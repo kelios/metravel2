@@ -3,11 +3,11 @@ import { PointFilters } from '@/components/UserPoints/PointFilters';
 import type { PointFilters as PointFiltersType } from '@/types/userPoints';
 
 describe('PointFilters', () => {
-  it('renders radius section', () => {
+  it('renders radius section', async () => {
     const mockOnChange = jest.fn();
     const filters: PointFiltersType = {};
 
-    render(<PointFilters filters={filters} onChange={mockOnChange} availableColors={[]} />);
+    await render(<PointFilters filters={filters} onChange={mockOnChange} availableColors={[]} />);
 
     expect(screen.getByText('Радиус')).toBeTruthy();
   });

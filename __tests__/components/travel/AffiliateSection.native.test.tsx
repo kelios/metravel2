@@ -52,8 +52,8 @@ describe('AffiliateSection native', () => {
     process.env = { ...originalEnv }
   })
 
-  it('renders partner travel offers on native when affiliate config is enabled', () => {
-    const { getByText } = render(<AffiliateSection travel={travel} styles={styles} />)
+  it('renders partner travel offers on native when affiliate config is enabled', async () => {
+    const { getByText } = await render(<AffiliateSection travel={travel} styles={styles} />)
 
     expect(getByText('Полезное в поездку')).toBeTruthy()
     expect(getByText('Экскурсии и гиды')).toBeTruthy()
@@ -62,7 +62,7 @@ describe('AffiliateSection native', () => {
 
   // `cityName` приходит из обратного геокодинга первой точки, а не как название
   // города, поэтому в подписи офферов должна стоять страна — как и в ссылке.
-  it('labels offers with the country, never with the reverse-geocoded address', () => {
+  it('labels offers with the country, never with the reverse-geocoded address', async () => {
     const addressTravel = {
       id: 485,
       cityName:
@@ -72,7 +72,7 @@ describe('AffiliateSection native', () => {
       travelAddress: [{ id: 1, address: 'Базилика Святого Стефана', coord: '47.5007615,19.0539858' }],
     } as any
 
-    const { getAllByText, queryByText } = render(
+    const { getAllByText, queryByText } = await render(
       <AffiliateSection travel={addressTravel} styles={styles} />,
     )
 
@@ -83,8 +83,8 @@ describe('AffiliateSection native', () => {
   // Фикстура `travel` выше выглядит «нормальной» (cityName='Минск'), но и она
   // приходит из того же поля: место в подписи обязано быть страной, иначе копия
   // разойдётся со страновой ссылкой Ostrovok/Tripster.
-  it('labels offers with the country even when cityName looks like a real city', () => {
-    const { getAllByText, queryByText } = render(<AffiliateSection travel={travel} styles={styles} />)
+  it('labels offers with the country even when cityName looks like a real city', async () => {
+    const { getAllByText, queryByText } = await render(<AffiliateSection travel={travel} styles={styles} />)
 
     expect(getAllByText(/— Беларусь$/).length).toBe(2)
     expect(queryByText(/— Минск$/)).toBeNull()
@@ -92,7 +92,7 @@ describe('AffiliateSection native', () => {
 
   // Мульти-страновые маршруты отдают countryName списком, а партнёрская ссылка
   // всегда одностранная (по countryCode первой точки). Обещать список нельзя.
-  it('drops the place from the copy when countryName is a list of countries', () => {
+  it('drops the place from the copy when countryName is a list of countries', async () => {
     const multiCountry = {
       id: 213,
       cityName: 'Тбилисский ботанический сад, Ботаническая улица, Тбилиси, Грузия',
@@ -101,7 +101,7 @@ describe('AffiliateSection native', () => {
       travelAddress: [{ id: 1, address: 'Тбилисский ботанический сад', coord: '41.6873906,44.8022161' }],
     } as any
 
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <AffiliateSection travel={multiCountry} styles={styles} />,
     )
 
@@ -115,7 +115,7 @@ describe('AffiliateSection native', () => {
   // Норвегии, которой нет в таблице bbox, поэтому код не резолвится и очищенный
   // `country` пуст — но блок там был и должен остаться, иначе монетизационная
   // поверхность молча исчезает со страницы.
-  it('keeps the block when the country list is unresolvable to a single code', () => {
+  it('keeps the block when the country list is unresolvable to a single code', async () => {
     const scandinavia = {
       id: 162,
       cityName: 'Bergen, Vestland, Norge',
@@ -124,7 +124,7 @@ describe('AffiliateSection native', () => {
       travelAddress: [{ id: 1, address: 'Bergen', coord: '60.4162572,5.4757361' }],
     } as any
 
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <AffiliateSection travel={scandinavia} styles={styles} />,
     )
 
@@ -144,10 +144,10 @@ describe('AffiliateSection native', () => {
       travelAddress: [{ id: 1, address: 'Rynek Główny', coord: '50.0647,19.945' }],
     } as any
 
-    const { getByText } = render(<AffiliateSection travel={poland} styles={styles} />)
-    await waitFor(() => {
+    const { getByText } = await render(<AffiliateSection travel={poland} styles={styles} />)
+    await waitFor(async () => {
       ;(openExternalUrlInNewTab as jest.Mock).mockClear()
-      fireEvent.press(getByText('Подобрать жильё'))
+      await fireEvent.press(getByText('Подобрать жильё'))
       expect(hotelsDestination()).toContain(encodeURIComponent('https://ostrovok.ru/hotel/poland/'))
     })
   })
@@ -165,10 +165,10 @@ describe('AffiliateSection native', () => {
       travelAddress: [{ id: 1, address: 'Тбилисский ботанический сад', coord: '41.6873906,44.8022161' }],
     } as any
 
-    const { getByText } = render(<AffiliateSection travel={georgia} styles={styles} />)
-    await waitFor(() => {
+    const { getByText } = await render(<AffiliateSection travel={georgia} styles={styles} />)
+    await waitFor(async () => {
       ;(openExternalUrlInNewTab as jest.Mock).mockClear()
-      fireEvent.press(getByText('Подобрать жильё'))
+      await fireEvent.press(getByText('Подобрать жильё'))
       expect(hotelsDestination()).toContain(encodeURIComponent('https://ostrovok.ru/hotel/georgia/'))
       expect(hotelsDestination()).not.toContain('russia')
     })
@@ -186,10 +186,10 @@ describe('AffiliateSection native', () => {
       travelAddress: [{ id: 1, address: 'Анкара', coord: '39.9334,32.8597' }],
     } as any
 
-    const { getByText } = render(<AffiliateSection travel={offList} styles={styles} />)
-    await waitFor(() => {
+    const { getByText } = await render(<AffiliateSection travel={offList} styles={styles} />)
+    await waitFor(async () => {
       ;(openExternalUrlInNewTab as jest.Mock).mockClear()
-      fireEvent.press(getByText('Подобрать жильё'))
+      await fireEvent.press(getByText('Подобрать жильё'))
       expect(hotelsDestination()).toContain(encodeURIComponent('https://ostrovok.ru/'))
       expect(hotelsDestination()).not.toContain('%2Fhotel%2F')
     })

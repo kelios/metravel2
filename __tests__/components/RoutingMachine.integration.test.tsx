@@ -34,7 +34,7 @@ describe('RoutingMachine integration', () => {
       }),
     });
 
-    render(
+    await render(
       <RoutingMachine
         routePoints={[startPoint, endPoint]}
         transportMode="car"
@@ -73,7 +73,7 @@ describe('RoutingMachine integration', () => {
       }),
     });
 
-    const { rerender } = render(
+    const { rerender } = await render(
       <RoutingMachine
         routePoints={[startPoint, endPoint]}
         transportMode="car"
@@ -101,7 +101,7 @@ describe('RoutingMachine integration', () => {
       }),
     });
 
-    rerender(
+    await rerender(
       <RoutingMachine
         routePoints={[startPoint, endPoint]}
         transportMode="bike"
@@ -135,7 +135,7 @@ describe('RoutingMachine integration', () => {
       }),
     });
 
-    render(
+    await render(
       <RoutingMachine
         routePoints={[startPoint, endPoint]}
         transportMode="foot"
@@ -170,7 +170,7 @@ describe('RoutingMachine integration', () => {
       }),
     });
 
-    render(
+    await render(
       <RoutingMachine
         routePoints={[startPoint, endPoint]}
         transportMode="car"
@@ -193,7 +193,7 @@ describe('RoutingMachine integration', () => {
 
     (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
 
-    render(
+    await render(
       <RoutingMachine
         routePoints={[startPoint, endPoint]}
         transportMode="car"

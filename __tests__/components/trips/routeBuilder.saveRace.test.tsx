@@ -116,15 +116,15 @@ type MutationCallbacks = {
   onSettled: () => void
 }
 
-const renderRouteBuilder = (element: React.ReactElement) =>
-  render(element, { wrapper: createQueryWrapper().Wrapper })
+const renderRouteBuilder = async (element: React.ReactElement) =>
+  await render(element, { wrapper: createQueryWrapper().Wrapper })
 
 /** Добавляет точку с указанным именем через панель «Точки маршрута». */
-const addCustomPoint = (getByTestId: (id: string) => any, name: string) => {
-  fireEvent.press(getByTestId('route-builder-add-action'))
-  fireEvent.press(getByTestId('route-builder-type-custom'))
-  fireEvent.changeText(getByTestId('route-builder-name'), name)
-  fireEvent.press(getByTestId('route-builder-add'))
+const addCustomPoint = async (getByTestId: (id: string) => any, name: string) => {
+  await fireEvent.press(getByTestId('route-builder-add-action'))
+  await fireEvent.press(getByTestId('route-builder-type-custom'))
+  await fireEvent.changeText(getByTestId('route-builder-name'), name)
+  await fireEvent.press(getByTestId('route-builder-add'))
 }
 
 describe('RouteBuilder route save race (#1824)', () => {
@@ -134,18 +134,18 @@ describe('RouteBuilder route save race (#1824)', () => {
     mockRoutePending = false
   })
 
-  it('не затирает правку, сделанную пока PUT сохранения летел на сервер', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('не затирает правку, сделанную пока PUT сохранения летел на сервер', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     // Правка, которую пользователь сохраняет.
-    addCustomPoint(getByTestId, 'C')
-    fireEvent.press(getByTestId('route-builder-save'))
+    await addCustomPoint(getByTestId, 'C')
+    await fireEvent.press(getByTestId('route-builder-save'))
     expect(mockRouteMutate).toHaveBeenCalledTimes(1)
     expect(mockRouteMutate.mock.calls[0][0].route.map((p: { name: string }) => p.name))
       .toEqual(['A', 'B', 'C'])
 
     // Пока запрос летит, пользователь добавляет ещё одну точку.
-    addCustomPoint(getByTestId, 'D')
+    await addCustomPoint(getByTestId, 'D')
     expect(getByTestId('route-map-point-names').props.children).toBe('A|B|C|D')
 
     // Ответ описывает маршрут БЕЗ последней правки.
@@ -157,7 +157,7 @@ describe('RouteBuilder route save race (#1824)', () => {
       ],
     })
     const callbacks = mockRouteMutate.mock.calls[0][1] as MutationCallbacks
-    act(() => {
+    await act(() => {
       callbacks.onSuccess(savedTrip)
       callbacks.onSettled()
     })
@@ -165,13 +165,13 @@ describe('RouteBuilder route save race (#1824)', () => {
     expect(getByTestId('route-map-point-names').props.children).toBe('A|B|C|D')
   })
 
-  it('расхождение не тихое: кнопка сохранения остаётся, и повтор шлёт весь черновик', () => {
+  it('расхождение не тихое: кнопка сохранения остаётся, и повтор шлёт весь черновик', async () => {
     const initialTrip = makeTrip()
-    const { getByTestId, rerender } = renderRouteBuilder(<RouteBuilder trip={initialTrip} />)
+    const { getByTestId, rerender } = await renderRouteBuilder(<RouteBuilder trip={initialTrip} />)
 
-    addCustomPoint(getByTestId, 'C')
-    fireEvent.press(getByTestId('route-builder-save'))
-    addCustomPoint(getByTestId, 'D')
+    await addCustomPoint(getByTestId, 'C')
+    await fireEvent.press(getByTestId('route-builder-save'))
+    await addCustomPoint(getByTestId, 'D')
 
     const savedTrip = makeTrip({
       route: [
@@ -181,25 +181,25 @@ describe('RouteBuilder route save race (#1824)', () => {
       ],
     })
     const callbacks = mockRouteMutate.mock.calls[0][1] as MutationCallbacks
-    act(() => {
+    await act(() => {
       callbacks.onSuccess(savedTrip)
       callbacks.onSettled()
     })
     // Кэш поездки обновился ответом сервера — экран получает новый `trip`.
-    rerender(<RouteBuilder trip={savedTrip} />)
+    await rerender(<RouteBuilder trip={savedTrip} />)
 
     // Кнопка на месте: несохранённая правка видна пользователю, а не потеряна.
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-save'))
     expect(mockRouteMutate).toHaveBeenCalledTimes(2)
     expect(mockRouteMutate.mock.calls[1][0].route.map((p: { name: string }) => p.name))
       .toEqual(['A', 'B', 'C', 'D'])
   })
 
-  it('без параллельной правки ответ сервера применяется и подхватывает серверные id', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('без параллельной правки ответ сервера применяется и подхватывает серверные id', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    addCustomPoint(getByTestId, 'C')
-    fireEvent.press(getByTestId('route-builder-save'))
+    await addCustomPoint(getByTestId, 'C')
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     const savedTrip = makeTrip({
       route: [
@@ -209,7 +209,7 @@ describe('RouteBuilder route save race (#1824)', () => {
       ],
     })
     const callbacks = mockRouteMutate.mock.calls[0][1] as MutationCallbacks
-    act(() => {
+    await act(() => {
       callbacks.onSuccess(savedTrip)
       callbacks.onSettled()
     })
@@ -218,32 +218,32 @@ describe('RouteBuilder route save race (#1824)', () => {
     expect(getByTestId('route-map-point-names').props.children).toBe('A|B|C-server')
   })
 
-  it('повтор нажатия в одном тике отправляет ровно один PUT', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('повтор нажатия в одном тике отправляет ровно один PUT', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    addCustomPoint(getByTestId, 'C')
-    fireEvent.press(getByTestId('route-builder-save'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await addCustomPoint(getByTestId, 'C')
+    await fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate).toHaveBeenCalledTimes(1)
   })
 
-  it('смена транспорта не стартует, пока сохранение маршрута ещё не завершилось', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('смена транспорта не стартует, пока сохранение маршрута ещё не завершилось', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    addCustomPoint(getByTestId, 'C')
-    fireEvent.press(getByTestId('route-builder-save'))
+    await addCustomPoint(getByTestId, 'C')
+    await fireEvent.press(getByTestId('route-builder-save'))
 
-    fireEvent.press(getByTestId('segmented-foot'))
+    await fireEvent.press(getByTestId('segmented-foot'), { timeStamp: 1 })
     expect(mockTransportMutate).not.toHaveBeenCalled()
 
     const callbacks = mockRouteMutate.mock.calls[0][1] as MutationCallbacks
-    act(() => {
+    await act(() => {
       callbacks.onSuccess(makeTrip())
       callbacks.onSettled()
     })
 
-    fireEvent.press(getByTestId('segmented-foot'))
+    await fireEvent.press(getByTestId('segmented-foot'), { timeStamp: 2 })
     expect(mockTransportMutate).toHaveBeenCalledTimes(1)
   })
 })

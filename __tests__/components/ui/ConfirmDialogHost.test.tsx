@@ -40,14 +40,14 @@ describe('ConfirmDialogHost', () => {
     resolveConfirmDialog(false)
   })
 
-  it('без запроса не рендерит ничего: пустой хост висит на каждой web-странице', () => {
-    render(<ConfirmDialogHost />)
+  it('без запроса не рендерит ничего: пустой хост висит на каждой web-странице', async () => {
+    await render(<ConfirmDialogHost />)
 
     expect(screen.queryByTestId('confirm-dialog-stub')).toBeNull()
   })
 
   it('показывает запрос из стора и резолвит промис подтверждением', async () => {
-    render(<ConfirmDialogHost />)
+    await render(<ConfirmDialogHost />)
 
     const pending = requestConfirmDialog({
       title: 'Удалить точку',
@@ -59,19 +59,19 @@ describe('ConfirmDialogHost', () => {
     expect(await screen.findByText('Точку «Ратуша» удалить из маршрута?')).toBeTruthy()
     expect(screen.getByText('Удалить')).toBeTruthy()
 
-    fireEvent.press(screen.getByTestId('stub-accept'))
+    await fireEvent.press(screen.getByTestId('stub-accept'))
 
     await expect(pending).resolves.toBe(true)
     expect(screen.queryByTestId('confirm-dialog-stub')).toBeNull()
   })
 
   it('отмена резолвит false и закрывает диалог', async () => {
-    render(<ConfirmDialogHost />)
+    await render(<ConfirmDialogHost />)
 
     const pending = requestConfirmDialog({ title: 'Очистить?', message: 'Список будет очищен.' })
     expect(await screen.findByTestId('confirm-dialog-stub')).toBeTruthy()
 
-    fireEvent.press(screen.getByTestId('stub-cancel'))
+    await fireEvent.press(screen.getByTestId('stub-cancel'))
 
     await expect(pending).resolves.toBe(false)
     expect(screen.queryByTestId('confirm-dialog-stub')).toBeNull()
@@ -79,10 +79,10 @@ describe('ConfirmDialogHost', () => {
 
   it('размонтирование хоста с открытым диалогом резолвит false, а не вешает await', async () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
-    const view = render(<ConfirmDialogHost />)
+    const view = await render(<ConfirmDialogHost />)
 
     const pending = requestConfirmDialog({ title: 'Удалить?', message: 'Действие необратимо.' })
-    view.unmount()
+    await view.unmount()
 
     await expect(pending).resolves.toBe(false)
     warn.mockRestore()

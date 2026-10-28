@@ -63,8 +63,8 @@ describe('QuickRecommendations', () => {
     mockPlaceListCard.mockClear();
   });
 
-  it('passes larger media and content title layout to nearby recommendation cards', () => {
-    render(
+  it('passes larger media and content title layout to nearby recommendation cards', async () => {
+    await render(
       <QuickRecommendations
         places={[
           {
@@ -97,8 +97,8 @@ describe('QuickRecommendations', () => {
     expect(firstCallProps.imageHeight).toBeGreaterThanOrEqual(148);
   });
 
-  it('passes the primary source travel id of the recommendation urlTravel (#1960)', () => {
-    render(
+  it('passes the primary source travel id of the recommendation urlTravel (#1960)', async () => {
+    await render(
       <QuickRecommendations
         places={[
           {

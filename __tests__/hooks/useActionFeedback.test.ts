@@ -29,7 +29,7 @@ describe('useActionFeedback', () => {
 
   it('applies optimistic state and haptic before commit, then toasts success with undo and announces', async () => {
     const order: string[] = []
-    const { result } = renderHook(() => useActionFeedback())
+    const { result } = await renderHook(() => useActionFeedback())
     const undoCommit = jest.fn().mockResolvedValue(undefined)
 
     let outcome: any
@@ -60,7 +60,7 @@ describe('useActionFeedback', () => {
   })
 
   it('does not toast an undo action when no undo is passed', async () => {
-    const { result } = renderHook(() => useActionFeedback())
+    const { result } = await renderHook(() => useActionFeedback())
     await act(async () => {
       await result.current.run({ commit: async () => 1, success: { message: 'Готово' } })
     })
@@ -69,7 +69,7 @@ describe('useActionFeedback', () => {
 
   it('rolls back, shows error toast and error haptic when commit fails', async () => {
     const rollback = jest.fn()
-    const { result } = renderHook(() => useActionFeedback())
+    const { result } = await renderHook(() => useActionFeedback())
     let outcome: any
     await act(async () => {
       outcome = await result.current.run({
@@ -90,7 +90,7 @@ describe('useActionFeedback', () => {
   })
 
   it('ignores a second tap with the same key while commit is pending', async () => {
-    const { result } = renderHook(() => useActionFeedback())
+    const { result } = await renderHook(() => useActionFeedback())
     let release!: () => void
     const commit = jest.fn(() => new Promise<void>((resolve) => { release = resolve }))
 
@@ -114,7 +114,7 @@ describe('useActionFeedback', () => {
 
   it('failed undo rolls back and reports an error', async () => {
     const undoRollback = jest.fn()
-    const { result } = renderHook(() => useActionFeedback())
+    const { result } = await renderHook(() => useActionFeedback())
     await act(async () => {
       await result.current.run({
         commit: async () => undefined,
@@ -134,7 +134,7 @@ describe('useActionFeedback', () => {
 
   it('does not announce on web (toast role=status speaks)', async () => {
     ;(Platform as any).OS = 'web'
-    const { result } = renderHook(() => useActionFeedback())
+    const { result } = await renderHook(() => useActionFeedback())
     await act(async () => {
       await result.current.run({ commit: async () => undefined, success: { message: 'ok' } })
     })

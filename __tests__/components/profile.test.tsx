@@ -319,8 +319,8 @@ describe('ProfileScreen', () => {
     mockTravelStatusEntries = [];
   });
 
-  const renderProfile = () => {
-    return render(
+  const renderProfile = async () => {
+    return await render(
       <NativeMenuAccessibilityProvider>
         <PaperProvider>
           <NativeMenuBackground><ProfileScreen /></NativeMenuBackground>
@@ -334,7 +334,7 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: false });
     setupFavorites(0, 0);
 
-    const { findByText } = renderProfile();
+    const { findByText } = await renderProfile();
 
     expect(await findByText('Войдите в аккаунт')).toBeTruthy();
     expect(await findByText('Войдите, чтобы открыть профиль и управлять своими данными.')).toBeTruthy();
@@ -344,7 +344,7 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(2, 5);
 
-    const { findByText, findByLabelText, findAllByLabelText, findAllByText, getByLabelText, getAllByLabelText, queryByText } = renderProfile();
+    const { findByText, findByLabelText, findAllByLabelText, findAllByText, getByLabelText, getAllByLabelText, queryByText } = await renderProfile();
 
     expect(await findByText('Test User')).toBeTruthy();
     // Компактная шапка: быстрые действия — icon-only чипы поверх баннера,
@@ -368,7 +368,7 @@ describe('ProfileScreen', () => {
     expect(getAllByLabelText('Недавно смотрел: 5')).toHaveLength(1);
 
     // Статистика автора и личный календарь живут во вкладке "Статистика"
-    fireEvent.press(getByLabelText('Статистика профиля'));
+    await fireEvent.press(getByLabelText('Статистика профиля'));
     expect(await findByText('Личный календарь')).toBeTruthy();
     expect(await findByText('Мои статусы поездок')).toBeTruthy();
     expect((await findAllByText('Были')).length).toBeGreaterThan(0);
@@ -406,27 +406,27 @@ describe('ProfileScreen', () => {
       },
     ] as never);
 
-    const { findByLabelText, findByText, queryByText } = renderProfile();
+    const { findByLabelText, findByText, queryByText } = await renderProfile();
 
-    fireEvent.press(await findByLabelText('Маршруты: 2'));
+    await fireEvent.press(await findByLabelText('Маршруты: 2'));
 
     expect(await findByText('Опубликованный Алтай')).toBeTruthy();
     expect(await findByText('Черновик Кавказа')).toBeTruthy();
     expect(await findByText('Черновик')).toBeTruthy();
 
-    fireEvent.press(await findByLabelText('Черновики маршрутов: 1'));
+    await fireEvent.press(await findByLabelText('Черновики маршрутов: 1'));
     expect(await findByText('Черновик Кавказа')).toBeTruthy();
     await waitFor(() => {
       expect(queryByText('Опубликованный Алтай')).toBeNull();
     });
 
-    fireEvent.press(await findByLabelText('Опубликованные маршруты: 1'));
+    await fireEvent.press(await findByLabelText('Опубликованные маршруты: 1'));
     expect(await findByText('Опубликованный Алтай')).toBeTruthy();
     await waitFor(() => {
       expect(queryByText('Черновик Кавказа')).toBeNull();
     });
 
-    fireEvent.press(await findByLabelText('Маршруты: 2'));
+    await fireEvent.press(await findByLabelText('Маршруты: 2'));
     expect(
       await findByLabelText(/Путешествие: Черновик Кавказа\./),
     ).toBeTruthy();
@@ -439,7 +439,7 @@ describe('ProfileScreen', () => {
     setupFavorites(0, 0);
     mockFetchMyTravels.mockRejectedValue(new Error('502 Bad Gateway'));
 
-    const { findByLabelText, queryByLabelText, queryByTestId, queryByText } = renderProfile();
+    const { findByLabelText, queryByLabelText, queryByTestId, queryByText } = await renderProfile();
 
     expect(await findByLabelText('Маршруты: количество недоступно')).toBeTruthy();
     expect(await findByLabelText('Опубликованные маршруты: количество недоступно')).toBeTruthy();
@@ -447,11 +447,11 @@ describe('ProfileScreen', () => {
     // Голая подпись без числа = бейджа нет вовсе, то есть «честный ноль».
     expect(queryByLabelText('Маршруты')).toBeNull();
 
-    fireEvent.press(await findByLabelText('Уровень, значки и достижения'));
+    await fireEvent.press(await findByLabelText('Уровень, значки и достижения'));
     expect(queryByTestId('profile-first-steps-card')).toBeNull();
     expect(queryByText('Маршрут')).toBeNull();
 
-    fireEvent.press(await findByLabelText('Статистика профиля'));
+    await fireEvent.press(await findByLabelText('Статистика профиля'));
     expect(queryByText(/Маршрутов:/)).toBeNull();
   });
 
@@ -462,9 +462,9 @@ describe('ProfileScreen', () => {
     setupFavorites(0, 0);
     mockFetchMyTravels.mockRejectedValue(new Error('502 Bad Gateway'));
 
-    const { findByLabelText } = renderProfile();
+    const { findByLabelText } = await renderProfile();
 
-    fireEvent.press(await findByLabelText('Черновики маршрутов: количество недоступно'));
+    await fireEvent.press(await findByLabelText('Черновики маршрутов: количество недоступно'));
 
     const authorListCalls = () => mockFetchMyTravels.mock.calls.filter(
       ([params]) => !(params as { publicationStatus?: readonly string[] })?.publicationStatus,
@@ -472,7 +472,7 @@ describe('ProfileScreen', () => {
     const retry = await findByLabelText('Повторить');
     const callsBeforeRetry = authorListCalls();
 
-    fireEvent.press(retry);
+    await fireEvent.press(retry);
 
     await waitFor(() => {
       expect(authorListCalls()).toBeGreaterThan(callsBeforeRetry);
@@ -483,9 +483,9 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(2, 5);
 
-    const { findByLabelText } = renderProfile();
+    const { findByLabelText } = await renderProfile();
 
-    fireEvent.press(await findByLabelText('Календарь'));
+    await fireEvent.press(await findByLabelText('Календарь'));
 
     expect(mockPush).toHaveBeenCalledWith('/calendar');
   });
@@ -494,9 +494,9 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(2, 5);
 
-    const { findByLabelText } = renderProfile();
+    const { findByLabelText } = await renderProfile();
 
-    fireEvent.press(await findByLabelText('Поездки'));
+    await fireEvent.press(await findByLabelText('Поездки'));
 
     expect(mockPush).toHaveBeenCalledWith('/trips/my');
   });
@@ -506,16 +506,16 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true, logout: logoutMock });
     setupFavorites(0, 0);
 
-    const { getByLabelText, getByText, queryByTestId } = renderProfile();
+    const { getByLabelText, getByText, queryByTestId } = await renderProfile();
 
     // Открываем меню профиля
     await waitFor(() => getByLabelText('Меню профиля'));
-    fireEvent.press(getByLabelText('Меню профиля'));
+    await fireEvent.press(getByLabelText('Меню профиля'));
     expect(queryByTestId('native-menu-overlay')).toBeTruthy();
 
     // Ждем появления кнопки выхода (ищем по тексту)
     await waitFor(() => getByText('Выйти'));
-    fireEvent.press(getByText('Выйти'));
+    await fireEvent.press(getByText('Выйти'));
 
     await waitFor(() => {
       expect(logoutMock).toHaveBeenCalled();
@@ -528,16 +528,16 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(1, 1);
 
-    const { getByLabelText, findByLabelText } = renderProfile();
+    const { getByLabelText, findByLabelText } = await renderProfile();
 
     // По умолчанию активна вкладка "Уровень"; переключаемся на "Маршруты"
-    fireEvent.press(await findByLabelText('Маршруты: 3'));
+    await fireEvent.press(await findByLabelText('Маршруты: 3'));
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
 
-    fireEvent.press(getByLabelText('Хочу поехать: 1'));
+    await fireEvent.press(getByLabelText('Хочу поехать: 1'));
     expect(await findByLabelText(/Fav 1/)).toBeTruthy();
 
-    fireEvent.press(getByLabelText('Недавно смотрел: 1'));
+    await fireEvent.press(getByLabelText('Недавно смотрел: 1'));
     expect(await findByLabelText(/History 1/)).toBeTruthy();
   });
 
@@ -567,13 +567,13 @@ describe('ProfileScreen', () => {
       handleUnsubscribe: jest.fn(),
     }));
 
-    const { findByLabelText, findByText } = renderProfile();
+    const { findByLabelText, findByText } = await renderProfile();
 
-    fireEvent.press(await findByLabelText('Подписки: 1'));
+    await fireEvent.press(await findByLabelText('Подписки: 1'));
     expect(await findByText('Иван Петров')).toBeTruthy();
     expect(await findByText('1 автор')).toBeTruthy();
 
-    fireEvent.press(await findByLabelText('Подписчики: 1'));
+    await fireEvent.press(await findByLabelText('Подписчики: 1'));
     expect(await findByText('Мария Сидорова')).toBeTruthy();
     expect(mockPush).not.toHaveBeenCalled();
   });
@@ -602,9 +602,9 @@ describe('ProfileScreen', () => {
       },
     ];
 
-    const { findByLabelText, findByText, findAllByText, getAllByText } = renderProfile();
+    const { findByLabelText, findByText, findAllByText, getAllByText } = await renderProfile();
 
-    fireEvent.press(await findByLabelText('Страны профиля'));
+    await fireEvent.press(await findByLabelText('Страны профиля'));
 
     expect((await findAllByText('Посетили')).length).toBeGreaterThan(0);
     expect(await findByText('Статистика по странам')).toBeTruthy();
@@ -625,20 +625,20 @@ describe('ProfileScreen', () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(0, 0);
 
-    const { getByLabelText, findAllByLabelText, findByLabelText, queryByLabelText } = renderProfile();
+    const { getByLabelText, findAllByLabelText, findByLabelText, queryByLabelText } = await renderProfile();
 
     // Метрики статистики автора живут во вкладке "Статистика".
     // Клик по метрике — drill-down: переключает на "Маршруты" с фильтром.
-    fireEvent.press(await findByLabelText('Статистика профиля'));
-    fireEvent.press((await findAllByLabelText('Были: 3'))[0]);
+    await fireEvent.press(await findByLabelText('Статистика профиля'));
+    await fireEvent.press((await findAllByLabelText('Были: 3'))[0]);
 
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
     expect(queryByLabelText(/My Travel 2/)).toBeNull();
     expect(queryByLabelText(/My Travel 3/)).toBeNull();
 
     // Смена метрики — возврат на "Статистика" и выбор другой метрики.
-    fireEvent.press(getByLabelText('Статистика профиля'));
-    fireEvent.press((await findAllByLabelText('Планируют: 7'))[0]);
+    await fireEvent.press(getByLabelText('Статистика профиля'));
+    await fireEvent.press((await findAllByLabelText('Планируют: 7'))[0]);
 
     expect(await findByLabelText(/My Travel 1/)).toBeTruthy();
     expect(await findByLabelText(/My Travel 2/)).toBeTruthy();
@@ -651,15 +651,15 @@ describe('ProfileScreen', () => {
     mockFetchMyTravels.mockResolvedValue({ total: 0, count: 0, data: [], results: [] });
     mockMyAchievementsData = makeAchievements();
 
-    const { findByLabelText, findByText } = renderProfile();
+    const { findByLabelText, findByText } = await renderProfile();
 
-    fireEvent.press(await findByLabelText('Уровень, значки и достижения'));
+    await fireEvent.press(await findByLabelText('Уровень, значки и достижения'));
     expect(await findByText('С чего начать')).toBeTruthy();
 
-    fireEvent.press(await findByLabelText('Создать первый маршрут'));
+    await fireEvent.press(await findByLabelText('Создать первый маршрут'));
     expect(mockPush).toHaveBeenCalledWith('/travel/new');
 
-    fireEvent.press(await findByLabelText('Начать первый квест'));
+    await fireEvent.press(await findByLabelText('Начать первый квест'));
     expect(mockPush).toHaveBeenCalledWith('/quests');
   });
 
@@ -671,18 +671,18 @@ describe('ProfileScreen', () => {
     const response = new Promise<MyTravelsPayload>((resolve) => { resolveResponse = resolve; });
     mockFetchMyTravels.mockReturnValue(response);
 
-    const { findByLabelText, getByLabelText, getByText, queryByTestId, queryByText, queryByLabelText } = renderProfile();
+    const { findByLabelText, getByLabelText, getByText, queryByTestId, queryByText, queryByLabelText } = await renderProfile();
 
     expect(await findByLabelText('Маршруты')).toBeTruthy();
     expect(queryByLabelText('Маршруты: количество недоступно')).toBeNull();
-    fireEvent.press(getByLabelText('Уровень, значки и достижения'));
+    await fireEvent.press(getByLabelText('Уровень, значки и достижения'));
     expect(queryByTestId('profile-first-steps-card')).toBeNull();
     expect(queryByText('Маршрут')).toBeNull();
     expect(getByLabelText('Заполненность профиля')).toHaveProp(
       'accessibilityValue', expect.objectContaining({ now: 33 }),
     );
 
-    fireEvent.press(getByLabelText('Статистика профиля'));
+    await fireEvent.press(getByLabelText('Статистика профиля'));
     expect(queryByText(/Маршрутов:/)).toBeNull();
     expect(getByText('Собираем сводную статистику по вашим опубликованным маршрутам.')).toBeTruthy();
 
@@ -693,7 +693,7 @@ describe('ProfileScreen', () => {
 
     expect(getByText(new RegExp(`Маршрутов:\\s*${total}`))).toBeTruthy();
     expect(getByLabelText(total ? `Маршруты: ${total}` : 'Маршруты')).toBeTruthy();
-    fireEvent.press(getByLabelText('Уровень, значки и достижения'));
+    await fireEvent.press(getByLabelText('Уровень, значки и достижения'));
     expect(Boolean(queryByTestId('profile-first-steps-card'))).toBe(total === 0);
     expect(getByText('Маршрут')).toBeTruthy();
     expect(getByLabelText('Заполненность профиля')).toHaveProp(
@@ -707,7 +707,7 @@ describe('ProfileScreen', () => {
     mockFetchMyTravels.mockResolvedValue({ total: 0, count: 0, data: [], results: [] });
     mockMyAchievementsData = makeAchievements({ totalPoints: 25, badgesCount: 1 });
 
-    const { queryByText } = renderProfile();
+    const { queryByText } = await renderProfile();
 
     await waitFor(() => {
       expect(queryByText('С чего начать')).toBeNull();

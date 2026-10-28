@@ -19,8 +19,8 @@ const user = {
 
 describe('Профиль при потерянном счётчике маршрутов (#1871)', () => {
   describe('карточка «С чего начать»', () => {
-    it('не показывается, пока счётчик недоступен', () => {
-      const { queryByTestId } = render(
+    it('не показывается, пока счётчик недоступен', async () => {
+      const { queryByTestId } = await render(
         <ProfileFirstStepsCard
           travelsCount={null}
           rank={null}
@@ -32,8 +32,8 @@ describe('Профиль при потерянном счётчике маршр
       expect(queryByTestId('profile-first-steps-card')).toBeNull();
     });
 
-    it('по-прежнему показывается на доказанном нуле', () => {
-      const { getByTestId } = render(
+    it('по-прежнему показывается на доказанном нуле', async () => {
+      const { getByTestId } = await render(
         <ProfileFirstStepsCard
           travelsCount={0}
           rank={null}
@@ -47,8 +47,8 @@ describe('Профиль при потерянном счётчике маршр
   });
 
   describe('чек-лист заполненности профиля', () => {
-    it('не отмечает пункт про маршрут невыполненным, пока счётчик недоступен', () => {
-      const { queryByText } = render(
+    it('не отмечает пункт про маршрут невыполненным, пока счётчик недоступен', async () => {
+      const { queryByText } = await render(
         <ProfileCompleteness user={user} profile={null} travelsCount={null} />,
       );
 
@@ -56,8 +56,8 @@ describe('Профиль при потерянном счётчике маршр
       expect(queryByText('Добавьте маршрут')).toBeNull();
     });
 
-    it('по-прежнему просит добавить маршрут на доказанном нуле', () => {
-      const { getByText } = render(
+    it('по-прежнему просит добавить маршрут на доказанном нуле', async () => {
+      const { getByText } = await render(
         <ProfileCompleteness user={user} profile={null} travelsCount={0} />,
       );
 
@@ -66,8 +66,8 @@ describe('Профиль при потерянном счётчике маршр
   });
 
   describe('статистика автора', () => {
-    it('прячет чип «Маршрутов» и не зовёт публиковать первое путешествие', () => {
-      const { queryByText } = render(
+    it('прячет чип «Маршрутов» и не зовёт публиковать первое путешествие', async () => {
+      const { queryByText } = await render(
         <ProfileTravelEngagementSummary summary={null} travelsCount={null} />,
       );
 
@@ -79,8 +79,8 @@ describe('Профиль при потерянном счётчике маршр
       ).toBeNull();
     });
 
-    it('по-прежнему показывает нулевой чип и зовёт публиковать на пустом профиле', () => {
-      const { getByText } = render(
+    it('по-прежнему показывает нулевой чип и зовёт публиковать на пустом профиле', async () => {
+      const { getByText } = await render(
         <ProfileTravelEngagementSummary summary={null} travelsCount={0} />,
       );
 

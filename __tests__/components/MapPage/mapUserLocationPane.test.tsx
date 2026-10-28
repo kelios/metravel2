@@ -11,7 +11,7 @@
  * себе ничего не чинила.
  */
 import React from 'react'
-import { Platform } from 'react-native'
+import { Platform, Text } from 'react-native'
 import { render } from '@testing-library/react-native'
 
 import { MapLayers } from '@/components/MapPage/Map/MapLayers'
@@ -32,6 +32,9 @@ afterEach(() => {
 })
 
 const Stub = ({ children }: any) => <>{children ?? null}</>
+
+// Leaflet accepts plain popup text; render that text in its native test host.
+const PopupStub = ({ children }: { children?: React.ReactNode }) => <Text>{children}</Text>
 
 const MarkerStub = (props: any) => {
   markerProps.push(props)
@@ -61,13 +64,13 @@ const makeMapInstance = ({
   }
 }
 
-const renderLayers = (mapInstance: any) =>
-  render(
+const renderLayers = async (mapInstance: any) =>
+  await render(
     <MapLayers
       TileLayer={Stub}
       Circle={Stub}
       Marker={MarkerStub}
-      Popup={Stub}
+      Popup={PopupStub}
       mode="radius"
       circleCenter={null}
       radiusInMeters={0}
@@ -78,9 +81,9 @@ const renderLayers = (mapInstance: any) =>
   )
 
 describe('#1780 — pane маркера «вы здесь» на web', () => {
-  it('получает z-index выше markerPane даже когда getPane пропатчен в get-or-create', () => {
+  it('получает z-index выше markerPane даже когда getPane пропатчен в get-or-create', async () => {
     const map = makeMapInstance({ getOrCreate: true })
-    renderLayers(map)
+    await renderLayers(map)
 
     const pane = map.panes['metravel-user-location']
     expect(pane).toBeDefined()
@@ -90,9 +93,9 @@ describe('#1780 — pane маркера «вы здесь» на web', () => {
     expect(pane.style.pointerEvents).toBe('none')
   })
 
-  it('передаёт имя pane самому маркеру и не делает его интерактивным', () => {
+  it('передаёт имя pane самому маркеру и не делает его интерактивным', async () => {
     const map = makeMapInstance({ getOrCreate: true })
-    renderLayers(map)
+    await renderLayers(map)
 
     // Главная регрессия #1780: стилизованный pane бесполезен, если имя не
     // доехало до маркера — именно так вёл себя мёртвый проп userLocationPaneName.
@@ -101,29 +104,29 @@ describe('#1780 — pane маркера «вы здесь» на web', () => {
     expect(lastMarkerProps().interactive).toBe(false)
   })
 
-  it('создаёт pane сам, когда патча нет (ванильный Leaflet)', () => {
+  it('создаёт pane сам, когда патча нет (ванильный Leaflet)', async () => {
     const map = makeMapInstance({ getOrCreate: false })
-    renderLayers(map)
+    await renderLayers(map)
 
     expect(map.createPane).toHaveBeenCalledWith('metravel-user-location')
     expect(map.panes['metravel-user-location'].style.zIndex).toBe('625')
     expect(lastMarkerProps().pane).toBe('metravel-user-location')
   })
 
-  it('на detached-заглушке мёртвой карты оставляет маркер в общем pane', () => {
+  it('на detached-заглушке мёртвой карты оставляет маркер в общем pane', async () => {
     // leafletFix на пересоздаваемой карте отдаёт узел вне документа. Повесить на
     // него маркер — значит убрать точку с карты совсем, поэтому фолбэк — markerPane.
     const map = makeMapInstance({ getOrCreate: true, connected: false })
-    renderLayers(map)
+    await renderLayers(map)
 
     expect(lastMarkerProps().pane).toBeUndefined()
     expect(map.panes['metravel-user-location'].style.zIndex).toBeUndefined()
   })
 
-  it('на native ничего не трогает: pane объявляет сам WebView-HTML', () => {
+  it('на native ничего не трогает: pane объявляет сам WebView-HTML', async () => {
     Platform.OS = 'ios'
     const map = makeMapInstance({ getOrCreate: true })
-    renderLayers(map)
+    await renderLayers(map)
 
     expect(map.getPane).not.toHaveBeenCalled()
     expect(map.createPane).not.toHaveBeenCalled()

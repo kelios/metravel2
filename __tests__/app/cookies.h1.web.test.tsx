@@ -21,9 +21,9 @@ function loadCookiesScreen() {
 }
 
 describe('CookieSettingsScreen H1 (#1617)', () => {
-  it('has exactly one visible level-1 heading with the suffix-free text', () => {
+  it('has exactly one visible level-1 heading with the suffix-free text', async () => {
     const CookiesScreen = loadCookiesScreen()
-    const { getByText } = render(<CookiesScreen />)
+    const { getByText } = await render(<CookiesScreen />)
 
     const heading = getByText('Настройки cookies и аналитики')
     expect(heading.props.accessibilityRole).toBe('header')

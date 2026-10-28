@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { render, waitFor } from '@testing-library/react-native';
+import { render, waitFor } from '@testing-library/react';
 
 jest.mock('@/hooks/useTheme', () => ({
   useThemedColors: () => ({
@@ -55,23 +55,16 @@ describe('StableContent (web) inline image priority', () => {
       '<img src="https://example.com/third.jpg" />',
     ].join('');
 
-    const { UNSAFE_getAllByProps } = render(
+    const { container } = await render(
       <StableContent html={html} contentWidth={700} />
     );
 
     await waitFor(() => {
-      const [container] = UNSAFE_getAllByProps({ className: 'travel-rich-text' });
-      expect(container).toBeTruthy();
-
-      const rendered: string = container.props.dangerouslySetInnerHTML?.__html ?? '';
-
-      // Extract all img tags from rendered HTML
-      const imgTags = rendered.match(/<img\b[^>]*>/gi) ?? [];
-      expect(imgTags.length).toBeGreaterThanOrEqual(2);
-
-      imgTags.forEach((tag) => {
-        expect(tag).toContain('fetchpriority="low"');
-        expect(tag).toContain('loading="lazy"');
+      const images = Array.from(container.querySelectorAll('.travel-rich-text img'));
+      expect(images.length).toBeGreaterThanOrEqual(2);
+      images.forEach((image) => {
+        expect(image.getAttribute('fetchpriority')).toBe('low');
+        expect(image.getAttribute('loading')).toBe('lazy');
       });
     });
   });

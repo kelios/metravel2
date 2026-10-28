@@ -33,9 +33,9 @@ describe('useSavedRouteRetry (#2065)', () => {
   // получают «Повторить», постоянная причина (4xx кроме 401/403/429) — нет.
   const temporaryCodes = ['ors_http_502', 'ors_http_429', 'ors_request_failed', 'route_provider_unavailable']
 
-  it.each(temporaryCodes)('владелец видит кнопку у временной причины %s', (code) => {
+  it.each(temporaryCodes)('владелец видит кнопку у временной причины %s', async (code) => {
     const routingState = degraded(code)
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useSavedRouteRetry({
         tripId: 205701,
         isOwner: true,
@@ -47,9 +47,9 @@ describe('useSavedRouteRetry (#2065)', () => {
     expect(result.current.visible).toBe(true)
   })
 
-  it('владелец не видит кнопку у постоянной причины ors_http_404', () => {
+  it('владелец не видит кнопку у постоянной причины ors_http_404', async () => {
     const routingState = degraded('ors_http_404')
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useSavedRouteRetry({
         tripId: 205701,
         isOwner: true,
@@ -61,9 +61,9 @@ describe('useSavedRouteRetry (#2065)', () => {
     expect(result.current.visible).toBe(false)
   })
 
-  it.each(temporaryCodes)('не-владелец не видит кнопку даже у временной причины %s', (code) => {
+  it.each(temporaryCodes)('не-владелец не видит кнопку даже у временной причины %s', async (code) => {
     const routingState = degraded(code)
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useSavedRouteRetry({
         tripId: 205701,
         isOwner: false,
@@ -75,12 +75,12 @@ describe('useSavedRouteRetry (#2065)', () => {
     expect(result.current.visible).toBe(false)
   })
 
-  it('кнопка скрыта, пока живое превью несохранённых правок владеет отображаемой тройкой', () => {
+  it('кнопка скрыта, пока живое превью несохранённых правок владеет отображаемой тройкой', async () => {
     // `useTripRouteDisplay` отдаёт `trip.routingState` без копирования только
     // когда правки совпадают с сохранёнными — здесь ссылки нарочно разные.
     const savedRoutingState = degraded('ors_http_502')
     const previewRoutingState = degraded('ors_http_502')
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useSavedRouteRetry({
         tripId: 205701,
         isOwner: true,
@@ -92,9 +92,9 @@ describe('useSavedRouteRetry (#2065)', () => {
     expect(result.current.visible).toBe(false)
   })
 
-  it('нажатие зовёт мутацию ровно один раз с tripId', () => {
+  it('нажатие зовёт мутацию ровно один раз с tripId', async () => {
     const routingState = degraded('ors_http_502')
-    const { result, rerender } = renderHook(() =>
+    const { result, rerender } = await renderHook(() =>
       useSavedRouteRetry({
         tripId: 205701,
         isOwner: true,
@@ -103,7 +103,7 @@ describe('useSavedRouteRetry (#2065)', () => {
       }),
     )
 
-    act(() => result.current.onPress())
+    await act(() => result.current.onPress())
 
     expect(mockMutate).toHaveBeenCalledTimes(1)
     expect(mockMutate).toHaveBeenCalledWith(
@@ -113,16 +113,16 @@ describe('useSavedRouteRetry (#2065)', () => {
 
     // Запрос в полёте — повторный тап тем же кликом ничего не шлёт.
     mockRefreshState.isPending = true
-    rerender()
-    act(() => result.current.onPress())
+    await rerender()
+    await act(() => result.current.onPress())
     expect(mockMutate).toHaveBeenCalledTimes(1)
   })
 
-  it('disabled во время запроса и ещё 10 с после ответа, потом снова активна', () => {
+  it('disabled во время запроса и ещё 10 с после ответа, потом снова активна', async () => {
     jest.useFakeTimers()
     try {
       const routingState = degraded('ors_http_502')
-      const { result, rerender } = renderHook(() =>
+      const { result, rerender } = await renderHook(() =>
         useSavedRouteRetry({
           tripId: 205701,
           isOwner: true,
@@ -133,30 +133,30 @@ describe('useSavedRouteRetry (#2065)', () => {
 
       expect(result.current.disabled).toBe(false)
 
-      act(() => result.current.onPress())
+      await act(() => result.current.onPress())
       const onSettled = mockMutate.mock.calls[0][1].onSettled as () => void
 
       // Запрос в полёте: `isPending` держит хук в mock до симулированного ответа.
       mockRefreshState.isPending = true
-      rerender()
+      await rerender()
       expect(result.current.pending).toBe(true)
       expect(result.current.disabled).toBe(true)
 
       // Ответ пришёл — pending снят, но cooldown только начался.
-      act(() => {
+      await act(() => {
         mockRefreshState.isPending = false
         onSettled()
       })
-      rerender()
+      await rerender()
       expect(result.current.pending).toBe(false)
       expect(result.current.disabled).toBe(true)
 
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(SAVED_ROUTE_RETRY_COOLDOWN_MS - 1)
       })
       expect(result.current.disabled).toBe(true)
 
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(1)
       })
       expect(result.current.disabled).toBe(false)

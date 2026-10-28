@@ -3,7 +3,8 @@
  */
 
 import React from 'react'
-import renderer from 'react-test-renderer'
+import { render as renderTree, act } from '@testing-library/react-native'
+import type { RenderResult } from '@testing-library/react-native'
 import * as RN from 'react-native'
 
 import NearTravelList from '@/components/travel/NearTravelList'
@@ -66,7 +67,7 @@ describe('NearTravelList web card width (#1544)', () => {
     RN.Platform.OS = originalPlatform
   })
 
-  it('passes the real column width (not the 720 viewport fallback) on desktop web', () => {
+  it('passes the real column width (not the 720 viewport fallback) on desktop web', async () => {
     jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({
       width: 1280,
       height: 900,
@@ -74,9 +75,9 @@ describe('NearTravelList web card width (#1544)', () => {
       fontScale: 1,
     } as any)
 
-    let tree!: ReturnType<typeof renderer.create>
-    renderer.act(() => {
-      tree = renderer.create(<NearTravelList travel={{ id: 1 }} embedded showHeader={false} />)
+    let tree!: RenderResult
+    await act(async () => {
+      tree = await renderTree(<NearTravelList travel={{ id: 1 }} embedded showHeader={false} />)
     })
 
     expect(mockTravelListItem).toHaveBeenCalled()
@@ -84,14 +85,14 @@ describe('NearTravelList web card width (#1544)', () => {
     expect(firstProps?.cardWidth).toBe(getTravelDetailsListColumnWidth(1280, 3))
     expect(firstProps?.cardWidth).toBeLessThanOrEqual(640)
     // #2367: «Рядом» — один горизонтальный ряд; вертикальной прокрутки внутри нет.
-    const scrolls = tree.root.findAllByType(RN.ScrollView)
+    const scrolls = tree.container.queryAll(node => node.type === 'RCTScrollView')
     expect(scrolls).toHaveLength(1)
     expect(scrolls[0].props.horizontal).toBe(true)
     // UnifiedTravelCard по умолчанию 'pan-y': в горизонтальном ряду свайп гасился бы.
     expect(firstProps?.webTouchAction).toBe('pan-x pan-y')
   })
 
-  it('phone web: cards sit in the horizontal rail and keep horizontal swipe (#2367)', () => {
+  it('phone web: cards sit in the horizontal rail and keep horizontal swipe (#2367)', async () => {
     jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({
       width: 390,
       height: 844,
@@ -99,12 +100,12 @@ describe('NearTravelList web card width (#1544)', () => {
       fontScale: 1,
     } as any)
 
-    let tree!: ReturnType<typeof renderer.create>
-    renderer.act(() => {
-      tree = renderer.create(<NearTravelList travel={{ id: 1 }} embedded showHeader={false} />)
+    let tree!: RenderResult
+    await act(async () => {
+      tree = await renderTree(<NearTravelList travel={{ id: 1 }} embedded showHeader={false} />)
     })
 
-    const scrolls = tree.root.findAllByType(RN.ScrollView)
+    const scrolls = tree.container.queryAll(node => node.type === 'RCTScrollView')
     expect(scrolls).toHaveLength(1)
     expect(scrolls[0].props.horizontal).toBe(true)
     expect(mockTravelTmlRound).toHaveBeenCalled()

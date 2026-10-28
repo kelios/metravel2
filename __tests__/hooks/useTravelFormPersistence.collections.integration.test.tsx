@@ -74,11 +74,11 @@ function createClient() {
 const wrapperFor = (client: QueryClient) => function Wrapper({ children }: React.PropsWithChildren) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
 };
-const mountProfile = (client: QueryClient, publicationStatus?: readonly string[], perPage = 20) => renderHook(
+const mountProfile = async (client: QueryClient, publicationStatus?: readonly string[], perPage = 20) => await renderHook(
   () => useMyTravels({ userId: '1', perPage, includeDrafts: true, publicationStatus }),
   { wrapper: wrapperFor(client) },
 );
-const mountList = (client: QueryClient, own = true) => renderHook(
+const mountList = async (client: QueryClient, own = true) => await renderHook(
   () => useListTravelData({ queryParams: own ? { user_id: '1' } : {}, search: '', isQueryEnabled: true }),
   { wrapper: wrapperFor(client) },
 );
@@ -100,7 +100,7 @@ function useEditor(client: QueryClient, initial: TravelFormData) {
   };
   return { formState, formDataRef, ...useTravelFormPersistence(params) };
 }
-const mountEditor = (client: QueryClient, initial = baseline()) => renderHook(
+const mountEditor = async (client: QueryClient, initial = baseline()) => await renderHook(
   () => useEditor(client, initial), { wrapper: wrapperFor(client) },
 );
 const cacheRows = (client: QueryClient, key: readonly unknown[]): Row[] => {
@@ -167,8 +167,8 @@ beforeEach(() => {
       changed_fields: Object.keys(fields), updated_at: '2026-10-23T03:00:00Z' }) as any;
   });
 });
-afterEach(() => {
-  cleanup();
+afterEach(async () => {
+  await cleanup();
   onlineManager.setOnline(true);
   for (const client of clients) client.clear();
   clients.clear();
@@ -182,17 +182,17 @@ describe('#2669 — confirmed mutation and warm author collections', () => {
   // fail on the original source's stale DTO, not on a missing new key factory.
   it('keeps manual navigation pending until warm own/profile collections hold the confirmed pending DTO', async () => {
     const client = createClient();
-    const own = mountList(client);
-    const profile = mountProfile(client);
+    const own = await mountList(client);
+    const profile = await mountProfile(client);
     await act(async () => { await profile.result.current.load(); });
     await waitFor(() => expect(own.result.current.data.find(t => t.id === 619)).toMatchObject(decision));
-    const editor = mountEditor(client);
-    act(() => editor.result.current.formState.updateField('name', 'Confirmed current route'));
+    const editor = await mountEditor(client);
+    await act(() => editor.result.current.formState.updateField('name', 'Confirmed current route'));
     const gate = deferred<void>();
     readGate = gate;
     let completed = false;
     let saving!: Promise<TravelFormData | void>;
-    act(() => {
+    await act(() => {
       saving = editor.result.current.handleManualSave(undefined, { intent: 'submit' });
       void saving.then(() => { completed = true; });
     });
@@ -229,28 +229,28 @@ describe('#2669 — confirmed mutation and warm author collections', () => {
 
   it('applies submit immediately, waits for real refresh, updates active/inactive slices and leaves unopened slices lazy', async () => {
     const client = createClient();
-    const own = mountList(client);
-    const publicList = mountList(client, false);
-    const all = mountProfile(client);
-    const drafts = mountProfile(client, draftStatuses);
-    const inactivePublished = mountProfile(client, publishedStatuses);
-    const unopened = mountProfile(client, publishedStatuses, 7);
+    const own = await mountList(client);
+    const publicList = await mountList(client, false);
+    const all = await mountProfile(client);
+    const drafts = await mountProfile(client, draftStatuses);
+    const inactivePublished = await mountProfile(client, publishedStatuses);
+    const unopened = await mountProfile(client, publishedStatuses, 7);
     await act(async () => { await Promise.all([all.result.current.load(), drafts.result.current.load(), inactivePublished.result.current.load()]); });
     await waitFor(() => expect(own.result.current.data).toHaveLength(2));
     await waitFor(() => expect(publicList.result.current.data).toHaveLength(1));
-    inactivePublished.unmount();
+    await inactivePublished.unmount();
     const initialLazyReads = profileRead.mock.calls.filter(([p]) => p.perPage === 7).length;
     expect(initialLazyReads).toBe(0);
     let counter = 2;
     await client.fetchQuery({ queryKey: queryKeys.myTravelsCount('1'), queryFn: async () => counter });
     await client.fetchQuery({ queryKey: queryKeys.exportMyTravelsCount('1'), queryFn: async () => counter });
-    const editor = mountEditor(client);
-    act(() => editor.result.current.formState.updateField('name', 'Corrected route'));
+    const editor = await mountEditor(client);
+    await act(() => editor.result.current.formState.updateField('name', 'Corrected route'));
     readGate = deferred<void>();
     counter = 3;
     let completed = false;
     let saving!: Promise<TravelFormData | void>;
-    act(() => {
+    await act(() => {
       saving = editor.result.current.handleManualSave(undefined, { intent: 'submit' });
       void saving.then(() => { completed = true; });
     });
@@ -289,11 +289,11 @@ describe('#2669 — confirmed mutation and warm author collections', () => {
       const initial = baseline(mode === 'create' ? { id: null } : mode === 'approve' || mode === 'reject' ? { publication_status: 'pending_review', ...cleared } : {});
       if (mode === 'approve' || mode === 'reject') rows[0] = asRow(initial);
       const client = createClient();
-      const own = mountList(client);
-      const profile = mountProfile(client);
+      const own = await mountList(client);
+      const profile = await mountProfile(client);
       await act(async () => { await profile.result.current.load(); });
       await waitFor(() => expect(own.result.current.data).toHaveLength(2));
-      const editor = mountEditor(client, initial);
+      const editor = await mountEditor(client, initial);
       const expectedNewSlug = mode === 'content PATCH' ? 'renamed-route-619'
         : mode === 'structural autosave' ? 'original-route-619' : 'current-server-title-619';
       if (mode !== 'create') {
@@ -301,7 +301,7 @@ describe('#2669 — confirmed mutation and warm author collections', () => {
           await client.fetchQuery({ queryKey: key, queryFn: async () => clone(initial) });
         }
       }
-      act(() => {
+      await act(() => {
         if (mode === 'structural autosave') editor.result.current.formState.updateField('categories', [1, 2]);
         else editor.result.current.formState.updateField('name', 'Current server title');
       });
@@ -332,13 +332,13 @@ describe('#2669 — confirmed mutation and warm author collections', () => {
 
   it.each(['full', 'content', 'submit'] as const)('keeps cache/history/counts after %s 503, then refreshes on one retry', async mode => {
     const client = createClient();
-    const own = mountList(client);
-    const profile = mountProfile(client);
+    const own = await mountList(client);
+    const profile = await mountProfile(client);
     await act(async () => { await profile.result.current.load(); });
     await waitFor(() => expect(own.result.current.data).toHaveLength(2));
     const initialCache = clone(own.result.current.data);
-    const editor = mountEditor(client);
-    act(() => editor.result.current.formState.updateField('name', 'Retained edit'));
+    const editor = await mountEditor(client);
+    await act(() => editor.result.current.formState.updateField('name', 'Retained edit'));
     const error = Object.assign(new Error('Intentional write 503'), { status: 503 });
     const write = mode === 'content' ? contentSave : fullSave;
     write.mockRejectedValueOnce(error);
@@ -364,11 +364,11 @@ describe('#2669 — confirmed mutation and warm author collections', () => {
 
   it('a confirmed PUT stays saved when collection GET fails; honest retry never resends PUT', async () => {
     const client = createClient();
-    const own = mountList(client);
-    const profile = mountProfile(client);
+    const own = await mountList(client);
+    const profile = await mountProfile(client);
     await act(async () => { await profile.result.current.load(); });
     await waitFor(() => expect(own.result.current.data).toHaveLength(2));
-    const editor = mountEditor(client);
+    const editor = await mountEditor(client);
     readError = new Error('Intentional collection 503');
     await act(async () => { await expect(editor.result.current.handleManualSave(undefined, { intent: 'submit' })).resolves.toMatchObject({ publication_status: 'pending_review', ...cleared }); });
     await waitFor(() => expect(own.result.current.isError).toBe(true));
@@ -387,11 +387,11 @@ describe('#2669 — confirmed mutation and warm author collections', () => {
 
   it('paused invalidated collections cannot present old rejected feedback as a current success', async () => {
     const client = createClient();
-    const own = mountList(client);
-    const profile = mountProfile(client);
+    const own = await mountList(client);
+    const profile = await mountProfile(client);
     await act(async () => { await profile.result.current.load(); });
     await waitFor(() => expect(own.result.current.data).toHaveLength(2));
-    const editor = mountEditor(client);
+    const editor = await mountEditor(client);
     onlineManager.setOnline(false);
     await act(async () => { await editor.result.current.handleManualSave(undefined, { intent: 'submit' }); });
     expect(editor.result.current.formDataRef.current).toMatchObject({ publication_status: 'pending_review', ...cleared });
@@ -399,7 +399,7 @@ describe('#2669 — confirmed mutation and warm author collections', () => {
     await waitFor(() => expect(profile.result.current.error).not.toBeNull());
     expect(profile.result.current.myTravels).toEqual([]);
     expect(profile.result.current.publicationCounts).toBeNull();
-    act(() => onlineManager.setOnline(true));
+    await act(() => onlineManager.setOnline(true));
     await waitFor(() => expect(own.result.current.isError).toBe(false));
     await waitFor(() => expect(own.result.current.data.find(t => t.id === 619)).toMatchObject({ publication_status: 'pending_review', ...cleared }));
     await waitFor(() => expect(profile.result.current.error).toBeNull());

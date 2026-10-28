@@ -1,6 +1,6 @@
 import React from 'react'
 import { StyleSheet, useWindowDimensions } from 'react-native'
-import { fireEvent, render, type RenderAPI } from '@testing-library/react-native'
+import { fireEvent, render, type RenderResult } from '@testing-library/react-native'
 
 import {
   resolveRoutePickerMapHeight,
@@ -36,8 +36,8 @@ describe('NativeRoutePickerMap', () => {
     mockInjectJavaScript.mockClear()
   })
 
-  const renderMap = (ref?: React.Ref<NativeRoutePickerMapHandle>) =>
-    render(
+  const renderMap = async (ref?: React.Ref<NativeRoutePickerMapHandle>) =>
+    await render(
       <NativeRoutePickerMap
         ref={ref}
         markers={[]}
@@ -49,13 +49,13 @@ describe('NativeRoutePickerMap', () => {
 
   // Карта считается готовой не по монтированию, а по MAP_READY из WebView:
   // только к этому моменту в документе определён `__mtRouteAddCenterPoint`.
-  const reportMapReady = (screen: RenderAPI) =>
+  const reportMapReady = async (screen: RenderResult) =>
     fireEvent(screen.getByTestId('travel-wizard.step-route.native-map'), 'message', {
       nativeEvent: { data: JSON.stringify({ type: 'MAP_READY' }) },
     })
 
-  it('stacks the hint above a full-width primary add action on narrow native screens', () => {
-    const screen = renderMap()
+  it('stacks the hint above a full-width primary add action on narrow native screens', async () => {
+    const screen = await renderMap()
 
     expect(StyleSheet.flatten(screen.getByTestId('travel-wizard.step-route.native-map-controls').props.style))
       .toEqual(expect.objectContaining({
@@ -80,8 +80,8 @@ describe('NativeRoutePickerMap', () => {
   // `forwardRef(...)` и в список не попал. Тач-таргет 44dp здесь больше нечем
   // держать, кроме этой проверки: `style` потребителя применяется ПОСЛЕ
   // `sizeStyles`, поэтому любая будущая правка раскладки может ужать высоту.
-  it('keeps both row actions at the minimum touch target after moving to the shared Button', () => {
-    const screen = renderMap()
+  it('keeps both row actions at the minimum touch target after moving to the shared Button', async () => {
+    const screen = await renderMap()
 
     const resolveStyle = (testID: string) => {
       const node = screen.getByTestId(testID)
@@ -102,8 +102,8 @@ describe('NativeRoutePickerMap', () => {
   // Главная регрессия #1722: подсказка и действия были ПОДВАЛОМ под полотном в
   // 380 пт, поэтому на 375×812 в видимую полосу шага не попадал ни один способ
   // добавить точку — тестировщик видел только карту. Порядок узлов и есть фикс.
-  it('renders the controls before the map canvas so both fit one screen', () => {
-    const screen = renderMap()
+  it('renders the controls before the map canvas so both fit one screen', async () => {
+    const screen = await renderMap()
 
     const rendered = JSON.stringify(screen.toJSON())
     const controlsIndex = rendered.indexOf('travel-wizard.step-route.native-map-controls')
@@ -114,11 +114,11 @@ describe('NativeRoutePickerMap', () => {
     expect(controlsIndex).toBeLessThan(canvasIndex)
   })
 
-  it('adds a point at the map centre through the existing POINT_ADD bridge', () => {
-    const screen = renderMap()
-    reportMapReady(screen)
+  it('adds a point at the map centre through the existing POINT_ADD bridge', async () => {
+    const screen = await renderMap()
+    await reportMapReady(screen)
 
-    fireEvent.press(screen.getByTestId('travel-wizard.step-route.add-point'))
+    await fireEvent.press(screen.getByTestId('travel-wizard.step-route.add-point'))
 
     expect(mockInjectJavaScript).toHaveBeenCalledWith('window.__mtRouteAddCenterPoint();true;')
   })
@@ -126,24 +126,24 @@ describe('NativeRoutePickerMap', () => {
   // Пока MAP_READY не пришёл, моста в документе ещё нет: инъекция упала бы
   // внутри WebView молча, и кнопка «сработала» бы вхолостую — ровно то «нажал
   // и ничего не произошло», из-за которого заведена задача.
-  it('keeps the add action inert and visibly disabled until the map reports ready', () => {
-    const screen = renderMap()
+  it('keeps the add action inert and visibly disabled until the map reports ready', async () => {
+    const screen = await renderMap()
 
     const addButton = screen.getByTestId('travel-wizard.step-route.add-point')
     expect(addButton.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }))
 
-    fireEvent.press(addButton)
+    await fireEvent.press(addButton)
     expect(mockInjectJavaScript).not.toHaveBeenCalled()
 
-    reportMapReady(screen)
+    await reportMapReady(screen)
 
     expect(screen.getByTestId('travel-wizard.step-route.add-point').props.accessibilityState)
       .toEqual(expect.objectContaining({ disabled: false }))
   })
 
-  it('does not fire the bridge from the point list before the map is ready', () => {
+  it('does not fire the bridge from the point list before the map is ready', async () => {
     const ref = React.createRef<NativeRoutePickerMapHandle>()
-    renderMap(ref)
+    await renderMap(ref)
 
     ref.current?.addPointAtCenter()
 
@@ -152,10 +152,10 @@ describe('NativeRoutePickerMap', () => {
 
   // Тот же путь отдан наружу: у списка точек под картой своя кнопка, и она
   // обязана вести не в копию логики, а ровно сюда.
-  it('exposes addPointAtCenter to the point list below the map', () => {
+  it('exposes addPointAtCenter to the point list below the map', async () => {
     const ref = React.createRef<NativeRoutePickerMapHandle>()
-    const screen = renderMap(ref)
-    reportMapReady(screen)
+    const screen = await renderMap(ref)
+    await reportMapReady(screen)
 
     ref.current?.addPointAtCenter()
 
@@ -165,15 +165,15 @@ describe('NativeRoutePickerMap', () => {
   // Высоту окна в jsdom задаёт среда, а не мы, поэтому сверяем не с числом, а с
   // тем, что даёт формула на фактическом окне: проверяется именно связь полотна
   // с окном. Сами числа формулы закреплены отдельным блоком ниже.
-  it('sizes the canvas from the window instead of a fixed 380pt', () => {
+  it('sizes the canvas from the window instead of a fixed 380pt', async () => {
     let observedWindowHeight = 0
     function WindowProbe() {
       observedWindowHeight = useWindowDimensions().height
       return null
     }
-    render(<WindowProbe />)
+    await render(<WindowProbe />)
 
-    const screen = renderMap()
+    const screen = await renderMap()
     const canvas = screen.getByTestId('travel-wizard.step-route.native-map-canvas')
 
     expect(observedWindowHeight).toBeGreaterThan(0)

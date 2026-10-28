@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native'
 import RouteElevationProfile from '@/components/travel/details/sections/RouteElevationProfile'
 
 describe('RouteElevationProfile', () => {
-  it('renders richer route metrics and key point cards', () => {
+  it('renders richer route metrics and key point cards', async () => {
     const preview = {
       linePoints: [
         { coord: '53.9,27.56', elevation: 905 },
@@ -17,7 +17,7 @@ describe('RouteElevationProfile', () => {
       ],
     } as any
 
-    render(
+    await render(
       <RouteElevationProfile
         title="Профиль высот: Маршрут"
         preview={preview}
@@ -36,7 +36,7 @@ describe('RouteElevationProfile', () => {
     expect(screen.getByText('Набор')).toBeTruthy()
     expect(screen.getByText('Сброс')).toBeTruthy()
     expect(screen.getByText('Перепад')).toBeTruthy()
-    fireEvent(screen.getByTestId('route-elevation-profile'), 'layout', {
+    await fireEvent(screen.getByTestId('route-elevation-profile'), 'layout', {
       nativeEvent: { layout: { width: 360, height: 240 } },
     })
 

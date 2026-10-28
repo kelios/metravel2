@@ -19,21 +19,21 @@ const makeRank = (overrides: Partial<UserRank> = {}): UserRank => ({
 })
 
 describe('RankProgressCard', () => {
-  it('keeps the overview rank card visible while rank is loading', () => {
+  it('keeps the overview rank card visible while rank is loading', async () => {
     const onPress = jest.fn()
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <RankProgressCard rank={undefined} onPress={onPress} />,
     )
 
-    fireEvent.press(getByTestId('rank-progress-card'))
+    await fireEvent.press(getByTestId('rank-progress-card'))
 
     expect(getByTestId('rank-progress-card-loading')).toBeTruthy()
     expect(getByText('Загружаем уровень, очки опыта и значки.')).toBeTruthy()
     expect(onPress).toHaveBeenCalledTimes(1)
   })
 
-  it('renders loaded rank details', () => {
-    const { getByTestId, getByText, queryByTestId } = render(
+  it('renders loaded rank details', async () => {
+    const { getByTestId, getByText, queryByTestId } = await render(
       <RankProgressCard rank={makeRank()} />,
     )
 

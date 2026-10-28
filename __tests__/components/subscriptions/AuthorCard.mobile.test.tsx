@@ -51,8 +51,8 @@ describe('AuthorCard mobile layout', () => {
     mockTabTravelCard.mockClear();
   });
 
-  it('renders compact horizontal rail cards for mobile subscriptions', () => {
-    const { getByLabelText, getByTestId } = render(
+  it('renders compact horizontal rail cards for mobile subscriptions', async () => {
+    const { getByLabelText, getByTestId } = await render(
       <AuthorCard
         author={author}
         onUnsubscribe={jest.fn()}
@@ -77,8 +77,8 @@ describe('AuthorCard mobile layout', () => {
     );
   });
 
-  it('uses locale plural rules for counts ending in one', () => {
-    const { getByText } = render(
+  it('uses locale plural rules for counts ending in one', async () => {
+    const { getByText } = await render(
       <AuthorCard
         author={{ ...author, travelsTotal: 21, travels: [] }}
         onUnsubscribe={jest.fn()}

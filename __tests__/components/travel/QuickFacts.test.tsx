@@ -20,15 +20,15 @@ const baseTravel: any = {
 }
 
 describe('QuickFacts', () => {
-  it('returns null when there is no data to show', () => {
-    const { queryByLabelText } = render(<QuickFacts travel={{} as any} />)
+  it('returns null when there is no data to show', async () => {
+    const { queryByLabelText } = await render(<QuickFacts travel={{} as any} />)
     expect(queryByLabelText('Ключевая информация о путешествии')).toBeNull()
   })
 
-  it('does not log RN Web Unexpected text node error', () => {
+  it('does not log RN Web Unexpected text node error', async () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
 
-    render(<QuickFacts travel={baseTravel} />)
+    await render(<QuickFacts travel={baseTravel} />)
 
     const calls = spy.mock.calls.map((args) => String(args[0] ?? ''))
     const hasUnexpectedTextNode = calls.some((msg) => msg.includes('Unexpected text node'))
@@ -37,8 +37,8 @@ describe('QuickFacts', () => {
     expect(hasUnexpectedTextNode).toBe(false)
   })
 
-  it('renders basic facts (date, days, country)', () => {
-    const { getByText, getByLabelText } = render(<QuickFacts travel={baseTravel} />)
+  it('renders basic facts (date, days, country)', async () => {
+    const { getByText, getByLabelText } = await render(<QuickFacts travel={baseTravel} />)
 
     // контейнер
     expect(getByLabelText('Ключевая информация о путешествии')).toBeTruthy()
@@ -51,15 +51,15 @@ describe('QuickFacts', () => {
     expect(getByText('Польша')).toBeTruthy()
   })
 
-  it('agrees the day noun with the number by the language rule (#2238)', () => {
+  it('agrees the day noun with the number by the language rule (#2238)', async () => {
     for (const [days, text] of [[1, '1 день'], [2, '2 дня'], [21, '21 день'], [22, '22 дня'], [11, '11 дней']] as const) {
-      const { getByText, unmount } = render(<QuickFacts travel={{ ...baseTravel, number_days: days } as any} />)
+      const { getByText, unmount } = await render(<QuickFacts travel={{ ...baseTravel, number_days: days } as any} />)
       expect(getByText(text)).toBeTruthy()
-      unmount()
+      await unmount()
     }
   })
 
-  it('normalizes categoryName from string and object and splits by comma', () => {
+  it('normalizes categoryName from string and object and splits by comma', async () => {
     const travelWithCategories: any = {
       ...baseTravel,
       travelAddress: [
@@ -69,7 +69,7 @@ describe('QuickFacts', () => {
     }
 
     const onCategoryPress = jest.fn()
-    const { getByText } = render(
+    const { getByText } = await render(
       <QuickFacts travel={travelWithCategories} onCategoryPress={onCategoryPress} />,
     )
 
@@ -85,21 +85,21 @@ describe('QuickFacts', () => {
     expect(sea).toBeTruthy()
 
     // Проверяем, что onCategoryPress вызывается по нажатию
-    fireEvent.press(city)
+    await fireEvent.press(city)
     expect(onCategoryPress).toHaveBeenCalledWith('Город')
   })
 
-  it('does not treat categories as buttons when onCategoryPress is not provided', () => {
+  it('does not treat categories as buttons when onCategoryPress is not provided', async () => {
     const travelWithCategories: any = {
       ...baseTravel,
       travelAddress: [{ categoryName: 'Город' }],
     }
 
-    const { getByText } = render(<QuickFacts travel={travelWithCategories} />)
+    const { getByText } = await render(<QuickFacts travel={travelWithCategories} />)
 
     const city = getByText('Город')
     // Нажатие не должно падать и не должно быть обработчика
-    fireEvent.press(city)
+    await fireEvent.press(city)
     expect(city).toBeTruthy()
   })
 })

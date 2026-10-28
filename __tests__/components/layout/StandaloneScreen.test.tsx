@@ -45,8 +45,8 @@ const safeAreaEdges = () => screen.getAllByTestId('safe-area').map((node) => nod
 
 // #2272 / MOBILE-INSETS-001: экран вне оболочки шапки начинается ниже статус-бара.
 describe('StandaloneScreen — верхний край экранов вне оболочки шапки', () => {
-  it('всегда держит верхний край безопасной зоны', () => {
-    render(
+  it('всегда держит верхний край безопасной зоны', async () => {
+    await render(
       <StandaloneScreen testID="standalone">
         <Text>тело</Text>
       </StandaloneScreen>,
@@ -59,19 +59,19 @@ describe('StandaloneScreen — верхний край экранов вне о�
     ['Журнал безопасности', SecurityJournalScreen],
     ['Приватность', PrivacySettingsScreen],
     ['Чёрный список', BlockedUsersScreen],
-  ])('«%s»: гостевая и основная ветки лежат в контейнере с верхним краем', (_name, Screen) => {
+  ])('«%s»: гостевая и основная ветки лежат в контейнере с верхним краем', async (_name, Screen) => {
     useAuth.mockReturnValue({ isAuthenticated: false, authReady: true, userId: null })
-    const guest = render(<Screen />)
+    const guest = await render(<Screen />)
     expect(safeAreaEdges()).toEqual([['top', 'left', 'right', 'bottom']])
-    guest.unmount()
+    await guest.unmount()
 
     useAuth.mockReturnValue({ isAuthenticated: true, authReady: true, userId: '1' })
-    render(<Screen />)
+    await render(<Screen />)
     expect(safeAreaEdges()).toEqual([['top', 'left', 'right', 'bottom']])
   })
 
-  it('экран ошибки без шапки тоже лежит в контейнере', () => {
-    render(<ErrorScreen error={new Error('boom')} retry={jest.fn()} />)
+  it('экран ошибки без шапки тоже лежит в контейнере', async () => {
+    await render(<ErrorScreen error={new Error('boom')} retry={jest.fn()} />)
     expect(safeAreaEdges()).toEqual([['top', 'left', 'right', 'bottom']])
   })
 })

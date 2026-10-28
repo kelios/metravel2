@@ -18,8 +18,8 @@ jest.mock('@/components/ui/UnifiedTravelCard', () => ({
   },
 }));
 
-const renderCard = (views: number) =>
-  render(
+const renderCard = async (views: number) =>
+  await render(
     <TabTravelCard
       item={{ id: '940', title: 'Глубокие и чистые озёра', imageUrl: null, views } as any}
       testID="card"
@@ -29,12 +29,12 @@ const renderCard = (views: number) =>
 // #2780: the recommendation shelves (hits of the week, recommendations,
 // favourites) share the public view-count threshold with catalog cards.
 describe('TabTravelCard view count', () => {
-  it('hides a small view count from readers', () => {
-    expect(renderCard(8).queryByTestId('card-views')).toBeNull();
+  it('hides a small view count from readers', async () => {
+    expect(await (await renderCard(8)).queryByTestId('card-views')).toBeNull();
   });
 
-  it('shows the view count from the public threshold', () => {
-    expect(renderCard(MIN_PUBLIC_VIEW_COUNT).getByTestId('card-views')).toBeTruthy();
+  it('shows the view count from the public threshold', async () => {
+    expect(await (await renderCard(MIN_PUBLIC_VIEW_COUNT)).getByTestId('card-views')).toBeTruthy();
   });
 
   it('keeps small counts visible to the owner through the shared rule', () => {

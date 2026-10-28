@@ -47,7 +47,7 @@ const mockTravel = {
   created_at: '2024-01-01T00:00:00Z',
 };
 
-const renderWithProviders = (component: React.ReactElement) => {
+const renderWithProviders = async (component: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -55,7 +55,7 @@ const renderWithProviders = (component: React.ReactElement) => {
     },
   });
 
-  return render(
+  return await render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         {component}
@@ -72,8 +72,8 @@ describe('RenderTravelItem Component', () => {
     jest.clearAllMocks();
   });
 
-  it('renders travel item correctly', () => {
-    renderWithProviders(
+  it('renders travel item correctly', async () => {
+    await renderWithProviders(
       <RenderTravelItem
         item={mockTravel}
         index={0}
@@ -93,8 +93,8 @@ describe('RenderTravelItem Component', () => {
     expect(screen.getByTestId('travel-card-test-travel')).toBeTruthy();
   });
 
-  it('renders mobile version correctly', () => {
-    renderWithProviders(
+  it('renders mobile version correctly', async () => {
+    await renderWithProviders(
       <RenderTravelItem
         item={mockTravel}
         index={0}
@@ -114,8 +114,8 @@ describe('RenderTravelItem Component', () => {
     expect(screen.getByTestId('travel-card-test-travel')).toBeTruthy();
   });
 
-  it('shows delete button for superuser', () => {
-    renderWithProviders(
+  it('shows delete button for superuser', async () => {
+    await renderWithProviders(
       <RenderTravelItem
         item={mockTravel}
         index={0}
@@ -135,8 +135,8 @@ describe('RenderTravelItem Component', () => {
     expect(deleteButton).toBeTruthy();
   });
 
-  it('calls onDeletePress when delete button is pressed', () => {
-    renderWithProviders(
+  it('calls onDeletePress when delete button is pressed', async () => {
+    await renderWithProviders(
       <RenderTravelItem
         item={mockTravel}
         index={0}
@@ -152,13 +152,13 @@ describe('RenderTravelItem Component', () => {
     );
 
     const deleteButton = screen.getByTestId('delete-button');
-    fireEvent.press(deleteButton);
+    await fireEvent.press(deleteButton);
 
     expect(mockOnDeletePress).toHaveBeenCalledWith(mockTravel.id);
   });
 
-  it('shows selection checkbox when selectable is true', () => {
-    renderWithProviders(
+  it('shows selection checkbox when selectable is true', async () => {
+    await renderWithProviders(
       <RenderTravelItem
         item={mockTravel}
         index={0}
@@ -177,8 +177,8 @@ describe('RenderTravelItem Component', () => {
     expect(checkbox).toBeTruthy();
   });
 
-  it('calls onToggle when selection checkbox is pressed', () => {
-    const { getByTestId } = renderWithProviders(
+  it('calls onToggle when selection checkbox is pressed', async () => {
+    const { getByTestId } = await renderWithProviders(
       <RenderTravelItem
         item={mockTravel}
         index={0}
@@ -194,7 +194,7 @@ describe('RenderTravelItem Component', () => {
     );
 
     const checkbox = getByTestId('selection-checkbox');
-    fireEvent.press(checkbox);
+    await fireEvent.press(checkbox);
 
     expect(mockOnToggle).toHaveBeenCalled();
   });
@@ -205,12 +205,12 @@ describe('real author-card moderation controls', () => {
     moderation_decision: 'rejected' as const, moderation_decision_reason: 'Добавьте сведения о маршруте' };
   beforeEach(() => jest.clearAllMocks());
 
-  it('shows the rejection without a duplicate draft badge and correction opens the existing editor', () => {
-    const screen = renderWithProviders(<RenderTravelItem item={rejectedTravel} currentUserId="1" showAuthorModerationFeedback />);
+  it('shows the rejection without a duplicate draft badge and correction opens the existing editor', async () => {
+    const screen = await renderWithProviders(<RenderTravelItem item={rejectedTravel} currentUserId="1" showAuthorModerationFeedback />);
     expect(screen.getByTestId('publication-status-icon').props.accessibilityLabel).toBe('Отклонено');
     expect(screen.queryByText('Отклонено')).toBeNull();
     expect(screen.queryByTestId('draft-status-badge')).toBeNull();
-    fireEvent.press(screen.getByTestId('moderation-correct-button'));
+    await fireEvent.press(screen.getByTestId('moderation-correct-button'));
     expect(mockRouterPush).toHaveBeenCalledTimes(1);
     expect(mockRouterPush).toHaveBeenCalledWith('/travel/1');
   });
@@ -219,8 +219,8 @@ describe('real author-card moderation controls', () => {
     { currentUserId: '1', showAuthorModerationFeedback: false },
     { currentUserId: '2', showAuthorModerationFeedback: true },
     { currentUserId: '2', showAuthorModerationFeedback: true, isSuperuser: true },
-  ])('does not render a cached private reason for %p', (context) => {
-    const screen = renderWithProviders(<RenderTravelItem item={rejectedTravel} {...context} />);
+  ])('does not render a cached private reason for %p', async (context) => {
+    const screen = await renderWithProviders(<RenderTravelItem item={rejectedTravel} {...context} />);
     expect(screen.queryByText('Отклонено')).toBeNull();
     expect(screen.queryByText(rejectedTravel.moderation_decision_reason)).toBeNull();
     expect(screen.queryByTestId('moderation-correct-button')).toBeNull();

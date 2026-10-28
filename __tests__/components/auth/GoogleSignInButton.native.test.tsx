@@ -72,10 +72,10 @@ describe('GoogleSignInButton native config', () => {
         resetGoogleEnv();
     });
 
-    it('does not reuse the web client id as the Android client id', () => {
+    it('does not reuse the web client id as the Android client id', async () => {
         process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID = WEB_CLIENT_ID;
 
-        const { getByLabelText, getByText } = render(
+        const { getByLabelText, getByText } = await render(
             <GoogleSignInButton onSuccess={jest.fn()} onError={jest.fn()} />
         );
 
@@ -84,10 +84,10 @@ describe('GoogleSignInButton native config', () => {
         expect(googleSigninMock.configure).not.toHaveBeenCalled();
     });
 
-    it('does not start native Google Sign-In without the web client id needed for id_token', () => {
+    it('does not start native Google Sign-In without the web client id needed for id_token', async () => {
         process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID = ANDROID_CLIENT_ID;
 
-        const { getByText } = render(
+        const { getByText } = await render(
             <GoogleSignInButton onSuccess={jest.fn()} onError={jest.fn()} />
         );
 
@@ -99,7 +99,7 @@ describe('GoogleSignInButton native config', () => {
         process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID = WEB_CLIENT_ID;
         process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID = ANDROID_CLIENT_ID;
 
-        const { getByText } = render(<GoogleSignInButton onSuccess={jest.fn()} onError={jest.fn()} />);
+        const { getByText } = await render(<GoogleSignInButton onSuccess={jest.fn()} onError={jest.fn()} />);
 
         expect(getByText('Войти через Google')).toBeTruthy();
         await waitFor(() => expect(googleSigninMock.configure).toHaveBeenCalledTimes(1));
@@ -115,19 +115,19 @@ describe('GoogleSignInButton native config', () => {
         process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID = ANDROID_CLIENT_ID;
         const onSuccess = jest.fn();
 
-        const { getByText } = render(<GoogleSignInButton onSuccess={onSuccess} onError={jest.fn()} />);
-        fireEvent.press(getByText('Войти через Google'));
+        const { getByText } = await render(<GoogleSignInButton onSuccess={onSuccess} onError={jest.fn()} />);
+        await fireEvent.press(getByText('Войти через Google'));
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalledWith(mockGoogleIdToken));
         expect(googleSigninMock.hasPlayServices).toHaveBeenCalledWith({ showPlayServicesUpdateDialog: true });
         expect(googleSigninMock.signIn).toHaveBeenCalledTimes(1);
     });
 
-    it('does not reuse the web client id as the iOS client id', () => {
+    it('does not reuse the web client id as the iOS client id', async () => {
         (Platform.OS as any) = 'ios';
         process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID = WEB_CLIENT_ID;
 
-        render(<GoogleSignInButton onSuccess={jest.fn()} onError={jest.fn()} />);
+        await render(<GoogleSignInButton onSuccess={jest.fn()} onError={jest.fn()} />);
 
         expect(googleSigninMock.configure).not.toHaveBeenCalled();
     });
@@ -137,7 +137,7 @@ describe('GoogleSignInButton native config', () => {
         process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID = WEB_CLIENT_ID;
         process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID = IOS_CLIENT_ID;
 
-        render(<GoogleSignInButton onSuccess={jest.fn()} onError={jest.fn()} />);
+        await render(<GoogleSignInButton onSuccess={jest.fn()} onError={jest.fn()} />);
 
         await waitFor(() => expect(googleSigninMock.configure).toHaveBeenCalledTimes(1));
         expect(googleSigninMock.configure).toHaveBeenCalledWith({

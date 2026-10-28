@@ -45,7 +45,7 @@ const baseStep = {
 // (перемонтирование), передают `questNumericId` явно.
 let questIdSeq = 1000
 
-const renderCard = (overrides: Record<string, unknown> = {}) => {
+const renderCard = async (overrides: Record<string, unknown> = {}) => {
   const props = {
     colors,
     styles,
@@ -68,16 +68,16 @@ const renderCard = (overrides: Record<string, unknown> = {}) => {
     ...overrides,
   } as any
 
-  return { ...render(<QuestStepCard {...props} />), props }
+  return { ...await render(<QuestStepCard {...props} />), props }
 }
 
-const submitAnswer = (screen: ReturnType<typeof render>, answer: string) => {
-  fireEvent.changeText(screen.getByPlaceholderText(/Ваш ответ/), answer)
-  fireEvent.press(screen.getByTestId('quest-step-check'))
+const submitAnswer = async (screen: Awaited<ReturnType<typeof render>>, answer: string) => {
+  await fireEvent.changeText(screen.getByPlaceholderText(/Ваш ответ/), answer)
+  await fireEvent.press(screen.getByTestId('quest-step-check'))
 }
 
 afterEach(async () => {
-  cleanup()
+  await cleanup()
   await i18n.changeLanguage('ru')
 })
 
@@ -102,49 +102,49 @@ describe('#1428 — пауза между неверными попытками'
 
   it.each(bruteForceableCases)(
     'после неверного ответа на шаге %s кнопка проверки уходит на паузу',
-    (answerType, answerValue, wrongAnswer) => {
-      const screen = renderCard({
+    async (answerType, answerValue, wrongAnswer) => {
+      const screen = await renderCard({
         step: { ...baseStep, answer: buildAnswerChecker(answerType, answerValue) },
       })
 
-      submitAnswer(screen, wrongAnswer)
+      await submitAnswer(screen, wrongAnswer)
 
       expect(screen.getByTestId('quest-step-cooldown-note')).toBeTruthy()
       expect(screen.getByTestId('quest-step-check').props.accessibilityState.disabled).toBe(true)
     },
   )
 
-  it('вторая попытка не отправляется, пока пауза не истекла', () => {
-    const screen = renderCard()
+  it('вторая попытка не отправляется, пока пауза не истекла', async () => {
+    const screen = await renderCard()
     const { props } = screen
 
-    submitAnswer(screen, '9')
+    await submitAnswer(screen, '9')
     expect(props.onWrongAttempt).toHaveBeenCalledTimes(1)
 
     // Игрок пытается продолжить перебор сразу же — и кнопкой, и с клавиатуры.
-    fireEvent.press(screen.getByTestId('quest-step-check'))
-    fireEvent(screen.getByPlaceholderText(/Ваш ответ/), 'submitEditing')
+    await fireEvent.press(screen.getByTestId('quest-step-check'))
+    await fireEvent(screen.getByPlaceholderText(/Ваш ответ/), 'submitEditing')
     expect(props.onWrongAttempt).toHaveBeenCalledTimes(1)
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(3000)
     })
 
     expect(screen.queryByTestId('quest-step-cooldown-note')).toBeNull()
-    fireEvent.press(screen.getByTestId('quest-step-check'))
+    await fireEvent.press(screen.getByTestId('quest-step-check'))
     expect(props.onWrongAttempt).toHaveBeenCalledTimes(2)
   })
 
-  it('верный ответ с первой попытки уходит без паузы', () => {
-    const screen = renderCard()
+  it('верный ответ с первой попытки уходит без паузы', async () => {
+    const screen = await renderCard()
 
-    submitAnswer(screen, '3')
+    await submitAnswer(screen, '3')
 
     expect(screen.queryByTestId('quest-step-cooldown-note')).toBeNull()
     expect(screen.props.onWrongAttempt).not.toHaveBeenCalled()
   })
 
-  it('пауза переживает уход на соседний шаг и возврат — обхода в два тапа нет', () => {
+  it('пауза переживает уход на соседний шаг и возврат — обхода в два тапа нет', async () => {
     // Полоса шагов на том же экране пускает на любой открытый шаг, а карточка
     // при этом перемонтируется: раньше дедлайн жил только в её стейте.
     const remountStep = {
@@ -152,20 +152,20 @@ describe('#1428 — пауза между неверными попытками'
       id: 'step-remount',
       answer: buildAnswerChecker('range', '{"min":2,"max":5}'),
     }
-    const first = renderCard({ questNumericId: 777, step: remountStep })
-    submitAnswer(first, '9')
+    const first = await renderCard({ questNumericId: 777, step: remountStep })
+    await submitAnswer(first, '9')
     expect(first.getByTestId('quest-step-cooldown-note')).toBeTruthy()
 
-    first.unmount()
-    const returned = renderCard({ questNumericId: 777, step: remountStep })
+    await first.unmount()
+    const returned = await renderCard({ questNumericId: 777, step: remountStep })
 
     expect(returned.getByTestId('quest-step-cooldown-note')).toBeTruthy()
-    fireEvent.changeText(returned.getByPlaceholderText(/Ваш ответ/), '8')
-    fireEvent.press(returned.getByTestId('quest-step-check'))
+    await fireEvent.changeText(returned.getByPlaceholderText(/Ваш ответ/), '8')
+    await fireEvent.press(returned.getByTestId('quest-step-check'))
     expect(returned.props.onWrongAttempt).not.toHaveBeenCalled()
   })
 
-  it('сброс прогресса уносит и паузу: переигровка начинается с первой ступени', () => {
+  it('сброс прогресса уносит и паузу: переигровка начинается с первой ступени', async () => {
     // Лестница 3 → 5 → 8 с считается по неверным попыткам, и без сброса
     // переигровка в той же вкладке встречала бы игрока унаследованной ступенью.
     const replayStep = {
@@ -173,29 +173,29 @@ describe('#1428 — пауза между неверными попытками'
       id: 'step-replay',
       answer: buildAnswerChecker('range', '{"min":2,"max":5}'),
     }
-    const before = renderCard({ questNumericId: 555, step: replayStep })
-    submitAnswer(before, '9')
+    const before = await renderCard({ questNumericId: 555, step: replayStep })
+    await submitAnswer(before, '9')
     expect(before.getByTestId('quest-step-cooldown-note')).toBeTruthy()
-    before.unmount()
+    await before.unmount()
 
     clearQuestCooldowns(555)
-    const replay = renderCard({ questNumericId: 555, step: replayStep })
+    const replay = await renderCard({ questNumericId: 555, step: replayStep })
 
     expect(replay.queryByTestId('quest-step-cooldown-note')).toBeNull()
   })
 
-  it('шаг с ответом «любое число» паузы не получает: подбирать там нечего', () => {
-    const screen = renderCard({
+  it('шаг с ответом «любое число» паузы не получает: подбирать там нечего', async () => {
+    const screen = await renderCard({
       step: { ...baseStep, id: 'step-any-number', answer: buildAnswerChecker('any_number', '') },
     })
 
-    submitAnswer(screen, 'три')
+    await submitAnswer(screen, 'три')
 
     expect(screen.queryByTestId('quest-step-cooldown-note')).toBeNull()
   })
 
-  it('свободный ответ паузу не получает: подбирать там нечего', () => {
-    const screen = renderCard({
+  it('свободный ответ паузу не получает: подбирать там нечего', async () => {
+    const screen = await renderCard({
       step: {
         ...baseStep,
         inputType: 'text' as const,
@@ -203,42 +203,42 @@ describe('#1428 — пауза между неверными попытками'
       },
     })
 
-    fireEvent.changeText(screen.getByPlaceholderText(/Опиши своими словами/), 'коротко')
-    fireEvent.press(screen.getByTestId('quest-step-check'))
+    await fireEvent.changeText(screen.getByPlaceholderText(/Опиши своими словами/), 'коротко')
+    await fireEvent.press(screen.getByTestId('quest-step-check'))
 
     expect(screen.queryByTestId('quest-step-cooldown-note')).toBeNull()
   })
 })
 
 describe('#1430 — выход вперёд после серии неудач', () => {
-  it('после трёх неверных попыток подряд подсказка уступает место приглашению пропустить шаг', () => {
-    const before = renderCard({ attempts: 2 })
+  it('после трёх неверных попыток подряд подсказка уступает место приглашению пропустить шаг', async () => {
+    const before = await renderCard({ attempts: 2 })
     expect(before.queryByTestId('quest-step-skip-prompt')).toBeNull()
 
-    const after = renderCard({ attempts: 3 })
+    const after = await renderCard({ attempts: 3 })
     expect(after.getByTestId('quest-step-skip-prompt')).toBeTruthy()
   })
 
-  it('приглашение уводит со шага так, чтобы квест остался завершаемым', () => {
+  it('приглашение уводит со шага так, чтобы квест остался завершаемым', async () => {
     // Обычная ссылка «Пропустить» продолжает маршрут, но оставляет шаг в гейте
     // финала. Приглашение обещает «идти дальше», поэтому оно идёт через
     // `onSkipStuckStep` — тот же механизм, что снимает с гейта далёкую точку.
-    const screen = renderCard({ attempts: 3 })
+    const screen = await renderCard({ attempts: 3 })
 
-    fireEvent.press(screen.getByTestId('quest-step-skip-prompt'))
+    await fireEvent.press(screen.getByTestId('quest-step-skip-prompt'))
 
     expect(screen.props.onSkipStuckStep).toHaveBeenCalledTimes(1)
     expect(screen.props.onSkip).not.toHaveBeenCalled()
   })
 
-  it('пока показано приглашение, серой ссылки «Пропустить» рядом нет', () => {
-    const withPrompt = renderCard({ attempts: 3 })
+  it('пока показано приглашение, серой ссылки «Пропустить» рядом нет', async () => {
+    const withPrompt = await renderCard({ attempts: 3 })
 
     expect(withPrompt.queryByText('Пропустить')).toBeNull()
   })
 
-  it('свободный ответ приглашения не получает: «слишком коротко» — не тупик', () => {
-    const screen = renderCard({
+  it('свободный ответ приглашения не получает: «слишком коротко» — не тупик', async () => {
+    const screen = await renderCard({
       attempts: 3,
       step: {
         ...baseStep,
@@ -258,7 +258,7 @@ describe('#1430 — выход вперёд после серии неудач',
         await i18n.changeLanguage(locale)
       })
 
-      const screen = renderCard({ attempts: 3 })
+      const screen = await renderCard({ attempts: 3 })
       const expected = i18nT('quests:components.quests.questWizardStepCard.skipPrompt')
 
       // Незалокализованный хардкод дал бы одинаковый текст на всех пяти языках.
@@ -269,25 +269,25 @@ describe('#1430 — выход вперёд после серии неудач',
 })
 
 describe('#1483 — Enter в поле ответа отправляет ответ', () => {
-  it('поле ответа отключает автозаполнение браузера, иначе выпадашка глотает Enter', () => {
+  it('поле ответа отключает автозаполнение браузера, иначе выпадашка глотает Enter', async () => {
     // react-native-web без явного значения ставит DOM autocomplete="on", и
     // подсказка автозаполнения браузера перехватывает Enter (выбирает подсказку и
     // делает preventDefault) — onSubmitEditing не срабатывает, ответ не уходит.
     // Явный "off" убирает выпадашку и возвращает Enter путь на кнопку проверки.
-    const screen = renderCard()
+    const screen = await renderCard()
 
     expect(screen.getByPlaceholderText(/Ваш ответ/).props.autoComplete).toBe('off')
   })
 
-  it('submitEditing верного ответа отправляет его тем же путём, что кнопка-стрелка', () => {
+  it('submitEditing верного ответа отправляет его тем же путём, что кнопка-стрелка', async () => {
     jest.useFakeTimers()
     try {
-      const screen = renderCard()
+      const screen = await renderCard()
 
-      fireEvent.changeText(screen.getByPlaceholderText(/Ваш ответ/), '3')
-      fireEvent(screen.getByPlaceholderText(/Ваш ответ/), 'submitEditing')
+      await fireEvent.changeText(screen.getByPlaceholderText(/Ваш ответ/), '3')
+      await fireEvent(screen.getByPlaceholderText(/Ваш ответ/), 'submitEditing')
       // Верный ответ уходит через переворот карточки — onSubmit ждёт таймер.
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(200)
       })
 
@@ -298,18 +298,18 @@ describe('#1483 — Enter в поле ответа отправляет отве
     }
   })
 
-  it('повторный Enter во время паузы дубль не отправляет', () => {
+  it('повторный Enter во время паузы дубль не отправляет', async () => {
     jest.useFakeTimers()
     try {
-      const screen = renderCard()
+      const screen = await renderCard()
 
       // Неверный ответ уводит перебираемый шаг на паузу.
-      fireEvent.changeText(screen.getByPlaceholderText(/Ваш ответ/), '9')
-      fireEvent(screen.getByPlaceholderText(/Ваш ответ/), 'submitEditing')
+      await fireEvent.changeText(screen.getByPlaceholderText(/Ваш ответ/), '9')
+      await fireEvent(screen.getByPlaceholderText(/Ваш ответ/), 'submitEditing')
       expect(screen.props.onWrongAttempt).toHaveBeenCalledTimes(1)
 
       // Enter, пока пауза не истекла, молчит — как и отключённая кнопка.
-      fireEvent(screen.getByPlaceholderText(/Ваш ответ/), 'submitEditing')
+      await fireEvent(screen.getByPlaceholderText(/Ваш ответ/), 'submitEditing')
       expect(screen.props.onWrongAttempt).toHaveBeenCalledTimes(1)
     } finally {
       jest.runOnlyPendingTimers()

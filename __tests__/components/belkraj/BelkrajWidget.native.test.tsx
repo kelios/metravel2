@@ -11,8 +11,8 @@ jest.mock('@/utils/externalLinks', () => ({
 
 const mockOpenExternalUrl = openExternalUrl as jest.MockedFunction<typeof openExternalUrl>
 
-const pressCard = (getByTestId: (id: string) => unknown) => {
-  fireEvent.press(getByTestId('belkraj-native-link-card') as never)
+const pressCard = async (getByTestId: (id: string) => unknown) => {
+  await fireEvent.press(getByTestId('belkraj-native-link-card') as never)
   return mockOpenExternalUrl.mock.calls[0]?.[0] as string
 }
 
@@ -41,8 +41,8 @@ describe('BelkrajWidget.native — карточка-ссылка во внешн
     expect(source).not.toMatch(/['"]react-native-webview['"]/)
   })
 
-  it('opens the partner selection for the first point in the external browser', () => {
-    const { getByTestId, getByText, queryByTestId } = render(
+  it('opens the partner selection for the first point in the external browser', async () => {
+    const { getByTestId, getByText, queryByTestId } = await render(
       <BelkrajWidget
         countryCode="BY"
         points={[{ id: 1, address: 'Минск', coord: '53.9,27.56' }]}
@@ -56,7 +56,7 @@ describe('BelkrajWidget.native — карточка-ссылка во внешн
     expect(getByText('Экскурсии рядом с этим местом')).toBeTruthy()
     expect(getByText('Открыть подборку belkraj.by в браузере')).toBeTruthy()
 
-    const url = pressCard(getByTestId)
+    const url = await pressCard(getByTestId)
 
     expect(mockOpenExternalUrl).toHaveBeenCalledTimes(1)
     expect(mockOpenExternalUrl).toHaveBeenCalledWith(url, { allowedProtocols: ['https:'] })
@@ -65,11 +65,11 @@ describe('BelkrajWidget.native — карточка-ссылка во внешн
     )
   })
 
-  it('passes the real country code of a supported non-Belarus point', () => {
+  it('passes the real country code of a supported non-Belarus point', async () => {
     // Ключевое поведение #1460: подборка открыта не только для BY, а для любой
     // страны каталога, и в URL уходит реальный код страны точки (без него
     // tripvenue промахивается городом). Варшава/PL — реальный кейс с прода.
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <BelkrajWidget
         countryCode="PL"
         points={[{ id: 1, address: 'Варшава', lat: 52.2297, lng: 21.0122 }]}
@@ -77,7 +77,7 @@ describe('BelkrajWidget.native — карточка-ссылка во внешн
       />,
     )
 
-    const url = pressCard(getByTestId)
+    const url = await pressCard(getByTestId)
 
     expect(url).toContain('country=PL')
     expect(url).toContain('lat=52.2297')
@@ -85,10 +85,10 @@ describe('BelkrajWidget.native — карточка-ссылка во внешн
     expect(url).not.toContain('widgetId=')
   })
 
-  it('stays closed for a country outside the partner catalog', () => {
+  it('stays closed for a country outside the partner catalog', async () => {
     // Кипр в каталоге нет — виджет отвечает подменой на Минск, поэтому секция
     // не рисуется вовсе (иначе игрок увидит минские экскурсии под кипрским местом).
-    const { queryByTestId } = render(
+    const { queryByTestId } = await render(
       <BelkrajWidget
         countryCode="CY"
         points={[{ id: 1, address: 'Лимасол', lat: 34.7071, lng: 33.0226 }]}
@@ -99,10 +99,10 @@ describe('BelkrajWidget.native — карточка-ссылка во внешн
     expect(queryByTestId('belkraj-native-link-card')).toBeNull()
   })
 
-  it('stays closed outside production builds, like the web iframe', () => {
+  it('stays closed outside production builds, like the web iframe', async () => {
     process.env.NODE_ENV = 'development'
 
-    const { queryByTestId } = render(
+    const { queryByTestId } = await render(
       <BelkrajWidget countryCode="BY" points={[{ id: 1, address: 'Минск', lat: 53.9, lng: 27.56 }]} />,
     )
 

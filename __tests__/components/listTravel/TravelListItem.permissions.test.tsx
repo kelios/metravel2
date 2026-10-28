@@ -44,9 +44,9 @@ const createTestClient = () => new QueryClient({
   },
 });
 
-const renderItem = (props: Partial<React.ComponentProps<typeof TravelListItem>> = {}) => {
+const renderItem = async (props: Partial<React.ComponentProps<typeof TravelListItem>> = {}) => {
   const queryClient = createTestClient();
-  return render(
+  return await render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <FavoritesProvider>
@@ -65,15 +65,15 @@ const renderItem = (props: Partial<React.ComponentProps<typeof TravelListItem>> 
 };
 
 describe('TravelListItem permissions', () => {
-  it('does not show edit/delete buttons for guest (no currentUserId)', () => {
-    const { queryByLabelText } = renderItem({ currentUserId: null, isSuperuser: false });
+  it('does not show edit/delete buttons for guest (no currentUserId)', async () => {
+    const { queryByLabelText } = await renderItem({ currentUserId: null, isSuperuser: false });
 
     expect(queryByLabelText('Редактировать')).toBeNull();
     expect(queryByLabelText('Удалить')).toBeNull();
   });
 
-  it('shows edit/delete buttons for owner user', () => {
-    const { getByLabelText } = renderItem({
+  it('shows edit/delete buttons for owner user', async () => {
+    const { getByLabelText } = await renderItem({
       currentUserId: '42',
       isSuperuser: false,
       onDeletePress: jest.fn(),
@@ -83,9 +83,9 @@ describe('TravelListItem permissions', () => {
     expect(getByLabelText('Удалить')).toBeTruthy();
   });
 
-  it('shows edit/delete buttons when userIds is comma-separated and contains current user', () => {
+  it('shows edit/delete buttons when userIds is comma-separated and contains current user', async () => {
     const travel: Travel = { ...baseTravel, userIds: '7, 42, 100' } as any;
-    const { getByLabelText } = renderItem({
+    const { getByLabelText } = await renderItem({
       travel,
       currentUserId: '42',
       isSuperuser: false,
@@ -97,9 +97,9 @@ describe('TravelListItem permissions', () => {
     expect(getByLabelText('Удалить')).toBeTruthy();
   });
 
-  it('does not show edit/delete buttons on metravel page when owner fields are missing', () => {
+  it('does not show edit/delete buttons on metravel page when owner fields are missing', async () => {
     const travel: Travel = { ...baseTravel, userIds: '' } as any;
-    const { queryByLabelText } = renderItem({
+    const { queryByLabelText } = await renderItem({
       travel,
       currentUserId: '42',
       isSuperuser: false,
@@ -110,9 +110,9 @@ describe('TravelListItem permissions', () => {
     expect(queryByLabelText('Удалить')).toBeNull();
   });
 
-  it('shows edit/delete buttons for superuser regardless of owner', () => {
+  it('shows edit/delete buttons for superuser regardless of owner', async () => {
     const travel: Travel = { ...baseTravel, userIds: '100' } as any;
-    const { getByLabelText } = renderItem({
+    const { getByLabelText } = await renderItem({
       travel,
       currentUserId: '42',
       isSuperuser: true,
@@ -123,8 +123,8 @@ describe('TravelListItem permissions', () => {
     expect(getByLabelText('Удалить')).toBeTruthy();
   });
 
-  it('hides delete button (keeps edit) when onDeletePress is not provided', () => {
-    const { getByLabelText, queryByLabelText, queryByTestId } = renderItem({
+  it('hides delete button (keeps edit) when onDeletePress is not provided', async () => {
+    const { getByLabelText, queryByLabelText, queryByTestId } = await renderItem({
       currentUserId: '42',
       isSuperuser: false,
       onDeletePress: undefined,
@@ -135,9 +135,9 @@ describe('TravelListItem permissions', () => {
     expect(queryByTestId('delete-button')).toBeNull();
   });
 
-  it('hides delete button for superuser when onDeletePress is not provided', () => {
+  it('hides delete button for superuser when onDeletePress is not provided', async () => {
     const travel: Travel = { ...baseTravel, userIds: '100' } as any;
-    const { getByLabelText, queryByTestId } = renderItem({
+    const { getByLabelText, queryByTestId } = await renderItem({
       travel,
       currentUserId: '42',
       isSuperuser: true,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Modal, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { act, fireEvent, render, within } from '@testing-library/react-native';
 
 import TripPlanDescriptionEditor from '@/components/trips/planning/TripPlanDescriptionEditor';
@@ -45,20 +45,20 @@ describe('TripPlanDescriptionEditor', () => {
     mockIsMobile = false;
   });
 
-  it('keeps the fullscreen header inside ModalSafeArea (MODAL-TOP-INSET-001)', () => {
+  it('keeps the fullscreen header inside ModalSafeArea (MODAL-TOP-INSET-001)', async () => {
     mockIsMobile = true;
-    const { getByTestId } = render(<EditorHarness initialValue="Текст" />);
+    const { getByTestId } = await render(<EditorHarness initialValue="Текст" />);
 
-    fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
+    await fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
 
     const safeArea = getByTestId('trip-plan-description-safe-area');
     expect(within(safeArea).getByTestId('trip-plan-description-fullscreen')).toBeTruthy();
     expect(within(safeArea).getByTestId('trip-plan-description-close')).toBeTruthy();
   });
 
-  it('shows at least eight inline rows and keeps a 44px mobile fullscreen target', () => {
+  it('shows at least eight inline rows and keeps a 44px mobile fullscreen target', async () => {
     mockIsMobile = true;
-    const { getByTestId } = render(<EditorHarness />);
+    const { getByTestId } = await render(<EditorHarness />);
 
     const input = getByTestId('trip-plan-edit-description');
     expect(input.props.multiline).toBe(true);
@@ -78,22 +78,22 @@ describe('TripPlanDescriptionEditor', () => {
     expect(openButtonStyle.height).toBeGreaterThanOrEqual(44);
     expect(openButton.props.accessibilityLabel).toBe('Открыть описание на весь экран');
 
-    fireEvent.press(openButton);
+    await fireEvent.press(openButton);
     expect(getByTestId('trip-plan-description-keyboard-frame')).toBeTruthy();
     expect(getByTestId('trip-plan-description-fullscreen-input').props.multiline).toBe(true);
   });
 
-  it('keeps a 2000-character draft and selection across close and reopen', () => {
+  it('keeps a 2000-character draft and selection across close and reopen', async () => {
     const longDescription = 'Длинное описание поездки. '.repeat(80);
     expect(longDescription.length).toBeGreaterThan(2000);
-    const { getByTestId, queryByTestId } = render(<EditorHarness />);
+    const { getByTestId, queryByTestId } = await render(<EditorHarness />);
 
     const inlineInput = getByTestId('trip-plan-edit-description');
-    fireEvent.changeText(inlineInput, longDescription);
-    fireEvent(inlineInput, 'selectionChange', {
+    await fireEvent.changeText(inlineInput, longDescription);
+    await fireEvent(inlineInput, 'selectionChange', {
       nativeEvent: { selection: { start: 120, end: 165 } },
     });
-    fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
+    await fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
 
     expect(getByTestId('trip-plan-description-fullscreen-input').props.value).toBe(
       longDescription,
@@ -104,7 +104,7 @@ describe('TripPlanDescriptionEditor', () => {
     });
     // A trailing blur/selection event from the field behind the modal must not
     // consume the restore intended for the freshly mounted fullscreen input.
-    fireEvent(inlineInput, 'selectionChange', {
+    await fireEvent(inlineInput, 'selectionChange', {
       nativeEvent: { selection: { start: 0, end: 0 } },
     });
     expect(getByTestId('trip-plan-description-fullscreen-input').props.selection).toEqual({
@@ -115,7 +115,7 @@ describe('TripPlanDescriptionEditor', () => {
       String(getByTestId('trip-plan-description-count').props.children).replace(/\D/g, ''),
     ).toBe(String(longDescription.length));
 
-    fireEvent.press(getByTestId('trip-plan-description-close'));
+    await fireEvent.press(getByTestId('trip-plan-description-close'));
     expect(queryByTestId('trip-plan-description-fullscreen')).toBeNull();
     expect(getByTestId('trip-plan-edit-description').props.value).toBe(longDescription);
     expect(getByTestId('trip-plan-edit-description').props.selection).toEqual({
@@ -123,42 +123,42 @@ describe('TripPlanDescriptionEditor', () => {
       end: 165,
     });
 
-    fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
+    await fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
     expect(getByTestId('trip-plan-description-fullscreen-input').props.selection).toEqual({
       start: 120,
       end: 165,
     });
   });
 
-  it('does not keep the cursor controlled during ordinary typing', () => {
-    const { getByTestId } = render(<EditorHarness initialValue="Начало конец" />);
+  it('does not keep the cursor controlled during ordinary typing', async () => {
+    const { getByTestId } = await render(<EditorHarness initialValue="Начало конец" />);
     const inlineInput = getByTestId('trip-plan-edit-description');
 
-    fireEvent(inlineInput, 'selectionChange', {
+    await fireEvent(inlineInput, 'selectionChange', {
       nativeEvent: { selection: { start: 7, end: 7 } },
     });
-    fireEvent.changeText(inlineInput, 'Начало текста конец');
+    await fireEvent.changeText(inlineInput, 'Начало текста конец');
 
     expect(getByTestId('trip-plan-edit-description').props.selection).toBeUndefined();
   });
 
-  it('replaces the captured selection with a safe URL and restores the cursor', () => {
+  it('replaces the captured selection with a safe URL and restores the cursor', async () => {
     const initialValue = 'Встречаемся здесь после обеда';
     const selectedStart = initialValue.indexOf('здесь');
     const selectedEnd = selectedStart + 'здесь'.length;
-    const { getByTestId } = render(<EditorHarness initialValue={initialValue} />);
+    const { getByTestId } = await render(<EditorHarness initialValue={initialValue} />);
 
-    fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
+    await fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
     const fullscreenInput = getByTestId('trip-plan-description-fullscreen-input');
-    fireEvent(fullscreenInput, 'selectionChange', {
+    await fireEvent(fullscreenInput, 'selectionChange', {
       nativeEvent: { selection: { start: selectedStart, end: selectedEnd } },
     });
-    fireEvent.press(getByTestId('trip-plan-description-add-link'));
-    fireEvent.changeText(
+    await fireEvent.press(getByTestId('trip-plan-description-add-link'));
+    await fireEvent.changeText(
       getByTestId('trip-plan-description-link-input'),
       'https://example.com/meeting',
     );
-    fireEvent.press(getByTestId('trip-plan-description-link-insert'));
+    await fireEvent.press(getByTestId('trip-plan-description-link-insert'));
 
     const expected = 'Встречаемся https://example.com/meeting после обеда';
     const updatedInput = getByTestId('trip-plan-description-fullscreen-input');
@@ -170,71 +170,71 @@ describe('TripPlanDescriptionEditor', () => {
     });
   });
 
-  it('accepts an internal relative address and rejects unsafe schemes observably', () => {
+  it('accepts an internal relative address and rejects unsafe schemes observably', async () => {
     const initialValue = 'Маршрут: ';
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <EditorHarness initialValue={initialValue} />,
     );
 
-    fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
-    fireEvent.press(getByTestId('trip-plan-description-add-link'));
-    fireEvent.changeText(getByTestId('trip-plan-description-link-input'), '/trips/my');
-    fireEvent.press(getByTestId('trip-plan-description-link-insert'));
+    await fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
+    await fireEvent.press(getByTestId('trip-plan-description-add-link'));
+    await fireEvent.changeText(getByTestId('trip-plan-description-link-input'), '/trips/my');
+    await fireEvent.press(getByTestId('trip-plan-description-link-insert'));
     expect(getByTestId('trip-plan-description-fullscreen-input').props.value).toBe(
       'Маршрут: https://metravel.by/trips/my',
     );
 
     const safeValue = getByTestId('trip-plan-description-fullscreen-input').props.value;
-    fireEvent.press(getByTestId('trip-plan-description-add-link'));
-    fireEvent.changeText(
+    await fireEvent.press(getByTestId('trip-plan-description-add-link'));
+    await fireEvent.changeText(
       getByTestId('trip-plan-description-link-input'),
       'javascript:alert(1)',
     );
-    fireEvent.press(getByTestId('trip-plan-description-link-insert'));
+    await fireEvent.press(getByTestId('trip-plan-description-link-insert'));
 
     expect(getByTestId('trip-plan-description-link-error').props.accessibilityRole).toBe('alert');
     expect(queryByTestId('trip-plan-description-link-dialog')).toBeTruthy();
     expect(getByTestId('trip-plan-description-fullscreen-input').props.value).toBe(safeValue);
   });
 
-  it('keeps fullscreen open when Escape closes the nested link dialog', () => {
-    const { getByTestId, queryByTestId, UNSAFE_getAllByType } = render(
+  it('keeps fullscreen open when Escape closes the nested link dialog', async () => {
+    const { getByTestId, queryByTestId } = await render(
       <EditorHarness initialValue="Отель у вокзала" />,
     );
-    const fullscreenModalOf = () =>
-      UNSAFE_getAllByType(Modal).find((modal) => modal.props.presentationStyle === 'fullScreen');
-    const linkModalOf = () =>
-      UNSAFE_getAllByType(Modal).find((modal) => modal.props.transparent === true);
+    const fullscreenModalOf = () => mockEditorModalProps.get('fullscreen');
+    const linkModalOf = () => mockEditorModalProps.get('link');
 
-    fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
-    fireEvent.press(getByTestId('trip-plan-description-add-link'));
-    expect(linkModalOf()?.props.visible).toBe(true);
+    await fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
+    await fireEvent.press(getByTestId('trip-plan-description-add-link'));
+    expect(fullscreenModalOf()).toBeDefined();
+    expect(linkModalOf()).toBeDefined();
+    expect(linkModalOf().visible).toBe(true);
 
-    act(() => {
-      fullscreenModalOf()?.props.onRequestClose();
+    await act(() => {
+      fullscreenModalOf().onRequestClose();
     });
-    expect(linkModalOf()?.props.visible).toBe(false);
+    expect(linkModalOf().visible).toBe(false);
     expect(getByTestId('trip-plan-description-fullscreen')).toBeTruthy();
 
-    act(() => {
-      fullscreenModalOf()?.props.onRequestClose();
+    await act(() => {
+      fullscreenModalOf().onRequestClose();
     });
     expect(queryByTestId('trip-plan-description-fullscreen')).toBeNull();
   });
 
-  it('cancels link insertion without changing the draft and restores its selection', () => {
+  it('cancels link insertion without changing the draft and restores its selection', async () => {
     const initialValue = 'Отель у вокзала';
     const selectedStart = initialValue.indexOf('вокзала');
     const selectedEnd = selectedStart + 'вокзала'.length;
-    const { getByTestId } = render(<EditorHarness initialValue={initialValue} />);
+    const { getByTestId } = await render(<EditorHarness initialValue={initialValue} />);
 
-    fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
-    fireEvent(getByTestId('trip-plan-description-fullscreen-input'), 'selectionChange', {
+    await fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
+    await fireEvent(getByTestId('trip-plan-description-fullscreen-input'), 'selectionChange', {
       nativeEvent: { selection: { start: selectedStart, end: selectedEnd } },
     });
-    fireEvent.press(getByTestId('trip-plan-description-add-link'));
-    fireEvent.changeText(getByTestId('trip-plan-description-link-input'), 'example.com/hotel');
-    fireEvent.press(getByTestId('trip-plan-description-link-cancel'));
+    await fireEvent.press(getByTestId('trip-plan-description-add-link'));
+    await fireEvent.changeText(getByTestId('trip-plan-description-link-input'), 'example.com/hotel');
+    await fireEvent.press(getByTestId('trip-plan-description-link-cancel'));
 
     const fullscreenInput = getByTestId('trip-plan-description-fullscreen-input');
     expect(fullscreenInput.props.value).toBe(initialValue);
@@ -244,9 +244,9 @@ describe('TripPlanDescriptionEditor', () => {
     });
   });
 
-  it('keeps native copy/cut/paste behavior and closes Done without a hidden callback', () => {
+  it('keeps native copy/cut/paste behavior and closes Done without a hidden callback', async () => {
     const onChangeText = jest.fn();
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <TripPlanDescriptionEditor
         value="Текст для выделения"
         onChangeText={onChangeText}
@@ -258,10 +258,10 @@ describe('TripPlanDescriptionEditor', () => {
     const inlineInput = getByTestId('trip-plan-edit-description');
     expect(inlineInput.props.contextMenuHidden).toBeUndefined();
     expect(inlineInput.props.selectTextOnFocus).toBeUndefined();
-    fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
+    await fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
     const fullscreenInput = getByTestId('trip-plan-description-fullscreen-input');
     expect(fullscreenInput.props.contextMenuHidden).toBeUndefined();
-    fireEvent.press(getByTestId('trip-plan-description-done'));
+    await fireEvent.press(getByTestId('trip-plan-description-done'));
 
     expect(queryByTestId('trip-plan-description-fullscreen')).toBeNull();
     expect(onChangeText).not.toHaveBeenCalled();
@@ -270,39 +270,39 @@ describe('TripPlanDescriptionEditor', () => {
   // #2072: панель оформления ставит и снимает разметку #2070 у выделения поля,
   // под которым стоит, и оставляет выделение на тексте — повторное нажатие
   // снимает оформление.
-  it('bold toggles ** around the inline selection and keeps the word selected', () => {
-    const { getByTestId } = render(<EditorHarness initialValue="Ужин в кафе" />);
+  it('bold toggles ** around the inline selection and keeps the word selected', async () => {
+    const { getByTestId } = await render(<EditorHarness initialValue="Ужин в кафе" />);
     const inlineInput = getByTestId('trip-plan-edit-description');
-    fireEvent(inlineInput, 'selectionChange', { nativeEvent: { selection: { start: 7, end: 11 } } });
+    await fireEvent(inlineInput, 'selectionChange', { nativeEvent: { selection: { start: 7, end: 11 } } });
 
-    fireEvent.press(getByTestId('trip-plan-description-format-bold'));
+    await fireEvent.press(getByTestId('trip-plan-description-format-bold'));
     let updated = getByTestId('trip-plan-edit-description');
     expect(updated.props.value).toBe('Ужин в **кафе**');
     expect(updated.props.selection).toEqual({ start: 9, end: 13 });
 
-    fireEvent.press(getByTestId('trip-plan-description-format-bold'));
+    await fireEvent.press(getByTestId('trip-plan-description-format-bold'));
     updated = getByTestId('trip-plan-edit-description');
     expect(updated.props.value).toBe('Ужин в кафе');
   });
 
-  it('list and heading buttons mark the selected lines in fullscreen', () => {
-    const { getByTestId } = render(<EditorHarness initialValue={'вода\nхлеб'} />);
-    fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
+  it('list and heading buttons mark the selected lines in fullscreen', async () => {
+    const { getByTestId } = await render(<EditorHarness initialValue={'вода\nхлеб'} />);
+    await fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
     const fullscreenInput = getByTestId('trip-plan-description-fullscreen-input');
-    fireEvent(fullscreenInput, 'selectionChange', { nativeEvent: { selection: { start: 0, end: 9 } } });
+    await fireEvent(fullscreenInput, 'selectionChange', { nativeEvent: { selection: { start: 0, end: 9 } } });
 
-    fireEvent.press(getByTestId('trip-plan-description-fullscreen-format-bullet'));
+    await fireEvent.press(getByTestId('trip-plan-description-fullscreen-format-bullet'));
     expect(getByTestId('trip-plan-description-fullscreen-input').props.value).toBe('- вода\n- хлеб');
 
-    fireEvent(getByTestId('trip-plan-description-fullscreen-input'), 'selectionChange', {
+    await fireEvent(getByTestId('trip-plan-description-fullscreen-input'), 'selectionChange', {
       nativeEvent: { selection: { start: 2, end: 2 } },
     });
-    fireEvent.press(getByTestId('trip-plan-description-fullscreen-format-heading'));
+    await fireEvent.press(getByTestId('trip-plan-description-fullscreen-format-heading'));
     expect(getByTestId('trip-plan-description-fullscreen-input').props.value).toBe('## вода\n- хлеб');
   });
 
-  it('format buttons have accessible names, a 44px target and are disabled with the editor', () => {
-    const { getByTestId, rerender } = render(
+  it('format buttons have accessible names, a 44px target and are disabled with the editor', async () => {
+    const { getByTestId, rerender } = await render(
       <TripPlanDescriptionEditor value="" onChangeText={jest.fn()} label="Описание" placeholder="" />,
     );
     for (const action of ['heading', 'bullet', 'ordered', 'bold', 'italic']) {
@@ -315,9 +315,23 @@ describe('TripPlanDescriptionEditor', () => {
     }
     expect(getByTestId('trip-plan-description-format-hint')).toBeTruthy();
 
-    rerender(
+    await rerender(
       <TripPlanDescriptionEditor value="" onChangeText={jest.fn()} label="Описание" placeholder="" editable={false} />,
     );
     expect(getByTestId('trip-plan-description-format-bold').props.accessibilityState?.disabled).toBe(true);
   });
 });
+
+// Observe the public component input while retaining its normal host rendering.
+const captureNative = require('react-native')
+const capturedOriginalModal = captureNative.Modal
+const mockEditorModalProps = new Map<string, any>()
+beforeAll(() => {
+  captureNative.Modal = require('react').forwardRef((props: any, ref: any) => {
+    const key = props.presentationStyle === 'fullScreen' ? 'fullscreen' : props.transparent === true ? 'link' : null
+    if (key) mockEditorModalProps.set(key, props)
+    return require('react').createElement(capturedOriginalModal, { ...props, ref })
+  })
+})
+afterAll(() => { captureNative.Modal = capturedOriginalModal })
+beforeEach(() => { mockEditorModalProps.clear() })

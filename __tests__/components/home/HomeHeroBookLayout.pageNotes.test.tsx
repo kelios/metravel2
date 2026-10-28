@@ -18,7 +18,7 @@ const moodCards = [
   { title: 'Замки', icon: 'flag', filters: {}, route: '/search' },
 ]
 
-const renderBook = (overrides: Partial<React.ComponentProps<typeof HomeHeroBookLayout>> = {}) => {
+const renderBook = async (overrides: Partial<React.ComponentProps<typeof HomeHeroBookLayout>> = {}) => {
   const props = {
     colors: new Proxy({}, { get: () => '#000' }) as any,
     styles,
@@ -54,87 +54,87 @@ const renderBook = (overrides: Partial<React.ComponentProps<typeof HomeHeroBookL
     onMarkSlideLoaded: jest.fn(),
     ...overrides,
   }
-  return { ...render(<HomeHeroBookLayout {...props} />), props }
+  return { ...await render(<HomeHeroBookLayout {...props} />), props }
 }
 
 const layout = (height: number) => ({ nativeEvent: { layout: { x: 0, y: 0, width: 400, height } } })
 
-const measure = (utils: ReturnType<typeof renderBook>, frame: number, content: number) => {
+const measure = async (utils: Awaited<ReturnType<typeof renderBook>>, frame: number, content: number) => {
   const frameNode = utils.getByTestId('home-hero-left-frame')
-  act(() => {
-    fireEvent(frameNode, 'layout', layout(frame))
-    fireEvent(frameNode.children[0] as any, 'layout', layout(content))
+  await act(async () => {
+    await fireEvent(frameNode, 'layout', layout(frame))
+    await fireEvent(frameNode.children[0] as any, 'layout', layout(content))
   })
 }
 
-const full = (utils: ReturnType<typeof renderBook>) => utils.queryByTestId('home-hero-page-notes')
-const compact = (utils: ReturnType<typeof renderBook>) => utils.queryByTestId('home-hero-page-notes-compact')
+const full = (utils: Awaited<ReturnType<typeof renderBook>>) => utils.queryByTestId('home-hero-page-notes')
+const compact = (utils: Awaited<ReturnType<typeof renderBook>>) => utils.queryByTestId('home-hero-page-notes-compact')
 
 describe('HomeHeroBookLayout page notes fit the left page', () => {
-  it('keeps the notes while the page content fits its frame', () => {
-    const utils = renderBook()
-    measure(utils, 500, 480)
+  it('keeps the notes while the page content fits its frame', async () => {
+    const utils = await renderBook()
+    await measure(utils, 500, 480)
     expect(full(utils)).toBeTruthy()
   })
 
-  it('drops the notes when the measured content overflows the frame', () => {
-    const utils = renderBook()
-    measure(utils, 500, 526)
+  it('drops the notes when the measured content overflows the frame', async () => {
+    const utils = await renderBook()
+    await measure(utils, 500, 526)
     expect(full(utils)).toBeNull()
     // Without the notes the content shrinks; they must not come back for the same layout.
-    measure(utils, 500, 380)
+    await measure(utils, 500, 380)
     expect(full(utils)).toBeNull()
   })
 
-  it('retries the notes after the book size changes', () => {
-    const utils = renderBook()
-    measure(utils, 500, 526)
+  it('retries the notes after the book size changes', async () => {
+    const utils = await renderBook()
+    await measure(utils, 500, 526)
     expect(full(utils)).toBeNull()
-    utils.rerender(<HomeHeroBookLayout {...utils.props} bookHeight={1000} />)
+    await utils.rerender(<HomeHeroBookLayout {...utils.props} bookHeight={1000} />)
     expect(full(utils)).toBeTruthy()
     // The taller book fits them: a fresh measurement keeps them.
-    measure(utils, 640, 600)
+    await measure(utils, 640, 600)
     expect(full(utils)).toBeTruthy()
   })
 
-  it('waits for the resized frame when content is measured first', () => {
-    const utils = renderBook()
-    measure(utils, 500, 526)
-    utils.rerender(<HomeHeroBookLayout {...utils.props} bookHeight={1000} />)
+  it('waits for the resized frame when content is measured first', async () => {
+    const utils = await renderBook()
+    await measure(utils, 500, 526)
+    await utils.rerender(<HomeHeroBookLayout {...utils.props} bookHeight={1000} />)
 
     const frame = utils.getByTestId('home-hero-left-frame')
-    fireEvent(frame.children[0] as any, 'layout', layout(600))
+    await fireEvent(frame.children[0] as any, 'layout', layout(600))
     expect(full(utils)).toBeTruthy()
-    fireEvent(frame, 'layout', layout(640))
+    await fireEvent(frame, 'layout', layout(640))
     expect(full(utils)).toBeTruthy()
   })
 
   it.each([
     { width: 2300 },
     { heroSubtitle: 'Real routes through Belarus and Europe' },
-  ])('retries after width or translated content changes: %p', (overrides) => {
-    const utils = renderBook()
-    measure(utils, 500, 526)
-    utils.rerender(<HomeHeroBookLayout {...utils.props} {...overrides} />)
+  ])('retries after width or translated content changes: %p', async (overrides) => {
+    const utils = await renderBook()
+    await measure(utils, 500, 526)
+    await utils.rerender(<HomeHeroBookLayout {...utils.props} {...overrides} />)
     expect(full(utils)).toBeTruthy()
-    measure(utils, 500, 480)
+    await measure(utils, 500, 480)
     expect(full(utils)).toBeTruthy()
-    measure(utils, 500, 526)
+    await measure(utils, 500, 526)
     expect(full(utils)).toBeNull()
   })
 
-  it('keeps layout observers attached before the notes become enabled', () => {
-    const utils = renderBook({ bookHeight: 720 })
+  it('keeps layout observers attached before the notes become enabled', async () => {
+    const utils = await renderBook({ bookHeight: 720 })
     const frame = utils.getByTestId('home-hero-left-frame')
     expect(frame.props.onLayout).toEqual(expect.any(Function))
     expect((frame.children[0] as any).props.onLayout).toEqual(expect.any(Function))
-    utils.rerender(<HomeHeroBookLayout {...utils.props} bookHeight={820} />)
-    measure(utils, 500, 526)
+    await utils.rerender(<HomeHeroBookLayout {...utils.props} bookHeight={820} />)
+    await measure(utils, 500, 526)
     expect(full(utils)).toBeNull()
   })
 
-  it('never shows the full notes on a book shorter than the notes threshold', () => {
-    const utils = renderBook({ bookHeight: 720 })
+  it('never shows the full notes on a book shorter than the notes threshold', async () => {
+    const utils = await renderBook({ bookHeight: 720 })
     expect(full(utils)).toBeNull()
   })
 })
@@ -142,10 +142,10 @@ describe('HomeHeroBookLayout page notes fit the left page', () => {
 // #2773: a laptop book is too low for the full notes; the quick ideas stay on
 // the first screen as one compact row under the CTA while that row fits.
 describe('HomeHeroBookLayout compact quick ideas', () => {
-  it('shows a compact row without meta lines on a book below the notes threshold', () => {
+  it('shows a compact row without meta lines on a book below the notes threshold', async () => {
     const onPageNotesVisibilityChange = jest.fn()
-    const utils = renderBook({ bookHeight: 720, onPageNotesVisibilityChange })
-    measure(utils, 440, 400)
+    const utils = await renderBook({ bookHeight: 720, onPageNotesVisibilityChange })
+    await measure(utils, 440, 400)
     expect(full(utils)).toBeNull()
     expect(compact(utils)).toBeTruthy()
     expect(utils.getByText('У воды')).toBeTruthy()
@@ -153,19 +153,19 @@ describe('HomeHeroBookLayout compact quick ideas', () => {
     expect(onPageNotesVisibilityChange).toHaveBeenLastCalledWith(true)
   })
 
-  it('falls back to the compact row when the full notes overflow', () => {
-    const utils = renderBook()
-    measure(utils, 500, 526)
+  it('falls back to the compact row when the full notes overflow', async () => {
+    const utils = await renderBook()
+    await measure(utils, 500, 526)
     expect(full(utils)).toBeNull()
     expect(compact(utils)).toBeTruthy()
   })
 
   // The approved book spec (#2405) keeps the subtitle: when the compact row does
   // not fit, the quick ideas go to the rail below the book instead.
-  it('drops the compact row on the lowest book but keeps the subtitle', () => {
+  it('drops the compact row on the lowest book but keeps the subtitle', async () => {
     const onPageNotesVisibilityChange = jest.fn()
-    const utils = renderBook({ bookHeight: 477, onPageNotesVisibilityChange })
-    measure(utils, 291, 354)
+    const utils = await renderBook({ bookHeight: 477, onPageNotesVisibilityChange })
+    await measure(utils, 291, 354)
     expect(compact(utils)).toBeNull()
     expect(utils.queryByText('У воды')).toBeNull()
     expect(utils.getByTestId('home-hero-subtitle')).toBeTruthy()

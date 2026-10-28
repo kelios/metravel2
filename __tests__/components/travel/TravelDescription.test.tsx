@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet } from 'react-native'
+import { StyleSheet } from 'react-native'
 import { act, render, waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
@@ -33,7 +33,7 @@ describe('TravelDescription', () => {
     jest.useRealTimers()
   })
 
-  it('uses the full section width on desktop when noBox is enabled', () => {
+  it('uses the full section width on desktop when noBox is enabled', async () => {
     jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
       width: 1280,
       height: 900,
@@ -41,7 +41,7 @@ describe('TravelDescription', () => {
       fontScale: 1,
     })
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <TravelDescription htmlContent="<p>Описание</p>" noBox />
     )
 
@@ -52,7 +52,7 @@ describe('TravelDescription', () => {
     expect(style.paddingHorizontal).toBe(0)
   })
 
-  it('keeps the default constrained layout without noBox', () => {
+  it('keeps the default constrained layout without noBox', async () => {
     jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
       width: 1280,
       height: 900,
@@ -60,7 +60,7 @@ describe('TravelDescription', () => {
       fontScale: 1,
     })
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <TravelDescription htmlContent="<p>Описание</p>" />
     )
 
@@ -79,7 +79,7 @@ describe('TravelDescription', () => {
     ;(window as any).requestIdleCallback = requestIdleCallback
     ;(window as any).cancelIdleCallback = jest.fn()
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <TravelDescription htmlContent="<p>Короткое описание маршрута.</p>" noBox />
     )
 
@@ -90,14 +90,14 @@ describe('TravelDescription', () => {
     expect(requestIdleCallback).not.toHaveBeenCalled()
   })
 
-  it('keeps noBox native content in the parent scroll chain', () => {
+  it('keeps noBox native content in the parent scroll chain', async () => {
     Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true })
 
-    const { UNSAFE_queryAllByType } = render(
+    const { container: _hostContainer } = await render(
       <TravelDescription htmlContent="<p>Описание</p>" noBox />
     )
 
-    expect(UNSAFE_queryAllByType(ScrollView)).toHaveLength(0)
+    expect(_hostContainer.queryAll(node => node.type === "RCTScrollView", { includeSelf: true })).toHaveLength(0)
   })
 
   it('keeps heavy web descriptions deferred until the placeholder approaches the viewport', async () => {
@@ -129,7 +129,7 @@ describe('TravelDescription', () => {
     ;(window as any).cancelIdleCallback = cancelIdleCallback
 
     const heavyText = 'длинное описание '.repeat(600)
-    const { getByTestId, queryByTestId, unmount } = render(
+    const { getByTestId, queryByTestId, unmount } = await render(
       <TravelDescription htmlContent={`<p>${heavyText}</p>`} noBox />
     )
 
@@ -144,19 +144,19 @@ describe('TravelDescription', () => {
     )
     expect(observe).toHaveBeenCalledWith(expect.anything())
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(60_000)
     })
     expect(queryByTestId('stable-content')).toBeNull()
     expect(requestIdleCallback).not.toHaveBeenCalled()
 
-    act(() => {
+    await act(() => {
       intersectionCallback?.([{ isIntersecting: false, intersectionRatio: 0 }])
     })
     expect(queryByTestId('stable-content')).toBeNull()
     expect(requestIdleCallback).not.toHaveBeenCalled()
 
-    act(() => {
+    await act(() => {
       intersectionCallback?.([{ isIntersecting: true, intersectionRatio: 0.1 }])
     })
     expect(requestIdleCallback).toHaveBeenCalledTimes(1)
@@ -167,7 +167,7 @@ describe('TravelDescription', () => {
     })
     expect(getByTestId('stable-content')).toBeTruthy()
 
-    unmount()
+    await unmount()
     expect(disconnect).toHaveBeenCalled()
     expect(cancelIdleCallback).toHaveBeenCalled()
   })
@@ -184,7 +184,7 @@ describe('TravelDescription', () => {
     ;(window as any).cancelIdleCallback = jest.fn()
 
     const heavyText = 'длинное описание '.repeat(600)
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <TravelDescription htmlContent={`<p>${heavyText}</p>`} noBox />
     )
 
@@ -211,7 +211,7 @@ describe('TravelDescription', () => {
     ;(window as any).cancelIdleCallback = jest.fn()
 
     const heavyText = 'длинное описание '.repeat(600)
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <TravelDescription htmlContent={`<p>${heavyText}</p>`} noBox />
     )
 
@@ -241,20 +241,20 @@ describe('TravelDescription', () => {
     ;(window as any).cancelIdleCallback = jest.fn()
 
     const heavyText = 'длинное описание '.repeat(600)
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <TravelDescription htmlContent={`<p>${heavyText}</p>`} noBox />
     )
 
     expect(observe).toHaveBeenCalledTimes(1)
     expect(queryByTestId('stable-content')).toBeNull()
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(949)
     })
     expect(observe).toHaveBeenCalledTimes(20)
     expect(requestIdleCallback).not.toHaveBeenCalled()
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1)
     })
     expect(observe).toHaveBeenCalledTimes(21)
@@ -268,8 +268,10 @@ describe('TravelDescription', () => {
     expect(getByTestId('stable-content')).toBeTruthy()
   })
 
-  it('cancels a pending observe retry on unmount without scheduling reveal', () => {
+  it('cancels a pending observe retry on unmount without scheduling reveal', async () => {
     jest.useFakeTimers()
+    const schedule = jest.spyOn(globalThis, 'setTimeout')
+    const cancel = jest.spyOn(globalThis, 'clearTimeout')
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
     const observe = jest.fn(() => {
       throw new Error('target unavailable')
@@ -281,18 +283,21 @@ describe('TravelDescription', () => {
     ;(window as any).cancelIdleCallback = jest.fn()
 
     const heavyText = 'длинное описание '.repeat(600)
-    const { queryByTestId, unmount } = render(
+    const { queryByTestId, unmount } = await render(
       <TravelDescription htmlContent={`<p>${heavyText}</p>`} noBox />
     )
 
     expect(observe).toHaveBeenCalledTimes(1)
     expect(queryByTestId('stable-content')).toBeNull()
-    expect(jest.getTimerCount()).toBe(1)
+    const retries = schedule.mock.calls.flatMap(([callback], index) =>
+      typeof callback === 'function' && callback.name === 'retryAttach' ? [schedule.mock.results[index].value] : [],
+    )
+    expect(retries).toHaveLength(1)
 
-    unmount()
-    expect(jest.getTimerCount()).toBe(0)
+    await unmount()
+    expect(cancel).toHaveBeenCalledWith(retries[0])
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(5_000)
     })
     expect(observe).toHaveBeenCalledTimes(1)

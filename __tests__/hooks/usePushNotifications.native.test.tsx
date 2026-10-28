@@ -96,7 +96,7 @@ describe('usePushNotifications native lifecycle', () => {
   });
 
   it('performs only passive registration on authenticated mount', async () => {
-    renderHook(() => usePushNotifications());
+    await renderHook(() => usePushNotifications());
     await act(async () => {
       await Promise.resolve();
     });
@@ -108,7 +108,7 @@ describe('usePushNotifications native lifecycle', () => {
 
   it('keeps passive sync and rotation blocked until auth hydration is ready', async () => {
     mockAuthState = { authReady: false, isAuthenticated: true };
-    renderHook(() => usePushNotifications());
+    await renderHook(() => usePushNotifications());
     await act(async () => {
       await Promise.resolve();
     });
@@ -125,7 +125,7 @@ describe('usePushNotifications native lifecycle', () => {
       id: 'response-1',
       data: { screen: 'quest', city: 'krakow', questId: 'dragon' },
     });
-    const { rerender } = renderHook(() => usePushNotifications());
+    const { rerender } = await renderHook(() => usePushNotifications());
 
     await act(async () => {
       await Promise.resolve();
@@ -133,10 +133,10 @@ describe('usePushNotifications native lifecycle', () => {
     expect(mockPush).not.toHaveBeenCalled();
 
     mockNavigationState = { key: 'root' };
-    rerender({});
+    await rerender({});
     expect(mockPush).toHaveBeenCalledWith('/quests/krakow/dragon');
 
-    act(() => {
+    await act(() => {
       mockResponseListener?.({
         id: 'response-1',
         data: { screen: 'quest', city: 'krakow', questId: 'dragon' },
@@ -147,15 +147,15 @@ describe('usePushNotifications native lifecycle', () => {
     nowSpy.mockRestore();
   });
 
-  it('allows a later local reminder that reuses its stable identifier', () => {
+  it('allows a later local reminder that reuses its stable identifier', async () => {
     const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_000);
-    renderHook(() => usePushNotifications());
+    await renderHook(() => usePushNotifications());
 
-    act(() => {
+    await act(() => {
       mockResponseListener?.({ id: 'quest-reminder-dragon', data: { url: '/quests/krakow/dragon' } });
     });
     nowSpy.mockReturnValue(2_001);
-    act(() => {
+    await act(() => {
       mockResponseListener?.({ id: 'quest-reminder-dragon', data: { url: '/quests/krakow/dragon' } });
     });
 
@@ -163,11 +163,11 @@ describe('usePushNotifications native lifecycle', () => {
     nowSpy.mockRestore();
   });
 
-  it('does not navigate on foreground receipt before the user taps', () => {
+  it('does not navigate on foreground receipt before the user taps', async () => {
     const onNotificationReceived = jest.fn();
-    renderHook(() => usePushNotifications({ onNotificationReceived }));
+    await renderHook(() => usePushNotifications({ onNotificationReceived }));
 
-    act(() => {
+    await act(() => {
       mockReceivedListener?.({
         title: 'New trip message',
         data: { screen: 'trip', tripId: 31 },
@@ -185,7 +185,7 @@ describe('usePushNotifications native lifecycle', () => {
       token: 'ExponentPushToken[user-action]',
       backendSynced: true,
     });
-    const { result } = renderHook(() => usePushNotifications());
+    const { result } = await renderHook(() => usePushNotifications());
 
     await expect(result.current.requestPermission()).resolves.toBe(
       'ExponentPushToken[user-action]',

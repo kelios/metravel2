@@ -9,7 +9,7 @@ import MapErrorBoundary from '@/components/MapPage/MapErrorBoundary'
 // auto-recovers from. The lifetime budget (2) must RESET after a successful
 // recovery, otherwise the third flip's error is left uncaught → blank map.
 //
-// react-test-renderer re-throws boundary-caught render errors to the caller, so
+// The former renderer re-threw boundary-caught render errors to the caller, so
 // we drive the boundary's lifecycle methods directly (the same path React calls)
 // and assert the observable state + private retry counter.
 
@@ -29,9 +29,9 @@ describe('MapErrorBoundary retry budget reset (#217)', () => {
     console.info = originalInfo
   })
 
-  function makeBoundary() {
+  async function makeBoundary() {
     const ref = React.createRef<any>()
-    render(<MapErrorBoundary ref={ref}>{null}</MapErrorBoundary>)
+    await render(<MapErrorBoundary ref={ref}>{null}</MapErrorBoundary>)
     const instance = ref.current
     const setState = jest.fn((updater: any) => {
       const next = typeof updater === 'function' ? updater(instance.state) : updater
@@ -41,8 +41,8 @@ describe('MapErrorBoundary retry budget reset (#217)', () => {
     return instance
   }
 
-  it('resets the retry budget after each successful recovery (survives >2 flips)', () => {
-    const boundary = makeBoundary()
+  it('resets the retry budget after each successful recovery (survives >2 flips)', async () => {
+    const boundary = await makeBoundary()
 
     // Simulate 4 breakpoint flips. Each: error caught → auto-reset → healthy
     // re-render (componentDidUpdate restores the budget).
@@ -64,12 +64,12 @@ describe('MapErrorBoundary retry budget reset (#217)', () => {
     expect((boundary as any)._autoRetryCount).toBe(0)
   })
 
-  it('does NOT auto-recover unrelated errors (fallback is shown with a retry button)', () => {
+  it('does NOT auto-recover unrelated errors (fallback is shown with a retry button)', async () => {
     function HardBoom(): React.ReactElement {
       throw UNRELATED_ERROR
     }
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <MapErrorBoundary>
         <HardBoom />
       </MapErrorBoundary>,
@@ -77,12 +77,12 @@ describe('MapErrorBoundary retry budget reset (#217)', () => {
 
     expect(getByText('Ошибка загрузки карты')).toBeTruthy()
     const retry = getByText('Попробовать снова')
-    fireEvent.press(retry)
+    await fireEvent.press(retry)
     expect(getByText('Ошибка загрузки карты')).toBeTruthy()
   })
 
-  it('renders children normally when no error occurs', () => {
-    const { getByText } = render(
+  it('renders children normally when no error occurs', async () => {
+    const { getByText } = await render(
       <MapErrorBoundary>
         <Text>map-ok</Text>
       </MapErrorBoundary>,

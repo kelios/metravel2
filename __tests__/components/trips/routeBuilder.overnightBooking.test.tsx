@@ -115,27 +115,27 @@ const makeTrip = (route: RoutePoint[]): PlannedTrip => ({
   createdAt: '2026-08-08T08:00:00Z',
 })
 
-const renderRouteBuilder = (route: RoutePoint[], layout: 'stack' | 'mapFirst') =>
-  render(<RouteBuilder trip={makeTrip(route)} layout={layout} />, {
+const renderRouteBuilder = async (route: RoutePoint[], layout: 'stack' | 'mapFirst') =>
+  await render(<RouteBuilder trip={makeTrip(route)} layout={layout} />, {
     wrapper: createQueryWrapper().Wrapper,
   })
 
 /** Первая точка правится, заполняется бронью и сохраняется вместе с маршрутом. */
-const fillBooking = (
-  getByTestId: ReturnType<typeof renderRouteBuilder>['getByTestId'],
+const fillBooking = async (
+  getByTestId: Awaited<ReturnType<typeof renderRouteBuilder>>['getByTestId'],
   values: { address?: string; url?: string; price?: string; checkin?: string },
 ) => {
   if (values.address !== undefined) {
-    fireEvent.changeText(getByTestId('route-builder-overnight-address'), values.address)
+    await fireEvent.changeText(getByTestId('route-builder-overnight-address'), values.address)
   }
   if (values.url !== undefined) {
-    fireEvent.changeText(getByTestId('route-builder-overnight-url'), values.url)
+    await fireEvent.changeText(getByTestId('route-builder-overnight-url'), values.url)
   }
   if (values.price !== undefined) {
-    fireEvent.changeText(getByTestId('route-builder-overnight-price'), values.price)
+    await fireEvent.changeText(getByTestId('route-builder-overnight-price'), values.price)
   }
   if (values.checkin !== undefined) {
-    fireEvent.changeText(getByTestId('route-builder-overnight-checkin'), values.checkin)
+    await fireEvent.changeText(getByTestId('route-builder-overnight-checkin'), values.checkin)
   }
 }
 
@@ -144,41 +144,41 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: бронь ночё
     mockRouteMutate.mockReset()
   })
 
-  it('показывает поля брони только у типа «ночёвка»', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder(
+  it('показывает поля брони только у типа «ночёвка»', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder(
       [makePoint(), makePoint({ id: 'p1', name: 'Точка 2' })],
       layout,
     )
 
-    fireEvent.press(getByTestId('route-builder-edit-0'))
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
     // Точка своя, не ночёвка — блока брони в форме нет.
     expect(queryByTestId('route-builder-overnight-fields')).toBeNull()
 
-    fireEvent.press(getByTestId('route-builder-edit-type-overnight'))
+    await fireEvent.press(getByTestId('route-builder-edit-type-overnight'))
     expect(getByTestId('route-builder-overnight-fields')).toBeTruthy()
 
     // Возврат к прежнему типу снова прячет блок.
-    fireEvent.press(getByTestId('route-builder-edit-type-rest'))
+    await fireEvent.press(getByTestId('route-builder-edit-type-rest'))
     expect(queryByTestId('route-builder-overnight-fields')).toBeNull()
   })
 
-  it('сохраняет бронь нормализованной и отдаёт её в PUT маршрута', () => {
-    const { getByTestId } = renderRouteBuilder(
+  it('сохраняет бронь нормализованной и отдаёт её в PUT маршрута', async () => {
+    const { getByTestId } = await renderRouteBuilder(
       [makePoint(), makePoint({ id: 'p1', name: 'Точка 2' })],
       layout,
     )
 
-    fireEvent.press(getByTestId('route-builder-edit-0'))
-    fireEvent.press(getByTestId('route-builder-edit-type-overnight'))
-    fillBooking(getByTestId, {
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
+    await fireEvent.press(getByTestId('route-builder-edit-type-overnight'))
+    await fillBooking(getByTestId, {
       address: 'Rue de la Gare 1, Echternach',
       // Голый домен и запятая в цене — то, что реально набирают руками.
       url: 'booking.com/hotel/lu/echternach.html',
       price: '84,50',
       checkin: '15.00',
     })
-    fireEvent.press(getByTestId('route-builder-edit-save'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-edit-save'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate).toHaveBeenCalledTimes(1)
     const saved = mockRouteMutate.mock.calls[0][0].route as RoutePoint[]
@@ -199,13 +199,13 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: бронь ночё
     ['время заезда', { checkin: '14-00' }, 'tripsStatic:plan.overnight.errors.checkin'],
     ['цену', { price: '42 евро' }, 'tripsStatic:plan.overnight.errors.price'],
     ['ссылку', { url: 'javascript:alert(1)' }, 'tripsStatic:plan.overnight.errors.url'],
-  ] as const)('не закрывает форму и показывает ошибку на негодную %s', (_case, values, key) => {
-    const { getByTestId, getByText } = renderRouteBuilder([makePoint()], layout)
+  ] as const)('не закрывает форму и показывает ошибку на негодную %s', async (_case, values, key) => {
+    const { getByTestId, getByText } = await renderRouteBuilder([makePoint()], layout)
 
-    fireEvent.press(getByTestId('route-builder-edit-0'))
-    fireEvent.press(getByTestId('route-builder-edit-type-overnight'))
-    fillBooking(getByTestId, values)
-    fireEvent.press(getByTestId('route-builder-edit-save'))
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
+    await fireEvent.press(getByTestId('route-builder-edit-type-overnight'))
+    await fillBooking(getByTestId, values)
+    await fireEvent.press(getByTestId('route-builder-edit-save'))
 
     // Форма осталась открытой, введённое не потеряно, а причина названа.
     expect(getByTestId('route-builder-edit-form')).toBeTruthy()
@@ -214,13 +214,13 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: бронь ночё
     expect(mockRouteMutate).not.toHaveBeenCalled()
   })
 
-  it('считает правку одной только брони несохранённой и отправляет её', () => {
+  it('считает правку одной только брони несохранённой и отправляет её', async () => {
     // Кнопка «Сохранить маршрут» существует, только пока подпись черновика
     // разошлась с сохранённой (`routeBuilderCta.visible`), а `handleSave` при
     // совпадении подписей уходит в ранний возврат. Пока бронь не входила в
     // `routeSignature`, заполнение её полей — без единой правки имени, типа или
     // координат — не давало ни кнопки, ни PUT: введённое пропадало молча.
-    const { getByTestId } = renderRouteBuilder(
+    const { getByTestId } = await renderRouteBuilder(
       [
         makePoint({ type: 'overnight', name: 'Ночёвка 1' }),
         makePoint({ id: 'p1', name: 'Точка 2' }),
@@ -228,10 +228,10 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: бронь ночё
       layout,
     )
 
-    fireEvent.press(getByTestId('route-builder-edit-0'))
-    fillBooking(getByTestId, { url: 'booking.com/hotel/lu/echternach.html' })
-    fireEvent.press(getByTestId('route-builder-edit-save'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
+    await fillBooking(getByTestId, { url: 'booking.com/hotel/lu/echternach.html' })
+    await fireEvent.press(getByTestId('route-builder-edit-save'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate).toHaveBeenCalledTimes(1)
     const saved = mockRouteMutate.mock.calls[0][0].route as RoutePoint[]
@@ -242,8 +242,8 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: бронь ночё
     })
   })
 
-  it('роняет бронь, когда точка перестала быть ночёвкой', () => {
-    const { getByTestId } = renderRouteBuilder(
+  it('роняет бронь, когда точка перестала быть ночёвкой', async () => {
+    const { getByTestId } = await renderRouteBuilder(
       [
         makePoint({
           type: 'overnight',
@@ -259,21 +259,21 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: бронь ночё
       layout,
     )
 
-    fireEvent.press(getByTestId('route-builder-edit-0'))
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
     // Форма подставила сохранённую бронь…
     expect(getByTestId('route-builder-overnight-address').props.value).toBe('Rue de la Gare 1')
     // …а смена типа обязана её снять: показать бронь у «отдыха» нечем.
-    fireEvent.press(getByTestId('route-builder-edit-type-rest'))
-    fireEvent.press(getByTestId('route-builder-edit-save'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-edit-type-rest'))
+    await fireEvent.press(getByTestId('route-builder-edit-save'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     const saved = mockRouteMutate.mock.calls[0][0].route as RoutePoint[]
     expect(saved[0].type).toBe('rest')
     expect(saved[0].booking).toBeNull()
   })
 
-  it('показывает бронь в строке точки ссылкой, ценой и временем заезда', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder(
+  it('показывает бронь в строке точки ссылкой, ценой и временем заезда', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder(
       [
         makePoint({
           type: 'overnight',

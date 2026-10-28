@@ -54,7 +54,7 @@ describe('PersonalizedRecommendations', () => {
   })
 
   it('renders login prompt when not authenticated', async () => {
-    const { findByText, queryByText } = render(<PersonalizedRecommendations />)
+    const { findByText, queryByText } = await render(<PersonalizedRecommendations />)
     
     expect(await findByText('Рекомендации для вас')).toBeTruthy()
     expect(queryByText('Для вас')).toBeNull()
@@ -66,7 +66,7 @@ describe('PersonalizedRecommendations', () => {
   it('renders empty state when authenticated but no favorites or history', async () => {
     mockIsAuthenticated = true
     
-    const { findByText } = render(<PersonalizedRecommendations />)
+    const { findByText } = await render(<PersonalizedRecommendations />)
     
     expect(await findByText('Рекомендации для вас')).toBeTruthy()
     expect(
@@ -84,7 +84,7 @@ describe('PersonalizedRecommendations', () => {
       addedAt: Date.now(),
     })
 
-    const { findByTestId, queryByText } = render(
+    const { findByTestId, queryByText } = await render(
       <PersonalizedRecommendations onlyRecommendations />
     )
 
@@ -104,7 +104,7 @@ describe('PersonalizedRecommendations', () => {
     }
     mockFavorites.push(testFavorite)
     
-    const { findByText, findByLabelText, findByTestId } = render(<PersonalizedRecommendations />)
+    const { findByText, findByLabelText, findByTestId } = await render(<PersonalizedRecommendations />)
 
     expect(await findByText('Хочу поехать')).toBeTruthy()
     expect(await findByTestId('personalized-favorites-section')).toBeTruthy()
@@ -123,7 +123,7 @@ describe('PersonalizedRecommendations', () => {
       viewedAt: Date.now(),
     })
     
-    const { findByText, findByTestId } = render(<PersonalizedRecommendations />)
+    const { findByText, findByTestId } = await render(<PersonalizedRecommendations />)
 
     expect(await findByText('Недавно просмотрено')).toBeTruthy()
     expect(await findByTestId('personalized-history-section')).toBeTruthy()
@@ -141,10 +141,10 @@ describe('PersonalizedRecommendations', () => {
     }
     mockFavorites.push(testFavorite)
     
-    const { findByLabelText } = render(<PersonalizedRecommendations />)
+    const { findByLabelText } = await render(<PersonalizedRecommendations />)
     const item = await findByLabelText(/Test Travel/)
     
-    fireEvent.press(item)
+    await fireEvent.press(item)
     
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/travels/1')

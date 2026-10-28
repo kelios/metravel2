@@ -164,7 +164,7 @@ describe('RouteBuilder — «Повторить» и автопересчёт в
   it('клик по «Повторить» шлёт ровно один POST; смена транспорта после него — ещё один', async () => {
     const trip = makeTrip()
     const { queryClient, Wrapper } = createQueryWrapper()
-    const { findByTestId, rerender } = render(<RouteBuilder trip={trip} layout="mapFirst" />, {
+    const { findByTestId, rerender } = await render(<RouteBuilder trip={trip} layout="mapFirst" />, {
       wrapper: Wrapper,
     })
 
@@ -176,7 +176,7 @@ describe('RouteBuilder — «Повторить» и автопересчёт в
     expect(mockRefreshElevation).not.toHaveBeenCalled()
 
     const retryButton = await findByTestId('route-mobile-summary-retry')
-    fireEvent.press(retryButton)
+    await fireEvent.press(retryButton)
 
     await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(1))
     await waitFor(() =>
@@ -192,7 +192,7 @@ describe('RouteBuilder — «Повторить» и автопересчёт в
 
     // Смена транспорта — новый ключ пересчёта (#1308): авто-эффект обязан
     // сработать заново, «Повторить» его не должен был запереть навсегда.
-    rerender(<RouteBuilder trip={{ ...trip, transport: 'bike', bikeType: 'regular' }} layout="mapFirst" />)
+    await rerender(<RouteBuilder trip={{ ...trip, transport: 'bike', bikeType: 'regular' }} layout="mapFirst" />)
 
     await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(2))
     expect(mockRefreshElevation).toHaveBeenNthCalledWith(1, trip.id)

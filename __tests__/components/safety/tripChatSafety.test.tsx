@@ -24,7 +24,7 @@ jest.mock('@/api/tripChat', () => ({
 import { TripChatPanel } from '@/components/trips/chat/TripChatPanel'
 import { useHiddenContentStore } from '@/stores/hiddenContentStore'
 
-const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: createQueryWrapper().Wrapper })
+const render = async (ui: React.ReactElement) => rtlRender(ui, { wrapper: createQueryWrapper().Wrapper })
 
 beforeEach(() => {
   useHiddenContentStore.setState({ byOwner: {} })
@@ -32,7 +32,7 @@ beforeEach(() => {
 
 describe('TripChatPanel safety (#2133)', () => {
   it('shows the trigger on a foreign message only', async () => {
-    const { findByText, getByTestId, queryByTestId } = render(<TripChatPanel tripId={3} />)
+    const { findByText, getByTestId, queryByTestId } = await render(<TripChatPanel tripId={3} />)
     await findByText('Чужое в поездке')
     expect(getByTestId('trip-chat-message-5-safety-menu')).toBeTruthy()
     expect(queryByTestId('trip-chat-message-6-safety-menu')).toBeNull()
@@ -40,7 +40,7 @@ describe('TripChatPanel safety (#2133)', () => {
 
   it('replaces a hidden foreign message with the placeholder', async () => {
     useHiddenContentStore.setState({ byOwner: { '1': ['trip_chat_message:5'] } })
-    const { findByText, getByTestId, queryByText } = render(<TripChatPanel tripId={3} />)
+    const { findByText, getByTestId, queryByText } = await render(<TripChatPanel tripId={3} />)
     await findByText('Моё в поездке')
     expect(getByTestId('hidden-content')).toBeTruthy()
     expect(queryByText('Чужое в поездке')).toBeNull()

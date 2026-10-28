@@ -69,8 +69,8 @@ beforeEach(() => {
 })
 
 describe('BadgeDetailSheet', () => {
-  it('shows "Как получить" criteria + progress count and remaining for locked', () => {
-    const { getByText, queryByText } = render(
+  it('shows "Как получить" criteria + progress count and remaining for locked', async () => {
+    const { getByText, queryByText } = await render(
       <BadgeDetailSheet
         visible
         onClose={() => {}}
@@ -90,8 +90,8 @@ describe('BadgeDetailSheet', () => {
     expect(queryByText('Значок получен')).toBeNull()
   })
 
-  it('shows "За что получен" and earned state without progress for earned', () => {
-    const { getByText, queryByText } = render(
+  it('shows "За что получен" and earned state without progress for earned', async () => {
+    const { getByText, queryByText } = await render(
       <BadgeDetailSheet
         visible
         onClose={() => {}}
@@ -104,15 +104,15 @@ describe('BadgeDetailSheet', () => {
     expect(queryByText('Прогресс')).toBeNull()
   })
 
-  it('renders nothing when detail is null', () => {
-    const { toJSON } = render(
+  it('renders nothing when detail is null', async () => {
+    const { toJSON } = await render(
       <BadgeDetailSheet visible={false} onClose={() => {}} detail={null} />,
     )
     expect(toJSON()).toBeNull()
   })
 
-  it('hides share when earned but userBadgeId is unknown (avoids 403)', () => {
-    const { queryByLabelText } = render(
+  it('hides share when earned but userBadgeId is unknown (avoids 403)', async () => {
+    const { queryByLabelText } = await render(
       <BadgeDetailSheet
         visible
         onClose={() => {}}
@@ -124,7 +124,7 @@ describe('BadgeDetailSheet', () => {
   })
 
   it('shares with UserBadge.id, not the catalog badge.id', async () => {
-    const { getByLabelText, getByTestId } = render(
+    const { getByLabelText, getByTestId } = await render(
       <BadgeDetailSheet
         visible
         onClose={() => {}}
@@ -133,7 +133,7 @@ describe('BadgeDetailSheet', () => {
       />,
     )
 
-    fireEvent.press(getByLabelText('Поделиться достижением'))
+    await fireEvent.press(getByLabelText('Поделиться достижением'))
     // Лист открыт — дожидаемся запроса карточки.
     await waitFor(() => expect(mockCreateShareCard).toHaveBeenCalled())
 
@@ -150,22 +150,22 @@ describe('BadgeDetailSheet', () => {
   it('closes only sharing and hides every child presentation with its parent', async () => {
     const onClose = jest.fn()
     const detail = { badge: makeBadge(), earned: true, userBadgeId: 104 }
-    const view = render(
+    const view = await render(
       <BadgeDetailSheet visible onClose={onClose} detail={detail} ownerName="Юлия" />,
     )
 
-    fireEvent.press(view.getByLabelText('Поделиться достижением'))
+    await fireEvent.press(view.getByLabelText('Поделиться достижением'))
     await waitFor(() => expect(view.getByTestId('share-card-preview')).toBeTruthy())
 
     const closeButtons = view.getAllByLabelText('Закрыть')
-    fireEvent.press(closeButtons[closeButtons.length - 1])
+    await fireEvent.press(closeButtons[closeButtons.length - 1])
     expect(view.queryByTestId('share-card-preview')).toBeNull()
     expect(view.getByTestId('badge-detail-sheet')).toBeTruthy()
     expect(onClose).not.toHaveBeenCalled()
 
-    fireEvent.press(view.getByLabelText('Поделиться достижением'))
+    await fireEvent.press(view.getByLabelText('Поделиться достижением'))
     await waitFor(() => expect(view.getByTestId('share-card-preview')).toBeTruthy())
-    view.rerender(
+    await view.rerender(
       <BadgeDetailSheet visible={false} onClose={onClose} detail={detail} ownerName="Юлия" />,
     )
     expect(view.queryByTestId('share-card-preview')).toBeNull()

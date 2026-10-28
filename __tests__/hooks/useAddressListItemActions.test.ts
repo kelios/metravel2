@@ -58,7 +58,7 @@ const baseTravel: TravelCoords = {
 }
 
 const savePoint = async (travel: TravelCoords) => {
-  const { result } = renderHook(() => useAddressListItemActions(travel))
+  const { result } = await renderHook(() => useAddressListItemActions(travel))
   await act(async () => {
     await result.current.handleAddPoint()
   })

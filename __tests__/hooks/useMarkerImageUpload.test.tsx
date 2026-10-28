@@ -57,6 +57,10 @@ describe('useMarkerImageUpload', () => {
   it('replaces a backend fallback that arrived while the blob upload was in flight', async () => {
     const fallbackUrl = 'https://example.com/travel-cover/fallback.webp';
     const pendingFile = new File(['point'], 'point.webp', { type: 'image/webp' });
+    let resolveUpload!: (value: Awaited<ReturnType<typeof uploadImage>>) => void;
+    const uploadResponse = new Promise<Awaited<ReturnType<typeof uploadImage>>>((resolve) => {
+      resolveUpload = resolve;
+    });
     Object.defineProperty(globalThis, 'requestAnimationFrame', {
       configurable: true,
       writable: true,
@@ -65,7 +69,7 @@ describe('useMarkerImageUpload', () => {
     (getPendingImageFile as jest.MockedFunction<typeof getPendingImageFile>)
       .mockReturnValue(pendingFile);
     (uploadImage as jest.MockedFunction<typeof uploadImage>)
-      .mockResolvedValue({ url: uploadedUrl });
+      .mockReturnValue(uploadResponse);
 
     const formDataRef = {
       current: {
@@ -74,18 +78,18 @@ describe('useMarkerImageUpload', () => {
     };
     const updateFormMarkers = jest.fn();
     const updateBaseline = jest.fn();
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useMarkerImageUpload({
           formDataRef,
           updateFormMarkers,
           updateBaseline,
         }),
-      { concurrentRoot: false },
+      {  },
     );
 
     let upload!: Promise<void>;
-    act(() => {
+    await act(() => {
       upload = result.current.uploadPendingMarkerImages([marker]);
     });
     formDataRef.current = {
@@ -94,6 +98,7 @@ describe('useMarkerImageUpload', () => {
     };
 
     await act(async () => {
+      resolveUpload({ url: uploadedUrl });
       await upload;
     });
 
@@ -112,7 +117,7 @@ describe('useMarkerImageUpload', () => {
     expect(removePendingImageFile).toHaveBeenCalledWith(blobUrl);
   });
 
-  it('does not let an old upload completion overwrite a newer local preview', () => {
+  it('does not let an old upload completion overwrite a newer local preview', async () => {
     const newerBlobUrl = 'blob:https://example.com/newer-route-point-preview';
     const formDataRef = {
       current: {
@@ -121,17 +126,17 @@ describe('useMarkerImageUpload', () => {
     };
     const updateFormMarkers = jest.fn();
     const updateBaseline = jest.fn();
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useMarkerImageUpload({
           formDataRef,
           updateFormMarkers,
           updateBaseline,
         }),
-      { concurrentRoot: false },
+      {  },
     );
 
-    act(() => {
+    await act(() => {
       result.current.applyUploadedMarkerImage('55', blobUrl, uploadedUrl);
     });
 
@@ -179,18 +184,18 @@ describe('useMarkerImageUpload', () => {
     };
     const updateFormMarkers = jest.fn();
     const updateBaseline = jest.fn();
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useMarkerImageUpload({
           formDataRef,
           updateFormMarkers,
           updateBaseline,
         }),
-      { concurrentRoot: false },
+      {  },
     );
 
     let uploadA!: Promise<void>;
-    act(() => {
+    await act(() => {
       uploadA = result.current.uploadPendingMarkerImages([marker]);
     });
     formDataRef.current = {
@@ -198,7 +203,7 @@ describe('useMarkerImageUpload', () => {
       coordsMeTravel: [{ ...marker, image: blobUrlB }],
     };
     let uploadB!: Promise<void>;
-    act(() => {
+    await act(() => {
       uploadB = result.current.uploadPendingMarkerImages([
         { ...marker, image: blobUrlB },
       ]);
@@ -243,18 +248,18 @@ describe('useMarkerImageUpload', () => {
     };
     const updateFormMarkers = jest.fn();
     const updateBaseline = jest.fn();
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useMarkerImageUpload({
           formDataRef,
           updateFormMarkers,
           updateBaseline,
         }),
-      { concurrentRoot: false },
+      {  },
     );
 
     let upload!: Promise<void>;
-    act(() => {
+    await act(() => {
       upload = result.current.uploadPendingMarkerImages([marker]);
     });
     formDataRef.current = {
@@ -293,14 +298,14 @@ describe('useMarkerImageUpload', () => {
     };
     const updateFormMarkers = jest.fn();
     const updateBaseline = jest.fn();
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useMarkerImageUpload({
           formDataRef,
           updateFormMarkers,
           updateBaseline,
         }),
-      { concurrentRoot: false },
+      {  },
     );
 
     for (let attempt = 0; attempt < 4; attempt += 1) {
@@ -345,7 +350,7 @@ describe('useMarkerImageUpload', () => {
       .mockResolvedValue({ url: uploadedUrl });
 
     const updateBaseline = jest.fn();
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => {
         const formDataRef = useRef({
           coordsMeTravel: [marker],
@@ -365,7 +370,7 @@ describe('useMarkerImageUpload', () => {
         });
         return { ...upload, renderedFormData };
       },
-      { concurrentRoot: false },
+      {  },
     );
 
     try {
@@ -380,12 +385,12 @@ describe('useMarkerImageUpload', () => {
       expect(frameCallbacks).toHaveLength(0);
       expect(revokeObjectURL).not.toHaveBeenCalled();
 
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(14_000);
       });
       expect(revokeObjectURL).not.toHaveBeenCalled();
 
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(2_000);
       });
       expect(revokeObjectURL).toHaveBeenCalledTimes(1);
@@ -416,7 +421,7 @@ describe('useMarkerImageUpload', () => {
     const formDataRef = {
       current: { coordsMeTravel: [{ ...marker, id: null }] } as unknown as TravelFormData,
     };
-    const { result } = renderHook(() => useMarkerImageUpload({
+    const { result } = await renderHook(() => useMarkerImageUpload({
       formDataRef,
       updateFormMarkers,
       updateBaseline,
@@ -430,7 +435,7 @@ describe('useMarkerImageUpload', () => {
       expect(uploadImage).toHaveBeenCalledTimes(1);
       expect(updateFormMarkers).not.toHaveBeenCalled();
       expect(removePendingImageFile).not.toHaveBeenCalled();
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(60_000);
       });
       expect(revokeObjectURL).not.toHaveBeenCalled();
@@ -467,9 +472,9 @@ describe('useMarkerImageUpload', () => {
     const formDataRef = {
       current: { coordsMeTravel: [{ ...marker, id: null }] } as unknown as TravelFormData,
     };
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useMarkerImageUpload({ formDataRef, updateFormMarkers, updateBaseline }),
-      { concurrentRoot: false },
+      {  },
     );
 
     await act(async () => {

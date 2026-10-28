@@ -40,7 +40,7 @@ it('shows guest-safe SSR data immediately and waits for normal credentials befor
   const authenticated: ApiQuestMeta = { ...seed, title: 'Authenticated current value', is_completed_by_me: true,
     personal_status_unavailable: false };
   mockFetchList.mockResolvedValue([authenticated]);
-  const { result } = renderHook(() => useQuestsList(), { wrapper: wrapper(discovery('catalog')) });
+  const { result } = await renderHook(() => useQuestsList(), { wrapper: wrapper(discovery('catalog')) });
   expect(result.current.loading).toBe(false);
   expect(result.current.quests[0].personalStatusUnavailable).toBe(true);
   expect(result.current.quests[0].isCompletedByMe).toBe(false);
@@ -51,25 +51,25 @@ it('shows guest-safe SSR data immediately and waits for normal credentials befor
   expect(result.current.quests[0].personalStatusUnavailable).toBe(false);
 });
 
-it('does not overwrite an existing authenticated browser cache with a public document snapshot', () => {
+it('does not overwrite an existing authenticated browser cache with a public document snapshot', async () => {
   client.setQueryData(queryKeys.questsCatalog('ru'), [{ ...seed, title: 'Existing current cache',
     is_completed_by_me: true, personal_status_unavailable: false }]);
-  const { result } = renderHook(() => useQuestsList(), { wrapper: wrapper(discovery('catalog')) });
+  const { result } = await renderHook(() => useQuestsList(), { wrapper: wrapper(discovery('catalog')) });
   expect(result.current.quests[0].title).toBe('Existing current cache');
   expect(result.current.quests[0].isCompletedByMe).toBe(true);
   expect(mockFetchList).not.toHaveBeenCalled();
 });
 
-it('does not mistake a homepage preview for the complete catalogue', () => {
-  const { result } = renderHook(() => ({ list: useQuestsList({ enabled: false }), preview: useQuestsPreview(6, { enabled: false }) }),
+it('does not mistake a homepage preview for the complete catalogue', async () => {
+  const { result } = await renderHook(() => ({ list: useQuestsList({ enabled: false }), preview: useQuestsPreview(6, { enabled: false }) }),
     { wrapper: wrapper(discovery('home')) });
   expect(result.current.list.quests).toEqual([]);
   expect(result.current.preview.quests.map((quest) => quest.id)).toEqual([seed.quest_id]);
   expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toBeUndefined();
 });
 
-it('never feeds a RU seed into a later selected content locale', () => {
+it('never feeds a RU seed into a later selected content locale', async () => {
   mockLocale = 'pl';
-  const { result } = renderHook(() => useQuestsList({ enabled: false }), { wrapper: wrapper(discovery('catalog')) });
+  const { result } = await renderHook(() => useQuestsList({ enabled: false }), { wrapper: wrapper(discovery('catalog')) });
   expect(result.current.quests).toEqual([]);
 });

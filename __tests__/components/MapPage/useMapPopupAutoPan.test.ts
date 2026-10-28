@@ -58,10 +58,10 @@ describe('useMapPopupAutoPan', () => {
     ;(global as any).ResizeObserver = originalResizeObserver
   })
 
-  it('uses mobile top auto-pan padding on narrow web viewports', () => {
+  it('uses mobile top auto-pan padding on narrow web viewports', async () => {
     const mapRef = { current: null }
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useMapPopupAutoPan({
         mapRef,
         mapPaneWidth: 393,
@@ -80,7 +80,7 @@ describe('useMapPopupAutoPan', () => {
     )
   })
 
-  it('re-centers popup into the mobile safe area when it overlaps the header and chips area', () => {
+  it('re-centers popup into the mobile safe area when it overlaps the header and chips area', async () => {
     const panBy = jest.fn()
     const listeners = new Map<string, (...args: any[]) => void>()
     const on = jest.fn((event: string, callback: (...args: any[]) => void) => {
@@ -123,7 +123,7 @@ describe('useMapPopupAutoPan', () => {
       },
     }
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useMapPopupAutoPan({
         mapRef,
         mapPaneWidth: 393,
@@ -145,7 +145,7 @@ describe('useMapPopupAutoPan', () => {
     expect(on).not.toHaveBeenCalledWith('moveend', expect.any(Function))
   })
 
-  it('keeps observing popup size changes after the first second and corrects horizontal overflow', () => {
+  it('keeps observing popup size changes after the first second and corrects horizontal overflow', async () => {
     const panBy = jest.fn()
     const on = jest.fn()
     const off = jest.fn()
@@ -187,7 +187,7 @@ describe('useMapPopupAutoPan', () => {
       },
     }
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useMapPopupAutoPan({
         mapRef,
         mapPaneWidth: 393,
@@ -208,7 +208,7 @@ describe('useMapPopupAutoPan', () => {
 
     // The first ResizeObserver callback reports a real size (differs from the
     // initial 0x0 baseline), so it schedules a debounced horizontal re-pan.
-    act(() => {
+    await act(() => {
       resizeObserverInstances[0]?.trigger({ width: popupWidth, height: 380 })
       jest.advanceTimersByTime(120)
     })
@@ -218,13 +218,13 @@ describe('useMapPopupAutoPan', () => {
 
     // A subsequent callback reporting the SAME size is skipped (no debounce
     // scheduled, no redundant re-pan).
-    act(() => {
+    await act(() => {
       resizeObserverInstances[0]?.trigger({ width: popupWidth, height: 380 })
       jest.advanceTimersByTime(120)
     })
     expect(panBy).not.toHaveBeenCalled()
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1500)
     })
 
@@ -233,7 +233,7 @@ describe('useMapPopupAutoPan', () => {
     // A real size change well after the first second still schedules a debounced
     // horizontal re-pan so late image decode can keep the popup unclipped without
     // vertically jerking the photo.
-    act(() => {
+    await act(() => {
       resizeObserverInstances[0]?.trigger({ width: popupWidth, height: 380 })
       jest.advanceTimersByTime(120)
     })
@@ -246,7 +246,7 @@ describe('useMapPopupAutoPan', () => {
     })
   })
 
-  it('pans desktop popup horizontally only when it overflows the safe area', () => {
+  it('pans desktop popup horizontally only when it overflows the safe area', async () => {
     const panBy = jest.fn()
     const on = jest.fn()
     const off = jest.fn()
@@ -290,7 +290,7 @@ describe('useMapPopupAutoPan', () => {
       },
     }
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useMapPopupAutoPan({
         mapRef,
         mapPaneWidth: 1280,
@@ -313,7 +313,7 @@ describe('useMapPopupAutoPan', () => {
     })
   })
 
-  it('does not pan desktop popup when it fits inside the safe area', () => {
+  it('does not pan desktop popup when it fits inside the safe area', async () => {
     const panBy = jest.fn()
     const on = jest.fn()
     const off = jest.fn()
@@ -356,7 +356,7 @@ describe('useMapPopupAutoPan', () => {
       },
     }
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useMapPopupAutoPan({
         mapRef,
         mapPaneWidth: 1280,
@@ -380,16 +380,16 @@ describe('useMapPopupAutoPan', () => {
 
   // #2451 — the sheet height is read lazily: a sheet snap must not hand the
   // marker layer a new popupProps object (nor re-render the map).
-  it('keeps popupProps identity when the bottom-sheet getter value changes', () => {
+  it('keeps popupProps identity when the bottom-sheet getter value changes', async () => {
     let offset = 120
     const getOffset = () => offset
     const mapRef = { current: null }
-    const { result, rerender } = renderHook(() =>
+    const { result, rerender } = await renderHook(() =>
       useMapPopupAutoPan({ mapRef, mapPaneWidth: 393, popupBottomOffset: getOffset }),
     )
     const first = result.current.popupAutoPanPadding
     offset = 480
-    rerender({})
+    await rerender({})
     expect(result.current.popupAutoPanPadding).toBe(first)
   })
 })

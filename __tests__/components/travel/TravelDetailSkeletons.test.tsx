@@ -1,3 +1,4 @@
+import { within } from '@testing-library/react-native'
 import React from 'react';
 import { render } from '@testing-library/react-native';
 
@@ -40,8 +41,8 @@ jest.mock('@/hooks/useResponsive', () => ({
 }));
 
 describe('TravelDetailSkeletons', () => {
-  it('DescriptionSkeleton reserves stable space', () => {
-    const { getByTestId, queryAllByTestId } = render(<DescriptionSkeleton />);
+  it('DescriptionSkeleton reserves stable space', async () => {
+    const { getByTestId, queryAllByTestId } = await render(<DescriptionSkeleton />);
     expect(queryAllByTestId('skeleton-loader')).toHaveLength(0);
 
     const reserved = getByTestId('travel-details-description-reserved');
@@ -50,41 +51,41 @@ describe('TravelDetailSkeletons', () => {
     expect(flattened.height).toBeGreaterThan(0);
   });
 
-  it('MapSkeleton renders exactly one block', () => {
-    const { getAllByTestId } = render(<MapSkeleton />);
+  it('MapSkeleton renders exactly one block', async () => {
+    const { getAllByTestId } = await render(<MapSkeleton />);
     expect(getAllByTestId('skeleton-loader')).toHaveLength(1);
   });
 
-  it('PointListSkeleton renders 3 point cards with expected loaders per card', () => {
-    const { getAllByTestId } = render(<PointListSkeleton />);
+  it('PointListSkeleton renders 3 point cards with expected loaders per card', async () => {
+    const { getAllByTestId } = await render(<PointListSkeleton />);
     // per card: image + title + subtitle => 3 loaders
     expect(getAllByTestId('skeleton-loader')).toHaveLength(3 * 3);
   });
 
-  it('sidebar placeholders use the actual card skeleton for near and popular', () => {
-    const { getAllByTestId } = render(<SidebarSectionSkeleton />);
+  it('sidebar placeholders use the actual card skeleton for near and popular', async () => {
+    const { getAllByTestId } = await render(<SidebarSectionSkeleton />);
     const placeholders = getAllByTestId('travel-sidebar-round-card-skeleton', { includeHiddenElements: true });
     expect(placeholders).toHaveLength(2);
-    const loaded = render(<TravelTmlRound travel={{ id: 791, name: 'Маршрут', slug: 'route', travel_image_thumb_url: '' } as Travel} />);
+    const loaded = await render(<TravelTmlRound travel={{ id: 791, name: 'Маршрут', slug: 'route', travel_image_thumb_url: '' } as Travel} />);
     const styles = createTravelTmlRoundStyles(getThemedColors(false));
-    const actualContainers = loaded.UNSAFE_getAllByType(require('react-native').View)
+    const actualContainers = loaded.container.queryAll(node => node.type === 'View', { includeSelf: true })
       .filter(node => StyleSheet.flatten(node.props.style)?.height === 250);
     expect(actualContainers).toHaveLength(1);
     for (const placeholder of placeholders) {
       expect(StyleSheet.flatten(placeholder.props.style)).toEqual(styles.container);
       expect(StyleSheet.flatten(placeholder.props.style)).toEqual(StyleSheet.flatten(actualContainers[0].props.style));
-      expect(placeholder.findAllByProps({ testID: 'skeleton-loader' })[0].props.height).toBe(TRAVEL_TML_ROUND_IMAGE_HEIGHT);
+      expect(within(placeholder).queryAllByTestId('skeleton-loader', { includeHiddenElements: true })[0].props.height).toBe(TRAVEL_TML_ROUND_IMAGE_HEIGHT);
     }
     expect(TRAVEL_TML_ROUND_IMAGE_HEIGHT).toBe(170);
   });
 
-  it('VideoSkeleton renders exactly one block', () => {
-    const { getAllByTestId } = render(<VideoSkeleton />);
+  it('VideoSkeleton renders exactly one block', async () => {
+    const { getAllByTestId } = await render(<VideoSkeleton />);
     expect(getAllByTestId('skeleton-loader')).toHaveLength(1);
   });
 
-  it('SectionSkeleton reserves stable space', () => {
-    const { getByTestId, queryAllByTestId } = render(<SectionSkeleton lines={5} />);
+  it('SectionSkeleton reserves stable space', async () => {
+    const { getByTestId, queryAllByTestId } = await render(<SectionSkeleton lines={5} />);
     expect(queryAllByTestId('skeleton-loader')).toHaveLength(0);
 
     const reserved = getByTestId('travel-details-section-reserved');

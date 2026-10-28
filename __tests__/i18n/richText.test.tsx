@@ -3,8 +3,8 @@ import { Text } from 'react-native'
 import { renderLocalizedText } from '@/i18n/richText'
 
 describe('localized rich interpolation', () => {
-  it('places styled nodes in the order specified by the localized phrase', () => {
-    const { getByTestId, getByText } = render(
+  it('places styled nodes in the order specified by the localized phrase', async () => {
+    const { getByTestId, getByText } = await render(
       <Text>{renderLocalizedText('{{value2}}: {{value1}}', {
         value1: <Text testID="emphasized-count">5</Text>, value2: 'Wybrano',
       })}</Text>,

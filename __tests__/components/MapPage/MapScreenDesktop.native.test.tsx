@@ -140,22 +140,22 @@ const findByTestID = (node: any, testID: string): any => {
   }
   return null
 }
-it('native wide chrome registers its actual three panel tab hosts for tour measurements', () => {
+it('native wide chrome registers its actual three panel tab hosts for tour measurements', async () => {
   const original = Platform.OS
   Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' })
   const registry = Object.fromEntries(['filters', 'travels', 'route'].map(name => [`map-panel-tab-${name}`, React.createRef<View>()]))
-  const view = render(<Chrome targetRegistry={registry} />)
+  const view = await render(<Chrome targetRegistry={registry} />)
   for (const [id, ref] of Object.entries(registry)) {
     expect(view.getByTestId(id)).toBeTruthy()
     expect((ref.current as any)?.props.testID).toBe(id)
     expect(ref.current?.measureInWindow).toEqual(expect.any(Function))
   }
   expect(view.queryByTestId('map-mobile-filters-button')).toBeNull()
-  view.unmount()
+  await view.unmount()
   Object.defineProperty(Platform, 'OS', { configurable: true, value: original })
 })
 
-const rowChildren = (utils: ReturnType<typeof render>) =>
+const rowChildren = (utils: Awaited<ReturnType<typeof render>>) =>
   (findByTestID(utils.toJSON(), 'map-row')?.children ?? []) as any[]
 const widthOf = (node: any) => StyleSheet.flatten(node?.props?.style)?.width
 
@@ -176,8 +176,8 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
 
   // #2217 — the header row belongs to the tabs only: «Фильтры» became the third
   // tab, «Подсказки» moved onto the map, «Сбросить» into the filters footer.
-  it('the panel header is the three tabs, without header actions or the phone «Скрыть панель»', () => {
-    const utils = render(<Chrome />)
+  it('the panel header is the three tabs, without header actions or the phone «Скрыть панель»', async () => {
+    const utils = await render(<Chrome />)
 
     for (const testID of ['map-panel-tab-travels', 'map-panel-tab-route', 'map-panel-tab-filters']) {
       expect(utils.getByTestId(testID)).toBeTruthy()
@@ -199,8 +199,8 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
   // neighbour reached into the neighbour's own 44pt box (the right 6pt of
   // «Места» opened «Маршрут»). The own box is the target
   // (scripts/guard-touch-targets.js).
-  it('header tabs never reach into their neighbour', () => {
-    const utils = render(<Chrome />)
+  it('header tabs never reach into their neighbour', async () => {
+    const utils = await render(<Chrome />)
     const styles = getStyles(false, 0, themedColors)
     const gap = Number(styles.tabsSegment.columnGap)
     expect(Number.isFinite(gap)).toBe(true)
@@ -212,8 +212,8 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     }
   })
 
-  it('collapses into the 56pt strip with no 360pt column left in the row, then expands back', () => {
-    const utils = render(<Chrome />)
+  it('collapses into the 56pt strip with no 360pt column left in the row, then expands back', async () => {
+    const utils = await render(<Chrome />)
 
     let row = rowChildren(utils)
     // #2243: the chevron's screen-reader twin in its slot, then the panel, then
@@ -227,7 +227,7 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     ])
     expect(StyleSheet.flatten(row[2].props.style).position).toBe('absolute')
 
-    fireEvent.press(utils.getByTestId(...CHEVRON))
+    await fireEvent.press(utils.getByTestId(...CHEVRON))
 
     row = rowChildren(utils)
     expect(row).toHaveLength(2)
@@ -236,7 +236,7 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     expect(row.some((node) => widthOf(node) === PANEL_WIDTH_NATIVE)).toBe(false)
     expect(utils.queryByTestId('map-panel-tab-travels')).toBeNull()
 
-    fireEvent.press(utils.getByTestId('map-panel-expand-button'))
+    await fireEvent.press(utils.getByTestId('map-panel-expand-button'))
 
     row = rowChildren(utils)
     expect(row).toHaveLength(4)
@@ -265,8 +265,8 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     return out
   }
 
-  it('iOS mount order reads the chevron twin first; the visible chevron is hidden from screen readers', () => {
-    const utils = render(<Chrome />)
+  it('iOS mount order reads the chevron twin first; the visible chevron is hidden from screen readers', async () => {
+    const utils = await render(<Chrome />)
     const order = iosReadingOrder(findByTestID(utils.toJSON(), 'map-row'))
     expect(order[0]).toBe('map-panel-collapse-a11y')
     expect(order.indexOf('map-panel-collapse-a11y')).toBeLessThan(order.indexOf('map-panel-tab-travels'))
@@ -314,19 +314,19 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
   })
 
   // #2243 — screen-reader focus around the chevron, and its activation.
-  it('moves focus across the toggle; the twin activates the same toggle', () => {
+  it('moves focus across the toggle; the twin activates the same toggle', async () => {
     const focusSpy = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {})
     try {
-      const utils = render(<Chrome />)
+      const utils = await render(<Chrome />)
       expect(focusSpy).not.toHaveBeenCalled()
 
-      fireEvent.press(utils.getByTestId(...CHEVRON))
+      await fireEvent.press(utils.getByTestId(...CHEVRON))
       expect(focusSpy).toHaveBeenCalledTimes(1)
       const [expandNode, expandEvent] = focusSpy.mock.calls[0] as any[]
       expect(expandEvent).toBe('focus')
       expect(expandNode.props.testID).toBe('map-panel-expand-button')
 
-      fireEvent.press(utils.getByTestId('map-panel-expand-button'))
+      await fireEvent.press(utils.getByTestId('map-panel-expand-button'))
       expect(focusSpy).toHaveBeenCalledTimes(2)
       expect(focusSpy.mock.calls[1][1]).toBe('focus')
       // Focus returns to the node screen readers read — the twin.
@@ -334,17 +334,17 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
 
       // Screen-reader activation of the twin collapses the panel.
       const twin = utils.getByTestId('map-panel-collapse-a11y')
-      act(() => {
+      await act(() => {
         if (Platform.OS === 'ios') twin.props.onAccessibilityTap()
         else twin.props.onAccessibilityAction({ nativeEvent: { actionName: 'activate' } })
       })
       expect(utils.getByTestId('map-panel-collapsed')).toBeTruthy()
-      fireEvent.press(utils.getByTestId('map-panel-expand-button'))
+      await fireEvent.press(utils.getByTestId('map-panel-expand-button'))
 
       // A strip icon expands the panel on its tab — not a chevron: no focus jump.
-      fireEvent.press(utils.getByTestId(...CHEVRON))
+      await fireEvent.press(utils.getByTestId(...CHEVRON))
       focusSpy.mockClear()
-      fireEvent.press(
+      await fireEvent.press(
         utils.getByLabelText(
           i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.spisok_tochek_value1_3daae6f8', { value1: 123 }),
         ),
@@ -355,11 +355,11 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     }
   })
 
-  it('a strip icon expands the panel on its tab', () => {
-    const utils = render(<Chrome />)
+  it('a strip icon expands the panel on its tab', async () => {
+    const utils = await render(<Chrome />)
 
-    fireEvent.press(utils.getByTestId(...CHEVRON))
-    fireEvent.press(
+    await fireEvent.press(utils.getByTestId(...CHEVRON))
+    await fireEvent.press(
       utils.getByLabelText(
         i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.spisok_tochek_value1_3daae6f8', { value1: 123 }),
       ),
@@ -369,8 +369,8 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     expect(utils.getByTestId('travel-list-panel')).toBeTruthy()
   })
 
-  const renderOverlays = (topInset = 0, isConnected = true, side = { left: 0, right: 0 }) =>
-    render(
+  const renderOverlays = async (topInset = 0, isConnected = true, side = { left: 0, right: 0 }) =>
+    await render(
       <MapScreenDesktopOverlays
         styles={getStyles(false, topInset, themedColors, false, side)}
         themedColors={themedColors}
@@ -393,13 +393,13 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
   // Over the native map WebView a hitSlop ring leaks taps on Android: the JS
   // target grows by it while the native touch outside the view lands on the
   // map (a route point in «Маршрут»). Targets are their own 44pt boxes.
-  it('controls over or beside the map carry no hitSlop', () => {
-    const chrome = render(<Chrome />)
+  it('controls over or beside the map carry no hitSlop', async () => {
+    const chrome = await render(<Chrome />)
     expect(chrome.getByTestId(...CHEVRON).props.hitSlop).toBeUndefined()
-    fireEvent.press(chrome.getByTestId(...CHEVRON))
+    await fireEvent.press(chrome.getByTestId(...CHEVRON))
     expect(chrome.getByTestId('map-panel-expand-button').props.hitSlop).toBeUndefined()
 
-    const overlays = renderOverlays()
+    const overlays = await renderOverlays()
     expect(overlays.getByTestId('map-desktop-help-button').props.hitSlop).toBeUndefined()
     expect(overlays.getByTestId('map-desktop-layers-button').props.hitSlop).toBeUndefined()
     expect(overlays.getByTestId('map-desktop-radius-button').props.hitSlop).toBeUndefined()
@@ -407,7 +407,7 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
 
   // BUG-CLASS-5: an open overlay closes on Android Back before Back navigates
   // away, as the phone layout already does for the same popovers.
-  it('Android Back closes an open on-map popover first; with none open Back stays default', () => {
+  it('Android Back closes an open on-map popover first; with none open Back stays default', async () => {
     let hardwareBack: (() => boolean) | undefined
     const remove = jest.fn()
     const addListener = jest
@@ -418,16 +418,16 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
       })
 
     try {
-      const utils = renderOverlays()
+      const utils = await renderOverlays()
       expect(addListener).not.toHaveBeenCalled()
 
-      fireEvent.press(utils.getByTestId('map-desktop-radius-button'))
+      await fireEvent.press(utils.getByTestId('map-desktop-radius-button'))
       expect(utils.getByTestId('radius-popover')).toBeTruthy()
 
       if (os === 'android') {
         expect(addListener).toHaveBeenCalledWith('hardwareBackPress', expect.any(Function))
         let consumed: boolean | undefined
-        act(() => {
+        await act(() => {
           consumed = hardwareBack?.()
         })
         expect(consumed).toBe(true)
@@ -442,8 +442,8 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     }
   })
 
-  it('the map carries «Радиус», «Слои», «Подсказки» in reading order; the floating filters button is gone', () => {
-    const utils = renderOverlays()
+  it('the map carries «Радиус», «Слои», «Подсказки» in reading order; the floating filters button is gone', async () => {
+    const utils = await renderOverlays()
 
     // Exactly the three on-map controls in the order of the picture: the top
     // row left to right, then «Подсказки» under «Слои» (#2217 moved it here
@@ -455,7 +455,7 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     ])
     expect(utils.getByLabelText(i18nT('map:components.MapPage.MapPanelHeader.pokazat_podskazki_po_karte_5d9bc7dd'))).toBeTruthy()
     ;(restartMapOnboarding as jest.Mock).mockClear()
-    fireEvent.press(utils.getByTestId('map-desktop-help-button'))
+    await fireEvent.press(utils.getByTestId('map-desktop-help-button'))
     expect(restartMapOnboarding).toHaveBeenCalledTimes(1)
 
     // One cluster of 44 boxes 8 apart: «Радиус» and «Слои» in the top row with
@@ -476,10 +476,10 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
 
     // The «Слои» card opens on the spot of «Подсказки»: the button would sit
     // on the card's «×» (and start the tour), so it is gone while «Слои» is open.
-    fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
+    await fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
     expect(utils.getByTestId('layers-popover')).toBeTruthy()
     expect(utils.queryByTestId('map-desktop-help-button')).toBeNull()
-    fireEvent.press(utils.getByTestId('map-desktop-radius-button'))
+    await fireEvent.press(utils.getByTestId('map-desktop-radius-button'))
     expect(utils.getByTestId('radius-popover')).toBeTruthy()
     expect(utils.queryByTestId('layers-popover')).toBeNull()
     expect(utils.getByTestId('map-desktop-help-button')).toBeTruthy()
@@ -491,9 +491,9 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
   it.each([
     [true, 1],
     [false, 0],
-  ])('«Подсказки» with the panel collapsed=%s expand it %i time(s) before the tour', (collapsed, expands) => {
+  ])('«Подсказки» with the panel collapsed=%s expand it %i time(s) before the tour', async (collapsed, expands) => {
     const toggleDesktopCollapse = jest.fn()
-    const utils = render(
+    const utils = await render(
       <MapScreenDesktopOverlays
         styles={getStyles(false, 0, themedColors)}
         themedColors={themedColors}
@@ -507,7 +507,7 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
     )
     ;(restartMapOnboarding as jest.Mock).mockClear()
 
-    fireEvent.press(utils.getByTestId('map-desktop-help-button'))
+    await fireEvent.press(utils.getByTestId('map-desktop-help-button'))
 
     expect(toggleDesktopCollapse).toHaveBeenCalledTimes(expands)
     expect(restartMapOnboarding).toHaveBeenCalledTimes(1)
@@ -521,19 +521,19 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
   // The map route has no app header on native: the branch must clear the iPad
   // status bar itself — the row, the on-map controls, their popovers and the
   // offline pill all move down by the same inset.
-  it('clears the status bar: the row, the on-map controls, their popovers and the offline pill', () => {
+  it('clears the status bar: the row, the on-map controls, their popovers and the offline pill', async () => {
     const STATUS_BAR = 24
     const styles = getStyles(false, STATUS_BAR, themedColors)
     expect(styles.mapContainer.paddingTop).toBe(12 + STATUS_BAR)
 
-    const utils = renderOverlays(STATUS_BAR, false)
+    const utils = await renderOverlays(STATUS_BAR, false)
     const topOf = (testID: string) => StyleSheet.flatten(utils.getByTestId(testID).props.style)?.top
     expect(topOf('map-desktop-help-button')).toBe(16 + STATUS_BAR + 44 + 8)
     expect(topOf('map-desktop-layers-button')).toBe(16 + STATUS_BAR)
     expect(topOf('map-desktop-radius-button')).toBe(16 + STATUS_BAR)
     expect(utils.getByTestId('offline-indicator').props.top).toBe(10 + STATUS_BAR)
 
-    fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
+    await fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
     expect(utils.getByTestId('layers-popover').props.top).toBe(STATUS_BAR + 16 + 44 + 8)
   })
 
@@ -544,32 +544,32 @@ describe.each(['ios', 'android'])('map desktop branch on a %s tablet (#2172)', (
   // of the popovers; on native they end above it — the dock's height comes
   // from its single owner `useDockReservePx` (no provider here: the fallback
   // BOTTOM_DOCK_HEIGHT + insets.bottom).
-  it('popovers end above the floating dock', () => {
+  it('popovers end above the floating dock', async () => {
     const dock = jest.spyOn(require('@/components/layout/bottomChromeInset'), 'useDockReservePx').mockReturnValue(83)
     try {
       const { renderHook } = require('@testing-library/react-native')
-      const windowHeight = renderHook(() => require('react-native').useWindowDimensions()).result.current.height
-      const utils = renderOverlays(24)
-      fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
+      const windowHeight = (await renderHook(() => require('react-native').useWindowDimensions())).result.current.height
+      const utils = await renderOverlays(24)
+      await fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
       const layers = utils.getByTestId('layers-popover').props
       // The card's bottom edge stops 8 above the dock.
       expect(layers.top + layers.maxHeight).toBe(windowHeight - 83 - 8)
-      fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
-      fireEvent.press(utils.getByTestId('map-desktop-radius-button'))
+      await fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
+      await fireEvent.press(utils.getByTestId('map-desktop-radius-button'))
       expect(utils.getByTestId('radius-popover').props.maxHeight).toBe(layers.maxHeight)
     } finally {
       dock.mockRestore()
     }
   })
 
-  it.each([0, 32])('popovers stay anchored on their buttons with a right cutout of %i', (cutout) => {
-    const utils = renderOverlays(0, true, { left: 0, right: cutout })
+  it.each([0, 32])('popovers stay anchored on their buttons with a right cutout of %i', async (cutout) => {
+    const utils = await renderOverlays(0, true, { left: 0, right: cutout })
     const rightOf = (testID: string) => StyleSheet.flatten(utils.getByTestId(testID).props.style)?.right
     expect(rightOf('map-desktop-layers-button')).toBe(16 + cutout)
-    fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
+    await fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
     expect(utils.getByTestId('layers-popover').props.right).toBe(rightOf('map-desktop-layers-button'))
-    fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
-    fireEvent.press(utils.getByTestId('map-desktop-radius-button'))
+    await fireEvent.press(utils.getByTestId('map-desktop-layers-button'))
+    await fireEvent.press(utils.getByTestId('map-desktop-radius-button'))
     expect(utils.getByTestId('radius-popover').props.right).toBe(rightOf('map-desktop-radius-button'))
   })
 })
@@ -588,8 +588,8 @@ describe('map desktop branch on web (#2172 containment)', () => {
     Object.defineProperty(Platform, 'OS', { value: originalOS })
   })
 
-  it('keeps the collapse chevron inside the panel; the row holds the panel and the map', () => {
-    const utils = render(<Chrome isWeb />)
+  it('keeps the collapse chevron inside the panel; the row holds the panel and the map', async () => {
+    const utils = await render(<Chrome isWeb />)
 
     const row = rowChildren(utils)
     expect(row).toHaveLength(2)
@@ -600,18 +600,18 @@ describe('map desktop branch on web (#2172 containment)', () => {
     expect(chevronStyle).toMatchObject({ position: 'absolute', top: 16, right: -48 })
     expect(chevronStyle.left).toBeUndefined()
 
-    fireEvent.press(utils.getByTestId(...CHEVRON))
+    await fireEvent.press(utils.getByTestId(...CHEVRON))
 
     expect(rowChildren(utils)[0].props.testID).toBe('map-panel-collapsed')
     expect(utils.queryByTestId(...CHEVRON)).toBeNull()
   })
 
-  it('#2243: web keeps its DOM focus model — no native focus events on toggle', () => {
+  it('#2243: web keeps its DOM focus model — no native focus events on toggle', async () => {
     const focusSpy = jest.spyOn(AccessibilityInfo, 'sendAccessibilityEvent').mockImplementation(() => {})
     try {
-      const utils = render(<Chrome isWeb />)
-      fireEvent.press(utils.getByTestId(...CHEVRON))
-      fireEvent.press(utils.getByTestId('map-panel-expand-button'))
+      const utils = await render(<Chrome isWeb />)
+      await fireEvent.press(utils.getByTestId(...CHEVRON))
+      await fireEvent.press(utils.getByTestId('map-panel-expand-button'))
       expect(focusSpy).not.toHaveBeenCalled()
     } finally {
       focusSpy.mockRestore()

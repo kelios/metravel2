@@ -23,8 +23,8 @@ describe('useTravelDetailsLayout', () => {
     Platform.select = originalSelect
   })
 
-  it('returns mobile layout values', () => {
-    const { result } = renderHook(() =>
+  it('returns mobile layout values', async () => {
+    const { result } = await renderHook(() =>
       useTravelDetailsLayout({ isMobile: true, screenWidth: 360 })
     )
 
@@ -32,8 +32,8 @@ describe('useTravelDetailsLayout', () => {
     expect(result.current.contentHorizontalPadding).toBe(10)
   })
 
-  it('returns desktop layout values', () => {
-    const { result } = renderHook(() =>
+  it('returns desktop layout values', async () => {
+    const { result } = await renderHook(() =>
       useTravelDetailsLayout({ isMobile: false, screenWidth: 1680 })
     )
 
@@ -41,18 +41,18 @@ describe('useTravelDetailsLayout', () => {
     expect(result.current.contentHorizontalPadding).toBe(48)
   })
 
-  it('uses web and native side menu styles', () => {
+  it('uses web and native side menu styles', async () => {
     // #1711: хук берёт стили из shell-набора — сверяемся с ним, а не с агрегатом.
     const baseStyles = getTravelDetailsShellStyles(getThemedColors(false))
-    let result = renderHook(() =>
+    let result = (await renderHook(() =>
       useTravelDetailsLayout({ isMobile: false, screenWidth: 1200 })
-    ).result
+    )).result
     expect(result.current.sideMenuPlatformStyles).toEqual(baseStyles.sideMenuWebDesktop)
 
     Platform.OS = 'ios'
-    result = renderHook(() =>
+    result = (await renderHook(() =>
       useTravelDetailsLayout({ isMobile: false, screenWidth: 1200 })
-    ).result
+    )).result
     expect(result.current.sideMenuPlatformStyles).toEqual(baseStyles.sideMenuNative)
   })
 })

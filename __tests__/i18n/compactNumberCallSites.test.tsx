@@ -69,12 +69,12 @@ describe('#1457 компактные счётчики идут через кан
     it.each(COMPACT_CASES)('печатает число оценок по нормам локали %s', async (locale, _thousand, thousands) => {
       await i18n.changeLanguage(locale)
 
-      const { getByText } = render(<StarRating rating={4.5} ratingCount={12_500} />)
+      const { getByText } = await render(<StarRating rating={4.5} ratingCount={12_500} />)
       expect(getByText(`(${thousands})`)).toBeTruthy()
     })
 
-    it('прячет счётчик целиком, когда оценок нет', () => {
-      const { queryByText } = render(<StarRating rating={4.5} ratingCount={0} />)
+    it('прячет счётчик целиком, когда оценок нет', async () => {
+      const { queryByText } = await render(<StarRating rating={4.5} ratingCount={0} />)
       expect(queryByText('(0)')).toBeNull()
     })
   })
@@ -83,7 +83,7 @@ describe('#1457 компактные счётчики идут через кан
     it.each(COMPACT_CASES)('печатает число отзывов по нормам локали %s', async (locale, _thousand, thousands) => {
       await i18n.changeLanguage(locale)
 
-      const { getByText } = render(
+      const { getByText } = await render(
         <PlaceRatingBadge
           rating={{
             value: 4.6,

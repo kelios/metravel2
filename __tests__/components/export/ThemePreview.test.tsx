@@ -28,13 +28,13 @@ describe('ThemePreview', () => {
   });
 
   describe('rendering', () => {
-    it('should render without crashing', () => {
-      const { getByText } = render(<ThemePreview {...defaultProps} />);
+    it('should render without crashing', async () => {
+      const { getByText } = await render(<ThemePreview {...defaultProps} />);
       expect(getByText('Выберите тему оформления')).toBeTruthy();
     });
 
-    it('should render the full theme catalog', () => {
-      const { getByText } = render(<ThemePreview {...defaultProps} />);
+    it('should render the full theme catalog', async () => {
+      const { getByText } = await render(<ThemePreview {...defaultProps} />);
 
       expect(getByText('Минимал')).toBeTruthy();
       expect(getByText('Светлая')).toBeTruthy();
@@ -57,15 +57,15 @@ describe('ThemePreview', () => {
       expect(getByText('Акварель')).toBeTruthy();
     });
 
-    it('should show theme descriptions', () => {
-      const { getByText } = render(<ThemePreview {...defaultProps} />);
+    it('should show theme descriptions', async () => {
+      const { getByText } = await render(<ThemePreview {...defaultProps} />);
 
       expect(getByText('Чистый и простой дизайн')).toBeTruthy();
       expect(getByText('Мягкие цвета и много воздуха')).toBeTruthy();
     });
 
-    it('should display selected theme indicator', () => {
-      const { getAllByText } = render(<ThemePreview {...defaultProps} />);
+    it('should display selected theme indicator', async () => {
+      const { getAllByText } = await render(<ThemePreview {...defaultProps} />);
 
       const checkIcons = getAllByText('check');
       expect(checkIcons.length).toBeGreaterThan(0);
@@ -73,21 +73,21 @@ describe('ThemePreview', () => {
   });
 
   describe('theme selection', () => {
-    it('should call onThemeSelect when theme is clicked', () => {
-      const { getByText } = render(<ThemePreview {...defaultProps} />);
+    it('should call onThemeSelect when theme is clicked', async () => {
+      const { getByText } = await render(<ThemePreview {...defaultProps} />);
 
       const darkTheme = getByText('Темная');
-      fireEvent.press(darkTheme.parent!.parent!);
+      await fireEvent.press(darkTheme.parent!.parent!);
 
       expect(mockOnThemeSelect).toHaveBeenCalledWith('dark');
     });
 
-    it('should allow selecting different themes', () => {
-      const { getByText } = render(<ThemePreview {...defaultProps} />);
+    it('should allow selecting different themes', async () => {
+      const { getByText } = await render(<ThemePreview {...defaultProps} />);
 
       const themes: PdfThemeName[] = ['light', 'dark', 'modern', 'romantic'];
 
-      themes.forEach((theme) => {
+      for (const theme of themes) {
         mockOnThemeSelect.mockClear();
         const themeElement = getByText(
           theme === 'light' ? 'Светлая' :
@@ -95,23 +95,23 @@ describe('ThemePreview', () => {
           theme === 'modern' ? 'Модерн' :
           'Романтика'
         );
-        fireEvent.press(themeElement.parent!.parent!);
+        await fireEvent.press(themeElement.parent!.parent!);
         expect(mockOnThemeSelect).toHaveBeenCalledWith(theme);
-      });
+      }
     });
   });
 
   describe('compact mode', () => {
-    it('should render in compact mode', () => {
-      const { getByText } = render(
+    it('should render in compact mode', async () => {
+      const { getByText } = await render(
         <ThemePreview {...defaultProps} compact={true} />
       );
 
       expect(getByText('Выберите тему оформления')).toBeTruthy();
     });
 
-    it('should show fewer details in compact mode', () => {
-      const { queryByText } = render(
+    it('should show fewer details in compact mode', async () => {
+      const { queryByText } = await render(
         <ThemePreview {...defaultProps} compact={true} />
       );
 
@@ -122,15 +122,15 @@ describe('ThemePreview', () => {
   });
 
   describe('theme information', () => {
-    it('shows font pairs in regular mode', () => {
-      const { getAllByText, getByText } = render(<ThemePreview {...defaultProps} />);
+    it('shows font pairs in regular mode', async () => {
+      const { getAllByText, getByText } = await render(<ThemePreview {...defaultProps} />);
 
       expect(getAllByText('Inter / Inter').length).toBeGreaterThan(0);
       expect(getByText('Montserrat / Open Sans')).toBeTruthy();
     });
 
-    it('hides descriptions and font pairs in compact mode', () => {
-      const { queryByText } = render(<ThemePreview {...defaultProps} compact={true} />);
+    it('hides descriptions and font pairs in compact mode', async () => {
+      const { queryByText } = await render(<ThemePreview {...defaultProps} compact={true} />);
 
       expect(queryByText('Чистый и простой дизайн')).toBeFalsy();
       expect(queryByText('Inter / Inter')).toBeFalsy();
@@ -138,16 +138,16 @@ describe('ThemePreview', () => {
   });
 
   describe('accessibility', () => {
-    it('should have accessible labels', () => {
-      const { getByText } = render(<ThemePreview {...defaultProps} />);
+    it('should have accessible labels', async () => {
+      const { getByText } = await render(<ThemePreview {...defaultProps} />);
 
       expect(getByText('Выберите тему оформления')).toBeTruthy();
     });
   });
 
   describe('edge cases', () => {
-    it('should handle undefined selectedTheme', () => {
-      const { getByText } = render(
+    it('should handle undefined selectedTheme', async () => {
+      const { getByText } = await render(
         <ThemePreview
           selectedTheme={undefined as any}
           onThemeSelect={mockOnThemeSelect}
@@ -157,14 +157,14 @@ describe('ThemePreview', () => {
       expect(getByText('Выберите тему оформления')).toBeTruthy();
     });
 
-    it('should handle rapid theme changes', () => {
-      const { getByText } = render(<ThemePreview {...defaultProps} />);
+    it('should handle rapid theme changes', async () => {
+      const { getByText } = await render(<ThemePreview {...defaultProps} />);
 
       const themes = ['Светлая', 'Темная', 'Модерн'];
-      themes.forEach((themeName) => {
+      for (const themeName of themes) {
         const theme = getByText(themeName);
-        fireEvent.press(theme.parent!.parent!);
-      });
+        await fireEvent.press(theme.parent!.parent!);
+      }
 
       expect(mockOnThemeSelect).toHaveBeenCalledTimes(3);
     });

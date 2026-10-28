@@ -64,14 +64,14 @@ describe('ExportScreen', () => {
     mockUseIsFocused.mockReturnValue(true);
   });
 
-  it('shows login empty state for unauthenticated users', () => {
+  it('shows login empty state for unauthenticated users', async () => {
     const { Wrapper } = createQueryWrapper();
     mockUseAuth.mockReturnValue(createAuthValue({
       isAuthenticated: false,
       userId: null,
     }));
 
-    const { getByText } = render(<ExportScreen />, { wrapper: Wrapper });
+    const { getByText } = await render(<ExportScreen />, { wrapper: Wrapper });
 
     // Title contains a non-breaking hyphen (U+2011); rendered via EmptyState Text.
     // Match with a regex to be resilient to font-rendering normalisation.
@@ -79,14 +79,14 @@ describe('ExportScreen', () => {
     expect(mockFetchMyTravels).not.toHaveBeenCalled();
   });
 
-  it('does not show empty state until userId is available', () => {
+  it('does not show empty state until userId is available', async () => {
     const { Wrapper } = createQueryWrapper();
     mockUseAuth.mockReturnValue(createAuthValue({
       isAuthenticated: true,
       userId: null,
     }));
 
-    const { queryByText } = render(<ExportScreen />, { wrapper: Wrapper });
+    const { queryByText } = await render(<ExportScreen />, { wrapper: Wrapper });
 
     // isCountQueryEnabled=false → query disabled → shouldShowEmptyState=false.
     // Suspense with a mocked (sync) ListTravelBase resolves immediately, so
@@ -106,7 +106,7 @@ describe('ExportScreen', () => {
     }));
     mockFetchMyTravels.mockResolvedValueOnce([]);
 
-    const { findByText } = render(<ExportScreen />, { wrapper: Wrapper });
+    const { findByText } = await render(<ExportScreen />, { wrapper: Wrapper });
 
     expect(
       await findByText(/Чтобы собрать PDF.*книгу.*добавьте/)
@@ -127,7 +127,7 @@ describe('ExportScreen', () => {
     }));
     mockFetchMyTravels.mockRejectedValueOnce(new Error('boom'));
 
-    const { getByTestId, queryByText } = render(<ExportScreen />, { wrapper: Wrapper });
+    const { getByTestId, queryByText } = await render(<ExportScreen />, { wrapper: Wrapper });
 
     await waitFor(() => {
       expect(getByTestId('list-travel')).toBeTruthy();

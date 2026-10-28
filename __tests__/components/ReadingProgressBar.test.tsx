@@ -9,8 +9,8 @@ describe('ReadingProgressBar', () => {
     scrollY = new Animated.Value(0);
   });
 
-  it('should render progress bar', () => {
-    const { getByTestId } = render(
+  it('should render progress bar', async () => {
+    const { getByTestId } = await render(
       <ReadingProgressBar
         scrollY={scrollY}
         contentHeight={1000}
@@ -23,11 +23,11 @@ describe('ReadingProgressBar', () => {
     expect(getByTestId).toBeDefined();
   });
 
-  it('should calculate progress correctly', () => {
+  it('should calculate progress correctly', async () => {
     const contentHeight = 1000;
     const viewportHeight = 500;
 
-    render(
+    await render(
       <ReadingProgressBar
         scrollY={scrollY}
         contentHeight={contentHeight}
@@ -43,8 +43,8 @@ describe('ReadingProgressBar', () => {
     // In a real scenario, you might want to test the calculation logic separately
   });
 
-  it('should handle zero scrollable height', () => {
-    render(
+  it('should handle zero scrollable height', async () => {
+    await render(
       <ReadingProgressBar
         scrollY={scrollY}
         contentHeight={500}
@@ -58,11 +58,11 @@ describe('ReadingProgressBar', () => {
     // Progress should remain 0
   });
 
-  it('should clamp progress between 0 and 1', () => {
+  it('should clamp progress between 0 and 1', async () => {
     const contentHeight = 1000;
     const viewportHeight = 500;
 
-    render(
+    await render(
       <ReadingProgressBar
         scrollY={scrollY}
         contentHeight={contentHeight}
@@ -79,11 +79,11 @@ describe('ReadingProgressBar', () => {
     // Progress should be clamped to 0 (0%)
   });
 
-  it('should update progress when scroll position changes', () => {
+  it('should update progress when scroll position changes', async () => {
     const contentHeight = 1000;
     const viewportHeight = 500;
 
-    render(
+    await render(
       <ReadingProgressBar
         scrollY={scrollY}
         contentHeight={contentHeight}
@@ -100,11 +100,11 @@ describe('ReadingProgressBar', () => {
     // Progress should be 1 (100%)
   });
 
-  it('should handle very large content', () => {
+  it('should handle very large content', async () => {
     const contentHeight = 10000;
     const viewportHeight = 500;
 
-    render(
+    await render(
       <ReadingProgressBar
         scrollY={scrollY}
         contentHeight={contentHeight}

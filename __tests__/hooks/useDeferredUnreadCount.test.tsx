@@ -18,14 +18,14 @@ import { useAuthStore } from '@/stores/authStore';
  * общего слоя данных: до #1661 механизмов было два, и открытие меню на экране
  * профиля заказывало то же число заново.
  */
-const renderShared = (
+const renderShared = async (
   args: Array<[boolean, boolean]>,
-): { unmount: () => void } => {
+) => {
   const queryClient = createTestQueryClient();
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  return renderHook(() => args.map(([enabled, poll]) => useDeferredUnreadCount(enabled, poll)), {
+  return await renderHook(() => args.map(([enabled, poll]) => useDeferredUnreadCount(enabled, poll)), {
     wrapper: Wrapper,
   });
 };
@@ -38,7 +38,7 @@ describe('useDeferredUnreadCount', () => {
   });
 
   it('does not go to the network while the caller keeps it disabled', async () => {
-    const { result } = renderHook(() => useDeferredUnreadCount(false, false), {
+    const { result } = await renderHook(() => useDeferredUnreadCount(false, false), {
       wrapper: ({ children }: { children: React.ReactNode }) => (
         <QueryClientProvider client={createTestQueryClient()}>{children}</QueryClientProvider>
       ),
@@ -52,7 +52,7 @@ describe('useDeferredUnreadCount', () => {
 
   // Ровно тот дефект, ради которого заведена #1661: два вызывающих — один запрос.
   it('serves both callers from one shared request', async () => {
-    const { result } = renderShared([
+    const { result } = await renderShared([
       [true, true],
       [true, false],
     ]);
@@ -70,14 +70,14 @@ describe('useDeferredUnreadCount', () => {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
 
-    const first = renderHook(() => useDeferredUnreadCount(true, false), { wrapper: Wrapper });
+    const first = await renderHook(() => useDeferredUnreadCount(true, false), { wrapper: Wrapper });
     await waitFor(() => expect(first.result.current.count).toBe(4));
-    first.unmount();
+    await first.unmount();
 
     mockFetchUnreadCount.mockResolvedValue({ count: 0 });
     useAuthStore.setState({ userId: '9' });
 
-    const second = renderHook(() => useDeferredUnreadCount(true, false), { wrapper: Wrapper });
+    const second = await renderHook(() => useDeferredUnreadCount(true, false), { wrapper: Wrapper });
 
     // Чужое число не подставляется даже на первый кадр.
     expect(second.result.current.count).toBe(0);
@@ -88,7 +88,7 @@ describe('useDeferredUnreadCount', () => {
   it('falls back to zero when the endpoint fails', async () => {
     mockFetchUnreadCount.mockRejectedValue(new Error('unavailable'));
 
-    const { result } = renderHook(() => useDeferredUnreadCount(true, false), {
+    const { result } = await renderHook(() => useDeferredUnreadCount(true, false), {
       wrapper: ({ children }: { children: React.ReactNode }) => (
         <QueryClientProvider client={createTestQueryClient()}>{children}</QueryClientProvider>
       ),

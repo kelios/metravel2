@@ -60,7 +60,7 @@ describe('useTravelDetailsPerformance', () => {
   })
 
   it('initializes performance helpers on non-happy paths after idle delay', async () => {
-    renderHook(() =>
+    await renderHook(() =>
       useTravelDetailsPerformance({ travel: undefined, isMobile: false, isLoading: false })
     )
 
@@ -72,7 +72,7 @@ describe('useTravelDetailsPerformance', () => {
   })
 
   it('keeps performance helpers out of the early happy-path window', async () => {
-    renderHook(() =>
+    await renderHook(() =>
       useTravelDetailsPerformance({
         travel: { id: 1, name: 'Demo travel' } as any,
         isMobile: false,
@@ -87,18 +87,18 @@ describe('useTravelDetailsPerformance', () => {
     expect(initPerformanceMonitoring).not.toHaveBeenCalled()
   })
 
-  it('enables deferred loading once loading is complete', () => {
-    const { result } = renderHook(() =>
+  it('enables deferred loading once loading is complete', async () => {
+    const { result } = await renderHook(() =>
       useTravelDetailsPerformance({ travel: undefined, isMobile: false, isLoading: false })
     )
 
-    act(() => {})
+    await act(() => {})
     expect(result.current.deferAllowed).toBe(true)
     expect(result.current.postLcpRuntimeReady).toBe(false)
   })
 
   it('preloads slider runtime automatically after LCP', async () => {
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelDetailsPerformance({
         travel: heroTravel,
         isMobile: false,
@@ -122,7 +122,7 @@ describe('useTravelDetailsPerformance', () => {
   })
 
   it('keeps post-LCP runtime blocked until LCP is ready', async () => {
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelDetailsPerformance({
         travel: heroTravel,
         isMobile: false,
@@ -139,7 +139,7 @@ describe('useTravelDetailsPerformance', () => {
     const flag = Object.getOwnPropertyDescriptor(navigator, 'webdriver')
     Object.defineProperty(navigator, 'webdriver', { configurable: true, value: automation })
     try {
-      const { result } = renderHook(() => useTravelDetailsPerformance({ travel: heroTravel, isMobile: true, isLoading: false }))
+      const { result } = await renderHook(() => useTravelDetailsPerformance({ travel: heroTravel, isMobile: true, isLoading: false }))
       await act(async () => { result.current.setLcpLoaded(true) })
       expect(result.current.heroEnhancersReady).toBe(automation)
       expect(result.current.postLcpRuntimeReady).toBe(automation)
@@ -155,7 +155,7 @@ describe('useTravelDetailsPerformance', () => {
     const flag = Object.getOwnPropertyDescriptor(navigator, 'webdriver')
     Object.defineProperty(navigator, 'webdriver', { configurable: true, value: false })
     try {
-      const { result } = renderHook(() => useTravelDetailsPerformance({ travel: heroTravel, isMobile: true, isLoading: false }))
+      const { result } = await renderHook(() => useTravelDetailsPerformance({ travel: heroTravel, isMobile: true, isLoading: false }))
       expect(result.current.postLcpRuntimeReady).toBe(false)
       Object.defineProperty(navigator, 'webdriver', { configurable: true, value: true })
       await act(async () => { result.current.setLcpLoaded(true) })
@@ -167,8 +167,8 @@ describe('useTravelDetailsPerformance', () => {
     }
   })
 
-  it('releases the first-screen gate within the 1000 ms «Timeout policy» cap when the hero onLoad is lost', () => {
-    const { result } = renderHook(() =>
+  it('releases the first-screen gate within the 1000 ms «Timeout policy» cap when the hero onLoad is lost', async () => {
+    const { result } = await renderHook(() =>
       useTravelDetailsPerformance({
         travel: heroTravel,
         isMobile: false,
@@ -182,15 +182,15 @@ describe('useTravelDetailsPerformance', () => {
 
     // …and a lost onLoad (SPA navigation onto a cached hero) keeps the
     // first-screen gate closed for at most 1000 ms (#2020).
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1000)
     })
 
     expect(result.current.lcpLoaded).toBe(true)
   })
 
-  it('unblocks the main runtime immediately when the travel has no hero gallery', () => {
-    const { result } = renderHook(() =>
+  it('unblocks the main runtime immediately when the travel has no hero gallery', async () => {
+    const { result } = await renderHook(() =>
       useTravelDetailsPerformance({
         travel: { id: 503, name: 'No gallery travel', gallery: [] } as any,
         isMobile: false,
@@ -205,7 +205,7 @@ describe('useTravelDetailsPerformance', () => {
   })
 
   it('reveals hero enhancers and post-LCP runtime together on a single idle window after LCP', async () => {
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelDetailsPerformance({
         travel: heroTravel,
         isMobile: false,
@@ -247,7 +247,7 @@ describe('useTravelDetailsPerformance', () => {
       gallery: [{ id: 'hero-2', url: 'https://example.com/b.jpg' }],
     } as any
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ travel }) =>
         useTravelDetailsPerformance({ travel, isMobile: false, isLoading: false }),
       { initialProps: { travel: firstTravel } }
@@ -260,7 +260,7 @@ describe('useTravelDetailsPerformance', () => {
     await act(async () => {
       await Promise.resolve()
     })
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(500)
     })
     await act(async () => {
@@ -272,8 +272,8 @@ describe('useTravelDetailsPerformance', () => {
     expect(result.current.heroEnhancersReady).toBe(true)
 
     // SPA cache-hit navigation: same hook instance, isLoading never flips true.
-    act(() => {
-      rerender({ travel: secondTravel })
+    await act(async () => {
+      await rerender({ travel: secondTravel })
     })
 
     // First render of the new travel must NOT carry the heavy gates over.
@@ -289,7 +289,7 @@ describe('useTravelDetailsPerformance', () => {
     await act(async () => {
       await Promise.resolve()
     })
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(500)
     })
     await act(async () => {
@@ -301,7 +301,7 @@ describe('useTravelDetailsPerformance', () => {
   })
 
   it('keeps post-LCP chrome out of the critical path until LCP, then reveals it in one step', async () => {
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelDetailsPerformance({
         travel: heroTravel,
         isMobile: false,

@@ -14,19 +14,19 @@ it('sends zero protected requests until auth is ready with an owner; resumes nor
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const wrapper = ({ children }: { children: React.ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
   mockAuth = { authReady: false, isAuthenticated: false, userId: null }
-  const hook = renderHook(() => useBlockedUsers(), { wrapper })
+  const hook = await renderHook(() => useBlockedUsers(), { wrapper })
   await act(async () => {})
   expect(fetchBlockedUsers).not.toHaveBeenCalled()
   mockAuth = { authReady: true, isAuthenticated: false, userId: null }
-  hook.rerender({})
+  await hook.rerender({})
   await act(async () => {})
   expect(fetchBlockedUsers).not.toHaveBeenCalled()
   mockAuth = { authReady: false, isAuthenticated: true, userId: '104' }
-  hook.rerender({})
+  await hook.rerender({})
   await act(async () => {})
   expect(fetchBlockedUsers).not.toHaveBeenCalled()
   mockAuth = { authReady: true, isAuthenticated: true, userId: '104' }
-  hook.rerender({})
+  await hook.rerender({})
   await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
   expect(fetchBlockedUsers).toHaveBeenCalledTimes(1)
   const { ApiError } = require('@/api/client')
@@ -34,6 +34,6 @@ it('sends zero protected requests until auth is ready with an owner; resumes nor
   ;(fetchBlockedUsers as jest.Mock).mockRejectedValueOnce(error)
   await act(async () => { await hook.result.current.refetch() })
   await waitFor(() => expect(hook.result.current.error).toBe(error))
-  hook.unmount()
+  await hook.unmount()
   client.clear()
 })

@@ -200,9 +200,9 @@ function QuestScreen({ props }: { props: Omit<QuestScreenHeaderInput, 'onOpenFon
   return <QuestFontScaleSheet visible={fontScaleSheetOpen} onClose={closeFontScaleSheet} />
 }
 
-const renderPhoneRow = (overrides: Partial<QuestScreenHeaderInput> = {}) => {
+const renderPhoneRow = async (overrides: Partial<QuestScreenHeaderInput> = {}) => {
   const { onOpenFontScale: _ignored, ...props } = input(overrides)
-  const view = render(
+  const view = await render(
     <>
       <HeaderContextBar />
       <QuestScreen props={props} />
@@ -212,19 +212,19 @@ const renderPhoneRow = (overrides: Partial<QuestScreenHeaderInput> = {}) => {
 }
 
 describe('useQuestScreenHeader — строка экрана на телефоне (#2148)', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks()
     resetScreenHeaderForTests()
     ;(usePathname as jest.Mock).mockReturnValue('/quests/117/luxembourg-melusina')
     ;(useRouter as jest.Mock).mockReturnValue({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: () => true })
     ;(global as any).__mockResponsive = phone
-    act(() => {
+    await act(() => {
       useQuestFontScaleStore.setState({ fontScale: 1 })
     })
   })
 
-  it('строка рисует название, (i), офлайн и «⋯»', () => {
-    const { getByTestId } = renderPhoneRow()
+  it('строка рисует название, (i), офлайн и «⋯»', async () => {
+    const { getByTestId } = await renderPhoneRow()
 
     expect(getByTestId('screen-header-title').props.children).toBe('Квест по Люксембургу')
     expect(getByTestId('screen-header-info')).toBeTruthy()
@@ -232,44 +232,44 @@ describe('useQuestScreenHeader — строка экрана на телефон
     expect(getByTestId('screen-header-more')).toBeTruthy()
   })
 
-  it('во время скачивания офлайн-кнопка недоступна, после — снова зовёт действие', () => {
-    const busy = renderPhoneRow({ offlineQuestState: 'downloading' })
+  it('во время скачивания офлайн-кнопка недоступна, после — снова зовёт действие', async () => {
+    const busy = await renderPhoneRow({ offlineQuestState: 'downloading' })
     expect(busy.getByTestId('quest-header-offline').props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: true }),
     )
     expect(busy.getByTestId('quest-header-offline')).toBeDisabled()
-    busy.unmount()
+    await busy.unmount()
 
     resetScreenHeaderForTests()
-    const idle = renderPhoneRow({ offlineQuestState: 'idle' })
+    const idle = await renderPhoneRow({ offlineQuestState: 'idle' })
     expect(idle.getByTestId('quest-header-offline')).not.toBeDisabled()
-    fireEvent.press(idle.getByTestId('quest-header-offline'))
+    await fireEvent.press(idle.getByTestId('quest-header-offline'))
     expect(idle.props.onOfflineQuestDownload).toHaveBeenCalledTimes(1)
   })
 
   it('«Сбросить прогресс» из «⋯» зовёт сброс визарда', async () => {
-    const { getByTestId, props } = renderPhoneRow()
+    const { getByTestId, props } = await renderPhoneRow()
 
-    fireEvent.press(getByTestId('screen-header-more'))
-    fireEvent.press(getByTestId('quest-menu-reset'))
+    await fireEvent.press(getByTestId('screen-header-more'))
+    await fireEvent.press(getByTestId('quest-menu-reset'))
 
     // На iOS пункт листа выполняется после закрытия листа (onDismiss / таймер, #2115).
     await waitFor(() => expect(props.onReset).toHaveBeenCalledTimes(1))
   })
 
   it('«Размер шрифта» открывает лист с шагами, лист не закрывается на шаге', async () => {
-    const { getByTestId } = renderPhoneRow()
+    const { getByTestId } = await renderPhoneRow()
 
-    fireEvent.press(getByTestId('screen-header-more'))
-    fireEvent.press(getByTestId('quest-menu-font-size'))
+    await fireEvent.press(getByTestId('screen-header-more'))
+    await fireEvent.press(getByTestId('quest-menu-font-size'))
 
     await waitFor(() => expect(getByTestId('quest-font-scale-sheet')).toBeTruthy())
     expect(getByTestId('quest-font-scale-decrease').props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: true }),
     )
 
-    fireEvent.press(getByTestId('quest-font-scale-increase'))
-    fireEvent.press(getByTestId('quest-font-scale-increase'))
+    await fireEvent.press(getByTestId('quest-font-scale-increase'))
+    await fireEvent.press(getByTestId('quest-font-scale-increase'))
 
     expect(useQuestFontScaleStore.getState().fontScale).toBe(1.3)
     expect(getByTestId('quest-font-scale-sheet')).toBeTruthy()
@@ -305,7 +305,7 @@ describe('единый владелец панели и строки экран�
     return null
   }
 
-  it.each(['ios', 'android', 'web'] as const)('%s: «⋯» в строке ровно там, где панель отдала ей шапку', (os) => {
+  it.each(['ios', 'android', 'web'] as const)('%s: «⋯» в строке ровно там, где панель отдала ей шапку', async (os) => {
     const platform = jest.replaceProperty(Platform, 'OS', os)
     ;(usePathname as jest.Mock).mockReturnValue('/quests/117/luxembourg-melusina')
     ;(useRouter as jest.Mock).mockReturnValue({ push: jest.fn(), replace: jest.fn(), back: jest.fn(), canGoBack: () => true })
@@ -314,7 +314,7 @@ describe('единый владелец панели и строки экран�
         resetScreenHeaderForTests()
         ;(global as any).__mockResponsive = responsiveFor(width)
         const out: { headerInScreenRow?: boolean } = {}
-        const view = render(
+        const view = await render(
           <>
             <HeaderContextBar />
             <ParityProbe out={out} />
@@ -323,7 +323,7 @@ describe('единый владелец панели и строки экран�
         expect([width, view.queryByTestId('screen-header-more') !== null]).toEqual([width, out.headerInScreenRow])
         const screenRowBoundary = os === 'web' ? METRICS.breakpoints.desktop : METRICS.breakpoints.tablet
         expect([width, out.headerInScreenRow]).toEqual([width, width < screenRowBoundary])
-        view.unmount()
+        await view.unmount()
       }
     } finally {
       platform.restore()
@@ -346,15 +346,15 @@ describe('quest short-height policy (#2198)', () => {
     return null
   }
 
-  it.each(['web', 'android', 'ios'] as const)('%s uses the same layout-height boundary', (os) => {
+  it.each(['web', 'android', 'ios'] as const)('%s uses the same layout-height boundary', async (os) => {
     const platform = jest.replaceProperty(Platform, 'OS', os)
     try {
       for (const [width, height, nativeFlow, webFlow] of cases) {
         ;(global as any).__mockResponsive = { ...responsiveFor(width), height }
         const out: { flow?: boolean } = {}
-        const view = render(<PlacementProbe out={out} />)
+        const view = await render(<PlacementProbe out={out} />)
         expect([width, height, out.flow]).toEqual([width, height, os === 'web' ? webFlow : nativeFlow])
-        view.unmount()
+        await view.unmount()
       }
     } finally {
       platform.restore()

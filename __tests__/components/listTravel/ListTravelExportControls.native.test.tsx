@@ -53,8 +53,8 @@ const setPlatform = (os: typeof Platform.OS) => {
   Object.defineProperty(Platform, 'OS', { configurable: true, value: os })
 }
 
-const renderControls = () =>
-  render(
+const renderControls = async () =>
+  await render(
     <ListTravelExportControls
       isMobile
       travels={travels}
@@ -84,31 +84,31 @@ describe('ListTravelExportControls в приложении (#2119)', () => {
     setPlatform(originalPlatform)
   })
 
-  it.each(['ios', 'android'] as const)('%s: «Сохранить PDF» печатает книгу с текущими настройками, ссылка «Настройки» есть', (os) => {
+  it.each(['ios', 'android'] as const)('%s: «Сохранить PDF» печатает книгу с текущими настройками, ссылка «Настройки» есть', async (os) => {
     setPlatform(os)
-    const view = renderControls()
+    const view = await renderControls()
 
     expect(view.queryByText('Настройки')).not.toBeNull()
-    fireEvent.press(view.getByText('Сохранить PDF'))
+    await fireEvent.press(view.getByText('Сохранить PDF'))
 
     expect(mockOpenPrintBook).toHaveBeenCalledTimes(1)
     expect(mockOpenPrintBook).toHaveBeenCalledWith(settings)
   })
 
-  it.each(['ios', 'android'] as const)('%s: во время сборки виден прогресс', (os) => {
+  it.each(['ios', 'android'] as const)('%s: во время сборки виден прогресс', async (os) => {
     setPlatform(os)
     mockPdfExportState = { isGenerating: true, progress: 45 }
-    const view = renderControls()
+    const view = await renderControls()
 
     expect(view.getByText('Генерация содержимого...')).toBeTruthy()
   })
 
-  it.each(['ios', 'android'] as const)('%s: #2274 «Отменить» во время сборки прерывает её', (os) => {
+  it.each(['ios', 'android'] as const)('%s: #2274 «Отменить» во время сборки прерывает её', async (os) => {
     setPlatform(os)
     mockPdfExportState = { isGenerating: true, progress: 85 }
-    const view = renderControls()
+    const view = await renderControls()
 
-    fireEvent.press(view.getByText('Отменить'))
+    await fireEvent.press(view.getByText('Отменить'))
     expect(mockCancel).toHaveBeenCalledTimes(1)
   })
 
@@ -126,12 +126,12 @@ describe('ListTravelExportControls в приложении (#2119)', () => {
       await new Promise<void>((resolve) => { finishPreparation = resolve })
       if (!cancelled) print()
     })
-    const view = renderControls()
-    fireEvent.press(view.getByText('Настройки'))
+    const view = await renderControls()
+    await fireEvent.press(view.getByText('Настройки'))
     expect(mockModalProps.current?.visible).toBe(true)
     let pending: Promise<void> = Promise.resolve()
-    act(() => { pending = mockModalProps.current!.onSave(settings) })
-    fireEvent.press(view.getByTestId('settings-cancel'))
+    await act(() => { pending = mockModalProps.current!.onSave(settings) })
+    await fireEvent.press(view.getByTestId('settings-cancel'))
     expect(mockCancel).toHaveBeenCalledTimes(1)
     expect(mockModalProps.current?.visible).toBe(false)
     expect(mockPdfExportState).toEqual({ isGenerating: false, progress: 0 })
@@ -140,9 +140,9 @@ describe('ListTravelExportControls в приложении (#2119)', () => {
     expect(print).not.toHaveBeenCalled()
   })
 
-  it('сайт: ссылка «Настройки» на месте', () => {
+  it('сайт: ссылка «Настройки» на месте', async () => {
     setPlatform('web')
-    const view = renderControls()
+    const view = await renderControls()
 
     expect(view.queryByText('Настройки')).not.toBeNull()
   })

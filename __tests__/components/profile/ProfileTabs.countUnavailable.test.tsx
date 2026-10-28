@@ -34,8 +34,8 @@ jest.mock('@/hooks/useTheme', () => ({
 const TAB_KEYS = ['travels', 'publishedTravels', 'draftTravels'] as const;
 
 describe('ProfileTabs — недоступный счётчик', () => {
-  it('unknown counts have neither a numeric badge nor an unavailable badge', () => {
-    const { queryByText, getByLabelText } = render(
+  it('unknown counts have neither a numeric badge nor an unavailable badge', async () => {
+    const { queryByText, getByLabelText } = await render(
       <ProfileTabs activeTab="travels" onChangeTab={jest.fn()} counts={{ travels: undefined }} tabKeys={[...TAB_KEYS]} />
     );
 
@@ -44,8 +44,8 @@ describe('ProfileTabs — недоступный счётчик', () => {
     expect(getByLabelText('Маршруты')).toBeTruthy();
   });
 
-  it('показывает «—» вместо цифры и озвучивает недоступность', () => {
-    const { getAllByText, getByLabelText } = render(
+  it('показывает «—» вместо цифры и озвучивает недоступность', async () => {
+    const { getAllByText, getByLabelText } = await render(
       <ProfileTabs
         activeTab="draftTravels"
         onChangeTab={jest.fn()}
@@ -59,8 +59,8 @@ describe('ProfileTabs — недоступный счётчик', () => {
     expect(getByLabelText('Черновики маршрутов: количество недоступно')).toBeTruthy();
   });
 
-  it('честный ноль по-прежнему остаётся без бейджа', () => {
-    const { queryByText, getByLabelText } = render(
+  it('честный ноль по-прежнему остаётся без бейджа', async () => {
+    const { queryByText, getByLabelText } = await render(
       <ProfileTabs
         activeTab="travels"
         onChangeTab={jest.fn()}
@@ -74,8 +74,8 @@ describe('ProfileTabs — недоступный счётчик', () => {
     expect(getByLabelText('Маршруты')).toBeTruthy();
   });
 
-  it('обычный счётчик рисуется как раньше', () => {
-    const { getByText, getByLabelText } = render(
+  it('обычный счётчик рисуется как раньше', async () => {
+    const { getByText, getByLabelText } = await render(
       <ProfileTabs
         activeTab="travels"
         onChangeTab={jest.fn()}

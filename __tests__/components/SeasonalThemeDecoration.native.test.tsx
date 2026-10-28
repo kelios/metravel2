@@ -9,9 +9,9 @@ import WebDecoration from '@/components/layout/SeasonalThemeDecoration.web';
 jest.mock('@/hooks/useTheme', () => ({ useTheme: jest.fn() }));
 
 describe('native seasonal header decoration', () => {
-  it.each(SEASONAL_THEME_IDS)('bounds the %s motif and excludes it from interaction/accessibility', season => {
+  it.each(SEASONAL_THEME_IDS)('bounds the %s motif and excludes it from interaction/accessibility', async season => {
     (useTheme as jest.Mock).mockReturnValue({ activeSeasonalTheme: season, isDark: false });
-    const view = render(<NativeDecoration />);
+    const view = await render(<NativeDecoration />);
     const layer = view.getByTestId('seasonal-theme-decoration', { includeHiddenElements: true });
     expect(layer.props).toMatchObject({
       pointerEvents: 'none',
@@ -26,25 +26,25 @@ describe('native seasonal header decoration', () => {
     }
   });
 
-  it.each(SEASONAL_THEME_IDS)('updates the %s scene colors with dark mode', season => {
+  it.each(SEASONAL_THEME_IDS)('updates the %s scene colors with dark mode', async season => {
     (useTheme as jest.Mock).mockReturnValue({ activeSeasonalTheme: season, isDark: false });
-    const view = render(<NativeDecoration />);
+    const view = await render(<NativeDecoration />);
     const light = getSeasonalThemePalette(season, false)!;
     expect(JSON.stringify(view.toJSON())).toContain(light.sceneJewel);
     expect(JSON.stringify(view.toJSON())).toContain(light.sceneWordmark);
     (useTheme as jest.Mock).mockReturnValue({ activeSeasonalTheme: season, isDark: true });
-    view.rerender(<NativeDecoration />);
+    await view.rerender(<NativeDecoration />);
     const dark = getSeasonalThemePalette(season, true)!;
     expect(JSON.stringify(view.toJSON())).toContain(dark.sceneJewel);
     expect(JSON.stringify(view.toJSON())).toContain(dark.sceneWordmark);
   });
 
-  it('disappears when there is no active season', () => {
+  it('disappears when there is no active season', async () => {
     (useTheme as jest.Mock).mockReturnValue({ activeSeasonalTheme: null, isDark: false });
-    expect(render(<NativeDecoration />).toJSON()).toBeNull();
+    expect(await (await render(<NativeDecoration />)).toJSON()).toBeNull();
   });
 
-  it('leaves web decoration under existing CSS ownership', () => {
-    expect(render(<WebDecoration />).toJSON()).toBeNull();
+  it('leaves web decoration under existing CSS ownership', async () => {
+    expect(await (await render(<WebDecoration />)).toJSON()).toBeNull();
   });
 });

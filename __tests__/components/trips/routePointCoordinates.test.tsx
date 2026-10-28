@@ -12,8 +12,8 @@ import type { ThemedColors } from '@/hooks/useTheme'
 
 const colors = new Proxy({}, { get: (_target, key) => String(key) }) as ThemedColors
 
-const renderRow = (coordinates: [number, number] | null) =>
-  render(
+const renderRow = async (coordinates: [number, number] | null) =>
+  await render(
     <RoutePointRow
       point={{
         id: 'a',
@@ -52,16 +52,16 @@ describe('route point coordinates display format', () => {
     expect(formatRoutePointCoordinates([Number.NaN, 56.006732])).toBeNull()
   })
 
-  it('keeps the row coordinates on a single truncated line', () => {
-    const { getByText } = renderRow([26.247111, 56.006732])
+  it('keeps the row coordinates on a single truncated line', async () => {
+    const { getByText } = await renderRow([26.247111, 56.006732])
     const coordinates = getByText('56.00673, 26.24711')
 
     expect(coordinates.props.numberOfLines).toBe(1)
     expect(coordinates.props.ellipsizeMode).toBe('tail')
   })
 
-  it('renders no coordinates line for a point without a pair', () => {
-    const { queryByText } = renderRow(null)
+  it('renders no coordinates line for a point without a pair', async () => {
+    const { queryByText } = await renderRow(null)
     expect(queryByText(/\d+\.\d+, /)).toBeNull()
   })
 })

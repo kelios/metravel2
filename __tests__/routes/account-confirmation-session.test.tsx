@@ -96,7 +96,7 @@ describe('accountconfirmation → auth state', () => {
       userName: 'Ирина',
     })
 
-    render(<AccountConfirmation />)
+    await render(<AccountConfirmation />)
 
     await waitFor(() => expect(useAuthStore.getState().isAuthenticated).toBe(true))
     const state = useAuthStore.getState()
@@ -108,7 +108,7 @@ describe('accountconfirmation → auth state', () => {
   it('ключ прогресса квеста сразу после подтверждения содержит id, а не pending', async () => {
     mockConfirmAccount.mockResolvedValue({ userToken: 'tok', userId: 77, userName: '' })
 
-    render(<AccountConfirmation />)
+    await render(<AccountConfirmation />)
 
     await waitFor(() => expect(useAuthStore.getState().isAuthenticated).toBe(true))
     const { isAuthenticated, userId } = useAuthStore.getState()
@@ -127,7 +127,7 @@ describe('accountconfirmation → auth state', () => {
       quest_handoff: { quest_id: 'grodno-royal', redirect_path: '/quests/grodno/grodno-royal', answered: 2 },
     })
 
-    render(<AccountConfirmation />)
+    await render(<AccountConfirmation />)
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/quests/grodno/grodno-royal'))
     expect(mockQueueAnalyticsEvent).toHaveBeenCalledWith('quest_guest_progress_migrated', {
@@ -145,7 +145,7 @@ describe('accountconfirmation → auth state', () => {
       quest_handoff: { quest_id: 'x', redirect_path: '//evil.example/quests/a/b', answered: 2 },
     })
 
-    render(<AccountConfirmation />)
+    await render(<AccountConfirmation />)
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'))
     expect(mockQueueAnalyticsEvent).not.toHaveBeenCalled()
@@ -154,7 +154,7 @@ describe('accountconfirmation → auth state', () => {
   it('не объявляет сессию, если сервер не вернул id', async () => {
     mockConfirmAccount.mockResolvedValue({ userToken: 'tok', userName: 'Ирина' })
 
-    render(<AccountConfirmation />)
+    await render(<AccountConfirmation />)
 
     await waitFor(() => expect(mockConfirmAccount).toHaveBeenCalled())
     await waitFor(() => expect(useAuthStore.getState().authReady).toBe(false))

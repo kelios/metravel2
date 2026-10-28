@@ -159,8 +159,8 @@ const makeElevation = (overrides: Partial<TripRouteElevation> = {}): TripRouteEl
 
 // #1491: шаг «Точки маршрута» рендерит общий AddressSearch с /map, а он ходит за
 // адресами через React Query — конструктору нужен клиент, как и в приложении.
-const renderRouteBuilder = (element: React.ReactElement) =>
-  render(element, { wrapper: createQueryWrapper().Wrapper })
+const renderRouteBuilder = async (element: React.ReactElement) =>
+  await render(element, { wrapper: createQueryWrapper().Wrapper })
 
 describe('RouteBuilder elevation profile', () => {
   beforeEach(() => {
@@ -171,7 +171,7 @@ describe('RouteBuilder elevation profile', () => {
 
   it('shows the shared profile under the map for a routed trip', async () => {
     mockElevationData = makeElevation()
-    const { findByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    const { findByTestId, getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(await findByTestId('route-elevation-profile')).toBeTruthy()
     expect(getByTestId('route-builder-elevation')).toBeTruthy()
@@ -187,7 +187,7 @@ describe('RouteBuilder elevation profile', () => {
 
   it('feeds the decoded polyline to the map when the trip has no stored geometry', async () => {
     mockElevationData = makeElevation()
-    const { findByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    const { findByTestId, getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     await findByTestId('route-elevation-profile')
     expect(getByTestId('route-map-geometry').props.children).toBe('3')
@@ -203,13 +203,13 @@ describe('RouteBuilder elevation profile', () => {
         [20.2, 49.33],
       ],
     })
-    const { findByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={trip} />)
+    const { findByTestId, getByTestId } = await renderRouteBuilder(<RouteBuilder trip={trip} />)
 
     await findByTestId('route-elevation-profile')
     expect(getByTestId('route-map-geometry').props.children).toBe('4')
   })
 
-  it('hides the graph for a direct-line route and does not ask for a recalculation', () => {
+  it('hides the graph for a direct-line route and does not ask for a recalculation', async () => {
     mockElevationData = makeElevation({
       status: 'degraded',
       provider: 'direct',
@@ -218,7 +218,7 @@ describe('RouteBuilder elevation profile', () => {
       preview: null,
       geometry: null,
     })
-    const { queryByTestId } = renderRouteBuilder(
+    const { queryByTestId } = await renderRouteBuilder(
       <RouteBuilder
         trip={makeTrip({
           routingState: {
@@ -238,13 +238,13 @@ describe('RouteBuilder elevation profile', () => {
   it('recalculates once when a routed summary was saved without elevation', async () => {
     mockElevationData = makeElevation({ preview: null, geometry: null, ascentM: null })
     const trip = makeTrip({ routeGeometry: makeElevation().geometry })
-    const { rerender } = renderRouteBuilder(<RouteBuilder trip={trip} />)
+    const { rerender } = await renderRouteBuilder(<RouteBuilder trip={trip} />)
 
     await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(1))
     expect(mockRefreshElevation).toHaveBeenCalledWith({ tripId: 22 })
 
-    rerender(<RouteBuilder trip={trip} />)
-    rerender(<RouteBuilder trip={makeTrip()} />)
+    await rerender(<RouteBuilder trip={trip} />)
+    await rerender(<RouteBuilder trip={makeTrip()} />)
     expect(mockRefreshElevation).toHaveBeenCalledTimes(1)
   })
 
@@ -253,34 +253,34 @@ describe('RouteBuilder elevation profile', () => {
   it('recalculates again after the route is rebuilt for another transport or bike type', async () => {
     mockElevationData = makeElevation({ preview: null, geometry: null, ascentM: null })
     const routeGeometry = makeElevation().geometry
-    const { rerender } = renderRouteBuilder(<RouteBuilder trip={makeTrip({ routeGeometry })} />)
+    const { rerender } = await renderRouteBuilder(<RouteBuilder trip={makeTrip({ routeGeometry })} />)
 
     await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(1))
 
-    rerender(<RouteBuilder trip={makeTrip({ routeGeometry, transport: 'bike', bikeType: 'regular' })} />)
+    await rerender(<RouteBuilder trip={makeTrip({ routeGeometry, transport: 'bike', bikeType: 'regular' })} />)
     await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(2))
 
-    rerender(<RouteBuilder trip={makeTrip({ routeGeometry, transport: 'bike', bikeType: 'mountain' })} />)
+    await rerender(<RouteBuilder trip={makeTrip({ routeGeometry, transport: 'bike', bikeType: 'mountain' })} />)
     await waitFor(() => expect(mockRefreshElevation).toHaveBeenCalledTimes(3))
 
-    rerender(<RouteBuilder trip={makeTrip({ routeGeometry, transport: 'bike', bikeType: 'mountain' })} />)
+    await rerender(<RouteBuilder trip={makeTrip({ routeGeometry, transport: 'bike', bikeType: 'mountain' })} />)
     expect(mockRefreshElevation).toHaveBeenCalledTimes(3)
   })
 
   it('hides the profile once an unsaved point changes the road', async () => {
     mockElevationData = makeElevation()
-    const { findByTestId, getByTestId, queryByTestId } = renderRouteBuilder(
+    const { findByTestId, getByTestId, queryByTestId } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip()} />,
     )
 
     await findByTestId('route-elevation-profile')
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
-    fireEvent.press(getByTestId('route-builder-type-custom'))
-    fireEvent.changeText(getByTestId('route-builder-name'), 'Poronin')
-    fireEvent.changeText(getByTestId('route-builder-lat'), '49.339')
-    fireEvent.changeText(getByTestId('route-builder-lng'), '20.009')
-    fireEvent.press(getByTestId('route-builder-add'))
+    await fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-type-custom'))
+    await fireEvent.changeText(getByTestId('route-builder-name'), 'Poronin')
+    await fireEvent.changeText(getByTestId('route-builder-lat'), '49.339')
+    await fireEvent.changeText(getByTestId('route-builder-lng'), '20.009')
+    await fireEvent.press(getByTestId('route-builder-add'))
 
     expect(queryByTestId('route-elevation-profile')).toBeNull()
     expect(getByTestId('route-map-geometry').props.children).toBe('0')
@@ -290,30 +290,30 @@ describe('RouteBuilder elevation profile', () => {
   // координат. Точка без координат на карту не попадает и обесценить их не может.
   it('keeps the profile when the added point has no coordinates', async () => {
     mockElevationData = makeElevation()
-    const { findByTestId, getByTestId, queryByTestId } = renderRouteBuilder(
+    const { findByTestId, getByTestId, queryByTestId } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip()} />,
     )
 
     await findByTestId('route-elevation-profile')
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
-    fireEvent.press(getByTestId('route-builder-type-custom'))
-    fireEvent.changeText(getByTestId('route-builder-name'), 'Кофе по дороге')
-    fireEvent.press(getByTestId('route-builder-add'))
+    await fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-type-custom'))
+    await fireEvent.changeText(getByTestId('route-builder-name'), 'Кофе по дороге')
+    await fireEvent.press(getByTestId('route-builder-add'))
 
     expect(queryByTestId('route-elevation-profile')).not.toBeNull()
     expect(getByTestId('route-map-geometry').props.children).toBe('3')
   })
 
-  it('never recalculates for a participant who cannot own the route', () => {
+  it('never recalculates for a participant who cannot own the route', async () => {
     mockElevationData = makeElevation({ preview: null, geometry: null, ascentM: null })
-    renderRouteBuilder(<RouteBuilder trip={makeTrip({ isOwner: false })} />)
+    await renderRouteBuilder(<RouteBuilder trip={makeTrip({ isOwner: false })} />)
 
     expect(mockRefreshElevation).not.toHaveBeenCalled()
   })
 
-  it('does not request elevation for a route that cannot be routed', () => {
-    renderRouteBuilder(
+  it('does not request elevation for a route that cannot be routed', async () => {
+    await renderRouteBuilder(
       <RouteBuilder
         trip={makeTrip({
           route: [

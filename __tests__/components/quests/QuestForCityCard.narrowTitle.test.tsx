@@ -55,7 +55,7 @@ const quest = {
   lng: 28.6,
 }
 
-const renderCard = () => render(<QuestForCityCard quest={quest as any} />)
+const renderCard = async () => await render(<QuestForCityCard quest={quest as any} />)
 
 describe('QuestForCityCard — ширина колонки заголовка', () => {
   beforeEach(() => {
@@ -63,8 +63,8 @@ describe('QuestForCityCard — ширина колонки заголовка', 
     mockUseBreakpoints.mockReturnValue({ isMobile: true, isPhone: true, isSmallPhone: false })
   })
 
-  it('на телефоне убирает стрелку, сжимает плитку и разрешает четвёртую строку', () => {
-    renderCard()
+  it('на телефоне убирает стрелку, сжимает плитку и разрешает четвёртую строку', async () => {
+    await renderCard()
 
     expect(screen.queryByTestId('quest-card-arrow')).toBeNull()
     expect(screen.getByTestId('quest-card-media').props.width).toBe(QUEST_TILE_MEDIA_SIZE_COMPACT)
@@ -72,10 +72,10 @@ describe('QuestForCityCard — ширина колонки заголовка', 
   })
 
   // На 320pt компактная плитка оставляет тексту 168px — потолок выдачи там пять строк.
-  it('на самой узкой колонке даёт заголовку пятую строку', () => {
+  it('на самой узкой колонке даёт заголовку пятую строку', async () => {
     mockUseBreakpoints.mockReturnValue({ isMobile: true, isPhone: false, isSmallPhone: true })
 
-    renderCard()
+    await renderCard()
 
     expect(screen.queryByTestId('quest-card-arrow')).toBeNull()
     expect(screen.getByTestId('quest-card-media').props.width).toBe(QUEST_TILE_MEDIA_SIZE_COMPACT)
@@ -83,19 +83,19 @@ describe('QuestForCityCard — ширина колонки заголовка', 
   })
 
   // 480–767pt: колонка уже шире самого длинного названия, плитка остаётся полной.
-  it('на большом телефоне и планшете держит полную плитку', () => {
+  it('на большом телефоне и планшете держит полную плитку', async () => {
     mockUseBreakpoints.mockReturnValue({ isMobile: true, isPhone: false, isSmallPhone: false })
 
-    renderCard()
+    await renderCard()
 
     expect(screen.getByTestId('quest-card-media').props.width).toBe(QUEST_TILE_MEDIA_SIZE)
     expect(screen.getByText(quest.title).props.numberOfLines).toBe(3)
   })
 
-  it('на широкой колонке оставляет стрелку и лимит в две строки', () => {
+  it('на широкой колонке оставляет стрелку и лимит в две строки', async () => {
     mockUseBreakpoints.mockReturnValue({ isMobile: false, isPhone: false, isSmallPhone: false })
 
-    renderCard()
+    await renderCard()
 
     expect(screen.getByTestId('quest-card-arrow')).toBeTruthy()
     expect(screen.getByTestId('quest-card-media').props.width).toBe(QUEST_TILE_MEDIA_SIZE)

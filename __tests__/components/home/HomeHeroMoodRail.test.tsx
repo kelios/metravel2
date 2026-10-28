@@ -1,5 +1,6 @@
+import { getOnlyHost, queryHost } from '@/__tests__/helpers/hostQueries'
 import React from 'react'
-import { ScrollView } from 'react-native'
+
 import { act, render } from '@testing-library/react-native'
 
 import HomeHeroMoodRail from '@/components/home/HomeHeroMoodRail'
@@ -45,8 +46,8 @@ const styles = {
   moodChipTitle: { fontSize: 16 },
 }
 
-const renderRail = (props: Record<string, unknown> = {}) =>
-  render(
+const renderRail = async (props: Record<string, unknown> = {}) =>
+  await render(
     <HomeHeroMoodRail
       colors={{ textMuted: '#6b6b6b', primary: '#ff9f5a', background: HERO_BACKGROUND }}
       styles={styles}
@@ -67,13 +68,13 @@ const scrollEvent = (offsetX: number, layoutWidth: number, contentWidth: number)
 })
 
 describe('HomeHeroMoodRail', () => {
-  it('не затухает, пока ряд помещается целиком', () => {
+  it('не затухает, пока ряд помещается целиком', async () => {
     // Снятая маска (#1682) гасила края всегда — в том числе первый пункт
     // на десктопе, где прокручивать некуда вовсе.
-    const { UNSAFE_getByType, queryByTestId } = renderRail()
-    const scroll = UNSAFE_getByType(ScrollView)
+    const { queryByTestId, container: hostContainer } = await renderRail()
+    const scroll = getOnlyHost(hostContainer, node => node.type === "RCTScrollView")
 
-    act(() => {
+    await act(() => {
       scroll.props.onLayout({ nativeEvent: { layout: { width: 1180 } } })
       scroll.props.onContentSizeChange(720, 48)
     })
@@ -82,11 +83,11 @@ describe('HomeHeroMoodRail', () => {
     expect(queryByTestId('edge-fade-right')).toBeNull()
   })
 
-  it('показывает затухание только с той стороны, где есть продолжение', () => {
-    const { UNSAFE_getByType, queryByTestId } = renderRail()
-    const scroll = UNSAFE_getByType(ScrollView)
+  it('показывает затухание только с той стороны, где есть продолжение', async () => {
+    const { queryByTestId, container: hostContainer } = await renderRail()
+    const scroll = getOnlyHost(hostContainer, node => node.type === "RCTScrollView")
 
-    act(() => {
+    await act(() => {
       scroll.props.onLayout({ nativeEvent: { layout: { width: 390 } } })
       scroll.props.onContentSizeChange(700, 48)
     })
@@ -94,7 +95,7 @@ describe('HomeHeroMoodRail', () => {
     expect(queryByTestId('edge-fade-left')).toBeNull()
     expect(queryByTestId('edge-fade-right')).toBeTruthy()
 
-    act(() => {
+    await act(() => {
       scroll.props.onScroll(scrollEvent(310, 390, 700))
     })
 
@@ -102,11 +103,11 @@ describe('HomeHeroMoodRail', () => {
     expect(queryByTestId('edge-fade-right')).toBeNull()
   })
 
-  it('затухает в фон героя, а не в цвет поверхности из темы', () => {
-    const { UNSAFE_getByType, getByTestId } = renderRail()
-    const scroll = UNSAFE_getByType(ScrollView)
+  it('затухает в фон героя, а не в цвет поверхности из темы', async () => {
+    const { getByTestId, container: hostContainer } = await renderRail()
+    const scroll = getOnlyHost(hostContainer, node => node.type === "RCTScrollView")
 
-    act(() => {
+    await act(() => {
       scroll.props.onScroll(scrollEvent(120, 390, 700))
     })
 
@@ -120,8 +121,8 @@ describe('HomeHeroMoodRail', () => {
     ])
   })
 
-  it('сохраняет состав и порядок карточек ряда', () => {
-    const { getAllByRole } = renderRail()
+  it('сохраняет состав и порядок карточек ряда', async () => {
+    const { getAllByRole } = await renderRail()
 
     expect(getAllByRole('button').map((node) => node.props.accessibilityLabel)).toEqual([
       expect.stringContaining('У воды'),
@@ -130,10 +131,10 @@ describe('HomeHeroMoodRail', () => {
     ])
   })
 
-  it('на телефоне остаётся раскладка переносом, без ряда прокрутки', () => {
-    const { UNSAFE_queryByType, getAllByRole } = renderRail({ isMobile: true })
+  it('на телефоне остаётся раскладка переносом, без ряда прокрутки', async () => {
+    const { getAllByRole, container: hostContainer } = await renderRail({ isMobile: true })
 
-    expect(UNSAFE_queryByType(ScrollView)).toBeNull()
+    expect(queryHost(hostContainer, node => node.type === "RCTScrollView")).toBeNull()
     expect(getAllByRole('button')).toHaveLength(MOOD_CARDS.length)
   })
 })

@@ -62,13 +62,13 @@ describe('HeaderContextBar', () => {
     useBreadcrumbModel: jest.Mock;
   };
 
-  const renderWithClient = (ui: React.ReactElement) => {
+  const renderWithClient = async (ui: React.ReactElement) => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false, gcTime: 0 },
       },
     });
-    return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+    return await render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
   };
 
   beforeEach(() => {
@@ -116,14 +116,14 @@ describe('HeaderContextBar', () => {
     });
   });
 
-  it('should hide context bar on desktop home (page name already in nav)', () => {
+  it('should hide context bar on desktop home (page name already in nav)', async () => {
     (usePathname as jest.Mock).mockReturnValue('/');
-    const { queryByText, queryByTestId } = renderWithClient(<HeaderContextBar />);
+    const { queryByText, queryByTestId } = await renderWithClient(<HeaderContextBar />);
     expect(queryByText('Путешествия')).toBeNull();
     expect(queryByTestId('header-context-bar')).toBeNull();
   });
 
-  it('should hide context bar on desktop top-level routes (page name already in nav)', () => {
+  it('should hide context bar on desktop top-level routes (page name already in nav)', async () => {
     (usePathname as jest.Mock).mockReturnValue('/map');
 
     useBreadcrumbModel.mockReturnValue({
@@ -134,12 +134,12 @@ describe('HeaderContextBar', () => {
       items: [],
     });
 
-    const { queryByText, queryByTestId } = renderWithClient(<HeaderContextBar />);
+    const { queryByText, queryByTestId } = await renderWithClient(<HeaderContextBar />);
     expect(queryByText('Карта')).toBeNull();
     expect(queryByTestId('header-context-bar')).toBeNull();
   });
 
-  it('should render breadcrumb chain on nested routes and navigate on click', () => {
+  it('should render breadcrumb chain on nested routes and navigate on click', async () => {
     (usePathname as jest.Mock).mockReturnValue('/travels/test-slug');
 
     useBreadcrumbModel.mockReturnValue({
@@ -150,17 +150,17 @@ describe('HeaderContextBar', () => {
       items: [{ path: '/travels/test-slug', label: 'Mock Travel' }],
     });
 
-    const { getByText } = renderWithClient(<HeaderContextBar />);
+    const { getByText } = await renderWithClient(<HeaderContextBar />);
 
     const homeCrumb = getByText('Главная');
     expect(homeCrumb).toBeTruthy();
     expect(getByText('Mock Travel')).toBeTruthy();
 
-    fireEvent.press(homeCrumb);
+    await fireEvent.press(homeCrumb);
     expect(mockPush).toHaveBeenCalledWith('/');
   });
 
-  it('should not render the map panel open button on mobile /map (#228 — duplicate of bottom list entry)', () => {
+  it('should not render the map panel open button on mobile /map (#228 — duplicate of bottom list entry)', async () => {
     (usePathname as jest.Mock).mockReturnValue('/map');
     (global as any).__mockResponsive = {
       width: 390,
@@ -189,7 +189,7 @@ describe('HeaderContextBar', () => {
       items: [],
     });
 
-    const { queryByTestId } = renderWithClient(<HeaderContextBar />);
+    const { queryByTestId } = await renderWithClient(<HeaderContextBar />);
     // #228 — entry into the "places nearby" list lives only on the bottom
     // "Списком · N" button now; the header no longer duplicates it.
     expect(queryByTestId('map-panel-open')).toBeNull();
@@ -197,7 +197,7 @@ describe('HeaderContextBar', () => {
     expect(mockRequestToggleMapPanel).not.toHaveBeenCalled();
   });
 
-  it('renders a compact clickable breadcrumb trail for the mobile travel wizard', () => {
+  it('renders a compact clickable breadcrumb trail for the mobile travel wizard', async () => {
     (usePathname as jest.Mock).mockReturnValue('/travel/42');
     (global as any).__mockResponsive = {
       width: 390,
@@ -229,16 +229,16 @@ describe('HeaderContextBar', () => {
       ],
     });
 
-    const { getByTestId, getByText } = renderWithClient(<HeaderContextBar />);
+    const { getByTestId, getByText } = await renderWithClient(<HeaderContextBar />);
 
     expect(getByTestId('travel-upsert-breadcrumbs')).toBeTruthy();
     expect(getByText('Редактировать путешествие')).toBeTruthy();
 
-    fireEvent.press(getByText('Мои путешествия'));
+    await fireEvent.press(getByText('Мои путешествия'));
     expect(mockPush).toHaveBeenCalledWith('/metravel');
   });
 
-  it('should not render sections menu button on mobile non-travel pages', () => {
+  it('should not render sections menu button on mobile non-travel pages', async () => {
     (usePathname as jest.Mock).mockReturnValue('/');
     (global as any).__mockResponsive = {
       width: 390,
@@ -267,12 +267,12 @@ describe('HeaderContextBar', () => {
       items: [],
     });
 
-    const { queryByTestId } = renderWithClient(<HeaderContextBar />);
+    const { queryByTestId } = await renderWithClient(<HeaderContextBar />);
     expect(queryByTestId('map-panel-open')).toBeNull();
     expect(queryByTestId('mobile-sections-open')).toBeNull();
   });
 
-  it('should render sections menu button on mobile travel details pages', () => {
+  it('should render sections menu button on mobile travel details pages', async () => {
     (usePathname as jest.Mock).mockReturnValue('/travels/test-slug');
     (global as any).__mockResponsive = {
       width: 390,
@@ -301,11 +301,11 @@ describe('HeaderContextBar', () => {
       items: [],
     });
 
-    const { getByTestId } = renderWithClient(<HeaderContextBar />);
+    const { getByTestId } = await renderWithClient(<HeaderContextBar />);
     expect(getByTestId('mobile-sections-open')).toBeTruthy();
   });
 
-  it('should fall back to home on mobile back press when there is no history and no backToPath', () => {
+  it('should fall back to home on mobile back press when there is no history and no backToPath', async () => {
     (usePathname as jest.Mock).mockReturnValue('/map');
     (global as any).__mockResponsive = {
       width: 390,
@@ -334,9 +334,9 @@ describe('HeaderContextBar', () => {
       items: [],
     });
 
-    const { getByLabelText } = renderWithClient(<HeaderContextBar />);
+    const { getByLabelText } = await renderWithClient(<HeaderContextBar />);
 
-    fireEvent.press(getByLabelText('Назад'));
+    await fireEvent.press(getByLabelText('Назад'));
 
     expect(mockCanGoBack).toHaveBeenCalled();
     expect(mockBack).not.toHaveBeenCalled();

@@ -84,17 +84,17 @@ let queryClient: QueryClient
 
 // Клиент без своего `retry`: если слой данных потеряет политику повторов, в
 // силу вступит дефолт React Query (три повтора) и набор покраснеет.
-const renderController = (layout = { isCompact: false, isWide: true, hasMeasuredWidth: true }) => {
+const renderController = async (layout = { isCompact: false, isWide: true, hasMeasuredWidth: true }) => {
   queryClient = new QueryClient()
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
-  return renderHook(() => usePlacesCatalogController(layout), { wrapper })
+  return await renderHook(() => usePlacesCatalogController(layout), { wrapper })
 }
 
 // Часы теста поддельные. Ждать опросом здесь нельзя: в jsdom таймер опроса сам
 // поддельный и не тикает. `tick` — один проход часов вместе с микрозадачами.
-const tick = (ms: number) =>
+const tick = async (ms: number) =>
   act(async () => {
     await jest.advanceTimersByTimeAsync(ms)
   })
@@ -128,7 +128,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
 
   it('preserves a malformed percent escape from the URL without crashing the catalog', async () => {
     mockParams = { category: ' 100% nature ' }
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
     expect(result.current.selectedCategories).toEqual(['100% nature'])
     expect(callParams(0).categories).toEqual(['100% nature'])
@@ -137,7 +137,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
 
   it('implicit starter route makes only one filtered list calculation and leaves uncached scope idle', async () => {
     mockParams = {}
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
     expect(mockedFetch).toHaveBeenCalledTimes(1)
     expect(callParams(0)).toEqual({ page: 1, perPage: 20, categories: [...DEFAULT_CATEGORY_SELECTION], sort: 'default' })
@@ -155,9 +155,9 @@ describe('usePlacesCatalogController — бюджет запросов ката�
     mockParams = {}
     const list = deferred<PlacesCatalogPage>()
     mockedFetch.mockImplementation((params) => params.categories?.length ? list.promise : Promise.resolve(CATALOG_PAGE))
-    const { result } = renderController()
+    const { result } = await renderController()
     await tick(1)
-    act(() => {
+    await act(() => {
       if (intent === 'country') result.current.setCountryMenuVisible(true)
       else if (intent === 'filters') result.current.setFiltersOpen(true)
       else result.current.requestCatalogScope()
@@ -170,14 +170,14 @@ describe('usePlacesCatalogController — бюджет запросов ката�
     expect(mockedFetch).toHaveBeenCalledTimes(2)
     expect(callParams(1)).toEqual({ page: 1, perPage: 1 })
     expect(result.current.scopeStatus).toBe('ready')
-    act(() => result.current.setCountryMenuVisible(true))
+    await act(() => result.current.setCountryMenuVisible(true))
     await settle()
     expect(mockedFetch).toHaveBeenCalledTimes(2)
   })
 
   it('implicit route observes matching full-scope cache without an automatic scope request', async () => {
     mockParams = {}
-    const { result } = renderController()
+    const { result } = await renderController()
     queryClient.setQueryData(queryKeys.placesCatalogScope({}), { count: 120, ...CATALOG_FACETS })
     await settle()
     expect(mockedFetch).toHaveBeenCalledTimes(1)
@@ -192,16 +192,16 @@ describe('usePlacesCatalogController — бюджет запросов ката�
       if (params.categories?.length) return FILTERED_PAGE
       throw timeoutError()
     })
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
-    act(() => result.current.setCountryMenuVisible(true))
+    await act(() => result.current.setCountryMenuVisible(true))
     await settle()
     expect(mockedFetch).toHaveBeenCalledTimes(2)
     expect(result.current.scopeStatus).toBe('error')
     expect(result.current.countryFacets).toEqual([])
     expect(result.current.showLoadedCounts).toBe(false)
     mockedFetch.mockResolvedValue(CATALOG_PAGE)
-    act(() => result.current.retryScope())
+    await act(() => result.current.retryScope())
     await settle()
     expect(mockedFetch).toHaveBeenCalledTimes(3)
     expect(callParams(2)).toEqual({ page: 1, perPage: 1 })
@@ -210,12 +210,12 @@ describe('usePlacesCatalogController — бюджет запросов ката�
 
   it('changing country does not present the previous country scope while the new list is pending', async () => {
     mockParams = {}
-    const { result } = renderController()
+    const { result } = await renderController()
     queryClient.setQueryData(queryKeys.placesCatalogScope({}), { count: 120, ...CATALOG_FACETS })
     await settle()
     const nextList = deferred<PlacesCatalogPage>()
     mockedFetch.mockImplementation((params) => params.categories?.length ? nextList.promise : Promise.resolve({ ...CATALOG_PAGE, count: 0, countryFacets: [], categoryFacets: [] }))
-    act(() => result.current.handleSelectCountry('pl'))
+    await act(() => result.current.handleSelectCountry('pl'))
     await tick(1)
     expect(result.current.showLoadedCounts).toBe(false)
     expect(result.current.countryFacets).toEqual([])
@@ -231,12 +231,12 @@ describe('usePlacesCatalogController — бюджет запросов ката�
 
   it('Reset from implicit featured commits explicit All atomically and never reselects featured', async () => {
     mockParams = {}
-    const { result, rerender } = renderController()
+    const { result, rerender } = await renderController()
     await settle()
     mockSetParams.mockClear()
-    act(() => result.current.resetAll())
+    await act(() => result.current.resetAll())
     mockParams = { q: '', category: '', country: '' }
-    rerender({})
+    await rerender({})
     await settle()
     expect(mockSetParams.mock.calls).toEqual([[{ q: '', category: '', country: '' }]])
     expect(result.current.selectedCategories).toEqual([])
@@ -246,7 +246,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
   })
 
   it('первое открытие без фильтров: один запрос на список, итог и фасеты', async () => {
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
 
     expect(result.current.resultsStatus).toBe('list')
@@ -265,11 +265,11 @@ describe('usePlacesCatalogController — бюджет запросов ката�
   })
 
   it('выбор подборки: один запрос списка, объём без категорий остаётся из кэша', async () => {
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
     const nature = result.current.collectionCards.find((card) => card.id === 'nature')!
 
-    act(() => result.current.selectCategoryCollection(nature))
+    await act(() => result.current.selectCategoryCollection(nature))
     await settle()
 
     expect(result.current.totalCount).toBe(7)
@@ -286,7 +286,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
     ])
 
     // Возврат ко всем местам — из кэша, без запроса.
-    act(() => result.current.handleClearCategories())
+    await act(() => result.current.handleClearCategories())
     await settle()
     expect(result.current.totalCount).toBe(120)
     expect(mockedFetch).toHaveBeenCalledTimes(2)
@@ -298,7 +298,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
     const scope = deferred<PlacesCatalogPage>()
     mockedFetch.mockImplementation((params) => (params.categories?.length ? list.promise : scope.promise))
 
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
 
     // Список ещё в пути — второго расчёта рядом с ним нет.
@@ -324,7 +324,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
     mockParams = { category: 'Замок' }
     mockedFetch.mockRejectedValue(timeoutError())
 
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
 
     expect(result.current.resultsStatus).toBe('error')
@@ -336,7 +336,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
   it('таймаут: повторов нет, ошибка с ручным «Повторить»', async () => {
     mockedFetch.mockRejectedValue(timeoutError())
 
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
 
     expect(result.current.resultsStatus).toBe('error')
@@ -344,7 +344,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
     expect(result.current.loadErrorDescription).toContain('Сервер не отвечает')
 
     mockedFetch.mockImplementation(async () => CATALOG_PAGE)
-    act(() => {
+    await act(() => {
       void result.current.placesQuery.refetch()
     })
     await settle()
@@ -356,7 +356,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
   it('504 от шлюза: сервер ещё считает — повторов нет', async () => {
     mockedFetch.mockRejectedValue(new ApiError(504, 'HTTP 504: '))
 
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
 
     expect(result.current.resultsStatus).toBe('error')
@@ -366,7 +366,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
   it('обрыв соединения: ровно один повтор', async () => {
     mockedFetch.mockRejectedValue(connectionError())
 
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
 
     expect(result.current.resultsStatus).toBe('error')
@@ -377,7 +377,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
   it('503 «каталог занят»: один повтор, и он доводит до списка', async () => {
     mockedFetch.mockRejectedValueOnce(new ApiError(503, 'HTTP 503: Service Unavailable'))
 
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
 
     expect(result.current.resultsStatus).toBe('list')
@@ -390,11 +390,11 @@ describe('usePlacesCatalogController — бюджет запросов ката�
       if (params.page === 1) return { ...CATALOG_PAGE, count: 40 }
       throw timeoutError()
     })
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
 
     // Автодогрузка по скроллу запрашивает вторую страницу — она падает по таймауту.
-    act(() => result.current.handleScroll(NEAR_BOTTOM_SCROLL))
+    await act(() => result.current.handleScroll(NEAR_BOTTOM_SCROLL))
     await settle()
     expect(result.current.loadMoreFailed).toBe(true)
     expect(mockedFetch).toHaveBeenCalledTimes(2)
@@ -403,13 +403,13 @@ describe('usePlacesCatalogController — бюджет запросов ката�
     expect(result.current.visiblePlaces).toHaveLength(20)
 
     // Скролл у низа списка больше ничего не шлёт.
-    act(() => result.current.handleScroll(NEAR_BOTTOM_SCROLL))
+    await act(() => result.current.handleScroll(NEAR_BOTTOM_SCROLL))
     await settle()
     expect(mockedFetch).toHaveBeenCalledTimes(2)
 
     // Кнопка в подвале повторяет одну несостоявшуюся страницу, а не весь список.
     mockedFetch.mockImplementation(async () => ({ ...CATALOG_PAGE, count: 40, places: makePlaces(21, 20) }))
-    act(() => result.current.loadMorePlaces())
+    await act(() => result.current.loadMorePlaces())
     await settle()
 
     expect(result.current.visiblePlaces).toHaveLength(40)
@@ -419,11 +419,11 @@ describe('usePlacesCatalogController — бюджет запросов ката�
   })
 
   it('инвалидация каталога (блок автора) без категорий: перечитывается только список', async () => {
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
     expect(mockedFetch).toHaveBeenCalledTimes(1)
 
-    act(() => invalidateBlockSensitiveQueries(queryClient, 'block'))
+    await act(() => invalidateBlockSensitiveQueries(queryClient, 'block'))
     await settle()
 
     // Объём заново заполняет первая страница списка: отдельного `perPage=1` нет.
@@ -433,12 +433,12 @@ describe('usePlacesCatalogController — бюджет запросов ката�
   })
 
   it('«Сбросить» при поиске и подборке: запроса промежуточного состояния нет', async () => {
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
     const nature = result.current.collectionCards.find((card) => card.id === 'nature')!
-    act(() => result.current.selectCategoryCollection(nature))
+    await act(() => result.current.selectCategoryCollection(nature))
     await settle()
-    act(() => result.current.handleQueryChange('зам'))
+    await act(() => result.current.handleQueryChange('зам'))
     await settle()
     // Список подборки с поиском и после него объём для этого поиска.
     expect(mockedFetch).toHaveBeenCalledTimes(4)
@@ -448,7 +448,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
     // Очищенный поиск применяется в тот же рендер, что и сброс фильтров: запрос
     // «старый поиск без категорий» не уходит, каталог без фильтров — из кэша.
     mockSetParams.mockClear()
-    act(() => result.current.resetAll())
+    await act(() => result.current.resetAll())
     await settle()
 
     expect(mockedFetch).toHaveBeenCalledTimes(4)
@@ -459,12 +459,12 @@ describe('usePlacesCatalogController — бюджет запросов ката�
   })
 
   it('поиск: один запрос на паузу ввода, а не на каждый символ', async () => {
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
 
-    act(() => result.current.handleQueryChange('з'))
-    act(() => result.current.handleQueryChange('за'))
-    act(() => result.current.handleQueryChange('зам'))
+    await act(() => result.current.handleQueryChange('з'))
+    await act(() => result.current.handleQueryChange('за'))
+    await act(() => result.current.handleQueryChange('зам'))
     await tick(399)
     expect(mockedFetch).toHaveBeenCalledTimes(1)
 
@@ -475,7 +475,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
   })
   it('URL filters commit before the only initial list request, including the debounced q', async () => {
     mockParams = { q: 'замок', category: 'Замок', country: 'by' }
-    renderController({ isCompact: true, isWide: false, hasMeasuredWidth: true })
+    await renderController({ isCompact: true, isWide: false, hasMeasuredWidth: true })
     await tick(399)
     expect(mockedFetch).not.toHaveBeenCalled()
     expect(mockedGroups).not.toHaveBeenCalled()
@@ -492,7 +492,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
     ['native', { isCompact: false, isWide: true, hasMeasuredWidth: true }, 'ios'],
   ] as const)('does not request aggregate counts on %s', async (_name, layout, platform) => {
     Platform.OS = platform
-    renderController(layout)
+    await renderController(layout)
     await settle()
     expect(mockedFetch).toHaveBeenCalledTimes(1)
     expect(mockedGroups).not.toHaveBeenCalled()
@@ -503,7 +503,7 @@ describe('usePlacesCatalogController — бюджет запросов ката�
     const order: string[] = []
     mockedFetch.mockImplementation(() => { order.push('list'); return list.promise })
     mockedGroups.mockImplementation(async () => { order.push('groups'); return { nature: 41, history: 7, featured: 52, family: 0 } })
-    const { result } = renderController()
+    const { result } = await renderController()
     await tick(1)
     expect(order).toEqual(['list'])
     expect(mockedGroups).not.toHaveBeenCalled()
@@ -514,14 +514,14 @@ describe('usePlacesCatalogController — бюджет запросов ката�
       { id: 'featured', count: 52, countReady: true }, { id: 'history', count: 7, countReady: true },
       { id: 'nature', count: 41, countReady: true }, { id: 'family', count: 0, countReady: true },
     ])
-    act(() => result.current.handleQueryChange('озеро'))
+    await act(() => result.current.handleQueryChange('озеро'))
     await settle()
     expect(mockedGroups).toHaveBeenCalledTimes(1)
   })
 
   it('aggregate failure is quiet and leaves honest unknown counts with the loaded list', async () => {
     mockedGroups.mockRejectedValue(new ApiError(504, 'still working'))
-    const { result } = renderController()
+    const { result } = await renderController()
     await settle()
     expect(result.current.resultsStatus).toBe('list')
     expect(result.current.visiblePlaces).toHaveLength(20)
@@ -538,11 +538,11 @@ describe('aggregate cache versus selected-list refinement', () => {
   const nature = collections.find(({ id }) => id === 'nature')!
   type Input = Parameters<typeof usePlacesCatalogQueries>[0]
   const initial: Input = { enabled: true, showCollections: true, q: undefined, categories: [...nature.categories], country: 'by', sort: 'default', collections }
-  const renderQueries = (input: Input, seed?: (client: QueryClient) => void) => {
+  const renderQueries = async (input: Input, seed?: (client: QueryClient) => void) => {
     queryClient = new QueryClient()
     seed?.(queryClient)
     const wrapper = ({ children }: { children: React.ReactNode }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    return renderHook((props: Input) => usePlacesCatalogQueries(props), { initialProps: input, wrapper })
+    return await renderHook((props: Input) => usePlacesCatalogQueries(props), { initialProps: input, wrapper })
   }
   beforeEach(() => {
     jest.useFakeTimers()
@@ -555,7 +555,7 @@ describe('aggregate cache versus selected-list refinement', () => {
   it('partial cache does not suppress first aggregate; late aggregate cannot overwrite current selected count', async () => {
     const aggregate = deferred<Readonly<Record<string, number>>>()
     mockedGroups.mockReturnValue(aggregate.promise)
-    const { result } = renderQueries(initial, (client) => client.setQueryData(
+    const { result } = await renderQueries(initial, (client) => client.setQueryData(
       queryKeys.placesCatalogCollectionCounts({ country: 'by', groups, source: 'list' }), { nature: 1 },
     ))
     await settle()
@@ -568,12 +568,12 @@ describe('aggregate cache versus selected-list refinement', () => {
 
   it('country and exact groups isolate cached refinements; placeholder list cannot start a new aggregate', async () => {
     mockedGroups.mockImplementation(async ({ groups }) => Object.fromEntries(groups.map(({ id }) => [id, id === 'nature' ? 99 : 40])))
-    const { result, rerender } = renderQueries(initial)
+    const { result, rerender } = await renderQueries(initial)
     await settle()
     expect(result.current.collectionCounts?.nature).toBe(7)
     const next = deferred<PlacesCatalogPage>()
     mockedFetch.mockReturnValue(next.promise)
-    rerender({ ...initial, country: 'pl' })
+    await rerender({ ...initial, country: 'pl' })
     await tick(1)
     expect(result.current.placesQuery.isPlaceholderData).toBe(true)
     expect(result.current.collectionCounts).toBeUndefined()
@@ -583,7 +583,7 @@ describe('aggregate cache versus selected-list refinement', () => {
     expect(mockedGroups).toHaveBeenCalledTimes(2)
     expect(mockedGroups.mock.calls[1][0]).toMatchObject({ country: 'pl', groups })
     expect(result.current.collectionCounts?.nature).toBe(3)
-    rerender({ ...initial, country: 'pl', collections: collections.filter(({ id }) => id === 'history'), categories: [] })
+    await rerender({ ...initial, country: 'pl', collections: collections.filter(({ id }) => id === 'history'), categories: [] })
     await settle()
     expect(mockedGroups).toHaveBeenCalledTimes(3)
     expect(result.current.collectionCounts).toEqual({ history: 40 })
@@ -591,7 +591,7 @@ describe('aggregate cache versus selected-list refinement', () => {
   })
 
   it('disabled URL readiness cannot wake successful cached list or cached aggregate', async () => {
-    renderQueries({ ...initial, enabled: false }, (client) => {
+    await renderQueries({ ...initial, enabled: false }, (client) => {
       client.setQueryData(queryKeys.placesCatalogList({ q: undefined, categories: initial.categories, country: 'by', sort: 'default' }), { pages: [FILTERED_PAGE], pageParams: [1] })
       client.setQueryData(queryKeys.placesCatalogCollectionCounts({ country: 'by', groups, source: 'aggregate' }), { nature: 9 })
     })

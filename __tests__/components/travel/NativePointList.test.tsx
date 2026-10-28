@@ -14,9 +14,9 @@ describe('NativePointList', () => {
   // точки УЖЕ есть: список умел только править, двигать и удалять. Кнопка над
   // картой к этому моменту уже уехала вверх за край экрана, поэтому действие
   // нужно и здесь.
-  it('offers adding a point when the route already has some', () => {
+  it('offers adding a point when the route already has some', async () => {
     const onAddPoint = jest.fn()
-    const screen = render(
+    const screen = await render(
       <NativePointList
         markers={MARKERS}
         onChange={jest.fn()}
@@ -25,13 +25,13 @@ describe('NativePointList', () => {
       />,
     )
 
-    fireEvent.press(screen.getByTestId('travel-wizard.step-route.point-list-add'))
+    await fireEvent.press(screen.getByTestId('travel-wizard.step-route.point-list-add'))
 
     expect(onAddPoint).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps the header clean when no add handler is wired', () => {
-    const screen = render(
+  it('keeps the header clean when no add handler is wired', async () => {
+    const screen = await render(
       <NativePointList markers={MARKERS} onChange={jest.fn()} onRequestEdit={jest.fn()} />,
     )
 

@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 
 // LocationSearchInput (внутри шага маршрута) использует React Query — оборачиваем рендер
 // в свежий QueryClientProvider на каждый вызов для изоляции кэша между тестами.
-const render = (
+const render = async (
     ui: React.ReactElement,
     options?: Parameters<typeof rtlRender>[1],
 ) => {
@@ -180,28 +180,28 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
     });
 
     describe('✅ Отображение компонентов', () => {
-        it('должен отображать заголовок шага', () => {
-            const { getByText } = render(<TravelWizardStepRoute {...defaultProps} />);
+        it('должен отображать заголовок шага', async () => {
+            const { getByText } = await render(<TravelWizardStepRoute {...defaultProps} />);
             expect(getByText('Маршрут путешествия')).toBeTruthy();
         });
 
-        it('должен отображать поле поиска мест', () => {
-            const { getByPlaceholderText } = render(<TravelWizardStepRoute {...defaultProps} />);
+        it('должен отображать поле поиска мест', async () => {
+            const { getByPlaceholderText } = await render(<TravelWizardStepRoute {...defaultProps} />);
             expect(getByPlaceholderText(/Поиск места/)).toBeTruthy();
         });
 
-        it('должен отображать кнопку "Добавить точку вручную"', () => {
-            const { getByText } = render(<TravelWizardStepRoute {...defaultProps} />);
+        it('должен отображать кнопку "Добавить точку вручную"', async () => {
+            const { getByText } = await render(<TravelWizardStepRoute {...defaultProps} />);
             expect(getByText('Добавить точку вручную')).toBeTruthy();
         });
 
-        it('должен отображать счетчик точек', () => {
-            const { getByText } = render(<TravelWizardStepRoute {...defaultProps} />);
+        it('должен отображать счетчик точек', async () => {
+            const { getByText } = await render(<TravelWizardStepRoute {...defaultProps} />);
             expect(getByText('Точек: 0')).toBeTruthy();
         });
 
-        it('countries field is a read-only summary derived from markers only', () => {
-            const { getByTestId, getByText } = render(
+        it('countries field is a read-only summary derived from markers only', async () => {
+            const { getByTestId, getByText } = await render(
                 <TravelWizardStepRoute {...defaultProps} selectedCountryIds={['1']} />
             );
 
@@ -231,10 +231,10 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
                 json: async () => mockResults,
             });
 
-            const { getByPlaceholderText } = render(<TravelWizardStepRoute {...defaultProps} />);
+            const { getByPlaceholderText } = await render(<TravelWizardStepRoute {...defaultProps} />);
 
             const searchInput = getByPlaceholderText(/Поиск места/);
-            fireEvent.changeText(searchInput, 'Эйфелева башня');
+            await fireEvent.changeText(searchInput, 'Эйфелева башня');
 
             await waitFor(() => {
                 expect(global.fetch).toHaveBeenCalledWith(
@@ -265,7 +265,7 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
                 json: async () => mockResults,
             });
 
-            const { getByPlaceholderText, getByText } = render(
+            const { getByPlaceholderText, getByText } = await render(
                 <TravelWizardStepRoute
                     {...defaultProps}
                     setMarkers={mockSetMarkers}
@@ -274,14 +274,14 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
             );
 
             const searchInput = getByPlaceholderText(/Поиск места/);
-            fireEvent.changeText(searchInput, 'Париж');
+            await fireEvent.changeText(searchInput, 'Париж');
 
             await waitFor(() => {
                 expect(getByText('Париж, Франция')).toBeTruthy();
             });
 
             const result = getByText('Париж, Франция');
-            fireEvent.press(result);
+            await fireEvent.press(result);
 
             await waitFor(() => {
                 expect(mockSetMarkers).toHaveBeenCalledWith(
@@ -315,20 +315,20 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
                 json: async () => mockResults,
             });
 
-            const { getByPlaceholderText, getByText } = render(
+            const { getByPlaceholderText, getByText } = await render(
                 <TravelWizardStepRoute
                     {...defaultProps}
                     onManualSave={mockOnManualSave}
                 />
             );
 
-            fireEvent.changeText(getByPlaceholderText(/Поиск места/), 'Париж');
+            await fireEvent.changeText(getByPlaceholderText(/Поиск места/), 'Париж');
 
             await waitFor(() => {
                 expect(getByText('Париж, Франция')).toBeTruthy();
             });
 
-            fireEvent.press(getByText('Париж, Франция'));
+            await fireEvent.press(getByText('Париж, Франция'));
 
             await waitFor(() => {
                 expect(mockOnManualSave).toHaveBeenCalledWith(
@@ -344,7 +344,7 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
         it('должен автоматически выбрать страну при добавлении точки', async () => {
             const mockOnCountrySelect = jest.fn();
 
-            render(
+            await render(
                 <TravelWizardStepRoute
                     {...defaultProps}
                     onCountrySelect={mockOnCountrySelect}
@@ -357,25 +357,25 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
     });
 
     describe('✅ Ручное добавление точки', () => {
-        it('должен показать форму при нажатии кнопки', () => {
-            const { getByText, getByPlaceholderText } = render(
+        it('должен показать форму при нажатии кнопки', async () => {
+            const { getByText, getByPlaceholderText } = await render(
                 <TravelWizardStepRoute {...defaultProps} />
             );
 
             const button = getByText('Добавить точку вручную');
-            fireEvent.press(button);
+            await fireEvent.press(button);
 
             expect(getByPlaceholderText('49.609645, 18.845693')).toBeTruthy();
         });
 
-        it('на web разрешает выбирать HEIC и HEIF для точки из фото', () => {
+        it('на web разрешает выбирать HEIC и HEIF для точки из фото', async () => {
             Object.defineProperty(Platform, 'OS', { value: 'web' });
 
-            const screen = render(<TravelWizardStepRoute {...defaultProps} />);
+            const screen = await render(<TravelWizardStepRoute {...defaultProps} />);
 
-            fireEvent.press(screen.getByText('Добавить точку вручную'));
+            await fireEvent.press(screen.getByText('Добавить точку вручную'));
 
-            const fileInputs = screen.UNSAFE_queryAllByType?.('input' as any) ?? [];
+            const fileInputs = screen.container.queryAll(node => node.type === 'input');
             const fileInput = fileInputs.find((node: any) => node?.props?.type === 'file');
 
             expect(fileInput).toBeTruthy();
@@ -398,7 +398,7 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
                 }),
             });
 
-            const { getByText, getByPlaceholderText } = render(
+            const { getByText, getByPlaceholderText } = await render(
                 <TravelWizardStepRoute
                     {...defaultProps}
                     setMarkers={mockSetMarkers}
@@ -406,13 +406,13 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
             );
 
             const button = getByText('Добавить точку вручную');
-            fireEvent.press(button);
+            await fireEvent.press(button);
 
             const input = getByPlaceholderText('49.609645, 18.845693');
-            fireEvent.changeText(input, '53.9, 27.56');
+            await fireEvent.changeText(input, '53.9, 27.56');
 
             const addButton = getByText('Добавить');
-            fireEvent.press(addButton);
+            await fireEvent.press(addButton);
 
             await waitFor(() => {
                 expect(mockSetMarkers).toHaveBeenCalled();
@@ -424,27 +424,27 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
             const mockSetMarkers = jest.fn();
             const file = new File(['image'], 'gps-photo.jpg', { type: 'image/jpeg' });
 
-            const screen = render(
+            const screen = await render(
                 <TravelWizardStepRoute
                     {...defaultProps}
                     setMarkers={mockSetMarkers}
                 />
             );
 
-            fireEvent.press(screen.getByText('Добавить точку вручную'));
-            const fileInputs = screen.UNSAFE_queryAllByType?.('input' as any) ?? [];
+            await fireEvent.press(screen.getByText('Добавить точку вручную'));
+            const fileInputs = screen.container.queryAll(node => node.type === 'input');
             const fileInput = fileInputs.find((node: any) => node?.props?.type === 'file');
             expect(fileInput).toBeTruthy();
 
-            await waitFor(() => {
-                fireEvent(fileInput, 'change', { target: { files: [file], value: 'gps-photo.jpg' } });
+            await waitFor(async () => {
+                await fireEvent(fileInput, 'change', { target: { files: [file], value: 'gps-photo.jpg' } });
             });
 
             await waitFor(() => {
                 expect(getPendingImageFile('blob:https://example.com/manual-point')).toBe(file);
             });
 
-            fireEvent.press(screen.getByTestId('travel-wizard.step-route.manual.add'));
+            await fireEvent.press(screen.getByTestId('travel-wizard.step-route.manual.add'));
 
             await waitFor(() => {
                 expect(mockSetMarkers).toHaveBeenCalledWith(
@@ -459,10 +459,10 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
             expect(global.URL.revokeObjectURL).not.toHaveBeenCalledWith('blob:https://example.com/manual-point');
         });
 
-        it('НЕ должен добавить точку с невалидными координатами', () => {
+        it('НЕ должен добавить точку с невалидными координатами', async () => {
             const mockSetMarkers = jest.fn();
 
-            const { getByText, getByPlaceholderText } = render(
+            const { getByText, getByPlaceholderText } = await render(
                 <TravelWizardStepRoute
                     {...defaultProps}
                     setMarkers={mockSetMarkers}
@@ -470,26 +470,26 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
             );
 
             const button = getByText('Добавить точку вручную');
-            fireEvent.press(button);
+            await fireEvent.press(button);
 
             const input = getByPlaceholderText('49.609645, 18.845693');
-            fireEvent.changeText(input, 'invalid coords');
+            await fireEvent.changeText(input, 'invalid coords');
 
             const addButton = getByText('Добавить');
-            fireEvent.press(addButton);
+            await fireEvent.press(addButton);
 
             expect(mockSetMarkers).not.toHaveBeenCalled();
         });
     });
 
     describe('✅ Счетчик точек', () => {
-        it('должен показать правильное количество точек', () => {
+        it('должен показать правильное количество точек', async () => {
             const markers = [
                 { id: null, lat: 50, lng: 30, address: 'Киев', country: 1, categories: [], image: '' },
                 { id: null, lat: 49, lng: 24, address: 'Львов', country: 1, categories: [], image: '' },
             ];
 
-            const { getByText } = render(
+            const { getByText } = await render(
                 <TravelWizardStepRoute
                     {...defaultProps}
                     markers={markers}
@@ -502,7 +502,7 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
 
     describe('✅ Coachmark (подсказка)', () => {
         it('должен показать подсказку если нет точек', async () => {
-            const { findByText } = render(
+            const { findByText } = await render(
                 <TravelWizardStepRoute
                     {...defaultProps}
                     markers={[]}
@@ -512,12 +512,12 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
             expect(await findByText('Как добавить первую точку')).toBeTruthy();
         });
 
-        it('НЕ должен показать подсказку если есть точки', () => {
+        it('НЕ должен показать подсказку если есть точки', async () => {
             const markers = [
                 { id: null, lat: 50, lng: 30, address: 'Киев', country: 1, categories: [], image: '' },
             ];
 
-            const { queryByText } = render(
+            const { queryByText } = await render(
                 <TravelWizardStepRoute
                     {...defaultProps}
                     markers={markers}
@@ -529,20 +529,20 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
     });
 
     describe('✅ Кнопки навигации', () => {
-        it('должна вызвать onBack при нажатии "Назад"', () => {
-            const { getByTestId } = render(<TravelWizardStepRoute {...defaultProps} />);
+        it('должна вызвать onBack при нажатии "Назад"', async () => {
+            const { getByTestId } = await render(<TravelWizardStepRoute {...defaultProps} />);
 
             const backButton = getByTestId('travel-wizard-back');
-            fireEvent.press(backButton);
+            await fireEvent.press(backButton);
 
             expect(defaultProps.onBack).toHaveBeenCalled();
         });
 
-        it('должна вызвать onNext при нажатии "К медиа"', () => {
-            const { getByText } = render(<TravelWizardStepRoute {...defaultProps} />);
+        it('должна вызвать onNext при нажатии "К медиа"', async () => {
+            const { getByText } = await render(<TravelWizardStepRoute {...defaultProps} />);
 
             const nextButton = getByText('К медиа');
-            fireEvent.press(nextButton);
+            await fireEvent.press(nextButton);
 
             expect(defaultProps.onNext).toHaveBeenCalled();
         });
@@ -572,7 +572,7 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
                 }],
             });
 
-            const { getByPlaceholderText, getByText } = render(
+            const { getByPlaceholderText, getByText } = await render(
                 <TravelWizardStepRoute
                     {...defaultProps}
                     formData={publishedFormData}
@@ -580,9 +580,9 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
                 />
             );
 
-            fireEvent.changeText(getByPlaceholderText(/Поиск места/), 'Париж');
+            await fireEvent.changeText(getByPlaceholderText(/Поиск места/), 'Париж');
             await waitFor(() => expect(getByText('Париж, Франция')).toBeTruthy());
-            fireEvent.press(getByText('Париж, Франция'));
+            await fireEvent.press(getByText('Париж, Франция'));
 
             await waitFor(() => {
                 expect(mockOnManualSave).toHaveBeenCalledWith(
@@ -612,7 +612,7 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
                 }],
             });
 
-            const { getByPlaceholderText, getByText } = render(
+            const { getByPlaceholderText, getByText } = await render(
                 <TravelWizardStepRoute
                     {...defaultProps}
                     formData={{ ...defaultProps.formData, publish: false, moderation: false }}
@@ -620,9 +620,9 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
                 />
             );
 
-            fireEvent.changeText(getByPlaceholderText(/Поиск места/), 'Париж');
+            await fireEvent.changeText(getByPlaceholderText(/Поиск места/), 'Париж');
             await waitFor(() => expect(getByText('Париж, Франция')).toBeTruthy());
-            fireEvent.press(getByText('Париж, Франция'));
+            await fireEvent.press(getByText('Париж, Франция'));
 
             await waitFor(() => {
                 expect(mockOnManualSave).toHaveBeenCalledWith(

@@ -60,7 +60,7 @@ const createAllTravels = (overrides: Partial<UseMyTravelsResult> = {}): UseMyTra
   ...overrides,
 });
 
-const renderTabList = (activeTab: string, allTravels: UseMyTravelsResult, onAfterRemove = jest.fn()) =>
+const renderTabList = async (activeTab: string, allTravels: UseMyTravelsResult, onAfterRemove = jest.fn()) =>
   renderHook(
     ({ tab }: { tab: string }) =>
       useProfileTravelTabList({
@@ -81,10 +81,10 @@ beforeEach(() => {
 });
 
 describe('useProfileTravelTabList', () => {
-  it('на вкладке «Маршруты» отдаёт общий список автора и ничего не запрашивает', () => {
+  it('на вкладке «Маршруты» отдаёт общий список автора и ничего не запрашивает', async () => {
     const allTravels = createAllTravels();
 
-    const { result } = renderTabList('travels', allTravels);
+    const { result } = await renderTabList('travels', allTravels);
 
     expect(result.current.isFiltered).toBe(false);
     expect(result.current.travels).toBe(allTravels.myTravels);
@@ -94,7 +94,7 @@ describe('useProfileTravelTabList', () => {
   it('открытие «Черновиков» стоит одного запроса со своим фильтром', async () => {
     const allTravels = createAllTravels();
 
-    const { result } = renderTabList('draftTravels', allTravels);
+    const { result } = await renderTabList('draftTravels', allTravels);
     await act(async () => {});
 
     expect(mockFetchMyTravels).toHaveBeenCalledTimes(1);
@@ -111,13 +111,13 @@ describe('useProfileTravelTabList', () => {
   it('возврат на уже открытую вкладку не повторяет запрос', async () => {
     const allTravels = createAllTravels();
 
-    const { rerender } = renderTabList('draftTravels', allTravels);
+    const { rerender } = await renderTabList('draftTravels', allTravels);
     await act(async () => {});
     expect(mockFetchMyTravels).toHaveBeenCalledTimes(1);
 
-    rerender({ tab: 'travels' });
+    await rerender({ tab: 'travels' });
     await act(async () => {});
-    rerender({ tab: 'draftTravels' });
+    await rerender({ tab: 'draftTravels' });
     await act(async () => {});
 
     expect(mockFetchMyTravels).toHaveBeenCalledTimes(1);
@@ -126,9 +126,9 @@ describe('useProfileTravelTabList', () => {
   it('каждый статус читает свой срез отдельным запросом', async () => {
     const allTravels = createAllTravels();
 
-    const { rerender } = renderTabList('draftTravels', allTravels);
+    const { rerender } = await renderTabList('draftTravels', allTravels);
     await act(async () => {});
-    rerender({ tab: 'publishedTravels' });
+    await rerender({ tab: 'publishedTravels' });
     await act(async () => {});
 
     expect(mockFetchMyTravels).toHaveBeenCalledTimes(2);
@@ -143,7 +143,7 @@ describe('useProfileTravelTabList', () => {
     mockConfirmAction.mockResolvedValue(true);
     mockDeleteTravel.mockResolvedValue(undefined as any);
 
-    const { result } = renderTabList('draftTravels', allTravels, onAfterRemove);
+    const { result } = await renderTabList('draftTravels', allTravels, onAfterRemove);
     await act(async () => {});
 
     await act(async () => {
@@ -161,7 +161,7 @@ describe('useProfileTravelTabList', () => {
     const onAfterRemove = jest.fn();
     mockConfirmAction.mockResolvedValue(false);
 
-    const { result } = renderTabList('draftTravels', allTravels, onAfterRemove);
+    const { result } = await renderTabList('draftTravels', allTravels, onAfterRemove);
     await act(async () => {});
 
     await act(async () => {
@@ -178,19 +178,19 @@ describe('useProfileTravelTabList', () => {
       const isPublished = params.publicationStatus?.includes('published');
       return page(isPublished === published ? [10] : [], isPublished === published ? 1 : 0, published ? 'published' : 'draft') as any;
     });
-    const { result, rerender } = renderTabList('draftTravels', createAllTravels());
+    const { result, rerender } = await renderTabList('draftTravels', createAllTravels());
     await waitFor(() => expect(result.current.travels.map(t => t.id)).toEqual([10]));
-    rerender({ tab: 'publishedTravels' });
+    await rerender({ tab: 'publishedTravels' });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.travels).toEqual([]);
-    rerender({ tab: 'travels' });
+    await rerender({ tab: 'travels' });
     published = true;
     await act(async () => { await invalidateTravelCollections([...queryClients].at(-1)!, 'u-1'); });
     const readsAfterInvalidation = mockFetchMyTravels.mock.calls.length;
-    rerender({ tab: 'draftTravels' });
+    await rerender({ tab: 'draftTravels' });
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.travels).toEqual([]);
-    rerender({ tab: 'publishedTravels' });
+    await rerender({ tab: 'publishedTravels' });
     await waitFor(() => expect(result.current.travels.map(t => t.id)).toEqual([10]));
     expect(result.current.travels[0].publication_status).toBe('published');
     // Returning is cache use, not a compensating reload that hides stale data.
@@ -203,13 +203,13 @@ describe('useProfileTravelTabList', () => {
       const selected = params.publicationStatus?.includes(status);
       return page(selected ? [10] : [], selected ? 1 : 0, status) as any;
     });
-    const { result, rerender } = renderTabList('draftTravels', createAllTravels());
+    const { result, rerender } = await renderTabList('draftTravels', createAllTravels());
     await waitFor(() => expect(result.current.travels).toHaveLength(1));
     status = 'published';
     await act(async () => { await invalidateTravelCollections([...queryClients].at(-1)!, 'u-1'); });
     expect(result.current.travels).toEqual([]);
     expect(mockFetchMyTravels.mock.calls.filter(([p]) => p.publicationStatus?.includes('published'))).toHaveLength(0);
-    rerender({ tab: 'publishedTravels' });
+    await rerender({ tab: 'publishedTravels' });
     await waitFor(() => expect(result.current.travels.map(t => t.id)).toEqual([10]));
     expect(result.current.travels[0].publication_status).toBe('published');
     expect(mockFetchMyTravels.mock.calls.filter(([p]) => p.publicationStatus?.includes('published'))).toHaveLength(1);
@@ -219,7 +219,7 @@ describe('useProfileTravelTabList', () => {
 
 // Isolated real QueryClient: cache lifecycle is part of the hook contract.
 const queryClients = new Set<QueryClient>();
-const renderHook: typeof renderQueryHook = (callback, options) => {
+const renderHook: typeof renderQueryHook = async (callback, options) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity, staleTime: 300_000 } },
   });

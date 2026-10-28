@@ -1,5 +1,7 @@
+import { within } from '@testing-library/react-native'
 import { Suspense } from 'react';
-import renderer, { act } from 'react-test-renderer'
+import { render as renderTree, act } from '@testing-library/react-native'
+import type { RenderResult } from '@testing-library/react-native'
 
 import { Platform } from 'react-native'
 import { __testables } from '@/components/travel/details/TravelDetailsHero'
@@ -161,9 +163,9 @@ describe('TravelHeroSection slider background regression (web)', () => {
       excursions: { current: null },
     }
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <Suspense fallback={null}>
           <__testables.TravelHeroSection
             travel={travel}
@@ -183,9 +185,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
 
     expect(mockSliderSpy).toHaveBeenCalled()
 
-    const heroSliderContainer = (tree as any).root.findByProps({
-      testID: 'travel-details-hero-slider-container',
-    })
+    const heroSliderContainer = within(tree.container).getByTestId('travel-details-hero-slider-container', { includeHiddenElements: true })
     expect(heroSliderContainer).toBeTruthy()
     expect(mockSliderSpy.mock.calls.length).toBeGreaterThan(0)
     const lastArgs = mockSliderSpy.mock.calls[mockSliderSpy.mock.calls.length - 1]
@@ -234,9 +234,9 @@ describe('TravelHeroSection slider background regression (web)', () => {
       excursions: { current: null },
     }
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <Suspense fallback={null}>
           <__testables.TravelHeroSection
             travel={travel}
@@ -252,11 +252,11 @@ describe('TravelHeroSection slider background regression (web)', () => {
       await Promise.resolve()
     })
 
-    const hiddenWrapper = (tree as any).root.findAll(
+    const hiddenWrapper = tree.container.queryAll(
       (node: any) =>
         Array.isArray(node.props?.style) &&
         node.props.style.some((style: any) => style?.opacity === 0),
-    )[0]
+    { includeSelf: true })[0]
 
     expect(hiddenWrapper).toBeTruthy()
     expect(hiddenWrapper.props.style).toEqual(
@@ -276,7 +276,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
     } as any)
 
     await act(async () => {
-      tree!.update(
+      await tree!.rerender(
         <Suspense fallback={null}>
           <__testables.TravelHeroSection
             travel={travel}
@@ -316,9 +316,9 @@ describe('TravelHeroSection slider background regression (web)', () => {
     }
     const anchors: any = { gallery: { current: null } }
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <Suspense fallback={null}>
           <__testables.TravelHeroSection
             travel={travel}
@@ -340,10 +340,10 @@ describe('TravelHeroSection slider background regression (web)', () => {
     expect(sliderProps.firstImagePreloaded).toBe(true)
     expect(sliderProps.onInteractionStart).toBe(mockReleaseSsgHero)
 
-    const visibleSliderWrapper = tree!.root.findAll(
+    const visibleSliderWrapper = tree!.container.queryAll(
       (node: any) =>
         node.props?.dataSet?.travelHeroSliderUnder === 'true',
-    )[0]
+    { includeSelf: true })[0]
     expect(visibleSliderWrapper.props.style).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -354,10 +354,10 @@ describe('TravelHeroSection slider background regression (web)', () => {
       ]),
     )
 
-    const adoptedHeroHost = tree!.root.findAll(
+    const adoptedHeroHost = tree!.container.queryAll(
       (node: any) =>
         node.props?.dataSet?.travelHeroOverlay === 'true',
-    )[0]
+    { includeSelf: true })[0]
     expect(adoptedHeroHost).toBeTruthy()
     expect(adoptedHeroHost.props.style).toEqual(
       expect.arrayContaining([expect.objectContaining({ zIndex: TRAVEL_HERO_LAYERS.lcpOverlay })]),
@@ -436,9 +436,9 @@ describe('TravelHeroSection slider background regression (web)', () => {
       excursions: { current: null },
     }
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <Suspense fallback={null}>
           <__testables.TravelHeroSection
             travel={travel}
@@ -456,14 +456,12 @@ describe('TravelHeroSection slider background regression (web)', () => {
       await Promise.resolve()
     })
 
-    const heroSliderContainer = (tree as any).root.findByProps({
-      testID: 'travel-details-hero-slider-container',
-    })
+    const heroSliderContainer = within(tree.container).getByTestId('travel-details-hero-slider-container', { includeHiddenElements: true })
 
     expect(typeof heroSliderContainer.props?.onLayout).toBe('function')
-    const lcpHeroImage = (tree as any).root.findAll(
+    const lcpHeroImage = tree.container.queryAll(
       (node: any) => node.type === 'img' && node.props?.['data-lcp'],
-    )[0]
+    { includeSelf: true })[0]
     expect(lcpHeroImage.props.style).toEqual(
       expect.objectContaining({
         width: '100%',
@@ -517,9 +515,9 @@ describe('TravelHeroSection slider background regression (web)', () => {
       excursions: { current: null },
     }
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <Suspense fallback={null}>
           <__testables.TravelHeroSection
             travel={travel}
@@ -536,7 +534,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
       await Promise.resolve()
     })
 
-    const galleryAnchors = (tree as any).root.findAll((node) => node.props.dataSet?.sectionKey === 'gallery')
+    const galleryAnchors = tree.container.queryAll((node) => node.props.dataSet?.sectionKey === 'gallery', { includeSelf: true })
     expect(galleryAnchors.length).toBeGreaterThan(0)
   })
 
@@ -597,7 +595,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
       excursions: { current: null },
     }
     await act(async () => {
-      renderer.create(
+      await renderTree(
         <Suspense fallback={null}>
           <__testables.TravelHeroSection
             travel={travel}
@@ -679,7 +677,7 @@ describe('TravelHeroSection slider background regression (web)', () => {
     }
 
     await act(async () => {
-      renderer.create(
+      await renderTree(
         <Suspense fallback={null}>
           <__testables.TravelHeroSection
             travel={travel}

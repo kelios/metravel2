@@ -110,7 +110,7 @@ describe('useGuestQuestFlow migration after login', () => {
     } as never)
     mockedApi.updateProgress.mockResolvedValue({ id: 42 } as never)
 
-    renderHook(() =>
+    await renderHook(() =>
       useGuestQuestFlow({
         questId: 'krakow-dragon',
         cityId: 'krakow',
@@ -162,7 +162,7 @@ describe('useGuestQuestFlow migration after login', () => {
     } as never)
     mockedApi.updateProgress.mockResolvedValue({ id: 42 } as never)
 
-    renderHook(() =>
+    await renderHook(() =>
       useGuestQuestFlow({
         questId: 'krakow-dragon',
         cityId: 'krakow',
@@ -210,7 +210,7 @@ describe('useGuestQuestFlow migration after login', () => {
       updated_at: '2026-01-01T00:00:00Z',
     } as never)
 
-    renderHook(() =>
+    await renderHook(() =>
       useGuestQuestFlow({
         questId: 'krakow-dragon',
         cityId: 'krakow',
@@ -251,7 +251,7 @@ describe('useGuestQuestFlow migration after login', () => {
     })
 
     try {
-      renderHook(() =>
+      await renderHook(() =>
         useGuestQuestFlow({
           questId: 'krakow-dragon',
           cityId: 'krakow',
@@ -301,7 +301,7 @@ describe('useGuestQuestFlow migration after login', () => {
     mockReadOrCreateProgress.mockRejectedValue(new Error('Network request failed'))
 
     try {
-      renderHook(() =>
+      await renderHook(() =>
         useGuestQuestFlow({
           questId: 'krakow-dragon',
           cityId: 'krakow',
@@ -358,7 +358,7 @@ describe('useGuestQuestFlow migration after login', () => {
     })
 
     try {
-      renderHook(() =>
+      await renderHook(() =>
         useGuestQuestFlow({
           questId: 'krakow-dragon',
           cityId: 'krakow',
@@ -392,7 +392,7 @@ describe('useGuestQuestFlow migration after login', () => {
   })
 
   it('is a no-op when there is no guest progress to migrate', async () => {
-    renderHook(() =>
+    await renderHook(() =>
       useGuestQuestFlow({
         questId: 'krakow-dragon',
         cityId: 'krakow',
@@ -420,7 +420,7 @@ describe('useGuestQuestFlow migration after login', () => {
       showMap: true,
     })
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useGuestQuestFlow({
         questId: 'krakow-dragon',
         cityId: 'krakow',
@@ -450,8 +450,8 @@ describe('useGuestQuestFlow reset (#2047)', () => {
     showMap: true,
   }
 
-  const renderGuestFlow = (isAuthenticated: boolean) =>
-    renderHook(
+  const renderGuestFlow = async (isAuthenticated: boolean) =>
+    await renderHook(
       ({ auth }: { auth: boolean }) =>
         useGuestQuestFlow({
           questId: 'krakow-dragon',
@@ -469,7 +469,7 @@ describe('useGuestQuestFlow reset (#2047)', () => {
   })
 
   it('стирает гостевую копию, и повторное открытие квеста начинается с нуля', async () => {
-    const { result } = renderGuestFlow(false)
+    const { result } = await renderGuestFlow(false)
     await waitFor(() => {
       expect(result.current.guestInitial?.answers).toEqual(answeredGuestProgress.answers)
     })
@@ -483,19 +483,19 @@ describe('useGuestQuestFlow reset (#2047)', () => {
     expect(await AsyncStorage.getItem(`${GUEST_QUEST_PROGRESS_PREFIX}krakow-dragon`)).toBeNull()
     expect(result.current.guestInitial).toBeNull()
 
-    const reopened = renderGuestFlow(false)
+    const reopened = await renderGuestFlow(false)
     await waitFor(() => expect(reopened.result.current.guestReady).toBe(true))
     expect(reopened.result.current.guestInitial).toBeNull()
   })
 
   it('после входа сброшенные ответы не мигрируют в аккаунт', async () => {
-    const { result, rerender } = renderGuestFlow(false)
+    const { result, rerender } = await renderGuestFlow(false)
     await waitFor(() => expect(result.current.guestInitial).toBeTruthy())
 
     await act(async () => {
       await result.current.resetGuestProgress()
     })
-    rerender({ auth: true })
+    await rerender({ auth: true })
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 0))
     })

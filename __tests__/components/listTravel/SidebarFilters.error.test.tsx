@@ -42,27 +42,27 @@ const baseProps = {
 };
 
 describe('SidebarFilters error state', () => {
-  it('shows a readable filter error and retries the failed options query', () => {
+  it('shows a readable filter error and retries the failed options query', async () => {
     const onRetry = jest.fn();
-    const screen = render(<SidebarFilters {...baseProps} isError onRetry={onRetry} />);
+    const screen = await render(<SidebarFilters {...baseProps} isError onRetry={onRetry} />);
 
     expect(screen.queryByTestId('modern-filters')).toBeNull();
     expect(screen.getByText('Не удалось загрузить фильтры')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('filters-error-retry'));
+    await fireEvent.press(screen.getByTestId('filters-error-retry'));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the normal filters UI when the query succeeds', () => {
-    const screen = render(<SidebarFilters {...baseProps} />);
+  it('keeps the normal filters UI when the query succeeds', async () => {
+    const screen = await render(<SidebarFilters {...baseProps} />);
 
     expect(screen.getByTestId('modern-filters')).toBeTruthy();
     expect(screen.queryByTestId('filters-error-retry')).toBeNull();
   });
 
-  it('lets mobile users close the full-screen error sheet', () => {
+  it('lets mobile users close the full-screen error sheet', async () => {
     const onClose = jest.fn();
-    const screen = render(
+    const screen = await render(
       <SidebarFilters
         {...baseProps}
         isMobile
@@ -72,7 +72,7 @@ describe('SidebarFilters error state', () => {
       />,
     );
 
-    fireEvent.press(screen.getByTestId('filters-error-dismiss'));
+    await fireEvent.press(screen.getByTestId('filters-error-dismiss'));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

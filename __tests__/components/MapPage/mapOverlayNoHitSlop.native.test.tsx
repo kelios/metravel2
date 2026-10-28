@@ -132,23 +132,11 @@ const addressOf = (node: any): string => {
   return '(без testID)'
 }
 
-const typeName = (node: any) => {
-  // forwardRef/memo-обёртки (Pressable = memo(forwardRef(fn))) хранят имя во
-  // внутреннем render/type — спускаемся до первого имени.
-  let type = node.type
-  for (let depth = 0; type && depth < 4; depth += 1) {
-    if (typeof type === 'string') return type
-    if (type.displayName || type.name) return type.displayName || type.name
-    type = type.render ?? type.type
-  }
-  return '(composite)'
-}
-
-/** Все узлы (host и composite) с `hitSlop` — в виде, пригодном для сообщения. */
+/** Все host-узлы с `hitSlop` — в виде, пригодном для сообщения. */
 const findHitSlopNodes = (root: any) =>
   root
-    .findAll((node: any) => node.props != null && node.props.hitSlop != null)
-    .map((node: any) => `${typeName(node)} @ ${addressOf(node)} hitSlop=${JSON.stringify(node.props.hitSlop)}`)
+    .queryAll((node: any) => node.props.hitSlop != null)
+    .map((node: any) => `${node.type} @ ${addressOf(node)} hitSlop=${JSON.stringify(node.props.hitSlop)}`)
 
 const OS_LIST: Os[] = ['ios', 'android']
 
@@ -161,14 +149,14 @@ describe.each(OS_LIST)('слои над native-картой без hitSlop (#223
     colors = env.getThemedColors(false)
   })
 
-  afterEach(() => {
-    env.RNTL.cleanup()
+  afterEach(async () => {
+    await env.RNTL.cleanup()
   })
 
   const h = (component: any, props: Record<string, unknown>) => env.React.createElement(component, props)
 
-  const renderLayer = (element: any, expectedTestIds: string[]) => {
-    const screen = env.RNTL.render(element)
+  const renderLayer = async (element: any, expectedTestIds: string[]) => {
+    const screen = await env.RNTL.render(element)
     // Контроль невакуумности: нужные кнопки слоя действительно отрендерились.
     for (const testID of expectedTestIds) {
       expect({ testID, rendered: screen.queryAllByTestId(testID).length > 0 }).toEqual({ testID, rendered: true })
@@ -177,7 +165,7 @@ describe.each(OS_LIST)('слои над native-картой без hitSlop (#223
   }
 
   const expectNoHitSlop = (screen: any) => {
-    expect(findHitSlopNodes(screen.UNSAFE_root)).toEqual([])
+    expect(findHitSlopNodes(screen.container)).toEqual([])
   }
 
   const overlayProps = () => ({
@@ -226,8 +214,8 @@ describe.each(OS_LIST)('слои над native-картой без hitSlop (#223
     expect(require('react-native').Platform.select({ ios: 'ios', android: 'android' })).toBe(os)
   })
 
-  it('тулбар в radius-режиме с рядом чипов', () => {
-    const screen = renderLayer(h(env.MapMobileTopOverlay, overlayProps()), [
+  it('тулбар в radius-режиме с рядом чипов', async () => {
+    const screen = await renderLayer(h(env.MapMobileTopOverlay, overlayProps()), [
       'map-center-user-quick',
       'map-mobile-filters-button',
       'map-mobile-radius-button',
@@ -238,23 +226,23 @@ describe.each(OS_LIST)('слои над native-картой без hitSlop (#223
     expectNoHitSlop(screen)
   })
 
-  it('тулбар с открытым поповером радиуса', () => {
-    const screen = renderLayer(h(env.MapMobileTopOverlay, { ...overlayProps(), activePopover: 'radius' }), [
+  it('тулбар с открытым поповером радиуса', async () => {
+    const screen = await renderLayer(h(env.MapMobileTopOverlay, { ...overlayProps(), activePopover: 'radius' }), [
       'map-center-user-quick',
     ])
     expectNoHitSlop(screen)
   })
 
-  it('тулбар с открытым поповером «Слои»', () => {
-    const screen = renderLayer(h(env.MapMobileTopOverlay, { ...overlayProps(), activePopover: 'layers' }), [
+  it('тулбар с открытым поповером «Слои»', async () => {
+    const screen = await renderLayer(h(env.MapMobileTopOverlay, { ...overlayProps(), activePopover: 'layers' }), [
       'map-mobile-layers-popover',
       'map-mobile-layers-popover-close',
     ])
     expectNoHitSlop(screen)
   })
 
-  it('тулбар в route-режиме: выбор старта и подсказка с «Разрешить»', () => {
-    const screen = renderLayer(
+  it('тулбар в route-режиме: выбор старта и подсказка с «Разрешить»', async () => {
+    const screen = await renderLayer(
       h(env.MapMobileTopOverlay, {
         ...routeProps(),
         routePointCount: 0,
@@ -273,16 +261,16 @@ describe.each(OS_LIST)('слои над native-картой без hitSlop (#223
     expectNoHitSlop(screen)
   })
 
-  it('тулбар в route-режиме с поповером транспорта', () => {
-    const screen = renderLayer(
+  it('тулбар в route-режиме с поповером транспорта', async () => {
+    const screen = await renderLayer(
       h(env.MapMobileTopOverlay, { ...routeProps(), routePointCount: 1, activePopover: 'transport' }),
       ['map-mobile-transport-button'],
     )
     expectNoHitSlop(screen)
   })
 
-  it('тулбар в route-режиме со сводкой готового маршрута', () => {
-    const screen = renderLayer(
+  it('тулбар в route-режиме со сводкой готового маршрута', async () => {
+    const screen = await renderLayer(
       h(env.MapMobileTopOverlay, {
         ...routeProps(),
         routePointCount: 2,
@@ -294,8 +282,8 @@ describe.each(OS_LIST)('слои над native-картой без hitSlop (#223
     expectNoHitSlop(screen)
   })
 
-  it('поповер «Слои» отдельно (его же монтирует планшетная раскладка)', () => {
-    const screen = renderLayer(
+  it('поповер «Слои» отдельно (его же монтирует планшетная раскладка)', async () => {
+    const screen = await renderLayer(
       h(env.MapMobileLayersPopover, {
         colors,
         top: 80,
@@ -309,8 +297,8 @@ describe.each(OS_LIST)('слои над native-картой без hitSlop (#223
     expectNoHitSlop(screen)
   })
 
-  it('плашка пустого состояния с обоими действиями', () => {
-    const screen = renderLayer(
+  it('плашка пустого состояния с обоими действиями', async () => {
+    const screen = await renderLayer(
       h(env.MapEmptyStateToast, {
         colors,
         nextRadiusOption: { id: '100', name: '100' },
@@ -339,8 +327,8 @@ describe.each(OS_LIST)('слои над native-картой без hitSlop (#223
     onShowAllPlaces: jest.fn(),
   })
 
-  it('мобильная раскладка: тулбар, «Искать в этой области» и шапка нижней шторки', () => {
-    const screen = renderLayer(h(env.MapMobileLayout, layoutProps()), [
+  it('мобильная раскладка: тулбар, «Искать в этой области» и шапка нижней шторки', async () => {
+    const screen = await renderLayer(h(env.MapMobileLayout, layoutProps()), [
       'map-mobile-top-overlay',
       'map-search-this-area',
       'travel-list-mobile-summary',
@@ -350,8 +338,8 @@ describe.each(OS_LIST)('слои над native-картой без hitSlop (#223
     expectNoHitSlop(screen)
   })
 
-  it('мобильная раскладка с открытой карточкой места', () => {
-    const screen = renderLayer(
+  it('мобильная раскладка с открытой карточкой места', async () => {
+    const screen = await renderLayer(
       h(env.MapMobileLayout, {
         ...layoutProps(),
         selectedPlace: { id: 'place-1', coord: '53.9,27.56', address: 'Место' },
@@ -362,8 +350,8 @@ describe.each(OS_LIST)('слои над native-картой без hitSlop (#223
     expectNoHitSlop(screen)
   })
 
-  it('нижняя карточка места отдельно (native-ветка)', () => {
-    const screen = renderLayer(
+  it('нижняя карточка места отдельно (native-ветка)', async () => {
+    const screen = await renderLayer(
       h(env.MapPlaceBottomCard, {
         point: { id: '1', lat: 53.9, lng: 27.56, title: 'Место' },
         userLocation: null,

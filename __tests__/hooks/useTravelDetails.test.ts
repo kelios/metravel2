@@ -70,7 +70,7 @@ describe('useTravelDetails', () => {
       throw new Error('should not be called for numeric id');
     });
 
-    const { result } = renderHook(() => useTravelDetails());
+    const { result } = await renderHook(() => useTravelDetails());
 
     expect(result.current.isId).toBe(true);
 
@@ -87,7 +87,7 @@ describe('useTravelDetails', () => {
       throw new Error('should not be called for slug');
     });
 
-    const { result } = renderHook(() => useTravelDetails());
+    const { result } = await renderHook(() => useTravelDetails());
 
     expect(result.current.isId).toBe(false);
     expect(result.current.slug).toBe('awesome-trip');
@@ -128,7 +128,7 @@ describe('useTravelDetails', () => {
       };
     });
 
-    const { result } = renderHook(() => useTravelDetails());
+    const { result } = await renderHook(() => useTravelDetails());
 
     expect(result.current.isId).toBe(false);
     expect(result.current.slug).toBe('awesome-trip');
@@ -187,7 +187,7 @@ describe('useTravelDetails', () => {
       };
     });
 
-    renderHook(() => useTravelDetails());
+    await renderHook(() => useTravelDetails());
 
     expect(requestIdleCallback).not.toHaveBeenCalled();
     expect(fetchTravel).not.toHaveBeenCalled();
@@ -239,7 +239,7 @@ describe('useTravelDetails', () => {
       };
     });
 
-    const { result, unmount } = renderHook(() => useTravelDetails());
+    const { result, unmount } = await renderHook(() => useTravelDetails());
 
     // (a) First paint hydrates instantly from the partial preload (initialData).
     expect(result.current.isLoading).toBe(false);
@@ -260,8 +260,8 @@ describe('useTravelDetails', () => {
     await waitFor(() => {
       expect((global as any).window.__metravelTravelPreload).toBeUndefined();
     });
-    unmount();
-    renderHook(() => useTravelDetails());
+    await unmount();
+    await renderHook(() => useTravelDetails());
     expect(capturedConfig.refetchOnMount).toBe(false);
     expect(fetchTravelBySlug).toHaveBeenCalledTimes(1);
   });
@@ -303,7 +303,7 @@ describe('useTravelDetails', () => {
       };
     });
 
-    const { result } = renderHook(() => useTravelDetails());
+    const { result } = await renderHook(() => useTravelDetails());
 
     expect(result.current.isId).toBe(true);
     expect(result.current.travel).toMatchObject({ id: 498, name: 'Travel without a slug' });
@@ -313,7 +313,7 @@ describe('useTravelDetails', () => {
     expect(fetchTravelBySlug).not.toHaveBeenCalled();
   });
 
-  it('keeps partial preload content visible when the background media backfill fails', () => {
+  it('keeps partial preload content visible when the background media backfill fails', async () => {
     (Platform.OS as any) = 'web';
     const backfillError = new Error('network unavailable');
     stubWindowProperties({
@@ -342,14 +342,14 @@ describe('useTravelDetails', () => {
       refetch: jest.fn(),
     }));
 
-    const { result } = renderHook(() => useTravelDetails());
+    const { result } = await renderHook(() => useTravelDetails());
 
     expect(result.current.travel).toMatchObject({ id: 498, slug: 'awesome-trip' });
     expect(result.current.isError).toBe(false);
     expect(result.current.error).toBeNull();
   });
 
-  it('keeps a query error fatal when a partial marker has no usable preload content', () => {
+  it('keeps a query error fatal when a partial marker has no usable preload content', async () => {
     (Platform.OS as any) = 'web';
     const initialError = new Error('travel unavailable');
     stubWindowProperties({
@@ -369,7 +369,7 @@ describe('useTravelDetails', () => {
       refetch: jest.fn(),
     }));
 
-    const { result } = renderHook(() => useTravelDetails());
+    const { result } = await renderHook(() => useTravelDetails());
 
     expect(result.current.travel).toBeUndefined();
     expect(result.current.isError).toBe(true);
@@ -414,7 +414,7 @@ describe('useTravelDetails', () => {
       };
     });
 
-    renderHook(() => useTravelDetails());
+    await renderHook(() => useTravelDetails());
 
     await waitFor(() => {
       expect((global as any).window.__metravelTravelPreload).toBeUndefined();
@@ -453,7 +453,7 @@ describe('useTravelDetails', () => {
       userName: 'Julia',
     });
 
-    renderHook(() => useTravelDetails());
+    await renderHook(() => useTravelDetails());
 
     const data = await capturedQueryFn!();
     expect(fetchTravelBySlug).toHaveBeenCalledWith('awesome-trip', { signal: undefined });
@@ -486,7 +486,7 @@ describe('useTravelDetails', () => {
     useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
     (fetchTravelBySlug as jest.Mock).mockResolvedValue({ slug: 'awesome-trip', from: 'network' });
 
-    renderHook(() => useTravelDetails());
+    await renderHook(() => useTravelDetails());
 
     const data = await capturedQueryFn!();
     expect(fetchTravelBySlug).not.toHaveBeenCalled();
@@ -518,7 +518,7 @@ describe('useTravelDetails', () => {
     useLocalSearchParams.mockReturnValue({ param: 'awesome-trip' });
     (fetchTravelBySlug as jest.Mock).mockResolvedValue({ slug: 'awesome-trip', from: 'network' });
 
-    renderHook(() => useTravelDetails());
+    await renderHook(() => useTravelDetails());
 
     const queryPromise = capturedQueryFn!();
 
@@ -580,7 +580,7 @@ describe('useTravelDetails', () => {
     useLocalSearchParams.mockReturnValue({ param: 'second-trip' });
     (fetchTravelBySlug as jest.Mock).mockResolvedValue({ slug: 'second-trip', from: 'network' });
 
-    renderHook(() => useTravelDetails());
+    await renderHook(() => useTravelDetails());
 
     const data = await capturedQueryFn!();
 
@@ -613,7 +613,7 @@ describe('useTravelDetails', () => {
       travelAddress: [{ id: 1, name: 'Point' }],
     });
 
-    renderHook(() => useTravelDetails());
+    await renderHook(() => useTravelDetails());
 
     const data = await capturedQueryFn!();
     expect(fetchTravelBySlug).toHaveBeenCalledWith('awesome-trip', { signal: undefined });
@@ -654,7 +654,7 @@ describe('useTravelDetails', () => {
       coordsMeTravel: [{ id: 1, lat: 49.25, lng: 20.1 }],
     });
 
-    renderHook(() => useTravelDetails());
+    await renderHook(() => useTravelDetails());
 
     const data = await capturedQueryFn!();
     expect(fetchTravelBySlug).toHaveBeenCalledWith('morskoe-oko-v-mae', { signal: undefined });
@@ -698,7 +698,7 @@ describe('useTravelDetails', () => {
       coordsMeTravel: [{ id: 1, lat: 53.9, lng: 27.56 }],
     });
 
-    renderHook(() => useTravelDetails());
+    await renderHook(() => useTravelDetails());
 
     const data = await capturedQueryFn!();
     expect(fetchTravelBySlug).toHaveBeenCalledWith(
@@ -748,7 +748,7 @@ describe('useTravelDetails', () => {
       coordsMeTravel: [{ id: 1, lat: 53.9, lng: 27.56 }],
     });
 
-    renderHook(() => useTravelDetails());
+    await renderHook(() => useTravelDetails());
 
     const data = await capturedQueryFn!();
     expect(fetchTravelBySlug).toHaveBeenCalledWith(
@@ -768,7 +768,7 @@ describe('useTravelDetails', () => {
     expect((global as any).window.__metravelTravelPreload).toBeUndefined();
   });
 
-  it('exposes refetch function from react-query result', () => {
+  it('exposes refetch function from react-query result', async () => {
     const mockRefetch = jest.fn();
     useLocalSearchParams.mockReturnValue({ param: '456' });
     (useQuery as jest.Mock).mockReturnValue({
@@ -779,9 +779,9 @@ describe('useTravelDetails', () => {
       refetch: mockRefetch,
     });
 
-    const { result } = renderHook(() => useTravelDetails());
+    const { result } = await renderHook(() => useTravelDetails());
 
-    act(() => {
+    await act(() => {
       result.current.refetch();
     });
 

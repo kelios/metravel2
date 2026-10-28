@@ -13,9 +13,9 @@ describe('ProfileCollectionHeader', () => {
   });
 
   // #2099: на телефоне «←» и заголовок рисует HeaderContextBar, здесь — ничего.
-  it('renders nothing on a phone (the context bar owns back and title)', () => {
+  it('renders nothing on a phone (the context bar owns back and title)', async () => {
     mockResponsive.current = { width: 390, isPhone: true, isLargePhone: false };
-    const { queryByText, queryByLabelText } = render(
+    const { queryByText, queryByLabelText } = await render(
       <ProfileCollectionHeader title="Избранное" onBackPress={() => {}} showClearButton onClearPress={() => {}} />
     );
 
@@ -24,26 +24,26 @@ describe('ProfileCollectionHeader', () => {
     expect(queryByLabelText('Очистить')).toBeNull();
   });
 
-  it('renders title and handles back press', () => {
+  it('renders title and handles back press', async () => {
     const onBackPress = jest.fn();
-    const { getByText, getByLabelText } = render(
+    const { getByText, getByLabelText } = await render(
       <ProfileCollectionHeader title="Избранное" onBackPress={onBackPress} />
     );
 
     expect(getByText('Избранное')).toBeTruthy();
-    fireEvent.press(getByLabelText('Назад'));
+    await fireEvent.press(getByLabelText('Назад'));
     expect(onBackPress).toHaveBeenCalledTimes(1);
   });
 
-  it('renders clear button only when enabled', () => {
+  it('renders clear button only when enabled', async () => {
     const onClearPress = jest.fn();
-    const { queryByLabelText, rerender, getByLabelText } = render(
+    const { queryByLabelText, rerender, getByLabelText } = await render(
       <ProfileCollectionHeader title="История" onBackPress={() => {}} />
     );
 
     expect(queryByLabelText('Очистить историю просмотров')).toBeNull();
 
-    rerender(
+    await rerender(
       <ProfileCollectionHeader
         title="История"
         onBackPress={() => {}}
@@ -53,13 +53,13 @@ describe('ProfileCollectionHeader', () => {
       />
     );
 
-    fireEvent.press(getByLabelText('Очистить историю просмотров'));
+    await fireEvent.press(getByLabelText('Очистить историю просмотров'));
     expect(onClearPress).toHaveBeenCalledTimes(1);
   });
 
-  it('renders profile breadcrumbs and navigates through non-current crumbs', () => {
+  it('renders profile breadcrumbs and navigates through non-current crumbs', async () => {
     const onBreadcrumbPress = jest.fn();
-    const { getAllByText, getByLabelText, getByText } = render(
+    const { getAllByText, getByLabelText, getByText } = await render(
       <ProfileCollectionHeader
         title="Мой календарь"
         onBackPress={() => {}}
@@ -77,10 +77,10 @@ describe('ProfileCollectionHeader', () => {
     expect(getByText('Профиль')).toBeTruthy();
     expect(getAllByText('Мой календарь').length).toBeGreaterThanOrEqual(2);
 
-    fireEvent.press(getByLabelText('Перейти на Профиль'));
+    await fireEvent.press(getByLabelText('Перейти на Профиль'));
     expect(onBreadcrumbPress).toHaveBeenCalledWith('/profile');
 
-    fireEvent.press(getByLabelText('Текущая страница: Мой календарь'));
+    await fireEvent.press(getByLabelText('Текущая страница: Мой календарь'));
     expect(onBreadcrumbPress).toHaveBeenCalledTimes(1);
   });
 });

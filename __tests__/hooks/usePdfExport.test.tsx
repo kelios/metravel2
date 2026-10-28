@@ -197,8 +197,8 @@ describe('usePdfExport', () => {
   });
 
   describe('Инициализация', () => {
-    it('должен инициализироваться с правильными значениями по умолчанию', () => {
-      const { result } = renderHook(() => usePdfExport(mockTravels));
+    it('должен инициализироваться с правильными значениями по умолчанию', async () => {
+      const { result } = await renderHook(() => usePdfExport(mockTravels));
 
       expect(result.current.isGenerating).toBe(false);
       expect(result.current.progress).toBe(0);
@@ -212,7 +212,7 @@ describe('usePdfExport', () => {
       const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
       mockFetchTravel.mockRejectedValue(new Error('details unavailable'));
 
-      const { result } = renderHook(() => usePdfExport(mockTravels, { maxRetries: 0 }));
+      const { result } = await renderHook(() => usePdfExport(mockTravels, { maxRetries: 0 }));
 
       await act(async () => {
         await result.current.openPrintBook(mockSettings);
@@ -230,7 +230,7 @@ describe('usePdfExport', () => {
       delete (global as any).DOMParser;
 
       try {
-        const { result } = renderHook(() => usePdfExport(mockTravels));
+        const { result } = await renderHook(() => usePdfExport(mockTravels));
 
         await act(async () => {
           await result.current.openPrintBook(mockSettings);
@@ -245,7 +245,7 @@ describe('usePdfExport', () => {
     });
 
     it('должен показывать предупреждение, если не выбрано ни одного путешествия', async () => {
-      const { result } = renderHook(() => usePdfExport([]));
+      const { result } = await renderHook(() => usePdfExport([]));
 
       // Wait for the dynamic import() in useEffect to resolve
       await act(async () => { await Promise.resolve(); });
@@ -286,7 +286,7 @@ describe('usePdfExport', () => {
         },
       ];
 
-      const { result } = renderHook(() => usePdfExport(detailedTravels));
+      const { result } = await renderHook(() => usePdfExport(detailedTravels));
 
       // Wait for the dynamic import() in useEffect to resolve
       await act(async () => { await Promise.resolve(); });
@@ -337,7 +337,7 @@ describe('usePdfExport', () => {
         travelAddress: [],
       };
 
-      const { result } = renderHook(() => usePdfExport([partialTravel]));
+      const { result } = await renderHook(() => usePdfExport([partialTravel]));
 
       await act(async () => { await Promise.resolve(); });
 
@@ -361,7 +361,7 @@ describe('usePdfExport', () => {
       const error = new Error('Generation failed');
       mockGenerateTravelsHtml.mockRejectedValueOnce(error);
 
-      const { result } = renderHook(() => usePdfExport(mockTravels));
+      const { result } = await renderHook(() => usePdfExport(mockTravels));
 
       // Wait for the dynamic import() in useEffect to resolve
       await act(async () => { await Promise.resolve(); });
@@ -388,9 +388,9 @@ describe('usePdfExport', () => {
     });
 
     it('не должен изменять состояние, если хук размонтирован до завершения', async () => {
-      const { result, unmount } = renderHook(() => usePdfExport(mockTravels));
+      const { result, unmount } = await renderHook(() => usePdfExport(mockTravels));
 
-      unmount();
+      await unmount();
 
       await act(async () => {
         await result.current.openPrintBook(mockSettings);
@@ -407,19 +407,19 @@ describe('usePdfExport', () => {
   });
 
   describe('#2125: окно печати резервируется в клике', () => {
-    it('окно открывается синхронно, до первого await', () => {
-      const { result } = renderHook(() => usePdfExport(mockTravels));
+    it('окно открывается синхронно, до первого await', async () => {
+      const { result } = await renderHook(() => usePdfExport(mockTravels));
 
       const pending = result.current.openPrintBook(mockSettings);
       expect(mockOpenPendingBookPreviewWindow).toHaveBeenCalledTimes(1);
-      return act(async () => {
+      return await act(async () => {
         await pending;
       });
     });
 
     it('окно заблокировано — тост «Печать недоступна…», сервер, детали и генерация не запускаются', async () => {
       mockOpenPendingBookPreviewWindow.mockReturnValueOnce(null);
-      const { result } = renderHook(() => usePdfExport(mockTravels.map((t) => ({ ...t, description: undefined as any }))));
+      const { result } = await renderHook(() => usePdfExport(mockTravels.map((t) => ({ ...t, description: undefined as any }))));
 
       await act(async () => {
         await result.current.openPrintBook(mockSettings);
@@ -440,7 +440,7 @@ describe('usePdfExport', () => {
     it('книга пишется в окно, открытое в клике', async () => {
       const reserved = { closed: false };
       mockOpenPendingBookPreviewWindow.mockReturnValueOnce(reserved);
-      const { result } = renderHook(() => usePdfExport(mockTravels));
+      const { result } = await renderHook(() => usePdfExport(mockTravels));
 
       await act(async () => {
         await result.current.openPrintBook(mockSettings);
@@ -459,7 +459,7 @@ describe('usePdfExport', () => {
         contentType: 'application/pdf',
         filename: 'book.pdf',
       } as any);
-      const { result } = renderHook(() => usePdfExport(mockTravels));
+      const { result } = await renderHook(() => usePdfExport(mockTravels));
 
       await act(async () => {
         await result.current.openPrintBook(mockSettings);
@@ -479,7 +479,7 @@ describe('usePdfExport', () => {
         contentType: 'text/html; charset=utf-8',
         filename: 'book.html',
       } as any);
-      const { result } = renderHook(() => usePdfExport(mockTravels));
+      const { result } = await renderHook(() => usePdfExport(mockTravels));
 
       await act(async () => {
         await result.current.openPrintBook(mockSettings);
@@ -501,7 +501,7 @@ describe('usePdfExport', () => {
         contentType: 'text/html',
         filename: 'book.html',
       } as any);
-      const { result } = renderHook(() => usePdfExport(mockTravels));
+      const { result } = await renderHook(() => usePdfExport(mockTravels));
 
       await act(async () => {
         await result.current.openPrintBook(mockSettings);
@@ -520,7 +520,7 @@ describe('usePdfExport', () => {
         reserved.closed = true;
         return '<html></html>';
       });
-      const { result } = renderHook(() => usePdfExport(mockTravels));
+      const { result } = await renderHook(() => usePdfExport(mockTravels));
 
       await act(async () => {
         await result.current.openPrintBook(mockSettings);
@@ -538,16 +538,16 @@ describe('usePdfExport', () => {
       mockGenerateTravelsHtml.mockImplementationOnce(
         () => new Promise<string>((resolve) => { finishGeneration = resolve; }),
       );
-      const { result } = renderHook(() => usePdfExport(mockTravels as any));
+      const { result } = await renderHook(() => usePdfExport(mockTravels as any));
 
       let exportPromise: Promise<void> = Promise.resolve();
-      act(() => {
+      await act(() => {
         exportPromise = result.current.openPrintBook(mockSettings);
       });
       await waitFor(() => expect(result.current.progress).toBeGreaterThanOrEqual(15));
       expect(result.current.isGenerating).toBe(true);
 
-      act(() => {
+      await act(() => {
         result.current.cancel();
       });
       expect(result.current.isGenerating).toBe(false);
@@ -571,11 +571,11 @@ describe('usePdfExport', () => {
       mockRequestServerBookExport.mockResolvedValueOnce({ job_id: 'late-job' } as Awaited<ReturnType<typeof requestServerBookExport>>);
       let finish: (artifact: Awaited<ReturnType<typeof downloadBookExportArtifact>>) => void = () => {};
       mockDownloadBookExportArtifact.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
-      const { result } = renderHook(() => usePdfExport(mockTravels));
+      const { result } = await renderHook(() => usePdfExport(mockTravels));
       let pending: Promise<void> = Promise.resolve();
-      act(() => { pending = result.current.openPrintBook(mockSettings); });
+      await act(() => { pending = result.current.openPrintBook(mockSettings); });
       await waitFor(() => expect(mockDownloadBookExportArtifact).toHaveBeenCalledTimes(1));
-      act(() => result.current.cancel());
+      await act(() => result.current.cancel());
       await act(async () => { await pending; });
       await act(async () => {
         finish({ blob: new Blob(['%PDF']), contentType: 'application/pdf', filename: 'late.pdf' });
@@ -597,9 +597,9 @@ describe('usePdfExport', () => {
       let finishGeneration: (html: string) => void = () => {};
       mockGenerateTravelsHtml.mockImplementationOnce(() => new Promise((resolve) => { finishGeneration = resolve; }));
       try {
-        const { result } = renderHook(() => usePdfExport(mockTravels));
+        const { result } = await renderHook(() => usePdfExport(mockTravels));
         let pending: Promise<void> = Promise.resolve();
-        act(() => { pending = result.current.openPrintBook(mockSettings); });
+        await act(() => { pending = result.current.openPrintBook(mockSettings); });
         await waitFor(() => expect(result.current.progress).toBeGreaterThanOrEqual(15));
         await act(async () => {
           preparationError = new Error('Preparation exceeded 120 seconds');
@@ -616,9 +616,9 @@ describe('usePdfExport', () => {
       } finally { reserve.mockRestore(); }
     });
 
-    it('без идущей сборки ничего не делает', () => {
-      const { result } = renderHook(() => usePdfExport(mockTravels as any));
-      act(() => {
+    it('без идущей сборки ничего не делает', async () => {
+      const { result } = await renderHook(() => usePdfExport(mockTravels as any));
+      await act(() => {
         result.current.cancel();
       });
       expect(result.current.isGenerating).toBe(false);
@@ -633,7 +633,7 @@ describe('usePdfExport', () => {
       setAuthSessionProbe(() => false);
       const reserved = { closed: false };
       mockOpenPendingBookPreviewWindow.mockReturnValueOnce(reserved);
-      const { result } = renderHook(() => usePdfExport(mockTravels));
+      const { result } = await renderHook(() => usePdfExport(mockTravels));
 
       await act(async () => {
         await result.current.openPrintBook(mockSettings);
@@ -650,7 +650,7 @@ describe('usePdfExport', () => {
 
     it('без зарегистрированной пробы сессии пользователь считается гостем', async () => {
       setAuthSessionProbe(null);
-      const { result } = renderHook(() => usePdfExport(mockTravels));
+      const { result } = await renderHook(() => usePdfExport(mockTravels));
 
       await act(async () => {
         await result.current.openPrintBook(mockSettings);
@@ -662,7 +662,7 @@ describe('usePdfExport', () => {
 
     it('вошедший пользователь — прежний серверный путь: POST /exports/books/ уходит', async () => {
       setAuthSessionProbe(() => true);
-      const { result } = renderHook(() => usePdfExport(mockTravels));
+      const { result } = await renderHook(() => usePdfExport(mockTravels));
 
       await act(async () => {
         await result.current.openPrintBook(mockSettings);

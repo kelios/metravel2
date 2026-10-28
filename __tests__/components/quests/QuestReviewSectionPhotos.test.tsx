@@ -81,9 +81,9 @@ jest.mock('@/hooks/useTheme', () => ({
   }),
 }))
 
-const rate = (view: ReturnType<typeof render>) => {
+const rate = async (view: Awaited<ReturnType<typeof render>>) => {
   const stars = view.getAllByLabelText('Оценить на 5 из 5')
-  fireEvent.press(stars[stars.length - 1])
+  await fireEvent.press(stars[stars.length - 1])
 }
 
 describe('QuestReviewSection photos', () => {
@@ -94,9 +94,9 @@ describe('QuestReviewSection photos', () => {
   })
 
   it('submits a photoless review exactly as before and uploads nothing', async () => {
-    const view = render(<QuestReviewSection questId="minsk-cmok" questNumericId={5} />)
-    rate(view)
-    fireEvent.press(view.getByTestId('quest-review-section-submit'))
+    const view = await render(<QuestReviewSection questId="minsk-cmok" questNumericId={5} />)
+    await rate(view)
+    await fireEvent.press(view.getByTestId('quest-review-section-submit'))
 
     await waitFor(() => expect(view.getByText('Спасибо за отзыв!')).toBeTruthy())
     expect(mockSubmit).toHaveBeenCalledTimes(1)
@@ -111,8 +111,8 @@ describe('QuestReviewSection photos', () => {
       assets: [{ uri: 'file:///a.jpg', fileName: 'a.jpg', mimeType: 'image/jpeg' }],
     })
 
-    const view = render(<QuestReviewSection questId="minsk-cmok" questNumericId={5} />)
-    fireEvent.press(view.getByTestId('quest-review-section-photos-add'))
+    const view = await render(<QuestReviewSection questId="minsk-cmok" questNumericId={5} />)
+    await fireEvent.press(view.getByTestId('quest-review-section-photos-add'))
     await waitFor(() =>
       expect(view.getByTestId('quest-review-section-photos-counter')).toHaveTextContent(
         'Выбрано 1 из 3',
@@ -121,8 +121,8 @@ describe('QuestReviewSection photos', () => {
     // До подтверждения отзыва загрузки быть не может: адресовать её нечем.
     expect(mockUploadPhoto).not.toHaveBeenCalled()
 
-    rate(view)
-    fireEvent.press(view.getByTestId('quest-review-section-submit'))
+    await rate(view)
+    await fireEvent.press(view.getByTestId('quest-review-section-submit'))
 
     await waitFor(() => expect(mockUploadPhoto).toHaveBeenCalledTimes(1))
     expect(mockUploadPhoto.mock.calls[0][0]).toMatchObject({ reviewId: 77 })
@@ -146,16 +146,16 @@ describe('QuestReviewSection photos', () => {
     })
     mockUploadPhoto.mockRejectedValueOnce(new Error('network'))
 
-    const view = render(<QuestReviewSection questId="minsk-cmok" questNumericId={5} />)
-    fireEvent.press(view.getByTestId('quest-review-section-photos-add'))
+    const view = await render(<QuestReviewSection questId="minsk-cmok" questNumericId={5} />)
+    await fireEvent.press(view.getByTestId('quest-review-section-photos-add'))
     await waitFor(() =>
       expect(view.getByTestId('quest-review-section-photos-counter')).toHaveTextContent(
         'Выбрано 1 из 3',
       ),
     )
 
-    rate(view)
-    fireEvent.press(view.getByTestId('quest-review-section-submit'))
+    await rate(view)
+    await fireEvent.press(view.getByTestId('quest-review-section-submit'))
 
     const status = await waitFor(() => {
       const node = view.getAllByText('Не загрузилось')[0]
@@ -172,7 +172,7 @@ describe('QuestReviewSection photos', () => {
     expect(mockTrackPhotoUpload).not.toHaveBeenCalled()
 
     // «Повторить» догружает именно этот снимок.
-    fireEvent.press(view.getByLabelText('Повторить загрузку фото broken.jpg'))
+    await fireEvent.press(view.getByLabelText('Повторить загрузку фото broken.jpg'))
     await waitFor(() =>
       expect(view.getByTestId('quest-review-section-photo-upload-summary')).toHaveTextContent(
         'Загружено 1 из 1',

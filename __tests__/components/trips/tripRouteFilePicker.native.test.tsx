@@ -44,7 +44,7 @@ const asset = (name: string, size = 42) => ({
   mimeType: 'application/gpx+xml',
 });
 
-const renderPicker = () => {
+const renderPicker = async () => {
   const props = {
     label: 'Load track (GPX/KML)',
     maxBytes: 100,
@@ -52,23 +52,23 @@ const renderPicker = () => {
     onError: jest.fn(),
     onBusyChange: jest.fn(),
   };
-  return { ...render(<TripRouteFilePicker {...props} />), props };
+  return { ...await render(<TripRouteFilePicker {...props} />), props };
 };
 
 describe('TripRouteFilePicker native adapter', () => {
   // #1789: icon-only импорт был непонятен; #2053: короткое «Импорт» в сжатом ряду
   // обрезалось до «И…». На телефоне видна полная подпись действия — та же, что
   // и доступное имя; перевод подписи делает панель импорта (`useTranslation`).
-  it('keeps the full import label visible on a phone', () => {
-    const { getByText, getByLabelText, queryByText, props } = renderPicker();
+  it('keeps the full import label visible on a phone', async () => {
+    const { getByText, getByLabelText, queryByText, props } = await renderPicker();
 
     expect(getByText(props.label)).toBeTruthy();
     expect(getByLabelText(props.label)).toBeTruthy();
     expect(queryByText('Импорт')).toBeNull();
   });
 
-  it('stretches the import across the row when asked to fill it', () => {
-    const { getByTestId } = render(
+  it('stretches the import across the row when asked to fill it', async () => {
+    const { getByTestId } = await render(
       <TripRouteFilePicker
         label="Load track (GPX/KML)"
         maxBytes={100}
@@ -97,9 +97,9 @@ describe('TripRouteFilePicker native adapter', () => {
       canceled: false,
       assets: [asset('weekend.gpx')],
     });
-    const { getByTestId, props } = renderPicker();
+    const { getByTestId, props } = await renderPicker();
 
-    fireEvent.press(getByTestId('trip-route-import-picker'));
+    await fireEvent.press(getByTestId('trip-route-import-picker'));
 
     await waitFor(() => expect(props.onPicked).toHaveBeenCalledWith({
       name: 'weekend.gpx',
@@ -140,11 +140,11 @@ describe('TripRouteFilePicker native adapter', () => {
       canceled: false,
       assets: [asset('weekend.gpx')],
     });
-    const { getByTestId, props } = renderPicker();
+    const { getByTestId, props } = await renderPicker();
 
-    fireEvent.press(getByTestId('trip-route-import-picker'));
+    await fireEvent.press(getByTestId('trip-route-import-picker'));
     await waitFor(() => expect(props.onPicked).toHaveBeenCalledTimes(1));
-    fireEvent.press(getByTestId('trip-route-import-picker'));
+    await fireEvent.press(getByTestId('trip-route-import-picker'));
     await waitFor(() => expect(props.onPicked).toHaveBeenCalledTimes(2));
 
     const targets = FileSystem.copyAsync.mock.calls.map(([copy]) => copy.to);
@@ -154,9 +154,9 @@ describe('TripRouteFilePicker native adapter', () => {
 
   it('leaves callbacks untouched when the chooser is cancelled', async () => {
     DocumentPicker.getDocumentAsync.mockResolvedValue({ canceled: true, assets: null });
-    const { getByTestId, props } = renderPicker();
+    const { getByTestId, props } = await renderPicker();
 
-    fireEvent.press(getByTestId('trip-route-import-picker'));
+    await fireEvent.press(getByTestId('trip-route-import-picker'));
     await act(async () => undefined);
 
     expect(props.onPicked).not.toHaveBeenCalled();
@@ -170,9 +170,9 @@ describe('TripRouteFilePicker native adapter', () => {
       canceled: false,
       assets: [asset('huge.gpx', 101)],
     });
-    const { getByTestId, props } = renderPicker();
+    const { getByTestId, props } = await renderPicker();
 
-    fireEvent.press(getByTestId('trip-route-import-picker'));
+    await fireEvent.press(getByTestId('trip-route-import-picker'));
 
     await waitFor(() => expect(props.onError).toHaveBeenCalledWith('tooLarge'));
     expect(FileSystem.readAsStringAsync).not.toHaveBeenCalled();
@@ -189,10 +189,10 @@ describe('TripRouteFilePicker native adapter', () => {
     DocumentPicker.getDocumentAsync
       .mockImplementationOnce(() => firstPick.promise)
       .mockImplementationOnce(() => secondPick.promise);
-    const { getByTestId, props } = renderPicker();
+    const { getByTestId, props } = await renderPicker();
 
-    fireEvent.press(getByTestId('trip-route-import-picker'));
-    fireEvent.press(getByTestId('trip-route-import-picker'));
+    await fireEvent.press(getByTestId('trip-route-import-picker'));
+    await fireEvent.press(getByTestId('trip-route-import-picker'));
 
     await act(async () => {
       secondPick.resolve({ canceled: false, assets: [asset('new.kml')] });

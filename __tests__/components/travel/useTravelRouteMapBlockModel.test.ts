@@ -11,8 +11,8 @@ const baseArgs = {
 }
 
 describe('useTravelRouteMapBlockModel', () => {
-  it('maps point-only route files to markers without line or profile models', () => {
-    const { result } = renderHook(() =>
+  it('maps point-only route files to markers without line or profile models', async () => {
+    const { result } = await renderHook(() =>
       useTravelRouteMapBlockModel({
         ...baseArgs,
         routeFilePoints: [
@@ -32,12 +32,12 @@ describe('useTravelRouteMapBlockModel', () => {
     expect(result.current.shouldShowRouteLine).toBe(false)
   })
 
-  it('keeps a confirmed track as a line and profile alongside independent markers', () => {
+  it('keeps a confirmed track as a line and profile alongside independent markers', async () => {
     const preview = {
       linePoints: [{ coord: '52.1,23.7' }, { coord: '52.2,23.8' }],
       elevationProfile: [],
     }
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelRouteMapBlockModel({
         ...baseArgs,
         routeFilePoints: [{ id: 'route-file-32-point-0', coord: '50,19', name: 'POI' }],

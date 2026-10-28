@@ -20,8 +20,8 @@ const links = [
 /** Максимальная НЕ-accessibility ступень iOS, `RCTUtils.mm`. */
 const IOS_MAX_NON_ACCESSIBILITY_MULTIPLIER = 1.353
 
-const renderRow = (isMobile: boolean) =>
-  render(
+const renderRow = async (isMobile: boolean) =>
+  await render(
     <TravelHeroQuickJumps
       links={links as any}
       isMobile={isMobile}
@@ -33,8 +33,8 @@ const renderRow = (isMobile: boolean) =>
 describe('TravelHeroQuickJumps — системное увеличение шрифта', () => {
   it.each([true, false])(
     'ограничивает рост подписи чипа на закреплённой полосе (isMobile=%s)',
-    (isMobile) => {
-      renderRow(isMobile)
+    async (isMobile) => {
+      await renderRow(isMobile)
 
       for (const link of links) {
         const cap = screen.getByTestId(`travel-quick-jump-label-${link.key}`).props
@@ -47,8 +47,8 @@ describe('TravelHeroQuickJumps — системное увеличение шр�
     },
   )
 
-  it('не обрезает подпись принудительно одной строкой', () => {
-    renderRow(true)
+  it('не обрезает подпись принудительно одной строкой', async () => {
+    await renderRow(true)
 
     for (const link of links) {
       const label = screen.getByTestId(`travel-quick-jump-label-${link.key}`)
@@ -57,8 +57,8 @@ describe('TravelHeroQuickJumps — системное увеличение шр�
     }
   })
 
-  it('не задаёт чипу фиксированную высоту — потолок гасит масштаб, а не перенос', () => {
-    renderRow(true)
+  it('не задаёт чипу фиксированную высоту — потолок гасит масштаб, а не перенос', async () => {
+    await renderRow(true)
 
     const chip = StyleSheet.flatten(screen.getByTestId('travel-quick-jump-map').props.style)
 

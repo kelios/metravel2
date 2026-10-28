@@ -15,40 +15,40 @@ describe('Chip', () => {
     jest.clearAllMocks();
   });
 
-  it('renders label correctly', () => {
-    const { getByText } = render(
+  it('renders label correctly', async () => {
+    const { getByText } = await render(
       <Chip label="Test Chip" onPress={() => {}} />
     );
     
     expect(getByText('Test Chip')).toBeTruthy();
   });
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
     const onPress = jest.fn();
-    const { getByRole } = render(
+    const { getByRole } = await render(
       <Chip label="Test Chip" onPress={onPress} />
     );
     
     const chip = getByRole('button');
-    fireEvent.press(chip);
+    await fireEvent.press(chip);
     
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('does not call onPress when not provided', () => {
-    const { getByRole } = render(
+  it('does not call onPress when not provided', async () => {
+    const { getByRole } = await render(
       <Chip label="Test Chip" />
     );
     
     const chip = getByRole('button');
-    fireEvent.press(chip);
+    await fireEvent.press(chip);
     
     // Should not throw error
     expect(chip).toBeTruthy();
   });
 
-  it('displays count when provided', () => {
-    const { getByText } = render(
+  it('displays count when provided', async () => {
+    const { getByText } = await render(
       <Chip label="Test Chip" count={5} onPress={() => {}} />
     );
     
@@ -56,17 +56,17 @@ describe('Chip', () => {
     expect(getByText('(5)')).toBeTruthy();
   });
 
-  it('does not display count when not provided', () => {
-    const { queryByText } = render(
+  it('does not display count when not provided', async () => {
+    const { queryByText } = await render(
       <Chip label="Test Chip" onPress={() => {}} />
     );
     
     expect(queryByText(/\(\d+\)/)).toBeNull();
   });
 
-  it('renders icon when provided', () => {
+  it('renders icon when provided', async () => {
     const { View } = require('react-native');
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <Chip
         label="Test Chip"
         icon={<View testID="test-icon" />}
@@ -77,8 +77,8 @@ describe('Chip', () => {
     expect(getByTestId('test-icon')).toBeTruthy();
   });
 
-  it('marks as selected when selected prop is true', () => {
-    const { getByRole } = render(
+  it('marks as selected when selected prop is true', async () => {
+    const { getByRole } = await render(
       <Chip label="Test Chip" selected={true} onPress={() => {}} />
     );
     
@@ -86,8 +86,8 @@ describe('Chip', () => {
     expect(chip.props.accessibilityState.selected).toBe(true);
   });
 
-  it('marks as not selected when selected prop is false', () => {
-    const { getByRole } = render(
+  it('marks as not selected when selected prop is false', async () => {
+    const { getByRole } = await render(
       <Chip label="Test Chip" selected={false} onPress={() => {}} />
     );
     
@@ -95,16 +95,16 @@ describe('Chip', () => {
     expect(chip.props.accessibilityState.selected).toBe(false);
   });
 
-  it('has correct accessibility label', () => {
-    const { getByLabelText } = render(
+  it('has correct accessibility label', async () => {
+    const { getByLabelText } = await render(
       <Chip label="Test Chip" onPress={() => {}} />
     );
     
     expect(getByLabelText('Test Chip')).toBeTruthy();
   });
 
-  it('applies selected styles when selected', () => {
-    const { getByRole } = render(
+  it('applies selected styles when selected', async () => {
+    const { getByRole } = await render(
       <Chip label="Test Chip" selected={true} onPress={() => {}} />
     );
     
@@ -113,25 +113,25 @@ describe('Chip', () => {
     expect(chip.props.accessibilityState.selected).toBe(true);
   });
 
-  it('handles large count numbers', () => {
-    const { getByText } = render(
+  it('handles large count numbers', async () => {
+    const { getByText } = await render(
       <Chip label="Test Chip" count={9999} onPress={() => {}} />
     );
     
     expect(getByText('(9999)')).toBeTruthy();
   });
 
-  it('handles zero count', () => {
-    const { getByText } = render(
+  it('handles zero count', async () => {
+    const { getByText } = await render(
       <Chip label="Test Chip" count={0} onPress={() => {}} />
     );
     
     expect(getByText('(0)')).toBeTruthy();
   });
 
-  it('truncates long labels correctly', () => {
+  it('truncates long labels correctly', async () => {
     const longLabel = 'A'.repeat(100);
-    const { getByText } = render(
+    const { getByText } = await render(
       <Chip label={longLabel} onPress={() => {}} />
     );
     
@@ -139,8 +139,8 @@ describe('Chip', () => {
     expect(label.props.numberOfLines).toBe(1);
   });
 
-  it('handles testID prop', () => {
-    const { getByTestId } = render(
+  it('handles testID prop', async () => {
+    const { getByTestId } = await render(
       <Chip label="Test Chip" testID="custom-chip" onPress={() => {}} />
     );
     
@@ -148,16 +148,16 @@ describe('Chip', () => {
   });
 
   // #2114: пока число грузится, слот счётчика занят невидимым «(0)» — чип не расширяется.
-  it('countPending резервирует слот счётчика невидимым и скрытым от a11y', () => {
-    const { getByTestId } = render(<Chip label="Организую" countPending testID="chip" />);
+  it('countPending резервирует слот счётчика невидимым и скрытым от a11y', async () => {
+    const { getByTestId } = await render(<Chip label="Организую" countPending testID="chip" />);
     const slot = getByTestId('chip-count-pending', { includeHiddenElements: true });
     expect(slot.props.children).toBe('(0)');
     expect(JSON.stringify(slot.props.style)).toMatch(/"opacity":0/);
     expect(slot.props.importantForAccessibility).toBe('no-hide-descendants');
   });
 
-  it('число важнее countPending', () => {
-    const { queryByTestId, getByText } = render(<Chip label="Организую" count={3} countPending testID="chip" />);
+  it('число важнее countPending', async () => {
+    const { queryByTestId, getByText } = await render(<Chip label="Организую" count={3} countPending testID="chip" />);
     expect(queryByTestId('chip-count-pending', { includeHiddenElements: true })).toBeNull();
     expect(getByText('(3)')).toBeTruthy();
   });

@@ -32,8 +32,8 @@ const deferred = <T,>() => {
   const promise = new Promise<T>((res, rej) => { resolve = res; reject = rej })
   return { promise, resolve, reject }
 }
-const setViewer = (viewer: string | null) => {
-  act(() => { useAuthStore.setState({ isAuthenticated: viewer != null, userId: viewer, authReady: true }) })
+const setViewer = async (viewer: string | null) => {
+  await act(() => { useAuthStore.setState({ isAuthenticated: viewer != null, userId: viewer, authReady: true }) })
 }
 let client: QueryClient
 const wrapper = ({ children }: { children: React.ReactNode }) => (
@@ -59,26 +59,26 @@ it.each([
   { authReady: true, isAuthenticated: true, userId: '' },
 ])('waits for a resolved viewer before either personalized read: %j', async state => {
   useAuthStore.setState(state)
-  const { result } = renderHook(useReads, { wrapper })
+  const { result } = await renderHook(useReads, { wrapper })
   expect(fetchUserAchievements).not.toHaveBeenCalled()
   expect(fetchTravelPeerBadges).not.toHaveBeenCalled()
   expect(result.current.user.fetchStatus).toBe('idle')
   expect(result.current.travel.fetchStatus).toBe('idle')
 
-  setViewer('A')
+  await setViewer('A')
   await waitFor(() => expect(result.current.user.isSuccess && result.current.travel.isSuccess).toBe(true))
   expect(fetchUserAchievements).toHaveBeenCalledWith(104, 'ru', { authenticated: true })
   expect(fetchTravelPeerBadges).toHaveBeenCalledWith(44, { authenticated: true })
 })
 
 it('separates guest, reader A and reader B without relying on a global identity cache reset', async () => {
-  const { result } = renderHook(useReads, { wrapper })
+  const { result } = await renderHook(useReads, { wrapper })
   await waitFor(() => expect(result.current.user.isSuccess && result.current.travel.isSuccess).toBe(true))
   expect(fetchUserAchievements).toHaveBeenLastCalledWith(104, 'ru', { authenticated: false })
   expect(fetchTravelPeerBadges).toHaveBeenLastCalledWith(44, { authenticated: false })
 
   for (const viewer of ['A', 'B', null]) {
-    setViewer(viewer)
+    await setViewer(viewer)
     await waitFor(() => {
       expect(result.current.user.data).toEqual(author(viewer))
       expect(result.current.travel.data).toEqual(received(viewer))
@@ -94,14 +94,14 @@ it('separates guest, reader A and reader B without relying on a global identity 
 })
 
 it('keeps delayed A responses out of B entries and preserves the captured credential mode', async () => {
-  setViewer('A')
+  await setViewer('A')
   const pendingUser = deferred<PublicAchievements>()
   const pendingTravel = deferred<PeerBadgeReceived[]>()
   jest.mocked(fetchUserAchievements).mockReturnValueOnce(pendingUser.promise)
   jest.mocked(fetchTravelPeerBadges).mockReturnValueOnce(pendingTravel.promise)
-  const { result } = renderHook(useReads, { wrapper })
+  const { result } = await renderHook(useReads, { wrapper })
   await waitFor(() => expect(fetchTravelPeerBadges).toHaveBeenCalledTimes(1))
-  setViewer('B')
+  await setViewer('B')
   await waitFor(() => expect(result.current.user.data).toEqual(author('B')))
   await act(async () => {
     pendingUser.resolve(author('A'))
@@ -114,7 +114,7 @@ it('keeps delayed A responses out of B entries and preserves the captured creden
   expect(jest.mocked(fetchUserAchievements).mock.calls.map(call => call[2])).toEqual([
     { authenticated: true }, { authenticated: true },
   ])
-  setViewer(null)
+  await setViewer(null)
   await waitFor(() => expect(result.current.user.data).toEqual(author(null)))
   expect(fetchUserAchievements).toHaveBeenLastCalledWith(104, 'ru', { authenticated: false })
   expect(fetchTravelPeerBadges).toHaveBeenLastCalledWith(44, { authenticated: false })
@@ -123,7 +123,7 @@ it('keeps delayed A responses out of B entries and preserves the captured creden
 it.each([
   ['user', 'success'], ['user', 'failure'], ['travel', 'success'], ['travel', 'failure'],
 ] as const)('isolates a late A %s mutation %s and invalidates every viewer of the public target', async (target, outcome) => {
-  setViewer('A')
+  await setViewer('A')
   const pending = deferred<GrantResult>()
   jest.mocked(grantPeerBadge).mockReturnValueOnce(pending.promise)
   const key = (viewer: string | null, locale = 'ru') => target === 'user'
@@ -135,9 +135,9 @@ it.each([
   if (target === 'user') client.setQueryData(key('B', 'pl'), author('B'))
   client.setQueryData(queryKeys.achievementsMe('B', 'ru'), { private: 'B' })
   client.setQueryData(queryKeys.achievementsTravelPeer(999, 'B'), [])
-  const { result } = renderHook(useGrantPeerBadge, { wrapper })
+  const { result } = await renderHook(useGrantPeerBadge, { wrapper })
   let mutation!: Promise<unknown>
-  act(() => {
+  await act(() => {
     mutation = result.current.mutateAsync({
       badgeSlug: MOCK_PEER_CATALOG[0].slug,
       ...(target === 'user' ? { recipientId: 104 } : { travelId: 44 }),
@@ -146,7 +146,7 @@ it.each([
   await waitFor(() => expect(grantPeerBadge).toHaveBeenCalledTimes(1))
   // Only A's originating query is optimistic; B and the guest stay untouched.
   expect(client.getQueryData(key('B'))).toEqual(target === 'user' ? author('B') : received('B'))
-  setViewer('B')
+  await setViewer('B')
   await act(async () => {
     if (outcome === 'success') pending.resolve({ granted: true, count: 99 })
     else pending.reject(new Error('Rejected by server'))
@@ -163,7 +163,7 @@ it.each([
 })
 
 it.each(['user', 'travel'] as const)('rolls back only the failed badge while another %s award succeeds', async target => {
-  setViewer('A')
+  await setViewer('A')
   const rejected = deferred<GrantResult>()
   const confirmed = deferred<GrantResult>()
   const badges = MOCK_PEER_CATALOG.slice(0, 2)
@@ -175,15 +175,15 @@ it.each(['user', 'travel'] as const)('rolls back only the failed badge while ano
   jest.mocked(grantPeerBadge)
     .mockReturnValueOnce(rejected.promise)
     .mockReturnValueOnce(confirmed.promise)
-  const { result } = renderHook(useGrantPeerBadge, { wrapper })
+  const { result } = await renderHook(useGrantPeerBadge, { wrapper })
   const input = (badgeSlug: string) => ({
     badgeSlug, ...(target === 'user' ? { recipientId: 104 } : { travelId: 44 }),
   })
   let first!: Promise<unknown>
   let second!: Promise<unknown>
-  act(() => { first = result.current.mutateAsync(input(badges[0].slug)).catch(error => error) })
+  await act(() => { first = result.current.mutateAsync(input(badges[0].slug)).catch(error => error) })
   await waitFor(() => expect(grantPeerBadge).toHaveBeenCalledTimes(1))
-  act(() => { second = result.current.mutateAsync(input(badges[1].slug)) })
+  await act(() => { second = result.current.mutateAsync(input(badges[1].slug)) })
   await waitFor(() => expect(grantPeerBadge).toHaveBeenCalledTimes(2))
   await act(async () => {
     confirmed.resolve({ granted: true, count: 10 })

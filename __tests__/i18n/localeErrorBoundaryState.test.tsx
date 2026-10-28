@@ -13,12 +13,12 @@ describe('locale-aware error boundary instances (#2442)', () => {
   ] as const)('retains the %s class, error and retry state while rendering the new language', async (_name, Boundary) => {
     const ref = React.createRef<any>()
     await act(async () => { await i18n.changeLanguage('ru') })
-    const result = render(<ThemeContext.Provider value={{ isDark: true } as any}>
+    const result = await render(<ThemeContext.Provider value={{ isDark: true } as any}>
       <Boundary ref={ref}><Text>healthy child</Text></Boundary>
     </ThemeContext.Provider>)
     const instance = ref.current
     const failure = new Error('preserved error')
-    act(() => instance.setState({ hasError: true, error: failure }))
+    await act(() => instance.setState({ hasError: true, error: failure }))
     const before = JSON.stringify(result.toJSON())
     expect(before).not.toContain('healthy child')
     // These counters are owned by their class and must not reset on language.

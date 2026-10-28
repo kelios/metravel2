@@ -99,7 +99,7 @@ describe('MapOnboarding', () => {
   });
 
   it('does not auto-open on desktop web', async () => {
-    const { queryByText, queryByTestId } = render(<MapOnboarding mobileWebCoachmark={false} />);
+    const { queryByText, queryByTestId } = await render(<MapOnboarding mobileWebCoachmark={false} />);
 
     await act(async () => {
       jest.advanceTimersByTime(1200);
@@ -112,13 +112,13 @@ describe('MapOnboarding', () => {
   it('auto-opens a lightweight coachmark on mobile web', async () => {
     setViewportWidth(390);
 
-    const { getByText, getByTestId } = render(<MapOnboarding mobileWebCoachmark />);
+    const { getByText, getByTestId } = await render(<MapOnboarding mobileWebCoachmark />);
 
     await act(async () => {
       await Promise.resolve();
     });
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1200);
     });
 
@@ -134,7 +134,7 @@ describe('MapOnboarding', () => {
   it('defers mobile web coachmark while the consent banner is open', async () => {
     setViewportWidth(390);
 
-    const { getByText, queryByTestId, rerender } = render(
+    const { getByText, queryByTestId, rerender } = await render(
       <MapOnboarding mobileWebCoachmark suspendAutoOpen />,
     );
 
@@ -142,18 +142,18 @@ describe('MapOnboarding', () => {
       await Promise.resolve();
     });
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1200);
     });
 
     expect(queryByTestId('onboarding-next')).toBeNull();
 
     await act(async () => {
-      rerender(<MapOnboarding mobileWebCoachmark suspendAutoOpen={false} />);
+      await rerender(<MapOnboarding mobileWebCoachmark suspendAutoOpen={false} />);
       await Promise.resolve();
     });
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1200);
     });
 
@@ -165,7 +165,7 @@ describe('MapOnboarding', () => {
   });
 
   it('still opens when restarted manually', async () => {
-    const { getByText, getByTestId } = render(<MapOnboarding mobileWebCoachmark={false} />);
+    const { getByText, getByTestId } = await render(<MapOnboarding mobileWebCoachmark={false} />);
 
     await act(async () => {
       restartMapOnboarding();
@@ -180,7 +180,7 @@ describe('MapOnboarding', () => {
   it('a restart pressed before the tour mounts opens it on mount', async () => {
     restartMapOnboarding();
 
-    const { getByText } = render(<MapOnboarding mobileWebCoachmark={false} />);
+    const { getByText } = await render(<MapOnboarding mobileWebCoachmark={false} />);
     await act(async () => {
       await Promise.resolve();
     });
@@ -192,7 +192,7 @@ describe('MapOnboarding', () => {
     setViewportWidth(390);
     restartMapOnboarding();
 
-    const { queryByTestId, getByTestId, rerender } = render(
+    const { queryByTestId, getByTestId, rerender } = await render(
       <MapOnboarding mobileWebCoachmark suspendAutoOpen />,
     );
     await act(async () => {
@@ -201,7 +201,7 @@ describe('MapOnboarding', () => {
     expect(queryByTestId('onboarding-next')).toBeNull();
 
     await act(async () => {
-      rerender(<MapOnboarding mobileWebCoachmark suspendAutoOpen={false} />);
+      await rerender(<MapOnboarding mobileWebCoachmark suspendAutoOpen={false} />);
       await Promise.resolve();
     });
 
@@ -213,7 +213,7 @@ describe('MapOnboarding', () => {
   it('a manual restart while the cookie banner is open shows once the banner closes', async () => {
     setViewportWidth(390);
 
-    const { queryByTestId, getByTestId, rerender } = render(
+    const { queryByTestId, getByTestId, rerender } = await render(
       <MapOnboarding mobileWebCoachmark suspendAutoOpen />,
     );
     await act(async () => {
@@ -223,7 +223,7 @@ describe('MapOnboarding', () => {
     expect(queryByTestId('onboarding-next')).toBeNull();
 
     await act(async () => {
-      rerender(<MapOnboarding mobileWebCoachmark suspendAutoOpen={false} />);
+      await rerender(<MapOnboarding mobileWebCoachmark suspendAutoOpen={false} />);
       await Promise.resolve();
     });
 
@@ -255,16 +255,16 @@ describe('deferred restart lifetime (#2305)', () => {
     const { cancelMapOnboardingRestart } = require('@/components/MapPage/mapOnboardingCommands')
     restartMapOnboarding()
     cancelMapOnboardingRestart()
-    const cancelled = render(<MapOnboarding mobileWebCoachmark={false} />)
+    const cancelled = await render(<MapOnboarding mobileWebCoachmark={false} />)
     await act(async () => Promise.resolve())
     expect(cancelled.queryByTestId('onboarding-card')).toBeNull()
-    cancelled.unmount()
+    await cancelled.unmount()
     restartMapOnboarding()
-    const first = render(<MapOnboarding mobileWebCoachmark={false} />)
+    const first = await render(<MapOnboarding mobileWebCoachmark={false} />)
     await act(async () => Promise.resolve())
     expect(first.getByTestId('onboarding-card')).toBeTruthy()
-    first.unmount()
-    const second = render(<MapOnboarding mobileWebCoachmark={false} />)
+    await first.unmount()
+    const second = await render(<MapOnboarding mobileWebCoachmark={false} />)
     await act(async () => Promise.resolve())
     expect(second.queryByTestId('onboarding-card')).toBeNull()
   })
@@ -281,19 +281,19 @@ describe('web tour follows rendered target movement (#2305)', () => {
     target.getBoundingClientRect = () => ({ top: targetTop, left: 24, width: 102, height: 44 } as DOMRect)
     Object.defineProperty((require('react-native').View as any).prototype, 'getBoundingClientRect', { configurable: true, value: () => ({ top: frameTop, left: 0, width: 1180, height: 756 }) })
     const query = jest.spyOn(document, 'querySelector')
-    const view = render(<MapOnboarding layout="desktop" mobileWebCoachmark={false} />)
+    const view = await render(<MapOnboarding layout="desktop" mobileWebCoachmark={false} />)
     await act(async () => restartMapOnboarding())
-    fireEvent.press(view.getByTestId('onboarding-next'))
-    act(() => jest.advanceTimersByTime(30))
+    await fireEvent.press(view.getByTestId('onboarding-next'))
+    await act(() => jest.advanceTimersByTime(30))
     expect(query).toHaveBeenCalledWith('[data-testid="map-panel-tab-filters"]')
     expect(StyleSheet.flatten(view.getByTestId('onboarding-spotlight').props.style).top).toBe(82)
     targetTop = 260
-    act(() => { window.dispatchEvent(new Event('resize')); jest.advanceTimersByTime(30) })
+    await act(() => { window.dispatchEvent(new Event('resize')); jest.advanceTimersByTime(30) })
     expect(StyleSheet.flatten(view.getByTestId('onboarding-spotlight').props.style).top).toBe(192)
     frameTop = 100
-    act(() => { window.dispatchEvent(new Event('scroll')); jest.advanceTimersByTime(30) })
+    await act(() => { window.dispatchEvent(new Event('scroll')); jest.advanceTimersByTime(30) })
     expect(StyleSheet.flatten(view.getByTestId('onboarding-spotlight').props.style).top).toBe(156)
-    view.unmount()
+    await view.unmount()
     target.remove()
     query.mockRestore()
     delete (require('react-native').View as any).prototype.getBoundingClientRect

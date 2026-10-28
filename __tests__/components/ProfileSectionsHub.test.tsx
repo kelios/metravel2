@@ -49,33 +49,33 @@ describe('ProfileSectionsHub — экспорт в PDF на мобильном',
   })
 
   // Ширина плитки — стиль `Pressable` с `accessibilityRole="menuitem"`.
-  const tileWidths = (view: ReturnType<typeof render>) =>
+  const tileWidths = (view: Awaited<ReturnType<typeof render>>) =>
     view.getAllByRole('menuitem').map((tile) => {
       const style = typeof tile.props.style === 'function' ? tile.props.style({ pressed: false }) : tile.props.style
       return StyleSheet.flatten(style).width
     })
 
-  it.each(['ios', 'android'] as const)('в приложении %s плитка есть и на телефоне — когда есть модуль печати (#2119)', (os) => {
+  it.each(['ios', 'android'] as const)('в приложении %s плитка есть и на телефоне — когда есть модуль печати (#2119)', async (os) => {
     setPlatform(os)
     mockResponsive = { isDesktop: false, isMobile: true, isHydrated: true }
-    const view = render(<ProfileSectionsHub userId="1" />)
+    const view = await render(<ProfileSectionsHub userId="1" />)
 
     expect(view.queryByText('Экспорт в PDF')).not.toBeNull()
     // Плитка книги раскладку не меняет: на телефоне плитки по-прежнему в одну колонку.
     expect(new Set(tileWidths(view))).toEqual(new Set(['100%']))
   })
 
-  it('раскладка плиток зависит от экрана, а не от плитки книги', () => {
+  it('раскладка плиток зависит от экрана, а не от плитки книги', async () => {
     // Сайт, телефон: плитки книги нет, одна колонка.
     setPlatform('web')
     mockResponsive = { isDesktop: false, isMobile: true, isHydrated: true }
-    expect(new Set(tileWidths(render(<ProfileSectionsHub userId="1" />)))).toEqual(new Set(['100%']))
+    expect(new Set(tileWidths(await render(<ProfileSectionsHub userId="1" />)))).toEqual(new Set(['100%']))
 
     // Приложение на планшете без модуля печати: плитки книги нет, но колонок две.
     setPlatform('ios')
     mockPrintAvailable = false
     mockResponsive = { isDesktop: false, isMobile: false, isHydrated: true }
-    const tablet = render(<ProfileSectionsHub userId="1" />)
+    const tablet = await render(<ProfileSectionsHub userId="1" />)
     expect(tablet.queryByText('Экспорт в PDF')).toBeNull()
     expect(new Set(tileWidths(tablet))).toEqual(new Set(['48%']))
 
@@ -83,10 +83,10 @@ describe('ProfileSectionsHub — экспорт в PDF на мобильном',
     setPlatform('web')
     mockPrintAvailable = true
     mockResponsive = { isDesktop: true, isMobile: false, isHydrated: true }
-    expect(new Set(tileWidths(render(<ProfileSectionsHub userId="1" />)))).toEqual(new Set(['31.5%']))
+    expect(new Set(tileWidths(await render(<ProfileSectionsHub userId="1" />)))).toEqual(new Set(['31.5%']))
   })
 
-  it.each(['ios', 'android'] as const)('в сборке приложения %s без модуля печати плитки нет ни на каком экране', (os) => {
+  it.each(['ios', 'android'] as const)('в сборке приложения %s без модуля печати плитки нет ни на каком экране', async (os) => {
     setPlatform(os)
     mockPrintAvailable = false
     for (const responsive of [
@@ -94,33 +94,33 @@ describe('ProfileSectionsHub — экспорт в PDF на мобильном',
       { isDesktop: true, isMobile: false, isHydrated: true },
     ]) {
       mockResponsive = responsive
-      expect(render(<ProfileSectionsHub userId="1" />).queryByText('Экспорт в PDF')).toBeNull()
+      expect(await (await render(<ProfileSectionsHub userId="1" />)).queryByText('Экспорт в PDF')).toBeNull()
     }
   })
 
-  it('скрывает «Экспорт в PDF» в мобильной версии сайта', () => {
+  it('скрывает «Экспорт в PDF» в мобильной версии сайта', async () => {
     mockResponsive = { isDesktop: false, isMobile: true, isHydrated: true }
-    const { queryByText } = render(<ProfileSectionsHub userId="1" />)
+    const { queryByText } = await render(<ProfileSectionsHub userId="1" />)
     expect(queryByText('Экспорт в PDF')).toBeNull()
   })
 
-  it('показывает «Экспорт в PDF» на десктопе (без изменений)', () => {
+  it('показывает «Экспорт в PDF» на десктопе (без изменений)', async () => {
     mockResponsive = { isDesktop: true, isMobile: false, isHydrated: true }
-    const { queryByText } = render(<ProfileSectionsHub userId="1" />)
+    const { queryByText } = await render(<ProfileSectionsHub userId="1" />)
     expect(queryByText('Экспорт в PDF')).not.toBeNull()
   })
 
-  it('до гидрации показывает пункт даже на мобильном (нет hydration mismatch)', () => {
+  it('до гидрации показывает пункт даже на мобильном (нет hydration mismatch)', async () => {
     mockResponsive = { isDesktop: false, isMobile: true, isHydrated: false }
-    const { queryByText } = render(<ProfileSectionsHub userId="1" />)
+    const { queryByText } = await render(<ProfileSectionsHub userId="1" />)
     expect(queryByText('Экспорт в PDF')).not.toBeNull()
   })
 
-  it('открывает приватность из профиля с явным источником для стабильного Android Back', () => {
+  it('открывает приватность из профиля с явным источником для стабильного Android Back', async () => {
     mockResponsive = { isDesktop: false, isMobile: true, isHydrated: true }
-    const { getByLabelText } = render(<ProfileSectionsHub userId="1" />)
+    const { getByLabelText } = await render(<ProfileSectionsHub userId="1" />)
 
-    fireEvent.press(getByLabelText('Приватность'))
+    await fireEvent.press(getByLabelText('Приватность'))
 
     expect(mockPush).toHaveBeenCalledWith('/privacy-settings?from=profile')
   })

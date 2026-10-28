@@ -27,7 +27,7 @@ it('keeps the first web render neutral before committing explicit URL intent wit
     try {
         mockParams = { theme: 'detective' };
         const renders: Array<{ id: string | null; restored: boolean }> = [];
-        const { result } = renderHook(() => {
+        const { result } = await renderHook(() => {
             const selection = useQuestCatalogSelection(true, jest.fn());
             renders.push({ id: selection.selectedCityId, restored: selection.selectionRestored });
             return selection;
@@ -41,13 +41,13 @@ it('keeps the first web render neutral before committing explicit URL intent wit
     }
 });
 
-it.each(['android', 'ios'])('keeps native %s URL selection available on the first render', (platform) => {
+it.each(['android', 'ios'])('keeps native %s URL selection available on the first render', async (platform) => {
     const oldPlatform = Platform.OS;
     (Platform as { OS: string }).OS = platform;
     try {
         mockParams = { theme: 'detective' };
         const renders: Array<{ id: string | null; restored: boolean }> = [];
-        renderHook(() => {
+        await renderHook(() => {
             const selection = useQuestCatalogSelection(true, jest.fn());
             renders.push({ id: selection.selectedCityId, restored: selection.selectionRestored });
         });
@@ -61,7 +61,7 @@ it.each(['android', 'ios'])('keeps native %s URL selection available on the firs
 it('initial explicit selection outranks storage and persists before any ordinary restore', async () => {
     mockParams = { theme: ' DeTECTive ' };
     await AsyncStorage.setItem(STORAGE_SELECTED_CITY, 'minsk');
-    const { result } = renderHook(() => useQuestCatalogSelection(true, jest.fn()));
+    const { result } = await renderHook(() => useQuestCatalogSelection(true, jest.fn()));
     expect(result.current.selectedCityId).toBe('__theme__:detective');
     await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(STORAGE_SELECTED_CITY, '__theme__:detective'));
     expect(AsyncStorage.getItem).not.toHaveBeenCalledWith(STORAGE_SELECTED_CITY);
@@ -69,7 +69,7 @@ it('initial explicit selection outranks storage and persists before any ordinary
 it.each(['', 'unknown', ['detective', 'legends']])('explicit invalid %s intentionally clears saved city', async (theme) => {
     mockParams = { theme };
     await AsyncStorage.setItem(STORAGE_SELECTED_CITY, 'minsk');
-    const { result } = renderHook(() => useQuestCatalogSelection(true, jest.fn()));
+    const { result } = await renderHook(() => useQuestCatalogSelection(true, jest.fn()));
     expect(result.current.selectedCityId).toBe(ALL_QUESTS_ID);
     await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(STORAGE_SELECTED_CITY, ALL_QUESTS_ID));
 });
@@ -77,56 +77,56 @@ it('late storage cannot replace a warm URL or its later Reset; unchanged query i
     const read = deferred();
     jest.spyOn(AsyncStorage, 'getItem').mockImplementation((key) => key === STORAGE_SELECTED_CITY ? read.promise : Promise.resolve(null));
     const navigation = jest.fn();
-    const { result, rerender } = renderHook(() => useQuestCatalogSelection(true, navigation));
+    const { result, rerender } = await renderHook(() => useQuestCatalogSelection(true, navigation));
     mockParams = { theme: 'legends' };
-    rerender({});
+    await rerender({});
     await waitFor(() => expect(result.current.selectedCityId).toBe('__theme__:legends'));
     await act(async () => { await result.current.select(ALL_QUESTS_ID); read.resolve('minsk'); });
-    rerender({});
+    await rerender({});
     expect(result.current.selectedCityId).toBe(ALL_QUESTS_ID);
     expect(AsyncStorage.setItem).toHaveBeenLastCalledWith(STORAGE_SELECTED_CITY, ALL_QUESTS_ID);
     expect(navigation).toHaveBeenCalledTimes(1);
     mockParams = { theme: 'detective' };
-    rerender({});
+    await rerender({});
     await waitFor(() => expect(result.current.selectedCityId).toBe('__theme__:detective'));
 });
 it('no query preserves saved out-of-season selection', async () => {
     await AsyncStorage.setItem(STORAGE_SELECTED_CITY, '__theme__:halloween');
-    const { result } = renderHook(() => useQuestCatalogSelection(true, jest.fn()));
+    const { result } = await renderHook(() => useQuestCatalogSelection(true, jest.fn()));
     await waitFor(() => expect(result.current.selectedCityId).toBe('__theme__:halloween'));
 });
 it('manual selection before late ordinary restore remains authoritative', async () => {
     const read = deferred();
     jest.spyOn(AsyncStorage, 'getItem').mockReturnValue(read.promise);
-    const { result } = renderHook(() => useQuestCatalogSelection(true, jest.fn()));
+    const { result } = await renderHook(() => useQuestCatalogSelection(true, jest.fn()));
     await act(async () => { await result.current.select('__country__:PL'); read.resolve('minsk'); });
     expect(result.current.selectedCityId).toBe('__country__:PL');
 });
 it('explicit entry consumes stale profile handoff, but a later profile focus intentionally applies', async () => {
     mockParams = { theme: 'detective' };
     await AsyncStorage.setItem(STORAGE_PENDING_CATALOG_SELECTION, '__completed__');
-    const { result, rerender } = renderHook(({ focused }) => {
+    const { result, rerender } = await renderHook(({ focused }) => {
         const selection = useQuestCatalogSelection(focused, jest.fn());
         useQuestCatalogHandoff({ enabled: focused, onApply: selection.select, getGeneration: selection.getGeneration, canApply: selection.canApplyHandoff });
         return selection;
     }, { initialProps: { focused: true } });
     await waitFor(() => expect(AsyncStorage.removeItem).toHaveBeenCalledWith(STORAGE_PENDING_CATALOG_SELECTION));
     expect(result.current.selectedCityId).toBe('__theme__:detective');
-    rerender({ focused: false });
+    await rerender({ focused: false });
     await AsyncStorage.setItem(STORAGE_PENDING_CATALOG_SELECTION, '__completed__');
-    rerender({ focused: true });
+    await rerender({ focused: true });
     await waitFor(() => expect(result.current.selectedCityId).toBe('__completed__'));
 });
 it('late profile read cannot override a newer URL navigation', async () => {
     const read = deferred();
     jest.spyOn(AsyncStorage, 'getItem').mockImplementation((key) => key === STORAGE_PENDING_CATALOG_SELECTION ? read.promise : Promise.resolve(null));
-    const { result, rerender } = renderHook(() => {
+    const { result, rerender } = await renderHook(() => {
         const selection = useQuestCatalogSelection(true, jest.fn());
         useQuestCatalogHandoff({ enabled: true, onApply: selection.select, getGeneration: selection.getGeneration, canApply: selection.canApplyHandoff });
         return selection;
     });
     mockParams = { theme: 'legends' };
-    rerender({});
+    await rerender({});
     await act(async () => read.resolve('__completed__'));
     expect(result.current.selectedCityId).toBe('__theme__:legends');
 });
@@ -141,19 +141,19 @@ it('an identical warm native link is a new action after Reset, while ordinary re
         return { remove: jest.fn() };
     });
     mockParams = { theme: 'detective' };
-    const { result, rerender, unmount } = renderHook(({ focused }) => useQuestCatalogSelection(focused, jest.fn()), { initialProps: { focused: true } });
+    const { result, rerender, unmount } = await renderHook(({ focused }) => useQuestCatalogSelection(focused, jest.fn()), { initialProps: { focused: true } });
     await act(async () => { await result.current.select(ALL_QUESTS_ID); });
-    rerender({ focused: false });
-    rerender({ focused: true });
+    await rerender({ focused: false });
+    await rerender({ focused: true });
     expect(result.current.selectedCityId).toBe(ALL_QUESTS_ID);
     await act(async () => { receive({ url: 'metravel://quests?theme=detective' }); });
     expect(result.current.selectedCityId).toBe('__theme__:detective');
     await act(async () => { await result.current.select(ALL_QUESTS_ID); receive({ url: 'metravel://quests?theme=legends' }); });
     expect(result.current.selectedCityId).toBe('__theme__:legends');
     mockParams = { theme: 'legends' };
-    rerender({ focused: true });
+    await rerender({ focused: true });
     expect(result.current.selectedCityId).toBe('__theme__:legends');
-    unmount();
+    await unmount();
     (Platform as { OS: string }).OS = oldPlatform;
 });
 
@@ -163,7 +163,7 @@ it('route mode shows the URL slice from the first render and never touches saved
     await AsyncStorage.setItem(STORAGE_PENDING_CATALOG_SELECTION, '__kids__');
     jest.clearAllMocks();
     const onLeave = jest.fn();
-    const { result } = renderHook(() => useQuestCatalogSelection(true, jest.fn(), { selectionId: '121', onLeave }));
+    const { result } = await renderHook(() => useQuestCatalogSelection(true, jest.fn(), { selectionId: '121', onLeave }));
     expect(result.current.selectedCityId).toBe('121');
     expect(result.current.selectionRestored).toBe(true);
     expect(result.current.canApplyHandoff()).toBe(false);

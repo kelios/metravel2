@@ -3,7 +3,7 @@ import type React from 'react'
 /**
  * #2215: перелив `ShimmerOverlay` на web — настоящий серверный рендер
  * react-native-web (как у статического экспорта), а не проп в
- * react-test-renderer: инлайн `animationKeyframes` проходил снимок пропов и
+ * test renderer: инлайн `animationKeyframes` проходил снимок пропов и
  * при этом не доходил до CSS.
  */
 let createElement: typeof import('react').createElement

@@ -2,7 +2,8 @@ import fs from 'fs'
 import path from 'path'
 import React from 'react'
 import { Platform } from 'react-native'
-import { render, waitFor } from '@testing-library/react-native'
+import { waitFor, within } from '@testing-library/react-native'
+import { createRootRegistry } from '../helpers/rawRootLifecycle'
 
 jest.mock('expo-router', () => ({
   usePathname: jest.fn(() => '/'),
@@ -30,6 +31,11 @@ jest.mock('@/components/seo/LazyInstantSEO', () => {
   }
 })
 
+// The .web route deliberately contains HTML headings. Keep the real web
+// subtree under the generic renderer; native tests retain strict RNTL rules.
+const webRoots = createRootRegistry()
+afterEach(() => webRoots.cleanup())
+
 describe('Home screen regression guards', () => {
   beforeEach(() => {
     Platform.OS = 'web'
@@ -45,7 +51,9 @@ describe('Home screen regression guards', () => {
 
   it('renders home route on web without runtime crash', async () => {
     const HomeScreen = require('@/app/(tabs)/index').default
-    const { getByTestId } = render(<HomeScreen />)
+    const root = webRoots.createRoot()
+    await React.act(() => root.render(<HomeScreen />))
+    const { getByTestId } = within(root.container)
 
     await waitFor(() => {
       expect(getByTestId('home-screen-content')).toBeTruthy()
@@ -55,7 +63,8 @@ describe('Home screen regression guards', () => {
   it('hydrates InstantSEO from the canonical RU home metadata keys', async () => {
     const { resources } = require('@/i18n/resources')
     const HomeScreen = require('@/app/(tabs)/index').default
-    render(<HomeScreen />)
+    const root = webRoots.createRoot()
+    await React.act(() => root.render(<HomeScreen />))
 
     await waitFor(() => {
       expect(mockInstantSEO).toHaveBeenCalled()

@@ -33,8 +33,8 @@ const keyboardEvent: KeyboardEvent = {
   endCoordinates: { height: 300, width: 390, screenX: 0, screenY: 544 },
 }
 
-function show(text1: string, params: ToastShowParams = {}) {
-  act(() => Toast.show({ text1, autoHide: false, ...params }))
+async function show(text1: string, params: ToastShowParams = {}) {
+  await act(() => Toast.show({ text1, autoHide: false, ...params }))
 }
 
 function expectOnlyHost(result: ReturnType<typeof render>, host: string, text: string) {
@@ -60,8 +60,8 @@ beforeEach(() => {
   })
 })
 
-afterEach(() => {
-  cleanup() // Real unmount must remove each library ref before the next test.
+afterEach(async () => {
+  await cleanup() // Real unmount must remove each library ref before the next test.
   jest.clearAllTimers()
   jest.useRealTimers()
   jest.restoreAllMocks()
@@ -69,9 +69,9 @@ afterEach(() => {
 })
 
 describe('native feedback host lifetime priority (real library)', () => {
-  it.each(['keyboard', 'inset'])('keeps the retained modal selected after a root-only %s update', (source) => {
-    const result = render(<Layers />)
-    act(() => {
+  it.each(['keyboard', 'inset'])('keeps the retained modal selected after a root-only %s update', async (source) => {
+    const result = await render(<Layers />)
+    await act(() => {
       if (source === 'keyboard') {
         // A lower host can commit its keyboard update after the modal's commit.
         keyboardCallbacks.find(({ event }) => event === 'keyboardDidShow')!.callback(keyboardEvent)
@@ -79,88 +79,88 @@ describe('native feedback host lifetime priority (real library)', () => {
         mockSetRootInset(72)
       }
     })
-    show('Permission denied', { type: 'info' })
+    await show('Permission denied', { type: 'info' })
     expectOnlyHost(result, 'parent', 'Permission denied')
     expect(within(result.getByTestId('root')).queryByText('Permission denied')).toBeNull()
   })
 
-  it('does not promote the root when its earlier notification expires internally', () => {
+  it('does not promote the root when its earlier notification expires internally', async () => {
     const expired = jest.fn()
-    const result = render(<Layers parent={false} />)
-    show('Earlier root message', { autoHide: true, visibilityTime: 100, onHide: expired })
-    result.rerender(<Layers />)
-    act(() => jest.advanceTimersByTime(100))
+    const result = await render(<Layers parent={false} />)
+    await show('Earlier root message', { autoHide: true, visibilityTime: 100, onHide: expired })
+    await result.rerender(<Layers />)
+    await act(() => jest.advanceTimersByTime(100))
     expect(expired).toHaveBeenCalledTimes(1)
     expect(result.queryByText('Earlier root message')).toBeNull()
 
-    show('Modal after expiry')
+    await show('Modal after expiry')
     expectOnlyHost(result, 'parent', 'Modal after expiry')
   })
 
-  it('falls back from retained child to parent to root without replay after real unmount', () => {
-    const result = render(<Layers child />)
-    act(() => mockSetRootInset(72))
+  it('falls back from retained child to parent to root without replay after real unmount', async () => {
+    const result = await render(<Layers child />)
+    await act(() => mockSetRootInset(72))
     // Also commit a parent-only update beneath the child.
-    act(() => keyboardCallbacks.filter(({ event }) => event === 'keyboardDidShow')[1].callback(keyboardEvent))
-    show('Child message')
+    await act(() => keyboardCallbacks.filter(({ event }) => event === 'keyboardDidShow')[1].callback(keyboardEvent))
+    await show('Child message')
     expectOnlyHost(result, 'child', 'Child message')
 
-    result.rerender(<Layers />)
+    await result.rerender(<Layers />)
     expect(result.queryByText('Child message')).toBeNull()
-    show('Parent message')
+    await show('Parent message')
     expectOnlyHost(result, 'parent', 'Parent message')
 
-    result.rerender(<Layers parent={false} />)
+    await result.rerender(<Layers parent={false} />)
     expect(result.queryByText('Parent message')).toBeNull()
-    show('Root message')
+    await show('Root message')
     expectOnlyHost(result, 'root', 'Root message')
-    result.unmount()
+    await result.unmount()
     expect(() => { Toast.show({ text1: 'No mounted host' }); Toast.hide() }).not.toThrow()
   })
 
-  it('delegates to the latest defaults and hide callback while replacing and expiring messages', () => {
+  it('delegates to the latest defaults and hide callback while replacing and expiring messages', async () => {
     const oldShow = jest.fn()
     const oldHide = jest.fn()
     const currentShow = jest.fn()
     const currentHide = jest.fn()
     const renderHost = (props: ToastProps) => <View testID="root"><Toast {...props} /></View>
-    const result = render(renderHost({ onShow: oldShow, onHide: oldHide, autoHide: false }))
-    show('Initial')
+    const result = await render(renderHost({ onShow: oldShow, onHide: oldHide, autoHide: false }))
+    await show('Initial')
     expect(oldShow).toHaveBeenCalledTimes(1)
-    result.rerender(renderHost({ onShow: currentShow, onHide: currentHide, visibilityTime: 120 }))
+    await result.rerender(renderHost({ onShow: currentShow, onHide: currentHide, visibilityTime: 120 }))
 
-    act(() => Toast.show({ text1: 'Current defaults' }))
+    await act(() => Toast.show({ text1: 'Current defaults' }))
     expect(currentShow).toHaveBeenCalledTimes(1)
     expect(result.queryByText('Initial')).toBeNull()
     expectOnlyHost(result, 'root', 'Current defaults')
-    act(() => jest.advanceTimersByTime(119))
+    await act(() => jest.advanceTimersByTime(119))
     expect(result.getByText('Current defaults')).toBeTruthy()
-    act(() => jest.advanceTimersByTime(1))
+    await act(() => jest.advanceTimersByTime(1))
     expect(result.queryByText('Current defaults')).toBeNull()
     expect(currentHide).toHaveBeenCalledTimes(1)
     expect(oldHide).not.toHaveBeenCalled()
 
     const messageHide = jest.fn()
-    show('Public hide', { onHide: messageHide })
-    act(() => Toast.hide())
+    await show('Public hide', { onHide: messageHide })
+    await act(() => Toast.hide())
     expect(result.queryByTestId('visible-toast')).toBeNull()
     expect(messageHide).toHaveBeenCalledTimes(1)
     expect(currentHide).toHaveBeenCalledTimes(1)
   })
 
-  it('uses the real app action renderer to hide once and run its action once', () => {
+  it('uses the real app action renderer to hide once and run its action once', async () => {
     const action = jest.fn()
     const hidden = jest.fn()
-    const result = render(<Layers />)
-    show('Undo available', {
+    const result = await render(<Layers />)
+    await show('Undo available', {
       type: 'info', onHide: hidden, props: { action: { label: 'Undo', onPress: action } },
     })
     expectOnlyHost(result, 'parent', 'Undo available')
-    fireEvent.press(result.getByTestId('toast-action'))
+    await fireEvent.press(result.getByTestId('toast-action'))
     expect(result.queryByTestId('visible-toast')).toBeNull()
     expect(hidden).toHaveBeenCalledTimes(1)
     expect(action).toHaveBeenCalledTimes(1)
-    show('After action')
+    await show('After action')
     expectOnlyHost(result, 'parent', 'After action')
   })
 })

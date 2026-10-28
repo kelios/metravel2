@@ -1,3 +1,4 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 import { render } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform } from 'react-native';
@@ -63,8 +64,8 @@ describe('Home Component', () => {
     jest.clearAllMocks();
   });
 
-  const renderHome = () => {
-    return render(
+  const renderHome = async () => {
+    return await render(
       <QueryClientProvider client={queryClient}>
         <Home />
       </QueryClientProvider>
@@ -72,35 +73,35 @@ describe('Home Component', () => {
   };
 
   describe('Rendering', () => {
-    it('should render without crashing', () => {
-      const { getByTestId } = renderHome();
+    it('should render without crashing', async () => {
+      const { getByTestId } = await renderHome();
       expect(getByTestId).toBeDefined();
     });
 
-    it('should render HomeHero component', () => {
-      const { getByTestId } = renderHome();
+    it('should render HomeHero component', async () => {
+      const { getByTestId } = await renderHome();
       expect(getByTestId('home-hero')).toBeTruthy();
     });
 
-    it('should not render the How It Works block on home (moved out of main flow)', () => {
-      const { queryByTestId } = renderHome();
+    it('should not render the How It Works block on home (moved out of main flow)', async () => {
+      const { queryByTestId } = await renderHome();
       expect(queryByTestId('home-how-it-works')).toBeNull();
     });
 
-    it('should render HomeFAQSection', () => {
-      const { getByTestId } = renderHome();
+    it('should render HomeFAQSection', async () => {
+      const { getByTestId } = await renderHome();
       expect(getByTestId('home-faq')).toBeTruthy();
     });
 
-    it('invites readers to the author landing inside the home scroll content', () => {
-      const { getByText } = renderHome();
+    it('invites readers to the author landing inside the home scroll content', async () => {
+      const { getByText } = await renderHome();
       expect(getByText('Ваш опыт пригодится другим путешественникам')).toBeTruthy();
       expect(getByText('Стать автором')).toBeTruthy();
     });
   });
 
   describe('Authentication States', () => {
-    it('should not show loading skeleton for unauthenticated users', () => {
+    it('should not show loading skeleton for unauthenticated users', async () => {
       mockUseAuth.mockReturnValue({
         isAuthenticated: false,
         userId: null,
@@ -110,12 +111,12 @@ describe('Home Component', () => {
         triggerProfileRefresh: jest.fn(),
       } as any);
 
-      const { queryByTestId } = renderHome();
+      const { queryByTestId } = await renderHome();
       expect(queryByTestId('travel-card-skeleton')).toBeNull();
       expect(mockFetchMyTravels).not.toHaveBeenCalled();
     });
 
-    it('should fetch travels count for authenticated users (HERO-06)', () => {
+    it('should fetch travels count for authenticated users (HERO-06)', async () => {
       // HERO-06: устанавливаем мок ДО рендера чтобы queryFn получил правильные данные
       mockFetchMyTravels.mockResolvedValue({ data: [], total: 3 } as any);
 
@@ -129,14 +130,14 @@ describe('Home Component', () => {
       } as any);
 
 
-      const { getByTestId } = renderHome();
+      const { getByTestId } = await renderHome();
       expect(getByTestId('home-hero')).toBeTruthy();
       expect(mockFetchMyTravels).toHaveBeenCalledWith({ user_id: '123', perPage: 1, throwOnError: true });
     });
   });
 
   describe('Responsive Design', () => {
-    it('should handle mobile viewport (320px)', () => {
+    it('should handle mobile viewport (320px)', async () => {
       jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
         width: 320,
         height: 568,
@@ -144,11 +145,11 @@ describe('Home Component', () => {
         fontScale: 1,
       });
 
-      const { getByTestId } = renderHome();
+      const { getByTestId } = await renderHome();
       expect(getByTestId('home-hero')).toBeTruthy();
     });
 
-    it('should handle small mobile viewport (480px)', () => {
+    it('should handle small mobile viewport (480px)', async () => {
       jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
         width: 480,
         height: 800,
@@ -156,11 +157,11 @@ describe('Home Component', () => {
         fontScale: 1,
       });
 
-      const { getByTestId } = renderHome();
+      const { getByTestId } = await renderHome();
       expect(getByTestId('home-hero')).toBeTruthy();
     });
 
-    it('should handle tablet viewport (768px)', () => {
+    it('should handle tablet viewport (768px)', async () => {
       jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
         width: 768,
         height: 1024,
@@ -168,11 +169,11 @@ describe('Home Component', () => {
         fontScale: 1,
       });
 
-      const { getByTestId } = renderHome();
+      const { getByTestId } = await renderHome();
       expect(getByTestId('home-hero')).toBeTruthy();
     });
 
-    it('should handle desktop viewport (1024px)', () => {
+    it('should handle desktop viewport (1024px)', async () => {
       jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
         width: 1024,
         height: 768,
@@ -180,11 +181,11 @@ describe('Home Component', () => {
         fontScale: 1,
       });
 
-      const { getByTestId } = renderHome();
+      const { getByTestId } = await renderHome();
       expect(getByTestId('home-hero')).toBeTruthy();
     });
 
-    it('should handle large desktop viewport (1920px)', () => {
+    it('should handle large desktop viewport (1920px)', async () => {
       jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
         width: 1920,
         height: 1080,
@@ -192,7 +193,7 @@ describe('Home Component', () => {
         fontScale: 1,
       });
 
-      const { getByTestId } = renderHome();
+      const { getByTestId } = await renderHome();
       expect(getByTestId('home-hero')).toBeTruthy();
     });
   });
@@ -200,22 +201,25 @@ describe('Home Component', () => {
   // Data fetching is intentionally disabled on home; no data-handling tests needed here.
 
   describe('Performance', () => {
-    it('should use lazy loading for heavy components', () => {
-      const { getByTestId } = renderHome();
+    it('should use lazy loading for heavy components', async () => {
+      const { getByTestId } = await renderHome();
       expect(getByTestId('home-hero')).toBeTruthy();
       // Lazy components should be wrapped in Suspense
     });
 
-    it('should have optimized scroll event throttle', () => {
-      const { UNSAFE_getByType } = renderHome();
-      const ScrollView = require('react-native').ScrollView;
-      const list = UNSAFE_getByType(ScrollView);
+    it('should have optimized scroll event throttle', async () => {
+      const { container: hostContainer } = await renderHome();
+      const list = getOnlyHost(hostContainer, node => (
+        node.type === 'RCTScrollView'
+        && typeof node.props.scrollEventThrottle === 'number'
+        && node.queryAll((child) => child.props.testID === 'home-hero').length > 0
+      ));
       
       // Should have scrollEventThrottle prop
       expect(list.props.scrollEventThrottle).toBeDefined();
     });
 
-    it('keeps below-fold web sections unmounted before viewport proximity', () => {
+    it('keeps below-fold web sections unmounted before viewport proximity', async () => {
       const originalOS = Platform.OS;
       const originalObserver = (window as any).IntersectionObserver;
 
@@ -228,7 +232,7 @@ describe('Home Component', () => {
       (window as any).IntersectionObserver = MockIntersectionObserver;
 
       try {
-        const { queryByTestId, getByTestId } = renderHome();
+        const { queryByTestId, getByTestId } = await renderHome();
 
         expect(getByTestId('home-hero')).toBeTruthy();
         expect(queryByTestId('home-faq')).toBeNull();

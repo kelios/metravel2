@@ -58,15 +58,15 @@ beforeEach(async () => {
   await AsyncStorage.clear()
 })
 
-it('не рендерится у игрока без прохождений', () => {
-  const { queryByTestId } = render(<ProfileCompletedQuests />)
+it('не рендерится у игрока без прохождений', async () => {
+  const { queryByTestId } = await render(<ProfileCompletedQuests />)
   expect(queryByTestId('profile-completed-quests')).toBeNull()
 })
 
-it('показывает пройденные квесты и обходится без «показать все», пока список короткий', () => {
+it('показывает пройденные квесты и обходится без «показать все», пока список короткий', async () => {
   mockCompleted = [quest('a', 'Минск'), quest('b', 'Брест')]
 
-  const { getByTestId, queryByTestId } = render(<ProfileCompletedQuests />)
+  const { getByTestId, queryByTestId } = await render(<ProfileCompletedQuests />)
 
   expect(getByTestId('profile-completed-quests')).toBeTruthy()
   expect(getByTestId('completed-quest-a')).toBeTruthy()
@@ -77,7 +77,7 @@ it('показывает пройденные квесты и обходится
 it('режет список до порога и уводит остаток в срез «Пройденные» каталога', async () => {
   mockCompleted = Array.from({ length: PROFILE_COMPLETED_QUESTS_LIMIT + 2 }, (_, i) => quest(`q${i}`, 'Минск'))
 
-  const { getByTestId, queryByTestId } = render(<ProfileCompletedQuests />)
+  const { getByTestId, queryByTestId } = await render(<ProfileCompletedQuests />)
 
   expect(getByTestId(`completed-quest-q${PROFILE_COMPLETED_QUESTS_LIMIT - 1}`)).toBeTruthy()
   expect(queryByTestId(`completed-quest-q${PROFILE_COMPLETED_QUESTS_LIMIT}`)).toBeNull()
@@ -86,7 +86,7 @@ it('режет список до порога и уводит остаток в 
   expect(showAll.props.accessibilityLabel).toBe(
     `Показать все пройденные квесты, ${PROFILE_COMPLETED_QUESTS_LIMIT + 2}`,
   )
-  fireEvent.press(showAll)
+  await fireEvent.press(showAll)
 
   // Срез передаётся одноразовым ключом и до навигации: каталог забирает его на
   // фокусе, поэтому уже открытая вкладка тоже переключается.
@@ -101,8 +101,8 @@ it('открывает каталог даже когда хранилище н�
   mockCompleted = Array.from({ length: PROFILE_COMPLETED_QUESTS_LIMIT + 1 }, (_, i) => quest(`q${i}`, 'Минск'))
   ;(AsyncStorage.setItem as jest.Mock).mockRejectedValueOnce(new Error('quota'))
 
-  const { getByTestId } = render(<ProfileCompletedQuests />)
-  fireEvent.press(getByTestId('profile-completed-quests-show-all'))
+  const { getByTestId } = await render(<ProfileCompletedQuests />)
+  await fireEvent.press(getByTestId('profile-completed-quests-show-all'))
 
   await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/quests'))
 })

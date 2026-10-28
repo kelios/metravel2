@@ -20,9 +20,9 @@ const makeOptions = () => ({
   countries: [] as { country_id: number; title_ru: string }[],
 });
 
-const setup = (overrides: Partial<Parameters<typeof useListTravelFilters>[0]> = {}) => {
+const setup = async (overrides: Partial<Parameters<typeof useListTravelFilters>[0]> = {}) => {
   const options = overrides.options ?? makeOptions();
-  const result = renderHook(() =>
+  const result = await renderHook(() =>
     useListTravelFilters({
       options,
       isMeTravel: false,
@@ -37,39 +37,39 @@ const setup = (overrides: Partial<Parameters<typeof useListTravelFilters>[0]> = 
 };
 
 describe('useListTravelFilters', () => {
-  it('switches between admin unpublished, personal statuses and the moderation queue', () => {
-    const { result } = setup({ isMeTravel: true, isSuperuser: true, userId: '42' });
+  it('switches between admin unpublished, personal statuses and the moderation queue', async () => {
+    const { result } = await setup({ isMeTravel: true, isSuperuser: true, userId: '42' });
     for (const [key, value] of [['draftsOnly', true], ['publishedOnly', true], ['moderation', 0]] as const) {
-      act(() => result.current.onSelect(key, value));
-      act(() => result.current.onSelect('allAuthorsUnpublishedOnly', true));
+      await act(() => result.current.onSelect(key, value));
+      await act(() => result.current.onSelect('allAuthorsUnpublishedOnly', true));
       expect(result.current.filter[key]).toBeUndefined();
       expect(result.current.queryParams).toEqual({
         publish: 0,
         includeDrafts: true,
         exclude_current_user: true,
       });
-      act(() => result.current.onSelect(key, value));
+      await act(() => result.current.onSelect(key, value));
       expect(result.current.filter.allAuthorsUnpublishedOnly).toBeUndefined();
     }
-    act(() => result.current.onSelect('allAuthorsUnpublishedOnly', true));
-    act(() => result.current.onSelect('allAuthorsUnpublishedOnly', undefined));
+    await act(() => result.current.onSelect('allAuthorsUnpublishedOnly', true));
+    await act(() => result.current.onSelect('allAuthorsUnpublishedOnly', undefined));
     expect(result.current.queryParams).toEqual({ user_id: '42', includeDrafts: true });
-    act(() => result.current.onSelect('allAuthorsUnpublishedOnly', true));
-    act(() => result.current.resetFilters());
+    await act(() => result.current.onSelect('allAuthorsUnpublishedOnly', true));
+    await act(() => result.current.resetFilters());
     expect(result.current.queryParams).toEqual({ user_id: '42', includeDrafts: true });
   });
 
-  it('builds stable, cleaned queryParams without empty values', () => {
-    const { result } = setup();
+  it('builds stable, cleaned queryParams without empty values', async () => {
+    const { result } = await setup();
 
-    act(() => {
+    await act(() => {
       result.current.onSelect('countries', [3, null, undefined, '']);
       result.current.onSelect('year', '');
     });
 
     const first = result.current.queryParams;
 
-    act(() => {
+    await act(() => {
       // тот же набор значений в другом порядке не должен менять строку
       result.current.onSelect('countries', ['3', 3]);
     });
@@ -91,10 +91,10 @@ describe('useListTravelFilters', () => {
     });
   });
 
-  it('maps textual categories to numeric ids for filter state and queryParams', () => {
-    const { result } = setup();
+  it('maps textual categories to numeric ids for filter state and queryParams', async () => {
+    const { result } = await setup();
 
-    act(() => {
+    await act(() => {
       result.current.onSelect('categories', ['Горы', '2']);
     });
 
@@ -102,10 +102,10 @@ describe('useListTravelFilters', () => {
     expect(result.current.queryParams.categories).toEqual([1, 2]);
   });
 
-  it('maps textual point categories to numeric ids for filter state and queryParams', () => {
-    const { result } = setup();
+  it('maps textual point categories to numeric ids for filter state and queryParams', async () => {
+    const { result } = await setup();
 
-    act(() => {
+    await act(() => {
       result.current.onSelect('categoryTravelAddress', ['Озеро', '110']);
     });
 
@@ -113,17 +113,17 @@ describe('useListTravelFilters', () => {
     expect(result.current.queryParams.categoryTravelAddress).toEqual([84, 110]);
   });
 
-  it('keeps year as non-empty trimmed string and drops empty year', () => {
-    const { result } = setup();
+  it('keeps year as non-empty trimmed string and drops empty year', async () => {
+    const { result } = await setup();
 
-    act(() => {
+    await act(() => {
       result.current.applyFilter({ year: ' 2024 ' } as any);
     });
 
     expect(result.current.filter.year).toBe('2024');
     expect(result.current.queryParams.year).toBe('2024');
 
-    act(() => {
+    await act(() => {
       result.current.applyFilter({ year: '' } as any);
     });
 
@@ -131,15 +131,15 @@ describe('useListTravelFilters', () => {
     expect(result.current.queryParams.year).toBeUndefined();
   });
 
-  it('removes field from filter when onSelect gets empty value', () => {
-    const { result } = setup();
+  it('removes field from filter when onSelect gets empty value', async () => {
+    const { result } = await setup();
 
-    act(() => {
+    await act(() => {
       result.current.onSelect('transports', [10]);
     });
     expect(result.current.filter.transports).toEqual([10]);
 
-    act(() => {
+    await act(() => {
       result.current.onSelect('transports', []);
     });
 
@@ -147,28 +147,28 @@ describe('useListTravelFilters', () => {
     expect(result.current.queryParams.transports).toBeUndefined();
   });
 
-  it('adds and removes category names via handleToggleCategory', () => {
-    const { result } = setup();
+  it('adds and removes category names via handleToggleCategory', async () => {
+    const { result } = await setup();
 
-    act(() => {
+    await act(() => {
       result.current.handleToggleCategory('Горы');
     });
     expect(result.current.filter.categories).toEqual([1]);
 
-    act(() => {
+    await act(() => {
       result.current.handleToggleCategory('Горы');
     });
     // При пустом массиве onSelect удаляет поле из фильтра
     expect(result.current.filter.categories).toBeUndefined();
   });
 
-  it('uses context flags isMeTravel / isTravelBy for queryParams', () => {
-    const { result: resultTravelBy } = setup({ isTravelBy: true });
+  it('uses context flags isMeTravel / isTravelBy for queryParams', async () => {
+    const { result: resultTravelBy } = await setup({ isTravelBy: true });
 
     // Для travelsby должен проставляться countries = [BELARUS_ID] (3 по умолчанию)
     expect(resultTravelBy.current.queryParams.countries).toEqual([3]);
 
-    const { result: resultMeTravel } = setup({ isMeTravel: true, userId: '42' });
+    const { result: resultMeTravel } = await setup({ isMeTravel: true, userId: '42' });
     expect(resultMeTravel.current.queryParams.user_id).toBe('42');
     // /metravel по умолчанию включает черновики; статусные тоглы сужают список явно.
     expect(resultMeTravel.current.queryParams.includeDrafts).toBe(true);
@@ -176,10 +176,10 @@ describe('useListTravelFilters', () => {
     expect(resultMeTravel.current.queryParams.moderation).toBeUndefined();
   });
 
-  it('builds draft query params for "Мои путешествия" when draftsOnly is selected', () => {
-    const { result } = setup({ isMeTravel: true, userId: '42' });
+  it('builds draft query params for "Мои путешествия" when draftsOnly is selected', async () => {
+    const { result } = await setup({ isMeTravel: true, userId: '42' });
 
-    act(() => {
+    await act(() => {
       result.current.onSelect('draftsOnly', true);
     });
 
@@ -191,10 +191,10 @@ describe('useListTravelFilters', () => {
     });
   });
 
-  it('builds staff-wide pending queue params for "Мои путешествия" admin moderation toggle', () => {
-    const { result } = setup({ isMeTravel: true, userId: '42' });
+  it('builds staff-wide pending queue params for "Мои путешествия" admin moderation toggle', async () => {
+    const { result } = await setup({ isMeTravel: true, userId: '42' });
 
-    act(() => {
+    await act(() => {
       result.current.onSelect('moderation', 0);
     });
 
@@ -204,17 +204,17 @@ describe('useListTravelFilters', () => {
     });
   });
 
-  it('keeps moderation queue mutually exclusive with draft and published modes', () => {
-    const { result } = setup({ isMeTravel: true, userId: '42' });
+  it('keeps moderation queue mutually exclusive with draft and published modes', async () => {
+    const { result } = await setup({ isMeTravel: true, userId: '42' });
 
-    act(() => {
+    await act(() => {
       result.current.onSelect('draftsOnly', true);
       result.current.onSelect('moderation', 0);
     });
 
     expect(result.current.filter).toEqual({ moderation: 0 });
 
-    act(() => {
+    await act(() => {
       result.current.onSelect('publishedOnly', true);
     });
 
@@ -227,32 +227,32 @@ describe('useListTravelFilters', () => {
   });
 
   describe('initialFilter', () => {
-    it('uses INITIAL_FILTER (empty) when initialFilter is not provided', () => {
-      const { result } = setup();
+    it('uses INITIAL_FILTER (empty) when initialFilter is not provided', async () => {
+      const { result } = await setup();
       expect(result.current.filter).toEqual({});
     });
 
-    it('initialises filter state from initialFilter when provided', () => {
-      const { result } = setup({
+    it('initialises filter state from initialFilter when provided', async () => {
+      const { result } = await setup({
         initialFilter: { categories: [2, 21], over_nights_stay: [1] },
       });
       expect(result.current.filter.categories).toEqual([2, 21]);
       expect(result.current.filter.over_nights_stay).toEqual([1]);
     });
 
-    it('reflects initialFilter in queryParams immediately', () => {
-      const { result } = setup({
+    it('reflects initialFilter in queryParams immediately', async () => {
+      const { result } = await setup({
         initialFilter: { month: [6, 7, 8] },
       });
       expect(result.current.queryParams.month).toEqual([6, 7, 8]);
     });
 
-    it('allows overriding initialFilter values via onSelect', () => {
-      const { result } = setup({
+    it('allows overriding initialFilter values via onSelect', async () => {
+      const { result } = await setup({
         initialFilter: { categories: [2, 21] },
       });
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('categories', [22]);
       });
 
@@ -260,20 +260,20 @@ describe('useListTravelFilters', () => {
       expect(result.current.queryParams.categories).toEqual([22]);
     });
 
-    it('allows resetting to empty state via resetFilters even when initialFilter was set', () => {
-      const { result } = setup({
+    it('allows resetting to empty state via resetFilters even when initialFilter was set', async () => {
+      const { result } = await setup({
         initialFilter: { categories: [2], month: [6, 7, 8] },
       });
 
-      act(() => {
+      await act(() => {
         result.current.resetFilters();
       });
 
       expect(result.current.filter).toEqual({});
     });
 
-    it('handles initialFilter with multiple filter types simultaneously', () => {
-      const { result } = setup({
+    it('handles initialFilter with multiple filter types simultaneously', async () => {
+      const { result } = await setup({
         initialFilter: {
           categories: [22, 2],
           over_nights_stay: [1, 8],
@@ -288,8 +288,8 @@ describe('useListTravelFilters', () => {
       expect(result.current.queryParams.month).toEqual([9, 10, 11]);
     });
 
-    it('ignores undefined initialFilter (falls back to empty filter)', () => {
-      const { result } = setup({ initialFilter: undefined });
+    it('ignores undefined initialFilter (falls back to empty filter)', async () => {
+      const { result } = await setup({ initialFilter: undefined });
       expect(result.current.filter).toEqual({});
     });
   });

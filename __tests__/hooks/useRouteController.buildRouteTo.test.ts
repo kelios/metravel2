@@ -99,8 +99,8 @@ describe('useRouteController.buildRouteTo', () => {
     jest.useRealTimers()
   })
 
-  it('collapses the mobile bottom sheet before opening a popup for the target point', () => {
-    const { result } = renderHook(() =>
+  it('collapses the mobile bottom sheet before opening a popup for the target point', async () => {
+    const { result } = await renderHook(() =>
       useRouteController({
         mapUiApi: {
           focusOnCoord: mockFocusOnCoord,
@@ -109,19 +109,19 @@ describe('useRouteController.buildRouteTo', () => {
       })
     )
 
-    act(() => {
+    await act(() => {
       result.current.buildRouteTo({ coord: '50.0619474, 19.9368564' } as any)
     })
 
     expect(mockRequestPanelCollapse).toHaveBeenCalledTimes(1)
     expect(mockFocusOnCoord).toHaveBeenCalledWith('50.061947,19.936856', { zoom: 14 })
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(519)
     })
     expect(mockOpenPopupForCoord).not.toHaveBeenCalled()
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1)
     })
     expect(mockOpenPopupForCoord).toHaveBeenCalledWith('50.0619474,19.9368564')
@@ -129,8 +129,8 @@ describe('useRouteController.buildRouteTo', () => {
     expect(mockOpenPopupForCoord).toHaveBeenCalledWith('50.061947,19.936856')
   })
 
-  it('switches to route mode and creates start/end points from origin to swiped place', () => {
-    const { result } = renderHook(() =>
+  it('switches to route mode and creates start/end points from origin to swiped place', async () => {
+    const { result } = await renderHook(() =>
       useRouteController({
         originCoordinates: { latitude: 53.9, longitude: 27.5667 },
         mapUiApi: {
@@ -140,7 +140,7 @@ describe('useRouteController.buildRouteTo', () => {
       })
     )
 
-    act(() => {
+    await act(() => {
       result.current.buildRouteTo({
         coord: '50.0619474, 19.9368564',
         address: 'Krakow place',
@@ -161,10 +161,10 @@ describe('useRouteController.buildRouteTo', () => {
     )
   })
 
-  it('does not request collapse when the bottom sheet is already collapsed', () => {
+  it('does not request collapse when the bottom sheet is already collapsed', async () => {
     mockBottomSheetState = 'collapsed'
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useRouteController({
         mapUiApi: {
           focusOnCoord: mockFocusOnCoord,
@@ -173,7 +173,7 @@ describe('useRouteController.buildRouteTo', () => {
       })
     )
 
-    act(() => {
+    await act(() => {
       result.current.buildRouteTo({ coord: '50.0619474, 19.9368564' } as any)
       jest.advanceTimersByTime(420)
     })
@@ -182,8 +182,8 @@ describe('useRouteController.buildRouteTo', () => {
     expect(mockOpenPopupForCoord).toHaveBeenCalled()
   })
 
-  it('adds a tapped place as a route point without opening a popup', () => {
-    const { result } = renderHook(() =>
+  it('adds a tapped place as a route point without opening a popup', async () => {
+    const { result } = await renderHook(() =>
       useRouteController({
         mapUiApi: {
           focusOnCoord: mockFocusOnCoord,
@@ -192,7 +192,7 @@ describe('useRouteController.buildRouteTo', () => {
       })
     )
 
-    act(() => {
+    await act(() => {
       result.current.addRoutePointFromTravel({
         coord: '50.0619474, 19.9368564',
         address: 'Krakow place',

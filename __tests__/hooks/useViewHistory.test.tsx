@@ -169,7 +169,7 @@ describe('useViewHistory (reactive read)', () => {
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={qc}>{children}</QueryClientProvider>
     );
-    const { result } = renderHook(() => useViewHistory(), { wrapper });
+    const { result } = await renderHook(() => useViewHistory(), { wrapper });
 
     expect(result.current).toEqual([]);
     expect(mockFetch).not.toHaveBeenCalled();

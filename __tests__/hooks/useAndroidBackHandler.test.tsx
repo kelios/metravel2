@@ -63,20 +63,20 @@ describe('useAndroidBackHandler (NAV-1: focus-scoped subscription)', () => {
     jest.restoreAllMocks();
   });
 
-  it('subscribes once while focused and does not re-subscribe when the route or callbacks change', () => {
-    const { rerender } = render(<Screen onDismiss={() => false} />);
+  it('subscribes once while focused and does not re-subscribe when the route or callbacks change', async () => {
+    const { rerender } = await render(<Screen onDismiss={() => false} />);
     expect(addListener).toHaveBeenCalledTimes(1);
 
     mockPathname = '/messages';
-    rerender(<Screen onDismiss={() => false} />);
-    rerender(<Screen onDismiss={() => false} />);
+    await rerender(<Screen onDismiss={() => false} />);
+    await rerender(<Screen onDismiss={() => false} />);
 
     expect(addListener).toHaveBeenCalledTimes(1);
     expect(remove).not.toHaveBeenCalled();
   });
 
-  it('reads the latest route inside the long-lived handler', () => {
-    const { rerender } = render(<Screen />);
+  it('reads the latest route inside the long-lived handler', async () => {
+    const { rerender } = await render(<Screen />);
     const handler = lastHandler();
 
     // Not home: delegate to the router.
@@ -86,7 +86,7 @@ describe('useAndroidBackHandler (NAV-1: focus-scoped subscription)', () => {
     // Navigated to home without re-subscribing: the first press shows the
     // "press again to exit" toast and is consumed, the second one exits.
     mockPathname = '/';
-    rerender(<Screen />);
+    await rerender(<Screen />);
     expect(addListener).toHaveBeenCalledTimes(1);
     expect(handler()).toBe(true);
     expect(ToastAndroid.show).toHaveBeenCalledTimes(1);
@@ -94,30 +94,30 @@ describe('useAndroidBackHandler (NAV-1: focus-scoped subscription)', () => {
     expect(mockRouter.back).toHaveBeenCalledTimes(1);
   });
 
-  it('does not listen while the screen is not focused and starts listening on focus', () => {
+  it('does not listen while the screen is not focused and starts listening on focus', async () => {
     mockFocus.focused = false;
-    const { rerender } = render(<Screen />);
+    const { rerender } = await render(<Screen />);
     expect(addListener).not.toHaveBeenCalled();
 
     mockFocus.focused = true;
-    rerender(<Screen />);
+    await rerender(<Screen />);
     expect(addListener).toHaveBeenCalledTimes(1);
 
     mockFocus.focused = false;
-    rerender(<Screen />);
+    await rerender(<Screen />);
     expect(remove).toHaveBeenCalledTimes(1);
   });
 
-  it('removes the subscription on unmount', () => {
-    const { unmount } = render(<Screen />);
-    unmount();
+  it('removes the subscription on unmount', async () => {
+    const { unmount } = await render(<Screen />);
+    await unmount();
     expect(remove).toHaveBeenCalledTimes(1);
   });
 
-  it('prefers a dismissed sheet, then the explicit back target, then the router', () => {
+  it('prefers a dismissed sheet, then the explicit back target, then the router', async () => {
     const onDismiss = jest.fn(() => true);
     const resolveBack = jest.fn(() => true);
-    const { rerender } = render(<Screen onDismiss={onDismiss} resolveBack={resolveBack} />);
+    const { rerender } = await render(<Screen onDismiss={onDismiss} resolveBack={resolveBack} />);
     const handler = lastHandler();
 
     expect(handler()).toBe(true);
@@ -125,21 +125,21 @@ describe('useAndroidBackHandler (NAV-1: focus-scoped subscription)', () => {
     expect(resolveBack).not.toHaveBeenCalled();
 
     onDismiss.mockReturnValue(false);
-    rerender(<Screen onDismiss={onDismiss} resolveBack={resolveBack} />);
+    await rerender(<Screen onDismiss={onDismiss} resolveBack={resolveBack} />);
     expect(handler()).toBe(true);
     expect(resolveBack).toHaveBeenCalledTimes(1);
     expect(mockRouter.back).not.toHaveBeenCalled();
 
     resolveBack.mockReturnValue(false);
     mockRouter.canGoBack.mockReturnValue(false);
-    rerender(<Screen onDismiss={onDismiss} resolveBack={resolveBack} />);
+    await rerender(<Screen onDismiss={onDismiss} resolveBack={resolveBack} />);
     expect(handler()).toBe(false);
     expect(mockRouter.back).not.toHaveBeenCalled();
   });
 
-  it('does nothing off Android', () => {
+  it('does nothing off Android', async () => {
     (Platform as { OS: string }).OS = 'ios';
-    render(<Screen />);
+    await render(<Screen />);
     expect(addListener).not.toHaveBeenCalled();
   });
 });

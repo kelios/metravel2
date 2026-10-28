@@ -30,7 +30,7 @@ type TestMarker = {
 
 describe('MarkerClusterGroup', () => {
   const originalDocument = global.document
-  const renderWithClient = (ui: React.ReactElement) => {
+  const renderWithClient = async (ui: React.ReactElement) => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -40,7 +40,7 @@ describe('MarkerClusterGroup', () => {
 
     return {
       queryClient,
-      ...render(
+      ...await render(
         <QueryClientProvider client={queryClient}>
           {ui}
         </QueryClientProvider>,
@@ -63,7 +63,7 @@ describe('MarkerClusterGroup', () => {
     ;(global as any).document = originalDocument
   })
 
-  it('forwards popup shell props and popupopen handler to imperative Leaflet markers', () => {
+  it('forwards popup shell props and popupopen handler to imperative Leaflet markers', async () => {
     const popupOpen = jest.fn()
     const markerHandlers = new Map<string, (event: any) => void>()
     const marker = {} as TestMarker
@@ -92,7 +92,7 @@ describe('MarkerClusterGroup', () => {
       divIcon: jest.fn(),
     }
 
-    renderWithClient(
+    await renderWithClient(
       <MarkerClusterGroup
         L={L}
         useMap={() => map}
@@ -134,7 +134,7 @@ describe('MarkerClusterGroup', () => {
     expect(popupOpen).toHaveBeenCalledWith(popupEvent)
   })
 
-  it('defers popup opening to marker click follow-up when a handler is present', () => {
+  it('defers popup opening to marker click follow-up when a handler is present', async () => {
     const markerHandlers = new Map<string, (event: any) => void>()
     const marker = {} as TestMarker
     marker.bindPopup = jest.fn()
@@ -162,7 +162,7 @@ describe('MarkerClusterGroup', () => {
     }
     const onMarkerClick = jest.fn()
 
-    renderWithClient(
+    await renderWithClient(
       <MarkerClusterGroup
         L={L}
         useMap={() => map}
@@ -190,7 +190,7 @@ describe('MarkerClusterGroup', () => {
     expect(onMarkerClick.mock.calls[0][2]).toBe(marker)
   })
 
-  it('renders popup content through a portal into the Leaflet popup container', () => {
+  it('renders popup content through a portal into the Leaflet popup container', async () => {
     const markerHandlers = new Map<string, (event: any) => void>()
     const marker = {} as TestMarker
     marker.bindPopup = jest.fn()
@@ -217,7 +217,7 @@ describe('MarkerClusterGroup', () => {
       divIcon: jest.fn(),
     }
 
-    renderWithClient(
+    await renderWithClient(
       <MarkerClusterGroup
         L={L}
         useMap={() => map}
@@ -234,7 +234,7 @@ describe('MarkerClusterGroup', () => {
       />,
     )
 
-    act(() => {
+    await act(() => {
       markerHandlers.get('popupopen')?.({})
     })
 
@@ -249,7 +249,7 @@ describe('MarkerClusterGroup', () => {
     expect(popupContainer?.className).toBe('metravel-cluster-popup-root')
   })
 
-  it('does not bind or open Leaflet popup when mobile bottom-card mode suppresses popups', () => {
+  it('does not bind or open Leaflet popup when mobile bottom-card mode suppresses popups', async () => {
     const markerHandlers = new Map<string, (event: any) => void>()
     const marker = {} as TestMarker
     marker.bindPopup = jest.fn()
@@ -277,7 +277,7 @@ describe('MarkerClusterGroup', () => {
     }
     const onMarkerClick = jest.fn()
 
-    renderWithClient(
+    await renderWithClient(
       <MarkerClusterGroup
         L={L}
         useMap={() => map}
@@ -308,7 +308,7 @@ describe('MarkerClusterGroup', () => {
     expect(mockCreatePortal).not.toHaveBeenCalled()
   })
 
-  it('keeps Leaflet markers mounted when only popup React content changes', () => {
+  it('keeps Leaflet markers mounted when only popup React content changes', async () => {
     const marker = {} as TestMarker
     marker.bindPopup = jest.fn()
     marker.bindTooltip = jest.fn()
@@ -341,7 +341,7 @@ describe('MarkerClusterGroup', () => {
     const FirstPopupContent = () => null
     const SecondPopupContent = () => null
 
-    const { queryClient, rerender } = renderWithClient(
+    const { queryClient, rerender } = await renderWithClient(
       <MarkerClusterGroup
         L={L}
         useMap={() => map}
@@ -359,7 +359,7 @@ describe('MarkerClusterGroup', () => {
     expect(addLayersCalls).toBeGreaterThan(0)
     expect(clearLayersCalls).toBe(0)
 
-    rerender(
+    await rerender(
       <QueryClientProvider client={queryClient}>
         <MarkerClusterGroup
           L={L}
@@ -379,7 +379,7 @@ describe('MarkerClusterGroup', () => {
   // #1347 — the server-cluster query re-keys on every viewport change, so the same
   // places arrive as a brand-new array on every pan. Rebuilding all markers there is
   // what froze the mobile map.
-  it('diffs markers by key: a new array with the same points touches nothing', () => {
+  it('diffs markers by key: a new array with the same points touches nothing', async () => {
     const makeMarker = () => {
       const marker = {} as TestMarker & { off: jest.Mock; unbindPopup: jest.Mock }
       marker.bindPopup = jest.fn()
@@ -416,14 +416,14 @@ describe('MarkerClusterGroup', () => {
       Popup: () => null,
     })
 
-    const { queryClient, rerender } = renderWithClient(
+    const { queryClient, rerender } = await renderWithClient(
       <MarkerClusterGroup {...(props([pointA, pointB]) as any)} />,
     )
     expect(L.marker).toHaveBeenCalledTimes(2)
     expect(group.addLayers).toHaveBeenCalledTimes(1)
 
     // Same two points, fresh array + fresh objects (what a refetch produces).
-    rerender(
+    await rerender(
       <QueryClientProvider client={queryClient}>
         <MarkerClusterGroup {...(props([{ ...pointA }, { ...pointB }]) as any)} />
       </QueryClientProvider>,
@@ -435,7 +435,7 @@ describe('MarkerClusterGroup', () => {
 
     // One point leaves, one arrives → exactly one create and one removal.
     const pointC = { id: 3, coord: '54.0,27.90', address: 'Логойск' } as any
-    rerender(
+    await rerender(
       <QueryClientProvider client={queryClient}>
         <MarkerClusterGroup {...(props([pointA, pointC]) as any)} />
       </QueryClientProvider>,
@@ -451,7 +451,7 @@ describe('MarkerClusterGroup', () => {
   // #1347 — the parent keeps a coord→marker index that MapUiApi.openPopupForCoord uses
   // to open a place card from the list. With clear+rebuild it was re-published on every
   // data change; the diff must keep it whole, including survivors.
-  it('republishes the whole marker index after a diff, and only drops orphaned coords', () => {
+  it('republishes the whole marker index after a diff, and only drops orphaned coords', async () => {
     const makeMarker = () => {
       const marker: any = {}
       marker.bindPopup = jest.fn()
@@ -500,14 +500,14 @@ describe('MarkerClusterGroup', () => {
       onMarkerInstance,
     })
 
-    const { queryClient, rerender } = renderWithClient(
+    const { queryClient, rerender } = await renderWithClient(
       <MarkerClusterGroup {...(props([a, b, c]) as any)} />,
     )
     expect(index.get(shared)).toBeTruthy()
     expect(index.get('54.0,27.90')).toBeTruthy()
 
     // b leaves. Its coord is still owned by a, so the shared entry must survive.
-    rerender(
+    await rerender(
       <QueryClientProvider client={queryClient}>
         <MarkerClusterGroup {...(props([a, c]) as any)} />
       </QueryClientProvider>,
@@ -516,7 +516,7 @@ describe('MarkerClusterGroup', () => {
     expect(index.get('54.0,27.90')).toBeTruthy()
 
     // c leaves — nobody owns its coord any more.
-    rerender(
+    await rerender(
       <QueryClientProvider client={queryClient}>
         <MarkerClusterGroup {...(props([a]) as any)} />
       </QueryClientProvider>,
@@ -527,7 +527,7 @@ describe('MarkerClusterGroup', () => {
 
   // #1347 — a surviving key must not freeze stale content: the marker is never
   // re-created, so a changed address/coord has to be detected as a replacement.
-  it('re-creates a marker when the same place changes coordinates or content', () => {
+  it('re-creates a marker when the same place changes coordinates or content', async () => {
     const group = {
       addLayers: jest.fn(),
       addLayer: jest.fn(),
@@ -565,13 +565,13 @@ describe('MarkerClusterGroup', () => {
       Popup,
     })
 
-    const { queryClient, rerender } = renderWithClient(
+    const { queryClient, rerender } = await renderWithClient(
       <MarkerClusterGroup {...(props({ id: 7, coord: '53.9,27.56', address: 'Старый' }) as any)} />,
     )
     expect(L.marker).toHaveBeenCalledTimes(1)
 
     // Same id, same coord, new address → replaced.
-    rerender(
+    await rerender(
       <QueryClientProvider client={queryClient}>
         <MarkerClusterGroup {...(props({ id: 7, coord: '53.9,27.56', address: 'Новый' }) as any)} />
       </QueryClientProvider>,
@@ -580,7 +580,7 @@ describe('MarkerClusterGroup', () => {
     expect(group.removeLayers).toHaveBeenCalledTimes(1)
 
     // Same id, moved → replaced again.
-    rerender(
+    await rerender(
       <QueryClientProvider client={queryClient}>
         <MarkerClusterGroup {...(props({ id: 7, coord: '54.1,27.90', address: 'Новый' }) as any)} />
       </QueryClientProvider>,
@@ -644,7 +644,7 @@ describe('MarkerClusterGroup', () => {
         MarkerCluster: FakeMarkerCluster,
       }
 
-      renderWithClient(
+      await renderWithClient(
         <MarkerClusterGroup
           L={L}
           useMap={() => map}
@@ -669,7 +669,7 @@ describe('MarkerClusterGroup', () => {
       } finally { await act(async () => { await i18n.changeLanguage('ru') }) }
     })
 
-    it('labels a cluster reported later through the map layeradd event, and ignores non-cluster layers', () => {
+    it('labels a cluster reported later through the map layeradd event, and ignores non-cluster layers', async () => {
       const clusterIcon = makeIcon()
       const fakeCluster = new FakeMarkerCluster(clusterIcon, 3)
       const plainMarkerIcon = makeIcon()
@@ -701,7 +701,7 @@ describe('MarkerClusterGroup', () => {
         MarkerCluster: FakeMarkerCluster,
       }
 
-      renderWithClient(
+      await renderWithClient(
         <MarkerClusterGroup
           L={L}
           useMap={() => map}
@@ -723,7 +723,7 @@ describe('MarkerClusterGroup', () => {
       expect(clusterIcon.getAttribute('aria-label')).toBe('Кластер: 3 точки')
     })
 
-    it('does not throw when `L.MarkerCluster`, `map.on` or `map.eachLayer` are unavailable (degenerate host)', () => {
+    it('does not throw when `L.MarkerCluster`, `map.on` or `map.eachLayer` are unavailable (degenerate host)', async () => {
       const marker = {} as TestMarker
       marker.bindPopup = jest.fn()
       marker.bindTooltip = jest.fn()
@@ -743,7 +743,7 @@ describe('MarkerClusterGroup', () => {
         divIcon: jest.fn(),
       }
 
-      expect(() =>
+      await expect(
         renderWithClient(
           <MarkerClusterGroup
             L={L}
@@ -754,7 +754,7 @@ describe('MarkerClusterGroup', () => {
             Popup={() => null}
           />,
         ),
-      ).not.toThrow()
+      ).resolves.toBeDefined()
     })
   })
 })

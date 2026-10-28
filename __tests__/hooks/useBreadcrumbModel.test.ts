@@ -80,7 +80,7 @@ describe('useBreadcrumbModel', () => {
     // Данные ключа кладёт экран деталей; крошка их только читает.
     queryClient.setQueryData(queryKeys.travel('test-slug'), { name: 'Длинное описание' });
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.items.length).toBeGreaterThan(0);
@@ -113,7 +113,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/travels/test-slug');
     useLocalSearchParams.mockReturnValue({ returnTo: '/travelsby' });
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.currentTitle).toBe('Статический маршрут');
@@ -132,7 +132,7 @@ describe('useBreadcrumbModel', () => {
       countryName: 'Хорватия',
     });
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.items.length).toBeGreaterThan(0);
@@ -154,7 +154,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue(pathname);
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.showBreadcrumbs).toBe(true);
@@ -172,7 +172,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/profile');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current).toBeTruthy();
@@ -188,7 +188,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/subscriptions');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current).toBeTruthy();
@@ -212,7 +212,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue(pathname);
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current).toBeTruthy();
@@ -225,7 +225,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/export');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current).toBeTruthy();
@@ -246,7 +246,7 @@ describe('useBreadcrumbModel', () => {
     for (const path of ['/favorites', '/history', '/calendar']) {
       usePathname.mockReturnValue(path);
       useLocalSearchParams.mockReturnValue({});
-      const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+      const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
       await waitFor(() => expect(result.current).toBeTruthy());
       expect(result.current.showBreadcrumbs).toBe(false);
       expect(result.current.items).toEqual([]);
@@ -262,7 +262,7 @@ describe('useBreadcrumbModel', () => {
       usePathname.mockReturnValue(path);
       useLocalSearchParams.mockReturnValue({});
 
-      const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+      const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
       await waitFor(() => expect(result.current).toBeTruthy());
       expect(result.current.showBreadcrumbs).toBe(true);
@@ -276,14 +276,14 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/search');
     useLocalSearchParams.mockReturnValue({});
 
-    const plain = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const plain = await renderHook(() => useBreadcrumbModel(), { wrapper });
     await waitFor(() => expect(plain.result.current).toBeTruthy());
     expect(plain.result.current.showBreadcrumbs).toBe(false);
 
     // «Замки» с главной: /search?categoryTravelAddress=33,43
     useLocalSearchParams.mockReturnValue({ categoryTravelAddress: '33,43' });
 
-    const filtered = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const filtered = await renderHook(() => useBreadcrumbModel(), { wrapper });
     await waitFor(() => expect(filtered.result.current).toBeTruthy());
     expect(filtered.result.current.showBreadcrumbs).toBe(true);
     expect(filtered.result.current.items).toEqual([
@@ -296,7 +296,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/userpoints');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => expect(result.current).toBeTruthy());
     expect(result.current.showBreadcrumbs).toBe(true);
@@ -317,7 +317,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/quests/minsk');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.currentTitle).toBe('Минск');
@@ -338,13 +338,13 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue(path);
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
     // Before the screen's `?lang=` bundle: no slug guess and no own request.
     expect(result.current.items).toEqual([{ label: 'Квесты', path: '/quests' }]);
     expect(result.current.structuredDataOwnedByScreen).toBe(true);
     expect(fetchQuestByQuestId).not.toHaveBeenCalled();
 
-    act(() => {
+    await act(() => {
       queryClient.setQueryData(queryKeys.questBundle('brest-fortress', locale), {
         title: 'Rozkaz nr 1: trzy dni Twierdzy Brzeskiej', content_locale: locale,
       });
@@ -366,16 +366,16 @@ describe('useBreadcrumbModel', () => {
       title: 'Приказ № 1: три дня Брестской крепости', content_locale: 'ru',
     });
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
     await act(async () => { await Promise.resolve(); });
     expect(result.current.items).toEqual([{ label: 'Квесты', path: '/quests' }]);
   });
 
-  it('does not titleize the RU quest slug while its bundle is pending', () => {
+  it('does not titleize the RU quest slug while its bundle is pending', async () => {
     usePathname.mockReturnValue('/quests/4/minsk-cmok');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
     expect(result.current.items).toEqual([{ label: 'Квесты', path: '/quests' }]);
     expect(result.current.items.map((item) => item.label)).not.toContain('Minsk Cmok');
     expect(result.current.structuredDataOwnedByScreen).toBe(true);
@@ -385,7 +385,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/quests/scenario');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.currentTitle).toBe('Сценарий квеста');
@@ -417,7 +417,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/quests/country/belarus');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.currentTitle).toBe('Беларусь');
@@ -438,7 +438,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/quests/paphos');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
     const seen: string[] = [result.current.currentTitle];
     await waitFor(() => expect(fetchQuestsList).toHaveBeenCalled());
     seen.push(result.current.currentTitle);
@@ -460,7 +460,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/quests/minsk');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.currentTitle).toBe('Квесты');
@@ -475,11 +475,11 @@ describe('useBreadcrumbModel', () => {
     queryClient.setDefaultOptions({ queries: { retry: false } });
     usePathname.mockReturnValue('/quests/minsk');
     useLocalSearchParams.mockReturnValue({});
-    const screen = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const screen = await renderHook(() => useBreadcrumbModel(), { wrapper });
     await waitFor(() => expect(queryClient.getQueryState(questsListQueryOptions().queryKey)?.status).toBe('error'));
     expect(screen.result.current.items).toEqual([{ label: 'Квесты', path: '/quests' }]);
 
-    act(() => queryClient.setQueryData(questsListQueryOptions().queryKey, [
+    await act(() => queryClient.setQueryData(questsListQueryOptions().queryKey, [
       { quest_id: 'minsk-center', city_id: '4', city_name: 'Мінск', title: 'Квест' },
     ]));
     await waitFor(() => expect(screen.result.current.currentTitle).toBe('Мінск'));
@@ -499,7 +499,7 @@ describe('useBreadcrumbModel', () => {
       fetchQuestsList.mockResolvedValue([{ quest_id: 'minsk-center', city_id: '4', city_name: name, title: 'Quest' }]);
       usePathname.mockReturnValue('/quests/minsk');
       useLocalSearchParams.mockReturnValue({});
-      const screen = renderHook(() => useBreadcrumbModel(), { wrapper });
+      const screen = await renderHook(() => useBreadcrumbModel(), { wrapper });
       unmount = screen.unmount;
       await waitFor(() => expect(screen.result.current.currentTitle).toBe(name));
       expect(screen.result.current.items.at(-1)).toEqual({ label: name, path: '/quests/minsk' });
@@ -515,7 +515,7 @@ describe('useBreadcrumbModel', () => {
     useLocalSearchParams.mockReturnValue({});
     fetchPlannedTrip.mockResolvedValue({ title: 'GR131 Ла-Пальма' });
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.currentTitle).toBe('GR131 Ла-Пальма');
@@ -535,7 +535,7 @@ describe('useBreadcrumbModel', () => {
     useLocalSearchParams.mockReturnValue({});
     fetchPublicTrip.mockResolvedValue({ title: 'QA: Поездка на Браславские озёра' });
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.currentTitle).toBe('QA: Поездка на Браславские озёра');
@@ -553,7 +553,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/trips/my');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.showBreadcrumbs).toBe(true);
@@ -571,7 +571,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/security-journal');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current).toBeTruthy();
@@ -591,7 +591,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/about');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current).toBeTruthy();
@@ -612,7 +612,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue(path);
     useLocalSearchParams.mockReturnValue({ token: 'abc' });
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current).toBeTruthy();
@@ -633,7 +633,7 @@ describe('useBreadcrumbModel', () => {
     let unmount: (() => void) | undefined;
     try {
       await i18n.changeLanguage(locale);
-      const screen = renderHook(() => useBreadcrumbModel(), { wrapper });
+      const screen = await renderHook(() => useBreadcrumbModel(), { wrapper });
       unmount = screen.unmount;
       const { result } = screen;
       expect(result.current.items).toEqual([
@@ -657,7 +657,7 @@ describe('useBreadcrumbModel', () => {
     let unmount: (() => void) | undefined;
     try {
       await i18n.changeLanguage('ru');
-      const screen = renderHook(() => useBreadcrumbModel(), { wrapper });
+      const screen = await renderHook(() => useBreadcrumbModel(), { wrapper });
       unmount = screen.unmount;
       expect(screen.result.current.currentTitle).toBe('Книга путешествий');
       await act(async () => { await i18n.changeLanguage('en'); });
@@ -670,11 +670,11 @@ describe('useBreadcrumbModel', () => {
     }
   });
 
-  it('keeps book-job navigation valid with a trailing route slash', () => {
+  it('keeps book-job navigation valid with a trailing route slash', async () => {
     const path = '/book-exports/00000000-0000-4000-8000-000000000000/';
     usePathname.mockReturnValue(path);
     useLocalSearchParams.mockReturnValue({});
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
     expect(result.current.items.map(item => item.path)).toEqual(['/profile', '/export', path]);
     expect(result.current.backToPath).toBe('/export');
     expect(result.current.currentTitle).toBe(i18n.t('export:components.export.BookJob.title'));
@@ -684,7 +684,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/map');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current).toBeTruthy();
@@ -699,7 +699,7 @@ describe('useBreadcrumbModel', () => {
     usePathname.mockReturnValue('/offline');
     useLocalSearchParams.mockReturnValue({});
 
-    const { result } = renderHook(() => useBreadcrumbModel(), { wrapper });
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
 
     await waitFor(() => {
       expect(result.current.currentTitle).toBe('Офлайн');

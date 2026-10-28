@@ -32,13 +32,13 @@ describe('native target measurements (#2307)', () => {
     for (const step of steps) if (step.targetTestID) {
       registry[step.targetTestID] = { current: { measureInWindow: jest.fn(callback => callback(24, targetY, 44, 44)) } }
     }
-    const view = render(<MapOnboarding layout={layout} targetRegistry={registry as MapOnboardingTargetRegistry} />)
+    const view = await render(<MapOnboarding layout={layout} targetRegistry={registry as MapOnboardingTargetRegistry} />)
     await act(async () => { restartMapOnboarding(); await Promise.resolve() })
     expect(view.queryByTestId('onboarding-spotlight')).toBeNull()
-    fireEvent(view.getByTestId('onboarding-card'), 'layout', { nativeEvent: { layout: { height: 220 } } })
+    await fireEvent(view.getByTestId('onboarding-card'), 'layout', { nativeEvent: { layout: { height: 220 } } })
     for (let i = 1; i <= 3; i++) {
-      fireEvent.press(view.getByTestId('onboarding-next'))
-      act(() => jest.advanceTimersByTime(20))
+      await fireEvent.press(view.getByTestId('onboarding-next'))
+      await act(() => jest.advanceTimersByTime(20))
       const spotlight = StyleSheet.flatten(view.getByTestId('onboarding-spotlight').props.style)
       expect(spotlight).toMatchObject({ top: targetY - 64 - 4, left: 20, width: 52, height: 52 })
       expect(registry[steps[i].targetTestID!].current.measureInWindow).toHaveBeenCalled()
@@ -48,10 +48,10 @@ describe('native target measurements (#2307)', () => {
     mockWindow = { width: 844, height: 390 }
     targetY = 120
     expect(useWindowDimensions()).toMatchObject({ width: 844, height: 390 })
-    view.rerender(<MapOnboarding layout={layout} targetRegistry={registry} />)
-    act(() => jest.advanceTimersByTime(20))
+    await view.rerender(<MapOnboarding layout={layout} targetRegistry={registry} />)
+    await act(() => jest.advanceTimersByTime(20))
     expect(StyleSheet.flatten(view.getByTestId('onboarding-spotlight').props.style).top).toBe(52)
-    fireEvent.press(view.getByTestId('onboarding-next'))
+    await fireEvent.press(view.getByTestId('onboarding-next'))
     expect(view.queryByTestId('onboarding-card')).toBeNull()
     expect(view.queryByTestId('onboarding-spotlight')).toBeNull()
   })
@@ -62,24 +62,24 @@ describe('native target measurements (#2307)', () => {
       'map-mobile-filters-button': { current: { measureInWindow: (callback: any) => { delayed = callback } } as View },
       'map-mobile-open-list': { current: { measureInWindow: (callback: any) => callback(40, 180, 44, 44) } as View },
     }
-    const view = render(<MapOnboarding layout="phone" targetRegistry={registry} />)
+    const view = await render(<MapOnboarding layout="phone" targetRegistry={registry} />)
     await act(async () => restartMapOnboarding())
-    fireEvent.press(view.getByTestId('onboarding-next'))
-    act(() => jest.advanceTimersByTime(20))
-    fireEvent.press(view.getByTestId('onboarding-next'))
-    act(() => jest.advanceTimersByTime(20))
-    act(() => delayed(24, 730, 44, 44))
+    await fireEvent.press(view.getByTestId('onboarding-next'))
+    await act(() => jest.advanceTimersByTime(20))
+    await fireEvent.press(view.getByTestId('onboarding-next'))
+    await act(() => jest.advanceTimersByTime(20))
+    await act(() => delayed(24, 730, 44, 44))
     expect(StyleSheet.flatten(view.getByTestId('onboarding-spotlight').props.style).top).toBe(112)
-    view.unmount()
-    act(() => delayed(24, 730, 44, 44))
+    await view.unmount()
+    await act(() => delayed(24, 730, 44, 44))
   })
 
   it('a missing native target never draws an invented spotlight', async () => {
     const ref = createRef<View>()
-    const view = render(<MapOnboarding layout="phone" targetRegistry={{ 'map-mobile-filters-button': ref }} />)
+    const view = await render(<MapOnboarding layout="phone" targetRegistry={{ 'map-mobile-filters-button': ref }} />)
     await act(async () => restartMapOnboarding())
-    fireEvent.press(view.getByTestId('onboarding-next'))
-    act(() => jest.advanceTimersByTime(20))
+    await fireEvent.press(view.getByTestId('onboarding-next'))
+    await act(() => jest.advanceTimersByTime(20))
     expect(view.queryByTestId('onboarding-spotlight')).toBeNull()
   })
 })

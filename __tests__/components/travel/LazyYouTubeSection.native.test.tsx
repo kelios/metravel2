@@ -37,9 +37,9 @@ jest.mock('@/components/travel/details/TravelDetailsIcons', () => ({
 
 describe('LazyYouTube native', () => {
   it('mounts the Android-compatible WebView player after the preview is pressed', async () => {
-    render(<LazyYouTube url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />)
+    await render(<LazyYouTube url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />)
 
-    fireEvent.press(screen.getByLabelText('Смотреть видео'))
+    await fireEvent.press(screen.getByLabelText('Смотреть видео'))
 
     await waitFor(() => {
       expect(screen.getByTestId('travel-youtube-webview')).toBeTruthy()
@@ -70,8 +70,8 @@ describe('LazyYouTube native', () => {
   // другие переходы уходят во внешний браузер/приложение YouTube.
   it('keeps only the wrapper and the player frame inside the app', async () => {
     mockOpenExternalUrl.mockClear()
-    render(<LazyYouTube url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />)
-    fireEvent.press(screen.getByLabelText('Смотреть видео'))
+    await render(<LazyYouTube url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />)
+    await fireEvent.press(screen.getByLabelText('Смотреть видео'))
     await waitFor(() => {
       expect(screen.getByTestId('travel-youtube-webview')).toBeTruthy()
     })

@@ -62,7 +62,7 @@ import PublicTripCard from '@/components/trips/PublicTripCard';
 import PublicTripDetail from '@/components/trips/PublicTripDetail';
 
 // #2133: меню жалобы в рендере зовёт мутации блокировки — нужен QueryClient, как в приложении.
-const render = (ui: Parameters<typeof rtlRender>[0]) =>
+const render = async (ui: Parameters<typeof rtlRender>[0]) =>
   rtlRender(ui, { wrapper: createQueryWrapper().Wrapper });
 
 const baseTrip: PublicTrip = {
@@ -102,10 +102,10 @@ describe('public trip fallback cover', () => {
     Platform.OS = originalPlatform;
   });
 
-  it('uses a default cover on the public trip detail when coverUrl is empty', () => {
+  it('uses a default cover on the public trip detail when coverUrl is empty', async () => {
     mockUsePublicTrip.mockReturnValue({ data: baseTrip, isLoading: false, isError: false });
 
-    render(<PublicTripDetail tripId={1} />);
+    await render(<PublicTripDetail tripId={1} />);
 
     const props = mockImageCardMedia.mock.calls.at(-1)?.[0];
     expect(props).toMatchObject({
@@ -118,8 +118,8 @@ describe('public trip fallback cover', () => {
     });
   });
 
-  it('uses a default cover on public trip cards when coverUrl is empty', () => {
-    render(<PublicTripCard trip={baseTrip} onPress={jest.fn()} />);
+  it('uses a default cover on public trip cards when coverUrl is empty', async () => {
+    await render(<PublicTripCard trip={baseTrip} onPress={jest.fn()} />);
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0];
     expect(props).toMatchObject({

@@ -34,7 +34,7 @@ describe('usePointListCategoryDictionaryModel', () => {
     mockFetchFilters.mockReset();
   });
 
-  it('uses query data when available and builds derived maps', () => {
+  it('uses query data when available and builds derived maps', async () => {
     mockUseQuery.mockReturnValue({
       data: [
         { id: 1, name: 'Озёра' },
@@ -42,7 +42,7 @@ describe('usePointListCategoryDictionaryModel', () => {
       ],
     });
 
-    const { result } = renderHook(() => usePointListCategoryDictionaryModel());
+    const { result } = await renderHook(() => usePointListCategoryDictionaryModel());
 
     expect(result.current.siteCategoryDictionary).toEqual([
       { id: 1, name: 'Озёра' },
@@ -59,7 +59,7 @@ describe('usePointListCategoryDictionaryModel', () => {
       categoryTravelAddress: [{ id: 5, name: 'Замки' }],
     });
 
-    const { result } = renderHook(() => usePointListCategoryDictionaryModel());
+    const { result } = await renderHook(() => usePointListCategoryDictionaryModel());
 
     await waitFor(() => {
       expect(result.current.siteCategoryDictionary).toEqual([{ id: '5', name: 'Замки' }]);
@@ -73,7 +73,7 @@ describe('usePointListCategoryDictionaryModel', () => {
     let resolveEn: (data: unknown) => void = () => {};
     mockFetchFilters.mockResolvedValueOnce({ categoryTravelAddress: [{ id: 84, name: 'Озеро' }] })
       .mockImplementationOnce(() => new Promise(resolve => { resolveEn = resolve; }));
-    const { result } = renderHook(() => usePointListCategoryDictionaryModel());
+    const { result } = await renderHook(() => usePointListCategoryDictionaryModel());
     await waitFor(() => expect(result.current.categoryIdToName.get('84')).toBe('Озеро'));
     await act(async () => { await i18n.changeLanguage('en'); });
     expect(result.current.siteCategoryDictionary).toEqual([]);

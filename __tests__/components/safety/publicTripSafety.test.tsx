@@ -57,7 +57,7 @@ jest.mock('@/components/layout/ScreenHeaderContext', () => ({
 
 import PublicTripDetail from '@/components/trips/PublicTripDetail'
 
-const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: createQueryWrapper().Wrapper })
+const render = async (ui: React.ReactElement) => rtlRender(ui, { wrapper: createQueryWrapper().Wrapper })
 
 beforeEach(() => {
   mockIsOwner = false
@@ -67,7 +67,7 @@ beforeEach(() => {
 
 describe('PublicTripDetail safety (#2133)', () => {
   it('phone: puts report and block of the organizer into the header overflow', async () => {
-    const { findByTestId, queryByTestId } = render(<PublicTripDetail tripId={11} />)
+    const { findByTestId, queryByTestId } = await render(<PublicTripDetail tripId={11} />)
     await findByTestId('trip-detail-11')
     expect(mockHeader?.overflow?.map((item) => item.key)).toEqual(['report', 'block'])
     expect(queryByTestId('trip-detail-safety-menu')).toBeNull()
@@ -75,13 +75,13 @@ describe('PublicTripDetail safety (#2133)', () => {
 
   it('desktop: renders the trigger next to the organizer', async () => {
     mockIsScreenHeaderMobile = false
-    const { findByTestId } = render(<PublicTripDetail tripId={11} />)
+    const { findByTestId } = await render(<PublicTripDetail tripId={11} />)
     expect(await findByTestId('trip-detail-safety-menu')).toBeTruthy()
   })
 
   it('owner: no safety actions on an own trip', async () => {
     mockIsOwner = true
-    const { findByTestId, queryByTestId } = render(<PublicTripDetail tripId={11} />)
+    const { findByTestId, queryByTestId } = await render(<PublicTripDetail tripId={11} />)
     await findByTestId('trip-detail-11')
     expect(mockHeader?.overflow).toBeUndefined()
     expect(queryByTestId('trip-detail-safety-menu')).toBeNull()

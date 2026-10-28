@@ -44,37 +44,37 @@ const makeData = (description: string): MyAchievements => {
 }
 beforeEach(() => { mockData = makeData('Русское описание') })
 
-it('refreshes the selected gallery detail from the active language data and preserves its share identity', () => {
+it('refreshes the selected gallery detail from the active language data and preserves its share identity', async () => {
   const screen = () => <AchievementsGalleryModal visible onClose={() => {}} data={mockData!} />
-  const view = render(screen())
-  fireEvent.press(view.getByTestId(`medal-${mockData!.earned[0].badge.id}`))
+  const view = await render(screen())
+  await fireEvent.press(view.getByTestId(`medal-${mockData!.earned[0].badge.id}`))
   expect(view.getByText('Русское описание')).toBeTruthy()
 
   mockData = makeData('Opis po polsku')
-  view.rerender(screen())
+  await view.rerender(screen())
 
   expect(view.getByText('Opis po polsku')).toBeTruthy()
   expect(view.queryByText('Русское описание')).toBeNull()
   expect(view.getByText(`share-${mockData.earned[0].id}`)).toBeTruthy()
 
   mockData = { ...mockData, earned: [] }
-  view.rerender(screen())
+  await view.rerender(screen())
   expect(view.queryByTestId('selected-detail')).toBeNull()
 })
 
-it.each([false, true])('refreshes the selected recent badge without old-language prose (cold=%s)', cold => {
-  const view = render(<RecentAwardsTab />)
-  fireEvent.press(view.getByTestId(`recent-award-${mockData!.earned[0].badge.id}`))
+it.each([false, true])('refreshes the selected recent badge without old-language prose (cold=%s)', async cold => {
+  const view = await render(<RecentAwardsTab />)
+  await fireEvent.press(view.getByTestId(`recent-award-${mockData!.earned[0].badge.id}`))
   expect(view.getByText('Русское описание')).toBeTruthy()
 
   if (cold) {
     mockData = undefined
-    view.rerender(<RecentAwardsTab testID="recent-loading" />)
+    await view.rerender(<RecentAwardsTab testID="recent-loading" />)
     expect(view.queryByTestId('selected-detail')).toBeNull()
     expect(view.queryByText('Русское описание')).toBeNull()
   }
   mockData = makeData('Opis po polsku')
-  view.rerender(<RecentAwardsTab testID="recent-pl" />)
+  await view.rerender(<RecentAwardsTab testID="recent-pl" />)
 
   expect(view.getByText('Opis po polsku')).toBeTruthy()
   expect(view.queryByText('Русское описание')).toBeNull()

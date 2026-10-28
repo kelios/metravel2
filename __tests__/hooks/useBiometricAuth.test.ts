@@ -28,7 +28,7 @@ describe('useBiometricAuth', () => {
     // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
     Platform.OS = 'web';
 
-    const { result } = renderHook(() => useBiometricAuth());
+    const { result } = await renderHook(() => useBiometricAuth());
 
     await waitFor(() => {
       expect(result.current.isChecking).toBe(false);
@@ -43,7 +43,7 @@ describe('useBiometricAuth', () => {
     // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
     Platform.OS = 'web';
 
-    const { result } = renderHook(() => useBiometricAuth());
+    const { result } = await renderHook(() => useBiometricAuth());
 
     let authenticated = false;
     await act(async () => {
@@ -54,7 +54,7 @@ describe('useBiometricAuth', () => {
   });
 
   it('disable removes secure storage key', async () => {
-    const { result } = renderHook(() => useBiometricAuth());
+    const { result } = await renderHook(() => useBiometricAuth());
 
     await waitFor(() => {
       expect(result.current.isChecking).toBe(false);
@@ -67,16 +67,16 @@ describe('useBiometricAuth', () => {
     expect(secureStorage.removeSecureItem).toHaveBeenCalledWith('biometric_auth_enabled');
   });
 
-  it('has enable/disable/authenticate methods', () => {
-    const { result } = renderHook(() => useBiometricAuth());
+  it('has enable/disable/authenticate methods', async () => {
+    const { result } = await renderHook(() => useBiometricAuth());
 
     expect(typeof result.current.enable).toBe('function');
     expect(typeof result.current.disable).toBe('function');
     expect(typeof result.current.authenticate).toBe('function');
   });
 
-  it('initial state has isChecking=true', () => {
-    const { result } = renderHook(() => useBiometricAuth());
+  it('initial state has isChecking=true', async () => {
+    const { result } = await renderHook(() => useBiometricAuth());
 
     // Initially isChecking should be true (before async check completes)
     // But since mocks resolve immediately, it might already be false

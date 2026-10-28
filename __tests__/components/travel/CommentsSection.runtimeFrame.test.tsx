@@ -41,11 +41,11 @@ describe('CommentsSection deferred runtime frame', () => {
     mockUseCommentsData.mockReset()
   })
 
-  it('observes its frame from the first render but reports only real layout', () => {
+  it('observes its frame from the first render but reports only real layout', async () => {
     const onRuntimeFrameReady = jest.fn()
     mockUseCommentsData.mockReturnValue({ ...commentsData, isLoading: true })
 
-    const view = render(
+    const view = await render(
       <CommentsSection
         travelId={42}
         autoload
@@ -59,13 +59,13 @@ describe('CommentsSection deferred runtime frame', () => {
     // report the skeleton frame upstream.
     const skeleton = screen.getByTestId('comments-skeleton')
     expect(skeleton.props.onLayout).toEqual(expect.any(Function))
-    fireEvent(skeleton, 'layout', {
+    await fireEvent(skeleton, 'layout', {
       nativeEvent: { layout: { height: 226, width: 920, x: 0, y: 0 } },
     })
     expect(onRuntimeFrameReady).not.toHaveBeenCalled()
 
     mockUseCommentsData.mockReturnValue(commentsData)
-    view.rerender(
+    await view.rerender(
       <CommentsSection
         travelId={42}
         autoload
@@ -74,10 +74,12 @@ describe('CommentsSection deferred runtime frame', () => {
       />,
     )
 
-    const runtime = screen.UNSAFE_getByProps({ nativeID: 'comments' })
+    const runtimeNodes = screen.container.queryAll(node => node.props.nativeID === 'comments')
+    expect(runtimeNodes).toHaveLength(1)
+    const runtime = runtimeNodes[0]
     expect(runtime.props.onLayout).toEqual(expect.any(Function))
     expect(onRuntimeFrameReady).not.toHaveBeenCalled()
-    fireEvent(runtime, 'layout', {
+    await fireEvent(runtime, 'layout', {
       nativeEvent: { layout: { height: 548, width: 920, x: 0, y: 0 } },
     })
     expect(onRuntimeFrameReady).toHaveBeenCalledTimes(1)

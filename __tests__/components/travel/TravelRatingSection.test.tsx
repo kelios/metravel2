@@ -53,7 +53,7 @@ describe('TravelRatingSection', () => {
 
   it('allows changing an existing user rating', async () => {
     const queryClient = createTestQueryClient();
-    const { getAllByLabelText } = render(
+    const { getAllByLabelText } = await render(
       <QueryClientProvider client={queryClient}>
         <TravelRatingSection
           travelId={503}
@@ -69,7 +69,7 @@ describe('TravelRatingSection', () => {
     });
 
     const fiveStarButtons = getAllByLabelText('Оценить на 5 из 5');
-    fireEvent.press(fiveStarButtons[fiveStarButtons.length - 1]);
+    await fireEvent.press(fiveStarButtons[fiveStarButtons.length - 1]);
 
     await waitFor(() => {
       expect(mockRateTravel).toHaveBeenCalledWith({ travelId: 503, rating: 5 });
@@ -85,7 +85,7 @@ describe('TravelRatingSection', () => {
       user_rating: null,
     });
 
-    const { getByLabelText, queryByText, findByText } = render(
+    const { getByLabelText, queryByText, findByText } = await render(
       <QueryClientProvider client={queryClient}>
         <TravelRatingSection
           travelId={504}
@@ -98,7 +98,7 @@ describe('TravelRatingSection', () => {
 
     expect(queryByText('Пока нет оценок')).toBeTruthy();
 
-    fireEvent.press(getByLabelText('Оценить на 5 из 5'));
+    await fireEvent.press(getByLabelText('Оценить на 5 из 5'));
 
     await waitFor(() => {
       expect(mockRateTravel).toHaveBeenCalledWith({ travelId: 504, rating: 5 });

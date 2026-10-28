@@ -46,13 +46,13 @@ describe('FacebookSignInButton.web unavailable state', () => {
         jest.clearAllMocks();
     });
 
-    it('does not load the SDK or report success when rollout is enabled without app id', () => {
+    it('does not load the SDK or report success when rollout is enabled without app id', async () => {
         process.env.EXPO_PUBLIC_FACEBOOK_LOGIN_ENABLED = 'true';
         process.env.EXPO_PUBLIC_META_APP_ID = '';
         const onSuccess = jest.fn();
         const onError = jest.fn();
 
-        const screen = render(
+        const screen = await render(
             <FacebookSignInButton onSuccess={onSuccess} onError={onError} />,
         );
         const button = screen.getByTestId('facebook-sign-in-button');
@@ -64,7 +64,7 @@ describe('FacebookSignInButton.web unavailable state', () => {
         expect(screen.getByText('authStatic:facebook.unavailable')).toBeTruthy();
         expect(document.getElementById('facebook-jssdk')).toBeNull();
 
-        fireEvent.press(button);
+        await fireEvent.press(button);
 
         expect(onSuccess).not.toHaveBeenCalled();
         expect(onError).not.toHaveBeenCalled();

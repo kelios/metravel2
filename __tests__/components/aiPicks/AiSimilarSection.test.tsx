@@ -41,9 +41,9 @@ const item = (id: number, title: string): AiPickItem => ({
   cover: `https://metravel.by/travel-image/${id}.jpg`,
 })
 
-function renderSection(props: Partial<React.ComponentProps<typeof AiSimilarSection>> = {}) {
+async function renderSection(props: Partial<React.ComponentProps<typeof AiSimilarSection>> = {}) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const utils = render(
+  const utils = await render(
     <QueryClientProvider client={client}>
       <AiSimilarSection type="travel" id={816} limit={6} {...props} />
     </QueryClientProvider>,
@@ -64,7 +64,7 @@ describe('AiSimilarSection (#2459)', () => {
   it('shows a skeleton while loading and then the cards in the same grid', async () => {
     let resolve: (value: AiPickItem[]) => void = () => {}
     mockFetchAiSimilar.mockReturnValue(new Promise<AiPickItem[]>((r) => { resolve = r }))
-    const { getByTestId, queryByTestId, getAllByTestId, getByText, getAllByText } = renderSection()
+    const { getByTestId, queryByTestId, getAllByTestId, getByText, getAllByText } = await renderSection()
 
     expect(getByTestId('ai-similar-skeleton')).toBeTruthy()
     expect(getAllByTestId('ai-pick-card-skeleton')).toHaveLength(6)
@@ -81,7 +81,7 @@ describe('AiSimilarSection (#2459)', () => {
 
   it('renders nothing (no gap) when the service returns no items', async () => {
     mockFetchAiSimilar.mockResolvedValue([])
-    const { queryByTestId } = renderSection()
+    const { queryByTestId } = await renderSection()
     await waitFor(() => expect(mockFetchAiSimilar).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(queryByTestId('ai-similar-skeleton')).toBeNull())
     expect(queryByTestId('ai-similar-section')).toBeNull()
@@ -89,19 +89,19 @@ describe('AiSimilarSection (#2459)', () => {
 
   it('renders nothing and does not retry when the service is unavailable', async () => {
     mockFetchAiSimilar.mockRejectedValue(new Error('network'))
-    const { queryByTestId } = renderSection()
+    const { queryByTestId } = await renderSection()
     await waitFor(() => expect(mockFetchAiSimilar).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(queryByTestId('ai-similar-section')).toBeNull())
     await new Promise((r) => setTimeout(r, 30))
     expect(mockFetchAiSimilar).toHaveBeenCalledTimes(1)
   })
 
-  it('sends no request while the flag is off or the section is not enabled', () => {
+  it('sends no request while the flag is off or the section is not enabled', async () => {
     process.env.EXPO_PUBLIC_AI_PICKS = ''
-    const first = renderSection()
+    const first = await renderSection()
     expect(first.queryByTestId('ai-similar-section')).toBeNull()
     process.env.EXPO_PUBLIC_AI_PICKS = '1'
-    const second = renderSection({ enabled: false })
+    const second = await renderSection({ enabled: false })
     expect(second.queryByTestId('ai-similar-section')).toBeNull()
     expect(mockFetchAiSimilar).not.toHaveBeenCalled()
   })

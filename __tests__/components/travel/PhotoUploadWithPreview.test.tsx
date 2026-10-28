@@ -47,7 +47,7 @@ jest.mock('@expo/vector-icons', () => ({
 
 const mockUploadImage = uploadImage as jest.MockedFunction<typeof uploadImage>;
 const getWebPreviewImg = (screen: any) => {
-    const nodes = screen.UNSAFE_getAllByType('img' as any);
+    const nodes = screen.container.queryAll(node => node.type === "img", { includeSelf: true });
     const preview = nodes.find((node: any) => node?.props?.alt === 'Предпросмотр');
     if (!preview) {
         throw new Error('Preview image not found');
@@ -55,7 +55,7 @@ const getWebPreviewImg = (screen: any) => {
     return preview;
 };
 const queryWebPreviewImg = (screen: any) => {
-    const nodes = screen.UNSAFE_queryAllByType?.('img' as any) ?? [];
+    const nodes = screen.container.queryAll(node => node.type === 'img', { includeSelf: true });
     return nodes.find((node: any) => node?.props?.alt === 'Предпросмотр') ?? null;
 };
 
@@ -87,8 +87,8 @@ describe('PhotoUploadWithPreview', () => {
     });
 
     describe('Rendering', () => {
-        it('should render upload button on native platforms', () => {
-            const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
+        it('should render upload button on native platforms', async () => {
+            const { getByText } = await render(<PhotoUploadWithPreview {...defaultProps} />);
             expect(getByText('Выбрать из галереи')).toBeTruthy();
             expect(getByText('Сделать фото')).toBeTruthy();
         });
@@ -107,7 +107,7 @@ describe('PhotoUploadWithPreview', () => {
             });
             mockUploadImage.mockResolvedValueOnce({ url: 'https://cdn.example/camera.jpg' } as any);
 
-            const screen = render(<PhotoUploadWithPreview {...defaultProps} />);
+            const screen = await render(<PhotoUploadWithPreview {...defaultProps} />);
             await act(async () => {
                 screen.getByTestId('photo-upload-camera-button').props.onPress();
                 await Promise.resolve();
@@ -123,7 +123,7 @@ describe('PhotoUploadWithPreview', () => {
         it('native: surfaces denied camera permission without opening the camera', async () => {
             Object.defineProperty(Platform, 'OS', { value: 'android' });
             (ImagePicker.requestCameraPermissionsAsync as jest.Mock).mockResolvedValueOnce({ granted: false });
-            const screen = render(<PhotoUploadWithPreview {...defaultProps} />);
+            const screen = await render(<PhotoUploadWithPreview {...defaultProps} />);
 
             await act(async () => {
                 screen.getByTestId('photo-upload-camera-button').props.onPress();
@@ -142,7 +142,7 @@ describe('PhotoUploadWithPreview', () => {
                 assets: [],
             });
 
-            const screen = render(<PhotoUploadWithPreview {...defaultProps} />);
+            const screen = await render(<PhotoUploadWithPreview {...defaultProps} />);
             await act(async () => {
                 screen.getByTestId('photo-upload-gallery-button').props.onPress();
                 await Promise.resolve();
@@ -161,7 +161,7 @@ describe('PhotoUploadWithPreview', () => {
                 .spyOn(require('@/hooks/useResponsive'), 'useResponsiveWidth')
                 .mockReturnValue(1280);
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         placeholder={customPlaceholder}
@@ -185,7 +185,7 @@ describe('PhotoUploadWithPreview', () => {
                 .mockReturnValue(390);
 
             try {
-                const screen = render(<PhotoUploadWithPreview {...defaultProps} />);
+                const screen = await render(<PhotoUploadWithPreview {...defaultProps} />);
 
                 // #1148: кнопки рендерит ленивый WebDropzoneView — ждём его маунта.
                 expect(await screen.findByText('Выбрать из галереи')).toBeTruthy();
@@ -197,11 +197,10 @@ describe('PhotoUploadWithPreview', () => {
                     noDrag: true,
                 }));
 
-                fireEvent.press(screen.getByTestId('photo-upload-mobile-gallery-button'));
+                await fireEvent.press(screen.getByTestId('photo-upload-mobile-gallery-button'));
                 expect(mockOpenPicker).toHaveBeenCalledTimes(1);
 
-                const cameraInput = screen
-                    .UNSAFE_getAllByType('input' as any)
+                const cameraInput = screen.container.queryAll(node => node.type === "input", { includeSelf: true })
                     .find((input: any) => input.props.capture === 'environment');
                 expect(cameraInput?.props.accept).toBe('image/*');
             } finally {
@@ -212,7 +211,7 @@ describe('PhotoUploadWithPreview', () => {
         it('should show existing image when oldImage is provided', async () => {
             const oldImageUrl = 'https://example.com/image.jpg';
             Object.defineProperty(Platform, 'OS', { value: 'web' });
-            const screen = render(
+            const screen = await render(
                 <PhotoUploadWithPreview {...defaultProps} oldImage={oldImageUrl} />
             );
 
@@ -230,7 +229,7 @@ describe('PhotoUploadWithPreview', () => {
             const deadBlobUrl = 'blob:http://localhost:8081/dead-blob';
 
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         oldImage={deadBlobUrl}
@@ -269,7 +268,7 @@ describe('PhotoUploadWithPreview', () => {
                 'http://192.168.50.36/travel-image/17992/conversions/9b69f6475c7143d08e3ac7b508612221.webp';
 
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         oldImage={absolutePrivateIpUrl}
@@ -294,7 +293,7 @@ describe('PhotoUploadWithPreview', () => {
             const absoluteUrl = 'https://example.com/image.jpg';
 
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         oldImage={absoluteUrl}
@@ -315,7 +314,7 @@ describe('PhotoUploadWithPreview', () => {
             Object.defineProperty(Platform, 'OS', { value: 'web' });
 
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         oldImage="https://example.com/image-to-remove.jpg"
@@ -327,7 +326,7 @@ describe('PhotoUploadWithPreview', () => {
                     expect(String(imgNode.props.src)).toBe('https://example.com/image-to-remove.jpg');
                 });
 
-                screen.rerender(
+                await await screen.rerender(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         oldImage={null}
@@ -351,7 +350,7 @@ describe('PhotoUploadWithPreview', () => {
             mockUploadImage.mockResolvedValueOnce(mockResponse as any);
 
             const onUploadMock = jest.fn();
-            const { getByText } = render(
+            const { getByText } = await render(
                 <PhotoUploadWithPreview {...defaultProps} onUpload={onUploadMock} />
             );
 
@@ -375,7 +374,7 @@ describe('PhotoUploadWithPreview', () => {
             const onUpload = jest.fn();
 
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         idTravel={'819'}
@@ -419,7 +418,7 @@ describe('PhotoUploadWithPreview', () => {
             mockUploadImage.mockResolvedValueOnce({ url: serverUrl } as any);
 
             try {
-                render(
+                await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         idTravel={'819'}
@@ -467,7 +466,7 @@ describe('PhotoUploadWithPreview', () => {
             );
 
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         idTravel={'739'}
@@ -502,7 +501,7 @@ describe('PhotoUploadWithPreview', () => {
             Object.defineProperty(Platform, 'OS', { value: 'web' });
 
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         idTravel={'739'}
@@ -534,7 +533,7 @@ describe('PhotoUploadWithPreview', () => {
             Object.defineProperty(Platform, 'OS', { value: 'web' });
 
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         idTravel={'739'}
@@ -572,7 +571,7 @@ describe('PhotoUploadWithPreview', () => {
             const onUpload = jest.fn();
 
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         idTravel={null}
@@ -611,7 +610,7 @@ describe('PhotoUploadWithPreview', () => {
                 () => new Promise((resolve) => setTimeout(resolve, 1000))
             );
 
-            const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
+            const { getByText } = await render(<PhotoUploadWithPreview {...defaultProps} />);
             
             // Component should render without errors
             expect(getByText('Выбрать из галереи')).toBeTruthy();
@@ -619,7 +618,7 @@ describe('PhotoUploadWithPreview', () => {
 
         it('should handle upload without idTravel (preview only mode)', async () => {
             const onUploadMock = jest.fn();
-            const { getByText } = render(
+            const { getByText } = await render(
                 <PhotoUploadWithPreview
                     collection="travelMainImage"
                     idTravel={null}
@@ -634,8 +633,8 @@ describe('PhotoUploadWithPreview', () => {
     });
 
     describe('File Validation', () => {
-        it('should validate file size', () => {
-            const { getByText } = render(
+        it('should validate file size', async () => {
+            const { getByText } = await render(
                 <PhotoUploadWithPreview {...defaultProps} maxSizeMB={5} />
             );
             
@@ -644,7 +643,7 @@ describe('PhotoUploadWithPreview', () => {
         });
 
         it('should show error for oversized files', async () => {
-            const { getByText } = render(
+            const { getByText } = await render(
                 <PhotoUploadWithPreview {...defaultProps} maxSizeMB={1} />
             );
 
@@ -652,8 +651,8 @@ describe('PhotoUploadWithPreview', () => {
             expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
-        it('should validate file type', () => {
-            const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
+        it('should validate file type', async () => {
+            const { getByText } = await render(<PhotoUploadWithPreview {...defaultProps} />);
             
             // Type validation happens internally
             expect(getByText('Выбрать из галереи')).toBeTruthy();
@@ -663,7 +662,7 @@ describe('PhotoUploadWithPreview', () => {
     describe('Image Removal', () => {
         it('should remove image when remove button is clicked', async () => {
             const onUploadMock = jest.fn();
-            const { getByText } = render(
+            const { getByText } = await render(
                 <PhotoUploadWithPreview
                     {...defaultProps}
                     oldImage="https://example.com/image.jpg"
@@ -679,7 +678,7 @@ describe('PhotoUploadWithPreview', () => {
 
         it('should call onUpload with empty string when image is removed', async () => {
             const onUploadMock = jest.fn();
-            const { getByText } = render(
+            const { getByText } = await render(
                 <PhotoUploadWithPreview
                     {...defaultProps}
                     oldImage="https://example.com/image.jpg"
@@ -706,7 +705,7 @@ describe('PhotoUploadWithPreview', () => {
                 const remoteBadUrl = 'http://example.com/travel-image/17981/conversions/bad.webp';
                 mockUploadImage.mockResolvedValueOnce({ url: remoteBadUrl } as any);
 
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         oldImage={remoteBadUrl}
@@ -739,7 +738,7 @@ describe('PhotoUploadWithPreview', () => {
                         imgNode.props.onError?.();
                     });
 
-                    act(() => {
+                    await act(() => {
                         jest.advanceTimersByTime(delays[attempt - 1] + 1);
                     });
 
@@ -757,7 +756,7 @@ describe('PhotoUploadWithPreview', () => {
                 const finalImg = getWebPreviewImg(screen);
                 expect(finalImg.props.src).toBe(blobUrl);
             } finally {
-                act(() => {
+                await act(() => {
                     jest.runOnlyPendingTimers();
                     jest.clearAllTimers();
                 });
@@ -770,14 +769,14 @@ describe('PhotoUploadWithPreview', () => {
 
     describe('Preview Functionality', () => {
         it('should show preview immediately after file selection', async () => {
-            const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
+            const { getByText } = await render(<PhotoUploadWithPreview {...defaultProps} />);
             
             expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
-        it('should call onPreviewChange callback when preview changes', () => {
+        it('should call onPreviewChange callback when preview changes', async () => {
             const onPreviewChangeMock = jest.fn();
-            const { getByText } = render(
+            const { getByText } = await render(
                 <PhotoUploadWithPreview
                     {...defaultProps}
                     onPreviewChange={onPreviewChangeMock}
@@ -787,8 +786,8 @@ describe('PhotoUploadWithPreview', () => {
             expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
-        it('should maintain preview when switching between files', () => {
-            const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
+        it('should maintain preview when switching between files', async () => {
+            const { getByText } = await render(<PhotoUploadWithPreview {...defaultProps} />);
             
             expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
@@ -798,13 +797,13 @@ describe('PhotoUploadWithPreview', () => {
         it('should display error message on upload failure', async () => {
             mockUploadImage.mockRejectedValueOnce(new Error('Upload failed'));
 
-            const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
+            const { getByText } = await render(<PhotoUploadWithPreview {...defaultProps} />);
             
             expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
         it('should clear error when new file is selected', async () => {
-            const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
+            const { getByText } = await render(<PhotoUploadWithPreview {...defaultProps} />);
             
             expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
@@ -812,15 +811,15 @@ describe('PhotoUploadWithPreview', () => {
         it('should handle network errors gracefully', async () => {
             mockUploadImage.mockRejectedValueOnce(new Error('Network error'));
 
-            const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
+            const { getByText } = await render(<PhotoUploadWithPreview {...defaultProps} />);
             
             expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
     });
 
     describe('Disabled State', () => {
-        it('should not allow upload when disabled', () => {
-            const { getByText } = render(
+        it('should not allow upload when disabled', async () => {
+            const { getByText } = await render(
                 <PhotoUploadWithPreview {...defaultProps} disabled={true} />
             );
 
@@ -828,8 +827,8 @@ describe('PhotoUploadWithPreview', () => {
             expect(button).toBeTruthy();
         });
 
-        it('should not show remove button when disabled', () => {
-            const { getByText, queryByText } = render(
+        it('should not show remove button when disabled', async () => {
+            const { getByText, queryByText } = await render(
                 <PhotoUploadWithPreview
                     {...defaultProps}
                     oldImage="https://example.com/image.jpg"
@@ -850,13 +849,13 @@ describe('PhotoUploadWithPreview', () => {
                 () => new Promise((resolve) => setTimeout(resolve, 500))
             );
 
-            const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
+            const { getByText } = await render(<PhotoUploadWithPreview {...defaultProps} />);
             
             expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
 
         it('should update progress percentage during upload', async () => {
-            const { getByText } = render(<PhotoUploadWithPreview {...defaultProps} />);
+            const { getByText } = await render(<PhotoUploadWithPreview {...defaultProps} />);
             
             expect(getByText('Выбрать из галереи')).toBeTruthy();
         });
@@ -868,14 +867,14 @@ describe('PhotoUploadWithPreview', () => {
             Object.defineProperty(Platform, 'OS', { value: 'web' });
 
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview {...defaultProps} oldImage={null} />
                 );
 
                 // When oldImage is null, no <img> should be rendered.
                 expect(queryWebPreviewImg(screen)).toBeNull();
 
-                screen.rerender(
+                await await screen.rerender(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         oldImage="https://example.com/new-image.jpg"
@@ -894,7 +893,7 @@ describe('PhotoUploadWithPreview', () => {
             Object.defineProperty(Platform, 'OS', { value: 'web' });
 
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         oldImage="https://example.com/old-image.jpg"
@@ -910,12 +909,12 @@ describe('PhotoUploadWithPreview', () => {
     });
 
     describe('URL Normalization', () => {
-        it('should handle relative URLs', () => {
+        it('should handle relative URLs', async () => {
             const originalOs = Platform.OS;
             Object.defineProperty(Platform, 'OS', { value: 'web' });
 
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         oldImage="/uploads/image.jpg"
@@ -932,12 +931,12 @@ describe('PhotoUploadWithPreview', () => {
             }
         });
 
-        it('should handle absolute URLs', () => {
+        it('should handle absolute URLs', async () => {
             const originalOs = Platform.OS;
             Object.defineProperty(Platform, 'OS', { value: 'web' });
 
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         oldImage="https://example.com/image.jpg"
@@ -951,12 +950,12 @@ describe('PhotoUploadWithPreview', () => {
             }
         });
 
-        it('should handle blob URLs', () => {
+        it('should handle blob URLs', async () => {
             const originalOs = Platform.OS;
             Object.defineProperty(Platform, 'OS', { value: 'web' });
 
             try {
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         oldImage="blob:http://localhost:8081/abc-123"
@@ -970,13 +969,13 @@ describe('PhotoUploadWithPreview', () => {
             }
         });
 
-        it('should handle data URLs', () => {
+        it('should handle data URLs', async () => {
             const originalOs = Platform.OS;
             Object.defineProperty(Platform, 'OS', { value: 'web' });
 
             try {
                 const dataUrl = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-                const screen = render(
+                const screen = await render(
                     <PhotoUploadWithPreview
                         {...defaultProps}
                         oldImage={dataUrl}

@@ -42,32 +42,32 @@ describe('CreateTripScreen auth gate', () => {
     mockAuthState = { authReady: true, isAuthenticated: false };
   });
 
-  it('blocks direct trip creation route for guests', () => {
+  it('blocks direct trip creation route for guests', async () => {
     const CreateTripScreen = require('@/app/(tabs)/trips/plan/create').default;
-    const { getByTestId, queryByTestId } = render(<CreateTripScreen />);
+    const { getByTestId, queryByTestId } = await render(<CreateTripScreen />);
 
     expect(getByTestId('trip-create-auth-gate')).toBeTruthy();
     expect(queryByTestId('trip-create-form')).toBeNull();
 
-    fireEvent.press(getByTestId('trip-create-login-link'));
+    await fireEvent.press(getByTestId('trip-create-login-link'));
     expect(mockPush).toHaveBeenCalledWith('/login?redirect=%2Ftrips%2Fplan%2Fcreate&intent=plan-trip');
   });
 
-  it('renders trip creation form for authenticated users', () => {
+  it('renders trip creation form for authenticated users', async () => {
     mockAuthState = { authReady: true, isAuthenticated: true };
 
     const CreateTripScreen = require('@/app/(tabs)/trips/plan/create').default;
-    const { getByTestId, queryByTestId } = render(<CreateTripScreen />);
+    const { getByTestId, queryByTestId } = await render(<CreateTripScreen />);
 
     expect(queryByTestId('trip-create-auth-gate')).toBeNull();
     expect(getByTestId('trip-create-form')).toBeTruthy();
   });
 
-  it('does not render form before auth state is ready', () => {
+  it('does not render form before auth state is ready', async () => {
     mockAuthState = { authReady: false, isAuthenticated: false };
 
     const CreateTripScreen = require('@/app/(tabs)/trips/plan/create').default;
-    const { getByTestId, queryByTestId } = render(<CreateTripScreen />);
+    const { getByTestId, queryByTestId } = await render(<CreateTripScreen />);
 
     expect(getByTestId('trip-create-auth-loading')).toBeTruthy();
     expect(queryByTestId('trip-create-form')).toBeNull();

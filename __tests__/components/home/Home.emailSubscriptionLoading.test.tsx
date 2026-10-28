@@ -52,12 +52,12 @@ it('loads the subscription module only when its existing visibility gate opens',
   }
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const screen = () => <QueryClientProvider client={client}><Home /></QueryClientProvider>
-  const { queryByTestId, getByTestId, rerender, unmount } = render(screen())
+  const { queryByTestId, getByTestId, rerender, unmount } = await render(screen())
 
   expect(probe.loads).toBe(0)
   expect(queryByTestId('home-email-form')).toBeNull()
 
-  act(() => {
+  await act(() => {
     probe.subscribers.forEach((setVisible) => setVisible(true))
   })
   await waitFor(() => expect(getByTestId('home-email-form')).toBeTruthy())
@@ -68,9 +68,9 @@ it('loads the subscription module only when its existing visibility gate opens',
     clientOnly: true,
   })
 
-  rerender(screen())
+  await rerender(screen())
   expect(probe.loads).toBe(1)
-  unmount()
+  await unmount()
   client.clear()
 })
 

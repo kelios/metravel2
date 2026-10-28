@@ -7,8 +7,7 @@
 // записью предыдущего (чужие ответы и монотонный `completed`).
 
 import React from 'react'
-import { act } from 'react-test-renderer'
-import { render } from '@testing-library/react-native'
+import { act, render } from '@testing-library/react-native'
 
 const mockUseAuth = jest.fn(() => ({ isAuthenticated: true, userId: '17' } as any))
 const mockQuestWizard = jest.fn(() => null)
@@ -115,7 +114,7 @@ jest.mock('@/components/quests/TravelsForQuestSection', () => ({
 
 const renderQuestScreen = async () => {
   const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
-  render(<QuestScreen />)
+  await render(<QuestScreen />)
   await act(async () => {
     await Promise.resolve()
   })

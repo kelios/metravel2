@@ -36,10 +36,10 @@ const mockedFetchWithTimeout = fetchWithTimeout as jest.MockedFunction<typeof fe
 const PASSWORD = 'StrongPassword1!';
 
 async function submit() {
-  const view = render(<SetPasswordForm />);
-  fireEvent.changeText(view.getByPlaceholderText('Новый пароль'), PASSWORD);
-  fireEvent.changeText(view.getByPlaceholderText('Подтвердите пароль'), PASSWORD);
-  fireEvent.press(view.getByLabelText('Сменить пароль'));
+  const view = await render(<SetPasswordForm />);
+  await fireEvent.changeText(view.getByPlaceholderText('Новый пароль'), PASSWORD);
+  await fireEvent.changeText(view.getByPlaceholderText('Подтвердите пароль'), PASSWORD);
+  await fireEvent.press(view.getByLabelText('Сменить пароль'));
   return view;
 }
 
@@ -106,7 +106,7 @@ describe('SetPasswordForm — недействительная ссылка (#21
     ).toBeTruthy();
     expect(view.queryByText(new RegExp(SERVER_MARKER))).toBeNull();
 
-    fireEvent.press(view.getByLabelText(GO_TO_LOGIN));
+    await fireEvent.press(view.getByLabelText(GO_TO_LOGIN));
     expect(mockNavigate).toHaveBeenCalledWith('login');
   });
 
@@ -119,18 +119,18 @@ describe('SetPasswordForm — недействительная ссылка (#21
     expect(view.queryByText(new RegExp(SERVER_MARKER))).toBeNull();
   });
 
-  it('без токена в ссылке — под «Ссылка недействительна» та же кнопка входа', () => {
+  it('без токена в ссылке — под «Ссылка недействительна» та же кнопка входа', async () => {
     mockToken = '';
-    const view = render(<SetPasswordForm />);
+    const view = await render(<SetPasswordForm />);
 
     expect(view.getByText('Ссылка недействительна или устарела')).toBeTruthy();
-    fireEvent.press(view.getByLabelText(GO_TO_LOGIN));
+    await fireEvent.press(view.getByLabelText(GO_TO_LOGIN));
     expect(mockNavigate).toHaveBeenCalledWith('login');
   });
 
-  it('до гидратации токен ещё не прочитан (#2178) — ни текста про ссылку, ни кнопки', () => {
+  it('до гидратации токен ещё не прочитан (#2178) — ни текста про ссылку, ни кнопки', async () => {
     mockToken = null;
-    const view = render(<SetPasswordForm />);
+    const view = await render(<SetPasswordForm />);
 
     expect(view.queryByText('Ссылка недействительна или устарела')).toBeNull();
     expect(view.queryByLabelText(GO_TO_LOGIN)).toBeNull();

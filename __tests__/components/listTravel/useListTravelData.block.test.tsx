@@ -60,14 +60,14 @@ const Catalog = forwardRef<UseListTravelDataReturn, HarnessProps>(({ enabled }, 
 })
 Catalog.displayName = 'CatalogHarness'
 
-const setup = (enabled = true) => {
+const setup = async (enabled = true) => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity }, mutations: { retry: false } } })
   const stop = installBlockedAuthorGuard(qc, { getOwner: () => mockOwner })
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={qc}>{children}</QueryClientProvider>
   )
   const ref = React.createRef<UseListTravelDataReturn>()
-  const view = render(<Catalog ref={ref} enabled={enabled} />, { wrapper })
+  const view = await render(<Catalog ref={ref} enabled={enabled} />, { wrapper })
   const current = () => ref.current as UseListTravelDataReturn
   return { qc, stop, wrapper, view, current, ref }
 }
@@ -91,28 +91,28 @@ describe('catalog after blocking the author of every loaded card', () => {
       data: [{ id: mockOwner === null ? 1 : 2, userIds: mockOwner === null ? '1' : '2' }],
       total: 1,
     }))
-    const { qc, stop, current, view, ref } = setup()
+    const { qc, stop, current, view, ref } = await setup()
     await waitFor(() => expect(ids(current())).toEqual([1]))
     mockOwner = '242'
-    view.rerender(<Catalog ref={ref} enabled />)
+    await view.rerender(<Catalog ref={ref} enabled />)
     await waitFor(() => expect(ids(current())).toEqual([2]))
     const owners = qc.getQueryCache().findAll({ queryKey: queryKeys.travels() })
       .map((query) => (query.queryKey[1] as { owner: string | null }).owner)
     expect(owners).toEqual(expect.arrayContaining([null, '242']))
 
     mockOwner = null
-    view.rerender(<Catalog ref={ref} enabled />)
+    await view.rerender(<Catalog ref={ref} enabled />)
     await waitFor(() => expect(ids(current())).toEqual([1]))
     expect(current().data.some((travel) => travel.id === 2)).toBe(false)
     stop()
   })
 
   it('loads the next pages instead of showing the empty state', async () => {
-    const { stop, wrapper, current } = setup()
+    const { stop, wrapper, current } = await setup()
     await waitFor(() => expect(current().data).toHaveLength(PER_PAGE))
 
-    const { result } = renderHook(() => useBlockUser(), { wrapper })
-    act(() => result.current.mutate(AUTHOR))
+    const { result } = await renderHook(() => useBlockUser(), { wrapper })
+    await act(() => result.current.mutate(AUTHOR))
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     await waitFor(() => expect(ids(current())).toEqual([VISIBLE_ID]))
@@ -125,12 +125,12 @@ describe('catalog after blocking the author of every loaded card', () => {
   })
 
   it('shows loading, never the empty state, while pages emptied by the block are replaced', async () => {
-    const { stop, wrapper, current } = setup()
+    const { stop, wrapper, current } = await setup()
     await waitFor(() => expect(current().data).toHaveLength(PER_PAGE))
     const from = renders.length
-    const { result } = renderHook(() => useBlockUser(), { wrapper })
+    const { result } = await renderHook(() => useBlockUser(), { wrapper })
 
-    act(() => result.current.mutate(AUTHOR))
+    await act(() => result.current.mutate(AUTHOR))
     await waitFor(() => expect(ids(current())).toEqual([VISIBLE_ID]))
 
     const afterBlock = renders.slice(from)
@@ -146,11 +146,11 @@ describe('catalog after blocking the author of every loaded card', () => {
       data: page < 2 ? Array.from({ length: PER_PAGE }, (_, i) => travelAt(page * PER_PAGE + i)) : [],
       total: 2 * PER_PAGE,
     }))
-    const { stop, wrapper, current } = setup()
+    const { stop, wrapper, current } = await setup()
     await waitFor(() => expect(current().data).toHaveLength(PER_PAGE))
-    const { result } = renderHook(() => useBlockUser(), { wrapper })
+    const { result } = await renderHook(() => useBlockUser(), { wrapper })
 
-    act(() => result.current.mutate(AUTHOR))
+    await act(() => result.current.mutate(AUTHOR))
     await waitFor(() => expect(current().isEmpty).toBe(true))
     expect(current().hasMore).toBe(false)
     expect(current().data).toEqual([])
@@ -163,9 +163,9 @@ describe('catalog after blocking the author of every loaded card', () => {
       data: page < 2 ? Array.from({ length: PER_PAGE }, (_, i) => travelAt(page * PER_PAGE + i)) : [],
       total: 2 * PER_PAGE,
     }))
-    const { qc, stop, current } = setup()
+    const { qc, stop, current } = await setup()
     await waitFor(() => expect(current().data).toHaveLength(PER_PAGE))
-    act(() => applyAuthorBlock(qc, AUTHOR))
+    await act(() => applyAuthorBlock(qc, AUTHOR))
     await waitFor(() => expect(current().isEmpty).toBe(true))
     expect((fetchTravels as jest.Mock).mock.calls.map(([page]) => page)).toEqual([0, 1])
     stop()
@@ -173,18 +173,18 @@ describe('catalog after blocking the author of every loaded card', () => {
 
   it('blocks and unblocks the sole card without refetching beyond the end', async () => {
     ;(fetchTravels as jest.Mock).mockResolvedValue({ data: [travelAt(0)], total: 1 })
-    const { stop, wrapper, current } = setup()
+    const { stop, wrapper, current } = await setup()
     await waitFor(() => expect(current().data).toHaveLength(1))
-    const { result: block } = renderHook(() => useBlockUser(), { wrapper })
-    act(() => block.current.mutate(AUTHOR))
+    const { result: block } = await renderHook(() => useBlockUser(), { wrapper })
+    await act(() => block.current.mutate(AUTHOR))
     await waitFor(() => expect(block.current.isSuccess).toBe(true))
     await waitFor(() => expect(current().isEmpty).toBe(true))
     expect(current().hasMore).toBe(false)
     expect(current().total).toBe(0)
     expect((fetchTravels as jest.Mock).mock.calls.every(([page]) => page === 0)).toBe(true)
 
-    const { result: unblock } = renderHook(() => useUnblockUser(), { wrapper })
-    act(() => unblock.current.mutate(AUTHOR))
+    const { result: unblock } = await renderHook(() => useUnblockUser(), { wrapper })
+    await act(() => unblock.current.mutate(AUTHOR))
     await waitFor(() => expect(current().data).toHaveLength(1))
     expect(current().total).toBe(1)
     stop()
@@ -192,9 +192,9 @@ describe('catalog after blocking the author of every loaded card', () => {
 
   it('does not advance a genuinely empty server feed', async () => {
     ;(fetchTravels as jest.Mock).mockResolvedValue({ data: [], total: 0 })
-    const { qc, stop, current } = setup()
+    const { qc, stop, current } = await setup()
     await waitFor(() => expect(current().isEmpty).toBe(true))
-    act(() => applyAuthorBlock(qc, AUTHOR))
+    await act(() => applyAuthorBlock(qc, AUTHOR))
     expect(current().hasMore).toBe(false)
     expect(fetchTravels).toHaveBeenCalledTimes(1)
     stop()
@@ -208,12 +208,12 @@ describe('catalog after blocking the author of every loaded card', () => {
       })),
       total: 2 * PER_PAGE,
     }))
-    const { qc, stop, current } = setup()
+    const { qc, stop, current } = await setup()
     await waitFor(() => expect(current().data).toHaveLength(PER_PAGE))
-    act(() => applyAuthorBlock(qc, AUTHOR))
+    await act(() => applyAuthorBlock(qc, AUTHOR))
     await waitFor(() => expect(current().data).toHaveLength(PER_PAGE - 1))
     expect(fetchTravels).toHaveBeenCalledTimes(1)
-    act(() => current().handleEndReached())
+    await act(() => current().handleEndReached())
     await waitFor(() => expect(current().data).toHaveLength(2 * PER_PAGE - 1))
     expect(current().hasMore).toBe(false)
     expect(current().total).toBe(2 * PER_PAGE - 1)
@@ -225,9 +225,9 @@ describe('catalog after blocking the author of every loaded card', () => {
       if (page > 0) throw new Error('Offline')
       return { data: Array.from({ length: PER_PAGE }, (_, index) => travelAt(index)), total: TOTAL }
     })
-    const { qc, stop, current } = setup()
+    const { qc, stop, current } = await setup()
     await waitFor(() => expect(current().data).toHaveLength(PER_PAGE))
-    act(() => applyAuthorBlock(qc, AUTHOR))
+    await act(() => applyAuthorBlock(qc, AUTHOR))
     await waitFor(() => expect(current().isError).toBe(true))
     expect(current().isEmpty).toBe(false)
     expect(current().isInitialLoading).toBe(false)
@@ -236,9 +236,9 @@ describe('catalog after blocking the author of every loaded card', () => {
   })
 
   it('reports offline replacement-page loading and recovers when the connection returns', async () => {
-    const { qc, stop, current } = setup()
+    const { qc, stop, current } = await setup()
     await waitFor(() => expect(current().data).toHaveLength(PER_PAGE))
-    act(() => {
+    await act(() => {
       onlineManager.setOnline(false)
       applyAuthorBlock(qc, AUTHOR)
     })
@@ -246,21 +246,21 @@ describe('catalog after blocking the author of every loaded card', () => {
     expect(current().isEmpty).toBe(false)
     expect(current().isInitialLoading).toBe(false)
     expect(fetchTravels).toHaveBeenCalledTimes(1)
-    act(() => onlineManager.setOnline(true))
+    await act(() => onlineManager.setOnline(true))
     await waitFor(() => expect(ids(current())).toEqual([VISIBLE_ID]))
     expect(current().isError).toBe(false)
     stop()
   })
 
   it('waits for a hidden catalog to become enabled before advancing its emptied page', async () => {
-    const { qc, stop, current, view, ref } = setup()
+    const { qc, stop, current, view, ref } = await setup()
     await waitFor(() => expect(current().data).toHaveLength(PER_PAGE))
-    view.rerender(<Catalog ref={ref} enabled={false} />)
-    act(() => applyAuthorBlock(qc, AUTHOR))
+    await view.rerender(<Catalog ref={ref} enabled={false} />)
+    await act(() => applyAuthorBlock(qc, AUTHOR))
     await act(async () => { await Promise.resolve() })
     expect(fetchTravels).toHaveBeenCalledTimes(1)
 
-    view.rerender(<Catalog ref={ref} enabled />)
+    await view.rerender(<Catalog ref={ref} enabled />)
     await waitFor(() => expect(ids(current())).toEqual([VISIBLE_ID]))
     expect(current().isEmpty).toBe(false)
     stop()
@@ -272,9 +272,9 @@ describe('catalog after blocking the author of every loaded card', () => {
         : allHidden ? [] : [{ id: VISIBLE_ID, userIds: '2' }],
       total: allHidden ? 2 * PER_PAGE : 2 * PER_PAGE + 1,
     }))
-    const { qc, stop, wrapper } = setup(false)
-    act(() => applyAuthorBlock(qc, AUTHOR))
-    const { result } = renderHook(() => useRandomTravelData({ queryParams: {}, search: '', isQueryEnabled: false }), { wrapper })
+    const { qc, stop, wrapper } = await setup(false)
+    await act(() => applyAuthorBlock(qc, AUTHOR))
+    const { result } = await renderHook(() => useRandomTravelData({ queryParams: {}, search: '', isQueryEnabled: false }), { wrapper })
     expect(fetchRandomTravels).not.toHaveBeenCalled()
 
     let response: Awaited<ReturnType<UseListTravelDataReturn['refetch']>>
@@ -294,9 +294,9 @@ describe('catalog after blocking the author of every loaded card', () => {
       if (page > 0) throw new Error('Offline')
       return { data: Array.from({ length: PER_PAGE }, (_, i) => travelAt(i)), total: TOTAL }
     })
-    const { qc, stop, wrapper } = setup(false)
-    act(() => applyAuthorBlock(qc, AUTHOR))
-    const { result } = renderHook(() => useRandomTravelData({ queryParams: {}, search: '', isQueryEnabled: false }), { wrapper })
+    const { qc, stop, wrapper } = await setup(false)
+    await act(() => applyAuthorBlock(qc, AUTHOR))
+    const { result } = await renderHook(() => useRandomTravelData({ queryParams: {}, search: '', isQueryEnabled: false }), { wrapper })
     await act(async () => { await result.current.refetch() })
     expect((fetchRandomTravels as jest.Mock).mock.calls.map(([page]) => page)).toEqual([0, 1])
     await waitFor(() => expect(result.current.isError).toBe(true))
@@ -306,21 +306,21 @@ describe('catalog after blocking the author of every loaded card', () => {
   })
 
   it('returns the cards after unblocking without a reload', async () => {
-    const { qc, stop, wrapper, current, view } = setup()
+    const { qc, stop, wrapper, current, view } = await setup()
     await waitFor(() => expect(current().data).toHaveLength(PER_PAGE))
-    const { result: block } = renderHook(() => useBlockUser(), { wrapper })
-    act(() => block.current.mutate(AUTHOR))
+    const { result: block } = await renderHook(() => useBlockUser(), { wrapper })
+    await act(() => block.current.mutate(AUTHOR))
     await waitFor(() => expect(ids(current())).toEqual([VISIBLE_ID]))
     qc.setQueryData(queryKeys.myBlockedUsers('242'), [{ id: 900, user: AUTHOR }])
 
     // Разблокировка с другого экрана: каталог на фоне (`enabled={isFocused}`).
-    view.rerender(<Catalog ref={React.createRef()} enabled={false} />)
-    const { result: unblock } = renderHook(() => useUnblockUser(), { wrapper })
-    act(() => unblock.current.mutate(AUTHOR))
+    await view.rerender(<Catalog ref={React.createRef()} enabled={false} />)
+    const { result: unblock } = await renderHook(() => useUnblockUser(), { wrapper })
+    await act(() => unblock.current.mutate(AUTHOR))
     await waitFor(() => expect(unblock.current.isSuccess).toBe(true))
 
     const ref = React.createRef<UseListTravelDataReturn>()
-    view.rerender(<Catalog ref={ref} enabled />)
+    await view.rerender(<Catalog ref={ref} enabled />)
     await waitFor(() => expect(ref.current?.data.length).toBeGreaterThanOrEqual(PER_PAGE))
     expect(ref.current?.data[0]).toMatchObject({ id: 1 })
     expect(ref.current?.total).toBe(TOTAL)
@@ -329,15 +329,15 @@ describe('catalog after blocking the author of every loaded card', () => {
   })
 
   it('returns the cards after unblocking while the catalog stays on screen', async () => {
-    const { qc, stop, wrapper, current } = setup()
+    const { qc, stop, wrapper, current } = await setup()
     await waitFor(() => expect(current().data).toHaveLength(PER_PAGE))
-    const { result: block } = renderHook(() => useBlockUser(), { wrapper })
-    act(() => block.current.mutate(AUTHOR))
+    const { result: block } = await renderHook(() => useBlockUser(), { wrapper })
+    await act(() => block.current.mutate(AUTHOR))
     await waitFor(() => expect(ids(current())).toEqual([VISIBLE_ID]))
     qc.setQueryData(queryKeys.myBlockedUsers('242'), [{ id: 900, user: AUTHOR }])
 
-    const { result: unblock } = renderHook(() => useUnblockUser(), { wrapper })
-    act(() => unblock.current.mutate(AUTHOR))
+    const { result: unblock } = await renderHook(() => useUnblockUser(), { wrapper })
+    await act(() => unblock.current.mutate(AUTHOR))
     await waitFor(() => expect(unblock.current.isSuccess).toBe(true))
 
     await waitFor(() => expect(current().data[0]).toMatchObject({ id: 1 }))

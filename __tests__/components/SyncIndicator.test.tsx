@@ -30,8 +30,8 @@ describe('SyncIndicator', () => {
     mockPush.mockClear();
   });
 
-  it('keeps the offline saved-content action above the measured dock and out of the header', () => {
-    const { getByLabelText, getByText, getByTestId } = render(
+  it('keeps the offline saved-content action above the measured dock and out of the header', async () => {
+    const { getByLabelText, getByText, getByTestId } = await render(
       <BottomChromeInsetProvider measuredHeight={89}><SyncIndicator /></BottomChromeInsetProvider>,
     );
     const banner = getByLabelText('Нет сети. Сохранённые материалы доступны.');
@@ -47,23 +47,23 @@ describe('SyncIndicator', () => {
     expect(message.props.numberOfLines).toBe(2);
     expect(action).toBeTruthy();
 
-    fireEvent.press(action);
+    await fireEvent.press(action);
     expect(mockPush).toHaveBeenCalledWith('/offline');
   });
 
-  it('keeps the saved-content action above the safe area when the route hides the dock', () => {
-    const { getByLabelText } = render(
+  it('keeps the saved-content action above the safe area when the route hides the dock', async () => {
+    const { getByLabelText } = await render(
       <BottomChromeInsetProvider measuredHeight={0}><SyncIndicator /></BottomChromeInsetProvider>,
     );
     expect(StyleSheet.flatten(getByLabelText('Нет сети. Сохранённые материалы доступны.').props.style).bottom)
       .toBe(34 + DESIGN_TOKENS.spacing.xs);
   });
 
-  it('does not add native offline chrome on web', () => {
+  it('does not add native offline chrome on web', async () => {
     const originalOS = Platform.OS;
     try {
       Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
-      expect(render(<SyncIndicator />).toJSON()).toBeNull();
+      expect(await (await render(<SyncIndicator />)).toJSON()).toBeNull();
     } finally {
       Object.defineProperty(Platform, 'OS', { value: originalOS, configurable: true });
     }

@@ -105,9 +105,9 @@ describe('hooks/useQuestReview analytics', () => {
       return React.createElement(QueryClientProvider, { client }, children)
     }
 
-  const renderReviewHook = (client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => ({
+  const renderReviewHook = async (client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => ({
     client,
-    ...renderHook(
+    ...await renderHook(
       () => useQuestReview({ questId: 42, questSlug: 'minsk-cmok', cityId: 'minsk' }),
       { wrapper: makeWrapper(client) },
     ),
@@ -117,13 +117,13 @@ describe('hooks/useQuestReview analytics', () => {
     const post = apiClient.post as unknown as jest.Mock
     post.mockResolvedValue({ id: 1, user: 77, quest: 42, rating: 5, liked: 'Сюжет', disliked: '' })
 
-    const { result } = renderReviewHook()
+    const { result } = await renderReviewHook()
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    act(() => {
+    await act(() => {
       result.current.submit({ rating: 5, liked: 'Сюжет', disliked: '' })
     })
 
@@ -142,13 +142,13 @@ describe('hooks/useQuestReview analytics', () => {
     const post = apiClient.post as unknown as jest.Mock
     post.mockResolvedValue({ id: 2, user: 77, quest: 42, rating: 4, liked: '', disliked: '   ' })
 
-    const { result } = renderReviewHook()
+    const { result } = await renderReviewHook()
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    act(() => {
+    await act(() => {
       result.current.submit({ rating: 4, liked: '', disliked: '' })
     })
 
@@ -164,13 +164,13 @@ describe('hooks/useQuestReview analytics', () => {
     post.mockResolvedValue({ id: 3, user: 77, quest: 42, rating: 5, liked: '', disliked: '' })
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     const invalidate = jest.spyOn(client, 'invalidateQueries')
-    const { result } = renderReviewHook(client)
+    const { result } = await renderReviewHook(client)
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    act(() => {
+    await act(() => {
       result.current.submit({ rating: 5, liked: '', disliked: '' })
     })
 
@@ -206,7 +206,7 @@ describe('hooks/useQuestReview analytics', () => {
     }
     client.setQueryData(queryKeys.questUserReview('12', 42), otherReview)
 
-    const { result } = renderReviewHook(client)
+    const { result } = await renderReviewHook(client)
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
@@ -220,27 +220,27 @@ describe('hooks/useQuestReview analytics', () => {
     const post = apiClient.post as unknown as jest.Mock
     get.mockRejectedValue(new Error('network down'))
 
-    const { result } = renderReviewHook()
+    const { result } = await renderReviewHook()
 
     await waitFor(() => {
       expect(result.current.hasLoadError).toBe(true)
     })
 
-    act(() => {
+    await act(() => {
       result.current.submit({ rating: 5, liked: '', disliked: '' })
     })
 
     expect(post).not.toHaveBeenCalled()
   })
 
-  it('does not fetch or submit personal data without an authenticated identity', () => {
+  it('does not fetch or submit personal data without an authenticated identity', async () => {
     mockAuthState = { isAuthenticated: false, userId: null }
     const get = apiClient.get as unknown as jest.Mock
     const post = apiClient.post as unknown as jest.Mock
 
-    const { result } = renderReviewHook()
+    const { result } = await renderReviewHook()
 
-    act(() => {
+    await act(() => {
       result.current.submit({ rating: 5, liked: '', disliked: '' })
     })
 
@@ -252,13 +252,13 @@ describe('hooks/useQuestReview analytics', () => {
     const post = apiClient.post as unknown as jest.Mock
     post.mockRejectedValue(new Error('boom'))
 
-    const { result } = renderReviewHook()
+    const { result } = await renderReviewHook()
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
     })
 
-    act(() => {
+    await act(() => {
       result.current.submit({ rating: 3, liked: '', disliked: '' })
     })
 

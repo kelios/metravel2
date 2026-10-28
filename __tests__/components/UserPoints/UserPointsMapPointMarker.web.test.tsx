@@ -85,7 +85,7 @@ describe('UserPointsMapPointMarkerWeb', () => {
     </View>
   );
 
-  const renderMarker = (overrides: Partial<React.ComponentProps<typeof UserPointsMapPointMarkerWeb>> = {}) => {
+  const renderMarker = async (overrides: Partial<React.ComponentProps<typeof UserPointsMapPointMarkerWeb>> = {}) => {
     const mapInstance = {
       getZoom: jest.fn(() => 12),
       setView: jest.fn(),
@@ -95,7 +95,7 @@ describe('UserPointsMapPointMarkerWeb', () => {
     const onDeletePoint = jest.fn();
     const requestDriveInfo = jest.fn();
 
-    render(
+    await render(
       <UserPointsMapPointMarkerWeb
         mods={{ Marker, Popup }}
         point={point}
@@ -132,8 +132,8 @@ describe('UserPointsMapPointMarkerWeb', () => {
     markerElement.setAttribute.mockClear();
   });
 
-  it('renders the saved point popup through the shared PlacePopupCard template', () => {
-    renderMarker();
+  it('renders the saved point popup through the shared PlacePopupCard template', async () => {
+    await renderMarker();
 
     expect(markerElement.setAttribute).toHaveBeenCalledWith('aria-label', 'Saved place');
 
@@ -168,8 +168,8 @@ describe('UserPointsMapPointMarkerWeb', () => {
     expect(props.extraActions.map((action: any) => action.key)).toEqual(['edit', 'delete']);
   });
 
-  it('passes the saved travel id from tags to the related travel stack (#1960)', () => {
-    renderMarker({
+  it('passes the saved travel id from tags to the related travel stack (#1960)', async () => {
+    await renderMarker({
       point: {
         ...point,
         tags: { travelUrl: 'https://metravel.by/travels/forty-krakova', travelId: 435 },
@@ -184,39 +184,39 @@ describe('UserPointsMapPointMarkerWeb', () => {
     );
   });
 
-  it('ignores a malformed saved travel id', () => {
-    renderMarker({ point: { ...point, tags: { travelUrl: '/travels/krakow', travelId: 'abc' } } });
+  it('ignores a malformed saved travel id', async () => {
+    await renderMarker({ point: { ...point, tags: { travelUrl: '/travels/krakow', travelId: 'abc' } } });
 
     expect(mockPlacePopupCard.mock.calls.at(-1)?.[0]).toEqual(
       expect.objectContaining({ relatedTravelUrl: '/travels/krakow', relatedTravelId: null }),
     );
   });
 
-  it('does not pass a saved travel id without its travel url', () => {
-    renderMarker({ point: { ...point, tags: { travelId: 435 } } });
+  it('does not pass a saved travel id without its travel url', async () => {
+    await renderMarker({ point: { ...point, tags: { travelId: 435 } } });
 
     expect(mockPlacePopupCard.mock.calls.at(-1)?.[0]).toEqual(
       expect.objectContaining({ relatedTravelUrl: null, relatedTravelId: null }),
     );
   });
 
-  it('keeps edit, delete, close and marker click behavior from the old popup', () => {
-    const { mapInstance, onDeletePoint, onEditPoint, requestDriveInfo } = renderMarker();
+  it('keeps edit, delete, close and marker click behavior from the old popup', async () => {
+    const { mapInstance, onDeletePoint, onEditPoint, requestDriveInfo } = await renderMarker();
 
-    fireEvent.press(screen.getByLabelText('marker'));
+    await fireEvent.press(screen.getByLabelText('marker'));
     expect(markerApi.openPopup).toHaveBeenCalled();
     expect(mapInstance.setView).toHaveBeenCalledWith([50.05924, 19.93941], 14, { animate: true });
     expect(requestDriveInfo).toHaveBeenCalledWith({ pointId: 77, pointLat: 50.05924, pointLng: 19.93941 });
 
-    fireEvent.press(screen.getByLabelText('Редактировать'));
+    await fireEvent.press(screen.getByLabelText('Редактировать'));
     expect(markerApi.closePopup).toHaveBeenCalled();
     expect(mapInstance.closePopup).toHaveBeenCalled();
     expect(onEditPoint).toHaveBeenCalledWith(point);
 
-    fireEvent.press(screen.getByLabelText('Удалить'));
+    await fireEvent.press(screen.getByLabelText('Удалить'));
     expect(onDeletePoint).toHaveBeenCalledWith(point);
 
-    fireEvent.press(screen.getByLabelText('Закрыть попап'));
+    await fireEvent.press(screen.getByLabelText('Закрыть попап'));
     expect(markerApi.closePopup).toHaveBeenCalledTimes(3);
   });
 });

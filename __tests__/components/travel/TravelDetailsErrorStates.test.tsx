@@ -10,9 +10,9 @@ const styles = {
 }
 
 describe('TravelDetailsErrorStates', () => {
-  it('routes an unsaved offline travel to the saved-content library', () => {
+  it('routes an unsaved offline travel to the saved-content library', async () => {
     const onOpenSaved = jest.fn()
-    const screen = render(
+    const screen = await render(
       <LoadError
         styles={styles}
         seoBlock={null}
@@ -24,7 +24,7 @@ describe('TravelDetailsErrorStates', () => {
     )
 
     expect(screen.getByText('Этот материал не сохранён')).toBeTruthy()
-    fireEvent.press(screen.getByText('Открыть сохранённое'))
+    await fireEvent.press(screen.getByText('Открыть сохранённое'))
     expect(onOpenSaved).toHaveBeenCalledTimes(1)
     expect(screen.queryByText('Повторить')).toBeNull()
   })

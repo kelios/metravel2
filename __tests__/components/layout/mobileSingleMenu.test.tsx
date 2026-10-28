@@ -123,12 +123,12 @@ describe('одно меню телефона (#2779)', () => {
     expect(primary.find((item) => item.key === 'travel-note')?.route).toBe(TRAVEL_NOTE_CREATE_HREF)
   })
 
-  it('кнопка меню шапки открывает тот же лист, что и пункт дока', () => {
-    const { getByTestId, queryByTestId } = render(<BottomDock />)
+  it('кнопка меню шапки открывает тот же лист, что и пункт дока', async () => {
+    const { getByTestId, queryByTestId } = await render(<BottomDock />)
     expect(queryByTestId('footer-more-sheet-native')).toBeNull()
 
     let opened = false
-    act(() => {
+    await act(() => {
       opened = requestOpenDockMore()
     })
 
@@ -139,32 +139,32 @@ describe('одно меню телефона (#2779)', () => {
     expect(queryByTestId('footer-more-item-profile')).toBeNull()
   })
 
-  it('«Тема оформления» открывается подэкраном листа, лист не закрывается', () => {
-    const { getByTestId } = render(<BottomDock />)
-    fireEvent.press(getByTestId('footer-item-more'))
-    fireEvent.press(getByTestId('footer-more-item-theme'))
+  it('«Тема оформления» открывается подэкраном листа, лист не закрывается', async () => {
+    const { getByTestId } = await render(<BottomDock />)
+    await fireEvent.press(getByTestId('footer-item-more'))
+    await fireEvent.press(getByTestId('footer-more-item-theme'))
     expect(getByTestId('footer-more-theme-back')).toBeTruthy()
     expect(getByTestId('footer-more-sheet-native')).toBeTruthy()
-    fireEvent.press(getByTestId('footer-more-theme-back'))
+    await fireEvent.press(getByTestId('footer-more-theme-back'))
     expect(getByTestId('footer-more-item-theme')).toBeTruthy()
   })
 
   it('«Выход» из листа после logout ведёт на главную, как desktop-меню', async () => {
     Object.assign(mockAuth, { isAuthenticated: true, userId: 7, username: 'Юля' })
-    const { getByTestId, queryByTestId } = render(<BottomDock />)
-    fireEvent.press(getByTestId('footer-item-more'))
+    const { getByTestId, queryByTestId } = await render(<BottomDock />)
+    await fireEvent.press(getByTestId('footer-item-more'))
     await act(async () => {
-      fireEvent.press(getByTestId('footer-more-item-logout'))
+      await fireEvent.press(getByTestId('footer-more-item-logout'))
     })
     expect(mockAuth.logout).toHaveBeenCalledTimes(1)
     expect(mockRouter.push).toHaveBeenCalledWith('/')
     expect(queryByTestId('footer-more-sheet-native')).toBeNull()
   })
 
-  it('вошедший видит в листе счётчик непрочитанных у «Сообщений»', () => {
+  it('вошедший видит в листе счётчик непрочитанных у «Сообщений»', async () => {
     Object.assign(mockAuth, { isAuthenticated: true, userId: 7, username: 'Юля' })
-    const { getByTestId, getByText } = render(<BottomDock />)
-    fireEvent.press(getByTestId('footer-item-more'))
+    const { getByTestId, getByText } = await render(<BottomDock />)
+    await fireEvent.press(getByTestId('footer-item-more'))
     expect(getByTestId('footer-more-item-messages')).toBeTruthy()
     expect(getByText('Сообщения (3)')).toBeTruthy()
   })

@@ -1,7 +1,9 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 import React from 'react'
 import { PanResponder, Platform, StyleSheet } from 'react-native'
+import { createRootRegistry } from '@/__tests__/helpers/rawRootLifecycle'
 
-const renderer = require('react-test-renderer')
+const renderer = createRootRegistry()
 const originalUseWindowDimensions = require('react-native').useWindowDimensions
 require('react-native').useWindowDimensions = jest.fn(() => ({
   width: 390,
@@ -61,6 +63,8 @@ const MapPlaceBottomCard = require('@/components/MapPage/MapPlaceBottomCard').de
 const point = { id: '1', lat: 53.9, lng: 27.56, title: 'Test point' } as any
 
 describe('MapPlaceBottomCard native layout', () => {
+  afterEach(renderer.cleanup)
+
   afterAll(() => {
     ;(Platform as any).OS = originalPlatform
     require('react-native').useWindowDimensions = originalUseWindowDimensions
@@ -72,23 +76,22 @@ describe('MapPlaceBottomCard native layout', () => {
     mockPanResponderConfigs.length = 0
   })
 
-  it('renders a bottom-anchored content-sized sheet over a soft backdrop', () => {
+  it('renders a bottom-anchored content-sized sheet over a soft backdrop', async () => {
     const onClose = jest.fn()
     let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <MapPlaceBottomCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<MapPlaceBottomCard
           point={point}
           userLocation={null}
           onClose={onClose}
           bottomInset={72}
           topInset={116}
-        />,
-      )
+        />)
     })
 
     // Root: absolute-fill, bottom-anchored (the sheet sits at the bottom over the map).
-    const root = tree.root.findByProps({ testID: 'map-place-bottom-card' })
+    const root = getOnlyHost(tree.container, (node: any) => node.props?.["testID"] === 'map-place-bottom-card')
     const rootStyle = StyleSheet.flatten(root.props.style)
     expect(rootStyle.justifyContent).toBe('flex-end')
     expect(rootStyle.top).toBe(0)
@@ -98,10 +101,10 @@ describe('MapPlaceBottomCard native layout', () => {
     expect(rootStyle.elevation).toBe(rootStyle.zIndex)
 
     // Backdrop closes on tap and uses the exact soft scrim color.
-    const backdrop = tree.root.findByProps({ testID: 'map-place-bottom-card-backdrop' })
+    const backdrop = getOnlyHost(tree.container, (node: any) => node.props?.["testID"] === 'map-place-bottom-card-backdrop')
     const backdropStyle = StyleSheet.flatten(backdrop.props.style)
     expect(backdropStyle.backgroundColor).toBe('rgba(15, 23, 42, 0.18)')
-    renderer.act(() => {
+    await React.act(() => {
       backdrop.props.onTouchEnd()
       backdrop.props.onPress()
     })
@@ -111,11 +114,10 @@ describe('MapPlaceBottomCard native layout', () => {
     // Panel caps at nativeSheetMaxHeight and clears the bottom chrome.
     // bottomChromeInset = 72 + safe.bottom(8) = 80
     // nativeSheetMaxHeight = round(max(360, 844 - 80 - safe.top(24) - 12)) = 728
-    expect(tree.root.findByProps({ testID: 'map-place-bottom-card-close' })).toBeTruthy()
-    const { View } = require('react-native')
-    const panel = tree.root.findAll(
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["testID"] === 'map-place-bottom-card-close')).toBeTruthy()
+    const panel = tree.container.queryAll(
       (node: any) =>
-        node.type === View &&
+        node.type === 'View' &&
         StyleSheet.flatten(node.props.style)?.maxHeight === 728,
     )[0]
     const panelStyle = StyleSheet.flatten(panel.props.style)
@@ -138,36 +140,35 @@ describe('MapPlaceBottomCard native layout', () => {
     expect(728 - HANDLE_ROW - heroHeight).toBeGreaterThanOrEqual(140)
 
     // One content-driven ScrollView fallback for tall content.
-    const scrolls = tree.root.findAllByType(require('react-native').ScrollView)
+    const scrolls = tree.container.queryAll((node: any) => node.type === 'RCTScrollView', { includeSelf: true })
     expect(scrolls.length).toBe(1)
     const contentStyle = StyleSheet.flatten(scrolls[0].props.contentContainerStyle)
     expect(contentStyle.paddingBottom).toBe(12)
   })
 
-  it('captures a downward handle drag before native children and keeps the responder', () => {
+  it('captures a downward handle drag before native children and keeps the responder', async () => {
     const onClose = jest.fn()
     let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <MapPlaceBottomCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<MapPlaceBottomCard
           point={point}
           userLocation={null}
           onClose={onClose}
-        />,
-      )
+        />)
     })
 
-    expect(tree.root.findByProps({ testID: 'map-place-bottom-card' })).toBeTruthy()
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["testID"] === 'map-place-bottom-card')).toBeTruthy()
     const responderConfig = mockPanResponderConfigs.at(-1)
     expect(responderConfig.onMoveShouldSetPanResponderCapture).toEqual(expect.any(Function))
     expect(responderConfig.onMoveShouldSetPanResponderCapture({}, { dy: 12, dx: 1 })).toBe(true)
     expect(responderConfig.onPanResponderTerminationRequest()).toBe(false)
     expect(responderConfig.onShouldBlockNativeResponder()).toBe(true)
-    renderer.act(() => {
+    await React.act(() => {
       responderConfig.onPanResponderTerminate({}, { dy: 120, dx: 1 })
     })
     expect(onClose).not.toHaveBeenCalled()
-    renderer.act(() => {
+    await React.act(() => {
       responderConfig.onPanResponderRelease({}, { dy: 65, dx: 1 })
     })
     expect(onClose).toHaveBeenCalledTimes(1)
@@ -178,18 +179,17 @@ describe('MapPlaceBottomCard native layout', () => {
   // responder and the target, skipping the responder itself: the header loses
   // the drag only when one of ITS ANCESTORS already holds the touch from start.
   // A child responder (the ✕ Pressable) is fine — the header captures on move.
-  it('#2300: the swipe reaches the header — no ancestor claims the touch start, a child yields on move', () => {
+  it('#2300: the swipe reaches the header — no ancestor claims the touch start, a child yields on move', async () => {
     const onClose = jest.fn()
     let tree: any
-    renderer.act(() => {
-      tree = renderer.create(<MapPlaceBottomCard point={point} userLocation={null} onClose={onClose} />)
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<MapPlaceBottomCard point={point} userLocation={null} onClose={onClose} />)
     })
-    const handleRow = tree.root.find(
-      (node: any) => typeof node.props?.onMoveShouldSetResponderCapture === 'function',
-    )
+    const handleRow = getOnlyHost(tree.container, (node: any) => typeof node.props?.onMoveShouldSetResponderCapture === 'function')
     // The header (found by its move-capture handler) wraps the ✕ child, so it
     // joins on move in the capture phase — ahead of the ✕.
-    expect(handleRow.findByProps({ testID: 'map-place-bottom-card-close' })).toBeTruthy()
+    expect(getOnlyHost(handleRow, (node: any) => node.props?.["testID"] === 'map-place-bottom-card-close')).toBeTruthy()
     // No ancestor of the header inside the card claims the touch at start.
     const claimsStart = (node: any) =>
       ['onStartShouldSetResponder', 'onStartShouldSetResponderCapture', 'onResponderGrant'].some(
@@ -206,11 +206,11 @@ describe('MapPlaceBottomCard native layout', () => {
     expect(config.onMoveShouldSetPanResponderCapture({}, { dy: 12, dx: 1 })).toBe(true)
     expect(config.onMoveShouldSetPanResponderCapture({}, { dy: 4, dx: 20 })).toBe(false)
     // A short drag does not close; one past the threshold (64) does.
-    renderer.act(() => {
+    await React.act(() => {
       config.onPanResponderRelease({}, { dy: 40, dx: 0 })
     })
     expect(onClose).not.toHaveBeenCalled()
-    renderer.act(() => {
+    await React.act(() => {
       config.onPanResponderRelease({}, { dy: 80, dx: 0 })
     })
     expect(onClose).toHaveBeenCalledTimes(1)

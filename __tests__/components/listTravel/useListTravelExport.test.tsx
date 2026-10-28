@@ -27,77 +27,77 @@ const travelC = {
 } as any;
 
 describe('useListTravelExport', () => {
-  it('keeps selected travels when current filtered list changes', () => {
-    const { result, rerender } = renderHook(
+  it('keeps selected travels when current filtered list changes', async () => {
+    const { result, rerender } = await renderHook(
       ({ travels }) => useListTravelExport(travels),
       {
         initialProps: { travels: [travelA, travelB] },
       }
     );
 
-    act(() => {
+    await act(() => {
       result.current.toggleSelect(travelA);
     });
 
-    rerender({ travels: [travelB] });
+    await rerender({ travels: [travelB] });
 
     expect(result.current.selected.map((item) => item.id)).toEqual([1]);
     expect(result.current.isSelected(1)).toBe(true);
   });
 
-  it('toggles all only for currently visible travels and preserves hidden selection', () => {
-    const { result, rerender } = renderHook(
+  it('toggles all only for currently visible travels and preserves hidden selection', async () => {
+    const { result, rerender } = await renderHook(
       ({ travels }) => useListTravelExport(travels),
       {
         initialProps: { travels: [travelA] },
       }
     );
 
-    act(() => {
+    await act(() => {
       result.current.toggleSelect(travelA);
     });
 
-    rerender({ travels: [travelB, travelC] });
+    await rerender({ travels: [travelB, travelC] });
 
-    act(() => {
+    await act(() => {
       result.current.toggleSelectAll();
     });
 
     expect(result.current.selected.map((item) => item.id)).toEqual([1, 2, 3]);
 
-    act(() => {
+    await act(() => {
       result.current.toggleSelectAll();
     });
 
     expect(result.current.selected.map((item) => item.id)).toEqual([1]);
   });
 
-  it('moves selected travels up and down in manual order', () => {
-    const { result } = renderHook(() => useListTravelExport([travelA, travelB, travelC]));
+  it('moves selected travels up and down in manual order', async () => {
+    const { result } = await renderHook(() => useListTravelExport([travelA, travelB, travelC]));
 
-    act(() => {
+    await act(() => {
       result.current.toggleSelect(travelA);
       result.current.toggleSelect(travelB);
       result.current.toggleSelect(travelC);
     });
 
-    act(() => {
+    await act(() => {
       result.current.moveSelected(3, 'up');
     });
 
     expect(result.current.selected.map((item) => item.id)).toEqual([1, 3, 2]);
 
-    act(() => {
+    await act(() => {
       result.current.moveSelected(1, 'down');
     });
 
     expect(result.current.selected.map((item) => item.id)).toEqual([3, 1, 2]);
   });
 
-  it('resets remembered export sort to manual when selection changes', () => {
-    const { result } = renderHook(() => useListTravelExport([travelA, travelB, travelC]));
+  it('resets remembered export sort to manual when selection changes', async () => {
+    const { result } = await renderHook(() => useListTravelExport([travelA, travelB, travelC]));
 
-    act(() => {
+    await act(() => {
       result.current.setLastSettings((prev) => ({
         ...prev,
         sortOrder: 'date-desc',
@@ -106,7 +106,7 @@ describe('useListTravelExport', () => {
 
     expect(result.current.lastSettings.sortOrder).toBe('date-desc');
 
-    act(() => {
+    await act(() => {
       result.current.toggleSelect(travelA);
     });
 

@@ -1,3 +1,4 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 /**
  * #1480: раскрытие об ИИ на стартовом экране квеста свёрнуто в строку рядом с
  * проверяемыми фактами о маршруте, а «Сообщить о неточности» уходит в реальный
@@ -7,7 +8,7 @@ import React from 'react'
 import fs from 'node:fs'
 import path from 'node:path'
 import { act, fireEvent, render, within } from '@testing-library/react-native'
-import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native'
+import { KeyboardAvoidingView, Platform } from 'react-native'
 
 const mockSendFeedback = jest.fn()
 const mockShowToastMessage = jest.fn()
@@ -21,8 +22,8 @@ jest.mock('@/utils/toast', () => ({
 
 import QuestTrustBar from '@/components/quests/QuestTrustBar'
 
-const renderBar = () =>
-  render(
+const renderBar = async () =>
+  await render(
     <QuestTrustBar
       pointsCount={7}
       questTitle="Город на сваях"
@@ -38,8 +39,8 @@ describe('QuestTrustBar', () => {
     mockSendFeedback.mockResolvedValue('ok')
   })
 
-  it('показывает факты маршрута и держит раскрытие об ИИ свёрнутым', () => {
-    const { getByText, getByTestId, queryByTestId } = renderBar()
+  it('показывает факты маршрута и держит раскрытие об ИИ свёрнутым', async () => {
+    const { getByText, getByTestId, queryByTestId } = await renderBar()
 
     expect(getByText('7 точек')).toBeTruthy()
     expect(getByText('Точки сверены с картой')).toBeTruthy()
@@ -50,10 +51,10 @@ describe('QuestTrustBar', () => {
     expect(queryByTestId('quest-report-inaccuracy')).toBeNull()
   })
 
-  it('раскрывает полный текст и кнопку отчёта по нажатию на строку', () => {
-    const { getByTestId, getByText } = renderBar()
+  it('раскрывает полный текст и кнопку отчёта по нажатию на строку', async () => {
+    const { getByTestId, getByText } = await renderBar()
 
-    fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
+    await fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
 
     expect(getByTestId('quest-ai-disclosure')).toBeTruthy()
     expect(getByText(/подготовлены с использованием искусственного интеллекта/)).toBeTruthy()
@@ -61,18 +62,18 @@ describe('QuestTrustBar', () => {
   })
 
   it('отправляет отчёт о неточности с контекстом квеста', async () => {
-    const { getByTestId, queryByTestId } = renderBar()
+    const { getByTestId, queryByTestId } = await renderBar()
 
-    fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
-    fireEvent.press(getByTestId('quest-report-inaccuracy'))
+    await fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
+    await fireEvent.press(getByTestId('quest-report-inaccuracy'))
 
-    fireEvent.changeText(getByTestId('quest-inaccuracy-report-name'), 'Игрок')
-    fireEvent.changeText(getByTestId('quest-inaccuracy-report-email'), 'player@example.com')
-    fireEvent.changeText(getByTestId('quest-inaccuracy-report-message'), 'Точка 3 стоит на парковке')
-    fireEvent.press(getByTestId('quest-inaccuracy-report-consent'))
+    await fireEvent.changeText(getByTestId('quest-inaccuracy-report-name'), 'Игрок')
+    await fireEvent.changeText(getByTestId('quest-inaccuracy-report-email'), 'player@example.com')
+    await fireEvent.changeText(getByTestId('quest-inaccuracy-report-message'), 'Точка 3 стоит на парковке')
+    await fireEvent.press(getByTestId('quest-inaccuracy-report-consent'))
 
     await act(async () => {
-      fireEvent.press(getByTestId('quest-inaccuracy-report-submit'))
+      await fireEvent.press(getByTestId('quest-inaccuracy-report-submit'))
       await Promise.resolve()
     })
 
@@ -90,17 +91,17 @@ describe('QuestTrustBar', () => {
   })
 
   it('не отправляет отчёт без согласия на обработку данных', async () => {
-    const { getByTestId } = renderBar()
+    const { getByTestId } = await renderBar()
 
-    fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
-    fireEvent.press(getByTestId('quest-report-inaccuracy'))
+    await fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
+    await fireEvent.press(getByTestId('quest-report-inaccuracy'))
 
-    fireEvent.changeText(getByTestId('quest-inaccuracy-report-name'), 'Игрок')
-    fireEvent.changeText(getByTestId('quest-inaccuracy-report-email'), 'player@example.com')
-    fireEvent.changeText(getByTestId('quest-inaccuracy-report-message'), 'Ошибка в дате')
+    await fireEvent.changeText(getByTestId('quest-inaccuracy-report-name'), 'Игрок')
+    await fireEvent.changeText(getByTestId('quest-inaccuracy-report-email'), 'player@example.com')
+    await fireEvent.changeText(getByTestId('quest-inaccuracy-report-message'), 'Ошибка в дате')
 
     await act(async () => {
-      fireEvent.press(getByTestId('quest-inaccuracy-report-submit'))
+      await fireEvent.press(getByTestId('quest-inaccuracy-report-submit'))
       await Promise.resolve()
     })
 
@@ -108,25 +109,25 @@ describe('QuestTrustBar', () => {
     expect(getByTestId('quest-inaccuracy-report-error')).toBeTruthy()
   })
 
-  it('не закрывает iOS-клавиатуру при прокрутке к кнопке отправки', () => {
-    const { getByTestId, UNSAFE_getByType } = renderBar()
+  it('не закрывает iOS-клавиатуру при прокрутке к кнопке отправки', async () => {
+    const { getByTestId, container: hostContainer } = await renderBar()
 
-    fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
-    fireEvent.press(getByTestId('quest-report-inaccuracy'))
+    await fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
+    await fireEvent.press(getByTestId('quest-report-inaccuracy'))
 
-    expect(UNSAFE_getByType(ScrollView).props.keyboardDismissMode).toBe('none')
+    expect(getOnlyHost(hostContainer, node => node.type === "RCTScrollView").props.keyboardDismissMode).toBe('none')
   })
 
-  it('держит кнопку отправки в закреплённом подвале вне ScrollView', () => {
+  it('держит кнопку отправки в закреплённом подвале вне ScrollView', async () => {
     // Регрессия #1480 (iOS-приёмка 22.08.2026): пока кнопка «Отправить» жила
     // внутри ScrollView, на iOS она перерастала maxHeight шита и уезжала под
     // клавиатуру. Подвал вне списка полей держит её над клавиатурой.
-    const { getByTestId, UNSAFE_getByType } = renderBar()
+    const { getByTestId, container: hostContainer } = await renderBar()
 
-    fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
-    fireEvent.press(getByTestId('quest-report-inaccuracy'))
+    await fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
+    await fireEvent.press(getByTestId('quest-report-inaccuracy'))
 
-    const scrollView = UNSAFE_getByType(ScrollView)
+    const scrollView = getOnlyHost(hostContainer, node => node.type === "RCTScrollView")
     const scoped = within(scrollView)
     // Поля живут внутри прокручиваемого списка…
     expect(scoped.getByTestId('quest-inaccuracy-report-message')).toBeTruthy()
@@ -139,29 +140,30 @@ describe('QuestTrustBar', () => {
     ['android', 'height'],
     ['ios', 'padding'],
     ['web', undefined],
-  ] as const)('использует для %s контракт KeyboardAvoidingView %s', (platform, behavior) => {
+  ] as const)('использует для %s контракт KeyboardAvoidingView %s', async (platform, behavior) => {
     const originalPlatform = Platform.OS
     Object.defineProperty(Platform, 'OS', { configurable: true, value: platform })
 
     try {
-      const { getByTestId, UNSAFE_getByType } = renderBar()
-      fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
-      fireEvent.press(getByTestId('quest-report-inaccuracy'))
+      const { getByTestId } = await renderBar()
+      await fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
+      await fireEvent.press(getByTestId('quest-report-inaccuracy'))
 
-      expect(UNSAFE_getByType(KeyboardAvoidingView).props.behavior).toBe(behavior)
+      expect(mockAvoiderProps.has('report')).toBe(true)
+      expect(mockAvoiderProps.get('report').behavior).toBe(behavior)
     } finally {
       Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform })
     }
   })
 
-  it('сохраняет Autofill и связывает e-mail с узким тематическим WebKit-контрактом', () => {
+  it('сохраняет Autofill и связывает e-mail с узким тематическим WebKit-контрактом', async () => {
     const originalPlatform = Platform.OS
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
 
     try {
-      const { getByPlaceholderText, getByTestId } = renderBar()
-      fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
-      fireEvent.press(getByTestId('quest-report-inaccuracy'))
+      const { getByPlaceholderText, getByTestId } = await renderBar()
+      await fireEvent.press(getByTestId('quest-ai-disclosure-toggle'))
+      await fireEvent.press(getByTestId('quest-report-inaccuracy'))
 
       const emailInput = getByPlaceholderText(/e-mail/i)
       expect(emailInput.props.autoComplete).toBe('email')
@@ -186,4 +188,22 @@ describe('QuestTrustBar', () => {
     expect(autofillRule).toContain('background-color: var(--color-background)')
     expect(autofillRule).toContain('var(--color-background) inset')
   })
+})
+
+// RN 0.8x отдаёт KeyboardAvoidingView геттером, поэтому подмена экспорта
+// не попадает в уже связанный класс. Смотрим props самого render.
+const renderKeyboardAvoidingView = KeyboardAvoidingView.prototype.render
+const mockAvoiderProps = new Map<string, any>()
+let restoreKeyboardAvoidingView: (() => void) | null = null
+beforeEach(() => {
+  mockAvoiderProps.clear()
+  const spy = jest.spyOn(KeyboardAvoidingView.prototype, 'render').mockImplementation(function (this: KeyboardAvoidingView) {
+    mockAvoiderProps.set('report', this.props)
+    return renderKeyboardAvoidingView.call(this)
+  })
+  restoreKeyboardAvoidingView = () => spy.mockRestore()
+})
+afterEach(() => {
+  restoreKeyboardAvoidingView?.()
+  restoreKeyboardAvoidingView = null
 })

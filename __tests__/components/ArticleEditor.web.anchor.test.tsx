@@ -1,4 +1,5 @@
-import { TextInput, Platform } from 'react-native';
+import { getAllHosts } from '@/__tests__/helpers/hostQueries'
+import { Platform } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
 jest.mock('@/context/AuthContext', () => ({
@@ -107,7 +108,7 @@ describe('ArticleEditor.web anchors', () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
     const onChange = jest.fn();
-    const { getByLabelText, getByPlaceholderText, getAllByRole, UNSAFE_getAllByType, getByTestId } = render(
+    const { getByLabelText, getByPlaceholderText, getAllByRole, getByTestId, container: hostContainer } = await render(
       <ArticleEditor content={'<p>hello</p>'} onChange={onChange} />
     );
 
@@ -115,19 +116,19 @@ describe('ArticleEditor.web anchors', () => {
       expect(getByTestId('quill-mock')).toBeTruthy();
     });
 
-    fireEvent.press(getByLabelText('Вставить якорь'));
+    await fireEvent.press(getByLabelText('Вставить якорь'));
 
-    fireEvent.changeText(getByPlaceholderText('day-3'), 'day-3');
+    await fireEvent.changeText(getByPlaceholderText('day-3'), 'day-3');
 
     const buttons = getAllByRole('button');
     const insertBtn = buttons.find(b => b.props?.accessibilityLabel === 'Вставить');
     expect(insertBtn).toBeTruthy();
-    fireEvent.press(insertBtn as any);
+    await fireEvent.press(insertBtn as any);
 
-    fireEvent.press(getByLabelText('Показать HTML-код'));
+    await fireEvent.press(getByLabelText('Показать HTML-код'));
 
     await waitFor(() => {
-      const inputs = UNSAFE_getAllByType(TextInput);
+      const inputs = getAllHosts(hostContainer, node => node.type === "TextInput");
       const htmlInput = inputs[inputs.length - 1];
       expect(String(htmlInput.props.value)).toContain('<span id="day-3">[#day-3]</span>');
     });
@@ -136,7 +137,7 @@ describe('ArticleEditor.web anchors', () => {
   it('supports Cyrillic anchors (unicode) and normalizes spaces to dashes', async () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
-    const { getByLabelText, getByPlaceholderText, getAllByRole, UNSAFE_getAllByType, getByTestId } = render(
+    const { getByLabelText, getByPlaceholderText, getAllByRole, getByTestId, container: hostContainer } = await render(
       <ArticleEditor content={'<p>hello</p>'} onChange={jest.fn()} />
     );
 
@@ -144,17 +145,17 @@ describe('ArticleEditor.web anchors', () => {
       expect(getByTestId('quill-mock')).toBeTruthy();
     });
 
-    fireEvent.press(getByLabelText('Вставить якорь'));
-    fireEvent.changeText(getByPlaceholderText('day-3'), 'день 3');
+    await fireEvent.press(getByLabelText('Вставить якорь'));
+    await fireEvent.changeText(getByPlaceholderText('day-3'), 'день 3');
 
     const buttons = getAllByRole('button');
     const insertBtn = buttons.find(b => b.props?.accessibilityLabel === 'Вставить');
-    fireEvent.press(insertBtn as any);
+    await fireEvent.press(insertBtn as any);
 
-    fireEvent.press(getByLabelText('Показать HTML-код'));
+    await fireEvent.press(getByLabelText('Показать HTML-код'));
 
     await waitFor(() => {
-      const inputs = UNSAFE_getAllByType(TextInput);
+      const inputs = getAllHosts(hostContainer, node => node.type === "TextInput");
       const htmlInput = inputs[inputs.length - 1];
       expect(String(htmlInput.props.value)).toContain('<span id="день-3">[#день-3]</span>');
     });
@@ -169,7 +170,7 @@ describe('ArticleEditor.web anchors', () => {
     // Select "world" (index 6..11)
     (globalThis as any).__quillSelection__ = { index: 6, length: 5 };
 
-    const { getByLabelText, getByPlaceholderText, getAllByRole, UNSAFE_getAllByType, getByTestId } = render(
+    const { getByLabelText, getByPlaceholderText, getAllByRole, getByTestId, container: hostContainer } = await render(
       <ArticleEditor content={initial} onChange={jest.fn()} />
     );
 
@@ -177,18 +178,18 @@ describe('ArticleEditor.web anchors', () => {
       expect(getByTestId('quill-mock')).toBeTruthy();
     });
 
-    fireEvent.press(getByLabelText('Вставить якорь'));
-    fireEvent.changeText(getByPlaceholderText('day-3'), 'desc');
+    await fireEvent.press(getByLabelText('Вставить якорь'));
+    await fireEvent.changeText(getByPlaceholderText('day-3'), 'desc');
 
     const buttons = getAllByRole('button');
     const insertBtn = buttons.find(b => b.props?.accessibilityLabel === 'Вставить');
     expect(insertBtn).toBeTruthy();
-    fireEvent.press(insertBtn as any);
+    await fireEvent.press(insertBtn as any);
 
-    fireEvent.press(getByLabelText('Показать HTML-код'));
+    await fireEvent.press(getByLabelText('Показать HTML-код'));
 
     await waitFor(() => {
-      const inputs = UNSAFE_getAllByType(TextInput);
+      const inputs = getAllHosts(hostContainer, node => node.type === "TextInput");
       const htmlInput = inputs[inputs.length - 1];
       const value = String(htmlInput.props.value);
       expect(value).toContain('hello <span id="desc">world</span>');
@@ -204,7 +205,7 @@ describe('ArticleEditor.web anchors', () => {
 
     const openSpy = jest.spyOn(window, 'open').mockImplementation(() => ({ opener: null } as Window));
 
-    const { getByLabelText, getByTestId } = render(
+    const { getByLabelText, getByTestId } = await render(
       <ArticleEditor content={'hello'} onChange={jest.fn()} idTravel={'733'} />
     );
 
@@ -212,7 +213,7 @@ describe('ArticleEditor.web anchors', () => {
       expect(getByTestId('quill-mock')).toBeTruthy();
     });
 
-    fireEvent.press(getByLabelText('Открыть превью'));
+    await fireEvent.press(getByLabelText('Открыть превью'));
 
     expect(openSpy).toHaveBeenCalledWith(
       `${window.location.origin}/travels/733`,
@@ -226,7 +227,7 @@ describe('ArticleEditor.web anchors', () => {
   it('normalizes full HTML document to body HTML when leaving HTML mode (content should not disappear)', async () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
-    const { getByLabelText, UNSAFE_getAllByType, getByTestId } = render(
+    const { getByLabelText, getByTestId, container: hostContainer } = await render(
       <ArticleEditor content={''} onChange={jest.fn()} />
     );
 
@@ -235,27 +236,27 @@ describe('ArticleEditor.web anchors', () => {
     });
 
     // Enter HTML mode.
-    fireEvent.press(getByLabelText('Показать HTML-код'));
+    await fireEvent.press(getByLabelText('Показать HTML-код'));
 
     await waitFor(() => {
-      const inputs = UNSAFE_getAllByType(TextInput);
+      const inputs = getAllHosts(hostContainer, node => node.type === "TextInput");
       expect(inputs.length).toBeGreaterThan(0);
     });
 
     const fullDoc = '<!DOCTYPE html><html><head><style>body{color:red}</style></head><body><p>HELLO</p></body></html>';
 
-    const inputs = UNSAFE_getAllByType(TextInput);
+    const inputs = getAllHosts(hostContainer, node => node.type === "TextInput");
     const htmlInput = inputs[inputs.length - 1];
-    fireEvent.changeText(htmlInput, fullDoc);
+    await fireEvent.changeText(htmlInput, fullDoc);
 
     // Leave HTML mode => should normalize to body.innerHTML.
-    fireEvent.press(getByLabelText('Скрыть HTML-код'));
+    await fireEvent.press(getByLabelText('Скрыть HTML-код'));
 
     // Re-open HTML mode and verify content is preserved and normalized.
-    fireEvent.press(getByLabelText('Показать HTML-код'));
+    await fireEvent.press(getByLabelText('Показать HTML-код'));
 
     await waitFor(() => {
-      const nextInputs = UNSAFE_getAllByType(TextInput);
+      const nextInputs = getAllHosts(hostContainer, node => node.type === "TextInput");
       const nextHtmlInput = nextInputs[nextInputs.length - 1];
       const value = String(nextHtmlInput.props.value);
       expect(value).toContain('<p>HELLO</p>');
@@ -267,7 +268,7 @@ describe('ArticleEditor.web anchors', () => {
   it('does not wipe non-empty content on non-user empty Quill onChange', async () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
-    const { getByLabelText, UNSAFE_getAllByType, getByTestId } = render(
+    const { getByLabelText, getByTestId, container: hostContainer } = await render(
       <ArticleEditor content={'<p>keep</p>'} onChange={jest.fn()} />
     );
 
@@ -281,10 +282,10 @@ describe('ArticleEditor.web anchors', () => {
     // Simulate Quill emitting empty change with source !== 'user' (mount/toggle artifact)
     quillProps.onChange('', null, 'api');
 
-    fireEvent.press(getByLabelText('Показать HTML-код'));
+    await fireEvent.press(getByLabelText('Показать HTML-код'));
 
     await waitFor(() => {
-      const inputs = UNSAFE_getAllByType(TextInput);
+      const inputs = getAllHosts(hostContainer, node => node.type === "TextInput");
       const htmlInput = inputs[inputs.length - 1];
       expect(String(htmlInput.props.value)).toContain('<p>keep</p>');
     });
@@ -293,7 +294,7 @@ describe('ArticleEditor.web anchors', () => {
   it('preserves a normal HTML fragment when toggling HTML mode on and off', async () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
 
-    const { getByLabelText, UNSAFE_getAllByType, getByTestId } = render(
+    const { getByLabelText, getByTestId, container: hostContainer } = await render(
       <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} />
     );
 
@@ -302,25 +303,25 @@ describe('ArticleEditor.web anchors', () => {
     });
 
     // Enter HTML mode.
-    fireEvent.press(getByLabelText('Показать HTML-код'));
+    await fireEvent.press(getByLabelText('Показать HTML-код'));
 
     await waitFor(() => {
-      const inputs = UNSAFE_getAllByType(TextInput);
+      const inputs = getAllHosts(hostContainer, node => node.type === "TextInput");
       expect(inputs.length).toBeGreaterThan(0);
     });
 
-    const inputs = UNSAFE_getAllByType(TextInput);
+    const inputs = getAllHosts(hostContainer, node => node.type === "TextInput");
     const htmlInput = inputs[inputs.length - 1];
-    fireEvent.changeText(htmlInput, '<p>changed</p>');
+    await fireEvent.changeText(htmlInput, '<p>changed</p>');
 
     // Leave HTML mode.
-    fireEvent.press(getByLabelText('Скрыть HTML-код'));
+    await fireEvent.press(getByLabelText('Скрыть HTML-код'));
 
     // Re-open HTML mode and verify the change is still there.
-    fireEvent.press(getByLabelText('Показать HTML-код'));
+    await fireEvent.press(getByLabelText('Показать HTML-код'));
 
     await waitFor(() => {
-      const nextInputs = UNSAFE_getAllByType(TextInput);
+      const nextInputs = getAllHosts(hostContainer, node => node.type === "TextInput");
       const nextHtmlInput = nextInputs[nextInputs.length - 1];
       expect(String(nextHtmlInput.props.value)).toContain('<p>changed</p>');
     });

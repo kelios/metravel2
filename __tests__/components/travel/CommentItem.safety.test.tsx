@@ -44,9 +44,9 @@ const comment = (patch: Partial<TravelComment> = {}): TravelComment => ({
   ...patch,
 })
 
-const renderItem = (item: TravelComment) => {
+const renderItem = async (item: TravelComment) => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(
+  return await render(
     <QueryClientProvider client={client}>
       <CommentItem comment={item} />
     </QueryClientProvider>,
@@ -60,26 +60,26 @@ describe('CommentItem content safety', () => {
     useHiddenContentStore.setState({ byOwner: {} })
   })
 
-  it('shows the 44x44 safety trigger on a foreign comment and no own-actions toggle', () => {
-    const { getByTestId, queryByTestId } = renderItem(comment())
+  it('shows the 44x44 safety trigger on a foreign comment and no own-actions toggle', async () => {
+    const { getByTestId, queryByTestId } = await renderItem(comment())
     expect(getByTestId('comment-safety-menu')).toBeTruthy()
     expect(queryByTestId('comment-actions-trigger')).toBeNull()
   })
 
-  it('keeps the own edit/delete toggle and no safety trigger on an own comment', () => {
-    const { getByTestId, queryByTestId } = renderItem(comment({ user: ME }))
+  it('keeps the own edit/delete toggle and no safety trigger on an own comment', async () => {
+    const { getByTestId, queryByTestId } = await renderItem(comment({ user: ME }))
     expect(getByTestId('comment-actions-trigger')).toBeTruthy()
     expect(queryByTestId('comment-safety-menu')).toBeNull()
   })
 
-  it('offers nothing to report on an optimistic comment (temporary positive id, user 0)', () => {
-    const { queryByTestId } = renderItem(comment({ id: Date.now(), user: 0 }))
+  it('offers nothing to report on an optimistic comment (temporary positive id, user 0)', async () => {
+    const { queryByTestId } = await renderItem(comment({ id: Date.now(), user: 0 }))
     expect(queryByTestId('comment-safety-menu')).toBeNull()
   })
 
-  it('renders the hidden placeholder instead of a hidden comment', () => {
+  it('renders the hidden placeholder instead of a hidden comment', async () => {
     useHiddenContentStore.setState({ byOwner: { [String(ME)]: ['travel_comment:31'] } })
-    const { getByTestId, queryByText } = renderItem(comment())
+    const { getByTestId, queryByText } = await renderItem(comment())
     expect(getByTestId('hidden-content')).toBeTruthy()
     expect(queryByText('Comment text')).toBeNull()
   })

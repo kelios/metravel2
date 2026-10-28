@@ -65,25 +65,25 @@ const formatDayMonth = (year: number, monthIndex: number, day: number) =>
 // ---- tests ----
 describe('MiniCalendar', () => {
   describe('рендер заголовка', () => {
-    it('показывает название текущего месяца и год', () => {
+    it('показывает название текущего месяца и год', async () => {
       const today = new Date()
       const MONTHS = [
         'Январь', 'Февраль', 'Март', 'Апрель',
         'Май', 'Июнь', 'Июль', 'Август',
         'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
       ]
-      const { getByText } = render(<MiniCalendar entries={[]} />)
+      const { getByText } = await render(<MiniCalendar entries={[]} />)
       expect(getByText(`${MONTHS[today.getMonth()]} ${today.getFullYear()}`)).toBeTruthy()
     })
 
-    it('рендерит кнопки навигации по месяцам', () => {
-      const { getByLabelText } = render(<MiniCalendar entries={[]} />)
+    it('рендерит кнопки навигации по месяцам', async () => {
+      const { getByLabelText } = await render(<MiniCalendar entries={[]} />)
       expect(getByLabelText('Предыдущий месяц')).toBeTruthy()
       expect(getByLabelText('Следующий месяц')).toBeTruthy()
     })
 
-    it('рендерит строку с названиями дней недели (Пн–Вс)', () => {
-      const { getByText } = render(<MiniCalendar entries={[]} />)
+    it('рендерит строку с названиями дней недели (Пн–Вс)', async () => {
+      const { getByText } = await render(<MiniCalendar entries={[]} />)
       for (const day of ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']) {
         expect(getByText(day)).toBeTruthy()
       }
@@ -91,7 +91,7 @@ describe('MiniCalendar', () => {
   })
 
   describe('навигация по месяцам', () => {
-    it('переходит на следующий месяц при нажатии «Следующий месяц»', () => {
+    it('переходит на следующий месяц при нажатии «Следующий месяц»', async () => {
       const MONTHS = [
         'Январь', 'Февраль', 'Март', 'Апрель',
         'Май', 'Июнь', 'Июль', 'Август',
@@ -101,12 +101,12 @@ describe('MiniCalendar', () => {
       const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1)
       const expectedTitle = `${MONTHS[nextMonth.getMonth()]} ${nextMonth.getFullYear()}`
 
-      const { getByLabelText, getByText } = render(<MiniCalendar entries={[]} />)
-      fireEvent.press(getByLabelText('Следующий месяц'))
+      const { getByLabelText, getByText } = await render(<MiniCalendar entries={[]} />)
+      await fireEvent.press(getByLabelText('Следующий месяц'))
       expect(getByText(expectedTitle)).toBeTruthy()
     })
 
-    it('переходит на предыдущий месяц при нажатии «Предыдущий месяц»', () => {
+    it('переходит на предыдущий месяц при нажатии «Предыдущий месяц»', async () => {
       const MONTHS = [
         'Январь', 'Февраль', 'Март', 'Апрель',
         'Май', 'Июнь', 'Июль', 'Август',
@@ -116,41 +116,41 @@ describe('MiniCalendar', () => {
       const prevMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1)
       const expectedTitle = `${MONTHS[prevMonth.getMonth()]} ${prevMonth.getFullYear()}`
 
-      const { getByLabelText, getByText } = render(<MiniCalendar entries={[]} />)
-      fireEvent.press(getByLabelText('Предыдущий месяц'))
+      const { getByLabelText, getByText } = await render(<MiniCalendar entries={[]} />)
+      await fireEvent.press(getByLabelText('Предыдущий месяц'))
       expect(getByText(expectedTitle)).toBeTruthy()
     })
 
-    it('переходит через граничный месяц: декабрь → январь следующего года', () => {
-      const { getByLabelText, getByText } = render(<MiniCalendar entries={[]} />)
+    it('переходит через граничный месяц: декабрь → январь следующего года', async () => {
+      const { getByLabelText, getByText } = await render(<MiniCalendar entries={[]} />)
       // Navigate to December of current year
       const today = new Date()
       const monthsToEnd = 11 - today.getMonth() // months until December
       for (let i = 0; i < monthsToEnd; i++) {
-        fireEvent.press(getByLabelText('Следующий месяц'))
+        await fireEvent.press(getByLabelText('Следующий месяц'))
       }
       // Now click next to go to January of next year
-      fireEvent.press(getByLabelText('Следующий месяц'))
+      await fireEvent.press(getByLabelText('Следующий месяц'))
       expect(getByText(`Январь ${today.getFullYear() + 1}`)).toBeTruthy()
     })
 
-    it('переходит через граничный месяц: январь → декабрь предыдущего года', () => {
-      const { getByLabelText, getByText } = render(<MiniCalendar entries={[]} />)
+    it('переходит через граничный месяц: январь → декабрь предыдущего года', async () => {
+      const { getByLabelText, getByText } = await render(<MiniCalendar entries={[]} />)
       const today = new Date()
       // Navigate to January of current year
       const monthsToStart = today.getMonth() // months back to January
       for (let i = 0; i < monthsToStart; i++) {
-        fireEvent.press(getByLabelText('Предыдущий месяц'))
+        await fireEvent.press(getByLabelText('Предыдущий месяц'))
       }
       // Now click prev to go to December of prev year
-      fireEvent.press(getByLabelText('Предыдущий месяц'))
+      await fireEvent.press(getByLabelText('Предыдущий месяц'))
       expect(getByText(`Декабрь ${today.getFullYear() - 1}`)).toBeTruthy()
     })
   })
 
   describe('сетка дней', () => {
-    it('рендерит корректное количество дней в May 2026 (31 день)', () => {
-      const { getAllByRole } = render(<MiniCalendar entries={[]} focusDate="2026-05-01" />)
+    it('рендерит корректное количество дней в May 2026 (31 день)', async () => {
+      const { getAllByRole } = await render(<MiniCalendar entries={[]} focusDate="2026-05-01" />)
       // Day buttons are rendered as buttons in the grid
       const buttons = getAllByRole('button')
       // Filter out nav buttons (Предыдущий/Следующий месяц)
@@ -161,8 +161,8 @@ describe('MiniCalendar', () => {
       expect(dayButtons.length).toBe(31)
     })
 
-    it('день 1 рендерится как кнопка с правильным accessibilityLabel', () => {
-      const { getByLabelText } = render(<MiniCalendar entries={[]} />)
+    it('день 1 рендерится как кнопка с правильным accessibilityLabel', async () => {
+      const { getByLabelText } = await render(<MiniCalendar entries={[]} />)
       // May 2026 - current date context
       const today = new Date()
       const label = formatDayMonth(today.getFullYear(), today.getMonth(), 1)
@@ -171,13 +171,13 @@ describe('MiniCalendar', () => {
   })
 
   describe('отмеченные дни (entries)', () => {
-    it('добавляет «, есть поездки» к label дня с planned поездкой', () => {
+    it('добавляет «, есть поездки» к label дня с planned поездкой', async () => {
       const today = new Date()
       const year = today.getFullYear()
       const month = String(today.getMonth() + 1).padStart(2, '0')
       const day = '15'
       const plannedDate = `${year}-${month}-${day}`
-      const { getByLabelText } = render(
+      const { getByLabelText } = await render(
         <MiniCalendar entries={[makeEntry(plannedDate)]} />
       )
       expect(
@@ -185,12 +185,12 @@ describe('MiniCalendar', () => {
       ).toBeTruthy()
     })
 
-    it('не отмечает дни из других месяцев', () => {
+    it('не отмечает дни из других месяцев', async () => {
       // Current month entry in the next month
       const today = new Date()
       const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 15)
       const plannedDate = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-15`
-      const { queryByLabelText } = render(
+      const { queryByLabelText } = await render(
         <MiniCalendar entries={[makeEntry(plannedDate)]} />
       )
       // The day 15 in current month should NOT have "есть поездки"
@@ -199,7 +199,7 @@ describe('MiniCalendar', () => {
       ).toBeNull()
     })
 
-    it('не отмечает невозможную дату после Date-нормализации', () => {
+    it('не отмечает невозможную дату после Date-нормализации', async () => {
       const today = new Date()
       const invalidEntry: TravelStatusEntry = {
         id: 4,
@@ -210,13 +210,13 @@ describe('MiniCalendar', () => {
         plannedDate: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-32`,
         addedAt: Date.now(),
       }
-      const { queryByLabelText } = render(<MiniCalendar entries={[invalidEntry]} />)
+      const { queryByLabelText } = await render(<MiniCalendar entries={[invalidEntry]} />)
       expect(
         queryByLabelText(`${formatDayMonth(today.getFullYear(), today.getMonth(), 1)}, есть поездки`),
       ).toBeNull()
     })
 
-    it('не отмечает дни для visited/wishlist записей (без plannedDate)', () => {
+    it('не отмечает дни для visited/wishlist записей (без plannedDate)', async () => {
       const today = new Date()
       const visitedEntry: TravelStatusEntry = {
         id: 2,
@@ -227,7 +227,7 @@ describe('MiniCalendar', () => {
         addedAt: Date.now(),
         // no plannedDate
       }
-      const { queryByLabelText } = render(
+      const { queryByLabelText } = await render(
         <MiniCalendar entries={[visitedEntry]} />
       )
       // No day should have "есть поездки" label
@@ -239,7 +239,7 @@ describe('MiniCalendar', () => {
       }
     })
 
-    it('отмечает visitedDate и wishlistDate как календарные даты', () => {
+    it('отмечает visitedDate и wishlistDate как календарные даты', async () => {
       const today = new Date()
       const year = today.getFullYear()
       const month = String(today.getMonth() + 1).padStart(2, '0')
@@ -263,12 +263,12 @@ describe('MiniCalendar', () => {
           addedAt: Date.now(),
         },
       ]
-      const { getByLabelText } = render(<MiniCalendar entries={entries} />)
+      const { getByLabelText } = await render(<MiniCalendar entries={entries} />)
       expect(getByLabelText(`${formatDayMonth(year, today.getMonth(), 8)}, есть поездки`)).toBeTruthy()
       expect(getByLabelText(`${formatDayMonth(year, today.getMonth(), 18)}, есть поездки`)).toBeTruthy()
     })
 
-    it('отмечает посещённое путешествие по fallback-дате, если указаны только год и месяц', () => {
+    it('отмечает посещённое путешествие по fallback-дате, если указаны только год и месяц', async () => {
       const today = new Date()
       const year = today.getFullYear()
       const MONTHS = [
@@ -294,7 +294,7 @@ describe('MiniCalendar', () => {
         addedAt: Date.now(),
       }
 
-      const { getByLabelText } = render(<MiniCalendar entries={[entry]} />)
+      const { getByLabelText } = await render(<MiniCalendar entries={[entry]} />)
 
       expect(fallbackDay).not.toBeNull()
       expect(
@@ -320,7 +320,7 @@ describe('MiniCalendar', () => {
       })
       const fallbackDay = fallbackDate ? Number(fallbackDate.slice(-2)) : null
 
-      const { getByText, getByLabelText } = render(
+      const { getByText, getByLabelText } = await render(
         <MiniCalendar entries={[entry]} focusDate={fallbackDate} />
       )
 
@@ -331,47 +331,47 @@ describe('MiniCalendar', () => {
   })
 
   describe('выбор дня (selectedDate)', () => {
-    it('вызывает onDayPress с корректной датой при нажатии на день', () => {
+    it('вызывает onDayPress с корректной датой при нажатии на день', async () => {
       const onDayPress = jest.fn()
       const today = new Date()
       const year = today.getFullYear()
       const month = String(today.getMonth() + 1).padStart(2, '0')
-      const { getByLabelText } = render(
+      const { getByLabelText } = await render(
         <MiniCalendar entries={[]} onDayPress={onDayPress} />
       )
-      fireEvent.press(getByLabelText(formatDayMonth(year, today.getMonth(), 10)))
+      await fireEvent.press(getByLabelText(formatDayMonth(year, today.getMonth(), 10)))
       expect(onDayPress).toHaveBeenCalledWith(`${year}-${month}-10`)
     })
 
-    it('отмечает выбранный день (accessibilityState.selected = true)', () => {
+    it('отмечает выбранный день (accessibilityState.selected = true)', async () => {
       const today = new Date()
       const year = today.getFullYear()
       const month = String(today.getMonth() + 1).padStart(2, '0')
       const selectedDate = `${year}-${month}-10`
-      const { getByLabelText } = render(
+      const { getByLabelText } = await render(
         <MiniCalendar entries={[]} selectedDate={selectedDate} />
       )
       const dayBtn = getByLabelText(formatDayMonth(year, today.getMonth(), 10))
       expect(dayBtn.props.accessibilityState?.selected).toBe(true)
     })
 
-    it('не вызывает onDayPress если он не передан', () => {
+    it('не вызывает onDayPress если он не передан', async () => {
       const today = new Date()
-      const { getByLabelText } = render(<MiniCalendar entries={[]} />)
-      expect(() =>
+      const { getByLabelText } = await render(<MiniCalendar entries={[]} />)
+      await expect(
         fireEvent.press(getByLabelText(formatDayMonth(today.getFullYear(), today.getMonth(), 5)))
-      ).not.toThrow()
+      ).resolves.toBeUndefined()
     })
   })
 
   describe('рендер с пустым списком entries', () => {
-    it('рендерится без ошибок при entries=[]', () => {
-      expect(() => render(<MiniCalendar entries={[]} />)).not.toThrow()
+    it('рендерится без ошибок при entries=[]', async () => {
+      await expect(render(<MiniCalendar entries={[]} />)).resolves.toBeDefined()
     })
   })
 
   describe('множество поездок в одном месяце', () => {
-    it('корректно обрабатывает несколько записей', () => {
+    it('корректно обрабатывает несколько записей', async () => {
       const today = new Date()
       const year = today.getFullYear()
       const month = String(today.getMonth() + 1).padStart(2, '0')
@@ -380,7 +380,7 @@ describe('MiniCalendar', () => {
         makeEntry(`${year}-${month}-10`, 2),
         makeEntry(`${year}-${month}-20`, 3),
       ]
-      const { getByLabelText } = render(<MiniCalendar entries={entries} />)
+      const { getByLabelText } = await render(<MiniCalendar entries={entries} />)
       expect(getByLabelText(`${formatDayMonth(year, today.getMonth(), 5)}, есть поездки`)).toBeTruthy()
       expect(getByLabelText(`${formatDayMonth(year, today.getMonth(), 10)}, есть поездки`)).toBeTruthy()
       expect(getByLabelText(`${formatDayMonth(year, today.getMonth(), 20)}, есть поездки`)).toBeTruthy()

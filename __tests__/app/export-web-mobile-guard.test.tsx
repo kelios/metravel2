@@ -73,14 +73,14 @@ describe('ExportScreen (web) — PDF-экспорт скрыт в мобильн
     mockResponsive = { isMobile: false, isHydrated: true }
   })
 
-  it('на мобильном показывает заглушку «только на компьютере» вместо контролов', () => {
+  it('на мобильном показывает заглушку «только на компьютере» вместо контролов', async () => {
     const { Wrapper } = createQueryWrapper()
     mockResponsive = { isMobile: true, isHydrated: true }
     mockUseAuth.mockReturnValue(
       createAuthValue({ isAuthenticated: true, userId: '123' }),
     )
 
-    const { getByText, queryByTestId } = render(<ExportScreen />, {
+    const { getByText, queryByTestId } = await render(<ExportScreen />, {
       wrapper: Wrapper,
     })
 
@@ -99,7 +99,7 @@ describe('ExportScreen (web) — PDF-экспорт скрыт в мобильн
     mockFetchMyTravels.mockRejectedValueOnce(new Error('boom'))
 
     // ListTravelBase на web грузится через lazy() → ждём резолва Suspense.
-    const { findByTestId, queryByText } = render(<ExportScreen />, {
+    const { findByTestId, queryByText } = await render(<ExportScreen />, {
       wrapper: Wrapper,
     })
 
@@ -107,14 +107,14 @@ describe('ExportScreen (web) — PDF-экспорт скрыт в мобильн
     expect(queryByText(/PDF.*книга доступна только на компьютере/)).toBeNull()
   })
 
-  it('до гидрации не показывает заглушку (нет desktop-мигания)', () => {
+  it('до гидрации не показывает заглушку (нет desktop-мигания)', async () => {
     const { Wrapper } = createQueryWrapper()
     mockResponsive = { isMobile: true, isHydrated: false }
     mockUseAuth.mockReturnValue(
       createAuthValue({ isAuthenticated: false, userId: null }),
     )
 
-    const { queryByText, getByText } = render(<ExportScreen />, {
+    const { queryByText, getByText } = await render(<ExportScreen />, {
       wrapper: Wrapper,
     })
 

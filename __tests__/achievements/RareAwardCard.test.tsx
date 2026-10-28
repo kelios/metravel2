@@ -40,19 +40,19 @@ const makeAward = (overrides: Partial<RareAward> = {}): RareAward => ({
 })
 
 describe('RareAwardCard', () => {
-  it('renders the award title and reason', () => {
-    const { getByText } = render(<RareAwardCard award={makeAward()} />)
+  it('renders the award title and reason', async () => {
+    const { getByText } = await render(<RareAwardCard award={makeAward()} />)
     expect(getByText('Первая волна')).toBeTruthy()
     expect(getByText('Один из первых авторов сообщества')).toBeTruthy()
   })
 
-  it('renders the granter name when present', () => {
-    const { getByText } = render(<RareAwardCard award={makeAward()} />)
+  it('renders the granter name when present', async () => {
+    const { getByText } = await render(<RareAwardCard award={makeAward()} />)
     expect(getByText(/Команда MeTravel/)).toBeTruthy()
   })
 
-  it('renders without reason or granter (sparse award)', () => {
-    const { getByText, queryByText } = render(
+  it('renders without reason or granter (sparse award)', async () => {
+    const { getByText, queryByText } = await render(
       <RareAwardCard
         award={makeAward({ reason: '', grantedByProfile: null, grantedAt: '' })}
       />,
@@ -61,8 +61,8 @@ describe('RareAwardCard', () => {
     expect(queryByText(/Команда MeTravel/)).toBeNull()
   })
 
-  it('forwards testID', () => {
-    const { getByTestId } = render(
+  it('forwards testID', async () => {
+    const { getByTestId } = await render(
       <RareAwardCard award={makeAward()} testID="rare-901" />,
     )
     expect(getByTestId('rare-901')).toBeTruthy()

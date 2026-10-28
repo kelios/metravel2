@@ -45,14 +45,14 @@ describe('/assistant route under feature flag (#2460)', () => {
 
   it('без флага отдаёт «страница не найдена» и не рендерит ассистента', async () => {
     delete process.env.EXPO_PUBLIC_AI_ASSISTANT
-    render(<Route />)
+    await render(<Route />)
     expect(screen.getByTestId('not-found')).toBeTruthy()
     expect(screen.queryByTestId('assistant-screen')).toBeNull()
   })
 
   it('с флагом показывает пустое состояние, примеры и композер; пример отправляется в чат', async () => {
     process.env.EXPO_PUBLIC_AI_ASSISTANT = '1'
-    render(<Route />)
+    await render(<Route />)
     expect(await screen.findByTestId('assistant-screen', {}, { timeout: 5000 })).toBeTruthy()
     expect(screen.getByTestId('assistant-empty')).toBeTruthy()
     expect(screen.getByTestId('assistant-input')).toBeTruthy()
@@ -61,21 +61,21 @@ describe('/assistant route under feature flag (#2460)', () => {
     const examples = screen.getAllByTestId('assistant-example')
     expect(examples).toHaveLength(3)
     await act(async () => {
-      fireEvent.press(examples[1])
+      await fireEvent.press(examples[1])
     })
     expect(mockChatState.ask).toHaveBeenCalledWith('Какие квесты есть в Минске?')
   })
 
   it('ввод и кнопка «Спросить»: пустой ввод заблокирован, непустой уходит в ask', async () => {
     process.env.EXPO_PUBLIC_AI_ASSISTANT = '1'
-    render(<Route />)
+    await render(<Route />)
     await screen.findByTestId('assistant-screen')
     const send = screen.getByTestId('assistant-send')
     expect(send.props.accessibilityState?.disabled).toBe(true)
 
-    fireEvent.changeText(screen.getByTestId('assistant-input'), 'Куда поехать под Гродно?')
+    await fireEvent.changeText(screen.getByTestId('assistant-input'), 'Куда поехать под Гродно?')
     await act(async () => {
-      fireEvent.press(screen.getByTestId('assistant-send'))
+      await fireEvent.press(screen.getByTestId('assistant-send'))
     })
     expect(mockChatState.ask).toHaveBeenCalledWith('Куда поехать под Гродно?')
   })
@@ -98,7 +98,7 @@ describe('/assistant route under feature flag (#2460)', () => {
       { id: 't2', question: 'Ещё?', answer: '', sources: [], status: 'unavailable', removedLinks: 0, retryAfterSec: null, usage: null },
     ]
     mockChatState.remaining = 0
-    render(<Route />)
+    await render(<Route />)
     await screen.findByTestId('assistant-screen')
 
     expect(screen.getByTestId('assistant-answer-text')).toBeTruthy()
@@ -107,11 +107,11 @@ describe('/assistant route under feature flag (#2460)', () => {
     expect(screen.getAllByTestId('assistant-answer-link')).toHaveLength(1)
     expect(screen.getByTestId('assistant-links-removed')).toBeTruthy()
     const sourceRow = screen.getByTestId('assistant-source-travel-1')
-    fireEvent.press(sourceRow)
+    await fireEvent.press(sourceRow)
     const { router } = jest.requireMock('expo-router')
     expect(router.push).toHaveBeenCalledWith('/travels/vyhodnye-pod-grodno')
 
-    fireEvent.press(screen.getByTestId('assistant-retry'))
+    await fireEvent.press(screen.getByTestId('assistant-retry'))
     expect(mockChatState.retry).toHaveBeenCalledWith('t2')
 
     expect(screen.getByTestId('assistant-send').props.accessibilityState?.disabled).toBe(true)
@@ -123,11 +123,11 @@ describe('/assistant route under feature flag (#2460)', () => {
     mockChatState.turns = [
       { id: 't3', question: 'Куда поехать?', answer: '', sources: [], status: 'aborted', removedLinks: 0, retryAfterSec: null, usage: null },
     ]
-    render(<Route />)
+    await render(<Route />)
     await screen.findByTestId('assistant-screen')
 
     expect(screen.getByText('Ответ остановлен.')).toBeTruthy()
-    fireEvent.press(screen.getByTestId('assistant-retry'))
+    await fireEvent.press(screen.getByTestId('assistant-retry'))
     expect(mockChatState.retry).toHaveBeenCalledWith('t3')
   })
 })

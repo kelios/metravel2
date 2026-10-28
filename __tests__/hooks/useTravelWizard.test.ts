@@ -82,7 +82,7 @@ describe('useTravelWizard step persistence', () => {
   // поля проверяются ровно один раз, при явной отправке на модерацию.
   it('advances to the next step even when required fields are empty (free navigation)', async () => {
     const emptyFormData = { name: '', description: '' } as any;
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: false,
@@ -96,7 +96,7 @@ describe('useTravelWizard step persistence', () => {
       expect(result.current.currentStep).toBe(1);
     });
 
-    act(() => {
+    await act(() => {
       result.current.handleNext();
     });
 
@@ -110,7 +110,7 @@ describe('useTravelWizard step persistence', () => {
       JSON.stringify({ step: 4, timestamp: Date.now(), schemaVersion: 1 }),
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: false,
@@ -133,7 +133,7 @@ describe('useTravelWizard step persistence', () => {
       JSON.stringify({ step: 5, timestamp: Date.now() - ttlMs - 1, schemaVersion: 1 }),
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: false,
@@ -157,7 +157,7 @@ describe('useTravelWizard step persistence', () => {
       JSON.stringify({ step: 5, timestamp: Date.now(), schemaVersion: 0 }),
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: false,
@@ -177,7 +177,7 @@ describe('useTravelWizard step persistence', () => {
   it('restores step from legacy numeric string payload (backward compatibility)', async () => {
     await AsyncStorage.setItem(stepKey, '3');
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: false,
@@ -200,7 +200,7 @@ describe('useTravelWizard step persistence', () => {
 
     const onSave = jest.fn(async () => ({ publish: true, moderation: false }));
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: false,
@@ -226,7 +226,7 @@ describe('useTravelWizard step persistence', () => {
 
     const onSave = jest.fn(async () => ({ publish: false, moderation: false }));
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: false,
@@ -267,10 +267,10 @@ describe('useTravelWizard beforeunload guard (web)', () => {
     setPlatformOs(originalPlatformOs);
   });
 
-  it('enables beforeunload on web when hasUnsavedChanges=true', () => {
+  it('enables beforeunload on web when hasUnsavedChanges=true', async () => {
     const { useBeforeUnload } = require('@/utils/beforeunloadGuard');
 
-    renderHook(() =>
+    await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: true,
@@ -285,10 +285,10 @@ describe('useTravelWizard beforeunload guard (web)', () => {
     );
   });
 
-  it('keeps beforeunload disabled on web when hasUnsavedChanges=false', () => {
+  it('keeps beforeunload disabled on web when hasUnsavedChanges=false', async () => {
     const { useBeforeUnload } = require('@/utils/beforeunloadGuard');
 
-    renderHook(() =>
+    await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: false,
@@ -313,8 +313,8 @@ describe('useTravelWizard origin-aware exit', () => {
     mockPreventRemove.callback = undefined;
   });
 
-  it('blocks native removal with unsaved changes and asks before leaving', () => {
-    const { result } = renderHook(() =>
+  it('blocks native removal with unsaved changes and asks before leaving', async () => {
+    const { result } = await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: true,
@@ -326,23 +326,23 @@ describe('useTravelWizard origin-aware exit', () => {
     expect(Platform.OS).not.toBe('web');
     expect(mockPreventRemove.enabled).toBe(true);
     const repeat = jest.fn();
-    act(() => {
+    await act(() => {
       mockPreventRemove.callback?.({ data: { action: { type: 'GO_BACK' } }, repeat });
     });
 
     expect(repeat).not.toHaveBeenCalled();
     expect(result.current.exitPrompt).not.toBeNull();
 
-    act(() => {
+    await act(() => {
       result.current.handleExitDiscard();
     });
 
     expect(repeat).toHaveBeenCalledTimes(1);
   });
 
-  it('repeats the removal blocked while a confirmed exit is navigating away', () => {
+  it('repeats the removal blocked while a confirmed exit is navigating away', async () => {
     mockLocalSearchParams = { returnTo: '/search' };
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: true,
@@ -351,27 +351,27 @@ describe('useTravelWizard origin-aware exit', () => {
       }),
     );
 
-    act(() => {
+    await act(() => {
       result.current.handleExit();
     });
-    act(() => {
+    await act(() => {
       result.current.handleExitDiscard();
     });
     expect(mockRouter.replace).toHaveBeenCalledWith('/search');
 
     // Prop hasUnsavedChanges is still true, so the router blocks the replace it just got.
     const repeat = jest.fn();
-    act(() => {
+    await act(() => {
       mockPreventRemove.callback?.({ data: { action: { type: 'REPLACE' } }, repeat });
     });
 
     expect(repeat).toHaveBeenCalledTimes(1);
   });
 
-  it('replaces to returnTo when leaving the first wizard step', () => {
+  it('replaces to returnTo when leaving the first wizard step', async () => {
     mockLocalSearchParams = { returnTo: '/search' };
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: false,
@@ -380,7 +380,7 @@ describe('useTravelWizard origin-aware exit', () => {
       }),
     );
 
-    act(() => {
+    await act(() => {
       result.current.handleExit();
     });
 
@@ -388,10 +388,10 @@ describe('useTravelWizard origin-aware exit', () => {
     expect(mockRouter.back).not.toHaveBeenCalled();
   });
 
-  it('uses legacy from param as the return target', () => {
+  it('uses legacy from param as the return target', async () => {
     mockLocalSearchParams = { from: ['/map'] };
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: false,
@@ -400,18 +400,18 @@ describe('useTravelWizard origin-aware exit', () => {
       }),
     );
 
-    act(() => {
+    await act(() => {
       result.current.handleExit();
     });
 
     expect(mockRouter.replace).toHaveBeenCalledWith('/map');
   });
 
-  it('falls back to router history when origin is invalid', () => {
+  it('falls back to router history when origin is invalid', async () => {
     mockLocalSearchParams = { returnTo: 'https://example.com/search' };
     mockRouter.canGoBack.mockReturnValue(true);
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: false,
@@ -420,7 +420,7 @@ describe('useTravelWizard origin-aware exit', () => {
       }),
     );
 
-    act(() => {
+    await act(() => {
       result.current.handleExit();
     });
 

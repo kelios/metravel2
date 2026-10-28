@@ -76,7 +76,7 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
   // #2289: ровная сетка одинаковых карточек вместо зигзага 7/12+5/12 на
   // десктопе и шести карточек столбцом (блок 2941 px) на телефоне.
   describe('weekend showcase grid', () => {
-    const renderShowcase = (width: number, count: number) => {
+    const renderShowcase = async (width: number, count: number) => {
       mockViewport = { isPhone: width < 480, isLargePhone: width >= 480 && width < 768, width }
       mockUseQuery.mockReturnValue({
         data: {
@@ -91,7 +91,7 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
         refetch: jest.fn(),
       } as any)
 
-      return render(
+      return await render(
         <HomeInspirationSection
           title="Идеи для ближайших выходных"
           subtitle="Реальные маршруты без долгого планирования"
@@ -101,11 +101,11 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
       )
     }
 
-    const rowSizes = (view: ReturnType<typeof render>) =>
+    const rowSizes = (view: Awaited<ReturnType<typeof render>>) =>
       view.getAllByTestId('home-showcase-row').map(
-        (row) => row.findAll((node) => node.props.testID === 'home-showcase-cell', { deep: false }).length,
+        (row) => row.queryAll((node) => node.props.testID === 'home-showcase-cell' && node.parent === row).length,
       )
-    const cellStyles = (view: ReturnType<typeof render>) =>
+    const cellStyles = (view: Awaited<ReturnType<typeof render>>) =>
       view.getAllByTestId('home-showcase-cell').map((cell) => StyleSheet.flatten(cell.props.style))
 
     it.each([
@@ -116,24 +116,24 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
       [1440, 6, [3, 3]],
       [1440, 5, [3]],
       [1440, 2, [2]],
-    ])('%ipx, %i маршрутов → ряды %j', (width, count, rows) => {
-      const view = renderShowcase(width, count)
+    ])('%ipx, %i маршрутов → ряды %j', async (width, count, rows) => {
+      const view = await renderShowcase(width, count)
       expect(rowSizes(view)).toEqual(rows)
     })
 
-    it('все ячейки одной ширины колонки, не растягиваются и ужимаются поровну', () => {
+    it('все ячейки одной ширины колонки, не растягиваются и ужимаются поровну', async () => {
       for (const [width, basis] of [[390, '100%'], [768, '50%'], [1440, `${100 / 3}%`]] as const) {
-        const view = renderShowcase(width, 6)
+        const view = await renderShowcase(width, 6)
         for (const style of cellStyles(view)) {
           expect(style).toMatchObject({ flexBasis: basis, flexGrow: 0, flexShrink: 1, minWidth: 0 })
           expect(style.width).toBeUndefined()
         }
-        view.unmount()
+        await view.unmount()
       }
     })
 
-    it('неполный ряд стоит по центру шириной колонки', () => {
-      const view = renderShowcase(1440, 2)
+    it('неполный ряд стоит по центру шириной колонки', async () => {
+      const view = await renderShowcase(1440, 2)
       const row = view.getByTestId('home-showcase-row')
       expect(StyleSheet.flatten(row.props.style)).toMatchObject({
         flexDirection: 'row',
@@ -142,17 +142,17 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
       expect(cellStyles(view).map((style) => style.flexBasis)).toEqual([`${100 / 3}%`, `${100 / 3}%`])
     })
 
-    it('сетка не шире 1136 и по центру; в одну колонку — зазор 12 без сепараторов', () => {
-      const desktop = renderShowcase(1440, 6)
+    it('сетка не шире 1136 и по центру; в одну колонку — зазор 12 без сепараторов', async () => {
+      const desktop = await renderShowcase(1440, 6)
       expect(StyleSheet.flatten(desktop.getByTestId('home-showcase-grid').props.style)).toMatchObject({
         width: '100%',
         maxWidth: 1136,
         alignSelf: 'center',
         gap: 16,
       })
-      desktop.unmount()
+      await desktop.unmount()
 
-      const phone = renderShowcase(390, 6)
+      const phone = await renderShowcase(390, 6)
       const grid = phone.getByTestId('home-showcase-grid')
       expect(StyleSheet.flatten(grid.props.style)).toMatchObject({ gap: 12 })
       // Прямые дети сетки — только ряды карточек, никаких View-сепараторов.
@@ -160,7 +160,7 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
       expect(children).toEqual(['home-showcase-row', 'home-showcase-row', 'home-showcase-row'])
     })
 
-    it('скелетон зеркалит сетку: те же ряды и число слотов', () => {
+    it('скелетон зеркалит сетку: те же ряды и число слотов', async () => {
       mockViewport = { isPhone: false, isLargePhone: false, width: 1440 }
       mockUseQuery.mockReturnValue({
         data: undefined,
@@ -169,7 +169,7 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
         error: null,
         refetch: jest.fn(),
       } as any)
-      const view = render(
+      const view = await render(
         <HomeInspirationSection
           title="Идеи для ближайших выходных"
           queryKey="home-travels-of-month"
@@ -184,7 +184,7 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
   // #1414 (TestFlight 1.0.5 (8)): бейдж секции дублировал её же заголовок и
   // вместе с ним съедал экран до первой карточки. На телефоне он снят, на
   // широком экране остаётся — обе стороны контракта держим тестом.
-  it('drops the section badge on a phone and keeps it on a wide viewport', () => {
+  it('drops the section badge on a phone and keeps it on a wide viewport', async () => {
     const section = (
       <HomeInspirationSection
         title="Идеи для ближайших выходных"
@@ -194,13 +194,13 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
       />
     )
 
-    const phone = render(section)
+    const phone = await render(section)
     expect(phone.queryByText('Подборка выходного дня')).toBeNull()
     expect(phone.getByText('Идеи для ближайших выходных')).toBeTruthy()
-    phone.unmount()
+    await phone.unmount()
 
     mockViewport = { isPhone: false, isLargePhone: false, width: 1280 }
-    const wide = render(section)
+    const wide = await render(section)
     expect(wide.getByText('Подборка выходного дня')).toBeTruthy()
   })
 
@@ -220,7 +220,7 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
       })),
     }
 
-    const renderRail = (queryKey: string) => {
+    const renderRail = async (queryKey: string) => {
       mockUseQuery.mockReturnValue({
         data: railData,
         isLoading: false,
@@ -229,7 +229,7 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
         refetch: jest.fn(),
       } as any)
 
-      return render(
+      return await render(
         <HomeInspirationSection
           title="Популярное у путешественников"
           subtitle="Маршруты, которые чаще всего открывают другие путешественники"
@@ -240,33 +240,33 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
       )
     }
 
-    const countRenderedRoutes = (view: ReturnType<typeof render>) =>
+    const countRenderedRoutes = (view: Awaited<ReturnType<typeof render>>) =>
       Array.from({ length: RAIL_FIXTURE_SIZE }, (_, index) => index + 1).filter(
         (n) => view.queryByText(`Маршрут ${n}`) !== null,
       )
 
-    it('caps the popular rail at 5 cards on a phone', () => {
-      const view = renderRail('home-popular-travels')
+    it('caps the popular rail at 5 cards on a phone', async () => {
+      const view = await renderRail('home-popular-travels')
 
       expect(countRenderedRoutes(view)).toEqual([1, 2, 3, 4, 5])
     })
 
-    it('keeps other rails at 8 cards on a phone', () => {
-      const view = renderRail('home-new-travels')
+    it('keeps other rails at 8 cards on a phone', async () => {
+      const view = await renderRail('home-new-travels')
 
       expect(countRenderedRoutes(view)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
     })
 
-    it('keeps the popular rail at the full desktop budget of 10 cards', () => {
+    it('keeps the popular rail at the full desktop budget of 10 cards', async () => {
       mockViewport = { isPhone: false, isLargePhone: false, width: 1280 }
-      const view = renderRail('home-popular-travels')
+      const view = await renderRail('home-popular-travels')
 
       expect(countRenderedRoutes(view)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
     })
   })
 
-  it('shows a working "Все маршруты" CTA that navigates to the catalog', () => {
-    render(
+  it('shows a working "Все маршруты" CTA that navigates to the catalog', async () => {
+    await render(
       <HomeInspirationSection
         title="Идеи для ближайших выходных"
         subtitle="Реальные маршруты без долгого планирования"
@@ -275,7 +275,7 @@ describe('HomeInspirationSection mobile weekend showcase', () => {
       />,
     )
 
-    fireEvent.press(screen.getByText('Все маршруты'))
+    await fireEvent.press(screen.getByText('Все маршруты'))
     expect(mockPush).toHaveBeenCalledWith('/search')
   })
 })

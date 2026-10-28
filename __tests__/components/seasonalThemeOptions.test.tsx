@@ -24,7 +24,7 @@ describe('seasonal theme icons', () => {
     }
   });
 
-  it.each(['web', 'android', 'ios'])('exposes exactly one checked radio in %s settings and updates it after selection', platform => {
+  it.each(['web', 'android', 'ios'])('exposes exactly one checked radio in %s settings and updates it after selection', async platform => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: platform });
     const options = getSeasonalThemeOptions();
     const colors = getThemedColors(false);
@@ -38,13 +38,13 @@ describe('seasonal theme icons', () => {
         themeOptions={options}
       />
     );
-    const view = render(draw('auto'));
+    const view = await render(draw('auto'));
     expect(view.getAllByRole('radio')).toHaveLength(7);
     expect(view.getAllByRole('radio', { checked: true })).toHaveLength(1);
     expect(view.getByRole('radio', { checked: true }).props.accessibilityLabel).toBe(options[0].label);
-    fireEvent.press(view.getByRole('radio', { name: options.find(option => option.value === 'easter')!.label }));
+    await fireEvent.press(view.getByRole('radio', { name: options.find(option => option.value === 'easter')!.label }));
     expect(setTheme).toHaveBeenCalledWith('easter');
-    view.rerender(draw('easter'));
+    await view.rerender(draw('easter'));
     expect(view.getAllByRole('radio', { checked: true })).toHaveLength(1);
     expect(view.getByRole('radio', { checked: true }).props.accessibilityLabel).toBe(options.find(option => option.value === 'easter')!.label);
   });

@@ -37,24 +37,24 @@ const socials = [
 beforeEach(() => jest.clearAllMocks())
 
 describe('ProtectedContacts gating', () => {
-  it('shows contacts directly when protection is inactive', () => {
-    const { getByText, queryByText } = render(
+  it('shows contacts directly when protection is inactive', async () => {
+    const { getByText, queryByText } = await render(
       <ProtectedContacts socials={socials} isOwnProfile={false} contactsHidden={false} targetUserId={42} />
     )
     expect(getByText('Instagram')).toBeTruthy()
     expect(queryByText('Контакты скрыты')).toBeNull()
   })
 
-  it('shows contacts on own profile even when contactsHidden is true', () => {
-    const { getByText, queryByText } = render(
+  it('shows contacts on own profile even when contactsHidden is true', async () => {
+    const { getByText, queryByText } = await render(
       <ProtectedContacts socials={socials} isOwnProfile={true} contactsHidden={true} targetUserId={42} />
     )
     expect(getByText('Instagram')).toBeTruthy()
     expect(queryByText('Контакты скрыты')).toBeNull()
   })
 
-  it('hides contacts behind a request gate when protected and access=none', () => {
-    const { getByText, queryByText } = render(
+  it('hides contacts behind a request gate when protected and access=none', async () => {
+    const { getByText, queryByText } = await render(
       <ProtectedContacts
         socials={socials}
         isOwnProfile={false}
@@ -68,8 +68,8 @@ describe('ProtectedContacts gating', () => {
     expect(queryByText('Instagram')).toBeNull()
   })
 
-  it('reveals contacts directly when access is already granted', () => {
-    const { getByText, queryByText } = render(
+  it('reveals contacts directly when access is already granted', async () => {
+    const { getByText, queryByText } = await render(
       <ProtectedContacts
         socials={socials}
         isOwnProfile={false}
@@ -82,8 +82,8 @@ describe('ProtectedContacts gating', () => {
     expect(queryByText('Контакты скрыты')).toBeNull()
   })
 
-  it('shows a pending badge when a request is already pending', () => {
-    const { getByText, queryByText } = render(
+  it('shows a pending badge when a request is already pending', async () => {
+    const { getByText, queryByText } = await render(
       <ProtectedContacts
         socials={socials}
         isOwnProfile={false}
@@ -100,7 +100,7 @@ describe('ProtectedContacts gating', () => {
     mockConfirm.mockResolvedValueOnce(true)
     mockRequestContactAccess.mockResolvedValueOnce({ status: 'pending' })
 
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <ProtectedContacts
         socials={socials}
         isOwnProfile={false}
@@ -110,7 +110,7 @@ describe('ProtectedContacts gating', () => {
       />
     )
 
-    fireEvent.press(getByText('Запросить контакты'))
+    await fireEvent.press(getByText('Запросить контакты'))
 
     await waitFor(() => expect(mockRequestContactAccess).toHaveBeenCalledWith(42))
     expect(mockConfirm).toHaveBeenCalled()
@@ -120,7 +120,7 @@ describe('ProtectedContacts gating', () => {
 
   it('does not call the API when consent is declined', async () => {
     mockConfirm.mockResolvedValueOnce(false)
-    const { getByText } = render(
+    const { getByText } = await render(
       <ProtectedContacts
         socials={socials}
         isOwnProfile={false}
@@ -129,7 +129,7 @@ describe('ProtectedContacts gating', () => {
         targetUserId={42}
       />
     )
-    fireEvent.press(getByText('Запросить контакты'))
+    await fireEvent.press(getByText('Запросить контакты'))
     await waitFor(() => expect(mockConfirm).toHaveBeenCalled())
     expect(mockRequestContactAccess).not.toHaveBeenCalled()
   })

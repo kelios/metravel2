@@ -44,7 +44,7 @@ describe('useOfflineTravelCache', () => {
   });
 
   it('caches a travel and retrieves it', async () => {
-    const { result } = renderHook(() => useOfflineTravelCache());
+    const { result } = await renderHook(() => useOfflineTravelCache());
 
     const mockTravel = { id: 42, name: 'Test Travel', description: 'A test' };
 
@@ -65,7 +65,7 @@ describe('useOfflineTravelCache', () => {
   });
 
   it('returns null for non-cached travel', async () => {
-    const { result } = renderHook(() => useOfflineTravelCache());
+    const { result } = await renderHook(() => useOfflineTravelCache());
 
     let cached: unknown = null;
     await act(async () => {
@@ -102,7 +102,7 @@ describe('useOfflineTravelCache', () => {
   });
 
   it('maintains index of cached IDs', async () => {
-    const { result } = renderHook(() => useOfflineTravelCache());
+    const { result } = await renderHook(() => useOfflineTravelCache());
 
     await act(async () => {
       await result.current.cacheTravel(1, { id: 1, name: 'First' });
@@ -118,7 +118,7 @@ describe('useOfflineTravelCache', () => {
   });
 
   it('deduplicates IDs in index when same travel cached again', async () => {
-    const { result } = renderHook(() => useOfflineTravelCache());
+    const { result } = await renderHook(() => useOfflineTravelCache());
 
     await act(async () => {
       await result.current.cacheTravel(1, { id: 1, name: 'First' });
@@ -146,7 +146,7 @@ describe('useOfflineTravelCache', () => {
     // @ts-ignore -- override Platform.OS to test web no-op behavior
     Platform.OS = 'web';
 
-    const { result } = renderHook(() => useOfflineTravelCache());
+    const { result } = await renderHook(() => useOfflineTravelCache());
 
     await act(async () => {
       await result.current.cacheTravel(1, { id: 1, name: 'Web travel' });

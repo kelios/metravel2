@@ -59,7 +59,7 @@ describe('«Сбросить» обновляет число прохожден�
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
-  const renderQuestHeader = () => renderHook(() => ({
+  const renderQuestHeader = async () => await renderHook(() => ({
     sync: useQuestProgressSync(QUEST_ID, true),
     completion: useQuestCompletionMeta(QUEST_ID, 7),
     // Каталог под экраном квеста: по нему считается «Пройденные другими».
@@ -84,7 +84,7 @@ describe('«Сбросить» обновляет число прохожден�
   })
 
   it('подтверждённое удаление перечитывает completions_count без перезагрузки экрана', async () => {
-    const { result } = renderQuestHeader()
+    const { result } = await renderQuestHeader()
     await waitFor(() => expect(result.current.completion.completionsCount).toBe(1))
     await waitFor(() => expect(result.current.sync.progress?.id).toBe(42))
     await waitFor(() => expect(result.current.catalog).toEqual([CATALOG_QUEST]))
@@ -110,7 +110,7 @@ describe('«Сбросить» обновляет число прохожден�
   })
 
   it('удаление, которого сервер не подтвердил, счётчик не перечитывает', async () => {
-    const { result } = renderQuestHeader()
+    const { result } = await renderQuestHeader()
     await waitFor(() => expect(result.current.completion.completionsCount).toBe(1))
     await waitFor(() => expect(result.current.sync.progress?.id).toBe(42))
     await waitFor(() => expect(result.current.catalog).toEqual([CATALOG_QUEST]))

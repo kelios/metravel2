@@ -8,8 +8,8 @@ jest.mock('@/components/travel/ImageGalleryComponent', () => jest.requireActual(
 const originalOS = Platform.OS;
 afterEach(() => Object.defineProperty(Platform, 'OS', { value: originalOS }));
 
-it.each(['ios', 'android'])('%s: the real native gallery owns a single empty-state message', (os) => {
+it.each(['ios', 'android'])('%s: the real native gallery owns a single empty-state message', async (os) => {
   Object.defineProperty(Platform, 'OS', { value: os });
-  const screen = render(<GallerySection images={[]} travelId={42} />);
+  const screen = await render(<GallerySection images={[]} travelId={42} />);
   expect(screen.getAllByText('Нет загруженных изображений')).toHaveLength(1);
 });

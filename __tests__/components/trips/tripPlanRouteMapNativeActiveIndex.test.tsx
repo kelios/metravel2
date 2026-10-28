@@ -49,7 +49,7 @@ describe('TripPlanRouteMap (native): activeIndex → routePointMarkers.activeInd
     mockMountCount = 0
   })
 
-  it('переводит activeIndex списка в позицию среди отрисованных маркеров и не пересоздаёт WebView', () => {
+  it('переводит activeIndex списка в позицию среди отрисованных маркеров и не пересоздаёт WebView', async () => {
     const route: RoutePoint[] = [
       point(0, [19.94, 50.06]),
       point(1, null), // #1683: без координат — маркера нет, но номер в списке занимает.
@@ -57,25 +57,25 @@ describe('TripPlanRouteMap (native): activeIndex → routePointMarkers.activeInd
       point(3, [11.6, 48.1]),
     ]
 
-    const utils = render(<TripPlanRouteMap route={route} activeIndex={2} />)
+    const utils = await render(<TripPlanRouteMap route={route} activeIndex={2} />)
 
     // route[2] — второй ОТРИСОВАННЫЙ маркер (route[1] без координат пропущен).
     expect(mockNativeMapProps.routePointMarkers.activeIndex).toBe(1)
     expect(mockMountCount).toBe(1)
 
-    utils.rerender(<TripPlanRouteMap route={route} activeIndex={3} />)
+    await utils.rerender(<TripPlanRouteMap route={route} activeIndex={3} />)
     expect(mockNativeMapProps.routePointMarkers.activeIndex).toBe(2)
     // Тот же экземпляр NativeMap: эффект монтирования не сработал повторно.
     expect(mockMountCount).toBe(1)
 
-    utils.rerender(<TripPlanRouteMap route={route} activeIndex={null} />)
+    await utils.rerender(<TripPlanRouteMap route={route} activeIndex={null} />)
     expect(mockNativeMapProps.routePointMarkers.activeIndex).toBeNull()
     expect(mockMountCount).toBe(1)
   })
 
-  it('activeIndex вне списка (нет такой точки) уходит в payload как null', () => {
+  it('activeIndex вне списка (нет такой точки) уходит в payload как null', async () => {
     const route: RoutePoint[] = [point(0, [19.94, 50.06]), point(1, [11.58, 48.14])]
-    render(<TripPlanRouteMap route={route} activeIndex={99} />)
+    await render(<TripPlanRouteMap route={route} activeIndex={99} />)
 
     expect(mockNativeMapProps.routePointMarkers.activeIndex).toBeNull()
   })

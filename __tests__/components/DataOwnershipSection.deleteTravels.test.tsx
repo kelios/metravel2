@@ -40,8 +40,8 @@ import DataOwnershipSection from '@/components/settings/DataOwnershipSection';
 import { translate as i18nT } from '@/i18n';
 
 describe('DataOwnershipSection destructive action copy (#1828)', () => {
-  it('labels the action as deleting travels and never as deleting routes', () => {
-    render(<DataOwnershipSection />);
+  it('labels the action as deleting travels and never as deleting routes', async () => {
+    await render(<DataOwnershipSection />);
 
     expect(
       screen.getByText(i18nT('profile:components.settings.DataOwnershipSection.deleteTravelsLabel')),
@@ -49,8 +49,8 @@ describe('DataOwnershipSection destructive action copy (#1828)', () => {
     expect(screen.queryByText('Удалить маршруты')).toBeNull();
   });
 
-  it('renders the hint that separates the action from saved routes', () => {
-    render(<DataOwnershipSection />);
+  it('renders the hint that separates the action from saved routes', async () => {
+    await render(<DataOwnershipSection />);
 
     expect(
       screen.getByText(i18nT('profile:components.settings.DataOwnershipSection.deleteTravelsHint')),

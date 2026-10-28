@@ -61,11 +61,11 @@ beforeEach(() => {
 });
 
 describe('#1826 бюджет первого кадра каталога', () => {
-    it('в первый кадр уходит окно, а не весь каталог', () => {
+    it('в первый кадр уходит окно, а не весь каталог', async () => {
         (Platform as { OS: string }).OS = 'web';
         const quests = Array.from({ length: CATALOG_SIZE }, (_, index) => makeQuest(index));
 
-        const { queryAllByTestId } = render(
+        const { queryAllByTestId } = await render(
             <QuestsContentPanel
                 styles={styles as never}
                 colors={colors as never}

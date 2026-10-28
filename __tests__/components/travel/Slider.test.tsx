@@ -1,4 +1,4 @@
-import { act, fireEvent, render, type RenderAPI } from '@testing-library/react-native'
+import { act, fireEvent, render, type RenderResult } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 import Slider, { type SliderImage } from '@/components/travel/Slider'
 import { computeSliderHeight } from '@/components/travel/sliderParts/utils'
@@ -29,8 +29,8 @@ const portraitImage2: SliderImage = {
   height: 1200,
 }
 
-const renderSlider = async (images: SliderImage[]): Promise<RenderAPI> => {
-  const api = render(
+const renderSlider = async (images: SliderImage[]): Promise<RenderResult> => {
+  const api = await render(
     <Slider
       images={images}
       showArrows={false}
@@ -65,7 +65,7 @@ describe('Slider', () => {
 
     expect(image.props.contentFit).toBe('contain')
 
-    act(() => {
+    await act(() => {
       image.props.onLoad?.()
     })
 
@@ -79,10 +79,10 @@ describe('Slider', () => {
 
     expect(getByText('Браславские озёра')).toBeTruthy()
     expect(getByLabelText(/Браславские озёра.*Фотография путешествия 1 из 1/)).toBeTruthy()
-    const isCaptionHost = (node: import('react-test-renderer').ReactTestInstance) =>
+    const isCaptionHost = (node: import('test-renderer').TestInstance) =>
       typeof node.type === 'string' && node.props.testID === 'slider-caption'
-    expect(getByTestId('slider-wrapper').findAll(isCaptionHost).length).toBe(0)
-    expect(getByTestId('slider-stack').findAll(isCaptionHost).length).toBe(1)
+    expect(getByTestId('slider-wrapper').queryAll(isCaptionHost, { includeSelf: true }).length).toBe(0)
+    expect(getByTestId('slider-stack').queryAll(isCaptionHost, { includeSelf: true }).length).toBe(1)
     expect(getByText('Браславские озёра').props.numberOfLines).toBeUndefined()
   })
 
@@ -98,7 +98,7 @@ describe('Slider', () => {
     const { getByTestId, queryByText } = await renderSlider([portraitImage])
     const image = getByTestId('slider-image-0')
 
-    act(() => {
+    await act(() => {
       image.props.onError?.()
     })
 
@@ -117,7 +117,7 @@ describe('Slider', () => {
     const { getByTestId, queryByTestId } = await renderSlider([brokenGalleryImage])
 
     const firstAttempt = getByTestId('slider-image-0')
-    act(() => {
+    await act(() => {
       firstAttempt.props.onError?.()
     })
 
@@ -125,7 +125,7 @@ describe('Slider', () => {
     expect(queryByTestId('slider-neutral-placeholder-0')).toBeNull()
 
     const secondAttempt = getByTestId('slider-image-0')
-    act(() => {
+    await act(() => {
       secondAttempt.props.onError?.()
     })
 
@@ -135,7 +135,7 @@ describe('Slider', () => {
   it('renders arrows on desktop when enabled and hides them on mobile when hideArrowsOnMobile is true', async () => {
     ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 1024, height: 900 })
 
-    const apiDesktop = render(
+    const apiDesktop = await render(
       <Slider
         images={[portraitImage, landscapeImage]}
         showArrows
@@ -151,7 +151,7 @@ describe('Slider', () => {
 
     ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 360, height: 800 })
 
-    const apiMobile = render(
+    const apiMobile = await render(
       <Slider
         images={[portraitImage, landscapeImage]}
         showArrows
@@ -170,7 +170,7 @@ describe('Slider', () => {
   it('renders first image on web and keeps it after load', async () => {
     ;(Platform as any).OS = 'web'
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <Slider
         images={[portraitImage, landscapeImage]}
         showArrows={false}
@@ -184,7 +184,7 @@ describe('Slider', () => {
     expect(getByTestId('slider-image-0')).toBeTruthy()
 
     const img = getByTestId('slider-image-0')
-    act(() => {
+    await act(() => {
       img.props.onLoad?.()
     })
 
@@ -194,7 +194,7 @@ describe('Slider', () => {
   it('updates counter when navigating to the next slide via arrow', async () => {
     ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 1024, height: 900 })
 
-    const { getByLabelText, getByText, queryByText } = render(
+    const { getByLabelText, getByText, queryByText } = await render(
       <Slider
         images={[
           { ...portraitImage, caption: 'First photo caption' },
@@ -210,7 +210,7 @@ describe('Slider', () => {
 
     expect(getByText('1/2')).toBeTruthy()
     expect(getByText('First photo caption')).toBeTruthy()
-    fireEvent.press(getByLabelText('Next slide'))
+    await fireEvent.press(getByLabelText('Next slide'))
     expect(getByText('2/2')).toBeTruthy()
     expect(getByText('Second photo caption')).toBeTruthy()
     expect(queryByText('First photo caption')).toBeNull()
@@ -220,7 +220,7 @@ describe('Slider', () => {
     // Мобильный экран: 360x800
     ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 360, height: 800 })
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <Slider
         images={[portraitImage, landscapeImage]}
         showArrows={false}
@@ -245,7 +245,7 @@ describe('Slider', () => {
   it('shows counter with correct format for multiple images', async () => {
     const images = [portraitImage, landscapeImage, portraitImage2]
     
-    const { getByText } = render(
+    const { getByText } = await render(
       <Slider
         images={images}
         showArrows={false}
@@ -261,7 +261,7 @@ describe('Slider', () => {
   })
 
   it('hides counter when only one image is present', async () => {
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <Slider
         images={[portraitImage]}
         showArrows={false}
@@ -288,7 +288,7 @@ describe('Slider', () => {
       { ...landscapeImage, id: 'landscape-3', url: 'https://example.com/landscape-3.jpg' },
     ]
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <Slider
         images={images}
         showArrows={false}
@@ -305,7 +305,7 @@ describe('Slider', () => {
   })
 
   it('hides dots when only one image is present', async () => {
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <Slider
         images={[portraitImage]}
         showArrows={false}
@@ -325,7 +325,7 @@ describe('Slider', () => {
   it('applies correct border radius on mobile', async () => {
     ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 360, height: 800 })
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <Slider
         images={[portraitImage]}
         showArrows={false}
@@ -353,7 +353,7 @@ describe('Slider', () => {
       { ...landscapeImage, id: 'landscape-3', url: 'https://example.com/landscape-3.jpg' },
     ]
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <Slider
         images={images}
         showArrows={false}
@@ -385,7 +385,7 @@ describe('Slider', () => {
     expect(getByTestId('slider-deferred-placeholder-3')).toBeTruthy()
     expect(() => getByTestId('slider-image-3')).toThrow()
 
-    act(() => {
+    await act(() => {
       list.props.onTouchStart({ nativeEvent: { changedTouches: [{ pageX: 300 }] } })
       list.props.onScrollEndDrag({
         nativeEvent: { contentOffset: { x: 0 }, velocity: { x: 0.8 } },
@@ -400,7 +400,7 @@ describe('Slider', () => {
     ;(Platform as any).OS = 'android'
     ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 360, height: 800 })
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <Slider
         images={[portraitImage, landscapeImage, portraitImage2]}
         showArrows={false}
@@ -422,7 +422,7 @@ describe('Slider', () => {
     expect(() => getByTestId('slider-image-1-blur-background')).toThrow()
     expect(readOpacity(adjacentImage.props.style)).toBe(0)
 
-    act(() => {
+    await act(() => {
       adjacentImage.props.onLoad?.()
     })
 
@@ -440,7 +440,7 @@ describe('Slider', () => {
     expect(adjacentBackdrop.props.blurRadius).toBeGreaterThan(0)
     expect(readOpacity(getByTestId('slider-image-1').props.style)).toBe(0)
 
-    act(() => {
+    await act(() => {
       adjacentBackdrop.props.onLoad?.()
     })
 
@@ -452,7 +452,7 @@ describe('Slider', () => {
   it('calls onFirstImageLoad callback when first image loads', async () => {
     const onFirstImageLoad = jest.fn()
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <Slider
         images={[portraitImage, landscapeImage]}
         showArrows={false}
@@ -466,7 +466,7 @@ describe('Slider', () => {
 
     const image = getByTestId('slider-image-0')
     
-    act(() => {
+    await act(() => {
       image.props.onLoad?.()
     })
 
@@ -483,7 +483,7 @@ describe('Slider', () => {
       height: 900,
     }
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <Slider
         images={[brokenImage, landscapeImage]}
         showArrows={false}
@@ -496,14 +496,14 @@ describe('Slider', () => {
     )
 
     // First error retries the fallback URL; the gate must NOT release yet.
-    act(() => {
+    await act(() => {
       getByTestId('slider-image-0').props.onError?.()
     })
     expect(onFirstImageLoad).not.toHaveBeenCalled()
 
     // Second (terminal) error must release the first-screen LCP gate so the rest of
     // the travel page renders instead of staying blank behind the skeleton overlay.
-    act(() => {
+    await act(() => {
       getByTestId('slider-image-0').props.onError?.()
     })
     expect(onFirstImageLoad).toHaveBeenCalledTimes(1)
@@ -512,7 +512,7 @@ describe('Slider', () => {
   it('does not call onFirstImageLoad for subsequent images', async () => {
     const onFirstImageLoad = jest.fn()
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <Slider
         images={[portraitImage, landscapeImage]}
         showArrows={false}
@@ -527,7 +527,7 @@ describe('Slider', () => {
     // Загружаем второе изображение
     const secondImage = getByTestId('slider-image-1')
     
-    act(() => {
+    await act(() => {
       secondImage.props.onLoad?.()
     })
 
@@ -538,7 +538,7 @@ describe('Slider', () => {
   it('uses mobileHeightPercent prop to calculate height on mobile', async () => {
     ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 360, height: 1000 })
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <Slider
         images={[portraitImage]}
         showArrows={false}

@@ -68,11 +68,11 @@ const apiQuests = Array.from({ length: 6 }, (_, i) => ({
   cover_url: `https://metravel.by/quest-cover/quests/${i + 1}/main/cover.webp`,
 }))
 
-const renderSection = () => {
+const renderSection = async () => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   queryClient.setQueryData(queryKeys.questsPreview(6, getQuestContentLocale()), apiQuests)
 
-  return render(
+  return await render(
     <QueryClientProvider client={queryClient}>
       <HomeQuestsPromoSection />
     </QueryClientProvider>,
@@ -85,10 +85,10 @@ describe('HomeQuestsPromoSection — сетка по вьюпорту (#1475)', 
     jest.clearAllMocks()
   })
 
-  it('на mobile 390 показывает ровно 4 карточки и подарочный CTA', () => {
+  it('на mobile 390 показывает ровно 4 карточки и подарочный CTA', async () => {
     mockResponsive = { isPhone: true, isLargePhone: false, width: 390 }
 
-    const { queryByText, getByText } = renderSection()
+    const { queryByText, getByText } = await renderSection()
 
     expect(getByText('Квест номер 1')).toBeTruthy()
     expect(getByText('Квест номер 4')).toBeTruthy()
@@ -101,43 +101,43 @@ describe('HomeQuestsPromoSection — сетка по вьюпорту (#1475)', 
     expect(getByText('Все квесты')).toBeTruthy()
   })
 
-  it('на largePhone 480 тоже держит мобильную сетку из 4 карточек', () => {
+  it('на largePhone 480 тоже держит мобильную сетку из 4 карточек', async () => {
     mockResponsive = { isPhone: false, isLargePhone: true, width: 480 }
 
-    const { queryByText, getByText } = renderSection()
+    const { queryByText, getByText } = await renderSection()
 
     expect(getByText('Квест номер 4')).toBeTruthy()
     expect(queryByText('Квест номер 5')).toBeNull()
   })
 
-  it('на desktop 1280 показывает 6 карточек', () => {
-    const { getByText } = renderSection()
+  it('на desktop 1280 показывает 6 карточек', async () => {
+    const { getByText } = await renderSection()
 
     expect(getByText('Квест номер 1')).toBeTruthy()
     expect(getByText('Квест номер 6')).toBeTruthy()
   })
 
-  it('на mobile клики размечены событиями контракта и ведут на нужные роуты', () => {
+  it('на mobile клики размечены событиями контракта и ведут на нужные роуты', async () => {
     mockResponsive = { isPhone: true, isLargePhone: false, width: 390 }
 
-    const { getByText } = renderSection()
+    const { getByText } = await renderSection()
 
-    fireEvent.press(getByText('Квест в подарок'))
+    await fireEvent.press(getByText('Квест в подарок'))
     expect(sendAnalyticsEvent).toHaveBeenCalledWith('HomeClick_QuestScenario', {
       source: 'home_quests',
     })
     expect(mockPush).toHaveBeenCalledWith('/quests/scenario')
 
-    fireEvent.press(getByText('Все квесты'))
+    await fireEvent.press(getByText('Все квесты'))
     expect(sendAnalyticsEvent).toHaveBeenCalledWith('HomeClick_ViewAllQuests', { count: 4 })
     expect(mockPush).toHaveBeenCalledWith('/quests')
   })
 
-  it('без данных секции нет вовсе — пустая выдача не ломает главную', () => {
+  it('без данных секции нет вовсе — пустая выдача не ломает главную', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     queryClient.setQueryData(queryKeys.questsPreview(6, getQuestContentLocale()), [])
 
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <QueryClientProvider client={queryClient}>
         <HomeQuestsPromoSection />
       </QueryClientProvider>,

@@ -76,30 +76,30 @@ describe('TravelsForQuestSection', () => {
   // кадр рисовал бы карточки во всю ширину ряда и следующий кадр возвращал их к
   // 320 (CLS #1282).
   describe('ширина карточки', () => {
-    const renderCardWrapper = () => {
-      const { getByTestId } = render(
+    const renderCardWrapper = async () => {
+      const { getByTestId } = await render(
         <TravelsForQuestSection cityName="Ошмяны" countryName="Беларусь" />,
       )
       return StyleSheet.flatten(getByTestId('quest-travel-card-slot-196').props.style)
     }
 
-    it('держит потолок 320 на широкой раскладке', () => {
-      expect(renderCardWrapper()).toMatchObject({ maxWidth: 320 })
+    it('держит потолок 320 на широкой раскладке', async () => {
+      expect(await renderCardWrapper()).toMatchObject({ maxWidth: 320 })
     })
 
-    it('отдаёт карточке весь ряд на узкой раскладке', () => {
+    it('отдаёт карточке весь ряд на узкой раскладке', async () => {
       mockResponsive = { isHydrated: true, isMobile: true }
-      expect(renderCardWrapper().maxWidth).toBeUndefined()
+      expect((await renderCardWrapper()).maxWidth).toBeUndefined()
     })
 
-    it('до гидратации остаётся на широкой раскладке, а не на нулевой ширине', () => {
+    it('до гидратации остаётся на широкой раскладке, а не на нулевой ширине', async () => {
       mockResponsive = { isHydrated: false, isMobile: true }
-      expect(renderCardWrapper()).toMatchObject({ maxWidth: 320 })
+      expect(await renderCardWrapper()).toMatchObject({ maxWidth: 320 })
     })
   })
 
-  it('uses contain media with one source for the sharp image and blurred fill', () => {
-    render(<TravelsForQuestSection cityName="Ошмяны" countryName="Беларусь" />)
+  it('uses contain media with one source for the sharp image and blurred fill', async () => {
+    await render(<TravelsForQuestSection cityName="Ошмяны" countryName="Беларусь" />)
 
     expect(mockUnifiedTravelCard).toHaveBeenCalledTimes(1)
     const props = mockUnifiedTravelCard.mock.calls[0]?.[0]
@@ -119,13 +119,13 @@ describe('TravelsForQuestSection', () => {
 
 
 describe('#2482 travel editorial language', () => {
-  it('marks the actual card title and location in the page locale without changing strings', () => {
+  it('marks the actual card title and location in the page locale without changing strings', async () => {
     const { Platform } = require('react-native')
     const originalOS = Platform.OS
     Platform.OS = 'web'
     try {
-      const tree = render(<TravelsForQuestSection cityName="Ошмяны" countryName="Беларусь" />)
-      const parts = tree.UNSAFE_root.findAll((node) => node.props.lang === 'ru')
+      const tree = await render(<TravelsForQuestSection cityName="Ошмяны" countryName="Беларусь" />)
+      const parts = tree.container.queryAll((node) => node.props.lang === 'ru')
       expect(parts.some((node) => node.props.children === 'Маршрут по Ошмянам')).toBe(true)
       expect(parts.some((node) => node.props.children === 'Ошмяны')).toBe(true)
       expect(mockUnifiedTravelCard.mock.calls.at(-1)?.[0].title).toBe('Маршрут по Ошмянам')

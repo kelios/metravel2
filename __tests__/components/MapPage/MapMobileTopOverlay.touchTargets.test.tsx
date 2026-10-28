@@ -61,8 +61,8 @@ const baseProps = {
 afterEach(cleanup)
 
 describe('MapMobileTopOverlay — тач-таргеты тулбара', () => {
-  it('в radius-режиме каждая кнопка не меньше 48dp по обеим осям', () => {
-    const { getByTestId } = render(<MapMobileTopOverlay {...(baseProps as any)} />)
+  it('в radius-режиме каждая кнопка не меньше 48dp по обеим осям', async () => {
+    const { getByTestId } = await render(<MapMobileTopOverlay {...(baseProps as any)} />)
 
     RADIUS_MODE_BUTTONS.forEach((testID) => {
       const style = StyleSheet.flatten(getByTestId(testID).props.style)
@@ -75,8 +75,8 @@ describe('MapMobileTopOverlay — тач-таргеты тулбара', () => {
     })
   })
 
-  it('в route-режиме кнопки маршрута тоже держат 48dp', () => {
-    const { getByTestId } = render(
+  it('в route-режиме кнопки маршрута тоже держат 48dp', async () => {
+    const { getByTestId } = await render(
       <MapMobileTopOverlay
         {...(baseProps as any)}
         mode="route"
@@ -97,8 +97,8 @@ describe('MapMobileTopOverlay — тач-таргеты тулбара', () => {
     })
   })
 
-  it('видимый круг остаётся 38dp, чтобы тулбар не раздувался', () => {
-    const { getByTestId } = render(<MapMobileTopOverlay {...(baseProps as any)} />)
+  it('видимый круг остаётся 38dp, чтобы тулбар не раздувался', async () => {
+    const { getByTestId } = await render(<MapMobileTopOverlay {...(baseProps as any)} />)
 
     const touch = getByTestId('map-mobile-filters-button')
     const surface = StyleSheet.flatten(touch.children[0].props.style)
@@ -122,8 +122,8 @@ describe('MapMobileTopOverlay — тач-таргеты контролов ма�
     onClearRoute: jest.fn(),
   } as const
 
-  it('пилюли выбора старта держат 44dp по высоте (было 36)', () => {
-    const { getByTestId } = render(
+  it('пилюли выбора старта держат 44dp по высоте (было 36)', async () => {
+    const { getByTestId } = await render(
       <MapMobileTopOverlay {...(routeProps as any)} onUseUserLocationStart={jest.fn()} onStartManualRoute={jest.fn()} />,
     )
 
@@ -133,8 +133,8 @@ describe('MapMobileTopOverlay — тач-таргеты контролов ма�
     }
   })
 
-  it('действие в подсказке маршрута держит 44dp и не раздувает плашку', () => {
-    const { getByTestId } = render(
+  it('действие в подсказке маршрута держит 44dp и не раздувает плашку', async () => {
+    const { getByTestId } = await render(
       <MapMobileTopOverlay {...(routeProps as any)} routePointCount={0} hasUserLocation={false} onRequestLocation={jest.fn()} />,
     )
 
@@ -144,8 +144,8 @@ describe('MapMobileTopOverlay — тач-таргеты контролов ма�
     expect(style.marginVertical).toBe(-6)
   })
 
-  it('крестик сводки маршрута: рамка 48dp, видимый круг прежние 26dp', () => {
-    const { getByTestId } = render(
+  it('крестик сводки маршрута: рамка 48dp, видимый круг прежние 26dp', async () => {
+    const { getByTestId } = await render(
       <MapMobileTopOverlay {...(routeProps as any)} routePointCount={2} routeDistance={4200} routeDuration={900} />,
     )
 

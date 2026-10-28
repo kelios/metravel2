@@ -2,7 +2,32 @@
  * @jest-environment jsdom
  */
 
-const renderer = require('react-test-renderer')
+jest.resetModules()
+jest.doMock('react-native', () => jest.requireActual('react-native-web'))
+const { act } = require('react')
+const { createRoot } = require('react-dom/client')
+type DOMRoot = import('react-dom/client').Root
+const hosts = new Map<DOMRoot, HTMLDivElement>()
+const mount = (element: import('react').ReactNode): DOMRoot => {
+  const host = document.createElement('div')
+  document.body.append(host)
+  const root = createRoot(host)
+  hosts.set(root, host)
+  root.render(element)
+  return root
+}
+type Pixels = { complete: boolean; naturalWidth: number; naturalHeight?: number; currentSrc: string; decode?: () => Promise<void> }
+let mockPixels: (image: HTMLImageElement) => Pixels
+let loadedPixels = new WeakMap<HTMLImageElement, Pixels>()
+const reportImageLoad = (image: HTMLImageElement) => {
+  loadedPixels.set(image, {
+    complete: true, naturalWidth: 800, naturalHeight: 600,
+    currentSrc: image.srcset.split(',')[0].trim().split(/\s+/)[0] || image.src,
+  })
+  image.dispatchEvent(new Event('load'))
+}
+const initialDecode = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'decode')
+
 const { Platform } = require('react-native')
 const {
   default: ImageCardMedia,
@@ -19,12 +44,30 @@ describe('ImageCardMedia blur background (web)', () => {
 
   beforeEach(() => {
     Platform.OS = 'web'
+    loadedPixels = new WeakMap()
+    mockPixels = () => ({ complete: false, naturalWidth: 0, naturalHeight: 0, currentSrc: '' })
+    for (const property of ['complete', 'naturalWidth', 'naturalHeight', 'currentSrc'] as const) {
+      jest.spyOn(HTMLImageElement.prototype, property, 'get').mockImplementation(function (this: HTMLImageElement) {
+        return (loadedPixels.get(this) ?? mockPixels(this))[property] ?? 0
+      })
+    }
+    Object.defineProperty(HTMLImageElement.prototype, 'decode', { configurable: true, value: function (this: HTMLImageElement) {
+      return mockPixels(this).decode?.() ?? Promise.resolve()
+    } })
     // ImageCardMedia disables web <img> rendering in Jest by default.
     // For this regression test we need to exercise the real web <img> branch.
     delete process.env.JEST_WORKER_ID
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    for (const [root, host] of hosts) {
+      await act(() => root.unmount())
+      host.remove()
+    }
+    hosts.clear()
+    jest.restoreAllMocks()
+    if (initialDecode) Object.defineProperty(HTMLImageElement.prototype, 'decode', initialDecode)
+    else delete (HTMLImageElement.prototype as any).decode
     Platform.OS = originalPlatform
     Object.defineProperty(window.navigator, 'userAgent', {
       value: originalUserAgent,
@@ -106,22 +149,20 @@ describe('ImageCardMedia blur background (web)', () => {
     const imageNode = {
       complete: false,
       naturalWidth: 0,
+      naturalHeight: 0,
       currentSrc: '',
-      // Резкий слой раскрывается мутацией `style.opacity`, поэтому node-mock обязан
-      // иметь `style` — иначе тест проверяет не тот контракт, что живёт в браузере.
-      style: {} as Record<string, string>,
-      decode: jest.fn(
+            decode: jest.fn(
         () => new Promise<void>((resolve) => {
           resolveDecode = resolve
         }),
       ),
     }
+    mockPixels = () => imageNode
     const onLoad = jest.fn()
-    let tree: any
+    let tree!: DOMRoot
 
-    await renderer.act(async () => {
-      tree = renderer.create(
-        <WebMainImage
+    await act(async () => {
+      tree = mount(<WebMainImage
           src="https://metravel.by/travel-image/38/photo.webp?w=640"
           alt="Travel cover"
           width={390}
@@ -132,18 +173,14 @@ describe('ImageCardMedia blur background (web)', () => {
           priority="high"
           loaded={false}
           onLoad={onLoad}
-        />,
-        {
-          createNodeMock: (element: any) => (element.type === 'img' ? imageNode : null),
-        },
-      )
+        />)
     })
 
     imageNode.complete = true
     imageNode.naturalWidth = 640
     imageNode.naturalHeight = 360
     imageNode.currentSrc = 'https://metravel.by/travel-image/38/photo.webp?w=640'
-    await renderer.act(async () => {
+    await act(async () => {
       resolveDecode?.()
       await Promise.resolve()
     })
@@ -151,7 +188,7 @@ describe('ImageCardMedia blur background (web)', () => {
     // #1177: вторым аргументом идут фактические пропорции кандидата — из них
     // считаются поля letterbox для сегментной подложки.
     expect(onLoad).toHaveBeenCalledWith(imageNode.currentSrc, { width: 640, height: 360 })
-    renderer.act(() => tree.unmount())
+    await act(() => tree.unmount())
   })
 
   // Родитель имеет право заново закрыть уже показанное медиа (смена decode-режима,
@@ -164,9 +201,9 @@ describe('ImageCardMedia blur background (web)', () => {
       complete: true,
       naturalWidth: 640,
       currentSrc: src,
-      style: {} as Record<string, string>,
       decode: jest.fn(() => Promise.resolve()),
     }
+    mockPixels = () => imageNode
     const onLoad = jest.fn()
     const props = {
       src,
@@ -179,28 +216,26 @@ describe('ImageCardMedia blur background (web)', () => {
       priority: 'high' as const,
       onLoad,
     }
-    let tree: any
+    let tree!: DOMRoot
 
-    await renderer.act(async () => {
-      tree = renderer.create(<WebMainImage {...props} loaded={false} />, {
-        createNodeMock: (element: any) => (element.type === 'img' ? imageNode : null),
-      })
+    await act(async () => {
+      tree = mount(<WebMainImage {...props} loaded={false} />)
     })
     expect(onLoad).toHaveBeenCalledTimes(1)
 
     // Родитель принял загрузку...
-    await renderer.act(async () => {
-      tree.update(<WebMainImage {...props} loaded />)
+    await act(async () => {
+      tree.render(<WebMainImage {...props} loaded />)
     })
     expect(onLoad).toHaveBeenCalledTimes(1)
 
     // ...а затем снова закрыл слой (слайд стал активным и включил decode-гейт).
-    await renderer.act(async () => {
-      tree.update(<WebMainImage {...props} loaded={false} />)
+    await act(async () => {
+      tree.render(<WebMainImage {...props} loaded={false} />)
     })
     expect(onLoad).toHaveBeenCalledTimes(2)
 
-    renderer.act(() => tree.unmount())
+    await act(() => tree.unmount())
   })
 
   it('starts iOS lazy-image recovery only when the image approaches the viewport', async () => {
@@ -230,22 +265,20 @@ describe('ImageCardMedia blur background (web)', () => {
     const imageNode = {
       complete: false,
       naturalWidth: 0,
+      naturalHeight: 0,
       currentSrc: '',
-      // Резкий слой раскрывается мутацией `style.opacity`, поэтому node-mock обязан
-      // иметь `style` — иначе тест проверяет не тот контракт, что живёт в браузере.
-      style: {} as Record<string, string>,
-      decode: jest.fn(
+            decode: jest.fn(
         () => new Promise<void>((resolve) => {
           resolveDecode = resolve
         }),
       ),
     }
+    mockPixels = () => imageNode
     const onLoad = jest.fn()
-    let tree: any
+    let tree!: DOMRoot
 
-    await renderer.act(async () => {
-      tree = renderer.create(
-        <WebMainImage
+    await act(async () => {
+      tree = mount(<WebMainImage
           src="https://metravel.by/gallery/38/photo.webp?w=480"
           alt="Description image"
           width={390}
@@ -256,17 +289,13 @@ describe('ImageCardMedia blur background (web)', () => {
           priority="normal"
           loaded={false}
           onLoad={onLoad}
-        />,
-        {
-          createNodeMock: (element: any) => (element.type === 'img' ? imageNode : null),
-        },
-      )
+        />)
     })
 
-    expect(observe).toHaveBeenCalledWith(imageNode)
+    expect(observe).toHaveBeenCalledWith(hosts.get(tree!)!.querySelector('img'))
     expect(imageNode.decode).not.toHaveBeenCalled()
 
-    await renderer.act(async () => {
+    await act(async () => {
       intersectionCallback?.([{ isIntersecting: true }])
       await Promise.resolve()
     })
@@ -276,19 +305,19 @@ describe('ImageCardMedia blur background (web)', () => {
     imageNode.naturalWidth = 480
     imageNode.naturalHeight = 640
     imageNode.currentSrc = 'https://metravel.by/gallery/38/photo.webp?w=480'
-    await renderer.act(async () => {
+    await act(async () => {
       resolveDecode?.()
       await Promise.resolve()
     })
 
     // #1177: пропорции приезжают вместе с адресом — по ним строятся поля letterbox.
     expect(onLoad).toHaveBeenCalledWith(imageNode.currentSrc, { width: 480, height: 640 })
-    renderer.act(() => tree.unmount())
+    await act(() => tree.unmount())
     expect(disconnect).toHaveBeenCalled()
     ;(window as any).IntersectionObserver = originalIntersectionObserver
   })
 
-  it('keeps responsive srcSet enabled on iPhone Safari while still forcing eager load', () => {
+  it('keeps responsive srcSet enabled on iPhone Safari while still forcing eager load', async () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       value:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
@@ -299,34 +328,32 @@ describe('ImageCardMedia blur background (web)', () => {
       configurable: true,
     })
 
-    let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <ImageCardMedia
+    let tree!: DOMRoot
+    await act(() => {
+      tree = mount(<ImageCardMedia
           src="https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg"
           width={320}
           height={200}
           blurBackground
           fit="contain"
           loading="lazy"
-        />
-      )
+        />)
     })
 
-    const mainImage = tree!.root.findAll((node: any) => {
-      if (node?.type !== 'img') return false
-      if (node?.props?.['aria-hidden'] === true) return false
-      return String(node?.props?.style?.objectFit || '') === 'contain'
+    const mainImage = Array.from(hosts.get(tree)!.querySelectorAll('img')).filter((node: any) => {
+      if (node.tagName !== 'IMG') return false
+      if (node.getAttribute('aria-hidden') === 'true') return false
+      return String(node.style.objectFit || '') === 'contain'
     })[0]
 
     expect(mainImage).toBeTruthy()
-    expect(mainImage.props.loading).toBe('eager')
-    expect(mainImage.props.srcSet).toBeTruthy()
-    expect(String(mainImage.props.srcSet)).toContain('160w')
-    expect(mainImage.props.sizes).toBe('320px')
+    expect(mainImage.getAttribute('loading')).toBe('eager')
+    expect(mainImage.getAttribute('srcset')).toBeTruthy()
+    expect(String(mainImage.getAttribute('srcset'))).toContain('160w')
+    expect(mainImage.sizes).toBe('320px')
   })
 
-  it('keeps no-blur quest catalog covers lazy on iPhone Safari', () => {
+  it('keeps no-blur quest catalog covers lazy on iPhone Safari', async () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       value:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
@@ -337,10 +364,9 @@ describe('ImageCardMedia blur background (web)', () => {
       configurable: true,
     })
 
-    let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <ImageCardMedia
+    let tree!: DOMRoot
+    await act(() => {
+      tree = mount(<ImageCardMedia
           src="https://metravel.by/quest-cover/quests/1/main/cover.jpg?w=480&q=60&fit=cover"
           width={420}
           height={287}
@@ -348,20 +374,19 @@ describe('ImageCardMedia blur background (web)', () => {
           fit="cover"
           loading="lazy"
           optimizeWeb={false}
-        />
-      )
+        />)
     })
 
-    const mainImage = tree!.root.findAll((node: any) => {
-      return node?.type === 'img' && node?.props?.['aria-hidden'] !== true
+    const mainImage = Array.from(hosts.get(tree)!.querySelectorAll('img')).filter((node: any) => {
+      return node.tagName === 'IMG' && node.getAttribute('aria-hidden') !== 'true'
     })[0]
 
     expect(mainImage).toBeTruthy()
-    expect(mainImage.props.loading).toBe('lazy')
-    expect(mainImage.props.src).toContain('w=480')
+    expect(mainImage.getAttribute('loading')).toBe('lazy')
+    expect(mainImage.src).toContain('w=480')
   })
 
-  it('uses a full-width sizes fallback for iPhone Safari auto-width cards', () => {
+  it('uses a full-width sizes fallback for iPhone Safari auto-width cards', async () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       value:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
@@ -372,63 +397,58 @@ describe('ImageCardMedia blur background (web)', () => {
       configurable: true,
     })
 
-    let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <ImageCardMedia
+    let tree!: DOMRoot
+    await act(() => {
+      tree = mount(<ImageCardMedia
           src="https://metravel.by/travel-image/77/conversions/photo-thumb_200.jpg"
           height={220}
           blurBackground
           fit="contain"
           loading="lazy"
           allowCriticalWebBlur
-        />
-      )
+        />)
     })
 
-    const mainImage = tree!.root.findAll((node: any) => {
-      if (node?.type !== 'img') return false
-      if (node?.props?.['aria-hidden'] === true) return false
-      return String(node?.props?.style?.objectFit || '') === 'contain'
+    const mainImage = Array.from(hosts.get(tree)!.querySelectorAll('img')).filter((node: any) => {
+      if (node.tagName !== 'IMG') return false
+      if (node.getAttribute('aria-hidden') === 'true') return false
+      return String(node.style.objectFit || '') === 'contain'
     })[0]
 
     expect(mainImage).toBeTruthy()
-    expect(mainImage.props.sizes).toBe('(min-width: 768px) 50vw, 100vw')
+    expect(mainImage.sizes).toBe('(min-width: 768px) 50vw, 100vw')
     // #1170: ступень 1200 есть в контракте прокси и вернулась в клиентскую лестницу,
     // поэтому верхний кандидат — ровно 1200w. Прежнее ожидание (1280w) фиксировало
     // ограничение урезанной лестницы: 1200 округлялось вверх, и браузер тянул более
     // тяжёлый вариант на тот же слот.
-    expect(String(mainImage.props.srcSet)).toContain('1200w')
-    expect(String(mainImage.props.srcSet)).not.toContain('1280w')
+    expect(String(mainImage.getAttribute('srcset'))).toContain('1200w')
+    expect(String(mainImage.getAttribute('srcset'))).not.toContain('1280w')
   })
 
-  it('maps low-priority web media to fetchPriority=low', () => {
-    let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <ImageCardMedia
+  it('maps low-priority web media to fetchPriority=low', async () => {
+    let tree!: DOMRoot
+    await act(() => {
+      tree = mount(<ImageCardMedia
           src="https://example.com/near-viewport-card.jpg"
           width={320}
           height={200}
           loading="eager"
           priority="low"
           revealOnLoadOnly
-        />
-      )
+        />)
     })
 
-    const mainImage = tree!.root.findAll((node: any) => {
-      return node?.type === 'img' && node?.props?.['aria-hidden'] !== true
+    const mainImage = Array.from(hosts.get(tree)!.querySelectorAll('img')).filter((node: any) => {
+      return node.tagName === 'IMG' && node.getAttribute('aria-hidden') !== 'true'
     })[0]
 
-    expect(mainImage.props.fetchPriority).toBe('low')
+    expect(mainImage.getAttribute('fetchpriority')).toBe('low')
   })
 
-  it('keeps the main image visible on first frame for eager critical web media', () => {
-    let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <ImageCardMedia
+  it('keeps the main image visible on first frame for eager critical web media', async () => {
+    let tree!: DOMRoot
+    await act(() => {
+      tree = mount(<ImageCardMedia
           src="https://example.com/photo-visible-with-blur.jpg"
           height={200}
           blurBackground
@@ -436,25 +456,23 @@ describe('ImageCardMedia blur background (web)', () => {
           loading="eager"
           priority="high"
           allowCriticalWebBlur
-        />
-      )
+        />)
     })
 
-    const mainImage = tree!.root.findAll((node: any) => {
-      if (node?.type !== 'img') return false
-      if (node?.props?.['aria-hidden'] === true) return false
-      return String(node?.props?.style?.objectFit || '') === 'contain'
+    const mainImage = Array.from(hosts.get(tree)!.querySelectorAll('img')).filter((node: any) => {
+      if (node.tagName !== 'IMG') return false
+      if (node.getAttribute('aria-hidden') === 'true') return false
+      return String(node.style.objectFit || '') === 'contain'
     })[0]
 
     expect(mainImage).toBeTruthy()
-    expect(mainImage.props.style?.opacity).toBe(1)
+    expect(mainImage.style.opacity).toBe('1')
   })
 
-  it('preserves a pre-optimized critical web source instead of generating a new srcSet', () => {
-    let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <ImageCardMedia
+  it('preserves a pre-optimized critical web source instead of generating a new srcSet', async () => {
+    let tree!: DOMRoot
+    await act(() => {
+      tree = mount(<ImageCardMedia
           src="https://metravel.by/gallery/544/gallery/photo.JPG?v=3567&w=400&q=35&fit=contain"
           width={392}
           height={576}
@@ -464,27 +482,25 @@ describe('ImageCardMedia blur background (web)', () => {
           priority="high"
           allowCriticalWebBlur
           preserveOptimizedWebSrc
-        />
-      )
+        />)
     })
 
-    const mainImage = tree!.root.findAll((node: any) => {
-      if (node?.type !== 'img') return false
-      if (node?.props?.['aria-hidden'] === true) return false
-      return String(node?.props?.style?.objectFit || '') === 'contain'
+    const mainImage = Array.from(hosts.get(tree)!.querySelectorAll('img')).filter((node: any) => {
+      if (node.tagName !== 'IMG') return false
+      if (node.getAttribute('aria-hidden') === 'true') return false
+      return String(node.style.objectFit || '') === 'contain'
     })[0]
 
     expect(mainImage).toBeTruthy()
-    expect(mainImage.props.src).toContain('w=400')
-    expect(mainImage.props.src).toContain('q=35')
-    expect(mainImage.props.srcSet).toBeUndefined()
+    expect(mainImage.src).toContain('w=400')
+    expect(mainImage.src).toContain('q=35')
+    expect(mainImage.getAttribute('srcset')).toBeNull()
   })
 
-  it('uses caller-provided backend responsive source on web', () => {
-    let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <ImageCardMedia
+  it('uses caller-provided backend responsive source on web', async () => {
+    let tree!: DOMRoot
+    await act(() => {
+      tree = mount(<ImageCardMedia
           src="https://metravel.by/gallery/544/gallery/original.jpg"
           width={320}
           height={200}
@@ -496,26 +512,25 @@ describe('ImageCardMedia blur background (web)', () => {
               'https://metravel.by/gallery/544/gallery/photo.webp?w=320&q=72&fit=cover 320w, https://metravel.by/gallery/544/gallery/photo.webp?w=640&q=75&fit=cover 640w',
             sizes: '(max-width: 768px) 100vw, 320px',
           }}
-        />
-      )
+        />)
     })
 
-    const mainImage = tree!.root.findAll((node: any) => {
-      if (node?.type !== 'img') return false
-      if (node?.props?.['aria-hidden'] === true) return false
-      return String(node?.props?.style?.objectFit || '') === 'contain'
+    const mainImage = Array.from(hosts.get(tree)!.querySelectorAll('img')).filter((node: any) => {
+      if (node.tagName !== 'IMG') return false
+      if (node.getAttribute('aria-hidden') === 'true') return false
+      return String(node.style.objectFit || '') === 'contain'
     })[0]
 
     expect(mainImage).toBeTruthy()
-    expect(mainImage.props.src).toBe(
+    expect(mainImage.src).toBe(
       'https://metravel.by/gallery/544/gallery/photo.webp?w=640&q=75&fit=cover',
     )
-    expect(mainImage.props.srcSet).toContain('320w')
-    expect(mainImage.props.srcSet).toContain('640w')
-    expect(mainImage.props.sizes).toBe('(max-width: 768px) 100vw, 320px')
+    expect(mainImage.getAttribute('srcset')).toContain('320w')
+    expect(mainImage.getAttribute('srcset')).toContain('640w')
+    expect(mainImage.sizes).toBe('(max-width: 768px) 100vw, 320px')
   })
 
-  it('keeps responsive srcSet for pre-optimized shared-blur cards on iPhone Safari', () => {
+  it('keeps responsive srcSet for pre-optimized shared-blur cards on iPhone Safari', async () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       value:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
@@ -526,10 +541,9 @@ describe('ImageCardMedia blur background (web)', () => {
       configurable: true,
     })
 
-    let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <ImageCardMedia
+    let tree!: DOMRoot
+    await act(() => {
+      tree = mount(<ImageCardMedia
           src="https://metravel.by/gallery/544/gallery/photo.JPG?v=3567&w=320&h=168&q=52&fit=contain"
           width={320}
           height={168}
@@ -538,31 +552,29 @@ describe('ImageCardMedia blur background (web)', () => {
           loading="lazy"
           priority="low"
           allowCriticalWebBlur
-        />
-      )
+        />)
     })
 
-    const mainImage = tree!.root.findAll((node: any) => {
-      if (node?.type !== 'img') return false
-      if (node?.props?.['aria-hidden'] === true) return false
-      return String(node?.props?.style?.objectFit || '') === 'contain'
+    const mainImage = Array.from(hosts.get(tree)!.querySelectorAll('img')).filter((node: any) => {
+      if (node.tagName !== 'IMG') return false
+      if (node.getAttribute('aria-hidden') === 'true') return false
+      return String(node.style.objectFit || '') === 'contain'
     })[0]
 
     expect(mainImage).toBeTruthy()
-    expect(mainImage.props.srcSet).toBeTruthy()
-    expect(String(mainImage.props.srcSet)).toContain('640w')
+    expect(mainImage.getAttribute('srcset')).toBeTruthy()
+    expect(String(mainImage.getAttribute('srcset'))).toContain('640w')
     // #1170: ступень 960 вернули в лестницу, дескриптор совпадает с фактически
     // отдаваемым вариантом без округления вверх. Замер прода 2026-07-30 на обложке
     // квеста: w=960 → 10 430 B против w=1280 → 45 978 B (мастер целиком).
-    expect(String(mainImage.props.srcSet)).toContain('960w')
-    expect(String(mainImage.props.srcSet)).not.toContain('1280w')
+    expect(String(mainImage.getAttribute('srcset'))).toContain('960w')
+    expect(String(mainImage.getAttribute('srcset'))).not.toContain('1280w')
   })
 
-  it('keeps the exact pre-optimized shared-blur source on non-Safari browsers by default', () => {
-    let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <ImageCardMedia
+  it('keeps the exact pre-optimized shared-blur source on non-Safari browsers by default', async () => {
+    let tree!: DOMRoot
+    await act(() => {
+      tree = mount(<ImageCardMedia
           src="https://metravel.by/gallery/544/gallery/photo.JPG?v=3567&w=320&h=168&q=52&fit=contain"
           width={320}
           height={168}
@@ -571,19 +583,18 @@ describe('ImageCardMedia blur background (web)', () => {
           loading="lazy"
           priority="low"
           allowCriticalWebBlur
-        />
-      )
+        />)
     })
 
-    const mainImage = tree!.root.findAll((node: any) => {
-      if (node?.type !== 'img') return false
-      if (node?.props?.['aria-hidden'] === true) return false
-      return String(node?.props?.style?.objectFit || '') === 'contain'
+    const mainImage = Array.from(hosts.get(tree)!.querySelectorAll('img')).filter((node: any) => {
+      if (node.tagName !== 'IMG') return false
+      if (node.getAttribute('aria-hidden') === 'true') return false
+      return String(node.style.objectFit || '') === 'contain'
     })[0]
 
     expect(mainImage).toBeTruthy()
-    expect(mainImage.props.src).toContain('w=320')
-    expect(mainImage.props.srcSet).toBeUndefined()
+    expect(mainImage.src).toContain('w=320')
+    expect(mainImage.getAttribute('srcset')).toBeNull()
   })
 
   // #1111: подложка больше не заказывает собственный серверный вариант с `blur=`.
@@ -591,110 +602,96 @@ describe('ImageCardMedia blur background (web)', () => {
   // делает CSS-фильтр. Прежний контракт стоил второго запроса за тем же файлом:
   // замер прода 2026-07-28 — подложка карточки квеста просила `?w=160`, резкий
   // слой `?w=320`, и на путях из #1120 это было 2.5 МБ вместо килобайтов, дважды.
-  it('still reports onLoad on a cache-hit mount so the LCP gate releases', () => {
+  it('still reports onLoad on a cache-hit mount so the LCP gate releases', async () => {
     // Regression: navigating into a travel whose hero image was already rendered
     // on the previous screen initialises webLoaded=true from the module cache.
     // WebMainImage must still fire onLoad in that case, otherwise the first-image
     // callback (which releases the travel-details skeleton overlay) never runs and
     // the page stays blank behind the skeleton until a 6s safety timeout.
     const src = 'https://example.com/photo-cache-hit.jpg'
-    const cachedPixels = (element: any) => element.type === 'img' ? {
+    mockPixels = (image) => ({
       complete: true,
       naturalWidth: 640,
       naturalHeight: 360,
-      currentSrc: element.props.srcSet?.split(',')[0].trim().split(/\s+/)[0] ?? element.props.src,
-      style: {},
-    } : null
+      currentSrc: image.srcset.split(',')[0].trim().split(/\s+/)[0] || image.src,
+    })
 
     // First mount + load primes loadedWebImageBaseCache for this base src.
-    let firstTree: any
-    renderer.act(() => {
-      firstTree = renderer.create(
-        <ImageCardMedia src={src} height={200} blurBackground fit="contain" />,
-        { createNodeMock: cachedPixels },
-      )
+    let firstTree!: DOMRoot
+    await act(() => {
+      firstTree = mount(<ImageCardMedia src={src} height={200} blurBackground fit="contain" />)
     })
-    const firstMainImage = firstTree!.root.findAll((node: any) => {
-      if (node?.type !== 'img') return false
-      if (node?.props?.['aria-hidden'] === true) return false
-      if (typeof node?.props?.onLoad !== 'function') return false
-      return String(node?.props?.style?.objectFit || '') === 'contain'
+    const firstMainImage = Array.from(hosts.get(firstTree)!.querySelectorAll('img')).filter((node: any) => {
+      if (node.tagName !== 'IMG') return false
+      if (node.getAttribute('aria-hidden') === 'true') return false
+      return String(node.style.objectFit || '') === 'contain'
     })[0]
-    renderer.act(() => {
-      firstMainImage.props.onLoad()
+    await act(() => {
+      reportImageLoad(firstMainImage)
     })
-    renderer.act(() => {
+    await act(() => {
       firstTree!.unmount()
     })
 
     // Second mount of the same base image: webLoaded inits true (cache hit).
     const onLoad = jest.fn()
-    let secondTree: any
-    renderer.act(() => {
-      secondTree = renderer.create(
-        <ImageCardMedia src={`${src}?w=480&q=60`} height={200} blurBackground fit="contain" onLoad={onLoad} />,
-        { createNodeMock: cachedPixels },
-      )
+    let secondTree!: DOMRoot
+    await act(() => {
+      secondTree = mount(<ImageCardMedia src={`${src}?w=480&q=60`} height={200} blurBackground fit="contain" onLoad={onLoad} />)
     })
 
     // onLoad must fire even though no real <img> load event occurs for a cached image.
     expect(onLoad).toHaveBeenCalled()
 
-    renderer.act(() => {
+    await act(() => {
       secondTree!.unmount()
     })
   })
 
-  it('keeps a previously loaded web image visible after remount', () => {
+  it('keeps a previously loaded web image visible after remount', async () => {
     const src = 'https://example.com/photo-remount.jpg'
 
-    let firstTree: any
-    renderer.act(() => {
-      firstTree = renderer.create(
-        <ImageCardMedia
+    let firstTree!: DOMRoot
+    await act(() => {
+      firstTree = mount(<ImageCardMedia
           src={src}
           height={200}
           blurBackground
           fit="contain"
-        />
-      )
+        />)
     })
 
-    const firstMainImage = firstTree!.root.findAll((node: any) => {
-      if (node?.type !== 'img') return false
-      if (node?.props?.['aria-hidden'] === true) return false
-      if (typeof node?.props?.onLoad !== 'function') return false
-      return String(node?.props?.style?.objectFit || '') === 'contain'
+    const firstMainImage = Array.from(hosts.get(firstTree)!.querySelectorAll('img')).filter((node: any) => {
+      if (node.tagName !== 'IMG') return false
+      if (node.getAttribute('aria-hidden') === 'true') return false
+      return String(node.style.objectFit || '') === 'contain'
     })[0]
 
-    renderer.act(() => {
-      firstMainImage.props.onLoad()
+    await act(() => {
+      reportImageLoad(firstMainImage)
     })
 
-    renderer.act(() => {
+    await act(() => {
       firstTree!.unmount()
     })
 
-    let secondTree: any
-    renderer.act(() => {
-      secondTree = renderer.create(
-        <ImageCardMedia
+    let secondTree!: DOMRoot
+    await act(() => {
+      secondTree = mount(<ImageCardMedia
           src={`${src}?w=480&q=60`}
           height={200}
           blurBackground
           fit="contain"
-        />
-      )
+        />)
     })
 
-    const secondMainImage = secondTree!.root.findAll((node: any) => {
-      if (node?.type !== 'img') return false
-      if (node?.props?.['aria-hidden'] === true) return false
-      if (typeof node?.props?.onLoad !== 'function') return false
-      return String(node?.props?.style?.objectFit || '') === 'contain'
+    const secondMainImage = Array.from(hosts.get(secondTree)!.querySelectorAll('img')).filter((node: any) => {
+      if (node.tagName !== 'IMG') return false
+      if (node.getAttribute('aria-hidden') === 'true') return false
+      return String(node.style.objectFit || '') === 'contain'
     })[0]
 
-    expect(secondMainImage.props.style?.opacity).toBe(1)
+    expect(secondMainImage.style.opacity).toBe('1')
   })
 
   // Регрессия галереи на iPhone: сосед грузится ДО того, как становится активным,
@@ -702,12 +699,11 @@ describe('ImageCardMedia blur background (web)', () => {
   // + `allowCriticalWebBlur`). Сброс «загружено» в этот момент гасил уже показанное
   // фото, а `<img>` не повторяет событие `load` для неизменного `src` — слайд
   // оставался блюром навсегда: первый кадр видно, все следующие — только подложка.
-  it('keeps an already decoded image visible when the decode gate turns on later', () => {
+  it('keeps an already decoded image visible when the decode gate turns on later', async () => {
     const src = 'https://metravel.by/gallery/544/gallery/slide-gate.JPG?v=91&w=390&q=52&fit=contain'
-    let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <ImageCardMedia
+    let tree!: DOMRoot
+    await act(() => {
+      tree = mount(<ImageCardMedia
           src={src}
           width={390}
           height={560}
@@ -716,25 +712,24 @@ describe('ImageCardMedia blur background (web)', () => {
           loading="eager"
           priority="normal"
           preserveOptimizedWebSrc
-        />
-      )
+        />)
     })
 
     const findMain = () =>
-      tree!.root.findAll((node: any) => {
-        if (node?.type !== 'img') return false
-        if (node?.props?.['aria-hidden'] === true) return false
-        return String(node?.props?.style?.objectFit || '') === 'contain'
+      Array.from(hosts.get(tree)!.querySelectorAll('img')).filter((node: any) => {
+        if (node.tagName !== 'IMG') return false
+        if (node.getAttribute('aria-hidden') === 'true') return false
+        return String(node.style.objectFit || '') === 'contain'
       })[0]
 
-    renderer.act(() => {
-      findMain().props.onLoad()
+    await act(() => {
+      reportImageLoad(findMain())
     })
-    expect(findMain().props.style?.opacity).toBe(1)
+    expect(findMain().style.opacity).toBe('1')
 
     // Свайп: слайд стал активным, Slide включает iOS decode-гейт на том же URL.
-    renderer.act(() => {
-      tree!.update(
+    await act(() => {
+      tree!.render(
         <ImageCardMedia
           src={src}
           width={390}
@@ -750,9 +745,9 @@ describe('ImageCardMedia blur background (web)', () => {
       )
     })
 
-    expect(findMain().props.style?.opacity).toBe(1)
+    expect(findMain().style.opacity).toBe('1')
 
-    renderer.act(() => {
+    await act(() => {
       tree!.unmount()
     })
   })

@@ -118,7 +118,7 @@ describe('confirmRichTextLossIfNeeded', () => {
   });
 });
 
-function setupPersistence(opts: {
+async function setupPersistence(opts: {
   initialFormData: any;
   baselineText: any;
   isFormHydrated?: boolean;
@@ -162,16 +162,16 @@ function setupPersistence(opts: {
       opts.uploadPendingMarkerImages ?? jest.fn().mockResolvedValue(undefined),
   };
 
-  const { result, rerender } = renderHook(() => useTravelFormPersistence(params));
+  const { result, rerender } = await renderHook(() => useTravelFormPersistence(params));
   return { result, rerender, params };
 }
 
 describe('autosave hydration gate', () => {
-  it('keeps autosave disabled until existing server data has hydrated the form', () => {
+  it('keeps autosave disabled until existing server data has hydrated the form', async () => {
     mockUseImprovedAutoSave.mockClear();
     mockSaveFormData.mockClear();
 
-    setupPersistence({
+    await setupPersistence({
       initialFormData: {
         id: 641,
         name: '',
@@ -188,10 +188,10 @@ describe('autosave hydration gate', () => {
     expect(mockSaveFormData).not.toHaveBeenCalled();
   });
 
-  it('keeps the autosave callback stable across an unrelated persistence rerender', () => {
+  it('keeps the autosave callback stable across an unrelated persistence rerender', async () => {
     mockUseImprovedAutoSave.mockClear();
 
-    const { rerender } = setupPersistence({
+    const { rerender } = await setupPersistence({
       initialFormData: {
         id: 641,
         name: 'Stable autosave',
@@ -203,7 +203,7 @@ describe('autosave hydration gate', () => {
     });
     const firstOnSave = mockUseImprovedAutoSave.mock.calls.at(-1)?.[2].onSave;
 
-    rerender();
+    await rerender();
 
     expect(mockUseImprovedAutoSave.mock.calls.at(-1)?.[2].onSave).toBe(firstOnSave);
   });
@@ -236,7 +236,7 @@ describe('applySavedData — route point save races', () => {
       countries: [],
       gallery: [],
     };
-    const { result, params } = setupPersistence({
+    const { result, params } = await setupPersistence({
       initialFormData: sourceTravel,
       baselineText: null,
     });
@@ -287,7 +287,7 @@ describe('applySavedData — route point save races', () => {
       gallery: [],
     };
     const uploadPendingMarkerImages = jest.fn().mockResolvedValue(undefined);
-    const { result, params } = setupPersistence({
+    const { result, params } = await setupPersistence({
       initialFormData: sourceTravel,
       baselineText: null,
       uploadPendingMarkerImages,
@@ -340,7 +340,7 @@ describe('applySavedData — route point save races', () => {
       gallery: [],
     };
     const uploadPendingMarkerImages = jest.fn().mockResolvedValue(undefined);
-    const { result, params } = setupPersistence({
+    const { result, params } = await setupPersistence({
       initialFormData: sourceTravel,
       baselineText: null,
       uploadPendingMarkerImages,
@@ -386,7 +386,7 @@ describe('applySavedData — route point save races', () => {
       gallery: [],
     };
     const uploadPendingMarkerImages = jest.fn().mockResolvedValue(undefined);
-    const { result, params } = setupPersistence({
+    const { result, params } = await setupPersistence({
       initialFormData: sourceTravel,
       baselineText: null,
       uploadPendingMarkerImages,
@@ -436,7 +436,7 @@ describe('applySavedData — route point save races', () => {
       gallery: [],
     };
     const uploadPendingMarkerImages = jest.fn().mockResolvedValue(undefined);
-    const { result, params } = setupPersistence({
+    const { result, params } = await setupPersistence({
       initialFormData: sourceTravel,
       baselineText: null,
       uploadPendingMarkerImages,
@@ -490,14 +490,14 @@ describe('applySavedData — route point save races', () => {
       countries: [],
       gallery: [],
     };
-    const { result, params } = setupPersistence({
+    const { result, params } = await setupPersistence({
       initialFormData: sourceTravel,
       baselineText: null,
       rehydrateMarkerIdsFromServer,
       uploadPendingMarkerImages,
     });
 
-    act(() => {
+    await act(() => {
       result.current.applySavedData(sourceTravel, sourceTravel);
     });
 
@@ -549,13 +549,13 @@ describe('applySavedData — route point save races', () => {
       countries: [],
       gallery: [],
     };
-    const { result, params } = setupPersistence({
+    const { result, params } = await setupPersistence({
       initialFormData: sourceTravel,
       baselineText: null,
       rehydrateMarkerIdsFromServer,
     });
 
-    act(() => {
+    await act(() => {
       result.current.applySavedData(sourceTravel, sourceTravel);
     });
     params.formDataRef.current = {
@@ -596,7 +596,7 @@ describe('applySavedData — route point save races', () => {
       countries: [],
       gallery: [],
     };
-    const { params } = setupPersistence({
+    const { params } = await setupPersistence({
       initialFormData: sourceTravel,
       baselineText: null,
     });
@@ -646,7 +646,7 @@ describe('handleManualSave — guard «анти-потеря текста»', ()
 
   it('сокращение description до «desc» → confirm; да → saveFormData вызван', async () => {
     mockConfirmAction.mockResolvedValueOnce(true);
-    const { result } = setupPersistence({
+    const { result } = await setupPersistence({
       initialFormData: baseTravel,
       baselineText: {
         description: LONG_TEXT,
@@ -669,7 +669,7 @@ describe('handleManualSave — guard «анти-потеря текста»', ()
 
   it('сокращение description до «desc» → confirm; нет → saveFormData НЕ вызван', async () => {
     mockConfirmAction.mockResolvedValueOnce(false);
-    const { result } = setupPersistence({
+    const { result } = await setupPersistence({
       initialFormData: baseTravel,
       baselineText: {
         description: LONG_TEXT,
@@ -692,7 +692,7 @@ describe('handleManualSave — guard «анти-потеря текста»', ()
 
   it('добавление точки при неизменном тексте → нет диалога, сейв идёт', async () => {
     mockConfirmAction.mockResolvedValue(true);
-    const { result } = setupPersistence({
+    const { result } = await setupPersistence({
       initialFormData: baseTravel,
       baselineText: {
         description: LONG_TEXT,
@@ -725,7 +725,7 @@ describe('handleManualSave — guard «анти-потеря текста»', ()
       categories: [7],
       gallery: [galleryItem],
     };
-    const { result } = setupPersistence({
+    const { result } = await setupPersistence({
       initialFormData: currentTravel,
       baselineText: {
         description: LONG_TEXT,
@@ -808,7 +808,7 @@ describe('handleManualSave — server echo while editing', () => {
         resolveSave = resolve as (savedData: typeof sentTravel) => void;
       }),
     );
-    const { result, params } = setupPersistence({
+    const { result, params } = await setupPersistence({
       initialFormData: sentTravel,
       baselineText: {
         description: LONG_TEXT,
@@ -910,7 +910,7 @@ describe('handleManualSave — server echo while editing', () => {
       travel_image_thumb_small_url: 'https://metravel.by/cover/small.jpg',
     };
     mockSaveFormData.mockResolvedValueOnce(savedTravel as any);
-    const { result, params } = setupPersistence({
+    const { result, params } = await setupPersistence({
       initialFormData: sentTravel,
       baselineText: {
         description: LONG_TEXT,
@@ -963,7 +963,7 @@ describe('handleManualSave — localized backend errors', () => {
 
   const expectRejectedManualSave = async (error: Error, intent?: 'save' | 'submit') => {
     mockSaveFormData.mockRejectedValueOnce(error);
-    const { result } = setupPersistence({
+    const { result } = await setupPersistence({
       initialFormData: baseTravel,
       baselineText: null,
     });
@@ -1078,7 +1078,7 @@ describe('handleManualSave — guard «фото исчезнувшей точк�
   // отличается и тост «Сохранено».
   it('точка ушла из маршрута, а фото осталось в тексте → confirm; отмена = чистый no-op', async () => {
     mockConfirmAction.mockResolvedValueOnce(false);
-    const { result } = setupPersistence({ initialFormData: baseTravel, baselineText });
+    const { result } = await setupPersistence({ initialFormData: baseTravel, baselineText });
 
     await act(async () => {
       await result.current.handleManualSave();
@@ -1090,7 +1090,7 @@ describe('handleManualSave — guard «фото исчезнувшей точк�
 
   it('подтверждение автора пропускает сохранение и текст не переписан', async () => {
     mockConfirmAction.mockResolvedValueOnce(true);
-    const { result } = setupPersistence({ initialFormData: baseTravel, baselineText });
+    const { result } = await setupPersistence({ initialFormData: baseTravel, baselineText });
 
     await act(async () => {
       await result.current.handleManualSave();
@@ -1106,7 +1106,7 @@ describe('handleManualSave — guard «фото исчезнувшей точк�
   // отмена оставила бы её без server-id, то есть без возможности приложить фото
   // (отказ #505). У опубликованной статьи автосейва нет, и этот сейв — единственный.
   it('инкрементальный сейв точки диалога не поднимает и не теряет точку', async () => {
-    const { result } = setupPersistence({ initialFormData: baseTravel, baselineText });
+    const { result } = await setupPersistence({ initialFormData: baseTravel, baselineText });
 
     await act(async () => {
       await result.current.handleManualSave({
@@ -1125,7 +1125,7 @@ describe('handleManualSave — guard «фото исчезнувшей точк�
 
   it('публикация статьи с мёртвым фото в теле диалог поднимает', async () => {
     mockConfirmAction.mockResolvedValueOnce(false);
-    const { result } = setupPersistence({ initialFormData: baseTravel, baselineText });
+    const { result } = await setupPersistence({ initialFormData: baseTravel, baselineText });
 
     await act(async () => {
       await result.current.handleManualSave(baseTravel as any, { intent: 'submit' });
@@ -1138,7 +1138,7 @@ describe('handleManualSave — guard «фото исчезнувшей точк�
   it.each(['approve', 'reject'] as const)('cancelled %s preserves pending state when a body photo belongs to a removed point (#2693)', async (intent) => {
     mockConfirmAction.mockResolvedValueOnce(false);
     const pending = { ...baseTravel, publication_status: 'pending_review', publish: false, moderation: false };
-    const { result, params } = setupPersistence({ initialFormData: pending, baselineText });
+    const { result, params } = await setupPersistence({ initialFormData: pending, baselineText });
     await act(async () => {
       await expect(result.current.handleManualSave(pending as any, {
         intent,
@@ -1156,7 +1156,7 @@ describe('handleManualSave — guard «фото исчезнувшей точк�
   // гейт молчит ровно там, где нужен (поймано браузерной пробой на локальном стеке).
   it('press-событие от кнопки «Сохранить» считается намеренным сохранением', async () => {
     mockConfirmAction.mockResolvedValueOnce(false);
-    const { result } = setupPersistence({ initialFormData: baseTravel, baselineText });
+    const { result } = await setupPersistence({ initialFormData: baseTravel, baselineText });
 
     await act(async () => {
       await result.current.handleManualSave({
@@ -1171,7 +1171,7 @@ describe('handleManualSave — guard «фото исчезнувшей точк�
   });
 
   it('фото живой точки диалога не поднимает', async () => {
-    const { result } = setupPersistence({
+    const { result } = await setupPersistence({
       initialFormData: {
         ...baseTravel,
         description: `${LONG_TEXT}${POINT_IMG(15193)}`,

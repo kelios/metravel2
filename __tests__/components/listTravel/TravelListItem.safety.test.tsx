@@ -47,9 +47,9 @@ const travel = {
   travelAddress: [],
 } as Travel
 
-const renderItem = (props: Partial<React.ComponentProps<typeof TravelListItem>> = {}, cards = [travel]) => {
+const renderItem = async (props: Partial<React.ComponentProps<typeof TravelListItem>> = {}, cards = [travel]) => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(
+  return await render(
     <QueryClientProvider client={client}>
       {cards.map((card) => <TravelListItem key={card.id} travel={card} currentUserId={ME} {...props} />)}
     </QueryClientProvider>,
@@ -63,33 +63,33 @@ describe('TravelListItem content safety', () => {
     useHiddenContentStore.setState({ byOwner: {} })
   })
 
-  it('shows the safety trigger in the corner slot of a foreign travel card', () => {
-    const { getByTestId, queryByTestId } = renderItem()
+  it('shows the safety trigger in the corner slot of a foreign travel card', async () => {
+    const { getByTestId, queryByTestId } = await renderItem()
     expect(getByTestId('travel-card-foreign-travel-safety-menu')).toBeTruthy()
     expect(queryByTestId('admin-actions')).toBeNull()
   })
 
-  it('keeps admin actions and no safety trigger on an own travel card', () => {
+  it('keeps admin actions and no safety trigger on an own travel card', async () => {
     useAuthStore.setState({ isAuthenticated: true, userId: '42' })
-    const { getByTestId, queryByTestId } = renderItem({ currentUserId: '42' })
+    const { getByTestId, queryByTestId } = await renderItem({ currentUserId: '42' })
     expect(getByTestId('admin-actions')).toBeTruthy()
     expect(queryByTestId('travel-card-foreign-travel-safety-menu')).toBeNull()
   })
 
-  it('shows no safety trigger in selectable (export) mode', () => {
-    const { queryByTestId } = renderItem({ selectable: true })
+  it('shows no safety trigger in selectable (export) mode', async () => {
+    const { queryByTestId } = await renderItem({ selectable: true })
     expect(queryByTestId('travel-card-foreign-travel-safety-menu')).toBeNull()
   })
 
   it('uniquely selects a card without a slug and reports that travel from a multi-card list', async () => {
     const second = { ...travel, id: 2, slug: '', userIds: '43' }
-    const { getByTestId, findByTestId, queryByTestId } = renderItem({}, [travel, second])
+    const { getByTestId, findByTestId, queryByTestId } = await renderItem({}, [travel, second])
     expect(getByTestId('travel-card-foreign-travel-safety-menu')).toBeTruthy()
     expect(queryByTestId('travel-card-safety-menu')).toBeNull()
-    fireEvent.press(getByTestId('travel-card-2-safety-menu'))
-    fireEvent.press(getByTestId('travel-card-safety-report'))
-    fireEvent.press(await findByTestId('report-reason-spam'))
-    fireEvent.press(getByTestId('report-submit'))
+    await fireEvent.press(getByTestId('travel-card-2-safety-menu'))
+    await fireEvent.press(getByTestId('travel-card-safety-report'))
+    await fireEvent.press(await findByTestId('report-reason-spam'))
+    await fireEvent.press(getByTestId('report-submit'))
 
     await waitFor(() => expect(reportContent).toHaveBeenCalledTimes(1))
     expect(jest.mocked(reportContent).mock.calls[0][0]).toEqual({
@@ -99,17 +99,17 @@ describe('TravelListItem content safety', () => {
 
   it('blocks the author of the uniquely selected card in a multi-card list', async () => {
     const second = { ...travel, id: 2, slug: 'another-travel', userIds: '43' }
-    const { getByTestId } = renderItem({}, [travel, second])
-    fireEvent.press(getByTestId('travel-card-another-travel-safety-menu'))
-    fireEvent.press(getByTestId('travel-card-safety-block'))
+    const { getByTestId } = await renderItem({}, [travel, second])
+    await fireEvent.press(getByTestId('travel-card-another-travel-safety-menu'))
+    await fireEvent.press(getByTestId('travel-card-safety-block'))
 
     await waitFor(() => expect(blockUser).toHaveBeenCalledTimes(1))
     expect(jest.mocked(blockUser).mock.calls[0][0]).toBe(43)
   })
 
-  it('renders the hidden placeholder instead of a hidden travel', () => {
+  it('renders the hidden placeholder instead of a hidden travel', async () => {
     useHiddenContentStore.setState({ byOwner: { [ME]: ['travel:1'] } })
-    const { getByTestId, queryByTestId } = renderItem()
+    const { getByTestId, queryByTestId } = await renderItem()
     expect(getByTestId('hidden-content')).toBeTruthy()
     expect(queryByTestId('travel-card-foreign-travel')).toBeNull()
   })

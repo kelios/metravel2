@@ -57,8 +57,8 @@ describe('TravelTmlRound', () => {
     mockUnifiedTravelCard.mockClear();
   });
 
-  it('renders compact popular-card metadata: author, year, rating and views', () => {
-    const { getByText } = render(
+  it('renders compact popular-card metadata: author, year, rating and views', async () => {
+    const { getByText } = await render(
       <TravelTmlRound
         travel={{
           id: 42,
@@ -81,13 +81,13 @@ describe('TravelTmlRound', () => {
     expect(getByText('2,4\u00a0тыс.')).toBeTruthy();
   });
 
-  it('forwards webTouchAction so a horizontal rail keeps its swipe (#2367)', () => {
-    render(<TravelTmlRound travel={{ id: 3, name: 'Rail card' } as any} webTouchAction="pan-x pan-y" />);
+  it('forwards webTouchAction so a horizontal rail keeps its swipe (#2367)', async () => {
+    await render(<TravelTmlRound travel={{ id: 3, name: 'Rail card' } as any} webTouchAction="pan-x pan-y" />);
     expect(mockUnifiedTravelCard.mock.calls[0]?.[0]?.webTouchAction).toBe('pan-x pan-y');
   });
 
-  it('omits a non-positive rating', () => {
-    const { queryByTestId } = render(
+  it('omits a non-positive rating', async () => {
+    const { queryByTestId } = await render(
       <TravelTmlRound
         travel={{
           id: 43,

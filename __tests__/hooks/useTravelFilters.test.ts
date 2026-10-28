@@ -109,18 +109,26 @@ describe('useTravelFilters', () => {
   });
 
   it('loads and normalizes filters on mount', async () => {
-    mockFetchFilters.mockResolvedValue({
-      categories: [{ id: 1, name: 'Горы' }],
-      transports: [{ id: 1, name: 'Авто' }],
-    });
-    mockFetchAllCountries.mockResolvedValue([
-      { country_id: 112, title_ru: 'Беларусь' },
-    ]);
+    let resolveFilters!: (value: unknown) => void;
+    let resolveCountries!: (value: unknown) => void;
+    mockFetchFilters.mockImplementationOnce(() => new Promise(resolve => { resolveFilters = resolve; }));
+    mockFetchAllCountries.mockImplementationOnce(() => new Promise(resolve => { resolveCountries = resolve; }));
 
-    const { result } = renderHook(() => useTravelFilters());
+    const { result } = await renderHook(() => useTravelFilters());
 
     expect(result.current.isLoading).toBe(true);
+    for (const entries of Object.values(result.current.filters)) expect(entries).toEqual([]);
+    expect(mockFetchFilters).toHaveBeenCalledTimes(1);
+    expect(mockFetchAllCountries).toHaveBeenCalledTimes(1);
 
+    await act(() => resolveFilters({
+      categories: [{ id: 1, name: 'Горы' }],
+      transports: [{ id: 1, name: 'Авто' }],
+    }));
+    expect(result.current.isLoading).toBe(true);
+    for (const entries of Object.values(result.current.filters)) expect(entries).toEqual([]);
+
+    await act(() => resolveCountries([{ country_id: 112, title_ru: 'Беларусь' }]));
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     expect(result.current.error).toBeNull();
@@ -152,7 +160,7 @@ describe('useTravelFilters', () => {
     mockFetchAllCountries.mockImplementationOnce(() => fetchAllCountries({ throwOnError: true }));
 
     try {
-      const { result } = renderHook(() => useTravelFilters());
+      const { result } = await renderHook(() => useTravelFilters());
       await waitFor(() => expect(result.current.isLoading).toBe(false));
       expect(result.current.error).toBeNull();
       expect(result.current.filters.countries).toHaveLength(countries.length);
@@ -177,7 +185,7 @@ describe('useTravelFilters', () => {
       { country_id: 2, title_ru: 'Грузия' },
     ]);
 
-    const { result } = renderHook(() => useTravelFilters());
+    const { result } = await renderHook(() => useTravelFilters());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -193,7 +201,7 @@ describe('useTravelFilters', () => {
     mockFetchFilters.mockRejectedValue(new Error('Network down'));
     mockFetchAllCountries.mockResolvedValue([]);
 
-    const { result } = renderHook(() => useTravelFilters());
+    const { result } = await renderHook(() => useTravelFilters());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
@@ -203,7 +211,7 @@ describe('useTravelFilters', () => {
   });
 
   it('does not auto-load when loadOnMount is false', async () => {
-    const { result } = renderHook(() => useTravelFilters({ loadOnMount: false }));
+    const { result } = await renderHook(() => useTravelFilters({ loadOnMount: false }));
 
     expect(result.current.isLoading).toBe(false);
     expect(mockFetchFilters).not.toHaveBeenCalled();
@@ -223,7 +231,7 @@ describe('useTravelFilters', () => {
     mockFetchFilters.mockResolvedValue({ categories: [] });
     mockFetchAllCountries.mockResolvedValue([]);
 
-    const { result } = renderHook(() => useTravelFilters());
+    const { result } = await renderHook(() => useTravelFilters());
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(mockFetchFilters).toHaveBeenCalledTimes(1);
@@ -246,7 +254,7 @@ describe('useTravelFilters', () => {
     });
     mockFetchAllCountries.mockResolvedValue([]);
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ step }: { step: number }) => useTravelFilters({ currentStep: step }),
       { initialProps: { step: 1 } },
     );
@@ -264,7 +272,7 @@ describe('useTravelFilters', () => {
     });
 
     await act(async () => {
-      rerender({ step: 2 });
+      await rerender({ step: 2 });
     });
 
     expect(mockFetchFilters).toHaveBeenCalledTimes(2);
@@ -284,7 +292,7 @@ describe('useTravelFilters', () => {
     });
     mockFetchAllCountries.mockResolvedValue([]);
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ step }: { step: number }) => useTravelFilters({ currentStep: step }),
       { initialProps: { step: 1 } },
     );
@@ -296,7 +304,7 @@ describe('useTravelFilters', () => {
     );
 
     await act(async () => {
-      rerender({ step: 2 });
+      await rerender({ step: 2 });
     });
 
     // Список уже показан — обновление молчаливое, скелет поля стран не мигает.
@@ -310,7 +318,7 @@ describe('useTravelFilters', () => {
 
     // Переход 2 → 3 внутри минуты не выпускает второй запрос.
     await act(async () => {
-      rerender({ step: 3 });
+      await rerender({ step: 3 });
     });
     expect(mockFetchFilters).toHaveBeenCalledTimes(2);
   });
@@ -325,12 +333,12 @@ describe('useTravelFilters', () => {
     mockFetchAllCountries.mockResolvedValue([{ country_id: 112, title_ru: 'Беларусь' }]);
 
     try {
-      const { result, rerender } = renderHook(
+      const { result, rerender } = await renderHook(
         ({ step }: { step: number }) => useTravelFilters({ currentStep: step }),
         { initialProps: { step: 1 } },
       );
       await waitFor(() => expect(result.current.isLoading).toBe(false));
-      await act(async () => { rerender({ step: 2 }); });
+      await act(async () => { await rerender({ step: 2 }); });
       const countries = result.current.filters.countries;
       const callsBeforeReturn = mockFetchFilters.mock.calls.length;
 
@@ -376,7 +384,7 @@ describe('useTravelFilters', () => {
       }),
     );
 
-    const { result } = renderHook(() => useTravelFilters({ currentStep: 2 }));
+    const { result } = await renderHook(() => useTravelFilters({ currentStep: 2 }));
 
     await waitFor(() =>
       expect(result.current.filters.categoryTravelAddress).toEqual([
@@ -413,22 +421,22 @@ describe('useTravelFilters', () => {
     });
     mockFetchAllCountries.mockResolvedValue([]);
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ step }: { step: number }) => useTravelFilters({ currentStep: step }),
       { initialProps: { step: 1 } },
     );
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     const callsAfterLoad = mockFetchFilters.mock.calls.length;
 
-    await act(async () => { rerender({ step: 2 }); });
+    await act(async () => { await rerender({ step: 2 }); });
     expect(mockFetchFilters).toHaveBeenCalledTimes(callsAfterLoad + 1);
 
     now += 10_000;
-    await act(async () => { rerender({ step: 3 }); });
+    await act(async () => { await rerender({ step: 3 }); });
     expect(mockFetchFilters).toHaveBeenCalledTimes(callsAfterLoad + 1);
 
     now += 120_000;
-    await act(async () => { rerender({ step: 2 }); });
+    await act(async () => { await rerender({ step: 2 }); });
     expect(mockFetchFilters).toHaveBeenCalledTimes(callsAfterLoad + 2);
     expect(mockFetchFilters).toHaveBeenLastCalledWith({ lang: 'ru', force: true });
 
@@ -442,7 +450,7 @@ describe('useTravelFilters', () => {
     });
     mockFetchAllCountries.mockResolvedValue([]);
 
-    const { result } = renderHook(() => useTravelFilters());
+    const { result } = await renderHook(() => useTravelFilters());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
     mockFetchAllCountries.mockResolvedValue([{ country_id: 2, title_ru: 'Польша' }]);
@@ -492,12 +500,12 @@ describe('useTravelFilters', () => {
       window.dispatchEvent(event);
     };
     const openPointStep = async (step = 2) => {
-      const hook = renderHook(
+      const hook = await renderHook(
         ({ step }: { step: number }) => useTravelFilters({ currentStep: step }),
         { initialProps: { step: 1 } },
       );
       await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
-      await act(async () => { hook.rerender({ step }); });
+      await act(async () => { await hook.rerender({ step }); });
       return hook;
     };
 
@@ -560,7 +568,7 @@ describe('useTravelFilters', () => {
       let resolveReturn: (value: unknown) => void = () => {};
       mockFetchFilters.mockImplementationOnce(() => new Promise((resolve) => { resolveOlder = resolve; }));
       let older: Promise<void>;
-      act(() => { older = result.current.refetchPointCategories({ force: true, silent: true }); });
+      await act(() => { older = result.current.refetchPointCategories({ force: true, silent: true }); });
       mockFetchFilters.mockImplementationOnce(() => new Promise((resolve) => { resolveReturn = resolve; }));
       await act(async () => { blur(); focus(); });
       const count = mockFetchFilters.mock.calls.length;
@@ -570,7 +578,7 @@ describe('useTravelFilters', () => {
       });
       expect(result.current.filters.categoryTravelAddress).toEqual([{ id: '4', name: 'Парк' }]);
       now += 120_000;
-      await act(async () => { rerender({ step: 3 }); });
+      await act(async () => { await rerender({ step: 3 }); });
       expect(mockFetchFilters).toHaveBeenCalledTimes(count);
       await act(async () => { resolveReturn(refreshed); });
       expect(result.current.filters.categoryTravelAddress).toContainEqual({ id: '228', name: 'Планетарий' });
@@ -585,8 +593,8 @@ describe('useTravelFilters', () => {
       const options = mockFetchFilters.mock.calls.at(-1)?.[0] as { signal: AbortSignal };
       await act(async () => {
         if (reason === 'leave') blur();
-        else if (reason === 'other-step') rerender({ step: 4 });
-        else unmount();
+        else if (reason === 'other-step') await rerender({ step: 4 });
+        else await unmount();
       });
       expect(options.signal.aborted).toBe(true);
       const count = mockFetchFilters.mock.calls.length;
@@ -622,11 +630,11 @@ describe('useTravelFilters', () => {
       await act(async () => { options.onRequestStart(now); resolveReturn(refreshed); });
       const count = mockFetchFilters.mock.calls.length;
       now += 1_000;
-      await act(async () => { rerender({ step: 3 }); });
-      await act(async () => { rerender({ step: 2 }); });
+      await act(async () => { await rerender({ step: 3 }); });
+      await act(async () => { await rerender({ step: 2 }); });
       expect(mockFetchFilters).toHaveBeenCalledTimes(count);
       now += 60_000;
-      await act(async () => { rerender({ step: 3 }); });
+      await act(async () => { await rerender({ step: 3 }); });
       expect(mockFetchFilters).toHaveBeenCalledTimes(count + 1);
     });
 
@@ -657,7 +665,7 @@ describe('useTravelFilters', () => {
 
     it.each([1, 4, 5, 6])('does not subscribe outside point steps (step %s)', async (step) => {
       const { rerender } = await openPointStep();
-      await act(async () => { rerender({ step }); });
+      await act(async () => { await rerender({ step }); });
       const count = mockFetchFilters.mock.calls.length;
       await act(async () => { blur(); focus(); visibilityChange(); pickerOpen(); pageShow(true); });
       expect(mockFetchFilters).toHaveBeenCalledTimes(count);
@@ -670,7 +678,7 @@ describe('useTravelFilters', () => {
       mockFetchFilters.mockResolvedValue(refreshed);
       const count = mockFetchFilters.mock.calls.length;
       now += 10_000;
-      await act(async () => { rerender({ step: 3 }); });
+      await act(async () => { await rerender({ step: 3 }); });
       expect(mockFetchFilters).toHaveBeenCalledTimes(count);
       await act(async () => { pickerOpen(); });
       expect(result.current.filters.categoryTravelAddress).toContainEqual({ id: '228', name: 'Планетарий' });
@@ -719,7 +727,7 @@ describe('useTravelFilters locale transitions', () => {
       categories: [{ id: 1, name: 'Diving' }],
       categoryTravelAddress: [{ id: 1, name: 'Aqueduct' }],
     });
-    const { result } = renderHook(() => useTravelFilters());
+    const { result } = await renderHook(() => useTravelFilters());
     for (const entries of Object.values(result.current.filters)) expect(entries).toEqual([]);
     await waitFor(() => expect(result.current.error).toBe(error));
     expect(result.current.isLoading).toBe(false);
@@ -738,7 +746,7 @@ describe('useTravelFilters locale transitions', () => {
       categories: [{ id: 1, name: 'Diving' }],
       categoryTravelAddress: [{ id: 1, name: 'Aqueduct' }],
     }).mockRejectedValueOnce(new Error('Refresh unavailable'));
-    const { result } = renderHook(() => useTravelFilters());
+    const { result } = await renderHook(() => useTravelFilters());
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     await act(async () => { await result.current.refetchPointCategories({ force: true }); });
     expect(result.current.filters.categories).toEqual([{ id: '1', name: 'Diving' }]);
@@ -751,7 +759,7 @@ describe('useTravelFilters locale transitions', () => {
     mockFetchFilters.mockImplementation(({ lang }: { lang: string }) => lang === 'ru'
       ? new Promise(resolve => { resolveRu = resolve; })
       : Promise.resolve({ categories: [{ id: 25, name: 'Mountains' }] }));
-    const { result } = renderHook(() => useTravelFilters());
+    const { result } = await renderHook(() => useTravelFilters());
     await act(async () => { await i18n.changeLanguage('en'); });
     await waitFor(() => expect(result.current.filters.categories).toEqual([{ id: '25', name: 'Mountains' }]));
     expect(result.current.isLoading).toBe(false);
@@ -764,7 +772,7 @@ describe('useTravelFilters locale transitions', () => {
     mockFetchFilters.mockImplementation(({ lang }: { lang: string }) => lang === 'ru'
       ? new Promise(resolve => { resolveRu = resolve; })
       : Promise.resolve({ categoryTravelAddress: [{ id: 84, name: 'Lake' }] }));
-    const { result } = renderHook(() => useTravelFilters({ loadOnMount: false, currentStep: 2 }));
+    const { result } = await renderHook(() => useTravelFilters({ loadOnMount: false, currentStep: 2 }));
     await act(async () => { await i18n.changeLanguage('en'); });
     await waitFor(() => expect(result.current.filters.categoryTravelAddress).toEqual([{ id: '84', name: 'Lake' }]));
     await act(async () => { resolveRu({ categoryTravelAddress: [{ id: 84, name: 'Озеро' }] }); });
@@ -776,7 +784,7 @@ describe('useTravelFilters locale transitions', () => {
     mockFetchFilters.mockImplementationOnce(() => new Promise(resolve => { resolveOldRu = resolve; }))
       .mockResolvedValueOnce({ categories: [{ id: 25, name: 'Mountains' }] })
       .mockResolvedValueOnce({ categories: [{ id: 25, name: 'Свежие горы' }] });
-    const { result } = renderHook(() => useTravelFilters());
+    const { result } = await renderHook(() => useTravelFilters());
     const oldPointRefresh = result.current.refetchPointCategories;
     await act(async () => { await i18n.changeLanguage('en'); });
     await waitFor(() => expect(result.current.filters.categories[0]?.name).toBe('Mountains'));

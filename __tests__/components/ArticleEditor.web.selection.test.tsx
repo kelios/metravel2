@@ -1,3 +1,4 @@
+import { getAllHosts } from '@/__tests__/helpers/hostQueries'
 import { Platform } from 'react-native';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 
@@ -124,7 +125,7 @@ describe('ArticleEditor.web selection + paste', () => {
 
     ;(globalThis as any).__quillSelection__ = { index: 5, length: 0 };
 
-    const { getByLabelText, getByTestId, UNSAFE_getAllByType } = render(
+    const { getByLabelText, getByTestId, container: hostContainer } = await render(
       <ArticleEditor content={'hello'} onChange={onChange} />
     );
 
@@ -147,10 +148,10 @@ describe('ArticleEditor.web selection + paste', () => {
       expect(String(editor.root.innerHTML)).toContain('hello!')
     })
 
-    fireEvent.press(getByLabelText('Показать HTML-код'));
+    await fireEvent.press(getByLabelText('Показать HTML-код'));
 
     await waitFor(() => {
-      const inputs = UNSAFE_getAllByType(require('react-native').TextInput);
+      const inputs = getAllHosts(hostContainer, node => node.type === "TextInput");
       const htmlInput = inputs[inputs.length - 1];
       expect(String(htmlInput.props.value)).toContain('<p>hello!</p>');
     });
@@ -160,7 +161,7 @@ describe('ArticleEditor.web selection + paste', () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
     const onChange = jest.fn();
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ArticleEditor content="" onChange={onChange} variant="compact" />
     );
 
@@ -182,7 +183,7 @@ describe('ArticleEditor.web selection + paste', () => {
 
     ;(globalThis as any).__quillSelection__ = { index: 5, length: 0 };
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ArticleEditor content={'hello'} onChange={onChange} />
     );
 
@@ -215,7 +216,7 @@ describe('ArticleEditor.web selection + paste', () => {
 
     ;(globalThis as any).__quillSelection__ = { index: 5, length: 0 };
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ArticleEditor content={'hello'} onChange={onChange} />
     );
 

@@ -1,3 +1,4 @@
+import { createWebMapTestRuntime, type WebMapTestRuntime } from '@/__tests__/helpers/webMapTestRuntime'
 /**
  * #2056 — переезд на web-карте планировщика: прогоны — по своим срезам
  * `legs[].geometry_slice`, переезд — пунктирная дуга своего цвета с классом
@@ -5,14 +6,14 @@
  * переездов карта рисует одну линию, как раньше.
  */
 import React from 'react'
-import { render, waitFor } from '@testing-library/react-native'
+let render: typeof import('@testing-library/react/pure').render
+let waitFor: typeof import('@testing-library/react/pure').waitFor
 
 import type { RouteLeg, RoutePoint, RouteSummary } from '@/api/plannedTrips'
 
 const mockPolylineProps: Array<Record<string, unknown>> = []
 const mockMap = { setView: jest.fn(), fitBounds: jest.fn(), stop: jest.fn() }
 
-jest.mock('react-dom', () => ({ createPortal: (node: unknown) => node }))
 jest.mock('@/utils/ensureLeafletCss', () => ({ ensureLeafletCss: jest.fn() }))
 
 jest.mock('@/utils/loadLeafletRuntime', () => ({
@@ -45,7 +46,7 @@ jest.mock('@/hooks/useTheme', () => ({
     new Proxy({}, { get: (_t, key) => String(key) }) as unknown as Record<string, string>,
 }))
 
-import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap.web'
+let TripPlanRouteMap: typeof import('@/components/trips/planning/TripPlanRouteMap.web').default
 import { ROUTE_TRANSFER_DASH_ARRAY } from '@/components/trips/planning/tripRouteLegs'
 
 const point = (id: string, coordinates: [number, number], arrivalMode: RoutePoint['arrivalMode'] = null): RoutePoint => ({
@@ -83,7 +84,7 @@ describe('TripPlanRouteMap.web — переезды (#2056)', () => {
   })
 
   it('draws two routed slices and one dashed transfer arc', async () => {
-    render(<TripPlanRouteMap route={route} routeGeometry={geometry} summary={summary} />)
+    await render(<TripPlanRouteMap route={route} routeGeometry={geometry} summary={summary} />)
     await waitFor(() => expect(mockPolylineProps.length).toBe(3))
 
     const [first, transfer, second] = mockPolylineProps
@@ -103,8 +104,18 @@ describe('TripPlanRouteMap.web — переезды (#2056)', () => {
 
   it('keeps one line when the route has no transfer', async () => {
     const plain = route.map((item) => ({ ...item, arrivalMode: null }))
-    render(<TripPlanRouteMap route={plain} routeGeometry={geometry} summary={{ ...summary, legs: [leg('route', [0, 7], 'ors')] }} />)
+    await render(<TripPlanRouteMap route={plain} routeGeometry={geometry} summary={{ ...summary, legs: [leg('route', [0, 7], 'ors')] }} />)
     await waitFor(() => expect(mockPolylineProps.length).toBe(1))
     expect(mockPolylineProps[0].positions).toHaveLength(7)
   })
 })
+
+let web: WebMapTestRuntime<typeof TripPlanRouteMap>
+beforeAll(() => {
+  web = createWebMapTestRuntime(React, () => require('@/components/trips/planning/TripPlanRouteMap.web').default)
+  TripPlanRouteMap = web.subject
+  ;({ render, waitFor } = web)
+  expect.extend(web.matchers)
+})
+afterEach(() => web.cleanup())
+afterAll(() => expect.extend(require('@testing-library/react-native/matchers')))

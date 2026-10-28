@@ -12,8 +12,8 @@ jest.mock('@/hooks/useTheme', () => ({
 }));
 
 describe('StarRating', () => {
-    it('renders correctly with rating', () => {
-        const { getByTestId, getByText } = render(
+    it('renders correctly with rating', async () => {
+        const { getByTestId, getByText } = await render(
             <StarRating rating={4.5} ratingCount={120} testID="star-rating" />
         );
 
@@ -24,8 +24,8 @@ describe('StarRating', () => {
         expect(getByText('(120)')).toBeTruthy();
     });
 
-    it('renders compact mode with single star', () => {
-        const { getByTestId, getByText, queryByTestId } = render(
+    it('renders compact mode with single star', async () => {
+        const { getByTestId, getByText, queryByTestId } = await render(
             <StarRating rating={4.2} compact testID="star-rating-compact" />
         );
 
@@ -35,24 +35,24 @@ describe('StarRating', () => {
         expect(queryByTestId('star-rating-compact-count')).toBeNull();
     });
 
-    it('does not render compact mode when rating is 0', () => {
-        const { queryByTestId } = render(
+    it('does not render compact mode when rating is 0', async () => {
+        const { queryByTestId } = await render(
             <StarRating rating={0} compact testID="star-rating-zero" />
         );
 
         expect(queryByTestId('star-rating-zero')).toBeNull();
     });
 
-    it('does not render compact mode when rating is null', () => {
-        const { queryByTestId } = render(
+    it('does not render compact mode when rating is null', async () => {
+        const { queryByTestId } = await render(
             <StarRating rating={null} compact testID="star-rating-null" />
         );
 
         expect(queryByTestId('star-rating-null')).toBeNull();
     });
 
-    it('renders all 5 stars in non-compact mode', () => {
-        const { getByTestId } = render(
+    it('renders all 5 stars in non-compact mode', async () => {
+        const { getByTestId } = await render(
             <StarRating rating={3} testID="star-rating" />
         );
 
@@ -64,9 +64,9 @@ describe('StarRating', () => {
         expect(getByTestId('star-rating-star-5')).toBeTruthy();
     });
 
-    it('calls onRate when interactive and star is pressed', () => {
+    it('calls onRate when interactive and star is pressed', async () => {
         const onRate = jest.fn();
-        const { getByTestId } = render(
+        const { getByTestId } = await render(
             <StarRating
                 rating={3}
                 interactive
@@ -75,13 +75,13 @@ describe('StarRating', () => {
             />
         );
 
-        fireEvent.press(getByTestId('star-rating-interactive-star-4'));
+        await fireEvent.press(getByTestId('star-rating-interactive-star-4'));
         expect(onRate).toHaveBeenCalledWith(4);
     });
 
-    it('does not call onRate when not interactive', () => {
+    it('does not call onRate when not interactive', async () => {
         const onRate = jest.fn();
-        const { getByTestId } = render(
+        const { getByTestId } = await render(
             <StarRating
                 rating={3}
                 interactive={false}
@@ -91,33 +91,33 @@ describe('StarRating', () => {
         );
 
         // Try pressing star - should not trigger onRate since not interactive
-        fireEvent.press(getByTestId('star-rating-star-4'));
+        await fireEvent.press(getByTestId('star-rating-star-4'));
         expect(onRate).not.toHaveBeenCalled();
     });
 
-    it('shows dash when rating is 0', () => {
-        const { getByText } = render(
+    it('shows dash when rating is 0', async () => {
+        const { getByText } = await render(
             <StarRating rating={0} showValue testID="star-rating" />
         );
 
         expect(getByText('—')).toBeTruthy();
     });
 
-    it('formats rating count correctly', () => {
-        const { getByText, rerender } = render(
+    it('formats rating count correctly', async () => {
+        const { getByText, rerender } = await render(
             <StarRating rating={4} ratingCount={999} showCount testID="star-rating" />
         );
         expect(getByText('(999)')).toBeTruthy();
 
-        rerender(
+        await rerender(
             <StarRating rating={4} ratingCount={1500} showCount testID="star-rating" />
         );
         // #1457: компактная единица берётся из локали (дефолт — русский)
         expect(getByText('(1,5\u00a0тыс.)')).toBeTruthy();
     });
 
-    it('hides count when showCount is false', () => {
-        const { queryByTestId } = render(
+    it('hides count when showCount is false', async () => {
+        const { queryByTestId } = await render(
             <StarRating
                 rating={4}
                 ratingCount={100}
@@ -129,8 +129,8 @@ describe('StarRating', () => {
         expect(queryByTestId('star-rating-count')).toBeNull();
     });
 
-    it('hides value when showValue is false', () => {
-        const { queryByTestId } = render(
+    it('hides value when showValue is false', async () => {
+        const { queryByTestId } = await render(
             <StarRating
                 rating={4}
                 showValue={false}
@@ -141,21 +141,21 @@ describe('StarRating', () => {
         expect(queryByTestId('star-rating-value')).toBeNull();
     });
 
-    it('supports different sizes', () => {
-        const { rerender, getByTestId } = render(
+    it('supports different sizes', async () => {
+        const { rerender, getByTestId } = await render(
             <StarRating rating={4} size="small" testID="star-rating" />
         );
         expect(getByTestId('star-rating')).toBeTruthy();
 
-        rerender(<StarRating rating={4} size="medium" testID="star-rating" />);
+        await rerender(<StarRating rating={4} size="medium" testID="star-rating" />);
         expect(getByTestId('star-rating')).toBeTruthy();
 
-        rerender(<StarRating rating={4} size="large" testID="star-rating" />);
+        await rerender(<StarRating rating={4} size="large" testID="star-rating" />);
         expect(getByTestId('star-rating')).toBeTruthy();
     });
 
-    it('shows previously set userRating as selected when interactive (integer)', () => {
-        const { getByTestId } = render(
+    it('shows previously set userRating as selected when interactive (integer)', async () => {
+        const { getByTestId } = await render(
             <StarRating
                 rating={5}
                 userRating={4}
@@ -178,8 +178,8 @@ describe('StarRating', () => {
         );
     });
 
-    it('shows previously set userRating as selected when interactive (float like 5.0)', () => {
-        const { getByTestId } = render(
+    it('shows previously set userRating as selected when interactive (float like 5.0)', async () => {
+        const { getByTestId } = await render(
             <StarRating
                 rating={5}
                 userRating={5.0}

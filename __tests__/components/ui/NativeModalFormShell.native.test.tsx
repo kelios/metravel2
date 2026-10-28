@@ -30,13 +30,13 @@ describe('NativeModalFormShell', () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform })
   })
 
-  const setup = (editing = false) => render(
+  const setup = async (editing = false) => await render(
     <NativeModalFormShell active editing={editing} header={<Text>Header</Text>} footer={<Text>Footer</Text>} backgroundColor="#fff">
       <TextInput testID="input" />
     </NativeModalFormShell>,
   )
 
-  it('retains the same scroll, form host and edited value across sticky, keyboard and oversized chrome modes', () => {
+  it('retains the same scroll, form host and edited value across sticky, keyboard and oversized chrome modes', async () => {
     const mounted = jest.fn()
     const unmounted = jest.fn()
     function Form() {
@@ -44,56 +44,56 @@ describe('NativeModalFormShell', () => {
       useEffect(() => { mounted(); return () => unmounted() }, [])
       return <TextInput testID="input" value={value} onChangeText={setValue} />
     }
-    const view = render(
+    const view = await render(
       <NativeModalFormShell active editing={false} header={<Text>Header</Text>} footer={<Text>Footer</Text>} backgroundColor="#fff">
         <Form />
       </NativeModalFormShell>,
     )
-    fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(375, 720))
-    fireEvent(view.getByTestId('native-modal-form-header'), 'layout', layout(375, 130))
-    fireEvent(view.getByTestId('native-modal-form-footer'), 'layout', layout(375, 170))
+    await fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(375, 720))
+    await fireEvent(view.getByTestId('native-modal-form-header'), 'layout', layout(375, 130))
+    await fireEvent(view.getByTestId('native-modal-form-footer'), 'layout', layout(375, 170))
     const input = view.getByTestId('input')
     const scroll = view.getByTestId('native-modal-form-scroll')
     expect(scroll.props.contentContainerStyle).toEqual({ paddingTop: 130, paddingBottom: 170 })
-    fireEvent.changeText(input, 'edited')
-    act(() => { visible = true; listeners.keyboardWillShow(keyboardFrame) })
+    await fireEvent.changeText(input, 'edited')
+    await act(() => { visible = true; listeners.keyboardWillShow(keyboardFrame) })
     expect(view.getByTestId('native-modal-form-scroll')).toBe(scroll)
     expect(view.getByTestId('input')).toBe(input)
     expect(input.props.value).toBe('edited')
     expect(scroll.props.contentContainerStyle).toEqual({ paddingTop: 0, paddingBottom: 0 })
     expect(scroll.props.automaticallyAdjustKeyboardInsets).toBe(true)
-    act(() => { visible = false; listeners.keyboardDidHide(keyboardFrame) })
+    await act(() => { visible = false; listeners.keyboardDidHide(keyboardFrame) })
     expect(scroll.props.contentContainerStyle.paddingTop).toBe(130)
-    fireEvent(view.getByTestId('native-modal-form-header'), 'layout', layout(375, 590))
+    await fireEvent(view.getByTestId('native-modal-form-header'), 'layout', layout(375, 590))
     expect(scroll.props.contentContainerStyle.paddingTop).toBe(0)
     expect(input.props.value).toBe('edited')
     expect(mounted).toHaveBeenCalledTimes(1)
     expect(unmounted).not.toHaveBeenCalled()
   })
 
-  it.each([[720, 300], [570, 150], [420, 0], [390, 0]])('Android viewport %s adds only residual IME inset %s', (height, expected) => {
+  it.each([[720, 300], [570, 150], [420, 0], [390, 0]])('Android viewport %s adds only residual IME inset %s', async (height, expected) => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' })
-    const view = setup()
-    fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(390, 720))
-    act(() => { visible = true; listeners.keyboardDidShow(keyboardFrame) })
-    fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(390, height))
+    const view = await setup()
+    await fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(390, 720))
+    await act(() => { visible = true; listeners.keyboardDidShow(keyboardFrame) })
+    await fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(390, height))
     const scroll = view.getByTestId('native-modal-form-scroll')
     expect(scroll.props.automaticallyAdjustKeyboardInsets).toBe(false)
     expect(scroll.props.contentContainerStyle.paddingBottom).toBe(expected)
   })
 
-  it('updates the hidden baseline after rotation instead of retaining a portrait maximum', () => {
+  it('updates the hidden baseline after rotation instead of retaining a portrait maximum', async () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' })
-    const view = setup()
-    fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(390, 720))
-    fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(720, 390))
-    act(() => { visible = true; listeners.keyboardDidShow(keyboardFrame) })
-    fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(720, 240))
+    const view = await setup()
+    await fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(390, 720))
+    await fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(720, 390))
+    await act(() => { visible = true; listeners.keyboardDidShow(keyboardFrame) })
+    await fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(720, 240))
     expect(view.getByTestId('native-modal-form-scroll').props.contentContainerStyle.paddingBottom).toBe(150)
   })
 
   it.each([[720, 390, 224], [420, 390, 224], [240, 720, 600]])(
-    'reveals Android focus in a %s × %s safe viewport without coordinate drift or rotation overscroll', (height, width, expected) => {
+    'reveals Android focus in a %s × %s safe viewport without coordinate drift or rotation overscroll', async (height, width, expected) => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'android' })
     const measureLayout = jest.fn((_relative, success) => success(0, 500, 200, 44))
     const input = { measureLayout } as unknown as ReturnType<typeof TextInput.State.currentlyFocusedInput>
@@ -103,38 +103,38 @@ describe('NativeModalFormShell', () => {
         <TextInput testID="input" />
       </NativeModalFormShell>
     )
-    const view = render(shell(false))
-    fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(390, 720))
-    fireEvent(view.getByTestId('native-modal-form-header'), 'layout', layout(390, 100))
-    const scrollTo = jest.spyOn(view.UNSAFE_getByType(ScrollView).instance, 'scrollTo').mockImplementation(() => undefined)
-    view.rerender(shell(true))
+    const view = await render(shell(false))
+    await fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(390, 720))
+    await fireEvent(view.getByTestId('native-modal-form-header'), 'layout', layout(390, 100))
+    const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(() => undefined)
+    await view.rerender(shell(true))
     // ScreenY includes a 36-point modal safe-area origin. Available height does not.
-    act(() => { visible = true; listeners.keyboardDidShow({ ...keyboardFrame,
+    await act(() => { visible = true; listeners.keyboardDidShow({ ...keyboardFrame,
       endCoordinates: { ...keyboardFrame.endCoordinates, screenY: 456 },
     }) })
-    fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(width, height))
+    await fireEvent(view.getByTestId('native-modal-form'), 'layout', layout(width, height))
     // Compare the boundary's small scalar props, not the circular native Fiber.
     expect(measureLayout.mock.calls.at(-1)?.[0].props.testID).toBe('native-modal-form-body')
     expect(scrollTo.mock.calls.at(-1)?.[0]).toEqual({ y: expected, animated: true })
     scrollTo.mockClear()
     // The next input receives its own reveal while the same keyboard stays open.
-    fireEvent(view.getByTestId('native-modal-form-body'), 'focus')
+    await fireEvent(view.getByTestId('native-modal-form-body'), 'focus')
     expect(scrollTo).toHaveBeenCalledTimes(1)
     scrollTo.mockClear()
     let completeMeasure!: (left: number, top: number, width: number, height: number) => void
     measureLayout.mockImplementationOnce((_relative, success) => { completeMeasure = success })
-    fireEvent(view.getByTestId('native-modal-form-body'), 'focus')
+    await fireEvent(view.getByTestId('native-modal-form-body'), 'focus')
     jest.mocked(TextInput.State.currentlyFocusedInput).mockReturnValue(null)
-    act(() => completeMeasure(0, 500, 200, 44))
+    await act(() => completeMeasure(0, 500, 200, 44))
     expect(scrollTo).not.toHaveBeenCalled()
   })
 
-  it('opens in flow mode when the keyboard was already visible and removes subscriptions on close', () => {
+  it('opens in flow mode when the keyboard was already visible and removes subscriptions on close', async () => {
     visible = true
-    const view = setup()
+    const view = await setup()
     const input = view.getByTestId('input')
     expect(view.getByTestId('native-modal-form-scroll').props.contentContainerStyle.paddingTop).toBe(0)
-    view.rerender(<NativeModalFormShell active={false} editing={false} header={null} footer={null} backgroundColor="#fff"><TextInput testID="input" /></NativeModalFormShell>)
+    await view.rerender(<NativeModalFormShell active={false} editing={false} header={null} footer={null} backgroundColor="#fff"><TextInput testID="input" /></NativeModalFormShell>)
     expect(view.getByTestId('input')).toBe(input)
     const results = (Keyboard.addListener as jest.Mock).mock.results
     for (const result of results) expect(result.value.remove).toHaveBeenCalledTimes(1)

@@ -52,8 +52,8 @@ describe('ToastHost (native)', () => {
     mockInsets = { top: 0, bottom: 0, left: 0, right: 0 }
   })
 
-  it('ставит тост над измеренным доком с зазором и по умолчанию снизу', () => {
-    render(
+  it('ставит тост над измеренным доком с зазором и по умолчанию снизу', async () => {
+    await render(
       <BottomChromeInsetProvider measuredHeight={89}>
         <ToastHost />
       </BottomChromeInsetProvider>,
@@ -62,22 +62,22 @@ describe('ToastHost (native)', () => {
     expect(positionedOffset()).toBe(89 + TOAST_DOCK_GAP)
   })
 
-  it('до замера дока берёт тот же фолбэк, что экраны: док + нижняя safe-area', () => {
+  it('до замера дока берёт тот же фолбэк, что экраны: док + нижняя safe-area', async () => {
     mockInsets = { top: 0, bottom: 34, left: 0, right: 0 }
-    render(<ToastHost />)
+    await render(<ToastHost />)
     expect(positionedOffset()).toBe(56 + 34 + TOAST_DOCK_GAP)
   })
 
-  it('без дока и внутри полноэкранного Modal — над home indicator', () => {
+  it('без дока и внутри полноэкранного Modal — над home indicator', async () => {
     mockInsets = { top: 0, bottom: 34, left: 0, right: 0 }
-    render(
+    await render(
       <BottomChromeInsetProvider measuredHeight={0}>
         <ToastHost />
       </BottomChromeInsetProvider>,
     )
     expect(positionedOffset()).toBe(34 + TOAST_DOCK_GAP)
 
-    render(
+    await render(
       <BottomChromeInsetProvider measuredHeight={89}>
         <ToastHost overDock={false} />
       </BottomChromeInsetProvider>,
@@ -85,8 +85,8 @@ describe('ToastHost (native)', () => {
     expect(positionedOffset()).toBe(34 + TOAST_DOCK_GAP)
   })
 
-  it('слой тоста верхний и не перехватывает касания', () => {
-    const { getByTestId } = render(<ToastHost />)
+  it('слой тоста верхний и не перехватывает касания', async () => {
+    const { getByTestId } = await render(<ToastHost />)
     const layer = getByTestId('toast-layer')
     expect(layer.props.pointerEvents).toBe('box-none')
     const flat = Array.isArray(layer.props.style) ? Object.assign({}, ...layer.props.style) : layer.props.style
@@ -94,9 +94,9 @@ describe('ToastHost (native)', () => {
     expect(flat.elevation).toBeGreaterThan(0)
   })
 
-  it('на web хоста нет — там свой ToastHost.web', () => {
+  it('на web хоста нет — там свой ToastHost.web', async () => {
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
-    const { toJSON } = render(<ToastHost />)
+    const { toJSON } = await render(<ToastHost />)
     expect(toJSON()).toBeNull()
   })
 })

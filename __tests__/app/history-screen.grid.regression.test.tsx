@@ -1,7 +1,10 @@
 import { render, act, fireEvent } from '@testing-library/react-native';
-import { FlashList } from '@shopify/flash-list';
 
 import HistoryScreen from '@/app/(tabs)/history';
+
+// Observe the public list boundary while retaining the shared mock's rendering.
+const mockFlashList = jest.spyOn(require('@shopify/flash-list'), 'FlashList');
+const latestListProps = () => mockFlashList.mock.calls.at(-1)![0] as Record<string, any>;
 
 const mockUseAuth = jest.fn();
 const mockUseFavorites = jest.fn();
@@ -73,7 +76,7 @@ describe('HistoryScreen grid regression', () => {
   });
 
   const renderLoaded = async () => {
-    const utils = render(<HistoryScreen />);
+    const utils = await render(<HistoryScreen />);
 
     await act(async () => {
       jest.advanceTimersByTime(350);
@@ -85,28 +88,28 @@ describe('HistoryScreen grid regression', () => {
   it('uses 1 column on narrow widths', async () => {
     (global as any).__mockResponsive = { width: 500 };
 
-    const utils = await renderLoaded();
-    const list = utils.UNSAFE_getByType(FlashList);
+    await renderLoaded();
+    const list = latestListProps();
 
-    expect(list.props.numColumns).toBe(1);
+    expect(list.numColumns).toBe(1);
   });
 
   it('uses 2 columns on medium widths', async () => {
     (global as any).__mockResponsive = { width: 700 };
 
-    const utils = await renderLoaded();
-    const list = utils.UNSAFE_getByType(FlashList);
+    await renderLoaded();
+    const list = latestListProps();
 
-    expect(list.props.numColumns).toBe(2);
+    expect(list.numColumns).toBe(2);
   });
 
   it('uses up to 3 columns on wide widths and renders TabTravelCard with layout="grid"', async () => {
     (global as any).__mockResponsive = { width: 1100 };
 
-    const utils = await renderLoaded();
-    const list = utils.UNSAFE_getByType(FlashList);
+    await renderLoaded();
+    const list = latestListProps();
 
-    expect(list.props.numColumns).toBe(3);
+    expect(list.numColumns).toBe(3);
 
     expect(tabTravelCardProps.length).toBeGreaterThan(0);
     expect(tabTravelCardProps[0]?.layout).toBe('grid');
@@ -127,7 +130,7 @@ describe('HistoryScreen grid regression', () => {
 
     const utils = await renderLoaded();
 
-    fireEvent.press(utils.getByLabelText('Продолжить с последнего'));
+    await fireEvent.press(utils.getByLabelText('Продолжить с последнего'));
 
     expect(router.push).toHaveBeenCalledWith('/travels/1');
   });

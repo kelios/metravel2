@@ -20,17 +20,17 @@ describe('useContentScrollAnalytics', () => {
     jest.clearAllMocks()
   })
 
-  it('emits each reached depth once', () => {
-    const { result } = renderHook(() => useContentScrollAnalytics({
+  it('emits each reached depth once', async () => {
+    const { result } = await renderHook(() => useContentScrollAnalytics({
       source: 'article_detail',
       contentType: 'article',
       contentId: 7,
     }))
 
-    act(() => result.current(scrollEvent(0) as never))
-    act(() => result.current(scrollEvent(600) as never))
-    act(() => result.current(scrollEvent(1100) as never))
-    act(() => result.current(scrollEvent(1100) as never))
+    await act(() => result.current(scrollEvent(0) as never))
+    await act(() => result.current(scrollEvent(600) as never))
+    await act(() => result.current(scrollEvent(1100) as never))
+    await act(() => result.current(scrollEvent(1100) as never))
 
     expect(queueAnalyticsEvent).toHaveBeenNthCalledWith(1, 'content_scroll_depth', {
       source: 'article_detail',

@@ -98,7 +98,7 @@ describe('Travel detail section state resets', () => {
     const firstTravel = { id: 1, slug: 'first-travel', travelAddress: [{ id: 1 }] } as Travel
     const secondTravel = { id: 2, slug: 'second-travel', travelAddress: [{ id: 2 }] } as Travel
 
-    const view = render(<MockSidebarSection travel={firstTravel} />)
+    const view = await render(<MockSidebarSection travel={firstTravel} />)
 
     // Wait for mock to call onTravelsLoaded and set relatedTravels
     await waitFor(() => {
@@ -106,7 +106,7 @@ describe('Travel detail section state resets', () => {
     })
 
     // Rerender with different travel
-    view.rerender(<MockSidebarSection travel={secondTravel} />)
+    await view.rerender(<MockSidebarSection travel={secondTravel} />)
 
     // After travel change, relatedTravels should be reset to []
     await waitFor(() => {
@@ -128,13 +128,13 @@ describe('Travel detail section state resets', () => {
       coordsMeTravel: [{ lat: 52.1, lng: 23.7, coord: '52.1,23.7', title: 'Брест' }],
     } as Travel
 
-    const view = render(<MockMapSection travel={firstTravel} />)
+    const view = await render(<MockMapSection travel={firstTravel} />)
 
     // Initially map should not be visible
     expect(view.queryByTestId('travel-map')).toBeNull()
 
     // Open the map
-    fireEvent.press(view.getByTestId('open-map-button'))
+    await fireEvent.press(view.getByTestId('open-map-button'))
 
     await act(async () => {
       await Promise.resolve()
@@ -144,7 +144,7 @@ describe('Travel detail section state resets', () => {
     expect(view.getByTestId('travel-map')).toBeTruthy()
 
     // Rerender with different travel
-    view.rerender(<MockMapSection travel={secondTravel} />)
+    await view.rerender(<MockMapSection travel={secondTravel} />)
 
     await act(async () => {
       await Promise.resolve()

@@ -75,7 +75,7 @@ describe('native preparation outcome reaches usePdfExport with RN AbortControlle
     if (boundary === 'generator') mockGenerate.mockRejectedValueOnce(failure)
     else if (boundary === 'renderer') mockRenderFile.mockRejectedValueOnce(failure)
     else mockPrint.mockRejectedValueOnce(failure)
-    const { result } = renderHook(() => usePdfExport(travels))
+    const { result } = await renderHook(() => usePdfExport(travels))
     await act(async () => { await result.current.openPrintBook(settings) })
 
     expect(mockLastSession?.preparationSignal?.aborted).toBe(true)
@@ -93,9 +93,9 @@ describe('native preparation outcome reaches usePdfExport with RN AbortControlle
     try {
       let finish: (html: string) => void = () => {}
       mockGenerate.mockImplementationOnce(() => new Promise<string>((resolve) => { finish = resolve }))
-      const { result } = renderHook(() => usePdfExport(travels))
+      const { result } = await renderHook(() => usePdfExport(travels))
       let pending: Promise<void> = Promise.resolve()
-      act(() => { pending = result.current.openPrintBook(settings) })
+      await act(() => { pending = result.current.openPrintBook(settings) })
       await act(async () => { await jest.advanceTimersByTimeAsync(0) })
       expect(mockGenerate).toHaveBeenCalledTimes(1)
       expect(mockLastSession?.preparationSignal).not.toHaveProperty('reason')

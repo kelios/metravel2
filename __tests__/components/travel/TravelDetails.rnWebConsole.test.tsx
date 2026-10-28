@@ -143,10 +143,10 @@ function collectViewStringChildren(node: unknown, acc: string[] = []): string[] 
 }
 
 describe('TravelDetails RN-Web console contract', () => {
-  it('does not pass empty insight strings as View children after draft-placeholder normalize', () => {
+  it('does not pass empty insight strings as View children after draft-placeholder normalize', async () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
 
-    const view = render(
+    const view = await render(
       <TravelDetailsContentSection
         travel={createTravel()}
         isMobile={false}
@@ -170,8 +170,8 @@ describe('TravelDetails RN-Web console contract', () => {
     expect(view.queryByTestId('collapsible-Минусы')).toBeNull()
   })
 
-  it('keeps plus/minus sections when those fields have real content', () => {
-    const view = render(
+  it('keeps plus/minus sections when those fields have real content', async () => {
+    const view = await render(
       <TravelDetailsContentSection
         travel={createTravel({ plus: '<p>Плюсы</p>', minus: '<p>Минусы</p>' })}
         isMobile={false}

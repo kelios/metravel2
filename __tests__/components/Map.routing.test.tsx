@@ -2,8 +2,8 @@ import { render } from '@testing-library/react-native';
 import RoutingStatus from '@/components/MapPage/RoutingStatus';
 
 describe('Map Routing Display Tests', () => {
-  it('should display loading state when routing is in progress', () => {
-    const { getByText } = render(
+  it('should display loading state when routing is in progress', async () => {
+    const { getByText } = await render(
       <RoutingStatus
         isLoading={true}
         error={null}
@@ -15,8 +15,8 @@ describe('Map Routing Display Tests', () => {
     expect(getByText('Построение маршрута…')).toBeTruthy();
   });
 
-  it('should display route distance and time when routing succeeds', () => {
-    const { getByText } = render(
+  it('should display route distance and time when routing succeeds', async () => {
+    const { getByText } = await render(
       <RoutingStatus
         isLoading={false}
         error={false}
@@ -30,9 +30,9 @@ describe('Map Routing Display Tests', () => {
     expect(getByText('8,5 км')).toBeTruthy();
   });
 
-  it('should display error message when routing fails', () => {
+  it('should display error message when routing fails', async () => {
     const errorMessage = 'Network error occurred';
-    const { getByText } = render(
+    const { getByText } = await render(
       <RoutingStatus
         isLoading={false}
         error={errorMessage}
@@ -45,8 +45,8 @@ describe('Map Routing Display Tests', () => {
     expect(getByText(errorMessage)).toBeTruthy();
   });
 
-  it('should display fallback message when using direct line', () => {
-    const { getByText } = render(
+  it('should display fallback message when using direct line', async () => {
+    const { getByText } = await render(
       <RoutingStatus
         isLoading={false}
         error="Using direct line"
@@ -59,8 +59,8 @@ describe('Map Routing Display Tests', () => {
     expect(getByText('Оптимальный маршрут недоступен, показана прямая линия')).toBeTruthy();
   });
 
-  it('should display correct transport mode icon in header', () => {
-    const { getByText, getByTestId } = render(
+  it('should display correct transport mode icon in header', async () => {
+    const { getByText, getByTestId } = await render(
       <RoutingStatus
         isLoading={false}
         error={false}
@@ -74,8 +74,8 @@ describe('Map Routing Display Tests', () => {
     expect(getByTestId('mci-bike')).toBeTruthy(); // bike icon
   });
 
-  it('should display correct time estimate for car', () => {
-    const { getByText } = render(
+  it('should display correct time estimate for car', async () => {
+    const { getByText } = await render(
       <RoutingStatus
         isLoading={false}
         error={false}
@@ -88,8 +88,8 @@ describe('Map Routing Display Tests', () => {
     expect(getByText('1 ч')).toBeTruthy();
   });
 
-  it('should display correct time estimate for bike', () => {
-    const { getByText } = render(
+  it('should display correct time estimate for bike', async () => {
+    const { getByText } = await render(
       <RoutingStatus
         isLoading={false}
         error={false}
@@ -102,8 +102,8 @@ describe('Map Routing Display Tests', () => {
     expect(getByText('1 ч')).toBeTruthy();
   });
 
-  it('should display correct time estimate for foot', () => {
-    const { getByText } = render(
+  it('should display correct time estimate for foot', async () => {
+    const { getByText } = await render(
       <RoutingStatus
         isLoading={false}
         error={false}
@@ -116,8 +116,8 @@ describe('Map Routing Display Tests', () => {
     expect(getByText('1 ч')).toBeTruthy();
   });
 
-  it('should display distance in meters for short distances', () => {
-    const { getByText } = render(
+  it('should display distance in meters for short distances', async () => {
+    const { getByText } = await render(
       <RoutingStatus
         isLoading={false}
         error={false}
@@ -129,8 +129,8 @@ describe('Map Routing Display Tests', () => {
     expect(getByText('500 м')).toBeTruthy();
   });
 
-  it('should display distance in kilometers for long distances', () => {
-    const { getByText } = render(
+  it('should display distance in kilometers for long distances', async () => {
+    const { getByText } = await render(
       <RoutingStatus
         isLoading={false}
         error={false}
@@ -142,8 +142,8 @@ describe('Map Routing Display Tests', () => {
     expect(getByText('15,0 км')).toBeTruthy();
   });
 
-  it('should return null when no route data and not loading', () => {
-    const { queryByText } = render(
+  it('should return null when no route data and not loading', async () => {
+    const { queryByText } = await render(
       <RoutingStatus
         isLoading={false}
         error={false}

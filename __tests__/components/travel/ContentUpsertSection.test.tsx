@@ -145,8 +145,8 @@ const baseFormData: TravelFormData = {
   moderation: false,
 }
 
-const renderSection = (override: Partial<TravelFormData> = {}) =>
-  render(
+const renderSection = async (override: Partial<TravelFormData> = {}) =>
+  await render(
     <ContentUpsertSection
       formData={{ ...baseFormData, ...override }}
       setFormData={jest.fn()}
@@ -160,53 +160,53 @@ describe('ContentUpsertSection — derived display logic', () => {
     mockContentViewportInset = 0
   })
 
-  it('prompts for a minimum description when empty', () => {
-    const { getByText } = renderSection({ description: '' })
+  it('prompts for a minimum description when empty', async () => {
+    const { getByText } = await renderSection({ description: '' })
     expect(getByText(/Минимум 50 символов/)).toBeTruthy()
     expect(getByText('0 символов')).toBeTruthy()
   })
 
-  it('shows remaining characters when below the 50-char minimum', () => {
-    const { getByText } = renderSection({ description: 'a'.repeat(40) })
+  it('shows remaining characters when below the 50-char minimum', async () => {
+    const { getByText } = await renderSection({ description: 'a'.repeat(40) })
     // 50 - 40 = 10 remaining
     expect(getByText('Осталось 10 символов до минимума')).toBeTruthy()
     expect(getByText('40 символов')).toBeTruthy()
   })
 
-  it('acknowledges a good short description in the 50–150 range', () => {
-    const { getByText } = renderSection({ description: 'b'.repeat(80) })
+  it('acknowledges a good short description in the 50–150 range', async () => {
+    const { getByText } = await renderSection({ description: 'b'.repeat(80) })
     expect(getByText(/Хорошее краткое описание/)).toBeTruthy()
     expect(getByText('80 символов')).toBeTruthy()
   })
 
-  it('celebrates a detailed description above 150 chars', () => {
-    const { getByText } = renderSection({ description: 'c'.repeat(200) })
+  it('celebrates a detailed description above 150 chars', async () => {
+    const { getByText } = await renderSection({ description: 'c'.repeat(200) })
     expect(getByText('Отличное подробное описание!')).toBeTruthy()
     expect(getByText('200 символов')).toBeTruthy()
   })
 
-  it('strips HTML tags and entities when counting description length', () => {
+  it('strips HTML tags and entities when counting description length', async () => {
     const html = '<p>Hello&nbsp;<b>world</b></p>'
     // plain text -> "Hello world" = 11 chars
-    const { getByText } = renderSection({ description: html })
+    const { getByText } = await renderSection({ description: html })
     expect(getByText('11 символов')).toBeTruthy()
   })
 
-  it('computes 0% form progress when required fields are empty', () => {
-    const { getByText } = renderSection()
+  it('computes 0% form progress when required fields are empty', async () => {
+    const { getByText } = await renderSection()
     expect(getByText('0%')).toBeTruthy()
   })
 
-  it('computes 50% form progress when 2 of 4 required fields are filled', () => {
-    const { getByText } = renderSection({
+  it('computes 50% form progress when 2 of 4 required fields are filled', async () => {
+    const { getByText } = await renderSection({
       name: 'Поездка',
       description: 'd'.repeat(60),
     })
     expect(getByText('50%')).toBeTruthy()
   })
 
-  it('computes 100% form progress when all required fields are filled', () => {
-    const { getByText } = renderSection({
+  it('computes 100% form progress when all required fields are filled', async () => {
+    const { getByText } = await renderSection({
       name: 'Поездка',
       description: 'd'.repeat(60),
       countries: ['1'],
@@ -215,8 +215,8 @@ describe('ContentUpsertSection — derived display logic', () => {
     expect(getByText('100%')).toBeTruthy()
   })
 
-  it('hides the progress block when showProgress is false', () => {
-    const { queryByText } = render(
+  it('hides the progress block when showProgress is false', async () => {
+    const { queryByText } = await render(
       <ContentUpsertSection
         formData={baseFormData}
         setFormData={jest.fn()}
@@ -226,16 +226,16 @@ describe('ContentUpsertSection — derived display logic', () => {
     expect(queryByText('Прогресс заполнения')).toBeNull()
   })
 
-  it('leaves vertical scrolling to the enclosing wizard step', () => {
-    const { UNSAFE_queryAllByType } = renderSection()
+  it('leaves vertical scrolling to the enclosing wizard step', async () => {
+    const { container: _hostContainer } = await renderSection()
 
-    expect(UNSAFE_queryAllByType(ScrollView)).toHaveLength(0)
+    expect(_hostContainer.queryAll(node => node.type === "RCTScrollView", { includeSelf: true })).toHaveLength(0)
   })
 
-  it('scrolls the enclosing wizard step to the first invalid field using the section offset', () => {
+  it('scrolls the enclosing wizard step to the first invalid field using the section offset', async () => {
     const scrollTo = jest.fn()
     const scrollViewRef = { current: { scrollTo } } as unknown as React.RefObject<ScrollView | null>
-    const { getByTestId, UNSAFE_getByProps } = render(
+    const { getByTestId, container } = await render(
       <ContentUpsertSection
         formData={baseFormData}
         setFormData={jest.fn()}
@@ -244,21 +244,23 @@ describe('ContentUpsertSection — derived display logic', () => {
       />,
     )
 
-    fireEvent(getByTestId('travel-wizard.basic.content-section'), 'layout', {
+    await fireEvent(getByTestId('travel-wizard.basic.content-section'), 'layout', {
       nativeEvent: { layout: { y: 320 } },
     })
-    fireEvent(UNSAFE_getByProps({ nativeID: 'travelwizard-basic-description' }), 'layout', {
+    const descriptions = container.queryAll(node => node.props.nativeID === 'travelwizard-basic-description')
+    expect(descriptions).toHaveLength(1)
+    await fireEvent(descriptions[0], 'layout', {
       nativeEvent: { layout: { y: 240 } },
     })
 
     expect(scrollTo).toHaveBeenLastCalledWith({ y: 520, animated: true })
   })
 
-  it('waits for field layout before handling a native focus anchor', () => {
+  it('waits for field layout before handling a native focus anchor', async () => {
     const scrollTo = jest.fn()
     const onAnchorHandled = jest.fn()
     const scrollViewRef = { current: { scrollTo } } as unknown as React.RefObject<ScrollView | null>
-    const { getByTestId, UNSAFE_getByProps } = render(
+    const { getByTestId, container } = await render(
       <ContentUpsertSection
         formData={baseFormData}
         setFormData={jest.fn()}
@@ -270,12 +272,14 @@ describe('ContentUpsertSection — derived display logic', () => {
 
     expect(onAnchorHandled).not.toHaveBeenCalled()
 
-    fireEvent(UNSAFE_getByProps({ nativeID: 'travelwizard-basic-description' }), 'layout', {
+    const descriptions = container.queryAll(node => node.props.nativeID === 'travelwizard-basic-description')
+    expect(descriptions).toHaveLength(1)
+    await fireEvent(descriptions[0], 'layout', {
       nativeEvent: { layout: { y: 500 } },
     })
     expect(onAnchorHandled).not.toHaveBeenCalled()
 
-    fireEvent(getByTestId('travel-wizard.basic.content-section'), 'layout', {
+    await fireEvent(getByTestId('travel-wizard.basic.content-section'), 'layout', {
       nativeEvent: { layout: { y: 300 } },
     })
 
@@ -283,8 +287,8 @@ describe('ContentUpsertSection — derived display logic', () => {
     expect(onAnchorHandled).toHaveBeenCalledTimes(1)
   })
 
-  it('renders only the requested fields when visibleFields is constrained', () => {
-    const { getByText, queryByText } = render(
+  it('renders only the requested fields when visibleFields is constrained', async () => {
+    const { getByText, queryByText } = await render(
       <ContentUpsertSection
         formData={baseFormData}
         setFormData={jest.fn()}
@@ -296,7 +300,7 @@ describe('ContentUpsertSection — derived display logic', () => {
     expect(queryByText('Минусы')).toBeNull()
   })
 
-  it('preserves a trailing space in the focused Android description until the next word is typed', () => {
+  it('preserves a trailing space in the focused Android description until the next word is typed', async () => {
     const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
     useResponsive.mockReturnValue({ isHydrated: true, isMobile: true })
 
@@ -309,14 +313,14 @@ describe('ContentUpsertSection — derived display logic', () => {
       return <ContentUpsertSection formData={formData} setFormData={setFormData} />
     }
 
-    const { getByTestId } = render(<Harness />)
+    const { getByTestId } = await render(<Harness />)
     const input = getByTestId('travel-wizard.basic.description.mobile-input')
 
-    fireEvent(input, 'focus')
-    fireEvent.changeText(input, 'синий ')
+    await fireEvent(input, 'focus')
+    await fireEvent.changeText(input, 'синий ')
     expect(getByTestId('travel-wizard.basic.description.mobile-input').props.value).toBe('синий ')
 
-    fireEvent.changeText(getByTestId('travel-wizard.basic.description.mobile-input'), 'синий берег')
+    await fireEvent.changeText(getByTestId('travel-wizard.basic.description.mobile-input'), 'синий берег')
     expect(getByTestId('travel-wizard.basic.description.mobile-input').props.value).toBe('синий берег')
   })
 
@@ -325,22 +329,22 @@ describe('ContentUpsertSection — derived display logic', () => {
     '<p><span class="ql-font-serif">Другой шрифт</span></p>',
     '<p><span class="ql-size-large">Крупный</span></p>',
     '<p class="ql-indent-2">Отступ</p>',
-  ])('opens formatted mobile descriptions in the rich editor: %s', (description) => {
+  ])('opens formatted mobile descriptions in the rich editor: %s', async (description) => {
     const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
     useResponsive.mockReturnValue({ isHydrated: true, isMobile: true })
-    const { getByTestId, queryByTestId } = renderSection({ description })
+    const { getByTestId, queryByTestId } = await renderSection({ description })
 
     expect(queryByTestId('travel-wizard.basic.description.mobile-input')).toBeNull()
-    fireEvent.press(getByTestId('travel-wizard.basic.description.mobile-rich-preview'))
+    await fireEvent.press(getByTestId('travel-wizard.basic.description.mobile-rich-preview'))
     expect(getByTestId('editor-Описание')).toBeTruthy()
   })
 
-  it('syncs the latest edit content after the focused Android description blurs', () => {
+  it('syncs the latest edit content after the focused Android description blurs', async () => {
     const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
     useResponsive.mockReturnValue({ isHydrated: true, isMobile: true })
     const setFormData = jest.fn()
 
-    const { getByTestId, rerender } = render(
+    const { getByTestId, rerender } = await render(
       <ContentUpsertSection
         formData={{ ...baseFormData, description: '<p>Старый текст</p>' }}
         setFormData={setFormData}
@@ -348,10 +352,10 @@ describe('ContentUpsertSection — derived display logic', () => {
     )
 
     const input = getByTestId('travel-wizard.basic.description.mobile-input')
-    fireEvent(input, 'focus')
-    fireEvent.changeText(input, 'Черновик пользователя ')
+    await fireEvent(input, 'focus')
+    await fireEvent.changeText(input, 'Черновик пользователя ')
 
-    rerender(
+    await rerender(
       <ContentUpsertSection
         formData={{ ...baseFormData, description: '<p>Внешнее обновление</p>' }}
         setFormData={setFormData}
@@ -361,28 +365,28 @@ describe('ContentUpsertSection — derived display logic', () => {
     expect(getByTestId('travel-wizard.basic.description.mobile-input').props.value)
       .toBe('Черновик пользователя ')
 
-    fireEvent(getByTestId('travel-wizard.basic.description.mobile-input'), 'blur')
+    await fireEvent(getByTestId('travel-wizard.basic.description.mobile-input'), 'blur')
 
     expect(getByTestId('travel-wizard.basic.description.mobile-input').props.value)
       .toBe('Внешнее обновление')
   })
 
-  it('keeps the fullscreen editor mounted when a new travel receives its server id', () => {
+  it('keeps the fullscreen editor mounted when a new travel receives its server id', async () => {
     const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
     useResponsive.mockReturnValue({ isHydrated: true, isMobile: true })
     const setFormData = jest.fn()
 
-    const { getByLabelText, getByTestId, rerender } = render(
+    const { getByLabelText, getByTestId, rerender } = await render(
       <ContentUpsertSection
         formData={{ ...baseFormData, id: null as any }}
         setFormData={setFormData}
       />,
     )
 
-    fireEvent.press(getByLabelText('Открыть расширенный редактор описания'))
+    await fireEvent.press(getByLabelText('Открыть расширенный редактор описания'))
     const firstInstance = getByTestId('editor-Описание').props.accessibilityHint
 
-    rerender(
+    await rerender(
       <ContentUpsertSection
         formData={{ ...baseFormData, id: '999' }}
         setFormData={setFormData}
@@ -392,24 +396,24 @@ describe('ContentUpsertSection — derived display logic', () => {
     expect(getByTestId('editor-Описание').props.accessibilityHint).toBe(firstInstance)
   })
 
-  it('keeps the fullscreen header inside ModalSafeArea (MODAL-TOP-INSET-001)', () => {
+  it('keeps the fullscreen header inside ModalSafeArea (MODAL-TOP-INSET-001)', async () => {
     const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
     useResponsive.mockReturnValue({ isHydrated: true, isMobile: true })
 
-    const { getByLabelText, getByTestId } = renderSection({ description: '<p>test</p>' })
-    fireEvent.press(getByLabelText('Открыть расширенный редактор описания'))
+    const { getByLabelText, getByTestId } = await renderSection({ description: '<p>test</p>' })
+    await fireEvent.press(getByLabelText('Открыть расширенный редактор описания'))
 
     const safeArea = getByTestId('description-fullscreen-safe-area')
     expect(within(safeArea).getByTestId('description-fullscreen-keyboard-frame')).toBeTruthy()
   })
 
-  it('shrinks the fullscreen editor by the real Android IME height', () => {
+  it('shrinks the fullscreen editor by the real Android IME height', async () => {
     const useResponsive = require('@/hooks/useResponsive').useResponsive as jest.Mock
     useResponsive.mockReturnValue({ isHydrated: true, isMobile: true })
     mockContentViewportInset = 320
 
-    const { getByLabelText, getByTestId } = renderSection({ description: '<p>test link</p>' })
-    fireEvent.press(getByLabelText('Открыть расширенный редактор описания'))
+    const { getByLabelText, getByTestId } = await renderSection({ description: '<p>test link</p>' })
+    await fireEvent.press(getByLabelText('Открыть расширенный редактор описания'))
 
     const keyboardFrameStyle = StyleSheet.flatten(
       getByTestId('description-fullscreen-keyboard-frame').props.style,

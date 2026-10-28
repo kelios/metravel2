@@ -87,7 +87,7 @@ describe('useMapViewportSnapshot stickiness', () => {
 
   it('publishes a padded bbox and keeps it while the viewport stays inside', async () => {
     const map = makeMap();
-    const { result } = renderHook(() => useMapViewportSnapshot(map.instance, 12, true));
+    const { result } = await renderHook(() => useMapViewportSnapshot(map.instance, 12, true));
     await flushFrame();
 
     const first = result.current;
@@ -100,20 +100,20 @@ describe('useMapViewportSnapshot stickiness', () => {
     // Small pan: still inside the padded area → same snapshot object, no refetch.
     map.view.south += 0.02;
     map.view.north += 0.02;
-    act(() => map.fire('moveend'));
+    await act(() => map.fire('moveend'));
     await flushFrame();
     expect(result.current).toBe(first);
   });
 
   it('republishes when the viewport leaves the fetched area', async () => {
     const map = makeMap();
-    const { result } = renderHook(() => useMapViewportSnapshot(map.instance, 12, true));
+    const { result } = await renderHook(() => useMapViewportSnapshot(map.instance, 12, true));
     await flushFrame();
     const first = result.current;
 
     map.view.south += 0.5;
     map.view.north += 0.5;
-    act(() => map.fire('moveend'));
+    await act(() => map.fire('moveend'));
     await flushFrame();
 
     expect(result.current).not.toBe(first);
@@ -122,7 +122,7 @@ describe('useMapViewportSnapshot stickiness', () => {
 
   it('republishes when the rounded zoom changes even inside the fetched area', async () => {
     const map = makeMap();
-    const { result } = renderHook(() => useMapViewportSnapshot(map.instance, 12, true));
+    const { result } = await renderHook(() => useMapViewportSnapshot(map.instance, 12, true));
     await flushFrame();
     const first = result.current;
 
@@ -131,7 +131,7 @@ describe('useMapViewportSnapshot stickiness', () => {
     map.view.zoom = 13;
     map.view.south = 53.85;
     map.view.north = 53.95;
-    act(() => map.fire('zoomend'));
+    await act(() => map.fire('zoomend'));
     await flushFrame();
 
     expect(result.current).not.toBe(first);

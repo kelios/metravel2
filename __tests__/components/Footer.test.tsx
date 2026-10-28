@@ -52,8 +52,8 @@ describe('Footer', () => {
     jest.restoreAllMocks()
   })
 
-  it('renders mobile dock correctly', () => {
-    const { getByTestId } = render(<Footer />)
+  it('renders mobile dock correctly', async () => {
+    const { getByTestId } = await render(<Footer />)
     expect(getByTestId('footer-item-home')).toBeTruthy()
     expect(getByTestId('footer-item-map')).toBeTruthy()
     expect(getByTestId('footer-item-quests')).toBeTruthy()
@@ -61,7 +61,7 @@ describe('Footer', () => {
     expect(getByTestId('footer-item-more')).toBeTruthy()
   })
 
-  it('renders the mobile dock on small-phone web widths below 360px', () => {
+  it('renders the mobile dock on small-phone web widths below 360px', async () => {
     const { Platform } = require('react-native')
     const prevOS = Platform.OS
     Object.defineProperty(Platform, 'OS', {
@@ -90,7 +90,7 @@ describe('Footer', () => {
         isBetween: () => false,
       }
 
-      const { getByTestId, queryByTestId } = render(<Footer />)
+      const { getByTestId, queryByTestId } = await render(<Footer />)
       expect(getByTestId('footer-item-home')).toBeTruthy()
       expect(getByTestId('footer-item-map')).toBeTruthy()
       expect(getByTestId('footer-item-quests')).toBeTruthy()
@@ -105,18 +105,18 @@ describe('Footer', () => {
     }
   })
 
-  it('calls onDockHeight callback', () => {
+  it('calls onDockHeight callback', async () => {
     const onDockHeight = jest.fn()
-    const { getByTestId } = render(<Footer onDockHeight={onDockHeight} />)
+    const { getByTestId } = await render(<Footer onDockHeight={onDockHeight} />)
 
-    fireEvent(getByTestId('footer-dock-measure'), 'layout', {
+    await fireEvent(getByTestId('footer-dock-measure'), 'layout', {
       nativeEvent: { layout: { height: 56 } },
     })
 
     expect(onDockHeight).toHaveBeenCalledWith(56)
   })
 
-  it('renders the compact dock on tablet-width web screens', () => {
+  it('renders the compact dock on tablet-width web screens', async () => {
     const { Platform } = require('react-native')
     const prevOS = Platform.OS
     Object.defineProperty(Platform, 'OS', {
@@ -145,7 +145,7 @@ describe('Footer', () => {
         isBetween: () => false,
       }
 
-      const { getByTestId, queryByTestId } = render(<Footer />)
+      const { getByTestId, queryByTestId } = await render(<Footer />)
       expect(getByTestId('footer-dock-wrapper')).toBeTruthy()
       expect(queryByTestId('footer-desktop')).toBeNull()
     } finally {
@@ -162,11 +162,11 @@ describe('Footer', () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
     ;(global as any).__mockResponsive = { width, height: 640, isDesktop: false, isMobile: false }
     try {
-      const view = render(<LocaleProvider><Footer /></LocaleProvider>)
+      const view = await render(<LocaleProvider><Footer /></LocaleProvider>)
       expect(await view.findByTestId('footer-item-map')).toBeTruthy()
       expect(view.getByTestId('footer-item-quests')).toBeTruthy()
-      fireEvent.press(view.getByTestId('footer-item-more'))
-      fireEvent.press(view.getByTestId('footer-more-item-language'))
+      await fireEvent.press(view.getByTestId('footer-item-more'))
+      await fireEvent.press(view.getByTestId('footer-more-item-language'))
       for (const locale of ['ru', 'be', 'uk', 'pl', 'en']) {
         expect(view.getByTestId(`more-language-option-${locale}`)).toBeTruthy()
       }
@@ -175,7 +175,7 @@ describe('Footer', () => {
     }
   })
 
-  it('renders desktop footer groups', () => {
+  it('renders desktop footer groups', async () => {
     const { Platform } = require('react-native')
     const prevOS = Platform.OS
     Object.defineProperty(Platform, 'OS', {
@@ -204,7 +204,7 @@ describe('Footer', () => {
       }
 
       const FooterDesktop = require('@/components/layout/FooterDesktop').default
-      const { getByTestId, getByText } = render(<FooterDesktop />)
+      const { getByTestId, getByText } = await render(<FooterDesktop />)
       expect(getByTestId('footer-item-about')).toBeTruthy()
       // #1999: Meta Business Verification сверяет имя владельца с текстом сайта —
       // строка копирайта несёт его на каждой desktop-странице.
@@ -223,13 +223,13 @@ describe('Footer', () => {
     }
   })
 
-  it.each([false, true])('leaves visible web footer ownership to the root (desktop=%s)', isDesktop => {
+  it.each([false, true])('leaves visible web footer ownership to the root (desktop=%s)', async isDesktop => {
     const { Platform } = require('react-native')
     const prevOS = Platform.OS
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
     ;(global as any).__mockResponsive = { isDesktop }
     try {
-      const { queryByTestId } = render(<Footer webDockManagedByRoot />)
+      const { queryByTestId } = await render(<Footer webDockManagedByRoot />)
       expect(queryByTestId('footer-desktop')).toBeNull()
       expect(queryByTestId('footer-dock-wrapper')).toBeNull()
     } finally {

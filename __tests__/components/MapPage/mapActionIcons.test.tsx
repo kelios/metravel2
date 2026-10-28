@@ -5,9 +5,9 @@
  * кнопкой другой глиф, чем на самой кнопке.
  */
 import React from 'react'
-import Feather from '@expo/vector-icons/Feather'
 import { StyleSheet } from 'react-native'
 import { cleanup, render } from '@testing-library/react-native'
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 
 import { MapMobileTopOverlay } from '@/components/MapPage/MapMobile/MapMobileTopOverlay'
 import MapPanelHeader from '@/components/MapPage/MapPanelHeader'
@@ -47,25 +47,28 @@ const baseProps = {
   onEnterRoute: jest.fn(),
 } as const
 
-const iconOf = (node: any): string => node.findByType(Feather).props.name
+const iconOf = (node: any): string => {
+  const icon = getOnlyHost(node, child => child.props.testID?.startsWith('feather-'))
+  return String(icon.props.children)
+}
 
 afterEach(cleanup)
 
 describe('map action icons match their actions (#2777)', () => {
-  it('reset is a reset glyph, not «expand»', () => {
-    const { getByTestId } = render(<MapMobileTopOverlay {...(baseProps as any)} />)
+  it('reset is a reset glyph, not «expand»', async () => {
+    const { getByTestId } = await render(<MapMobileTopOverlay {...(baseProps as any)} />)
     const icon = iconOf(getByTestId('map-mobile-show-all'))
 
     expect(icon).toBe(MAP_ACTION_ICON.reset)
     expect(MAP_EXPAND_LOOKALIKE_ICONS).not.toContain(icon)
   })
 
-  it('route entry and the route-mode indicator use the route glyph, not a geolocation arrow', () => {
-    const radius = render(<MapMobileTopOverlay {...(baseProps as any)} />)
+  it('route entry and the route-mode indicator use the route glyph, not a geolocation arrow', async () => {
+    const radius = await render(<MapMobileTopOverlay {...(baseProps as any)} />)
     const entryIcon = iconOf(radius.getByTestId('map-mobile-route-button'))
-    radius.unmount()
+    await radius.unmount()
 
-    const route = render(
+    const route = await render(
       <MapMobileTopOverlay
         {...(baseProps as any)}
         mode="route"
@@ -81,13 +84,13 @@ describe('map action icons match their actions (#2777)', () => {
     }
   })
 
-  it('«my location» keeps the only locate glyph in the row', () => {
-    const { getByTestId } = render(<MapMobileTopOverlay {...(baseProps as any)} />)
+  it('«my location» keeps the only locate glyph in the row', async () => {
+    const { getByTestId } = await render(<MapMobileTopOverlay {...(baseProps as any)} />)
     expect(iconOf(getByTestId('map-center-user-quick'))).toBe(MAP_ACTION_ICON.locate)
   })
 
-  it('every phone tour step shows the glyph of the button it points at', () => {
-    const { getByTestId } = render(<MapMobileTopOverlay {...(baseProps as any)} />)
+  it('every phone tour step shows the glyph of the button it points at', async () => {
+    const { getByTestId } = await render(<MapMobileTopOverlay {...(baseProps as any)} />)
     for (const step of getPhoneOnboardingSteps()) {
       if (!step.targetTestID) continue
       expect({ target: step.targetTestID, icon: step.icon }).toEqual({
@@ -97,8 +100,8 @@ describe('map action icons match their actions (#2777)', () => {
     }
   })
 
-  it('every desktop tour step shows the glyph of the panel tab it points at', () => {
-    const { getByTestId } = render(
+  it('every desktop tour step shows the glyph of the panel tab it points at', async () => {
+    const { getByTestId } = await render(
       <MapPanelHeader
         activeTab="search"
         travelsCount={3}
@@ -125,8 +128,8 @@ describe('labelled reset and route entry in the map toolbar (#2777)', () => {
   const KEY = 'components.MapPage.MapMobile.MapMobileTopOverlay'
   const LABEL_MAX_CHARS = 8
 
-  it('shows «Сбросить» and «Маршрут» as visible labels with names that contain them', () => {
-    const { getByTestId, getByText } = render(<MapMobileTopOverlay {...(baseProps as any)} />)
+  it('shows «Сбросить» and «Маршрут» as visible labels with names that contain them', async () => {
+    const { getByTestId, getByText } = await render(<MapMobileTopOverlay {...(baseProps as any)} />)
     const reset = getByTestId('map-mobile-show-all')
     const route = getByTestId('map-mobile-route-button')
     const resetLabel = i18nT(`map:${KEY}.resetShort` as any)
@@ -143,8 +146,8 @@ describe('labelled reset and route entry in the map toolbar (#2777)', () => {
     }
   })
 
-  it('no reset button without a reset action (nothing to reset)', () => {
-    const { queryByTestId } = render(
+  it('no reset button without a reset action (nothing to reset)', async () => {
+    const { queryByTestId } = await render(
       <MapMobileTopOverlay {...(baseProps as any)} onShowAllPlaces={undefined} />,
     )
     expect(queryByTestId('map-mobile-show-all')).toBeNull()

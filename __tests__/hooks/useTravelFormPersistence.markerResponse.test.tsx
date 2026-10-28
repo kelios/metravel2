@@ -13,7 +13,7 @@ const a: MarkerData = { id: 101, lat: 53.9, lng: 27.56, country: 19, address: 'A
 const b: MarkerData = { ...a, id: 102, lat: 53.91, address: 'B' };
 const travel = (markers: MarkerData[]): TravelFormData => ({ ...getEmptyFormData('225'), id: 225, name: 'Route', coordsMeTravel: markers });
 
-function setup(source: TravelFormData, current: TravelFormData = source) {
+async function setup(source: TravelFormData, current: TravelFormData = source) {
   const baseline = jest.fn();
   const params = {
     formState: { data: source, reset: jest.fn(), updateField: jest.fn(), updateFields: jest.fn() },
@@ -27,14 +27,14 @@ function setup(source: TravelFormData, current: TravelFormData = source) {
     updateBaselineRef: { current: baseline }, rehydrateMarkerIdsFromServer: jest.fn().mockResolvedValue(null),
     uploadPendingMarkerImages: jest.fn().mockResolvedValue(undefined),
   } as unknown as Parameters<typeof useTravelFormPersistence>[0];
-  return { ...renderHook(() => useTravelFormPersistence(params)), params };
+  return { ...await renderHook(() => useTravelFormPersistence(params)), params };
 }
 
 describe('late marker save response preserves latest route ownership', () => {
   it.each(['sent reorder', 'in-flight reorder', 'deleted point', 'deleted all', 'edited point'])('keeps current route after response: %s', async (change) => {
     const source = travel(change === 'sent reorder' ? [b, a] : [a, b]);
     const current = change.includes('reorder') ? [b, a] : change === 'deleted point' ? [b] : change === 'deleted all' ? [] : [{ ...a, address: 'New address', categories: [9] }, b];
-    const { result, params } = setup(source, travel(current));
+    const { result, params } = await setup(source, travel(current));
     await act(async () => {
       result.current.applySavedData(travel([{ ...a, image: 'https://example.com/new-a.jpg' }, b]), source, { preserveEditingState: true });
     });
@@ -44,7 +44,7 @@ describe('late marker save response preserves latest route ownership', () => {
 
   it.each([null, 'https://example.com/newer-user-photo.jpg', 'blob:http://localhost/newer-photo'])('keeps a newer user image change: %s', async (image) => {
     const source = travel([a, b]);
-    const { result, params } = setup(source, travel([{ ...a, image }, b]));
+    const { result, params } = await setup(source, travel([{ ...a, image }, b]));
     await act(async () => {
       result.current.applySavedData(travel([{ ...a, image: 'https://example.com/stale-response.jpg' }, b]), source, { preserveEditingState: true });
     });
@@ -55,7 +55,7 @@ describe('late marker save response preserves latest route ownership', () => {
     const first = { ...a, id: null, image: 'blob:http://localhost/first' };
     const second = { ...b, id: null, lat: a.lat, image: 'blob:http://localhost/second' };
     const source = travel([first, second]);
-    const { result, params } = setup(source);
+    const { result, params } = await setup(source);
     await act(async () => {
       result.current.applySavedData(travel([{ ...first, id: 201, image: null }, { ...second, id: 202, image: null }]), source);
     });
@@ -67,7 +67,7 @@ describe('late marker save response preserves latest route ownership', () => {
     const added = { ...a, id: null, lat: 54, address: 'Added' };
     const liveA = { ...a, address: 'Edited' };
     const response = travel([a, b]);
-    const { result, params } = setup(source, travel([added, b, liveA]));
+    const { result, params } = await setup(source, travel([added, b, liveA]));
     await act(async () => { result.current.applySavedData(response, source); });
     expect(params.formDataRef.current.coordsMeTravel).toEqual([added, b, liveA]);
     expect(response.coordsMeTravel).toEqual([a, b]);
@@ -76,7 +76,7 @@ describe('late marker save response preserves latest route ownership', () => {
   it('does not graft a different persisted id onto a coincident point', async () => {
     const source = travel([a]);
     const replacement = { ...a, id: 999, address: 'Replacement' };
-    const { result, params } = setup(source, travel([replacement]));
+    const { result, params } = await setup(source, travel([replacement]));
     await act(async () => { result.current.applySavedData(source, source); });
     expect(params.formDataRef.current.coordsMeTravel).toEqual([replacement]);
   });
@@ -84,7 +84,7 @@ describe('late marker save response preserves latest route ownership', () => {
   it('does not assign an existing live id to a newly added coincident point', async () => {
     const source = travel([a, b]);
     const added = { ...a, id: null, address: 'Added at A', image: 'blob:http://localhost/added' };
-    const { result, params } = setup(source, travel([added, a, b]));
+    const { result, params } = await setup(source, travel([added, a, b]));
     await act(async () => { result.current.applySavedData(source, source); });
     expect(params.formDataRef.current.coordsMeTravel).toEqual([added, a, b]);
   });
@@ -93,7 +93,7 @@ describe('late marker save response preserves latest route ownership', () => {
     const dispatched = { ...a, id: null, image: 'blob:http://localhost/dispatched' };
     const added = { ...dispatched, address, image: 'blob:http://localhost/added' };
     const source = travel([dispatched]);
-    const { result, params } = setup(source, travel([added, dispatched]));
+    const { result, params } = await setup(source, travel([added, dispatched]));
     await act(async () => {
       result.current.applySavedData(travel([{ ...dispatched, id: 201, image: null }]), source);
     });
@@ -105,7 +105,7 @@ describe('late marker save response preserves latest route ownership', () => {
     const dispatched = { ...a, id: null, image: 'blob:http://localhost/dispatched' };
     const replacement = { ...dispatched, address: 'Replacement', image: 'blob:http://localhost/replacement' };
     const source = travel([dispatched]);
-    const { result, params } = setup(source, travel([replacement]));
+    const { result, params } = await setup(source, travel([replacement]));
     await act(async () => {
       result.current.applySavedData(travel([{ ...dispatched, id: 201, image: null }]), source);
     });
@@ -116,7 +116,7 @@ describe('late marker save response preserves latest route ownership', () => {
     const dispatched = { ...a, id: null, image: 'blob:http://localhost/dispatched' };
     const edited = { ...dispatched, categories: [9] };
     const source = travel([dispatched]);
-    const { result, params } = setup(source, travel([edited]));
+    const { result, params } = await setup(source, travel([edited]));
     await act(async () => {
       result.current.applySavedData(travel([{ ...dispatched, id: 201, image: null }]), source);
     });
@@ -128,7 +128,7 @@ describe('late marker save response preserves latest route ownership', () => {
     const edited = { ...dispatched, address: 'Edited A', categories: [9] };
     const added = { ...dispatched, address: 'New at A', image: 'blob:http://localhost/added' };
     const source = travel([dispatched]);
-    const { result, params } = setup(source, travel([added, edited]));
+    const { result, params } = await setup(source, travel([added, edited]));
     await act(async () => {
       result.current.applySavedData(travel([{ ...dispatched, id: 201, image: null }]), source);
     });
@@ -141,7 +141,7 @@ describe('late marker save response preserves latest route ownership', () => {
     const cloned = { ...dispatched, categories: [9] };
     const added = { ...dispatched, image: 'blob:http://localhost/added' };
     const source = travel([dispatched]);
-    const { result, params } = setup(source, travel([added, cloned]));
+    const { result, params } = await setup(source, travel([added, cloned]));
     await act(async () => {
       result.current.applySavedData(travel([{ ...dispatched, id: 201, image: null }]), source);
     });
@@ -151,7 +151,7 @@ describe('late marker save response preserves latest route ownership', () => {
   it('does not resurrect a deleted id through a new point at the same coordinates', async () => {
     const source = travel([a, b]);
     const replacement = { ...a, id: null, address: 'New point at A' };
-    const { result, params } = setup(source, travel([replacement, b]));
+    const { result, params } = await setup(source, travel([replacement, b]));
     await act(async () => { result.current.applySavedData(source, source); });
     expect(params.formDataRef.current.coordsMeTravel).toEqual([replacement, b]);
   });
@@ -160,7 +160,7 @@ describe('late marker save response preserves latest route ownership', () => {
     const first = { ...a, id: null, image: 'blob:http://localhost/first' };
     const second = { ...b, id: null, lat: a.lat, image: 'blob:http://localhost/second' };
     const source = travel([first, second]);
-    const { result, params } = setup(source, travel([second, first]));
+    const { result, params } = await setup(source, travel([second, first]));
     await act(async () => {
       result.current.applySavedData(travel([{ ...first, id: 201, image: null }, { ...second, id: 202, image: null }]), source);
     });
@@ -170,7 +170,7 @@ describe('late marker save response preserves latest route ownership', () => {
   it('does not recover a deleted saved id onto a new coincident pending-photo point', async () => {
     const source = travel([a, b]);
     const replacement = { ...a, id: null, address: 'Replacement', image: 'blob:http://localhost/replacement' };
-    const { result, params } = setup(source, travel([replacement, b]));
+    const { result, params } = await setup(source, travel([replacement, b]));
     (params.rehydrateMarkerIdsFromServer as jest.Mock).mockResolvedValue([{ ...a, image: replacement.image }, b]);
     await act(async () => { result.current.applySavedData(source, source); });
     expect(params.formDataRef.current.coordsMeTravel).toEqual([replacement, b]);

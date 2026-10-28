@@ -73,7 +73,7 @@ const makeStep = (id: string) => ({
 })
 
 const renderAndReset = async (onProgressReset: (serverId: number) => Promise<boolean> | void) => {
-  const view = render(
+  const view = await render(
     <QuestWizard
       title="Тест-квест"
       steps={[makeStep('s1'), makeStep('s2')]}
@@ -89,7 +89,7 @@ const renderAndReset = async (onProgressReset: (serverId: number) => Promise<boo
     await Promise.resolve()
   })
   await act(async () => {
-    fireEvent.press(view.getAllByLabelText(i18nT('quests:components.quests.questWizardShell.sbrosit_progress_5f45dc36'))[0])
+    await fireEvent.press(view.getAllByLabelText(i18nT('quests:components.quests.questWizardShell.sbrosit_progress_5f45dc36'))[0])
     await new Promise((resolve) => setTimeout(resolve, 0))
   })
 }

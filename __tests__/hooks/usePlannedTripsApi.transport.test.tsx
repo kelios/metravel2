@@ -85,12 +85,12 @@ describe('planned trip hooks', () => {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )
 
-    const { result } = renderHook(() => usePlannedTrip(42), { wrapper })
+    const { result } = await renderHook(() => usePlannedTrip(42), { wrapper })
 
     expect(result.current.data?.isOwner).toBe(false)
     expect(mockFetchPlannedTrip).not.toHaveBeenCalled()
 
-    act(() => {
+    await act(() => {
       useAuthStore.setState({
         authReady: true,
         isAuthenticated: true,
@@ -101,7 +101,7 @@ describe('planned trip hooks', () => {
     await waitFor(() => expect(result.current.data?.isOwner).toBe(true))
     expect(mockFetchPlannedTrip).not.toHaveBeenCalled()
 
-    act(() => {
+    await act(() => {
       useAuthStore.setState({ userId: '8' })
     })
 
@@ -120,7 +120,7 @@ describe('planned trip hooks', () => {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )
 
-    const { result } = renderHook(() => useUpdateTripTransport(), { wrapper })
+    const { result } = await renderHook(() => useUpdateTripTransport(), { wrapper })
 
     await act(async () => {
       await result.current.mutateAsync({ tripId: 42, transport: 'bike' })
@@ -157,7 +157,7 @@ describe('planned trip hooks', () => {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     )
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => ({ trips: useMyPlannedTrips(), updateTransport: useUpdateTripTransport() }),
       { wrapper },
     )

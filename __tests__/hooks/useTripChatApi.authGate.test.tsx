@@ -41,7 +41,7 @@ beforeEach(() => {
 
 describe('useTripChatMessages auth gate (#1829)', () => {
   it('гость с живым threadId не получает сообщения', async () => {
-    const { result } = renderHook(() => useTripChatMessages(7), { wrapper })
+    const { result } = await renderHook(() => useTripChatMessages(7), { wrapper })
 
     await waitFor(() => expect(result.current.fetchStatus).toBe('idle'))
     expect(mockMessages).not.toHaveBeenCalled()
@@ -51,7 +51,7 @@ describe('useTripChatMessages auth gate (#1829)', () => {
   it('вошедший пользователь сообщения получает', async () => {
     authRef.isAuthenticated = true
     authRef.userId = '7'
-    const { result } = renderHook(() => useTripChatMessages(7), { wrapper })
+    const { result } = await renderHook(() => useTripChatMessages(7), { wrapper })
 
     await waitFor(() => expect(result.current.data).toEqual([{ id: 1, text: 'secret' }]))
     expect(mockMessages).toHaveBeenCalledWith(7)
@@ -60,13 +60,13 @@ describe('useTripChatMessages auth gate (#1829)', () => {
   // Гейт списка сообщений обязан совпадать с гейтом самого треда: иначе один из
   // двух снова окажется открытым.
   it('гейт совпадает с useTripChat на той же паре состояний', async () => {
-    const guest = renderHook(() => useTripChat(7), { wrapper })
+    const guest = await renderHook(() => useTripChat(7), { wrapper })
     await waitFor(() => expect(guest.result.current.fetchStatus).toBe('idle'))
     expect(mockThread).not.toHaveBeenCalled()
 
     authRef.isAuthenticated = true
     authRef.userId = '7'
-    const signedIn = renderHook(() => useTripChat(7), { wrapper })
+    const signedIn = await renderHook(() => useTripChat(7), { wrapper })
     await waitFor(() => expect(signedIn.result.current.data).toBeTruthy())
     expect(mockThread).toHaveBeenCalledWith(7)
   })

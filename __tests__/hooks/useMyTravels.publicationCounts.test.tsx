@@ -55,7 +55,7 @@ describe('useMyTravels — разбивка опубликованных и че
       (isDraftCountRequest(params) ? page([1], 120, 'draft') : page([1, 2], 365)) as any
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useMyTravels({ userId: 'u-1', perPage: 20, includeDrafts: true })
     );
     await act(async () => {
@@ -74,7 +74,7 @@ describe('useMyTravels — разбивка опубликованных и че
       return page([1, 2], 365) as any;
     });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useMyTravels({ userId: 'u-1', perPage: 20, includeDrafts: true })
     );
     await act(async () => {
@@ -93,7 +93,7 @@ describe('useMyTravels — разбивка опубликованных и че
       (isDraftCountRequest(params) ? page([1], 120, 'draft') : page([1, 2], 365)) as any
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useMyTravels({ userId: 'u-1', perPage: 20, includeDrafts: true })
     );
     await act(async () => {
@@ -108,7 +108,7 @@ describe('useMyTravels — разбивка опубликованных и че
       (isDraftCountRequest(params) ? page([1], 7, 'draft') : page([1, 2], 40)) as any
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useMyTravels({ userId: 'u-1', perPage: 20, includeDrafts: true })
     );
     await act(async () => {
@@ -129,7 +129,7 @@ describe('useMyTravels — разбивка опубликованных и че
   it('на публичном профиле (без черновиков) второй запрос не уходит', async () => {
     mockFetchMyTravels.mockResolvedValue(page([1, 2], 40) as any);
 
-    const { result } = renderHook(() => useMyTravels({ userId: 'u-1', perPage: 20 }));
+    const { result } = await renderHook(() => useMyTravels({ userId: 'u-1', perPage: 20 }));
     await act(async () => {
       await result.current.load();
     });
@@ -144,7 +144,7 @@ describe('useMyTravels — разбивка опубликованных и че
       return page([1, 2], 365) as any;
     });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useMyTravels({ userId: 'u-1', perPage: 20, includeDrafts: true })
     );
     await act(async () => {
@@ -160,7 +160,7 @@ describe('useMyTravels — разбивка опубликованных и че
     mockFetchMyTravels.mockImplementation(async params =>
       (isDraftCountRequest(params) ? page([1], drafts, 'draft') : page([1, 2], 40)) as any
     );
-    const { result } = renderHook(() => useMyTravels({ userId: 'u-1', perPage: 20, includeDrafts: true }));
+    const { result } = await renderHook(() => useMyTravels({ userId: 'u-1', perPage: 20, includeDrafts: true }));
     await act(async () => { await result.current.load(); });
     expect(result.current.publicationCounts).toEqual({ published: drafts === 0 ? 40 : 0, drafts: drafts === 0 ? 0 : 40 });
   });
@@ -173,7 +173,7 @@ describe('useMyTravels — разбивка опубликованных и че
         engagementSummary: { favoritesCount: 50, wishlistCount: 20, visitedCount: 10, plannedCount: 5 },
       } as any;
     });
-    const { result } = renderHook(() => useMyTravels({ userId: 'u-1', perPage: 2, includeDrafts: true }));
+    const { result } = await renderHook(() => useMyTravels({ userId: 'u-1', perPage: 2, includeDrafts: true }));
     await act(async () => { await result.current.load(); });
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -203,7 +203,7 @@ describe('useMyTravels — разбивка опубликованных и че
         engagementSummary: { favoritesCount: deleted ? 7 : 10, wishlistCount: 0, visitedCount: 0, plannedCount: 0 },
       } as any;
     });
-    const { result } = renderHook(() => useMyTravels({ userId: 'u-1', perPage: 20, includeDrafts: true }));
+    const { result } = await renderHook(() => useMyTravels({ userId: 'u-1', perPage: 20, includeDrafts: true }));
     await act(async () => { await result.current.load(); });
     await waitFor(() => expect(result.current.publicationCounts).toEqual({ published: 1, drafts: 1 }));
     mockConfirmAction.mockResolvedValue(outcome !== 'cancel');
@@ -214,7 +214,7 @@ describe('useMyTravels — разбивка опубликованных и че
     const log = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     try {
       let removing!: Promise<boolean>;
-      act(() => { removing = result.current.remove(1); });
+      await act(() => { removing = result.current.remove(1); });
       if (outcome === 'cancel') {
         await act(async () => { await expect(removing).resolves.toBe(false); });
         expect(mockDeleteTravel).not.toHaveBeenCalled();
@@ -261,7 +261,7 @@ describe('useMyTravels — разбивка опубликованных и че
       } as any;
     });
     const onTotalChange = jest.fn();
-    const { result } = renderHook(() => useMyTravels({ userId: 'u-1', perPage: 20, includeDrafts: true, onTotalChange }));
+    const { result } = await renderHook(() => useMyTravels({ userId: 'u-1', perPage: 20, includeDrafts: true, onTotalChange }));
     await act(async () => { await result.current.load(); });
     await waitFor(() => expect(result.current.myTravels.map(t => t.id)).toEqual([1, 2]));
     expect(result.current.publicationCounts).toEqual({ published: 1, drafts: 1 });
@@ -270,7 +270,7 @@ describe('useMyTravels — разбивка опубликованных и че
     const pendingDelete = new Promise<void>((_yes, no) => { rejectDelete = no; });
     mockDeleteTravel.mockReturnValue(pendingDelete as any);
     let removing!: Promise<boolean>;
-    act(() => { removing = result.current.remove(1); });
+    await act(() => { removing = result.current.remove(1); });
     await waitFor(() => expect(mockDeleteTravel).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(result.current.myTravels.map(t => t.id)).toEqual([2]));
     expect(result.current.publicationCounts).toEqual({ published: 1, drafts: 0 });
@@ -333,7 +333,7 @@ describe('#2669 — author-block publication counts', () => {
         engagementSummary: { favoritesCount: 21, wishlistCount: 0, visitedCount: 0, plannedCount: 0 } } as any;
     });
     const onTotalChange = jest.fn();
-    const { result } = renderHook(() => useMyTravels({ userId: '1', perPage, includeDrafts: true, onTotalChange }));
+    const { result } = await renderHook(() => useMyTravels({ userId: '1', perPage, includeDrafts: true, onTotalChange }));
     const client = [...queryClients].at(-1)!;
     client.setQueryData(queryKeys.myBlockedUsers('u-1'), [{ user: 2 }]);
     const uninstall = installBlockedAuthorGuard(client, { getOwner: () => 'u-1' });
@@ -375,7 +375,7 @@ describe('#2669 — author-block publication counts', () => {
         engagementSummary: { favoritesCount: serverUsesCurrentBlockPolicy ? 14 : 21, wishlistCount: 0, visitedCount: 0, plannedCount: 0 } } as any;
     });
     const onTotalChange = jest.fn();
-    const { result } = renderHook(() => useMyTravels({ userId: '1', perPage: 2, includeDrafts: true, onTotalChange }));
+    const { result } = await renderHook(() => useMyTravels({ userId: '1', perPage: 2, includeDrafts: true, onTotalChange }));
     const client = [...queryClients].at(-1)!;
     client.setQueryData(queryKeys.myBlockedUsers('u-1'), [{ user: 2 }]);
     const uninstall = installBlockedAuthorGuard(client, { getOwner: () => 'u-1' });
@@ -411,7 +411,7 @@ describe('#2669 — author-block publication counts', () => {
       const start = ((params.page ?? 1) - 1) * 2;
       return { data: selected.slice(start, start + 2), total: selected.length } as any;
     });
-    const { result } = renderHook(() => useMyTravels({ userId: '1', perPage: 2, includeDrafts: true }));
+    const { result } = await renderHook(() => useMyTravels({ userId: '1', perPage: 2, includeDrafts: true }));
     const client = [...queryClients].at(-1)!;
     client.setQueryData(queryKeys.myBlockedUsers('u-1'), [{ user: 2 }]);
     const uninstall = installBlockedAuthorGuard(client, { getOwner: () => 'u-1' });
@@ -425,7 +425,7 @@ describe('#2669 — author-block publication counts', () => {
       let rejectDelete!: (error: Error) => void;
       mockDeleteTravel.mockReturnValue(new Promise<void>((yes, no) => { resolveDelete = yes; rejectDelete = no; }) as any);
       let removing!: Promise<boolean>;
-      act(() => { removing = result.current.remove(2); });
+      await act(() => { removing = result.current.remove(2); });
       await waitFor(() => expect(mockDeleteTravel).toHaveBeenCalledTimes(1));
       const key = queryKeys.authorTravels('u-1', '1', { perPage: 2, includeDrafts: true });
       const optimistic = client.getQueryData<{ pages: Array<{ total: number; draftsCount: number | null }> }>(key)!;
@@ -449,7 +449,7 @@ describe('#2669 — author-block publication counts', () => {
 
 // Isolated real QueryClient: cache lifecycle is part of the hook contract.
 const queryClients = new Set<QueryClient>();
-const renderHook: typeof renderQueryHook = (callback, options) => {
+const renderHook: typeof renderQueryHook = async (callback, options) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity, staleTime: 300_000 } },
   });

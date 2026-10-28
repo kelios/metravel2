@@ -10,7 +10,8 @@
  */
 
 import React from 'react'
-import renderer, { act } from 'react-test-renderer'
+import { render as renderTree, act } from '@testing-library/react-native'
+import type { RenderResult } from '@testing-library/react-native'
 
 import { useSliderPointerDrag } from '@/components/travel/sliderParts/useSliderPointerDrag'
 
@@ -74,9 +75,9 @@ describe('useSliderPointerDrag — raw touch path vs implicit pointer capture', 
   it('completes the swipe even when lostpointercapture fires before touchend', async () => {
     const { Harness, viewportNode, applyOffset, scrollTo } = createHarness()
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(<Harness />)
+      tree = await renderTree(<Harness />)
     })
 
     const y = 100
@@ -103,7 +104,7 @@ describe('useSliderPointerDrag — raw touch path vs implicit pointer capture', 
     expect(snapBackCalls).toHaveLength(0)
 
     await act(async () => {
-      tree!.unmount()
+      await tree!.unmount()
     })
   })
 
@@ -111,9 +112,9 @@ describe('useSliderPointerDrag — raw touch path vs implicit pointer capture', 
     const { Harness, viewportNode, scrollTo, onSlideTap, onInteractionStart, indexRef } = createHarness()
     indexRef.current = 1
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(<Harness />)
+      tree = await renderTree(<Harness />)
     })
 
     await act(async () => {
@@ -129,16 +130,16 @@ describe('useSliderPointerDrag — raw touch path vs implicit pointer capture', 
     expect(scrollTo).not.toHaveBeenCalled()
 
     await act(async () => {
-      tree!.unmount()
+      await tree!.unmount()
     })
   })
 
   it('does NOT fire onSlideTap for a horizontal drag or a cancelled touch', async () => {
     const { Harness, viewportNode, scrollTo, onSlideTap } = createHarness()
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(<Harness />)
+      tree = await renderTree(<Harness />)
     })
 
     // Horizontal drag — resolves as swipe, not tap
@@ -160,16 +161,16 @@ describe('useSliderPointerDrag — raw touch path vs implicit pointer capture', 
     expect(onSlideTap).not.toHaveBeenCalled()
 
     await act(async () => {
-      tree!.unmount()
+      await tree!.unmount()
     })
   })
 
   it('releases the handoff only for slider navigation keys', async () => {
     const { Harness, wrapperNode, scrollTo, onInteractionStart } = createHarness()
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(<Harness />)
+      tree = await renderTree(<Harness />)
     })
 
     await act(async () => {
@@ -184,16 +185,16 @@ describe('useSliderPointerDrag — raw touch path vs implicit pointer capture', 
     expect(scrollTo).toHaveBeenCalledWith(1)
 
     await act(async () => {
-      tree!.unmount()
+      await tree!.unmount()
     })
   })
 
   it('still snaps back via lostpointercapture for mouse-driven drags', async () => {
     const { Harness, viewportNode, applyOffset, scrollTo } = createHarness()
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(<Harness />)
+      tree = await renderTree(<Harness />)
     })
 
     const firePointer = (type: string, props: Record<string, unknown>) => {
@@ -217,7 +218,7 @@ describe('useSliderPointerDrag — raw touch path vs implicit pointer capture', 
     expect(snapBack).toBeTruthy()
 
     await act(async () => {
-      tree!.unmount()
+      await tree!.unmount()
     })
   })
 })

@@ -61,11 +61,11 @@ describe('ArticleActivationCtaSection', () => {
   })
 
   it('stores guest favorite intent and sends the reader to registration', async () => {
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <ArticleActivationCtaSection article={article} redirectPath="/article/test-article" />,
     )
 
-    fireEvent.press(getByLabelText('Сохранить статью в избранное'))
+    await fireEvent.press(getByLabelText('Сохранить статью в избранное'))
 
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/registration?redirect=%2Farticle%2Ftest-article&intent=favorite')
@@ -96,11 +96,11 @@ describe('ArticleActivationCtaSection', () => {
       addFavorite,
     })
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <ArticleActivationCtaSection article={article} redirectPath="/article/test-article" />,
     )
 
-    fireEvent.press(getByLabelText('Сохранить статью в избранное'))
+    await fireEvent.press(getByLabelText('Сохранить статью в избранное'))
 
     await waitFor(() => {
       expect(addFavorite).toHaveBeenCalledWith({
@@ -114,12 +114,12 @@ describe('ArticleActivationCtaSection', () => {
     expect(mockPush).not.toHaveBeenCalled()
   })
 
-  it('opens the map without forcing registration', () => {
-    const { getByLabelText } = render(
+  it('opens the map without forcing registration', async () => {
+    const { getByLabelText } = await render(
       <ArticleActivationCtaSection article={article} redirectPath="/article/test-article" />,
     )
 
-    fireEvent.press(getByLabelText('Открыть карту с местами'))
+    await fireEvent.press(getByLabelText('Открыть карту с местами'))
 
     expect(queueAnalyticsEvent).toHaveBeenCalledWith('contextual_next_step_click', {
       source: 'article_detail',

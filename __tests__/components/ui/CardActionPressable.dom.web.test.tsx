@@ -4,7 +4,7 @@ import type { Root } from 'react-dom/client'
 // #2035: маркер `data-card-action="true"` стоял сырым пропом на `Pressable`/`View`,
 // а react-native-web переносит в DOM только `dataSet`. Карточки, которые отличают
 // клик по своей кнопке от клика по себе через `closest('[data-card-action="true"]')`
-// (`UnifiedTravelCard`, `PointListRow`), маркера не находили. react-test-renderer
+// (`UnifiedTravelCard`, `PointListRow`), маркера не находили. test renderer
 // видит проп и проходит, поэтому здесь — настоящий DOM react-native-web.
 //
 // `__tests__/setup.ts` уже закэшировал свой мок `react-native`, поэтому RNW и всё,

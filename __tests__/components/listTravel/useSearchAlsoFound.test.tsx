@@ -81,11 +81,11 @@ function Harness({ query, enabled = true }: HarnessProps) {
   )
 }
 
-function renderHarness(props: HarnessProps) {
+async function renderHarness(props: HarnessProps) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  return render(
+  return await render(
     <QueryClientProvider client={client}>
       <Harness {...props} />
     </QueryClientProvider>,
@@ -108,9 +108,9 @@ describe('useSearchAlsoFound (#2775)', () => {
     mockFetchSiteSearchPlaces.mockResolvedValue({ places: [braslavPlace], total: 12 })
   })
 
-  it('reserves the fixed-height row before the sources answer', () => {
+  it('reserves the fixed-height row before the sources answer', async () => {
     mockFetchSiteSearchPlaces.mockReturnValue(new Promise(() => undefined))
-    renderHarness({ query: 'Браслав' })
+    await renderHarness({ query: 'Браслав' })
 
     expect(screen.getByTestId('search-also-found-loading')).toBeTruthy()
     expect(rowHeight('search-also-found-loading')).toBe(SEARCH_ALSO_FOUND_ROW_HEIGHT)
@@ -118,7 +118,7 @@ describe('useSearchAlsoFound (#2775)', () => {
   })
 
   it('summarizes the city quest and places for «Браслав» in a row of the same height', async () => {
-    renderHarness({ query: 'Браслав' })
+    await renderHarness({ query: 'Браслав' })
 
     expect(await screen.findByText('Ещё по запросу: 1 квест · 12 мест')).toBeTruthy()
     expect(rowHeight('search-also-found-toggle')).toBe(SEARCH_ALSO_FOUND_ROW_HEIGHT)
@@ -128,24 +128,24 @@ describe('useSearchAlsoFound (#2775)', () => {
   })
 
   it('expands the ready list on tap and links to the city quests and places', async () => {
-    renderHarness({ query: 'Браслав' })
+    await renderHarness({ query: 'Браслав' })
 
-    fireEvent.press(await screen.findByTestId('search-also-found-toggle'))
+    await fireEvent.press(await screen.findByTestId('search-also-found-toggle'))
 
     expect(await screen.findByText('Квест по Браславу: город между двух озёр')).toBeTruthy()
     expect(screen.getByText('Гора Маяк')).toBeTruthy()
-    fireEvent.press(screen.getByTestId('search-also-found-quests-all'))
+    await fireEvent.press(screen.getByTestId('search-also-found-quests-all'))
     expect(mockPush).toHaveBeenLastCalledWith('/quests/braslav')
-    fireEvent.press(screen.getByTestId('search-also-found-places-all'))
+    await fireEvent.press(screen.getByTestId('search-also-found-places-all'))
     expect(mockPush).toHaveBeenLastCalledWith({ pathname: '/places', params: { q: 'Браслав' } })
 
-    fireEvent.press(screen.getByTestId('search-also-found-toggle'))
+    await fireEvent.press(screen.getByTestId('search-also-found-toggle'))
     await waitFor(() => expect(screen.queryByTestId('search-also-found-list')).toBeNull())
   })
 
   it('keeps the row with a muted "nothing found" text when no quest city or place matches', async () => {
     mockFetchSiteSearchPlaces.mockResolvedValue({ places: [], total: 0 })
-    renderHarness({ query: 'Зюзюкино' })
+    await renderHarness({ query: 'Зюзюкино' })
 
     expect(await screen.findByTestId('search-also-found-empty')).toBeTruthy()
     expect(screen.getByText('Квестов и мест по запросу не нашлось')).toBeTruthy()
@@ -155,7 +155,7 @@ describe('useSearchAlsoFound (#2775)', () => {
   })
 
   it.each(['', '   ', 'Бр'])('does not request quests or places and shows no row for query %p', async (query) => {
-    renderHarness({ query })
+    await renderHarness({ query })
     await flush()
 
     expect(mockFetchSiteSearchCityQuests).not.toHaveBeenCalled()
@@ -164,12 +164,12 @@ describe('useSearchAlsoFound (#2775)', () => {
   })
 
   it('prefetches the quest city directory on /search before a query is typed', async () => {
-    renderHarness({ query: '' })
+    await renderHarness({ query: '' })
     await waitFor(() => expect(mockFetchQuestCitiesDirectory).toHaveBeenCalledTimes(1))
   })
 
   it('does nothing outside /search', async () => {
-    renderHarness({ query: 'Браслав', enabled: false })
+    await renderHarness({ query: 'Браслав', enabled: false })
     await flush()
 
     expect(mockFetchQuestCitiesDirectory).not.toHaveBeenCalled()

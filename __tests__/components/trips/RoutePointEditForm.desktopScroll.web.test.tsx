@@ -31,8 +31,8 @@ const setPlatformOS = (os: typeof Platform.OS) => {
   Object.defineProperty(Platform, 'OS', { configurable: true, get: () => os })
 }
 
-const renderForm = (isMapFirst: boolean, editingIndex = 0) =>
-  render(
+const renderForm = async (isMapFirst: boolean, editingIndex = 0) =>
+  await render(
     <RoutePointEditForm
       styles={createStyles(colors)}
       colors={colors}
@@ -72,8 +72,8 @@ describe('RoutePointEditForm desktop scroll (#1974)', () => {
   })
   afterAll(() => setPlatformOS(originalOS))
 
-  it('scrolls the top of the form into view on the desktop stack layout', () => {
-    renderForm(false)
+  it('scrolls the top of the form into view on the desktop stack layout', async () => {
+    await renderForm(false)
 
     expect(scrollPlannerNodeIntoView).toHaveBeenCalledWith(
       expect.anything(),
@@ -81,8 +81,8 @@ describe('RoutePointEditForm desktop scroll (#1974)', () => {
     )
   })
 
-  it('does not scroll from the form itself in the compact mapFirst layout', () => {
-    renderForm(true)
+  it('does not scroll from the form itself in the compact mapFirst layout', async () => {
+    await renderForm(true)
 
     expect(scrollPlannerNodeIntoView).not.toHaveBeenCalled()
   })

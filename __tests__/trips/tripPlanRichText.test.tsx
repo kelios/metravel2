@@ -1,6 +1,7 @@
+import { getAllHosts } from '@/__tests__/helpers/hostQueries'
 // #2070: лёгкая разметка текста плана — разбор, экран и печать.
 import React from 'react'
-import { Platform, Text } from 'react-native'
+import { Platform } from 'react-native'
 import { render } from '@testing-library/react-native'
 
 import TripPlanLinkedText, { extractTripPlanLinks } from '@/components/trips/planning/TripPlanLinkedText'
@@ -124,9 +125,9 @@ describe('TripPlanLinkedText с разметкой', () => {
     Platform.OS = originalPlatform
   })
 
-  it('убирает маркеры, выделяет жирный и курсив и оставляет ссылки ссылками', () => {
+  it('убирает маркеры, выделяет жирный и курсив и оставляет ссылки ссылками', async () => {
     Platform.OS = 'web'
-    const { getByTestId, toJSON, UNSAFE_getAllByType, UNSAFE_getAllByProps } = render(
+    const { getByTestId, toJSON, container } = await render(
       <TripPlanLinkedText
         text={'ПО ДНЯМ\n**Бронь:** https://example.com/info\n_курсив_\n- пункт'}
         testID="desc"
@@ -135,10 +136,10 @@ describe('TripPlanLinkedText с разметкой', () => {
     )
     const root = getByTestId('desc')
     expect(root.props.numberOfLines).toBe(2)
-    const texts = UNSAFE_getAllByType(Text)
+    const texts = getAllHosts(container, node => node.type === 'Text')
     expect(texts.some((node) => node.props.style?.fontStyle === 'italic')).toBe(true)
     expect(texts.some((node) => node.props.style?.fontWeight === '700')).toBe(true)
-    expect(UNSAFE_getAllByProps({ href: 'https://example.com/info' }).length).toBeGreaterThan(0)
+    expect(getAllHosts(container, node => node.props.href === 'https://example.com/info').length).toBeGreaterThan(0)
     const plain = JSON.stringify(toJSON())
     expect(plain).not.toContain('**')
     expect(plain).not.toContain('_курсив_')

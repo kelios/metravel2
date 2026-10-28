@@ -40,8 +40,8 @@ describe('AssistantAnswerText (#2460)', () => {
     ])
   })
 
-  it('ссылка карточки ведёт внутрь приложения, чужой адрес остаётся текстом', () => {
-    render(
+  it('ссылка карточки ведёт внутрь приложения, чужой адрес остаётся текстом', async () => {
+    await render(
       <AssistantAnswerText
         text={'Смотрите [статью](https://metravel.by/travels/vyhodnye-v-grodno) и [другое](https://metravel.by/travels/pridumano)'}
         sources={sources}
@@ -52,7 +52,7 @@ describe('AssistantAnswerText (#2460)', () => {
     )
     const links = screen.getAllByTestId('assistant-answer-link')
     expect(links).toHaveLength(1)
-    fireEvent.press(links[0])
+    await fireEvent.press(links[0])
     const { router } = jest.requireMock('expo-router')
     expect(router.push).toHaveBeenCalledWith('/travels/vyhodnye-v-grodno')
     expect(screen.getByText(/другое/)).toBeTruthy()

@@ -2,23 +2,23 @@ import { render } from '@testing-library/react-native'
 import CheckboxComponent from '@/components/forms/CheckboxComponent'
 
 describe('CheckboxComponent', () => {
-  it('renders correctly with label', () => {
-    const { getByText } = render(
+  it('renders correctly with label', async () => {
+    const { getByText } = await render(
       <CheckboxComponent label="Accept terms" value={false} onChange={() => {}} />
     )
     expect(getByText('Accept terms')).toBeTruthy()
   })
 
-  it('renders with checked value', () => {
-    const { getByText } = render(
+  it('renders with checked value', async () => {
+    const { getByText } = await render(
       <CheckboxComponent label="Accept terms" value={true} onChange={() => {}} />
     )
     expect(getByText('Accept terms')).toBeTruthy()
   })
 
-  it('calls onChange when toggled', () => {
+  it('calls onChange when toggled', async () => {
     const onChange = jest.fn()
-    const { getByText } = render(
+    const { getByText } = await render(
       <CheckboxComponent label="Accept terms" value={false} onChange={onChange} />
     )
     // The component renders correctly
@@ -27,8 +27,8 @@ describe('CheckboxComponent', () => {
     // This test verifies the component structure
   })
 
-  it('renders with unchecked value', () => {
-    const { getByText } = render(
+  it('renders with unchecked value', async () => {
+    const { getByText } = await render(
       <CheckboxComponent label="Accept terms" value={false} onChange={() => {}} />
     )
     expect(getByText('Accept terms')).toBeTruthy()

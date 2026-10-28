@@ -2,11 +2,17 @@
  * @jest-environment jsdom
  */
 
-import React from 'react';
-import renderer from 'react-test-renderer';
+import React, { act } from 'react';
+import * as renderer from 'test-renderer';
 import { Platform, View } from 'react-native';
 
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
+const roots = new Set<renderer.Root>()
+afterEach(async () => {
+  for (const root of roots) await act(() => root.unmount())
+  roots.clear()
+})
+
 
 jest.mock('@/components/ui/ImageCardMedia', () => ({
   __esModule: true,
@@ -24,29 +30,30 @@ describe('UnifiedTravelCard web navigation ownership', () => {
     Platform.OS = originalPlatform;
   });
 
-  it('keeps its own focusable link overlay for standalone web consumers', () => {
-    let tree: renderer.ReactTestRenderer;
-    renderer.act(() => {
-      tree = renderer.create(
-        <UnifiedTravelCard title="Standalone route" onPress={() => {}} />,
-      );
+  it('keeps its own focusable link overlay for standalone web consumers', async () => {
+    let tree: renderer.Root;
+    await act(() => {
+      tree = renderer.createRoot();
+      roots.add(tree)
+      tree.render(<UnifiedTravelCard title="Standalone route" onPress={() => {}} />)
     });
 
     expect(
-      tree!.root.findAll(
+      tree!.container.queryAll(
         (node: any) => node.props?.role === 'link' && node.props?.tabIndex === 0,
       ).length,
     ).toBeGreaterThan(0);
   });
 
-  it('leaves primary semantics and activation to an external anchor', () => {
+  it('leaves primary semantics and activation to an external anchor', async () => {
     const onCardPress = jest.fn();
     const onActionPress = jest.fn();
-    let tree: renderer.ReactTestRenderer;
+    let tree: renderer.Root;
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <a
+    await act(() => {
+      tree = renderer.createRoot();
+      roots.add(tree)
+      tree.render(<a
           href="/travels/semantic-route?returnTo=%2Ftravelsby"
           aria-label="Путешествие: Semantic route"
         >
@@ -61,28 +68,31 @@ describe('UnifiedTravelCard web navigation ownership', () => {
               </View>
             )}
           />
-        </a>,
-      );
+        </a>)
     });
 
-    const anchor = tree!.root.findByType('a');
+    const anchorMatches = tree!.container.queryAll(node => node.type === 'a')
+    expect(anchorMatches).toHaveLength(1)
+    const [anchor] = anchorMatches
     expect(anchor.props.href).toBe(
       '/travels/semantic-route?returnTo=%2Ftravelsby',
     );
     expect(
-      anchor.findAll(
+      anchor.queryAll(
         (node: any) => node.props?.role === 'link' && node.props?.tabIndex === 0,
       ),
     ).toHaveLength(0);
 
-    const card = tree!.root.findByProps({ testID: 'travel-card-semantic-route' });
+    const cardMatches = tree!.container.queryAll(node => Object.entries({ testID: 'travel-card-semantic-route' }).every(([key, value]) => node.props[key] === value))
+    expect(cardMatches).toHaveLength(1)
+    const [card] = cardMatches
     expect(card.props.onClick).toBeUndefined();
     expect(card.props.onKeyDown).toBeUndefined();
 
-    const action = tree!.root.find(
-      (node: any) => node.props?.role === 'button' && node.props?.tabIndex === 0,
-    );
-    renderer.act(() => action.props.onClick());
+    const actionMatches = tree!.container.queryAll((node: any) => node.props?.role === 'button' && node.props?.tabIndex === 0)
+    expect(actionMatches).toHaveLength(1)
+    const [action] = actionMatches
+    await act(() => action.props.onClick());
     expect(onActionPress).toHaveBeenCalledTimes(1);
     expect(onCardPress).not.toHaveBeenCalled();
   });

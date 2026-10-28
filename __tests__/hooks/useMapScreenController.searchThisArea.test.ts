@@ -187,38 +187,38 @@ const FIT_SETTLE = { latitude: 53.666, longitude: 27.5667 }
 const USER_PANNED = { latitude: 53.4, longitude: 27.5667 }
 
 describe('useMapScreenController — «Искать в этой области»', () => {
-  it('молчит, когда карту сдвинула наша же подгонка вида, а не пользователь', () => {
-    const { result } = renderHook(() => useMapScreenController())
+  it('молчит, когда карту сдвинула наша же подгонка вида, а не пользователь', async () => {
+    const { result } = await renderHook(() => useMapScreenController())
 
     // Программный settle после fitBounds: центр НЕ совпадает с якорем.
-    act(() => {
+    await act(() => {
       result.current.mapPanelProps.onMapMove({ ...FIT_SETTLE })
     })
 
     expect(result.current.canSearchThisArea).toBe(false)
   })
 
-  it('предлагает поиск только после жеста пользователя за порог', () => {
-    const { result } = renderHook(() => useMapScreenController())
+  it('предлагает поиск только после жеста пользователя за порог', async () => {
+    const { result } = await renderHook(() => useMapScreenController())
 
-    act(() => {
+    await act(() => {
       result.current.mapPanelProps.onMapMove({ ...FIT_SETTLE })
     })
     expect(result.current.canSearchThisArea).toBe(false)
 
-    act(() => {
+    await act(() => {
       result.current.mapPanelProps.onMapMove({ ...USER_PANNED, userInitiated: true })
     })
     expect(result.current.canSearchThisArea).toBe(true)
   })
 
-  it('не реагирует на жест в пределах порога', () => {
-    const { result } = renderHook(() => useMapScreenController())
+  it('не реагирует на жест в пределах порога', async () => {
+    const { result } = await renderHook(() => useMapScreenController())
 
-    act(() => {
+    await act(() => {
       result.current.mapPanelProps.onMapMove({ ...ANCHOR })
     })
-    act(() => {
+    await act(() => {
       // ~5км — сильно меньше 18км порога.
       result.current.mapPanelProps.onMapMove({
         latitude: ANCHOR.latitude - 0.045,
@@ -230,25 +230,25 @@ describe('useMapScreenController — «Искать в этой области»
     expect(result.current.canSearchThisArea).toBe(false)
   })
 
-  it('прячет кнопку после нажатия и снова показывает после нового жеста', () => {
-    const { result } = renderHook(() => useMapScreenController())
+  it('прячет кнопку после нажатия и снова показывает после нового жеста', async () => {
+    const { result } = await renderHook(() => useMapScreenController())
 
-    act(() => {
+    await act(() => {
       result.current.mapPanelProps.onMapMove({ ...FIT_SETTLE })
     })
-    act(() => {
+    await act(() => {
       result.current.mapPanelProps.onMapMove({ ...USER_PANNED, userInitiated: true })
     })
     expect(result.current.canSearchThisArea).toBe(true)
 
     // Нажатие переносит якорь поиска в текущий вид и делает его новой точкой
     // отсчёта — иначе кнопка осталась бы висеть поверх уже найденной области.
-    act(() => {
+    await act(() => {
       result.current.handleSearchThisArea()
     })
     expect(result.current.canSearchThisArea).toBe(false)
 
-    act(() => {
+    await act(() => {
       result.current.mapPanelProps.onMapMove({
         latitude: USER_PANNED.latitude - 0.6,
         longitude: USER_PANNED.longitude,
@@ -261,15 +261,15 @@ describe('useMapScreenController — «Искать в этой области»
   // Регрессия: программного settle может не быть вообще (геолокация запрещена,
   // авто-fit не отработал) — тогда первым событием приходит жест пользователя.
   // Без базовой точки дрейф не с чем сравнивать, и кнопка не появлялась НИКОГДА.
-  it('заводит точку отсчёта, даже если первым пришёл жест пользователя', () => {
-    const { result } = renderHook(() => useMapScreenController())
+  it('заводит точку отсчёта, даже если первым пришёл жест пользователя', async () => {
+    const { result } = await renderHook(() => useMapScreenController())
 
-    act(() => {
+    await act(() => {
       result.current.mapPanelProps.onMapMove({ ...ANCHOR, userInitiated: true })
     })
     expect(result.current.canSearchThisArea).toBe(false)
 
-    act(() => {
+    await act(() => {
       result.current.mapPanelProps.onMapMove({ ...USER_PANNED, userInitiated: true })
     })
     expect(result.current.canSearchThisArea).toBe(true)
@@ -278,8 +278,8 @@ describe('useMapScreenController — «Искать в этой области»
   // Регрессия: порог, посчитанный только от радиуса (60км → 18км), больше всего
   // видимого экрана на городском зуме — карту можно увести на целый вид, а
   // предложения «Искать в этой области» так и не будет.
-  it('учитывает размер видимой области, а не только радиус', () => {
-    const { result } = renderHook(() => useMapScreenController())
+  it('учитывает размер видимой области, а не только радиус', async () => {
+    const { result } = await renderHook(() => useMapScreenController())
 
     // Вьюпорт городского зума: ~14×8 км вокруг якоря.
     const cityBbox = {
@@ -289,10 +289,10 @@ describe('useMapScreenController — «Искать в этой области»
       east: ANCHOR.longitude + 0.108,
     }
 
-    act(() => {
+    await act(() => {
       result.current.mapPanelProps.onMapMove({ ...ANCHOR, bbox: cityBbox })
     })
-    act(() => {
+    await act(() => {
       // ~5.6км — меньше радиусного порога 18км, но больше четверти диагонали
       // экрана (~16.5км → 4.1км): вид уже не тот, что искали.
       result.current.mapPanelProps.onMapMove({
@@ -306,8 +306,8 @@ describe('useMapScreenController — «Искать в этой области»
     expect(result.current.canSearchThisArea).toBe(true)
   })
 
-  it('не срабатывает на микро-пан внутри экрана', () => {
-    const { result } = renderHook(() => useMapScreenController())
+  it('не срабатывает на микро-пан внутри экрана', async () => {
+    const { result } = await renderHook(() => useMapScreenController())
 
     const cityBbox = {
       south: ANCHOR.latitude - 0.038,
@@ -316,10 +316,10 @@ describe('useMapScreenController — «Искать в этой области»
       east: ANCHOR.longitude + 0.108,
     }
 
-    act(() => {
+    await act(() => {
       result.current.mapPanelProps.onMapMove({ ...ANCHOR, bbox: cityBbox })
     })
-    act(() => {
+    await act(() => {
       // ~1.1км — нижний порог 1.5км держит кнопку скрытой.
       result.current.mapPanelProps.onMapMove({
         latitude: ANCHOR.latitude - 0.01,

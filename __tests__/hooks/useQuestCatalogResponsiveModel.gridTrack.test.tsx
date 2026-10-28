@@ -63,9 +63,9 @@ describe('ширина карточки по измеренной web-сетке
     jest.restoreAllMocks()
   })
 
-  const renderGridHook = (enabled = true) => {
+  const renderGridHook = async (enabled = true) => {
     let renders = 0
-    const hook = renderHook(
+    const hook = await renderHook(
       ({ on }: { on: boolean }) => {
         renders += 1
         return useQuestGridCardWidth(318, on)
@@ -75,42 +75,42 @@ describe('ширина карточки по измеренной web-сетке
     return { ...hook, renders: () => renders }
   }
 
-  it.each([[606, 606], [862, 415], [1022, 495]])('сетка %i px даёт карточку %i px', (gridWidth, cardWidth) => {
-    const { result } = renderGridHook()
+  it.each([[606, 606], [862, 415], [1022, 495]])('сетка %i px даёт карточку %i px', async (gridWidth, cardWidth) => {
+    const { result } = await renderGridHook()
     expect(result.current.cardWidth).toBe(318)
 
-    act(() => result.current.onGridLayout(layoutEvent(gridWidth)))
+    await act(() => result.current.onGridLayout(layoutEvent(gridWidth)))
     expect(result.current.cardWidth).toBe(cardWidth)
   })
 
-  it('layout той же ширины не перерисовывает каталог', () => {
-    const { result, renders } = renderGridHook()
-    act(() => result.current.onGridLayout(layoutEvent(862)))
+  it('layout той же ширины не перерисовывает каталог', async () => {
+    const { result, renders } = await renderGridHook()
+    await act(() => result.current.onGridLayout(layoutEvent(862)))
     const settled = renders()
 
     // onLayout сетки приходит на каждое раскрытие окна по высоте при той же ширине.
-    act(() => result.current.onGridLayout(layoutEvent(862)))
-    act(() => result.current.onGridLayout(layoutEvent(862.4)))
+    await act(() => result.current.onGridLayout(layoutEvent(862)))
+    await act(() => result.current.onGridLayout(layoutEvent(862.4)))
     expect({ renders: renders() - settled, cardWidth: result.current.cardWidth }).toEqual({
       renders: 0,
       cardWidth: 415,
     })
   })
 
-  it('скрытая сетка (ширина 0) не сбрасывает замер к ширине модели', () => {
-    const { result } = renderGridHook()
-    act(() => result.current.onGridLayout(layoutEvent(606)))
-    act(() => result.current.onGridLayout(layoutEvent(0)))
+  it('скрытая сетка (ширина 0) не сбрасывает замер к ширине модели', async () => {
+    const { result } = await renderGridHook()
+    await act(() => result.current.onGridLayout(layoutEvent(606)))
+    await act(() => result.current.onGridLayout(layoutEvent(0)))
     expect(result.current.cardWidth).toBe(606)
   })
 
-  it('меряет сетку при монтировании, не дожидаясь onLayout', () => {
+  it('меряет сетку при монтировании, не дожидаясь onLayout', async () => {
     const node = document.createElement('div')
     node.getBoundingClientRect = () => ({ width: 606.4 }) as DOMRect
-    const { result, rerender } = renderGridHook(false)
+    const { result, rerender } = await renderGridHook(false)
     result.current.gridRef.current = node as unknown as View
 
-    rerender({ on: true })
+    await rerender({ on: true })
     expect(result.current.cardWidth).toBe(606)
   })
 
@@ -120,40 +120,40 @@ describe('ширина карточки по измеренной web-сетке
   it.each([
     [791.6, 792, 791],
     [1203.5, 1204, 585.5],
-  ])('дробный контейнер %f px (offsetWidth %i) не получает лишнюю колонку', (rectWidth, offsetWidth, cardWidth) => {
+  ])('дробный контейнер %f px (offsetWidth %i) не получает лишнюю колонку', async (rectWidth, offsetWidth, cardWidth) => {
     const node = document.createElement('div')
     node.getBoundingClientRect = () => ({ width: rectWidth }) as DOMRect
-    const { result, rerender } = renderGridHook(false)
+    const { result, rerender } = await renderGridHook(false)
     result.current.gridRef.current = node as unknown as View
 
-    rerender({ on: true })
-    act(() => result.current.onGridLayout(layoutEvent(offsetWidth)))
+    await rerender({ on: true })
+    await act(() => result.current.onGridLayout(layoutEvent(offsetWidth)))
     const css = cssAutoFillTrack(rectWidth)
     expect(result.current.cardWidth).toBe(cardWidth)
     expect(css.cardWidth - result.current.cardWidth).toBeGreaterThanOrEqual(0)
     expect(css.cardWidth - result.current.cardWidth).toBeLessThan(1)
   })
 
-  it('без смонтированной сетки отдаёт ширину модели', () => {
-    const { result, rerender } = renderGridHook()
-    act(() => result.current.onGridLayout(layoutEvent(606)))
+  it('без смонтированной сетки отдаёт ширину модели', async () => {
+    const { result, rerender } = await renderGridHook()
+    await act(() => result.current.onGridLayout(layoutEvent(606)))
 
-    rerender({ on: false })
+    await rerender({ on: false })
     expect(result.current.cardWidth).toBe(318)
   })
 })
 
 describe('native сетку не меряет', () => {
-  it('отдаёт ширину модели и не перерисовывается на layout', () => {
+  it('отдаёт ширину модели и не перерисовывается на layout', async () => {
     expect(Platform.OS).not.toBe('web')
     let renders = 0
-    const { result } = renderHook(() => {
+    const { result } = await renderHook(() => {
       renders += 1
       return useQuestGridCardWidth(318, true)
     })
     const initial = renders
 
-    act(() => result.current.onGridLayout(layoutEvent(606)))
+    await act(() => result.current.onGridLayout(layoutEvent(606)))
     expect({ renders: renders - initial, cardWidth: result.current.cardWidth }).toEqual({
       renders: 0,
       cardWidth: 318,

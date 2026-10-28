@@ -54,8 +54,8 @@ describe('HomePageSkeleton — реальные подписи первого э
     ],
   }
 
-  it('рисует заголовок, подзаголовок, поиск, CTA и mood-чипы текстом', () => {
-    const { getByText, queryByText } = render(<HomePageSkeleton />)
+  it('рисует заголовок, подзаголовок, поиск, CTA и mood-чипы текстом', async () => {
+    const { getByText, queryByText } = await render(<HomePageSkeleton />)
 
     expect(getByText(copy.title, { exact: false })).toBeTruthy()
     expect(getByText(copy.titleAccent)).toBeTruthy()

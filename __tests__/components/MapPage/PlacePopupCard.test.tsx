@@ -1,7 +1,9 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 import React from 'react';
 import { Platform, StyleSheet } from 'react-native';
+import { createRootRegistry } from '@/__tests__/helpers/rawRootLifecycle';
 
-const renderer = require('react-test-renderer');
+const renderer = createRootRegistry();
 
 const mockImageCardMedia = jest.fn((props: any) => React.createElement('mock-image-card-media', props));
 const mockRelatedTravelActionStack = jest.fn((props: any) =>
@@ -54,12 +56,12 @@ const mockColors = {
   borderLight: '#ddd',
 };
 
-const findHeroPressable = (tree: any) => tree.root.findAll((node: any) => (
+const findHeroPressable = (tree: any) => tree.container.queryAll((node: any) => (
   node.props?.accessibilityLabel === 'Открыть фото на весь экран' &&
   typeof node.props?.onPress === 'function'
 ))[0];
 
-const findHeroExpandButton = (tree: any) => tree.root.findAll((node: any) => (
+const findHeroExpandButton = (tree: any) => tree.container.queryAll((node: any) => (
   node.type === 'span' &&
   node.props?.['data-card-action'] === 'true' &&
   node.props?.['aria-hidden'] === 'true'
@@ -81,10 +83,10 @@ const nearestSharedAncestor = (a: any, b: any) => {
 };
 
 const findRelatedTravelStack = (tree: any) =>
-  tree.root.findAll((node: any) => node.type === 'related-travel-action-stack')[0];
+  tree.container.queryAll((node: any) => node.type === 'related-travel-action-stack')[0];
 
 const findTextNode = (tree: any, text: string) =>
-  tree.root.findAll((node: any) => node.props?.children === text)[0];
+  tree.container.queryAll((node: any) => node.props?.children === text)[0];
 
 describe('PlacePopupCard', () => {
   const originalPlatform = Platform.OS;
@@ -99,7 +101,8 @@ describe('PlacePopupCard', () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 1024, height: 768, scale: 1, fontScale: 1 }));
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await renderer.cleanup();
     (Platform as any).OS = originalPlatform;
     require('react-native').useWindowDimensions = originalWindowDimensions;
     Object.defineProperty(window.navigator, 'userAgent', {
@@ -112,9 +115,9 @@ describe('PlacePopupCard', () => {
     });
   });
 
-  it('passes actual popup hero dimensions to ImageCardMedia on web with contain fit and blur backdrop', () => {
-    renderer.act(() => {
-      renderer.create(
+  it('passes actual popup hero dimensions to ImageCardMedia on web with contain fit and blur backdrop', async () => {
+    await React.act(() => {
+      renderer.createRoot().render(
         <PlacePopupCard
           colors={mockColors as any}
           title="Test point"
@@ -142,9 +145,9 @@ describe('PlacePopupCard', () => {
    * URL строится настоящим `optimizeImageUrl` (не моком): дефект был именно в том,
    * КАК собирается адрес, поэтому проверять это на подменённом билдере бессмысленно.
    */
-  it('requests a stored derivative width for the popup hero instead of the bare conversion URL', () => {
-    renderer.act(() => {
-      renderer.create(
+  it('requests a stored derivative width for the popup hero instead of the bare conversion URL', async () => {
+    await React.act(() => {
+      renderer.createRoot().render(
         <PlacePopupCard
           colors={mockColors as any}
           title="Test point"
@@ -162,11 +165,11 @@ describe('PlacePopupCard', () => {
     expect({ width, withinFamilyCeiling: width <= 960 }).toEqual({ width, withinFamilyCeiling: true });
   });
 
-  it('switches popup hero to compact layout on narrow viewport to keep it inside the screen', () => {
+  it('switches popup hero to compact layout on narrow viewport to keep it inside the screen', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 360, height: 740, scale: 1, fontScale: 1 }));
 
-    renderer.act(() => {
-      renderer.create(
+    await React.act(() => {
+      renderer.createRoot().render(
         <PlacePopupCard
           colors={mockColors as any}
           title="Test point"
@@ -182,9 +185,9 @@ describe('PlacePopupCard', () => {
     expect(props.style).toEqual(StyleSheet.absoluteFill);
   });
 
-  it('uses a compact hero on travel details popup layout', () => {
-    renderer.act(() => {
-      renderer.create(
+  it('uses a compact hero on travel details popup layout', async () => {
+    await React.act(() => {
+      renderer.createRoot().render(
         <PlacePopupCard
           colors={mockColors as any}
           title="Test point"
@@ -201,7 +204,7 @@ describe('PlacePopupCard', () => {
     expect(props.style).toEqual(StyleSheet.absoluteFill);
   });
 
-  it('reveals the bottom-card hero after load without a composited blur on iPhone Safari', () => {
+  it('reveals the bottom-card hero after load without a composited blur on iPhone Safari', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
     Object.defineProperty(window.navigator, 'userAgent', {
       value:
@@ -213,8 +216,8 @@ describe('PlacePopupCard', () => {
       configurable: true,
     });
 
-    renderer.act(() => {
-      renderer.create(
+    await React.act(() => {
+      renderer.createRoot().render(
         <PlacePopupCard
           colors={mockColors as any}
           title="Test point"
@@ -232,9 +235,9 @@ describe('PlacePopupCard', () => {
     expect(props.allowCriticalWebBlur).toBe(false);
   });
 
-  it('keeps popup hero on the existing immediate path outside iPhone Safari', () => {
-    renderer.act(() => {
-      renderer.create(
+  it('keeps popup hero on the existing immediate path outside iPhone Safari', async () => {
+    await React.act(() => {
+      renderer.createRoot().render(
         <PlacePopupCard
           colors={mockColors as any}
           title="Test point"
@@ -249,20 +252,19 @@ describe('PlacePopupCard', () => {
     expect(props.revealOnLoadOnly).toBe(false);
   });
 
-  it('opens FullscreenImageViewer when hero image is pressed', () => {
+  it('opens FullscreenImageViewer when hero image is pressed', async () => {
     const FullscreenImageViewerModule = require('@/components/MapPage/Map/PlacePopupCard/FullscreenImageViewer');
     const fullscreenSpy = jest.spyOn(FullscreenImageViewerModule, 'default');
 
     let tree: any;
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           imageUrl="https://example.com/photo.jpg"
           width={560}
-        />
-      );
+        />);
     });
 
     // Initially fullscreen viewer is rendered with visible=false
@@ -272,7 +274,7 @@ describe('PlacePopupCard', () => {
     // Find the hero Pressable by accessibilityLabel and fire onPress
     const heroPressable = findHeroPressable(tree);
     expect(heroPressable).toBeTruthy();
-    renderer.act(() => {
+    await React.act(() => {
       heroPressable.props.onPress();
     });
 
@@ -282,17 +284,16 @@ describe('PlacePopupCard', () => {
     fullscreenSpy.mockRestore();
   });
 
-  it('stops web map events when opening the fullscreen image viewer', () => {
+  it('stops web map events when opening the fullscreen image viewer', async () => {
     let tree: any;
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           imageUrl="https://example.com/photo.jpg"
           width={560}
-        />
-      );
+        />);
     });
 
     const heroPressable = findHeroPressable(tree);
@@ -300,7 +301,7 @@ describe('PlacePopupCard', () => {
     expect(heroPressable.props.dataSet).toEqual({ cardAction: 'true' });
 
     const stopPropagation = jest.fn();
-    renderer.act(() => {
+    await React.act(() => {
       heroPressable.props.onMouseDown({ stopPropagation });
       heroPressable.props.onPress({ stopPropagation });
     });
@@ -308,20 +309,19 @@ describe('PlacePopupCard', () => {
     expect(stopPropagation).toHaveBeenCalledTimes(2);
   });
 
-  it('opens the fullscreen image viewer from the visible expand button capture handler', () => {
+  it('opens the fullscreen image viewer from the visible expand button capture handler', async () => {
     const FullscreenImageViewerModule = require('@/components/MapPage/Map/PlacePopupCard/FullscreenImageViewer');
     const fullscreenSpy = jest.spyOn(FullscreenImageViewerModule, 'default');
 
     let tree: any;
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           imageUrl="https://example.com/photo.jpg"
           width={560}
-        />
-      );
+        />);
     });
 
     const expandButton = findHeroExpandButton(tree);
@@ -329,7 +329,7 @@ describe('PlacePopupCard', () => {
 
     const stopPropagation = jest.fn();
     const preventDefault = jest.fn();
-    renderer.act(() => {
+    await React.act(() => {
       expandButton.props.onPointerDownCapture({ stopPropagation, preventDefault });
     });
 
@@ -340,21 +340,20 @@ describe('PlacePopupCard', () => {
     fullscreenSpy.mockRestore();
   });
 
-  it('renders related travel status inline with visible text in bottom-card layout', () => {
+  it('renders related travel status inline with visible text in bottom-card layout', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
 
     let tree: any;
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           imageUrl="https://example.com/photo.jpg"
           relatedTravelUrl="/travel/42"
           width={390}
           compactLayout
-        />
-      );
+        />);
     });
 
     expect(mockRelatedTravelActionStack).toHaveBeenCalledTimes(1);
@@ -363,10 +362,10 @@ describe('PlacePopupCard', () => {
         variant: 'inline',
       }),
     );
-    expect(JSON.stringify(tree.toJSON())).toContain('Был / Хочу / Планирую');
+    expect(JSON.stringify(tree.container.toJSON())).toContain('Был / Хочу / Планирую');
   });
 
-  it('threads the explicit related travel id into the ♥/status stack and re-renders it on change (#1960)', () => {
+  it('threads the explicit related travel id into the ♥/status stack and re-renders it on change (#1960)', async () => {
     const renderCard = (relatedTravelId: number | null) => (
       <PlacePopupCard
         colors={mockColors as any}
@@ -378,8 +377,9 @@ describe('PlacePopupCard', () => {
     );
 
     let tree: any;
-    renderer.act(() => {
-      tree = renderer.create(renderCard(389));
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(renderCard(389));
     });
 
     expect(mockRelatedTravelActionStack.mock.calls.at(-1)?.[0]).toEqual(
@@ -392,8 +392,8 @@ describe('PlacePopupCard', () => {
 
     // Id входит в deps мемоизированного стека: смена точки с тем же url не должна
     // оставить на ♥/статусе id предыдущей статьи.
-    renderer.act(() => {
-      tree.update(renderCard(646));
+    await React.act(() => {
+      tree.render(renderCard(646));
     });
 
     expect(mockRelatedTravelActionStack.mock.calls.at(-1)?.[0]).toEqual(
@@ -434,23 +434,22 @@ describe('PlacePopupCard', () => {
     }
   });
 
-  it('opens the fullscreen image viewer from capture handlers before Leaflet popup event guards', () => {
+  it('opens the fullscreen image viewer from capture handlers before Leaflet popup event guards', async () => {
     const FullscreenImageViewerModule = require('@/components/MapPage/Map/PlacePopupCard/FullscreenImageViewer');
     const fullscreenSpy = jest.spyOn(FullscreenImageViewerModule, 'default');
 
     let tree: any;
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           imageUrl="https://example.com/photo.jpg"
           width={560}
-        />
-      );
+        />);
     });
 
-    const heroPressable = tree.root.findAll((node: any) => (
+    const heroPressable = tree.container.queryAll((node: any) => (
       node.props?.dataSet?.cardAction === 'true' &&
       typeof node.props?.onClickCapture === 'function' &&
       typeof node.props?.onTouchEndCapture === 'function'
@@ -460,7 +459,7 @@ describe('PlacePopupCard', () => {
     expect(typeof heroPressable.props.onTouchEndCapture).toBe('function');
 
     const stopPropagation = jest.fn();
-    renderer.act(() => {
+    await React.act(() => {
       heroPressable.props.onClickCapture({ stopPropagation });
     });
 
@@ -470,15 +469,15 @@ describe('PlacePopupCard', () => {
     fullscreenSpy.mockRestore();
   });
 
-  it('renders the fallback Google action and opens navigation options in the picker sheet', () => {
+  it('renders the fallback Google action and opens navigation options in the picker sheet', async () => {
     // The «Навигация» toggle now opens the ActionListSheet picker (a selectable list)
     // on every surface — including the desktop popup — instead of expanding an inline
     // grid that pushed the height-capped card into an awkward internal scroll.
     let tree: any;
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           coord="53.9, 27.56"
@@ -490,21 +489,20 @@ describe('PlacePopupCard', () => {
           onOpenYandexNavi={jest.fn()}
           onOpenOpenStreetMap={jest.fn()}
           onAddPoint={jest.fn()}
-        />
-      );
+        />);
     });
 
     const findLabel = (label: string) =>
-      tree.root.findAll((node: any) => node.props?.children === label);
+      tree.container.queryAll((node: any) => node.props?.children === label);
 
     expect(findLabel('Google Maps').length).toBeGreaterThan(0);
 
-    const googleAction = tree.root.findByProps({ accessibilityLabel: 'Открыть точку в Google Maps' });
+    const googleAction = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть точку в Google Maps');
     expect(googleAction).toBeTruthy();
 
     // Toggle carries the sheet-open affordance (not the old inline show/hide label).
-    const moreAction = tree.root.findByProps({ accessibilityLabel: 'Открыть способы навигации' });
-    renderer.act(() => {
+    const moreAction = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть способы навигации');
+    await React.act(() => {
       moreAction.props.onPress();
     });
 
@@ -517,106 +515,102 @@ describe('PlacePopupCard', () => {
     expect(findLabel('OSM').length).toBeGreaterThan(0);
   });
 
-  it('runs the Google navigation handler when the popup action is pressed', () => {
+  it('runs the Google navigation handler when the popup action is pressed', async () => {
     const onOpenGoogleMaps = jest.fn();
     let tree: any;
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           coord="53.9, 27.56"
           onOpenGoogleMaps={onOpenGoogleMaps}
-        />
-      );
+        />);
     });
 
-    const googleAction = tree.root.findByProps({ accessibilityLabel: 'Открыть точку в Google Maps' });
+    const googleAction = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть точку в Google Maps');
 
-    renderer.act(() => {
+    await React.act(() => {
       googleAction.props.onPress();
     });
 
     expect(onOpenGoogleMaps).toHaveBeenCalledTimes(1);
   });
 
-  it('runs the add-point handler when the save action is pressed', () => {
+  it('runs the add-point handler when the save action is pressed', async () => {
     const onAddPoint = jest.fn();
     let tree: any;
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           coord="53.9, 27.56"
           onAddPoint={onAddPoint}
-        />
-      );
+        />);
     });
 
-    const saveAction = tree.root.findByProps({ accessibilityLabel: 'Мои точки' });
+    const saveAction = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Мои точки');
 
-    renderer.act(() => {
+    await React.act(() => {
       saveAction.props.onPress();
     });
 
     expect(onAddPoint).toHaveBeenCalledTimes(1);
   });
 
-  it('renders an explicit popup close button when an onClose handler is provided', () => {
+  it('renders an explicit popup close button when an onClose handler is provided', async () => {
     const onClose = jest.fn();
     let tree: any;
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           imageUrl="https://example.com/photo.jpg"
           onClose={onClose}
-        />
-      );
+        />);
     });
 
-    const closeButton = tree.root.findByProps({ accessibilityLabel: 'Закрыть попап' });
+    const closeButton = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Закрыть попап');
 
     expect(closeButton).toBeTruthy();
-    renderer.act(() => {
+    await React.act(() => {
       closeButton.props.onPress();
     });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('disables the save action when addDisabled is true', () => {
+  it('disables the save action when addDisabled is true', async () => {
     const onAddPoint = jest.fn();
     let tree: any;
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           coord="53.9, 27.56"
           onAddPoint={onAddPoint}
           addDisabled
-        />
-      );
+        />);
     });
 
-    const saveAction = tree.root.findByProps({ accessibilityLabel: 'Мои точки' });
+    const saveAction = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Мои точки');
 
     expect(saveAction.props.disabled).toBe(true);
   });
 
-  it('shows the checked «Сохранено» state on the bottom card when the point is saved', () => {
+  it('shows the checked «Сохранено» state on the bottom card when the point is saved', async () => {
     const onAddPoint = jest.fn();
     let tree: any;
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           coord="53.9, 27.56"
@@ -624,30 +618,29 @@ describe('PlacePopupCard', () => {
           isSaved
           addLabel="В точках"
           compactLayout
-        />
-      );
+        />);
     });
 
     // Bottom-card save chip flips to the verb «Сохранено» and reports checked=true.
-    const saveAction = tree.root.findByProps({ accessibilityRole: 'checkbox' });
+    const saveAction = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityRole"] === 'checkbox');
     expect(saveAction.props.accessibilityState.checked).toBe(true);
     expect(saveAction.props.accessibilityState.disabled).toBe(false);
     expect(
-      tree.root.findAll((node: any) => node.props?.children === 'Сохранено').length,
+      tree.container.queryAll((node: any) => node.props?.children === 'Сохранено').length,
     ).toBeGreaterThan(0);
 
-    renderer.act(() => {
+    await React.act(() => {
       saveAction.props.onPress();
     });
     expect(onAddPoint).toHaveBeenCalledTimes(1);
   });
 
-  it('marks the bottom-card save action as busy/disabled while a save is in flight', () => {
+  it('marks the bottom-card save action as busy/disabled while a save is in flight', async () => {
     let tree: any;
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           coord="53.9, 27.56"
@@ -655,75 +648,71 @@ describe('PlacePopupCard', () => {
           isAdding
           addDisabled
           compactLayout
-        />
-      );
+        />);
     });
 
-    const saveAction = tree.root.findByProps({ accessibilityRole: 'checkbox' });
+    const saveAction = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityRole"] === 'checkbox');
     expect(saveAction.props.disabled).toBe(true);
     expect(saveAction.props.accessibilityState.disabled).toBe(true);
     // A spinner replaces the icon so the press does not look like a silent no-op.
-    const { ActivityIndicator } = require('react-native');
-    expect(tree.root.findAllByType(ActivityIndicator).length).toBeGreaterThan(0);
+    expect(tree.container.queryAll((node: any) => node.type === 'ActivityIndicator', { includeSelf: true }).length).toBeGreaterThan(0);
   });
 
-  it('opens the page through the popup handler when the page action is pressed', () => {
+  it('opens the page through the popup handler when the page action is pressed', async () => {
     const onOpenArticle = jest.fn();
     let tree: any;
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           articleHref="/travels/test-route"
           coord="53.9, 27.56"
           onBuildRoute={jest.fn()}
           onOpenArticle={onOpenArticle}
-        />
-      );
+        />);
     });
 
-    const linkAction = tree.root.findByProps({ accessibilityLabel: 'Открыть статью' });
+    const linkAction = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть статью');
 
-    renderer.act(() => {
+    await React.act(() => {
       linkAction.props.onPress();
     });
 
     expect(onOpenArticle).toHaveBeenCalledTimes(1);
   });
 
-  it('renders a page action for article routes', () => {
+  it('renders a page action for article routes', async () => {
     let tree: any;
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           articleHref="/article/test-post"
           coord="53.9, 27.56"
           onBuildRoute={jest.fn()}
           onOpenArticle={jest.fn()}
-        />
-      );
+        />);
     });
 
-    const articleAction = tree.root.findByProps({ accessibilityLabel: 'Открыть статью' });
+    const articleAction = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть статью');
     expect(articleAction).toBeTruthy();
     expect(
-      tree.root.findAll((node: any) => node.props?.children === 'Страница').length,
+      tree.container.queryAll((node: any) => node.props?.children === 'Страница').length,
     ).toBeGreaterThan(0);
   });
 
-  it('keeps mobile bottom-card actions labeled and preserves article accessibility', () => {
+  it('keeps mobile bottom-card actions labeled and preserves article accessibility', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
 
     let tree: any;
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
           articleHref="/article/test-post"
@@ -733,26 +722,25 @@ describe('PlacePopupCard', () => {
           onAddPoint={jest.fn()}
           bottomSheetSplit
           compactLayout
-        />
-      );
+        />);
     });
 
-    expect(tree.root.findByProps({ accessibilityLabel: 'Открыть статью' })).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть статью')).toBeTruthy();
     expect(
-      tree.root.findAll((node: any) => node.props?.children === 'Страница').length,
+      tree.container.queryAll((node: any) => node.props?.children === 'Страница').length,
     ).toBeGreaterThan(0);
     expect(
-      tree.root.findAll((node: any) => node.props?.children === 'Открыть страницу').length,
+      tree.container.queryAll((node: any) => node.props?.children === 'Открыть страницу').length,
     ).toBe(0);
   });
 
-  it('does not render an article primary action without a valid article href', () => {
+  it('does not render an article primary action without a valid article href', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
 
     let tree: any;
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Travel point"
           coord="53.9, 27.56"
@@ -761,24 +749,23 @@ describe('PlacePopupCard', () => {
           onOpenGoogleMaps={jest.fn()}
           bottomSheetSplit
           compactLayout
-        />
-      );
+        />);
     });
 
-    expect(tree.root.findAllByProps({ accessibilityLabel: 'Открыть статью о точке' })).toHaveLength(0);
-    expect(tree.root.findAllByProps({ accessibilityLabel: 'Открыть статью' })).toHaveLength(0);
+    expect(tree.container.queryAll((node: any) => node.props?.["accessibilityLabel"] === 'Открыть статью о точке', { includeSelf: true })).toHaveLength(0);
+    expect(tree.container.queryAll((node: any) => node.props?.["accessibilityLabel"] === 'Открыть статью', { includeSelf: true })).toHaveLength(0);
   });
 
-  it('keeps the mobile bottom-card photo compact enough for actions and exposes map/share actions', () => {
+  it('keeps the mobile bottom-card photo compact enough for actions and exposes map/share actions', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
 
     let tree: any;
     const longTitle = 'Очень длинный адрес точки, который раньше занимал несколько строк и перекрывал действия';
     const longSubtitle = 'Podzamcze, Old Town, Stare Miasto, Краков, Малопольское воеводство, Польша';
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title={longTitle}
           subtitle={longSubtitle}
@@ -795,43 +782,42 @@ describe('PlacePopupCard', () => {
           onCopyCoord={jest.fn()}
           bottomSheetSplit
           compactLayout
-        />
-      );
+        />);
     });
 
     // Hero-caption layout: the photo has no max-height cap anymore — it absorbs
     // the space freed by moving the title/coords onto the photo (flexGrow:1).
-    const hero = tree.root.findAll((node: any) => {
+    const hero = tree.container.queryAll((node: any) => {
       const style = StyleSheet.flatten(node.props?.style);
       return style?.flexBasis === '58%' && style?.flexGrow === 1 && style?.minHeight === '46%';
     })[0];
 
     expect(hero).toBeTruthy();
-    expect(tree.root.findByProps({ accessibilityLabel: 'Скопировать координаты' })).toBeTruthy();
-    expect(tree.root.findByProps({ accessibilityLabel: 'Открыть точку в Google Maps' })).toBeTruthy();
-    const navToggle = tree.root.findByProps({ accessibilityLabel: 'Открыть способы навигации' });
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Скопировать координаты')).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть точку в Google Maps')).toBeTruthy();
+    const navToggle = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть способы навигации');
     expect(navToggle.props.accessibilityState).toEqual({ expanded: false });
 
-    renderer.act(() => {
+    await React.act(() => {
       navToggle.props.onPress();
     });
 
-    expect(tree.root.findByProps({ accessibilityLabel: 'Открыть способы навигации' }).props.accessibilityState).toEqual({ expanded: true });
-    expect(tree.root.findByProps({ accessibilityLabel: 'Apple Maps' })).toBeTruthy();
-    expect(tree.root.findByProps({ accessibilityLabel: 'Organic Maps' })).toBeTruthy();
-    expect(tree.root.findByProps({ accessibilityLabel: 'Waze' })).toBeTruthy();
-    expect(tree.root.findByProps({ accessibilityLabel: 'Яндекс Карты' })).toBeTruthy();
-    expect(tree.root.findByProps({ accessibilityLabel: 'Яндекс Навигатор' })).toBeTruthy();
-    expect(tree.root.findByProps({ accessibilityLabel: 'OpenStreetMap' })).toBeTruthy();
-    expect(tree.root.findByProps({ accessibilityLabel: 'Поделиться в Telegram' })).toBeTruthy();
-    expect(tree.root.findByProps({ accessibilityLabel: 'Закрыть меню действий' })).toBeTruthy();
-    expect(tree.root.findAllByProps({ accessibilityLabel: 'Показать способы навигации' })).toHaveLength(0);
-    expect(tree.root.findAll((node: any) => node.props?.children === 'Навигация и действия').length).toBeGreaterThan(0);
-    expect(tree.root.findAll((node: any) => node.props?.children === 'Apple').length).toBeGreaterThan(0);
-    expect(tree.root.findAll((node: any) => node.props?.children === 'Organic').length).toBeGreaterThan(0);
-    expect(tree.root.findAll((node: any) => node.props?.children === 'Яндекс Карты').length).toBeGreaterThan(0);
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть способы навигации').props.accessibilityState).toEqual({ expanded: true });
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Apple Maps')).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Organic Maps')).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Waze')).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Яндекс Карты')).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Яндекс Навигатор')).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'OpenStreetMap')).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Поделиться в Telegram')).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Закрыть меню действий')).toBeTruthy();
+    expect(tree.container.queryAll((node: any) => node.props?.["accessibilityLabel"] === 'Показать способы навигации', { includeSelf: true })).toHaveLength(0);
+    expect(tree.container.queryAll((node: any) => node.props?.children === 'Навигация и действия').length).toBeGreaterThan(0);
+    expect(tree.container.queryAll((node: any) => node.props?.children === 'Apple').length).toBeGreaterThan(0);
+    expect(tree.container.queryAll((node: any) => node.props?.children === 'Organic').length).toBeGreaterThan(0);
+    expect(tree.container.queryAll((node: any) => node.props?.children === 'Яндекс Карты').length).toBeGreaterThan(0);
     expect(
-      tree.root.findAll((node: any) => node.props?.children === longTitle && node.props?.numberOfLines === 2).length,
+      tree.container.queryAll((node: any) => node.props?.children === longTitle && node.props?.numberOfLines === 2).length,
     ).toBeGreaterThan(0);
   });
 
@@ -839,13 +825,13 @@ describe('PlacePopupCard', () => {
   // координаты, пару ♥/«Был здесь» и ряд действий. Оба теста ниже фиксируют, что
   // рядов стало на один меньше в каждой из двух конфигураций точки, а все шесть
   // действий остались на месте.
-  it('draws the travel actions on the hero photo instead of a separate row below it (#1779)', () => {
+  it('draws the travel actions on the hero photo instead of a separate row below it (#1779)', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 375, height: 812, scale: 1, fontScale: 1 }));
 
     let tree: any;
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Живой музей обважанка (Żywe Muzeum Obwarzanka)"
           subtitle="Краков, Малопольское воеводство, Польша"
@@ -860,8 +846,7 @@ describe('PlacePopupCard', () => {
           onOpenGoogleMaps={jest.fn()}
           width={375}
           compactLayout
-        />
-      );
+        />);
     });
 
     const stack = findRelatedTravelStack(tree);
@@ -891,20 +876,20 @@ describe('PlacePopupCard', () => {
     ).toBe(true);
 
     // Все шесть действий на месте.
-    expect(tree.root.findByProps({ accessibilityLabel: 'Скопировать координаты' })).toBeTruthy();
-    expect(tree.root.findByProps({ accessibilityLabel: 'Построить маршрут от моего местоположения' })).toBeTruthy();
-    expect(tree.root.findByProps({ accessibilityLabel: 'Открыть статью' })).toBeTruthy();
-    expect(tree.root.findAll((node: any) => node.props?.children === 'Сохранить').length).toBeGreaterThan(0);
-    expect(tree.root.findByProps({ accessibilityLabel: 'Открыть способы навигации' })).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Скопировать координаты')).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Построить маршрут от моего местоположения')).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть статью')).toBeTruthy();
+    expect(tree.container.queryAll((node: any) => node.props?.children === 'Сохранить').length).toBeGreaterThan(0);
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть способы навигации')).toBeTruthy();
   });
 
-  it('shares one row between the coordinates and the travel actions when the point has no photo (#1779)', () => {
+  it('shares one row between the coordinates and the travel actions when the point has no photo (#1779)', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 375, height: 812, scale: 1, fontScale: 1 }));
 
     let tree: any;
-    renderer.act(() => {
-      tree = renderer.create(
-        <PlacePopupCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Река Ислочь"
           coord="53.98326, 26.98798"
@@ -917,8 +902,7 @@ describe('PlacePopupCard', () => {
           onOpenGoogleMaps={jest.fn()}
           width={375}
           compactLayout
-        />
-      );
+        />);
     });
 
     const coordText = findTextNode(tree, '53.98326, 26.98798');
@@ -934,25 +918,26 @@ describe('PlacePopupCard', () => {
       expect.objectContaining({ flexDirection: 'row', alignItems: 'center' }),
     );
 
-    expect(tree.root.findByProps({ accessibilityLabel: 'Скопировать координаты' })).toBeTruthy();
-    expect(tree.root.findByProps({ accessibilityLabel: 'Построить маршрут от моего местоположения' })).toBeTruthy();
-    expect(tree.root.findByProps({ accessibilityLabel: 'Открыть статью' })).toBeTruthy();
-    expect(tree.root.findAll((node: any) => node.props?.children === 'Сохранить').length).toBeGreaterThan(0);
-    expect(tree.root.findByProps({ accessibilityLabel: 'Открыть способы навигации' })).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Скопировать координаты')).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Построить маршрут от моего местоположения')).toBeTruthy();
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть статью')).toBeTruthy();
+    expect(tree.container.queryAll((node: any) => node.props?.children === 'Сохранить').length).toBeGreaterThan(0);
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть способы навигации')).toBeTruthy();
   });
 });
 
 
-it.each([false, true])('#2482 renders title and subtitle markup for popup hero=%s while media keeps string alt', (bottomSheetSplit) => {
+it.each([false, true])('#2482 renders title and subtitle markup for popup hero=%s while media keeps string alt', async (bottomSheetSplit) => {
   const originalOS = Platform.OS;
   Platform.OS = 'web';
   try {
     let tree: any;
-    renderer.act(() => {
-      tree = renderer.create(<PlacePopupCard colors={mockColors as any} title="Тайны дворца" subtitle="Гомель, Беларусь" imageUrl="https://example.com/cover.jpg"
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard colors={mockColors as any} title="Тайны дворца" subtitle="Гомель, Беларусь" imageUrl="https://example.com/cover.jpg"
         bottomSheetSplit={bottomSheetSplit} renderText={(text: string) => <span lang="ru">{text}</span>} />);
     });
-    const parts = tree.root.findAllByType('span').filter((node: any) => node.props.lang === 'ru');
+    const parts = tree.container.queryAll((node: any) => node.type === 'span', { includeSelf: true }).filter((node: any) => node.props.lang === 'ru');
     expect(parts.some((node: any) => node.props.children === 'Тайны дворца')).toBe(true);
     expect(parts.some((node: any) => node.props.children === 'Гомель, Беларусь')).toBe(true);
     expect(mockImageCardMedia.mock.calls.at(-1)?.[0].alt).toBe('Тайны дворца');

@@ -26,8 +26,8 @@ describe('MultiSelectField', () => {
     { label: 'B', value: 'b' },
   ]
 
-  it('renders label when provided', () => {
-    const { getByText } = render(
+  it('renders label when provided', async () => {
+    const { getByText } = await render(
       // @ts-ignore -- test passes intentionally loose props to verify label rendering
       <MultiSelectField
         label="Категории"
@@ -42,8 +42,8 @@ describe('MultiSelectField', () => {
     expect(getByText('Категории')).toBeTruthy()
   })
 
-  it('renders without crashing', () => {
-    const { getByTestId } = render(
+  it('renders without crashing', async () => {
+    const { getByTestId } = await render(
       // @ts-ignore -- intentional loose props for testing primitive items array
       <MultiSelectField
         label="Одна категория"
@@ -58,10 +58,10 @@ describe('MultiSelectField', () => {
     expect(getByTestId('multi-select-mock')).toBeTruthy()
   })
 
-  it('calls onChange with single value in single mode (primitive)', () => {
+  it('calls onChange with single value in single mode (primitive)', async () => {
     const handleChange = jest.fn()
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       // @ts-ignore -- intentional loose props for testing primitive items array
       <MultiSelectField
         label="Одна категория"
@@ -77,15 +77,15 @@ describe('MultiSelectField', () => {
     const element = getByTestId('multi-select-mock')
 
     // Эмулируем вызов внутреннего onChange с массивом примитивов
-    fireEvent(element, 'onChange', ['x'])
+    await fireEvent(element, 'onChange', ['x'])
 
     expect(handleChange).toHaveBeenCalledWith('x')
   })
 
-  it('calls onChange with extracted value in single mode (object)', () => {
+  it('calls onChange with extracted value in single mode (object)', async () => {
     const handleChange = jest.fn()
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       // @ts-ignore -- intentional loose props for testing object items array in single mode
       <MultiSelectField
         label="Несколько категорий"
@@ -101,15 +101,15 @@ describe('MultiSelectField', () => {
     const element = getByTestId('multi-select-mock')
 
     // Эмулируем выбор первого объекта
-    fireEvent(element, 'onChange', [items[0]])
+    await fireEvent(element, 'onChange', [items[0]])
 
     expect(handleChange).toHaveBeenCalledWith('a')
   })
 
-  it('calls onChange with array of values in multi mode (objects)', () => {
+  it('calls onChange with array of values in multi mode (objects)', async () => {
     const handleChange = jest.fn()
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       // @ts-ignore -- intentional loose props for testing multi-select mode
       <MultiSelectField
         label="Несколько категорий"
@@ -123,15 +123,15 @@ describe('MultiSelectField', () => {
 
     const element = getByTestId('multi-select-mock')
 
-    fireEvent(element, 'onChange', [items[0], items[1]])
+    await fireEvent(element, 'onChange', [items[0], items[1]])
 
     expect(handleChange).toHaveBeenCalledWith(['a', 'b'])
   })
 
-  it('handles multi-select mode correctly', () => {
+  it('handles multi-select mode correctly', async () => {
     const onChange = jest.fn()
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       // @ts-ignore -- intentional loose props for testing multi-select with object items
       <MultiSelectField
         label="Несколько категорий"
@@ -147,10 +147,10 @@ describe('MultiSelectField', () => {
     expect(element.props['data-value']).toBe(JSON.stringify(['a', 'b']))
   })
 
-  it('handles empty value in multi-select mode', () => {
+  it('handles empty value in multi-select mode', async () => {
     const onChange = jest.fn()
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       // @ts-ignore -- intentional loose props for testing empty value in multi-select
       <MultiSelectField
         label="Несколько категорий"
@@ -166,8 +166,8 @@ describe('MultiSelectField', () => {
     expect(element.props['data-value']).toBe(JSON.stringify([]))
   })
 
-  it('passes correct value prop to underlying MultiSelect in single mode', () => {
-    const { getByTestId, rerender } = render(
+  it('passes correct value prop to underlying MultiSelect in single mode', async () => {
+    const { getByTestId, rerender } = await render(
       <MultiSelectField
         label="Одна категория"
         items={items}
@@ -182,7 +182,7 @@ describe('MultiSelectField', () => {
     const element = getByTestId('multi-select-mock')
     expect(element.props['data-value']).toBe(JSON.stringify([]))
 
-    rerender(
+    await rerender(
       <MultiSelectField
         label="Одна категория"
         items={items}

@@ -46,12 +46,12 @@ const makeTrip = (): PlannedTrip => ({
   createdAt: '2026-07-01T10:00:00.000Z',
 })
 
-type Queries = ReturnType<typeof render>
+type Queries = Awaited<ReturnType<typeof render>>
 
-const fillPoint = ({ getByTestId }: Queries) => {
-  fireEvent.changeText(getByTestId('trip-suggest-name'), 'Костёл в Гервятах')
-  fireEvent.changeText(getByTestId('trip-suggest-lat'), '54.7519')
-  fireEvent.changeText(getByTestId('trip-suggest-lng'), '26.1447')
+const fillPoint = async ({ getByTestId }: Queries) => {
+  await fireEvent.changeText(getByTestId('trip-suggest-name'), 'Костёл в Гервятах')
+  await fireEvent.changeText(getByTestId('trip-suggest-lat'), '54.7519')
+  await fireEvent.changeText(getByTestId('trip-suggest-lng'), '26.1447')
 }
 
 beforeEach(() => {
@@ -59,8 +59,8 @@ beforeEach(() => {
 })
 
 describe('TripSuggestPointForm point type binding', () => {
-  it('does not offer the place type: the form has no MeTravel binding at all', () => {
-    const { getByTestId, queryByTestId } = render(<TripSuggestPointForm trip={makeTrip()} />)
+  it('does not offer the place type: the form has no MeTravel binding at all', async () => {
+    const { getByTestId, queryByTestId } = await render(<TripSuggestPointForm trip={makeTrip()} />)
 
     expect(queryByTestId('trip-suggest-type-place')).toBeNull()
     expect(getByTestId('trip-suggest-type-custom')).toBeTruthy()
@@ -68,11 +68,11 @@ describe('TripSuggestPointForm point type binding', () => {
     expect(getByTestId('trip-suggest-type-overnight')).toBeTruthy()
   })
 
-  it('sends a coordinate point with the untouched default type', () => {
-    const queries = render(<TripSuggestPointForm trip={makeTrip()} />)
+  it('sends a coordinate point with the untouched default type', async () => {
+    const queries = await render(<TripSuggestPointForm trip={makeTrip()} />)
 
-    fillPoint(queries)
-    fireEvent.press(queries.getByTestId('trip-suggest-submit'))
+    await fillPoint(queries)
+    await fireEvent.press(queries.getByTestId('trip-suggest-submit'))
 
     expect(mockSuggestMutate).toHaveBeenCalledTimes(1)
     expect(mockSuggestMutate.mock.calls[0][0]).toMatchObject({
@@ -88,12 +88,12 @@ describe('TripSuggestPointForm point type binding', () => {
 
   it.each(['custom', 'rest', 'overnight'] as const)(
     'never sends type place without a placeId — chip %s',
-    (option) => {
-      const queries = render(<TripSuggestPointForm trip={makeTrip()} />)
+    async (option) => {
+      const queries = await render(<TripSuggestPointForm trip={makeTrip()} />)
 
-      fireEvent.press(queries.getByTestId(`trip-suggest-type-${option}`))
-      fillPoint(queries)
-      fireEvent.press(queries.getByTestId('trip-suggest-submit'))
+      await fireEvent.press(queries.getByTestId(`trip-suggest-type-${option}`))
+      await fillPoint(queries)
+      await fireEvent.press(queries.getByTestId('trip-suggest-submit'))
 
       expect(mockSuggestMutate).toHaveBeenCalledTimes(1)
       const { point } = mockSuggestMutate.mock.calls[0][0]
@@ -103,11 +103,11 @@ describe('TripSuggestPointForm point type binding', () => {
     },
   )
 
-  it('refuses a point without coordinates with a readable reason instead of a 400', () => {
-    const { getByTestId, queryByTestId } = render(<TripSuggestPointForm trip={makeTrip()} />)
+  it('refuses a point without coordinates with a readable reason instead of a 400', async () => {
+    const { getByTestId, queryByTestId } = await render(<TripSuggestPointForm trip={makeTrip()} />)
 
-    fireEvent.changeText(getByTestId('trip-suggest-name'), 'Точка без координат')
-    fireEvent.press(getByTestId('trip-suggest-submit'))
+    await fireEvent.changeText(getByTestId('trip-suggest-name'), 'Точка без координат')
+    await fireEvent.press(getByTestId('trip-suggest-submit'))
 
     expect(mockSuggestMutate).not.toHaveBeenCalled()
     expect(queryByTestId('trip-suggest-error')).toBeTruthy()
@@ -116,25 +116,25 @@ describe('TripSuggestPointForm point type binding', () => {
     )
   })
 
-  it('refuses coordinates outside the valid range', () => {
-    const { getByTestId } = render(<TripSuggestPointForm trip={makeTrip()} />)
+  it('refuses coordinates outside the valid range', async () => {
+    const { getByTestId } = await render(<TripSuggestPointForm trip={makeTrip()} />)
 
-    fireEvent.changeText(getByTestId('trip-suggest-name'), 'Точка за полюсом')
-    fireEvent.changeText(getByTestId('trip-suggest-lat'), '154.75')
-    fireEvent.changeText(getByTestId('trip-suggest-lng'), '26.1447')
-    fireEvent.press(getByTestId('trip-suggest-submit'))
+    await fireEvent.changeText(getByTestId('trip-suggest-name'), 'Точка за полюсом')
+    await fireEvent.changeText(getByTestId('trip-suggest-lat'), '154.75')
+    await fireEvent.changeText(getByTestId('trip-suggest-lng'), '26.1447')
+    await fireEvent.press(getByTestId('trip-suggest-submit'))
 
     expect(mockSuggestMutate).not.toHaveBeenCalled()
     expect(getByTestId('trip-suggest-error')).toBeTruthy()
   })
 
-  it('accepts a comma decimal separator in coordinates', () => {
-    const { getByTestId } = render(<TripSuggestPointForm trip={makeTrip()} />)
+  it('accepts a comma decimal separator in coordinates', async () => {
+    const { getByTestId } = await render(<TripSuggestPointForm trip={makeTrip()} />)
 
-    fireEvent.changeText(getByTestId('trip-suggest-name'), 'Мирский замок')
-    fireEvent.changeText(getByTestId('trip-suggest-lat'), '53,4511')
-    fireEvent.changeText(getByTestId('trip-suggest-lng'), '26,4731')
-    fireEvent.press(getByTestId('trip-suggest-submit'))
+    await fireEvent.changeText(getByTestId('trip-suggest-name'), 'Мирский замок')
+    await fireEvent.changeText(getByTestId('trip-suggest-lat'), '53,4511')
+    await fireEvent.changeText(getByTestId('trip-suggest-lng'), '26,4731')
+    await fireEvent.press(getByTestId('trip-suggest-submit'))
 
     expect(mockSuggestMutate).toHaveBeenCalledTimes(1)
     expect(mockSuggestMutate.mock.calls[0][0].point.coordinates).toEqual([26.4731, 53.4511])

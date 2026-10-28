@@ -64,14 +64,14 @@ describe('TravelDetailsPostLcpRuntime', () => {
   })
 
   it('does not treat a native-renderer web layout callback as connected measured DOM', async () => {
-    render(
+    await render(
       <TravelDetailsPostLcpRuntime
         travel={{ id: 1, name: 'Demo', slug: 'demo', gallery: [] } as any}
         isMobile anchors={{} as any} forceOpenKey={null} scrollToMapSection={jest.fn()}
       />,
     )
     const runtime = await screen.findByTestId('travel-details-deferred-transition-runtime', INCLUDE_HIDDEN)
-    fireEvent(runtime, 'layout', { nativeEvent: { layout: { width: 390, height: 2400, x: 0, y: 0 } } })
+    await fireEvent(runtime, 'layout', { nativeEvent: { layout: { width: 390, height: 2400, x: 0, y: 0 } } })
     expect(screen.getByTestId('travel-deferred-sections', INCLUDE_HIDDEN)).toBeTruthy()
     expect(screen.getByTestId('travel-details-deferred-transition-placeholder', INCLUDE_HIDDEN)).toBeTruthy()
     expect(screen.getByTestId('travel-details-deferred-transition-runtime', INCLUDE_HIDDEN).props.inert).toBe(true)
@@ -82,7 +82,7 @@ describe('TravelDetailsPostLcpRuntime', () => {
     Platform.OS = 'ios'
     mockLoadDeferredSectionsComponent.mockRejectedValueOnce(new Error('chunk failed'))
 
-    render(
+    await render(
       <TravelDetailsPostLcpRuntime
         travel={{ id: 1, name: 'Demo', slug: 'demo', gallery: [] } as any}
         isMobile
@@ -101,9 +101,9 @@ describe('TravelDetailsPostLcpRuntime', () => {
     expect(screen.queryByTestId('travel-details-deferred-transition')).toBeNull()
   })
 
-  it('keeps the original direct placeholder-to-runtime behavior on native', () => {
+  it('keeps the original direct placeholder-to-runtime behavior on native', async () => {
     Platform.OS = 'ios'
-    const { rerender } = render(
+    const { rerender } = await render(
       <TravelDetailsDeferredTransition
         testID="native-transition"
         isMobile
@@ -118,7 +118,7 @@ describe('TravelDetailsPostLcpRuntime', () => {
     expect(screen.queryByTestId('native-runtime')).toBeNull()
     expect(screen.queryByTestId('native-transition')).toBeNull()
 
-    rerender(
+    await rerender(
       <TravelDetailsDeferredTransition
         testID="native-transition"
         isMobile
@@ -135,7 +135,7 @@ describe('TravelDetailsPostLcpRuntime', () => {
   })
 
   it('renders scroll-derived runtime controls from the scroll provider', async () => {
-    render(
+    await render(
       <TravelDetailsDeferredScrollProvider
         value={{
           activeSection: 'map',
@@ -168,7 +168,7 @@ describe('TravelDetailsPostLcpRuntime', () => {
     ['viewport', { sheet: false, progress: true, actions: true }],
   ] as const)('renders only the %s layer of the runtime chrome', async (layer, expected) => {
     Platform.OS = 'ios'
-    render(
+    await render(
       <TravelDetailsDeferredScrollProvider
         value={{ activeSection: 'map', contentHeight: 1200, scrollY: {} as any, viewportHeight: 800 }}
       >

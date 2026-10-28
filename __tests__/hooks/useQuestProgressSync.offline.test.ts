@@ -4,7 +4,7 @@
 // catch только логировал — упавшее сохранение выбрасывало ответы навсегда.
 //
 // Тесты живут отдельным файлом: они работают на фейковых таймерах, а в этом
-// окружении (jest-expo + RNTL + react-test-renderer) фейковые таймеры ломают
+// окружении (jest-expo + RNTL + test renderer) фейковые таймеры ломают
 // `waitFor` в последующих тестах того же файла.
 import { AppState } from 'react-native';
 import { renderHook, act } from '@testing-library/react-native';
@@ -99,7 +99,7 @@ const flushMicrotasks = async () => {
 
 /** Проматывает дебаунс/бэкофф и догоняет промис запроса. */
 const advance = async (ms: number) => {
-  act(() => {
+  await act(() => {
     jest.advanceTimersByTime(ms);
   });
   await flushMicrotasks();
@@ -107,7 +107,7 @@ const advance = async (ms: number) => {
 
 /** Маунт с уже загруженным серверным прогрессом (id=42). */
 const mountLoadedSync = async () => {
-  const rendered = renderHook(() => useQuestProgressSync('krakow-dragon', true));
+  const rendered = await renderHook(() => useQuestProgressSync('krakow-dragon', true));
   await flushMicrotasks();
   return rendered;
 };
@@ -146,7 +146,7 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
       .mockRejectedValueOnce(OFFLINE_ERROR())
       .mockResolvedValueOnce({ ...API_PROGRESS, answers: OFFLINE_ANSWER.answers });
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress(OFFLINE_ANSWER);
     });
 
@@ -175,13 +175,13 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
 
     mockUpdateProgress.mockRejectedValue(OFFLINE_ERROR());
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress(OFFLINE_ANSWER);
     });
     await advance(2000);
     expect(mockUpdateProgress).toHaveBeenCalledTimes(1);
 
-    unmount();
+    await unmount();
     await flushMicrotasks();
 
     const raw = await AsyncStorage.getItem(QUEST_PROGRESS_QUEUE_KEY);
@@ -200,7 +200,7 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
 
     mockUpdateProgress.mockRejectedValue(OFFLINE_ERROR());
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress(OFFLINE_ANSWER);
     });
     await advance(2000);
@@ -258,7 +258,7 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
       .mockRejectedValueOnce(OFFLINE_ERROR())
       .mockResolvedValueOnce({ ...API_PROGRESS, answers: OFFLINE_ANSWER.answers });
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress(OFFLINE_ANSWER);
     });
     await advance(2000);
@@ -266,7 +266,7 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
 
     // Сеть вернулась — отложенный прогресс уходит сразу, не дожидаясь бэкоффа.
     mockIsConnected = true;
-    rerender(undefined);
+    await rerender(undefined);
     await flushMicrotasks();
 
     expect(mockUpdateProgress).toHaveBeenCalledTimes(2);
@@ -292,13 +292,13 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
         .mockRejectedValueOnce(OFFLINE_ERROR())
         .mockResolvedValueOnce({ ...API_PROGRESS, answers: OFFLINE_ANSWER.answers });
 
-      act(() => {
+      await act(() => {
         result.current.saveProgress(OFFLINE_ANSWER);
       });
       await advance(2000);
       expect(mockUpdateProgress).toHaveBeenCalledTimes(1);
 
-      act(() => {
+      await act(() => {
         appStateListeners.forEach((listener) => listener('active'));
       });
       await flushMicrotasks();
@@ -327,7 +327,7 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
 
     const { result } = await mountLoadedSync();
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress(OFFLINE_ANSWER);
     });
     await advance(2000);
@@ -363,7 +363,7 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
 
     const { result } = await mountLoadedSync();
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress(OFFLINE_ANSWER);
     });
     await advance(2000);
@@ -380,14 +380,14 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
       .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }))
       .mockResolvedValueOnce({ ...API_PROGRESS, answers: OFFLINE_ANSWER.answers });
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress({ ...OFFLINE_ANSWER, answers: { intro: 'start' } });
     });
     await advance(2000);
     expect(mockUpdateProgress).toHaveBeenCalledTimes(1);
 
     // Игрок отвечает, пока первый запрос ещё в полёте.
-    act(() => {
+    await act(() => {
       result.current.saveProgress(OFFLINE_ANSWER);
     });
     await act(async () => {
@@ -411,10 +411,10 @@ describe('useQuestProgressSync — офлайн-прохождение', () => {
       () => new Promise((resolve) => { resolveRead = resolve; }),
     );
 
-    const { result } = renderHook(() => useQuestProgressSync('krakow-dragon', true));
+    const { result } = await renderHook(() => useQuestProgressSync('krakow-dragon', true));
     await flushMicrotasks();
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress(OFFLINE_ANSWER);
     });
     await advance(2000);
@@ -478,7 +478,7 @@ describe('useQuestProgressSync — экран открыт, прохождени
   });
 
   it('reads the progress on mount and never creates it', async () => {
-    const { result } = renderHook(() => useQuestProgressSync('krakow-dragon', true));
+    const { result } = await renderHook(() => useQuestProgressSync('krakow-dragon', true));
     await flushMicrotasks();
 
     expect(mockFetchQuestProgress).toHaveBeenCalledWith('krakow-dragon');
@@ -487,11 +487,11 @@ describe('useQuestProgressSync — экран открыт, прохождени
   });
 
   it('keeps the empty snapshot of an untouched screen off the server', async () => {
-    const { result } = renderHook(() => useQuestProgressSync('krakow-dragon', true));
+    const { result } = await renderHook(() => useQuestProgressSync('krakow-dragon', true));
     await flushMicrotasks();
 
     // Ровно то, что шлёт визард первым рендером: нули и пустые словари.
-    act(() => {
+    await act(() => {
       result.current.saveProgress(EMPTY_SNAPSHOT);
     });
     await advance(2000);
@@ -502,17 +502,17 @@ describe('useQuestProgressSync — экран открыт, прохождени
   });
 
   it('creates the row on the first real action', async () => {
-    const { result } = renderHook(() => useQuestProgressSync('krakow-dragon', true));
+    const { result } = await renderHook(() => useQuestProgressSync('krakow-dragon', true));
     await flushMicrotasks();
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress(EMPTY_SNAPSHOT);
     });
     await advance(2000);
     expect(mockReadOrCreateProgress).not.toHaveBeenCalled();
 
     // Игрок нажал «Начать квест» — визард пишет ответ на intro.
-    act(() => {
+    await act(() => {
       result.current.saveProgress(FIRST_ANSWER);
     });
     await advance(2000);
@@ -524,10 +524,10 @@ describe('useQuestProgressSync — экран открыт, прохождени
   });
 
   it('treats moving off the first step as a start even without answers', async () => {
-    const { result } = renderHook(() => useQuestProgressSync('krakow-dragon', true));
+    const { result } = await renderHook(() => useQuestProgressSync('krakow-dragon', true));
     await flushMicrotasks();
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress({ ...EMPTY_SNAPSHOT, currentIndex: 1, unlockedIndex: 1 });
     });
     await advance(2000);

@@ -93,7 +93,7 @@ describe('TravelPointsBlock', () => {
   });
 
   it('shows all route-point export actions on native and shares KML with Metravel source styling', async () => {
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <TravelPointsBlock
         anchors={{ points: createRef() } as any}
         handlePointCardPress={jest.fn()}
@@ -106,7 +106,7 @@ describe('TravelPointsBlock', () => {
     expect(getByLabelText('Скачать все точки в KML для Organic Maps и MAPS.ME')).toBeTruthy();
     expect(getByLabelText('Открыть все точки в Google Maps')).toBeTruthy();
 
-    fireEvent.press(getByLabelText('Скачать все точки в KML для Organic Maps и MAPS.ME'));
+    await fireEvent.press(getByLabelText('Скачать все точки в KML для Organic Maps и MAPS.ME'));
 
     await waitFor(() => expect(saveRouteExportFile).toHaveBeenCalledTimes(1));
     const [file, dialogTitle] = saveRouteExportFile.mock.calls[0];
@@ -120,8 +120,8 @@ describe('TravelPointsBlock', () => {
     expect(file.content).toContain('https://metravel.by/travels/gomel-route');
   });
 
-  it('passes the article id into PointList so saved points carry tags.travelId (#1963)', () => {
-    render(
+  it('passes the article id into PointList so saved points carry tags.travelId (#1963)', async () => {
+    await render(
       <TravelPointsBlock
         anchors={{ points: createRef() } as any}
         handlePointCardPress={jest.fn()}
@@ -139,8 +139,8 @@ describe('TravelPointsBlock', () => {
     );
   });
 
-  it('opens all exportable points in Google Maps on native', () => {
-    const { getByLabelText } = render(
+  it('opens all exportable points in Google Maps on native', async () => {
+    const { getByLabelText } = await render(
       <TravelPointsBlock
         anchors={{ points: createRef() } as any}
         handlePointCardPress={jest.fn()}
@@ -149,7 +149,7 @@ describe('TravelPointsBlock', () => {
       />,
     );
 
-    fireEvent.press(getByLabelText('Открыть все точки в Google Maps'));
+    await fireEvent.press(getByLabelText('Открыть все точки в Google Maps'));
 
     expect(openExternalUrlInNewTab).toHaveBeenCalledWith(
       'https://www.google.com/maps/dir/52.4242,31.0148/52.4238,31.017',

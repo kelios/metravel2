@@ -102,7 +102,7 @@ describe('quest content follows the UI language', () => {
 
   it('refetches the catalog under the new locale key and never shows the old language there', async () => {
     const seen: string[] = []
-    const { result } = renderHook(() => {
+    const { result } = await renderHook(() => {
       const value = useQuestsList()
       value.quests.forEach((quest) => seen.push(`${quest.contentLocale}:${quest.title}`))
       return value
@@ -131,7 +131,7 @@ describe('quest content follows the UI language', () => {
   })
 
   it('reloads the bundle in the new language and stamps its steps with that locale', async () => {
-    const { result } = renderHook(() => useQuestBundle('krakow-dragon'), { wrapper: makeWrapper(client) })
+    const { result } = await renderHook(() => useQuestBundle('krakow-dragon'), { wrapper: makeWrapper(client) })
 
     await waitFor(() => expect(result.current.bundle?.title).toBe('title-ru'))
     expect(result.current.bundle?.steps[0]?.contentLocale).toBe('ru')

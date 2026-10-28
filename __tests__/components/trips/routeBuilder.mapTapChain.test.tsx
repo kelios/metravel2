@@ -1,6 +1,5 @@
 import React from 'react'
-import { render } from '@testing-library/react-native'
-import { act } from 'react-test-renderer'
+import { act, render } from '@testing-library/react-native'
 
 import type { PlannedTrip } from '@/api/plannedTrips'
 import RouteBuilder from '@/components/trips/planning/RouteBuilder'
@@ -75,8 +74,8 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
   ...overrides,
 })
 
-const renderRouteBuilder = (element: React.ReactElement) =>
-  render(element, { wrapper: createQueryWrapper().Wrapper })
+const renderRouteBuilder = async (element: React.ReactElement) =>
+  await render(element, { wrapper: createQueryWrapper().Wrapper })
 
 describe('RouteBuilder: цепочка тапов по карте', () => {
   beforeEach(() => {
@@ -86,15 +85,15 @@ describe('RouteBuilder: цепочка тапов по карте', () => {
   // Точка с карты сразу открывает редактор, и раньше это же гасило карту:
   // обработчик переставал передаваться, второй тап молча ничего не делал,
   // хотя подсказка продолжала звать нажимать по карте.
-  it('добавляет вторую точку тапом, пока открыт редактор первой', () => {
-    const { getByText } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('добавляет вторую точку тапом, пока открыт редактор первой', async () => {
+    const { getByText } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    act(() => {
+    await act(() => {
       mockMapProps.current.onAddPointFromMap?.({ lat: 53.9, lng: 27.56 })
     })
     expect(typeof mockMapProps.current.onAddPointFromMap).toBe('function')
 
-    act(() => {
+    await act(() => {
       mockMapProps.current.onAddPointFromMap?.({ lat: 53.8, lng: 27.4 })
     })
 
@@ -102,10 +101,10 @@ describe('RouteBuilder: цепочка тапов по карте', () => {
     expect(getByText('Точка 2')).toBeTruthy()
   })
 
-  it('не добавляет точку с нечисловыми координатами', () => {
-    renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('не добавляет точку с нечисловыми координатами', async () => {
+    await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    act(() => {
+    await act(() => {
       mockMapProps.current.onAddPointFromMap?.({ lat: Number.NaN, lng: 27.56 })
     })
 

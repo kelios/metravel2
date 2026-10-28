@@ -62,13 +62,13 @@ const trip: PlannedTrip = {
 // #1313: контроль на реальном компоненте — сырой ISO не должен доезжать до экрана
 // ни через дату старта, ни через нечитаемое значение.
 describe('TripPlanCard start date rendering', () => {
-  const renderedText = (node: ReturnType<typeof render>): string =>
+  const renderedText = (node: Awaited<ReturnType<typeof render>>): string =>
     JSON.stringify(node.toJSON());
 
-  it('renders a local date and time instead of the raw ISO value', () => {
+  it('renders a local date and time instead of the raw ISO value', async () => {
     const iso = '2026-10-12T09:00:00+00:00';
     const text = renderedText(
-      render(<TripPlanCard trip={{ ...trip, startDate: iso, startTime: null }} />),
+      await render(<TripPlanCard trip={{ ...trip, startDate: iso, startTime: null }} />),
     );
 
     expect(text).not.toContain(iso);
@@ -79,9 +79,9 @@ describe('TripPlanCard start date rendering', () => {
   });
 
   // #1838: многодневная поездка не должна выглядеть однодневной в «Мои поездки».
-  it('renders the trip end as a range', () => {
+  it('renders the trip end as a range', async () => {
     const text = renderedText(
-      render(
+      await render(
         <TripPlanCard
           trip={{ ...trip, startDate: '2026-09-26', endDate: '2026-10-04', startTime: null }}
         />,
@@ -91,9 +91,9 @@ describe('TripPlanCard start date rendering', () => {
     expect(text).toContain('26 сентября 2026 г. — 4 октября 2026 г.');
   });
 
-  it('renders the unavailable placeholder for an unreadable value', () => {
+  it('renders the unavailable placeholder for an unreadable value', async () => {
     const text = renderedText(
-      render(<TripPlanCard trip={{ ...trip, startDate: 'not-a-date', startTime: null }} />),
+      await render(<TripPlanCard trip={{ ...trip, startDate: 'not-a-date', startTime: null }} />),
     );
 
     expect(text).not.toContain('not-a-date');
@@ -122,13 +122,13 @@ describe('TripPlanCard participants line', () => {
     [1, 'Едет 1 из 4'],
     [2, 'Едут 2 из 4'],
     [5, 'Едут 5 из 4'],
-  ])('uses the locale plural form for %i going', (count, expected) => {
-    const text = JSON.stringify(render(<TripPlanCard trip={going(count)} />).toJSON());
+  ])('uses the locale plural form for %i going', async (count, expected) => {
+    const text = JSON.stringify(await (await render(<TripPlanCard trip={going(count)} />)).toJSON());
     expect(text).toContain(expected);
   });
 
-  it('renders each label as one string instead of glued fragments', () => {
-    const { getByText } = render(<TripPlanCard trip={going(2)} />);
+  it('renders each label as one string instead of glued fragments', async () => {
+    const { getByText } = await render(<TripPlanCard trip={going(2)} />);
 
     // Один цельный дочерний узел: склейка фрагментов дала бы массив с краевыми
     // пробелами, а getByText нормализует их и дефект не поймал бы.
@@ -142,8 +142,8 @@ describe('TripPlanCard participants line', () => {
   // потому что при `flexBasis: 'auto'` текст успевает свёрстаться в одну строку до
   // сжатия бокса — проверено на устройстве. Ловим сам стиль: отрисовка в
   // jsdom-хосте усечение не воспроизводит.
-  it('measures the participants hint against the available row width', () => {
-    const { getByText } = render(<TripPlanCard trip={going(2)} />);
+  it('measures the participants hint against the available row width', async () => {
+    const { getByText } = await render(<TripPlanCard trip={going(2)} />);
 
     const style = StyleSheet.flatten(getByText('· 2 в списке').props.style);
 
@@ -153,8 +153,8 @@ describe('TripPlanCard participants line', () => {
 });
 
 describe('TripPlanCard metadata row sizing', () => {
-  it('renders metadata through one flexible label without ellipsis', () => {
-    const { getByText } = render(<TripPlanCard trip={trip} />);
+  it('renders metadata through one flexible label without ellipsis', async () => {
+    const { getByText } = await render(<TripPlanCard trip={trip} />);
 
     const metadata = getByText(
       `На машине · ${formatTripDateTime(trip.startDate, trip.startTime, trip.endDate)}`,
@@ -169,34 +169,34 @@ describe('TripPlanCard metadata row sizing', () => {
 });
 
 describe('TripPlanCard organizer actions', () => {
-  it('counts the organizer when the list response omits them from participants', () => {
-    const { getByText } = render(<TripPlanCard trip={trip} />);
+  it('counts the organizer when the list response omits them from participants', async () => {
+    const { getByText } = await render(<TripPlanCard trip={trip} />);
 
     expect(getByText('Едет 1 из 1')).toBeTruthy();
     expect(getByText('· 1 в списке')).toBeTruthy();
   });
 
-  it('exposes edit and delete as explicit icon buttons in the action row', () => {
+  it('exposes edit and delete as explicit icon buttons in the action row', async () => {
     const onEditPress = jest.fn();
     const onDeletePress = jest.fn();
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <TripPlanCard trip={trip} onEditPress={onEditPress} onDeletePress={onDeletePress} />,
     );
 
     expect(queryByTestId('trip-plan-card-more-1')).toBeNull();
 
-    fireEvent.press(getByTestId('trip-plan-card-edit-1'));
+    await fireEvent.press(getByTestId('trip-plan-card-edit-1'));
     expect(onEditPress).toHaveBeenCalledWith(trip);
     expect(onDeletePress).not.toHaveBeenCalled();
 
-    fireEvent.press(getByTestId('trip-plan-card-delete-1'));
+    await fireEvent.press(getByTestId('trip-plan-card-delete-1'));
     expect(onDeletePress).toHaveBeenCalledWith(trip);
   });
 
   // #1660: строка действий отдала 52dp двум значкам владельца, поэтому подпись
   // основной кнопки обязана сжиматься, а не выезжать за её пределы.
-  it('lets the primary label shrink next to the owner icon buttons', () => {
-    const { getByText } = render(
+  it('lets the primary label shrink next to the owner icon buttons', async () => {
+    const { getByText } = await render(
       <TripPlanCard trip={trip} onEditPress={jest.fn()} onDeletePress={jest.fn()} />,
     );
 
@@ -206,10 +206,10 @@ describe('TripPlanCard organizer actions', () => {
     expect(manageLabel.props.numberOfLines).toBe(1);
   });
 
-  it('keeps the delete icon busy and locked while the trip is being removed', () => {
+  it('keeps the delete icon busy and locked while the trip is being removed', async () => {
     const onEditPress = jest.fn();
     const onDeletePress = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <TripPlanCard trip={trip} onEditPress={onEditPress} onDeletePress={onDeletePress} isDeleting />,
     );
 
@@ -218,14 +218,14 @@ describe('TripPlanCard organizer actions', () => {
       expect.objectContaining({ busy: true, disabled: true }),
     );
 
-    fireEvent.press(deleteButton);
-    fireEvent.press(getByTestId('trip-plan-card-edit-1'));
+    await fireEvent.press(deleteButton);
+    await fireEvent.press(getByTestId('trip-plan-card-edit-1'));
     expect(onDeletePress).not.toHaveBeenCalled();
     expect(onEditPress).not.toHaveBeenCalled();
   });
 
-  it('hides owner icon buttons for a participant card', () => {
-    const { queryByTestId } = render(<TripPlanCard trip={trip} />);
+  it('hides owner icon buttons for a participant card', async () => {
+    const { queryByTestId } = await render(<TripPlanCard trip={trip} />);
 
     expect(queryByTestId('trip-plan-card-edit-1')).toBeNull();
     expect(queryByTestId('trip-plan-card-delete-1')).toBeNull();
@@ -234,7 +234,7 @@ describe('TripPlanCard organizer actions', () => {
 
 
 describe('TripPlanCard shared web text slots preserve native wrap contract', () => {
-  it.each(['ios', 'android'])('keeps original%s title/metadata styles and unbounded single metadata Text', platform => {
+  it.each(['ios', 'android'])('keeps original%s title/metadata styles and unbounded single metadata Text', async platform => {
     const descriptor = Object.getOwnPropertyDescriptor(Platform, 'OS')!
     Object.defineProperty(Platform, 'OS', { configurable: true, value: platform })
     try {
@@ -242,12 +242,12 @@ describe('TripPlanCard shared web text slots preserve native wrap contract', () 
       const styles = createTripPlanCardStyles(colors)
       expect(StyleSheet.flatten(styles.title)).toEqual({ fontSize: 16, fontWeight: '700', color: colors.text })
       expect(StyleSheet.flatten(styles.meta)).toEqual({ fontSize: 13, color: colors.textSecondary, flex: 1 })
-      const { getByText } = render(<TripPlanCard trip={{ ...trip, startDate: '2026-09-26', endDate: '2026-10-04', startTime: null }} />)
+      const { getByText } = await render(<TripPlanCard trip={{ ...trip, startDate: '2026-09-26', endDate: '2026-10-04', startTime: null }} />)
       const metadata = getByText(`На машине · ${formatTripDateTime('2026-09-26', null, '2026-10-04')}`)
       expect(metadata.props.numberOfLines).toBeUndefined()
       expect(StyleSheet.flatten(metadata.props.style).flex).toBe(1)
       expect(metadata.props.children).toBe(`На машине · ${formatTripDateTime('2026-09-26', null, '2026-10-04')}`)
-      const skeleton = render(<TripPlanCardSkeleton />)
+      const skeleton = await render(<TripPlanCardSkeleton />)
       const lines = skeleton.getAllByText('\u00a0', { includeHiddenElements: true, normalizer: text => text })
       expect(lines).toHaveLength(8)
       expect(lines.every(line => line.props.children === '\u00a0')).toBe(true)

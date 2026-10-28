@@ -1,5 +1,5 @@
 import { fireEvent, render } from '@testing-library/react-native';
-import { Modal } from 'react-native';
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries';
 
 import DraftRecoveryDialog from '@/components/travel/DraftRecoveryDialog';
 
@@ -22,8 +22,8 @@ jest.mock('@/hooks/useTheme', () => ({
 }));
 
 describe('DraftRecoveryDialog', () => {
-  it('makes the saved-version choice explicit', () => {
-    const { getByText, getByLabelText } = render(
+  it('makes the saved-version choice explicit', async () => {
+    const { getByText, getByLabelText } = await render(
       <DraftRecoveryDialog
         visible
         draftTimestamp={Date.now() - 60_000}
@@ -38,10 +38,10 @@ describe('DraftRecoveryDialog', () => {
     expect(getByLabelText('Продолжить с локального черновика')).toBeTruthy();
   });
 
-  it('routes actions to discard and recover handlers', () => {
+  it('routes actions to discard and recover handlers', async () => {
     const onRecover = jest.fn();
     const onDiscard = jest.fn();
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <DraftRecoveryDialog
         visible
         draftTimestamp={Date.now() - 60_000}
@@ -50,16 +50,16 @@ describe('DraftRecoveryDialog', () => {
       />,
     );
 
-    fireEvent.press(getByLabelText('Открыть сохранённую версию'));
-    fireEvent.press(getByLabelText('Продолжить с локального черновика'));
+    await fireEvent.press(getByLabelText('Открыть сохранённую версию'));
+    await fireEvent.press(getByLabelText('Продолжить с локального черновика'));
 
     expect(onDiscard).toHaveBeenCalledTimes(1);
     expect(onRecover).toHaveBeenCalledTimes(1);
   });
 
-  it('does not discard the only local draft on Android hardware Back', () => {
+  it('does not discard the only local draft on Android hardware Back', async () => {
     const onDiscard = jest.fn();
-    const screen = render(
+    const screen = await render(
       <DraftRecoveryDialog
         visible
         draftTimestamp={Date.now() - 60_000}
@@ -68,7 +68,7 @@ describe('DraftRecoveryDialog', () => {
       />,
     );
 
-    screen.UNSAFE_getByType(Modal).props.onRequestClose();
+    getOnlyHost(screen.container, node => node.type === 'Modal').props.onRequestClose();
 
     expect(onDiscard).not.toHaveBeenCalled();
   });

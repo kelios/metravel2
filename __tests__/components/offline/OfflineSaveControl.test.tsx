@@ -130,11 +130,11 @@ const downloadingOperation = {
   startedAt: 1,
 };
 
-const renderControl = (
+const renderControl = async (
   onSave = jest.fn(() => Promise.resolve()),
   props: { compact?: boolean } = {},
 ) => {
-  const view = render(
+  const view = await render(
     <OfflineSaveControl type="travel" sourceId={42} onSave={onSave} {...props} />,
   );
   return { ...view, onSave };
@@ -156,38 +156,38 @@ describe('OfflineSaveControl', () => {
   });
 
   it('предлагает сохранить и передаёт выбор «с фото» наружу', async () => {
-    const { onSave } = renderControl();
+    const { onSave } = await renderControl();
 
     expect(screen.getByText('offline:saveOffline')).toBeTruthy();
     expect(screen.queryByTestId('action-sheet')).toBeNull();
 
-    fireEvent.press(screen.getByTestId('offline-save-chip'));
+    await fireEvent.press(screen.getByTestId('offline-save-chip'));
     expect(screen.getByText('offline:saveTitle')).toBeTruthy();
 
-    fireEvent.press(screen.getByText('offline:withPhotos'));
+    await fireEvent.press(screen.getByText('offline:withPhotos'));
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledWith(true);
     });
   });
 
   it('сохраняет только текст и маршрут, когда фото не нужны', async () => {
-    const { onSave } = renderControl();
+    const { onSave } = await renderControl();
 
-    fireEvent.press(screen.getByTestId('offline-save-chip'));
-    fireEvent.press(screen.getByText('offline:textAndRoute'));
+    await fireEvent.press(screen.getByTestId('offline-save-chip'));
+    await fireEvent.press(screen.getByText('offline:textAndRoute'));
 
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledWith(false);
     });
   });
 
-  it('показывает прогресс закраской и отменяет загрузку соседней кнопкой', () => {
+  it('показывает прогресс закраской и отменяет загрузку соседней кнопкой', async () => {
     mockUseOfflineCatalog.mockReturnValue({
       ...baseCatalogState,
       operations: [downloadingOperation],
     });
 
-    renderControl();
+    await renderControl();
 
     expect(screen.getByText('offline:saving · 3/10')).toBeTruthy();
     const fill = require('react-native').StyleSheet.flatten(
@@ -196,14 +196,14 @@ describe('OfflineSaveControl', () => {
     expect(fill.width).toBe('30%');
 
     // Во время загрузки чип не открывает лист выбора — только отмена.
-    fireEvent.press(screen.getByTestId('offline-save-chip'));
+    await fireEvent.press(screen.getByTestId('offline-save-chip'));
     expect(screen.queryByTestId('action-sheet')).toBeNull();
 
-    fireEvent.press(screen.getByTestId('offline-save-cancel'));
+    await fireEvent.press(screen.getByTestId('offline-save-cancel'));
     expect(mockCancelOperation).toHaveBeenCalledWith('travel:42');
   });
 
-  it('объясняет нехватку места и повторяет загрузку по нажатию', () => {
+  it('объясняет нехватку места и повторяет загрузку по нажатию', async () => {
     mockUseOfflineCatalog.mockReturnValue({
       ...baseCatalogState,
       operations: [{
@@ -213,13 +213,13 @@ describe('OfflineSaveControl', () => {
       }],
     });
 
-    renderControl();
+    await renderControl();
 
     expect(screen.getByText('offline:retry')).toBeTruthy();
     expect(screen.getByTestId('offline-save-error')).toHaveTextContent('offline:storageFull');
     expect(screen.queryByTestId('offline-save-cancel')).toBeNull();
 
-    fireEvent.press(screen.getByTestId('offline-save-chip'));
+    await fireEvent.press(screen.getByTestId('offline-save-chip'));
     expect(mockRetryOperation).toHaveBeenCalledWith('travel:42');
   });
 
@@ -229,14 +229,14 @@ describe('OfflineSaveControl', () => {
       items: [savedManifest],
     });
 
-    renderControl();
+    await renderControl();
 
     expect(screen.getByText('offline:savedOffline')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('offline-save-chip'));
+    await fireEvent.press(screen.getByTestId('offline-save-chip'));
     expect(screen.getByText('offline:manageTitle')).toBeTruthy();
 
-    fireEvent.press(screen.getByText('offline:remove'));
+    await fireEvent.press(screen.getByText('offline:remove'));
     await waitFor(() => {
       expect(mockRemove).toHaveBeenCalledWith('travel:42');
     });
@@ -250,10 +250,10 @@ describe('OfflineSaveControl', () => {
     });
     mockConfirmAction.mockResolvedValue(false);
 
-    renderControl();
+    await renderControl();
 
-    fireEvent.press(screen.getByTestId('offline-save-chip'));
-    fireEvent.press(screen.getByText('offline:remove'));
+    await fireEvent.press(screen.getByTestId('offline-save-chip'));
+    await fireEvent.press(screen.getByText('offline:remove'));
 
     await waitFor(() => {
       expect(mockConfirmAction).toHaveBeenCalled();
@@ -261,20 +261,20 @@ describe('OfflineSaveControl', () => {
     expect(mockRemove).not.toHaveBeenCalled();
   });
 
-  it('держит тач-таргет ≥44 на мобильном и на планшетной ширине native', () => {
-    renderControl();
+  it('держит тач-таргет ≥44 на мобильном и на планшетной ширине native', async () => {
+    await renderControl();
     expect(chipHeight()).toBeGreaterThanOrEqual(44);
 
-    screen.unmount();
+    await screen.unmount();
     mockUseResponsive.mockReturnValue({ isHydrated: true, isMobile: false });
-    renderControl();
+    await renderControl();
     expect(chipHeight()).toBeGreaterThanOrEqual(44);
   });
 
   // #1673: рядом со статусом под галереей чип стоит в одной строке, поэтому
   // теряет подпись — но не действие, не состояние и не доступное имя.
-  it('в компактном виде прячет подпись, но остаётся квадратным тач-таргетом с тем же действием', () => {
-    renderControl(undefined, { compact: true });
+  it('в компактном виде прячет подпись, но остаётся квадратным тач-таргетом с тем же действием', async () => {
+    await renderControl(undefined, { compact: true });
 
     expect(screen.queryByText('offline:saveOffline')).toBeNull();
 
@@ -284,14 +284,14 @@ describe('OfflineSaveControl', () => {
     expect(flattened.width).toBe(flattened.minHeight);
     expect(flattened.paddingHorizontal).toBe(0);
 
-    fireEvent.press(chip);
+    await fireEvent.press(chip);
     expect(screen.getByText('offline:saveTitle')).toBeTruthy();
   });
 
-  it('в компактном виде продолжает показывать состояние сохранённой копии', () => {
+  it('в компактном виде продолжает показывать состояние сохранённой копии', async () => {
     mockUseOfflineCatalog.mockReturnValue({ ...baseCatalogState, items: [savedManifest] });
 
-    renderControl(undefined, { compact: true });
+    await renderControl(undefined, { compact: true });
 
     expect(screen.getByLabelText('offline:savedOffline')).toBeTruthy();
   });

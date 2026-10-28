@@ -117,9 +117,9 @@ describe('CustomHeader', () => {
         Object.defineProperty(Platform, 'OS', { value: originalPlatformOS });
     });
 
-    const renderHeader = (props: React.ComponentProps<typeof CustomHeader> = {}) => {
+    const renderHeader = async (props: React.ComponentProps<typeof CustomHeader> = {}) => {
         const client = createTestQueryClient();
-        return render(
+        return await render(
             <QueryClientProvider client={client}>
                 <NativeMenuAccessibilityProvider>
                     <PaperProvider>
@@ -132,12 +132,12 @@ describe('CustomHeader', () => {
         );
     };
 
-    it.each([960, 1024, 1279, 1440])('quest detail at %d has exactly one site/quest identity owner', width => {
+    it.each([960, 1024, 1279, 1440])('quest detail at %d has exactly one site/quest identity owner', async width => {
         Object.defineProperty(Platform, 'OS', { value: 'web' });
         (global as any).__mockResponsive = { width, height: 768, isPhone: false, isLargePhone: false, isDesktop: width >= 1280, isMobile: false, isHydrated: true };
         (usePathname as jest.Mock).mockReturnValue('/pl/quests/35/istanbul');
         try {
-            const view = renderHeader();
+            const view = await renderHeader();
             expect(Boolean(view.queryByTestId('main-header-row'))).toBe(width >= 1280);
             expect(Boolean(view.queryByTestId('mock-header-context-bar'))).toBe(width < 1280);
             if (width >= 1280) expect(view.getByTestId('header-language-switcher')).toBeTruthy();
@@ -146,7 +146,7 @@ describe('CustomHeader', () => {
         }
     });
 
-    it.each(['android', 'ios'])('keeps %s seasonal decoration inside the brand row without changing safe-area geometry', platform => {
+    it.each(['android', 'ios'])('keeps %s seasonal decoration inside the brand row without changing safe-area geometry', async platform => {
         Object.defineProperty(Platform, 'OS', { value: platform });
         mockSafeAreaInsets = { top: 59, right: 0, bottom: 34, left: 0 };
         (global as any).__mockResponsive = {
@@ -156,20 +156,20 @@ describe('CustomHeader', () => {
         (usePathname as jest.Mock).mockReturnValue('/search');
         const themeModule = require('@/hooks/useTheme') as typeof import('@/hooks/useTheme');
         const baselineTheme = themeModule.useTheme();
-        const baseline = renderHeader();
+        const baseline = await renderHeader();
         const baselineRow = StyleSheet.flatten(baseline.getByTestId('main-header-row').props.style);
-        baseline.unmount();
+        await baseline.unmount();
         const themeSpy = jest.spyOn(themeModule, 'useTheme').mockReturnValue({ ...baselineTheme, activeSeasonalTheme: 'spring' });
 
         try {
-            const view = renderHeader();
+            const view = await renderHeader();
             const row = view.getByTestId('main-header-row');
-            expect(row.findByProps({ testID: 'seasonal-theme-decoration' })).toBeTruthy();
+            expect(row.queryAll((node) => node.props.testID === 'seasonal-theme-decoration').length).toBeGreaterThan(0);
             expect(StyleSheet.flatten(row.props.style)).toEqual(baselineRow);
             expect(StyleSheet.flatten(view.getByTestId('main-header').props.style).paddingTop).toBe(59);
-            view.unmount();
+            await view.unmount();
             (usePathname as jest.Mock).mockReturnValue('/contact');
-            expect(renderHeader().queryByTestId('seasonal-theme-decoration', { includeHiddenElements: true })).toBeNull();
+            expect(await (await renderHeader()).queryByTestId('seasonal-theme-decoration', { includeHiddenElements: true })).toBeNull();
         } finally {
             themeSpy.mockRestore();
             (global as any).__mockResponsive = undefined;
@@ -177,7 +177,7 @@ describe('CustomHeader', () => {
     });
 
     describe('iPhone safe area', () => {
-        it('places the header row below the top inset exactly once', () => {
+        it('places the header row below the top inset exactly once', async () => {
             Object.defineProperty(Platform, 'OS', { value: 'ios' });
             mockSafeAreaInsets = { top: 59, right: 0, bottom: 34, left: 0 };
             const onHeightChange = jest.fn();
@@ -194,7 +194,7 @@ describe('CustomHeader', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
 
             try {
-                const { getByTestId } = renderHeader({ onHeightChange });
+                const { getByTestId } = await renderHeader({ onHeightChange });
                 const header = getByTestId('main-header');
                 const headerStyle = StyleSheet.flatten(header.props.style);
                 const rowStyle = StyleSheet.flatten(getByTestId('main-header-row').props.style);
@@ -202,8 +202,8 @@ describe('CustomHeader', () => {
                 expect(headerStyle.paddingTop).toBe(59);
                 expect(rowStyle.paddingTop).toBe(8);
 
-                fireEvent(header, 'layout', { nativeEvent: { layout: { height: 119 } } });
-                fireEvent(header, 'layout', { nativeEvent: { layout: { height: 119 } } });
+                await fireEvent(header, 'layout', { nativeEvent: { layout: { height: 119 } } });
+                await fireEvent(header, 'layout', { nativeEvent: { layout: { height: 119 } } });
                 expect(onHeightChange).toHaveBeenCalledTimes(1);
                 expect(onHeightChange).toHaveBeenCalledWith(119);
             } finally {
@@ -217,7 +217,7 @@ describe('CustomHeader', () => {
             ['/trips/my', false],
             ['/contact', false],
             ['/search', true],
-        ] as const)('iPhone %s: бренд-строка = %s', (path, hasBrandRow) => {
+        ] as const)('iPhone %s: бренд-строка = %s', async (path, hasBrandRow) => {
             Object.defineProperty(Platform, 'OS', { value: 'ios' });
             mockSafeAreaInsets = { top: 59, right: 0, bottom: 34, left: 0 };
             (global as any).__mockResponsive = {
@@ -233,7 +233,7 @@ describe('CustomHeader', () => {
             (usePathname as jest.Mock).mockReturnValue(path);
 
             try {
-                const { getByTestId, queryByTestId } = renderHeader();
+                const { getByTestId, queryByTestId } = await renderHeader();
                 expect(Boolean(queryByTestId('main-header-row'))).toBe(hasBrandRow);
                 expect(StyleSheet.flatten(getByTestId('main-header').props.style).paddingTop).toBe(59);
             } finally {
@@ -241,12 +241,12 @@ describe('CustomHeader', () => {
             }
         });
 
-        it('does not apply the native top inset on web', () => {
+        it('does not apply the native top inset on web', async () => {
             Object.defineProperty(Platform, 'OS', { value: 'web' });
             mockSafeAreaInsets = { top: 59, right: 0, bottom: 34, left: 0 };
             (usePathname as jest.Mock).mockReturnValue('/');
 
-            const { getByTestId } = renderHeader();
+            const { getByTestId } = await renderHeader();
             const headerStyle = StyleSheet.flatten(getByTestId('main-header').props.style);
 
             expect(headerStyle.paddingTop).toBe(0);
@@ -261,7 +261,7 @@ describe('CustomHeader', () => {
             ['/trips/my', false],
             ['/quests/minsk/q1', false],
             ['/search', true],
-        ] as const)('Android %s: инсет на контейнере, бренд-строка = %s', (path, hasBrandRow) => {
+        ] as const)('Android %s: инсет на контейнере, бренд-строка = %s', async (path, hasBrandRow) => {
             Object.defineProperty(Platform, 'OS', { value: 'android' });
             mockSafeAreaInsets = { top: 63, right: 0, bottom: 24, left: 0 };
             (global as any).__mockResponsive = {
@@ -277,7 +277,7 @@ describe('CustomHeader', () => {
             (usePathname as jest.Mock).mockReturnValue(path);
 
             try {
-                const { getByTestId, queryByTestId } = renderHeader();
+                const { getByTestId, queryByTestId } = await renderHeader();
                 expect(Boolean(queryByTestId('main-header-row'))).toBe(hasBrandRow);
                 expect(StyleSheet.flatten(getByTestId('main-header').props.style).paddingTop).toBe(63);
             } finally {
@@ -287,16 +287,16 @@ describe('CustomHeader', () => {
     });
 
     describe('Desktop navigation', () => {
-        it('renders desktop navigation by default', () => {
+        it('renders desktop navigation by default', async () => {
             (usePathname as jest.Mock).mockReturnValue('/');
-            const utils = renderHeader();
+            const utils = await renderHeader();
             expect(utils.getByLabelText('Маршруты')).toBeTruthy();
         });
 
-        it('removes the shared skip-link id from an inactive transition header', () => {
+        it('removes the shared skip-link id from an inactive transition header', async () => {
             (usePathname as jest.Mock).mockReturnValue('/trips/plan');
             const client = createTestQueryClient();
-            const { getByTestId } = render(
+            const { getByTestId } = await render(
                 <QueryClientProvider client={client}>
                     <CustomHeader isNavigationTarget={false} />
                 </QueryClientProvider>,
@@ -305,9 +305,9 @@ describe('CustomHeader', () => {
             expect(getByTestId('main-header').props.nativeID).toBeUndefined();
         });
 
-        it('shows navigation items on desktop', () => {
+        it('shows navigation items on desktop', async () => {
             (usePathname as jest.Mock).mockReturnValue('/');
-            const utils = renderHeader();
+            const utils = await renderHeader();
             
             expect(utils.getByLabelText('Маршруты')).toBeTruthy();
             expect(utils.getByLabelText('Беларусь')).toBeTruthy();
@@ -318,64 +318,64 @@ describe('CustomHeader', () => {
             expect(utils.queryByLabelText('Попутчики')).toBeNull();
         });
 
-        it('highlights active navigation item', () => {
+        it('highlights active navigation item', async () => {
             (usePathname as jest.Mock).mockReturnValue('/map');
-            const utils = renderHeader();
+            const utils = await renderHeader();
             
             const mapItem = utils.getByLabelText('Карта');
             expect(mapItem.props.accessibilityState?.selected).toBe(true);
         });
 
-        it('navigates when navigation item is pressed', () => {
+        it('navigates when navigation item is pressed', async () => {
             (usePathname as jest.Mock).mockReturnValue('/');
-            const utils = renderHeader();
+            const utils = await renderHeader();
             
             const mapItem = utils.getByLabelText('Карта');
-            fireEvent.press(mapItem);
+            await fireEvent.press(mapItem);
             
             expect(mockPush).toHaveBeenCalledWith('/map');
         });
 
-        it('navigates to places from desktop navigation', () => {
+        it('navigates to places from desktop navigation', async () => {
             (usePathname as jest.Mock).mockReturnValue('/');
-            const utils = renderHeader();
+            const utils = await renderHeader();
 
-            fireEvent.press(utils.getByLabelText('Места'));
+            await fireEvent.press(utils.getByLabelText('Места'));
 
             expect(mockPush).toHaveBeenCalledWith('/places');
         });
 
-        it('does not highlight ideas navigation item on travel details routes', () => {
+        it('does not highlight ideas navigation item on travel details routes', async () => {
             (usePathname as jest.Mock).mockReturnValue('/travels/some-travel');
-            const utils = renderHeader();
+            const utils = await renderHeader();
             
             const homeItem = utils.getByLabelText('Маршруты');
             expect(homeItem.props.accessibilityState?.selected).toBe(false);
         });
 
-        it('correctly identifies active path for quest routes', () => {
+        it('correctly identifies active path for quest routes', async () => {
             (usePathname as jest.Mock).mockReturnValue('/quests/minsk');
-            const utils = renderHeader();
+            const utils = await renderHeader();
             
             const questsItem = utils.getByLabelText('Квесты');
             expect(questsItem.props.accessibilityState?.selected).toBe(true);
         });
 
-        it('correctly identifies active path for roulette routes', () => {
+        it('correctly identifies active path for roulette routes', async () => {
             (usePathname as jest.Mock).mockReturnValue('/roulette');
-            const utils = renderHeader();
+            const utils = await renderHeader();
 
             const rouletteItem = utils.getByLabelText('Случайный маршрут');
             expect(rouletteItem.props.accessibilityState?.selected).toBe(true);
         });
 
-        it('does not render mobile burger button on desktop', () => {
+        it('does not render mobile burger button on desktop', async () => {
             (usePathname as jest.Mock).mockReturnValue('/');
-            const utils = renderHeader();
+            const utils = await renderHeader();
             expect(utils.queryByTestId('mobile-menu-open')).toBeNull();
         });
 
-        it('uses compact navigation on tablet-width web screens', () => {
+        it('uses compact navigation on tablet-width web screens', async () => {
             Object.defineProperty(Platform, 'OS', { value: 'web' });
             (global as any).__mockResponsive = {
                 width: 1024,
@@ -391,7 +391,7 @@ describe('CustomHeader', () => {
             (usePathname as jest.Mock).mockReturnValue('/');
 
             try {
-                const utils = renderHeader();
+                const utils = await renderHeader();
                 expect(utils.getByTestId('mobile-menu-open')).toBeTruthy();
                 expect(utils.queryByLabelText('Случайный маршрут')).toBeNull();
             } finally {
@@ -399,19 +399,19 @@ describe('CustomHeader', () => {
             }
         });
 
-        it('renders desktop account anchor and guest login CTA without eager account menu mount', () => {
+        it('renders desktop account anchor and guest login CTA without eager account menu mount', async () => {
             (usePathname as jest.Mock).mockReturnValue('/');
-            const utils = renderHeader();
+            const utils = await renderHeader();
 
             expect(utils.getByTestId('account-menu-anchor')).toBeTruthy();
             expect(utils.getByTestId('header-login-cta')).toBeTruthy();
         });
 
-        it('opens guest login CTA in the current tab', () => {
+        it('opens guest login CTA in the current tab', async () => {
             (usePathname as jest.Mock).mockReturnValue('/');
-            const utils = renderHeader();
+            const utils = await renderHeader();
 
-            fireEvent.press(utils.getByTestId('header-login-cta'));
+            await fireEvent.press(utils.getByTestId('header-login-cta'));
 
             expect(mockPush).toHaveBeenCalledWith('/login?redirect=%2F&intent=menu');
         });
@@ -426,7 +426,7 @@ describe('CustomHeader', () => {
 
             try {
                 (usePathname as jest.Mock).mockReturnValue('/travels/test-slug');
-                const { queryByTestId } = render(
+                const { queryByTestId } = await render(
                     <QueryClientProvider client={createTestQueryClient()}>
                         <CustomHeader />
                     </QueryClientProvider>
@@ -447,14 +447,14 @@ describe('CustomHeader', () => {
             }
         });
 
-        it('does not crash when primary navigation config is unavailable', () => {
+        it('does not crash when primary navigation config is unavailable', async () => {
             const headerNavigationModule = require('@/constants/headerNavigation');
             const originalBar = headerNavigationModule.DESKTOP_BAR_NAV_ITEMS;
             headerNavigationModule.DESKTOP_BAR_NAV_ITEMS = undefined;
 
             try {
                 (usePathname as jest.Mock).mockReturnValue('/');
-                const utils = renderHeader();
+                const utils = await renderHeader();
                 expect(utils.queryByLabelText('Маршруты')).toBeNull();
             } finally {
                 headerNavigationModule.DESKTOP_BAR_NAV_ITEMS = originalBar;
@@ -473,13 +473,13 @@ describe('CustomHeader', () => {
             Object.assign(mockAuthContext, { isAuthenticated: false, username: '', userId: null, authReady: true });
         });
 
-        it('menu button opens the shared «Ещё» sheet instead of a header menu of its own', () => {
+        it('menu button opens the shared «Ещё» sheet instead of a header menu of its own', async () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             const opener = jest.fn();
             const unregister = registerDockMoreOpener(opener);
             try {
-                const utils = renderHeader();
-                fireEvent.press(utils.getByTestId('mobile-menu-open'));
+                const utils = await renderHeader();
+                await fireEvent.press(utils.getByTestId('mobile-menu-open'));
                 expect(opener).toHaveBeenCalledTimes(1);
                 expect(utils.queryByTestId('mobile-menu-panel')).toBeNull();
                 expect(mockPush).not.toHaveBeenCalled();
@@ -488,38 +488,38 @@ describe('CustomHeader', () => {
             }
         });
 
-        it('falls back to the /more page when the sheet controller is not mounted', () => {
+        it('falls back to the /more page when the sheet controller is not mounted', async () => {
             (usePathname as jest.Mock).mockReturnValue('/');
-            const utils = renderHeader();
-            fireEvent.press(utils.getByTestId('mobile-menu-open'));
+            const utils = await renderHeader();
+            await fireEvent.press(utils.getByTestId('mobile-menu-open'));
             expect(mockPush).toHaveBeenCalledWith('/more');
         });
 
-        it('shows a visible 44 px «Войти» to a guest in the header row', () => {
+        it('shows a visible 44 px «Войти» to a guest in the header row', async () => {
             (usePathname as jest.Mock).mockReturnValue('/');
-            const utils = renderHeader();
+            const utils = await renderHeader();
             const login = utils.getByTestId('mobile-header-login');
             expect(login.props.accessibilityLabel).toBe('Войти');
             expect(utils.getByText('Войти')).toBeTruthy();
             expect(StyleSheet.flatten(login.props.style).minHeight).toBeGreaterThanOrEqual(44);
-            fireEvent.press(login);
+            await fireEvent.press(login);
             expect(mockPush).toHaveBeenCalledWith('/login?redirect=%2F&intent=menu');
         });
 
-        it('does not show «Войти» before the session is read', () => {
+        it('does not show «Войти» before the session is read', async () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             Object.assign(mockAuthContext, { authReady: false });
-            const utils = renderHeader();
+            const utils = await renderHeader();
             expect(utils.queryByTestId('mobile-header-login')).toBeNull();
             expect(utils.getByTestId('mobile-menu-open')).toBeTruthy();
         });
 
-        it('shows the profile pill instead of «Войти» to a signed-in user', () => {
+        it('shows the profile pill instead of «Войти» to a signed-in user', async () => {
             (usePathname as jest.Mock).mockReturnValue('/');
             Object.assign(mockAuthContext, { isAuthenticated: true, username: 'Юля', userId: 1 });
-            const utils = renderHeader();
+            const utils = await renderHeader();
             expect(utils.queryByTestId('mobile-header-login')).toBeNull();
-            fireEvent.press(utils.getByLabelText('Открыть профиль Юля'));
+            await fireEvent.press(utils.getByLabelText('Открыть профиль Юля'));
             expect(mockPush).toHaveBeenCalledWith('/profile');
         });
     });

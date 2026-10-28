@@ -13,10 +13,10 @@ describe('TravelHeroQuickJumps', () => {
     ['map', 'travel-quick-jump-map'],
     ['description', 'travel-quick-jump-description'],
     ['points', 'travel-quick-jump-points'],
-  ])('fires sticky quick jump navigation for %s', (sectionKey, testID) => {
+  ])('fires sticky quick jump navigation for %s', async (sectionKey, testID) => {
     const onQuickJump = jest.fn()
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <TravelHeroQuickJumps
         links={links as any}
         isMobile
@@ -25,15 +25,15 @@ describe('TravelHeroQuickJumps', () => {
       />,
     )
 
-    fireEvent.press(getByTestId(testID))
+    await fireEvent.press(getByTestId(testID))
 
     expect(onQuickJump).toHaveBeenCalledWith(sectionKey)
   })
 
-  it('fires navigation for a short native touch when ScrollView cancels press', () => {
+  it('fires navigation for a short native touch when ScrollView cancels press', async () => {
     const onQuickJump = jest.fn()
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <TravelHeroQuickJumps
         links={links as any}
         isMobile
@@ -43,17 +43,17 @@ describe('TravelHeroQuickJumps', () => {
     )
 
     const chip = getByTestId('travel-quick-jump-points')
-    fireEvent(chip, 'touchStart', { nativeEvent: { pageX: 584, pageY: 540 } })
-    fireEvent(chip, 'touchEnd', { nativeEvent: { pageX: 589, pageY: 544 } })
+    await fireEvent(chip, 'touchStart', { nativeEvent: { pageX: 584, pageY: 540 } })
+    await fireEvent(chip, 'touchEnd', { nativeEvent: { pageX: 589, pageY: 544 } })
 
     expect(onQuickJump).toHaveBeenCalledTimes(1)
     expect(onQuickJump).toHaveBeenCalledWith('points')
   })
 
-  it('does not navigate when the user swipes the horizontal quick jump row', () => {
+  it('does not navigate when the user swipes the horizontal quick jump row', async () => {
     const onQuickJump = jest.fn()
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <TravelHeroQuickJumps
         links={links as any}
         isMobile
@@ -63,8 +63,8 @@ describe('TravelHeroQuickJumps', () => {
     )
 
     const chip = getByTestId('travel-quick-jump-points')
-    fireEvent(chip, 'touchStart', { nativeEvent: { pageX: 584, pageY: 540 } })
-    fireEvent(chip, 'touchEnd', { nativeEvent: { pageX: 620, pageY: 542 } })
+    await fireEvent(chip, 'touchStart', { nativeEvent: { pageX: 584, pageY: 540 } })
+    await fireEvent(chip, 'touchEnd', { nativeEvent: { pageX: 620, pageY: 542 } })
 
     expect(onQuickJump).not.toHaveBeenCalled()
   })

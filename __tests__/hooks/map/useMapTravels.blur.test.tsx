@@ -48,7 +48,7 @@ describe('useMapTravels — blur keeps the loaded result set', () => {
   })
 
   it('keeps data and total when the screen loses focus and does not refetch on return', async () => {
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ isFocused, coordinates }) =>
         useMapTravels({
           coordinates,
@@ -68,19 +68,19 @@ describe('useMapTravels — blur keeps the loaded result set', () => {
     expect(result.current.total).toBe(2)
     expect(mockFetchTravelsForMap).toHaveBeenCalledTimes(1)
 
-    rerender({ isFocused: false, coordinates: { latitude: 53.9, longitude: 27.56 } })
+    await rerender({ isFocused: false, coordinates: { latitude: 53.9, longitude: 27.56 } })
     expect(result.current.allTravelsData).toHaveLength(2)
     expect(result.current.total).toBe(2)
 
     // GPS jitter below ~11 m on re-focus does not change the query key.
-    rerender({ isFocused: true, coordinates: { latitude: 53.900004, longitude: 27.560003 } })
+    await rerender({ isFocused: true, coordinates: { latitude: 53.900004, longitude: 27.560003 } })
     await new Promise((resolve) => setTimeout(resolve, 30))
     expect(mockFetchTravelsForMap).toHaveBeenCalledTimes(1)
     expect(result.current.allTravelsData).toHaveLength(2)
   })
 
   it('keeps loadMore referentially stable across fetch lifecycle ticks', async () => {
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useMapTravels({
           coordinates: { latitude: 53.9, longitude: 27.56 },

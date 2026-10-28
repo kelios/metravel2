@@ -17,46 +17,46 @@ describe('delivered document ownership (#2701)', () => {
   })
   afterEach(() => { marker.remove(); Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform }) })
 
-  it.each(['/travel/42', '/travel/0', '/travel/000123', '/travel/9007199254740993'])('uses the delivered marker at numeric server route %s', pathname => {
+  it.each(['/travel/42', '/travel/0', '/travel/000123', '/travel/9007199254740993'])('uses the delivered marker at numeric server route %s', async pathname => {
     window.history.replaceState(null, '', pathname)
-    const screen = render(<Probe pathname={pathname} />)
+    const screen = await render(<Probe pathname={pathname} />)
     expect(JSON.parse(screen.getByTestId('view').props.children)).toMatchObject({ kind: 'not-found', pathname, showFooter: true, prefetchTravelStatics: false })
   })
 
-  it.each(['/travel/new', '/travel/slug', '/travel/-1', '/travel/42/extra', '/travels/42', '/search'])('does not redefine unrelated matched route %s', pathname => {
+  it.each(['/travel/new', '/travel/slug', '/travel/-1', '/travel/42/extra', '/travels/42', '/search'])('does not redefine unrelated matched route %s', async pathname => {
     window.history.replaceState(null, '', pathname)
-    const screen = render(<Probe pathname={pathname} />)
+    const screen = await render(<Probe pathname={pathname} />)
     expect(JSON.parse(screen.getByTestId('view').props.children).kind).toBe('route')
   })
 
-  it('does not read a marker inserted later by an SPA route', () => {
+  it('does not read a marker inserted later by an SPA route', async () => {
     window.history.replaceState(null, '', '/travel/42')
     marker.remove()
-    const screen = render(<Probe pathname="/travel/42" />)
+    const screen = await render(<Probe pathname="/travel/42" />)
     document.body.appendChild(marker)
-    screen.rerender(<Probe pathname="/travel/42" />)
+    await await screen.rerender(<Probe pathname="/travel/42" />)
     expect(JSON.parse(screen.getByTestId('view').props.children)).toMatchObject({ kind: 'route', showFooter: false, prefetchTravelStatics: true })
   })
 
-  it('retains denial through rerenders and consumes it permanently after a committed departure', () => {
+  it('retains denial through rerenders and consumes it permanently after a committed departure', async () => {
     window.history.replaceState(null, '', '/travel/42')
     const readMarker = jest.spyOn(document, 'getElementById')
-    const screen = render(<Probe pathname="/travel/42" />)
+    const screen = await render(<Probe pathname="/travel/42" />)
     marker.remove()
-    screen.rerender(<Probe pathname="/travel/42" />)
+    await await screen.rerender(<Probe pathname="/travel/42" />)
     expect(JSON.parse(screen.getByTestId('view').props.children).kind).toBe('not-found')
-    act(() => screen.rerender(<Probe pathname="/" />))
+    await act(async () => await await screen.rerender(<Probe pathname="/" />))
     expect(JSON.parse(screen.getByTestId('view').props.children)).toMatchObject({ kind: 'route', pathname: '/' })
-    screen.rerender(<Probe pathname="/travel/42" />)
+    await await screen.rerender(<Probe pathname="/travel/42" />)
     expect(JSON.parse(screen.getByTestId('view').props.children)).toMatchObject({ kind: 'route', pathname: '/travel/42', showFooter: false, prefetchTravelStatics: true })
     expect(readMarker).toHaveBeenCalledTimes(1)
     readMarker.mockRestore()
   })
 
-  it.each(['android', 'ios'])('is inert on %s even with a web marker and matching route', platform => {
+  it.each(['android', 'ios'])('is inert on %s even with a web marker and matching route', async platform => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: platform })
     window.history.replaceState(null, '', '/travel/42')
-    const screen = render(<Probe pathname="/travel/42" segments={['+not-found']} />)
+    const screen = await render(<Probe pathname="/travel/42" segments={['+not-found']} />)
     expect(JSON.parse(screen.getByTestId('view').props.children).kind).toBe('route')
   })
 

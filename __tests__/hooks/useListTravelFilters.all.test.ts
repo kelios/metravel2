@@ -21,15 +21,15 @@ describe('useListTravelFilters - All Filters', () => {
   };
 
   describe('Countries filter', () => {
-    it('should initialize with empty countries filter', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should initialize with empty countries filter', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
       expect(result.current.filter.countries).toBeUndefined();
     });
 
-    it('should set countries filter', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should set countries filter', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('countries', [1, 2, 3]);
       });
 
@@ -37,14 +37,14 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.queryParams.countries).toEqual([1, 2, 3]);
     });
 
-    it('should remove countries when set to empty array', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should remove countries when set to empty array', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('countries', [1, 2]);
       });
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('countries', []);
       });
 
@@ -52,10 +52,10 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.queryParams.countries).toBeUndefined();
     });
 
-    it('should normalize string IDs to numbers', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should normalize string IDs to numbers', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.applyFilter({ countries: ['1', '2', '3'] as any });
       });
 
@@ -65,15 +65,15 @@ describe('useListTravelFilters - All Filters', () => {
   });
 
   describe('Categories filter', () => {
-    it('should initialize with empty categories filter', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should initialize with empty categories filter', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
       expect(result.current.filter.categories).toBeUndefined();
     });
 
-    it('should set categories filter', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should set categories filter', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('categories', ['hiking', 'cycling']);
       });
 
@@ -81,30 +81,30 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.queryParams.categories).toEqual([1, 2]);
     });
 
-    it('should toggle category using handleToggleCategory', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should toggle category using handleToggleCategory', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.handleToggleCategory('hiking');
       });
 
       expect(result.current.filter.categories).toEqual([1]);
 
-      act(() => {
+      await act(() => {
         result.current.handleToggleCategory('hiking');
       });
 
       expect(result.current.filter.categories).toBeUndefined();
     });
 
-    it('should add multiple categories', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should add multiple categories', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.handleToggleCategory('hiking');
       });
 
-      act(() => {
+      await act(() => {
         result.current.handleToggleCategory('cycling');
       });
 
@@ -112,7 +112,7 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.filter.categories).toContain(2);
     });
 
-    it('should merge numeric selections with mapped category names', () => {
+    it('should merge numeric selections with mapped category names', async () => {
       const customProps = {
         ...defaultProps,
         options: {
@@ -123,13 +123,13 @@ describe('useListTravelFilters - All Filters', () => {
           ],
         },
       };
-      const { result } = renderHook(() => useListTravelFilters(customProps));
+      const { result } = await renderHook(() => useListTravelFilters(customProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('categories', [3]);
       });
 
-      act(() => {
+      await act(() => {
         result.current.handleToggleCategory('sailing');
       });
 
@@ -137,24 +137,24 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.queryParams.categories).toEqual([3, 42]);
     });
 
-    it('should re-map stored category names when options become available', () => {
+    it('should re-map stored category names when options become available', async () => {
       const initialProps = {
         ...defaultProps,
         options: undefined,
       };
-      const { result, rerender } = renderHook(
+      const { result, rerender } = await renderHook(
         (props: any) => useListTravelFilters(props),
         { initialProps }
       );
 
-      act(() => {
+      await act(() => {
         result.current.handleToggleCategory('mountains');
       });
 
       expect(result.current.filter.categories).toEqual(['mountains']);
       expect(result.current.queryParams.categories).toBeUndefined();
 
-      rerender({
+      await rerender({
         ...initialProps,
         options: {
           categories: [{ id: '3', name: 'mountains' }],
@@ -166,10 +166,10 @@ describe('useListTravelFilters - All Filters', () => {
   });
 
   describe('CategoryTravelAddress filter', () => {
-    it('should set categoryTravelAddress filter', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should set categoryTravelAddress filter', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('categoryTravelAddress', [1, 2]);
       });
 
@@ -177,14 +177,14 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.queryParams.categoryTravelAddress).toEqual([1, 2]);
     });
 
-    it('should remove categoryTravelAddress when set to empty', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should remove categoryTravelAddress when set to empty', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('categoryTravelAddress', [1]);
       });
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('categoryTravelAddress', []);
       });
 
@@ -193,10 +193,10 @@ describe('useListTravelFilters - All Filters', () => {
   });
 
   describe('Transports filter', () => {
-    it('should set transports filter', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should set transports filter', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('transports', [1, 2, 3]);
       });
 
@@ -204,10 +204,10 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.queryParams.transports).toEqual([1, 2, 3]);
     });
 
-    it('should handle single transport', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should handle single transport', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('transports', [1]);
       });
 
@@ -216,10 +216,10 @@ describe('useListTravelFilters - All Filters', () => {
   });
 
   describe('Companions filter', () => {
-    it('should set companions filter', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should set companions filter', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('companions', [1, 2]);
       });
 
@@ -229,10 +229,10 @@ describe('useListTravelFilters - All Filters', () => {
   });
 
   describe('Complexity filter', () => {
-    it('should set complexity filter', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should set complexity filter', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('complexity', [1, 2, 3]);
       });
 
@@ -242,10 +242,10 @@ describe('useListTravelFilters - All Filters', () => {
   });
 
   describe('Month filter', () => {
-    it('should set month filter', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should set month filter', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('month', [1, 2, 3]);
       });
 
@@ -255,10 +255,10 @@ describe('useListTravelFilters - All Filters', () => {
   });
 
   describe('Over_nights_stay filter', () => {
-    it('should set over_nights_stay filter', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should set over_nights_stay filter', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('over_nights_stay', [1, 2]);
       });
 
@@ -268,10 +268,10 @@ describe('useListTravelFilters - All Filters', () => {
   });
 
   describe('Multiple filters combination', () => {
-    it('should combine multiple filters', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should combine multiple filters', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.applyFilter({
           countries: [1, 2],
           categories: ['hiking'],
@@ -291,14 +291,14 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.queryParams.year).toBe('2023');
     });
 
-    it('should preserve existing filters when adding new ones', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should preserve existing filters when adding new ones', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('countries', [1]);
       });
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('categories', ['hiking']);
       });
 
@@ -306,10 +306,10 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.filter.categories).toEqual([1]);
     });
 
-    it('should remove one filter without affecting others', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should remove one filter without affecting others', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.applyFilter({
           countries: [1],
           categories: ['hiking'],
@@ -317,7 +317,7 @@ describe('useListTravelFilters - All Filters', () => {
         });
       });
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('categories', []);
       });
 
@@ -328,10 +328,10 @@ describe('useListTravelFilters - All Filters', () => {
   });
 
   describe('Filter reset', () => {
-    it('should reset all filters', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should reset all filters', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.applyFilter({
           countries: [1, 2],
           categories: ['hiking'],
@@ -344,7 +344,7 @@ describe('useListTravelFilters - All Filters', () => {
         });
       });
 
-      act(() => {
+      await act(() => {
         result.current.resetFilters();
       });
 
@@ -360,10 +360,10 @@ describe('useListTravelFilters - All Filters', () => {
   });
 
   describe('Query params normalization', () => {
-    it('should include default moderation and publish', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should include default moderation and publish', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('countries', [1]);
       });
 
@@ -371,14 +371,14 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.queryParams.publish).toBe(1);
     });
 
-    it('should exclude empty arrays from queryParams', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should exclude empty arrays from queryParams', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('countries', [1]);
       });
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('categories', []);
       });
 
@@ -386,10 +386,10 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.queryParams.categories).toBeUndefined();
     });
 
-    it('should normalize string array IDs to numbers', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should normalize string array IDs to numbers', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.applyFilter({
           countries: ['1', '2'] as any,
           transports: ['3', '4'] as any,
@@ -400,10 +400,10 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.queryParams.transports).toEqual([3, 4]);
     });
 
-    it('should filter out invalid numeric values', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should filter out invalid numeric values', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.applyFilter({
           countries: ['1', 'invalid', '2', NaN, Infinity] as any,
         });
@@ -414,52 +414,52 @@ describe('useListTravelFilters - All Filters', () => {
   });
 
   describe('Edge cases', () => {
-    it('should handle null values', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should handle null values', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('countries', [1]);
       });
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('countries', null as any);
       });
 
       expect(result.current.filter.countries).toBeUndefined();
     });
 
-    it('should handle undefined values', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should handle undefined values', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('countries', [1]);
       });
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('countries', undefined);
       });
 
       expect(result.current.filter.countries).toBeUndefined();
     });
 
-    it('should handle empty string for year', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should handle empty string for year', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('year', '2023');
       });
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('year', '');
       });
 
       expect(result.current.filter.year).toBeUndefined();
     });
 
-    it('should handle whitespace-only year', () => {
-      const { result } = renderHook(() => useListTravelFilters(defaultProps));
+    it('should handle whitespace-only year', async () => {
+      const { result } = await renderHook(() => useListTravelFilters(defaultProps));
 
-      act(() => {
+      await act(() => {
         result.current.applyFilter({ year: '   ' });
       });
 
@@ -469,12 +469,12 @@ describe('useListTravelFilters - All Filters', () => {
   });
 
   describe('Context-specific behavior', () => {
-    it('should handle isMeTravel context', () => {
-      const { result } = renderHook(() =>
+    it('should handle isMeTravel context', async () => {
+      const { result } = await renderHook(() =>
         useListTravelFilters({ ...defaultProps, isMeTravel: true, userId: '123' })
       );
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('countries', [1]);
       });
 
@@ -485,12 +485,12 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.queryParams.publish).toBeUndefined();
     });
 
-    it('should handle isTravelBy context', () => {
-      const { result } = renderHook(() =>
+    it('should handle isTravelBy context', async () => {
+      const { result } = await renderHook(() =>
         useListTravelFilters({ ...defaultProps, isTravelBy: true })
       );
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('countries', [1]);
       });
 
@@ -498,12 +498,12 @@ describe('useListTravelFilters - All Filters', () => {
       expect(result.current.queryParams.countries).toEqual([3]);
     });
 
-    it('should handle routeUserId', () => {
-      const { result } = renderHook(() =>
+    it('should handle routeUserId', async () => {
+      const { result } = await renderHook(() =>
         useListTravelFilters({ ...defaultProps, user_id: '456' })
       );
 
-      act(() => {
+      await act(() => {
         result.current.onSelect('countries', [1]);
       });
 

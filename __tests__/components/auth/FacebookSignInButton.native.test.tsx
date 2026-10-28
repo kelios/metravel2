@@ -1,6 +1,6 @@
 import { fireEvent, render, waitFor } from '@testing-library/react-native'
 import { getRandomValues as nativeRandomValues } from 'expo-crypto'
-import { Platform, Pressable, StyleSheet } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
 import {
   AccessToken,
   AuthenticationToken,
@@ -169,14 +169,14 @@ describe('FacebookSignInButton native', () => {
     nativeRandomMock.mockImplementation((array: Uint8Array) => array)
     const onError = jest.fn()
     const onSuccess = jest.fn()
-    const screen = render(
+    const screen = await render(
       <FacebookSignInButton onSuccess={onSuccess} onError={onError} />,
     )
     await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
 
-    withoutWebCrypto(() => {
+    withoutWebCrypto(async () => {
       expect(createFacebookLoginNonce()).toBe('')
-      fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+      await fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
     })
     await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
 
@@ -209,12 +209,12 @@ describe('FacebookSignInButton native', () => {
 
   it('signs in on iPhone through Limited Login and returns the OIDC token', async () => {
     const onSuccess = jest.fn()
-    const screen = render(
+    const screen = await render(
       <FacebookSignInButton onSuccess={onSuccess} onError={jest.fn()} />,
     )
 
     await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
-    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+    await fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
     const [permissions, tracking, nonce] = loginMock.mock.calls[0]
@@ -233,14 +233,14 @@ describe('FacebookSignInButton native', () => {
   })
 
   it('uses a fresh nonce for every iPhone attempt', async () => {
-    const screen = render(
+    const screen = await render(
       <FacebookSignInButton onSuccess={jest.fn()} onError={jest.fn()} />,
     )
 
     await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
-    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+    await fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
     await waitFor(() => expect(loginMock).toHaveBeenCalledTimes(1))
-    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+    await fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
     await waitFor(() => expect(loginMock).toHaveBeenCalledTimes(2))
 
     expect(loginMock.mock.calls[1][2]).not.toBe(loginMock.mock.calls[0][2])
@@ -250,12 +250,12 @@ describe('FacebookSignInButton native', () => {
     authenticationTokenMock.mockResolvedValue(null)
     const onSuccess = jest.fn()
     const onError = jest.fn()
-    const screen = render(
+    const screen = await render(
       <FacebookSignInButton onSuccess={onSuccess} onError={onError} />,
     )
 
     await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
-    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+    await fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
 
     await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
     expect(onSuccess).not.toHaveBeenCalled()
@@ -269,12 +269,12 @@ describe('FacebookSignInButton native', () => {
     })
     const onSuccess = jest.fn()
     const onError = jest.fn()
-    const screen = render(
+    const screen = await render(
       <FacebookSignInButton onSuccess={onSuccess} onError={onError} />,
     )
 
     await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
-    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+    await fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
 
     await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
     expect(onSuccess).not.toHaveBeenCalled()
@@ -282,12 +282,12 @@ describe('FacebookSignInButton native', () => {
 
   it('re-requests only the email permission on iPhone and keeps Limited Login', async () => {
     const onSuccess = jest.fn()
-    const screen = render(
+    const screen = await render(
       <FacebookSignInButton onSuccess={onSuccess} mode="rerequest_email" />,
     )
 
     await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
-    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+    await fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
     expect(loginMock.mock.calls[0][0]).toEqual(['email'])
@@ -297,7 +297,7 @@ describe('FacebookSignInButton native', () => {
   it('initializes the SDK and returns a fresh access token on Android', async () => {
     setPlatform('android')
     const onSuccess = jest.fn()
-    const screen = render(
+    const screen = await render(
       <FacebookSignInButton onSuccess={onSuccess} onError={jest.fn()} />,
     )
 
@@ -305,7 +305,7 @@ describe('FacebookSignInButton native', () => {
     expect(LoginManager.setLoginBehavior).toHaveBeenCalledWith(
       'native_with_fallback',
     )
-    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+    await fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
 
     await waitFor(() =>
       expect(onSuccess).toHaveBeenCalledWith({
@@ -320,13 +320,15 @@ describe('FacebookSignInButton native', () => {
   })
 
   it('uses the shared social button geometry for its native touch target', async () => {
-    const screen = render(
+    const screen = await render(
       <FacebookSignInButton onSuccess={jest.fn()} onError={jest.fn()} />,
     )
 
     await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
-    const button = screen.UNSAFE_getByType(Pressable)
-    const resolvedStyle = button.props.style({ pressed: true })
+    expect(screen.getByTestId('facebook-sign-in-button')).toBeTruthy()
+    const rawProps = mockSocialButtonProps.get('facebook-sign-in-button')
+    expect(typeof rawProps?.style).toBe('function')
+    const resolvedStyle = rawProps.style({ pressed: true })
 
     expect(StyleSheet.flatten(resolvedStyle)).toMatchObject({
       minHeight: SOCIAL_AUTH_BUTTON_GEOMETRY.minHeight,
@@ -336,10 +338,10 @@ describe('FacebookSignInButton native', () => {
     })
   })
 
-  it('stays unavailable without app id and never initializes or reports success', () => {
+  it('stays unavailable without app id and never initializes or reports success', async () => {
     process.env.EXPO_PUBLIC_META_APP_ID = ''
     const onSuccess = jest.fn()
-    const screen = render(
+    const screen = await render(
       <FacebookSignInButton onSuccess={onSuccess} onError={jest.fn()} />,
     )
     const button = screen.getByTestId('facebook-sign-in-button')
@@ -350,7 +352,7 @@ describe('FacebookSignInButton native', () => {
     })
     expect(Settings.initializeSDK).not.toHaveBeenCalled()
 
-    fireEvent.press(button)
+    await fireEvent.press(button)
 
     expect(onSuccess).not.toHaveBeenCalled()
     expect(loginMock).not.toHaveBeenCalled()
@@ -362,7 +364,7 @@ describe('FacebookSignInButton native', () => {
     })
     const onSuccess = jest.fn()
     const onError = jest.fn()
-    const screen = render(
+    const screen = await render(
       <FacebookSignInButton onSuccess={onSuccess} onError={onError} />,
     )
 
@@ -376,7 +378,7 @@ describe('FacebookSignInButton native', () => {
     ).toBeTruthy()
     expect(onError).toHaveBeenCalledTimes(1)
 
-    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+    await fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
 
     expect(onSuccess).not.toHaveBeenCalled()
     expect(loginMock).not.toHaveBeenCalled()
@@ -386,7 +388,7 @@ describe('FacebookSignInButton native', () => {
     loginMock.mockResolvedValue({ isCancelled: true })
     const onSuccess = jest.fn()
     const onCancel = jest.fn()
-    const screen = render(
+    const screen = await render(
       <FacebookSignInButton
         onSuccess={onSuccess}
         onCancel={onCancel}
@@ -395,7 +397,7 @@ describe('FacebookSignInButton native', () => {
     )
 
     await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
-    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+    await fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
 
     await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1))
     expect(authenticationTokenMock).not.toHaveBeenCalled()
@@ -410,12 +412,12 @@ describe('FacebookSignInButton native', () => {
       permissions: ['public_profile'],
     })
     const onSuccess = jest.fn()
-    const screen = render(
+    const screen = await render(
       <FacebookSignInButton onSuccess={onSuccess} mode="rerequest_email" />,
     )
 
     await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
-    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+    await fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
 
     await waitFor(() =>
       expect(onSuccess).toHaveBeenCalledWith({
@@ -434,10 +436,10 @@ describe('FacebookSignInButton native', () => {
       grantedPermissions: ['public_profile'],
     })
     const onSuccess = jest.fn()
-    const screen = render(<FacebookSignInButton onSuccess={onSuccess} />)
+    const screen = await render(<FacebookSignInButton onSuccess={onSuccess} />)
 
     await waitFor(() => expect(Settings.initializeSDK).toHaveBeenCalledTimes(1))
-    fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
+    await fireEvent.press(screen.getByTestId('facebook-sign-in-button'))
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1))
     expect(onSuccess.mock.calls[0][0]).toMatchObject({
@@ -447,3 +449,17 @@ describe('FacebookSignInButton native', () => {
     })
   })
 })
+
+// Observe the public component input while retaining its normal host rendering.
+const captureNative = require('react-native')
+const capturedOriginalPressable = captureNative.Pressable
+const mockSocialButtonProps = new Map<string, any>()
+beforeAll(() => {
+  captureNative.Pressable = require('react').forwardRef((props: any, ref: any) => {
+    const key = props.testID === 'facebook-sign-in-button' ? props.testID : null
+    if (key) mockSocialButtonProps.set(key, props)
+    return require('react').createElement(capturedOriginalPressable, { ...props, ref })
+  })
+})
+afterAll(() => { captureNative.Pressable = capturedOriginalPressable })
+beforeEach(() => { mockSocialButtonProps.clear() })

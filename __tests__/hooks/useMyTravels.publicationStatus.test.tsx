@@ -50,7 +50,7 @@ const page = (ids: number[], total: number) => ({
   total,
 });
 
-const renderDraftsSlice = () =>
+const renderDraftsSlice = async () =>
   renderHook(() =>
     useMyTravels({
       userId: 'u-1',
@@ -69,7 +69,7 @@ describe('useMyTravels — серверный срез по статусу пу�
   it('первую страницу берёт одним запросом со своим where.publication_status', async () => {
     mockFetchMyTravels.mockResolvedValue(page([1, 2], 65) as any);
 
-    const { result } = renderDraftsSlice();
+    const { result } = await renderDraftsSlice();
     await act(async () => {
       await result.current.load();
     });
@@ -93,7 +93,7 @@ describe('useMyTravels — серверный срез по статусу пу�
   it('следующую страницу листает тем же фильтром, а не общим списком', async () => {
     mockFetchMyTravels.mockResolvedValue(page([1, 2], 65) as any);
 
-    const { result } = renderDraftsSlice();
+    const { result } = await renderDraftsSlice();
     await act(async () => {
       await result.current.load();
     });
@@ -113,14 +113,14 @@ describe('useMyTravels — серверный срез по статусу пу�
     await waitFor(() => expect(result.current.myTravels).toHaveLength(4));
   });
 
-  it('инлайновый массив фильтра не пересоздаёт загрузчики на каждом рендере', () => {
-    const { result, rerender } = renderHook(() =>
+  it('инлайновый массив фильтра не пересоздаёт загрузчики на каждом рендере', async () => {
+    const { result, rerender } = await renderHook(() =>
       useMyTravels({ userId: 'u-1', perPage: 20, publicationStatus: ['draft', 'pending_review'] })
     );
     const firstLoad = result.current.load;
     const firstLoadMore = result.current.loadMore;
 
-    rerender({});
+    await rerender({});
 
     // Иначе каждый рендер профиля перезапускал бы эффект загрузки вкладки.
     expect(result.current.load).toBe(firstLoad);
@@ -129,7 +129,7 @@ describe('useMyTravels — серверный срез по статусу пу�
 
   it('пустая следующая страница завершает выдачу, даже если серверный total больше', async () => {
     mockFetchMyTravels.mockResolvedValueOnce(page([1, 2], 65) as any).mockResolvedValueOnce(page([], 65) as any);
-    const { result } = renderDraftsSlice();
+    const { result } = await renderDraftsSlice();
     await act(async () => { await result.current.load(); });
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false);
@@ -148,10 +148,10 @@ describe('useMyTravels — серверный срез по статусу пу�
     mockFetchMyTravels.mockResolvedValueOnce(page([1, 2], 4) as any)
       .mockImplementationOnce(params => { oldSignal = params.signal; return oldPage as any; })
       .mockResolvedValueOnce(page([7, 8], 2) as any);
-    const { result } = renderDraftsSlice();
+    const { result } = await renderDraftsSlice();
     await act(async () => { await result.current.load(); });
     let loadingMore!: Promise<void>;
-    act(() => { loadingMore = result.current.loadMore(); });
+    await act(() => { loadingMore = result.current.loadMore(); });
     await waitFor(() => expect(mockFetchMyTravels).toHaveBeenCalledTimes(2));
     await act(async () => { await result.current.load(); });
     expect(oldSignal?.aborted).toBe(true);
@@ -162,17 +162,17 @@ describe('useMyTravels — серверный срез по статусу пу�
 
   it('разделяет private/public и target-user без переноса предыдущих строк', async () => {
     mockFetchMyTravels.mockImplementation(async params => page([params.includeDrafts ? 11 : params.user_id === 'u-2' ? 22 : 12], 1) as any);
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ target, includeDrafts }: { target: string; includeDrafts: boolean }) => useMyTravels({ userId: target, perPage: 20, includeDrafts }),
       { initialProps: { target: 'u-1', includeDrafts: true } },
     );
     await act(async () => { await result.current.load(); });
     expect(result.current.myTravels.map(t => t.id)).toEqual([11]);
-    rerender({ target: 'u-1', includeDrafts: false });
+    await rerender({ target: 'u-1', includeDrafts: false });
     expect(result.current.myTravels).toEqual([]);
     await act(async () => { await result.current.load(); });
     expect(result.current.myTravels.map(t => t.id)).toEqual([12]);
-    rerender({ target: 'u-2', includeDrafts: false });
+    await rerender({ target: 'u-2', includeDrafts: false });
     expect(result.current.myTravels).toEqual([]);
     await act(async () => { await result.current.load(); });
     expect(result.current.myTravels.map(t => t.id)).toEqual([22]);
@@ -186,20 +186,20 @@ describe('useMyTravels — серверный срез по статусу пу�
       if (params.user_id === 'u-1') { signalA = params.signal; return lateA as any; }
       return Promise.resolve(page([22], 1) as any);
     });
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ userId }: { userId: string | null }) => useMyTravels({ userId, perPage: 20, publicationStatus: ['draft'] }),
       { initialProps: { userId: 'u-1' as string | null } },
     );
     let loadingA!: Promise<void>;
-    act(() => { loadingA = result.current.load(); });
+    await act(() => { loadingA = result.current.load(); });
     await waitFor(() => expect(mockFetchMyTravels).toHaveBeenCalledTimes(1));
     const client = [...queryClients].at(-1)!;
     const keyA = queryKeys.authorTravels('u-1', 'u-1', { perPage: 20, includeDrafts: false, publicationStatus: ['draft'] });
     mockQueryOwner = null;
-    rerender({ userId: null });
+    await rerender({ userId: null });
     await act(async () => { await dropQueryCacheForIdentityChange(client, () => true); });
     mockQueryOwner = 'u-2';
-    rerender({ userId: 'u-2' });
+    await rerender({ userId: 'u-2' });
     expect(result.current.myTravels).toEqual([]);
     expect(result.current.error).toBeNull();
     expect(result.current.publicationCounts).toBeNull();
@@ -219,23 +219,23 @@ describe('useMyTravels — серверный срез по статусу пу�
     mockConfirmAction.mockResolvedValue(true);
     let rejectDelete!: (error: Error) => void;
     mockDeleteTravel.mockReturnValue(new Promise((_yes, no) => { rejectDelete = no; }) as any);
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ userId }: { userId: string | null }) => useMyTravels({ userId, perPage: 20, publicationStatus: ['draft'] }),
       { initialProps: { userId: 'u-1' as string | null } },
     );
     await act(async () => { await result.current.load(); });
     let removing!: Promise<boolean>;
-    act(() => { removing = result.current.remove(11); });
+    await act(() => { removing = result.current.remove(11); });
     await waitFor(() => expect(mockDeleteTravel).toHaveBeenCalledTimes(1));
     expect(result.current.myTravels).toEqual([]);
     const client = [...queryClients].at(-1)!;
     const oldKey = queryKeys.authorTravels('u-1', 'u-1', { perPage: 20, includeDrafts: false, publicationStatus: ['draft'] });
     mockQueryOwner = null;
-    rerender({ userId: null });
+    await rerender({ userId: null });
     await act(async () => { await dropQueryCacheForIdentityChange(client, () => true); });
     freshSession = true;
     mockQueryOwner = nextOwner;
-    rerender({ userId: nextOwner });
+    await rerender({ userId: nextOwner });
     await act(async () => { await result.current.load(); });
     await waitFor(() => expect(result.current.myTravels.map(t => t.id)).toEqual([22]));
     const log = jest.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -277,7 +277,7 @@ describe('#2669 — author-block infinite-page contract', () => {
       params.page === 1 ? [1, 2] : [3, 4], [1, 2], 4,
     ) as any);
     const onTotalChange = jest.fn();
-    const { result } = renderHook(() => useMyTravels({ userId: '1', perPage: 2, onTotalChange }));
+    const { result } = await renderHook(() => useMyTravels({ userId: '1', perPage: 2, onTotalChange }));
     const { client, uninstall } = install();
     try {
       await act(async () => { await result.current.load(); });
@@ -304,7 +304,7 @@ describe('#2669 — author-block infinite-page contract', () => {
       params.page === 1 ? [1, 2] : params.page === 2 ? [3, 4] : [5, 6], [1, 2, 3], 6,
     ) as any);
     const onTotalChange = jest.fn();
-    const { result } = renderHook(() => useMyTravels({ userId: '1', perPage: 2, onTotalChange }));
+    const { result } = await renderHook(() => useMyTravels({ userId: '1', perPage: 2, onTotalChange }));
     const { uninstall } = install();
     try {
       await act(async () => { await result.current.load(); });
@@ -324,7 +324,7 @@ describe('#2669 — author-block infinite-page contract', () => {
       params.page === 1 ? [1, 2] : [], [1, 2], 10,
     ) as any);
     const onTotalChange = jest.fn();
-    const { result } = renderHook(() => useMyTravels({ userId: '1', perPage: 2, onTotalChange }));
+    const { result } = await renderHook(() => useMyTravels({ userId: '1', perPage: 2, onTotalChange }));
     const { uninstall } = install();
     try {
       await act(async () => { await result.current.load(); });
@@ -347,7 +347,7 @@ describe('#2669 — author-block infinite-page contract', () => {
       return authoredPage(params.page === 1 ? [1, 2] : [3, 4], [1, 2], 4) as any;
     });
     const onTotalChange = jest.fn();
-    const { result } = renderHook(() => useMyTravels({ userId: '1', perPage: 2, onTotalChange }));
+    const { result } = await renderHook(() => useMyTravels({ userId: '1', perPage: 2, onTotalChange }));
     const { uninstall } = install();
     try {
       await act(async () => { await result.current.load(); });
@@ -372,7 +372,7 @@ describe('#2669 — author-block infinite-page contract', () => {
       return authoredPage(params.page === 1 ? [1, 2] : [3, 4], [1, 2], 4) as any;
     });
     const onTotalChange = jest.fn();
-    const { result } = renderHook(() => useMyTravels({ userId: '1', perPage: 2, onTotalChange }));
+    const { result } = await renderHook(() => useMyTravels({ userId: '1', perPage: 2, onTotalChange }));
     const { uninstall } = install();
     try {
       await act(async () => { await result.current.load(); });
@@ -382,7 +382,7 @@ describe('#2669 — author-block infinite-page contract', () => {
       expect(result.current.isLoading).toBe(false);
       expect(onTotalChange).toHaveBeenLastCalledWith(null);
       expect(mockFetchMyTravels.mock.calls.map(([params]) => params.page)).toEqual([1]);
-      act(() => { onlineManager.setOnline(true); });
+      await act(() => { onlineManager.setOnline(true); });
       await waitFor(() => expect(result.current.myTravels.map(travel => travel.id)).toEqual([3, 4]));
       expect(result.current.error).toBeNull();
       expect(onTotalChange).toHaveBeenLastCalledWith(2);
@@ -394,7 +394,7 @@ describe('#2669 — author-block infinite-page contract', () => {
 
 // Isolated real QueryClient: cache lifecycle is part of the hook contract.
 const queryClients = new Set<QueryClient>();
-const renderHook: typeof renderQueryHook = (callback, options) => {
+const renderHook: typeof renderQueryHook = async (callback, options) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity, staleTime: 300_000 } },
   });

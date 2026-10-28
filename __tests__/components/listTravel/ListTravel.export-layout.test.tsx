@@ -137,10 +137,10 @@ describe('ListTravel export layout', () => {
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
   });
 
-  it('forces a single column on export route', () => {
+  it('forces a single column on export route', async () => {
     const queryClient = createTestQueryClient();
 
-    render(
+    await render(
       <QueryClientProvider client={queryClient}>
         <ListTravel />
       </QueryClientProvider>

@@ -34,19 +34,19 @@ describe('useActiveSection', () => {
     s2.getBoundingClientRect = jest.fn(() => ({ top: 800, bottom: 1000, height: 200 } as any))
   })
 
-  it('updates activeSection when intersection entries indicate visible section', () => {
+  it('updates activeSection when intersection entries indicate visible section', async () => {
     const anchors = {
       'section-1': { current: null },
       'section-2': { current: null },
     }
 
-    const { result } = renderHook(() => useActiveSection(anchors, 0))
+    const { result } = await renderHook(() => useActiveSection(anchors, 0))
 
     expect(lastObserverCallback).not.toBeNull()
     expect(['', 'section-1']).toContain(result.current.activeSection)
 
     // Wait for the Intersection Observer to be set up
-    act(() => {
+    await act(() => {
       // Trigger observer callback; algorithm reads DOM rects directly.
       lastObserverCallback?.([], null as any)
     })
@@ -59,20 +59,20 @@ describe('useActiveSection', () => {
     s1.getBoundingClientRect = jest.fn(() => ({ top: -900, bottom: -700, height: 200 } as any))
     s2.getBoundingClientRect = jest.fn(() => ({ top: 10, bottom: 210, height: 200 } as any))
 
-    act(() => {
+    await act(() => {
       lastObserverCallback?.([], null as any)
     })
 
     expect(result.current.activeSection).toBe('section-2')
   })
 
-  it('prefers section spanning header line over the first section below it (regression)', () => {
+  it('prefers section spanning header line over the first section below it (regression)', async () => {
     const anchors = {
       'section-1': { current: null },
       'section-2': { current: null },
     }
 
-    const { result } = renderHook(() => useActiveSection(anchors, 0))
+    const { result } = await renderHook(() => useActiveSection(anchors, 0))
 
     // headerLine = 24 (TOP_BUFFER_PX). section-1 spans it; section-2 starts below.
     const s1 = document.getElementById('section-1') as any
@@ -80,20 +80,20 @@ describe('useActiveSection', () => {
     s1.getBoundingClientRect = jest.fn(() => ({ top: -10, bottom: 200, height: 210 } as any))
     s2.getBoundingClientRect = jest.fn(() => ({ top: 30, bottom: 230, height: 200 } as any))
 
-    act(() => {
+    await act(() => {
       lastObserverCallback?.([], null as any)
     })
 
     expect(result.current.activeSection).toBe('section-1')
   })
 
-  it('keeps the section crossing the reading line active until the next one crosses it', () => {
+  it('keeps the section crossing the reading line active until the next one crosses it', async () => {
     const anchors = {
       'section-1': { current: null },
       'section-2': { current: null },
     }
 
-    const { result } = renderHook(() => useActiveSection(anchors, 0))
+    const { result } = await renderHook(() => useActiveSection(anchors, 0))
 
     // headerLine = 24. section-1 crosses it; section-2 starts below and does not
     // cross yet — the single reading-line metric keeps section-1 active.
@@ -102,7 +102,7 @@ describe('useActiveSection', () => {
     s1.getBoundingClientRect = jest.fn(() => ({ top: -140, bottom: 120, height: 260 } as any))
     s2.getBoundingClientRect = jest.fn(() => ({ top: 96, bottom: 360, height: 264 } as any))
 
-    act(() => {
+    await act(() => {
       lastObserverCallback?.([], null as any)
     })
 
@@ -112,7 +112,7 @@ describe('useActiveSection', () => {
     s1.getBoundingClientRect = jest.fn(() => ({ top: -300, bottom: 10, height: 310 } as any))
     s2.getBoundingClientRect = jest.fn(() => ({ top: 10, bottom: 360, height: 350 } as any))
 
-    act(() => {
+    await act(() => {
       lastObserverCallback?.([], null as any)
     })
 
@@ -147,31 +147,31 @@ describe('useActiveSection', () => {
       document.body.appendChild(s3)
     })
 
-    it('keeps the last section active after scrolling past it into the footer', () => {
-      const { result } = renderHook(() => useActiveSection(anchors, 0))
+    it('keeps the last section active after scrolling past it into the footer', async () => {
+      const { result } = await renderHook(() => useActiveSection(anchors, 0))
 
       setRects({
         'section-1': { top: -2000, bottom: -1500 },
         'section-2': { top: -1500, bottom: -400 },
         'section-3': { top: -400, bottom: 300 },
       })
-      act(() => {
+      await act(() => {
         lastObserverCallback?.([], null as any)
       })
       expect(result.current.activeSection).toBe('section-3')
 
       setRects(FOOTER_RECTS)
-      act(() => {
+      await act(() => {
         lastObserverCallback?.([], null as any)
       })
       expect(result.current.activeSection).toBe('section-3')
     })
 
-    it('activates the last section, not the first, when the page opens already in the footer', () => {
+    it('activates the last section, not the first, when the page opens already in the footer', async () => {
       setRects(FOOTER_RECTS)
 
-      const { result } = renderHook(() => useActiveSection(anchors, 0))
-      act(() => {
+      const { result } = await renderHook(() => useActiveSection(anchors, 0))
+      await act(() => {
         lastObserverCallback?.([], null as any)
       })
 
@@ -179,20 +179,20 @@ describe('useActiveSection', () => {
     })
   })
 
-  it('updates activeSection when a lazy-mounted section appears later (regression)', () => {
+  it('updates activeSection when a lazy-mounted section appears later (regression)', async () => {
     const anchors = {
       'section-1': { current: null },
       'section-2': { current: null },
     }
 
-    const { result } = renderHook(() => useActiveSection(anchors, 0))
+    const { result } = await renderHook(() => useActiveSection(anchors, 0))
 
     expect(lastObserverCallback).not.toBeNull()
 
     const s1 = document.getElementById('section-1') as any
     s1.getBoundingClientRect = jest.fn(() => ({ top: 10, bottom: 210, height: 200 } as any))
 
-    act(() => {
+    await act(() => {
       lastObserverCallback?.([], null as any)
     })
 
@@ -208,14 +208,14 @@ describe('useActiveSection', () => {
     s2.getBoundingClientRect = jest.fn(() => ({ top: 8, bottom: 240, height: 232 } as any))
     s1.getBoundingClientRect = jest.fn(() => ({ top: -320, bottom: -120, height: 200 } as any))
 
-    act(() => {
+    await act(() => {
       lastObserverCallback?.([], null as any)
     })
 
     expect(result.current.activeSection).toBe('section-2')
   })
 
-  it('puts the reading line under the measured sticky header, not under the static prop (regression)', () => {
+  it('puts the reading line under the measured sticky header, not under the static prop (regression)', async () => {
     // Прокрутка к секции (`useScrollNavigation`) паркует её ровно под измеренной
     // шапкой. Если scrollspy считает «линию чтения» по своей константе, линия
     // оказывается выше секции и подсвечивается хвост предыдущей — клик по
@@ -233,19 +233,19 @@ describe('useActiveSection', () => {
     s1.getBoundingClientRect = jest.fn(() => ({ top: HEADER_BOTTOM - 4200, bottom: HEADER_BOTTOM, height: 4200 } as any))
     s2.getBoundingClientRect = jest.fn(() => ({ top: HEADER_BOTTOM, bottom: HEADER_BOTTOM + 1550, height: 1550 } as any))
 
-    const { result } = renderHook(() => useActiveSection({
+    const { result } = await renderHook(() => useActiveSection({
       'section-1': { current: null },
       'section-2': { current: null },
     }, 72))
 
-    act(() => {
+    await act(() => {
       lastObserverCallback?.([], null as any)
     })
 
     expect(result.current.activeSection).toBe('section-2')
   })
 
-  it('falls back to document scroll when provided scrollRoot is not an actual scroll container (regression)', () => {
+  it('falls back to document scroll when provided scrollRoot is not an actual scroll container (regression)', async () => {
     const anchors = {
       'section-1': { current: null },
       'section-2': { current: null },
@@ -266,7 +266,7 @@ describe('useActiveSection', () => {
 
     const observerMock = (global as any).IntersectionObserver as jest.Mock
 
-    renderHook(() => useActiveSection(anchors, 72, fakeRoot))
+    await renderHook(() => useActiveSection(anchors, 72, fakeRoot))
 
     expect(observerMock).toHaveBeenCalled()
     expect(observerMock.mock.calls[0]?.[1]?.root).toBeNull()
@@ -278,7 +278,7 @@ describe('useActiveSection', () => {
     { helperFlag: false, moduleFlag: true, laterFlag: false, worker: undefined, synchronous: true },
     { helperFlag: true, moduleFlag: false, laterFlag: true, worker: undefined, synchronous: false },
     { helperFlag: false, moduleFlag: false, laterFlag: false, worker: '1', synchronous: true },
-  ])('reads automation at its own module phase, retaining the worker branch: %j', ({ helperFlag, moduleFlag, laterFlag, worker, synchronous }) => {
+  ])('reads automation at its own module phase, retaining the worker branch: %j', async ({ helperFlag, moduleFlag, laterFlag, worker, synchronous }) => {
     const workerId = process.env.JEST_WORKER_ID
     const flag = Object.getOwnPropertyDescriptor(navigator, 'webdriver')
     const RN = require('react-native')
@@ -299,7 +299,7 @@ describe('useActiveSection', () => {
         hook = require('@/hooks/useActiveSection').useActiveSection
       })
       setFlag(laterFlag)
-      const { result, unmount } = renderHook(() => hook({ 'section-1': { current: null } }, 0))
+      const { result, unmount } = await renderHook(() => hook({ 'section-1': { current: null } }, 0))
       if (synchronous) {
         expect(result.current.activeSection).toBe('section-1')
         expect(raf).not.toHaveBeenCalled()
@@ -307,7 +307,7 @@ describe('useActiveSection', () => {
         expect(result.current.activeSection).toBe('')
         expect(raf).toHaveBeenCalled()
       }
-      unmount()
+      await unmount()
     } finally {
       raf.mockRestore()
       if (flag) Object.defineProperty(navigator, 'webdriver', flag)

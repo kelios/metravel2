@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
+import { createRootRegistry } from '@/__tests__/helpers/rawRootLifecycle'
 
-const renderer = require('react-test-renderer')
+const renderer = createRootRegistry()
 
 import {
   createUserLocationSignal,
@@ -27,6 +28,8 @@ function SignalProbe({
 }
 
 describe('userLocationSignal', () => {
+  afterEach(renderer.cleanup)
+
   beforeEach(() => {
     isRendering = false
   })
@@ -82,7 +85,7 @@ describe('userLocationSignal', () => {
     expect(listener).not.toHaveBeenCalled()
   })
 
-  it('useUserLocationSignal keeps a stable instance across renders and tracks the prop', () => {
+  it('useUserLocationSignal keeps a stable instance across renders and tracks the prop', async () => {
     const instances: unknown[] = []
     const Owner: React.FC<{ loc: { lat: number; lng: number } | null }> = ({ loc }) => {
       const signal = useUserLocationSignal(loc)
@@ -91,11 +94,12 @@ describe('userLocationSignal', () => {
     }
 
     let root: any
-    renderer.act(() => {
-      root = renderer.create(<Owner loc={null} />)
+    await React.act(() => {
+      root = renderer.createRoot();
+      root.render(<Owner loc={null} />)
     })
-    renderer.act(() => {
-      root.update(<Owner loc={{ lat: 53.9, lng: 27.56 }} />)
+    await React.act(() => {
+      root.render(<Owner loc={{ lat: 53.9, lng: 27.56 }} />)
     })
 
     // Same instance across renders (stable identity → factory never rebuilds).
@@ -105,23 +109,24 @@ describe('userLocationSignal', () => {
     expect(signal.current).toEqual({ lat: 53.9, lng: 27.56 })
   })
 
-  it('does not notify subscribers while rendering a new location value', () => {
+  it('does not notify subscribers while rendering a new location value', async () => {
     const onNotify = jest.fn()
     let tree: any
 
-    renderer.act(() => {
-      tree = renderer.create(<SignalProbe value={null} onNotify={onNotify} />)
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<SignalProbe value={null} onNotify={onNotify} />)
     })
 
-    renderer.act(() => {
-      tree.update(<SignalProbe value={{ lat: 50.0895, lng: 19.82779 }} onNotify={onNotify} />)
+    await React.act(() => {
+      tree.render(<SignalProbe value={{ lat: 50.0895, lng: 19.82779 }} onNotify={onNotify} />)
     })
 
     expect(onNotify).toHaveBeenCalledWith(false)
     expect(onNotify).not.toHaveBeenCalledWith(true)
   })
 
-  it('a popup consumer re-renders exactly once when the location arrives after mount', () => {
+  it('a popup consumer re-renders exactly once when the location arrives after mount', async () => {
     // Mirrors production: the OWNER (map screen / bottom card) holds the signal and
     // updates it when its own `userLocation` prop changes; the CONSUMER (popup) only
     // subscribes to the coarse boolean and never re-runs the owner's hook.
@@ -136,8 +141,8 @@ describe('userLocationSignal', () => {
       return null
     }
 
-    renderer.act(() => {
-      renderer.create(<Consumer />)
+    await React.act(() => {
+      renderer.createRoot().render(<Consumer />)
     })
 
     // Mounted without a fix → «Маршрут» gate closed.
@@ -145,7 +150,7 @@ describe('userLocationSignal', () => {
     const rendersBefore = consumerRenders
 
     // First GPS fix arrives asynchronously.
-    renderer.act(() => {
+    await React.act(() => {
       signal.set({ lat: 53.9, lng: 27.56 })
     })
 
@@ -154,7 +159,7 @@ describe('userLocationSignal', () => {
     expect(consumerRenders).toBe(rendersBefore + 1)
 
     // Subsequent coordinate ticks must NOT re-render (ref-perf intent preserved).
-    renderer.act(() => {
+    await React.act(() => {
       signal.set({ lat: 53.9001, lng: 27.5601 })
       signal.set({ lat: 53.9002, lng: 27.5602 })
     })

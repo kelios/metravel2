@@ -153,7 +153,7 @@ describe('FiltersPanel Controls', () => {
   });
 
   describe('Route point pills', () => {
-    it('renders route points as pills and calls onRemoveRoutePoint when X is pressed', () => {
+    it('renders route points as pills and calls onRemoveRoutePoint when X is pressed', async () => {
       const onRemoveRoutePoint = jest.fn();
 
       const context = makeFiltersContext({
@@ -169,7 +169,7 @@ describe('FiltersPanel Controls', () => {
         ],
       });
 
-      const { getByTestId, getByText } = render(
+      const { getByTestId, getByText } = await render(
         <FiltersProvider {...context}>
           <FiltersPanel />
         </FiltersProvider>
@@ -178,13 +178,13 @@ describe('FiltersPanel Controls', () => {
       expect(getByTestId('route-points-list')).toBeTruthy();
       expect(getByText('Kraków')).toBeTruthy();
 
-      fireEvent.press(getByTestId('route-point-remove-p1'));
+      await fireEvent.press(getByTestId('route-point-remove-p1'));
       expect(onRemoveRoutePoint).toHaveBeenCalledWith('p1');
     });
   });
 
   describe('Transport Mode Controls', () => {
-    it('should call setTransportMode when transport button clicked and route is ready', () => {
+    it('should call setTransportMode when transport button clicked and route is ready', async () => {
       const setTransportMode = jest.fn();
       const context = makeFiltersContext({
         filters: mockFilters,
@@ -198,7 +198,7 @@ describe('FiltersPanel Controls', () => {
         startAddress: 'Start Address',
         endAddress: 'End Address',
       });
-      const { getByText } = render(
+      const { getByText } = await render(
         <FiltersProvider {...context}>
           <FiltersPanel />
         </FiltersProvider>
@@ -206,12 +206,12 @@ describe('FiltersPanel Controls', () => {
 
       const bikeTabText: any = getByText('Велосипед');
       const bikePressable = bikeTabText.parent;
-      fireEvent.press(bikePressable);
+      await fireEvent.press(bikePressable);
 
       expect(setTransportMode).toHaveBeenCalledWith('bike');
     });
 
-    it('should call setTransportMode when no route points', () => {
+    it('should call setTransportMode when no route points', async () => {
       const setTransportMode = jest.fn();
       const context = makeFiltersContext({
         filters: mockFilters,
@@ -220,7 +220,7 @@ describe('FiltersPanel Controls', () => {
         setTransportMode,
         routePoints: [],
       });
-      const { getByText } = render(
+      const { getByText } = await render(
         <FiltersProvider {...context}>
           <FiltersPanel />
         </FiltersProvider>
@@ -228,14 +228,14 @@ describe('FiltersPanel Controls', () => {
 
       const bikeTabText: any = getByText('Велосипед');
       const bikePressable = bikeTabText.parent;
-      fireEvent.press(bikePressable);
+      await fireEvent.press(bikePressable);
 
       expect(setTransportMode).toHaveBeenCalledWith('bike');
     });
   });
 
   describe('Mode Switching', () => {
-    it('should call setMode when switching to route mode', () => {
+    it('should call setMode when switching to route mode', async () => {
       const setMode = jest.fn();
       const context = makeFiltersContext({
         filters: mockFilters,
@@ -243,19 +243,19 @@ describe('FiltersPanel Controls', () => {
         mode: 'radius',
         setMode,
       });
-      const { getByTestId } = render(
+      const { getByTestId } = await render(
         <FiltersProvider {...context}>
           <FiltersPanel />
         </FiltersProvider>
       );
 
       const routeTab = getByTestId('segmented-route');
-      fireEvent.press(routeTab);
+      await fireEvent.press(routeTab);
 
       expect(setMode).toHaveBeenCalledWith('route');
     });
 
-    it('should switch store to radius mode atomically when switching to radius', () => {
+    it('should switch store to radius mode atomically when switching to radius', async () => {
       const { useRouteStore } = require('@/stores/routeStore');
       // Start in route mode
       useRouteStore.getState().setMode('route');
@@ -265,14 +265,14 @@ describe('FiltersPanel Controls', () => {
         filterValue: mockFilterValue,
         mode: 'route',
       });
-      const { getByTestId } = render(
+      const { getByTestId } = await render(
         <FiltersProvider {...context}>
           <FiltersPanel />
         </FiltersProvider>
       );
 
       const radiusTab = getByTestId('segmented-radius');
-      fireEvent.press(radiusTab);
+      await fireEvent.press(radiusTab);
 
       // clearRouteAndSetMode is called atomically (single store update)
       expect(useRouteStore.getState().mode).toBe('radius');
@@ -296,7 +296,7 @@ describe('FiltersPanel Controls', () => {
       },
     };
 
-    it('should pass mapUiApi to component without errors', () => {
+    it('should pass mapUiApi to component without errors', async () => {
       // Zoom buttons are inside a collapsed section by default
       // This test verifies the component renders with mapUiApi prop
       const context = makeFiltersContext({
@@ -304,7 +304,7 @@ describe('FiltersPanel Controls', () => {
         filterValue: mockFilterValue,
         mapUiApi: mockMapUiApi,
       });
-      const { getByTestId } = render(
+      const { getByTestId } = await render(
         <FiltersProvider {...context}>
           <FiltersPanel />
         </FiltersProvider>
@@ -316,7 +316,7 @@ describe('FiltersPanel Controls', () => {
   });
 
   describe('Reset Filters', () => {
-    it('should call resetFilters when reset button pressed', () => {
+    it('should call resetFilters when reset button pressed', async () => {
       const resetFilters = jest.fn();
       const context = makeFiltersContext({
         filters: mockFilters,
@@ -324,14 +324,14 @@ describe('FiltersPanel Controls', () => {
         mode: 'radius',
         resetFilters,
       });
-      const { getByTestId } = render(
+      const { getByTestId } = await render(
         <FiltersProvider {...context}>
           <FiltersPanel />
         </FiltersProvider>
       );
 
       const resetButton = getByTestId('filters-reset-button');
-      fireEvent.press(resetButton);
+      await fireEvent.press(resetButton);
 
       expect(resetFilters).toHaveBeenCalled();
     });

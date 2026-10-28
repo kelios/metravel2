@@ -83,7 +83,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
 
   it('derives isSaved from the shared userPointsAll cache', async () => {
     mockedApi.getAllPoints.mockResolvedValue([makePoint()]);
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
     await waitFor(() => expect(result.current.isSaved).toBe(true));
     expect(result.current.savedPointId).toBe(42);
   });
@@ -91,7 +91,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
   it('does not refetch or POST when createPoint sees an already-saved coordinate', async () => {
     mockedApi.getAllPoints.mockResolvedValue([makePoint()]);
     const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
     await waitFor(() => expect(result.current.isSaved).toBe(true));
 
     await act(async () => {
@@ -107,7 +107,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     const fullRead = deferred<ImportedPoint[]>();
     mockedApi.getAllPoints.mockReturnValue(fullRead.promise as any);
 
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
 
     expect(result.current.isReady).toBe(false);
     await act(async () => {
@@ -117,10 +117,10 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     await waitFor(() => expect(result.current.isReady).toBe(true));
   });
 
-  it('keeps guest actions ready without starting a saved-points request', () => {
+  it('keeps guest actions ready without starting a saved-points request', async () => {
     mockIsAuthenticated = false;
 
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
 
     expect(result.current.isReady).toBe(true);
     expect(mockedApi.getAllPoints).not.toHaveBeenCalled();
@@ -134,7 +134,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     writePointsPaginationState(queryClient, OWNER, { nextPage: 2, complete: false });
     mockedApi.getAllPoints.mockReturnValue(fullRead.promise as any);
 
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
 
     expect(result.current.isReady).toBe(false);
     await act(async () => {
@@ -152,11 +152,11 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     writePointsPaginationState(queryClient, OWNER, { nextPage: 2, complete: false });
     mockedApi.getAllPoints.mockReturnValue(fullRead.promise as any);
 
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
     expect(result.current.isReady).toBe(false);
 
     let pending!: Promise<unknown>;
-    act(() => {
+    await act(() => {
       pending = result.current.createPoint({ latitude: COORD.lat, longitude: COORD.lng });
     });
     expect(mockedApi.createPoint).not.toHaveBeenCalled();
@@ -183,9 +183,9 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     });
     mockedApi.getAllPoints.mockResolvedValue([makePoint()]);
 
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
     let pending!: Promise<unknown>;
-    act(() => {
+    await act(() => {
       pending = result.current.createPoint({ latitude: COORD.lat, longitude: COORD.lng });
     });
 
@@ -207,12 +207,12 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     const created = deferred<ImportedPoint>();
     mockedApi.createPoint.mockReturnValue(created.promise as any);
 
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
     await waitFor(() => expect(result.current.isReady).toBe(true));
     expect(result.current.isSaved).toBe(false);
 
     let pending: Promise<unknown>;
-    act(() => {
+    await act(() => {
       pending = result.current.createPoint({
         latitude: COORD.lat,
         longitude: COORD.lng,
@@ -244,7 +244,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     mockedApi.createPoint.mockResolvedValue(makePoint({ id: 777 }) as any);
     mockedApi.deletePoint.mockResolvedValue(undefined as any);
 
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
     await waitFor(() => expect(result.current.isReady).toBe(true));
     expect(mockedApi.getAllPoints).toHaveBeenCalledTimes(1);
 
@@ -284,13 +284,13 @@ describe('useSavedPointToggle — optimistic toggle', () => {
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     );
 
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), {
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), {
       wrapper: localWrapper,
     });
 
     // Коллекция ещё летит — сохраняем прямо сейчас, не дожидаясь её.
     let pending: Promise<unknown>;
-    act(() => {
+    await act(() => {
       pending = result.current.createPoint({ latitude: COORD.lat, longitude: COORD.lng });
     });
     firstRead.resolve(wholeCollection);
@@ -321,7 +321,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     );
 
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), {
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), {
       wrapper: localWrapper,
     });
 
@@ -345,12 +345,12 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     const created = deferred<ImportedPoint>();
     mockedApi.createPoint.mockReturnValue(created.promise as any);
 
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
     await waitFor(() => expect(result.current.isReady).toBe(true));
 
     let first!: Promise<unknown>;
     let second!: Promise<unknown>;
-    act(() => {
+    await act(() => {
       first = result.current.createPoint({ latitude: COORD.lat, longitude: COORD.lng });
       second = result.current.createPoint({ latitude: COORD.lat, longitude: COORD.lng });
     });
@@ -376,8 +376,8 @@ describe('useSavedPointToggle — optimistic toggle', () => {
       .mockReturnValueOnce(firstCreated.promise as any)
       .mockReturnValueOnce(secondCreated.promise as any);
 
-    const firstHook = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
-    const secondHook = renderHook(() => useSavedPointToggle({ coord: otherCoord }), { wrapper });
+    const firstHook = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    const secondHook = await renderHook(() => useSavedPointToggle({ coord: otherCoord }), { wrapper });
     await waitFor(() => {
       expect(firstHook.result.current.isReady).toBe(true);
       expect(secondHook.result.current.isReady).toBe(true);
@@ -385,7 +385,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
 
     let first!: Promise<unknown>;
     let second!: Promise<unknown>;
-    act(() => {
+    await act(() => {
       first = firstHook.result.current.createPoint({
         latitude: COORD.lat,
         longitude: COORD.lng,
@@ -422,7 +422,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     mockedApi.getAllPoints.mockResolvedValue([]);
     mockedApi.createPoint.mockRejectedValue(new Error('network'));
 
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
     await waitFor(() => expect(result.current.isReady).toBe(true));
 
     await act(async () => {
@@ -439,11 +439,11 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     const removed = deferred<unknown>();
     mockedApi.deletePoint.mockReturnValue(removed.promise as any);
 
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
     await waitFor(() => expect(result.current.isSaved).toBe(true));
 
     let pending: Promise<unknown>;
-    act(() => {
+    await act(() => {
       pending = result.current.removeSaved();
     });
 
@@ -463,7 +463,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     mockedApi.getAllPoints.mockResolvedValue([makePoint()]);
     mockedApi.deletePoint.mockRejectedValue(new Error('boom'));
 
-    const { result } = renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
+    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
     await waitFor(() => expect(result.current.isSaved).toBe(true));
 
     await act(async () => {

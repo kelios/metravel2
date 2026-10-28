@@ -21,8 +21,8 @@ const routed: RoutingState = {
 }
 
 describe('RouteSummaryBar layout contract', () => {
-  it('separates route status and transport metadata from exactly four metrics', () => {
-    const { getByTestId } = render(
+  it('separates route status and transport metadata from exactly four metrics', async () => {
+    const { getByTestId } = await render(
       <RouteSummaryBar summary={summary} routingState={routed} transport="bike" />,
     )
 
@@ -66,8 +66,8 @@ describe('RouteSummaryBar layout contract', () => {
     }
   })
 
-  it('keeps degraded routing state in the dedicated status slot', () => {
-    const { getByTestId, queryByTestId } = render(
+  it('keeps degraded routing state in the dedicated status slot', async () => {
+    const { getByTestId, queryByTestId } = await render(
       <RouteSummaryBar
         summary={{ ...summary, provider: 'direct' }}
         routingState={{
@@ -88,8 +88,8 @@ describe('RouteSummaryBar layout contract', () => {
 
   // #2057: прод trip 47 — «В пути 481 ч 57 мин» (дистанция по прямой / 1,4 м/с),
   // пустая плитка «Набор —» и причина ещё раз под чипом, хотя её уже показала карта.
-  it('shows a direct line as a straight-line distance with stops, without time, elevation or reason', () => {
-    const { getByTestId, queryByTestId, queryByText } = render(
+  it('shows a direct line as a straight-line distance with stops, without time, elevation or reason', async () => {
+    const { getByTestId, queryByTestId, queryByText } = await render(
       <RouteSummaryBar
         summary={{
           distanceKm: 2429,
@@ -128,8 +128,8 @@ describe('RouteSummaryBar layout contract', () => {
     expect(queryByText(/Не получилось проложить|временно недоступен/)).toBeNull()
   })
 
-  it('keeps the four metrics and the empty elevation tile for a routed summary (#1336)', () => {
-    const { getByTestId } = render(
+  it('keeps the four metrics and the empty elevation tile for a routed summary (#1336)', async () => {
+    const { getByTestId } = await render(
       <RouteSummaryBar summary={{ ...summary, elevationGainM: 0 }} routingState={routed} transport="car" />,
     )
 

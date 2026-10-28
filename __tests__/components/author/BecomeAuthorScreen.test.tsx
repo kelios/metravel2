@@ -33,11 +33,11 @@ describe('BecomeAuthorScreen', () => {
 
   afterEach(async () => { await act(async () => { await i18n.changeLanguage('ru') }) })
 
-  it('ships desktop geometry in critical CSS while preserving the same mobile and desktop nodes', () => {
+  it('ships desktop geometry in critical CSS while preserving the same mobile and desktop nodes', async () => {
     const originalPlatform = Platform.OS
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
     try {
-      const screen = render(<BecomeAuthorScreen />)
+      const screen = await render(<BecomeAuthorScreen />)
       const cards = screen.getAllByTestId('author-benefit-card')
       const actions = screen.getAllByTestId('author-create-action')
       expect(cards).toHaveLength(4)
@@ -56,7 +56,7 @@ describe('BecomeAuthorScreen', () => {
       expect(firstFrameCSS).toContain('align-items:flex-start !important')
 
       mockIsMobile = false
-      screen.rerender(<BecomeAuthorScreen />)
+      await await screen.rerender(<BecomeAuthorScreen />)
       expect(screen.getAllByTestId('author-benefit-card')).toEqual(cards)
       for (const card of cards) expect(StyleSheet.flatten(card.props.style).flexBasis).toBe('46%')
       for (const action of actions) expect(StyleSheet.flatten(action.props.style).alignItems).toBe('flex-start')
@@ -65,8 +65,8 @@ describe('BecomeAuthorScreen', () => {
     }
   })
 
-  it('explains four real author benefits without a contest or store promotion', () => {
-    const screen = render(<BecomeAuthorScreen />)
+  it('explains four real author benefits without a contest or store promotion', async () => {
+    const screen = await render(<BecomeAuthorScreen />)
     for (const title of ['Ваши поездки на карте', 'PDF-книга о путешествии', 'Значки и ранги', 'Читатели и подписчики']) {
       expect(screen.getByText(title)).toBeTruthy()
     }
@@ -75,9 +75,9 @@ describe('BecomeAuthorScreen', () => {
     expect(mockQueue).not.toHaveBeenCalled()
   })
 
-  it('takes a guest through registration with a safe creation return and records the intent once', () => {
-    const screen = render(<BecomeAuthorScreen />)
-    fireEvent.press(screen.getAllByRole('button', { name: label })[0])
+  it('takes a guest through registration with a safe creation return and records the intent once', async () => {
+    const screen = await render(<BecomeAuthorScreen />)
+    await fireEvent.press(screen.getAllByRole('button', { name: label })[0])
     const url = new URL(mockPush.mock.calls[0][0], 'https://metravel.by')
     expect(url.pathname).toBe('/registration')
     expect(url.searchParams.get('redirect')).toBe('/travel/new')
@@ -90,10 +90,10 @@ describe('BecomeAuthorScreen', () => {
     })
   })
 
-  it('takes a signed-in author directly to creation from the lower CTA', () => {
+  it('takes a signed-in author directly to creation from the lower CTA', async () => {
     mockAuthStore.mockImplementation((select) => select({ authReady: true, isAuthenticated: true }))
-    const screen = render(<BecomeAuthorScreen />)
-    fireEvent.press(screen.getAllByRole('button', { name: label })[1])
+    const screen = await render(<BecomeAuthorScreen />)
+    await fireEvent.press(screen.getAllByRole('button', { name: label })[1])
     expect(mockPush).toHaveBeenCalledWith('/travel/new')
     expect(mockQueue).toHaveBeenCalledTimes(1)
     expect(mockQueue).toHaveBeenCalledWith('content_create_cta_click', {
@@ -101,17 +101,17 @@ describe('BecomeAuthorScreen', () => {
     })
   })
 
-  it('waits for auth restoration before deciding registration versus creation', () => {
+  it('waits for auth restoration before deciding registration versus creation', async () => {
     mockAuthStore.mockImplementation((select) => select({ authReady: false, isAuthenticated: false }))
-    const screen = render(<BecomeAuthorScreen />)
-    fireEvent.press(screen.getAllByRole('button', { name: label })[0])
+    const screen = await render(<BecomeAuthorScreen />)
+    await fireEvent.press(screen.getAllByRole('button', { name: label })[0])
     expect(mockPush).not.toHaveBeenCalled()
     expect(mockQueue).not.toHaveBeenCalled()
     expect(screen.getByText('Ваши поездки на карте')).toBeTruthy()
   })
 
   it('updates the page and action when the language changes', async () => {
-    const screen = render(<BecomeAuthorScreen />)
+    const screen = await render(<BecomeAuthorScreen />)
     await act(async () => { await i18n.changeLanguage('en') })
     expect(screen.getByText('Your trips on the map')).toBeTruthy()
     expect(screen.getAllByRole('button', { name: 'Share a trip' })).toHaveLength(2)

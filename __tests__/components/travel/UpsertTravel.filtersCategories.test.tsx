@@ -189,22 +189,22 @@ describe('UpsertTravel categories filters integration', () => {
       expect(utils.getByTestId('next-1')).toBeTruthy();
     });
 
-    fireEvent.press(utils.getByTestId('next-1'));
+    await fireEvent.press(utils.getByTestId('next-1'));
 
     await waitFor(() => {
       expect(utils.getByTestId('next-2')).toBeTruthy();
     });
-    fireEvent.press(utils.getByTestId('next-2'));
+    await fireEvent.press(utils.getByTestId('next-2'));
 
     await waitFor(() => {
       expect(utils.getByTestId('next-3')).toBeTruthy();
     });
-    fireEvent.press(utils.getByTestId('next-3'));
+    await fireEvent.press(utils.getByTestId('next-3'));
 
     await waitFor(() => {
       expect(utils.getByTestId('next-4')).toBeTruthy();
     });
-    fireEvent.press(utils.getByTestId('next-4'));
+    await fireEvent.press(utils.getByTestId('next-4'));
 
     await waitFor(() => {
       expect(utils.getByTestId('step-5')).toBeTruthy();
@@ -223,7 +223,7 @@ describe('UpsertTravel categories filters integration', () => {
       countries: [],
     });
 
-    const utils = render(<UpsertTravel />);
+    const utils = await render(<UpsertTravel />);
     await advanceToStep5(utils);
 
     await waitFor(() => {
@@ -252,7 +252,7 @@ describe('UpsertTravel categories filters integration', () => {
       countries: [],
     });
 
-    const utils = render(<UpsertTravel />);
+    const utils = await render(<UpsertTravel />);
     await advanceToStep5(utils);
 
     expect(Array.isArray(capturedExtrasFilters?.categories)).toBe(true);
@@ -271,7 +271,7 @@ describe('UpsertTravel categories filters integration', () => {
       countries: [],
     });
 
-    const utils = render(<UpsertTravel />);
+    const utils = await render(<UpsertTravel />);
 
     await waitFor(() => {
       expect(mockFetchFilters).toHaveBeenCalled();

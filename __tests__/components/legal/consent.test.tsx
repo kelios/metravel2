@@ -5,7 +5,11 @@ import { Platform, Text } from 'react-native'
 jest.mock('@expo/vector-icons', () => ({ Feather: 'Feather' }))
 jest.mock('@expo/vector-icons/Feather', () => 'Feather')
 jest.mock('expo-router', () => ({
-  Link: ({ children }: { children: React.ReactNode }) => children,
+  Link: ({ children }: { children: React.ReactNode }) => {
+    const React = require('react')
+    const { Text } = require('react-native')
+    return React.createElement(Text, null, children)
+  },
 }))
 
 const mockPostConsentRecord = jest.fn().mockResolvedValue(undefined)
@@ -66,8 +70,8 @@ describe('actionConsent storage (web)', () => {
 })
 
 describe('ConsentCheckbox', () => {
-  it('exposes the checked state to web assistive technology', () => {
-    const { getByTestId } = render(
+  it('exposes the checked state to web assistive technology', async () => {
+    const { getByTestId } = await render(
       <ConsentCheckbox checked onToggle={jest.fn()} testID="cb">
         Я согласен
       </ConsentCheckbox>,
@@ -76,28 +80,28 @@ describe('ConsentCheckbox', () => {
     expect(getByTestId('cb').props['aria-checked']).toBe(true)
   })
 
-  it('toggles to the opposite state on press', () => {
+  it('toggles to the opposite state on press', async () => {
     const onToggle = jest.fn()
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ConsentCheckbox checked={false} onToggle={onToggle} testID="cb">
         Я согласен
       </ConsentCheckbox>,
     )
 
-    fireEvent.press(getByTestId('cb'))
+    await fireEvent.press(getByTestId('cb'))
     expect(onToggle).toHaveBeenCalledWith(true)
   })
 
   // #2093: тап по подписи (не только по квадрату 44×44) переключает чекбокс.
-  it('toggles when the label text itself is pressed, not only the square', () => {
+  it('toggles when the label text itself is pressed, not only the square', async () => {
     const onToggle = jest.fn()
-    const { getByText } = render(
+    const { getByText } = await render(
       <ConsentCheckbox checked={false} onToggle={onToggle} testID="cb">
         Я согласен с условиями
       </ConsentCheckbox>,
     )
 
-    fireEvent.press(getByText('Я согласен с условиями'))
+    await fireEvent.press(getByText('Я согласен с условиями'))
     expect(onToggle).toHaveBeenCalledTimes(1)
     expect(onToggle).toHaveBeenCalledWith(true)
   })
@@ -106,10 +110,10 @@ describe('ConsentCheckbox', () => {
   // перехватывает press на себе и не должна переключать чекбокс. На native
   // `<Link>` без `asChild` рендерится как `Text` со своим `onPress`
   // (`BaseExpoRouterLink`), поэтому воспроизводим ту же форму напрямую.
-  it('does not toggle when a nested link inside the label is pressed, and fires the link handler', () => {
+  it('does not toggle when a nested link inside the label is pressed, and fires the link handler', async () => {
     const onToggle = jest.fn()
     const linkPress = jest.fn()
-    const { getByText } = render(
+    const { getByText } = await render(
       <ConsentCheckbox checked={false} onToggle={onToggle} testID="cb">
         Я согласен с{' '}
         <Text onPress={linkPress} accessibilityRole="link">
@@ -118,7 +122,7 @@ describe('ConsentCheckbox', () => {
       </ConsentCheckbox>,
     )
 
-    fireEvent.press(getByText('Правилами поездок'))
+    await fireEvent.press(getByText('Правилами поездок'))
     expect(linkPress).toHaveBeenCalledTimes(1)
     expect(onToggle).not.toHaveBeenCalled()
   })
@@ -127,8 +131,8 @@ describe('ConsentCheckbox', () => {
   // `checkbox`: доступный `Pressable` на iOS — лист дерева VoiceOver (ссылки
   // недостижимы), а на вебе `<a>` внутри `role="checkbox"` — вложенный
   // интерактив. Роль checkbox — ровно одна и только у квадрата.
-  it('keeps the label and its links outside the single checkbox node', () => {
-    const { getAllByRole, getByTestId, getByText } = render(
+  it('keeps the label and its links outside the single checkbox node', async () => {
+    const { getAllByRole, getByTestId, getByText } = await render(
       <ConsentCheckbox checked={false} onToggle={jest.fn()} testID="cb">
         Я согласен с{' '}
         <Text onPress={jest.fn()} accessibilityRole="link">
@@ -147,7 +151,7 @@ describe('ConsentCheckbox', () => {
   // #2093: на вебе `<Link>` без `asChild` рендерится react-native-web'ом как
   // `<a href>` с `onClick` без `stopPropagation` (`BaseExpoRouterLink`), и
   // клик по нему после перехода всплывает в `onClick` подписи.
-  // `react-test-renderer` не проигрывает реальное всплытие DOM, поэтому жмём
+  // `test-renderer` не проигрывает реальное всплытие DOM, поэтому жмём
   // на подпись с фейковым событием, чей `target` лежит внутри `<a>`, — так
   // выглядит событие, дошедшее до подписи после клика по вложенной ссылке.
   describe('web DOM click bubbling from a nested <a> (RNW-specific)', () => {
@@ -161,30 +165,30 @@ describe('ConsentCheckbox', () => {
       ;(Platform as { OS: string }).OS = originalOS
     })
 
-    it('ignores a bubbled label click whose target is inside an anchor', () => {
+    it('ignores a bubbled label click whose target is inside an anchor', async () => {
       const onToggle = jest.fn()
-      const { getByText } = render(
+      const { getByText } = await render(
         <ConsentCheckbox checked={false} onToggle={onToggle} testID="cb">
           Я согласен
         </ConsentCheckbox>,
       )
 
-      fireEvent.press(getByText('Я согласен'), {
+      await fireEvent.press(getByText('Я согласен'), {
         target: { closest: (selector: string) => (selector === 'a' ? {} : null) },
       })
 
       expect(onToggle).not.toHaveBeenCalled()
     })
 
-    it('still toggles a label click whose target is not inside an anchor', () => {
+    it('still toggles a label click whose target is not inside an anchor', async () => {
       const onToggle = jest.fn()
-      const { getByText } = render(
+      const { getByText } = await render(
         <ConsentCheckbox checked={false} onToggle={onToggle} testID="cb">
           Я согласен
         </ConsentCheckbox>,
       )
 
-      fireEvent.press(getByText('Я согласен'), {
+      await fireEvent.press(getByText('Я согласен'), {
         target: { closest: () => null },
       })
 
@@ -214,42 +218,42 @@ describe('ConsentCheckbox', () => {
       )
     }
 
-    it('toggles checked on Space and calls preventDefault so the page does not scroll', () => {
-      const { getByRole } = render(<CheckboxHarness />)
+    it('toggles checked on Space and calls preventDefault so the page does not scroll', async () => {
+      const { getByRole } = await render(<CheckboxHarness />)
       const preventDefault = jest.fn()
 
-      fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', preventDefault })
+      await fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', preventDefault })
 
       expect(preventDefault).toHaveBeenCalledTimes(1)
       expect(getByRole('checkbox').props.accessibilityState.checked).toBe(true)
     })
 
-    it('prevents scrolling throughout held Space without toggling repeatedly', () => {
-      const { getByRole } = render(<CheckboxHarness />)
+    it('prevents scrolling throughout held Space without toggling repeatedly', async () => {
+      const { getByRole } = await render(<CheckboxHarness />)
       const preventDefault = jest.fn()
 
-      fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', preventDefault })
-      fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', repeat: true, preventDefault })
-      fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', repeat: true, preventDefault })
+      await fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', preventDefault })
+      await fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', repeat: true, preventDefault })
+      await fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', repeat: true, preventDefault })
 
       expect(preventDefault).toHaveBeenCalledTimes(3)
       expect(getByRole('checkbox').props.accessibilityState.checked).toBe(true)
 
       // A fresh press after releasing Space switches the checkbox off again.
-      fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', repeat: false, preventDefault })
+      await fireEvent(getByRole('checkbox'), 'keyDown', { key: ' ', repeat: false, preventDefault })
       expect(getByRole('checkbox').props.accessibilityState.checked).toBe(false)
     })
 
-    it('leaves Enter handling to Pressable and keeps onPress functional', () => {
-      const { getByRole } = render(<CheckboxHarness />)
+    it('leaves Enter handling to Pressable and keeps onPress functional', async () => {
+      const { getByRole } = await render(<CheckboxHarness />)
       const checkbox = getByRole('checkbox')
       const preventDefault = jest.fn()
 
-      fireEvent(checkbox, 'keyDown', { key: 'Enter', preventDefault })
+      await fireEvent(checkbox, 'keyDown', { key: 'Enter', preventDefault })
       // Enter must not be swallowed by the Space handler. RNW turns that
       // keyup into onPress; the test renderer does not run the browser listener.
       expect(preventDefault).not.toHaveBeenCalled()
-      fireEvent.press(checkbox)
+      await fireEvent.press(checkbox)
 
       expect(getByRole('checkbox').props.accessibilityState.checked).toBe(true)
     })
@@ -257,8 +261,8 @@ describe('ConsentCheckbox', () => {
 })
 
 describe('TripApplyForm consent names (#2109)', () => {
-  it('gives both consent checkboxes a non-empty accessible name with the full consent text', () => {
-    const { getByTestId } = render(<TripApplyForm trip={{ id: 1 } as never} />)
+  it('gives both consent checkboxes a non-empty accessible name with the full consent text', async () => {
+    const { getByTestId } = await render(<TripApplyForm trip={{ id: 1 } as never} />)
 
     const rulesLabel = getByTestId('trip-apply-consent-rules').props.accessibilityLabel
     const disclaimerLabel = getByTestId('trip-apply-consent-disclaimer').props.accessibilityLabel
@@ -276,16 +280,16 @@ describe('TripApplyForm consent names (#2109)', () => {
 })
 
 describe('DataFreshnessNotice', () => {
-  it('renders the default "data may be outdated" warning', () => {
-    const { getByText } = render(<DataFreshnessNotice />)
+  it('renders the default "data may be outdated" warning', async () => {
+    const { getByText } = await render(<DataFreshnessNotice />)
     expect(getByText(/информация может быть неактуальной/i)).toBeTruthy()
   })
 })
 
 describe('QuestConsentGate', () => {
-  it('blocks the start button until the consent checkbox is checked', () => {
+  it('blocks the start button until the consent checkbox is checked', async () => {
     const onAccept = jest.fn()
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <QuestConsentGate title="Тестовый квест" onAccept={onAccept} />,
     )
 
@@ -293,15 +297,15 @@ describe('QuestConsentGate', () => {
     expect(startButton.props.accessibilityState?.disabled).toBe(true)
 
     // Press while disabled — nothing happens.
-    fireEvent.press(startButton)
+    await fireEvent.press(startButton)
     expect(onAccept).not.toHaveBeenCalled()
 
     // Check the box, then start becomes actionable.
-    fireEvent.press(getByTestId('quest-consent-checkbox'))
+    await fireEvent.press(getByTestId('quest-consent-checkbox'))
     const enabledButton = getByTestId('quest-consent-start')
     expect(enabledButton.props.accessibilityState?.disabled).toBe(false)
 
-    fireEvent.press(enabledButton)
+    await fireEvent.press(enabledButton)
     expect(onAccept).toHaveBeenCalledTimes(1)
   })
 })

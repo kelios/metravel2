@@ -73,7 +73,7 @@ describe('MapLogicComponent radius auto-fit vs. server total', () => {
 
   it('does not tighten to page 1 when the server total is larger than the loaded set', async () => {
     const { map, pointBounds, props, travelData } = setup();
-    render(<MapLogicComponent {...props} travelData={travelData} travelsTotal={576} />);
+    await render(<MapLogicComponent {...props} travelData={travelData} travelsTotal={576} />);
     await act(async () => {});
     expect(map.fitBounds).toHaveBeenCalledTimes(1);
     // The tighten branch extends the point bounds with the centre; it must not run.
@@ -82,7 +82,7 @@ describe('MapLogicComponent radius auto-fit vs. server total', () => {
 
   it('tightens to the points when they are the whole result set', async () => {
     const { map, pointBounds, props, travelData } = setup();
-    render(<MapLogicComponent {...props} travelData={travelData} travelsTotal={2} />);
+    await render(<MapLogicComponent {...props} travelData={travelData} travelsTotal={2} />);
     await act(async () => {});
     expect(map.fitBounds).toHaveBeenCalledTimes(1);
     expect(pointBounds.extend).toHaveBeenCalled();
@@ -92,7 +92,7 @@ describe('MapLogicComponent radius auto-fit vs. server total', () => {
     // A radius change after the startup latch: travelData/total still belong to the
     // previous radius. Tightening to them would keep the old small area on screen.
     const { map, pointBounds, props, travelData } = setup();
-    render(<MapLogicComponent {...props} travelData={travelData} travelsTotal={null} />);
+    await render(<MapLogicComponent {...props} travelData={travelData} travelsTotal={null} />);
     await act(async () => {});
     expect(map.fitBounds).toHaveBeenCalledTimes(1);
     expect(pointBounds.extend).not.toHaveBeenCalled();
@@ -100,7 +100,7 @@ describe('MapLogicComponent radius auto-fit vs. server total', () => {
 
   it('treats an omitted total as complete (legacy callers)', async () => {
     const { pointBounds, props, travelData } = setup();
-    render(<MapLogicComponent {...props} travelData={travelData} />);
+    await render(<MapLogicComponent {...props} travelData={travelData} />);
     await act(async () => {});
     expect(pointBounds.extend).toHaveBeenCalled();
   });

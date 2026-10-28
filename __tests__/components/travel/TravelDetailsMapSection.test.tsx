@@ -112,7 +112,7 @@ describe('TravelDetailsMapSection', () => {
     mockHandlePointCardPress.mockClear()
   })
 
-  it('composes map section blocks with props from map and content models', () => {
+  it('composes map section blocks with props from map and content models', async () => {
     const anchors = {
       gallery: createRef(),
       video: createRef(),
@@ -135,7 +135,7 @@ describe('TravelDetailsMapSection', () => {
       travelAddress: [{ id: 1, coord: '53.9,27.56' }],
     } as Travel
 
-    render(
+    await render(
       <TravelDetailsMapSection
         travel={travel}
         anchors={anchors}
@@ -189,7 +189,7 @@ describe('TravelDetailsMapSection', () => {
     )
   })
 
-  it('focuses the map marker from travel point cards without opening the shared card', () => {
+  it('focuses the map marker from travel point cards without opening the shared card', async () => {
     const anchors = {
       gallery: createRef(),
       video: createRef(),
@@ -212,7 +212,7 @@ describe('TravelDetailsMapSection', () => {
       travelAddress: [{ id: 1, address: 'Point A', coord: '53.9,27.56' }],
     } as Travel
 
-    const { queryByTestId } = render(
+    const { queryByTestId } = await render(
       <TravelDetailsMapSection
         travel={travel}
         anchors={anchors}
@@ -223,7 +223,7 @@ describe('TravelDetailsMapSection', () => {
     )
 
     const props = mockTravelPointsBlock.mock.calls[0][0]
-    act(() => {
+    await act(() => {
       props.handlePointCardPress({
         id: 1,
         address: 'Point A',

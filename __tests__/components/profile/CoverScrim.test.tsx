@@ -83,8 +83,8 @@ describe('CoverScrim (#1670)', () => {
     mockGradientProps.length = 0;
   });
 
-  it('спадает выпукло — на конце рампы нет излома, который глаз читает границей', () => {
-    render(<CoverScrim coverHeight={132} />);
+  it('спадает выпукло — на конце рампы нет излома, который глаз читает границей', async () => {
+    await render(<CoverScrim coverHeight={132} />);
 
     const gradient = mockGradientProps[0];
     expect(gradient.locations.length).toBeGreaterThanOrEqual(3);
@@ -98,8 +98,8 @@ describe('CoverScrim (#1670)', () => {
     expect(slope(locs.length - 2)).toBeLessThan(slope(0));
   });
 
-  it('затемняет угол градиентом, а не плоской заливкой', () => {
-    render(<CoverScrim coverHeight={132} />);
+  it('затемняет угол градиентом, а не плоской заливкой', async () => {
+    await render(<CoverScrim coverHeight={132} />);
 
     expect(mockGradientProps).toHaveLength(1);
     const gradient = mockGradientProps[0];
@@ -111,8 +111,8 @@ describe('CoverScrim (#1670)', () => {
     expect(parseAlpha(gradient.colors[gradient.colors.length - 1])).toBe(0);
   });
 
-  it('гаснет до нуля на внутренней (левой) и нижней кромке — шва нет', () => {
-    render(<CoverScrim coverHeight={132} />);
+  it('гаснет до нуля на внутренней (левой) и нижней кромке — шва нет', async () => {
+    await render(<CoverScrim coverHeight={132} />);
 
     const gradient = mockGradientProps[0];
     const { width, height } = StyleSheet.flatten(gradient.style);
@@ -136,8 +136,8 @@ describe('CoverScrim (#1670)', () => {
     }
   });
 
-  it('держит инвариант и при другой высоте обложки', () => {
-    render(<CoverScrim coverHeight={220} />);
+  it('держит инвариант и при другой высоте обложки', async () => {
+    await render(<CoverScrim coverHeight={220} />);
 
     const gradient = mockGradientProps[0];
     const { width, height } = StyleSheet.flatten(gradient.style);
@@ -149,8 +149,8 @@ describe('CoverScrim (#1670)', () => {
     }
   });
 
-  it('свой профиль рисует scrim одним общим источником во всю высоту обложки', () => {
-    render(
+  it('свой профиль рисует scrim одним общим источником во всю высоту обложки', async () => {
+    await render(
       <ProfileHeader
         user={{ name: 'Julia I', email: 'julia@tut.by', avatar: null }}
         profile={profile}
@@ -165,8 +165,8 @@ describe('CoverScrim (#1670)', () => {
     expect(StyleSheet.flatten(mockGradientProps[0].style).height).toBe(132);
   });
 
-  it('чужой профиль рисует тот же scrim, а не свою копию', () => {
-    const { getByTestId } = render(
+  it('чужой профиль рисует тот же scrim, а не свою копию', async () => {
+    const { getByTestId } = await render(
       <PublicProfileHeader
         userId="2"
         fullName="Traveler"

@@ -32,7 +32,7 @@ describe('useMapFilters', () => {
       year: '',
     });
 
-    const { result } = renderHook(() => useMapFilters());
+    const { result } = await renderHook(() => useMapFilters());
 
     await waitFor(() => {
       expect(result.current.filters.categoryTravelAddress).toEqual([
@@ -56,7 +56,7 @@ describe('useMapFilters', () => {
       radius: [{ id: '60', name: '60' }],
     } as any);
 
-    const { result } = renderHook(() => useMapFilters());
+    const { result } = await renderHook(() => useMapFilters());
 
     await waitFor(() => {
       expect(result.current.filters.categoryTravelAddress).toHaveLength(3);
@@ -72,7 +72,7 @@ describe('useMapFilters', () => {
       radius: [],
     } as any);
 
-    const { result } = renderHook(() => useMapFilters({ initialCategories: ['Замок'] }));
+    const { result } = await renderHook(() => useMapFilters({ initialCategories: ['Замок'] }));
 
     expect(result.current.filterValues.categoryTravelAddress).toEqual(['Замок']);
     expect(result.current.filterValues.categories).toEqual([]);
@@ -89,7 +89,7 @@ describe('useMapFilters', () => {
   it('preserves numeric and unknown URL tokens during loading, then resolves only registered IDs', async () => {
     let finish!: (value: any) => void;
     mockedFetchFiltersMap.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
-    const { result } = renderHook(() => useMapFilters({ initialCategories: ['43', 'Unknown'] }));
+    const { result } = await renderHook(() => useMapFilters({ initialCategories: ['43', 'Unknown'] }));
     expect(result.current.filters.categoryDictionaryState).toBe('loading');
     expect(result.current.filterValues.categoryTravelAddress).toEqual(['43', 'Unknown']);
     await act(async () => { finish({ categories: [{ id: '43', name: 'Замок' }] }); });
@@ -99,7 +99,7 @@ describe('useMapFilters', () => {
 
   it('retains pending tokens when the dictionary request fails', async () => {
     mockedFetchFiltersMap.mockRejectedValue(new Error('dictionary unavailable'));
-    const { result } = renderHook(() => useMapFilters({ initialCategories: ['43', 'Unknown'] }));
+    const { result } = await renderHook(() => useMapFilters({ initialCategories: ['43', 'Unknown'] }));
     await waitFor(() => expect(result.current.filters.categoryDictionaryState).toBe('error'));
     expect(result.current.filterValues.categoryTravelAddress).toEqual(['43', 'Unknown']);
     expect(result.current.error).toBeTruthy();
@@ -107,7 +107,7 @@ describe('useMapFilters', () => {
 
   it('distinguishes a loaded empty dictionary from pending loading', async () => {
     mockedFetchFiltersMap.mockResolvedValue({ categories: [] } as any);
-    const { result } = renderHook(() => useMapFilters({ initialCategories: ['43'] }));
+    const { result } = await renderHook(() => useMapFilters({ initialCategories: ['43'] }));
     await waitFor(() => expect(result.current.filters.categoryDictionaryState).toBe('ready'));
     expect(result.current.filters.categoryTravelAddress).toEqual([]);
     expect(result.current.filterValues.categoryTravelAddress).toEqual(['43']);

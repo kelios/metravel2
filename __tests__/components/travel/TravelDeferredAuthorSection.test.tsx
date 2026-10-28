@@ -46,8 +46,8 @@ describe('TravelDeferredAuthorSection', () => {
     jest.restoreAllMocks()
   })
 
-  it('keeps the mobile author block compact without duplicate explanatory subtitle', () => {
-    const { getByTestId, getByText, queryByText } = render(
+  it('keeps the mobile author block compact without duplicate explanatory subtitle', async () => {
+    const { getByTestId, getByText, queryByText } = await render(
       <TravelDeferredAuthorSection travel={{ id: 1 } as any} isMobile />,
     )
 
@@ -58,7 +58,7 @@ describe('TravelDeferredAuthorSection', () => {
     expect(queryByText('Профиль, соцсети и другие путешествия автора')).toBeNull()
   })
 
-  it('keeps the author visible on tablet without duplicating the desktop share block', () => {
+  it('keeps the author visible on tablet without duplicating the desktop share block', async () => {
     jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
       width: 820,
       height: 1180,
@@ -66,7 +66,7 @@ describe('TravelDeferredAuthorSection', () => {
       fontScale: 1,
     })
 
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = await render(
       <TravelDeferredAuthorSection travel={{ id: 1 } as any} isMobile={false} />,
     )
 
@@ -76,7 +76,7 @@ describe('TravelDeferredAuthorSection', () => {
     expect(getByText('Peer badges')).toBeTruthy()
   })
 
-  it('leaves the inline author out when the desktop sidebar owns it', () => {
+  it('leaves the inline author out when the desktop sidebar owns it', async () => {
     jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
       width: 1440,
       height: 900,
@@ -84,7 +84,7 @@ describe('TravelDeferredAuthorSection', () => {
       fontScale: 1,
     })
 
-    const { getByText, queryByTestId, queryByText } = render(
+    const { getByText, queryByTestId, queryByText } = await render(
       <TravelDeferredAuthorSection travel={{ id: 1 } as any} isMobile={false} />,
     )
 

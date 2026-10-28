@@ -12,19 +12,27 @@
  * Здесь закреплено то, что осталось: одна фотография, показанная сразу, и
  * дешёвая заливка полей из данных манифеста.
  */
-const renderer = require('react-test-renderer');
+const { act } = require('react');
+const renderer = require('test-renderer');
 const { Platform } = require('react-native');
 const { default: ImageCardMedia } = require('@/components/ui/ImageCardMedia');
+const roots = new Set<import('test-renderer').Root>()
+afterEach(async () => {
+  for (const root of roots) await act(() => root.unmount())
+  roots.clear()
+})
+
 
 const SRC = 'https://metravel.by/media-resize/legacy/682/conversions/cover.webp';
 const BLURHASH = 'LSF=~=I_-o-;5^xuRPR:yGs,M{WZ';
 const COLOR = '#7b7e78';
 
-const renderMedia = (props: Record<string, unknown> = {}) => {
+const renderMedia = async (props: Record<string, unknown> = {}) => {
   let tree: any;
-  renderer.act(() => {
-    tree = renderer.create(
-      <ImageCardMedia
+  await act(() => {
+    tree = renderer.createRoot();
+      roots.add(tree)
+      tree.render(<ImageCardMedia
         testID="card-media"
         src={SRC}
         width={408}
@@ -34,8 +42,7 @@ const renderMedia = (props: Record<string, unknown> = {}) => {
         placeholderBlurhash={BLURHASH}
         placeholderColor={COLOR}
         {...props}
-      />,
-    );
+      />)
   });
   return tree;
 };
@@ -55,30 +62,27 @@ describe('ImageCardMedia: один слой фотографии на web', () =
     if (originalJestWorkerId) process.env.JEST_WORKER_ID = originalJestWorkerId;
   });
 
-  it('не рисует размытую копию фотографии вторым слоем', () => {
-    const tree = renderMedia();
+  it('не рисует размытую копию фотографии вторым слоем', async () => {
+    const tree = await renderMedia();
     // Ни одного узла с `data-blur-backdrop`: второй <img> с тем же файлом снят.
-    const backdrops = tree.root.findAll(
-      (node: any) => node?.props?.['data-blur-backdrop'] !== undefined,
-      { deep: true },
+    const backdrops = tree.container.queryAll(
+      (node: any) => node?.props?.['data-blur-backdrop'] !== undefined
     );
     expect(backdrops).toHaveLength(0);
   });
 
-  it('не заводит blob-слой из blurhash даже когда хеш передан', () => {
-    const tree = renderMedia();
-    const blurhashSources = tree.root.findAll(
-      (node: any) => typeof node?.props?.source?.blurhash === 'string',
-      { deep: true },
+  it('не заводит blob-слой из blurhash даже когда хеш передан', async () => {
+    const tree = await renderMedia();
+    const blurhashSources = tree.container.queryAll(
+      (node: any) => typeof node?.props?.source?.blurhash === 'string'
     );
     expect(blurhashSources).toHaveLength(0);
   });
 
-  it('не тянет отдельный LQIP-файл под фотографию', () => {
-    const tree = renderMedia({ placeholderSrc: 'https://metravel.by/gallery/lqip.webp' });
-    const lqip = tree.root.findAll(
-      (node: any) => typeof node?.props?.src === 'string' && node.props.src.includes('lqip'),
-      { deep: true },
+  it('не тянет отдельный LQIP-файл под фотографию', async () => {
+    const tree = await renderMedia({ placeholderSrc: 'https://metravel.by/gallery/lqip.webp' });
+    const lqip = tree.container.queryAll(
+      (node: any) => typeof node?.props?.src === 'string' && node.props.src.includes('lqip')
     );
     expect(lqip).toHaveLength(0);
   });

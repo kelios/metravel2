@@ -105,15 +105,15 @@ describe('useFullBookExport', () => {
     useFullBookExportStore.setState({ byOwner: {} })
   })
 
-  afterEach(() => {
-    cleanup()
+  afterEach(async () => {
+    await cleanup()
     jest.useRealTimers()
   })
 
   it.each([true, false])('known guest never queries auth-only capabilities or jobs (enabled=%s)', async (enabled) => {
     mockOwner = null;
     const { Wrapper } = createWrapper();
-    const { result } = renderHook(() => useFullBookExport({ enabled }), { wrapper: Wrapper });
+    const { result } = await renderHook(() => useFullBookExport({ enabled }), { wrapper: Wrapper });
     await act(async () => { await Promise.resolve(); });
     expect(result.current.capabilityState).toBe('unavailable');
     expect(result.current.isAvailable).toBe(false);
@@ -125,7 +125,7 @@ describe('useFullBookExport', () => {
 
   it('does not query capabilities for a disabled signed-in surface', async () => {
     const { Wrapper } = createWrapper();
-    renderHook(() => useFullBookExport({ enabled: false }), { wrapper: Wrapper });
+    await renderHook(() => useFullBookExport({ enabled: false }), { wrapper: Wrapper });
     await act(async () => { await Promise.resolve(); });
     expect(mockedGet).not.toHaveBeenCalled();
     expect(mockedPost).not.toHaveBeenCalled();
@@ -135,7 +135,7 @@ describe('useFullBookExport', () => {
     routeGet({ ...readyCapabilities, pdf_available: false, renderer_version: 'unavailable' }, [makeJob()])
     const { Wrapper } = createWrapper()
 
-    const { result } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    const { result } = await renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
 
     await waitFor(() => expect(result.current.capabilityState).toBe('unavailable'))
     expect(result.current.isAvailable).toBe(false)
@@ -147,7 +147,7 @@ describe('useFullBookExport', () => {
     routeGet(readyCapabilities, [makeJob()])
     const { Wrapper } = createWrapper()
 
-    const { result } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    const { result } = await renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
 
     await waitFor(() => expect(result.current.job?.job_id).toBe('job-1'))
     expect(mockedGet).toHaveBeenCalledWith('/exports/books/?page_size=1')
@@ -159,10 +159,10 @@ describe('useFullBookExport', () => {
     routeGet(readyCapabilities, [makeJob({ status: 'cancelled', stage: 'snapshot' })])
     const { Wrapper } = createWrapper()
 
-    const { result } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    const { result } = await renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.job?.status).toBe('cancelled'))
 
-    act(() => result.current.dismiss())
+    await act(() => result.current.dismiss())
 
     await waitFor(() => expect(result.current.job).toBeNull())
     expect(useFullBookExportStore.getState().byOwner['owner-1']?.dismissedJobId).toBe('job-1')
@@ -176,7 +176,7 @@ describe('useFullBookExport', () => {
       return Promise.reject(new ApiError(404, 'Not found'))
     })
     const { client, Wrapper } = createWrapper()
-    const { result } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    const { result } = await renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.job?.job_id).toBe('job-1'))
 
     await act(async () => {
@@ -184,7 +184,7 @@ describe('useFullBookExport', () => {
     })
     await waitFor(() => expect(result.current.isJobMissing).toBe(true))
 
-    act(() => result.current.dismiss())
+    await act(() => result.current.dismiss())
     await waitFor(() => expect(result.current.isJobMissing).toBe(false))
     expect(result.current.job).toBeNull()
   })
@@ -204,10 +204,10 @@ describe('useFullBookExport', () => {
       return Promise.reject(new Error(`unexpected POST ${endpoint}`))
     })
     const { Wrapper } = createWrapper()
-    const { result } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    const { result } = await renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.isAvailable).toBe(true))
 
-    act(() => result.current.findPeriod({ yearFrom: 2012, yearTo: 2013 }))
+    await act(() => result.current.findPeriod({ yearFrom: 2012, yearTo: 2013 }))
     await waitFor(() => expect(result.current.draft?.travelCount).toBe(23))
     expect(useFullBookExportStore.getState().byOwner['owner-1']).toMatchObject({ yearFrom: 2012, yearTo: 2013 })
 
@@ -225,11 +225,11 @@ describe('useFullBookExport', () => {
   it('does not read another owner draft or job after an account switch', async () => {
     routeGet(readyCapabilities, [makeJob()])
     const { Wrapper } = createWrapper()
-    const { result, rerender } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    const { result, rerender } = await renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.job?.job_id).toBe('job-1'))
 
     mockOwner = null
-    rerender({})
+    await rerender({})
 
     expect(result.current.job).toBeNull()
     expect(result.current.isAvailable).toBe(false)
@@ -242,12 +242,12 @@ describe('useFullBookExport', () => {
     let finishTicket!: (value: { download_url: string; expires_at: string }) => void
     mockedPost.mockImplementationOnce(() => new Promise((resolve) => { finishTicket = resolve }))
     const { Wrapper } = createWrapper()
-    const { result, rerender } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    const { result, rerender } = await renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.job?.status).toBe('done'))
-    act(() => result.current.download())
+    await act(() => result.current.download())
     await waitFor(() => expect(mockedPost).toHaveBeenCalledWith('/exports/books/job-1/download-ticket/', {}))
     mockOwner = 'owner-2'
-    rerender({})
+    await rerender({})
     await act(async () => {
       finishTicket({ download_url: '/api/exports/books/job-1/download/?ticket=old-owner', expires_at: '2099-01-01T00:00:00Z' })
     })
@@ -262,11 +262,11 @@ describe('useFullBookExport', () => {
     let finishTicket!: (value: { download_url: string; expires_at: string }) => void
     mockedPost.mockImplementationOnce(() => new Promise((resolve) => { finishTicket = resolve }))
     const { Wrapper } = createWrapper()
-    const { result, unmount } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    const { result, unmount } = await renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.job?.status).toBe('done'))
-    act(() => result.current.download())
+    await act(() => result.current.download())
     await waitFor(() => expect(mockedPost).toHaveBeenCalledWith('/exports/books/job-1/download-ticket/', {}))
-    unmount()
+    await unmount()
     await act(async () => {
       finishTicket({ download_url: '/api/exports/books/job-1/download/?ticket=old-owner', expires_at: '2099-01-01T00:00:00Z' })
     })
@@ -278,12 +278,12 @@ describe('useFullBookExport', () => {
     let finishSelection!: (value: unknown) => void
     mockedPost.mockReturnValue(new Promise((resolve) => { finishSelection = resolve }))
     const { Wrapper } = createWrapper()
-    const { result, rerender } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    const { result, rerender } = await renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.isAvailable).toBe(true))
-    act(() => result.current.findPeriod({ yearFrom: 2012, yearTo: 2013 }))
+    await act(() => result.current.findPeriod({ yearFrom: 2012, yearTo: 2013 }))
     await waitFor(() => expect(mockedPost).toHaveBeenCalledTimes(1))
     mockOwner = 'owner-2'
-    rerender({})
+    await rerender({})
     await act(async () => {
       finishSelection({ selection_id: 'owner-1-selection', state: 'draft', travel_count: 23, next_sequence: 1 })
     })
@@ -307,9 +307,9 @@ describe('useFullBookExport', () => {
       return Promise.reject(new Error('Unexpected endpoint'))
     })
     const { Wrapper } = createWrapper()
-    const { result } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    const { result } = await renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.isAvailable).toBe(true))
-    act(() => result.current.findPeriod({ yearFrom: 2012, yearTo: 2013 }))
+    await act(() => result.current.findPeriod({ yearFrom: 2012, yearTo: 2013 }))
     await waitFor(() => expect(result.current.draft).not.toBeNull())
     const settings = { ...DEFAULT_BOOK_SETTINGS, sortOrder: 'date-asc' as const }
     await act(async () => { await expect(result.current.submit(settings)).rejects.toThrow('Unavailable') })
@@ -340,9 +340,9 @@ describe('useFullBookExport', () => {
       return Promise.reject(new Error('Unexpected endpoint'))
     })
     const { Wrapper } = createWrapper()
-    const { result } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    const { result } = await renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.isAvailable).toBe(true))
-    act(() => result.current.findPeriod({ yearFrom: 2012, yearTo: 2013 }))
+    await act(() => result.current.findPeriod({ yearFrom: 2012, yearTo: 2013 }))
     await waitFor(() => expect(result.current.draft).not.toBeNull())
     const settings = { ...DEFAULT_BOOK_SETTINGS, sortOrder: 'date-asc' as const }
     await act(async () => { await expect(result.current.submit(settings)).rejects.toThrow('Gateway Timeout') })
@@ -367,9 +367,9 @@ describe('useFullBookExport', () => {
     })
     const { client, Wrapper } = createWrapper()
     client.setDefaultOptions({ queries: { retryDelay: 0 }, mutations: { retry: false } })
-    const { result } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    const { result } = await renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.isAvailable).toBe(true))
-    act(() => result.current.findPeriod({ yearFrom: 2012, yearTo: 2013 }))
+    await act(() => result.current.findPeriod({ yearFrom: 2012, yearTo: 2013 }))
     await waitFor(() => expect(result.current.draft).not.toBeNull())
     await act(async () => { await result.current.submit({ ...DEFAULT_BOOK_SETTINGS, sortOrder: 'date-asc' }) })
     await waitFor(() => expect(result.current.isReconnecting).toBe(true))
@@ -391,13 +391,13 @@ describe('useFullBookExport', () => {
     })
     mockedPost.mockRejectedValueOnce(new ApiError(409, 'Rebuild', { error_code: 'REBUILD_REQUIRED' }))
     const { client, Wrapper } = createWrapper()
-    const { result } = renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
+    const { result } = await renderHook(() => useFullBookExport({ enabled: true }), { wrapper: Wrapper })
     await waitFor(() => expect(result.current.job?.job_id).toBe('job-a'))
 
-    act(() => result.current.retry())
+    await act(() => result.current.retry())
     await waitFor(() => expect(result.current.retryError).toBeInstanceOf(ApiError))
 
-    act(() => result.current.dismiss())
+    await act(() => result.current.dismiss())
     listed = [failedB]
     await act(async () => {
       await client.refetchQueries({ queryKey: ['full-book-export', 'owner-1', 'latest-job'] })

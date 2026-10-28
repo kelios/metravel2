@@ -60,25 +60,25 @@ describe('AwardsHub', () => {
     jest.clearAllMocks()
   })
 
-  it.each(['web', 'ios', 'android'] as const)('keeps the real row ancestor, one selected child and switching on %s', os => {
+  it.each(['web', 'ios', 'android'] as const)('keeps the real row ancestor, one selected child and switching on %s', async os => {
     const original = Platform.OS
     Object.defineProperty(Platform, 'OS', { configurable: true, value: os })
     try {
-      const view = render(<AwardsHub />)
+      const view = await render(<AwardsHub />)
       const roles = getTabRoles()
       const row = view.getByTestId('awards-tabbar')
       expect(row.props.accessibilityRole).toBe(roles.tablist)
       const tabs = within(row).getAllByRole(roles.tab)
       expect(tabs).toHaveLength(4)
       expect(tabs.filter(tab => tab.props.accessibilityState?.selected)).toHaveLength(1)
-      fireEvent.press(view.getByTestId('awards-tab-all'))
+      await fireEvent.press(view.getByTestId('awards-tab-all'))
       const next = within(view.getByTestId('awards-tabbar')).getAllByRole(roles.tab)
       expect(next.filter(tab => tab.props.accessibilityState?.selected).map(tab => tab.props.testID)).toEqual(['awards-tab-all'])
     } finally { Object.defineProperty(Platform, 'OS', { configurable: true, value: original }) }
   })
 
-  it('starts from the lightweight path tab without mounting all awards', () => {
-    const { getByTestId, getByText, queryByText } = render(<AwardsHub />)
+  it('starts from the lightweight path tab without mounting all awards', async () => {
+    const { getByTestId, getByText, queryByText } = await render(<AwardsHub />)
 
     expect(getByTestId('awards-tab-path').props.accessibilityState).toEqual({
       selected: true,
@@ -88,10 +88,10 @@ describe('AwardsHub', () => {
     expect(queryByText('all awards panel')).toBeNull()
   })
 
-  it('opens all awards from the path action', () => {
-    const { getByTestId, getByText } = render(<AwardsHub />)
+  it('opens all awards from the path action', async () => {
+    const { getByTestId, getByText } = await render(<AwardsHub />)
 
-    fireEvent.press(getByTestId('open-awards-from-path'))
+    await fireEvent.press(getByTestId('open-awards-from-path'))
 
     expect(getByText('all awards panel')).toBeTruthy()
     expect(getByTestId('awards-tab-all').props.accessibilityState).toEqual({

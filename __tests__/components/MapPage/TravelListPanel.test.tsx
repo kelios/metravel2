@@ -99,13 +99,13 @@ describe('TravelListPanel (right list on map page)', () => {
     });
   });
 
-  it('renders the empty state through ui/EmptyState with all four map actions', () => {
+  it('renders the empty state through ui/EmptyState with all four map actions', async () => {
     const onExpandRadius = jest.fn();
     const onResetFilters = jest.fn();
     const onOpenFilters = jest.fn();
     const onClosePanel = jest.fn();
 
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <TravelListPanel
         travelsData={[]}
         buildRouteTo={() => {}}
@@ -119,10 +119,10 @@ describe('TravelListPanel (right list on map page)', () => {
     expect(getByTestId('travel-list-empty')).toBeTruthy();
     expect(getByText('Ничего не нашлось')).toBeTruthy();
 
-    fireEvent.press(getByTestId('empty-expand-radius'));
-    fireEvent.press(getByTestId('empty-reset-filters'));
-    fireEvent.press(getByTestId('empty-open-filters'));
-    fireEvent.press(getByTestId('empty-back-to-map'));
+    await fireEvent.press(getByTestId('empty-expand-radius'));
+    await fireEvent.press(getByTestId('empty-reset-filters'));
+    await fireEvent.press(getByTestId('empty-open-filters'));
+    await fireEvent.press(getByTestId('empty-back-to-map'));
 
     expect(onExpandRadius).toHaveBeenCalledTimes(1);
     expect(onResetFilters).toHaveBeenCalledTimes(1);
@@ -130,8 +130,8 @@ describe('TravelListPanel (right list on map page)', () => {
     expect(onClosePanel).toHaveBeenCalledTimes(1);
   });
 
-  it('hides empty-state actions whose handlers are absent', () => {
-    const { getByTestId, queryByTestId } = render(
+  it('hides empty-state actions whose handlers are absent', async () => {
+    const { getByTestId, queryByTestId } = await render(
       <TravelListPanel travelsData={[]} buildRouteTo={() => {}} onOpenFilters={() => {}} />
     );
 
@@ -141,10 +141,10 @@ describe('TravelListPanel (right list on map page)', () => {
     expect(queryByTestId('empty-back-to-map')).toBeNull();
   });
 
-  it('renders AddressListItem for each travel', () => {
+  it('renders AddressListItem for each travel', async () => {
     const noop = () => {};
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <TravelListPanel
         travelsData={travelsData}
         buildRouteTo={noop}
@@ -161,10 +161,10 @@ describe('TravelListPanel (right list on map page)', () => {
     });
   });
 
-  it('calls buildRouteTo when item is pressed', () => {
+  it('calls buildRouteTo when item is pressed', async () => {
     const buildRouteTo = jest.fn();
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <TravelListPanel
         travelsData={travelsData}
         buildRouteTo={buildRouteTo}
@@ -174,16 +174,16 @@ describe('TravelListPanel (right list on map page)', () => {
     );
 
     const firstItem = getByTestId('address-item-1');
-    fireEvent.press(firstItem);
+    await fireEvent.press(firstItem);
 
     expect(buildRouteTo).toHaveBeenCalledTimes(1);
     expect(buildRouteTo).toHaveBeenCalledWith(travelsData[0]);
   });
 
-  it('uses favorite auth intent and context favorite lookup for web card actions', () => {
+  it('uses favorite auth intent and context favorite lookup for web card actions', async () => {
     mockIsFavorite.mockImplementation((id: string | number, type: string) => id === 1 && type === 'travel');
 
-    render(
+    await render(
       <TravelListPanel
         travelsData={travelsData}
         buildRouteTo={jest.fn()}
@@ -200,7 +200,7 @@ describe('TravelListPanel (right list on map page)', () => {
   it('shows feedback when web favorite toggle fails', async () => {
     mockAddFavorite.mockRejectedValueOnce(new Error('failed'));
 
-    render(
+    await render(
       <TravelListPanel
         travelsData={travelsData}
         buildRouteTo={jest.fn()}
@@ -219,8 +219,8 @@ describe('TravelListPanel (right list on map page)', () => {
     );
   });
 
-  it('keeps the mobile list header free of legacy filter and map buttons', () => {
-    const { getByText, queryByTestId } = render(
+  it('keeps the mobile list header free of legacy filter and map buttons', async () => {
+    const { getByText, queryByTestId } = await render(
       <TravelListPanel
         travelsData={travelsData}
         buildRouteTo={jest.fn()}
@@ -240,10 +240,10 @@ describe('TravelListPanel (right list on map page)', () => {
     expect(queryByTestId('travel-list-back-to-map')).toBeNull();
   });
 
-  it('renders mobile filters as a compact icon beside the count and radius chip', () => {
+  it('renders mobile filters as a compact icon beside the count and radius chip', async () => {
     const onOpenFilters = jest.fn();
 
-    const { getByTestId, getByText, queryByText } = render(
+    const { getByTestId, getByText, queryByText } = await render(
       <TravelListPanel
         travelsData={travelsData}
         buildRouteTo={jest.fn()}
@@ -260,12 +260,12 @@ describe('TravelListPanel (right list on map page)', () => {
     expect(getByText('9 точек · 5 км')).toBeTruthy();
     expect(queryByText('Фильтры')).toBeNull();
 
-    fireEvent.press(getByTestId('travel-list-open-filters'));
+    await fireEvent.press(getByTestId('travel-list-open-filters'));
     expect(onOpenFilters).toHaveBeenCalledTimes(1);
   });
 
-  it('can hide the mobile summary when the parent sheet renders it in the header', () => {
-    const { getByText, queryByTestId } = render(
+  it('can hide the mobile summary when the parent sheet renders it in the header', async () => {
+    const { getByText, queryByTestId } = await render(
       <TravelListPanel
         travelsData={travelsData}
         buildRouteTo={jest.fn()}

@@ -72,12 +72,12 @@ describe('ServerClusterLayer', () => {
   const map = { id: 'map' }
   const useMap = () => map
 
-  const renderLayer = (L: any, clusters: ClusterData[], extra: Record<string, unknown> = {}) =>
-    render(<ServerClusterLayer L={L} useMap={useMap} clusters={clusters} {...extra} />)
+  const renderLayer = async (L: any, clusters: ClusterData[], extra: Record<string, unknown> = {}) =>
+    await render(<ServerClusterLayer L={L} useMap={useMap} clusters={clusters} {...extra} />)
 
-  it('adds one marker per cluster into a single layer group on the map', () => {
+  it('adds one marker per cluster into a single layer group on the map', async () => {
     const { L, group, markers } = makeLeaflet()
-    renderLayer(L, [cluster(53.9, 27.5, 12), cluster(52.1, 23.7, 40)])
+    await renderLayer(L, [cluster(53.9, 27.5, 12), cluster(52.1, 23.7, 40)])
 
     expect(L.layerGroup).toHaveBeenCalledTimes(1)
     expect(group.addTo).toHaveBeenCalledWith(map)
@@ -91,12 +91,12 @@ describe('ServerClusterLayer', () => {
     expect(markers[0].el.getAttribute('aria-label')).toContain('12')
   })
 
-  it('does not touch Leaflet when the same set arrives again in a new array (0 add / 0 remove)', () => {
+  it('does not touch Leaflet when the same set arrives again in a new array (0 add / 0 remove)', async () => {
     const { L, group } = makeLeaflet()
-    const view = renderLayer(L, [cluster(53.9, 27.5, 12), cluster(52.1, 23.7, 40)])
+    const view = await renderLayer(L, [cluster(53.9, 27.5, 12), cluster(52.1, 23.7, 40)])
     group.addLayer.mockClear()
 
-    view.rerender(
+    await view.rerender(
       <ServerClusterLayer
         L={L}
         useMap={useMap}
@@ -110,12 +110,12 @@ describe('ServerClusterLayer', () => {
     expect(L.layerGroup).toHaveBeenCalledTimes(1)
   })
 
-  it('replaces exactly the cluster that changed (1 remove + 1 add)', () => {
+  it('replaces exactly the cluster that changed (1 remove + 1 add)', async () => {
     const { L, group, markers } = makeLeaflet()
-    const view = renderLayer(L, [cluster(53.9, 27.5, 12), cluster(52.1, 23.7, 40)])
+    const view = await renderLayer(L, [cluster(53.9, 27.5, 12), cluster(52.1, 23.7, 40)])
     group.addLayer.mockClear()
 
-    view.rerender(
+    await view.rerender(
       <ServerClusterLayer
         L={L}
         useMap={useMap}
@@ -129,23 +129,23 @@ describe('ServerClusterLayer', () => {
     expect(group.addLayer).toHaveBeenCalledWith(markers[2])
   })
 
-  it('reuses one cached icon instance per visual class', () => {
+  it('reuses one cached icon instance per visual class', async () => {
     const { L, markers } = makeLeaflet()
-    renderLayer(L, [cluster(53.9, 27.5, 12), cluster(52.1, 23.7, 12)])
+    await renderLayer(L, [cluster(53.9, 27.5, 12), cluster(52.1, 23.7, 12)])
 
     expect(markers[0].options.icon).toBe(markers[1].options.icon)
     expect(L.divIcon).toHaveBeenCalledTimes(1)
   })
 
-  it('zooms to the CURRENT bounds of the tapped key and stamps the tap guard', () => {
+  it('zooms to the CURRENT bounds of the tapped key and stamps the tap guard', async () => {
     const { L, markers } = makeLeaflet()
     const onClusterZoom = jest.fn()
     const onClusterTap = jest.fn()
-    const view = renderLayer(L, [cluster(53.9, 27.5, 12)], { onClusterZoom, onClusterTap })
+    const view = await renderLayer(L, [cluster(53.9, 27.5, 12)], { onClusterZoom, onClusterTap })
 
     // Same key, wider bounds in a later response → no new marker, fresh bounds.
     const wider = cluster(53.9, 27.5, 12, 0.3)
-    view.rerender(
+    await view.rerender(
       <ServerClusterLayer
         L={L}
         useMap={useMap}
@@ -169,11 +169,11 @@ describe('ServerClusterLayer', () => {
     })
   })
 
-  it('removes the whole group only on unmount', () => {
+  it('removes the whole group only on unmount', async () => {
     const { L, group } = makeLeaflet()
-    const view = renderLayer(L, [cluster(53.9, 27.5, 12)])
+    const view = await renderLayer(L, [cluster(53.9, 27.5, 12)])
     expect(group.remove).not.toHaveBeenCalled()
-    view.unmount()
+    await view.unmount()
     expect(group.remove).toHaveBeenCalledTimes(1)
   })
 })

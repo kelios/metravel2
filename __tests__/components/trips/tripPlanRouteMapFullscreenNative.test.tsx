@@ -12,7 +12,6 @@
  *     же маршрутом; закрытие двухфазное, поэтому unmount ждёт кадр.
  */
 import React from 'react'
-import { Modal } from 'react-native'
 import { act, fireEvent, render } from '@testing-library/react-native'
 
 import type { RoutePoint } from '@/api/plannedTrips'
@@ -63,8 +62,8 @@ describe('TripPlanRouteMap (native) — полноэкранный режим', 
     jest.useRealTimers()
   })
 
-  it('разворачивает карту в модалку и сворачивает обратно без потери маршрута', () => {
-    const { getByTestId, queryByTestId, getAllByTestId, getByLabelText, queryByLabelText } = render(
+  it('разворачивает карту в модалку и сворачивает обратно без потери маршрута', async () => {
+    const { getByTestId, queryByTestId, getAllByTestId, getByLabelText, queryByLabelText } = await render(
       <TripPlanRouteMap route={route} routeGeometry={routeGeometry} routingState="ok" />,
     )
 
@@ -74,7 +73,7 @@ describe('TripPlanRouteMap (native) — полноэкранный режим', 
     expect(inlineProps.routePoints).toEqual([[27.56, 53.9], [27.6, 53.91]])
     expect(inlineProps.fullRouteCoords).toEqual(routeGeometry)
 
-    fireEvent.press(getByTestId('trip-plan-map-fullscreen'))
+    await fireEvent.press(getByTestId('trip-plan-map-fullscreen'))
 
     expect(getByTestId('trip-plan-map-fullscreen-modal')).toBeTruthy()
     expect(getByTestId('trip-plan-map-fullscreen-placeholder')).toBeTruthy()
@@ -88,10 +87,10 @@ describe('TripPlanRouteMap (native) — полноэкранный режим', 
     // на слабом Android не монтируется.
     expect(getAllByTestId('native-map')).toHaveLength(1)
 
-    fireEvent.press(getByTestId('trip-plan-map-fullscreen'))
+    await fireEvent.press(getByTestId('trip-plan-map-fullscreen'))
     // Первая фаза: модалка ещё смонтирована, чтобы touch-каскад завершился.
     expect(getByTestId('trip-plan-map-fullscreen-modal')).toBeTruthy()
-    act(() => {
+    await act(() => {
       jest.runAllTimers()
     })
 
@@ -103,14 +102,15 @@ describe('TripPlanRouteMap (native) — полноэкранный режим', 
     expect(restoredProps.fullRouteCoords).toEqual(inlineProps.fullRouteCoords)
   })
 
-  it('системный «назад» на Android сворачивает карту, а не выходит с экрана', () => {
-    const { getByTestId, queryByTestId, UNSAFE_getByType } = render(
+  it('системный «назад» на Android сворачивает карту, а не выходит с экрана', async () => {
+    const { getByTestId, queryByTestId } = await render(
       <TripPlanRouteMap route={route} routeGeometry={routeGeometry} />,
     )
 
-    fireEvent.press(getByTestId('trip-plan-map-fullscreen'))
-    const requestClose = UNSAFE_getByType(Modal).props.onRequestClose as () => void
-    act(() => {
+    await fireEvent.press(getByTestId('trip-plan-map-fullscreen'))
+    expect(mockNativeMapModalProps.has('map')).toBe(true)
+    const requestClose = mockNativeMapModalProps.get('map').onRequestClose as () => void
+    await act(() => {
       requestClose()
       jest.runAllTimers()
     })
@@ -119,19 +119,19 @@ describe('TripPlanRouteMap (native) — полноэкранный режим', 
     expect(getByTestId('trip-plan-map-fullscreen')).toBeTruthy()
   })
 
-  it('«Изменить» из полноэкранного режима сворачивает карту и открывает редактор точки', () => {
+  it('«Изменить» из полноэкранного режима сворачивает карту и открывает редактор точки', async () => {
     const onEditPoint = jest.fn()
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <TripPlanRouteMap route={route} routeGeometry={routeGeometry} onEditPoint={onEditPoint} />,
     )
 
-    fireEvent.press(getByTestId('trip-plan-map-fullscreen'))
+    await fireEvent.press(getByTestId('trip-plan-map-fullscreen'))
     const fullscreenProps = mockMapProps.at(-1)!
-    act(() => {
+    await act(() => {
       ;(fullscreenProps.onRoutePointPress as (index: number) => void)(1)
     })
-    fireEvent.press(getByTestId('trip-plan-map-edit-point'))
-    act(() => {
+    await fireEvent.press(getByTestId('trip-plan-map-edit-point'))
+    await act(() => {
       jest.runAllTimers()
     })
 
@@ -139,3 +139,17 @@ describe('TripPlanRouteMap (native) — полноэкранный режим', 
     expect(queryByTestId('trip-plan-map-fullscreen-modal')).toBeNull()
   })
 })
+
+// Observe the public component input while retaining its normal host rendering.
+const captureNative = require('react-native')
+const capturedOriginalModal = captureNative.Modal
+const mockNativeMapModalProps = new Map<string, any>()
+beforeAll(() => {
+  captureNative.Modal = require('react').forwardRef((props: any, ref: any) => {
+    const key = 'map'
+    if (key) mockNativeMapModalProps.set(key, props)
+    return require('react').createElement(capturedOriginalModal, { ...props, ref })
+  })
+})
+afterAll(() => { captureNative.Modal = capturedOriginalModal })
+beforeEach(() => { mockNativeMapModalProps.clear() })

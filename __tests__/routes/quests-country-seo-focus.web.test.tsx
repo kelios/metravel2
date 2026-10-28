@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import { Platform, Text } from 'react-native'
+import { Platform } from 'react-native'
 import { render } from '@testing-library/react-native'
 
 const mockUseIsFocused = jest.fn(() => true)
@@ -139,34 +139,34 @@ describe('quest country SEO focus lifecycle', () => {
     jest.useRealTimers()
   })
 
-  it('deduplicates country descriptions and restores the previous head on blur', () => {
-    const screen = render(<QuestsByCountryScreen />)
+  it('deduplicates country descriptions and restores the previous head on blur', async () => {
+    const screen = await render(<QuestsByCountryScreen />)
     expectSingleDescriptionSet(COUNTRY_DESCRIPTION)
     expectSingleOgUrl(COUNTRY_OG_URL)
 
     mockUseIsFocused.mockReturnValue(false)
-    screen.rerender(<QuestsByCountryScreen />)
+    await screen.rerender(<QuestsByCountryScreen />)
     expectSingleDescriptionSet(GENERIC_DESCRIPTION)
     expectSingleOgUrl(GENERIC_OG_URL)
 
     mockUseIsFocused.mockReturnValue(true)
-    screen.rerender(<QuestsByCountryScreen />)
+    await screen.rerender(<QuestsByCountryScreen />)
     expectSingleDescriptionSet(COUNTRY_DESCRIPTION)
     expectSingleOgUrl(COUNTRY_OG_URL)
 
-    screen.unmount()
+    await screen.unmount()
     expectSingleDescriptionSet(GENERIC_DESCRIPTION)
     expectSingleOgUrl(GENERIC_OG_URL)
   })
 
-  it('removes country descriptions on blur when the previous head had none', () => {
+  it('removes country descriptions on blur when the previous head had none', async () => {
     document.head.innerHTML = ''
-    const screen = render(<QuestsByCountryScreen />)
+    const screen = await render(<QuestsByCountryScreen />)
     expectSingleDescriptionSet(COUNTRY_DESCRIPTION)
     expectSingleOgUrl(COUNTRY_OG_URL)
 
     mockUseIsFocused.mockReturnValue(false)
-    screen.rerender(<QuestsByCountryScreen />)
+    await screen.rerender(<QuestsByCountryScreen />)
     for (const selector of DESCRIPTION_SELECTORS) {
       expect(document.querySelectorAll(selector)).toHaveLength(0)
     }
@@ -175,7 +175,7 @@ describe('quest country SEO focus lifecycle', () => {
 
   // #2087: SSG-блок страны — сосед #root, гидратация его не снимает, а стиль
   // `rnw-styles-ready` только прячет. Без снятия в DOM оставался второй, скрытый H1.
-  it('keeps one runtime H1 and removes only the stale SSG country section', () => {
+  it('keeps one runtime H1 and removes only the stale SSG country section', async () => {
     document.body.innerHTML = [
       '<section data-ssg-quest-country="true"><h1>Static country heading</h1></section>',
       '<h1 data-unrelated-heading="true">Unrelated heading</h1>',
@@ -185,33 +185,33 @@ describe('quest country SEO focus lifecycle', () => {
       '<style data-ssg-quest-country-style="true">[data-ssg-quest-country]{display:none}</style>',
     )
 
-    const { UNSAFE_root } = render(<QuestsByCountryScreen />)
+    const { container } = await render(<QuestsByCountryScreen />)
 
     expect(document.querySelector('section[data-ssg-quest-country="true"]')).toBeNull()
     expect(document.querySelector('style[data-ssg-quest-country-style="true"]')).toBeNull()
     expect(document.querySelector('h1[data-unrelated-heading="true"]')?.textContent).toBe('Unrelated heading')
     expect(
-      UNSAFE_root.findAll((node) =>
-        node.type === Text && node.props.accessibilityRole === 'header' && node.props['aria-level'] === 1,
+      container.queryAll((node) =>
+        node.props.accessibilityRole === 'header' && node.props['aria-level'] === 1,
       ),
     ).toHaveLength(1)
     document.body.innerHTML = ''
   })
 
-  it('keeps the static country section while the screen is not focused', () => {
+  it('keeps the static country section while the screen is not focused', async () => {
     mockUseIsFocused.mockReturnValue(false)
     document.body.innerHTML =
       '<section data-ssg-quest-country="true"><h1>Static country heading</h1></section>'
 
-    render(<QuestsByCountryScreen />)
+    await render(<QuestsByCountryScreen />)
 
     expect(document.querySelector('section[data-ssg-quest-country="true"]')).not.toBeNull()
     document.body.innerHTML = ''
   })
 
-  it('redirects an unknown alias instead of rendering an indexable empty page', () => {
+  it('redirects an unknown alias instead of rendering an indexable empty page', async () => {
     mockCountryParam = 'unknown-country'
-    render(<QuestsByCountryScreen />)
+    await render(<QuestsByCountryScreen />)
 
     expect(mockReplace).toHaveBeenCalledWith('/quests')
     expect(document.querySelector('link[rel="canonical"]')).toBeNull()
@@ -220,28 +220,28 @@ describe('quest country SEO focus lifecycle', () => {
   // #2090: «назад» в браузере (popstate → resetRoot к записи истории до первого
   // визита) сбрасывает параметры скрытого, ещё смонтированного экрана таба в пустые.
   // Пустой алиас скрытого экрана — не «страна не найдена».
-  it('keeps a hidden country landing with a history-reset alias from redirecting', () => {
-    const screen = render(<QuestsByCountryScreen />)
+  it('keeps a hidden country landing with a history-reset alias from redirecting', async () => {
+    const screen = await render(<QuestsByCountryScreen />)
 
     mockUseIsFocused.mockReturnValue(false)
     mockCountryParam = ''
-    screen.rerender(<QuestsByCountryScreen />)
+    await screen.rerender(<QuestsByCountryScreen />)
 
     mockUseIsFocused.mockReturnValue(true)
     mockCountryParam = 'belarus'
-    screen.rerender(<QuestsByCountryScreen />)
+    await screen.rerender(<QuestsByCountryScreen />)
 
     expect(mockReplace).not.toHaveBeenCalled()
   })
 
-  it('redirects an unknown alias only once its screen is focused', () => {
+  it('redirects an unknown alias only once its screen is focused', async () => {
     mockUseIsFocused.mockReturnValue(false)
     mockCountryParam = 'unknown-country'
-    const screen = render(<QuestsByCountryScreen />)
+    const screen = await render(<QuestsByCountryScreen />)
     expect(mockReplace).not.toHaveBeenCalled()
 
     mockUseIsFocused.mockReturnValue(true)
-    screen.rerender(<QuestsByCountryScreen />)
+    await screen.rerender(<QuestsByCountryScreen />)
     expect(mockReplace).toHaveBeenCalledWith('/quests')
   })
 })

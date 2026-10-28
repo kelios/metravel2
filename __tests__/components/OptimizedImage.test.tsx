@@ -29,19 +29,19 @@ describe('OptimizedImage', () => {
   })
 
   it('shows loading indicator and retries before error fallback', async () => {
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} />
     )
 
     expect(getByTestId('optimized-image-loading')).toBeTruthy()
 
     const image = getByTestId('expo-image')
-    fireEvent(image, 'onLoad')
+    await fireEvent(image, 'onLoad')
     expect(queryByTestId('optimized-image-loading')).toBeNull()
 
     // First error schedules retry (no fallback yet)
-    act(() => {
-      fireEvent(image, 'onError')
+    await act(async () => {
+      await fireEvent(image, 'onError')
     })
     expect(queryByTestId('optimized-image-error')).toBeNull()
     await waitFor(() => {
@@ -57,34 +57,34 @@ describe('OptimizedImage', () => {
       })
 
       if (attempt < 6) {
-        act(() => {
-          fireEvent(getByTestId('expo-image'), 'onError')
+        await act(async () => {
+          await fireEvent(getByTestId('expo-image'), 'onError')
         })
         expect(queryByTestId('optimized-image-error')).toBeNull()
       }
     }
 
     // After retries exhausted (retryAttempt==6), next error should show fallback.
-    act(() => {
-      fireEvent(getByTestId('expo-image'), 'onError')
+    await act(async () => {
+      await fireEvent(getByTestId('expo-image'), 'onError')
     })
     expect(getByTestId('optimized-image-error')).toBeTruthy()
   })
 
   it('adds cache-busting retry param to source.uri after onError (regression: should retry instead of getting stuck until reload)', async () => {
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} />
     )
 
-    act(() => {
-      fireEvent(getByTestId('expo-image'), 'onError')
+    await act(async () => {
+      await fireEvent(getByTestId('expo-image'), 'onError')
     })
     await waitFor(() => {
       expect(String((getByTestId('expo-image') as any).props.source?.uri)).toContain('__retry=1')
     })
 
-    act(() => {
-      fireEvent(getByTestId('expo-image'), 'onError')
+    await act(async () => {
+      await fireEvent(getByTestId('expo-image'), 'onError')
     })
     await waitFor(() => {
       expect(String((getByTestId('expo-image') as any).props.source?.uri)).toContain('__retry=2')
@@ -92,29 +92,29 @@ describe('OptimizedImage', () => {
   })
 
   it('resets error state when uri changes (regression: should recover without page reload)', async () => {
-    const { getByTestId, queryByTestId, rerender } = render(
+    const { getByTestId, queryByTestId, rerender } = await render(
       <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} />
     )
 
     // Exhaust retries -> error fallback
     for (let attempt = 0; attempt < 6; attempt++) {
-      act(() => {
-        fireEvent(getByTestId('expo-image'), 'onError')
+      await act(async () => {
+        await fireEvent(getByTestId('expo-image'), 'onError')
       })
       await waitFor(() => {
         expect(String((getByTestId('expo-image') as any).props.source?.uri)).toContain(`__retry=${attempt + 1}`)
       })
     }
-    act(() => {
-      fireEvent(getByTestId('expo-image'), 'onError')
+    await act(async () => {
+      await fireEvent(getByTestId('expo-image'), 'onError')
     })
     await waitFor(() => {
       expect(getByTestId('optimized-image-error')).toBeTruthy()
     })
 
     // Change uri -> should reset error and show loading again
-    act(() => {
-      rerender(<OptimizedImage source={{ uri: 'https://example.com/photo-2.jpg' }} />)
+    await act(async () => {
+      await rerender(<OptimizedImage source={{ uri: 'https://example.com/photo-2.jpg' }} />)
     })
 
     // Effects run synchronously under act in tests.
@@ -122,8 +122,8 @@ describe('OptimizedImage', () => {
     expect(getByTestId('optimized-image-loading')).toBeTruthy()
   })
 
-  it('exposes web-specific loading attributes and helpers', () => {
-    const { getByTestId } = render(
+  it('exposes web-specific loading attributes and helpers', async () => {
+    const { getByTestId } = await render(
       <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} priority="high" alt="demo" />
     )
 
@@ -141,31 +141,31 @@ describe('OptimizedImage', () => {
     expect(sizes).toContain('25vw')
   })
 
-  it('maps fetchpriority based on priority prop', () => {
-    const { getByTestId, rerender } = render(
+  it('maps fetchpriority based on priority prop', async () => {
+    const { getByTestId, rerender } = await render(
       <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} priority="low" />
     )
 
     expect((getByTestId('expo-image') as any).props.fetchPriority).toBe('low')
 
-    rerender(
+    await rerender(
       <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} priority="normal" />
     )
     expect((getByTestId('expo-image') as any).props.fetchPriority).toBe('auto')
 
-    rerender(
+    await rerender(
       <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} priority="high" />
     )
     expect((getByTestId('expo-image') as any).props.fetchPriority).toBe('high')
   })
 
-  it('gives native blur and sharp layers one source contract', () => {
+  it('gives native blur and sharp layers one source contract', async () => {
     const previousPlatform = Platform.OS
     ;(Platform as any).OS = 'android'
     let unmount: (() => void) | undefined
 
     try {
-      const rendered = render(
+      const rendered = await render(
         <OptimizedImage
           source={{ uri: 'https://metravel.by/travel-image/1436/photo.jpg?w=480&q=60' }}
           blurBackground
@@ -181,8 +181,8 @@ describe('OptimizedImage', () => {
 
       // The sharp request must finish before the transformed backdrop mounts;
       // otherwise two cold Glide targets can still race to the network.
-      act(() => {
-        fireEvent(sharp, 'onLoad')
+      await act(async () => {
+        await fireEvent(sharp, 'onLoad')
       })
 
       const backdrop = rendered.getByTestId('shared-photo-blur-background') as any

@@ -46,8 +46,8 @@ describe('TripsPageSeo', () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, get: () => originalOS });
   });
 
-  it('replaces a title inherited from another route', () => {
-    render(
+  it('replaces a title inherited from another route', async () => {
+    await render(
       <TripsPageSeo
         canonicalPath="/trips/plan/31"
         fallbackTitle="plan"
@@ -66,10 +66,10 @@ describe('TripsPageSeo', () => {
     expect(buildTripsPageTitle('   ')).toBe('Metravel');
   });
 
-  it('does not compete for the title while its route is unfocused', () => {
+  it('does not compete for the title while its route is unfocused', async () => {
     mockUseIsFocused.mockReturnValue(false);
 
-    render(
+    await render(
       <TripsPageSeo
         canonicalPath="/trips/plan/31"
         fallbackTitle="plan"

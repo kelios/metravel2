@@ -18,29 +18,29 @@ function loadAppDownloadScreen() {
 }
 
 describe('AppDownloadScreen single H1 (#1617)', () => {
-  it('has exactly one level-1 heading: the visible hero title', () => {
+  it('has exactly one level-1 heading: the visible hero title', async () => {
     const AppDownloadScreen = loadAppDownloadScreen()
-    const { UNSAFE_root } = render(<AppDownloadScreen />)
+    const { container } = await render(<AppDownloadScreen />)
 
     const level1Headers = new Set(
-      UNSAFE_root
-        .findAllByProps({ accessibilityRole: 'header' })
+      container
+        .queryAll((node) => node.props.accessibilityRole === 'header')
         .filter((node) => node.props['aria-level'] === 1)
         .map((node) => String(node.props.children)),
     )
     expect(Array.from(level1Headers)).toEqual(['MeTravel — путешествия в кармане'])
   })
 
-  it('renders the feature-grid and install-step subheadings as level 2/4, not level 1', () => {
+  it('renders the feature-grid and install-step subheadings as level 2/4, not level 1', async () => {
     const AppDownloadScreen = loadAppDownloadScreen()
-    const { UNSAFE_root } = render(<AppDownloadScreen />)
+    const { container } = await render(<AppDownloadScreen />)
 
-    const level2 = UNSAFE_root
-      .findAllByProps({ accessibilityRole: 'header' })
+    const level2 = container
+      .queryAll((node) => node.props.accessibilityRole === 'header')
       .filter((node) => node.props['aria-level'] === 2)
       .map((node) => String(node.props.children))
-    const level4 = UNSAFE_root
-      .findAllByProps({ accessibilityRole: 'header' })
+    const level4 = container
+      .queryAll((node) => node.props.accessibilityRole === 'header')
       .filter((node) => node.props['aria-level'] === 4)
       .map((node) => String(node.props.children))
 

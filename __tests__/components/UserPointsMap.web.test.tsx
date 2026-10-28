@@ -1,17 +1,15 @@
-const { render, waitFor } = require('@testing-library/react-native')
+import React from 'react'
+import { createWebMapTestRuntime, type WebMapTestRuntime } from '@/__tests__/helpers/webMapTestRuntime'
+let render: typeof import('@testing-library/react/pure').render
+let waitFor: typeof import('@testing-library/react/pure').waitFor
+let UserPointsMap: typeof import('@/components/UserPoints/UserPointsMap').UserPointsMap
 
-const RN = require('react-native')
-const originalPlatformOS = RN.Platform.OS
-RN.Platform.OS = 'web'
 let mockIsDark = false
 jest.mock('@/hooks/useTheme', () => ({
   ...jest.requireActual('@/hooks/useTheme'),
   useThemedColors: () => require('@/constants/designSystem').getThemedColors(mockIsDark),
 }))
 
-afterAll(() => {
-  RN.Platform.OS = originalPlatformOS
-})
 
 jest.mock('@/utils/leafletFix', () => ({}))
 
@@ -66,7 +64,7 @@ jest.mock('react-leaflet', () => {
       whenReady?.()
     }, [whenReady, ref])
 
-    return <View testID="userpoints-map-container">{props.children}</View>
+    return <div data-testid="userpoints-map-container" style={props.style}>{props.children}</div>
   })
 
   return {
@@ -80,16 +78,26 @@ jest.mock('react-leaflet', () => {
   }
 })
 
-const { UserPointsMap } = require('@/components/UserPoints/UserPointsMap')
+let web: WebMapTestRuntime<typeof UserPointsMap>
+beforeAll(() => {
+  web = createWebMapTestRuntime(React, () => require('@/components/UserPoints/UserPointsMap').UserPointsMap)
+  UserPointsMap = web.subject
+  ;({ render, waitFor } = web)
+  expect.extend(web.matchers)
+})
+afterEach(() => web.cleanup())
+afterAll(() => expect.extend(require('@testing-library/react-native/matchers')))
+beforeEach(() => { (globalThis as any).__lastUserPointsMapContainerProps = undefined })
 
 test('UserPointsMap.web wires MapContainer via whenReady/ref and emits map UI api', async () => {
   const onMapUiApiReady = jest.fn()
-  render(<UserPointsMap points={[]} onMapUiApiReady={onMapUiApiReady} />)
+  const screen = render(<UserPointsMap points={[]} onMapUiApiReady={onMapUiApiReady} />)
 
   await waitFor(() => {
     const calls = onMapUiApiReady.mock.calls
     const sawApi = calls.some(([arg]: any[]) => arg && typeof arg.zoomIn === 'function' && typeof arg.setOverlayEnabled === 'function')
     expect(sawApi).toBe(true)
+    expect(screen.getByTestId('userpoints-map-container')).toBeTruthy()
   })
 
   const props = (globalThis as any).__lastUserPointsMapContainerProps
@@ -99,11 +107,14 @@ test('UserPointsMap.web wires MapContainer via whenReady/ref and emits map UI ap
 
 test.each([false, true])('uses the theme background on the actual Leaflet owner before tiles arrive (dark=%s)', async (isDark) => {
   mockIsDark = isDark
-  const screen = render(<UserPointsMap points={[]} />)
+  const screen = await render(<UserPointsMap points={[]} />)
   await waitFor(() => {
     const props = (globalThis as any).__lastUserPointsMapContainerProps
     expect(props.style.background).toBe(require('@/constants/designSystem').getThemedColors(isDark).background)
     expect(props.style['--metravel-map-background']).toBe(require('@/constants/designSystem').getThemedColors(isDark).background)
+    const owner = screen.getByTestId('userpoints-map-container')
+    expect(owner).toHaveStyle({ background: require('@/constants/designSystem').getThemedColors(isDark).background })
+    expect(owner.style.getPropertyValue('--metravel-map-background')).toBe(props.style['--metravel-map-background'])
   })
-  screen.unmount()
+  await screen.unmount()
 })

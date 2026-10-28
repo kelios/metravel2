@@ -8,7 +8,12 @@
  * включает её обратно только счётчик оптовых замен маршрута (#1820).
  */
 import React from 'react'
-import { render, waitFor } from '@testing-library/react-native'
+let render: typeof import('@testing-library/react/pure').render
+let fireEvent: typeof import('@testing-library/react/pure').fireEvent
+let waitFor: typeof import('@testing-library/react/pure').waitFor
+let cleanup: typeof import('@testing-library/react/pure').cleanup
+let act: typeof import('react').act
+let TripPlanRouteMap: typeof import('@/components/trips/planning/TripPlanRouteMap.web').default
 
 import type { RoutePoint } from '@/api/plannedTrips'
 
@@ -17,7 +22,6 @@ const mockFitBounds = jest.fn()
 const mockSetView = jest.fn()
 const mockMap = { setView: mockSetView, fitBounds: mockFitBounds, stop: jest.fn() }
 
-jest.mock('react-dom', () => ({ createPortal: (node: unknown) => node }))
 jest.mock('@/utils/ensureLeafletCss', () => ({ ensureLeafletCss: jest.fn() }))
 
 jest.mock('@/utils/loadLeafletRuntime', () => ({
@@ -45,83 +49,118 @@ jest.mock('@/components/MapPage/Map/MapCanvas', () => ({
   ),
 }))
 
-jest.mock('@/hooks/useTheme', () => ({
-  useThemedColors: () =>
-    new Proxy({}, { get: (_t, key) => String(key) }) as unknown as Record<string, string>,
-}))
 
-import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap.web'
+
+
+// This subject renders HTML popup/button/portal content. Exercise it through
+// the real web renderer, while Leaflet remains the deterministic test boundary.
+let mockMapRootProps: Record<string, any> | null = null
+const reanimated = require('react-native-reanimated')
+const worklets = require('react-native-worklets')
+const reactQuery = require('@tanstack/react-query')
+beforeAll(() => {
+  jest.resetModules()
+  // Preserve the React singleton used by the JSX in this test file.
+  // The reanimated factory in setup.ts crashes if resetModules runs it again.
+  jest.doMock('react', () => React)
+  jest.doMock('react-native-reanimated', () => reanimated)
+  jest.doMock('react-native-worklets', () => worklets)
+  jest.doMock('@tanstack/react-query', () => reactQuery)
+  jest.doMock('react-native', () => {
+    const web = jest.requireActual('react-native-web')
+    return {
+      ...web,
+      View: React.forwardRef((props: any, ref: any) => {
+        if (props.testID === 'trip-plan-route-map') mockMapRootProps = props
+        return React.createElement(web.View, { ...props, ref })
+      }),
+    }
+  })
+  jest.doMock('@expo/vector-icons/Feather', () => ({
+    __esModule: true,
+    default: ({ name }: { name: string }) => React.createElement('span', { 'aria-hidden': true, 'data-icon': name }),
+  }))
+  jest.doMock('@/hooks/useTheme', () => ({
+    useThemedColors: () => require('@/constants/designSystem').getThemedColors(false),
+    useTheme: () => ({ isDark: false }),
+  }))
+  ;({ render, fireEvent, waitFor, cleanup } = require('@testing-library/react/pure'))
+  act = React.act
+  TripPlanRouteMap = require('@/components/trips/planning/TripPlanRouteMap.web').default
+})
+afterEach(() => cleanup())
 
 const route: RoutePoint[] = [
   { id: 'a', type: 'custom', name: 'Старт', description: null, coordinates: [27.56, 53.9], placeId: null },
   { id: 'b', type: 'custom', name: 'Финиш', description: null, coordinates: [27.6, 53.91], placeId: null },
 ]
 
-const dragEndAt = (index: number, lat: number, lng: number) => {
+const dragEndAt = async (index: number, lat: number, lng: number) => {
   const handlers = markerProps[index].eventHandlers as { dragend: (event: unknown) => void }
-  handlers.dragend({ target: { getLatLng: () => ({ lat, lng }) } })
+  await act(() => handlers.dragend({ target: { getLatLng: () => ({ lat, lng }) } }))
 }
 
 describe('#1781 TripPlanRouteMap.web — правка точки с карты', () => {
   beforeEach(() => {
     markerProps.length = 0
+    mockMapRootProps = null
     mockFitBounds.mockClear()
     mockSetView.mockClear()
   })
 
   it('отдаёт индекс и координаты дропа после перетаскивания маркера', async () => {
     const onMovePoint = jest.fn()
-    render(<TripPlanRouteMap route={route} onMovePoint={onMovePoint} />)
+    await render(<TripPlanRouteMap route={route} onMovePoint={onMovePoint} />)
 
     await waitFor(() => expect(markerProps).toHaveLength(2))
     expect(markerProps[1].draggable).toBe(true)
 
-    dragEndAt(1, 53.915, 27.61)
+    await dragEndAt(1, 53.915, 27.61)
 
     expect(onMovePoint).toHaveBeenCalledWith({ index: 1, lat: 53.915, lng: 27.61 })
   })
 
   it('не отдаёт наружу нефинитную позицию дропа', async () => {
     const onMovePoint = jest.fn()
-    render(<TripPlanRouteMap route={route} onMovePoint={onMovePoint} />)
+    await render(<TripPlanRouteMap route={route} onMovePoint={onMovePoint} />)
 
     await waitFor(() => expect(markerProps).toHaveLength(2))
-    dragEndAt(0, Number.NaN, 27.6)
+    await dragEndAt(0, Number.NaN, 27.6)
 
     expect(onMovePoint).not.toHaveBeenCalled()
   })
 
   it('после ручного перемещения не подгоняет кадр под изменившийся маршрут', async () => {
-    const { rerender } = render(<TripPlanRouteMap route={route} onMovePoint={jest.fn()} />)
+    const { rerender } = await render(<TripPlanRouteMap route={route} onMovePoint={jest.fn()} />)
 
     await waitFor(() => expect(markerProps).toHaveLength(2))
     // Первая подгонка — штатная, кадр ещё принадлежит данным.
     expect(mockFitBounds).toHaveBeenCalledTimes(1)
 
-    dragEndAt(1, 53.95, 27.7)
+    await dragEndAt(1, 53.95, 27.7)
     const movedRoute: RoutePoint[] = [
       route[0],
       { ...route[1], coordinates: [27.7, 53.95] },
     ]
-    rerender(<TripPlanRouteMap route={movedRoute} onMovePoint={jest.fn()} />)
+    await rerender(<TripPlanRouteMap route={movedRoute} onMovePoint={jest.fn()} />)
 
     expect(mockFitBounds).toHaveBeenCalledTimes(1)
   })
 
   it('снова подгоняет кадр, когда маршрут заменён целиком', async () => {
-    const { rerender } = render(
+    const { rerender } = await render(
       <TripPlanRouteMap route={route} routeReplacementToken={0} onMovePoint={jest.fn()} />,
     )
 
     await waitFor(() => expect(markerProps).toHaveLength(2))
     expect(mockFitBounds).toHaveBeenCalledTimes(1)
 
-    dragEndAt(1, 53.95, 27.7)
+    await dragEndAt(1, 53.95, 27.7)
     const movedRoute: RoutePoint[] = [
       route[0],
       { ...route[1], coordinates: [27.7, 53.95] },
     ]
-    rerender(
+    await rerender(
       <TripPlanRouteMap route={movedRoute} routeReplacementToken={0} onMovePoint={jest.fn()} />,
     )
     expect(mockFitBounds).toHaveBeenCalledTimes(1)
@@ -132,7 +171,7 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
       { id: 'i1', type: 'custom', name: 'Прага', description: null, coordinates: [14.43, 50.07], placeId: null },
       { id: 'i2', type: 'custom', name: 'Брно', description: null, coordinates: [16.6, 49.19], placeId: null },
     ]
-    rerender(
+    await rerender(
       <TripPlanRouteMap route={importedRoute} routeReplacementToken={1} onMovePoint={jest.fn()} />,
     )
 
@@ -140,15 +179,15 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
   })
 
   it('#1820 снова подгоняет кадр на повторном применении ТОГО ЖЕ шаблона', async () => {
-    const { rerender } = render(
+    const { rerender } = await render(
       <TripPlanRouteMap route={route} routeReplacementToken={0} onMovePoint={jest.fn()} />,
     )
 
     await waitFor(() => expect(markerProps).toHaveLength(2))
     expect(mockFitBounds).toHaveBeenCalledTimes(1)
 
-    dragEndAt(1, 53.95, 27.7)
-    rerender(
+    await dragEndAt(1, 53.95, 27.7)
+    await rerender(
       <TripPlanRouteMap
         route={[route[0], { ...route[1], coordinates: [27.7, 53.95] }]}
         routeReplacementToken={0}
@@ -160,7 +199,7 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
     // Тот же шаблон возвращает неперетащенную точку с ТЕМИ ЖЕ координатами:
     // по самим точкам такая замена неотличима от частичной правки, и снимает
     // защёлку только счётчик.
-    rerender(
+    await rerender(
       <TripPlanRouteMap route={route} routeReplacementToken={1} onMovePoint={jest.fn()} />,
     )
 
@@ -168,7 +207,7 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
   })
 
   it('#1820 показывает маршрут шаблона, даже если кадр по нему уже наводили', async () => {
-    const { rerender } = render(
+    const { rerender } = await render(
       <TripPlanRouteMap route={route} routeReplacementToken={0} onMovePoint={jest.fn()} />,
     )
 
@@ -178,7 +217,7 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
     // Применение шаблона — замена маршрута целиком, и карта обязана показать
     // получившийся маршрут: пользователь мог увести кадр жестом, а форма линии
     // при этом совпадает с той, по которой подгонка уже отработала.
-    rerender(
+    await rerender(
       <TripPlanRouteMap route={route} routeReplacementToken={1} onMovePoint={jest.fn()} />,
     )
 
@@ -186,12 +225,12 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
   })
 
   it('держит защёлку после сохранения маршрута, хотя бэкенд выдаёт точкам новые id', async () => {
-    const { rerender } = render(<TripPlanRouteMap route={route} onMovePoint={jest.fn()} />)
+    const { rerender } = await render(<TripPlanRouteMap route={route} onMovePoint={jest.fn()} />)
 
     await waitFor(() => expect(markerProps).toHaveLength(2))
     expect(mockFitBounds).toHaveBeenCalledTimes(1)
 
-    dragEndAt(1, 53.95, 27.7)
+    await dragEndAt(1, 53.95, 27.7)
     // PUT /route/ пересоздаёт строки точек: те же координаты приезжают с новыми
     // id. Ключ защёлки обязан это пережить, иначе кадр, наведённый после
     // перетаскивания, выбрасывался бы первым же «Сохранить маршрут».
@@ -199,14 +238,14 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
       { ...route[0], id: '90001' },
       { ...route[1], id: '90002', coordinates: [27.7, 53.95] },
     ]
-    rerender(<TripPlanRouteMap route={savedRoute} onMovePoint={jest.fn()} />)
+    await rerender(<TripPlanRouteMap route={savedRoute} onMovePoint={jest.fn()} />)
 
     expect(mockFitBounds).toHaveBeenCalledTimes(1)
   })
 
   it('не снимает защёлку кадра, когда перетащили единственную точку маршрута', async () => {
     const single: RoutePoint[] = [route[0]]
-    const { rerender } = render(<TripPlanRouteMap route={single} onMovePoint={jest.fn()} />)
+    const { rerender } = await render(<TripPlanRouteMap route={single} onMovePoint={jest.fn()} />)
 
     await waitFor(() => expect(markerProps).toHaveLength(1))
     expect(mockSetView).toHaveBeenCalledTimes(1)
@@ -214,8 +253,8 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
     // Маршрут из одной точки после дропа не сохраняет ни одной прежней
     // координаты — ровно тот случай, на котором эвристика по точкам снимала бы
     // защёлку сама (#1820). Счётчик замен не рос: кадр остаётся наведённым.
-    dragEndAt(0, 53.90123456789012, 27.56789123456789)
-    rerender(
+    await dragEndAt(0, 53.90123456789012, 27.56789123456789)
+    await rerender(
       <TripPlanRouteMap
         route={[{ ...single[0], coordinates: [27.567891, 53.901235] }]}
         onMovePoint={jest.fn()}
@@ -227,40 +266,41 @@ describe('#1781 TripPlanRouteMap.web — правка точки с карты',
 
   it('даёт владельцу удалить точку из popup её маркера, не теряя редактирование', async () => {
     const onDeletePoint = jest.fn()
-    const screen = render(
+    const screen = await render(
       <TripPlanRouteMap route={route} onMovePoint={jest.fn()} onDeletePoint={onDeletePoint} />,
     )
 
     await waitFor(() => expect(markerProps).toHaveLength(2))
     // Удаление стоит РЯДОМ с существующим редактированием, а не вместо него.
-    expect(screen.UNSAFE_getAllByProps({ 'data-testid': 'trip-plan-map-edit-point-1' })).not.toHaveLength(0)
+    expect(screen.getByTestId('trip-plan-map-edit-point-1')).toBeTruthy()
 
-    const [deleteButton] = screen.UNSAFE_getAllByProps({
-      'data-testid': 'trip-plan-map-delete-point-1',
-    })
-    ;(deleteButton.props.onClick as () => void)()
+    fireEvent.click(screen.getByTestId('trip-plan-map-delete-point-1'))
 
     expect(onDeletePoint).toHaveBeenCalledWith(1)
   })
 
   it('гостю не даёт ни тянуть маркер, ни удалять точку', async () => {
-    const screen = render(
+    const screen = await render(
       <TripPlanRouteMap route={route} readonly onMovePoint={jest.fn()} onDeletePoint={jest.fn()} />,
     )
 
     await waitFor(() => expect(markerProps).toHaveLength(2))
     expect(markerProps[0].draggable).toBe(false)
     expect(markerProps[0].eventHandlers).toBeUndefined()
-    expect(screen.UNSAFE_queryAllByProps({ 'data-testid': 'trip-plan-map-delete-point-0' })).toHaveLength(0)
-    expect(screen.UNSAFE_queryAllByProps({ 'data-testid': 'trip-plan-map-edit-point-0' })).toHaveLength(0)
-    expect(screen.getByTestId('trip-plan-route-map').props.accessibilityHint).toBeUndefined()
+    expect(screen.queryAllByTestId('trip-plan-map-delete-point-0')).toHaveLength(0)
+    expect(screen.queryAllByTestId('trip-plan-map-edit-point-0')).toHaveLength(0)
+    expect(screen.getByTestId('trip-plan-route-map')).toBeTruthy()
+    expect(mockMapRootProps).not.toBeNull()
+    expect(mockMapRootProps!.accessibilityHint).toBeUndefined()
   })
 
   it('#2059 даёт владельцу подсказку про жест скринридеру, а не строкой в шапке', async () => {
-    const screen = render(<TripPlanRouteMap route={route} onMovePoint={jest.fn()} />)
+    const screen = await render(<TripPlanRouteMap route={route} onMovePoint={jest.fn()} />)
 
     await waitFor(() => expect(markerProps).toHaveLength(2))
-    expect(screen.getByTestId('trip-plan-route-map').props.accessibilityHint).toBe(
+    expect(screen.getByTestId('trip-plan-route-map')).toBeTruthy()
+    expect(mockMapRootProps).not.toBeNull()
+    expect(mockMapRootProps!.accessibilityHint).toBe(
       'Маркер точки можно перетащить по карте, а по тапу открыть изменение или удаление.',
     )
     expect(screen.queryByText(/можно перетащить/)).toBeNull()

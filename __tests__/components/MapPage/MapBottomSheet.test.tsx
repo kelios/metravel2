@@ -55,22 +55,22 @@ jest.mock('@gorhom/bottom-sheet', () => {
 })
 
 describe('MapBottomSheet', () => {
-  it('publishes actual container-minus-position, ignores unknown geometry, and clears on close/unmount', () => {
-    const view = render(<MapBottomSheet bottomInset={34}><View /></MapBottomSheet>)
+  it('publishes actual container-minus-position, ignores unknown geometry, and clears on close/unmount', async () => {
+    const view = await render(<MapBottomSheet bottomInset={34}><View /></MapBottomSheet>)
     const props = mockBottomSheet.mock.calls.at(-1)![0]
-    act(() => mockReactToPosition!(mockPrepare!(), null))
+    await act(() => mockReactToPosition!(mockPrepare!(), null))
     expect(useBottomSheetStore.getState().heightPx).toBe(117)
     props.containerLayoutState.value = { height: 810, offset: { top: 0, bottom: 34, left: 0, right: 0 } }
     props.animatedPosition.value = 220
-    act(() => mockReactToPosition!(mockPrepare!(), null))
+    await act(() => mockReactToPosition!(mockPrepare!(), null))
     expect(useBottomSheetStore.getState().heightPx).toBe(590)
     props.animatedPosition.value = 530
-    act(() => mockReactToPosition!(mockPrepare!(), { height: 810, position: 220 }))
+    await act(() => mockReactToPosition!(mockPrepare!(), { height: 810, position: 220 }))
     expect(useBottomSheetStore.getState().heightPx).toBe(280)
-    act(() => props.onChange(-1))
+    await act(() => props.onChange(-1))
     expect(useBottomSheetStore.getState().heightPx).toBe(0)
     useBottomSheetStore.getState().setHeightPx(590)
-    view.unmount()
+    await view.unmount()
     expect(useBottomSheetStore.getState().heightPx).toBe(0)
   })
   beforeEach(() => {
@@ -82,10 +82,10 @@ describe('MapBottomSheet', () => {
     mockFooterPosition.value = 386.7
   })
 
-  it('disables dynamic sizing when using fixed snap points on mobile web', () => {
+  it('disables dynamic sizing when using fixed snap points on mobile web', async () => {
     Platform.OS = 'web'
 
-    render(
+    await render(
       <MapBottomSheet>
         <View testID="sheet-content" />
       </MapBottomSheet>,
@@ -95,8 +95,8 @@ describe('MapBottomSheet', () => {
     expect(mockBottomSheet.mock.calls[0]?.[0]?.enableDynamicSizing).toBe(false)
   })
 
-  it('keeps content scrolling from changing the sheet height', () => {
-    render(
+  it('keeps content scrolling from changing the sheet height', async () => {
+    await render(
       <MapBottomSheet>
         <View testID="sheet-content" />
       </MapBottomSheet>,
@@ -110,8 +110,8 @@ describe('MapBottomSheet', () => {
     )
   })
 
-  it('exposes nested controls to iOS accessibility instead of grouping the sheet', () => {
-    render(
+  it('exposes nested controls to iOS accessibility instead of grouping the sheet', async () => {
+    await render(
       <MapBottomSheet>
         <View testID="sheet-content" />
       </MapBottomSheet>,
@@ -122,8 +122,8 @@ describe('MapBottomSheet', () => {
     )
   })
 
-  it('can render static content without wrapping virtualized lists in a scroll view', () => {
-    const { getByTestId } = render(
+  it('can render static content without wrapping virtualized lists in a scroll view', async () => {
+    const { getByTestId } = await render(
       <MapBottomSheet scrollableContent={false}>
         <View testID="sheet-content" />
       </MapBottomSheet>,
@@ -137,8 +137,8 @@ describe('MapBottomSheet', () => {
     expect(mockBottomSheetView).not.toHaveBeenCalled()
   })
 
-  it('bounds static content by the active detent and reserves dock/safe-area only in the host', () => {
-    const { getByTestId } = render(<MapBottomSheet bottomInset={111} scrollableContent={false}><View /></MapBottomSheet>)
+  it('bounds static content by the active detent and reserves dock/safe-area only in the host', async () => {
+    const { getByTestId } = await render(<MapBottomSheet bottomInset={111} scrollableContent={false}><View /></MapBottomSheet>)
     const props = mockBottomSheet.mock.calls.at(-1)![0]
     expect(props.bottomInset).toBe(111)
     expect(StyleSheet.flatten(getByTestId('map-sheet-active-viewport').props.style).height).toBeCloseTo(446.7)
@@ -147,7 +147,7 @@ describe('MapBottomSheet', () => {
     expect(content.props.style).toEqual(expect.arrayContaining([expect.objectContaining({ paddingBottom: 40 })]))
   })
 
-  it('keeps animated footer frames on the UI values and updates React only when chrome fit changes', () => {
+  it('keeps animated footer frames on the UI values and updates React only when chrome fit changes', async () => {
     const slots: { current: React.ContextType<typeof NativeMapSheetFooterContext> } = { current: null }
     function Publisher() {
       const context = useContext(NativeMapSheetFooterContext)
@@ -155,7 +155,7 @@ describe('MapBottomSheet', () => {
       useLayoutEffect(() => { context?.publishFooter(<View testID="footer-action" />) }, [context])
       return <View />
     }
-    render(<MapBottomSheet scrollableContent={false}><Publisher /></MapBottomSheet>)
+    await render(<MapBottomSheet scrollableContent={false}><Publisher /></MapBottomSheet>)
     slots.current?.measureHeader(52)
     slots.current?.measureFooter(60)
     const footerReaction = mockReactions.findLast(({ prepare }) => {
@@ -166,7 +166,7 @@ describe('MapBottomSheet', () => {
     const bridge = jest.requireMock('react-native-reanimated').runOnJS as jest.Mock
     bridge.mockClear()
     const renders = mockBottomSheet.mock.calls.length
-    act(() => {
+    await act(() => {
       for (const position of [386.7, 350, 300, 200]) {
         mockFooterPosition.value = position
         footerReaction.react(footerReaction.prepare(), null)
@@ -175,7 +175,7 @@ describe('MapBottomSheet', () => {
     })
     expect(bridge).not.toHaveBeenCalled()
     expect(mockBottomSheet.mock.calls.length).toBe(renders)
-    act(() => {
+    await act(() => {
       mockFooterPosition.value = 50
       footerReaction.react(footerReaction.prepare(), null)
       flowReaction.react(flowReaction.prepare(), false)

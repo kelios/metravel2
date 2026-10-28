@@ -90,18 +90,18 @@ describe('usePlannedTripRouteFiles', () => {
     api.listPlannedTripRouteFiles.mockResolvedValue([loopsKml, daysGpx])
     const { Wrapper } = createQueryWrapper()
 
-    const { result } = renderHook(() => usePlannedTripRouteFiles(47), { wrapper: Wrapper })
+    const { result } = await renderHook(() => usePlannedTripRouteFiles(47), { wrapper: Wrapper })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(api.listPlannedTripRouteFiles).toHaveBeenCalledWith('47')
     expect(result.current.data?.map((file) => file.id)).toEqual([4, 11])
   })
 
-  it('не ходит в хранилище без id поездки и при выключенном запросе', () => {
+  it('не ходит в хранилище без id поездки и при выключенном запросе', async () => {
     const { Wrapper } = createQueryWrapper()
 
-    renderHook(() => usePlannedTripRouteFiles(null), { wrapper: Wrapper })
-    renderHook(() => usePlannedTripRouteFiles(47, { enabled: false }), { wrapper: Wrapper })
+    await renderHook(() => usePlannedTripRouteFiles(null), { wrapper: Wrapper })
+    await renderHook(() => usePlannedTripRouteFiles(47, { enabled: false }), { wrapper: Wrapper })
 
     expect(api.listPlannedTripRouteFiles).not.toHaveBeenCalled()
   })
@@ -110,7 +110,7 @@ describe('usePlannedTripRouteFiles', () => {
     api.listPlannedTripRouteFiles.mockRejectedValue(new MockApiError(status))
     const { Wrapper } = createQueryWrapper()
 
-    const { result } = renderHook(() => usePlannedTripRouteFiles(47), { wrapper: Wrapper })
+    const { result } = await renderHook(() => usePlannedTripRouteFiles(47), { wrapper: Wrapper })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data).toEqual([])
@@ -120,7 +120,7 @@ describe('usePlannedTripRouteFiles', () => {
     api.listPlannedTripRouteFiles.mockRejectedValue(new MockApiError(500))
     const { Wrapper } = createQueryWrapper()
 
-    const { result } = renderHook(() => usePlannedTripRouteFiles(47), { wrapper: Wrapper })
+    const { result } = await renderHook(() => usePlannedTripRouteFiles(47), { wrapper: Wrapper })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(result.current.error).toBeInstanceOf(MockApiError)
@@ -138,7 +138,7 @@ describe('usePlannedTripOriginalTracks', () => {
   it('два файла — два трека: линии каждого файла целиком и в порядке списка', async () => {
     const { Wrapper } = createQueryWrapper()
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => usePlannedTripOriginalTracks(47, [loopsKml, daysGpx]),
       { wrapper: Wrapper },
     )
@@ -161,7 +161,7 @@ describe('usePlannedTripOriginalTracks', () => {
   it('кэширует трек на файл по id и ревизии', async () => {
     const { Wrapper, queryClient } = createQueryWrapper()
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => usePlannedTripOriginalTracks(47, [loopsKml, daysGpx]),
       { wrapper: Wrapper },
     )
@@ -174,11 +174,11 @@ describe('usePlannedTripOriginalTracks', () => {
     ]))
   })
 
-  it('без файлов и при выключенном запросе ничего не качает', () => {
+  it('без файлов и при выключенном запросе ничего не качает', async () => {
     const { Wrapper } = createQueryWrapper()
 
-    const empty = renderHook(() => usePlannedTripOriginalTracks(47, []), { wrapper: Wrapper })
-    renderHook(() => usePlannedTripOriginalTracks(47, [loopsKml], { enabled: false }), { wrapper: Wrapper })
+    const empty = await renderHook(() => usePlannedTripOriginalTracks(47, []), { wrapper: Wrapper })
+    await renderHook(() => usePlannedTripOriginalTracks(47, [loopsKml], { enabled: false }), { wrapper: Wrapper })
 
     expect(empty.result.current).toEqual([])
     expect(api.downloadPlannedTripRouteFileBlob).not.toHaveBeenCalled()
@@ -195,7 +195,7 @@ describe('мутации файлов поездки', () => {
     const { Wrapper, queryClient } = createQueryWrapper()
     queryClient.setQueryData(['planned-trip-route-files', 47], [loopsKml])
 
-    const { result } = renderHook(() => useUploadPlannedTripRouteFile(), { wrapper: Wrapper })
+    const { result } = await renderHook(() => useUploadPlannedTripRouteFile(), { wrapper: Wrapper })
     await act(async () => {
       await result.current.mutateAsync({ tripId: 47, file: { uri: 'file:///day.gpx', name: 'day.gpx' } })
     })
@@ -210,7 +210,7 @@ describe('мутации файлов поездки', () => {
     const { Wrapper, queryClient } = createQueryWrapper()
     queryClient.setQueryData(['planned-trip-route-files', 47], [loopsKml, daysGpx])
 
-    const { result } = renderHook(() => useDeletePlannedTripRouteFile(), { wrapper: Wrapper })
+    const { result } = await renderHook(() => useDeletePlannedTripRouteFile(), { wrapper: Wrapper })
     await act(async () => {
       await result.current.mutateAsync({ tripId: 47, routeId: 4 })
     })

@@ -81,8 +81,8 @@ const WALK = {
 }
 
 describe('QuestCityLandingSections', () => {
-  it('показывает заметки о местах и структуру маршрута теми же фразами, что и SSG', () => {
-    render(<QuestCityLandingSections city={CITY} nearbyCities={[]} walk={WALK} />)
+  it('показывает заметки о местах и структуру маршрута теми же фразами, что и SSG', async () => {
+    await render(<QuestCityLandingSections city={CITY} nearbyCities={[]} walk={WALK} />)
 
     expect(screen.getByTestId('quest-city-walk')).toBeTruthy()
     expect(screen.getByText('Что увидите по дороге: Рим')).toBeTruthy()
@@ -109,8 +109,8 @@ describe('QuestCityLandingSections', () => {
     ).toBeTruthy()
   })
 
-  it('не рисует пустых секций, пока бандлы квестов не загружены', () => {
-    render(<QuestCityLandingSections city={CITY} nearbyCities={[]} walk={null} />)
+  it('не рисует пустых секций, пока бандлы квестов не загружены', async () => {
+    await render(<QuestCityLandingSections city={CITY} nearbyCities={[]} walk={null} />)
 
     expect(screen.queryByTestId('quest-city-walk')).toBeNull()
     expect(screen.queryByTestId('quest-city-routes')).toBeNull()
@@ -119,13 +119,13 @@ describe('QuestCityLandingSections', () => {
 })
 
 
-it('#2482 marks route titles, city names and original place descriptions on the landing', () => {
+it('#2482 marks route titles, city names and original place descriptions on the landing', async () => {
   const { Platform } = require('react-native')
   const originalOS = Platform.OS
   Platform.OS = 'web'
   try {
-    const tree = render(<QuestCityLandingSections city={CITY} nearbyCities={[]} walk={WALK} />)
-    const marked = tree.UNSAFE_root.findAll((node) => node.props.lang === 'ru')
+    const tree = await render(<QuestCityLandingSections city={CITY} nearbyCities={[]} walk={WALK} />)
+    const marked = tree.container.queryAll((node) => node.props.lang === 'ru')
       .map((node) => String(node.props.children))
     expect(marked.some((text) => text.includes('Квест по Риму'))).toBe(true)
     expect(marked.some((text) => text.includes('Рим'))).toBe(true)
@@ -133,13 +133,13 @@ it('#2482 marks route titles, city names and original place descriptions on the 
   } finally { Platform.OS = originalOS }
 })
 
-it('#2482 marks the city name interpolated into the catalog section heading', () => {
+it('#2482 marks the city name interpolated into the catalog section heading', async () => {
   const { Platform } = require('react-native')
   const originalOS = Platform.OS
   Platform.OS = 'web'
   try {
-    const tree = render(<QuestLandingSectionTitle colors={{ text: '#000' } as never}>Choose a quest in Могилёв</QuestLandingSectionTitle>)
-    expect(tree.UNSAFE_root.findAll((node) => node.props.lang === 'ru')
+    const tree = await render(<QuestLandingSectionTitle colors={{ text: '#000' } as never}>Choose a quest in Могилёв</QuestLandingSectionTitle>)
+    expect(tree.container.queryAll((node) => node.props.lang === 'ru')
       .some((node) => node.props.children === 'Могилёв')).toBe(true)
     expect(tree.getByRole('header')).toHaveTextContent('Choose a quest in Могилёв')
   } finally { Platform.OS = originalOS }

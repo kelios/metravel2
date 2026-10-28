@@ -51,8 +51,8 @@ const routeProps = {
 afterEach(cleanup)
 
 describe('MapMobileTopOverlay — один ярус маршрута поверх карты (#1699)', () => {
-  it('пока маршрут строится, стоит выбор старта и никакой сводки', () => {
-    const { getByTestId, queryByTestId } = render(
+  it('пока маршрут строится, стоит выбор старта и никакой сводки', async () => {
+    const { getByTestId, queryByTestId } = await render(
       <MapMobileTopOverlay {...(routeProps as any)} routePointCount={1} routeDistance={0} />,
     )
 
@@ -60,8 +60,8 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     expect(queryByTestId('map-mobile-route-summary')).toBeNull()
   })
 
-  it('у готового маршрута сводка ЗАМЕНЯЕТ выбор старта, а не встаёт вторым ярусом', () => {
-    const { getByTestId, queryByTestId } = render(
+  it('у готового маршрута сводка ЗАМЕНЯЕТ выбор старта, а не встаёт вторым ярусом', async () => {
+    const { getByTestId, queryByTestId } = await render(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
@@ -74,8 +74,8 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     expect(queryByTestId('map-mobile-route-start-selector')).toBeNull()
   })
 
-  it('сводка — одна строка 44dp, а не карточка в два этажа', () => {
-    const { getByTestId } = render(
+  it('сводка — одна строка 44dp, а не карточка в два этажа', async () => {
+    const { getByTestId } = await render(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
@@ -93,14 +93,14 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
 
     // Тот же ярус, что и у селектора старта: высота ряда совпадает.
     const selector = StyleSheet.flatten(
-      render(<MapMobileTopOverlay {...(routeProps as any)} routePointCount={0} />)
+      await (await render(<MapMobileTopOverlay {...(routeProps as any)} routePointCount={0} />))
         .getByTestId('map-mobile-route-start-selector').props.style,
     )
     expect(selector.minHeight).toBe(ROUTE_ROW_HEIGHT)
   })
 
-  it('метрики сводки не переносятся на вторую строку', () => {
-    const { getByText } = render(
+  it('метрики сводки не переносятся на вторую строку', async () => {
+    const { getByText } = await render(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
@@ -132,10 +132,10 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     expect(styles.routeSummaryCloseTouch.flexShrink).toBe(0)
   })
 
-  it('подпись нормального состояния не рисуется, но остаётся для скринридера', () => {
+  it('подпись нормального состояния не рисуется, но остаётся для скринридера', async () => {
     // «Маршрут готов» рядом с «3,6 км · 11 мин» ничего не добавляет, а на 375dp
     // усекается до бессмысленного «Маршрут …» (браузерная проба #1699).
-    const { getByTestId, queryByText, getByText } = render(
+    const { getByTestId, queryByText, getByText } = await render(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
@@ -152,8 +152,8 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     )
   })
 
-  it('состояния сводки остались в одной строке: «прямая линия» больше не дубль', () => {
-    const direct = render(
+  it('состояния сводки остались в одной строке: «прямая линия» больше не дубль', async () => {
+    const direct = await render(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
@@ -171,9 +171,9 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     expect(direct.getByTestId('map-mobile-route-summary').props.accessibilityLabel).toBe(
       'Прямая линия, 3,6 км, 11 мин',
     )
-    direct.unmount()
+    await direct.unmount()
 
-    const loading = render(
+    const loading = await render(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
@@ -185,11 +185,11 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     expect(loading.getByText('Маршрут обновляется')).toBeTruthy()
   })
 
-  it('ярус не пустеет, пока роутинг ещё считает геометрию', () => {
+  it('ярус не пустеет, пока роутинг ещё считает геометрию', async () => {
     // `addPoint` обнуляет геометрию (stores/routeStore.ts), а выбор старта к
     // этому моменту уже уступил слот: без отдельного состояния ряд исчезал бы
     // на всё время сетевого запроса и возвращался сводкой.
-    const { getByTestId, queryByTestId, getByText, queryByText } = render(
+    const { getByTestId, queryByTestId, getByText, queryByText } = await render(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
@@ -210,14 +210,14 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
   it.each([
     ['геометрии ещё нет вовсе', null],
     ['адаптер уже положил маршрут с distance: 0', 0],
-  ])('ярус занят и в дебаунс-окне (%s)', (_label, distance) => {
+  ])('ярус занят и в дебаунс-окне (%s)', async (_label, distance) => {
     // useRouting запускает запрос через setTimeout(ROUTE_DEBOUNCE_MS): между
     // второй точкой и включением loading есть окно, в котором ярус пустел бы, а
     // смещение поповеров прыгало на 50dp и обратно. Ни loading, ни `route ===
     // null` это окно не закрывают: useRouteStoreAdapter.ts:158 успевает
     // положить в стор маршрут с нулевой дистанцией (браузерная проба #1699 —
     // ярус пустел всё время запроса). Признак один — нет дистанции.
-    const { getByTestId, queryByTestId, getByText } = render(
+    const { getByTestId, queryByTestId, getByText } = await render(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
@@ -231,10 +231,10 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     expect(getByText('Маршрут обновляется')).toBeTruthy()
   })
 
-  it('у яруса ожидания нет крестика: закрыть можно только готовую сводку', () => {
+  it('у яруса ожидания нет крестика: закрыть можно только готовую сводку', async () => {
     // Иначе dismiss ожидания пришлось бы хранить отдельным ключом, и один раз
     // закрытое ожидание гасило бы ярус у всех последующих построений маршрута.
-    const pending = render(
+    const pending = await render(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
@@ -244,9 +244,9 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
       />,
     )
     expect(pending.queryByTestId('map-mobile-route-summary-close')).toBeNull()
-    pending.unmount()
+    await pending.unmount()
 
-    const ready = render(
+    const ready = await render(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
@@ -257,8 +257,8 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     expect(ready.getByTestId('map-mobile-route-summary-close')).toBeTruthy()
   })
 
-  it('закрытая сводка не гасит ярус ожидания у следующего маршрута', () => {
-    const { getByTestId, queryByTestId, getByText, rerender } = render(
+  it('закрытая сводка не гасит ярус ожидания у следующего маршрута', async () => {
+    const { getByTestId, queryByTestId, getByText, rerender } = await render(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
@@ -267,11 +267,11 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
       />,
     )
 
-    fireEvent.press(getByTestId('map-mobile-route-summary-close'))
+    await fireEvent.press(getByTestId('map-mobile-route-summary-close'))
     expect(queryByTestId('map-mobile-route-summary')).toBeNull()
 
     // Точку сдвинули — геометрия обнулилась, идёт новый расчёт.
-    rerender(
+    await rerender(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
@@ -284,8 +284,8 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     expect(getByText('Маршрут обновляется')).toBeTruthy()
   })
 
-  it('крестик скрывает сводку, а новый маршрут показывает её снова', () => {
-    const { getByTestId, queryByTestId, rerender } = render(
+  it('крестик скрывает сводку, а новый маршрут показывает её снова', async () => {
+    const { getByTestId, queryByTestId, rerender } = await render(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
@@ -294,12 +294,12 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
       />,
     )
 
-    fireEvent.press(getByTestId('map-mobile-route-summary-close'))
+    await fireEvent.press(getByTestId('map-mobile-route-summary-close'))
     expect(queryByTestId('map-mobile-route-summary')).toBeNull()
     // Скрытая сводка не возвращает выбор старта: ярус просто пуст.
     expect(queryByTestId('map-mobile-route-start-selector')).toBeNull()
 
-    rerender(
+    await rerender(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         routePointCount={2}
@@ -310,12 +310,12 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
     expect(getByTestId('map-mobile-route-summary')).toBeTruthy()
   })
 
-  it('подсказка не ложится на сводку при входе в режим с готовыми двумя точками', () => {
+  it('подсказка не ложится на сводку при входе в режим с готовыми двумя точками', async () => {
     // Ярус один, а плашка подсказки стоит на том же смещении, что и он. Эффект,
     // который её гасит, слушает только routePointCount, поэтому вход в режим
     // маршрута с уже сохранёнными двумя точками (возврат на карту) оставлял бы
     // подсказку висеть ПОВЕРХ сводки — до #1699 она стояла ярусом ниже.
-    const { queryByTestId, rerender } = render(
+    const { queryByTestId, rerender } = await render(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         mode="radius"
@@ -325,7 +325,7 @@ describe('MapMobileTopOverlay — один ярус маршрута повер�
       />,
     )
 
-    rerender(
+    await rerender(
       <MapMobileTopOverlay
         {...(routeProps as any)}
         mode="route"

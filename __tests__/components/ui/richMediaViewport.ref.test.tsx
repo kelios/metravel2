@@ -8,7 +8,7 @@ import { View } from 'react-native'
 
 import { useRichMediaVisibility } from '@/components/ui/richMediaViewport'
 
-const renderer = require('react-test-renderer')
+import { fireEvent, render } from '@testing-library/react-native'
 
 type Captured = ReturnType<typeof useRichMediaVisibility>
 
@@ -20,14 +20,10 @@ const Frame: React.FC<{ onReady: (value: Captured) => void }> = ({ onReady }) =>
 }
 
 describe('useRichMediaVisibility ref contract', () => {
-  it('доводит ref до host-View без каста', () => {
+  it('доводит ref до host-View без каста', async () => {
     let captured: Captured | null = null
 
-    renderer.act(() => {
-      renderer.create(<Frame onReady={(value) => { captured = value }} />, {
-        createNodeMock: () => ({ measureInWindow: jest.fn() }),
-      })
-    })
+    await render(<Frame onReady={(value) => { captured = value }} />)
 
     expect(captured).not.toBeNull()
     // Ref реально прикреплён к View, а не остался пустым: гейт зовёт по нему
@@ -36,32 +32,21 @@ describe('useRichMediaVisibility ref contract', () => {
     expect(typeof captured!.ref.current?.measureInWindow).toBe('function')
   })
 
-  it('без провайдера считает медиа видимым, чтобы web и статьи не пустели', () => {
+  it('без провайдера считает медиа видимым, чтобы web и статьи не пустели', async () => {
     let captured: Captured | null = null
 
-    renderer.act(() => {
-      renderer.create(<Frame onReady={(value) => { captured = value }} />, {
-        createNodeMock: () => ({ measureInWindow: jest.fn() }),
-      })
-    })
+    await render(<Frame onReady={(value) => { captured = value }} />)
 
     expect(captured!.visible).toBe(true)
   })
 
-  it('переживает onLayout, не роняя рамку', () => {
+  it('переживает onLayout, не роняя рамку', async () => {
     let captured: Captured | null = null
-    let tree: any
 
-    renderer.act(() => {
-      tree = renderer.create(<Frame onReady={(value) => { captured = value }} />, {
-        createNodeMock: () => ({ measureInWindow: jest.fn() }),
-      })
-    })
+    const tree = await render(<Frame onReady={(value) => { captured = value }} />)
 
-    renderer.act(() => {
-      tree.root
-        .findByProps({ testID: 'frame' })
-        .props.onLayout({ nativeEvent: { layout: { x: 0, y: 120, width: 390, height: 560 } } })
+    await fireEvent(tree.getByTestId('frame'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 120, width: 390, height: 560 } },
     })
 
     expect(captured!.ref.current).toBeTruthy()

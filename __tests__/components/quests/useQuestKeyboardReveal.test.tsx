@@ -41,8 +41,17 @@ const INPUT_HEIGHT = 48
 const SETTLE_MS = 60
 
 // Высота окна — та же, что видит хук (jest-сетап подменяет useWindowDimensions).
-const windowHeight = renderHook(() => useWindowDimensions()).result.current.height
-const visibleBottom = windowHeight - KEYBOARD_HEIGHT - NAV_BAR_INSET
+let windowHeight: number
+let visibleBottom: number
+beforeAll(async () => {
+  const measurement = await renderHook(() => useWindowDimensions())
+  try {
+    windowHeight = measurement.result.current.height
+    visibleBottom = windowHeight - KEYBOARD_HEIGHT - NAV_BAR_INSET
+  } finally {
+    await measurement.unmount()
+  }
+})
 
 const measurable = (y: number, height = 0) => ({
   measureInWindow: (cb: (x: number, y: number, w: number, h: number) => void) => cb(0, y, 300, height),
@@ -53,18 +62,18 @@ describe('useQuestKeyboardReveal (#1072)', () => {
   let listeners: Record<string, (e: any) => void>
   let scrollTo: jest.Mock
 
-  const setup = (viewportBottom = windowHeight, bottomChromePx = 0) => {
+  const setup = async (viewportBottom = windowHeight, bottomChromePx = 0) => {
     scrollTo = jest.fn()
     const scrollRef = {
       current: { scrollTo, ...measurable(VIEWPORT_TOP, viewportBottom - VIEWPORT_TOP) } as unknown as ScrollView,
     }
-    return renderHook(() => useQuestKeyboardReveal(scrollRef, bottomChromePx))
+    return await renderHook(() => useQuestKeyboardReveal(scrollRef, bottomChromePx))
   }
 
   const openKeyboard = async () => {
     // Таймер раскрытия ставит эффект на новый inset — он виден только после
     // коммита, поэтому часы двигаем вторым проходом.
-    act(() => {
+    await act(() => {
       listeners.keyboardDidShow?.({ endCoordinates: { height: KEYBOARD_HEIGHT } })
     })
     await act(async () => {
@@ -96,10 +105,10 @@ describe('useQuestKeyboardReveal (#1072)', () => {
   })
 
   it('на фокусе доматывает поле над клавиатурой, как и раньше', async () => {
-    const { result } = setup()
+    const { result } = await setup()
     const inputY = visibleBottom + 100
 
-    act(() => result.current.handleInputFocus(measurable(inputY, INPUT_HEIGHT)))
+    await act(() => result.current.handleInputFocus(measurable(inputY, INPUT_HEIGHT)))
     await openKeyboard()
 
     expect(result.current.keyboardInset).toBe(KEYBOARD_HEIGHT + NAV_BAR_INSET)
@@ -112,22 +121,22 @@ describe('useQuestKeyboardReveal (#1072)', () => {
     const scrollRef = { current: { scrollTo, ...measurable(VIEWPORT_TOP, windowHeight - VIEWPORT_TOP) } as unknown as ScrollView }
     let finishInputMeasure!: (x: number, y: number, width: number, height: number) => void
     const input = { measureInWindow: jest.fn((callback: typeof finishInputMeasure) => { finishInputMeasure = callback }) }
-    const { result, rerender } = renderHook(({ step }) => useQuestKeyboardReveal(scrollRef, 0, step), {
+    const { result, rerender } = await renderHook(({ step }) => useQuestKeyboardReveal(scrollRef, 0, step), {
       initialProps: { step: 'answer' },
     })
-    act(() => result.current.handleInputFocus(input))
+    await act(() => result.current.handleInputFocus(input))
     await openKeyboard()
     expect(input.measureInWindow).toHaveBeenCalledTimes(1)
-    rerender({ step: 'no-input' })
+    await rerender({ step: 'no-input' })
     await act(async () => { finishInputMeasure(0, visibleBottom + 100, 300, INPUT_HEIGHT) })
     expect(scrollTo).not.toHaveBeenCalled()
 
-    act(() => result.current.handleAnswerFeedback(measurable(windowHeight + 100), null, true))
+    await act(() => result.current.handleAnswerFeedback(measurable(windowHeight + 100), null, true))
     await act(async () => { await jest.advanceTimersByTimeAsync(SETTLE_MS) })
     expect(input.measureInWindow).toHaveBeenCalledTimes(1)
     expect(scrollTo).not.toHaveBeenCalled()
 
-    act(() => {
+    await act(() => {
       result.current.handleAnswerFeedback(null)
       result.current.handleInputFocus(measurable(visibleBottom + 50, INPUT_HEIGHT))
     })
@@ -136,16 +145,16 @@ describe('useQuestKeyboardReveal (#1072)', () => {
   })
 
   it('после неверного ответа при открытой клавиатуре раскрывает блок ошибки и действия под полем', async () => {
-    const { result } = setup()
+    const { result } = await setup()
     // Поле уже стоит над клавиатурой — фокусный автоскролл ничего не делает.
     const inputY = visibleBottom - GAP - INPUT_HEIGHT
-    act(() => result.current.handleInputFocus(measurable(inputY, INPUT_HEIGHT)))
+    await act(() => result.current.handleInputFocus(measurable(inputY, INPUT_HEIGHT)))
     await openKeyboard()
     expect(scrollTo).not.toHaveBeenCalled()
 
     // «Неверный ответ» + «Подсказка · Пропустить» — 120px под полем.
     const feedbackBottom = inputY + INPUT_HEIGHT + 120
-    act(() => result.current.handleAnswerFeedback(measurable(feedbackBottom)))
+    await act(() => result.current.handleAnswerFeedback(measurable(feedbackBottom)))
     expect(scrollTo).not.toHaveBeenCalled()
     await act(async () => {
       await jest.advanceTimersByTimeAsync(SETTLE_MS)
@@ -159,13 +168,13 @@ describe('useQuestKeyboardReveal (#1072)', () => {
   })
 
   it('высокую обратную связь раскрывает ровно до упора поля в верх области прокрутки', async () => {
-    const { result } = setup()
+    const { result } = await setup()
     const inputY = visibleBottom - GAP - INPUT_HEIGHT
-    act(() => result.current.handleInputFocus(measurable(inputY, INPUT_HEIGHT)))
+    await act(() => result.current.handleInputFocus(measurable(inputY, INPUT_HEIGHT)))
     await openKeyboard()
 
     // Раскрытая длинная подсказка: целиком над клавиатурой вместе с полем не влезает.
-    act(() => result.current.handleAnswerFeedback(measurable(inputY + windowHeight)))
+    await act(() => result.current.handleAnswerFeedback(measurable(inputY + windowHeight)))
     await act(async () => {
       await jest.advanceTimersByTimeAsync(SETTLE_MS)
     })
@@ -174,17 +183,17 @@ describe('useQuestKeyboardReveal (#1072)', () => {
   })
 
   it('при закрытой клавиатуре видимую обратную связь не трогает, а на следующем фокусе раскрывает поле вместе с ней', async () => {
-    const { result } = setup()
+    const { result } = await setup()
     const inputY = visibleBottom - GAP - INPUT_HEIGHT
     const feedbackBottom = inputY + INPUT_HEIGHT + 120
 
-    act(() => result.current.handleAnswerFeedback(measurable(feedbackBottom)))
+    await act(() => result.current.handleAnswerFeedback(measurable(feedbackBottom)))
     await act(async () => {
       await jest.advanceTimersByTimeAsync(SETTLE_MS)
     })
     expect(scrollTo).not.toHaveBeenCalled()
 
-    act(() => result.current.handleInputFocus(measurable(inputY, INPUT_HEIGHT)))
+    await act(() => result.current.handleInputFocus(measurable(inputY, INPUT_HEIGHT)))
     await openKeyboard()
 
     expect(scrollTo).toHaveBeenLastCalledWith({ y: feedbackBottom + GAP - visibleBottom, animated: true })
@@ -192,22 +201,27 @@ describe('useQuestKeyboardReveal (#1072)', () => {
 
   describe('без клавиатуры (#2271)', () => {
     // Desktop 1280×800: под областью прокрутки футер, её низ выше низа окна.
-    const viewportBottom = windowHeight - 100
-    const inputY = viewportBottom - 200
+    // windowHeight снимается в beforeAll, поэтому граница считается уже перед тестом.
+    let viewportBottom: number
+    let inputY: number
+    beforeEach(() => {
+      viewportBottom = windowHeight - 100
+      inputY = viewportBottom - 200
+    })
 
     const showFeedback = async (
       result: { current: ReturnType<typeof useQuestKeyboardReveal> },
       feedbackBottom: number,
       input: ReturnType<typeof measurable> | null = measurable(inputY, INPUT_HEIGHT),
     ) => {
-      act(() => result.current.handleAnswerFeedback(measurable(feedbackBottom), input))
+      await act(() => result.current.handleAnswerFeedback(measurable(feedbackBottom), input))
       await act(async () => {
         await jest.advanceTimersByTimeAsync(SETTLE_MS)
       })
     }
 
     it('вердикт под нижним краем области прокрутки доматывается ровно до него', async () => {
-      const { result } = setup(viewportBottom)
+      const { result } = await setup(viewportBottom)
       const feedbackBottom = viewportBottom + 35
 
       await showFeedback(result, feedbackBottom)
@@ -217,7 +231,7 @@ describe('useQuestKeyboardReveal (#1072)', () => {
     })
 
     it('видимый вердикт не дёргает экран', async () => {
-      const { result } = setup(viewportBottom)
+      const { result } = await setup(viewportBottom)
 
       await showFeedback(result, viewportBottom - GAP - 10)
 
@@ -225,9 +239,9 @@ describe('useQuestKeyboardReveal (#1072)', () => {
     })
 
     it('фокус снят отправкой — вердикт раскрывается по последнему полю ответа', async () => {
-      const { result } = setup(viewportBottom)
-      act(() => result.current.handleInputFocus(measurable(inputY, INPUT_HEIGHT)))
-      act(() => result.current.handleInputBlur())
+      const { result } = await setup(viewportBottom)
+      await act(() => result.current.handleInputFocus(measurable(inputY, INPUT_HEIGHT)))
+      await act(() => result.current.handleInputBlur())
 
       await showFeedback(result, viewportBottom + 60, null)
 
@@ -235,7 +249,7 @@ describe('useQuestKeyboardReveal (#1072)', () => {
     })
 
     it('высокий вердикт не уводит поле за верх области прокрутки', async () => {
-      const { result } = setup(viewportBottom)
+      const { result } = await setup(viewportBottom)
 
       await showFeedback(result, viewportBottom + windowHeight)
 
@@ -245,7 +259,7 @@ describe('useQuestKeyboardReveal (#1072)', () => {
     it('на телефоне вердикт не прячется под нижней панелью поверх области прокрутки', async () => {
       // Android-замер: ScrollView до 2154 px, панель навигации поверх неё с 1982 px.
       const dock = 86
-      const { result } = setup(windowHeight, dock)
+      const { result } = await setup(windowHeight, dock)
       const feedbackBottom = windowHeight - dock + 20
 
       await showFeedback(result, feedbackBottom, measurable(windowHeight - dock - 300, INPUT_HEIGHT))
@@ -260,29 +274,29 @@ describe('useQuestKeyboardReveal (#1072)', () => {
       })
       const scrollTo = jest.fn()
       const scrollRef = { current: { scrollTo, ...measurable(VIEWPORT_TOP, windowHeight - VIEWPORT_TOP) } as unknown as ScrollView }
-      const hook = renderHook(() => useQuestKeyboardReveal(scrollRef, useBottomChromeReservePx()))
+      const hook = await renderHook(() => useQuestKeyboardReveal(scrollRef, useBottomChromeReservePx()))
       try {
         // 56px dock + two 8px gaps + a 60px network banner.
-        act(() => setBottomChromeReserve('network-status', 132))
+        await act(() => setBottomChromeReserve('network-status', 132))
         const feedbackBottom = windowHeight - 66
         const input = measurable(windowHeight - 356, INPUT_HEIGHT)
         await showFeedback(hook.result, feedbackBottom, input)
         expect(scrollTo).toHaveBeenLastCalledWith({ y: 82, animated: true })
         expect(feedbackBottom - 82 + GAP).toBeLessThanOrEqual(windowHeight - 132)
-        act(() => releaseBottomChromeReserve('network-status'))
+        await act(() => releaseBottomChromeReserve('network-status'))
         await showFeedback(hook.result, feedbackBottom, input)
         expect(scrollTo).toHaveBeenLastCalledWith({ y: 6, animated: true })
       } finally {
-        hook.unmount()
+        await hook.unmount()
         rect.mockRestore()
         platform.restore()
       }
     })
 
     it('начальная обратная связь шага (из сохранённого прогресса) экран без клавиатуры не двигает', async () => {
-      const { result } = setup(viewportBottom)
+      const { result } = await setup(viewportBottom)
 
-      act(() => result.current.handleAnswerFeedback(measurable(viewportBottom + 300), measurable(inputY, INPUT_HEIGHT), false))
+      await act(() => result.current.handleAnswerFeedback(measurable(viewportBottom + 300), measurable(inputY, INPUT_HEIGHT), false))
       await act(async () => {
         await jest.advanceTimersByTimeAsync(SETTLE_MS)
       })
@@ -291,8 +305,8 @@ describe('useQuestKeyboardReveal (#1072)', () => {
     })
 
     it('фокус на поле без клавиатуры ничего не доматывает', async () => {
-      const { result } = setup(viewportBottom)
-      act(() => result.current.handleInputFocus(measurable(viewportBottom + 50, INPUT_HEIGHT)))
+      const { result } = await setup(viewportBottom)
+      await act(() => result.current.handleInputFocus(measurable(viewportBottom + 50, INPUT_HEIGHT)))
       await act(async () => {
         await jest.advanceTimersByTimeAsync(SETTLE_MS)
       })
@@ -302,12 +316,12 @@ describe('useQuestKeyboardReveal (#1072)', () => {
   })
 
   it('без обратной связи (null) фокус раскрывает только поле', async () => {
-    const { result } = setup()
+    const { result } = await setup()
     const inputY = visibleBottom - GAP - INPUT_HEIGHT
 
-    act(() => result.current.handleAnswerFeedback(measurable(inputY + INPUT_HEIGHT + 120)))
-    act(() => result.current.handleAnswerFeedback(null))
-    act(() => result.current.handleInputFocus(measurable(inputY, INPUT_HEIGHT)))
+    await act(() => result.current.handleAnswerFeedback(measurable(inputY + INPUT_HEIGHT + 120)))
+    await act(() => result.current.handleAnswerFeedback(null))
+    await act(() => result.current.handleInputFocus(measurable(inputY, INPUT_HEIGHT)))
     await openKeyboard()
 
     expect(scrollTo).not.toHaveBeenCalled()
@@ -318,7 +332,7 @@ describe('QuestStepCard отдаёт обратную связь по ответ
   const colors = getThemedColors(false) as any
   const styles = createQuestWizardStyles(colors, true, 390)
 
-  const renderCard = (overrides: Record<string, unknown> = {}) => {
+  const renderCard = async (overrides: Record<string, unknown> = {}) => {
     const props = {
       colors,
       styles,
@@ -352,20 +366,20 @@ describe('QuestStepCard отдаёт обратную связь по ответ
       onAnswerFeedback: jest.fn(),
       ...overrides,
     } as any
-    return { ...render(<QuestStepCard {...props} />), props }
+    return { ...await render(<QuestStepCard {...props} />), props }
   }
 
-  afterEach(() => {
-    cleanup()
+  afterEach(async () => {
+    await cleanup()
   })
 
-  it('без обратной связи сообщает null, после неверного ответа — метку её конца', () => {
-    const screen = renderCard()
+  it('без обратной связи сообщает null, после неверного ответа — метку её конца', async () => {
+    const screen = await renderCard()
     const onAnswerFeedback = screen.props.onAnswerFeedback as jest.Mock
     expect(onAnswerFeedback).toHaveBeenLastCalledWith(null)
 
-    fireEvent.changeText(screen.getByPlaceholderText(/Ваш ответ/), 'мост')
-    fireEvent.press(screen.getByTestId('quest-step-check'))
+    await fireEvent.changeText(screen.getByPlaceholderText(/Ваш ответ/), 'мост')
+    await fireEvent.press(screen.getByTestId('quest-step-check'))
 
     expect(screen.getByText('Неверный ответ')).toBeTruthy()
     expect(onAnswerFeedback.mock.calls.at(-1)?.[0]).toBeTruthy()
@@ -373,16 +387,16 @@ describe('QuestStepCard отдаёт обратную связь по ответ
     expect(onAnswerFeedback.mock.calls.at(-1)?.[1]).toBeTruthy()
   })
 
-  it('повторный отказ с тем же текстом ошибки снова отдаёт метку — игрок мог отмотать вверх', () => {
-    const screen = renderCard()
+  it('повторный отказ с тем же текстом ошибки снова отдаёт метку — игрок мог отмотать вверх', async () => {
+    const screen = await renderCard()
     const onAnswerFeedback = screen.props.onAnswerFeedback as jest.Mock
-    fireEvent.changeText(screen.getByPlaceholderText(/Ваш ответ/), 'мост')
-    fireEvent.press(screen.getByTestId('quest-step-check'))
-    screen.rerender(<QuestStepCard {...screen.props} attempts={1} />)
+    await fireEvent.changeText(screen.getByPlaceholderText(/Ваш ответ/), 'мост')
+    await fireEvent.press(screen.getByTestId('quest-step-check'))
+    await screen.rerender(<QuestStepCard {...screen.props} attempts={1} />)
     onAnswerFeedback.mockClear()
 
-    fireEvent.press(screen.getByTestId('quest-step-check'))
-    screen.rerender(<QuestStepCard {...screen.props} attempts={2} />)
+    await fireEvent.press(screen.getByTestId('quest-step-check'))
+    await screen.rerender(<QuestStepCard {...screen.props} attempts={2} />)
 
     expect(onAnswerFeedback).toHaveBeenCalledTimes(1)
     expect(onAnswerFeedback.mock.calls[0][0]).toBeTruthy()
@@ -391,8 +405,8 @@ describe('QuestStepCard отдаёт обратную связь по ответ
   it.each([
     ['раскрытой подсказкой', { hintVisible: true }],
     ['третьей попыткой', { attempts: 3 }],
-  ])('вход на шаг с %s из прогресса — начальное состояние, не свежая обратная связь (#2271)', (_label, state) => {
-    const screen = renderCard(state)
+  ])('вход на шаг с %s из прогресса — начальное состояние, не свежая обратная связь (#2271)', async (_label, state) => {
+    const screen = await renderCard(state)
     const onAnswerFeedback = screen.props.onAnswerFeedback as jest.Mock
 
     expect(onAnswerFeedback).toHaveBeenCalledTimes(1)
@@ -400,22 +414,22 @@ describe('QuestStepCard отдаёт обратную связь по ответ
     expect(onAnswerFeedback.mock.calls[0][2]).toBe(false)
   })
 
-  it('тот же серверный feedback и новый callback не запускают свежий scroll, новая попытка запускает', () => {
-    const screen = renderCard({ attempts: 3, hintVisible: true })
+  it('тот же серверный feedback и новый callback не запускают свежий scroll, новая попытка запускает', async () => {
+    const screen = await renderCard({ attempts: 3, hintVisible: true })
     const onAnswerFeedback = jest.fn()
-    screen.rerender(<QuestStepCard {...screen.props} onAnswerFeedback={onAnswerFeedback} />)
+    await screen.rerender(<QuestStepCard {...screen.props} onAnswerFeedback={onAnswerFeedback} />)
     expect(onAnswerFeedback).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), false)
     onAnswerFeedback.mockClear()
-    screen.rerender(<QuestStepCard {...screen.props} onAnswerFeedback={onAnswerFeedback} attempts={4} />)
+    await screen.rerender(<QuestStepCard {...screen.props} onAnswerFeedback={onAnswerFeedback} attempts={4} />)
     expect(onAnswerFeedback).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), true)
   })
 
-  it('раскрытая подсказка — тоже обратная связь: метка переезжает за неё', () => {
-    const screen = renderCard()
+  it('раскрытая подсказка — тоже обратная связь: метка переезжает за неё', async () => {
+    const screen = await renderCard()
     const onAnswerFeedback = screen.props.onAnswerFeedback as jest.Mock
     onAnswerFeedback.mockClear()
 
-    screen.rerender(<QuestStepCard {...screen.props} hintVisible />)
+    await screen.rerender(<QuestStepCard {...screen.props} hintVisible />)
 
     expect(onAnswerFeedback).toHaveBeenCalledTimes(1)
     expect(onAnswerFeedback.mock.calls[0][0]).toBeTruthy()

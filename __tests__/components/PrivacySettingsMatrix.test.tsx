@@ -31,8 +31,8 @@ beforeEach(() => {
 })
 
 describe('PrivacySettingsMatrix', () => {
-  it('renders a row for every content type', () => {
-    const { getByText } = render(<PrivacySettingsMatrix />)
+  it('renders a row for every content type', async () => {
+    const { getByText } = await render(<PrivacySettingsMatrix />)
     expect(getByText('Путешествия')).toBeTruthy()
     expect(getByText('Маршруты')).toBeTruthy()
     expect(getByText('Контакты и соцсети')).toBeTruthy()
@@ -40,16 +40,16 @@ describe('PrivacySettingsMatrix', () => {
     expect(getByText('Посещённые места')).toBeTruthy()
   })
 
-  it('calls setAudience with the chosen content type + audience', () => {
-    const { getAllByText } = render(<PrivacySettingsMatrix />)
+  it('calls setAudience with the chosen content type + audience', async () => {
+    const { getAllByText } = await render(<PrivacySettingsMatrix />)
     // "Только я" appears once per content-type row; pressing the first toggles trips.
-    fireEvent.press(getAllByText('Только я')[0])
+    await fireEvent.press(getAllByText('Только я')[0])
     expect(mockSetAudience).toHaveBeenCalledWith('trips', 'only_me')
   })
 
-  it('shows a spinner while loading', () => {
+  it('shows a spinner while loading', async () => {
     mockHookState.isLoading = true
-    const { queryByText } = render(<PrivacySettingsMatrix />)
+    const { queryByText } = await render(<PrivacySettingsMatrix />)
     expect(queryByText('Путешествия')).toBeNull()
   })
 })

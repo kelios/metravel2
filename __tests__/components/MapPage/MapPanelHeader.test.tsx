@@ -1,6 +1,5 @@
 import React from 'react'
 import { Platform } from 'react-native'
-import Feather from '@expo/vector-icons/Feather'
 import { fireEvent, render } from '@testing-library/react-native'
 
 import MapPanelHeader from '@/components/MapPage/MapPanelHeader'
@@ -15,6 +14,21 @@ import { formatMapPoints, type MapPointCountScope } from '@/utils/mapPointCount'
 import { resources } from '@/i18n/resources'
 import { translate as i18nT } from '@/i18n'
 import { getTabRoles } from '@/utils/a11yTabRoles'
+
+// Capture the app's explicit aria props before the shared Pressable mock mirrors
+// accessibilityState into host aria strings. Keep the normal host rendering.
+const mockRawTabProps = new Map<string, Record<string, any>>()
+const native = require('react-native')
+const originalPressable = native.Pressable
+beforeAll(() => {
+  native.Pressable = React.forwardRef((props: any, ref: any) => {
+    if (props.testID?.startsWith('map-panel-tab-')) mockRawTabProps.set(props.testID, props)
+    return React.createElement(originalPressable, { ...props, ref })
+  })
+})
+afterAll(() => {
+  native.Pressable = originalPressable
+})
 
 // #2217 — the desktop-branch panel header (web, iPad, Android tablet): the row
 // belongs to the tabs only. Norms: docs/design/map-panel-header-tablet.md.
@@ -59,13 +73,13 @@ const FILTERS = () => i18nT('map:components.MapPage.MapPanelHeader.filtry_95c57b
 const selectedTabIds = (tabs: any[]) =>
   tabs.filter((tab) => tab.props.accessibilityState?.selected === true).map((tab) => tab.props.testID)
 
-const renderHeader = (activeTab: PanelTab, travelsCount = 1234, totalScope?: MapPointCountScope) => {
+const renderHeader = async (activeTab: PanelTab, travelsCount = 1234, totalScope?: MapPointCountScope) => {
   const handlers = {
     selectSearchTab: jest.fn(),
     selectRouteTab: jest.fn(),
     selectTravelsTab: jest.fn(),
   }
-  const utils = render(
+  const utils = await render(
     <MapPanelHeader
       activeTab={activeTab}
       travelsCount={travelsCount}
@@ -94,8 +108,8 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
     Object.defineProperty(Platform, 'OS', { value: originalOS })
   })
 
-  it('the row holds one tablist of exactly three tabs, in the order of the strip', () => {
-    const utils = renderHeader('search')
+  it('the row holds one tablist of exactly three tabs, in the order of the strip', async () => {
+    const utils = await renderHeader('search')
 
     expect(tabRole).toBe(os === 'ios' ? 'button' : 'tab')
     expect(utils.getAllByRole(tabRole).map((tab) => tab.props.testID)).toEqual(TAB_IDS)
@@ -111,8 +125,8 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
     expect(row.children[0].children).toHaveLength(MAP_PANEL_TAB_COUNT)
   })
 
-  it('carries no header actions: «Подсказки» live on the map, «Сбросить» in the filters footer', () => {
-    const utils = renderHeader('search')
+  it('carries no header actions: «Подсказки» live on the map, «Сбросить» in the filters footer', async () => {
+    const utils = await renderHeader('search')
 
     for (const testID of ['map-filters-button', 'map-help-button', 'map-reset-filters-button']) {
       expect(utils.queryByTestId(testID)).toBeNull()
@@ -127,18 +141,18 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
     ['search', 'map-panel-tab-filters'],
     ['route', 'map-panel-tab-route'],
     ['travels', 'map-panel-tab-travels'],
-  ] as const)('activeTab «%s» selects exactly %s', (activeTab, testID) => {
-    const utils = renderHeader(activeTab)
+  ] as const)('activeTab «%s» selects exactly %s', async (activeTab, testID) => {
+    const utils = await renderHeader(activeTab)
 
     expect(selectedTabIds(utils.getAllByRole(tabRole))).toEqual([testID])
   })
 
-  it('each tab switches its own view', () => {
-    const utils = renderHeader('search')
+  it('each tab switches its own view', async () => {
+    const utils = await renderHeader('search')
 
-    fireEvent.press(utils.getByTestId('map-panel-tab-travels'))
-    fireEvent.press(utils.getByTestId('map-panel-tab-route'))
-    fireEvent.press(utils.getByTestId('map-panel-tab-filters'))
+    await fireEvent.press(utils.getByTestId('map-panel-tab-travels'))
+    await fireEvent.press(utils.getByTestId('map-panel-tab-route'))
+    await fireEvent.press(utils.getByTestId('map-panel-tab-filters'))
 
     expect(utils.selectTravelsTab).toHaveBeenCalledTimes(1)
     expect(utils.selectRouteTab).toHaveBeenCalledTimes(1)
@@ -146,8 +160,8 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
   })
 
   // WCAG 2.5.3 Label in Name: the accessible name starts with the visible label.
-  it('names start with the visible label; «Места» carries the full count, the badge caps it', () => {
-    const utils = renderHeader('search', 1234)
+  it('names start with the visible label; «Места» carries the full count, the badge caps it', async () => {
+    const utils = await renderHeader('search', 1234)
 
     expect(utils.getByRole(tabRole, { name: `${PLACES()}: ${formatMapPoints(1234)}` }).props.testID).toBe(
       'map-panel-tab-travels',
@@ -157,22 +171,22 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
     expect(utils.getByText('999+')).toBeTruthy()
   })
 
-  it('no count yet: no badge, the name is the label', () => {
-    const utils = renderHeader('search', 0)
+  it('no count yet: no badge, the name is the label', async () => {
+    const utils = await renderHeader('search', 0)
 
     expect(utils.getByRole(tabRole, { name: PLACES() }).props.testID).toBe('map-panel-tab-travels')
     expect(utils.queryByText('0')).toBeNull()
   })
 
-  it('keeps the visible tab label in its name and discloses that fallback counts cover loaded points', () => {
-    const utils = renderHeader('travels', 3, 'loaded')
+  it('keeps the visible tab label in its name and discloses that fallback counts cover loaded points', async () => {
+    const utils = await renderHeader('travels', 3, 'loaded')
     expect(utils.getByRole(tabRole, { name: `${PLACES()}: Загружено: 3 точки` }).props.testID)
       .toBe('map-panel-tab-travels')
     expect(utils.getByText(PLACES())).toBeTruthy()
   })
 
-  it('labels and the badge stay on one line and cap the font scale', () => {
-    const utils = renderHeader('travels', 1234)
+  it('labels and the badge stay on one line and cap the font scale', async () => {
+    const utils = await renderHeader('travels', 1234)
 
     for (const text of [PLACES(), ROUTE(), FILTERS(), '999+']) {
       const node = utils.getByText(text)
@@ -181,11 +195,11 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
     }
   })
 
-  it('the selected icon takes the label colour (textOnPrimary), the others stay muted', () => {
-    const utils = renderHeader('travels')
+  it('the selected icon takes the label colour (textOnPrimary), the others stay muted', async () => {
+    const utils = await renderHeader('travels')
 
     expect(
-      utils.UNSAFE_getAllByType(Feather).map((icon) => [icon.props.name, icon.props.color]),
+      utils.getAllByTestId(/^feather-/).map((icon) => [String(icon.props.children), icon.props.color]),
     ).toEqual([
       ['list', themedColors.textOnPrimary],
       // #2777: маршрут — глиф маршрута, не стрелка геолокации.
@@ -196,8 +210,8 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
 
   // #2172: on native a hitSlop wider than the 2 pt gap reached into the
   // neighbour's box; the tab's own 44 box is the target.
-  it('tabs carry no hitSlop', () => {
-    const utils = renderHeader('search')
+  it('tabs carry no hitSlop', async () => {
+    const utils = await renderHeader('search')
 
     for (const testID of TAB_IDS) {
       expect(utils.getByTestId(testID).props.hitSlop).toBeUndefined()
@@ -208,8 +222,8 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
   // e2e nor an Android pass would notice their loss): at the accessibility sizes
   // a long press shows the capped label in the Large Content Viewer, and
   // «Маршрут» tells what it builds. Tabs by testID: #2262 may change the role.
-  it('every tab carries the Large Content Viewer title; «Маршрут» carries its hint', () => {
-    const utils = renderHeader('search')
+  it('every tab carries the Large Content Viewer title; «Маршрут» carries its hint', async () => {
+    const utils = await renderHeader('search')
     const labels: Record<string, string> = {
       'map-panel-tab-travels': i18nT('map:components.MapPage.MapPanelHeader.mesta_3ad2b948'),
       'map-panel-tab-route': i18nT('map:components.MapPage.MapPanelHeader.marshrut_486762dc'),
@@ -231,8 +245,8 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
   // the intro at a `map-panel` nobody rendered: a step whose target is missing
   // shows its card with no highlight. Every target the desktop tour names must
   // be rendered by this header.
-  it('the desktop tour points every step with a target at a tab this header renders', () => {
-    const utils = renderHeader('search')
+  it('the desktop tour points every step with a target at a tab this header renders', async () => {
+    const utils = await renderHeader('search')
     const targets = getOnboardingSteps()
       .map((step) => step.targetTestID)
       .filter((target): target is string => Boolean(target))
@@ -250,13 +264,14 @@ describe.each(['web', 'ios', 'android'])('MapPanelHeader on %s (#2217)', (os) =>
 // RN-web 0.21 drops `accessibilityState.selected`: on production the tabs had
 // role="tab" and no `aria-selected` (production smoke of #2217, 05.10). The jest
 // Pressable mock (`__tests__/setup.ts`) mirrors accessibilityState into
-// `aria-selected` and would hide that, so the raw prop is read from the
-// component element, not from the mocked host.
+// `aria-selected` and would hide that, so the raw prop is captured at the
+// Pressable boundary before the shared mock transforms it.
 describe('MapPanelHeader on web: the tabs carry aria-selected themselves (#2217)', () => {
   const originalOS = Platform.OS
 
   beforeEach(() => {
     Object.defineProperty(Platform, 'OS', { value: 'web' })
+    mockRawTabProps.clear()
   })
 
   afterEach(() => {
@@ -267,12 +282,10 @@ describe('MapPanelHeader on web: the tabs carry aria-selected themselves (#2217)
     ['search', 'map-panel-tab-filters'],
     ['route', 'map-panel-tab-route'],
     ['travels', 'map-panel-tab-travels'],
-  ] as const)('activeTab «%s»: only %s has aria-selected true', (activeTab, selectedId) => {
-    const utils = renderHeader(activeTab)
+  ] as const)('activeTab «%s»: only %s has aria-selected true', async (activeTab, selectedId) => {
+    await renderHeader(activeTab)
     const rawAriaSelected = (testID: string) =>
-      utils
-        .UNSAFE_getAllByProps({ testID })
-        .find((node) => typeof node.props['aria-selected'] === 'boolean')?.props['aria-selected']
+      mockRawTabProps.get(testID)?.['aria-selected']
 
     for (const testID of ['map-panel-tab-travels', 'map-panel-tab-route', 'map-panel-tab-filters']) {
       expect(rawAriaSelected(testID)).toBe(testID === selectedId)

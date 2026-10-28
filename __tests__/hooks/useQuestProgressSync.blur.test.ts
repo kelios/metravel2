@@ -101,7 +101,7 @@ describe('useQuestProgressSync — уход с экрана раньше деб�
   });
 
   const mountLoaded = async (initial: SyncProps) => {
-    const rendered = renderHook(
+    const rendered = await renderHook(
       ({ questId, isAuthenticated }: SyncProps) => useQuestProgressSync(questId, isAuthenticated),
       { initialProps: initial },
     );
@@ -115,13 +115,13 @@ describe('useQuestProgressSync — уход с экрана раньше деб�
       isAuthenticated: true,
     });
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress(ANSWER);
     });
     expect(mockUpdateProgress).not.toHaveBeenCalled();
 
     // Как экран после фикса: questId снимается с фокусом, isAuthenticated остаётся.
-    rerender({ questId: undefined, isAuthenticated: true });
+    await rerender({ questId: undefined, isAuthenticated: true });
     await flushMicrotasks();
 
     expect(mockUpdateProgress).toHaveBeenCalledTimes(1);
@@ -137,13 +137,13 @@ describe('useQuestProgressSync — уход с экрана раньше деб�
       isAuthenticated: true,
     });
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress(ANSWER);
     });
     expect(mockUpdateProgress).not.toHaveBeenCalled();
 
     // Старый экран: `isFocused && isAuthenticated` на блюре давал false.
-    rerender({ questId: undefined, isAuthenticated: false });
+    await rerender({ questId: undefined, isAuthenticated: false });
     await flushMicrotasks();
 
     expect(mockUpdateProgress).toHaveBeenCalledTimes(1);
@@ -159,18 +159,18 @@ describe('useQuestProgressSync — уход с экрана раньше деб�
     mockReadOrCreateProgress.mockClear();
     mockUpdateProgress.mockClear();
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ questId, isAuthenticated }: SyncProps) => useQuestProgressSync(questId, isAuthenticated),
       { initialProps: { questId: QUEST_ID, isAuthenticated: false } },
     );
     await flushMicrotasks();
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress(ANSWER);
     });
-    rerender({ questId: undefined, isAuthenticated: false });
+    await rerender({ questId: undefined, isAuthenticated: false });
     await flushMicrotasks();
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(2000);
     });
     await flushMicrotasks();
@@ -187,12 +187,12 @@ describe('useQuestProgressSync — уход с экрана раньше деб�
       isAuthenticated: true,
     });
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress(ANSWER);
     });
     expect(mockUpdateProgress).not.toHaveBeenCalled();
 
-    rerender({ questId: undefined, isAuthenticated: true });
+    await rerender({ questId: undefined, isAuthenticated: true });
     await flushMicrotasks();
 
     expect(mockUpdateProgress).not.toHaveBeenCalled();

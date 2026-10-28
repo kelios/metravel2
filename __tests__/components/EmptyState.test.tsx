@@ -38,8 +38,8 @@ jest.mock('react-native', () => {
 });
 
 describe('EmptyState', () => {
-  it('should render with icon, title and description', () => {
-    const { toJSON, getByTestId } = render(
+  it('should render with icon, title and description', async () => {
+    const { toJSON, getByTestId } = await render(
       <EmptyState
         density="full"
         icon="inbox"
@@ -61,9 +61,9 @@ describe('EmptyState', () => {
     expect(getByTestId('feather-inbox')).toBeTruthy();
   });
 
-  it('should render action button when provided', () => {
+  it('should render action button when provided', async () => {
     const onPress = jest.fn();
-    const { UNSAFE_getAllByType, toJSON } = render(
+    const { getByRole, toJSON } = await render(
       <EmptyState
         density="full"
         icon="inbox"
@@ -81,19 +81,13 @@ describe('EmptyState', () => {
     const treeStr = JSON.stringify(tree);
     expect(treeStr).toContain('Add Item');
 
-    // Находим Pressable и нажимаем на него
-    const { Pressable } = require('react-native');
-    const pressables = UNSAFE_getAllByType(Pressable);
-    expect(pressables.length).toBeGreaterThan(0);
-    
-    // Нажимаем на последний Pressable (кнопка действия)
-    fireEvent.press(pressables[pressables.length - 1]);
+    await fireEvent.press(getByRole('button', { name: 'Add Item' }));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('should pass custom layout action style while preserving primary button color', () => {
+  it('should pass custom layout action style while preserving primary button color', async () => {
     const customActionStyle = { alignSelf: 'stretch' as const, backgroundImage: 'none' };
-    const { UNSAFE_getAllByType } = render(
+    const { getByRole } = await render(
       <EmptyState
         density="full"
         icon="inbox"
@@ -107,10 +101,10 @@ describe('EmptyState', () => {
       />
     );
 
-    const { Pressable, StyleSheet } = require('react-native');
-    const pressables = UNSAFE_getAllByType(Pressable);
-    const actionButton = pressables[pressables.length - 1];
-    const buttonStyle = actionButton.props.style({ pressed: false, hovered: false });
+    expect(getByRole('button', { name: 'Add Item' })).toBeTruthy();
+    const rawProps = mockActionProps.get('Add Item');
+    expect(typeof rawProps?.style).toBe('function');
+    const buttonStyle = rawProps.style({ pressed: false, hovered: false });
 
     expect(StyleSheet.flatten(buttonStyle)).toMatchObject({
       ...customActionStyle,
@@ -118,8 +112,8 @@ describe('EmptyState', () => {
     });
   });
 
-  it('should not render action button when not provided', () => {
-    const { toJSON } = render(
+  it('should not render action button when not provided', async () => {
+    const { toJSON } = await render(
       <EmptyState
         density="full"
         icon="inbox"
@@ -133,8 +127,8 @@ describe('EmptyState', () => {
     expect(treeStr).not.toContain('Add Item');
   });
 
-  it('should use custom icon size', () => {
-    const { toJSON } = render(
+  it('should use custom icon size', async () => {
+    const { toJSON } = await render(
       <EmptyState
         density="full"
         icon="inbox"
@@ -149,8 +143,8 @@ describe('EmptyState', () => {
     expect(tree).toBeTruthy();
   });
 
-  it('should use custom icon color', () => {
-    const { toJSON } = render(
+  it('should use custom icon color', async () => {
+    const { toJSON } = await render(
       <EmptyState
         density="full"
         icon="inbox"
@@ -165,8 +159,8 @@ describe('EmptyState', () => {
     expect(tree).toBeTruthy();
   });
 
-  it('should use default icon size when not provided', () => {
-    const { toJSON } = render(
+  it('should use default icon size when not provided', async () => {
+    const { toJSON } = await render(
       <EmptyState
         density="full"
         icon="inbox"
@@ -188,9 +182,9 @@ describe('EmptyState', () => {
       return node;
     };
 
-    it('compact: без flex/minHeight, круг 56, иконка 28, testID кнопок', () => {
+    it('compact: без flex/minHeight, круг 56, иконка 28, testID кнопок', async () => {
       const onPress = jest.fn();
-      const { getByTestId } = render(
+      const { getByTestId } = await render(
         <EmptyState
           density="compact"
           icon="map"
@@ -207,13 +201,13 @@ describe('EmptyState', () => {
       expect(circle.width).toBe(56);
       expect(circle.height).toBe(56);
       expect(getByTestId('feather-map').props.size).toBe(28);
-      fireEvent.press(getByTestId('empty-state-action'));
+      await fireEvent.press(getByTestId('empty-state-action'));
       expect(onPress).toHaveBeenCalledTimes(1);
       expect(getByTestId('empty-state-secondary-action')).toBeTruthy();
     });
 
-    it('full: прежний вид — minHeight и круг больше компактного', () => {
-      const { getByTestId } = render(
+    it('full: прежний вид — minHeight и круг больше компактного', async () => {
+      const { getByTestId } = await render(
         <EmptyState density="full" icon="map" title="T" description="D" />
       );
       const root = flat(getByTestId('empty-state'));
@@ -222,9 +216,9 @@ describe('EmptyState', () => {
       expect(flat(circleOf(getByTestId, 'map')).width).toBeGreaterThan(56);
     });
 
-    it('moreActions и собственные testID действий, описание необязательно', () => {
+    it('moreActions и собственные testID действий, описание необязательно', async () => {
       const onMore = jest.fn();
-      const { getByTestId, queryByText } = render(
+      const { getByTestId, queryByText } = await render(
         <EmptyState
           density="compact"
           testID="panel-empty"
@@ -236,7 +230,7 @@ describe('EmptyState', () => {
       );
       expect(getByTestId('panel-empty')).toBeTruthy();
       expect(getByTestId('empty-expand-radius')).toBeTruthy();
-      fireEvent.press(getByTestId('empty-open-filters'));
+      await fireEvent.press(getByTestId('empty-open-filters'));
       expect(onMore).toHaveBeenCalledTimes(1);
       expect(queryByText('undefined')).toBeNull();
     });
@@ -245,18 +239,10 @@ describe('EmptyState', () => {
   // #2114: компактная заглушка часто монтируется после ответа данных, а useResponsive
   // даёт новому потребителю один кадр «до гидратации» (desktop). Вид не должен зависеть
   // от ширины — иначе второй кадр перекладывает кнопки и сдвигает всё ниже.
-  it('compact не зависит от ширины, full — зависит', () => {
+  it('compact не зависит от ширины, full — зависит', async () => {
     const { createEmptyStateStyles } = require('@/components/ui/EmptyState');
-    const { useThemedColors } = require('@/hooks/useTheme');
-    const colors = (() => {
-      let value: unknown;
-      const Probe = () => {
-        value = useThemedColors();
-        return null;
-      };
-      render(<Probe />);
-      return value;
-    })();
+    const { getThemedColors } = require('@/hooks/useTheme');
+    const colors = getThemedColors(false);
     const flat = (styles: Record<string, unknown>) =>
       JSON.stringify(Object.fromEntries(Object.entries(styles).map(([k, v]) => [k, StyleSheet.flatten(v as never)])));
     expect(flat(createEmptyStateStyles(colors, 'compact', true))).toEqual(flat(createEmptyStateStyles(colors, 'compact', false)));
@@ -274,3 +260,17 @@ describe('EmptyState', () => {
     expect(buildCriticalCSS()).toContain('[data-bp-layout="emptyState-compactActions"]{flex-direction:row !important');
   });
 });
+
+// Observe the public component input while retaining its normal host rendering.
+const captureNative = require('react-native')
+const capturedOriginalPressable = captureNative.Pressable
+const mockActionProps = new Map<string, any>()
+beforeAll(() => {
+  captureNative.Pressable = require('react').forwardRef((props: any, ref: any) => {
+    const key = props.accessibilityLabel === 'Add Item' ? props.accessibilityLabel : null
+    if (key) mockActionProps.set(key, props)
+    return require('react').createElement(capturedOriginalPressable, { ...props, ref })
+  })
+})
+afterAll(() => { captureNative.Pressable = capturedOriginalPressable })
+beforeEach(() => { mockActionProps.clear() })

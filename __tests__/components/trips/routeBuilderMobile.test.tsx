@@ -136,14 +136,14 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
   ...overrides,
 })
 
-const renderMobile = () =>
-  render(<RouteBuilder trip={makeTrip()} layout="mapFirst" />, {
+const renderMobile = async () =>
+  await render(<RouteBuilder trip={makeTrip()} layout="mapFirst" />, {
     wrapper: createQueryWrapper().Wrapper,
   })
 
 describe('RouteBuilder — мобильная раскладка вкладки «Маршрут»', () => {
-  it('раскладывает карту и панель одним потоком, без шторки со своим скроллом', () => {
-    const { getByTestId, queryByTestId } = renderMobile()
+  it('раскладывает карту и панель одним потоком, без шторки со своим скроллом', async () => {
+    const { getByTestId, queryByTestId } = await renderMobile()
 
     expect(getByTestId('route-mobile-map')).toBeTruthy()
     expect(getByTestId('route-mobile-summary')).toBeTruthy()
@@ -155,28 +155,28 @@ describe('RouteBuilder — мобильная раскладка вкладки 
     expect(queryByTestId('route-builder-point-list-scroll')).toBeNull()
   })
 
-  it('держит «Добавить точку» внутри секции списка точек', () => {
-    const { getByTestId } = renderMobile()
+  it('держит «Добавить точку» внутри секции списка точек', async () => {
+    const { getByTestId } = await renderMobile()
 
     const pointsStep = getByTestId('route-builder-step-points')
     expect(within(pointsStep).getByTestId('route-builder-add-action')).toBeTruthy()
   })
 
-  it('открывает форму добавления вместе с адресным поиском в одном месте', () => {
-    const { getByTestId } = renderMobile()
+  it('открывает форму добавления вместе с адресным поиском в одном месте', async () => {
+    const { getByTestId } = await renderMobile()
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-add-action'))
 
     const addForm = getByTestId('route-builder-add-form')
     expect(within(addForm).getByTestId('route-builder-address-search')).toBeTruthy()
   })
 
-  it('раскрывает правку точки внутри её же карточки', () => {
-    const { getByTestId, queryByTestId } = renderMobile()
+  it('раскрывает правку точки внутри её же карточки', async () => {
+    const { getByTestId, queryByTestId } = await renderMobile()
 
     expect(queryByTestId('route-builder-edit-form')).toBeNull()
 
-    fireEvent.press(getByTestId('route-builder-edit-1'))
+    await fireEvent.press(getByTestId('route-builder-edit-1'))
 
     const card = getByTestId('route-builder-point-1')
     expect(within(card).getByTestId('route-builder-edit-form')).toBeTruthy()
@@ -185,40 +185,40 @@ describe('RouteBuilder — мобильная раскладка вкладки 
     expect(getByTestId('route-builder-point-2')).toBeTruthy()
   })
 
-  it('сворачивает открытый редактор той же кнопкой, а не пересобирает форму', () => {
-    const { getByTestId, queryByTestId } = renderMobile()
+  it('сворачивает открытый редактор той же кнопкой, а не пересобирает форму', async () => {
+    const { getByTestId, queryByTestId } = await renderMobile()
 
-    fireEvent.press(getByTestId('route-builder-edit-1'))
-    fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Переименованная точка')
+    await fireEvent.press(getByTestId('route-builder-edit-1'))
+    await fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Переименованная точка')
     expect(getByTestId('route-builder-edit-name').props.value).toBe('Переименованная точка')
 
     // Кнопка со стрелкой вверх обещает «свернуть» — она и сворачивает. Раньше
     // она звала ту же `onEdit`: форма пересобиралась из сохранённой точки, ввод
     // молча пропадал, а редактор оставался открытым.
-    fireEvent.press(getByTestId('route-builder-edit-1'))
+    await fireEvent.press(getByTestId('route-builder-edit-1'))
     expect(queryByTestId('route-builder-edit-form')).toBeNull()
   })
 
-  it('тапом по телу строки с открытым редактором не сбрасывает введённое', () => {
-    const { getByTestId } = renderMobile()
+  it('тапом по телу строки с открытым редактором не сбрасывает введённое', async () => {
+    const { getByTestId } = await renderMobile()
 
-    fireEvent.press(getByTestId('route-builder-edit-1'))
-    fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Черновик названия')
-    fireEvent.press(getByTestId('route-builder-focus-1'))
+    await fireEvent.press(getByTestId('route-builder-edit-1'))
+    await fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Черновик названия')
+    await fireEvent.press(getByTestId('route-builder-focus-1'))
 
     expect(getByTestId('route-builder-edit-name').props.value).toBe('Черновик названия')
   })
 
-  it('открывает ту же правку тапом по телу строки', () => {
-    const { getByTestId } = renderMobile()
+  it('открывает ту же правку тапом по телу строки', async () => {
+    const { getByTestId } = await renderMobile()
 
-    fireEvent.press(getByTestId('route-builder-focus-2'))
+    await fireEvent.press(getByTestId('route-builder-focus-2'))
 
     expect(within(getByTestId('route-builder-point-2')).getByTestId('route-builder-edit-form')).toBeTruthy()
   })
 
-  it('убирает перестановку и удаление из свёрнутой строки и отдаёт их редактору', () => {
-    const { getByTestId, queryByTestId } = renderMobile()
+  it('убирает перестановку и удаление из свёрнутой строки и отдаёт их редактору', async () => {
+    const { getByTestId, queryByTestId } = await renderMobile()
 
     // Четыре иконки по 44dp съедали ширину названия точки — в свёрнутой строке
     // остаётся только вход в правку.
@@ -226,7 +226,7 @@ describe('RouteBuilder — мобильная раскладка вкладки 
     expect(queryByTestId('route-builder-move-down-1')).toBeNull()
     expect(queryByTestId('route-builder-delete-1')).toBeNull()
 
-    fireEvent.press(getByTestId('route-builder-edit-1'))
+    await fireEvent.press(getByTestId('route-builder-edit-1'))
 
     const card = getByTestId('route-builder-point-1')
     expect(within(card).getByTestId('route-builder-move-up-1')).toBeTruthy()
@@ -234,8 +234,8 @@ describe('RouteBuilder — мобильная раскладка вкладки 
     expect(within(card).getByTestId('route-builder-delete-1')).toBeTruthy()
   })
 
-  it('оставляет desktop-раскладке правку и удаление в строке, а форму — отдельной секцией', () => {
-    const { getByTestId, queryByTestId } = render(
+  it('оставляет desktop-раскладке правку и удаление в строке, а форму — отдельной секцией', async () => {
+    const { getByTestId, queryByTestId } = await render(
       <RouteBuilder trip={makeTrip()} />,
       { wrapper: createQueryWrapper().Wrapper },
     )
@@ -245,7 +245,7 @@ describe('RouteBuilder — мобильная раскладка вкладки 
     expect(queryByTestId('route-builder-move-up-1')).toBeNull()
     expect(getByTestId('route-builder-delete-1')).toBeTruthy()
 
-    fireEvent.press(getByTestId('route-builder-edit-1'))
+    await fireEvent.press(getByTestId('route-builder-edit-1'))
     expect(getByTestId('route-builder-move-up-1')).toBeTruthy()
     // На desktop форма остаётся отдельной секцией колонки, а не внутри строки.
     expect(queryByTestId('route-builder-edit-form')).toBeTruthy()
@@ -260,8 +260,8 @@ describe('RouteBuilder — мобильная раскладка вкладки 
 // связка «карта ↔ панель»: чем карту растянули, куда сфокусировали и доводит ли
 // тап по ней новую точку до формы правки.
 describe('RouteBuilder layout=mapFirst — связка карты и панели', () => {
-  it('растягивает карту и держит панель обычным контентом под ней', () => {
-    const { getByTestId, queryByTestId } = renderMobile()
+  it('растягивает карту и держит панель обычным контентом под ней', async () => {
+    const { getByTestId, queryByTestId } = await renderMobile()
 
     expect(getByTestId('route-map-fill').props.children).toBe('true')
     expect(getByTestId('route-mobile-map')).toBeTruthy()
@@ -274,7 +274,7 @@ describe('RouteBuilder layout=mapFirst — связка карты и панел
     expect(queryByTestId('route-builder-add-form')).toBeNull()
     expect(queryByTestId('route-builder-site-search')).toBeNull()
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-add-action'))
 
     // Первый тип — «место», поэтому раскрытая add-форма показывает поиск, а не
     // ручной submit `route-builder-add`.
@@ -286,12 +286,12 @@ describe('RouteBuilder layout=mapFirst — связка карты и панел
     expect(queryByTestId('route-builder-save')).toBeNull()
   })
 
-  it('тап по точке в списке центрует карту на её координатах', () => {
-    const { getByTestId } = renderMobile()
+  it('тап по точке в списке центрует карту на её координатах', async () => {
+    const { getByTestId } = await renderMobile()
 
     expect(getByTestId('route-map-focus').props.children).toBe('none')
 
-    fireEvent.press(getByTestId('route-builder-focus-1'))
+    await fireEvent.press(getByTestId('route-builder-focus-1'))
 
     expect(getByTestId('route-map-focus').props.children).toBe('53.93,27.52')
   })
@@ -300,31 +300,31 @@ describe('RouteBuilder layout=mapFirst — связка карты и панел
   // экран отдаёт `mapFirst` независимо от владения, а проверка `!trip.isOwner`
   // стоит раньше. Строку точки там рендерит тот же renderPoint, значит и обещание
   // «тап центрует карту» там то же: карта обязана получить focusPoint.
-  it('гостю-участнику тап по точке тоже центрует карту', () => {
-    const { getByTestId } = render(
+  it('гостю-участнику тап по точке тоже центрует карту', async () => {
+    const { getByTestId } = await render(
       <RouteBuilder trip={makeTrip({ isOwner: false })} layout="mapFirst" />,
       { wrapper: createQueryWrapper().Wrapper },
     )
 
     expect(getByTestId('route-map-focus').props.children).toBe('none')
 
-    fireEvent.press(getByTestId('route-builder-focus-1'))
+    await fireEvent.press(getByTestId('route-builder-focus-1'))
 
     expect(getByTestId('route-map-focus').props.children).toBe('53.93,27.52')
   })
 
-  it('точка, добавленная тапом по карте, открывает форму переименования', () => {
-    const { getByTestId } = renderMobile()
+  it('точка, добавленная тапом по карте, открывает форму переименования', async () => {
+    const { getByTestId } = await renderMobile()
 
-    fireEvent.press(getByTestId('route-map-click'))
+    await fireEvent.press(getByTestId('route-map-click'))
 
     expect(getByTestId('route-builder-edit-form')).toBeTruthy()
     expect(getByTestId('route-builder-edit-lat').props.value).toBe('53.95')
     expect(getByTestId('route-builder-edit-lng').props.value).toBe('27.61')
   })
 
-  it('вертикальная раскладка остаётся без мобильного блока и без центрирования по тапу', () => {
-    const { getByTestId, queryByTestId } = render(<RouteBuilder trip={makeTrip()} />, {
+  it('вертикальная раскладка остаётся без мобильного блока и без центрирования по тапу', async () => {
+    const { getByTestId, queryByTestId } = await render(<RouteBuilder trip={makeTrip()} />, {
       wrapper: createQueryWrapper().Wrapper,
     })
 
@@ -336,7 +336,7 @@ describe('RouteBuilder layout=mapFirst — связка карты и панел
     const pointBody = getByTestId('route-builder-focus-1')
     expect(pointBody.props.accessibilityRole).toBeUndefined()
     expect(pointBody.props.onStartShouldSetResponder).toBeUndefined()
-    fireEvent.press(pointBody)
+    await fireEvent.press(pointBody)
     expect(getByTestId('route-map-focus').props.children).toBe('none')
     expect(getByTestId('route-map-fill').props.children).toBe('false')
   })
@@ -369,8 +369,8 @@ describe('RouteBuilder layout=mapFirst — приблизительный мар
     },
   })
 
-  it('показывает причину один раз — под строкой итога, без времени в пути', () => {
-    const { getAllByText, getByTestId, queryByText } = render(
+  it('показывает причину один раз — под строкой итога, без времени в пути', async () => {
+    const { getAllByText, getByTestId, queryByText } = await render(
       <RouteBuilder trip={directTrip} layout="mapFirst" />,
       { wrapper: createQueryWrapper().Wrapper },
     )
@@ -394,7 +394,7 @@ describe('RouteBuilder layout=mapFirst — приблизительный мар
     expect(within(summary).queryByTestId('route-summary-metric-elevation')).toBeNull()
   })
 
-  it('не рисует строку причины у маршрута, проложенного по дорогам', () => {
+  it('не рисует строку причины у маршрута, проложенного по дорогам', async () => {
     const routedTrip = makeTrip({
       transport: 'foot',
       route,
@@ -408,7 +408,7 @@ describe('RouteBuilder layout=mapFirst — приблизительный мар
       routeSummary: { distanceKm: 12.4, durationMin: 150, elevationGainM: 80, stopsCount: 3, provider: 'ors' },
       routingState: { provider: 'ors', isOptimal: true, fallbackReason: null, warnings: [] },
     })
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <RouteBuilder trip={routedTrip} layout="mapFirst" />,
       { wrapper: createQueryWrapper().Wrapper },
     )
@@ -446,13 +446,13 @@ describe('RouteBuilder layout=mapFirst — «Повторить» для сох�
     mockRefreshMutate.mockClear()
   })
 
-  it('владелец видит «Повторить» у временной причины, клик шлёт мутацию ровно один раз', () => {
-    const { getByTestId } = render(
+  it('владелец видит «Повторить» у временной причины, клик шлёт мутацию ровно один раз', async () => {
+    const { getByTestId } = await render(
       <RouteBuilder trip={temporaryTrip} layout="mapFirst" />,
       { wrapper: createQueryWrapper().Wrapper },
     )
 
-    fireEvent.press(getByTestId('route-mobile-summary-retry'))
+    await fireEvent.press(getByTestId('route-mobile-summary-retry'))
 
     expect(mockRefreshMutate).toHaveBeenCalledTimes(1)
     expect(mockRefreshMutate).toHaveBeenCalledWith(
@@ -461,8 +461,8 @@ describe('RouteBuilder layout=mapFirst — «Повторить» для сох�
     )
   })
 
-  it('не-владелец не видит «Повторить» даже у временной причины', () => {
-    const { queryByTestId } = render(
+  it('не-владелец не видит «Повторить» даже у временной причины', async () => {
+    const { queryByTestId } = await render(
       <RouteBuilder trip={{ ...temporaryTrip, isOwner: false }} layout="mapFirst" />,
       { wrapper: createQueryWrapper().Wrapper },
     )

@@ -5,7 +5,9 @@
  * Verifies that arrow buttons, keyboard navigation, and touch interactions work correctly.
  */
 
-import renderer, { act } from 'react-test-renderer'
+import { within } from '@testing-library/react-native'
+import { render as renderTree, act } from '@testing-library/react-native'
+import type { RenderResult } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 import { render, fireEvent } from '@testing-library/react-native'
 
@@ -64,10 +66,10 @@ describe('Slider navigation - Web', () => {
   describe('Arrow button navigation', () => {
     it('navigates to next slide when Next button is pressed', async () => {
       const images = createImages(5)
-      let tree: renderer.ReactTestRenderer
+      let tree: RenderResult
 
       await act(async () => {
-        tree = renderer.create(
+        tree = await renderTree(
           <SliderWeb
             images={images}
             showArrows
@@ -80,28 +82,28 @@ describe('Slider navigation - Web', () => {
       })
 
       // Initial state: slide 0 is active
-      const counterBefore = tree!.root.findByProps({ testID: 'slider-wrapper' })
+      const counterBefore = within(tree!.container).getByTestId('slider-wrapper', { includeHiddenElements: true })
       expect(counterBefore).toBeTruthy()
 
       // Find and press Next button
-      const nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+      const nextButton = within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })
       expect(nextButton).toBeTruthy()
 
       await act(async () => {
-        nextButton.props.onPress()
+        await fireEvent.press(nextButton)
       })
 
       // Slide 1 should now be rendered
-      expect(tree!.root.findByProps({ testID: 'slider-image-1' })).toBeTruthy()
+      expect(within(tree!.container).getByTestId('slider-image-1', { includeHiddenElements: true })).toBeTruthy()
     })
 
     it('emits index change once per web arrow navigation', async () => {
       const images = createImages(5)
       const onIndexChanged = jest.fn()
-      let tree: renderer.ReactTestRenderer
+      let tree: RenderResult
 
       await act(async () => {
-        tree = renderer.create(
+        tree = await renderTree(
           <SliderWeb
             images={images}
             showArrows
@@ -114,10 +116,10 @@ describe('Slider navigation - Web', () => {
         )
       })
 
-      const nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+      const nextButton = within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })
 
       await act(async () => {
-        nextButton.props.onPress()
+        await fireEvent.press(nextButton)
       })
 
       expect(onIndexChanged).toHaveBeenCalledTimes(1)
@@ -126,10 +128,10 @@ describe('Slider navigation - Web', () => {
 
     it('navigates to previous slide when Previous button is pressed', async () => {
       const images = createImages(5)
-      let tree: renderer.ReactTestRenderer
+      let tree: RenderResult
 
       await act(async () => {
-        tree = renderer.create(
+        tree = await renderTree(
           <SliderWeb
             images={images}
             showArrows
@@ -142,28 +144,28 @@ describe('Slider navigation - Web', () => {
       })
 
       // Navigate to slide 2 first
-      const nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+      const nextButton = within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })
       await act(async () => {
-        nextButton.props.onPress()
-        nextButton.props.onPress()
+        await fireEvent.press(nextButton)
+        await fireEvent.press(nextButton)
       })
 
       // Now navigate back
-      const prevButton = tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })
+      const prevButton = within(tree!.container).getByLabelText('Previous slide', { includeHiddenElements: true })
       await act(async () => {
-        prevButton.props.onPress()
+        await fireEvent.press(prevButton)
       })
 
       // Slide 1 should be active
-      expect(tree!.root.findByProps({ testID: 'slider-image-1' })).toBeTruthy()
+      expect(within(tree!.container).getByTestId('slider-image-1', { includeHiddenElements: true })).toBeTruthy()
     })
 
     it('stops at last slide — no wrap-around (Instagram-style)', async () => {
       const images = createImages(3)
-      let tree: renderer.ReactTestRenderer
+      let tree: RenderResult
 
       await act(async () => {
-        tree = renderer.create(
+        tree = await renderTree(
           <SliderWeb
             images={images}
             showArrows
@@ -175,38 +177,38 @@ describe('Slider navigation - Web', () => {
         )
       })
 
-      let nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+      let nextButton = within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })
 
       // Navigate to slide 1
       await act(async () => {
-        nextButton.props.onPress() // 0 -> 1
+        await fireEvent.press(nextButton) // 0 -> 1
       })
 
       // Re-find Next button (it may have re-rendered)
-      nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+      nextButton = within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })
 
       // Navigate to last slide (index 2)
       await act(async () => {
-        nextButton.props.onPress() // 1 -> 2
+        await fireEvent.press(nextButton) // 1 -> 2
       })
 
       // Both arrows stay available at the boundary, but navigation no longer wraps
-      expect(tree!.root.findByProps({ accessibilityLabel: 'Next slide' })).toBeTruthy()
-      expect(tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })).toBeTruthy()
+      expect(within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })).toBeTruthy()
+      expect(within(tree!.container).getByLabelText('Previous slide', { includeHiddenElements: true })).toBeTruthy()
 
       await act(async () => {
-        tree!.root.findByProps({ accessibilityLabel: 'Next slide' }).props.onPress()
+        await fireEvent.press(within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true }))
       })
 
-      expect(tree!.root.findByProps({ testID: 'slider-image-2' })).toBeTruthy()
+      expect(within(tree!.container).getByTestId('slider-image-2', { includeHiddenElements: true })).toBeTruthy()
     })
 
     it('keeps Previous arrow on first slide without wrap-around navigation', async () => {
       const images = createImages(3)
-      let tree: renderer.ReactTestRenderer
+      let tree: RenderResult
 
       await act(async () => {
-        tree = renderer.create(
+        tree = await renderTree(
           <SliderWeb
             images={images}
             showArrows
@@ -218,22 +220,22 @@ describe('Slider navigation - Web', () => {
         )
       })
 
-      expect(tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })).toBeTruthy()
-      expect(tree!.root.findByProps({ accessibilityLabel: 'Next slide' })).toBeTruthy()
+      expect(within(tree!.container).getByLabelText('Previous slide', { includeHiddenElements: true })).toBeTruthy()
+      expect(within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })).toBeTruthy()
 
       await act(async () => {
-        tree!.root.findByProps({ accessibilityLabel: 'Previous slide' }).props.onPress()
+        await fireEvent.press(within(tree!.container).getByLabelText('Previous slide', { includeHiddenElements: true }))
       })
 
-      expect(tree!.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
+      expect(within(tree!.container).getByTestId('slider-image-0', { includeHiddenElements: true })).toBeTruthy()
     })
 
     it('does not render arrows when showArrows is false', async () => {
       const images = createImages(3)
-      let tree: renderer.ReactTestRenderer
+      let tree: RenderResult
 
       await act(async () => {
-        tree = renderer.create(
+        tree = await renderTree(
           <SliderWeb
             images={images}
             showArrows={false}
@@ -245,16 +247,16 @@ describe('Slider navigation - Web', () => {
         )
       })
 
-      expect(() => tree!.root.findByProps({ accessibilityLabel: 'Next slide' })).toThrow()
-      expect(() => tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })).toThrow()
+      expect(() => within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })).toThrow()
+      expect(() => within(tree!.container).getByLabelText('Previous slide', { includeHiddenElements: true })).toThrow()
     })
 
     it('does not render arrows when only one image', async () => {
       const images = createImages(1)
-      let tree: renderer.ReactTestRenderer
+      let tree: RenderResult
 
       await act(async () => {
-        tree = renderer.create(
+        tree = await renderTree(
           <SliderWeb
             images={images}
             showArrows
@@ -266,8 +268,8 @@ describe('Slider navigation - Web', () => {
         )
       })
 
-      expect(() => tree!.root.findByProps({ accessibilityLabel: 'Next slide' })).toThrow()
-      expect(() => tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })).toThrow()
+      expect(() => within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })).toThrow()
+      expect(() => within(tree!.container).getByLabelText('Previous slide', { includeHiddenElements: true })).toThrow()
     })
   })
 
@@ -275,10 +277,10 @@ describe('Slider navigation - Web', () => {
   describe('Web rendering stability', () => {
     it('keeps only current-neighbour slides mounted on web', async () => {
       const images = createImages(10)
-      let tree: renderer.ReactTestRenderer
+      let tree: RenderResult
 
       await act(async () => {
-        tree = renderer.create(
+        tree = await renderTree(
           <SliderWeb
             images={images}
             showArrows
@@ -290,18 +292,18 @@ describe('Slider navigation - Web', () => {
         )
       })
 
-      expect(tree!.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
-      expect(tree!.root.findByProps({ testID: 'slider-image-1' })).toBeTruthy()
-      expect(tree!.root.findByProps({ testID: 'slider-image-2' })).toBeTruthy()
-      expect(tree!.root.findAllByProps({ testID: 'slider-image-5' })).toHaveLength(0)
+      expect(within(tree!.container).getByTestId('slider-image-0', { includeHiddenElements: true })).toBeTruthy()
+      expect(within(tree!.container).getByTestId('slider-image-1', { includeHiddenElements: true })).toBeTruthy()
+      expect(within(tree!.container).getByTestId('slider-image-2', { includeHiddenElements: true })).toBeTruthy()
+      expect(within(tree!.container).queryAllByTestId('slider-image-5', { includeHiddenElements: true })).toHaveLength(0)
     })
 
     it('keeps previous slides rendered when navigating forward', async () => {
       const images = createImages(10)
-      let tree: renderer.ReactTestRenderer
+      let tree: RenderResult
 
       await act(async () => {
-        tree = renderer.create(
+        tree = await renderTree(
           <SliderWeb
             images={images}
             showArrows
@@ -313,17 +315,17 @@ describe('Slider navigation - Web', () => {
         )
       })
 
-      const nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+      const nextButton = within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })
 
       // Navigate forward one slide
       await act(async () => {
-        nextButton.props.onPress() // 0 -> 1
+        await fireEvent.press(nextButton) // 0 -> 1
       })
 
       // Previously visited slides stay mounted, so the browser never needs to
       // reconstruct a missing slide during the swipe animation.
-      expect(tree!.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
-      expect(tree!.root.findByProps({ testID: 'slider-image-1' })).toBeTruthy()
+      expect(within(tree!.container).getByTestId('slider-image-0', { includeHiddenElements: true })).toBeTruthy()
+      expect(within(tree!.container).getByTestId('slider-image-1', { includeHiddenElements: true })).toBeTruthy()
     })
   })
 
@@ -387,11 +389,11 @@ describe('Slider navigation - Native (mobile)', () => {
   })
 
   describe('Arrow navigation on tablet', () => {
-    it('shows arrows on tablet when showArrows is true', () => {
+    it('shows arrows on tablet when showArrows is true', async () => {
       ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 768, height: 1024 })
 
       const images = createImages(3)
-      const { getByLabelText } = render(
+      const { getByLabelText } = await render(
         <Slider
           images={images}
           showArrows
@@ -406,11 +408,11 @@ describe('Slider navigation - Native (mobile)', () => {
       expect(getByLabelText('Next slide')).toBeTruthy()
     })
 
-    it('updates counter when pressing Next on tablet', () => {
+    it('updates counter when pressing Next on tablet', async () => {
       ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 768, height: 1024 })
 
       const images = createImages(3)
-      const { getByLabelText, getByText } = render(
+      const { getByLabelText, getByText } = await render(
         <Slider
           images={images}
           showArrows
@@ -423,19 +425,19 @@ describe('Slider navigation - Native (mobile)', () => {
 
       expect(getByText('1/3')).toBeTruthy()
 
-      fireEvent.press(getByLabelText('Next slide'))
+      await fireEvent.press(getByLabelText('Next slide'))
 
       expect(getByText('2/3')).toBeTruthy()
     })
   })
 
   describe('Mobile-specific behavior', () => {
-    it('hides arrows on mobile when hideArrowsOnMobile is true', () => {
+    it('hides arrows on mobile when hideArrowsOnMobile is true', async () => {
       // Set mobile dimensions - width < 768 triggers isMobile in useResponsive
       ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 375, height: 812 })
 
       const images = createImages(3)
-      const { queryByLabelText } = render(
+      const { queryByLabelText } = await render(
         <Slider
           images={images}
           showArrows
@@ -464,11 +466,11 @@ describe('Slider navigation - Native (mobile)', () => {
       }
     })
 
-    it('shows arrows on mobile when hideArrowsOnMobile is false', () => {
+    it('shows arrows on mobile when hideArrowsOnMobile is false', async () => {
       ;(RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 375, height: 812 })
 
       const images = createImages(3)
-      const { getByLabelText } = render(
+      const { getByLabelText } = await render(
         <Slider
           images={images}
           showArrows
@@ -508,10 +510,10 @@ describe('Slider display correctness', () => {
 
   it('renders all required UI elements on web', async () => {
     const images = createImages(5)
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
 
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={images}
           showArrows
@@ -524,23 +526,19 @@ describe('Slider display correctness', () => {
     })
 
     // Check main structure
-    expect(tree!.root.findByProps({ testID: 'slider-stack' })).toBeTruthy()
-    expect(tree!.root.findByProps({ testID: 'slider-wrapper' })).toBeTruthy()
-    expect(tree!.root.findByProps({ testID: 'slider-clip' })).toBeTruthy()
-    expect(tree!.root.findByProps({ testID: 'slider-scroll' })).toBeTruthy()
+    expect(within(tree!.container).getByTestId('slider-stack', { includeHiddenElements: true })).toBeTruthy()
+    expect(within(tree!.container).getByTestId('slider-wrapper', { includeHiddenElements: true })).toBeTruthy()
+    expect(within(tree!.container).getByTestId('slider-clip', { includeHiddenElements: true })).toBeTruthy()
+    expect(within(tree!.container).getByTestId('slider-scroll', { includeHiddenElements: true })).toBeTruthy()
 
-    expect(tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })).toBeTruthy()
-    expect(tree!.root.findByProps({ accessibilityLabel: 'Next slide' })).toBeTruthy()
+    expect(within(tree!.container).getByLabelText('Previous slide', { includeHiddenElements: true })).toBeTruthy()
+    expect(within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })).toBeTruthy()
      expect(
-       tree!.root.find(
-         (node: renderer.ReactTestInstance) =>
-           Array.isArray(node.props?.children) &&
-           node.props.children.join('') === '1/5'
-       )
+       within(tree!.container).getByText('1/5', { includeHiddenElements: true })
      ).toBeTruthy()
 
     // Check first image
-    expect(tree!.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
+    expect(within(tree!.container).getByTestId('slider-image-0', { includeHiddenElements: true })).toBeTruthy()
   })
 
   it('keeps horizontal swipe routed to JS on mobile web slides', async () => {
@@ -555,10 +553,10 @@ describe('Slider display correctness', () => {
     })
 
     const images = createImages(3)
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
 
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={images}
           showArrows={false}
@@ -570,7 +568,7 @@ describe('Slider display correctness', () => {
       )
     })
 
-    const viewport = tree!.root.findByProps({ testID: 'slider-scroll' })
+    const viewport = within(tree!.container).getByTestId('slider-scroll', { includeHiddenElements: true })
     const style = Array.isArray(viewport.props.style)
       ? Object.assign({}, ...viewport.props.style.filter(Boolean))
       : viewport.props.style
@@ -590,10 +588,10 @@ describe('Slider display correctness', () => {
     })
 
     const images = createImages(3)
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
 
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={images}
           showArrows
@@ -606,7 +604,7 @@ describe('Slider display correctness', () => {
       )
     })
 
-    const nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+    const nextButton = within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })
     const nextStyle = Array.isArray(nextButton.props.style)
       ? Object.assign({}, ...nextButton.props.style.filter(Boolean))
       : nextButton.props.style
@@ -617,10 +615,10 @@ describe('Slider display correctness', () => {
 
   it('renders only the current slide window containers', async () => {
     const images = createImages(7)
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
 
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={images}
           showArrows={false}
@@ -633,19 +631,19 @@ describe('Slider display correctness', () => {
     })
 
     for (let i = 0; i <= 2; i++) {
-      expect(tree!.root.findByProps({ testID: `slider-slide-${i}` })).toBeTruthy()
+      expect(within(tree!.container).getByTestId(`slider-slide-${i}`, { includeHiddenElements: true })).toBeTruthy()
     }
     for (let i = 3; i < 7; i++) {
-      expect(tree!.root.findAllByProps({ testID: `slider-slide-${i}` })).toHaveLength(0)
+      expect(within(tree!.container).queryAllByTestId(`slider-slide-${i}`, { includeHiddenElements: true })).toHaveLength(0)
     }
   })
 
   it('applies correct accessibility labels to navigation buttons', async () => {
     const images = createImages(3)
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
 
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={images}
           showArrows
@@ -658,13 +656,13 @@ describe('Slider display correctness', () => {
     })
 
     // Navigate to slide 1 so both arrows are visible
-    const nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+    const nextButton = within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })
     await act(async () => {
-      nextButton.props.onPress()
+      await fireEvent.press(nextButton)
     })
 
-    const prevButton = tree!.root.findByProps({ accessibilityLabel: 'Previous slide' })
-    const nextBtn = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+    const prevButton = within(tree!.container).getByLabelText('Previous slide', { includeHiddenElements: true })
+    const nextBtn = within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })
 
     expect(prevButton.props.accessibilityRole).toBe('button')
     expect(nextBtn.props.accessibilityRole).toBe('button')

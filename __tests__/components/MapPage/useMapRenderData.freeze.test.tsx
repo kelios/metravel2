@@ -50,31 +50,31 @@ const lastEnabled = (): boolean => {
 describe('useServerPlaceLayerData — server-cluster freeze while a popup is open', () => {
   beforeEach(() => mockUseMapClusters.mockClear())
 
-  it('enables the cluster query by default (no popup open)', () => {
-    renderHook(() => useServerPlaceLayerData({ ...baseArgs(), freezeServerClusters: false }))
+  it('enables the cluster query by default (no popup open)', async () => {
+    await renderHook(() => useServerPlaceLayerData({ ...baseArgs(), freezeServerClusters: false }))
     expect(lastEnabled()).toBe(true)
   })
 
-  it('disables the cluster query while a popup is open (freeze)', () => {
-    renderHook(() => useServerPlaceLayerData({ ...baseArgs(), freezeServerClusters: true }))
+  it('disables the cluster query while a popup is open (freeze)', async () => {
+    await renderHook(() => useServerPlaceLayerData({ ...baseArgs(), freezeServerClusters: true }))
     expect(lastEnabled()).toBe(false)
   })
 
-  it('re-enables the cluster query once the popup closes (unfreeze)', () => {
-    const { rerender } = renderHook(
+  it('re-enables the cluster query once the popup closes (unfreeze)', async () => {
+    const { rerender } = await renderHook(
       (props: { freeze: boolean }) =>
         useServerPlaceLayerData({ ...baseArgs(), freezeServerClusters: props.freeze }),
       { initialProps: { freeze: true } },
     )
     expect(lastEnabled()).toBe(false)
-    rerender({ freeze: false })
+    await rerender({ freeze: false })
     expect(lastEnabled()).toBe(true)
   })
 
-  it('keeps the cluster query off outside radius mode and for points-only maps', () => {
-    renderHook(() => useServerPlaceLayerData({ ...baseArgs(), mode: 'route' as const }))
+  it('keeps the cluster query off outside radius mode and for points-only maps', async () => {
+    await renderHook(() => useServerPlaceLayerData({ ...baseArgs(), mode: 'route' as const }))
     expect(lastEnabled()).toBe(false)
-    renderHook(() => useServerPlaceLayerData({ ...baseArgs(), pointsOnly: true }))
+    await renderHook(() => useServerPlaceLayerData({ ...baseArgs(), pointsOnly: true }))
     expect(lastEnabled()).toBe(false)
   })
 })

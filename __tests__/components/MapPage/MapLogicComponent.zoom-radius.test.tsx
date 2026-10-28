@@ -77,7 +77,7 @@ describe('MapLogicComponent radius zoom initialization', () => {
       useMapEvents,
     };
 
-    const { rerender } = render(
+    const { rerender } = await render(
       <MapLogicComponent
         {...baseProps}
         travelData={[]}
@@ -92,7 +92,7 @@ describe('MapLogicComponent radius zoom initialization', () => {
     expect(map.setView).not.toHaveBeenCalled();
     expect(attachBaseLayer).not.toHaveBeenCalled();
 
-    rerender(
+    await rerender(
       <MapLogicComponent
         {...baseProps}
         initialResultsSettled
@@ -109,7 +109,7 @@ describe('MapLogicComponent radius zoom initialization', () => {
       attachBaseLayer.mock.invocationCallOrder[0],
     );
 
-    rerender(
+    await rerender(
       <MapLogicComponent
         {...baseProps}
         initialResultsSettled
@@ -174,7 +174,7 @@ describe('MapLogicComponent radius zoom initialization', () => {
       useMapEvents: jest.fn(() => null),
     };
 
-    render(<MapLogicComponent {...props} initialResultsSettled />);
+    await render(<MapLogicComponent {...props} initialResultsSettled />);
     await act(async () => {});
 
     expect(map.fitBounds).toHaveBeenCalledTimes(1);
@@ -212,7 +212,7 @@ describe('MapLogicComponent radius zoom initialization', () => {
     };
     const onInitialViewReady = jest.fn();
 
-    render(
+    await render(
       <MapLogicComponent
         mapClickHandler={() => undefined}
         mode="radius"
@@ -319,7 +319,7 @@ describe('MapLogicComponent radius zoom initialization', () => {
         useMapEvents: jest.fn(() => null),
       };
 
-      const { rerender } = render(
+      const { rerender } = await render(
         <MapLogicComponent
           {...baseProps}
           travelData={[{ id: 1, coord: '53.9,27.5667', address: 'A' }]}
@@ -330,7 +330,7 @@ describe('MapLogicComponent radius zoom initialization', () => {
       expect(onInitialViewReady).not.toHaveBeenCalled();
       expect(queuedFrames.size).toBe(1);
 
-      rerender(
+      await rerender(
         <MapLogicComponent
           {...baseProps}
           travelData={[
@@ -406,12 +406,12 @@ describe('MapLogicComponent radius zoom initialization', () => {
       const map = makeMap();
       const props = makeProps(map);
 
-      const { rerender } = render(<MapLogicComponent {...props} />);
+      const { rerender } = await render(<MapLogicComponent {...props} />);
       await act(async () => {});
       expect(map.fitBounds).toHaveBeenCalled();
 
       map.setView.mockClear();
-      rerender(<MapLogicComponent {...props} mode="route" />);
+      await rerender(<MapLogicComponent {...props} mode="route" />);
       await act(async () => {});
 
       // Вход в маршрут не выбрасывает уже применённый вид на анкер в z13.
@@ -422,14 +422,14 @@ describe('MapLogicComponent radius zoom initialization', () => {
       const map = makeMap();
       const props = makeProps(map);
 
-      const { rerender } = render(<MapLogicComponent {...props} />);
+      const { rerender } = await render(<MapLogicComponent {...props} />);
       await act(async () => {});
 
-      rerender(<MapLogicComponent {...props} mode="route" />);
+      await rerender(<MapLogicComponent {...props} mode="route" />);
       await act(async () => {});
 
       map.fitBounds.mockClear();
-      rerender(<MapLogicComponent {...props} mode="radius" />);
+      await rerender(<MapLogicComponent {...props} mode="radius" />);
       await act(async () => {});
 
       // Маршрутный fitBounds увёл карту в коридор маршрута — радиусный вид
@@ -492,13 +492,13 @@ describe('MapLogicComponent radius zoom initialization', () => {
 
     const travelData = [{ id: 1, coord: '53.9,27.5667', address: 'A' }];
 
-    const { rerender } = render(<MapLogicComponent {...baseProps} travelData={travelData} />);
+    const { rerender } = await render(<MapLogicComponent {...baseProps} travelData={travelData} />);
     await act(async () => {});
     expect(map.fitBounds).toHaveBeenCalledTimes(1);
 
     map.fitBounds.mockClear();
 
-    rerender(
+    await rerender(
       <MapLogicComponent
         {...baseProps}
         travelData={travelData}
@@ -558,7 +558,7 @@ describe('MapLogicComponent radius zoom initialization', () => {
       hintCenter: { lat: 53.9, lng: 27.56 },
     };
     const firstPage = [{ id: 1, coord: '53.9,27.56', address: 'A' }];
-    const { rerender } = render(
+    const { rerender } = await render(
       <MapLogicComponent {...baseProps} travelData={firstPage} />,
     );
     await act(async () => {});
@@ -567,7 +567,7 @@ describe('MapLogicComponent radius zoom initialization', () => {
     map.fitBounds.mockClear();
     map.setView.mockClear();
 
-    rerender(
+    await rerender(
       <MapLogicComponent
         {...baseProps}
         travelData={[
@@ -634,14 +634,14 @@ describe('MapLogicComponent radius zoom initialization', () => {
 
     const travelData = [{ id: 1, coord: '53.9001,27.5601', address: 'A' }];
 
-    const { rerender } = render(<MapLogicComponent {...baseProps} travelData={travelData} />);
+    const { rerender } = await render(<MapLogicComponent {...baseProps} travelData={travelData} />);
     await act(async () => {});
     expect(map.fitBounds).toHaveBeenCalledTimes(1);
 
     map.fitBounds.mockClear();
     map.setView.mockClear();
 
-    rerender(
+    await rerender(
       <MapLogicComponent
         {...baseProps}
         coordinates={{ lat: 53.9002, lng: 27.5602 }}
@@ -705,13 +705,13 @@ describe('MapLogicComponent radius zoom initialization', () => {
       hintCenter: { lat: 53.9, lng: 27.56 },
     };
     const travelData = [{ id: 1, coord: '53.9,27.56', address: 'A' }];
-    const { rerender } = render(<MapLogicComponent {...baseProps} travelData={travelData} />);
+    const { rerender } = await render(<MapLogicComponent {...baseProps} travelData={travelData} />);
     await act(async () => {});
     expect(map.fitBounds).toHaveBeenCalledTimes(1);
     map.fitBounds.mockClear();
     map.setView.mockClear();
 
-    rerender(
+    await rerender(
       <MapLogicComponent
         {...baseProps}
         userLocation={{ lat: 53.9111, lng: 27.5695 }}

@@ -32,7 +32,7 @@ const MapPageHeading = loadMapPageHeading()
 // react-native-web's contract and is asserted in `e2e/map-page.spec.ts`
 // ('desktop: SEO title and canonical are set for /map'). What stays this suite's
 // job is the input side of that contract plus the static DOM teardown it owns.
-const getLevelOneHeadings = (view: ReturnType<typeof render>) =>
+const getLevelOneHeadings = (view: Awaited<ReturnType<typeof render>>) =>
   view.queryAllByRole('header').filter((node) => node.props['aria-level'] === 1)
 
 const styles = {
@@ -60,19 +60,19 @@ describe('MapPageHeading (#1640)', () => {
       .forEach((heading) => heading.remove())
   })
 
-  it('renders level-1 heading semantics without the site-name suffix', () => {
-    const view = render(<MapPageHeading anchor="panel-head" styles={styles} />)
+  it('renders level-1 heading semantics without the site-name suffix', async () => {
+    const view = await render(<MapPageHeading anchor="panel-head" styles={styles} />)
 
     const headings = getLevelOneHeadings(view)
     expect(headings).toHaveLength(1)
     expect(String(headings[0].props.children)).toBe('Карта маршрутов и достопримечательностей Беларуси')
   })
 
-  it('adopts the static heading only when it mounts, not on a timer', () => {
+  it('adopts the static heading only when it mounts, not on a timer', async () => {
     mountStaticHeading()
     expect(document.querySelectorAll('h1[data-ssg-travel-h1="true"]')).toHaveLength(1)
 
-    const view = render(<MapPageHeading anchor="map-corner" styles={styles} />)
+    const view = await render(<MapPageHeading anchor="map-corner" styles={styles} />)
 
     // The static node is gone and its replacement is already rendered — the
     // page never passes through zero headings or two.
@@ -83,22 +83,22 @@ describe('MapPageHeading (#1640)', () => {
     )
   })
 
-  it('keeps exactly one heading when the anchor switches', () => {
-    const view = render(<MapPageHeading anchor="panel-head" styles={styles} />)
+  it('keeps exactly one heading when the anchor switches', async () => {
+    const view = await render(<MapPageHeading anchor="panel-head" styles={styles} />)
     expect(getLevelOneHeadings(view)).toHaveLength(1)
 
-    view.rerender(<MapPageHeading anchor="map-corner" styles={styles} />)
+    await view.rerender(<MapPageHeading anchor="map-corner" styles={styles} />)
 
     // Sampled synchronously right after the commit, without waitFor: a second
     // heading must never be observable during the swap.
     expect(getLevelOneHeadings(view)).toHaveLength(1)
 
-    view.rerender(<MapPageHeading anchor="panel-head" styles={styles} />)
+    await view.rerender(<MapPageHeading anchor="panel-head" styles={styles} />)
     expect(getLevelOneHeadings(view)).toHaveLength(1)
   })
 
-  it('keeps the map-corner heading semantic but visually hidden', () => {
-    const view = render(<MapPageHeading anchor="map-corner" styles={styles} />)
+  it('keeps the map-corner heading semantic but visually hidden', async () => {
+    const view = await render(<MapPageHeading anchor="map-corner" styles={styles} />)
 
     const heading = view.getByRole('header')
     expect(heading.props['aria-level']).toBe(1)
@@ -110,17 +110,17 @@ describe('MapPageHeading (#1640)', () => {
     })
   })
 
-  it('marks both anchors with the dataSet hook react-native-web turns into data-map-page-heading', () => {
+  it('marks both anchors with the dataSet hook react-native-web turns into data-map-page-heading', async () => {
     // The resulting `data-map-page-heading` attribute is react-native-web's
     // output; this unit test guards the input prop and exact anchor value.
     // #2258: панельный заголовок задаёт свой кегль — CSS-ступени `Heading` к нему
     // не цепляются, dataSet остаётся ровно якорем. Визуально скрытый угловой
     // заголовок кегля не задаёт и получает метку ступени `bpLayout`, слитую
     // с якорем (а не затирающую его).
-    const panel = render(<MapPageHeading anchor="panel-head" styles={styles} />)
+    const panel = await render(<MapPageHeading anchor="panel-head" styles={styles} />)
     expect(panel.getByRole('header').props.dataSet).toEqual({ mapPageHeading: 'panel-head' })
 
-    const corner = render(<MapPageHeading anchor="map-corner" styles={styles} />)
+    const corner = await render(<MapPageHeading anchor="map-corner" styles={styles} />)
     expect(corner.getByRole('header').props.dataSet).toEqual({
       mapPageHeading: 'map-corner',
       bpLayout: 'heading-h1',

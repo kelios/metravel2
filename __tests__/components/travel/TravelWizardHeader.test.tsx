@@ -1,6 +1,5 @@
-import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
-import { Modal, StyleSheet } from 'react-native';
-import Feather from '@expo/vector-icons/Feather';
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native';
 import TravelWizardHeader from '@/components/travel/TravelWizardHeader';
 import { showToastMessage } from '@/utils/toast';
 
@@ -44,8 +43,8 @@ describe('TravelWizardHeader', () => {
     };
   });
 
-  it('announces progress status and exposes errors without relying only on color', () => {
-    const { getByTestId, getByText } = render(
+  it('announces progress status and exposes errors without relying only on color', async () => {
+    const { getByTestId, getByText } = await render(
       <TravelWizardHeader
         title="Маршрут"
         subtitle="Шаг 2 из 6"
@@ -68,8 +67,8 @@ describe('TravelWizardHeader', () => {
     expect(getByText('Ошибки: 2')).toBeTruthy();
   });
 
-  it('keeps autosave status in a polite live region', () => {
-    const { getByTestId } = render(
+  it('keeps autosave status in a polite live region', async () => {
+    const { getByTestId } = await render(
       <TravelWizardHeader
         title="Маршрут"
         subtitle="Шаг 2 из 6"
@@ -85,13 +84,13 @@ describe('TravelWizardHeader', () => {
     expect(status.props.children).toBe('Есть несохранённые изменения');
   });
 
-  it('keeps the mobile save button at a 44px touch target', () => {
+  it('keeps the mobile save button at a 44px touch target', async () => {
     mockResponsiveState = {
       isHydrated: true,
       isMobile: true,
     };
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <TravelWizardHeader
         title="Маршрут"
         subtitle="Шаг 2 из 6"
@@ -122,7 +121,7 @@ describe('TravelWizardHeader', () => {
     };
     const onStepSelect = jest.fn();
 
-    const { getByTestId, getByLabelText, queryByLabelText, UNSAFE_getAllByType } = render(
+    const { getByTestId, getByLabelText, queryByLabelText, container: _hostContainer } = await render(
       <TravelWizardHeader
         title="Основная информация"
         subtitle="Название и описание путешествия"
@@ -133,19 +132,21 @@ describe('TravelWizardHeader', () => {
       />
     );
 
-    fireEvent.press(getByTestId('travel-wizard-step-select'));
+    await fireEvent.press(getByTestId('travel-wizard-step-select'));
 
     const stepFive = getByLabelText('Перейти к шагу 5: дополнительные параметры');
     expect(stepFive).toBeTruthy();
 
-    const openModal = UNSAFE_getAllByType(Modal).find((modal) => modal.props.visible);
+    const modalHosts = _hostContainer.queryAll(node => typeof node.props.onRequestClose === 'function');
+    expect(modalHosts).toHaveLength(1);
+    const openModal = modalHosts[0];
     expect(openModal).toBeTruthy();
-    fireEvent(openModal!, 'requestClose');
+    await fireEvent(openModal, 'requestClose');
     expect(queryByLabelText('Перейти к шагу 5: дополнительные параметры')).toBeNull();
 
-    fireEvent.press(getByTestId('travel-wizard-step-select'));
+    await fireEvent.press(getByTestId('travel-wizard-step-select'));
 
-    fireEvent.press(getByLabelText('Перейти к шагу 5: дополнительные параметры'));
+    await fireEvent.press(getByLabelText('Перейти к шагу 5: дополнительные параметры'));
 
     // На iOS пункт листа выполняется после закрытия листа (onDismiss / таймер, #2115).
     await waitFor(() => expect(onStepSelect).toHaveBeenCalledTimes(1));
@@ -153,9 +154,9 @@ describe('TravelWizardHeader', () => {
     expect(queryByLabelText('Перейти к шагу 5: дополнительные параметры')).toBeNull();
   });
 
-  it('exposes a visible Save button in the toolbar (no menu needed) that calls onSave', () => {
+  it('exposes a visible Save button in the toolbar (no menu needed) that calls onSave', async () => {
     const onSave = jest.fn();
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <TravelWizardHeader
         title="Маршрут"
         subtitle="Шаг 2 из 6"
@@ -171,12 +172,12 @@ describe('TravelWizardHeader', () => {
     // with only onSave there is no overflow menu to open
     expect(queryByTestId('travel-wizard-more')).toBeNull();
 
-    fireEvent.press(getByTestId('travel-wizard-save'));
+    await fireEvent.press(getByTestId('travel-wizard-save'));
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
-  it('marks the current milestone as selected and completed milestones with a check', () => {
-    const { getByLabelText } = render(
+  it('marks the current milestone as selected and completed milestones with a check', async () => {
+    const { getByLabelText } = await render(
       <TravelWizardHeader
         title="Медиа"
         subtitle="Шаг 3 из 6"
@@ -191,13 +192,13 @@ describe('TravelWizardHeader', () => {
     const currentStep = getByLabelText(/Перейти к шагу 3/);
 
     expect(completedStep.props.accessibilityState).toEqual({ selected: false, disabled: false });
-    expect(completedStep.findByType(Feather).props.name).toBe('check');
+    expect(within(completedStep).getByTestId('feather-check')).toBeTruthy();
     expect(currentStep.props.accessibilityState).toEqual({ selected: true, disabled: false });
   });
 
-  it('shows an in-progress save state and blocks duplicate save presses', () => {
+  it('shows an in-progress save state and blocks duplicate save presses', async () => {
     const onSave = jest.fn();
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <TravelWizardHeader
         title="Маршрут"
         subtitle="Шаг 2 из 6"
@@ -219,7 +220,7 @@ describe('TravelWizardHeader', () => {
       busy: true,
     });
 
-    fireEvent.press(saveButton);
+    await fireEvent.press(saveButton);
     expect(onSave).not.toHaveBeenCalled();
   });
 
@@ -230,7 +231,7 @@ describe('TravelWizardHeader', () => {
     const onSave = jest.fn()
       .mockImplementationOnce(() => { rejectedSave = Promise.reject(error); return rejectedSave; })
       .mockResolvedValueOnce({ id: 844, publication_status: 'pending_review' });
-    const screen = render(<TravelWizardHeader title="Маршрут" subtitle="Шаг 1 из 6"
+    const screen = await render(<TravelWizardHeader title="Маршрут" subtitle="Шаг 1 из 6"
       progressPercent={17} onSave={onSave} autosaveBadge="Есть несохранённые изменения" />);
 
     await act(async () => {
@@ -256,7 +257,7 @@ describe('TravelWizardHeader', () => {
       if (failureType === 'sync') throw error;
       return Promise.reject(error);
     });
-    const screen = render(<TravelWizardHeader title="Маршрут" subtitle="Шаг 1 из 6"
+    const screen = await render(<TravelWizardHeader title="Маршрут" subtitle="Шаг 1 из 6"
       progressPercent={17} onSave={onSave} />);
 
     await act(async () => {

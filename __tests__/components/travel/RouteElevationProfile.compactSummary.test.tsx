@@ -21,15 +21,15 @@ const preview = {
 
 const SUMMARY_LINE = '7,5 км • +240 м набора • пик 1 145 м • 32 м/км'
 
-const layoutTo = (width: number) =>
+const layoutTo = async (width: number) =>
   fireEvent(screen.getByTestId('route-elevation-profile'), 'layout', {
     nativeEvent: { layout: { width, height: 240 } },
   })
 
 describe('RouteElevationProfile summary density', () => {
-  it('keeps only the three key tiles and drops the duplicate summary line on a narrow layout', () => {
-    render(<RouteElevationProfile preview={preview} />)
-    layoutTo(390)
+  it('keeps only the three key tiles and drops the duplicate summary line on a narrow layout', async () => {
+    await render(<RouteElevationProfile preview={preview} />)
+    await layoutTo(390)
 
     expect(screen.queryByText(SUMMARY_LINE)).toBeNull()
     expect(screen.getByText('Дистанция')).toBeTruthy()
@@ -45,9 +45,9 @@ describe('RouteElevationProfile summary density', () => {
     expect(gridStyle.flexWrap).toBe('nowrap')
   })
 
-  it('keeps the full desktop tile set and the summary line on a wide layout', () => {
-    render(<RouteElevationProfile preview={preview} />)
-    layoutTo(1280)
+  it('keeps the full desktop tile set and the summary line on a wide layout', async () => {
+    await render(<RouteElevationProfile preview={preview} />)
+    await layoutTo(1280)
 
     expect(screen.getByText(SUMMARY_LINE)).toBeTruthy()
     for (const label of [

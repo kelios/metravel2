@@ -64,10 +64,10 @@ describe('language selection surfaces', () => {
     localeState.useSystemLocale.mockReset().mockResolvedValue(undefined)
   })
 
-  it('opens the header picker and selects Ukrainian without authentication', () => {
-    const { getByTestId, getByLabelText, getByText } = render(<LanguageSwitcher />)
+  it('opens the header picker and selects Ukrainian without authentication', async () => {
+    const { getByTestId, getByLabelText, getByText } = await render(<LanguageSwitcher />)
 
-    fireEvent.press(getByTestId('header-language-switcher'))
+    await fireEvent.press(getByTestId('header-language-switcher'))
     expect(getByLabelText('Русский')).toBeTruthy()
     expect(getByLabelText('Беларуская')).toBeTruthy()
     expect(getByLabelText('Українська')).toBeTruthy()
@@ -75,24 +75,24 @@ describe('language selection surfaces', () => {
     expect(getByLabelText('English')).toBeTruthy()
     expect(getByText('BY')).toBeTruthy()
 
-    fireEvent.press(getByTestId('header-language-option-uk'))
+    await fireEvent.press(getByTestId('header-language-option-uk'))
     expect(localeState.setLocale).toHaveBeenCalledWith('uk')
   })
 
-  it('persists an intentional selection of the current language, including retry', () => {
-    const { getByTestId } = render(<LanguageSwitcher />)
-    fireEvent.press(getByTestId('header-language-switcher'))
-    fireEvent.press(getByTestId('header-language-option-ru'))
-    fireEvent.press(getByTestId('header-language-switcher'))
-    fireEvent.press(getByTestId('header-language-option-ru'))
+  it('persists an intentional selection of the current language, including retry', async () => {
+    const { getByTestId } = await render(<LanguageSwitcher />)
+    await fireEvent.press(getByTestId('header-language-switcher'))
+    await fireEvent.press(getByTestId('header-language-option-ru'))
+    await fireEvent.press(getByTestId('header-language-switcher'))
+    await fireEvent.press(getByTestId('header-language-option-ru'))
     expect(localeState.setLocale.mock.calls).toEqual([['ru'], ['ru']])
   })
 
   it('handles a rejected header language change through the existing toast', async () => {
     localeState.setLocale.mockRejectedValueOnce(new Error('catalog unavailable'))
-    const { getByTestId } = render(<LanguageSwitcher />)
-    fireEvent.press(getByTestId('header-language-switcher'))
-    fireEvent.press(getByTestId('header-language-option-en'))
+    const { getByTestId } = await render(<LanguageSwitcher />)
+    await fireEvent.press(getByTestId('header-language-switcher'))
+    await fireEvent.press(getByTestId('header-language-option-en'))
     await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.objectContaining({
       type: 'error', text1: 'Не удалось выполнить действие',
     })))
@@ -101,21 +101,21 @@ describe('language selection surfaces', () => {
   it.each(['explicit', 'system'])('handles a rejected settings %s choice without an unhandled rejection', async (mode) => {
     const reject = mode === 'explicit' ? localeState.setLocale : localeState.useSystemLocale
     reject.mockRejectedValueOnce(new Error('storage unavailable'))
-    const { getByLabelText } = render(<LanguageSection colors={colors} styles={styles} />)
-    fireEvent.press(getByLabelText(mode === 'explicit' ? 'English' : 'Как в системе'))
+    const { getByLabelText } = await render(<LanguageSection colors={colors} styles={styles} />)
+    await fireEvent.press(getByLabelText(mode === 'explicit' ? 'English' : 'Как в системе'))
     await waitFor(() => expect(showToast).toHaveBeenCalledTimes(1))
   })
 
   // #2100: на вложенных экранах телефона бренд-строки нет — язык меняется из «Ещё».
   // Подэкран внутри того же листа: второй Modal на iOS поверх первого не показывается.
-  it('«Ещё» → «Язык интерфейса» открывает выбор языка внутри листа и меняет локаль', () => {
+  it('«Ещё» → «Язык интерфейса» открывает выбор языка внутри листа и меняет локаль', async () => {
     const items = BOTTOM_DOCK_MORE_MENU_SECTIONS.flatMap((section) => section.items)
     const language = items.find((item) => item.key === 'language')
     expect(language).toEqual(expect.objectContaining({ action: 'language', iconName: 'globe' }))
     expect(language?.route).toBeUndefined()
 
     const onClose = jest.fn()
-    const { getByTestId, queryByTestId, getByLabelText } = render(
+    const { getByTestId, queryByTestId, getByLabelText } = await render(
       <BottomDockMoreList
         styles={styles}
         iconColor="#000"
@@ -129,24 +129,24 @@ describe('language selection surfaces', () => {
       />,
     )
     expect(queryByTestId('more-language-option-pl')).toBeNull()
-    fireEvent.press(getByTestId('footer-more-item-language'))
+    await fireEvent.press(getByTestId('footer-more-item-language'))
     expect(onClose).not.toHaveBeenCalled()
     expect(getByLabelText('English')).toBeTruthy()
-    fireEvent.press(getByTestId('more-language-option-pl'))
+    await fireEvent.press(getByTestId('more-language-option-pl'))
     expect(localeState.setLocale).toHaveBeenCalledWith('pl')
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('offers explicit languages and opt-in system mode in account settings', () => {
-    const { getAllByText, getByLabelText } = render(
+  it('offers explicit languages and opt-in system mode in account settings', async () => {
+    const { getAllByText, getByLabelText } = await render(
       <LanguageSection colors={colors} styles={styles} />,
     )
 
     expect(getAllByText('BY')).toHaveLength(2)
-    fireEvent.press(getByLabelText('Беларуская'))
+    await fireEvent.press(getByLabelText('Беларуская'))
     expect(localeState.setLocale).toHaveBeenCalledWith('be')
 
-    fireEvent.press(getByLabelText('Как в системе'))
+    await fireEvent.press(getByLabelText('Как в системе'))
     expect(localeState.useSystemLocale).toHaveBeenCalledTimes(1)
   })
 
@@ -160,12 +160,12 @@ describe('language selection surfaces', () => {
     ['uk', 'UK'],
     ['pl', 'PL'],
     ['en', 'EN'],
-  ] as const)('держит бокс кода языка одинаковым на локали %s', (locale, displayCode) => {
+  ] as const)('держит бокс кода языка одинаковым на локали %s', async (locale, displayCode) => {
     const originalPlatformOS = Platform.OS
     localeState.locale = locale
     Object.defineProperty(Platform, 'OS', { value: 'web' })
     try {
-      const { getByText } = render(<LanguageSwitcher />)
+      const { getByText } = await render(<LanguageSwitcher />)
       const code = getByText(displayCode)
 
       expect(StyleSheet.flatten(code.props.style)).toMatchObject({
@@ -181,11 +181,11 @@ describe('language selection surfaces', () => {
 
   // Фиксированный бокс кода — web-only: на native он не нужен (пререндера нет),
   // а вместе с `numberOfLines` резал бы код при системном увеличении шрифта.
-  it('на native бокс кода языка не фиксирует', () => {
+  it('на native бокс кода языка не фиксирует', async () => {
     const originalPlatformOS = Platform.OS
     Object.defineProperty(Platform, 'OS', { value: 'ios' })
     try {
-      const { getByText } = render(<LanguageSwitcher />)
+      const { getByText } = await render(<LanguageSwitcher />)
       const flattened = StyleSheet.flatten(getByText('RU').props.style)
 
       expect(flattened.width).toBeUndefined()

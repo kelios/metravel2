@@ -13,7 +13,7 @@ let mockViewportWidth = 320
 let mockIsConnected = false
 let mockKeyboardInset = 0
 const mockKeyboardListeners = new Set<() => void>()
-const setKeyboardInset = (inset: number) => act(() => {
+const setKeyboardInset = async (inset: number) => act(() => {
   mockKeyboardInset = inset
   mockKeyboardListeners.forEach(listener => listener())
 })
@@ -91,53 +91,53 @@ describe('AppInstallBar', () => {
 
   it.each([
     ['ios', APP_STORE_APP_URL], ['android', GOOGLE_PLAY_APP_URL],
-  ] as const)('offers the %s store without claiming installation or closing Open', (platform, url) => {
+  ] as const)('offers the %s store without claiming installation or closing Open', async (platform, url) => {
     mockPhoneStorePlatform = platform
     const AppInstallBar = require('@/components/layout/AppInstallBar').default
-    const { getByTestId } = render(<AppInstallBar />)
+    const { getByTestId } = await render(<AppInstallBar />)
     expect(getByTestId('app-install-bar')).toBeTruthy()
     expect(mockedOpenExternalUrl).not.toHaveBeenCalled()
-    fireEvent.press(getByTestId('app-install-bar-cta'))
+    await fireEvent.press(getByTestId('app-install-bar-cta'))
     expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('app_download_click', { source: 'install_bar', platform })
     expect(mockedOpenExternalUrl).toHaveBeenCalledWith(url, expect.anything())
     expect(getByTestId('app-install-bar-open')).toBeTruthy()
     expect(markAppInstallHintDismissed).not.toHaveBeenCalled()
   })
 
-  it.each(['ios', 'android'] as const)('opens the current page explicitly on %s without an install goal', (platform) => {
+  it.each(['ios', 'android'] as const)('opens the current page explicitly on %s without an install goal', async (platform) => {
     mockPhoneStorePlatform = platform
     const AppInstallBar = require('@/components/layout/AppInstallBar').default
-    const { getByTestId } = render(<AppInstallBar />)
-    fireEvent.press(getByTestId('app-install-bar-open'))
+    const { getByTestId } = await render(<AppInstallBar />)
+    await fireEvent.press(getByTestId('app-install-bar-open'))
     expect(mockedOpenExternalUrl).toHaveBeenCalledWith(getMobileAppOpenUrl(platform, window.location.href), {
       allowedProtocols: ['metravel:', 'intent:'],
     })
     expect(mockedSendAnalyticsEvent).not.toHaveBeenCalledWith('app_download_click', expect.anything())
   })
 
-  it('stacks above existing consent and releases its measured reserve on dismissal', () => {
+  it('stacks above existing consent and releases its measured reserve on dismissal', async () => {
     setBottomChromeReserve('consent-banner', 240)
     const AppInstallBar = require('@/components/layout/AppInstallBar').default
-    const { getByTestId, queryByTestId } = render(<AppInstallBar />)
+    const { getByTestId, queryByTestId } = await render(<AppInstallBar />)
     expect(StyleSheet.flatten(getByTestId('app-install-bar').props.style).bottom).toContain('240px')
-    fireEvent(getByTestId('app-install-bar'), 'layout', { nativeEvent: { layout: { height: 136 } } })
+    await fireEvent(getByTestId('app-install-bar'), 'layout', { nativeEvent: { layout: { height: 136 } } })
     expect(getBottomChromeReserve()).toBe(240 + 8 + 136 + 8)
-    fireEvent.press(getByTestId('app-install-bar-dismiss'))
+    await fireEvent.press(getByTestId('app-install-bar-dismiss'))
     expect(markAppInstallHintDismissed).toHaveBeenCalled()
     expect(queryByTestId('app-install-bar')).toBeNull()
     expect(getBottomChromeReserve()).toBe(240)
   })
 
-  it('ignores the network banner above it when positioning over consent', () => {
+  it('ignores the network banner above it when positioning over consent', async () => {
     setBottomChromeReserve('consent-banner', 240)
     setBottomChromeReserve('network-status', 500)
     const AppInstallBar = require('@/components/layout/AppInstallBar').default
-    const view = render(<AppInstallBar />)
+    const view = await render(<AppInstallBar />)
     expect(StyleSheet.flatten(view.getByTestId('app-install-bar').props.style).bottom).toContain('240px')
-    act(() => setBottomChromeReserve('network-status', 600))
+    await act(() => setBottomChromeReserve('network-status', 600))
     expect(StyleSheet.flatten(view.getByTestId('app-install-bar').props.style).bottom).toContain('240px')
     expect(getBottomChromeReserve('network-status')).toBe(240 + 8 + 112 + 8)
-    view.unmount()
+    await view.unmount()
     expect(getBottomChromeReserve('network-status')).toBe(240)
   })
 
@@ -148,8 +148,8 @@ describe('AppInstallBar', () => {
     const AppInstallBar = require('@/components/layout/AppInstallBar').default
     const ConsentBanner = require('@/components/layout/ConsentBanner').default
     const { NetworkStatus } = require('@/components/ui/NetworkStatus.web')
-    const view = render(<><ConsentBanner /><AppInstallBar /><NetworkStatus position="bottom" /></>)
-    fireEvent(view.getByTestId('network-status-banner'), 'layout', { nativeEvent: { layout: { height: 60 } } })
+    const view = await render(<><ConsentBanner /><AppInstallBar /><NetworkStatus position="bottom" /></>)
+    await fireEvent(view.getByTestId('network-status-banner'), 'layout', { nativeEvent: { layout: { height: 60 } } })
     const networkExtent = 56 + 8 + 60 + 8
     expect(getCriticalBottomChromeOwner()).toBe('network-status')
     expect(getBottomChromeReserve()).toBe(networkExtent)
@@ -158,17 +158,17 @@ describe('AppInstallBar', () => {
     expect(view.queryByTestId('app-install-bar')).toBeNull()
     expect(document.body.hasAttribute('data-consent-banner-open')).toBe(false)
     expect(StyleSheet.flatten(view.getByTestId('network-status-banner').props.style).bottom).toBe('calc(max(var(--mt-dock-h, 0px), var(--mt-footer-h, 0px)) + 8px)')
-    act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: true } })))
+    await act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: true } })))
     expect(getBottomChromeReserve()).toBe(0)
     expect(view.queryByTestId('network-status-banner')).toBeNull()
     expect(view.queryByTestId('app-install-bar')).toBeNull()
     expect(getCriticalBottomChromeOwner()).toBe('network-status')
-    act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: false } })))
+    await act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: false } })))
     expect(getBottomChromeReserve()).toBe(networkExtent)
     expect(view.queryByTestId('consent-banner')).toBeNull()
     expect(view.queryByTestId('app-install-bar')).toBeNull()
     mockIsConnected = true
-    view.rerender(<><ConsentBanner /><AppInstallBar /><NetworkStatus position="bottom" /></>)
+    await view.rerender(<><ConsentBanner /><AppInstallBar /><NetworkStatus position="bottom" /></>)
     await act(async () => { jest.advanceTimersByTime(2000) })
     expect(getCriticalBottomChromeOwner()).toBe('network-status')
     expect(getBottomChromeReserve()).toBe(0)
@@ -179,40 +179,40 @@ describe('AppInstallBar', () => {
     expect(view.getByTestId('consent-banner')).toBeTruthy()
     // #2782: the undecided visitor gets only the consent banner on this page.
     expect(view.queryByTestId('app-install-bar')).toBeNull()
-    fireEvent(view.getByTestId('consent-banner'), 'layout', { nativeEvent: { layout: { height: 100 } } })
+    await fireEvent(view.getByTestId('consent-banner'), 'layout', { nativeEvent: { layout: { height: 100 } } })
     expect(getBottomChromeReserve()).toBe(172)
     expect(writeConsent).not.toHaveBeenCalled()
     expect(markAppInstallHintDismissed).not.toHaveBeenCalled()
-    view.unmount()
+    await view.unmount()
     expect(getBottomChromeReserve()).toBe(0)
   })
 
-  it('suspends physical notices for the existing keyboard overlap without releasing network priority', () => {
+  it('suspends physical notices for the existing keyboard overlap without releasing network priority', async () => {
     mockConsent = null
     const AppInstallBar = require('@/components/layout/AppInstallBar').default
     const ConsentBanner = require('@/components/layout/ConsentBanner').default
     const { NetworkStatus } = require('@/components/ui/NetworkStatus.web')
     const tree = <><ConsentBanner /><AppInstallBar /><NetworkStatus position="bottom" /></>
-    const view = render(tree)
+    const view = await render(tree)
     expect(getBottomChromeReserve()).toBe(132)
-    setKeyboardInset(240)
+    await setKeyboardInset(240)
     expect(getBottomChromeReserve()).toBe(0)
     expect(getCriticalBottomChromeOwner()).toBe('network-status')
     expect(view.queryByTestId('network-status-banner')).toBeNull()
     expect(view.queryByTestId('consent-banner')).toBeNull()
     expect(view.queryByTestId('app-install-bar')).toBeNull()
-    setKeyboardInset(0)
+    await setKeyboardInset(0)
     expect(getBottomChromeReserve()).toBe(132)
-    view.unmount()
+    await view.unmount()
     expect(getCriticalBottomChromeOwner()).toBeNull()
     mockIsConnected = true
-    const online = render(<><ConsentBanner /><AppInstallBar /></>)
+    const online = await render(<><ConsentBanner /><AppInstallBar /></>)
     expect(online.getByTestId('consent-banner')).toBeTruthy()
     expect(online.queryByTestId('app-install-bar')).toBeNull()
-    setKeyboardInset(240)
+    await setKeyboardInset(240)
     expect(getBottomChromeReserve()).toBe(0)
     expect(online.queryByTestId('consent-banner')).toBeNull()
-    setKeyboardInset(0)
+    await setKeyboardInset(0)
     expect(online.getByTestId('consent-banner')).toBeTruthy()
     expect(online.queryByTestId('app-install-bar')).toBeNull()
     expect(writeConsent).not.toHaveBeenCalled()
@@ -220,7 +220,7 @@ describe('AppInstallBar', () => {
   })
 
   // #2782: two stacked bottom offers covered ~40% of a phone map on a first visit.
-  it('waits for the consent answer and a later page before offering the app', () => {
+  it('waits for the consent answer and a later page before offering the app', async () => {
     mockConsent = null
     mockIsConnected = true
     const AppInstallBar = require('@/components/layout/AppInstallBar').default
@@ -231,17 +231,17 @@ describe('AppInstallBar', () => {
         <AppInstallBar />
       </MockRouterContext.Provider>
     )
-    const view = render(tree('/map'))
+    const view = await render(tree('/map'))
     expect(view.getByTestId('consent-banner')).toBeTruthy()
     expect(view.queryByTestId('app-install-bar')).toBeNull()
     mockConsent = DECIDED_CONSENT
-    view.rerender(tree('/map'))
+    await view.rerender(tree('/map'))
     expect(view.queryByTestId('app-install-bar')).toBeNull()
-    view.rerender(tree('/places'))
+    await view.rerender(tree('/places'))
     expect(view.getByTestId('app-install-bar')).toBeTruthy()
   })
 
-  it('refreshes the native banner destination after a query-only navigation', () => {
+  it('refreshes the native banner destination after a query-only navigation', async () => {
     const meta = document.createElement('meta')
     meta.name = 'apple-itunes-app'
     document.head.appendChild(meta)
@@ -252,7 +252,7 @@ describe('AppInstallBar', () => {
     try {
       window.history.replaceState(null, '', '/map?lat=1')
       const AppInstallBar = require('@/components/layout/AppInstallBar').default
-      const { rerender } = render(
+      const { rerender } = await render(
         <MockRouterContext.Provider value={{ pathname: '/map', searchParams: { lat: '1' } }}>
           <AppInstallBar />
         </MockRouterContext.Provider>
@@ -260,7 +260,7 @@ describe('AppInstallBar', () => {
       expect(meta.content).toBe(`app-argument=${window.location.href}`)
 
       window.history.replaceState(null, '', '/map?lat=2')
-      rerender(
+      await rerender(
         <MockRouterContext.Provider value={{ pathname: '/map', searchParams: { lat: '2' } }}>
           <AppInstallBar />
         </MockRouterContext.Provider>
@@ -275,19 +275,19 @@ describe('AppInstallBar', () => {
     }
   })
 
-  it('suspends the offer for the app landing and More overlay', () => {
+  it('suspends the offer for the app landing and More overlay', async () => {
     const AppInstallBar = require('@/components/layout/AppInstallBar').default
-    const { queryByTestId, rerender } = render(
+    const { queryByTestId, rerender } = await render(
       <MockRouterContext.Provider value={{ pathname: '/', searchParams: {} }}>
         <AppInstallBar />
       </MockRouterContext.Provider>
     )
-    act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: true } })))
+    await act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: true } })))
     expect(queryByTestId('app-install-bar')).toBeNull()
     expect(getBottomChromeReserve()).toBe(0)
-    act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: false } })))
+    await act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: false } })))
     expect(queryByTestId('app-install-bar')).not.toBeNull()
-    rerender(
+    await rerender(
       <MockRouterContext.Provider value={{ pathname: '/app', searchParams: {} }}>
         <AppInstallBar />
       </MockRouterContext.Provider>

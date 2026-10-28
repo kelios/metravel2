@@ -24,8 +24,8 @@ const filters = [
   { key: 'tag', label: 'Родник' },
 ]
 
-const renderBar = (variant: 'panel' | 'floating') =>
-  render(
+const renderBar = async (variant: 'panel' | 'floating') =>
+  await render(
     <ActiveFiltersBar
       testID="active-filters"
       variant={variant}
@@ -36,16 +36,16 @@ const renderBar = (variant: 'panel' | 'floating') =>
   )
 
 describe('ActiveFiltersBar — границы floating-полосы (#1279)', () => {
-  it('clear-all has its own44px target while the floating row stays bounded', () => {
-    const view = renderBar('floating')
+  it('clear-all has its own44px target while the floating row stays bounded', async () => {
+    const view = await renderBar('floating')
     const style = StyleSheet.flatten(view.getByTestId('map-active-filters-clear-all').props.style)
     expect(style.minWidth).toBeGreaterThanOrEqual(44)
     expect(style.minHeight).toBeGreaterThanOrEqual(44)
     expect(StyleSheet.flatten(view.getByTestId('active-filters').props.style).maxHeight).toBeLessThanOrEqual(48)
   })
 
-  it('floating-контейнер объявляет конечную высоту', () => {
-    const { getByTestId } = renderBar('floating')
+  it('floating-контейнер объявляет конечную высоту', async () => {
+    const { getByTestId } = await renderBar('floating')
     const style = StyleSheet.flatten(getByTestId('active-filters').props.style)
 
     const bound = style.maxHeight ?? style.height
@@ -56,23 +56,23 @@ describe('ActiveFiltersBar — границы floating-полосы (#1279)', ()
     expect(bound).toBeLessThanOrEqual(48)
   })
 
-  it('не растягивается по вертикали флексом', () => {
-    const { getByTestId } = renderBar('floating')
+  it('не растягивается по вертикали флексом', async () => {
+    const { getByTestId } = await renderBar('floating')
     const style = StyleSheet.flatten(getByTestId('active-filters').props.style)
 
     expect(style.flex).toBeUndefined()
     expect(style.flexGrow ?? 0).toBe(0)
   })
 
-  it('panel-вариант ограничения не требует — он в потоке, а не над шторкой', () => {
-    const { getByTestId } = renderBar('panel')
+  it('panel-вариант ограничения не требует — он в потоке, а не над шторкой', async () => {
+    const { getByTestId } = await renderBar('panel')
     const style = StyleSheet.flatten(getByTestId('active-filters').props.style)
 
     expect(style.flex).toBeUndefined()
   })
 
-  it('без активных фильтров не рендерит ничего', () => {
-    const { queryByTestId } = render(
+  it('без активных фильтров не рендерит ничего', async () => {
+    const { queryByTestId } = await render(
       <ActiveFiltersBar
         testID="active-filters"
         variant="floating"

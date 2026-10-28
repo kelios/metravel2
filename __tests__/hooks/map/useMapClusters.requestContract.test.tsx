@@ -45,13 +45,13 @@ describe('useMapClusters request contract', () => {
 
   it('keeps one queryKey for viewports inside the same tiles (no refetch on a small pan)', async () => {
     const wrapper = makeWrapper()
-    const { rerender } = renderHook(
+    const { rerender } = await renderHook(
       ({ bbox }) => useMapClusters({ bbox, zoom: 12, debounceMs: 0 }),
       { wrapper, initialProps: { bbox: { south: 53.86, west: 27.52, north: 53.94, east: 27.58 } } },
     )
     await waitFor(() => expect(mockFetchMapClusters).toHaveBeenCalledTimes(1))
 
-    rerender({ bbox: { south: 53.87, west: 27.53, north: 53.93, east: 27.57 } })
+    await rerender({ bbox: { south: 53.87, west: 27.53, north: 53.93, east: 27.57 } })
     await sleep(40)
     expect(mockFetchMapClusters).toHaveBeenCalledTimes(1)
 
@@ -64,7 +64,7 @@ describe('useMapClusters request contract', () => {
   it('holds the request while a programmatic map move is in flight and fires once after it', async () => {
     const wrapper = makeWrapper()
     beginProgrammaticMapMove(120)
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ bbox }) => useMapClusters({ bbox, zoom: 12, debounceMs: 0 }),
       { wrapper, initialProps: { bbox: { south: 53.86, west: 27.52, north: 53.94, east: 27.6 } } },
     )
@@ -73,7 +73,7 @@ describe('useMapClusters request contract', () => {
     expect(mockFetchMapClusters).not.toHaveBeenCalled()
 
     // The fit lands on a new viewport before the window closes.
-    rerender({ bbox: { south: 53.5, west: 27.0, north: 54.3, east: 28.1 } })
+    await rerender({ bbox: { south: 53.5, west: 27.0, north: 54.3, east: 28.1 } })
     await waitFor(() => expect(mockFetchMapClusters).toHaveBeenCalledTimes(1), { timeout: 1500 })
     const [bboxArg] = mockFetchMapClusters.mock.calls[0]
     expect(bboxArg.west).toBeLessThanOrEqual(27.0)
@@ -84,7 +84,7 @@ describe('useMapClusters request contract', () => {
   it('on a radius change waits for the re-fitted viewport instead of fetching the old bbox', async () => {
     const wrapper = makeWrapper()
     const bbox = { south: 53.86, west: 27.52, north: 53.94, east: 27.6 }
-    const { rerender } = renderHook(
+    const { rerender } = await renderHook(
       ({ radius, bbox: nextBBox }) =>
         useMapClusters({
           bbox: nextBBox,
@@ -96,14 +96,14 @@ describe('useMapClusters request contract', () => {
     )
     await waitFor(() => expect(mockFetchMapClusters).toHaveBeenCalledTimes(1))
 
-    rerender({ radius: 200, bbox })
+    await rerender({ radius: 200, bbox })
     await sleep(60)
     // Old bbox + new radius is NOT requested.
     expect(mockFetchMapClusters).toHaveBeenCalledTimes(1)
 
     // The auto-fit publishes the wider viewport: exactly one request with the new radius.
     await act(async () => {
-      rerender({ radius: 200, bbox: { south: 52.2, west: 26.1, north: 55.6, east: 29.0 } })
+      await rerender({ radius: 200, bbox: { south: 52.2, west: 26.1, north: 55.6, east: 29.0 } })
     })
     await waitFor(() => expect(mockFetchMapClusters).toHaveBeenCalledTimes(2))
     expect(mockFetchMapClusters.mock.calls[1]?.[2]).toEqual(
@@ -115,7 +115,7 @@ describe('useMapClusters request contract', () => {
   it('still fetches after the refit wait expires when the fit did not move the map', async () => {
     const wrapper = makeWrapper()
     const bbox = { south: 53.86, west: 27.52, north: 53.94, east: 27.6 }
-    const { rerender } = renderHook(
+    const { rerender } = await renderHook(
       ({ radius }) =>
         useMapClusters({
           bbox,
@@ -126,7 +126,7 @@ describe('useMapClusters request contract', () => {
       { wrapper, initialProps: { radius: 50 } },
     )
     await waitFor(() => expect(mockFetchMapClusters).toHaveBeenCalledTimes(1))
-    rerender({ radius: 25 })
+    await rerender({ radius: 25 })
     await waitFor(() => expect(mockFetchMapClusters).toHaveBeenCalledTimes(2), { timeout: 2500 })
     expect(mockFetchMapClusters.mock.calls[1]?.[2]).toEqual(expect.objectContaining({ radius: 25 }))
   })
@@ -134,7 +134,7 @@ describe('useMapClusters request contract', () => {
   it('does not wait for a refit when the renderer never re-fits (native)', async () => {
     const wrapper = makeWrapper()
     const bbox = { south: 53.86, west: 27.52, north: 53.94, east: 27.6 }
-    const { rerender } = renderHook(
+    const { rerender } = await renderHook(
       ({ radius }) =>
         useMapClusters({
           bbox,
@@ -146,7 +146,7 @@ describe('useMapClusters request contract', () => {
       { wrapper, initialProps: { radius: 50 } },
     )
     await waitFor(() => expect(mockFetchMapClusters).toHaveBeenCalledTimes(1))
-    rerender({ radius: 25 })
+    await rerender({ radius: 25 })
     // Well inside the 900 ms refit window.
     await waitFor(() => expect(mockFetchMapClusters).toHaveBeenCalledTimes(2), { timeout: 300 })
     expect(mockFetchMapClusters.mock.calls[1]?.[2]).toEqual(expect.objectContaining({ radius: 25 }))

@@ -46,8 +46,8 @@ const makeWrapper = () => {
   )
 }
 
-const renderTravels = (mode: 'radius' | 'route', fullRouteCoords: [number, number][]) =>
-  renderHook(
+const renderTravels = async (mode: 'radius' | 'route', fullRouteCoords: [number, number][]) =>
+  await renderHook(
     () =>
       useMapTravels({
         coordinates: COORDINATES,
@@ -70,20 +70,20 @@ describe('useMapTravels — data source while a route is being built', () => {
 
   it('radius query identity ignores route geometry edits and retains its dataset', async () => {
     const wrapper = makeWrapper()
-    const { result, rerender } = renderHook(({ coords }) => useMapTravels({
+    const { result, rerender } = await renderHook(({ coords }) => useMapTravels({
       coordinates: COORDINATES, filterValues: FILTER_VALUES, filters: FILTERS,
       mode: 'radius', fullRouteCoords: coords, isFocused: true,
     }), { wrapper, initialProps: { coords: [[27.56, 53.9], [27.1, 53.5]] as [number, number][] } })
     await waitFor(() => expect(result.current.total).toBe(1))
     const before = mockFetchTravelsForMap.mock.calls.length
-    rerender({ coords: [[27.56, 53.9], [28.4, 54.3]] })
+    await rerender({ coords: [[27.56, 53.9], [28.4, 54.3]] })
     await waitFor(() => expect(result.current.total).toBe(1))
     expect(mockFetchTravelsForMap).toHaveBeenCalledTimes(before)
     expect(mockFetchTravelsNearRoute).not.toHaveBeenCalled()
   })
 
   it('keeps places visible in route mode with no route points yet', async () => {
-    const { result } = renderTravels('route', [])
+    const { result } = await renderTravels('route', [])
 
     await waitFor(() => expect(result.current.allTravelsData).toHaveLength(1))
     expect(result.current.total).toBe(1)
@@ -92,7 +92,7 @@ describe('useMapTravels — data source while a route is being built', () => {
   })
 
   it('keeps places visible in route mode with a single start point', async () => {
-    const { result } = renderTravels('route', [[27.56, 53.9]])
+    const { result } = await renderTravels('route', [[27.56, 53.9]])
 
     await waitFor(() => expect(result.current.allTravelsData).toHaveLength(1))
     expect(result.current.total).toBe(1)
@@ -100,7 +100,7 @@ describe('useMapTravels — data source while a route is being built', () => {
   })
 
   it('switches to the route corridor query once the route is built', async () => {
-    const { result } = renderTravels('route', [
+    const { result } = await renderTravels('route', [
       [27.56, 53.9],
       [27.1, 53.5],
     ])
@@ -114,7 +114,7 @@ describe('useMapTravels — data source while a route is being built', () => {
   // clamp 5..20 — вокруг короткого маршрута приходили точки в полосе 20 км, и
   // выдача выглядела как обычный радиус, а не как «места по маршруту».
   it('uses a narrow fixed corridor that does not scale with the nearby radius', async () => {
-    const { result } = renderTravels('route', [
+    const { result } = await renderTravels('route', [
       [27.56, 53.9],
       [27.1, 53.5],
     ])
@@ -125,7 +125,7 @@ describe('useMapTravels — data source while a route is being built', () => {
   })
 
   it('still uses the radius query in plain radius mode', async () => {
-    const { result } = renderTravels('radius', [])
+    const { result } = await renderTravels('radius', [])
 
     await waitFor(() => expect(result.current.allTravelsData).toHaveLength(1))
     expect(result.current.allTravelsData[0]).toMatchObject({ address: 'Radius point' })

@@ -10,11 +10,11 @@ jest.mock('@/utils/seoRoutes/routeMetadata', () => ({ routeMetadata: jest.fn(), 
 import TravelDetailsScreen from '../../app/(tabs)/travels/[param].web'
 import TravelLoaderScreen from '@/components/travel/details/TravelLoaderScreen.web'
 
-it('does not mount a loader subscriber while production still serves generated static pages', () => {
+it('does not mount a loader subscriber while production still serves generated static pages', async () => {
   const previous = process.env.EXPO_PUBLIC_WEB_RUNTIME_SSR
   delete process.env.EXPO_PUBLIC_WEB_RUNTIME_SSR
   try {
-    render(<TravelDetailsScreen />)
+    await render(<TravelDetailsScreen />)
     expect(TravelLoaderScreen).not.toHaveBeenCalled()
   } finally {
     if (previous === undefined) delete process.env.EXPO_PUBLIC_WEB_RUNTIME_SSR

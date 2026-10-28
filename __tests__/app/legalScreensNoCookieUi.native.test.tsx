@@ -42,9 +42,9 @@ const setPlatform = (os: typeof Platform.OS) => {
 
 type LegalSection = { heading?: string; paragraphs: string[] }
 
-const collectScreenText = (Screen: React.ComponentType): string[] => {
+const collectScreenText = async (Screen: React.ComponentType): string[] => {
   mockLegalPageProps = null
-  render(<Screen />)
+  await render(<Screen />)
   const props = mockLegalPageProps as unknown as {
     pageTitle: string
     intro?: string[]
@@ -62,18 +62,18 @@ describe('legal screens on native have no cookie UI references (#2135)', () => {
     setPlatform(originalPlatform)
   })
 
-  it.each(Object.keys(LEGAL_SCREENS))('%s: no reference to the cookie banner or cookie settings page', (name) => {
+  it.each(Object.keys(LEGAL_SCREENS))('%s: no reference to the cookie banner or cookie settings page', async (name) => {
     setPlatform('ios')
 
-    const offenders = collectScreenText(LEGAL_SCREENS[name]).filter((text) => COOKIE_UI_REFERENCE.test(text))
+    const offenders = await (await collectScreenText(LEGAL_SCREENS[name])).filter((text) => COOKIE_UI_REFERENCE.test(text))
 
     expect({ screen: name, offenders }).toEqual({ screen: name, offenders: [] })
   })
 
-  it('privacy section 4 on native states that the app has no cookies or tracking', () => {
+  it('privacy section 4 on native states that the app has no cookies or tracking', async () => {
     setPlatform('ios')
 
-    const text = collectScreenText(PrivacyScreen)
+    const text = await collectScreenText(PrivacyScreen)
 
     expect(text).toContain(i18nT('legal:app.tabs.privacy.nativeAppStorage'))
     expect(text).toContain(i18nT('legal:app.tabs.privacy.nativeSiteAnalytics'))
@@ -82,19 +82,19 @@ describe('legal screens on native have no cookie UI references (#2135)', () => {
     expect(i18nT('legal:app.tabs.privacy.nativeAppStorage')).toMatch(/не использует файлы cookie.*не отслеживает вас/)
   })
 
-  it('privacy on Android uses the same native paragraphs', () => {
+  it('privacy on Android uses the same native paragraphs', async () => {
     setPlatform('android')
 
-    const text = collectScreenText(PrivacyScreen)
+    const text = await collectScreenText(PrivacyScreen)
 
     expect(text).toContain(i18nT('legal:app.tabs.privacy.nativeAppStorage'))
     expect(text).not.toContain(i18nT('legal:app.tabs.privacy.analiticheskie_instrumenty_takie_kak_yandeks_03d8dc46'))
   })
 
-  it('privacy on web keeps the site text about the cookie banner and settings page', () => {
+  it('privacy on web keeps the site text about the cookie banner and settings page', async () => {
     setPlatform('web')
 
-    const text = collectScreenText(PrivacyScreen)
+    const text = await collectScreenText(PrivacyScreen)
 
     expect(text).toContain(i18nT('legal:app.tabs.privacy.my_ispolzuem_tehnicheski_neobhodimye_fayly_c_86b4b204'))
     expect(text).toContain(i18nT('legal:app.tabs.privacy.analiticheskie_instrumenty_takie_kak_yandeks_03d8dc46'))

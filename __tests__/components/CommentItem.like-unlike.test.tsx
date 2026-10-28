@@ -75,10 +75,10 @@ describe('CommentItem - Like/Unlike functionality', () => {
       isPending: false,
     } as any);
 
-    render(<CommentItem comment={mockComment} />, { wrapper });
+    await render(<CommentItem comment={mockComment} />, { wrapper });
 
     const likeButton = screen.getByLabelText('Поставить лайк');
-    fireEvent.press(likeButton);
+    await fireEvent.press(likeButton);
 
     await waitFor(() => {
       expect(likeMock).toHaveBeenCalledWith(1);
@@ -101,10 +101,10 @@ describe('CommentItem - Like/Unlike functionality', () => {
     } as any);
 
     const likedComment = { ...mockComment, is_liked: true };
-    render(<CommentItem comment={likedComment} />, { wrapper });
+    await render(<CommentItem comment={likedComment} />, { wrapper });
 
     const unlikeButton = screen.getByLabelText('Убрать лайк');
-    fireEvent.press(unlikeButton);
+    await fireEvent.press(unlikeButton);
 
     await waitFor(() => {
       expect(unlikeMock).toHaveBeenCalledWith(1);
@@ -127,11 +127,11 @@ describe('CommentItem - Like/Unlike functionality', () => {
     } as any);
 
     // Начинаем с не лайкнутого комментария
-    const { rerender } = render(<CommentItem comment={mockComment} />, { wrapper });
+    const { rerender } = await render(<CommentItem comment={mockComment} />, { wrapper });
 
     // Первый клик - ставим лайк
     const likeButton1 = screen.getByLabelText('Поставить лайк');
-    fireEvent.press(likeButton1);
+    await fireEvent.press(likeButton1);
 
     await waitFor(() => {
       expect(likeMock).toHaveBeenCalledWith(1);
@@ -140,11 +140,11 @@ describe('CommentItem - Like/Unlike functionality', () => {
 
     // Симулируем обновление состояния после лайка
     const likedComment = { ...mockComment, is_liked: true, likes_count: 6 };
-    rerender(<CommentItem comment={likedComment} />);
+    await rerender(<CommentItem comment={likedComment} />);
 
     // Второй клик - убираем лайк
     const unlikeButton = screen.getByLabelText('Убрать лайк');
-    fireEvent.press(unlikeButton);
+    await fireEvent.press(unlikeButton);
 
     await waitFor(() => {
       expect(unlikeMock).toHaveBeenCalledWith(1);
@@ -154,11 +154,11 @@ describe('CommentItem - Like/Unlike functionality', () => {
 
     // Симулируем обновление состояния после отлайка
     const unlikedComment = { ...mockComment, is_liked: false, likes_count: 5 };
-    rerender(<CommentItem comment={unlikedComment} />);
+    await rerender(<CommentItem comment={unlikedComment} />);
 
     // Третий клик - снова ставим лайк
     const likeButton2 = screen.getByLabelText('Поставить лайк');
-    fireEvent.press(likeButton2);
+    await fireEvent.press(likeButton2);
 
     await waitFor(() => {
       expect(likeMock).toHaveBeenCalledWith(1);
@@ -180,14 +180,14 @@ describe('CommentItem - Like/Unlike functionality', () => {
       isPending: false,
     } as any);
 
-    render(<CommentItem comment={mockComment} />, { wrapper });
+    await render(<CommentItem comment={mockComment} />, { wrapper });
 
     const likeButton = screen.getByLabelText('Поставить лайк');
 
     // Кнопка должна быть disabled
     expect(likeButton.props.disabled).toBe(true);
 
-    fireEvent.press(likeButton);
+    await fireEvent.press(likeButton);
 
     // mutate не должен быть вызван, так как кнопка disabled
     expect(likeMock).not.toHaveBeenCalled();
@@ -207,20 +207,20 @@ describe('CommentItem - Like/Unlike functionality', () => {
     } as any);
 
     const likedComment = { ...mockComment, is_liked: true };
-    render(<CommentItem comment={likedComment} />, { wrapper });
+    await render(<CommentItem comment={likedComment} />, { wrapper });
 
     const unlikeButton = screen.getByLabelText('Убрать лайк');
 
     // Кнопка должна быть disabled
     expect(unlikeButton.props.disabled).toBe(true);
 
-    fireEvent.press(unlikeButton);
+    await fireEvent.press(unlikeButton);
 
     // mutate не должен быть вызван, так как кнопка disabled
     expect(unlikeMock).not.toHaveBeenCalled();
   });
 
-  it('should show correct icon color for liked state', () => {
+  it('should show correct icon color for liked state', async () => {
     const mockUseLikeCommentDefault = mockUseLikeComment as jest.MockedFunction<typeof useLikeComment>;
     const mockUseUnlikeCommentDefault = mockUseUnlikeComment as jest.MockedFunction<typeof useUnlikeComment>;
 
@@ -235,14 +235,14 @@ describe('CommentItem - Like/Unlike functionality', () => {
     } as any);
 
     const likedComment = { ...mockComment, is_liked: true };
-    const { rerender } = render(<CommentItem comment={likedComment} />, { wrapper });
+    const { rerender } = await render(<CommentItem comment={likedComment} />, { wrapper });
 
     // Проверяем, что кнопка отображается с правильным label
     expect(screen.getByLabelText('Убрать лайк')).toBeTruthy();
 
     // Изменяем на не лайкнутый
     const unlikedComment = { ...mockComment, is_liked: false };
-    rerender(<CommentItem comment={unlikedComment} />);
+    await rerender(<CommentItem comment={unlikedComment} />);
 
     // Проверяем, что кнопка изменилась
     expect(screen.getByLabelText('Поставить лайк')).toBeTruthy();
@@ -266,12 +266,12 @@ describe('CommentItem - Like/Unlike functionality', () => {
     const commentWithoutIsLiked = { ...mockComment };
     delete (commentWithoutIsLiked as any).is_liked;
 
-    const { rerender } = render(<CommentItem comment={commentWithoutIsLiked} />, { wrapper });
+    const { rerender } = await render(<CommentItem comment={commentWithoutIsLiked} />, { wrapper });
 
     // Должна отображаться кнопка "Поставить лайк" (is_liked = undefined => falsy => не лайкнуто)
     expect(screen.getByLabelText('Поставить лайк')).toBeTruthy();
 
-    fireEvent.press(screen.getByLabelText('Поставить лайк'));
+    await fireEvent.press(screen.getByLabelText('Поставить лайк'));
 
     await waitFor(() => {
       expect(likeMock).toHaveBeenCalledWith(1);
@@ -281,7 +281,7 @@ describe('CommentItem - Like/Unlike functionality', () => {
     const commentAfterLike = { ...mockComment, likes_count: 6 };
     delete (commentAfterLike as any).is_liked;
 
-    rerender(<CommentItem comment={commentAfterLike} />);
+    await rerender(<CommentItem comment={commentAfterLike} />);
 
     // Даже если бэкенд не вернул is_liked, кнопка должна позволить отлайкнуть
     // Но в реальности, если is_liked undefined, кнопка будет "Поставить лайк"

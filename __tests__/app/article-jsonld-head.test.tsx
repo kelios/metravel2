@@ -6,11 +6,12 @@
 
 import React from 'react'
 import { Platform } from 'react-native'
-import { render, waitFor } from '@testing-library/react-native'
-import { Helmet, HelmetProvider, type HelmetServerState } from 'expo-router/vendor/react-helmet-async/lib'
+import { waitFor } from '@testing-library/react-native'
+import { createRootRegistry } from '../helpers/rawRootLifecycle'
+import { HelmetProvider } from 'expo-router/vendor/react-helmet-async/lib'
+import { readHelmetHead } from '../helpers/helmetHead'
 
 import ArticleScreen from '@/app/(tabs)/article/[id].web'
-import LazyInstantSEO from '@/components/seo/LazyInstantSEO'
 
 const mockUseLocalSearchParams = jest.fn()
 const mockFetchArticle = jest.fn()
@@ -69,35 +70,24 @@ jest.mock('@/ui/paper', () => {
   return { Card, Title }
 })
 
-const emitHelmetScripts = (node: React.ReactNode) => {
-  const context: { helmet?: HelmetServerState } = {}
-  const originalCanUseDOM = HelmetProvider.canUseDOM
-  let helmetScreen: ReturnType<typeof render> | undefined
-  HelmetProvider.canUseDOM = false
-  try {
-    helmetScreen = render(
-      <HelmetProvider context={context}>
-        <Helmet>{node}</Helmet>
-      </HelmetProvider>,
-    )
-    const html = context.helmet?.script.toString() ?? ''
-    const template = document.createElement('template')
-    template.innerHTML = html
-    return [...template.content.querySelectorAll('script')]
-  } finally {
-    helmetScreen?.unmount()
-    HelmetProvider.canUseDOM = originalCanUseDOM
-  }
-}
+jest.mock('expo-router/head', () => require('../helpers/helmetHead').createHelmetHeadMock())
+
+// The .web route deliberately contains HTML headings. Keep the real web
+// subtree under the generic renderer; native tests retain strict RNTL rules.
+const webRoots = createRootRegistry()
+afterEach(() => webRoots.cleanup())
 
 describe('Article JSON-LD Helmet contract (#1967)', () => {
   const originalOS = Platform.OS
+  const originalCanUseDOM = HelmetProvider.canUseDOM
 
   beforeAll(() => {
+    HelmetProvider.canUseDOM = false
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
   })
 
   afterAll(() => {
+    HelmetProvider.canUseDOM = originalCanUseDOM
     Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOS })
   })
 
@@ -113,15 +103,16 @@ describe('Article JSON-LD Helmet contract (#1967)', () => {
   })
 
   it('emits application/ld+json with data-rh from real LazyInstantSEO additionalTags', async () => {
-    const screen = render(<ArticleScreen />)
+    const root = webRoots.createRoot()
+    await React.act(() => root.render(<ArticleScreen />))
 
     await waitFor(() => {
-      expect(screen.UNSAFE_root.findByType(LazyInstantSEO).props.additionalTags).toBeTruthy()
+      expect(readHelmetHead().scripts).toHaveLength(1)
     })
 
-    const { additionalTags } = screen.UNSAFE_root.findByType(LazyInstantSEO).props
+    const { children, scripts } = readHelmetHead()
+    const [additionalTags] = React.Children.toArray(children) as React.ReactElement[]
     expect(additionalTags.props).not.toHaveProperty('dangerouslySetInnerHTML')
-    const scripts = emitHelmetScripts(additionalTags)
     expect(scripts).toHaveLength(1)
     expect(scripts[0].type).toBe('application/ld+json')
     expect(scripts[0].getAttribute('data-rh')).toBe('true')

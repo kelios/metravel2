@@ -33,8 +33,8 @@ describe('TravelDetailsCriticalShell viewport overlay (#2118)', () => {
     Platform.OS = originalOS
   })
 
-  it('mounts the viewport chrome outside the scroll content and passes touches through', () => {
-    render(
+  it('mounts the viewport chrome outside the scroll content and passes touches through', async () => {
+    await render(
       <TravelDetailsCriticalShell
         travel={{ id: 1, name: 'Тропа ведьм' } as any}
         isMobile

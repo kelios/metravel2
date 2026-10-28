@@ -44,7 +44,7 @@ const baseTravel: any = {
   travel_image_thumb_small_url: null,
 }
 
-const renderWithClient = (ui: React.ReactElement) => {
+const renderWithClient = async (ui: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -53,18 +53,18 @@ const renderWithClient = (ui: React.ReactElement) => {
     },
   })
 
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
+  return await render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
 }
 
 describe('AuthorCard', () => {
-  it('returns null when no author data', () => {
-    const { queryByText } = renderWithClient(<AuthorCard travel={{} as any} />)
+  it('returns null when no author data', async () => {
+    const { queryByText } = await renderWithClient(<AuthorCard travel={{} as any} />)
     expect(queryByText('Аноним')).toBeNull()
   })
 
-  it('renders author info with placeholder avatar when no image', () => {
+  it('renders author info with placeholder avatar when no image', async () => {
     mockProfile = null
-    const { getByText, getByLabelText, queryByText } = renderWithClient(<AuthorCard travel={baseTravel} />)
+    const { getByText, getByLabelText, queryByText } = await renderWithClient(<AuthorCard travel={baseTravel} />)
 
     expect(getByText('Test User')).toBeTruthy()
     expect(queryByText('Беларусь')).toBeNull()
@@ -75,30 +75,30 @@ describe('AuthorCard', () => {
     expect(button).toBeTruthy()
   })
 
-  it('calls onViewAuthorTravels when provided instead of navigation', () => {
+  it('calls onViewAuthorTravels when provided instead of navigation', async () => {
     const onViewAuthorTravels = jest.fn()
 
-    const { getByLabelText } = renderWithClient(
+    const { getByLabelText } = await renderWithClient(
       <AuthorCard travel={baseTravel} onViewAuthorTravels={onViewAuthorTravels} />,
     )
 
     const button = getByLabelText('Все путешествия автора')
-    fireEvent.press(button)
+    await fireEvent.press(button)
 
     expect(onViewAuthorTravels).toHaveBeenCalledTimes(1)
     expect(mockPush).not.toHaveBeenCalled()
     expect((Linking.openURL as jest.Mock)).not.toHaveBeenCalled()
   })
 
-  it('navigates with router.push on web when userId exists and no onViewAuthorTravels', () => {
-    const { getByLabelText } = renderWithClient(<AuthorCard travel={baseTravel} />)
+  it('navigates with router.push on web when userId exists and no onViewAuthorTravels', async () => {
+    const { getByLabelText } = await renderWithClient(<AuthorCard travel={baseTravel} />)
 
     const button = getByLabelText('Все путешествия автора')
-    fireEvent.press(button)
+    await fireEvent.press(button)
     expect(mockPush).toHaveBeenCalledWith('/search?user_id=42')
   })
 
-  it('extracts userId from userIds string and shows subscribe/message buttons', () => {
+  it('extracts userId from userIds string and shows subscribe/message buttons', async () => {
     mockProfile = null
     const travelWithStringUserIds: any = {
       id: 10,
@@ -108,16 +108,16 @@ describe('AuthorCard', () => {
       userTravelsCount: 2,
       travel_image_thumb_small_url: null,
     }
-    const { getByText, getByLabelText } = renderWithClient(
+    const { getByText, getByLabelText } = await renderWithClient(
       <AuthorCard travel={travelWithStringUserIds} />,
     )
     expect(getByText('String ID User')).toBeTruthy()
     const button = getByLabelText('Все путешествия автора')
-    fireEvent.press(button)
+    await fireEvent.press(button)
     expect(mockPush).toHaveBeenCalledWith('/search?user_id=55')
   })
 
-  it('extracts userId from comma-separated userIds string', () => {
+  it('extracts userId from comma-separated userIds string', async () => {
     mockProfile = null
     const travelWithCommaUserIds: any = {
       id: 11,
@@ -126,26 +126,26 @@ describe('AuthorCard', () => {
       userIds: '77,88',
       travel_image_thumb_small_url: null,
     }
-    const { getByText, getByLabelText } = renderWithClient(
+    const { getByText, getByLabelText } = await renderWithClient(
       <AuthorCard travel={travelWithCommaUserIds} />,
     )
     expect(getByText('Comma User')).toBeTruthy()
     const button = getByLabelText('Все путешествия автора')
-    fireEvent.press(button)
+    await fireEvent.press(button)
     expect(mockPush).toHaveBeenCalledWith('/search?user_id=77')
   })
 
-  it('does not show travel countries when profile is absent', () => {
+  it('does not show travel countries when profile is absent', async () => {
     mockProfile = null
-    const { queryByText } = renderWithClient(
+    const { queryByText } = await renderWithClient(
       <AuthorCard travel={{ ...baseTravel, countryName: 'Россия, Беларусь' }} />,
     )
     expect(queryByText('Россия, Беларусь')).toBeNull()
   })
 
-  it('shows author country from profile when available', () => {
+  it('shows author country from profile when available', async () => {
     mockProfile = { countryName: 'Испания' }
-    const { getByText } = renderWithClient(
+    const { getByText } = await renderWithClient(
       <AuthorCard travel={{ ...baseTravel, countryName: 'Россия, Беларусь' }} />,
     )
     expect(getByText('Испания')).toBeTruthy()

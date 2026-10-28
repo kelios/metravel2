@@ -86,8 +86,8 @@ beforeEach(() => {
 (global as any).__DEV__ = true;
 
 describe('ErrorDisplay', () => {
-  it('should render with default title and message', () => {
-    const { toJSON } = render(
+  it('should render with default title and message', async () => {
+    const { toJSON } = await render(
       <ErrorDisplay message="Something went wrong" />
     );
 
@@ -98,8 +98,8 @@ describe('ErrorDisplay', () => {
     expect(treeStr).toContain('Something went wrong');
   });
 
-  it('should render with custom title', () => {
-    const { toJSON } = render(
+  it('should render with custom title', async () => {
+    const { toJSON } = await render(
       <ErrorDisplay 
         title="Custom Error"
         message="Error message"
@@ -111,8 +111,8 @@ describe('ErrorDisplay', () => {
     expect(treeStr).toContain('Custom Error');
   });
 
-  it('should render error icon for error variant', () => {
-    const { getByTestId } = render(
+  it('should render error icon for error variant', async () => {
+    const { getByTestId } = await render(
       <ErrorDisplay 
         message="Error"
         variant="error"
@@ -122,8 +122,8 @@ describe('ErrorDisplay', () => {
     expect(getByTestId('feather-alert-circle')).toBeTruthy();
   });
 
-  it('should render warning icon for warning variant', () => {
-    const { getByTestId } = render(
+  it('should render warning icon for warning variant', async () => {
+    const { getByTestId } = await render(
       <ErrorDisplay 
         message="Warning"
         variant="warning"
@@ -133,8 +133,8 @@ describe('ErrorDisplay', () => {
     expect(getByTestId('feather-alert-triangle')).toBeTruthy();
   });
 
-  it('should render info icon for info variant', () => {
-    const { getByTestId } = render(
+  it('should render info icon for info variant', async () => {
+    const { getByTestId } = await render(
       <ErrorDisplay 
         message="Info"
         variant="info"
@@ -144,60 +144,22 @@ describe('ErrorDisplay', () => {
     expect(getByTestId('feather-info')).toBeTruthy();
   });
 
-  it('should call onRetry when retry button is pressed', () => {
+  it('should call onRetry when retry button is pressed', async () => {
     const onRetry = jest.fn();
-    const { UNSAFE_getAllByType } = render(
-      <ErrorDisplay 
-        message="Error"
-        onRetry={onRetry}
-      />
-    );
-
-    const { Pressable } = require('react-native');
-    const pressables = UNSAFE_getAllByType(Pressable);
-    
-    // Находим кнопку "Попробовать снова"
-    const retryButton = pressables.find((p: any) => {
-      const children = p.props.children;
-      if (Array.isArray(children)) {
-        return children.some((child: any) => 
-          child?.props?.children === 'Попробовать снова'
-        );
-      }
-      return false;
-    });
-
-    if (retryButton) {
-      fireEvent.press(retryButton);
-      expect(onRetry).toHaveBeenCalledTimes(1);
-    }
+    const { getByRole } = await render(<ErrorDisplay message="Error" onRetry={onRetry} />);
+    await fireEvent.press(getByRole('button', { name: 'Попробовать снова' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('should call onDismiss when dismiss button is pressed', () => {
+  it('should call onDismiss when dismiss button is pressed', async () => {
     const onDismiss = jest.fn();
-    const { UNSAFE_getAllByType } = render(
-      <ErrorDisplay 
-        message="Error"
-        onDismiss={onDismiss}
-      />
-    );
-
-    const { Pressable } = require('react-native');
-    const pressables = UNSAFE_getAllByType(Pressable);
-    
-    // Находим кнопку закрытия (X)
-    const dismissButton = pressables.find((p: any) => 
-      p.props.children?.props?.name === 'x'
-    );
-
-    if (dismissButton) {
-      fireEvent.press(dismissButton);
-      expect(onDismiss).toHaveBeenCalledTimes(1);
-    }
+    const { getByRole } = await render(<ErrorDisplay message="Error" onDismiss={onDismiss} />);
+    await fireEvent.press(getByRole('button', { name: 'Закрыть уведомление об ошибке' }));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
-  it('should show contact button when showContact is true', () => {
-    const { toJSON } = render(
+  it('should show contact button when showContact is true', async () => {
+    const { toJSON } = await render(
       <ErrorDisplay 
         message="Error"
         showContact={true}
@@ -209,8 +171,8 @@ describe('ErrorDisplay', () => {
     expect(treeStr).toContain('Связаться с поддержкой');
   });
 
-  it('should not show contact button when showContact is false', () => {
-    const { toJSON } = render(
+  it('should not show contact button when showContact is false', async () => {
+    const { toJSON } = await render(
       <ErrorDisplay 
         message="Error"
         showContact={false}
@@ -222,9 +184,9 @@ describe('ErrorDisplay', () => {
     expect(treeStr).not.toContain('Связаться с поддержкой');
   });
 
-  it('should show details in dev mode', () => {
+  it('should show details in dev mode', async () => {
     (global as any).__DEV__ = true;
-    const { toJSON } = render(
+    const { toJSON } = await render(
       <ErrorDisplay 
         message="Error"
         details="Technical details"
@@ -237,9 +199,9 @@ describe('ErrorDisplay', () => {
     expect(treeStr).toContain('Технические детали');
   });
 
-  it('should not show details when not in dev mode', () => {
+  it('should not show details when not in dev mode', async () => {
     (global as any).__DEV__ = false;
-    const { toJSON } = render(
+    const { toJSON } = await render(
       <ErrorDisplay 
         message="Error"
         details="Technical details"
@@ -251,34 +213,14 @@ describe('ErrorDisplay', () => {
     expect(treeStr).not.toContain('Technical details');
   });
 
-  it('should open support link when contact button is pressed', () => {
+  it('should open support link when contact button is pressed', async () => {
     const originalPlatform = Platform.OS;
     Platform.OS = 'web';
-    const { UNSAFE_getAllByType } = render(
-      <ErrorDisplay 
-        message="Error"
-        showContact={true}
-      />
-    );
-
-    const { Pressable } = require('react-native');
-    const pressables = UNSAFE_getAllByType(Pressable);
-    
-    // Находим кнопку связи с поддержкой
-    const contactButton = pressables.find((p: any) => {
-      const children = p.props.children;
-      if (Array.isArray(children)) {
-        return children.some((child: any) => 
-          child?.props?.children === 'Связаться с поддержкой'
-        );
-      }
-      return false;
-    });
-
-    expect(contactButton).toBeDefined();
-    fireEvent.press(contactButton);
-    expect(mockOpenExternalUrl).toHaveBeenCalledWith('https://www.instagram.com/metravelby/');
-    expect(openSpy).not.toHaveBeenCalled();
-    Platform.OS = originalPlatform;
+    try {
+      const { getByRole } = await render(<ErrorDisplay message="Error" showContact />);
+      await fireEvent.press(getByRole('button', { name: 'Связаться с поддержкой' }));
+      expect(mockOpenExternalUrl).toHaveBeenCalledWith('https://www.instagram.com/metravelby/');
+      expect(openSpy).not.toHaveBeenCalled();
+    } finally { Platform.OS = originalPlatform; }
   });
 });

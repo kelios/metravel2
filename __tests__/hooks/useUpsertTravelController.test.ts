@@ -151,24 +151,24 @@ describe('useUpsertTravelController', () => {
     await i18n.changeLanguage(originalLanguage);
   });
 
-  it('sets isNew=true when id is missing', () => {
-    const { result } = renderHook(() => useUpsertTravelController());
+  it('sets isNew=true when id is missing', async () => {
+    const { result } = await renderHook(() => useUpsertTravelController());
     expect(result.current.isNew).toBe(true);
   });
 
-  it('sets isNew=false when id is provided', () => {
+  it('sets isNew=false when id is provided', async () => {
     mockUseLocalSearchParams.mockReturnValue({ id: '123' });
-    const { result } = renderHook(() => useUpsertTravelController());
+    const { result } = await renderHook(() => useUpsertTravelController());
     expect(result.current.isNew).toBe(false);
   });
 
-  it('creates a note from mode=note and keeps the six-step wizard otherwise (#2666)', () => {
+  it('creates a note from mode=note and keeps the six-step wizard otherwise (#2666)', async () => {
     mockUseLocalSearchParams.mockReturnValue({ mode: 'note' });
     mockUseTravelFormData.mockImplementation((options: { initialPublicationFormat?: string }) => ({
       ...baseForm,
       formData: { ...baseForm.formData, publication_format: options.initialPublicationFormat },
     }));
-    const note = renderHook(() => useUpsertTravelController());
+    const note = await renderHook(() => useUpsertTravelController());
     expect(mockUseTravelFormData).toHaveBeenLastCalledWith(expect.objectContaining({ initialPublicationFormat: 'note' }));
     expect(mockUseTravelWizard).toHaveBeenLastCalledWith(expect.objectContaining({
       totalSteps: 2,
@@ -179,7 +179,7 @@ describe('useUpsertTravelController', () => {
     expect(note.result.current.publicationMode).toBe('note');
 
     mockUseLocalSearchParams.mockReturnValue({ mode: 'other' });
-    const full = renderHook(() => useUpsertTravelController());
+    const full = await renderHook(() => useUpsertTravelController());
     expect(mockUseTravelFormData).toHaveBeenLastCalledWith(expect.objectContaining({ initialPublicationFormat: 'full' }));
     expect(mockUseTravelWizard).toHaveBeenLastCalledWith(expect.objectContaining({
       totalSteps: 6,
@@ -189,22 +189,22 @@ describe('useUpsertTravelController', () => {
     expect(full.result.current.publicationMode).toBe('full');
   });
 
-  it('opens an existing note by its stored format, and in the full wizard for a moderator', () => {
+  it('opens an existing note by its stored format, and in the full wizard for a moderator', async () => {
     mockUseLocalSearchParams.mockReturnValue({ id: '55' });
     mockUseTravelFormData.mockReturnValue({
       ...baseForm,
       formData: { ...baseForm.formData, id: '55', publication_format: 'note' },
     });
-    expect(renderHook(() => useUpsertTravelController()).result.current.publicationMode).toBe('note');
+    expect((await renderHook(() => useUpsertTravelController())).result.current.publicationMode).toBe('note');
 
     mockUseAuth.mockReturnValue({ userId: 'admin', isAuthenticated: true, isSuperuser: true, authReady: true });
-    expect(renderHook(() => useUpsertTravelController()).result.current.publicationMode).toBe('full');
+    expect((await renderHook(() => useUpsertTravelController())).result.current.publicationMode).toBe('full');
   });
 
-  it('waits for the first country result and preserves article context without restoring a stale new-wizard step', () => {
+  it('waits for the first country result and preserves article context without restoring a stale new-wizard step', async () => {
     mockUseLocalSearchParams.mockReturnValue({ source_travel_id: '42', country: 'PL', place: 'Краков' });
     mockUseTravelFilters.mockReturnValue({ filters: baseFilters, isLoading: true });
-    const { result, rerender } = renderHook(() => useUpsertTravelController());
+    const { result, rerender } = await renderHook(() => useUpsertTravelController());
     expect(mockUseTravelFormData).toHaveBeenLastCalledWith(expect.objectContaining({ prefillPending: true }));
     expect(mockUseTravelWizard).toHaveBeenLastCalledWith(expect.objectContaining({ stepStorageKey: undefined }));
 
@@ -212,7 +212,7 @@ describe('useUpsertTravelController', () => {
       filters: { ...baseFilters, countries: [{ country_id: '616', title_ru: 'Польша', country_code: 'PL' }] },
       isLoading: false,
     });
-    rerender({});
+    await rerender({});
     expect(mockUseTravelFormData).toHaveBeenLastCalledWith(expect.objectContaining({
       prefillPending: false, initialPrefill: { name: 'Краков', countries: ['616'] },
     }));
@@ -220,43 +220,43 @@ describe('useUpsertTravelController', () => {
 
     mockUseLocalSearchParams.mockReturnValue({ source_travel_id: '99', country: 'BY', place: 'Другое место' });
     mockUseTravelFilters.mockReturnValue({ filters: baseFilters, isLoading: false });
-    rerender({});
+    await rerender({});
     expect(mockUseTravelFormData).toHaveBeenLastCalledWith(expect.objectContaining({
       initialPrefill: { name: 'Краков', countries: ['616'] },
     }));
     expect(result.current.shareTripContext?.sourceTravelId).toBe('42');
   });
 
-  it('settles failed dictionaries and does not seed an existing edit or a late source over ordinary creation', () => {
+  it('settles failed dictionaries and does not seed an existing edit or a late source over ordinary creation', async () => {
     mockUseLocalSearchParams.mockReturnValue({ source_travel_id: '42', country: 'PL', place: 'Краков' });
     mockUseTravelFilters.mockReturnValue({ filters: baseFilters, isLoading: false, error: new Error('offline') });
-    const view = renderHook(() => useUpsertTravelController());
+    const view = await renderHook(() => useUpsertTravelController());
     expect(mockUseTravelFormData).toHaveBeenLastCalledWith(expect.objectContaining({
       prefillPending: false, initialPrefill: { name: 'Краков', countries: [] },
     }));
-    view.unmount();
+    await view.unmount();
 
     mockUseLocalSearchParams.mockReturnValue({ id: '321', source_travel_id: '42' });
-    const existing = renderHook(() => useUpsertTravelController());
+    const existing = await renderHook(() => useUpsertTravelController());
     expect(existing.result.current.shareTripContext).toBeNull();
-    existing.unmount();
+    await existing.unmount();
     mockUseLocalSearchParams.mockReturnValue({});
-    const ordinary = renderHook(() => useUpsertTravelController());
+    const ordinary = await renderHook(() => useUpsertTravelController());
     mockUseLocalSearchParams.mockReturnValue({ source_travel_id: '42', place: 'Позднее место' });
-    ordinary.rerender({});
+    await ordinary.rerender({});
     expect(ordinary.result.current.shareTripContext).toBeNull();
     expect(mockUseTravelFormData).toHaveBeenLastCalledWith(expect.objectContaining({
       prefillPending: false, initialPrefill: null,
     }));
   });
 
-  it('computes autosaveBadge from autosave status', () => {
+  it('computes autosaveBadge from autosave status', async () => {
     mockUseTravelFormData.mockReturnValue({
       ...baseForm,
       autosave: { ...baseForm.autosave, status: 'saving', phase: 'saving' },
     });
 
-    const { result } = renderHook(() => useUpsertTravelController());
+    const { result } = await renderHook(() => useUpsertTravelController());
     expect(result.current.autosaveBadge).toBe('Сохранение...');
   });
 
@@ -362,7 +362,7 @@ describe('useUpsertTravelController', () => {
         },
       });
 
-      const { result } = renderHook(() => useUpsertTravelController());
+      const { result } = await renderHook(() => useUpsertTravelController());
       expect(result.current.autosaveBadge).toBe('Сохранено 5 минут назад');
     } finally {
       if (relativeTimeFormatDescriptor) {
@@ -373,7 +373,7 @@ describe('useUpsertTravelController', () => {
     }
   });
 
-  it('refreshes the visible saved-relative-time while the editor stays open', () => {
+  it('refreshes the visible saved-relative-time while the editor stays open', async () => {
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-08-20T10:01:00.000Z'));
     mockUseTravelFormData.mockReturnValue({
@@ -386,27 +386,27 @@ describe('useUpsertTravelController', () => {
       },
     });
 
-    const { result } = renderHook(() => useUpsertTravelController());
+    const { result } = await renderHook(() => useUpsertTravelController());
     expect(result.current.autosaveBadge).toBe('Сохранено 1 минуту назад');
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(60_000);
     });
     expect(result.current.autosaveBadge).toBe('Сохранено 2 минуты назад');
   });
 
-  it('computes progress based on wizard currentStep / totalSteps', () => {
+  it('computes progress based on wizard currentStep / totalSteps', async () => {
     mockUseTravelWizard.mockReturnValue({
       ...baseWizard,
       currentStep: 3,
       totalSteps: 6,
     });
 
-    const { result } = renderHook(() => useUpsertTravelController());
+    const { result } = await renderHook(() => useUpsertTravelController());
     expect(result.current.progress).toBe(0.5);
   });
 
-  it('selects currentStepMeta from stepConfig', () => {
+  it('selects currentStepMeta from stepConfig', async () => {
     mockUseTravelWizard.mockReturnValue({
       ...baseWizard,
       currentStep: 2,
@@ -416,18 +416,18 @@ describe('useUpsertTravelController', () => {
       ],
     });
 
-    const { result } = renderHook(() => useUpsertTravelController());
+    const { result } = await renderHook(() => useUpsertTravelController());
     expect(result.current.currentStepMeta?.id).toBe(2);
     expect(result.current.currentStepMeta?.subtitle).toBe('s2');
   });
 
-  it('passes loadOnMount/currentStep to useTravelFilters', () => {
+  it('passes loadOnMount/currentStep to useTravelFilters', async () => {
     mockUseTravelWizard.mockReturnValue({
       ...baseWizard,
       currentStep: 4,
     });
 
-    renderHook(() => useUpsertTravelController());
+    await renderHook(() => useUpsertTravelController());
 
     expect(mockUseTravelFilters).toHaveBeenCalledWith({
       loadOnMount: true,
@@ -439,13 +439,13 @@ describe('useUpsertTravelController', () => {
     const error = new Error('Dictionary unavailable');
     const loadFilters = jest.fn(async () => {});
     mockUseTravelFilters.mockReturnValue({ filters: baseFilters, isLoading: false, error, loadFilters });
-    const { result } = renderHook(() => useUpsertTravelController());
+    const { result } = await renderHook(() => useUpsertTravelController());
     expect(result.current.filtersError).toBe(error);
     await act(async () => { await result.current.retryFilters(); });
     expect(loadFilters).toHaveBeenCalledTimes(1);
   });
 
-  it('does not save local draft when form is dirty but user did not interact', () => {
+  it('does not save local draft when form is dirty but user did not interact', async () => {
     const saveDraft = jest.fn();
     mockUseDraftRecovery.mockReturnValue({
       hasPendingDraft: false,
@@ -465,11 +465,11 @@ describe('useUpsertTravelController', () => {
       formData: { id: 1, countries: [], categories: [] },
     });
 
-    renderHook(() => useUpsertTravelController());
+    await renderHook(() => useUpsertTravelController());
     expect(saveDraft).not.toHaveBeenCalled();
   });
 
-  it('saves local draft when form is dirty and user interacted', () => {
+  it('saves local draft when form is dirty and user interacted', async () => {
     const saveDraft = jest.fn();
     mockUseDraftRecovery.mockReturnValue({
       hasPendingDraft: false,
@@ -493,12 +493,12 @@ describe('useUpsertTravelController', () => {
       autosave: { ...baseForm.autosave, hasUnsavedChanges: true },
     });
 
-    renderHook(() => useUpsertTravelController());
+    await renderHook(() => useUpsertTravelController());
     expect(saveDraft).toHaveBeenCalledTimes(1);
     expect(saveDraft).toHaveBeenCalledWith(formData);
   });
 
-  it('clears rather than re-persists the draft once a save confirmed the data (F-09 P2)', () => {
+  it('clears rather than re-persists the draft once a save confirmed the data (F-09 P2)', async () => {
     const saveDraft = jest.fn();
     const clearDraft = jest.fn(async () => undefined);
     mockUseDraftRecovery.mockReturnValue({
@@ -523,12 +523,12 @@ describe('useUpsertTravelController', () => {
       autosave: { ...baseForm.autosave, status: 'saved', hasUnsavedChanges: false },
     });
 
-    renderHook(() => useUpsertTravelController());
+    await renderHook(() => useUpsertTravelController());
     expect(saveDraft).not.toHaveBeenCalled();
     expect(clearDraft).toHaveBeenCalledTimes(1);
   });
 
-  it('does not persist a draft while an autosave confirms the current data', () => {
+  it('does not persist a draft while an autosave confirms the current data', async () => {
     const saveDraft = jest.fn();
     mockUseDraftRecovery.mockReturnValue({
       hasPendingDraft: false,
@@ -551,11 +551,11 @@ describe('useUpsertTravelController', () => {
       autosave: { ...baseForm.autosave, status: 'saving', hasUnsavedChanges: false },
     });
 
-    renderHook(() => useUpsertTravelController());
+    await renderHook(() => useUpsertTravelController());
     expect(saveDraft).not.toHaveBeenCalled();
   });
 
-  it('persists edits typed while an autosave is in flight', () => {
+  it('persists edits typed while an autosave is in flight', async () => {
     const saveDraft = jest.fn();
     mockUseDraftRecovery.mockReturnValue({
       hasPendingDraft: false,
@@ -580,11 +580,11 @@ describe('useUpsertTravelController', () => {
       autosave: { ...baseForm.autosave, status: 'saving', hasUnsavedChanges: true },
     });
 
-    renderHook(() => useUpsertTravelController());
+    await renderHook(() => useUpsertTravelController());
     expect(saveDraft).toHaveBeenCalledWith(formData);
   });
 
-  it('keeps the draft when a save succeeds with edits still unconfirmed', () => {
+  it('keeps the draft when a save succeeds with edits still unconfirmed', async () => {
     const clearDraft = jest.fn(async () => undefined);
     const saveDraft = jest.fn();
     mockUseDraftRecovery.mockReturnValue({
@@ -609,7 +609,7 @@ describe('useUpsertTravelController', () => {
       autosave: { ...baseForm.autosave, status: 'saved', hasUnsavedChanges: true },
     });
 
-    renderHook(() => useUpsertTravelController());
+    await renderHook(() => useUpsertTravelController());
     expect(clearDraft).not.toHaveBeenCalled();
     expect(saveDraft).toHaveBeenCalledWith(formData);
   });
@@ -640,7 +640,7 @@ describe('useUpsertTravelController', () => {
       autosave: { ...baseForm.autosave, getHasUnsavedChanges: jest.fn(() => false) },
     });
 
-    const { result } = renderHook(() => useUpsertTravelController());
+    const { result } = await renderHook(() => useUpsertTravelController());
 
     await act(async () => {
       await result.current.handleManualSave();
@@ -669,7 +669,7 @@ describe('useUpsertTravelController', () => {
       autosave: { ...baseForm.autosave, getHasUnsavedChanges: jest.fn(() => false) },
     });
 
-    const { result } = renderHook(() => useUpsertTravelController());
+    const { result } = await renderHook(() => useUpsertTravelController());
 
     await act(async () => {
       await result.current.handleManualSave({ description: '<p>new</p>' } as any);
@@ -698,12 +698,12 @@ describe('useUpsertTravelController', () => {
       autosave: { ...baseForm.autosave, getHasUnsavedChanges: jest.fn(() => false) },
     });
 
-    const { result, unmount } = renderHook(() => useUpsertTravelController());
+    const { result, unmount } = await renderHook(() => useUpsertTravelController());
 
     await result.current.handleManualSave();
     expect(clearDraft).toHaveBeenCalledTimes(1);
 
-    unmount();
+    await unmount();
   });
 
   it('keeps keystrokes typed while a manual save was in flight (#1511)', async () => {
@@ -724,7 +724,7 @@ describe('useUpsertTravelController', () => {
       autosave: { ...baseForm.autosave, getHasUnsavedChanges: jest.fn(() => true) },
     });
 
-    const { result } = renderHook(() => useUpsertTravelController());
+    const { result } = await renderHook(() => useUpsertTravelController());
 
     await act(async () => {
       await result.current.handleManualSave();
@@ -751,7 +751,7 @@ describe('useUpsertTravelController', () => {
       autosave: { ...baseForm.autosave, hasUnsavedChanges: false },
     });
 
-    const { result } = renderHook(() => useUpsertTravelController());
+    const { result } = await renderHook(() => useUpsertTravelController());
 
     await act(async () => {
       await result.current.handleManualSave();
@@ -799,7 +799,7 @@ describe('useUpsertTravelController', () => {
       setMarkers,
     });
 
-    const { result } = renderHook(() => useUpsertTravelController());
+    const { result } = await renderHook(() => useUpsertTravelController());
 
     await act(async () => {
       await result.current.draftRecovery.recoverDraft();
@@ -837,9 +837,9 @@ describe('useUpsertTravelController', () => {
         ...mockUseDraftRecovery(), recoverDraft, hasPendingDraft: true,
       });
       mockUseTravelFormData.mockReturnValue({ ...baseForm, getFormData, setFormData, setMarkers });
-      const { result } = renderHook(() => useUpsertTravelController());
+      const { result } = await renderHook(() => useUpsertTravelController());
       let recovery!: Promise<void>;
-      act(() => { recovery = result.current.draftRecovery.recoverDraft(); });
+      await act(() => { recovery = result.current.draftRecovery.recoverDraft(); });
       // A moderation response arriving during the storage read is authoritative too.
       getFormData.mockReturnValue({ ...recovered, publication_status });
       await act(async () => { finishRecovery(recovered); await recovery; });
@@ -886,9 +886,9 @@ describe('useUpsertTravelController', () => {
     const setFormData = jest.fn();
     mockUseDraftRecovery.mockReturnValue({ ...mockUseDraftRecovery(), recoverDraft, hasPendingDraft: true });
     mockUseTravelFormData.mockReturnValue({ ...baseForm, getFormData, setFormData });
-    const { result } = renderHook(() => useUpsertTravelController());
+    const { result } = await renderHook(() => useUpsertTravelController());
     let recovery!: Promise<void>;
-    act(() => { recovery = result.current.draftRecovery.recoverDraft(); });
+    await act(() => { recovery = result.current.draftRecovery.recoverDraft(); });
     getFormData.mockReturnValue({ id: '123', ...current });
     await act(async () => { finishRecovery(recovered); await recovery; });
 
@@ -899,22 +899,22 @@ describe('useUpsertTravelController', () => {
     }));
   });
 
-  it('qualifies private feedback against the current viewer even if inherited form access remains true (#2669)', () => {
+  it('qualifies private feedback against the current viewer even if inherited form access remains true (#2669)', async () => {
     mockUseLocalSearchParams.mockReturnValue({ id: '640' });
     mockUseTravelFormData.mockReturnValue({ ...baseForm,
       formData: { ...baseForm.formData, id: '640', publication_status: 'draft', moderation_decision: 'rejected', moderation_decision_reason: 'Private reason' },
       travelDataOld: { id: 640, userIds: 'u1' }, hasAccess: true, isInitialLoading: false });
-    const { result, rerender } = renderHook(() => useUpsertTravelController());
+    const { result, rerender } = await renderHook(() => useUpsertTravelController());
     expect(result.current.moderationFeedbackContextKey).toBe('640:u1');
     mockUseAuth.mockReturnValue({ userId: 'u2', isAuthenticated: true, isSuperuser: false, authReady: true });
-    rerender({});
+    await rerender({});
     expect(result.current.hasAccess).toBe(true);
     expect(result.current.moderationFeedbackContextKey).toBeNull();
     mockUseAuth.mockReturnValue({ userId: 'u2', isAuthenticated: true, isSuperuser: true, authReady: true });
-    rerender({});
+    await rerender({});
     expect(result.current.moderationFeedbackContextKey).toBe('640:u2');
     mockUseAuth.mockReturnValue({ userId: 'u2', isAuthenticated: false, isSuperuser: true, authReady: true });
-    rerender({});
+    await rerender({});
     expect(result.current.moderationFeedbackContextKey).toBeNull();
   });
 
@@ -925,12 +925,12 @@ describe('useUpsertTravelController', () => {
     { label: 'no trusted GET after creation', routeId: '640', formId: '640', serverId: null, ready: true },
     { label: 'new route', routeId: undefined, formId: '640', serverId: 640, ready: true },
     { label: 'auth not ready', routeId: '640', formId: '640', serverId: 640, ready: false },
-  ])('hides private feedback for $label despite retained access (#2669)', ({ routeId, formId, serverId, ready }) => {
+  ])('hides private feedback for $label despite retained access (#2669)', async ({ routeId, formId, serverId, ready }) => {
     mockUseLocalSearchParams.mockReturnValue({ id: routeId });
     mockUseAuth.mockReturnValue({ userId: 'u1', isAuthenticated: true, isSuperuser: false, authReady: ready });
     mockUseTravelFormData.mockReturnValue({ ...baseForm, formData: { ...baseForm.formData, id: formId },
       travelDataOld: serverId == null ? null : { id: serverId, userIds: 'u1' }, hasAccess: true });
-    const { result } = renderHook(() => useUpsertTravelController());
+    const { result } = await renderHook(() => useUpsertTravelController());
     expect(result.current.moderationFeedbackContextKey).toBeNull();
   });
 
@@ -945,46 +945,46 @@ describe('useUpsertTravelController', () => {
       ...baseForm, setFormData,
       getFormData: jest.fn(() => ({ id: '123', publish: false, moderation: true })),
     });
-    const { result } = renderHook(() => useUpsertTravelController());
+    const { result } = await renderHook(() => useUpsertTravelController());
     await act(async () => { await result.current.draftRecovery.recoverDraft(); });
     expect(setFormData).toHaveBeenCalledWith(expect.objectContaining({ name: recovered.name, publication_status: 'approved' }));
   });
 
-  it('reflects the server id in the URL after the first save of a new travel (F-09)', () => {
+  it('reflects the server id in the URL after the first save of a new travel (F-09)', async () => {
     mockUseLocalSearchParams.mockReturnValue({ id: undefined });
     mockUseTravelFormData.mockReturnValue({
       ...baseForm,
       formData: { id: 456, countries: [], categories: [] },
     });
 
-    renderHook(() => useUpsertTravelController());
+    await renderHook(() => useUpsertTravelController());
 
     expect(mockSetParams).toHaveBeenCalledTimes(1);
     expect(mockSetParams).toHaveBeenCalledWith({ id: '456' });
   });
 
-  it('does not push id into the URL when editing an existing travel', () => {
+  it('does not push id into the URL when editing an existing travel', async () => {
     mockUseLocalSearchParams.mockReturnValue({ id: '456' });
     mockUseTravelFormData.mockReturnValue({
       ...baseForm,
       formData: { id: 456, countries: [], categories: [] },
     });
 
-    renderHook(() => useUpsertTravelController());
+    await renderHook(() => useUpsertTravelController());
 
     expect(mockSetParams).not.toHaveBeenCalled();
   });
 
-  it('reflects the created id only once across re-renders', () => {
+  it('reflects the created id only once across re-renders', async () => {
     mockUseLocalSearchParams.mockReturnValue({ id: undefined });
     mockUseTravelFormData.mockReturnValue({
       ...baseForm,
       formData: { id: 456, countries: [], categories: [] },
     });
 
-    const { rerender } = renderHook(() => useUpsertTravelController());
-    rerender({});
-    rerender({});
+    const { rerender } = await renderHook(() => useUpsertTravelController());
+    await rerender({});
+    await rerender({});
 
     expect(mockSetParams).toHaveBeenCalledTimes(1);
   });

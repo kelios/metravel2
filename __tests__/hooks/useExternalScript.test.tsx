@@ -15,8 +15,8 @@ describe('useExternalScript', () => {
         jest.clearAllMocks();
     });
 
-    it('creates one async deferred script with the requested attributes', () => {
-        renderHook(() => useExternalScript({
+    it('creates one async deferred script with the requested attributes', async () => {
+        await renderHook(() => useExternalScript({
             id: SCRIPT_ID,
             src: SCRIPT_SRC,
             onReady: jest.fn(),
@@ -32,17 +32,17 @@ describe('useExternalScript', () => {
         expect(script?.crossOrigin).toBe('anonymous');
     });
 
-    it('reuses the same node for concurrent consumers and notifies both', () => {
+    it('reuses the same node for concurrent consumers and notifies both', async () => {
         const firstReady = jest.fn();
         const secondReady = jest.fn();
-        const first = renderHook(() => useExternalScript({
+        const first = await renderHook(() => useExternalScript({
             id: SCRIPT_ID,
             src: SCRIPT_SRC,
             onReady: firstReady,
             onError: jest.fn(),
         }));
         const script = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
-        const second = renderHook(() => useExternalScript({
+        const second = await renderHook(() => useExternalScript({
             id: SCRIPT_ID,
             src: SCRIPT_SRC,
             onReady: secondReady,
@@ -52,17 +52,17 @@ describe('useExternalScript', () => {
         expect(document.querySelectorAll(`#${SCRIPT_ID}`)).toHaveLength(1);
         expect(document.getElementById(SCRIPT_ID)).toBe(script);
 
-        act(() => script.dispatchEvent(new Event('load')));
+        await act(() => script.dispatchEvent(new Event('load')));
 
         expect(firstReady).toHaveBeenCalledTimes(1);
         expect(secondReady).toHaveBeenCalledTimes(1);
-        first.unmount();
-        second.unmount();
+        await first.unmount();
+        await second.unmount();
     });
 
-    it('keeps the loaded node across unmount/remount and reports readiness', () => {
+    it('keeps the loaded node across unmount/remount and reports readiness', async () => {
         const firstReady = jest.fn();
-        const first = renderHook(() => useExternalScript({
+        const first = await renderHook(() => useExternalScript({
             id: SCRIPT_ID,
             src: SCRIPT_SRC,
             onReady: firstReady,
@@ -70,11 +70,11 @@ describe('useExternalScript', () => {
         }));
         const script = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
 
-        act(() => script.dispatchEvent(new Event('load')));
-        first.unmount();
+        await act(() => script.dispatchEvent(new Event('load')));
+        await first.unmount();
 
         const remountReady = jest.fn();
-        renderHook(() => useExternalScript({
+        await renderHook(() => useExternalScript({
             id: SCRIPT_ID,
             src: SCRIPT_SRC,
             onReady: remountReady,
@@ -86,8 +86,8 @@ describe('useExternalScript', () => {
         expect(remountReady).toHaveBeenCalledTimes(1);
     });
 
-    it('records completion after every consumer unmounts so a remount still becomes ready', () => {
-        const first = renderHook(() => useExternalScript({
+    it('records completion after every consumer unmounts so a remount still becomes ready', async () => {
+        const first = await renderHook(() => useExternalScript({
             id: SCRIPT_ID,
             src: SCRIPT_SRC,
             onReady: jest.fn(),
@@ -95,11 +95,11 @@ describe('useExternalScript', () => {
         }));
         const script = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
 
-        first.unmount();
-        act(() => script.dispatchEvent(new Event('load')));
+        await first.unmount();
+        await act(() => script.dispatchEvent(new Event('load')));
 
         const remountReady = jest.fn();
-        renderHook(() => useExternalScript({
+        await renderHook(() => useExternalScript({
             id: SCRIPT_ID,
             src: SCRIPT_SRC,
             onReady: remountReady,
@@ -109,10 +109,10 @@ describe('useExternalScript', () => {
         expect(remountReady).toHaveBeenCalledTimes(1);
     });
 
-    it('removes listeners on unmount without removing the reusable node', () => {
+    it('removes listeners on unmount without removing the reusable node', async () => {
         const onReady = jest.fn();
         const onError = jest.fn();
-        const hook = renderHook(() => useExternalScript({
+        const hook = await renderHook(() => useExternalScript({
             id: SCRIPT_ID,
             src: SCRIPT_SRC,
             onReady,
@@ -120,8 +120,8 @@ describe('useExternalScript', () => {
         }));
         const script = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
 
-        hook.unmount();
-        act(() => {
+        await hook.unmount();
+        await act(() => {
             script.dispatchEvent(new Event('load'));
             script.dispatchEvent(new Event('error'));
         });
@@ -131,9 +131,9 @@ describe('useExternalScript', () => {
         expect(document.getElementById(SCRIPT_ID)).toBe(script);
     });
 
-    it('reports a load failure once and preserves it for a remount', () => {
+    it('reports a load failure once and preserves it for a remount', async () => {
         const firstError = jest.fn();
-        const first = renderHook(() => useExternalScript({
+        const first = await renderHook(() => useExternalScript({
             id: SCRIPT_ID,
             src: SCRIPT_SRC,
             onReady: jest.fn(),
@@ -141,12 +141,12 @@ describe('useExternalScript', () => {
         }));
         const script = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
 
-        act(() => script.dispatchEvent(new Event('error')));
+        await act(() => script.dispatchEvent(new Event('error')));
         expect(firstError).toHaveBeenCalledTimes(1);
-        first.unmount();
+        await first.unmount();
 
         const remountError = jest.fn();
-        renderHook(() => useExternalScript({
+        await renderHook(() => useExternalScript({
             id: SCRIPT_ID,
             src: SCRIPT_SRC,
             onReady: jest.fn(),
@@ -157,8 +157,8 @@ describe('useExternalScript', () => {
         expect(document.querySelectorAll(`#${SCRIPT_ID}`)).toHaveLength(1);
     });
 
-    it('does not touch the DOM while disabled', () => {
-        renderHook(() => useExternalScript({
+    it('does not touch the DOM while disabled', async () => {
+        await renderHook(() => useExternalScript({
             id: SCRIPT_ID,
             src: SCRIPT_SRC,
             onReady: jest.fn(),
@@ -169,8 +169,8 @@ describe('useExternalScript', () => {
         expect(document.getElementById(SCRIPT_ID)).toBeNull();
     });
 
-    it('replaces the existing node when src changes after the first insert', () => {
-        const { rerender } = renderHook(
+    it('replaces the existing node when src changes after the first insert', async () => {
+        const { rerender } = await renderHook(
             ({ src }: { src: string }) => useExternalScript({
                 id: SCRIPT_ID,
                 src,
@@ -183,7 +183,7 @@ describe('useExternalScript', () => {
         expect(first.src).toBe(SCRIPT_SRC);
 
         const nextSrc = 'https://sdk.example.com/client-en.js';
-        rerender({ src: nextSrc });
+        await rerender({ src: nextSrc });
 
         const second = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
         expect(document.querySelectorAll(`#${SCRIPT_ID}`)).toHaveLength(1);
@@ -191,8 +191,8 @@ describe('useExternalScript', () => {
         expect(second.src).toBe(nextSrc);
     });
 
-    it('keeps the same node when src is unchanged', () => {
-        const { rerender } = renderHook(
+    it('keeps the same node when src is unchanged', async () => {
+        const { rerender } = await renderHook(
             ({ src }: { src: string }) => useExternalScript({
                 id: SCRIPT_ID,
                 src,
@@ -202,13 +202,13 @@ describe('useExternalScript', () => {
             { initialProps: { src: SCRIPT_SRC } },
         );
         const first = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
-        rerender({ src: SCRIPT_SRC });
+        await rerender({ src: SCRIPT_SRC });
         expect(document.getElementById(SCRIPT_ID)).toBe(first);
     });
 
-    it('notifies onReady after the replacement script loads', () => {
+    it('notifies onReady after the replacement script loads', async () => {
         const onReady = jest.fn();
-        const { rerender } = renderHook(
+        const { rerender } = await renderHook(
             ({ src }: { src: string }) => useExternalScript({
                 id: SCRIPT_ID,
                 src,
@@ -218,12 +218,12 @@ describe('useExternalScript', () => {
             { initialProps: { src: SCRIPT_SRC } },
         );
         const first = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
-        act(() => first.dispatchEvent(new Event('load')));
+        await act(() => first.dispatchEvent(new Event('load')));
         expect(onReady).toHaveBeenCalledTimes(1);
 
-        rerender({ src: 'https://sdk.example.com/client-en.js' });
+        await rerender({ src: 'https://sdk.example.com/client-en.js' });
         const second = document.getElementById(SCRIPT_ID) as HTMLScriptElement;
-        act(() => second.dispatchEvent(new Event('load')));
+        await act(() => second.dispatchEvent(new Event('load')));
         expect(onReady).toHaveBeenCalledTimes(2);
     });
 });

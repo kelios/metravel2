@@ -1,3 +1,4 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 // __tests__/components/trips/tripCreateForm.test.tsx
 // Integration render-test for TripCreateForm (Sprint 13 / FE-trip-tests #406).
 // Asserts consent-gate and validation errors — does NOT snapshot the full DOM.
@@ -96,22 +97,22 @@ import TripCreateForm, {
   formatTripCreateDisplayDate,
 } from '@/components/trips/planning/TripCreateForm'
 
-type RenderedForm = ReturnType<typeof render>
+type RenderedForm = Awaited<ReturnType<typeof render>>
 
 function getStartDateInput(view: RenderedForm) {
-  return view.UNSAFE_getByProps({ 'data-testid': 'trip-create-start-date' })
+  return getOnlyHost(view.container, node => node.props["data-testid"] === 'trip-create-start-date')
 }
 
-function changeStartDate(view: RenderedForm, value: string) {
-  fireEvent(getStartDateInput(view), 'change', { target: { value } })
+async function changeStartDate(view: RenderedForm, value: string) {
+  await fireEvent(getStartDateInput(view), 'change', { target: { value } })
 }
 
 function getEndDateInput(view: RenderedForm) {
-  return view.UNSAFE_getByProps({ 'data-testid': 'trip-create-end-date' })
+  return getOnlyHost(view.container, node => node.props["data-testid"] === 'trip-create-end-date')
 }
 
-function changeEndDate(view: RenderedForm, value: string) {
-  fireEvent(getEndDateInput(view), 'change', { target: { value } })
+async function changeEndDate(view: RenderedForm, value: string) {
+  await fireEvent(getEndDateInput(view), 'change', { target: { value } })
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -126,17 +127,17 @@ beforeEach(() => {
 // только иконки каким транспортом» — пять подписанных чипов раскладывались на
 // телефоне в четыре ряда.
 describe('TripCreateForm — transport control', () => {
-  it('keeps labelled chips on the wide layout', () => {
-    const view = render(<TripCreateForm />)
+  it('keeps labelled chips on the wide layout', async () => {
+    const view = await render(<TripCreateForm />)
 
     expect(view.getByTestId('trip-create-transport-car')).toBeTruthy()
     expect(view.getByText('Общественный транспорт')).toBeTruthy()
     expect(view.queryByTestId('trip-create-transport')).toBeNull()
   })
 
-  it('switches to the shared icon-only segmented control on mobile width', () => {
+  it('switches to the shared icon-only segmented control on mobile width', async () => {
     mockResponsiveOverride = { isHydrated: true, isMobile: true }
-    const view = render(<TripCreateForm />)
+    const view = await render(<TripCreateForm />)
 
     expect(view.getByTestId('trip-create-transport')).toBeTruthy()
     expect(view.queryByTestId('trip-create-transport-car')).toBeNull()
@@ -155,45 +156,45 @@ describe('TripCreateForm — transport control', () => {
     // Выбранный транспорт назван текстом рядом с заголовком поля: иначе ряд
     // иконок не сообщает, что именно выбрано.
     expect(view.getByText('На машине')).toBeTruthy()
-    fireEvent.press(view.getByTestId('segmented-foot'))
+    await fireEvent.press(view.getByTestId('segmented-foot'))
     expect(view.getByText('Пешком')).toBeTruthy()
   })
 })
 
 describe('TripCreateForm — consent gate', () => {
-  it('submit button is disabled before consent is toggled', () => {
-    const { getByTestId } = render(<TripCreateForm />)
+  it('submit button is disabled before consent is toggled', async () => {
+    const { getByTestId } = await render(<TripCreateForm />)
     const btn = getByTestId('trip-create-submit')
     expect(btn.props.accessibilityState?.disabled).toBe(true)
   })
 
-  it('submit button becomes enabled after toggling consent', () => {
-    const { getByTestId } = render(<TripCreateForm />)
-    fireEvent.press(getByTestId('trip-create-consent'))
+  it('submit button becomes enabled after toggling consent', async () => {
+    const { getByTestId } = await render(<TripCreateForm />)
+    await fireEvent.press(getByTestId('trip-create-consent'))
     const btn = getByTestId('trip-create-submit')
     expect(btn.props.accessibilityState?.disabled).toBe(false)
   })
 
-  it('toggling consent twice disables submit again', () => {
-    const { getByTestId } = render(<TripCreateForm />)
+  it('toggling consent twice disables submit again', async () => {
+    const { getByTestId } = await render(<TripCreateForm />)
     const checkbox = getByTestId('trip-create-consent')
-    fireEvent.press(checkbox) // check
-    fireEvent.press(checkbox) // uncheck
+    await fireEvent.press(checkbox) // check
+    await fireEvent.press(checkbox) // uncheck
     const btn = getByTestId('trip-create-submit')
     expect(btn.props.accessibilityState?.disabled).toBe(true)
   })
 })
 
 describe('TripCreateForm — validation errors', () => {
-  it('prefills a real default start date instead of showing it as a placeholder', () => {
-    const view = render(<TripCreateForm />)
+  it('prefills a real default start date instead of showing it as a placeholder', async () => {
+    const view = await render(<TripCreateForm />)
     const startDate = getStartDateInput(view)
     expect(startDate.props.type).toBe('date')
     expect(startDate.props.value).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
-  it('accepts route-source prefill for organizing a trip from a travel page', () => {
-    const { getByTestId } = render(
+  it('accepts route-source prefill for organizing a trip from a travel page', async () => {
+    const { getByTestId } = await render(
       <TripCreateForm
         initialValues={{
           title: 'Поездка по маршруту "Нарочь"',
@@ -206,18 +207,18 @@ describe('TripCreateForm — validation errors', () => {
   })
 
   it('shows title error when submitting with empty title', async () => {
-    const view = render(<TripCreateForm />)
+    const view = await render(<TripCreateForm />)
     const { getByTestId, findAllByText, queryByText } = view
 
     // Toggle consent so the button is enabled and handleSubmit runs.
-    fireEvent.press(getByTestId('trip-create-consent'))
+    await fireEvent.press(getByTestId('trip-create-consent'))
 
     // Leave title empty (default '') and provide a valid date so only title fails.
-    fireEvent.changeText(getByTestId('trip-create-title'), '')
-    changeStartDate(view, '2026-08-01')
+    await fireEvent.changeText(getByTestId('trip-create-title'), '')
+    await changeStartDate(view, '2026-08-01')
 
     // Press submit — yup will fire asynchronously and set field errors.
-    fireEvent.press(getByTestId('trip-create-submit'))
+    await fireEvent.press(getByTestId('trip-create-submit'))
 
     const errors = await findAllByText(/Введите название поездки/i)
     expect(errors.length).toBeGreaterThan(0)
@@ -226,13 +227,13 @@ describe('TripCreateForm — validation errors', () => {
   })
 
   it('shows min-length title error when title has one or two characters', async () => {
-    const view = render(<TripCreateForm />)
+    const view = await render(<TripCreateForm />)
     const { getByTestId, findAllByText, queryByText } = view
 
-    fireEvent.press(getByTestId('trip-create-consent'))
-    fireEvent.changeText(getByTestId('trip-create-title'), 'Аб')
-    changeStartDate(view, '2026-08-01')
-    fireEvent.press(getByTestId('trip-create-submit'))
+    await fireEvent.press(getByTestId('trip-create-consent'))
+    await fireEvent.changeText(getByTestId('trip-create-title'), 'Аб')
+    await changeStartDate(view, '2026-08-01')
+    await fireEvent.press(getByTestId('trip-create-submit'))
 
     const errors = await findAllByText(/не короче 3 символов/i)
     expect(errors.length).toBeGreaterThan(0)
@@ -243,14 +244,14 @@ describe('TripCreateForm — validation errors', () => {
   })
 
   it('shows date error when start date is missing', async () => {
-    const view = render(<TripCreateForm />)
+    const view = await render(<TripCreateForm />)
     const { getByTestId, findAllByText } = view
 
     // Toggle consent and provide a long enough title, leave date empty.
-    fireEvent.press(getByTestId('trip-create-consent'))
-    fireEvent.changeText(getByTestId('trip-create-title'), 'Тест-поездка')
-    changeStartDate(view, '')
-    fireEvent.press(getByTestId('trip-create-submit'))
+    await fireEvent.press(getByTestId('trip-create-consent'))
+    await fireEvent.changeText(getByTestId('trip-create-title'), 'Тест-поездка')
+    await changeStartDate(view, '')
+    await fireEvent.press(getByTestId('trip-create-submit'))
 
     const errors = await findAllByText(/Укажите дату старта/i)
     expect(errors.length).toBeGreaterThan(0)
@@ -258,13 +259,13 @@ describe('TripCreateForm — validation errors', () => {
   })
 
   it('submits a valid form using the default start date', async () => {
-    const view = render(<TripCreateForm />)
+    const view = await render(<TripCreateForm />)
     const { getByTestId } = view
     const defaultDate = getStartDateInput(view).props.value
 
-    fireEvent.press(getByTestId('trip-create-consent'))
-    fireEvent.changeText(getByTestId('trip-create-title'), 'Тест-поездка')
-    fireEvent.press(getByTestId('trip-create-submit'))
+    await fireEvent.press(getByTestId('trip-create-consent'))
+    await fireEvent.changeText(getByTestId('trip-create-title'), 'Тест-поездка')
+    await fireEvent.press(getByTestId('trip-create-submit'))
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
     expect(mockMutate.mock.calls[0][0]).toMatchObject({
@@ -275,8 +276,8 @@ describe('TripCreateForm — validation errors', () => {
     })
   })
 
-  it('shows Telegram group as unavailable instead of offering a broken create checkbox', () => {
-    const { getByTestId, queryByTestId, getByText } = render(<TripCreateForm />)
+  it('shows Telegram group as unavailable instead of offering a broken create checkbox', async () => {
+    const { getByTestId, queryByTestId, getByText } = await render(<TripCreateForm />)
 
     expect(getByTestId('trip-create-telegram-unavailable')).toBeTruthy()
     expect(queryByTestId('trip-create-telegram-group')).toBeNull()
@@ -288,7 +289,7 @@ describe('TripCreateForm — validation errors', () => {
     // the RN Pressable chain.  Verify the disabled state instead — the submit
     // error path (consentChecked=false branch) is already covered by the
     // consent-gate suite above.
-    const { getByTestId } = render(<TripCreateForm />)
+    const { getByTestId } = await render(<TripCreateForm />)
     const btn = getByTestId('trip-create-submit')
     expect(btn.props.accessibilityState?.disabled).toBe(true)
   })
@@ -304,8 +305,8 @@ describe('TripCreateForm — Android date picker', () => {
     expect(formatTripCreateDisplayDate('')).toBe('Выберите дату')
   })
 
-  it('renders a picker trigger instead of a manual date text input on Android', () => {
-    const { getByTestId } = render(
+  it('renders a picker trigger instead of a manual date text input on Android', async () => {
+    const { getByTestId } = await render(
       <TripCreateForm initialValues={{ startDate: '2026-08-10' }} />,
     )
     const trigger = getByTestId('trip-create-start-date')
@@ -316,7 +317,7 @@ describe('TripCreateForm — Android date picker', () => {
   })
 
   it('updates visible date and submitted API value after selecting a calendar day', async () => {
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <TripCreateForm
         initialValues={{
           title: 'Тест-поездка',
@@ -325,15 +326,15 @@ describe('TripCreateForm — Android date picker', () => {
       />,
     )
 
-    fireEvent.press(getByTestId('trip-create-start-date'))
+    await fireEvent.press(getByTestId('trip-create-start-date'))
     expect(getByTestId('trip-create-date-picker')).toBeTruthy()
 
-    fireEvent.press(getByTestId('mini-calendar-day-2026-08-15'))
+    await fireEvent.press(getByTestId('mini-calendar-day-2026-08-15'))
     expect(queryByTestId('trip-create-date-picker')).toBeNull()
     expect(getByTestId('trip-create-start-date-value').props.children).toBe('15 августа 2026 г.')
 
-    fireEvent.press(getByTestId('trip-create-consent'))
-    fireEvent.press(getByTestId('trip-create-submit'))
+    await fireEvent.press(getByTestId('trip-create-consent'))
+    await fireEvent.press(getByTestId('trip-create-submit'))
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
     expect(mockMutate.mock.calls[0][0]).toMatchObject({
@@ -343,15 +344,15 @@ describe('TripCreateForm — Android date picker', () => {
     })
   })
 
-  it('keeps the current date when the picker is canceled', () => {
-    const { getByTestId, queryByTestId } = render(
+  it('keeps the current date when the picker is canceled', async () => {
+    const { getByTestId, queryByTestId } = await render(
       <TripCreateForm initialValues={{ startDate: '2026-08-10' }} />,
     )
 
-    fireEvent.press(getByTestId('trip-create-start-date'))
+    await fireEvent.press(getByTestId('trip-create-start-date'))
     expect(getByTestId('trip-create-date-picker')).toBeTruthy()
 
-    fireEvent.press(getByTestId('trip-create-start-date-cancel'))
+    await fireEvent.press(getByTestId('trip-create-start-date-cancel'))
     expect(queryByTestId('trip-create-date-picker')).toBeNull()
     expect(getByTestId('trip-create-start-date-value').props.children).toBe('10 августа 2026 г.')
   })
@@ -360,14 +361,14 @@ describe('TripCreateForm — Android date picker', () => {
 // #1838: до правки конца поездки в форме не было вовсе, и поездка 26.09–04.10
 // сохранялась одним днём.
 describe('TripCreateForm — trip end date', () => {
-  const fillValidForm = (view: RenderedForm) => {
-    fireEvent.press(view.getByTestId('trip-create-consent'))
-    fireEvent.changeText(view.getByTestId('trip-create-title'), 'Поход по пуще')
-    changeStartDate(view, '2026-09-26')
+  const fillValidForm = async (view: RenderedForm) => {
+    await fireEvent.press(view.getByTestId('trip-create-consent'))
+    await fireEvent.changeText(view.getByTestId('trip-create-title'), 'Поход по пуще')
+    await changeStartDate(view, '2026-09-26')
   }
 
-  it('offers an optional end date next to the start', () => {
-    const view = render(<TripCreateForm />)
+  it('offers an optional end date next to the start', async () => {
+    const view = await render(<TripCreateForm />)
     const endDate = getEndDateInput(view)
 
     expect(endDate.props.type).toBe('date')
@@ -375,10 +376,10 @@ describe('TripCreateForm — trip end date', () => {
   })
 
   it('submits the chosen end date', async () => {
-    const view = render(<TripCreateForm />)
-    fillValidForm(view)
-    changeEndDate(view, '2026-10-04')
-    fireEvent.press(view.getByTestId('trip-create-submit'))
+    const view = await render(<TripCreateForm />)
+    await fillValidForm(view)
+    await changeEndDate(view, '2026-10-04')
+    await fireEvent.press(view.getByTestId('trip-create-submit'))
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
     expect(mockMutate.mock.calls[0][0]).toMatchObject({
@@ -390,20 +391,20 @@ describe('TripCreateForm — trip end date', () => {
   // Встроенный `<input type=date>` даёт стереть значение не во всех браузерах
   // (в мобильном Safari — нет), поэтому очистка своя и на web тоже.
   it('clears the end date with an explicit control on web', async () => {
-    const view = render(<TripCreateForm />)
+    const view = await render(<TripCreateForm />)
     expect(view.queryByTestId('trip-create-end-date-clear')).toBeNull()
 
-    changeEndDate(view, '2026-10-04')
-    fireEvent.press(view.getByTestId('trip-create-end-date-clear'))
+    await changeEndDate(view, '2026-10-04')
+    await fireEvent.press(view.getByTestId('trip-create-end-date-clear'))
 
     expect(getEndDateInput(view).props.value).toBe('')
     expect(view.queryByTestId('trip-create-end-date-clear')).toBeNull()
   })
 
   it('submits null when the end is left empty', async () => {
-    const view = render(<TripCreateForm />)
-    fillValidForm(view)
-    fireEvent.press(view.getByTestId('trip-create-submit'))
+    const view = await render(<TripCreateForm />)
+    await fillValidForm(view)
+    await fireEvent.press(view.getByTestId('trip-create-submit'))
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
     expect(mockMutate.mock.calls[0][0]).toMatchObject({ endDate: null })
@@ -412,10 +413,10 @@ describe('TripCreateForm — trip end date', () => {
   // Ошибка под полем, а не тост, и запрос не уходит — иначе бэкенд ответит 400
   // на форму, которая выглядела заполненной.
   it('blocks an end earlier than the start', async () => {
-    const view = render(<TripCreateForm />)
-    fillValidForm(view)
-    changeEndDate(view, '2026-09-25')
-    fireEvent.press(view.getByTestId('trip-create-submit'))
+    const view = await render(<TripCreateForm />)
+    await fillValidForm(view)
+    await changeEndDate(view, '2026-09-25')
+    await fireEvent.press(view.getByTestId('trip-create-submit'))
 
     const errors = await view.findAllByText('Окончание раньше начала')
     expect(errors.length).toBeGreaterThan(0)
@@ -423,10 +424,10 @@ describe('TripCreateForm — trip end date', () => {
   })
 
   it('accepts an end on the same day as the start', async () => {
-    const view = render(<TripCreateForm />)
-    fillValidForm(view)
-    changeEndDate(view, '2026-09-26')
-    fireEvent.press(view.getByTestId('trip-create-submit'))
+    const view = await render(<TripCreateForm />)
+    await fillValidForm(view)
+    await changeEndDate(view, '2026-09-26')
+    await fireEvent.press(view.getByTestId('trip-create-submit'))
 
     await waitFor(() => expect(mockMutate).toHaveBeenCalledTimes(1))
     expect(mockMutate.mock.calls[0][0]).toMatchObject({ endDate: '2026-09-26' })

@@ -50,8 +50,8 @@ describe('useTravelDeferredSectionsModel', () => {
     jest.useRealTimers()
   })
 
-  it('does not enable heavy content synchronously on web (first render is false)', () => {
-    const { result } = renderHook(
+  it('does not enable heavy content synchronously on web (first render is false)', async () => {
+    const { result } = await renderHook(
       ({ travelId }) => useTravelDeferredSectionsModel({ travelId }),
       { initialProps: { travelId: 1 } }
     )
@@ -59,54 +59,54 @@ describe('useTravelDeferredSectionsModel', () => {
     expect(result.current.canRenderHeavy).toBe(false)
   })
 
-  it('enables heavy content after browser idle on web', () => {
-    const { result } = renderHook(
+  it('enables heavy content after browser idle on web', async () => {
+    const { result } = await renderHook(
       ({ travelId }) => useTravelDeferredSectionsModel({ travelId }),
       { initialProps: { travelId: 1 } }
     )
 
     expect(result.current.canRenderHeavy).toBe(false)
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(250)
     })
 
     expect(result.current.canRenderHeavy).toBe(true)
   })
 
-  it('resets heavy content to false during render on a cache-hit travel swap', () => {
-    const { result, rerender } = renderHook(
+  it('resets heavy content to false during render on a cache-hit travel swap', async () => {
+    const { result, rerender } = await renderHook(
       ({ travelId }) => useTravelDeferredSectionsModel({ travelId }),
       { initialProps: { travelId: 1 } }
     )
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(250)
     })
     expect(result.current.canRenderHeavy).toBe(true)
 
     // SPA navigation to a cached travel: same hook instance, new travelId.
-    act(() => {
-      rerender({ travelId: 2 })
+    await act(async () => {
+      await rerender({ travelId: 2 })
     })
 
     // The heavy tree (incl. the Leaflet map) must not carry over as true.
     expect(result.current.canRenderHeavy).toBe(false)
 
     // Then it re-reveals progressively via idle.
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(250)
     })
     expect(result.current.canRenderHeavy).toBe(true)
   })
 
-  it('keeps heavy offscreen sections unloaded by timer and loads them through one shared observer', () => {
-    const { result } = renderHook(
+  it('keeps heavy offscreen sections unloaded by timer and loads them through one shared observer', async () => {
+    const { result } = await renderHook(
       ({ travelId }) => useTravelDeferredSectionsModel({ travelId }),
       { initialProps: { travelId: 1 } }
     )
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(250)
     })
     expect(result.current.canRenderHeavy).toBe(true)
@@ -115,7 +115,7 @@ describe('useTravelDeferredSectionsModel', () => {
     const commentsElement = document.createElement('section')
     const footerElement = document.createElement('section')
 
-    act(() => {
+    await act(() => {
       result.current.setMapRef(mapElement)
       result.current.setCommentsRef(commentsElement)
       result.current.setFooterRef(footerElement)
@@ -141,7 +141,7 @@ describe('useTravelDeferredSectionsModel', () => {
       footerElement,
     )
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(10000)
     })
 
@@ -151,7 +151,7 @@ describe('useTravelDeferredSectionsModel', () => {
 
     // Only the observer that really watches the comments element reports it,
     // exactly as the browser would.
-    act(() => {
+    await act(() => {
       reservedObserver.notify(
         [
           {
@@ -169,11 +169,11 @@ describe('useTravelDeferredSectionsModel', () => {
     expect(result.current.shouldLoadFooter).toBe(false)
   })
 
-  it('loads every observed section at once in a browser without IntersectionObserver', () => {
+  it('loads every observed section at once in a browser without IntersectionObserver', async () => {
     // #2021: the map, sidebar and comments have no fallback timer, so an
     // observer that cannot arm would leave them unloaded for good.
     window.IntersectionObserver = undefined as unknown as typeof IntersectionObserver
-    const { result } = renderHook(
+    const { result } = await renderHook(
       ({ travelId }) => useTravelDeferredSectionsModel({ travelId }),
       { initialProps: { travelId: 1 } }
     )
@@ -182,7 +182,7 @@ describe('useTravelDeferredSectionsModel', () => {
 
     // The idle callback enables the heavy tree at 250 ms — before the 500 / 600 ms
     // author and rating timers, so nothing here is loaded by a timer.
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(250)
     })
 
@@ -194,7 +194,7 @@ describe('useTravelDeferredSectionsModel', () => {
     expect(result.current.shouldLoadRating).toBe(true)
   })
 
-  it('uses settled native offsets without subscribing JS to every scroll frame', () => {
+  it('uses settled native offsets without subscribing JS to every scroll frame', async () => {
     Platform.OS = 'android'
     const interactionSpy = jest
       .spyOn(afterInteractions, 'runAfterInteractions')
@@ -205,7 +205,7 @@ describe('useTravelDeferredSectionsModel', () => {
     const scrollY = new Animated.Value(0)
     const addListenerSpy = jest.spyOn(scrollY, 'addListener')
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ settledScrollOffsetY }) => useTravelDeferredSectionsModel({
         travelId: 1,
         scrollY,
@@ -218,15 +218,15 @@ describe('useTravelDeferredSectionsModel', () => {
     expect(addListenerSpy).not.toHaveBeenCalled()
     expect(result.current.shouldLoadMap).toBe(false)
 
-    act(() => {
-      rerender({ settledScrollOffsetY: 300 })
+    await act(async () => {
+      await rerender({ settledScrollOffsetY: 300 })
     })
 
     expect(addListenerSpy).not.toHaveBeenCalled()
     expect(result.current.shouldLoadMap).toBe(false)
 
-    act(() => {
-      rerender({ settledScrollOffsetY: 1000 })
+    await act(async () => {
+      await rerender({ settledScrollOffsetY: 1000 })
     })
 
     expect(addListenerSpy).not.toHaveBeenCalled()

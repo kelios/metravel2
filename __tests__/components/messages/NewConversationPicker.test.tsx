@@ -20,88 +20,88 @@ describe('NewConversationPicker', () => {
         jest.clearAllMocks();
     });
 
-    it('renders header with title', () => {
-        const { getByText } = render(<NewConversationPicker {...defaultProps} />);
+    it('renders header with title', async () => {
+        const { getByText } = await render(<NewConversationPicker {...defaultProps} />);
         expect(getByText('Новый диалог')).toBeTruthy();
     });
 
-    it('renders user list', () => {
-        const { getByText } = render(<NewConversationPicker {...defaultProps} />);
+    it('renders user list', async () => {
+        const { getByText } = await render(<NewConversationPicker {...defaultProps} />);
         expect(getByText('Иван Петров')).toBeTruthy();
         expect(getByText('Мария Сидорова')).toBeTruthy();
         expect(getByText('Алексей')).toBeTruthy();
     });
 
-    it('calls onSelectUser with correct userId when user pressed', () => {
+    it('calls onSelectUser with correct userId when user pressed', async () => {
         const onSelectUser = jest.fn();
-        const { getByLabelText } = render(
+        const { getByLabelText } = await render(
             <NewConversationPicker {...defaultProps} onSelectUser={onSelectUser} />
         );
-        fireEvent.press(getByLabelText('Написать Иван Петров'));
+        await fireEvent.press(getByLabelText('Написать Иван Петров'));
         expect(onSelectUser).toHaveBeenCalledWith(10);
     });
 
-    it('calls onClose when back button pressed', () => {
+    it('calls onClose when back button pressed', async () => {
         const onClose = jest.fn();
-        const { getByLabelText } = render(
+        const { getByLabelText } = await render(
             <NewConversationPicker {...defaultProps} onClose={onClose} />
         );
-        fireEvent.press(getByLabelText('Назад к списку диалогов'));
+        await fireEvent.press(getByLabelText('Назад к списку диалогов'));
         expect(onClose).toHaveBeenCalled();
     });
 
-    it('filters users by search query', () => {
-        const { getByLabelText, queryByText } = render(
+    it('filters users by search query', async () => {
+        const { getByLabelText, queryByText } = await render(
             <NewConversationPicker {...defaultProps} />
         );
         const searchInput = getByLabelText('Поиск пользователя');
-        fireEvent.changeText(searchInput, 'Мария');
+        await fireEvent.changeText(searchInput, 'Мария');
         expect(queryByText('Мария Сидорова')).toBeTruthy();
         expect(queryByText('Иван Петров')).toBeNull();
     });
 
-    it('filters users by email, username and nickname', () => {
-        const { getByLabelText, queryByText } = render(
+    it('filters users by email, username and nickname', async () => {
+        const { getByLabelText, queryByText } = await render(
             <NewConversationPicker {...defaultProps} />
         );
 
         const searchInput = getByLabelText('Поиск пользователя');
 
-        fireEvent.changeText(searchInput, 'ivan@example.com');
+        await fireEvent.changeText(searchInput, 'ivan@example.com');
         expect(queryByText('Иван Петров')).toBeTruthy();
         expect(queryByText('Мария Сидорова')).toBeNull();
 
-        fireEvent.changeText(searchInput, 'masha');
+        await fireEvent.changeText(searchInput, 'masha');
         expect(queryByText('Мария Сидорова')).toBeTruthy();
         expect(queryByText('Иван Петров')).toBeNull();
 
-        fireEvent.changeText(searchInput, 'alex-map');
+        await fireEvent.changeText(searchInput, 'alex-map');
         expect(queryByText('Алексей')).toBeTruthy();
         expect(queryByText('Мария Сидорова')).toBeNull();
     });
 
-    it('shows empty state when no users match search', () => {
-        const { getByLabelText, getByText } = render(
+    it('shows empty state when no users match search', async () => {
+        const { getByLabelText, getByText } = await render(
             <NewConversationPicker {...defaultProps} />
         );
-        fireEvent.changeText(getByLabelText('Поиск пользователя'), 'несуществующий');
+        await fireEvent.changeText(getByLabelText('Поиск пользователя'), 'несуществующий');
         expect(getByText('Пользователи не найдены')).toBeTruthy();
     });
 
-    it('shows empty state when no users available', () => {
-        const { getByText } = render(
+    it('shows empty state when no users available', async () => {
+        const { getByText } = await render(
             <NewConversationPicker {...defaultProps} users={[]} />
         );
         expect(getByText('Нет доступных пользователей')).toBeTruthy();
     });
 
-    it('clears search when X button pressed', () => {
-        const { getByLabelText, getByText, queryByText } = render(
+    it('clears search when X button pressed', async () => {
+        const { getByLabelText, getByText, queryByText } = await render(
             <NewConversationPicker {...defaultProps} />
         );
-        fireEvent.changeText(getByLabelText('Поиск пользователя'), 'Мария');
+        await fireEvent.changeText(getByLabelText('Поиск пользователя'), 'Мария');
         expect(queryByText('Иван Петров')).toBeNull();
-        fireEvent.press(getByLabelText('Очистить поиск'));
+        await fireEvent.press(getByLabelText('Очистить поиск'));
         expect(getByText('Иван Петров')).toBeTruthy();
     });
 });

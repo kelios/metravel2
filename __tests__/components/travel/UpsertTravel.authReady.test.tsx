@@ -66,7 +66,7 @@ describe('UpsertTravel authReady gating', () => {
   });
 
   it('does not load travel or redirect before authReady is true, then loads after', async () => {
-    const { rerender } = render(<UpsertTravel />);
+    const { rerender } = await render(<UpsertTravel />);
 
     // Пока authReady=false не должно быть запросов к путешествию и редиректа
     expect(mockFetchTravel).not.toHaveBeenCalled();
@@ -74,7 +74,7 @@ describe('UpsertTravel authReady gating', () => {
 
     // Переключаем authReady и делаем повторный рендер
     mockAuthState = { ...mockAuthState, authReady: true };
-    rerender(<UpsertTravel />);
+    await rerender(<UpsertTravel />);
 
     await waitFor(() => {
       expect(mockFetchTravel).toHaveBeenCalledTimes(1);
@@ -91,7 +91,7 @@ describe('UpsertTravel authReady gating', () => {
       authReady: false,
     };
 
-    const { rerender, getByText, queryByTestId } = render(<UpsertTravel />);
+    const { rerender, getByText, queryByTestId } = await render(<UpsertTravel />);
 
     // Пока authReady=false — нет запросов и редиректов
     expect(mockFetchTravel).not.toHaveBeenCalled();
@@ -99,7 +99,7 @@ describe('UpsertTravel authReady gating', () => {
 
     // Включаем authReady
     mockAuthState = { ...mockAuthState, authReady: true };
-    rerender(<UpsertTravel />);
+    await rerender(<UpsertTravel />);
 
     await waitFor(() => {
       expect(mockFetchTravel).toHaveBeenCalledTimes(1);

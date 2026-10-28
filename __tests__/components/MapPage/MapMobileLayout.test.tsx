@@ -118,7 +118,7 @@ describe('MapMobileLayout', () => {
   })
 
   it('shows a loading state instead of an empty panel when filters content is not ready', async () => {
-    const screen = render(
+    const screen = await render(
       <MapMobileLayout
         mapComponent={<View testID="mock-map" />}
         travelsData={[]}
@@ -162,7 +162,7 @@ describe('MapMobileLayout', () => {
       filtersPanelProps,
       clearSelectedPlace,
     }
-    const screen = render(<MapMobileLayout {...baseProps} />)
+    const screen = await render(<MapMobileLayout {...baseProps} />)
 
     await act(async () => {
       useMapPanelStore.setState((state) => ({
@@ -170,14 +170,14 @@ describe('MapMobileLayout', () => {
         command: { kind: 'open', tab: 'list' },
       }))
     })
-    fireEvent.press(screen.getByTestId('mock-list-open-filters'))
+    await fireEvent.press(screen.getByTestId('mock-list-open-filters'))
 
     await waitFor(() => expect(screen.getByTestId('filters-block-main')).toBeTruthy())
     expect(mockSnapToSeventy).toHaveBeenCalled()
 
     mockSnapToCollapsed.mockClear()
     clearSelectedPlace.mockClear()
-    screen.rerender(
+    await screen.rerender(
       <MapMobileLayout
         {...baseProps}
         selectedPlace={{ id: 10, coord: '53.9,27.56', address: 'Late marker' }}
@@ -189,8 +189,8 @@ describe('MapMobileLayout', () => {
     expect(mockSnapToCollapsed).not.toHaveBeenCalled()
   })
 
-  it('passes loading state to the mobile places tab while map results refresh', () => {
-    const screen = render(
+  it('passes loading state to the mobile places tab while map results refresh', async () => {
+    const screen = await render(
       <MapMobileLayout
         mapComponent={<View testID="mock-map" />}
         travelsData={[]}
@@ -214,8 +214,8 @@ describe('MapMobileLayout', () => {
     )
   })
 
-  it('reserves native bottom dock space for the map bottom sheet', () => {
-    render(
+  it('reserves native bottom dock space for the map bottom sheet', async () => {
+    await render(
       <MapMobileLayout
         mapComponent={<View testID="mock-map" />}
         travelsData={[]}
@@ -236,8 +236,8 @@ describe('MapMobileLayout', () => {
     expect(mockMapBottomSheet.mock.calls[0]?.[0]?.bottomInset).toBeGreaterThan(56)
   })
 
-  it('renders the places summary in the sheet header and hides the body summary', () => {
-    const screen = render(
+  it('renders the places summary in the sheet header and hides the body summary', async () => {
+    const screen = await render(
       <MapMobileLayout
         mapComponent={<View testID="mock-map" />}
         travelsData={[{ id: 1 }]}
@@ -262,7 +262,7 @@ describe('MapMobileLayout', () => {
   })
 
   it('opens the places list at the seventy percent snap point', async () => {
-    render(
+    await render(
       <MapMobileLayout
         mapComponent={<View testID="mock-map" />}
         travelsData={[{ id: 1 }]}
@@ -288,7 +288,7 @@ describe('MapMobileLayout', () => {
   })
 
   it('hides search-this-area when the map sheet is open', async () => {
-    const screen = render(
+    const screen = await render(
       <MapMobileLayout
         mapComponent={<View testID="mock-map" />}
         travelsData={[{ id: 1 }]}
@@ -313,7 +313,7 @@ describe('MapMobileLayout', () => {
     expect(screen.queryByTestId('map-search-this-area')).toBeNull()
   })
 
-  it('consumes Android Back by closing the selected place card in place', () => {
+  it('consumes Android Back by closing the selected place card in place', async () => {
     const originalPlatform = Platform.OS
     ;(Platform as any).OS = 'android'
     const clearSelectedPlace = jest.fn()
@@ -327,7 +327,7 @@ describe('MapMobileLayout', () => {
       })
 
     try {
-      const screen = render(
+      const screen = await render(
         <MapMobileLayout
           mapComponent={<View testID="mock-map" />}
           travelsData={[]}
@@ -355,8 +355,8 @@ describe('MapMobileLayout', () => {
     }
   })
 
-  it('passes only trusted user location to the selected place bottom card', () => {
-    render(
+  it('passes only trusted user location to the selected place bottom card', async () => {
+    await render(
       <MapMobileLayout
         mapComponent={<View testID="mock-map" />}
         travelsData={[]}
@@ -402,8 +402,8 @@ describe('MapMobileLayout', () => {
       },
     }
 
-    const renderWith = (extra: any) =>
-      render(
+    const renderWith = async (extra: any) =>
+      await render(
         <MapMobileLayout
           mapComponent={<View testID="mock-map" />}
           travelsData={[]}
@@ -419,14 +419,14 @@ describe('MapMobileLayout', () => {
         />,
       )
 
-    beforeEach(() => {
-      cleanup()
+    beforeEach(async () => {
+      await cleanup()
       useRouteStore.getState().clearRouteAndSetMode('radius')
     })
     afterEach(cleanup)
 
-    it('shows the chips row and hides the reset FAB when a category is active', () => {
-      const screen = renderWith({
+    it('shows the chips row and hides the reset FAB when a category is active', async () => {
+      const screen = await renderWith({
         hasActiveFilters: true,
         activeFilterItems: [{ key: 'cat:Церковь', label: 'Церковь' }],
       })
@@ -438,8 +438,8 @@ describe('MapMobileLayout', () => {
     })
 
     // #2777: сбрасывать нечего (радиус по умолчанию, без фильтров) — кнопки нет.
-    it('hides the reset FAB when there is nothing to reset', () => {
-      const screen = renderWith({ hasActiveFilters: false, activeFilterItems: [] })
+    it('hides the reset FAB when there is nothing to reset', async () => {
+      const screen = await renderWith({ hasActiveFilters: false, activeFilterItems: [] })
 
       expect(screen.queryByTestId('map-mobile-active-filters')).toBeNull()
       expect(screen.queryByTestId('map-mobile-show-all')).toBeNull()
@@ -447,8 +447,8 @@ describe('MapMobileLayout', () => {
 
     // Радиус чипа не даёт, но не-дефолтный радиус («Карта до 60 км») — то, что
     // сброс снимает: FAB есть, ряда чипов нет.
-    it('shows the reset FAB for a non-default radius without a chips row', () => {
-      const screen = renderWith({
+    it('shows the reset FAB for a non-default radius without a chips row', async () => {
+      const screen = await renderWith({
         hasActiveFilters: false,
         activeFilterItems: [{ key: 'radius', label: '60 км' }],
         filtersPanelProps: {
@@ -462,8 +462,8 @@ describe('MapMobileLayout', () => {
 
     // Текстовый поиск делает hasActiveFilters=true, но чипа не даёт: спрятать FAB
     // здесь означало бы оставить экран вообще без способа сброса.
-    it('keeps the reset FAB when only a text query is active (no chips rendered)', () => {
-      const screen = renderWith({ hasActiveFilters: true, activeFilterItems: [] })
+    it('keeps the reset FAB when only a text query is active (no chips rendered)', async () => {
+      const screen = await renderWith({ hasActiveFilters: true, activeFilterItems: [] })
 
       expect(screen.queryByTestId('map-mobile-active-filters')).toBeNull()
       expect(screen.getByTestId('map-mobile-show-all')).toBeTruthy()
@@ -484,24 +484,24 @@ describe('MapMobileLayout', () => {
       return { filtersPanelProps: { props }, setMode }
     }
 
-    beforeEach(() => {
+    beforeEach(async () => {
       // The toolbar reads/writes route state straight from the store, so reset
       // it to radius before each scenario. Unmount any leaked tree first so a
       // pending store-driven re-render from a prior test can't crash render().
-      cleanup()
+      await cleanup()
       useRouteStore.getState().clearRouteAndSetMode('radius')
       useRouteStore.getState().setTransportMode('car')
     })
 
-    afterEach(() => {
-      cleanup()
+    afterEach(async () => {
+      await cleanup()
       useRouteStore.getState().clearRouteAndSetMode('radius')
     })
 
-    it('enters route mode without faking a start when current location is unavailable', () => {
+    it('enters route mode without faking a start when current location is unavailable', async () => {
       const centerOnUser = jest.fn()
       const { filtersPanelProps } = buildFiltersProps()
-      const screen = render(
+      const screen = await render(
         <MapMobileLayout
           mapComponent={<View testID="mock-map" />}
           travelsData={[]}
@@ -521,7 +521,7 @@ describe('MapMobileLayout', () => {
       expect(screen.queryByTestId('map-mobile-transport-button')).toBeNull()
       expect(screen.queryByTestId('map-mobile-route-clear-button')).toBeNull()
 
-      fireEvent.press(screen.getByTestId('map-mobile-route-button'))
+      await fireEvent.press(screen.getByTestId('map-mobile-route-button'))
       // Store flipped to 'route' → contextual icons + hint now render.
       expect(useRouteStore.getState().mode).toBe('route')
       expect(screen.getByTestId('map-mobile-route-toolbar')).toBeTruthy()
@@ -535,19 +535,19 @@ describe('MapMobileLayout', () => {
       expect(screen.getByText('0/2')).toBeTruthy()
       expect(screen.getByText('Старт не определён — выберите «На карте» выше.')).toBeTruthy()
       expect(useRouteStore.getState().points).toHaveLength(0)
-      fireEvent.press(screen.getByTestId('map-mobile-route-request-location'))
+      await fireEvent.press(screen.getByTestId('map-mobile-route-request-location'))
       expect(centerOnUser).toHaveBeenCalledTimes(1)
       // Ручной старт живёт ТОЛЬКО в ряду «Старт» (опция «На карте»); дубля
       // «Указать старт вручную» внутри подсказки больше нет.
       expect(screen.queryByTestId('map-mobile-route-manual-start')).toBeNull()
-      fireEvent.press(screen.getByTestId('map-mobile-route-start-map'))
+      await fireEvent.press(screen.getByTestId('map-mobile-route-start-map'))
       expect(screen.getByText('Коснитесь карты, чтобы выбрать новый старт маршрута.')).toBeTruthy()
       expect(mockSnapToHalf).not.toHaveBeenCalled()
     })
 
     it('enters manual tap-start directly when route mode is requested by the location banner', async () => {
       const { filtersPanelProps } = buildFiltersProps()
-      const screen = render(
+      const screen = await render(
         <MapMobileLayout
           mapComponent={<View testID="mock-map" />}
           travelsData={[]}
@@ -569,9 +569,9 @@ describe('MapMobileLayout', () => {
       expect(useRouteStore.getState().points).toHaveLength(0)
     })
 
-    it('seeds route mode with trusted current location as 1/2 start', () => {
+    it('seeds route mode with trusted current location as 1/2 start', async () => {
       const { filtersPanelProps } = buildFiltersProps()
-      const screen = render(
+      const screen = await render(
         <MapMobileLayout
           mapComponent={<View testID="mock-map" />}
           travelsData={[]}
@@ -589,7 +589,7 @@ describe('MapMobileLayout', () => {
       // задаётся уже внутри режима.
       expect(screen.getByTestId('map-mobile-route-button')).toBeTruthy()
 
-      fireEvent.press(screen.getByTestId('map-mobile-route-button'))
+      await fireEvent.press(screen.getByTestId('map-mobile-route-button'))
 
       const points = useRouteStore.getState().points
       expect(useRouteStore.getState().mode).toBe('route')
@@ -611,9 +611,9 @@ describe('MapMobileLayout', () => {
       expect(mockSnapToHalf).not.toHaveBeenCalled()
     })
 
-    it('switches the route start directly between current location and the map', () => {
+    it('switches the route start directly between current location and the map', async () => {
       const { filtersPanelProps } = buildFiltersProps()
-      const screen = render(
+      const screen = await render(
         <MapMobileLayout
           mapComponent={<View testID="mock-map" />}
           travelsData={[]}
@@ -627,7 +627,7 @@ describe('MapMobileLayout', () => {
         />,
       )
 
-      fireEvent.press(screen.getByTestId('map-mobile-route-button'))
+      await fireEvent.press(screen.getByTestId('map-mobile-route-button'))
       expect(useRouteStore.getState().points).toEqual([
         expect.objectContaining({
           coordinates: { lat: 52.2, lng: 20.98 },
@@ -640,7 +640,7 @@ describe('MapMobileLayout', () => {
         selected: true,
       })
 
-      fireEvent.press(screen.getByTestId('map-mobile-route-start-map'))
+      await fireEvent.press(screen.getByTestId('map-mobile-route-start-map'))
 
       expect(useRouteStore.getState().mode).toBe('route')
       expect(useRouteStore.getState().points).toHaveLength(0)
@@ -651,7 +651,7 @@ describe('MapMobileLayout', () => {
         selected: true,
       })
 
-      fireEvent.press(screen.getByTestId('map-mobile-route-start-user'))
+      await fireEvent.press(screen.getByTestId('map-mobile-route-start-user'))
 
       expect(useRouteStore.getState().points).toEqual([
         expect.objectContaining({
@@ -678,12 +678,12 @@ describe('MapMobileLayout', () => {
         onOpenFilters: jest.fn(),
         filtersPanelProps,
       }
-      const screen = render(<MapMobileLayout {...baseProps} />)
+      const screen = await render(<MapMobileLayout {...baseProps} />)
 
-      fireEvent.press(screen.getByTestId('map-mobile-route-button'))
+      await fireEvent.press(screen.getByTestId('map-mobile-route-button'))
       expect(useRouteStore.getState().points).toHaveLength(0)
 
-      screen.rerender(
+      await screen.rerender(
         <MapMobileLayout
           {...baseProps}
           userLocation={{ latitude: 52.2, longitude: 20.98 }}
@@ -702,11 +702,11 @@ describe('MapMobileLayout', () => {
       expect(screen.getByText('1/2')).toBeTruthy()
     })
 
-    it('shows transport selector + clear + hint when already in route mode', () => {
+    it('shows transport selector + clear + hint when already in route mode', async () => {
       useRouteStore.getState().setMode('route')
       useRouteStore.getState().addPoint({ lat: 53.9, lng: 27.56 }, 'Старт')
       const { filtersPanelProps } = buildFiltersProps({ mode: 'route' })
-      const screen = render(
+      const screen = await render(
         <MapMobileLayout
           mapComponent={<View testID="mock-map" />}
           travelsData={[]}
@@ -727,7 +727,7 @@ describe('MapMobileLayout', () => {
       expect(screen.queryByTestId('map-mobile-radius-button')).toBeNull()
     })
 
-    it('keeps built route metrics visible on the map until the summary close is pressed', () => {
+    it('keeps built route metrics visible on the map until the summary close is pressed', async () => {
       jest.useFakeTimers()
       try {
         useRouteStore.getState().setMode('route')
@@ -744,7 +744,7 @@ describe('MapMobileLayout', () => {
         })
 
         const { filtersPanelProps } = buildFiltersProps({ mode: 'route' })
-        const screen = render(
+        const screen = await render(
           <MapMobileLayout
             mapComponent={<View testID="mock-map" />}
             travelsData={[]}
@@ -770,16 +770,16 @@ describe('MapMobileLayout', () => {
         expect(screen.getByText('12,5 км')).toBeTruthy()
         expect(screen.getByText('30 мин')).toBeTruthy()
 
-        act(() => {
+        await act(() => {
           jest.advanceTimersByTime(10000)
         })
 
         expect(screen.getByTestId('map-mobile-route-summary')).toBeTruthy()
 
-        fireEvent.press(screen.getByTestId('map-mobile-route-summary-close'))
+        await fireEvent.press(screen.getByTestId('map-mobile-route-summary-close'))
         expect(screen.queryByTestId('map-mobile-route-summary')).toBeNull()
 
-        act(() => {
+        await act(() => {
           useRouteStore.getState().setRoute({
             coordinates: [
               { lat: 53.9, lng: 27.56 },
@@ -799,10 +799,10 @@ describe('MapMobileLayout', () => {
       }
     })
 
-    it('opens the transport popover and applies a profile via the store', () => {
+    it('opens the transport popover and applies a profile via the store', async () => {
       useRouteStore.getState().setMode('route')
       const { filtersPanelProps } = buildFiltersProps({ mode: 'route' })
-      const screen = render(
+      const screen = await render(
         <MapMobileLayout
           mapComponent={<View testID="mock-map" />}
           travelsData={[]}
@@ -815,14 +815,14 @@ describe('MapMobileLayout', () => {
         />,
       )
 
-      fireEvent.press(screen.getByTestId('map-mobile-transport-button'))
-      fireEvent.press(screen.getByTestId('map-mobile-transport-option-bike'))
+      await fireEvent.press(screen.getByTestId('map-mobile-transport-button'))
+      await fireEvent.press(screen.getByTestId('map-mobile-transport-option-bike'))
       expect(useRouteStore.getState().transportMode).toBe('bike')
     })
 
-    it('anchors compact popovers under their toolbar icons', () => {
+    it('anchors compact popovers under their toolbar icons', async () => {
       const { filtersPanelProps } = buildFiltersProps()
-      const screen = render(
+      const screen = await render(
         <MapMobileLayout
           mapComponent={<View testID="mock-map" />}
           travelsData={[]}
@@ -835,7 +835,7 @@ describe('MapMobileLayout', () => {
         />,
       )
 
-      fireEvent.press(screen.getByTestId('map-mobile-radius-button'))
+      await fireEvent.press(screen.getByTestId('map-mobile-radius-button'))
       // 10 (отступ от края) + 2 × 48 (шаг между центрами кнопок = ширина
       // тач-таргета). Шаг вырос с 44 до 48 вместе с тач-таргетами тулбара
       // (#1271), поэтому якорь сместился с 98 на 106 — попап по-прежнему
@@ -844,7 +844,7 @@ describe('MapMobileLayout', () => {
         StyleSheet.flatten(screen.getByTestId('map-mobile-radius-popover-card').props.style).right,
       ).toBe(106)
 
-      fireEvent.press(screen.getByTestId('map-mobile-layers-button'))
+      await fireEvent.press(screen.getByTestId('map-mobile-layers-button'))
       const layersCardStyle = StyleSheet.flatten(
         screen.getByTestId('map-mobile-layers-popover-card').props.style,
       )
@@ -852,9 +852,9 @@ describe('MapMobileLayout', () => {
       expect(layersCardStyle.right).toBe(58)
       expect(layersCardStyle.width).toBe(360)
 
-      fireEvent.press(screen.getByTestId('map-mobile-layers-popover-backdrop'))
-      fireEvent.press(screen.getByTestId('map-mobile-route-button'))
-      fireEvent.press(screen.getByTestId('map-mobile-transport-button'))
+      await fireEvent.press(screen.getByTestId('map-mobile-layers-popover-backdrop'))
+      await fireEvent.press(screen.getByTestId('map-mobile-route-button'))
+      await fireEvent.press(screen.getByTestId('map-mobile-transport-button'))
       const transportCardStyle = StyleSheet.flatten(
         screen.getByTestId('map-mobile-transport-popover-card').props.style,
       )
@@ -865,7 +865,7 @@ describe('MapMobileLayout', () => {
     // Регрессия (Android, телефон 412dp): в route-режиме иконка «Слои» уезжает
     // на 4 шага влево, и карточка 272dp с якорем right=186 вылезала за ЛЕВЫЙ
     // край — «Слои карты» были обрезаны.
-    it('keeps the layers popover fully on screen in route mode on a phone', () => {
+    it('keeps the layers popover fully on screen in route mode on a phone', async () => {
       const PHONE_WIDTH = 412
       // `useWindowDimensions` глобально подменён в __tests__/setup.ts на jest.fn
       // (desktop 1024). Меняем только реализацию и возвращаем прежнюю: spyOn +
@@ -877,7 +877,7 @@ describe('MapMobileLayout', () => {
       try {
         useRouteStore.getState().setMode('route')
         const { filtersPanelProps } = buildFiltersProps({ mode: 'route' })
-        const screen = render(
+        const screen = await render(
           <MapMobileLayout
             mapComponent={<View testID="mock-map" />}
             travelsData={[]}
@@ -890,7 +890,7 @@ describe('MapMobileLayout', () => {
           />,
         )
 
-        fireEvent.press(screen.getByTestId('map-mobile-layers-button'))
+        await fireEvent.press(screen.getByTestId('map-mobile-layers-button'))
         const layersCardStyle = StyleSheet.flatten(
           screen.getByTestId('map-mobile-layers-popover-card').props.style,
         )
@@ -902,10 +902,10 @@ describe('MapMobileLayout', () => {
       }
     })
 
-    it('clears the route and returns to radius mode (contextual icons hidden)', () => {
+    it('clears the route and returns to radius mode (contextual icons hidden)', async () => {
       useRouteStore.getState().setMode('route')
       const { filtersPanelProps } = buildFiltersProps({ mode: 'route' })
-      const screen = render(
+      const screen = await render(
         <MapMobileLayout
           mapComponent={<View testID="mock-map" />}
           travelsData={[]}
@@ -918,7 +918,7 @@ describe('MapMobileLayout', () => {
         />,
       )
 
-      fireEvent.press(screen.getByTestId('map-mobile-route-clear-button'))
+      await fireEvent.press(screen.getByTestId('map-mobile-route-clear-button'))
       expect(useRouteStore.getState().mode).toBe('radius')
       // Back in radius: contextual icons gone, radius button restored.
       expect(screen.queryByTestId('map-mobile-transport-button')).toBeNull()
@@ -928,7 +928,7 @@ describe('MapMobileLayout', () => {
   })
 
   it('keeps native list and filters free of an outer scroll wrapper', async () => {
-    const screen = render(
+    const screen = await render(
       <MapMobileLayout
         mapComponent={<View testID="mock-map" />}
         travelsData={[]}

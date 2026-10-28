@@ -1,3 +1,4 @@
+import { getAllHosts } from '@/__tests__/helpers/hostQueries'
 /**
  * #2149: полоса маршрута и лист «Маршрут» на телефоне. До правки кружок
  * нумеровал все точки (1…14), счётчик «Задания» — только обязательные (из 11),
@@ -44,7 +45,7 @@ const build = (overrides: Partial<Parameters<typeof buildQuestRouteModel>[0]> = 
 afterEach(cleanup)
 
 describe('buildQuestRouteModel (#2149)', () => {
-  it('authored optional titles remain single in actual route rows, details and a11y', () => {
+  it('authored optional titles remain single in actual route rows, details and a11y', async () => {
     const titledPoints = points.map((point, index) => index === 6
       ? { ...point, title: 'Башня (по желанию)' }
       : point)
@@ -54,8 +55,8 @@ describe('buildQuestRouteModel (#2149)', () => {
     expect(row.detail).toBe('доступна')
     expect(row.accessibilityLabel).toBe('Башня (по желанию): Точка 7 из 14, доступна')
     expect(model.segments[6].role).toBe('optional')
-    const screen = render(<QuestRouteStrip model={model} onGoToStep={jest.fn()} onShowFinale={jest.fn()} />)
-    fireEvent.press(screen.getByTestId('quest-route-strip'))
+    const screen = await render(<QuestRouteStrip model={model} onGoToStep={jest.fn()} onShowFinale={jest.fn()} />)
+    await fireEvent.press(screen.getByTestId('quest-route-strip'))
     expect(screen.getByLabelText(row.accessibilityLabel)).toBeTruthy()
   })
 
@@ -106,46 +107,46 @@ describe('buildQuestRouteModel (#2149)', () => {
 })
 
 describe('QuestRouteStrip (#2149)', () => {
-  const renderStrip = () => {
+  const renderStrip = async () => {
     const onGoToStep = jest.fn()
     const onShowFinale = jest.fn()
-    const view = render(<QuestRouteStrip model={build()} onGoToStep={onGoToStep} onShowFinale={onShowFinale} />)
+    const view = await render(<QuestRouteStrip model={build()} onGoToStep={onGoToStep} onShowFinale={onShowFinale} />)
     return { view, onGoToStep, onShowFinale }
   }
 
-  it('полоса — кнопка ≥ 44 pt с подписью маршрута', () => {
-    const { view } = renderStrip()
+  it('полоса — кнопка ≥ 44 pt с подписью маршрута', async () => {
+    const { view } = await renderStrip()
     const strip = view.getByTestId('quest-route-strip')
     expect(strip.props.accessibilityLabel ?? strip.props['aria-label']).toBeDefined()
     expect(view.getByLabelText('Маршрут: Точка 12 из 14, задания 10 из 11')).toBeTruthy()
     expect((StyleSheet.flatten(strip.props.style) as any).minHeight).toBeGreaterThanOrEqual(QUEST_ROUTE_ROW_MIN_HEIGHT)
   })
 
-  it('лист «Маршрут»: доступная точка открывается, закрытая — нет, финал — через свою строку', () => {
-    const { view, onGoToStep, onShowFinale } = renderStrip()
-    fireEvent.press(view.getByTestId('quest-route-strip'))
+  it('лист «Маршрут»: доступная точка открывается, закрытая — нет, финал — через свою строку', async () => {
+    const { view, onGoToStep, onShowFinale } = await renderStrip()
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
 
     const row = view.getByTestId('quest-route-row-p3')
     expect((StyleSheet.flatten(row.props.style) as any).minHeight).toBeGreaterThanOrEqual(QUEST_ROUTE_ROW_MIN_HEIGHT)
-    fireEvent.press(row)
+    await fireEvent.press(row)
     expect(onGoToStep).toHaveBeenCalledWith(3)
 
-    fireEvent.press(view.getByTestId('quest-route-strip'))
-    fireEvent.press(view.getByTestId('quest-route-row-p13'))
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
+    await fireEvent.press(view.getByTestId('quest-route-row-p13'))
     expect(onGoToStep).toHaveBeenCalledTimes(1)
 
-    fireEvent.press(view.getByTestId('quest-nav-finale'))
+    await fireEvent.press(view.getByTestId('quest-nav-finale'))
     expect(onShowFinale).toHaveBeenCalledTimes(1)
   })
 })
 
 describe('QuestRouteStrip — лист открывается на текущей точке (#2149, P3 ревью)', () => {
-  it('прокручивает список к строке текущей точки', () => {
+  it('прокручивает список к строке текущей точки', async () => {
     const scrollTo = jest.spyOn(ScrollView.prototype as any, 'scrollTo').mockImplementation(() => undefined)
-    const view = render(<QuestRouteStrip model={build()} onGoToStep={jest.fn()} onShowFinale={jest.fn()} />)
-    fireEvent.press(view.getByTestId('quest-route-strip'))
-    act(() => {
-      fireEvent(view.getByTestId('quest-route-row-p12'), 'layout', {
+    const view = await render(<QuestRouteStrip model={build()} onGoToStep={jest.fn()} onShowFinale={jest.fn()} />)
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
+    await act(async () => {
+      await fireEvent(view.getByTestId('quest-route-row-p12'), 'layout', {
         nativeEvent: { layout: { x: 0, y: 552, width: 340, height: 46 } },
       })
     })
@@ -156,22 +157,22 @@ describe('QuestRouteStrip — лист открывается на текуще�
 })
 
 describe('ActiveScrollNav — активный шаг в видимой части на длинном маршруте (#2149)', () => {
-  it('центрует 25-й элемент из 30 по измеренной раскладке, а не по литералу ширины', () => {
+  it('центрует 25-й элемент из 30 по измеренной раскладке, а не по литералу ширины', async () => {
     const scrollTo = jest.spyOn(ScrollView.prototype as any, 'scrollTo').mockImplementation(() => undefined)
-    const view = render(
+    const view = await render(
       <ActiveScrollNav activeIndex={25}>
         {Array.from({ length: 30 }, (_, i) => (
           <ScrollView key={`item-${i}`} />
         ))}
       </ActiveScrollNav>,
     )
-    act(() => {
+    await act(async () => {
       for (let i = 0; i < 30; i += 1) {
-        fireEvent(view.getByTestId(`quest-steps-nav-item-${i}`), 'layout', {
+        await fireEvent(view.getByTestId(`quest-steps-nav-item-${i}`), 'layout', {
           nativeEvent: { layout: { x: i * 126, y: 0, width: 120, height: 44 } },
         })
       }
-      fireEvent(view.UNSAFE_getAllByType(ScrollView)[0], 'layout', {
+      await fireEvent(getAllHosts(view.container, node => node.type === "RCTScrollView")[0], 'layout', {
         nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 44 } },
       })
     })

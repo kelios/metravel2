@@ -14,8 +14,8 @@ const rating = (overrides: Partial<PlaceRating> = {}): PlaceRating => ({
 })
 
 describe('PlaceRatingBadge', () => {
-  it('renders the score, primary provider label and review count', () => {
-    const { getByText, getByTestId } = render(<PlaceRatingBadge rating={rating()} />)
+  it('renders the score, primary provider label and review count', async () => {
+    const { getByText, getByTestId } = await render(<PlaceRatingBadge rating={rating()} />)
 
     // #1459: дробную часть оценки печатает локаль (дефолт — русский)
     expect(getByText('4,6')).toBeTruthy()
@@ -25,16 +25,16 @@ describe('PlaceRatingBadge', () => {
     expect(getByTestId('place-rating-badge').props.accessibilityLabel).toContain('4,6')
   })
 
-  it('renders nothing without an aggregate score', () => {
-    const { queryByTestId, rerender } = render(<PlaceRatingBadge rating={null} />)
+  it('renders nothing without an aggregate score', async () => {
+    const { queryByTestId, rerender } = await render(<PlaceRatingBadge rating={null} />)
     expect(queryByTestId('place-rating-badge')).toBeNull()
 
-    rerender(<PlaceRatingBadge rating={rating({ value: null })} />)
+    await rerender(<PlaceRatingBadge rating={rating({ value: null })} />)
     expect(queryByTestId('place-rating-badge')).toBeNull()
   })
 
-  it('hides the source label for the own MeTravel rating', () => {
-    const { getByText, queryByText } = render(
+  it('hides the source label for the own MeTravel rating', async () => {
+    const { getByText, queryByText } = await render(
       <PlaceRatingBadge
         rating={rating({
           sources: [{ provider: 'metravel', value: 4.6, count: 128, url: null }],
@@ -46,8 +46,8 @@ describe('PlaceRatingBadge', () => {
     expect(queryByText('·')).toBeNull()
   })
 
-  it('falls back to the first source when the primary has no score', () => {
-    const { getByText } = render(
+  it('falls back to the first source when the primary has no score', async () => {
+    const { getByText } = await render(
       <PlaceRatingBadge
         rating={rating({
           sources: [{ provider: 'tripadvisor', value: null, count: 12, url: null }],

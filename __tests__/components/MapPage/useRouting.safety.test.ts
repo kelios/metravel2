@@ -3,7 +3,7 @@
  * Проверяют обработку невалидных данных, rate limiting и retry логику
  */
 
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { useRouting, clearResolvedRouteKeys } from '@/components/MapPage/useRouting';
 import { routeCache } from '@/utils/routeCache';
 
@@ -19,8 +19,8 @@ describe('useRouting - Safety Tests', () => {
   });
 
   describe('Invalid Route Points', () => {
-    it('handles empty route points array', () => {
-      const { result } = renderHook(() =>
+    it('handles empty route points array', async () => {
+      const { result } = await renderHook(() =>
         useRouting([], 'car', 'test-api-key')
       );
 
@@ -30,8 +30,8 @@ describe('useRouting - Safety Tests', () => {
       expect(result.current.coords).toEqual([]);
     });
 
-    it('handles single route point', () => {
-      const { result } = renderHook(() =>
+    it('handles single route point', async () => {
+      const { result } = await renderHook(() =>
         useRouting([[27.56, 53.9]], 'car', 'test-api-key')
       );
 
@@ -39,8 +39,8 @@ describe('useRouting - Safety Tests', () => {
       expect(result.current.error).toBe(false);
     });
 
-    it('handles invalid coordinates (NaN)', () => {
-      const { result } = renderHook(() =>
+    it('handles invalid coordinates (NaN)', async () => {
+      const { result } = await renderHook(() =>
         useRouting(
           [
             [NaN, 53.9],
@@ -55,8 +55,8 @@ describe('useRouting - Safety Tests', () => {
       expect(result.current).toBeDefined();
     });
 
-    it('handles invalid coordinates (Infinity)', () => {
-      const { result } = renderHook(() =>
+    it('handles invalid coordinates (Infinity)', async () => {
+      const { result } = await renderHook(() =>
         useRouting(
           [
             [Infinity, 53.9],
@@ -70,8 +70,8 @@ describe('useRouting - Safety Tests', () => {
       expect(result.current).toBeDefined();
     });
 
-    it('handles out-of-range coordinates', () => {
-      const { result } = renderHook(() =>
+    it('handles out-of-range coordinates', async () => {
+      const { result } = await renderHook(() =>
         useRouting(
           [
             [181, 53.9], // invalid longitude
@@ -94,7 +94,7 @@ describe('useRouting - Safety Tests', () => {
         text: jest.fn().mockResolvedValue('Forbidden'),
       });
 
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useRouting(
           [
             [27.56, 53.9],
@@ -117,7 +117,7 @@ describe('useRouting - Safety Tests', () => {
         text: jest.fn().mockResolvedValue('Invalid API key'),
       });
 
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useRouting(
           [
             [27.56, 53.9],
@@ -134,7 +134,7 @@ describe('useRouting - Safety Tests', () => {
     });
 
     it('handles short API key', async () => {
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useRouting(
           [
             [27.56, 53.9],
@@ -195,7 +195,7 @@ describe('useRouting - Safety Tests', () => {
           }),
         });
 
-      renderHook(() =>
+      await renderHook(() =>
         useRouting(
           [
             [20.1805115, 50.2621317],
@@ -227,7 +227,7 @@ describe('useRouting - Safety Tests', () => {
           )
       );
 
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useRouting(
           [
             [27.56, 53.9],
@@ -253,7 +253,7 @@ describe('useRouting - Safety Tests', () => {
         text: jest.fn().mockResolvedValue('Too many requests'),
       });
 
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useRouting(
           [
             [27.56, 53.9],
@@ -277,7 +277,7 @@ describe('useRouting - Safety Tests', () => {
         text: jest.fn().mockResolvedValue('Bad request'),
       });
 
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useRouting(
           [
             [27.56, 53.9],
@@ -301,7 +301,7 @@ describe('useRouting - Safety Tests', () => {
         text: jest.fn().mockResolvedValue('Internal server error'),
       });
 
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useRouting(
           [
             [27.56, 53.9],
@@ -340,7 +340,7 @@ describe('useRouting - Safety Tests', () => {
         }),
       });
 
-      const { result } = renderHook(() => useRouting(points, 'car', undefined));
+      const { result } = await renderHook(() => useRouting(points, 'car', undefined));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -387,7 +387,7 @@ describe('useRouting - Safety Tests', () => {
           }),
         });
 
-      const { result } = renderHook(() => useRouting(points, 'car', undefined));
+      const { result } = await renderHook(() => useRouting(points, 'car', undefined));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -423,7 +423,7 @@ describe('useRouting - Safety Tests', () => {
           text: jest.fn().mockResolvedValue('OSRM unavailable'),
         });
 
-      const { result } = renderHook(() => useRouting(points, 'car', undefined));
+      const { result } = await renderHook(() => useRouting(points, 'car', undefined));
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -435,25 +435,30 @@ describe('useRouting - Safety Tests', () => {
     });
 
     it('handles empty response', async () => {
+      jest.useFakeTimers();
+      const points: [number, number][] = [[27.56, 53.9], [27.6, 53.95]];
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         json: jest.fn().mockResolvedValue({}),
       });
-
-      const { result } = renderHook(() =>
-        useRouting(
-          [
-            [27.56, 53.9],
-            [27.6, 53.95],
-          ],
-          'car',
-          'test-api-key-long-enough'
-        )
-      );
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
+      try {
+        const hook = await renderHook(() => useRouting(points, 'car', 'test-api-key-long-enough'));
+        try {
+          // Settle the real debounce and ORS retry/backoff chain before inspecting
+          // the terminal fallback. Awaited renderHook no longer exposes a pre-effect false state.
+          await act(async () => { await jest.runAllTimersAsync(); });
+          expect(global.fetch).toHaveBeenCalledTimes(5); // server, ORS × 3, OSRM
+          expect(hook.result.current.loading).toBe(false);
+          expect(hook.result.current.error).toEqual(expect.any(String));
+          expect(hook.result.current.coords).toEqual(points);
+          expect(hook.result.current.isOptimal).toBe(false);
+          expect(routeCache.get(points, 'car')).toBeNull();
+        } finally {
+          await hook.unmount();
+        }
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
     it('handles malformed JSON response', async () => {
@@ -462,7 +467,7 @@ describe('useRouting - Safety Tests', () => {
         json: jest.fn().mockRejectedValue(new Error('Invalid JSON')),
       });
 
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useRouting(
           [
             [27.56, 53.9],
@@ -492,7 +497,7 @@ describe('useRouting - Safety Tests', () => {
         }),
       });
 
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useRouting(
           [
             [27.56, 53.9],
@@ -517,7 +522,7 @@ describe('useRouting - Safety Tests', () => {
         return new Promise(() => {}); // Never resolves
       });
 
-      const { unmount } = renderHook(() =>
+      const { unmount } = await renderHook(() =>
         useRouting(
           [
             [27.56, 53.9],
@@ -531,7 +536,7 @@ describe('useRouting - Safety Tests', () => {
       await waitFor(() => expect(global.fetch).toHaveBeenCalled());
       expect(requestSignal?.aborted).toBe(false);
 
-      unmount();
+      await unmount();
 
       expect(requestSignal?.aborted).toBe(true);
     });
@@ -556,7 +561,7 @@ describe('useRouting - Safety Tests', () => {
         }),
       });
 
-      const { rerender } = renderHook(
+      const { rerender } = await renderHook(
         ({ points }) => useRouting(points, 'car', 'test-api-key-long-enough'),
         {
           initialProps: {
@@ -570,7 +575,7 @@ describe('useRouting - Safety Tests', () => {
 
       // Быстрые изменения маршрута
       for (let i = 0; i < 5; i++) {
-        rerender({
+        await rerender({
           points: [
             [27.56 + i * 0.01, 53.9],
             [27.6 + i * 0.01, 53.95],
@@ -599,7 +604,7 @@ describe('useRouting - Safety Tests', () => {
           [27.6, 53.95],
         ];
 
-        const first = renderHook(() => useRouting(points, 'car', undefined));
+        const first = await renderHook(() => useRouting(points, 'car', undefined));
 
         await waitFor(() => {
           expect(first.result.current.loading).toBe(false);
@@ -609,9 +614,9 @@ describe('useRouting - Safety Tests', () => {
 
         expect(routeCache.get(points, 'car')).toBeNull();
         const callsAfterFirstFailure = (global.fetch as jest.Mock).mock.calls.length;
-        first.unmount();
+        await first.unmount();
 
-        const second = renderHook(() => useRouting(points, 'car', undefined));
+        const second = await renderHook(() => useRouting(points, 'car', undefined));
 
         await waitFor(() => {
           expect((global.fetch as jest.Mock).mock.calls.length).toBeGreaterThan(
@@ -620,7 +625,7 @@ describe('useRouting - Safety Tests', () => {
           expect(second.result.current.error).toBeTruthy();
         });
 
-        second.unmount();
+        await second.unmount();
       }
     );
 
@@ -649,7 +654,7 @@ describe('useRouting - Safety Tests', () => {
         [27.6, 53.95],
       ];
 
-      const { rerender, result } = renderHook(
+      const { rerender, result } = await renderHook(
         ({ pts }) => useRouting(pts, 'foot', 'test-api-key-long-enough'),
         { initialProps: { pts: points } }
       );
@@ -663,7 +668,7 @@ describe('useRouting - Safety Tests', () => {
       expect(firstCalls).toBeGreaterThanOrEqual(1);
 
       // Re-render with same points (should use cache and return without scheduling a new fetch)
-      rerender({ pts: points });
+      await rerender({ pts: points });
       await new Promise((r) => setTimeout(r, 30));
 
       const afterCalls = (global.fetch as jest.Mock).mock.calls.length;
@@ -697,7 +702,7 @@ describe('useRouting - Safety Tests', () => {
         [27.6, 53.95],
       ];
 
-      const { rerender, result } = renderHook(
+      const { rerender, result } = await renderHook(
         ({ mode }) => useRouting(points, mode, 'test-api-key-long-enough'),
         {
           initialProps: { mode: 'car' as const },
@@ -709,14 +714,14 @@ describe('useRouting - Safety Tests', () => {
       });
 
       // Меняем режим транспорта
-      rerender({ mode: 'bike' });
+      await rerender({ mode: 'bike' });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
       });
 
       // Меняем на пеший режим
-      rerender({ mode: 'foot' });
+      await rerender({ mode: 'foot' });
 
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
@@ -760,7 +765,7 @@ describe('useRouting - shared bounded Valhalla fallback', () => {
       return { ok: false, status: 503, text: async () => 'unavailable' } as Response;
     });
 
-    const { result, unmount } = renderHook(() => useRouting(points, mode, undefined));
+    const { result, unmount } = await renderHook(() => useRouting(points, mode, undefined));
     await waitFor(() => {
       expect(result.current.coords).toEqual(points);
       expect(result.current.loading).toBe(false);
@@ -774,7 +779,7 @@ describe('useRouting - shared bounded Valhalla fallback', () => {
     expect(result.current.error).toBe(false);
     expect(routeCache.get(points, mode)?.coords).toEqual(points);
     expect(global.fetch).toHaveBeenCalledTimes(3); // server + both complete provider chunks
-    unmount();
+    await unmount();
   });
 
   it('never caches a partial route when a later Valhalla chunk fails', async () => {
@@ -796,7 +801,7 @@ describe('useRouting - shared bounded Valhalla fallback', () => {
       return { ok: false, status: 503, text: async () => 'unavailable' } as Response;
     });
 
-    const { result, unmount } = renderHook(() => useRouting(points, 'foot', undefined));
+    const { result, unmount } = await renderHook(() => useRouting(points, 'foot', undefined));
     await waitFor(() => {
       expect(result.current.error).toBeTruthy();
       expect(result.current.loading).toBe(false);
@@ -805,6 +810,6 @@ describe('useRouting - shared bounded Valhalla fallback', () => {
     expect(result.current.coords).toEqual(points);
     expect(result.current.isOptimal).toBe(false);
     expect(routeCache.get(points, 'foot')).toBeNull();
-    unmount();
+    await unmount();
   });
 });

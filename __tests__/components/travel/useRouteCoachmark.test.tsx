@@ -58,7 +58,7 @@ describe('RouteCoachmark persistence', () => {
   it('hydrates native coachmark visibility and stores dismiss action', async () => {
     setPlatformOs('android')
 
-    const { result, unmount } = renderHook(() => useRouteCoachmark(false))
+    const { result, unmount } = await renderHook(() => useRouteCoachmark(false))
 
     await waitFor(() => {
       expect(result.current.isVisible).toBe(true)
@@ -74,9 +74,9 @@ describe('RouteCoachmark persistence', () => {
       expect(AsyncStorage.setItem).toHaveBeenCalledWith(MAP_COACHMARK_STORAGE_KEY, '1')
     })
 
-    unmount()
+    await unmount()
 
-    const second = renderHook(() => useRouteCoachmark(false))
+    const second = await renderHook(() => useRouteCoachmark(false))
 
     await waitFor(() => {
       expect(second.result.current.isVisible).toBe(false)
@@ -86,7 +86,7 @@ describe('RouteCoachmark persistence', () => {
   it('hides coachmark immediately when route already has points', async () => {
     setPlatformOs('android')
 
-    const { result } = renderHook(() => useRouteCoachmark(true))
+    const { result } = await renderHook(() => useRouteCoachmark(true))
 
     expect(result.current.isVisible).toBe(false)
     expect(AsyncStorage.getItem).not.toHaveBeenCalled()

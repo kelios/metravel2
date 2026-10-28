@@ -48,11 +48,11 @@ describe('TravelArticleShareTripCta', () => {
     await act(async () => { await i18n.changeLanguage('ru') })
   })
 
-  it('takes a guest to registration with the bounded note create URL and share intent', () => {
-    const screen = render(<TravelArticleShareTripCta travel={travel} isMobile />)
+  it('takes a guest to registration with the bounded note create URL and share intent', async () => {
+    const screen = await render(<TravelArticleShareTripCta travel={travel} isMobile />)
 
     expect(mockQueue).not.toHaveBeenCalled()
-    fireEvent.press(screen.getByRole('button', { name: actionLabel }))
+    await fireEvent.press(screen.getByRole('button', { name: actionLabel }))
 
     const authUrl = new URL(mockPush.mock.calls[0][0], 'https://metravel.by')
     expect(authUrl.pathname).toBe('/registration')
@@ -77,11 +77,11 @@ describe('TravelArticleShareTripCta', () => {
     expect(mockQueue.mock.calls.some(([event]) => String(event).includes('favorite'))).toBe(false)
   })
 
-  it('opens creation directly for a signed-in reader, including a superuser who is not the author', () => {
+  it('opens creation directly for a signed-in reader, including a superuser who is not the author', async () => {
     mockUseAuth.mockReturnValue({ authReady: true, isAuthenticated: true, userId: '8', isSuperuser: true })
-    const screen = render(<TravelArticleShareTripCta travel={travel} isMobile={false} />)
+    const screen = await render(<TravelArticleShareTripCta travel={travel} isMobile={false} />)
 
-    fireEvent.press(screen.getByRole('button', { name: actionLabel }))
+    await fireEvent.press(screen.getByRole('button', { name: actionLabel }))
 
     const createUrl = new URL(mockPush.mock.calls[0][0], 'https://metravel.by')
     expect(createUrl.pathname).toBe('/travel/new')
@@ -95,11 +95,11 @@ describe('TravelArticleShareTripCta', () => {
     }))
   })
 
-  it('keeps the full wizard as the second choice with the same article context (#2829)', () => {
+  it('keeps the full wizard as the second choice with the same article context (#2829)', async () => {
     mockUseAuth.mockReturnValue({ authReady: true, isAuthenticated: true, userId: '8' })
-    const screen = render(<TravelArticleShareTripCta travel={travel} isMobile={false} />)
+    const screen = await render(<TravelArticleShareTripCta travel={travel} isMobile={false} />)
 
-    fireEvent.press(screen.getByRole('button', { name: fullActionLabel }))
+    await fireEvent.press(screen.getByRole('button', { name: fullActionLabel }))
 
     const createUrl = new URL(mockPush.mock.calls[0][0], 'https://metravel.by')
     expect(createUrl.pathname).toBe('/travel/new')
@@ -118,41 +118,41 @@ describe('TravelArticleShareTripCta', () => {
   it.each([
     ['userIds', travel],
     ['fallback user.id', { ...travel, userIds: '', user: { id: 7, name: 'Автор' } }],
-  ])('hides the CTA from the author resolved through %s', (_case, article) => {
+  ])('hides the CTA from the author resolved through %s', async (_case, article) => {
     mockUseAuth.mockReturnValue({ authReady: true, isAuthenticated: true, userId: '7' })
 
-    const screen = render(<TravelArticleShareTripCta travel={article} isMobile />)
+    const screen = await render(<TravelArticleShareTripCta travel={article} isMobile />)
 
     expect(screen.queryByRole('button')).toBeNull()
     expect(mockQueue).not.toHaveBeenCalled()
   })
 
-  it('waits for resolved authentication and does not flash a CTA for the author', () => {
+  it('waits for resolved authentication and does not flash a CTA for the author', async () => {
     mockUseAuth.mockReturnValue({ authReady: false, isAuthenticated: false, userId: null })
-    const screen = render(<TravelArticleShareTripCta travel={travel} isMobile />)
+    const screen = await render(<TravelArticleShareTripCta travel={travel} isMobile />)
     expect(screen.queryByRole('button')).toBeNull()
 
     mockUseAuth.mockReturnValue({ authReady: true, isAuthenticated: true, userId: '7' })
-    screen.rerender(<TravelArticleShareTripCta travel={{ ...travel }} isMobile />)
+    await await screen.rerender(<TravelArticleShareTripCta travel={{ ...travel }} isMobile />)
 
     expect(screen.queryByRole('button')).toBeNull()
     expect(mockQueue).not.toHaveBeenCalled()
   })
 
-  it('waits for a signed-in reader identity before deciding whether the reader is the author', () => {
+  it('waits for a signed-in reader identity before deciding whether the reader is the author', async () => {
     mockUseAuth.mockReturnValue({ authReady: true, isAuthenticated: true, userId: null })
-    const screen = render(<TravelArticleShareTripCta travel={travel} isMobile />)
+    const screen = await render(<TravelArticleShareTripCta travel={travel} isMobile />)
 
     expect(screen.queryByRole('button')).toBeNull()
     expect(mockQueue).not.toHaveBeenCalled()
   })
 
-  it('counts a visible impression once per article and re-arms after article navigation', () => {
-    const screen = render(<TravelArticleShareTripCta travel={travel} isMobile />)
+  it('counts a visible impression once per article and re-arms after article navigation', async () => {
+    const screen = await render(<TravelArticleShareTripCta travel={travel} isMobile />)
     expect(mockQueue).not.toHaveBeenCalled()
 
-    fireEvent(screen.getByTestId('travel-article-share-trip'), 'layout')
-    fireEvent(screen.getByTestId('travel-article-share-trip'), 'layout')
+    await fireEvent(screen.getByTestId('travel-article-share-trip'), 'layout')
+    await fireEvent(screen.getByTestId('travel-article-share-trip'), 'layout')
     expect(mockQueue).toHaveBeenCalledTimes(1)
     expect(mockQueue).toHaveBeenLastCalledWith('content_create_cta_impression', expect.objectContaining({
       source_travel_id: '42',
@@ -160,23 +160,23 @@ describe('TravelArticleShareTripCta', () => {
       intent: 'share-trip',
     }))
 
-    screen.rerender(<TravelArticleShareTripCta travel={{ ...travel, id: 43 }} isMobile />)
-    fireEvent(screen.getByTestId('travel-article-share-trip'), 'layout')
+    await await screen.rerender(<TravelArticleShareTripCta travel={{ ...travel, id: 43 }} isMobile />)
+    await fireEvent(screen.getByTestId('travel-article-share-trip'), 'layout')
     expect(mockQueue).toHaveBeenCalledTimes(2)
     expect(mockQueue).toHaveBeenLastCalledWith('content_create_cta_impression', expect.objectContaining({
       source_travel_id: '43',
     }))
   })
 
-  it('still allows sharing when neither place nor country is available', () => {
-    const screen = render(
+  it('still allows sharing when neither place nor country is available', async () => {
+    const screen = await render(
       <TravelArticleShareTripCta
         travel={{ ...travel, cityName: '', countryCode: '', travelAddress: [] }}
         isMobile
       />,
     )
 
-    fireEvent.press(screen.getByRole('button', { name: actionLabel }))
+    await fireEvent.press(screen.getByRole('button', { name: actionLabel }))
 
     const authUrl = new URL(mockPush.mock.calls[0][0], 'https://metravel.by')
     const createUrl = new URL(authUrl.searchParams.get('redirect')!, 'https://metravel.by')
@@ -185,7 +185,7 @@ describe('TravelArticleShareTripCta', () => {
   })
 
   it('updates the visible label in all current locales without remounting the CTA', async () => {
-    const screen = render(<TravelArticleShareTripCta travel={travel} isMobile />)
+    const screen = await render(<TravelArticleShareTripCta travel={travel} isMobile />)
 
     for (const locale of ['be', 'uk', 'pl', 'en', 'ru']) {
       await act(async () => { await i18n.changeLanguage(locale) })

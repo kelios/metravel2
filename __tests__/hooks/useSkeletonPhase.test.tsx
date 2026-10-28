@@ -30,30 +30,30 @@ describe('useSkeletonPhase (web)', () => {
     Platform.OS = originalOS
   })
 
-  it('hides immediately when data and visual are both ready', () => {
-    const { result } = renderHook(() =>
+  it('hides immediately when data and visual are both ready', async () => {
+    const { result } = await renderHook(() =>
       useSkeletonPhase({ isDataReady: true, isVisualReady: true })
     )
 
     expect(result.current).toBe('hidden')
   })
 
-  it('stays loading when visual-ready never arrives and no fallback is set', () => {
-    const { result } = renderHook(() =>
+  it('stays loading when visual-ready never arrives and no fallback is set', async () => {
+    const { result } = await renderHook(() =>
       useSkeletonPhase({ isDataReady: true, isVisualReady: false })
     )
 
     expect(result.current).toBe('loading')
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(10_000)
     })
 
     expect(result.current).toBe('loading')
   })
 
-  it('lifts the overlay on data readiness after the fallback window, without a visual-ready signal', () => {
-    const { result } = renderHook(() =>
+  it('lifts the overlay on data readiness after the fallback window, without a visual-ready signal', async () => {
+    const { result } = await renderHook(() =>
       useSkeletonPhase({
         isDataReady: true,
         isVisualReady: false,
@@ -63,19 +63,19 @@ describe('useSkeletonPhase (web)', () => {
 
     expect(result.current).toBe('loading')
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(499)
     })
     expect(result.current).toBe('loading')
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1)
     })
     expect(result.current).toBe('hidden')
   })
 
-  it('does not lift the overlay via fallback while data is not ready', () => {
-    const { result } = renderHook(() =>
+  it('does not lift the overlay via fallback while data is not ready', async () => {
+    const { result } = await renderHook(() =>
       useSkeletonPhase({
         isDataReady: false,
         isVisualReady: false,
@@ -83,15 +83,15 @@ describe('useSkeletonPhase (web)', () => {
       })
     )
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(2_000)
     })
 
     expect(result.current).toBe('loading')
   })
 
-  it('prefers the real visual-ready signal over waiting for the fallback', () => {
-    const { result, rerender } = renderHook(
+  it('prefers the real visual-ready signal over waiting for the fallback', async () => {
+    const { result, rerender } = await renderHook(
       ({ isVisualReady }) =>
         useSkeletonPhase({
           isDataReady: true,
@@ -103,8 +103,8 @@ describe('useSkeletonPhase (web)', () => {
 
     expect(result.current).toBe('loading')
 
-    act(() => {
-      rerender({ isVisualReady: true })
+    await act(async () => {
+      await rerender({ isVisualReady: true })
     })
 
     expect(result.current).toBe('hidden')

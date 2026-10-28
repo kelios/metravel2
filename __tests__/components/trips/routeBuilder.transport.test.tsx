@@ -128,8 +128,8 @@ type MutationCallbacks = {
 
 // #1491: шаг «Точки маршрута» рендерит общий AddressSearch с /map, а он ходит за
 // адресами через React Query — конструктору нужен клиент, как и в приложении.
-const renderRouteBuilder = (element: React.ReactElement) =>
-  render(element, { wrapper: createQueryWrapper().Wrapper })
+const renderRouteBuilder = async (element: React.ReactElement) =>
+  await render(element, { wrapper: createQueryWrapper().Wrapper })
 
 describe('RouteBuilder transport selector', () => {
   beforeEach(() => {
@@ -139,8 +139,8 @@ describe('RouteBuilder transport selector', () => {
     mockTransportPending = false
   })
 
-  it('shows the three owner choices in order with selected state and 44dp targets', () => {
-    const { getAllByRole, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('shows the three owner choices in order with selected state and 44dp targets', async () => {
+    const { getAllByRole, getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     const choices = getAllByRole('radio')
     expect(choices.map((choice) => choice.props.accessibilityLabel)).toEqual([
@@ -161,8 +161,8 @@ describe('RouteBuilder transport selector', () => {
     expect(StyleSheet.flatten(resolvedStyle).minHeight).toBeGreaterThanOrEqual(44)
   })
 
-  it('does not render an interactive selector for a non-owner', () => {
-    const { queryByTestId, getByTestId } = renderRouteBuilder(
+  it('does not render an interactive selector for a non-owner', async () => {
+    const { queryByTestId, getByTestId } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ isOwner: false })} />,
     )
 
@@ -170,14 +170,14 @@ describe('RouteBuilder transport selector', () => {
     expect(getByTestId('trip-plan-route-map')).toBeTruthy()
   })
 
-  it('ignores the current choice and locks rapid repeated changes to one mutation', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('ignores the current choice and locks rapid repeated changes to one mutation', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    fireEvent.press(getByTestId('segmented-car'))
+    await fireEvent.press(getByTestId('segmented-car'))
     expect(mockTransportMutate).not.toHaveBeenCalled()
 
-    fireEvent.press(getByTestId('segmented-foot'))
-    fireEvent.press(getByTestId('segmented-foot'))
+    await fireEvent.press(getByTestId('segmented-foot'))
+    await fireEvent.press(getByTestId('segmented-foot'))
     // #1491: маршрут не правился, поэтому сохранять нечего и кнопки действия
     // на панели нет — раньше здесь жала постоянная «Сохранить маршрут».
     expect(queryByTestId('route-builder-save')).toBeNull()
@@ -187,29 +187,29 @@ describe('RouteBuilder transport selector', () => {
     expect(mockRouteMutate).not.toHaveBeenCalled()
   })
 
-  it('disables transport changes while a route save is pending', () => {
+  it('disables transport changes while a route save is pending', async () => {
     mockRoutePending = true
-    const { getAllByRole, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    const { getAllByRole, getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(getAllByRole('radio').every((choice) => choice.props.accessibilityState.disabled)).toBe(true)
 
-    fireEvent.press(getByTestId('segmented-foot'))
+    await fireEvent.press(getByTestId('segmented-foot'))
     expect(mockTransportMutate).not.toHaveBeenCalled()
   })
 
-  it('keeps the persisted route visible and disables all choices while pending', () => {
+  it('keeps the persisted route visible and disables all choices while pending', async () => {
     mockTransportPending = true
-    const { getAllByRole, getByTestId, getByText } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    const { getAllByRole, getByTestId, getByText } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(getByTestId('route-builder-transport-pending')).toBeTruthy()
     expect(getAllByRole('radio').every((choice) => choice.props.accessibilityState.disabled)).toBe(true)
     expect(getByText('car:2:20:ors')).toBeTruthy()
 
-    fireEvent.press(getByTestId('segmented-foot'))
+    await fireEvent.press(getByTestId('segmented-foot'))
     expect(mockTransportMutate).not.toHaveBeenCalled()
   })
 
-  it('applies the returned transport, geometry, summary, and degraded routing state together', () => {
+  it('applies the returned transport, geometry, summary, and degraded routing state together', async () => {
     const initialTrip = makeTrip()
     const updatedTrip = makeTrip({
       transport: 'bike',
@@ -232,21 +232,21 @@ describe('RouteBuilder transport selector', () => {
         warnings: [],
       },
     })
-    const { getByTestId, getByText, rerender } = renderRouteBuilder(<RouteBuilder trip={initialTrip} />)
+    const { getByTestId, getByText, rerender } = await renderRouteBuilder(<RouteBuilder trip={initialTrip} />)
 
-    fireEvent.press(getByTestId('segmented-bike'))
+    await fireEvent.press(getByTestId('segmented-bike'))
     const callbacks = mockTransportMutate.mock.calls[0][1] as MutationCallbacks
-    act(() => {
+    await act(() => {
       callbacks.onSuccess(updatedTrip)
       callbacks.onSettled()
     })
-    rerender(<RouteBuilder trip={updatedTrip} />)
+    await rerender(<RouteBuilder trip={updatedTrip} />)
 
     expect(getByText('bike:3:72:direct')).toBeTruthy()
     expect(getByTestId('route-summary-approximate')).toBeTruthy()
   })
 
-  it('does not overwrite unsaved route edits when the transport response arrives', () => {
+  it('does not overwrite unsaved route edits when the transport response arrives', async () => {
     const initialTrip = makeTrip()
     const updatedTrip = makeTrip({
       transport: 'foot',
@@ -255,17 +255,17 @@ describe('RouteBuilder transport selector', () => {
         { id: 'server-b', type: 'custom', name: 'B', description: null, coordinates: [27.4, 53.8], placeId: null },
       ],
     })
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={initialTrip} />)
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={initialTrip} />)
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
-    fireEvent.press(getByTestId('route-builder-type-custom'))
-    fireEvent.changeText(getByTestId('route-builder-name'), 'C')
-    fireEvent.press(getByTestId('route-builder-add'))
+    await fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-type-custom'))
+    await fireEvent.changeText(getByTestId('route-builder-name'), 'C')
+    await fireEvent.press(getByTestId('route-builder-add'))
     expect(getByTestId('route-map-point-names').props.children).toBe('A|B|C')
 
-    fireEvent.press(getByTestId('segmented-foot'))
+    await fireEvent.press(getByTestId('segmented-foot'))
     const callbacks = mockTransportMutate.mock.calls[0][1] as MutationCallbacks
-    act(() => {
+    await act(() => {
       callbacks.onSuccess(updatedTrip)
       callbacks.onSettled()
     })
@@ -273,12 +273,12 @@ describe('RouteBuilder transport selector', () => {
     expect(getByTestId('route-map-point-names').props.children).toBe('A|B|C')
   })
 
-  it('preserves the prior route, shows an error, and allows retry after failure', () => {
-    const { getByTestId, getByText } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('preserves the prior route, shows an error, and allows retry after failure', async () => {
+    const { getByTestId, getByText } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    fireEvent.press(getByTestId('segmented-foot'))
+    await fireEvent.press(getByTestId('segmented-foot'), { timeStamp: 1 })
     const callbacks = mockTransportMutate.mock.calls[0][1] as MutationCallbacks
-    act(() => {
+    await act(() => {
       callbacks.onError()
       callbacks.onSettled()
     })
@@ -287,7 +287,7 @@ describe('RouteBuilder transport selector', () => {
     expect(getByText('Не удалось перестроить маршрут. Попробуйте ещё раз.')).toBeTruthy()
     expect(getByText('car:2:20:ors')).toBeTruthy()
 
-    fireEvent.press(getByTestId('segmented-foot'))
+    await fireEvent.press(getByTestId('segmented-foot'), { timeStamp: 2 })
     expect(mockTransportMutate).toHaveBeenCalledTimes(2)
   })
 })

@@ -1,3 +1,4 @@
+import { createWebMapTestRuntime, type WebMapTestRuntime } from '@/__tests__/helpers/webMapTestRuntime'
 /**
  * #1496 — фаза 2 импорта на web-карте планировщика.
  *
@@ -10,7 +11,8 @@
  * проводила между несмежными треками прямую, которой в файле нет.
  */
 import React from 'react'
-import { render, waitFor } from '@testing-library/react-native'
+let render: typeof import('@testing-library/react/pure').render
+let waitFor: typeof import('@testing-library/react/pure').waitFor
 
 import type { RoutePoint } from '@/api/plannedTrips'
 
@@ -19,7 +21,6 @@ const mockFitBounds = jest.fn()
 const mockLatLngBounds = jest.fn((positions: unknown) => positions)
 const mockMap = { setView: jest.fn(), fitBounds: mockFitBounds, stop: jest.fn() }
 
-jest.mock('react-dom', () => ({ createPortal: (node: unknown) => node }))
 jest.mock('@/utils/ensureLeafletCss', () => ({ ensureLeafletCss: jest.fn() }))
 
 jest.mock('@/utils/loadLeafletRuntime', () => ({
@@ -52,7 +53,7 @@ jest.mock('@/hooks/useTheme', () => ({
     new Proxy({}, { get: (_t, key) => String(key) }) as unknown as Record<string, string>,
 }))
 
-import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap.web'
+let TripPlanRouteMap: typeof import('@/components/trips/planning/TripPlanRouteMap.web').default
 
 const route: RoutePoint[] = [
   { id: 'a', type: 'place', name: 'Старт', description: null, coordinates: [27.56, 53.9], placeId: null },
@@ -96,7 +97,7 @@ describe('TripPlanRouteMap.web — оригинальный трек', () => {
   })
 
   it('рисует оригинал отдельной линией поверх маршрута, не подменяя его', async () => {
-    const screen = render(
+    const screen = await render(
       <TripPlanRouteMap route={route} routeGeometry={routeGeometry} originalTrackSegments={originalTrackSegments} />,
     )
 
@@ -123,7 +124,7 @@ describe('TripPlanRouteMap.web — оригинальный трек', () => {
   })
 
   it('#1847 рисует каждый трек файла своей линией и не соединяет их между собой', async () => {
-    const screen = render(
+    const screen = await render(
       <TripPlanRouteMap
         route={route}
         routeGeometry={routeGeometry}
@@ -155,7 +156,7 @@ describe('TripPlanRouteMap.web — оригинальный трек', () => {
   })
 
   it('#1847 подгоняет кадр под все сегменты, а не только под первый', async () => {
-    render(
+    await render(
       <TripPlanRouteMap
         route={route}
         routeGeometry={routeGeometry}
@@ -171,7 +172,7 @@ describe('TripPlanRouteMap.web — оригинальный трек', () => {
   })
 
   it('#1847 пропускает сегмент, от которого осталась одна точка', async () => {
-    const screen = render(
+    const screen = await render(
       <TripPlanRouteMap
         route={route}
         routeGeometry={routeGeometry}
@@ -184,7 +185,7 @@ describe('TripPlanRouteMap.web — оригинальный трек', () => {
   })
 
   it('подгоняет кадр под обе линии, а не только под упрощённую', async () => {
-    render(
+    await render(
       <TripPlanRouteMap route={route} routeGeometry={routeGeometry} originalTrackSegments={originalTrackSegments} />,
     )
 
@@ -197,14 +198,14 @@ describe('TripPlanRouteMap.web — оригинальный трек', () => {
   })
 
   it('без загруженного файла оставляет ровно одну линию и не показывает легенду', async () => {
-    const screen = render(<TripPlanRouteMap route={route} routeGeometry={routeGeometry} />)
+    const screen = await render(<TripPlanRouteMap route={route} routeGeometry={routeGeometry} />)
 
     await waitFor(() => expect(mockPolylineProps.length).toBe(1))
     expect(screen.queryByTestId('trip-plan-map-original-track-legend')).toBeNull()
   })
 
   it('fails closed to a dashed waypoint line when healthy state has no geometry', async () => {
-    const screen = render(
+    const screen = await render(
       <TripPlanRouteMap
         route={route}
         routeGeometry={null}
@@ -243,7 +244,7 @@ describe('TripPlanRouteMap.web — оригинальный трек', () => {
   })
 
   it('keeps a dense healthy route solid and labels it as routed', async () => {
-    const screen = render(
+    const screen = await render(
       <TripPlanRouteMap
         route={route}
         routeGeometry={routeGeometry}
@@ -265,7 +266,7 @@ describe('TripPlanRouteMap.web — оригинальный трек', () => {
   })
 
   it('uses the full fallback style when a non-finite geometry is rejected', async () => {
-    render(
+    await render(
       <TripPlanRouteMap
         route={route}
         routeGeometry={[
@@ -293,3 +294,13 @@ describe('TripPlanRouteMap.web — оригинальный трек', () => {
     )
   })
 })
+
+let web: WebMapTestRuntime<typeof TripPlanRouteMap>
+beforeAll(() => {
+  web = createWebMapTestRuntime(React, () => require('@/components/trips/planning/TripPlanRouteMap.web').default)
+  TripPlanRouteMap = web.subject
+  ;({ render, waitFor } = web)
+  expect.extend(web.matchers)
+})
+afterEach(() => web.cleanup())
+afterAll(() => expect.extend(require('@testing-library/react-native/matchers')))

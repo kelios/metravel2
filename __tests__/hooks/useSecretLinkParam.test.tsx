@@ -35,9 +35,9 @@ describe('useSecretLinkParam', () => {
     Platform.OS = originalOS
   })
 
-  it('takes the secret from the query, stores it and removes it from the URL', () => {
+  it('takes the secret from the query, stores it and removes it from the URL', async () => {
     mockParams = { token: [' abc123 ', 'other'], utm_source: 'mail' }
-    const { result, rerender } = renderHook(() => useSecretLinkParam('/subscribe/confirm', 'token'))
+    const { result, rerender } = await renderHook(() => useSecretLinkParam('/subscribe/confirm', 'token'))
 
     expect(result.current).toBe('abc123')
     expect(mockSetParams).toHaveBeenCalledTimes(1)
@@ -46,55 +46,55 @@ describe('useSecretLinkParam', () => {
 
     // Роутер снял параметр — экран продолжает видеть тот же секрет.
     mockParams = { utm_source: 'mail' }
-    rerender({})
+    await rerender({})
     expect(result.current).toBe('abc123')
     expect(mockSetParams).toHaveBeenCalledTimes(1)
   })
 
-  it('restores the secret from the tab session after reload or remount without the query', () => {
+  it('restores the secret from the tab session after reload or remount without the query', async () => {
     window.sessionStorage.setItem(KEY, 'stored-token')
-    const { result } = renderHook(() => useSecretLinkParam('/subscribe/confirm', 'token'))
+    const { result } = await renderHook(() => useSecretLinkParam('/subscribe/confirm', 'token'))
 
     expect(result.current).toBe('stored-token')
     expect(mockSetParams).not.toHaveBeenCalled()
   })
 
-  it('a fresh link wins over the stored secret; routes do not share storage', () => {
+  it('a fresh link wins over the stored secret; routes do not share storage', async () => {
     window.sessionStorage.setItem(KEY, 'old-token')
     mockParams = { token: 'new-token' }
-    const { result } = renderHook(() => useSecretLinkParam('/subscribe/confirm', 'token'))
+    const { result } = await renderHook(() => useSecretLinkParam('/subscribe/confirm', 'token'))
 
     expect(result.current).toBe('new-token')
     expect(window.sessionStorage.getItem(KEY)).toBe('new-token')
 
     mockParams = {}
-    const other = renderHook(() => useSecretLinkParam('/subscribe/unsubscribe', 'token'))
+    const other = await renderHook(() => useSecretLinkParam('/subscribe/unsubscribe', 'token'))
     expect(other.result.current).toBe('')
   })
 
-  it('keeps the landed secret when the tab storage refuses writes', () => {
+  it('keeps the landed secret when the tab storage refuses writes', async () => {
     const setItem = jest.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('storage blocked')
     })
     try {
       mockParams = { token: 'abc123' }
-      const { result, rerender } = renderHook(() => useSecretLinkParam('/subscribe/confirm', 'token'))
+      const { result, rerender } = await renderHook(() => useSecretLinkParam('/subscribe/confirm', 'token'))
       expect(result.current).toBe('abc123')
 
       // Роутер снял параметр, а хранилище пусто — экран всё равно видит секрет.
       mockParams = {}
-      rerender({})
+      await rerender({})
       expect(result.current).toBe('abc123')
     } finally {
       setItem.mockRestore()
     }
   })
 
-  it('native: reads the query as is, no address bar to clean and no storage', () => {
+  it('native: reads the query as is, no address bar to clean and no storage', async () => {
     Platform.OS = 'ios'
     mockParams = { hash: 'native-hash' }
     const renders: Array<string | null> = []
-    const { result } = renderHook(() => {
+    const { result } = await renderHook(() => {
       const value = useSecretLinkParam('/accountconfirmation', 'hash')
       renders.push(value)
       return value
@@ -113,10 +113,10 @@ describe('useSecretLinkParam', () => {
     ['query', () => { mockParams = { token: 'abc123' } }, 'abc123'],
     ['tab session', () => window.sessionStorage.setItem(KEY, 'stored-token'), 'stored-token'],
     ['no secret', () => undefined, ''],
-  ])('web: the first render is unknown (null), the %s value comes after hydration', (_label, arrange, expected) => {
+  ])('web: the first render is unknown (null), the %s value comes after hydration', async (_label, arrange, expected) => {
     arrange()
     const renders: Array<string | null> = []
-    const { result } = renderHook(() => {
+    const { result } = await renderHook(() => {
       const value = useSecretLinkParam('/subscribe/confirm', 'token')
       renders.push(value)
       return value

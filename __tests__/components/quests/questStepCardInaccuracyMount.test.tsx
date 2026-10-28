@@ -58,7 +58,7 @@ const cardElement = (step: Record<string, unknown>) => (
     />
   )
 
-const renderCard = (step: Record<string, unknown>) => render(cardElement(step))
+const renderCard = async (step: Record<string, unknown>) => await render(cardElement(step))
 
 describe('quest step card inaccuracy entry', () => {
   beforeEach(() => {
@@ -66,8 +66,8 @@ describe('quest step card inaccuracy entry', () => {
     mockReport.mockResolvedValue({ stepId: 903, created: true, reportCount: 1, needsReview: false })
   })
 
-  it('offers the structured flag on a real route point', () => {
-    const view = renderCard({ id: '5-prikurivayushchiy', numericId: 903 })
+  it('offers the structured flag on a real route point', async () => {
+    const view = await renderCard({ id: '5-prikurivayushchiy', numericId: 903 })
 
     expect(view.getByTestId('quest-step-inaccuracy-button')).toBeTruthy()
     // Подпись отличает назначение от свободнотекстовой формы #1480
@@ -75,13 +75,13 @@ describe('quest step card inaccuracy entry', () => {
     expect(view.getByLabelText('Точка изменилась')).toBeTruthy()
   })
 
-  it('does not offer it without a numeric pk — there is nothing to address', () => {
-    const view = renderCard({ id: '5-prikurivayushchiy' })
+  it('does not offer it without a numeric pk — there is nothing to address', async () => {
+    const view = await renderCard({ id: '5-prikurivayushchiy' })
     expect(view.queryByTestId('quest-step-inaccuracy-button')).toBeNull()
   })
 
-  it('does not offer it on the synthetic intro step', () => {
-    const view = renderCard({ id: 'intro', numericId: 900 })
+  it('does not offer it on the synthetic intro step', async () => {
+    const view = await renderCard({ id: 'intro', numericId: 900 })
     expect(view.queryByTestId('quest-step-inaccuracy-button')).toBeNull()
   })
 
@@ -90,8 +90,8 @@ describe('quest step card inaccuracy entry', () => {
     // сбрасывает своё состояние эффектом на `step.id`. Без собственной
     // идентичности у действия следующая точка открывалась бы с чужим
     // «спасибо, отметка отправлена» и вообще без кнопки.
-    const view = renderCard({ id: '5-prikurivayushchiy', numericId: 903 })
-    fireEvent.press(view.getByTestId('quest-step-inaccuracy-button'))
+    const view = await renderCard({ id: '5-prikurivayushchiy', numericId: 903 })
+    await fireEvent.press(view.getByTestId('quest-step-inaccuracy-button'))
 
     await waitFor(() =>
       expect(view.getByTestId('quest-step-inaccuracy-message')).toHaveTextContent(
@@ -99,12 +99,12 @@ describe('quest step card inaccuracy entry', () => {
       ),
     )
 
-    view.rerender(cardElement({ id: '6-yakub-kolas', numericId: 904 }))
+    await view.rerender(cardElement({ id: '6-yakub-kolas', numericId: 904 }))
 
     expect(view.queryByTestId('quest-step-inaccuracy-message')).toBeNull()
     expect(view.getByTestId('quest-step-inaccuracy-button')).toBeTruthy()
 
-    fireEvent.press(view.getByTestId('quest-step-inaccuracy-button'))
+    await fireEvent.press(view.getByTestId('quest-step-inaccuracy-button'))
     await waitFor(() => expect(mockReport).toHaveBeenLastCalledWith(904))
   })
 })

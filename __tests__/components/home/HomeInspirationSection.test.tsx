@@ -34,22 +34,22 @@ describe('HomeInspirationSections', () => {
     jest.clearAllMocks();
   });
 
-  it('renders quick filter section', () => {
-    const { getByText } = render(<HomeInspirationSections />);
+  it('renders quick filter section', async () => {
+    const { getByText } = await render(<HomeInspirationSections />);
 
     expect(getByText('Найдите маршрут под свой день')).toBeTruthy();
   });
 
   describe('Quick filter chips — FILTER_GROUPS', () => {
-    it('renders quick filter section controls', () => {
-      const { getByText, getByLabelText } = render(<HomeInspirationSections />);
+    it('renders quick filter section controls', async () => {
+      const { getByText, getByLabelText } = await render(<HomeInspirationSections />);
       expect(getByText('Быстрый подбор')).toBeTruthy();
       expect(getByText('Найдите маршрут под свой день')).toBeTruthy();
       expect(getByLabelText('Открыть каталог')).toBeTruthy();
     });
 
-    it('renders chip labels for each group', () => {
-      const { getByText } = render(<HomeInspirationSections />);
+    it('renders chip labels for each group', async () => {
+      const { getByText } = await render(<HomeInspirationSections />);
       expect(getByText('Без ночлега')).toBeTruthy();
       expect(getByText('Лето')).toBeTruthy();
       expect(getByText('До 60 км')).toBeTruthy();
@@ -71,26 +71,26 @@ describe('HomeInspirationSections', () => {
       ['Город', '/search?categories=19,20'],
       ['Квесты', '/quests'],
       ['Замок', '/search?categoryTravelAddress=43'],
-    ])('navigates to %s filter link', (label, expectedPath) => {
-      const { getByLabelText } = render(<HomeInspirationSections />);
-      fireEvent.press(getByLabelText(`Подбор ${label}`));
+    ])('navigates to %s filter link', async (label, expectedPath) => {
+      const { getByLabelText } = await render(<HomeInspirationSections />);
+      await fireEvent.press(getByLabelText(`Подбор ${label}`));
       expect(mockPush).toHaveBeenCalledWith(expectedPath);
     });
 
-    it('does not keep previous filter params when another chip is pressed', () => {
-      const { getByLabelText } = render(<HomeInspirationSections />);
+    it('does not keep previous filter params when another chip is pressed', async () => {
+      const { getByLabelText } = await render(<HomeInspirationSections />);
 
-      fireEvent.press(getByLabelText('Подбор Город'));
-      fireEvent.press(getByLabelText('Подбор Без ночлега'));
+      await fireEvent.press(getByLabelText('Подбор Город'));
+      await fireEvent.press(getByLabelText('Подбор Без ночлега'));
 
       const lastPath = mockPush.mock.calls.at(-1)?.[0] as string;
       expect(lastPath).toBe('/search?over_nights_stay=8');
       expect(lastPath).not.toContain('categories=');
     });
 
-    it('"Открыть каталог" button navigates to /search without filters', () => {
-      const { getByLabelText } = render(<HomeInspirationSections />);
-      fireEvent.press(getByLabelText('Открыть каталог'));
+    it('"Открыть каталог" button navigates to /search without filters', async () => {
+      const { getByLabelText } = await render(<HomeInspirationSections />);
+      await fireEvent.press(getByLabelText('Открыть каталог'));
       expect(mockPush).toHaveBeenCalledWith('/search');
     });
   });

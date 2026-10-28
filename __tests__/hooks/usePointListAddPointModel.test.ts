@@ -57,7 +57,7 @@ describe('usePointListAddPointModel', () => {
   it('shows auth toast when user is not authenticated', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false, authReady: true });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       usePointListAddPointModel({
         baseUrl: 'https://example.com/travel',
         categoryIdToName: new Map(),
@@ -84,7 +84,7 @@ describe('usePointListAddPointModel', () => {
   });
 
   it('shows coord parse toast when coordinates are invalid', async () => {
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       usePointListAddPointModel({
         baseUrl: 'https://example.com/travel',
         categoryIdToName: new Map(),
@@ -113,7 +113,7 @@ describe('usePointListAddPointModel', () => {
   it('падает на рефетч коллекции, когда сервер не вернул координаты новой точки', async () => {
     mockCreatePoint.mockResolvedValue({ id: 11 });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       usePointListAddPointModel({
         baseUrl: 'https://example.com/travel',
         categoryIdToName: new Map([
@@ -180,7 +180,7 @@ describe('usePointListAddPointModel', () => {
   it('шлёт цвет сырым hex, а не CSS-переменной темы', async () => {
     mockCreatePoint.mockResolvedValue({ id: 12, latitude: 53.9, longitude: 27.56 });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       usePointListAddPointModel({
         baseUrl: 'https://example.com/travel',
         categoryIdToName: new Map(),
@@ -202,7 +202,7 @@ describe('usePointListAddPointModel', () => {
   it('не рефетчит всю коллекцию, когда серверная запись уже записана в кэш', async () => {
     mockCreatePoint.mockResolvedValue({ id: 11, latitude: 53.9, longitude: 27.56 });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       usePointListAddPointModel({
         baseUrl: 'https://example.com/travel',
         categoryIdToName: new Map(),
@@ -242,7 +242,7 @@ describe('usePointListAddPointModel', () => {
   it('writes tags.travelId next to tags.travelUrl when the article id is known (#1963)', async () => {
     mockCreatePoint.mockResolvedValue({ id: 21, latitude: 53.9, longitude: 27.56 });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       usePointListAddPointModel({
         baseUrl: 'https://metravel.by/travels/gomel-route',
         baseTravelId: 22,
@@ -273,7 +273,7 @@ describe('usePointListAddPointModel', () => {
   it('does not write tags.travelId for a draft without an article id (#1963)', async () => {
     mockCreatePoint.mockResolvedValue({ id: 22, latitude: 53.9, longitude: 27.56 });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       usePointListAddPointModel({
         baseUrl: 'https://metravel.by/travels/draft',
         baseTravelId: undefined,

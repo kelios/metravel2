@@ -20,7 +20,7 @@ describe('ImportWizard', () => {
   const mockOnComplete = jest.fn();
   const mockOnCancel = jest.fn();
 
-  const renderWithClient = () => {
+  const renderWithClient = async () => {
     const client = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -28,14 +28,14 @@ describe('ImportWizard', () => {
       },
     });
 
-    return render(
+    return await render(
       <QueryClientProvider client={client}>
         <ImportWizard onComplete={mockOnComplete} onCancel={mockOnCancel} />
       </QueryClientProvider>
     );
   };
 
-  const renderWithClientAndSpy = () => {
+  const renderWithClientAndSpy = async () => {
     const client = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -45,7 +45,7 @@ describe('ImportWizard', () => {
 
     const invalidateSpy = jest.spyOn(client, 'invalidateQueries');
 
-    const utils = render(
+    const utils = await render(
       <QueryClientProvider client={client}>
         <ImportWizard onComplete={mockOnComplete} onCancel={mockOnCancel} />
       </QueryClientProvider>
@@ -108,18 +108,18 @@ describe('ImportWizard', () => {
     mockImportPoints.mockResolvedValue({ created: 1, skipped: 0 });
   });
 
-  it('should render intro step with single import button', () => {
-    renderWithClient();
+  it('should render intro step with single import button', async () => {
+    await renderWithClient();
 
     expect(screen.getAllByText('Импорт точек').length).toBeGreaterThan(0);
     expect(screen.getByText('Отмена')).toBeTruthy();
   });
 
   it('should send the file to the server dry-run preview and move to preview', async () => {
-    renderWithClient();
+    await renderWithClient();
 
     const importBtns = screen.getAllByText('Импорт точек');
-    fireEvent.press(importBtns[importBtns.length - 1]);
+    await fireEvent.press(importBtns[importBtns.length - 1]);
 
     expect(mockGetDocumentAsync).toHaveBeenCalled();
 
@@ -129,33 +129,33 @@ describe('ImportWizard', () => {
   });
 
   it('should allow going back to intro from preview', async () => {
-    renderWithClient();
+    await renderWithClient();
 
     const importBtns = screen.getAllByText('Импорт точек');
-    fireEvent.press(importBtns[importBtns.length - 1]);
+    await fireEvent.press(importBtns[importBtns.length - 1]);
     await screen.findByText('Предпросмотр данных');
 
-    fireEvent.press(screen.getByText('Назад'));
+    await fireEvent.press(screen.getByText('Назад'));
     expect(screen.getAllByText('Импорт точек').length).toBeGreaterThan(0);
   });
 
-  it('should call onCancel when cancel button is pressed', () => {
-    renderWithClient();
+  it('should call onCancel when cancel button is pressed', async () => {
+    await renderWithClient();
 
     const cancelButton = screen.getByText('Отмена');
-    fireEvent.press(cancelButton);
+    await fireEvent.press(cancelButton);
 
     expect(mockOnCancel).toHaveBeenCalled();
   });
 
   it('should import after preview via non-dry-run call', async () => {
-    renderWithClient();
+    await renderWithClient();
 
     const importBtns = screen.getAllByText('Импорт точек');
-    fireEvent.press(importBtns[importBtns.length - 1]);
+    await fireEvent.press(importBtns[importBtns.length - 1]);
     await screen.findByText('Предпросмотр данных');
 
-    fireEvent.press(screen.getByText('Импортировать'));
+    await fireEvent.press(screen.getByText('Импортировать'));
 
     await waitFor(() => {
       expect(mockImportPoints).toHaveBeenCalledWith(mockAsset, { dedupePolicy: 'merge' });
@@ -167,13 +167,13 @@ describe('ImportWizard', () => {
   });
 
   it('should invalidate userPoints query after successful import', async () => {
-    const { invalidateSpy } = renderWithClientAndSpy();
+    const { invalidateSpy } = await renderWithClientAndSpy();
 
     const importBtns = screen.getAllByText('Импорт точек');
-    fireEvent.press(importBtns[importBtns.length - 1]);
+    await fireEvent.press(importBtns[importBtns.length - 1]);
     await screen.findByText('Предпросмотр данных');
 
-    fireEvent.press(screen.getByText('Импортировать'));
+    await fireEvent.press(screen.getByText('Импортировать'));
 
     await waitFor(() => {
       expect(mockImportPoints).toHaveBeenCalled();
@@ -185,15 +185,15 @@ describe('ImportWizard', () => {
   });
 
   it('should allow closing complete screen', async () => {
-    renderWithClient();
+    await renderWithClient();
 
     const importBtns = screen.getAllByText('Импорт точек');
-    fireEvent.press(importBtns[importBtns.length - 1]);
+    await fireEvent.press(importBtns[importBtns.length - 1]);
     await screen.findByText('Предпросмотр данных');
-    fireEvent.press(screen.getByText('Импортировать'));
+    await fireEvent.press(screen.getByText('Импортировать'));
     await screen.findByText('Импорт завершен!');
 
-    fireEvent.press(screen.getByText('Готово'));
+    await fireEvent.press(screen.getByText('Готово'));
 
     expect(mockOnComplete).toHaveBeenCalled();
   });
@@ -205,10 +205,10 @@ describe('ImportWizard', () => {
       summary: { ...previewResult.summary, totalParsed: 0, valid: 0, errors: ['Unsupported file type'] },
     });
 
-    renderWithClient();
+    await renderWithClient();
 
     const importBtns = screen.getAllByText('Импорт точек');
-    fireEvent.press(importBtns[importBtns.length - 1]);
+    await fireEvent.press(importBtns[importBtns.length - 1]);
 
     expect(await screen.findByText(/Unsupported file type/)).toBeTruthy();
   });
@@ -216,10 +216,10 @@ describe('ImportWizard', () => {
   it('should surface a thrown preview error', async () => {
     mockPreviewImport.mockRejectedValueOnce(new Error('Network down'));
 
-    renderWithClient();
+    await renderWithClient();
 
     const importBtns = screen.getAllByText('Импорт точек');
-    fireEvent.press(importBtns[importBtns.length - 1]);
+    await fireEvent.press(importBtns[importBtns.length - 1]);
 
     expect(await screen.findByText(/Network down/)).toBeTruthy();
   });

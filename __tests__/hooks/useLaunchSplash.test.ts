@@ -24,42 +24,42 @@ describe('useLaunchSplash', () => {
     jest.useRealTimers();
   });
 
-  it('keeps the splash after fonts load until the biometric gate decides', () => {
-    renderHook(() => useLaunchSplash(true));
+  it('keeps the splash after fonts load until the biometric gate decides', async () => {
+    await renderHook(() => useLaunchSplash(true));
     expect(useLaunchReadinessStore.getState().ready.fonts).toBe(true);
     expect(mockHideAsync).not.toHaveBeenCalled();
 
-    act(() => {
+    await act(() => {
       useLaunchReadinessStore.getState().markLaunchConditionReady('biometricGate');
     });
     expect(mockHideAsync).not.toHaveBeenCalled();
-    act(() => {
+    await act(() => {
       useLaunchReadinessStore.getState().markLaunchConditionReady('theme');
     });
     expect(mockHideAsync).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the splash while the gate decided but fonts are still loading', () => {
-    const { rerender } = renderHook(({ fonts }) => useLaunchSplash(fonts), {
+  it('keeps the splash while the gate decided but fonts are still loading', async () => {
+    const { rerender } = await renderHook(({ fonts }) => useLaunchSplash(fonts), {
       initialProps: { fonts: false },
     });
-    act(() => {
+    await act(() => {
       useLaunchReadinessStore.getState().markLaunchConditionReady('biometricGate');
       useLaunchReadinessStore.getState().markLaunchConditionReady('theme');
     });
     expect(mockHideAsync).not.toHaveBeenCalled();
-    rerender({ fonts: true });
+    await rerender({ fonts: true });
     expect(mockHideAsync).toHaveBeenCalledTimes(1);
   });
 
-  it('releases the splash at the failsafe when a condition hangs', () => {
-    const { result } = renderHook(() => useLaunchSplash(false));
+  it('releases the splash at the failsafe when a condition hangs', async () => {
+    const { result } = await renderHook(() => useLaunchSplash(false));
     expect(result.current).toBe(false);
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(LAUNCH_FAILSAFE_MS - 1);
     });
     expect(mockHideAsync).not.toHaveBeenCalled();
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1);
     });
     expect(result.current).toBe(true);

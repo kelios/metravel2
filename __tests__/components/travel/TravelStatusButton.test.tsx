@@ -103,40 +103,40 @@ beforeEach(() => {
 })
 
 describe('TravelStatusButton — полный режим (default)', () => {
-  it('отображает кнопку «Добавить в план» при отсутствии статуса', () => {
-    render(<TravelStatusButton {...baseProps} />)
+  it('отображает кнопку «Добавить в план» при отсутствии статуса', async () => {
+    await render(<TravelStatusButton {...baseProps} />)
     expect(screen.getByRole('button', { name: 'Добавить в план' })).toBeTruthy()
   })
 
-  it('отображает текущий статус, если он задан', () => {
+  it('отображает текущий статус, если он задан', async () => {
     useTravelStatus.mockReturnValue([currentEntry({ status: 'visited' })])
-    render(<TravelStatusButton {...baseProps} />)
+    await render(<TravelStatusButton {...baseProps} />)
     expect(screen.getByRole('button', { name: 'Был здесь' })).toBeTruthy()
   })
 
-  it('отображает plannedDate рядом с меткой', () => {
+  it('отображает plannedDate рядом с меткой', async () => {
     useTravelStatus.mockReturnValue([currentEntry({ status: 'planned', plannedDate: '2026-08-15' })])
-    render(<TravelStatusButton {...baseProps} />)
+    await render(<TravelStatusButton {...baseProps} />)
     expect(screen.getByText('· 15 августа 2026 г.')).toBeTruthy()
   })
 
-  it('вызывает requireAuth и не открывает модал, если пользователь не авторизован', () => {
+  it('вызывает requireAuth и не открывает модал, если пользователь не авторизован', async () => {
     const requireAuth = jest.fn()
     useRequireAuth.mockReturnValue(makeRequireAuthMock(requireAuth))
     useAuth.mockReturnValue(makeAuthMock(false))
 
-    render(<TravelStatusButton {...baseProps} />)
-    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    await render(<TravelStatusButton {...baseProps} />)
+    await fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
 
     expect(requireAuth).toHaveBeenCalledTimes(1)
     // Модал не должен открыться (нет элементов листа опций)
     expect(screen.queryByText('Был здесь')).toBeNull()
   })
 
-  it('открывает модал при нажатии авторизованным пользователем', () => {
+  it('открывает модал при нажатии авторизованным пользователем', async () => {
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
-    render(<TravelStatusButton {...baseProps} />)
-    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    await render(<TravelStatusButton {...baseProps} />)
+    await fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
     // Заголовок в модале + текст кнопки — оба содержат «Добавить в план»
     expect(screen.getAllByText('Добавить в план').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('Был здесь')).toBeTruthy()
@@ -147,10 +147,10 @@ describe('TravelStatusButton — полный режим (default)', () => {
   it('вызывает setStatus при выборе статуса «Был здесь»', async () => {
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
 
-    render(<TravelStatusButton {...baseProps} />)
-    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    await render(<TravelStatusButton {...baseProps} />)
+    await fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Был здесь' }))
+      await fireEvent.press(screen.getByRole('button', { name: 'Был здесь' }))
     })
 
     expect(setTravelStatus).toHaveBeenCalledWith(
@@ -162,12 +162,12 @@ describe('TravelStatusButton — полный режим (default)', () => {
     )
   })
 
-  it('показывает календарь при выборе «Планирую»', () => {
+  it('показывает календарь при выборе «Планирую»', async () => {
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
-    render(<TravelStatusButton {...baseProps} />)
+    await render(<TravelStatusButton {...baseProps} />)
 
-    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
-    fireEvent.press(screen.getByRole('button', { name: 'Планирую' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Планирую' }))
 
     expect(screen.getByText('Укажите дату поездки')).toBeTruthy()
     expect(screen.getByText('Дата поездки')).toBeTruthy()
@@ -176,13 +176,13 @@ describe('TravelStatusButton — полный режим (default)', () => {
     expect(screen.getByText('Дата не выбрана')).toBeTruthy()
   })
 
-  it('на web показывает встроенный календарь без ручного поля ввода даты', () => {
+  it('на web показывает встроенный календарь без ручного поля ввода даты', async () => {
     Platform.OS = 'web'
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
-    render(<TravelStatusButton {...baseProps} />)
+    await render(<TravelStatusButton {...baseProps} />)
 
-    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
-    fireEvent.press(screen.getByRole('button', { name: 'Планирую' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Планирую' }))
 
     expect(screen.getByTestId('planned-date-calendar')).toBeTruthy()
     expect(screen.queryByPlaceholderText('ГГГГ-ММ-ДД')).toBeNull()
@@ -191,15 +191,15 @@ describe('TravelStatusButton — полный режим (default)', () => {
 
   it('сохраняет planned статус с датой, выбранной в календаре', async () => {
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
-    render(<TravelStatusButton {...baseProps} />)
+    await render(<TravelStatusButton {...baseProps} />)
 
-    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
-    fireEvent.press(screen.getByRole('button', { name: 'Планирую' }))
-    fireEvent.press(screen.getByRole('button', { name: '15 Июль' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Планирую' }))
+    await fireEvent.press(screen.getByRole('button', { name: '15 Июль' }))
     expect(screen.getByText('Выбрано: 15 июля 2026 г.')).toBeTruthy()
 
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Сохранить дату' }))
+      await fireEvent.press(screen.getByRole('button', { name: 'Сохранить дату' }))
     })
 
     expect(setTravelStatus).toHaveBeenCalledWith(
@@ -217,23 +217,23 @@ describe('TravelStatusButton — полный режим (default)', () => {
 
   it('показывает ошибку при попытке сохранить пустую дату', async () => {
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
-    render(<TravelStatusButton {...baseProps} />)
+    await render(<TravelStatusButton {...baseProps} />)
 
-    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
-    fireEvent.press(screen.getByRole('button', { name: 'Планирую' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Планирую' }))
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Сохранить дату' }))
+      await fireEvent.press(screen.getByRole('button', { name: 'Сохранить дату' }))
     })
 
     expect(screen.getByText('Укажите дату')).toBeTruthy()
   })
 
-  it('показывает кнопку «Убрать из плана», если статус уже задан', () => {
+  it('показывает кнопку «Убрать из плана», если статус уже задан', async () => {
     useTravelStatus.mockReturnValue([currentEntry({ status: 'wishlist' })])
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
 
-    render(<TravelStatusButton {...baseProps} />)
-    fireEvent.press(screen.getByRole('button', { name: 'Хочу поехать' }))
+    await render(<TravelStatusButton {...baseProps} />)
+    await fireEvent.press(screen.getByRole('button', { name: 'Хочу поехать' }))
     expect(screen.getByRole('button', { name: 'Убрать из плана' })).toBeTruthy()
   })
 
@@ -241,10 +241,10 @@ describe('TravelStatusButton — полный режим (default)', () => {
     useTravelStatus.mockReturnValue([currentEntry({ status: 'wishlist' })])
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
 
-    render(<TravelStatusButton {...baseProps} />)
-    fireEvent.press(screen.getByRole('button', { name: 'Хочу поехать' }))
+    await render(<TravelStatusButton {...baseProps} />)
+    await fireEvent.press(screen.getByRole('button', { name: 'Хочу поехать' }))
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Убрать из плана' }))
+      await fireEvent.press(screen.getByRole('button', { name: 'Убрать из плана' }))
     })
 
     expect(removeTravelStatus).toHaveBeenCalledWith(42, '1')
@@ -271,79 +271,79 @@ describe('TravelStatusButton — лист на native (#2230)', () => {
     _accountsForMovesUpTo: 0,
   })
 
-  const openSheet = () => {
+  const openSheet = async () => {
     const createSpy = jest.spyOn(PanResponder, 'create')
     useAuth.mockReturnValue(makeAuthMock(true, '1'))
-    render(<TravelStatusButton {...baseProps} />)
+    await render(<TravelStatusButton {...baseProps} />)
     const config = createSpy.mock.calls.at(-1)?.[0] as PanResponderCallbacks
     createSpy.mockRestore()
-    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
     return config
   }
 
-  it('шапка листа берёт касание на старте и не отдаёт жест на полпути', () => {
-    const config = openSheet()
+  it('шапка листа берёт касание на старте и не отдаёт жест на полпути', async () => {
+    const config = await openSheet()
     expect(config.onStartShouldSetPanResponder?.(touch, gesture(0))).toBe(true)
     expect(config.onStartShouldSetPanResponderCapture).toBeUndefined()
     expect(config.onPanResponderTerminationRequest?.(touch, gesture(30))).toBe(false)
   })
 
-  it('свайп вниз дальше порога закрывает лист, короткий и вверх — нет', () => {
-    const config = openSheet()
-    act(() => {
+  it('свайп вниз дальше порога закрывает лист, короткий и вверх — нет', async () => {
+    const config = await openSheet()
+    await act(() => {
       config.onPanResponderRelease?.(touch, gesture(30))
       config.onPanResponderRelease?.(touch, gesture(-120))
     })
     expect(screen.getByRole('button', { name: 'Планирую' })).toBeTruthy()
-    act(() => {
+    await act(() => {
       config.onPanResponderRelease?.(touch, gesture(120))
     })
     expect(screen.queryByRole('button', { name: 'Планирую' })).toBeNull()
   })
 
-  it('лист статуса — общий нижний лист: касания внутри него держит граница листа', () => {
-    openSheet()
+  it('лист статуса — общий нижний лист: касания внутри него держит граница листа', async () => {
+    await openSheet()
     expect(screen.getByTestId('bottom-sheet-touch-boundary')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Закрыть' })).toBeTruthy()
   })
 
   it('крестик и выбор статуса работают как раньше', async () => {
-    openSheet()
-    fireEvent.press(screen.getByRole('button', { name: 'Закрыть' }))
+    await openSheet()
+    await fireEvent.press(screen.getByRole('button', { name: 'Закрыть' }))
     expect(screen.queryByRole('button', { name: 'Планирую' })).toBeNull()
 
-    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    await fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Был здесь' }))
+      await fireEvent.press(screen.getByRole('button', { name: 'Был здесь' }))
     })
     expect(setTravelStatus).toHaveBeenCalledWith(expect.objectContaining({ id: 42, status: 'visited' }), '1')
   })
 })
 
 describe('TravelStatusButton — compact режим', () => {
-  it('не отображает текстовую метку (только иконка)', () => {
-    render(<TravelStatusButton {...baseProps} compact />)
+  it('не отображает текстовую метку (только иконка)', async () => {
+    await render(<TravelStatusButton {...baseProps} compact />)
     expect(screen.queryByText('Добавить в план')).toBeNull()
     expect(screen.getByRole('button', { name: 'Добавить в план' })).toBeTruthy()
   })
 
-  it('отображает accessibilityLabel текущего статуса', () => {
+  it('отображает accessibilityLabel текущего статуса', async () => {
     useTravelStatus.mockReturnValue([currentEntry({ status: 'planned' })])
-    render(<TravelStatusButton {...baseProps} compact />)
+    await render(<TravelStatusButton {...baseProps} compact />)
     expect(screen.getByRole('button', { name: 'Планирую' })).toBeTruthy()
   })
 
-  it('вызывает requireAuth при нажатии неавторизованным', () => {
+  it('вызывает requireAuth при нажатии неавторизованным', async () => {
     const requireAuth = jest.fn()
     useRequireAuth.mockReturnValue(makeRequireAuthMock(requireAuth))
     useAuth.mockReturnValue(makeAuthMock(false))
 
-    render(<TravelStatusButton {...baseProps} compact />)
-    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    await render(<TravelStatusButton {...baseProps} compact />)
+    await fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
     expect(requireAuth).toHaveBeenCalledTimes(1)
   })
 
-  it('на web останавливает click-событие, чтобы карточка не открывалась', () => {
+  it('на web останавливает click-событие, чтобы карточка не открывалась', async () => {
     Platform.OS = 'web'
     const requireAuth = jest.fn()
     const event = {
@@ -357,8 +357,8 @@ describe('TravelStatusButton — compact режим', () => {
     useRequireAuth.mockReturnValue(makeRequireAuthMock(requireAuth))
     useAuth.mockReturnValue(makeAuthMock(false))
 
-    render(<TravelStatusButton {...baseProps} compact />)
-    fireEvent(screen.getByLabelText('Добавить в план'), 'click', event)
+    await render(<TravelStatusButton {...baseProps} compact />)
+    await fireEvent(screen.getByLabelText('Добавить в план'), 'click', event)
 
     expect(event.preventDefault).toHaveBeenCalledTimes(1)
     expect(event.stopPropagation).toHaveBeenCalledTimes(1)
@@ -367,7 +367,7 @@ describe('TravelStatusButton — compact режим', () => {
     expect(requireAuth).toHaveBeenCalledTimes(1)
   })
 
-  it('на mobile web не отменяет touchstart, чтобы браузер сгенерировал click по кнопке', () => {
+  it('на mobile web не отменяет touchstart, чтобы браузер сгенерировал click по кнопке', async () => {
     Platform.OS = 'web'
     const touchEvent = {
       preventDefault: jest.fn(),
@@ -378,8 +378,8 @@ describe('TravelStatusButton — compact режим', () => {
       },
     }
 
-    render(<TravelStatusButton {...baseProps} compact />)
-    fireEvent(screen.getByLabelText('Добавить в план'), 'touchStart', touchEvent)
+    await render(<TravelStatusButton {...baseProps} compact />)
+    await fireEvent(screen.getByLabelText('Добавить в план'), 'touchStart', touchEvent)
 
     expect(touchEvent.preventDefault).not.toHaveBeenCalled()
     expect(touchEvent.stopPropagation).toHaveBeenCalledTimes(1)
@@ -387,10 +387,10 @@ describe('TravelStatusButton — compact режим', () => {
     expect(touchEvent.nativeEvent.stopImmediatePropagation).toHaveBeenCalledTimes(1)
   })
 
-  it('открывает тот же модал у авторизованного пользователя', () => {
+  it('открывает тот же модал у авторизованного пользователя', async () => {
     useAuth.mockReturnValue(makeAuthMock(true, '5'))
-    render(<TravelStatusButton {...baseProps} compact />)
-    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    await render(<TravelStatusButton {...baseProps} compact />)
+    await fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
     expect(screen.getAllByText('Добавить в план').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('Был здесь')).toBeTruthy()
   })
@@ -398,10 +398,10 @@ describe('TravelStatusButton — compact режим', () => {
   it('выбор статуса в compact-режиме так же вызывает setStatus', async () => {
     useAuth.mockReturnValue(makeAuthMock(true, '5'))
 
-    render(<TravelStatusButton {...baseProps} compact />)
-    fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
+    await render(<TravelStatusButton {...baseProps} compact />)
+    await fireEvent.press(screen.getByRole('button', { name: 'Добавить в план' }))
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Хочу поехать' }))
+      await fireEvent.press(screen.getByRole('button', { name: 'Хочу поехать' }))
     })
 
     expect(setTravelStatus).toHaveBeenCalledWith(

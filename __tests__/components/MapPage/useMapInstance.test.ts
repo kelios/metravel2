@@ -52,7 +52,7 @@ describe('getThemedBaseLayerOptions', () => {
 });
 
 describe('useMapInstance startup gate', () => {
-  it('does not create tiles before the initial view and attaches exactly once after it', () => {
+  it('does not create tiles before the initial view and attaches exactly once after it', async () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
     const baseLayer = {
       addTo: jest.fn(),
@@ -73,7 +73,7 @@ describe('useMapInstance startup gate', () => {
       off: jest.fn(),
     };
 
-    const { rerender } = renderHook(
+    const { rerender } = await renderHook(
       ({ ready }) => useMapInstance({ map, L, layerStartupReady: ready }),
       { initialProps: { ready: false } },
     );
@@ -81,7 +81,7 @@ describe('useMapInstance startup gate', () => {
     expect(L.tileLayer).not.toHaveBeenCalled();
     expect(baseLayer.addTo).not.toHaveBeenCalled();
 
-    rerender({ ready: true });
+    await rerender({ ready: true });
 
     expect(L.tileLayer).toHaveBeenCalledTimes(1);
     expect(baseLayer.addTo).toHaveBeenCalledTimes(1);
@@ -89,7 +89,7 @@ describe('useMapInstance startup gate', () => {
 
     // A normal parent rerender/refetch keeps the monotonic gate true. The hook
     // must reuse the existing layer rather than producing duplicate requests.
-    rerender({ ready: true });
+    await rerender({ ready: true });
     expect(L.tileLayer).toHaveBeenCalledTimes(1);
     expect(baseLayer.addTo).toHaveBeenCalledTimes(1);
   });

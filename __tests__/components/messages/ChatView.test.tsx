@@ -5,7 +5,7 @@ import ChatView from '@/components/messages/ChatView';
 import type { Message } from '@/api/messages';
 
 // #2133: меню жалобы в рендере зовёт мутации блокировки — нужен QueryClient, как в приложении.
-const render = (ui: Parameters<typeof rtlRender>[0]) =>
+const render = async (ui: Parameters<typeof rtlRender>[0]) =>
     rtlRender(ui, { wrapper: createQueryWrapper().Wrapper });
 
 const mockMessages: Message[] = [
@@ -36,38 +36,38 @@ describe('ChatView', () => {
         jest.clearAllMocks();
     });
 
-    it('renders header with other user name', () => {
-        const { getByText } = render(<ChatView {...defaultProps} />);
+    it('renders header with other user name', async () => {
+        const { getByText } = await render(<ChatView {...defaultProps} />);
         expect(getByText('Иван Петров')).toBeTruthy();
     });
 
-    it('renders messages', () => {
-        const { getByText } = render(<ChatView {...defaultProps} />);
+    it('renders messages', async () => {
+        const { getByText } = await render(<ChatView {...defaultProps} />);
         expect(getByText('Привет!')).toBeTruthy();
         expect(getByText('Здравствуйте!')).toBeTruthy();
         expect(getByText('Как дела?')).toBeTruthy();
     });
 
-    it('renders empty state when no messages', () => {
-        const { getByText } = render(
+    it('renders empty state when no messages', async () => {
+        const { getByText } = await render(
             <ChatView {...defaultProps} messages={[]} />
         );
         expect(getByText('Начните диалог — напишите сообщение')).toBeTruthy();
     });
 
-    it('calls onSend when send button pressed with text', () => {
+    it('calls onSend when send button pressed with text', async () => {
         const onSend = jest.fn();
-        const { getByLabelText } = render(
+        const { getByLabelText } = await render(
             <ChatView {...defaultProps} onSend={onSend} />
         );
         const input = getByLabelText('Поле ввода сообщения');
-        fireEvent.changeText(input, 'Новое сообщение');
-        fireEvent.press(getByLabelText('Отправить сообщение'));
+        await fireEvent.changeText(input, 'Новое сообщение');
+        await fireEvent.press(getByLabelText('Отправить сообщение'));
         expect(onSend).toHaveBeenCalledWith('Новое сообщение');
     });
 
-    it('does not reserve the global dock inset when reserveBottomDock is false', () => {
-        const { getByTestId } = render(
+    it('does not reserve the global dock inset when reserveBottomDock is false', async () => {
+        const { getByTestId } = await render(
             <ChatView {...defaultProps} reserveBottomDock={false} />
         );
         const composerStyle = StyleSheet.flatten(getByTestId('message-composer').props.style);
@@ -75,41 +75,41 @@ describe('ChatView', () => {
         expect(composerStyle?.paddingBottom ?? 0).toBeLessThan(56);
     });
 
-    it('does not call onSend with empty text', () => {
+    it('does not call onSend with empty text', async () => {
         const onSend = jest.fn();
-        const { getByLabelText } = render(
+        const { getByLabelText } = await render(
             <ChatView {...defaultProps} onSend={onSend} />
         );
-        fireEvent.press(getByLabelText('Отправить сообщение'));
+        await fireEvent.press(getByLabelText('Отправить сообщение'));
         expect(onSend).not.toHaveBeenCalled();
     });
 
-    it('calls onBack when back button pressed', () => {
+    it('calls onBack when back button pressed', async () => {
         const onBack = jest.fn();
-        const { getByLabelText } = render(
+        const { getByLabelText } = await render(
             <ChatView {...defaultProps} onBack={onBack} />
         );
-        fireEvent.press(getByLabelText('Назад к списку диалогов'));
+        await fireEvent.press(getByLabelText('Назад к списку диалогов'));
         expect(onBack).toHaveBeenCalled();
     });
 
-    it('hides back button when hideBackButton is true', () => {
-        const { queryByLabelText } = render(
+    it('hides back button when hideBackButton is true', async () => {
+        const { queryByLabelText } = await render(
             <ChatView {...defaultProps} hideBackButton />
         );
         expect(queryByLabelText('Назад к списку диалогов')).toBeNull();
     });
 
     // #2115: удаление диалога — только после подтверждения (раньше шло сразу).
-    it('desktop: «Удалить диалог» спрашивает подтверждение и удаляет только после него', () => {
+    it('desktop: «Удалить диалог» спрашивает подтверждение и удаляет только после него', async () => {
         mockIsScreenHeaderMobile = false;
         const onDeleteThread = jest.fn();
-        const { getByLabelText, getByTestId } = render(
+        const { getByLabelText, getByTestId } = await render(
             <ChatView {...defaultProps} onDeleteThread={onDeleteThread} />
         );
-        fireEvent.press(getByLabelText('Удалить диалог'));
+        await fireEvent.press(getByLabelText('Удалить диалог'));
         expect(onDeleteThread).not.toHaveBeenCalled();
-        fireEvent.press(getByTestId('chat-header-delete-confirm'));
+        await fireEvent.press(getByTestId('chat-header-delete-confirm'));
         expect(onDeleteThread).toHaveBeenCalledTimes(1);
     });
 
@@ -117,22 +117,22 @@ describe('ChatView', () => {
     it('телефон: «Удалить диалог» — destructive-пункт «⋯» с подтверждением', async () => {
         mockIsScreenHeaderMobile = true;
         const onDeleteThread = jest.fn();
-        const { getByTestId, queryByTestId } = render(
+        const { getByTestId, queryByTestId } = await render(
             <ChatView {...defaultProps} onDeleteThread={onDeleteThread} />
         );
         expect(queryByTestId('chat-header-delete')).toBeNull();
-        fireEvent.press(getByTestId('chat-header-more'));
-        fireEvent.press(getByTestId('chat-header-delete-thread'));
+        await fireEvent.press(getByTestId('chat-header-more'));
+        await fireEvent.press(getByTestId('chat-header-delete-thread'));
         expect(onDeleteThread).not.toHaveBeenCalled();
         // На iOS пункт ждёт закрытия листа (onDismiss / страховочный таймер, #2115).
         const confirm = await waitFor(() => getByTestId('chat-header-delete-confirm'));
-        fireEvent.press(confirm);
+        await fireEvent.press(confirm);
         expect(onDeleteThread).toHaveBeenCalledTimes(1);
         mockIsScreenHeaderMobile = false;
     });
 
-    it('shows loading indicator when loading with no messages', () => {
-        const { queryByText } = render(
+    it('shows loading indicator when loading with no messages', async () => {
+        const { queryByText } = await render(
             <ChatView {...defaultProps} messages={[]} loading={true} />
         );
         expect(queryByText('Привет!')).toBeNull();
@@ -142,11 +142,11 @@ describe('ChatView', () => {
     // в поле ввода, а переданная ошибка отображается над композером.
     it('restores the input text when onSend reports failure', async () => {
         const onSend = jest.fn().mockResolvedValue(false);
-        const { getByLabelText } = render(<ChatView {...defaultProps} onSend={onSend} />);
+        const { getByLabelText } = await render(<ChatView {...defaultProps} onSend={onSend} />);
         const input = getByLabelText('Поле ввода сообщения');
 
-        fireEvent.changeText(input, 'Не ушло');
-        fireEvent.press(getByLabelText('Отправить сообщение'));
+        await fireEvent.changeText(input, 'Не ушло');
+        await fireEvent.press(getByLabelText('Отправить сообщение'));
 
         expect(onSend).toHaveBeenCalledWith('Не ушло');
         await waitFor(() => expect(input.props.value).toBe('Не ушло'));
@@ -154,27 +154,27 @@ describe('ChatView', () => {
 
     it('keeps the input cleared when onSend succeeds', async () => {
         const onSend = jest.fn().mockResolvedValue(true);
-        const { getByLabelText } = render(<ChatView {...defaultProps} onSend={onSend} />);
+        const { getByLabelText } = await render(<ChatView {...defaultProps} onSend={onSend} />);
         const input = getByLabelText('Поле ввода сообщения');
 
-        fireEvent.changeText(input, 'Ушло');
-        fireEvent.press(getByLabelText('Отправить сообщение'));
+        await fireEvent.changeText(input, 'Ушло');
+        await fireEvent.press(getByLabelText('Отправить сообщение'));
 
         await waitFor(() => expect(onSend).toHaveBeenCalled());
         expect(input.props.value).toBe('');
     });
 
-    it('renders send error above the composer', () => {
-        const { getByTestId, getByText } = render(
+    it('renders send error above the composer', async () => {
+        const { getByTestId, getByText } = await render(
             <ChatView {...defaultProps} sendError="Ошибка отправки сообщения" />
         );
         expect(getByTestId('message-send-error')).toBeTruthy();
         expect(getByText('Ошибка отправки сообщения')).toBeTruthy();
     });
 
-    it('replaces the composer with a notice when composerDisabledReason is set', () => {
+    it('replaces the composer with a notice when composerDisabledReason is set', async () => {
         const reason = 'Диалог недоступен: собеседник удалён. Отправка сообщений отключена.';
-        const { getByTestId, getByText, queryByLabelText } = render(
+        const { getByTestId, getByText, queryByLabelText } = await render(
             <ChatView {...defaultProps} composerDisabledReason={reason} />
         );
         expect(getByTestId('message-composer-disabled')).toBeTruthy();
@@ -183,8 +183,8 @@ describe('ChatView', () => {
         expect(queryByLabelText('Отправить сообщение')).toBeNull();
     });
 
-    it('renders date separators between different days', () => {
-        const { getByText } = render(<ChatView {...defaultProps} />);
+    it('renders date separators between different days', async () => {
+        const { getByText } = await render(<ChatView {...defaultProps} />);
         // Messages span two days, so there should be date labels
         // The exact labels depend on the current date vs message dates
         // At minimum, the messages should render without errors

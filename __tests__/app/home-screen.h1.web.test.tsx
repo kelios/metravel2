@@ -19,7 +19,7 @@ import { Platform } from 'react-native'
 // factory never runs — so plain `Platform.OS` mutation, as already used
 // elsewhere in this suite, e.g. QuestsContentPanel.test.tsx, is the
 // reliable option). `jest.resetModules()` is deliberately avoided: it would
-// also evict the already-loaded `react`/`react-test-renderer` singletons and
+// also evict the already-loaded `react`/`React Test Renderer` singletons and
 // break hook dispatch with a "more than one copy of React" error.
 jest.mock('@/components/home/Home', () => () => null)
 jest.mock('@/components/seo/LazyInstantSEO', () => () => null)
@@ -51,7 +51,7 @@ describe('HomeScreen SSG H1 cleanup (#1609)', () => {
     expect(document.querySelectorAll('h1[data-ssg-travel-h1]').length).toBe(1)
 
     const HomeScreen = loadHomeScreen()
-    render(<HomeScreen />)
+    await render(<HomeScreen />)
 
     await waitFor(() => {
       expect(document.querySelectorAll('h1[data-ssg-travel-h1]').length).toBe(0)
@@ -69,7 +69,7 @@ describe('HomeScreen SSG H1 cleanup (#1609)', () => {
     document.body.insertBefore(ssg, document.body.firstChild)
 
     const HomeScreen = loadHomeScreen()
-    render(<HomeScreen />)
+    await render(<HomeScreen />)
 
     // HomeScreen renders null (not home path) and never mounts the cleanup
     // effect; the marker belongs to whatever other route is actually live.

@@ -15,7 +15,7 @@ jest.mock('@/utils/openAppStoreListing', () => ({
   openAppStoreListing: jest.fn(() => Promise.resolve(true)),
 }))
 
-const storeOrder = (root: ReturnType<typeof render>) =>
+const storeOrder = (root: Awaited<ReturnType<typeof render>>) =>
   root
     .getAllByTestId(/^app-store-buttons-(ios|android)$/)
     .map((node) => [String(node.props.testID).replace('app-store-buttons-', ''), node])
@@ -39,24 +39,24 @@ describe('AppStoreButtons', () => {
     [null, ['ios', 'android']],
     ['ios', ['ios', 'android']],
     ['android', ['android', 'ios']],
-  ] as const)('device store %s goes first', (platform, expected) => {
+  ] as const)('device store %s goes first', async (platform, expected) => {
     mockStorePlatform = platform
-    const root = render(<AppStoreButtons source="app_page" />)
+    const root = await render(<AppStoreButtons source="app_page" />)
 
     expect(storeOrder(root).map(([store]) => store)).toEqual(expected)
   })
 
-  it('shows only the own store inside the native app', () => {
+  it('shows only the own store inside the native app', async () => {
     Platform.OS = 'ios'
     mockStorePlatform = 'ios'
-    const root = render(<AppStoreButtons source="app_page" />)
+    const root = await render(<AppStoreButtons source="app_page" />)
 
     expect(storeOrder(root).map(([store]) => store)).toEqual(['ios'])
   })
 
-  it('keeps both stores reachable on every web device', () => {
+  it('keeps both stores reachable on every web device', async () => {
     mockStorePlatform = 'android'
-    const root = render(<AppStoreButtons source="app_page" />)
+    const root = await render(<AppStoreButtons source="app_page" />)
 
     expect(root.getByLabelText('sharedStatic:appDownload.appStore.a11y')).toBeTruthy()
     expect(root.getByLabelText('sharedStatic:appDownload.googlePlay.a11y')).toBeTruthy()

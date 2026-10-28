@@ -35,8 +35,8 @@ describe('useTravelDetailsSeoViewModel (#1643)', () => {
     Object.defineProperty(Platform, 'OS', { value: originalPlatformOS })
   })
 
-  it('keeps SPA navigation metadata synchronous when no matching SSG preload exists', () => {
-    const { result } = renderHook(() =>
+  it('keeps SPA navigation metadata synchronous when no matching SSG preload exists', async () => {
+    const { result } = await renderHook(() =>
       useTravelDetailsSeoViewModel(travel, travel.slug, false),
     )
 
@@ -45,20 +45,20 @@ describe('useTravelDetailsSeoViewModel (#1643)', () => {
     expect(mockRIC).not.toHaveBeenCalled()
   })
 
-  it('defers only a direct preloaded article and cancels the idle job on cleanup', () => {
-    const { result, unmount } = renderHook(() =>
+  it('defers only a direct preloaded article and cancels the idle job on cleanup', async () => {
+    const { result, unmount } = await renderHook(() =>
       useTravelDetailsSeoViewModel(travel, travel.slug, true),
     )
 
     expect(result.current.readyTitle).toBeNull()
     expect(mockRIC).toHaveBeenCalledWith(expect.any(Function), 200)
 
-    act(() => {
+    await act(() => {
       mockIdleCallbacks[0]()
     })
 
     expect(result.current.readyTitle).toContain('Energylandia')
-    unmount()
+    await unmount()
     expect(mockCancelIdle).toHaveBeenCalledTimes(1)
   })
 })

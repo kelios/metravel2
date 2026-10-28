@@ -22,9 +22,9 @@ import { fetchBlockedUsers, unblockUser } from '@/api/userSafety'
 import { confirmAction } from '@/utils/confirmAction'
 import { resetBlockedAuthorStateForTests } from '@/api/blockSensitiveQueries'
 
-const renderList = () => {
+const renderList = async () => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(
+  return await render(
     <QueryClientProvider client={qc}>
       <BlockedUsersList />
     </QueryClientProvider>,
@@ -39,7 +39,7 @@ beforeEach(() => {
 describe('BlockedUsersList', () => {
   it('shows the empty state when nobody is blocked', async () => {
     ;(fetchBlockedUsers as jest.Mock).mockResolvedValue([])
-    const { findByTestId } = renderList()
+    const { findByTestId } = await renderList()
     expect(await findByTestId('blocked-users-empty')).toBeTruthy()
   })
 
@@ -47,7 +47,7 @@ describe('BlockedUsersList', () => {
     // 403 хук не ретраит (`useUserSafety` retry) — состояние ошибки сразу.
     const { ApiError } = jest.requireActual('@/api/client')
     ;(fetchBlockedUsers as jest.Mock).mockRejectedValue(new ApiError(403, 'forbidden'))
-    const { findByTestId } = renderList()
+    const { findByTestId } = await renderList()
     expect(await findByTestId('blocked-users-error')).toBeTruthy()
   })
 
@@ -55,18 +55,18 @@ describe('BlockedUsersList', () => {
     ;(fetchBlockedUsers as jest.Mock)
       .mockResolvedValueOnce([{ id: 500, user: 7, first_name: 'Иван', last_name: 'Петров', avatar: null }])
       .mockResolvedValue([])
-    const { findByTestId, getByText, queryByTestId } = renderList()
+    const { findByTestId, getByText, queryByTestId } = await renderList()
     expect(await findByTestId('blocked-user-7')).toBeTruthy()
     expect(getByText('Иван Петров')).toBeTruthy()
 
     ;(confirmAction as jest.Mock).mockResolvedValueOnce(false)
     await act(async () => {
-      fireEvent.press(getByText('Разблокировать'))
+      await fireEvent.press(getByText('Разблокировать'))
     })
     expect(unblockUser).not.toHaveBeenCalled()
 
     await act(async () => {
-      fireEvent.press(getByText('Разблокировать'))
+      await fireEvent.press(getByText('Разблокировать'))
     })
     await waitFor(() => expect(unblockUser).toHaveBeenCalledWith(7, expect.anything()))
     expect((confirmAction as jest.Mock).mock.calls[1][0].title).toContain('Иван Петров')

@@ -47,9 +47,9 @@ describe('TravelListItem selectable (web)', () => {
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
   });
 
-  it('renders a dedicated web checkbox control for selection', () => {
+  it('renders a dedicated web checkbox control for selection', async () => {
     const queryClient = createTestQueryClient();
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <QueryClientProvider client={queryClient}>
         <TravelListItem
           travel={baseTravel}
@@ -68,10 +68,10 @@ describe('TravelListItem selectable (web)', () => {
     expect(checkbox.props.onTouchEnd).toEqual(expect.any(Function));
   });
 
-  it('toggles selection from the checkbox itself on web', () => {
+  it('toggles selection from the checkbox itself on web', async () => {
     const queryClient = createTestQueryClient();
     const onToggle = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <QueryClientProvider client={queryClient}>
         <TravelListItem
           travel={baseTravel}
@@ -85,7 +85,7 @@ describe('TravelListItem selectable (web)', () => {
       </QueryClientProvider>
     );
 
-    fireEvent(getByTestId('selection-checkbox'), 'click', {
+    await fireEvent(getByTestId('selection-checkbox'), 'click', {
       stopPropagation: jest.fn(),
       preventDefault: jest.fn(),
     });
@@ -93,10 +93,10 @@ describe('TravelListItem selectable (web)', () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  it('handles touch selection on web without relying only on click', () => {
+  it('handles touch selection on web without relying only on click', async () => {
     const queryClient = createTestQueryClient();
     const onToggle = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <QueryClientProvider client={queryClient}>
         <TravelListItem
           travel={baseTravel}
@@ -114,7 +114,7 @@ describe('TravelListItem selectable (web)', () => {
 
     expect(card.props.onTouchEnd).toEqual(expect.any(Function));
 
-    fireEvent(card, 'touchEnd', {
+    await fireEvent(card, 'touchEnd', {
       stopPropagation: jest.fn(),
       preventDefault: jest.fn(),
     });
@@ -122,10 +122,10 @@ describe('TravelListItem selectable (web)', () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  it('still toggles selection when the travel has no navigation url', () => {
+  it('still toggles selection when the travel has no navigation url', async () => {
     const queryClient = createTestQueryClient();
     const onToggle = jest.fn();
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <QueryClientProvider client={queryClient}>
         <TravelListItem
           travel={{
@@ -143,7 +143,7 @@ describe('TravelListItem selectable (web)', () => {
       </QueryClientProvider>
     );
 
-    fireEvent.press(getByTestId('travel-card-selectable-1'));
+    await fireEvent.press(getByTestId('travel-card-selectable-1'));
 
     expect(onToggle).toHaveBeenCalledTimes(1);
   });

@@ -26,16 +26,16 @@ describe.each(['android', 'ios'])('seasonal menu on %s', platform => {
     await i18n.changeLanguage('ru');
   });
 
-  it('exposes all seven choices with exactly one checked radio and accepts each choice', () => {
-    const view = render(<SeasonalThemeToggle compact />);
+  it('exposes all seven choices with exactly one checked radio and accepts each choice', async () => {
+    const view = await render(<SeasonalThemeToggle compact />);
     expect(view.getAllByRole('radio')).toHaveLength(7);
     expect(view.getAllByRole('radio', { checked: true })).toHaveLength(1);
 
     for (const preference of ['auto', 'off', ...SEASONAL_THEME_IDS]) {
-      fireEvent.press(view.getByTestId(`seasonal-theme-toggle-${preference}`));
+      await fireEvent.press(view.getByTestId(`seasonal-theme-toggle-${preference}`));
       expect(setSeasonalTheme).toHaveBeenLastCalledWith(preference);
       (useTheme as jest.Mock).mockReturnValue({ seasonalTheme: preference, setSeasonalTheme, seasonalCalendar: null });
-      view.rerender(<SeasonalThemeToggle compact />);
+      await view.rerender(<SeasonalThemeToggle compact />);
       expect(view.getAllByRole('radio', { checked: true })).toHaveLength(1);
       expect(view.getByTestId(`seasonal-theme-toggle-${preference}`).props.accessibilityState.checked).toBe(true);
     }
@@ -43,7 +43,7 @@ describe.each(['android', 'ios'])('seasonal menu on %s', platform => {
 
   it.each(['ru', 'be', 'uk', 'pl', 'en'])('keeps %s labels and 44dp targets in a wrapping row', async locale => {
     await i18n.changeLanguage(locale);
-    const view = render(<SeasonalThemeToggle compact layout="horizontal" showLabels />);
+    const view = await render(<SeasonalThemeToggle compact layout="horizontal" showLabels />);
     expect(StyleSheet.flatten(view.getByTestId('seasonal-theme-toggle').props.style)).toMatchObject({ flexWrap: 'wrap' });
     for (const option of getSeasonalThemeOptions()) {
       expect(view.getByText(option.label)).toBeTruthy();

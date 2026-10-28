@@ -1,7 +1,8 @@
+import { getAllHosts } from '@/__tests__/helpers/hostQueries'
 // __tests__/components/Map.ios.test.tsx
 import React from 'react';
 import { act, render } from '@testing-library/react-native';
-import { Platform, View } from 'react-native';
+import { Platform } from 'react-native';
 import { padViewportBBox } from '@/hooks/map/mapViewportCoverage';
 
 const mockInjectJavaScript = jest.fn();
@@ -110,13 +111,13 @@ describe('Map.ios Component', () => {
     longitude: 27.5,
   };
 
-  const getWebViewHtml = (rendered: ReturnType<typeof render>) => {
+  const getWebViewHtml = (rendered: Awaited<ReturnType<typeof render>>) => {
     const webView = getWebView(rendered);
     return webView.props.source.html as string;
   };
 
-  const getWebView = (rendered: ReturnType<typeof render>) => {
-    const webView = rendered.UNSAFE_getAllByType(View).find(
+  const getWebView = (rendered: Awaited<ReturnType<typeof render>>) => {
+    const webView = getAllHosts(rendered.container, node => node.type === "View").find(
       (node) => typeof node.props?.source?.html === 'string'
     );
     expect(webView).toBeTruthy();
@@ -137,9 +138,9 @@ describe('Map.ios Component', () => {
         typeof script === 'string' &&
         (channel ? script.includes(channel) : CHANNEL_COMMANDS.some((name) => script.includes(name))));
 
-  const getInjectedPayloadScript = (rendered: ReturnType<typeof render>) => {
+  const getInjectedPayloadScript = async (rendered: Awaited<ReturnType<typeof render>>) => {
     const webView = getWebView(rendered);
-    act(() => {
+    await act(() => {
       webView.props.onLoadEnd();
     });
     expect(mockInjectJavaScript).toHaveBeenCalled();
@@ -149,15 +150,15 @@ describe('Map.ios Component', () => {
       .join('\n');
   };
 
-  it('should render without crashing', () => {
-    const rendered = render(
+  it('should render without crashing', async () => {
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     expect(getWebViewHtml(rendered)).toContain('<div id="map"></div>');
   });
 
-  it('should render WebView map markup', () => {
-    const rendered = render(
+  it('should render WebView map markup', async () => {
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
@@ -165,8 +166,8 @@ describe('Map.ios Component', () => {
     expect(getWebViewHtml(rendered)).toContain('zoomControl: false');
   });
 
-  it('keeps native WebView tiles fresh after Android layout and pan changes', () => {
-    const rendered = render(
+  it('keeps native WebView tiles fresh after Android layout and pan changes', async () => {
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
 
@@ -187,8 +188,8 @@ describe('Map.ios Component', () => {
     expect(html).toContain('/proxy/tiles/osm/{z}/{x}/{y}.png');
   });
 
-  it('draws single POI markers with the shared brand bird divIcon (not the teardrop pin)', () => {
-    const rendered = render(
+  it('draws single POI markers with the shared brand bird divIcon (not the teardrop pin)', async () => {
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
 
@@ -205,8 +206,8 @@ describe('Map.ios Component', () => {
     expect(html).not.toContain('data:image/svg+xml');
   });
 
-  it('should send marker selection through the WebView bridge', () => {
-    const rendered = render(
+  it('should send marker selection through the WebView bridge', async () => {
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
 
@@ -223,14 +224,14 @@ describe('Map.ios Component', () => {
     expect(html).not.toContain('marker.bindPopup(popupContent');
   });
 
-  it('should route marker selection messages to onMarkerSelect', () => {
+  it('should route marker selection messages to onMarkerSelect', async () => {
     const onMarkerSelect = jest.fn();
-    const rendered = render(
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} onMarkerSelect={onMarkerSelect} />
     );
 
     const webView = getWebView(rendered);
-    act(() => {
+    await act(() => {
       webView.props.onMessage({
         nativeEvent: { data: JSON.stringify({ type: 'SELECT_PLACE', index: 1 }) },
       });
@@ -239,13 +240,13 @@ describe('Map.ios Component', () => {
     expect(onMarkerSelect).toHaveBeenCalledWith(mockTravel.travelAddress.data[1]);
   });
 
-  it('ignores a stale keyed marker message after its place is removed', () => {
+  it('ignores a stale keyed marker message after its place is removed', async () => {
     const [removedPoint, currentPoint] = mockTravel.travelAddress.data.map((point) => ({
       ...point,
       placeId: `place-${point.id}`,
     }));
     const onMarkerSelect = jest.fn();
-    const rendered = render(
+    const rendered = await render(
       <Map
         travel={{ travelAddress: { data: [removedPoint, currentPoint] } }}
         coordinates={mockCoordinates}
@@ -254,14 +255,14 @@ describe('Map.ios Component', () => {
     );
     const onMessage = getWebView(rendered).props.onMessage;
 
-    rendered.rerender(
+    await rendered.rerender(
       <Map
         travel={{ travelAddress: { data: [currentPoint] } }}
         coordinates={mockCoordinates}
         onMarkerSelect={onMarkerSelect}
       />
     );
-    act(() => {
+    await act(() => {
       onMessage({
         nativeEvent: { data: JSON.stringify({
           type: 'SELECT_PLACE',
@@ -274,7 +275,7 @@ describe('Map.ios Component', () => {
     });
     expect(onMarkerSelect).not.toHaveBeenCalled();
 
-    act(() => {
+    await act(() => {
       onMessage({
         nativeEvent: { data: JSON.stringify({ type: 'SELECT_PLACE', placeKey: currentPoint.placeId }) },
       });
@@ -286,10 +287,10 @@ describe('Map.ios Component', () => {
     }));
   });
 
-  it('routes an empty-map tap to the native background-dismiss callback', () => {
+  it('routes an empty-map tap to the native background-dismiss callback', async () => {
     const onMapBackgroundTap = jest.fn();
     const onMapClick = jest.fn();
-    const rendered = render(
+    const rendered = await render(
       <Map
         travel={mockTravel}
         coordinates={mockCoordinates}
@@ -299,7 +300,7 @@ describe('Map.ios Component', () => {
     );
 
     const webView = getWebView(rendered);
-    act(() => {
+    await act(() => {
       webView.props.onMessage({
         nativeEvent: { data: JSON.stringify({ type: 'MAP_CLICK', lat: 53.91, lng: 27.57 }) },
       });
@@ -309,9 +310,9 @@ describe('Map.ios Component', () => {
     expect(onMapClick).toHaveBeenCalledWith(27.57, 53.91);
   });
 
-  it('should expose native map controls through the WebView bridge', () => {
+  it('should expose native map controls through the WebView bridge', async () => {
     const onMapUiApiReady = jest.fn();
-    const rendered = render(
+    const rendered = await render(
       <Map
         travel={mockTravel}
         coordinates={mockCoordinates}
@@ -333,7 +334,7 @@ describe('Map.ios Component', () => {
 
     const api = onMapUiApiReady.mock.calls.find(([value]) => value)?.[0];
     mockInjectJavaScript.mockClear();
-    act(() => {
+    await act(() => {
       api.centerOnUser({ lat: 50.0680351, lng: 19.849518 });
     });
     expect(mockInjectJavaScript).toHaveBeenCalledWith(
@@ -343,16 +344,16 @@ describe('Map.ios Component', () => {
     );
   });
 
-  it('#2058: fits the frame to a set of points through the WebView bridge', () => {
+  it('#2058: fits the frame to a set of points through the WebView bridge', async () => {
     const onMapUiApiReady = jest.fn();
-    const rendered = render(
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} onMapUiApiReady={onMapUiApiReady} />
     );
 
     expect(getWebViewHtml(rendered)).toContain('window.__metravelMapFitCoords = function');
     const api = onMapUiApiReady.mock.calls.find(([value]) => value)?.[0];
     mockInjectJavaScript.mockClear();
-    act(() => {
+    await act(() => {
       api.fitToCoords([{ lat: 48.14, lng: 11.58 }, { lat: 48.1, lng: 11.6 }], { maxZoom: 14 });
     });
     expect(mockInjectJavaScript).toHaveBeenCalledWith(
@@ -362,9 +363,9 @@ describe('Map.ios Component', () => {
     );
   });
 
-  it('#2218: hands consumers the full MapUiApi contract, fitToResults included', () => {
+  it('#2218: hands consumers the full MapUiApi contract, fitToResults included', async () => {
     const onMapUiApiReady = jest.fn();
-    render(<Map travel={mockTravel} coordinates={mockCoordinates} onMapUiApiReady={onMapUiApiReady} />);
+    await render(<Map travel={mockTravel} coordinates={mockCoordinates} onMapUiApiReady={onMapUiApiReady} />);
     const api = onMapUiApiReady.mock.calls.find(([value]) => value)?.[0];
 
     // Всё, что читают поповер «Слои» (FiltersPanelMapSettings) и ядро
@@ -378,7 +379,7 @@ describe('Map.ios Component', () => {
     expect(api.capabilities).toEqual({ canCenterOnUser: true, canFitToResults: true, canExportRoute: false });
 
     mockInjectJavaScript.mockClear();
-    act(() => {
+    await act(() => {
       api.fitToResults();
     });
     expect(mockInjectJavaScript).toHaveBeenCalledTimes(1);
@@ -393,23 +394,23 @@ describe('Map.ios Component', () => {
     );
   });
 
-  it('#2218: without places fitToResults is unavailable and injects nothing', () => {
+  it('#2218: without places fitToResults is unavailable and injects nothing', async () => {
     const onMapUiApiReady = jest.fn();
-    render(
+    await render(
       <Map travel={{ travelAddress: { data: [] } }} coordinates={mockCoordinates} onMapUiApiReady={onMapUiApiReady} />,
     );
     const api = onMapUiApiReady.mock.calls.find(([value]) => value)?.[0];
     expect(api.capabilities.canFitToResults).toBe(false);
     mockInjectJavaScript.mockClear();
-    act(() => {
+    await act(() => {
       api.fitToResults();
     });
     expect(mockInjectJavaScript).not.toHaveBeenCalled();
   });
 
-  it('#2066: focuses on a coordinate through the WebView bridge', () => {
+  it('#2066: focuses on a coordinate through the WebView bridge', async () => {
     const onMapUiApiReady = jest.fn();
-    render(
+    await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} onMapUiApiReady={onMapUiApiReady} />
     );
 
@@ -419,7 +420,7 @@ describe('Map.ios Component', () => {
     const api = onMapUiApiReady.mock.calls.find(([value]) => value)?.[0];
 
     mockInjectJavaScript.mockClear();
-    act(() => {
+    await act(() => {
       api.focusOnCoord('48.14,11.58', { zoom: 14 });
     });
     expect(mockInjectJavaScript).toHaveBeenCalledWith(
@@ -429,7 +430,7 @@ describe('Map.ios Component', () => {
     );
 
     mockInjectJavaScript.mockClear();
-    act(() => {
+    await act(() => {
       api.focusOnCoord('48.14,11.58');
     });
     expect(mockInjectJavaScript).toHaveBeenCalledWith(
@@ -439,20 +440,20 @@ describe('Map.ios Component', () => {
     );
 
     mockInjectJavaScript.mockClear();
-    act(() => {
+    await act(() => {
       api.focusOnCoord('abc');
     });
     expect(mockInjectJavaScript).not.toHaveBeenCalled();
 
     mockInjectJavaScript.mockClear();
-    act(() => {
+    await act(() => {
       api.focusOnCoord('200,300');
     });
     expect(mockInjectJavaScript).not.toHaveBeenCalled();
   });
 
-  it('does not center on the fallback viewport when real user location is absent', () => {
-    const rendered = render(
+  it('does not center on the fallback viewport when real user location is absent', async () => {
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
 
@@ -462,18 +463,18 @@ describe('Map.ios Component', () => {
     expect(html).not.toContain('map.__realUserLocation || map.__userCenter');
   });
 
-  it('auto-centers once when a trusted user fix replaces the fallback anchor', () => {
-    const rendered = render(
+  it('auto-centers once when a trusted user fix replaces the fallback anchor', async () => {
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} userLocation={null} />
     );
     const webView = getWebView(rendered);
-    act(() => {
+    await act(() => {
       webView.props.onLoadEnd();
     });
     mockInjectJavaScript.mockClear();
 
     const current = { latitude: 52.2297, longitude: 21.0122 };
-    rendered.rerender(
+    await rendered.rerender(
       <Map travel={mockTravel} coordinates={current} userLocation={current} />
     );
 
@@ -482,7 +483,7 @@ describe('Map.ios Component', () => {
     );
     expect(centerCalls).toHaveLength(1);
 
-    rendered.rerender(
+    await rendered.rerender(
       <Map
         travel={mockTravel}
         coordinates={{ latitude: 52.2301, longitude: 21.0128 }}
@@ -495,8 +496,8 @@ describe('Map.ios Component', () => {
     expect(laterCenterCalls).toHaveLength(1);
   });
 
-  it('does not auto-center when the current viewport is an explicit different anchor', () => {
-    const rendered = render(
+  it('does not auto-center when the current viewport is an explicit different anchor', async () => {
+    const rendered = await render(
       <Map
         travel={mockTravel}
         coordinates={mockCoordinates}
@@ -504,7 +505,7 @@ describe('Map.ios Component', () => {
       />
     );
     const webView = getWebView(rendered);
-    act(() => {
+    await act(() => {
       webView.props.onLoadEnd();
     });
 
@@ -515,8 +516,8 @@ describe('Map.ios Component', () => {
     ).toBe(false);
   });
 
-  it('should render route polyline payload in route mode', () => {
-    const rendered = render(
+  it('should render route polyline payload in route mode', async () => {
+    const rendered = await render(
       <Map
         travel={mockTravel}
         coordinates={mockCoordinates}
@@ -528,7 +529,7 @@ describe('Map.ios Component', () => {
       />
     );
 
-    const injectedScript = getInjectedPayloadScript(rendered);
+    const injectedScript = await getInjectedPayloadScript(rendered);
     expect(injectedScript).toContain('"mode":"route"');
     expect(injectedScript).toContain('"routePoints":[[53.9,27.5667],[50.0619474,19.9368564]]');
     expect(injectedScript).toContain('"routeLine":[[53.9,27.5667],[50.0619474,19.9368564]]');
@@ -548,10 +549,10 @@ describe('Map.ios Component', () => {
     expect(injectedScript).toContain('"routePointMarkers":null');
   });
 
-  it('#2059 keeps planner marker numbers aligned with the points that survive normalization', () => {
+  it('#2059 keeps planner marker numbers aligned with the points that survive normalization', async () => {
     const onRoutePointMove = jest.fn();
     const onRoutePointPress = jest.fn();
-    const rendered = render(
+    const rendered = await render(
       <Map
         travel={mockTravel}
         coordinates={mockCoordinates}
@@ -573,7 +574,7 @@ describe('Map.ios Component', () => {
       />
     );
 
-    const injectedScript = getInjectedPayloadScript(rendered);
+    const injectedScript = await getInjectedPayloadScript(rendered);
     // Широта 95 на карту не попадает, а номер 2 уходит вместе с ней: третья
     // точка остаётся «3», как в списке.
     expect(injectedScript).toContain('"routePoints":[[53.9,27.5667],[50.0619474,19.9368564]]');
@@ -583,7 +584,7 @@ describe('Map.ios Component', () => {
     // Второй маркер WebView — третья пара `routePoints`: тап и перетаскивание
     // возвращаются её индексом, а не позицией среди отрисованных маркеров.
     const webView = getWebView(rendered);
-    act(() => {
+    await act(() => {
       webView.props.onMessage({
         nativeEvent: { data: JSON.stringify({ type: 'ROUTE_POINT_TAP', index: 1 }) },
       });
@@ -599,19 +600,19 @@ describe('Map.ios Component', () => {
     expect(onRoutePointMove).toHaveBeenCalledWith(2, 50.07, 19.95);
   });
 
-  it('redraws failed base tiles exactly on offline to online recovery', () => {
+  it('redraws failed base tiles exactly on offline to online recovery', async () => {
     mockIsConnected = false;
-    const rendered = render(
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     const webView = getWebView(rendered);
-    act(() => {
+    await act(() => {
       webView.props.onLoadEnd();
     });
     mockInjectJavaScript.mockClear();
 
     mockIsConnected = true;
-    rendered.rerender(
+    await rendered.rerender(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
 
@@ -625,7 +626,7 @@ describe('Map.ios Component', () => {
     expect(reconnectScripts[0]).toContain('window.__metravelSetTileNetwork(true)');
 
     mockInjectJavaScript.mockClear();
-    rendered.rerender(
+    await rendered.rerender(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     expect(
@@ -633,16 +634,16 @@ describe('Map.ios Component', () => {
     ).toBe(false);
   });
 
-  it('defers an offline to online redraw until the WebView is ready', () => {
+  it('defers an offline to online redraw until the WebView is ready', async () => {
     mockIsConnected = false;
-    const rendered = render(
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     const webView = getWebView(rendered);
     mockInjectJavaScript.mockClear();
 
     mockIsConnected = true;
-    rendered.rerender(
+    await rendered.rerender(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
 
@@ -650,11 +651,11 @@ describe('Map.ios Component', () => {
       mockInjectJavaScript.mock.calls.some(([script]) => String(script).includes('__metravelSetTileNetwork'))
     ).toBe(false);
 
-    act(() => {
+    await act(() => {
       webView.props.onLoadEnd();
     });
     // Вторая готовность (READY из моста) не повторяет redraw.
-    act(() => {
+    await act(() => {
       webView.props.onLoadEnd();
     });
 
@@ -669,43 +670,42 @@ describe('Map.ios Component', () => {
 
   // #2172 — collapsing the tablet panel, Split View, Stage Manager and rotation
   // change the map WIDTH at the same height; Leaflet must re-measure then too.
-  it('re-measures Leaflet when only the container width changes', () => {
-    const rendered = render(
+  it('re-measures Leaflet when only the container width changes', async () => {
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     const webView = getWebView(rendered);
-    act(() => {
+    await act(() => {
       webView.props.onLoadEnd();
     });
-    const container = rendered
-      .UNSAFE_getAllByType(View)
+    const container = getAllHosts(rendered.container, node => node.type === "View")
       .find((node) => typeof node.props?.onLayout === 'function' && !node.props?.source);
     expect(container).toBeTruthy();
-    const layout = (width: number, height: number) =>
-      act(() => {
+    const layout = async (width: number, height: number) =>
+      await act(() => {
         container!.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width, height } } });
       });
     const rnLayoutCalls = () =>
       mockInjectJavaScript.mock.calls.filter(([script]) => String(script).includes('"rn-layout"')).length;
 
-    layout(764, 730);
+    await layout(764, 730);
     expect(rnLayoutCalls()).toBe(1);
 
     // Same size again: nothing to re-measure.
-    layout(764, 730);
+    await layout(764, 730);
     expect(rnLayoutCalls()).toBe(1);
 
     // Panel collapsed: +304pt width, same height.
-    layout(1068, 730);
+    await layout(1068, 730);
     expect(rnLayoutCalls()).toBe(2);
   });
 
-  it('should include all travel points in the map payload', () => {
-    const rendered = render(
+  it('should include all travel points in the map payload', async () => {
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    const injectedScript = getInjectedPayloadScript(rendered);
+    const injectedScript = await getInjectedPayloadScript(rendered);
     // #1573: узкая проекция моста отдаёт id строкой — он служит legacy-fallback
     // резолва выбора, а WebView и так возвращал его через String(point.id).
     expect(injectedScript).toContain('"id":"1"');
@@ -716,7 +716,7 @@ describe('Map.ios Component', () => {
   // получал ~11 команд renderPoints подряд (готовность приходит дважды, плюс
   // каждое обновление центра пересобирает payload) и на каждой заново строил 869
   // маркеров, поэтому уже приехавшие тайлы не успевали отрисоваться.
-  it('не повторяет renderPoints с байт-в-байт тем же payload', () => {
+  it('не повторяет renderPoints с байт-в-байт тем же payload', async () => {
     const bigTravel = {
       travelAddress: {
         data: Array.from({ length: 840 }, (_, index) => ({
@@ -730,16 +730,16 @@ describe('Map.ios Component', () => {
       },
     };
 
-    const rendered = render(<Map travel={bigTravel} coordinates={mockCoordinates} />);
+    const rendered = await render(<Map travel={bigTravel} coordinates={mockCoordinates} />);
     const webView = getWebView(rendered);
-    act(() => {
+    await act(() => {
       webView.props.onLoadEnd();
     });
     // Вторая готовность (READY из моста) приходит на том же наборе точек.
-    act(() => {
+    await act(() => {
       webView.props.onLoadEnd();
     });
-    rendered.rerender(<Map travel={bigTravel} coordinates={mockCoordinates} />);
+    await rendered.rerender(<Map travel={bigTravel} coordinates={mockCoordinates} />);
 
     // #2453 — повтор того же набора даёт пустой diff: маркеры уходят один раз.
     const markerCalls = channelCalls('__metravelSetMarkers');
@@ -748,11 +748,11 @@ describe('Map.ios Component', () => {
     expect(channelCalls('__metravelRenderPoints')).toHaveLength(0);
   });
 
-  it('пересылает точки заново после перезагрузки страницы WebView', () => {
-    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+  it('пересылает точки заново после перезагрузки страницы WebView', async () => {
+    const rendered = await render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
     const renderPointsCalls = () => channelCalls('__metravelSetMarkers');
 
-    act(() => {
+    await act(() => {
       getWebView(rendered).props.onLoadEnd();
     });
     expect(renderPointsCalls()).toHaveLength(1);
@@ -761,17 +761,17 @@ describe('Map.ios Component', () => {
     // маркеры. Дедупликация payload не должна оставить свежую страницу пустой.
     const htmlBefore = getWebViewHtml(rendered);
     mockThemeSurface = '#101014';
-    rendered.rerender(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+    await rendered.rerender(<Map travel={mockTravel} coordinates={mockCoordinates} />);
     expect(getWebViewHtml(rendered)).not.toBe(htmlBefore);
 
-    act(() => {
+    await act(() => {
       getWebView(rendered).props.onLoadEnd();
     });
     expect(renderPointsCalls()).toHaveLength(2);
   });
 
-  it('requests server clusters from native viewport bbox and filters', () => {
-    const rendered = render(
+  it('requests server clusters from native viewport bbox and filters', async () => {
+    const rendered = await render(
       <Map
         travel={mockTravel}
         coordinates={mockCoordinates}
@@ -780,7 +780,7 @@ describe('Map.ios Component', () => {
     );
 
     const webView = getWebView(rendered);
-    act(() => {
+    await act(() => {
       webView.props.onMessage({
         nativeEvent: {
           data: JSON.stringify({
@@ -803,42 +803,42 @@ describe('Map.ios Component', () => {
     );
   });
 
-  it('#2453: a viewport inside the published area does not touch state', () => {
-    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+  it('#2453: a viewport inside the published area does not touch state', async () => {
+    const rendered = await render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
     const webView = getWebView(rendered);
-    const sendViewport = (bbox: Record<string, number>, zoom: number) =>
-      act(() => {
+    const sendViewport = async (bbox: Record<string, number>, zoom: number) =>
+      await act(() => {
         webView.props.onMessage({
           nativeEvent: { data: JSON.stringify({ type: 'MAP_VIEWPORT', bbox, zoom, lat: 53.6, lng: 27.6 }) },
         });
       });
 
-    sendViewport({ south: 53.1, west: 27.1, north: 54.1, east: 28.1 }, 9);
+    await sendViewport({ south: 53.1, west: 27.1, north: 54.1, east: 28.1 }, 9);
     const callsAfterFirst = mockUseMapClusters.mock.calls.length;
 
     // Небольшой пан внутри запаса на том же зуме: resolveViewportPublication → null,
     // setState не вызывается — компонент не перерисовывается, запроса нет.
-    sendViewport({ south: 53.15, west: 27.15, north: 54.15, east: 28.15 }, 9);
+    await sendViewport({ south: 53.15, west: 27.15, north: 54.15, east: 28.15 }, 9);
     expect(mockUseMapClusters.mock.calls.length).toBe(callsAfterFirst);
 
     // Смена округлённого зума публикует новый snapshot.
-    sendViewport({ south: 53.3, west: 27.3, north: 53.8, east: 27.8 }, 10);
+    await sendViewport({ south: 53.3, west: 27.3, north: 53.8, east: 27.8 }, 10);
     expect(mockUseMapClusters.mock.calls.length).toBeGreaterThan(callsAfterFirst);
     expect(mockUseMapClusters).toHaveBeenLastCalledWith(expect.objectContaining({ zoom: 10 }));
   });
 
-  it('#2453: one viewport message routes the moved centre to onMapMove only when it moved', () => {
+  it('#2453: one viewport message routes the moved centre to onMapMove only when it moved', async () => {
     const onMapMove = jest.fn();
-    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} onMapMove={onMapMove} />);
+    const rendered = await render(<Map travel={mockTravel} coordinates={mockCoordinates} onMapMove={onMapMove} />);
     const webView = getWebView(rendered);
     const bbox = { south: 53.1, west: 27.1, north: 54.1, east: 28.1 };
-    act(() => {
+    await act(() => {
       webView.props.onMessage({
         nativeEvent: { data: JSON.stringify({ type: 'MAP_VIEWPORT', bbox, zoom: 9, lat: 53.6, lng: 27.6, byUser: true, centerMoved: false }) },
       });
     });
     expect(onMapMove).not.toHaveBeenCalled();
-    act(() => {
+    await act(() => {
       webView.props.onMessage({
         nativeEvent: { data: JSON.stringify({ type: 'MAP_VIEWPORT', bbox, zoom: 9, lat: 53.7, lng: 27.7, byUser: true, centerMoved: true }) },
       });
@@ -851,7 +851,7 @@ describe('Map.ios Component', () => {
     }));
   });
 
-  it('#2453: with server data only server markers are drawn, never the whole list', () => {
+  it('#2453: with server data only server markers are drawn, never the whole list', async () => {
     mockUseMapClusters.mockReturnValue({
       data: {
         clusters: [
@@ -873,8 +873,8 @@ describe('Map.ios Component', () => {
       isError: false,
       isDebouncing: false,
     });
-    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
-    getInjectedPayloadScript(rendered);
+    const rendered = await render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+    await getInjectedPayloadScript(rendered);
     const markers = channelCalls('__metravelSetMarkers').at(-1) ?? '';
     expect(markers).toContain('"add":[]');
     expect(markers).toContain('"usesServerClusters":true');
@@ -883,13 +883,13 @@ describe('Map.ios Component', () => {
 
   it.each(['ios', 'android'] as const)(
     'personal points never enable the public catalogue query on %s',
-    (platform) => {
+    async (platform) => {
       const originalPlatform = Platform.OS;
       Platform.OS = platform;
       try {
         const { UserPointsMap } = require('@/components/UserPoints/UserPointsMap');
-        const rendered = render(<UserPointsMap points={[]} />);
-        act(() => {
+        const rendered = await render(<UserPointsMap points={[]} />);
+        await act(() => {
           getWebView(rendered).props.onMessage({
             nativeEvent: {
               data: JSON.stringify({
@@ -909,7 +909,7 @@ describe('Map.ios Component', () => {
     },
   );
 
-  it('pointsOnly preserves supplied marker identities when public catalogue data is cached', () => {
+  it('pointsOnly preserves supplied marker identities when public catalogue data is cached', async () => {
     // A disabled React Query observer can still expose cached successful data.
     mockUseMapClusters.mockReturnValue({
       data: {
@@ -922,8 +922,8 @@ describe('Map.ios Component', () => {
       },
       isLoading: false, isFetching: false, isError: false, isDebouncing: false,
     });
-    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} pointsOnly />);
-    getInjectedPayloadScript(rendered);
+    const rendered = await render(<Map travel={mockTravel} coordinates={mockCoordinates} pointsOnly />);
+    await getInjectedPayloadScript(rendered);
     const markers = channelCalls('__metravelSetMarkers').at(-1) ?? '';
     expect(markers).toContain('"id":"1"');
     expect(markers).toContain('"id":"2"');
@@ -931,22 +931,22 @@ describe('Map.ios Component', () => {
     expect(channelCalls('__metravelSetClusters').at(-1)).toContain('"add":[]');
   });
 
-  it('#2453: a centre change does not re-serialize markers', () => {
-    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
-    getInjectedPayloadScript(rendered);
+  it('#2453: a centre change does not re-serialize markers', async () => {
+    const rendered = await render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+    await getInjectedPayloadScript(rendered);
     const markerCallsBefore = channelCalls('__metravelSetMarkers').length;
     const centerCallsBefore = channelCalls('__metravelSetCenter').length;
 
-    rendered.rerender(<Map travel={mockTravel} coordinates={{ latitude: 52.1, longitude: 23.7 }} />);
+    await rendered.rerender(<Map travel={mockTravel} coordinates={{ latitude: 52.1, longitude: 23.7 }} />);
 
     expect(channelCalls('__metravelSetCenter').length).toBe(centerCallsBefore + 1);
     expect(channelCalls('__metravelSetCenter').at(-1)).toContain('{"lat":52.1,"lng":23.7}');
     expect(channelCalls('__metravelSetMarkers').length).toBe(markerCallsBefore);
   });
 
-  it('#2453: one new list point is sent as a single add', () => {
-    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
-    getInjectedPayloadScript(rendered);
+  it('#2453: one new list point is sent as a single add', async () => {
+    const rendered = await render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+    await getInjectedPayloadScript(rendered);
     const extra = {
       id: 3,
       lat: '53.7',
@@ -955,7 +955,7 @@ describe('Map.ios Component', () => {
       address: 'Third',
       categoryName: 'Attraction',
     };
-    rendered.rerender(
+    await rendered.rerender(
       <Map
         travel={{ travelAddress: { data: [...mockTravel.travelAddress.data, extra] } }}
         coordinates={mockCoordinates}
@@ -968,15 +968,15 @@ describe('Map.ios Component', () => {
     expect(patch).not.toContain('"reset":true');
   });
 
-  it('#2452: captured tiles are written to the cache without any inject back; tainted canvas warns once', () => {
+  it('#2452: captured tiles are written to the cache without any inject back; tainted canvas warns once', async () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+    const rendered = await render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
     const webView = getWebView(rendered);
-    act(() => {
+    await act(() => {
       webView.props.onLoadEnd();
     });
     mockInjectJavaScript.mockClear();
-    act(() => {
+    await act(() => {
       webView.props.onMessage({
         nativeEvent: { data: JSON.stringify({ type: 'TILE_CAPTURE', gen: 0, tiles: [['10/585/333', 'data:image/png;base64,AAAA']] }) },
       });
@@ -988,14 +988,14 @@ describe('Map.ios Component', () => {
     warn.mockRestore();
   });
 
-  it('#2452: tile requests and cancels go through the fallback bridge, not one inject per tile', () => {
-    const rendered = render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
+  it('#2452: tile requests and cancels go through the fallback bridge, not one inject per tile', async () => {
+    const rendered = await render(<Map travel={mockTravel} coordinates={mockCoordinates} />);
     const webView = getWebView(rendered);
-    act(() => {
+    await act(() => {
       webView.props.onLoadEnd();
     });
     mockInjectJavaScript.mockClear();
-    act(() => {
+    await act(() => {
       webView.props.onMessage({
         nativeEvent: { data: JSON.stringify({ type: 'TILE_REQ', z: 10, x: 1, y: 2, key: '10/1/2#1', fallback: true }) },
       });
@@ -1009,7 +1009,7 @@ describe('Map.ios Component', () => {
     ).toBe(false);
   });
 
-  it('injects server clusters into the native WebView payload', () => {
+  it('injects server clusters into the native WebView payload', async () => {
     mockUseMapClusters.mockReturnValue({
       data: {
         clusters: [
@@ -1031,11 +1031,11 @@ describe('Map.ios Component', () => {
       isError: false,
       isDebouncing: false,
     });
-    const rendered = render(
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
 
-    const injectedScript = getInjectedPayloadScript(rendered);
+    const injectedScript = await getInjectedPayloadScript(rendered);
     // Server ids are request-scoped and change for overlapping bbox queries.
     // The native renderer must receive the same stable geometric key as web so
     // an unchanged cluster is not recreated after every pan/refetch (#1347).
@@ -1048,46 +1048,46 @@ describe('Map.ios Component', () => {
     expect(getWebViewHtml(rendered)).toContain("__metravelPostViewport('init')");
   });
 
-  it('should handle empty travel data', () => {
+  it('should handle empty travel data', async () => {
     const emptyTravel = { 
       travelAddress: { 
         data: [] 
       } 
     };
     
-    const rendered = render(
+    const rendered = await render(
       <Map travel={emptyTravel} coordinates={mockCoordinates} />
     );
     
     // Первая отправка маркеров — сброс страницы даже для пустого набора, чтобы
     // WebView выполнил стартовое позиционирование.
-    const markers = getInjectedPayloadScript(rendered);
+    const markers = await getInjectedPayloadScript(rendered);
     expect(markers).toContain('"add":[]');
     expect(markers).toContain('"reset":true');
   });
 
-  it('should use default coordinates when not provided', () => {
-    const rendered = render(
+  it('should use default coordinates when not provided', async () => {
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={null} />
     );
     
-    const injectedScript = getInjectedPayloadScript(rendered);
+    const injectedScript = await getInjectedPayloadScript(rendered);
     // D2: центр по умолчанию — `DEFAULT_MAP_CENTER` из `constants/mapConfig.ts`,
     // а не прежний захардкоженный 53.8828449/27.7273595.
     expect(getWebViewHtml(rendered)).toContain('setView([53.9006, 27.559], 10)');
     expect(injectedScript).toContain('__metravelSetCenter({"lat":53.9006,"lng":27.559})');
   });
 
-  it('should parse coordinates correctly', () => {
-    const rendered = render(
+  it('should parse coordinates correctly', async () => {
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
     expect(getWebViewHtml(rendered)).toContain("String(point.coord).split(',').map(Number)");
   });
 
-  it('should not render travel marker callouts inside the native WebView', () => {
-    const rendered = render(
+  it('should not render travel marker callouts inside the native WebView', async () => {
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
@@ -1101,27 +1101,27 @@ describe('Map.ios Component', () => {
   // #1573 — WebView-маркер получает только поля рендера/выбора
   // (placeKey/id/coord/categoryName/sourceCount). Адрес, превью и ссылки живут в
   // RN (MapPlaceBottomCard) и через мост не сериализуются.
-  it('sends a narrow marker payload without record-only fields', () => {
-    const rendered = render(
+  it('sends a narrow marker payload without record-only fields', async () => {
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
 
-    const payload = getInjectedPayloadScript(rendered);
+    const payload = await getInjectedPayloadScript(rendered);
     expect(payload).toContain('"coord":"53.9,27.5"');
     expect(payload).toContain('"placeKey":');
     expect(payload).not.toContain('Test Address, Minsk');
     expect(payload).not.toContain('travelImageThumbUrl');
   });
 
-  it('should display point category in callout', () => {
-    const rendered = render(
+  it('should display point category in callout', async () => {
+    const rendered = await render(
       <Map travel={mockTravel} coordinates={mockCoordinates} />
     );
     
-    expect(getInjectedPayloadScript(rendered)).toContain('Attraction');
+    expect(await getInjectedPayloadScript(rendered)).toContain('Attraction');
   });
 
-  it('should handle missing image gracefully', () => {
+  it('should handle missing image gracefully', async () => {
     const travelWithoutImage = {
       travelAddress: {
         data: [{
@@ -1131,13 +1131,13 @@ describe('Map.ios Component', () => {
       },
     };
 
-    const rendered = render(
+    const rendered = await render(
       <Map travel={travelWithoutImage} coordinates={mockCoordinates} />
     );
 
     // Точка без превью всё равно даёт маркер: картинка рисуется в RN, а не в
     // WebView, поэтому её отсутствие не может обнулить payload маркера (#1573).
-    const payload = getInjectedPayloadScript(rendered);
+    const payload = await getInjectedPayloadScript(rendered);
     expect(payload).toContain('"coord":"53.8,27.6"');
     expect(payload).not.toContain('travelImageThumbUrl');
   });

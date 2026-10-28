@@ -1,6 +1,11 @@
-import { Suspense } from 'react';
-import renderer, { act } from 'react-test-renderer'
+import { Suspense, createContext } from 'react';
+import { render as renderTree, act } from '@testing-library/react-native'
+import type { RenderResult } from '@testing-library/react-native'
 import { Animated, Platform } from 'react-native'
+import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
+
+type TransitionProps = Parameters<typeof TravelDetailsDeferredTransition>[0]
+const mockTransitionScope = createContext<Map<string, TransitionProps> | null>(null)
 
 const mockAuthorCardSpy: jest.Mock<any, any> = jest.fn(() => null)
 const mockMapSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
@@ -13,6 +18,19 @@ type ObserverEntry = {
   observe: jest.Mock
   disconnect: jest.Mock
 }
+
+jest.mock('@/components/travel/details/TravelDetailsDeferredTransition', () => {
+  const React = require('react')
+  const actual = jest.requireActual('@/components/travel/details/TravelDetailsDeferredTransition')
+  return {
+    ...actual,
+    TravelDetailsDeferredTransition: jest.fn((props: TransitionProps) => {
+      const scope = React.useContext(mockTransitionScope)
+      scope?.set(props.testID, props)
+      return React.createElement(actual.TravelDetailsDeferredTransition, props)
+    }),
+  }
+})
 
 jest.mock('@/components/travel/AuthorCard', () => ({
   __esModule: true,
@@ -83,6 +101,7 @@ describe('TravelDeferredSections (web author defer)', () => {
   let observers: ObserverEntry[] = []
 
   beforeEach(() => {
+    jest.mocked(TravelDetailsDeferredTransition).mockClear()
     jest.useFakeTimers()
     Platform.OS = 'web'
     Platform.select = (obj: any) => obj.web || obj.default
@@ -146,7 +165,7 @@ describe('TravelDeferredSections (web author defer)', () => {
     }
 
     await act(async () => {
-      renderer.create(
+      await renderTree(
         <Suspense fallback={null}>
           <TravelDeferredSections
             travel={travel}
@@ -207,7 +226,7 @@ describe('TravelDeferredSections (web author defer)', () => {
     }
 
     await act(async () => {
-      renderer.create(
+      await renderTree(
         <Suspense fallback={null}>
           <TravelDeferredSections
             travel={travel}
@@ -262,7 +281,7 @@ describe('TravelDeferredSections (web author defer)', () => {
     }
 
     await act(async () => {
-      renderer.create(
+      await renderTree(
         <Suspense fallback={null}>
           <TravelDeferredSections
             travel={travel}
@@ -286,7 +305,7 @@ describe('TravelDeferredSections (web author defer)', () => {
     mockCommentsSectionSpy.mockClear()
 
     await act(async () => {
-      renderer.create(
+      await renderTree(
         <Suspense fallback={null}>
           <TravelDeferredSections
             travel={travel}
@@ -342,7 +361,7 @@ describe('TravelDeferredSections (web author defer)', () => {
     }
 
     await act(async () => {
-      renderer.create(
+      await renderTree(
         <Suspense fallback={null}>
           <TravelDeferredSections
             travel={travel}
@@ -397,18 +416,19 @@ describe('TravelDeferredSections (web author defer)', () => {
     const layoutEvent = (height: number) => ({
       nativeEvent: { layout: { height, width: 920, x: 0, y: 0 } },
     })
-    const { TravelDetailsDeferredTransition } = require('@/components/travel/details/TravelDetailsDeferredTransition')
     // This renderer has disconnected/null DOM refs: it verifies caller signals,
     // not visibility or geometry. The real RNW/ReactDOM Transition suite proves
     // positive DOM measurements, pre-paint display and reserve/anchor behavior.
-    const transitionOf = (tree: renderer.ReactTestRenderer, testID: string) =>
-      tree.root.findAllByType(TravelDetailsDeferredTransition)
-        .find((node) => node.props.testID === testID)!
+    // Props belong to a mounted root. Both roots below render transitions with
+    // the same IDs, so a global last-call spy can read the other tree's state.
+    const sidebarTransitions = new Map<string, TransitionProps>()
+    const commentsTransitions = new Map<string, TransitionProps>()
+    const transitionProps = (scope: Map<string, TransitionProps>, testID: string) => () => scope.get(testID)!
 
-    let sidebarTree: renderer.ReactTestRenderer
+    let sidebarTree: RenderResult
     await act(async () => {
-      sidebarTree = renderer.create(
-        <Suspense fallback={null}>
+      sidebarTree = await renderTree(
+        <mockTransitionScope.Provider value={sidebarTransitions}><Suspense fallback={null}>
           <TravelDeferredSections
             travel={travel}
             isMobile={false}
@@ -416,72 +436,71 @@ describe('TravelDeferredSections (web author defer)', () => {
             anchors={anchors}
             scrollToMapSection={() => {}}
           />
-        </Suspense>,
+        </Suspense></mockTransitionScope.Provider>,
       )
       await Promise.resolve()
     })
 
-    const sidebarTransition = transitionOf(sidebarTree!, 'travel-details-sidebar-transition')
-    expect(sidebarTransition.props.runtimeFrameReady).toBe(false)
+    const sidebarTransition = transitionProps(sidebarTransitions, 'travel-details-sidebar-transition')
+    expect(sidebarTransition().runtimeFrameReady).toBe(false)
 
     const sidebarRuntimeLayout = mockSidebarSectionSpy.mock.calls.at(-1)?.[0]?.onRuntimeFrameReady
     expect(sidebarRuntimeLayout).toEqual(expect.any(Function))
 
     const sidebarVisibilityLayout = mockSidebarSectionSpy.mock.calls.at(-1)?.[0]?.onRuntimeVisibilityReady
     expect(sidebarVisibilityLayout).toEqual(expect.any(Function))
-    expect(sidebarTransition.props.runtimeFrameReady).toBe(false)
+    expect(sidebarTransition().runtimeFrameReady).toBe(false)
     await act(async () => { sidebarVisibilityLayout(layoutEvent(300)) })
-    expect(sidebarTransition.props.runtimeVisibilityReady).toBe(true)
-    expect(sidebarTransition.props.runtimeFrameReady).toBe(false)
+    expect(sidebarTransition().runtimeVisibilityReady).toBe(true)
+    expect(sidebarTransition().runtimeFrameReady).toBe(false)
 
     // First real frame is not the settled frame: `Популярные` is still growing.
     await act(async () => {
       sidebarRuntimeLayout(layoutEvent(300))
       jest.advanceTimersByTime(200)
     })
-    expect(sidebarTransition.props.runtimeVisibilityReady).toBe(true)
-    expect(sidebarTransition.props.runtimeFrameReady).toBe(false)
+    expect(sidebarTransition().runtimeVisibilityReady).toBe(true)
+    expect(sidebarTransition().runtimeFrameReady).toBe(false)
 
     // A new height restarts the quiet window instead of releasing the reserve.
     await act(async () => {
       sidebarRuntimeLayout(layoutEvent(548))
       jest.advanceTimersByTime(200)
     })
-    expect(sidebarTransition.props.runtimeVisibilityReady).toBe(true)
-    expect(sidebarTransition.props.runtimeFrameReady).toBe(false)
+    expect(sidebarTransition().runtimeVisibilityReady).toBe(true)
+    expect(sidebarTransition().runtimeFrameReady).toBe(false)
 
     await act(async () => {
       jest.advanceTimersByTime(400)
     })
-    expect(sidebarTransition.props.runtimeFrameReady).toBe(true)
+    expect(sidebarTransition().runtimeFrameReady).toBe(true)
 
     // Old travel callbacks must not expose a new visit, even on back navigation.
     await act(async () => {
-      sidebarTree!.update(<Suspense fallback={null}><TravelDeferredSections
+      await sidebarTree!.rerender(<mockTransitionScope.Provider value={sidebarTransitions}><Suspense fallback={null}><TravelDeferredSections
         travel={{ ...travel, id: 999 }} isMobile={false} forceOpenKey="near"
-        anchors={anchors} scrollToMapSection={() => {}} /></Suspense>)
+        anchors={anchors} scrollToMapSection={() => {}} /></Suspense></mockTransitionScope.Provider>)
       await Promise.resolve()
     })
-    const newTransition = transitionOf(sidebarTree!, 'travel-details-sidebar-transition')
+    const newTransition = transitionProps(sidebarTransitions, 'travel-details-sidebar-transition')
     await act(async () => { sidebarVisibilityLayout(layoutEvent(300)) })
-    expect(newTransition.props.runtimeVisibilityReady).toBe(false)
-    expect(newTransition.props.runtimeFrameReady).toBe(false)
+    expect(newTransition().runtimeVisibilityReady).toBe(false)
+    expect(newTransition().runtimeFrameReady).toBe(false)
     // The old settle/layout callback must also belong to its original visit.
     await act(async () => {
       sidebarRuntimeLayout(layoutEvent(548))
       jest.advanceTimersByTime(400)
     })
-    expect(newTransition.props.runtimeFrameReady).toBe(false)
+    expect(newTransition().runtimeFrameReady).toBe(false)
     const newVisibilityLayout = mockSidebarSectionSpy.mock.calls.at(-1)?.[0]?.onRuntimeVisibilityReady
     await act(async () => { newVisibilityLayout(layoutEvent(300)) })
-    expect(newTransition.props.runtimeVisibilityReady).toBe(true)
-    expect(newTransition.props.runtimeFrameReady).toBe(false)
+    expect(newTransition().runtimeVisibilityReady).toBe(true)
+    expect(newTransition().runtimeFrameReady).toBe(false)
 
     mockCommentsSectionSpy.mockClear()
-    let commentsTree: renderer.ReactTestRenderer
     await act(async () => {
-      commentsTree = renderer.create(
-        <Suspense fallback={null}>
+      await renderTree(
+        <mockTransitionScope.Provider value={commentsTransitions}><Suspense fallback={null}>
           <TravelDeferredSections
             travel={travel}
             isMobile={false}
@@ -489,20 +508,20 @@ describe('TravelDeferredSections (web author defer)', () => {
             anchors={anchors}
             scrollToMapSection={() => {}}
           />
-        </Suspense>,
+        </Suspense></mockTransitionScope.Provider>,
       )
       await Promise.resolve()
     })
 
-    const commentsTransition = transitionOf(commentsTree!, 'travel-details-comments-transition')
-    expect(commentsTransition.props.runtimeFrameReady).toBe(false)
-    expect(commentsTransition.props.runtimeVisibilityReady).toBeUndefined()
+    const commentsTransition = transitionProps(commentsTransitions, 'travel-details-comments-transition')
+    expect(commentsTransition().runtimeFrameReady).toBe(false)
+    expect(commentsTransition().runtimeVisibilityReady).toBeUndefined()
 
     // A section whose data never arrives must still become interactive: the
     // fail-open timeout releases the reserve without a single layout event.
     await act(async () => {
       jest.advanceTimersByTime(6000)
     })
-    expect(commentsTransition.props.runtimeFrameReady).toBe(true)
+    expect(commentsTransition().runtimeFrameReady).toBe(true)
   })
 })

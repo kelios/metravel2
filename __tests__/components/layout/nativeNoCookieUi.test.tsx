@@ -71,15 +71,15 @@ const setPlatform = (os: typeof Platform.OS) => {
   Object.defineProperty(Platform, 'OS', { configurable: true, value: os })
 }
 
-const renderWithClient = (ui: React.ReactElement) =>
-  render(
+const renderWithClient = async (ui: React.ReactElement) =>
+  await render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       {ui}
     </QueryClientProvider>,
   )
 
-const renderAboutCard = () =>
-  render(
+const renderAboutCard = async () =>
+  await render(
     <AboutIntroCard
       email="info@metravel.by"
       onSendMail={jest.fn()}
@@ -128,42 +128,42 @@ describe('native app has no cookie UI (#2135)', () => {
       expect(getIsHeaderMobile(1280, 1280)).toBe(false)
     })
 
-    it('guest menu lists the privacy policy but no cookie settings', () => {
+    it('guest menu lists the privacy policy but no cookie settings', async () => {
       setPlatform('ios')
-      const { getByText, queryByText } = renderWithClient(<AccountMenu initialOpenKey={1} />)
+      const { getByText, queryByText } = await renderWithClient(<AccountMenu initialOpenKey={1} />)
 
       expect(getByText(PRIVACY_ITEM)).toBeTruthy()
       expect(queryByText(COOKIE_ITEM)).toBeNull()
     })
 
-    it('authenticated documents section has no cookie settings', () => {
+    it('authenticated documents section has no cookie settings', async () => {
       setPlatform('ios')
       mockAuth.isAuthenticated = true
       mockAuth.username = 'reviewer'
       mockAuth.userId = '1'
-      const { getByText, queryByText } = renderWithClient(<AccountMenu initialOpenKey={1} />)
+      const { getByText, queryByText } = await renderWithClient(<AccountMenu initialOpenKey={1} />)
 
-      fireEvent.press(getByText('Документы'))
+      await fireEvent.press(getByText('Документы'))
 
       expect(getByText(PRIVACY_ITEM)).toBeTruthy()
       expect(queryByText(COOKIE_ITEM)).toBeNull()
     })
 
-    it('web keeps the cookie settings entry and opens it in the current tab', () => {
+    it('web keeps the cookie settings entry and opens it in the current tab', async () => {
       setPlatform('web')
-      const { getByText } = renderWithClient(<AccountMenu initialOpenKey={1} />)
+      const { getByText } = await renderWithClient(<AccountMenu initialOpenKey={1} />)
 
-      fireEvent.press(getByText(COOKIE_ITEM))
+      await fireEvent.press(getByText(COOKIE_ITEM))
 
       expect(router.push).toHaveBeenCalledWith('/cookies')
     })
 
-    it('opens the metravel.by bloggers article inside the app, not in Safari', () => {
+    it('opens the metravel.by bloggers article inside the app, not in Safari', async () => {
       setPlatform('ios')
       const openSpy = jest.spyOn(Linking, 'openURL').mockResolvedValue()
-      const { getByText } = renderWithClient(<AccountMenu initialOpenKey={1} />)
+      const { getByText } = await renderWithClient(<AccountMenu initialOpenKey={1} />)
 
-      fireEvent.press(getByText(BLOGGERS_ITEM))
+      await fireEvent.press(getByText(BLOGGERS_ITEM))
 
       expect(router.push).toHaveBeenCalledWith('/travels/akkaunty-v-instagram-o-puteshestviyah-po-belarusi')
       expect(router.push).not.toHaveBeenCalledWith(BLOGGERS_URL)
@@ -188,17 +188,17 @@ describe('native app has no cookie UI (#2135)', () => {
   })
 
   describe('about / contact intro card', () => {
-    it('native shows the privacy link only', () => {
+    it('native shows the privacy link only', async () => {
       setPlatform('android')
-      const { getByLabelText, queryByLabelText } = renderAboutCard()
+      const { getByLabelText, queryByLabelText } = await renderAboutCard()
 
       expect(getByLabelText(PRIVACY_ITEM)).toBeTruthy()
       expect(queryByLabelText(COOKIE_ITEM)).toBeNull()
     })
 
-    it('web keeps the cookie settings link', () => {
+    it('web keeps the cookie settings link', async () => {
       setPlatform('web')
-      const { getByLabelText } = renderAboutCard()
+      const { getByLabelText } = await renderAboutCard()
 
       expect(getByLabelText(COOKIE_ITEM)).toBeTruthy()
     })

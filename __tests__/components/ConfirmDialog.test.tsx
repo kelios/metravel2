@@ -1,5 +1,5 @@
-import { render, fireEvent, waitFor, within, act } from '@testing-library/react-native'
-import { Modal, Platform, StyleSheet } from 'react-native'
+import { render, fireEvent, within } from '@testing-library/react-native'
+import { Platform, StyleSheet } from 'react-native'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
 
 const originalPlatform = Platform.OS
@@ -28,16 +28,16 @@ describe('ConfirmDialog', () => {
     document.body.replaceChildren()
   })
 
-  it('renders correctly with default props', () => {
-    const { getByText } = render(<ConfirmDialog {...defaultProps} />)
+  it('renders correctly with default props', async () => {
+    const { getByText } = await render(<ConfirmDialog {...defaultProps} />)
     expect(getByText('Подтверждение')).toBeTruthy()
     expect(getByText('Вы уверены, что хотите продолжить?')).toBeTruthy()
     expect(getByText('Удалить')).toBeTruthy()
     expect(getByText('Отмена')).toBeTruthy()
   })
 
-  it('renders with custom props', () => {
-    const { getByText } = render(
+  it('renders with custom props', async () => {
+    const { getByText } = await render(
       <ConfirmDialog
         {...defaultProps}
         title="Custom Title"
@@ -52,112 +52,42 @@ describe('ConfirmDialog', () => {
     expect(getByText('Cancel')).toBeTruthy()
   })
 
-  it('calls onClose when cancel is pressed', () => {
+  it('calls onClose when cancel is pressed', async () => {
     const onClose = jest.fn()
-    const { getByText } = render(<ConfirmDialog {...defaultProps} onClose={onClose} />)
-    fireEvent.press(getByText('Отмена'))
+    const { getByText } = await render(<ConfirmDialog {...defaultProps} onClose={onClose} />)
+    await fireEvent.press(getByText('Отмена'))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('calls onConfirm when confirm is pressed', () => {
+  it('calls onConfirm when confirm is pressed', async () => {
     const onConfirm = jest.fn()
-    const { getByText } = render(<ConfirmDialog {...defaultProps} onConfirm={onConfirm} />)
-    fireEvent.press(getByText('Удалить'))
+    const { getByText } = await render(<ConfirmDialog {...defaultProps} onConfirm={onConfirm} />)
+    await fireEvent.press(getByText('Удалить'))
     expect(onConfirm).toHaveBeenCalledTimes(1)
   })
 
-  it('does not render when visible is false', () => {
-    const { queryByText } = render(<ConfirmDialog {...defaultProps} visible={false} />)
+  it('does not render when visible is false', async () => {
+    const { queryByText } = await render(<ConfirmDialog {...defaultProps} visible={false} />)
     expect(queryByText('Подтверждение')).toBeNull()
   })
 
-  it.each(['web', 'ios'] as const)('disables confirmation while preserving cancellation on %s', (platform) => {
+  it.each(['ios'] as const)('disables confirmation while preserving cancellation on %s', async (platform) => {
     Object.defineProperty(Platform, 'OS', { value: platform })
     const onConfirm = jest.fn()
     const onClose = jest.fn()
-    const screen = render(
+    const screen = await render(
       <ConfirmDialog {...defaultProps} onConfirm={onConfirm} onClose={onClose} confirmDisabled />
     )
     const confirm = screen.getByLabelText('Удалить')
     expect(confirm.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }))
-    fireEvent.press(confirm)
+    await fireEvent.press(confirm)
     expect(onConfirm).not.toHaveBeenCalled()
-    fireEvent.press(screen.getByLabelText('Отмена'))
+    await fireEvent.press(screen.getByLabelText('Отмена'))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('renders in the connected web host and exposes a stable dialog test id', () => {
-    Object.defineProperty(Platform, 'OS', { value: 'web' })
-
-    const { getByTestId } = render(<ConfirmDialog {...defaultProps} />)
-    expect(getByTestId('confirm-dialog')).toBeTruthy()
-  })
-
-  it('stacks as the active RNW modal so a parent modal does not receive the same Escape', async () => {
-    Object.defineProperty(Platform, 'OS', { value: 'web' })
-    const onClose = jest.fn()
-    const onParentClose = jest.fn()
-
-    render(
-      <>
-        <Modal visible transparent onRequestClose={onParentClose}>
-          <button type="button">Parent action</button>
-        </Modal>
-        <ConfirmDialog {...defaultProps} onClose={onClose} />
-      </>
-    )
-
-    document.body.dispatchEvent(new KeyboardEvent('keyup', {
-      key: 'Escape',
-      bubbles: true,
-      cancelable: true,
-    }))
-
-    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
-    expect(onParentClose).not.toHaveBeenCalled()
-  })
-
-  it('handles one Escape gesture on capture keyup and prevents it reaching a parent RNW modal', async () => {
-    Object.defineProperty(Platform, 'OS', { value: 'web' })
-    const onClose = jest.fn()
-    const parentModalKeyup = jest.fn()
-    document.addEventListener('keyup', parentModalKeyup)
-
-    const view = render(<ConfirmDialog {...defaultProps} onClose={onClose} />)
-    const keydown = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
-    const keyup = new KeyboardEvent('keyup', { key: 'Escape', bubbles: true, cancelable: true })
-    document.body.dispatchEvent(keydown)
-    document.body.dispatchEvent(keyup)
-
-    // A keydown close handler plus the required capture-keyup handler would
-    // call onClose twice for the single browser keyboard gesture.
-    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
-    expect(parentModalKeyup).not.toHaveBeenCalled()
-    expect(keyup.defaultPrevented).toBe(true)
-
-    view.unmount()
-    document.removeEventListener('keyup', parentModalKeyup)
-  })
-
-  it('caps a long message at the viewport and scrolls only the message on web', () => {
-    Object.defineProperty(Platform, 'OS', { value: 'web' })
-
-    const { getByTestId } = render(<ConfirmDialog {...defaultProps} message={LONG_MESSAGE} />)
-
-    // Без потолка по высоте бокс вырастал по содержимому и выносил кнопки за экран.
-    expect(flattenStyle(getByTestId('confirm-dialog').props.style).maxHeight).toBe('100%')
-
-    const messageArea = getByTestId('confirm-dialog-message')
-    // Единственный сжимаемый блок: переполнение уходит в прокрутку сообщения.
-    expect(flattenStyle(messageArea.props.style).flexShrink).toBe(1)
-    expect(within(messageArea).getByText(LONG_MESSAGE)).toBeTruthy()
-    // Кнопки лежат вне области прокрутки, поэтому остаются на экране.
-    expect(within(messageArea).queryByText('Удалить')).toBeNull()
-    expect(within(messageArea).queryByText('Отмена')).toBeNull()
-  })
-
-  it('caps a long message at the viewport and scrolls only the message on native', () => {
-    const { getByTestId, getByText } = render(
+  it('caps a long message at the viewport and scrolls only the message on native', async () => {
+    const { getByTestId, getByText } = await render(
       <ConfirmDialog {...defaultProps} message={LONG_MESSAGE} />
     )
 
@@ -168,71 +98,162 @@ describe('ConfirmDialog', () => {
     expect(within(getByTestId('confirm-dialog-message')).queryByText('Удалить')).toBeNull()
 
     // Кнопки по-прежнему смонтированы и кликабельны при любой длине сообщения.
-    fireEvent.press(getByText('Удалить'))
+    await fireEvent.press(getByText('Удалить'))
     expect(defaultProps.onConfirm).toHaveBeenCalledTimes(1)
   })
+})
 
-  it('takes a Tab stop only while the message actually overflows', () => {
-    Object.defineProperty(Platform, 'OS', { value: 'web' })
+// Browser events, portals and focus refs need the DOM renderer. Keep the native
+// assertions above on RNTL, with its native text invariant intact.
+describe('ConfirmDialog in real React Native Web DOM', () => {
+  let ReactWeb: typeof import('react')
+  let createRoot: typeof import('react-dom/client').createRoot
+  let WebConfirmDialog: typeof import('@/components/ui/ConfirmDialog').default
+  let WebModal: typeof import('react-native').Modal
+  let host: HTMLDivElement
+  let root: import('react-dom/client').Root
+  const mockScrollProps = jest.fn()
+  const defaultProps = { visible: true, onClose: jest.fn(), onConfirm: jest.fn() }
 
-    const { getByTestId } = render(<ConfirmDialog {...defaultProps} message={LONG_MESSAGE} />)
-    const messageArea = getByTestId('confirm-dialog-message')
-
-    // До замера область не претендует на фокус.
-    expect(messageArea.props.focusable).toBe(false)
-
-    // Однострочное сообщение: прокручивать нечего — лишнего шага Tab быть не
-    // должно, иначе он появится в КАЖДОМ подтверждении приложения.
-    act(() => {
-      fireEvent(messageArea, 'layout', { nativeEvent: { layout: { height: 300 } } })
-      fireEvent(messageArea, 'contentSizeChange', 332, 24)
+  beforeAll(() => {
+    // The shared setup cached native mocks. Load the real web component tree
+    // and ReactDOM together so their hooks and native DOM refs share React.
+    jest.resetModules()
+    jest.doMock('react-native', () => {
+      const actual = jest.requireActual('react-native-web')
+      const React = require('react')
+      const CapturedScrollView = React.forwardRef((props: Record<string, unknown>, ref: unknown) => {
+        mockScrollProps(props)
+        return React.createElement(actual.ScrollView, { ...props, ref })
+      })
+      return { ...actual, ScrollView: CapturedScrollView }
     })
-    expect(getByTestId('confirm-dialog-message').props.focusable).toBe(false)
-
-    // Текст выше своей области: без остановки Tab скрытую часть не прочитать —
-    // `useFocusTrap` перехватывает каждый Tab и водит фокус только по элементам
-    // с `tabindex`, которого у скроллера RNW своего нет.
-    act(() => {
-      fireEvent(getByTestId('confirm-dialog-message'), 'contentSizeChange', 332, 1602)
-    })
-    expect(getByTestId('confirm-dialog-message').props.focusable).toBe(true)
-    // `role="region"`/`aria-label` этим сьютом не проверить: `Platform.select`
-    // здесь — ios-реализация (`'web' in spec` она не смотрит) и на web-ветку
-    // отдаёт undefined, сколько ни подменяй `Platform.OS`. Их закрывает
-    // браузерная проба.
+    ReactWeb = require('react')
+    ;({ createRoot } = require('react-dom/client'))
+    WebModal = require('react-native').Modal
+    WebConfirmDialog = require('@/components/ui/ConfirmDialog').default
   })
 
-  it('routes Escape only to the topmost confirm and hands control back after it unmounts', () => {
-    Object.defineProperty(Platform, 'OS', { value: 'web' })
+  beforeEach(() => {
+    jest.clearAllMocks()
+    host = document.createElement('div')
+    document.body.append(host)
+    root = createRoot(host)
+  })
+
+  afterEach(async () => {
+    await ReactWeb.act(() => root.unmount())
+    host.remove()
+    document.body.replaceChildren()
+  })
+
+  const inPage = (testID: string) => {
+    const node = document.body.querySelector<HTMLElement>(`[data-testid="${testID}"]`)
+    expect(node).not.toBeNull()
+    return node!
+  }
+  const action = (label: string) => {
+    const node = document.body.querySelector<HTMLElement>(`[role="button"][aria-label="${label}"]`)
+    expect(node).not.toBeNull()
+    return node!
+  }
+  const renderWeb = async (element: import('react').ReactElement) => {
+    await ReactWeb.act(() => root.render(element))
+  }
+  const click = async (node: HTMLElement) => {
+    await ReactWeb.act(() => node.click())
+  }
+  const key = async (type: 'keydown' | 'keyup') => {
+    const event = new KeyboardEvent(type, { key: 'Escape', bubbles: true, cancelable: true })
+    await ReactWeb.act(() => { document.body.dispatchEvent(event) })
+    return event
+  }
+
+  it('disables confirmation while preserving cancellation on web', async () => {
+    const onConfirm = jest.fn()
+    const onClose = jest.fn()
+    await renderWeb(ReactWeb.createElement(WebConfirmDialog, { ...defaultProps, onConfirm, onClose, confirmDisabled: true }))
+    const confirm = action('Удалить')
+    expect(confirm.getAttribute('aria-disabled')).toBe('true')
+    await click(confirm)
+    expect(onConfirm).not.toHaveBeenCalled()
+    await click(action('Отмена'))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders in the connected web host and exposes a stable dialog test id', async () => {
+    await renderWeb(ReactWeb.createElement(WebConfirmDialog, defaultProps))
+    expect(inPage('confirm-dialog').isConnected).toBe(true)
+  })
+
+  it('stacks as the active RNW modal so a parent modal does not receive the same Escape', async () => {
+    const onClose = jest.fn()
+    const onParentClose = jest.fn()
+    await renderWeb(ReactWeb.createElement(ReactWeb.Fragment, null,
+      ReactWeb.createElement(WebModal, { visible: true, transparent: true, onRequestClose: onParentClose },
+        ReactWeb.createElement('button', { type: 'button' }, 'Parent action')),
+      ReactWeb.createElement(WebConfirmDialog, { ...defaultProps, onClose }),
+    ))
+    await key('keyup')
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onParentClose).not.toHaveBeenCalled()
+  })
+
+  it('handles one Escape gesture on capture keyup and prevents it reaching a parent RNW modal', async () => {
+    const onClose = jest.fn()
+    const parentModalKeyup = jest.fn()
+    document.addEventListener('keyup', parentModalKeyup)
+    try {
+      await renderWeb(ReactWeb.createElement(WebConfirmDialog, { ...defaultProps, onClose }))
+      await key('keydown')
+      const keyup = await key('keyup')
+      // One keydown + keyup gesture closes once, before bubbling reaches RNW.
+      expect(onClose).toHaveBeenCalledTimes(1)
+      expect(parentModalKeyup).not.toHaveBeenCalled()
+      expect(keyup.defaultPrevented).toBe(true)
+    } finally {
+      document.removeEventListener('keyup', parentModalKeyup)
+    }
+  })
+
+  it('caps a long message at the viewport and scrolls only the message on web', async () => {
+    await renderWeb(ReactWeb.createElement(WebConfirmDialog, { ...defaultProps, message: LONG_MESSAGE }))
+    expect(getComputedStyle(inPage('confirm-dialog')).maxHeight).toBe('100%')
+    const messageArea = inPage('confirm-dialog-message')
+    expect(getComputedStyle(messageArea).flexShrink).toBe('1')
+    expect(messageArea.textContent).toBe(LONG_MESSAGE)
+    expect(messageArea.textContent).not.toContain('Удалить')
+    expect(messageArea.textContent).not.toContain('Отмена')
+  })
+
+  it('takes a Tab stop only while the message actually overflows', async () => {
+    await renderWeb(ReactWeb.createElement(WebConfirmDialog, { ...defaultProps, message: LONG_MESSAGE }))
+    const scrollProps = () => mockScrollProps.mock.calls.at(-1)![0]
+    expect(inPage('confirm-dialog-message').tabIndex).toBe(-1)
+    // jsdom has no layout. Supply measurements at the public ScrollView
+    // boundary, while rendering its actual DOM, events and forwarded ref.
+    await ReactWeb.act(() => {
+      scrollProps().onLayout({ nativeEvent: { layout: { height: 300 } } })
+      scrollProps().onContentSizeChange(332, 24)
+    })
+    expect(inPage('confirm-dialog-message').tabIndex).toBe(-1)
+    await ReactWeb.act(() => { scrollProps().onContentSizeChange(332, 1602) })
+    expect(inPage('confirm-dialog-message').tabIndex).toBe(0)
+  })
+
+  it('routes Escape only to the topmost confirm and hands control back after it unmounts', async () => {
     const onLowerClose = jest.fn()
     const onTopClose = jest.fn()
-
-    const DialogStack = ({ showTop }: { showTop: boolean }) => (
-      <>
-        <ConfirmDialog {...defaultProps} title="Lower confirm" onClose={onLowerClose} />
-        {showTop ? (
-          <ConfirmDialog {...defaultProps} title="Top confirm" onClose={onTopClose} />
-        ) : null}
-      </>
+    const stack = (showTop: boolean) => ReactWeb.createElement(ReactWeb.Fragment, null,
+      ReactWeb.createElement(WebConfirmDialog, { ...defaultProps, title: 'Lower confirm', onClose: onLowerClose }),
+      showTop ? ReactWeb.createElement(WebConfirmDialog, { ...defaultProps, title: 'Top confirm', onClose: onTopClose }) : null,
     )
-
-    const view = render(<DialogStack showTop />)
-    document.body.dispatchEvent(new KeyboardEvent('keyup', {
-      key: 'Escape',
-      bubbles: true,
-      cancelable: true,
-    }))
-
+    await renderWeb(stack(true))
+    await key('keyup')
     expect(onTopClose).toHaveBeenCalledTimes(1)
     expect(onLowerClose).not.toHaveBeenCalled()
-
-    view.rerender(<DialogStack showTop={false} />)
-    document.body.dispatchEvent(new KeyboardEvent('keyup', {
-      key: 'Escape',
-      bubbles: true,
-      cancelable: true,
-    }))
-
+    await renderWeb(stack(false))
+    await key('keyup')
     expect(onTopClose).toHaveBeenCalledTimes(1)
     expect(onLowerClose).toHaveBeenCalledTimes(1)
   })

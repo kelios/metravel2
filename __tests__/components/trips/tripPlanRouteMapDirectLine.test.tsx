@@ -1,3 +1,4 @@
+import { createWebMapTestRuntime, type WebMapTestRuntime } from '@/__tests__/helpers/webMapTestRuntime'
 /**
  * #2057 — шапка карты планировщика у приблизительного маршрута.
  *
@@ -11,11 +12,10 @@
  * через тот же форматтер, поэтому контракт проверяется на обеих картах.
  */
 import React from 'react'
-import { render, waitFor } from '@testing-library/react-native'
+import { render as renderNative, waitFor as waitForNative } from '@testing-library/react-native'
 
 import type { RoutePoint, RouteSummary, RoutingState } from '@/api/plannedTrips'
 
-jest.mock('react-dom', () => ({ createPortal: (node: unknown) => node }))
 jest.mock('@/utils/ensureLeafletCss', () => ({ ensureLeafletCss: jest.fn() }))
 
 jest.mock('@/utils/loadLeafletRuntime', () => ({
@@ -56,7 +56,8 @@ jest.mock('@/hooks/useTheme', () => ({
 }))
 
 import TripPlanRouteMapNative from '@/components/trips/planning/TripPlanRouteMap'
-import TripPlanRouteMapWeb from '@/components/trips/planning/TripPlanRouteMap.web'
+let TripPlanRouteMapWeb: typeof import('@/components/trips/planning/TripPlanRouteMap.web').default
+const WebMap = (props: React.ComponentProps<typeof TripPlanRouteMapWeb>) => <TripPlanRouteMapWeb {...props} />
 
 const route: RoutePoint[] = [
   { id: 'a', type: 'place', name: 'Эхтернах', description: null, coordinates: [6.4214, 49.8117], placeId: null },
@@ -88,28 +89,32 @@ const UNAVAILABLE = 'Сервис построения маршрутов вре
 const DURATION = /\d\s*(ч|мин)(?![а-яё])/
 
 const MAPS = [
-  ['web', TripPlanRouteMapWeb],
+  ['web', WebMap],
   ['native', TripPlanRouteMapNative],
 ] as const
 
 describe.each(MAPS)('TripPlanRouteMap (%s) — шапка приблизительного маршрута (#2057)', (_platform, Map) => {
+  beforeEach(() => expect.extend(_platform === 'web' ? web.matchers : require('@testing-library/react-native/matchers')))
+
   it('называет 4xx честно, подписывает дистанцию «по прямой» и не печатает время', async () => {
-    const screen = render(
-      <Map
+    const mapElement = <Map
         route={route}
         routeGeometry={directGeometry}
         routingState={degraded('ors_http_404')}
         summary={directSummary}
         transport="foot"
         readonly
-      />,
-    )
+      />
+    const screen = _platform === 'web' ? web.render(mapElement) : await renderNative(mapElement)
 
-    const reason = await waitFor(() => screen.getByTestId('trip-plan-map-route-reason'))
+    const reason = await (_platform === 'web' ? web.waitFor : waitForNative)(() => screen.getByTestId('trip-plan-map-route-reason'))
     expect(reason).toHaveTextContent(NO_ROUTE_FOOT)
     expect(screen.getAllByText(/Не получилось проложить маршрут/)).toHaveLength(1)
     expect(screen.queryByText(/временно недоступен/)).toBeNull()
-    expect(screen.getByText('≈ 2 429 км по прямой')).toBeTruthy()
+    // Intl prints the thousands separator as NBSP or NNBSP. DOM getByText
+    // compares the normalized node to the raw query, so a literal NBSP misses.
+    // The phrase, the digits and the suffix stay exact.
+    expect(screen.getByText(/^≈ 2\s429 км по прямой$/)).toBeTruthy()
     expect(screen.queryByText(DURATION)).toBeNull()
     expect(screen.getByText('Приблизительный маршрут')).toBeTruthy()
   })
@@ -117,35 +122,41 @@ describe.each(MAPS)('TripPlanRouteMap (%s) — шапка приблизител
   it.each(['ors_http_502', 'ors_http_429', 'ors_request_failed', 'route_provider_unavailable'])(
     'для временной причины %s оставляет «временно недоступен»',
     async (code) => {
-      const screen = render(
-        <Map
+      const mapElement = <Map
           route={route}
           routeGeometry={directGeometry}
           routingState={degraded(code)}
           summary={directSummary}
           transport="foot"
           readonly
-        />,
-      )
+        />
+    const screen = _platform === 'web' ? web.render(mapElement) : await renderNative(mapElement)
 
-      const reason = await waitFor(() => screen.getByTestId('trip-plan-map-route-reason'))
+      const reason = await (_platform === 'web' ? web.waitFor : waitForNative)(() => screen.getByTestId('trip-plan-map-route-reason'))
       expect(reason).toHaveTextContent(UNAVAILABLE)
     },
   )
 
   it('у проложенного маршрута держит дистанцию и время, без строки причины', async () => {
-    const screen = render(
-      <Map
+    const mapElement = <Map
         route={route}
         routeGeometry={[directGeometry[0], [9, 49.2], directGeometry[1], [8.5, 49], directGeometry[2]]}
         routingState={{ provider: 'ors', isOptimal: true, fallbackReason: null, warnings: [] }}
         summary={{ distanceKm: 252, durationMin: 252, elevationGainM: 120, stopsCount: 3, provider: 'ors' }}
         transport="car"
         readonly
-      />,
-    )
+      />
+    const screen = _platform === 'web' ? web.render(mapElement) : await renderNative(mapElement)
 
-    await waitFor(() => expect(screen.getByText('252 км · 4 ч 12 мин')).toBeTruthy())
+    await (_platform === 'web' ? web.waitFor : waitForNative)(() => expect(screen.getByText('252 км · 4 ч 12 мин')).toBeTruthy())
     expect(screen.queryByTestId('trip-plan-map-route-reason')).toBeNull()
   })
 })
+
+let web: WebMapTestRuntime<typeof TripPlanRouteMapWeb>
+beforeAll(() => {
+  web = createWebMapTestRuntime(React, () => require('@/components/trips/planning/TripPlanRouteMap.web').default)
+  TripPlanRouteMapWeb = web.subject
+})
+afterEach(() => web.cleanup())
+afterAll(() => expect.extend(require('@testing-library/react-native/matchers')))

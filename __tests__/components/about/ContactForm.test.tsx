@@ -59,26 +59,26 @@ describe('ContactForm honeypot boundary', () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform })
   })
 
-  it.each(['ios', 'android'])('does not render the browser honeypot on %s', (os) => {
+  it.each(['ios', 'android'])('does not render the browser honeypot on %s', async (os) => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: os })
 
-    const { queryByTestId } = render(<ContactForm {...props} />)
+    const { queryByTestId } = await render(<ContactForm {...props} />)
 
     expect(queryByTestId('contact-form-honeypot')).toBeNull()
   })
 
-  it('keeps the honeypot on web', () => {
+  it('keeps the honeypot on web', async () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
 
-    const { getByTestId } = render(<ContactForm {...props} />)
+    const { getByTestId } = await render(<ContactForm {...props} />)
 
     expect(getByTestId('contact-form-honeypot', { includeHiddenElements: true })).toBeTruthy()
   })
 
-  it.each(['web', 'ios', 'android'])('shows the keyboard shortcut hint only on web (%s)', (os) => {
+  it.each(['web', 'ios', 'android'])('shows the keyboard shortcut hint only on web (%s)', async (os) => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: os })
 
-    const { queryByText } = render(<ContactForm {...props} />)
+    const { queryByText } = await render(<ContactForm {...props} />)
     const hint = queryByText('home:components.about.ContactForm.shift_enter_novaya_stroka_enter_otpravit_web_26a15cc6')
 
     if (os === 'web') {

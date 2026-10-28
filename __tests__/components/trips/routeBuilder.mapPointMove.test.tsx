@@ -98,19 +98,19 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
   ...overrides,
 })
 
-const renderRouteBuilder = (element: React.ReactElement) =>
-  render(element, { wrapper: createQueryWrapper().Wrapper })
+const renderRouteBuilder = async (element: React.ReactElement) =>
+  await render(element, { wrapper: createQueryWrapper().Wrapper })
 
 describe('#1781 RouteBuilder — точка маршрута правится с карты', () => {
   beforeEach(() => {
     mockRouteMutate.mockReset()
   })
 
-  it('перетаскивание маркера меняет координаты одной точки, сохраняя порядок и поля', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('перетаскивание маркера меняет координаты одной точки, сохраняя порядок и поля', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    fireEvent.press(getByTestId('map-drag-point-0'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('map-drag-point-0'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate).toHaveBeenCalledTimes(1)
     const saved = mockRouteMutate.mock.calls[0][0].route
@@ -123,38 +123,38 @@ describe('#1781 RouteBuilder — точка маршрута правится с
     expect(saved[1].name).toBe('Финиш')
   })
 
-  it('нефинитная координата дропа оставляет маршрут нетронутым', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('нефинитная координата дропа оставляет маршрут нетронутым', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    fireEvent.press(getByTestId('map-drag-point-0-invalid'))
+    await fireEvent.press(getByTestId('map-drag-point-0-invalid'))
 
     // Кнопки сохранения нет вовсе, пока нет несохранённых изменений (#1491).
     expect(queryByTestId('route-builder-save')).toBeNull()
   })
 
-  it('переносит открытый редактор точки вслед за её маркером', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('переносит открытый редактор точки вслед за её маркером', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    fireEvent.press(getByTestId('route-builder-edit-0'))
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
     expect(getByTestId('route-builder-edit-lat').props.value).toBe('53.9')
 
-    fireEvent.press(getByTestId('map-drag-point-0'))
+    await fireEvent.press(getByTestId('map-drag-point-0'))
 
     expect(getByTestId('route-builder-edit-lat').props.value).toBe('53.930012')
     expect(getByTestId('route-builder-edit-lng').props.value).toBe('27.601988')
 
     // Сохранение открытой формы не возвращает точку в дотасковую позицию.
-    fireEvent.press(getByTestId('route-builder-edit-save'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-edit-save'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate.mock.calls[0][0].route[0].coordinates).toEqual([27.601988, 53.930012])
   })
 
-  it('удаление с карты убирает ту же точку, что и удаление из списка', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('удаление с карты убирает ту же точку, что и удаление из списка', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    fireEvent.press(getByTestId('map-delete-point-0'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('map-delete-point-0'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     const saved = mockRouteMutate.mock.calls[0][0].route
     expect(saved).toHaveLength(1)

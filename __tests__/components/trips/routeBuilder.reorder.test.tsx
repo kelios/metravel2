@@ -94,16 +94,16 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
 
 // #1491: шаг «Точки маршрута» рендерит общий AddressSearch с /map, а он ходит за
 // адресами через React Query — конструктору нужен клиент, как и в приложении.
-const renderRouteBuilder = (element: React.ReactElement) =>
-  render(element, { wrapper: createQueryWrapper().Wrapper })
+const renderRouteBuilder = async (element: React.ReactElement) =>
+  await render(element, { wrapper: createQueryWrapper().Wrapper })
 
 describe('RouteBuilder reorder', () => {
   beforeEach(() => {
     mockRouteMutate.mockReset()
   })
 
-  it('renders every point of a long route with its own drag handle', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('renders every point of a long route with its own drag handle', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(getByTestId(`route-builder-point-${ROUTE_LENGTH - 1}`)).toBeTruthy()
     expect(getByTestId(`route-builder-drag-${ROUTE_LENGTH - 1}`)).toBeTruthy()
@@ -113,15 +113,15 @@ describe('RouteBuilder reorder', () => {
     )
   })
 
-  it('saves the whole reordered list with a single mutation', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('saves the whole reordered list with a single mutation', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     // Стрелки живут в редакторе точки: в строке рядом с названием помещаются
     // только правка и удаление. Клавиатурный/a11y путь того же reorder остался
     // на ручке перетаскивания.
-    fireEvent.press(getByTestId('route-builder-edit-19'))
-    fireEvent.press(getByTestId('route-builder-move-up-19'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-edit-19'))
+    await fireEvent.press(getByTestId('route-builder-move-up-19'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate).toHaveBeenCalledTimes(1)
     const [payload] = mockRouteMutate.mock.calls[0] as [
@@ -133,29 +133,29 @@ describe('RouteBuilder reorder', () => {
     expect(payload.route[19].name).toBe('Point 19')
   })
 
-  it('keeps the edit form on its own point after a reorder', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('keeps the edit form on its own point after a reorder', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    fireEvent.press(getByTestId('route-builder-edit-3'))
+    await fireEvent.press(getByTestId('route-builder-edit-3'))
     expect(getByTestId('route-builder-edit-name').props.value).toBe('Point 4')
 
-    fireEvent.press(getByTestId('route-builder-move-down-3'))
+    await fireEvent.press(getByTestId('route-builder-move-down-3'))
     expect(getByTestId('route-builder-edit-name').props.value).toBe('Point 4')
 
-    fireEvent.press(getByTestId('route-builder-edit-save'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-edit-save'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     const [payload] = mockRouteMutate.mock.calls[0] as [{ route: Array<{ name: string }> }]
     expect(payload.route[4].name).toBe('Point 4')
     expect(payload.route[3].name).toBe('Point 5')
   })
 
-  it('hides the drag handle when there is nothing to reorder or the trip is not mine', () => {
-    const single = renderRouteBuilder(<RouteBuilder trip={makeTrip({ route: makeRoute(1) })} />)
+  it('hides the drag handle when there is nothing to reorder or the trip is not mine', async () => {
+    const single = await renderRouteBuilder(<RouteBuilder trip={makeTrip({ route: makeRoute(1) })} />)
     expect(single.queryByTestId('route-builder-drag-0')).toBeNull()
     expect(single.getByTestId('route-builder-point-0')).toBeTruthy()
 
-    const foreign = renderRouteBuilder(<RouteBuilder trip={makeTrip({ isOwner: false })} />)
+    const foreign = await renderRouteBuilder(<RouteBuilder trip={makeTrip({ isOwner: false })} />)
     expect(foreign.queryByTestId('route-builder-drag-0')).toBeNull()
     expect(foreign.queryByTestId('route-builder-move-up-1')).toBeNull()
     expect(foreign.getByTestId(`route-builder-point-${ROUTE_LENGTH - 1}`)).toBeTruthy()

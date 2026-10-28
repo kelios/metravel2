@@ -2,7 +2,9 @@
  * @jest-environment jsdom
  */
 
-import renderer, { act } from 'react-test-renderer'
+import { within } from '@testing-library/react-native'
+import { render as renderTree, act, fireEvent } from '@testing-library/react-native'
+import type { RenderResult } from '@testing-library/react-native'
 import { Platform } from 'react-native'
 
 import SliderWeb from '@/components/travel/Slider.web'
@@ -12,8 +14,8 @@ const images = Array.from({ length: 6 }, (_, index) => ({
   url: `https://example.com/img-${index + 1}.jpg`,
 }))
 
-async function measureSliderLayout(tree: renderer.ReactTestRenderer, width = 981) {
-  const wrapper = tree.root.findByProps({ testID: 'slider-wrapper' })
+async function measureSliderLayout(tree: RenderResult, width = 981) {
+  const wrapper = within(tree.container).getByTestId('slider-wrapper', { includeHiddenElements: true })
   await act(async () => {
     wrapper.props.onLayout({ nativeEvent: { layout: { width } } })
   })
@@ -77,9 +79,9 @@ describe('Slider (web) blur background', () => {
   })
 
   it('renders slider with blurBackground prop passed to Slide component', async () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={[{ id: 'img-1', url: 'https://example.com/img.jpg' }] as any}
           showArrows={false}
@@ -92,18 +94,18 @@ describe('Slider (web) blur background', () => {
     })
 
     // Verify slider renders with slide content
-    expect(tree.root.findByProps({ testID: 'slider-stack' })).toBeTruthy()
-    expect(tree.root.findByProps({ testID: 'slider-wrapper' })).toBeTruthy()
-    const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
+    expect(within(tree.container).getByTestId('slider-stack', { includeHiddenElements: true })).toBeTruthy()
+    expect(within(tree.container).getByTestId('slider-wrapper', { includeHiddenElements: true })).toBeTruthy()
+    const firstImage = within(tree.container).getByTestId('slider-image-0', { includeHiddenElements: true })
     expect(firstImage).toBeTruthy()
     expect(firstImage.props.blurBackground).toBe(true)
     expect(firstImage.props.allowCriticalWebBlur).toBe(true)
   })
 
   it('renders slider without blur when blurBackground is disabled', async () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={[{ id: 'img-1', url: 'https://example.com/img.jpg' }] as any}
           showArrows={false}
@@ -116,14 +118,14 @@ describe('Slider (web) blur background', () => {
     })
 
     // Verify slider renders correctly
-    expect(tree.root.findByProps({ testID: 'slider-stack' })).toBeTruthy()
-    expect(tree.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
+    expect(within(tree.container).getByTestId('slider-stack', { includeHiddenElements: true })).toBeTruthy()
+    expect(within(tree.container).getByTestId('slider-image-0', { includeHiddenElements: true })).toBeTruthy()
   })
 
   it('keeps slide 0 rendered after navigating to index 2 on web', async () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={images as any}
           showArrows
@@ -136,24 +138,24 @@ describe('Slider (web) blur background', () => {
     })
     await measureSliderLayout(tree!)
 
-    const nextButton = tree.root.findByProps({ accessibilityLabel: 'Next slide' })
+    const nextButton = within(tree.container).getByLabelText('Next slide', { includeHiddenElements: true })
 
     await act(async () => {
-      nextButton.props.onPress()
+      await fireEvent.press(nextButton)
     })
 
     await act(async () => {
-      nextButton.props.onPress()
+      await fireEvent.press(nextButton)
     })
 
-    expect(tree.root.findByProps({ testID: 'slider-image-0' })).toBeTruthy()
-    expect(tree.root.findByProps({ testID: 'slider-image-2' })).toBeTruthy()
+    expect(within(tree.container).getByTestId('slider-image-0', { includeHiddenElements: true })).toBeTruthy()
+    expect(within(tree.container).getByTestId('slider-image-2', { includeHiddenElements: true })).toBeTruthy()
   })
 
   it('mounts only the active slide window on web', async () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={images as any}
           showArrows
@@ -166,28 +168,28 @@ describe('Slider (web) blur background', () => {
     })
     await measureSliderLayout(tree!)
 
-    const nextButton = tree.root.findByProps({ accessibilityLabel: 'Next slide' })
+    const nextButton = within(tree.container).getByLabelText('Next slide', { includeHiddenElements: true })
 
     await act(async () => {
-      nextButton.props.onPress()
+      await fireEvent.press(nextButton)
     })
     await act(async () => {
-      nextButton.props.onPress()
+      await fireEvent.press(nextButton)
     })
     await act(async () => {
-      nextButton.props.onPress()
+      await fireEvent.press(nextButton)
     })
 
     for (let index = 1; index <= 5; index += 1) {
-      expect(tree.root.findByProps({ testID: `slider-image-${index}` })).toBeTruthy()
+      expect(within(tree.container).getByTestId(`slider-image-${index}`, { includeHiddenElements: true })).toBeTruthy()
     }
-    expect(tree.root.findAllByProps({ testID: 'slider-image-0' })).toHaveLength(0)
+    expect(within(tree.container).queryAllByTestId('slider-image-0', { includeHiddenElements: true })).toHaveLength(0)
   })
 
   it('keeps initial unmeasured slides inside the track instead of stretching each slide to full track width', async () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={images as any}
           showArrows={false}
@@ -199,8 +201,8 @@ describe('Slider (web) blur background', () => {
       )
     })
 
-    const firstSlide = tree.root.findByProps({ testID: 'slider-slide-0' })
-    const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
+    const firstSlide = within(tree.container).getByTestId('slider-slide-0', { includeHiddenElements: true })
+    const firstImage = within(tree.container).getByTestId('slider-image-0', { includeHiddenElements: true })
 
     expect(firstSlide.props.style).toEqual(
       expect.arrayContaining([
@@ -211,9 +213,9 @@ describe('Slider (web) blur background', () => {
   })
 
   it('keeps the immediate swipe target eager before wider web prefetch is enabled', async () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={images as any}
           showArrows={false}
@@ -226,8 +228,8 @@ describe('Slider (web) blur background', () => {
     })
     await measureSliderLayout(tree!)
 
-    const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
-    const secondImage = tree.root.findByProps({ testID: 'slider-image-1' })
+    const firstImage = within(tree.container).getByTestId('slider-image-0', { includeHiddenElements: true })
+    const secondImage = within(tree.container).getByTestId('slider-image-1', { includeHiddenElements: true })
 
     expect(firstImage.props.loading).toBe('eager')
     expect(firstImage.props.fetchPriority).toBe('high')
@@ -254,9 +256,9 @@ describe('Slider (web) blur background', () => {
       },
     ]
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={imagesWithManifestRatio}
           showArrows
@@ -270,33 +272,33 @@ describe('Slider (web) blur background', () => {
     })
     await measureSliderLayout(tree!, 390)
 
-    const squareWhileDistant = tree!.root.findByProps({ testID: 'slider-image-2' })
+    const squareWhileDistant = within(tree!.container).getByTestId('slider-image-2', { includeHiddenElements: true })
     expect(squareWhileDistant.props.contentAspectRatio).toBe(1)
     expect(squareWhileDistant.props.allowCriticalWebBlur).toBe(false)
 
-    const nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+    const nextButton = within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })
     await act(async () => {
-      nextButton.props.onPress()
+      await fireEvent.press(nextButton)
     })
 
-    const squareWhileAdjacent = tree!.root.findByProps({ testID: 'slider-image-2' })
+    const squareWhileAdjacent = within(tree!.container).getByTestId('slider-image-2', { includeHiddenElements: true })
     expect(squareWhileAdjacent.props.contentAspectRatio).toBe(1)
     expect(squareWhileAdjacent.props.allowCriticalWebBlur).toBe(true)
     expect(squareWhileAdjacent.props.loading).toBe('eager')
 
     await act(async () => {
-      nextButton.props.onPress()
+      await fireEvent.press(nextButton)
     })
 
-    const squareWhileActive = tree!.root.findByProps({ testID: 'slider-image-2' })
+    const squareWhileActive = within(tree!.container).getByTestId('slider-image-2', { includeHiddenElements: true })
     expect(squareWhileActive.props.contentAspectRatio).toBe(1)
     expect(squareWhileActive.props.allowCriticalWebBlur).toBe(true)
   })
 
   it('leaves an unknown slide ratio unset so natural image dimensions can resolve its gutters', async () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={[
             { id: 'known', url: 'https://example.com/known.jpg', width: 1600, height: 900 },
@@ -313,17 +315,17 @@ describe('Slider (web) blur background', () => {
     })
     await measureSliderLayout(tree!, 390)
 
-    const unknownWhileAdjacent = tree!.root.findByProps({ testID: 'slider-image-1' })
+    const unknownWhileAdjacent = within(tree!.container).getByTestId('slider-image-1', { includeHiddenElements: true })
     expect(unknownWhileAdjacent.props.contentAspectRatio).toBeUndefined()
     expect(unknownWhileAdjacent.props.allowCriticalWebBlur).toBe(true)
     expect(unknownWhileAdjacent.props.loading).toBe('eager')
 
-    const nextButton = tree!.root.findByProps({ accessibilityLabel: 'Next slide' })
+    const nextButton = within(tree!.container).getByLabelText('Next slide', { includeHiddenElements: true })
     await act(async () => {
-      nextButton.props.onPress()
+      await fireEvent.press(nextButton)
     })
 
-    const unknownWhileActive = tree!.root.findByProps({ testID: 'slider-image-1' })
+    const unknownWhileActive = within(tree!.container).getByTestId('slider-image-1', { includeHiddenElements: true })
     expect(unknownWhileActive.props.contentAspectRatio).toBeUndefined()
     expect(unknownWhileActive.props.allowCriticalWebBlur).toBe(true)
   })
@@ -331,9 +333,9 @@ describe('Slider (web) blur background', () => {
   it('raises preload count on mobile viewport widths for faster swipe response', async () => {
     useWindowDimensionsMock.mockReturnValue({ width: 390, height: 844, scale: 1, fontScale: 1 })
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={images as any}
           showArrows={false}
@@ -346,15 +348,15 @@ describe('Slider (web) blur background', () => {
     })
     await measureSliderLayout(tree!, 390)
 
-    const secondImage = tree.root.findByProps({ testID: 'slider-image-1' })
+    const secondImage = within(tree.container).getByTestId('slider-image-1', { includeHiddenElements: true })
     expect(secondImage.props.loading).toBe('eager')
     expect(secondImage.props.fetchPriority).toBe('high')
   })
 
   it('keeps blur rendering inside slide media instead of a separate shared backdrop track', async () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={images as any}
           showArrows={false}
@@ -366,17 +368,17 @@ describe('Slider (web) blur background', () => {
       )
     })
 
-    const separateBackdrop = tree.root.findAllByProps({ testID: 'slider-shared-blur-backdrop' })
+    const separateBackdrop = within(tree.container).queryAllByTestId('slider-shared-blur-backdrop', { includeHiddenElements: true })
     expect(separateBackdrop).toHaveLength(0)
 
-    const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
+    const firstImage = within(tree.container).getByTestId('slider-image-0', { includeHiddenElements: true })
     expect(firstImage.props.blurBackground).toBe(true)
   })
 
   it('passes a per-slide recycling key so web blur backdrop remounts on slide change', async () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={images as any}
           showArrows
@@ -389,17 +391,17 @@ describe('Slider (web) blur background', () => {
     })
     await measureSliderLayout(tree!)
 
-    const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
+    const firstImage = within(tree.container).getByTestId('slider-image-0', { includeHiddenElements: true })
     expect(firstImage.props.recyclingKey).toContain('slider-slide-0-')
     expect(firstImage.props.recyclingKey).toContain('img-1.jpg')
 
-    const nextButton = tree.root.findByProps({ accessibilityLabel: 'Next slide' })
+    const nextButton = within(tree.container).getByLabelText('Next slide', { includeHiddenElements: true })
 
     await act(async () => {
-      nextButton.props.onPress()
+      await fireEvent.press(nextButton)
     })
 
-    const secondImage = tree.root.findByProps({ testID: 'slider-image-1' })
+    const secondImage = within(tree.container).getByTestId('slider-image-1', { includeHiddenElements: true })
     expect(secondImage.props.recyclingKey).toContain('slider-slide-1-')
     expect(secondImage.props.recyclingKey).toContain('img-2.jpg')
   })
@@ -415,9 +417,9 @@ describe('Slider (web) blur background', () => {
       configurable: true,
     })
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={[{ id: 'img-1', url: 'https://example.com/img.jpg' }] as any}
           showArrows={false}
@@ -430,7 +432,7 @@ describe('Slider (web) blur background', () => {
     })
     await measureSliderLayout(tree!)
 
-    const firstImage = tree.root.findByProps({ testID: 'slider-image-0' })
+    const firstImage = within(tree.container).getByTestId('slider-image-0', { includeHiddenElements: true })
     expect(firstImage.props.blurBackground).toBe(true)
     expect(firstImage.props.allowCriticalWebBlur).toBe(true)
     expect(firstImage.props.revealOnLoadOnly).toBe(true)
@@ -448,9 +450,9 @@ describe('Slider (web) blur background', () => {
       configurable: true,
     })
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={[{ id: 'img-1', url: 'https://example.com/img.jpg' }] as any}
           showArrows={false}
@@ -463,7 +465,7 @@ describe('Slider (web) blur background', () => {
     })
     await measureSliderLayout(tree!)
 
-    const firstImage = tree!.root.findByProps({ testID: 'slider-image-0' })
+    const firstImage = within(tree!.container).getByTestId('slider-image-0', { includeHiddenElements: true })
     expect(firstImage.props.revealOnLoadOnly).toBe(true)
     expect(firstImage.props.showImmediately).toBe(false)
     expect(firstImage.props.loading).toBe('eager')
@@ -471,9 +473,9 @@ describe('Slider (web) blur background', () => {
   })
 
   it('keeps only the in-track previous frame after navigating without duplicating overlay media', async () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={images as any}
           showArrows
@@ -487,26 +489,26 @@ describe('Slider (web) blur background', () => {
     })
     await measureSliderLayout(tree!)
 
-    const nextButton = tree.root.findByProps({ accessibilityLabel: 'Next slide' })
+    const nextButton = within(tree.container).getByLabelText('Next slide', { includeHiddenElements: true })
 
     await act(async () => {
-      nextButton.props.onPress()
+      await fireEvent.press(nextButton)
     })
 
-    const previousFrameInstances = tree.root.findAll(
+    const previousFrameInstances = tree.container.queryAll(
       (node: any) =>
         node.type === 'mock-image-card-media' &&
         typeof node.props?.src === 'string' &&
         node.props.src.includes('img-1.jpg'),
-    )
+    { includeSelf: true })
 
     expect(previousFrameInstances).toHaveLength(1)
   })
 
   it('does not add a duplicate previous-frame overlay when blur background mode is enabled', async () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={images as any}
           showArrows
@@ -520,18 +522,18 @@ describe('Slider (web) blur background', () => {
     })
     await measureSliderLayout(tree!)
 
-    const nextButton = tree.root.findByProps({ accessibilityLabel: 'Next slide' })
+    const nextButton = within(tree.container).getByLabelText('Next slide', { includeHiddenElements: true })
 
     await act(async () => {
-      nextButton.props.onPress()
+      await fireEvent.press(nextButton)
     })
 
-    const previousFrameInstances = tree.root.findAll(
+    const previousFrameInstances = tree.container.queryAll(
       (node: any) =>
         node.type === 'mock-image-card-media' &&
         typeof node.props?.src === 'string' &&
         node.props.src.includes('img-1.jpg'),
-    )
+    { includeSelf: true })
 
     expect(previousFrameInstances).toHaveLength(1)
   })
@@ -539,9 +541,9 @@ describe('Slider (web) blur background', () => {
   it('does not report the first slide as loaded before the actual image onLoad fires', async () => {
     const onFirstImageLoad = jest.fn()
 
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={[{ id: 'img-1', url: 'https://example.com/img.jpg' }] as any}
           showArrows={false}
@@ -557,7 +559,7 @@ describe('Slider (web) blur background', () => {
 
     expect(onFirstImageLoad).not.toHaveBeenCalled()
 
-    const firstSlideImage = tree.root.findByProps({ testID: 'slider-image-0' })
+    const firstSlideImage = within(tree.container).getByTestId('slider-image-0', { includeHiddenElements: true })
 
     await act(async () => {
       firstSlideImage.props.onLoad()
@@ -567,9 +569,9 @@ describe('Slider (web) blur background', () => {
   })
 
   it('forwards backend data placeholder and suppresses its LQIP URL', async () => {
-    let tree: renderer.ReactTestRenderer
+    let tree: RenderResult
     await act(async () => {
-      tree = renderer.create(
+      tree = await renderTree(
         <SliderWeb
           images={[{
             id: 'img-1',
@@ -590,7 +592,7 @@ describe('Slider (web) blur background', () => {
       )
     })
 
-    const image = tree!.root.findByProps({ testID: 'slider-image-0' })
+    const image = within(tree!.container).getByTestId('slider-image-0', { includeHiddenElements: true })
     expect(image.props.placeholderBlurhash).toBe('LEHL6nWB2yk8pyo0adR*.7kCMdnj')
     // Оба поля прокидываются вместе: web заливает поля цветом, native рисует blurhash.
     expect(image.props.placeholderColor).toBe('#123456')

@@ -83,7 +83,7 @@ const flushMicrotasks = async () => {
 };
 
 const advance = async (ms: number) => {
-  act(() => {
+  await act(() => {
     jest.advanceTimersByTime(ms);
   });
   await flushMicrotasks();
@@ -113,7 +113,7 @@ describe('useQuestProgressSync — переход на следующий кве
   });
 
   it('не отправляет снапшот квеста A в прохождение квеста B', async () => {
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ questId }: { questId: string }) => useQuestProgressSync(questId, true),
       { initialProps: { questId: QUEST_A } },
     );
@@ -121,13 +121,13 @@ describe('useQuestProgressSync — переход на следующий кве
     expect(result.current.progress).toEqual(PROGRESS_A);
 
     // Последний ответ на квесте A ещё в очереди — дебаунс не истёк.
-    act(() => {
+    await act(() => {
       result.current.saveProgress(SNAPSHOT_A);
     });
     expect(mockUpdateProgress).not.toHaveBeenCalled();
 
     // Игрок открыл следующий квест, не перезагружая вкладку.
-    rerender({ questId: QUEST_B });
+    await rerender({ questId: QUEST_B });
     await flushMicrotasks();
     await advance(2000);
     await advance(120000);
@@ -145,16 +145,16 @@ describe('useQuestProgressSync — переход на следующий кве
   });
 
   it('не создаёт прохождение квеста B, пока игрок в нём ничего не сделал', async () => {
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ questId }: { questId: string }) => useQuestProgressSync(questId, true),
       { initialProps: { questId: QUEST_A } },
     );
     await flushMicrotasks();
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress(SNAPSHOT_A);
     });
-    rerender({ questId: QUEST_B });
+    await rerender({ questId: QUEST_B });
     await flushMicrotasks();
     mockReadOrCreateProgress.mockClear();
     mockUpdateProgress.mockClear();
@@ -162,7 +162,7 @@ describe('useQuestProgressSync — переход на следующий кве
     // Визард нового квеста сохраняет пустой снапшот первым рендером. До #1906
     // гейт «прохождение ещё не начато» открывал id квеста A, и строка B
     // создавалась с чужими ответами и `completed`.
-    act(() => {
+    await act(() => {
       result.current.saveProgress(EMPTY_SNAPSHOT_B);
     });
     await advance(2000);
@@ -174,16 +174,16 @@ describe('useQuestProgressSync — переход на следующий кве
   });
 
   it('первый ответ на квесте B уходит только со своими данными', async () => {
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ questId }: { questId: string }) => useQuestProgressSync(questId, true),
       { initialProps: { questId: QUEST_A } },
     );
     await flushMicrotasks();
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress(SNAPSHOT_A);
     });
-    rerender({ questId: QUEST_B });
+    await rerender({ questId: QUEST_B });
     await flushMicrotasks();
     await advance(2000);
     mockReadOrCreateProgress.mockClear();
@@ -198,7 +198,7 @@ describe('useQuestProgressSync — переход на следующий кве
       completed: false,
     }));
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress({
         ...EMPTY_SNAPSHOT_B,
         answers: { intro: 'start' },
@@ -230,17 +230,17 @@ describe('useQuestProgressSync — переход на следующий кве
     mockUpdateProgress.mockImplementation(async (id: number) => ({ ...PROGRESS_A, id }));
     mockDeleteProgress.mockResolvedValue(undefined);
 
-    const { result } = renderHook(() => useQuestProgressSync(QUEST_B, true));
+    const { result } = await renderHook(() => useQuestProgressSync(QUEST_B, true));
     await flushMicrotasks();
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress({ ...EMPTY_SNAPSHOT_B, answers: { intro: 'start' } });
     });
     await advance(2000);
     expect(mockReadOrCreateProgress).toHaveBeenCalledWith(QUEST_B);
 
     // Пустое чтение возвращается позже созданной строки.
-    act(() => {
+    await act(() => {
       resolveRead?.(null);
     });
     await flushMicrotasks();

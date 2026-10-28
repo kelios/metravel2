@@ -101,7 +101,7 @@ const waitReady = async (getByTestId: any) =>
 
 describe('ShareBadgeSheet', () => {
   it('tracks open and requests a default-template card', async () => {
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ShareBadgeSheet visible onClose={() => {}} subject={subject()} context="detail" />,
     )
     await waitReady(getByTestId)
@@ -114,7 +114,7 @@ describe('ShareBadgeSheet', () => {
   })
 
   it('requests a rare-template card and renders the premium ribbon', async () => {
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <ShareBadgeSheet visible onClose={() => {}} subject={subject({ isRare: true })} />,
     )
     await waitReady(getByTestId)
@@ -125,11 +125,11 @@ describe('ShareBadgeSheet', () => {
   })
 
   it('copies a UTM-tagged public link and tracks the share', async () => {
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ShareBadgeSheet visible onClose={() => {}} subject={subject()} />,
     )
     await waitReady(getByTestId)
-    fireEvent.press(getByTestId('share-channel-copy'))
+    await fireEvent.press(getByTestId('share-channel-copy'))
     await waitFor(() => expect(mockSetString).toHaveBeenCalled())
     const link = mockSetString.mock.calls[0][0] as string
     expect(link).toContain('https://metravel.by/achievements/901')
@@ -141,11 +141,11 @@ describe('ShareBadgeSheet', () => {
   })
 
   it('opens Telegram only via openExternalUrlInNewTab', async () => {
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ShareBadgeSheet visible onClose={() => {}} subject={subject()} />,
     )
     await waitReady(getByTestId)
-    fireEvent.press(getByTestId('share-channel-telegram'))
+    await fireEvent.press(getByTestId('share-channel-telegram'))
     await waitFor(() => expect(mockOpenExternal).toHaveBeenCalled())
     const url = mockOpenExternal.mock.calls[0][0] as string
     expect(url).toContain('https://t.me/share/url')
@@ -156,17 +156,17 @@ describe('ShareBadgeSheet', () => {
   })
 
   it('opens Facebook sharer via openExternalUrlInNewTab', async () => {
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ShareBadgeSheet visible onClose={() => {}} subject={subject()} />,
     )
     await waitReady(getByTestId)
-    fireEvent.press(getByTestId('share-channel-facebook'))
+    await fireEvent.press(getByTestId('share-channel-facebook'))
     await waitFor(() => expect(mockOpenExternal).toHaveBeenCalled())
     expect(mockOpenExternal.mock.calls[0][0]).toContain('facebook.com/sharer')
   })
 
-  it('renders nothing without a subject', () => {
-    const { toJSON } = render(
+  it('renders nothing without a subject', async () => {
+    const { toJSON } = await render(
       <ShareBadgeSheet visible onClose={() => {}} subject={null} />,
     )
     expect(toJSON()).toBeNull()

@@ -86,7 +86,7 @@ const flushMicrotasks = async () => {
 };
 
 const advance = async (ms: number) => {
-  act(() => {
+  await act(() => {
     jest.advanceTimersByTime(ms);
   });
   await flushMicrotasks();
@@ -98,7 +98,7 @@ const readStoredQueue = async (): Promise<any[]> => {
 };
 
 const mountSync = async () => {
-  const rendered = renderHook(() => useQuestProgressSync('krakow-dragon', true));
+  const rendered = await renderHook(() => useQuestProgressSync('krakow-dragon', true));
   await flushMicrotasks();
   return rendered;
 };
@@ -149,7 +149,7 @@ describe('useQuestProgressSync — сброс на другом устройст
 
     // «Сбросить» во втором профиле: строки 42 больше нет.
     mockServerRow = null;
-    act(() => {
+    await act(() => {
       result.current.saveProgress(FINISHED_COPY);
     });
     await advance(2000);
@@ -169,7 +169,7 @@ describe('useQuestProgressSync — сброс на другом устройст
 
     const restarted = { ...FINISHED_ROW, id: 57, answers: { intro: 'start' }, completed: false };
     mockServerRow = restarted;
-    act(() => {
+    await act(() => {
       result.current.saveProgress(FINISHED_COPY);
     });
     await advance(2000);
@@ -182,7 +182,7 @@ describe('useQuestProgressSync — сброс на другом устройст
   it('снапшот без поколения по-прежнему уходит PATCH-ем в строку (#1803)', async () => {
     const { result } = await mountSync();
 
-    act(() => {
+    await act(() => {
       result.current.saveProgress({ ...FINISHED_COPY, serverId: undefined });
     });
     await advance(2000);
@@ -212,18 +212,18 @@ describe('useQuestProgressSync — сброс на другом устройст
     mockDeleteProgress.mockImplementationOnce(
       () => new Promise<void>((resolve) => { finishDelete = resolve; }),
     );
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ questId }: { questId: string }) => useQuestProgressSync(questId, true),
       { initialProps: { questId: 'krakow-dragon' } },
     );
     await flushMicrotasks();
 
     let resetting!: Promise<void>;
-    act(() => {
+    await act(() => {
       resetting = result.current.resetProgress();
     });
     // DELETE ещё в полёте, а игрок уже открыл следующий квест.
-    rerender({ questId: 'krakow-barbakan' });
+    await rerender({ questId: 'krakow-barbakan' });
     await flushMicrotasks();
     expect(result.current.progress?.id).toBe(77);
 
@@ -245,7 +245,7 @@ describe('useQuestProgressSync — сброс на другом устройст
 
   it('упавшее перечитывание не наследует прежнее «строки нет»', async () => {
     mockServerRow = null;
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ isAuthenticated }: { isAuthenticated: boolean }) =>
         useQuestProgressSync('krakow-dragon', isAuthenticated),
       { initialProps: { isAuthenticated: true } },
@@ -255,10 +255,10 @@ describe('useQuestProgressSync — сброс на другом устройст
 
     // Выход и вход другим аккаунтом, не уходя с квеста: чтение нового упало.
     // Подтверждение прошлого аккаунта ему не принадлежит — копию по нему не стирают.
-    rerender({ isAuthenticated: false });
+    await rerender({ isAuthenticated: false });
     await flushMicrotasks();
     mockFetchQuestProgress.mockRejectedValue(new Error('Network request failed'));
-    rerender({ isAuthenticated: true });
+    await rerender({ isAuthenticated: true });
     await flushMicrotasks();
 
     expect(result.current.progressLoading).toBe(false);

@@ -54,13 +54,13 @@ describe('RecommendationsTabs lazy backend fetching', () => {
   })
 
   it('does not fetch server data when collapsed; fetches only for active tab when visible', async () => {
-    const { getByTestId, getByText, queryByText } = render(<RecommendationsTabs />)
+    const { getByTestId, getByText, queryByText } = await render(<RecommendationsTabs />)
 
     // Default tab is highlights -> no server fetches
     expect(mockEnsureServerData).not.toHaveBeenCalled()
 
     // Switch to Favorites -> should fetch favorites
-    fireEvent.press(getByText('Хочу поехать'))
+    await fireEvent.press(getByText('Хочу поехать'))
     await waitFor(() => {
       expect(mockEnsureServerData).toHaveBeenCalledWith('favorites')
     })
@@ -68,7 +68,7 @@ describe('RecommendationsTabs lazy backend fetching', () => {
     expect(mockEnsureServerDataBackend).toHaveBeenCalledWith('favorites')
 
     // Switch to History -> should fetch history
-    fireEvent.press(getByText('История'))
+    await fireEvent.press(getByText('История'))
     await waitFor(() => {
       expect(mockEnsureServerData).toHaveBeenCalledWith('history')
     })
@@ -76,7 +76,7 @@ describe('RecommendationsTabs lazy backend fetching', () => {
     expect(mockEnsureServerDataBackend).toHaveBeenCalledWith('history')
 
     // Collapse panel
-    fireEvent.press(getByTestId('recommendations-tabs-collapse'))
+    await fireEvent.press(getByTestId('recommendations-tabs-collapse'))
 
     // When collapsed, tab labels are not rendered, and no extra fetch is triggered
     expect(queryByText('Хочу поехать')).toBeNull()
@@ -84,7 +84,7 @@ describe('RecommendationsTabs lazy backend fetching', () => {
     const backendCallsBefore = mockEnsureServerDataBackend.mock.calls.length
 
     // Expand panel back
-    fireEvent.press(getByTestId('recommendations-tabs-expand'))
+    await fireEvent.press(getByTestId('recommendations-tabs-expand'))
 
     // Expanding may re-run the effect (ensureServerData can be called again),
     // but it must NOT trigger a new backend fetch because the kind was already loaded.

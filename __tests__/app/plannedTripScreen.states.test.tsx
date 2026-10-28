@@ -1,5 +1,5 @@
 import { act, render, fireEvent } from '@testing-library/react-native';
-import { ActivityIndicator, Platform, StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 
 import type { PlannedTrip } from '@/api/plannedTrips';
 import { ApiError } from '@/api/clientErrors';
@@ -221,9 +221,9 @@ const LONG_DESKTOP_DESCRIPTION = Array.from(
   (_, index) => `Абзац ${index + 1} с логистикой маршрута и деталями стоянок.`,
 ).join('\n');
 
-const renderScreen = () => {
+const renderScreen = async () => {
   const PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default;
-  return render(<PlannedTripScreen />);
+  return await render(<PlannedTripScreen />);
 };
 
 describe('PlannedTripScreen — planner states', () => {
@@ -244,18 +244,18 @@ describe('PlannedTripScreen — planner states', () => {
     [429, 'errorsStatic:api.misc.tooManyAttempts'],
     [404, 'trips:components.trips.PublicTripDetail.poezdka_ne_naydena_9fc200e6'],
     [400, 'trips:app.tabs.trips.plan.id.ne_udalos_zagruzit_poezdku_b321e113'],
-  ] as const)('renders the terminal HTTP %s message instead of the loading indicator', (status, key) => {
+  ] as const)('renders the terminal HTTP %s message instead of the loading indicator', async (status, key) => {
     mockUsePlannedTrip.mockReturnValue({
       data: undefined, isLoading: false, isError: true, error: new ApiError(status, 'Server error'),
     });
-    const { getByText, UNSAFE_queryByType } = renderScreen();
+    const { getByText, container } = await renderScreen();
     expect(getByText(i18nT(key))).toBeTruthy();
-    expect(UNSAFE_queryByType(ActivityIndicator)).toBeNull();
+    expect(container.queryAll((node) => node.type === 'ActivityIndicator')).toHaveLength(0);
   });
 
-  it('renders a routed success state without an approximate warning', () => {
+  it('renders a routed success state without an approximate warning', async () => {
     mockTrip(makeTrip());
-    const { getByTestId, queryByTestId } = renderScreen();
+    const { getByTestId, queryByTestId } = await renderScreen();
 
     expect(mockTripsPageSeo).toHaveBeenCalledWith({
       canonicalPath: '/trips/plan/8001',
@@ -268,7 +268,7 @@ describe('PlannedTripScreen — planner states', () => {
     expect(queryByTestId('trip-plan-route-approximate')).toBeNull();
   });
 
-  it('hides a stale healthy header summary when its routed geometry is missing', () => {
+  it('hides a stale healthy header summary when its routed geometry is missing', async () => {
     mockTrip(
       makeTrip({
         routeGeometry: null,
@@ -282,14 +282,14 @@ describe('PlannedTripScreen — planner states', () => {
       }),
     );
 
-    const { queryByTestId, queryByText } = renderScreen();
+    const { queryByTestId, queryByText } = await renderScreen();
 
     expect(queryByTestId('trip-plan-summary')).toBeNull();
     expect(queryByText(/118/)).toBeNull();
     expect(queryByTestId('route-builder')).toBeTruthy();
   });
 
-  it('hides stale not_enough_points after the persisted route already has two coordinates', () => {
+  it('hides stale not_enough_points after the persisted route already has two coordinates', async () => {
     mockTrip(
       makeTrip({
         routeGeometry: [
@@ -306,14 +306,14 @@ describe('PlannedTripScreen — planner states', () => {
       }),
     );
 
-    const { queryByTestId, queryByText } = renderScreen();
+    const { queryByTestId, queryByText } = await renderScreen();
 
     expect(queryByTestId('trip-plan-summary')).toBeNull();
     expect(queryByTestId('trip-plan-route-approximate')).toBeNull();
     expect(queryByText(/минимум две точки/i)).toBeNull();
   });
 
-  it('updates the header from the same live route tuple as RouteBuilder', () => {
+  it('updates the header from the same live route tuple as RouteBuilder', async () => {
     mockTrip(
       makeTrip({
         routeGeometry: null,
@@ -326,7 +326,7 @@ describe('PlannedTripScreen — planner states', () => {
         },
       }),
     );
-    const { getByTestId, queryByTestId } = renderScreen();
+    const { getByTestId, queryByTestId } = await renderScreen();
     expect(queryByTestId('trip-plan-summary')).toBeNull();
 
     mockRouteBuilderDisplayState = {
@@ -345,7 +345,7 @@ describe('PlannedTripScreen — planner states', () => {
       },
       routablePointCount: 2,
     };
-    fireEvent.press(getByTestId('route-builder'));
+    await fireEvent.press(getByTestId('route-builder'));
 
     expect(getByTestId('trip-plan-summary')).toBeTruthy();
     expect(queryByTestId('trip-plan-route-approximate')).toBeNull();
@@ -356,7 +356,7 @@ describe('PlannedTripScreen — planner states', () => {
   // здесь стояло «2 429 км · 481 ч 57 мин» — дистанция по прямой / 1,4 м/с.
   it.each([false, true])(
     'flags a direct fallback route with ⚠ only and no travel time (mobile: %s)',
-    (isMobile) => {
+    async (isMobile) => {
       mockResponsive = { isMobile };
       mockTrip(
         makeTrip({
@@ -370,7 +370,7 @@ describe('PlannedTripScreen — planner states', () => {
           },
         }),
       );
-      const { getByTestId, queryByTestId, queryByText } = renderScreen();
+      const { getByTestId, queryByTestId, queryByText } = await renderScreen();
 
       const pill = getByTestId('trip-plan-summary');
       expect(pill).toHaveTextContent('alert-triangle', { exact: false });
@@ -381,29 +381,29 @@ describe('PlannedTripScreen — planner states', () => {
     },
   );
 
-  it('shows metadata edit and delete controls to the owner', () => {
+  it('shows metadata edit and delete controls to the owner', async () => {
     mockTrip(makeTrip({ isOwner: true }));
-    const { getByTestId } = renderScreen();
+    const { getByTestId } = await renderScreen();
 
     expect(getByTestId('trip-plan-delete')).toBeTruthy();
     expect(getByTestId('trip-plan-edit')).toBeTruthy();
   });
 
-  it('hides owner-only controls for a non-owner viewer', () => {
+  it('hides owner-only controls for a non-owner viewer', async () => {
     mockTrip(makeTrip({ isOwner: false }));
-    const { queryByTestId, getByTestId } = renderScreen();
+    const { queryByTestId, getByTestId } = await renderScreen();
 
     expect(queryByTestId('trip-plan-delete')).toBeNull();
     // A non-owner can still open the route + collaboration tabs.
     expect(getByTestId('route-builder')).toBeTruthy();
-    fireEvent.press(getByTestId('trip-plan-tab-people'));
+    await fireEvent.press(getByTestId('trip-plan-tab-people'));
     expect(getByTestId('trip-suggest-point-form')).toBeTruthy();
   });
 
-  it('opens an enabled metadata editor from the edit deeplink', () => {
+  it('opens an enabled metadata editor from the edit deeplink', async () => {
     mockSearchParams = { id: '8001', edit: '1' };
     mockTrip(makeTrip({ isOwner: true }));
-    const { getByTestId, queryByTestId } = renderScreen();
+    const { getByTestId, queryByTestId } = await renderScreen();
 
     expect(getByTestId('trip-plan-edit-panel')).toBeTruthy();
     expect(queryByTestId('trip-plan-edit-blocker')).toBeNull();
@@ -411,14 +411,14 @@ describe('PlannedTripScreen — planner states', () => {
     expect(saveButton.props.accessibilityState?.disabled).toBe(false);
   });
 
-  it('persists edited metadata and the uploaded planned-trip cover URL', () => {
+  it('persists edited metadata and the uploaded planned-trip cover URL', async () => {
     mockTrip(makeTrip({ isOwner: true }));
-    const { getByTestId } = renderScreen();
+    const { getByTestId } = await renderScreen();
 
-    fireEvent.press(getByTestId('trip-plan-edit'));
-    fireEvent.changeText(getByTestId('trip-plan-edit-title'), 'Обновлённый маршрут');
-    fireEvent.press(getByTestId('photo-upload'));
-    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    await fireEvent.press(getByTestId('trip-plan-edit'));
+    await fireEvent.changeText(getByTestId('trip-plan-edit-title'), 'Обновлённый маршрут');
+    await fireEvent.press(getByTestId('photo-upload'));
+    await fireEvent.press(getByTestId('trip-plan-edit-save'));
 
     expect(mockUpdateTripMutate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -433,23 +433,23 @@ describe('PlannedTripScreen — planner states', () => {
     );
   });
 
-  it('keeps one description draft across modes and PATCHes only from the general Save', () => {
+  it('keeps one description draft across modes and PATCHes only from the general Save', async () => {
     const longDescription = 'Подробная инструкция для участников. '.repeat(60);
     mockTrip(makeTrip({ isOwner: true, description: 'Серверное описание' }));
-    const { getByTestId } = renderScreen();
+    const { getByTestId } = await renderScreen();
 
-    fireEvent.press(getByTestId('trip-plan-edit'));
-    fireEvent.changeText(getByTestId('trip-plan-edit-description'), longDescription);
-    fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
+    await fireEvent.press(getByTestId('trip-plan-edit'));
+    await fireEvent.changeText(getByTestId('trip-plan-edit-description'), longDescription);
+    await fireEvent.press(getByTestId('trip-plan-description-open-fullscreen'));
     expect(getByTestId('trip-plan-description-fullscreen-input').props.value).toBe(
       longDescription,
     );
 
-    fireEvent.press(getByTestId('trip-plan-description-done'));
+    await fireEvent.press(getByTestId('trip-plan-description-done'));
     expect(getByTestId('trip-plan-edit-description').props.value).toBe(longDescription);
     expect(mockUpdateTripMutate).not.toHaveBeenCalled();
 
-    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    await fireEvent.press(getByTestId('trip-plan-edit-save'));
     expect(mockUpdateTripMutate).toHaveBeenCalledTimes(1);
     expect(mockUpdateTripMutate).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -460,40 +460,40 @@ describe('PlannedTripScreen — planner states', () => {
     );
   });
 
-  it('keeps the description after a PATCH error and restores server data on Cancel', () => {
+  it('keeps the description after a PATCH error and restores server data on Cancel', async () => {
     mockTrip(makeTrip({ isOwner: true, description: 'Серверное описание' }));
-    const { getByTestId, queryByTestId } = renderScreen();
+    const { getByTestId, queryByTestId } = await renderScreen();
 
-    fireEvent.press(getByTestId('trip-plan-edit'));
-    fireEvent.changeText(getByTestId('trip-plan-edit-description'), 'Черновик после ошибки');
-    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    await fireEvent.press(getByTestId('trip-plan-edit'));
+    await fireEvent.changeText(getByTestId('trip-plan-edit-description'), 'Черновик после ошибки');
+    await fireEvent.press(getByTestId('trip-plan-edit-save'));
 
     const mutationOptions = mockUpdateTripMutate.mock.calls[0][1] as {
       onError: () => void;
     };
-    act(() => mutationOptions.onError());
+    await act(() => mutationOptions.onError());
     expect(getByTestId('trip-plan-edit-error')).toBeTruthy();
     expect(getByTestId('trip-plan-edit-description').props.value).toBe(
       'Черновик после ошибки',
     );
 
-    fireEvent.press(getByTestId('trip-plan-edit-cancel'));
+    await fireEvent.press(getByTestId('trip-plan-edit-cancel'));
     expect(queryByTestId('trip-plan-edit-panel')).toBeNull();
-    fireEvent.press(getByTestId('trip-plan-edit'));
+    await fireEvent.press(getByTestId('trip-plan-edit'));
     expect(getByTestId('trip-plan-edit-description').props.value).toBe(
       'Серверное описание',
     );
   });
 
-  it('keeps an untouched metadata transport aligned with a route-builder update', () => {
+  it('keeps an untouched metadata transport aligned with a route-builder update', async () => {
     mockTrip(makeTrip({ isOwner: true, transport: 'car' }));
     const PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default;
-    const { getByTestId, rerender } = render(<PlannedTripScreen />);
+    const { getByTestId, rerender } = await render(<PlannedTripScreen />);
 
-    fireEvent.press(getByTestId('trip-plan-edit'));
+    await fireEvent.press(getByTestId('trip-plan-edit'));
     mockTrip(makeTrip({ isOwner: true, transport: 'bike' }));
-    rerender(<PlannedTripScreen />);
-    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    await rerender(<PlannedTripScreen />);
+    await fireEvent.press(getByTestId('trip-plan-edit-save'));
 
     expect(mockUpdateTripMutate).toHaveBeenCalledWith(
       expect.objectContaining({ transport: 'bike' }),
@@ -501,28 +501,28 @@ describe('PlannedTripScreen — planner states', () => {
     );
   });
 
-  it('keeps save and close disabled until the cover upload finishes', () => {
+  it('keeps save and close disabled until the cover upload finishes', async () => {
     mockTrip(makeTrip({ isOwner: true }));
-    const { getByTestId } = renderScreen();
+    const { getByTestId } = await renderScreen();
 
-    fireEvent.press(getByTestId('trip-plan-edit'));
-    fireEvent.press(getByTestId('photo-upload-start'));
+    await fireEvent.press(getByTestId('trip-plan-edit'));
+    await fireEvent.press(getByTestId('photo-upload-start'));
 
     expect(getByTestId('trip-plan-edit-save').props.accessibilityState?.disabled).toBe(true);
     expect(getByTestId('trip-plan-edit-cancel').props.accessibilityState?.disabled).toBe(true);
-    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    await fireEvent.press(getByTestId('trip-plan-edit-save'));
     expect(mockUpdateTripMutate).not.toHaveBeenCalled();
 
-    fireEvent.press(getByTestId('photo-upload-finish'));
+    await fireEvent.press(getByTestId('photo-upload-finish'));
     expect(getByTestId('trip-plan-edit-save').props.accessibilityState?.disabled).toBe(false);
     expect(getByTestId('trip-plan-edit-cancel').props.accessibilityState?.disabled).toBe(false);
   });
 
-  it('uses the app date picker for native edit and keeps the API date in YYYY-MM-DD', () => {
+  it('uses the app date picker for native edit and keeps the API date in YYYY-MM-DD', async () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'android' });
     mockSearchParams = { id: '8001', edit: '1' };
     mockTrip(makeTrip({ isOwner: true, startDate: '2026-08-15T08:00:00Z' }));
-    const { getByTestId, queryByTestId } = renderScreen();
+    const { getByTestId, queryByTestId } = await renderScreen();
 
     const trigger = getByTestId('trip-plan-edit-start-date');
     expect(trigger.props.accessibilityRole).toBe('button');
@@ -531,22 +531,22 @@ describe('PlannedTripScreen — planner states', () => {
       '15 августа 2026 г.',
     );
 
-    fireEvent.press(trigger);
+    await fireEvent.press(trigger);
     expect(getByTestId('trip-plan-edit-date-picker')).toBeTruthy();
-    fireEvent.press(getByTestId('mini-calendar-day-2026-08-20'));
+    await fireEvent.press(getByTestId('mini-calendar-day-2026-08-20'));
     expect(queryByTestId('trip-plan-edit-date-picker')).toBeNull();
     expect(getByTestId('trip-plan-edit-start-date-value').props.children).toBe(
       '20 августа 2026 г.',
     );
 
-    fireEvent.press(getByTestId('trip-plan-edit-start-date'));
-    fireEvent.press(getByTestId('trip-plan-edit-start-date-cancel'));
+    await fireEvent.press(getByTestId('trip-plan-edit-start-date'));
+    await fireEvent.press(getByTestId('trip-plan-edit-start-date-cancel'));
     expect(queryByTestId('trip-plan-edit-date-picker')).toBeNull();
     expect(getByTestId('trip-plan-edit-start-date-value').props.children).toBe(
       '20 августа 2026 г.',
     );
 
-    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    await fireEvent.press(getByTestId('trip-plan-edit-save'));
     expect(mockUpdateTripMutate).toHaveBeenCalledWith(
       expect.objectContaining({ startDate: '2026-08-20' }),
       expect.any(Object),
@@ -555,102 +555,104 @@ describe('PlannedTripScreen — planner states', () => {
 
   // #1838: до правки шапка знала только старт, и поездка 15–20 августа
   // выглядела однодневной, а сохранение конца молча терялось.
-  it('shows the trip end in the header as a range', () => {
+  it('shows the trip end in the header as a range', async () => {
     mockTrip(makeTrip({ endDate: '2026-08-20' }));
-    const { getByText } = renderScreen();
+    const { getByText } = await renderScreen();
 
     expect(getByText(/15 августа 2026 г\., 08:00 — 20 августа 2026 г\./)).toBeTruthy();
   });
 
-  it('keeps a single date in the header when the trip has no end', () => {
+  it('keeps a single date in the header when the trip has no end', async () => {
     mockTrip(makeTrip());
-    const { getByText, queryByText } = renderScreen();
+    const { getByText, queryByText } = await renderScreen();
 
     expect(getByText(/15 августа 2026 г\., 08:00/)).toBeTruthy();
     expect(queryByText(/—/)).toBeNull();
   });
 
-  it('edits and clears the trip end on native', () => {
+  it('edits and clears the trip end on native', async () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'android' });
     mockSearchParams = { id: '8001', edit: '1' };
     mockTrip(makeTrip({ isOwner: true, endDate: null }));
-    const { getByTestId, queryByTestId } = renderScreen();
+    const { getByTestId, queryByTestId } = await renderScreen();
 
     expect(getByTestId('trip-plan-edit-end-date-value').props.children).toBe('Не задано');
     expect(queryByTestId('trip-plan-edit-end-date-clear')).toBeNull();
 
-    fireEvent.press(getByTestId('trip-plan-edit-end-date'));
-    fireEvent.press(getByTestId('mini-calendar-day-2026-08-20'));
+    await fireEvent.press(getByTestId('trip-plan-edit-end-date'));
+    await fireEvent.press(getByTestId('mini-calendar-day-2026-08-20'));
     expect(getByTestId('trip-plan-edit-end-date-value').props.children).toBe(
       '20 августа 2026 г.',
     );
 
-    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    await fireEvent.press(getByTestId('trip-plan-edit-save'));
     expect(mockUpdateTripMutate).toHaveBeenCalledWith(
       expect.objectContaining({ endDate: '2026-08-20' }),
       expect.any(Object),
     );
 
     // Убрать конец — это отправить null, а не «не менять поле».
-    fireEvent.press(getByTestId('trip-plan-edit-end-date-clear'));
-    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    await fireEvent.press(getByTestId('trip-plan-edit-end-date-clear'));
+    await fireEvent.press(getByTestId('trip-plan-edit-save'));
     expect(mockUpdateTripMutate).toHaveBeenLastCalledWith(
       expect.objectContaining({ endDate: null }),
       expect.any(Object),
     );
   });
 
-  it('clears the end date with an explicit control on web', () => {
+  it('clears the end date with an explicit control on web', async () => {
     // По умолчанию сьют идёт под `ios`; веб-ветку надо назвать явно, иначе
     // проверялась бы native-кнопка, которая уже покрыта выше.
     Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'web' });
     mockSearchParams = { id: '8001', edit: '1' };
     mockTrip(makeTrip({ isOwner: true, endDate: '2026-08-20' }));
-    const { getByTestId, queryByTestId, UNSAFE_getByProps } = renderScreen();
+    const { getByTestId, queryByTestId, container } = await renderScreen();
 
-    fireEvent.press(getByTestId('trip-plan-edit-end-date-clear'));
+    await fireEvent.press(getByTestId('trip-plan-edit-end-date-clear'));
 
-    expect(UNSAFE_getByProps({ 'data-testid': 'trip-plan-edit-end-date' }).props.value).toBe('');
+    const endDateInputs = container.queryAll((node) => node.props['data-testid'] === 'trip-plan-edit-end-date');
+    expect(endDateInputs).toHaveLength(1);
+    expect(endDateInputs[0].props.value).toBe('');
     expect(queryByTestId('trip-plan-edit-end-date-clear')).toBeNull();
 
-    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    await fireEvent.press(getByTestId('trip-plan-edit-save'));
     expect(mockUpdateTripMutate).toHaveBeenCalledWith(
       expect.objectContaining({ endDate: null }),
       expect.any(Object),
     );
   });
 
-  it('refuses to save an end earlier than the start', () => {
+  it('refuses to save an end earlier than the start', async () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'android' });
     mockSearchParams = { id: '8001', edit: '1' };
     // Календарь в этом файле замокан одним днём 2026-08-20, поэтому «раньше
     // старта» задаётся стартом позже него, а не другим днём в пикере.
     mockTrip(makeTrip({ isOwner: true, startDate: '2026-08-25', endDate: null }));
-    const { getByTestId, getByText } = renderScreen();
+    const { getByTestId, getByText } = await renderScreen();
 
-    fireEvent.press(getByTestId('trip-plan-edit-end-date'));
-    fireEvent.press(getByTestId('mini-calendar-day-2026-08-20'));
-    fireEvent.press(getByTestId('trip-plan-edit-save'));
+    await fireEvent.press(getByTestId('trip-plan-edit-end-date'));
+    await fireEvent.press(getByTestId('mini-calendar-day-2026-08-20'));
+    await fireEvent.press(getByTestId('trip-plan-edit-save'));
 
     expect(getByText('Окончание раньше начала')).toBeTruthy();
     expect(mockUpdateTripMutate).not.toHaveBeenCalled();
   });
 
-  it('navigates the workspace tabs between route, people, export and more', () => {
+  it('navigates the workspace tabs between route, people, export and more', async () => {
     mockTrip(makeTrip({ status: 'completed' }));
-    const { getByTestId, queryByTestId } = renderScreen();
+    const { getByTestId, queryByTestId } = await renderScreen();
 
     // Default tab = route.
     expect(getByTestId('trip-plan-panel-route')).toBeTruthy();
 
-    fireEvent.press(getByTestId('trip-plan-tab-people'));
+    await fireEvent.press(getByTestId('trip-plan-tab-people'));
     expect(getByTestId('trip-plan-panel-people')).toBeTruthy();
     expect(getByTestId('trip-invite-panel')).toBeTruthy();
 
-    fireEvent.press(getByTestId('trip-plan-tab-export'));
+    await fireEvent.press(getByTestId('trip-plan-tab-export'));
     expect(getByTestId('trip-plan-route-export-section')).toBeTruthy();
 
-    fireEvent.press(getByTestId('trip-plan-tab-more'));
+    await fireEvent.press(getByTestId('trip-plan-tab-more'));
     expect(getByTestId('trip-report-form')).toBeTruthy();
     // Rating panel only appears for completed trips.
     expect(getByTestId('trip-rating-panel')).toBeTruthy();
@@ -658,14 +660,14 @@ describe('PlannedTripScreen — planner states', () => {
     expect(queryByTestId('trip-plan-panel-route')).toBeNull();
   });
 
-  it('#2059 widens only the route workspace to 1 200 px on desktop ≥ 1280', () => {
+  it('#2059 widens only the route workspace to 1 200 px on desktop ≥ 1280', async () => {
     mockTrip(makeTrip());
-    const narrow = renderScreen();
+    const narrow = await renderScreen();
     expect(StyleSheet.flatten(narrow.getByTestId('trip-plan-panel-route').props.style).width).toBeUndefined();
-    narrow.unmount();
+    await narrow.unmount();
 
     mockResponsive = { isMobile: false, isDesktop: true };
-    const wide = renderScreen();
+    const wide = await renderScreen();
     expect(StyleSheet.flatten(wide.getByTestId('trip-plan-panel-route').props.style)).toMatchObject({
       width: 1200,
       maxWidth: 1200,
@@ -675,7 +677,7 @@ describe('PlannedTripScreen — planner states', () => {
     expect(StyleSheet.flatten(wide.getByTestId('trip-plan-tabs').props.style).width).toBeUndefined();
   });
 
-  it('renders a freshly created empty trip without crashing (regression for #884)', () => {
+  it('renders a freshly created empty trip without crashing (regression for #884)', async () => {
     // Shape of a just-created planned trip: empty participants/route, null
     // summary/geometry/routing, transport defaulted. Must not blank out.
     mockTrip(
@@ -687,20 +689,20 @@ describe('PlannedTripScreen — planner states', () => {
         participants: [],
       }),
     );
-    const { getByTestId } = renderScreen();
+    const { getByTestId } = await renderScreen();
 
     expect(getByTestId('trip-plan-summary')).toBeTruthy();
     expect(getByTestId('trip-plan-tabs')).toBeTruthy();
     expect(getByTestId('trip-plan-panel-route')).toBeTruthy();
     // People tab renders with an empty participant list, no throw.
-    fireEvent.press(getByTestId('trip-plan-tab-people'));
+    await fireEvent.press(getByTestId('trip-plan-tab-people'));
     expect(getByTestId('trip-plan-panel-people')).toBeTruthy();
   });
 
-  it('renders a compact mobile header with an icon-only inactive tab', () => {
+  it('renders a compact mobile header with an icon-only inactive tab', async () => {
     mockResponsive = { isMobile: true };
     mockTrip(makeTrip());
-    const { getByTestId } = renderScreen();
+    const { getByTestId } = await renderScreen();
 
     // Tabs and summary are present on mobile too.
     expect(getByTestId('trip-plan-tabs')).toBeTruthy();
@@ -711,29 +713,29 @@ describe('PlannedTripScreen — planner states', () => {
   // #1844: обрезку описания заводит именно компактная шапка (`compactHeader`),
   // поэтому проводка «обрезали → дали кнопку разворота» проверяется на экране, а
   // не только в самом `TripPlanCollapsibleText` с пропами из теста.
-  it('gives the description a toggle under the compact mobile route header', () => {
+  it('gives the description a toggle under the compact mobile route header', async () => {
     mockResponsive = { isMobile: true };
     mockTrip(makeTrip({ description: LOGISTICS_DESCRIPTION }));
-    const { getByTestId } = renderScreen();
+    const { getByTestId } = await renderScreen();
 
     expect(getByTestId('trip-plan-description').props.numberOfLines).toBe(2);
     expect(getByTestId('trip-plan-description-toggle')).toBeTruthy();
   });
 
-  it('leaves the desktop description unclamped and without a toggle', () => {
+  it('leaves the desktop description unclamped and without a toggle', async () => {
     mockTrip(makeTrip({ description: LOGISTICS_DESCRIPTION }));
-    const { getByTestId, queryByTestId } = renderScreen();
+    const { getByTestId, queryByTestId } = await renderScreen();
 
     expect(getByTestId('trip-plan-description').props.numberOfLines).toBeUndefined();
     expect(queryByTestId('trip-plan-description-toggle')).toBeNull();
   });
 
-  it('keeps the toggle off the other mobile tabs, where the header is full', () => {
+  it('keeps the toggle off the other mobile tabs, where the header is full', async () => {
     mockResponsive = { isMobile: true };
     mockTrip(makeTrip({ description: LOGISTICS_DESCRIPTION }));
-    const { getByTestId, queryByTestId } = renderScreen();
+    const { getByTestId, queryByTestId } = await renderScreen();
 
-    fireEvent.press(getByTestId('trip-plan-tab-people'));
+    await fireEvent.press(getByTestId('trip-plan-tab-people'));
 
     expect(getByTestId('trip-plan-description').props.numberOfLines).toBeUndefined();
     expect(queryByTestId('trip-plan-description-toggle')).toBeNull();
@@ -741,27 +743,27 @@ describe('PlannedTripScreen — planner states', () => {
 
   // #2060: desktop не имел предела строк вовсе — 6 274-знаковое описание
   // уводило вкладки и конструктор маршрута на 2 116 px вниз.
-  it('clamps a long description to 8 lines on desktop and offers a toggle', () => {
+  it('clamps a long description to 8 lines on desktop and offers a toggle', async () => {
     mockResponsive = { isMobile: false, width: 1440 };
     mockTrip(makeTrip({ description: LONG_DESKTOP_DESCRIPTION }));
-    const { getByTestId, getByText, queryByText } = renderScreen();
+    const { getByTestId, getByText, queryByText } = await renderScreen();
 
     expect(getByTestId('trip-plan-description').props.numberOfLines).toBe(8);
     expect(getByText(i18nT('tripsStatic:plan.description.expand'))).toBeTruthy();
 
-    fireEvent.press(getByTestId('trip-plan-description-toggle'));
+    await fireEvent.press(getByTestId('trip-plan-description-toggle'));
 
     expect(getByTestId('trip-plan-description').props.numberOfLines).toBeUndefined();
     expect(getByText(i18nT('tripsStatic:plan.description.collapse'))).toBeTruthy();
     expect(queryByText(i18nT('tripsStatic:plan.description.expand'))).toBeNull();
   });
 
-  it('measures desktop capacity by the 860px column: a paragraph that fits 8 lines there has no toggle', () => {
+  it('measures desktop capacity by the 860px column: a paragraph that fits 8 lines there has no toggle', async () => {
     // 800 знаков одним абзацем: 8 строк по 114 знаков в колонке 860px, но 17 —
     // по эталонным 390dp, если бы ширина колонки в оценку не дошла.
     mockResponsive = { isMobile: false, width: 1440 };
     mockTrip(makeTrip({ description: 'а'.repeat(800) }));
-    const { getByTestId, queryByTestId } = renderScreen();
+    const { getByTestId, queryByTestId } = await renderScreen();
 
     expect(getByTestId('trip-plan-description').props.numberOfLines).toBeUndefined();
     expect(queryByTestId('trip-plan-description-toggle')).toBeNull();

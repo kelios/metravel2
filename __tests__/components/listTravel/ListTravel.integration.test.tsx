@@ -155,7 +155,7 @@ jest.mock('@/components/listTravel/hooks/useListTravelExport', () => ({
   useListTravelExport: (...args: any[]) => mockUseListTravelExport(...args),
 }));
 
-const renderWithProviders = (component: React.ReactElement) => {
+const renderWithProviders = async (component: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -163,7 +163,7 @@ const renderWithProviders = (component: React.ReactElement) => {
     },
   });
 
-  return render(
+  return await render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         {component}
@@ -324,7 +324,7 @@ describe('ListTravel Integration Tests', () => {
   });
 
   it('does not show recommendations by default on web when no stored preference', async () => {
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
       expect(screen.getByTestId('toggle-recommendations-button')).toBeTruthy();
@@ -336,7 +336,7 @@ describe('ListTravel Integration Tests', () => {
   it('keeps recommendations hidden on web when stored preference is false', async () => {
     (window as any).sessionStorage.setItem(RECOMMENDATIONS_VISIBLE_KEY, 'false');
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
       expect(screen.getByTestId('toggle-recommendations-button')).toBeTruthy();
@@ -369,11 +369,11 @@ describe('ListTravel Integration Tests', () => {
       settingsSummary: 'minimal • тема: blue',
     });
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     // In export mode, travel cards become selectable (RenderTravelItem receives selectable=true)
     const toggleButton = await screen.findByTestId('mock-toggle-1');
-    fireEvent.press(toggleButton);
+    await fireEvent.press(toggleButton);
     expect(toggleSelect).toHaveBeenCalledTimes(1);
   });
 
@@ -385,33 +385,33 @@ describe('ListTravel Integration Tests', () => {
       .mocked((globalThis as any).fetch)
       .mockResolvedValue({ ok: true, statusText: 'OK' } as any);
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
       expect(screen.getByText('Mountain Trip')).toBeTruthy();
     });
 
     // First: open dialog and confirm -> should call delete
-    fireEvent.press(screen.getByTestId('mock-delete-1'));
+    await fireEvent.press(screen.getByTestId('mock-delete-1'));
 
     await waitFor(() => {
       expect(screen.getByTestId('confirm-delete-button')).toBeTruthy();
     });
 
-    fireEvent.press(screen.getByTestId('confirm-delete-button'));
+    await fireEvent.press(screen.getByTestId('confirm-delete-button'));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalled();
     });
 
     // Second: open dialog and cancel -> should not call delete again
-    fireEvent.press(screen.getByTestId('mock-delete-2'));
+    await fireEvent.press(screen.getByTestId('mock-delete-2'));
 
     await waitFor(() => {
       expect(screen.getByTestId('cancel-delete-button')).toBeTruthy();
     });
 
-    fireEvent.press(screen.getByTestId('cancel-delete-button'));
+    await fireEvent.press(screen.getByTestId('cancel-delete-button'));
 
     // Depending on environment, other hooks may trigger additional fetches.
     // We only require that a DELETE request for travel was issued once.
@@ -424,7 +424,7 @@ describe('ListTravel Integration Tests', () => {
   });
 
   it('displays search bar, filters, and travel cards correctly', async () => {
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     // Check that main components are rendered
     await waitFor(() => {
@@ -436,7 +436,7 @@ describe('ListTravel Integration Tests', () => {
   });
 
   it('shows filters in sidebar on desktop', async () => {
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     // Wait for filters to load
     await waitFor(() => {
@@ -444,7 +444,7 @@ describe('ListTravel Integration Tests', () => {
     });
 
     // Expand all groups to render category options
-    fireEvent.press(screen.getByTestId('toggle-all-groups'));
+    await fireEvent.press(screen.getByTestId('toggle-all-groups'));
 
     await waitFor(() => {
       expect(screen.getByText('Горы')).toBeTruthy();
@@ -472,14 +472,14 @@ describe('ListTravel Integration Tests', () => {
       isBetween: () => false,
     };
 
-    renderWithProviders(<ListTravel initialViewportWidth={1440} />);
+    await renderWithProviders(<ListTravel initialViewportWidth={1440} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('filter-scrollview')).toBeTruthy();
     });
   });
 
-  it('hides sidebar filters on mobile', () => {
+  it('hides sidebar filters on mobile', async () => {
     (global as any).__mockResponsive = {
       width: 375,
       height: 667,
@@ -499,9 +499,9 @@ describe('ListTravel Integration Tests', () => {
       isBetween: () => false,
     };
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
-    fireEvent.press(screen.getByLabelText('Открыть фильтры'));
+    await fireEvent.press(screen.getByLabelText('Открыть фильтры'));
     expect(screen.getByLabelText('Закрыть фильтры')).toBeTruthy();
     expect(screen.getByText('Показать результаты')).toBeTruthy();
   });
@@ -534,7 +534,7 @@ describe('ListTravel Integration Tests', () => {
       isRefreshing: false,
     });
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
       expect(within(screen.getByTestId('results-count-wrapper')).getByText('1 маршрут')).toBeTruthy();
@@ -558,12 +558,9 @@ describe('ListTravel Integration Tests', () => {
       name: 'Fallback Trip',
     };
 
-    let callIndex = 0;
-    mockUseListTravelData.mockImplementation(() => {
-      const currentCall = callIndex % 5;
-      callIndex += 1;
-
-      if (currentCall === 0) {
+    // Match the query contract, not the number of React render passes.
+    mockUseListTravelData.mockImplementation(({ isQueryEnabled }) => {
+      if (isQueryEnabled) {
         return {
           data: [exactTravel],
           total: 20,
@@ -582,8 +579,8 @@ describe('ListTravel Integration Tests', () => {
         };
       }
 
-      if (currentCall === 1) {
-        return {
+      // Disabled fallback queries may retain cached matches, but exact results win.
+      return {
           data: [fallbackTravel],
           total: 379,
           hasMore: true,
@@ -599,27 +596,9 @@ describe('ListTravel Integration Tests', () => {
           handleRefresh: jest.fn(),
           isRefreshing: false,
         };
-      }
-
-      return {
-        data: [],
-        total: 0,
-        hasMore: false,
-        isLoading: false,
-        isFetching: false,
-        isError: false,
-        status: 'success',
-        isInitialLoading: false,
-        isNextPageLoading: false,
-        isEmpty: false,
-        refetch: jest.fn(),
-        handleEndReached: jest.fn(),
-        handleRefresh: jest.fn(),
-        isRefreshing: false,
-      };
     });
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
       expect(within(screen.getByTestId('results-count-wrapper')).getByText('20 маршрутов')).toBeTruthy();
@@ -655,14 +634,12 @@ describe('ListTravel Integration Tests', () => {
       status: 'success', isInitialLoading: false, isNextPageLoading: false, isEmpty: data.length === 0,
       refetch: jest.fn(), handleEndReached: jest.fn(), handleRefresh: jest.fn(), isRefreshing: false,
     });
-    let callIndex = 0;
-    mockUseListTravelData.mockImplementation(() => {
-      const currentCall = callIndex % 5;
-      callIndex += 1;
-      return currentCall === 1 ? result([rejectedTravel]) : result([]);
+    mockUseListTravelData.mockImplementation(({ queryParams, isQueryEnabled }) => {
+      // The main query keeps the year; the active relaxed query drops it.
+      return isQueryEnabled && queryParams.year === undefined ? result([rejectedTravel]) : result([]);
     });
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     await waitFor(() => expect(screen.getByText('Rejected Fallback Trip')).toBeTruthy());
     // reason | date | correction slots of the shown fallback card, not of the empty main list.
@@ -676,7 +653,7 @@ describe('ListTravel Integration Tests', () => {
       categoryTravelAddress: '84',
     };
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
       expect(mockUseListTravelFilters).toHaveBeenCalled();
@@ -703,14 +680,14 @@ describe('ListTravel Integration Tests', () => {
       handleToggleCategory: jest.fn(),
     });
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     // Search input should be present
     const searchInput = screen.getByPlaceholderText('Найти маршрут…');
     expect(searchInput).toBeTruthy();
 
     // Type in search
-    fireEvent.changeText(searchInput, 'mountain');
+    await fireEvent.changeText(searchInput, 'mountain');
 
     // Should accept user input (search text is updated)
     expect((searchInput as any).props.value).toBe('mountain');
@@ -719,7 +696,7 @@ describe('ListTravel Integration Tests', () => {
   it('syncs search input with updated URL search params without remount', async () => {
     (global as any).__mockLocalSearchParams = { search: 'mountain' };
 
-    const view = renderWithProviders(<ListTravel />);
+    const view = await renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText('Найти маршрут…')).toBeTruthy();
@@ -734,7 +711,7 @@ describe('ListTravel Integration Tests', () => {
 
     (global as any).__mockLocalSearchParams = { search: 'beach' };
 
-    view.rerender(
+    await view.rerender(
       <QueryClientProvider client={new QueryClient({
         defaultOptions: {
           queries: { retry: false },
@@ -770,7 +747,7 @@ describe('ListTravel Integration Tests', () => {
       '/search?q=%20%20%D0%9C%D0%B8%D0%BD%D1%81%D0%BA%20%20&categories=2&utm_source=e2e#results',
     );
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText('Найти маршрут…').props.value).toBe('Минск');
@@ -802,7 +779,7 @@ describe('ListTravel Integration Tests', () => {
       '/search?search=%20%20%D0%91%D1%80%D0%B5%D1%81%D1%82%20%20&q=%D0%9C%D0%B8%D0%BD%D1%81%D0%BA&campaign=summer#catalog',
     );
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
       expect(screen.getByPlaceholderText('Найти маршрут…').props.value).toBe('Брест');
@@ -840,7 +817,7 @@ describe('ListTravel Integration Tests', () => {
       isRefreshing: false,
     });
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     await waitFor(() => {
       expect(screen.getByText('Ничего не найдено')).toBeTruthy();
@@ -866,17 +843,17 @@ describe('ListTravel Integration Tests', () => {
       handleToggleCategory: jest.fn(),
     });
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     // Clear button should be available when there are active filters
     const clearButton = await screen.findByTestId('clear-all-button');
-    fireEvent.press(clearButton);
+    await fireEvent.press(clearButton);
 
     expect(mockResetFilters).toHaveBeenCalled();
   });
 
   it('handles responsive layout changes', async () => {
-    const { rerender } = renderWithProviders(<ListTravel />);
+    const { rerender } = await renderWithProviders(<ListTravel />);
 
     // Should show sidebar on desktop. Filter groups mount once the first
     // catalog load completes (#2765), so wait for them instead of reading sync.
@@ -902,7 +879,7 @@ describe('ListTravel Integration Tests', () => {
     };
 
     // Re-render component
-    rerender(
+    await rerender(
       <QueryClientProvider client={new QueryClient()}>
         <ThemeProvider>
           <ListTravel />
@@ -910,7 +887,7 @@ describe('ListTravel Integration Tests', () => {
       </QueryClientProvider>
     );
 
-    fireEvent.press(screen.getByLabelText('Открыть фильтры'));
+    await fireEvent.press(screen.getByLabelText('Открыть фильтры'));
     expect(screen.getByLabelText('Закрыть фильтры')).toBeTruthy();
     expect(screen.getByText('Показать результаты')).toBeTruthy();
   });
@@ -935,7 +912,7 @@ describe('ListTravel Integration Tests', () => {
         isRefreshing: false,
       });
 
-      renderWithProviders(<ListTravel />);
+      await renderWithProviders(<ListTravel />);
 
       // Skeleton is delayed to prevent flicker.
       await act(async () => {
@@ -949,7 +926,7 @@ describe('ListTravel Integration Tests', () => {
     }
   });
 
-  it('handles error states correctly', () => {
+  it('handles error states correctly', async () => {
     mockUseListTravelData.mockReturnValue({
       data: [],
       total: 0,
@@ -967,14 +944,14 @@ describe('ListTravel Integration Tests', () => {
       isRefreshing: false,
     });
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     // Should show error message
     expect(screen.getByText('Ошибка загрузки')).toBeTruthy();
     expect(screen.getByText('Не удалось загрузить маршруты.')).toBeTruthy();
   });
 
-  it('handles empty state correctly', () => {
+  it('handles empty state correctly', async () => {
     mockUseListTravelData.mockReturnValue({
       data: [],
       total: 0,
@@ -992,7 +969,7 @@ describe('ListTravel Integration Tests', () => {
       isRefreshing: false,
     });
 
-    renderWithProviders(<ListTravel />);
+    await renderWithProviders(<ListTravel />);
 
     // Should show empty state: нет карточек путешествий
     expect(screen.queryByText('Mountain Trip')).toBeNull();

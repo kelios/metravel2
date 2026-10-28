@@ -29,14 +29,14 @@ describe('native UpsertTravelRoute', () => {
   // форма мастера размонтировалась при потере фокуса экрана и терялся весь
   // введённый, но ещё не сохранённый стейт. Контракт выровнен с web: форма
   // остаётся смонтированной всегда.
-  it('keeps the wizard mounted regardless of navigation focus', () => {
-    const { queryByText } = render(<UpsertTravelRoute />)
+  it('keeps the wizard mounted regardless of navigation focus', async () => {
+    const { queryByText } = await render(<UpsertTravelRoute />)
 
     expect(queryByText('UpsertTravel loaded')).toBeTruthy()
   })
 
   it('loads the wizard behind an error boundary', async () => {
-    const { queryByText } = render(<UpsertTravelRoute />)
+    const { queryByText } = await render(<UpsertTravelRoute />)
 
     await waitFor(() => {
       expect(queryByText('UpsertTravel loaded')).toBeTruthy()
@@ -49,7 +49,7 @@ describe('native UpsertTravelRoute', () => {
 
     const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {})
 
-    const { getByText, queryByText } = render(<UpsertTravelRoute />)
+    const { getByText, queryByText } = await render(<UpsertTravelRoute />)
 
     await waitFor(() => {
       expect(getByText('Попробовать снова')).toBeTruthy()
@@ -57,7 +57,7 @@ describe('native UpsertTravelRoute', () => {
     expect(queryByText('Загрузка...')).toBeNull()
 
     mockUpsertImportShouldFail = false
-    fireEvent.press(getByText('Попробовать снова'))
+    await fireEvent.press(getByText('Попробовать снова'))
 
     await waitFor(() => {
       expect(queryByText('UpsertTravel loaded')).toBeTruthy()

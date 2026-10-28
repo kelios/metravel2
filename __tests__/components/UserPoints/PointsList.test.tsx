@@ -95,7 +95,7 @@ describe('PointsList (manual create)', () => {
   const mockPurgePoints = require('@/api/userPoints').userPointsApi.purgePoints as jest.Mock;
   const mockFetchFilters = require('@/api/miscOptimized').fetchAllFiltersOptimized as jest.Mock;
 
-  const renderWithClient = () => {
+  const renderWithClient = async () => {
     const client = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -105,7 +105,7 @@ describe('PointsList (manual create)', () => {
 
     const { PointsList } = require('@/components/UserPoints/PointsList');
 
-    return render(
+    return await render(
       <QueryClientProvider client={client}>
         <PointsList />
       </QueryClientProvider>
@@ -136,7 +136,7 @@ describe('PointsList (manual create)', () => {
   });
 
   it('switches between map and list view from the header segmented control', async () => {
-    renderWithClient();
+    await renderWithClient();
 
     // Grid starts in map view.
     await waitFor(() => {
@@ -149,7 +149,7 @@ describe('PointsList (manual create)', () => {
 
     // Pressing segmented-list invokes onPanelTabChange; viewMode prop on Grid
     // remains 'map' (desktop viewMode is separate from mobile mobileTab).
-    fireEvent.press(screen.getByTestId('segmented-list'));
+    await fireEvent.press(screen.getByTestId('segmented-list'));
 
     await waitFor(() => {
       expect(screen.getByTestId('points-list-grid-view-mode').props.children).toBe('map');
@@ -160,49 +160,49 @@ describe('PointsList (manual create)', () => {
 
   const openManualAdd = async () => {
     // open actions from header
-    fireEvent.press(screen.getByLabelText('Управление точками'));
+    await fireEvent.press(screen.getByLabelText('Управление точками'));
     // choose manual add
-    fireEvent.press(screen.getByText('Добавить вручную'));
+    await fireEvent.press(screen.getByText('Добавить вручную'));
     await screen.findByText('Добавить точку вручную');
   };
 
-  const fillBasics = () => {
-    fireEvent.changeText(screen.getByPlaceholderText('Например: Любимое кафе'), 'Место');
-    fireEvent.changeText(screen.getByPlaceholderText('55.755800'), '55.7558');
-    fireEvent.changeText(screen.getByPlaceholderText('37.617300'), '37.6173');
+  const fillBasics = async () => {
+    await fireEvent.changeText(screen.getByPlaceholderText('Например: Любимое кафе'), 'Место');
+    await fireEvent.changeText(screen.getByPlaceholderText('55.755800'), '55.7558');
+    await fireEvent.changeText(screen.getByPlaceholderText('37.617300'), '37.6173');
   };
 
   const selectCategory = async (id: string) => {
     const triggers = screen.getAllByLabelText('Открыть выбор');
     // Manual modal has a single multiselect: Category.
-    fireEvent.press(triggers[0]);
+    await fireEvent.press(triggers[0]);
 
     const item = await screen.findByTestId(`simple-multiselect.item.${id}`);
-    fireEvent.press(item);
+    await fireEvent.press(item);
 
-    fireEvent.press(screen.getByText('Готово'));
+    await fireEvent.press(screen.getByText('Готово'));
   };
 
   it('should show validation error if category is not selected', async () => {
-    renderWithClient();
+    await renderWithClient();
     await openManualAdd();
 
-    fillBasics();
+    await fillBasics();
 
-    fireEvent.press(screen.getByText('Сохранить'));
+    await fireEvent.press(screen.getByText('Сохранить'));
 
     expect(await screen.findByText('Выберите категорию')).toBeTruthy();
     expect(mockCreatePoint).not.toHaveBeenCalled();
   });
 
   it('should create point with categoryId', async () => {
-    renderWithClient();
+    await renderWithClient();
     await openManualAdd();
 
-    fillBasics();
+    await fillBasics();
     await selectCategory('39');
 
-    fireEvent.press(screen.getByText('Сохранить'));
+    await fireEvent.press(screen.getByText('Сохранить'));
 
     await waitFor(() => {
       expect(mockCreatePoint).toHaveBeenCalled();
@@ -230,22 +230,22 @@ describe('PointsList (manual create)', () => {
     ]);
     mockPurgePoints.mockResolvedValue({ deleted: 1 });
 
-    renderWithClient();
+    await renderWithClient();
 
     await waitFor(() => {
       expect(mockGetPoints).toHaveBeenCalled();
     });
 
-    fireEvent.press(screen.getByTestId('userpoints-actions-open'));
+    await fireEvent.press(screen.getByTestId('userpoints-actions-open'));
     // #1414: подпись действия видима в шапке списка на любой ширине, поэтому
     // текст «Управление точками» есть и на кнопке, и в заголовке открытой
     // модалки — ровно два вхождения.
     expect(screen.getAllByText('Управление точками')).toHaveLength(2);
     expect(screen.getByLabelText('Закрыть меню действий')).toBeTruthy();
-    fireEvent.press(screen.getByText('Удалить все точки'));
+    await fireEvent.press(screen.getByText('Удалить все точки'));
     await screen.findByText('Удалить все точки?');
 
-    fireEvent.press(screen.getByText('Удалить все'));
+    await fireEvent.press(screen.getByText('Удалить все'));
 
     await waitFor(() => {
       expect(mockPurgePoints).toHaveBeenCalledTimes(1);

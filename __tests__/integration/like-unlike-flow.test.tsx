@@ -94,14 +94,14 @@ describe('Like/Unlike Flow Integration', () => {
   );
 
   it('should like comment and increase count from 0 to 1', async () => {
-    const { rerender } = render(<CommentItem comment={mockComment} />, { wrapper });
+    const { rerender } = await render(<CommentItem comment={mockComment} />, { wrapper });
 
     // Начальное состояние: лайков 0, не лайкнуто
     expect(screen.queryByText('0')).toBeNull(); // Счетчик не показывается при 0 лайках
 
     // Нажимаем "Поставить лайк"
     const likeButton = screen.getByLabelText('Поставить лайк');
-    fireEvent.press(likeButton);
+    await fireEvent.press(likeButton);
 
     await waitFor(() => {
       expect(likeMock).toHaveBeenCalledWith(1);
@@ -110,7 +110,7 @@ describe('Like/Unlike Flow Integration', () => {
 
     // Симулируем обновление данных после лайка
     const likedComment = { ...mockComment, likes_count: 1, is_liked: true };
-    rerender(<CommentItem comment={likedComment} />);
+    await rerender(<CommentItem comment={likedComment} />);
 
     // Проверяем, что счетчик показывает 1
     expect(screen.getByText('1')).toBeTruthy();
@@ -119,14 +119,14 @@ describe('Like/Unlike Flow Integration', () => {
 
   it('should unlike comment and decrease count from 1 to 0', async () => {
     const likedComment = { ...mockComment, likes_count: 1, is_liked: true };
-    const { rerender } = render(<CommentItem comment={likedComment} />, { wrapper });
+    const { rerender } = await render(<CommentItem comment={likedComment} />, { wrapper });
 
     // Начальное состояние: 1 лайк, лайкнуто
     expect(screen.getByText('1')).toBeTruthy();
 
     // Нажимаем "Убрать лайк"
     const unlikeButton = screen.getByLabelText('Убрать лайк');
-    fireEvent.press(unlikeButton);
+    await fireEvent.press(unlikeButton);
 
     await waitFor(() => {
       expect(unlikeMock).toHaveBeenCalledWith(1);
@@ -135,7 +135,7 @@ describe('Like/Unlike Flow Integration', () => {
 
     // Симулируем обновление данных после удаления лайка
     const unlikedComment = { ...mockComment, likes_count: 0, is_liked: false };
-    rerender(<CommentItem comment={unlikedComment} />);
+    await rerender(<CommentItem comment={unlikedComment} />);
 
     // Проверяем, что счетчик исчез (не показывается при 0 лайках)
     expect(screen.queryByText('0')).toBeNull();
@@ -143,14 +143,14 @@ describe('Like/Unlike Flow Integration', () => {
   });
 
   it('should complete full cycle: like (0→1) then unlike (1→0)', async () => {
-    const { rerender } = render(<CommentItem comment={mockComment} />, { wrapper });
+    const { rerender } = await render(<CommentItem comment={mockComment} />, { wrapper });
 
     // Шаг 1: Начальное состояние - 0 лайков
     expect(screen.queryByText('0')).toBeNull();
     const likeButton1 = screen.getByLabelText('Поставить лайк');
 
     // Шаг 2: Ставим лайк
-    fireEvent.press(likeButton1);
+    await fireEvent.press(likeButton1);
 
     await waitFor(() => {
       expect(likeMock).toHaveBeenCalledTimes(1);
@@ -159,13 +159,13 @@ describe('Like/Unlike Flow Integration', () => {
 
     // Шаг 3: Обновляем данные - теперь 1 лайк
     const likedComment = { ...mockComment, likes_count: 1, is_liked: true };
-    rerender(<CommentItem comment={likedComment} />);
+    await rerender(<CommentItem comment={likedComment} />);
 
     expect(screen.getByText('1')).toBeTruthy();
     const unlikeButton = screen.getByLabelText('Убрать лайк');
 
     // Шаг 4: Убираем лайк
-    fireEvent.press(unlikeButton);
+    await fireEvent.press(unlikeButton);
 
     await waitFor(() => {
       expect(unlikeMock).toHaveBeenCalledTimes(1);
@@ -175,7 +175,7 @@ describe('Like/Unlike Flow Integration', () => {
 
     // Шаг 5: Обновляем данные - теперь 0 лайков
     const unlikedComment = { ...mockComment, likes_count: 0, is_liked: false };
-    rerender(<CommentItem comment={unlikedComment} />);
+    await rerender(<CommentItem comment={unlikedComment} />);
 
     // Проверяем финальное состояние
     expect(screen.queryByText('0')).toBeNull(); // Счетчик не показывается
@@ -184,28 +184,28 @@ describe('Like/Unlike Flow Integration', () => {
   });
 
   it('should handle multiple likes and unlikes correctly', async () => {
-    const { rerender } = render(<CommentItem comment={mockComment} />, { wrapper });
+    const { rerender } = await render(<CommentItem comment={mockComment} />, { wrapper });
 
     // Цикл 1: Like
-    fireEvent.press(screen.getByLabelText('Поставить лайк'));
+    await fireEvent.press(screen.getByLabelText('Поставить лайк'));
     await waitFor(() => expect(likeMock).toHaveBeenCalledTimes(1));
 
-    rerender(<CommentItem comment={{ ...mockComment, likes_count: 1, is_liked: true }} />);
+    await rerender(<CommentItem comment={{ ...mockComment, likes_count: 1, is_liked: true }} />);
 
     // Цикл 1: Unlike
-    fireEvent.press(screen.getByLabelText('Убрать лайк'));
+    await fireEvent.press(screen.getByLabelText('Убрать лайк'));
     await waitFor(() => expect(unlikeMock).toHaveBeenCalledTimes(1));
 
-    rerender(<CommentItem comment={{ ...mockComment, likes_count: 0, is_liked: false }} />);
+    await rerender(<CommentItem comment={{ ...mockComment, likes_count: 0, is_liked: false }} />);
 
     // Цикл 2: Like снова
-    fireEvent.press(screen.getByLabelText('Поставить лайк'));
+    await fireEvent.press(screen.getByLabelText('Поставить лайк'));
     await waitFor(() => expect(likeMock).toHaveBeenCalledTimes(2));
 
-    rerender(<CommentItem comment={{ ...mockComment, likes_count: 1, is_liked: true }} />);
+    await rerender(<CommentItem comment={{ ...mockComment, likes_count: 1, is_liked: true }} />);
 
     // Цикл 2: Unlike снова
-    fireEvent.press(screen.getByLabelText('Убрать лайк'));
+    await fireEvent.press(screen.getByLabelText('Убрать лайк'));
     await waitFor(() => expect(unlikeMock).toHaveBeenCalledTimes(2));
 
     // Финальная проверка
@@ -214,27 +214,27 @@ describe('Like/Unlike Flow Integration', () => {
   });
 
   it('should ensure is_liked state is correct after each operation', async () => {
-    const { rerender } = render(<CommentItem comment={mockComment} />, { wrapper });
+    const { rerender } = await render(<CommentItem comment={mockComment} />, { wrapper });
 
     // Проверка 1: Изначально не лайкнуто
     expect(screen.getByLabelText('Поставить лайк')).toBeTruthy();
     expect(screen.queryByLabelText('Убрать лайк')).toBeNull();
 
     // Ставим лайк
-    fireEvent.press(screen.getByLabelText('Поставить лайк'));
+    await fireEvent.press(screen.getByLabelText('Поставить лайк'));
     await waitFor(() => expect(likeMock).toHaveBeenCalled());
 
     // Проверка 2: После лайка is_liked должен быть true
-    rerender(<CommentItem comment={{ ...mockComment, likes_count: 1, is_liked: true }} />);
+    await rerender(<CommentItem comment={{ ...mockComment, likes_count: 1, is_liked: true }} />);
     expect(screen.queryByLabelText('Поставить лайк')).toBeNull();
     expect(screen.getByLabelText('Убрать лайк')).toBeTruthy();
 
     // Убираем лайк
-    fireEvent.press(screen.getByLabelText('Убрать лайк'));
+    await fireEvent.press(screen.getByLabelText('Убрать лайк'));
     await waitFor(() => expect(unlikeMock).toHaveBeenCalled());
 
     // Проверка 3: После удаления лайка is_liked должен быть false
-    rerender(<CommentItem comment={{ ...mockComment, likes_count: 0, is_liked: false }} />);
+    await rerender(<CommentItem comment={{ ...mockComment, likes_count: 0, is_liked: false }} />);
     expect(screen.getByLabelText('Поставить лайк')).toBeTruthy();
     expect(screen.queryByLabelText('Убрать лайк')).toBeNull();
   });

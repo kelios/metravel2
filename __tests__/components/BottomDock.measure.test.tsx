@@ -24,14 +24,14 @@ describe('BottomDock: замер высоты дока на native', () => {
     Object.defineProperty(Platform, 'OS', { value: originalOS, configurable: true })
   })
 
-  it('высоту отдаёт обёртка дока, а не ряд иконок', () => {
+  it('высоту отдаёт обёртка дока, а не ряд иконок', async () => {
     const onDockHeight = jest.fn()
-    const { getByTestId } = render(<BottomDock onDockHeight={onDockHeight} />)
+    const { getByTestId } = await render(<BottomDock onDockHeight={onDockHeight} />)
 
     expect(getByTestId('footer-dock-measure').props.onLayout).toBeUndefined()
     expect(typeof getByTestId('footer-dock-wrapper').props.onLayout).toBe('function')
 
-    fireEvent(getByTestId('footer-dock-wrapper'), 'layout', {
+    await fireEvent(getByTestId('footer-dock-wrapper'), 'layout', {
       nativeEvent: { layout: { x: 0, y: 0, width: 402, height: 89 } },
     })
     expect(onDockHeight).toHaveBeenLastCalledWith(89)

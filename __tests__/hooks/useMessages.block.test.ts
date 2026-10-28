@@ -50,10 +50,10 @@ afterEach(() => stopGuard())
 
 describe('useThreads', () => {
   it('hides the blocked conversation at once and reloads on unblock', async () => {
-    const { result } = renderHook(() => useThreads(true, false))
+    const { result } = await renderHook(() => useThreads(true, false))
     await waitFor(() => expect(result.current.threads).toHaveLength(2))
 
-    act(() => applyAuthorBlock(qc, BLOCKED))
+    await act(() => applyAuthorBlock(qc, BLOCKED))
     expect(result.current.threads.map((t) => t.id)).toEqual([2])
 
     // Перечитывание при живом блоке не возвращает переписку.
@@ -70,10 +70,10 @@ describe('useThreads', () => {
 
 describe('useThreadMessages', () => {
   it('drops messages of the blocked sender', async () => {
-    const { result } = renderHook(() => useThreadMessages(1, false))
+    const { result } = await renderHook(() => useThreadMessages(1, false))
     await waitFor(() => expect(result.current.messages).toHaveLength(2))
 
-    act(() => applyAuthorBlock(qc, BLOCKED))
+    await act(() => applyAuthorBlock(qc, BLOCKED))
     expect(result.current.messages.map((m) => m.id)).toEqual([11])
   })
 })

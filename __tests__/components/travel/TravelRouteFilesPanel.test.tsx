@@ -94,12 +94,12 @@ describe('TravelRouteFilesPanel drag-and-drop', () => {
       ext: 'gpx',
       size: 5420,
     });
-    const screen = render(<TravelRouteFilesPanel travelId={640} allowUpload />);
+    const screen = await render(<TravelRouteFilesPanel travelId={640} allowUpload />);
     const panel = screen.getByTestId('travel-route-files-panel');
     const dropEvent = makeDropEvent([file]);
 
-    fireEvent(panel, 'dragOver', dropEvent);
-    fireEvent(panel, 'drop', dropEvent);
+    await fireEvent(panel, 'dragOver', dropEvent);
+    await fireEvent(panel, 'drop', dropEvent);
 
     await waitFor(() => {
       expect(uploadTravelRouteFile).toHaveBeenCalledWith(640, file);
@@ -111,10 +111,10 @@ describe('TravelRouteFilesPanel drag-and-drop', () => {
 
   it('rejects unsupported dropped files without uploading them', async () => {
     const file = new File(['text'], 'notes.txt', { type: 'text/plain' });
-    const screen = render(<TravelRouteFilesPanel travelId={640} allowUpload />);
+    const screen = await render(<TravelRouteFilesPanel travelId={640} allowUpload />);
     const panel = screen.getByTestId('travel-route-files-panel');
 
-    fireEvent(panel, 'drop', makeDropEvent([file]));
+    await fireEvent(panel, 'drop', makeDropEvent([file]));
 
     await waitFor(() => {
       expect(screen.getByText('Поддерживаются только файлы .gpx и .kml')).toBeTruthy();

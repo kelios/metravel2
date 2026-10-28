@@ -57,13 +57,13 @@ describe('SubscribeButton', () => {
         mockedUnsubscribeFromUser.mockResolvedValue(null);
     });
 
-    it('renders nothing when viewing own profile', () => {
+    it('renders nothing when viewing own profile', async () => {
         mockedUseAuth.mockReturnValue({
             isAuthenticated: true,
             userId: '42',
         });
 
-        const { toJSON } = render(
+        const { toJSON } = await render(
             <SubscribeButton targetUserId="42" />,
             { wrapper: createWrapper() }
         );
@@ -74,7 +74,7 @@ describe('SubscribeButton', () => {
     it('renders "Подписаться" when not subscribed', async () => {
         mockedFetchMySubscriptions.mockResolvedValue([]);
 
-        const { findByText } = render(
+        const { findByText } = await render(
             <SubscribeButton targetUserId="99" />,
             { wrapper: createWrapper() }
         );
@@ -88,7 +88,7 @@ describe('SubscribeButton', () => {
             { id: 5, first_name: 'Test', last_name: 'User', user: 99 },
         ]);
 
-        const { findByText } = render(
+        const { findByText } = await render(
             <SubscribeButton targetUserId="99" />,
             { wrapper: createWrapper() }
         );
@@ -100,13 +100,13 @@ describe('SubscribeButton', () => {
     it('calls subscribeToUser on press when not subscribed', async () => {
         mockedFetchMySubscriptions.mockResolvedValue([]);
 
-        const { findByText } = render(
+        const { findByText } = await render(
             <SubscribeButton targetUserId="99" />,
             { wrapper: createWrapper() }
         );
 
         const button = await findByText('Подписаться');
-        fireEvent.press(button);
+        await fireEvent.press(button);
 
         await waitFor(() => {
             expect(mockedSubscribeToUser).toHaveBeenCalledWith('99');
@@ -118,13 +118,13 @@ describe('SubscribeButton', () => {
             { id: 5, first_name: 'Test', last_name: 'User', user: 99 },
         ]);
 
-        const { findByText } = render(
+        const { findByText } = await render(
             <SubscribeButton targetUserId="99" />,
             { wrapper: createWrapper() }
         );
 
         const button = await findByText('Вы подписаны');
-        fireEvent.press(button);
+        await fireEvent.press(button);
 
         await waitFor(() => {
             expect(mockedUnsubscribeFromUser).toHaveBeenCalledWith('99');
@@ -137,7 +137,7 @@ describe('SubscribeButton', () => {
             userId: null,
         });
 
-        const { findByText } = render(
+        const { findByText } = await render(
             <SubscribeButton targetUserId="99" />,
             { wrapper: createWrapper() }
         );
@@ -146,8 +146,8 @@ describe('SubscribeButton', () => {
         expect(button).toBeTruthy();
     });
 
-    it('renders nothing when targetUserId is null', () => {
-        const { toJSON } = render(
+    it('renders nothing when targetUserId is null', async () => {
+        const { toJSON } = await render(
             <SubscribeButton targetUserId={null} />,
             { wrapper: createWrapper() }
         );
@@ -155,10 +155,10 @@ describe('SubscribeButton', () => {
         expect(toJSON()).toBeNull();
     });
 
-    it('shows loading state while subscriptions are being fetched', () => {
+    it('shows loading state while subscriptions are being fetched', async () => {
         mockedFetchMySubscriptions.mockReturnValue(new Promise(() => {}));
 
-        const { getByLabelText } = render(
+        const { getByLabelText } = await render(
             <SubscribeButton targetUserId="99" />,
             { wrapper: createWrapper() }
         );
@@ -170,11 +170,11 @@ describe('SubscribeButton', () => {
     it('shows success toast after subscribe', async () => {
         const { showToast } = require('@/utils/toast');
         mockedFetchMySubscriptions.mockResolvedValue([]);
-        const { findByText } = render(
+        const { findByText } = await render(
             <SubscribeButton targetUserId="99" />,
             { wrapper: createWrapper() }
         );
-        fireEvent.press(await findByText('Подписаться'));
+        await fireEvent.press(await findByText('Подписаться'));
         await waitFor(() => {
             expect(showToast).toHaveBeenCalledWith(
                 expect.objectContaining({ type: 'success', text1: 'Вы подписаны' })
@@ -187,13 +187,13 @@ describe('SubscribeButton', () => {
         mockedFetchMySubscriptions.mockResolvedValue([]);
         mockedSubscribeToUser.mockRejectedValue(new Error('Network error'));
 
-        const { findByText } = render(
+        const { findByText } = await render(
             <SubscribeButton targetUserId="99" />,
             { wrapper: createWrapper() }
         );
 
         const button = await findByText('Подписаться');
-        fireEvent.press(button);
+        await fireEvent.press(button);
 
         await waitFor(() => {
             expect(showToast).toHaveBeenCalledWith(
@@ -209,13 +209,13 @@ describe('SubscribeButton', () => {
         ]);
         mockedUnsubscribeFromUser.mockRejectedValue(new Error('Network error'));
 
-        const { findByText } = render(
+        const { findByText } = await render(
             <SubscribeButton targetUserId="99" />,
             { wrapper: createWrapper() }
         );
 
         const button = await findByText('Вы подписаны');
-        fireEvent.press(button);
+        await fireEvent.press(button);
 
         await waitFor(() => {
             expect(showToast).toHaveBeenCalledWith(

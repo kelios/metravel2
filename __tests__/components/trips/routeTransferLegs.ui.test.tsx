@@ -38,8 +38,8 @@ const MUC: [number, number] = [11.786, 48.3538]
 const LUX: [number, number] = [6.2044, 49.6233]
 const ECHTERNACH: [number, number] = [6.4214, 49.8117]
 
-const renderForm = (editingIndex: number, onChange = jest.fn()) =>
-  render(
+const renderForm = async (editingIndex: number, onChange = jest.fn()) =>
+  await render(
     <RoutePointEditForm
       styles={styles}
       colors={colors}
@@ -73,14 +73,14 @@ const renderForm = (editingIndex: number, onChange = jest.fn()) =>
   )
 
 describe('«Как добираюсь сюда» in the point form', () => {
-  it('is not offered on the first point', () => {
-    const { queryByTestId } = renderForm(0)
+  it('is not offered on the first point', async () => {
+    const { queryByTestId } = await renderForm(0)
     expect(queryByTestId('route-builder-arrival-field')).toBeNull()
   })
 
-  it('offers inherit plus five modes on a later point and reports the choice', () => {
+  it('offers inherit plus five modes on a later point and reports the choice', async () => {
     const onChange = jest.fn()
-    const { getByTestId, getByText } = renderForm(2, onChange)
+    const { getByTestId, getByText } = await renderForm(2, onChange)
     const field = getByTestId('route-builder-arrival-field')
     expect(within(field).getByText('Как добираюсь сюда')).toBeTruthy()
     for (const id of ['inherit', 'train', 'flight', 'bus', 'ferry', 'transfer']) {
@@ -88,9 +88,9 @@ describe('«Как добираюсь сюда» in the point form', () => {
     }
     expect(getByTestId('route-builder-arrival-inherit')).toHaveProp('accessibilityState', { selected: true })
     expect(getByText('Как вся поездка')).toBeTruthy()
-    fireEvent.press(getByTestId('route-builder-arrival-flight'))
+    await fireEvent.press(getByTestId('route-builder-arrival-flight'))
     expect(onChange).toHaveBeenLastCalledWith('flight')
-    fireEvent.press(getByTestId('route-builder-arrival-inherit'))
+    await fireEvent.press(getByTestId('route-builder-arrival-inherit'))
     expect(onChange).toHaveBeenLastCalledWith(null)
   })
 })
@@ -109,9 +109,9 @@ describe('routeSignature carries the arrival mode', () => {
 })
 
 describe('transfer plaque in the point list', () => {
-  it('renders «Перелёт · 431 км» right above the point reached by plane', () => {
+  it('renders «Перелёт · 431 км» right above the point reached by plane', async () => {
     const route = [point('a', MUC), point('b', LUX, 'flight'), point('c', ECHTERNACH)]
-    const { getByTestId, toJSON } = render(
+    const { getByTestId, toJSON } = await render(
       <RouteDayGroups
         route={route}
         startDate="2026-09-25"
@@ -149,8 +149,8 @@ describe('separate totals', () => {
       .toMatch(/^Переезды 2\s?240\s?км$/)
   })
 
-  it('adds a «Переезды» tile next to an unchanged distance tile', () => {
-    const { getByTestId } = render(<RouteSummaryBar summary={summary} transport="foot" />)
+  it('adds a «Переезды» tile next to an unchanged distance tile', async () => {
+    const { getByTestId } = await render(<RouteSummaryBar summary={summary} transport="foot" />)
     expect(getByTestId('route-summary-metric-distance-value')).toHaveTextContent(/^189\s?км$/)
     expect(getByTestId('route-summary-metric-transfers-value')).toHaveTextContent(/^2\s?240\s?км$/)
     expect(getByTestId('route-summary-metric-transfers-label')).toHaveTextContent('Переезды')

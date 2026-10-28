@@ -204,34 +204,34 @@ describe('quest city SEO focus lifecycle', () => {
     jest.useRealTimers()
   })
 
-  it.each(['web', 'android', 'ios'] as const)('resolves a retired city segment on %s without a server redirect', (platform) => {
+  it.each(['web', 'android', 'ios'] as const)('resolves a retired city segment on %s without a server redirect', async (platform) => {
     Object.defineProperty(Platform, 'OS', { value: platform, configurable: true })
     mockLegacyCityId = 92
     mockCityParam = '92'
-    const screen = render(<QuestsByCityScreen />)
+    const screen = await render(<QuestsByCityScreen />)
     expect(mockReplace).not.toHaveBeenCalled()
     expect(mockUseQuestCityWalk).toHaveBeenCalledWith(
       expect.arrayContaining([expect.objectContaining({ cityId: '121' })]),
       { enabled: platform === 'web' },
     )
-    screen.unmount()
+    await screen.unmount()
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
   })
 
-  it('deduplicates focused city descriptions and restores the generic head across blur/refocus/unmount', () => {
-    const screen = render(<QuestsByCityScreen />)
+  it('deduplicates focused city descriptions and restores the generic head across blur/refocus/unmount', async () => {
+    const screen = await render(<QuestsByCityScreen />)
 
     expectSingleDescriptionSet(CITY_DESCRIPTION)
 
     mockUseIsFocused.mockReturnValue(false)
-    screen.rerender(<QuestsByCityScreen />)
+    await screen.rerender(<QuestsByCityScreen />)
     expectSingleDescriptionSet(GENERIC_DESCRIPTION)
 
     mockUseIsFocused.mockReturnValue(true)
-    screen.rerender(<QuestsByCityScreen />)
+    await screen.rerender(<QuestsByCityScreen />)
     expectSingleDescriptionSet(CITY_DESCRIPTION)
 
-    screen.unmount()
+    await screen.unmount()
     expectSingleDescriptionSet(GENERIC_DESCRIPTION)
   })
 
@@ -239,39 +239,39 @@ describe('quest city SEO focus lifecycle', () => {
   // resetRoot к записи истории до первого визита города, и скрытый, ещё
   // смонтированный экран города получает пустой алиас. Пустой алиас скрытого
   // экрана — не «город не найден».
-  it('keeps a hidden city landing with a history-reset alias from redirecting', () => {
-    const screen = render(<QuestsByCityScreen />)
+  it('keeps a hidden city landing with a history-reset alias from redirecting', async () => {
+    const screen = await render(<QuestsByCityScreen />)
 
     mockUseIsFocused.mockReturnValue(false)
     mockCityParam = ''
-    screen.rerender(<QuestsByCityScreen />)
+    await screen.rerender(<QuestsByCityScreen />)
 
     mockUseIsFocused.mockReturnValue(true)
     mockCityParam = 'rome'
-    screen.rerender(<QuestsByCityScreen />)
+    await screen.rerender(<QuestsByCityScreen />)
 
     expect(mockReplace).not.toHaveBeenCalled()
   })
 
-  it('redirects an unknown city alias only once its screen is focused', () => {
+  it('redirects an unknown city alias only once its screen is focused', async () => {
     mockUseIsFocused.mockReturnValue(false)
     mockCityParam = 'unknown-city'
-    const screen = render(<QuestsByCityScreen />)
+    const screen = await render(<QuestsByCityScreen />)
     expect(mockReplace).not.toHaveBeenCalled()
 
     mockUseIsFocused.mockReturnValue(true)
-    screen.rerender(<QuestsByCityScreen />)
+    await screen.rerender(<QuestsByCityScreen />)
     expect(mockReplace).toHaveBeenCalledWith('/quests')
   })
 
-  it('removes city descriptions on blur when the previous head had none', () => {
+  it('removes city descriptions on blur when the previous head had none', async () => {
     document.head.innerHTML = ''
-    const screen = render(<QuestsByCityScreen />)
+    const screen = await render(<QuestsByCityScreen />)
 
     expectSingleDescriptionSet(CITY_DESCRIPTION)
 
     mockUseIsFocused.mockReturnValue(false)
-    screen.rerender(<QuestsByCityScreen />)
+    await screen.rerender(<QuestsByCityScreen />)
     for (const selector of DESCRIPTION_SELECTORS) {
       expect(document.querySelectorAll(selector)).toHaveLength(0)
     }
@@ -283,29 +283,29 @@ describe('quest city SEO focus lifecycle', () => {
    * отрендеренную страницу без того самого содержания, ради которого она
    * переписана (#1569).
    */
-  it('keeps the static city section until the runtime notes are loaded', () => {
+  it('keeps the static city section until the runtime notes are loaded', async () => {
     mockUseQuestCityWalk.mockReturnValueOnce({ walk: null, settled: false })
     document.body.innerHTML =
       '<section data-ssg-quest-city="true"><h1>Static city heading</h1></section>'
 
-    render(<QuestsByCityScreen />)
+    await render(<QuestsByCityScreen />)
 
     expect(document.querySelector('section[data-ssg-quest-city="true"]')).not.toBeNull()
   })
 
   // #2754: заметки встают над маршрутами и соседями; подвал, нарисованный до
   // окончательного набора заметок, уезжал бы вниз под ними.
-  it('holds the city footer until the walk notes are settled', () => {
+  it('holds the city footer until the walk notes are settled', async () => {
     mockUseQuestCityWalk.mockReturnValue({ walk: null, settled: false })
-    render(<QuestsByCityScreen />)
+    await render(<QuestsByCityScreen />)
     expect(mockCatalogRoute?.footer).toBeNull()
 
     mockUseQuestCityWalk.mockReturnValue({ walk: WALK_MODEL, settled: true })
-    render(<QuestsByCityScreen />)
+    await render(<QuestsByCityScreen />)
     expect(mockCatalogRoute?.footer).toBeTruthy()
   })
 
-  it('removes only the stale shared SSG section once the runtime notes are loaded', () => {
+  it('removes only the stale shared SSG section once the runtime notes are loaded', async () => {
     document.body.innerHTML = [
       '<section data-ssg-quest-city="true"><h1>Static city heading</h1></section>',
       '<h1 data-unrelated-heading="true">Unrelated heading</h1>',
@@ -315,15 +315,15 @@ describe('quest city SEO focus lifecycle', () => {
       '<style data-ssg-quest-city-style="true">[data-ssg-quest-city]{display:none}</style>',
     )
 
-    render(<QuestsByCityScreen />)
+    await render(<QuestsByCityScreen />)
 
     expect(document.querySelector('section[data-ssg-quest-city="true"]')).toBeNull()
     expect(document.querySelector('style[data-ssg-quest-city-style="true"]')).toBeNull()
     expect(document.querySelector('h1[data-unrelated-heading="true"]')?.textContent).toBe('Unrelated heading')
   })
 
-  it('renders the catalog with the URL city as its fixed slice, own SEO and copy below the grid', () => {
-    render(<QuestsByCityScreen />)
+  it('renders the catalog with the URL city as its fixed slice, own SEO and copy below the grid', async () => {
+    await render(<QuestsByCityScreen />)
 
     expect(mockCatalogRoute?.selectionId).toBe('121')
     expect(mockCatalogRoute?.seo).toBeTruthy()
@@ -331,9 +331,9 @@ describe('quest city SEO focus lifecycle', () => {
   })
 
   it('leaves to another city page, or hands any other slice to /quests', async () => {
-    render(<QuestsByCityScreen />)
+    await render(<QuestsByCityScreen />)
 
-    act(() => mockCatalogRoute?.onLeave('140'))
+    await act(() => mockCatalogRoute?.onLeave('140'))
     expect(mockPush).toHaveBeenCalledWith('/quests/naples')
 
     mockPush.mockClear()

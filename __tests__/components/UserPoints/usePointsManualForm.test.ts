@@ -26,8 +26,8 @@ const NEW_POINT_LABEL = i18nT('map:components.UserPoints.usePointsManualForm.nov
 
 const COORDS = { lat: 53.451, lng: 26.473 };
 
-const renderManualForm = () =>
-  renderHook(() =>
+const renderManualForm = async () =>
+  await renderHook(() =>
     usePointsManualForm({
       blurActiveElementForModal: jest.fn(),
       setShowActions: jest.fn(),
@@ -59,7 +59,7 @@ describe('usePointsManualForm — автоимя ручной точки', () =>
       display_name: 'Мирский замок, Мир, Гродненская область, Беларусь',
     });
 
-    const { result } = renderManualForm();
+    const { result } = await renderManualForm();
     await act(async () => {
       result.current.handleMapPress(COORDS);
     });
@@ -73,7 +73,7 @@ describe('usePointsManualForm — автоимя ручной точки', () =>
       display_name: '332, Soblówka, Polska',
     });
 
-    const { result } = renderManualForm();
+    const { result } = await renderManualForm();
     await act(async () => {
       result.current.handleMapPress(COORDS);
     });
@@ -87,7 +87,7 @@ describe('usePointsManualForm — автоимя ручной точки', () =>
   it('пустой ответ геокодера даёт «Новая точка», а не строку координат', async () => {
     answerWith({ address: {} });
 
-    const { result } = renderManualForm();
+    const { result } = await renderManualForm();
     await act(async () => {
       result.current.handleMapPress(COORDS);
     });
@@ -98,7 +98,7 @@ describe('usePointsManualForm — автоимя ручной точки', () =>
 
   it('refreshes the untouched fallback on locale change without geocoding again, preserving user edits', async () => {
     answerWith({ address: {}, display_name: '' });
-    const { result } = renderManualForm();
+    const { result } = await renderManualForm();
     await act(async () => result.current.handleMapPress(COORDS));
     await waitFor(() => expect(mockNominatimReverse).toHaveBeenCalled());
     const requests = mockNominatimReverse.mock.calls.length;
@@ -106,7 +106,7 @@ describe('usePointsManualForm — автоимя ручной точки', () =>
       await act(async () => { await i18n.changeLanguage('en') });
       expect(result.current.manualName).toBe(i18nT('map:components.UserPoints.usePointsManualForm.novaya_tochka_4d3f685d'));
       expect(mockNominatimReverse).toHaveBeenCalledTimes(requests);
-      act(() => { result.current.setManualNameTouched(true); result.current.setManualName('my point') });
+      await act(() => { result.current.setManualNameTouched(true); result.current.setManualName('my point') });
       await act(async () => { await i18n.changeLanguage('pl') });
       expect(result.current.manualName).toBe('my point');
       expect(mockNominatimReverse).toHaveBeenCalledTimes(requests);
@@ -129,11 +129,11 @@ describe('usePointsManualForm — автоимя ручной точки', () =>
       },
     });
 
-    const { result } = renderManualForm();
-    act(() => {
+    const { result } = await renderManualForm();
+    await act(() => {
       result.current.handleMapPress(COORDS);
     });
-    act(() => {
+    await act(() => {
       result.current.setManualNameTouched(true);
       result.current.setManualName('Моя точка');
     });

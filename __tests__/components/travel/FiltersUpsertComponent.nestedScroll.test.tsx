@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
-import { Platform, ScrollView } from 'react-native';
+import { Platform } from 'react-native';
 import FiltersUpsertComponent from '@/components/travel/FiltersUpsertComponent';
 
 jest.mock('@/components/forms/MultiSelectField', () => ({
@@ -55,8 +55,8 @@ describe('FiltersUpsertComponent scroll ownership', () => {
     month: [],
   };
 
-  const renderExtras = () =>
-    render(
+  const renderExtras = async () =>
+    await render(
       <FiltersUpsertComponent
         filters={filters}
         formData={formData}
@@ -72,21 +72,21 @@ describe('FiltersUpsertComponent scroll ownership', () => {
       />
     );
 
-  it('does not nest its own vertical ScrollView inside the wizard step', () => {
+  it('does not nest its own vertical ScrollView inside the wizard step', async () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'android';
 
-    const { UNSAFE_queryAllByType } = renderExtras();
-    expect(UNSAFE_queryAllByType(ScrollView)).toHaveLength(0);
+    const { container: _hostContainer } = await renderExtras();
+    expect(_hostContainer.queryAll(node => node.type === "RCTScrollView", { includeSelf: true })).toHaveLength(0);
 
     (Platform as any).OS = prevOs;
   });
 
-  it('keeps the exact visited-date field reachable in the additional fields group', () => {
+  it('keeps the exact visited-date field reachable in the additional fields group', async () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'android';
 
-    const { getByText } = renderExtras();
+    const { getByText } = await renderExtras();
     expect(getByText('Дата, когда был(а)')).toBeTruthy();
 
     (Platform as any).OS = prevOs;

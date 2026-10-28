@@ -17,10 +17,10 @@ describe('useTravelFormData – cover photo deletion + save', () => {
     jest.clearAllMocks();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.runOnlyPendingTimers();
     jest.useRealTimers();
-    cleanup();
+    await cleanup();
   });
 
   const newTravelOptions = {
@@ -37,9 +37,9 @@ describe('useTravelFormData – cover photo deletion + save', () => {
       ...payload,
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useTravelFormData(newTravelOptions),
-      { concurrentRoot: false },
+      {  },
     );
 
     // Advance past any initial timers
@@ -48,7 +48,7 @@ describe('useTravelFormData – cover photo deletion + save', () => {
     expect(result.current.isInitialLoading).toBe(false);
 
     // Simulate existing travel with a cover image
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 42,
@@ -59,7 +59,7 @@ describe('useTravelFormData – cover photo deletion + save', () => {
     });
 
     // Simulate cover deletion (what TravelWizardStepMedia.handleConfirmDeleteCover does)
-    act(() => {
+    await act(() => {
       result.current.setFormData((prev: any) => ({
         ...prev,
         travel_image_thumb_small_url: null,
@@ -93,15 +93,15 @@ describe('useTravelFormData – cover photo deletion + save', () => {
       travel_image_thumb_small_url: null,
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useTravelFormData(newTravelOptions),
-      { concurrentRoot: false },
+      {  },
     );
 
     await act(async () => { jest.advanceTimersByTime(100); });
 
     // Set up travel with cover, then delete it
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 42,
@@ -111,7 +111,7 @@ describe('useTravelFormData – cover photo deletion + save', () => {
       });
     });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData((prev: any) => ({
         ...prev,
         travel_image_thumb_small_url: null,
@@ -139,15 +139,15 @@ describe('useTravelFormData – cover photo deletion + save', () => {
       travel_image_thumb_small_url: 'https://metravel.by/covers/42_small.webp',
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useTravelFormData(newTravelOptions),
-      { concurrentRoot: false },
+      {  },
     );
 
     await act(async () => { jest.advanceTimersByTime(100); });
 
     // Set up travel with cover
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 42,
@@ -158,7 +158,7 @@ describe('useTravelFormData – cover photo deletion + save', () => {
     });
 
     // Delete cover
-    act(() => {
+    await act(() => {
       result.current.setFormData((prev: any) => ({
         ...prev,
         travel_image_thumb_small_url: null,
@@ -185,14 +185,14 @@ describe('useTravelFormData – cover photo deletion + save', () => {
       ...payload,
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useTravelFormData(newTravelOptions),
-      { concurrentRoot: false },
+      {  },
     );
 
     await act(async () => { jest.advanceTimersByTime(100); });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 42,
@@ -203,7 +203,7 @@ describe('useTravelFormData – cover photo deletion + save', () => {
     });
 
     // Delete cover
-    act(() => {
+    await act(() => {
       result.current.setFormData((prev: any) => ({
         ...prev,
         travel_image_thumb_small_url: null,
@@ -229,15 +229,15 @@ describe('useTravelFormData – cover photo deletion + save', () => {
       gallery: [],
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useTravelFormData(newTravelOptions),
-      { concurrentRoot: false },
+      {  },
     );
 
     await act(async () => { jest.advanceTimersByTime(100); });
 
     // Set up travel with gallery
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 42,
@@ -250,7 +250,7 @@ describe('useTravelFormData – cover photo deletion + save', () => {
     });
 
     // Remove one gallery image (simulate gallery change handler)
-    act(() => {
+    await act(() => {
       result.current.setFormData((prev: any) => ({
         ...prev,
         gallery: ['https://metravel.by/gallery/1.webp'],

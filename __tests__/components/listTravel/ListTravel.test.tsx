@@ -1,3 +1,4 @@
+import { createContext } from 'react';
 import { render, screen, waitFor } from '@testing-library/react-native';
 import { Platform } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -6,6 +7,7 @@ import { restoreWindowStubs, stubWindowProperties } from '../../helpers/windowSt
 
 const mockRouterPush = jest.fn();
 const mockUseHydrationReady = jest.fn(() => true);
+const mockHydrationContext = createContext<boolean | undefined>(undefined);
 const mockMarkSsgFirstScreenReady = jest.fn();
 
 // Базовый мок для AuthContext и маршрута, который можно перенастраивать в тестах
@@ -28,10 +30,13 @@ jest.mock('@/context/AuthContext', () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-jest.mock('@/hooks/useHydrationReady', () => ({
-  useHydrationReady: () => mockUseHydrationReady(),
-  markSsgFirstScreenReady: () => mockMarkSsgFirstScreenReady(),
-}));
+jest.mock('@/hooks/useHydrationReady', () => {
+  const React = require('react');
+  return {
+    useHydrationReady: () => React.useContext(mockHydrationContext) ?? mockUseHydrationReady(),
+    markSsgFirstScreenReady: () => mockMarkSsgFirstScreenReady(),
+  };
+});
 
 // Mock dependencies
 jest.mock('@/components/listTravel/RecommendationsTabs', () => ({
@@ -175,20 +180,20 @@ describe('ListTravel', () => {
     queryClient.clear();
   });
 
-  const renderComponent = () =>
-    render(
+  const renderComponent = async () =>
+    await render(
       <QueryClientProvider client={queryClient}>
         <ListTravel />
       </QueryClientProvider>
     );
 
   it('renders the search input', async () => {
-    renderComponent();
+    await renderComponent();
     expect(await screen.findByPlaceholderText('Найти маршрут…')).toBeTruthy();
   });
 
   it('renders an empty state message when there are no items', async () => {
-    renderComponent();
+    await renderComponent();
     expect(await screen.findByText(/Пока нет маршрутов/i)).toBeTruthy();
   });
 
@@ -207,12 +212,12 @@ describe('ListTravel', () => {
       setNewPassword: jest.fn(),
     });
 
-    const firstRender = renderComponent();
+    const firstRender = await renderComponent();
 
     await waitFor(() => {
       expect(screen.queryByText(/Пока нет путешествий/i)).toBeNull();
     });
-    firstRender.unmount();
+    await firstRender.unmount();
 
     // Этап 2: когда userId появляется, снова рендерим список и ожидаем стандартное пустое состояние
     mockUseRoute.mockReturnValue({ name: 'metravel' });
@@ -228,7 +233,7 @@ describe('ListTravel', () => {
       setNewPassword: jest.fn(),
     });
 
-    renderComponent();
+    await renderComponent();
 
     expect(await screen.findByText(/Пока нет путешествий/i)).toBeTruthy();
   });
@@ -247,14 +252,14 @@ describe('ListTravel', () => {
       setNewPassword: jest.fn(),
     });
 
-    renderComponent();
+    await renderComponent();
 
     expect(await screen.findByText('Войдите в аккаунт')).toBeTruthy();
     expect(screen.getByText(/видеть свои путешествия/i)).toBeTruthy();
     expect(screen.queryByText(/Пока нет путешествий/i)).toBeNull();
   });
 
-  it('keeps own-user routes neutral while auth is bootstrapping', () => {
+  it('keeps own-user routes neutral while auth is bootstrapping', async () => {
     mockUseRoute.mockReturnValue({ name: 'metravel' });
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
@@ -264,7 +269,7 @@ describe('ListTravel', () => {
       userId: null,
     });
 
-    renderComponent();
+    await renderComponent();
 
     expect(screen.getByTestId('list-travel-auth-bootstrap')).toBeTruthy();
     expect(screen.queryByText('Войдите в аккаунт')).toBeNull();
@@ -282,17 +287,22 @@ describe('ListTravel', () => {
       userId: '123',
     });
 
-    const rendered = renderComponent();
+    // Hydration is a subscribed React update; changing a plain mock cannot
+    // invalidate memo(ListTravelBase) when its props stay equal.
+    const hydrationTree = (ready: boolean) => (
+      <QueryClientProvider client={queryClient}>
+        <mockHydrationContext.Provider value={ready}>
+          <ListTravel />
+        </mockHydrationContext.Provider>
+      </QueryClientProvider>
+    );
+    const rendered = await render(hydrationTree(false));
 
     expect(screen.getByTestId('list-travel-auth-bootstrap')).toBeTruthy();
     expect(screen.queryByPlaceholderText('Найти маршрут…')).toBeNull();
 
     mockUseHydrationReady.mockReturnValue(true);
-    rendered.rerender(
-      <QueryClientProvider client={queryClient}>
-        <ListTravel />
-      </QueryClientProvider>
-    );
+    await rendered.rerender(hydrationTree(true));
 
     expect(await screen.findByPlaceholderText('Найти маршрут…')).toBeTruthy();
   });
@@ -311,7 +321,7 @@ describe('ListTravel', () => {
     const originalOS = Platform.OS;
     (Platform as any).OS = 'web';
 
-    renderComponent();
+    await renderComponent();
 
     await waitFor(() => {
       expect(travelsApi.deleteTravel).toHaveBeenCalledWith('1');
@@ -338,7 +348,7 @@ describe('ListTravel', () => {
     const originalOS = Platform.OS;
     (Platform as any).OS = 'web';
 
-    renderComponent();
+    await renderComponent();
 
     await waitFor(() => {
       expect(travelsApi.deleteTravel).toHaveBeenCalledWith('2');
@@ -367,7 +377,7 @@ describe('ListTravel', () => {
     const originalOS = Platform.OS;
     (Platform as any).OS = 'web';
 
-    renderComponent();
+    await renderComponent();
 
     await waitFor(() => {
       expect(travelsApi.deleteTravel).toHaveBeenCalledWith('2977');
@@ -394,7 +404,7 @@ describe('ListTravel', () => {
     const originalOS = Platform.OS;
     (Platform as any).OS = 'web';
 
-    renderComponent();
+    await renderComponent();
 
 
     await waitFor(() => {
@@ -427,7 +437,7 @@ describe('ListTravel', () => {
         hasMore: false,
       });
 
-      renderComponent();
+      await renderComponent();
 
       await waitFor(() => {
         expect(getMark()).toHaveBeenCalledTimes(1);
@@ -437,7 +447,7 @@ describe('ListTravel', () => {
     });
 
     it('сигналит готовность и на честном пустом состоянии', async () => {
-      renderComponent();
+      await renderComponent();
 
       expect(await screen.findByText(/Пока нет маршрутов/i)).toBeTruthy();
       await waitFor(() => {
@@ -449,20 +459,20 @@ describe('ListTravel', () => {
       const travelListQueries: any = require('@/api/travelListQueries');
       travelListQueries.fetchTravels.mockImplementationOnce(() => new Promise(() => {}));
 
-      renderComponent();
+      await renderComponent();
 
       expect(await screen.findByPlaceholderText('Найти маршрут…')).toBeTruthy();
       expect(getMark()).not.toHaveBeenCalled();
     });
 
     it('на анмаунте вызывает cleanup утилиты', async () => {
-      const rendered = renderComponent();
+      const rendered = await renderComponent();
 
       await waitFor(() => {
         expect(getMark()).toHaveBeenCalledTimes(1);
       });
 
-      rendered.unmount();
+      await rendered.unmount();
       expect(cleanupSpy).toHaveBeenCalledTimes(1);
     });
   });

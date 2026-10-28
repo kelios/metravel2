@@ -27,9 +27,9 @@ describe('MapScreenShell on native tablet width (#2155)', () => {
     Object.defineProperty(Platform, 'OS', { value: originalOS });
   });
 
-  const renderShell = (isMobile: boolean) => {
+  const renderShell = async (isMobile: boolean) => {
     const styles = getStyles(isMobile, 0, themedColors);
-    const utils = render(
+    const utils = await render(
       <MapScreenShell
         styles={styles}
         seoBlock={null}
@@ -59,9 +59,9 @@ describe('MapScreenShell on native tablet width (#2155)', () => {
   const hasCanvas = (node: any): boolean =>
     node?.props?.testID === 'map-canvas' || (node?.children ?? []).some(hasCanvas);
 
-  it('ios, isMobile=false: panel then map host in one row container', () => {
+  it('ios, isMobile=false: panel then map host in one row container', async () => {
     Object.defineProperty(Platform, 'OS', { value: 'ios' });
-    const { row } = renderShell(false);
+    const { row } = await renderShell(false);
 
     expect(StyleSheet.flatten(row.props.style).flexDirection).toBe('row');
     const siblings = row.children as any[];
@@ -71,9 +71,9 @@ describe('MapScreenShell on native tablet width (#2155)', () => {
     expect(hasCanvas(siblings[1])).toBe(true);
   });
 
-  it('ios, isMobile=true: column container, chrome after the full-bleed host', () => {
+  it('ios, isMobile=true: column container, chrome after the full-bleed host', async () => {
     Object.defineProperty(Platform, 'OS', { value: 'ios' });
-    const { row } = renderShell(true);
+    const { row } = await renderShell(true);
 
     expect(StyleSheet.flatten(row.props.style).flexDirection).toBe('column');
     const siblings = row.children as any[];

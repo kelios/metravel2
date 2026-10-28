@@ -26,8 +26,8 @@ jest.mock('@/context/AuthContext', () => {
     };
 });
 
-function switchAuth(next: { isAuthenticated: boolean; userId: string | null }) {
-    act(() => {
+async function switchAuth(next: { isAuthenticated: boolean; userId: string | null }) {
+    await act(() => {
         Object.assign(mockAuth, next);
         mockAuthStore.version += 1;
         mockAuthStore.listeners.forEach((listener) => listener());
@@ -52,9 +52,13 @@ jest.mock('@/utils/actionConsent', () => {
     return { ...actual, recordActionConsent: jest.fn(() => Promise.resolve()) };
 });
 
-jest.mock('expo-router', () => ({
-    Link: ({ children }: { children: React.ReactNode }) => children,
-}));
+jest.mock('expo-router', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  return {
+    Link: ({ children, asChild, ...props }: any) => asChild ? children : React.createElement(Text, { ...props, accessibilityRole: 'link' }, children),
+  };
+});
 
 import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm';
 import { subscribeEmail } from '@/api/misc';
@@ -74,21 +78,21 @@ const mockedSendQuest = sendQuestToEmail as jest.Mock;
 
 const QUEST_URL = 'https://metravel.by/quests/12/luxembourg-old-town';
 
-function renderForm(source = 'quest', pageUrl: string | null = QUEST_URL, accountDelivery = false) {
+async function renderForm(source = 'quest', pageUrl: string | null = QUEST_URL, accountDelivery = false) {
     const queryClient = new QueryClient({
         defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
-    return render(
+    return await render(
         <QueryClientProvider client={queryClient}>
             <EmailSubscriptionForm source={source} pageUrl={pageUrl} accountDelivery={accountDelivery} />
         </QueryClientProvider>,
     );
 }
 
-async function submitValid(utils: ReturnType<typeof renderForm>) {
-    fireEvent.changeText(utils.getByLabelText(EMAIL_LABEL), 'reader@example.com');
-    fireEvent.press(utils.getByTestId('email-subscribe-consent'));
-    fireEvent.press(utils.getByLabelText(SUBMIT_LABEL));
+async function submitValid(utils: Awaited<ReturnType<typeof renderForm>>) {
+    await fireEvent.changeText(utils.getByLabelText(EMAIL_LABEL), 'reader@example.com');
+    await fireEvent.press(utils.getByTestId('email-subscribe-consent'));
+    await fireEvent.press(utils.getByLabelText(SUBMIT_LABEL));
 }
 
 const EMAIL_LABEL = 'Email для подписки на новые маршруты';
@@ -103,21 +107,21 @@ describe('EmailSubscriptionForm', () => {
     });
 
     it('не отправляет подписку, пока согласие не отмечено', async () => {
-        const { getByLabelText } = renderForm();
+        const { getByLabelText } = await renderForm();
 
-        fireEvent.changeText(getByLabelText(EMAIL_LABEL), 'reader@example.com');
-        fireEvent.press(getByLabelText(SUBMIT_LABEL));
+        await fireEvent.changeText(getByLabelText(EMAIL_LABEL), 'reader@example.com');
+        await fireEvent.press(getByLabelText(SUBMIT_LABEL));
 
         await waitFor(() => expect(mockedSubscribeEmail).not.toHaveBeenCalled());
         expect(mockedRecordActionConsent).not.toHaveBeenCalled();
     });
 
     it('submit по Enter без согласия объясняет причину, а не молчит', async () => {
-        const { getByLabelText, getByTestId, queryByText } = renderForm();
+        const { getByLabelText, getByTestId, queryByText } = await renderForm();
         const input = getByLabelText(EMAIL_LABEL);
 
-        fireEvent.changeText(input, 'reader@example.com');
-        fireEvent(input, 'submitEditing');
+        await fireEvent.changeText(input, 'reader@example.com');
+        await fireEvent(input, 'submitEditing');
 
         await waitFor(() =>
             expect(queryByText('Отметьте согласие, чтобы подписаться')).toBeTruthy(),
@@ -127,18 +131,18 @@ describe('EmailSubscriptionForm', () => {
         expect(queryByText('Введите корректный email')).toBeNull();
 
         // отметка согласия убирает подсказку
-        fireEvent.press(getByTestId('email-subscribe-consent'));
+        await fireEvent.press(getByTestId('email-subscribe-consent'));
         await waitFor(() =>
             expect(queryByText('Отметьте согласие, чтобы подписаться')).toBeNull(),
         );
     });
 
     it('после согласия отправляет email на серверный контракт и фиксирует согласие', async () => {
-        const { getByLabelText, getByTestId } = renderForm('quest');
+        const { getByLabelText, getByTestId } = await renderForm('quest');
 
-        fireEvent.changeText(getByLabelText(EMAIL_LABEL), 'reader@example.com');
-        fireEvent.press(getByTestId('email-subscribe-consent'));
-        fireEvent.press(getByLabelText(SUBMIT_LABEL));
+        await fireEvent.changeText(getByLabelText(EMAIL_LABEL), 'reader@example.com');
+        await fireEvent.press(getByTestId('email-subscribe-consent'));
+        await fireEvent.press(getByLabelText(SUBMIT_LABEL));
 
         await waitFor(() =>
             expect(mockedSubscribeEmail).toHaveBeenCalledWith(
@@ -158,11 +162,11 @@ describe('EmailSubscriptionForm', () => {
     });
 
     it('шлёт событие email_subscribe с источником только после успеха бэкенда', async () => {
-        const { getByLabelText, getByTestId } = renderForm('scenario');
+        const { getByLabelText, getByTestId } = await renderForm('scenario');
 
-        fireEvent.changeText(getByLabelText(EMAIL_LABEL), 'reader@example.com');
-        fireEvent.press(getByTestId('email-subscribe-consent'));
-        fireEvent.press(getByLabelText(SUBMIT_LABEL));
+        await fireEvent.changeText(getByLabelText(EMAIL_LABEL), 'reader@example.com');
+        await fireEvent.press(getByTestId('email-subscribe-consent'));
+        await fireEvent.press(getByLabelText(SUBMIT_LABEL));
 
         await waitFor(() =>
             expect(mockedQueueAnalyticsEvent).toHaveBeenCalledWith('email_subscribe', {
@@ -174,11 +178,11 @@ describe('EmailSubscriptionForm', () => {
 
     it('при ошибке бэкенда не показывает успех и не шлёт событие', async () => {
         mockedSubscribeEmail.mockRejectedValue(new Error('Не удалось оформить подписку'));
-        const { getByLabelText, getByTestId, queryByText } = renderForm();
+        const { getByLabelText, getByTestId, queryByText } = await renderForm();
 
-        fireEvent.changeText(getByLabelText(EMAIL_LABEL), 'reader@example.com');
-        fireEvent.press(getByTestId('email-subscribe-consent'));
-        fireEvent.press(getByLabelText(SUBMIT_LABEL));
+        await fireEvent.changeText(getByLabelText(EMAIL_LABEL), 'reader@example.com');
+        await fireEvent.press(getByTestId('email-subscribe-consent'));
+        await fireEvent.press(getByLabelText(SUBMIT_LABEL));
 
         await waitFor(() => expect(queryByText('Не удалось оформить подписку')).toBeTruthy());
         expect(mockedQueueAnalyticsEvent).not.toHaveBeenCalled();
@@ -193,7 +197,7 @@ describe('EmailSubscriptionForm', () => {
             const original = Platform.OS;
             Platform.OS = os;
             try {
-                const utils = renderForm('quest', QUEST_URL);
+                const utils = await renderForm('quest', QUEST_URL);
                 await submitValid(utils);
                 await waitFor(() => expect(mockedSubscribeEmail).toHaveBeenCalled());
                 expect(mockedSubscribeEmail.mock.calls[0][2]).toBe(QUEST_URL);
@@ -204,14 +208,14 @@ describe('EmailSubscriptionForm', () => {
     );
 
     it('pageUrl=null не угадывает адрес из window.location, а не шлёт ничего', async () => {
-        const utils = renderForm('home', null);
+        const utils = await renderForm('home', null);
         await submitValid(utils);
         await waitFor(() => expect(mockedSubscribeEmail).toHaveBeenCalled());
         expect(mockedSubscribeEmail.mock.calls[0][2]).toBeUndefined();
     });
 
     it('после created на квесте просит подтвердить почту и обещает этот квест', async () => {
-        const utils = renderForm('quest');
+        const utils = await renderForm('quest');
         await submitValid(utils);
         await waitFor(() =>
             expect(
@@ -222,7 +226,7 @@ describe('EmailSubscriptionForm', () => {
     });
 
     it('после created в остальных местах обещает письмо', async () => {
-        const utils = renderForm('article', 'https://metravel.by/articles');
+        const utils = await renderForm('article', 'https://metravel.by/articles');
         await submitValid(utils);
         await waitFor(() =>
             expect(
@@ -234,7 +238,7 @@ describe('EmailSubscriptionForm', () => {
 
     it('для exists текст прежний', async () => {
         mockedSubscribeEmail.mockResolvedValue({ ok: true, status: 'exists' });
-        const utils = renderForm('quest');
+        const utils = await renderForm('quest');
         await submitValid(utils);
         await waitFor(() => expect(utils.queryByText(/Вы уже подписаны/)).toBeTruthy());
         expect(utils.queryByText(/Проверьте почту/)).toBeNull();
@@ -247,7 +251,7 @@ describe('EmailSubscriptionForm', () => {
 
         it.each([true, false])('на квесте просит перейти по ссылке и обещает квест (confirmation_resent=%s)', async (resent) => {
             mockedSubscribeEmail.mockResolvedValue({ ok: true, status: 'pending', confirmation_resent: resent });
-            const utils = renderForm('quest');
+            const utils = await renderForm('quest');
             await submitValid(utils);
             await waitFor(() => expect(utils.queryByText(PENDING_QUEST)).toBeTruthy());
             expect(utils.queryByText(/Вы уже подписаны/)).toBeNull();
@@ -260,7 +264,7 @@ describe('EmailSubscriptionForm', () => {
 
         it.each([true, false])('в остальных местах — тот же текст без квеста (confirmation_resent=%s)', async (resent) => {
             mockedSubscribeEmail.mockResolvedValue({ ok: true, status: 'pending', confirmation_resent: resent });
-            const utils = renderForm('article', 'https://metravel.by/articles');
+            const utils = await renderForm('article', 'https://metravel.by/articles');
             await submitValid(utils);
             await waitFor(() => expect(utils.queryByText(PENDING)).toBeTruthy());
             expect(utils.queryByText(/Вы уже подписаны/)).toBeNull();
@@ -268,11 +272,11 @@ describe('EmailSubscriptionForm', () => {
     });
 
     it('не обращается к бэкенду при некорректном email', async () => {
-        const { getByLabelText, getByTestId, queryByText } = renderForm();
+        const { getByLabelText, getByTestId, queryByText } = await renderForm();
 
-        fireEvent.changeText(getByLabelText(EMAIL_LABEL), 'not-an-email');
-        fireEvent.press(getByTestId('email-subscribe-consent'));
-        fireEvent.press(getByLabelText(SUBMIT_LABEL));
+        await fireEvent.changeText(getByLabelText(EMAIL_LABEL), 'not-an-email');
+        await fireEvent.press(getByTestId('email-subscribe-consent'));
+        await fireEvent.press(getByLabelText(SUBMIT_LABEL));
 
         await waitFor(() => expect(queryByText('Введите корректный email')).toBeTruthy());
         expect(mockedSubscribeEmail).not.toHaveBeenCalled();
@@ -280,7 +284,7 @@ describe('EmailSubscriptionForm', () => {
 
     it('гостю с уже подтверждённой подпиской сообщает, что квест отправлен (status=sent)', async () => {
         mockedSubscribeEmail.mockResolvedValue({ ok: true, status: 'sent' });
-        const utils = renderForm('quest');
+        const utils = await renderForm('quest');
         await submitValid(utils);
         await waitFor(() =>
             expect(utils.queryByText('Вы уже подписаны — отправили квест на почту.')).toBeTruthy(),
@@ -297,7 +301,7 @@ describe('EmailSubscriptionForm', () => {
 
         it('гость видит форму и статус подписки не запрашивается', async () => {
             mockAuth.isAuthenticated = false;
-            const utils = renderForm('quest', QUEST_URL, true);
+            const utils = await renderForm('quest', QUEST_URL, true);
             expect(utils.getByLabelText(EMAIL_LABEL)).toBeTruthy();
             expect(mockedFetchStatus).not.toHaveBeenCalled();
         });
@@ -305,13 +309,13 @@ describe('EmailSubscriptionForm', () => {
         it('подписанному вместо формы — кнопка, квест уходит на email аккаунта', async () => {
             mockedFetchStatus.mockResolvedValue({ subscribed: true, email: 'me@example.com' });
             mockedSendQuest.mockResolvedValue(undefined);
-            const utils = renderForm('quest', QUEST_URL, true);
+            const utils = await renderForm('quest', QUEST_URL, true);
 
             const button = await waitFor(() => utils.getByLabelText(SEND_LABEL));
             expect(utils.queryByLabelText(EMAIL_LABEL)).toBeNull();
             expect(utils.queryByTestId('email-subscribe-consent')).toBeNull();
 
-            fireEvent.press(button);
+            await fireEvent.press(button);
             await waitFor(() =>
                 expect(utils.queryByText('Отправили квест на me@example.com — проверьте почту.')).toBeTruthy(),
             );
@@ -322,7 +326,7 @@ describe('EmailSubscriptionForm', () => {
 
         it('неподписанному — форма с подставленным email аккаунта', async () => {
             mockedFetchStatus.mockResolvedValue({ subscribed: false, email: 'me@example.com' });
-            const utils = renderForm('quest', QUEST_URL, true);
+            const utils = await renderForm('quest', QUEST_URL, true);
             await waitFor(() =>
                 expect(utils.getByLabelText(EMAIL_LABEL).props.value).toBe('me@example.com'),
             );
@@ -331,16 +335,16 @@ describe('EmailSubscriptionForm', () => {
 
         it('ошибка статуса — честный запасной вариант: обычная форма', async () => {
             mockedFetchStatus.mockRejectedValue(new Error('404'));
-            const utils = renderForm('quest', QUEST_URL, true);
+            const utils = await renderForm('quest', QUEST_URL, true);
             await waitFor(() => expect(utils.getByLabelText(EMAIL_LABEL)).toBeTruthy());
         });
 
         it('подписка пропала (403 not_subscribed) — возвращает форму с причиной', async () => {
             mockedFetchStatus.mockResolvedValue({ subscribed: true, email: 'me@example.com' });
             mockedSendQuest.mockRejectedValue(new NotSubscribedError());
-            const utils = renderForm('quest', QUEST_URL, true);
+            const utils = await renderForm('quest', QUEST_URL, true);
 
-            fireEvent.press(await waitFor(() => utils.getByLabelText(SEND_LABEL)));
+            await fireEvent.press(await waitFor(() => utils.getByLabelText(SEND_LABEL)));
             await waitFor(() => expect(utils.getByLabelText(EMAIL_LABEL)).toBeTruthy());
             expect(
                 utils.queryByText('Подписка не найдена — подпишитесь, и мы пришлём квест.'),
@@ -350,18 +354,18 @@ describe('EmailSubscriptionForm', () => {
         it('выход и вход другим аккаунтом не переносят итог отправки и email прошлого', async () => {
             mockedFetchStatus.mockResolvedValue({ subscribed: true, email: 'me@example.com' });
             mockedSendQuest.mockResolvedValue(undefined);
-            const utils = renderForm('quest', QUEST_URL, true);
+            const utils = await renderForm('quest', QUEST_URL, true);
 
-            fireEvent.press(await waitFor(() => utils.getByLabelText(SEND_LABEL)));
+            await fireEvent.press(await waitFor(() => utils.getByLabelText(SEND_LABEL)));
             await waitFor(() =>
                 expect(utils.queryByText('Отправили квест на me@example.com — проверьте почту.')).toBeTruthy(),
             );
 
-            switchAuth({ isAuthenticated: false, userId: null });
+            await switchAuth({ isAuthenticated: false, userId: null });
             await waitFor(() => expect(utils.getByLabelText(EMAIL_LABEL).props.value).toBe(''));
 
             mockedFetchStatus.mockResolvedValue({ subscribed: true, email: 'other@example.com' });
-            switchAuth({ isAuthenticated: true, userId: '8' });
+            await switchAuth({ isAuthenticated: true, userId: '8' });
             await waitFor(() =>
                 expect(utils.getByLabelText('Прислать печатную версию квеста на other@example.com')).toBeTruthy(),
             );
@@ -370,13 +374,13 @@ describe('EmailSubscriptionForm', () => {
 
         it('неподписанному после смены аккаунта подставляется email нового аккаунта', async () => {
             mockedFetchStatus.mockResolvedValue({ subscribed: false, email: 'me@example.com' });
-            const utils = renderForm('quest', QUEST_URL, true);
+            const utils = await renderForm('quest', QUEST_URL, true);
             await waitFor(() =>
                 expect(utils.getByLabelText(EMAIL_LABEL).props.value).toBe('me@example.com'),
             );
 
             mockedFetchStatus.mockResolvedValue({ subscribed: false, email: 'other@example.com' });
-            switchAuth({ isAuthenticated: true, userId: '8' });
+            await switchAuth({ isAuthenticated: true, userId: '8' });
             await waitFor(() =>
                 expect(utils.getByLabelText(EMAIL_LABEL).props.value).toBe('other@example.com'),
             );
@@ -385,9 +389,9 @@ describe('EmailSubscriptionForm', () => {
         it('прочая ошибка отправки остаётся у кнопки', async () => {
             mockedFetchStatus.mockResolvedValue({ subscribed: true, email: 'me@example.com' });
             mockedSendQuest.mockRejectedValue(new Error('Не удалось отправить квест. Попробуйте ещё раз.'));
-            const utils = renderForm('quest', QUEST_URL, true);
+            const utils = await renderForm('quest', QUEST_URL, true);
 
-            fireEvent.press(await waitFor(() => utils.getByLabelText(SEND_LABEL)));
+            await fireEvent.press(await waitFor(() => utils.getByLabelText(SEND_LABEL)));
             await waitFor(() =>
                 expect(utils.queryByText('Не удалось отправить квест. Попробуйте ещё раз.')).toBeTruthy(),
             );

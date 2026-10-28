@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform } from 'react-native';
-import renderer, { act } from 'react-test-renderer';
+import { render as renderTree, act } from '@testing-library/react-native'
+import type { RenderResult } from '@testing-library/react-native'
 
 // Регресс-страж android-link-tap: selectable-текст на Android перехватывает тапы,
 // и onPress вложенных <a> в RenderHTML не срабатывает (RN #22811) — ссылки в статьях
@@ -66,13 +67,13 @@ describe('StableContent (native) links', () => {
     jest.restoreAllMocks();
   });
 
-  const renderNative = (
+  const renderNative = async (
     html = '<p>См. <a href="https://metravel.by/travels/test">рядом</a></p>'
   ) => {
     const StableContent = require('@/components/travel/StableContent').default;
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-      tree = renderer.create(
+    let tree: RenderResult;
+    await act(async () => {
+      tree = await renderTree(
         <StableContent
           html={html}
           contentWidth={360}
@@ -82,18 +83,18 @@ describe('StableContent (native) links', () => {
     return tree!;
   };
 
-  it('android: текст НЕ selectable — иначе тапы по ссылкам не срабатывают', () => {
+  it('android: текст НЕ selectable — иначе тапы по ссылкам не срабатывают', async () => {
     setPlatformOs('android');
-    renderNative();
+    await renderNative();
 
     expect(renderHTMLProps.length).toBeGreaterThan(0);
     const props = renderHTMLProps[renderHTMLProps.length - 1];
     expect(props.defaultTextProps?.selectable).toBe(false);
   });
 
-  it.each(['android', 'ios'])('%s: class formats resolve to real native text styles', (os) => {
+  it.each(['android', 'ios'])('%s: class formats resolve to real native text styles', async (os) => {
     setPlatformOs(os);
-    renderNative(
+    await renderNative(
       '<p class="ql-align-center ql-indent-4"><span class="ql-font-serif ql-size-large"><strong>Текст</strong></span></p>' +
       '<h2 class="ql-align-right"><span class="ql-font-monospace ql-size-huge">Заголовок</span></h2>' +
       '<p><span id="plain">Обычный текст</span></p>'
@@ -137,9 +138,9 @@ describe('StableContent (native) links', () => {
     });
   });
 
-  it('android: первый маркер списка выровнен с первой строкой текста', () => {
+  it('android: первый маркер списка выровнен с первой строкой текста', async () => {
     setPlatformOs('android');
-    renderNative();
+    await renderNative();
 
     const props = renderHTMLProps[renderHTMLProps.length - 1];
     expect(props.tagsStyles?.li).toMatchObject({
@@ -150,9 +151,9 @@ describe('StableContent (native) links', () => {
     expect(props.enableExperimentalGhostLinesPrevention).toBe(true);
   });
 
-  it('android: маркер-точка <ul> прижат к верху пункта, а не к его низу', () => {
+  it('android: маркер-точка <ul> прижат к верху пункта, а не к его низу', async () => {
     setPlatformOs('android');
-    renderNative('<ul><li>Первый пункт в две строки</li><li>Второй</li></ul>');
+    await renderNative('<ul><li>Первый пункт в две строки</li><li>Второй</li></ul>');
 
     // Символьный маркер (disc) RNRH рендерит в собственной строке
     // (`flexDirection: 'row'` + `justifyContent: 'flex-end'`), поэтому alignItems
@@ -163,9 +164,9 @@ describe('StableContent (native) links', () => {
     expect(props.renderersProps?.ul?.markerBoxStyle?.alignItems).toBe('flex-start');
   });
 
-  it('android: длинный пункт списка ограничен доступной шириной и переносится после маркера', () => {
+  it('android: длинный пункт списка ограничен доступной шириной и переносится после маркера', async () => {
     setPlatformOs('android');
-    renderNative([
+    await renderNative([
       '<ol>',
       '<li><strong>Длина маршрута:</strong> около 100 км</li>',
       '<li><strong>Высшая точка:</strong> гора Броккен (1 142 м)</li>',
@@ -183,9 +184,9 @@ describe('StableContent (native) links', () => {
     expect(props.renderersProps?.ol?.enableDynamicMarkerBoxWidth).toBe(true);
   });
 
-  it('android: FAQ details/summary регистрируются как раскрываемый native renderer', () => {
+  it('android: FAQ details/summary регистрируются как раскрываемый native renderer', async () => {
     setPlatformOs('android');
-    renderNative('<details><summary>Вопрос?</summary><p>Ответ.</p></details>');
+    await renderNative('<details><summary>Вопрос?</summary><p>Ответ.</p></details>');
 
     const props = renderHTMLProps[renderHTMLProps.length - 1];
     expect(props.source.html).toContain('<details>')
@@ -264,9 +265,9 @@ describe('StableContent (native) links', () => {
     ).toEqual([answerNode]);
   });
 
-  it('android: onPress внутренней ссылки ведёт через router.push внутри приложения', () => {
+  it('android: onPress внутренней ссылки ведёт через router.push внутри приложения', async () => {
     setPlatformOs('android');
-    renderNative();
+    await renderNative();
 
     const props = renderHTMLProps[renderHTMLProps.length - 1];
     const onPress = props.renderersProps?.a?.onPress;
@@ -277,9 +278,9 @@ describe('StableContent (native) links', () => {
     expect(router.push).toHaveBeenCalledWith('/travels/test');
   });
 
-  it('android: относительный href, нормализованный RNRH в about:/// — тоже router.push', () => {
+  it('android: относительный href, нормализованный RNRH в about:/// — тоже router.push', async () => {
     setPlatformOs('android');
-    renderNative();
+    await renderNative();
 
     const props = renderHTMLProps[renderHTMLProps.length - 1];
     props.renderersProps.a.onPress({}, 'about:///travels/oriavskii-zamok');

@@ -18,11 +18,11 @@ describe('ArticleNextStepSection', () => {
     jest.clearAllMocks()
   })
 
-  it('offers map and quest continuations without an auth gate', () => {
-    const { getByLabelText } = render(<ArticleNextStepSection articleId={42} />)
+  it('offers map and quest continuations without an auth gate', async () => {
+    const { getByLabelText } = await render(<ArticleNextStepSection articleId={42} />)
 
-    fireEvent.press(getByLabelText('Открыть карту мест'))
-    fireEvent.press(getByLabelText('Открыть городские квесты'))
+    await fireEvent.press(getByLabelText('Открыть карту мест'))
+    await fireEvent.press(getByLabelText('Открыть городские квесты'))
 
     expect(queueAnalyticsEvent).toHaveBeenNthCalledWith(1, 'contextual_next_step_click', {
       source: 'article_detail_intro',

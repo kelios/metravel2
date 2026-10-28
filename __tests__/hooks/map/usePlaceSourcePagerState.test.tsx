@@ -62,31 +62,31 @@ beforeEach(() => {
 });
 
 describe('usePlaceSourcePagerState', () => {
-  it('keeps the marker counter while the collection is loading and pages only what it has', () => {
+  it('keeps the marker counter while the collection is loading and pages only what it has', async () => {
     mockUseMapPlaceSources.mockReturnValue(loading());
 
-    const { result } = renderHook(() => usePlaceSourcePagerState(LIBRARY_POINT, true));
+    const { result } = await renderHook(() => usePlaceSourcePagerState(LIBRARY_POINT, true));
 
     expect(result.current.sourceCount).toBe(2);
     expect(result.current.activeSource?.sourceId).toBe(sourceA.sourceId);
 
-    act(() => result.current.goNext());
+    await act(() => result.current.goNext());
 
     // Листать нечем, пока коллекция не пришла: активный материал не меняется.
     expect(result.current.activeSourceIndex).toBe(0);
     expect(result.current.activeSource?.sourceId).toBe(sourceA.sourceId);
   });
 
-  it('collapses the counter when the request failed (no arrows that do nothing)', () => {
+  it('collapses the counter when the request failed (no arrows that do nothing)', async () => {
     mockUseMapPlaceSources.mockReturnValue(failed());
 
-    const { result } = renderHook(() => usePlaceSourcePagerState(LIBRARY_POINT, true));
+    const { result } = await renderHook(() => usePlaceSourcePagerState(LIBRARY_POINT, true));
 
     expect(result.current.sourceCount).toBe(1);
     expect(result.current.isPrimarySourceActive).toBe(true);
   });
 
-  it('keeps primary source fields after a request failure without legacy duplicates', () => {
+  it('keeps primary source fields after a request failure without legacy duplicates', async () => {
     mockUseMapPlaceSources.mockReturnValue(failed());
     const pointWithPrimaryOnly = {
       id: LIBRARY_POINT.id,
@@ -96,7 +96,7 @@ describe('usePlaceSourcePagerState', () => {
       primarySource: LIBRARY_POINT.primarySource,
     };
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       usePlaceSourcePagerState(pointWithPrimaryOnly, true),
     );
     const fields = resolvePlaceSourceCardFields(pointWithPrimaryOnly, result.current, false);
@@ -106,85 +106,85 @@ describe('usePlaceSourcePagerState', () => {
     expect(fields.imageUrl).toBe(sourceA.thumbnailUrl);
   });
 
-  it('pages forward and backward cyclically over the loaded collection', () => {
+  it('pages forward and backward cyclically over the loaded collection', async () => {
     mockUseMapPlaceSources.mockReturnValue(loaded([sourceA, sourceB]));
 
-    const { result } = renderHook(() => usePlaceSourcePagerState(LIBRARY_POINT, true));
+    const { result } = await renderHook(() => usePlaceSourcePagerState(LIBRARY_POINT, true));
 
-    act(() => result.current.goNext());
+    await act(() => result.current.goNext());
     expect(result.current.activeSourceIndex).toBe(1);
     expect(result.current.activeSource?.sourceId).toBe(sourceB.sourceId);
     expect(result.current.isPrimarySourceActive).toBe(false);
 
-    act(() => result.current.goNext());
+    await act(() => result.current.goNext());
     expect(result.current.activeSourceIndex).toBe(0);
 
-    act(() => result.current.goPrev());
+    await act(() => result.current.goPrev());
     expect(result.current.activeSourceIndex).toBe(1);
   });
 
-  it('holds the active source by id across a late collection load and a new array instance', () => {
+  it('holds the active source by id across a late collection load and a new array instance', async () => {
     mockUseMapPlaceSources.mockReturnValue(loading());
-    const { result, rerender } = renderHook(() =>
+    const { result, rerender } = await renderHook(() =>
       usePlaceSourcePagerState(LIBRARY_POINT, true),
     );
 
     mockUseMapPlaceSources.mockReturnValue(loaded([sourceA, sourceB]));
-    rerender({});
+    await rerender({});
     // Догрузка коллекции не двигает активный материал.
     expect(result.current.activeSourceIndex).toBe(0);
 
-    act(() => result.current.goNext());
+    await act(() => result.current.goNext());
     expect(result.current.activeSource?.sourceId).toBe(sourceB.sourceId);
 
     // Новая ссылка на тот же список (рефетч/пересборка кэша) не сбрасывает выбор.
     mockUseMapPlaceSources.mockReturnValue(loaded([{ ...sourceA }, { ...sourceB }]));
-    rerender({});
+    await rerender({});
     expect(result.current.activeSource?.sourceId).toBe(sourceB.sourceId);
   });
 
-  it('does not duplicate primary when fetched source_id is the live point-id string', () => {
+  it('does not duplicate primary when fetched source_id is the live point-id string', async () => {
     const liveShapedA = { ...sourceA, sourceId: String(sourceA.pointId) };
     const liveShapedB = { ...sourceB, sourceId: String(sourceB.pointId) };
     mockUseMapPlaceSources.mockReturnValue(loaded([liveShapedA, liveShapedB]));
 
-    const { result } = renderHook(() => usePlaceSourcePagerState(LIBRARY_POINT, true));
+    const { result } = await renderHook(() => usePlaceSourcePagerState(LIBRARY_POINT, true));
 
     expect(LIBRARY_POINT.primarySource?.sourceId).toBe('travel-address:14029');
     expect(result.current.sourceCount).toBe(2);
     expect(result.current.activeSource?.sourceId).toBe(liveShapedA.sourceId);
 
-    act(() => result.current.goNext());
+    await act(() => result.current.goNext());
     expect(result.current.activeSource?.sourceId).toBe(liveShapedB.sourceId);
-    act(() => result.current.goNext());
+    await act(() => result.current.goNext());
     expect(result.current.activeSource?.sourceId).toBe(liveShapedA.sourceId);
   });
 
-  it('keeps primary first and reachable when a partial collection omits it', () => {
+  it('keeps primary first and reachable when a partial collection omits it', async () => {
     mockUseMapPlaceSources.mockReturnValue(loaded([sourceB]));
 
-    const { result } = renderHook(() => usePlaceSourcePagerState(LIBRARY_POINT, true));
+    const { result } = await renderHook(() => usePlaceSourcePagerState(LIBRARY_POINT, true));
 
     expect(result.current.sourceCount).toBe(2);
     expect(result.current.activeSourceIndex).toBe(0);
     expect(result.current.activeSource?.sourceId).toBe(sourceA.sourceId);
 
-    act(() => result.current.goNext());
+    await act(() => result.current.goNext());
     expect(result.current.activeSourceIndex).toBe(1);
     expect(result.current.activeSource?.sourceId).toBe(sourceB.sourceId);
   });
 
-  it('restarts from the primary source when another place is selected', () => {
+  it('restarts from the primary source when another place is selected', async () => {
     mockUseMapPlaceSources.mockReturnValue(loaded([sourceA, sourceB]));
     let point = LIBRARY_POINT;
-    const { result, rerender } = renderHook(() => usePlaceSourcePagerState(point, true));
+    const { result, rerender } = await renderHook(() => usePlaceSourcePagerState(point, true));
 
-    act(() => result.current.goNext());
+    await act(() => result.current.goNext());
     expect(result.current.activeSource?.sourceId).toBe(sourceB.sourceId);
 
     point = NEARBY_POINT;
     mockUseMapPlaceSources.mockReturnValue(loaded([]));
-    rerender({});
+    await rerender({});
 
     expect(result.current.activeSourceIndex).toBe(0);
     expect(result.current.activeSource?.sourceId).toBe(
@@ -193,17 +193,17 @@ describe('usePlaceSourcePagerState', () => {
     expect(result.current.isPrimarySourceActive).toBe(true);
   });
 
-  it('never substitutes the flat legacy fields under a non-primary source', () => {
+  it('never substitutes the flat legacy fields under a non-primary source', async () => {
     mockUseMapPlaceSources.mockReturnValue(loaded([sourceA, sourceBWithoutMedia]));
 
-    const { result } = renderHook(() => usePlaceSourcePagerState(LIBRARY_POINT, true));
+    const { result } = await renderHook(() => usePlaceSourcePagerState(LIBRARY_POINT, true));
 
     const primaryFields = resolvePlaceSourceCardFields(LIBRARY_POINT, result.current, true);
     expect(primaryFields.imageUrl).toBe(sourceA.thumbnailUrl);
     expect(primaryFields.articleUrl).toBe(sourceA.articleUrl);
     expect(primaryFields.articleTitle).toBe(sourceA.articleTitle);
 
-    act(() => result.current.goNext());
+    await act(() => result.current.goNext());
 
     const secondFields = resolvePlaceSourceCardFields(LIBRARY_POINT, result.current, true);
     // У материала нет ни своего фото, ни своей ссылки — карточка остаётся без
@@ -215,11 +215,11 @@ describe('usePlaceSourcePagerState', () => {
     expect(LIBRARY_POINT.urlTravel).toBeTruthy();
   });
 
-  it('keeps the legacy single-source card on its flat fields', () => {
+  it('keeps the legacy single-source card on its flat fields', async () => {
     mockUseMapPlaceSources.mockReturnValue(loading());
 
     const legacyPoint = { id: 4242, coord: '51.88,26.84', urlTravel: '/travels/stolin', imageUrl: '/address-image/5960.webp' };
-    const { result } = renderHook(() => usePlaceSourcePagerState(legacyPoint, true));
+    const { result } = await renderHook(() => usePlaceSourcePagerState(legacyPoint, true));
 
     const fields = resolvePlaceSourceCardFields(legacyPoint, result.current, false);
     expect(result.current.sourceCount).toBe(1);

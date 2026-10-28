@@ -206,8 +206,10 @@ describe('Android Dependencies Tests', () => {
       expect(packageJson.devDependencies['@testing-library/react-native']).toBeDefined();
     });
 
-    it('should have @testing-library/jest-native', () => {
-      expect(packageJson.devDependencies['@testing-library/jest-native']).toBeDefined();
+    it('uses built-in native matchers and the public renderer peer', () => {
+      expect(packageJson.devDependencies['@testing-library/jest-native']).toBeUndefined();
+      expect(packageJson.devDependencies['test-renderer']).toBeDefined();
+      expect(require('@testing-library/react-native/matchers').toHaveTextContent).toEqual(expect.any(Function));
     });
   });
 

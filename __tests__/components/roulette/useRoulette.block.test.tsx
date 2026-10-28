@@ -19,30 +19,30 @@ beforeEach(() => {
   mockTravels = [{ id: 1, userIds: '1' }, { id: 2, userIds: '2' }];
   jest.useFakeTimers({ doNotFake: ['setImmediate'] });
 });
-afterEach(() => {
+afterEach(async () => {
   jest.useRealTimers();
-  cleanup();
+  await cleanup();
 });
 
 it('derives spun cards from the guarded query so blocking cannot leave a stale selected card', async () => {
-  const { result, rerender } = renderHook(() => useRoulette());
+  const { result, rerender } = await renderHook(() => useRoulette());
   await act(async () => result.current.handleSpin());
-  act(() => jest.advanceTimersByTime(900));
+  await act(() => jest.advanceTimersByTime(900));
   expect(result.current.result).toHaveLength(2);
   mockTravels = [{ id: 2, userIds: '2' }];
-  rerender({});
+  await rerender({});
   expect(result.current.result.map((travel) => travel.id)).toEqual([2]);
   mockTravels = [];
-  rerender({});
+  await rerender({});
   expect(result.current.result).toEqual([]);
 });
 
 it('does not carry a previous owner selection into a new session', async () => {
-  const { result, rerender } = renderHook(() => useRoulette());
+  const { result, rerender } = await renderHook(() => useRoulette());
   await act(async () => result.current.handleSpin());
-  act(() => jest.advanceTimersByTime(900));
+  await act(() => jest.advanceTimersByTime(900));
   expect(result.current.result).toHaveLength(2);
   mockOwner = null;
-  rerender({});
+  await rerender({});
   expect(result.current.result).toEqual([]);
 });

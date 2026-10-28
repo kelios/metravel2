@@ -1,3 +1,4 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 import { act, render, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { Alert, Platform, StyleSheet } from 'react-native';
 import ThreadList from '@/components/messages/ThreadList';
@@ -52,70 +53,70 @@ describe('ThreadList', () => {
         jest.clearAllMocks();
     });
 
-    it('renders thread list with participant names', () => {
-        const { getByText } = render(<ThreadList {...defaultProps} />);
+    it('renders thread list with participant names', async () => {
+        const { getByText } = await render(<ThreadList {...defaultProps} />);
         expect(getByText('Иван Петров')).toBeTruthy();
         expect(getByText('Мария Сидорова')).toBeTruthy();
     });
 
-    it('calls onSelectThread when thread is pressed', () => {
+    it('calls onSelectThread when thread is pressed', async () => {
         const onSelectThread = jest.fn();
-        const { getByText } = render(
+        const { getByText } = await render(
             <ThreadList {...defaultProps} onSelectThread={onSelectThread} />
         );
-        fireEvent.press(getByText('Иван Петров'));
+        await fireEvent.press(getByText('Иван Петров'));
         expect(onSelectThread).toHaveBeenCalledWith(mockThreads[0]);
     });
 
-    it('keeps an unchanged row memoized when another row is selected (#2284)', () => {
+    it('keeps an unchanged row memoized when another row is selected (#2284)', async () => {
         const optimize = imageOptimization.optimizeImageUrl as jest.Mock;
         const avatars = new Map([[2, 'https://example.com/a.jpg'], [3, 'https://example.com/b.jpg']]);
         const props = { ...defaultProps, participantAvatars: avatars, onDeleteThread: jest.fn() };
-        const { rerender } = render(<ThreadList {...props} />);
+        const { rerender } = await render(<ThreadList {...props} />);
         optimize.mockClear();
-        rerender(<ThreadList {...props} selectedThreadId={1} />);
+        await rerender(<ThreadList {...props} selectedThreadId={1} />);
         expect(optimize.mock.calls.map(([url]) => url)).toEqual(['https://example.com/a.jpg']);
     });
 
-    it('shows loading indicator when loading with no threads', () => {
-        const { queryByText } = render(
+    it('shows loading indicator when loading with no threads', async () => {
+        const { queryByText } = await render(
             <ThreadList {...defaultProps} threads={[]} loading={true} />
         );
         expect(queryByText('Иван Петров')).toBeNull();
     });
 
-    it('shows error state with retry button', () => {
+    it('shows error state with retry button', async () => {
         const onRefresh = jest.fn();
-        const { getByText, getByLabelText } = render(
+        const { getByText, getByLabelText } = await render(
             <ThreadList {...defaultProps} error="Ошибка загрузки" onRefresh={onRefresh} />
         );
         expect(getByText('Ошибка загрузки')).toBeTruthy();
-        fireEvent.press(getByLabelText('Повторить'));
+        await fireEvent.press(getByLabelText('Повторить'));
         expect(onRefresh).toHaveBeenCalled();
     });
 
-    it('shows empty state when no threads', () => {
-        const { getByText } = render(
+    it('shows empty state when no threads', async () => {
+        const { getByText } = await render(
             <ThreadList {...defaultProps} threads={[]} />
         );
         expect(getByText('Нет сообщений')).toBeTruthy();
     });
 
-    it('shows new conversation button in empty state', () => {
+    it('shows new conversation button in empty state', async () => {
         const onNewConversation = jest.fn();
-        const { getByTestId } = render(
+        const { getByTestId } = await render(
             <ThreadList {...defaultProps} threads={[]} onNewConversation={onNewConversation} />
         );
-        fireEvent.press(getByTestId('thread-list-empty-action'));
+        await fireEvent.press(getByTestId('thread-list-empty-action'));
         expect(onNewConversation).toHaveBeenCalledTimes(1);
     });
 
     // #2267: «Новый диалог» — действие шапки панели рядом с поиском, а не первая
     // карточка списка той же формы, что строка диалога.
     describe('panel header (#2267)', () => {
-        it('puts «Новый диалог» into the header next to the search, outside the thread rows', () => {
+        it('puts «Новый диалог» into the header next to the search, outside the thread rows', async () => {
             const onNewConversation = jest.fn();
-            const { getByTestId, getByLabelText } = render(
+            const { getByTestId, getByLabelText } = await render(
                 <ThreadList {...defaultProps} onNewConversation={onNewConversation} />
             );
 
@@ -129,12 +130,12 @@ describe('ThreadList', () => {
                 expect(within(getByTestId(`thread-item-${thread.id}`)).queryByLabelText('Новый диалог')).toBeNull();
             }
 
-            fireEvent.press(button);
+            await fireEvent.press(button);
             expect(onNewConversation).toHaveBeenCalledTimes(1);
         });
 
-        it('keeps the header over the empty list and can leave the empty-state button to the screen', () => {
-            const { getByTestId, queryByTestId, getByText } = render(
+        it('keeps the header over the empty list and can leave the empty-state button to the screen', async () => {
+            const { getByTestId, queryByTestId, getByText } = await render(
                 <ThreadList {...defaultProps} threads={[]} onNewConversation={jest.fn()} hideEmptyStateAction />
             );
 
@@ -145,14 +146,14 @@ describe('ThreadList', () => {
 
         // Шапка — рамка панели: при открытии экрана загрузка сменяется списком, и
         // раньше поиск с кнопкой на это время снимались и монтировались заново.
-        it('keeps the same header node across loading, list, empty and error states', () => {
+        it('keeps the same header node across loading, list, empty and error states', async () => {
             const props = { ...defaultProps, onNewConversation: jest.fn() };
-            const { getByTestId, queryByText, rerender } = render(<ThreadList {...props} threads={[]} loading />);
+            const { getByTestId, queryByText, rerender } = await render(<ThreadList {...props} threads={[]} loading />);
 
             const button = getByTestId('thread-list-new-conversation');
             const search = within(getByTestId('thread-list-header')).getByLabelText('Поиск диалогов');
             expect(queryByText('Нет сообщений')).toBeNull();
-            fireEvent.changeText(search, 'Иван');
+            await fireEvent.changeText(search, 'Иван');
 
             const states = [
                 <ThreadList key="list" {...props} />,
@@ -162,7 +163,7 @@ describe('ThreadList', () => {
             ];
             for (const state of states) {
                 // Один и тот же экземпляр: `key` у корня не меняется.
-                rerender(<ThreadList {...state.props} />);
+                await rerender(<ThreadList {...state.props} />);
                 expect(getByTestId('thread-list-new-conversation')).toBe(button);
                 const field = within(getByTestId('thread-list-header')).getByLabelText('Поиск диалогов');
                 expect(field).toBe(search);
@@ -170,38 +171,38 @@ describe('ThreadList', () => {
             }
         });
 
-        it('shows the loader, not «Нет сообщений», while the first load is pending', () => {
-            const { queryByText, queryByTestId } = render(<ThreadList {...defaultProps} threads={[]} loading />);
+        it('shows the loader, not «Нет сообщений», while the first load is pending', async () => {
+            const { queryByText, queryByTestId } = await render(<ThreadList {...defaultProps} threads={[]} loading />);
 
             expect(queryByText('Нет сообщений')).toBeNull();
             expect(queryByTestId('thread-list-empty')).toBeNull();
         });
 
-        it('renders no new-conversation button without a handler', () => {
-            const { queryByTestId } = render(<ThreadList {...defaultProps} />);
+        it('renders no new-conversation button without a handler', async () => {
+            const { queryByTestId } = await render(<ThreadList {...defaultProps} />);
             expect(queryByTestId('thread-list-new-conversation')).toBeNull();
         });
 
-        it('gives the search clear control a 44px touch target', () => {
-            const { getByLabelText } = render(<ThreadList {...defaultProps} />);
-            fireEvent.changeText(getByLabelText('Поиск диалогов'), 'Мария');
+        it('gives the search clear control a 44px touch target', async () => {
+            const { getByLabelText } = await render(<ThreadList {...defaultProps} />);
+            await fireEvent.changeText(getByLabelText('Поиск диалогов'), 'Мария');
 
             expect(StyleSheet.flatten(getByLabelText('Очистить поиск').props.style)).toMatchObject({ width: 44, height: 44 });
         });
     });
 
-    it('filters threads by search query', () => {
-        const { getByLabelText, queryByText } = render(
+    it('filters threads by search query', async () => {
+        const { getByLabelText, queryByText } = await render(
             <ThreadList {...defaultProps} />
         );
         const searchInput = getByLabelText('Поиск диалогов');
-        fireEvent.changeText(searchInput, 'Мария');
+        await fireEvent.changeText(searchInput, 'Мария');
         expect(queryByText('Мария Сидорова')).toBeTruthy();
         expect(queryByText('Иван Петров')).toBeNull();
     });
 
-    it('includes participant name in accessibility label', () => {
-        const { getByLabelText } = render(<ThreadList {...defaultProps} />);
+    it('includes participant name in accessibility label', async () => {
+        const { getByLabelText } = await render(<ThreadList {...defaultProps} />);
         expect(getByLabelText('Диалог с Иван Петров')).toBeTruthy();
     });
 
@@ -217,8 +218,8 @@ describe('ThreadList', () => {
             [other, 'Встретимся у озера'],
             [{ ...own, is_deleted: true }, 'Сообщение удалено'],
             [null, 'Нет сообщений'],
-        ])('renders and announces the safe preview state %j', (preview, text) => {
-            const view = render(<ThreadList {...defaultProps} threads={[withPreview(preview)]} />);
+        ])('renders and announces the safe preview state %j', async (preview, text) => {
+            const view = await render(<ThreadList {...defaultProps} threads={[withPreview(preview)]} />);
             expect(view.getByTestId('thread-preview-1').props.children).toBe(text);
             expect(view.getByLabelText(`Диалог с Иван Петров, 150 непрочитанных. ${text}`)).toBeTruthy();
             if (preview?.is_deleted) {
@@ -227,47 +228,47 @@ describe('ThreadList', () => {
             }
         });
 
-        it('keeps old responses usable without claiming the conversation is empty', () => {
-            const view = render(<ThreadList {...defaultProps} threads={[mockThreads[0]]} />);
+        it('keeps old responses usable without claiming the conversation is empty', async () => {
+            const view = await render(<ThreadList {...defaultProps} threads={[mockThreads[0]]} />);
             expect(view.queryByTestId('thread-preview-1')).toBeNull();
             expect(view.queryByText('Нет сообщений')).toBeNull();
             expect(view.getByLabelText('Диалог с Иван Петров')).toBeTruthy();
         });
 
-        it.each(['invalid', '0', '-1', '1.5', 'Infinity', null])('keeps API text unchanged for invalid current-user id %s', (currentUserId) => {
+        it.each(['invalid', '0', '-1', '1.5', 'Infinity', null])('keeps API text unchanged for invalid current-user id %s', async (currentUserId) => {
             const text = 'You: & <b>сообщение</b>';
-            const view = render(<ThreadList {...defaultProps} currentUserId={currentUserId} threads={[
+            const view = await render(<ThreadList {...defaultProps} currentUserId={currentUserId} threads={[
                 withPreview({ ...own, text }),
             ]} />);
             expect(view.getByTestId('thread-preview-1').props.children).toBe(text);
         });
 
-        it('distinguishes similar names, searches names only and preserves selection/delete callbacks', () => {
+        it('distinguishes similar names, searches names only and preserves selection/delete callbacks', async () => {
             const rows = [
                 withPreview(own),
                 { ...mockThreads[1], last_message_preview: other },
             ];
             const onSelectThread = jest.fn();
             const onDeleteThread = jest.fn();
-            const view = render(<ThreadList {...defaultProps} threads={rows}
+            const view = await render(<ThreadList {...defaultProps} threads={rows}
                 participantNames={new Map([[2, 'Julia Sauran'], [3, 'Julia Ivanova']])}
                 onSelectThread={onSelectThread} onDeleteThread={onDeleteThread} />);
             expect(view.getByText('Вы: Маршрут через лес')).toBeTruthy();
             expect(view.getByText('Встретимся у озера')).toBeTruthy();
-            fireEvent.press(view.getByText('Встретимся у озера'));
+            await fireEvent.press(view.getByText('Встретимся у озера'));
             expect(onSelectThread).toHaveBeenCalledWith(rows[1]);
-            fireEvent.changeText(view.getByLabelText('Поиск диалогов'), 'озера');
+            await fireEvent.changeText(view.getByLabelText('Поиск диалогов'), 'озера');
             expect(view.queryByTestId('thread-item-2')).toBeNull();
-            fireEvent.changeText(view.getByLabelText('Поиск диалогов'), 'Ivanova');
+            await fireEvent.changeText(view.getByLabelText('Поиск диалогов'), 'Ivanova');
             expect(view.queryByTestId('thread-item-1')).toBeNull();
             expect(view.getByTestId('thread-item-2')).toBeTruthy();
-            fireEvent(view.getByText('Julia Ivanova'), 'longPress');
+            await fireEvent(view.getByText('Julia Ivanova'), 'longPress');
             expect(onDeleteThread).not.toHaveBeenCalled();
         });
 
-        it('gives long text one meta line while preserving a full accessibility label', () => {
+        it('gives long text one meta line while preserving a full accessibility label', async () => {
             const text = 'М'.repeat(200);
-            const view = render(<ThreadList {...defaultProps} threads={[withPreview({ ...other, text })]} />);
+            const view = await render(<ThreadList {...defaultProps} threads={[withPreview({ ...other, text })]} />);
             const preview = view.getByTestId('thread-preview-1');
             expect(preview.props.numberOfLines).toBe(1);
             expect(preview.props.ellipsizeMode).toBe('tail');
@@ -282,7 +283,7 @@ describe('ThreadList', () => {
                 { ...withPreview({ ...own, is_deleted: true }), id: 2 },
                 { ...withPreview(null), id: 3 },
             ] };
-            const view = render(<ThreadList {...props} />);
+            const view = await render(<ThreadList {...props} />);
             try {
                 for (const [locale, prefix, deleted, empty] of [
                     ['ru', 'Вы', 'Сообщение удалено', 'Нет сообщений'],
@@ -297,18 +298,18 @@ describe('ThreadList', () => {
                     expect(view.getByTestId('thread-preview-3').props.children).toBe(empty);
                 }
             } finally {
-                view.unmount();
+                await view.unmount();
                 await act(async () => { await i18n.changeLanguage('ru'); });
             }
         });
     });
 
-    it('announces unread count and caps the visible badge at 99+', () => {
+    it('announces unread count and caps the visible badge at 99+', async () => {
         const unreadThread: MessageThread = {
             ...mockThreads[0],
             unread_count: 150,
         };
-        const { getByLabelText, getByText } = render(
+        const { getByLabelText, getByText } = await render(
             <ThreadList {...defaultProps} threads={[unreadThread]} />
         );
 
@@ -321,8 +322,8 @@ describe('ThreadList', () => {
     describe('thread row composition (#2264)', () => {
         const unread: MessageThread = { ...mockThreads[0], unread_count: 150 };
 
-        it('keeps the name alone on its line: date and unread badge sit on the line below', () => {
-            const { getByTestId } = render(
+        it('keeps the name alone on its line: date and unread badge sit on the line below', async () => {
+            const { getByTestId } = await render(
                 <ThreadList {...defaultProps} threads={[unread]} onDeleteThread={jest.fn()} />
             );
 
@@ -331,42 +332,42 @@ describe('ThreadList', () => {
             expect(name.props.children).toBe('Иван Петров');
 
             // Колонка текста: имя и под ним строка меты — больше ничего.
-            const column = name.parent!.parent!;
-            const lines = column.props.children.filter(Boolean);
+            const column = name.parent!;
+            const lines = column.children;
             expect(lines).toHaveLength(2);
             expect(StyleSheet.flatten(column.props.style)).toMatchObject({ flex: 1, minWidth: 0 });
             expect(StyleSheet.flatten(column.props.style).flexDirection).toBeUndefined();
 
             const time = getByTestId('thread-time-1');
-            const meta = time.parent!.parent!;
+            const meta = time.parent!;
             expect(StyleSheet.flatten(meta.props.style)).toMatchObject({ flexDirection: 'row' });
             expect(within(meta).getByText('99+')).toBeTruthy();
             expect(within(meta).queryByText('Иван Петров')).toBeNull();
         });
 
-        it('draws no chevron and no in-flow delete button', () => {
+        it('draws no chevron and no in-flow delete button', async () => {
             const originalPlatform = Platform.OS;
             Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
 
             try {
-                const { getByTestId, getByLabelText, UNSAFE_queryAllByProps } = render(
+                const { getByTestId, getByLabelText, queryAllByTestId } = await render(
                     <ThreadList {...defaultProps} onDeleteThread={jest.fn()} />
                 );
 
-                expect(UNSAFE_queryAllByProps({ name: 'chevron-right' })).toHaveLength(0);
+                expect(queryAllByTestId('feather-chevron-right')).toHaveLength(0);
 
                 // Кнопка удаления лежит поверх строки и в потоке ширину не занимает;
                 // показывает её CSS по маркерам (app/global.css).
                 const row = getByTestId('thread-item-1');
                 expect(row.props.dataSet).toEqual({ threadRow: 'true' });
-                const [action] = row.findAll((node) => node.props.dataSet?.threadRowAction === 'true');
+                const action = getOnlyHost(row, node => node.props.dataSet?.threadRowAction === 'true');
                 expect(StyleSheet.flatten(action.props.style)).toMatchObject({ position: 'absolute' });
                 expect(within(action).getByLabelText('Удалить диалог с Иван Петров')).toBeTruthy();
                 expect(StyleSheet.flatten(getByLabelText('Удалить диалог с Иван Петров').props.style)).toMatchObject({
                     minWidth: 44,
                     minHeight: 44,
                 });
-                expect(getByTestId('thread-name-1').parent!.parent!.props.dataSet).toEqual({ threadRowText: 'true' });
+                expect(getByTestId('thread-name-1').parent!.props.dataSet).toEqual({ threadRowText: 'true' });
             } finally {
                 Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
             }
@@ -378,7 +379,7 @@ describe('ThreadList', () => {
             const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 
             try {
-                const { getByLabelText, queryByLabelText } = render(
+                const { getByLabelText, queryByLabelText } = await render(
                     <ThreadList {...defaultProps} onDeleteThread={jest.fn()} />
                 );
 
@@ -389,12 +390,12 @@ describe('ThreadList', () => {
                     { name: 'delete', label: 'Удалить диалог с Иван Петров' },
                 ]);
 
-                fireEvent(row, 'longPress');
+                await fireEvent(row, 'longPress');
                 expect(alertSpy).toHaveBeenCalledTimes(1);
 
-                fireEvent(row, 'accessibilityAction', { nativeEvent: { actionName: 'activate' } });
+                await fireEvent(row, 'accessibilityAction', { nativeEvent: { actionName: 'activate' } });
                 expect(alertSpy).toHaveBeenCalledTimes(1);
-                fireEvent(row, 'accessibilityAction', { nativeEvent: { actionName: 'delete' } });
+                await fireEvent(row, 'accessibilityAction', { nativeEvent: { actionName: 'delete' } });
                 expect(alertSpy).toHaveBeenCalledTimes(2);
             } finally {
                 alertSpy.mockRestore();
@@ -402,26 +403,26 @@ describe('ThreadList', () => {
             }
         });
 
-        it('offers no delete path at all without a handler', () => {
-            const { getByLabelText, queryByLabelText } = render(<ThreadList {...defaultProps} />);
+        it('offers no delete path at all without a handler', async () => {
+            const { getByLabelText, queryByLabelText } = await render(<ThreadList {...defaultProps} />);
 
             expect(queryByLabelText('Удалить диалог с Иван Петров')).toBeNull();
             expect(getByLabelText('Диалог с Иван Петров').props.accessibilityActions).toBeUndefined();
         });
 
-        it('opens the web confirmation from a long press as well', () => {
+        it('opens the web confirmation from a long press as well', async () => {
             const originalPlatform = Platform.OS;
             Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
 
             try {
-                const { getByLabelText, queryByLabelText } = render(
+                const { getByLabelText, queryByLabelText } = await render(
                     <ThreadList {...defaultProps} onDeleteThread={jest.fn()} />
                 );
 
                 expect(queryByLabelText('Подтвердить удаление диалога')).toBeNull();
-                fireEvent(getByLabelText('Диалог с Иван Петров'), 'longPress');
+                await fireEvent(getByLabelText('Диалог с Иван Петров'), 'longPress');
                 expect(StyleSheet.flatten(getByLabelText('Подтвердить удаление диалога').props.style)).toMatchObject({ minHeight: 44 });
-                fireEvent.press(getByLabelText('Отмена'));
+                await fireEvent.press(getByLabelText('Отмена'));
                 expect(queryByLabelText('Подтвердить удаление диалога')).toBeNull();
             } finally {
                 Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
@@ -429,12 +430,12 @@ describe('ThreadList', () => {
         });
     });
 
-    it('does not clip the delete tooltip at the web thread-card boundary', () => {
+    it('does not clip the delete tooltip at the web thread-card boundary', async () => {
         const originalPlatform = Platform.OS;
         Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
 
         try {
-            const { getByTestId } = render(
+            const { getByTestId } = await render(
                 <ThreadList {...defaultProps} onDeleteThread={jest.fn()} />
             );
 
@@ -446,18 +447,18 @@ describe('ThreadList', () => {
         }
     });
 
-    it('renders the web confirmation and confirms thread deletion', () => {
+    it('renders the web confirmation and confirms thread deletion', async () => {
         const originalPlatform = Platform.OS;
         Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
         const onDeleteThread = jest.fn();
 
         try {
-            const { getByLabelText } = render(
+            const { getByLabelText } = await render(
                 <ThreadList {...defaultProps} onDeleteThread={onDeleteThread} />
             );
 
-            fireEvent.press(getByLabelText('Удалить диалог с Иван Петров'));
-            fireEvent.press(getByLabelText('Подтвердить удаление диалога'));
+            await fireEvent.press(getByLabelText('Удалить диалог с Иван Петров'));
+            await fireEvent.press(getByLabelText('Подтвердить удаление диалога'));
 
             expect(onDeleteThread).toHaveBeenCalledWith(1);
         } finally {
@@ -472,11 +473,11 @@ describe('ThreadList', () => {
         const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => undefined);
 
         try {
-            const { getByLabelText } = render(
+            const { getByLabelText } = await render(
                 <ThreadList {...defaultProps} onDeleteThread={onDeleteThread} />
             );
 
-            fireEvent(getByLabelText('Диалог с Иван Петров'), 'longPress');
+            await fireEvent(getByLabelText('Диалог с Иван Петров'), 'longPress');
             expect(onDeleteThread).not.toHaveBeenCalled();
             expect(alertSpy).toHaveBeenCalledTimes(1);
             expect(alertSpy).toHaveBeenCalledWith(
@@ -497,12 +498,12 @@ describe('ThreadList', () => {
         }
     });
 
-    it('labels a persisted thread with no remaining peer as a deleted user', () => {
+    it('labels a persisted thread with no remaining peer as a deleted user', async () => {
         const orphanedThread: MessageThread = {
             ...mockThreads[0],
             participants: [1],
         };
-        const { getByText, queryByText } = render(
+        const { getByText, queryByText } = await render(
             <ThreadList
                 {...defaultProps}
                 threads={[orphanedThread]}
@@ -520,8 +521,8 @@ describe('ThreadList', () => {
     // available-users list (it now merges resolved profiles). This test documents
     // the contract: a missing entry falls back to «Пользователь», so the gap is
     // never the component's to hide — it must be filled by the screen.
-    it('falls back to «Пользователь» only when the name map lacks the peer', () => {
-        const { getByText, queryByText } = render(
+    it('falls back to «Пользователь» only when the name map lacks the peer', async () => {
+        const { getByText, queryByText } = await render(
             <ThreadList
                 {...defaultProps}
                 threads={[mockThreads[0]]}
@@ -532,7 +533,7 @@ describe('ThreadList', () => {
         expect(queryByText('Иван Петров')).toBeNull();
 
         // With the name provided (как теперь делает экран через mergedNames) — реальное имя.
-        const { getByText: getByText2 } = render(
+        const { getByText: getByText2 } = await render(
             <ThreadList {...defaultProps} threads={[mockThreads[0]]} />
         );
         expect(getByText2('Иван Петров')).toBeTruthy();

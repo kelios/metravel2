@@ -52,8 +52,8 @@ function Probe({ impressionKey, onImpression }: { impressionKey: string; onImpre
   return <View testID="probe" ref={impression.ref as any} onLayout={impression.onLayout} />
 }
 
-const renderProbe = (props: { impressionKey: string; onImpression: () => void }) =>
-  render(<Probe {...props} />)
+const renderProbe = async (props: { impressionKey: string; onImpression: () => void }) =>
+  await render(<Probe {...props} />)
 
 const liveObserver = () => {
   const observer = FakeIntersectionObserver.instances[FakeIntersectionObserver.instances.length - 1]
@@ -76,9 +76,9 @@ describe('useTrackedImpression', () => {
     ;(globalThis as any).IntersectionObserver = originalObserver
   })
 
-  it('keeps the observer alive after mount and reports the impression once', () => {
+  it('keeps the observer alive after mount and reports the impression once', async () => {
     const onImpression = jest.fn()
-    renderProbe({ impressionKey: 'quest_card::7', onImpression })
+    await renderProbe({ impressionKey: 'quest_card::7', onImpression })
 
     const observer = liveObserver()
     expect(observer.observed).toHaveLength(1)
@@ -90,24 +90,24 @@ describe('useTrackedImpression', () => {
     expect(onImpression).toHaveBeenCalledTimes(1)
   })
 
-  it('re-arms for a new impression key on the same node', () => {
+  it('re-arms for a new impression key on the same node', async () => {
     const onImpression = jest.fn()
-    const { rerender } = renderProbe({ impressionKey: 'quest_card::7', onImpression })
+    const { rerender } = await renderProbe({ impressionKey: 'quest_card::7', onImpression })
 
     liveObserver().enterViewport()
     expect(onImpression).toHaveBeenCalledTimes(1)
 
-    rerender(<Probe impressionKey="quest_card::9" onImpression={onImpression} />)
+    await rerender(<Probe impressionKey="quest_card::9" onImpression={onImpression} />)
     liveObserver().enterViewport()
     expect(onImpression).toHaveBeenCalledTimes(2)
   })
 
-  it('stops observing when the element goes away', () => {
+  it('stops observing when the element goes away', async () => {
     const onImpression = jest.fn()
-    const { unmount } = renderProbe({ impressionKey: 'quest_card::7', onImpression })
+    const { unmount } = await renderProbe({ impressionKey: 'quest_card::7', onImpression })
     const observer = liveObserver()
 
-    unmount()
+    await unmount()
 
     expect(observer.disconnected).toBe(true)
     expect(onImpression).not.toHaveBeenCalled()

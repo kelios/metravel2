@@ -25,8 +25,8 @@ describe('GroupedFiltersSection', () => {
         defaultExpanded: false,
     };
 
-    it('renders correctly with collapsed state', () => {
-        const { getByText, queryByText } = render(
+    it('renders correctly with collapsed state', async () => {
+        const { getByText, queryByText } = await render(
             <GroupedFiltersSection group={mockGroup}>
                 <Text>Child content</Text>
             </GroupedFiltersSection>
@@ -36,9 +36,9 @@ describe('GroupedFiltersSection', () => {
         expect(queryByText('Child content')).toBeNull();
     });
 
-    it('renders correctly with expanded state', () => {
+    it('renders correctly with expanded state', async () => {
         const expandedGroup = { ...mockGroup, defaultExpanded: true };
-        const { getByText } = render(
+        const { getByText } = await render(
             <GroupedFiltersSection group={expandedGroup}>
                 <Text>Child content</Text>
             </GroupedFiltersSection>
@@ -48,8 +48,8 @@ describe('GroupedFiltersSection', () => {
         expect(getByText('Child content')).toBeTruthy();
     });
 
-    it('toggles expansion on press', () => {
-        const { getByLabelText, getByText, queryByText } = render(
+    it('toggles expansion on press', async () => {
+        const { getByLabelText, getByText, queryByText } = await render(
             <GroupedFiltersSection group={mockGroup}>
                 <Text>Child content</Text>
             </GroupedFiltersSection>
@@ -59,20 +59,20 @@ describe('GroupedFiltersSection', () => {
         expect(queryByText('Child content')).toBeNull();
 
         // Press to expand
-        fireEvent.press(getByLabelText('Развернуть: Test Group'));
+        await fireEvent.press(getByLabelText('Развернуть: Test Group'));
 
         // Now expanded
         expect(getByText('Child content')).toBeTruthy();
 
         // Press to collapse
-        fireEvent.press(getByLabelText('Свернуть: Test Group'));
+        await fireEvent.press(getByLabelText('Свернуть: Test Group'));
 
         // Collapsed again
         expect(queryByText('Child content')).toBeNull();
     });
 
-    it('displays progress badge when filledCount and totalCount are provided', () => {
-        const { getByText } = render(
+    it('displays progress badge when filledCount and totalCount are provided', async () => {
+        const { getByText } = await render(
             <GroupedFiltersSection group={mockGroup} filledCount={2} totalCount={5}>
                 <Text>Child content</Text>
             </GroupedFiltersSection>
@@ -81,8 +81,8 @@ describe('GroupedFiltersSection', () => {
         expect(getByText('2/5')).toBeTruthy();
     });
 
-    it('does not display progress badge when counts are missing', () => {
-        const { queryByText } = render(
+    it('does not display progress badge when counts are missing', async () => {
+        const { queryByText } = await render(
             <GroupedFiltersSection group={mockGroup}>
                 <Text>Child content</Text>
             </GroupedFiltersSection>
@@ -91,8 +91,8 @@ describe('GroupedFiltersSection', () => {
         expect(queryByText(/\/\d+/)).toBeNull();
     });
 
-    it('shows description when collapsed', () => {
-        const { getByText } = render(
+    it('shows description when collapsed', async () => {
+        const { getByText } = await render(
             <GroupedFiltersSection group={mockGroup}>
                 <Text>Child content</Text>
             </GroupedFiltersSection>
@@ -101,9 +101,9 @@ describe('GroupedFiltersSection', () => {
         expect(getByText('Test description')).toBeTruthy();
     });
 
-    it('shows full description when expanded', () => {
+    it('shows full description when expanded', async () => {
         const expandedGroup = { ...mockGroup, defaultExpanded: true };
-        const { getByText } = render(
+        const { getByText } = await render(
             <GroupedFiltersSection group={expandedGroup}>
                 <Text>Child content</Text>
             </GroupedFiltersSection>

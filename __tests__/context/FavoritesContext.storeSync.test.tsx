@@ -58,7 +58,7 @@ describe('useFavorites store sync (native cold-start regression)', () => {
 
   it('reflects favorites + viewHistory (RQ cache) populated after mount', async () => {
     let ctx: any;
-    render(
+    await render(
       <QueryClientProvider client={queryClient}>
         <FavoritesProvider>
           <Probe onContext={(c) => { ctx = c; }} />

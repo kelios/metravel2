@@ -1,3 +1,4 @@
+import { createWebMapTestRuntime, type WebMapTestRuntime } from '@/__tests__/helpers/webMapTestRuntime'
 /**
  * #1683 — точка с битыми координатами не роняет карту плана поездки.
  *
@@ -13,7 +14,7 @@
  * дыра была у `tripPlanRouteMapPopupCoordinates.test.tsx`.
  */
 import React from 'react'
-import { render, waitFor } from '@testing-library/react-native'
+import { render as renderNative } from '@testing-library/react-native'
 
 import type { RoutePoint } from '@/api/plannedTrips'
 
@@ -23,7 +24,6 @@ const mockBoundsPositions: unknown[][] = []
 const mockSetViewPositions: unknown[] = []
 const mockNativeMapProps: Array<Record<string, unknown>> = []
 
-jest.mock('react-dom', () => ({ createPortal: (node: unknown) => node }))
 jest.mock('@/utils/ensureLeafletCss', () => ({ ensureLeafletCss: jest.fn() }))
 
 jest.mock('@/utils/loadLeafletRuntime', () => {
@@ -99,7 +99,7 @@ jest.mock('@/hooks/useTheme', () => ({
     new Proxy({}, { get: (_t, key) => String(key) }) as unknown as Record<string, string>,
 }))
 
-import TripPlanRouteMapWeb from '@/components/trips/planning/TripPlanRouteMap.web'
+let TripPlanRouteMapWeb: typeof import('@/components/trips/planning/TripPlanRouteMap.web').default
 import TripPlanRouteMapNative from '@/components/trips/planning/TripPlanRouteMap'
 import { isDrawableCoordinatePair } from '@/components/trips/planning/tripPlanFormatting'
 
@@ -129,14 +129,10 @@ const routeWithBrokenPoints: RoutePoint[] = [
   point('b', 'Финиш', FINISH),
 ]
 
-const collectText = (node: unknown): string[] => {
-  if (typeof node === 'string') return [node]
-  if (Array.isArray(node)) return node.flatMap(collectText)
-  if (node && typeof node === 'object' && 'children' in node) {
-    return collectText((node as { children: unknown }).children)
-  }
-  return []
-}
+const collectText = (node: Node): string[] =>
+  node.nodeType === Node.TEXT_NODE
+    ? [node.textContent ?? '']
+    : Array.from(node.childNodes).flatMap(collectText)
 
 beforeEach(() => {
   mockMarkerPositions.length = 0
@@ -160,47 +156,47 @@ describe('isDrawableCoordinatePair', () => {
 
 describe('TripPlanRouteMap.web — битые координаты точки', () => {
   it('рисует остальной маршрут и не строит маркер на битой паре', async () => {
-    const screen = render(<TripPlanRouteMapWeb route={routeWithBrokenPoints} />)
+    const screen = await web.render(<TripPlanRouteMapWeb route={routeWithBrokenPoints} />)
 
-    await waitFor(() => expect(collectText(screen.toJSON())).toContain('Старт'))
+    await web.waitFor(() => expect(collectText(screen.container)).toContain('Старт'))
 
     // Маркеры Leaflet ждут [lat, lng] — порядок инвертирован относительно хранения.
     expect(mockMarkerPositions).toEqual([
       [START[1], START[0]],
       [FINISH[1], FINISH[0]],
     ])
-    const text = collectText(screen.toJSON())
+    const text = collectText(screen.container)
     expect(text).toContain('Финиш')
     expect(text).not.toContain('Битая широта')
     expect(text).not.toContain('Битая долгота')
   })
 
   it('не пускает битую пару в линию маршрута и подгонку кадра', async () => {
-    const screen = render(<TripPlanRouteMapWeb route={routeWithBrokenPoints} />)
+    const screen = await web.render(<TripPlanRouteMapWeb route={routeWithBrokenPoints} />)
 
-    await waitFor(() => expect(mockPolylinePositions.length).toBeGreaterThan(0))
+    await web.waitFor(() => expect(mockPolylinePositions.length).toBeGreaterThan(0))
 
     expect(mockPolylinePositions[0]).toEqual([
       [START[1], START[0]],
       [FINISH[1], FINISH[0]],
     ])
-    await waitFor(() => expect(mockBoundsPositions.length).toBeGreaterThan(0))
+    await web.waitFor(() => expect(mockBoundsPositions.length).toBeGreaterThan(0))
     expect(mockBoundsPositions[0]).toEqual([
       [START[1], START[0]],
       [FINISH[1], FINISH[0]],
     ])
-    expect(screen.toJSON()).toBeTruthy()
+    expect(screen.container.firstElementChild).not.toBeNull()
   })
 
   it('переживает битую пару в оригинальном треке', async () => {
-    const screen = render(
+    const screen = await web.render(
       <TripPlanRouteMapWeb
         route={[point('a', 'Старт', START), point('b', 'Финиш', FINISH)]}
         originalTrackSegments={[[TRACK_START, BROKEN_LAT, TRACK_END]]}
       />,
     )
 
-    await waitFor(() => expect(collectText(screen.toJSON())).toContain('Старт'))
+    await web.waitFor(() => expect(collectText(screen.container)).toContain('Старт'))
 
     // Трек рисуется своей линией без битой пары, а не исчезает и не роняет карту.
     expect(mockPolylinePositions).toContainEqual([
@@ -215,35 +211,35 @@ describe('TripPlanRouteMap.web — центрирование на точке и
   const validRoute = [point('a', 'Старт', START), point('b', 'Финиш', FINISH)]
 
   it('центрирует карту на валидной точке', async () => {
-    render(
+    await web.render(
       <TripPlanRouteMapWeb
         route={validRoute}
         focusPoint={{ lat: FINISH[1], lng: FINISH[0], token: 1 }}
       />,
     )
 
-    await waitFor(() => expect(mockSetViewPositions).toEqual([[FINISH[1], FINISH[0]]]))
+    await web.waitFor(() => expect(mockSetViewPositions).toEqual([[FINISH[1], FINISH[0]]]))
   })
 
   it('не зовёт setView по битой паре: список отдаёт точку по наличию координат', async () => {
     // `RouteBuilder.handleFocusPoint` пропускает точку по `if (!coordinates)`,
     // поэтому в карту прилетает пара с NaN — гард маркера её не перехватывает.
-    const screen = render(
+    const screen = await web.render(
       <TripPlanRouteMapWeb
         route={validRoute}
         focusPoint={{ lat: Number.NaN, lng: BROKEN_LAT[0], token: 2 }}
       />,
     )
 
-    await waitFor(() => expect(collectText(screen.toJSON())).toContain('Старт'))
+    await web.waitFor(() => expect(collectText(screen.container)).toContain('Старт'))
 
     expect(mockSetViewPositions).toEqual([])
   })
 })
 
 describe('TripPlanRouteMap (native) — битые координаты точки', () => {
-  it('отдаёт карте только пары с конечными числами', () => {
-    const { getByTestId } = render(<TripPlanRouteMapNative route={routeWithBrokenPoints} />)
+  it('отдаёт карте только пары с конечными числами', async () => {
+    const { getByTestId } = await renderNative(<TripPlanRouteMapNative route={routeWithBrokenPoints} />)
 
     expect(getByTestId('native-map')).toBeTruthy()
     const props = mockNativeMapProps[0]
@@ -252,8 +248,8 @@ describe('TripPlanRouteMap (native) — битые координаты точк
     expect(props.fullRouteCoords).toEqual([START, FINISH])
   })
 
-  it('чистит битую пару из оригинального трека', () => {
-    render(
+  it('чистит битую пару из оригинального трека', async () => {
+    await renderNative(
       <TripPlanRouteMapNative
         route={[point('a', 'Старт', START), point('b', 'Финиш', FINISH)]}
         originalTrackSegments={[[START, BROKEN_LNG, FINISH]]}
@@ -263,3 +259,10 @@ describe('TripPlanRouteMap (native) — битые координаты точк
     expect(mockNativeMapProps[0].originalTrackSegments).toEqual([[START, FINISH]])
   })
 })
+
+let web: WebMapTestRuntime<typeof TripPlanRouteMapWeb>
+beforeAll(() => {
+  web = createWebMapTestRuntime(React, () => require('@/components/trips/planning/TripPlanRouteMap.web').default)
+  TripPlanRouteMapWeb = web.subject
+})
+afterEach(() => web.cleanup())

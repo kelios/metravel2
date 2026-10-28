@@ -81,12 +81,12 @@ describe.each(['ios', 'android'] as const)('controls over the native map on %s (
     Object.defineProperty(Platform, 'OS', { value: originalOS })
   })
 
-  const renderCanvas = (props: Record<string, unknown>) => {
+  const renderCanvas = async (props: Record<string, unknown>) => {
     const { MapCanvas } = require('@/components/MapPage/MapCanvas')
-    return render(<MapCanvas {...baseProps} {...props} />)
+    return await render(<MapCanvas {...baseProps} {...props} />)
   }
 
-  const assertLayerInvariant = (utils: ReturnType<typeof render>, expected: string[]) => {
+  const assertLayerInvariant = (utils: Awaited<ReturnType<typeof render>>, expected: string[]) => {
     const root = utils.toJSON() as any
     const kids = (root.children ?? []) as any[]
     const layerIndex = kids.findIndex((kid) => kid?.props?.testID === 'map-overlay-layer')
@@ -105,8 +105,8 @@ describe.each(['ios', 'android'] as const)('controls over the native map on %s (
     expect(interactive.filter((node) => !node.inLayer)).toEqual([])
   }
 
-  it('tablet: «Искать в этой области» and «Моё местоположение» live in the overlay layer', () => {
-    const utils = renderCanvas({
+  it('tablet: «Искать в этой области» and «Моё местоположение» live in the overlay layer', async () => {
+    const utils = await renderCanvas({
       isMobile: false,
       canSearchThisArea: true,
       onSearchThisArea: jest.fn(),
@@ -116,8 +116,8 @@ describe.each(['ios', 'android'] as const)('controls over the native map on %s (
     assertLayerInvariant(utils, ['map-search-this-area-desktop', 'map-desktop-locate-button'])
   })
 
-  it('phone: the geo banner actions live in the overlay layer too', () => {
-    const utils = renderCanvas({
+  it('phone: the geo banner actions live in the overlay layer too', async () => {
+    const utils = await renderCanvas({
       isMobile: true,
       locationState: { status: 'denied', coordinates: null, accuracy: null, timestamp: null, canAskAgain: true },
       showGeoBanner: true,
@@ -127,9 +127,9 @@ describe.each(['ios', 'android'] as const)('controls over the native map on %s (
     assertLayerInvariant(utils, [])
   })
 
-  it('the map surface itself carries no elevation (native MapPanel root)', () => {
+  it('the map surface itself carries no elevation (native MapPanel root)', async () => {
     const ActualMapPanel = jest.requireActual('@/components/MapPage/MapPanel').default
-    const utils = render(
+    const utils = await render(
       <ActualMapPanel
         travelsData={[]}
         coordinates={{ latitude: 53.9, longitude: 27.56 }}

@@ -68,7 +68,7 @@ const flush = async () => {
 describe('#1813 — pane маршрута на карте раздела «Карта» (MapRoute)', () => {
   it('получает z-index на пропатченном get-or-create getPane', async () => {
     const map = makeMap()
-    render(<MapRoute map={map} leaflet={makeLeaflet()} routeCoordinates={coords} isOptimal />)
+    await render(<MapRoute map={map} leaflet={makeLeaflet()} routeCoordinates={coords} isOptimal />)
     await flush()
 
     expect(map.panes[ROUTE_PANE_NAME].style.zIndex).toBe('590')
@@ -79,7 +79,7 @@ describe('#1813 — pane маршрута на карте раздела «Ка�
 
   it('на detached-заглушке мёртвой карты оставляет линию в штатном pane', async () => {
     const map = makeMap({ connected: false })
-    render(<MapRoute map={map} leaflet={makeLeaflet()} routeCoordinates={coords} isOptimal />)
+    await render(<MapRoute map={map} leaflet={makeLeaflet()} routeCoordinates={coords} isOptimal />)
     await flush()
 
     expect(map.panes[ROUTE_PANE_NAME].style.zIndex).toBeUndefined()
@@ -97,7 +97,7 @@ describe('#1813 — pane маршрута на карте статьи (RouteLin
 
   it('получает z-index на пропатченном get-or-create getPane', async () => {
     const map = makeMap()
-    render(
+    await render(
       <RouteLineLayer
         routeLineCoords={lineCoords}
         colors={colors}
@@ -115,7 +115,7 @@ describe('#1813 — pane маршрута на карте статьи (RouteLin
 
   it('на detached-заглушке мёртвой карты откатывается в overlayPane', async () => {
     const map = makeMap({ connected: false })
-    render(
+    await render(
       <RouteLineLayer
         routeLineCoords={lineCoords}
         colors={colors}

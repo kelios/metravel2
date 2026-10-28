@@ -30,7 +30,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 
 it('deduplicates concurrent consumers per locale and preserves selected IDs after language switching', async () => {
   fetchOptions.mockImplementation(async ({ lang } = {}) => dictionary(lang === 'en' ? 'Mountains' : 'Горы'));
-  const { result } = renderHook(() => {
+  const { result } = await renderHook(() => {
     const shared = useFilterOptions();
     const catalog = useListTravelFilterOptions(true);
     const selection = useListTravelFilters({
@@ -40,7 +40,7 @@ it('deduplicates concurrent consumers per locale and preserves selected IDs afte
     return { shared, catalog, selection };
   }, { wrapper });
   await waitFor(() => expect(result.current.catalog.options?.categories?.[0].name).toBe('Горы'));
-  act(() => result.current.selection.onSelect('categories', ['25']));
+  await act(() => result.current.selection.onSelect('categories', ['25']));
   await act(async () => { await i18n.changeLanguage('en'); });
   await waitFor(() => expect(result.current.catalog.options?.categories?.[0].name).toBe('Mountains'));
   expect(result.current.shared.data?.categories[0]).toEqual({ id: 25, name: 'Mountains' });
@@ -54,7 +54,7 @@ it('does not render a late Russian response under an English query', async () =>
   let resolveRu: (data: ReturnType<typeof dictionary>) => void = () => {};
   fetchOptions.mockImplementation(({ lang } = {}) => lang === 'ru'
     ? new Promise(resolve => { resolveRu = resolve; }) : Promise.resolve(dictionary('Mountains')));
-  const { result } = renderHook(() => useFilterOptions(), { wrapper });
+  const { result } = await renderHook(() => useFilterOptions(), { wrapper });
   await act(async () => { await i18n.changeLanguage('en'); });
   await waitFor(() => expect(result.current.data?.categories[0].name).toBe('Mountains'));
   await act(async () => { resolveRu(dictionary('Горы')); });

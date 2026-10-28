@@ -43,8 +43,8 @@ describe('AffiliateOffers', () => {
     })
   })
 
-  it('renders both offers with localized titles', () => {
-    const { getByText } = render(<AffiliateOffers city="Минск" travelId={384} />)
+  it('renders both offers with localized titles', async () => {
+    const { getByText } = await render(<AffiliateOffers city="Минск" travelId={384} />)
     expect(getByText('Экскурсии и гиды')).toBeTruthy()
     expect(getByText('Где остановиться')).toBeTruthy()
   })
@@ -57,8 +57,8 @@ describe('AffiliateOffers', () => {
   // range, not as `'96%'`: the number is a measurement, and a different reserve is
   // still a correct fix — a reserve of none is not. The name says what is asserted
   // and no more: the reserve narrows the exposure, it does not close the class.
-  it('keeps a width reserve on the offer subtitle (#1392)', () => {
-    const { getByText } = render(
+  it('keeps a width reserve on the offer subtitle (#1392)', async () => {
+    const { getByText } = await render(
       <AffiliateOffers city="Минск" country="Беларусь" countryCode="BY" travelId={384} />,
     )
     // Full string on purpose: `/Авторские экскурсии/` also matches the place-less
@@ -72,18 +72,18 @@ describe('AffiliateOffers', () => {
     if (String(maxWidth).endsWith('%')) expect(reserve).toBeLessThan(100)
   })
 
-  it('renders nothing when no template is configured', () => {
+  it('renders nothing when no template is configured', async () => {
     delete process.env.EXPO_PUBLIC_AFFILIATE_TOURS_TEMPLATE
     delete process.env.EXPO_PUBLIC_AFFILIATE_HOTELS_TEMPLATE
-    const { toJSON } = render(<AffiliateOffers city="Минск" travelId={384} />)
+    const { toJSON } = await render(<AffiliateOffers city="Минск" travelId={384} />)
     expect(toJSON()).toBeNull()
   })
 
-  it('tracks click and opens the interpolated affiliate URL', () => {
-    const { getByText } = render(
+  it('tracks click and opens the interpolated affiliate URL', async () => {
+    const { getByText } = await render(
       <AffiliateOffers city="Минск" country="Беларусь" countryCode="BY" travelId={384} />,
     )
-    fireEvent.press(getByText('Подобрать жильё'))
+    await fireEvent.press(getByText('Подобрать жильё'))
 
     expect(queueAnalyticsEvent).toHaveBeenCalledWith(
       'Affiliate_Click',
@@ -96,17 +96,17 @@ describe('AffiliateOffers', () => {
     expect(calledUrl).toContain(encodeURIComponent('https://ostrovok.ru/hotel/belarus/'))
   })
 
-  it('tracks one impression from native layout without opening partner links', () => {
+  it('tracks one impression from native layout without opening partner links', async () => {
     ;(Platform as any).OS = 'android'
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <AffiliateOffers city="Минск" country="Беларусь" countryCode="BY" travelId={384} />,
     )
 
-    fireEvent(getByTestId('affiliate-offers'), 'layout', {
+    await fireEvent(getByTestId('affiliate-offers'), 'layout', {
       nativeEvent: { layout: { x: 0, y: 120, width: 320, height: 180 } },
     })
-    fireEvent(getByTestId('affiliate-offers'), 'layout', {
+    await fireEvent(getByTestId('affiliate-offers'), 'layout', {
       nativeEvent: { layout: { x: 0, y: 120, width: 320, height: 180 } },
     })
 

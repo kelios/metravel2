@@ -66,9 +66,9 @@ describe('useQuestReviewPhotoUpload', () => {
       return { id: 1, url: 'https://cdn/x.jpg', sizeBytes: 1000 }
     })
 
-    const { result } = renderHook(() => useQuestReviewPhotoUpload(77))
+    const { result } = await renderHook(() => useQuestReviewPhotoUpload(77))
 
-    act(() => {
+    await act(() => {
       result.current.uploadAll(77, [draft('a'), draft('b')], { questId: 'minsk-cmok', cityId: '3' })
     })
 
@@ -93,8 +93,8 @@ describe('useQuestReviewPhotoUpload', () => {
   it('marks a rejected photo failed, keeps the queue going and reports the reason', async () => {
     mockUpload.mockRejectedValueOnce(new UploadTransportError('idle_timeout'))
 
-    const { result } = renderHook(() => useQuestReviewPhotoUpload(77))
-    act(() => {
+    const { result } = await renderHook(() => useQuestReviewPhotoUpload(77))
+    await act(() => {
       result.current.uploadAll(77, [draft('a'), draft('b')], { questId: 'q' })
     })
 
@@ -112,8 +112,8 @@ describe('useQuestReviewPhotoUpload', () => {
   it('retry re-uploads only the failed photo with the same client upload id', async () => {
     mockUpload.mockRejectedValueOnce(new UploadTransportError('network'))
 
-    const { result } = renderHook(() => useQuestReviewPhotoUpload(77))
-    act(() => {
+    const { result } = await renderHook(() => useQuestReviewPhotoUpload(77))
+    await act(() => {
       result.current.uploadAll(77, [draft('a'), draft('b'), draft('c')])
     })
     await waitFor(() => expect(result.current.isActive).toBe(false))
@@ -121,7 +121,7 @@ describe('useQuestReviewPhotoUpload', () => {
     const firstClientId = mockUpload.mock.calls[0][0].clientUploadId
     expect(firstClientId).toEqual(expect.any(String))
 
-    act(() => {
+    await act(() => {
       result.current.retry('a')
     })
     await waitFor(() => expect(result.current.uploaded).toBe(3))
@@ -150,8 +150,8 @@ describe('useQuestReviewPhotoUpload', () => {
         }),
     )
 
-    const { result } = renderHook(() => useQuestReviewPhotoUpload(5))
-    act(() => {
+    const { result } = await renderHook(() => useQuestReviewPhotoUpload(5))
+    await act(() => {
       result.current.uploadAll(5, [draft('a')])
     })
 
@@ -173,25 +173,25 @@ describe('useQuestReviewPhotoUpload', () => {
         }),
     )
 
-    const first = renderHook(() => useQuestReviewPhotoUpload(9))
-    act(() => {
+    const first = await renderHook(() => useQuestReviewPhotoUpload(9))
+    await act(() => {
       first.result.current.uploadAll(9, [draft('a'), draft('b')])
     })
     await waitFor(() => expect(mockUpload).toHaveBeenCalledTimes(1))
-    first.unmount()
+    await first.unmount()
 
     await act(async () => {
       finish()
     })
 
-    const second = renderHook(() => useQuestReviewPhotoUpload(9))
+    const second = await renderHook(() => useQuestReviewPhotoUpload(9))
     await waitFor(() => expect(second.result.current.uploaded).toBe(2))
     expect(second.result.current.total).toBe(2)
   })
 
   it('does not duplicate drafts that are already queued', async () => {
-    const { result } = renderHook(() => useQuestReviewPhotoUpload(77))
-    act(() => {
+    const { result } = await renderHook(() => useQuestReviewPhotoUpload(77))
+    await act(() => {
       result.current.uploadAll(77, [draft('a')])
       result.current.uploadAll(77, [draft('a')])
     })
@@ -199,9 +199,9 @@ describe('useQuestReviewPhotoUpload', () => {
     expect(mockUpload).toHaveBeenCalledTimes(1)
   })
 
-  it('ignores an empty draft list and an invalid review id', () => {
-    const { result } = renderHook(() => useQuestReviewPhotoUpload(77))
-    act(() => {
+  it('ignores an empty draft list and an invalid review id', async () => {
+    const { result } = await renderHook(() => useQuestReviewPhotoUpload(77))
+    await act(() => {
       result.current.uploadAll(77, [])
       result.current.uploadAll(0, [draft('a')])
     })

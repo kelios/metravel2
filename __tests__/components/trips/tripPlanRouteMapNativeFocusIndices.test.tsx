@@ -69,9 +69,9 @@ describe('TripPlanRouteMap (native): focusIndices', () => {
     mockFocusOnCoord.mockClear()
   })
 
-  it('отдаёт WebView координаты точек дня один раз на токен', () => {
+  it('отдаёт WebView координаты точек дня один раз на токен', async () => {
     const focusIndices = { indices: [1, 2, 3], token: 1 }
-    const utils = render(<TripPlanRouteMap route={route} focusIndices={focusIndices} />)
+    const utils = await render(<TripPlanRouteMap route={route} focusIndices={focusIndices} />)
 
     expect(mockFitToCoords).toHaveBeenCalledTimes(1)
     expect(mockFitToCoords).toHaveBeenCalledWith(
@@ -83,18 +83,18 @@ describe('TripPlanRouteMap (native): focusIndices', () => {
       { maxZoom: FOCUS_POINT_ZOOM, padding: ROUTE_MAP_FIT_PADDING },
     )
 
-    utils.rerender(<TripPlanRouteMap route={[...route]} focusIndices={focusIndices} />)
+    await utils.rerender(<TripPlanRouteMap route={[...route]} focusIndices={focusIndices} />)
     expect(mockFitToCoords).toHaveBeenCalledTimes(1)
 
-    utils.rerender(<TripPlanRouteMap route={route} focusIndices={{ indices: [0], token: 2 }} />)
+    await utils.rerender(<TripPlanRouteMap route={route} focusIndices={{ indices: [0], token: 2 }} />)
     expect(mockFitToCoords).toHaveBeenLastCalledWith([{ lat: 50.06, lng: 19.94 }], {
       maxZoom: FOCUS_POINT_ZOOM,
       padding: ROUTE_MAP_FIT_PADDING,
     })
   })
 
-  it('без пригодных координат команду не шлёт', () => {
-    render(<TripPlanRouteMap route={route} focusIndices={{ indices: [3], token: 1 }} />)
+  it('без пригодных координат команду не шлёт', async () => {
+    await render(<TripPlanRouteMap route={route} focusIndices={{ indices: [3], token: 1 }} />)
 
     expect(mockFitToCoords).not.toHaveBeenCalled()
   })
@@ -152,7 +152,7 @@ describe('TripPlanRouteMap (native): focusIndices', () => {
     expect(runFitCoords({ x: 390, y: 354 })).toEqual({ maxZoom: 14, padding: [50, 50] })
   })
 
-  it('#2059 маркер с номером из списка правит свою точку, даже если перед ней точка без координат', () => {
+  it('#2059 маркер с номером из списка правит свою точку, даже если перед ней точка без координат', async () => {
     const onMovePoint = jest.fn()
     const withGap: RoutePoint[] = [
       point(0, [19.94, 50.06]),
@@ -160,32 +160,32 @@ describe('TripPlanRouteMap (native): focusIndices', () => {
       point(2, [11.58, 48.14]),
       point(3, [11.6, 48.1]),
     ]
-    const utils = render(<TripPlanRouteMap route={withGap} onMovePoint={onMovePoint} onEditPoint={jest.fn()} />)
+    const utils = await render(<TripPlanRouteMap route={withGap} onMovePoint={onMovePoint} onEditPoint={jest.fn()} />)
 
     // Точка «2» без координат маркера не получает, но номер в списке занимает.
     expect(mockNativeMapProps.routePointMarkers.labels).toEqual(['1', '3', '4'])
 
     // WebView сообщает позицию маркера среди переданных пар: второй маркер — точка «3».
-    act(() => mockNativeMapProps.onRoutePointMove(1, 48.2, 11.7))
+    await act(() => mockNativeMapProps.onRoutePointMove(1, 48.2, 11.7))
     expect(onMovePoint).toHaveBeenCalledWith({ index: 2, lat: 48.2, lng: 11.7 })
 
-    act(() => mockNativeMapProps.onRoutePointPress(1))
+    await act(() => mockNativeMapProps.onRoutePointPress(1))
     expect(within(utils.getByTestId('trip-plan-map-point-actions')).getByText('Точка 3')).toBeTruthy()
   })
 
   // #2066: тап по строке точки в списке — карта зовёт MapUiApi.focusOnCoord,
   // единственный доступ к native-карте из-под WebView (см. TripPlanRouteMap.tsx).
-  it('#2066: тап по точке в списке зовёт focusOnCoord с FOCUS_POINT_ZOOM, тот же token повторно — нет', () => {
+  it('#2066: тап по точке в списке зовёт focusOnCoord с FOCUS_POINT_ZOOM, тот же token повторно — нет', async () => {
     const focusPoint = { lat: 48.14, lng: 11.58, token: 1 }
-    const utils = render(<TripPlanRouteMap route={route} focusPoint={focusPoint} />)
+    const utils = await render(<TripPlanRouteMap route={route} focusPoint={focusPoint} />)
 
     expect(mockFocusOnCoord).toHaveBeenCalledTimes(1)
     expect(mockFocusOnCoord).toHaveBeenCalledWith('48.14,11.58', { zoom: FOCUS_POINT_ZOOM })
 
-    utils.rerender(<TripPlanRouteMap route={route} focusPoint={focusPoint} />)
+    await utils.rerender(<TripPlanRouteMap route={route} focusPoint={focusPoint} />)
     expect(mockFocusOnCoord).toHaveBeenCalledTimes(1)
 
-    utils.rerender(
+    await utils.rerender(
       <TripPlanRouteMap route={route} focusPoint={{ lat: 50.06, lng: 19.94, token: 2 }} />,
     )
     expect(mockFocusOnCoord).toHaveBeenCalledTimes(2)

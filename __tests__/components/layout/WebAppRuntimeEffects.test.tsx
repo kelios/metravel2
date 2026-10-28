@@ -7,14 +7,14 @@ describe('WebAppRuntimeEffects', () => {
     document.body.innerHTML = ''
   })
 
-  it('preserves native history.replaceState semantics', () => {
+  it('preserves native history.replaceState semantics', async () => {
     const originalReplaceState = window.history.replaceState
 
-    const view = render(<WebAppRuntimeEffects pathname="/search" />)
+    const view = await render(<WebAppRuntimeEffects pathname="/search" />)
 
     expect(window.history.replaceState).toBe(originalReplaceState)
 
-    view.unmount()
+    await view.unmount()
     expect(window.history.replaceState).toBe(originalReplaceState)
   })
 
@@ -23,13 +23,13 @@ describe('WebAppRuntimeEffects', () => {
     main.id = 'main-content'
     document.body.appendChild(main)
 
-    const view = render(<WebAppRuntimeEffects pathname="/search" />)
+    const view = await render(<WebAppRuntimeEffects pathname="/search" />)
 
     await waitFor(() => {
       expect(document.activeElement).toBe(main)
     })
 
-    view.rerender(<WebAppRuntimeEffects pathname="/places" />)
+    await view.rerender(<WebAppRuntimeEffects pathname="/places" />)
     await waitFor(() => {
       expect(document.activeElement).toBe(main)
     })

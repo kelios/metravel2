@@ -37,11 +37,11 @@ const mockedToast = showToast as jest.Mock
 
 const foreignComment: ContentRef = { content_type: 'travel_comment', object_id: 15, author_id: 42 }
 
-function renderWithClient(ui: React.ReactElement) {
+async function renderWithClient(ui: React.ReactElement) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
+  return await render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>)
 }
 
 describe('ContentSafetyActions (#2133)', () => {
@@ -57,25 +57,25 @@ describe('ContentSafetyActions (#2133)', () => {
     Object.defineProperty(Platform, 'OS', { value: originalOS, configurable: true })
   })
 
-  it('renders nothing on own content', () => {
-    const { queryByTestId } = renderWithClient(
+  it('renders nothing on own content', async () => {
+    const { queryByTestId } = await renderWithClient(
       <ContentSafetyActions contentRef={{ ...foreignComment, author_id: 1 }} />,
     )
     expect(queryByTestId('content-safety-menu')).toBeNull()
   })
 
-  it('renders nothing for an unsaved object', () => {
-    const { queryByTestId } = renderWithClient(<ContentSafetyActions contentRef={null} />)
+  it('renders nothing for an unsaved object', async () => {
+    const { queryByTestId } = await renderWithClient(<ContentSafetyActions contentRef={null} />)
     expect(queryByTestId('content-safety-menu')).toBeNull()
   })
 
-  it('offers report, hide and block author, block last', () => {
-    const { getByTestId, getAllByRole } = renderWithClient(
+  it('offers report, hide and block author, block last', async () => {
+    const { getByTestId, getAllByRole } = await renderWithClient(
       <HiddenContentGate contentRef={foreignComment}>
         <ContentSafetyActions contentRef={foreignComment} />
       </HiddenContentGate>,
     )
-    fireEvent.press(getByTestId('content-safety-menu'))
+    await fireEvent.press(getByTestId('content-safety-menu'))
 
     const labels = getAllByRole('button').map((node) => node.props.accessibilityLabel)
     const report = labels.indexOf('Пожаловаться')
@@ -86,30 +86,30 @@ describe('ContentSafetyActions (#2133)', () => {
     expect(block).toBeGreaterThan(hide)
   })
 
-  it('has no block item when the backend sends no author id', () => {
-    const { getByTestId, queryByTestId } = renderWithClient(
+  it('has no block item when the backend sends no author id', async () => {
+    const { getByTestId, queryByTestId } = await renderWithClient(
       <ContentSafetyActions contentRef={{ content_type: 'quest_review', object_id: 3, author_id: null }} />,
     )
-    fireEvent.press(getByTestId('content-safety-menu'))
+    await fireEvent.press(getByTestId('content-safety-menu'))
     expect(getByTestId('content-safety-report')).toBeTruthy()
     expect(queryByTestId('content-safety-block')).toBeNull()
   })
 
-  it('does not offer hide on a non-hideable type', () => {
-    const { getByTestId, queryByTestId } = renderWithClient(
+  it('does not offer hide on a non-hideable type', async () => {
+    const { getByTestId, queryByTestId } = await renderWithClient(
       <ContentSafetyActions contentRef={{ content_type: 'photo', object_id: 9, author_id: 42 }} />,
     )
-    fireEvent.press(getByTestId('content-safety-menu'))
+    await fireEvent.press(getByTestId('content-safety-menu'))
     expect(queryByTestId('content-safety-hide')).toBeNull()
   })
 
   it('sends the report for the content ref and confirms the 24 hour review', async () => {
-    const { getByTestId, findByTestId } = renderWithClient(<ContentSafetyActions contentRef={foreignComment} />)
-    fireEvent.press(getByTestId('content-safety-menu'))
-    fireEvent.press(getByTestId('content-safety-report'))
+    const { getByTestId, findByTestId } = await renderWithClient(<ContentSafetyActions contentRef={foreignComment} />)
+    await fireEvent.press(getByTestId('content-safety-menu'))
+    await fireEvent.press(getByTestId('content-safety-report'))
 
-    fireEvent.press(await findByTestId('report-reason-spam'))
-    fireEvent.press(getByTestId('report-submit'))
+    await fireEvent.press(await findByTestId('report-reason-spam'))
+    await fireEvent.press(getByTestId('report-submit'))
 
     await waitFor(() => expect(mockedReport).toHaveBeenCalled())
     expect(mockedReport.mock.calls[0][0]).toEqual({ target: foreignComment, reason: 'spam', comment: '' })
@@ -129,45 +129,45 @@ describe('ContentSafetyActions (#2133)', () => {
         <ContentSafetyActions contentRef={ref} />
       </QueryClientProvider>
     )
-    const { getByTestId, findByTestId, rerender } = render(ui(foreignComment))
-    fireEvent.press(getByTestId('content-safety-menu'))
-    fireEvent.press(getByTestId('content-safety-report'))
-    fireEvent.press(await findByTestId('report-reason-spam'))
-    fireEvent.press(getByTestId('report-submit'))
+    const { getByTestId, findByTestId, rerender } = await render(ui(foreignComment))
+    await fireEvent.press(getByTestId('content-safety-menu'))
+    await fireEvent.press(getByTestId('content-safety-report'))
+    await fireEvent.press(await findByTestId('report-reason-spam'))
+    await fireEvent.press(getByTestId('report-submit'))
     await waitFor(() => expect(mockedToast).toHaveBeenCalled())
-    fireEvent.press(getByTestId('content-safety-menu'))
+    await fireEvent.press(getByTestId('content-safety-menu'))
     expect(getByTestId('content-safety-report').props.accessibilityLabel).toBe('Жалоба отправлена')
 
     // Слот FlashList / следующий слайд галереи: тот же экземпляр, другой объект.
-    rerender(ui({ ...foreignComment, object_id: 16 }))
-    fireEvent.press(getByTestId('content-safety-menu'))
+    await rerender(ui({ ...foreignComment, object_id: 16 }))
+    await fireEvent.press(getByTestId('content-safety-menu'))
     expect(getByTestId('content-safety-report').props.accessibilityLabel).toBe('Пожаловаться')
   })
 
   it('blocks the author after confirmation', async () => {
-    const { getByTestId } = renderWithClient(<ContentSafetyActions contentRef={foreignComment} authorName="Иван" />)
-    fireEvent.press(getByTestId('content-safety-menu'))
-    fireEvent.press(getByTestId('content-safety-block'))
+    const { getByTestId } = await renderWithClient(<ContentSafetyActions contentRef={foreignComment} authorName="Иван" />)
+    await fireEvent.press(getByTestId('content-safety-menu'))
+    await fireEvent.press(getByTestId('content-safety-block'))
     await waitFor(() => expect(mockedBlock).toHaveBeenCalled())
     expect(mockedBlock.mock.calls[0][0]).toBe(42)
   })
 
-  it('offers no hide outside a list gate, where the object would stay on screen', () => {
-    const { getByTestId, queryByTestId } = renderWithClient(<ContentSafetyActions contentRef={foreignComment} />)
-    fireEvent.press(getByTestId('content-safety-menu'))
+  it('offers no hide outside a list gate, where the object would stay on screen', async () => {
+    const { getByTestId, queryByTestId } = await renderWithClient(<ContentSafetyActions contentRef={foreignComment} />)
+    await fireEvent.press(getByTestId('content-safety-menu'))
     expect(getByTestId('content-safety-report')).toBeTruthy()
     expect(queryByTestId('content-safety-hide')).toBeNull()
   })
 
   it('hides the object for the current owner and shows it back from the placeholder', async () => {
-    const { getByTestId, queryByText, getByText } = renderWithClient(
+    const { getByTestId, queryByText, getByText } = await renderWithClient(
       <HiddenContentGate contentRef={foreignComment}>
         <ContentSafetyActions contentRef={foreignComment} />
       </HiddenContentGate>,
     )
-    fireEvent.press(getByTestId('content-safety-menu'))
+    await fireEvent.press(getByTestId('content-safety-menu'))
     await act(async () => {
-      fireEvent.press(getByTestId('content-safety-hide'))
+      await fireEvent.press(getByTestId('content-safety-hide'))
     })
 
     expect(useHiddenContentStore.getState().byOwner['1']).toEqual(['travel_comment:15'])
@@ -175,7 +175,7 @@ describe('ContentSafetyActions (#2133)', () => {
     expect(mockedToast).toHaveBeenCalledWith(expect.objectContaining({ action: expect.any(Object) }))
 
     await act(async () => {
-      fireEvent.press(getByTestId('hidden-content-show'))
+      await fireEvent.press(getByTestId('hidden-content-show'))
     })
     expect(queryByText('Вы скрыли этот материал')).toBeNull()
   })

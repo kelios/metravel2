@@ -88,7 +88,7 @@ describe('MapCanvas', () => {
   // #2219 × #2304 — the quality pill and «Искать в этой области» share ONE
   // flex row; while the action shows, the pill folds to its icon and keeps its
   // message as the accessibility label.
-  it.each(['ios', 'android', 'web'] as const)('%s desktop: quality pill and the action are items of one top-row band', (os) => {
+  it.each(['ios', 'android', 'web'] as const)('%s desktop: quality pill and the action are items of one top-row band', async (os) => {
     ;(Platform as any).OS = os
     const lowAccuracy = {
       status: 'current' as const,
@@ -97,7 +97,7 @@ describe('MapCanvas', () => {
       timestamp: Date.now(),
       canAskAgain: true,
     }
-    const screen = render(
+    const screen = await render(
       <MapCanvas
         {...baseProps}
         isWeb={os === 'web'}
@@ -110,16 +110,16 @@ describe('MapCanvas', () => {
     )
     const band = screen.getByTestId('map-top-band')
     const quality = screen.getByTestId('map-location-quality')
-    expect(band.findAll((node: any) => node.props?.testID === 'map-location-quality').length).toBeGreaterThan(0)
-    expect(band.findAll((node: any) => node.props?.testID === 'map-search-this-area-desktop').length).toBeGreaterThan(0)
+    expect(band.queryAll((node: any) => node.props?.testID === 'map-location-quality').length).toBeGreaterThan(0)
+    expect(band.queryAll((node: any) => node.props?.testID === 'map-search-this-area-desktop').length).toBeGreaterThan(0)
     expect(screen.queryByText('Низкая точность геолокации')).toBeNull()
     expect(quality.props.accessibilityLabel).toBe('Низкая точность геолокации')
     // Web names the folded icon only as an `img` (a generic div exposes no name).
     expect(quality.props.accessibilityRole).toBe(os === 'web' ? 'image' : undefined)
-    screen.unmount()
+    await screen.unmount()
 
     // Without the action the pill shows its message in the same band.
-    const alone = render(
+    const alone = await render(
       <MapCanvas {...baseProps} isWeb={os === 'web'} showProgress={false} locationState={lowAccuracy} coordinatesSource="geolocation" />,
     )
     expect(alone.getByTestId('map-top-band')).toBeTruthy()
@@ -127,51 +127,51 @@ describe('MapCanvas', () => {
   })
 
   describe('#2219 — map actions of the desktop branch on the native tablet', () => {
-    it.each(['ios', 'android'] as const)('%s: «Искать в этой области» is offered and has no hitSlop', (os) => {
+    it.each(['ios', 'android'] as const)('%s: «Искать в этой области» is offered and has no hitSlop', async (os) => {
       ;(Platform as any).OS = os
       const onSearchThisArea = jest.fn()
-      const screen = render(
+      const screen = await render(
         <MapCanvas {...baseProps} showProgress={false} canSearchThisArea onSearchThisArea={onSearchThisArea} />,
       )
       const button = screen.getByTestId('map-search-this-area-desktop')
       expect(button.props.hitSlop).toBeUndefined()
-      fireEvent.press(button)
+      await fireEvent.press(button)
       expect(onSearchThisArea).toHaveBeenCalledTimes(1)
     })
 
-    it.each(['ios', 'android'] as const)('%s: «Моё местоположение» centres the map once, no hitSlop', (os) => {
+    it.each(['ios', 'android'] as const)('%s: «Моё местоположение» centres the map once, no hitSlop', async (os) => {
       ;(Platform as any).OS = os
       const onCenterUser = jest.fn()
-      const screen = render(<MapCanvas {...baseProps} showProgress={false} onCenterUser={onCenterUser} />)
+      const screen = await render(<MapCanvas {...baseProps} showProgress={false} onCenterUser={onCenterUser} />)
       const button = screen.getByTestId('map-desktop-locate-button')
       expect(button.props.accessibilityLabel).toBeTruthy()
       expect(button.props.hitSlop).toBeUndefined()
       expect(StyleSheet.flatten(button.props.style)).toEqual(
         expect.objectContaining({ position: 'absolute', top: 72, left: 16, width: 44, height: 44 }),
       )
-      fireEvent.press(button)
+      await fireEvent.press(button)
       expect(onCenterUser).toHaveBeenCalledTimes(1)
     })
 
-    it('neither button exists in the phone layout', () => {
+    it('neither button exists in the phone layout', async () => {
       ;(Platform as any).OS = 'ios'
-      const screen = render(
+      const screen = await render(
         <MapCanvas {...baseProps} isMobile showProgress={false} canSearchThisArea onSearchThisArea={jest.fn()} />,
       )
       expect(screen.queryByTestId('map-search-this-area-desktop')).toBeNull()
       expect(screen.queryByTestId('map-desktop-locate-button')).toBeNull()
     })
 
-    it('no search pill until the map was moved far enough', () => {
-      const screen = render(
+    it('no search pill until the map was moved far enough', async () => {
+      const screen = await render(
         <MapCanvas {...baseProps} showProgress={false} canSearchThisArea={false} onSearchThisArea={jest.fn()} />,
       )
       expect(screen.queryByTestId('map-search-this-area-desktop')).toBeNull()
     })
 
-    it('web keeps the pill and leaves «Моё местоположение» to the Leaflet MapControls column', () => {
+    it('web keeps the pill and leaves «Моё местоположение» to the Leaflet MapControls column', async () => {
       ;(Platform as any).OS = 'web'
-      const screen = render(
+      const screen = await render(
         <MapCanvas {...baseProps} isWeb showProgress={false} canSearchThisArea onSearchThisArea={jest.fn()} />,
       )
       expect(screen.getByTestId('map-search-this-area-desktop')).toBeTruthy()
@@ -179,19 +179,19 @@ describe('MapCanvas', () => {
     })
   })
 
-  it('passes the explicit map progress state to the top loading bar', () => {
-    render(<MapCanvas {...baseProps} showProgress={false} />)
+  it('passes the explicit map progress state to the top loading bar', async () => {
+    await render(<MapCanvas {...baseProps} showProgress={false} />)
     expect(mockMapLoadingBar).toHaveBeenLastCalledWith({ visible: false })
   })
 
-  it('shows the top loading bar when the screen asks for map progress', () => {
-    render(<MapCanvas {...baseProps} showProgress />)
+  it('shows the top loading bar when the screen asks for map progress', async () => {
+    await render(<MapCanvas {...baseProps} showProgress />)
     expect(mockMapLoadingBar).toHaveBeenLastCalledWith({ visible: true })
   })
 
-  it('offers a retry when location permission can be requested again', () => {
+  it('offers a retry when location permission can be requested again', async () => {
     const retryLocation = jest.fn()
-    const screen = render(
+    const screen = await render(
       <MapCanvas
         {...baseProps}
         showProgress={false}
@@ -200,7 +200,7 @@ describe('MapCanvas', () => {
       />,
     )
 
-    fireEvent.press(screen.getByTestId('map-geo-retry'))
+    await fireEvent.press(screen.getByTestId('map-geo-retry'))
 
     expect(retryLocation).toHaveBeenCalledTimes(1)
     // Ручной старт — действие режима маршрута, а не общего гео-статуса: в
@@ -211,8 +211,8 @@ describe('MapCanvas', () => {
   // Ряд чипов активных фильтров (overlay-слой) и баннер (слой карты) — разные
   // поддеревья, поэтому баннер опускается под ряд явным сдвигом, иначе они
   // рисуются друг поверх друга.
-  it('drops the geo banner below the active filter chips row when it is shown', () => {
-    const screen = render(
+  it('drops the geo banner below the active filter chips row when it is shown', async () => {
+    const screen = await render(
       <MapCanvas
         {...baseProps}
         isMobile
@@ -226,8 +226,8 @@ describe('MapCanvas', () => {
     expect(StyleSheet.flatten(banner.props.style)).toMatchObject({ marginTop: 34 })
   })
 
-  it('keeps the geo banner tight under the toolbar when there are no chips', () => {
-    const screen = render(
+  it('keeps the geo banner tight under the toolbar when there are no chips', async () => {
+    const screen = await render(
       <MapCanvas {...baseProps} isMobile showProgress={false} showGeoBanner />,
     )
 
@@ -235,9 +235,9 @@ describe('MapCanvas', () => {
     expect(StyleSheet.flatten(banner.props.style)?.marginTop).toBeUndefined()
   })
 
-  it('offers a manual route start from the geo banner only in route mode', () => {
+  it('offers a manual route start from the geo banner only in route mode', async () => {
     const startManualRoute = jest.fn()
-    const screen = render(
+    const screen = await render(
       <MapCanvas
         {...baseProps}
         mapPanelProps={{ mode: 'route' }}
@@ -247,13 +247,13 @@ describe('MapCanvas', () => {
       />,
     )
 
-    fireEvent.press(screen.getByTestId('map-geo-manual-start'))
+    await fireEvent.press(screen.getByTestId('map-geo-manual-start'))
 
     expect(startManualRoute).toHaveBeenCalledTimes(1)
   })
 
-  it('labels cached coordinates as last-known rather than current', () => {
-    const screen = render(
+  it('labels cached coordinates as last-known rather than current', async () => {
+    const screen = await render(
       <MapCanvas
         {...baseProps}
         showProgress={false}
@@ -272,10 +272,10 @@ describe('MapCanvas', () => {
     expect(screen.getByText(/последнее известное место/i)).toBeTruthy()
   })
 
-  it('opens native settings when permission cannot be requested again', () => {
+  it('opens native settings when permission cannot be requested again', async () => {
     ;(Platform as any).OS = 'android'
     const openLocationSettings = jest.fn()
-    const screen = render(
+    const screen = await render(
       <MapCanvas
         {...baseProps}
         showProgress={false}
@@ -291,7 +291,7 @@ describe('MapCanvas', () => {
       />,
     )
 
-    fireEvent.press(screen.getByTestId('map-geo-open-settings'))
+    await fireEvent.press(screen.getByTestId('map-geo-open-settings'))
 
     expect(openLocationSettings).toHaveBeenCalledTimes(1)
     expect(screen.queryByTestId('map-geo-retry')).toBeNull()
@@ -300,8 +300,8 @@ describe('MapCanvas', () => {
   // #1780 — на мобиле статус и действия стоят разными строками. Если действий
   // нет (геолокация недоступна в принципе: ни «Повторить», ни «Открыть
   // настройки»), пустая вторая строка добавила бы баннеру только gap.
-  it('drops the geo banner action row when there is nothing to offer', () => {
-    const screen = render(
+  it('drops the geo banner action row when there is nothing to offer', async () => {
+    const screen = await render(
       <MapCanvas
         {...baseProps}
         isMobile
@@ -321,8 +321,8 @@ describe('MapCanvas', () => {
     expect(screen.queryByTestId('map-geo-banner-actions')).toBeNull()
   })
 
-  it('keeps the geo banner action row while at least one action is offered', () => {
-    const screen = render(
+  it('keeps the geo banner action row while at least one action is offered', async () => {
+    const screen = await render(
       <MapCanvas {...baseProps} isMobile showProgress={false} showGeoBanner />,
     )
 
@@ -330,8 +330,8 @@ describe('MapCanvas', () => {
     expect(screen.getByTestId('map-geo-retry')).toBeTruthy()
   })
 
-  it('shows when a trusted live fix is temporarily refreshing', () => {
-    const screen = render(
+  it('shows when a trusted live fix is temporarily refreshing', async () => {
+    const screen = await render(
       <MapCanvas
         {...baseProps}
         showProgress={false}
@@ -351,8 +351,8 @@ describe('MapCanvas', () => {
     expect(screen.getByText('Обновляем местоположение…')).toBeTruthy()
   })
 
-  it('shows low accuracy and stale live-fix states without replacing the user point', () => {
-    const lowAccuracy = render(
+  it('shows low accuracy and stale live-fix states without replacing the user point', async () => {
+    const lowAccuracy = await render(
       <MapCanvas
         {...baseProps}
         showProgress={false}
@@ -367,9 +367,9 @@ describe('MapCanvas', () => {
       />,
     )
     expect(lowAccuracy.getByText('Низкая точность геолокации')).toBeTruthy()
-    lowAccuracy.unmount()
+    await lowAccuracy.unmount()
 
-    const stale = render(
+    const stale = await render(
       <MapCanvas
         {...baseProps}
         showProgress={false}
@@ -407,10 +407,10 @@ describe('MapCanvas — свежесть позиции считается по 
     resetLiveUserPosition()
   })
 
-  it('молчит, пока тики приходят, даже если фикс из ОС давно просрочен', () => {
+  it('молчит, пока тики приходят, даже если фикс из ОС давно просрочен', async () => {
     markLiveUserPositionFix(Date.now())
 
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <MapCanvas
         {...baseProps}
         showProgress={false}
@@ -422,10 +422,10 @@ describe('MapCanvas — свежесть позиции считается по 
     expect(queryByText('Местоположение давно не обновлялось')).toBeNull()
   })
 
-  it('показывает баннер, когда тиков действительно нет', () => {
+  it('показывает баннер, когда тиков действительно нет', async () => {
     markLiveUserPositionFix(Date.now() - 31_000)
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <MapCanvas
         {...baseProps}
         showProgress={false}

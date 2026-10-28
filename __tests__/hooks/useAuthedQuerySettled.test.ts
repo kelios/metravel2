@@ -8,19 +8,19 @@ describe('useAuthedQuerySettled', () => {
   const setAuth = (authReady: boolean, isAuthenticated: boolean) =>
     useAuthStore.setState({ authReady, isAuthenticated } as never)
 
-  it('авторизация ещё не готова — не устоялся, даже если запрос не «грузится»', () => {
+  it('авторизация ещё не готова — не устоялся, даже если запрос не «грузится»', async () => {
     setAuth(false, false)
-    expect(renderHook(() => useAuthedQuerySettled({ isPending: true })).result.current).toBe(false)
+    expect((await renderHook(() => useAuthedQuerySettled({ isPending: true }))).result.current).toBe(false)
   })
 
-  it('гость — устоялся (данных у гостя не будет)', () => {
+  it('гость — устоялся (данных у гостя не будет)', async () => {
     setAuth(true, false)
-    expect(renderHook(() => useAuthedQuerySettled({ isPending: true })).result.current).toBe(true)
+    expect((await renderHook(() => useAuthedQuerySettled({ isPending: true }))).result.current).toBe(true)
   })
 
-  it('вошёл — ждёт ответа запроса', () => {
+  it('вошёл — ждёт ответа запроса', async () => {
     setAuth(true, true)
-    expect(renderHook(() => useAuthedQuerySettled({ isPending: true })).result.current).toBe(false)
-    expect(renderHook(() => useAuthedQuerySettled({ isPending: false })).result.current).toBe(true)
+    expect((await renderHook(() => useAuthedQuerySettled({ isPending: true }))).result.current).toBe(false)
+    expect((await renderHook(() => useAuthedQuerySettled({ isPending: false }))).result.current).toBe(true)
   })
 })

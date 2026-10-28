@@ -26,7 +26,7 @@ jest.mock('@/utils/seo', () => ({
   getSiteBaseUrl: () => 'https://metravel.by',
 }))
 
-const renderWithQuery = (ui: React.ReactElement) => {
+const renderWithQuery = async (ui: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -35,7 +35,7 @@ const renderWithQuery = (ui: React.ReactElement) => {
     },
   })
 
-  return render(
+  return await render(
     <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
   )
 }
@@ -48,7 +48,7 @@ describe('RelatedTravelActionStack', () => {
   })
 
   it('renders actions from fallbacks for numeric travel routes without fetching detail', async () => {
-    renderWithQuery(
+    await renderWithQuery(
       <RelatedTravelActionStack
         relatedTravelUrl="/travel/42"
         fallbackTitle="Связанное путешествие"
@@ -81,7 +81,7 @@ describe('RelatedTravelActionStack', () => {
 
   // #1960: backend (#1961) снимет `?id=` с `urlTravel`, id приходит отдельным полем.
   it('does not fetch detail for a query-less slug url when the API id is explicit', async () => {
-    renderWithQuery(
+    await renderWithQuery(
       <RelatedTravelActionStack
         relatedTravelUrl="https://metravel.by/travels/ourvietnam"
         relatedTravelId={129}
@@ -106,7 +106,7 @@ describe('RelatedTravelActionStack', () => {
   })
 
   it('keeps the legacy ?id query as a fallback when no explicit id is passed', async () => {
-    renderWithQuery(
+    await renderWithQuery(
       <RelatedTravelActionStack
         relatedTravelUrl="https://metravel.by/travels/ourvietnam?id=129"
         fallbackTitle="Вьетнам"
@@ -129,7 +129,7 @@ describe('RelatedTravelActionStack', () => {
   it('renders from the explicit id without fetching when the url host is the API host', async () => {
     // Локальный/dev API строит `urlTravel` от своего хоста — url-разбор такую
     // ссылку отбрасывает, а явный id остаётся достаточным без запроса статьи.
-    renderWithQuery(
+    await renderWithQuery(
       <RelatedTravelActionStack
         relatedTravelUrl="http://localhost:8000/travels/ourvietnam"
         relatedTravelId={129}
@@ -148,7 +148,7 @@ describe('RelatedTravelActionStack', () => {
   })
 
   it('uses a catalog travel id with a canonical slug route without resolving the slug', async () => {
-    renderWithQuery(
+    await renderWithQuery(
       <RelatedTravelActionStack
         relatedTravelUrl="/travels/polish-camino"
         relatedTravelId={77}
@@ -181,7 +181,7 @@ describe('RelatedTravelActionStack', () => {
       monthName: 'Сентябрь',
     })
 
-    renderWithQuery(
+    await renderWithQuery(
       <RelatedTravelActionStack
         relatedTravelUrl="https://metravel.by/travels/polish-camino"
         fallbackTitle="Камино"
@@ -210,7 +210,7 @@ describe('RelatedTravelActionStack', () => {
       url: '/travels/polish-camino',
     })
 
-    renderWithQuery(
+    await renderWithQuery(
       <RelatedTravelActionStack
         relatedTravelUrl="/travels/polish-camino"
         relatedTravelId={Number.NaN}
@@ -233,7 +233,7 @@ describe('RelatedTravelActionStack', () => {
       url: '/travels/polish-camino',
     })
 
-    renderWithQuery(
+    await renderWithQuery(
       <>
         <RelatedTravelActionStack
           relatedTravelUrl="/travels/polish-camino"
@@ -254,7 +254,7 @@ describe('RelatedTravelActionStack', () => {
   })
 
   it('renders inline status as an explicit travel-state action', async () => {
-    renderWithQuery(
+    await renderWithQuery(
       <RelatedTravelActionStack
         relatedTravelUrl="/travel/42"
         fallbackTitle="Связанное путешествие"
@@ -274,8 +274,8 @@ describe('RelatedTravelActionStack', () => {
     )
   })
 
-  it('does not render actions for non-metravel or non-travel urls', () => {
-    const view = renderWithQuery(
+  it('does not render actions for non-metravel or non-travel urls', async () => {
+    const view = await renderWithQuery(
       <RelatedTravelActionStack
         relatedTravelUrl="https://example.com/place/123"
         fallbackTitle="Внешняя ссылка"

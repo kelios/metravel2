@@ -8,10 +8,10 @@ jest.mock('@/utils/seo', () => ({ getSiteBaseUrl: () => 'https://metravel.by' })
 // `resolveSitePath` (без `new URL`, неспецифичного на Hermes), предикат статьи —
 // `isSiteArticlePath` из `utils/siteLinks.ts`; хост пути статьи — любой (#501).
 describe('usePopupActions: normalizedArticleHref (#2144)', () => {
-  const render = (articleHref: string | null) =>
-    renderHook(() =>
+  const render = async (articleHref: string | null) =>
+    (await renderHook(() =>
       usePopupActions({ colors: {} as any, coord: '53.9, 27.56', articleHref, onOpenArticle: jest.fn() }),
-    ).result.current
+    )).result.current
 
   it.each([
     ['/travels/slug', '/travels/slug'],
@@ -21,8 +21,8 @@ describe('usePopupActions: normalizedArticleHref (#2144)', () => {
     // #501: ссылки маркеров строятся от хоста API (dev/local) — кнопка есть.
     ['http://localhost:8000/travels/slug', '/travels/slug'],
     ['http://192.168.50.36/travel/12?id=3', '/travel/12?id=3'],
-  ])('%s → %s, кнопка есть', (href, path) => {
-    const actions = render(href)
+  ])('%s → %s, кнопка есть', async (href, path) => {
+    const actions = await render(href)
     expect(actions.normalizedArticleHref).toBe(path)
     expect(actions.hasArticle).toBe(true)
   })
@@ -34,8 +34,8 @@ describe('usePopupActions: normalizedArticleHref (#2144)', () => {
     '/quests/minsk',
     '',
     null,
-  ])('%s → нет статьи', (href) => {
-    const actions = render(href as string | null)
+  ])('%s → нет статьи', async (href) => {
+    const actions = await render(href as string | null)
     expect(actions.normalizedArticleHref).toBeNull()
     expect(actions.hasArticle).toBe(false)
   })

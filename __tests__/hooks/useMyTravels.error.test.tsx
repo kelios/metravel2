@@ -48,7 +48,7 @@ describe('useMyTravels — состояние ошибки первой стра
   it('запрашивает первую страницу с throwOnError, иначе сбой не долетит до хука', async () => {
     mockFetchMyTravels.mockResolvedValue(travelPayload([1]) as any);
 
-    const { result } = renderHook(() => useMyTravels({ userId: 'u-1', perPage: 10 }));
+    const { result } = await renderHook(() => useMyTravels({ userId: 'u-1', perPage: 10 }));
     await act(async () => {
       await result.current.load();
     });
@@ -62,7 +62,7 @@ describe('useMyTravels — состояние ошибки первой стра
     mockFetchMyTravels.mockRejectedValue(httpError(502, 'Bad Gateway'));
     const onTotalChange = jest.fn();
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useMyTravels({ userId: 'u-1', perPage: 10, onTotalChange })
     );
     await act(async () => {
@@ -84,7 +84,7 @@ describe('useMyTravels — состояние ошибки первой стра
   it('успешная повторная загрузка гасит error и возвращает данные', async () => {
     mockFetchMyTravels.mockRejectedValueOnce(httpError(502, 'Bad Gateway'));
 
-    const { result } = renderHook(() => useMyTravels({ userId: 'u-1', perPage: 10 }));
+    const { result } = await renderHook(() => useMyTravels({ userId: 'u-1', perPage: 10 }));
     await act(async () => {
       await result.current.load();
     });
@@ -102,7 +102,7 @@ describe('useMyTravels — состояние ошибки первой стра
   it('сбой подгрузки следующей страницы не стирает уже показанные маршруты', async () => {
     mockFetchMyTravels.mockResolvedValueOnce(travelPayload([1, 2], 4) as any);
 
-    const { result } = renderHook(() => useMyTravels({ userId: 'u-1', perPage: 2 }));
+    const { result } = await renderHook(() => useMyTravels({ userId: 'u-1', perPage: 2 }));
     await act(async () => {
       await result.current.load();
     });
@@ -128,7 +128,7 @@ describe('useMyTravels — состояние ошибки первой стра
   it('сбрасывает error, когда пользователь разлогинился', async () => {
     mockFetchMyTravels.mockRejectedValue(httpError(500, 'Server Error'));
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ userId }: { userId: string | null }) => useMyTravels({ userId, perPage: 10 }),
       { initialProps: { userId: 'u-1' as string | null } }
     );
@@ -137,7 +137,7 @@ describe('useMyTravels — состояние ошибки первой стра
     });
     await waitFor(() => expect(result.current.error).not.toBeNull());
 
-    rerender({ userId: null });
+    await rerender({ userId: null });
     await act(async () => {
       await result.current.load();
     });
@@ -148,7 +148,7 @@ describe('useMyTravels — состояние ошибки первой стра
   it('после ошибки фонового обновления не выдаёт старый отказ за актуальный список', async () => {
     mockFetchMyTravels.mockResolvedValueOnce(travelPayload([1]) as any);
     const onTotalChange = jest.fn();
-    const { result } = renderHook(() => useMyTravels({ userId: 'u-1', perPage: 10, onTotalChange }));
+    const { result } = await renderHook(() => useMyTravels({ userId: 'u-1', perPage: 10, onTotalChange }));
     await act(async () => { await result.current.load(); });
     await waitFor(() => expect(result.current.myTravels.map(t => t.id)).toEqual([1]));
     mockFetchMyTravels.mockRejectedValueOnce(httpError(503, 'Service Unavailable'));
@@ -169,7 +169,7 @@ describe('useMyTravels — состояние ошибки первой стра
 
   it('ошибка следующей страницы замораживает автоподгрузку до явного обновления', async () => {
     mockFetchMyTravels.mockResolvedValueOnce(travelPayload([1, 2], 4) as any);
-    const { result } = renderHook(() => useMyTravels({ userId: 'u-1', perPage: 2 }));
+    const { result } = await renderHook(() => useMyTravels({ userId: 'u-1', perPage: 2 }));
     await act(async () => { await result.current.load(); });
     await waitFor(() => expect(result.current.hasMore).toBe(true));
     mockFetchMyTravels.mockRejectedValueOnce(httpError(503, 'Service Unavailable'));
@@ -191,7 +191,7 @@ describe('useMyTravels — состояние ошибки первой стра
 
 // Isolated real QueryClient: cache lifecycle is part of the hook contract.
 const queryClients = new Set<QueryClient>();
-const renderHook: typeof renderQueryHook = (callback, options) => {
+const renderHook: typeof renderQueryHook = async (callback, options) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: Infinity, staleTime: 300_000 } },
   });

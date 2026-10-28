@@ -37,13 +37,13 @@ const questModel: BreadcrumbModel = {
 describe('BreadcrumbsJsonLd ownership', () => {
   beforeEach(() => { mockHeadRenders.length = 0 })
 
-  it('emits nothing when the screen owns the BreadcrumbList', () => {
-    render(<BreadcrumbsJsonLd model={{ ...questModel, structuredDataOwnedByScreen: true }} />)
+  it('emits nothing when the screen owns the BreadcrumbList', async () => {
+    await render(<BreadcrumbsJsonLd model={{ ...questModel, structuredDataOwnedByScreen: true }} />)
     expect(mockHeadRenders).toHaveLength(0)
   })
 
-  it('still emits the header list for pages without a screen owner', () => {
-    render(<BreadcrumbsJsonLd model={questModel} />)
+  it('still emits the header list for pages without a screen owner', async () => {
+    await render(<BreadcrumbsJsonLd model={questModel} />)
     const script = mockHeadRenders.at(-1) as React.ReactElement<{ children: string }>
     expect(JSON.parse(script.props.children)['@type']).toBe('BreadcrumbList')
   })

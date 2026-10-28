@@ -40,7 +40,7 @@ const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 describe('TravelDetailsFooterSection', () => {
   it('renders Telegram block once on web', async () => {
-    const result = render(
+    const result = await render(
       <TravelDetailsFooterSection travel={baseTravel} isMobile={false} />,
       { wrapper: Wrapper }
     );
@@ -52,7 +52,7 @@ describe('TravelDetailsFooterSection', () => {
   });
 
   it('renders ShareButtons only on desktop/web variant', async () => {
-    const desktop = render(
+    const desktop = await render(
       <TravelDetailsFooterSection travel={baseTravel} isMobile={false} />,
       { wrapper: Wrapper }
     );
@@ -60,7 +60,7 @@ describe('TravelDetailsFooterSection', () => {
       expect(desktop.getAllByTestId('travel-details-share')).toHaveLength(1);
     });
 
-    const mobile = render(
+    const mobile = await render(
       <TravelDetailsFooterSection travel={baseTravel} isMobile />,
       { wrapper: Wrapper }
     );
@@ -73,7 +73,7 @@ describe('TravelDetailsFooterSection', () => {
   // блок обсуждения прилипал к ней вплотную. Отступ обязан жить на самом блоке,
   // иначе зазор снова начнёт зависеть от соседа сверху.
   it('keeps its own top spacing on the leading Telegram block', async () => {
-    const result = render(
+    const result = await render(
       <TravelDetailsFooterSection travel={baseTravel} isMobile={false} />,
       { wrapper: Wrapper }
     );
@@ -87,14 +87,14 @@ describe('TravelDetailsFooterSection', () => {
   // Скелетон футера подменяется реальным футером поверх той же строки раскладки:
   // разошедшийся верхний отступ двигает страницу в момент подмены (CLS).
   it('matches the footer skeleton top spacing so the swap does not shift the page', async () => {
-    const result = render(
+    const result = await render(
       <TravelDetailsFooterSection travel={baseTravel} isMobile={false} />,
       { wrapper: Wrapper }
     );
     const telegram = await result.findByTestId('travel-details-telegram');
     const runtimeMarginTop = StyleSheet.flatten(telegram.props.style).marginTop;
 
-    const skeleton = render(<FooterSectionSkeleton isMobile={false} />);
+    const skeleton = await render(<FooterSectionSkeleton isMobile={false} />);
     const skeletonRoot = skeleton.toJSON() as { props: { style?: unknown } };
     const skeletonMarginTop = StyleSheet.flatten(skeletonRoot.props.style as never)?.marginTop;
 

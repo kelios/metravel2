@@ -43,8 +43,8 @@ describe('SubscriberCard mobile layout', () => {
     jest.mocked(openExternalUrl).mockClear();
   });
 
-  it('keeps the full name visible and renders the remaining actions as icons', () => {
-    const { getByText, getByTestId } = render(
+  it('keeps the full name visible and renders the remaining actions as icons', async () => {
+    const { getByText, getByTestId } = await render(
       <SubscriberCard
         profile={profile}
         onMessage={jest.fn()}
@@ -62,12 +62,12 @@ describe('SubscriberCard mobile layout', () => {
     );
     expect(getByTestId('subscriber-social-instagram').props.accessibilityRole).toBe('link');
 
-    fireEvent.press(getByTestId('subscriber-social-instagram'));
+    await fireEvent.press(getByTestId('subscriber-social-instagram'));
     expect(openExternalUrl).toHaveBeenCalledWith('https://instagram.com/alexandra');
   });
 
-  it('does not expose social links while profile contacts are protected', () => {
-    const { queryByTestId } = render(
+  it('does not expose social links while profile contacts are protected', async () => {
+    const { queryByTestId } = await render(
       <SubscriberCard
         profile={{ ...profile, contacts_hidden: true, contact_access: 'none' }}
         onMessage={jest.fn()}
@@ -79,8 +79,8 @@ describe('SubscriberCard mobile layout', () => {
     expect(queryByTestId('subscriber-social-youtube')).toBeNull();
   });
 
-  it('shows social links when access to protected contacts is granted', () => {
-    const { getByTestId } = render(
+  it('shows social links when access to protected contacts is granted', async () => {
+    const { getByTestId } = await render(
       <SubscriberCard
         profile={{ ...profile, contacts_hidden: true, contact_access: 'granted' }}
         onMessage={jest.fn()}

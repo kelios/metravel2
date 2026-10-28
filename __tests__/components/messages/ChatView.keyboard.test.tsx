@@ -4,7 +4,7 @@ import { Keyboard, Platform, StyleSheet } from 'react-native';
 import type { Message } from '@/api/messages';
 
 // #2133: меню жалобы в рендере зовёт мутации блокировки — нужен QueryClient, как в приложении.
-const render = (ui: Parameters<typeof rtlRender>[0]) =>
+const render = async (ui: Parameters<typeof rtlRender>[0]) =>
     rtlRender(ui, { wrapper: createQueryWrapper().Wrapper });
 
 const NAV_BAR_INSET = 24;
@@ -65,10 +65,10 @@ describe('ChatView composer vs Android keyboard', () => {
     // RN отдаёт высоту клавиатуры без nav-bar инсета (imeInsets.bottom -
     // systemBars.bottom), а под edge-to-edge корневая вьюха уходит под этот бар:
     // без добавления insets.bottom клавиатура наезжает на поле ввода и «Отправить».
-    it('lifts the composer by the keyboard height plus the navigation-bar inset', () => {
-        const { getByTestId } = render(<ChatView {...defaultProps} />);
+    it('lifts the composer by the keyboard height plus the navigation-bar inset', async () => {
+        const { getByTestId } = await render(<ChatView {...defaultProps} />);
 
-        act(() => {
+        await act(() => {
             listeners.keyboardDidShow?.({ endCoordinates: { height: 300 } });
         });
 
@@ -76,13 +76,13 @@ describe('ChatView composer vs Android keyboard', () => {
         expect(composerStyle.paddingBottom).toBeGreaterThanOrEqual(300 + NAV_BAR_INSET);
     });
 
-    it('restores the dock reserve when the keyboard hides', () => {
-        const { getByTestId } = render(<ChatView {...defaultProps} />);
+    it('restores the dock reserve when the keyboard hides', async () => {
+        const { getByTestId } = await render(<ChatView {...defaultProps} />);
 
-        act(() => {
+        await act(() => {
             listeners.keyboardDidShow?.({ endCoordinates: { height: 300 } });
         });
-        act(() => {
+        await act(() => {
             listeners.keyboardDidHide?.();
         });
 

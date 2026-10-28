@@ -25,12 +25,12 @@ type AlertButton = { text: string; style?: string; onPress?: () => void };
 const originalPlatform = Platform.OS;
 const setPlatform = (os: string) => Object.defineProperty(Platform, 'OS', { configurable: true, value: os });
 
-function renderDeleteHook() {
+async function renderDeleteHook() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
-  return renderHook(() => useListTravelDelete(), { wrapper });
+  return await renderHook(() => useListTravelDelete(), { wrapper });
 }
 
 describe('useListTravelDelete (#2127)', () => {
@@ -48,11 +48,11 @@ describe('useListTravelDelete (#2127)', () => {
 
   const alertButtons = (call = 0) => alertSpy.mock.calls[call][2] as AlertButton[];
 
-  it('web: вопрос — ConfirmDialog через deleteId, системный Alert не трогается', () => {
+  it('web: вопрос — ConfirmDialog через deleteId, системный Alert не трогается', async () => {
     setPlatform('web');
-    const { result } = renderDeleteHook();
+    const { result } = await renderDeleteHook();
 
-    act(() => result.current.requestDelete(42));
+    await act(() => result.current.requestDelete(42));
 
     expect(result.current.deleteId).toBe(42);
     expect(alertSpy).not.toHaveBeenCalled();
@@ -60,9 +60,9 @@ describe('useListTravelDelete (#2127)', () => {
 
   it('native: «Удалить» в confirmAction удаляет маршрут и показывает тост успеха', async () => {
     setPlatform('ios');
-    const { result } = renderDeleteHook();
+    const { result } = await renderDeleteHook();
 
-    act(() => result.current.requestDelete(42));
+    await act(() => result.current.requestDelete(42));
     expect(alertSpy).toHaveBeenCalledTimes(1);
     expect(deleteTravel).not.toHaveBeenCalled();
 
@@ -76,13 +76,13 @@ describe('useListTravelDelete (#2127)', () => {
 
   it('native: «Отмена» ничего не удаляет; повторный запрос того же маршрута снова спрашивает', async () => {
     setPlatform('android');
-    const { result } = renderDeleteHook();
+    const { result } = await renderDeleteHook();
 
-    act(() => result.current.requestDelete(7));
+    await act(() => result.current.requestDelete(7));
     await act(async () => {
       (alertSpy.mock.calls[0][3] as { onDismiss?: () => void }).onDismiss?.();
     });
-    act(() => result.current.requestDelete(7));
+    await act(() => result.current.requestDelete(7));
 
     expect(alertSpy).toHaveBeenCalledTimes(2);
     expect(deleteTravel).not.toHaveBeenCalled();
@@ -91,9 +91,9 @@ describe('useListTravelDelete (#2127)', () => {
   it('native: отказ сервера — причина тостом, а не вторым Alert', async () => {
     setPlatform('ios');
     (deleteTravel as jest.Mock).mockRejectedValueOnce(new Error('HTTP 500'));
-    const { result } = renderDeleteHook();
+    const { result } = await renderDeleteHook();
 
-    act(() => result.current.requestDelete(42));
+    await act(() => result.current.requestDelete(42));
     await act(async () => {
       alertButtons().find((b) => b.style === 'destructive')?.onPress?.();
     });

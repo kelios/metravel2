@@ -30,7 +30,7 @@ describe('useLeafletLoader required styles', () => {
   });
 
   it('injects Leaflet CSS link or fallback styles on web mount', async () => {
-    renderHook(() => useLeafletLoader({ enabled: true, useIdleCallback: true }));
+    await renderHook(() => useLeafletLoader({ enabled: true, useIdleCallback: true }));
 
     await act(async () => {
       // Flush effects
@@ -42,7 +42,7 @@ describe('useLeafletLoader required styles', () => {
   });
 
   it('injects fallback styles if Leaflet CSS does not load within timeout', async () => {
-    renderHook(() => useLeafletLoader({ enabled: true, useIdleCallback: true }));
+    await renderHook(() => useLeafletLoader({ enabled: true, useIdleCallback: true }));
 
     await act(async () => {
       // Ensure initial effect ran and scheduled the timeout

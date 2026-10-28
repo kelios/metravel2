@@ -143,15 +143,15 @@ describe('#1812 — плашка «нет сети» и гео-баннер не
 })
 
 describe('#1812 — компонент рисует ровно ту позицию, которую ему дали', () => {
-  it('не добавляет скрытого слагаемого к переданному top', () => {
-    render(<MapOfflineIndicator visible top={123} />)
+  it('не добавляет скрытого слагаемого к переданному top', async () => {
+    await render(<MapOfflineIndicator visible top={123} />)
 
     const flat = StyleSheet.flatten(screen.getByTestId('map-offline-indicator').props.style)
     expect(flat?.top).toBe(123)
   })
 
-  it('без позиции остаётся на прежнем десктопном отступе', () => {
-    render(<MapOfflineIndicator visible />)
+  it('без позиции остаётся на прежнем десктопном отступе', async () => {
+    await render(<MapOfflineIndicator visible />)
 
     const flat = StyleSheet.flatten(screen.getByTestId('map-offline-indicator').props.style)
     expect(flat?.top).toBe(10)
@@ -160,8 +160,8 @@ describe('#1812 — компонент рисует ровно ту позици
   // Высота задана ПОЛОМ без вертикальных полей: при обычном масштабе шрифта
   // пилюля ровно такая, из какой считается ярус под ней, а при системном
   // укрупнении текста растёт, вместо того чтобы обрезать сообщение.
-  it('высота пилюли совпадает с той, из которой считается ярус под ней', () => {
-    render(<MapOfflineIndicator visible top={0} />)
+  it('высота пилюли совпадает с той, из которой считается ярус под ней', async () => {
+    await render(<MapOfflineIndicator visible top={0} />)
 
     const pill = screen.getByTestId('map-offline-indicator').props.children
     const flat = StyleSheet.flatten(pill.props.style)
@@ -197,10 +197,10 @@ describe('#1812 — экран отдаёт плашке посчитанную 
     isMobile: true,
   }
 
-  it('на вырезе плашка стоит ниже ряда кнопок, а не на прежних 66', () => {
+  it('на вырезе плашка стоит ниже ряда кнопок, а не на прежних 66', async () => {
     const { offlineIndicatorTop } = stackFor(NOTCH_INSET)
 
-    render(
+    await render(
       <MapScreenMobile
         {...mobileProps}
         isConnected={false}
@@ -214,8 +214,8 @@ describe('#1812 — экран отдаёт плашке посчитанную 
     expect(flat?.top).not.toBe(LEGACY_TOP)
   })
 
-  it('в сети плашки нет вовсе', () => {
-    render(
+  it('в сети плашки нет вовсе', async () => {
+    await render(
       <MapScreenMobile
         {...mobileProps}
         isConnected

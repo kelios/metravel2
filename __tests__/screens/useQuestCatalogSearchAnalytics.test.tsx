@@ -1,5 +1,5 @@
 // Explicit cleanup avoids auto-cleanup's setImmediate polyfill waiting on fake timeout 0.
-import { act, cleanupAsync, renderHook } from '@testing-library/react-native/pure';
+import { act, cleanup, renderHook } from '@testing-library/react-native/pure';
 import { Platform } from 'react-native';
 import { sendAnalyticsEvent } from '@/utils/analytics';
 import { useQuestCatalogSearchAnalytics } from '@/screens/tabs/useQuestCatalogSearchAnalytics';
@@ -15,7 +15,7 @@ const initial = {
     ready: true,
     focused: true,
 };
-const advance = (ms = 900) => act(() => { jest.advanceTimersByTime(ms); });
+const advance = async (ms = 900) => act(() => { jest.advanceTimersByTime(ms); });
 
 beforeEach(() => {
     jest.useFakeTimers();
@@ -24,15 +24,15 @@ beforeEach(() => {
 });
 afterEach(async () => {
     try {
-        await cleanupAsync();
+        await cleanup();
     } finally {
         jest.useRealTimers();
         (Platform as { OS: string }).OS = originalPlatform;
     }
 });
 
-it('keeps input immediate and records only after normalized matching and the analytics pause', () => {
-    const { result } = renderHook(() => {
+it('keeps input immediate and records only after normalized matching and the analytics pause', async () => {
+    const { result } = await renderHook(() => {
         const search = useQuestCatalogSearchQuery();
         useQuestCatalogSearchAnalytics({
             query: search.searchQuery,
@@ -44,117 +44,117 @@ it('keeps input immediate and records only after normalized matching and the ana
         return search;
     });
 
-    act(() => result.current.setSearchQuery(' Минск '));
+    await act(() => result.current.setSearchQuery(' Минск '));
     expect(result.current.searchQuery).toBe(' Минск ');
     expect(result.current.searchTerm).toBe('');
-    advance(200);
+    await advance(200);
     expect(result.current.searchTerm).toBe('минск');
-    advance(899);
+    await advance(899);
     expect(sendAnalyticsEvent).not.toHaveBeenCalled();
-    advance(1);
+    await advance(1);
     expect(sendAnalyticsEvent).toHaveBeenCalledWith('quest_search', {
         source: 'quest_catalog', search_term: 'минск', results_count: 17,
     });
 });
 
-it('records the settled normalized query and its full result count once', () => {
-    const { rerender } = renderHook(useQuestCatalogSearchAnalytics, { initialProps: initial });
-    advance(899);
+it('records the settled normalized query and its full result count once', async () => {
+    const { rerender } = await renderHook(useQuestCatalogSearchAnalytics, { initialProps: initial });
+    await advance(899);
     expect(sendAnalyticsEvent).not.toHaveBeenCalled();
-    advance(1);
+    await advance(1);
     expect(sendAnalyticsEvent).toHaveBeenCalledWith('quest_search', {
         source: 'quest_catalog', search_term: 'минск', results_count: 17,
     });
-    rerender({ ...initial, resultsCount: 18 });
-    advance(2000);
+    await rerender({ ...initial, resultsCount: 18 });
+    await advance(2000);
     expect(sendAnalyticsEvent).toHaveBeenCalledTimes(1);
 });
 
-it('cancels unfinished typing and waits for the new query results', () => {
-    const { rerender } = renderHook(useQuestCatalogSearchAnalytics, {
+it('cancels unfinished typing and waits for the new query results', async () => {
+    const { rerender } = await renderHook(useQuestCatalogSearchAnalytics, {
         initialProps: { ...initial, query: 'ми', appliedSearchTerm: 'ми' },
     });
-    advance(600);
-    rerender({ ...initial, query: 'минск', appliedSearchTerm: 'ми' });
-    advance(2000);
+    await advance(600);
+    await rerender({ ...initial, query: 'минск', appliedSearchTerm: 'ми' });
+    await advance(2000);
     expect(sendAnalyticsEvent).not.toHaveBeenCalled();
-    rerender({ ...initial, query: 'минск', resultsCount: 7 });
-    advance();
+    await rerender({ ...initial, query: 'минск', resultsCount: 7 });
+    await advance();
     expect(sendAnalyticsEvent).toHaveBeenCalledTimes(1);
     expect(sendAnalyticsEvent).toHaveBeenLastCalledWith('quest_search', {
         source: 'quest_catalog', search_term: 'минск', results_count: 7,
     });
 });
 
-it('records zero results and permits a new search after clearing', () => {
+it('records zero results and permits a new search after clearing', async () => {
     const props = { ...initial, query: 'Atlantis', appliedSearchTerm: 'atlantis', resultsCount: 0 };
-    const { rerender } = renderHook(useQuestCatalogSearchAnalytics, { initialProps: props });
-    advance();
+    const { rerender } = await renderHook(useQuestCatalogSearchAnalytics, { initialProps: props });
+    await advance();
     expect(sendAnalyticsEvent).toHaveBeenLastCalledWith('quest_search', {
         source: 'quest_catalog', search_term: 'atlantis', results_count: 0,
     });
-    rerender({ ...props, query: '' });
-    advance();
+    await rerender({ ...props, query: '' });
+    await advance();
     expect(sendAnalyticsEvent).toHaveBeenCalledTimes(1);
-    rerender(props);
-    advance();
+    await rerender(props);
+    await advance();
     expect(sendAnalyticsEvent).toHaveBeenCalledTimes(2);
 });
 
-it('waits for ready data and cancels pending work on lost readiness or focus', () => {
-    const { rerender } = renderHook(useQuestCatalogSearchAnalytics, {
+it('waits for ready data and cancels pending work on lost readiness or focus', async () => {
+    const { rerender } = await renderHook(useQuestCatalogSearchAnalytics, {
         initialProps: { ...initial, ready: false },
     });
-    advance(2000);
+    await advance(2000);
     expect(sendAnalyticsEvent).not.toHaveBeenCalled();
-    rerender(initial);
-    advance(500);
-    rerender({ ...initial, focused: false });
-    advance(2000);
+    await rerender(initial);
+    await advance(500);
+    await rerender({ ...initial, focused: false });
+    await advance(2000);
     expect(sendAnalyticsEvent).not.toHaveBeenCalled();
-    rerender(initial);
-    advance(500);
-    rerender({ ...initial, ready: false });
-    advance(2000);
+    await rerender(initial);
+    await advance(500);
+    await rerender({ ...initial, ready: false });
+    await advance(2000);
     expect(sendAnalyticsEvent).not.toHaveBeenCalled();
-    rerender(initial);
-    advance();
+    await rerender(initial);
+    await advance();
     expect(sendAnalyticsEvent).toHaveBeenCalledTimes(1);
 });
 
-it('cancels the timer when unmounted', () => {
-    const { unmount } = renderHook(useQuestCatalogSearchAnalytics, { initialProps: initial });
-    advance(500);
-    unmount();
-    advance();
+it('cancels the timer when unmounted', async () => {
+    const { unmount } = await renderHook(useQuestCatalogSearchAnalytics, { initialProps: initial });
+    await advance(500);
+    await unmount();
+    await advance();
     expect(sendAnalyticsEvent).not.toHaveBeenCalled();
 });
 
 it.each(['', ' ', 'м', 'a'.repeat(101), 'julia@example.com', 'https://example.com', 'www.example.com', '+48 (123) 456-789'])(
-    'does not record non-search input %s', (query) => {
-        renderHook(useQuestCatalogSearchAnalytics, {
+    'does not record non-search input %s', async (query) => {
+        await renderHook(useQuestCatalogSearchAnalytics, {
             initialProps: { ...initial, query, appliedSearchTerm: query.trim().toLowerCase() },
         });
-        advance(2000);
+        await advance(2000);
         expect(sendAnalyticsEvent).not.toHaveBeenCalled();
     },
 );
 
 it.each(['Кракаў', 'Київ', 'Łódź', 'London', 'Минск 1941-1945'])(
-    'preserves search language and ordinary history titles: %s', (query) => {
-        renderHook(useQuestCatalogSearchAnalytics, {
+    'preserves search language and ordinary history titles: %s', async (query) => {
+        await renderHook(useQuestCatalogSearchAnalytics, {
             initialProps: { ...initial, query, appliedSearchTerm: query.toLowerCase() },
         });
-        advance();
+        await advance();
         expect(sendAnalyticsEvent).toHaveBeenCalledWith('quest_search', expect.objectContaining({
             search_term: query.toLowerCase(),
         }));
     },
 );
 
-it.each(['android', 'ios'])('keeps %s provider analytics disabled', (platform) => {
+it.each(['android', 'ios'])('keeps %s provider analytics disabled', async (platform) => {
     (Platform as { OS: string }).OS = platform;
-    renderHook(useQuestCatalogSearchAnalytics, { initialProps: initial });
-    advance(2000);
+    await renderHook(useQuestCatalogSearchAnalytics, { initialProps: initial });
+    await advance(2000);
     expect(sendAnalyticsEvent).not.toHaveBeenCalled();
 });

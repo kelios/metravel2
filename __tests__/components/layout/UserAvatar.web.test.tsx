@@ -2,31 +2,35 @@
  * @jest-environment jsdom
  */
 
-const renderer = require('react-test-renderer')
+import { act } from 'react'
+import { createRoot, type Root } from 'test-renderer'
 const { Platform } = require('react-native')
 const { default: UserAvatar } = require('@/components/layout/UserAvatar')
 
 describe('UserAvatar (web)', () => {
   const originalPlatform = Platform.OS
+  let root: Root | undefined
 
   beforeEach(() => {
     Platform.OS = 'web'
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    await act(() => root?.unmount())
+    root = undefined
     Platform.OS = originalPlatform
   })
 
-  it('renders a native img element for remote avatar URLs on web', () => {
-    let tree: any
+  it('renders a native img element for remote avatar URLs on web', async () => {
+    root = createRoot()
 
-    renderer.act(() => {
-      tree = renderer.create(
+    await act(() => {
+      root!.render(
         <UserAvatar uri="https://lh3.googleusercontent.com/a/example=s96-c" />
       )
     })
 
-    const images = tree.root.findAll((node: any) => node?.type === 'img')
+    const images = root.container.queryAll((node) => node.type === 'img')
 
     expect(images).toHaveLength(1)
     expect(images[0].props.src).toBe('https://lh3.googleusercontent.com/a/example=s96-c')

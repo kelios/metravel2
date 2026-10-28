@@ -53,7 +53,7 @@ describe('CharacterProfileCard', () => {
     mockUseUserCharacter.mockReturnValue(queryResult(undefined))
   })
 
-  it('own profile: shows static title and branch name inside meta, not as raw heading', () => {
+  it('own profile: shows static title and branch name inside meta, not as raw heading', async () => {
     const character = buildCharacter({
       name: 'Лисья',
       pathName: null,
@@ -62,7 +62,7 @@ describe('CharacterProfileCard', () => {
     })
     mockUseMyCharacter.mockReturnValue(queryResult(character))
 
-    const { getByText, queryByText } = render(<CharacterProfileCard />)
+    const { getByText, queryByText } = await render(<CharacterProfileCard />)
 
     expect(getByText('Ваш персонаж')).toBeTruthy()
     expect(getByText(/Ветка «Лисья»/)).toBeTruthy()
@@ -71,7 +71,7 @@ describe('CharacterProfileCard', () => {
     expect(queryByText('Лисья')).toBeNull()
   })
 
-  it('public profile: shows generic traveler title', () => {
+  it('public profile: shows generic traveler title', async () => {
     const character = buildCharacter({
       name: 'Собачья',
       pathName: 'Собачья',
@@ -81,7 +81,7 @@ describe('CharacterProfileCard', () => {
     mockUseMyCharacter.mockReturnValue(queryResult(undefined))
     mockUseUserCharacter.mockReturnValue(queryResult(character))
 
-    const { getByText, queryByText } = render(<CharacterProfileCard userId={42} />)
+    const { getByText, queryByText } = await render(<CharacterProfileCard userId={42} />)
 
     expect(getByText('Персонаж путешественника')).toBeTruthy()
     expect(queryByText('Ваш персонаж')).toBeNull()
@@ -89,7 +89,7 @@ describe('CharacterProfileCard', () => {
     expect(getByText(/уровень 2/)).toBeTruthy()
   })
 
-  it('does not show a "Ветка" fragment when name/pathName is the default placeholder', () => {
+  it('does not show a "Ветка" fragment when name/pathName is the default placeholder', async () => {
     const character = buildCharacter({
       name: 'Персонаж',
       pathName: null,
@@ -97,7 +97,7 @@ describe('CharacterProfileCard', () => {
     })
     mockUseMyCharacter.mockReturnValue(queryResult(character))
 
-    const { getByText, queryByText } = render(<CharacterProfileCard />)
+    const { getByText, queryByText } = await render(<CharacterProfileCard />)
 
     expect(getByText('Ваш персонаж')).toBeTruthy()
     expect(queryByText(/Ветка/)).toBeNull()

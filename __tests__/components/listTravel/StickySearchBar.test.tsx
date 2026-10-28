@@ -28,7 +28,7 @@ jest.mock('@/hooks/useResponsive', () => ({
     },
 }));
 
-const renderWithProviders = (component: React.ReactElement) => {
+const renderWithProviders = async (component: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -36,7 +36,7 @@ const renderWithProviders = (component: React.ReactElement) => {
     },
   });
 
-  return render(
+  return await render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         {component}
@@ -83,8 +83,8 @@ describe('StickySearchBar Component', () => {
     Platform.select = originalPlatformSelect;
   });
 
-  it('renders search input and desktop actions', () => {
-    renderWithProviders(
+  it('renders search input and desktop actions', async () => {
+    await renderWithProviders(
       <StickySearchBar
         search=""
         onSearchChange={mockOnSearchChange}
@@ -105,7 +105,7 @@ describe('StickySearchBar Component', () => {
   });
 
   it('calls onSearchChange when text is entered', async () => {
-    renderWithProviders(
+    await renderWithProviders(
       <StickySearchBar
         search=""
         onSearchChange={mockOnSearchChange}
@@ -120,14 +120,14 @@ describe('StickySearchBar Component', () => {
     );
 
     const searchInput = screen.getByPlaceholderText('Найти маршрут…');
-    fireEvent.changeText(searchInput, 'test search');
+    await fireEvent.changeText(searchInput, 'test search');
 
     await waitFor(() => {
       expect(mockOnSearchChange).toHaveBeenCalledWith('test search');
     });
   });
 
-  it('calls onFiltersPress when filters button is pressed (mobile)', () => {
+  it('calls onFiltersPress when filters button is pressed (mobile)', async () => {
     (global as any).__mockResponsive = {
       width: 375,
       height: 768,
@@ -146,7 +146,7 @@ describe('StickySearchBar Component', () => {
       isAtMost: () => true,
       isBetween: () => false,
     };
-    renderWithProviders(
+    await renderWithProviders(
       <StickySearchBar
         search=""
         onSearchChange={mockOnSearchChange}
@@ -161,12 +161,12 @@ describe('StickySearchBar Component', () => {
     );
 
     const filtersButton = screen.getByTestId('filters-button');
-    fireEvent.press(filtersButton);
+    await fireEvent.press(filtersButton);
 
     expect(mockOnFiltersPress).toHaveBeenCalled();
   });
 
-  it('renders primary mobile action and calls it without using an overlay FAB', () => {
+  it('renders primary mobile action and calls it without using an overlay FAB', async () => {
     (global as any).__mockResponsive = {
       width: 375,
       height: 768,
@@ -187,7 +187,7 @@ describe('StickySearchBar Component', () => {
     };
     const onCreateTravel = jest.fn();
 
-    renderWithProviders(
+    await renderWithProviders(
       <StickySearchBar
         search=""
         onSearchChange={mockOnSearchChange}
@@ -208,13 +208,13 @@ describe('StickySearchBar Component', () => {
     );
 
     const createButton = screen.getByTestId('create-travel-toolbar-button');
-    fireEvent.press(createButton);
+    await fireEvent.press(createButton);
 
     expect(onCreateTravel).toHaveBeenCalledTimes(1);
   });
 
-  it('calls onToggleRecommendations when recommendations button is pressed', () => {
-    renderWithProviders(
+  it('calls onToggleRecommendations when recommendations button is pressed', async () => {
+    await renderWithProviders(
       <StickySearchBar
         search=""
         onSearchChange={mockOnSearchChange}
@@ -229,12 +229,12 @@ describe('StickySearchBar Component', () => {
     );
 
     const recommendationsButton = screen.getByTestId('toggle-recommendations-button');
-    fireEvent.press(recommendationsButton);
+    await fireEvent.press(recommendationsButton);
 
     expect(mockOnToggleRecommendations).toHaveBeenCalled();
   });
 
-  it('shows active filters indicator on mobile when hasActiveFilters is true', () => {
+  it('shows active filters indicator on mobile when hasActiveFilters is true', async () => {
     (global as any).__mockResponsive = {
       width: 375,
       height: 768,
@@ -253,7 +253,7 @@ describe('StickySearchBar Component', () => {
       isAtMost: () => true,
       isBetween: () => false,
     };
-    renderWithProviders(
+    await renderWithProviders(
       <StickySearchBar
         search=""
         onSearchChange={mockOnSearchChange}
@@ -271,8 +271,8 @@ describe('StickySearchBar Component', () => {
     expect(screen.queryByText('2 условия')).toBeNull();
   });
 
-  it('calls onClearAll when clear button is pressed', () => {
-    renderWithProviders(
+  it('calls onClearAll when clear button is pressed', async () => {
+    await renderWithProviders(
       <StickySearchBar
         search="test"
         onSearchChange={mockOnSearchChange}
@@ -287,13 +287,13 @@ describe('StickySearchBar Component', () => {
     );
 
     const clearButton = screen.getByTestId('clear-all-button');
-    fireEvent.press(clearButton);
+    await fireEvent.press(clearButton);
 
     expect(mockOnClearAll).toHaveBeenCalled();
   });
 
-  it('shows recommendations as active when isRecommendationsVisible is true', () => {
-    renderWithProviders(
+  it('shows recommendations as active when isRecommendationsVisible is true', async () => {
+    await renderWithProviders(
       <StickySearchBar
         search=""
         onSearchChange={mockOnSearchChange}
@@ -311,8 +311,8 @@ describe('StickySearchBar Component', () => {
     expect(recommendationsButton.props.accessibilityState?.selected).toBe(true);
   });
 
-  it('displays results count correctly on desktop', () => {
-    renderWithProviders(
+  it('displays results count correctly on desktop', async () => {
+    await renderWithProviders(
       <StickySearchBar
         search=""
         onSearchChange={mockOnSearchChange}
@@ -330,8 +330,8 @@ describe('StickySearchBar Component', () => {
     expect(String((results.props as any).children)).toContain('25');
   });
 
-  it('shows a pending search status while search is in progress', () => {
-    renderWithProviders(
+  it('shows a pending search status while search is in progress', async () => {
+    await renderWithProviders(
       <StickySearchBar
         search="брест"
         onSearchChange={mockOnSearchChange}
@@ -351,10 +351,10 @@ describe('StickySearchBar Component', () => {
     expect(screen.queryByTestId('results-count-text')).toBeNull();
   });
 
-  it('renders quick filters and triggers onQuickFilterPress', () => {
+  it('renders quick filters and triggers onQuickFilterPress', async () => {
     const mockOnQuickFilterPress = jest.fn();
 
-    renderWithProviders(
+    await renderWithProviders(
       <StickySearchBar
         search=""
         onSearchChange={mockOnSearchChange}
@@ -367,7 +367,7 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    fireEvent.press(screen.getByTestId('quick-filter-popular'));
+    await fireEvent.press(screen.getByTestId('quick-filter-popular'));
 
     expect(screen.getByTestId('quick-filter-weekend').props.accessibilityState?.selected).toBe(true);
     expect(mockOnQuickFilterPress).toHaveBeenCalledWith('popular');
@@ -378,7 +378,7 @@ describe('StickySearchBar Component', () => {
     Platform.select = (obj: Record<string, unknown>) => obj.web ?? obj.default;
     useSearchHistoryStore.setState({ history: ['гомель', 'краков'], _loaded: true });
 
-    renderWithProviders(
+    await renderWithProviders(
       <StickySearchBar
         search=""
         onSearchChange={mockOnSearchChange}
@@ -388,7 +388,7 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    fireEvent(screen.getByPlaceholderText('Найти маршрут…'), 'focus');
+    await fireEvent(screen.getByPlaceholderText('Найти маршрут…'), 'focus');
 
     expect(screen.getByTestId('search-history-panel')).toBeTruthy();
 

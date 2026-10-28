@@ -79,10 +79,10 @@ const createQueryClient = () =>
     },
   })
 
-const renderWithTheme = (ui: React.ReactNode, contextProps: any = defaultProps) => {
+const renderWithTheme = async (ui: React.ReactNode, contextProps: any = defaultProps) => {
   const queryClient = createQueryClient()
 
-  return render(
+  return await render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <FiltersProvider {...contextProps}>{ui}</FiltersProvider>
@@ -97,7 +97,7 @@ describe('FiltersPanel inline options', () => {
   })
 
   it('shows category options directly in the panel', async () => {
-    const { getByTestId } = renderWithTheme(<FiltersPanel />, {
+    const { getByTestId } = await renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       travelsData: [
         { categoryName: 'Museum', name: 'History Hall', address: 'Center' },
@@ -113,7 +113,7 @@ describe('FiltersPanel inline options', () => {
   })
 
   it('falls back to categories from visible map points without opening a dropdown', async () => {
-    const { getByTestId } = renderWithTheme(<FiltersPanel />, {
+    const { getByTestId } = await renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       filters: {
         ...mockFilters,
@@ -132,9 +132,9 @@ describe('FiltersPanel inline options', () => {
     })
   })
 
-  it('toggles category chips directly from the visible list', () => {
+  it('toggles category chips directly from the visible list', async () => {
     const onFilterChange = jest.fn()
-    const { getByTestId } = renderWithTheme(<FiltersPanel />, {
+    const { getByTestId } = await renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       onFilterChange,
       filterValue: {
@@ -147,29 +147,29 @@ describe('FiltersPanel inline options', () => {
       ],
     })
 
-    fireEvent.press(getByTestId('category-option-1'))
+    await fireEvent.press(getByTestId('category-option-1'))
     expect(onFilterChange).toHaveBeenCalledWith('categoryTravelAddress', ['Museum', 'Park'])
 
-    fireEvent.press(getByTestId('category-option-0'))
+    await fireEvent.press(getByTestId('category-option-0'))
     expect(onFilterChange).toHaveBeenCalledWith('categoryTravelAddress', [])
   })
 
-  it('offers the next radius from the empty state without duplicating radius presets', () => {
+  it('offers the next radius from the empty state without duplicating radius presets', async () => {
     const onFilterChange = jest.fn()
-    const { getByLabelText, queryByTestId } = renderWithTheme(<FiltersPanel />, {
+    const { getByLabelText, queryByTestId } = await renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       onFilterChange,
     })
 
     expect(queryByTestId('radius-presets')).toBeNull()
 
-    fireEvent.press(getByLabelText('Увеличить радиус до 100 километров'))
+    await fireEvent.press(getByLabelText('Увеличить радиус до 100 километров'))
     expect(onFilterChange).toHaveBeenCalledWith('radius', '100')
   })
 
-  it('resolves numeric selections for display and keeps unknown members when toggling chips', () => {
+  it('resolves numeric selections for display and keeps unknown members when toggling chips', async () => {
     const onFilterChange = jest.fn()
-    const { getByTestId } = renderWithTheme(<FiltersPanel />, {
+    const { getByTestId } = await renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       onFilterChange,
       filterValue: { ...mockFilterValue, categoryTravelAddress: ['1', 'Unknown'] },
@@ -180,15 +180,15 @@ describe('FiltersPanel inline options', () => {
     expect(museum.props.accessibilityState.selected).toBe(true)
     expect(unknown.props.accessibilityLabel).toBe('Unknown')
     expect(unknown.props.accessibilityState.selected).toBe(true)
-    fireEvent.press(museum)
+    await fireEvent.press(museum)
     expect(onFilterChange).toHaveBeenLastCalledWith('categoryTravelAddress', ['Unknown'])
-    fireEvent.press(unknown)
+    await fireEvent.press(unknown)
     expect(onFilterChange).toHaveBeenLastCalledWith('categoryTravelAddress', ['Museum'])
   })
 
-  it.each(['loading', 'error', 'ready'])('keeps unknown URL chips removable with an empty %s dictionary', (state) => {
+  it.each(['loading', 'error', 'ready'])('keeps unknown URL chips removable with an empty %s dictionary', async (state) => {
     const onFilterChange = jest.fn()
-    const { getByTestId } = renderWithTheme(<FiltersPanel />, {
+    const { getByTestId } = await renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       onFilterChange,
       filters: { ...mockFilters, categoryTravelAddress: [], categoryDictionaryState: state },
@@ -196,12 +196,12 @@ describe('FiltersPanel inline options', () => {
     })
     expect(getByTestId('category-option-0').props.accessibilityLabel).toBe('43')
     expect(getByTestId('category-option-1').props.accessibilityLabel).toBe('Unknown')
-    fireEvent.press(getByTestId('category-option-0'))
+    await fireEvent.press(getByTestId('category-option-0'))
     expect(onFilterChange).toHaveBeenCalledWith('categoryTravelAddress', ['Unknown'])
   })
 
-  it.each([false, true])('labels loaded point facets in the shared panel (mobile: %s)', (isMobile) => {
-    const { getByTestId } = renderWithTheme(<FiltersPanel />, {
+  it.each([false, true])('labels loaded point facets in the shared panel (mobile: %s)', async (isMobile) => {
+    const { getByTestId } = await renderWithTheme(<FiltersPanel />, {
       ...defaultProps,
       isMobile,
       resultsTotal: 332,

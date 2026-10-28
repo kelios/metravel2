@@ -39,7 +39,7 @@ describe('useRichMediaVisibility', () => {
   // а измерение проходило успешно. Здесь `scrollY` намеренно остаётся нулём:
   // проверяется, что гейт открывается по settled-смещению обычного JS-колбэка
   // (`onScrollEndDrag`/`onMomentumScrollEnd`).
-  it('раскрывает кадр по settledOffsetY, когда обновления Animated не приходят', () => {
+  it('раскрывает кадр по settledOffsetY, когда обновления Animated не приходят', async () => {
     ;(Platform as { OS: string }).OS = 'android'
     const scrollY = new Animated.Value(0)
     let captured: ReturnType<typeof useRichMediaVisibility> | null = null
@@ -61,7 +61,7 @@ describe('useRichMediaVisibility', () => {
       return <Text testID="frame">{gate.visible ? 'visible' : 'hidden'}</Text>
     }
 
-    const view = render(
+    const view = await render(
       <RichMediaViewportProvider scrollY={scrollY} settledOffsetY={0}>
         <Frame />
       </RichMediaViewportProvider>,
@@ -70,8 +70,8 @@ describe('useRichMediaVisibility', () => {
 
     // Жест закончился — кадр приехал во вьюпорт. Ни одного события `scrollY`.
     windowY = 200
-    act(() => {
-      view.rerender(
+    await act(async () => {
+      await view.rerender(
         <RichMediaViewportProvider scrollY={scrollY} settledOffsetY={3800}>
           <Frame />
         </RichMediaViewportProvider>,
@@ -82,16 +82,16 @@ describe('useRichMediaVisibility', () => {
     expect(captured!.visible).toBe(true)
   })
 
-  it('без провайдера медиа всегда монтируется (web, статьи, тесты)', () => {
-    const { getByTestId } = render(<Probe />)
+  it('без провайдера медиа всегда монтируется (web, статьи, тесты)', async () => {
+    const { getByTestId } = await render(<Probe />)
     expect(getByTestId('probe').props.children).toBe('visible')
   })
 
-  it('под провайдером кадр вне вьюпорта скрыт, но раскрывается по fallback-таймеру', () => {
+  it('под провайдером кадр вне вьюпорта скрыт, но раскрывается по fallback-таймеру', async () => {
     ;(Platform as { OS: string }).OS = 'android'
     jest.useFakeTimers()
     const scrollY = new Animated.Value(0)
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <RichMediaViewportProvider scrollY={scrollY}>
         <Probe />
       </RichMediaViewportProvider>,
@@ -100,13 +100,13 @@ describe('useRichMediaVisibility', () => {
     // measureInWindow в тестовом рендерере не отдаёт координат — страховка обязана
     // показать фото, а не оставить вечно пустую рамку.
     expect(getByTestId('probe').props.children).toBe('hidden')
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(2000)
     })
     expect(getByTestId('probe').props.children).toBe('visible')
   })
 
-  it('на iOS провайдер прозрачен: гейт не держит НИ ОДНО медиа пустым', () => {
+  it('на iOS провайдер прозрачен: гейт не держит НИ ОДНО медиа пустым', async () => {
     // #1696: #1666 включила гейт на всём native и вывела из-под него только фото
     // тела статьи. Плитки квестов остались гейтящимися и приехали пустыми в
     // билд 1.0.5 (6) — на симуляторе iPhone 17 секция «Квесты по этому городу и
@@ -117,7 +117,7 @@ describe('useRichMediaVisibility', () => {
     ;(Platform as { OS: string }).OS = 'ios'
     jest.useFakeTimers()
     const scrollY = new Animated.Value(0)
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <RichMediaViewportProvider scrollY={scrollY}>
         <Probe />
         <CustomImageRenderer
@@ -137,9 +137,9 @@ describe('useRichMediaVisibility', () => {
     expect(mockImageCardMedia).toHaveBeenCalledTimes(1)
   })
 
-  it('снимает error-placeholder после успешного retry изображения', () => {
+  it('снимает error-placeholder после успешного retry изображения', async () => {
     ;(Platform as { OS: string }).OS = 'ios'
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <CustomImageRenderer
         tnode={{
           attributes: {
@@ -152,12 +152,12 @@ describe('useRichMediaVisibility', () => {
       />,
     )
 
-    act(() => {
+    await act(() => {
       mockImageCardMedia.mock.calls.at(-1)?.[0]?.onError()
     })
     expect(getByTestId('custom-image-error-placeholder')).toBeTruthy()
 
-    act(() => {
+    await act(() => {
       mockImageCardMedia.mock.calls.at(-1)?.[0]?.onLoad()
     })
     expect(queryByTestId('custom-image-error-placeholder')).toBeNull()

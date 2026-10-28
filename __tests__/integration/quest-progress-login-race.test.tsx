@@ -120,8 +120,8 @@ describe('#1905 два писателя прохождения после лог
 
   it('создаёт прохождение один раз и сохраняет ответы обоих потоков', async () => {
     // Поток 1 — авторизованная синхронизация с отложенным ответом.
-    const sync = renderHook(() => useQuestProgressSync(QUEST_ID, true))
-    act(() => {
+    const sync = await renderHook(() => useQuestProgressSync(QUEST_ID, true))
+    await act(() => {
       sync.result.current.saveProgress({
         currentIndex: 3,
         unlockedIndex: 3,
@@ -135,7 +135,7 @@ describe('#1905 два писателя прохождения после лог
     })
 
     // Поток 2 — миграция гостевого прогресса тем же логином.
-    renderHook(() =>
+    await renderHook(() =>
       useGuestQuestFlow({ questId: QUEST_ID, cityId: CITY_ID, isAuthenticated: true, enabled: true }),
     )
 

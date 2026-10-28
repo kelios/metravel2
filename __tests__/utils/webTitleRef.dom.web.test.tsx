@@ -3,7 +3,7 @@ import type { Root } from 'react-dom/client'
 
 // #2261: react-native-web 0.21.2 не переносит проп `title` в DOM (его нет в
 // `forwardedProps`), поэтому подсказка наведения, развёрнутая спредом
-// (`{...({ title } as any)}`), жила только в исходнике. react-test-renderer проп
+// (`{...({ title } as any)}`), жила только в исходнике. Структурный renderer проп
 // видит и проходит — здесь настоящий DOM react-native-web (рецепт #2035,
 // `CardActionPressable.dom.web.test.tsx`): атрибут читается с узла страницы.
 let act: typeof import('react').act

@@ -30,8 +30,8 @@ describe('RoutingMachine', () => {
     clearResolvedRouteKeys();
   });
 
-  it('should render without crashing', () => {
-    render(<RoutingMachine {...defaultProps} />);
+  it('should render without crashing', async () => {
+    await render(<RoutingMachine {...defaultProps} />);
     // Component renders successfully with 2 route points
     expect(mockSetRoutingLoading).toHaveBeenCalledWith(true);
   });
@@ -42,7 +42,7 @@ describe('RoutingMachine', () => {
       routePoints: [[27.5590, 53.9006]],
     };
 
-    render(<RoutingMachine {...props} />);
+    await render(<RoutingMachine {...props} />);
 
     await waitFor(() => {
       expect(mockSetRoutingLoading).not.toHaveBeenCalled();
@@ -61,7 +61,7 @@ describe('RoutingMachine', () => {
       }),
     });
 
-    render(<RoutingMachine {...defaultProps} />);
+    await render(<RoutingMachine {...defaultProps} />);
 
     await waitFor(() => {
       expect(mockSetRoutingLoading).toHaveBeenCalledWith(true);
@@ -80,7 +80,7 @@ describe('RoutingMachine', () => {
       }),
     });
 
-    render(<RoutingMachine {...defaultProps} />);
+    await render(<RoutingMachine {...defaultProps} />);
 
     await waitFor(() => {
       expect(mockSetRoutingLoading).toHaveBeenCalledWith(false);
@@ -100,7 +100,7 @@ describe('RoutingMachine', () => {
       }),
     });
 
-    render(<RoutingMachine {...defaultProps} />);
+    await render(<RoutingMachine {...defaultProps} />);
 
     await waitFor(() => {
       expect(mockSetRouteDistance).toHaveBeenCalledWith(expectedDistance);
@@ -120,7 +120,7 @@ describe('RoutingMachine', () => {
       }),
     });
 
-    render(<RoutingMachine {...defaultProps} />);
+    await render(<RoutingMachine {...defaultProps} />);
 
     await waitFor(() => {
       expect(mockSetFullRouteCoords).toHaveBeenCalledWith(expectedCoords);
@@ -130,7 +130,7 @@ describe('RoutingMachine', () => {
   it('should handle routing errors gracefully', async () => {
     (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
 
-    render(<RoutingMachine {...defaultProps} />);
+    await render(<RoutingMachine {...defaultProps} />);
 
     await waitFor(() => {
       const calls = mockSetErrors.mock.calls;
@@ -155,7 +155,7 @@ describe('RoutingMachine', () => {
       }),
     });
 
-    const { rerender } = render(<RoutingMachine {...defaultProps} />);
+    const { rerender } = await render(<RoutingMachine {...defaultProps} />);
 
     await waitFor(() => {
       expect(mockSetRoutingLoading).toHaveBeenCalledWith(true);
@@ -169,17 +169,17 @@ describe('RoutingMachine', () => {
     jest.clearAllMocks();
 
     // Re-render with same props
-    rerender(<RoutingMachine {...defaultProps} />);
+    await rerender(<RoutingMachine {...defaultProps} />);
 
     // Should not trigger another routing request (component may still sync loading=false).
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it('should clear polyline when route points are removed', async () => {
-    const { rerender } = render(<RoutingMachine {...defaultProps} />);
+    const { rerender } = await render(<RoutingMachine {...defaultProps} />);
 
     // Re-render with less than 2 points
-    rerender(
+    await rerender(
       <RoutingMachine
         {...defaultProps}
         routePoints={[[27.5590, 53.9006]]}
@@ -210,7 +210,7 @@ describe('RoutingMachine', () => {
       }),
     });
 
-    const { rerender } = render(<RoutingMachine {...defaultProps} />);
+    const { rerender } = await render(<RoutingMachine {...defaultProps} />);
 
     await waitFor(() => {
       expect(mockSetRoutingLoading).toHaveBeenCalledWith(true);
@@ -236,7 +236,7 @@ describe('RoutingMachine', () => {
     });
 
     // Change transport mode
-    rerender(
+    await rerender(
       <RoutingMachine
         {...defaultProps}
         transportMode="bike"
@@ -271,14 +271,14 @@ describe('RoutingMachine', () => {
       })
     );
 
-    const { rerender } = render(<RoutingMachine {...defaultProps} />);
+    const { rerender } = await render(<RoutingMachine {...defaultProps} />);
 
     await waitFor(() => {
       expect(mockSetRoutingLoading).toHaveBeenCalledWith(true);
     });
 
     // Change route points to trigger new routing
-    rerender(
+    await rerender(
       <RoutingMachine
         {...defaultProps}
         routePoints={[[27.5590, 53.9006], [27.5800, 53.9200]]}

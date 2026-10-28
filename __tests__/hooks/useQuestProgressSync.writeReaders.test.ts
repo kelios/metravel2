@@ -51,14 +51,14 @@ const flushMicrotasks = async () => {
 }
 
 const mountSync = async () => {
-  const rendered = renderHook(() => useQuestProgressSync(QUEST_ID, true))
+  const rendered = await renderHook(() => useQuestProgressSync(QUEST_ID, true))
   await flushMicrotasks()
   return rendered
 }
 
 /** Запись другого писателя подтверждена сервером. */
 const confirmForeignWrite = async (row: ApiQuestProgress) => {
-  act(() => syncQuestProgressReaders(QUEST_ID, 'A', row))
+  await act(() => syncQuestProgressReaders(QUEST_ID, 'A', row))
   await flushMicrotasks()
 }
 
@@ -107,8 +107,8 @@ describe('useQuestProgressSync — запись другого писателя 
     let acknowledge!: (row: ApiQuestProgress) => void
     mockUpdateProgress.mockImplementationOnce(() => new Promise<ApiQuestProgress>((resolve) => { acknowledge = resolve }))
 
-    act(() => result.current.saveProgress(STARTED))
-    act(() => {
+    await act(() => result.current.saveProgress(STARTED))
+    await act(() => {
       jest.advanceTimersByTime(2000)
     })
     await flushMicrotasks()
@@ -144,7 +144,7 @@ describe('useQuestProgressSync — запись другого писателя 
 
   it('запись другого квеста экран не трогает', async () => {
     const { result } = await mountSync()
-    act(() => syncQuestProgressReaders('minsk-cmok', 'A', withAnswers(mockEmptyRow(88), { 'step-1': 'цмок' })))
+    await act(() => syncQuestProgressReaders('minsk-cmok', 'A', withAnswers(mockEmptyRow(88), { 'step-1': 'цмок' })))
     await flushMicrotasks()
     expect(result.current.progress).toBeNull()
     expect(result.current.progressMissing).toBe(true)

@@ -41,7 +41,7 @@ describe('useMapCoordinates re-focus with a fresh trusted fix', () => {
       })
     }
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ isFocused }) => useMapCoordinates({ isFocused }),
       { initialProps: { isFocused: true } },
     )
@@ -53,10 +53,10 @@ describe('useMapCoordinates re-focus with a fresh trusted fix', () => {
     const coordinatesBefore = result.current.coordinates
 
     await act(async () => {
-      rerender({ isFocused: false })
+      await rerender({ isFocused: false })
     })
     await act(async () => {
-      rerender({ isFocused: true })
+      await rerender({ isFocused: true })
     })
 
     expect(getCurrentPosition).toHaveBeenCalledTimes(1)

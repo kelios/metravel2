@@ -45,16 +45,16 @@ describe('useTravelFilters browser return freshness without a browser (SSR)', ()
     Object.defineProperty(globalThis, globalName, { configurable: true, value: undefined });
     try {
       expect(typeof (globalThis as Record<string, unknown>)[globalName]).toBe('undefined');
-      const hook = renderHook(
+      const hook = await renderHook(
         ({ step }: { step: number }) => useTravelFilters({ currentStep: step }),
         { initialProps: { step: 1 } },
       );
       await waitFor(() => expect(hook.result.current.isLoading).toBe(false));
-      await act(async () => { hook.rerender({ step: 2 }); });
+      await act(async () => { await hook.rerender({ step: 2 }); });
       // Точечный шаг открылся без браузерных глобалов: ни исключения, ни подписок на окно.
       expect(hook.result.current.isLoading).toBe(false);
       expect(mockFetchFilters).toHaveBeenCalled();
-      hook.unmount();
+      await hook.unmount();
     } finally {
       if (descriptor) Object.defineProperty(globalThis, globalName, descriptor);
       else delete (globalThis as Record<string, unknown>)[globalName];

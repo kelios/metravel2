@@ -200,10 +200,10 @@ describe('useMapScreenController — handleOverlayToggle', () => {
   })
 
   // Кейс 1: включение weather-temp → temp=true, labels=true, clouds/precip=false
-  it('включение weather-temp включает подписи и сбрасывает других участников группы', () => {
-    const { result } = renderHook(() => useMapScreenController())
+  it('включение weather-temp включает подписи и сбрасывает других участников группы', async () => {
+    const { result } = await renderHook(() => useMapScreenController())
 
-    act(() => {
+    await act(() => {
       getToggle(result)(TEMP, true)
     })
 
@@ -217,18 +217,18 @@ describe('useMapScreenController — handleOverlayToggle', () => {
   })
 
   // Кейс 2: включены temp+labels, включаем precip → precip=true, temp=false, labels=false
-  it('включение weather-precip при активном temp выключает temp и подписи (граничный фикс)', () => {
-    const { result } = renderHook(() => useMapScreenController())
+  it('включение weather-precip при активном temp выключает temp и подписи (граничный фикс)', async () => {
+    const { result } = await renderHook(() => useMapScreenController())
 
     // Сначала включаем temp (он тянет labels)
-    act(() => {
+    await act(() => {
       getToggle(result)(TEMP, true)
     })
     expect(getOverlays(result)[TEMP]).toBe(true)
     expect(getOverlays(result)[LABELS]).toBe(true)
 
     // Теперь включаем precip — temp должен выключиться косвенно, labels тоже
-    act(() => {
+    await act(() => {
       getToggle(result)(PRECIP, true)
     })
 
@@ -241,14 +241,14 @@ describe('useMapScreenController — handleOverlayToggle', () => {
   })
 
   // Кейс 3: прямое выключение weather-temp → temp=false, labels=false
-  it('прямое выключение weather-temp выключает и подписи', () => {
-    const { result } = renderHook(() => useMapScreenController())
+  it('прямое выключение weather-temp выключает и подписи', async () => {
+    const { result } = await renderHook(() => useMapScreenController())
 
-    act(() => {
+    await act(() => {
       getToggle(result)(TEMP, true)
     })
 
-    act(() => {
+    await act(() => {
       getToggle(result)(TEMP, false)
     })
 
@@ -258,13 +258,13 @@ describe('useMapScreenController — handleOverlayToggle', () => {
   })
 
   // Кейс 4: два не-погодных оверлея (без exclusiveGroup) могут быть включены одновременно
-  it('не-погодные оверлеи включаются независимо (нет взаимоисключения)', () => {
-    const { result } = renderHook(() => useMapScreenController())
+  it('не-погодные оверлеи включаются независимо (нет взаимоисключения)', async () => {
+    const { result } = await renderHook(() => useMapScreenController())
 
-    act(() => {
+    await act(() => {
       getToggle(result)(WATER, true)
     })
-    act(() => {
+    await act(() => {
       getToggle(result)('nature-viewpoint', true)
     })
 
@@ -275,11 +275,11 @@ describe('useMapScreenController — handleOverlayToggle', () => {
 
   // Кейс 5 (граничный): labels=true, temp=false → включаем clouds → labels НЕ трогаем.
   // Симулирует сценарий «подписи включены отдельно без заливки».
-  it('косвенное выключение temp НЕ сбрасывает labels если temp уже был выключен', () => {
-    const { result } = renderHook(() => useMapScreenController())
+  it('косвенное выключение temp НЕ сбрасывает labels если temp уже был выключен', async () => {
+    const { result } = await renderHook(() => useMapScreenController())
 
     // Включаем только labels (temp остаётся false)
-    act(() => {
+    await act(() => {
       getToggle(result)(LABELS, true)
     })
     // Убеждаемся: temp выключен, labels включён
@@ -288,7 +288,7 @@ describe('useMapScreenController — handleOverlayToggle', () => {
 
     // Включаем clouds (другой heatmap группы). temp был уже выключен —
     // условие `prev[WEATHER_TEMP_LAYER_ID]` не срабатывает, labels не трогаем.
-    act(() => {
+    await act(() => {
       getToggle(result)(CLOUDS, true)
     })
 

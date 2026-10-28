@@ -38,7 +38,7 @@ describe('useFavoriteToggle', () => {
   })
 
   it('adds, toasts «Добавлено в «Хочу поехать»» with undo, and undo removes', async () => {
-    const { result } = renderHook(() => useFavoriteToggle())
+    const { result } = await renderHook(() => useFavoriteToggle())
     await act(async () => {
       expect(await result.current.toggle(target)).toBe('success')
     })
@@ -53,7 +53,7 @@ describe('useFavoriteToggle', () => {
 
   it('removes when already favorite; undo re-adds', async () => {
     mockIsFavorite.mockReturnValue(true)
-    const { result } = renderHook(() => useFavoriteToggle())
+    const { result } = await renderHook(() => useFavoriteToggle())
     await act(async () => {
       await result.current.toggle(target)
     })
@@ -68,7 +68,7 @@ describe('useFavoriteToggle', () => {
 
   it('reports an error toast when the network call fails', async () => {
     mockAdd.mockRejectedValue(new Error('network'))
-    const { result } = renderHook(() => useFavoriteToggle())
+    const { result } = await renderHook(() => useFavoriteToggle())
     await act(async () => {
       expect(await result.current.toggle(target)).toBe('error')
     })
@@ -78,7 +78,7 @@ describe('useFavoriteToggle', () => {
   it('ignores a double tap while the first is in flight', async () => {
     let release!: () => void
     mockAdd.mockImplementation(() => new Promise<void>((r) => { release = r }))
-    const { result } = renderHook(() => useFavoriteToggle())
+    const { result } = await renderHook(() => useFavoriteToggle())
     let first!: Promise<string>
     let second = ''
     await act(async () => {
@@ -95,7 +95,7 @@ describe('useFavoriteToggle', () => {
 
   it('guest: explains and opens sign-in, does not call the API', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false, authReady: true })
-    const { result } = renderHook(() => useFavoriteToggle())
+    const { result } = await renderHook(() => useFavoriteToggle())
     await act(async () => {
       expect(await result.current.toggle(target)).toBe('auth')
     })
@@ -106,7 +106,7 @@ describe('useFavoriteToggle', () => {
 
   it('!authReady: the tap is deferred, not lost, and replays once auth is ready', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false, authReady: false })
-    const { result, rerender } = renderHook(() => useFavoriteToggle())
+    const { result, rerender } = await renderHook(() => useFavoriteToggle())
     await act(async () => {
       expect(await result.current.toggle(target)).toBe('deferred')
     })
@@ -115,7 +115,7 @@ describe('useFavoriteToggle', () => {
 
     mockUseAuth.mockReturnValue({ isAuthenticated: true, authReady: true })
     await act(async () => {
-      rerender({})
+      await rerender({})
     })
     expect(mockAdd).toHaveBeenCalledTimes(1)
     expect(toast.mock.calls[0][0].text1).toBe('Добавлено в «Хочу поехать»')
@@ -123,19 +123,19 @@ describe('useFavoriteToggle', () => {
 
   it('!authReady then guest: the replay opens sign-in', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false, authReady: false })
-    const { result, rerender } = renderHook(() => useFavoriteToggle())
+    const { result, rerender } = await renderHook(() => useFavoriteToggle())
     await act(async () => {
       await result.current.toggle(target)
     })
     mockUseAuth.mockReturnValue({ isAuthenticated: false, authReady: true })
     await act(async () => {
-      rerender({})
+      await rerender({})
     })
     expect(mockRequireAuth).toHaveBeenCalledTimes(1)
   })
 
   it('does not add a favorite without a url (#1438)', async () => {
-    const { result } = renderHook(() => useFavoriteToggle())
+    const { result } = await renderHook(() => useFavoriteToggle())
     await act(async () => {
       expect(await result.current.toggle({ ...target, url: '' })).toBe('invalid')
     })

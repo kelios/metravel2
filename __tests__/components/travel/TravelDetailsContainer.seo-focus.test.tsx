@@ -2,10 +2,13 @@
  * @jest-environment jsdom
  */
 
-import React from 'react'
-import { act } from 'react-test-renderer'
-import { render } from '@testing-library/react-native'
+import React, { act } from 'react'
+import { cleanup as cleanupNative, render as renderNative } from '@testing-library/react-native'
+import { HelmetProvider } from 'expo-router/vendor/react-helmet-async/lib'
+import { activeHelmetHeads, readHelmetHead } from '../../helpers/helmetHead'
+import { createRootRegistry } from '../../helpers/rawRootLifecycle'
 
+const roots = createRootRegistry()
 const mockSetOptions = jest.fn()
 const mockUseIsFocused = jest.fn(() => false)
 
@@ -15,10 +18,7 @@ jest.mock('expo-router', () => ({
   useNavigation: () => ({ setOptions: mockSetOptions }),
 }))
 
-jest.mock('expo-router/head', () => ({
-  __esModule: true,
-  default: ({ children }: { children?: React.ReactNode }) => children ?? null,
-}))
+jest.mock('expo-router/head', () => require('../../helpers/helmetHead').createHelmetHeadMock())
 
 jest.mock('@/context/AuthContext', () => ({
   useAuth: () => ({
@@ -97,14 +97,23 @@ jest.mock('@/hooks/travel-details', () => ({
 import TravelDetailsContainer from '@/components/travel/details/TravelDetailsContainer'
 
 describe('TravelDetailsContainer SEO focus guard', () => {
+  const originalCanUseDOM = HelmetProvider.canUseDOM
+
   beforeAll(() => {
+    HelmetProvider.canUseDOM = false
     const RN = require('react-native')
     RN.Platform.OS = 'web'
     RN.Platform.select = (obj: Record<string, unknown>) => obj.web || obj.default
   })
 
+  afterAll(() => {
+    HelmetProvider.canUseDOM = originalCanUseDOM
+  })
+
   beforeEach(() => {
-    require('react-native').Platform.OS = 'web'
+    const RN = require('react-native')
+    RN.Platform.OS = 'web'
+    RN.Platform.select = (options: Record<string, unknown>) => options.web ?? options.default
     jest.useFakeTimers()
     mockSetOptions.mockClear()
     mockUseIsFocused.mockReturnValue(false)
@@ -122,18 +131,20 @@ describe('TravelDetailsContainer SEO focus guard', () => {
     ].join('')
   })
 
-  afterEach(() => {
-    act(() => {
+  afterEach(async () => {
+    await roots.cleanup()
+    await cleanupNative()
+    await act(() => {
       jest.runOnlyPendingTimers()
     })
     jest.useRealTimers()
     document.body.innerHTML = ''
   })
 
-  it('does not overwrite title or head meta when the screen is not focused', () => {
-    render(<TravelDetailsContainer />)
+  it('does not overwrite title or head meta when the screen is not focused', async () => {
+    await act(() => roots.createRoot().render(<TravelDetailsContainer />))
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1000)
     })
 
@@ -150,12 +161,13 @@ describe('TravelDetailsContainer SEO focus guard', () => {
   it('releases the retained article head writer on blur and restores it on refocus', async () => {
     mockUseIsFocused.mockReturnValue(true)
     const articleCanonical = 'https://metravel.by/travels/energylandia-polskiy-disneylend'
-    const rendered = render(<TravelDetailsContainer />)
+    const rendered = roots.createRoot()
+    await act(() => rendered.render(<TravelDetailsContainer />))
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(articleCanonical)
-    expect(JSON.stringify(rendered.toJSON())).toContain('travel-article-jsonld')
+    expect(readHelmetHead().scripts.map(script => script.id)).toEqual(['travel-article-jsonld'])
 
     mockUseIsFocused.mockReturnValue(false)
-    rendered.rerender(<TravelDetailsContainer />)
+    await act(() => rendered.render(<TravelDetailsContainer />))
 
     await act(async () => {
       document.head.querySelector('link[rel="canonical"]')?.setAttribute('href', 'https://metravel.by/search')
@@ -165,29 +177,31 @@ describe('TravelDetailsContainer SEO focus guard', () => {
       await Promise.resolve()
     })
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://metravel.by/search')
-    expect(JSON.stringify(rendered.toJSON())).not.toContain('travel-article-jsonld')
+    expect(activeHelmetHeads.size).toBe(0)
 
     mockUseIsFocused.mockReturnValue(true)
-    rendered.rerender(<TravelDetailsContainer />)
+    await act(() => rendered.render(<TravelDetailsContainer />))
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe(articleCanonical)
-    expect(JSON.stringify(rendered.toJSON())).toContain('travel-article-jsonld')
+    expect(readHelmetHead().scripts.map(script => script.id)).toEqual(['travel-article-jsonld'])
   })
 
-  it.each(['android', 'ios'])('preserves the existing native head subtree on %s', platform => {
-    require('react-native').Platform.OS = platform
-    const rendered = render(<TravelDetailsContainer />)
-    expect(JSON.stringify(rendered.toJSON())).toContain('travel-article-jsonld')
+  it.each(['android', 'ios'])('preserves the existing native head subtree on %s', async platform => {
+    const RN = require('react-native')
+    RN.Platform.OS = platform
+    RN.Platform.select = (options: Record<string, unknown>) => options[platform] ?? options.native ?? options.default
+    await renderNative(<TravelDetailsContainer />)
+    expect(readHelmetHead().scripts.map(script => script.id)).toEqual(['travel-article-jsonld'])
     expect(document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')).toBe('https://metravel.by/search')
   })
 
-  it('patches only head metadata without scanning or mutating matching body nodes', () => {
+  it('patches only head metadata without scanning or mutating matching body nodes', async () => {
     mockUseIsFocused.mockReturnValue(true)
     const bodyDecoy = document.createElement('meta')
     bodyDecoy.setAttribute('name', 'description')
     bodyDecoy.setAttribute('content', 'body-decoy')
     document.body.appendChild(bodyDecoy)
 
-    render(<TravelDetailsContainer />)
+    await act(() => roots.createRoot().render(<TravelDetailsContainer />))
 
     expect(document.head.querySelector('meta[name="description"]')?.getAttribute('content')).toContain(
       'Путешествие в Energylandia',
@@ -202,7 +216,7 @@ describe('TravelDetailsContainer SEO focus guard', () => {
       '<script id="travel-article-jsonld" type="application/ld+json">{"source":"preload"}</script>',
     )
 
-    render(<TravelDetailsContainer />)
+    await act(() => roots.createRoot().render(<TravelDetailsContainer />))
 
     expect(
       document.querySelector('script#travel-article-jsonld')?.textContent,
@@ -244,7 +258,7 @@ describe('TravelDetailsContainer SEO focus guard', () => {
       ].join(''),
     )
 
-    render(<TravelDetailsContainer />)
+    await act(() => roots.createRoot().render(<TravelDetailsContainer />))
 
     expect(
       document.querySelector('script[data-seo-jsonld="travel-article"]')?.textContent,

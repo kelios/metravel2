@@ -4,7 +4,7 @@ const { render } = require('@testing-library/react-native');
 const MapMarkers = require('@/components/MapPage/Map/MapMarkers').default;
 
 describe('MapMarkers', () => {
-  it('renders a Marker for each valid point coord', () => {
+  it('renders a Marker for each valid point coord', async () => {
     const RN = require('react-native');
     const View = RN.View;
 
@@ -21,7 +21,7 @@ describe('MapMarkers', () => {
       { id: 4, coord: '500,500', address: 'D', travelImageThumbUrl: '', categoryName: '' },
     ];
 
-    const { queryAllByTestId } = render(
+    const { queryAllByTestId } = await render(
       <MapMarkers
         points={points}
         icon={{}}
@@ -34,7 +34,7 @@ describe('MapMarkers', () => {
     expect(queryAllByTestId('marker').length).toBe(2);
   });
 
-  it('opens the popup before running follow-up marker click behavior', () => {
+  it('opens the popup before running follow-up marker click behavior', async () => {
     const RN = require('react-native');
     const View = RN.View;
 
@@ -51,7 +51,7 @@ describe('MapMarkers', () => {
     const Popup = ({ children }: any) => <View testID="popup">{children}</View>;
     const PopupContent = ({ point }: any) => <View testID="popup-content" data-address={point?.address} />;
 
-    render(
+    await render(
       <MapMarkers
         points={[
           { id: 1, coord: '50.0619474,19.9368564', address: 'A', travelImageThumbUrl: '', categoryName: '' },

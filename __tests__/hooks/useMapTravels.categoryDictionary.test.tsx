@@ -92,7 +92,7 @@ describe('useMapTravels — point-type chip resolves through the /api/filterform
       searchQuery: '',
     } as any
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useMapTravels({
           coordinates: KRAKOW,
@@ -125,7 +125,7 @@ describe('useMapTravels — point-type chip resolves through the /api/filterform
       searchQuery: '',
     } as any
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useMapTravels({
           coordinates: KRAKOW,
@@ -170,7 +170,7 @@ describe('useMapTravels — point-type chip resolves through the /api/filterform
       searchQuery: '',
     } as any
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useMapTravels({
           coordinates: KRAKOW,
@@ -211,7 +211,7 @@ describe('useMapTravels — point-type chip resolves through the /api/filterform
   }
 
   it('accepts a numeric URL category ID and keeps the whole server-filtered point page', async () => {
-    const { result } = renderHook(() => useMapTravels(baseParams), { wrapper: makeWrapper() })
+    const { result } = await renderHook(() => useMapTravels(baseParams), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.total).toBe(10))
     expect(mockFetchTravelsForMap.mock.calls[0][2].categoryTravelAddress).toEqual([43])
     expect(result.current.filteredTravelsData.map(({ id }) => id)).toEqual([1, 2])
@@ -222,14 +222,14 @@ describe('useMapTravels — point-type chip resolves through the /api/filterform
     mockFetchTravelsForMap.mockImplementation((pageIndex: number) => Promise.resolve(pageIndex === 0
       ? page([{ id: 1, categoryName: 'Замок' }, { id: 2, categoryName: 'Unknown' }], 4)
       : page([{ id: 3, categoryName: 'Площадь' }, { id: 4, categoryName: 'Unknown' }], 4)))
-    const { result } = renderHook(() => useMapTravels({
+    const { result } = await renderHook(() => useMapTravels({
       ...baseParams,
       filterValues: { ...baseParams.filterValues, categoryTravelAddress: ['43', 'Unknown'] },
     }), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.filteredTravelsData.map(({ id }) => id)).toEqual([1, 2]))
     expect(result.current.total).toBe(2)
     expect(result.current.totalScope).toBe('loaded')
-    act(() => result.current.loadMore())
+    await act(() => result.current.loadMore())
     await waitFor(() => expect(result.current.allTravelsData).toHaveLength(4))
     expect(result.current.filteredTravelsData.map(({ id }) => id)).toEqual([1, 2, 4])
     expect(result.current.total).toBe(3)
@@ -242,7 +242,7 @@ describe('useMapTravels — point-type chip resolves through the /api/filterform
     mockFetchTravelsForMap.mockResolvedValue(page([
       { id: 1, categoryName: 'Замок' }, { id: 2, categoryName: 'Unknown' }, { id: 3, categoryName: 'Площадь' },
     ], 10))
-    const { result } = renderHook(() => useMapTravels({
+    const { result } = await renderHook(() => useMapTravels({
       ...baseParams,
       filters: { ...baseParams.filters, categoryDictionaryState: state },
       filterValues: { ...baseParams.filterValues, categoryTravelAddress: ['43', 'Unknown'] },
@@ -255,14 +255,14 @@ describe('useMapTravels — point-type chip resolves through the /api/filterform
   })
 
   it('resolves a retained numeric token when the dictionary becomes ready', async () => {
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       (filters: FiltersData) => useMapTravels({ ...baseParams, filters }),
       { wrapper: makeWrapper(), initialProps: { ...baseParams.filters, categoryTravelAddress: [], categoryDictionaryState: 'loading' as 'loading' | 'ready' } },
     )
     await waitFor(() => expect(result.current.allTravelsData).toHaveLength(2))
     expect(mockFetchTravelsForMap.mock.calls[0][2].categoryTravelAddress).toBeUndefined()
     expect(result.current.filteredTravelsData).toHaveLength(0)
-    rerender(baseParams.filters)
+    await rerender(baseParams.filters)
     await waitFor(() => expect(result.current.totalScope).toBe('radius'))
     expect(mockFetchTravelsForMap.mock.calls.at(-1)?.[2].categoryTravelAddress).toEqual([43])
     expect(result.current.filteredTravelsData).toHaveLength(2)
@@ -274,7 +274,7 @@ describe('useMapTravels — point-type chip resolves through the /api/filterform
       { id: 2, coord: '50.07,19.94', categoryName: 'Unknown' },
       { id: 3, coord: '50.08,19.95', categoryName: 'Площадь' },
     ])
-    const { result } = renderHook(() => useMapTravels({
+    const { result } = await renderHook(() => useMapTravels({
       ...baseParams,
       mode: 'route',
       fullRouteCoords: [[19.93, 50.06], [19.94, 50.07]],
@@ -295,7 +295,7 @@ describe('useMapTravels — point-type chip resolves through the /api/filterform
       { id: 3, categoryName: 'Unknown', address: 'New museum' },
       { id: 4, categoryName: 'Площадь', address: 'Old square' },
     ])
-    const { result } = renderHook(() => useMapTravels({
+    const { result } = await renderHook(() => useMapTravels({
       ...baseParams,
       filterValues: { ...baseParams.filterValues, categoryTravelAddress: ['43', 'Unknown'], searchQuery: 'Old' },
     }), { wrapper: makeWrapper() })
@@ -311,7 +311,7 @@ describe('useMapTravels — point-type chip resolves through the /api/filterform
     mockFetchTravelsForMap.mockResolvedValue(page([
       { id: 1, categoryName: 'Category 1' }, { id: 51, categoryName: 'Category 51' }, { id: 99, categoryName: 'Other' },
     ], 100))
-    const { result } = renderHook(() => useMapTravels({
+    const { result } = await renderHook(() => useMapTravels({
       ...baseParams,
       filters: { ...baseParams.filters, categoryTravelAddress },
       filterValues: { ...baseParams.filterValues, categoryTravelAddress: categoryTravelAddress.map(({ id }) => String(id)) },

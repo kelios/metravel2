@@ -131,8 +131,8 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     });
   });
 
-  it('renders publish step basics (smoke)', () => {
-    const { getByText } = render(
+  it('renders publish step basics (smoke)', async () => {
+    const { getByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -149,7 +149,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
   });
 
   it('opens generic share with the saved public travel slug', async () => {
-    const screen = render(
+    const screen = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -163,14 +163,14 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     await act(async () => {
-      fireEvent.press(screen.getByTestId('travel-publish-share-button'));
+      await fireEvent.press(screen.getByTestId('travel-publish-share-button'));
     });
 
     expect(shareTravel).toHaveBeenCalledWith({ id: 'test', title: 'Test travel' });
   });
 
-  it('does not expose sharing for a private draft', () => {
-    const screen = render(
+  it('does not expose sharing for a private draft', async () => {
+    const screen = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -191,7 +191,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     const onFinish = jest.fn();
     const setFormData = jest.fn();
 
-    const { getByText, getByTestId } = render(
+    const { getByText, getByTestId } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -211,13 +211,13 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       throw new Error('Moderation option row not found');
     }
     await act(async () => {
-      fireEvent.press(moderationRow);
+      await fireEvent.press(moderationRow);
     });
 
     // Press the header primary button (it uses accessibilityLabel=primaryLabel)
     const primarySubmit = getByTestId('primary-button');
     await act(async () => {
-      fireEvent.press(primarySubmit);
+      await fireEvent.press(primarySubmit);
     });
 
     expect(setFormData).not.toHaveBeenCalled();
@@ -235,7 +235,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       moderation: false,
     };
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -251,7 +251,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     const approveButton = getByText('Одобрить модерацию');
 
     await act(async () => {
-      fireEvent.press(approveButton);
+      await fireEvent.press(approveButton);
     });
 
     expect(setFormData).not.toHaveBeenCalled();
@@ -278,7 +278,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       ],
     };
 
-    const { getByText, findByText } = render(
+    const { getByText, findByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -292,7 +292,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     await act(async () => {
-      fireEvent.press(getByText('Одобрить модерацию'));
+      await fireEvent.press(getByText('Одобрить модерацию'));
     });
 
     expect(onManualSave).not.toHaveBeenCalled();
@@ -307,7 +307,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     const onManualSave = jest.fn().mockResolvedValue(undefined);
     const setFormData = jest.fn();
 
-    const { getByText, getByTestId, findByText } = render(
+    const { getByText, getByTestId, findByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -326,17 +326,17 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     const moderationRow = getByText('Отправить на модерацию').parent?.parent;
     if (!moderationRow) throw new Error('Moderation option row not found');
     await act(async () => {
-      fireEvent.press(moderationRow);
+      await fireEvent.press(moderationRow);
     });
     await act(async () => {
-      fireEvent.press(getByTestId('primary-button'));
+      await fireEvent.press(getByTestId('primary-button'));
     });
 
     expect(onManualSave).not.toHaveBeenCalled();
     expect(await findByText(/Rynek 5/)).toBeTruthy();
   });
 
-  it('shows admin panel when publish=true and moderation=false', () => {
+  it('shows admin panel when publish=true and moderation=false', async () => {
     const onManualSave = jest.fn().mockResolvedValue(undefined);
     const onFinish = jest.fn();
     const setFormData = jest.fn();
@@ -347,7 +347,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       moderation: false,
     };
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -368,8 +368,8 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(getByText('Опубликовать в Instagram')).toBeTruthy();
   });
 
-  it('hides the instagram publication block for regular users', () => {
-    const { queryByText } = render(
+  it('hides the instagram publication block for regular users', async () => {
+    const { queryByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -389,7 +389,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
   });
 
   it('shows Facebook publishing only after the backend confirms capability', async () => {
-    const { findByText } = render(
+    const { findByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -427,7 +427,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       });
 
     try {
-      const { findByText } = render(
+      const { findByText } = await render(
         <TravelWizardStepPublish
           currentStep={6}
           totalSteps={6}
@@ -456,7 +456,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
 
   it('keeps Facebook action hidden when capability lookup fails', async () => {
     ;(fetchFacebookPublishStatus as jest.Mock).mockRejectedValueOnce(new Error('Not deployed'));
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -481,7 +481,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       pageName: 'MeTravel',
       canPublish: false,
     });
-    const { findByText } = render(
+    const { findByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -496,7 +496,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
 
     const connectButton = await findByText('Подключить Facebook');
     await act(async () => {
-      fireEvent.press(connectButton);
+      await fireEvent.press(connectButton);
     });
 
     expect(fetchFacebookOAuthStartUrl).toHaveBeenCalledTimes(1);
@@ -506,7 +506,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
   });
 
   it('publishes an edited Facebook message with the default selected gallery photo', async () => {
-    const { findByText, findByLabelText } = render(
+    const { findByText, findByLabelText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -519,10 +519,10 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       />
     );
 
-    fireEvent.changeText(await findByLabelText('Текст поста для Facebook'), 'Новый Facebook текст');
+    await fireEvent.changeText(await findByLabelText('Текст поста для Facebook'), 'Новый Facebook текст');
     const publishButton = await findByText('Опубликовать в Facebook');
     await act(async () => {
-      fireEvent.press(publishButton);
+      await fireEvent.press(publishButton);
     });
 
     expect(publishTravelToFacebook).toHaveBeenCalledWith(640, 'Новый Facebook текст', [
@@ -536,7 +536,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
   });
 
   it('honors an explicit choice to publish without the default gallery photo', async () => {
-    const { findByText, findByLabelText, findByTestId } = render(
+    const { findByText, findByLabelText, findByTestId } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -549,14 +549,14 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       />
     );
 
-    fireEvent.changeText(await findByLabelText('Текст поста для Facebook'), 'Текст без фото');
+    await fireEvent.changeText(await findByLabelText('Текст поста для Facebook'), 'Текст без фото');
     const selectedPhoto = await findByTestId('facebook-photo-0');
     expect(selectedPhoto.props.accessibilityState).toEqual(
       expect.objectContaining({ checked: true }),
     );
 
     await act(async () => {
-      fireEvent.press(selectedPhoto);
+      await fireEvent.press(selectedPhoto);
     });
 
     expect((await findByTestId('facebook-photo-0')).props.accessibilityState).toEqual(
@@ -564,7 +564,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
     const publishButton = await findByText('Опубликовать в Facebook');
     await act(async () => {
-      fireEvent.press(publishButton);
+      await fireEvent.press(publishButton);
     });
 
     expect(publishTravelToFacebook).toHaveBeenCalledWith(640, 'Текст без фото', []);
@@ -579,7 +579,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
         { id: 3, url: 'https://example.com/gallery-3.jpg' },
       ],
     };
-    const { findByText, findByLabelText, findByTestId } = render(
+    const { findByText, findByLabelText, findByTestId } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -592,21 +592,21 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       />
     );
 
-    fireEvent.changeText(await findByLabelText('Текст поста для Facebook'), 'Свой порядок фото');
+    await fireEvent.changeText(await findByLabelText('Текст поста для Facebook'), 'Свой порядок фото');
     // Clear the default selection, then pick the last photo first.
     for (const index of [0, 1, 2]) {
       await act(async () => {
-        fireEvent.press(await findByTestId(`facebook-photo-${index}`));
+        await fireEvent.press(await findByTestId(`facebook-photo-${index}`));
       });
     }
     for (const index of [2, 0]) {
       await act(async () => {
-        fireEvent.press(await findByTestId(`facebook-photo-${index}`));
+        await fireEvent.press(await findByTestId(`facebook-photo-${index}`));
       });
     }
 
     await act(async () => {
-      fireEvent.press(await findByText('Опубликовать в Facebook'));
+      await fireEvent.press(await findByText('Опубликовать в Facebook'));
     });
 
     expect(publishTravelToFacebook).toHaveBeenCalledWith(640, 'Свой порядок фото', [
@@ -620,7 +620,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       id: index + 1,
       url: `https://example.com/gallery-${index + 1}.jpg`,
     }));
-    const { findByText, findByLabelText, findByTestId } = render(
+    const { findByText, findByLabelText, findByTestId } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -633,10 +633,10 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       />
     );
 
-    fireEvent.changeText(await findByLabelText('Текст поста для Facebook'), 'Десять фото');
+    await fireEvent.changeText(await findByLabelText('Текст поста для Facebook'), 'Десять фото');
     for (let index = 4; index < 10; index += 1) {
       await act(async () => {
-        fireEvent.press(await findByTestId(`facebook-photo-${index}`));
+        await fireEvent.press(await findByTestId(`facebook-photo-${index}`));
       });
     }
 
@@ -650,7 +650,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     await act(async () => {
-      fireEvent.press(await findByText('Опубликовать в Facebook'));
+      await fireEvent.press(await findByText('Опубликовать в Facebook'));
     });
     expect(publishTravelToFacebook).toHaveBeenCalledWith(
       640,
@@ -663,7 +663,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     await act(async () => {
-      fireEvent.press(await findByTestId('facebook-photo-0'));
+      await fireEvent.press(await findByTestId('facebook-photo-0'));
     });
     expect((await findByTestId('facebook-photo-10')).props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: false }),
@@ -676,7 +676,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       duplicate: true,
       postUrl: 'https://www.facebook.com/existing-post',
     });
-    const { findByText } = render(
+    const { findByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -691,13 +691,13 @@ describe('TravelWizardStepPublish - moderation submit', () => {
 
     const publishButton = await findByText('Опубликовать в Facebook');
     await act(async () => {
-      fireEvent.press(publishButton);
+      await fireEvent.press(publishButton);
     });
     expect(await findByText('MeTravel: Эта статья уже опубликована')).toBeTruthy();
 
     const openPostButton = await findByText('Открыть пост в Facebook');
     await act(async () => {
-      fireEvent.press(openPostButton);
+      await fireEvent.press(openPostButton);
     });
     expect(openExternalUrl).toHaveBeenCalledWith('https://www.facebook.com/existing-post');
   });
@@ -706,7 +706,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     const timeoutError = new Error('Превышено время ожидания (100000ms)');
     timeoutError.name = 'TimeoutError';
     ;(publishTravelToFacebook as jest.Mock).mockRejectedValueOnce(timeoutError);
-    const { findByText } = render(
+    const { findByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -721,7 +721,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
 
     const publishButton = await findByText('Опубликовать в Facebook');
     await act(async () => {
-      fireEvent.press(publishButton);
+      await fireEvent.press(publishButton);
     });
 
     expect(await findByText('MeTravel: Пост, возможно, ещё публикуется')).toBeTruthy();
@@ -736,7 +736,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
   });
 
   it('guards Facebook publish until the travel has been saved', async () => {
-    const { findByText } = render(
+    const { findByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -751,7 +751,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
 
     const publishButton = await findByText('Опубликовать в Facebook');
     await act(async () => {
-      fireEvent.press(publishButton);
+      await fireEvent.press(publishButton);
     });
 
     expect(publishTravelToFacebook).not.toHaveBeenCalled();
@@ -765,7 +765,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     ;(publishTravelToFacebook as jest.Mock).mockImplementationOnce(
       () => new Promise((resolve) => { resolvePublish = resolve; }),
     );
-    const { findByText } = render(
+    const { findByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -779,8 +779,8 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     const publishButton = await findByText('Опубликовать в Facebook');
-    fireEvent.press(publishButton);
-    fireEvent.press(publishButton);
+    await fireEvent.press(publishButton);
+    await fireEvent.press(publishButton);
     expect(publishTravelToFacebook).toHaveBeenCalledTimes(1);
 
     await act(async () => {
@@ -792,7 +792,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     ;(publishTravelToFacebook as jest.Mock).mockRejectedValueOnce(
       new ApiError(409, 'Facebook Page is not connected'),
     );
-    const { findByText } = render(
+    const { findByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -807,7 +807,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
 
     const publishButton = await findByText('Опубликовать в Facebook');
     await act(async () => {
-      fireEvent.press(publishButton);
+      await fireEvent.press(publishButton);
     });
 
     expect(await findByText('MeTravel: Страница Facebook не подключена')).toBeTruthy();
@@ -823,7 +823,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       ;(publishTravelToFacebook as jest.Mock).mockRejectedValueOnce(
         new ApiError(status, `Facebook publish failed: ${status}`),
       );
-      const { findByText } = render(
+      const { findByText } = await render(
         <TravelWizardStepPublish
           currentStep={6}
           totalSteps={6}
@@ -838,7 +838,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
 
       const publishButton = await findByText('Опубликовать в Facebook');
       await act(async () => {
-        fireEvent.press(publishButton);
+        await fireEvent.press(publishButton);
       });
 
       expect(await findByText('MeTravel: Произошла ошибка. Повторите попытку.')).toBeTruthy();
@@ -849,7 +849,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
   );
 
   it('opens Meta OAuth from the backend when superadmin presses connect', async () => {
-    const { getByText } = render(
+    const { getByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -872,7 +872,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     await act(async () => {
-      fireEvent.press(getByText('Подключить Instagram'));
+      await fireEvent.press(getByText('Подключить Instagram'));
     });
 
     expect(fetchInstagramOAuthStartUrl).toHaveBeenCalled();
@@ -885,7 +885,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
   });
 
   it('publishes to Instagram via the API when superadmin presses publish', async () => {
-    const { getByText } = render(
+    const { getByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -908,7 +908,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     await act(async () => {
-      fireEvent.press(getByText('Опубликовать в Instagram'));
+      await fireEvent.press(getByText('Опубликовать в Instagram'));
     });
 
     expect(publishTravelToInstagram).toHaveBeenCalledWith(
@@ -927,7 +927,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
   });
 
   it('allows editing instagram caption and hashtags before oauth launch', async () => {
-    const { getByLabelText, getByText } = render(
+    const { getByLabelText, getByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -946,8 +946,8 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     await act(async () => {
-      fireEvent.changeText(getByLabelText('Текст поста для Instagram'), 'Новый caption');
-      fireEvent.changeText(getByLabelText('Хэштеги для Instagram'), '#metravelby #польша #краков');
+      await fireEvent.changeText(getByLabelText('Текст поста для Instagram'), 'Новый caption');
+      await fireEvent.changeText(getByLabelText('Хэштеги для Instagram'), '#metravelby #польша #краков');
     });
 
     expect(getByLabelText('Текст поста для Instagram').props.value).toBe('Новый caption');
@@ -956,7 +956,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
   });
 
   it('keeps manual instagram image reorder controls working', async () => {
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -978,14 +978,14 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     await act(async () => {
-      fireEvent.press(getByTestId('instagram-move-right-0'));
+      await fireEvent.press(getByTestId('instagram-move-right-0'));
     });
 
     expect(getByTestId('instagram-move-left-1')).toBeTruthy();
   });
 
   it('keeps instagram image removal controls working', async () => {
-    const { getByTestId, getAllByTestId } = render(
+    const { getByTestId, getAllByTestId } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -1009,7 +1009,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(getAllByTestId('instagram-preview-image')).toHaveLength(3);
 
     await act(async () => {
-      fireEvent.press(getByTestId('instagram-remove-1'));
+      await fireEvent.press(getByTestId('instagram-remove-1'));
     });
 
     expect(getAllByTestId('instagram-preview-image')).toHaveLength(2);
@@ -1018,7 +1018,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
   it('shows config error when the backend has no OAuth url (not configured)', async () => {
     ;(fetchInstagramOAuthStartUrl as jest.Mock).mockResolvedValueOnce('')
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -1038,7 +1038,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     await act(async () => {
-      fireEvent.press(getByText('Подключить Instagram'));
+      await fireEvent.press(getByText('Подключить Instagram'));
     });
 
     expect(openExternalUrl).not.toHaveBeenCalled();
@@ -1050,7 +1050,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
   });
 
-  it('hides status switch when already sent to moderation', () => {
+  it('hides status switch when already sent to moderation', async () => {
     const onManualSave = jest.fn().mockResolvedValue(undefined);
     const onFinish = jest.fn();
     const setFormData = jest.fn();
@@ -1061,7 +1061,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       moderation: false,
     };
 
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -1081,17 +1081,17 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     const data = { ...baseFormData, publication_status, publish: false, moderation: false };
     const onManualSave = jest.fn().mockResolvedValue(data);
     const setFormData = jest.fn();
-    const screen = render(<TravelWizardStepPublish currentStep={6} totalSteps={6}
+    const screen = await render(<TravelWizardStepPublish currentStep={6} totalSteps={6}
       formData={data} setFormData={setFormData} isSuperAdmin={false}
       onManualSave={onManualSave} onGoBack={jest.fn()} onFinish={jest.fn()} />);
-    await act(async () => fireEvent.press(screen.getByTestId('primary-button')));
+    await act(async () => await fireEvent.press(screen.getByTestId('primary-button')));
     expect(onManualSave).toHaveBeenCalledWith(data, { intent: 'save' });
     expect(setFormData).not.toHaveBeenCalled();
   });
 
-  it('shows pending state and admin actions immediately for false/false legacy flags', () => {
+  it('shows pending state and admin actions immediately for false/false legacy flags', async () => {
     const data = { ...baseFormData, publication_status: 'pending_review', publish: false, moderation: false };
-    const screen = render(<TravelWizardStepPublish currentStep={6} totalSteps={6}
+    const screen = await render(<TravelWizardStepPublish currentStep={6} totalSteps={6}
       formData={data} setFormData={jest.fn()} isSuperAdmin
       onManualSave={jest.fn()} onGoBack={jest.fn()} onFinish={jest.fn()} />);
     expect(screen.getByText('Отправлено на модерацию')).toBeTruthy();
@@ -1099,14 +1099,14 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(screen.queryByText('Черновик')).toBeNull();
   });
 
-  it('shows an unsupported canonical state error and blocks writes without discarding content', () => {
+  it('shows an unsupported canonical state error and blocks writes without discarding content', async () => {
     const onManualSave = jest.fn();
     const data = { ...baseFormData, publication_status: 'future_state' };
-    const screen = render(<TravelWizardStepPublish currentStep={6} totalSteps={6}
+    const screen = await render(<TravelWizardStepPublish currentStep={6} totalSteps={6}
       formData={data} setFormData={jest.fn()} isSuperAdmin
       onManualSave={onManualSave} onGoBack={jest.fn()} onFinish={jest.fn()} />);
     expect(screen.getAllByText(/Неизвестное состояние публикации/).length).toBeGreaterThan(0);
-    fireEvent.press(screen.getByTestId('primary-button'));
+    await fireEvent.press(screen.getByTestId('primary-button'));
     expect(onManualSave).not.toHaveBeenCalled();
     expect(screen.queryByText('Одобрить модерацию')).toBeNull();
     expect(data.description).toBe(baseFormData.description);
@@ -1121,7 +1121,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       id: null,
     };
 
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -1135,7 +1135,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     );
 
     await act(async () => {
-      fireEvent.press(getByTestId('primary-button'));
+      await fireEvent.press(getByTestId('primary-button'));
     });
 
     expect(onManualSave).toHaveBeenCalled();
@@ -1144,7 +1144,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
 
   it.each(['', '  \n  '])('blocks rejecting with an empty reason (%p)', async (comment) => {
     const onManualSave = jest.fn();
-    const screen = render(
+    const screen = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -1157,17 +1157,18 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       />
     );
 
-    fireEvent.changeText(screen.getByLabelText('Комментарий при отклонении'), comment);
+    await fireEvent.changeText(screen.getByLabelText('Комментарий при отклонении'), comment);
     const reject = screen.getByLabelText('Отклонить модерацию');
     expect(reject.props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
     expect(screen.getByText('Укажите причину отклонения')).toBeTruthy();
-    fireEvent.press(reject);
+    await fireEvent.press(reject);
     expect(onManualSave).not.toHaveBeenCalled();
     expect(screen.queryByLabelText('Отклонить')).toBeNull();
   });
 
   it('reject click sends its trimmed reason once without putting the signal in form state', async () => {
-    const onManualSave = jest.fn().mockResolvedValue({ ...baseFormData, publish: false, moderation: false });
+    let resolveSave!: (value: TravelFormData) => void;
+    const onManualSave = jest.fn(() => new Promise<TravelFormData>(resolve => { resolveSave = resolve; }));
     const onFinish = jest.fn();
     const setFormData = jest.fn();
 
@@ -1177,7 +1178,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       moderation: false,
     };
 
-    const { getByLabelText } = render(
+    const { getByLabelText, getByTestId } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -1190,16 +1191,23 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       />
     );
 
-    fireEvent.changeText(getByLabelText('Комментарий при отклонении'), '  нет фото  ');
+    await fireEvent.changeText(getByLabelText('Комментарий при отклонении'), '  нет фото  ');
     expect(getByLabelText('Комментарий при отклонении').props.maxLength).toBe(2000);
     await act(async () => {
-      fireEvent.press(getByLabelText('Отклонить модерацию'));
+      await fireEvent.press(getByLabelText('Отклонить модерацию'));
     });
 
-    await act(async () => {
-      fireEvent.press(getByLabelText('Отклонить'));
-      fireEvent.press(getByLabelText('Отклонить'));
+    const confirmPress = getByLabelText('Отклонить').props.onPress as () => void;
+    expect(confirmPress).toEqual(expect.any(Function));
+    // Two deliveries in the same frame must share the in-flight guard. The save
+    // stays pending instead of completing between two awaited event dispatches.
+    await act(() => {
+      confirmPress();
+      confirmPress();
     });
+    // The confirm sheet is an accessibility modal, so the footer action is
+    // hidden from queries while the in-flight guard is the thing under test.
+    expect(getByTestId('primary-button', { includeHiddenElements: true }).props.accessibilityState).toEqual(expect.objectContaining({ disabled: true }));
 
     expect(onManualSave).toHaveBeenCalledTimes(1);
     expect(onManualSave).toHaveBeenCalledWith(adminData,
@@ -1207,12 +1215,17 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     expect(setFormData).not.toHaveBeenCalled();
 
     expect(onFinish).not.toHaveBeenCalled();
+    await act(() => resolveSave({ ...adminData, publish: false, moderation: false }));
+    expect(onManualSave).toHaveBeenCalledTimes(1);
+    expect(setFormData).not.toHaveBeenCalled();
+    expect(onFinish).not.toHaveBeenCalled();
+    expect(getByTestId('primary-button', { includeHiddenElements: true }).props.accessibilityState).toEqual(expect.objectContaining({ disabled: false }));
   });
 
   it('keeps the rejection reason and restores pending status when saving rejection fails', async () => {
     const adminData = { ...baseFormData, publish: true, moderation: false };
     const setFormData = jest.fn();
-    const screen = render(
+    const screen = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -1224,9 +1237,9 @@ describe('TravelWizardStepPublish - moderation submit', () => {
         onFinish={jest.fn()}
       />
     );
-    fireEvent.changeText(screen.getByLabelText('Комментарий при отклонении'), 'нет фото');
-    fireEvent.press(screen.getByLabelText('Отклонить модерацию'));
-    await act(async () => fireEvent.press(screen.getByLabelText('Отклонить')));
+    await fireEvent.changeText(screen.getByLabelText('Комментарий при отклонении'), 'нет фото');
+    await fireEvent.press(screen.getByLabelText('Отклонить модерацию'));
+    await act(async () => await fireEvent.press(screen.getByLabelText('Отклонить')));
 
     expect(setFormData).not.toHaveBeenCalled();
     expect(adminData.publish).toBe(true);
@@ -1247,7 +1260,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       live = { ...live, categories: ['1', '2'], description: 'Newer content' };
       if (outcome === 'failed') throw new Error('Save failed');
     });
-    const { result } = renderHook(() => useTravelPublishModeration({
+    const { result } = await renderHook(() => useTravelPublishModeration({
       formData: adminData,
       setFormData,
       onManualSave,
@@ -1257,7 +1270,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
       galleryItems: adminData.gallery ?? [],
       checklist: [],
     }));
-    act(() => result.current.setRejectionComment('Add photos'));
+    await act(() => result.current.setRejectionComment('Add photos'));
 
     await act(async () => { await result.current.handleRejectModeration(); });
 
@@ -1277,7 +1290,7 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     const onManualSave = jest.fn().mockRejectedValue(new Error('Network error'));
     const setFormData = jest.fn();
 
-    const { getByText, getByTestId } = render(
+    const { getByText, getByTestId } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -1297,11 +1310,11 @@ describe('TravelWizardStepPublish - moderation submit', () => {
     }
 
     await act(async () => {
-      fireEvent.press(moderationRow);
+      await fireEvent.press(moderationRow);
     });
 
     await act(async () => {
-      fireEvent.press(getByTestId('primary-button'));
+      await fireEvent.press(getByTestId('primary-button'));
     });
 
     expect(setFormData).not.toHaveBeenCalled();
@@ -1316,12 +1329,12 @@ describe('TravelWizardStepPublish - moderation submit', () => {
   it.each(['submit', 'approve'] as const)('does not announce success or leave after cancelled %s', async (intent) => {
     const data = { ...baseFormData, publication_status: intent === 'submit' ? 'draft' : 'pending_review' };
     const onManualSave = jest.fn().mockResolvedValue(undefined);
-    const { result } = renderHook(() => useTravelPublishModeration({
+    const { result } = await renderHook(() => useTravelPublishModeration({
       formData: data, setFormData: jest.fn(), onManualSave,
       currentStep: 6, isSuperAdmin: intent === 'approve',
       routePoints: data.coordsMeTravel, galleryItems: data.gallery ?? [], checklist: [],
     }));
-    if (intent === 'submit') act(() => result.current.setStatus('moderation'));
+    if (intent === 'submit') await act(() => result.current.setStatus('moderation'));
     await act(async () => {
       if (intent === 'submit') result.current.handlePrimaryAction();
       else await result.current.handleApproveModeration();
@@ -1340,14 +1353,14 @@ describe('author rejection feedback in the existing wizard', () => {
     moderation_decided_at: '2026-10-22T12:00:00Z' };
   beforeEach(() => jest.clearAllMocks());
 
-  it('correction navigates to editing without saving, selecting submission, or clearing the decision', () => {
+  it('correction navigates to editing without saving, selecting submission, or clearing the decision', async () => {
     const onStepSelect = jest.fn();
     const onManualSave = jest.fn();
     const setFormData = jest.fn();
-    const screen = render(<TravelWizardStepPublish currentStep={6} totalSteps={6} formData={rejectedData} moderationFeedbackContextKey="640:u1"
+    const screen = await render(<TravelWizardStepPublish currentStep={6} totalSteps={6} formData={rejectedData} moderationFeedbackContextKey="640:u1"
       setFormData={setFormData} isSuperAdmin={false} onManualSave={onManualSave}
       onGoBack={jest.fn()} onFinish={jest.fn()} onStepSelect={onStepSelect} />);
-    fireEvent.press(screen.getByTestId('moderation-correct-button'));
+    await fireEvent.press(screen.getByTestId('moderation-correct-button'));
     expect(onStepSelect).toHaveBeenCalledWith(1);
     expect(onManualSave).not.toHaveBeenCalled();
     expect(setFormData).not.toHaveBeenCalled();
@@ -1355,13 +1368,13 @@ describe('author rejection feedback in the existing wizard', () => {
     expect(rejectedData.moderation_decision_reason).toBe('Добавьте фотографию точки маршрута');
   });
 
-  it('hides private decision metadata synchronously when the viewer context is denied', () => {
+  it('hides private decision metadata synchronously when the viewer context is denied', async () => {
     const props = { currentStep: 6, totalSteps: 6, formData: rejectedData,
       setFormData: jest.fn(), isSuperAdmin: false, onManualSave: jest.fn(), onGoBack: jest.fn(), onFinish: jest.fn() };
-    const screen = render(<TravelWizardStepPublish {...props} moderationFeedbackContextKey="640:u1" />);
+    const screen = await render(<TravelWizardStepPublish {...props} moderationFeedbackContextKey="640:u1" />);
     expect(screen.getByText('Отклонено')).toBeTruthy();
     expect(screen.getByTestId('moderation-reason-preview')).toBeTruthy();
-    screen.rerender(<TravelWizardStepPublish {...props} moderationFeedbackContextKey={null} />);
+    await await screen.rerender(<TravelWizardStepPublish {...props} moderationFeedbackContextKey={null} />);
     expect(screen.getByText('Черновик')).toBeTruthy();
     expect(screen.queryByText('Отклонено')).toBeNull();
     expect(screen.queryByTestId('moderation-reason-preview')).toBeNull();
@@ -1370,8 +1383,8 @@ describe('author rejection feedback in the existing wizard', () => {
     expect(props.onManualSave).not.toHaveBeenCalled();
   });
 
-  it('denies private metadata by default even when stale form data includes a rejection', () => {
-    const screen = render(<TravelWizardStepPublish currentStep={6} totalSteps={6} formData={rejectedData}
+  it('denies private metadata by default even when stale form data includes a rejection', async () => {
+    const screen = await render(<TravelWizardStepPublish currentStep={6} totalSteps={6} formData={rejectedData}
       setFormData={jest.fn()} isSuperAdmin={false} onManualSave={jest.fn()} onGoBack={jest.fn()} onFinish={jest.fn()} />);
     expect(screen.getByText('Черновик')).toBeTruthy();
     expect(screen.queryByText('Отклонено')).toBeNull();
@@ -1380,16 +1393,16 @@ describe('author rejection feedback in the existing wizard', () => {
 
   it('failed explicit resubmission keeps the reason and allows a retry', async () => {
     const onManualSave = jest.fn().mockRejectedValueOnce(new Error('Network failure')).mockResolvedValueOnce(undefined);
-    const screen = render(<TravelWizardStepPublish currentStep={6} totalSteps={6} formData={rejectedData} moderationFeedbackContextKey="640:u1"
+    const screen = await render(<TravelWizardStepPublish currentStep={6} totalSteps={6} formData={rejectedData} moderationFeedbackContextKey="640:u1"
       setFormData={jest.fn()} isSuperAdmin={false} onManualSave={onManualSave} onGoBack={jest.fn()} onFinish={jest.fn()} />);
     const moderationRow = screen.getByText('Отправить на модерацию').parent?.parent;
     if (!moderationRow) throw new Error('Moderation option row not found');
-    fireEvent.press(moderationRow);
-    await act(async () => fireEvent.press(screen.getByTestId('primary-button')));
+    await fireEvent.press(moderationRow);
+    await act(async () => await fireEvent.press(screen.getByTestId('primary-button')));
     expect(onManualSave).toHaveBeenCalledWith(rejectedData, { intent: 'submit' });
     expect(screen.getByTestId('moderation-reason-preview').props.children).toBe(rejectedData.moderation_decision_reason);
     expect(screen.getByText('Отклонено')).toBeTruthy();
-    await act(async () => fireEvent.press(screen.getByTestId('primary-button')));
+    await act(async () => await fireEvent.press(screen.getByTestId('primary-button')));
     expect(onManualSave).toHaveBeenCalledTimes(2);
     expect(rejectedData.description).toBe(baseFormData.description);
   });

@@ -221,9 +221,9 @@ const HeaderProbe = () => {
   );
 };
 
-const renderScreen = () => {
+const renderScreen = async () => {
   const PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default;
-  return render(
+  return await render(
     <>
       <HeaderProbe />
       <PlannedTripScreen />
@@ -246,10 +246,10 @@ describe('PlannedTripScreen — действия экрана (#2101)', () => {
   const mockTrip = (trip: PlannedTrip) =>
     mockUsePlannedTrip.mockReturnValue({ data: trip, isLoading: false, isError: false });
 
-  it('телефон: правка — иконка в строке экрана, в теле нет кнопок «Редактировать»/«Удалить»', () => {
+  it('телефон: правка — иконка в строке экрана, в теле нет кнопок «Редактировать»/«Удалить»', async () => {
     mockResponsive = PHONE;
     mockTrip(makeTrip({ isOwner: true }));
-    const { getByTestId, queryByTestId } = renderScreen();
+    const { getByTestId, queryByTestId } = await renderScreen();
 
     expect(queryByTestId('trip-plan-edit')).toBeNull();
     expect(queryByTestId('trip-plan-delete')).toBeNull();
@@ -260,10 +260,10 @@ describe('PlannedTripScreen — действия экрана (#2101)', () => {
 
   // #2102: печать плана есть и в приложениях (printHtml.native → expo-print),
   // поэтому «Распечатать план» — первый пункт «⋯» на любой платформе.
-  it('телефон: «⋯» — печать, экспорт, «Поделиться», красное «Удалить поездку» последним', () => {
+  it('телефон: «⋯» — печать, экспорт, «Поделиться», красное «Удалить поездку» последним', async () => {
     mockResponsive = PHONE;
     mockTrip(makeTrip({ isOwner: true }));
-    const { getByTestId } = renderScreen();
+    const { getByTestId } = await renderScreen();
 
     expect(probe(getByTestId).overflow).toEqual([
       ['print', 'Распечатать план', false],
@@ -273,63 +273,63 @@ describe('PlannedTripScreen — действия экрана (#2101)', () => {
     ]);
   });
 
-  it('телефон на web: «Распечатать план» первым пунктом «⋯»', () => {
+  it('телефон на web: «Распечатать план» первым пунктом «⋯»', async () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'web' });
     mockResponsive = PHONE;
     mockTrip(makeTrip({ isOwner: true }));
-    const { getByTestId } = renderScreen();
+    const { getByTestId } = await renderScreen();
 
     expect(probe(getByTestId).overflow.map((o: unknown[]) => o[0])).toEqual(['print', 'export', 'share', 'delete']);
   });
 
-  const openDeleteFromMenu = () => {
+  const openDeleteFromMenu = async () => {
     let active: any = null;
     const Grab = () => { active = useActiveScreenHeader(); return null; };
-    render(<Grab />);
-    act(() => active.overflow.find((o: any) => o.key === 'delete').onPress());
+    await render(<Grab />);
+    await act(() => active.overflow.find((o: any) => o.key === 'delete').onPress());
   };
 
-  it('телефон: «Удалить поездку» спрашивает подтверждение, «Оставить» ничего не удаляет', () => {
+  it('телефон: «Удалить поездку» спрашивает подтверждение, «Оставить» ничего не удаляет', async () => {
     mockResponsive = PHONE;
     mockTrip(makeTrip({ isOwner: true }));
-    const { getByTestId, queryByTestId } = renderScreen();
+    const { getByTestId, queryByTestId } = await renderScreen();
 
     expect(queryByTestId('trip-plan-delete-confirm')).toBeNull();
-    openDeleteFromMenu();
+    await openDeleteFromMenu();
     expect(getByTestId('trip-plan-delete-confirm')).toBeTruthy();
-    fireEvent.press(getByTestId('trip-plan-delete-cancel'));
+    await fireEvent.press(getByTestId('trip-plan-delete-cancel'));
     expect(mockDeleteMutate).not.toHaveBeenCalled();
   });
 
-  it('телефон: подтверждение удаляет поездку', () => {
+  it('телефон: подтверждение удаляет поездку', async () => {
     mockResponsive = PHONE;
     mockTrip(makeTrip({ isOwner: true }));
-    const { getByTestId } = renderScreen();
+    const { getByTestId } = await renderScreen();
 
-    openDeleteFromMenu();
-    act(() => getByTestId('trip-plan-delete-confirm').props.onPress());
+    await openDeleteFromMenu();
+    await act(() => getByTestId('trip-plan-delete-confirm').props.onPress());
     expect(mockDeleteMutate).toHaveBeenCalledWith(8001, expect.anything());
   });
 
-  it.each(['web', 'ios', 'android'] as const)('workspace tabs have their real row ancestor and one selected child on %s', os => {
+  it.each(['web', 'ios', 'android'] as const)('workspace tabs have their real row ancestor and one selected child on %s', async os => {
     Object.defineProperty(Platform, 'OS', { configurable: true, get: () => os });
     mockResponsive = PHONE;
     mockTrip(makeTrip({ isOwner: true, status: 'planning' }));
-    const view = renderScreen();
+    const view = await renderScreen();
     const roles = getTabRoles();
     const row = view.getByTestId('trip-plan-tabs');
     expect(row.props.accessibilityRole).toBe(roles.tablist);
     const children = within(row).getAllByRole(roles.tab);
     expect(children).toHaveLength(4);
     expect(children.filter(child => child.props.accessibilityState?.selected)).toHaveLength(1);
-    fireEvent.press(view.getByTestId('trip-plan-tab-people'));
+    await fireEvent.press(view.getByTestId('trip-plan-tab-people'));
     expect(within(view.getByTestId('trip-plan-tabs')).getAllByRole(roles.tab).filter(child => child.props.accessibilityState?.selected).map(child => child.props.testID)).toEqual(['trip-plan-tab-people']);
   });
 
-  it('телефон: у каждой вкладки подпись; «Ещё» названа по содержимому', () => {
+  it('телефон: у каждой вкладки подпись; «Ещё» названа по содержимому', async () => {
     mockResponsive = PHONE;
     mockTrip(makeTrip({ isOwner: true, status: 'planning' }));
-    const { getByTestId } = renderScreen();
+    const { getByTestId } = await renderScreen();
 
     expect(getByTestId('trip-plan-tab-route')).toHaveTextContent('Маршрут', { exact: false });
     expect(getByTestId('trip-plan-tab-people')).toHaveTextContent('Люди', { exact: false });
@@ -337,27 +337,27 @@ describe('PlannedTripScreen — действия экрана (#2101)', () => {
     expect(getByTestId('trip-plan-tab-more')).toHaveTextContent('Подготовка', { exact: false });
   });
 
-  it('завершённая поездка: вкладка называется «Отчёт»', () => {
+  it('завершённая поездка: вкладка называется «Отчёт»', async () => {
     mockResponsive = PHONE;
     mockTrip(makeTrip({ isOwner: true, status: 'completed' }));
-    const { getByTestId } = renderScreen();
+    const { getByTestId } = await renderScreen();
     expect(getByTestId('trip-plan-tab-more')).toHaveTextContent('Отчёт', { exact: false });
   });
 
-  it('чужая поездка: нет карандаша и «Удалить», остаются печать, экспорт и «Поделиться»', () => {
+  it('чужая поездка: нет карандаша и «Удалить», остаются печать, экспорт и «Поделиться»', async () => {
     mockResponsive = PHONE;
     mockTrip(makeTrip({ isOwner: false }));
-    const { getByTestId } = renderScreen();
+    const { getByTestId } = await renderScreen();
 
     const header = probe(getByTestId);
     expect(header.primary).toBeNull();
     expect(header.overflow.map((o: unknown[]) => o[0])).toEqual(['print', 'export', 'share']);
   });
 
-  it('desktop: кнопки с подписями на месте, заголовок в теле', () => {
+  it('desktop: кнопки с подписями на месте, заголовок в теле', async () => {
     mockResponsive = DESKTOP;
     mockTrip(makeTrip({ isOwner: true }));
-    const { getByTestId, getByText } = renderScreen();
+    const { getByTestId, getByText } = await renderScreen();
 
     expect(getByTestId('trip-plan-edit')).toHaveTextContent('Редактировать поездку', { exact: false });
     expect(getByTestId('trip-plan-delete')).toHaveTextContent('Удалить поездку', { exact: false });

@@ -1,7 +1,8 @@
 import React from 'react';
 import { Platform } from 'react-native';
+import { createRootRegistry } from '@/__tests__/helpers/rawRootLifecycle';
 
-const renderer = require('react-test-renderer');
+const renderer = createRootRegistry();
 
 jest.mock('react-dom', () => ({
   createPortal: jest.fn((node: any) => node),
@@ -38,29 +39,29 @@ describe('FullscreenImageViewer', () => {
     mockCreatePortal.mockClear();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await renderer.cleanup();
     (Platform as any).OS = originalPlatform;
     require('react-native').useWindowDimensions = originalWindowDimensions;
     nowSpy.mockRestore();
   });
 
-  it('ignores the first backdrop click after opening so mobile synthetic click does not close it immediately', () => {
+  it('ignores the first backdrop click after opening so mobile synthetic click does not close it immediately', async () => {
     const onClose = jest.fn();
     let tree: any;
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <FullscreenImageViewer
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<FullscreenImageViewer
           imageUrl="https://example.com/photo.jpg"
           alt="Test point"
           visible
           onClose={onClose}
           colors={mockColors as any}
-        />
-      );
+        />);
     });
 
-    const overlay = tree.root.findAll((node: any) => node.type === 'div' && node.props?.style?.position === 'fixed')[0];
+    const overlay = tree.container.queryAll((node: any) => node.type === 'div' && node.props?.style?.position === 'fixed')[0];
     expect(overlay).toBeTruthy();
     expect(mockCreatePortal).toHaveBeenCalledWith(expect.anything(), document.body);
 
@@ -68,13 +69,13 @@ describe('FullscreenImageViewer', () => {
     event.target = overlay;
     event.currentTarget = overlay;
 
-    renderer.act(() => {
+    await React.act(() => {
       overlay.props.onClick(event);
     });
     expect(onClose).not.toHaveBeenCalled();
 
     nowSpy.mockReturnValue(1501);
-    renderer.act(() => {
+    await React.act(() => {
       overlay.props.onClick(event);
     });
     expect(onClose).toHaveBeenCalledTimes(1);

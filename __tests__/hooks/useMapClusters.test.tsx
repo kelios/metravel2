@@ -46,7 +46,7 @@ describe('useMapClusters', () => {
   })
 
   it('fetches clusters for a valid bbox/zoom after debounce', async () => {
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useMapClusters({ bbox: BBOX, zoom: 9, debounceMs: 0 }),
       { wrapper: makeWrapper() },
     )
@@ -66,7 +66,7 @@ describe('useMapClusters', () => {
   })
 
   it('passes radius anchor filters to the cluster endpoint', async () => {
-    renderHook(
+    await renderHook(
       () =>
         useMapClusters({
           bbox: BBOX,
@@ -84,7 +84,7 @@ describe('useMapClusters', () => {
   })
 
   it('does not fetch when bbox is null (fallback to local clustering)', async () => {
-    renderHook(() => useMapClusters({ bbox: null, zoom: 9, debounceMs: 0 }), {
+    await renderHook(() => useMapClusters({ bbox: null, zoom: 9, debounceMs: 0 }), {
       wrapper: makeWrapper(),
     })
     await new Promise((r) => setTimeout(r, 30))
@@ -92,7 +92,7 @@ describe('useMapClusters', () => {
   })
 
   it('does not fetch when bbox is invalid (south >= north)', async () => {
-    renderHook(
+    await renderHook(
       () => useMapClusters({ bbox: { south: 55, west: 27, north: 54, east: 28 }, zoom: 9, debounceMs: 0 }),
       { wrapper: makeWrapper() },
     )
@@ -101,11 +101,11 @@ describe('useMapClusters', () => {
   })
 
   it('does not fetch when disabled or not focused', async () => {
-    renderHook(
+    await renderHook(
       () => useMapClusters({ bbox: BBOX, zoom: 9, enabled: false, debounceMs: 0 }),
       { wrapper: makeWrapper() },
     )
-    renderHook(
+    await renderHook(
       () => useMapClusters({ bbox: BBOX, zoom: 9, isFocused: false, debounceMs: 0 }),
       { wrapper: makeWrapper() },
     )
@@ -115,7 +115,7 @@ describe('useMapClusters', () => {
 
   it('surfaces isError without throwing when the endpoint rejects', async () => {
     mockFetchMapClusters.mockRejectedValue(new Error('boom'))
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useMapClusters({ bbox: BBOX, zoom: 9, debounceMs: 0 }),
       { wrapper: makeWrapper() },
     )

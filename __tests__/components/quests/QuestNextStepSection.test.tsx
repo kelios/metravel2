@@ -54,8 +54,8 @@ const quest = (over: Partial<QuestMeta> & { id: string }): QuestMeta => ({
   ...over,
 })
 
-const renderSection = () =>
-  render(
+const renderSection = async () =>
+  await render(
     <QuestNextStepSection
       questId="minsk-loshitsa"
       questTitle="Лошицкая усадьба"
@@ -72,7 +72,7 @@ const renderSection = () =>
  * которого в jsdom нет, а на native — по `onLayout`. Тест работает в native-режиме
  * и сам отдаёт layout, иначе показ не зафиксируется ни там, ни там.
  */
-const fireLayout = (node: any) =>
+const fireLayout = async (node: any) =>
   fireEvent(node, 'layout', { nativeEvent: { layout: { width: 320, height: 48 } } })
 
 describe('QuestNextStepSection', () => {
@@ -111,8 +111,8 @@ describe('QuestNextStepSection', () => {
     })
   })
 
-  it('показывает прогресс коллекции города и следующие квесты с расстоянием', () => {
-    const { getByText, getByTestId } = renderSection()
+  it('показывает прогресс коллекции города и следующие квесты с расстоянием', async () => {
+    const { getByText, getByTestId } = await renderSection()
 
     expect(getByTestId('quest-next-step-section')).toBeTruthy()
     expect(getByText('Коллекция: Минск')).toBeTruthy()
@@ -125,11 +125,11 @@ describe('QuestNextStepSection', () => {
     expect(getByText('4,8 км')).toBeTruthy()
   })
 
-  it('шлёт city_collection_view один раз с числами коллекции', () => {
-    const { getByTestId } = renderSection()
+  it('шлёт city_collection_view один раз с числами коллекции', async () => {
+    const { getByTestId } = await renderSection()
 
-    fireLayout(getByTestId('quest-city-collection-4'))
-    fireLayout(getByTestId('quest-city-collection-4'))
+    await fireLayout(getByTestId('quest-city-collection-4'))
+    await fireLayout(getByTestId('quest-city-collection-4'))
 
     const views = mockSendAnalyticsEvent.mock.calls.filter(([name]) => name === 'city_collection_view')
     expect(views).toHaveLength(1)
@@ -141,8 +141,8 @@ describe('QuestNextStepSection', () => {
     })
   })
 
-  it('запоминает финиш для события возврата', () => {
-    renderSection()
+  it('запоминает финиш для события возврата', async () => {
+    await renderSection()
 
     expect(mockRememberQuestFinish).toHaveBeenCalledTimes(1)
     expect(mockRememberQuestFinish.mock.calls[0][0]).toMatchObject({
@@ -154,10 +154,10 @@ describe('QuestNextStepSection', () => {
     })
   })
 
-  it('шлёт next_quest_click с позицией и расстоянием карточки', () => {
-    const { getByLabelText } = renderSection()
+  it('шлёт next_quest_click с позицией и расстоянием карточки', async () => {
+    const { getByLabelText } = await renderSection()
 
-    fireEvent.press(getByLabelText(/Дворики/))
+    await fireEvent.press(getByLabelText(/Дворики/))
 
     const clicks = mockSendAnalyticsEvent.mock.calls.filter(([name]) => name === 'next_quest_click')
     expect(clicks).toHaveLength(1)
@@ -174,26 +174,26 @@ describe('QuestNextStepSection', () => {
 
   // #2010: на web данные ждут видимости блока, а на native наблюдателя нет —
   // запрос уходит сразу, и напоминание получает остаток коллекции к финишу.
-  it('на native запрашивает данные коллекции сразу, без ожидания прокрутки', () => {
-    renderSection()
+  it('на native запрашивает данные коллекции сразу, без ожидания прокрутки', async () => {
+    await renderSection()
 
     expect(mockUseQuestCityCollection).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }))
   })
 
-  it('прячет блок целиком, когда предлагать нечего', () => {
+  it('прячет блок целиком, когда предлагать нечего', async () => {
     mockUseQuestCityCollection.mockReturnValue({ collection: null, suggestions: [], loading: false })
-    const { queryByTestId } = renderSection()
+    const { queryByTestId } = await renderSection()
 
     expect(queryByTestId('quest-next-step-section')).toBeNull()
   })
 
-  it('оставляет прогресс города, даже если новых квестов рядом нет', () => {
+  it('оставляет прогресс города, даже если новых квестов рядом нет', async () => {
     mockUseQuestCityCollection.mockReturnValue({
       collection: { cityId: '4', cityName: 'Минск', completedCount: 6, totalCount: 6, ratio: 1 },
       suggestions: [],
       loading: false,
     })
-    const { getByText, queryByText } = renderSection()
+    const { getByText, queryByText } = await renderSection()
 
     expect(getByText('Пройдено 6 из 6 квестов')).toBeTruthy()
     expect(getByText('Все квесты города пройдены')).toBeTruthy()

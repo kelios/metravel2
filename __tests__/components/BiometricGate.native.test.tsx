@@ -53,7 +53,7 @@ describe('BiometricGate (native)', () => {
   it('shows the launch cover, not «заблокирован», while the Face ID prompt is open', async () => {
     const prompt = deferred();
     mockAuthenticate.mockReturnValue(prompt.promise);
-    render(<BiometricGate />);
+    await render(<BiometricGate />);
 
     await waitFor(() => expect(mockAuthenticate).toHaveBeenCalledTimes(1));
     expect(screen.getByTestId('launch-cover', HIDDEN)).toBeTruthy();
@@ -68,24 +68,24 @@ describe('BiometricGate (native)', () => {
 
   it('shows the lock screen with retry after a cancelled prompt', async () => {
     mockAuthenticate.mockResolvedValueOnce(false);
-    render(<BiometricGate />);
+    await render(<BiometricGate />);
 
     expect(await screen.findByText(LOCKED_TITLE)).toBeTruthy();
     expect(gateSettled()).toBe(true);
 
     const retry = deferred();
     mockAuthenticate.mockReturnValueOnce(retry.promise);
-    await act(async () => { fireEvent.press(screen.getByText(UNLOCK_LABEL)); });
+    await act(async () => { await fireEvent.press(screen.getByText(UNLOCK_LABEL)); });
     // Retry: the system prompt runs over the cover again, never over the lock text.
     expect(mockAuthenticate).toHaveBeenCalledTimes(2);
     await act(async () => { retry.resolve(true); });
     expect(screen.queryByText(LOCKED_TITLE)).toBeNull();
   });
 
-  it('holds the cover and the splash while auth restore or the device probe is running', () => {
+  it('holds the cover and the splash while auth restore or the device probe is running', async () => {
     mockAuth = { ...mockAuth, authReady: false, isAuthenticated: false };
     mockBiometric = { ...mockBiometric, isEnabled: false, isChecking: true };
-    render(<BiometricGate />);
+    await render(<BiometricGate />);
 
     expect(screen.getByTestId('launch-cover', HIDDEN)).toBeTruthy();
     expect(mockAuthenticate).not.toHaveBeenCalled();
@@ -94,7 +94,7 @@ describe('BiometricGate (native)', () => {
 
   it('opens without a prompt when biometrics are off and releases the splash', async () => {
     mockBiometric = { ...mockBiometric, isEnabled: false };
-    render(<BiometricGate />);
+    await render(<BiometricGate />);
 
     await waitFor(() => expect(gateSettled()).toBe(true));
     expect(screen.queryByTestId('launch-cover', HIDDEN)).toBeNull();
@@ -103,7 +103,7 @@ describe('BiometricGate (native)', () => {
 
   it('a guest start opens without a prompt', async () => {
     mockAuth = { ...mockAuth, isAuthenticated: false };
-    render(<BiometricGate />);
+    await render(<BiometricGate />);
 
     await waitFor(() => expect(gateSettled()).toBe(true));
     expect(mockAuthenticate).not.toHaveBeenCalled();
@@ -111,10 +111,10 @@ describe('BiometricGate (native)', () => {
 
   it('the launch failsafe opens a gate whose probe hangs (fail-open, as before)', async () => {
     mockBiometric = { ...mockBiometric, isEnabled: false, isChecking: true };
-    render(<BiometricGate />);
+    await render(<BiometricGate />);
     expect(screen.getByTestId('launch-cover', HIDDEN)).toBeTruthy();
 
-    act(() => { useLaunchReadinessStore.getState().expireLaunchFailsafe(); });
+    await act(() => { useLaunchReadinessStore.getState().expireLaunchFailsafe(); });
     await waitFor(() => expect(screen.queryByTestId('launch-cover', HIDDEN)).toBeNull());
     expect(mockAuthenticate).not.toHaveBeenCalled();
   });
@@ -124,14 +124,14 @@ describe('BiometricGate (native)', () => {
     mockBiometric = { ...mockBiometric, isEnabled: false, isChecking: true };
     const prompt = deferred();
     mockAuthenticate.mockReturnValue(prompt.promise);
-    const view = render(<BiometricGate />);
+    const view = await render(<BiometricGate />);
 
-    act(() => { useLaunchReadinessStore.getState().expireLaunchFailsafe(); });
+    await act(() => { useLaunchReadinessStore.getState().expireLaunchFailsafe(); });
     await waitFor(() => expect(screen.queryByTestId('launch-cover', HIDDEN)).toBeNull());
 
     mockAuth = { ...mockAuth, authReady: true, isAuthenticated: true };
     mockBiometric = { ...mockBiometric, isEnabled: true, isChecking: false };
-    view.rerender(<BiometricGate />);
+    await view.rerender(<BiometricGate />);
     await waitFor(() => expect(mockAuthenticate).toHaveBeenCalledTimes(1));
     expect(screen.getByTestId('launch-cover', HIDDEN)).toBeTruthy();
 
@@ -142,11 +142,11 @@ describe('BiometricGate (native)', () => {
 
   it('decides once per cold start: a later sign-in does not prompt', async () => {
     mockAuth = { ...mockAuth, isAuthenticated: false };
-    const view = render(<BiometricGate />);
+    const view = await render(<BiometricGate />);
     await waitFor(() => expect(gateSettled()).toBe(true));
 
     mockAuth = { ...mockAuth, isAuthenticated: true };
-    view.rerender(<BiometricGate />);
+    await view.rerender(<BiometricGate />);
     expect(mockAuthenticate).not.toHaveBeenCalled();
     expect(screen.queryByTestId('launch-cover', HIDDEN)).toBeNull();
   });

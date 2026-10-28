@@ -33,14 +33,14 @@ describe('TripTelegramGroupCard', () => {
     jest.clearAllMocks();
   });
 
-  it('shows a disabled explanation instead of owner-create when the query failed', () => {
+  it('shows a disabled explanation instead of owner-create when the query failed', async () => {
     mockUseTripTelegramGroup.mockReturnValue({
       data: undefined,
       isLoading: false,
       isError: true,
     });
 
-    const { getByTestId, getByText, queryByTestId } = render(
+    const { getByTestId, getByText, queryByTestId } = await render(
       <TripTelegramGroupCard tripId={42} isOwner />,
     );
 

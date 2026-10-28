@@ -17,8 +17,8 @@ describe('Adaptive Layout Tests', () => {
     expect(calculateColumns(2560)).toBeLessThanOrEqual(4);
   });
 
-  it('should render without errors', () => {
-    render(<Text>Test component renders</Text>);
+  it('should render without errors', async () => {
+    await render(<Text>Test component renders</Text>);
     expect(screen.getByText('Test component renders')).toBeTruthy();
   });
 });

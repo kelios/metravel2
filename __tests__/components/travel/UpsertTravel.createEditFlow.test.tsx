@@ -173,7 +173,7 @@ describe('UpsertTravel create/edit flow', () => {
     };
   });
 
-  it('shows auth error when creating and user is not authenticated', () => {
+  it('shows auth error when creating and user is not authenticated', async () => {
     mockAuthState = {
       isAuthenticated: false,
       isSuperuser: false,
@@ -181,40 +181,40 @@ describe('UpsertTravel create/edit flow', () => {
       authReady: true,
     };
 
-    const { getByText } = render(<UpsertTravel />);
+    const { getByText } = await render(<UpsertTravel />);
 
     expect(getByText('Войдите в аккаунт')).toBeTruthy();
     expect(capturedFormArgs?.isNew).toBe(true);
   });
 
-  it('preserves the bounded article context and note mode when registration returns without a session and the reader chooses login', () => {
+  it('preserves the bounded article context and note mode when registration returns without a session and the reader chooses login', async () => {
     mockLocalParams = { source_travel_id: '42', country: 'PL', place: 'Краков', token: 'ignored', mode: 'note' };
     mockAuthState = { ...mockAuthState, isAuthenticated: false, userId: '' };
-    const view = render(<UpsertTravel />);
-    fireEvent.press(view.getByRole('button', { name: 'Войти и вернуться к созданию путешествия' }));
+    const view = await render(<UpsertTravel />);
+    await fireEvent.press(view.getByRole('button', { name: 'Войти и вернуться к созданию путешествия' }));
     const login = new URL(mockPush.mock.calls[0][0], 'https://metravel.by');
     expect(login.pathname).toBe('/login');
     expect(login.searchParams.get('intent')).toBe('share-trip');
     // #2829: режим заметки переживает вход так же, как контекст статьи; посторонние параметры — нет.
     expect(login.searchParams.get('redirect')).toBe('/travel/new?mode=note&source_travel_id=42&country=PL&place=%D0%9A%D1%80%D0%B0%D0%BA%D0%BE%D0%B2');
     expect(login.searchParams.get('redirect')).not.toMatch(/token/);
-    fireEvent.press(view.getByRole('button', { name: 'Зарегистрироваться и вернуться к созданию путешествия' }));
+    await fireEvent.press(view.getByRole('button', { name: 'Зарегистрироваться и вернуться к созданию путешествия' }));
     const registration = new URL(mockPush.mock.calls[1][0], 'https://metravel.by');
     expect(registration.searchParams.get('redirect')).toBe(login.searchParams.get('redirect'));
     expect(registration.searchParams.get('intent')).toBe('share-trip');
     expect(mockRouteCreateStarted).not.toHaveBeenCalled();
 
     mockAuthState = { ...mockAuthState, isAuthenticated: true, userId: '42' };
-    view.rerender(<UpsertTravel />);
+    await view.rerender(<UpsertTravel />);
     expect(mockRouteCreateStarted).toHaveBeenCalledTimes(1);
     expect(mockRouteCreateStarted).toHaveBeenCalledWith(expect.objectContaining({
       source: 'travel_article_cta', sourceTravelId: '42', step: 1,
     }));
-    view.rerender(<UpsertTravel />);
+    await view.rerender(<UpsertTravel />);
     expect(mockRouteCreateStarted).toHaveBeenCalledTimes(1);
   });
 
-  it('shows access error when editing without access', () => {
+  it('shows access error when editing without access', async () => {
     mockLocalParams = { id: '123' };
     mockPathname = '/travel/123';
     mockFormState = {
@@ -222,26 +222,26 @@ describe('UpsertTravel create/edit flow', () => {
       hasAccess: false,
     };
 
-    const { getByText } = render(<UpsertTravel />);
+    const { getByText } = await render(<UpsertTravel />);
 
     expect(getByText('Нет доступа')).toBeTruthy();
     expect(capturedFormArgs?.isNew).toBe(false);
     expect(capturedFormArgs?.travelId).toBe('123');
   });
 
-  it('renders step 1 for editing when access is granted', () => {
+  it('renders step 1 for editing when access is granted', async () => {
     mockLocalParams = { id: '321' };
     mockPathname = '/travel/321';
 
-    const { getByText } = render(<UpsertTravel />);
+    const { getByText } = await render(<UpsertTravel />);
 
     expect(getByText('Step1')).toBeTruthy();
     expect(capturedFormArgs?.isNew).toBe(false);
     expect(capturedFormArgs?.travelId).toBe('321');
   });
 
-  it('keeps the editor root structural while interactive descendants stay addressable', () => {
-    const { getByRole, getByTestId } = render(<UpsertTravel />);
+  it('keeps the editor root structural while interactive descendants stay addressable', async () => {
+    const { getByRole, getByTestId } = await render(<UpsertTravel />);
 
     const root = getByTestId('travel-upsert.root');
 
@@ -250,7 +250,7 @@ describe('UpsertTravel create/edit flow', () => {
     expect(getByRole('button', { name: 'Step 1 action' })).toBeTruthy();
   });
 
-  it('sets explicit SEO title for the edit page', () => {
+  it('sets explicit SEO title for the edit page', async () => {
     mockLocalParams = { id: '321' };
     mockPathname = '/travel/321';
     mockFormState = {
@@ -258,7 +258,7 @@ describe('UpsertTravel create/edit flow', () => {
       formData: { id: 321, name: 'Energylandia', countries: [] },
     };
 
-    render(<UpsertTravel />);
+    await render(<UpsertTravel />);
 
     expect(mockSeo).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -269,8 +269,8 @@ describe('UpsertTravel create/edit flow', () => {
     );
   });
 
-  it('sets explicit SEO title for the create page', () => {
-    render(<UpsertTravel />);
+  it('sets explicit SEO title for the create page', async () => {
+    await render(<UpsertTravel />);
 
     expect(mockSeo).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -285,12 +285,12 @@ describe('UpsertTravel create/edit flow', () => {
     await act(async () => { await i18n.changeLanguage('en'); });
     try {
       mockFiltersError = new Error('HTTP 502: upstream failure');
-      const view = render(<UpsertTravel />);
+      const view = await render(<UpsertTravel />);
       expect(view.getByText('Failed to load filters')).toBeTruthy();
       expect(view.queryByText('HTTP 502: upstream failure')).toBeNull();
       expect(view.getByTestId('travel-upsert.root')).toBeTruthy();
       expect(view.getByText('Step1')).toBeTruthy();
-      fireEvent.press(view.getByRole('button', { name: 'Retry' }));
+      await fireEvent.press(view.getByRole('button', { name: 'Retry' }));
       expect(mockRetryFilters).toHaveBeenCalledTimes(1);
     } finally {
       await act(async () => { await i18n.changeLanguage('ru'); });

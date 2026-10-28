@@ -29,29 +29,29 @@ const trip = { id: 3, title: 'Поездка', isOwner: true } as unknown as Pla
 const overflowKeys = (): string[] =>
   (mockUseScreenHeader.mock.calls.at(-1)?.[0].overflow as { key: string }[]).map((item) => item.key)
 
-const renderHeader = (onActionError = jest.fn()) => {
-  render(<TripPlanScreenHeader trip={trip} onEdit={jest.fn()} onDelete={jest.fn()} onShowExport={jest.fn()} onActionError={onActionError} />)
+const renderHeader = async (onActionError = jest.fn()) => {
+  await render(<TripPlanScreenHeader trip={trip} onEdit={jest.fn()} onDelete={jest.fn()} onShowExport={jest.fn()} onActionError={onActionError} />)
   return onActionError
 }
 
 describe('TripPlanScreenHeader — печать плана (#2102)', () => {
   beforeEach(() => jest.clearAllMocks())
 
-  it('печать доступна — пункт «Распечатать план» есть и стоит первым', () => {
+  it('печать доступна — пункт «Распечатать план» есть и стоит первым', async () => {
     mockIsPrintAvailable.mockReturnValue(true)
-    renderHeader()
+    await renderHeader()
     expect(overflowKeys()[0]).toBe('print')
   })
 
-  it('сборка без модуля печати — пункта нет', () => {
+  it('сборка без модуля печати — пункта нет', async () => {
     mockIsPrintAvailable.mockReturnValue(false)
-    renderHeader()
+    await renderHeader()
     expect(overflowKeys()).not.toContain('print')
   })
 
   it('unavailable показывает common:print.unavailable, cancelled молчит', async () => {
     mockIsPrintAvailable.mockReturnValue(true)
-    const onActionError = renderHeader()
+    const onActionError = await renderHeader()
     const item = (mockUseScreenHeader.mock.calls.at(-1)?.[0].overflow as { key: string; onPress: () => void }[]).find((i) => i.key === 'print')!
 
     mockPrintTripPlan.mockResolvedValueOnce('cancelled')

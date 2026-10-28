@@ -35,7 +35,7 @@ describe('пресеты PDF-книги переводятся', () => {
 
   it('PL: выбиралка «Быстрый старт» показывает польские категории и пресеты', async () => {
     await i18n.changeLanguage('pl')
-    const view = render(<PresetSelector onPresetSelect={jest.fn()} showCategories />)
+    const view = await render(<PresetSelector onPresetSelect={jest.fn()} showCategories />)
 
     expect(view.getByText('Minimalizm')).toBeTruthy()
     expect(view.getByText('Szczegółowe')).toBeTruthy()

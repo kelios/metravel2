@@ -103,7 +103,7 @@ describe('useQuestCityWalk', () => {
     mockedFetch.mockImplementation(async (questId: string) => bundleFor(questId) as never)
     const quests = ['minsk-d', 'minsk-a', 'minsk-c', 'minsk-b'].map(quest)
 
-    const { result } = renderHook(() => useQuestCityWalk(quests as never), { wrapper })
+    const { result } = await renderHook(() => useQuestCityWalk(quests as never), { wrapper })
 
     expect(mockedFetch).not.toHaveBeenCalled()
     expect(result.current.walk).toBeNull()
@@ -120,12 +120,12 @@ describe('useQuestCityWalk', () => {
     ])
   })
 
-  it('ждёт простоя не дольше 1000 мс «Timeout policy» (#2020)', () => {
+  it('ждёт простоя не дольше 1000 мс «Timeout policy» (#2020)', async () => {
     const requestIdleCallback = jest.fn((_callback: () => void, _options?: { timeout: number }) => 1)
     ;(window as IdleWindow).requestIdleCallback = requestIdleCallback
     ;(window as IdleWindow).cancelIdleCallback = jest.fn()
 
-    renderHook(() => useQuestCityWalk([quest('minsk-a')] as never), { wrapper })
+    await renderHook(() => useQuestCityWalk([quest('minsk-a')] as never), { wrapper })
 
     expect(requestIdleCallback).toHaveBeenCalledTimes(1)
     expect(requestIdleCallback.mock.calls[0][1]?.timeout).toBeLessThanOrEqual(1000)
@@ -135,7 +135,7 @@ describe('useQuestCityWalk', () => {
   it('без requestIdleCallback запрашивает бандлы не позже чем через 1000 мс', async () => {
     mockedFetch.mockImplementation(async (questId: string) => bundleFor(questId) as never)
 
-    renderHook(() => useQuestCityWalk([quest('minsk-a')] as never), { wrapper })
+    await renderHook(() => useQuestCityWalk([quest('minsk-a')] as never), { wrapper })
 
     expect(mockedFetch).not.toHaveBeenCalled()
 
@@ -149,7 +149,7 @@ describe('useQuestCityWalk', () => {
   it('не пишет чужие квесты в офлайн-каталог: заметки читают бандл без коммита', async () => {
     mockedFetch.mockImplementation(async (questId: string) => bundleFor(questId) as never)
 
-    renderHook(() => useQuestCityWalk(['minsk-a'].map(quest) as never), { wrapper })
+    await renderHook(() => useQuestCityWalk(['minsk-a'].map(quest) as never), { wrapper })
 
     await act(async () => {
       jest.runOnlyPendingTimers()
@@ -169,7 +169,7 @@ describe('useQuestCityWalk', () => {
       return bundleFor(questId) as never
     })
 
-    const { result } = renderHook(() => useQuestCityWalk([quest('minsk-a'), quest('minsk-b')] as never), {
+    const { result } = await renderHook(() => useQuestCityWalk([quest('minsk-a'), quest('minsk-b')] as never), {
       wrapper,
     })
 
@@ -198,7 +198,7 @@ describe('useQuestCityWalk', () => {
       return bundleFor(questId) as never
     })
 
-    const { result } = renderHook(() => useQuestCityWalk([quest('minsk-a'), quest('minsk-b')] as never), {
+    const { result } = await renderHook(() => useQuestCityWalk([quest('minsk-a'), quest('minsk-b')] as never), {
       wrapper,
     })
 
@@ -227,7 +227,7 @@ describe('useQuestCityWalk', () => {
     mockLocale = 'ru'
     mockedFetch.mockImplementation(async (questId: string) => bundleFor(questId) as never)
     const quests = [quest('minsk-a')]
-    const { result, rerender } = renderHook(() => useQuestCityWalk(quests as never), { wrapper })
+    const { result, rerender } = await renderHook(() => useQuestCityWalk(quests as never), { wrapper })
 
     await act(async () => {
       jest.runOnlyPendingTimers()
@@ -246,7 +246,7 @@ describe('useQuestCityWalk', () => {
     mockedFetch.mockClear()
     mockedFetch.mockImplementation(() => new Promise(() => undefined) as never)
     mockLocale = 'en'
-    rerender({})
+    await rerender({})
     await act(async () => {
       jest.runOnlyPendingTimers()
     })
@@ -256,8 +256,8 @@ describe('useQuestCityWalk', () => {
     mockLocale = 'ru'
   })
 
-  it('не ходит в сеть, пока город не разрешён', () => {
-    renderHook(() => useQuestCityWalk([quest('minsk-a')] as never, { enabled: false }), { wrapper })
+  it('не ходит в сеть, пока город не разрешён', async () => {
+    await renderHook(() => useQuestCityWalk([quest('minsk-a')] as never, { enabled: false }), { wrapper })
 
     jest.runOnlyPendingTimers()
 

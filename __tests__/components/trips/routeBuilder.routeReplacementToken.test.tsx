@@ -133,39 +133,39 @@ describe('#1820 RouteBuilder — счётчик оптовых замен мар
     tokens.length = 0
   })
 
-  it('растёт на каждом применении шаблона, включая повторное', () => {
-    const { getByTestId } = render(<RouteBuilder trip={trip} />, {
+  it('растёт на каждом применении шаблона, включая повторное', async () => {
+    const { getByTestId } = await render(<RouteBuilder trip={trip} />, {
       wrapper: createQueryWrapper().Wrapper,
     })
 
     const initial = lastToken()
     expect(initial).toBe(0)
 
-    fireEvent.press(getByTestId('route-builder-template-ring'))
+    await fireEvent.press(getByTestId('route-builder-template-ring'))
     expect(lastToken()).toBe(1)
 
     // Тот же шаблон второй раз: точки вернулись прежними, и без роста счётчика
     // карта осталась бы с защёлкой кадра от перетаскивания маркера.
-    fireEvent.press(getByTestId('route-builder-template-ring'))
+    await fireEvent.press(getByTestId('route-builder-template-ring'))
     expect(lastToken()).toBe(2)
   })
 
-  it('растёт на применении импортированного трека', () => {
-    const { getByTestId } = render(<RouteBuilder trip={trip} />, {
+  it('растёт на применении импортированного трека', async () => {
+    const { getByTestId } = await render(<RouteBuilder trip={trip} />, {
       wrapper: createQueryWrapper().Wrapper,
     })
 
-    fireEvent.press(getByTestId('import-apply'))
+    await fireEvent.press(getByTestId('import-apply'))
 
     expect(lastToken()).toBe(1)
   })
 
-  it('не растёт на правке точки с карты', () => {
-    const { getByTestId } = render(<RouteBuilder trip={trip} />, {
+  it('не растёт на правке точки с карты', async () => {
+    const { getByTestId } = await render(<RouteBuilder trip={trip} />, {
       wrapper: createQueryWrapper().Wrapper,
     })
 
-    fireEvent.press(getByTestId('map-drag-point-0'))
+    await fireEvent.press(getByTestId('map-drag-point-0'))
 
     expect(lastToken()).toBe(0)
   })

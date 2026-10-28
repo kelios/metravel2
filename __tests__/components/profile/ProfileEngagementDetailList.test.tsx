@@ -23,8 +23,8 @@ const buildItem = (overrides: Partial<AuthorEngagementItem> = {}): AuthorEngagem
   ...overrides,
 });
 
-const renderList = (props: Partial<React.ComponentProps<typeof ProfileEngagementDetailList>> = {}) =>
-  render(
+const renderList = async (props: Partial<React.ComponentProps<typeof ProfileEngagementDetailList>> = {}) =>
+  await render(
     <ProfileEngagementDetailList
       metric="favorites"
       items={[buildItem()]}
@@ -42,8 +42,8 @@ const renderList = (props: Partial<React.ComponentProps<typeof ProfileEngagement
   );
 
 describe('ProfileEngagementDetailList', () => {
-  it('shows who reacted, on which route and when', () => {
-    const { getByText } = renderList();
+  it('shows who reacted, on which route and when', async () => {
+    const { getByText } = await renderList();
 
     expect(getByText('Кто сохранил ваши маршруты')).toBeTruthy();
     expect(getByText('Иван Петров')).toBeTruthy();
@@ -52,8 +52,8 @@ describe('ProfileEngagementDetailList', () => {
     expect(getByText('Всего отметок: 1')).toBeTruthy();
   });
 
-  it('uses the metric-specific title', () => {
-    const { getByText } = renderList({
+  it('uses the metric-specific title', async () => {
+    const { getByText } = await renderList({
       metric: 'planned',
       items: [buildItem({ metric: 'planned' })],
     });
@@ -61,21 +61,21 @@ describe('ProfileEngagementDetailList', () => {
     expect(getByText('Кто планирует поездку')).toBeTruthy();
   });
 
-  it('navigates internally to the user profile and to the route', () => {
+  it('navigates internally to the user profile and to the route', async () => {
     const onOpenProfile = jest.fn();
     const onOpenTravel = jest.fn();
-    const { getByLabelText } = renderList({ onOpenProfile, onOpenTravel });
+    const { getByLabelText } = await renderList({ onOpenProfile, onOpenTravel });
 
-    fireEvent.press(getByLabelText('Открыть профиль: Иван Петров'));
+    await fireEvent.press(getByLabelText('Открыть профиль: Иван Петров'));
     expect(onOpenProfile).toHaveBeenCalledWith(7);
 
-    fireEvent.press(getByLabelText('Открыть маршрут: Гарц за три дня'));
+    await fireEvent.press(getByLabelText('Открыть маршрут: Гарц за три дня'));
     expect(onOpenTravel).toHaveBeenCalledWith('/travels/garz');
   });
 
-  it('never routes to an absolute url coming from the API', () => {
+  it('never routes to an absolute url coming from the API', async () => {
     const onOpenTravel = jest.fn();
-    const { getByLabelText } = renderList({
+    const { getByLabelText } = await renderList({
       onOpenTravel,
       items: [
         buildItem({
@@ -90,13 +90,13 @@ describe('ProfileEngagementDetailList', () => {
       ],
     });
 
-    fireEvent.press(getByLabelText('Открыть маршрут: Гарц за три дня'));
+    await fireEvent.press(getByLabelText('Открыть маршрут: Гарц за три дня'));
     expect(onOpenTravel).toHaveBeenCalledWith('/travels/garz');
   });
 
-  it('renders a hidden row without identity and without a profile link', () => {
+  it('renders a hidden row without identity and without a profile link', async () => {
     const onOpenProfile = jest.fn();
-    const { getByText, queryByLabelText } = renderList({
+    const { getByText, queryByLabelText } = await renderList({
       onOpenProfile,
       items: [
         buildItem({
@@ -111,23 +111,23 @@ describe('ProfileEngagementDetailList', () => {
     expect(queryByLabelText('Открыть профиль: Скрытый пользователь')).toBeNull();
   });
 
-  it('shows the loading skeleton instead of an empty state while fetching', () => {
-    const { getByTestId, queryByTestId } = renderList({ isLoading: true, items: [], total: 0 });
+  it('shows the loading skeleton instead of an empty state while fetching', async () => {
+    const { getByTestId, queryByTestId } = await renderList({ isLoading: true, items: [], total: 0 });
 
     expect(getByTestId('engagement-detail-loading')).toBeTruthy();
     expect(queryByTestId('engagement-detail-empty')).toBeNull();
   });
 
-  it('shows an explicit empty state when nobody reacted yet', () => {
-    const { getByTestId, getByText } = renderList({ items: [], total: 0 });
+  it('shows an explicit empty state when nobody reacted yet', async () => {
+    const { getByTestId, getByText } = await renderList({ items: [], total: 0 });
 
     expect(getByTestId('engagement-detail-empty')).toBeTruthy();
     expect(getByText('Пока никто не отметил')).toBeTruthy();
   });
 
-  it('offers a retry on error', () => {
+  it('offers a retry on error', async () => {
     const onRetry = jest.fn();
-    const { getByTestId, getByText } = renderList({
+    const { getByTestId, getByText } = await renderList({
       isError: true,
       items: [],
       total: 0,
@@ -135,18 +135,18 @@ describe('ProfileEngagementDetailList', () => {
     });
 
     expect(getByTestId('engagement-detail-error')).toBeTruthy();
-    fireEvent.press(getByText('Повторить'));
+    await fireEvent.press(getByText('Повторить'));
     expect(onRetry).toHaveBeenCalled();
   });
 
-  it('paginates through "показать ещё" and blocks a double request', () => {
+  it('paginates through "показать ещё" and blocks a double request', async () => {
     const onLoadMore = jest.fn();
-    const { getByTestId, rerender } = renderList({ hasNextPage: true, onLoadMore });
+    const { getByTestId, rerender } = await renderList({ hasNextPage: true, onLoadMore });
 
-    fireEvent.press(getByTestId('engagement-detail-load-more'));
+    await fireEvent.press(getByTestId('engagement-detail-load-more'));
     expect(onLoadMore).toHaveBeenCalledTimes(1);
 
-    rerender(
+    await rerender(
       <ProfileEngagementDetailList
         metric="favorites"
         items={[buildItem()]}
@@ -162,12 +162,12 @@ describe('ProfileEngagementDetailList', () => {
       />,
     );
 
-    fireEvent.press(getByTestId('engagement-detail-load-more'));
+    await fireEvent.press(getByTestId('engagement-detail-load-more'));
     expect(onLoadMore).toHaveBeenCalledTimes(1);
   });
 
-  it('hides the pagination control on the last page', () => {
-    const { queryByTestId } = renderList({ hasNextPage: false });
+  it('hides the pagination control on the last page', async () => {
+    const { queryByTestId } = await renderList({ hasNextPage: false });
 
     expect(queryByTestId('engagement-detail-load-more')).toBeNull();
   });

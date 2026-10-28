@@ -71,26 +71,26 @@ describe('MyTripsDashboard', () => {
     mockUseTripNotifications.mockClear();
   });
 
-  it('opens with organizer trips and switches roles without mixing their lists', () => {
-    const { getByTestId, queryByTestId } = render(<MyTripsDashboard />);
+  it('opens with organizer trips and switches roles without mixing their lists', async () => {
+    const { getByTestId, queryByTestId } = await render(<MyTripsDashboard />);
 
     expect(getByTestId('my-trips-list-organized')).toBeTruthy();
     expect(queryByTestId('my-trips-list-participating')).toBeNull();
 
-    fireEvent.press(getByTestId('my-trips-segment-participating'));
+    await fireEvent.press(getByTestId('my-trips-segment-participating'));
     expect(getByTestId('my-trips-list-participating')).toBeTruthy();
     expect(queryByTestId('my-trips-list-organized')).toBeNull();
 
-    fireEvent.press(getByTestId('my-trips-segment-applications'));
+    await fireEvent.press(getByTestId('my-trips-segment-applications'));
     expect(getByTestId('my-trips-applications-list')).toBeTruthy();
     expect(queryByTestId('my-trips-updates')).toBeNull();
   });
 
-  it('exposes explicit organize and find actions', () => {
-    const { getByTestId } = render(<MyTripsDashboard />);
+  it('exposes explicit organize and find actions', async () => {
+    const { getByTestId } = await render(<MyTripsDashboard />);
 
-    fireEvent.press(getByTestId('my-trips-plan-cta'));
-    fireEvent.press(getByTestId('my-trips-find-cta'));
+    await fireEvent.press(getByTestId('my-trips-plan-cta'));
+    await fireEvent.press(getByTestId('my-trips-find-cta'));
 
     expect(mockPush).toHaveBeenNthCalledWith(1, '/trips/plan/create');
     expect(mockPush).toHaveBeenNthCalledWith(2, '/trips');
@@ -98,11 +98,11 @@ describe('MyTripsDashboard', () => {
 
   // #2114: блок «Обновления» не стоит над скелетоном списка — монтируется под
   // устоявшимся списком; запрос уведомлений стартует сразу. Счётчики держат слот.
-  it('не монтирует «Обновления» и держит слот счётчика, пока список грузится', () => {
+  it('не монтирует «Обновления» и держит слот счётчика, пока список грузится', async () => {
     const prev = mockPlannedTripsState;
     mockPlannedTripsState = { data: undefined, isLoading: true };
     try {
-      const { queryByTestId, getByTestId } = render(<MyTripsDashboard />);
+      const { queryByTestId, getByTestId } = await render(<MyTripsDashboard />);
       expect(queryByTestId('my-trips-updates')).toBeNull();
       expect(mockUseTripNotifications).toHaveBeenCalled();
       expect(getByTestId('my-trips-segment-organized-count-pending', { includeHiddenElements: true })).toBeTruthy();
@@ -111,11 +111,11 @@ describe('MyTripsDashboard', () => {
     }
   });
 
-  it('после ответа списка «Обновления» на месте, а счётчики показаны, включая ноль', () => {
+  it('после ответа списка «Обновления» на месте, а счётчики показаны, включая ноль', async () => {
     const prev = mockPlannedTripsState;
     mockPlannedTripsState = { data: [{ id: 1, isOwner: true }], isLoading: false };
     try {
-      const { getByTestId, getByText, queryByTestId } = render(<MyTripsDashboard />);
+      const { getByTestId, getByText, queryByTestId } = await render(<MyTripsDashboard />);
       expect(getByTestId('my-trips-updates')).toBeTruthy();
       expect(queryByTestId('my-trips-segment-organized-count-pending', { includeHiddenElements: true })).toBeNull();
       expect(getByText('(1)')).toBeTruthy();

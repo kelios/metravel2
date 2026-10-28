@@ -142,27 +142,27 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
   ...overrides,
 })
 
-const renderRouteBuilder = (element: React.ReactElement) =>
-  render(element, { wrapper: createQueryWrapper().Wrapper })
+const renderRouteBuilder = async (element: React.ReactElement) =>
+  await render(element, { wrapper: createQueryWrapper().Wrapper })
 
 describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: поиск места (%s)', (layout) => {
   beforeEach(() => {
     mockRouteMutate.mockReset()
   })
 
-  it('подставляет координаты выбранного места в поля правки точки', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
+  it('подставляет координаты выбранного места в поля правки точки', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
 
-    fireEvent.press(getByTestId('route-builder-edit-0'))
-    fireEvent.press(getByTestId('route-builder-address-pick'))
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
+    await fireEvent.press(getByTestId('route-builder-address-pick'))
 
     expect(getByTestId('route-builder-edit-lat').props.value).toBe('49.8209')
     expect(getByTestId('route-builder-edit-lng').props.value).toBe('18.2625')
     // Название точки принадлежит пользователю и адресом не затирается.
     expect(getByTestId('route-builder-edit-name').props.value).toBe('Точка 1')
 
-    fireEvent.press(getByTestId('route-builder-edit-save'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-edit-save'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate).toHaveBeenCalledTimes(1)
     expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
@@ -171,34 +171,34 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: поиск мест
     })
   })
 
-  it('оставляет ручной ввод координат рабочим запасным путём', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
+  it('оставляет ручной ввод координат рабочим запасным путём', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
 
-    fireEvent.press(getByTestId('route-builder-edit-0'))
-    fireEvent.changeText(getByTestId('route-builder-edit-lat'), '50.5')
-    fireEvent.changeText(getByTestId('route-builder-edit-lng'), '30.25')
-    fireEvent.press(getByTestId('route-builder-edit-save'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
+    await fireEvent.changeText(getByTestId('route-builder-edit-lat'), '50.5')
+    await fireEvent.changeText(getByTestId('route-builder-edit-lng'), '30.25')
+    await fireEvent.press(getByTestId('route-builder-edit-save'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
       coordinates: [30.25, 50.5],
     })
   })
 
-  it('не отдаёт бэкенду тип place без привязки к месту и не берёт скрытые поля', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder(
+  it('не отдаёт бэкенду тип place без привязки к месту и не берёт скрытые поля', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ route: [] })} layout={layout} />,
     )
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
-    fireEvent.press(getByTestId('route-builder-type-custom'))
-    fireEvent.changeText(getByTestId('route-builder-name'), 'Черновик прошлой попытки')
+    await fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-type-custom'))
+    await fireEvent.changeText(getByTestId('route-builder-name'), 'Черновик прошлой попытки')
     // «Место» — состояние формы по умолчанию: она показывает только поиск по
     // MeTravel, набранное название с экрана уходит и в точку попасть не должно.
-    fireEvent.press(getByTestId('route-builder-type-place'))
+    await fireEvent.press(getByTestId('route-builder-type-place'))
     expect(queryByTestId('route-builder-name')).toBeNull()
 
-    fireEvent.press(getByTestId('route-builder-address-pick'))
+    await fireEvent.press(getByTestId('route-builder-address-pick'))
     expect(getByTestId('route-builder-name').props.value).toBe('Острава')
     expect(getByTestId('route-builder-lat').props.value).toBe('49.8209')
     expect(getByTestId('route-builder-lng').props.value).toBe('18.2625')
@@ -206,9 +206,9 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: поиск мест
     expect(queryByTestId('route-builder-save')).toBeNull()
 
     // Выбор только заполняет форму: до добавления можно уточнить имя.
-    fireEvent.changeText(getByTestId('route-builder-name'), 'Встреча в Остраве')
-    fireEvent.press(getByTestId('route-builder-add'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.changeText(getByTestId('route-builder-name'), 'Встреча в Остраве')
+    await fireEvent.press(getByTestId('route-builder-add'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
       // #1532: `place` без `placeId` бэкенд отклоняет вместе со всем маршрутом.
@@ -219,18 +219,18 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: поиск мест
     })
   })
 
-  it('сохраняет выбранный тип и введённое название при добавлении по поиску', () => {
-    const { getByTestId } = renderRouteBuilder(
+  it('сохраняет выбранный тип и введённое название при добавлении по поиску', async () => {
+    const { getByTestId } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ route: [] })} layout={layout} />,
     )
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
-    fireEvent.press(getByTestId('route-builder-type-overnight'))
-    fireEvent.changeText(getByTestId('route-builder-name'), 'Ночёвка в Остраве')
-    fireEvent.changeText(getByTestId('route-builder-description'), 'Встречаемся у вокзала')
-    fireEvent.press(getByTestId('route-builder-address-pick'))
-    fireEvent.press(getByTestId('route-builder-add'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-type-overnight'))
+    await fireEvent.changeText(getByTestId('route-builder-name'), 'Ночёвка в Остраве')
+    await fireEvent.changeText(getByTestId('route-builder-description'), 'Встречаемся у вокзала')
+    await fireEvent.press(getByTestId('route-builder-address-pick'))
+    await fireEvent.press(getByTestId('route-builder-add'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
       type: 'overnight',
@@ -240,16 +240,16 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: поиск мест
     })
   })
 
-  it('заполняет пустое название в правке и разрешает изменить его до сохранения', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
+  it('заполняет пустое название в правке и разрешает изменить его до сохранения', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
 
-    fireEvent.press(getByTestId('route-builder-edit-0'))
-    fireEvent.changeText(getByTestId('route-builder-edit-name'), '')
-    fireEvent.press(getByTestId('route-builder-address-pick'))
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
+    await fireEvent.changeText(getByTestId('route-builder-edit-name'), '')
+    await fireEvent.press(getByTestId('route-builder-address-pick'))
     expect(getByTestId('route-builder-edit-name').props.value).toBe('Острава')
-    fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Остановка в Остраве')
-    fireEvent.press(getByTestId('route-builder-edit-save'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Остановка в Остраве')
+    await fireEvent.press(getByTestId('route-builder-edit-save'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
       name: 'Остановка в Остраве',
@@ -257,22 +257,22 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: поиск мест
     })
   })
 
-  it('исправленный выбор адреса переписывает и название с описанием, а не только координаты', () => {
-    const { getByTestId } = renderRouteBuilder(
+  it('исправленный выбор адреса переписывает и название с описанием, а не только координаты', async () => {
+    const { getByTestId } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ route: [] })} layout={layout} />,
     )
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
-    fireEvent.press(getByTestId('route-builder-address-pick'))
-    fireEvent.press(getByTestId('route-builder-address-pick-prague'))
+    await fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-address-pick'))
+    await fireEvent.press(getByTestId('route-builder-address-pick-prague'))
 
     expect(getByTestId('route-builder-name').props.value).toBe('Прага')
     expect(getByTestId('route-builder-description').props.value).toBe('Прага, Чехия')
     expect(getByTestId('route-builder-lat').props.value).toBe('50.0755')
     expect(getByTestId('route-builder-lng').props.value).toBe('14.4378')
 
-    fireEvent.press(getByTestId('route-builder-add'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-add'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
       name: 'Прага',
@@ -281,22 +281,22 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: поиск мест
     })
   })
 
-  it('исправленный выбор адреса не трогает название, набранное пользователем', () => {
-    const { getByTestId } = renderRouteBuilder(
+  it('исправленный выбор адреса не трогает название, набранное пользователем', async () => {
+    const { getByTestId } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ route: [] })} layout={layout} />,
     )
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-add-action'))
     // В режиме «Место» полей названия и описания на экране нет.
-    fireEvent.press(getByTestId('route-builder-type-custom'))
-    fireEvent.changeText(getByTestId('route-builder-name'), 'Встреча у вокзала')
-    fireEvent.press(getByTestId('route-builder-address-pick'))
-    fireEvent.press(getByTestId('route-builder-address-pick-prague'))
+    await fireEvent.press(getByTestId('route-builder-type-custom'))
+    await fireEvent.changeText(getByTestId('route-builder-name'), 'Встреча у вокзала')
+    await fireEvent.press(getByTestId('route-builder-address-pick'))
+    await fireEvent.press(getByTestId('route-builder-address-pick-prague'))
 
     expect(getByTestId('route-builder-name').props.value).toBe('Встреча у вокзала')
 
-    fireEvent.press(getByTestId('route-builder-add'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-add'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
       name: 'Встреча у вокзала',
@@ -304,18 +304,18 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: поиск мест
     })
   })
 
-  it('исправленный выбор адреса в правке переписывает предзаполненное имя', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
+  it('исправленный выбор адреса в правке переписывает предзаполненное имя', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
 
-    fireEvent.press(getByTestId('route-builder-edit-0'))
-    fireEvent.changeText(getByTestId('route-builder-edit-name'), '')
-    fireEvent.press(getByTestId('route-builder-address-pick'))
-    fireEvent.press(getByTestId('route-builder-address-pick-prague'))
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
+    await fireEvent.changeText(getByTestId('route-builder-edit-name'), '')
+    await fireEvent.press(getByTestId('route-builder-address-pick'))
+    await fireEvent.press(getByTestId('route-builder-address-pick-prague'))
 
     expect(getByTestId('route-builder-edit-name').props.value).toBe('Прага')
 
-    fireEvent.press(getByTestId('route-builder-edit-save'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-edit-save'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
       name: 'Прага',
@@ -323,21 +323,21 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: поиск мест
     })
   })
 
-  it('точка, открытая тапом по карте, не отдаёт своё имя прошлому выбору адреса', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
+  it('точка, открытая тапом по карте, не отдаёт своё имя прошлому выбору адреса', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} layout={layout} />)
 
     // Правка точки A: поиск сам подставил имя и запомнил его как своё.
-    fireEvent.press(getByTestId('route-builder-edit-0'))
-    fireEvent.changeText(getByTestId('route-builder-edit-name'), '')
-    fireEvent.press(getByTestId('route-builder-address-pick'))
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
+    await fireEvent.changeText(getByTestId('route-builder-edit-name'), '')
+    await fireEvent.press(getByTestId('route-builder-address-pick'))
     expect(getByTestId('route-builder-edit-name').props.value).toBe('Острава')
 
     // Тап по карте коммитит правку и открывает редактор новой точки.
-    act(() => {
+    await act(() => {
       mockMapProps.current.onAddPointFromMap?.({ lat: 53.9, lng: 27.56 })
     })
-    fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Острава')
-    fireEvent.press(getByTestId('route-builder-address-pick-prague'))
+    await fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Острава')
+    await fireEvent.press(getByTestId('route-builder-address-pick-prague'))
 
     // Имя набрано пользователем — совпадение с прошлой автоподстановкой ничего
     // не значит, переписаться должны только координаты.
@@ -346,32 +346,32 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: поиск мест
     expect(getByTestId('route-builder-edit-lng').props.value).toBe('14.4378')
   })
 
-  it('отмена после выбора адреса оставляет маршрут прежним', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder(
+  it('отмена после выбора адреса оставляет маршрут прежним', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip()} layout={layout} />,
     )
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
-    fireEvent.press(getByTestId('route-builder-address-pick'))
-    fireEvent.press(getByTestId('route-builder-add-cancel'))
+    await fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-address-pick'))
+    await fireEvent.press(getByTestId('route-builder-add-cancel'))
 
     expect(queryByTestId('route-builder-add-form')).toBeNull()
     expect(queryByTestId('route-builder-save')).toBeNull()
     expect(mockRouteMutate).not.toHaveBeenCalled()
   })
 
-  it('позволяет добавить точку ручным вводом без результата поиска', () => {
-    const { getByTestId } = renderRouteBuilder(
+  it('позволяет добавить точку ручным вводом без результата поиска', async () => {
+    const { getByTestId } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ route: [] })} layout={layout} />,
     )
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
-    fireEvent.press(getByTestId('route-builder-type-custom'))
-    fireEvent.changeText(getByTestId('route-builder-name'), 'Ручная точка')
-    fireEvent.changeText(getByTestId('route-builder-lat'), '49.8209')
-    fireEvent.changeText(getByTestId('route-builder-lng'), '18.2625')
-    fireEvent.press(getByTestId('route-builder-add'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-type-custom'))
+    await fireEvent.changeText(getByTestId('route-builder-name'), 'Ручная точка')
+    await fireEvent.changeText(getByTestId('route-builder-lat'), '49.8209')
+    await fireEvent.changeText(getByTestId('route-builder-lng'), '18.2625')
+    await fireEvent.press(getByTestId('route-builder-add'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate.mock.calls[0][0].route[0]).toMatchObject({
       type: 'custom',

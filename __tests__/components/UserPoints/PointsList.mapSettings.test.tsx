@@ -1,6 +1,6 @@
 import React from 'react';
 import { Platform } from 'react-native';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { PointsList } from '@/components/UserPoints/PointsList';
@@ -49,15 +49,15 @@ const setPlatform = (os: typeof Platform.OS) => {
 };
 let mockWidth = 1280;
 
-const renderPoints = () => {
+const renderPoints = async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const tree = () => (
     <QueryClientProvider client={client}>
       <PointsList />
     </QueryClientProvider>
   );
-  const result = render(tree());
-  return { ...result, resize: (width: number) => { mockWidth = width; result.rerender(tree()); } };
+  const result = await render(tree());
+  return { ...result, resize: async (width: number) => { mockWidth = width; await result.rerender(tree()); } };
 };
 
 const expectSettingsAbsent = () => {
@@ -79,7 +79,8 @@ describe('PointsList map settings availability (#1787)', () => {
     );
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await cleanup();
     jest.restoreAllMocks();
     setPlatform(originalOS);
   });
@@ -91,65 +92,65 @@ describe('PointsList map settings availability (#1787)', () => {
     ['android', 1280],
     ['web', 390],
     ['web', 1023],
-  ] as const)('hides unavailable settings on %s at %ipx across mobile tabs', (os, width) => {
+  ] as const)('hides unavailable settings on %s at %ipx across mobile tabs', async (os, width) => {
     setPlatform(os);
     mockWidth = width;
-    renderPoints();
+    await renderPoints();
 
     expect(screen.getByTestId('userpoints-map-engine')).toBeTruthy();
     expectSettingsAbsent();
-    fireEvent.press(screen.getByTestId('segmented-list'));
+    await fireEvent.press(screen.getByTestId('segmented-list'));
     expectSettingsAbsent();
-    fireEvent.press(screen.getByTestId('segmented-filters'));
+    await fireEvent.press(screen.getByTestId('segmented-filters'));
     expectSettingsAbsent();
     expect(screen.getByText('Управление точками')).toBeTruthy();
     expect(screen.getByText('Показать фильтры')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('userpoints-filters-toggle'));
+    await fireEvent.press(screen.getByTestId('userpoints-filters-toggle'));
     expect(screen.getByText('Скрыть фильтры')).toBeTruthy();
   });
 
-  it.each([1024, 1280])('opens and closes the actual panel slot in desktop map mode at %ipx', (width) => {
+  it.each([1024, 1280])('opens and closes the actual panel slot in desktop map mode at %ipx', async (width) => {
     mockWidth = width;
-    renderPoints();
-    fireEvent.press(screen.getByTestId('segmented-filters'));
+    await renderPoints();
+    await fireEvent.press(screen.getByTestId('segmented-filters'));
 
     expect(screen.getByText('Показать настройки карты')).toBeTruthy();
     expect(screen.queryByTestId('userpoints-map-settings-panel')).toBeNull();
-    fireEvent.press(screen.getByTestId('userpoints-map-settings-toggle'));
+    await fireEvent.press(screen.getByTestId('userpoints-map-settings-toggle'));
     expect(screen.getByText('Скрыть настройки карты')).toBeTruthy();
     expect(screen.getByTestId('userpoints-map-settings-panel')).toBeTruthy();
     expect(screen.getByTestId('userpoints-map-engine')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('userpoints-map-settings-toggle'));
+    await fireEvent.press(screen.getByTestId('userpoints-map-settings-toggle'));
     expect(screen.getByText('Показать настройки карты')).toBeTruthy();
     expect(screen.queryByTestId('userpoints-map-settings-panel')).toBeNull();
   });
 
-  it('hides settings in standalone desktop list mode and restores a consistent map state', () => {
-    renderPoints();
-    fireEvent.press(screen.getByTestId('segmented-filters'));
-    fireEvent.press(screen.getByTestId('userpoints-map-settings-toggle'));
+  it('hides settings in standalone desktop list mode and restores a consistent map state', async () => {
+    await renderPoints();
+    await fireEvent.press(screen.getByTestId('segmented-filters'));
+    await fireEvent.press(screen.getByTestId('userpoints-map-settings-toggle'));
     // The side-panel tab and the header view toggle both have a list option.
-    fireEvent.press(screen.getByText('Список'));
+    await fireEvent.press(screen.getByText('Список'));
     expectSettingsAbsent();
     expect(screen.queryByTestId('userpoints-map-engine')).toBeNull();
     expect(screen.getByText('Управление точками')).toBeTruthy();
 
-    fireEvent.press(screen.getByText('Карта'));
+    await fireEvent.press(screen.getByText('Карта'));
     expect(screen.getByTestId('userpoints-map-engine')).toBeTruthy();
     expect(screen.getByText('Скрыть настройки карты')).toBeTruthy();
     expect(screen.getByTestId('userpoints-map-settings-panel')).toBeTruthy();
   });
 
-  it('cannot leave an open panel behind when resizing to mobile web', () => {
-    const { resize } = renderPoints();
-    fireEvent.press(screen.getByTestId('segmented-filters'));
-    fireEvent.press(screen.getByTestId('userpoints-map-settings-toggle'));
+  it('cannot leave an open panel behind when resizing to mobile web', async () => {
+    const { resize } = await renderPoints();
+    await fireEvent.press(screen.getByTestId('segmented-filters'));
+    await fireEvent.press(screen.getByTestId('userpoints-map-settings-toggle'));
     expect(screen.getByTestId('userpoints-map-settings-panel')).toBeTruthy();
 
-    resize(390);
-    fireEvent.press(screen.getByTestId('segmented-filters'));
+    await resize(390);
+    await fireEvent.press(screen.getByTestId('segmented-filters'));
     expectSettingsAbsent();
-    resize(1280);
+    await resize(1280);
     expect(screen.getByText('Скрыть настройки карты')).toBeTruthy();
     expect(screen.getByTestId('userpoints-map-settings-panel')).toBeTruthy();
   });

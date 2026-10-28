@@ -11,8 +11,8 @@ jest.mock('@/hooks/useResponsive', () => ({
 }));
 
 describe('ProfileTravelEngagementSummary mobile layout', () => {
-  it('keeps author stats compact on mobile by hiding helper copy in metric cards', () => {
-    const { getByText, queryByText } = render(
+  it('keeps author stats compact on mobile by hiding helper copy in metric cards', async () => {
+    const { getByText, queryByText } = await render(
       <ProfileTravelEngagementSummary
         summary={{
           favoritesCount: 4,
@@ -32,9 +32,9 @@ describe('ProfileTravelEngagementSummary mobile layout', () => {
     expect(queryByText('собираются поехать')).toBeNull();
   });
 
-  it('keeps the icon and value in one clickable row', () => {
+  it('keeps the icon and value in one clickable row', async () => {
     const onMetricPress = jest.fn();
-    const { getByLabelText, getByTestId } = render(
+    const { getByLabelText, getByTestId } = await render(
       <ProfileTravelEngagementSummary
         summary={{
           favoritesCount: 4,
@@ -52,7 +52,7 @@ describe('ProfileTravelEngagementSummary mobile layout', () => {
       expect.objectContaining({ flexDirection: 'row', alignItems: 'center' }),
     );
 
-    fireEvent.press(getByLabelText('Сохранили: 4'));
+    await fireEvent.press(getByLabelText('Сохранили: 4'));
     expect(onMetricPress).toHaveBeenCalledWith('favoritesCount');
   });
 });

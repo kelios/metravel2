@@ -185,26 +185,26 @@ describe('PlannedTripScreen route export section', () => {
     mockUsePlannedTrip.mockReset();
   });
 
-  it('keeps the route export section on Android with supported actions', () => {
+  it('keeps the route export section on Android with supported actions', async () => {
     setPlatformOS('android');
 
     const PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default;
-    const { queryByTestId, getByTestId } = render(<PlannedTripScreen />);
+    const { queryByTestId, getByTestId } = await render(<PlannedTripScreen />);
 
     // Route builder is the default tab; export lives under the "Экспорт" tab.
     expect(getByTestId('route-builder')).toBeTruthy();
-    fireEvent.press(getByTestId('trip-plan-tab-export'));
+    await fireEvent.press(getByTestId('trip-plan-tab-export'));
     expect(getByTestId('trip-plan-route-export-section')).toBeTruthy();
     expect(queryByTestId('trip-route-export')).toBeTruthy();
   });
 
-  it('keeps the route export section outside Android', () => {
+  it('keeps the route export section outside Android', async () => {
     setPlatformOS('web');
 
     const PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default;
-    const { getByTestId } = render(<PlannedTripScreen />);
+    const { getByTestId } = await render(<PlannedTripScreen />);
 
-    fireEvent.press(getByTestId('trip-plan-tab-export'));
+    await fireEvent.press(getByTestId('trip-plan-tab-export'));
     expect(getByTestId('trip-plan-route-export-section')).toBeTruthy();
     expect(getByTestId('trip-route-export')).toBeTruthy();
   });

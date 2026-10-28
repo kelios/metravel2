@@ -5,7 +5,7 @@ import MessageBubble from '@/components/messages/MessageBubble';
 import type { Message } from '@/api/messages';
 
 // #2133: меню жалобы в рендере зовёт мутации блокировки — нужен QueryClient, как в приложении.
-const render = (ui: Parameters<typeof rtlRender>[0]) =>
+const render = async (ui: Parameters<typeof rtlRender>[0]) =>
     rtlRender(ui, { wrapper: createQueryWrapper().Wrapper });
 
 jest.mock('expo-clipboard', () => ({
@@ -29,55 +29,55 @@ function findPressableWithLongPress(startNode: any): any {
 }
 
 describe('MessageBubble', () => {
-    it('renders message text', () => {
-        const { getByText } = render(
+    it('renders message text', async () => {
+        const { getByText } = await render(
             <MessageBubble message={baseMessage} isOwn={false} />
         );
         expect(getByText('Hello world')).toBeTruthy();
     });
 
-    it('renders own message', () => {
-        const { getByText } = render(
+    it('renders own message', async () => {
+        const { getByText } = await render(
             <MessageBubble message={baseMessage} isOwn={true} />
         );
         expect(getByText('Hello world')).toBeTruthy();
     });
 
-    it('renders system message', () => {
+    it('renders system message', async () => {
         const sysMsg: Message = { ...baseMessage, text: 'System notification' };
-        const { getByText } = render(
+        const { getByText } = await render(
             <MessageBubble message={sysMsg} isOwn={false} isSystem />
         );
         expect(getByText('System notification')).toBeTruthy();
     });
 
-    it('renders formatted time for today', () => {
+    it('renders formatted time for today', async () => {
         const now = new Date();
         const msg: Message = { ...baseMessage, created_at: now.toISOString() };
-        const { queryByText } = render(
+        const { queryByText } = await render(
             <MessageBubble message={msg} isOwn={false} />
         );
         expect(queryByText('Hello world')).toBeTruthy();
     });
 
-    it('handles null created_at gracefully', () => {
+    it('handles null created_at gracefully', async () => {
         const msg: Message = { ...baseMessage, created_at: null };
-        const { getByText } = render(
+        const { getByText } = await render(
             <MessageBubble message={msg} isOwn={false} />
         );
         expect(getByText('Hello world')).toBeTruthy();
     });
 
-    it('does not show actions by default', () => {
-        const { queryByLabelText } = render(
+    it('does not show actions by default', async () => {
+        const { queryByLabelText } = await render(
             <MessageBubble message={baseMessage} isOwn={true} />
         );
         expect(queryByLabelText('Удалить сообщение')).toBeNull();
         expect(queryByLabelText('Копировать текст')).toBeNull();
     });
 
-    it('renders explicit delete button for own message when onDelete is passed', () => {
-        const { getByLabelText } = render(
+    it('renders explicit delete button for own message when onDelete is passed', async () => {
+        const { getByLabelText } = await render(
             <MessageBubble message={baseMessage} isOwn={true} onDelete={jest.fn()} />
         );
 
@@ -85,14 +85,14 @@ describe('MessageBubble', () => {
     });
 
     // #2127: меню долгого нажатия — ActionListSheet на всех платформах, без Alert.alert.
-    it('long press with onDelete opens the action sheet with Копировать and destructive Удалить', () => {
+    it('long press with onDelete opens the action sheet with Копировать and destructive Удалить', async () => {
         const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-        const { getByText, getByLabelText, getAllByLabelText } = render(
+        const { getByText, getByLabelText, getAllByLabelText } = await render(
             <MessageBubble message={baseMessage} isOwn={true} onDelete={jest.fn()} />
         );
         expect(getAllByLabelText('Удалить сообщение')).toHaveLength(1);
         const node = findPressableWithLongPress(getByText('Hello world'));
-        act(() => node.props.onLongPress());
+        await act(() => node.props.onLongPress());
 
         expect(getByText('Сообщение')).toBeTruthy();
         expect(getByLabelText('Копировать текст')).toBeTruthy();
@@ -102,12 +102,12 @@ describe('MessageBubble', () => {
         alertSpy.mockRestore();
     });
 
-    it('long press without onDelete offers Копировать only', () => {
-        const { getByText, getByLabelText, queryByText } = render(
+    it('long press without onDelete offers Копировать only', async () => {
+        const { getByText, getByLabelText, queryByText } = await render(
             <MessageBubble message={baseMessage} isOwn={false} />
         );
         const node = findPressableWithLongPress(getByText('Hello world'));
-        act(() => node.props.onLongPress());
+        await act(() => node.props.onLongPress());
 
         expect(getByLabelText('Копировать текст')).toBeTruthy();
         expect(queryByText('Удалить')).toBeNull();
@@ -119,10 +119,10 @@ describe('MessageBubble', () => {
         const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
         const onDelete = jest.fn();
         try {
-            const { getByText, getByLabelText } = render(
+            const { getByText, getByLabelText } = await render(
                 <MessageBubble message={baseMessage} isOwn={true} onDelete={onDelete} />
             );
-            fireEvent.press(getByLabelText('Удалить сообщение'));
+            await fireEvent.press(getByLabelText('Удалить сообщение'));
             expect(onDelete).not.toHaveBeenCalled();
             expect(alertSpy).toHaveBeenCalledWith(
                 'Удалить сообщение',

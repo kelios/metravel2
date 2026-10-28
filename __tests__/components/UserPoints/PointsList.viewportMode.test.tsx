@@ -58,9 +58,9 @@ const setPlatform = (os: typeof Platform.OS) => {
 
 let mockWidth = 1280;
 
-const renderPoints = () => {
+const renderPoints = async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  return await render(
     <QueryClientProvider client={client}>
       <PointsList />
     </QueryClientProvider>,
@@ -94,11 +94,11 @@ describe('PointsList: режим раскладки из вьюпорта (#1788
     ['android', 390, true],
     ['web', 1280, false],
     ['ios', 1280, false],
-  ])('%s на ширине %ipx отдаёт в шапку isMobile=%s', (os, width, expected) => {
+  ])('%s на ширине %ipx отдаёт в шапку isMobile=%s', async (os, width, expected) => {
     setPlatform(os as typeof Platform.OS);
     mockWidth = width;
 
-    renderPoints();
+    await renderPoints();
 
     expect(lastHeaderMode()).toBe(expected);
   });

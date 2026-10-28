@@ -60,8 +60,8 @@ describe('PublicProfileHeader identity (#847)', () => {
     mockImageCardMedia.mockClear();
   });
 
-  it('renders the public profile cover as a sharp image without blur backdrop', () => {
-    render(<PublicProfileHeader {...baseProps} profile={profile} rank={rank} />);
+  it('renders the public profile cover as a sharp image without blur backdrop', async () => {
+    await render(<PublicProfileHeader {...baseProps} profile={profile} rank={rank} />);
 
     expect(mockImageCardMedia).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -73,8 +73,8 @@ describe('PublicProfileHeader identity (#847)', () => {
     );
   });
 
-  it('renders the rank chip and hides the generic subtitle when rank is present', () => {
-    const { getByText, queryByText } = render(
+  it('renders the rank chip and hides the generic subtitle when rank is present', async () => {
+    const { getByText, queryByText } = await render(
       <PublicProfileHeader {...baseProps} profile={profile} rank={rank} />
     );
 
@@ -83,8 +83,8 @@ describe('PublicProfileHeader identity (#847)', () => {
     expect(queryByText('Проверенный')).toBeNull();
   });
 
-  it('falls back to the generic subtitle when no rank is available', () => {
-    const { queryByText } = render(
+  it('falls back to the generic subtitle when no rank is available', async () => {
+    const { queryByText } = await render(
       <PublicProfileHeader {...baseProps} profile={profile} rank={null} />
     );
 
@@ -92,8 +92,8 @@ describe('PublicProfileHeader identity (#847)', () => {
     expect(queryByText('Автор путешествий')).toBeTruthy();
   });
 
-  it('keeps all own-profile sections under the shared header', () => {
-    render(<PublicProfileHeader {...baseProps} isOwnProfile profile={profile} rank={rank} />);
+  it('keeps all own-profile sections under the shared header', async () => {
+    await render(<PublicProfileHeader {...baseProps} isOwnProfile profile={profile} rank={rank} />);
 
     expect(mockProfileTabs).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -102,8 +102,8 @@ describe('PublicProfileHeader identity (#847)', () => {
     );
   });
 
-  it('does not expose private subscription sections on another user profile', () => {
-    render(<PublicProfileHeader {...baseProps} profile={profile} rank={rank} />);
+  it('does not expose private subscription sections on another user profile', async () => {
+    await render(<PublicProfileHeader {...baseProps} profile={profile} rank={rank} />);
 
     expect(mockProfileTabs).toHaveBeenLastCalledWith(
       expect.objectContaining({ tabKeys: ['travels', 'overview'] })

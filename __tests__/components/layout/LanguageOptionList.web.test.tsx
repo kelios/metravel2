@@ -32,25 +32,25 @@ const ActualVersionLinks = jest.requireActual<typeof import('@/components/quests
 describe('quest version language control', () => {
   beforeEach(() => { mockNavigation = null; mockPreferenceOptions.mockClear(); mockVersionLinks.mockClear() })
 
-  it('delegates non-quest selection to the existing preference control', () => {
+  it('delegates non-quest selection to the existing preference control', async () => {
     const onChosen = jest.fn()
-    render(<LanguageOptionList onChosen={onChosen} testIDPrefix="menu-language" />)
+    await render(<LanguageOptionList onChosen={onChosen} testIDPrefix="menu-language" />)
     expect(mockPreferenceOptions).toHaveBeenCalledWith({ onChosen, testIDPrefix: 'menu-language' })
     expect(mockVersionLinks).not.toHaveBeenCalled()
   })
 
-  it('keeps a bound pending or unavailable page from exposing preference-only choices', () => {
+  it('keeps a bound pending or unavailable page from exposing preference-only choices', async () => {
     mockNavigation = { bound: true, projection: null, locale: 'pl' }
-    render(<LanguageOptionList />)
+    await render(<LanguageOptionList />)
     expect(mockPreferenceOptions).not.toHaveBeenCalled()
     expect(mockVersionLinks).toHaveBeenCalledWith({ projection: null, currentLocale: 'pl', onSelectLocale: mockSetLocale })
   })
 
-  it('passes the effective served cluster and full selection callback to version links', () => {
+  it('passes the effective served cluster and full selection callback to version links', async () => {
     const projection = { state: 'available', versions: [{ locale: 'ru', path: '/quests/4/minsk-cmok' }, { locale: 'pl', path: '/pl/quests/4/minsk-cmok' }] }
     const onChosen = jest.fn()
     mockNavigation = { bound: true, projection, locale: 'pl' }
-    render(<LanguageOptionList onChosen={onChosen} />)
+    await render(<LanguageOptionList onChosen={onChosen} />)
     expect(mockVersionLinks).toHaveBeenCalledWith({ projection, currentLocale: 'pl', onChosen, onSelectLocale: mockSetLocale })
     expect(mockPreferenceOptions).not.toHaveBeenCalled()
   })
@@ -71,11 +71,11 @@ describe('served version anchor activation', () => {
     Object.defineProperty(Platform, 'OS', { value: originalPlatform, configurable: true })
   })
 
-  it.each([{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }])('preserves browser navigation for gesture %j', (gesture) => {
+  it.each([{ metaKey: true }, { ctrlKey: true }, { shiftKey: true }, { altKey: true }, { button: 1 }])('preserves browser navigation for gesture %j', async (gesture) => {
     const choose = jest.fn(async () => {})
-    const screen = render(<ActualVersionLinks projection={projection} currentLocale="pl" onSelectLocale={choose} />)
+    const screen = await render(<ActualVersionLinks projection={projection} currentLocale="pl" onSelectLocale={choose} />)
     const preventDefault = jest.fn()
-    fireEvent.press(screen.getByTestId('quest-version-ru'), { nativeEvent: gesture, preventDefault })
+    await fireEvent.press(screen.getByTestId('quest-version-ru'), { nativeEvent: gesture, preventDefault })
     expect(preventDefault).not.toHaveBeenCalled()
     expect(choose).not.toHaveBeenCalled()
     expect(mockPush).not.toHaveBeenCalled()
@@ -84,10 +84,10 @@ describe('served version anchor activation', () => {
   it('navigates to the real version address even when preference persistence fails', async () => {
     const choose = jest.fn(async () => { throw new Error('storage unavailable') })
     const onChosen = jest.fn()
-    const screen = render(<ActualVersionLinks projection={projection} currentLocale="pl" onSelectLocale={choose} onChosen={onChosen} />)
+    const screen = await render(<ActualVersionLinks projection={projection} currentLocale="pl" onSelectLocale={choose} onChosen={onChosen} />)
     const preventDefault = jest.fn()
     await act(async () => {
-      fireEvent.press(screen.getByTestId('quest-version-ru'), { nativeEvent: {}, preventDefault })
+      await fireEvent.press(screen.getByTestId('quest-version-ru'), { nativeEvent: {}, preventDefault })
     })
     expect(preventDefault).toHaveBeenCalledTimes(1)
     expect(choose).toHaveBeenCalledWith('ru')

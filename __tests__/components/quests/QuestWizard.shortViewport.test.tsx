@@ -1,9 +1,10 @@
+import { getAllHosts, getOnlyHost } from '@/__tests__/helpers/hostQueries'
 /** #2198: actual wizard composition and transient state across resize. */
 import React, { useEffect, useState } from 'react'
 import { act, cleanup, fireEvent, render } from '@testing-library/react-native'
-import { Keyboard, Platform, ScrollView, StyleSheet, Text, TextInput, Pressable, View } from 'react-native'
+import { Keyboard, Platform, ScrollView, StyleSheet, Text, Pressable, View } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import type { ReactTestInstance } from 'react-test-renderer'
+import type { TestInstance } from 'test-renderer'
 
 let mockViewport = { width: 390, height: 844 }
 const mockViewportListeners = new Set<() => void>()
@@ -74,7 +75,7 @@ const steps = ['p1', 'p2', 'p3'].map((id, index) => ({
 }))
 const finale = { story: 'Финал' }
 
-function isDescendant(node: ReactTestInstance, ancestor: ReactTestInstance): boolean {
+function isDescendant(node: TestInstance, ancestor: TestInstance): boolean {
   let parent = node.parent
   while (parent) {
     if (parent === ancestor) return true
@@ -83,9 +84,9 @@ function isDescendant(node: ReactTestInstance, ancestor: ReactTestInstance): boo
   return false
 }
 
-type WizardView = ReturnType<typeof render>
+type WizardView = Awaited<ReturnType<typeof render>>
 type AnchorMeasureCallback = (x: number, y: number, width: number, height: number) => void
-const contentScroll = (view: WizardView) => view.UNSAFE_getAllByType(ScrollView)
+const contentScroll = (view: WizardView) => getAllHosts(view.container, node => node.type === "RCTScrollView")
   .find((scroll) => scroll.props.keyboardShouldPersistTaps === 'handled')!
 const routeInContent = (view: WizardView) => isDescendant(view.getByTestId('quest-route-strip'), contentScroll(view))
 
@@ -138,7 +139,7 @@ describe('QuestWizard short viewport (#2198)', () => {
       return Boolean(view && strip && isDescendant(strip, contentScroll(view)))
     }
     // RN's Jest View ref is the component instance, whose native measurement
-    // methods do not call back. Host createNodeMock does not replace that ref.
+    // methods do not call back. A host ref stub does not replace that ref.
     // View and ScrollView mocks share one MockNativeMethods.measureInWindow
     // jest.fn, so a single implementation answers for both hosts.
     const measureInWindow = function (this: { props: { testID?: string; keyboardShouldPersistTaps?: string } }, callback: AnchorMeasureCallback) {
@@ -159,7 +160,7 @@ describe('QuestWizard short viewport (#2198)', () => {
       if (this.props.testID === 'quest-route-strip') routeFocus('route')
       else if (this.props.accessibilityState?.selected) routeFocus('current')
     })
-    view = render(renderNode())
+    view = await render(renderNode())
     await act(async () => { await Promise.resolve() })
     return {
       view,
@@ -170,7 +171,7 @@ describe('QuestWizard short viewport (#2198)', () => {
         // as useResponsive; retain component and slot identities across renders.
         await act(async () => {
           mockViewportListeners.forEach((listener) => listener())
-          view!.rerender(renderNode())
+          await view!.rerender(renderNode())
           await Promise.resolve()
         })
       },
@@ -189,21 +190,21 @@ describe('QuestWizard short viewport (#2198)', () => {
     await AsyncStorage.clear()
     window.localStorage.clear()
   })
-  afterEach(() => { cleanup(); resetBottomChromeReserve(); jest.restoreAllMocks(); Platform.OS = originalOS })
+  afterEach(async () => { await cleanup(); resetBottomChromeReserve(); jest.restoreAllMocks(); Platform.OS = originalOS })
 
   it('keeps the mounted web reading tail tied to the live shared notice reserve', async () => {
     const { view } = await setup(960, 640)
     const scroll = contentScroll(view)
     const padding = () => StyleSheet.flatten(scroll.props.contentContainerStyle).paddingBottom
     expect(padding()).toBe(`calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)) + ${SPACING.xl}px)`)
-    act(() => {
+    await act(() => {
       setBottomChromeReserve('consent-banner', 180)
       setBottomChromeReserve('network-status', 280)
     })
     expect(document.documentElement.style.getPropertyValue('--mt-consent-h')).toBe('280px')
     expect(contentScroll(view)).toBe(scroll)
     expect(padding()).toContain('var(--mt-consent-h, 0px)')
-    act(() => releaseBottomChromeReserve('network-status'))
+    await act(() => releaseBottomChromeReserve('network-status'))
     expect(document.documentElement.style.getPropertyValue('--mt-consent-h')).toBe('180px')
     expect(padding()).toContain('var(--mt-consent-h, 0px)')
   })
@@ -219,35 +220,35 @@ describe('QuestWizard short viewport (#2198)', () => {
     '%dx%d has one route in the expected reading surface', async (width, height, flow) => {
       const { view } = await setup(width, height)
       expect(view.getAllByTestId('quest-route-strip')).toHaveLength(1)
-      expect(view.UNSAFE_getAllByType(ScrollView).filter((scroll) => scroll.props.keyboardShouldPersistTaps === 'handled')).toHaveLength(1)
+      expect(getAllHosts(view.container, node => node.type === "RCTScrollView").filter((scroll) => scroll.props.keyboardShouldPersistTaps === 'handled')).toHaveLength(1)
       expect(routeInContent(view)).toBe(flow)
-      expect(view.UNSAFE_getAllByType(TextInput)).toHaveLength(1)
+      expect(getAllHosts(view.container, node => node.type === "TextInput")).toHaveLength(1)
     },
   )
 
   it('relocates only the header; existing input, reading state and scroll host survive', async () => {
     const { view, resize } = await setup()
     const scroll = contentScroll(view)
-    const input = view.UNSAFE_getByType(TextInput)
-    fireEvent.changeText(input, 'my unsent answer')
-    fireEvent.press(view.getByTestId('reading-state'))
+    const input = getOnlyHost(view.container, node => node.type === "TextInput")
+    await fireEvent.changeText(input, 'my unsent answer')
+    await fireEvent.press(view.getByTestId('reading-state'))
     await resize(390, 640)
     expect(routeInContent(view)).toBe(true)
     expect(contentScroll(view) === scroll).toBe(true)
-    expect(view.UNSAFE_getByType(TextInput) === input).toBe(true)
-    expect(view.UNSAFE_getByType(TextInput).props.value).toBe('my unsent answer')
-    expect(view.getByTestId('reading-state').findByType(Text).props.children).toBe(1)
+    expect(getOnlyHost(view.container, node => node.type === "TextInput") === input).toBe(true)
+    expect(getOnlyHost(view.container, node => node.type === "TextInput").props.value).toBe('my unsent answer')
+    expect(getOnlyHost(view.getByTestId('reading-state'), node => node.type === 'Text').props.children).toBe(1)
     expect([mounts, unmounts]).toEqual([1, 0])
     await resize(390, 844)
     expect(routeInContent(view)).toBe(false)
     expect(contentScroll(view) === scroll).toBe(true)
-    expect(view.UNSAFE_getByType(TextInput).props.value).toBe('my unsent answer')
+    expect(getOnlyHost(view.container, node => node.type === "TextInput").props.value).toBe('my unsent answer')
     expect([mounts, unmounts]).toEqual([1, 0])
   })
 
   it('keeps an open route sheet and current row across height and 599/600 changes', async () => {
     const { view, resize } = await setup()
-    fireEvent.press(view.getByTestId('quest-route-strip'))
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
     const sheet = view.getByTestId('quest-route-sheet')
     const current = view.getByTestId('quest-route-row-p1')
     expect(current.props.accessibilityState.selected).toBe(true)
@@ -257,7 +258,7 @@ describe('QuestWizard short viewport (#2198)', () => {
     expect(view.getByTestId('quest-route-sheet') === sheet).toBe(true)
     expect(view.getByTestId('quest-route-row-p1').props.accessibilityState.selected).toBe(true)
     expect(routeInContent(view)).toBe(false)
-    fireEvent.press(view.getByRole('button', { name: 'Закрыть' }))
+    await fireEvent.press(view.getByRole('button', { name: 'Закрыть' }))
     await act(async () => { await Promise.resolve() })
     expect(view.queryByTestId('quest-route-sheet')).toBeNull()
     expect(routeInContent(view)).toBe(true)
@@ -266,32 +267,32 @@ describe('QuestWizard short viewport (#2198)', () => {
 
   it('applies the latest desired mode only after answering ends, with the answer intact', async () => {
     const { view, resize } = await setup()
-    const input = view.UNSAFE_getByType(TextInput)
-    fireEvent(input, 'focus')
-    fireEvent.changeText(input, 'unfinished answer')
+    const input = getOnlyHost(view.container, node => node.type === "TextInput")
+    await fireEvent(input, 'focus')
+    await fireEvent.changeText(input, 'unfinished answer')
     await resize(390, 640)
     expect(routeInContent(view)).toBe(false)
     await resize(600, 640)
     await resize(390, 844)
-    fireEvent(input, 'blur')
+    await fireEvent(input, 'blur')
     await act(async () => { await Promise.resolve() })
     expect(routeInContent(view)).toBe(false)
-    expect(view.UNSAFE_getByType(TextInput) === input).toBe(true)
+    expect(getOnlyHost(view.container, node => node.type === "TextInput") === input).toBe(true)
     expect(input.props.value).toBe('unfinished answer')
-    fireEvent(input, 'focus')
+    await fireEvent(input, 'focus')
     await resize(390, 640)
-    fireEvent(input, 'blur')
+    await fireEvent(input, 'blur')
     await act(async () => { await Promise.resolve() })
     expect(routeInContent(view)).toBe(true)
-    expect(view.UNSAFE_getByType(TextInput).props.value).toBe('unfinished answer')
+    expect(getOnlyHost(view.container, node => node.type === "TextInput").props.value).toBe('unfinished answer')
   })
 
   it('closing after 599→600 restores focus to the live current-point navigation', async () => {
     const { view, resize } = await setup(599, 640)
-    fireEvent.press(view.getByTestId('quest-route-strip'))
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
     await resize(600, 640)
     expect(view.getByTestId('quest-route-row-p1').props.accessibilityState.selected).toBe(true)
-    fireEvent.press(view.getByRole('button', { name: 'Закрыть' }))
+    await fireEvent.press(view.getByRole('button', { name: 'Закрыть' }))
     await act(async () => { await Promise.resolve() })
     expect(view.queryByTestId('quest-route-strip')).toBeNull()
     expect(view.queryByTestId('quest-route-sheet')).toBeNull()
@@ -311,13 +312,13 @@ describe('QuestWizard short viewport (#2198)', () => {
       await act(async () => { await jest.advanceTimersByTimeAsync(20) })
       scrollTo.mockClear()
       const scroll = contentScroll(view)
-      fireEvent(scroll, 'scrollBeginDrag')
+      await fireEvent(scroll, 'scrollBeginDrag')
       expect(dismiss).toHaveBeenCalledTimes(1)
       scrollY = 200
-      fireEvent.scroll(scroll, { nativeEvent: { contentOffset: { y: 200, x: 0 } } })
+      await fireEvent.scroll(scroll, { nativeEvent: { contentOffset: { y: 200, x: 0 } } })
       await resize(390, 640)
       expect(routeInContent(view)).toBe(false)
-      fireEvent(scroll, 'scrollEndDrag')
+      await fireEvent(scroll, 'scrollEndDrag')
       await act(async () => { await jest.advanceTimersByTimeAsync(200) })
       expect(routeInContent(view)).toBe(true)
       // The line at the top of the visible reading area stays put: 84 px of the
@@ -334,14 +335,14 @@ describe('QuestWizard short viewport (#2198)', () => {
     try {
       const { view, resize } = await setup()
       const scroll = contentScroll(view)
-      fireEvent(scroll, 'touchStart')
-      fireEvent.scroll(scroll, { nativeEvent: { contentOffset: { y: 200, x: 0 } } })
+      await fireEvent(scroll, 'touchStart')
+      await fireEvent.scroll(scroll, { nativeEvent: { contentOffset: { y: 200, x: 0 } } })
       await act(async () => { await jest.advanceTimersByTimeAsync(300) })
       await resize(390, 640)
       expect(routeInContent(view)).toBe(false)
       await act(async () => { await jest.advanceTimersByTimeAsync(300) })
       expect(routeInContent(view)).toBe(false)
-      fireEvent(scroll, release)
+      await fireEvent(scroll, release)
       await act(async () => { await jest.advanceTimersByTimeAsync(200) })
       expect(routeInContent(view)).toBe(true)
       expect(contentScroll(view) === scroll).toBe(true)
@@ -351,15 +352,15 @@ describe('QuestWizard short viewport (#2198)', () => {
 
   it('keeps an orientation-resized route sheet while live screen actions have one owner', async () => {
     const { view, resize } = await setup(390, 640, undefined, true)
-    fireEvent.press(view.getByTestId('quest-route-strip'))
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
     const sheet = view.getByTestId('quest-route-sheet')
-    const input = view.UNSAFE_getByType(TextInput)
-    fireEvent.changeText(input, 'orientation answer')
+    const input = getOnlyHost(view.container, node => node.type === "TextInput")
+    await fireEvent.changeText(input, 'orientation answer')
     for (const width of [767, 768, 844, 767, 390]) {
       await resize(width, 640)
       expect(view.getByTestId('quest-route-sheet') === sheet).toBe(true)
       expect(view.getByTestId('quest-route-row-p1').props.accessibilityState.selected).toBe(true)
-      expect(view.UNSAFE_getByType(TextInput) === input).toBe(true)
+      expect(getOnlyHost(view.container, node => node.type === "TextInput") === input).toBe(true)
       expect(input.props.value).toBe('orientation answer')
       const mobileActions = view.queryAllByTestId('screen-header-more').length
       const panelActions = view.queryAllByTestId('quest-header-actions').length
@@ -372,11 +373,11 @@ describe('QuestWizard short viewport (#2198)', () => {
     '%dx%d keeps tablet/landscape navigation in the reading host with one screen action owner', async (width, height) => {
       const { view, resize } = await setup(390, 640, undefined, true)
       const scroll = contentScroll(view)
-      const input = view.UNSAFE_getByType(TextInput)
-      fireEvent.changeText(input, 'tablet draft')
+      const input = getOnlyHost(view.container, node => node.type === "TextInput")
+      await fireEvent.changeText(input, 'tablet draft')
       await resize(width, height)
       expect(contentScroll(view) === scroll).toBe(true)
-      expect(view.UNSAFE_getByType(TextInput) === input).toBe(true)
+      expect(getOnlyHost(view.container, node => node.type === "TextInput") === input).toBe(true)
       expect(input.props.value).toBe('tablet draft')
       expect(view.getAllByTestId('screen-header-more')).toHaveLength(1)
       expect(view.queryByTestId('quest-header-actions')).toBeNull()
@@ -389,15 +390,15 @@ describe('QuestWizard short viewport (#2198)', () => {
     '%dx%d → %dx%d preserves an unfocused draft and the reading subtree across the sidebar boundary', async (fromW, fromH, toW, toH) => {
       const { view, resize } = await setup(fromW, fromH, undefined, true)
       const scroll = contentScroll(view)
-      const input = view.UNSAFE_getByType(TextInput)
-      fireEvent.changeText(input, 'draft across desktop boundary')
-      fireEvent.press(view.getByTestId('reading-state'))
+      const input = getOnlyHost(view.container, node => node.type === "TextInput")
+      await fireEvent.changeText(input, 'draft across desktop boundary')
+      await fireEvent.press(view.getByTestId('reading-state'))
       for (const [width, height] of [[toW, toH], [fromW, fromH]]) {
         await resize(width, height)
         expect(contentScroll(view) === scroll).toBe(true)
-        expect(view.UNSAFE_getByType(TextInput) === input).toBe(true)
+        expect(getOnlyHost(view.container, node => node.type === "TextInput") === input).toBe(true)
         expect(input.props.value).toBe('draft across desktop boundary')
-        expect(view.getByTestId('reading-state').findByType(Text).props.children).toBe(1)
+        expect(getOnlyHost(view.getByTestId('reading-state'), node => node.type === 'Text').props.children).toBe(1)
         expect(Boolean(view.queryByTestId('quest-desktop-sidebar'))).toBe(width >= 1280)
         expectSingleQuestTitle(view)
         expect([mounts, unmounts]).toEqual([1, 0])
@@ -408,27 +409,27 @@ describe('QuestWizard short viewport (#2198)', () => {
   it('keeps the route sheet across a jump to desktop, then returns focus to the sidebar current point', async () => {
     const { view, resize } = await setup(390, 640, undefined, true)
     const scroll = contentScroll(view)
-    const input = view.UNSAFE_getByType(TextInput)
-    fireEvent.changeText(input, 'sheet draft')
-    fireEvent.press(view.getByTestId('quest-route-strip'))
+    const input = getOnlyHost(view.container, node => node.type === "TextInput")
+    await fireEvent.changeText(input, 'sheet draft')
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
     const sheet = view.getByTestId('quest-route-sheet')
     await resize(1440, 900)
     expect(view.getByTestId('quest-route-sheet') === sheet).toBe(true)
     expect(view.getByTestId('quest-route-row-p1').props.accessibilityState.selected).toBe(true)
     expect(view.queryByTestId('quest-desktop-sidebar')).toBeNull()
     expectSingleQuestTitle(view)
-    fireEvent.press(view.getByRole('button', { name: 'Закрыть' }))
+    await fireEvent.press(view.getByRole('button', { name: 'Закрыть' }))
     await act(async () => { await Promise.resolve() })
     expect(view.queryByTestId('quest-route-sheet')).toBeNull()
     expect(view.getByTestId('quest-desktop-sidebar')).toBeTruthy()
     expect(routeFocus).toHaveBeenLastCalledWith('current')
     expect(contentScroll(view) === scroll).toBe(true)
-    expect(view.UNSAFE_getByType(TextInput) === input).toBe(true)
+    expect(getOnlyHost(view.container, node => node.type === "TextInput") === input).toBe(true)
     expect(input.props.value).toBe('sheet draft')
     await resize(390, 640)
-    fireEvent.press(view.getByTestId('quest-route-strip'))
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
     expect(view.getByTestId('quest-route-sheet')).toBeTruthy()
-    fireEvent.press(view.getByRole('button', { name: 'Закрыть' }))
+    await fireEvent.press(view.getByRole('button', { name: 'Закрыть' }))
     expect(view.queryByTestId('quest-route-sheet')).toBeNull()
     expect([mounts, unmounts]).toEqual([1, 0])
   })
@@ -436,25 +437,25 @@ describe('QuestWizard short viewport (#2198)', () => {
   it('defers the desktop panel handoff until input blur without duplicating the live title owner', async () => {
     const { view, resize } = await setup(1024, 768, undefined, true)
     const scroll = contentScroll(view)
-    const input = view.UNSAFE_getByType(TextInput)
-    fireEvent(input, 'focus')
-    fireEvent.changeText(input, 'focused tablet draft')
+    const input = getOnlyHost(view.container, node => node.type === "TextInput")
+    await fireEvent(input, 'focus')
+    await fireEvent.changeText(input, 'focused tablet draft')
     await resize(1366, 1024)
     expect(view.queryByTestId('quest-desktop-sidebar')).toBeNull()
     expectSingleQuestTitle(view)
-    fireEvent(input, 'blur')
+    await fireEvent(input, 'blur')
     await act(async () => { await Promise.resolve() })
     expect(view.getByTestId('quest-desktop-sidebar')).toBeTruthy()
-    fireEvent(input, 'focus')
+    await fireEvent(input, 'focus')
     await resize(1024, 768)
     expect(view.queryByTestId('quest-desktop-sidebar')).toBeNull()
     expect(view.getAllByTestId('screen-header-more')).toHaveLength(1)
     expect(view.queryByTestId('quest-header-actions')).toBeNull()
     expectSingleQuestTitle(view)
-    fireEvent(input, 'blur')
+    await fireEvent(input, 'blur')
     await act(async () => { await Promise.resolve() })
     expect(contentScroll(view) === scroll).toBe(true)
-    expect(view.UNSAFE_getByType(TextInput) === input).toBe(true)
+    expect(getOnlyHost(view.container, node => node.type === "TextInput") === input).toBe(true)
     expect(input.props.value).toBe('focused tablet draft')
     expect([mounts, unmounts]).toEqual([1, 0])
   })
@@ -474,21 +475,21 @@ describe('QuestWizard short viewport (#2198)', () => {
     try {
       const { view, resize } = await setup(390, 640)
       const scroll = contentScroll(view)
-      const input = view.UNSAFE_getByType(TextInput)
-      fireEvent(input, 'focus')
-      fireEvent.changeText(input, 'keyboard answer')
+      const input = getOnlyHost(view.container, node => node.type === "TextInput")
+      await fireEvent(input, 'focus')
+      await fireEvent.changeText(input, 'keyboard answer')
       await act(async () => { viewport.resizeTo(512); await jest.advanceTimersByTimeAsync(20) })
-      fireEvent(input, 'blur')
+      await fireEvent(input, 'blur')
       await resize(390, 844)
       expect(routeInContent(view)).toBe(true)
       expect(input.props.value).toBe('keyboard answer')
       await act(async () => { viewport.resizeTo(844); await jest.advanceTimersByTimeAsync(200) })
       expect(routeInContent(view)).toBe(false)
-      expect(view.UNSAFE_getByType(TextInput) === input).toBe(true)
+      expect(getOnlyHost(view.container, node => node.type === "TextInput") === input).toBe(true)
       expect(contentScroll(view) === scroll).toBe(true)
       expect([mounts, unmounts]).toEqual([1, 0])
     } finally {
-      cleanup()
+      await cleanup()
       jest.useRealTimers()
       if (previousViewport) Object.defineProperty(window, 'visualViewport', previousViewport)
       else Reflect.deleteProperty(window, 'visualViewport')
@@ -502,14 +503,14 @@ describe('QuestWizard short viewport (#2198)', () => {
       index: 1, unlocked: 1, answers: { p1: 'correct' }, attempts: {}, hints: {}, showMap: false,
     }))
     const { view, resize } = await setup()
-    const input = view.UNSAFE_getByType(TextInput)
-    fireEvent.changeText(input, 'offline draft')
+    const input = getOnlyHost(view.container, node => node.type === "TextInput")
+    await fireEvent.changeText(input, 'offline draft')
     ;(AsyncStorage.setItem as jest.Mock).mockClear()
     await resize(390, 640)
-    expect(view.UNSAFE_getByType(TextInput) === input).toBe(true)
+    expect(getOnlyHost(view.container, node => node.type === "TextInput") === input).toBe(true)
     expect(input.props.value).toBe('offline draft')
     expect(view.getByTestId('quest-content-locale-notice')).toBeTruthy()
-    fireEvent.press(view.getByTestId('quest-route-strip'))
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
     expect(view.getByTestId('quest-route-row-p2').props.accessibilityState.selected).toBe(true)
     expect(view.getByLabelText(/Точка 1.*пройдена/)).toBeTruthy()
     expect(AsyncStorage.setItem).not.toHaveBeenCalled()
@@ -537,8 +538,8 @@ describe('QuestWizard short viewport (#2198)', () => {
       await resize(390, 844)
       expect(routeInContent(view)).toBe(false)
       expect(pending.length).toBeGreaterThan(0)
-      fireEvent.press(view.getByTestId('quest-route-strip'))
-      fireEvent.press(view.getByTestId('quest-route-row-p2'))
+      await fireEvent.press(view.getByTestId('quest-route-strip'))
+      await fireEvent.press(view.getByTestId('quest-route-row-p2'))
       await act(async () => { await jest.advanceTimersByTimeAsync(20) })
       expect(view.getByText('Task p2')).toBeTruthy()
       expect(scrollTo).toHaveBeenCalledWith({ y: 0, animated: false })
@@ -556,11 +557,11 @@ describe('QuestWizard short viewport (#2198)', () => {
     expect(isDescendant(notice, view.getByTestId('quest-route-strip'))).toBe(false)
     expect(isDescendant(view.getByTestId('pending-photo-retry'), view.getByTestId('quest-header-status'))).toBe(true)
     expect(view.getByText(new RegExp(getLocaleDisplayName('ru'), 'i'))).toBeTruthy()
-    fireEvent.press(notice)
+    await fireEvent.press(notice)
     expect(view.queryByTestId('quest-route-sheet')).toBeNull()
-    fireEvent.press(view.getByTestId('pending-photo-retry'))
+    await fireEvent.press(view.getByTestId('pending-photo-retry'))
     expect(retry).toHaveBeenCalledTimes(1)
-    fireEvent.press(view.getByTestId('quest-route-strip'))
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
     expect(view.getByTestId('quest-route-row-p1').props.accessibilityState.selected).toBe(true)
   })
 
@@ -568,7 +569,7 @@ describe('QuestWizard short viewport (#2198)', () => {
     mockLocale = 'ru'
     const { view } = await setup(390, 640)
     expect(view.queryByTestId('quest-content-locale-notice')).toBeNull()
-    fireEvent.press(view.getByTestId('quest-route-strip'))
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
     expect(view.getByTestId('quest-route-row-p1').props.accessibilityState.selected).toBe(true)
   })
   it.each([
@@ -583,7 +584,7 @@ describe('QuestWizard short viewport (#2198)', () => {
       await act(async () => { await jest.advanceTimersByTimeAsync(20) })
       if (offset) {
         scrollY = offset
-        fireEvent.scroll(contentScroll(view), { nativeEvent: { contentOffset: { y: offset, x: 0 } } })
+        await fireEvent.scroll(contentScroll(view), { nativeEvent: { contentOffset: { y: offset, x: 0 } } })
         await act(async () => { await jest.advanceTimersByTimeAsync(200) })
       }
       const scrollTo = jest.mocked(ScrollView.prototype.scrollTo)
@@ -604,8 +605,8 @@ describe('QuestWizard short viewport (#2198)', () => {
     const finaleTop = (view: WizardView) =>
       StyleSheet.flatten(view.getByTestId('quest-finale-panel').props.style).marginTop ?? 0
     const { view, resize } = await setup(320, 640)
-    fireEvent.press(view.getByTestId('quest-route-strip'))
-    fireEvent.press(view.getByTestId('quest-nav-finale'))
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
+    await fireEvent.press(view.getByTestId('quest-nav-finale'))
     await act(async () => { await Promise.resolve() })
     expect(routeInContent(view)).toBe(true)
     expect(finaleTop(view)).toBe(0)
@@ -622,7 +623,7 @@ describe('QuestWizard short viewport (#2198)', () => {
       const { view, resize, setAnchorMeasure } = await setup(390, 844)
       await act(async () => { await jest.advanceTimersByTimeAsync(20) })
       scrollY = 200
-      fireEvent.scroll(contentScroll(view), { nativeEvent: { contentOffset: { y: 200, x: 0 } } })
+      await fireEvent.scroll(contentScroll(view), { nativeEvent: { contentOffset: { y: 200, x: 0 } } })
       await act(async () => { await jest.advanceTimersByTimeAsync(200) })
       // Only the first post-relocation measurement is slow; later ones answer at once.
       let measures = 0
@@ -637,10 +638,10 @@ describe('QuestWizard short viewport (#2198)', () => {
       await resize(390, 640)
       expect(routeInContent(view)).toBe(true)
       expect(pending.length).toBeGreaterThan(0)
-      fireEvent(contentScroll(view), 'touchStart')
+      await fireEvent(contentScroll(view), 'touchStart')
       scrollY = 260
-      fireEvent.scroll(contentScroll(view), { nativeEvent: { contentOffset: { y: 260, x: 0 } } })
-      fireEvent(contentScroll(view), 'touchEnd')
+      await fireEvent.scroll(contentScroll(view), { nativeEvent: { contentOffset: { y: 260, x: 0 } } })
+      await fireEvent(contentScroll(view), 'touchEnd')
       await act(async () => { pending.forEach((complete) => complete()); await jest.advanceTimersByTimeAsync(200) })
       expect(scrollTo).not.toHaveBeenCalled()
       expect(scrollY).toBe(260)

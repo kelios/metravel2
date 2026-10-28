@@ -1,3 +1,4 @@
+import { getAllHosts } from '@/__tests__/helpers/hostQueries'
 import React from 'react';
 import { render } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
@@ -70,7 +71,7 @@ const createTestClient = () =>
     },
   });
 
-const renderItem = (props: Partial<React.ComponentProps<typeof TravelListItem>> = {}) => {
+const renderItem = async (props: Partial<React.ComponentProps<typeof TravelListItem>> = {}) => {
   const queryClient = createTestClient();
 
   const createItem = (nextProps: Partial<React.ComponentProps<typeof TravelListItem>>) => (
@@ -90,11 +91,18 @@ const renderItem = (props: Partial<React.ComponentProps<typeof TravelListItem>> 
     </QueryClientProvider>
   );
 
-  const rendered = render(createItem(props));
+  const rendered = await render(createItem(props));
   return {
     ...rendered,
-    rerenderItem: (nextProps: Partial<React.ComponentProps<typeof TravelListItem>>) =>
-      rendered.rerender(createItem(nextProps)),
+    rerenderItem: async (nextProps: Partial<React.ComponentProps<typeof TravelListItem>>) => {
+      const nextTree = createItem(nextProps);
+      const rerenderAsync = (rendered as { rerenderAsync?: (ui: React.ReactElement) => Promise<void> }).rerenderAsync;
+      if (rerenderAsync) {
+        await rerenderAsync(nextTree);
+        return;
+      }
+      await rendered.rerender(nextTree);
+    },
   };
 };
 
@@ -120,31 +128,31 @@ describe('TravelListItem media props on web', () => {
     });
   });
 
-  it('keeps blur background enabled for default list cards', () => {
-    renderItem();
+  it('keeps blur background enabled for default list cards', async () => {
+    await renderItem();
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props).toBeTruthy();
     expect(props.mediaProps?.blurBackground).toBe(true);
   });
 
-  it('renders default list cards without inset media shell gaps', () => {
-    renderItem();
+  it('renders default list cards without inset media shell gaps', async () => {
+    await renderItem();
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props).toBeTruthy();
     expect(props.insetMedia).toBe(false);
   });
 
-  it('delegates non-selectable web navigation to the real anchor wrapper', () => {
-    renderItem();
+  it('delegates non-selectable web navigation to the real anchor wrapper', async () => {
+    await renderItem();
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props.webNavigationOwner).toBe('external');
   });
 
-  it('keeps selectable web cards owned by their checkbox action', () => {
-    renderItem({ selectable: true });
+  it('keeps selectable web cards owned by their checkbox action', async () => {
+    await renderItem({ selectable: true });
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props.webNavigationOwner).toBeUndefined();
@@ -154,15 +162,15 @@ describe('TravelListItem media props on web', () => {
     });
   });
 
-  it('does not pass a fixed width to the web card when grid slot already controls layout', () => {
-    renderItem({ cardWidth: 320, viewportWidth: 1280 });
+  it('does not pass a fixed width to the web card when grid slot already controls layout', async () => {
+    await renderItem({ cardWidth: 320, viewportWidth: 1280 });
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props).toBeTruthy();
     expect(props.width).toBeUndefined();
   });
 
-  it('keeps search-card media hidden until decode on iPhone Safari', () => {
+  it('keeps search-card media hidden until decode on iPhone Safari', async () => {
     Object.defineProperty(window.navigator, 'userAgent', {
       value:
         'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
@@ -173,15 +181,15 @@ describe('TravelListItem media props on web', () => {
       configurable: true,
     });
 
-    renderItem({ isFirst: true, isMobile: true });
+    await renderItem({ isFirst: true, isMobile: true });
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props).toBeTruthy();
     expect(props.mediaProps?.revealOnLoadOnly).toBe(true);
   });
 
-  it('decode-gates every web search card and keeps non-critical requests low priority', () => {
-    renderItem({ isFirst: false, isMobile: false });
+  it('decode-gates every web search card and keeps non-critical requests low priority', async () => {
+    await renderItem({ isFirst: false, isMobile: false });
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props).toBeTruthy();
@@ -192,8 +200,8 @@ describe('TravelListItem media props on web', () => {
     expect(props.mediaProps?.placeholderSrc).toBeUndefined();
   });
 
-  it('keeps only the first row high priority', () => {
-    renderItem({ isFirst: true });
+  it('keeps only the first row high priority', async () => {
+    await renderItem({ isFirst: true });
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props.mediaProps?.priority).toBe('high');
@@ -201,12 +209,12 @@ describe('TravelListItem media props on web', () => {
     expect(props.mediaProps?.prefetch).toBe(false);
   });
 
-  it('applies the catalog lazy policy through the memo boundary after scrolling', () => {
-    const { rerenderItem } = renderItem({ isFirst: true, mediaLoading: 'eager' });
+  it('applies the catalog lazy policy through the memo boundary after scrolling', async () => {
+    const { rerenderItem } = await renderItem({ isFirst: true, mediaLoading: 'eager' });
 
     expect(mockUnifiedTravelCard.mock.calls.at(-1)?.[0]?.mediaProps?.loading).toBe('eager');
 
-    rerenderItem({ isFirst: false, mediaLoading: 'lazy' });
+    await rerenderItem({ isFirst: false, mediaLoading: 'lazy' });
 
     expect(mockUnifiedTravelCard).toHaveBeenCalledTimes(2);
     expect(mockUnifiedTravelCard.mock.calls.at(-1)?.[0]?.mediaProps).toMatchObject({
@@ -217,8 +225,8 @@ describe('TravelListItem media props on web', () => {
     });
   });
 
-  it('uses compact owner controls on mobile web cards', () => {
-    const { getByTestId } = renderItem({ currentUserId: '42', isMobile: true });
+  it('uses compact owner controls on mobile web cards', async () => {
+    const { getByTestId } = await renderItem({ currentUserId: '42', isMobile: true });
 
     // На web админ-кнопки живут СНАРУЖИ якоря карточки (#1626), поэтому в пропах
     // `UnifiedTravelCard` их больше нет — ищем их в отрисованном дереве.
@@ -231,8 +239,8 @@ describe('TravelListItem media props on web', () => {
     expect(adminStyle.paddingHorizontal).toBe(5);
   });
 
-  it('passes backend media variants without requesting a separate lqip on web', () => {
-    renderItem({
+  it('passes backend media variants without requesting a separate lqip on web', async () => {
+    await renderItem({
       travel: {
         ...baseTravel,
         media: {
@@ -266,8 +274,8 @@ describe('TravelListItem media props on web', () => {
     expect(props.mediaProps?.webResponsiveSource?.srcSet).toContain('640w');
   });
 
-  it('does not advertise cover candidates wider than the card needs', () => {
-    renderItem({
+  it('does not advertise cover candidates wider than the card needs', async () => {
+    await renderItem({
       travel: {
         ...baseTravel,
         media: {
@@ -300,8 +308,8 @@ describe('TravelListItem media props on web', () => {
     expect(srcSet).not.toContain('960w');
   });
 
-  it('keeps a candidate that covers cards wider than the default ladder cap', () => {
-    renderItem({
+  it('keeps a candidate that covers cards wider than the default ladder cap', async () => {
+    await renderItem({
       travel: {
         ...baseTravel,
         media: {
@@ -331,8 +339,8 @@ describe('TravelListItem media props on web', () => {
     expect(srcSet).not.toContain('960w');
   });
 
-  it('forwards backend blurhash instead of the generic card placeholder', () => {
-    renderItem({
+  it('forwards backend blurhash instead of the generic card placeholder', async () => {
+    await renderItem({
       travel: {
         ...baseTravel,
         media: {
@@ -353,7 +361,7 @@ describe('TravelListItem media props on web', () => {
     expect(props.mediaProps?.placeholderSrc).toBeUndefined();
   });
 
-  it('keeps the letterbox fill for a card built from the profile payload', () => {
+  it('keeps the letterbox fill for a card built from the profile payload', async () => {
     // Профиль не отдаёт `Travel` напрямую: список проходит через
     // `normalizeToTravel`, и раньше тот терял `media`. Карточка оставалась без
     // `placeholderColor`, то есть без единственной web-подложки под
@@ -372,7 +380,7 @@ describe('TravelListItem media props on web', () => {
       },
     });
 
-    renderItem({ travel, isMobile: true, viewportWidth: 390 });
+    await renderItem({ travel, isMobile: true, viewportWidth: 390 });
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props.mediaProps?.placeholderColor).toBe('#666b6d');
@@ -385,8 +393,8 @@ describe('TravelListItem media props on web', () => {
   // #1487 сохранил это правило, но изменил саму отрисовку: слот берёт пропорции
   // обложки, поэтому квадратный кадр больше не жмётся к высоте ландшафтного
   // бокса и рисуется на всю ширину карточки — плоских полей не остаётся.
-  it('квадратная обложка рисуется на всю ширину карточки и объявляет её в sizes', () => {
-    renderItem({
+  it('квадратная обложка рисуется на всю ширину карточки и объявляет её в sizes', async () => {
+    await renderItem({
       travel: {
         ...baseTravel,
         media: {
@@ -427,9 +435,9 @@ describe('TravelListItem media props on web', () => {
   // #1544: списки travel-details («Рядом»/«Популярное») на desktop прокидывают
   // реальную ширину колонки (~403 px оценки сверху), а не фолбэк 720 от вьюпорта.
   // Обложка колонки объявляет `sizes` по колонке и не тянет ступень w=720/960.
-  it('обложка колонки travel-details объявляет sizes по колонке, а не по вьюпорту 720', () => {
+  it('обложка колонки travel-details объявляет sizes по колонке, а не по вьюпорту 720', async () => {
     const columnWidth = getTravelDetailsListColumnWidth(1280, 3);
-    renderItem({
+    await renderItem({
       travel: {
         ...baseTravel,
         media: {
@@ -468,8 +476,8 @@ describe('TravelListItem media props on web', () => {
 
   // Слот единый квадратный, поэтому кадр уже квадрата рисуется не на всю ширину:
   // действует прежнее правило #1285 — `sizes` считается по отрисовке.
-  it('портретная обложка в квадратном слоте просит ступень по своей отрисовке', () => {
-    renderItem({
+  it('портретная обложка в квадратном слоте просит ступень по своей отрисовке', async () => {
+    await renderItem({
       travel: {
         ...baseTravel,
         media: {
@@ -514,8 +522,8 @@ describe('TravelListItem media props on web', () => {
   // 316 px). Адаптивный слот это ограничение снял — крупная карточка
   // редакционной сетки главной рисуется на все ~643 px, и 480 превратилось бы
   // из оценки СВЕРХУ в занижение, то есть в мыло при DPR 1.
-  it('крупная карточка главной не занижает объявленную ширину отрисовки', () => {
-    renderItem({
+  it('крупная карточка главной не занижает объявленную ширину отрисовки', async () => {
+    await renderItem({
       travel: {
         ...baseTravel,
         media: {
@@ -550,8 +558,8 @@ describe('TravelListItem media props on web', () => {
     expect(props.mediaSlotWidth).toBeGreaterThanOrEqual(643);
   });
 
-  it('uses dominant color when the cover has no blurhash', () => {
-    renderItem({
+  it('uses dominant color when the cover has no blurhash', async () => {
+    await renderItem({
       travel: {
         ...baseTravel,
         media: { cover: { id: 11, blurhash: null, dominant_color: '#234567' } },
@@ -575,8 +583,8 @@ describe('TravelListItem card actions outside the anchor', () => {
     mockUnifiedTravelCard.mockClear();
   });
 
-  it('keeps both top slots out of the card and renders them next to the anchor', () => {
-    const { getByTestId, UNSAFE_getAllByType } = renderItem({
+  it('keeps both top slots out of the card and renders them next to the anchor', async () => {
+    const { getByTestId, container: hostContainer } = await renderItem({
       currentUserId: '42',
       onDeletePress: jest.fn(),
     });
@@ -585,11 +593,11 @@ describe('TravelListItem card actions outside the anchor', () => {
     expect(props?.leftTopSlot).toBeNull();
     expect(props?.rightTopSlot).toBeNull();
     // Якорь обязан остаться: без него подъём просто прячет кнопки.
-    const anchors = UNSAFE_getAllByType('a' as any);
+    const anchors = getAllHosts(hostContainer, node => node.type === 'a');
     expect(anchors).toHaveLength(1);
 
     const adminActions = getByTestId('admin-actions');
-    expect(anchors[0].findAll((node: any) => node.props?.testID === 'admin-actions')).toHaveLength(0);
+    expect(anchors[0].queryAll((node: any) => node.props?.testID === 'admin-actions')).toHaveLength(0);
 
     // Поднятая обёртка — ближайший предок с `pointerEvents="box-none"` (сам
     // контейнер админ-кнопок этот проп не ставит).
@@ -608,15 +616,15 @@ describe('TravelListItem card actions outside the anchor', () => {
     });
   });
 
-  it('leaves the slots inside the card in selectable mode, where there is no anchor', () => {
-    const { queryByTestId, UNSAFE_queryAllByType } = renderItem({
+  it('leaves the slots inside the card in selectable mode, where there is no anchor', async () => {
+    const { queryByTestId, container: hostContainer } = await renderItem({
       currentUserId: '42',
       selectable: true,
     });
 
     const props = mockUnifiedTravelCard.mock.calls.at(-1)?.[0] as any;
     expect(props?.leftTopSlot).toBeTruthy();
-    expect(UNSAFE_queryAllByType('a' as any)).toHaveLength(0);
+    expect(hostContainer.queryAll(node => node.type === 'a')).toHaveLength(0);
     // Слот ушёл в карточку пропом, а не в дерево рядом с ней.
     expect(queryByTestId('admin-actions')).toBeNull();
   });

@@ -9,8 +9,8 @@ jest.mock('@/hooks/useResponsive', () => ({
   useBreakpoints: () => ({ width: mockWidth }),
 }));
 
-const renderChip = () =>
-  render(
+const renderChip = async () =>
+  await render(
     <Chip
       label="Организую"
       icon={<Text>i</Text>}
@@ -23,22 +23,22 @@ const renderChip = () =>
 // #2157: иконка «от планшета» — узел есть всегда, видимость из реестра CHIP_LAYOUT,
 // бокс фиксирован. Условный icon={isMobile ? undefined : …} расширял чип после гидратации.
 describe('Chip iconVisibility="fromTablet"', () => {
-  it('keeps the icon node in the zero-width frame, hidden until critical CSS shows it', () => {
+  it('keeps the icon node in the zero-width frame, hidden until critical CSS shows it', async () => {
     mockWidth = 0;
-    const slot = StyleSheet.flatten(renderChip().getByTestId('segment-icon', { includeHiddenElements: true }).props.style);
+    const slot = StyleSheet.flatten(await (await renderChip()).getByTestId('segment-icon', { includeHiddenElements: true }).props.style);
     expect(slot).toMatchObject({ display: 'none', width: 15, height: 15 });
   });
 
-  it('hides the icon on a phone and shows it from the tablet width', () => {
+  it('hides the icon on a phone and shows it from the tablet width', async () => {
     mockWidth = 390;
-    expect(StyleSheet.flatten(renderChip().getByTestId('segment-icon', { includeHiddenElements: true }).props.style)).toMatchObject({ display: 'none' });
+    expect(StyleSheet.flatten(await (await renderChip()).getByTestId('segment-icon', { includeHiddenElements: true }).props.style)).toMatchObject({ display: 'none' });
     mockWidth = 800;
-    expect(StyleSheet.flatten(renderChip().getByTestId('segment-icon', { includeHiddenElements: true }).props.style)).toMatchObject({ display: 'flex', width: 15 });
+    expect(StyleSheet.flatten(await (await renderChip()).getByTestId('segment-icon', { includeHiddenElements: true }).props.style)).toMatchObject({ display: 'flex', width: 15 });
   });
 
-  it('leaves regular chips without a breakpoint display style', () => {
+  it('leaves regular chips without a breakpoint display style', async () => {
     mockWidth = 390;
-    const { getByTestId } = render(<Chip label="Фильтр" icon={<Text>i</Text>} testID="filter" />);
+    const { getByTestId } = await render(<Chip label="Фильтр" icon={<Text>i</Text>} testID="filter" />);
     expect(StyleSheet.flatten(getByTestId('filter-icon').props.style).display).toBeUndefined();
   });
 });

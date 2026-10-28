@@ -5,9 +5,9 @@ import { SocialSection } from '@/components/about/SocialSection'
 import { METRAVEL_SOCIAL_LINKS } from '@/constants/socialLinks'
 
 describe('official MeTravel social links', () => {
-  it('opens the canonical Facebook Page from the About card', () => {
+  it('opens the canonical Facebook Page from the About card', async () => {
     const onOpenUrl = jest.fn()
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <AboutIntroCard
         email="metraveldev@gmail.com"
         onSendMail={jest.fn()}
@@ -18,20 +18,20 @@ describe('official MeTravel social links', () => {
       />,
     )
 
-    fireEvent.press(getByLabelText('MeTravel в Facebook'))
+    await fireEvent.press(getByLabelText('MeTravel в Facebook'))
 
     expect(onOpenUrl).toHaveBeenCalledWith(
       'https://www.facebook.com/profile.php?id=61590753359050',
     )
   })
 
-  it('exposes Facebook alongside Instagram in the social section', () => {
+  it('exposes Facebook alongside Instagram in the social section', async () => {
     const onOpenFacebook = jest.fn()
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <SocialSection onOpenFacebook={onOpenFacebook} onOpenInstagram={jest.fn()} />,
     )
 
-    fireEvent.press(getByLabelText('MeTravel в Facebook'))
+    await fireEvent.press(getByLabelText('MeTravel в Facebook'))
 
     expect(onOpenFacebook).toHaveBeenCalledTimes(1)
   })

@@ -66,15 +66,15 @@ describe('TripRatingPanel error states', () => {
       }),
     )
 
-    render(<TripRatingPanel trip={trip} />)
+    await render(<TripRatingPanel trip={trip} />)
 
     expect(screen.getByText('Не удалось загрузить сохранённую оценку.')).toBeTruthy()
-    fireEvent.press(screen.getByTestId('participant-rating-retry-2'))
+    await fireEvent.press(screen.getByTestId('participant-rating-retry-2'))
     expect(refetch).toHaveBeenCalledTimes(1)
     expect(screen.getByTestId('participant-stars-2').props.accessibilityState.disabled).toBe(true)
   })
 
-  it('distinguishes an expired session without offering a futile retry', () => {
+  it('distinguishes an expired session without offering a futile retry', async () => {
     mockUseMyParticipantRating.mockReturnValue(
       makeQueryState({
         error: new ApiError(401, 'unauthorized'),
@@ -82,20 +82,20 @@ describe('TripRatingPanel error states', () => {
       }),
     )
 
-    render(<TripRatingPanel trip={trip} />)
+    await render(<TripRatingPanel trip={trip} />)
 
     expect(screen.getByText('Сессия истекла. Войдите в аккаунт снова.')).toBeTruthy()
     expect(screen.queryByTestId('participant-rating-retry-2')).toBeNull()
   })
 
-  it('keeps a failed save visible so the user can repeat the action', () => {
+  it('keeps a failed save visible so the user can repeat the action', async () => {
     mockUseRateParticipant.mockReturnValue({
       error: new ApiError(500, 'server error'),
       isPending: false,
       mutate: jest.fn(),
     })
 
-    render(<TripRatingPanel trip={trip} />)
+    await render(<TripRatingPanel trip={trip} />)
 
     expect(screen.getByText('Не удалось сохранить оценку. Повторите действие.')).toBeTruthy()
   })

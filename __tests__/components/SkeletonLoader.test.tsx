@@ -3,14 +3,14 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { StyleSheet } from 'react-native';
 
 describe('SkeletonLoader', () => {
-  it('should render with default props', () => {
-    const { toJSON } = render(<SkeletonLoader />);
+  it('should render with default props', async () => {
+    const { toJSON } = await render(<SkeletonLoader />);
     const tree = toJSON();
     expect(tree).toBeTruthy();
   });
 
-  it('should apply width/height/borderRadius and expose testID', () => {
-    const { getByTestId } = render(
+  it('should apply width/height/borderRadius and expose testID', async () => {
+    const { getByTestId } = await render(
       <SkeletonLoader testID="skeleton" width={123} height={45} borderRadius={7} />
     );
 
@@ -22,39 +22,39 @@ describe('SkeletonLoader', () => {
     expect(flattened.borderRadius).toBe(7);
   });
 
-  it('should render with custom width', () => {
-    const { toJSON } = render(<SkeletonLoader width={200} />);
+  it('should render with custom width', async () => {
+    const { toJSON } = await render(<SkeletonLoader width={200} />);
     const tree = toJSON();
     expect(tree).toBeTruthy();
   });
 
-  it('should render with custom height', () => {
-    const { toJSON } = render(<SkeletonLoader height={50} />);
+  it('should render with custom height', async () => {
+    const { toJSON } = await render(<SkeletonLoader height={50} />);
     const tree = toJSON();
     expect(tree).toBeTruthy();
   });
 
-  it('should render with custom borderRadius', () => {
-    const { toJSON } = render(<SkeletonLoader borderRadius={8} />);
+  it('should render with custom borderRadius', async () => {
+    const { toJSON } = await render(<SkeletonLoader borderRadius={8} />);
     const tree = toJSON();
     expect(tree).toBeTruthy();
   });
 
-  it('should render with string width', () => {
-    const { toJSON } = render(<SkeletonLoader width="50%" />);
+  it('should render with string width', async () => {
+    const { toJSON } = await render(<SkeletonLoader width="50%" />);
     const tree = toJSON();
     expect(tree).toBeTruthy();
   });
 
-  it('should render with custom style', () => {
+  it('should render with custom style', async () => {
     const customStyle = { marginTop: 10 };
-    const { toJSON } = render(<SkeletonLoader style={customStyle} />);
+    const { toJSON } = await render(<SkeletonLoader style={customStyle} />);
     const tree = toJSON();
     expect(tree).toBeTruthy();
   });
 
-  it('should combine default and custom styles', () => {
-    const { toJSON } = render(
+  it('should combine default and custom styles', async () => {
+    const { toJSON } = await render(
       <SkeletonLoader 
         width={100}
         height={20}

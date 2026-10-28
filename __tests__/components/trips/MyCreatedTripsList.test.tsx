@@ -119,9 +119,9 @@ describe('MyCreatedTripsList', () => {
     });
   });
 
-  it('keeps the actual search/filter shell and two planned-trip slots while auth/query is pending', () => {
+  it('keeps the actual search/filter shell and two planned-trip slots while auth/query is pending', async () => {
     mockUseMyPlannedTrips.mockReturnValue({ data: undefined, isPending: true, isError: false });
-    const screen = render(<MyCreatedTripsList />);
+    const screen = await render(<MyCreatedTripsList />);
     expect(screen.getByTestId('my-created-trips-search-input').props.editable).toBe(false);
     expect(screen.getByTestId('my-created-trips-filters')).toBeTruthy();
     expect(screen.getAllByTestId('trip-plan-card-skeleton', { includeHiddenElements: true })).toHaveLength(2);
@@ -129,53 +129,53 @@ describe('MyCreatedTripsList', () => {
     expect(screen.queryByTestId('my-created-trips-filtered-empty')).toBeNull();
   });
 
-  it('keeps every region option and selecting the last option filters the actual trips', () => {
+  it('keeps every region option and selecting the last option filters the actual trips', async () => {
     mockUseMyPlannedTrips.mockReturnValue({ data: [
       makeTrip({ id: 1, title: 'Брест', region: 'Брест' }),
       makeTrip({ id: 2, title: 'Гродно', region: 'Гродно' }),
       makeTrip({ id: 3, title: 'Минск', region: 'Минск' }),
     ], isLoading: false, isError: false });
-    const screen = render(<MyCreatedTripsList />);
+    const screen = await render(<MyCreatedTripsList />);
     expect(screen.getByTestId('my-created-trips-filter-Брест')).toBeTruthy();
     expect(screen.getByTestId('my-created-trips-filter-Гродно')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('my-created-trips-filter-Минск'));
+    await fireEvent.press(screen.getByTestId('my-created-trips-filter-Минск'));
     expect(screen.getByTestId('mock-trip-card-3')).toBeTruthy();
     expect(screen.queryByTestId('mock-trip-card-1')).toBeNull();
     expect(screen.queryByTestId('mock-trip-card-2')).toBeNull();
   });
 
-  it('announces exactly one native search field', () => {
-    const screen = render(<MyCreatedTripsList />);
+  it('announces exactly one native search field', async () => {
+    const screen = await render(<MyCreatedTripsList />);
     expect(screen.getAllByRole('search')).toHaveLength(1);
   });
 
-  it('shows only trips organized by the current user and opens a trip', () => {
-    const { getByText, queryByText, getByTestId } = render(<MyCreatedTripsList />);
+  it('shows only trips organized by the current user and opens a trip', async () => {
+    const { getByText, queryByText, getByTestId } = await render(<MyCreatedTripsList />);
 
     expect(getByText('Организуемая поездка')).toBeTruthy();
     expect(queryByText('Чужая поездка')).toBeNull();
 
-    fireEvent.press(getByTestId('mock-trip-card-1'));
+    await fireEvent.press(getByTestId('mock-trip-card-1'));
 
     expect(mockPush).toHaveBeenCalledWith('/trips/plan/1');
   });
 
-  it('shows only trips where the current user participates in participating mode', () => {
-    const { getByText, queryByText, getByTestId } = render(
+  it('shows only trips where the current user participates in participating mode', async () => {
+    const { getByText, queryByText, getByTestId } = await render(
       <MyCreatedTripsList role="participating" />,
     );
 
     expect(getByText('Чужая поездка')).toBeTruthy();
     expect(queryByText('Организуемая поездка')).toBeNull();
 
-    fireEvent.press(getByTestId('mock-trip-card-2'));
+    await fireEvent.press(getByTestId('mock-trip-card-2'));
     expect(mockPush).toHaveBeenCalledWith('/trips/plan/2');
   });
 
-  it('opens an organized trip in edit mode from the compact card action', () => {
-    const { getByTestId } = render(<MyCreatedTripsList />);
+  it('opens an organized trip in edit mode from the compact card action', async () => {
+    const { getByTestId } = await render(<MyCreatedTripsList />);
 
-    fireEvent.press(getByTestId('my-created-trip-edit-1'));
+    await fireEvent.press(getByTestId('my-created-trip-edit-1'));
 
     expect(mockPush).toHaveBeenCalledWith('/trips/plan/1?edit=1');
   });
@@ -183,9 +183,9 @@ describe('MyCreatedTripsList', () => {
   it('confirms and deletes an organized trip from the list', async () => {
     (confirmAction as jest.Mock).mockResolvedValueOnce(true);
 
-    const { getByTestId } = render(<MyCreatedTripsList />);
+    const { getByTestId } = await render(<MyCreatedTripsList />);
 
-    fireEvent.press(getByTestId('my-created-trip-delete-1'));
+    await fireEvent.press(getByTestId('my-created-trip-delete-1'));
 
     await waitFor(() => {
       expect(confirmAction).toHaveBeenCalledWith(expect.objectContaining({
@@ -199,7 +199,7 @@ describe('MyCreatedTripsList', () => {
     });
   });
 
-  it('filters organized trips by search and status', () => {
+  it('filters organized trips by search and status', async () => {
     mockUseMyPlannedTrips.mockReturnValue({
       data: [
         makeTrip({ id: 1, title: 'Поездка в Брест', status: 'planning', isOwner: true }),
@@ -209,13 +209,13 @@ describe('MyCreatedTripsList', () => {
       isError: false,
     });
 
-    const { getByTestId, getByText, queryByText } = render(<MyCreatedTripsList />);
+    const { getByTestId, getByText, queryByText } = await render(<MyCreatedTripsList />);
 
-    fireEvent.changeText(getByTestId('my-created-trips-search-input'), 'Минск');
+    await fireEvent.changeText(getByTestId('my-created-trips-search-input'), 'Минск');
     expect(getByText('Активный Минск')).toBeTruthy();
     expect(queryByText('Поездка в Брест')).toBeNull();
 
-    fireEvent.press(getByTestId('my-created-trips-filter-planning'));
+    await fireEvent.press(getByTestId('my-created-trips-filter-planning'));
     expect(getByTestId('my-created-trips-filtered-empty')).toBeTruthy();
   });
 });

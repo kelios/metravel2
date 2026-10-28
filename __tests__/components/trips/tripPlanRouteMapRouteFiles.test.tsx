@@ -1,3 +1,4 @@
+import { createWebMapTestRuntime, type WebMapTestRuntime } from '@/__tests__/helpers/webMapTestRuntime'
 /**
  * #2069 — у поездки несколько исходных файлов трека, и карта планировщика рисует
  * все, а не только первый.
@@ -11,7 +12,7 @@
  * сводил список к `files[0]`, и на карту уезжал один KML, а GPX по дням пропадал.
  */
 import React from 'react'
-import { render, waitFor } from '@testing-library/react-native'
+import { render as renderNative, waitFor } from '@testing-library/react-native'
 
 import type { RouteGeometry, RoutePoint } from '@/api/plannedTrips'
 import { useTripRouteFileBranch } from '@/components/trips/planning/useTripRouteFileBranch'
@@ -31,7 +32,6 @@ jest.mock('@/api/client', () => ({
   ApiError: class ApiError extends Error {},
 }))
 
-jest.mock('react-dom', () => ({ createPortal: (node: unknown) => node }))
 jest.mock('@/utils/ensureLeafletCss', () => ({ ensureLeafletCss: jest.fn() }))
 jest.mock('@/utils/loadLeafletRuntime', () => ({
   loadLeafletRuntime: async () => ({
@@ -71,7 +71,7 @@ jest.mock('@/hooks/useTheme', () => ({
 }))
 
 import TripPlanRouteMapNative from '@/components/trips/planning/TripPlanRouteMap'
-import TripPlanRouteMapWeb from '@/components/trips/planning/TripPlanRouteMap.web'
+let TripPlanRouteMapWeb: typeof import('@/components/trips/planning/TripPlanRouteMap.web').default
 
 const { apiClient } = jest.requireMock('@/api/client') as {
   apiClient: { get: jest.Mock; download: jest.Mock }
@@ -138,8 +138,11 @@ function Harness({ PlanMap }: { PlanMap: PlanMap }) {
   return <PlanMap route={route} originalTrackSegments={originalTrackSegments} />
 }
 
-const renderHarness = (PlanMap: PlanMap) =>
-  render(<Harness PlanMap={PlanMap} />, { wrapper: createQueryWrapper().Wrapper })
+const renderHarness = async (PlanMap: PlanMap) => {
+  const element = <Harness PlanMap={PlanMap} />
+  const options = { wrapper: createQueryWrapper().Wrapper }
+  return PlanMap === TripPlanRouteMapWeb ? web.render(element, options) : await renderNative(element, options)
+}
 
 describe('#2069: два исходных файла — два трека на карте планировщика', () => {
   beforeEach(() => {
@@ -151,7 +154,7 @@ describe('#2069: два исходных файла — два трека на �
   })
 
   it('web: по полилинии оригинала на каждый файл, с координатами своего файла', async () => {
-    const screen = renderHarness(TripPlanRouteMapWeb)
+    const screen = await renderHarness(TripPlanRouteMapWeb)
 
     const originalLines = () => {
       const seen = new Map<string, unknown>()
@@ -161,7 +164,7 @@ describe('#2069: два исходных файла — два трека на �
       return [...seen.values()]
     }
 
-    await waitFor(() => expect(originalLines()).toHaveLength(2))
+    await web.waitFor(() => expect(originalLines()).toHaveLength(2))
     expect(apiClient.get).toHaveBeenCalledWith(`/trips/planned/${TRIP_ID}/routes/`, expect.any(Number))
     expect(apiClient.download.mock.calls.map(([url]) => routeIdOf(url)).sort((a, b) => a - b)).toEqual([4, 11])
     // Leaflet получает [lat, lng]: KML-петля и GPX-день — каждый своей линией.
@@ -174,7 +177,7 @@ describe('#2069: два исходных файла — два трека на �
   })
 
   it('native: в payload WebView-карты уезжают линии обоих файлов', async () => {
-    const screen = renderHarness(TripPlanRouteMapNative)
+    const screen = await renderHarness(TripPlanRouteMapNative)
 
     const lastSegments = () =>
       mockNativeMapProps[mockNativeMapProps.length - 1]?.originalTrackSegments as RouteGeometry[] | undefined
@@ -187,10 +190,19 @@ describe('#2069: два исходных файла — два трека на �
   it('файл, который не скачался, не прячет трек соседнего', async () => {
     mockDownloads((routeId) => (routeId === 4 ? null : BODIES[routeId]))
 
-    renderHarness(TripPlanRouteMapNative)
+    await renderHarness(TripPlanRouteMapNative)
 
     await waitFor(() =>
       expect(mockNativeMapProps[mockNativeMapProps.length - 1]?.originalTrackSegments).toEqual([DAY_LINE]),
     )
   })
 })
+
+let web: WebMapTestRuntime<typeof TripPlanRouteMapWeb>
+beforeAll(() => {
+  web = createWebMapTestRuntime(React, () => require('@/components/trips/planning/TripPlanRouteMap.web').default, {
+    sharedModules: { '@/api/client': jest.requireMock('@/api/client') },
+  })
+  TripPlanRouteMapWeb = web.subject
+})
+afterEach(() => web.cleanup())

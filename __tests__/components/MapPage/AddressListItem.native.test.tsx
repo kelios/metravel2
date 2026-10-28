@@ -34,7 +34,7 @@ jest.mock('react-native', () => {
 });
 
 describe('AddressListItem (native list card)', () => {
-  it('does not render coordinates row on mobile', () => {
+  it('does not render coordinates row on mobile', async () => {
     const travel: any = {
       id: 1,
       address: 'Test place',
@@ -53,7 +53,7 @@ describe('AddressListItem (native list card)', () => {
       },
     });
 
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <QueryClientProvider client={queryClient}>
         <AddressListItem travel={travel} isMobile={true} />
       </QueryClientProvider>
@@ -63,7 +63,7 @@ describe('AddressListItem (native list card)', () => {
     expect(queryByText(travel.coord)).toBeNull();
   });
 
-  it('renders a visible route action on mobile', () => {
+  it('renders a visible route action on mobile', async () => {
     const travel: any = {
       id: 1,
       address: 'Test place',
@@ -80,7 +80,7 @@ describe('AddressListItem (native list card)', () => {
       },
     });
 
-    const { getAllByLabelText, queryByLabelText } = render(
+    const { getAllByLabelText, queryByLabelText } = await render(
       <QueryClientProvider client={queryClient}>
         <AddressListItem travel={travel} isMobile={true} onBuildRoute={onBuildRoute} />
       </QueryClientProvider>
@@ -97,11 +97,11 @@ describe('AddressListItem (native list card)', () => {
     // …but the «Навигация» tile is present so the user can open that full list.
     expect(getAllByLabelText('Навигация и действия').length).toBeGreaterThan(0);
 
-    fireEvent.press(routeActions[0]);
+    await fireEvent.press(routeActions[0]);
     expect(onBuildRoute).toHaveBeenCalledTimes(1);
   });
 
-  it('pins native mobile card width to the sheet width minus card margins', () => {
+  it('pins native mobile card width to the sheet width minus card margins', async () => {
     const travel: any = {
       id: 1,
       address: 'Test place',
@@ -117,7 +117,7 @@ describe('AddressListItem (native list card)', () => {
       },
     });
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <QueryClientProvider client={queryClient}>
         <AddressListItem travel={travel} isMobile={true} screenWidth={390} />
       </QueryClientProvider>

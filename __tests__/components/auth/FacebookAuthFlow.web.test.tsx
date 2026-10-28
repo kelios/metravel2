@@ -65,9 +65,9 @@ describe('FacebookAuthFlow web', () => {
       },
     });
     const onAuthenticated = jest.fn();
-    const screen = render(<FacebookAuthFlow onAuthenticated={onAuthenticated} termsVersion="1" />);
+    const screen = await render(<FacebookAuthFlow onAuthenticated={onAuthenticated} termsVersion="1" />);
 
-    fireEvent.press(screen.getByTestId('mock-facebook-sign_in'));
+    await fireEvent.press(screen.getByTestId('mock-facebook-sign_in'));
 
     await waitFor(() => {
       // #2132: версия условий, отмеченная на форме, уходит вместе с credential.
@@ -86,14 +86,14 @@ describe('FacebookAuthFlow web', () => {
       reasonCode: 'facebook_email_permission_missing',
       expiresIn: 900,
     });
-    const screen = render(<FacebookAuthFlow onAuthenticated={jest.fn()} />);
+    const screen = await render(<FacebookAuthFlow onAuthenticated={jest.fn()} />);
 
-    fireEvent.press(screen.getByTestId('mock-facebook-sign_in'));
+    await fireEvent.press(screen.getByTestId('mock-facebook-sign_in'));
 
     expect(loginWithFacebook).not.toHaveBeenCalled();
     expect(screen.getByTestId('facebook-permission-panel')).toBeTruthy();
 
-    fireEvent.press(screen.getByTestId('mock-facebook-rerequest_email'));
+    await fireEvent.press(screen.getByTestId('mock-facebook-rerequest_email'));
 
     await waitFor(() => {
       expect(loginWithFacebook).toHaveBeenCalledWith(
@@ -123,25 +123,25 @@ describe('FacebookAuthFlow web', () => {
       },
     });
     const onAuthenticated = jest.fn();
-    const screen = render(<FacebookAuthFlow onAuthenticated={onAuthenticated} termsVersion="1" />);
+    const screen = await render(<FacebookAuthFlow onAuthenticated={onAuthenticated} termsVersion="1" />);
 
     // Simulate a provider callback with email permission so the backend is called immediately.
     const initialButton = screen.getByTestId('mock-facebook-sign_in');
-    fireEvent(initialButton, 'press');
+    await fireEvent(initialButton, 'press');
     // The shared mock intentionally omits email; use the explicit retry path to obtain completion.
-    fireEvent.press(screen.getByTestId('mock-facebook-rerequest_email'));
+    await fireEvent.press(screen.getByTestId('mock-facebook-rerequest_email'));
 
     await screen.findByTestId('facebook-completion-email');
-    fireEvent.changeText(screen.getByTestId('facebook-completion-email'), ' user@example.com ');
-    fireEvent.press(screen.getByTestId('facebook-completion-send-code'));
+    await fireEvent.changeText(screen.getByTestId('facebook-completion-email'), ' user@example.com ');
+    await fireEvent.press(screen.getByTestId('facebook-completion-send-code'));
 
     await waitFor(() => {
       expect(startFacebookEmailCompletion).toHaveBeenCalledWith('opaque-handle', 'user@example.com');
       expect(screen.getByTestId('facebook-completion-code')).toBeTruthy();
     });
 
-    fireEvent.changeText(screen.getByTestId('facebook-completion-code'), '123456');
-    fireEvent.press(screen.getByTestId('facebook-completion-confirm'));
+    await fireEvent.changeText(screen.getByTestId('facebook-completion-code'), '123456');
+    await fireEvent.press(screen.getByTestId('facebook-completion-confirm'));
 
     await waitFor(() => {
       expect(confirmFacebookEmailCompletion).toHaveBeenCalledWith('opaque-handle', '123456', '1');
@@ -151,15 +151,15 @@ describe('FacebookAuthFlow web', () => {
 
   it('renders provider and API failures in the inline alert region', async () => {
     const onFailure = jest.fn();
-    const providerScreen = render(
+    const providerScreen = await render(
       <FacebookAuthFlow onAuthenticated={jest.fn()} onFailure={onFailure} />,
     );
 
-    fireEvent.press(providerScreen.getByTestId('mock-facebook-error-sign_in'));
+    await fireEvent.press(providerScreen.getByTestId('mock-facebook-error-sign_in'));
 
     expect(providerScreen.getByTestId('facebook-auth-error').props.children).toBe('Provider failed');
     expect(onFailure).toHaveBeenCalledWith('provider');
-    providerScreen.unmount();
+    await providerScreen.unmount();
 
     mockEmailPermissionGranted = true;
     loginWithFacebook.mockResolvedValue({
@@ -167,11 +167,11 @@ describe('FacebookAuthFlow web', () => {
       errorCode: 'facebook_token_invalid',
       message: 'API failed',
     });
-    const apiScreen = render(
+    const apiScreen = await render(
       <FacebookAuthFlow onAuthenticated={jest.fn()} onFailure={onFailure} />,
     );
 
-    fireEvent.press(apiScreen.getByTestId('mock-facebook-sign_in'));
+    await fireEvent.press(apiScreen.getByTestId('mock-facebook-sign_in'));
 
     await waitFor(() => {
       expect(apiScreen.getByTestId('facebook-auth-error').props.children).toBe('API failed');
@@ -179,11 +179,11 @@ describe('FacebookAuthFlow web', () => {
     });
   });
 
-  it('cancels a missing-permission flow without sending the access token', () => {
-    const screen = render(<FacebookAuthFlow onAuthenticated={jest.fn()} />);
+  it('cancels a missing-permission flow without sending the access token', async () => {
+    const screen = await render(<FacebookAuthFlow onAuthenticated={jest.fn()} />);
 
-    fireEvent.press(screen.getByTestId('mock-facebook-sign_in'));
-    fireEvent.press(screen.getByTestId('facebook-permission-cancel'));
+    await fireEvent.press(screen.getByTestId('mock-facebook-sign_in'));
+    await fireEvent.press(screen.getByTestId('facebook-permission-cancel'));
 
     expect(loginWithFacebook).not.toHaveBeenCalled();
     expect(screen.queryByTestId('facebook-permission-panel')).toBeNull();
@@ -202,13 +202,13 @@ describe('FacebookAuthFlow web', () => {
       errorCode: 'facebook_completion_invalid',
       message: 'Completion expired',
     });
-    const screen = render(<FacebookAuthFlow onAuthenticated={jest.fn()} />);
+    const screen = await render(<FacebookAuthFlow onAuthenticated={jest.fn()} />);
 
-    fireEvent.press(screen.getByTestId('mock-facebook-sign_in'));
-    fireEvent.press(screen.getByTestId('mock-facebook-rerequest_email'));
+    await fireEvent.press(screen.getByTestId('mock-facebook-sign_in'));
+    await fireEvent.press(screen.getByTestId('mock-facebook-rerequest_email'));
     await screen.findByTestId('facebook-completion-email');
-    fireEvent.changeText(screen.getByTestId('facebook-completion-email'), 'user@example.com');
-    fireEvent.press(screen.getByTestId('facebook-completion-send-code'));
+    await fireEvent.changeText(screen.getByTestId('facebook-completion-email'), 'user@example.com');
+    await fireEvent.press(screen.getByTestId('facebook-completion-send-code'));
 
     await waitFor(() => {
       expect(screen.queryByTestId('facebook-email-completion-panel')).toBeNull();
@@ -227,16 +227,16 @@ describe('FacebookAuthFlow web', () => {
         reasonCode: 'facebook_primary_email_unavailable',
         expiresIn: 1,
       });
-      const screen = render(<FacebookAuthFlow onAuthenticated={jest.fn()} />);
+      const screen = await render(<FacebookAuthFlow onAuthenticated={jest.fn()} />);
 
-      fireEvent.press(screen.getByTestId('mock-facebook-sign_in'));
+      await fireEvent.press(screen.getByTestId('mock-facebook-sign_in'));
       await act(async () => {
-        fireEvent.press(screen.getByTestId('mock-facebook-rerequest_email'));
+        await fireEvent.press(screen.getByTestId('mock-facebook-rerequest_email'));
         await Promise.resolve();
       });
       expect(screen.getByTestId('facebook-email-completion-panel')).toBeTruthy();
 
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(1001);
       });
 
@@ -254,11 +254,15 @@ describe('FacebookAuthFlow web', () => {
       resolveLogin = resolve;
     }));
     const onBusyChange = jest.fn();
-    const screen = render(
+    const screen = await render(
       <FacebookAuthFlow onAuthenticated={jest.fn()} onBusyChange={onBusyChange} />,
     );
 
-    fireEvent.press(screen.getByTestId('mock-facebook-sign_in'));
+    let pendingLogin!: Promise<void>;
+    await act(() => {
+      // Keep the public provider callback pending while its busy UI commits.
+      pendingLogin = screen.getByTestId('mock-facebook-sign_in').props.onPress();
+    });
 
     await waitFor(() => expect(onBusyChange).toHaveBeenLastCalledWith(true));
 
@@ -268,7 +272,7 @@ describe('FacebookAuthFlow web', () => {
         errorCode: 'facebook_token_invalid',
         message: 'API failed',
       });
-      await Promise.resolve();
+      await pendingLogin;
     });
     await waitFor(() => expect(onBusyChange).toHaveBeenLastCalledWith(false));
   });

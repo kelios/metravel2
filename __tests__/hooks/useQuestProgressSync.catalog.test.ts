@@ -52,13 +52,13 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     jest.useRealTimers()
   })
   const mount = async () => {
-    const rendered = renderHook(() => useQuestProgressSync('q', true))
+    const rendered = await renderHook(() => useQuestProgressSync('q', true))
     await flush()
     return rendered
   }
   const save = async (result: { current: ReturnType<typeof useQuestProgressSync> }, completed = true) => {
-    act(() => result.current.saveProgress({ ...pending, completed }))
-    act(() => jest.advanceTimersByTime(2000))
+    await act(() => result.current.saveProgress({ ...pending, completed }))
+    await act(() => jest.advanceTimersByTime(2000))
     await flush()
   }
 
@@ -74,7 +74,7 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     await save(result)
     expect(fetchCatalog).toHaveBeenCalledTimes(1)
     expect(client.getQueryState(queryKeys.userPointsAll('A'))?.isInvalidated).toBe(false)
-    unmount()
+    await unmount()
   })
 
   it('failed PATCH and partial progress do not refresh', async () => {
@@ -85,7 +85,7 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     updateProgress.mockResolvedValue({ ...progress, completed: false })
     await save(result, false)
     expect(fetchCatalog).not.toHaveBeenCalled()
-    unmount()
+    await unmount()
   })
 
   it('unmount flush and in-flight completion acknowledgements share one refresh', async () => {
@@ -93,7 +93,7 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     const acknowledgements: Array<(value: ApiQuestProgress) => void> = []
     updateProgress.mockImplementation(() => new Promise<ApiQuestProgress>((resolve) => { acknowledgements.push(resolve) }))
     await save(result)
-    unmount()
+    await unmount()
     await flush()
     expect(acknowledgements).toHaveLength(2)
     acknowledgements.forEach((resolve) => resolve({ ...progress, completed: true }))
@@ -111,7 +111,7 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     await flush()
     expect(fetchCatalog).not.toHaveBeenCalled()
     expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(catalog(false))
-    unmount()
+    await unmount()
   })
 
   it('reset then replay can refresh the completion again', async () => {
@@ -127,7 +127,7 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(catalog(false))
     await save(result)
     expect(fetchCatalog).toHaveBeenCalledTimes(3)
-    unmount()
+    await unmount()
   })
 
   // #2033: прохождение сброшено на другом устройстве — визард стёр копию, но
@@ -144,26 +144,26 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     const failed = await mount()
     expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(catalog(true))
     expect(bundleMark()).toBe(true)
-    failed.unmount()
+    await failed.unmount()
 
     fetchQuestProgress.mockResolvedValueOnce(null)
     const missing = await mount()
     expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(catalog(false))
     expect(bundleMark()).toBe(false)
-    missing.unmount()
+    await missing.unmount()
 
     markCompleted()
     fetchQuestProgress.mockResolvedValueOnce({ ...progress, id: 57, completed: false })
     const restarted = await mount()
     expect(bundleMark()).toBe(false)
-    restarted.unmount()
+    await restarted.unmount()
 
     markCompleted()
     fetchQuestProgress.mockResolvedValueOnce({ ...progress, completed: true })
     const completed = await mount()
     expect(bundleMark()).toBe(true)
     expect(fetchCatalog).not.toHaveBeenCalled()
-    completed.unmount()
+    await completed.unmount()
   })
 
   it('inactive catalog is marked stale without a network fetch', async () => {
@@ -173,6 +173,6 @@ describe('quest completion catalog refresh after server acknowledgement', () => 
     expect(fetchCatalog).not.toHaveBeenCalled()
     expect(client.getQueryState(queryKeys.questsCatalog('ru'))?.isInvalidated).toBe(true)
     expect(client.getQueryData(queryKeys.questsCatalog('ru'))).toEqual(catalog(true))
-    unmount()
+    await unmount()
   })
 })

@@ -112,7 +112,7 @@ describe('OfflineLibraryScreen operation states', () => {
     mockUseOfflineCatalog.mockReturnValue(baseCatalogState);
   });
 
-  it('renders truthful download progress and cancels the active operation', () => {
+  it('renders truthful download progress and cancels the active operation', async () => {
     mockUseOfflineCatalog.mockReturnValue({
       ...baseCatalogState,
       operations: [{
@@ -129,14 +129,14 @@ describe('OfflineLibraryScreen operation states', () => {
       }],
     });
 
-    render(<OfflineLibraryScreen />);
+    await render(<OfflineLibraryScreen />);
 
     expect(screen.getByText('offline:progress:2/5')).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'offline:cancel' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'offline:cancel' }));
     expect(mockCancelOperation).toHaveBeenCalledWith('travel:42');
   });
 
-  it('renders storage-full as retryable and allows clearing the failed operation', () => {
+  it('renders storage-full as retryable and allows clearing the failed operation', async () => {
     mockUseOfflineCatalog.mockReturnValue({
       ...baseCatalogState,
       operations: [{
@@ -153,12 +153,12 @@ describe('OfflineLibraryScreen operation states', () => {
       }],
     });
 
-    render(<OfflineLibraryScreen />);
+    await render(<OfflineLibraryScreen />);
 
     expect(screen.getByText('offline:storageFull')).toBeTruthy();
-    fireEvent.press(screen.getByRole('button', { name: 'offline:retry' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'offline:retry' }));
     expect(mockRetryOperation).toHaveBeenCalledWith('article:7');
-    fireEvent.press(screen.getByRole('button', { name: 'offline:remove' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'offline:remove' }));
     expect(mockClearOperation).toHaveBeenCalledWith('article:7');
   });
 });

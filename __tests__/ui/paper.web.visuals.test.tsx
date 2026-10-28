@@ -1,5 +1,6 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries';
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text as RNText } from 'react-native';
+import { StyleSheet, Text as RNText } from 'react-native';
 import { render } from '@testing-library/react-native';
 
 import * as PaperShim from '@/ui/paper.web';
@@ -19,15 +20,16 @@ const resolveStyle = (node: any) => {
 };
 
 describe('ui/paper.web visible behaviour', () => {
-  it('renders three distinct fills for the three paper modes', () => {
-    const byMode = (['contained', 'outlined', 'text'] as const).map((mode) => {
-      const { getByTestId } = render(
+  it('renders three distinct fills for the three paper modes', async () => {
+    const byMode: Array<readonly [string, ReturnType<typeof resolveStyle>]> = [];
+    for (const mode of ['contained', 'outlined', 'text'] as const) {
+      const { getByTestId } = await render(
         <Button testID="cta" mode={mode}>
           Сохранить
         </Button>,
       );
-      return [mode, resolveStyle(getByTestId('cta'))] as const;
-    });
+      byMode.push([mode, resolveStyle(getByTestId('cta'))]);
+    }
 
     const styleOf = (mode: string) => byMode.find(([m]) => m === mode)![1] as any;
 
@@ -42,8 +44,8 @@ describe('ui/paper.web visible behaviour', () => {
   // и кнопка предпросмотра в `FiltersUpsertComponent` кладут собственную заливку
   // поверх режима. Уедет стиль вызывающего ВЫШЕ `buttonModeStyles` — обе кнопки
   // молча получат чужой фон, и это опять будет незаметно до браузера.
-  it('keeps the caller style above the mode fill', () => {
-    const { getByTestId } = render(
+  it('keeps the caller style above the mode fill', async () => {
+    const { getByTestId } = await render(
       <Button testID="cta" mode="outlined" style={{ backgroundColor: '#123456' }}>
         Предпросмотр
       </Button>,
@@ -55,8 +57,8 @@ describe('ui/paper.web visible behaviour', () => {
   // Гард режима существует ради значения из-за границы типов. Проверка через `in`
   // смотрела бы и прототип: `mode="toString"` прошёл бы её насквозь, и в `color`
   // лейбла с спиннером легла бы функция вместо цвета.
-  it('falls back to the text mode when mode arrives from outside the type', () => {
-    const { getByTestId, getByText } = render(
+  it('falls back to the text mode when mode arrives from outside the type', async () => {
+    const { getByTestId, getByText } = await render(
       <Button testID="cta" mode={'toString' as any}>
         Сохранить
       </Button>,
@@ -70,19 +72,20 @@ describe('ui/paper.web visible behaviour', () => {
 
   // ManualPointPanel переключает contained ↔ outlined как индикатор состояния
   // тоггла. Толщина рамки обязана совпадать, иначе переключение дёргает раскладку.
-  it('keeps the border width stable across modes so a mode toggle cannot shift layout', () => {
-    const widths = (['contained', 'outlined', 'text'] as const).map((mode) => {
-      const { getByTestId } = render(<Button testID="toggle" mode={mode}>Вручную</Button>);
-      return (resolveStyle(getByTestId('toggle')) as any).borderWidth;
-    });
+  it('keeps the border width stable across modes so a mode toggle cannot shift layout', async () => {
+    const widths: number[] = [];
+    for (const mode of ['contained', 'outlined', 'text'] as const) {
+      const { getByTestId } = await render(<Button testID="toggle" mode={mode}>Вручную</Button>);
+      widths.push((resolveStyle(getByTestId('toggle')) as any).borderWidth);
+    }
 
     expect(new Set(widths).size).toBe(1);
     expect(widths[0]).toBe(1);
   });
 
-  it('paints the label with the foreground of its mode', () => {
-    const { getByText: getContained } = render(<Button mode="contained">Сохранить</Button>);
-    const { getByText: getOutlined } = render(<Button mode="outlined">Предпросмотр</Button>);
+  it('paints the label with the foreground of its mode', async () => {
+    const { getByText: getContained } = await render(<Button mode="contained">Сохранить</Button>);
+    const { getByText: getOutlined } = await render(<Button mode="outlined">Предпросмотр</Button>);
 
     expect((StyleSheet.flatten(getContained('Сохранить').props.style) as any).color).toBe(
       DESIGN_TOKENS.colors.textOnPrimary,
@@ -92,8 +95,8 @@ describe('ui/paper.web visible behaviour', () => {
     );
   });
 
-  it('renders the icon node and hands it the size and foreground of the mode', () => {
-    const { getByTestId } = render(
+  it('renders the icon node and hands it the size and foreground of the mode', async () => {
+    const { getByTestId } = await render(
       <Button
         mode="contained"
         icon={({ size, color }) => <RNText testID="cta-icon">{`${size}|${color}`}</RNText>}
@@ -107,14 +110,14 @@ describe('ui/paper.web visible behaviour', () => {
     );
   });
 
-  it('swaps the icon for a spinner while loading and marks the control busy', () => {
-    const { getByTestId, queryByTestId, UNSAFE_getByType } = render(
+  it('swaps the icon for a spinner while loading and marks the control busy', async () => {
+    const { getByTestId, queryByTestId, container } = await render(
       <Button testID="cta" loading icon={() => <RNText testID="cta-icon">иконка</RNText>}>
         Загрузка
       </Button>,
     );
 
-    expect(UNSAFE_getByType(ActivityIndicator)).toBeTruthy();
+    expect(getOnlyHost(container, node => node.type === 'ActivityIndicator')).toBeTruthy();
     expect(queryByTestId('cta-icon')).toBeNull();
     // Проверяем `aria-busy`, а не `accessibilityState.busy`: react-native-web
     // `accessibilityState` не обрабатывает, и утверждение о нём было бы зелёным
@@ -122,9 +125,9 @@ describe('ui/paper.web visible behaviour', () => {
     expect(getByTestId('cta').props['aria-busy']).toBe(true);
   });
 
-  it('narrows horizontal padding for compact without dropping below the 44 touch target', () => {
-    const { getByTestId: getCompact } = render(<Button testID="c" compact>Добавить</Button>);
-    const { getByTestId: getRegular } = render(<Button testID="r">Добавить</Button>);
+  it('narrows horizontal padding for compact without dropping below the 44 touch target', async () => {
+    const { getByTestId: getCompact } = await render(<Button testID="c" compact>Добавить</Button>);
+    const { getByTestId: getRegular } = await render(<Button testID="r">Добавить</Button>);
 
     const compact = resolveStyle(getCompact('c')) as any;
     const regular = resolveStyle(getRegular('r')) as any;
@@ -134,8 +137,8 @@ describe('ui/paper.web visible behaviour', () => {
     expect(compact.minWidth).toBe(44);
   });
 
-  it('applies contentStyle to the row that holds the icon and the label', () => {
-    const { getByText } = render(
+  it('applies contentStyle to the row that holds the icon and the label', async () => {
+    const { getByText } = await render(
       <Button contentStyle={{ paddingVertical: 10 }}>На главную</Button>,
     );
 

@@ -23,9 +23,9 @@ jest.mock('@/hooks/useTheme', () => ({
     }),
 }));
 
-const renderInput = (props: Partial<React.ComponentProps<typeof LocationSearchInput>> = {}) => {
+const renderInput = async (props: Partial<React.ComponentProps<typeof LocationSearchInput>> = {}) => {
     const { Wrapper } = createQueryWrapper();
-    return render(<LocationSearchInput onLocationSelect={jest.fn()} {...props} />, { wrapper: Wrapper });
+    return await render(<LocationSearchInput onLocationSelect={jest.fn()} {...props} />, { wrapper: Wrapper });
 };
 
 describe('LocationSearchInput', () => {
@@ -39,23 +39,23 @@ describe('LocationSearchInput', () => {
         jest.clearAllMocks();
     });
 
-    it('renders correctly', () => {
-        const { getByPlaceholderText } = renderInput();
+    it('renders correctly', async () => {
+        const { getByPlaceholderText } = await renderInput();
 
         expect(getByPlaceholderText('Поиск места на карте...')).toBeTruthy();
     });
 
-    it('renders with custom placeholder', () => {
-        const { getByPlaceholderText } = renderInput({ placeholder: 'Custom placeholder' });
+    it('renders with custom placeholder', async () => {
+        const { getByPlaceholderText } = await renderInput({ placeholder: 'Custom placeholder' });
 
         expect(getByPlaceholderText('Custom placeholder')).toBeTruthy();
     });
 
     it('does not search with less than 3 characters', async () => {
-        const { getByPlaceholderText } = renderInput();
+        const { getByPlaceholderText } = await renderInput();
 
         const input = getByPlaceholderText('Поиск места на карте...');
-        fireEvent.changeText(input, 'ab');
+        await fireEvent.changeText(input, 'ab');
 
         await advanceSearchTimers();
 
@@ -82,10 +82,10 @@ describe('LocationSearchInput', () => {
             json: async () => mockResults,
         });
 
-        const { getByPlaceholderText, getByText } = renderInput();
+        const { getByPlaceholderText, getByText } = await renderInput();
 
         const input = getByPlaceholderText('Поиск места на карте...');
-        fireEvent.changeText(input, 'Эйфелева башня');
+        await fireEvent.changeText(input, 'Эйфелева башня');
 
         await advanceSearchTimers();
 
@@ -108,10 +108,10 @@ describe('LocationSearchInput', () => {
             json: async () => [],
         });
 
-        const { getByPlaceholderText, getByText } = renderInput();
+        const { getByPlaceholderText, getByText } = await renderInput();
 
         const input = getByPlaceholderText('Поиск места на карте...');
-        fireEvent.changeText(input, 'abcdefg12345');
+        await fireEvent.changeText(input, 'abcdefg12345');
 
         await advanceSearchTimers();
 
@@ -123,10 +123,10 @@ describe('LocationSearchInput', () => {
     it('displays error message on network error', async () => {
         (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
 
-        const { getByPlaceholderText, getByText } = renderInput();
+        const { getByPlaceholderText, getByText } = await renderInput();
 
         const input = getByPlaceholderText('Поиск места на карте...');
-        fireEvent.changeText(input, 'test query');
+        await fireEvent.changeText(input, 'test query');
 
         await advanceSearchTimers();
 
@@ -156,10 +156,10 @@ describe('LocationSearchInput', () => {
             json: async () => mockResults,
         });
 
-        const { getByPlaceholderText, getByText } = renderInput({ onLocationSelect: mockOnSelect });
+        const { getByPlaceholderText, getByText } = await renderInput({ onLocationSelect: mockOnSelect });
 
         const input = getByPlaceholderText('Поиск места на карте...');
-        fireEvent.changeText(input, 'Эйфелева башня');
+        await fireEvent.changeText(input, 'Эйфелева башня');
 
         await advanceSearchTimers();
 
@@ -168,7 +168,7 @@ describe('LocationSearchInput', () => {
         });
 
         const result = getByText('Эйфелева башня');
-        fireEvent.press(result);
+        await fireEvent.press(result);
 
         expect(mockOnSelect).toHaveBeenCalledWith(mockResults[0]);
     });
@@ -189,10 +189,10 @@ describe('LocationSearchInput', () => {
             json: async () => mockResults,
         });
 
-        const { getByPlaceholderText, getAllByText, UNSAFE_getAllByType } = renderInput();
+        const { getByPlaceholderText, getAllByText, getByTestId } = await renderInput();
 
         const input = getByPlaceholderText('Поиск места на карте...');
-        fireEvent.changeText(input, 'test');
+        await fireEvent.changeText(input, 'test');
 
         await advanceSearchTimers();
 
@@ -200,10 +200,7 @@ describe('LocationSearchInput', () => {
             expect(getAllByText('Test Location').length).toBeGreaterThan(0);
         });
 
-        // Find and press clear button (x icon)
-        const pressables = UNSAFE_getAllByType(require('react-native').Pressable);
-        // Clear button should be the last pressable (search icon pressables come first)
-        fireEvent.press(pressables[pressables.length - 1]);
+        await fireEvent.press(getByTestId('location-clear-button'));
 
         await waitFor(() => {
             expect(input.props.value).toBe('');
@@ -230,10 +227,10 @@ describe('LocationSearchInput', () => {
             json: async () => mockResults,
         });
 
-        const { getByPlaceholderText, getByText } = renderInput();
+        const { getByPlaceholderText, getByText } = await renderInput();
 
         const input = getByPlaceholderText('Поиск места на карте...');
-        fireEvent.changeText(input, 'Эйфелева башня');
+        await fireEvent.changeText(input, 'Эйфелева башня');
 
         await advanceSearchTimers();
 

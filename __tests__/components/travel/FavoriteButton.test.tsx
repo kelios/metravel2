@@ -38,19 +38,19 @@ describe('FavoriteButton: оба варианта дают один и тот ж
   })
 
   it.each(['overlay', 'plain'] as const)('%s: success toast with «Отменить»', async (variant) => {
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <FavoriteButton id={5} type="travel" title="Мост" url="/travels/most" variant={variant} />,
     )
-    fireEvent.press(getByLabelText(/Добавить/))
+    await fireEvent.press(getByLabelText(/Добавить/))
     await waitFor(() => expect(showToast).toHaveBeenCalled())
     const payload = (showToast as jest.Mock).mock.calls[0][0]
     expect(payload.text1).toBe('Добавлено в «Хочу поехать»')
     expect(payload.action?.label).toBe('Отменить')
   })
 
-  it.each(['overlay', 'plain'] as const)('%s: active heart has a filled danger disc, not only an outline', (variant) => {
+  it.each(['overlay', 'plain'] as const)('%s: active heart has a filled danger disc, not only an outline', async (variant) => {
     mockIsFavorite.mockReturnValue(true)
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <FavoriteButton id={5} type="travel" title="Мост" url="/travels/most" variant={variant} />,
     )
     const flat = StyleSheet.flatten(getByLabelText(/Удалить/).props.style)

@@ -48,15 +48,15 @@ describe('useQuestPrintLanding', () => {
   });
 
   it('ждёт загрузки квеста и открывает печатную версию в этой вкладке один раз', async () => {
-    const { rerender } = renderHook(
+    const { rerender } = await renderHook(
       ({ current }: { current: FrontendQuestBundle | null }) =>
         useQuestPrintLanding({ enabled: true, bundle: current, questUrl: QUEST_URL }),
       { initialProps: { current: null as FrontendQuestBundle | null } },
     );
     expect(mockGeneratePrintableQuest).not.toHaveBeenCalled();
 
-    rerender({ current: bundle });
-    rerender({ current: { ...bundle } as FrontendQuestBundle });
+    await rerender({ current: bundle });
+    await rerender({ current: { ...bundle } as FrontendQuestBundle });
 
     await waitFor(() => expect(mockGeneratePrintableQuest).toHaveBeenCalledTimes(1));
     const [props, options] = mockGeneratePrintableQuest.mock.calls[0];
@@ -75,35 +75,35 @@ describe('useQuestPrintLanding', () => {
 
   it('ждёт тегов квеста: без них кольцевой маршрут напечатался бы незамкнутым', async () => {
     const pending = { ...bundle, tags: undefined } as FrontendQuestBundle;
-    const { rerender } = renderHook(
+    const { rerender } = await renderHook(
       ({ current }: { current: FrontendQuestBundle }) =>
         useQuestPrintLanding({ enabled: true, bundle: current, questUrl: QUEST_URL }),
       { initialProps: { current: pending } },
     );
     expect(mockGeneratePrintableQuest).not.toHaveBeenCalled();
 
-    rerender({ current: bundle });
+    await rerender({ current: bundle });
     await waitFor(() => expect(mockGeneratePrintableQuest).toHaveBeenCalledTimes(1));
     expect(mockGeneratePrintableQuest.mock.calls[0][0].closeLoop).toBe(true);
   });
 
   it('bundle failure never starts print; a later ordinary retry result remains eligible without auto-retry', async () => {
-    const { rerender } = renderHook(
+    const { rerender } = await renderHook(
       ({ current }: { current: FrontendQuestBundle | null }) =>
         useQuestPrintLanding({ enabled: true, bundle: current, questUrl: QUEST_URL }),
       { initialProps: { current: null as FrontendQuestBundle | null } },
     );
-    rerender({ current: null });
+    await rerender({ current: null });
     await waitFor(() => expect(mockGeneratePrintableQuest).not.toHaveBeenCalled());
     expect(mockNotifyQuest).not.toHaveBeenCalled();
-    rerender({ current: bundle });
+    await rerender({ current: bundle });
     await waitFor(() => expect(mockGeneratePrintableQuest).toHaveBeenCalledTimes(1));
     expect(mockGeneratePrintableQuest.mock.calls[0][1].signal.aborted).toBe(false);
   });
 
   it('уход с экрана во время сборки отменяет запись печатной версии', async () => {
     mockGeneratePrintableQuest.mockReturnValue(new Promise(() => {}));
-    const { rerender, unmount } = renderHook(
+    const { rerender, unmount } = await renderHook(
       ({ enabled }: { enabled: boolean }) =>
         useQuestPrintLanding({ enabled, bundle, questUrl: QUEST_URL }),
       { initialProps: { enabled: true } },
@@ -111,19 +111,19 @@ describe('useQuestPrintLanding', () => {
     await waitFor(() => expect(mockGeneratePrintableQuest).toHaveBeenCalledTimes(1));
     const { signal } = mockGeneratePrintableQuest.mock.calls[0][1];
     expect(signal.aborted).toBe(false);
-    rerender({ enabled: false });
+    await rerender({ enabled: false });
     expect(signal.aborted).toBe(true);
-    unmount();
+    await unmount();
   });
 
-  it('без ?print=1 ничего не печатает', () => {
-    renderHook(() => useQuestPrintLanding({ enabled: false, bundle, questUrl: QUEST_URL }));
+  it('без ?print=1 ничего не печатает', async () => {
+    await renderHook(() => useQuestPrintLanding({ enabled: false, bundle, questUrl: QUEST_URL }));
     expect(mockGeneratePrintableQuest).not.toHaveBeenCalled();
   });
 
   it('печатать нечем — сообщает, а не молчит', async () => {
     mockGeneratePrintableQuest.mockResolvedValue('unavailable');
-    renderHook(() => useQuestPrintLanding({ enabled: true, bundle, questUrl: QUEST_URL }));
+    await renderHook(() => useQuestPrintLanding({ enabled: true, bundle, questUrl: QUEST_URL }));
     await waitFor(() => expect(mockNotifyQuest).toHaveBeenCalledTimes(1));
   });
 });

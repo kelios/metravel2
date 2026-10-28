@@ -29,7 +29,7 @@ beforeEach(async () => {
 afterEach(async () => { await i18n.changeLanguage('ru') })
 
 it('updates actual scenario memo sections and native navigation title without restarting the mounted screen', async () => {
-  render(<QuestScenarioScreen />)
+  await render(<QuestScenarioScreen />)
   for (const locale of ['en', 'pl', 'ru'] as const) {
     await act(async () => { await i18n.changeLanguage(locale) })
     expect(screen.getByText(getQuestScenarioIncludes()[0].q)).toBeTruthy()
@@ -42,8 +42,8 @@ it('updates actual scenario memo sections and native navigation title without re
 })
 
 it('refreshes the default FAQ local factory while retaining the open accordion item', async () => {
-  render(<QuestsSeoIntroFaq variant="faq" />)
-  fireEvent.press(screen.getByLabelText(getQuestFaqItems()[0].q))
+  await render(<QuestsSeoIntroFaq variant="faq" />)
+  await fireEvent.press(screen.getByLabelText(getQuestFaqItems()[0].q))
   expect(screen.getByText(getQuestFaqItems()[0].a)).toBeTruthy()
   for (const locale of ['en', 'pl', 'ru'] as const) {
     await act(async () => { await i18n.changeLanguage(locale) })

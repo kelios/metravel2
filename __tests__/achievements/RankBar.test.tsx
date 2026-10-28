@@ -1,3 +1,4 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 // __tests__/achievements/RankBar.test.tsx
 // Render tests for components/achievements/RankBar.tsx
 
@@ -51,18 +52,18 @@ const makeRank = (overrides: Partial<UserRank> = {}): UserRank => ({
 // ── tests ──────────────────────────────────────────────────────────────────────
 
 describe('RankBar', () => {
-  it('renders level number', () => {
-    const { getByText } = render(<RankBar rank={makeRank({ level: 3 })} />)
+  it('renders level number', async () => {
+    const { getByText } = await render(<RankBar rank={makeRank({ level: 3 })} />)
     expect(getByText('3')).toBeTruthy()
   })
 
-  it('renders rank title', () => {
-    const { getByText } = render(<RankBar rank={makeRank({ title: 'Бывалый' })} />)
+  it('renders rank title', async () => {
+    const { getByText } = await render(<RankBar rank={makeRank({ title: 'Бывалый' })} />)
     expect(getByText('Бывалый')).toBeTruthy()
   })
 
-  it('prepends titlePrefix to the rank title so the rank is explained', () => {
-    const { getByText, queryByText } = render(
+  it('prepends titlePrefix to the rank title so the rank is explained', async () => {
+    const { getByText, queryByText } = await render(
       <RankBar rank={makeRank({ title: 'Эксперт' })} compact titlePrefix="Ранг: " />,
     )
     expect(getByText('Ранг: Эксперт')).toBeTruthy()
@@ -70,23 +71,23 @@ describe('RankBar', () => {
     expect(queryByText('Эксперт')).toBeNull()
   })
 
-  it('renders XP and badge count in non-compact mode', () => {
-    const { getByText } = render(
+  it('renders XP and badge count in non-compact mode', async () => {
+    const { getByText } = await render(
       <RankBar rank={makeRank({ totalPoints: 450, badgesCount: 5 })} />,
     )
     expect(getByText('450 очков опыта · значков: 5')).toBeTruthy()
   })
 
-  it('does NOT render XP line in compact mode', () => {
-    const { queryByText } = render(
+  it('does NOT render XP line in compact mode', async () => {
+    const { queryByText } = await render(
       <RankBar rank={makeRank({ totalPoints: 450, badgesCount: 5 })} compact />,
     )
     expect(queryByText(/очков опыта · значков/)).toBeNull()
   })
 
-  it('renders caption "До «...»: N XP" with correct remaining value', () => {
+  it('renders caption "До «...»: N XP" with correct remaining value', async () => {
     // totalPoints=450, nextLevelMinPoints=900 → remaining=450
-    const { getByText } = render(
+    const { getByText } = await render(
       <RankBar
         rank={makeRank({
           totalPoints: 450,
@@ -99,8 +100,8 @@ describe('RankBar', () => {
     expect(getByText('До «Писатель»: ещё 450 очков опыта')).toBeTruthy()
   })
 
-  it('renders maximum level caption when isMaxLevel is true', () => {
-    const { getByText } = render(
+  it('renders maximum level caption when isMaxLevel is true', async () => {
+    const { getByText } = await render(
       <RankBar
         rank={makeRank({ nextLevelMinPoints: null, nextLevelTitle: null, isMaxLevel: true })}
       />,
@@ -108,10 +109,10 @@ describe('RankBar', () => {
     expect(getByText('Максимальный уровень достигнут')).toBeTruthy()
   })
 
-  it('does NOT render XP bar or caption in unknown mode (null thresholds, isMaxLevel false)', () => {
+  it('does NOT render XP bar or caption in unknown mode (null thresholds, isMaxLevel false)', async () => {
     // Public profile endpoint: no rank_levels → nextLevelMinPoints null, isMaxLevel false
     // RankBar skips the track+caption block entirely in 'unknown' mode.
-    const { queryByText, getAllByTestId } = render(
+    const { queryByText, getAllByTestId } = await render(
       <RankBar
         rank={makeRank({ nextLevelMinPoints: null, nextLevelTitle: null, isMaxLevel: false })}
       />,
@@ -123,21 +124,21 @@ describe('RankBar', () => {
     expect(getAllByTestId('linear-gradient')).toHaveLength(1)
   })
 
-  it('does NOT render progress caption in compact mode', () => {
-    const { queryByText } = render(
+  it('does NOT render progress caption in compact mode', async () => {
+    const { queryByText } = await render(
       <RankBar rank={makeRank()} compact />,
     )
     expect(queryByText(/До «/)).toBeNull()
     expect(queryByText(/Максимальный уровень/)).toBeNull()
   })
 
-  it('root element has accessibilityRole="summary"', () => {
-    const { UNSAFE_getByProps } = render(<RankBar rank={makeRank()} />)
-    expect(UNSAFE_getByProps({ accessibilityRole: 'summary' })).toBeTruthy()
+  it('root element has accessibilityRole="summary"', async () => {
+    const { container } = await render(<RankBar rank={makeRank()} />)
+    expect(getOnlyHost(container, node => node.props.accessibilityRole === 'summary')).toBeTruthy()
   })
 
-  it('accessibilityLabel includes level and title for non-max rank', () => {
-    const { getByLabelText } = render(
+  it('accessibilityLabel includes level and title for non-max rank', async () => {
+    const { getByLabelText } = await render(
       <RankBar
         rank={makeRank({
           level: 3,
@@ -153,8 +154,8 @@ describe('RankBar', () => {
     expect(el).toBeTruthy()
   })
 
-  it('accessibilityLabel says "Максимальный уровень" when isMaxLevel is true', () => {
-    const { getByLabelText } = render(
+  it('accessibilityLabel says "Максимальный уровень" when isMaxLevel is true', async () => {
+    const { getByLabelText } = await render(
       <RankBar
         rank={makeRank({ nextLevelMinPoints: null, nextLevelTitle: null, isMaxLevel: true })}
       />,
@@ -162,16 +163,16 @@ describe('RankBar', () => {
     expect(getByLabelText(/Максимальный уровень/)).toBeTruthy()
   })
 
-  it('accepts testID prop', () => {
-    const { getByTestId } = render(
+  it('accepts testID prop', async () => {
+    const { getByTestId } = await render(
       <RankBar rank={makeRank()} testID="rank-bar-test" />,
     )
     expect(getByTestId('rank-bar-test')).toBeTruthy()
   })
 
-  it('renders without crash when totalPoints equals currentLevelMinPoints', () => {
+  it('renders without crash when totalPoints equals currentLevelMinPoints', async () => {
     // ratio = 0, remaining = nextLevel - totalPoints
-    const { getByText } = render(
+    const { getByText } = await render(
       <RankBar
         rank={makeRank({
           totalPoints: 400,
@@ -184,8 +185,8 @@ describe('RankBar', () => {
     expect(getByText('До «Писатель»: ещё 500 очков опыта')).toBeTruthy()
   })
 
-  it('agrees the noun with the number of points (#2238)', () => {
-    const { getByText, getByLabelText } = render(
+  it('agrees the noun with the number of points (#2238)', async () => {
+    const { getByText, getByLabelText } = await render(
       <RankBar
         rank={makeRank({
           totalPoints: 1,
@@ -201,10 +202,10 @@ describe('RankBar', () => {
     expect(getByLabelText('Уровень 3, Бывалый. Очков опыта: 1, до уровня Писатель осталось 2')).toBeTruthy()
   })
 
-  it('uses server-provided remainingPoints when present (canonical #721)', () => {
+  it('uses server-provided remainingPoints when present (canonical #721)', async () => {
     // Server summary: remainingPoints=35 must win over any client-computed value
     // (totalPoints/nextLevelMinPoints here would give 450, but server says 35).
-    const { getByText } = render(
+    const { getByText } = await render(
       <RankBar
         rank={makeRank({
           totalPoints: 15,
@@ -219,8 +220,8 @@ describe('RankBar', () => {
     expect(getByText('До «Путешественник»: ещё 35 очков опыта')).toBeTruthy()
   })
 
-  it('uses server-provided progressRatio for the fill width', () => {
-    const { getByLabelText } = render(
+  it('uses server-provided progressRatio for the fill width', async () => {
+    const { getByLabelText } = await render(
       <RankBar
         rank={makeRank({
           level: 5,
@@ -237,9 +238,9 @@ describe('RankBar', () => {
     expect(getByLabelText(/осталось 360/)).toBeTruthy()
   })
 
-  it('falls back to client compute when server progress fields are null (legacy)', () => {
+  it('falls back to client compute when server progress fields are null (legacy)', async () => {
     // progressRatio/remainingPoints null → compute: 900-450 = 450
-    const { getByText } = render(
+    const { getByText } = await render(
       <RankBar
         rank={makeRank({
           totalPoints: 450,
@@ -254,8 +255,8 @@ describe('RankBar', () => {
     expect(getByText('До «Писатель»: ещё 450 очков опыта')).toBeTruthy()
   })
 
-  it('clamps remaining to 0 when totalPoints exceeds nextLevelMinPoints', () => {
-    const { getByText } = render(
+  it('clamps remaining to 0 when totalPoints exceeds nextLevelMinPoints', async () => {
+    const { getByText } = await render(
       <RankBar
         rank={makeRank({
           totalPoints: 1000,

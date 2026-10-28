@@ -57,8 +57,8 @@ describe('LazyYouTube web offscreen gating (#818)', () => {
     mockSetElementRef.mockClear()
   })
 
-  it('does not mount the thumbnail before the section nears the viewport', () => {
-    render(<LazyYouTube url={URL} />)
+  it('does not mount the thumbnail before the section nears the viewport', async () => {
+    await render(<LazyYouTube url={URL} />)
 
     // Intentional play affordance is present so the reserved 16:9 slot never
     // reads as blank (no CLS) while the image stays gated.
@@ -67,9 +67,9 @@ describe('LazyYouTube web offscreen gating (#818)', () => {
     expect(screen.queryByTestId('youtube-preview-image')).toBeNull()
   })
 
-  it('mounts the hqdefault thumbnail once the section is near the viewport', () => {
+  it('mounts the hqdefault thumbnail once the section is near the viewport', async () => {
     mockShouldLoad = true
-    render(<LazyYouTube url={URL} />)
+    await render(<LazyYouTube url={URL} />)
 
     const img = screen.getByTestId('youtube-preview-image')
     expect(img.props.src).toBe('https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg')

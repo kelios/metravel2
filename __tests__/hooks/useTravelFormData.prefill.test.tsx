@@ -21,14 +21,14 @@ describe('article wizard initial prefill', () => {
   const tick = async () => { await act(async () => { await jest.advanceTimersByTimeAsync(6000); }); };
 
   it('waits for the initial catalog, creates a pristine baseline and never saves merely by opening', async () => {
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ pending, prefill }) => useTravelFormData({ ...defaults, prefillPending: pending, initialPrefill: prefill }),
-      { initialProps: { pending: true, prefill: null as typeof seed | null }, concurrentRoot: false },
+      { initialProps: { pending: true, prefill: null as typeof seed | null } },
     );
     expect(result.current.isInitialLoading).toBe(true);
     await tick();
     expect(saveFormData).not.toHaveBeenCalled();
-    rerender({ pending: false, prefill: seed });
+    await rerender({ pending: false, prefill: seed });
     expect(result.current.isInitialLoading).toBe(false);
     expect(result.current.formData).toMatchObject({ name: 'Краков', countries: ['616'], description: '', coordsMeTravel: [], gallery: [] });
     expect(result.current.formState.isDirty).toBe(false);
@@ -37,33 +37,33 @@ describe('article wizard initial prefill', () => {
     await tick();
     expect(saveFormData).not.toHaveBeenCalled();
 
-    act(() => result.current.setFormData((previous) => ({ ...previous, name: 'Моя поездка' })));
+    await act(() => result.current.setFormData((previous) => ({ ...previous, name: 'Моя поездка' })));
     await tick();
     expect(saveFormData).toHaveBeenCalledTimes(1);
     expect((saveFormData as jest.Mock).mock.calls[0][0]).toMatchObject({ name: 'Моя поездка', countries: ['616'] });
     expect((saveFormData as jest.Mock).mock.calls[0][0]).not.toHaveProperty('source_travel_id');
   });
 
-  it('keeps edits and recovered data when later context, catalog or locale changes', () => {
-    const { result, rerender } = renderHook(
+  it('keeps edits and recovered data when later context, catalog or locale changes', async () => {
+    const { result, rerender } = await renderHook(
       ({ prefill }) => useTravelFormData({ ...defaults, initialPrefill: prefill }),
-      { initialProps: { prefill: seed }, concurrentRoot: false },
+      { initialProps: { prefill: seed } },
     );
-    act(() => result.current.setFormData((previous) => ({
+    await act(() => result.current.setFormData((previous) => ({
       ...previous, name: 'Восстановленный черновик', countries: ['112'], description: 'Свой текст',
     })));
-    rerender({ prefill: { name: 'Чужое место', countries: ['999'] } });
+    await rerender({ prefill: { name: 'Чужое место', countries: ['999'] } });
     expect(result.current.formData).toMatchObject({
       name: 'Восстановленный черновик', countries: ['112'], description: 'Свой текст',
     });
   });
 
   it('releases the form after a catalog failure without inventing a selected country', async () => {
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ pending, prefill }) => useTravelFormData({ ...defaults, prefillPending: pending, initialPrefill: prefill }),
-      { initialProps: { pending: true, prefill: null as typeof seed | null }, concurrentRoot: false },
+      { initialProps: { pending: true, prefill: null as typeof seed | null } },
     );
-    rerender({ pending: false, prefill: { name: 'Краков', countries: [] } });
+    await rerender({ pending: false, prefill: { name: 'Краков', countries: [] } });
     expect(result.current.isInitialLoading).toBe(false);
     expect(result.current.formData.countries).toEqual([]);
     expect(result.current.formData.name).toBe('Краков');
@@ -71,13 +71,13 @@ describe('article wizard initial prefill', () => {
     expect(saveFormData).not.toHaveBeenCalled();
   });
 
-  it('ignores a new source arriving over an already mounted ordinary editor', () => {
-    const { result, rerender } = renderHook(
+  it('ignores a new source arriving over an already mounted ordinary editor', async () => {
+    const { result, rerender } = await renderHook(
       ({ prefill }) => useTravelFormData({ ...defaults, initialPrefill: prefill }),
-      { initialProps: { prefill: null as typeof seed | null }, concurrentRoot: false },
+      { initialProps: { prefill: null as typeof seed | null } },
     );
-    act(() => result.current.setFormData((previous) => ({ ...previous, name: 'Собственное начало' })));
-    rerender({ prefill: seed });
+    await act(() => result.current.setFormData((previous) => ({ ...previous, name: 'Собственное начало' })));
+    await rerender({ prefill: seed });
     expect(result.current.formData.name).toBe('Собственное начало');
     expect(result.current.formData.countries).toEqual([]);
   });
@@ -86,9 +86,9 @@ describe('article wizard initial prefill', () => {
     (fetchTravel as jest.Mock).mockResolvedValue({
       id: 321, name: 'Существующая статья', countries: [112], description: 'Авторский текст', userIds: '42',
     });
-    const { result } = renderHook(() => useTravelFormData({
+    const { result } = await renderHook(() => useTravelFormData({
       ...defaults, travelId: '321', isNew: false, initialPrefill: seed,
-    }), { concurrentRoot: false });
+    }), {  });
     await act(async () => { await Promise.resolve(); });
     expect(result.current.formData).toMatchObject({ name: 'Существующая статья', countries: ['112'], description: 'Авторский текст' });
     await tick();

@@ -38,7 +38,7 @@ describe('useSliderCore native prefetch', () => {
   })
 
   it('does not duplicate the mounted native neighbor request on initial warmup', async () => {
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useSliderCore({
         images,
         autoPlay: false,
@@ -47,7 +47,7 @@ describe('useSliderCore native prefetch', () => {
       }),
     )
 
-    act(() => {
+    await act(() => {
       result.current.setContainerWidth(360)
     })
 
@@ -55,7 +55,7 @@ describe('useSliderCore native prefetch', () => {
   })
 
   it('prefetches only the unmounted second neighbor during wider native warmup', async () => {
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useSliderCore({
         images,
         autoPlay: false,
@@ -64,7 +64,7 @@ describe('useSliderCore native prefetch', () => {
       }),
     )
 
-    act(() => {
+    await act(() => {
       result.current.setContainerWidth(360)
     })
 
@@ -75,7 +75,7 @@ describe('useSliderCore native prefetch', () => {
     })
   })
 
-  it('handles a native state change before the initial AppState is available', () => {
+  it('handles a native state change before the initial AppState is available', async () => {
     const initialState = AppState.currentState
     let onChange: ((state: AppStateStatus) => void) | undefined
     const remove = jest.fn()
@@ -85,11 +85,11 @@ describe('useSliderCore native prefetch', () => {
     })
     AppState.currentState = null
     try {
-      const { unmount } = renderHook(() => useSliderCore({ images, autoPlay: false, buildUri: (image) => image.url }))
+      const { unmount } = await renderHook(() => useSliderCore({ images, autoPlay: false, buildUri: (image) => image.url }))
       expect(onChange).toBeDefined()
-      expect(() => act(() => onChange?.('background'))).not.toThrow()
-      expect(() => act(() => onChange?.('active'))).not.toThrow()
-      unmount()
+      await expect(act(() => onChange?.('background'))).resolves.toBeUndefined()
+      await expect(act(() => onChange?.('active'))).resolves.toBeUndefined()
+      await unmount()
       expect(remove).toHaveBeenCalled()
     } finally {
       AppState.currentState = initialState

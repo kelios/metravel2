@@ -47,7 +47,7 @@ const mockFilterGroups = [
   },
 ];
 
-const renderWithProviders = (component: React.ReactElement) => {
+const renderWithProviders = async (component: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -55,7 +55,7 @@ const renderWithProviders = (component: React.ReactElement) => {
     },
   });
 
-  return render(
+  return await render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         {component}
@@ -100,26 +100,26 @@ describe('ModernFilters Component', () => {
       );
     };
 
-    it('opens desktop groups with cached options before its own width is available', () => {
-      render(createFrame()());
+    it('opens desktop groups with cached options before its own width is available', async () => {
+      await render(createFrame()());
       expect(screen.getByRole('button', { name: 'Свернуть Категории' }).props.accessibilityState.expanded).toBe(true);
       expect(screen.getByRole('checkbox', { name: 'Горы' })).toBeTruthy();
       expect(screen.getByRole('checkbox', { name: 'Самолет' })).toBeTruthy();
       expect(screen.queryByTestId('filters-apply-footer')).toBeNull();
     });
 
-    it('replaces reserved rows with options and preserves a manually collapsed group', () => {
+    it('replaces reserved rows with options and preserves a manually collapsed group', async () => {
       const frame = createFrame();
       const pendingGroups = mockFilterGroups.map(group => ({ ...group, options: [] }));
-      const { rerender } = render(frame({ filterGroups: pendingGroups, isLoading: true }));
+      const { rerender } = await render(frame({ filterGroups: pendingGroups, isLoading: true }));
       expect(screen.getByTestId('filter-options-loading-categories', { includeHiddenElements: true })).toBeTruthy();
       expect(screen.queryByText('Транспорт')).toBeNull();
       expect(screen.queryByTestId('filter-options-loading-transports', { includeHiddenElements: true })).toBeNull();
       expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
-      fireEvent.press(screen.getByRole('button', { name: 'Свернуть Категории' }));
+      await fireEvent.press(screen.getByRole('button', { name: 'Свернуть Категории' }));
       expect(screen.getByTestId('filter-options-loading-transports', { includeHiddenElements: true })).toBeTruthy();
 
-      rerender(frame({ isLoading: false }));
+      await rerender(frame({ isLoading: false }));
       expect(screen.queryByTestId('filter-options-loading-categories', { includeHiddenElements: true })).toBeNull();
       expect(screen.queryByTestId('filter-options-loading-transports', { includeHiddenElements: true })).toBeNull();
       expect(screen.queryByRole('checkbox', { name: 'Горы' })).toBeNull();
@@ -127,8 +127,8 @@ describe('ModernFilters Component', () => {
       expect(screen.getByRole('button', { name: 'Развернуть Категории' }).props.accessibilityState.expanded).toBe(false);
     });
 
-    it('keeps cached options and subsequent headers while dictionaries refresh', () => {
-      render(createFrame()({ isLoading: true }));
+    it('keeps cached options and subsequent headers while dictionaries refresh', async () => {
+      await render(createFrame()({ isLoading: true }));
       expect(screen.getByRole('checkbox', { name: 'Горы' })).toBeTruthy();
       expect(screen.getByRole('checkbox', { name: 'Самолет' })).toBeTruthy();
       expect(screen.getByText('Транспорт')).toBeTruthy();
@@ -139,9 +139,9 @@ describe('ModernFilters Component', () => {
       ['web', 1280],
       ['android', 1440],
       ['ios', 1440],
-    ] as const)('keeps %s width %s groups collapsed', (os, width) => {
+    ] as const)('keeps %s width %s groups collapsed', async (os, width) => {
       Platform.OS = os;
-      render(createFrame()({
+      await render(createFrame()({
         initialViewportWidth: width,
         isLoading: true,
         filterGroups: mockFilterGroups.map(group => ({ ...group, options: [] })),
@@ -152,18 +152,18 @@ describe('ModernFilters Component', () => {
       expect(screen.getByTestId('filters-apply-footer')).toBeTruthy();
     });
 
-    it('uses live width instead of the inherited desktop width after resize', () => {
+    it('uses live width instead of the inherited desktop width after resize', async () => {
       const frame = createFrame();
-      const { rerender } = render(frame());
+      const { rerender } = await render(frame());
       expect(screen.queryByTestId('filters-apply-footer')).toBeNull();
       mockResponsiveWidth = 1280;
-      rerender(frame({ resultsCount: 10 }));
+      await rerender(frame({ resultsCount: 10 }));
       expect(screen.getByTestId('filters-apply-footer')).toBeTruthy();
     });
   });
 
-  it('renders filter groups correctly', () => {
-    renderWithProviders(
+  it('renders filter groups correctly', async () => {
+    await renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
@@ -180,7 +180,7 @@ describe('ModernFilters Component', () => {
   });
 
   it('calls onFilterChange when filter option is selected', async () => {
-    renderWithProviders(
+    await renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
@@ -191,17 +191,17 @@ describe('ModernFilters Component', () => {
       />
     );
 
-    fireEvent.press(screen.getByText('Категории'));
+    await fireEvent.press(screen.getByText('Категории'));
     const categoryButton = screen.getByText('Горы');
-    fireEvent.press(categoryButton);
+    await fireEvent.press(categoryButton);
 
     await waitFor(() => {
       expect(mockOnFilterChange).toHaveBeenCalledWith('categories', '1');
     });
   });
 
-  it('shows correct pluralization for results count', () => {
-    const { rerender } = renderWithProviders(
+  it('shows correct pluralization for results count', async () => {
+    const { rerender } = await renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
@@ -214,7 +214,7 @@ describe('ModernFilters Component', () => {
 
     expect(screen.getByText('1 маршрут')).toBeTruthy();
 
-    rerender(
+    await rerender(
       <QueryClientProvider client={new QueryClient()}>
         <ThemeProvider>
           <ModernFilters
@@ -233,8 +233,8 @@ describe('ModernFilters Component', () => {
   });
 
   // #2375: группы, совпадающие с выбором по умолчанию экрана, не считаются активными
-  it('does not count groups equal to defaultSelectedFilters as active', () => {
-    renderWithProviders(
+  it('does not count groups equal to defaultSelectedFilters as active', async () => {
+    await renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{ categories: ['1', '2'] }}
@@ -249,8 +249,8 @@ describe('ModernFilters Component', () => {
     expect(screen.queryByRole('button', { name: /Очистить все фильтры/ })).toBeNull();
   });
 
-  it('counts a group that deviates from defaultSelectedFilters', () => {
-    renderWithProviders(
+  it('counts a group that deviates from defaultSelectedFilters', async () => {
+    await renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{ categories: ['1'] }}
@@ -275,8 +275,8 @@ describe('ModernFilters Component', () => {
     [' 2026 ', 2026, 0],
     [2025, '2026', 1],
     [undefined, '2026', 1],
-  ] as const)('counts year %p against default %p as %p', (year, defaultYear, count) => {
-    renderWithProviders(
+  ] as const)('counts year %p against default %p as %p', async (year, defaultYear, count) => {
+    await renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{ year } as FilterState}
@@ -293,13 +293,13 @@ describe('ModernFilters Component', () => {
       expect(reset).toBeNull();
     } else {
       expect(reset).toBeTruthy();
-      fireEvent.press(reset!);
+      await fireEvent.press(reset!);
       expect(mockOnClearAll).toHaveBeenCalledTimes(1);
     }
   });
 
-  it('keeps selected badges but hides group clear for reordered duplicate defaults', () => {
-    renderWithProviders(<ModernFilters filterGroups={mockFilterGroups}
+  it('keeps selected badges but hides group clear for reordered duplicate defaults', async () => {
+    await renderWithProviders(<ModernFilters filterGroups={mockFilterGroups}
       selectedFilters={{ categories: ['2', '1', '1'] }}
       defaultSelectedFilters={{ categories: ['1', '2', '2'] }}
       onFilterChange={mockOnFilterChange} onResetGroup={mockOnResetGroup} onClearAll={mockOnClearAll} />);
@@ -308,31 +308,31 @@ describe('ModernFilters Component', () => {
     expect(screen.getByText('3')).toBeTruthy();
   });
 
-  it('restores changed defaults once without toggling or clearing other groups', () => {
-    renderWithProviders(<ModernFilters filterGroups={mockFilterGroups}
+  it('restores changed defaults once without toggling or clearing other groups', async () => {
+    await renderWithProviders(<ModernFilters filterGroups={mockFilterGroups}
       selectedFilters={{ categories: ['2'], transports: ['1'] }}
       defaultSelectedFilters={{ categories: ['1', '2'] }}
       onFilterChange={mockOnFilterChange} onResetGroup={mockOnResetGroup} onClearAll={mockOnClearAll} />);
-    fireEvent.press(screen.getAllByRole('button', { name: 'Очистить 1 выбранных' })[0]);
+    await fireEvent.press(screen.getAllByRole('button', { name: 'Очистить 1 выбранных' })[0]);
     expect(mockOnResetGroup).toHaveBeenCalledTimes(1);
     expect(mockOnResetGroup).toHaveBeenCalledWith('categories', ['1', '2']);
     expect(mockOnFilterChange).not.toHaveBeenCalled();
     expect(mockOnClearAll).not.toHaveBeenCalled();
   });
 
-  it('offers reset when all defaults were removed, and clears ordinary groups to empty', () => {
-    renderWithProviders(<ModernFilters filterGroups={mockFilterGroups}
+  it('offers reset when all defaults were removed, and clears ordinary groups to empty', async () => {
+    await renderWithProviders(<ModernFilters filterGroups={mockFilterGroups}
       selectedFilters={{ categories: [], transports: ['1'] }}
       defaultSelectedFilters={{ categories: ['1', '2'] }}
       onFilterChange={mockOnFilterChange} onResetGroup={mockOnResetGroup} onClearAll={mockOnClearAll} />);
-    fireEvent.press(screen.getByRole('button', { name: 'Очистить 2 выбранных' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Очистить 2 выбранных' }));
     expect(mockOnResetGroup).toHaveBeenCalledWith('categories', ['1', '2']);
-    fireEvent.press(screen.getByRole('button', { name: 'Очистить 1 выбранных' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Очистить 1 выбранных' }));
     expect(mockOnResetGroup).toHaveBeenCalledWith('transports', []);
   });
 
-  it('calls onClearAll when clear button is pressed', () => {
-    renderWithProviders(
+  it('calls onClearAll when clear button is pressed', async () => {
+    await renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{ categories: ['1'] }}
@@ -344,13 +344,13 @@ describe('ModernFilters Component', () => {
     );
 
     const clearButton = screen.getByRole('button', { name: 'Очистить все фильтры (1)' });
-    fireEvent.press(clearButton);
+    await fireEvent.press(clearButton);
 
     expect(mockOnClearAll).toHaveBeenCalled();
   });
 
-  it('displays year filter when provided', () => {
-    renderWithProviders(
+  it('displays year filter when provided', async () => {
+    await renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
@@ -366,8 +366,8 @@ describe('ModernFilters Component', () => {
     expect(screen.getByDisplayValue('2023')).toBeTruthy();
   });
 
-  it('uses a mobile-safe font size for the year input', () => {
-    renderWithProviders(
+  it('uses a mobile-safe font size for the year input', async () => {
+    await renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
@@ -387,8 +387,8 @@ describe('ModernFilters Component', () => {
     expect(flattened.fontSize).toBeGreaterThanOrEqual(16);
   });
 
-  it('keeps mobile web filter chrome compact', () => {
-    renderWithProviders(
+  it('keeps mobile web filter chrome compact', async () => {
+    await renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
@@ -428,11 +428,11 @@ describe('ModernFilters Component', () => {
     expect(yearStyle.minHeight).toBe(38);
   });
 
-  it('renders the expand/collapse toggle icon-only on native (F-39)', () => {
+  it('renders the expand/collapse toggle icon-only on native (F-39)', async () => {
     const originalOS = Platform.OS;
     Platform.OS = 'android';
     try {
-      renderWithProviders(
+      await renderWithProviders(
         <ModernFilters
           filterGroups={mockFilterGroups}
           selectedFilters={{}}
@@ -460,14 +460,14 @@ describe('ModernFilters Component', () => {
     }
   });
 
-  it('shows moderation toggle for superuser', () => {
+  it('shows moderation toggle for superuser', async () => {
     // Mock superuser
     jest.spyOn(require('@/context/AuthContext'), 'useAuth').mockReturnValue({
       userId: 'test-user',
       isSuperuser: true,
     });
 
-    renderWithProviders(
+    await renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
@@ -484,8 +484,8 @@ describe('ModernFilters Component', () => {
     expect(screen.getByText('Только на модерации')).toBeTruthy();
   });
 
-  it('shows drafts filter for author travels', () => {
-    renderWithProviders(
+  it('shows drafts filter for author travels', async () => {
+    await renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
@@ -503,10 +503,10 @@ describe('ModernFilters Component', () => {
     expect(screen.getByLabelText('Показать черновики').props.accessibilityState).toEqual({ checked: true });
   });
 
-  it('shows published-only filter for author travels', () => {
+  it('shows published-only filter for author travels', async () => {
     const onTogglePublishedOnly = jest.fn();
 
-    renderWithProviders(
+    await renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{}}
@@ -523,17 +523,17 @@ describe('ModernFilters Component', () => {
     expect(screen.getByText('Только опубликованные')).toBeTruthy();
     expect(screen.getByLabelText('Только опубликованные').props.accessibilityState).toEqual({ checked: true });
 
-    fireEvent.press(screen.getByLabelText('Только опубликованные'));
+    await fireEvent.press(screen.getByLabelText('Только опубликованные'));
     expect(onTogglePublishedOnly).toHaveBeenCalledTimes(1);
   });
 
-  it('marks status rows with aria-checked on web', () => {
+  it('marks status rows with aria-checked on web', async () => {
     // react-native-web 0.21 не форвардит accessibilityState в DOM, поэтому без
     // явного aria-checked строка role="checkbox" читается как «не отмечена».
     const originalOS = Platform.OS;
     Platform.OS = 'web';
     try {
-      renderWithProviders(
+      await renderWithProviders(
         <ModernFilters
           filterGroups={mockFilterGroups}
           selectedFilters={{}}
@@ -561,9 +561,9 @@ describe('ModernFilters Component', () => {
     }
   });
 
-  it('shows the all-authors scope and lets the admin reset it as the only active filter', () => {
+  it('shows the all-authors scope and lets the admin reset it as the only active filter', async () => {
     const onToggleAllAuthorsUnpublishedOnly = jest.fn();
-    renderWithProviders(
+    await renderWithProviders(
       <ModernFilters
         filterGroups={mockFilterGroups}
         selectedFilters={{ allAuthorsUnpublishedOnly: true } as unknown as FilterState}
@@ -579,14 +579,14 @@ describe('ModernFilters Component', () => {
     const row = screen.getByRole('checkbox', { name: 'Неопубликованные (на модерации)' });
     expect(row.props.accessibilityState).toEqual({ checked: true });
     expect(row.props.accessibilityHint).toBe('Показывать неопубликованные статьи на модерации');
-    fireEvent.press(row);
+    await fireEvent.press(row);
     expect(onToggleAllAuthorsUnpublishedOnly).toHaveBeenCalledTimes(1);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Очистить все фильтры (1)' }));
+    await fireEvent.press(screen.getByRole('button', { name: 'Очистить все фильтры (1)' }));
     expect(mockOnClearAll).toHaveBeenCalledTimes(1);
   });
 
-  it('moves selected object option to top of the group list', () => {
+  it('moves selected object option to top of the group list', async () => {
     const objectGroup = [
       {
         key: 'categoryTravelAddress',
@@ -601,7 +601,7 @@ describe('ModernFilters Component', () => {
       },
     ];
 
-    renderWithProviders(
+    await renderWithProviders(
       <ModernFilters
         filterGroups={objectGroup as any}
         selectedFilters={{ categoryTravelAddress: [84] as any }}
@@ -612,7 +612,7 @@ describe('ModernFilters Component', () => {
       />
     );
 
-    fireEvent.press(screen.getByText('ОБЪЕКТЫ'));
+    await fireEvent.press(screen.getByText('ОБЪЕКТЫ'));
 
     const optionTexts = screen.getAllByText(/Акведук|Амфитеатр|Озеро/);
     expect(optionTexts[0].props.children).toBe('Озеро');

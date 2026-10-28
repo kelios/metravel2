@@ -72,8 +72,8 @@ describe('TripPlanRouteMap (native) — оригинальный трек', () =
     mockNativeMapProps.length = 0
   })
 
-  it('передаёт оригинал отдельным каналом, не подменяя точки и линию маршрута', () => {
-    render(
+  it('передаёт оригинал отдельным каналом, не подменяя точки и линию маршрута', async () => {
+    await render(
       <TripPlanRouteMap route={route} routeGeometry={routeGeometry} originalTrackSegments={originalTrackSegments} />,
     )
 
@@ -88,22 +88,22 @@ describe('TripPlanRouteMap (native) — оригинальный трек', () =
     ])
   })
 
-  it('подписывает слой в легенде только когда оригинал есть', () => {
-    const withoutTrack = render(<TripPlanRouteMap route={route} routeGeometry={routeGeometry} />)
+  it('подписывает слой в легенде только когда оригинал есть', async () => {
+    const withoutTrack = await render(<TripPlanRouteMap route={route} routeGeometry={routeGeometry} />)
     expect(withoutTrack.queryByTestId('trip-plan-map-original-track-legend')).toBeNull()
     expect(
       mockNativeMapProps[mockNativeMapProps.length - 1].originalTrackSegments,
     ).toEqual([])
-    withoutTrack.unmount()
+    await withoutTrack.unmount()
 
-    const withTrack = render(
+    const withTrack = await render(
       <TripPlanRouteMap route={route} routeGeometry={routeGeometry} originalTrackSegments={originalTrackSegments} />,
     )
     expect(withTrack.getByTestId('trip-plan-map-original-track-legend')).toBeTruthy()
   })
 
-  it('не скрывает легенду оригинала в mobile fill-mode', () => {
-    const screen = render(
+  it('не скрывает легенду оригинала в mobile fill-mode', async () => {
+    const screen = await render(
       <TripPlanRouteMap
         route={route}
         routeGeometry={routeGeometry}
@@ -115,8 +115,8 @@ describe('TripPlanRouteMap (native) — оригинальный трек', () =
     expect(screen.getByTestId('trip-plan-map-original-track-legend')).toBeTruthy()
   })
 
-  it('игнорирует вырожденный трек короче линии', () => {
-    render(
+  it('игнорирует вырожденный трек короче линии', async () => {
+    await render(
       <TripPlanRouteMap
         route={route}
         routeGeometry={routeGeometry}
@@ -128,11 +128,11 @@ describe('TripPlanRouteMap (native) — оригинальный трек', () =
     expect(mockNativeMapProps[mockNativeMapProps.length - 1].originalTrackSegments).toEqual([])
   })
 
-  it('#1851 без точек маршрута объявляет центром начало оригинала, а не дефолтный Минск', () => {
+  it('#1851 без точек маршрута объявляет центром начало оригинала, а не дефолтный Минск', async () => {
     // Видимый кадр в этом случае ставит fitBounds внутри WebView; здесь
     // проверяется объявленный центр — страховка веток nativeMapHtml, которые
     // читают map.__userCenter, когда рисовать маршрут не от чего.
-    render(<TripPlanRouteMap route={[]} originalTrackSegments={twoRingSegments} />)
+    await render(<TripPlanRouteMap route={[]} originalTrackSegments={twoRingSegments} />)
 
     const props = mockNativeMapProps[mockNativeMapProps.length - 1]
     // Первая пара первого сегмента — [lng, lat], карта ждёт их разложенными.
@@ -142,8 +142,8 @@ describe('TripPlanRouteMap (native) — оригинальный трек', () =
     expect(props.routePoints).toEqual([])
   })
 
-  it('#1851 при наличии точек маршрута центр берётся по-прежнему из них', () => {
-    render(
+  it('#1851 при наличии точек маршрута центр берётся по-прежнему из них', async () => {
+    await render(
       <TripPlanRouteMap route={route} routeGeometry={routeGeometry} originalTrackSegments={twoRingSegments} />,
     )
 
@@ -151,8 +151,8 @@ describe('TripPlanRouteMap (native) — оригинальный трек', () =
     expect(props.coordinates).toEqual({ latitude: 53.9, longitude: 27.56 })
   })
 
-  it('#1847 отдаёт каждый трек файла отдельной линией, не склеивая их', () => {
-    const screen = render(
+  it('#1847 отдаёт каждый трек файла отдельной линией, не склеивая их', async () => {
+    const screen = await render(
       <TripPlanRouteMap
         route={route}
         routeGeometry={routeGeometry}

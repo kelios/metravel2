@@ -62,8 +62,8 @@ const navigationTitles = () => [
   ...SUPPLEMENTARY_NAV_ITEMS.map((item) => item.label),
 ]
 
-const renderMenu = () =>
-  render(
+const renderMenu = async () =>
+  await render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <AccountMenu initialOpenKey={1} />
     </QueryClientProvider>,
@@ -86,7 +86,7 @@ describe('AccountMenu: «Навигация» на языке приложени
     async (locale) => {
       await i18n.changeLanguage(locale)
       const expected = navigationTitles()
-      const { getByText, queryByText } = renderMenu()
+      const { getByText, queryByText } = await renderMenu()
 
       for (const title of expected) expect(getByText(title)).toBeTruthy()
       if (locale !== 'ru') {

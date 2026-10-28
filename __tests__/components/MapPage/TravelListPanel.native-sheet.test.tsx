@@ -79,8 +79,8 @@ describe('TravelListPanel native bottom sheet list', () => {
     mockFlashList.mockClear();
   });
 
-  it('uses BottomSheetFlatList and renders every nearby card inside the map sheet', () => {
-    const { getByTestId } = render(
+  it('uses BottomSheetFlatList and renders every nearby card inside the map sheet', async () => {
+    const { getByTestId } = await render(
       <TravelListPanel
         travelsData={travelsData}
         buildRouteTo={jest.fn()}
@@ -105,8 +105,8 @@ describe('TravelListPanel native bottom sheet list', () => {
     expect(mockFlashList).not.toHaveBeenCalled();
   });
 
-  it('renders compact preview rows with readable place titles', () => {
-    const { getByText, queryByTestId } = render(
+  it('renders compact preview rows with readable place titles', async () => {
+    const { getByText, queryByTestId } = await render(
       <TravelListPanel
         travelsData={travelsData}
         buildRouteTo={jest.fn()}

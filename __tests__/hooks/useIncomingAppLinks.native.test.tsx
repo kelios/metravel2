@@ -211,19 +211,19 @@ describe('useIncomingAppLinks', () => {
     });
   });
 
-  it('leaves iOS lifecycle ownership to Expo Router without a second listener', () => {
+  it('leaves iOS lifecycle ownership to Expo Router without a second listener', async () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
 
-    renderHook(() => useIncomingAppLinks());
+    await renderHook(() => useIncomingAppLinks());
 
     expect(mockAddListener).not.toHaveBeenCalled();
   });
 
-  it('reads the native event payload and suppresses an immediate duplicate delivery', () => {
+  it('reads the native event payload and suppresses an immediate duplicate delivery', async () => {
     const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(1_000);
-    renderHook(() => useIncomingAppLinks());
+    await renderHook(() => useIncomingAppLinks());
 
-    act(() => {
+    await act(() => {
       urlListener?.({ url: 'https://metravel.by/travels/first' });
       urlListener?.({ url: 'https://metravel.by/travels/first' });
     });
@@ -236,41 +236,41 @@ describe('useIncomingAppLinks', () => {
     expect(mockPush).toHaveBeenCalledWith('/travels/first');
 
     nowSpy.mockReturnValue(2_001);
-    act(() => {
+    await act(() => {
       urlListener?.({ url: 'https://metravel.by/travels/first' });
     });
     expect(mockPush).toHaveBeenCalledTimes(2);
     nowSpy.mockRestore();
   });
 
-  it('keeps the latest warm link pending until root navigation is ready', () => {
+  it('keeps the latest warm link pending until root navigation is ready', async () => {
     mockRootNavigationState = undefined;
-    const { rerender } = renderHook(() => useIncomingAppLinks());
+    const { rerender } = await renderHook(() => useIncomingAppLinks());
 
-    act(() => {
+    await act(() => {
       urlListener?.({ url: 'metravel://travels/first' });
       urlListener?.({ url: 'metravel://travels/latest' });
     });
     expect(mockPush).not.toHaveBeenCalled();
 
     mockRootNavigationState = { key: 'root' };
-    rerender({});
+    await rerender({});
 
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith('/travels/latest');
   });
 
-  it('ignores malformed or external events and removes the native listener', () => {
-    const { unmount } = renderHook(() => useIncomingAppLinks());
+  it('ignores malformed or external events and removes the native listener', async () => {
+    const { unmount } = await renderHook(() => useIncomingAppLinks());
 
-    act(() => {
+    await act(() => {
       urlListener?.({ url: 'https://example.com/travels/test' });
       urlListener?.({ url: 'https://metravel.by' });
       urlListener?.(null);
     });
     expect(mockPush).not.toHaveBeenCalled();
 
-    unmount();
+    await unmount();
     expect(mockRemove).toHaveBeenCalledTimes(1);
   });
 });

@@ -81,7 +81,7 @@ console.info = (message, ...args) => {
 jest.mock('expo/src/winter/runtime.native', () => ({}))
 jest.mock('expo/src/winter/runtime', () => ({}))
 
-require('@testing-library/jest-native/extend-expect')
+expect.extend(require('@testing-library/react-native/matchers'))
 
 // react-leaflet ships ESM and expects a real browser environment.
 // For unit tests we only need lightweight stubs.
@@ -433,9 +433,6 @@ if (typeof (global as any).setImmediate !== 'function') {
 if (typeof (global as any).clearImmediate !== 'function') {
   ;(global as any).clearImmediate = (id: any) => clearTimeout(id)
 }
-
-import { installCompactTestInstanceFormat } from './helpers/compactTestInstanceFormat'
-installCompactTestInstanceFormat()
 
 // Polyfill TextEncoder/TextDecoder for JSDOM environment
 import { TextEncoder, TextDecoder } from 'util'

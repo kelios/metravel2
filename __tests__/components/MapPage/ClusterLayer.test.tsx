@@ -101,13 +101,13 @@ describe('ClusterLayer', () => {
     mockIconReadyOnMount = true;
   });
 
-  it('opens singleton cluster popup before marker click follow-up logic', () => {
+  it('opens singleton cluster popup before marker click follow-up logic', async () => {
     const events: string[] = [];
     const onMarkerClick = jest.fn(() => {
       events.push('onMarkerClick');
     });
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ClusterLayer
         clusters={[
           {
@@ -143,7 +143,7 @@ describe('ClusterLayer', () => {
       />
     );
 
-    fireEvent.press(getByTestId('cluster-marker'));
+    await fireEvent.press(getByTestId('cluster-marker'));
 
     expect(events).toEqual(['openPopup', 'onMarkerClick']);
     expect(onMarkerClick).toHaveBeenCalledTimes(1);
@@ -169,8 +169,8 @@ describe('ClusterLayer', () => {
       ],
     } as any;
 
-    it('sets a localized, pluralized aria-label on a multi-point cluster icon', () => {
-      render(
+    it('sets a localized, pluralized aria-label on a multi-point cluster icon', async () => {
+      await render(
         <ClusterLayer
           clusters={[multiPointCluster]}
           Marker={Marker as any}
@@ -185,10 +185,10 @@ describe('ClusterLayer', () => {
       expect(markerInstances[0]._icon?.getAttribute('aria-label')).toBe('Кластер: 4 точки');
     });
 
-    it('labels the icon once Leaflet fires "add", even when the ref resolved before the icon existed', () => {
+    it('labels the icon once Leaflet fires "add", even when the ref resolved before the icon existed', async () => {
       mockIconReadyOnMount = false;
 
-      render(
+      await render(
         <ClusterLayer
           clusters={[multiPointCluster]}
           Marker={Marker as any}
@@ -208,7 +208,7 @@ describe('ClusterLayer', () => {
       expect(marker._icon?.getAttribute('aria-label')).toBe('Кластер: 4 точки');
     });
 
-    it('does not accumulate `once("add", ...)` subscriptions once the icon is ready, even though `ref` re-invokes on every re-render', () => {
+    it('does not accumulate `once("add", ...)` subscriptions once the icon is ready, even though `ref` re-invokes on every re-render', async () => {
       mockIconReadyOnMount = false;
 
       const renderCard = () => (
@@ -222,7 +222,7 @@ describe('ClusterLayer', () => {
         />
       );
 
-      const { rerender } = render(renderCard());
+      const { rerender } = await render(renderCard());
 
       const marker = markerInstances[0];
       expect(marker.onceAddCallCount).toBe(1);
@@ -239,15 +239,15 @@ describe('ClusterLayer', () => {
       // code subscribed unconditionally and leaked one dead listener per
       // re-render (code review, #1624).
       for (let i = 0; i < 4; i += 1) {
-        rerender(renderCard());
+        await rerender(renderCard());
       }
 
       expect(markerInstances).toHaveLength(1);
       expect(marker.onceAddCallCount).toBe(1);
     });
 
-    it('sets an address-based aria-label on a lone single-point cluster', () => {
-      render(
+    it('sets an address-based aria-label on a lone single-point cluster', async () => {
+      await render(
         <ClusterLayer
           clusters={[
             {
@@ -273,8 +273,8 @@ describe('ClusterLayer', () => {
       expect(markerInstances[0]._icon?.getAttribute('aria-label')).toBe('Гродно');
     });
 
-    it('sets an address-based aria-label on a single-point marker inside an expanded cluster', () => {
-      render(
+    it('sets an address-based aria-label on a single-point marker inside an expanded cluster', async () => {
+      await render(
         <ClusterLayer
           clusters={[multiPointCluster]}
           expandedClusterKey="group-a"

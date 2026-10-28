@@ -1,3 +1,4 @@
+import { getAllHosts } from '@/__tests__/helpers/hostQueries'
 import React from 'react'
 import { fireEvent, render } from '@testing-library/react-native'
 import { Platform } from 'react-native'
@@ -81,8 +82,8 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
 
 // #1491: шаг «Точки маршрута» рендерит общий AddressSearch с /map, а он ходит за
 // адресами через React Query — конструктору нужен клиент, как и в приложении.
-const renderRouteBuilder = (element: React.ReactElement) =>
-  render(element, { wrapper: createQueryWrapper().Wrapper })
+const renderRouteBuilder = async (element: React.ReactElement) =>
+  await render(element, { wrapper: createQueryWrapper().Wrapper })
 
 describe('RouteBuilder point description', () => {
   const originalPlatform = Platform.OS
@@ -96,20 +97,20 @@ describe('RouteBuilder point description', () => {
   })
 
   // #1494: однострочное поле не давало прочитать и отредактировать длинное описание.
-  it('keeps the new-point description input multiline', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
-    fireEvent.press(getByTestId('route-builder-add-action'))
+  it('keeps the new-point description input multiline', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    await fireEvent.press(getByTestId('route-builder-add-action'))
     // Первый тип в раскрытой форме — место; ручные поля живут
     // в «своей точке».
-    fireEvent.press(getByTestId('route-builder-type-custom'))
+    await fireEvent.press(getByTestId('route-builder-type-custom'))
     const input = getByTestId('route-builder-description')
     expect(input.props.multiline).toBe(true)
     expect(input.props.numberOfLines).toBe(3)
   })
 
-  it('keeps the edited-point description input multiline', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
-    fireEvent.press(getByTestId('route-builder-edit-0'))
+  it('keeps the edited-point description input multiline', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
     const input = getByTestId('route-builder-edit-description')
     expect(input.props.multiline).toBe(true)
     expect(input.props.numberOfLines).toBe(3)
@@ -117,17 +118,17 @@ describe('RouteBuilder point description', () => {
 
   // #1494: длинное описание точки должно доезжать до сохранения маршрута целиком,
   // вместе с переносами строк — ради этого поле и стало многострочным.
-  it('saves a multi-line point description with its line breaks', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
-    fireEvent.press(getByTestId('route-builder-add-action'))
-    fireEvent.press(getByTestId('route-builder-type-custom'))
-    fireEvent.changeText(getByTestId('route-builder-name'), 'Ночёвка')
-    fireEvent.changeText(
+  it('saves a multi-line point description with its line breaks', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    await fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-type-custom'))
+    await fireEvent.changeText(getByTestId('route-builder-name'), 'Ночёвка')
+    await fireEvent.changeText(
       getByTestId('route-builder-description'),
       'Бронь на фамилию Иванов\nЗаезд с 14:00, ключи у сторожа\nСайт camp.by/booking',
     )
-    fireEvent.press(getByTestId('route-builder-add'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-add'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate).toHaveBeenCalledTimes(1)
     const saved = mockRouteMutate.mock.calls[0][0].route.at(-1)
@@ -140,14 +141,14 @@ describe('RouteBuilder point description', () => {
   // На скрине владельца (08.09.2026, Mullerthal Trail) описание первой точки —
   // автобусы RGTR до старта — занимало в карточке полтора десятка строк и
   // выдавливало из ограниченного по высоте списка остальные точки.
-  it('collapses a long point description to three lines with a per-point toggle', () => {
+  it('collapses a long point description to three lines with a per-point toggle', async () => {
     const longDescription =
       'День 0. Приезд, база на старте. Автобусы RGTR 211/212 из Люксембурга ' +
       '(Kirchberg/Limpertsberg), 190/191 от вокзала Ettelbruck, 272 от Wasserbillig ' +
       '(поезд Трир–Люксембург). Проезд по Люксембургу бесплатный, билеты не нужны. ' +
       'Заселение с 15:00, ключи на ресепшене до 22:00, поздний заезд — по телефону.'
     const trip = makeTrip()
-    const { getByTestId, queryByTestId } = renderRouteBuilder(
+    const { getByTestId, queryByTestId } = await renderRouteBuilder(
       <RouteBuilder
         trip={makeTrip({
           route: [
@@ -160,17 +161,17 @@ describe('RouteBuilder point description', () => {
 
     expect(getByTestId('route-builder-point-description-0').props.numberOfLines).toBe(3)
 
-    fireEvent.press(getByTestId('route-builder-point-description-toggle-0'))
+    await fireEvent.press(getByTestId('route-builder-point-description-toggle-0'))
     expect(getByTestId('route-builder-point-description-0').props.numberOfLines).toBeUndefined()
 
     // Короткому описанию соседней точки кнопка не нужна и не рисуется.
     expect(queryByTestId('route-builder-point-description-toggle-1')).toBeNull()
   })
 
-  it('renders links inside a point description as real anchors on web', () => {
+  it('renders links inside a point description as real anchors on web', async () => {
     Platform.OS = 'web'
-    const { UNSAFE_getAllByProps } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
-    const anchors = UNSAFE_getAllByProps({ href: 'https://cafe-gluboke.by/menu' })
+    const { container: hostContainer } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    const anchors = getAllHosts(hostContainer, node => node.props["href"] === 'https://cafe-gluboke.by/menu')
     expect(anchors.length).toBeGreaterThan(0)
   })
 })

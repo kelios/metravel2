@@ -1,4 +1,6 @@
+import { act } from 'react'
 import { fireEvent, render, within } from '@testing-library/react-native'
+import { createRootRegistry } from '../helpers/rawRootLifecycle'
 import { Platform } from 'react-native'
 import { createQueryWrapper } from '../helpers/testQueryClient'
 import PlacesScreen from '@/screens/tabs/PlacesScreen'
@@ -123,6 +125,21 @@ const catalogPage: PlacesCatalogPage = {
   countryFacets: [{ id: null, name: 'Беларусь', count: 2 }],
 }
 
+// Web owns an actual HTML heading; native cases continue through strict RNTL.
+const webRoots = createRootRegistry()
+const webQueryClients: ReturnType<typeof createQueryWrapper>['queryClient'][] = []
+const renderWebScreen = async () => {
+  const root = webRoots.createRoot()
+  const { Wrapper, queryClient } = createQueryWrapper()
+  webQueryClients.push(queryClient)
+  await act(() => root.render(<Wrapper><PlacesScreen /></Wrapper>))
+  return root
+}
+afterEach(async () => {
+  await webRoots.cleanup()
+  webQueryClients.splice(0).forEach((client) => client.clear())
+})
+
 describe('PlacesScreen category search', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -132,33 +149,34 @@ describe('PlacesScreen category search', () => {
   })
 
   it('filters manual category chips and keeps selection working', async () => {
-    const { findByTestId, queryByTestId } = render(<PlacesScreen />, {
-      wrapper: createQueryWrapper().Wrapper,
-    })
+    const root = await renderWebScreen()
+    const { findByTestId, queryByTestId } = within(root.container)
 
     expect(await findByTestId('places-category-chip-Парковка')).toBeTruthy()
     expect(await findByTestId('places-category-chip-Замок')).toBeTruthy()
 
-    fireEvent.changeText(await findByTestId('places-category-search-input'), 'зам')
+    const categoryInput = await findByTestId('places-category-search-input')
+    await act(() => categoryInput.props.onChangeText('зам'))
 
     const castleChip = await findByTestId('places-category-chip-Замок')
     expect(castleChip).toBeTruthy()
     expect(queryByTestId('places-category-chip-Парковка')).toBeNull()
 
-    fireEvent.press(castleChip)
+    await act(() => castleChip.props.onPress())
 
     expect(mockSetParams).toHaveBeenCalledWith({ category: 'Замок' })
   })
 
   it('toggles multiple category chips into a CSV category param (OR multi-select)', async () => {
-    const { findByTestId } = render(<PlacesScreen />, {
-      wrapper: createQueryWrapper().Wrapper,
-    })
+    const root = await renderWebScreen()
+    const { findByTestId } = within(root.container)
 
-    fireEvent.press(await findByTestId('places-category-chip-Замок'))
+    const castle = await findByTestId('places-category-chip-Замок')
+    await act(() => castle.props.onPress())
     expect(mockSetParams).toHaveBeenLastCalledWith({ category: 'Замок' })
 
-    fireEvent.press(await findByTestId('places-category-chip-Парковка'))
+    const parking = await findByTestId('places-category-chip-Парковка')
+    await act(() => parking.props.onPress())
     expect(mockSetParams).toHaveBeenLastCalledWith({ category: 'Замок,Парковка' })
 
     // The catalog list request carries both categories, not just the last one.
@@ -172,12 +190,11 @@ describe('PlacesScreen category search', () => {
   })
 
   it('renders the "Интересные подборки" collections and selects one', async () => {
-    const { findByTestId } = render(<PlacesScreen />, {
-      wrapper: createQueryWrapper().Wrapper,
-    })
+    const root = await renderWebScreen()
+    const { findByTestId } = within(root.container)
 
     const featured = await findByTestId('places-collection-nature')
-    fireEvent.press(featured)
+    await act(() => featured.props.onPress())
 
     const lastCall = mockSetParams.mock.calls.at(-1)?.[0]
     expect(String(lastCall?.category)).toContain('Озеро')
@@ -185,19 +202,22 @@ describe('PlacesScreen category search', () => {
   })
 
   it('restores the Read action on place cards and keeps the internal article route', async () => {
-    const { findAllByText, queryByText } = render(<PlacesScreen />, { wrapper: createQueryWrapper().Wrapper })
+    const root = await renderWebScreen()
+    const { findAllByText, getAllByLabelText, queryByText } = within(root.container)
     const readActions = await findAllByText('Прочитать')
     expect(queryByText('Статья')).toBeNull()
-    fireEvent.press(readActions[0])
+    expect(readActions.length).toBeGreaterThan(0)
+    const readControl = getAllByLabelText('Открыть статью')[0]
+    await act(() => readControl.props.onPress())
     expect(mockPush).toHaveBeenCalledWith('/travels/parking')
   })
 
   it('shows an empty state when no category matches the query', async () => {
-    const { findByTestId } = render(<PlacesScreen />, {
-      wrapper: createQueryWrapper().Wrapper,
-    })
+    const root = await renderWebScreen()
+    const { findByTestId } = within(root.container)
 
-    fireEvent.changeText(await findByTestId('places-category-search-input'), 'аэродром')
+    const categoryInput = await findByTestId('places-category-search-input')
+    await act(() => categoryInput.props.onChangeText('аэродром'))
 
     expect(await findByTestId('places-category-search-empty')).toBeTruthy()
   })
@@ -209,11 +229,11 @@ describe('PlacesScreen category search', () => {
     const prev = useAuthStore.getState()
     useAuthStore.setState({ isAuthenticated: false, authReady: true } as any)
     try {
-      const { findByTestId } = render(<PlacesScreen />, {
+      const { findByTestId } = await render(<PlacesScreen />, {
         wrapper: createQueryWrapper().Wrapper,
       })
       const placeCard = await findByTestId('places-card-place-1')
-      fireEvent.press(within(placeCard).getByLabelText('Сохранить'))
+      await fireEvent.press(within(placeCard).getByLabelText('Сохранить'))
       expect(mockPush).toHaveBeenCalledWith('/login?redirect=%2Fplaces&intent=save-point')
     } finally {
       useAuthStore.setState({ isAuthenticated: prev.isAuthenticated, authReady: prev.authReady } as any)
@@ -221,12 +241,11 @@ describe('PlacesScreen category search', () => {
   })
 
   it('opens selected place on map and exposes navigator actions on the card', async () => {
-    const { findAllByLabelText, findByLabelText, findByTestId } = render(<PlacesScreen />, {
-      wrapper: createQueryWrapper().Wrapper,
-    })
+    const root = await renderWebScreen()
+    const { findAllByLabelText, findByLabelText, findByTestId } = within(root.container)
 
     const placeCard = await findByTestId('places-card-place-1')
-    fireEvent.press(placeCard)
+    await act(() => placeCard.props.onClick())
 
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/map',
@@ -256,8 +275,10 @@ describe('PlacesScreen category search', () => {
     expect(within(placeCard).getByText('Прочитать')).toBeTruthy()
     expect(within(placeCard).getByText('Сохранить')).toBeTruthy()
     expect(within(placeCard).queryByText('На карте')).toBeNull()
-    fireEvent.press(within(placeCard).getByLabelText('Навигация и действия'))
-    fireEvent.press(await findByLabelText('Открыть место на карте'))
+    const navigationControl = within(placeCard).getByLabelText('Навигация и действия')
+    await act(() => navigationControl.props.onPress())
+    const openMapControl = await findByLabelText('Открыть место на карте')
+    await act(() => openMapControl.props.onPress())
 
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/map',
@@ -279,10 +300,10 @@ describe('PlacesScreen category search', () => {
 
     // На компактной карточке navigator-действия живут за overflow-шитом
     // «Навигация и действия» — открываем его для этой карточки перед проверкой.
-    fireEvent.press(within(placeCard).getByLabelText('Навигация и действия'))
+    await act(() => navigationControl.props.onPress())
 
     const organicButtons = await findAllByLabelText('Открыть точку в Organic Maps')
-    fireEvent.press(organicButtons[0])
+    await act(() => organicButtons[0].props.onPress())
 
     expect(openExternalUrlInNewTab).toHaveBeenCalledWith(
       'https://omaps.app/map?v=1&ll=53.9,27.56&n=%D0%9F%D0%B0%D1%80%D0%BA%D0%BE%D0%B2%D0%BA%D0%B0%20%D1%83%20%D0%BE%D0%B7%D0%B5%D1%80%D0%B0',

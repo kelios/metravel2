@@ -95,8 +95,8 @@ describe('TravelMap (web)', () => {
     require('react-native').useWindowDimensions = originalWindowDimensions;
   });
 
-  it('renders a stable container with data-testid="travel-map" on web when ready', () => {
-    const { getByTestId } = render(
+  it('renders a stable container with data-testid="travel-map" on web when ready', async () => {
+    const { getByTestId } = await render(
       <TravelMap
         travelData={[{ coord: '53.9, 27.56' }]}
         compact
@@ -108,8 +108,8 @@ describe('TravelMap (web)', () => {
     expect(getByTestId('travel-map')).toBeTruthy();
   });
 
-  it('does not crash when MapContainer uses ref (strictmode-safe)', () => {
-    const { getByTestId } = render(
+  it('does not crash when MapContainer uses ref (strictmode-safe)', async () => {
+    const { getByTestId } = await render(
       <TravelMap
         travelData={[{ coord: '53.9, 27.56' }]}
         compact
@@ -120,8 +120,8 @@ describe('TravelMap (web)', () => {
     expect(getByTestId('travel-map')).toBeTruthy();
   });
 
-  it('does not call rl.useMap by default (points-only, no route line)', () => {
-    render(
+  it('does not call rl.useMap by default (points-only, no route line)', async () => {
+    await render(
       <TravelMap
         travelData={[
           { coord: '53.9, 27.56' },
@@ -136,8 +136,8 @@ describe('TravelMap (web)', () => {
     expect(loaderValue?.RL?.useMap).toHaveBeenCalledTimes(0);
   });
 
-  it('calls rl.useMap when showRouteLine=true and there are 2+ points', () => {
-    render(
+  it('calls rl.useMap when showRouteLine=true and there are 2+ points', async () => {
+    await render(
       <TravelMap
         travelData={[
           { coord: '53.9, 27.56' },
@@ -154,8 +154,8 @@ describe('TravelMap (web)', () => {
     expect(loaderValue?.RL?.useMap).toHaveBeenCalled();
   });
 
-  it('renders map when there are no points but there is a route line', () => {
-    const { getByTestId } = render(
+  it('renders map when there are no points but there is a route line', async () => {
+    const { getByTestId } = await render(
       <TravelMap
         travelData={[]}
         showRouteLine
@@ -175,8 +175,8 @@ describe('TravelMap (web)', () => {
     expect(getByTestId('travel-map')).toBeTruthy();
   });
 
-  it('keeps the related travel id of nearby map points through point normalization (#1960)', () => {
-    render(
+  it('keeps the related travel id of nearby map points through point normalization (#1960)', async () => {
+    await render(
       <TravelMap
         travelData={[
           {
@@ -206,8 +206,8 @@ describe('TravelMap (web)', () => {
     );
   });
 
-  it('passes responsive metravel popup props to travel map markers', () => {
-    render(
+  it('passes responsive metravel popup props to travel map markers', async () => {
+    await render(
       <TravelMap
         travelData={[{ coord: '53.9, 27.56' }]}
         compact
@@ -244,7 +244,7 @@ describe('TravelMap (web)', () => {
     );
   });
 
-  it('uses a smaller popup shell on very narrow compact mobile viewports', () => {
+  it('uses a smaller popup shell on very narrow compact mobile viewports', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({
       width: 360,
       height: 740,
@@ -252,7 +252,7 @@ describe('TravelMap (web)', () => {
       fontScale: 1,
     }));
 
-    render(
+    await render(
       <TravelMap
         travelData={[{ coord: '53.9, 27.56' }]}
         compact
@@ -273,9 +273,9 @@ describe('TravelMap (web)', () => {
     );
   });
 
-  it('applies a pending point highlight when its marker registers later', () => {
+  it('applies a pending point highlight when its marker registers later', async () => {
     const coord = '53.9, 27.56';
-    render(
+    await render(
       <TravelMap
         travelData={[{ coord }]}
         highlightedPoint={{ coord, key: 'point-card-click' }}
@@ -295,7 +295,7 @@ describe('TravelMap (web)', () => {
       setZIndexOffset: jest.fn(),
     };
 
-    act(() => {
+    await act(() => {
       props.onMarkerInstance(coord, marker);
     });
 

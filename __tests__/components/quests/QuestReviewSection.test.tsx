@@ -69,14 +69,14 @@ describe('QuestReviewSection', () => {
     }
   })
 
-  it('opens auth when a guest taps a star without changing the draft', () => {
+  it('opens auth when a guest taps a star without changing the draft', async () => {
     mockIsAuthenticated = false
-    const view = render(
+    const view = await render(
       <QuestReviewSection questId="krakow-dragon" questNumericId={1} />,
     )
 
     const fourStar = view.getAllByLabelText('Оценить на 4 из 5')
-    fireEvent.press(fourStar[fourStar.length - 1])
+    await fireEvent.press(fourStar[fourStar.length - 1])
 
     expect(mockRequireAuth).toHaveBeenCalledTimes(1)
     expect(mockSubmit).not.toHaveBeenCalled()
@@ -84,66 +84,66 @@ describe('QuestReviewSection', () => {
     // После возврата из auth-flow компонент может пережить rerender. Если бы
     // guest-тап записал черновик, кнопка стала бы активной и отправила рейтинг.
     mockIsAuthenticated = true
-    view.rerender(<QuestReviewSection questId="krakow-dragon" questNumericId={1} />)
-    fireEvent.press(view.getByTestId('quest-review-section-submit'))
+    await view.rerender(<QuestReviewSection questId="krakow-dragon" questNumericId={1} />)
+    await fireEvent.press(view.getByTestId('quest-review-section-submit'))
     expect(mockSubmit).not.toHaveBeenCalled()
   })
 
-  it('keeps stars disabled until auth initialization finishes', () => {
+  it('keeps stars disabled until auth initialization finishes', async () => {
     mockIsAuthenticated = false
     mockAuthReady = false
-    const { getAllByLabelText } = render(
+    const { getAllByLabelText } = await render(
       <QuestReviewSection questId="krakow-dragon" questNumericId={1} />,
     )
 
     const fourStar = getAllByLabelText('Оценить на 4 из 5')
-    fireEvent.press(fourStar[fourStar.length - 1])
+    await fireEvent.press(fourStar[fourStar.length - 1])
 
     expect(mockRequireAuth).not.toHaveBeenCalled()
     expect(mockSubmit).not.toHaveBeenCalled()
   })
 
-  it('requires a rating before submitting (text alone is not enough)', () => {
-    const { getByTestId, getByPlaceholderText } = render(
+  it('requires a rating before submitting (text alone is not enough)', async () => {
+    const { getByTestId, getByPlaceholderText } = await render(
       <QuestReviewSection questId="krakow-dragon" questNumericId={1} />,
     )
 
-    fireEvent.changeText(
+    await fireEvent.changeText(
       getByPlaceholderText('Расскажите, что было интересно'),
       'Очень понравилось',
     )
 
     // Submit without a star rating must not call the mutation (BE: rating 1..5 NOT NULL).
-    fireEvent.press(getByTestId('quest-review-section-submit'))
+    await fireEvent.press(getByTestId('quest-review-section-submit'))
     expect(mockSubmit).not.toHaveBeenCalled()
   })
 
-  it('keeps a tapped rating local until the review is submitted', () => {
-    const { getAllByLabelText, getByText } = render(
+  it('keeps a tapped rating local until the review is submitted', async () => {
+    const { getAllByLabelText, getByText } = await render(
       <QuestReviewSection questId="krakow-dragon" questNumericId={1} />,
     )
 
     const fourStar = getAllByLabelText('Оценить на 4 из 5')
-    fireEvent.press(fourStar[fourStar.length - 1])
+    await fireEvent.press(fourStar[fourStar.length - 1])
 
     expect(mockSubmit).not.toHaveBeenCalled()
     expect(getByText('Оценка сохранится вместе с отзывом. Текстовый отзыв — по желанию.')).toBeTruthy()
   })
 
   it('submits the tapped rating together with the text fields', async () => {
-    const { getByTestId, getAllByLabelText, getByPlaceholderText } = render(
+    const { getByTestId, getAllByLabelText, getByPlaceholderText } = await render(
       <QuestReviewSection questId="krakow-dragon" questNumericId={1} />,
     )
 
-    fireEvent.changeText(
+    await fireEvent.changeText(
       getByPlaceholderText('Расскажите, что было интересно'),
       '  Сюжет и точки  ',
     )
 
     const fourStar = getAllByLabelText('Оценить на 4 из 5')
-    fireEvent.press(fourStar[fourStar.length - 1])
+    await fireEvent.press(fourStar[fourStar.length - 1])
 
-    fireEvent.press(getByTestId('quest-review-section-submit'))
+    await fireEvent.press(getByTestId('quest-review-section-submit'))
 
     await waitFor(() => {
       expect(mockSubmit).toHaveBeenCalledWith({
@@ -155,14 +155,14 @@ describe('QuestReviewSection', () => {
   })
 
   it('allows a rating-only review because text is optional', async () => {
-    const { getAllByLabelText, getByTestId } = render(
+    const { getAllByLabelText, getByTestId } = await render(
       <QuestReviewSection questId="krakow-dragon" questNumericId={1} />,
     )
 
     const fiveStar = getAllByLabelText('Оценить на 5 из 5')
-    fireEvent.press(fiveStar[fiveStar.length - 1])
+    await fireEvent.press(fiveStar[fiveStar.length - 1])
 
-    fireEvent.press(getByTestId('quest-review-section-submit'))
+    await fireEvent.press(getByTestId('quest-review-section-submit'))
 
     await waitFor(() => {
       expect(mockSubmit).toHaveBeenCalledWith({
@@ -173,28 +173,28 @@ describe('QuestReviewSection', () => {
     })
   })
 
-  it('does not submit while the existing-review prefill is loading', () => {
+  it('does not submit while the existing-review prefill is loading', async () => {
     mockReviewState.isLoading = true
-    const { getAllByLabelText, getByTestId } = render(
+    const { getAllByLabelText, getByTestId } = await render(
       <QuestReviewSection questId="krakow-dragon" questNumericId={1} />,
     )
 
     const fiveStar = getAllByLabelText('Оценить на 5 из 5')
-    fireEvent.press(fiveStar[fiveStar.length - 1])
-    fireEvent.press(getByTestId('quest-review-section-submit'))
+    await fireEvent.press(fiveStar[fiveStar.length - 1])
+    await fireEvent.press(getByTestId('quest-review-section-submit'))
 
     expect(mockSubmit).not.toHaveBeenCalled()
   })
 
-  it('does not overwrite a review when its prefill failed to load', () => {
+  it('does not overwrite a review when its prefill failed to load', async () => {
     mockReviewState.hasLoadError = true
-    const { getAllByLabelText, getByTestId, getByText } = render(
+    const { getAllByLabelText, getByTestId, getByText } = await render(
       <QuestReviewSection questId="krakow-dragon" questNumericId={1} />,
     )
 
     const fiveStar = getAllByLabelText('Оценить на 5 из 5')
-    fireEvent.press(fiveStar[fiveStar.length - 1])
-    fireEvent.press(getByTestId('quest-review-section-submit'))
+    await fireEvent.press(fiveStar[fiveStar.length - 1])
+    await fireEvent.press(getByTestId('quest-review-section-submit'))
 
     expect(mockSubmit).not.toHaveBeenCalled()
     expect(getByText('Не удалось загрузить отзывы')).toBeTruthy()
@@ -203,15 +203,15 @@ describe('QuestReviewSection', () => {
   // #1486: до этой задачи «Спасибо за отзыв» показывалось оптимистично, по
   // самому нажатию кнопки, — то есть и поверх упавшего запроса. Отзыва нет, а
   // игрок уверен, что оставил его.
-  it('shows an error and keeps the filled form when the save fails', () => {
+  it('shows an error and keeps the filled form when the save fails', async () => {
     mockReviewState.hasError = true
 
     const { getAllByLabelText, getByPlaceholderText, getByTestId, getByText, queryByText } =
-      render(<QuestReviewSection questId="krakow-dragon" questNumericId={1} />)
+      await render(<QuestReviewSection questId="krakow-dragon" questNumericId={1} />)
 
     const fourStar = getAllByLabelText('Оценить на 4 из 5')
-    fireEvent.press(fourStar[fourStar.length - 1])
-    fireEvent.changeText(getByPlaceholderText('Расскажите, что было интересно'), 'Сюжет')
+    await fireEvent.press(fourStar[fourStar.length - 1])
+    await fireEvent.changeText(getByPlaceholderText('Расскажите, что было интересно'), 'Сюжет')
 
     expect(queryByText('Спасибо за отзыв!')).toBeNull()
     expect(getByTestId('quest-review-section-error')).toBeTruthy()
@@ -219,14 +219,14 @@ describe('QuestReviewSection', () => {
 
     // Введённое остаётся в форме, поэтому отправку можно повторить тем же
     // содержимым, ничего не набирая заново.
-    fireEvent.press(getByTestId('quest-review-section-submit'))
+    await fireEvent.press(getByTestId('quest-review-section-submit'))
     expect(mockSubmit).toHaveBeenCalledWith({ rating: 4, liked: 'Сюжет', disliked: '' })
   })
 
-  it('shows a thank-you state when the user already left a review', () => {
+  it('shows a thank-you state when the user already left a review', async () => {
     mockReviewState.review = { id: 7, user: 1, quest: 1, rating: 5, liked: 'x', disliked: '' }
 
-    const { getByText, queryByPlaceholderText } = render(
+    const { getByText, queryByPlaceholderText } = await render(
       <QuestReviewSection questId="krakow-dragon" questNumericId={1} />,
     )
 

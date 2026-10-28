@@ -37,12 +37,12 @@ const makePoints = (from: number, count: number) =>
     status: 'planning',
   }))
 
-const renderModel = () => {
+const renderModel = async () => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
-  return renderHook(
+  return await renderHook(
     () =>
       usePointsDataModel({
         defaultPerPage: PER_PAGE,
@@ -63,7 +63,7 @@ describe('usePointsDataModel incremental streaming', () => {
   it('requests the first page with perPage=200', async () => {
     mockGetPoints.mockResolvedValue(makePoints(1, 10))
 
-    renderModel()
+    await renderModel()
 
     await waitFor(() => {
       expect(mockGetPoints).toHaveBeenCalledWith({ page: 1, perPage: PER_PAGE })
@@ -73,7 +73,7 @@ describe('usePointsDataModel incremental streaming', () => {
   it('does not fetch a second page when the first page is short', async () => {
     mockGetPoints.mockResolvedValue(makePoints(1, 42))
 
-    const { result } = renderModel()
+    const { result } = await renderModel()
 
     await waitFor(() => {
       expect(result.current.points).toHaveLength(42)
@@ -94,7 +94,7 @@ describe('usePointsDataModel incremental streaming', () => {
       return []
     })
 
-    const { result } = renderModel()
+    const { result } = await renderModel()
 
     // First render: only page 1.
     await waitFor(() => {
@@ -114,7 +114,7 @@ describe('usePointsDataModel incremental streaming', () => {
     // Backend returns the whole oversized set for page 1.
     mockGetPoints.mockResolvedValue(makePoints(1, PER_PAGE * 2))
 
-    const { result } = renderModel()
+    const { result } = await renderModel()
 
     await waitFor(() => {
       expect(result.current.points).toHaveLength(PER_PAGE * 2)
@@ -134,7 +134,7 @@ describe('usePointsDataModel incremental streaming', () => {
       return makePoints(1, PER_PAGE)
     })
 
-    const { result } = renderModel()
+    const { result } = await renderModel()
 
     await waitFor(() => {
       expect(result.current.points).toHaveLength(PER_PAGE)

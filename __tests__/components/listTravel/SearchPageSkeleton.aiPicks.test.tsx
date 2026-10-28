@@ -14,16 +14,16 @@ describe('SearchPageSkeleton reserves the AI picks panel (#2459)', () => {
     process.env.EXPO_PUBLIC_AI_PICKS = env
   })
 
-  it('draws the panel header in the first frame when the flag is on', () => {
+  it('draws the panel header in the first frame when the flag is on', async () => {
     process.env.EXPO_PUBLIC_AI_PICKS = '1'
-    const { getByTestId, getByText } = render(<SearchPageSkeleton />)
+    const { getByTestId, getByText } = await render(<SearchPageSkeleton />)
     expect(getByTestId('ai-search-panel-placeholder')).toBeTruthy()
     expect(getByText('Подобрать по описанию')).toBeTruthy()
   })
 
-  it('draws nothing extra when the flag is off', () => {
+  it('draws nothing extra when the flag is off', async () => {
     process.env.EXPO_PUBLIC_AI_PICKS = ''
-    const { queryByTestId } = render(<SearchPageSkeleton />)
+    const { queryByTestId } = await render(<SearchPageSkeleton />)
     expect(queryByTestId('ai-search-panel-placeholder')).toBeNull()
   })
 })

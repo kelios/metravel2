@@ -1,3 +1,4 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 /**
  * #1277: контент юридических страниц скроллится под нижним доком, поэтому нижний
  * отступ обязан включать высоту таб-бара. Без этого последняя секция («Контакты»
@@ -8,7 +9,7 @@
  * нет, иначе внизу появится мёртвая полоса.
  */
 import React from 'react'
-import { Platform, ScrollView } from 'react-native'
+import { Platform } from 'react-native'
 import { render } from '@testing-library/react-native'
 
 import LegalPage from '@/components/legal/LegalPage'
@@ -34,8 +35,8 @@ jest.mock('expo-router', () => ({
 
 jest.mock('@/components/seo/LazyInstantSEO', () => () => null)
 
-const renderPage = () =>
-  render(
+const renderPage = async () =>
+  await render(
     <LegalPage
       headKey="disclaimer"
       seoTitle="t"
@@ -45,8 +46,8 @@ const renderPage = () =>
     />,
   )
 
-const bottomPaddingOf = (tree: ReturnType<typeof renderPage>): number => {
-  const scroll = tree.UNSAFE_getByType(ScrollView)
+const bottomPaddingOf = (tree: Awaited<ReturnType<typeof renderPage>>): number => {
+  const scroll = getOnlyHost(tree.container, node => node.type === "RCTScrollView")
   const style = scroll.props.contentContainerStyle
   const flat = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style
   return flat?.paddingBottom
@@ -61,25 +62,25 @@ describe('LegalPage — нижний отступ под доком (#1277)', ()
     mockInsets = { top: 0, bottom: 0, left: 0, right: 0 }
   })
 
-  it('на native добавляет высоту дока и safe-area — хвост секции не уходит под таб-бар', () => {
+  it('на native добавляет высоту дока и safe-area — хвост секции не уходит под таб-бар', async () => {
     Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true })
     mockInsets = { top: 0, bottom: 18, left: 0, right: 0 }
 
-    expect(bottomPaddingOf(renderPage())).toBe(BASE_VERTICAL_PADDING + BOTTOM_DOCK_HEIGHT + 18)
+    expect(bottomPaddingOf(await renderPage())).toBe(BASE_VERTICAL_PADDING + BOTTOM_DOCK_HEIGHT + 18)
   })
 
-  it('на web резерв — формула max(док, согласие) плюс базовый зазор', () => {
+  it('на web резерв — формула max(док, согласие) плюс базовый зазор', async () => {
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
     mockResponsive = { isMobile: true, isDesktop: false, isHydrated: true }
     mockInsets = { top: 0, bottom: 18, left: 0, right: 0 }
 
-    expect(bottomPaddingOf(renderPage())).toBe(webBottomChromeInset(BASE_VERTICAL_PADDING))
+    expect(bottomPaddingOf(await renderPage())).toBe(webBottomChromeInset(BASE_VERTICAL_PADDING))
   })
 
-  it('на desktop web та же формула: --mt-dock-h = 0, мёртвой полосы нет', () => {
+  it('на desktop web та же формула: --mt-dock-h = 0, мёртвой полосы нет', async () => {
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
     mockResponsive = { isMobile: false, isDesktop: true, isHydrated: true }
 
-    expect(bottomPaddingOf(renderPage())).toBe(webBottomChromeInset(BASE_VERTICAL_PADDING))
+    expect(bottomPaddingOf(await renderPage())).toBe(webBottomChromeInset(BASE_VERTICAL_PADDING))
   })
 })

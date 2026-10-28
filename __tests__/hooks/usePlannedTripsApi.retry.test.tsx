@@ -57,9 +57,9 @@ describe('planned-trip query retry through the real HTTP pipeline', () => {
     return harness
   }
 
-  const renderTrip = () => {
+  const renderTrip = async () => {
     const { Wrapper } = createHarness()
-    return renderHook(() => usePlannedTrip(tripId), { wrapper: Wrapper })
+    return await renderHook(() => usePlannedTrip(tripId), { wrapper: Wrapper })
   }
 
   const expectPlannedRequests = (count: number) => {
@@ -81,8 +81,8 @@ describe('planned-trip query retry through the real HTTP pipeline', () => {
     })
   })
 
-  afterEach(() => {
-    cleanup()
+  afterEach(async () => {
+    await cleanup()
     clients.splice(0).forEach((client) => client.clear())
     fetchSpy.mockRestore()
     Platform.OS = originalPlatform
@@ -103,7 +103,7 @@ describe('planned-trip query retry through the real HTTP pipeline', () => {
       if (status === 401) mockedGetSecureItem.mockResolvedValue(null)
       fetchSpy.mockImplementation(async () => response(status, { detail: 'Request rejected' }))
 
-      const { result } = renderTrip()
+      const { result } = await renderTrip()
 
       await waitFor(() => expect(result.current.isError).toBe(true))
       expect(result.current.fetchStatus).toBe('idle')
@@ -119,7 +119,7 @@ describe('planned-trip query retry through the real HTTP pipeline', () => {
     async (status) => {
       fetchSpy.mockImplementation(async () => response(status, { detail: 'Upstream timeout' }))
 
-      const { result } = renderTrip()
+      const { result } = await renderTrip()
 
       await waitFor(() => expect(result.current.isError).toBe(true))
       expect(result.current.fetchStatus).toBe('idle')
@@ -140,7 +140,7 @@ describe('planned-trip query retry through the real HTTP pipeline', () => {
     async (message) => {
       fetchSpy.mockRejectedValue(new TypeError(message))
 
-      const { result } = renderTrip()
+      const { result } = await renderTrip()
 
       await waitFor(() => expect(result.current.isError).toBe(true))
       expect(result.current.fetchStatus).toBe('idle')
@@ -166,7 +166,7 @@ describe('planned-trip query retry through the real HTTP pipeline', () => {
   ])('does not repeat a local $name: $message', async (error) => {
     fetchSpy.mockRejectedValue(error)
 
-    const { result } = renderTrip()
+    const { result } = await renderTrip()
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(result.current.fetchStatus).toBe('idle')
@@ -181,7 +181,7 @@ describe('planned-trip query retry through the real HTTP pipeline', () => {
       owner: { id: 7, username: 'Organizer' },
     }))
 
-    const { result } = renderTrip()
+    const { result } = await renderTrip()
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data).toMatchObject({
@@ -201,7 +201,7 @@ describe('planned-trip query retry through the real HTTP pipeline', () => {
     // client's transport-error conversion. Offline status must not mask it.
     fetchSpy.mockImplementation(async () => response(200, null))
     try {
-      const { result } = renderTrip()
+      const { result } = await renderTrip()
       await waitFor(() => expect(result.current.isError).toBe(true))
       expect(result.current.error).toBeInstanceOf(TypeError)
       expect(result.current.fetchStatus).toBe('idle')
@@ -211,14 +211,14 @@ describe('planned-trip query retry through the real HTTP pipeline', () => {
     }
   })
 
-  it('attaches the same bounded retry policy to all six read hooks', () => {
+  it('attaches the same bounded retry policy to all six read hooks', async () => {
     useAuthStore.setState({ authReady: false, isAuthenticated: false })
     const { queryClient, Wrapper } = createHarness()
     // Public collections are disabled by a fresh cache, so this wiring check
     // does not need unrelated collection response fixtures.
     queryClient.setQueryData(queryKeys.communityTrips({}), [])
     queryClient.setQueryData(queryKeys.routeTemplates(), [])
-    renderHook(() => {
+    await renderHook(() => {
       useMyPlannedTrips()
       usePlannedTrip(null)
       useCommunityTrips()

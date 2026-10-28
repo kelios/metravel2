@@ -65,8 +65,8 @@ jest.mock('@/hooks/useQuestReview', () => ({
   },
 }))
 
-const pushReviewState = (next: { review: unknown; isLoading: boolean }) => {
-  act(() => {
+const pushReviewState = async (next: { review: unknown; isLoading: boolean }) => {
+  await act(() => {
     reviewStateSetters.forEach((setState) => setState(next))
   })
 }
@@ -116,36 +116,36 @@ describe('QuestReviewInvite', () => {
     mockPhotoUpload = { items: [], total: 0, uploaded: 0, failed: 0, isActive: false }
   })
 
-  it('показывает вход в отзыв прошедшему квест без отзыва', () => {
-    const { getByTestId } = render(
+  it('показывает вход в отзыв прошедшему квест без отзыва', async () => {
+    const { getByTestId } = await render(
       <QuestReviewInvite questId="minsk-cmok" questNumericId={12} cityId="3" />,
     )
 
     expect(getByTestId('quest-review-invite')).toBeTruthy()
   })
 
-  it('молчит, когда отзыв уже оставлен', () => {
+  it('молчит, когда отзыв уже оставлен', async () => {
     mockReviewState = { review: { id: 5, rating: 5 }, isLoading: false }
 
-    const { queryByTestId } = render(
+    const { queryByTestId } = await render(
       <QuestReviewInvite questId="minsk-cmok" questNumericId={12} cityId="3" />,
     )
 
     expect(queryByTestId('quest-review-invite')).toBeNull()
   })
 
-  it('не мигает кнопкой, пока префилл отзыва ещё грузится', () => {
+  it('не мигает кнопкой, пока префилл отзыва ещё грузится', async () => {
     mockReviewState = { review: null, isLoading: true }
 
-    const { queryByTestId } = render(
+    const { queryByTestId } = await render(
       <QuestReviewInvite questId="minsk-cmok" questNumericId={12} cityId="3" />,
     )
 
     expect(queryByTestId('quest-review-invite')).toBeNull()
   })
 
-  it('без числового id квеста отзыв адресовать некуда — кнопки нет', () => {
-    const { queryByTestId } = render(<QuestReviewInvite questId="minsk-cmok" cityId="3" />)
+  it('без числового id квеста отзыв адресовать некуда — кнопки нет', async () => {
+    const { queryByTestId } = await render(<QuestReviewInvite questId="minsk-cmok" cityId="3" />)
 
     expect(queryByTestId('quest-review-invite')).toBeNull()
   })
@@ -153,31 +153,31 @@ describe('QuestReviewInvite', () => {
   // #1795 review: гейт видимости раньше стоял выше самого окна, и запись отзыва
   // в общий ключ кэша (onSuccess) уносила открытую форму вместе с экраном
   // «Спасибо за отзыв» и загрузкой прикреплённых фото.
-  it('не закрывает открытую форму, когда отзыв сохранился или идёт фоновый refetch', () => {
-    const { getByTestId, queryByTestId } = render(
+  it('не закрывает открытую форму, когда отзыв сохранился или идёт фоновый refetch', async () => {
+    const { getByTestId, queryByTestId } = await render(
       <QuestReviewInvite questId="minsk-cmok" questNumericId={12} cityId="3" />,
     )
 
-    fireEvent.press(getByTestId('quest-review-invite'))
+    await fireEvent.press(getByTestId('quest-review-invite'))
     expect(getByTestId('quest-review-invite-form')).toBeTruthy()
 
     // Отправка прошла: тот же ключ кэша теперь отдаёт сохранённый отзыв.
-    pushReviewState({ review: { id: 5, rating: 5 }, isLoading: false })
+    await pushReviewState({ review: { id: 5, rating: 5 }, isLoading: false })
     expect(getByTestId('quest-review-invite-form')).toBeTruthy()
     // Кнопка-вход при этом уходит: второй раз звать писать отзыв незачем.
     expect(queryByTestId('quest-review-invite')).toBeNull()
 
     // Восстановление сети дёргает refetch — форма с набранным текстом остаётся.
-    pushReviewState({ review: null, isLoading: true })
+    await pushReviewState({ review: null, isLoading: true })
     expect(getByTestId('quest-review-invite-form')).toBeTruthy()
   })
 
-  it('открывает ту же форму отзыва и отмечает переход в аналитике', () => {
-    const { getByTestId } = render(
+  it('открывает ту же форму отзыва и отмечает переход в аналитике', async () => {
+    const { getByTestId } = await render(
       <QuestReviewInvite questId="minsk-cmok" questNumericId={12} cityId="3" />,
     )
 
-    fireEvent.press(getByTestId('quest-review-invite'))
+    await fireEvent.press(getByTestId('quest-review-invite'))
 
     expect(getByTestId('quest-review-invite-form')).toBeTruthy()
     expect(mockTrackPromptClick).toHaveBeenCalledWith({
@@ -189,23 +189,23 @@ describe('QuestReviewInvite', () => {
 
   // #2150: окно закрыли посреди загрузки фото — очередь продолжается, и на
   // странице квеста остаётся ссылка на её статус, которая возвращает в окно.
-  it('показывает статус незавершённой загрузки фото и открывает по нему окно', () => {
+  it('показывает статус незавершённой загрузки фото и открывает по нему окно', async () => {
     mockReviewState = { review: { id: 5, rating: 5 }, isLoading: false }
     mockPhotoUpload = { items: [], total: 3, uploaded: 2, failed: 1, isActive: false }
 
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <QuestReviewInvite questId="minsk-cmok" questNumericId={12} cityId="3" />,
     )
 
     expect(queryByTestId('quest-review-invite')).toBeNull()
     expect(getByTestId('quest-review-invite-photo-status')).toHaveTextContent('Фото к отзыву: 2 из 3', { exact: false })
-    fireEvent.press(getByTestId('quest-review-invite-photo-status'))
+    await fireEvent.press(getByTestId('quest-review-invite-photo-status'))
     expect(getByTestId('quest-review-invite-form')).toBeTruthy()
     expect(mockTrackPromptClick).not.toHaveBeenCalled()
   })
 
-  it('квест не пройден — входа нет ни кнопкой, ни пунктом «⋯»', () => {
-    const { queryByTestId } = render(
+  it('квест не пройден — входа нет ни кнопкой, ни пунктом «⋯»', async () => {
+    const { queryByTestId } = await render(
       <QuestReviewInvite questId="minsk-cmok" questNumericId={12} cityId="3" enabled={false} />,
     )
 
@@ -213,12 +213,12 @@ describe('QuestReviewInvite', () => {
     expect(queryByTestId('menu-leave-review')).toBeNull()
   })
 
-  it('пункт «⋯» на телефоне открывает ту же форму, что кнопка, и отмечает переход', () => {
-    const { getByTestId } = render(
+  it('пункт «⋯» на телефоне открывает ту же форму, что кнопка, и отмечает переход', async () => {
+    const { getByTestId } = await render(
       <QuestReviewInvite questId="minsk-cmok" questNumericId={12} cityId="3" />,
     )
 
-    fireEvent.press(getByTestId('menu-leave-review'))
+    await fireEvent.press(getByTestId('menu-leave-review'))
 
     expect(getByTestId('quest-review-invite-form')).toBeTruthy()
     expect(mockTrackPromptClick).toHaveBeenCalledWith({
@@ -228,11 +228,11 @@ describe('QuestReviewInvite', () => {
     })
   })
 
-  it('прячет статус, когда все фото загружены', () => {
+  it('прячет статус, когда все фото загружены', async () => {
     mockReviewState = { review: { id: 5, rating: 5 }, isLoading: false }
     mockPhotoUpload = { items: [], total: 3, uploaded: 3, failed: 0, isActive: false }
 
-    const { queryByTestId } = render(
+    const { queryByTestId } = await render(
       <QuestReviewInvite questId="minsk-cmok" questNumericId={12} cityId="3" />,
     )
 

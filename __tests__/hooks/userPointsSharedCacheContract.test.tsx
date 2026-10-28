@@ -106,8 +106,8 @@ describe('#1709 общий кэш userPointsAll: частичный стрим �
 
   afterEach(() => queryClient.clear());
 
-  const renderPointsScreen = () =>
-    renderHook(
+  const renderPointsScreen = async () =>
+    await renderHook(
       () =>
         usePointsDataModel({
           defaultPerPage: PER_PAGE,
@@ -119,21 +119,21 @@ describe('#1709 общий кэш userPointsAll: частичный стрим �
       { wrapper },
     );
 
-  const renderToggleFor = (n: number) =>
-    renderHook(() => useSavedPointToggle({ coord: coordOf(n) }), { wrapper });
+  const renderToggleFor = async (n: number) =>
+    await renderHook(() => useSavedPointToggle({ coord: coordOf(n) }), { wrapper });
 
   it('прерванный стрим: сосед перечитывает коллекцию и видит точку сохранённой', async () => {
     mockStreamingBackend({ stopAfterPage: 2 });
 
     // 1. Экран «Мои точки»: докачали 2 страницы из 5.
-    const screen = renderPointsScreen();
+    const screen = await renderPointsScreen();
     await waitFor(() => expect(screen.result.current.points).toHaveLength(STREAMED_PREFIX));
 
     // 2. Пользователь ушёл со страницы посреди докачки.
-    screen.unmount();
+    await screen.unmount();
 
     // 3. Соседний потребитель читает тот же ключ.
-    const toggle = renderToggleFor(POINT_BEYOND_PREFIX);
+    const toggle = await renderToggleFor(POINT_BEYOND_PREFIX);
     await waitFor(() => expect(toggle.result.current.isSaved).toBe(true));
     expect(mockedApi.getAllPoints).toHaveBeenCalledTimes(1);
   });
@@ -141,11 +141,11 @@ describe('#1709 общий кэш userPointsAll: частичный стрим �
   it('контроль: точка внутри докачанного префикса тоже сохранена (матчер исправен)', async () => {
     mockStreamingBackend({ stopAfterPage: 2 });
 
-    const screen = renderPointsScreen();
+    const screen = await renderPointsScreen();
     await waitFor(() => expect(screen.result.current.points).toHaveLength(STREAMED_PREFIX));
-    screen.unmount();
+    await screen.unmount();
 
-    const toggle = renderToggleFor(POINT_INSIDE_PREFIX);
+    const toggle = await renderToggleFor(POINT_INSIDE_PREFIX);
     await waitFor(() => expect(toggle.result.current.isSaved).toBe(true));
   });
 
@@ -167,11 +167,11 @@ describe('#1709 общий кэш userPointsAll: частичный стрим �
   it('контроль: непрерванный стрим отдаёт полную коллекцию без лишнего запроса', async () => {
     mockStreamingBackend({ stopAfterPage: Number.POSITIVE_INFINITY });
 
-    const screen = renderPointsScreen();
+    const screen = await renderPointsScreen();
     await waitFor(() => expect(screen.result.current.points).toHaveLength(TOTAL));
-    screen.unmount();
+    await screen.unmount();
 
-    const toggle = renderToggleFor(POINT_BEYOND_PREFIX);
+    const toggle = await renderToggleFor(POINT_BEYOND_PREFIX);
     await waitFor(() => expect(toggle.result.current.isSaved).toBe(true));
     // Коллекция уже полная — потребитель не тратит ещё одно чтение.
     expect(mockedApi.getAllPoints).not.toHaveBeenCalled();

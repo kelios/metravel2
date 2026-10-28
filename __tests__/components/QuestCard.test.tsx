@@ -1,9 +1,10 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 jest.mock('@/hooks/useQuestContentLocale', () => ({ useQuestContentLocale: () => 'pl' }));
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { PixelRatio, Platform } from 'react-native';
-import type { ReactTestInstance } from 'react-test-renderer';
+import type { TestInstance } from 'test-renderer';
 
 import QuestCard from '@/screens/tabs/QuestCard';
 import { createTestQueryClient } from '@/__tests__/helpers/testQueryClient';
@@ -88,15 +89,15 @@ const makeQuest = (overrides: Partial<QuestMeta> = {}): QuestMeta => ({
     ...overrides,
 });
 
-const renderWithQueryClient = (ui: React.ReactElement) =>
-    render(
+const renderWithQueryClient = async (ui: React.ReactElement) =>
+    await render(
         <QueryClientProvider client={createTestQueryClient()}>
             {ui}
         </QueryClientProvider>,
     );
 
-const getWebCardLink = (root: ReactTestInstance) =>
-    root.find((node) => node.type === 'a');
+const getWebCardLink = (root: TestInstance) =>
+    getOnlyHost(root, (node) => node.type === 'a');
 
 describe('QuestCard', () => {
     beforeEach(() => {
@@ -107,30 +108,30 @@ describe('QuestCard', () => {
     });
 
     describe.each(['web', 'android', 'ios'])('reviews action on %s', (platform) => {
-        it.each([true, false])('hides zero reviews and opens positive reviews (phone=%s)', (isPhone) => {
+        it.each([true, false])('hides zero reviews and opens positive reviews (phone=%s)', async (isPhone) => {
             (Platform as { OS: string }).OS = platform;
             mockIsPhone = isPhone;
             const card = (ratingCount: number) => (
                 <QuestCard styles={styles} cardWidth={380} cityId="krakow" quest={makeQuest({ ratingCount })} />
             );
             const client = createTestQueryClient();
-            const { queryByTestId, getByTestId, rerender } = render(
+            const { queryByTestId, getByTestId, rerender } = await render(
                 <QueryClientProvider client={client}>{card(0)}</QueryClientProvider>,
             );
             expect(queryByTestId('quest-card-reviews-krakow-dragon')).toBeNull();
             expect(queryByTestId('quest-card-rating-krakow-dragon')).toBeNull();
 
-            rerender(<QueryClientProvider client={client}>{card(1)}</QueryClientProvider>);
+            await rerender(<QueryClientProvider client={client}>{card(1)}</QueryClientProvider>);
             expect(queryByTestId('quest-card-rating-krakow-dragon')).toBeNull();
             expect(getByTestId('quest-card-reviews-krakow-dragon').props.accessibilityLabel).toBe('Посмотреть отзывы: 1 отзыв');
-            fireEvent.press(getByTestId('quest-card-reviews-krakow-dragon'));
+            await fireEvent.press(getByTestId('quest-card-reviews-krakow-dragon'));
             expect(getByTestId('quest-reviews-modal')).toBeTruthy();
             expect(mockPush).not.toHaveBeenCalled();
         });
     });
 
-    it('renders mobile quest media with a sharp cover and no zero-completions badge', () => {
-        const { queryByTestId, queryByText } = renderWithQueryClient(
+    it('renders mobile quest media with a sharp cover and no zero-completions badge', async () => {
+        const { queryByTestId, queryByText } = await renderWithQueryClient(
             <QuestCard
                 styles={styles}
                 cardWidth={340}
@@ -160,8 +161,8 @@ describe('QuestCard', () => {
         expect(queryByText('Ещё никто не проходил')).toBeNull();
     });
 
-    it('renders a crawlable web link while keeping the reviews button outside it', () => {
-        const { UNSAFE_root, getByTestId } = renderWithQueryClient(
+    it('renders a crawlable web link while keeping the reviews button outside it', async () => {
+        const { container, getByTestId } = await renderWithQueryClient(
             <QuestCard
                 styles={styles}
                 cardWidth={340}
@@ -170,7 +171,7 @@ describe('QuestCard', () => {
             />,
         );
 
-        const cardLink = getWebCardLink(UNSAFE_root);
+        const cardLink = getWebCardLink(container);
         expect(cardLink.props.href).toBe('/quests/krakow/krakow-dragon');
         expect(cardLink.props['aria-label']).toBe('Начать приключение: Тайна дракона');
 
@@ -183,8 +184,8 @@ describe('QuestCard', () => {
         expect(ancestorTypes).not.toContain('a');
     });
 
-    it('uses client routing for a primary click and preserves native link gestures', () => {
-        const { UNSAFE_root } = renderWithQueryClient(
+    it('uses client routing for a primary click and preserves native link gestures', async () => {
+        const { container } = await renderWithQueryClient(
             <QuestCard
                 styles={styles}
                 cardWidth={340}
@@ -192,17 +193,17 @@ describe('QuestCard', () => {
                 quest={makeQuest()}
             />,
         );
-        const cardLink = getWebCardLink(UNSAFE_root);
+        const cardLink = getWebCardLink(container);
         const primaryPreventDefault = jest.fn();
 
-        fireEvent(cardLink, 'click', { button: 0, preventDefault: primaryPreventDefault });
+        await fireEvent(cardLink, 'click', { button: 0, preventDefault: primaryPreventDefault });
 
         expect(primaryPreventDefault).toHaveBeenCalledTimes(1);
         expect(mockPush).toHaveBeenCalledWith('/quests/krakow/krakow-dragon');
 
         mockPush.mockClear();
         const modifiedPreventDefault = jest.fn();
-        fireEvent(cardLink, 'click', {
+        await fireEvent(cardLink, 'click', {
             button: 0,
             ctrlKey: true,
             preventDefault: modifiedPreventDefault,
@@ -212,13 +213,13 @@ describe('QuestCard', () => {
         expect(mockPush).not.toHaveBeenCalled();
 
         const spacePreventDefault = jest.fn();
-        fireEvent(cardLink, 'keyDown', { key: ' ', preventDefault: spacePreventDefault });
+        await fireEvent(cardLink, 'keyDown', { key: ' ', preventDefault: spacePreventDefault });
         expect(spacePreventDefault).toHaveBeenCalledTimes(1);
         expect(mockPush).toHaveBeenCalledWith('/quests/krakow/krakow-dragon');
     });
 
-    it('does not expose or follow an invalid quest URL', () => {
-        const { UNSAFE_root } = renderWithQueryClient(
+    it('does not expose or follow an invalid quest URL', async () => {
+        const { container } = await renderWithQueryClient(
             <QuestCard
                 styles={styles}
                 cardWidth={340}
@@ -226,14 +227,14 @@ describe('QuestCard', () => {
                 quest={makeQuest()}
             />,
         );
-        const cardLink = getWebCardLink(UNSAFE_root);
+        const cardLink = getWebCardLink(container);
         const preventDefault = jest.fn();
 
         expect(cardLink.props.href).toBeUndefined();
         expect(cardLink.props['aria-disabled']).toBe(true);
         expect(cardLink.props.tabIndex).toBe(-1);
 
-        fireEvent(cardLink, 'click', { button: 0, preventDefault });
+        await fireEvent(cardLink, 'click', { button: 0, preventDefault });
         expect(preventDefault).toHaveBeenCalledTimes(1);
         expect(mockPush).not.toHaveBeenCalled();
     });
@@ -263,7 +264,7 @@ describe('QuestCard', () => {
 
     it.each(QUEST_CATALOG_SLOTS)(
         'кадрирует обложку `contain`, поле не выше потолка своей ширины ($label)',
-        ({ isPhone, cardWidth, maxShare }) => {
+        async ({ isPhone, cardWidth, maxShare }) => {
             // docs/RULES.md → «Images and placeholders»: обложки квестов рисуются
             // ТОЛЬКО `contain`, исключений по поверхностям нет, а правка самого
             // правила запрещена (прецедент 29c30d95/INV2-17, откат 2026-08-19).
@@ -272,7 +273,7 @@ describe('QuestCard', () => {
             // тестом, а не только внутри проверки блюр-подложки.
             mockIsPhone = isPhone;
             mockImageCardMedia.mockClear();
-            renderWithQueryClient(
+            await renderWithQueryClient(
                 <QuestCard
                     styles={styles}
                     cardWidth={cardWidth}
@@ -303,7 +304,7 @@ describe('QuestCard', () => {
         },
     );
 
-    it('web оставляет блюр-подложку выключенной, native получает заливку полей', () => {
+    it('web оставляет блюр-подложку выключенной, native получает заливку полей', async () => {
         // Две стороны одного контракта. Web: подложку включать нельзя —
         // WebKit держал её нарисованной, пока резкий `<img>` не появился
         // (регресс ниже по файлу). Native: при `contain` поля закрывает именно
@@ -313,7 +314,7 @@ describe('QuestCard', () => {
         for (const [os, expected] of [['web', false], ['android', true], ['ios', true]] as const) {
             (Platform as { OS: string }).OS = os;
             mockImageCardMedia.mockClear();
-            renderWithQueryClient(
+            await renderWithQueryClient(
                 <QuestCard
                     styles={styles}
                     cardWidth={345}
@@ -325,8 +326,8 @@ describe('QuestCard', () => {
         }
     });
 
-    it('requests high fetch priority for the first above-the-fold cards', () => {
-        renderWithQueryClient(
+    it('requests high fetch priority for the first above-the-fold cards', async () => {
+        await renderWithQueryClient(
             <QuestCard
                 styles={styles}
                 cardWidth={340}
@@ -341,8 +342,8 @@ describe('QuestCard', () => {
         );
     });
 
-    it('asks to clarify age for a kids quest without replacing its city label', () => {
-        const { getByTestId, getByText, queryByText } = renderWithQueryClient(
+    it('asks to clarify age for a kids quest without replacing its city label', async () => {
+        const { getByTestId, getByText, queryByText } = await renderWithQueryClient(
             <QuestCard
                 styles={styles}
                 cardWidth={340}
@@ -358,8 +359,8 @@ describe('QuestCard', () => {
         expect(queryByText('Детская сказка')).toBeNull();
     });
 
-    it('shows an explicit age category when age tags are present', () => {
-        const { getByTestId, getByText, queryByText } = renderWithQueryClient(
+    it('shows an explicit age category when age tags are present', async () => {
+        const { getByTestId, getByText, queryByText } = await renderWithQueryClient(
             <QuestCard
                 styles={styles}
                 cardWidth={340}
@@ -373,13 +374,13 @@ describe('QuestCard', () => {
         expect(queryByText('Для детей')).toBeNull();
     });
 
-    it('passes a resized proxy cover URL to native image instead of the full-size original', () => {
+    it('passes a resized proxy cover URL to native image instead of the full-size original', async () => {
         (Platform as { OS: string }).OS = 'android';
         const prevApiUrl = process.env.EXPO_PUBLIC_API_URL;
         process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by';
 
         try {
-            renderWithQueryClient(
+            await renderWithQueryClient(
                 <QuestCard
                     styles={styles}
                     cardWidth={340}
@@ -425,10 +426,10 @@ describe('QuestCard', () => {
         }
     });
 
-    it('keeps only the first two covers eager and high-priority', () => {
+    it('keeps only the first two covers eager and high-priority', async () => {
         for (const index of [0, 1, 2]) {
             mockImageCardMedia.mockClear();
-            renderWithQueryClient(
+            await renderWithQueryClient(
                 <QuestCard
                     styles={styles}
                     cardWidth={420}
@@ -447,13 +448,13 @@ describe('QuestCard', () => {
         }
     });
 
-    it('запрашивает retina-ширину под слот 420 на DPR2: 840 → потолок набора 800', () => {
+    it('запрашивает retina-ширину под слот 420 на DPR2: 840 → потолок набора 800', async () => {
         const pixelRatioSpy = jest.spyOn(PixelRatio, 'get').mockReturnValue(2);
         const prevApiUrl = process.env.EXPO_PUBLIC_API_URL;
         process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by';
 
         try {
-            renderWithQueryClient(
+            await renderWithQueryClient(
                 <QuestCard
                     styles={styles}
                     cardWidth={420}
@@ -483,13 +484,13 @@ describe('QuestCard', () => {
         }
     });
 
-    it('regression: never renders only the blurred backdrop on a DPR3 iPhone card', () => {
+    it('regression: never renders only the blurred backdrop on a DPR3 iPhone card', async () => {
         const pixelRatioSpy = jest.spyOn(PixelRatio, 'get').mockReturnValue(3);
         const prevApiUrl = process.env.EXPO_PUBLIC_API_URL;
         process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by';
 
         try {
-            renderWithQueryClient(
+            await renderWithQueryClient(
                 <QuestCard
                     styles={styles}
                     cardWidth={345}
@@ -519,14 +520,14 @@ describe('QuestCard', () => {
         }
     });
 
-    it('keeps the existing 2x cover cap on Android devices with DPR3 screens', () => {
+    it('keeps the existing 2x cover cap on Android devices with DPR3 screens', async () => {
         (Platform as { OS: string }).OS = 'android';
         const pixelRatioSpy = jest.spyOn(PixelRatio, 'get').mockReturnValue(3);
         const prevApiUrl = process.env.EXPO_PUBLIC_API_URL;
         process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by';
 
         try {
-            renderWithQueryClient(
+            await renderWithQueryClient(
                 <QuestCard
                     styles={styles}
                     cardWidth={345}
@@ -548,8 +549,8 @@ describe('QuestCard', () => {
         }
     });
 
-    it('opens the quest reviews modal from the mobile reviews CTA', () => {
-        const { getByTestId } = renderWithQueryClient(
+    it('opens the quest reviews modal from the mobile reviews CTA', async () => {
+        const { getByTestId } = await renderWithQueryClient(
             <QuestCard
                 styles={styles}
                 cardWidth={340}
@@ -558,7 +559,7 @@ describe('QuestCard', () => {
             />,
         );
 
-        fireEvent.press(getByTestId('quest-card-reviews-krakow-dragon'));
+        await fireEvent.press(getByTestId('quest-card-reviews-krakow-dragon'));
 
         expect(getByTestId('quest-reviews-modal')).toBeTruthy();
         expect(mockPush).not.toHaveBeenCalled();
@@ -583,8 +584,8 @@ describe('QuestCard', () => {
             [5, 'Пройдено 5 раз'],
             [11, 'Пройдено 11 раз'],
             [21, 'Пройдено 21 раз'],
-        ])('склоняет ненулевой счётчик: count=%i → "%s"', (count, expected) => {
-            const { getByText } = renderWithQueryClient(
+        ])('склоняет ненулевой счётчик: count=%i → "%s"', async (count, expected) => {
+            const { getByText } = await renderWithQueryClient(
                 <QuestCard
                     styles={styles}
                     cardWidth={380}
@@ -596,8 +597,8 @@ describe('QuestCard', () => {
             expect(getByText(expected)).toBeTruthy();
         });
 
-        it('сохраняет реальный счётчик и первопроходца вместе', () => {
-            const { getByText } = renderWithQueryClient(
+        it('сохраняет реальный счётчик и первопроходца вместе', async () => {
+            const { getByText } = await renderWithQueryClient(
                 <QuestCard
                     styles={styles}
                     cardWidth={380}
@@ -614,8 +615,8 @@ describe('QuestCard', () => {
             expect(getByText('Первым прошёл: Roman Shakun')).toBeTruthy();
         });
 
-        it('нулевое состояние не показывает статистику прохождений в оверлее', () => {
-            const { queryByTestId, queryByText } = renderWithQueryClient(
+        it('нулевое состояние не показывает статистику прохождений в оверлее', async () => {
+            const { queryByTestId, queryByText } = await renderWithQueryClient(
                 <QuestCard
                     styles={styles}
                     cardWidth={380}
@@ -642,8 +643,8 @@ describe('QuestCard', () => {
                 mockIsPhone = isPhone;
             });
 
-            it.each([0, 1, 2])('скрывает оценку при %i отзывах', (ratingCount) => {
-                const { queryByTestId } = renderWithQueryClient(
+            it.each([0, 1, 2])('скрывает оценку при %i отзывах', async (ratingCount) => {
+                const { queryByTestId } = await renderWithQueryClient(
                     <QuestCard
                         styles={styles}
                         cardWidth={380}
@@ -655,8 +656,8 @@ describe('QuestCard', () => {
                 expect(queryByTestId('quest-card-rating-minsk-threshold')).toBeNull();
             });
 
-            it('показывает оценку начиная с трёх отзывов', () => {
-                const { getByTestId } = renderWithQueryClient(
+            it('показывает оценку начиная с трёх отзывов', async () => {
+                const { getByTestId } = await renderWithQueryClient(
                     <QuestCard
                         styles={styles}
                         cardWidth={380}
@@ -669,9 +670,9 @@ describe('QuestCard', () => {
             });
         });
 
-        it('оставляет вход в читалку при единственном отзыве', () => {
+        it('оставляет вход в читалку при единственном отзыве', async () => {
             mockIsPhone = true;
-            const { getByTestId, queryByTestId } = renderWithQueryClient(
+            const { getByTestId, queryByTestId } = await renderWithQueryClient(
                 <QuestCard
                     styles={styles}
                     cardWidth={380}
@@ -690,12 +691,12 @@ describe('QuestCard', () => {
 it.each([
     { cityName: 'Могилёв', countryName: 'Беларусь', category: 'Могилёв' },
     { cityName: undefined, countryName: 'Беларусь', category: 'Беларусь' },
-])('#2482 marks the catalog title and city/country label ($category) with their original language', ({ category, ...location }) => {
+])('#2482 marks the catalog title and city/country label ($category) with their original language', async ({ category, ...location }) => {
     const originalOS = Platform.OS;
     Platform.OS = 'web';
     try {
-        const tree = renderWithQueryClient(<QuestCard quest={makeQuest(location)} styles={styles} cardWidth={340} cityId="krakow" />);
-        const marked = tree.UNSAFE_root.findAll((node) => node.props.lang === 'ru');
+        const tree = await renderWithQueryClient(<QuestCard quest={makeQuest(location)} styles={styles} cardWidth={340} cityId="krakow" />);
+        const marked = tree.container.queryAll((node) => node.props.lang === 'ru');
         expect(marked.some((node) => node.props.children === 'Тайна дракона')).toBe(true);
         expect(marked.some((node) => node.props.children === category)).toBe(true);
     } finally { Platform.OS = originalOS; }

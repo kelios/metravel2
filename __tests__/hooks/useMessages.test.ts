@@ -70,16 +70,28 @@ const USER_1 = { id: 1, first_name: 'John', last_name: 'Doe', avatar: null, user
 
 // ---- Tests ----
 
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason: unknown) => void;
+  const promise = new Promise<T>((resolvePromise, rejectPromise) => {
+    resolve = resolvePromise;
+    reject = rejectPromise;
+  });
+  return { promise, resolve, reject };
+}
+
 describe('useThreads', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('loads threads on mount when enabled', async () => {
-    mockFetchMessageThreads.mockResolvedValueOnce([THREAD_1, THREAD_2]);
+    const request = createDeferred<Array<typeof THREAD_1>>();
+    mockFetchMessageThreads.mockReturnValueOnce(request.promise);
 
-    const { result } = renderHook(() => useThreads(true, false));
+    const { result } = await renderHook(() => useThreads(true, false));
 
     expect(result.current.loading).toBe(true);
 
+    await act(() => request.resolve([THREAD_1, THREAD_2]));
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.threads).toHaveLength(2);
@@ -89,7 +101,7 @@ describe('useThreads', () => {
   });
 
   it('does not load when disabled', async () => {
-    const { result } = renderHook(() => useThreads(false, false));
+    const { result } = await renderHook(() => useThreads(false, false));
 
     // Give it a tick
     await act(async () => {});
@@ -101,7 +113,7 @@ describe('useThreads', () => {
   it('sets error on failure', async () => {
     mockFetchMessageThreads.mockRejectedValueOnce(new Error('Network error'));
 
-    const { result } = renderHook(() => useThreads(true, false));
+    const { result } = await renderHook(() => useThreads(true, false));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -111,29 +123,33 @@ describe('useThreads', () => {
 
   // #2267: пустой `threads` до первого ответа — «ещё не знаем», а не «диалогов нет».
   it('reports loaded only after the first load settles — success, empty and error alike', async () => {
-    mockFetchMessageThreads.mockResolvedValueOnce([]);
-    const empty = renderHook(() => useThreads(true, false));
+    const emptyRequest = createDeferred<Array<typeof THREAD_1>>();
+    mockFetchMessageThreads.mockReturnValueOnce(emptyRequest.promise);
+    const empty = await renderHook(() => useThreads(true, false));
     expect(empty.result.current.loaded).toBe(false);
+    await act(() => emptyRequest.resolve([]));
     await waitFor(() => expect(empty.result.current.loaded).toBe(true));
     expect(empty.result.current.threads).toEqual([]);
 
-    mockFetchMessageThreads.mockRejectedValueOnce(new Error('Network error'));
-    const failed = renderHook(() => useThreads(true, false));
+    const failedRequest = createDeferred<Array<typeof THREAD_1>>();
+    mockFetchMessageThreads.mockReturnValueOnce(failedRequest.promise);
+    const failed = await renderHook(() => useThreads(true, false));
     expect(failed.result.current.loaded).toBe(false);
+    await act(() => failedRequest.reject(new Error('Network error')));
     await waitFor(() => expect(failed.result.current.loaded).toBe(true));
     expect(failed.result.current.error).toBe('Network error');
   });
 
   it('stays not loaded while disabled, then loads once enabled', async () => {
     mockFetchMessageThreads.mockResolvedValueOnce([THREAD_1]);
-    const { result, rerender } = renderHook(({ enabled }: { enabled: boolean }) => useThreads(enabled, false), {
+    const { result, rerender } = await renderHook(({ enabled }: { enabled: boolean }) => useThreads(enabled, false), {
       initialProps: { enabled: false },
     });
 
     await act(async () => {});
     expect(result.current).toMatchObject({ loaded: false, loading: false, threads: [] });
 
-    rerender({ enabled: true });
+    await rerender({ enabled: true });
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.threads).toHaveLength(1);
   });
@@ -141,7 +157,7 @@ describe('useThreads', () => {
   it('refresh reloads data', async () => {
     mockFetchMessageThreads.mockResolvedValueOnce([THREAD_1]);
 
-    const { result } = renderHook(() => useThreads(true, false));
+    const { result } = await renderHook(() => useThreads(true, false));
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.threads).toHaveLength(1);
@@ -155,7 +171,7 @@ describe('useThreads', () => {
   it('handles non-array response gracefully', async () => {
     mockFetchMessageThreads.mockResolvedValueOnce(null);
 
-    const { result } = renderHook(() => useThreads(true, false));
+    const { result } = await renderHook(() => useThreads(true, false));
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.threads).toEqual([]);
@@ -164,22 +180,22 @@ describe('useThreads', () => {
   it('optimistically removes a thread and can roll it back in the original position', async () => {
     mockFetchMessageThreads.mockResolvedValueOnce([THREAD_1, THREAD_2]);
 
-    const { result } = renderHook(() => useThreads(true, false));
+    const { result } = await renderHook(() => useThreads(true, false));
     await waitFor(() => expect(result.current.threads).toHaveLength(2));
 
     let rollback: () => void;
-    act(() => {
+    await act(() => {
       rollback = result.current.optimisticRemove(THREAD_1.id);
     });
     expect(result.current.threads.map((thread) => thread.id)).toEqual([THREAD_2.id]);
 
-    act(() => rollback());
+    await act(() => rollback());
     expect(result.current.threads.map((thread) => thread.id)).toEqual([THREAD_1.id, THREAD_2.id]);
   });
 
   it('does not restore an optimistically deleted thread from a stale refresh response', async () => {
     mockFetchMessageThreads.mockResolvedValueOnce([THREAD_1, THREAD_2]);
-    const { result } = renderHook(() => useThreads(true, false));
+    const { result } = await renderHook(() => useThreads(true, false));
     await waitFor(() => expect(result.current.threads).toHaveLength(2));
 
     let resolveRefresh: (threads: Array<typeof THREAD_1>) => void = () => undefined;
@@ -190,7 +206,7 @@ describe('useThreads', () => {
     );
 
     let refreshPromise: Promise<void>;
-    act(() => {
+    await act(() => {
       refreshPromise = result.current.refresh();
       result.current.optimisticRemove(THREAD_1.id);
     });
@@ -210,7 +226,7 @@ describe('useThreadMessages', () => {
   it('loads messages for a thread', async () => {
     mockFetchMessages.mockResolvedValueOnce(PAGINATED_MESSAGES);
 
-    const { result } = renderHook(() => useThreadMessages(1, false));
+    const { result } = await renderHook(() => useThreadMessages(1, false));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -220,7 +236,7 @@ describe('useThreadMessages', () => {
   });
 
   it('does not load for null threadId', async () => {
-    const { result } = renderHook(() => useThreadMessages(null, false));
+    const { result } = await renderHook(() => useThreadMessages(null, false));
 
     await act(async () => {});
 
@@ -229,7 +245,7 @@ describe('useThreadMessages', () => {
   });
 
   it('does not load for virtual thread (id < 0)', async () => {
-    const { result } = renderHook(() => useThreadMessages(-1, false));
+    const { result } = await renderHook(() => useThreadMessages(-1, false));
 
     await act(async () => {});
 
@@ -240,7 +256,7 @@ describe('useThreadMessages', () => {
   it('sets error on failure', async () => {
     mockFetchMessages.mockRejectedValueOnce(new Error('Server error'));
 
-    const { result } = renderHook(() => useThreadMessages(1, false));
+    const { result } = await renderHook(() => useThreadMessages(1, false));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -253,7 +269,7 @@ describe('useThreadMessages', () => {
       next: 'http://api/messages/?page=2',
     });
 
-    const { result } = renderHook(() => useThreadMessages(1, false));
+    const { result } = await renderHook(() => useThreadMessages(1, false));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -263,14 +279,14 @@ describe('useThreadMessages', () => {
   it('clears messages when threadId changes to null', async () => {
     mockFetchMessages.mockResolvedValueOnce(PAGINATED_MESSAGES);
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ id }) => useThreadMessages(id, false),
       { initialProps: { id: 1 as number | null } }
     );
 
     await waitFor(() => expect(result.current.messages).toHaveLength(2));
 
-    rerender({ id: null });
+    await rerender({ id: null });
 
     await waitFor(() => expect(result.current.messages).toEqual([]));
   });
@@ -278,10 +294,10 @@ describe('useThreadMessages', () => {
   it('optimisticRemove removes message from list immediately', async () => {
     mockFetchMessages.mockResolvedValueOnce(PAGINATED_MESSAGES);
 
-    const { result } = renderHook(() => useThreadMessages(1, false));
+    const { result } = await renderHook(() => useThreadMessages(1, false));
     await waitFor(() => expect(result.current.messages).toHaveLength(2));
 
-    act(() => {
+    await act(() => {
       result.current.optimisticRemove(1);
     });
 
@@ -292,17 +308,17 @@ describe('useThreadMessages', () => {
   it('optimisticRemove rollback restores message', async () => {
     mockFetchMessages.mockResolvedValueOnce(PAGINATED_MESSAGES);
 
-    const { result } = renderHook(() => useThreadMessages(1, false));
+    const { result } = await renderHook(() => useThreadMessages(1, false));
     await waitFor(() => expect(result.current.messages).toHaveLength(2));
 
     let rollback: () => void;
-    act(() => {
+    await act(() => {
       rollback = result.current.optimisticRemove(1);
     });
 
     expect(result.current.messages).toHaveLength(1);
 
-    act(() => {
+    await act(() => {
       rollback();
     });
 
@@ -317,7 +333,7 @@ describe('useSendMessage', () => {
   it('sends message successfully', async () => {
     mockSendMessage.mockResolvedValueOnce({});
 
-    const { result } = renderHook(() => useSendMessage());
+    const { result } = await renderHook(() => useSendMessage());
 
     let success: boolean | undefined;
     await act(async () => {
@@ -333,7 +349,7 @@ describe('useSendMessage', () => {
   it('returns false and sets error on failure', async () => {
     mockSendMessage.mockRejectedValueOnce(new Error('Send failed'));
 
-    const { result } = renderHook(() => useSendMessage());
+    const { result } = await renderHook(() => useSendMessage());
 
     let success: boolean | undefined;
     await act(async () => {
@@ -348,10 +364,10 @@ describe('useSendMessage', () => {
     let resolvePromise: (v: any) => void;
     mockSendMessage.mockReturnValueOnce(new Promise(r => { resolvePromise = r; }));
 
-    const { result } = renderHook(() => useSendMessage());
+    const { result } = await renderHook(() => useSendMessage());
 
     let sendPromise: Promise<boolean>;
-    act(() => {
+    await act(() => {
       sendPromise = result.current.send([2], 'Test');
     });
 
@@ -372,7 +388,7 @@ describe('useDeleteMessage', () => {
   it('deletes message successfully', async () => {
     mockDeleteMessage.mockResolvedValueOnce(null);
 
-    const { result } = renderHook(() => useDeleteMessage());
+    const { result } = await renderHook(() => useDeleteMessage());
 
     let success: boolean | undefined;
     await act(async () => {
@@ -387,7 +403,7 @@ describe('useDeleteMessage', () => {
   it('returns false on failure', async () => {
     mockDeleteMessage.mockRejectedValueOnce(new Error('Delete failed'));
 
-    const { result } = renderHook(() => useDeleteMessage());
+    const { result } = await renderHook(() => useDeleteMessage());
 
     let success: boolean | undefined;
     await act(async () => {
@@ -403,7 +419,7 @@ describe('useDeleteThread', () => {
 
   it('deletes a thread successfully', async () => {
     mockDeleteThread.mockResolvedValueOnce(null);
-    const { result } = renderHook(() => useDeleteThread());
+    const { result } = await renderHook(() => useDeleteThread());
 
     let success: boolean | undefined;
     await act(async () => {
@@ -417,7 +433,7 @@ describe('useDeleteThread', () => {
 
   it('reports failure so the screen can roll back its optimistic removal', async () => {
     mockDeleteThread.mockRejectedValueOnce(new Error('Delete failed'));
-    const { result } = renderHook(() => useDeleteThread());
+    const { result } = await renderHook(() => useDeleteThread());
 
     let success: boolean | undefined;
     await act(async () => {
@@ -434,7 +450,7 @@ describe('useAvailableUsers', () => {
   it('loads users when enabled', async () => {
     mockFetchAvailableUsers.mockResolvedValueOnce([USER_1]);
 
-    const { result } = renderHook(() => useAvailableUsers(true));
+    const { result } = await renderHook(() => useAvailableUsers(true));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -443,7 +459,7 @@ describe('useAvailableUsers', () => {
   });
 
   it('does not load when disabled', async () => {
-    const { result } = renderHook(() => useAvailableUsers(false));
+    const { result } = await renderHook(() => useAvailableUsers(false));
 
     await act(async () => {});
 
@@ -454,7 +470,7 @@ describe('useAvailableUsers', () => {
   it('handles non-array response', async () => {
     mockFetchAvailableUsers.mockResolvedValueOnce(null);
 
-    const { result } = renderHook(() => useAvailableUsers(true));
+    const { result } = await renderHook(() => useAvailableUsers(true));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -468,7 +484,7 @@ describe('useThreadByUser', () => {
   it('finds existing thread', async () => {
     mockFetchThreadByUser.mockResolvedValueOnce({ thread_id: 42 });
 
-    const { result } = renderHook(() => useThreadByUser(10));
+    const { result } = await renderHook(() => useThreadByUser(10));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -479,7 +495,7 @@ describe('useThreadByUser', () => {
   it('returns null when no thread exists', async () => {
     mockFetchThreadByUser.mockResolvedValueOnce({ thread_id: null });
 
-    const { result } = renderHook(() => useThreadByUser(10));
+    const { result } = await renderHook(() => useThreadByUser(10));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -487,7 +503,7 @@ describe('useThreadByUser', () => {
   });
 
   it('does not fetch when userId is null', async () => {
-    const { result } = renderHook(() => useThreadByUser(null));
+    const { result } = await renderHook(() => useThreadByUser(null));
 
     await act(async () => {});
 
@@ -498,7 +514,7 @@ describe('useThreadByUser', () => {
   it('handles error gracefully', async () => {
     mockFetchThreadByUser.mockRejectedValueOnce(new Error('Not found'));
 
-    const { result } = renderHook(() => useThreadByUser(10));
+    const { result } = await renderHook(() => useThreadByUser(10));
 
     await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -512,7 +528,7 @@ describe('useMarkThreadRead', () => {
   it('calls markThreadRead API', async () => {
     mockMarkThreadRead.mockResolvedValueOnce(null);
 
-    const { result } = renderHook(() => useMarkThreadRead());
+    const { result } = await renderHook(() => useMarkThreadRead());
 
     await act(async () => {
       await result.current.mark(7);
@@ -522,7 +538,7 @@ describe('useMarkThreadRead', () => {
   });
 
   it('does not call API for virtual thread (id < 0)', async () => {
-    const { result } = renderHook(() => useMarkThreadRead());
+    const { result } = await renderHook(() => useMarkThreadRead());
 
     await act(async () => {
       await result.current.mark(-1);
@@ -534,7 +550,7 @@ describe('useMarkThreadRead', () => {
   it('handles error silently', async () => {
     mockMarkThreadRead.mockRejectedValueOnce(new Error('Server error'));
 
-    const { result } = renderHook(() => useMarkThreadRead());
+    const { result } = await renderHook(() => useMarkThreadRead());
 
     // Should not throw
     await act(async () => {
@@ -551,7 +567,7 @@ describe('useUnreadCount (stubbed — backend not deployed)', () => {
   it('returns 0 when enabled (stub)', async () => {
     mockFetchUnreadCount.mockResolvedValueOnce({ count: 0 });
 
-    const { result } = renderHook(() => useUnreadCount(true, false), {
+    const { result } = await renderHook(() => useUnreadCount(true, false), {
       wrapper: createQueryWrapper().Wrapper,
     });
 
@@ -561,7 +577,7 @@ describe('useUnreadCount (stubbed — backend not deployed)', () => {
   });
 
   it('does not load when disabled', async () => {
-    const { result } = renderHook(() => useUnreadCount(false, false), {
+    const { result } = await renderHook(() => useUnreadCount(false, false), {
       wrapper: createQueryWrapper().Wrapper,
     });
 

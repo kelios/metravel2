@@ -18,33 +18,33 @@ describe('PresetSelector', () => {
   });
 
   describe('rendering', () => {
-    it('should render without crashing', () => {
-      const { getByText } = render(<PresetSelector {...defaultProps} />);
+    it('should render without crashing', async () => {
+      const { getByText } = await render(<PresetSelector {...defaultProps} />);
       expect(getByText('Быстрый старт')).toBeTruthy();
     });
 
-    it('should show subtitle', () => {
-      const { getByText } = render(<PresetSelector {...defaultProps} />);
+    it('should show subtitle', async () => {
+      const { getByText } = await render(<PresetSelector {...defaultProps} />);
       expect(getByText('Выберите готовый пресет или настройте вручную')).toBeTruthy();
     });
 
-    it('should render all presets', () => {
-      const { getByText } = render(<PresetSelector {...defaultProps} />);
+    it('should render all presets', async () => {
+      const { getByText } = await render(<PresetSelector {...defaultProps} />);
 
       BOOK_PRESETS.forEach((preset) => {
         expect(getByText(preset.name)).toBeTruthy();
       });
     });
 
-    it('should show preset descriptions', () => {
-      const { getByText } = render(<PresetSelector {...defaultProps} />);
+    it('should show preset descriptions', async () => {
+      const { getByText } = await render(<PresetSelector {...defaultProps} />);
 
       expect(getByText(/Только текст и ключевые фото/)).toBeTruthy();
       expect(getByText(/Акцент на фотографии/)).toBeTruthy();
     });
 
-    it('should display preset icons', () => {
-      const { queryAllByText } = render(<PresetSelector {...defaultProps} />);
+    it('should display preset icons', async () => {
+      const { queryAllByText } = await render(<PresetSelector {...defaultProps} />);
 
       // Icons are rendered via Feather mock as text nodes (e.g. "camera", "map").
       // Assert presence without relying on mock-specific testIDs.
@@ -55,8 +55,8 @@ describe('PresetSelector', () => {
   });
 
   describe('categories', () => {
-    it('should show category filters when enabled', () => {
-      const { getByText } = render(<PresetSelector {...defaultProps} />);
+    it('should show category filters when enabled', async () => {
+      const { getByText } = await render(<PresetSelector {...defaultProps} />);
 
       expect(getByText('Все')).toBeTruthy();
       expect(getByText('Минимализм')).toBeTruthy();
@@ -64,8 +64,8 @@ describe('PresetSelector', () => {
       expect(getByText('Фото')).toBeTruthy();
     });
 
-    it('should hide category filters when disabled', () => {
-      const { queryByText } = render(
+    it('should hide category filters when disabled', async () => {
+      const { queryByText } = await render(
         <PresetSelector {...defaultProps} showCategories={false} />
       );
 
@@ -73,12 +73,12 @@ describe('PresetSelector', () => {
       expect(queryByText('Минимализм')).toBeFalsy();
     });
 
-    it('should filter presets by category', () => {
-      const { getByText, queryByText } = render(<PresetSelector {...defaultProps} />);
+    it('should filter presets by category', async () => {
+      const { getByText, queryByText } = await render(<PresetSelector {...defaultProps} />);
 
       // Click on "Фото" category
       const photoCategory = getByText('Фото');
-      fireEvent.press(photoCategory);
+      await fireEvent.press(photoCategory);
 
       // Should show photo-focused presets
       expect(getByText('Фотоальбом')).toBeTruthy();
@@ -88,11 +88,11 @@ describe('PresetSelector', () => {
       expect(queryByText('Путеводитель')).toBeFalsy();
     });
 
-    it('should show all presets when "Все" is selected', () => {
-      const { getByText } = render(<PresetSelector {...defaultProps} />);
+    it('should show all presets when "Все" is selected', async () => {
+      const { getByText } = await render(<PresetSelector {...defaultProps} />);
 
       const allCategory = getByText('Все');
-      fireEvent.press(allCategory);
+      await fireEvent.press(allCategory);
 
       BOOK_PRESETS.forEach((preset) => {
         expect(getByText(preset.name)).toBeTruthy();
@@ -101,11 +101,11 @@ describe('PresetSelector', () => {
   });
 
   describe('preset selection', () => {
-    it('should call onPresetSelect when preset is clicked', () => {
-      const { getByText } = render(<PresetSelector {...defaultProps} />);
+    it('should call onPresetSelect when preset is clicked', async () => {
+      const { getByText } = await render(<PresetSelector {...defaultProps} />);
 
       const preset = getByText('Фотоальбом');
-      fireEvent.press(preset.parent!.parent!);
+      await fireEvent.press(preset.parent!.parent!);
 
       expect(mockOnPresetSelect).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -115,8 +115,8 @@ describe('PresetSelector', () => {
       );
     });
 
-    it('should show checkmark on selected preset', () => {
-      const { getAllByText } = render(
+    it('should show checkmark on selected preset', async () => {
+      const { getAllByText } = await render(
         <PresetSelector {...defaultProps} selectedPresetId="photo-album" />
       );
 
@@ -125,22 +125,22 @@ describe('PresetSelector', () => {
       expect(selectedBadges).toHaveLength(1);
     });
 
-    it('should move the selected badge when selectedPresetId changes', () => {
-      const { getAllByText, rerender } = render(
+    it('should move the selected badge when selectedPresetId changes', async () => {
+      const { getAllByText, rerender } = await render(
         <PresetSelector {...defaultProps} selectedPresetId="photo-album" />
       );
 
       expect(getAllByText('Выбрано')).toHaveLength(1);
 
-      rerender(<PresetSelector {...defaultProps} selectedPresetId="travel-guide" />);
+      await rerender(<PresetSelector {...defaultProps} selectedPresetId="travel-guide" />);
 
       expect(getAllByText('Выбрано')).toHaveLength(1);
     });
   });
 
   describe('preset features', () => {
-    it('should display feature badges', () => {
-      const { getAllByText } = render(<PresetSelector {...defaultProps} />);
+    it('should display feature badges', async () => {
+      const { getAllByText } = await render(<PresetSelector {...defaultProps} />);
 
       // Travel guide should have all features - use getAllByText since features may appear multiple times
       expect(getAllByText('Галерея').length).toBeGreaterThan(0);
@@ -148,16 +148,16 @@ describe('PresetSelector', () => {
       expect(getAllByText('Чек-листы').length).toBeGreaterThan(0);
     });
 
-    it('should show default badge for default preset', () => {
-      const { getByText } = render(<PresetSelector {...defaultProps} />);
+    it('should show default badge for default preset', async () => {
+      const { getByText } = await render(<PresetSelector {...defaultProps} />);
 
       expect(getByText('По умолчанию')).toBeTruthy();
     });
 
-    it('keeps feature badges aligned with preset settings', () => {
-      const { getByText, getAllByText, queryByText } = render(<PresetSelector {...defaultProps} />);
+    it('keeps feature badges aligned with preset settings', async () => {
+      const { getByText, getAllByText, queryByText } = await render(<PresetSelector {...defaultProps} />);
 
-      fireEvent.press(getByText('Минимализм'));
+      await fireEvent.press(getByText('Минимализм'));
 
       expect(getByText('Минималист')).toBeTruthy();
       expect(getByText('Современный минимализм')).toBeTruthy();
@@ -167,30 +167,30 @@ describe('PresetSelector', () => {
   });
 
   describe('accessibility', () => {
-    it('should have accessible labels', () => {
-      const { getByText } = render(<PresetSelector {...defaultProps} />);
+    it('should have accessible labels', async () => {
+      const { getByText } = await render(<PresetSelector {...defaultProps} />);
 
       expect(getByText('Быстрый старт')).toBeTruthy();
       expect(getByText('Выберите готовый пресет или настройте вручную')).toBeTruthy();
     });
 
-    it('keeps the preset action label visible for every rendered preset', () => {
-      const { getAllByText } = render(<PresetSelector {...defaultProps} />);
+    it('keeps the preset action label visible for every rendered preset', async () => {
+      const { getAllByText } = await render(<PresetSelector {...defaultProps} />);
 
       expect(getAllByText('Выбрать')).toHaveLength(BOOK_PRESETS.length);
     });
   });
 
   describe('edge cases', () => {
-    it('should handle no selected preset', () => {
-      const { getByText } = render(<PresetSelector {...defaultProps} />);
+    it('should handle no selected preset', async () => {
+      const { getByText } = await render(<PresetSelector {...defaultProps} />);
 
       expect(getByText('Быстрый старт')).toBeTruthy();
       // Should not crash
     });
 
-    it('should handle invalid selected preset ID', () => {
-      const { getByText } = render(
+    it('should handle invalid selected preset ID', async () => {
+      const { getByText } = await render(
         <PresetSelector {...defaultProps} selectedPresetId="invalid-id" />
       );
 
@@ -198,24 +198,24 @@ describe('PresetSelector', () => {
       // Should not crash
     });
 
-    it('should handle rapid preset changes', () => {
-      const { getByText } = render(<PresetSelector {...defaultProps} />);
+    it('should handle rapid preset changes', async () => {
+      const { getByText } = await render(<PresetSelector {...defaultProps} />);
 
       const presets = ['Минималист', 'Фотоальбом', 'Путеводитель'];
-      presets.forEach((presetName) => {
+      for (const presetName of presets) {
         const preset = getByText(presetName);
-        fireEvent.press(preset.parent!.parent!);
-      });
+        await fireEvent.press(preset.parent!.parent!);
+      }
 
       expect(mockOnPresetSelect).toHaveBeenCalledTimes(3);
     });
 
-    it('should handle empty category filter', () => {
-      const { getByText } = render(<PresetSelector {...defaultProps} />);
+    it('should handle empty category filter', async () => {
+      const { getByText } = await render(<PresetSelector {...defaultProps} />);
 
       // Click on a category
       const category = getByText('Печать');
-      fireEvent.press(category);
+      await fireEvent.press(category);
 
       // Should show at least one preset
       expect(getByText('Для печати')).toBeTruthy();

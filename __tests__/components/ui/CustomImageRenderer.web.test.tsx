@@ -82,8 +82,8 @@ describe('CustomImageRenderer body photos (web)', () => {
     ;(globalThis as any).IntersectionObserver = originalIO
   })
 
-  it('hands ImageCardMedia a resized variant instead of the raw detail_hd original', () => {
-    render(
+  it('hands ImageCardMedia a resized variant instead of the raw detail_hd original', async () => {
+    await render(
       <CustomImageRenderer
         tnode={makeTnode({ src: DETAIL_HD, alt: 'Замок' }) as any}
         contentWidth={358}
@@ -106,7 +106,7 @@ describe('CustomImageRenderer body photos (web)', () => {
   })
 
   it('measures aspect ratio through the same URL it renders, never the original', async () => {
-    render(
+    await render(
       <CustomImageRenderer
         tnode={makeTnode({ src: DETAIL_HD, alt: 'Замок' }) as any}
         contentWidth={358}
@@ -124,7 +124,7 @@ describe('CustomImageRenderer body photos (web)', () => {
   // iPhone WebKit дорисовывает прогрессивный JPEG поэтапно: фото статьи появлялось
   // мутным кадром и «дорезкивалось» уже на экране. Список путешествий закрывает это
   // тем же decode-гейтом (`TravelListItem`: `revealOnLoadOnly: IS_WEB`).
-  it('waits for the sharp decode on iOS WebKit so no progressive frame is shown', () => {
+  it('waits for the sharp decode on iOS WebKit so no progressive frame is shown', async () => {
     const originalUserAgent = window.navigator.userAgent
     const originalMaxTouchPoints = window.navigator.maxTouchPoints
     Object.defineProperty(window.navigator, 'userAgent', {
@@ -138,7 +138,7 @@ describe('CustomImageRenderer body photos (web)', () => {
     })
 
     try {
-      render(
+      await render(
         <CustomImageRenderer
           tnode={makeTnode({ src: DETAIL_HD, alt: 'Замок' }) as any}
           contentWidth={358}
@@ -158,8 +158,8 @@ describe('CustomImageRenderer body photos (web)', () => {
     }
   })
 
-  it('does not delay body photos on engines without the progressive frame', () => {
-    render(
+  it('does not delay body photos on engines without the progressive frame', async () => {
+    await render(
       <CustomImageRenderer
         tnode={makeTnode({ src: DETAIL_HD, alt: 'Замок' }) as any}
         contentWidth={358}
@@ -169,8 +169,8 @@ describe('CustomImageRenderer body photos (web)', () => {
     expect(mockImageCardMedia.mock.calls[0]?.[0]?.revealOnLoadOnly).toBe(false)
   })
 
-  it('skips the measuring request entirely when the HTML already carries dimensions', () => {
-    render(
+  it('skips the measuring request entirely when the HTML already carries dimensions', async () => {
+    await render(
       <CustomImageRenderer
         tnode={makeTnode({ src: DETAIL_HD, alt: 'Замок', width: '1600', height: '1200' }) as any}
         contentWidth={358}
@@ -181,7 +181,7 @@ describe('CustomImageRenderer body photos (web)', () => {
   })
 
   // Вьюпортный гейт измерения (IntersectionObserver вокруг рамки) здесь не
-  // проверяется намеренно: react-test-renderer не отдаёт настоящий DOM-узел, а без
+  // проверяется намеренно: test renderer не отдаёт настоящий DOM-узел, а без
   // него хук по контракту размыкается в «показать» — то есть такой тест зелёный
   // независимо от логики гейта. Гейт верифицируется в браузере: см. Progress Log
   // #1114 (число запросов к /gallery/ до и после прокрутки к телу статьи).

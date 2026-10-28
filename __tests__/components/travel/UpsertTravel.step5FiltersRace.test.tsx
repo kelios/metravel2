@@ -1,5 +1,5 @@
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { act } from 'react-test-renderer';
+import { act } from "@testing-library/react-native";
 
 import UpsertTravel from '@/components/travel/UpsertTravel';
 import MultiSelectField from '@/components/forms/MultiSelectField';
@@ -211,16 +211,16 @@ describe('UpsertTravel step 5 filters race regression', () => {
 
   const advanceToStep5Fast = async (utils: ReturnType<typeof render>) => {
     await waitFor(() => expect(utils.getByTestId('next-1')).toBeTruthy());
-    fireEvent.press(utils.getByTestId('next-1'));
+    await fireEvent.press(utils.getByTestId('next-1'));
 
     await waitFor(() => expect(utils.getByTestId('next-2')).toBeTruthy());
-    fireEvent.press(utils.getByTestId('next-2'));
+    await fireEvent.press(utils.getByTestId('next-2'));
 
     await waitFor(() => expect(utils.getByTestId('next-3')).toBeTruthy());
-    fireEvent.press(utils.getByTestId('next-3'));
+    await fireEvent.press(utils.getByTestId('next-3'));
 
     await waitFor(() => expect(utils.getByTestId('next-4')).toBeTruthy());
-    fireEvent.press(utils.getByTestId('next-4'));
+    await fireEvent.press(utils.getByTestId('next-4'));
   };
 
   it('renders only server dictionaries when filters resolve after fast navigation to step 5', async () => {
@@ -232,7 +232,7 @@ describe('UpsertTravel step 5 filters race regression', () => {
     mockFetchAllCountries.mockResolvedValue([{ country_id: 3, title_ru: 'Беларусь' }]);
     mockFetchFilters.mockImplementation(() => filtersPromise);
 
-    const utils = render(<UpsertTravel />);
+    const utils = await render(<UpsertTravel />);
 
     // Fast navigate to step 5 before filters resolve
     await advanceToStep5Fast(utils);

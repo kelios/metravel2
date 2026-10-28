@@ -86,9 +86,9 @@ const trip = {
   createdAt: '2026-09-06T10:00:00.000Z',
 } as unknown as PlannedTrip
 
-const renderScreen = () => {
+const renderScreen = async () => {
   const PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default
-  return render(<PlannedTripScreen />)
+  return await render(<PlannedTripScreen />)
 }
 
 beforeEach(() => {
@@ -105,17 +105,17 @@ beforeEach(() => {
 })
 
 describe('PlannedTripScreen — чеклист снаряжения (#1839)', () => {
-  it('не показывает чеклист на вкладке «Маршрут»', () => {
-    const { queryByTestId, getByTestId } = renderScreen()
+  it('не показывает чеклист на вкладке «Маршрут»', async () => {
+    const { queryByTestId, getByTestId } = await renderScreen()
 
     expect(getByTestId('trip-plan-panel-route')).toBeTruthy()
     expect(queryByTestId('trip-gear-checklist')).toBeNull()
   })
 
-  it('показывает чеклист во вкладке «Ещё»', () => {
-    const { getByTestId } = renderScreen()
+  it('показывает чеклист во вкладке «Ещё»', async () => {
+    const { getByTestId } = await renderScreen()
 
-    fireEvent.press(getByTestId('trip-plan-tab-more'))
+    await fireEvent.press(getByTestId('trip-plan-tab-more'))
 
     expect(getByTestId('trip-plan-panel-more')).toBeTruthy()
     expect(getByTestId('trip-gear-checklist')).toBeTruthy()

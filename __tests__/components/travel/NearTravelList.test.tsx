@@ -65,7 +65,7 @@ describe('NearTravelList', () => {
 
   it('fetches near travels only once per travel id', async () => {
     const travel: Pick<Travel, 'id'> = { id: 1 };
-    const { rerender } = render(
+    const { rerender } = await render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <NearTravelList travel={travel} />
@@ -76,7 +76,7 @@ describe('NearTravelList', () => {
     await waitFor(() => expect(fetchTravelsNear).toHaveBeenCalledTimes(1));
 
     // rerender with the same id should not trigger another fetch
-    rerender(
+    await rerender(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <NearTravelList travel={travel} />
@@ -86,7 +86,7 @@ describe('NearTravelList', () => {
     expect(fetchTravelsNear).toHaveBeenCalledTimes(1);
 
     // change id -> should fetch again
-    rerender(
+    await rerender(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <NearTravelList travel={{ id: 2 }} />
@@ -112,7 +112,7 @@ describe('NearTravelList', () => {
       },
     ]);
 
-    render(
+    await render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <NearTravelList travel={{ id: 1 }} />
@@ -122,7 +122,7 @@ describe('NearTravelList', () => {
 
     await waitFor(() => expect(screen.getByText('Карта')).toBeTruthy());
 
-    fireEvent.press(screen.getByText('Карта'));
+    await fireEvent.press(screen.getByText('Карта'));
 
     await act(async () => {
       await Promise.resolve();
@@ -152,7 +152,7 @@ describe('NearTravelList', () => {
       },
     ]);
 
-    render(
+    await render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <NearTravelList
@@ -167,7 +167,7 @@ describe('NearTravelList', () => {
     );
 
     await waitFor(() => expect(screen.getByText('Карта')).toBeTruthy());
-    fireEvent.press(screen.getByText('Карта'));
+    await fireEvent.press(screen.getByText('Карта'));
 
     await waitFor(() => expect(fetchNearbyTravelMapPoints).toHaveBeenCalledWith(
       { lat: 50.05, lng: 19.94 },
@@ -208,7 +208,7 @@ describe('NearTravelList', () => {
       },
     ]);
 
-    render(
+    await render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <NearTravelList
@@ -223,7 +223,7 @@ describe('NearTravelList', () => {
     );
 
     await waitFor(() => expect(screen.getByText('Карта')).toBeTruthy());
-    fireEvent.press(screen.getByText('Карта'));
+    await fireEvent.press(screen.getByText('Карта'));
 
     await waitFor(() => expect(fetchNearbyTravelMapPoints).toHaveBeenCalledWith(
       { lat: 50.05, lng: 19.94 },
@@ -259,20 +259,20 @@ describe('NearTravelList', () => {
         </AuthProvider>
       </QueryClientProvider>
     );
-    const { rerender } = render(renderList({
+    const { rerender } = await render(renderList({
       id: 1,
       travelAddress: [{ id: 1, name: 'First origin', coords: '50.05,19.94' }],
     }));
 
     await waitFor(() => expect(screen.getByText('Карта')).toBeTruthy());
-    fireEvent.press(screen.getByText('Карта'));
+    await fireEvent.press(screen.getByText('Карта'));
     await waitFor(() => expect(fetchNearbyTravelMapPoints).toHaveBeenCalledWith(
       { lat: 50.05, lng: 19.94 },
       [expect.objectContaining({ id: 301, slug: 'first-nearby-route' })],
       expect.any(Object),
     ));
 
-    rerender(renderList({
+    await rerender(renderList({
       id: 2,
       travelAddress: [{ id: 2, name: 'Second origin', coords: '51.05,20.94' }],
     }));
@@ -317,7 +317,7 @@ describe('NearTravelList', () => {
         },
       ]);
 
-    render(
+    await render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <NearTravelList
@@ -332,12 +332,12 @@ describe('NearTravelList', () => {
     );
 
     await waitFor(() => expect(screen.getByText('Карта')).toBeTruthy());
-    fireEvent.press(screen.getByText('Карта'));
+    await fireEvent.press(screen.getByText('Карта'));
 
     await waitFor(() => {
       expect(screen.getByText('Не удалось загрузить маршруты. Попробуйте позже.')).toBeTruthy();
     });
-    fireEvent.press(screen.getByText('Повторить попытку'));
+    await fireEvent.press(screen.getByText('Повторить попытку'));
 
     await waitFor(() => {
       const lastCall = mockTravelMap.mock.calls[mockTravelMap.mock.calls.length - 1]?.[0];
@@ -364,7 +364,7 @@ describe('NearTravelList', () => {
       },
     ]);
 
-    render(
+    await render(
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <NearTravelList travel={{ id: 1 }} embedded />
@@ -373,7 +373,7 @@ describe('NearTravelList', () => {
     );
 
     await waitFor(() => expect(screen.getByText('Список')).toBeTruthy());
-    fireEvent.press(screen.getByText('Карта'));
+    await fireEvent.press(screen.getByText('Карта'));
 
     await act(async () => {
       await Promise.resolve();

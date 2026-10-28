@@ -6,7 +6,7 @@ import path from 'node:path'
 
 import { act, fireEvent, render } from '@testing-library/react-native'
 import type { ComponentType } from 'react'
-import { Platform, Text } from 'react-native'
+import { Platform } from 'react-native'
 
 import { resources } from '@/i18n/resources'
 import { writeConsent } from '@/utils/consent'
@@ -107,17 +107,15 @@ describe('ConsentBanner text (#2135)', () => {
       Platform.OS = originalPlatform
     })
 
-    it('renders the short text under the two-line clamp at 320 px', () => {
+    it('renders the short text under the two-line clamp at 320 px', async () => {
       // `isWeb` в компоненте вычисляется при загрузке модуля: модуль грузится
       // здесь, уже под web, а не статическим импортом наверху файла.
       Platform.OS = 'web'
       const ConsentBanner: ComponentType = require('@/components/layout/ConsentBanner').default
 
-      const screen = render(<ConsentBanner />)
+      const screen = await render(<ConsentBanner />)
       const expected = navigationOf('ru')[bannerTextKey]
-      const textNode = screen
-        .UNSAFE_getAllByType(Text)
-        .find((node) => node.props.children === expected)
+      const textNode = screen.getByText(expected)
 
       expect(screen.getByTestId('consent-banner')).toBeTruthy()
       expect(textNode).toBeDefined()
@@ -139,15 +137,15 @@ describe('ConsentBanner choice buttons are addressable by testID (#2162)', () =>
   it.each([
     ['consent-accept', true],
     ['consent-decline', false],
-  ] as const)('%s saves the matching consent', (testID, analytics) => {
+  ] as const)('%s saves the matching consent', async (testID, analytics) => {
     Platform.OS = 'web'
     const ConsentBanner: ComponentType = require('@/components/layout/ConsentBanner').default
-    const screen = render(<ConsentBanner />)
+    const screen = await render(<ConsentBanner />)
 
     // Обёртка баннера несёт `pointerEvents: 'none'` (CSS-семантика web: клики
     // проходят к кнопкам с `auto`), а RNTL по RN-семантике гасит такой press —
     // поэтому связку testID → обработчик проверяем через сам компонент кнопки.
-    screen.UNSAFE_getByProps({ testID }).props.onPress()
+    await act(() => screen.getByTestId(testID).props.onPress())
 
     expect(writeConsent).toHaveBeenCalledWith(expect.objectContaining({ necessary: true, analytics }))
   })
@@ -166,53 +164,53 @@ describe('ConsentBanner measured bottom reserve', () => {
     resetBottomChromeReserve()
   })
 
-  it('replaces the estimate with the rendered height so another panel can stack above consent', () => {
+  it('replaces the estimate with the rendered height so another panel can stack above consent', async () => {
     const ConsentBanner: ComponentType = require('@/components/layout/ConsentBanner').default
-    const screen = render(<ConsentBanner />)
+    const screen = await render(<ConsentBanner />)
     expect(getBottomChromeReserve()).toBe(120)
 
-    fireEvent(screen.getByTestId('consent-banner'), 'layout', {
+    await fireEvent(screen.getByTestId('consent-banner'), 'layout', {
       nativeEvent: { layout: { height: 156, width: 288, x: 0, y: 0 } },
     })
     expect(getBottomChromeReserve()).toBe(172)
 
-    fireEvent(screen.getByTestId('consent-banner'), 'layout', {
+    await fireEvent(screen.getByTestId('consent-banner'), 'layout', {
       nativeEvent: { layout: { height: 128, width: 400, x: 0, y: 0 } },
     })
     expect(getBottomChromeReserve()).toBe(144)
 
     setBottomChromeReserve('app-install-bar', 240)
     expect(getBottomChromeReserve('app-install-bar')).toBe(144)
-    act(() => screen.UNSAFE_getByProps({ testID: 'consent-decline' }).props.onPress())
+    await act(() => screen.getByTestId('consent-decline').props.onPress())
     expect(getBottomChromeReserve('app-install-bar')).toBe(0)
     expect(getBottomChromeReserve()).toBe(240)
   })
 
-  it('keeps its estimate until a valid layout is available and releases it on unmount', () => {
+  it('keeps its estimate until a valid layout is available and releases it on unmount', async () => {
     const ConsentBanner: ComponentType = require('@/components/layout/ConsentBanner').default
-    const screen = render(<ConsentBanner />)
+    const screen = await render(<ConsentBanner />)
 
-    fireEvent(screen.getByTestId('consent-banner'), 'layout', {
+    await fireEvent(screen.getByTestId('consent-banner'), 'layout', {
       nativeEvent: { layout: { height: 0, width: 0, x: 0, y: 0 } },
     })
     expect(getBottomChromeReserve()).toBe(120)
 
-    screen.unmount()
+    await screen.unmount()
     expect(getBottomChromeReserve()).toBe(0)
   })
 
-  it('yields to critical network status and restores the same pending choice and measurement without granting consent', () => {
+  it('yields to critical network status and restores the same pending choice and measurement without granting consent', async () => {
     const ConsentBanner: ComponentType = require('@/components/layout/ConsentBanner').default
-    const screen = render(<ConsentBanner />)
+    const screen = await render(<ConsentBanner />)
     const banner = screen.getByTestId('consent-banner')
-    fireEvent(banner, 'layout', { nativeEvent: { layout: { height: 156 } } })
+    await fireEvent(banner, 'layout', { nativeEvent: { layout: { height: 156 } } })
     expect(getBottomChromeReserve()).toBe(172)
     const writesBefore = jest.mocked(writeConsent).mock.calls.length
-    act(() => setCriticalBottomChromeOwner('network-status'))
+    await act(() => setCriticalBottomChromeOwner('network-status'))
     expect(screen.queryByTestId('consent-banner')).toBeNull()
     expect(document.body.hasAttribute('data-consent-banner-open')).toBe(false)
     expect(getBottomChromeReserve()).toBe(0)
-    act(() => setCriticalBottomChromeOwner(null))
+    await act(() => setCriticalBottomChromeOwner(null))
     expect(screen.getByTestId('consent-banner')).toBe(banner)
     expect(document.body.getAttribute('data-consent-banner-open')).toBe('true')
     expect(getBottomChromeReserve()).toBe(172)

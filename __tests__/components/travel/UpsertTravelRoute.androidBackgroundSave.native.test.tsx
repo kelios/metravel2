@@ -136,16 +136,16 @@ describe('UpsertTravelRoute - Android explicit save / background / foreground (#
         return { remove } as any;
       });
 
-      const { getByText, getByTestId, queryByText } = render(<UpsertTravelRoute />);
+      const { getByText, getByTestId, queryByText } = await render(<UpsertTravelRoute />);
 
       // Editor visible with the marker before anything else happens.
       expect(getByText(mockDescriptionMarker)).toBeTruthy();
 
       // Explicit save.
-      fireEvent.press(getByTestId('upsert-travel-save'));
+      await fireEvent.press(getByTestId('upsert-travel-save'));
 
       // The author immediately sends the app to background.
-      act(() => {
+      await act(() => {
         appStateListener?.('background');
       });
       expect(getByTestId('app-state-probe').props.children).toBe('background');
@@ -153,12 +153,12 @@ describe('UpsertTravelRoute - Android explicit save / background / foreground (#
       // The successful response lands while the app is still backgrounded -
       // this is the render that used to throw building the missing
       // Intl.RelativeTimeFormat constructor.
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(0);
       });
 
       // The author returns to the foreground.
-      act(() => {
+      await act(() => {
         appStateListener?.('active');
       });
 

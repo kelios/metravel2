@@ -152,14 +152,14 @@ describe('ListTravel export flow (regression)', () => {
 
   it('should invoke export handler when clicking "Сохранить PDF" on /export', async () => {
     const client = createTestClient();
-    const { findByText } = render(
+    const { findByText } = await render(
       <QueryClientProvider client={client}>
         <ListTravel />
       </QueryClientProvider>
     );
 
     const saveButton = await findByText('Сохранить PDF');
-    fireEvent.press(saveButton);
+    await fireEvent.press(saveButton);
 
     expect(mockExportSave).toHaveBeenCalled();
   });

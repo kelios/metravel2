@@ -73,8 +73,8 @@ describe('useScrollNavigation (web)', () => {
     jest.restoreAllMocks();
   });
 
-  it('scrolls the nearest scrollable container when available', () => {
-    const { result } = renderHook(() => useScrollNavigation());
+  it('scrolls the nearest scrollable container when available', async () => {
+    const { result } = await renderHook(() => useScrollNavigation());
 
     // Patch scrollRef.current so hook can locate the scroll container.
     // In app this is a RN ScrollView instance; for test we mimic getScrollableNode.
@@ -82,7 +82,7 @@ describe('useScrollNavigation (web)', () => {
       getScrollableNode: () => document.getElementById('scroll-container'),
     };
 
-    act(() => {
+    await act(() => {
       result.current.scrollTo('description');
     });
 
@@ -97,13 +97,13 @@ describe('useScrollNavigation (web)', () => {
     expect(container.scrollTo).toHaveBeenCalledWith({ top: 66, behavior: 'smooth' });
   });
 
-  it('applies header offset directly in scrollTo (not via separate scrollBy)', () => {
-    const { result } = renderHook(() => useScrollNavigation());
+  it('applies header offset directly in scrollTo (not via separate scrollBy)', async () => {
+    const { result } = await renderHook(() => useScrollNavigation());
     (result.current.scrollRef as any).current = {
       getScrollableNode: () => document.getElementById('scroll-container'),
     };
 
-    act(() => {
+    await act(() => {
       result.current.scrollTo('description');
       jest.runAllTimers();
     });
@@ -118,8 +118,8 @@ describe('useScrollNavigation (web)', () => {
     expect((window as any).scrollBy).not.toHaveBeenCalled();
   });
 
-  it('falls back to scrollTop assignment when scrollTo throws', () => {
-    const { result } = renderHook(() => useScrollNavigation());
+  it('falls back to scrollTop assignment when scrollTo throws', async () => {
+    const { result } = await renderHook(() => useScrollNavigation());
 
     const container: any = document.getElementById('scroll-container');
 
@@ -136,7 +136,7 @@ describe('useScrollNavigation (web)', () => {
       getScrollableNode: () => container,
     };
 
-    act(() => {
+    await act(() => {
       result.current.scrollTo('description');
     });
 
@@ -148,8 +148,8 @@ describe('useScrollNavigation (web)', () => {
     expect((window as any).scrollTo).not.toHaveBeenCalled();
   });
 
-  it('falls back to window.scrollTo when no scrollable container is detected', () => {
-    const { result } = renderHook(() => useScrollNavigation());
+  it('falls back to window.scrollTo when no scrollable container is detected', async () => {
+    const { result } = await renderHook(() => useScrollNavigation());
     (result.current.scrollRef as any).current = null;
 
     // Make container appear non-scrollable
@@ -160,7 +160,7 @@ describe('useScrollNavigation (web)', () => {
     const origScrollTo = window.scrollTo;
     window.scrollTo = jest.fn() as any;
 
-    act(() => {
+    await act(() => {
       result.current.scrollTo('description');
       jest.runAllTimers();
     });
@@ -172,7 +172,7 @@ describe('useScrollNavigation (web)', () => {
     window.scrollTo = origScrollTo;
   });
 
-  it('retries and scrolls when section mounts lazily and is only available via ref (regression)', () => {
+  it('retries and scrolls when section mounts lazily and is only available via ref (regression)', async () => {
     // Remove the target from DOM initially so querySelector by data-section-key fails.
     document.body.innerHTML = `
       <div id="scroll-container" style="height: 200px; overflow-y: auto;">
@@ -205,7 +205,7 @@ describe('useScrollNavigation (web)', () => {
       return { overflowY: 'visible' } as any;
     });
 
-    const { result } = renderHook(() => useScrollNavigation());
+    const { result } = await renderHook(() => useScrollNavigation());
     (result.current.scrollRef as any).current = {
       getScrollableNode: () => container,
     };
@@ -219,16 +219,16 @@ describe('useScrollNavigation (web)', () => {
 
     expect(document.querySelector('[data-section-key="description"]')).toBeNull();
 
-    act(() => {
+    await act(() => {
       result.current.scrollTo('description');
     });
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(2300);
     });
     expect(container.scrollTo).not.toHaveBeenCalled();
 
-    act(() => {
+    await act(() => {
       ;(result.current.anchors as any).description.current = el;
       container.appendChild(el);
       jest.advanceTimersByTime(400);
@@ -240,7 +240,7 @@ describe('useScrollNavigation (web)', () => {
     expect(container.scrollTo).toHaveBeenCalledWith({ top: 56, behavior: 'smooth' });
   });
 
-  it('does not double-count the header when the container already starts below it (regression)', () => {
+  it('does not double-count the header when the container already starts below it (regression)', async () => {
     // Прод-раскладка travel-details: скролл-контейнер начинается ровно под
     // липкой шапкой, поэтому вычитать её высоту ещё раз нельзя — иначе секция
     // паркуется ниже «линии чтения» scrollspy и подсвечивается соседний пункт
@@ -255,12 +255,12 @@ describe('useScrollNavigation (web)', () => {
       height: 200,
     } as any);
 
-    const { result } = renderHook(() => useScrollNavigation());
+    const { result } = await renderHook(() => useScrollNavigation());
     (result.current.scrollRef as any).current = {
       getScrollableNode: () => container,
     };
 
-    act(() => {
+    await act(() => {
       result.current.scrollTo('description');
     });
 

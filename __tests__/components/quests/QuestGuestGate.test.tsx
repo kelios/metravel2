@@ -6,11 +6,11 @@ import QuestGuestGate from '@/components/quests/QuestGuestGate'
 // real, pressable buttons (migrated from ad-hoc Pressable to the canonical ui/Button)
 // and keep firing their callbacks.
 describe('QuestGuestGate', () => {
-  const setup = () => {
+  const setup = async () => {
     const onLogin = jest.fn()
     const onRegister = jest.fn()
     const onDismiss = jest.fn()
-    const utils = render(
+    const utils = await render(
       <QuestGuestGate
         passedCount={3}
         onLogin={onLogin}
@@ -21,8 +21,8 @@ describe('QuestGuestGate', () => {
     return { ...utils, onLogin, onRegister, onDismiss }
   }
 
-  it('renders login, register and dismiss actions as buttons', () => {
-    const { getByTestId } = setup()
+  it('renders login, register and dismiss actions as buttons', async () => {
+    const { getByTestId } = await setup()
 
     const login = getByTestId('quest-guest-gate-login')
     const register = getByTestId('quest-guest-gate-register')
@@ -33,16 +33,16 @@ describe('QuestGuestGate', () => {
     expect(dismiss.props.accessibilityRole).toBe('button')
   })
 
-  it('fires the matching callback for each action', () => {
-    const { getByTestId, onLogin, onRegister, onDismiss } = setup()
+  it('fires the matching callback for each action', async () => {
+    const { getByTestId, onLogin, onRegister, onDismiss } = await setup()
 
-    fireEvent.press(getByTestId('quest-guest-gate-login'))
+    await fireEvent.press(getByTestId('quest-guest-gate-login'))
     expect(onLogin).toHaveBeenCalledTimes(1)
 
-    fireEvent.press(getByTestId('quest-guest-gate-register'))
+    await fireEvent.press(getByTestId('quest-guest-gate-register'))
     expect(onRegister).toHaveBeenCalledTimes(1)
 
-    fireEvent.press(getByTestId('quest-guest-gate-dismiss'))
+    await fireEvent.press(getByTestId('quest-guest-gate-dismiss'))
     expect(onDismiss).toHaveBeenCalledTimes(1)
   })
 })

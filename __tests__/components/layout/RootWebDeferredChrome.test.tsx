@@ -76,7 +76,7 @@ describe('RootWebDeferredChrome', () => {
   })
 
   it('renders travel deferred chrome without waiting for interaction', async () => {
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <RootWebDeferredChrome
         isMobile={false}
         pathname="/travels/test-route"
@@ -96,7 +96,7 @@ describe('RootWebDeferredChrome', () => {
   })
 
   it('loads the map footer controller with visible chrome managed by the root', async () => {
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <RootWebDeferredChrome
         isMobile={false}
         pathname="/map"
@@ -113,7 +113,7 @@ describe('RootWebDeferredChrome', () => {
 
   it.each(['/quests/35/istanbul', '/pl/quests/35/istanbul', '/map'])(
     'keeps the global network status away from top navigation on %s', async pathname => {
-      const view = render(<RootWebDeferredChrome isMobile pathname={pathname} showFooter={false} isTravelPerformanceRoute={false} setDockHeight={jest.fn()} />)
+      const view = await render(<RootWebDeferredChrome isMobile pathname={pathname} showFooter={false} isTravelPerformanceRoute={false} setDockHeight={jest.fn()} />)
       await waitFor(() => expect(view.getByTestId('network-status').props.accessibilityHint).toBe('bottom'))
     },
   )
@@ -127,7 +127,7 @@ describe('RootWebDeferredChrome', () => {
   ])('mounts the app install bar chunk for %s: %s', async (_name, userAgent, expected) => {
     const uaSpy = jest.spyOn(window.navigator, 'userAgent', 'get').mockReturnValue(userAgent)
     try {
-      const { getByTestId, queryByTestId } = render(
+      const { getByTestId, queryByTestId } = await render(
         <RootWebDeferredChrome
           isMobile
           pathname="/travels/test-route"

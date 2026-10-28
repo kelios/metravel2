@@ -44,10 +44,10 @@ const point = {
 }
 
 describe('TravelMap native shared place card', () => {
-  it('opens the shared MapPlaceBottomCard when the WebView marker is selected', () => {
-    render(<TravelMap travelData={[point]} height={420} />)
+  it('opens the shared MapPlaceBottomCard when the WebView marker is selected', async () => {
+    await render(<TravelMap travelData={[point]} height={420} />)
 
-    fireEvent(screen.getByTestId('native-travel-map-webview'), 'message', {
+    await fireEvent(screen.getByTestId('native-travel-map-webview'), 'message', {
       nativeEvent: {
         data: JSON.stringify({ type: 'POINT_SELECT', coord: point.coord }),
       },
@@ -56,7 +56,7 @@ describe('TravelMap native shared place card', () => {
     expect(screen.getByTestId('shared-map-place-bottom-card')).toBeTruthy()
     expect(screen.getByText('Ратуша, центр города')).toBeTruthy()
 
-    fireEvent(screen.getByTestId('native-travel-map-webview'), 'message', {
+    await fireEvent(screen.getByTestId('native-travel-map-webview'), 'message', {
       nativeEvent: {
         data: JSON.stringify({ type: 'CLEAR_SELECTED_POINT' }),
       },
@@ -65,8 +65,8 @@ describe('TravelMap native shared place card', () => {
     expect(screen.queryByTestId('shared-map-place-bottom-card')).toBeNull()
   })
 
-  it('opens the shared card for a highlighted point from the travel point list', () => {
-    render(
+  it('opens the shared card for a highlighted point from the travel point list', async () => {
+    await render(
       <TravelMap
         travelData={[point]}
         highlightedPoint={{ coord: point.coord, key: 'from-list' }}
@@ -78,8 +78,8 @@ describe('TravelMap native shared place card', () => {
     expect(screen.getByText(point.coord)).toBeTruthy()
   })
 
-  it('mounts the toast host inside the modal so «Мои точки» save feedback is visible', () => {
-    render(
+  it('mounts the toast host inside the modal so «Мои точки» save feedback is visible', async () => {
+    await render(
       <TravelMap
         travelData={[point]}
         highlightedPoint={{ coord: point.coord, key: 'from-list' }}
@@ -91,8 +91,8 @@ describe('TravelMap native shared place card', () => {
     expect(screen.getByTestId('travel-map-modal-toast-host')).toBeTruthy()
   })
 
-  it('renders travel-point markers with the shared brand bird divIcon', () => {
-    render(<TravelMap travelData={[point]} height={420} />)
+  it('renders travel-point markers with the shared brand bird divIcon', async () => {
+    await render(<TravelMap travelData={[point]} height={420} />)
 
     const html = screen.getByTestId('native-travel-map-webview').props.source.html as string
     // #843 — same brand bird as web/native /map (size/anchor mirror useLeafletIcons),
@@ -113,9 +113,9 @@ describe('TravelMap native shared place card', () => {
     const openSpy = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined)
     ;(router.push as jest.Mock).mockClear()
 
-    render(<TravelMap travelData={[point]} height={420} />)
+    await render(<TravelMap travelData={[point]} height={420} />)
 
-    fireEvent(screen.getByTestId('native-travel-map-webview'), 'message', {
+    await fireEvent(screen.getByTestId('native-travel-map-webview'), 'message', {
       nativeEvent: {
         data: JSON.stringify({ type: 'OPEN_URL', url: 'https://metravel.by/travels/forty-krakova' }),
       },

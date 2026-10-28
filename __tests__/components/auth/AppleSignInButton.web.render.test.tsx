@@ -56,20 +56,20 @@ describe('AppleSignInButton.web', () => {
 
     // Регрессионный контроль: пока Services ID не выпущен, веб-формы остаются
     // ровно такими же, какими были до #1506.
-    it('без конфигурации не рендерит ничего и не трогает страницу', () => {
+    it('без конфигурации не рендерит ничего и не трогает страницу', async () => {
         process.env.EXPO_PUBLIC_APPLE_WEB_CLIENT_ID = '';
         process.env.EXPO_PUBLIC_APPLE_WEB_REDIRECT_URI = '';
 
-        const { queryByTestId } = render(<AppleSignInButton onSuccess={jest.fn()} />);
+        const { queryByTestId } = await render(<AppleSignInButton onSuccess={jest.fn()} />);
 
         expect(queryByTestId('apple-sign-in-button')).toBeNull();
         expect(document.getElementById('apple-signin-sdk')).toBeNull();
     });
 
-    it('подключает SDK Apple ровно с фиксированной локалью en_US', () => {
+    it('подключает SDK Apple ровно с фиксированной локалью en_US', async () => {
         setConfig();
 
-        render(<AppleSignInButton onSuccess={jest.fn()} />);
+        await render(<AppleSignInButton onSuccess={jest.fn()} />);
 
         const script = document.getElementById('apple-signin-sdk') as HTMLScriptElement | null;
         expect(script?.src).toBe(
@@ -77,11 +77,11 @@ describe('AppleSignInButton.web', () => {
         );
     });
 
-    it('инициализирует SDK Services ID, Return URL и popup-режимом', () => {
+    it('инициализирует SDK Services ID, Return URL и popup-режимом', async () => {
         setConfig();
         const init = installAppleSdk(jest.fn());
 
-        const { getByTestId } = render(<AppleSignInButton onSuccess={jest.fn()} />);
+        const { getByTestId } = await render(<AppleSignInButton onSuccess={jest.fn()} />);
 
         expect(getByTestId('apple-sign-in-button')).toBeTruthy();
         expect(init).toHaveBeenCalledTimes(1);
@@ -104,7 +104,7 @@ describe('AppleSignInButton.web', () => {
         const onSuccess = jest.fn();
         const onError = jest.fn();
 
-        const { getByTestId } = render(
+        const { getByTestId } = await render(
             <AppleSignInButton onSuccess={onSuccess} onError={onError} />,
         );
         const state = init.mock.calls[0][0].state;
@@ -113,7 +113,7 @@ describe('AppleSignInButton.web', () => {
             user: { name: { firstName: 'Apple', lastName: 'User' } },
         });
 
-        fireEvent.press(getByTestId('apple-sign-in-button'));
+        await fireEvent.press(getByTestId('apple-sign-in-button'));
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
         expect(onSuccess).toHaveBeenCalledWith({
@@ -133,10 +133,10 @@ describe('AppleSignInButton.web', () => {
         const onError = jest.fn();
         const onCancel = jest.fn();
 
-        const { getByTestId } = render(
+        const { getByTestId } = await render(
             <AppleSignInButton onSuccess={jest.fn()} onError={onError} onCancel={onCancel} />,
         );
-        fireEvent.press(getByTestId('apple-sign-in-button'));
+        await fireEvent.press(getByTestId('apple-sign-in-button'));
 
         await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
         expect(onError).not.toHaveBeenCalled();
@@ -149,16 +149,16 @@ describe('AppleSignInButton.web', () => {
         const onError = jest.fn();
         const onSuccess = jest.fn();
 
-        const { getByTestId } = render(
+        const { getByTestId } = await render(
             <AppleSignInButton onSuccess={onSuccess} onError={onError} />,
         );
-        fireEvent.press(getByTestId('apple-sign-in-button'));
+        await fireEvent.press(getByTestId('apple-sign-in-button'));
 
         await waitFor(() => expect(onError).toHaveBeenCalledWith('authStatic:apple.signInFailed'));
         expect(onSuccess).not.toHaveBeenCalled();
 
         signIn.mockResolvedValueOnce({ authorization: undefined });
-        fireEvent.press(getByTestId('apple-sign-in-button'));
+        await fireEvent.press(getByTestId('apple-sign-in-button'));
         await waitFor(() => expect(signIn).toHaveBeenCalledTimes(2));
     });
 
@@ -171,20 +171,20 @@ describe('AppleSignInButton.web', () => {
         const onSuccess = jest.fn();
         const onError = jest.fn();
 
-        const { getByTestId } = render(
+        const { getByTestId } = await render(
             <AppleSignInButton onSuccess={onSuccess} onError={onError} />,
         );
-        fireEvent.press(getByTestId('apple-sign-in-button'));
+        await fireEvent.press(getByTestId('apple-sign-in-button'));
 
         await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
         expect(onSuccess).not.toHaveBeenCalled();
     });
 
-    it('режим регистрации меняет надпись на «зарегистрироваться»', () => {
+    it('режим регистрации меняет надпись на «зарегистрироваться»', async () => {
         setConfig();
         installAppleSdk(jest.fn());
 
-        const { getByTestId } = render(
+        const { getByTestId } = await render(
             <AppleSignInButton onSuccess={jest.fn()} mode="sign_up" />,
         );
 

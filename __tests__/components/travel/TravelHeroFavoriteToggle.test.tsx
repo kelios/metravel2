@@ -64,11 +64,11 @@ describe('TravelHeroFavoriteToggle', () => {
     Platform.OS = originalPlatformOS as any
   })
 
-  it('uses desktop a11y label and hides text on web desktop', () => {
+  it('uses desktop a11y label and hides text on web desktop', async () => {
     Platform.OS = 'web' as any
     mockIsFavorite.mockReturnValue(false)
 
-    const { getByLabelText, queryByText } = render(
+    const { getByLabelText, queryByText } = await render(
       <TravelHeroFavoriteToggle
         travel={{ id: 1, slug: 'desktop', name: 'Desktop travel' } as any}
         isMobile={false}
@@ -79,11 +79,11 @@ describe('TravelHeroFavoriteToggle', () => {
     expect(queryByText('Хочу поехать')).toBeNull()
   })
 
-  it('uses mobile label text as a11y label and hides visible text', () => {
+  it('uses mobile label text as a11y label and hides visible text', async () => {
     Platform.OS = 'ios' as any
     mockIsFavorite.mockReturnValue(true)
 
-    const { getByLabelText, queryByText } = render(
+    const { getByLabelText, queryByText } = await render(
       <TravelHeroFavoriteToggle
         travel={{ id: 2, slug: 'mobile', name: 'Mobile travel' } as any}
         isMobile
@@ -99,14 +99,14 @@ describe('TravelHeroFavoriteToggle', () => {
     useAuth.mockReturnValue({ isAuthenticated: false, authReady: true })
     mockIsFavorite.mockReturnValue(false)
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <TravelHeroFavoriteToggle
         travel={{ id: 3, slug: 'auth', name: 'Auth travel' } as any}
         isMobile={false}
       />
     )
 
-    fireEvent.press(getByLabelText('Добавить в «Хочу поехать»'))
+    await fireEvent.press(getByLabelText('Добавить в «Хочу поехать»'))
 
     await waitFor(() => {
       expect(mockRequireAuth).toHaveBeenCalledTimes(1)
@@ -123,7 +123,7 @@ describe('TravelHeroFavoriteToggle', () => {
     mockIsFavorite.mockReturnValue(false)
     mockAddFavorite.mockResolvedValue(undefined)
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <TravelHeroFavoriteToggle
         travel={{
           id: 384,
@@ -136,7 +136,7 @@ describe('TravelHeroFavoriteToggle', () => {
       />
     )
 
-    fireEvent.press(getByLabelText('Хочу поехать'))
+    await fireEvent.press(getByLabelText('Хочу поехать'))
 
     await waitFor(() => {
       expect(mockAddFavorite).toHaveBeenCalledWith(
@@ -163,7 +163,7 @@ describe('TravelHeroFavoriteToggle', () => {
     mockIsFavorite.mockReturnValue(false)
     mockAddFavorite.mockResolvedValue(undefined)
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <TravelHeroFavoriteToggle
         travel={{
           id: 4,
@@ -176,7 +176,7 @@ describe('TravelHeroFavoriteToggle', () => {
       />
     )
 
-    fireEvent.press(getByLabelText('Добавить в «Хочу поехать»'))
+    await fireEvent.press(getByLabelText('Добавить в «Хочу поехать»'))
 
     await waitFor(() => {
       expect(mockAddFavorite).toHaveBeenCalledWith(
@@ -201,14 +201,14 @@ describe('TravelHeroFavoriteToggle', () => {
     mockIsFavorite.mockReturnValue(true)
     mockRemoveFavorite.mockResolvedValue(undefined)
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <TravelHeroFavoriteToggle
         travel={{ id: 5, slug: 'remove', name: 'Remove travel' } as any}
         isMobile={false}
       />
     )
 
-    fireEvent.press(getByLabelText('Удалить из «Хочу поехать»'))
+    await fireEvent.press(getByLabelText('Удалить из «Хочу поехать»'))
 
     await waitFor(() => {
       expect(mockRemoveFavorite).toHaveBeenCalledWith(5, 'travel')

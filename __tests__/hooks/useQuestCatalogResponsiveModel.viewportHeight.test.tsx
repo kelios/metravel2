@@ -11,8 +11,8 @@ import { act, renderHook } from '@testing-library/react-native'
 
 import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel'
 
-const setViewport = (width: number, height: number) => {
-  act(() => {
+const setViewport = async (width: number, height: number) => {
+  await act(() => {
     Dimensions.set({
       window: { width, height, scale: 2, fontScale: 1 },
       screen: { width, height, scale: 2, fontScale: 1 },
@@ -21,10 +21,10 @@ const setViewport = (width: number, height: number) => {
 }
 
 describe('#1826 модель каталога не подписана на высоту вьюпорта', () => {
-  it('не перерисовывает потребителя на изменение одной высоты', () => {
-    setViewport(1440, 900)
+  it('не перерисовывает потребителя на изменение одной высоты', async () => {
+    await setViewport(1440, 900)
     let renders = 0
-    const { result } = renderHook(() => {
+    const { result } = await renderHook(() => {
       renders += 1
       return useQuestCatalogResponsiveModel(177)
     })
@@ -33,14 +33,14 @@ describe('#1826 модель каталога не подписана на вы�
     const initialModel = result.current
 
     // Клавиатура на мобильном вебе: ширина та же, высота другая.
-    setViewport(1440, 500)
+    await setViewport(1440, 500)
     expect({ renders: renders - initialRenders, model: result.current }).toEqual({
       renders: 0,
       model: initialModel,
     })
 
     // Ширина меняется — модель обязана пересчитаться.
-    setViewport(390, 500)
+    await setViewport(390, 500)
     expect(renders).toBeGreaterThan(initialRenders)
     expect(result.current.isMobile).toBe(true)
   })

@@ -195,7 +195,7 @@ describe('#2697 localized consolidated reads seed neutral gamification caches', 
     },
   ]
 
-  it.each(cases)('$label uses the active achievements locale and its update time', ({ useHook, source, destination, expected }) => {
+  it.each(cases)('$label uses the active achievements locale and its update time', async ({ useHook, source, destination, expected }) => {
     mockLocaleRef.value = 'pl'
     const active = consolidated('Active source', 77)
     const updatedAt = Date.now() - 1000
@@ -204,7 +204,7 @@ describe('#2697 localized consolidated reads seed neutral gamification caches', 
     mockMyAchievements.mockReturnValue({ data: active, isSuccess: true, isFetching: false })
     mockUserAchievements.mockReturnValue({ data: active, isSuccess: true, isFetching: false })
 
-    const { result } = renderHook(useHook, { wrapper })
+    const { result } = await renderHook(useHook, { wrapper })
 
     expect(result.current.data).toMatchObject(expected)
     expect(queryClient.getQueryData(destination())).toMatchObject(expected)
@@ -215,7 +215,7 @@ describe('#2697 localized consolidated reads seed neutral gamification caches', 
     expect(mockFetchProgressUser).not.toHaveBeenCalled()
   })
 
-  it('seeds empty neutral caches from the active locale without replacing existing character or progression', () => {
+  it('seeds empty neutral caches from the active locale without replacing existing character or progression', async () => {
     mockLocaleRef.value = 'pl'
     const active = consolidated('Active source', 77)
     const updatedAt = Date.now() - 1000
@@ -223,7 +223,7 @@ describe('#2697 localized consolidated reads seed neutral gamification caches', 
     queryClient.setQueryData(queryKeys.achievementsMe(OWNER, 'pl'), active, { updatedAt })
     mockMyAchievements.mockReturnValue({ data: active, isSuccess: true, isFetching: false })
 
-    const { rerender } = renderHook(() => useSeedGamificationFromAchievements(), { wrapper })
+    const { rerender } = await renderHook(() => useSeedGamificationFromAchievements(), { wrapper })
 
     expect(queryClient.getQueryData(queryKeys.gamificationCharacterMe(OWNER))).toMatchObject({ id: 77, name: 'Active source' })
     expect(queryClient.getQueryState(queryKeys.gamificationCharacterMe(OWNER))?.dataUpdatedAt).toBe(updatedAt)
@@ -233,7 +233,7 @@ describe('#2697 localized consolidated reads seed neutral gamification caches', 
     queryClient.setQueryData(queryKeys.gamificationProgressMe(OWNER), progress)
     mockLocaleRef.value = 'en'
     mockMyAchievements.mockReturnValue({ data: consolidated('Other source', 88), isSuccess: true, isFetching: false })
-    rerender({})
+    await rerender({})
 
     expect(queryClient.getQueryData(queryKeys.gamificationCharacterMe(OWNER))).toEqual(character)
     expect(queryClient.getQueryData(queryKeys.gamificationProgressMe(OWNER))).toEqual(progress)
@@ -252,11 +252,11 @@ describe('#2697 localized consolidated reads seed neutral gamification caches', 
       const user = useUserPlaceFirstBadges(scope === 'public' ? 77 : null)
       return scope === 'own' ? own : user
     }
-    const { result, rerender } = renderHook(useBadges, { wrapper })
+    const { result, rerender } = await renderHook(useBadges, { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     mockLocaleRef.value = 'pl'
-    rerender({})
+    await rerender({})
 
     expect(result.current.data?.[0].authorStatus).toBe('Первооткрыватель')
     expect(fetchBadges).toHaveBeenCalledTimes(1)
@@ -275,7 +275,7 @@ afterEach(() => {
 describe('useMyGamificationProgress', () => {
   it('fetches progression lines when authenticated', async () => {
     mockFetchProgressMe.mockResolvedValueOnce(progress)
-    const { result } = renderHook(() => useMyGamificationProgress(), { wrapper })
+    const { result } = await renderHook(() => useMyGamificationProgress(), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data?.lines).toHaveLength(1)
     expect(result.current.data?.lines[0].slug).toBe('fox')
@@ -284,7 +284,7 @@ describe('useMyGamificationProgress', () => {
 
   it('is disabled (does not fetch) when not authenticated', async () => {
     isAuthenticatedRef.value = false
-    const { result } = renderHook(() => useMyGamificationProgress(), { wrapper })
+    const { result } = await renderHook(() => useMyGamificationProgress(), { wrapper })
     expect(result.current.fetchStatus).toBe('idle')
     expect(mockFetchProgressMe).not.toHaveBeenCalled()
   })
@@ -296,19 +296,19 @@ describe('useUserGamificationProgress', () => {
   it('fetches with the given userId regardless of auth', async () => {
     isAuthenticatedRef.value = false
     mockFetchProgressUser.mockResolvedValueOnce(progress)
-    const { result } = renderHook(() => useUserGamificationProgress(77), { wrapper })
+    const { result } = await renderHook(() => useUserGamificationProgress(77), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockFetchProgressUser).toHaveBeenCalledWith(77)
   })
 
   it('is disabled when userId is null', async () => {
-    const { result } = renderHook(() => useUserGamificationProgress(null), { wrapper })
+    const { result } = await renderHook(() => useUserGamificationProgress(null), { wrapper })
     expect(result.current.fetchStatus).toBe('idle')
     expect(mockFetchProgressUser).not.toHaveBeenCalled()
   })
 
   it('is disabled when userId is empty string', async () => {
-    const { result } = renderHook(() => useUserGamificationProgress(''), { wrapper })
+    const { result } = await renderHook(() => useUserGamificationProgress(''), { wrapper })
     expect(result.current.fetchStatus).toBe('idle')
     expect(mockFetchProgressUser).not.toHaveBeenCalled()
   })
@@ -319,7 +319,7 @@ describe('useUserGamificationProgress', () => {
 describe('useMyCharacter', () => {
   it('fetches the character when authenticated', async () => {
     mockFetchCharMe.mockResolvedValueOnce(character)
-    const { result } = renderHook(() => useMyCharacter(), { wrapper })
+    const { result } = await renderHook(() => useMyCharacter(), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data?.id).toBe(104)
     expect(result.current.data?.pendingChoice).toBe(true)
@@ -327,7 +327,7 @@ describe('useMyCharacter', () => {
 
   it('is disabled when not authenticated', async () => {
     isAuthenticatedRef.value = false
-    const { result } = renderHook(() => useMyCharacter(), { wrapper })
+    const { result } = await renderHook(() => useMyCharacter(), { wrapper })
     expect(result.current.fetchStatus).toBe('idle')
     expect(mockFetchCharMe).not.toHaveBeenCalled()
   })
@@ -339,13 +339,13 @@ describe('useUserCharacter', () => {
   it('fetches with userId regardless of auth', async () => {
     isAuthenticatedRef.value = false
     mockFetchCharUser.mockResolvedValueOnce(character)
-    const { result } = renderHook(() => useUserCharacter(42), { wrapper })
+    const { result } = await renderHook(() => useUserCharacter(42), { wrapper })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockFetchCharUser).toHaveBeenCalledWith(42)
   })
 
   it('is disabled when userId missing', async () => {
-    const { result } = renderHook(() => useUserCharacter(undefined), { wrapper })
+    const { result } = await renderHook(() => useUserCharacter(undefined), { wrapper })
     expect(result.current.fetchStatus).toBe('idle')
     expect(mockFetchCharUser).not.toHaveBeenCalled()
   })
@@ -364,7 +364,7 @@ describe('useChooseCharacterPath', () => {
     }
     mockChoosePath.mockResolvedValueOnce(chosen)
 
-    const { result } = renderHook(() => useChooseCharacterPath(), { wrapper })
+    const { result } = await renderHook(() => useChooseCharacterPath(), { wrapper })
     result.current.mutate({ pathSlug: 'fox' })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -381,7 +381,7 @@ describe('useChooseCharacterPath', () => {
     const chosen: CharacterState = { ...character, pathSlug: 'fox', level: 5 }
     mockChoosePath.mockResolvedValueOnce(chosen)
 
-    const { result } = renderHook(() => useChooseCharacterPath(), { wrapper })
+    const { result } = await renderHook(() => useChooseCharacterPath(), { wrapper })
     result.current.mutate({ pathSlug: 'fox' })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
@@ -391,7 +391,7 @@ describe('useChooseCharacterPath', () => {
   it('surfaces the error and does not touch cache/analytics on failure', async () => {
     mockChoosePath.mockRejectedValueOnce(new Error('boom'))
 
-    const { result } = renderHook(() => useChooseCharacterPath(), { wrapper })
+    const { result } = await renderHook(() => useChooseCharacterPath(), { wrapper })
     result.current.mutate({ pathSlug: 'bird' })
 
     await waitFor(() => expect(result.current.isError).toBe(true))

@@ -1,5 +1,5 @@
 import React from 'react';
-import renderer, { act } from 'react-test-renderer';
+import { render as renderTree, act } from '@testing-library/react-native'
 
 // Регресс-страж #1885: Dynamic Type меняет кегль уже отрисованного тела статьи,
 // но react-native-render-html держит прежний замер строк — на iPhone хвост
@@ -89,15 +89,15 @@ describe('StableContent (native) и системный размер шрифта
     });
   };
 
-  const renderNative = () => {
+  const renderNative = async () => {
     const StableContent = require('@/components/travel/StableContent').default;
-    act(() => {
-      renderer.create(<StableContent html={html} contentWidth={343} />);
+    await act(async () => {
+      await renderTree(<StableContent html={html} contentWidth={343} />);
     });
   };
 
-  const setFontScale = (fontScale: number) => {
-    act(() => {
+  const setFontScale = async (fontScale: number) => {
+    await act(() => {
       applyDimensions?.({ width: 375, height: 812, scale: 3, fontScale });
     });
   };
@@ -109,22 +109,22 @@ describe('StableContent (native) и системный размер шрифта
     jest.clearAllMocks();
   });
 
-  it('пересоздаёт дерево RenderHTML при смене fontScale — иначе хвост абзаца режется по старому замеру', () => {
+  it('пересоздаёт дерево RenderHTML при смене fontScale — иначе хвост абзаца режется по старому замеру', async () => {
     mockWindowDimensions(1);
-    renderNative();
+    await renderNative();
     expect(mounts).toHaveLength(1);
 
-    setFontScale(1.35);
+    await setFontScale(1.35);
 
     expect(mounts).toHaveLength(2);
   });
 
-  it('не пересоздаёт дерево, пока fontScale прежний', () => {
+  it('не пересоздаёт дерево, пока fontScale прежний', async () => {
     mockWindowDimensions(1);
-    renderNative();
+    await renderNative();
     expect(mounts).toHaveLength(1);
 
-    setFontScale(1);
+    await setFontScale(1);
 
     // Событие Dimensions действительно перерисовало компонент (renders вырос),
     // но дерево осталось прежним — ключ не дёргается на каждый рендер.
@@ -137,11 +137,11 @@ describe('StableContent (native) и системный размер шрифта
   // пересобирает движок и заново парсит весь HTML, новые `renderers` —
   // реестр рендереров, новый `defaultTextProps` — общие пропсы. Тогда memo
   // RenderHTMLSource не спасает и тело статьи перерисовывается целиком.
-  it('ре-рендер без смены пропсов не пересобирает конфиг RNRH', () => {
+  it('ре-рендер без смены пропсов не пересобирает конфиг RNRH', async () => {
     mockWindowDimensions(1);
-    renderNative();
+    await renderNative();
 
-    setFontScale(1);
+    await setFontScale(1);
 
     expect(renders.length).toBeGreaterThan(1);
     const first = renders[0];

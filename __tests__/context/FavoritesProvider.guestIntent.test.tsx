@@ -71,7 +71,7 @@ describe('FavoritesProvider guest intent restore', () => {
     mockAuthContext.isAuthenticated = true;
     mockAuthContext.userId = '104';
 
-    render(
+    await render(
       <FavoritesProvider>
         <></>
       </FavoritesProvider>
@@ -97,7 +97,7 @@ describe('FavoritesProvider guest intent restore', () => {
   it('does not consume the intent while the user is still a guest', async () => {
     await seedPendingIntent();
 
-    render(
+    await render(
       <FavoritesProvider>
         <></>
       </FavoritesProvider>

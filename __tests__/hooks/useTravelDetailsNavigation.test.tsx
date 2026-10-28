@@ -45,7 +45,7 @@ describe('useTravelDetailsNavigation', () => {
     ).toBeNull()
   })
 
-  it('scrolls to section after open-section event', () => {
+  it('scrolls to section after open-section event', async () => {
     const scrollTo = jest.fn()
     const scrollRef = {
       current: {
@@ -68,17 +68,17 @@ describe('useTravelDetailsNavigation', () => {
 
     const startTransition = (cb: () => void) => cb()
 
-    renderHook(() =>
+    await renderHook(() =>
       useTravelDetailsNavigation({ headerOffset: 72, slug: 'minsk', startTransition })
     )
 
-    act(() => {})
+    await act(() => {})
 
-    act(() => {
+    await act(() => {
       window.dispatchEvent(new CustomEvent('open-section', { detail: { key: 'map' } }))
     })
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1200)
     })
 
@@ -86,7 +86,7 @@ describe('useTravelDetailsNavigation', () => {
     expect(setActiveSection).toHaveBeenCalledWith('gallery')
   })
 
-  it('opens a lazy section directly without waiting for the global event bridge', () => {
+  it('opens a lazy section directly without waiting for the global event bridge', async () => {
     const scrollTo = jest.fn()
     const scrollRef = {
       current: {
@@ -106,7 +106,7 @@ describe('useTravelDetailsNavigation', () => {
     })
 
     const startTransition = jest.fn((callback: () => void) => callback())
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelDetailsNavigation({
         headerOffset: 72,
         slug: 'minsk',
@@ -114,15 +114,15 @@ describe('useTravelDetailsNavigation', () => {
       }),
     )
 
-    act(() => result.current.openSection('comments'))
+    await act(() => result.current.openSection('comments'))
     expect(result.current.forceOpenKey).toBe('comments')
     expect(startTransition).not.toHaveBeenCalled()
 
-    act(() => jest.advanceTimersByTime(1200))
+    await act(() => jest.advanceTimersByTime(1200))
     expect(scrollTo).toHaveBeenCalledWith('comments')
   })
 
-  it('uses scrollRef node as scrollRoot when it can scroll by size (regression)', () => {
+  it('uses scrollRef node as scrollRoot when it can scroll by size (regression)', async () => {
     const scrollNode: any = {
       scrollHeight: 1000,
       clientHeight: 200,
@@ -152,9 +152,9 @@ describe('useTravelDetailsNavigation', () => {
     const raf = window.requestAnimationFrame
     ;(window as any).requestAnimationFrame = (cb: FrameRequestCallback) => setTimeout(cb, 0)
 
-    renderHook(() => useTravelDetailsNavigation({ headerOffset: 72, slug: 'minsk', startTransition }))
+    await renderHook(() => useTravelDetailsNavigation({ headerOffset: 72, slug: 'minsk', startTransition }))
 
-    act(() => {
+    await act(() => {
       jest.runOnlyPendingTimers()
     })
 
@@ -165,7 +165,7 @@ describe('useTravelDetailsNavigation', () => {
     ;(window as any).requestAnimationFrame = raf
   })
 
-  it('retries scroll reset on web until the scroll container is available (regression)', () => {
+  it('retries scroll reset on web until the scroll container is available (regression)', async () => {
     const scrollTo = jest.fn()
     const scrollContainer = document.createElement('div') as any
     scrollContainer.setAttribute('data-testid', 'travel-details-scroll')
@@ -219,9 +219,9 @@ describe('useTravelDetailsNavigation', () => {
 
     const startTransition = (cb: () => void) => cb()
 
-    renderHook(() => useTravelDetailsNavigation({ headerOffset: 72, slug: 'minsk', startTransition }))
+    await renderHook(() => useTravelDetailsNavigation({ headerOffset: 72, slug: 'minsk', startTransition }))
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(40)
       document.body.appendChild(scrollContainer)
       jest.advanceTimersByTime(320)
@@ -237,7 +237,7 @@ describe('useTravelDetailsNavigation', () => {
     scrollContainer.remove()
   })
 
-  it('does not reset web scroll to top when the current URL already contains a hash', () => {
+  it('does not reset web scroll to top when the current URL already contains a hash', async () => {
     const scrollTo = jest.fn()
     const scrollContainer = document.createElement('div') as any
     scrollContainer.setAttribute('data-testid', 'travel-details-scroll')
@@ -288,9 +288,9 @@ describe('useTravelDetailsNavigation', () => {
 
     const startTransition = (cb: () => void) => cb()
 
-    renderHook(() => useTravelDetailsNavigation({ headerOffset: 72, slug: 'minsk', startTransition }))
+    await renderHook(() => useTravelDetailsNavigation({ headerOffset: 72, slug: 'minsk', startTransition }))
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(40)
       document.body.appendChild(scrollContainer)
       jest.advanceTimersByTime(320)

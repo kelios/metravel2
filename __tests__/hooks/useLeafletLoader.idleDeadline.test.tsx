@@ -42,8 +42,8 @@ describe('useLeafletLoader idle deadline', () => {
     Object.defineProperty(Platform, 'OS', { value: ORIGINAL_PLATFORM_OS, configurable: true })
   })
 
-  it('waits for idle no longer than 1000 ms by default', () => {
-    renderHook(() => useLeafletLoader({ enabled: true, useIdleCallback: true }))
+  it('waits for idle no longer than 1000 ms by default', async () => {
+    await renderHook(() => useLeafletLoader({ enabled: true, useIdleCallback: true }))
 
     expect(requestIdleCallback).toHaveBeenCalledTimes(1)
     expect(requestIdleCallback.mock.calls[0][1]?.timeout).toBeLessThanOrEqual(1000)

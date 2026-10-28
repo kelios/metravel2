@@ -71,64 +71,64 @@ describe('resolveQuestCountrySelection', () => {
 })
 
 describe('useQuestCountrySelection — раскрытие', () => {
-    it('по умолчанию все страны свёрнуты', () => {
-        const { result } = renderHook(() => useQuestCountrySelection('__all__', CITIES, QUESTS_BY_CITY))
+    it('по умолчанию все страны свёрнуты', async () => {
+        const { result } = await renderHook(() => useQuestCountrySelection('__all__', CITIES, QUESTS_BY_CITY))
         expect(Object.values(result.current.collapsedCountryCodes).every(Boolean)).toBe(true)
         expect(result.current.areAllCountryGroupsCollapsed).toBe(true)
     })
 
-    it('страна активного выбора раскрыта, а свернуть её снова можно', () => {
-        const { result } = renderHook(() => useQuestCountrySelection('1', CITIES, QUESTS_BY_CITY))
+    it('страна активного выбора раскрыта, а свернуть её снова можно', async () => {
+        const { result } = await renderHook(() => useQuestCountrySelection('1', CITIES, QUESTS_BY_CITY))
         expect(result.current.collapsedCountryCodes.BY).toBe(false)
         expect(result.current.collapsedCountryCodes.PL).toBe(true)
 
-        act(() => result.current.toggleCountryGroup('BY'))
+        await act(() => result.current.toggleCountryGroup('BY'))
         expect(result.current.collapsedCountryCodes.BY).toBe(true)
     })
 
-    it('выбор, восстановленный до загрузки каталога, раскрывает свою страну, когда каталог пришёл', () => {
-        const { result, rerender } = renderHook(
+    it('выбор, восстановленный до загрузки каталога, раскрывает свою страну, когда каталог пришёл', async () => {
+        const { result, rerender } = await renderHook(
             ({ cities, questsByCityId }: { cities: typeof CITIES; questsByCityId: Record<string, Quest[]> }) =>
                 useQuestCountrySelection('__country__:BY', cities, questsByCityId),
             { initialProps: { cities: [] as typeof CITIES, questsByCityId: {} as Record<string, Quest[]> } },
         )
         expect(result.current.activeCountryCode).toBeNull()
 
-        rerender({ cities: CITIES, questsByCityId: QUESTS_BY_CITY })
+        await rerender({ cities: CITIES, questsByCityId: QUESTS_BY_CITY })
         expect(result.current.collapsedCountryCodes.BY).toBe(false)
         expect(result.current.collapsedCountryCodes.PL).toBe(true)
     })
 
-    it('свёрнутая вручную страна выбора не раскрывается снова от обновления каталога', () => {
-        const { result, rerender } = renderHook(
+    it('свёрнутая вручную страна выбора не раскрывается снова от обновления каталога', async () => {
+        const { result, rerender } = await renderHook(
             ({ cities, questsByCityId }: { cities: typeof CITIES; questsByCityId: Record<string, Quest[]> }) =>
                 useQuestCountrySelection('1', cities, questsByCityId),
             { initialProps: { cities: CITIES, questsByCityId: QUESTS_BY_CITY } },
         )
-        act(() => result.current.toggleCountryGroup('BY'))
+        await act(() => result.current.toggleCountryGroup('BY'))
         expect(result.current.collapsedCountryCodes.BY).toBe(true)
 
         // Рефетч отдаёт тот же каталог новыми ссылками — выбор при этом не менялся.
-        rerender({ cities: CITIES.map((city) => ({ ...city })), questsByCityId: { ...QUESTS_BY_CITY } })
+        await rerender({ cities: CITIES.map((city) => ({ ...city })), questsByCityId: { ...QUESTS_BY_CITY } })
         expect(result.current.activeCountryCode).toBe('BY')
         expect(result.current.collapsedCountryCodes.BY).toBe(true)
     })
 
-    it('смена выбора на другую страну раскрывает и её', () => {
-        const { result, rerender } = renderHook(
+    it('смена выбора на другую страну раскрывает и её', async () => {
+        const { result, rerender } = await renderHook(
             ({ selectedId }: { selectedId: string }) => useQuestCountrySelection(selectedId, CITIES, QUESTS_BY_CITY),
             { initialProps: { selectedId: '1' } },
         )
-        rerender({ selectedId: '__country__:PL' })
+        await rerender({ selectedId: '__country__:PL' })
         expect(result.current.collapsedCountryCodes.PL).toBe(false)
         expect(result.current.selectedCountry?.code).toBe('PL')
     })
 
-    it('«Развернуть все» раскрывает все страны, повторно — сворачивает', () => {
-        const { result } = renderHook(() => useQuestCountrySelection('__all__', CITIES, QUESTS_BY_CITY))
-        act(() => result.current.toggleAllCountryGroups())
+    it('«Развернуть все» раскрывает все страны, повторно — сворачивает', async () => {
+        const { result } = await renderHook(() => useQuestCountrySelection('__all__', CITIES, QUESTS_BY_CITY))
+        await act(() => result.current.toggleAllCountryGroups())
         expect(Object.values(result.current.collapsedCountryCodes).some(Boolean)).toBe(false)
-        act(() => result.current.toggleAllCountryGroups())
+        await act(() => result.current.toggleAllCountryGroups())
         expect(result.current.areAllCountryGroupsCollapsed).toBe(true)
     })
 })

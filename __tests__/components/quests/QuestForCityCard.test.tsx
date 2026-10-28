@@ -44,8 +44,8 @@ describe('QuestForCityCard', () => {
     mockMediaVisible = true
   })
 
-  it('tracks the contextual card click before opening the quest', () => {
-    const { getByLabelText } = render(
+  it('tracks the contextual card click before opening the quest', async () => {
+    const { getByLabelText } = await render(
       <QuestForCityCard
         analyticsSource="travel_detail"
         analyticsContextId={42}
@@ -61,7 +61,7 @@ describe('QuestForCityCard', () => {
       />,
     )
 
-    fireEvent.press(getByLabelText('Пройти квест по городу Гомель: Тайны дворца'))
+    await fireEvent.press(getByLabelText('Пройти квест по городу Гомель: Тайны дворца'))
 
     expect(queueAnalyticsEvent).toHaveBeenCalledWith('quest_card_click', {
       source: 'travel_detail',
@@ -77,8 +77,8 @@ describe('QuestForCityCard', () => {
   it.each([
     ['city', { id: 'gomel-palace', cityId: undefined }],
     ['quest', { id: undefined, cityId: '3' }],
-  ])('does not navigate when %s id is missing', (_case, ids) => {
-    const { getByLabelText } = render(
+  ])('does not navigate when %s id is missing', async (_case, ids) => {
+    const { getByLabelText } = await render(
       <QuestForCityCard
         quest={{
           title: 'Тайны дворца',
@@ -91,14 +91,14 @@ describe('QuestForCityCard', () => {
       />,
     )
 
-    fireEvent.press(getByLabelText('Пройти квест по городу Гомель: Тайны дворца'))
+    await fireEvent.press(getByLabelText('Пройти квест по городу Гомель: Тайны дворца'))
 
     expect(mockPush).not.toHaveBeenCalled()
     expect(queueAnalyticsEvent).not.toHaveBeenCalledWith('quest_card_click', expect.anything())
   })
 
-  it('passes quest cover with stable web media geometry', () => {
-    render(
+  it('passes quest cover with stable web media geometry', async () => {
+    await render(
       <QuestForCityCard
         quest={{
           id: 'krakow-dragon',
@@ -140,8 +140,8 @@ describe('QuestForCityCard', () => {
     expect(props.loading).toBe('lazy')
   })
 
-  it('uses the square source and responsive ladder without adding a second raster', () => {
-    render(
+  it('uses the square source and responsive ladder without adding a second raster', async () => {
+    await render(
       <QuestForCityCard
         quest={{
           id: 'krakow-dragon',
@@ -184,10 +184,10 @@ describe('QuestForCityCard', () => {
     expect(props).not.toHaveProperty('placeholderSrc')
   })
 
-  it('keeps the square source and responsive ladder behind the same viewport gate', () => {
+  it('keeps the square source and responsive ladder behind the same viewport gate', async () => {
     mockMediaVisible = false
 
-    render(
+    await render(
       <QuestForCityCard
         quest={{
           id: 'krakow-dragon',
@@ -211,8 +211,8 @@ describe('QuestForCityCard', () => {
     expect(props.webResponsiveSource).toBeUndefined()
   })
 
-  it('falls back to the legacy cover when the square manifest source is blank', () => {
-    render(
+  it('falls back to the legacy cover when the square manifest source is blank', async () => {
+    await render(
       <QuestForCityCard
         quest={{
           id: 'krakow-dragon',
@@ -238,8 +238,8 @@ describe('QuestForCityCard', () => {
     expect(props.webResponsiveSource).toBeUndefined()
   })
 
-  it('lets a caller opt into an eager cover explicitly', () => {
-    render(
+  it('lets a caller opt into an eager cover explicitly', async () => {
+    await render(
       <QuestForCityCard
         imageLoading="eager"
         quest={{
@@ -258,8 +258,8 @@ describe('QuestForCityCard', () => {
     expect(mockImageCardMedia.mock.calls[0]?.[0].loading).toBe('eager')
   })
 
-  it('allows callers to defer non-critical quest covers', () => {
-    render(
+  it('allows callers to defer non-critical quest covers', async () => {
+    await render(
       <QuestForCityCard
         imageLoading="lazy"
         quest={{
@@ -281,8 +281,8 @@ describe('QuestForCityCard', () => {
     expect(props.loading).toBe('lazy')
   })
 
-  it('shows the age category in the quest meta row', () => {
-    const { getByText } = render(
+  it('shows the age category in the quest meta row', async () => {
+    const { getByText } = await render(
       <QuestForCityCard
         quest={{
           id: 'vitebsk-teens',
@@ -302,8 +302,8 @@ describe('QuestForCityCard', () => {
     expect(getByText('11-14 лет')).toBeTruthy()
   })
 
-  it('asks to clarify age when a child quest has only the generic kids tag', () => {
-    const { getByText, queryByText } = render(
+  it('asks to clarify age when a child quest has only the generic kids tag', async () => {
+    const { getByText, queryByText } = await render(
       <QuestForCityCard
         quest={{
           id: 'mogilev-kids',
@@ -324,31 +324,46 @@ describe('QuestForCityCard', () => {
 })
 
 
-it('#2482 marks the quest card title without changing the accessible navigation label', () => {
+it('#2482 marks the quest card title without changing the accessible navigation label', async () => {
   const { Platform } = require('react-native')
   const originalOS = Platform.OS
   Platform.OS = 'web'
   try {
-    const tree = render(<QuestForCityCard quest={{ id: 'palace', cityId: '3', title: 'Тайны дворца', cityName: 'Гомель', points: 4, lat: 52, lng: 30 }} />)
-    expect(tree.UNSAFE_root.findAll((node) => node.props.lang === 'ru')
+    const tree = await render(<QuestForCityCard quest={{ id: 'palace', cityId: '3', title: 'Тайны дворца', cityName: 'Гомель', points: 4, lat: 52, lng: 30 }} />)
+    expect(tree.container.queryAll((node) => node.props.lang === 'ru')
       .some((node) => node.props.children === 'Тайны дворца')).toBe(true)
     expect(tree.getByLabelText('Пройти квест по городу Гомель: Тайны дворца')).toBeTruthy()
   } finally { Platform.OS = originalOS }
 })
 
-it('#2830 gives Pressable one flat style object, so Link asChild keeps the card layout', () => {
-  const { Pressable } = require('react-native')
-  const tree = render(<QuestForCityCard quest={{ id: 'palace', cityId: '3', title: 'Тайны дворца', cityName: 'Гомель', points: 4, lat: 52, lng: 30 }} />)
-  const card = tree.UNSAFE_getByType(Pressable)
+it('#2830 gives Pressable one flat style object, so Link asChild keeps the card layout', async () => {
+  const tree = await render(<QuestForCityCard quest={{ id: 'palace', cityId: '3', title: 'Тайны дворца', cityName: 'Гомель', points: 4, lat: 52, lng: 30 }} />)
+  const card = tree.getByRole('link')
+  const rawCardProps = mockCardProps.get(card.props.accessibilityLabel)
+  expect(rawCardProps).toBeDefined()
   // Slot у `Link asChild` сливает стиль спредом: функция и массив дают пустую карточку.
-  expect(typeof card.props.style).toBe('object')
-  expect(Array.isArray(card.props.style)).toBe(false)
-  expect(card.props.style).toMatchObject({ flexDirection: 'row', borderWidth: 1, padding: 10 })
+  expect(typeof rawCardProps.style).toBe('object')
+  expect(Array.isArray(rawCardProps.style)).toBe(false)
+  expect(rawCardProps.style).toMatchObject({ flexDirection: 'row', borderWidth: 1, padding: 10 })
   const idleBorder = card.props.style.borderColor
 
-  fireEvent(card, 'hoverIn')
-  const hoveredBorder = tree.UNSAFE_getByType(Pressable).props.style.borderColor
+  await fireEvent(card, 'hoverIn')
+  const hoveredBorder = tree.getByRole('link').props.style.borderColor
   expect(hoveredBorder).not.toBe(idleBorder)
-  fireEvent(tree.UNSAFE_getByType(Pressable), 'hoverOut')
-  expect(tree.UNSAFE_getByType(Pressable).props.style.borderColor).toBe(idleBorder)
+  await fireEvent(tree.getByRole('link'), 'hoverOut')
+  expect(tree.getByRole('link').props.style.borderColor).toBe(idleBorder)
 })
+
+// Observe the public component input while retaining its normal host rendering.
+const captureNative = require('react-native')
+const capturedOriginalPressable = captureNative.Pressable
+const mockCardProps = new Map<string, any>()
+beforeAll(() => {
+  captureNative.Pressable = require('react').forwardRef((props: any, ref: any) => {
+    const key = props.accessibilityRole === 'link' ? props.accessibilityLabel : null
+    if (key) mockCardProps.set(key, props)
+    return require('react').createElement(capturedOriginalPressable, { ...props, ref })
+  })
+})
+afterAll(() => { captureNative.Pressable = capturedOriginalPressable })
+beforeEach(() => { mockCardProps.clear() })

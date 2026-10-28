@@ -19,8 +19,8 @@ const travels = (count: number, publicationStatus: string) =>
 
 const firstPage = [...travels(15, 'published'), ...travels(5, 'draft')];
 
-const renderSections = (overrides: Record<string, unknown>) =>
-  renderHook(() =>
+const renderSections = async (overrides: Record<string, unknown>) =>
+  await renderHook(() =>
     useProfileTravelSections({
       activeTab: 'travels',
       setActiveTab: jest.fn(),
@@ -46,8 +46,8 @@ const renderSections = (overrides: Record<string, unknown>) =>
   );
 
 describe('useProfileTravelSections — счётчики вкладок «Опубл.» и «Черновики»', () => {
-  it('показывает серверную разбивку по всему профилю, а не по первой странице', () => {
-    const { result } = renderSections({
+  it('показывает серверную разбивку по всему профилю, а не по первой странице', async () => {
+    const { result } = await renderSections({
       publicationCounts: { published: 300, drafts: 65 },
     });
 
@@ -55,8 +55,8 @@ describe('useProfileTravelSections — счётчики вкладок «Опу�
     expect(result.current.draftTravelsCount).toBe(65);
   });
 
-  it('на недогруженном списке без серверной разбивки не показывает цифру вовсе', () => {
-    const { result } = renderSections({ publicationCounts: null });
+  it('на недогруженном списке без серверной разбивки не показывает цифру вовсе', async () => {
+    const { result } = await renderSections({ publicationCounts: null });
 
     expect(result.current.publishedTravelsCount).toBeUndefined();
     expect(result.current.draftTravelsCount).toBeUndefined();
@@ -64,8 +64,8 @@ describe('useProfileTravelSections — счётчики вкладок «Опу�
 
   // #1871: сбой запроса за разбивкой давал тот же `publicationCounts === null`,
   // что и «ещё не загружено», и вкладка молча оставалась без цифры вместо «—».
-  it('на недогруженном списке показывает «—», когда запрос за разбивкой упал', () => {
-    const { result } = renderSections({
+  it('на недогруженном списке показывает «—», когда запрос за разбивкой упал', async () => {
+    const { result } = await renderSections({
       publicationCounts: null,
       publicationCountsUnavailable: true,
     });
@@ -74,8 +74,8 @@ describe('useProfileTravelSections — счётчики вкладок «Опу�
     expect(result.current.draftTravelsCount).toBeNull();
   });
 
-  it('упавшая разбивка не мешает точному локальному подсчёту по догруженному списку', () => {
-    const { result } = renderSections({
+  it('упавшая разбивка не мешает точному локальному подсчёту по догруженному списку', async () => {
+    const { result } = await renderSections({
       publicationCounts: null,
       publicationCountsUnavailable: true,
       travelsCount: firstPage.length,
@@ -86,8 +86,8 @@ describe('useProfileTravelSections — счётчики вкладок «Опу�
     expect(result.current.draftTravelsCount).toBe(5);
   });
 
-  it('когда список догружен целиком, считает локально — это те же данные', () => {
-    const { result } = renderSections({
+  it('когда список догружен целиком, считает локально — это те же данные', async () => {
+    const { result } = await renderSections({
       publicationCounts: null,
       travelsCount: firstPage.length,
       travelsHasMore: false,
@@ -99,8 +99,8 @@ describe('useProfileTravelSections — счётчики вкладок «Опу�
 
   // #1865: сбой общего списка обнуляет travelsCount и publicationCounts, и
   // ветка «список догружен целиком» вырождалась в 0 >= 0 — счётчики врали нулём.
-  it('при сбое общего списка помечает счётчики недоступными, а не нулём', () => {
-    const { result } = renderSections({
+  it('при сбое общего списка помечает счётчики недоступными, а не нулём', async () => {
+    const { result } = await renderSections({
       myTravels: [],
       publicationCounts: null,
       travelsCount: 0,
@@ -112,8 +112,8 @@ describe('useProfileTravelSections — счётчики вкладок «Опу�
     expect(result.current.draftTravelsCount).toBeNull();
   });
 
-  it('потерянный общий счётчик (`travelsCount === null`) сам по себе даёт «—», а не ноль', () => {
-    const { result } = renderSections({
+  it('потерянный общий счётчик (`travelsCount === null`) сам по себе даёт «—», а не ноль', async () => {
+    const { result } = await renderSections({
       myTravels: [],
       publicationCounts: null,
       travelsCount: null,
@@ -124,9 +124,9 @@ describe('useProfileTravelSections — счётчики вкладок «Опу�
     expect(result.current.draftTravelsCount).toBeNull();
   });
 
-  it('успешный срез вкладки продолжает рисовать свой список при сбое общего', () => {
+  it('успешный срез вкладки продолжает рисовать свой список при сбое общего', async () => {
     const statusTabTravels = travels(3, 'draft');
-    const { result } = renderSections({
+    const { result } = await renderSections({
       activeTab: 'draftTravels',
       myTravels: [],
       statusTabTravels,

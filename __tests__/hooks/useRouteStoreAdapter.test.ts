@@ -56,8 +56,8 @@ describe('useRouteStoreAdapter', () => {
   });
 
   describe('State mapping', () => {
-    it('should map basic store state correctly', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+    it('should map basic store state correctly', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       expect(result.current.mode).toBe('radius');
       expect(result.current.transportMode).toBe('car');
@@ -65,13 +65,13 @@ describe('useRouteStoreAdapter', () => {
       expect(result.current.error).toBe(null);
     });
 
-    it('should convert RoutePoint[] to [lng, lat][] format', () => {
+    it('should convert RoutePoint[] to [lng, lat][] format', async () => {
       mockStore.points = [
         { id: '1', coordinates: { lat: 53.9, lng: 27.56 }, address: 'Point 1', type: 'start' },
         { id: '2', coordinates: { lat: 54.0, lng: 28.0 }, address: 'Point 2', type: 'end' },
       ];
 
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       expect(result.current.routePoints).toEqual([
         [27.56, 53.9],
@@ -79,15 +79,15 @@ describe('useRouteStoreAdapter', () => {
       ]);
     });
 
-    it('should return empty array when no points', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+    it('should return empty array when no points', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       expect(result.current.routePoints).toEqual([]);
     });
   });
 
   describe('Addresses', () => {
-    it('should return start address', () => {
+    it('should return start address', async () => {
       mockStore.getStartPoint.mockReturnValue({
         id: '1',
         coordinates: { lat: 53.9, lng: 27.56 },
@@ -95,18 +95,18 @@ describe('useRouteStoreAdapter', () => {
         type: 'start',
       });
 
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       expect(result.current.startAddress).toBe('Start Address');
     });
 
-    it('should return empty string when no start point', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+    it('should return empty string when no start point', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       expect(result.current.startAddress).toBe('');
     });
 
-    it('should return end address', () => {
+    it('should return end address', async () => {
       mockStore.getEndPoint.mockReturnValue({
         id: '2',
         coordinates: { lat: 54.0, lng: 28.0 },
@@ -114,22 +114,22 @@ describe('useRouteStoreAdapter', () => {
         type: 'end',
       });
 
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       expect(result.current.endAddress).toBe('End Address');
     });
   });
 
   describe('setRoutePoints', () => {
-    it('should add points correctly when given valid [lng, lat][] array', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+    it('should add points correctly when given valid [lng, lat][] array', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       const points: [number, number][] = [
         [27.56, 53.9],
         [28.0, 54.0],
       ];
 
-      act(() => {
+      await act(() => {
         result.current.setRoutePoints(points);
       });
 
@@ -149,10 +149,10 @@ describe('useRouteStoreAdapter', () => {
       );
     });
 
-    it('should not add points if array is empty', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+    it('should not add points if array is empty', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
-      act(() => {
+      await act(() => {
         result.current.setRoutePoints([]);
       });
 
@@ -160,10 +160,10 @@ describe('useRouteStoreAdapter', () => {
       expect(mockStore.addPoint).not.toHaveBeenCalled();
     });
 
-    it('should not add points if not an array', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+    it('should not add points if not an array', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
-      act(() => {
+      await act(() => {
         result.current.setRoutePoints(null as any);
       });
 
@@ -171,8 +171,8 @@ describe('useRouteStoreAdapter', () => {
       expect(mockStore.addPoint).not.toHaveBeenCalled();
     });
 
-    it('should skip invalid point formats', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+    it('should skip invalid point formats', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       const points: any[] = [
         [27.56, 53.9], // valid
@@ -181,7 +181,7 @@ describe('useRouteStoreAdapter', () => {
         [29.0, 55.0], // valid
       ];
 
-      act(() => {
+      await act(() => {
         result.current.setRoutePoints(points);
       });
 
@@ -189,8 +189,8 @@ describe('useRouteStoreAdapter', () => {
       expect(mockStore.addPoint).toHaveBeenCalledTimes(2); // Only valid points
     });
 
-    it('should skip NaN coordinates', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+    it('should skip NaN coordinates', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       const points: [number, number][] = [
         [27.56, 53.9], // valid
@@ -199,7 +199,7 @@ describe('useRouteStoreAdapter', () => {
         [29.0, 55.0], // valid
       ];
 
-      act(() => {
+      await act(() => {
         result.current.setRoutePoints(points);
       });
 
@@ -208,7 +208,7 @@ describe('useRouteStoreAdapter', () => {
   });
 
   describe('handleAddressSelect', () => {
-    it('should add start point and remove existing start', () => {
+    it('should add start point and remove existing start', async () => {
       mockStore.getStartPoint.mockReturnValue({
         id: 'old-start',
         coordinates: { lat: 53.0, lng: 27.0 },
@@ -216,9 +216,9 @@ describe('useRouteStoreAdapter', () => {
         type: 'start',
       });
 
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
-      act(() => {
+      await act(() => {
         result.current.handleAddressSelect(
           'New Start Address',
           { lat: 53.9, lng: 27.56 },
@@ -233,12 +233,12 @@ describe('useRouteStoreAdapter', () => {
       );
     });
 
-    it('should add start point when no existing start', () => {
+    it('should add start point when no existing start', async () => {
       mockStore.getStartPoint.mockReturnValue(null);
 
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
-      act(() => {
+      await act(() => {
         result.current.handleAddressSelect(
           'Start Address',
           { lat: 53.9, lng: 27.56 },
@@ -253,10 +253,10 @@ describe('useRouteStoreAdapter', () => {
       );
     });
 
-    it('should add end point', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+    it('should add end point', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
-      act(() => {
+      await act(() => {
         result.current.handleAddressSelect(
           'End Address',
           { lat: 54.0, lng: 28.0 },
@@ -272,13 +272,13 @@ describe('useRouteStoreAdapter', () => {
   });
 
   describe('setFullRouteCoords', () => {
-    it('does not manufacture a healthy road from scalar coordinates before atomic publication', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
-      act(() => result.current.setFullRouteCoords([[27.56, 53.9], [27.57, 53.91], [27.58, 53.92]]));
+    it('does not manufacture a healthy road from scalar coordinates before atomic publication', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
+      await act(() => result.current.setFullRouteCoords([[27.56, 53.9], [27.57, 53.91], [27.58, 53.92]]));
       expect(mockStore.setRoute).not.toHaveBeenCalled();
     });
 
-    it('should not update if route coordinates are the same', () => {
+    it('should not update if route coordinates are the same', async () => {
       mockStore.route = {
         coordinates: [
           { lat: 53.9, lng: 27.56 },
@@ -289,14 +289,14 @@ describe('useRouteStoreAdapter', () => {
         isOptimal: true,
       };
 
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       const coords: [number, number][] = [
         [27.56, 53.9],
         [28.0, 54.0],
       ];
 
-      act(() => {
+      await act(() => {
         result.current.setFullRouteCoords(coords);
       });
 
@@ -305,7 +305,7 @@ describe('useRouteStoreAdapter', () => {
   });
 
   describe('setRouteDistance', () => {
-    it('updates published route distance without relabeling degraded geometry healthy', () => {
+    it('updates published route distance without relabeling degraded geometry healthy', async () => {
       mockStore.points = [
         { id: '1', coordinates: { lat: 53.9, lng: 27.56 }, address: 'Start', type: 'start' },
         { id: '2', coordinates: { lat: 54.0, lng: 28.0 }, address: 'End', type: 'end' },
@@ -316,9 +316,9 @@ describe('useRouteStoreAdapter', () => {
         distance: 0, duration: 0, isOptimal: false,
       };
 
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
-      act(() => {
+      await act(() => {
         result.current.setRouteDistance(12500); // 12.5 km
       });
 
@@ -333,7 +333,7 @@ describe('useRouteStoreAdapter', () => {
       });
     });
 
-    it('should not update if distance is the same', () => {
+    it('should not update if distance is the same', async () => {
       mockStore.route = {
         coordinates: [{ lat: 53.9, lng: 27.56 }],
         distance: 12500,
@@ -341,9 +341,9 @@ describe('useRouteStoreAdapter', () => {
         isOptimal: true,
       };
 
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
-      act(() => {
+      await act(() => {
         result.current.setRouteDistance(12500);
       });
 
@@ -352,10 +352,10 @@ describe('useRouteStoreAdapter', () => {
   });
 
   describe('handleClearRoute', () => {
-    it('should call store.clearRoute', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+    it('should call store.clearRoute', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
-      act(() => {
+      await act(() => {
         result.current.handleClearRoute();
       });
 
@@ -364,8 +364,8 @@ describe('useRouteStoreAdapter', () => {
   });
 
   describe('Direct store actions', () => {
-    it('should expose store actions directly', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+    it('should expose store actions directly', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       expect(result.current.setMode).toBe(mockStore.setMode);
       expect(result.current.setTransportMode).toBe(mockStore.setTransportMode);
@@ -375,8 +375,8 @@ describe('useRouteStoreAdapter', () => {
       expect(result.current.swapStartEnd).toBe(mockStore.swapStartEnd);
     });
 
-    it('should expose store state directly', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+    it('should expose store state directly', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       expect(result.current.points).toBe(mockStore.points);
       expect(result.current.route).toBe(mockStore.route);
@@ -384,7 +384,7 @@ describe('useRouteStoreAdapter', () => {
   });
 
   describe('Route data conversion', () => {
-    it('should convert route coordinates to [lng, lat][] format', () => {
+    it('should convert route coordinates to [lng, lat][] format', async () => {
       mockStore.route = {
         coordinates: [
           { lat: 53.9, lng: 27.56 },
@@ -396,7 +396,7 @@ describe('useRouteStoreAdapter', () => {
         isOptimal: true,
       };
 
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       expect(result.current.fullRouteCoords).toEqual([
         [27.56, 53.9],
@@ -405,13 +405,13 @@ describe('useRouteStoreAdapter', () => {
       ]);
     });
 
-    it('should return empty array when no route', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+    it('should return empty array when no route', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       expect(result.current.fullRouteCoords).toEqual([]);
     });
 
-    it('should return route distance', () => {
+    it('should return route distance', async () => {
       mockStore.route = {
         coordinates: [],
         distance: 12500,
@@ -419,13 +419,13 @@ describe('useRouteStoreAdapter', () => {
         isOptimal: true,
       };
 
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       expect(result.current.routeDistance).toBe(12500);
     });
 
-    it('should return null when no route distance', () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+    it('should return null when no route distance', async () => {
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       expect(result.current.routeDistance).toBe(null);
     });

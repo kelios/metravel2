@@ -40,17 +40,17 @@ describe('ui/ToolActionsRow', () => {
     mockResponsive = { isHydrated: true, isMobile: false }
   })
 
-  it('renders icon + visible label on desktop', () => {
-    const { getByText, getByLabelText } = render(<ToolActionsRow actions={buildActions()} />)
+  it('renders icon + visible label on desktop', async () => {
+    const { getByText, getByLabelText } = await render(<ToolActionsRow actions={buildActions()} />)
 
     expect(getByText('Надиктовать')).toBeTruthy()
     expect(getByText('Импорт текста')).toBeTruthy()
     expect(getByLabelText('Вставить')).toBeTruthy()
   })
 
-  it('renders icon-only buttons with accessible labels on mobile', () => {
+  it('renders icon-only buttons with accessible labels on mobile', async () => {
     mockResponsive = { isHydrated: true, isMobile: true }
-    const { queryByText, getByLabelText, getByText } = render(
+    const { queryByText, getByLabelText, getByText } = await render(
       <ToolActionsRow actions={buildActions()} />,
     )
 
@@ -68,9 +68,9 @@ describe('ui/ToolActionsRow', () => {
   // #1414 (TestFlight 1.0.5 (8)): «иконки непонятные что они значат» — три
   // кнопки экспорта несут одну и ту же иконку `download`, поэтому в compact-ряду
   // им нужна короткая видимая подпись, а полное имя остаётся у screen reader.
-  it('keeps a short visible caption for actions that share one icon on mobile', () => {
+  it('keeps a short visible caption for actions that share one icon on mobile', async () => {
     mockResponsive = { isHydrated: true, isMobile: true }
-    const { getByText, queryByText, getByLabelText } = render(
+    const { getByText, queryByText, getByLabelText } = await render(
       <ToolActionsRow
         actions={[
           {
@@ -108,8 +108,8 @@ describe('ui/ToolActionsRow', () => {
     ).toMatchObject({ minHeight: 44 })
   })
 
-  it('shows the full label instead of the compact one on desktop', () => {
-    const { getByText, queryByText } = render(
+  it('shows the full label instead of the compact one on desktop', async () => {
+    const { getByText, queryByText } = await render(
       <ToolActionsRow
         actions={[
           {
@@ -126,15 +126,15 @@ describe('ui/ToolActionsRow', () => {
     expect(queryByText('GPX')).toBeNull()
   })
 
-  it('keeps labels until the web viewport is hydrated', () => {
+  it('keeps labels until the web viewport is hydrated', async () => {
     mockResponsive = { isHydrated: false, isMobile: true }
-    const { getByText } = render(<ToolActionsRow actions={buildActions()} />)
+    const { getByText } = await render(<ToolActionsRow actions={buildActions()} />)
 
     expect(getByText('Надиктовать')).toBeTruthy()
   })
 
-  it('honours the explicit compact override', () => {
-    const { queryByText, getByLabelText } = render(
+  it('honours the explicit compact override', async () => {
+    const { queryByText, getByLabelText } = await render(
       <ToolActionsRow actions={buildActions()} compact />,
     )
 
@@ -142,19 +142,19 @@ describe('ui/ToolActionsRow', () => {
     expect(getByLabelText('Надиктовать')).toBeTruthy()
   })
 
-  it('fires onPress and renders nothing without actions', () => {
+  it('fires onPress and renders nothing without actions', async () => {
     const onPress = jest.fn()
-    const { getByLabelText } = render(<ToolActionsRow actions={buildActions(onPress)} />)
+    const { getByLabelText } = await render(<ToolActionsRow actions={buildActions(onPress)} />)
 
-    fireEvent.press(getByLabelText('Надиктовать'))
+    await fireEvent.press(getByLabelText('Надиктовать'))
     expect(onPress).toHaveBeenCalledTimes(1)
 
-    const { toJSON } = render(<ToolActionsRow actions={[]} />)
+    const { toJSON } = await render(<ToolActionsRow actions={[]} />)
     expect(toJSON()).toBeNull()
   })
 
-  it('passes loading and disabled state through to the button', () => {
-    const { getByLabelText } = render(
+  it('passes loading and disabled state through to the button', async () => {
+    const { getByLabelText } = await render(
       <ToolActionsRow
         actions={[
           { key: 'import', label: 'Импорт', icon: <Text>upload</Text>, loading: true },
@@ -172,9 +172,9 @@ describe('ui/ToolActionsRow', () => {
   // подписанная кнопка не уже своей подписи, не хватает ширины — ряд
   // переносится, а длинная подпись встаёт в две строки.
   describe('labelled buttons are never squeezed (#2053)', () => {
-    it('keeps compact-labelled buttons at their label width and lets the row wrap', () => {
+    it('keeps compact-labelled buttons at their label width and lets the row wrap', async () => {
       mockResponsive = { isHydrated: true, isMobile: true }
-      const { getByLabelText, getByText, toJSON } = render(
+      const { getByLabelText, getByText, toJSON } = await render(
         <ToolActionsRow actions={exportActions()} />,
       )
 
@@ -187,9 +187,9 @@ describe('ui/ToolActionsRow', () => {
       expect(rowStyle(toJSON()).flexWrap).toBe('wrap')
     })
 
-    it('wraps a row where only some compact actions carry a caption', () => {
+    it('wraps a row where only some compact actions carry a caption', async () => {
       mockResponsive = { isHydrated: true, isMobile: true }
-      const { getByLabelText, toJSON } = render(
+      const { getByLabelText, toJSON } = await render(
         <ToolActionsRow
           actions={[
             { key: 'import', label: 'Импорт текста', icon: <Text>upload</Text> },
@@ -205,16 +205,16 @@ describe('ui/ToolActionsRow', () => {
       })
     })
 
-    it('keeps an icon-only row on one line', () => {
+    it('keeps an icon-only row on one line', async () => {
       mockResponsive = { isHydrated: true, isMobile: true }
-      const { getByLabelText, toJSON } = render(<ToolActionsRow actions={buildActions()} />)
+      const { getByLabelText, toJSON } = await render(<ToolActionsRow actions={buildActions()} />)
 
       expect(rowStyle(toJSON()).flexWrap).toBe('nowrap')
       expect(StyleSheet.flatten(getByLabelText('Надиктовать').props.style).flexShrink).toBe(0)
     })
 
-    it('wraps a labelled desktop row without shrinking its buttons', () => {
-      const { getByLabelText, getByText, toJSON } = render(
+    it('wraps a labelled desktop row without shrinking its buttons', async () => {
+      const { getByLabelText, getByText, toJSON } = await render(
         <ToolActionsRow actions={buildActions()} />,
       )
 
@@ -226,9 +226,9 @@ describe('ui/ToolActionsRow', () => {
       expect(getByText('Надиктовать').props.numberOfLines).toBe(2)
     })
 
-    it('stretches fill buttons across the row with their full labels on a phone', () => {
+    it('stretches fill buttons across the row with their full labels on a phone', async () => {
       mockResponsive = { isHydrated: true, isMobile: true }
-      const { getByLabelText, getByText, queryByText, toJSON } = render(
+      const { getByLabelText, getByText, queryByText, toJSON } = await render(
         <ToolActionsRow actions={exportActions().slice(0, 2)} compact={false} fill />,
       )
 

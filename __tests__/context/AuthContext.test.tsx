@@ -89,9 +89,9 @@ describe('AuthContext', () => {
     return { promise, resolve, reject };
   };
 
-  it('throws error when useAuth is used outside provider', () => {
+  it('throws error when useAuth is used outside provider', async () => {
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    expect(() => render(<TestComponent />)).toThrow('useAuth must be used within an AuthProvider');
+    await expect(render(<TestComponent />)).rejects.toThrow('useAuth must be used within an AuthProvider');
     consoleSpy.mockRestore();
   });
 
@@ -105,7 +105,7 @@ describe('AuthContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
       </AuthProvider>
@@ -119,7 +119,7 @@ describe('AuthContext', () => {
     });
   });
 
-  it('on web waits for idle no longer than the 1000 ms «Timeout policy» cap before the auth check (#2020)', () => {
+  it('on web waits for idle no longer than the 1000 ms «Timeout policy» cap before the auth check (#2020)', async () => {
     const originalOS = Platform.OS;
     const requestIdleCallback = jest.fn((_callback: () => void, _options?: { timeout: number }) => 1);
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
@@ -127,7 +127,7 @@ describe('AuthContext', () => {
     Object.defineProperty(window, 'cancelIdleCallback', { value: jest.fn(), writable: true, configurable: true });
 
     try {
-      const { unmount } = render(
+      const { unmount } = await render(
         <AuthProvider>
           <TestComponent />
         </AuthProvider>
@@ -136,7 +136,7 @@ describe('AuthContext', () => {
       // The header's sign-in state waits for this check.
       expect(requestIdleCallback).toHaveBeenCalledTimes(1);
       expect(requestIdleCallback.mock.calls[0][1]?.timeout).toBeLessThanOrEqual(1000);
-      unmount();
+      await unmount();
     } finally {
       Object.defineProperty(Platform, 'OS', { value: originalOS, configurable: true });
       delete (window as { requestIdleCallback?: unknown }).requestIdleCallback;
@@ -163,7 +163,7 @@ describe('AuthContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
       </AuthProvider>
@@ -188,7 +188,7 @@ describe('AuthContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
       </AuthProvider>
@@ -215,7 +215,7 @@ describe('AuthContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
       </AuthProvider>
@@ -281,7 +281,7 @@ describe('AuthContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
       </AuthProvider>
@@ -327,7 +327,7 @@ describe('AuthContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
       </AuthProvider>
@@ -353,7 +353,7 @@ describe('AuthContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
       </AuthProvider>
@@ -385,7 +385,7 @@ describe('AuthContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
       </AuthProvider>
@@ -417,7 +417,7 @@ describe('AuthContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
       </AuthProvider>
@@ -457,7 +457,7 @@ describe('AuthContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
       </AuthProvider>
@@ -478,7 +478,7 @@ describe('AuthContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
       </AuthProvider>
@@ -499,7 +499,7 @@ describe('AuthContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
       </AuthProvider>

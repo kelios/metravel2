@@ -93,8 +93,8 @@ describe('#1801 офлайн-переход на сохранённый марш
 
   // Порядок вызова повторяет дерево: шапка с крошками рендерится раньше
   // содержимого маршрута и подписывается на ключ первой.
-  const renderRoute = () =>
-    renderHook(() => {
+  const renderRoute = async () =>
+    await renderHook(() => {
       const crumbs = useBreadcrumbModel();
       const details = useTravelDetails();
       return { crumbs, details };
@@ -125,8 +125,8 @@ describe('#1801 офлайн-переход на сохранённый марш
     onlineManager.setOnline(false);
   });
 
-  afterEach(() => {
-    cleanup();
+  afterEach(async () => {
+    await cleanup();
     onlineManager.setOnline(true);
     queryClient.clear();
     const errors = consoleError.mock.calls;
@@ -140,7 +140,7 @@ describe('#1801 офлайн-переход на сохранённый марш
   ])('%s: отдаёт сохранённый пакет, а не зависает на загрузке', async (_label, pathname, param, key) => {
     openRoute(pathname, param);
 
-    const { result } = renderRoute();
+    const { result } = await renderRoute();
 
     await waitFor(() => expect(result.current.details.travel?.id).toBe(TRAVEL_ID));
     expect(result.current.details.isLoading).toBe(false);
@@ -154,7 +154,7 @@ describe('#1801 офлайн-переход на сохранённый марш
   it('повторный офлайн-переход на несохранённый маршрут даёт конечное состояние, а не бесконечную загрузку', async () => {
     openRoute('/travels/682', '682');
 
-    const { result } = renderRoute();
+    const { result } = await renderRoute();
 
     await waitFor(() => expect(result.current.details.isError).toBe(true));
     expect(result.current.details.error?.message).toBe('OFFLINE_CONTENT_NOT_SAVED');
@@ -172,14 +172,14 @@ describe('#1801 офлайн-переход на сохранённый марш
     onlineManager.setOnline(false);
 
     openRoute(`/travels/${TRAVEL_ID}`, String(TRAVEL_ID));
-    const { result, rerender } = renderRoute();
+    const { result, rerender } = await renderRoute();
     await waitFor(() => expect(result.current.details.travel?.id).toBe(TRAVEL_ID));
     expect(crumbLabels(result.current.crumbs)).toContain(travelFixture.name);
 
     // Шапка НЕ размонтируется между маршрутами: подписка обязана переехать на
     // новый ключ, иначе крошка навсегда останется на предыдущем маршруте.
     openRoute(`/travels/${SECOND_SLUG}`, SECOND_SLUG);
-    rerender(undefined as never);
+    await rerender(undefined as never);
 
     await waitFor(() => expect(result.current.details.travel?.id).toBe(SECOND_ID));
     await waitFor(() => expect(crumbLabels(result.current.crumbs)).toContain(SECOND_NAME));
@@ -200,7 +200,7 @@ describe('#1801 офлайн-переход на сохранённый марш
 
     // expo-router на web отдаёт сегмент пути закодированным.
     openRoute(`/travels/${encodeURIComponent(ENCODED_SLUG)}`, encodeURIComponent(ENCODED_SLUG));
-    const { result } = renderRoute();
+    const { result } = await renderRoute();
 
     await waitFor(() => expect(result.current.details.travel?.id).toBe(ENCODED_ID));
     // Крошка читает ключ владельца: разошедшаяся нормализация оставила бы её

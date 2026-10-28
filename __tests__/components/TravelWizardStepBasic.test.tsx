@@ -238,14 +238,14 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             isLoading: false,
         };
 
-        it('keeps the ordinary first step without the contextual country selector', () => {
-            const screen = render(<TravelWizardStepBasic {...defaultProps} />);
+        it('keeps the ordinary first step without the contextual country selector', async () => {
+            const screen = await render(<TravelWizardStepBasic {...defaultProps} />);
             expect(screen.queryByTestId('travel-wizard.step-basic.countries')).toBeNull();
         });
 
-        it('shows the prefilled place and country, then edits both through the existing form', () => {
+        it('shows the prefilled place and country, then edits both through the existing form', async () => {
             const formData = { ...baseFormData, name: 'Гродно', countries: ['3'] };
-            const screen = render(
+            const screen = await render(
                 <TravelWizardStepBasic {...defaultProps} formData={formData} shareTripCountryField={shareTripCountryField} />,
             );
 
@@ -254,32 +254,32 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             expect(defaultProps.setFormData).not.toHaveBeenCalled();
             expect(defaultProps.onManualSave).not.toHaveBeenCalled();
 
-            fireEvent.changeText(screen.getByDisplayValue('Гродно'), 'Моя поездка в Гродно');
+            await fireEvent.changeText(screen.getByDisplayValue('Гродно'), 'Моя поездка в Гродно');
             const nameUpdate = defaultProps.setFormData.mock.calls[0][0];
             expect(nameUpdate(formData)).toEqual({ ...formData, name: 'Моя поездка в Гродно' });
 
-            fireEvent.press(screen.getByLabelText('Открыть выбор'));
-            fireEvent.press(screen.getByTestId('simple-multiselect.item.5'));
+            await fireEvent.press(screen.getByLabelText('Открыть выбор'));
+            await fireEvent.press(screen.getByTestId('simple-multiselect.item.5'));
             const countryUpdate = defaultProps.setFormData.mock.calls[1][0];
             expect(countryUpdate(formData)).toEqual({ ...formData, countries: ['3', '5'] });
             expect(defaultProps.onManualSave).not.toHaveBeenCalled();
         });
 
-        it('allows clearing the transferred country without changing the place name', () => {
+        it('allows clearing the transferred country without changing the place name', async () => {
             const formData = { ...baseFormData, name: 'Гродно', countries: ['3'] };
-            const screen = render(
+            const screen = await render(
                 <TravelWizardStepBasic {...defaultProps} formData={formData} shareTripCountryField={shareTripCountryField} />,
             );
 
-            fireEvent.press(screen.getByLabelText('Удалить Беларусь из выбранных'));
+            await fireEvent.press(screen.getByLabelText('Удалить Беларусь из выбранных'));
 
             const update = defaultProps.setFormData.mock.calls[0][0];
             expect(update(formData)).toEqual({ ...formData, countries: [] });
         });
 
-        it('retains the country selection while a retry refreshes the catalog', () => {
+        it('retains the country selection while a retry refreshes the catalog', async () => {
             const formData = { ...baseFormData, name: 'Гродно', countries: ['3'] };
-            const screen = render(
+            const screen = await render(
                 <TravelWizardStepBasic
                     {...defaultProps}
                     formData={formData}
@@ -289,13 +289,13 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
 
             expect(screen.getByDisplayValue('Гродно')).toBeTruthy();
             expect(screen.getByText('Беларусь')).toBeTruthy();
-            fireEvent.press(screen.getByLabelText('Открыть выбор'));
+            await fireEvent.press(screen.getByLabelText('Открыть выбор'));
             expect(screen.queryByTestId('simple-multiselect.item.5')).toBeNull();
             expect(defaultProps.setFormData).not.toHaveBeenCalled();
         });
 
         it('reacts to locale changes for the new country label', async () => {
-            const screen = render(
+            const screen = await render(
                 <TravelWizardStepBasic {...defaultProps} shareTripCountryField={shareTripCountryField} />,
             );
 
@@ -311,33 +311,33 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
     });
 
     describe('✅ Отображение компонентов', () => {
-        it('должен отображать заголовок шага', () => {
-            const { getByText } = render(<TravelWizardStepBasic {...defaultProps} />);
+        it('должен отображать заголовок шага', async () => {
+            const { getByText } = await render(<TravelWizardStepBasic {...defaultProps} />);
             expect(getByText('Основная информация')).toBeTruthy();
         });
 
-        it('должен отображать поле "Название путешествия"', () => {
-            const { getByText } = render(<TravelWizardStepBasic {...defaultProps} />);
+        it('должен отображать поле "Название путешествия"', async () => {
+            const { getByText } = await render(<TravelWizardStepBasic {...defaultProps} />);
             expect(getByText('Название путешествия')).toBeTruthy();
         });
 
-        it('должен отображать кнопку "Далее"', () => {
-            const { getByText } = render(<TravelWizardStepBasic {...defaultProps} />);
+        it('должен отображать кнопку "Далее"', async () => {
+            const { getByText } = await render(<TravelWizardStepBasic {...defaultProps} />);
             expect(getByText('Далее')).toBeTruthy();
         });
 
-        it('должен отображать кнопку "Быстрый черновик"', () => {
-            const { getByText } = render(<TravelWizardStepBasic {...defaultProps} />);
+        it('должен отображать кнопку "Быстрый черновик"', async () => {
+            const { getByText } = await render(<TravelWizardStepBasic {...defaultProps} />);
             expect(getByText('Быстрый черновик')).toBeTruthy();
         });
     });
 
     describe('✅ Валидация названия', () => {
         it('должен требовать минимум 3 символа для названия', async () => {
-            const { getByPlaceholderText } = render(<TravelWizardStepBasic {...defaultProps} />);
+            const { getByPlaceholderText } = await render(<TravelWizardStepBasic {...defaultProps} />);
 
             const nameInput = getByPlaceholderText('Например: Неделя в Грузии');
-            fireEvent.changeText(nameInput, 'Аб');
+            await fireEvent.changeText(nameInput, 'Аб');
 
             // Валидация должна показать ошибку при попытке сохранить
             await waitFor(() => {
@@ -349,11 +349,11 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             expect(nextState).toEqual(expect.objectContaining({ name: 'Аб' }));
         });
 
-        it('должен принимать валидное название', () => {
-            const { getByPlaceholderText } = render(<TravelWizardStepBasic {...defaultProps} />);
+        it('должен принимать валидное название', async () => {
+            const { getByPlaceholderText } = await render(<TravelWizardStepBasic {...defaultProps} />);
 
             const nameInput = getByPlaceholderText('Например: Неделя в Грузии');
-            fireEvent.changeText(nameInput, 'Путешествие по Грузии');
+            await fireEvent.changeText(nameInput, 'Путешествие по Грузии');
 
             expect(defaultProps.setFormData).toHaveBeenCalled();
             const updateArg = defaultProps.setFormData.mock.calls[0][0];
@@ -364,7 +364,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
 
     describe('✅ Quick Draft (Быстрый черновик)', () => {
         it('НЕ должен сохранять черновик если название пустое', async () => {
-            const { getByText } = render(
+            const { getByText } = await render(
                 <TravelWizardStepBasic
                     {...defaultProps}
                     formData={{ ...defaultProps.formData, name: '' }}
@@ -372,7 +372,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             );
 
             const quickDraftButton = getByText('Быстрый черновик');
-            fireEvent.press(quickDraftButton);
+            await fireEvent.press(quickDraftButton);
 
             await waitFor(() => {
                 expect(Toast.show).toHaveBeenCalledWith(expect.objectContaining({
@@ -387,7 +387,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
         });
 
         it('НЕ должен сохранять черновик если название < 3 символов', async () => {
-            const { getByText } = render(
+            const { getByText } = await render(
                 <TravelWizardStepBasic
                     {...defaultProps}
                     formData={{ ...defaultProps.formData, name: 'Аб' }}
@@ -395,7 +395,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             );
 
             const quickDraftButton = getByText('Быстрый черновик');
-            fireEvent.press(quickDraftButton);
+            await fireEvent.press(quickDraftButton);
 
             await waitFor(() => {
                 expect(Toast.show).toHaveBeenCalledWith(expect.objectContaining({
@@ -412,7 +412,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
                 id: '123',
             });
 
-            const { getByText } = render(
+            const { getByText } = await render(
                 <TravelWizardStepBasic
                     {...defaultProps}
                     formData={{ ...defaultProps.formData, name: 'Грузия 2026' }}
@@ -422,7 +422,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             );
 
             const quickDraftButton = getByText('Быстрый черновик');
-            fireEvent.press(quickDraftButton);
+            await fireEvent.press(quickDraftButton);
 
             await waitFor(() => {
                 expect(mockSave).toHaveBeenCalled();
@@ -443,7 +443,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
                 id: '123',
             });
 
-            const { getByText } = render(
+            const { getByText } = await render(
                 <TravelWizardStepBasic
                     {...defaultProps}
                     formData={{ ...defaultProps.formData, name: 'Грузия 2026' }}
@@ -453,7 +453,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             );
 
             const quickDraftButton = getByText('Быстрый черновик');
-            fireEvent.press(quickDraftButton);
+            await fireEvent.press(quickDraftButton);
 
             await waitFor(() => {
                 expect(mockSave).toHaveBeenCalled();
@@ -467,7 +467,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
         it('должен показать ошибку при неудачном сохранении', async () => {
             const mockSave = jest.fn().mockRejectedValue(new Error('Network error'));
 
-            const { getByText } = render(
+            const { getByText } = await render(
                 <TravelWizardStepBasic
                     {...defaultProps}
                     formData={{ ...defaultProps.formData, name: 'Грузия 2026' }}
@@ -476,7 +476,7 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             );
 
             const quickDraftButton = getByText('Быстрый черновик');
-            fireEvent.press(quickDraftButton);
+            await fireEvent.press(quickDraftButton);
 
             await waitFor(() => {
                 expect(Toast.show).toHaveBeenCalledWith(expect.objectContaining({
@@ -491,11 +491,11 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
     });
 
     describe('✅ Кнопка "Далее"', () => {
-        it('должна вызвать onGoNext при нажатии', () => {
-            const { getByText } = render(<TravelWizardStepBasic {...defaultProps} />);
+        it('должна вызвать onGoNext при нажатии', async () => {
+            const { getByText } = await render(<TravelWizardStepBasic {...defaultProps} />);
 
             const nextButton = getByText('Далее');
-            fireEvent.press(nextButton);
+            await fireEvent.press(nextButton);
 
             expect(defaultProps.onGoNext).toHaveBeenCalled();
         });
@@ -503,31 +503,31 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
 
     // Regression: #528 — editor opened from search must offer a way back.
     describe('✅ Кнопка "Назад"/выход (#528)', () => {
-        it('показывает кнопку "Назад" на шаге 1, когда передан onExit', () => {
-            const { getByTestId } = render(
+        it('показывает кнопку "Назад" на шаге 1, когда передан onExit', async () => {
+            const { getByTestId } = await render(
                 <TravelWizardStepBasic {...defaultProps} onExit={jest.fn()} />
             );
             expect(getByTestId('travel-wizard-back')).toBeTruthy();
         });
 
-        it('вызывает onExit при нажатии на "Назад"', () => {
+        it('вызывает onExit при нажатии на "Назад"', async () => {
             const onExit = jest.fn();
-            const { getByTestId } = render(
+            const { getByTestId } = await render(
                 <TravelWizardStepBasic {...defaultProps} onExit={onExit} />
             );
-            fireEvent.press(getByTestId('travel-wizard-back'));
+            await fireEvent.press(getByTestId('travel-wizard-back'));
             expect(onExit).toHaveBeenCalledTimes(1);
         });
 
-        it('не показывает кнопку "Назад", если onExit не передан', () => {
-            const { queryByTestId } = render(<TravelWizardStepBasic {...defaultProps} />);
+        it('не показывает кнопку "Назад", если onExit не передан', async () => {
+            const { queryByTestId } = await render(<TravelWizardStepBasic {...defaultProps} />);
             expect(queryByTestId('travel-wizard-back')).toBeNull();
         });
     });
 
     describe('✅ Сводка ошибок', () => {
-        it('должен сохранить desktop summary после submit-attempt', () => {
-            const { getByText, queryByText } = render(
+        it('должен сохранить desktop summary после submit-attempt', async () => {
+            const { getByText, queryByText } = await render(
                 <TravelWizardStepBasic
                     {...defaultProps}
                     stepErrors={['Название путешествия обязательно для заполнения']}
@@ -538,13 +538,13 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             expect(queryByText('collapsible-errors:2')).toBeNull();
         });
 
-        it('должен показать collapsible mobile summary после submit-attempt', () => {
+        it('должен показать collapsible mobile summary после submit-attempt', async () => {
             mockResponsiveState = {
                 isHydrated: true,
                 isMobile: true,
             };
 
-            const { getByText, queryByText } = render(
+            const { getByText, queryByText } = await render(
                 <TravelWizardStepBasic
                     {...defaultProps}
                     stepErrors={['Название путешествия обязательно для заполнения']}
@@ -555,13 +555,13 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
             expect(queryByText('errors:2')).toBeNull();
         });
 
-        it('не должен показывать mobile summary до submit-attempt', () => {
+        it('не должен показывать mobile summary до submit-attempt', async () => {
             mockResponsiveState = {
                 isHydrated: true,
                 isMobile: true,
             };
 
-            const { queryByText } = render(<TravelWizardStepBasic {...defaultProps} />);
+            const { queryByText } = await render(<TravelWizardStepBasic {...defaultProps} />);
 
             expect(queryByText('collapsible-errors:2')).toBeNull();
             expect(queryByText('errors:2')).toBeNull();
@@ -569,8 +569,8 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
     });
 
     describe('✅ Автосохранение индикатор', () => {
-        it('должен показать бейдж автосохранения', () => {
-            const { getByText } = render(
+        it('должен показать бейдж автосохранения', async () => {
+            const { getByText } = await render(
                 <TravelWizardStepBasic
                     {...defaultProps}
                     autosaveBadge="Сохранено"
@@ -582,8 +582,8 @@ describe('TravelWizardStepBasic (Шаг 1)', () => {
     });
 
     describe('✅ Прогресс', () => {
-        it('должен показать правильный процент прогресса', () => {
-            const { getByText } = render(<TravelWizardStepBasic {...defaultProps} />);
+        it('должен показать правильный процент прогресса', async () => {
+            const { getByText } = await render(<TravelWizardStepBasic {...defaultProps} />);
 
             // Прогресс 1/6 = ~17%
             expect(getByText(/17% готово/)).toBeTruthy();

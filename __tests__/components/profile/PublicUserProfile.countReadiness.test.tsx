@@ -77,42 +77,42 @@ describe('public author route count readiness (#2335)', () => {
   }
 
   it('updates unavailable pill accessibility text when the locale changes', async () => {
-    const view = render(<ProfileStatPills pills={[{ key: 'travels', label: 'Routes', value: null, icon: 'map', onPress: jest.fn() }]} />);
+    const view = await render(<ProfileStatPills pills={[{ key: 'travels', label: 'Routes', value: null, icon: 'map', onPress: jest.fn() }]} />);
     expect(view.getByLabelText('Routes: количество недоступно')).toBeTruthy();
     try {
       await act(async () => { await i18n.changeLanguage('en'); });
       expect(view.getByLabelText('Routes: count unavailable')).toBeTruthy();
       expect(view.queryByLabelText('Routes: количество недоступно')).toBeNull();
     } finally {
-      view.unmount();
+      await view.unmount();
       await act(async () => { await i18n.changeLanguage('ru'); });
     }
   });
 
-  it('keeps a ready profile navigable while its independent routes request is pending', () => {
+  it('keeps a ready profile navigable while its independent routes request is pending', async () => {
     mockFetchTravels.mockReturnValue(new Promise(() => {}));
-    const view = render(screen());
+    const view = await render(screen());
     expect(view.getByText('Author 7')).toBeTruthy();
     expect(view.queryByLabelText('Маршруты: 0')).toBeNull();
     expect(view.getAllByLabelText('Маршруты')).toHaveLength(2);
-    fireEvent.press(view.getAllByLabelText('Маршруты')[0]);
+    await fireEvent.press(view.getAllByLabelText('Маршруты')[0]);
     expect(view.queryByText('У автора пока нет опубликованных путешествий')).toBeNull();
   });
 
   it('renders unavailable count in both real consumers after an initial error', async () => {
     mockFetchTravels.mockRejectedValue(new Error('routes failed'));
-    const view = render(screen());
+    const view = await render(screen());
     await waitFor(() => expect(view.getAllByLabelText('Маршруты: количество недоступно')).toHaveLength(2));
     expect(view.getAllByText('—')).toHaveLength(2);
     expect(view.queryByLabelText('Маршруты: 0')).toBeNull();
     expect(view.getByText(loadError)).toBeTruthy();
-    fireEvent.press(view.getAllByLabelText('Маршруты: количество недоступно')[0]);
+    await fireEvent.press(view.getAllByLabelText('Маршруты: количество недоступно')[0]);
   });
 
   it.each([0, 15])('renders confirmed total %i after success', async (total) => {
     const response = deferred<TravelsResult>();
     mockFetchTravels.mockReturnValue(response.promise);
-    const view = render(screen());
+    const view = await render(screen());
     await act(async () => response.resolve({ data: total ? [trip] : [], total }));
     await waitFor(() => expect(view.getAllByLabelText(`Маршруты: ${total}`)).toHaveLength(total ? 2 : 1));
     expect(view.queryByText('—')).toBeNull();
@@ -123,11 +123,11 @@ describe('public author route count readiness (#2335)', () => {
 
   it('retains confirmed same-author count and cards when a refresh fails', async () => {
     mockFetchTravels.mockResolvedValue({ data: [trip], total: 15 });
-    const view = render(screen());
+    const view = await render(screen());
     await waitFor(() => expect(view.getAllByLabelText('Маршруты: 15')).toHaveLength(2));
     const refresh = deferred<TravelsResult>();
     mockFetchTravels.mockReturnValue(refresh.promise);
-    act(() => { void client.invalidateQueries({ queryKey: queryKeys.userTravels('7') }); });
+    await act(() => { void client.invalidateQueries({ queryKey: queryKeys.userTravels('7') }); });
     expect(view.getAllByLabelText('Маршруты: 15')).toHaveLength(2);
     await act(async () => refresh.reject(new Error('refresh failed')));
     await waitFor(() => expect(view.getByText(loadError)).toBeTruthy());
@@ -137,18 +137,18 @@ describe('public author route count readiness (#2335)', () => {
 
   it('keeps pagination placeholders for the same author and excludes them for another', async () => {
     mockFetchTravels.mockResolvedValue({ data: [trip], total: 15 });
-    const view = render(screen());
+    const view = await render(screen());
     await waitFor(() => expect(view.getAllByLabelText('Маршруты: 15')).toHaveLength(2));
     const page = deferred<TravelsResult>();
     mockFetchTravels.mockReturnValue(page.promise);
-    fireEvent.press(view.getByText('Показать ещё'));
+    await fireEvent.press(view.getByText('Показать ещё'));
     expect(view.getAllByLabelText('Маршруты: 15')).toHaveLength(2);
     expect(view.getByText(trip.name)).toBeTruthy();
     await act(async () => page.resolve({ data: [trip], total: 15 }));
     const nextAuthor = deferred<TravelsResult>();
     mockFetchTravels.mockReturnValue(nextAuthor.promise);
     mockAuthorId = '8';
-    view.rerender(screen());
+    await view.rerender(screen());
     expect(view.getByText('Author 8')).toBeTruthy();
     expect(view.queryAllByLabelText('Маршруты: 15')).toHaveLength(0);
     expect(view.queryByText(trip.name)).toBeNull();

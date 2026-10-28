@@ -115,29 +115,29 @@ describe('useCommentsData', () => {
     mockUseReplyToComment.mockReturnValue({ mutate: jest.fn(), isPending: false } as any);
   });
 
-  it('prefers the canonical tree query and skips the flat query when tree is available', () => {
-    renderHook(() => useCommentsData(123), { wrapper });
+  it('prefers the canonical tree query and skips the flat query when tree is available', async () => {
+    await renderHook(() => useCommentsData(123), { wrapper });
 
     expect(mockUseTravelCommentTree).toHaveBeenCalledWith(123, { enabled: true });
     // Flat fallback stays disabled while the canonical tree payload exists.
     expect(mockUseTravelComments).toHaveBeenCalledWith(123, undefined, { enabled: false });
   });
 
-  it('does not fetch comments when disabled', () => {
-    renderHook(() => useCommentsData(123, { enabled: false }), { wrapper });
+  it('does not fetch comments when disabled', async () => {
+    await renderHook(() => useCommentsData(123, { enabled: false }), { wrapper });
 
     expect(mockUseTravelCommentTree).toHaveBeenCalledWith(123, { enabled: false });
     expect(mockUseTravelComments).toHaveBeenCalledWith(123, undefined, { enabled: false });
   });
 
-  it('returns an empty thread model for an empty tree', () => {
-    const { result } = renderHook(() => useCommentsData(123), { wrapper });
+  it('returns an empty thread model for an empty tree', async () => {
+    const { result } = await renderHook(() => useCommentsData(123), { wrapper });
 
     expect(result.current.comments).toEqual([]);
     expect(result.current.topLevel).toEqual([]);
   });
 
-  it('maps a top-level-only tree without replies', () => {
+  it('maps a top-level-only tree without replies', async () => {
     mockUseTravelCommentTree.mockReturnValue(
       treeQueryResult({
         travel_id: 123,
@@ -150,14 +150,14 @@ describe('useCommentsData', () => {
       }),
     );
 
-    const { result } = renderHook(() => useCommentsData(123), { wrapper });
+    const { result } = await renderHook(() => useCommentsData(123), { wrapper });
 
     expect(result.current.topLevel.map((c) => c.id)).toEqual([1, 2]);
     expect(result.current.replies).toEqual({});
     expect(result.current.comments).toHaveLength(2);
   });
 
-  it('maps nested replies from the tree and resolves the parent chain', () => {
+  it('maps nested replies from the tree and resolves the parent chain', async () => {
     // Root (id 1) opens sub_thread 50; its reply (id 2, thread 50) opens
     // sub_thread 60; grandchild (id 3, thread 60).
     mockUseTravelCommentTree.mockReturnValue(
@@ -190,7 +190,7 @@ describe('useCommentsData', () => {
       }),
     );
 
-    const { result } = renderHook(() => useCommentsData(123), { wrapper });
+    const { result } = await renderHook(() => useCommentsData(123), { wrapper });
 
     expect(result.current.topLevel.map((c) => c.id)).toEqual([1]);
     expect(result.current.replies[1]?.map((c) => c.id)).toEqual([2]);
@@ -198,7 +198,7 @@ describe('useCommentsData', () => {
     expect(result.current.getParentChain(3).map((c) => c.id)).toEqual([1, 2]);
   });
 
-  it('falls back to the flat path when the tree endpoint is unavailable (404 -> null)', () => {
+  it('falls back to the flat path when the tree endpoint is unavailable (404 -> null)', async () => {
     mockUseTravelCommentTree.mockReturnValue(treeQueryResult(null));
     mockUseTravelComments.mockReturnValue(
       flatQueryResult([
@@ -207,7 +207,7 @@ describe('useCommentsData', () => {
       ]),
     );
 
-    const { result } = renderHook(() => useCommentsData(123), { wrapper });
+    const { result } = await renderHook(() => useCommentsData(123), { wrapper });
 
     // Flat query becomes enabled once the tree query settles without a payload.
     expect(mockUseTravelComments).toHaveBeenCalledWith(123, undefined, { enabled: true });

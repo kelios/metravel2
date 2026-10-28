@@ -47,7 +47,7 @@ describe('quest-only web catch-all', () => {
 
   it.each(['be', 'uk', 'pl', 'en'])('delegates an exact %s prefix with stable city and slug', async (locale) => {
     mockPathname = mockCardPath = `/${locale}/quests/4/minsk-cmok`
-    render(<QuestLocaleRouteScreen />)
+    await render(<QuestLocaleRouteScreen />)
     // The quest screen is a lazy boundary (#2389): it resolves after the first render.
     await waitFor(() => expect(mockDetail).toHaveBeenCalledWith(expect.objectContaining({
       route: { locale, cityId: 4, questSlug: 'minsk-cmok', path: mockCardPath },
@@ -55,23 +55,23 @@ describe('quest-only web catch-all', () => {
     expect(mockNotFound).not.toHaveBeenCalled()
   })
 
-  it.each(['/de/quests/4/minsk-cmok', '/ru/quests/4/minsk-cmok', '/pl/quests/minsk', '/pl/quests/minsk/minsk-cmok', '/pl/travels/example'])('keeps unsupported path %s in the existing not-found screen', (path) => {
+  it.each(['/de/quests/4/minsk-cmok', '/ru/quests/4/minsk-cmok', '/pl/quests/minsk', '/pl/quests/minsk/minsk-cmok', '/pl/travels/example'])('keeps unsupported path %s in the existing not-found screen', async (path) => {
     mockPathname = mockCardPath = path
-    render(<QuestLocaleRouteScreen />)
+    await render(<QuestLocaleRouteScreen />)
     expect(mockDetail).not.toHaveBeenCalled()
     expect(mockNotFound).toHaveBeenCalled()
   })
 
   it('renders an already loaded quest screen in the first commit, without a Suspense fallback (#2465)', async () => {
     mockPathname = mockCardPath = '/pl/quests/4/minsk-cmok'
-    const first = render(<QuestLocaleRouteScreen />)
+    const first = await render(<QuestLocaleRouteScreen />)
     await waitFor(() => expect(mockDetail).toHaveBeenCalled())
-    first.unmount()
+    await first.unmount()
     mockDetail.mockClear()
 
     // The translated document ships the chunk (#2465): the module is in before
     // mount, so the screen must not suspend — its retry would be throttled.
-    render(<QuestLocaleRouteScreen />)
+    await render(<QuestLocaleRouteScreen />)
     expect(mockDetail).toHaveBeenCalledWith(expect.objectContaining({
       route: expect.objectContaining({ locale: 'pl', questSlug: 'minsk-cmok' }),
     }))
@@ -85,12 +85,12 @@ describe('quest-only web catch-all', () => {
       return <DetailHeading path={route.path} />
     })
     mockPathname = mockCardPath = '/be/quests/1/krakow-dragon'
-    render(<QuestLocaleRouteScreen />)
+    await render(<QuestLocaleRouteScreen />)
     expect(await screen.findByText('detail /be/quests/1/krakow-dragon')).toBeTruthy()
     const rendersBeforePush = mockDetail.mock.calls.length
 
     // router.push('/uk/…'): the global path moves, this card stays BE and blurs.
-    act(() => {
+    await act(() => {
       mockPathname = '/uk/quests/1/krakow-dragon'
       setFocused(false)
     })
@@ -99,7 +99,7 @@ describe('quest-only web catch-all', () => {
     expect(screen.getAllByText(/^detail /, { includeHiddenElements: true })).toHaveLength(1)
 
     // Back: the same BE card is shown again without remounting another identity.
-    act(() => {
+    await act(() => {
       mockPathname = '/be/quests/1/krakow-dragon'
       setFocused(true)
     })

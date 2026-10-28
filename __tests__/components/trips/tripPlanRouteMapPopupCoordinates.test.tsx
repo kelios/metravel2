@@ -1,3 +1,4 @@
+import { createWebMapTestRuntime, type WebMapTestRuntime } from '@/__tests__/helpers/webMapTestRuntime'
 /**
  * #1679 — попап точки на карте плана поездки печатает координаты через общий
  * форматтер, а не своей копией формата.
@@ -8,7 +9,8 @@
  * координат не печатает пустую строку и не роняет попап.
  */
 import React from 'react'
-import { render, waitFor } from '@testing-library/react-native'
+let render: typeof import('@testing-library/react/pure').render
+let waitFor: typeof import('@testing-library/react/pure').waitFor
 
 import type { RoutePoint } from '@/api/plannedTrips'
 
@@ -27,7 +29,6 @@ jest.mock('@/components/trips/planning/tripPlanFormatting', () => ({
     mockFormatRoutePointCoordinates(coordinates),
 }))
 
-jest.mock('react-dom', () => ({ createPortal: (node: unknown) => node }))
 jest.mock('@/utils/ensureLeafletCss', () => ({ ensureLeafletCss: jest.fn() }))
 
 jest.mock('@/utils/loadLeafletRuntime', () => ({
@@ -57,7 +58,7 @@ jest.mock('@/hooks/useTheme', () => ({
     new Proxy({}, { get: (_t, key) => String(key) }) as unknown as Record<string, string>,
 }))
 
-import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap.web'
+let TripPlanRouteMap: typeof import('@/components/trips/planning/TripPlanRouteMap.web').default
 
 // Контракт хранения: `RoutePoint.coordinates` = [lng, lat] (api/plannedTripsTypes.ts).
 const COORDINATES: [number, number] = [26.247111, 56.006732]
@@ -75,14 +76,10 @@ const point = (
   placeId: null,
 })
 
-const collectText = (node: unknown): string[] => {
-  if (typeof node === 'string') return [node]
-  if (Array.isArray(node)) return node.flatMap(collectText)
-  if (node && typeof node === 'object' && 'children' in node) {
-    return collectText((node as { children: unknown }).children)
-  }
-  return []
-}
+const collectText = (node: Node): string[] =>
+  node.nodeType === Node.TEXT_NODE
+    ? [node.textContent ?? '']
+    : Array.from(node.childNodes).flatMap(collectText)
 
 describe('TripPlanRouteMap.web — координаты в попапе точки', () => {
   beforeEach(() => {
@@ -90,29 +87,39 @@ describe('TripPlanRouteMap.web — координаты в попапе точк
   })
 
   it('печатает строку общего форматтера, а не собственную копию формата', async () => {
-    const screen = render(<TripPlanRouteMap route={[point(COORDINATES)]} />)
+    const screen = await render(<TripPlanRouteMap route={[point(COORDINATES)]} />)
 
-    await waitFor(() => expect(collectText(screen.toJSON())).toContain('Точка'))
+    await waitFor(() => expect(collectText(screen.container)).toContain('Точка'))
 
     expect(mockFormatRoutePointCoordinates).toHaveBeenCalledWith(COORDINATES)
     // Ровно та же строка, что печатает карточка точки: lat, lng и пять знаков.
-    expect(collectText(screen.toJSON())).toContain('56.00673, 26.24711')
+    expect(collectText(screen.container)).toContain('56.00673, 26.24711')
   })
 
   it('не печатает пустую строку координат для битой пары', async () => {
     // #1683 передвинул гард выше по потоку: битая точка больше не доходит до
     // попапа, потому что на ней не строится и сам маркер. Соседняя валидная
     // точка держит рендер и показывает, что упала ровно одна пара, а не карта.
-    const screen = render(
+    const screen = await render(
       <TripPlanRouteMap route={[point(COORDINATES), point([Number.NaN, 56.006732], 'Битая', 'b')]} />,
     )
 
-    await waitFor(() => expect(collectText(screen.toJSON())).toContain('Точка'))
+    await waitFor(() => expect(collectText(screen.container)).toContain('Точка'))
 
-    const text = collectText(screen.toJSON())
+    const text = collectText(screen.container)
     expect(text).not.toContain('Битая')
     expect(mockFormatRoutePointCoordinates).not.toHaveBeenCalledWith([Number.NaN, 56.006732])
     // Инлайн-копия напечатала бы здесь «NaN, 56.00673».
     expect(text.some((line) => line.includes('NaN'))).toBe(false)
   })
 })
+
+let web: WebMapTestRuntime<typeof TripPlanRouteMap>
+beforeAll(() => {
+  web = createWebMapTestRuntime(React, () => require('@/components/trips/planning/TripPlanRouteMap.web').default)
+  TripPlanRouteMap = web.subject
+  ;({ render, waitFor } = web)
+  expect.extend(web.matchers)
+})
+afterEach(() => web.cleanup())
+afterAll(() => expect.extend(require('@testing-library/react-native/matchers')))

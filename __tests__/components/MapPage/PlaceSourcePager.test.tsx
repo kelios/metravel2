@@ -5,8 +5,9 @@
  */
 import React from 'react';
 import { Platform } from 'react-native';
+import { createRootRegistry } from '@/__tests__/helpers/rawRootLifecycle';
 
-const renderer = require('react-test-renderer');
+const renderer = createRootRegistry();
 
 const mockImageCardMedia = jest.fn((props: any) =>
   React.createElement('mock-image-card-media', props),
@@ -53,13 +54,12 @@ const mockColors = {
 } as any;
 
 const findByTestID = (tree: any, testID: string) =>
-  tree.root.findAll((node: any) => node.props?.testID === testID);
+  tree.container.queryAll((node: any) => node.props?.testID === testID);
 
-// RN пробрасывает testID сквозь Pressable в host-узлы, поэтому один контрол
-// встречается в дереве несколько раз. Для «сколько их на экране» считаем только
-// host-элементы, а props читаем с первого совпадения.
+// test-renderer exposes the rendered host controls directly; each matching
+// host is one visible control, without counting its composite wrappers.
 const countRenderedByTestID = (tree: any, testID: string) =>
-  tree.root.findAll(
+  tree.container.queryAll(
     (node: any) => node.props?.testID === testID && typeof node.type === 'string',
   ).length;
 
@@ -71,18 +71,17 @@ const readCounterText = (tree: any): string | null => {
 };
 
 /** Место с двумя материалами: канонические поля места + активный источник. */
-const renderCard = (props: Record<string, unknown>) => {
+const renderCard = async (props: Record<string, unknown>) => {
   let tree: any;
-  renderer.act(() => {
-    tree = renderer.create(
-      <PlacePopupCard
+  await React.act(() => {
+    tree = renderer.createRoot();
+    tree.render(<PlacePopupCard
         colors={mockColors}
         title="Национальная библиотека Беларуси"
         coord="53.93129,27.6459"
         width={560}
         {...props}
-      />,
-    );
+      />);
   });
   return tree;
 };
@@ -102,13 +101,14 @@ describe('PlacePopupCard source pager', () => {
     }));
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await renderer.cleanup();
     (Platform as any).OS = originalPlatform;
     require('react-native').useWindowDimensions = originalWindowDimensions;
   });
 
-  it('shows the localized counter and both controls for a two-source place', () => {
-    const tree = renderCard({
+  it('shows the localized counter and both controls for a two-source place', async () => {
+    const tree = await renderCard({
       imageUrl: 'https://example.com/library-1.jpg',
       sourceCount: 2,
       activeSourceIndex: 0,
@@ -121,8 +121,8 @@ describe('PlacePopupCard source pager', () => {
     expect(countRenderedByTestID(tree, 'place-source-pager-next')).toBeGreaterThan(0);
   });
 
-  it('reflects the active source index in the counter', () => {
-    const tree = renderCard({
+  it('reflects the active source index in the counter', async () => {
+    const tree = await renderCard({
       imageUrl: 'https://example.com/library-2.jpg',
       sourceCount: 2,
       activeSourceIndex: 1,
@@ -133,10 +133,10 @@ describe('PlacePopupCard source pager', () => {
     expect(readCounterText(tree)).toBe('Материал 2 из 2');
   });
 
-  it('invokes previous/next callbacks from the controls', () => {
+  it('invokes previous/next callbacks from the controls', async () => {
     const onPrevSource = jest.fn();
     const onNextSource = jest.fn();
-    const tree = renderCard({
+    const tree = await renderCard({
       imageUrl: 'https://example.com/library-1.jpg',
       sourceCount: 2,
       activeSourceIndex: 0,
@@ -144,10 +144,10 @@ describe('PlacePopupCard source pager', () => {
       onNextSource,
     });
 
-    renderer.act(() => {
+    await React.act(() => {
       findByTestID(tree, 'place-source-pager-next')[0].props.onPress();
     });
-    renderer.act(() => {
+    await React.act(() => {
       findByTestID(tree, 'place-source-pager-prev')[0].props.onPress();
     });
 
@@ -155,8 +155,8 @@ describe('PlacePopupCard source pager', () => {
     expect(onPrevSource).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps pager controls at a 44 dp touch target', () => {
-    const tree = renderCard({
+  it('keeps pager controls at a 44 dp touch target', async () => {
+    const tree = await renderCard({
       imageUrl: 'https://example.com/library-1.jpg',
       sourceCount: 2,
       activeSourceIndex: 0,
@@ -165,15 +165,17 @@ describe('PlacePopupCard source pager', () => {
     });
 
     for (const testID of ['place-source-pager-prev', 'place-source-pager-next']) {
-      const style = findByTestID(tree, testID)[0].props.style({ pressed: false });
+      const controls = findByTestID(tree, testID);
+      expect(controls).toHaveLength(1);
+      const style = controls[0].props.style;
       const flat = require('react-native').StyleSheet.flatten(style);
       expect(flat.width).toBeGreaterThanOrEqual(44);
       expect(flat.height).toBeGreaterThanOrEqual(44);
     }
   });
 
-  it('shows the active source title next to the counter and swaps it while paging', () => {
-    const first = renderCard({
+  it('shows the active source title next to the counter and swaps it while paging', async () => {
+    const first = await renderCard({
       imageUrl: 'https://example.com/library-1.jpg',
       sourceCount: 2,
       activeSourceIndex: 0,
@@ -185,7 +187,7 @@ describe('PlacePopupCard source pager', () => {
       'Минск за выходные',
     );
 
-    const second = renderCard({
+    const second = await renderCard({
       imageUrl: 'https://example.com/library-2.jpg',
       sourceCount: 2,
       activeSourceIndex: 1,
@@ -199,8 +201,8 @@ describe('PlacePopupCard source pager', () => {
     );
   });
 
-  it('keeps the controls reachable on a source without a photo (inline pager)', () => {
-    const tree = renderCard({
+  it('keeps the controls reachable on a source without a photo (inline pager)', async () => {
+    const tree = await renderCard({
       sourceCount: 2,
       activeSourceIndex: 1,
       activeSourceTitle: 'Библиотеки Беларуси',
@@ -213,11 +215,11 @@ describe('PlacePopupCard source pager', () => {
     expect(countRenderedByTestID(tree, 'place-source-pager-prev')).toBeGreaterThan(0);
     expect(countRenderedByTestID(tree, 'place-source-pager-next')).toBeGreaterThan(0);
     expect(readCounterText(tree)).toBe('Материал 2 из 2');
-    expect(tree.root.findAll((node: any) => node.type === 'mock-image-card-media')).toHaveLength(0);
+    expect(tree.container.queryAll((node: any) => node.type === 'mock-image-card-media')).toHaveLength(0);
   });
 
-  it('renders no pager for a single-source place (negative control)', () => {
-    const tree = renderCard({
+  it('renders no pager for a single-source place (negative control)', async () => {
+    const tree = await renderCard({
       imageUrl: 'https://example.com/single.jpg',
       sourceCount: 1,
       activeSourceIndex: 0,
@@ -229,8 +231,8 @@ describe('PlacePopupCard source pager', () => {
     expect(readCounterText(tree)).toBeNull();
   });
 
-  it('renders no pager when the owner passes no paging callbacks', () => {
-    const tree = renderCard({
+  it('renders no pager when the owner passes no paging callbacks', async () => {
+    const tree = await renderCard({
       imageUrl: 'https://example.com/single.jpg',
       sourceCount: 3,
     });
@@ -238,8 +240,8 @@ describe('PlacePopupCard source pager', () => {
     expect(findByTestID(tree, 'place-source-pager')).toHaveLength(0);
   });
 
-  it('mounts only the active source image (media discipline)', () => {
-    const tree = renderCard({
+  it('mounts only the active source image (media discipline)', async () => {
+    const tree = await renderCard({
       imageUrl: 'https://example.com/library-1.jpg',
       sourceCount: 2,
       activeSourceIndex: 0,
@@ -247,12 +249,12 @@ describe('PlacePopupCard source pager', () => {
       onNextSource: jest.fn(),
     });
 
-    const mounted = tree.root.findAll((node: any) => node.type === 'mock-image-card-media');
+    const mounted = tree.container.queryAll((node: any) => node.type === 'mock-image-card-media');
     expect(mounted).toHaveLength(1);
     expect(mounted[0].props.src).toContain('library-1.jpg');
   });
 
-  it('keeps place-owned fields identical across source paging', () => {
+  it('keeps place-owned fields identical across source paging', async () => {
     const placeProps = {
       title: 'Национальная библиотека Беларуси',
       coord: '53.93129,27.6459',
@@ -262,18 +264,18 @@ describe('PlacePopupCard source pager', () => {
     };
 
     const readPlaceFields = (tree: any) => {
-      const texts = tree.root
-        .findAll((node: any) => typeof node.type === 'string' && node.props?.selectable)
+      const texts = tree.container
+        .queryAll((node: any) => typeof node.type === 'string' && node.props?.selectable)
         .map((node: any) => String(node.props.children));
       return texts;
     };
 
-    const first = renderCard({
+    const first = await renderCard({
       ...placeProps,
       imageUrl: 'https://example.com/library-1.jpg',
       activeSourceIndex: 0,
     });
-    const second = renderCard({
+    const second = await renderCard({
       ...placeProps,
       imageUrl: 'https://example.com/library-2.jpg',
       activeSourceIndex: 1,

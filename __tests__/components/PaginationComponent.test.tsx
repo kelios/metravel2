@@ -55,8 +55,8 @@ describe('PaginationComponent', () => {
     }
   })
 
-  it('renders minimal layout with current page info', () => {
-    const { getByText, toJSON } = render(<PaginationComponent {...defaultProps} />)
+  it('renders minimal layout with current page info', async () => {
+    const { getByText, toJSON } = await render(<PaginationComponent {...defaultProps} />)
 
     // Проверяем текущую десктопную разметку: "Стр." и "из 10" + значение инпута "1"
     expect(getByText('Стр.')).toBeTruthy()
@@ -67,41 +67,41 @@ describe('PaginationComponent', () => {
     expect(treeStr).toContain('"value":"1"')
   })
 
-  it('calls onPageChange when next is pressed', () => {
+  it('calls onPageChange when next is pressed', async () => {
     const onPageChange = jest.fn()
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <PaginationComponent {...defaultProps} onPageChange={onPageChange} />
     )
     const nextButton = getByLabelText('Следующая страница')
-    fireEvent.press(nextButton)
+    await fireEvent.press(nextButton)
     expect(onPageChange).toHaveBeenCalledWith(1)
   })
 
-  it('calls onPageChange when prev is pressed', () => {
+  it('calls onPageChange when prev is pressed', async () => {
     const onPageChange = jest.fn()
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <PaginationComponent {...defaultProps} currentPage={1} onPageChange={onPageChange} />
     )
     const prevButton = getByLabelText('Предыдущая страница')
-    fireEvent.press(prevButton)
+    await fireEvent.press(prevButton)
     expect(onPageChange).toHaveBeenCalledWith(0)
   })
 
-  it('disables prev button on first page', () => {
-    const { getByLabelText } = render(<PaginationComponent {...defaultProps} currentPage={0} />)
+  it('disables prev button on first page', async () => {
+    const { getByLabelText } = await render(<PaginationComponent {...defaultProps} currentPage={0} />)
     const prevButton = getByLabelText('Предыдущая страница')
     expect(prevButton.props.accessibilityState?.disabled).toBe(true)
   })
 
-  it('disables next button on last page', () => {
-    const { getByLabelText } = render(
+  it('disables next button on last page', async () => {
+    const { getByLabelText } = await render(
       <PaginationComponent {...defaultProps} currentPage={9} totalItems={100} />
     )
     const nextButton = getByLabelText('Следующая страница')
     expect(nextButton.props.accessibilityState?.disabled).toBe(true)
   })
 
-  it('updates page when input changes on mobile layout', () => {
+  it('updates page when input changes on mobile layout', async () => {
     ;(global as any).__mockResponsive = {
       width: 600,
       height: 800,
@@ -122,12 +122,12 @@ describe('PaginationComponent', () => {
     }
 
     const onPageChange = jest.fn()
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <PaginationComponent {...defaultProps} onPageChange={onPageChange} />
     )
     const input = getByLabelText('Текущая страница')
-    fireEvent.changeText(input, '5')
-    fireEvent(input, 'submitEditing')
+    await fireEvent.changeText(input, '5')
+    await fireEvent(input, 'submitEditing')
     expect(onPageChange).toHaveBeenCalledWith(4) // 0-based
   })
 })

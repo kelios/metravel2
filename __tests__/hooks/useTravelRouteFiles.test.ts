@@ -21,8 +21,8 @@ describe('useTravelRouteFiles', () => {
     useQuery.mockClear();
   });
 
-  it('disables the query when explicit enabled=false is passed', () => {
-    renderHook(() => useTravelRouteFiles(503, { enabled: false }));
+  it('disables the query when explicit enabled=false is passed', async () => {
+    await renderHook(() => useTravelRouteFiles(503, { enabled: false }));
 
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -31,8 +31,8 @@ describe('useTravelRouteFiles', () => {
     );
   });
 
-  it('keeps the query enabled by default when travel id exists', () => {
-    renderHook(() => useTravelRouteFiles(503));
+  it('keeps the query enabled by default when travel id exists', async () => {
+    await renderHook(() => useTravelRouteFiles(503));
 
     expect(useQuery).toHaveBeenCalledWith(
       expect.objectContaining({

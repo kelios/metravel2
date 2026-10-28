@@ -21,9 +21,10 @@ describe('WeatherWidget', () => {
     await act(async () => { await i18n.changeLanguage('ru') })
   })
 
-  it('renders native fallback instead of blank content while loading', () => {
+  it('renders native fallback instead of blank content while loading', async () => {
     ;(Platform as any).OS = 'ios'
-    const { getByText } = render(
+    global.fetch = jest.fn(() => new Promise(() => {})) as typeof fetch
+    const { getByText } = await render(
       <WeatherWidget points={[{ coord: '53.9, 27.56', address: 'Минск' }]} countryName="BY" />
     )
     expect(getByText(/Погода в Минск, BY/)).toBeTruthy()
@@ -31,7 +32,7 @@ describe('WeatherWidget', () => {
   })
 
   it('renders an error fallback for invalid coords', async () => {
-    const { getByText } = render(<WeatherWidget points={[{ coord: 'bad', address: 'Минск' }]} />)
+    const { getByText } = await render(<WeatherWidget points={[{ coord: 'bad', address: 'Минск' }]} />)
     await waitFor(() => expect(getByText(/Не удалось загрузить прогноз/)).toBeTruthy())
   })
 
@@ -50,7 +51,7 @@ describe('WeatherWidget', () => {
         }),
     })
 
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <WeatherWidget
         points={[{ coord: '53.9, 27.56', address: 'Минск, Беларусь, Центр' }]}
         countryName="BY"
@@ -73,7 +74,7 @@ describe('WeatherWidget', () => {
       time: ['2026-10-13'], temperature_2m_max: [15], temperature_2m_min: [5], weather_code: [0],
     } }) })
     const onSettled = jest.fn()
-    const { getByText, queryByText } = render(<WeatherWidget points={[{ coord: '53.9, 27.56' }]} onSettled={onSettled} />)
+    const { getByText, queryByText } = await render(<WeatherWidget points={[{ coord: '53.9, 27.56' }]} onSettled={onSettled} />)
     await waitFor(() => expect(getByText('Ясно')).toBeTruthy())
     for (const locale of ['en', 'pl', 'ru'] as const) {
       await act(async () => { await i18n.changeLanguage(locale) })
@@ -88,7 +89,7 @@ describe('WeatherWidget', () => {
     const fetchMock = global.fetch as jest.Mock
     const onSettled = jest.fn()
 
-    const { rerender } = render(
+    const { rerender } = await render(
       <WeatherWidget
         points={[{ coord: 'bad', address: 'Минск' }]}
         countryName="BY"
@@ -112,7 +113,7 @@ describe('WeatherWidget', () => {
         }),
     })
 
-    rerender(
+    await rerender(
       <WeatherWidget
         points={[{ coord: '53.9, 27.56', address: 'Минск, Беларусь, Центр' }]}
         countryName="BY"
@@ -124,8 +125,8 @@ describe('WeatherWidget', () => {
     await waitFor(() => expect(onSettled).toHaveBeenCalledTimes(2))
   })
 
-  it('разбирает цепочку геокодера через « · » и не дублирует страну (#1750)', () => {
-    const { getByText } = render(
+  it('разбирает цепочку геокодера через « · » и не дублирует страну (#1750)', async () => {
+    const { getByText } = await render(
       <WeatherWidget
         points={[{ coord: '50.6, 16.1', address: '30110 · Адршпа · Краловеградецкий край · Чехия' }]}
         countryName="Чехия"

@@ -81,7 +81,7 @@ describe('ArticleEditor.ios Component', () => {
     jest.clearAllTimers();
   });
 
-  const renderComponent = (props = {}) => render(
+  const renderComponent = async (props = {}) => await render(
     <ArticleEditor
       content=""
       onChange={mockOnChange}
@@ -92,14 +92,14 @@ describe('ArticleEditor.ios Component', () => {
     />
   );
 
-  it('should render without crashing', () => {
-    const { getByTestId } = renderComponent();
+  it('should render without crashing', async () => {
+    const { getByTestId } = await renderComponent();
     
     expect(getByTestId('editor-webview')).toBeTruthy();
   });
 
-  it('should render header with label', () => {
-    const { getByText } = render(
+  it('should render header with label', async () => {
+    const { getByText } = await render(
       <ArticleEditor
         label="Описание путешествия"
         content=""
@@ -110,23 +110,23 @@ describe('ArticleEditor.ios Component', () => {
     expect(getByText('Описание путешествия')).toBeTruthy();
   });
 
-  it('should render undo/redo buttons', () => {
-    const { getAllByRole } = renderComponent();
+  it('should render undo/redo buttons', async () => {
+    const { getAllByRole } = await renderComponent();
     
     const buttons = getAllByRole('button');
     expect(buttons.length).toBeGreaterThanOrEqual(2); // Undo, Redo, и возможно Image
   });
 
-  it('should render image picker button for default variant', () => {
-    const { getAllByRole } = renderComponent();
+  it('should render image picker button for default variant', async () => {
+    const { getAllByRole } = await renderComponent();
 
     // Basic structural assertion: toolbar buttons are rendered.
     const buttons = getAllByRole('button');
     expect(buttons.length).toBeGreaterThanOrEqual(3);
   });
 
-  it('should render image picker button for compact variant', () => {
-    const { getByLabelText } = render(
+  it('should render image picker button for compact variant', async () => {
+    const { getByLabelText } = await render(
       <ArticleEditor
         content=""
         onChange={mockOnChange}
@@ -138,12 +138,12 @@ describe('ArticleEditor.ios Component', () => {
   });
 
   it('should handle content changes from WebView with debouncing', async () => {
-    const { getByTestId } = renderComponent();
+    const { getByTestId } = await renderComponent();
 
     const webView = getByTestId('editor-webview');
     
     // Simulate user typing (source: 'user')
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({
           type: 'content-change',
@@ -160,7 +160,7 @@ describe('ArticleEditor.ios Component', () => {
   });
 
   it('should keep the native WebView source stable when parent echoes typed content', async () => {
-    const { getByTestId, rerender } = render(
+    const { getByTestId, rerender } = await render(
       <ArticleEditor
         content="<p>Initial</p>"
         onChange={mockOnChange}
@@ -173,7 +173,7 @@ describe('ArticleEditor.ios Component', () => {
     const webView = getByTestId('editor-webview');
     const initialSource = webView.props.source;
 
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({
           type: 'content-change',
@@ -187,7 +187,7 @@ describe('ArticleEditor.ios Component', () => {
       expect(mockOnChange).toHaveBeenCalledWith('<p>Initial text</p>');
     }, { timeout: 500 });
 
-    rerender(
+    await rerender(
       <ArticleEditor
         content="<p>Initial text</p>"
         onChange={mockOnChange}
@@ -200,8 +200,8 @@ describe('ArticleEditor.ios Component', () => {
     expect(getByTestId('editor-webview').props.source).toBe(initialSource);
   });
 
-  it('should include anchor insertion snippet in the editor HTML template', () => {
-    const { getByTestId } = renderComponent();
+  it('should include anchor insertion snippet in the editor HTML template', async () => {
+    const { getByTestId } = await renderComponent();
 
     const webView = getByTestId('editor-webview');
     const sourceHtml = (webView.props?.source?.html ?? '') as string;
@@ -212,12 +212,12 @@ describe('ArticleEditor.ios Component', () => {
   });
 
   it('should preserve inserted anchor span id in onChange (sanitized)', async () => {
-    const { getByTestId } = renderComponent();
+    const { getByTestId } = await renderComponent();
     const webView = getByTestId('editor-webview');
 
     const htmlWithAnchor = '<p>Intro</p><p><span id="day-3">&#8203;</span>Target</p>';
 
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({
           type: 'content-change',
@@ -235,11 +235,11 @@ describe('ArticleEditor.ios Component', () => {
   });
 
   it('should handle ready message from WebView', async () => {
-    const { getByTestId } = renderComponent();
+    const { getByTestId } = await renderComponent();
 
     const webView = getByTestId('editor-webview');
     
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({ type: 'ready' }),
       },
@@ -253,11 +253,11 @@ describe('ArticleEditor.ios Component', () => {
 
   it('should call autosave after delay when user types', async () => {
     jest.useFakeTimers();
-    const { getByTestId } = renderComponent();
+    const { getByTestId } = await renderComponent();
     const webView = getByTestId('editor-webview');
     
     // Simulate user typing
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({
           type: 'content-change',
@@ -276,10 +276,10 @@ describe('ArticleEditor.ios Component', () => {
   });
 
   it('should request permission and upload an image when WebView requests it', async () => {
-    const { getByTestId } = renderComponent();
+    const { getByTestId } = await renderComponent();
     const webView = getByTestId('editor-webview');
 
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({ type: 'request-image-upload' }),
       },
@@ -302,9 +302,9 @@ describe('ArticleEditor.ios Component', () => {
 
   it('should show alert when not authenticated', async () => {
     mockIsAuthenticated = false;
-    const { getByTestId } = renderComponent();
+    const { getByTestId } = await renderComponent();
 
-    fireEvent(getByTestId('editor-webview'), 'message', {
+    await fireEvent(getByTestId('editor-webview'), 'message', {
       nativeEvent: {
         data: JSON.stringify({ type: 'request-image-upload' }),
       },
@@ -325,9 +325,9 @@ describe('ArticleEditor.ios Component', () => {
       canAskAgain: true,
       expires: 'never',
     });
-    const { getByTestId } = renderComponent();
+    const { getByTestId } = await renderComponent();
 
-    fireEvent(getByTestId('editor-webview'), 'message', {
+    await fireEvent(getByTestId('editor-webview'), 'message', {
       nativeEvent: {
         data: JSON.stringify({ type: 'request-image-upload' }),
       },
@@ -344,9 +344,9 @@ describe('ArticleEditor.ios Component', () => {
   it('should handle upload error gracefully', async () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     (uploadImage as jest.Mock).mockRejectedValueOnce(new Error('upload failed'));
-    const { getByTestId } = renderComponent();
+    const { getByTestId } = await renderComponent();
 
-    fireEvent(getByTestId('editor-webview'), 'message', {
+    await fireEvent(getByTestId('editor-webview'), 'message', {
       nativeEvent: {
         data: JSON.stringify({ type: 'request-image-upload' }),
       },
@@ -366,11 +366,11 @@ describe('ArticleEditor.ios Component', () => {
   // Regression test for text deletion issue
   it('should not delete text when rapid changes occur', async () => {
     jest.useFakeTimers();
-    const { getByTestId } = renderComponent();
+    const { getByTestId } = await renderComponent();
     const webView = getByTestId('editor-webview');
     
     // Simulate rapid typing
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({
           type: 'content-change',
@@ -380,7 +380,7 @@ describe('ArticleEditor.ios Component', () => {
       },
     });
     
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({
           type: 'content-change',
@@ -390,7 +390,7 @@ describe('ArticleEditor.ios Component', () => {
       },
     });
     
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({
           type: 'content-change',
@@ -400,7 +400,7 @@ describe('ArticleEditor.ios Component', () => {
       },
     });
     
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({
           type: 'content-change',
@@ -425,12 +425,12 @@ describe('ArticleEditor.ios Component', () => {
 
   // Regression test for copy/paste stability
   it('should handle paste operations without losing content', async () => {
-    const { getByTestId } = renderComponent();
+    const { getByTestId } = await renderComponent();
     const webView = getByTestId('editor-webview');
     
     const pastedContent = '<p>Pasted paragraph 1</p><p>Pasted paragraph 2</p><ul><li>Item 1</li><li>Item 2</li></ul>';
     
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({
           type: 'content-change',
@@ -448,7 +448,7 @@ describe('ArticleEditor.ios Component', () => {
   // Test that external prop changes don't interfere with user editing
   it('should not update content from props while user is editing', async () => {
     jest.useFakeTimers();
-    const { getByTestId, rerender } = render(
+    const { getByTestId, rerender } = await render(
       <ArticleEditor
         content="<p>Initial content</p>"
         onChange={mockOnChange}
@@ -457,7 +457,7 @@ describe('ArticleEditor.ios Component', () => {
     const webView = getByTestId('editor-webview');
     
     // Mark editor as ready
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({ type: 'ready' }),
       },
@@ -465,7 +465,7 @@ describe('ArticleEditor.ios Component', () => {
     mockWebViewPostMessage.mockClear();
     
     // User starts typing
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({
           type: 'content-change',
@@ -476,7 +476,7 @@ describe('ArticleEditor.ios Component', () => {
     });
     
     // Parent tries to update content while user is typing (within debounce window)
-    rerender(
+    await rerender(
       <ArticleEditor
         content="<p>External update</p>"
         onChange={mockOnChange}
@@ -493,8 +493,8 @@ describe('ArticleEditor.ios Component', () => {
   });
 
   // Test cursor preservation on content updates
-  it('should include cursor preservation logic in WebView HTML', () => {
-    const { getByTestId } = renderComponent();
+  it('should include cursor preservation logic in WebView HTML', async () => {
+    const { getByTestId } = await renderComponent();
     const webView = getByTestId('editor-webview');
     const sourceHtml = (webView.props?.source?.html ?? '') as string;
 
@@ -505,13 +505,13 @@ describe('ArticleEditor.ios Component', () => {
 
   // Test that non-user changes (API updates) don't trigger onChange
   it('should only trigger onChange for user-initiated changes', async () => {
-    const { getByTestId } = renderComponent();
+    const { getByTestId } = await renderComponent();
     const webView = getByTestId('editor-webview');
     
     mockOnChange.mockClear();
     
     // Simulate API/programmatic change (source !== 'user')
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({
           type: 'content-change',
@@ -530,7 +530,7 @@ describe('ArticleEditor.ios Component', () => {
 
   // Test pending content update on ready
   it('should apply pending content update when editor becomes ready', async () => {
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ArticleEditor
         content="<p>Pending content</p>"
         onChange={mockOnChange}
@@ -539,7 +539,7 @@ describe('ArticleEditor.ios Component', () => {
     const webView = getByTestId('editor-webview');
     
     // Editor signals ready
-    fireEvent(webView, 'message', {
+    await fireEvent(webView, 'message', {
       nativeEvent: {
         data: JSON.stringify({ type: 'ready' }),
       },

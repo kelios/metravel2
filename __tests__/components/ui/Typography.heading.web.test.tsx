@@ -14,15 +14,15 @@ describe('Typography Heading aria-level (#1617)', () => {
     (Platform as { OS: string }).OS = 'web'
   })
 
-  it.each([1, 2, 3, 4] as const)('sets aria-level=%d to match the requested level', (level) => {
-    const { getByText } = render(<Heading level={level}>Заголовок</Heading>)
+  it.each([1, 2, 3, 4] as const)('sets aria-level=%d to match the requested level', async (level) => {
+    const { getByText } = await render(<Heading level={level}>Заголовок</Heading>)
     const node = getByText('Заголовок')
     expect(node.props.accessibilityRole).toBe('header')
     expect(node.props['aria-level']).toBe(level)
   })
 
-  it('defaults to level 2 (not 1) when no level prop is given', () => {
-    const { getByText } = render(<Heading>Подзаголовок</Heading>)
+  it('defaults to level 2 (not 1) when no level prop is given', async () => {
+    const { getByText } = await render(<Heading>Подзаголовок</Heading>)
     const node = getByText('Подзаголовок')
     expect(node.props['aria-level']).toBe(2)
   })

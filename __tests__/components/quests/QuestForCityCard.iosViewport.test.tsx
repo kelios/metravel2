@@ -45,8 +45,8 @@ const quest = {
   cover: 'https://metravel.by/quest-cover/malbork-core/cover.png',
 }
 
-function renderUnderProvider() {
-  return render(
+async function renderUnderProvider() {
+  return await render(
     <RichMediaViewportProvider scrollY={new Animated.Value(0)}>
       <QuestForCityCard quest={quest} />
     </RichMediaViewportProvider>,
@@ -61,20 +61,20 @@ describe('QuestForCityCard под richMediaViewport по платформам', 
     mockImageCardMedia.mockClear()
   })
 
-  it('на iOS отдаёт обложку сразу на первом кадре секции', () => {
+  it('на iOS отдаёт обложку сразу на первом кадре секции', async () => {
     ;(Platform as any).OS = 'ios'
 
-    const screen = renderUnderProvider()
+    const screen = await renderUnderProvider()
 
     expect(screen.getByTestId('quest-card-media').props.source).toEqual({
       uri: quest.cover,
     })
   })
 
-  it('на Android гейт продолжает придерживать обложку вне вьюпорта (#1035)', () => {
+  it('на Android гейт продолжает придерживать обложку вне вьюпорта (#1035)', async () => {
     ;(Platform as any).OS = 'android'
 
-    const screen = renderUnderProvider()
+    const screen = await renderUnderProvider()
 
     expect(screen.getByTestId('quest-card-media').props.source).toBeNull()
   })

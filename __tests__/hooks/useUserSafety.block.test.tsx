@@ -66,9 +66,9 @@ describe('useBlockUser', () => {
     const request = deferred()
     ;(blockUser as jest.Mock).mockReturnValue(request.promise)
     const invalidate = jest.spyOn(qc, 'invalidateQueries')
-    const { result } = renderHook(() => useBlockUser(), { wrapper })
+    const { result } = await renderHook(() => useBlockUser(), { wrapper })
 
-    act(() => result.current.mutate(BLOCKED))
+    await act(() => result.current.mutate(BLOCKED))
     await waitFor(() => expect((qc.getQueryData(nearKey) as any[]).map((t) => t.id)).toEqual([2]))
     expect((qc.getQueryData(profileKey) as any).is_blocked_by_me).toBe(true)
     expect(invalidate).not.toHaveBeenCalled()
@@ -84,7 +84,7 @@ describe('useBlockUser', () => {
     expect((qc.getQueryData(nearKey) as any[]).map((t) => t.id)).toEqual([2])
 
     // Refetch после блока снова принёс автора — guard режет его.
-    act(() => {
+    await act(() => {
       qc.setQueryData(nearKey, [{ id: 1, userIds: '7' }, { id: 2, userIds: '3' }])
     })
     expect((qc.getQueryData(nearKey) as any[]).map((t) => t.id)).toEqual([2])
@@ -95,9 +95,9 @@ describe('useBlockUser', () => {
     const { qc, stop, wrapper } = setup()
     qc.setQueryData(articlesKey, { id: 5 })
     ;(blockUser as jest.Mock).mockRejectedValue(new Error('network'))
-    const { result } = renderHook(() => useBlockUser(), { wrapper })
+    const { result } = await renderHook(() => useBlockUser(), { wrapper })
 
-    act(() => result.current.mutate(BLOCKED))
+    await act(() => result.current.mutate(BLOCKED))
     await waitFor(() => expect(result.current.isError).toBe(true))
     // Сервер ничего не менял: кэш вне экрана не сносится (в том числе без сети).
     expect(qc.getQueryData(articlesKey)).toEqual({ id: 5 })
@@ -107,7 +107,7 @@ describe('useBlockUser', () => {
     expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }))
 
     // Откат держится: следующий ответ с автором не режется.
-    act(() => {
+    await act(() => {
       qc.setQueryData(nearKey, [{ id: 1, userIds: '7' }])
     })
     expect(qc.getQueryData(nearKey)).toHaveLength(1)
@@ -122,9 +122,9 @@ describe('useUnblockUser', () => {
     expect((qc.getQueryData(nearKey) as any[]).map((t) => t.id)).toEqual([2])
     ;(unblockUser as jest.Mock).mockResolvedValue(undefined)
     const invalidate = jest.spyOn(qc, 'invalidateQueries')
-    const { result } = renderHook(() => useUnblockUser(), { wrapper })
+    const { result } = await renderHook(() => useUnblockUser(), { wrapper })
 
-    act(() => result.current.mutate(String(BLOCKED)))
+    await act(() => result.current.mutate(String(BLOCKED)))
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
     expect(qc.getQueryData(blockedKey)).toEqual([{ id: 101, user: 9 }])
@@ -133,7 +133,7 @@ describe('useUnblockUser', () => {
     // Вырезанная копия без наблюдателя сносится, а не перечитывается залпом.
     expect(qc.getQueryData(nearKey)).toBeUndefined()
 
-    act(() => {
+    await act(() => {
       qc.setQueryData(nearKey, [{ id: 1, userIds: '7' }])
     })
     expect(qc.getQueryData(nearKey)).toHaveLength(1)
@@ -144,14 +144,14 @@ describe('useUnblockUser', () => {
     const { qc, stop, wrapper } = setup()
     qc.setQueryData(blockedKey, [{ id: 100, user: BLOCKED }])
     ;(unblockUser as jest.Mock).mockRejectedValue(new Error('network'))
-    const { result } = renderHook(() => useUnblockUser(), { wrapper })
+    const { result } = await renderHook(() => useUnblockUser(), { wrapper })
 
-    act(() => result.current.mutate(BLOCKED))
+    await act(() => result.current.mutate(BLOCKED))
     await waitFor(() => expect(result.current.isError).toBe(true))
 
     expect(qc.getQueryData(blockedKey)).toEqual([{ id: 100, user: BLOCKED }])
     expect((qc.getQueryData(profileKey) as any).is_blocked_by_me).toBe(true)
-    act(() => {
+    await act(() => {
       qc.setQueryData(nearKey, [{ id: 1, userIds: '7' }])
     })
     expect(qc.getQueryData(nearKey)).toEqual([])

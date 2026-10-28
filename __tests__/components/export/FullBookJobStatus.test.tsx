@@ -52,53 +52,53 @@ const makeController = (job: BookExportV2Job | null, overrides: Partial<FullBook
   })
 
 describe('FullBookJobStatus', () => {
-  it('keeps expired ticket output unavailable with an explicit route to rebuilding', () => {
+  it('keeps expired ticket output unavailable with an explicit route to rebuilding', async () => {
     const job = makeJob({ status: 'done', completeness: 'complete', download: { available: true, size_bytes: 100, checksum: 'c' } })
     const downloadError = new ApiError(410, 'expired', { error_code: 'JOB_EXPIRED' })
-    render(<FullBookJobStatus controller={makeController(job, { downloadError })} dismissLabel="Перейти к экспорту" />)
+    await render(<FullBookJobStatus controller={makeController(job, { downloadError })} dismissLabel="Перейти к экспорту" />)
     expect(screen.queryByText('Скачать PDF')).toBeNull()
     expect(screen.getByText('Перейти к экспорту')).toBeTruthy()
   })
 
-  it('does not offer retry when the job itself requires rebuilding', () => {
+  it('does not offer retry when the job itself requires rebuilding', async () => {
     const job = makeJob({ status: 'failed', retryable: true, error_code: 'REBUILD_REQUIRED' })
-    render(<FullBookJobStatus controller={makeController(job)} showErrorCode />)
+    await render(<FullBookJobStatus controller={makeController(job)} showErrorCode />)
     expect(screen.getByText('Код ошибки: REBUILD_REQUIRED')).toBeTruthy()
     expect(screen.queryByText('Повторить')).toBeNull()
   })
 
-  it('keeps a visible observation error before any job detail is available', () => {
-    render(<FullBookJobStatus controller={makeController(null, { isObservingJob: true, isReconnecting: true })} />)
+  it('keeps a visible observation error before any job detail is available', async () => {
+    await render(<FullBookJobStatus controller={makeController(null, { isObservingJob: true, isReconnecting: true })} />)
     expect(screen.getByText('Нет связи с сервером — проверяем последнее задание повторно.')).toBeTruthy()
     expect(screen.queryByRole('progressbar')).toBeNull()
     expect(screen.queryByText('Скачать PDF')).toBeNull()
   })
-  it('shows real page progress and only a cancel action while building', () => {
+  it('shows real page progress and only a cancel action while building', async () => {
     const controller = makeController(makeJob())
-    render(<FullBookJobStatus controller={controller} />)
+    await render(<FullBookJobStatus controller={controller} />)
 
     expect(screen.getByText('Идёт сборка · Сборка страниц')).toBeTruthy()
     expect(screen.getByText('Страницы: 40 из 139')).toBeTruthy()
     expect(screen.getByRole('progressbar')).toBeTruthy()
     expect(screen.queryByText('Скачать PDF')).toBeNull()
 
-    fireEvent.press(screen.getByText('Отменить сборку'))
+    await fireEvent.press(screen.getByText('Отменить сборку'))
     expect(controller.cancel).toHaveBeenCalledTimes(1)
   })
 
-  it('shows Lambda runtime stages as the same phases with page progress (#2391)', () => {
-    const { unmount } = render(<FullBookJobStatus controller={makeController(makeJob({ stage: 'lambda_render' }))} />)
+  it('shows Lambda runtime stages as the same phases with page progress (#2391)', async () => {
+    const { unmount } = await render(<FullBookJobStatus controller={makeController(makeJob({ stage: 'lambda_render' }))} />)
     expect(screen.getByText('Идёт сборка · Сборка страниц')).toBeTruthy()
     expect(screen.getByText('Страницы: 40 из 139')).toBeTruthy()
     expect(screen.getByRole('progressbar')).toBeTruthy()
-    unmount()
+    await unmount()
 
-    render(<FullBookJobStatus controller={makeController(makeJob({ stage: 'awaiting_lambda' }))} />)
+    await render(<FullBookJobStatus controller={makeController(makeJob({ stage: 'awaiting_lambda' }))} />)
     expect(screen.getByText('Идёт сборка · Ожидание сборки страниц')).toBeTruthy()
     expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
-  it('does not invent a percentage when the server does not know the total', () => {
+  it('does not invent a percentage when the server does not know the total', async () => {
     const job = makeJob({
       stage: 'snapshot',
       counters: {
@@ -108,14 +108,14 @@ describe('FullBookJobStatus', () => {
         pages: { expected: null, completed: 0 },
       },
     })
-    render(<FullBookJobStatus controller={makeController(job)} />)
+    await render(<FullBookJobStatus controller={makeController(job)} />)
 
     expect(screen.getByText('Путешествия: 4')).toBeTruthy()
     expect(screen.queryByRole('progressbar')).toBeNull()
     expect(screen.queryByText(/Страницы/)).toBeNull()
   })
 
-  it('offers download only for a confirmed complete book', () => {
+  it('offers download only for a confirmed complete book', async () => {
     const job = makeJob({
       status: 'done',
       stage: 'done',
@@ -124,30 +124,30 @@ describe('FullBookJobStatus', () => {
       download: { available: true, size_bytes: 128_717_117, checksum: 'c' },
     })
     const controller = makeController(job)
-    render(<FullBookJobStatus controller={controller} />)
+    await render(<FullBookJobStatus controller={controller} />)
 
-    fireEvent.press(screen.getByText('Скачать PDF'))
+    await fireEvent.press(screen.getByText('Скачать PDF'))
     expect(controller.download).toHaveBeenCalledTimes(1)
     expect(screen.queryByText('Отменить сборку')).toBeNull()
     expect(screen.getByText('Скрыть')).toBeTruthy()
   })
 
-  it('offers retry for a retryable failure and explains the reconnect state', () => {
+  it('offers retry for a retryable failure and explains the reconnect state', async () => {
     const failed = makeController(makeJob({ status: 'failed', retryable: true, error_code: 'RENDER_FAILED' }))
-    render(<FullBookJobStatus controller={failed} />)
+    await render(<FullBookJobStatus controller={failed} />)
     expect(screen.getByText('Сборка остановилась с ошибкой.')).toBeTruthy()
-    fireEvent.press(screen.getByText('Повторить'))
+    await fireEvent.press(screen.getByText('Повторить'))
     expect(failed.retry).toHaveBeenCalledTimes(1)
 
-    screen.unmount()
-    render(<FullBookJobStatus controller={makeController(makeJob(), { isReconnecting: true })} />)
+    await screen.unmount()
+    await render(<FullBookJobStatus controller={makeController(makeJob(), { isReconnecting: true })} />)
     expect(screen.getByText('Нет связи с сервером — переподключаемся. Сборка продолжается на сервере.')).toBeTruthy()
   })
 
-  it('stops offering retry once the server answers REBUILD_REQUIRED', () => {
+  it('stops offering retry once the server answers REBUILD_REQUIRED', async () => {
     const retryError = new ApiError(409, 'Rebuild', { error_code: 'REBUILD_REQUIRED' })
     const failed = makeController(makeJob({ status: 'failed', retryable: true, error_code: 'RENDER_FAILED' }), { retryError })
-    render(<FullBookJobStatus controller={failed} />)
+    await render(<FullBookJobStatus controller={failed} />)
     expect(screen.getByText('Материалы книги больше не хранятся. Соберите книгу заново.')).toBeTruthy()
     expect(screen.queryByText('Повторить')).toBeNull()
     expect(screen.queryByText('Не удалось выполнить действие. Попробуйте ещё раз.')).toBeNull()

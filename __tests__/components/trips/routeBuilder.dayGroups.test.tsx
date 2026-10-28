@@ -111,8 +111,8 @@ const makeTrip = (route: RoutePoint[], over: Partial<PlannedTrip> = {}): Planned
   ...over,
 })
 
-const renderRouteBuilder = (route: RoutePoint[], layout: 'stack' | 'mapFirst') =>
-  render(<RouteBuilder trip={makeTrip(route)} layout={layout} />, {
+const renderRouteBuilder = async (route: RoutePoint[], layout: 'stack' | 'mapFirst') =>
+  await render(<RouteBuilder trip={makeTrip(route)} layout={layout} />, {
     wrapper: createQueryWrapper().Wrapper,
   })
 
@@ -121,8 +121,8 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: дни похода
     mockRouteMutate.mockReset()
   })
 
-  it('не рисует заголовки дней, пока ни у одной точки дня нет', () => {
-    const { queryByTestId } = renderRouteBuilder(
+  it('не рисует заголовки дней, пока ни у одной точки дня нет', async () => {
+    const { queryByTestId } = await renderRouteBuilder(
       [makePoint(), makePoint({ id: 'p1', name: 'Точка 2' })],
       layout,
     )
@@ -130,8 +130,8 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: дни похода
     expect(queryByTestId('route-builder-day-group-unassigned')).toBeNull()
   })
 
-  it('группирует список по дням и показывает дату со старта поездки', () => {
-    const { getByTestId, getByText } = renderRouteBuilder(
+  it('группирует список по дням и показывает дату со старта поездки', async () => {
+    const { getByTestId, getByText } = await renderRouteBuilder(
       [
         makePoint({ id: 'd1', name: 'Старт', dayNumber: 1 }),
         makePoint({ id: 'd2', name: 'Ночёвка', dayNumber: 2, coordinates: [6.5, 49.82] }),
@@ -149,8 +149,8 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: дни похода
     )
   })
 
-  it('группирует список и у гостя, когда дни уже назначены', () => {
-    const { getByTestId, queryByTestId } = render(
+  it('группирует список и у гостя, когда дни уже назначены', async () => {
+    const { getByTestId, queryByTestId } = await render(
       <RouteBuilder
         trip={makeTrip(
           [
@@ -169,8 +169,8 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: дни похода
     expect(queryByTestId('route-builder-day-group-unassigned')).toBeNull()
   })
 
-  it('переносит точку в другой день через чип и считает это несохранённой правкой', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder(
+  it('переносит точку в другой день через чип и считает это несохранённой правкой', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder(
       [
         makePoint({ id: 'd1', name: 'Старт', dayNumber: 1 }),
         makePoint({ id: 'd2', name: 'Ночёвка', dayNumber: 2 }),
@@ -178,10 +178,10 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: дни похода
       layout,
     )
 
-    fireEvent.press(getByTestId('route-builder-edit-0'))
-    fireEvent.press(getByTestId('route-builder-day-chip-2'))
-    fireEvent.press(getByTestId('route-builder-edit-save'))
-    fireEvent.press(getByTestId('route-builder-save'))
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
+    await fireEvent.press(getByTestId('route-builder-day-chip-2'))
+    await fireEvent.press(getByTestId('route-builder-edit-save'))
+    await fireEvent.press(getByTestId('route-builder-save'))
 
     expect(mockRouteMutate).toHaveBeenCalledTimes(1)
     const saved = mockRouteMutate.mock.calls[0][0].route as RoutePoint[]
@@ -191,12 +191,12 @@ describe.each(['stack', 'mapFirst'] as const)('RouteBuilder: дни похода
     expect(queryByTestId('route-builder-day-group-1')).toBeNull()
   })
 
-  it('не закрывает форму на день вне 1–60', () => {
-    const { getByTestId, getByText } = renderRouteBuilder([makePoint()], layout)
+  it('не закрывает форму на день вне 1–60', async () => {
+    const { getByTestId, getByText } = await renderRouteBuilder([makePoint()], layout)
 
-    fireEvent.press(getByTestId('route-builder-edit-0'))
-    fireEvent.changeText(getByTestId('route-builder-day-input'), '80')
-    fireEvent.press(getByTestId('route-builder-edit-save'))
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
+    await fireEvent.changeText(getByTestId('route-builder-day-input'), '80')
+    await fireEvent.press(getByTestId('route-builder-edit-save'))
 
     expect(getByTestId('route-builder-edit-form')).toBeTruthy()
     expect(getByText(i18nT('tripsStatic:plan.routeDay.errors.range'))).toBeTruthy()

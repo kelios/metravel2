@@ -54,7 +54,7 @@ describe('PointsListGrid', () => {
     userPointsMapProps.length = 0;
   });
 
-  it('bounds the initial web side-panel list render', () => {
+  it('bounds the initial web side-panel list render', async () => {
     (require('react-native').Platform as any).OS = 'web';
 
     const points = Array.from({ length: 120 }, (_, index) => ({
@@ -64,7 +64,7 @@ describe('PointsListGrid', () => {
       longitude: 27 + index / 1000,
     }));
 
-    const utils = render(
+    const utils = await render(
       <PointsListGrid
         styles={styles}
         colors={{ text: '#111' }}

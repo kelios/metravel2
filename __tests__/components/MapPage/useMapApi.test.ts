@@ -26,7 +26,7 @@ describe('useMapApi', () => {
     let unmount: (() => void) | undefined;
 
     try {
-      ({ unmount } = renderHook(() =>
+      ({ unmount } = await renderHook(() =>
         useMapApi({
           map: { hasLayer: jest.fn(), removeLayer: jest.fn() },
           L: {},
@@ -44,20 +44,20 @@ describe('useMapApi', () => {
       const api = onMapUiApiReady.mock.calls.find((c: any[]) => c[0] != null)?.[0];
       expect(api).toBeTruthy();
 
-      act(() => {
+      await act(() => {
         api.setOverlayEnabled('late-layer', true);
       });
       expect(warnSpy).not.toHaveBeenCalled();
 
       overlayLayers.set('late-layer', { addTo, getTileUrl: jest.fn() });
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(220);
       });
 
       expect(addTo).toHaveBeenCalledTimes(1);
       expect(warnSpy).not.toHaveBeenCalled();
     } finally {
-      unmount?.();
+      await unmount?.();
       warnSpy.mockRestore();
       jest.useRealTimers();
     }
@@ -70,7 +70,7 @@ describe('useMapApi', () => {
     let unmount: (() => void) | undefined;
 
     try {
-      ({ unmount } = renderHook(() =>
+      ({ unmount } = await renderHook(() =>
         useMapApi({
           map: { hasLayer: jest.fn(), removeLayer: jest.fn() },
           L: {},
@@ -88,12 +88,12 @@ describe('useMapApi', () => {
       const api = onMapUiApiReady.mock.calls.find((c: any[]) => c[0] != null)?.[0];
       expect(api).toBeTruthy();
 
-      act(() => {
+      await act(() => {
         api.setOverlayEnabled('missing-layer', true);
       });
       expect(warnSpy).not.toHaveBeenCalled();
 
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(2200);
       });
 
@@ -105,7 +105,7 @@ describe('useMapApi', () => {
         [],
       );
     } finally {
-      unmount?.();
+      await unmount?.();
       warnSpy.mockRestore();
       jest.useRealTimers();
     }
@@ -121,7 +121,7 @@ describe('useMapApi', () => {
     let unmount: (() => void) | undefined;
 
     try {
-      ({ unmount } = renderHook(() =>
+      ({ unmount } = await renderHook(() =>
         useMapApi({
           map,
           L: {},
@@ -139,12 +139,12 @@ describe('useMapApi', () => {
       const api = onMapUiApiReady.mock.calls.find((c: any[]) => c[0] != null)?.[0];
       expect(api).toBeTruthy();
 
-      act(() => {
+      await act(() => {
         api.setOverlayEnabled('late-layer', true);
       });
 
       overlayLayers.set('late-layer', layer);
-      act(() => {
+      await act(() => {
         api.setOverlayEnabled('late-layer', false);
         jest.advanceTimersByTime(220);
       });
@@ -153,7 +153,7 @@ describe('useMapApi', () => {
       expect(layer.addTo).not.toHaveBeenCalled();
       expect(warnSpy).not.toHaveBeenCalled();
     } finally {
-      unmount?.();
+      await unmount?.();
       warnSpy.mockRestore();
       jest.useRealTimers();
     }
@@ -172,7 +172,7 @@ describe('useMapApi', () => {
 
     const onMapUiApiReady = jest.fn();
 
-    const { unmount } = renderHook(() =>
+    const { unmount } = await renderHook(() =>
       useMapApi({
         map,
         L: {},
@@ -198,7 +198,7 @@ describe('useMapApi', () => {
     expect(map.setView).toHaveBeenCalledWith([53.9, 27.5667], 16, expect.any(Object));
     expect(map.panBy).toHaveBeenCalledWith([84, -92], expect.any(Object));
 
-    unmount();
+    await unmount();
   });
 
   it('focusOnCoord centers and zooms the map', async () => {
@@ -209,7 +209,7 @@ describe('useMapApi', () => {
 
     const onMapUiApiReady = jest.fn();
 
-    const { unmount } = renderHook(() =>
+    const { unmount } = await renderHook(() =>
       useMapApi({
         map,
         L: {},
@@ -237,7 +237,7 @@ describe('useMapApi', () => {
     expect(map.closePopup).toHaveBeenCalled();
     expect(map.setView).toHaveBeenCalledWith([50.0619474, 19.9368564], 15, expect.any(Object));
 
-    unmount();
+    await unmount();
   });
 
   it('openPopupForCoord opens marker popup on moveend', async () => {
@@ -269,7 +269,7 @@ describe('useMapApi', () => {
     const onMapUiApiReady = jest.fn();
 
     const leafletControlRef = { current: { markerByCoord }, markerByCoord };
-    const { unmount } = renderHook(() =>
+    const { unmount } = await renderHook(() =>
       useMapApi({
         map,
         L: {},
@@ -304,11 +304,11 @@ describe('useMapApi', () => {
     expect(setZIndexOffset).toHaveBeenCalledWith(1000);
     expect(openPopup).toHaveBeenCalledTimes(1);
 
-    act(() => {
+    await act(() => {
       jest.runOnlyPendingTimers();
     });
 
-    unmount();
+    await unmount();
     jest.useRealTimers();
   });
 
@@ -338,7 +338,7 @@ describe('useMapApi', () => {
     const onMapUiApiReady = jest.fn();
 
     const leafletControlRef = { current: { markerByCoord }, markerByCoord };
-    const { unmount } = renderHook(() =>
+    const { unmount } = await renderHook(() =>
       useMapApi({
         map,
         L: {},
@@ -361,18 +361,18 @@ describe('useMapApi', () => {
       api.openPopupForCoord('50.0, 19.0');
     });
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(420);
     });
 
     expect(setZIndexOffset).toHaveBeenCalledWith(1000);
     expect(openPopup).toHaveBeenCalledTimes(1);
 
-    act(() => {
+    await act(() => {
       jest.runOnlyPendingTimers();
     });
 
-    unmount();
+    await unmount();
     jest.useRealTimers();
   });
 });

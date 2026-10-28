@@ -42,13 +42,13 @@ describe('#2693 — real autosave engine and publication commands', () => {
     let resolveCreation!: (data: TravelFormData) => void;
     const creation = new Promise<TravelFormData>(resolve => { resolveCreation = resolve; });
     save.mockReturnValueOnce(creation).mockImplementation(async data => ({ ...data, publication_status: 'pending_review' }));
-    const { result } = renderHook(() => usePersistence(initial));
-    act(() => result.current.formState.updateField('name', 'A new test article'));
+    const { result } = await renderHook(() => usePersistence(initial));
+    await act(() => result.current.formState.updateField('name', 'A new test article'));
     let background!: Promise<TravelFormData>;
-    act(() => { background = result.current.autosave.saveNow(); });
+    await act(() => { background = result.current.autosave.saveNow(); });
     expect(save).toHaveBeenCalledTimes(1);
     let command: Promise<TravelFormData | void> | undefined;
-    if (withCommand) act(() => { command = result.current.handleManualSave(undefined, { intent: 'submit' }); });
+    if (withCommand) await act(() => { command = result.current.handleManualSave(undefined, { intent: 'submit' }); });
     const created = { ...save.mock.calls[0][0], id: '9901', slug: 'created-by-server', publication_status: 'draft' } as TravelFormData;
     await act(async () => {
       resolveCreation(created);

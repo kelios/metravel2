@@ -1,7 +1,9 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 import React from 'react'
-import { Platform, StyleSheet, View } from 'react-native'
+import { Platform, StyleSheet } from 'react-native'
+import { createRootRegistry } from '@/__tests__/helpers/rawRootLifecycle'
 
-const renderer = require('react-test-renderer')
+const renderer = createRootRegistry()
 
 // Keep the heavy popup factory (router/stores/api) out of the unit test: the
 // bottom-card fullscreen layout is what we assert here, not the popup content.
@@ -50,47 +52,46 @@ describe('MapPlaceBottomCard', () => {
     ;(Platform as any).OS = originalPlatform
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    await renderer.cleanup()
     require('react-native').useWindowDimensions = originalUseWindowDimensions
   })
 
-  it('renders a bounded bottom sheet on mobile web so the map stays visible', () => {
+  it('renders a bounded bottom sheet on mobile web so the map stays visible', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }))
 
     let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <MapPlaceBottomCard point={point} userLocation={null} onClose={jest.fn()} />,
-      )
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<MapPlaceBottomCard point={point} userLocation={null} onClose={jest.fn()} />)
     })
 
     // The mobile web card is now a bounded maps.me-style sheet; the popup content
     // owns its split scrolling region instead of this wrapper adding a ScrollView.
-    expect(tree.root.findByProps({ testID: 'map-place-bottom-card' })).toBeTruthy()
-    expect(tree.root.findAllByProps({ testID: 'map-place-bottom-card-scroll' }).length).toBe(0)
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["testID"] === 'map-place-bottom-card')).toBeTruthy()
+    expect(tree.container.queryAll((node: any) => node.props?.["testID"] === 'map-place-bottom-card-scroll', { includeSelf: true }).length).toBe(0)
     // Close button is present and reachable.
-    const close = tree.root.findByProps({ testID: 'map-place-bottom-card-close' })
+    const close = getOnlyHost(tree.container, (node: any) => node.props?.["testID"] === 'map-place-bottom-card-close')
     expect(close).toBeTruthy()
-    expect(tree.root.findByProps({ testID: 'mock-popup-content' })).toBeTruthy()
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["testID"] === 'mock-popup-content')).toBeTruthy()
   })
 
-  it('sizes mobile web sheet to the measured viewport and the bottom footer edge', () => {
+  it('sizes mobile web sheet to the measured viewport and the bottom footer edge', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }))
 
     let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <MapPlaceBottomCard
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<MapPlaceBottomCard
           point={point}
           userLocation={null}
           onClose={jest.fn()}
           topInset={20}
           bottomInset={56}
-        />,
-      )
+        />)
     })
 
-    const sheet = tree.root.findAllByType(View).find((node: any) => {
+    const sheet = tree.container.queryAll((node: any) => node.type === 'View', { includeSelf: true }).find((node: any) => {
       const style = StyleSheet.flatten(node.props.style)
       return style?.height === 'calc(var(--metravel-map-vh, 100svh) - 76px)'
     })
@@ -101,36 +102,34 @@ describe('MapPlaceBottomCard', () => {
     expect(sheetStyle?.marginBottom).toBe(56)
   })
 
-  it('calls onClose from the fullscreen close button', () => {
+  it('calls onClose from the fullscreen close button', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }))
     const onClose = jest.fn()
 
     let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <MapPlaceBottomCard point={point} userLocation={null} onClose={onClose} />,
-      )
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<MapPlaceBottomCard point={point} userLocation={null} onClose={onClose} />)
     })
 
-    const close = tree.root.findByProps({ testID: 'map-place-bottom-card-close' })
-    renderer.act(() => {
+    const close = getOnlyHost(tree.container, (node: any) => node.props?.["testID"] === 'map-place-bottom-card-close')
+    await React.act(() => {
       close.props.onPress()
     })
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('closes on pointerup before WebKit drops touchend and suppresses the ghost click', () => {
+  it('closes on pointerup before WebKit drops touchend and suppresses the ghost click', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }))
     const onClose = jest.fn()
 
     let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <MapPlaceBottomCard point={point} userLocation={null} onClose={onClose} />,
-      )
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<MapPlaceBottomCard point={point} userLocation={null} onClose={onClose} />)
     })
 
-    const close = tree.root.findByProps({ testID: 'map-place-bottom-card-close' })
+    const close = getOnlyHost(tree.container, (node: any) => node.props?.["testID"] === 'map-place-bottom-card-close')
     const event = {
       preventDefault: jest.fn(),
       stopPropagation: jest.fn(),
@@ -141,7 +140,7 @@ describe('MapPlaceBottomCard', () => {
       },
     }
 
-    renderer.act(() => {
+    await React.act(() => {
       close.props.onPointerDown(event)
       close.props.onPointerUp(event)
       // Some WebKit versions still deliver these after pointerup. They must be
@@ -156,16 +155,15 @@ describe('MapPlaceBottomCard', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('swallows only the closing gesture ghost click; the next gesture at the same point gets its click (#2813)', () => {
+  it('swallows only the closing gesture ghost click; the next gesture at the same point gets its click (#2813)', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }))
 
     let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <MapPlaceBottomCard point={point} userLocation={null} onClose={jest.fn()} />,
-      )
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<MapPlaceBottomCard point={point} userLocation={null} onClose={jest.fn()} />)
     })
-    const close = tree.root.findByProps({ testID: 'map-place-bottom-card-close' })
+    const close = getOnlyHost(tree.container, (node: any) => node.props?.["testID"] === 'map-place-bottom-card-close')
     const tap = { clientX: 360, clientY: 120 }
     const closeEvent = {
       preventDefault: jest.fn(),
@@ -182,7 +180,7 @@ describe('MapPlaceBottomCard', () => {
 
     try {
       // Touch: the guard is armed twice (pointerup + touchend).
-      renderer.act(() => {
+      await React.act(() => {
         close.props.onPointerUp(closeEvent)
         close.props.onTouchEnd(closeEvent)
       })
@@ -199,17 +197,16 @@ describe('MapPlaceBottomCard', () => {
     }
   })
 
-  it('keeps the compact bottom-sheet (no extra ScrollView) on wider viewports', () => {
+  it('keeps the compact bottom-sheet (no extra ScrollView) on wider viewports', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 900, height: 800, scale: 1, fontScale: 1 }))
 
     let tree: any
-    renderer.act(() => {
-      tree = renderer.create(
-        <MapPlaceBottomCard point={point} userLocation={null} onClose={jest.fn()} />,
-      )
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<MapPlaceBottomCard point={point} userLocation={null} onClose={jest.fn()} />)
     })
 
-    expect(tree.root.findAllByProps({ testID: 'map-place-bottom-card-scroll' }).length).toBe(0)
-    expect(tree.root.findByProps({ testID: 'map-place-bottom-card' })).toBeTruthy()
+    expect(tree.container.queryAll((node: any) => node.props?.["testID"] === 'map-place-bottom-card-scroll', { includeSelf: true }).length).toBe(0)
+    expect(getOnlyHost(tree.container, (node: any) => node.props?.["testID"] === 'map-place-bottom-card')).toBeTruthy()
   })
 })

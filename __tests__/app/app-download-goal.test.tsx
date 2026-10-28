@@ -55,10 +55,10 @@ describe('AppDownloadScreen', () => {
   it.each([
     ['ios', APP_STORE_APP_URL],
     ['android', GOOGLE_PLAY_APP_URL],
-  ] as const)('reports the app_download_click goal before opening the %s listing', (platform, url) => {
-    const { getByTestId } = render(<AppDownloadScreen />)
+  ] as const)('reports the app_download_click goal before opening the %s listing', async (platform, url) => {
+    const { getByTestId } = await render(<AppDownloadScreen />)
 
-    fireEvent.press(getByTestId(`app-page-store-buttons-${platform}`))
+    await fireEvent.press(getByTestId(`app-page-store-buttons-${platform}`))
 
     expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('app_download_click', {
       source: 'app_page',

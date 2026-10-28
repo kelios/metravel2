@@ -26,8 +26,8 @@ const baseInput = {
   personalTravelStatusEntries: [],
 } as const;
 
-const renderSections = (overrides: Record<string, unknown>) =>
-  renderHook(() =>
+const renderSections = async (overrides: Record<string, unknown>) =>
+  await renderHook(() =>
     useProfileTravelSections({
       ...baseInput,
       travelsError: null,
@@ -39,9 +39,9 @@ const renderSections = (overrides: Record<string, unknown>) =>
 describe('useProfileTravelSections — empty state при сбое загрузки', () => {
   it.each(['travels', 'publishedTravels', 'draftTravels'])(
     'на вкладке %s показывает ошибку с причиной и кнопкой повтора',
-    (activeTab) => {
+    async (activeTab) => {
       const onRetryTravels = jest.fn();
-      const { result } = renderSections({
+      const { result } = await renderSections({
         activeTab,
         travelsError: 'Не удалось загрузить ваши маршруты: 502 Bad Gateway',
         onRetryTravels,
@@ -58,8 +58,8 @@ describe('useProfileTravelSections — empty state при сбое загруз�
     }
   );
 
-  it('без ошибки оставляет обычную inspire-заглушку вкладки travels', () => {
-    const { result } = renderSections({ activeTab: 'travels' });
+  it('без ошибки оставляет обычную inspire-заглушку вкладки travels', async () => {
+    const { result } = await renderSections({ activeTab: 'travels' });
 
     expect(result.current.emptyStateProps.variant).toBe('inspire');
     expect(result.current.emptyStateProps.title).toBe('Ваши маршруты появятся здесь');
@@ -67,8 +67,8 @@ describe('useProfileTravelSections — empty state при сбое загруз�
 
   it.each(['favorites', 'history'])(
     'не подменяет заглушку вкладки %s — она живёт на других данных',
-    (activeTab) => {
-      const { result } = renderSections({
+    async (activeTab) => {
+      const { result } = await renderSections({
         activeTab,
         travelsError: 'Не удалось загрузить ваши маршруты: 502 Bad Gateway',
       });

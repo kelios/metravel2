@@ -24,7 +24,7 @@ const farLeg = {
   far: true,
 }
 
-const renderFarStepCard = () => {
+const renderFarStepCard = async () => {
   const props = {
     colors,
     styles,
@@ -57,21 +57,21 @@ const renderFarStepCard = () => {
     showLocationControls: false,
   } as any
 
-  return { ...render(<QuestStepCard {...props} />), props }
+  return { ...await render(<QuestStepCard {...props} />), props }
 }
 
 describe('QuestStepCard — далёкая точка', () => {
-  it('«Пропустить точку» уходит в обработчик, снимающий точку с гейта финала', () => {
-    const screen = renderFarStepCard()
+  it('«Пропустить точку» уходит в обработчик, снимающий точку с гейта финала', async () => {
+    const screen = await renderFarStepCard()
 
-    fireEvent.press(screen.getByTestId('quest-step-far-skip'))
+    await fireEvent.press(screen.getByTestId('quest-step-far-skip'))
 
     expect(screen.props.onSkipFarStep).toHaveBeenCalledTimes(1)
     expect(screen.props.onSkip).not.toHaveBeenCalled()
   })
 
-  it('в блоке о расстоянии нет «Завершить квест здесь», пока впереди есть близкие точки', () => {
-    const screen = renderFarStepCard()
+  it('в блоке о расстоянии нет «Завершить квест здесь», пока впереди есть близкие точки', async () => {
+    const screen = await renderFarStepCard()
 
     expect(screen.queryByTestId('quest-step-finish-here')).toBeNull()
   })

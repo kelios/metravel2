@@ -107,14 +107,14 @@ beforeEach(async () => {
 });
 
 it('keeps the backend order until the visitor asks for popular', async () => {
-    const { getByTestId } = render(<QuestsScreen />);
+    const { getByTestId } = await render(<QuestsScreen />);
     await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
 
     expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(CATALOG_ORDER);
     expect(mockContentProps.availableSortOrders?.includes('popular')).toBe(true);
     expect(mockContentProps.activeSortOrder).toBe('default');
 
-    fireEvent.press(getByTestId('toggle-popular'));
+    await fireEvent.press(getByTestId('toggle-popular'));
 
     await waitFor(() => expect(mockContentProps.activeSortOrder).toBe('popular'));
     // Прохождения → просмотры → id: ничью двух квестов с двумя прохождениями
@@ -123,13 +123,13 @@ it('keeps the backend order until the visitor asks for popular', async () => {
 });
 
 it('returns to the catalog order on a second press', async () => {
-    const { getByTestId } = render(<QuestsScreen />);
+    const { getByTestId } = await render(<QuestsScreen />);
     await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
 
-    fireEvent.press(getByTestId('toggle-popular'));
+    await fireEvent.press(getByTestId('toggle-popular'));
     await waitFor(() => expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(POPULAR_ORDER));
 
-    fireEvent.press(getByTestId('toggle-popular'));
+    await fireEvent.press(getByTestId('toggle-popular'));
     await waitFor(() => expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(CATALOG_ORDER));
     expect(mockContentProps.activeSortOrder).toBe('default');
 });
@@ -140,7 +140,7 @@ it.each([
 ])('hides the sort when the catalog only has %s', async (_label, completions) => {
     mockQuests = popularCatalog().map((entry) => ({ ...entry, completionsCount: completions }));
 
-    render(<QuestsScreen />);
+    await render(<QuestsScreen />);
     await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
 
     expect(mockContentProps.availableSortOrders?.includes('popular')).toBe(false);
@@ -152,21 +152,21 @@ it('hides the sort when only one quest passes the threshold', async () => {
         entry.id === 'played-thrice' ? entry : { ...entry, completionsCount: 0 }
     ));
 
-    render(<QuestsScreen />);
+    await render(<QuestsScreen />);
     await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
 
     expect(mockContentProps.availableSortOrders?.includes('popular')).toBe(false);
 });
 
 it('drops an active sort when the current slice loses its popular quests', async () => {
-    const { getByTestId, rerender } = render(<QuestsScreen />);
+    const { getByTestId, rerender } = await render(<QuestsScreen />);
     await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
 
-    fireEvent.press(getByTestId('toggle-popular'));
+    await fireEvent.press(getByTestId('toggle-popular'));
     await waitFor(() => expect(mockContentProps.activeSortOrder).toBe('popular'));
 
     mockQuests = popularCatalog().map((entry) => ({ ...entry, completionsCount: 0 }));
-    rerender(<QuestsScreen />);
+    await rerender(<QuestsScreen />);
 
     await waitFor(() => expect(mockContentProps.availableSortOrders?.includes('popular')).toBe(false));
     expect(mockContentProps.activeSortOrder).toBe('default');
@@ -182,7 +182,7 @@ it('offers rating sort only once two quests carry a public rating', async () => 
     mockQuests = popularCatalog().map((entry) => (
         entry.id === 'cold' ? { ...entry, ratingAvg: 4.9, ratingCount: 4 } : entry
     ));
-    render(<QuestsScreen />);
+    await render(<QuestsScreen />);
     await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
     expect(mockContentProps.availableSortOrders?.includes('rating')).toBe(false);
 });
@@ -196,11 +196,11 @@ it('reorders by public rating and leaves unrated quests in catalog order', async
         return entry;
     });
 
-    const { getByTestId } = render(<QuestsScreen />);
+    const { getByTestId } = await render(<QuestsScreen />);
     await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
     expect(mockContentProps.availableSortOrders).toEqual(['popular', 'rating']);
 
-    fireEvent.press(getByTestId('toggle-rating'));
+    await fireEvent.press(getByTestId('toggle-rating'));
     await waitFor(() => expect(mockContentProps.activeSortOrder).toBe('rating'));
 
     expect(mockContentProps.questsAll.map((q) => q.id)).toEqual([
@@ -211,12 +211,12 @@ it('reorders by public rating and leaves unrated quests in catalog order', async
     ]);
 
     // Выбор второго варианта заменяет первый, а не складывается с ним.
-    fireEvent.press(getByTestId('toggle-popular'));
+    await fireEvent.press(getByTestId('toggle-popular'));
     await waitFor(() => expect(mockContentProps.activeSortOrder).toBe('popular'));
     expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(POPULAR_ORDER);
 
     // Повторное нажатие по выбранному возвращает порядок каталога.
-    fireEvent.press(getByTestId('toggle-popular'));
+    await fireEvent.press(getByTestId('toggle-popular'));
     await waitFor(() => expect(mockContentProps.activeSortOrder).toBe('default'));
     expect(mockContentProps.questsAll.map((q) => q.id)).toEqual(CATALOG_ORDER);
 });
@@ -229,7 +229,7 @@ it('never reorders a distance-ordered map-area list', async () => {
         quest('near-and-cold', 2, 0, { lat: 53.9, lng: 27.56 }),
     ];
 
-    render(<QuestsScreen />);
+    await render(<QuestsScreen />);
     await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
     expect(mockContentProps.availableSortOrders?.includes('popular')).toBe(true);
 
@@ -248,7 +248,7 @@ it('offers the sort again once a search overrides the map area', async () => {
     // Свободный поиск идёт по всему каталогу и отменяет и «Рядом», и область
     // карты: его выдача уже НЕ упорядочена по расстоянию, поэтому прятать
     // переключатель здесь значило бы отнимать сортировку у поиска.
-    const { getByTestId } = render(<QuestsScreen />);
+    const { getByTestId } = await render(<QuestsScreen />);
     await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
 
     mockContentProps.onToggleViewMode();
@@ -267,7 +267,7 @@ it('offers the sort again once a search overrides the map area', async () => {
         'played-twice-many-views',
     ]);
 
-    fireEvent.press(getByTestId('toggle-popular'));
+    await fireEvent.press(getByTestId('toggle-popular'));
     await waitFor(() => expect(mockContentProps.questsAll.map((q) => q.id)).toEqual([
         'played-thrice',
         'played-twice-many-views',

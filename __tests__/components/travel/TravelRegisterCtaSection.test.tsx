@@ -41,10 +41,10 @@ describe('TravelRegisterCtaSection', () => {
     ;(saveGuestFavoriteIntent as jest.Mock).mockClear()
   })
 
-  it('renders CTA for a guest and navigates to registration with redirect and analytics on press', () => {
+  it('renders CTA for a guest and navigates to registration with redirect and analytics on press', async () => {
     useAuth.mockReturnValue({ isAuthenticated: false })
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <TravelRegisterCtaSection
         redirect="/travels/test-route"
         travelId={42}
@@ -56,7 +56,7 @@ describe('TravelRegisterCtaSection', () => {
     const button = getByLabelText('Сохранить маршрут')
     expect(button).toBeTruthy()
 
-    fireEvent.press(button)
+    await fireEvent.press(button)
 
     expect(queueAnalyticsEvent).toHaveBeenCalledWith('cta_register_click', {
       source: 'travel_article',
@@ -81,10 +81,10 @@ describe('TravelRegisterCtaSection', () => {
     expect(mockPush).toHaveBeenCalledWith('/registration?redirect=%2Ftravels%2Ftest-route&intent=favorite')
   })
 
-  it('renders nothing for an authenticated user', () => {
+  it('renders nothing for an authenticated user', async () => {
     useAuth.mockReturnValue({ isAuthenticated: true })
 
-    const { queryByLabelText } = render(<TravelRegisterCtaSection />)
+    const { queryByLabelText } = await render(<TravelRegisterCtaSection />)
 
     expect(queryByLabelText('Сохранить маршрут')).toBeNull()
   })

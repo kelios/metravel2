@@ -67,11 +67,11 @@ const flattenStyle = (style: unknown): Record<string, unknown> =>
     : ((style ?? {}) as Record<string, unknown>)
 
 describe('BelkrajWidget — подложка стороннего виджета не следует тёмной теме (#1697)', () => {
-  it('native не показывает страницу партнёра — карточка-ссылка приложения на тематической поверхности', () => {
+  it('native не показывает страницу партнёра — карточка-ссылка приложения на тематической поверхности', async () => {
     // #2135: на native вместо WebView с belkraj.by карточка-ссылка во внешний
     // браузер. Это UI приложения, а не страница партнёра, поэтому она следует
     // теме, а светлая подложка BELKRAJ_WIDGET_SURFACE нужна только web-iframe.
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <BelkrajWidgetNative countryCode="BY" points={MINSK} cardsCount={6} />,
     )
 
@@ -84,19 +84,19 @@ describe('BelkrajWidget — подложка стороннего виджета
     expect(style.backgroundColor).toBe(MODERN_MATTE_PALETTE_DARK.surface)
   })
 
-  it('web-iframe лежит на светлой подложке партнёра, а не на тёмном colors.surface', () => {
-    const tree = render(
+  it('web-iframe лежит на светлой подложке партнёра, а не на тёмном colors.surface', async () => {
+    const tree = await (await render(
       <BelkrajWidgetWeb countryCode="BY" points={MINSK} cardsCount={6} />,
-    ).toJSON() as { props: { style?: Record<string, unknown> } } | null
+    )).toJSON() as { props: { style?: Record<string, unknown> } } | null
 
     expect(tree?.props?.style?.background).toBe(BELKRAJ_WIDGET_SURFACE)
     expect(tree?.props?.style?.background).not.toBe('var(--color-surface)')
   })
 
-  it('web-слот пинит светлую color-scheme — иначе UA красит подложку кросс-доменного iframe сам', () => {
-    const tree = render(
+  it('web-слот пинит светлую color-scheme — иначе UA красит подложку кросс-доменного iframe сам', async () => {
+    const tree = await (await render(
       <BelkrajWidgetWeb countryCode="BY" points={MINSK} cardsCount={6} />,
-    ).toJSON() as { props: { style?: Record<string, unknown> } } | null
+    )).toJSON() as { props: { style?: Record<string, unknown> } } | null
 
     expect(tree?.props?.style?.colorScheme).toBe('light')
   })

@@ -42,8 +42,8 @@ describe('FavoriteButton (overlay variant)', () => {
     ;(Platform as any).OS = originalPlatform
   })
 
-  it('marks the web hit area as a card action for clickable-card containment', () => {
-    render(
+  it('marks the web hit area as a card action for clickable-card containment', async () => {
+    await render(
       <FavoriteButton
         variant="overlay"
         id={42}
@@ -60,8 +60,8 @@ describe('FavoriteButton (overlay variant)', () => {
     expect(hitArea.props['data-card-action']).toBeUndefined()
   })
 
-  it('keeps the web hit area at the 44px accessibility minimum', () => {
-    render(
+  it('keeps the web hit area at the 44px accessibility minimum', async () => {
+    await render(
       <FavoriteButton
         variant="overlay"
         id={42}

@@ -3,11 +3,16 @@
  */
 
 import React from 'react';
-import { act } from 'react-test-renderer';
-import { render } from '@testing-library/react-native';
+import { act } from "@testing-library/react-native";
+import { cleanup, render } from '@testing-library/react-native';
+import { Platform } from 'react-native';
+import { HelmetProvider } from 'expo-router/vendor/react-helmet-async/lib';
+import { readHelmetHead } from '../../helpers/helmetHead';
 import { QueryClientProvider } from '@tanstack/react-query';
 
 import { createTestQueryClient } from '@/__tests__/helpers/testQueryClient';
+
+jest.mock('expo-router/head', () => require('../../helpers/helmetHead').createHelmetHeadMock());
 
 // useIsFocused/useNavigation приходят из глобального мока expo-router (setup.ts)
 
@@ -184,16 +189,27 @@ jest.mock('@/components/home/WeatherWidget', () => ({
 import TravelDetailsContainer from '@/components/travel/details/TravelDetailsContainer';
 
 describe('TravelDetailsContainer (mobile) no duplicated engagement blocks', () => {
+  const originalOS = Platform.OS;
+  const originalCanUseDOM = HelmetProvider.canUseDOM;
+  beforeAll(() => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+    HelmetProvider.canUseDOM = false;
+  });
+  afterAll(() => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOS });
+    HelmetProvider.canUseDOM = originalCanUseDOM;
+  });
   beforeEach(() => {
     jest.useFakeTimers();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await cleanup();
     jest.useRealTimers();
   });
 
   it('renders Telegram engagement block only once', async () => {
-    const { queryAllByTestId } = render(<TravelDetailsContainer />, {
+    const { queryAllByTestId } = await render(<TravelDetailsContainer />, {
       wrapper: withQueryClient(),
     });
 
@@ -204,5 +220,6 @@ describe('TravelDetailsContainer (mobile) no duplicated engagement blocks', () =
     });
 
     expect(queryAllByTestId('travel-details-telegram')).toHaveLength(1);
+    expect(readHelmetHead().scripts.map(script => script.id)).toEqual(['travel-article-jsonld']);
   });
 });

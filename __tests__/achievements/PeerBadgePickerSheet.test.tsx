@@ -1,3 +1,4 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 // __tests__/achievements/PeerBadgePickerSheet.test.tsx
 // Render tests for components/achievements/PeerBadgePickerSheet.tsx
 //
@@ -122,8 +123,8 @@ describe('PeerBadgePickerSheet — visible=false', () => {
     setupHooks(makeCatalog())
   })
 
-  it('renders nothing when visible=false', () => {
-    const { queryByText } = render(
+  it('renders nothing when visible=false', async () => {
+    const { queryByText } = await render(
       <PeerBadgePickerSheet {...defaultProps} visible={false} />,
     )
     expect(queryByText('Наградить автора')).toBeNull()
@@ -139,8 +140,8 @@ describe('PeerBadgePickerSheet — visible=true, target filtering', () => {
     setupHooks(makeCatalog())
   })
 
-  it('shows only user-targeted badges when target="user"', () => {
-    const { getByText, queryByText } = render(
+  it('shows only user-targeted badges when target="user"', async () => {
+    const { getByText, queryByText } = await render(
       <PeerBadgePickerSheet {...defaultProps} visible target="user" />,
     )
     expect(getByText('Любимый автор')).toBeTruthy()
@@ -150,8 +151,8 @@ describe('PeerBadgePickerSheet — visible=true, target filtering', () => {
     expect(queryByText('Лучшие фото')).toBeNull()
   })
 
-  it('shows only travel-targeted badges when target="travel"', () => {
-    const { getByText, queryByText } = render(
+  it('shows only travel-targeted badges when target="travel"', async () => {
+    const { getByText, queryByText } = await render(
       <PeerBadgePickerSheet {...defaultProps} visible target="travel" />,
     )
     expect(getByText('Лучшая статья')).toBeTruthy()
@@ -160,32 +161,32 @@ describe('PeerBadgePickerSheet — visible=true, target filtering', () => {
     expect(queryByText('Вдохновил меня')).toBeNull()
   })
 
-  it('renders no options when catalog is empty', () => {
+  it('renders no options when catalog is empty', async () => {
     setupHooks([])
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <PeerBadgePickerSheet {...defaultProps} visible target="user" />,
     )
     expect(queryByText('Любимый автор')).toBeNull()
   })
 
-  it('renders no options when catalog is undefined (loading)', () => {
+  it('renders no options when catalog is undefined (loading)', async () => {
     setupHooks(undefined, false)
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <PeerBadgePickerSheet {...defaultProps} visible target="user" />,
     )
     expect(queryByText('Любимый автор')).toBeNull()
   })
 
-  it('shows a catalog error and retry instead of disguising the failure as an empty catalog', () => {
+  it('shows a catalog error and retry instead of disguising the failure as an empty catalog', async () => {
     mockUsePeerBadgeCatalog.mockReturnValue({
       data: makeCatalog(), isLoading: false, isError: true, isFetching: false,
       refetch: mockRefetch,
     } as ReturnType<typeof usePeerBadgeCatalog>)
-    const screen = render(<PeerBadgePickerSheet {...defaultProps} visible />)
+    const screen = await render(<PeerBadgePickerSheet {...defaultProps} visible />)
     expect(screen.getByTestId('peer-badge-catalog-error')).toBeTruthy()
     expect(screen.queryByText('Нет доступных наград')).toBeNull()
     expect(screen.queryByText('Любимый автор')).toBeNull()
-    fireEvent.press(screen.getByTestId('peer-badge-catalog-retry'))
+    await fireEvent.press(screen.getByTestId('peer-badge-catalog-retry'))
     expect(mockRefetch).toHaveBeenCalledTimes(1)
     expect(mockMutate).not.toHaveBeenCalled()
   })
@@ -199,19 +200,19 @@ describe('PeerBadgePickerSheet — Выдать/Выдано toggle text', () =>
     setupHooks(makeCatalog())
   })
 
-  it('shows "Выдать" for badge not yet granted', () => {
-    const { getAllByText } = render(
+  it('shows "Выдать" for badge not yet granted', async () => {
+    const { getAllByText } = await render(
       <PeerBadgePickerSheet {...defaultProps} visible target="user" received={[]} />,
     )
     const buttons = getAllByText('Выдать')
     expect(buttons.length).toBeGreaterThan(0)
   })
 
-  it('shows "Выдано" for badge already granted by me', () => {
+  it('shows "Выдано" for badge already granted by me', async () => {
     const catalog = makeCatalog()
     const received = [makeReceived(catalog[0], 3, true)]
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <PeerBadgePickerSheet
         {...defaultProps}
         visible
@@ -222,11 +223,11 @@ describe('PeerBadgePickerSheet — Выдать/Выдано toggle text', () =>
     expect(getByText('Выдано')).toBeTruthy()
   })
 
-  it('shows "Выдать" for badge received by others but not by me (grantedByMe=false)', () => {
+  it('shows "Выдать" for badge received by others but not by me (grantedByMe=false)', async () => {
     const catalog = makeCatalog()
     const received = [makeReceived(catalog[0], 5, false)]
 
-    const { getAllByText } = render(
+    const { getAllByText } = await render(
       <PeerBadgePickerSheet
         {...defaultProps}
         visible
@@ -247,8 +248,8 @@ describe('PeerBadgePickerSheet — tap calls mutate', () => {
     setupHooks(makeCatalog())
   })
 
-  it('calls grant.mutate with badgeSlug and recipientId when user-target option tapped', () => {
-    const { getByLabelText } = render(
+  it('calls grant.mutate with badgeSlug and recipientId when user-target option tapped', async () => {
+    const { getByLabelText } = await render(
       <PeerBadgePickerSheet
         {...defaultProps}
         visible
@@ -257,14 +258,14 @@ describe('PeerBadgePickerSheet — tap calls mutate', () => {
         received={[]}
       />,
     )
-    fireEvent.press(getByLabelText(/Выдать значок «Любимый автор»/))
+    await fireEvent.press(getByLabelText(/Выдать значок «Любимый автор»/))
     expect(mockMutate).toHaveBeenCalledWith(
       expect.objectContaining({ badgeSlug: 'favorite-author', recipientId: 42 }),
     )
   })
 
-  it('calls grant.mutate with travelId when travel-target option tapped', () => {
-    const { getByLabelText } = render(
+  it('calls grant.mutate with travelId when travel-target option tapped', async () => {
+    const { getByLabelText } = await render(
       <PeerBadgePickerSheet
         {...defaultProps}
         visible
@@ -273,7 +274,7 @@ describe('PeerBadgePickerSheet — tap calls mutate', () => {
         received={[]}
       />,
     )
-    fireEvent.press(getByLabelText(/Выдать значок «Лучшая статья»/))
+    await fireEvent.press(getByLabelText(/Выдать значок «Лучшая статья»/))
     expect(mockMutate).toHaveBeenCalledWith(
       expect.objectContaining({ badgeSlug: 'best-article', travelId: 99 }),
     )
@@ -281,20 +282,20 @@ describe('PeerBadgePickerSheet — tap calls mutate', () => {
 
   it('reports a rejected grant as an error without a successful award toast', async () => {
     mockMutate.mockRejectedValueOnce(new Error('grant rejected'))
-    const screen = render(
+    const screen = await render(
       <PeerBadgePickerSheet {...defaultProps} visible target="user" recipientId={42} />,
     )
-    fireEvent.press(screen.getByLabelText(/Выдать значок «Любимый автор»/))
+    await fireEvent.press(screen.getByLabelText(/Выдать значок «Любимый автор»/))
     await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' })))
     expect(showToast).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }))
     expect(screen.queryByText('Выдано')).toBeNull()
   })
 
-  it('label changes to "Забрать" for already granted badge', () => {
+  it('label changes to "Забрать" for already granted badge', async () => {
     const catalog = makeCatalog()
     const received = [makeReceived(catalog[0], 3, true)]
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <PeerBadgePickerSheet
         {...defaultProps}
         visible
@@ -306,7 +307,7 @@ describe('PeerBadgePickerSheet — tap calls mutate', () => {
     // badge is granted → label should be "Забрать значок «...»"
     const el = getByLabelText(/Забрать значок «Любимый автор»/)
     expect(el).toBeTruthy()
-    fireEvent.press(el)
+    await fireEvent.press(el)
     expect(mockMutate).toHaveBeenCalledWith(
       expect.objectContaining({ badgeSlug: 'favorite-author' }),
     )
@@ -321,22 +322,22 @@ describe('PeerBadgePickerSheet — heading', () => {
     setupHooks(makeCatalog())
   })
 
-  it('shows "Наградить автора" for user target by default', () => {
-    const { getByText } = render(
+  it('shows "Наградить автора" for user target by default', async () => {
+    const { getByText } = await render(
       <PeerBadgePickerSheet {...defaultProps} visible target="user" />,
     )
     expect(getByText('Наградить автора')).toBeTruthy()
   })
 
-  it('shows "Наградить путешествие" for travel target by default', () => {
-    const { getByText } = render(
+  it('shows "Наградить путешествие" for travel target by default', async () => {
+    const { getByText } = await render(
       <PeerBadgePickerSheet {...defaultProps} visible target="travel" />,
     )
     expect(getByText('Наградить путешествие')).toBeTruthy()
   })
 
-  it('shows custom title when provided', () => {
-    const { getByText } = render(
+  it('shows custom title when provided', async () => {
+    const { getByText } = await render(
       <PeerBadgePickerSheet {...defaultProps} visible target="user" title="Выдать медаль" />,
     )
     expect(getByText('Выдать медаль')).toBeTruthy()
@@ -346,23 +347,22 @@ describe('PeerBadgePickerSheet — heading', () => {
 // ── loading state ─────────────────────────────────────────────────────────────
 
 describe('PeerBadgePickerSheet — loading', () => {
-  it('shows ActivityIndicator while catalog is loading', () => {
+  it('shows ActivityIndicator while catalog is loading', async () => {
     jest.clearAllMocks()
     setupHooks(undefined, true)
-    const { UNSAFE_getByType } = render(
+    const { container } = await render(
       <PeerBadgePickerSheet {...defaultProps} visible target="user" />,
     )
-    const { ActivityIndicator } = require('react-native')
-    expect(UNSAFE_getByType(ActivityIndicator)).toBeTruthy()
+    expect(getOnlyHost(container, node => node.type === 'ActivityIndicator')).toBeTruthy()
   })
 })
 
 describe('PeerBadgePickerSheet — empty catalog', () => {
-  it('shows a clear empty state instead of a blank sheet', () => {
+  it('shows a clear empty state instead of a blank sheet', async () => {
     jest.clearAllMocks()
     setupHooks([], false)
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <PeerBadgePickerSheet {...defaultProps} visible target="travel" title="Наградить статью" />,
     )
 

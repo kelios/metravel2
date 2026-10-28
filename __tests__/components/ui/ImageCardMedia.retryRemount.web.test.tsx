@@ -17,8 +17,15 @@
  * единственное, что сбрасывает состояние сбоя, поэтому здесь `WebMainImage`
  * заменён заглушкой, отдающей `onLoad` наружу вместе с размерами.
  */
-const renderer = require('react-test-renderer');
+const { act } = require('react');
+const renderer = require('test-renderer');
 const { Platform } = require('react-native');
+const roots = new Set<import('test-renderer').Root>()
+afterEach(async () => {
+  for (const root of roots) await act(() => root.unmount())
+  roots.clear()
+})
+
 
 /** Каждое монтирование web-узла = один сетевой запрос браузера. */
 const mockWebImageMounts: string[] = [];
@@ -51,12 +58,11 @@ const ALT = 'Обложка квеста Парк Прокоцим';
 const SIZE = 132;
 
 const mainImages = (tree: any): any[] =>
-  tree.root.findAll(
+  tree.container.queryAll(
     (node: any) =>
       node?.type === 'img' &&
       typeof node?.props?.alt === 'string' &&
-      node.props.alt.length > 0,
-    { deep: true },
+      node.props.alt.length > 0
   );
 
 describe('ImageCardMedia: ретрай не тянет третий запрос (#1212)', () => {
@@ -77,32 +83,32 @@ describe('ImageCardMedia: ретрай не тянет третий запрос
     if (originalJestWorkerId) process.env.JEST_WORKER_ID = originalJestWorkerId;
   });
 
-  it('успешный ретрай оставляет узел на месте: ровно два монтирования', () => {
+  it('успешный ретрай оставляет узел на месте: ровно два монтирования', async () => {
     let tree: any;
-    renderer.act(() => {
-      tree = renderer.create(
-        <ImageCardMedia
+    await act(() => {
+      tree = renderer.createRoot();
+      roots.add(tree)
+      tree.render(<ImageCardMedia
           testID="quest-media"
           src={SRC}
           alt={ALT}
           width={SIZE}
           height={SIZE}
           fit="contain"
-        />,
-      );
+        />)
     });
     expect(mockWebImageMounts).toHaveLength(1);
 
-    renderer.act(() => {
+    await act(() => {
       mainImages(tree)[0].props.onError();
     });
-    renderer.act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1500);
     });
     expect(mockWebImageMounts).toHaveLength(2);
 
     // Настоящая загрузка: размеры кадра снимают состояние сбоя.
-    renderer.act(() => {
+    await act(() => {
       mainImages(tree)[0].props.onLoad(SRC, { width: 800, height: 533 });
     });
 

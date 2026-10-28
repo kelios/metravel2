@@ -17,7 +17,7 @@ import { buildAnswerChecker } from '@/utils/questAdapters'
 const colors = getThemedColors(false) as any
 const styles = createQuestWizardStyles(colors, true, 390)
 
-const renderCard = (overrides: Record<string, unknown> = {}) => {
+const renderCard = async (overrides: Record<string, unknown> = {}) => {
   const props = {
     colors,
     styles,
@@ -51,30 +51,30 @@ const renderCard = (overrides: Record<string, unknown> = {}) => {
     ...overrides,
   } as any
 
-  return { ...render(<QuestStepCard {...props} />), props }
+  return { ...await render(<QuestStepCard {...props} />), props }
 }
 
 describe('QuestStepCard — долг маршрута перед финалом', () => {
-  it('называет отложенную точку и даёт вернуться к ней', () => {
-    const screen = renderCard()
+  it('называет отложенную точку и даёт вернуться к ней', async () => {
+    const screen = await renderCard()
 
     expect(screen.getByTestId('quest-step-pending-notice')).toBeTruthy()
-    fireEvent.press(screen.getByTestId('quest-step-pending-go-5-nikolaevskaya-cerkov'))
+    await fireEvent.press(screen.getByTestId('quest-step-pending-go-5-nikolaevskaya-cerkov'))
 
     expect(screen.props.onGoToStep).toHaveBeenCalledWith(1)
   })
 
-  it('даёт выход на финал, не завися от блока далёкой точки', () => {
+  it('даёт выход на финал, не завися от блока далёкой точки', async () => {
     // «Завершить квест здесь» до #1633 рисовалась только внутри блока о
     // расстоянии (`showFarStepBlock`), поэтому игрок в тупике её не видел.
-    const screen = renderCard({ isFarStep: false, approachLeg: null, canFinishHere: false })
+    const screen = await renderCard({ isFarStep: false, approachLeg: null, canFinishHere: false })
 
-    fireEvent.press(screen.getByTestId('quest-step-pending-finish'))
+    await fireEvent.press(screen.getByTestId('quest-step-pending-finish'))
 
     expect(screen.props.onFinishHere).toHaveBeenCalledTimes(1)
   })
 
-  it('переносит ряд возвратов и держит кнопку в карточке: долг бывает и на семь точек', () => {
+  it('переносит ряд возвратов и держит кнопку в карточке: долг бывает и на семь точек', async () => {
     // Квест из восьми точек (#92, Гомель) даёт семь кнопок «Вернуться» плюс
     // выход на финал. Строка без переноса вынесла их за карточку и за колонку
     // контента, поверх карты — это и есть разъехавшаяся вёрстка.
@@ -86,7 +86,7 @@ describe('QuestStepCard — долг маршрута перед финалом'
       title: `${i + 1}. Печать очень длинного названия точки маршрута`,
       index: i,
     }))
-    const screen = renderCard({ styles: desktopStyles, pendingBehind })
+    const screen = await renderCard({ styles: desktopStyles, pendingBehind })
 
     const buttons = [
       ...pendingBehind.map((pending) => screen.getByTestId(`quest-step-pending-go-${pending.id}`)),
@@ -97,14 +97,14 @@ describe('QuestStepCard — долг маршрута перед финалом'
     })
   })
 
-  it('молчит, когда долга нет', () => {
-    const screen = renderCard({ pendingBehind: [] })
+  it('молчит, когда долга нет', async () => {
+    const screen = await renderCard({ pendingBehind: [] })
 
     expect(screen.queryByTestId('quest-step-pending-notice')).toBeNull()
   })
 
-  it('молчит на уже отвеченной точке: там место занимает переход к финалу', () => {
-    const screen = renderCard({ savedAnswer: '5' })
+  it('молчит на уже отвеченной точке: там место занимает переход к финалу', async () => {
+    const screen = await renderCard({ savedAnswer: '5' })
 
     expect(screen.queryByTestId('quest-step-pending-notice')).toBeNull()
   })

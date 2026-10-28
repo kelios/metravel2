@@ -6,7 +6,7 @@ import { getMapFitBoundsPadding } from '@/components/MapPage/Map/mapFitBoundsPad
 // #2451 — react-leaflet's useMapEvents re-subscribes (map.off + map.on) whenever
 // the handlers object changes identity; callers pass inline literals.
 describe('createStableMapEventsHook', () => {
-  it('hands react-leaflet the same handler object across re-renders and calls the latest handler', () => {
+  it('hands react-leaflet the same handler object across re-renders and calls the latest handler', async () => {
     const seen: any[] = []
     const impl = jest.fn((handlers: any) => {
       seen.push(handlers)
@@ -16,11 +16,11 @@ describe('createStableMapEventsHook', () => {
     const first = jest.fn()
     const second = jest.fn()
 
-    const { rerender } = renderHook(
+    const { rerender } = await renderHook(
       ({ click }: { click: (event: any) => void }) => useStable({ click, zoomend: () => {} }),
       { initialProps: { click: first } },
     )
-    rerender({ click: second })
+    await rerender({ click: second })
 
     expect(seen).toHaveLength(2)
     expect(seen[1]).toBe(seen[0])
@@ -29,18 +29,18 @@ describe('createStableMapEventsHook', () => {
     expect(second).toHaveBeenCalledWith({ type: 'click' })
   })
 
-  it('re-subscribes only when the set of event names changes', () => {
+  it('re-subscribes only when the set of event names changes', async () => {
     const seen: any[] = []
     const useStable = createStableMapEventsHook((handlers: any) => {
       seen.push(handlers)
       return null
     })
-    const { rerender } = renderHook(
+    const { rerender } = await renderHook(
       ({ withZoom }: { withZoom: boolean }) =>
         useStable(withZoom ? { click: () => {}, zoomend: () => {} } : { click: () => {} }),
       { initialProps: { withZoom: false } },
     )
-    rerender({ withZoom: true })
+    await rerender({ withZoom: true })
     expect(seen[1]).not.toBe(seen[0])
     expect(Object.keys(seen[1]).sort()).toEqual(['click', 'zoomend'])
   })

@@ -54,11 +54,11 @@ const setPlatform = (os: typeof Platform.OS) => {
   Object.defineProperty(Platform, 'OS', { configurable: true, value: os })
 }
 
-const renderBridge = (visible: boolean, onClose = jest.fn(), onStateChange = jest.fn()) => {
-  const view = render(
+const renderBridge = async (visible: boolean, onClose = jest.fn(), onStateChange = jest.fn()) => {
+  const view = await render(
     <ShareButtonsPdfExportBridge travel={travel} visible={visible} onClose={onClose} onStateChange={onStateChange} />
   )
-  const rerender = (nextVisible: boolean) =>
+  const rerender = async (nextVisible: boolean) =>
     view.rerender(
       <ShareButtonsPdfExportBridge travel={travel} visible={nextVisible} onClose={onClose} onStateChange={onStateChange} />
     )
@@ -83,7 +83,7 @@ describe('ShareButtonsPdfExportBridge (#2119)', () => {
     })
 
     it('запрос экспорта открывает окно настроек и сам ничего не печатает', async () => {
-      const view = renderBridge(true)
+      const view = await renderBridge(true)
       expect(await view.findByText('окно настроек книги')).toBeTruthy()
 
       expect(mockOpenPrintBook).not.toHaveBeenCalled()
@@ -91,7 +91,7 @@ describe('ShareButtonsPdfExportBridge (#2119)', () => {
     })
 
     it('сохранение в окне печатает книгу с выбранными настройками', async () => {
-      const view = renderBridge(true)
+      const view = await renderBridge(true)
       await view.findByText('окно настроек книги')
       await act(async () => {
         await mockModalProps.current?.onSave({ ...LAST_SETTINGS, template: 'classic' })
@@ -114,21 +114,21 @@ describe('ShareButtonsPdfExportBridge (#2119)', () => {
         await new Promise<void>((resolve) => { finishPreparation = resolve })
         if (!cancelled) print()
       })
-      const view = renderBridge(true)
+      const view = await renderBridge(true)
       await view.findByText('окно настроек книги')
       let pending: Promise<void> = Promise.resolve()
-      act(() => { pending = mockModalProps.current!.onSave(LAST_SETTINGS) })
-      fireEvent.press(view.getByTestId('settings-cancel'))
+      await act(() => { pending = mockModalProps.current!.onSave(LAST_SETTINGS) })
+      await fireEvent.press(view.getByTestId('settings-cancel'))
       expect(mockCancel).toHaveBeenCalledTimes(1)
       expect(view.onClose).toHaveBeenCalledTimes(1)
-      view.rerenderBridge(false)
+      await view.rerenderBridge(false)
       expect(view.onStateChange).toHaveBeenLastCalledWith(expect.objectContaining({ isGenerating: false, progress: 0 }))
       await act(async () => { finishPreparation(); await pending })
       expect(print).not.toHaveBeenCalled()
     })
 
     it('состояние экспорта уходит наверх — кнопка показывает прогресс', async () => {
-      const view = renderBridge(false)
+      const view = await renderBridge(false)
       await act(async () => {})
 
       expect(view.onStateChange).toHaveBeenCalledWith(

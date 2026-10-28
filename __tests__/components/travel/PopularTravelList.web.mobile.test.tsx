@@ -3,7 +3,7 @@
  */
 
 import React from 'react'
-import renderer from 'react-test-renderer'
+import { render as renderTree, act } from '@testing-library/react-native'
 import * as RN from 'react-native'
 
 import PopularTravelList from '@/components/travel/PopularTravelList'
@@ -58,9 +58,9 @@ describe('PopularTravelList web mobile layout', () => {
     RN.Platform.OS = originalPlatform
   })
 
-  it('renders mobile-style cards with their real rail-slot width on narrow web', () => {
-    renderer.act(() => {
-      renderer.create(<PopularTravelList embedded showHeader={false} />)
+  it('renders mobile-style cards with their real rail-slot width on narrow web', async () => {
+    await act(async () => {
+      await renderTree(<PopularTravelList embedded showHeader={false} />)
     })
 
     expect(mockTravelListItem).toHaveBeenCalled()
@@ -71,7 +71,7 @@ describe('PopularTravelList web mobile layout', () => {
 
   // #1544: на desktop (3 колонки) карточка обязана получить реальную ширину
   // колонки, иначе обложка ~280 px просит ступень srcSet w=720 от вьюпорта.
-  it('passes the real column width (not the 720 viewport fallback) on desktop web', () => {
+  it('passes the real column width (not the 720 viewport fallback) on desktop web', async () => {
     jest.spyOn(RN, 'useWindowDimensions').mockReturnValue({
       width: 1280,
       height: 900,
@@ -79,8 +79,8 @@ describe('PopularTravelList web mobile layout', () => {
       fontScale: 1,
     } as any)
 
-    renderer.act(() => {
-      renderer.create(<PopularTravelList embedded showHeader={false} />)
+    await act(async () => {
+      await renderTree(<PopularTravelList embedded showHeader={false} />)
     })
 
     expect(mockTravelListItem).toHaveBeenCalled()

@@ -67,7 +67,7 @@ jest.mock('@/components/ui/UnifiedTravelCard', () => {
 })
 
 describe('MapClientSideComponent (Map.web.tsx)', () => {
-  const renderWithQueryClient = (ui: React.ReactElement) => {
+  const renderWithQueryClient = async (ui: React.ReactElement) => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -75,7 +75,7 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
       },
     });
 
-    return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+    return await render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
   };
 
   const defaultProps = {
@@ -125,19 +125,19 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
     });
   });
 
-  it('renders loading overlay when platform is not web', () => {
+  it('renders loading overlay when platform is not web', async () => {
     mockPlatform.OS = 'ios';
     
-    const rendered = renderWithQueryClient(<MapClientSideComponent {...defaultProps} />);
+    const rendered = await renderWithQueryClient(<MapClientSideComponent {...defaultProps} />);
     expect(rendered.toJSON()).toBeTruthy();
 
     mockPlatform.OS = 'web';
   });
 
-  it('renders loading state initially on web', () => {
+  it('renders loading state initially on web', async () => {
     mockPlatform.OS = 'web';
     
-    const rendered = renderWithQueryClient(<MapClientSideComponent {...defaultProps} />);
+    const rendered = await renderWithQueryClient(<MapClientSideComponent {...defaultProps} />);
     expect(rendered.toJSON()).toBeTruthy();
   });
 
@@ -154,26 +154,26 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
       ],
     };
 
-    const rendered = renderWithQueryClient(
+    const rendered = await renderWithQueryClient(
       <MapClientSideComponent {...defaultProps} travel={travelData} />
     );
     
     expect(rendered.toJSON()).toBeTruthy();
   });
 
-  it('uses default coordinates when not provided', () => {
-    const rendered = renderWithQueryClient(<MapClientSideComponent travel={{ data: [] }} />);
+  it('uses default coordinates when not provided', async () => {
+    const rendered = await renderWithQueryClient(<MapClientSideComponent travel={{ data: [] }} />);
     expect(rendered.toJSON()).toBeTruthy();
   });
 
-  it('handles null coordinates gracefully', () => {
-    const rendered = renderWithQueryClient(
+  it('handles null coordinates gracefully', async () => {
+    const rendered = await renderWithQueryClient(
       <MapClientSideComponent travel={{ data: [] }} coordinates={null} />
     );
     expect(rendered.toJSON()).toBeTruthy();
   });
 
-  it('filters out invalid coordinates', () => {
+  it('filters out invalid coordinates', async () => {
     const travelData = {
       data: [
         {
@@ -193,7 +193,7 @@ describe('MapClientSideComponent (Map.web.tsx)', () => {
       ],
     };
 
-    const rendered = renderWithQueryClient(
+    const rendered = await renderWithQueryClient(
       <MapClientSideComponent {...defaultProps} travel={travelData} />
     );
     

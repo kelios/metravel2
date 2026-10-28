@@ -66,21 +66,21 @@ describe('TripParticipantsList summary line', () => {
     [1, 1, '1 участник · 1 едет'],
     [2, 2, '2 участника · 2 едут'],
     [5, 3, '5 участников · 3 едут'],
-  ])('uses the locale plural form for %i participants', (total, going, expected) => {
-    const text = JSON.stringify(render(<TripParticipantsList trip={listOf(total, going)} />).toJSON());
+  ])('uses the locale plural form for %i participants', async (total, going, expected) => {
+    const text = JSON.stringify(await (await render(<TripParticipantsList trip={listOf(total, going)} />)).toJSON());
     expect(text).toContain(expected);
   });
 
-  it('renders the summary as one string instead of glued fragments', () => {
-    const { getByText } = render(<TripParticipantsList trip={listOf(3, 2)} />);
+  it('renders the summary as one string instead of glued fragments', async () => {
+    const { getByText } = await render(<TripParticipantsList trip={listOf(3, 2)} />);
 
     // Один цельный дочерний узел: склейка фрагментов дала бы массив, а
     // getByText нормализует краевые пробелы и дефект не поймал бы.
     expect(getByText('3 участника · 2 едут').props.children).toBe('3 участника · 2 едут');
   });
 
-  it('keeps the hint when nobody joined yet', () => {
-    const { queryByText, getByText } = render(<TripParticipantsList trip={tripWith([])} />);
+  it('keeps the hint when nobody joined yet', async () => {
+    const { queryByText, getByText } = await render(<TripParticipantsList trip={tripWith([])} />);
 
     expect(queryByText(/участник/)).toBeNull();
     expect(getByText('Пока никто не присоединился.')).toBeTruthy();

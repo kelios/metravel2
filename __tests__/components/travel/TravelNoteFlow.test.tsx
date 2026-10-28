@@ -59,7 +59,7 @@ type Harness = { handleManualSave: jest.Mock; clearPersistedStep: jest.Mock };
 
 let externalSetFormData: ((data: TravelFormData) => void) | null = null;
 
-function renderNote(harness: Harness, initialStep = 1) {
+async function renderNote(harness: Harness, initialStep = 1) {
   const Wrapper = () => {
     const [formData, setFormData] = useState<TravelFormData>({ ...getEmptyFormData(null), publication_format: 'note' });
     externalSetFormData = setFormData;
@@ -88,7 +88,7 @@ function renderNote(harness: Harness, initialStep = 1) {
     } as unknown as UpsertTravelController;
     return <TravelNoteFlow controller={controller} />;
   };
-  return render(<Wrapper />);
+  return await render(<Wrapper />);
 }
 
 describe('TravelNoteFlow (#2666)', () => {
@@ -102,24 +102,24 @@ describe('TravelNoteFlow (#2666)', () => {
   });
 
   it('creates the note draft on the first photo and sends it after two screens', async () => {
-    const screen = renderNote(harness);
+    const screen = await renderNote(harness);
     expect(screen.getByText('gallery:')).toBeTruthy();
 
     // Нижняя панель телефона — короткие подписи, чтобы не обрезаться рядом с «Назад».
     expect(screen.getByTestId('travel-note.footer-next')).toHaveTextContent('Далее');
-    await act(async () => { fireEvent.press(screen.getByTestId('gallery-stub')); });
+    await act(async () => { await fireEvent.press(screen.getByTestId('gallery-stub')); });
     expect(harness.handleManualSave).toHaveBeenCalledWith({ publication_format: 'note' });
 
-    fireEvent.press(screen.getByTestId('travel-note.next'));
-    fireEvent.press(screen.getByTestId('pick-poland'));
+    await fireEvent.press(screen.getByTestId('travel-note.next'));
+    await fireEvent.press(screen.getByTestId('pick-poland'));
     expect(screen.getByText('Страна: Польша')).toBeTruthy();
     expect(screen.getByTestId('travel-note.name').props.value).toBeTruthy();
 
-    fireEvent.changeText(screen.getByTestId('travel-note.story'), STORY);
+    await fireEvent.changeText(screen.getByTestId('travel-note.story'), STORY);
     expect(screen.getByTestId('travel-note.footer-submit')).toHaveTextContent('Отправить');
     expect(screen.getByTestId('travel-note.story-counter')).toHaveTextContent('Текста достаточно для отправки');
 
-    await act(async () => { fireEvent.press(screen.getByTestId('travel-note.submit')); });
+    await act(async () => { await fireEvent.press(screen.getByTestId('travel-note.submit')); });
 
     const submitCall = harness.handleManualSave.mock.calls.find(([, options]) => options?.intent === 'submit');
     expect(submitCall?.[0]).toEqual(expect.objectContaining({
@@ -133,13 +133,13 @@ describe('TravelNoteFlow (#2666)', () => {
     expect(harness.clearPersistedStep).toHaveBeenCalled();
   });
 
-  it('shows a story restored from the local draft and keeps it on the next keystroke', () => {
-    const screen = renderNote(harness, 2);
-    fireEvent.changeText(screen.getByTestId('travel-note.story'), 'Черновик\n');
+  it('shows a story restored from the local draft and keeps it on the next keystroke', async () => {
+    const screen = await renderNote(harness, 2);
+    await fireEvent.changeText(screen.getByTestId('travel-note.story'), 'Черновик\n');
     // Свой ввод (пустая строка в конце) не сбрасывается при пересборке HTML.
     expect(screen.getByTestId('travel-note.story').props.value).toBe('Черновик\n');
 
-    act(() => {
+    await act(() => {
       externalSetFormData?.({
         ...getEmptyFormData(null),
         publication_format: 'note',
@@ -148,20 +148,20 @@ describe('TravelNoteFlow (#2666)', () => {
     });
     expect(screen.getByTestId('travel-note.story').props.value).toBe(STORY);
 
-    fireEvent.changeText(screen.getByTestId('travel-note.story'), `${STORY} Ещё.`);
+    await fireEvent.changeText(screen.getByTestId('travel-note.story'), `${STORY} Ещё.`);
     expect(screen.getByTestId('travel-note.story').props.value).toBe(`${STORY} Ещё.`);
   });
 
   it('does not save a place without a country and lists what is missing instead of sending', async () => {
-    const screen = renderNote(harness, 2);
-    fireEvent.press(screen.getByTestId('pick-nowhere'));
+    const screen = await renderNote(harness, 2);
+    await fireEvent.press(screen.getByTestId('pick-nowhere'));
     expect(screen.getByText(/Не удалось определить страну/)).toBeTruthy();
     expect(harness.handleManualSave).not.toHaveBeenCalled();
 
-    fireEvent.changeText(screen.getByTestId('travel-note.story'), 'Коротко.');
+    await fireEvent.changeText(screen.getByTestId('travel-note.story'), 'Коротко.');
     expect(screen.getByTestId('travel-note.story-counter')).toHaveTextContent(/Ещё 42 символа до отправки/);
 
-    await act(async () => { fireEvent.press(screen.getByTestId('travel-note.submit')); });
+    await act(async () => { await fireEvent.press(screen.getByTestId('travel-note.submit')); });
     expect(harness.handleManualSave).not.toHaveBeenCalled();
     expect(screen.getByTestId('travel-note.issues')).toBeTruthy();
     expect(screen.getByText('Добавьте фото: от 1 до 10')).toBeTruthy();

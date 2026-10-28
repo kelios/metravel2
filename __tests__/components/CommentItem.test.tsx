@@ -80,28 +80,28 @@ describe('CommentItem', () => {
       });
     });
 
-    it('should render comment text', () => {
-      render(<CommentItem comment={mockComment} />, { wrapper });
+    it('should render comment text', async () => {
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       expect(screen.getByText('Test comment text')).toBeTruthy();
     });
 
-    it('should render user name', () => {
-      render(<CommentItem comment={mockComment} />, { wrapper });
+    it('should render user name', async () => {
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       expect(screen.getByText('Test User')).toBeTruthy();
     });
 
-    it('should render likes count', () => {
-      render(<CommentItem comment={mockComment} />, { wrapper });
+    it('should render likes count', async () => {
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       expect(screen.getByText('5')).toBeTruthy();
     });
 
-    it('should render user avatar with first letter', () => {
-      render(<CommentItem comment={mockComment} />, { wrapper });
+    it('should render user avatar with first letter', async () => {
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       expect(screen.getByText('T')).toBeTruthy();
     });
 
-    it('should render avatar image when user_avatar is present', () => {
-      render(
+    it('should render avatar image when user_avatar is present', async () => {
+      await render(
         <CommentItem comment={{ ...mockComment, user_avatar: 'https://metravel.by/avatar/profile/p.webp' }} />,
         { wrapper }
       );
@@ -109,33 +109,33 @@ describe('CommentItem', () => {
       expect(screen.queryByText('T')).toBeNull();
     });
 
-    it('should fall back to the letter monogram when user_avatar is empty', () => {
-      render(<CommentItem comment={{ ...mockComment, user_avatar: '' }} />, { wrapper });
+    it('should fall back to the letter monogram when user_avatar is empty', async () => {
+      await render(<CommentItem comment={{ ...mockComment, user_avatar: '' }} />, { wrapper });
       expect(screen.queryByTestId('comment-avatar-image')).toBeNull();
       expect(screen.getByText('T')).toBeTruthy();
     });
 
-    it('should render a relative date for a recent comment', () => {
+    it('should render a relative date for a recent comment', async () => {
       const recent = {
         ...mockComment,
         created_at: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
       };
-      render(<CommentItem comment={recent} />, { wrapper });
+      await render(<CommentItem comment={recent} />, { wrapper });
       expect(screen.getByText('5 минут назад')).toBeTruthy();
     });
 
-    it('should render "только что" for a sub-minute comment', () => {
+    it('should render "только что" for a sub-minute comment', async () => {
       const justNow = {
         ...mockComment,
         created_at: new Date(Date.now() - 10 * 1000).toISOString(),
       };
-      render(<CommentItem comment={justNow} />, { wrapper });
+      await render(<CommentItem comment={justNow} />, { wrapper });
       expect(screen.getByText('только что')).toBeTruthy();
     });
 
-    it('should render an empty date for an invalid timestamp', () => {
+    it('should render an empty date for an invalid timestamp', async () => {
       const invalid = { ...mockComment, created_at: 'not-a-date' };
-      render(<CommentItem comment={invalid} />, { wrapper });
+      await render(<CommentItem comment={invalid} />, { wrapper });
       expect(screen.queryByText(/назад|только что|вчера/)).toBeNull();
     });
   });
@@ -159,24 +159,24 @@ describe('CommentItem', () => {
       });
     });
 
-    it('should not show like button', () => {
-      render(<CommentItem comment={mockComment} />, { wrapper });
+    it('should not show like button', async () => {
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       expect(screen.queryByLabelText('Поставить лайк')).toBeNull();
     });
 
-    it('should not show reply button', () => {
+    it('should not show reply button', async () => {
       const onReply = jest.fn();
-      render(<CommentItem comment={mockComment} onReply={onReply} />, { wrapper });
+      await render(<CommentItem comment={mockComment} onReply={onReply} />, { wrapper });
       expect(screen.queryByLabelText('Ответить на комментарий')).toBeNull();
     });
 
-    it('should not show action buttons', () => {
-      render(<CommentItem comment={mockComment} />, { wrapper });
+    it('should not show action buttons', async () => {
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       expect(screen.queryByLabelText('Действия с комментарием')).toBeNull();
     });
 
-    it('should show likes count as static text', () => {
-      render(<CommentItem comment={mockComment} />, { wrapper });
+    it('should show likes count as static text', async () => {
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       expect(screen.getByText('5')).toBeTruthy();
     });
   });
@@ -200,19 +200,19 @@ describe('CommentItem', () => {
       });
     });
 
-    it('should show like button', () => {
-      render(<CommentItem comment={mockComment} />, { wrapper });
+    it('should show like button', async () => {
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       expect(screen.getByLabelText('Поставить лайк')).toBeTruthy();
     });
 
-    it('should show reply button when onReply provided', () => {
+    it('should show reply button when onReply provided', async () => {
       const onReply = jest.fn();
-      render(<CommentItem comment={mockComment} onReply={onReply} />, { wrapper });
+      await render(<CommentItem comment={mockComment} onReply={onReply} />, { wrapper });
       expect(screen.getByLabelText('Ответить на комментарий')).toBeTruthy();
     });
 
-    it('should not show action menu for other users comments', () => {
-      render(<CommentItem comment={mockComment} />, { wrapper });
+    it('should not show action menu for other users comments', async () => {
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       expect(screen.queryByLabelText('Действия с комментарием')).toBeNull();
     });
 
@@ -223,10 +223,10 @@ describe('CommentItem', () => {
         isPending: false,
       } as any);
 
-      render(<CommentItem comment={mockComment} />, { wrapper });
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       
       const likeButton = screen.getByLabelText('Поставить лайк');
-      fireEvent.press(likeButton);
+      await fireEvent.press(likeButton);
 
       await waitFor(() => {
         expect(mutateMock).toHaveBeenCalledWith(1);
@@ -241,29 +241,29 @@ describe('CommentItem', () => {
       } as any);
 
       const likedComment = { ...mockComment, is_liked: true };
-      render(<CommentItem comment={likedComment} />, { wrapper });
+      await render(<CommentItem comment={likedComment} />, { wrapper });
       
       const likeButton = screen.getByLabelText('Убрать лайк');
-      fireEvent.press(likeButton);
+      await fireEvent.press(likeButton);
 
       await waitFor(() => {
         expect(mutateMock).toHaveBeenCalledWith(1);
       });
     });
 
-    it('should call onReply when reply button pressed', () => {
+    it('should call onReply when reply button pressed', async () => {
       const onReply = jest.fn();
-      render(<CommentItem comment={mockComment} onReply={onReply} />, { wrapper });
+      await render(<CommentItem comment={mockComment} onReply={onReply} />, { wrapper });
       
       const replyButton = screen.getByLabelText('Ответить на комментарий');
-      fireEvent.press(replyButton);
+      await fireEvent.press(replyButton);
 
       expect(onReply).toHaveBeenCalledWith(mockComment);
     });
 
-    it('should not show reply button at level 2', () => {
+    it('should not show reply button at level 2', async () => {
       const onReply = jest.fn();
-      render(<CommentItem comment={mockComment} onReply={onReply} level={2} />, { wrapper });
+      await render(<CommentItem comment={mockComment} onReply={onReply} level={2} />, { wrapper });
       
       expect(screen.queryByLabelText('Ответить на комментарий')).toBeNull();
     });
@@ -288,31 +288,31 @@ describe('CommentItem', () => {
       });
     });
 
-    it('should show action menu button', () => {
-      render(<CommentItem comment={mockComment} />, { wrapper });
+    it('should show action menu button', async () => {
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       expect(screen.getByLabelText('Действия с комментарием')).toBeTruthy();
     });
 
-    it('should show edit and delete buttons when menu opened', () => {
+    it('should show edit and delete buttons when menu opened', async () => {
       const onEdit = jest.fn();
-      render(<CommentItem comment={mockComment} onEdit={onEdit} />, { wrapper });
+      await render(<CommentItem comment={mockComment} onEdit={onEdit} />, { wrapper });
       
       const menuButton = screen.getByLabelText('Действия с комментарием');
-      fireEvent.press(menuButton);
+      await fireEvent.press(menuButton);
 
       expect(screen.getByLabelText('Редактировать комментарий')).toBeTruthy();
       expect(screen.getByLabelText('Удалить комментарий')).toBeTruthy();
     });
 
-    it('should call onEdit when edit button pressed', () => {
+    it('should call onEdit when edit button pressed', async () => {
       const onEdit = jest.fn();
-      render(<CommentItem comment={mockComment} onEdit={onEdit} />, { wrapper });
+      await render(<CommentItem comment={mockComment} onEdit={onEdit} />, { wrapper });
       
       const menuButton = screen.getByLabelText('Действия с комментарием');
-      fireEvent.press(menuButton);
+      await fireEvent.press(menuButton);
 
       const editButton = screen.getByLabelText('Редактировать комментарий');
-      fireEvent.press(editButton);
+      await fireEvent.press(editButton);
 
       expect(onEdit).toHaveBeenCalledWith(mockComment);
     });
@@ -324,16 +324,16 @@ describe('CommentItem', () => {
         isPending: false,
       } as any);
 
-      render(<CommentItem comment={mockComment} />, { wrapper });
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       
       const menuButton = screen.getByLabelText('Действия с комментарием');
-      fireEvent.press(menuButton);
+      await fireEvent.press(menuButton);
 
       const deleteButton = screen.getByLabelText('Удалить комментарий');
-      fireEvent.press(deleteButton);
+      await fireEvent.press(deleteButton);
 
       const confirmButton = await screen.findByLabelText('Удалить');
-      fireEvent.press(confirmButton);
+      await fireEvent.press(confirmButton);
 
       await waitFor(() => {
         expect(mutateMock).toHaveBeenCalledWith(1);
@@ -347,16 +347,16 @@ describe('CommentItem', () => {
         isPending: false,
       } as any);
 
-      render(<CommentItem comment={mockComment} />, { wrapper });
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       
       const menuButton = screen.getByLabelText('Действия с комментарием');
-      fireEvent.press(menuButton);
+      await fireEvent.press(menuButton);
 
       const deleteButton = screen.getByLabelText('Удалить комментарий');
-      fireEvent.press(deleteButton);
+      await fireEvent.press(deleteButton);
 
       const cancelButton = await screen.findByLabelText('Отмена');
-      fireEvent.press(cancelButton);
+      await fireEvent.press(cancelButton);
 
       await waitFor(() => {
         expect(mutateMock).not.toHaveBeenCalled();
@@ -378,10 +378,10 @@ describe('CommentItem', () => {
       } as any);
 
       const likedComment = { ...mockComment, is_liked: true };
-      render(<CommentItem comment={likedComment} />, { wrapper });
+      await render(<CommentItem comment={likedComment} />, { wrapper });
 
       const unlikeButton = screen.getByLabelText('Убрать лайк');
-      fireEvent.press(unlikeButton);
+      await fireEvent.press(unlikeButton);
 
       await waitFor(() => {
         expect(unlikeMock).toHaveBeenCalledWith(1);
@@ -404,10 +404,10 @@ describe('CommentItem', () => {
       } as any);
 
       // Сначала комментарий не лайкнут
-      const { rerender } = render(<CommentItem comment={mockComment} />, { wrapper });
+      const { rerender } = await render(<CommentItem comment={mockComment} />, { wrapper });
 
       const likeButton = screen.getByLabelText('Поставить лайк');
-      fireEvent.press(likeButton);
+      await fireEvent.press(likeButton);
 
       await waitFor(() => {
         expect(likeMock).toHaveBeenCalledWith(1);
@@ -416,10 +416,10 @@ describe('CommentItem', () => {
 
       // Теперь симулируем что комментарий лайкнут
       const likedComment = { ...mockComment, is_liked: true };
-      rerender(<CommentItem comment={likedComment} />);
+      await rerender(<CommentItem comment={likedComment} />);
 
       const unlikeButton = screen.getByLabelText('Убрать лайк');
-      fireEvent.press(unlikeButton);
+      await fireEvent.press(unlikeButton);
 
       await waitFor(() => {
         expect(unlikeMock).toHaveBeenCalledWith(1);
@@ -448,28 +448,28 @@ describe('CommentItem', () => {
       });
     });
 
-    it('should show action menu for any comment', () => {
-      render(<CommentItem comment={mockComment} />, { wrapper });
+    it('should show action menu for any comment', async () => {
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       expect(screen.getByLabelText('Действия с комментарием')).toBeTruthy();
     });
 
-    it('should show delete button for other users comments', () => {
-      render(<CommentItem comment={mockComment} />, { wrapper });
+    it('should show delete button for other users comments', async () => {
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       
       const menuButton = screen.getByLabelText('Действия с комментарием');
-      fireEvent.press(menuButton);
+      await fireEvent.press(menuButton);
 
       // Кнопка удаления отображается как иконка, проверяем по accessibility label
       expect(screen.getByLabelText('Удалить комментарий (Админ)')).toBeTruthy();
       expect(screen.getByText('Удалить (Админ)')).toBeTruthy();
     });
 
-    it('should not show edit button for other users comments', () => {
+    it('should not show edit button for other users comments', async () => {
       const onEdit = jest.fn();
-      render(<CommentItem comment={mockComment} onEdit={onEdit} />, { wrapper });
+      await render(<CommentItem comment={mockComment} onEdit={onEdit} />, { wrapper });
       
       const menuButton = screen.getByLabelText('Действия с комментарием');
-      fireEvent.press(menuButton);
+      await fireEvent.press(menuButton);
 
       expect(screen.queryByLabelText('Редактировать комментарий')).toBeNull();
     });
@@ -481,16 +481,16 @@ describe('CommentItem', () => {
         isPending: false,
       } as any);
 
-      render(<CommentItem comment={mockComment} />, { wrapper });
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       
       const menuButton = screen.getByLabelText('Действия с комментарием');
-      fireEvent.press(menuButton);
+      await fireEvent.press(menuButton);
 
       const deleteButton = screen.getByLabelText('Удалить комментарий (Админ)');
-      fireEvent.press(deleteButton);
+      await fireEvent.press(deleteButton);
 
       const confirmButton = await screen.findByLabelText('Удалить');
-      fireEvent.press(confirmButton);
+      await fireEvent.press(confirmButton);
 
       await waitFor(() => {
         expect(mutateMock).toHaveBeenCalledWith(1);
@@ -499,8 +499,8 @@ describe('CommentItem', () => {
   });
 
   describe('Nested comments', () => {
-    it('should apply nested styling at level 1', () => {
-      const { getByTestId } = render(
+    it('should apply nested styling at level 1', async () => {
+      const { getByTestId } = await render(
         <CommentItem comment={mockComment} level={1} />,
         { wrapper }
       );
@@ -531,19 +531,19 @@ describe('CommentItem', () => {
       });
     });
 
-    it('should disable like button while liking', () => {
+    it('should disable like button while liking', async () => {
       mockUseLikeComment.mockReturnValue({
         mutate: jest.fn(),
         isPending: true,
       } as any);
 
-      render(<CommentItem comment={mockComment} />, { wrapper });
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       
       const likeButton = screen.getByLabelText('Поставить лайк');
       expect(likeButton.props.disabled).toBe(true);
     });
 
-    it('should show loading indicator while deleting', () => {
+    it('should show loading indicator while deleting', async () => {
       mockUseAuth.mockReturnValue({
         isAuthenticated: true,
         userId: '2',
@@ -565,10 +565,10 @@ describe('CommentItem', () => {
         isPending: true,
       } as any);
 
-      render(<CommentItem comment={mockComment} />, { wrapper });
+      await render(<CommentItem comment={mockComment} />, { wrapper });
       
       const menuButton = screen.getByLabelText('Действия с комментарием');
-      fireEvent.press(menuButton);
+      await fireEvent.press(menuButton);
 
       expect(screen.getByTestId('activity-indicator')).toBeTruthy();
     });

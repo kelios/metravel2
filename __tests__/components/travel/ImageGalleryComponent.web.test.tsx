@@ -1,7 +1,7 @@
 /** @jest-environment-options {"url": "http://localhost:8081/travel/42"} */
 // jsdom 26: window.location неподменяем (#2735) — детерминированный origin задаётся URL окружения.
 import React from 'react';
-import { Platform, Image, StyleSheet } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 import { QueryClientContext } from '@tanstack/react-query';
 
@@ -134,9 +134,9 @@ const updateGalleryCaptionMock = __mocks.updateGalleryCaptionMock as jest.Mock;
 const { __mocks: webImageUploadMocks } = jest.requireMock('@/utils/webImageUpload') as any;
 const prepareWebImageFileForUploadMock = webImageUploadMocks.prepareWebImageFileForUpload as jest.Mock;
 
-const renderSafe = (ui: React.ReactElement) => {
+const renderSafe = async (ui: React.ReactElement) => {
   try {
-    return render(ui);
+    return await render(ui);
   } catch (e) {
     console.error('renderSafe error:', e);
     throw e;
@@ -150,9 +150,9 @@ const runDrop = async (files: File[]) => {
   });
 };
 
-const runDropNoWait = (files: File[]) => {
+const runDropNoWait = async (files: File[]) => {
   const { __dropMock } = jest.requireMock('react-dropzone') as any;
-  act(() => {
+  await act(() => {
     // Intentionally do not await onDrop; some tests keep upload promise pending.
     __dropMock.onDrop(files);
   });
@@ -198,7 +198,7 @@ describe('ImageGalleryComponent.web', () => {
       const { __dropMock } = jest.requireMock('react-dropzone') as any;
       __dropMock.options = undefined;
 
-      const screen = renderSafe(
+      const screen = await renderSafe(
         <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
       );
 
@@ -213,7 +213,7 @@ describe('ImageGalleryComponent.web', () => {
       expect(screen.queryByText('Перетащите файлы или нажмите на зону выше')).toBeNull();
       expect(screen.getByText('Используйте кнопки выше, чтобы выбрать или сделать фото')).toBeTruthy();
 
-      fireEvent.press(screen.getByTestId('gallery-mobile-pick'));
+      await fireEvent.press(screen.getByTestId('gallery-mobile-pick'));
       expect(__dropMock.open).toHaveBeenCalledTimes(1);
       expect(__dropMock.options).toEqual(expect.objectContaining({
         noClick: true,
@@ -221,8 +221,7 @@ describe('ImageGalleryComponent.web', () => {
         noDrag: true,
       }));
 
-      const cameraInput = screen
-        .UNSAFE_getAllByType('input' as any)
+      const cameraInput = screen.container.queryAll(node => node.type === "input", { includeSelf: true })
         .find((input: any) => input.props.capture === 'environment');
       expect(cameraInput?.props.accept).toBe('image/*');
     } finally {
@@ -230,13 +229,13 @@ describe('ImageGalleryComponent.web', () => {
     }
   });
 
-  it('keeps the drag-and-drop affordance on desktop web', () => {
+  it('keeps the drag-and-drop affordance on desktop web', async () => {
     const dimensionsSpy = jest
       .spyOn(require('@/hooks/useResponsive'), 'useResponsiveWidth')
       .mockReturnValue(1280);
 
     try {
-      const screen = renderSafe(
+      const screen = await renderSafe(
         <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
       );
 
@@ -253,8 +252,8 @@ describe('ImageGalleryComponent.web', () => {
     }
   });
 
-  it('renders initial images with absolute URLs and count', () => {
-    const { getByText, UNSAFE_getAllByType } = renderSafe(
+  it('renders initial images with absolute URLs and count', async () => {
+    const { getByText, container: _hostContainer } = await renderSafe(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -264,12 +263,12 @@ describe('ImageGalleryComponent.web', () => {
     );
 
     expect(getByText(/Загружено/)).toBeTruthy();
-    const image = UNSAFE_getAllByType(Image)[0];
+    const image = _hostContainer.queryAll(node => node.type === "Image", { includeSelf: true })[0];
     expect(image).toBeTruthy();
   });
 
-  it('shows initial images with delete buttons', () => {
-    const { getAllByTestId } = renderSafe(
+  it('shows initial images with delete buttons', async () => {
+    const { getAllByTestId } = await renderSafe(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -290,7 +289,7 @@ describe('ImageGalleryComponent.web', () => {
 
   it('saves a place caption for each backend gallery image and reports it to the form', async () => {
     const onChange = jest.fn();
-    const { getByTestId, getByText } = renderSafe(
+    const { getByTestId, getByText } = await renderSafe(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -301,8 +300,8 @@ describe('ImageGalleryComponent.web', () => {
     );
 
     const input = getByTestId('gallery-caption-input-41');
-    fireEvent.changeText(input, '  Мирский замок  ');
-    fireEvent(input, 'blur');
+    await fireEvent.changeText(input, '  Мирский замок  ');
+    await fireEvent(input, 'blur');
 
     await waitFor(() => {
       expect(updateGalleryCaptionMock).toHaveBeenCalledWith('41', 'Мирский замок');
@@ -313,8 +312,8 @@ describe('ImageGalleryComponent.web', () => {
     });
   });
 
-  it('does not call the caption API for a temporary image id', () => {
-    const { queryByTestId } = renderSafe(
+  it('does not call the caption API for a temporary image id', async () => {
+    const { queryByTestId } = await renderSafe(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -330,7 +329,7 @@ describe('ImageGalleryComponent.web', () => {
   it('uploads files via dropzone and finalizes', async () => {
     const file = new File(['data'], 'test.jpg', { type: 'image/jpeg' });
 
-    const { getByText, findAllByTestId } = renderSafe(
+    const { getByText, findAllByTestId } = await renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
     );
 
@@ -344,7 +343,7 @@ describe('ImageGalleryComponent.web', () => {
 
   it('creates the record on the first picked photo when there is no travel id yet (#2666)', async () => {
     const resolveTravelId = jest.fn(async () => '77');
-    renderSafe(
+    await renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="" initialImages={[]} maxImages={10} resolveTravelId={resolveTravelId} />,
     );
 
@@ -357,7 +356,7 @@ describe('ImageGalleryComponent.web', () => {
 
   it('does not upload when the record could not be created', async () => {
     const resolveTravelId = jest.fn(async () => null);
-    const { findByText } = renderSafe(
+    const { findByText } = await renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="" initialImages={[]} maxImages={10} resolveTravelId={resolveTravelId} />,
     );
 
@@ -377,7 +376,7 @@ describe('ImageGalleryComponent.web', () => {
 
     prepareWebImageFileForUploadMock.mockResolvedValueOnce(compressedFile);
 
-    renderSafe(
+    await renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
     );
 
@@ -392,8 +391,8 @@ describe('ImageGalleryComponent.web', () => {
     expect(formData.get('file')).toBe(compressedFile);
   });
 
-  it('registers HEIC and HEIF in the web dropzone accept list', () => {
-    renderSafe(
+  it('registers HEIC and HEIF in the web dropzone accept list', async () => {
+    await renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
     );
 
@@ -419,11 +418,11 @@ describe('ImageGalleryComponent.web', () => {
         }),
     );
 
-    const { rerender, UNSAFE_getAllByType } = renderSafe(
+    const { rerender, container: _hostContainer2 } = await renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
     );
 
-    runDropNoWait([file]);
+    await runDropNoWait([file]);
 
     await waitFor(() => {
       expect(prepareWebImageFileForUploadMock).toHaveBeenCalledWith(file);
@@ -432,7 +431,7 @@ describe('ImageGalleryComponent.web', () => {
 
     // Simulate a parent prop sync (e.g. wizard form re-renders with initialImages)
     // that previously could drop the uploading placeholders.
-    rerender(
+    await rerender(
       <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
     );
 
@@ -447,7 +446,7 @@ describe('ImageGalleryComponent.web', () => {
     });
 
     await waitFor(() => {
-      const imgs = UNSAFE_getAllByType(Image);
+      const imgs = _hostContainer2.queryAll(node => node.type === "Image", { includeSelf: true });
       expect(imgs.length).toBeGreaterThan(0);
     });
   });
@@ -458,7 +457,7 @@ describe('ImageGalleryComponent.web', () => {
 
     const file = new File(['data'], 'test.jpg', { type: 'image/jpeg' });
 
-    const { UNSAFE_getAllByType } = renderSafe(
+    const { container: _hostContainer3 } = await renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
     );
 
@@ -466,7 +465,7 @@ describe('ImageGalleryComponent.web', () => {
 
     // OptimizedImage is mocked to RN Image, so we can inspect source.uri.
     await waitFor(() => {
-      const imgs = UNSAFE_getAllByType(Image);
+      const imgs = _hostContainer3.queryAll(node => node.type === "Image", { includeSelf: true });
       expect(imgs.length).toBeGreaterThan(0);
       const uri = imgs[0].props.source?.uri;
       expect(uri).toBe('http://192.168.50.36/gallery/820/x.jpg');
@@ -481,7 +480,7 @@ describe('ImageGalleryComponent.web', () => {
 
     const file = new File(['data'], 'test.jpg', { type: 'image/jpeg' });
 
-    const { UNSAFE_getAllByType } = renderSafe(
+    const { container: _hostContainer4 } = await renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={10} />,
     );
 
@@ -491,7 +490,7 @@ describe('ImageGalleryComponent.web', () => {
     // `gallery-image` testID is used both on wrapper View and on mocked OptimizedImage.
     // Count actual rendered Image nodes instead.
     await waitFor(() => {
-      const imgs = UNSAFE_getAllByType(Image);
+      const imgs = _hostContainer4.queryAll(node => node.type === "Image", { includeSelf: true });
       expect(imgs).toHaveLength(1);
     });
   });
@@ -504,7 +503,7 @@ describe('ImageGalleryComponent.web', () => {
     const onChange = jest.fn();
     const file = new File(['data'], 'test.jpg', { type: 'image/jpeg' });
 
-    renderSafe(
+    await renderSafe(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -528,7 +527,7 @@ describe('ImageGalleryComponent.web', () => {
 
   it('reports reordered gallery items in display order', async () => {
     const onChange = jest.fn();
-    const { getAllByTestId } = renderSafe(
+    const { getAllByTestId } = await renderSafe(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -545,7 +544,7 @@ describe('ImageGalleryComponent.web', () => {
     await waitFor(() => expect(onChange).toHaveBeenCalled());
 
     const callsBeforeMove = onChange.mock.calls.length;
-    fireEvent.press(getAllByTestId('gallery-move-left-button')[1]);
+    await fireEvent.press(getAllByTestId('gallery-move-left-button')[1]);
     const immediate = onChange.mock.calls[onChange.mock.calls.length - 1][0] as Array<{ id?: string; url: string }>;
     expect(onChange.mock.calls.length).toBeGreaterThan(callsBeforeMove);
     expect(immediate.map((item) => item.id)).toEqual(['2', '1', '3']);
@@ -574,8 +573,8 @@ describe('ImageGalleryComponent.web', () => {
     expect(moveButton.borderWidth).toBeGreaterThanOrEqual(2);
   });
 
-  it('uses the media-overlay text token for active move arrows in dark theme', () => {
-    const { getAllByTestId } = renderSafe(
+  it('uses the media-overlay text token for active move arrows in dark theme', async () => {
+    const { getAllByTestId } = await renderSafe(
       <ThemeContext.Provider
         value={{ theme: 'dark', isDark: true, setTheme: jest.fn(), toggleTheme: jest.fn() }}
       >
@@ -620,7 +619,7 @@ describe('ImageGalleryComponent.web', () => {
 
   it('invalidates the travel detail cache after persisted reorder', async () => {
     const invalidateQueries = jest.fn(async () => undefined);
-    const { getAllByTestId } = renderSafe(
+    const { getAllByTestId } = await renderSafe(
       <QueryClientContext.Provider value={{ invalidateQueries } as any}>
         <ImageGalleryComponent
           collection="gallery"
@@ -634,7 +633,7 @@ describe('ImageGalleryComponent.web', () => {
       </QueryClientContext.Provider>,
     );
 
-    fireEvent.press(getAllByTestId('gallery-move-left-button')[1]);
+    await fireEvent.press(getAllByTestId('gallery-move-left-button')[1]);
 
     await waitFor(() => {
       expect(reorderGalleryMock).toHaveBeenCalledWith(42, ['2', '1'], expect.any(AbortSignal));
@@ -647,7 +646,7 @@ describe('ImageGalleryComponent.web', () => {
 
     const file = new File(['data'], 'test.jpg', { type: 'image/jpeg' });
 
-    const { rerender, UNSAFE_getAllByType } = renderSafe(
+    const { rerender, container: _hostContainer5 } = await renderSafe(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -659,7 +658,7 @@ describe('ImageGalleryComponent.web', () => {
     await runDrop([file]);
 
     // Simulate parent sync in legacy/relative format.
-    rerender(
+    await rerender(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -669,7 +668,7 @@ describe('ImageGalleryComponent.web', () => {
     );
 
     await waitFor(() => {
-      const imgs = UNSAFE_getAllByType(Image);
+      const imgs = _hostContainer5.queryAll(node => node.type === "Image", { includeSelf: true });
       expect(imgs).toHaveLength(1);
     });
   });
@@ -682,7 +681,7 @@ describe('ImageGalleryComponent.web', () => {
 
     const file = new File(['data'], 'test.jpg', { type: 'image/jpeg' });
 
-    const { UNSAFE_getAllByType } = renderSafe(
+    const { container: _hostContainer6 } = await renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={10} />,
     );
 
@@ -690,7 +689,7 @@ describe('ImageGalleryComponent.web', () => {
     await runDrop([file]);
 
     await waitFor(() => {
-      const imgs = UNSAFE_getAllByType(Image);
+      const imgs = _hostContainer6.queryAll(node => node.type === "Image", { includeSelf: true });
       expect(imgs).toHaveLength(1);
     });
   });
@@ -701,7 +700,7 @@ describe('ImageGalleryComponent.web', () => {
     const file = new File(['data'], 'test.jpg', { type: 'image/jpeg' });
 
     // Simulate parent-provided legacy item (e.g. form state stores only URLs).
-    const { UNSAFE_getAllByType } = renderSafe(
+    const { container: _hostContainer7 } = await renderSafe(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -713,7 +712,7 @@ describe('ImageGalleryComponent.web', () => {
     await runDrop([file]);
 
     await waitFor(() => {
-      const imgs = UNSAFE_getAllByType(Image);
+      const imgs = _hostContainer7.queryAll(node => node.type === "Image", { includeSelf: true });
       expect(imgs).toHaveLength(1);
     });
   });
@@ -723,14 +722,14 @@ describe('ImageGalleryComponent.web', () => {
 
     const file = new File(['data'], 'test.jpg', { type: 'image/jpeg' });
 
-    const { rerender, getAllByTestId, getByTestId } = renderSafe(
+    const { rerender, getAllByTestId, getByTestId } = await renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={10} />, 
     );
 
     await runDrop([file]);
 
     // Parent stores only URL strings and rehydrates with legacy ids.
-    rerender(
+    await rerender(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -740,8 +739,8 @@ describe('ImageGalleryComponent.web', () => {
     );
 
     // Delete should still call backend DELETE by numeric id (999), not treat it as legacy.
-    fireEvent.press(getAllByTestId('delete-image-button')[0]);
-    fireEvent.press(getByTestId('confirm-delete'));
+    await fireEvent.press(getAllByTestId('delete-image-button')[0]);
+    await fireEvent.press(getByTestId('confirm-delete'));
 
     await waitFor(() => expect(deleteImageMock).toHaveBeenCalledWith('999'));
   });
@@ -754,14 +753,14 @@ describe('ImageGalleryComponent.web', () => {
     const fileA = new File(['data'], 'a.jpg', { type: 'image/jpeg' });
     const fileB = new File(['data'], 'b.jpg', { type: 'image/jpeg' });
 
-    const { rerender, getAllByTestId, UNSAFE_getAllByType } = renderSafe(
+    const { rerender, getAllByTestId, container: _hostContainer8 } = await renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={10} />,
     );
 
     await runDrop([fileA]);
 
     // Simulate parent syncing stored URLs (legacy ids) after first upload.
-    rerender(
+    await rerender(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -771,14 +770,14 @@ describe('ImageGalleryComponent.web', () => {
     );
 
     await waitFor(() => {
-      const imgs = UNSAFE_getAllByType(Image);
+      const imgs = _hostContainer8.queryAll(node => node.type === "Image", { includeSelf: true });
       expect(imgs.length).toBe(1);
     });
 
     await runDrop([fileB]);
 
     // Now parent syncs again with both URLs; image A must stay visible (not hidden again).
-    rerender(
+    await rerender(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -791,14 +790,14 @@ describe('ImageGalleryComponent.web', () => {
     );
 
     await waitFor(() => {
-      const imgs = UNSAFE_getAllByType(Image);
+      const imgs = _hostContainer8.queryAll(node => node.type === "Image", { includeSelf: true });
       expect(imgs.length).toBe(2);
       expect(getAllByTestId('delete-image-button').length).toBeGreaterThan(0);
     });
   });
 
   it('deletes an image after confirmation', async () => {
-    const { getByTestId, queryAllByTestId, getAllByTestId } = renderSafe(
+    const { getByTestId, queryAllByTestId, getAllByTestId } = await renderSafe(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -813,8 +812,8 @@ describe('ImageGalleryComponent.web', () => {
       expect(initialCount).toBeGreaterThan(0);
     });
 
-    fireEvent.press(getAllByTestId('delete-image-button')[0]);
-    fireEvent.press(getByTestId('confirm-delete'));
+    await fireEvent.press(getAllByTestId('delete-image-button')[0]);
+    await fireEvent.press(getByTestId('confirm-delete'));
 
     await waitFor(() => expect(deleteImageMock).toHaveBeenCalledWith('123'));
     await waitFor(() =>
@@ -823,7 +822,7 @@ describe('ImageGalleryComponent.web', () => {
   });
 
   it('removes legacy gallery items locally without calling delete API', async () => {
-    const { getByTestId, queryAllByTestId, getAllByTestId } = renderSafe(
+    const { getByTestId, queryAllByTestId, getAllByTestId } = await renderSafe(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -837,8 +836,8 @@ describe('ImageGalleryComponent.web', () => {
       expect(initialCount).toBeGreaterThan(0);
     });
 
-    fireEvent.press(getAllByTestId('delete-image-button')[0]);
-    fireEvent.press(getByTestId('confirm-delete'));
+    await fireEvent.press(getAllByTestId('delete-image-button')[0]);
+    await fireEvent.press(getByTestId('confirm-delete'));
 
     await waitFor(() =>
       expect(queryAllByTestId('gallery-image').length).toBeLessThan(initialCount),
@@ -852,7 +851,7 @@ describe('ImageGalleryComponent.web', () => {
     });
     const file = new File(['data'], 'broken.jpg', { type: 'image/jpeg' });
 
-    const { getAllByTestId, queryAllByTestId, getByTestId, getByText } = renderSafe(
+    const { getAllByTestId, queryAllByTestId, getByTestId, getByText } = await renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
     );
 
@@ -867,8 +866,8 @@ describe('ImageGalleryComponent.web', () => {
     expect(getByText('Удалить')).toBeTruthy();
 
     const before = queryAllByTestId('gallery-image').length;
-    fireEvent.press(getAllByTestId('delete-image-button')[0]);
-    fireEvent.press(getByTestId('confirm-delete'));
+    await fireEvent.press(getAllByTestId('delete-image-button')[0]);
+    await fireEvent.press(getByTestId('confirm-delete'));
 
     await waitFor(() =>
       expect(queryAllByTestId('gallery-image').length).toBeLessThan(before),
@@ -882,7 +881,7 @@ describe('ImageGalleryComponent.web', () => {
 
     prepareWebImageFileForUploadMock.mockResolvedValueOnce(convertedFile);
 
-    renderSafe(
+    await renderSafe(
       <ImageGalleryComponent collection="gallery" idTravel="42" initialImages={[]} maxImages={5} />,
     );
 
@@ -898,7 +897,7 @@ describe('ImageGalleryComponent.web', () => {
   });
 
   it('shows delete button for items with missing url and removes them locally', async () => {
-    const { getAllByTestId, getByTestId, queryAllByTestId } = renderSafe(
+    const { getAllByTestId, getByTestId, queryAllByTestId } = await renderSafe(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -917,8 +916,8 @@ describe('ImageGalleryComponent.web', () => {
       expect(getAllByTestId('delete-image-button').length).toBeGreaterThan(0);
     });
 
-    fireEvent.press(getAllByTestId('delete-image-button')[0]);
-    fireEvent.press(getByTestId('confirm-delete'));
+    await fireEvent.press(getAllByTestId('delete-image-button')[0]);
+    await fireEvent.press(getByTestId('confirm-delete'));
 
     await waitFor(() =>
       expect(queryAllByTestId('gallery-image').length).toBeLessThan(initialCount),
@@ -926,7 +925,7 @@ describe('ImageGalleryComponent.web', () => {
   });
 
   it('marks existing image as error on 404 and still allows deleting it', async () => {
-    const { getByText, getAllByTestId, getByTestId, queryAllByTestId } = renderSafe(
+    const { getByText, getAllByTestId, getByTestId, queryAllByTestId } = await renderSafe(
       <ImageGalleryComponent
         collection="gallery"
         idTravel="42"
@@ -948,8 +947,8 @@ describe('ImageGalleryComponent.web', () => {
     expect(getByTestId('gallery-caption-input-3796')).toBeTruthy();
 
     const before = queryAllByTestId('gallery-image').length;
-    fireEvent.press(getAllByTestId('delete-image-button')[0]);
-    fireEvent.press(getByTestId('confirm-delete'));
+    await fireEvent.press(getAllByTestId('delete-image-button')[0]);
+    await fireEvent.press(getByTestId('confirm-delete'));
 
     await waitFor(() =>
       expect(queryAllByTestId('gallery-image').length).toBeLessThan(before),

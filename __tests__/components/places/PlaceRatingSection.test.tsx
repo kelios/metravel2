@@ -47,7 +47,7 @@ describe('PlaceRatingSection', () => {
 
   it('submits the tapped rating for the place', async () => {
     const queryClient = createTestQueryClient();
-    const { getAllByLabelText } = render(
+    const { getAllByLabelText } = await render(
       <QueryClientProvider client={queryClient}>
         <PlaceRatingSection placeId="1039" initialRating={4.6} initialCount={128} initialUserRating={3} />
       </QueryClientProvider>,
@@ -56,17 +56,17 @@ describe('PlaceRatingSection', () => {
     await waitFor(() => expect(mockGetPlaceRating).toHaveBeenCalledWith('1039'));
 
     const fiveStar = getAllByLabelText('Оценить на 5 из 5');
-    fireEvent.press(fiveStar[fiveStar.length - 1]);
+    await fireEvent.press(fiveStar[fiveStar.length - 1]);
 
     await waitFor(() => {
       expect(mockRatePlace).toHaveBeenCalledWith({ placeId: '1039', rating: 5 });
     });
   });
 
-  it('shows the login hint and does not query when the visitor cannot rate', () => {
+  it('shows the login hint and does not query when the visitor cannot rate', async () => {
     mockIsAuthenticated = false;
     const queryClient = createTestQueryClient();
-    const { getByText } = render(
+    const { getByText } = await render(
       <QueryClientProvider client={queryClient}>
         <PlaceRatingSection placeId="1039" initialRating={4.6} initialCount={128} />
       </QueryClientProvider>,

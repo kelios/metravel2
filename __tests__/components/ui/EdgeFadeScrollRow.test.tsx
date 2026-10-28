@@ -2,6 +2,8 @@ import React from 'react';
 import { ScrollView, Text } from 'react-native';
 import { act, render } from '@testing-library/react-native';
 
+import type { TestInstance } from 'test-renderer';
+
 import EdgeFadeScrollRow, { transparentVariant } from '@/components/ui/EdgeFadeScrollRow';
 
 jest.mock('@/hooks/useTheme', () => ({
@@ -25,6 +27,12 @@ jest.mock('expo-linear-gradient', () => {
   };
 });
 
+const scrollOf = (container: TestInstance) => {
+  const matches = container.queryAll(node => typeof node.props.onScroll === 'function' && typeof node.props.onContentSizeChange === 'function');
+  expect(matches).toHaveLength(1);
+  return matches[0];
+};
+
 const scrollEvent = (offsetX: number, layoutWidth: number, contentWidth: number) => ({
   nativeEvent: {
     contentOffset: { x: offsetX },
@@ -33,8 +41,8 @@ const scrollEvent = (offsetX: number, layoutWidth: number, contentWidth: number)
   },
 });
 
-const renderRow = (props: Record<string, unknown> = {}) =>
-  render(
+const renderRow = async (props: Record<string, unknown> = {}) =>
+  await render(
     <EdgeFadeScrollRow {...props}>
       <Text>Страны</Text>
       <Text>Карта</Text>
@@ -43,11 +51,11 @@ const renderRow = (props: Record<string, unknown> = {}) =>
   );
 
 describe('EdgeFadeScrollRow', () => {
-  it('оставляет ряд без затухания, пока он помещается целиком', () => {
-    const { UNSAFE_getByType, queryByTestId } = renderRow();
-    const scroll = UNSAFE_getByType(ScrollView);
+  it('оставляет ряд без затухания, пока он помещается целиком', async () => {
+    const { container, queryByTestId } = await renderRow();
+    const scroll = scrollOf(container);
 
-    act(() => {
+    await act(() => {
       scroll.props.onLayout({ nativeEvent: { layout: { width: 390 } } });
       scroll.props.onContentSizeChange(360, 44);
     });
@@ -56,11 +64,11 @@ describe('EdgeFadeScrollRow', () => {
     expect(queryByTestId('edge-fade-right')).toBeNull();
   });
 
-  it('показывает затухание только с той стороны, где есть куда прокручивать', () => {
-    const { UNSAFE_getByType, queryByTestId } = renderRow();
-    const scroll = UNSAFE_getByType(ScrollView);
+  it('показывает затухание только с той стороны, где есть куда прокручивать', async () => {
+    const { container, queryByTestId } = await renderRow();
+    const scroll = scrollOf(container);
 
-    act(() => {
+    await act(() => {
       scroll.props.onLayout({ nativeEvent: { layout: { width: 390 } } });
       scroll.props.onContentSizeChange(700, 44);
     });
@@ -68,14 +76,14 @@ describe('EdgeFadeScrollRow', () => {
     expect(queryByTestId('edge-fade-left')).toBeNull();
     expect(queryByTestId('edge-fade-right')).toBeTruthy();
 
-    act(() => {
+    await act(() => {
       scroll.props.onScroll(scrollEvent(120, 390, 700));
     });
 
     expect(queryByTestId('edge-fade-left')).toBeTruthy();
     expect(queryByTestId('edge-fade-right')).toBeTruthy();
 
-    act(() => {
+    await act(() => {
       scroll.props.onScroll(scrollEvent(310, 390, 700));
     });
 
@@ -83,11 +91,11 @@ describe('EdgeFadeScrollRow', () => {
     expect(queryByTestId('edge-fade-right')).toBeNull();
   });
 
-  it('не зажигает затухание на субпиксельном хвосте прокрутки', () => {
-    const { UNSAFE_getByType, queryByTestId } = renderRow();
-    const scroll = UNSAFE_getByType(ScrollView);
+  it('не зажигает затухание на субпиксельном хвосте прокрутки', async () => {
+    const { container, queryByTestId } = await renderRow();
+    const scroll = scrollOf(container);
 
-    act(() => {
+    await act(() => {
       scroll.props.onScroll(scrollEvent(1.5, 390, 392));
     });
 
@@ -95,19 +103,19 @@ describe('EdgeFadeScrollRow', () => {
     expect(queryByTestId('edge-fade-right')).toBeNull();
   });
 
-  it('прокидывает собственные обработчики и ref вызывающей стороны', () => {
+  it('прокидывает собственные обработчики и ref вызывающей стороны', async () => {
     const onLayout = jest.fn();
     const onScroll = jest.fn();
     const ref = React.createRef<ScrollView>();
 
-    const { UNSAFE_getByType } = render(
+    const { container } = await render(
       <EdgeFadeScrollRow ref={ref} onLayout={onLayout} onScroll={onScroll}>
         <Text>Страны</Text>
       </EdgeFadeScrollRow>
     );
-    const scroll = UNSAFE_getByType(ScrollView);
+    const scroll = scrollOf(container);
 
-    act(() => {
+    await act(() => {
       scroll.props.onLayout({ nativeEvent: { layout: { width: 390 } } });
       scroll.props.onScroll(scrollEvent(0, 390, 700));
     });
@@ -117,11 +125,11 @@ describe('EdgeFadeScrollRow', () => {
     expect(ref.current).toBeTruthy();
   });
 
-  it('затухает в переданный фон поверхности, а не в цвет карточки', () => {
-    const { UNSAFE_getByType, getByTestId } = renderRow({ fadeColor: '#fdfcfb' });
-    const scroll = UNSAFE_getByType(ScrollView);
+  it('затухает в переданный фон поверхности, а не в цвет карточки', async () => {
+    const { container, getByTestId } = await renderRow({ fadeColor: '#fdfcfb' });
+    const scroll = scrollOf(container);
 
-    act(() => {
+    await act(() => {
       scroll.props.onScroll(scrollEvent(120, 390, 700));
     });
 
@@ -136,11 +144,11 @@ describe('EdgeFadeScrollRow', () => {
     ]);
   });
 
-  it('без явного цвета берёт `colors.surface` темы', () => {
-    const { UNSAFE_getByType, getByTestId } = renderRow();
-    const scroll = UNSAFE_getByType(ScrollView);
+  it('без явного цвета берёт `colors.surface` темы', async () => {
+    const { container, getByTestId } = await renderRow();
+    const scroll = scrollOf(container);
 
-    act(() => {
+    await act(() => {
       scroll.props.onScroll(scrollEvent(120, 390, 700));
     });
 

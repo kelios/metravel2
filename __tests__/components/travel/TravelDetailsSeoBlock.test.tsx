@@ -32,8 +32,8 @@ describe('TravelDetailsSeoBlock', () => {
     mockHeadProps.mockClear()
   })
 
-  it('does not publish invented dimensions for a travel cover', () => {
-    render(
+  it('does not publish invented dimensions for a travel cover', async () => {
+    await render(
       <TravelDetailsSeoBlock
         canonicalUrl="https://metravel.by/travels/lake"
         headKey="travel-lake"
@@ -53,14 +53,14 @@ describe('TravelDetailsSeoBlock', () => {
     expect(mockSeoProps.mock.calls[0][0]).not.toHaveProperty('imageHeight')
   })
 
-  it('passes safely serialized JSON-LD as script text for Expo Head', () => {
+  it('passes safely serialized JSON-LD as script text for Expo Head', async () => {
     const jsonLd = {
       '@context': 'https://schema.org',
       url: 'https://metravel.by/travels/lake',
       headline: '</script><script>alert(1)</script>',
     }
 
-    render(
+    await render(
       <TravelDetailsSeoBlock
         canonicalUrl="https://metravel.by/travels/lake"
         headKey="travel-lake"

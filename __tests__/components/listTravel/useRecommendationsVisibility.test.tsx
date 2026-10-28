@@ -47,14 +47,14 @@ describe('useRecommendationsVisibility', () => {
     ;(AsyncStorage.getItem as jest.Mock).mockClear()
     ;(AsyncStorage.setItem as jest.Mock).mockClear()
 
-    const { getByTestId } = render(<HookTestComponent />)
+    const { getByTestId } = await render(<HookTestComponent />)
 
     await waitFor(() => {
       expect(AsyncStorage.getItem).toHaveBeenCalledWith(RECOMMENDATIONS_VISIBLE_KEY)
       expect(getByTestId('visible')).toHaveTextContent('true')
     })
 
-    fireEvent.press(getByTestId('hide'))
+    await fireEvent.press(getByTestId('hide'))
 
     await waitFor(() => {
       expect(getByTestId('visible')).toHaveTextContent('false')
@@ -66,12 +66,12 @@ describe('useRecommendationsVisibility', () => {
     setPlatform('web')
     sessionStorage.setItem(RECOMMENDATIONS_VISIBLE_KEY, 'true')
 
-    const { getByTestId } = render(<HookTestComponent />)
+    const { getByTestId } = await render(<HookTestComponent />)
 
     expect(getByTestId('visible')).toHaveTextContent('true')
     expect(AsyncStorage.getItem).not.toHaveBeenCalled()
 
-    fireEvent.press(getByTestId('hide'))
+    await fireEvent.press(getByTestId('hide'))
 
     await waitFor(() => {
       expect(getByTestId('visible')).toHaveTextContent('false')

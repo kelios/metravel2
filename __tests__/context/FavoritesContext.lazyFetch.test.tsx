@@ -56,7 +56,7 @@ describe('FavoritesContext lazy server fetching', () => {
       )
     }
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <QueryClientProvider client={queryClient}>
         <FavoritesProvider>
           <Harness />
@@ -69,7 +69,7 @@ describe('FavoritesContext lazy server fetching', () => {
     expect(apiUser.fetchUserHistory).not.toHaveBeenCalled()
     expect(apiUser.fetchUserRecommendedTravels).not.toHaveBeenCalled()
 
-    fireEvent.press(getByTestId('load-favorites'))
+    await fireEvent.press(getByTestId('load-favorites'))
 
     await waitFor(() => {
       expect(apiUser.fetchUserFavoriteTravels).toHaveBeenCalledTimes(1)
@@ -81,12 +81,12 @@ describe('FavoritesContext lazy server fetching', () => {
     expect(apiUser.fetchUserRecommendedTravels).not.toHaveBeenCalled()
 
     // Calling the same kind again should not refetch (cached in provider)
-    fireEvent.press(getByTestId('load-favorites'))
+    await fireEvent.press(getByTestId('load-favorites'))
     await new Promise((r) => setTimeout(r, 0))
     expect(apiUser.fetchUserFavoriteTravels).toHaveBeenCalledTimes(1)
 
     // Another kind triggers its own fetch
-    fireEvent.press(getByTestId('load-history'))
+    await fireEvent.press(getByTestId('load-history'))
     await waitFor(() => {
       expect(apiUser.fetchUserHistory).toHaveBeenCalledTimes(1)
       expect(apiUser.fetchUserHistory).toHaveBeenCalledWith('1')

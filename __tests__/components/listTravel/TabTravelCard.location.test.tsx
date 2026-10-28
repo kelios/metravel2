@@ -17,8 +17,8 @@ jest.mock('@/components/ui/UnifiedTravelCard', () => ({
   },
 }));
 
-const renderCard = (item: { city: string | null; country: string | null }) =>
-  render(
+const renderCard = async (item: { city: string | null; country: string | null }) =>
+  await render(
     <TabTravelCard
       item={{ id: '485', title: 'Будапешт за три дня', imageUrl: null, ...item } as any}
       testID="card"
@@ -26,10 +26,10 @@ const renderCard = (item: { city: string | null; country: string | null }) =>
   );
 
 describe('TabTravelCard location line', () => {
-  it('shows the country instead of the geocoded address stored in city', () => {
+  it('shows the country instead of the geocoded address stored in city', async () => {
     // Реальное значение cityName у travel 485 на проде. Строка рендерится с
     // numberOfLines={1}, поэтому раньше карточка показывала обрезанный адрес.
-    const { queryByText } = renderCard({
+    const { queryByText } = await renderCard({
       city: 'Базилика Святого Стефана, 1, Szent István tér, Lipótváros, 5th district, Будапешт, Центральная Венгрия, 1051, Венгрия',
       country: 'Венгрия',
     });
@@ -38,13 +38,13 @@ describe('TabTravelCard location line', () => {
     expect(queryByText(/Szent István tér/)).toBeNull();
   });
 
-  it('keeps a real city name next to the country', () => {
-    const { queryByText } = renderCard({ city: 'Краков', country: 'Польша' });
+  it('keeps a real city name next to the country', async () => {
+    const { queryByText } = await renderCard({ city: 'Краков', country: 'Польша' });
     expect(queryByText('Краков, Польша')).toBeTruthy();
   });
 
-  it('renders no dangling separator when neither city nor country is usable', () => {
-    const { queryByText } = renderCard({
+  it('renders no dangling separator when neither city nor country is usable', async () => {
+    const { queryByText } = await renderCard({
       city: 'Rezerwat Lipowska, Kamienna, Żabnica, Живецкий повят, Польша',
       country: null,
     });

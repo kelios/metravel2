@@ -143,7 +143,7 @@ describe('TripInvitePanel', () => {
     }))).toBe('Пользователь #303');
   });
 
-  it('shows selected invitee names and supports select/cancel/reselect', () => {
+  it('shows selected invitee names and supports select/cancel/reselect', async () => {
     const longName = 'Александра Путешественница-Длиннофамильная';
     mockSubscribers.push(
       makeProfile({
@@ -161,32 +161,32 @@ describe('TripInvitePanel', () => {
       }),
     );
 
-    const { getByTestId, getByText, queryByTestId } = render(<TripInvitePanel trip={trip} />);
+    const { getByTestId, getByText, queryByTestId } = await render(<TripInvitePanel trip={trip} />);
 
     expect(getByText(longName)).toBeTruthy();
     expect(getByText('trail_friend')).toBeTruthy();
 
-    fireEvent.press(getByTestId('trip-invite-subscriber-101'));
+    await fireEvent.press(getByTestId('trip-invite-subscriber-101'));
     expect(getByText(`Выбрано: ${longName}`)).toBeTruthy();
 
-    fireEvent.press(getByTestId('trip-invite-subscriber-101'));
+    await fireEvent.press(getByTestId('trip-invite-subscriber-101'));
     expect(queryByTestId('trip-invite-selected-names')).toBeNull();
 
-    fireEvent.press(getByTestId('trip-invite-subscriber-202'));
+    await fireEvent.press(getByTestId('trip-invite-subscriber-202'));
     expect(getByText('Выбрано: trail_friend')).toBeTruthy();
   });
 
   it('opens generic system share and remains repeat-safe after cancellation', async () => {
     mockShareTripPlan.mockResolvedValue('dismissed');
-    const { getByTestId, queryByText } = render(<TripInvitePanel trip={trip} />);
+    const { getByTestId, queryByText } = await render(<TripInvitePanel trip={trip} />);
 
-    fireEvent.press(getByTestId('trip-invite-share-system'));
+    await fireEvent.press(getByTestId('trip-invite-share-system'));
     await waitFor(() => expect(mockShareTripPlan).toHaveBeenCalledTimes(1));
     await waitFor(() =>
       expect(getByTestId('trip-invite-share-system').props.disabled).toBe(false),
     );
 
-    fireEvent.press(getByTestId('trip-invite-share-system'));
+    await fireEvent.press(getByTestId('trip-invite-share-system'));
     await waitFor(() => expect(mockShareTripPlan).toHaveBeenCalledTimes(2));
 
     expect(mockShareTripPlan).toHaveBeenNthCalledWith(1, trip);
@@ -194,9 +194,9 @@ describe('TripInvitePanel', () => {
   });
 
   it('keeps Telegram share on the centralized external-link helper', async () => {
-    const { getByTestId } = render(<TripInvitePanel trip={trip} />);
+    const { getByTestId } = await render(<TripInvitePanel trip={trip} />);
 
-    fireEvent.press(getByTestId('trip-invite-share'));
+    await fireEvent.press(getByTestId('trip-invite-share'));
 
     await waitFor(() => expect(mockOpenExternalUrl).toHaveBeenCalledTimes(1));
     const telegramUrl = new URL(mockOpenExternalUrl.mock.calls[0][0] as string);

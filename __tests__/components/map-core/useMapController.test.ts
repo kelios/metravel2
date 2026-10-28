@@ -144,8 +144,8 @@ describe('useMapController (#991 smoke)', () => {
     })
   })
 
-  it('mapPanelProps несёт единый контракт рендер-адаптеров', () => {
-    const { result } = renderHook(() => useMapController(baseParams))
+  it('mapPanelProps несёт единый контракт рендер-адаптеров', async () => {
+    const { result } = await renderHook(() => useMapController(baseParams))
     const props = result.current.mapPanelProps
     for (const key of [
       'travelsData', 'coordinates', 'coordinatesAreFallback', 'userLocation',
@@ -164,88 +164,88 @@ describe('useMapController (#991 smoke)', () => {
     expect(props.initialResultsSettled).toBe(true)
   })
 
-  it('#1291 — opens the web startup gate only for the active settled result set', () => {
+  it('#1291 — opens the web startup gate only for the active settled result set', async () => {
     mockMapLoading = true
-    const { result, rerender } = renderHook(() => useMapController(baseParams))
+    const { result, rerender } = await renderHook(() => useMapController(baseParams))
 
     expect(result.current.mapPanelProps.initialResultsSettled).toBe(false)
 
     mockMapLoading = false
     mockMapFetching = true
     mockMapPlaceholder = true
-    rerender()
+    await rerender()
 
     expect(result.current.mapPanelProps.initialResultsSettled).toBe(false)
 
     mockMapFetching = false
     mockMapPlaceholder = false
     mockMapDebouncing = true
-    rerender()
+    await rerender()
 
     expect(result.current.mapPanelProps.initialResultsSettled).toBe(false)
 
     mockMapDebouncing = false
-    rerender()
+    await rerender()
 
     expect(result.current.mapPanelProps.initialResultsSettled).toBe(true)
   })
 
-  it('#2450 — keeps the startup latch open but withholds the stale total during a refetch', () => {
-    const { result, rerender } = renderHook(() => useMapController(baseParams))
+  it('#2450 — keeps the startup latch open but withholds the stale total during a refetch', async () => {
+    const { result, rerender } = await renderHook(() => useMapController(baseParams))
     expect(result.current.mapPanelProps.initialResultsSettled).toBe(true)
     expect(result.current.mapPanelProps.travelsTotal).toBe(0)
 
     // Radius/anchor change: placeholder points of the previous query.
     mockMapFetching = true
     mockMapPlaceholder = true
-    rerender()
+    await rerender()
     expect(result.current.mapPanelProps.initialResultsSettled).toBe(true)
     expect(result.current.mapPanelProps.travelsTotal).toBeNull()
 
     mockMapFetching = false
     mockMapPlaceholder = false
-    rerender()
+    await rerender()
     expect(result.current.mapPanelProps.travelsTotal).toBe(0)
   })
 
-  it('#2450 — a background refetch of the same key (next page) keeps the total for the auto-fit', () => {
-    const { result, rerender } = renderHook(() => useMapController(baseParams))
+  it('#2450 — a background refetch of the same key (next page) keeps the total for the auto-fit', async () => {
+    const { result, rerender } = await renderHook(() => useMapController(baseParams))
     expect(result.current.mapPanelProps.travelsTotal).toBe(0)
 
     // Same query key, real data already on screen: isFetching without placeholder.
     mockMapFetching = true
     mockMapPlaceholder = false
-    rerender()
+    await rerender()
     expect(result.current.mapPanelProps.travelsTotal).toBe(0)
     expect(result.current.mapPanelProps.travelsTotal).not.toBeNull()
 
     // Debounced input of a NEW anchor/radius → not this query's set.
     mockMapFetching = false
     mockMapDebouncing = true
-    rerender()
+    await rerender()
     expect(result.current.mapPanelProps.travelsTotal).toBeNull()
     mockMapDebouncing = false
   })
 
-  it('#1291 — stays closed while the map screen query is unfocused and disabled', () => {
-    const { result } = renderHook(() =>
+  it('#1291 — stays closed while the map screen query is unfocused and disabled', async () => {
+    const { result } = await renderHook(() =>
       useMapController({ ...baseParams, isFocused: false }),
     )
 
     expect(result.current.mapPanelProps.initialResultsSettled).toBe(false)
   })
 
-  it('#207 — isMobile включает marker-select/background-tap гейты', () => {
-    const { result } = renderHook(() => useMapController({ ...baseParams, isMobile: true }))
+  it('#207 — isMobile включает marker-select/background-tap гейты', async () => {
+    const { result } = await renderHook(() => useMapController({ ...baseParams, isMobile: true }))
     const props = result.current.mapPanelProps
     expect(typeof props.onMarkerSelect).toBe('function')
     expect(typeof props.onMapBackgroundTap).toBe('function')
     expect(props.suppressLeafletPopupOnSelect).toBe(true)
   })
 
-  it('F-49 precedence: URL-якорь побеждает resolved-координаты и помечается fallback', () => {
+  it('F-49 precedence: URL-якорь побеждает resolved-координаты и помечается fallback', async () => {
     const url = { latitude: 50.06, longitude: 19.94 }
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useMapController({ ...baseParams, urlCoordinates: url }),
     )
     expect(result.current.mapPanelProps.coordinates).toEqual(url)
@@ -253,15 +253,15 @@ describe('useMapController (#991 smoke)', () => {
     expect(result.current.mapPanelProps.coordinatesAreFallback).toBe(true)
   })
 
-  it('без якорей запрос идёт от resolved-координат', () => {
-    const { result } = renderHook(() => useMapController(baseParams))
+  it('без якорей запрос идёт от resolved-координат', async () => {
+    const { result } = await renderHook(() => useMapController(baseParams))
     expect(result.current.mapPanelProps.coordinates).toEqual({
       latitude: 53.9,
       longitude: 27.5667,
     })
   })
 
-  it('не подменяет stable viewport anchor движущимся live GPS marker', () => {
+  it('не подменяет stable viewport anchor движущимся live GPS marker', async () => {
     Object.assign(mockMapCoordinatesResult, {
       coordinates: { latitude: 52.2, longitude: 20.98 },
       coordinatesSource: 'geolocation',
@@ -276,7 +276,7 @@ describe('useMapController (#991 smoke)', () => {
       },
     })
 
-    const { result } = renderHook(() => useMapController(baseParams))
+    const { result } = await renderHook(() => useMapController(baseParams))
 
     expect(result.current.mapPanelProps.coordinates).toEqual({
       latitude: 52.2,
@@ -288,67 +288,67 @@ describe('useMapController (#991 smoke)', () => {
     })
   })
 
-  it('#FIX-2 — тап маркера кормит маршрут только пока в нём <2 точек', () => {
+  it('#FIX-2 — тап маркера кормит маршрут только пока в нём <2 точек', async () => {
     mockRouteStoreState = { mode: 'route', points: [{}] }
-    const { result } = renderHook(() => useMapController({ ...baseParams, isMobile: true }))
+    const { result } = await renderHook(() => useMapController({ ...baseParams, isMobile: true }))
     const point = { id: '7', coord: '53.9,27.5', address: 'X' } as any
 
-    act(() => { result.current.mapPanelProps.onMarkerSelect?.(point) })
+    await act(() => { result.current.mapPanelProps.onMarkerSelect?.(point) })
     expect(mockAddRoutePointFromTravel).toHaveBeenCalledWith(point)
     expect(result.current.selectedPlace).toBeNull()
 
     // Достроенный 2-точечный маршрут отпускает тап → открывается карточка места
     mockAddRoutePointFromTravel.mockClear()
     mockRouteStoreState = { mode: 'route', points: [{}, {}] }
-    act(() => { result.current.mapPanelProps.onMarkerSelect?.(point) })
+    await act(() => { result.current.mapPanelProps.onMarkerSelect?.(point) })
     expect(mockAddRoutePointFromTravel).not.toHaveBeenCalled()
     expect(result.current.selectedPlace).toEqual(point)
   })
 
-  it('«моё местоположение» — один запрос и одно центрирование, без follow на каждый GPS-тик', () => {
+  it('«моё местоположение» — один запрос и одно центрирование, без follow на каждый GPS-тик', async () => {
     const mapCenterOnUser = jest.fn()
     ;(mockMapCoordinatesResult.refreshLocation as jest.Mock).mockClear()
 
-    const { result, rerender } = renderHook(() => useMapController(baseParams))
-    act(() => {
+    const { result, rerender } = await renderHook(() => useMapController(baseParams))
+    await act(() => {
       result.current.mapPanelProps.onMapUiApiReady({ centerOnUser: mapCenterOnUser } as any)
     })
 
-    act(() => { result.current.centerOnUser() })
+    await act(() => { result.current.centerOnUser() })
     expect(mockMapCoordinatesResult.refreshLocation).toHaveBeenCalledTimes(1)
     expect(mapCenterOnUser).not.toHaveBeenCalled()
 
     // Ответ на этот запрос центрирует карту ровно один раз.
-    act(() => {
+    await act(async () => {
       Object.assign(mockMapCoordinatesResult, {
         coordinatesSource: 'geolocation',
         coordinatesAreFallback: false,
         currentLocation: { latitude: 52.2, longitude: 20.98 },
       })
-      rerender()
+      await rerender()
     })
     expect(mapCenterOnUser).toHaveBeenCalledTimes(1)
 
     // Дальнейшие тики live-watch двигают только маркер: повторный setView пере-
     // запрашивал кластеры/тайлы и карта перерисовывалась всю дорогу.
-    act(() => {
+    await act(async () => {
       Object.assign(mockMapCoordinatesResult, {
         currentLocation: { latitude: 52.2015, longitude: 20.9815 },
       })
-      rerender()
+      await rerender()
     })
     expect(mapCenterOnUser).toHaveBeenCalledTimes(1)
     expect(mockMapCoordinatesResult.refreshLocation).toHaveBeenCalledTimes(1)
   })
 
-  it('resetCoreForFilters сбрасывает search-area якорь и маршрут атомарно', () => {
-    const { result } = renderHook(() => useMapController(baseParams))
-    act(() => { result.current.resetCoreForFilters() })
+  it('resetCoreForFilters сбрасывает search-area якорь и маршрут атомарно', async () => {
+    const { result } = await renderHook(() => useMapController(baseParams))
+    await act(() => { result.current.resetCoreForFilters() })
     expect(mockSetSearchAreaCenter).toHaveBeenCalledWith(null)
     expect(mockClearRouteAndSetMode).toHaveBeenCalledWith('radius')
   })
-  it('uses registered numeric URL categories for server clusters', () => {
-    const { result } = renderHook(() => useMapController({
+  it('uses registered numeric URL categories for server clusters', async () => {
+    const { result } = await renderHook(() => useMapController({
       ...baseParams,
       filters: { ...baseParams.filters, categoryTravelAddress: [{ id: '43', name: 'Замок' }], categoryDictionaryState: 'ready' },
       filterValues: { ...baseParams.filterValues, categoryTravelAddress: ['43'] },
@@ -357,8 +357,8 @@ describe('useMapController (#991 smoke)', () => {
     expect(result.current.mapPanelProps.categoryFilterUnresolved).toBe(false)
   })
 
-  it.each(['loading', 'error', 'ready'])('keeps mixed OR markers local when dictionary state is %s', (state) => {
-    const { result } = renderHook(() => useMapController({
+  it.each(['loading', 'error', 'ready'])('keeps mixed OR markers local when dictionary state is %s', async (state) => {
+    const { result } = await renderHook(() => useMapController({
       ...baseParams,
       filters: { ...baseParams.filters, categoryTravelAddress: [{ id: '43', name: 'Замок' }], categoryDictionaryState: state as any },
       filterValues: { ...baseParams.filterValues, categoryTravelAddress: ['43', 'Unknown'] },
@@ -367,9 +367,9 @@ describe('useMapController (#991 smoke)', () => {
     expect(result.current.mapPanelProps.categoryFilterUnresolved).toBe(true)
   })
 
-  it('keeps all marker categories local when the resolved OR cannot fit the server category limit', () => {
+  it('keeps all marker categories local when the resolved OR cannot fit the server category limit', async () => {
     const dictionary = Array.from({ length: 51 }, (_, index) => ({ id: String(index + 1), name: `Category ${index + 1}` }))
-    const { result } = renderHook(() => useMapController({
+    const { result } = await renderHook(() => useMapController({
       ...baseParams,
       filters: { ...baseParams.filters, categoryTravelAddress: dictionary, categoryDictionaryState: 'ready' },
       filterValues: { ...baseParams.filterValues, categoryTravelAddress: dictionary.map(({ id }) => id) },

@@ -129,13 +129,13 @@ describe('CompactSideBarTravel', () => {
     });
   });
 
-  it('should render without crashing', () => {
-    const { getByTestId } = render(<CompactSideBarTravel {...defaultProps} />);
+  it('should render without crashing', async () => {
+    const { getByTestId } = await render(<CompactSideBarTravel {...defaultProps} />);
     // Component should render without errors
     expect(getByTestId).toBeDefined();
   });
 
-  it('should render user information when provided', () => {
+  it('should render user information when provided', async () => {
     const travel = createMockTravel({
       userName: 'Test User',
       year: 2024,
@@ -144,7 +144,7 @@ describe('CompactSideBarTravel', () => {
       travel_image_thumb_small_url: 'https://example.com/avatar.jpg',
     } as any);
 
-    const { getAllByText, getByText } = render(
+    const { getAllByText, getByText } = await render(
       <CompactSideBarTravel {...defaultProps} travel={travel} />
     );
 
@@ -152,14 +152,14 @@ describe('CompactSideBarTravel', () => {
     expect(getByText(/January.*2024/)).toBeTruthy();
   });
 
-  it('should render navigation links', () => {
+  it('should render navigation links', async () => {
     const travel = createMockTravel({
       gallery: [{ id: 1, url: 'test.jpg' }],
       youtube_link: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
       description: 'Test description',
     } as any);
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <CompactSideBarTravel {...defaultProps} travel={travel} />
     );
 
@@ -169,23 +169,23 @@ describe('CompactSideBarTravel', () => {
     expect(getByText('Карта маршрута')).toBeTruthy();
   });
 
-  it('should call onNavigate when link is pressed', () => {
+  it('should call onNavigate when link is pressed', async () => {
     const travel = createMockTravel({
       gallery: [{ id: 1, url: 'test.jpg' }],
     } as any);
 
     const onNavigate = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <CompactSideBarTravel {...defaultProps} travel={travel} onNavigate={onNavigate} />
     );
 
     const galleryLink = getByText('Галерея');
-    fireEvent.press(galleryLink);
+    await fireEvent.press(galleryLink);
 
     expect(onNavigate).toHaveBeenCalledWith('gallery');
   });
 
-  it('dispatches open-section event on web and calls onNavigate', () => {
+  it('dispatches open-section event on web and calls onNavigate', async () => {
     const RN = require('react-native');
     const prevOS = RN.Platform.OS;
     RN.Platform.OS = 'web';
@@ -197,11 +197,11 @@ describe('CompactSideBarTravel', () => {
     } as any);
 
     const onNavigate = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <CompactSideBarTravel {...defaultProps} travel={travel} onNavigate={onNavigate} />
     );
 
-    fireEvent.press(getByText('Галерея'));
+    await fireEvent.press(getByText('Галерея'));
 
     expect(onNavigate).toHaveBeenCalledWith('gallery');
     expect(dispatchSpy).toHaveBeenCalled();
@@ -214,13 +214,13 @@ describe('CompactSideBarTravel', () => {
     RN.Platform.OS = prevOS;
   });
 
-  it('should call closeMenu when link is pressed on mobile', () => {
+  it('should call closeMenu when link is pressed on mobile', async () => {
     const travel = createMockTravel({
       gallery: [{ id: 1, url: 'test.jpg' }],
     } as any);
 
     const closeMenu = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <CompactSideBarTravel
         {...defaultProps}
         travel={travel}
@@ -230,18 +230,18 @@ describe('CompactSideBarTravel', () => {
     );
 
     const galleryLink = getByText('Галерея');
-    fireEvent.press(galleryLink);
+    await fireEvent.press(galleryLink);
 
     expect(closeMenu).toHaveBeenCalled();
   });
 
-  it('should render edit button when user can edit', () => {
+  it('should render edit button when user can edit', async () => {
     mockAuthState.userId = '123';
     const travel = createMockTravel({
       userId: '123',
     } as any);
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <CompactSideBarTravel
         {...defaultProps}
         travel={travel}
@@ -251,12 +251,12 @@ describe('CompactSideBarTravel', () => {
     expect(getByLabelText('Редактировать путешествие')).toBeTruthy();
   });
 
-  it('should not render edit button for guest (no user and no superuser)', () => {
+  it('should not render edit button for guest (no user and no superuser)', async () => {
     const travel = createMockTravel({
       userId: '123',
     } as any);
 
-    const { queryByLabelText } = render(
+    const { queryByLabelText } = await render(
       <CompactSideBarTravel
         {...defaultProps}
         travel={travel}
@@ -266,13 +266,13 @@ describe('CompactSideBarTravel', () => {
     expect(queryByLabelText('Редактировать путешествие')).toBeNull();
   });
 
-  it('should render edit button for superuser even if not owner', () => {
+  it('should render edit button for superuser even if not owner', async () => {
     mockAuthState.isSuperuser = true;
     const travel = createMockTravel({
       userId: '999',
     } as any);
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <CompactSideBarTravel
         {...defaultProps}
         travel={travel}
@@ -282,8 +282,8 @@ describe('CompactSideBarTravel', () => {
     expect(getByLabelText('Редактировать путешествие')).toBeTruthy();
   });
 
-  it('should render close button on mobile', () => {
-    const { getByText, getAllByLabelText } = render(
+  it('should render close button on mobile', async () => {
+    const { getByText, getAllByLabelText } = await render(
       <CompactSideBarTravel {...defaultProps} isMobile={true} />
     );
 
@@ -291,9 +291,9 @@ describe('CompactSideBarTravel', () => {
     expect(getByText('Закрыть')).toBeTruthy();
   });
 
-  it('should call closeMenu when close button is pressed', () => {
+  it('should call closeMenu when close button is pressed', async () => {
     const closeMenu = jest.fn();
-    const { getAllByLabelText } = render(
+    const { getAllByLabelText } = await render(
       <CompactSideBarTravel
         {...defaultProps}
         isMobile={true}
@@ -302,12 +302,12 @@ describe('CompactSideBarTravel', () => {
     );
 
     const closeButton = getAllByLabelText('Закрыть меню')[0];
-    fireEvent.press(closeButton);
+    await fireEvent.press(closeButton);
 
     expect(closeMenu).toHaveBeenCalled();
   });
 
-  it('should not render categories even when available in travelAddress', () => {
+  it('should not render categories even when available in travelAddress', async () => {
     const travel = createMockTravel({
       travelAddress: [
         { categoryName: 'Museum, Park' },
@@ -315,7 +315,7 @@ describe('CompactSideBarTravel', () => {
       ] as any,
     });
 
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <CompactSideBarTravel {...defaultProps} travel={travel} />
     );
 
@@ -323,11 +323,11 @@ describe('CompactSideBarTravel', () => {
     expect(queryByText('Park')).toBeNull();
   });
 
-  it('should render view count when available', () => {
+  it('should render view count when available', async () => {
     const travel: any = createMockTravel();
     travel.countUnicIpView = 1234;
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <CompactSideBarTravel {...defaultProps} travel={travel} />
     );
 
@@ -335,20 +335,20 @@ describe('CompactSideBarTravel', () => {
     expect(getByText(/1[\s\u00A0\u202F]234/)).toBeTruthy();
   });
 
-  it('should render WeatherWidget', () => {
-    const { getByTestId } = render(
+  it('should render WeatherWidget', async () => {
+    const { getByTestId } = await render(
       <CompactSideBarTravel {...defaultProps} />
     );
 
     expect(getByTestId('weather-widget')).toBeTruthy();
   });
 
-  it('should highlight active section', () => {
+  it('should highlight active section', async () => {
     const travel = createMockTravel({
       gallery: [{ id: 1, url: 'test.jpg' }],
     } as any);
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <CompactSideBarTravel
         {...defaultProps}
         travel={travel}

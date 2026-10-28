@@ -7,6 +7,7 @@ let useLayoutEffect: typeof import('react').useLayoutEffect
 let useRuntimeSettle: typeof import('@/components/travel/details/TravelDetailsDeferredTransition').useDeferredSectionRuntimeSettle
 let createRoot: typeof import('react-dom/client').createRoot
 let Transition: typeof import('@/components/travel/details/TravelDetailsDeferredTransition').TravelDetailsDeferredTransition
+let mockNonDOMViewRef: object | null = null
 let Platform: typeof import('react-native').Platform
 
 class MeasuredResizeObserver {
@@ -21,7 +22,17 @@ class MeasuredResizeObserver {
 beforeAll(() => {
   Object.defineProperty(window, 'ResizeObserver', { configurable: true, value: MeasuredResizeObserver })
   jest.resetModules()
-  jest.doMock('react-native', () => jest.requireActual('react-native-web'))
+  jest.doMock('react-native', () => {
+    const React = require('react')
+    const actual = jest.requireActual('react-native-web')
+    const View = React.forwardRef(function ViewRefBoundary(props: Record<string, unknown>, ref: import('react').Ref<unknown>) {
+      const domRef = React.useRef(null)
+      // Expose the platform ref contract while keeping genuine DOM rendering.
+      React.useImperativeHandle(ref, () => mockNonDOMViewRef ?? domRef.current)
+      return React.createElement(actual.View, { ...props, ref: domRef })
+    })
+    return { ...actual, View }
+  })
   ;({ createElement, act, useLayoutEffect } = require('react'))
   ;({ createRoot } = require('react-dom/client'))
   ;({ Platform } = require('react-native'))
@@ -533,25 +544,32 @@ it('retains current-visit fail-open at6000ms without premature readiness from an
   }
 })
 
-it.each(['native-handle', 'detached-DOM'] as const)('keeps actual renderer%s refs unmeasured without mutating style or observing them', kind => {
-  const renderer = require('react-test-renderer') as typeof import('react-test-renderer')
+it.each(['native-handle', 'detached-DOM'] as const)('keeps actual renderer %s refs unmeasured without mutating style or observing them', async kind => {
   const ref = kind === 'native-handle' ? { nativeTag: 11 } : document.createElement('div')
   if (ref instanceof HTMLElement) ref.style.height = '41px'
-  let tree: ReturnType<typeof renderer.create> | undefined
+  const mount = document.createElement('div')
+  document.body.append(mount)
+  const root = createRoot(mount)
+  const transition = () => mount.querySelector<HTMLElement>('[data-testid="non-DOM-ref-boundary"]')!
   const element = (ready: boolean) => createElement(Transition, {
     isMobile: true, pending: false, placeholder: createElement('div'), reserveHeight: '100vh',
     runtimeFrameReady: ready, runtimeVisibilityReady: true, testID: 'non-DOM-ref-boundary', children: createElement('div'),
   })
+  mockNonDOMViewRef = ref
   try {
-    act(() => { tree = renderer.create(element(false), { createNodeMock: () => ref }) })
-    expect(tree!.root.findByProps({ 'data-testid': 'non-DOM-ref-boundary' }).props['data-deferred-transition-state']).toBe('measuring-runtime')
-    act(() => { tree!.update(element(true)) })
-    expect(tree!.root.findByProps({ 'data-testid': 'non-DOM-ref-boundary' }).props['data-deferred-transition-state']).toBe('measuring-runtime')
-    expect(tree!.root.findByProps({ 'data-testid': 'non-DOM-ref-boundary' }).props['data-reserve-release-state']).toBe('reserved')
+    await act(() => root.render(element(false)))
+    expect(transition().dataset.deferredTransitionState).toBe('measuring-runtime')
+    await act(() => root.render(element(true)))
+    expect(transition().dataset.deferredTransitionState).toBe('measuring-runtime')
+    expect(transition().dataset.reserveReleaseState).toBe('reserved')
     expect(MeasuredResizeObserver.instances.some(observer => observer.targets.has(ref as Element))).toBe(false)
     if (ref instanceof HTMLElement) expect(ref.style.height).toBe('41px')
     else expect(ref).not.toHaveProperty('style')
-  } finally { act(() => tree?.unmount()) }
+  } finally {
+    await act(() => root.unmount())
+    mockNonDOMViewRef = null
+    mount.remove()
+  }
 })
 
 it.each([false, true])('keeps native placeholder/children parity without DOM reserve/scroll correction (optional=%s)', optional => {

@@ -61,7 +61,7 @@ describe('useNearTravelData canonical /near/ adapter path', () => {
       results: Array.from({ length: 8 }, (_, index) => travelCard(index + 1)),
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useNearTravelData(384),
       { wrapper: makeWrapper() },
     );
@@ -98,7 +98,7 @@ describe('useNearTravelData canonical /near/ adapter path', () => {
       results: [],
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useNearTravelData(384),
       { wrapper: makeWrapper() },
     );
@@ -118,7 +118,7 @@ describe('useNearTravelData canonical /near/ adapter path', () => {
       results: [{ ...travelCard(1), lat: 50.061, lng: 19.938 }],
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useNearTravelData(384),
       { wrapper: makeWrapper() },
     );
@@ -147,7 +147,7 @@ describe('useNearTravelData canonical /near/ adapter path', () => {
         },
       ]));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useNearTravelData(384, undefined, true, {
         enabled: true,
         origin: { lat: 50.05, lng: 19.94 },
@@ -193,7 +193,7 @@ describe('useNearTravelData canonical /near/ adapter path', () => {
   ])('surfaces %s as a query error instead of an empty list', async (_case, payload) => {
     mockedFetchWithTimeout.mockResolvedValueOnce(responseWithJson(payload));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useNearTravelData(384),
       { wrapper: makeWrapper() },
     );
@@ -211,7 +211,7 @@ describe('useNearTravelData canonical /near/ adapter path', () => {
     const transportError = new TypeError('Network request failed');
     mockedFetchWithTimeout.mockRejectedValueOnce(transportError);
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useNearTravelData(384),
       { wrapper: makeWrapper() },
     );

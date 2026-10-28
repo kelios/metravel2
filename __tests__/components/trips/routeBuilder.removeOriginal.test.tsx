@@ -151,8 +151,8 @@ const makeTrip = (): PlannedTrip => ({
   createdAt: '2026-09-20T08:00:00Z',
 })
 
-const renderRouteBuilder = () =>
-  render(<RouteBuilder trip={makeTrip()} />, { wrapper: createQueryWrapper().Wrapper })
+const renderRouteBuilder = async () =>
+  await render(<RouteBuilder trip={makeTrip()} />, { wrapper: createQueryWrapper().Wrapper })
 
 const REMOVE = 'trip-route-import-remove-original'
 const CONFIRM = 'trip-route-import-remove-original-confirm'
@@ -166,31 +166,31 @@ describe('RouteBuilder — удаление оригинала только по
     mockStoredRouteFiles = [STORED_ORIGINAL]
   })
 
-  it('«Удалить» без подтверждения не отправляет DELETE', () => {
-    const { getByTestId } = renderRouteBuilder()
+  it('«Удалить» без подтверждения не отправляет DELETE', async () => {
+    const { getByTestId } = await renderRouteBuilder()
 
-    fireEvent.press(within(getByTestId('trip-route-import-stored-original')).getByTestId(REMOVE))
+    await fireEvent.press(within(getByTestId('trip-route-import-stored-original')).getByTestId(REMOVE))
 
     expect(within(getByTestId('confirm-dialog')).getByText('Удалить оригинальный файл?')).toBeTruthy()
     expect(mockOriginalDelete).not.toHaveBeenCalled()
   })
 
-  it('«Отмена» не отправляет DELETE и оставляет карточку оригинала', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder()
+  it('«Отмена» не отправляет DELETE и оставляет карточку оригинала', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder()
 
-    fireEvent.press(getByTestId(REMOVE))
-    fireEvent.press(getByTestId(CANCEL))
+    await fireEvent.press(getByTestId(REMOVE))
+    await fireEvent.press(getByTestId(CANCEL))
 
     expect(mockOriginalDelete).not.toHaveBeenCalled()
     expect(queryByTestId('confirm-dialog')).toBeNull()
     expect(within(getByTestId('trip-route-import-stored-original')).getByTestId(REMOVE)).toBeTruthy()
   })
 
-  it('«Удалить» в подтверждении отправляет ровно один DELETE этого файла', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder()
+  it('«Удалить» в подтверждении отправляет ровно один DELETE этого файла', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder()
 
-    fireEvent.press(getByTestId(REMOVE))
-    fireEvent.press(getByTestId(CONFIRM))
+    await fireEvent.press(getByTestId(REMOVE))
+    await fireEvent.press(getByTestId(CONFIRM))
 
     expect(mockOriginalDelete).toHaveBeenCalledTimes(1)
     expect(mockOriginalDelete.mock.calls[0][0]).toEqual({ tripId: TRIP_ID, routeId: STORED_ORIGINAL.id })
@@ -200,25 +200,25 @@ describe('RouteBuilder — удаление оригинала только по
   // Окно закрывается только со следующим рендером, поэтому двойное касание
   // «Удалить» в одном тике дважды доходит до файловой ветки — второй DELETE
   // глушит синхронный лок #1824, а не `disabled` кнопки.
-  it('двойное подтверждение в одном тике отправляет один DELETE', () => {
-    const { getByTestId } = renderRouteBuilder()
+  it('двойное подтверждение в одном тике отправляет один DELETE', async () => {
+    const { getByTestId } = await renderRouteBuilder()
 
-    fireEvent.press(getByTestId(REMOVE))
+    await fireEvent.press(getByTestId(REMOVE))
     const confirm = getByTestId(CONFIRM)
-    act(() => {
-      fireEvent.press(confirm)
-      fireEvent.press(confirm)
+    await act(async () => {
+      await fireEvent.press(confirm)
+      await fireEvent.press(confirm)
     })
 
     expect(mockOriginalDelete).toHaveBeenCalledTimes(1)
   })
 
-  it('отказ удаления показывает ошибку, а повтор снова идёт через подтверждение', () => {
-    const { getByTestId } = renderRouteBuilder()
+  it('отказ удаления показывает ошибку, а повтор снова идёт через подтверждение', async () => {
+    const { getByTestId } = await renderRouteBuilder()
 
-    fireEvent.press(getByTestId(REMOVE))
-    fireEvent.press(getByTestId(CONFIRM))
-    act(() => {
+    await fireEvent.press(getByTestId(REMOVE))
+    await fireEvent.press(getByTestId(CONFIRM))
+    await act(() => {
       mockOriginalDelete.mock.calls[0][1].onError(new Error('500'))
       mockOriginalDelete.mock.calls[0][1].onSettled()
     })
@@ -227,26 +227,26 @@ describe('RouteBuilder — удаление оригинала только по
       'Не удалось удалить оригинальный файл. Попробуйте ещё раз.',
     )
 
-    fireEvent.press(getByTestId(REMOVE))
+    await fireEvent.press(getByTestId(REMOVE))
     expect(mockOriginalDelete).toHaveBeenCalledTimes(1)
-    fireEvent.press(getByTestId(CONFIRM))
+    await fireEvent.press(getByTestId(CONFIRM))
     expect(mockOriginalDelete).toHaveBeenCalledTimes(2)
   })
 
   // Подтверждение относится к файлу, который пользователь видел, нажимая
   // «Удалить»: сменился оригинал при открытом окне — окно закрывается, а не
   // удаляет новый файл.
-  it('сменившийся при открытом окне оригинал не удаляется подтверждением', () => {
+  it('сменившийся при открытом окне оригинал не удаляется подтверждением', async () => {
     const wrapper = createQueryWrapper().Wrapper
-    const { getByTestId, queryByTestId, rerender } = render(<RouteBuilder trip={makeTrip()} />, {
+    const { getByTestId, queryByTestId, rerender } = await render(<RouteBuilder trip={makeTrip()} />, {
       wrapper,
     })
 
-    fireEvent.press(getByTestId(REMOVE))
+    await fireEvent.press(getByTestId(REMOVE))
     expect(getByTestId(CONFIRM)).toBeTruthy()
 
     mockStoredRouteFiles = [{ ...STORED_ORIGINAL, id: 8, original_name: 'Mullerthal_v2.kml' }]
-    rerender(<RouteBuilder trip={makeTrip()} />)
+    await rerender(<RouteBuilder trip={makeTrip()} />)
 
     expect(queryByTestId('confirm-dialog')).toBeNull()
     expect(within(getByTestId('trip-route-import-stored-original')).getByText('Mullerthal_v2.kml')).toBeTruthy()
@@ -256,10 +256,10 @@ describe('RouteBuilder — удаление оригинала только по
   // В jest у хоста Pressable нет responder-пропов, и RNTL жмёт даже выключенную
   // кнопку, поэтому занятость проверяется по состоянию кнопки: выключенный
   // Pressable нажатие не пропускает ни на web, ни на устройстве.
-  it('пока удаление идёт, «Удалить» занята и выключена', () => {
+  it('пока удаление идёт, «Удалить» занята и выключена', async () => {
     mockDeletePending = true
     mockDeleteVariables = { tripId: TRIP_ID, routeId: STORED_ORIGINAL.id }
-    const { getByTestId } = renderRouteBuilder()
+    const { getByTestId } = await renderRouteBuilder()
 
     expect(getByTestId(REMOVE).props.accessibilityState).toMatchObject({
       disabled: true,
@@ -278,15 +278,15 @@ describe('RouteBuilder — удаление оригинала только по
       created_at: '2026-09-23T08:00:00Z',
       updated_at: '2026-09-23T08:00:00Z',
     }
-    const cardsOf = (screen: ReturnType<typeof renderRouteBuilder>) =>
+    const cardsOf = (screen: Awaited<ReturnType<typeof renderRouteBuilder>>) =>
       screen.getAllByTestId('trip-route-import-stored-original').map((card) => within(card))
 
     beforeEach(() => {
       mockStoredRouteFiles = [LOOPS_KML, DAYS_GPX]
     })
 
-    it('показывает карточку на каждый файл в порядке бэкенда', () => {
-      const screen = renderRouteBuilder()
+    it('показывает карточку на каждый файл в порядке бэкенда', async () => {
+      const screen = await renderRouteBuilder()
 
       const [first, second] = cardsOf(screen)
       expect(cardsOf(screen)).toHaveLength(2)
@@ -296,21 +296,21 @@ describe('RouteBuilder — удаление оригинала только по
       expect(second.getByTestId(REMOVE)).toBeTruthy()
     })
 
-    it('«Удалить» второго файла удаляет именно его, а не первый', () => {
-      const screen = renderRouteBuilder()
+    it('«Удалить» второго файла удаляет именно его, а не первый', async () => {
+      const screen = await renderRouteBuilder()
 
-      fireEvent.press(cardsOf(screen)[1].getByTestId(REMOVE))
+      await fireEvent.press(cardsOf(screen)[1].getByTestId(REMOVE))
       expect(mockOriginalDelete).not.toHaveBeenCalled()
-      fireEvent.press(screen.getByTestId(CONFIRM))
+      await fireEvent.press(screen.getByTestId(CONFIRM))
 
       expect(mockOriginalDelete).toHaveBeenCalledTimes(1)
       expect(mockOriginalDelete.mock.calls[0][0]).toEqual({ tripId: TRIP_ID, routeId: DAYS_GPX.id })
     })
 
-    it('пока удаляется один файл, занята только его «Удалить», соседняя выключена', () => {
+    it('пока удаляется один файл, занята только его «Удалить», соседняя выключена', async () => {
       mockDeletePending = true
       mockDeleteVariables = { tripId: TRIP_ID, routeId: DAYS_GPX.id }
-      const [first, second] = cardsOf(renderRouteBuilder())
+      const [first, second] = cardsOf(await renderRouteBuilder())
       expect(first.getByTestId(REMOVE).props.accessibilityState).toMatchObject({
         disabled: true,
         busy: false,

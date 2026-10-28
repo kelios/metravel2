@@ -70,7 +70,7 @@ describe('NotificationSettingsSection', () => {
   });
 
   it('opens the OS prompt only after the user presses Enable', async () => {
-    const view = render(
+    const view = await render(
       <NotificationSettingsSection styles={styles as never} colors={colors as never} />,
     );
     await act(async () => {
@@ -79,7 +79,7 @@ describe('NotificationSettingsSection', () => {
 
     expect(mockRequestAndRegister).not.toHaveBeenCalled();
     expect(mockActivatePushRegistrationSession).toHaveBeenCalledTimes(1);
-    fireEvent.press(view.getByLabelText(
+    await fireEvent.press(view.getByLabelText(
       'profile:components.settings.NotificationSettingsSection.enableAction',
     ));
     await act(async () => {
@@ -95,14 +95,14 @@ describe('NotificationSettingsSection', () => {
       token: null,
       backendSynced: false,
     };
-    const view = render(
+    const view = await render(
       <NotificationSettingsSection styles={styles as never} colors={colors as never} />,
     );
     await act(async () => {
       await Promise.resolve();
     });
 
-    fireEvent.press(view.getByLabelText(
+    await fireEvent.press(view.getByLabelText(
       'profile:components.settings.NotificationSettingsSection.openSettingsAction',
     ));
     await act(async () => {
@@ -113,8 +113,8 @@ describe('NotificationSettingsSection', () => {
     expect(mockRequestAndRegister).not.toHaveBeenCalled();
   });
 
-  it('renders no notification UI on web', () => {
-    const view = render(
+  it('renders no notification UI on web', async () => {
+    const view = await render(
       <NotificationSettingsSectionWeb styles={styles as never} colors={colors as never} />,
     );
     expect(view.toJSON()).toBeNull();

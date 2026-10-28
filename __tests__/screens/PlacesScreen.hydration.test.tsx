@@ -3,7 +3,8 @@ import { hydrateRoot, type Root } from 'react-dom/client'
 import { renderToString } from 'react-dom/server.node'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { usePlacesCatalogController } from '@/screens/tabs/usePlacesCatalogController'
-import { render } from '@testing-library/react-native'
+import { render, within } from '@testing-library/react-native'
+import { createRootRegistry } from '../helpers/rawRootLifecycle'
 import { Platform, StyleSheet } from 'react-native'
 
 import { createQueryWrapper } from '../helpers/testQueryClient'
@@ -67,8 +68,19 @@ const catalogPage: PlacesCatalogPage = {
   countryFacets: [],
 }
 
-const renderScreen = () =>
-  render(<PlacesScreen />, { wrapper: createQueryWrapper().Wrapper })
+const webRoots = createRootRegistry()
+const webQueryClients: ReturnType<typeof createQueryWrapper>['queryClient'][] = []
+const renderWebScreen = async () => {
+  const root = webRoots.createRoot()
+  const { Wrapper, queryClient } = createQueryWrapper()
+  webQueryClients.push(queryClient)
+  await domAct(() => root.render(<Wrapper><PlacesScreen /></Wrapper>))
+  return root
+}
+afterEach(async () => {
+  await webRoots.cleanup()
+  webQueryClients.splice(0).forEach((client) => client.clear())
+})
 
 // #1334: статический HTML `/places` не знает ширину окна (SSR-снимок даёт 0) и
 // раньше рисовал только desktop-шапку. На мобильном компактная панель поиска
@@ -84,8 +96,9 @@ describe('PlacesScreen pre-hydration chrome', () => {
     mockParams = {}
   })
 
-  it('renders both catalog headers while the width is unknown', () => {
-    const { getByTestId } = renderScreen()
+  it('renders both catalog headers while the width is unknown', async () => {
+    const root = await renderWebScreen()
+    const { getByTestId } = within(root.container)
 
     expect(getByTestId('places-compact-bar')).toBeTruthy()
     expect(getByTestId('places-topbar')).toBeTruthy()
@@ -99,9 +112,10 @@ describe('PlacesScreen pre-hydration chrome', () => {
     })
   })
 
-  it('keeps only the compact bar once a phone width is measured', () => {
+  it('keeps only the compact bar once a phone width is measured', async () => {
     mockWidth = 412
-    const { getByTestId, queryByTestId } = renderScreen()
+    const root = await renderWebScreen()
+    const { getByTestId, queryByTestId } = within(root.container)
 
     expect(getByTestId('places-compact-bar')).toBeTruthy()
     expect(queryByTestId('places-topbar')).toBeNull()
@@ -113,9 +127,10 @@ describe('PlacesScreen pre-hydration chrome', () => {
     })
   })
 
-  it('keeps only the desktop top bar once a wide width is measured', () => {
+  it('keeps only the desktop top bar once a wide width is measured', async () => {
     mockWidth = 1280
-    const { getByTestId, queryByTestId } = renderScreen()
+    const root = await renderWebScreen()
+    const { getByTestId, queryByTestId } = within(root.container)
 
     expect(getByTestId('places-topbar')).toBeTruthy()
     expect(queryByTestId('places-compact-bar')).toBeNull()
@@ -124,29 +139,31 @@ describe('PlacesScreen pre-hydration chrome', () => {
   // Критический CSS показывает компактную панель до `min-width:760px`, а React
   // переключается по `width < 760`. Пока обе стороны читают одно число, кадр до
   // и после гидратации совпадает; иначе возвращается прыжок каталога на 115 px.
-  it('switches headers exactly at the breakpoint declared in the critical CSS', () => {
+  it('switches headers exactly at the breakpoint declared in the critical CSS', async () => {
     expect(Number.isFinite(COMPACT_BREAKPOINT)).toBe(true)
     expect(buildCriticalCSS()).toContain(`@media (max-width:${COMPACT_BREAKPOINT - 0.02}px){`)
 
     mockWidth = COMPACT_BREAKPOINT - 1
-    const compact = renderScreen()
+    const compactRoot = await renderWebScreen()
+    const compact = within(compactRoot.container)
     expect(compact.getByTestId('places-compact-bar')).toBeTruthy()
     expect(compact.queryByTestId('places-topbar')).toBeNull()
-    compact.unmount()
+    await domAct(() => compactRoot.unmount())
 
     mockWidth = COMPACT_BREAKPOINT
-    const wide = renderScreen()
+    const wideRoot = await renderWebScreen()
+    const wide = within(wideRoot.container)
     expect(wide.getByTestId('places-topbar')).toBeTruthy()
     expect(wide.queryByTestId('places-compact-bar')).toBeNull()
   })
 
   // На native ширина известна с первого кадра, гидратации нет — второй шапки
   // там быть не должно, иначе экран получит лишний дубль поиска.
-  it('never doubles the header on native', () => {
+  it('never doubles the header on native', async () => {
     ;(Platform as unknown as { OS: string }).OS = 'android'
     mockWidth = 0
     mockParams = {}
-    const { queryByTestId } = renderScreen()
+    const { queryByTestId } = await render(<PlacesScreen />, { wrapper: createQueryWrapper().Wrapper })
 
     expect(queryByTestId('places-compact-bar')).toBeNull()
   })

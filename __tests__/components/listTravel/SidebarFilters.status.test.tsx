@@ -36,8 +36,8 @@ describe('SidebarFilters publication-status rows', () => {
   // (`resultsCount={isError ? undefined : total}` — components/listTravel/RightColumn.tsx).
   // The persistent SidebarFilters chip must match, gated on the list's own error
   // (`hasResultsError`) rather than on the unrelated filter-options error (`isError`).
-  it('hides the results chip when the travel list failed to load, independent of filter-options isError', () => {
-    render(
+  it('hides the results chip when the travel list failed to load, independent of filter-options isError', async () => {
+    await render(
       <SidebarFilters
         {...baseProps}
         filter={{}}
@@ -50,8 +50,8 @@ describe('SidebarFilters publication-status rows', () => {
     expect(lastProps().resultsCount).toBeUndefined();
   });
 
-  it('shows the real results count once the travel list loads successfully', () => {
-    render(
+  it('shows the real results count once the travel list loads successfully', async () => {
+    await render(
       <SidebarFilters
         {...baseProps}
         filter={{}}
@@ -64,9 +64,9 @@ describe('SidebarFilters publication-status rows', () => {
     expect(lastProps().resultsCount).toBe(42);
   });
 
-  it('resets a multi-select group atomically without clearing another group', () => {
+  it('resets a multi-select group atomically without clearing another group', async () => {
     const onSelect = jest.fn();
-    render(<SidebarFilters {...baseProps} filter={{ countries: ['1', '2'], categories: ['hike'] }}
+    await render(<SidebarFilters {...baseProps} filter={{ countries: ['1', '2'], categories: ['hike'] }}
       filterGroups={[{ key: 'countries', title: 'Страны', options: [], multiSelect: true }]}
       onSelect={onSelect} />);
     lastProps().onResetGroup('countries', []);
@@ -74,9 +74,9 @@ describe('SidebarFilters publication-status rows', () => {
     expect(onSelect).toHaveBeenCalledWith('countries', []);
   });
 
-  it('resets a single-select group to undefined rather than an array', () => {
+  it('resets a single-select group to undefined rather than an array', async () => {
     const onSelect = jest.fn();
-    render(<SidebarFilters {...baseProps} filter={{ sort: 'date' }}
+    await render(<SidebarFilters {...baseProps} filter={{ sort: 'date' }}
       filterGroups={[{ key: 'sort', title: 'Порядок', options: [], multiSelect: false }]}
       onSelect={onSelect} />);
     lastProps().onResetGroup('sort', []);
@@ -84,16 +84,16 @@ describe('SidebarFilters publication-status rows', () => {
     expect(onSelect).toHaveBeenCalledWith('sort', undefined);
   });
 
-  it('hides both status rows outside "Мои путешествия"', () => {
-    render(<SidebarFilters {...baseProps} filter={{}} onSelect={jest.fn()} />);
+  it('hides both status rows outside "Мои путешествия"', async () => {
+    await render(<SidebarFilters {...baseProps} filter={{}} onSelect={jest.fn()} />);
 
     expect(lastProps().showPublishedOnly).toBe(false);
     expect(lastProps().showDraftsOnly).toBe(false);
   });
 
-  it('turns the published-only row on and off through the shared filter key', () => {
+  it('turns the published-only row on and off through the shared filter key', async () => {
     const onSelect = jest.fn();
-    const screen = render(
+    const screen = await render(
       <SidebarFilters {...baseProps} isMeTravel filter={{}} onSelect={onSelect} />
     );
 
@@ -106,7 +106,7 @@ describe('SidebarFilters publication-status rows', () => {
     // Повторное нажатие снимает фильтр, а не переключает его на другое значение:
     // buildTravelQueryParams различает только `true` и отсутствие ключа.
     onSelect.mockClear();
-    screen.rerender(
+    await await screen.rerender(
       <SidebarFilters
         {...baseProps}
         isMeTravel
@@ -120,9 +120,9 @@ describe('SidebarFilters publication-status rows', () => {
     expect(onSelect).toHaveBeenCalledWith('publishedOnly', undefined);
   });
 
-  it('keeps the drafts row on its own filter key', () => {
+  it('keeps the drafts row on its own filter key', async () => {
     const onSelect = jest.fn();
-    render(
+    await render(
       <SidebarFilters
         {...baseProps}
         isMeTravel
@@ -142,15 +142,15 @@ describe('SidebarFilters publication-status rows', () => {
     { isSuper: false, isMeTravel: false },
     { isSuper: false, isMeTravel: true },
     { isSuper: true, isMeTravel: false },
-  ])('hides the all-authors filter without admin access to My travels: %j', (scope) => {
-    render(<SidebarFilters {...baseProps} {...scope} filter={{}} onSelect={jest.fn()} />);
+  ])('hides the all-authors filter without admin access to My travels: %j', async (scope) => {
+    await render(<SidebarFilters {...baseProps} {...scope} filter={{}} onSelect={jest.fn()} />);
 
     expect(lastProps().showAllAuthorsUnpublishedOnly).toBe(false);
   });
 
-  it('lets an admin toggle all-authors unpublished articles from My travels', () => {
+  it('lets an admin toggle all-authors unpublished articles from My travels', async () => {
     const onSelect = jest.fn();
-    const screen = render(
+    const screen = await render(
       <SidebarFilters {...baseProps} isSuper isMeTravel filter={{}} onSelect={onSelect} />
     );
 
@@ -160,7 +160,7 @@ describe('SidebarFilters publication-status rows', () => {
     expect(onSelect).toHaveBeenCalledWith('allAuthorsUnpublishedOnly', true);
 
     onSelect.mockClear();
-    screen.rerender(
+    await await screen.rerender(
       <SidebarFilters
         {...baseProps}
         isSuper

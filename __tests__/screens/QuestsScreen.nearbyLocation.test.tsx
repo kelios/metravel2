@@ -64,7 +64,7 @@ const mockQuests: QuestMeta[] = [{
 const DENIED = 'Геолокация запрещена. Показываем весь каталог, пока доступ не разрешён.';
 
 const askNearby = async () => {
-    render(<QuestsScreen />);
+    await render(<QuestsScreen />);
     await waitFor(() => expect(mockContentProps.selectedCityId).toBe(ALL_QUESTS_ID));
     await act(async () => { mockContentProps.onShowNearby(); });
 };

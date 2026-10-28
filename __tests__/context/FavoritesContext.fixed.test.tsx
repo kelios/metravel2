@@ -120,7 +120,7 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
     mockAsyncStorage.getItem.mockResolvedValue(null)
     mockAsyncStorage.setItem.mockResolvedValue(undefined)
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <AuthProvider>
         <FavoritesProvider>
           <TestComponent />
@@ -135,7 +135,7 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
 
     const addButton = getByTestId('add-favorite')
     await act(async () => {
-      fireEvent.press(addButton)
+      await fireEvent.press(addButton)
     })
 
     await waitFor(() => {
@@ -165,7 +165,7 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
       ['metravel_view_history', null]
     ])
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <AuthProvider>
         <FavoritesProvider>
           <TestComponent />
@@ -179,7 +179,7 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
 
     const removeButton = getByTestId('remove-favorite')
     await act(async () => {
-      fireEvent.press(removeButton)
+      await fireEvent.press(removeButton)
     })
 
     await waitFor(() => {
@@ -214,7 +214,7 @@ describe('FavoritesContext (Fixed - Local Only)', () => {
         )
       }
 
-      const { getByTestId } = render(
+      const { getByTestId } = await render(
         <AuthProvider>
           <FavoritesProvider>
             <TestComponentWithInvalid />

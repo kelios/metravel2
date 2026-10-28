@@ -57,8 +57,8 @@ describe('QuestForCityCard native viewport media gate', () => {
     ;(Platform as any).OS = originalPlatform
   })
 
-  it('withholds the cover URL until the card nears the native viewport', () => {
-    const screen = render(<QuestForCityCard quest={quest} />)
+  it('withholds the cover URL until the card nears the native viewport', async () => {
+    const screen = await render(<QuestForCityCard quest={quest} />)
 
     expect(screen.getByTestId('quest-card-media').props.source).toBeNull()
     const viewport = screen.getByTestId('quest-card-media-viewport-krakow-dragon')
@@ -66,7 +66,7 @@ describe('QuestForCityCard native viewport media gate', () => {
     expect(viewport.props.onLayout).toBe(mockOnLayout)
 
     mockVisible = true
-    screen.rerender(<QuestForCityCard quest={{ ...quest }} />)
+    await await screen.rerender(<QuestForCityCard quest={{ ...quest }} />)
 
     expect(screen.getByTestId('quest-card-media').props.source).toEqual({
       uri: quest.cover,

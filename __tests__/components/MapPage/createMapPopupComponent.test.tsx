@@ -1,7 +1,10 @@
 jest.mock('@/hooks/useQuestContentLocale', () => ({ useQuestContentLocale: () => 'en' }));
 import React from 'react';
+import { createRootRegistry } from '@/__tests__/helpers/rawRootLifecycle';
 
-const renderer = require('react-test-renderer');
+const renderer = createRootRegistry();
+
+afterEach(renderer.cleanup);
 
 const mockPlacePopupCard = jest.fn((props: any) =>
   React.createElement('mock-place-popup-card', props),
@@ -86,16 +89,15 @@ describe('createMapPopupComponent saved-points readiness', () => {
     });
 
     let tree: any;
-    renderer.act(() => {
-      tree = renderer.create(
-        <Popup point={{ id: 1, coord: '50.05924,19.93941', address: 'Test point' }} />,
-      );
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<Popup point={{ id: 1, coord: '50.05924,19.93941', address: 'Test point' }} />);
     });
 
     expect(mockPlacePopupCard).toHaveBeenLastCalledWith(
       expect.objectContaining({ addDisabled: true, isAdding: true, isSaved: false }),
     );
-    await renderer.act(async () => {
+    await React.act(async () => {
       await mockPlacePopupCard.mock.calls.at(-1)?.[0].onAddPoint();
     });
     expect(createPoint).not.toHaveBeenCalled();
@@ -106,8 +108,8 @@ describe('createMapPopupComponent saved-points readiness', () => {
       removeSaved,
       createPoint,
     });
-    renderer.act(() => {
-      tree.update(
+    await React.act(() => {
+      tree.render(
         <Popup point={{ id: 1, coord: '50.05924,19.93941', address: 'Test point' }} />,
       );
     });
@@ -115,7 +117,7 @@ describe('createMapPopupComponent saved-points readiness', () => {
     expect(mockPlacePopupCard).toHaveBeenLastCalledWith(
       expect.objectContaining({ addDisabled: false, isAdding: false, isSaved: false }),
     );
-    await renderer.act(async () => {
+    await React.act(async () => {
       await mockPlacePopupCard.mock.calls.at(-1)?.[0].onAddPoint();
     });
     expect(createPoint).toHaveBeenCalledTimes(1);
@@ -135,15 +137,15 @@ describe('createMapPopupComponent saved-points readiness', () => {
       themeContextValue: {},
     });
 
-    renderer.act(() => {
-      renderer.create(<Popup point={{ id: 7, coord: '49.416,19.027', address: raw }} />);
+    await React.act(() => {
+      renderer.createRoot().render(<Popup point={{ id: 7, coord: '49.416,19.027', address: raw }} />);
     });
 
     expect(mockPlacePopupCard).toHaveBeenLastCalledWith(
       expect.objectContaining({ title: 'Soblówka' }),
     );
 
-    await renderer.act(async () => {
+    await React.act(async () => {
       await mockPlacePopupCard.mock.calls.at(-1)?.[0].onAddPoint();
     });
     expect(createPoint).toHaveBeenCalledWith(
@@ -164,14 +166,14 @@ describe('createMapPopupComponent related travel id (#1960)', () => {
     thumbnailHeight: null,
   });
 
-  const renderPopup = (point: Record<string, unknown>) => {
+  const renderPopup = async (point: Record<string, unknown>) => {
     const Popup = createMapPopupComponent({
       userLocation: null,
       colors: {},
       themeContextValue: {},
     });
-    renderer.act(() => {
-      renderer.create(<Popup point={point} />);
+    await React.act(() => {
+      renderer.createRoot().render(<Popup point={point} />);
     });
     return mockPlacePopupCard.mock.calls.at(-1)?.[0];
   };
@@ -186,9 +188,9 @@ describe('createMapPopupComponent related travel id (#1960)', () => {
     });
   });
 
-  it('passes the primary source id of the same article as the flat urlTravel', () => {
+  it('passes the primary source id of the same article as the flat urlTravel', async () => {
     // Кластеры, radius и near-route: `urlTravel` без `?id=`, id — в primary_source.
-    const props = renderPopup({
+    const props = await renderPopup({
       id: 14029,
       coord: '53.93129,27.6459',
       address: 'Национальная библиотека Беларуси',
@@ -204,8 +206,8 @@ describe('createMapPopupComponent related travel id (#1960)', () => {
     );
   });
 
-  it('uses the flat travelId for points without a primary source (nearby map, deep link)', () => {
-    const props = renderPopup({
+  it('uses the flat travelId for points without a primary source (nearby map, deep link)', async () => {
+    const props = await renderPopup({
       id: '11',
       coord: '50.061,19.938',
       address: 'Nearby route',
@@ -218,8 +220,8 @@ describe('createMapPopupComponent related travel id (#1960)', () => {
     );
   });
 
-  it('keeps quest points without related travel actions', () => {
-    const props = renderPopup({
+  it('keeps quest points without related travel actions', async () => {
+    const props = await renderPopup({
       id: 'quest-1',
       coord: '53.9,27.56',
       address: 'Квест',
@@ -242,14 +244,14 @@ describe('createMapPopupComponent open article on native', () => {
   const { openExternalUrlInNewTab } = require('@/utils/externalLinks');
   const originalPlatform = Platform.OS;
 
-  const renderPopup = (closePopup: () => void) => {
+  const renderPopup = async (closePopup: () => void) => {
     const Popup = createMapPopupComponent({
       userLocation: null,
       colors: {},
       themeContextValue: {},
     });
-    renderer.act(() => {
-      renderer.create(<Popup point={{ id: 7, coord: '53.9,27.56', address: 'Минск' }} closePopup={closePopup} />);
+    await React.act(() => {
+      renderer.createRoot().render(<Popup point={{ id: 7, coord: '53.9,27.56', address: 'Минск' }} closePopup={closePopup} />);
     });
     return mockPlacePopupCard.mock.calls.at(-1)?.[0];
   };
@@ -265,29 +267,30 @@ describe('createMapPopupComponent open article on native', () => {
     });
   });
 
-  afterEach(() => {
+  afterEach(async () => {
+    await renderer.cleanup();
     Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
     mockSourceCardFields = { articleUrl: null, imageUrl: null, articleTitle: null };
   });
 
-  it('closes the card, then routes a www.metravel.by article without the hash', () => {
+  it('closes the card, then routes a www.metravel.by article without the hash', async () => {
     mockSourceCardFields = { articleUrl: 'https://www.metravel.by/travels/forty-krakova#points', imageUrl: null, articleTitle: 'Форты' };
     const order: string[] = [];
     const closePopup = jest.fn(() => order.push('close'));
     (router.push as jest.Mock).mockImplementationOnce(() => order.push('push'));
 
-    renderPopup(closePopup).onOpenArticle();
+    await (await renderPopup(closePopup)).onOpenArticle();
 
     expect(router.push).toHaveBeenCalledWith('/travels/forty-krakova');
     expect(order).toEqual(['close', 'push']);
     expect(openExternalUrlInNewTab).not.toHaveBeenCalled();
   });
 
-  it('keeps foreign article links external', () => {
+  it('keeps foreign article links external', async () => {
     mockSourceCardFields = { articleUrl: 'https://example.com/story', imageUrl: null, articleTitle: 'Story' };
     const closePopup = jest.fn();
 
-    renderPopup(closePopup).onOpenArticle();
+    await (await renderPopup(closePopup)).onOpenArticle();
 
     expect(router.push).not.toHaveBeenCalled();
     expect(closePopup).not.toHaveBeenCalled();
@@ -299,12 +302,13 @@ describe('createMapPopupComponent open article on native', () => {
 });
 
 
-it('#2482 passes language rendering only to quest popups', () => {
+it('#2482 passes language rendering only to quest popups', async () => {
   mockUseSavedPointToggle.mockReturnValue({ isSaved: false, isReady: true, removeSaved: jest.fn(), createPoint: jest.fn() });
   const Popup = createMapPopupComponent({ userLocation: null, colors: {}, themeContextValue: {} });
   let tree: any;
-  renderer.act(() => {
-    tree = renderer.create(<Popup point={{ id: 1, coord: '53,27', address: 'Тайны дворца', questMeta: { id: 'palace', cityId: '3', title: 'Тайны дворца', cityName: 'Гомель', countryName: 'Беларусь' } }} />);
+  await React.act(() => {
+    tree = renderer.createRoot();
+    tree.render(<Popup point={{ id: 1, coord: '53,27', address: 'Тайны дворца', questMeta: { id: 'palace', cityId: '3', title: 'Тайны дворца', cityName: 'Гомель', countryName: 'Беларусь' } }} />);
   });
   const props = mockPlacePopupCard.mock.calls.at(-1)?.[0];
   expect(props.title).toBe('Тайны дворца');
@@ -314,10 +318,10 @@ it('#2482 passes language rendering only to quest popups', () => {
   Platform.OS = 'web';
   try {
     let label: any;
-    renderer.act(() => { label = renderer.create(props.renderText(props.title)); });
-    expect(label.root.findAll((node: any) => node.props.lang === 'ru')
+    await React.act(() => { label = renderer.createRoot(); label.render(props.renderText(props.title)); });
+    expect(label.container.queryAll((node: any) => node.props.lang === 'ru')
       .some((node: any) => node.props.children === 'Тайны дворца')).toBe(true);
   } finally { Platform.OS = originalOS; }
-  renderer.act(() => { tree.update(<Popup point={{ id: 2, coord: '53,27', address: 'Other place' }} />); });
+  await React.act(() => { tree.render(<Popup point={{ id: 2, coord: '53,27', address: 'Other place' }} />); });
   expect(mockPlacePopupCard.mock.calls.at(-1)?.[0].renderText).toBeUndefined();
 });

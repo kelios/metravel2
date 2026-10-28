@@ -50,7 +50,7 @@ const travel = {
 
 const anchors = { excursions: React.createRef<any>() } as any
 
-const renderSection = () => render(
+const renderSection = async () => await render(
   <ExcursionsSection
     travel={travel}
     anchors={anchors}
@@ -68,16 +68,16 @@ describe('ExcursionsSection: обвязка ходит за гейтом вид�
   // Виджет приезжает через React.lazy, поэтому первый кадр — Suspense-фолбэк;
   // ждём резолва, иначе тест проверял бы загрузчик, а не отрисованную секцию.
   it('рисует заголовок и виджет, когда гейт открыт', async () => {
-    const { findByTestId, getByText } = renderSection()
+    const { findByTestId, getByText } = await renderSection()
 
     expect(await findByTestId('travel-belkraj-widget')).toBeTruthy()
     expect(getByText(SECTION_TITLE)).toBeTruthy()
   })
 
-  it('не рисует ничего, когда виджет ничего не отдаст', () => {
+  it('не рисует ничего, когда виджет ничего не отдаст', async () => {
     mockCanRenderBelkraj = false
 
-    const { queryByText, queryByTestId } = renderSection()
+    const { queryByText, queryByTestId } = await renderSection()
 
     expect(queryByText(SECTION_TITLE)).toBeNull()
     expect(queryByTestId('travel-belkraj-widget')).toBeNull()
@@ -85,8 +85,8 @@ describe('ExcursionsSection: обвязка ходит за гейтом вид�
 
   // Гейт обязан считаться по тем же данным, что уходят в виджет: иначе предикат
   // разойдётся с его поведением и вернётся карточка-призрак.
-  it('спрашивает гейт теми же точками и countryCode, что получает виджет', () => {
-    renderSection()
+  it('спрашивает гейт теми же точками и countryCode, что получает виджет', async () => {
+    await renderSection()
 
     expect(mockCanRenderBelkrajWidget).toHaveBeenCalledWith(
       travel.travelAddress,

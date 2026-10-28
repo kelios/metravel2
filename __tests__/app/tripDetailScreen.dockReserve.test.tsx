@@ -36,9 +36,9 @@ jest.mock('@/components/trips/PublicTripDetail', () => {
 describe('TripDetailScreen (native) bottom dock reserve', () => {
   // BottomDock на native — absolute-оверлей поверх контента, поэтому без резерва
   // кнопка «Отправить заявку» формы «Хочу поехать» уходила под док (#1061).
-  it('reserves tab bar height plus safe area at the bottom of the scroll content', () => {
+  it('reserves tab bar height plus safe area at the bottom of the scroll content', async () => {
     const TripDetailScreen = require('@/app/(tabs)/trips/[id].native').default;
-    const { getByTestId } = render(<TripDetailScreen />);
+    const { getByTestId } = await render(<TripDetailScreen />);
 
     const reserve = getByTestId('trip-detail-bottom-reserve');
     const reserveStyle = StyleSheet.flatten(reserve.props.style);
@@ -49,11 +49,11 @@ describe('TripDetailScreen (native) bottom dock reserve', () => {
     expect(reserveStyle.height).toBeGreaterThan(LAYOUT.tabBarHeight + SAFE_AREA_BOTTOM);
   });
 
-  it('uses the real IME overlap as the reachable footer while the keyboard is open', () => {
+  it('uses the real IME overlap as the reachable footer while the keyboard is open', async () => {
     mockRootBottomOverlap = 320;
 
     const TripDetailScreen = require('@/app/(tabs)/trips/[id].native').default;
-    const { getByTestId } = render(<TripDetailScreen />);
+    const { getByTestId } = await render(<TripDetailScreen />);
 
     const reserveStyle = StyleSheet.flatten(getByTestId('trip-detail-bottom-reserve').props.style);
     expect(reserveStyle.height).toBe(320 + DESIGN_TOKENS.spacing.xl);

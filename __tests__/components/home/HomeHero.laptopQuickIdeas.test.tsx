@@ -34,16 +34,16 @@ afterEach(() => {
 it.each([
   [1440, 900],
   [1366, 768],
-])('keeps the quick ideas on the first screen of a %ix%i laptop book', (width, height) => {
+])('keeps the quick ideas on the first screen of a %ix%i laptop book', async (width, height) => {
   Object.assign(mockViewport, { width, height })
-  const result = render(<HomeHero />)
+  const result = await render(<HomeHero />)
   expect(result.getByTestId('home-hero-left-page')).toBeTruthy()
   expect(result.getAllByLabelText(quickIdea)).toHaveLength(1)
 })
 
-it('does not duplicate the quick ideas when the tall book shows them as page notes', () => {
+it('does not duplicate the quick ideas when the tall book shows them as page notes', async () => {
   Object.assign(mockViewport, { width: 2048, height: 1200 })
-  const result = render(<HomeHero />)
+  const result = await render(<HomeHero />)
   expect(result.getByTestId('home-hero-left-page')).toBeTruthy()
   expect(result.getAllByLabelText(quickIdea)).toHaveLength(1)
 })

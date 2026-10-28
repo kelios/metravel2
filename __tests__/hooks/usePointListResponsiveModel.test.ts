@@ -3,8 +3,8 @@ import { renderHook } from '@testing-library/react-native';
 import { usePointListResponsiveModel } from '@/components/travel/hooks/usePointListResponsiveModel';
 
 describe('usePointListResponsiveModel', () => {
-  it('returns compact mobile sizing and single column on small widths', () => {
-    const { result } = renderHook(() =>
+  it('returns compact mobile sizing and single column on small widths', async () => {
+    const { result } = await renderHook(() =>
       usePointListResponsiveModel({
         isLargeDesktop: false,
         isMobile: true,
@@ -22,8 +22,8 @@ describe('usePointListResponsiveModel', () => {
     });
   });
 
-  it('returns tablet/desktop sizing and two columns on medium widths', () => {
-    const { result } = renderHook(() =>
+  it('returns tablet/desktop sizing and two columns on medium widths', async () => {
+    const { result } = await renderHook(() =>
       usePointListResponsiveModel({
         isLargeDesktop: false,
         isMobile: false,
@@ -41,8 +41,8 @@ describe('usePointListResponsiveModel', () => {
     });
   });
 
-  it('uses large desktop sizing when large desktop flag is enabled', () => {
-    const { result } = renderHook(() =>
+  it('uses large desktop sizing when large desktop flag is enabled', async () => {
+    const { result } = await renderHook(() =>
       usePointListResponsiveModel({
         isLargeDesktop: true,
         isMobile: false,

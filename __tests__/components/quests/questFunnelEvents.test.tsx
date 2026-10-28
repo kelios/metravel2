@@ -120,7 +120,7 @@ describe('quest funnel events (#1498)', () => {
   })
 
   it('tracks step views, every answer attempt and the hint through the wizard', async () => {
-    const { getByLabelText, getByPlaceholderText, getByTestId, getByText } = render(
+    const { getByLabelText, getByPlaceholderText, getByTestId, getByText } = await render(
       <QuestWizard
         title="Тест-квест"
         steps={steps}
@@ -141,7 +141,7 @@ describe('quest funnel events (#1498)', () => {
     // Intro — ещё не точка маршрута: просмотр шага не считается.
     expect(eventsNamed('quest_step_view')).toHaveLength(0)
 
-    fireEvent.press(getByText('Начать квест'))
+    await fireEvent.press(getByText('Начать квест'))
     await act(async () => {
       await Promise.resolve()
     })
@@ -152,9 +152,9 @@ describe('quest funnel events (#1498)', () => {
     expect(eventsNamed('quest_point_done')).toHaveLength(0)
 
     // Подсказка: считаем раскрытие, а не каждое нажатие на аккордеон.
-    fireEvent.press(getByLabelText('Показать подсказку'))
-    fireEvent.press(getByLabelText('Скрыть подсказку'))
-    fireEvent.press(getByLabelText('Показать подсказку'))
+    await fireEvent.press(getByLabelText('Показать подсказку'))
+    await fireEvent.press(getByLabelText('Скрыть подсказку'))
+    await fireEvent.press(getByLabelText('Показать подсказку'))
     expect(eventsNamed('quest_hint')).toEqual([
       { quest_id: 'test-quest', step_index: 0, attempt_no: 0 },
     ])
@@ -162,8 +162,8 @@ describe('quest funnel events (#1498)', () => {
     // Ввод и нажатие идут отдельными вызовами: обёрнутые в один внешний `act`,
     // они бы не успели прокинуть состояние поля в обработчик проверки.
     const submit = async (answer: string) => {
-      fireEvent.changeText(getByPlaceholderText(/Ваш ответ/), answer)
-      fireEvent.press(getByTestId('quest-step-check'))
+      await fireEvent.changeText(getByPlaceholderText(/Ваш ответ/), answer)
+      await fireEvent.press(getByTestId('quest-step-check'))
       await act(async () => {
         await Promise.resolve()
       })
@@ -204,7 +204,7 @@ describe('quest funnel events (#1498)', () => {
   // вместо неё гейт. Просмотр этой точке не засчитывается — иначе провал на
   // гейте стал бы неотличим от провала на самом вопросе.
   it('does not count a step view behind the guest gate', async () => {
-    const { getByPlaceholderText, getByTestId, getByText } = render(
+    const { getByPlaceholderText, getByTestId, getByText } = await render(
       <QuestWizard
         title="Тест-квест"
         steps={steps}
@@ -223,7 +223,7 @@ describe('quest funnel events (#1498)', () => {
       await Promise.resolve()
     })
 
-    fireEvent.press(getByText('Начать квест'))
+    await fireEvent.press(getByText('Начать квест'))
     await act(async () => {
       await Promise.resolve()
     })
@@ -231,8 +231,8 @@ describe('quest funnel events (#1498)', () => {
       { quest_id: 'test-quest', step_index: 0 },
     ])
 
-    fireEvent.changeText(getByPlaceholderText(/Ваш ответ/), '7')
-    fireEvent.press(getByTestId('quest-step-check'))
+    await fireEvent.changeText(getByPlaceholderText(/Ваш ответ/), '7')
+    await fireEvent.press(getByTestId('quest-step-check'))
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 250))
     })
@@ -271,13 +271,13 @@ describe('useQuestWizardAnalytics (#1498)', () => {
   // Возврат к пройденной точке размывал бы кривую доходимости, ради которой
   // событие и заводится: по `quest_step_view` считают, сколько игроков дошло
   // до каждого `step_index`.
-  it('counts a step view once per index even after the player walks back', () => {
-    const { rerender } = renderHook((props: any) => useQuestWizardAnalytics(props), {
+  it('counts a step view once per index even after the player walks back', async () => {
+    const { rerender } = await renderHook((props: any) => useQuestWizardAnalytics(props), {
       initialProps: baseParams,
     })
-    rerender({ ...baseParams, stepIndex: 1 })
-    rerender({ ...baseParams, stepIndex: 0 })
-    rerender({ ...baseParams, stepIndex: 1 })
+    await rerender({ ...baseParams, stepIndex: 1 })
+    await rerender({ ...baseParams, stepIndex: 0 })
+    await rerender({ ...baseParams, stepIndex: 1 })
 
     expect(eventsNamed('quest_step_view')).toEqual([
       { quest_id: 'test-quest', step_index: 0 },
@@ -285,8 +285,8 @@ describe('useQuestWizardAnalytics (#1498)', () => {
     ])
   })
 
-  it('keeps intro out of the funnel', () => {
-    renderHook(() => useQuestWizardAnalytics({ ...baseParams, onRealStep: false, stepIndex: -1 }))
+  it('keeps intro out of the funnel', async () => {
+    await renderHook(() => useQuestWizardAnalytics({ ...baseParams, onRealStep: false, stepIndex: -1 }))
     expect(eventsNamed('quest_step_view')).toHaveLength(0)
     expect(eventsNamed('quest_start')).toHaveLength(0)
   })
@@ -294,19 +294,19 @@ describe('useQuestWizardAnalytics (#1498)', () => {
   // «Сбросить прогресс» не размонтирует визард. `quest_point_done` и
   // `quest_answer_submit` дедупа не имеют и на втором проходе уйдут в любом
   // случае — если не сбросить рефы, к ним не будет ни старта, ни просмотров.
-  it('starts the funnel over after a progress reset', () => {
-    const { rerender, result } = renderHook((props: any) => useQuestWizardAnalytics(props), {
+  it('starts the funnel over after a progress reset', async () => {
+    const { rerender, result } = await renderHook((props: any) => useQuestWizardAnalytics(props), {
       initialProps: baseParams,
     })
     expect(eventsNamed('quest_start')).toHaveLength(1)
     expect(eventsNamed('quest_step_view')).toHaveLength(1)
 
-    act(() => {
+    await act(() => {
       result.current.resetFunnelSession()
     })
     // Сброс возвращает игрока на intro, и только потом он стартует заново.
-    rerender({ ...baseParams, onRealStep: false, stepIndex: -1 })
-    rerender(baseParams)
+    await rerender({ ...baseParams, onRealStep: false, stepIndex: -1 })
+    await rerender(baseParams)
 
     expect(eventsNamed('quest_start')).toHaveLength(2)
     expect(eventsNamed('quest_step_view')).toEqual([
@@ -318,7 +318,7 @@ describe('useQuestWizardAnalytics (#1498)', () => {
   // Воронку читают по порядку событий, а вехи считаются из записи прохождения,
   // которую заводит `quest_start`. Значит, ни одна веха не имеет права уйти в
   // поток раньше старта — ни с intro, ни без него.
-  it('emits the funnel steps in order: start, then the milestones', () => {
+  it('emits the funnel steps in order: start, then the milestones', async () => {
     const funnelSteps = () =>
       eventNames().filter((name) =>
         ['quest_start', 'quest_point_1_done', 'quest_progress_25', 'quest_progress_50'].includes(
@@ -326,16 +326,16 @@ describe('useQuestWizardAnalytics (#1498)', () => {
         ),
       )
 
-    const { rerender } = renderHook((props: any) => useQuestWizardAnalytics(props), {
+    const { rerender } = await renderHook((props: any) => useQuestWizardAnalytics(props), {
       initialProps: { ...baseParams, onRealStep: false, stepIndex: -1 },
     })
     expect(funnelSteps()).toEqual([])
 
-    rerender(baseParams)
+    await rerender(baseParams)
     expect(funnelSteps()).toEqual(['quest_start'])
 
     // 1 из 3 точек — это и первая точка, и порог 25%.
-    rerender({ ...baseParams, passedCount: 1 })
+    await rerender({ ...baseParams, passedCount: 1 })
     expect(funnelSteps()).toEqual(['quest_start', 'quest_point_1_done', 'quest_progress_25'])
   })
 
@@ -343,22 +343,22 @@ describe('useQuestWizardAnalytics (#1498)', () => {
   // у квеста без intro визард стоит на первой точке, когда приходят чужие
   // закрытые точки. Очередь вех на этот скачок нарисовала бы всплеск, которого
   // не было.
-  it('keeps restored progress out of the funnel', () => {
-    const { rerender } = renderHook((props: any) => useQuestWizardAnalytics(props), {
+  it('keeps restored progress out of the funnel', async () => {
+    const { rerender } = await renderHook((props: any) => useQuestWizardAnalytics(props), {
       initialProps: { ...baseParams, stepsCount: 8 },
     })
-    rerender({ ...baseParams, stepsCount: 8, passedCount: 6 })
+    await rerender({ ...baseParams, stepsCount: 8, passedCount: 6 })
 
     expect(eventsNamed('quest_point_1_done')).toHaveLength(0)
     expect(eventsNamed('quest_progress_25')).toHaveLength(0)
     expect(eventsNamed('quest_progress_50')).toHaveLength(0)
   })
 
-  it('does not emit answer or hint events without a real step', () => {
-    const { result } = renderHook(() =>
+  it('does not emit answer or hint events without a real step', async () => {
+    const { result } = await renderHook(() =>
       useQuestWizardAnalytics({ ...baseParams, onRealStep: false, stepIndex: -1 }),
     )
-    act(() => {
+    await act(() => {
       result.current.trackAnswerSubmitted({ isCorrect: false, attemptNo: 1 })
       result.current.trackHintOpened({ attemptNo: 1 })
     })

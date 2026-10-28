@@ -87,9 +87,9 @@ describe('TripRouteImportPanel', () => {
     mockReleaseUpload.mockClear();
   });
 
-  it('shows a two-line preview, localized statistics, names, and explicit actions', () => {
+  it('shows a two-line preview, localized statistics, names, and explicit actions', async () => {
     const onApply = jest.fn();
-    const screen = render(
+    const screen = await render(
       <TripRouteImportPanel
         route={currentRoute}
         routeGeometry={[[27.5, 53.9], [27.6, 54], [27.7, 54.1]]}
@@ -100,7 +100,7 @@ describe('TripRouteImportPanel', () => {
     expect(screen.getByTestId('trip-route-import-picker').props.accessibilityLabel).toBe(
       'Загрузить трек (GPX/KML)',
     );
-    act(() => mockPickerProps.onPicked(file('weekend.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
+    await act(() => mockPickerProps.onPicked(file('weekend.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
 
     expect(screen.getByText('Предпросмотр импорта')).toBeTruthy();
     expect(screen.getByText('Точек: 3')).toBeTruthy();
@@ -129,7 +129,7 @@ describe('TripRouteImportPanel', () => {
   // #1789/#2053: на любой ширине импорт подписан полной фразой, и её перевод
   // обязан следовать за сменой языка без перемонтирования панели.
   it('passes the translated import label and follows a locale change', async () => {
-    render(<TripRouteImportPanel route={currentRoute} onApply={jest.fn()} />);
+    await render(<TripRouteImportPanel route={currentRoute} onApply={jest.fn()} />);
     expect(mockPickerProps.label).toBe('Загрузить трек (GPX/KML)');
     expect(mockPickerProps.fill).toBe(true);
 
@@ -141,58 +141,58 @@ describe('TripRouteImportPanel', () => {
     }
   });
 
-  it('switches preview geometry and statistics without applying the draft', () => {
+  it('switches preview geometry and statistics without applying the draft', async () => {
     const onApply = jest.fn();
-    const screen = render(<TripRouteImportPanel route={currentRoute} onApply={onApply} />);
-    act(() => mockPickerProps.onPicked(file('multi.gpx', GPX_MULTIPLE_ROUTES)));
+    const screen = await render(<TripRouteImportPanel route={currentRoute} onApply={onApply} />);
+    await act(() => mockPickerProps.onPicked(file('multi.gpx', GPX_MULTIPLE_ROUTES)));
 
     expect(screen.getByText('Выберите маршрут из файла')).toBeTruthy();
     expect(screen.getByLabelText('Маршрут 1').props.accessibilityState.checked).toBe(true);
     expect(mockMapProps.routeLines[1].coords[0]).toEqual([52.1, 23.7]);
 
-    fireEvent.press(screen.getByLabelText('Маршрут 2'));
+    await fireEvent.press(screen.getByLabelText('Маршрут 2'));
 
     expect(screen.getByLabelText('Маршрут 2').props.accessibilityState.checked).toBe(true);
     expect(mockMapProps.routeLines[1].coords[0]).toEqual([53.1, 24.7]);
     expect(onApply).not.toHaveBeenCalled();
   });
 
-  it('applies replace and append only after their explicit actions', () => {
+  it('applies replace and append only after their explicit actions', async () => {
     const onReplace = jest.fn();
-    const replaceScreen = render(
+    const replaceScreen = await render(
       <TripRouteImportPanel route={currentRoute} onApply={onReplace} />,
     );
-    act(() => mockPickerProps.onPicked(file('replace.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
+    await act(() => mockPickerProps.onPicked(file('replace.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
     expect(onReplace).not.toHaveBeenCalled();
-    fireEvent.press(replaceScreen.getByTestId('trip-route-import-replace'));
+    await fireEvent.press(replaceScreen.getByTestId('trip-route-import-replace'));
     expect(onReplace).toHaveBeenCalledTimes(1);
     expect(onReplace.mock.calls[0][0][0]).toMatchObject({
       name: 'Start camp',
       coordinates: [23.7, 52.1],
     });
     expect(replaceScreen.queryByTestId('trip-route-import-preview')).toBeNull();
-    replaceScreen.unmount();
+    await replaceScreen.unmount();
 
     const onAppend = jest.fn();
-    const appendScreen = render(
+    const appendScreen = await render(
       <TripRouteImportPanel route={currentRoute} onApply={onAppend} />,
     );
-    act(() => mockPickerProps.onPicked(file('append.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
-    fireEvent.press(appendScreen.getByTestId('trip-route-import-append'));
+    await act(() => mockPickerProps.onPicked(file('append.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
+    await fireEvent.press(appendScreen.getByTestId('trip-route-import-append'));
     expect(onAppend).toHaveBeenCalledTimes(1);
     expect(onAppend.mock.calls[0][0].slice(0, currentRoute.length)).toEqual(currentRoute);
   });
 
-  it('announces reading and parser errors while leaving the draft unchanged', () => {
+  it('announces reading and parser errors while leaving the draft unchanged', async () => {
     const onApply = jest.fn();
-    const screen = render(<TripRouteImportPanel route={currentRoute} onApply={onApply} />);
+    const screen = await render(<TripRouteImportPanel route={currentRoute} onApply={onApply} />);
 
-    act(() => mockPickerProps.onBusyChange(true));
+    await act(() => mockPickerProps.onBusyChange(true));
     expect(screen.getByTestId('trip-route-import-reading').props.accessibilityLiveRegion).toBe(
       'polite',
     );
-    act(() => mockPickerProps.onBusyChange(false));
-    act(() => mockPickerProps.onPicked(file('broken.gpx', MALFORMED_GPX)));
+    await act(() => mockPickerProps.onBusyChange(false));
+    await act(() => mockPickerProps.onPicked(file('broken.gpx', MALFORMED_GPX)));
 
     expect(screen.getByText('Файл повреждён или содержит некорректный GPX/KML.')).toBeTruthy();
     expect(screen.getByTestId('trip-route-import-error').props.accessibilityLiveRegion).toBe(
@@ -210,17 +210,17 @@ describe('TripRouteImportPanel', () => {
       'Файл слишком большой. Выберите GPX или KML размером до 20 МиБ.',
     ],
     ['empty', file('empty.gpx', EMPTY_GPX), 'В файле нет трека минимум с двумя точками.'],
-  ])('shows the %s validation error non-destructively', (_code, selectedFile, message) => {
+  ])('shows the %s validation error non-destructively', async (_code, selectedFile, message) => {
     const onApply = jest.fn();
-    const screen = render(<TripRouteImportPanel route={currentRoute} onApply={onApply} />);
+    const screen = await render(<TripRouteImportPanel route={currentRoute} onApply={onApply} />);
 
-    act(() => mockPickerProps.onPicked(selectedFile));
+    await act(() => mockPickerProps.onPicked(selectedFile));
 
     expect(screen.getByText(message)).toBeTruthy();
     expect(onApply).not.toHaveBeenCalled();
   });
 
-  it('maps native/web read failures and capacity failures to localized errors', () => {
+  it('maps native/web read failures and capacity failures to localized errors', async () => {
     const fullRoute = Array.from({ length: 50 }, (_, index): RoutePoint => ({
       id: `point-${index}`,
       type: 'custom',
@@ -230,13 +230,13 @@ describe('TripRouteImportPanel', () => {
       placeId: null,
     }));
     const onApply = jest.fn();
-    const screen = render(<TripRouteImportPanel route={fullRoute} onApply={onApply} />);
+    const screen = await render(<TripRouteImportPanel route={fullRoute} onApply={onApply} />);
 
-    act(() => mockPickerProps.onError('read'));
+    await act(() => mockPickerProps.onError('read'));
     expect(screen.getByText('Не удалось прочитать файл. Выберите его ещё раз.')).toBeTruthy();
 
-    act(() => mockPickerProps.onPicked(file('route.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
-    fireEvent.press(screen.getByTestId('trip-route-import-append'));
+    await act(() => mockPickerProps.onPicked(file('route.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
+    await fireEvent.press(screen.getByTestId('trip-route-import-append'));
     expect(screen.getByText(
       'Маршрут не помещается в доступный лимит точек. Удалите часть текущих или именованных точек.',
     )).toBeTruthy();
@@ -246,7 +246,7 @@ describe('TripRouteImportPanel', () => {
   // #1842: отказ по лимиту точек обязан оставлять рабочий выход. Предпросмотр
   // после отказа не закрывается, поэтому подсказка и кнопка «только трек» видны
   // рядом с самим сообщением.
-  it('offers the originalOnly way out of a capacity refusal and keeps the draft intact', () => {
+  it('offers the originalOnly way out of a capacity refusal and keeps the draft intact', async () => {
     const fullRoute = Array.from({ length: 50 }, (_, index): RoutePoint => ({
       id: `point-${index}`,
       type: 'custom',
@@ -256,11 +256,11 @@ describe('TripRouteImportPanel', () => {
       placeId: null,
     }));
     const onApply = jest.fn();
-    const screen = render(<TripRouteImportPanel route={fullRoute} onApply={onApply} />);
+    const screen = await render(<TripRouteImportPanel route={fullRoute} onApply={onApply} />);
 
     const selectedFile = file('route.gpx', GPX_SINGLE_WITH_WAYPOINTS);
-    act(() => mockPickerProps.onPicked(selectedFile));
-    fireEvent.press(screen.getByTestId('trip-route-import-append'));
+    await act(() => mockPickerProps.onPicked(selectedFile));
+    await fireEvent.press(screen.getByTestId('trip-route-import-append'));
 
     // Отказ объявляется assertive, поэтому выход из него обязан объявляться
     // тоже: иначе читающий экран сообщает про лимит и молчит про обход.
@@ -276,7 +276,7 @@ describe('TripRouteImportPanel', () => {
       'Трек можно положить на карту, не трогая точки маршрута, — кнопка «Только трек на карту».',
     );
 
-    fireEvent.press(screen.getByTestId('trip-route-import-original-only'));
+    await fireEvent.press(screen.getByTestId('trip-route-import-original-only'));
 
     expect(onApply).toHaveBeenCalledTimes(1);
     // Точки не тронуты — та же ссылка, что пришла пропом; оригинал при этом
@@ -289,12 +289,12 @@ describe('TripRouteImportPanel', () => {
     expect(screen.queryByTestId('trip-route-import-preview')).toBeNull();
   });
 
-  it('cancels pending preview without changing the current route', () => {
+  it('cancels pending preview without changing the current route', async () => {
     const onApply = jest.fn();
-    const screen = render(<TripRouteImportPanel route={currentRoute} onApply={onApply} />);
-    act(() => mockPickerProps.onPicked(file('route.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
+    const screen = await render(<TripRouteImportPanel route={currentRoute} onApply={onApply} />);
+    await act(() => mockPickerProps.onPicked(file('route.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
 
-    fireEvent.press(screen.getByTestId('trip-route-import-cancel'));
+    await fireEvent.press(screen.getByTestId('trip-route-import-cancel'));
 
     expect(screen.queryByTestId('trip-route-import-preview')).toBeNull();
     expect(onApply).not.toHaveBeenCalled();

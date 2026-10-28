@@ -37,8 +37,8 @@ jest.mock('@/hooks/useTheme', () => ({
 describe('QuestReviewPromptBanner', () => {
   beforeEach(() => jest.clearAllMocks())
 
-  it('отмечает показ просьбы в аналитике', () => {
-    render(
+  it('отмечает показ просьбы в аналитике', async () => {
+    await render(
       <QuestReviewPromptBanner
         questId="minsk-cmok"
         cityId="3"
@@ -50,9 +50,9 @@ describe('QuestReviewPromptBanner', () => {
     expect(mockTrackShown).toHaveBeenCalledWith({ questId: 'minsk-cmok', cityId: '3' })
   })
 
-  it('ведёт на страницу пройденного квеста и закрывается', () => {
+  it('ведёт на страницу пройденного квеста и закрывается', async () => {
     const onDismiss = jest.fn()
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <QuestReviewPromptBanner
         questId="minsk-cmok"
         cityId="3"
@@ -61,7 +61,7 @@ describe('QuestReviewPromptBanner', () => {
       />,
     )
 
-    fireEvent.press(getByTestId('quest-review-prompt-cta'))
+    await fireEvent.press(getByTestId('quest-review-prompt-cta'))
 
     expect(mockTrackClick).toHaveBeenCalledWith({
       questId: 'minsk-cmok',
@@ -75,20 +75,20 @@ describe('QuestReviewPromptBanner', () => {
     expect(onDismiss).toHaveBeenCalled()
   })
 
-  it('закрывается крестиком без перехода', () => {
+  it('закрывается крестиком без перехода', async () => {
     const onDismiss = jest.fn()
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <QuestReviewPromptBanner questId="minsk-cmok" cityId="3" onDismiss={onDismiss} />,
     )
 
-    fireEvent.press(getByTestId('quest-review-prompt-dismiss'))
+    await fireEvent.press(getByTestId('quest-review-prompt-dismiss'))
 
     expect(onDismiss).toHaveBeenCalled()
     expect(mockPush).not.toHaveBeenCalled()
   })
 
-  it('без города не показывает переход: маршрут квеста собрать не из чего', () => {
-    const { queryByTestId } = render(
+  it('без города не показывает переход: маршрут квеста собрать не из чего', async () => {
+    const { queryByTestId } = await render(
       <QuestReviewPromptBanner questId="minsk-cmok" onDismiss={jest.fn()} />,
     )
 

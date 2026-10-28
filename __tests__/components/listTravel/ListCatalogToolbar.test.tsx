@@ -49,8 +49,8 @@ describe('ListCatalogToolbar', () => {
     })
   })
 
-  it('keeps compact mobile web toolbar lean by dropping inline sort chips', () => {
-    const { getByTestId, queryByLabelText, queryByTestId } = render(
+  it('keeps compact mobile web toolbar lean by dropping inline sort chips', async () => {
+    const { getByTestId, queryByLabelText, queryByTestId } = await render(
       <ListCatalogToolbar
         sortOptions={[
           { id: 'newest', name: 'Новые' },
@@ -73,9 +73,9 @@ describe('ListCatalogToolbar', () => {
     expect(queryByTestId('catalog-sort-trigger')).toBeNull()
   })
 
-  it('shows a single sort menu on desktop and applies the picked option (#2755)', () => {
+  it('shows a single sort menu on desktop and applies the picked option (#2755)', async () => {
     const onSortChange = jest.fn()
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <ListCatalogToolbar
         sortOptions={[
           { id: 'newest', name: 'Новые' },
@@ -93,8 +93,8 @@ describe('ListCatalogToolbar', () => {
     expect(getByTestId('catalog-sort-trigger')).toHaveTextContent(/Новые/)
     expect(queryByTestId('sort-option-oldest')).toBeNull()
 
-    fireEvent.press(getByTestId('catalog-sort-trigger'))
-    fireEvent.press(getByTestId('sort-option-oldest'))
+    await fireEvent.press(getByTestId('catalog-sort-trigger'))
+    await fireEvent.press(getByTestId('sort-option-oldest'))
 
     expect(onSortChange).toHaveBeenCalledWith('oldest')
     expect(queryByTestId('sort-option-oldest')).toBeNull()

@@ -93,8 +93,8 @@ describe('NavigationArrows', () => {
     (useRouter as jest.Mock).mockReturnValue(mockRouter);
   });
 
-  it('should render previous and next navigation buttons', () => {
-    const { getByText } = render(
+  it('should render previous and next navigation buttons', async () => {
+    const { getByText } = await render(
       <NavigationArrows
         currentTravel={mockTravel}
         relatedTravels={mockRelatedTravels}
@@ -105,8 +105,8 @@ describe('NavigationArrows', () => {
     expect(getByText('Следующее')).toBeTruthy();
   });
 
-  it('should not render when there are no related travels', () => {
-    const { queryByText } = render(
+  it('should not render when there are no related travels', async () => {
+    const { queryByText } = await render(
       <NavigationArrows
         currentTravel={mockTravel}
         relatedTravels={[mockTravel]}
@@ -117,8 +117,8 @@ describe('NavigationArrows', () => {
     expect(queryByText('Следующее')).toBeNull();
   });
 
-  it('should navigate to previous travel when previous button is pressed', () => {
-    const { getByText } = render(
+  it('should navigate to previous travel when previous button is pressed', async () => {
+    const { getByText } = await render(
       <NavigationArrows
         currentTravel={mockTravel}
         relatedTravels={mockRelatedTravels}
@@ -126,13 +126,13 @@ describe('NavigationArrows', () => {
     );
 
     const prevButton = getByText('Предыдущее').parent;
-    fireEvent.press(prevButton!);
+    await fireEvent.press(prevButton!);
 
     expect(mockRouter.push).toHaveBeenCalledWith('/travels/prev-travel');
   });
 
-  it('should navigate to next travel when next button is pressed', () => {
-    const { getByText } = render(
+  it('should navigate to next travel when next button is pressed', async () => {
+    const { getByText } = await render(
       <NavigationArrows
         currentTravel={mockTravel}
         relatedTravels={mockRelatedTravels}
@@ -140,14 +140,14 @@ describe('NavigationArrows', () => {
     );
 
     const nextButton = getByText('Следующее').parent;
-    fireEvent.press(nextButton!);
+    await fireEvent.press(nextButton!);
 
     expect(mockRouter.push).toHaveBeenCalledWith('/travels/next-travel');
   });
 
-  it('should use custom onNavigate callback when provided', () => {
+  it('should use custom onNavigate callback when provided', async () => {
     const onNavigate = jest.fn();
-    const { getByText } = render(
+    const { getByText } = await render(
       <NavigationArrows
         currentTravel={mockTravel}
         relatedTravels={mockRelatedTravels}
@@ -156,13 +156,13 @@ describe('NavigationArrows', () => {
     );
 
     const nextButton = getByText('Следующее').parent;
-    fireEvent.press(nextButton!);
+    await fireEvent.press(nextButton!);
 
     expect(onNavigate).toHaveBeenCalledWith('next-travel');
     expect(mockRouter.push).not.toHaveBeenCalled();
   });
 
-  it('should not render when current travel is not in related travels', () => {
+  it('should not render when current travel is not in related travels', async () => {
     const unrelatedTravel: Travel = {
       ...baseTravel,
       id: 999,
@@ -170,7 +170,7 @@ describe('NavigationArrows', () => {
       name: 'Unrelated',
     };
 
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <NavigationArrows
         currentTravel={unrelatedTravel}
         relatedTravels={mockRelatedTravels}
@@ -181,7 +181,7 @@ describe('NavigationArrows', () => {
     expect(queryByText('Следующее')).toBeNull();
   });
 
-  it('should handle travel without slug by using id', () => {
+  it('should handle travel without slug by using id', async () => {
     const travelWithoutSlug: Travel = {
       ...baseTravel,
       id: 1,
@@ -195,7 +195,7 @@ describe('NavigationArrows', () => {
       { ...baseTravel, id: 2, name: 'Next', slug: '' },
     ];
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <NavigationArrows
         currentTravel={travelWithoutSlug}
         relatedTravels={relatedTravels}
@@ -203,7 +203,7 @@ describe('NavigationArrows', () => {
     );
 
     const nextButton = getByLabelText('Следующее путешествие: Next');
-    fireEvent.press(nextButton!);
+    await fireEvent.press(nextButton!);
 
     expect(mockRouter.push).toHaveBeenCalledWith('/travels/2');
   });
@@ -217,7 +217,7 @@ describe('NavigationArrows', () => {
     ['slug пустой, id undefined', { slug: '', id: undefined }],
     ['slug пустой, id ноль', { slug: '', id: 0 }],
     ['slug — литерал пустоты', { slug: 'null', id: null }],
-  ])('does not render an arrow to a neighbour without a usable identity (%s)', (_label, broken) => {
+  ])('does not render an arrow to a neighbour without a usable identity (%s)', async (_label, broken) => {
     const current: Travel = { ...baseTravel, id: 1, slug: 'current-travel', name: 'Current' };
     const relatedTravels = [
       { ...baseTravel, id: 5, slug: 'prev-travel', name: 'Previous' },
@@ -225,14 +225,14 @@ describe('NavigationArrows', () => {
       { ...baseTravel, ...broken, name: 'Broken' } as Travel,
     ];
 
-    const { queryByLabelText, getByLabelText } = render(
+    const { queryByLabelText, getByLabelText } = await render(
       <NavigationArrows currentTravel={current} relatedTravels={relatedTravels} />
     );
 
     expect(queryByLabelText('Следующее путешествие: Broken')).toBeNull();
 
     // Здоровый сосед в том же списке остаётся кликабельным.
-    fireEvent.press(getByLabelText('Предыдущее путешествие: Previous'));
+    await fireEvent.press(getByLabelText('Предыдущее путешествие: Previous'));
     expect(mockRouter.push).toHaveBeenCalledWith('/travels/prev-travel');
   });
 });

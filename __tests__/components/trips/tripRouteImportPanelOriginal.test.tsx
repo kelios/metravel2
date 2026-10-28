@@ -111,12 +111,12 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
     mockDownloadOriginal.mockResolvedValue(true);
   });
 
-  it('отдаёт выбранный оригинал наверх вместе с точками маршрута', () => {
+  it('отдаёт выбранный оригинал наверх вместе с точками маршрута', async () => {
     const onApply = jest.fn();
-    const screen = render(<TripRouteImportPanel route={currentRoute} onApply={onApply} />);
+    const screen = await render(<TripRouteImportPanel route={currentRoute} onApply={onApply} />);
 
-    act(() => mockPickerProps.onPicked(file('tatry.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
-    fireEvent.press(screen.getByTestId('trip-route-import-replace'));
+    await act(() => mockPickerProps.onPicked(file('tatry.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
+    await fireEvent.press(screen.getByTestId('trip-route-import-replace'));
 
     expect(onApply).toHaveBeenCalledTimes(1);
     const [nextRoute, originalUpload] = onApply.mock.calls[0];
@@ -126,16 +126,16 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
     expect(mockReleaseUpload).not.toHaveBeenCalled();
   });
 
-  it('освобождает кэш-копию при отмене предпросмотра и при отказе парсера', () => {
+  it('освобождает кэш-копию при отмене предпросмотра и при отказе парсера', async () => {
     const onApply = jest.fn();
-    const screen = render(<TripRouteImportPanel route={currentRoute} onApply={onApply} />);
+    const screen = await render(<TripRouteImportPanel route={currentRoute} onApply={onApply} />);
 
-    act(() => mockPickerProps.onPicked(file('tatry.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
-    fireEvent.press(screen.getByTestId('trip-route-import-cancel'));
+    await act(() => mockPickerProps.onPicked(file('tatry.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
+    await fireEvent.press(screen.getByTestId('trip-route-import-cancel'));
     expect(mockReleaseUpload).toHaveBeenCalledWith(upload('tatry.gpx'));
 
     mockReleaseUpload.mockClear();
-    act(() => mockPickerProps.onPicked(file('broken.gpx', MALFORMED_GPX)));
+    await act(() => mockPickerProps.onPicked(file('broken.gpx', MALFORMED_GPX)));
     expect(mockReleaseUpload).toHaveBeenCalledWith(upload('broken.gpx'));
     expect(onApply).not.toHaveBeenCalled();
   });
@@ -143,9 +143,9 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
   // Окно здесь настоящее. В jest анимация скрытия Paper-диалога
   // (`useNativeDriver: true`) не завершается, и закрытое окно остаётся в дереве,
   // поэтому «Отмену», закрытие и повторы проверяет routeBuilder.removeOriginal.test.tsx.
-  it('показывает сохранённый оригинал с размером и даёт его убрать через подтверждение', () => {
+  it('показывает сохранённый оригинал с размером и даёт его убрать через подтверждение', async () => {
     const onRemove = jest.fn();
-    const screen = render(
+    const screen = await render(
       <TripRouteImportPanel
         route={currentRoute}
         storedFiles={[storedFile] as never}
@@ -156,19 +156,19 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
 
     expect(screen.getByTestId('trip-route-import-stored-original')).toBeTruthy();
     expect(screen.getByText('tatry.gpx')).toBeTruthy();
-    fireEvent.press(screen.getByTestId('trip-route-import-remove-original'));
+    await fireEvent.press(screen.getByTestId('trip-route-import-remove-original'));
     expect(onRemove).not.toHaveBeenCalled();
 
-    fireEvent.press(screen.getByTestId('trip-route-import-remove-original-confirm'));
+    await fireEvent.press(screen.getByTestId('trip-route-import-remove-original-confirm'));
     expect(onRemove).toHaveBeenCalledTimes(1);
     expect(onRemove).toHaveBeenCalledWith(42);
   });
 
   // #2054: одно касание на телефоне безвозвратно стирало загруженный трек —
   // кнопка была нейтральной ghost и удаляла без вопроса.
-  it('«Удалить» оформлена как опасное действие и только открывает подтверждение', () => {
+  it('«Удалить» оформлена как опасное действие и только открывает подтверждение', async () => {
     const onRemove = jest.fn();
-    const screen = render(
+    const screen = await render(
       <TripRouteImportPanel
         route={currentRoute}
         storedFiles={[storedFile] as never}
@@ -188,7 +188,7 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
     ).toBe(colors.danger);
     expect(screen.queryByTestId('confirm-dialog')).toBeNull();
 
-    fireEvent.press(remove);
+    await fireEvent.press(remove);
 
     const dialog = within(screen.getByTestId('confirm-dialog'));
     expect(dialog.getByText('Удалить оригинальный файл?')).toBeTruthy();
@@ -209,7 +209,7 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
   // #2053: «Скачать» оригинала живёт в его карточке рядом с «Удалить», имя
   // файла — до двух строк, а не обрезанное «Mullerthal_Trail_Ro…».
   it('скачивает оригинал из его карточки, рядом с удалением', async () => {
-    const screen = render(
+    const screen = await render(
       <TripRouteImportPanel
         route={currentRoute}
         tripId={77}
@@ -225,13 +225,13 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
     const download = card.getByTestId('trip-route-import-download-original');
     expect(download.props.accessibilityLabel).toBe('Поделиться оригиналом');
 
-    fireEvent.press(download);
+    await fireEvent.press(download);
     await waitFor(() => expect(mockDownloadOriginal).toHaveBeenCalledTimes(1));
     expect(mockDownloadOriginal).toHaveBeenCalledWith(77, storedFile);
   });
 
-  it('без поездки скачать оригинал не предлагает, удаление остаётся', () => {
-    const screen = render(
+  it('без поездки скачать оригинал не предлагает, удаление остаётся', async () => {
+    const screen = await render(
       <TripRouteImportPanel
         route={currentRoute}
         storedFiles={[storedFile] as never}
@@ -244,8 +244,8 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
     expect(screen.getByTestId('trip-route-import-remove-original')).toBeTruthy();
   });
 
-  it('ставит кнопки скачивания GPX/KML сразу под импортом, до карточки оригинала', () => {
-    const screen = render(
+  it('ставит кнопки скачивания GPX/KML сразу под импортом, до карточки оригинала', async () => {
+    const screen = await render(
       <TripRouteImportPanel
         route={currentRoute}
         tripId={77}
@@ -270,8 +270,8 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
     expect(mockPickerProps.fill).toBe(true);
   });
 
-  it('пока новый оригинал не загружен, показывает его ожидающим рядом с сохранёнными', () => {
-    const screen = render(
+  it('пока новый оригинал не загружен, показывает его ожидающим рядом с сохранёнными', async () => {
+    const screen = await render(
       <TripRouteImportPanel
         route={currentRoute}
         storedFiles={[storedFile] as never}
@@ -295,8 +295,8 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
       created_at: '2026-09-23T08:00:00Z',
       updated_at: null,
     };
-    const renderTwo = (onRemove = jest.fn()) =>
-      render(
+    const renderTwo = async (onRemove = jest.fn()) =>
+      await render(
         <TripRouteImportPanel
           route={currentRoute}
           tripId={77}
@@ -305,11 +305,11 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
           onApply={jest.fn()}
         />,
       );
-    const cardsOf = (screen: ReturnType<typeof render>) =>
+    const cardsOf = (screen: Awaited<ReturnType<typeof render>>) =>
       screen.getAllByTestId('trip-route-import-stored-original').map((card) => within(card));
 
-    it('рисует карточку на каждый файл с его именем и размером', () => {
-      const cards = cardsOf(renderTwo());
+    it('рисует карточку на каждый файл с его именем и размером', async () => {
+      const cards = cardsOf(await renderTwo());
 
       expect(cards).toHaveLength(2);
       expect(cards[0].getByText('tatry.gpx')).toBeTruthy();
@@ -318,30 +318,30 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
     });
 
     it('«Скачать» второй карточки скачивает её файл, а не первый', async () => {
-      const screen = renderTwo();
+      const screen = await renderTwo();
 
-      fireEvent.press(cardsOf(screen)[1].getByTestId('trip-route-import-download-original'));
+      await fireEvent.press(cardsOf(screen)[1].getByTestId('trip-route-import-download-original'));
 
       await waitFor(() => expect(mockDownloadOriginal).toHaveBeenCalledTimes(1));
       expect(mockDownloadOriginal).toHaveBeenCalledWith(77, daysFile);
     });
 
-    it('«Удалить» второй карточки после подтверждения отдаёт её routeId', () => {
+    it('«Удалить» второй карточки после подтверждения отдаёт её routeId', async () => {
       const onRemove = jest.fn();
-      const screen = renderTwo(onRemove);
+      const screen = await renderTwo(onRemove);
 
-      fireEvent.press(cardsOf(screen)[1].getByTestId('trip-route-import-remove-original'));
+      await fireEvent.press(cardsOf(screen)[1].getByTestId('trip-route-import-remove-original'));
       expect(onRemove).not.toHaveBeenCalled();
-      fireEvent.press(screen.getByTestId('trip-route-import-remove-original-confirm'));
+      await fireEvent.press(screen.getByTestId('trip-route-import-remove-original-confirm'));
 
       expect(onRemove).toHaveBeenCalledTimes(1);
       expect(onRemove).toHaveBeenCalledWith(11);
     });
 
-    it('«Только трек на карту» добавляет файл и ничего не удаляет, о чём говорит подсказка', () => {
+    it('«Только трек на карту» добавляет файл и ничего не удаляет, о чём говорит подсказка', async () => {
       const onApply = jest.fn();
       const onRemove = jest.fn();
-      const screen = render(
+      const screen = await render(
         <TripRouteImportPanel
           route={currentRoute}
           storedFiles={[storedFile, daysFile] as never}
@@ -350,11 +350,11 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
         />,
       );
 
-      act(() => mockPickerProps.onPicked(file('loops.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
+      await act(() => mockPickerProps.onPicked(file('loops.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
       expect(screen.getByTestId('trip-route-import-original-append-hint').props.children).toBe(
         'Файл добавится к уже сохранённым трекам — прежние останутся на карте. Лишний трек удалите кнопкой «Удалить оригинал» в его карточке.',
       );
-      fireEvent.press(screen.getByTestId('trip-route-import-original-only'));
+      await fireEvent.press(screen.getByTestId('trip-route-import-original-only'));
 
       expect(onApply).toHaveBeenCalledTimes(1);
       const [nextRoute, originalUpload] = onApply.mock.calls[0];
@@ -363,18 +363,18 @@ describe('TripRouteImportPanel — исходный файл (#1496)', () => {
       expect(onRemove).not.toHaveBeenCalled();
     });
 
-    it('без сохранённых файлов подсказки о добавлении нет', () => {
-      const screen = render(<TripRouteImportPanel route={currentRoute} onApply={jest.fn()} />);
+    it('без сохранённых файлов подсказки о добавлении нет', async () => {
+      const screen = await render(<TripRouteImportPanel route={currentRoute} onApply={jest.fn()} />);
 
-      act(() => mockPickerProps.onPicked(file('loops.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
+      await act(() => mockPickerProps.onPicked(file('loops.gpx', GPX_SINGLE_WITH_WAYPOINTS)));
 
       expect(screen.getByTestId('trip-route-import-original-hint')).toBeTruthy();
       expect(screen.queryByTestId('trip-route-import-original-append-hint')).toBeNull();
     });
   });
 
-  it('показывает ошибку загрузки оригинала отдельно от ошибок разбора файла', () => {
-    const screen = render(
+  it('показывает ошибку загрузки оригинала отдельно от ошибок разбора файла', async () => {
+    const screen = await render(
       <TripRouteImportPanel
         route={currentRoute}
         uploadError="Маршрут сохранён, но оригинальный файл загрузить не удалось."

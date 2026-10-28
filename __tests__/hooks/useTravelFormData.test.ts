@@ -44,10 +44,10 @@ describe('useTravelFormData', () => {
     mockInvalidateQueries.mockResolvedValue(undefined);
   });
   
-  afterEach(() => {
+  afterEach(async () => {
     // Ensure one test's fake timers don't leak into the next.
     jest.useRealTimers();
-    cleanup();
+    await cleanup();
   });
 
   const createWrapper = () => {
@@ -67,7 +67,7 @@ describe('useTravelFormData', () => {
   it('sets loadError when travel does not exist', async () => {
     (fetchTravel as jest.Mock).mockRejectedValue(new ApiError(404, 'Not found'));
 
-    const { result } = renderHook(() => useTravelFormData(baseOptions), { concurrentRoot: false });
+    const { result } = await renderHook(() => useTravelFormData(baseOptions), {  });
 
     await waitFor(() => {
       expect(result.current.isInitialLoading).toBe(false);
@@ -92,7 +92,7 @@ describe('useTravelFormData', () => {
 
     (saveFormData as jest.Mock).mockImplementation(() => manualSavePromise);
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useTravelFormData({
           travelId: null,
@@ -102,19 +102,19 @@ describe('useTravelFormData', () => {
           isAuthenticated: true,
           authReady: true,
         }),
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
     const updated = { ...(result.current.formData as any), name: 'Test Travel' };
 
-    act(() => {
+    await act(() => {
       result.current.setFormData(updated);
     });
 
     let inFlight: Promise<any> | undefined;
-    act(() => {
+    await act(() => {
       inFlight = result.current.handleManualSave(updated);
     });
 
@@ -137,7 +137,7 @@ describe('useTravelFormData', () => {
     const html = '<p>еуые</p>';
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
       useTravelFormData({
         travelId: null,
@@ -148,12 +148,12 @@ describe('useTravelFormData', () => {
         authReady: true,
       })
       ,
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         name: 'Test',
@@ -176,7 +176,7 @@ describe('useTravelFormData', () => {
     const minusHtml = '<p>Минус: доставка зависит от региона, проверьте параметры перед заказом</p>';
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
       useTravelFormData({
         travelId: null,
@@ -187,12 +187,12 @@ describe('useTravelFormData', () => {
         authReady: true,
       })
       ,
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         name: 'Test',
@@ -215,7 +215,7 @@ describe('useTravelFormData', () => {
   it('manual save keeps moderation override flags for backend notification trigger', async () => {
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 817 }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useTravelFormData({
           travelId: null,
@@ -225,12 +225,12 @@ describe('useTravelFormData', () => {
           isAuthenticated: true,
           authReady: true,
         }),
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 817,
@@ -261,7 +261,7 @@ describe('useTravelFormData', () => {
   it('incremental save of a published travel uses save intent, not publish (#505)', async () => {
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 225 }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useTravelFormData({
           travelId: '225',
@@ -271,12 +271,12 @@ describe('useTravelFormData', () => {
           isAuthenticated: true,
           authReady: true,
         }),
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 225,
@@ -320,15 +320,14 @@ describe('useTravelFormData', () => {
       authReady: true,
     };
 
-    const { result, rerender } = renderHook((props) => useTravelFormData(props), {
+    const { result, rerender } = await renderHook((props) => useTravelFormData(props), {
       initialProps,
       wrapper: createWrapper(),
-      concurrentRoot: false,
     });
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         name: 'New travel name',
@@ -343,7 +342,7 @@ describe('useTravelFormData', () => {
     expect(result.current.formData.id).toBe(999);
 
     // Controller reflects the created id in the URL -> isNew=false, travelId='999'.
-    rerender({ ...initialProps, isNew: false, travelId: '999' });
+    await rerender({ ...initialProps, isNew: false, travelId: '999' });
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
@@ -355,7 +354,7 @@ describe('useTravelFormData', () => {
   it('invalidates my travels queries after first successful create', async () => {
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 817 }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useTravelFormData({
           travelId: null,
@@ -365,12 +364,12 @@ describe('useTravelFormData', () => {
           isAuthenticated: true,
           authReady: true,
         }),
-      { concurrentRoot: false, wrapper: createWrapper() }
+      {  wrapper: createWrapper() }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: null,
@@ -404,7 +403,7 @@ describe('useTravelFormData', () => {
       slug: 'created-travel',
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useTravelFormData({
           travelId: null,
@@ -414,12 +413,12 @@ describe('useTravelFormData', () => {
           isAuthenticated: true,
           authReady: true,
         }),
-      { concurrentRoot: false, wrapper: createWrapper() }
+      {  wrapper: createWrapper() }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: null,
@@ -444,7 +443,7 @@ describe('useTravelFormData', () => {
       .mockImplementationOnce(async (payload: any) => ({ ...payload, description: null }))
       .mockImplementationOnce(async (payload: any) => ({ ...payload }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
       useTravelFormData({
         travelId: null,
@@ -455,12 +454,12 @@ describe('useTravelFormData', () => {
         authReady: true,
       })
       ,
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         name: 'Test',
@@ -512,7 +511,7 @@ describe('useTravelFormData', () => {
       updated_at: '2026-08-25T10:00:00Z',
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useTravelFormData({
           travelId: '123',
@@ -522,12 +521,12 @@ describe('useTravelFormData', () => {
           isAuthenticated: true,
           authReady: true,
         }),
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         name: 'Existing travel',
@@ -551,7 +550,7 @@ describe('useTravelFormData', () => {
     const html = '<p>test</p>';
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
       useTravelFormData({
         travelId: null,
@@ -562,13 +561,13 @@ describe('useTravelFormData', () => {
         authReady: true,
       })
       ,
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
 
     // Set current snapshot as if user typed real values.
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 817,
@@ -609,7 +608,7 @@ describe('useTravelFormData', () => {
       return response;
     });
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
       useTravelFormData({
         travelId: null,
@@ -620,12 +619,12 @@ describe('useTravelFormData', () => {
         authReady: true,
       })
       ,
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 817,
@@ -668,7 +667,7 @@ describe('useTravelFormData', () => {
 
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, ...serverResponse }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
       useTravelFormData({
         travelId: null,
@@ -679,12 +678,12 @@ describe('useTravelFormData', () => {
         authReady: true,
       })
       ,
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 999,
@@ -739,7 +738,7 @@ describe('useTravelFormData', () => {
       };
     });
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
       useTravelFormData({
         travelId: null,
@@ -750,12 +749,12 @@ describe('useTravelFormData', () => {
         authReady: true,
       })
       ,
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         travel_image_thumb_url: localCover,
@@ -794,7 +793,7 @@ describe('useTravelFormData', () => {
       ],
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
       useTravelFormData({
         travelId: null,
@@ -804,12 +803,12 @@ describe('useTravelFormData', () => {
         isAuthenticated: true,
         authReady: true,
       }),
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 999,
@@ -831,7 +830,7 @@ describe('useTravelFormData', () => {
   it('maps gallery image ids into contract fields for upsert payload', async () => {
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 999 }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
       useTravelFormData({
         travelId: null,
@@ -841,12 +840,12 @@ describe('useTravelFormData', () => {
         isAuthenticated: true,
         authReady: true,
       }),
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         name: 'Gallery IDs test',
@@ -873,7 +872,7 @@ describe('useTravelFormData', () => {
   it('preserves reordered gallery image ids in all upsert contract fields', async () => {
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload, id: 999 }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
       useTravelFormData({
         travelId: '999',
@@ -883,12 +882,12 @@ describe('useTravelFormData', () => {
         isAuthenticated: true,
         authReady: true,
       }),
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: '999',
@@ -926,7 +925,7 @@ describe('useTravelFormData', () => {
       };
     });
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
       useTravelFormData({
         travelId: null,
@@ -937,7 +936,7 @@ describe('useTravelFormData', () => {
         authReady: true,
       })
       ,
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
@@ -945,7 +944,7 @@ describe('useTravelFormData', () => {
     const localImgA = 'blob:https://example.com/a';
     const localImgB = 'blob:https://example.com/b';
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         coordsMeTravel: [
@@ -985,7 +984,7 @@ describe('useTravelFormData', () => {
       };
     });
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useTravelFormData({
           travelId: null,
@@ -995,12 +994,12 @@ describe('useTravelFormData', () => {
           isAuthenticated: true,
           authReady: true,
         }),
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         coordsMeTravel: [
@@ -1024,7 +1023,7 @@ describe('useTravelFormData', () => {
     const localPointImage = 'blob:https://example.com/pending-point-preview';
     (saveFormData as jest.Mock).mockImplementation(async (payload: any) => ({ ...payload }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useTravelFormData({
           travelId: '123',
@@ -1034,12 +1033,12 @@ describe('useTravelFormData', () => {
           isAuthenticated: true,
           authReady: true,
         }),
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 123,
@@ -1087,7 +1086,7 @@ describe('useTravelFormData', () => {
       ],
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useTravelFormData({
           travelId: '123',
@@ -1097,12 +1096,12 @@ describe('useTravelFormData', () => {
           isAuthenticated: true,
           authReady: true,
         }),
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 123,
@@ -1157,7 +1156,7 @@ describe('useTravelFormData', () => {
       ],
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useTravelFormData({
           travelId: '123',
@@ -1167,12 +1166,12 @@ describe('useTravelFormData', () => {
           isAuthenticated: true,
           authReady: true,
         }),
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 123,
@@ -1215,7 +1214,7 @@ describe('useTravelFormData', () => {
       ],
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useTravelFormData({
           travelId: '123',
@@ -1225,12 +1224,12 @@ describe('useTravelFormData', () => {
           isAuthenticated: true,
           authReady: true,
         }),
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
 
-    act(() => {
+    await act(() => {
       result.current.setFormData({
         ...(result.current.formData as any),
         id: 123,
@@ -1273,7 +1272,7 @@ describe('useTravelFormData', () => {
       ],
     }));
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useTravelFormData({
           travelId: '123',
@@ -1283,7 +1282,7 @@ describe('useTravelFormData', () => {
           isAuthenticated: true,
           authReady: true,
         }),
-      { concurrentRoot: false }
+      {  }
     );
 
     await waitFor(() => expect(result.current.isInitialLoading).toBe(false));
@@ -1337,7 +1336,7 @@ describe('useTravelFormData', () => {
       };
       (fetchTravel as jest.Mock).mockResolvedValue(otherUserTravel);
 
-      const { result } = renderHook(
+      const { result } = await renderHook(
         () =>
           useTravelFormData({
             travelId: '123',
@@ -1347,7 +1346,7 @@ describe('useTravelFormData', () => {
             isAuthenticated: true,
             authReady: true,
           }),
-        { concurrentRoot: false }
+        {  }
       );
 
 	      await waitFor(() => {
@@ -1383,12 +1382,11 @@ describe('useTravelFormData', () => {
         isAuthenticated: true,
         authReady: false,
       };
-      const { result, rerender } = renderHook((props) => useTravelFormData(props), {
+      const { result, rerender } = await renderHook((props) => useTravelFormData(props), {
         initialProps,
-        concurrentRoot: false,
       });
-      act(() => {
-        rerender({ ...initialProps, authReady: true });
+      await act(async () => {
+        await rerender({ ...initialProps, authReady: true });
       });
 
       await waitFor(() => expect(fetchTravel).toHaveBeenCalled(), { timeout: 5000 });
@@ -1401,7 +1399,7 @@ describe('useTravelFormData', () => {
 	    it('sets hasAccess to false on fetch error', async () => {
 	      (fetchTravel as jest.Mock).mockRejectedValue(new Error('Network error'));
 
-      const { result } = renderHook(
+      const { result } = await renderHook(
         () =>
           useTravelFormData({
             travelId: '125',
@@ -1411,7 +1409,7 @@ describe('useTravelFormData', () => {
             isAuthenticated: true,
             authReady: true,
           }),
-        { concurrentRoot: false }
+        {  }
       );
 
 	      await waitFor(() => expect(result.current.hasAccess).toBe(false));
@@ -1452,12 +1450,11 @@ describe('useTravelFormData', () => {
         isAuthenticated: true,
         authReady: false,
       };
-      const { result, rerender } = renderHook((props) => useTravelFormData(props), {
+      const { result, rerender } = await renderHook((props) => useTravelFormData(props), {
         initialProps,
-        concurrentRoot: false,
       });
-      act(() => {
-        rerender({ ...initialProps, authReady: true });
+      await act(async () => {
+        await rerender({ ...initialProps, authReady: true });
       });
 
       await waitFor(() => expect(fetchTravel).toHaveBeenCalled(), { timeout: 5000 });
@@ -1493,12 +1490,11 @@ describe('useTravelFormData', () => {
         isAuthenticated: true,
         authReady: false,
       };
-      const { result, rerender } = renderHook((props) => useTravelFormData(props), {
+      const { result, rerender } = await renderHook((props) => useTravelFormData(props), {
         initialProps,
-        concurrentRoot: false,
       });
-      act(() => {
-        rerender({ ...initialProps, authReady: true });
+      await act(async () => {
+        await rerender({ ...initialProps, authReady: true });
       });
 
       await waitFor(() => expect(fetchTravel).toHaveBeenCalled(), { timeout: 5000 });
@@ -1534,7 +1530,7 @@ describe('useTravelFormData', () => {
         });
       });
 
-      const { result } = renderHook(
+      const { result } = await renderHook(
         () =>
           useTravelFormData({
             travelId: null,
@@ -1544,13 +1540,13 @@ describe('useTravelFormData', () => {
             isAuthenticated: true,
             authReady: true,
           }),
-        { concurrentRoot: false }
+        {  }
       );
 
       await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
       // Trigger first save
-      act(() => {
+      await act(() => {
         result.current.setFormData({
           ...(result.current.formData as any),
           name: 'First save',
@@ -1560,7 +1556,7 @@ describe('useTravelFormData', () => {
       const firstSave = result.current.handleManualSave();
 
       // Immediately trigger second save (should abort first)
-      act(() => {
+      await act(() => {
         result.current.setFormData({
           ...(result.current.formData as any),
           name: 'Second save',
@@ -1584,7 +1580,7 @@ describe('useTravelFormData', () => {
       (saveFormData as jest.Mock).mockRejectedValue(saveError);
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
-      const { result } = renderHook(
+      const { result } = await renderHook(
         () =>
           useTravelFormData({
             travelId: null,
@@ -1594,12 +1590,12 @@ describe('useTravelFormData', () => {
             isAuthenticated: true,
             authReady: true,
           }),
-        { concurrentRoot: false }
+        {  }
       );
 
       await waitFor(() => expect(result.current.isInitialLoading).toBe(false), { timeout: 5000 });
 
-      act(() => {
+      await act(() => {
         result.current.setFormData({
           ...(result.current.formData as any),
           name: 'Failed save',

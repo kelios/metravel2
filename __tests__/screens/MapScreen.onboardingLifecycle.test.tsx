@@ -1,6 +1,6 @@
 // RNTL auto cleanup flushes setImmediate before restoring fake timers. The
 // setup polyfill schedules that on timeout0; use its supported explicit entry.
-import { act, cleanupAsync, fireEvent, render } from '@testing-library/react-native/pure'
+import { act, cleanup, fireEvent, render } from '@testing-library/react-native/pure'
 // The shared setup caches RN before this file; set the actual module-time
 // platform before importing the production screen and lazy tour.
 const cachedRN = require('react-native')
@@ -58,7 +58,7 @@ beforeEach(() => {
   localStorage.setItem('metravel_map_onboarding_completed', 'true')
 })
 afterEach(async () => {
-  try { await cleanupAsync() } finally { jest.useRealTimers() }
+  try { await cleanup() } finally { jest.useRealTimers() }
 })
 
 const settle = async (milliseconds = 1200) => {
@@ -66,42 +66,42 @@ const settle = async (milliseconds = 1200) => {
   await act(async () => { await jest.advanceTimersByTimeAsync(milliseconds) })
 }
 
-const changeFocus = (screen: ReturnType<typeof render>, focused: boolean) => {
+const changeFocus = async (screen: Awaited<ReturnType<typeof render>>, focused: boolean) => {
   mockIsFocused = focused
-  screen.rerender(<MapScreen />)
+  await screen.rerender(<MapScreen />)
 }
 
 it('blur closes a manually reopened real mobile Modal while retaining MapScreen and its canvas', async () => {
-  const screen = render(<MapScreen />)
+  const screen = await render(<MapScreen />)
   await settle()
   expect(screen.queryByTestId('onboarding-card')).toBeNull()
-  act(() => restartMapOnboarding())
+  await act(() => restartMapOnboarding())
   expect(screen.getByTestId('onboarding-card')).toBeTruthy()
   expect(document.body.getAttribute('data-map-onboarding-open')).toBe('true')
 
-  changeFocus(screen, false)
+  await changeFocus(screen, false)
   expect(screen.queryByTestId('onboarding-card')).toBeNull()
   expect(document.body.hasAttribute('data-map-onboarding-open')).toBe(false)
   expect(mockMapCanvasMount).toHaveBeenCalledTimes(1)
   expect(mockMapCanvasUnmount).not.toHaveBeenCalled()
 
-  changeFocus(screen, true)
+  await changeFocus(screen, true)
   await settle()
   expect(screen.queryByTestId('onboarding-card')).toBeNull()
   expect(localStorage.getItem('metravel_map_onboarding_completed')).toBe('true')
   // This visit still supports an ordinary manual replay after returning.
-  act(() => restartMapOnboarding())
+  await act(() => restartMapOnboarding())
   expect(screen.getAllByTestId('onboarding-card')).toHaveLength(1)
 })
 
 it('blur cancels a manual restart before deferred mount; returning does not replay it', async () => {
-  const screen = render(<MapScreen />)
+  const screen = await render(<MapScreen />)
   expect(screen.queryByTestId('onboarding-card')).toBeNull()
-  act(() => restartMapOnboarding())
-  changeFocus(screen, false)
+  await act(() => restartMapOnboarding())
+  await changeFocus(screen, false)
   await settle()
   expect(screen.queryByTestId('onboarding-card')).toBeNull()
-  changeFocus(screen, true)
+  await changeFocus(screen, true)
   await settle()
   expect(screen.queryByTestId('onboarding-card')).toBeNull()
   expect(localStorage.getItem('metravel_map_onboarding_completed')).toBe('true')
@@ -110,8 +110,8 @@ it('blur cancels a manual restart before deferred mount; returning does not repl
 })
 
 it('same-visit manual restart before deferred mount still opens exactly one tour', async () => {
-  const screen = render(<MapScreen />)
-  act(() => restartMapOnboarding())
+  const screen = await render(<MapScreen />)
+  await act(() => restartMapOnboarding())
   await settle()
   expect(screen.getAllByTestId('onboarding-card')).toHaveLength(1)
   expect(localStorage.getItem('metravel_map_onboarding_completed')).toBe('true')
@@ -119,25 +119,25 @@ it('same-visit manual restart before deferred mount still opens exactly one tour
 
 it('a genuine first-time mobile visit still auto-opens and completing persists the flag', async () => {
   localStorage.removeItem('metravel_map_onboarding_completed')
-  const screen = render(<MapScreen />)
+  const screen = await render(<MapScreen />)
   await settle(600)
   await settle(800)
   expect(screen.getByTestId('onboarding-card')).toBeTruthy()
-  for (let step = 0; step < 4; step++) fireEvent.press(screen.getByTestId('onboarding-next'))
+  for (let step = 0; step < 4; step++) await fireEvent.press(screen.getByTestId('onboarding-next'))
   expect(screen.queryByTestId('onboarding-card')).toBeNull()
   expect(localStorage.getItem('metravel_map_onboarding_completed')).toBe('true')
 })
 
 it('actual MapScreen unmount cancels the restart while its tour UI is still deferred', async () => {
   mockMapError = 'fixture'
-  const screen = render(<MapScreen />)
+  const screen = await render(<MapScreen />)
   restartMapOnboarding()
-  screen.unmount()
-  const tour = render(<MapOnboarding mobileWebCoachmark />)
+  await await screen.unmount()
+  const tour = await render(<MapOnboarding mobileWebCoachmark />)
   await act(async () => Promise.resolve())
-  act(() => jest.advanceTimersByTime(1200))
+  await act(() => jest.advanceTimersByTime(1200))
   expect(tour.queryByTestId('onboarding-card')).toBeNull()
   expect(localStorage.getItem('metravel_map_onboarding_completed')).toBe('true')
-  tour.unmount()
+  await tour.unmount()
   jest.useRealTimers()
 })

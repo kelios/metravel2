@@ -80,7 +80,7 @@ describe('SubscriptionLinkResult', () => {
     mockResolve.mockReturnValueOnce(pending.promise)
     mockParams = { token: 'tok-1' }
 
-    render(<SubscriptionLinkResult action="confirm" />)
+    await render(<SubscriptionLinkResult action="confirm" />)
     expect(screen.getByTestId('subscription-link-pending')).toBeTruthy()
 
     await act(async () => pending.resolve('confirmed'))
@@ -89,8 +89,8 @@ describe('SubscriptionLinkResult', () => {
     expect(mockResolve).toHaveBeenCalledTimes(1)
     expect(mockResolve).toHaveBeenCalledWith('confirm', 'tok-1')
 
-    fireEvent.press(screen.getByText(t('toQuests')))
-    fireEvent.press(screen.getByText(t('toHome')))
+    await fireEvent.press(screen.getByText(t('toQuests')))
+    await fireEvent.press(screen.getByText(t('toHome')))
     expect(mockPush.mock.calls).toEqual([['/quests'], ['/']])
   })
 
@@ -98,7 +98,7 @@ describe('SubscriptionLinkResult', () => {
     mockResolve.mockResolvedValue('unsubscribed')
     mockParams = { token: 'tok-2' }
 
-    render(
+    await render(
       <React.StrictMode>
         <SubscriptionLinkResult action="unsubscribe" />
       </React.StrictMode>,
@@ -113,7 +113,7 @@ describe('SubscriptionLinkResult', () => {
     mockResolve.mockResolvedValue('invalid')
     mockParams = { token: 'used' }
 
-    render(<SubscriptionLinkResult action="unsubscribe" />)
+    await render(<SubscriptionLinkResult action="unsubscribe" />)
 
     await waitFor(() => expect(screen.getByTestId('subscription-link-invalid')).toBeTruthy())
     expect(screen.getByText(t('invalidTitle'))).toBeTruthy()
@@ -124,14 +124,14 @@ describe('SubscriptionLinkResult', () => {
     mockResolve.mockResolvedValueOnce('error').mockResolvedValueOnce('confirmed')
     mockParams = { token: 'tok-3' }
 
-    render(<SubscriptionLinkResult action="confirm" />)
+    await render(<SubscriptionLinkResult action="confirm" />)
 
     await waitFor(() => expect(screen.getByTestId('subscription-link-error')).toBeTruthy())
     expect(screen.queryByText(t('invalidTitle'))).toBeNull()
     expect(screen.getByText(t('toQuests'))).toBeTruthy()
     expect(screen.getByText(t('toHome'))).toBeTruthy()
 
-    fireEvent.press(screen.getByText(t('retry')))
+    await fireEvent.press(screen.getByText(t('retry')))
     await waitFor(() => expect(screen.getByTestId('subscription-link-confirmed')).toBeTruthy())
     expect(mockResolve).toHaveBeenCalledTimes(2)
   })
@@ -144,14 +144,14 @@ describe('SubscriptionLinkResult', () => {
   ])('?status=%s renders its state without an API call', async (status, testID) => {
     mockParams = { status, token: 'already-spent' }
 
-    render(<SubscriptionLinkResult action="confirm" />)
+    await render(<SubscriptionLinkResult action="confirm" />)
 
     await waitFor(() => expect(screen.getByTestId(testID)).toBeTruthy())
     expect(mockResolve).not.toHaveBeenCalled()
   })
 
   it('no token and no status → invalid without a request', async () => {
-    render(<SubscriptionLinkResult action="confirm" />)
+    await render(<SubscriptionLinkResult action="confirm" />)
 
     await waitFor(() => expect(screen.getByTestId('subscription-link-invalid')).toBeTruthy())
     expect(screen.getByText(t('invalidConfirmText'))).toBeTruthy()

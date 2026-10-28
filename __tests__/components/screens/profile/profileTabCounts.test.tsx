@@ -6,8 +6,8 @@ const counters = { travels: 12, published: 9, drafts: 3, subscribers: 5, subscri
 const pending = { travels: undefined, published: undefined, drafts: undefined, subscribers: undefined, subscriptions: undefined };
 
 describe('profile tab counters', () => {
-  it('uses the owner profile counters in the first render, before the lists arrive', () => {
-    const { result } = renderHook(() => {
+  it('uses the owner profile counters in the first render, before the lists arrive', async () => {
+    const { result } = await renderHook(() => {
       const { liveTravelsCount } = useProfileTravelCountState('104');
       return resolveProfileTabCounts({
         ...pending,
@@ -41,13 +41,13 @@ describe('profile tab counters', () => {
     });
   });
 
-  it('updates totals after deletion without losing the confirmed count on another render', () => {
-    const { result, rerender } = renderHook(() => useProfileTravelCountState('104'));
-    act(() => result.current.onTotalChange(12));
-    act(() => result.current.onTotalChange(11));
-    rerender({});
+  it('updates totals after deletion without losing the confirmed count on another render', async () => {
+    const { result, rerender } = await renderHook(() => useProfileTravelCountState('104'));
+    await act(() => result.current.onTotalChange(12));
+    await act(() => result.current.onTotalChange(11));
+    await rerender({});
     expect(result.current.liveTravelsCount).toBe(11);
-    act(() => result.current.onTotalChange(null));
+    await act(() => result.current.onTotalChange(null));
     expect(result.current.liveTravelsCount).toBeNull();
   });
 
@@ -75,31 +75,31 @@ describe('profile tab counters', () => {
     expect(resolveProfileTabCounts({ ...noDataError, initial: undefined })).toMatchObject({ subscribers: null, subscriptions: null });
   });
 
-  it('uses the new owner seed before old publication values or a late callback can override it', () => {
-    const { result, rerender } = renderHook(({ owner }) => useProfileTravelCountState(owner), { initialProps: { owner: '104' as string | null } });
+  it('uses the new owner seed before old publication values or a late callback can override it', async () => {
+    const { result, rerender } = await renderHook(({ owner }) => useProfileTravelCountState(owner), { initialProps: { owner: '104' as string | null } });
     const oldCallback = result.current.onTotalChange;
-    act(() => oldCallback(12));
-    rerender({ owner: '105' });
+    await act(() => oldCallback(12));
+    await rerender({ owner: '105' });
     expect(result.current.liveTravelsCount).toBeUndefined();
-    act(() => oldCallback(90));
+    await act(() => oldCallback(90));
     expect(result.current.liveTravelsCount).toBeUndefined();
     expect(resolveProfileTabCounts({ initial: counters, ...pending, travels: result.current.liveTravelsCount, published: 80, drafts: null })).toMatchObject({
       travels: 12, publishedTravels: 9, draftTravels: 3,
     });
-    act(() => result.current.onTotalChange(6));
+    await act(() => result.current.onTotalChange(6));
     expect(result.current.liveTravelsCount).toBe(6);
   });
 
-  it('rejects a late callback from the old session after logout and login with the same owner', () => {
-    const { result, rerender } = renderHook(({ owner }) => useProfileTravelCountState(owner), { initialProps: { owner: '104' as string | null } });
+  it('rejects a late callback from the old session after logout and login with the same owner', async () => {
+    const { result, rerender } = await renderHook(({ owner }) => useProfileTravelCountState(owner), { initialProps: { owner: '104' as string | null } });
     const oldCallback = result.current.onTotalChange;
-    act(() => oldCallback(12));
-    rerender({ owner: null });
+    await act(() => oldCallback(12));
+    await rerender({ owner: null });
     expect(result.current.liveTravelsCount).toBeUndefined();
-    rerender({ owner: '104' });
-    act(() => oldCallback(90));
+    await rerender({ owner: '104' });
+    await act(() => oldCallback(90));
     expect(result.current.liveTravelsCount).toBeUndefined();
-    act(() => result.current.onTotalChange(5));
+    await act(() => result.current.onTotalChange(5));
     expect(result.current.liveTravelsCount).toBe(5);
   });
 });

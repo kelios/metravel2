@@ -16,8 +16,8 @@ jest.mock('@react-native-community/datetimepicker', () => ({
     },
 }), { virtual: true });
 
-const renderDateInput = (value: string, onChange = jest.fn()) => {
-    const result = render(
+const renderDateInput = async (value: string, onChange = jest.fn()) => {
+    const result = await render(
         <TravelVisitedDateInput
             value={value}
             onChange={onChange}
@@ -45,41 +45,41 @@ describe('TravelVisitedDateInput', () => {
         expect(parseVisitedDateDraft('26.07.2025')).toBe('2025-07-26');
     });
 
-    it('commits a manually replaced year as an ISO date', () => {
-        const { getByTestId, onChange } = renderDateInput('2026-07-26');
+    it('commits a manually replaced year as an ISO date', async () => {
+        const { getByTestId, onChange } = await renderDateInput('2026-07-26');
         const input = getByTestId('travel-visited-date-input');
 
         expect(input.props.value).toBe('26.07.2026');
-        fireEvent.changeText(input, '26.07.2025');
+        await fireEvent.changeText(input, '26.07.2025');
 
         expect(onChange).toHaveBeenCalledTimes(1);
         expect(onChange).toHaveBeenCalledWith('2025-07-26');
     });
 
-    it('does not commit an incomplete or impossible date', () => {
-        const { getByTestId, getByText, onChange } = renderDateInput('');
+    it('does not commit an incomplete or impossible date', async () => {
+        const { getByTestId, getByText, onChange } = await renderDateInput('');
         const input = getByTestId('travel-visited-date-input');
 
-        fireEvent.changeText(input, '26.07.202');
+        await fireEvent.changeText(input, '26.07.202');
         expect(onChange).not.toHaveBeenCalled();
 
-        fireEvent.changeText(input, '31.02.2025');
+        await fireEvent.changeText(input, '31.02.2025');
         expect(onChange).not.toHaveBeenCalled();
         expect(getByText('Введите корректную дату в формате ДД.ММ.ГГГГ')).toBeTruthy();
         expect(input.props['aria-invalid']).toBe(true);
     });
 
-    it('clears the stored exact date when the manual input is cleared', () => {
-        const { getByTestId, onChange } = renderDateInput('2026-07-26');
+    it('clears the stored exact date when the manual input is cleared', async () => {
+        const { getByTestId, onChange } = await renderDateInput('2026-07-26');
 
-        fireEvent.changeText(getByTestId('travel-visited-date-input'), '');
+        await fireEvent.changeText(getByTestId('travel-visited-date-input'), '');
 
         expect(onChange).toHaveBeenCalledWith('');
     });
 
-    it('opens the Android system date picker and commits its local calendar date', () => {
+    it('opens the Android system date picker and commits its local calendar date', async () => {
         Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true });
-        const { getByTestId, onChange } = renderDateInput('2026-07-26');
+        const { getByTestId, onChange } = await renderDateInput('2026-07-26');
 
         const calendarButton = getByTestId('travel-visited-date-calendar-button');
         const calendarButtonStyle = StyleSheet.flatten(calendarButton.props.style);
@@ -88,7 +88,7 @@ describe('TravelVisitedDateInput', () => {
         expect(calendarButtonStyle.minWidth).toBe(48);
         expect(calendarButtonStyle.minHeight).toBe(48);
 
-        fireEvent.press(calendarButton);
+        await fireEvent.press(calendarButton);
 
         expect(mockOpenAndroidDatePicker).toHaveBeenCalledTimes(1);
         const options = mockOpenAndroidDatePicker.mock.calls[0][0] as {

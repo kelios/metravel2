@@ -23,8 +23,8 @@ const firstPage = [
   ...travels(['d-1'], 'draft'),
 ];
 
-const renderSections = (overrides: Record<string, unknown>) =>
-  renderHook(() =>
+const renderSections = async (overrides: Record<string, unknown>) =>
+  await renderHook(() =>
     useProfileTravelSections({
       activeTab: 'travels',
       setActiveTab: jest.fn(),
@@ -48,11 +48,11 @@ const renderSections = (overrides: Record<string, unknown>) =>
   );
 
 describe('useProfileTravelSections — вкладки-срезы по статусу публикации', () => {
-  it('«Черновики» показывают серверный срез, а не клиентский фильтр первой страницы', () => {
+  it('«Черновики» показывают серверный срез, а не клиентский фильтр первой страницы', async () => {
     const loadMoreTravels = jest.fn();
     const serverDrafts = travels(['d-40', 'd-41'], 'draft');
 
-    const { result } = renderSections({
+    const { result } = await renderSections({
       activeTab: 'draftTravels',
       statusTabTravels: serverDrafts,
       loadMoreTravels,
@@ -63,11 +63,11 @@ describe('useProfileTravelSections — вкладки-срезы по стату
     expect(loadMoreTravels).not.toHaveBeenCalled();
   });
 
-  it('«Опубл.» тоже читает свой срез и не запускает цепочку страниц общего списка', () => {
+  it('«Опубл.» тоже читает свой срез и не запускает цепочку страниц общего списка', async () => {
     const loadMoreTravels = jest.fn();
     const serverPublished = travels(['p-90'], 'published');
 
-    const { result } = renderSections({
+    const { result } = await renderSections({
       activeTab: 'publishedTravels',
       statusTabTravels: serverPublished,
       loadMoreTravels,
@@ -77,10 +77,10 @@ describe('useProfileTravelSections — вкладки-срезы по стату
     expect(loadMoreTravels).not.toHaveBeenCalled();
   });
 
-  it('«Страны» по-прежнему догружают весь список автора — им нужен полный каталог', () => {
+  it('«Страны» по-прежнему догружают весь список автора — им нужен полный каталог', async () => {
     const loadMoreTravels = jest.fn();
 
-    renderSections({ activeTab: 'countries', loadMoreTravels });
+    await renderSections({ activeTab: 'countries', loadMoreTravels });
 
     expect(loadMoreTravels).toHaveBeenCalled();
   });

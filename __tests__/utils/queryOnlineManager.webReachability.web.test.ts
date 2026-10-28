@@ -215,7 +215,7 @@ describe('web reachability restores catalog queries despite a false offline sign
     const probe = deferred<Response>();
     fetchMock.mockReturnValueOnce(probe.promise);
     const { pending } = preparePausedCatalog();
-    const { result, unmount } = renderHook(() => useNetworkStatus());
+    const { result, unmount } = await renderHook(() => useNetworkStatus());
 
     try {
       expect(result.current).toEqual({
@@ -235,7 +235,7 @@ describe('web reachability restores catalog queries despite a false offline sign
       expect(query.onlineManager.isOnline()).toBe(true);
       expect(fetchMock).toHaveBeenCalledTimes(1);
     } finally {
-      unmount();
+      await unmount();
     }
   });
 

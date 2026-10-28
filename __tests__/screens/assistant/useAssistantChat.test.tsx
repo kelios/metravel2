@@ -66,7 +66,7 @@ describe('useAssistantChat (#2460)', () => {
   it('полный цикл: подбор → стрим → страж ссылок → done, лимит списан', async () => {
     mockedSearch.mockResolvedValue([source])
     const generator = streamingGenerator(['Поезжайте под Гродно: ', 'https://metravel.by/travels/vyhodnye-pod-grodno ', 'и не ходите на https://evil.example/x'])
-    const { result } = renderHook(() => useAssistantChat({ locale: 'ru', generator }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator }))
 
     await waitFor(() => expect(result.current.remaining).toBe(20))
     await act(async () => {
@@ -89,7 +89,7 @@ describe('useAssistantChat (#2460)', () => {
   it('без карточек модель не вызывается: честный отказ и запись в журнал спроса', async () => {
     mockedSearch.mockResolvedValue([])
     const generate = jest.fn()
-    const { result } = renderHook(() => useAssistantChat({ locale: 'ru', generator: { generate } }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator: { generate } }))
 
     await act(async () => {
       await result.current.ask('Исландия зимой')
@@ -104,7 +104,7 @@ describe('useAssistantChat (#2460)', () => {
   it('сервер модели недоступен → unavailable без списания лимита; retry повторяет вопрос', async () => {
     mockedSearch.mockResolvedValue([source])
     const generator = failingGenerator(new AiGeneratorError('unavailable', 'down'))
-    const { result } = renderHook(() => useAssistantChat({ locale: 'ru', generator }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator }))
 
     await act(async () => {
       await result.current.ask('Куда поехать?')
@@ -125,13 +125,13 @@ describe('useAssistantChat (#2460)', () => {
 
   it('429 → busy с Retry-After; провайдер не настроен → unavailable', async () => {
     mockedSearch.mockResolvedValue([source])
-    const busy = renderHook(() => useAssistantChat({ locale: 'ru', generator: failingGenerator(new AiGeneratorError('busy', 'busy', { retryAfterSec: 15 })) }))
+    const busy = await renderHook(() => useAssistantChat({ locale: 'ru', generator: failingGenerator(new AiGeneratorError('busy', 'busy', { retryAfterSec: 15 })) }))
     await act(async () => {
       await busy.result.current.ask('q')
     })
     expect(busy.result.current.turns[0]).toMatchObject({ status: 'busy', retryAfterSec: 15 })
 
-    const none = renderHook(() => useAssistantChat({ locale: 'ru', generator: null }))
+    const none = await renderHook(() => useAssistantChat({ locale: 'ru', generator: null }))
     await act(async () => {
       await none.result.current.ask('q')
     })
@@ -140,7 +140,7 @@ describe('useAssistantChat (#2460)', () => {
   })
 
   it('слишком длинный вопрос и исчерпанный лимит не уходят в сеть', async () => {
-    const { result } = renderHook(() => useAssistantChat({ locale: 'ru', generator: streamingGenerator(['x']) }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator: streamingGenerator(['x']) }))
     await act(async () => {
       await result.current.ask('в'.repeat(501))
     })
@@ -159,7 +159,7 @@ describe('useAssistantChat (#2460)', () => {
 
   it('двойное нажатие «Спросить» не запускает второй вопрос поверх первого', async () => {
     mockedSearch.mockResolvedValue([source])
-    const { result } = renderHook(() => useAssistantChat({ locale: 'ru', generator: streamingGenerator(['Ответ']) }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator: streamingGenerator(['Ответ']) }))
 
     await act(async () => {
       await Promise.all([result.current.ask('Куда поехать?'), result.current.ask('Куда поехать?')])
@@ -173,7 +173,7 @@ describe('useAssistantChat (#2460)', () => {
   it('retry при исчерпанном лимите не снимает ход с ленты и показывает лимит', async () => {
     mockedSearch.mockResolvedValue([source])
     const generator = failingGenerator(new AiGeneratorError('unavailable', 'down'))
-    const { result } = renderHook(() => useAssistantChat({ locale: 'ru', generator }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator }))
     await act(async () => {
       await result.current.ask('Куда поехать?')
     })
@@ -217,7 +217,7 @@ describe('useAssistantChat: вопросы не по теме (#2711)', () => {
   it('отказ без подбора, модели и списания лимита; предупреждение с номером', async () => {
     const generate = jest.fn()
     mockedStrike.mockResolvedValue({ strikes: 1, blocked: false })
-    const { result } = renderHook(() => useAssistantChat({ locale: 'ru', generator: { generate } }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator: { generate } }))
     await waitFor(() => expect(result.current.remaining).toBe(20))
 
     await act(async () => {
@@ -234,7 +234,7 @@ describe('useAssistantChat: вопросы не по теме (#2711)', () => {
 
   it('третий вопрос не по теме: запись offtopic_blocked и блок; следующий вопрос не принимается', async () => {
     mockedStrike.mockResolvedValue({ strikes: 3, blocked: true })
-    const { result } = renderHook(() => useAssistantChat({ locale: 'pl', generator: streamingGenerator(['x']) }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'pl', generator: streamingGenerator(['x']) }))
     await waitFor(() => expect(result.current.remaining).toBe(20))
 
     await act(async () => {
@@ -255,7 +255,7 @@ describe('useAssistantChat: вопросы не по теме (#2711)', () => {
 
   it('блок, записанный раньше, поднимается при открытии экрана', async () => {
     mockedOffTopicState.mockResolvedValue({ strikes: 3, blocked: true })
-    const { result } = renderHook(() => useAssistantChat({ locale: 'ru', generator: null }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator: null }))
     await waitFor(() => expect(result.current.offTopicBlocked).toBe(true))
   })
 
@@ -263,7 +263,7 @@ describe('useAssistantChat: вопросы не по теме (#2711)', () => {
     mockedSearch.mockResolvedValue([source])
     mockedStrike.mockResolvedValue({ strikes: 1, blocked: false })
     const generator = streamingGenerator(['Я ассистент metravel.by по путешествиям — статьям и квестам сайта, на другие темы не отвечаю.'])
-    const { result } = renderHook(() => useAssistantChat({ locale: 'ru', generator }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator }))
     await waitFor(() => expect(result.current.remaining).toBe(20))
 
     await act(async () => {
@@ -277,7 +277,7 @@ describe('useAssistantChat: вопросы не по теме (#2711)', () => {
 
   it('вопрос по теме с медициной и поездкой идёт обычным путём', async () => {
     mockedSearch.mockResolvedValue([source])
-    const { result } = renderHook(() => useAssistantChat({ locale: 'ru', generator: streamingGenerator(['Смотрите https://metravel.by/travels/vyhodnye-pod-grodno']) }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator: streamingGenerator(['Смотрите https://metravel.by/travels/vyhodnye-pod-grodno']) }))
     await waitFor(() => expect(result.current.remaining).toBe(20))
 
     await act(async () => {
@@ -299,7 +299,7 @@ describe('useAssistantChat: уточнение в диалоге (#2719)', () =>
 
   it('подбор уточнения получает прошлый запрос, модель — исходный вопрос', async () => {
     const generate = jest.fn(async () => ({ text: 'Смотрите https://metravel.by/travels/vyhodnye-pod-grodno', usage: { prompt_tokens: 1, completion_tokens: 1, ttft_ms: 1, tokens_per_s: 1 } }))
-    const { result } = renderHook(() => useAssistantChat({ locale: 'ru', generator: { generate } }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator: { generate } }))
     await waitFor(() => expect(result.current.remaining).toBe(20))
 
     await act(async () => {
@@ -318,7 +318,7 @@ describe('useAssistantChat: уточнение в диалоге (#2719)', () =>
 
   it('цепочка уточнений и повтор ищутся от последнего самостоятельного вопроса, а не копят прошлые', async () => {
     const generate = jest.fn(async () => ({ text: 'Смотрите https://metravel.by/travels/vyhodnye-pod-grodno', usage: { prompt_tokens: 1, completion_tokens: 1, ttft_ms: 1, tokens_per_s: 1 } }))
-    const { result } = renderHook(() => useAssistantChat({ locale: 'ru', generator: { generate } }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator: { generate } }))
     await waitFor(() => expect(result.current.remaining).toBe(20))
 
     for (const question of ['Какие квесты есть в Гродно?', 'А какой из них подойдёт детям?', 'А там есть музеи?']) {

@@ -29,8 +29,8 @@ describe('ErrorBoundary', () => {
     Platform.OS = originalPlatform;
   });
 
-  it('renders children when no error occurs', () => {
-    const { toJSON } = render(
+  it('renders children when no error occurs', async () => {
+    const { toJSON } = await render(
       <ErrorBoundary>
         <Text>OK</Text>
       </ErrorBoundary>
@@ -39,11 +39,11 @@ describe('ErrorBoundary', () => {
     expect(JSON.stringify(toJSON())).toContain('OK');
   });
 
-  it('renders generic error UI when child throws', () => {
+  it('renders generic error UI when child throws', async () => {
     const consoleError = console.error;
     console.error = jest.fn();
 
-    const { toJSON } = render(
+    const { toJSON } = await render(
       <ErrorBoundary>
         <ThrowError />
       </ErrorBoundary>
@@ -59,11 +59,11 @@ describe('ErrorBoundary', () => {
     console.error = consoleError;
   });
 
-  it('replaces the expo-router loader failure with a localized page message (#2822)', () => {
+  it('replaces the expo-router loader failure with a localized page message (#2822)', async () => {
     const consoleError = console.error;
     console.error = jest.fn();
 
-    const { toJSON } = render(
+    const { toJSON } = await render(
       <ErrorBoundary>
         <ThrowError message="Failed to load loader data for route: /(tabs)/quests/15/lida-castle" />
       </ErrorBoundary>
@@ -77,12 +77,12 @@ describe('ErrorBoundary', () => {
     console.error = consoleError;
   });
 
-  it('calls onError callback', () => {
+  it('calls onError callback', async () => {
     const consoleError = console.error;
     console.error = jest.fn();
     const onError = jest.fn();
 
-    render(
+    await render(
       <ErrorBoundary onError={onError}>
         <ThrowError />
       </ErrorBoundary>
@@ -92,11 +92,11 @@ describe('ErrorBoundary', () => {
     console.error = consoleError;
   });
 
-  it('renders custom fallback if provided', () => {
+  it('renders custom fallback if provided', async () => {
     const consoleError = console.error;
     console.error = jest.fn();
 
-    const { toJSON } = render(
+    const { toJSON } = await render(
       <ErrorBoundary fallback={<Text>Custom fallback</Text>}>
         <ThrowError />
       </ErrorBoundary>
@@ -106,30 +106,30 @@ describe('ErrorBoundary', () => {
     console.error = consoleError;
   });
 
-  it('shows retry button on web and uses local reset instead of reload', () => {
+  it('shows retry button on web and uses local reset instead of reload', async () => {
     const consoleError = console.error;
     const errorSpy = jest.fn();
     console.error = errorSpy;
     Platform.OS = 'web';
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <ErrorBoundary>
         <ThrowError message="ChunkLoadError: Loading chunk 42 failed." />
       </ErrorBoundary>
     );
 
-    fireEvent.press(getByLabelText('Попробовать снова'));
+    await fireEvent.press(getByLabelText('Попробовать снова'));
     expect(errorSpy.mock.calls.some(isNavigationAttempt)).toBe(false);
 
     console.error = consoleError;
   });
 
-  it('renders retry button on native platforms', () => {
+  it('renders retry button on native platforms', async () => {
     const consoleError = console.error;
     console.error = jest.fn();
     Platform.OS = 'ios';
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <ErrorBoundary>
         <ThrowError />
       </ErrorBoundary>
@@ -138,22 +138,22 @@ describe('ErrorBoundary', () => {
     expect(getByLabelText('Попробовать снова')).toBeTruthy();
     console.error = consoleError;
   });
-  it('keeps a failed loader inside the screen and retries it there (#2822)', () => {
+  it('keeps a failed loader inside the screen and retries it there (#2822)', async () => {
     const retry = jest.fn(async () => undefined);
     const error = new Error('Failed to load loader data for route: /(tabs)/quests/15/lida-castle');
 
-    const { getByLabelText, toJSON } = render(<LoaderScreenErrorBoundary error={error} retry={retry} />);
+    const { getByLabelText, toJSON } = await render(<LoaderScreenErrorBoundary error={error} retry={retry} />);
 
     expect(JSON.stringify(toJSON())).toContain('Не удалось загрузить страницу.');
-    fireEvent.press(getByLabelText('Попробовать снова'));
+    await fireEvent.press(getByLabelText('Попробовать снова'));
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
-  it('passes every non-loader screen error up to the app boundary (#2822)', () => {
+  it('passes every non-loader screen error up to the app boundary (#2822)', async () => {
     const consoleError = console.error;
     console.error = jest.fn();
 
-    const { toJSON } = render(
+    const { toJSON } = await render(
       <ErrorBoundary>
         <LoaderScreenErrorBoundary error={new Error('Map container is being reused by another instance')} retry={jest.fn()} />
       </ErrorBoundary>

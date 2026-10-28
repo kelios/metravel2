@@ -18,13 +18,13 @@ describe('useTdTrace', () => {
     jest.restoreAllMocks()
   })
 
-  it('enables tracing from tdtrace query param', () => {
+  it('enables tracing from tdtrace query param', async () => {
     window.history.replaceState(null, '', '/?tdtrace=1')
 
     const consoleSpy = jest.spyOn(console, 'log').mockImplementation(() => {})
     const { useTdTrace } = require('@/hooks/useTdTrace')
 
-    const { result } = renderHook(() => useTdTrace())
+    const { result } = await renderHook(() => useTdTrace())
     result.current('trace:test')
 
     expect(consoleSpy).toHaveBeenCalled()

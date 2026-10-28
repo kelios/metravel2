@@ -1,31 +1,36 @@
 import type React from 'react';
 import type { Root } from 'react-dom/client';
-import type { ReactTestRenderer } from 'react-test-renderer';
 
 let act: typeof import('react').act;
 let createElement: typeof import('react').createElement;
 let createRoot: typeof import('react-dom/client').createRoot;
-let createTestRenderer: typeof import('react-test-renderer').create;
 let Platform: typeof import('react-native').Platform;
-let Pressable: typeof import('react-native').Pressable;
 let Text: typeof import('react-native').Text;
 let RadioPressable: typeof import('@/components/ui/RadioPressable').default;
 let ThemeOptionGroup: typeof import('@/components/layout/ThemeOptionGroup').default;
 let ThemeSection: typeof import('@/components/settings/ThemeSection').default;
 let createSettingsStyles: typeof import('@/components/screens/settings/settings.styles').createSettingsStyles;
 let getThemedColors: typeof import('@/constants/designSystem').getThemedColors;
+const mockPressableProps = jest.fn();
 
 beforeAll(() => {
   // Load real RNW into a fresh registry; setup.ts otherwise caches native mocks.
   jest.resetModules();
-  jest.doMock('react-native', () => jest.requireActual('react-native-web'));
+  jest.doMock('react-native', () => {
+    const actual = jest.requireActual('react-native-web');
+    const React = require('react');
+    const CapturedPressable = React.forwardRef((props: Record<string, unknown>, ref: unknown) => {
+      mockPressableProps(props);
+      return React.createElement(actual.Pressable, { ...props, ref });
+    });
+    return { ...actual, Pressable: CapturedPressable };
+  });
   jest.doMock('@expo/vector-icons/Feather', () => ({ __esModule: true, default: () => null }));
   jest.doMock('@/hooks/useTheme', () => ({ useThemedColors: () => require('@/constants/designSystem').getThemedColors(false) }));
   jest.doMock('@/i18n', () => ({ translate: (key: string) => key }));
   ({ act, createElement } = require('react'));
   ({ createRoot } = require('react-dom/client'));
-  ({ create: createTestRenderer } = require('react-test-renderer'));
-  ({ Platform, Pressable, Text } = require('react-native'));
+  ({ Platform, Text } = require('react-native'));
   RadioPressable = require('@/components/ui/RadioPressable').default;
   ThemeOptionGroup = require('@/components/layout/ThemeOptionGroup').default;
   ThemeSection = require('@/components/settings/ThemeSection').default;
@@ -97,24 +102,18 @@ describe('radio activation in real React Native Web DOM', () => {
   it.each(['ios', 'android'] as const)('delegates native %s activation to Pressable without a web key handler', async platform => {
     const originalPlatform = Platform.OS;
     const onSelect = jest.fn();
-    let tree: ReactTestRenderer | undefined;
     try {
       Platform.OS = platform;
-      await act(async () => {
-        tree = createTestRenderer(createElement(RadioPressable, { onSelect, accessibilityState: { checked: true } }));
-      });
-      const pressable = tree!.root.findByType(Pressable);
-      expect(pressable.props.onKeyDown).toBeUndefined();
-      expect(pressable.props.accessibilityRole).toBe('radio');
-      expect(pressable.props.accessibilityState).toEqual({ checked: true });
-      await act(async () => { pressable.props.onPress(); });
+      mockPressableProps.mockClear();
+      await render(createElement(RadioPressable, { onSelect, accessibilityState: { checked: true } }));
+      const pressableProps = mockPressableProps.mock.calls.at(-1)![0];
+      expect(pressableProps.onKeyDown).toBeUndefined();
+      expect(pressableProps.accessibilityRole).toBe('radio');
+      expect(pressableProps.accessibilityState).toEqual({ checked: true });
+      await act(async () => { pressableProps.onPress(); });
       expect(onSelect).toHaveBeenCalledTimes(1);
     } finally {
-      try {
-        await act(async () => { tree?.unmount(); });
-      } finally {
-        Platform.OS = originalPlatform;
-      }
+      Platform.OS = originalPlatform;
     }
   });
 

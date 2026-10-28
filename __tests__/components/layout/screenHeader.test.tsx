@@ -61,29 +61,29 @@ describe('useScreenHeader (#2099)', () => {
     ;(useRouter as jest.Mock).mockReturnValue({ push: jest.fn(), back: jest.fn(), replace: jest.fn(), canGoBack: () => false })
   })
 
-  it('phone: строка рисует заголовок, (i) и действие, тело не рисует H1', () => {
+  it('phone: строка рисует заголовок, (i) и действие, тело не рисует H1', async () => {
     ;(global as any).__mockResponsive = phone
-    const { getAllByText, queryByTestId, getByLabelText, getByTestId, queryByText } = render(<Harness />)
+    const { getAllByText, queryByTestId, getByLabelText, getByTestId, queryByText } = await render(<Harness />)
     expect(getAllByText('Мои поездки')).toHaveLength(1)
     expect(queryByTestId('screen-header')).toBeNull()
     expect(queryByText('Fallback')).toBeNull()
     expect(getByLabelText('Организовать поездку')).toBeTruthy()
     expect(getByTestId('screen-header-info')).toBeTruthy()
-    fireEvent.press(getByTestId('plus'))
+    await fireEvent.press(getByTestId('plus'))
     expect(onPlus).toHaveBeenCalledTimes(1)
   })
 
-  it('phone: (i) открывает лист с пояснением', () => {
+  it('phone: (i) открывает лист с пояснением', async () => {
     ;(global as any).__mockResponsive = phone
-    const { getByTestId, queryByText, getByText } = render(<Harness />)
+    const { getByTestId, queryByText, getByText } = await render(<Harness />)
     expect(queryByText('Описание раздела')).toBeNull()
-    fireEvent.press(getByTestId('screen-header-info'))
+    await fireEvent.press(getByTestId('screen-header-info'))
     expect(getByText('Описание раздела')).toBeTruthy()
   })
 
-  it('desktop: ScreenHeader рисует H1, описание и кнопку с подписью', () => {
+  it('desktop: ScreenHeader рисует H1, описание и кнопку с подписью', async () => {
     ;(global as any).__mockResponsive = desktop
-    const { getAllByText, getByText, getByTestId, queryByTestId } = render(<Harness />)
+    const { getAllByText, getByText, getByTestId, queryByTestId } = await render(<Harness />)
     expect(getAllByText('Мои поездки')).toHaveLength(1)
     expect(getByText('Описание раздела')).toBeTruthy()
     expect(getByText('Организовать поездку')).toBeTruthy()
@@ -102,9 +102,9 @@ describe('useScreenHeader (#2099)', () => {
       return <ScreenHeader header={header} />
     }
 
-    it('phone: иконка строки с a11y-состоянием и без нажатия', () => {
+    it('phone: иконка строки с a11y-состоянием и без нажатия', async () => {
       ;(global as any).__mockResponsive = phone
-      const { getByTestId } = render(
+      const { getByTestId } = await render(
         <>
           <HeaderContextBar />
           <BusyScreen />
@@ -114,28 +114,28 @@ describe('useScreenHeader (#2099)', () => {
       expect(getByTestId('busy')).toBeDisabled()
     })
 
-    it('desktop: кнопка с подписью неактивна', () => {
+    it('desktop: кнопка с подписью неактивна', async () => {
       ;(global as any).__mockResponsive = desktop
-      const { getByTestId } = render(<BusyScreen />)
+      const { getByTestId } = await render(<BusyScreen />)
       expect(getByTestId('busy')).toBeDisabled()
     })
   })
 
-  it('снятие экрана возвращает заголовок из хлебных крошек', () => {
+  it('снятие экрана возвращает заголовок из хлебных крошек', async () => {
     ;(global as any).__mockResponsive = phone
-    const view = render(<Harness />)
-    view.unmount()
-    const bar = render(<HeaderContextBar />)
+    const view = await render(<Harness />)
+    await view.unmount()
+    const bar = await render(<HeaderContextBar />)
     expect(bar.getByText('Fallback')).toBeTruthy()
   })
 
-  it('web до гидратации (ширина 0): десктопная шапка с h1 в разметке, не телефонная', () => {
+  it('web до гидратации (ширина 0): десктопная шапка с h1 в разметке, не телефонная', async () => {
     const original = Platform.OS
     jest.replaceProperty(Platform, 'OS', 'web')
     try {
       ;(global as any).__mockResponsive = { width: 0, height: 0, isPhone: false, isLargePhone: false, isHydrated: false }
       // Бар монтируется только после гидратации, до неё в HTML лишь тело экрана.
-      const { getByTestId, getByText, getAllByText } = render(<Screen />)
+      const { getByTestId, getByText, getAllByText } = await render(<Screen />)
       expect(getByTestId('screen-header')).toBeTruthy()
       // Метка для критического CSS: на телефоне до гидратации блок скрыт без прыжка контента.
       expect(getByTestId('screen-header').props.dataSet).toEqual({ screenHeader: 'desktop' })

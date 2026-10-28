@@ -8,12 +8,12 @@ import orsRouteSummary from '../fixtures/tripRouteSummaryOrs.json'
 // График планировщика обязан показывать те же набор/сброс, что отдал бэк, иначе
 // сводка маршрута и профиль высот разойдутся на одной странице.
 describe('planner elevation profile parity with the route-summary response', () => {
-  it('derives the same ascent and descent as the API from the stored polyline', () => {
+  it('derives the same ascent and descent as the API from the stored polyline', async () => {
     const elevation = mapTripRouteElevation(orsRouteSummary)
     expect(elevation.provider).toBe('ors')
     expect(elevation.preview).not.toBeNull()
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useRouteElevationModel({
         preview: elevation.preview!,
         width: 600,
@@ -31,9 +31,9 @@ describe('planner elevation profile parity with the route-summary response', () 
     expect(elevation.descentM).toBe(orsRouteSummary.descent_m)
   })
 
-  it('measures the same route length and a plausible elevation band', () => {
+  it('measures the same route length and a plausible elevation band', async () => {
     const elevation = mapTripRouteElevation(orsRouteSummary)
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useRouteElevationModel({
         preview: elevation.preview!,
         width: 600,

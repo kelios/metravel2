@@ -124,7 +124,7 @@ const createTravel = (id: number) => ({
   name: `Travel ${id}`,
 } as any);
 
-function setupWeb(dataOverrides: Record<string, unknown> = {}) {
+async function setupWeb(dataOverrides: Record<string, unknown> = {}) {
   (Platform as any).OS = 'web';
   mockedUseQuery.mockImplementation(() => ({ data: { total: 3, facets: {} }, isLoading: false }));
 
@@ -185,7 +185,7 @@ function setupWeb(dataOverrides: Record<string, unknown> = {}) {
     ...dataOverrides,
   } as any);
 
-  const utils = render(
+  const utils = await render(
     <QueryClientProvider client={client}>
       <RouletteScreen />
     </QueryClientProvider>,
@@ -202,7 +202,7 @@ const COUNTRY_DICTIONARY = [
   { country_id: 65, title_ru: 'Германия' },
 ];
 
-function setupMobile(platform: 'web' | 'android' | 'ios' = 'web') {
+async function setupMobile(platform: 'web' | 'android' | 'ios' = 'web') {
   (Platform as any).OS = platform;
   mockedUseQuery.mockImplementation(({ queryKey }: { queryKey: readonly unknown[] }) =>
     queryKey[0] === 'filter-options'
@@ -271,7 +271,7 @@ function setupMobile(platform: 'web' | 'android' | 'ios' = 'web') {
     isRefreshing: false,
   } as any);
 
-  const utils = render(
+  const utils = await render(
     <QueryClientProvider client={client}>
       <RouletteScreen />
     </QueryClientProvider>,
@@ -290,71 +290,71 @@ describe('RouletteScreen', () => {
   });
 
   it('calls refetch when roulette center is pressed on desktop web', async () => {
-    const { getByLabelText, refetch, unmount } = setupWeb();
+    const { getByLabelText, refetch, unmount } = await setupWeb();
 
-    fireEvent.press(getByLabelText('Крутить рулетку'));
+    await fireEvent.press(getByLabelText('Крутить рулетку'));
 
     await waitFor(() => {
       expect(refetch).toHaveBeenCalled();
     });
 
-    unmount();
+    await unmount();
   });
 
   // #2375: пустая выдача под фильтрами — плитка «Ничего не нашли»; ошибка запроса
   // пустым состоянием не считается.
   it('shows roulette-empty when the completed request returned no travels', async () => {
-    const { getByTestId, unmount } = setupWeb({ data: [], total: 0, isEmpty: true });
+    const { getByTestId, unmount } = await setupWeb({ data: [], total: 0, isEmpty: true });
 
     await waitFor(() => {
       expect(getByTestId('roulette-empty')).toBeTruthy();
     });
 
-    unmount();
+    await unmount();
   });
 
   it('does not show roulette-empty on a failed request', async () => {
-    const { queryByTestId, unmount } = setupWeb({ data: [], total: 0, isEmpty: false, isError: true, status: 'error' });
+    const { queryByTestId, unmount } = await setupWeb({ data: [], total: 0, isEmpty: false, isError: true, status: 'error' });
 
     await waitFor(() => {
       expect(queryByTestId('roulette-empty')).toBeNull();
     });
 
-    unmount();
+    await unmount();
   });
 
   it('shows hint when there are travels but no selection yet', async () => {
-    const { getByText, unmount } = setupWeb();
+    const { getByText, unmount } = await setupWeb();
 
     await waitFor(() => {
       expect(getByText('Не знаешь, куда поехать?')).toBeTruthy();
     });
 
-    unmount();
+    await unmount();
   });
 
   // #2431: подставленные страны по умолчанию — не выбор пользователя.
   it('hides the mobile reset at default countries and names them in the summary', async () => {
-    const { queryByTestId, getByText, unmount } = setupMobile();
+    const { queryByTestId, getByText, unmount } = await setupMobile();
 
     await waitFor(() => {
       expect(getByText('Фильтры: Беларусь и ещё 1')).toBeTruthy();
     });
     expect(queryByTestId('mobile-reset-filters')).toBeNull();
 
-    unmount();
+    await unmount();
   });
 
   it.each(['web', 'android', 'ios'] as const)('restores default countries after selecting and resetting on %s', async (platform) => {
-    const { getByTestId, getByText, queryByTestId, unmount } = setupMobile(platform);
+    const { getByTestId, getByText, queryByTestId, unmount } = await setupMobile(platform);
 
     await waitFor(() => {
       expect(getByText('Фильтры: Беларусь и ещё 1')).toBeTruthy();
     });
     expect(queryByTestId('mobile-reset-filters')).toBeNull();
 
-    fireEvent.press(getByTestId('mobile-filters-button'));
-    fireEvent.press(getByTestId('select-germany'));
+    await fireEvent.press(getByTestId('mobile-filters-button'));
+    await fireEvent.press(getByTestId('select-germany'));
 
     await waitFor(() => {
       expect(getByText('Фильтры: Беларусь и ещё 2')).toBeTruthy();
@@ -362,7 +362,7 @@ describe('RouletteScreen', () => {
     expect(mockedUseRandomTravelData).toHaveBeenLastCalledWith(expect.objectContaining({
       queryParams: expect.objectContaining({ countries: [3, 65, 160] }),
     }));
-    fireEvent.press(getByTestId('mobile-reset-filters'));
+    await fireEvent.press(getByTestId('mobile-reset-filters'));
 
     await waitFor(() => {
       expect(getByText('Фильтры: Беларусь и ещё 1')).toBeTruthy();
@@ -372,38 +372,38 @@ describe('RouletteScreen', () => {
       queryParams: expect.objectContaining({ countries: [3, 160] }),
     }));
 
-    unmount();
+    await unmount();
   });
 
-  it('offers mobile reset for a year alone and removes it after clearing', () => {
-    const { getByTestId, queryByTestId, unmount } = setupMobile();
+  it('offers mobile reset for a year alone and removes it after clearing', async () => {
+    const { getByTestId, queryByTestId, unmount } = await setupMobile();
 
     expect(queryByTestId('mobile-reset-filters')).toBeNull();
-    fireEvent.press(getByTestId('mobile-filters-button'));
-    fireEvent.press(getByTestId('select-year'));
+    await fireEvent.press(getByTestId('mobile-filters-button'));
+    await fireEvent.press(getByTestId('select-year'));
     expect(mockedUseRandomTravelData).toHaveBeenLastCalledWith(expect.objectContaining({
       queryParams: expect.objectContaining({ countries: [3, 160], year: '2026' }),
     }));
 
-    fireEvent.press(getByTestId('mobile-reset-filters'));
+    await fireEvent.press(getByTestId('mobile-reset-filters'));
 
     expect(queryByTestId('mobile-reset-filters')).toBeNull();
     const lastCall = mockedUseRandomTravelData.mock.calls.at(-1)![0];
     expect(lastCall.queryParams).not.toHaveProperty('year');
     expect(lastCall.queryParams.countries).toEqual([3, 160]);
-    unmount();
+    await unmount();
   });
 
   it('toggles filters modal on mobile web', async () => {
-    const { getByTestId, queryByText, unmount } = setupMobile();
+    const { getByTestId, queryByText, unmount } = await setupMobile();
 
     expect(queryByText('ModernFilters')).toBeNull();
-    fireEvent.press(getByTestId('mobile-filters-button'));
+    await fireEvent.press(getByTestId('mobile-filters-button'));
 
     await waitFor(() => {
       expect(queryByText('ModernFilters')).toBeTruthy();
     });
 
-    unmount();
+    await unmount();
   });
 });

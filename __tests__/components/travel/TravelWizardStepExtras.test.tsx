@@ -1,11 +1,10 @@
-import { Text } from 'react-native'
 import { render, fireEvent } from '@testing-library/react-native'
 
 import TravelWizardStepExtras from '@/components/travel/TravelWizardStepExtras'
 import type { TravelFormData, TravelFilters } from '@/types/types'
 
 jest.mock('@/components/travel/TravelWizardHeader', () => (props: any) => {
-  const { View, Text, Pressable } = require('react-native')
+  const { View, Pressable, Text } = require('react-native')
   return (
     <View testID="wizard-header-stub">
       <Text>{props.title}</Text>
@@ -138,9 +137,9 @@ const emptyFilters: TravelFilters = {
   transports: [],
 } as unknown as TravelFilters
 
-const renderStep = (override: Partial<TravelFormData> = {}, props: any = {}) => {
+const renderStep = async (override: Partial<TravelFormData> = {}, props: any = {}) => {
   const setFormData = jest.fn()
-  const utils = render(
+  const utils = await render(
     <TravelWizardStepExtras
       currentStep={5}
       totalSteps={6}
@@ -159,20 +158,20 @@ const renderStep = (override: Partial<TravelFormData> = {}, props: any = {}) => 
 }
 
 describe('TravelWizardStepExtras (Шаг 5)', () => {
-  it('renders the grouped filters section with its title and the filters component', () => {
-    const { getByTestId, getAllByTestId, getByText } = renderStep()
+  it('renders the grouped filters section with its title and the filters component', async () => {
+    const { getByTestId, getAllByTestId, getByText } = await renderStep()
 
     expect(getByTestId('grouped-filters')).toBeTruthy()
     expect(getAllByTestId('filters-upsert')).toHaveLength(2)
     expect(getByText('Дополнительные параметры')).toBeTruthy()
   })
 
-  it('passes the expected display flags to FiltersUpsertComponent', () => {
-    const { getAllByTestId } = renderStep({}, { isSuperAdmin: true })
+  it('passes the expected display flags to FiltersUpsertComponent', async () => {
+    const { getAllByTestId } = await renderStep({}, { isSuperAdmin: true })
 
     const [requiredNode, optionalNode] = getAllByTestId('filters-upsert')
-    const requiredFlags = JSON.parse(requiredNode.findAllByType(Text)[0].props.children)
-    const optionalFlags = JSON.parse(optionalNode.findAllByType(Text)[0].props.children)
+    const requiredFlags = JSON.parse(requiredNode.queryAll(node => node.type === "Text", { includeSelf: true })[0].props.children)
+    const optionalFlags = JSON.parse(optionalNode.queryAll(node => node.type === "Text", { includeSelf: true })[0].props.children)
 
     expect(requiredFlags).toEqual({
       showCategories: true,
@@ -194,13 +193,13 @@ describe('TravelWizardStepExtras (Шаг 5)', () => {
 
   // The "visa" toggle is a boolean — any defined value (even false) counts as answered,
   // so the baseline filled count is 1 even with an otherwise-empty form.
-  it('reports filled count of 1/10 (visa answered) when no other fields are set', () => {
-    const { getByText } = renderStep()
+  it('reports filled count of 1/10 (visa answered) when no other fields are set', async () => {
+    const { getByText } = await renderStep()
     expect(getByText('filled:1/10')).toBeTruthy()
   })
 
-  it('increments the filled count as additional fields get populated', () => {
-    const { getByText } = renderStep({
+  it('increments the filled count as additional fields get populated', async () => {
+    const { getByText } = await renderStep({
       categories: ['1'],
       transports: ['2'],
       year: '2024',
@@ -210,10 +209,10 @@ describe('TravelWizardStepExtras (Шаг 5)', () => {
     expect(getByText('filled:4/10')).toBeTruthy()
   })
 
-  it('updates a field through FiltersUpsertComponent onFieldChange', () => {
-    const { getAllByLabelText, setFormData } = renderStep()
+  it('updates a field through FiltersUpsertComponent onFieldChange', async () => {
+    const { getAllByLabelText, setFormData } = await renderStep()
 
-    fireEvent.press(getAllByLabelText('set-budget')[0])
+    await fireEvent.press(getAllByLabelText('set-budget')[0])
 
     expect(setFormData).toHaveBeenCalledTimes(1)
     const updater = setFormData.mock.calls[0][0]
@@ -221,11 +220,11 @@ describe('TravelWizardStepExtras (Шаг 5)', () => {
     expect(next).toEqual(expect.objectContaining({ budget: '1000' }))
   })
 
-  it('fires onNext from the header primary action', () => {
+  it('fires onNext from the header primary action', async () => {
     const onNext = jest.fn()
-    const { getByText } = renderStep({}, { onNext })
+    const { getByText } = await renderStep({}, { onNext })
 
-    fireEvent.press(getByText('К публикации'))
+    await fireEvent.press(getByText('К публикации'))
     expect(onNext).toHaveBeenCalledTimes(1)
   })
 })

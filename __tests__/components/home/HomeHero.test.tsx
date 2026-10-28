@@ -81,18 +81,18 @@ describe('HomeHero Component', () => {
   })
 
   describe('Rendering', () => {
-    it('should render title correctly', () => {
-      const { getByText } = render(<HomeHero />)
+    it('should render title correctly', async () => {
+      const { getByText } = await render(<HomeHero />)
       expect(getByText(/Куда поехать/)).toBeTruthy()
     })
 
-    it('should render subtitle correctly', () => {
-      const { getByText } = render(<HomeHero />)
+    it('should render subtitle correctly', async () => {
+      const { getByText } = await render(<HomeHero />)
       expect(getByText(/Реальные маршруты/)).toBeTruthy()
     })
 
-    it('should render mood cards correctly', () => {
-      const { getByText } = render(<HomeHero />)
+    it('should render mood cards correctly', async () => {
+      const { getByText } = await render(<HomeHero />)
       expect(getByText('У воды')).toBeTruthy()
     })
 
@@ -101,8 +101,8 @@ describe('HomeHero Component', () => {
   })
 
   describe('Button Labels', () => {
-    it('should render only "Смотреть маршруты" CTA', () => {
-      const { getByText, queryByText } = render(<HomeHero travelsCount={5} />)
+    it('should render only "Смотреть маршруты" CTA', async () => {
+      const { getByText, queryByText } = await render(<HomeHero travelsCount={5} />)
       expect(getByText('Смотреть маршруты')).toBeTruthy()
       expect(queryByText('Добавить первую поездку')).toBeNull()
       expect(queryByText('Открыть мою книгу')).toBeNull()
@@ -110,11 +110,11 @@ describe('HomeHero Component', () => {
   })
 
   describe('Navigation', () => {
-    it('should navigate to search when clicking "Смотреть маршруты"', () => {
-      const { getByText } = render(<HomeHero />)
+    it('should navigate to search when clicking "Смотреть маршруты"', async () => {
+      const { getByText } = await render(<HomeHero />)
       const button = getByText('Смотреть маршруты')
 
-      fireEvent.press(button)
+      await fireEvent.press(button)
 
       expect(mockPush).toHaveBeenCalledWith('/search')
       expect(mockQueueAnalyticsEvent).toHaveBeenCalledWith(
@@ -122,10 +122,10 @@ describe('HomeHero Component', () => {
       )
     })
 
-    it('native: book cover link goes through the single openExternalUrl decision point (#2144)', () => {
-      const { getByLabelText } = render(<HomeHero />)
+    it('native: book cover link goes through the single openExternalUrl decision point (#2144)', async () => {
+      const { getByLabelText } = await render(<HomeHero />)
 
-      fireEvent.press(getByLabelText(/Открыть маршрут недели: Озеро Сорапис/))
+      await fireEvent.press(getByLabelText(/Открыть маршрут недели: Озеро Сорапис/))
 
       // openExternalUrl opens a site path that has an app screen via
       // expo-router (see the book-cover invariant below), so no own router.push.
@@ -139,12 +139,12 @@ describe('HomeHero Component', () => {
   })
 
   describe('Responsive Design', () => {
-    it('should render on different screen sizes', () => {
-      const { getByText } = render(<HomeHero />)
+    it('should render on different screen sizes', async () => {
+      const { getByText } = await render(<HomeHero />)
       expect(getByText(/Куда поехать/)).toBeTruthy()
     })
 
-    it('keeps compact hero layout on intermediate widths before the book breakpoint', () => {
+    it('keeps compact hero layout on intermediate widths before the book breakpoint', async () => {
       Object.assign(mockResponsiveState, {
         isLargeTablet: true,
         isDesktop: false,
@@ -152,13 +152,13 @@ describe('HomeHero Component', () => {
         isPortrait: true,
       })
 
-      const { getByText } = render(<HomeHero />)
+      const { getByText } = await render(<HomeHero />)
 
       expect(getByText('Популярные маршруты')).toBeTruthy()
       expect(getByText('Маршрут недели')).toBeTruthy()
     })
 
-    it('lets the tablet media box derive its height from its real flex-column width', () => {
+    it('lets the tablet media box derive its height from its real flex-column width', async () => {
       Object.assign(mockResponsiveState, {
         isDesktop: false,
         isTablet: true,
@@ -166,7 +166,7 @@ describe('HomeHero Component', () => {
         width: 1025,
       })
 
-      render(<HomeHero />)
+      await render(<HomeHero />)
 
       const tabletMedia = mockImageCardMedia.mock.calls
         .map(([props]) => props)
@@ -178,14 +178,14 @@ describe('HomeHero Component', () => {
       )
     })
 
-    it('renders every home hero media surface with contain fit and blur backdrop', () => {
+    it('renders every home hero media surface with contain fit and blur backdrop', async () => {
       Object.assign(mockResponsiveState, {
         isDesktop: false,
         width: 1025,
         isPortrait: true,
       })
 
-      render(<HomeHero />)
+      await render(<HomeHero />)
 
       expect(mockImageCardMedia).toHaveBeenCalled()
       mockImageCardMedia.mock.calls.forEach(([props]) => {
@@ -195,7 +195,7 @@ describe('HomeHero Component', () => {
       })
     })
 
-    it('lets the featured media derive its height from the real container width', () => {
+    it('lets the featured media derive its height from the real container width', async () => {
       Object.assign(mockResponsiveState, {
         isDesktop: false,
         isPhone: true,
@@ -203,7 +203,7 @@ describe('HomeHero Component', () => {
         width: 390,
       })
 
-      render(<HomeHero />)
+      await render(<HomeHero />)
 
       const featuredMedia = mockImageCardMedia.mock.calls
         .map(([props]) => props)
@@ -223,14 +223,14 @@ describe('HomeHero Component', () => {
   })
 
   describe('Book slider styling', () => {
-    it('renders the desktop hero book shell without relying on post-import platform mutation', () => {
+    it('renders the desktop hero book shell without relying on post-import platform mutation', async () => {
       const previousPlatform = Platform.OS
       const previousSelect = Platform.select
 
       Platform.OS = 'web'
       Platform.select = (options: any) => options.web ?? options.default
 
-      const { getByTestId, getByText } = render(<HomeHero />)
+      const { getByTestId, getByText } = await render(<HomeHero />)
 
       expect(getByTestId('home-hero-left-page')).toBeTruthy()
       expect(getByText('Популярные маршруты')).toBeTruthy()
@@ -241,8 +241,8 @@ describe('HomeHero Component', () => {
   })
 
   describe('Accessibility', () => {
-    it('should have accessible buttons with proper labels', () => {
-      const { getByLabelText } = render(<HomeHero />)
+    it('should have accessible buttons with proper labels', async () => {
+      const { getByLabelText } = await render(<HomeHero />)
       expect(getByLabelText('Смотреть маршруты')).toBeTruthy()
     })
   })

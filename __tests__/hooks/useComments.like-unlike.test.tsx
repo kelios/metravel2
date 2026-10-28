@@ -56,7 +56,7 @@ describe('useComments - Like/Unlike integration', () => {
     mockedCommentsApi.likeComment = jest.fn().mockResolvedValue(commentWithoutIsLiked);
 
     // Загружаем комментарии
-    const { result: commentsResult } = renderHook(
+    const { result: commentsResult } = await renderHook(
       () => useTravelComments(1, 1),
       { wrapper }
     );
@@ -70,7 +70,7 @@ describe('useComments - Like/Unlike integration', () => {
     expect(commentsResult.current.data?.[0].is_liked).toBe(false);
 
     // Теперь лайкаем комментарий
-    const { result: likeResult } = renderHook(
+    const { result: likeResult } = await renderHook(
       () => useLikeComment(),
       { wrapper }
     );
@@ -105,7 +105,7 @@ describe('useComments - Like/Unlike integration', () => {
     mockedCommentsApi.unlikeComment = jest.fn().mockResolvedValue(undefined);
 
     // Загружаем комментарии
-    const { result: commentsResult } = renderHook(
+    const { result: commentsResult } = await renderHook(
       () => useTravelComments(1, 1),
       { wrapper }
     );
@@ -117,7 +117,7 @@ describe('useComments - Like/Unlike integration', () => {
     expect(commentsResult.current.data?.[0].is_liked).toBe(true);
 
     // Теперь отлайкаем комментарий
-    const { result: unlikeResult } = renderHook(
+    const { result: unlikeResult } = await renderHook(
       () => useUnlikeComment(),
       { wrapper }
     );
@@ -150,7 +150,7 @@ describe('useComments - Like/Unlike integration', () => {
     mockedCommentsApi.unlikeComment = jest.fn().mockResolvedValue(undefined);
 
     // Загружаем комментарии
-    const { result: commentsResult } = renderHook(
+    const { result: commentsResult } = await renderHook(
       () => useTravelComments(1, 1),
       { wrapper }
     );
@@ -160,7 +160,7 @@ describe('useComments - Like/Unlike integration', () => {
     });
 
     // Шаг 1: Лайкаем
-    const { result: likeResult } = renderHook(
+    const { result: likeResult } = await renderHook(
       () => useLikeComment(),
       { wrapper }
     );
@@ -179,7 +179,7 @@ describe('useComments - Like/Unlike integration', () => {
     expect(cachedData?.[0].likes_count).toBe(6);
 
     // Шаг 2: Отлайкаем
-    const { result: unlikeResult } = renderHook(
+    const { result: unlikeResult } = await renderHook(
       () => useUnlikeComment(),
       { wrapper }
     );
@@ -217,7 +217,7 @@ describe('useComments - Like/Unlike integration', () => {
     mockedCommentsApi.likeComment = jest.fn().mockRejectedValue(new Error('Network error'));
 
     // Загружаем комментарии
-    const { result: commentsResult } = renderHook(
+    const { result: commentsResult } = await renderHook(
       () => useTravelComments(1, 1),
       { wrapper }
     );
@@ -234,7 +234,7 @@ describe('useComments - Like/Unlike integration', () => {
     expect(originalData?.[0].likes_count).toBe(5);
 
     // Лайкаем с ошибкой
-    const { result: likeResult } = renderHook(
+    const { result: likeResult } = await renderHook(
       () => useLikeComment(),
       { wrapper }
     );
@@ -260,7 +260,7 @@ describe('useComments - Like/Unlike integration', () => {
     mockedCommentsApi.unlikeComment = jest.fn().mockRejectedValue(new Error('Network error'));
 
     // Загружаем комментарии
-    const { result: commentsResult } = renderHook(
+    const { result: commentsResult } = await renderHook(
       () => useTravelComments(1, 1),
       { wrapper }
     );
@@ -277,7 +277,7 @@ describe('useComments - Like/Unlike integration', () => {
     expect(originalData?.[0].likes_count).toBe(6);
 
     // Отлайкаем с ошибкой
-    const { result: unlikeResult } = renderHook(
+    const { result: unlikeResult } = await renderHook(
       () => useUnlikeComment(),
       { wrapper }
     );

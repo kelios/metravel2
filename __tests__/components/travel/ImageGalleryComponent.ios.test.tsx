@@ -56,8 +56,8 @@ describe('ImageGalleryComponent.ios', () => {
     jest.clearAllMocks();
   });
 
-  it('renders touch-first gallery and camera actions without drag-and-drop copy', () => {
-    const screen = render(
+  it('renders touch-first gallery and camera actions without drag-and-drop copy', async () => {
+    const screen = await render(
       <ImageGalleryComponentIOS
         collection="gallery"
         idTravel="123"
@@ -77,7 +77,7 @@ describe('ImageGalleryComponent.ios', () => {
 
     const onChange = jest.fn();
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ImageGalleryComponentIOS
         collection="gallery"
         idTravel="123"
@@ -87,7 +87,7 @@ describe('ImageGalleryComponent.ios', () => {
     );
 
     await act(async () => {
-      fireEvent.press(getByTestId('gallery-ios.pick'));
+      await fireEvent.press(getByTestId('gallery-ios.pick'));
     });
 
     await waitFor(() => {
@@ -104,7 +104,7 @@ describe('ImageGalleryComponent.ios', () => {
   it('deletes by backend id and updates onChange; does not call deleteImage for non-numeric ids', async () => {
     const onChange = jest.fn();
 
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <ImageGalleryComponentIOS
         collection="gallery"
         idTravel="123"
@@ -125,11 +125,11 @@ describe('ImageGalleryComponent.ios', () => {
     });
 
     // Delete server image: should call delete API and remove from list
-    fireEvent.press(getByTestId('gallery-ios.delete:123'));
+    await fireEvent.press(getByTestId('gallery-ios.delete:123'));
     await waitFor(() => {
       expect(queryByTestId('confirm-dialog')).toBeTruthy();
     });
-    fireEvent.press(getByTestId('confirm-dialog.confirm'));
+    await fireEvent.press(getByTestId('confirm-dialog.confirm'));
 
     await waitFor(() => {
       expect(deleteImage).toHaveBeenCalledWith('123');
@@ -142,11 +142,11 @@ describe('ImageGalleryComponent.ios', () => {
     });
 
     // Delete legacy image: should not call delete API
-    fireEvent.press(getByTestId('gallery-ios.delete:legacy-0'));
+    await fireEvent.press(getByTestId('gallery-ios.delete:legacy-0'));
     await waitFor(() => {
       expect(queryByTestId('confirm-dialog')).toBeTruthy();
     });
-    fireEvent.press(getByTestId('confirm-dialog.confirm'));
+    await fireEvent.press(getByTestId('confirm-dialog.confirm'));
 
     await waitFor(() => {
       expect(deleteImage).toHaveBeenCalledTimes(1);
@@ -157,8 +157,8 @@ describe('ImageGalleryComponent.ios', () => {
     });
   });
 
-  it('uses the media-overlay text token for active move arrows in dark theme', () => {
-    const { getByTestId } = render(
+  it('uses the media-overlay text token for active move arrows in dark theme', async () => {
+    const { getByTestId } = await render(
       <ThemeContext.Provider
         value={{ theme: 'dark', isDark: true, setTheme: jest.fn(), toggleTheme: jest.fn() }}
       >

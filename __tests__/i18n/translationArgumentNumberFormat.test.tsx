@@ -74,7 +74,7 @@ describe('#1468 число в аргументе перевода печатае
     async (locale, distance, elevation) => {
       await i18n.changeLanguage(locale)
 
-      const { getAllByText, getByText } = render(
+      const { getAllByText, getByText } = await render(
         <RouteElevationProfile title="Профиль высот" preview={preview} />,
       )
 

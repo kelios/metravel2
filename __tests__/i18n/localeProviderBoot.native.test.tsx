@@ -34,14 +34,14 @@ describe('LocaleProvider (native) boot with a stored locale (#2239)', () => {
   it('mounts the app once, already in the stored language', async () => {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, mode: 'explicit', locale: 'pl' }))
 
-    render(
+    await render(
       <LocaleProvider>
         <Screen />
       </LocaleProvider>,
     )
-    expect(screen.queryByText(/^screen:/)).toBeNull()
 
-    expect(await screen.findByText('screen:pl')).toBeTruthy()
+    expect(screen.getByText('screen:pl')).toBeTruthy()
+    expect(screen.queryByText('screen:ru')).toBeNull()
     await act(async () => {})
     expect(mounts).toEqual(['pl'])
   })
@@ -58,7 +58,7 @@ describe('LocaleProvider (native) boot with a stored locale (#2239)', () => {
       useEffect(() => { mounts.push(i18n.resolvedLanguage ?? '') }, [])
       return <Text>{`${locale}:${id}:${draft}`}</Text>
     }
-    render(<LocaleProvider><StatefulScreen /></LocaleProvider>)
+    await render(<LocaleProvider><StatefulScreen /></LocaleProvider>)
     await screen.findByText('ru:null:')
     await act(async () => edit())
     for (const locale of ['en', 'pl', 'ru'] as const) {
@@ -69,7 +69,7 @@ describe('LocaleProvider (native) boot with a stored locale (#2239)', () => {
   })
 
   it('mounts once in the active language when nothing is stored', async () => {
-    render(
+    await render(
       <LocaleProvider>
         <Screen />
       </LocaleProvider>,

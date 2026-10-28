@@ -35,12 +35,12 @@ it.each([
   ['privacy settings', PrivacySettings, '/profile'],
   ['blocked users', BlockedUsers, '/settings'],
   ['missing route', Missing, '/'],
-] as const)('%s uses history when available and a safe fallback on direct entry', (_name, Screen, fallback) => {
+] as const)('%s uses history when available and a safe fallback on direct entry', async (_name, Screen, fallback) => {
   for (const hasHistory of [false, true]) {
     jest.clearAllMocks()
     mockRouter.canGoBack.mockReturnValue(hasHistory)
-    const screen = render(<Screen />)
-    fireEvent.press(screen.getByRole('button', { name: 'Назад' }))
+    const screen = await render(<Screen />)
+    await fireEvent.press(screen.getByRole('button', { name: 'Назад' }))
     if (hasHistory) {
       expect(mockRouter.back).toHaveBeenCalledTimes(1)
       expect(mockRouter.replace).not.toHaveBeenCalled()
@@ -48,20 +48,20 @@ it.each([
       expect(mockRouter.back).not.toHaveBeenCalled()
       expect(mockRouter.replace).toHaveBeenCalledWith(fallback)
     }
-    screen.unmount()
+    await screen.unmount()
   }
 })
 
-it('never mounts a protected blocked-users query while auth loads or for a guest', () => {
+it('never mounts a protected blocked-users query while auth loads or for a guest', async () => {
   mockAuth = { authReady: false, isAuthenticated: false }
-  const screen = render(<BlockedUsers />)
+  const screen = await render(<BlockedUsers />)
   expect(screen.getByTestId('blocked-users-auth-loading')).toBeTruthy()
   expect(mockBlockedList).not.toHaveBeenCalled()
   mockAuth = { authReady: true, isAuthenticated: false }
-  screen.rerender(<BlockedUsers />)
+  await screen.rerender(<BlockedUsers />)
   expect(mockBlockedList).not.toHaveBeenCalled()
   mockAuth = { authReady: true, isAuthenticated: true }
-  screen.rerender(<BlockedUsers />)
+  await screen.rerender(<BlockedUsers />)
   expect(screen.getByTestId('protected-blocked-list')).toBeTruthy()
 })
 

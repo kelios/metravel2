@@ -174,10 +174,10 @@ describe('TripRouteExportMenu', () => {
     setPlatformOS(originalOS);
   });
 
-  it('keeps supported export and navigator actions visible on Android', () => {
+  it('keeps supported export and navigator actions visible on Android', async () => {
     setPlatformOS('android');
 
-    const { getByTestId, getByText, getByLabelText } = render(<TripRouteExportMenu trip={trip} />);
+    const { getByTestId, getByText, getByLabelText } = await render(<TripRouteExportMenu trip={trip} />);
 
     expect(shouldRenderTripRouteExportMenu('android')).toBe(true);
     expect(getByTestId('trip-route-export')).toBeTruthy();
@@ -195,10 +195,10 @@ describe('TripRouteExportMenu', () => {
     expect(getByTestId('trip-route-export-native-import-hint')).toBeTruthy();
   });
 
-  it('keeps the route export menu available outside Android', () => {
+  it('keeps the route export menu available outside Android', async () => {
     setPlatformOS('web');
 
-    const { getByTestId, getByText } = render(<TripRouteExportMenu trip={trip} />);
+    const { getByTestId, getByText } = await render(<TripRouteExportMenu trip={trip} />);
 
     expect(shouldRenderTripRouteExportMenu('web')).toBe(true);
     expect(shouldRenderTripRouteExportMenu('ios')).toBe(true);
@@ -210,7 +210,7 @@ describe('TripRouteExportMenu', () => {
     expect(getByText('Скачать GPX')).toBeTruthy();
   });
 
-  it('does not fetch a second geometry source for an already routed export', () => {
+  it('does not fetch a second geometry source for an already routed export', async () => {
     setPlatformOS('web');
     const routedTrip: PlannedTrip = {
       ...trip,
@@ -227,7 +227,7 @@ describe('TripRouteExportMenu', () => {
       },
     };
 
-    render(<TripRouteExportMenu trip={routedTrip} />);
+    await render(<TripRouteExportMenu trip={routedTrip} />);
 
     expect(mockUseTripRouteElevation).toHaveBeenCalledWith(trip.id, { enabled: false });
   });
@@ -255,7 +255,7 @@ describe('TripRouteExportMenu', () => {
     };
     mockUsePlannedTripRouteFiles.mockReturnValue({ data: [loopsFile, daysFile] });
 
-    const { getByTestId, getAllByTestId, queryByTestId } = render(
+    const { getByTestId, getAllByTestId, queryByTestId } = await render(
       <TripRouteExportMenu trip={trip} />,
     );
 
@@ -270,7 +270,7 @@ describe('TripRouteExportMenu', () => {
     // Вкладка «Экспорт» оригиналы только скачивает.
     expect(queryByTestId('trip-route-export-remove-original')).toBeNull();
 
-    fireEvent.press(cards[1].getByTestId('trip-route-export-download-original'));
+    await fireEvent.press(cards[1].getByTestId('trip-route-export-download-original'));
     await waitFor(() => expect(mockDownloadOriginal).toHaveBeenCalledTimes(1));
     expect(mockDownloadOriginal).toHaveBeenCalledWith(trip.id, daysFile);
   });
@@ -288,9 +288,9 @@ describe('TripRouteExportMenu', () => {
       }],
     });
     mockDownloadOriginal.mockResolvedValueOnce(false);
-    const { findByTestId, getByTestId } = render(<TripRouteExportMenu trip={trip} />);
+    const { findByTestId, getByTestId } = await render(<TripRouteExportMenu trip={trip} />);
 
-    fireEvent.press(getByTestId('trip-route-export-download-original'));
+    await fireEvent.press(getByTestId('trip-route-export-download-original'));
 
     const error = await findByTestId('trip-route-export-original-download-error');
     expect(
@@ -300,7 +300,7 @@ describe('TripRouteExportMenu', () => {
     ).toBe(error);
   });
 
-  it('never exposes a cached owner-only original to a non-owner', () => {
+  it('never exposes a cached owner-only original to a non-owner', async () => {
     setPlatformOS('web');
     mockUsePlannedTripRouteFiles.mockReturnValue({
       data: [{
@@ -313,7 +313,7 @@ describe('TripRouteExportMenu', () => {
       }],
     });
 
-    const { queryByTestId } = render(
+    const { queryByTestId } = await render(
       <TripRouteExportMenu trip={{ ...trip, isOwner: false }} />,
     );
 
@@ -323,9 +323,9 @@ describe('TripRouteExportMenu', () => {
 
   it('creates and shares a real GPX before opening Garmin import on Android', async () => {
     setPlatformOS('android');
-    const { getByTestId } = render(<TripRouteExportMenu trip={trip} />);
+    const { getByTestId } = await render(<TripRouteExportMenu trip={trip} />);
 
-    fireEvent.press(getByTestId('trip-route-export-garmin'));
+    await fireEvent.press(getByTestId('trip-route-export-garmin'));
 
     await waitFor(() => expect(mockSaveRouteExportFile).toHaveBeenCalledTimes(1));
     expect(mockSaveRouteExportFile.mock.calls[0][0]).toEqual(
@@ -342,9 +342,9 @@ describe('TripRouteExportMenu', () => {
   it('does not open Komoot import when native GPX handoff fails', async () => {
     setPlatformOS('android');
     mockSaveRouteExportFile.mockResolvedValue(false);
-    const { findByTestId, getByTestId } = render(<TripRouteExportMenu trip={trip} />);
+    const { findByTestId, getByTestId } = await render(<TripRouteExportMenu trip={trip} />);
 
-    fireEvent.press(getByTestId('trip-route-export-komoot'));
+    await fireEvent.press(getByTestId('trip-route-export-komoot'));
 
     expect(await findByTestId('trip-route-export-error')).toBeTruthy();
     expect(mockOpenExternalUrl).not.toHaveBeenCalled();
@@ -367,7 +367,7 @@ describe('TripRouteExportMenu', () => {
     expect(input.waypoints).toHaveLength(2);
   });
 
-  it('labels direct fallback exports as approximate', () => {
+  it('labels direct fallback exports as approximate', async () => {
     const directTrip: PlannedTrip = {
       ...trip,
       routingState: {
@@ -378,7 +378,7 @@ describe('TripRouteExportMenu', () => {
       },
     };
 
-    const { getByTestId } = render(<TripRouteExportMenu trip={directTrip} />);
+    const { getByTestId } = await render(<TripRouteExportMenu trip={directTrip} />);
     const input = buildTripRouteExportInput(directTrip);
 
     // #2057: вкладка «Экспорт» карты не показывает, поэтому причина здесь своя —
@@ -400,7 +400,7 @@ describe('TripRouteExportMenu', () => {
         warnings: [],
       },
     };
-    const { getByTestId, queryByTestId } = render(
+    const { getByTestId, queryByTestId } = await render(
       <TripRouteExportMenu trip={inconsistentTrip} />,
     );
 
@@ -423,7 +423,7 @@ describe('TripRouteExportMenu', () => {
       [27.59, 53.908],
       [27.6, 53.91],
     ];
-    act(() => {
+    await act(() => {
       mockRepairEngine.onResult?.({
         loading: false,
         error: null,
@@ -438,7 +438,7 @@ describe('TripRouteExportMenu', () => {
 
     expect(queryByTestId('trip-route-export-approximate')).toBeNull();
 
-    fireEvent.press(getByTestId('trip-route-export-garmin'));
+    await fireEvent.press(getByTestId('trip-route-export-garmin'));
     await waitFor(() => expect(mockSaveRouteExportFile).toHaveBeenCalledTimes(1));
     const exported = mockSaveRouteExportFile.mock.calls[0][0] as { content: string };
     expect((exported.content.match(/<trkpt/g) ?? [])).toHaveLength(denseGeometry.length);

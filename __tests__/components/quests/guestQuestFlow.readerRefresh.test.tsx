@@ -130,7 +130,7 @@ describe('перенос гостевого прогресса доходит д
 
   /** Экран смонтирован и дочитал прохождение раньше, чем перенос дошёл до сервера. */
   const mountScreenBeforeMigration = async () => {
-    const rendered = renderHook(() => useQuestScreenProgress())
+    const rendered = await renderHook(() => useQuestScreenProgress())
     await waitFor(() => expect(rendered.result.current.sync.progressLoading).toBe(false))
     expect(rendered.result.current.sync.progress).toBeNull()
     expect(rendered.result.current.sync.progressMissing).toBe(true)
@@ -157,7 +157,7 @@ describe('перенос гостевого прогресса доходит д
 
   it('несинхронизированный ответ экрана переживает пришедший перенос', async () => {
     const { result } = await mountScreenBeforeMigration()
-    act(() => {
+    await act(() => {
       result.current.wizard.setAnswers((answers) => ({ ...answers, 'step-4': 'мост' }))
     })
 
@@ -233,7 +233,7 @@ describe('перенос гостевого прогресса доходит д
       created_at: '2026-09-24T09:01:00Z',
       updated_at: '2026-09-24T09:01:00Z',
     }
-    act(() => {
+    await act(() => {
       syncQuestProgressReaders(QUEST_ID, '169', laterRow, beginQuestProgressWrite())
     })
     await waitFor(() => expect(result.current.sync.progress?.id).toBe(462))

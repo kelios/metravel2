@@ -108,47 +108,47 @@ describe('ShareButtons', () => {
       mockPrintAvailable = true;
     });
 
-    it('на сайте кнопка есть', () => {
+    it('на сайте кнопка есть', async () => {
       (Platform.OS as any) = 'web';
-      expect(render(<ShareButtons travel={mockTravel} />).queryByText('PDF / книга')).not.toBeNull();
+      expect(await (await render(<ShareButtons travel={mockTravel} />)).queryByText('PDF / книга')).not.toBeNull();
     });
 
-    it.each(['ios', 'android'])('в приложении %s кнопка есть, когда в сборке есть модуль печати', (os) => {
+    it.each(['ios', 'android'])('в приложении %s кнопка есть, когда в сборке есть модуль печати', async (os) => {
       (Platform.OS as any) = os;
-      expect(render(<ShareButtons travel={mockTravel} />).queryByText('PDF / книга')).not.toBeNull();
+      expect(await (await render(<ShareButtons travel={mockTravel} />)).queryByText('PDF / книга')).not.toBeNull();
     });
 
-    it.each(['ios', 'android'])('в сборке приложения %s без модуля печати кнопки нет', (os) => {
+    it.each(['ios', 'android'])('в сборке приложения %s без модуля печати кнопки нет', async (os) => {
       (Platform.OS as any) = os;
       mockPrintAvailable = false;
-      expect(render(<ShareButtons travel={mockTravel} />).queryByText('PDF / книга')).toBeNull();
+      expect(await (await render(<ShareButtons travel={mockTravel} />)).queryByText('PDF / книга')).toBeNull();
     });
 
     it.each(['ios', 'web'])('#2274 %s: на время сборки кнопка отменяет её, а не заблокирована', async (os) => {
       (Platform.OS as any) = os;
-      const view = render(<ShareButtons travel={mockTravel} />);
-      fireEvent.press(view.getByText('PDF / книга'));
+      const view = await render(<ShareButtons travel={mockTravel} />);
+      await fireEvent.press(view.getByText('PDF / книга'));
 
       const progressButton = await view.findByText('PDF 85%');
-      fireEvent.press(progressButton);
+      await fireEvent.press(progressButton);
 
       expect(mockCancelPdfExport).toHaveBeenCalledTimes(1);
       expect(view.getByLabelText(/Отменить/)).toBeTruthy();
     });
   });
 
-  it('should render share buttons', () => {
-    const { getByText } = render(<ShareButtons travel={mockTravel} />);
+  it('should render share buttons', async () => {
+    const { getByText } = await render(<ShareButtons travel={mockTravel} />);
 
     expect(getByText('Поделиться')).toBeTruthy();
   });
 
   it('should copy link to clipboard on web', async () => {
     (Platform.OS as any) = 'web';
-    const { getByLabelText } = render(<ShareButtons travel={mockTravel} />);
+    const { getByLabelText } = await render(<ShareButtons travel={mockTravel} />);
 
     const copyButton = getByLabelText('Копировать ссылку');
-    fireEvent.press(copyButton);
+    await fireEvent.press(copyButton);
 
     await waitFor(() => {
       if (typeof window !== 'undefined' && (window as any).navigator?.clipboard) {
@@ -161,10 +161,10 @@ describe('ShareButtons', () => {
 
   it('should copy link to clipboard on mobile', async () => {
     (Platform.OS as any) = 'ios';
-    const { getByLabelText } = render(<ShareButtons travel={mockTravel} />);
+    const { getByLabelText } = await render(<ShareButtons travel={mockTravel} />);
 
     const copyButton = getByLabelText('Копировать ссылку');
-    fireEvent.press(copyButton);
+    await fireEvent.press(copyButton);
 
     await waitFor(() => {
       expect(Clipboard.setStringAsync).toHaveBeenCalledWith(
@@ -175,10 +175,10 @@ describe('ShareButtons', () => {
 
   it('should show toast after copying', async () => {
     (Platform.OS as any) = 'ios';
-    const { getByLabelText } = render(<ShareButtons travel={mockTravel} />);
+    const { getByLabelText } = await render(<ShareButtons travel={mockTravel} />);
 
     const copyButton = getByLabelText('Копировать ссылку');
-    fireEvent.press(copyButton);
+    await fireEvent.press(copyButton);
 
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(
@@ -189,10 +189,10 @@ describe('ShareButtons', () => {
 
   it('should render native share action and use Share API on mobile', async () => {
     (Platform.OS as any) = 'ios';
-    const { getByLabelText } = render(<ShareButtons travel={mockTravel} />);
+    const { getByLabelText } = await render(<ShareButtons travel={mockTravel} />);
 
     const nativeShareButton = getByLabelText('Открыть системное меню Поделиться');
-    fireEvent.press(nativeShareButton);
+    await fireEvent.press(nativeShareButton);
 
     await waitFor(() => {
       expect(Share.share).toHaveBeenCalledWith(
@@ -205,30 +205,30 @@ describe('ShareButtons', () => {
   });
 
   it('should open Telegram share on button press', async () => {
-    const { getByLabelText } = render(<ShareButtons travel={mockTravel} />);
+    const { getByLabelText } = await render(<ShareButtons travel={mockTravel} />);
 
     const telegramButton = getByLabelText('Поделиться в Telegram');
-    fireEvent.press(telegramButton);
+    await fireEvent.press(telegramButton);
 
     await waitFor(() => {
       expect(openExternalUrlInNewTab).toHaveBeenCalledWith(expect.stringContaining('t.me/share/url'));
     });
   });
 
-  it('should render grouped share sections on default variant', () => {
-    const { getByText } = render(<ShareButtons travel={mockTravel} />);
+  it('should render grouped share sections on default variant', async () => {
+    const { getByText } = await render(<ShareButtons travel={mockTravel} />);
 
     expect(getByText('Быстрые действия')).toBeTruthy();
     expect(getByText('Соцсети')).toBeTruthy();
   });
 
-  it('should use custom URL when provided', () => {
+  it('should use custom URL when provided', async () => {
     (Platform.OS as any) = 'ios';
     const customUrl = 'https://custom-url.com/travel';
-    const { getByLabelText } = render(<ShareButtons travel={mockTravel} url={customUrl} />);
+    const { getByLabelText } = await render(<ShareButtons travel={mockTravel} url={customUrl} />);
 
     const copyButton = getByLabelText('Копировать ссылку');
-    fireEvent.press(copyButton);
+    await fireEvent.press(copyButton);
 
     expect(Clipboard.setStringAsync).toHaveBeenCalledWith(customUrl);
   });
@@ -237,10 +237,10 @@ describe('ShareButtons', () => {
     (Clipboard.setStringAsync as jest.Mock).mockRejectedValueOnce(new Error('Copy failed'));
     (Platform.OS as any) = 'ios';
 
-    const { getByLabelText } = render(<ShareButtons travel={mockTravel} />);
+    const { getByLabelText } = await render(<ShareButtons travel={mockTravel} />);
 
     const copyButton = getByLabelText('Копировать ссылку');
-    fireEvent.press(copyButton);
+    await fireEvent.press(copyButton);
 
     await waitFor(() => {
       expect(mockShowToast).toHaveBeenCalledWith(
@@ -254,12 +254,12 @@ describe('ShareButtons', () => {
 
     jest.useFakeTimers();
 
-    const { getByLabelText } = render(<ShareButtons travel={mockTravel} />);
+    const { getByLabelText } = await render(<ShareButtons travel={mockTravel} />);
 
     const copyButton = getByLabelText('Копировать ссылку');
 
     await act(async () => {
-      fireEvent.press(copyButton);
+      await fireEvent.press(copyButton);
     });
 
     expect(getByLabelText('Копировать ссылку')).toBeTruthy();

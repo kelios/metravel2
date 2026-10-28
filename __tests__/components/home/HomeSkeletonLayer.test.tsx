@@ -21,16 +21,16 @@ const colors = {
 // `shouldShowSkeleton`), поэтому web-вариант пустой и не тянет в веб-чанк главной
 // 12 KB разметки `HomePageSkeleton`. Native-экран при этом обязан остаться.
 describe('HomeSkeletonLayer', () => {
-  it('native variant renders the skeleton layer', () => {
+  it('native variant renders the skeleton layer', async () => {
     const { HomeSkeletonLayer } = require('@/components/home/HomeSkeletonLayer')
-    const screen = render(<HomeSkeletonLayer colors={colors} />)
+    const screen = await render(<HomeSkeletonLayer colors={colors} />)
     expect(screen.getByTestId('home-skeleton-layer')).toBeTruthy()
     expect(screen.getByTestId('mock-home-page-skeleton')).toBeTruthy()
   })
 
-  it('web variant renders nothing', () => {
+  it('web variant renders nothing', async () => {
     const { HomeSkeletonLayer } = require('@/components/home/HomeSkeletonLayer.web')
-    const screen = render(<HomeSkeletonLayer colors={colors} />)
+    const screen = await render(<HomeSkeletonLayer colors={colors} />)
     expect(screen.toJSON()).toBeNull()
   })
 

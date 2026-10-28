@@ -78,9 +78,9 @@ describe('AboutScreen', () => {
     (Platform as { OS: string }).OS = originalPlatformOS;
   });
 
-  it('renders hero and feature sections', () => {
+  it('renders hero and feature sections', async () => {
     (Platform as { OS: string }).OS = 'web';
-    const { getByText, getByTestId, queryByText } = render(<AboutScreen />);
+    const { getByText, getByTestId, queryByText } = await render(<AboutScreen />);
 
     expect(getByText('MeTravel.by')).toBeTruthy();
     expect(getByText('Путешествия, которые хочется повторить')).toBeTruthy();
@@ -109,8 +109,8 @@ describe('AboutScreen', () => {
   ] as const)('opens the public %s listing from the web feature card', async (platform, url) => {
     (Platform as { OS: string }).OS = 'web';
 
-    const { getByTestId } = render(<AboutScreen />);
-    fireEvent.press(getByTestId(`about-store-buttons-${platform}`));
+    const { getByTestId } = await render(<AboutScreen />);
+    await fireEvent.press(getByTestId(`about-store-buttons-${platform}`));
 
     expect(mockTrackAppDownloadClicked).toHaveBeenCalledWith({ source: 'about_page', platform });
     await waitFor(() => {
@@ -123,10 +123,10 @@ describe('AboutScreen', () => {
 
   it.each(['android', 'ios'] as const)(
     'does not render store CTAs inside the %s about screen',
-    (os) => {
+    async (os) => {
       (Platform as { OS: string }).OS = os;
 
-      const { queryByTestId, queryByText } = render(<AboutScreen />);
+      const { queryByTestId, queryByText } = await render(<AboutScreen />);
 
       expect(queryByTestId('about-store-buttons')).toBeNull();
       expect(
@@ -139,20 +139,20 @@ describe('AboutScreen', () => {
     ['about', AboutScreen],
     ['contact', ContactScreen],
   ] as const)('%s feedback form', (_route, Screen) => {
-    function fillAndSubmit() {
-      const view = render(<Screen />);
-      fireEvent.changeText(view.getByPlaceholderText('Имя'), 'Alice');
-      fireEvent.changeText(view.getByPlaceholderText('Email'), 'alice@example.com');
-      fireEvent.changeText(view.getByPlaceholderText('Сообщение'), 'Hello!');
-      fireEvent.press(view.getByText('Согласен(на) на обработку персональных данных'));
-      fireEvent.press(view.getByText('Отправить'));
+    async function fillAndSubmit() {
+      const view = await render(<Screen />);
+      await fireEvent.changeText(view.getByPlaceholderText('Имя'), 'Alice');
+      await fireEvent.changeText(view.getByPlaceholderText('Email'), 'alice@example.com');
+      await fireEvent.changeText(view.getByPlaceholderText('Сообщение'), 'Hello!');
+      await fireEvent.press(view.getByText('Согласен(на) на обработку персональных данных'));
+      await fireEvent.press(view.getByText('Отправить'));
       return view;
     }
 
     it('displays the returned confirmation and clears the submitted fields', async () => {
       const confirmation = 'Обращение принято: спасибо за ваше сообщение';
       mockSendFeedback.mockResolvedValueOnce(confirmation);
-      const view = fillAndSubmit();
+      const view = await fillAndSubmit();
 
       await waitFor(() => {
         expect(view.getByText(confirmation)).toBeTruthy();
@@ -168,7 +168,7 @@ describe('AboutScreen', () => {
     it('displays a rejected error without reporting success or losing the draft', async () => {
       const errorMessage = 'Не удалось отправить сообщение';
       mockSendFeedback.mockRejectedValueOnce(new Error(errorMessage));
-      const view = fillAndSubmit();
+      const view = await fillAndSubmit();
 
       await waitFor(() => {
         expect(view.getByText(errorMessage)).toBeTruthy();
@@ -182,10 +182,10 @@ describe('AboutScreen', () => {
     });
   });
 
-  it('exposes exactly one page heading, without the "| Metravel" tab-title suffix (#1610)', () => {
+  it('exposes exactly one page heading, without the "| Metravel" tab-title suffix (#1610)', async () => {
     (Platform as { OS: string }).OS = 'web';
 
-    const { getAllByRole, getByText, UNSAFE_root } = render(<AboutScreen />);
+    const { getAllByRole, getByText, container } = await render(<AboutScreen />);
 
     const heading = getByText('О проекте');
     expect(heading.props.accessibilityRole).toBe('header');
@@ -199,19 +199,19 @@ describe('AboutScreen', () => {
 
     // The removed sr-only node was a raw JSX <h1>, not a React Native Text,
     // so the accessibility-role assertions above would not detect its return.
-    expect(UNSAFE_root.findAll((node) => node.type === 'h1')).toHaveLength(0);
+    expect(container.queryAll((node) => node.type === 'h1')).toHaveLength(0);
   });
 
-  it('shows web keyboard hint in contact form', () => {
+  it('shows web keyboard hint in contact form', async () => {
     (Platform as { OS: string }).OS = 'web';
-    const { getByText } = render(<AboutScreen />);
+    const { getByText } = await render(<AboutScreen />);
     expect(getByText('Shift+Enter — новая строка, Enter — отправить (web)')).toBeTruthy();
   });
 
   it('opens instagram from social section', async () => {
-    const { getByText } = render(<AboutScreen />);
+    const { getByText } = await render(<AboutScreen />);
     const instaButton = getByText('@metravelby');
-    fireEvent.press(instaButton);
+    await fireEvent.press(instaButton);
 
     await waitFor(() => {
       expect(mockOpenExternalUrl).toHaveBeenCalledWith(

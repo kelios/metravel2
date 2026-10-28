@@ -1321,10 +1321,10 @@ describe('useQuestWizardProgress', () => {
     await waitFor(() => expect(result.current.answers['p-1']).toBe('чёрный монах'))
 
     await rerender({ storageKey: pendingKey })
-    expect(result.current.answers).toEqual({ 'p-1': 'чёрный монах' })
+    await waitFor(() => expect(result.current.answers).toEqual({ 'p-1': 'чёрный монах' }))
 
     await rerender({ storageKey: userKey })
-    expect(result.current.answers).toEqual({ 'p-1': 'чёрный монах' })
+    await waitFor(() => expect(result.current.answers).toEqual({ 'p-1': 'чёрный монах' }))
   })
 })
 

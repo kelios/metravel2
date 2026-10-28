@@ -34,8 +34,8 @@ describe('ModalSafeArea', () => {
     mockThrow = false;
   });
 
-  it('puts the header below the status bar: paddingTop equals the root top inset', () => {
-    const { getByTestId } = render(
+  it('puts the header below the status bar: paddingTop equals the root top inset', async () => {
+    const { getByTestId } = await render(
       <ModalSafeArea testID="modal-safe-area">
         <Text>Готово</Text>
       </ModalSafeArea>,
@@ -52,27 +52,27 @@ describe('ModalSafeArea', () => {
     });
   });
 
-  it('skips the edges that are not requested', () => {
-    const { getByTestId } = render(
+  it('skips the edges that are not requested', async () => {
+    const { getByTestId } = await render(
       <ModalSafeArea testID="modal-safe-area" edges={['bottom', 'left', 'right']} />,
     );
 
     expect(styleOf(getByTestId('modal-safe-area'))).toMatchObject({ paddingTop: 0, paddingBottom: 34 });
   });
 
-  it('keeps the insets over a caller style padding', () => {
-    const { getByTestId } = render(
+  it('keeps the insets over a caller style padding', async () => {
+    const { getByTestId } = await render(
       <ModalSafeArea testID="modal-safe-area" style={{ paddingTop: 4, backgroundColor: 'red' }} />,
     );
 
     expect(styleOf(getByTestId('modal-safe-area'))).toMatchObject({ paddingTop: 62, backgroundColor: 'red' });
   });
 
-  it('falls back to zero insets on web without a provider', () => {
+  it('falls back to zero insets on web without a provider', async () => {
     Platform.OS = 'web';
     mockThrow = true;
 
-    const { getByTestId } = render(<ModalSafeArea testID="modal-safe-area" />);
+    const { getByTestId } = await render(<ModalSafeArea testID="modal-safe-area" />);
 
     expect(styleOf(getByTestId('modal-safe-area'))).toMatchObject({
       paddingTop: 0,

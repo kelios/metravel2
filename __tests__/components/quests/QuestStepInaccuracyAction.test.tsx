@@ -43,8 +43,8 @@ describe('QuestStepInaccuracyAction', () => {
   })
 
   it('sends a structured flag addressed by the numeric step pk', async () => {
-    const view = render(<QuestStepInaccuracyAction stepNumericId={903} />)
-    fireEvent.press(view.getByTestId('quest-step-inaccuracy-button'))
+    const view = await render(<QuestStepInaccuracyAction stepNumericId={903} />)
+    await fireEvent.press(view.getByTestId('quest-step-inaccuracy-button'))
 
     await waitFor(() => expect(mockReport).toHaveBeenCalledWith(903))
     expect(view.getByTestId('quest-step-inaccuracy-message')).toHaveTextContent(
@@ -57,8 +57,8 @@ describe('QuestStepInaccuracyAction', () => {
   it('says the point is already flagged when the server answers with an existing report', async () => {
     mockReport.mockResolvedValue({ stepId: 903, created: false, reportCount: 2, needsReview: true })
 
-    const view = render(<QuestStepInaccuracyAction stepNumericId={903} />)
-    fireEvent.press(view.getByTestId('quest-step-inaccuracy-button'))
+    const view = await render(<QuestStepInaccuracyAction stepNumericId={903} />)
+    await fireEvent.press(view.getByTestId('quest-step-inaccuracy-button'))
 
     await waitFor(() =>
       expect(view.getByTestId('quest-step-inaccuracy-message')).toHaveTextContent(
@@ -67,11 +67,11 @@ describe('QuestStepInaccuracyAction', () => {
     )
   })
 
-  it('routes a guest into the existing auth entry without sending anything', () => {
+  it('routes a guest into the existing auth entry without sending anything', async () => {
     mockIsAuthenticated = false
 
-    const view = render(<QuestStepInaccuracyAction stepNumericId={903} />)
-    fireEvent.press(view.getByTestId('quest-step-inaccuracy-button'))
+    const view = await render(<QuestStepInaccuracyAction stepNumericId={903} />)
+    await fireEvent.press(view.getByTestId('quest-step-inaccuracy-button'))
 
     expect(mockRequireAuth).toHaveBeenCalledTimes(1)
     expect(mockReport).not.toHaveBeenCalled()
@@ -80,8 +80,8 @@ describe('QuestStepInaccuracyAction', () => {
   it('reports a network failure without breaking the run and allows a retry', async () => {
     mockReport.mockRejectedValueOnce(new Error('network'))
 
-    const view = render(<QuestStepInaccuracyAction stepNumericId={903} />)
-    fireEvent.press(view.getByTestId('quest-step-inaccuracy-button'))
+    const view = await render(<QuestStepInaccuracyAction stepNumericId={903} />)
+    await fireEvent.press(view.getByTestId('quest-step-inaccuracy-button'))
 
     await waitFor(() =>
       expect(view.getByTestId('quest-step-inaccuracy-message')).toHaveTextContent(
@@ -91,7 +91,7 @@ describe('QuestStepInaccuracyAction', () => {
     // Прохождение не тронуто: действие осталось доступным.
     expect(view.getByTestId('quest-step-inaccuracy-button')).toBeTruthy()
 
-    fireEvent.press(view.getByTestId('quest-step-inaccuracy-button'))
+    await fireEvent.press(view.getByTestId('quest-step-inaccuracy-button'))
     await waitFor(() => expect(mockReport).toHaveBeenCalledTimes(2))
   })
 })

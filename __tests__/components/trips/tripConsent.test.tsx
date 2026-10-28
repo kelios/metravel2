@@ -50,7 +50,7 @@ import { ApiError } from '@/api/client'
 import { CONSENT_TYPES, hasActionConsent, readActionConsentsSync } from '@/utils/actionConsent'
 
 // #2133: меню жалобы в рендере зовёт мутации блокировки — нужен QueryClient, как в приложении.
-const render = (ui: Parameters<typeof rtlRender>[0]) =>
+const render = async (ui: Parameters<typeof rtlRender>[0]) =>
   rtlRender(ui, { wrapper: createQueryWrapper().Wrapper })
 
 const baseTrip = {
@@ -80,13 +80,13 @@ describe('PublicTripDetail — contact-exchange acknowledgment (#441)', () => {
   })
 
   it('gates approved-participant contacts behind a «Понятно» ack, then reveals', async () => {
-    const { getByTestId, queryByTestId, findByTestId } = render(<PublicTripDetail tripId={1} />)
+    const { getByTestId, queryByTestId, findByTestId } = await render(<PublicTripDetail tripId={1} />)
 
     // Contacts hidden until acknowledged.
     expect(getByTestId('trip-contact-ack')).toBeTruthy()
     expect(queryByTestId('trip-reveal')).toBeNull()
 
-    fireEvent.press(getByTestId('trip-contact-ack-confirm'))
+    await fireEvent.press(getByTestId('trip-contact-ack-confirm'))
 
     // Reveal shows and consent is recorded (grant() resolves async).
     expect(await findByTestId('trip-reveal')).toBeTruthy()
@@ -96,19 +96,19 @@ describe('PublicTripDetail — contact-exchange acknowledgment (#441)', () => {
     ).toBe(true)
   })
 
-  it('shows owner their own meeting point without an ack gate', () => {
+  it('shows owner their own meeting point without an ack gate', async () => {
     mockUsePublicTrip.mockReturnValue({
       data: { ...baseTrip, isOwner: true, myApplicationStatus: null },
       isLoading: false,
       isError: false,
     })
-    const { getByTestId, queryByTestId } = render(<PublicTripDetail tripId={1} />)
+    const { getByTestId, queryByTestId } = await render(<PublicTripDetail tripId={1} />)
 
     expect(getByTestId('trip-reveal')).toBeTruthy()
     expect(queryByTestId('trip-contact-ack')).toBeNull()
   })
 
-  it('uses the current user application list to show existing application status', () => {
+  it('uses the current user application list to show existing application status', async () => {
     mockUsePublicTrip.mockReturnValue({
       data: { ...baseTrip, myApplicationStatus: null, isOwner: false },
       isLoading: false,
@@ -120,7 +120,7 @@ describe('PublicTripDetail — contact-exchange acknowledgment (#441)', () => {
       isError: false,
     })
 
-    const { getByText, queryByTestId } = render(<PublicTripDetail tripId={1} />)
+    const { getByText, queryByTestId } = await render(<PublicTripDetail tripId={1} />)
 
     expect(getByText('Ваша заявка')).toBeTruthy()
     expect(queryByTestId('trip-apply-form')).toBeNull()
@@ -135,40 +135,40 @@ describe('TripApplyForm — consent before applying (#439)', () => {
     mockSubmitApplicationMutate.mockReset()
   })
 
-  it('blocks «Отправить заявку» until both consent checkboxes are checked', () => {
+  it('blocks «Отправить заявку» until both consent checkboxes are checked', async () => {
     const trip = { ...baseTrip, myApplicationStatus: null } as never
-    const { getByTestId } = render(<TripApplyForm trip={trip} />)
+    const { getByTestId } = await render(<TripApplyForm trip={trip} />)
 
     const submit = getByTestId('trip-apply-submit')
-    fireEvent.changeText(getByTestId('trip-apply-message'), 'Хочу поехать с вами')
+    await fireEvent.changeText(getByTestId('trip-apply-message'), 'Хочу поехать с вами')
 
     // Message is valid but consent not given → still disabled.
     expect(submit.props.accessibilityState?.disabled).toBe(true)
 
-    fireEvent(getByTestId('trip-apply-consent-rules'), 'onToggle', true)
+    await fireEvent(getByTestId('trip-apply-consent-rules'), 'onToggle', true)
     expect(submit.props.accessibilityState?.disabled).toBe(true)
 
-    fireEvent(getByTestId('trip-apply-consent-disclaimer'), 'onToggle', true)
+    await fireEvent(getByTestId('trip-apply-consent-disclaimer'), 'onToggle', true)
     expect(submit.props.accessibilityState?.disabled).toBe(false)
   })
 
-  it('keeps submit enabled after consents and shows validation for a short message', () => {
+  it('keeps submit enabled after consents and shows validation for a short message', async () => {
     const trip = { ...baseTrip, myApplicationStatus: null } as never
-    const { getByTestId, getByText } = render(<TripApplyForm trip={trip} />)
+    const { getByTestId, getByText } = await render(<TripApplyForm trip={trip} />)
 
-    fireEvent.changeText(getByTestId('trip-apply-message'), 'test')
-    fireEvent(getByTestId('trip-apply-consent-rules'), 'onToggle', true)
-    fireEvent(getByTestId('trip-apply-consent-disclaimer'), 'onToggle', true)
+    await fireEvent.changeText(getByTestId('trip-apply-message'), 'test')
+    await fireEvent(getByTestId('trip-apply-consent-rules'), 'onToggle', true)
+    await fireEvent(getByTestId('trip-apply-consent-disclaimer'), 'onToggle', true)
 
     const submit = getByTestId('trip-apply-submit')
     expect(submit.props.accessibilityState?.disabled).toBe(false)
 
-    fireEvent.press(submit)
+    await fireEvent.press(submit)
 
     expect(getByText(/минимум 10 символов/i)).toBeTruthy()
   })
 
-  it('shows a duplicate-application message from backend validation', () => {
+  it('shows a duplicate-application message from backend validation', async () => {
     const trip = { ...baseTrip, myApplicationStatus: null } as never
     mockSubmitApplicationMutate.mockImplementation((_input, options) => {
       options.onError(
@@ -177,12 +177,12 @@ describe('TripApplyForm — consent before applying (#439)', () => {
         }),
       )
     })
-    const { getAllByText, getByTestId } = render(<TripApplyForm trip={trip} />)
+    const { getAllByText, getByTestId } = await render(<TripApplyForm trip={trip} />)
 
-    fireEvent.changeText(getByTestId('trip-apply-message'), 'Хочу поехать с вами')
-    fireEvent(getByTestId('trip-apply-consent-rules'), 'onToggle', true)
-    fireEvent(getByTestId('trip-apply-consent-disclaimer'), 'onToggle', true)
-    fireEvent.press(getByTestId('trip-apply-submit'))
+    await fireEvent.changeText(getByTestId('trip-apply-message'), 'Хочу поехать с вами')
+    await fireEvent(getByTestId('trip-apply-consent-rules'), 'onToggle', true)
+    await fireEvent(getByTestId('trip-apply-consent-disclaimer'), 'onToggle', true)
+    await fireEvent.press(getByTestId('trip-apply-submit'))
 
     expect(getAllByText(/Заявка уже отправлена/i).length).toBeGreaterThan(0)
     expect(getByTestId('trip-apply-submit').props.accessibilityState?.disabled).toBe(true)
@@ -190,7 +190,7 @@ describe('TripApplyForm — consent before applying (#439)', () => {
 })
 
 describe('OrganizerApplicationsPanel — unverified socials warning (#442)', () => {
-  it('warns that MeTravel does not verify applicant social accounts', () => {
+  it('warns that MeTravel does not verify applicant social accounts', async () => {
     mockUseTripApplications.mockReturnValue({
       data: [
         {
@@ -204,7 +204,7 @@ describe('OrganizerApplicationsPanel — unverified socials warning (#442)', () 
       isLoading: false,
       isError: false,
     })
-    const { getByTestId, getByText } = render(<OrganizerApplicationsPanel tripId={1} />)
+    const { getByTestId, getByText } = await render(<OrganizerApplicationsPanel tripId={1} />)
 
     expect(getByTestId('trip-socials-unverified')).toBeTruthy()
     expect(getByText(/не проверяет подлинность аккаунтов/i)).toBeTruthy()

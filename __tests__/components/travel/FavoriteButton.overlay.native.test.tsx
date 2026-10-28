@@ -55,7 +55,7 @@ describe('FavoriteButton (overlay variant, native)', () => {
       removeFavorite: jest.fn(),
     })
 
-    render(
+    await render(
       <FavoriteButton
         variant="overlay"
         id={514}
@@ -67,7 +67,7 @@ describe('FavoriteButton (overlay variant, native)', () => {
       />
     )
 
-    fireEvent.press(screen.getByTestId('favorite-button'))
+    await fireEvent.press(screen.getByTestId('favorite-button'))
 
     await waitFor(() => {
       expect(addFavorite).toHaveBeenCalledWith({
@@ -97,7 +97,7 @@ describe('FavoriteButton (overlay variant, native)', () => {
       removeFavorite: jest.fn(),
     })
 
-    render(
+    await render(
       <FavoriteButton
         variant="overlay"
         id={514}
@@ -107,7 +107,7 @@ describe('FavoriteButton (overlay variant, native)', () => {
       />
     )
 
-    fireEvent.press(screen.getByTestId('favorite-button'))
+    await fireEvent.press(screen.getByTestId('favorite-button'))
 
     await waitFor(() => {
       expect(addFavorite).toHaveBeenCalledWith({

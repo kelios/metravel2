@@ -22,18 +22,18 @@ describe('NetworkStatus', () => {
     mockIsConnected.mockReturnValue(true);
   });
 
-  it('should not render when online and showWhenOnline is false', () => {
+  it('should not render when online and showWhenOnline is false', async () => {
     mockIsConnected.mockReturnValue(true);
-    const { toJSON } = render(<NetworkStatus />);
+    const { toJSON } = await render(<NetworkStatus />);
     const tree = toJSON();
     
     // Компонент не должен рендериться когда онлайн и showWhenOnline=false
     expect(tree).toBeNull();
   });
 
-  it('should render when offline', () => {
+  it('should render when offline', async () => {
     mockIsConnected.mockReturnValue(false);
-    const { toJSON } = render(<NetworkStatus />);
+    const { toJSON } = await render(<NetworkStatus />);
     const tree = toJSON();
     
     expect(tree).toBeTruthy();
@@ -41,9 +41,9 @@ describe('NetworkStatus', () => {
     expect(treeStr).toContain('Нет подключения к интернету');
   });
 
-  it('should render when online and showWhenOnline is true', () => {
+  it('should render when online and showWhenOnline is true', async () => {
     mockIsConnected.mockReturnValue(true);
-    const { toJSON } = render(<NetworkStatus showWhenOnline={true} />);
+    const { toJSON } = await render(<NetworkStatus showWhenOnline={true} />);
     const tree = toJSON();
     
     expect(tree).toBeTruthy();
@@ -52,7 +52,7 @@ describe('NetworkStatus', () => {
   it('should show reconnection message when connection is restored', async () => {
     // Начинаем с offline
     mockIsConnected.mockReturnValue(false);
-    const { rerender, toJSON } = render(<NetworkStatus />);
+    const { rerender, toJSON } = await render(<NetworkStatus />);
     
     let tree = toJSON();
     expect(tree).toBeTruthy();
@@ -61,7 +61,7 @@ describe('NetworkStatus', () => {
 
     // Переключаемся на online
     mockIsConnected.mockReturnValue(true);
-    rerender(<NetworkStatus />);
+    await rerender(<NetworkStatus />);
 
     await waitFor(() => {
       tree = toJSON();
@@ -71,30 +71,30 @@ describe('NetworkStatus', () => {
     });
   });
 
-  it('should render at top position by default', () => {
+  it('should render at top position by default', async () => {
     mockIsConnected.mockReturnValue(false);
-    const { toJSON } = render(<NetworkStatus />);
+    const { toJSON } = await render(<NetworkStatus />);
     const tree = toJSON();
     expect(tree).toBeTruthy();
   });
 
-  it('should render at bottom position when specified', () => {
+  it('should render at bottom position when specified', async () => {
     mockIsConnected.mockReturnValue(false);
-    const { toJSON } = render(<NetworkStatus position="bottom" />);
+    const { toJSON } = await render(<NetworkStatus position="bottom" />);
     const tree = toJSON();
     expect(tree).toBeTruthy();
   });
 
-  it('should have correct background color for offline state', () => {
+  it('should have correct background color for offline state', async () => {
     mockIsConnected.mockReturnValue(false);
-    const { toJSON } = render(<NetworkStatus />);
+    const { toJSON } = await render(<NetworkStatus />);
     const tree = toJSON();
     expect(tree).toBeTruthy();
   });
 
-  it('should have correct background color for online state', () => {
+  it('should have correct background color for online state', async () => {
     mockIsConnected.mockReturnValue(true);
-    const { toJSON } = render(<NetworkStatus showWhenOnline={true} />);
+    const { toJSON } = await render(<NetworkStatus showWhenOnline={true} />);
     const tree = toJSON();
     expect(tree).toBeTruthy();
   });

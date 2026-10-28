@@ -16,7 +16,7 @@ describe('useImprovedAutoSave', () => {
     })
     const onError = jest.fn()
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ data }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 50,
@@ -28,7 +28,7 @@ describe('useImprovedAutoSave', () => {
       }
     )
 
-    rerender({ data: { value: 'updated' } })
+    await rerender({ data: { value: 'updated' } })
 
     await act(async () => {
       jest.advanceTimersByTime(60)
@@ -59,7 +59,7 @@ describe('useImprovedAutoSave', () => {
       })
     })
 
-    const { rerender } = renderHook(
+    const { rerender } = await renderHook(
       ({ data }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 50,
@@ -69,7 +69,7 @@ describe('useImprovedAutoSave', () => {
       { initialProps: { data: { value: 'initial' } } },
     )
 
-    rerender({ data: { value: 'updated' } })
+    await rerender({ data: { value: 'updated' } })
     await act(async () => {
       jest.advanceTimersByTime(60)
       await Promise.resolve()
@@ -79,7 +79,7 @@ describe('useImprovedAutoSave', () => {
     // Запрос всё ещё летит — следующие тики debounce обязаны его пропустить,
     // а не оборвать и перезапустить.
     for (let tick = 0; tick < 3; tick += 1) {
-      rerender({ data: { value: 'updated' } })
+      await rerender({ data: { value: 'updated' } })
       await act(async () => {
         jest.advanceTimersByTime(60)
         await Promise.resolve()
@@ -99,7 +99,7 @@ describe('useImprovedAutoSave', () => {
     jest.useFakeTimers()
     const onSave = jest.fn(async (data: { value: string }) => data)
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ data, isOnline }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 50,
@@ -109,7 +109,7 @@ describe('useImprovedAutoSave', () => {
       { initialProps: { data: { value: 'initial' }, isOnline: false } },
     )
 
-    rerender({ data: { value: 'offline edit' }, isOnline: false })
+    await rerender({ data: { value: 'offline edit' }, isOnline: false })
     await act(async () => {
       jest.advanceTimersByTime(60)
       await Promise.resolve()
@@ -120,7 +120,7 @@ describe('useImprovedAutoSave', () => {
     expect(result.current.hasUnsavedChanges).toBe(true)
     expect(result.current.phase).toBe('pending')
 
-    rerender({ data: { value: 'offline edit' }, isOnline: true })
+    await rerender({ data: { value: 'offline edit' }, isOnline: true })
     await act(async () => {
       jest.advanceTimersByTime(60)
       await Promise.resolve()
@@ -140,7 +140,7 @@ describe('useImprovedAutoSave', () => {
     })
     const onError = jest.fn()
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ data }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 20,
@@ -152,7 +152,7 @@ describe('useImprovedAutoSave', () => {
       { initialProps: { data: { value: 'initial' } } },
     )
 
-    rerender({ data: { value: 'needs auth' } })
+    await rerender({ data: { value: 'needs auth' } })
     await act(async () => {
       jest.advanceTimersByTime(200)
       await Promise.resolve()
@@ -164,7 +164,7 @@ describe('useImprovedAutoSave', () => {
     expect(result.current.status).toBe('error')
     expect((result.current.error as Error & { status?: number }).status).toBe(401)
 
-    rerender({ data: { value: 'another local edit' } })
+    await rerender({ data: { value: 'another local edit' } })
     await act(async () => {
       jest.advanceTimersByTime(200)
       await Promise.resolve()
@@ -184,7 +184,7 @@ describe('useImprovedAutoSave', () => {
 
     const onSave = jest.fn(async (data: { value: string }) => data)
 
-    const { rerender } = renderHook(
+    const { rerender } = await renderHook(
       ({ data }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 50,
@@ -194,7 +194,7 @@ describe('useImprovedAutoSave', () => {
       { initialProps: { data: { value: 'initial' } } },
     )
 
-    rerender({ data: { value: 'first' } })
+    await rerender({ data: { value: 'first' } })
     await act(async () => {
       jest.advanceTimersByTime(60)
       await Promise.resolve()
@@ -207,7 +207,7 @@ describe('useImprovedAutoSave', () => {
       { value: 'initial' },
     )
 
-    rerender({ data: { value: 'second' } })
+    await rerender({ data: { value: 'second' } })
     await act(async () => {
       jest.advanceTimersByTime(60)
       await Promise.resolve()
@@ -234,7 +234,7 @@ describe('useImprovedAutoSave', () => {
       resolveSave = () => resolve(data)
     }))
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ data }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 50,
@@ -244,7 +244,7 @@ describe('useImprovedAutoSave', () => {
       { initialProps: { data: { value: 'initial' } } },
     )
 
-    rerender({ data: { value: 'first' } })
+    await rerender({ data: { value: 'first' } })
     expect(result.current.phase).toBe('pending')
     expect(result.current.localRevision).toBe(1)
     expect(result.current.confirmedRevision).toBe(0)
@@ -258,7 +258,7 @@ describe('useImprovedAutoSave', () => {
     expect(result.current.inFlightRevision).toBe(1)
 
     // Автор продолжает печатать, пока первый сейв ещё летит.
-    rerender({ data: { value: 'second' } })
+    await rerender({ data: { value: 'second' } })
     await act(async () => {
       jest.advanceTimersByTime(60)
       await Promise.resolve()
@@ -310,7 +310,7 @@ describe('useImprovedAutoSave', () => {
       resolveSave = () => resolve(data)
     }))
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ data }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 50,
@@ -320,14 +320,14 @@ describe('useImprovedAutoSave', () => {
       { initialProps: { data: { value: 'initial' } } },
     )
 
-    rerender({ data: { value: 'first' } })
+    await rerender({ data: { value: 'first' } })
     await act(async () => {
       jest.advanceTimersByTime(60)
       await Promise.resolve()
     })
 
-    rerender({ data: { value: 'second' } })
-    rerender({ data: { value: 'first' } })
+    await rerender({ data: { value: 'second' } })
+    await rerender({ data: { value: 'first' } })
     expect(result.current.localRevision).toBe(3)
 
     await act(async () => {
@@ -348,7 +348,7 @@ describe('useImprovedAutoSave', () => {
     jest.useFakeTimers()
     const onSave = jest.fn(async (data: { value: string }) => data)
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ data }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 50,
@@ -358,7 +358,7 @@ describe('useImprovedAutoSave', () => {
       { initialProps: { data: { value: 'initial' } } },
     )
 
-    rerender({ data: { value: 'confirmed' } })
+    await rerender({ data: { value: 'confirmed' } })
     await act(async () => {
       jest.advanceTimersByTime(60)
       await Promise.resolve()
@@ -370,7 +370,7 @@ describe('useImprovedAutoSave', () => {
 
     // applySavedData/reset creates a new object even when the confirmed content
     // is unchanged. The status must still describe the server confirmation.
-    rerender({ data: { value: 'confirmed' } })
+    await rerender({ data: { value: 'confirmed' } })
     await act(async () => {
       await Promise.resolve()
     })
@@ -387,7 +387,7 @@ describe('useImprovedAutoSave', () => {
       resolveSave = () => resolve(data)
     }))
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ data }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 50,
@@ -397,13 +397,13 @@ describe('useImprovedAutoSave', () => {
       { initialProps: { data: { value: 'initial' } } },
     )
 
-    rerender({ data: { value: 'server-will-receive-this' } })
+    await rerender({ data: { value: 'server-will-receive-this' } })
     await act(async () => {
       jest.advanceTimersByTime(60)
       await Promise.resolve()
     })
 
-    rerender({ data: { value: 'initial' } })
+    await rerender({ data: { value: 'initial' } })
     expect(result.current.phase).toBe('saving')
 
     await act(async () => {
@@ -438,7 +438,7 @@ describe('useImprovedAutoSave', () => {
       })
     })
 
-    const { rerender } = renderHook(
+    const { rerender } = await renderHook(
       ({ data }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 50,
@@ -450,7 +450,7 @@ describe('useImprovedAutoSave', () => {
 
     // Десять debounce-тиков подряд при неотвечающем сервере.
     for (let tick = 1; tick <= 10; tick += 1) {
-      rerender({ data: { value: `edit-${tick}` } })
+      await rerender({ data: { value: `edit-${tick}` } })
       await act(async () => {
         jest.advanceTimersByTime(60)
         await Promise.resolve()
@@ -490,7 +490,7 @@ describe('useImprovedAutoSave', () => {
     })
     const onSuccess = jest.fn()
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ data }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 50,
@@ -501,14 +501,14 @@ describe('useImprovedAutoSave', () => {
       { initialProps: { data: { value: 'initial' } } },
     )
 
-    rerender({ data: { value: 'background' } })
+    await rerender({ data: { value: 'background' } })
     await act(async () => {
       jest.advanceTimersByTime(60)
       await Promise.resolve()
     })
     expect(onSave).toHaveBeenCalledTimes(1)
 
-    rerender({ data: { value: 'explicit' } })
+    await rerender({ data: { value: 'explicit' } })
     let explicitSave: Promise<unknown> | null = null
     await act(async () => {
       explicitSave = result.current.saveNow()
@@ -548,7 +548,7 @@ describe('useImprovedAutoSave', () => {
     })
     const onError = jest.fn()
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ data }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 20,
@@ -561,7 +561,7 @@ describe('useImprovedAutoSave', () => {
       { initialProps: { data: { value: 'initial' } } },
     )
 
-    rerender({ data: { value: 'slow server' } })
+    await rerender({ data: { value: 'slow server' } })
     await act(async () => {
       jest.advanceTimersByTime(50)
       await Promise.resolve()
@@ -573,7 +573,7 @@ describe('useImprovedAutoSave', () => {
     expect(result.current.status).toBe('error')
 
     // Правка внутри окна — запрос не уходит.
-    rerender({ data: { value: 'more typing' } })
+    await rerender({ data: { value: 'more typing' } })
     await act(async () => {
       jest.advanceTimersByTime(50)
       await Promise.resolve()
@@ -604,7 +604,7 @@ describe('useImprovedAutoSave', () => {
     })
     const onError = jest.fn()
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ data }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 20,
@@ -617,7 +617,7 @@ describe('useImprovedAutoSave', () => {
       { initialProps: { data: { value: 'initial' } } },
     )
 
-    rerender({ data: { value: 'slow server' } })
+    await rerender({ data: { value: 'slow server' } })
     await act(async () => {
       jest.advanceTimersByTime(50)
       await Promise.resolve()
@@ -629,7 +629,7 @@ describe('useImprovedAutoSave', () => {
     expect(result.current.status).toBe('error')
 
     // Правка внутри окна — вторая транзакция по заблокированной строке не уходит.
-    rerender({ data: { value: 'more typing' } })
+    await rerender({ data: { value: 'more typing' } })
     await act(async () => {
       jest.advanceTimersByTime(50)
       await Promise.resolve()
@@ -656,7 +656,7 @@ describe('useImprovedAutoSave', () => {
     })
     const onError = jest.fn()
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ data }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 20,
@@ -667,7 +667,7 @@ describe('useImprovedAutoSave', () => {
       { initialProps: { data: { value: 'initial' } } },
     )
 
-    rerender({ data: { value: 'invalid' } })
+    await rerender({ data: { value: 'invalid' } })
     await act(async () => {
       jest.advanceTimersByTime(200)
       await Promise.resolve()
@@ -698,7 +698,7 @@ describe('useImprovedAutoSave', () => {
     const onSuccess = jest.fn()
     const onError = jest.fn()
 
-    const { rerender, unmount } = renderHook(
+    const { rerender, unmount } = await renderHook(
       ({ data }) =>
         useImprovedAutoSave(data, { value: 'initial' }, {
           debounce: 50,
@@ -710,7 +710,7 @@ describe('useImprovedAutoSave', () => {
       { initialProps: { data: { value: 'initial' } } },
     )
 
-    rerender({ data: { value: 'leaving' } })
+    await rerender({ data: { value: 'leaving' } })
     await act(async () => {
       jest.advanceTimersByTime(60)
       await Promise.resolve()
@@ -718,7 +718,7 @@ describe('useImprovedAutoSave', () => {
     expect(onSave).toHaveBeenCalledTimes(1)
 
     await act(async () => {
-      unmount()
+      await unmount()
       await Promise.resolve()
     })
     expect(abortedSignals).toEqual(['leaving'])

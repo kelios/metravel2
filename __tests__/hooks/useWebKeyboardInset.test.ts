@@ -35,25 +35,25 @@ describe('useWebKeyboardInset', () => {
         jest.restoreAllMocks();
     });
 
-    it('reports no inset while the keyboard is closed', () => {
-        const { result } = renderHook(() => useWebKeyboardInset());
+    it('reports no inset while the keyboard is closed', async () => {
+        const { result } = await renderHook(() => useWebKeyboardInset());
         expect(result.current).toBe(0);
     });
 
-    it('reports the keyboard overlap when the visual viewport shrinks', () => {
-        const { result } = renderHook(() => useWebKeyboardInset());
+    it('reports the keyboard overlap when the visual viewport shrinks', async () => {
+        const { result } = await renderHook(() => useWebKeyboardInset());
 
-        act(() => {
+        await act(() => {
             vv.resizeTo(480);
         });
 
         expect(result.current).toBe(320);
     });
 
-    it('accounts for a panned visual viewport', () => {
-        const { result } = renderHook(() => useWebKeyboardInset());
+    it('accounts for a panned visual viewport', async () => {
+        const { result } = await renderHook(() => useWebKeyboardInset());
 
-        act(() => {
+        await act(() => {
             vv.resizeTo(480, 40);
         });
 
@@ -62,34 +62,34 @@ describe('useWebKeyboardInset', () => {
 
     // Сворачивание адресной строки браузера тоже уменьшает visual viewport —
     // на такое реагировать нельзя, иначе композер прыгает при скролле.
-    it('ignores a small shrink such as the browser URL bar', () => {
-        const { result } = renderHook(() => useWebKeyboardInset());
+    it('ignores a small shrink such as the browser URL bar', async () => {
+        const { result } = await renderHook(() => useWebKeyboardInset());
 
-        act(() => {
+        await act(() => {
             vv.resizeTo(744);
         });
 
         expect(result.current).toBe(0);
     });
 
-    it('drops back to zero when the keyboard closes', () => {
-        const { result } = renderHook(() => useWebKeyboardInset());
+    it('drops back to zero when the keyboard closes', async () => {
+        const { result } = await renderHook(() => useWebKeyboardInset());
 
-        act(() => {
+        await act(() => {
             vv.resizeTo(480);
         });
-        act(() => {
+        await act(() => {
             vv.resizeTo(800);
         });
 
         expect(result.current).toBe(0);
     });
 
-    it('stays inert on native', () => {
+    it('stays inert on native', async () => {
         Platform.OS = 'android';
-        const { result } = renderHook(() => useWebKeyboardInset());
+        const { result } = await renderHook(() => useWebKeyboardInset());
 
-        act(() => {
+        await act(() => {
             vv.resizeTo(480);
         });
 

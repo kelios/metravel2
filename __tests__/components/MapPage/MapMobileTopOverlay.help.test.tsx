@@ -14,6 +14,22 @@ import { restartMapOnboarding } from '@/components/MapPage/MapOnboarding'
 import { getThemedColors } from '@/constants/designSystem'
 import { translate as i18nT } from '@/i18n'
 
+// A glyph is visual content; its mock must not add the icon identifier to the button name.
+jest.mock('@expo/vector-icons/Feather', () => {
+  const React = require('react')
+  const { View } = require('react-native')
+  return {
+    __esModule: true,
+    default: ({ name, ...props }: any) => React.createElement(View, {
+      ...props,
+      testID: `feather-${name}`,
+      accessible: false,
+      accessibilityElementsHidden: true,
+      importantForAccessibility: 'no-hide-descendants',
+    }),
+  }
+})
+
 jest.mock('@/components/MapPage/MapOnboarding', () => ({
   __esModule: true,
   restartMapOnboarding: jest.fn(),
@@ -41,9 +57,9 @@ const baseProps = {
 afterEach(cleanup)
 
 describe('MapMobileTopOverlay — вход в подсказки по карте (#2251)', () => {
-  it('в карточке «Слои и настройки карты» есть вход в тур: подпись, 44, без hitSlop', () => {
+  it('в карточке «Слои и настройки карты» есть вход в тур: подпись, 44, без hitSlop', async () => {
     const onClosePopover = jest.fn()
-    const { getByTestId, getByRole } = render(
+    const { getByTestId, getByRole } = await render(
       <MapMobileTopOverlay
         {...(baseProps as any)}
         activePopover="layers"
@@ -61,7 +77,7 @@ describe('MapMobileTopOverlay — вход в подсказки по карте
     expect(style.minHeight).toBeGreaterThanOrEqual(44)
 
     ;(restartMapOnboarding as jest.Mock).mockClear()
-    fireEvent.press(entry)
+    await fireEvent.press(entry)
 
     // The card closes first: the tour is the only overlay.
     expect(onClosePopover).toHaveBeenCalledTimes(1)
@@ -71,8 +87,8 @@ describe('MapMobileTopOverlay — вход в подсказки по карте
     )
   })
 
-  it('без открытой карточки входа нет: ряд тулбара не растёт', () => {
-    const { queryByTestId } = render(
+  it('без открытой карточки входа нет: ряд тулбара не растёт', async () => {
+    const { queryByTestId } = await render(
       <MapMobileTopOverlay {...(baseProps as any)} activePopover={null} onClosePopover={jest.fn()} />,
     )
 

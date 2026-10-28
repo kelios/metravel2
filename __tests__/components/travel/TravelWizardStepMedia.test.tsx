@@ -149,8 +149,8 @@ describe('TravelWizardStepMedia', () => {
     mockDeleteTravelMainImage.mockReset();
   });
 
-  const renderStep = (formOverride: any = {}) =>
-    render(
+  const renderStep = async (formOverride: any = {}) =>
+    await render(
       <Suspense fallback={<Text testID="fallback">loading…</Text>}>
         <TravelWizardStepMedia
           currentStep={3}
@@ -166,19 +166,19 @@ describe('TravelWizardStepMedia', () => {
     );
 
   it('shows cover uploader when travel id exists', async () => {
-    const { getByText } = renderStep({ id: '999' });
+    const { getByText } = await renderStep({ id: '999' });
 
     await waitFor(() => expect(getByText('travelMainImage:999')).toBeTruthy());
   });
 
   it('shows cover instruction when travel is not yet saved (no id)', async () => {
-    const { getByText } = renderStep({ id: null });
+    const { getByText } = await renderStep({ id: null });
 
     expect(getByText(/превью будет сохранено/i)).toBeTruthy();
   });
 
   it('renders cover advice as separate list items', async () => {
-    const { getByText } = renderStep({ id: '999' });
+    const { getByText } = await renderStep({ id: '999' });
 
     expect(getByText('• Лучший формат: горизонтальный 16:9 (минимум 1200×675px)').props.role).toBe('listitem');
     expect(getByText('• Избегайте коллажей и текста на изображении').props.role).toBe('listitem');
@@ -191,7 +191,7 @@ describe('TravelWizardStepMedia', () => {
       { id: 7, url: '/relative/path.jpg' } as any,
     ];
 
-    const { getByTestId } = renderStep({ id: '42', gallery });
+    const { getByTestId } = await renderStep({ id: '42', gallery });
 
     const galleryPropsNode = await waitFor(() => getByTestId('image-gallery-props'));
     const parsed = JSON.parse(galleryPropsNode.props.children);
@@ -206,7 +206,7 @@ describe('TravelWizardStepMedia', () => {
   it('allows deleting cover when cover exists', async () => {
     mockDeleteTravelMainImage.mockResolvedValueOnce({ status: 204 } as any);
 
-    const { getByText, queryByText } = render(
+    const { getByText, queryByText } = await render(
       <Suspense fallback={<Text testID="fallback">loading…</Text>}>
         <TravelWizardStepMedia
           currentStep={3}
@@ -234,11 +234,11 @@ describe('TravelWizardStepMedia', () => {
 
     await waitFor(() => expect(getByText('Удалить обложку')).toBeTruthy());
 
-    fireEvent.press(getByText('Удалить обложку'));
+    await fireEvent.press(getByText('Удалить обложку'));
 
     // ConfirmDialog uppercases the confirm button
     await waitFor(() => expect(getByText('Удалить')).toBeTruthy());
-    fireEvent.press(getByText('Удалить'));
+    await fireEvent.press(getByText('Удалить'));
 
     await waitFor(() => expect(mockDeleteTravelMainImage).toHaveBeenCalledWith('42'));
 
@@ -250,18 +250,18 @@ describe('TravelWizardStepMedia', () => {
   });
 
   it('does not remount the uploader while a photo is being uploaded (preview is preserved)', async () => {
-    const { getByText } = render(<StatefulStep initialForm={{ id: '777' }} />);
+    const { getByText } = await render(<StatefulStep initialForm={{ id: '777' }} />);
 
     await waitFor(() => expect(getByText('travelMainImage:777')).toBeTruthy());
     expect(mockMountSpy).toHaveBeenCalledTimes(1);
 
     // Local preview (blob) appears first — must not remount the uploader.
-    act(() => {
-      fireEvent.press(getByText('sim-preview'));
+    await act(async () => {
+      await fireEvent.press(getByText('sim-preview'));
     });
     // Server URL arrives after a successful upload — must not remount either.
-    act(() => {
-      fireEvent.press(getByText('sim-upload'));
+    await act(async () => {
+      await fireEvent.press(getByText('sim-upload'));
     });
 
     // Regression: with the cover-URL-derived key the uploader remounted on every
@@ -275,7 +275,7 @@ describe('TravelWizardStepMedia', () => {
   it('remounts the uploader after the cover is deleted', async () => {
     mockDeleteTravelMainImage.mockResolvedValueOnce({ status: 204 } as any);
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <StatefulStep
         initialForm={{
           id: '42',
@@ -288,9 +288,9 @@ describe('TravelWizardStepMedia', () => {
     await waitFor(() => expect(getByText('old:/some/cover.webp')).toBeTruthy());
     expect(mockMountSpy).toHaveBeenCalledTimes(1);
 
-    fireEvent.press(getByText('Удалить обложку'));
+    await fireEvent.press(getByText('Удалить обложку'));
     await waitFor(() => expect(getByText('Удалить')).toBeTruthy());
-    fireEvent.press(getByText('Удалить'));
+    await fireEvent.press(getByText('Удалить'));
 
     await waitFor(() => expect(mockDeleteTravelMainImage).toHaveBeenCalledWith('42'));
     // Deletion must reset the uploader via a key change (fresh mount).

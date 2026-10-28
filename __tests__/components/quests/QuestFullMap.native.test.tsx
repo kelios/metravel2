@@ -1,5 +1,6 @@
+import { getAllHosts } from '@/__tests__/helpers/hostQueries'
 import { fireEvent, render, within } from '@testing-library/react-native';
-import { View } from 'react-native';
+
 
 jest.mock('expo-file-system/legacy', () => ({
   cacheDirectory: 'file://cache/',
@@ -20,14 +21,14 @@ describe('QuestFullMap native marker status', () => {
     { lat: 50.0573148, lng: 19.9407374, title: 'Финиш' },
   ];
 
-  it('exposes route points as loading until WebView confirms visible Leaflet markers', () => {
-    const { getByTestId, getByText } = render(
+  it('exposes route points as loading until WebView confirms visible Leaflet markers', async () => {
+    const { getByTestId, getByText } = await render(
       <QuestFullMap steps={steps} title="Карта квеста" height={420} />
     );
 
     expect(getByText('3 точки загружаются на карту')).toBeTruthy();
 
-    fireEvent(getByTestId('quest-map-webview'), 'message', {
+    await fireEvent(getByTestId('quest-map-webview'), 'message', {
       nativeEvent: {
         data: JSON.stringify({
           type: 'quest-map-status',
@@ -41,12 +42,12 @@ describe('QuestFullMap native marker status', () => {
     expect(getByText('3 точки на карте')).toBeTruthy();
   });
 
-  it('keeps the missing-marker regression visible when WebView reports no marker nodes', () => {
-    const { getByTestId, getByText, queryByText } = render(
+  it('keeps the missing-marker regression visible when WebView reports no marker nodes', async () => {
+    const { getByTestId, getByText, queryByText } = await render(
       <QuestFullMap steps={steps} title="Карта квеста" height={420} />
     );
 
-    fireEvent(getByTestId('quest-map-webview'), 'message', {
+    await fireEvent(getByTestId('quest-map-webview'), 'message', {
       nativeEvent: {
         data: JSON.stringify({
           type: 'quest-map-status',
@@ -61,7 +62,7 @@ describe('QuestFullMap native marker status', () => {
     expect(getByText('3 точки загружаются на карту')).toBeTruthy();
     expect(queryByText('Точки карты не отрисовались')).toBeNull();
 
-    fireEvent(getByTestId('quest-map-webview'), 'message', {
+    await fireEvent(getByTestId('quest-map-webview'), 'message', {
       nativeEvent: {
         data: JSON.stringify({
           type: 'quest-map-status',
@@ -77,8 +78,8 @@ describe('QuestFullMap native marker status', () => {
     expect(queryByText('3 точки на карте')).toBeNull();
   });
 
-  it('includes bounded native WebView refresh hooks for intermittent Android marker rendering', () => {
-    const { getByTestId } = render(
+  it('includes bounded native WebView refresh hooks for intermittent Android marker rendering', async () => {
+    const { getByTestId } = await render(
       <QuestFullMap steps={steps} title="Карта квеста" height={420} />
     );
 
@@ -107,8 +108,8 @@ describe('QuestFullMap native marker status', () => {
     expect(html).toContain('settled: settled');
   });
 
-  it('embeds the injectable PNG renderer so native export is no longer a stub', () => {
-    const { getByTestId } = render(
+  it('embeds the injectable PNG renderer so native export is no longer a stub', async () => {
+    const { getByTestId } = await render(
       <QuestFullMap steps={steps} title="Карта квеста" height={420} />
     );
 
@@ -118,22 +119,22 @@ describe('QuestFullMap native marker status', () => {
     expect(html).toContain('quest-map-png');
   });
 
-  it('offers PNG export in the native share menu', () => {
-    const { getByLabelText, getByText } = render(
+  it('offers PNG export in the native share menu', async () => {
+    const { getByLabelText, getByText } = await render(
       <QuestFullMap steps={steps} title="Карта квеста" height={420} />
     );
 
-    fireEvent.press(getByLabelText('Скачать маршрут (PNG, GPX, GeoJSON)'));
+    await fireEvent.press(getByLabelText('Скачать маршрут (PNG, GPX, GeoJSON)'));
 
     expect(getByText('Поделиться PNG')).toBeTruthy();
   });
 
-  it('keeps the fullscreen title, export, and close actions in one toolbar', () => {
-    const { getByLabelText, getByTestId } = render(
+  it('keeps the fullscreen title, export, and close actions in one toolbar', async () => {
+    const { getByLabelText, getByTestId } = await render(
       <QuestFullMap steps={steps} title="Карта квеста" height={420} />
     );
 
-    fireEvent.press(getByLabelText('Открыть карту квеста на весь экран'));
+    await fireEvent.press(getByLabelText('Открыть карту квеста на весь экран'));
 
     const fullscreenToolbar = within(getByTestId('quest-fullscreen-toolbar'));
     expect(fullscreenToolbar.getAllByText('Карта квеста')).toHaveLength(1);
@@ -141,12 +142,12 @@ describe('QuestFullMap native marker status', () => {
     expect(fullscreenToolbar.getByLabelText('Закрыть полноэкранную карту квеста')).toBeTruthy();
   });
 
-  it('keeps a safe native height when callers pass the compact mobile size', () => {
-    const rendered = render(
+  it('keeps a safe native height when callers pass the compact mobile size', async () => {
+    const rendered = await render(
       <QuestFullMap steps={steps} title="Карта квеста" height={360} />
     );
 
-    const wrap = rendered.UNSAFE_getAllByType(View).find((node) => {
+    const wrap = getAllHosts(rendered.container, node => node.type === "View").find((node) => {
       const style = node.props?.style;
       return Array.isArray(style) && style.some((entry) => entry?.height === 420);
     });

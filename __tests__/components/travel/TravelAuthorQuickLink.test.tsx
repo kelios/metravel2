@@ -90,7 +90,7 @@ describe('TravelAuthorQuickLink', () => {
     })
   })
 
-  it('renders a compact author block and opens author actions', () => {
+  it('renders a compact author block and opens author actions', async () => {
     const travel: any = {
       id: 1,
       slug: 'demo',
@@ -102,7 +102,7 @@ describe('TravelAuthorQuickLink', () => {
       travelAddress: [],
     }
 
-    const { getByLabelText, getByText, queryByText } = render(<TravelAuthorQuickLink travel={travel} />)
+    const { getByLabelText, getByText, queryByText } = await render(<TravelAuthorQuickLink travel={travel} />)
 
     expect(getByText('Автор путешествия')).toBeTruthy()
     expect(getByText('Мария Иванова')).toBeTruthy()
@@ -115,35 +115,35 @@ describe('TravelAuthorQuickLink', () => {
     expect(queryByText('Instagram')).toBeNull()
     expect(mockUseUserProfileCached).toHaveBeenCalledWith(42, { enabled: true })
 
-    fireEvent.press(getByLabelText('Открыть профиль автора Мария Иванова'))
+    await fireEvent.press(getByLabelText('Открыть профиль автора Мария Иванова'))
     expect(mockPush).toHaveBeenCalledWith('/user/42')
 
-    fireEvent.press(getByLabelText('Подписаться на пользователя'))
+    await fireEvent.press(getByLabelText('Подписаться на пользователя'))
     expect(mockSubscribePress).toHaveBeenCalledWith(42)
 
-    fireEvent.press(getByLabelText('Написать автору Мария Иванова'))
+    await fireEvent.press(getByLabelText('Написать автору Мария Иванова'))
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/messages',
       params: { userId: '42' },
     })
 
-    fireEvent.press(getByLabelText('Открыть все путешествия автора Мария Иванова'))
+    await fireEvent.press(getByLabelText('Открыть все путешествия автора Мария Иванова'))
     expect(mockPush).toHaveBeenCalledWith('/search?user_id=42')
 
-    fireEvent.press(getByLabelText('Открыть YouTube'))
+    await fireEvent.press(getByLabelText('Открыть YouTube'))
     expect(mockOpenExternalUrl).toHaveBeenCalledWith('https://youtube.com/@maria')
 
-    fireEvent.press(getByLabelText('Открыть Instagram'))
+    await fireEvent.press(getByLabelText('Открыть Instagram'))
     expect(mockOpenExternalUrl).toHaveBeenCalledWith('https://instagram.com/maria')
   })
 
-  it('does not render without author name or id', () => {
-    const { queryByTestId } = render(<TravelAuthorQuickLink travel={{ id: 1 } as any} />)
+  it('does not render without author name or id', async () => {
+    const { queryByTestId } = await render(<TravelAuthorQuickLink travel={{ id: 1 } as any} />)
 
     expect(queryByTestId('travel-author-quick-link')).toBeNull()
   })
 
-  it('renders the avatar returned by the cached author profile', () => {
+  it('renders the avatar returned by the cached author profile', async () => {
     mockUseUserProfileCached.mockReturnValue({
       profile: {
         avatar: 'https://metravel.by/media/avatars/author.jpg',
@@ -156,7 +156,7 @@ describe('TravelAuthorQuickLink', () => {
       userIds: '42',
     }
 
-    const { getByTestId } = render(<TravelAuthorQuickLink travel={travel} />)
+    const { getByTestId } = await render(<TravelAuthorQuickLink travel={travel} />)
 
     expect(getByTestId('author-avatar')).toBeTruthy()
     expect(mockImageCardMedia).toHaveBeenCalledWith(
@@ -167,9 +167,9 @@ describe('TravelAuthorQuickLink', () => {
   })
   describe('content safety (#2133)', () => {
     const travel: any = { id: 5, userName: 'Мария Иванова', userIds: '42' }
-    const renderSigned = () => {
+    const renderSigned = async () => {
       const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-      return render(
+      return await render(
         <QueryClientProvider client={client}>
           <TravelAuthorQuickLink travel={travel} />
         </QueryClientProvider>,
@@ -180,16 +180,16 @@ describe('TravelAuthorQuickLink', () => {
       useAuthStore.setState({ isAuthenticated: false, userId: null })
     })
 
-    it('offers the travel report menu to a signed-in reader', () => {
+    it('offers the travel report menu to a signed-in reader', async () => {
       useAuthStore.setState({ isAuthenticated: true, userId: '7' })
-      expect(renderSigned().getByTestId('travel-author-safety-menu')).toBeTruthy()
+      expect(await (await renderSigned()).getByTestId('travel-author-safety-menu')).toBeTruthy()
     })
 
-    it('hides it from the travel author and from guests', () => {
+    it('hides it from the travel author and from guests', async () => {
       useAuthStore.setState({ isAuthenticated: true, userId: '42' })
-      expect(renderSigned().queryByTestId('travel-author-safety-menu')).toBeNull()
+      expect(await (await renderSigned()).queryByTestId('travel-author-safety-menu')).toBeNull()
       useAuthStore.setState({ isAuthenticated: false, userId: null })
-      expect(render(<TravelAuthorQuickLink travel={travel} />).queryByTestId('travel-author-safety-menu')).toBeNull()
+      expect(await (await render(<TravelAuthorQuickLink travel={travel} />)).queryByTestId('travel-author-safety-menu')).toBeNull()
     })
   })
 })

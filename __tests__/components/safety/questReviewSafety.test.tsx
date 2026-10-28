@@ -24,7 +24,7 @@ jest.mock('@/api/quests', () => ({
 import QuestReviewsModal from '@/components/quests/QuestReviewsModal'
 import { useHiddenContentStore } from '@/stores/hiddenContentStore'
 
-const render = (ui: React.ReactElement) => rtlRender(ui, { wrapper: createQueryWrapper().Wrapper })
+const render = async (ui: React.ReactElement) => rtlRender(ui, { wrapper: createQueryWrapper().Wrapper })
 
 beforeEach(() => {
   useHiddenContentStore.setState({ byOwner: {} })
@@ -32,31 +32,31 @@ beforeEach(() => {
 
 describe('QuestReviewsModal safety (#2133)', () => {
   it('offers report and hide, but no block without a known author', async () => {
-    const { findByTestId, getByTestId, queryByTestId } = render(
+    const { findByTestId, getByTestId, queryByTestId } = await render(
       <QuestReviewsModal questId="minsk" visible onClose={jest.fn()} />,
     )
-    fireEvent.press(await findByTestId('quest-review-3-safety-menu'))
+    await fireEvent.press(await findByTestId('quest-review-3-safety-menu'))
     expect(getByTestId('quest-review-3-safety-report')).toBeTruthy()
     expect(getByTestId('quest-review-3-safety-hide')).toBeTruthy()
     expect(queryByTestId('quest-review-3-safety-block')).toBeNull()
   })
 
   it('offers block author on a foreign review with a known author', async () => {
-    const { findByTestId, getByTestId } = render(<QuestReviewsModal questId="minsk" visible onClose={jest.fn()} />)
-    fireEvent.press(await findByTestId('quest-review-4-safety-menu'))
+    const { findByTestId, getByTestId } = await render(<QuestReviewsModal questId="minsk" visible onClose={jest.fn()} />)
+    await fireEvent.press(await findByTestId('quest-review-4-safety-menu'))
     expect(getByTestId('quest-review-4-safety-report')).toBeTruthy()
     expect(getByTestId('quest-review-4-safety-block')).toBeTruthy()
   })
 
   it('shows no safety menu on the viewer own review', async () => {
-    const { findByTestId, queryByTestId } = render(<QuestReviewsModal questId="minsk" visible onClose={jest.fn()} />)
+    const { findByTestId, queryByTestId } = await render(<QuestReviewsModal questId="minsk" visible onClose={jest.fn()} />)
     expect(await findByTestId('quest-review-item-5')).toBeTruthy()
     expect(queryByTestId('quest-review-5-safety-menu')).toBeNull()
   })
 
   it('replaces a hidden review with the placeholder', async () => {
     useHiddenContentStore.setState({ byOwner: { '1': ['quest_review:3'] } })
-    const { findByTestId, queryByTestId } = render(
+    const { findByTestId, queryByTestId } = await render(
       <QuestReviewsModal questId="minsk" visible onClose={jest.fn()} />,
     )
     expect(await findByTestId('hidden-content')).toBeTruthy()

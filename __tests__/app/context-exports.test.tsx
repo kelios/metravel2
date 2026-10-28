@@ -84,7 +84,7 @@ describe('Context module exports (prod-build regression)', () => {
       const { renderHook: _unused, ...rtl } = require('@testing-library/react-native');
       const { render } = rtl;
 
-      render(
+      await render(
         <AppProviders queryClient={queryClient}>
           <ProbeComponent />
         </AppProviders>
@@ -115,7 +115,7 @@ describe('Context module exports (prod-build regression)', () => {
         );
       }
 
-      const { result } = renderHook(() => useAuth(), { wrapper });
+      const { result } = await renderHook(() => useAuth(), { wrapper });
 
       // #2239: дети монтируются, когда LocaleProvider применил сохранённый язык.
       await waitFor(() => expect(result.current).toBeTruthy());
@@ -141,7 +141,7 @@ describe('Context module exports (prod-build regression)', () => {
       try {
         const { render } = require('@testing-library/react-native');
 
-        render(
+        await render(
           <AppProviders
             queryClient={queryClient}
             deferAuthProvider
@@ -177,7 +177,7 @@ describe('Context module exports (prod-build regression)', () => {
       try {
         const { render } = require('@testing-library/react-native');
 
-        render(
+        await render(
           <AppProviders
             queryClient={queryClient}
             deferFavoritesProvider
@@ -220,7 +220,7 @@ describe('Context module exports (prod-build regression)', () => {
         );
       }
 
-      const { result } = renderHook(() => useAuth(), { wrapper });
+      const { result } = await renderHook(() => useAuth(), { wrapper });
 
       await act(async () => {
         jest.advanceTimersByTime(15000);

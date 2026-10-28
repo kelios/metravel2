@@ -85,7 +85,7 @@ describe('UserPointsScreen', () => {
       setNewPassword: jest.fn()
     });
 
-    render(<UserPointsScreen />);
+    await render(<UserPointsScreen />);
 
     expect(await screen.findByTestId('userpoints-auth-loading')).toBeTruthy();
     expect(screen.queryByText('Требуется авторизация')).toBeNull();
@@ -108,7 +108,7 @@ describe('UserPointsScreen', () => {
       setNewPassword: jest.fn()
     });
 
-    render(<UserPointsScreen />);
+    await render(<UserPointsScreen />);
 
     expect(await screen.findByText('Войдите, чтобы управлять точками')).toBeTruthy();
     expect(screen.getByText('Для сохранения и просмотра ваших точек на карте необходимо войти в аккаунт.')).toBeTruthy();
@@ -134,10 +134,10 @@ describe('UserPointsScreen', () => {
       setNewPassword: jest.fn()
     });
 
-    render(<UserPointsScreen />);
+    await render(<UserPointsScreen />);
 
     const loginButton = await screen.findByText('Войти');
-    fireEvent.press(loginButton);
+    await fireEvent.press(loginButton);
 
     expect(router.push).toHaveBeenCalledWith(expect.stringContaining('/login'));
     expect(router.push).toHaveBeenCalledWith(expect.stringContaining('intent=userpoints'));
@@ -160,7 +160,7 @@ describe('UserPointsScreen', () => {
       setNewPassword: jest.fn()
     });
 
-    render(<UserPointsScreen />);
+    await render(<UserPointsScreen />);
     
     expect(() => screen.getByText('Требуется авторизация')).toThrow();
 
@@ -187,7 +187,7 @@ describe('UserPointsScreen', () => {
       setNewPassword: jest.fn()
     });
 
-    render(<UserPointsScreen />);
+    await render(<UserPointsScreen />);
 
     expect(await screen.findByLabelText('Добавить')).toBeTruthy();
     expect(screen.queryByText('Мои точки')).toBeNull();
@@ -212,7 +212,7 @@ describe('UserPointsScreen', () => {
       setNewPassword: jest.fn()
     });
 
-    render(<UserPointsScreen />);
+    await render(<UserPointsScreen />);
 
     expect(await screen.findByLabelText('Добавить')).toBeTruthy();
     expect(screen.queryByText('Мои точки')).toBeNull();

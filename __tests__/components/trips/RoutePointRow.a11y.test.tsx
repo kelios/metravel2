@@ -23,12 +23,12 @@ describe('RoutePointRow drag handle accessibility', () => {
   afterEach(() => jest.restoreAllMocks())
   afterAll(() => setPlatformOS(originalOS))
 
-  it('supports keyboard and screen-reader reorder actions without replacing drag handlers', () => {
+  it('supports keyboard and screen-reader reorder actions without replacing drag handlers', async () => {
     const styles = createStyles(colors)
     const onMove = jest.fn()
     const onPointerDown = jest.fn()
     const preventDefault = jest.fn()
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <RoutePointRow
         point={{
           id: 'b',
@@ -60,11 +60,11 @@ describe('RoutePointRow drag handle accessibility', () => {
     expect(handle.props.tabIndex).toBe(0)
     expect(handleStyle.touchAction).toBe('pan-y')
 
-    fireEvent(handle, 'pointerDown', { clientY: 100, pointerType: 'mouse', button: 0 })
+    await fireEvent(handle, 'pointerDown', { clientY: 100, pointerType: 'mouse', button: 0 })
     expect(onPointerDown).toHaveBeenCalledTimes(1)
 
-    fireEvent(handle, 'keyDown', { key: 'ArrowUp', preventDefault })
-    fireEvent(handle, 'accessibilityAction', { nativeEvent: { actionName: 'increment' } })
+    await fireEvent(handle, 'keyDown', { key: 'ArrowUp', preventDefault })
+    await fireEvent(handle, 'accessibilityAction', { nativeEvent: { actionName: 'increment' } })
 
     expect(preventDefault).toHaveBeenCalledTimes(1)
     expect(onMove.mock.calls).toEqual([

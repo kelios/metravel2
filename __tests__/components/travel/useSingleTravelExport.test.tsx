@@ -44,7 +44,7 @@ describe('useSingleTravelExport', () => {
   })
 
   it('returns summary and delegates to pdf export service', async () => {
-    const { result } = renderHook(() => useSingleTravelExport(baseTravel))
+    const { result } = await renderHook(() => useSingleTravelExport(baseTravel))
     const customSettings: BookSettings = {
       ...result.current.lastSettings,
       includeChecklists: true,
@@ -59,9 +59,9 @@ describe('useSingleTravelExport', () => {
     expect(result.current.settingsSummary).toContain('minimal')
   })
 
-  it('resets settings when travel changes', () => {
+  it('resets settings when travel changes', async () => {
     const updatedTravel = { ...baseTravel, name: 'Новый маршрут' } as Travel
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ travel }: { travel: Travel }) => useSingleTravelExport(travel),
       {
         initialProps: { travel: baseTravel },
@@ -70,7 +70,7 @@ describe('useSingleTravelExport', () => {
 
     expect(result.current.lastSettings.title).toContain('Маршрут по Карпатам')
 
-    rerender({ travel: updatedTravel })
+    await rerender({ travel: updatedTravel })
     expect(result.current.lastSettings.title).toContain('Новый маршрут')
   })
 })

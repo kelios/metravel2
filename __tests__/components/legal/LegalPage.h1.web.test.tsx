@@ -30,10 +30,10 @@ describe('LegalPage single H1 (#1617)', () => {
     Object.defineProperty(Platform, 'OS', { value: originalOS, configurable: true })
   })
 
-  it('exposes pageTitle as the single visible level-1 heading, not seoTitle', () => {
+  it('exposes pageTitle as the single visible level-1 heading, not seoTitle', async () => {
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
 
-    const { getByText, queryByText, UNSAFE_root } = render(
+    const { getByText, queryByText, container } = await render(
       <LegalPage
         headKey="privacy"
         seoTitle="Политика конфиденциальности и обработка данных | Metravel"
@@ -49,15 +49,11 @@ describe('LegalPage single H1 (#1617)', () => {
 
     // The old hidden duplicate must be gone entirely, not just re-hidden.
     expect(queryByText('Политика конфиденциальности и обработка данных | Metravel')).toBeNull()
-    // react-test-renderer's findAllByProps can report the same logical Text
-    // element twice (composite + host fiber) — dedupe by content, as in
-    // about.test.tsx's equivalent single-H1 assertion.
-    const level1 = new Set(
-      UNSAFE_root
-        .findAllByProps({ accessibilityRole: 'header' })
-        .filter((node) => node.props['aria-level'] === 1)
-        .map((node) => String(node.props.children)),
+    // Host-only queries count each rendered heading once.
+    const level1 = container.queryAll(node =>
+      node.props.accessibilityRole === 'header' && node.props['aria-level'] === 1,
     )
-    expect(Array.from(level1)).toEqual(['Политика конфиденциальности'])
+    expect(level1).toHaveLength(1)
+    expect(level1.map(node => String(node.props.children))).toEqual(['Политика конфиденциальности'])
   })
 })

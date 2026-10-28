@@ -110,8 +110,8 @@ const PagerHarness: React.FC<HarnessProps> = ({ point, enabled, onState }) => {
 describe('#1568 lazy place sources network contract', () => {
   let queryClient: QueryClient;
 
-  const renderHarness = (props: HarnessProps) =>
-    render(
+  const renderHarness = async (props: HarnessProps) =>
+    await render(
       <QueryClientProvider client={queryClient}>
         <PagerHarness {...props} />
       </QueryClientProvider>,
@@ -131,7 +131,7 @@ describe('#1568 lazy place sources network contract', () => {
   it('does not request sources while the card is closed (markers must stay network-free)', async () => {
     mockFetchWithTimeout.mockResolvedValue(createResponseMock(RAW_SOURCES_SINGLE_PAGE));
 
-    const { getByTestId } = renderHarness({
+    const { getByTestId } = await renderHarness({
       point: toPoint(RAW_GROUPED_LIBRARY_MARKER as unknown as Record<string, unknown>),
       enabled: false,
     });
@@ -148,7 +148,7 @@ describe('#1568 lazy place sources network contract', () => {
 
     let state: ReturnType<typeof usePlaceSourcePagerState> | undefined;
     const point = toPoint(RAW_GROUPED_LIBRARY_MARKER as unknown as Record<string, unknown>);
-    const { getByTestId } = renderHarness({
+    const { getByTestId } = await renderHarness({
       point,
       enabled: true,
       onState: (value) => {
@@ -186,11 +186,11 @@ describe('#1568 lazy place sources network contract', () => {
     mockFetchWithTimeout.mockResolvedValue(createResponseMock(RAW_SOURCES_SINGLE_PAGE));
 
     const point = toPoint(RAW_GROUPED_LIBRARY_MARKER as unknown as Record<string, unknown>);
-    const first = renderHarness({ point, enabled: true });
+    const first = await renderHarness({ point, enabled: true });
     await waitFor(() => expect(sourcesUrls()).toHaveLength(1));
-    first.unmount();
+    await first.unmount();
 
-    const second = renderHarness({ point, enabled: true });
+    const second = await renderHarness({ point, enabled: true });
     await waitFor(() =>
       expect(second.getByTestId('counter').props.children).toBe(
         `1/2:${RAW_GROUPED_LIBRARY_MARKER.primary_source.source_id}`,
@@ -205,15 +205,15 @@ describe('#1568 lazy place sources network contract', () => {
       .mockResolvedValueOnce(createResponseMock(RAW_SOURCES_SINGLE_PAGE))
       .mockResolvedValue(createResponseMock({ results: [], next: null }));
 
-    const library = renderHarness({
+    const library = await renderHarness({
       point: toPoint(RAW_GROUPED_LIBRARY_MARKER as unknown as Record<string, unknown>),
       enabled: true,
     });
     await waitFor(() => expect(sourcesUrls()).toHaveLength(1));
-    library.unmount();
+    await library.unmount();
 
     // Соседнее место (другой place_id) — одиночный source, запроса быть не должно.
-    const nearby = renderHarness({
+    const nearby = await renderHarness({
       point: toPoint(RAW_NEARBY_DISTINCT_MARKER as unknown as Record<string, unknown>),
       enabled: true,
     });
@@ -229,7 +229,7 @@ describe('#1568 lazy place sources network contract', () => {
   it('never requests sources for a legacy row without place_id', async () => {
     mockFetchWithTimeout.mockResolvedValue(createResponseMock(RAW_SOURCES_SINGLE_PAGE));
 
-    const { getByTestId } = renderHarness({
+    const { getByTestId } = await renderHarness({
       point: toPoint(RAW_LEGACY_PLACELESS_ROW as unknown as Record<string, unknown>),
       enabled: true,
     });
@@ -242,7 +242,7 @@ describe('#1568 lazy place sources network contract', () => {
     mockFetchWithTimeout.mockResolvedValue(createResponseMock({}, false, 500));
 
     let state: ReturnType<typeof usePlaceSourcePagerState> | undefined;
-    renderHarness({
+    await renderHarness({
       point: toPoint(RAW_GROUPED_LIBRARY_MARKER as unknown as Record<string, unknown>),
       enabled: true,
       onState: (value) => {
@@ -262,7 +262,7 @@ describe('#1568 lazy place sources network contract', () => {
 
     let state: ReturnType<typeof usePlaceSourcePagerState> | undefined;
     const point = toPoint(RAW_GROUPED_LIBRARY_MARKER as unknown as Record<string, unknown>);
-    renderHarness({
+    await renderHarness({
       point,
       enabled: true,
       onState: (value) => {
@@ -293,7 +293,7 @@ describe('#1568 lazy place sources network contract', () => {
 
     let state: ReturnType<typeof usePlaceSourcePagerState> | undefined;
     const point = toPoint(RAW_GROUPED_LIBRARY_MARKER as unknown as Record<string, unknown>);
-    const { getByTestId } = renderHarness({
+    const { getByTestId } = await renderHarness({
       point,
       enabled: true,
       onState: (value) => {

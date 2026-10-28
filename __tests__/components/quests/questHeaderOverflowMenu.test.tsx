@@ -61,7 +61,7 @@ type HeaderOverrides = {
   showFinaleOnly?: boolean
 }
 
-const renderHeader = (overrides: HeaderOverrides) => {
+const renderHeader = async (overrides: HeaderOverrides) => {
   const { isMobile, offlineMapPointsCount = 3, statusSlot, contentLocaleSlot } = overrides
   const compactNav = overrides.compactNav ?? isMobile
   const screenW = overrides.screenW ?? (isMobile ? (compactNav ? 390 : 680) : 1024)
@@ -75,7 +75,7 @@ const renderHeader = (overrides: HeaderOverrides) => {
     onShowFinale: jest.fn(),
   }
 
-  const view = render(
+  const view = await render(
     <QuestHeaderPanel
       colors={colors}
       styles={createQuestWizardStyles(colors, isMobile, screenW)}
@@ -111,14 +111,14 @@ const renderHeader = (overrides: HeaderOverrides) => {
 }
 
 afterEach(async () => {
-  cleanup()
+  await cleanup()
   await i18n.changeLanguage('ru')
 })
 beforeEach(() => { mockContentLocale = 'pl' })
 
 describe('пометка языка рядом с маршрутом (#2198)', () => {
-  it.each([320, 390])('пассивная пометка не вложена в кнопку и не добавляет ряд статусов на %s', (screenW) => {
-    const screen = renderHeader({
+  it.each([320, 390])('пассивная пометка не вложена в кнопку и не добавляет ряд статусов на %s', async (screenW) => {
+    const screen = await renderHeader({
       isMobile: true,
       screenW,
       contentLocaleSlot: <QuestContentLocaleNotice contentLocale="ru" compact />,
@@ -130,32 +130,32 @@ describe('пометка языка рядом с маршрутом (#2198)', (
     expect(StyleSheet.flatten(route.props.style).height).toBe(44)
     expect(StyleSheet.flatten(route.props.style).minHeight).toBeGreaterThanOrEqual(44)
     expect(screen.queryByTestId('quest-header-status')).toBeNull()
-    expect(row.findAll((node) => node.props.testID === 'quest-content-locale-notice').length).toBeGreaterThan(0)
-    expect(route.findAll((node) => node.props.testID === 'quest-content-locale-notice')).toHaveLength(0)
+    expect(row.queryAll((node) => node.props.testID === 'quest-content-locale-notice').length).toBeGreaterThan(0)
+    expect(route.queryAll((node) => node.props.testID === 'quest-content-locale-notice')).toHaveLength(0)
     expect(notice.props.accessibilityLabel).toContain('Русский')
     expect(notice.props.onPress).toBeUndefined()
     expect(screen.getByLabelText('Маршрут: Точка 1 из 1, задания 1 из 2')).toBeTruthy()
     expect(screen.getByText('1/1')).toBeTruthy()
     expect(screen.getByText('1/2')).toBeTruthy()
-    fireEvent.press(route)
+    await fireEvent.press(route)
     expect(screen.getByTestId('quest-route-sheet')).toBeTruthy()
-    fireEvent.press(screen.getByTestId('quest-route-row-step-1'))
+    await fireEvent.press(screen.getByTestId('quest-route-row-step-1'))
     expect(screen.handlers.goToStep).toHaveBeenCalledWith(1)
-    fireEvent.press(route)
-    fireEvent.press(screen.getByTestId('quest-nav-finale'))
+    await fireEvent.press(route)
+    await fireEvent.press(screen.getByTestId('quest-nav-finale'))
     expect(screen.handlers.onShowFinale).toHaveBeenCalledTimes(1)
   })
 
-  it('pending и статус фото остаются независимыми от пассивной пометки', () => {
-    const screen = renderHeader({
+  it('pending и статус фото остаются независимыми от пассивной пометки', async () => {
+    const screen = await renderHeader({
       isMobile: true,
       contentLocaleSlot: <QuestContentLocaleNotice contentLocale="ru" compact />,
       statusSlot: <><Text testID="pending">Ждёт отправки</Text><Text testID="photo">Фото ждёт проверки</Text></>,
     })
     const status = screen.getByTestId('quest-header-status')
     const route = screen.getByTestId('quest-route-strip')
-    expect(status.findAll((node) => node.props.testID === 'quest-content-locale-notice')).toHaveLength(0)
-    expect(route.findAll((node) => node.props.testID === 'pending' || node.props.testID === 'photo')).toHaveLength(0)
+    expect(status.queryAll((node) => node.props.testID === 'quest-content-locale-notice')).toHaveLength(0)
+    expect(route.queryAll((node) => node.props.testID === 'pending' || node.props.testID === 'photo')).toHaveLength(0)
     expect(screen.getByTestId('pending')).toBeTruthy()
     expect(screen.getByTestId('photo')).toBeTruthy()
     expect(screen.getByTestId('quest-content-locale-notice')).toBeTruthy()
@@ -164,8 +164,8 @@ describe('пометка языка рядом с маршрутом (#2198)', (
   it.each([
     [{ currentIndex: 0 }, 'Старт'],
     [{ showFinaleOnly: true }, 'Финал'],
-  ] as const)('старт и финал остаются именованными состояниями: %s', (position, label) => {
-    const screen = renderHeader({
+  ] as const)('старт и финал остаются именованными состояниями: %s', async (position, label) => {
+    const screen = await renderHeader({
       isMobile: true,
       ...position,
       contentLocaleSlot: <QuestContentLocaleNotice contentLocale="ru" compact />,
@@ -175,16 +175,16 @@ describe('пометка языка рядом с маршрутом (#2198)', (
     expect(screen.getByText('1/2')).toBeTruthy()
   })
 
-  it('без языкового слота сохраняет прежний ряд маршрута', () => {
-    const screen = renderHeader({ isMobile: true, contentLocaleSlot: null })
+  it('без языкового слота сохраняет прежний ряд маршрута', async () => {
+    const screen = await renderHeader({ isMobile: true, contentLocaleSlot: null })
     expect(screen.queryByTestId('quest-locale-route-row')).toBeNull()
     expect(screen.queryByTestId('quest-header-status')).toBeNull()
     expect(screen.queryByTestId('quest-content-locale-notice')).toBeNull()
     expect(screen.getByText('Точка 1 из 1 · Задания: 1 / 2')).toBeTruthy()
   })
 
-  it.each([600, 767])('%s сохраняет язык и статусы в прежнем ряду над прогрессом', (screenW) => {
-    const screen = renderHeader({
+  it.each([600, 767])('%s сохраняет язык и статусы в прежнем ряду над прогрессом', async (screenW) => {
+    const screen = await renderHeader({
       isMobile: true,
       compactNav: false,
       screenW,
@@ -194,15 +194,15 @@ describe('пометка языка рядом с маршрутом (#2198)', (
     expect(screen.queryByTestId('quest-locale-route-row')).toBeNull()
     expect(screen.queryByTestId('quest-route-strip')).toBeNull()
     const status = screen.getByTestId('quest-header-status')
-    expect(status.findAll((node) => node.props.testID === 'quest-content-locale-notice').length).toBeGreaterThan(0)
-    expect(status.findAll((node) => node.props.testID === 'pending').length).toBeGreaterThan(0)
+    expect(status.queryAll((node) => node.props.testID === 'quest-content-locale-notice').length).toBeGreaterThan(0)
+    expect(status.queryAll((node) => node.props.testID === 'pending').length).toBeGreaterThan(0)
     expect(screen.getByTestId('quest-content-locale-notice')).toBeTruthy()
     expect(screen.getByTestId('pending')).toBeTruthy()
     expect(screen.getByText(/Задания: 1 \/ 2/)).toBeTruthy()
   })
 
-  it('desktop не дублирует язык из существующего completionSlot', () => {
-    const screen = renderHeader({
+  it('desktop не дублирует язык из существующего completionSlot', async () => {
+    const screen = await renderHeader({
       isMobile: false,
       screenW: 1440,
       contentLocaleSlot: <QuestContentLocaleNotice contentLocale="ru" compact />,
@@ -215,7 +215,7 @@ describe('пометка языка рядом с маршрутом (#2198)', (
   })
 
   it('смена языка обновляет видимый старт и доступную подпись без нового route model input', async () => {
-    const screen = renderHeader({
+    const screen = await renderHeader({
       isMobile: true,
       currentIndex: 0,
       contentLocaleSlot: <QuestContentLocaleNotice contentLocale="ru" compact />,
@@ -228,19 +228,19 @@ describe('пометка языка рядом с маршрутом (#2198)', (
     expect(screen.getByTestId('quest-route-strip').props.accessibilityLabel).not.toBe(beforeLabel)
     expect(screen.getByLabelText('Route: Quest start, tasks 1 of 2')).toBeTruthy()
     expect(screen.getByTestId('quest-route-strip').props.accessibilityHint).toBe('Opens the list of all route points')
-    fireEvent.press(screen.getByTestId('quest-route-strip'))
+    await fireEvent.press(screen.getByTestId('quest-route-strip'))
     expect(screen.getByText('Quest start')).toBeTruthy()
     expect(screen.getByText('Finale')).toBeTruthy()
     expect(screen.queryByText('Старт квеста')).toBeNull()
     expect(screen.queryByText('Финал')).toBeNull()
-    fireEvent.press(screen.getByTestId('quest-route-row-step-1'))
+    await fireEvent.press(screen.getByTestId('quest-route-row-step-1'))
     expect(screen.handlers.goToStep).toHaveBeenCalledWith(1)
   })
 })
 
 describe('панель квеста на телефоне — действия и мета в строке экрана (#2148)', () => {
-  it('не рисует ряд кнопок, ряд меты и второй заголовок', () => {
-    const { queryByTestId, queryByLabelText, queryByRole } = renderHeader({ isMobile: true })
+  it('не рисует ряд кнопок, ряд меты и второй заголовок', async () => {
+    const { queryByTestId, queryByLabelText, queryByRole } = await renderHeader({ isMobile: true })
 
     expect(queryByTestId('quest-header-actions')).toBeNull()
     expect(queryByTestId('feather-more-horizontal')).toBeNull()
@@ -252,34 +252,34 @@ describe('панель квеста на телефоне — действия �
     expect(queryByRole('header')).toBeNull()
   })
 
-  it('оставляет полосу маршрута (< 600 px)', () => {
-    const { getByTestId } = renderHeader({ isMobile: true })
+  it('оставляет полосу маршрута (< 600 px)', async () => {
+    const { getByTestId } = await renderHeader({ isMobile: true })
 
     expect(getByTestId('quest-route-strip')).toBeTruthy()
   })
 
-  it('от 600 до 767 px — полоса прогресса со счётчиком и пилюли, без ряда кнопок', () => {
-    const { getByText, getByTestId, queryByTestId } = renderHeader({ isMobile: true, compactNav: false })
+  it('от 600 до 767 px — полоса прогресса со счётчиком и пилюли, без ряда кнопок', async () => {
+    const { getByText, getByTestId, queryByTestId } = await renderHeader({ isMobile: true, compactNav: false })
 
     expect(getByText(/Задания: 1 \/ 2/)).toBeTruthy()
     expect(getByTestId('quest-nav-finale')).toBeTruthy()
     expect(queryByTestId('quest-header-actions')).toBeNull()
   })
 
-  it('статусы, требующие внимания, видны над навигацией и только когда они есть', () => {
-    const withStatus = renderHeader({ isMobile: true, statusSlot: <Text testID="pending">Ждёт отправки</Text> })
+  it('статусы, требующие внимания, видны над навигацией и только когда они есть', async () => {
+    const withStatus = await renderHeader({ isMobile: true, statusSlot: <Text testID="pending">Ждёт отправки</Text> })
     expect(withStatus.getByTestId('quest-header-status')).toBeTruthy()
     expect(withStatus.getByTestId('pending')).toBeTruthy()
-    withStatus.unmount()
+    await withStatus.unmount()
 
-    const withoutStatus = renderHeader({ isMobile: true })
+    const withoutStatus = await renderHeader({ isMobile: true })
     expect(withoutStatus.queryByTestId('quest-header-status')).toBeNull()
   })
 })
 
 describe('панель квеста на desktop', () => {
-  it('ряд остаётся прежним: название, мета и все действия с подписями для диктора', () => {
-    const { getByLabelText, getByRole, getByTestId, queryByTestId } = renderHeader({ isMobile: false })
+  it('ряд остаётся прежним: название, мета и все действия с подписями для диктора', async () => {
+    const { getByLabelText, getByRole, getByTestId, queryByTestId } = await renderHeader({ isMobile: false })
 
     expect(getByRole('header').props.children).toBe('Квест шапки')
     expect(getByTestId('rating-slot')).toBeTruthy()
@@ -293,10 +293,10 @@ describe('панель квеста на desktop', () => {
     expect(queryByTestId('quest-header-status')).toBeNull()
   })
 
-  it('кнопка ряда действительно вызывает действие', () => {
-    const { getByLabelText, handlers } = renderHeader({ isMobile: false })
+  it('кнопка ряда действительно вызывает действие', async () => {
+    const { getByLabelText, handlers } = await renderHeader({ isMobile: false })
 
-    fireEvent.press(getByLabelText('Сбросить прогресс'))
+    await fireEvent.press(getByLabelText('Сбросить прогресс'))
 
     expect(handlers.onReset).toHaveBeenCalledTimes(1)
   })
@@ -307,33 +307,33 @@ describe('подсказки действий квеста на web', () => {
   beforeEach(() => { Platform.OS = 'web' })
   afterEach(() => { Platform.OS = originalOS })
 
-  it('остаётся видимой при уходе мыши с кнопки в фокусе', () => {
-    const { getByLabelText, getByTestId, queryByTestId } = renderHeader({ isMobile: false })
+  it('остаётся видимой при уходе мыши с кнопки в фокусе', async () => {
+    const { getByLabelText, getByTestId, queryByTestId } = await renderHeader({ isMobile: false })
     const button = getByLabelText('Скачать квест для офлайна')
-    fireEvent(button, 'hoverIn')
-    fireEvent(button, 'focus')
-    fireEvent(button, 'hoverOut')
+    await fireEvent(button, 'hoverIn')
+    await fireEvent(button, 'focus')
+    await fireEvent(button, 'hoverOut')
     expect(getByTestId('action-tooltip').props.children).toBe('Скачать офлайн')
-    fireEvent(button, 'blur')
+    await fireEvent(button, 'blur')
     expect(queryByTestId('action-tooltip')).toBeNull()
   })
 
-  it('остаётся видимой при потере фокуса под мышью и закрывается по dismiss', () => {
-    const { getByLabelText, getByTestId, queryByTestId } = renderHeader({ isMobile: false })
+  it('остаётся видимой при потере фокуса под мышью и закрывается по dismiss', async () => {
+    const { getByLabelText, getByTestId, queryByTestId } = await renderHeader({ isMobile: false })
     const button = getByLabelText('Скачать квест для офлайна')
-    fireEvent(button, 'hoverIn')
-    fireEvent(button, 'focus')
-    fireEvent(button, 'blur')
-    fireEvent.press(getByTestId('action-tooltip'))
+    await fireEvent(button, 'hoverIn')
+    await fireEvent(button, 'focus')
+    await fireEvent(button, 'blur')
+    await fireEvent.press(getByTestId('action-tooltip'))
     expect(queryByTestId('action-tooltip')).toBeNull()
-    fireEvent(button, 'hoverOut')
-    fireEvent(button, 'hoverIn')
+    await fireEvent(button, 'hoverOut')
+    await fireEvent(button, 'hoverIn')
     expect(getByTestId('action-tooltip')).toBeTruthy()
   })
 
-  it('не показывает подсказку у недоступного действия', () => {
-    const { getByLabelText, queryByTestId } = renderHeader({ isMobile: false, offlineMapPointsCount: 0 })
-    fireEvent(getByLabelText(/Скачать GPX/), 'hoverIn')
+  it('не показывает подсказку у недоступного действия', async () => {
+    const { getByLabelText, queryByTestId } = await renderHeader({ isMobile: false, offlineMapPointsCount: 0 })
+    await fireEvent(getByLabelText(/Скачать GPX/), 'hoverIn')
     expect(queryByTestId('action-tooltip')).toBeNull()
   })
 

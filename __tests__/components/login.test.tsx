@@ -6,8 +6,11 @@ import { useAuth } from '@/context/AuthContext';
 
 // Mock dependencies
 jest.mock('@/context/AuthContext');
-jest.mock('expo-router', () => ({
-  Link: ({ children }: any) => children,
+jest.mock('expo-router', () => {
+  const React = require('react');
+  const { Text } = require('react-native');
+  return {
+  Link: ({ children, asChild, ...props }: any) => asChild ? children : React.createElement(Text, { ...props, accessibilityRole: 'link' }, children),
   useRouter: () => ({
     push: jest.fn(),
     replace: jest.fn(),
@@ -20,7 +23,8 @@ jest.mock('expo-router', () => ({
     navigate: jest.fn(),
   }),
   useIsFocused: () => true,
-}));
+  };
+});
 
 jest.mock('react-native', () => {
   const RN = jest.requireActual('react-native');
@@ -91,7 +95,7 @@ const renderLogin = async (mockLogin?: jest.Mock, mockSendPassword?: jest.Mock) 
     isSuperuser: false,
   });
 
-  const utils = render(<Login />);
+  const utils = await render(<Login />);
 
   // Login screen renders <ActivityIndicator> until the React.lazy LoginForm
   // chunk resolves. Under heavy parallel test load that dynamic import can take
@@ -100,7 +104,7 @@ const renderLogin = async (mockLogin?: jest.Mock, mockSendPassword?: jest.Mock) 
   await utils.findByPlaceholderText('Email', undefined, { timeout: 10000 });
   // #2132: без согласия с условиями вход заблокирован — сценарии ниже про
   // валидацию и поток входа, поэтому согласие отмечаем сразу.
-  fireEvent.press(utils.getByTestId('auth-terms-gate-checkbox'));
+  await fireEvent.press(utils.getByTestId('auth-terms-gate-checkbox'));
 
   return utils;
 };
@@ -121,9 +125,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, 'invalid-email');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, 'invalid-email');
+      await fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(getByText('Введите корректный email адрес')).toBeTruthy();
@@ -139,9 +143,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123', '1');
@@ -155,9 +159,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, '  test@example.com  ');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, '  test@example.com  ');
+      await fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123', '1');
@@ -173,9 +177,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.changeText(passwordInput, '   ');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.changeText(passwordInput, '   ');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(getByText('Пароль обязателен')).toBeTruthy();
@@ -191,9 +195,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(mockLogin).toHaveBeenCalled();
@@ -229,9 +233,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123', '1');
@@ -245,9 +249,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.changeText(passwordInput, 'wrongpassword');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.changeText(passwordInput, 'wrongpassword');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(getByText('Неверный email или пароль.')).toBeTruthy();
@@ -264,9 +268,9 @@ describe('Login Component', () => {
       });
       const { getByPlaceholderText, getByText, queryByText } = await renderLogin(mockLogin);
 
-      fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
-      fireEvent.changeText(getByPlaceholderText('Пароль'), 'correct-password');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
+      await fireEvent.changeText(getByPlaceholderText('Пароль'), 'correct-password');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(
@@ -285,9 +289,9 @@ describe('Login Component', () => {
       });
       const { getByPlaceholderText, getByText, queryByText } = await renderLogin(mockLogin);
 
-      fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
-      fireEvent.changeText(getByPlaceholderText('Пароль'), 'correct-password');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
+      await fireEvent.changeText(getByPlaceholderText('Пароль'), 'correct-password');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(getByText(/NSURLError -1009 \(notConnectedToInternet\) @ metravel\.by/)).toBeTruthy();
@@ -303,9 +307,9 @@ describe('Login Component', () => {
       });
       const { getByPlaceholderText, getByText, queryByText } = await renderLogin(mockLogin);
 
-      fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
-      fireEvent.changeText(getByPlaceholderText('Пароль'), 'correct-password');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
+      await fireEvent.changeText(getByPlaceholderText('Пароль'), 'correct-password');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(getByText('Сервис временно недоступен. Попробуйте позже.')).toBeTruthy();
@@ -320,9 +324,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(getByText(/· unreachable · \d{2}:\d{2}:\d{2}Z\]$/)).toBeTruthy();
@@ -336,9 +340,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(getByText('Ошибка при входе.')).toBeTruthy();
@@ -354,9 +358,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(getByText('Подождите…')).toBeTruthy();
@@ -385,23 +389,23 @@ describe('Login Component', () => {
       (useAuth as jest.Mock).mockImplementation(() => authValue);
 
       const { getByPlaceholderText, findByPlaceholderText, getByTestId, getByText, rerender } =
-        render(<Login />);
+        await render(<Login />);
       await findByPlaceholderText('Email', undefined, { timeout: 10000 });
-      fireEvent.press(getByTestId('auth-terms-gate-checkbox'));
+      await fireEvent.press(getByTestId('auth-terms-gate-checkbox'));
 
       // 1) Successful login latches `submitted` -> button shows "Подождите…".
-      fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
-      fireEvent.changeText(getByPlaceholderText('Пароль'), 'password123');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(getByPlaceholderText('Email'), 'test@example.com');
+      await fireEvent.changeText(getByPlaceholderText('Пароль'), 'password123');
+      await fireEvent.press(getByText('Войти'));
       await waitFor(() => expect(mockLogin).toHaveBeenCalled());
       await waitFor(() => expect(getByText('Подождите…')).toBeTruthy());
 
       // 2) Emulate the auth-state transition across logout: the screen stays
       //    mounted (native tab), auth flips authenticated -> unauthenticated.
       authValue.isAuthenticated = true;
-      rerender(<Login />);
+      await rerender(<Login />);
       authValue.isAuthenticated = false;
-      rerender(<Login />);
+      await rerender(<Login />);
 
       // 3) The focus/unauth effect must clear the `submitted` latch so a
       //    second login can proceed — button is back to "Войти", not stuck.
@@ -415,8 +419,8 @@ describe('Login Component', () => {
       const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
-      fireEvent.changeText(emailInput, 'invalid-email');
-      fireEvent.press(getByText('Забыли пароль?'));
+      await fireEvent.changeText(emailInput, 'invalid-email');
+      await fireEvent.press(getByText('Забыли пароль?'));
 
       await waitFor(() => {
         expect(getByText('Введите корректный email адрес')).toBeTruthy();
@@ -430,8 +434,8 @@ describe('Login Component', () => {
       const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
-      fireEvent.changeText(emailInput, '  test@example.com  ');
-      fireEvent.press(getByText('Забыли пароль?'));
+      await fireEvent.changeText(emailInput, '  test@example.com  ');
+      await fireEvent.press(getByText('Забыли пароль?'));
 
       await waitFor(() => {
         expect(mockSendPassword).toHaveBeenCalledWith('test@example.com');
@@ -443,8 +447,8 @@ describe('Login Component', () => {
       const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.press(getByText('Забыли пароль?'));
+      await fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.press(getByText('Забыли пароль?'));
 
       await waitFor(() => {
         expect(getByText('Пароль отправлен на email')).toBeTruthy();
@@ -458,8 +462,8 @@ describe('Login Component', () => {
       const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.press(getByText('Забыли пароль?'));
+      await fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.press(getByText('Забыли пароль?'));
 
       await waitFor(() => {
         expect(getByText('Ошибка: не удалось отправить')).toBeTruthy();
@@ -470,8 +474,8 @@ describe('Login Component', () => {
     // «ошиб|не удалось»: в EN/BE/UK/PL её слов нет, и отказ красился как успех.
     // Эталон стиля ошибки — клиентская валидация формы, она всегда error=true.
     const captureErrorStyle = async (utils: Awaited<ReturnType<typeof renderLogin>>) => {
-      fireEvent.changeText(utils.getByPlaceholderText('Email'), 'invalid-email');
-      fireEvent.press(utils.getByText('Забыли пароль?'));
+      await fireEvent.changeText(utils.getByPlaceholderText('Email'), 'invalid-email');
+      await fireEvent.press(utils.getByText('Забыли пароль?'));
       const validationError = await utils.findByText('Введите корректный email адрес');
       return StyleSheet.flatten(validationError.props.style);
     };
@@ -483,8 +487,8 @@ describe('Login Component', () => {
       const utils = await renderLogin(undefined, mockSendPassword);
       const errorStyle = await captureErrorStyle(utils);
 
-      fireEvent.changeText(utils.getByPlaceholderText('Email'), 'test@example.com');
-      fireEvent.press(utils.getByText('Забыли пароль?'));
+      await fireEvent.changeText(utils.getByPlaceholderText('Email'), 'test@example.com');
+      await fireEvent.press(utils.getByText('Забыли пароль?'));
 
       const message = await utils.findByText('Enter a correct email');
       expect(StyleSheet.flatten(message.props.style)).toEqual(errorStyle);
@@ -497,8 +501,8 @@ describe('Login Component', () => {
       const utils = await renderLogin(undefined, mockSendPassword);
       const errorStyle = await captureErrorStyle(utils);
 
-      fireEvent.changeText(utils.getByPlaceholderText('Email'), 'test@example.com');
-      fireEvent.press(utils.getByText('Забыли пароль?'));
+      await fireEvent.changeText(utils.getByPlaceholderText('Email'), 'test@example.com');
+      await fireEvent.press(utils.getByText('Забыли пароль?'));
 
       const message = await utils.findByText(neutral);
       expect(StyleSheet.flatten(message.props.style)).not.toEqual(errorStyle);
@@ -509,8 +513,8 @@ describe('Login Component', () => {
       const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.press(getByText('Забыли пароль?'));
+      await fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.press(getByText('Забыли пароль?'));
 
       await waitFor(() => {
         expect(getByText(/· unreachable · \d{2}:\d{2}:\d{2}Z\]$/)).toBeTruthy();
@@ -522,8 +526,8 @@ describe('Login Component', () => {
       const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.press(getByText('Забыли пароль?'));
+      await fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.press(getByText('Забыли пароль?'));
 
       await waitFor(() => {
         expect(getByText('Ошибка при сбросе пароля.')).toBeTruthy();
@@ -537,8 +541,8 @@ describe('Login Component', () => {
       const { getByPlaceholderText, getByText } = await renderLogin(undefined, mockSendPassword);
 
       const emailInput = getByPlaceholderText('Email');
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.press(getByText('Забыли пароль?'));
+      await fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.press(getByText('Забыли пароль?'));
 
       // Button should be disabled during loading
       await waitFor(() => {
@@ -552,7 +556,7 @@ describe('Login Component', () => {
       const { getByPlaceholderText } = await renderLogin();
       const emailInput = getByPlaceholderText('Email');
 
-      fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.changeText(emailInput, 'test@example.com');
       expect(emailInput.props.value).toBe('test@example.com');
     });
 
@@ -560,7 +564,7 @@ describe('Login Component', () => {
       const { getByPlaceholderText } = await renderLogin();
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent.changeText(passwordInput, 'password123');
       expect(passwordInput.props.value).toBe('password123');
     });
 
@@ -569,7 +573,7 @@ describe('Login Component', () => {
       const { getByPlaceholderText } = await renderLogin();
       const emailInput = getByPlaceholderText('Email');
 
-      fireEvent(emailInput, 'submitEditing');
+      await fireEvent(emailInput, 'submitEditing');
       expect(focusSpy).toHaveBeenCalled();
       focusSpy.mockRestore();
     });
@@ -581,9 +585,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent(passwordInput, 'submitEditing');
+      await fireEvent.changeText(emailInput, 'test@example.com');
+      await fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent(passwordInput, 'submitEditing');
 
       await waitFor(() => {
         expect(mockLogin).toHaveBeenCalled();
@@ -599,9 +603,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, 'test@@example.com');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, 'test@@example.com');
+      await fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(getByText('Введите корректный email адрес')).toBeTruthy();
@@ -617,9 +621,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, 'test@');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, 'test@');
+      await fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(getByText('Введите корректный email адрес')).toBeTruthy();
@@ -635,9 +639,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, 'testexample.com');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, 'testexample.com');
+      await fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(getByText('Введите корректный email адрес')).toBeTruthy();
@@ -654,9 +658,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, longEmail);
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, longEmail);
+      await fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(mockLogin).toHaveBeenCalled();
@@ -670,9 +674,9 @@ describe('Login Component', () => {
       const emailInput = getByPlaceholderText('Email');
       const passwordInput = getByPlaceholderText('Пароль');
 
-      fireEvent.changeText(emailInput, 'test+tag@example.com');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.press(getByText('Войти'));
+      await fireEvent.changeText(emailInput, 'test+tag@example.com');
+      await fireEvent.changeText(passwordInput, 'password123');
+      await fireEvent.press(getByText('Войти'));
 
       await waitFor(() => {
         expect(mockLogin).toHaveBeenCalledWith('test+tag@example.com', 'password123', '1');

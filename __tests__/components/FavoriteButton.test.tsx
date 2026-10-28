@@ -37,10 +37,10 @@ describe('FavoriteButton', () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: true })
   })
 
-  it('renders correctly when not favorite', () => {
+  it('renders correctly when not favorite', async () => {
     mockIsFavorite.mockReturnValue(false)
     
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <FavoriteButton
         id="1"
         type="travel"
@@ -54,10 +54,10 @@ describe('FavoriteButton', () => {
     ).toBeTruthy()
   })
 
-  it('renders correctly when favorite', () => {
+  it('renders correctly when favorite', async () => {
     mockIsFavorite.mockReturnValue(true)
     
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <FavoriteButton
         id="1"
         type="travel"
@@ -74,7 +74,7 @@ describe('FavoriteButton', () => {
   it('calls addFavorite when pressing non-favorite item', async () => {
     mockIsFavorite.mockReturnValue(false)
     
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <FavoriteButton
         id="1"
         type="travel"
@@ -85,7 +85,7 @@ describe('FavoriteButton', () => {
     )
     
     const button = getByLabelText(/Добавить "Test Travel" в «Хочу поехать»/)
-    fireEvent.press(button)
+    await fireEvent.press(button)
     
     await waitFor(() => {
       expect(mockAddFavorite).toHaveBeenCalledWith({
@@ -103,7 +103,7 @@ describe('FavoriteButton', () => {
   it('calls removeFavorite when pressing favorite item', async () => {
     mockIsFavorite.mockReturnValue(true)
     
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <FavoriteButton
         id="1"
         type="article"
@@ -113,7 +113,7 @@ describe('FavoriteButton', () => {
     )
     
     const button = getByLabelText(/Удалить "Test Article" из «Хочу поехать»/)
-    fireEvent.press(button)
+    await fireEvent.press(button)
     
     await waitFor(() => {
       expect(mockRemoveFavorite).toHaveBeenCalledWith('1', 'article')
@@ -124,7 +124,7 @@ describe('FavoriteButton', () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false, authReady: true })
     mockIsFavorite.mockReturnValue(false)
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <FavoriteButton
         id="1"
         type="travel"
@@ -134,7 +134,7 @@ describe('FavoriteButton', () => {
     )
 
     const button = getByLabelText(/Добавить "Test Travel" в «Хочу поехать»/)
-    fireEvent.press(button)
+    await fireEvent.press(button)
 
     await waitFor(() => {
       expect(mockRouterPush).toHaveBeenCalledWith(expect.stringContaining('/login'))
@@ -150,7 +150,7 @@ describe('FavoriteButton', () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false, authReady: true })
     mockIsFavorite.mockReturnValue(false)
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <FavoriteButton
         id="1"
         type="travel"
@@ -159,7 +159,7 @@ describe('FavoriteButton', () => {
       />
     )
 
-    fireEvent.press(getByLabelText(/Добавить "Test Travel" в «Хочу поехать»/))
+    await fireEvent.press(getByLabelText(/Добавить "Test Travel" в «Хочу поехать»/))
 
     await waitFor(() => {
       expect(mockAddFavorite).toHaveBeenCalledWith({
@@ -175,10 +175,10 @@ describe('FavoriteButton', () => {
     expect(mockRouterPush).not.toHaveBeenCalled()
   })
 
-  it('applies custom size and color', () => {
+  it('applies custom size and color', async () => {
     mockIsFavorite.mockReturnValue(false)
     
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <FavoriteButton
         id="1"
         type="travel"

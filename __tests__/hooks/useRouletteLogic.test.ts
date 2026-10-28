@@ -108,7 +108,7 @@ describe('useRouletteLogic', () => {
   });
 
   it('builds filter groups and summary with default countries when none selected', async () => {
-    const { result } = renderHook(() => useRouletteLogic());
+    const { result } = await renderHook(() => useRouletteLogic());
 
     await waitFor(() => expect(result.current.filtersSummary).toBe('Беларусь и ещё 1'));
 
@@ -142,21 +142,21 @@ describe('useRouletteLogic', () => {
     });
     useListTravelFilters.mockImplementation(() => ({ ...filtersState, resetFilters, onSelect: jest.fn() }));
 
-    const { result, rerender } = renderHook(() => useRouletteLogic());
+    const { result, rerender } = await renderHook(() => useRouletteLogic());
     await waitFor(() => expect(result.current.filter.countries).toEqual([1, 2]));
     expect(result.current.activeFiltersCount).toBe(0);
     expect(result.current.filtersSummary).toBe('Беларусь и ещё 1');
 
     filtersState.filter = { countries: [2], year: undefined };
     filtersState.queryParams = { countries: [2] };
-    rerender({});
+    await rerender({});
     expect(result.current.activeFiltersCount).toBe(1);
     expect(result.current.filtersSummary).toBe('Польша');
 
-    act(() => {
+    await act(() => {
       result.current.handleClearAll();
     });
-    rerender({});
+    await rerender({});
     expect(resetFilters).toHaveBeenCalledTimes(1);
     expect(result.current.filter.countries).toEqual([1, 2]);
     expect(result.current.activeFiltersCount).toBe(0);
@@ -171,13 +171,13 @@ describe('useRouletteLogic', () => {
       ],
     });
 
-    const { result } = renderHook(() => useRouletteLogic());
+    const { result } = await renderHook(() => useRouletteLogic());
 
     await waitFor(() => expect(result.current.filtersSummary).toBe('Беларусь и ещё 1'));
     expect(result.current.activeFiltersCount).toBe(0);
   });
 
-  it('counts a selected year while keeping default countries inactive', () => {
+  it('counts a selected year while keeping default countries inactive', async () => {
     useListTravelFilters.mockReturnValue({
       filter: { countries: [], year: '2026' },
       queryParams: { year: '2026' },
@@ -185,7 +185,7 @@ describe('useRouletteLogic', () => {
       onSelect: jest.fn(),
     });
 
-    const { result } = renderHook(() => useRouletteLogic());
+    const { result } = await renderHook(() => useRouletteLogic());
 
     expect(result.current.activeFiltersCount).toBe(1);
     expect(result.current.filter.countries).toEqual([1, 2]);
@@ -193,31 +193,31 @@ describe('useRouletteLogic', () => {
 
   // #2375: страны по умолчанию видны в панели как выбранные и снимаются чипом.
   it('exposes default countries as the selected filter and toggles them off', async () => {
-    const { result } = renderHook(() => useRouletteLogic());
+    const { result } = await renderHook(() => useRouletteLogic());
 
     await waitFor(() => expect(result.current.filter.countries).toEqual([1, 2]));
 
     const { onSelect } = useListTravelFilters.mock.results[0].value as { onSelect: jest.Mock };
-    act(() => {
+    await act(() => {
       result.current.handleFilterChange('countries', '1');
     });
     expect(onSelect).toHaveBeenCalledWith('countries', ['2']);
   });
 
-  it('resets one group with one array update and preserves other active filters', () => {
+  it('resets one group with one array update and preserves other active filters', async () => {
     const onSelect = jest.fn();
     const resetFilters = jest.fn();
     useListTravelFilters.mockReturnValue({ filter: { countries: [2], categories: ['hike'] },
       queryParams: { countries: [2], categories: ['hike'] }, onSelect, resetFilters });
-    const { result } = renderHook(() => useRouletteLogic());
-    act(() => result.current.handleResetGroup('countries', ['1', '2']));
+    const { result } = await renderHook(() => useRouletteLogic());
+    await act(() => result.current.handleResetGroup('countries', ['1', '2']));
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onSelect).toHaveBeenCalledWith('countries', ['1', '2']);
     expect(resetFilters).not.toHaveBeenCalled();
     expect(result.current.filter.categories).toEqual(['hike']);
   });
 
-  it('hides facet options with zero count unless they are selected', () => {
+  it('hides facet options with zero count unless they are selected', async () => {
     fetchAllFiltersOptimized.mockReturnValueOnce({
       countries: [{ id: 1, name: 'Беларусь', title_ru: 'Беларусь' }],
       categories: [
@@ -235,7 +235,7 @@ describe('useRouletteLogic', () => {
       },
     });
 
-    const { result } = renderHook(() => useRouletteLogic());
+    const { result } = await renderHook(() => useRouletteLogic());
 
     const categories = result.current.filterGroups.find((group) => group.key === 'categories');
     expect(categories?.options).toEqual([
@@ -245,13 +245,13 @@ describe('useRouletteLogic', () => {
 
   it('spins and returns up to 3 shuffled travels', async () => {
     jest.useFakeTimers();
-    const { result } = renderHook(() => useRouletteLogic());
+    const { result } = await renderHook(() => useRouletteLogic());
 
     await act(async () => {
       await result.current.handleSpin();
     });
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(900);
     });
 
@@ -268,7 +268,7 @@ describe('useRouletteLogic', () => {
       onSelect: jest.fn(),
     });
 
-    const { result } = renderHook(() => useRouletteLogic());
+    const { result } = await renderHook(() => useRouletteLogic());
 
     await act(async () => {
       await result.current.handleSpin();
@@ -279,7 +279,7 @@ describe('useRouletteLogic', () => {
     expect(result.current.result).toEqual([]);
   });
 
-  it('toggles filter values through handleFilterChange', () => {
+  it('toggles filter values through handleFilterChange', async () => {
     const onSelect = jest.fn();
     useListTravelFilters.mockReturnValueOnce({
       filter: { transports: ['bus'] },
@@ -288,9 +288,9 @@ describe('useRouletteLogic', () => {
       onSelect,
     });
 
-    const { result } = renderHook(() => useRouletteLogic());
+    const { result } = await renderHook(() => useRouletteLogic());
 
-    act(() => {
+    await act(() => {
       result.current.handleFilterChange('transports', 'bus');
     });
 

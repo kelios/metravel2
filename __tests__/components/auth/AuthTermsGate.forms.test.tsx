@@ -20,7 +20,11 @@ jest.mock('@/utils/questGuestHandoff', () => ({
   prepareQuestGuestHandoff: (...args: unknown[]) => mockPrepareQuestGuestHandoff(...args),
 }));
 jest.mock('expo-router', () => ({
-  Link: ({ children }: any) => children,
+  Link: ({ children }: any) => {
+    const React = require('react')
+    const { Text } = require('react-native')
+    return React.createElement(Text, null, children)
+  },
   useRouter: () => ({ push: jest.fn(), replace: jest.fn(), back: jest.fn() }),
   useLocalSearchParams: () => mockSearchParams,
   usePathname: () => '/login',
@@ -74,7 +78,7 @@ const forms = [
 
 describe.each(forms)('$name: согласие с условиями до входа (#2132)', ({ Component, submitLabel }) => {
   it('без галки все провайдеры и кнопка формы неактивны, Apple при этом показан', async () => {
-    const screen = render(<Component />);
+    const screen = await render(<Component />);
 
     expect(await screen.findByTestId('auth-terms-gate-checkbox')).toBeTruthy();
     expect(screen.getByTestId('auth-terms-gate-hint')).toBeTruthy();
@@ -89,8 +93,8 @@ describe.each(forms)('$name: согласие с условиями до вхо�
   });
 
   it('после галки провайдеры активны и получают версию условий', async () => {
-    const screen = render(<Component />);
-    fireEvent.press(await screen.findByTestId('auth-terms-gate-checkbox'));
+    const screen = await render(<Component />);
+    await fireEvent.press(await screen.findByTestId('auth-terms-gate-checkbox'));
 
     expect(screen.queryByTestId('auth-terms-gate-hint')).toBeNull();
     expect(providerProps.apple.disabled).toBe(false);
@@ -98,9 +102,9 @@ describe.each(forms)('$name: согласие с условиями до вхо�
     expect(providerProps.facebook.disabled).toBe(false);
     expect(providerProps.facebook.termsVersion).toBe('1');
 
-    fireEvent.press(screen.getByTestId('mock-google'));
+    await fireEvent.press(screen.getByTestId('mock-google'));
     await waitFor(() => expect(authValue.loginWithGoogle).toHaveBeenCalledWith('google-id-token', '1'));
-    fireEvent.press(screen.getByTestId('mock-apple'));
+    await fireEvent.press(screen.getByTestId('mock-apple'));
     await waitFor(() =>
       expect(authValue.loginWithApple).toHaveBeenCalledWith({ identityToken: 'apple-token' }, '1'),
     );
@@ -108,11 +112,11 @@ describe.each(forms)('$name: согласие с условиями до вхо�
 });
 
 it('RegistrationForm: регистрация по email уходит с terms_version', async () => {
-  const screen = render(<RegistrationForm />);
-  fireEvent.press(await screen.findByTestId('auth-terms-gate-checkbox'));
-  fireEvent.changeText(screen.getByPlaceholderText('Email'), 'new@example.com');
-  fireEvent.changeText(screen.getAllByPlaceholderText(/Пароль|пароль/)[0], 'Str0ngPass!word');
-  fireEvent.press(screen.getByRole('button', { name: 'Зарегистрироваться' }));
+  const screen = await render(<RegistrationForm />);
+  await fireEvent.press(await screen.findByTestId('auth-terms-gate-checkbox'));
+  await fireEvent.changeText(screen.getByPlaceholderText('Email'), 'new@example.com');
+  await fireEvent.changeText(screen.getAllByPlaceholderText(/Пароль|пароль/)[0], 'Str0ngPass!word');
+  await fireEvent.press(screen.getByRole('button', { name: 'Зарегистрироваться' }));
 
   await waitFor(() =>
     expect(registration).toHaveBeenCalledWith(expect.objectContaining({ email: 'new@example.com' }), '1', null),
@@ -126,11 +130,11 @@ it('RegistrationForm: из гейта квеста регистрация ухо
   mockSearchParams = { intent: 'quest', redirect: '/quests/grodno/grodno-royal' };
   mockPrepareQuestGuestHandoff.mockResolvedValue('6a2955c0-0000-4000-8000-000000000001');
   try {
-    const screen = render(<RegistrationForm />);
-    fireEvent.press(await screen.findByTestId('auth-terms-gate-checkbox'));
-    fireEvent.changeText(screen.getByPlaceholderText('Email'), 'new@example.com');
-    fireEvent.changeText(screen.getAllByPlaceholderText(/Пароль|пароль/)[0], 'Str0ngPass!word');
-    fireEvent.press(screen.getByRole('button', { name: 'Зарегистрироваться' }));
+    const screen = await render(<RegistrationForm />);
+    await fireEvent.press(await screen.findByTestId('auth-terms-gate-checkbox'));
+    await fireEvent.changeText(screen.getByPlaceholderText('Email'), 'new@example.com');
+    await fireEvent.changeText(screen.getAllByPlaceholderText(/Пароль|пароль/)[0], 'Str0ngPass!word');
+    await fireEvent.press(screen.getByRole('button', { name: 'Зарегистрироваться' }));
 
     await waitFor(() =>
       expect(registration).toHaveBeenCalledWith(

@@ -21,30 +21,30 @@ describe('ActionListSheet: нижний отступ панели', () => {
     mockInsets.bottom = 0
   })
 
-  const panelStyle = () => {
-    const { getByTestId } = render(<ActionListSheet visible onClose={jest.fn()} title="Действия" />)
+  const panelStyle = async () => {
+    const { getByTestId } = await render(<ActionListSheet visible onClose={jest.fn()} title="Действия" />)
     return StyleSheet.flatten(getByTestId('bottom-sheet-panel').props.style)
   }
 
-  it('web: отступ — CSS-резерв дока и плашек, без литерала высоты дока', () => {
+  it('web: отступ — CSS-резерв дока и плашек, без литерала высоты дока', async () => {
     Platform.OS = 'web'
-    const style = panelStyle()
+    const style = await panelStyle()
     expect(style.marginBottom).toBe(WEB_BOTTOM_CHROME_INSET)
     expect(String(style.marginBottom)).toContain('var(--mt-dock-h, 0px)')
   })
 
-  it('native: Modal лежит поверх дока — отступа от края нет, низ панели резервирует home indicator', () => {
+  it('native: Modal лежит поверх дока — отступа от края нет, низ панели резервирует home indicator', async () => {
     Platform.OS = 'ios'
     mockInsets.bottom = 34
-    const style = panelStyle()
+    const style = await panelStyle()
     expect(style.marginBottom ?? 0).toBe(0)
     expect(style.paddingBottom).toBe(34)
   })
 
-  it('native без нижней safe-area: остаётся базовый зазор панели', () => {
+  it('native без нижней safe-area: остаётся базовый зазор панели', async () => {
     Platform.OS = 'android'
     mockInsets.bottom = 0
-    const style = panelStyle()
+    const style = await panelStyle()
     expect(style.marginBottom ?? 0).toBe(0)
     expect(style.paddingBottom).toBe(16)
   })

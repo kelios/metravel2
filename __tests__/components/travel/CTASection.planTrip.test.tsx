@@ -55,8 +55,8 @@ describe('CTASection plan-trip action', () => {
     mockRequireAuth.mockClear()
   })
 
-  it('opens trip planning with the current travel as source', () => {
-    const { getByTestId } = render(
+  it('opens trip planning with the current travel as source', async () => {
+    const { getByTestId } = await render(
       <CTASection
         travel={{
           id: 42,
@@ -86,7 +86,7 @@ describe('CTASection plan-trip action', () => {
       />,
     )
 
-    fireEvent.press(getByTestId('travel-plan-trip-cta'))
+    await fireEvent.press(getByTestId('travel-plan-trip-cta'))
 
     expect(mockPush).toHaveBeenCalledTimes(1)
     const href = String(mockPush.mock.calls[0][0])

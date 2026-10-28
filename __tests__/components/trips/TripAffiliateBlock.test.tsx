@@ -48,7 +48,7 @@ const openedUrl = () => (openExternalUrlInNewTab as jest.Mock).mock.calls[0][0] 
 // ожидание не зависит от числа звеньев в цепочке промисов; достаточность
 // доказывают тесты со страной ниже — без flush они краснеют на homepage-ссылке.
 const renderBlock = async (trip: PlannedTrip) => {
-  const view = render(<TripAffiliateBlock trip={trip} />)
+  const view = await render(<TripAffiliateBlock trip={trip} />)
   await act(async () => {
     await new Promise((resolve) => setImmediate(resolve))
   })
@@ -82,17 +82,17 @@ describe('TripAffiliateBlock', () => {
   it('deep-links both partners to the country of the first route point', async () => {
     const { getByText } = await renderBlock(makeTrip([point('Минск', MINSK)]))
 
-    fireEvent.press(getByText('Подобрать жильё'))
+    await fireEvent.press(getByText('Подобрать жильё'))
     expect(openedUrl()).toContain(encodeURIComponent('https://ostrovok.ru/hotel/belarus/'))
 
     ;(openExternalUrlInNewTab as jest.Mock).mockClear()
-    fireEvent.press(getByText('Посмотреть экскурсии'))
+    await fireEvent.press(getByText('Посмотреть экскурсии'))
     expect(openedUrl()).toContain(encodeURIComponent('https://experience.tripster.ru/destinations/belarus/'))
   })
 
   it('keeps reporting the click to trip analytics', async () => {
     const { getByText } = await renderBlock(makeTrip([point('Минск', MINSK)]))
-    fireEvent.press(getByText('Подобрать жильё'))
+    await fireEvent.press(getByText('Подобрать жильё'))
     expect(trackTripAffiliateClick).toHaveBeenCalledWith(31, 'hotels')
   })
 
@@ -103,7 +103,7 @@ describe('TripAffiliateBlock', () => {
       makeTrip([point('Сбор у подъезда', null), point('Минск', MINSK)]),
     )
 
-    fireEvent.press(getByText('Подобрать жильё'))
+    await fireEvent.press(getByText('Подобрать жильё'))
     expect(openedUrl()).toContain(encodeURIComponent('https://ostrovok.ru/hotel/belarus/'))
   })
 
@@ -116,7 +116,7 @@ describe('TripAffiliateBlock', () => {
       ),
     )
 
-    fireEvent.press(getByText('Подобрать жильё'))
+    await fireEvent.press(getByText('Подобрать жильё'))
     expect(openedUrl()).toContain(encodeURIComponent('https://ostrovok.ru/hotel/belarus/'))
   })
 
@@ -133,7 +133,7 @@ describe('TripAffiliateBlock', () => {
     const { getByText } = await renderBlock(makeTrip([point('Киев', KYIV)], 'Киев'))
 
     expect(getByText('Отели и апартаменты рядом с маршрутом')).toBeTruthy()
-    fireEvent.press(getByText('Подобрать жильё'))
+    await fireEvent.press(getByText('Подобрать жильё'))
     expect(openedUrl()).toContain(encodeURIComponent('https://ostrovok.ru/'))
     expect(openedUrl()).not.toContain(encodeURIComponent('/hotel/'))
   })
@@ -142,7 +142,7 @@ describe('TripAffiliateBlock', () => {
     const { getByText } = await renderBlock(makeTrip([point('Сбор у подъезда', null)], 'Минск'))
 
     expect(getByText('Отели и апартаменты рядом с маршрутом')).toBeTruthy()
-    fireEvent.press(getByText('Подобрать жильё'))
+    await fireEvent.press(getByText('Подобрать жильё'))
     expect(openedUrl()).toContain(encodeURIComponent('https://ostrovok.ru/'))
     expect(openedUrl()).not.toContain(encodeURIComponent('/hotel/'))
   })

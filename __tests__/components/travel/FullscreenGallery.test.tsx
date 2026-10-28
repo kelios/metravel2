@@ -27,8 +27,8 @@ const mockImages = [
 ];
 
 describe('FullscreenGallery', () => {
-  it('renders when visible is true', () => {
-    const { getByText } = render(
+  it('renders when visible is true', async () => {
+    const { getByText } = await render(
       <FullscreenGallery
         visible={true}
         images={mockImages}
@@ -40,8 +40,8 @@ describe('FullscreenGallery', () => {
     expect(getByText('1 / 3')).toBeTruthy();
   });
 
-  it('renders close button with accessibility label', () => {
-    const { getByLabelText } = render(
+  it('renders close button with accessibility label', async () => {
+    const { getByLabelText } = await render(
       <FullscreenGallery
         visible={true}
         images={mockImages}
@@ -52,8 +52,8 @@ describe('FullscreenGallery', () => {
     expect(getByLabelText('Закрыть галерею')).toBeTruthy();
   });
 
-  it('marks gallery images as pinch-zoomable', () => {
-    const { getAllByLabelText } = render(
+  it('marks gallery images as pinch-zoomable', async () => {
+    const { getAllByLabelText } = await render(
       <FullscreenGallery
         visible={true}
         images={[{ url: 'https://example.com/1.jpg', alt: 'Горы' }]}
@@ -65,8 +65,8 @@ describe('FullscreenGallery', () => {
     expect(getAllByLabelText(/Горы.*Увеличение двумя пальцами/).length).toBeGreaterThan(0);
   });
 
-  it('does not show counter for single image', () => {
-    const { queryByText } = render(
+  it('does not show counter for single image', async () => {
+    const { queryByText } = await render(
       <FullscreenGallery
         visible={true}
         images={[{ url: 'https://example.com/1.jpg' }]}
@@ -77,8 +77,8 @@ describe('FullscreenGallery', () => {
     expect(queryByText(/\//)).toBeNull();
   });
 
-  it('shows the caption for the current photo', () => {
-    const { getByText } = render(
+  it('shows the caption for the current photo', async () => {
+    const { getByText } = await render(
       <FullscreenGallery
         visible={true}
         images={[{ url: 'https://example.com/1.jpg', caption: 'Дворец Пусловских' }]}

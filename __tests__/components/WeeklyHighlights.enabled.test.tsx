@@ -21,16 +21,16 @@ describe('WeeklyHighlights enabled gating', () => {
     jest.clearAllMocks()
   })
 
-  it('passes enabled=false to useQuery when disabled', () => {
-    render(<WeeklyHighlights enabled={false} />)
+  it('passes enabled=false to useQuery when disabled', async () => {
+    await render(<WeeklyHighlights enabled={false} />)
     expect(mockUseQuery).toHaveBeenCalled()
     const arg = (mockUseQuery.mock.calls[0] && mockUseQuery.mock.calls[0][0]) as any
     expect(arg).toBeTruthy()
     expect(arg.enabled).toBe(false)
   })
 
-  it('defaults enabled=true', () => {
-    render(<WeeklyHighlights />)
+  it('defaults enabled=true', async () => {
+    await render(<WeeklyHighlights />)
     expect(mockUseQuery).toHaveBeenCalled()
     const arg = (mockUseQuery.mock.calls[0] && mockUseQuery.mock.calls[0][0]) as any
     expect(arg).toBeTruthy()

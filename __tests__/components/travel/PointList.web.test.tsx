@@ -105,7 +105,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
     restoreWindowStubs();
   });
 
-  it('shows point cards by default and keeps preview available after collapse', () => {
+  it('shows point cards by default and keeps preview available after collapse', async () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
 
@@ -116,7 +116,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
       { ...basePoint, id: '4', address: 'D', coord: '53.0,23.0' },
     ];
 
-    const { getByLabelText, getByText, queryByText } = render(
+    const { getByLabelText, getByText, queryByText } = await render(
       <PointList points={points as any} baseUrl="https://example.com/travel-page" />
     );
 
@@ -126,11 +126,11 @@ describe('PointList (web coordinates list uses popup template)', () => {
     expect(getByLabelText('Список')).toBeTruthy();
     expect(queryByText('+ ещё 1')).toBeNull();
 
-    fireEvent.press(getByLabelText('Список'));
+    await fireEvent.press(getByLabelText('Список'));
     expect(getByText('Быстрый список точек')).toBeTruthy();
     expect(getByText('A')).toBeTruthy();
 
-    fireEvent.press(getByLabelText(/Скрыть карточки точек/));
+    await fireEvent.press(getByLabelText(/Скрыть карточки точек/));
     expect(getByText('+ ещё 1')).toBeTruthy();
     expect(getByText('Открыть список: 4 точки')).toBeTruthy();
 
@@ -140,7 +140,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
   // #1182: сериализатор отдаёт голый `https://metravel.by/address-image/` для
   // точки без фото. Раньше строка считалась картинкой, и каждая отрисовка ряда
   // уходила в гарантированный 404 перед показом плейсхолдера.
-  it('renders the placeholder instead of requesting a bare media endpoint thumb', () => {
+  it('renders the placeholder instead of requesting a bare media endpoint thumb', async () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
     mockImageCardMedia.mockClear();
@@ -150,10 +150,10 @@ describe('PointList (web coordinates list uses popup template)', () => {
       { ...basePoint, id: '2', address: 'С фото', travelImageThumbUrl: 'https://metravel.by/address-image/7/x.jpg' },
     ];
 
-    const { getByLabelText, queryAllByTestId } = render(
+    const { getByLabelText, queryAllByTestId } = await render(
       <PointList points={points as any} baseUrl="https://example.com/travel-page" />
     );
-    fireEvent.press(getByLabelText('Список'));
+    await fireEvent.press(getByLabelText('Список'));
 
     const requested = mockImageCardMedia.mock.calls.map(([props]: any[]) => String(props.src));
     expect(requested.some((src) => src.includes('/address-image/7/x.jpg'))).toBe(true);
@@ -163,14 +163,14 @@ describe('PointList (web coordinates list uses popup template)', () => {
     (Platform as any).OS = prevOs;
   });
 
-  it('uses non-button web row semantics while preserving row activation', () => {
+  it('uses non-button web row semantics while preserving row activation', async () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
 
     const onOpenMap = jest.fn();
     const onCardPress = jest.fn();
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <PointListRow
         point={{ id: '1', address: 'A', coord: '50.0,20.0' }}
         index={0}
@@ -191,13 +191,13 @@ describe('PointList (web coordinates list uses popup template)', () => {
     expect(row.props.tabIndex).toBe(0);
 
     const currentTarget = { nodeType: 1 };
-    fireEvent(row, 'click', {
+    await fireEvent(row, 'click', {
       currentTarget,
       target: { closest: () => null },
     });
     expect(onCardPress).toHaveBeenCalledTimes(1);
 
-    fireEvent(row, 'keyDown', {
+    await fireEvent(row, 'keyDown', {
       key: 'Enter',
       preventDefault: jest.fn(),
       currentTarget,
@@ -205,7 +205,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
     });
     expect(onCardPress).toHaveBeenCalledTimes(2);
 
-    fireEvent(row, 'click', {
+    await fireEvent(row, 'click', {
       currentTarget,
       target: { closest: () => ({ nodeType: 1 }) },
     });
@@ -215,7 +215,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
     (Platform as any).OS = prevOs;
   });
 
-  it('renders the point action tiles (copy/share/article/nav) on web', () => {
+  it('renders the point action tiles (copy/share/article/nav) on web', async () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
 
@@ -233,7 +233,7 @@ describe('PointList (web coordinates list uses popup template)', () => {
     // #841: the «Открыть статью» tile is shown only when the point links to a
     // DIFFERENT article than the current travel (baseUrl). Give it a distinct
     // articleUrl so the tile renders; a bare baseUrl fallback is now hidden.
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <PointList
         points={[{ ...basePoint, articleUrl: 'https://example.com/other-article' } as any]}
         baseUrl={baseUrl}
@@ -249,25 +249,28 @@ describe('PointList (web coordinates list uses popup template)', () => {
     expect(getByLabelText('Навигация и действия')).toBeTruthy();
 
     // Each sheet action closes the sheet on press, so re-open it before the next.
-    const openMapSheet = () => fireEvent.press(getByLabelText('Навигация и действия'));
+    let activationTime = 0;
+    // Each logical click has its own timestamp; the default synthetic timestamp
+    // is identical, which the card correctly treats as a duplicate delivery.
+    const openMapSheet = async () => await fireEvent.press(getByLabelText('Навигация и действия'), { timeStamp: ++activationTime });
 
-    openMapSheet();
-    fireEvent.press(getByLabelText('Открыть в Google Maps'));
+    await openMapSheet();
+    await fireEvent.press(getByLabelText('Открыть в Google Maps'));
     return waitFor(() => {
       expect(openSpy).toHaveBeenCalledWith(
         'https://www.google.com/maps/search/?api=1&query=50,20',
         '_blank',
         'noopener'
       );
-    }).then(() => {
-      openMapSheet();
-      fireEvent.press(getByLabelText('Открыть в Apple Maps'));
+    }).then(async () => {
+      await openMapSheet();
+      await fireEvent.press(getByLabelText('Открыть в Apple Maps'));
       return waitFor(() => {
         expect(openSpy).toHaveBeenCalledWith('https://maps.apple.com/?q=50%2C20', '_blank', 'noopener');
       });
-    }).then(() => {
-      openMapSheet();
-      fireEvent.press(getByLabelText('Открыть в Яндекс Картах'));
+    }).then(async () => {
+      await openMapSheet();
+      await fireEvent.press(getByLabelText('Открыть в Яндекс Картах'));
       return waitFor(() => {
         expect(openSpy).toHaveBeenCalledWith(
           'https://yandex.ru/maps/?pt=20%2C50&z=16&l=map',
@@ -275,9 +278,9 @@ describe('PointList (web coordinates list uses popup template)', () => {
           'noopener'
         );
       });
-    }).then(() => {
-      openMapSheet();
-      fireEvent.press(getByLabelText('Открыть в OpenStreetMap'));
+    }).then(async () => {
+      await openMapSheet();
+      await fireEvent.press(getByLabelText('Открыть в OpenStreetMap'));
       return waitFor(() => {
         expect(openSpy).toHaveBeenCalledWith(
           'https://www.openstreetmap.org/?mlat=50&mlon=20#map=16/50/20',
@@ -285,18 +288,18 @@ describe('PointList (web coordinates list uses popup template)', () => {
           'noopener'
         );
       });
-    }).then(() => {
-      fireEvent.press(getByLabelText('Скопировать координаты'));
+    }).then(async () => {
+      await fireEvent.press(getByLabelText('Скопировать координаты'));
       return waitFor(() => {
         expect(writeText).toHaveBeenCalledWith(basePoint.coord);
       });
-    }).then(() => {
-      fireEvent.press(getByLabelText('Поделиться в Telegram'));
+    }).then(async () => {
+      await fireEvent.press(getByLabelText('Поделиться в Telegram'));
       return waitFor(() => {
         const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
         expect(calls.some((v: string) => /^(tg:\/\/|https:\/\/t\.me\/share\/url\?url=)/.test(v))).toBe(true);
-      }).then(() => {
-        fireEvent.press(getByLabelText('Открыть статью'));
+      }).then(async () => {
+        await fireEvent.press(getByLabelText('Открыть статью'));
         return waitFor(() => {
           // #841: opens the point's own (distinct) article, not the current travel.
           expect(openSpy).toHaveBeenCalledWith(
@@ -318,12 +321,12 @@ describe('PointList (web coordinates list uses popup template)', () => {
     const mockCreatePoint = require('@/api/userPoints').userPointsApi.createPoint as jest.Mock;
     mockCreatePoint.mockClear();
 
-    const { getAllByLabelText } = render(
+    const { getAllByLabelText } = await render(
       <PointList points={[basePoint as any]} baseUrl="https://example.com/travel-page" travelName="T" />
     );
 
     const addButtons = getAllByLabelText('Сохранить');
-    fireEvent.press(addButtons[0]);
+    await fireEvent.press(addButtons[0]);
 
     await waitFor(() => {
       expect(mockCreatePoint).toHaveBeenCalledTimes(1);

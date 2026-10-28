@@ -14,10 +14,10 @@ describe('usePointListDisplayModel', () => {
     (Platform as any).OS = originalPlatformOS;
   });
 
-  it('opens web route points as cards by default', () => {
+  it('opens web route points as cards by default', async () => {
     (Platform as any).OS = 'web';
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       usePointListDisplayModel({
         isMobile: false,
         points: [
@@ -43,10 +43,10 @@ describe('usePointListDisplayModel', () => {
     expect(result.current.shouldShowToggleTextCompact).toBe(false);
   });
 
-  it('switches to web list mode when opened and view mode changes', () => {
+  it('switches to web list mode when opened and view mode changes', async () => {
     (Platform as any).OS = 'web';
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       usePointListDisplayModel({
         isMobile: false,
         points: [{ id: '1', address: 'A', coord: '1,1' }],
@@ -58,7 +58,7 @@ describe('usePointListDisplayModel', () => {
     expect(result.current.shouldShowViewModeBar).toBe(true);
     expect(result.current.shouldRenderWebCardsMode).toBe(true);
 
-    act(() => {
+    await act(() => {
       result.current.setViewMode('list');
     });
 
@@ -67,10 +67,10 @@ describe('usePointListDisplayModel', () => {
     expect(result.current.shouldRenderWebCardsMode).toBe(false);
   });
 
-  it('enables compact toggle text and native list rendering on mobile native', () => {
+  it('enables compact toggle text and native list rendering on mobile native', async () => {
     (Platform as any).OS = 'ios';
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       usePointListDisplayModel({
         isMobile: true,
         points: [{ id: '1', address: 'A', coord: '1,1' }],

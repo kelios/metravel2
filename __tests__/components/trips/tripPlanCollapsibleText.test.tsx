@@ -39,8 +39,8 @@ describe('TripPlanCollapsibleText', () => {
     mockViewportWidth = 390;
   });
 
-  it('offers the toggle and clamps the text when the description does not fit the compact header', () => {
-    const { getByTestId, getByText } = render(
+  it('offers the toggle and clamps the text when the description does not fit the compact header', async () => {
+    const { getByTestId, getByText } = await render(
       <TripPlanCollapsibleText
         text={LOGISTICS_TEXT}
         numberOfLines={2}
@@ -52,8 +52,8 @@ describe('TripPlanCollapsibleText', () => {
     expect(getByText(EXPAND_LABEL)).toBeTruthy();
   });
 
-  it('shows the whole description on press and folds it back', () => {
-    const { getByTestId, getByText, queryByText } = render(
+  it('shows the whole description on press and folds it back', async () => {
+    const { getByTestId, getByText, queryByText } = await render(
       <TripPlanCollapsibleText
         text={LOGISTICS_TEXT}
         numberOfLines={2}
@@ -63,21 +63,21 @@ describe('TripPlanCollapsibleText', () => {
 
     expect(getByTestId('trip-plan-description-toggle').props['aria-expanded']).toBe(false);
 
-    fireEvent.press(getByTestId('trip-plan-description-toggle'));
+    await fireEvent.press(getByTestId('trip-plan-description-toggle'));
 
     expect(getByTestId('trip-plan-description-toggle').props['aria-expanded']).toBe(true);
     expect(getByTestId('trip-plan-description').props.numberOfLines).toBeUndefined();
     expect(getByText(COLLAPSE_LABEL)).toBeTruthy();
     expect(queryByText(EXPAND_LABEL)).toBeNull();
 
-    fireEvent.press(getByTestId('trip-plan-description-toggle'));
+    await fireEvent.press(getByTestId('trip-plan-description-toggle'));
 
     expect(getByTestId('trip-plan-description').props.numberOfLines).toBe(2);
     expect(getByText(EXPAND_LABEL)).toBeTruthy();
   });
 
-  it('leaves a short description untouched — no toggle and no clamping', () => {
-    const { getByTestId, queryByTestId } = render(
+  it('leaves a short description untouched — no toggle and no clamping', async () => {
+    const { getByTestId, queryByTestId } = await render(
       <TripPlanCollapsibleText
         text={SHORT_TEXT}
         numberOfLines={2}
@@ -91,13 +91,13 @@ describe('TripPlanCollapsibleText', () => {
 
   // Один и тот же текст на 390dp не помещается в две строки, а на 430dp
   // помещается: кнопка, ничего не меняющая по нажатию, — тоже дефект.
-  it('keeps the toggle off a description that fits two lines on a wider phone', () => {
+  it('keeps the toggle off a description that fits two lines on a wider phone', async () => {
     const borderlineText =
       'Старт от вокзала: автобус 211 в 8:40, обратно 262 в 19:40 — билет берите у водителя, наличными.';
     expect(borderlineText.length).toBe(95);
 
     mockViewportWidth = 390;
-    const narrow = render(
+    const narrow = await render(
       <TripPlanCollapsibleText
         text={borderlineText}
         numberOfLines={2}
@@ -107,7 +107,7 @@ describe('TripPlanCollapsibleText', () => {
     expect(narrow.getByTestId('trip-plan-description-toggle')).toBeTruthy();
 
     mockViewportWidth = 430;
-    const wide = render(
+    const wide = await render(
       <TripPlanCollapsibleText
         text={borderlineText}
         numberOfLines={2}
@@ -120,8 +120,8 @@ describe('TripPlanCollapsibleText', () => {
 
   // Регресс desktop web и соседних вкладок: там шапка не компактная,
   // `numberOfLines` не передаётся — описание и так видно целиком.
-  it('does not add the toggle where the header renders the description in full', () => {
-    const { getByTestId, queryByTestId } = render(
+  it('does not add the toggle where the header renders the description in full', async () => {
+    const { getByTestId, queryByTestId } = await render(
       <TripPlanCollapsibleText text={LOGISTICS_TEXT} testID="trip-plan-description" />,
     );
 
@@ -129,8 +129,8 @@ describe('TripPlanCollapsibleText', () => {
     expect(getByTestId('trip-plan-description').props.numberOfLines).toBeUndefined();
   });
 
-  it('starts collapsed again for another trip description', () => {
-    const { getByTestId, getByText, rerender } = render(
+  it('starts collapsed again for another trip description', async () => {
+    const { getByTestId, getByText, rerender } = await render(
       <TripPlanCollapsibleText
         text={LOGISTICS_TEXT}
         numberOfLines={2}
@@ -138,10 +138,10 @@ describe('TripPlanCollapsibleText', () => {
       />,
     );
 
-    fireEvent.press(getByTestId('trip-plan-description-toggle'));
+    await fireEvent.press(getByTestId('trip-plan-description-toggle'));
     expect(getByTestId('trip-plan-description').props.numberOfLines).toBeUndefined();
 
-    rerender(
+    await rerender(
       <TripPlanCollapsibleText
         text={`${LOGISTICS_TEXT} Вторая поездка, другое описание.`}
         numberOfLines={2}

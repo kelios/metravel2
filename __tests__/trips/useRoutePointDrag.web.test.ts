@@ -37,15 +37,15 @@ const touchEvent = (
 
 type DragHook = ReturnType<typeof useRoutePointDrag>
 
-const measureRows = (hook: { current: DragHook }) => {
-  act(() => {
+const measureRows = async (hook: { current: DragHook }) => {
+  await act(() => {
     for (let index = 0; index < COUNT; index += 1) {
       hook.current.registerRowLayout(index, layoutEvent(index))
     }
   })
 }
 
-const pressPointerHandle = (
+const pressPointerHandle = async (
   hook: { current: DragHook },
   index: number,
   pointerType: 'mouse' | 'pen',
@@ -54,12 +54,12 @@ const pressPointerHandle = (
   const handlers = hook.current.handleProps[index] as {
     onPointerDown: (event: unknown) => void
   }
-  act(() => {
+  await act(() => {
     handlers.onPointerDown({ pointerType, button: 0, clientY })
   })
 }
 
-const pressTouchHandle = (
+const pressTouchHandle = async (
   hook: { current: DragHook },
   index: number,
   clientY: number,
@@ -70,7 +70,7 @@ const pressTouchHandle = (
     onTouchStart: (event: unknown) => void
     onPointerDown: (event: unknown) => void
   }
-  act(() => {
+  await act(() => {
     handlers.onTouchStart({ touches: [...existingTouches, touch], changedTouches: [touch] })
     // Browsers supporting Pointer Events also emit pointerdown for this touch;
     // it must not replace or restart the raw touch gesture.
@@ -101,25 +101,25 @@ describe('useRoutePointDrag on web', () => {
     jest.useRealTimers()
   })
 
-  const setup = () =>
-    renderHook(() => useRoutePointDrag({ enabled: true, count: COUNT, onReorder }))
+  const setup = async () =>
+    await renderHook(() => useRoutePointDrag({ enabled: true, count: COUNT, onReorder }))
 
-  it('drags with the mouse immediately and drops point #20 onto position #2', () => {
-    const { result } = setup()
-    measureRows(result)
+  it('drags with the mouse immediately and drops point #20 onto position #2', async () => {
+    const { result } = await setup()
+    await measureRows(result)
 
     const startY = 1000
-    pressPointerHandle(result, 19, 'mouse', startY)
+    await pressPointerHandle(result, 19, 'mouse', startY)
     expect(result.current.drag).toEqual({ index: 19, dropIndex: 19, offsetY: 0 })
 
     // Центр строки #20 переносим в центр строки #2.
     const deltaY = 1 * ROW_PITCH - 19 * ROW_PITCH
-    act(() => {
+    await act(() => {
       window.dispatchEvent(pointerEvent('pointermove', startY + deltaY))
     })
     expect(result.current.drag).toEqual({ index: 19, dropIndex: 1, offsetY: deltaY })
 
-    act(() => {
+    await act(() => {
       window.dispatchEvent(pointerEvent('pointerup', startY + deltaY))
     })
     expect(onReorder).toHaveBeenCalledTimes(1)
@@ -127,57 +127,57 @@ describe('useRoutePointDrag on web', () => {
     expect(result.current.drag).toBeNull()
   })
 
-  it('starts a touch drag only after the hold delay', () => {
-    const { result } = setup()
-    measureRows(result)
+  it('starts a touch drag only after the hold delay', async () => {
+    const { result } = await setup()
+    await measureRows(result)
 
-    pressTouchHandle(result, 3, 500)
+    await pressTouchHandle(result, 3, 500)
     expect(result.current.drag).toBeNull()
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(TOUCH_HOLD_MS)
     })
     expect(result.current.drag).toEqual({ index: 3, dropIndex: 3, offsetY: 0 })
 
     const move = touchEvent('touchmove', [{ clientY: 500 - 2 * ROW_PITCH, identifier: 7 }])
-    act(() => {
+    await act(() => {
       window.dispatchEvent(move)
     })
     expect(move.defaultPrevented).toBe(true)
 
-    act(() => {
+    await act(() => {
       window.dispatchEvent(touchEvent('touchend', [], [{ clientY: 500 - 2 * ROW_PITCH, identifier: 7 }]))
     })
     expect(onReorder).toHaveBeenCalledWith(3, 1)
   })
 
-  it('lets a quick touch swipe scroll instead of reordering', () => {
-    const { result } = setup()
-    measureRows(result)
+  it('lets a quick touch swipe scroll instead of reordering', async () => {
+    const { result } = await setup()
+    await measureRows(result)
 
-    pressTouchHandle(result, 3, 500)
+    await pressTouchHandle(result, 3, 500)
     const move = touchEvent('touchmove', [{ clientY: 460, identifier: 7 }])
-    act(() => {
+    await act(() => {
       window.dispatchEvent(move)
     })
     expect(move.defaultPrevented).toBe(false)
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(TOUCH_HOLD_MS * 2)
     })
     expect(result.current.drag).toBeNull()
 
-    act(() => {
+    await act(() => {
       window.dispatchEvent(touchEvent('touchend', [], [{ clientY: 460, identifier: 7 }]))
     })
     expect(onReorder).not.toHaveBeenCalled()
   })
 
-  it('ignores another finger ending while the tracked touch is still dragging', () => {
-    const { result } = setup()
-    measureRows(result)
+  it('ignores another finger ending while the tracked touch is still dragging', async () => {
+    const { result } = await setup()
+    await measureRows(result)
 
-    pressTouchHandle(result, 3, 500, [{ clientY: 300, identifier: 9 }])
-    act(() => {
+    await pressTouchHandle(result, 3, 500, [{ clientY: 300, identifier: 9 }])
+    await act(() => {
       jest.advanceTimersByTime(TOUCH_HOLD_MS)
       window.dispatchEvent(touchEvent('touchmove', [
         { clientY: 300, identifier: 9 },
@@ -185,7 +185,7 @@ describe('useRoutePointDrag on web', () => {
       ]))
     })
 
-    act(() => {
+    await act(() => {
       window.dispatchEvent(touchEvent(
         'touchend',
         [{ clientY: 500 - 2 * ROW_PITCH, identifier: 7 }],
@@ -195,7 +195,7 @@ describe('useRoutePointDrag on web', () => {
     expect(result.current.drag?.dropIndex).toBe(1)
     expect(onReorder).not.toHaveBeenCalled()
 
-    act(() => {
+    await act(() => {
       window.dispatchEvent(touchEvent(
         'touchend',
         [],
@@ -205,12 +205,12 @@ describe('useRoutePointDrag on web', () => {
     expect(onReorder).toHaveBeenCalledWith(3, 1)
   })
 
-  it('cancels the tracked touch without committing a reorder', () => {
-    const { result } = setup()
-    measureRows(result)
+  it('cancels the tracked touch without committing a reorder', async () => {
+    const { result } = await setup()
+    await measureRows(result)
 
-    pressTouchHandle(result, 4, 600)
-    act(() => {
+    await pressTouchHandle(result, 4, 600)
+    await act(() => {
       jest.advanceTimersByTime(TOUCH_HOLD_MS)
       window.dispatchEvent(touchEvent('touchmove', [{ clientY: 600 - ROW_PITCH, identifier: 7 }]))
       window.dispatchEvent(touchEvent(
@@ -224,8 +224,8 @@ describe('useRoutePointDrag on web', () => {
     expect(result.current.drag).toBeNull()
   })
 
-  it('cancels an active gesture when reordering becomes disabled', () => {
-    const hook = renderHook(
+  it('cancels an active gesture when reordering becomes disabled', async () => {
+    const hook = await renderHook(
       ({ enabled }: { enabled: boolean }) => useRoutePointDrag({
         enabled,
         count: COUNT,
@@ -233,17 +233,17 @@ describe('useRoutePointDrag on web', () => {
       }),
       { initialProps: { enabled: true } },
     )
-    measureRows(hook.result)
+    await measureRows(hook.result)
 
-    pressTouchHandle(hook.result, 4, 600)
-    act(() => {
+    await pressTouchHandle(hook.result, 4, 600)
+    await act(() => {
       jest.advanceTimersByTime(TOUCH_HOLD_MS)
       window.dispatchEvent(touchEvent('touchmove', [{ clientY: 600 - ROW_PITCH, identifier: 7 }]))
     })
     expect(hook.result.current.drag?.dropIndex).toBe(3)
 
-    hook.rerender({ enabled: false })
-    act(() => {
+    await hook.rerender({ enabled: false })
+    await act(() => {
       window.dispatchEvent(touchEvent(
         'touchend',
         [],
@@ -255,8 +255,8 @@ describe('useRoutePointDrag on web', () => {
     expect(hook.result.current.drag).toBeNull()
   })
 
-  it('cancels an active gesture when the route point count changes', () => {
-    const hook = renderHook(
+  it('cancels an active gesture when the route point count changes', async () => {
+    const hook = await renderHook(
       ({ count }: { count: number }) => useRoutePointDrag({
         enabled: true,
         count,
@@ -264,10 +264,10 @@ describe('useRoutePointDrag on web', () => {
       }),
       { initialProps: { count: COUNT } },
     )
-    measureRows(hook.result)
+    await measureRows(hook.result)
 
-    pressTouchHandle(hook.result, 4, 600)
-    act(() => {
+    await pressTouchHandle(hook.result, 4, 600)
+    await act(() => {
       jest.advanceTimersByTime(TOUCH_HOLD_MS)
       window.dispatchEvent(touchEvent('touchmove', [{ clientY: 600 - ROW_PITCH, identifier: 7 }]))
     })
@@ -275,8 +275,8 @@ describe('useRoutePointDrag on web', () => {
 
     // Изменилась даже «хвостовая» точка: dragged index всё ещё валиден,
     // но прежние layout spans/dropIndex больше нельзя коммитить.
-    hook.rerender({ count: COUNT - 1 })
-    act(() => {
+    await hook.rerender({ count: COUNT - 1 })
+    await act(() => {
       window.dispatchEvent(touchEvent(
         'touchend',
         [],
@@ -288,52 +288,52 @@ describe('useRoutePointDrag on web', () => {
     expect(hook.result.current.drag).toBeNull()
   })
 
-  it('commits nothing when the pointer returns to the original slot', () => {
-    const { result } = setup()
-    measureRows(result)
+  it('commits nothing when the pointer returns to the original slot', async () => {
+    const { result } = await setup()
+    await measureRows(result)
 
-    pressPointerHandle(result, 5, 'mouse', 700)
-    act(() => {
+    await pressPointerHandle(result, 5, 'mouse', 700)
+    await act(() => {
       window.dispatchEvent(pointerEvent('pointermove', 700 + ROW_HEIGHT / 4))
     })
-    act(() => {
+    await act(() => {
       window.dispatchEvent(pointerEvent('pointerup', 700 + ROW_HEIGHT / 4))
     })
     expect(onReorder).not.toHaveBeenCalled()
   })
 
-  it('drops the gesture on pointercancel', () => {
-    const { result } = setup()
-    measureRows(result)
+  it('drops the gesture on pointercancel', async () => {
+    const { result } = await setup()
+    await measureRows(result)
 
-    pressPointerHandle(result, 8, 'mouse', 900)
-    act(() => {
+    await pressPointerHandle(result, 8, 'mouse', 900)
+    await act(() => {
       window.dispatchEvent(pointerEvent('pointermove', 900 - 4 * ROW_PITCH))
     })
-    act(() => {
+    await act(() => {
       window.dispatchEvent(pointerEvent('pointercancel', 900 - 4 * ROW_PITCH))
     })
     expect(onReorder).not.toHaveBeenCalled()
     expect(result.current.drag).toBeNull()
   })
 
-  it('ignores a secondary mouse button and a disabled list', () => {
-    const { result } = setup()
-    measureRows(result)
+  it('ignores a secondary mouse button and a disabled list', async () => {
+    const { result } = await setup()
+    await measureRows(result)
 
     const handlers = result.current.handleProps[2] as { onPointerDown: (e: unknown) => void }
-    act(() => {
+    await act(() => {
       handlers.onPointerDown({ pointerType: 'mouse', button: 2, clientY: 400 })
     })
     expect(result.current.drag).toBeNull()
 
-    const disabled = renderHook(() =>
+    const disabled = await renderHook(() =>
       useRoutePointDrag({ enabled: false, count: COUNT, onReorder }),
     )
     const disabledHandlers = disabled.result.current.handleProps[2] as {
       onPointerDown: (e: unknown) => void
     }
-    act(() => {
+    await act(() => {
       disabledHandlers.onPointerDown({ pointerType: 'mouse', button: 0, clientY: 400 })
     })
     expect(disabled.result.current.drag).toBeNull()

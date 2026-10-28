@@ -1,5 +1,6 @@
+import { getAllHosts } from '@/__tests__/helpers/hostQueries'
 import React from 'react';
-import { Dimensions, Platform, View } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
 
 import { PublicProfileTravelsTab } from '@/components/screens/profile/PublicProfileTravelsTab';
@@ -23,10 +24,10 @@ describe('PublicProfileTravelsTab', () => {
     mockUnifiedTravelCard.mockClear();
   });
 
-  it('loads more routes inside the profile instead of navigating away', () => {
+  it('loads more routes inside the profile instead of navigating away', async () => {
     const onLoadMore = jest.fn();
     const travel = { id: 1, name: 'Маршрут' } as Travel;
-    const { getByRole, queryByText } = render(
+    const { getByRole, queryByText } = await render(
       <PublicProfileTravelsTab
         travels={[travel]}
         total={13}
@@ -38,13 +39,13 @@ describe('PublicProfileTravelsTab', () => {
       />
     );
 
-    fireEvent.press(getByRole('button', { name: 'Показать ещё путешествия автора' }));
+    await fireEvent.press(getByRole('button', { name: 'Показать ещё путешествия автора' }));
 
     expect(onLoadMore).toHaveBeenCalledTimes(1);
     expect(queryByText('Смотреть все (13)')).toBeNull();
   });
 
-  it('заливает поля letterbox доминирующим цветом обложки, а не общим blurhash', () => {
+  it('заливает поля letterbox доминирующим цветом обложки, а не общим blurhash', async () => {
     // На web blurhash в подложку не идёт вовсе, поэтому один хардкоженый хеш
     // оставлял `contain`-фото автора без фона.
     const travel = {
@@ -53,7 +54,7 @@ describe('PublicProfileTravelsTab', () => {
       media: { cover: { id: 2, blurhash: 'LKO2:N%2Tw=w]~RBVZRi};RPxuwH', dominant_color: '#4d5a52' } },
     } as unknown as Travel;
 
-    render(
+    await render(
       <PublicProfileTravelsTab
         travels={[travel]}
         total={1}
@@ -70,13 +71,13 @@ describe('PublicProfileTravelsTab', () => {
     expect(props.mediaProps?.placeholderBlurhash).toBe('LKO2:N%2Tw=w]~RBVZRi};RPxuwH');
   });
 
-  it('#1674: слот живёт на пропорции, а ширина растра — оценка СВЕРХУ', () => {
+  it('#1674: слот живёт на пропорции, а ширина растра — оценка СВЕРХУ', async () => {
     // Пиксельная высота при резиновой ширине карточки и была дефектом #1674:
     // квадратная обложка (мода прод-выдачи) вписывалась в низкий широкий бокс
     // и оставляла полосы `dominant_color` сверху и снизу.
     const travel = { id: 4, name: 'Слот' } as Travel;
 
-    render(
+    await render(
       <PublicProfileTravelsTab
         travels={[travel]}
         total={1}
@@ -102,7 +103,7 @@ describe('PublicProfileTravelsTab', () => {
     );
   });
 
-  it('#1674: web-сетка не растягивает неполный последний ряд', () => {
+  it('#1674: web-сетка не растягивает неполный последний ряд', async () => {
     // Замер в браузере (1700×900, 12 карточек, 5 колонок) ДО этой правки:
     // полные ряды 311.8×347.8, хвост из двух карточек — 460×496, то есть на
     // 42.6% выше. Пока высота медиа была приколочена 180 px, разница ширины не
@@ -119,8 +120,8 @@ describe('PublicProfileTravelsTab', () => {
         ? style.filter(Boolean).reduce((acc, s) => ({ ...acc, ...flatten(s) }), {})
         : { ...(style ?? {}) };
 
-    const renderGridStyle = () => {
-      const { UNSAFE_root } = render(
+    const renderGridStyle = async () => {
+      const { container } = await render(
         <PublicProfileTravelsTab
           travels={[{ id: 5, name: 'Сетка' } as Travel]}
           total={1}
@@ -131,8 +132,7 @@ describe('PublicProfileTravelsTab', () => {
           onLoadMore={jest.fn()}
         />
       );
-      return UNSAFE_root
-        .findAllByType(View)
+      return getAllHosts(container, node => node.type === 'View')
         .map((node: any) => flatten(node.props?.style))
         .find((style: any) => style.flexWrap === 'wrap');
     };
@@ -140,7 +140,7 @@ describe('PublicProfileTravelsTab', () => {
     const originalPlatform = Platform.OS;
     try {
       (Platform as any).OS = 'web';
-      const web = renderGridStyle();
+      const web = await renderGridStyle();
       expect(web).toBeDefined();
       expect(web!.display).toBe('grid');
       expect(String(web!.gridTemplateColumns)).toMatch(
@@ -148,7 +148,7 @@ describe('PublicProfileTravelsTab', () => {
       );
 
       (Platform as any).OS = 'ios';
-      const native = renderGridStyle();
+      const native = await renderGridStyle();
       expect(native).toBeDefined();
       // Native: одна карточка в строку, растягивать нечего — flex остаётся.
       expect(native!.display).toBeUndefined();
@@ -158,10 +158,10 @@ describe('PublicProfileTravelsTab', () => {
     }
   });
 
-  it('оставляет общий blurhash только когда у обложки нет ни хеша, ни цвета', () => {
+  it('оставляет общий blurhash только когда у обложки нет ни хеша, ни цвета', async () => {
     const travel = { id: 3, name: 'Старый payload' } as Travel;
 
-    render(
+    await render(
       <PublicProfileTravelsTab
         travels={[travel]}
         total={1}

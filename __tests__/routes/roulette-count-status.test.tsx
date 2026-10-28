@@ -44,14 +44,14 @@ function deferredFacets() {
   return { promise, resolve, reject };
 }
 
-function renderRoulette() {
+async function renderRoulette() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   const tree = () => (
     <QueryClientProvider client={client}>
       <ThemeProvider><RouletteScreen /></ThemeProvider>
     </QueryClientProvider>
   );
-  return { client, tree, ...render(tree()) };
+  return { client, tree, ...await render(tree()) };
 }
 
 describe('roulette count in the real mobile filters panel', () => {
@@ -69,11 +69,11 @@ describe('roulette count in the real mobile filters panel', () => {
   it('keeps ready reference filters while pending/error counts remain unknown, then shows a true zero', async () => {
     const pending = deferredFacets();
     fetchFacets.mockReturnValueOnce(pending.promise);
-    const panel = renderRoulette();
+    const panel = await renderRoulette();
 
     await waitFor(() => expect(fetchFacets).toHaveBeenCalledTimes(1));
     expect(panel.client.getQueryData(queryKeys.filterOptions())).toBeDefined();
-    fireEvent.press(panel.getByTestId('mobile-filters-button'));
+    await fireEvent.press(panel.getByTestId('mobile-filters-button'));
     expect(panel.getByText('Страны')).toBeTruthy();
     expect(panel.getByText('Загружаем…')).toBeTruthy();
     expect(panel.queryByText('0 маршрутов')).toBeNull();
@@ -82,8 +82,8 @@ describe('roulette count in the real mobile filters panel', () => {
     await waitFor(() => expect(panel.getByText('Не удалось выполнить действие')).toBeTruthy());
     expect(panel.queryByText('0 маршрутов')).toBeNull();
     expect(panel.getByText('Страны')).toBeTruthy();
-    fireEvent.press(panel.getByText('Страны'));
-    fireEvent.press(panel.getByRole('checkbox', { name: 'Италия' }));
+    await fireEvent.press(panel.getByText('Страны'));
+    await fireEvent.press(panel.getByRole('checkbox', { name: 'Италия' }));
     expect(filters.mock.results[0].value.onSelect).toHaveBeenCalledWith('countries', []);
 
     fetchFacets.mockResolvedValueOnce({ total: 0, facets: {} });
@@ -92,19 +92,19 @@ describe('roulette count in the real mobile filters panel', () => {
     });
     await waitFor(() => expect(panel.getByText('0 маршрутов')).toBeTruthy());
     expect(panel.queryByText('Не удалось выполнить действие')).toBeNull();
-    panel.unmount();
+    await panel.unmount();
     panel.client.clear();
   });
 
   it('retains the confirmed count during same-key refetch failure and drops it when filters change', async () => {
     fetchFacets.mockResolvedValueOnce({ total: 7, facets: {} });
-    const panel = renderRoulette();
-    fireEvent.press(panel.getByTestId('mobile-filters-button'));
+    const panel = await renderRoulette();
+    await fireEvent.press(panel.getByTestId('mobile-filters-button'));
     await waitFor(() => expect(panel.getByText('7 маршрутов')).toBeTruthy());
 
     const refetch = deferredFacets();
     fetchFacets.mockReturnValueOnce(refetch.promise);
-    act(() => {
+    await act(() => {
       void panel.client.invalidateQueries({ queryKey: queryKeys.rouletteTravelFacets({ countries: [3] }) });
     });
     await waitFor(() => expect(panel.getByText('Загружаем…')).toBeTruthy());
@@ -119,14 +119,14 @@ describe('roulette count in the real mobile filters panel', () => {
       filter: { countries: ['4'] }, queryParams: { countries: [4] },
       resetFilters: jest.fn(), onSelect: jest.fn(),
     } as ReturnType<typeof useListTravelFilters>);
-    panel.rerender(panel.tree());
+    await panel.rerender(panel.tree());
     await waitFor(() => expect(panel.getByText('Загружаем…')).toBeTruthy());
     expect(panel.queryByText('7 маршрутов')).toBeNull();
     expect(panel.queryByText('0 маршрутов')).toBeNull();
     expect(panel.queryByText('Не удалось выполнить действие')).toBeNull();
     await act(async () => changed.resolve({ total: 3, facets: {} }));
     await waitFor(() => expect(panel.getByText('3 маршрута')).toBeTruthy());
-    panel.unmount();
+    await panel.unmount();
     panel.client.clear();
   });
 });

@@ -53,8 +53,8 @@ const badge: Badge = {
 }
 
 describe('ShareCardPreview brand row sizing', () => {
-  it('wraps translated brand items as bounded whole groups', () => {
-    const { getByText } = render(
+  it('wraps translated brand items as bounded whole groups', async () => {
+    const { getByText } = await render(
       <ShareCardPreview subject={{ badge, isRare: false }} />,
     )
 

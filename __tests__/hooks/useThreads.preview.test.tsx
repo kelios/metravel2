@@ -30,7 +30,7 @@ it('preserves additive previews through the real list pipeline without message f
         ok: true, status: 200, text: async () => JSON.stringify(threads),
     } as Response);
 
-    const { result } = renderHook(() => useThreads(true, false));
+    const { result } = await renderHook(() => useThreads(true, false));
     await waitFor(() => expect(result.current.loaded).toBe(true));
     expect(result.current.error).toBeNull();
     expect(result.current.threads).toEqual(threads);

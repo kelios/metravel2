@@ -57,7 +57,7 @@ describe('single-quest metadata (#1992)', () => {
   it('cold detail and all three real metadata hooks share one pending bundle, never the full catalog', async () => {
     let resolve!: (bundle: ApiQuestBundle) => void
     fetchQuestByQuestId.mockReturnValue(new Promise<ApiQuestBundle>((done) => { resolve = done }))
-    const { result } = renderHook(() => useDetail(), { wrapper })
+    const { result } = await renderHook(() => useDetail(), { wrapper })
     await waitFor(() => expect(fetchQuestByQuestId).toHaveBeenCalledTimes(1))
     expect(result.current.loading).toBe(true)
     expect(result.current.rating).toEqual({ ratingAvg: null, ratingCount: 0 })
@@ -79,7 +79,7 @@ describe('single-quest metadata (#1992)', () => {
     fetchQuestByQuestId.mockResolvedValue({ ...base, cover_url: null })
     let resolve!: (value: unknown[]) => void
     fetchQuestsByCity.mockReturnValue(new Promise<unknown[]>((done) => { resolve = done }))
-    const { result } = renderHook(() => useDetail(), { wrapper })
+    const { result } = await renderHook(() => useDetail(), { wrapper })
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.bundle?.tags).toBeUndefined()
     await act(async () => resolve([{ id: 7, quest_id: 'quest-a', tags: {}, cover_url: base.cover_url }]))
@@ -90,7 +90,7 @@ describe('single-quest metadata (#1992)', () => {
 
   it('bundle-supplied tags avoid even the city lookup and opened cached bundles persist offline', async () => {
     client.setQueryData(queryKeys.questBundle('quest-a', getQuestContentLocale()), { ...base, tags: { bike: true } })
-    const { result } = renderHook(() => useDetail(), { wrapper })
+    const { result } = await renderHook(() => useDetail(), { wrapper })
     expect(result.current.bundle?.tags).toEqual(['bike'])
     expect(fetchQuestByQuestId).not.toHaveBeenCalled()
     expect(fetchQuestsByCity).not.toHaveBeenCalled()
@@ -100,7 +100,7 @@ describe('single-quest metadata (#1992)', () => {
   it('offline transport still runs its durable fallback; missing city cache releases the map', async () => {
     onlineManager.setOnline(false)
     fetchQuestsByCity.mockRejectedValue(new Error('offline'))
-    const { result } = renderHook(() => useDetail(), { wrapper })
+    const { result } = await renderHook(() => useDetail(), { wrapper })
     await waitFor(() => expect(result.current.bundle?.tags).toEqual([]))
     expect(result.current.rating.ratingCount).toBe(8)
     expect(fetchQuestsList).not.toHaveBeenCalled()
@@ -108,7 +108,7 @@ describe('single-quest metadata (#1992)', () => {
 
   it('bundle error retains the route error and never fans out into either catalog', async () => {
     fetchQuestByQuestId.mockRejectedValue(new Error('Not found'))
-    const { result } = renderHook(() => useDetail(), { wrapper })
+    const { result } = await renderHook(() => useDetail(), { wrapper })
     await waitFor(() => expect(result.current.error).toBe('Not found'))
     expect(result.current.bundle).toBeNull()
     expect(result.current.rating.ratingCount).toBe(0)
@@ -118,14 +118,14 @@ describe('single-quest metadata (#1992)', () => {
 
   it('identity changes scrub immediately and wait for logout credentials before reloading metadata', async () => {
     fetchQuestByQuestId.mockResolvedValue({ ...base, is_completed_by_me: true, user_rating: 5 })
-    const { result } = renderHook(() => useDetail(), { wrapper })
+    const { result } = await renderHook(() => useDetail(), { wrapper })
     await waitFor(() => expect(result.current.completion.isCompletedByMe).toBe(true))
     let release!: () => void
     const credentials = new Promise<void>((resolve) => { release = resolve })
     fetchQuestByQuestId.mockResolvedValue(base)
     let refresh!: Promise<void>
     let drop!: Promise<void>
-    act(() => {
+    await act(() => {
       refresh = refreshQuestsCatalogIdentity(client, () => true, credentials)
       drop = dropQueryCacheForIdentityChange(client, () => true, credentials)
     })
@@ -142,7 +142,7 @@ describe('single-quest metadata (#1992)', () => {
     let resolveGuest!: (bundle: ApiQuestBundle) => void
     fetchQuestByQuestId.mockImplementationOnce(() => new Promise<ApiQuestBundle>((resolve) => { resolveGuest = resolve }))
       .mockResolvedValueOnce({ ...base, is_completed_by_me: true })
-    const { result } = renderHook(() => useDetail(), { wrapper })
+    const { result } = await renderHook(() => useDetail(), { wrapper })
     await waitFor(() => expect(fetchQuestByQuestId).toHaveBeenCalledTimes(1))
     await act(async () => refreshQuestsCatalogIdentity(client, () => true))
     await act(async () => resolveGuest(base))
@@ -151,7 +151,7 @@ describe('single-quest metadata (#1992)', () => {
   })
 
   it('completion ACK refreshes the opened bundle, deduplicates repeat saves and supports restart', async () => {
-    const { result } = renderHook(() => useDetail(), { wrapper })
+    const { result } = await renderHook(() => useDetail(), { wrapper })
     await waitFor(() => expect(result.current.loading).toBe(false))
     fetchQuestByQuestId.mockResolvedValue({ ...base, completions_count: 13, is_completed_by_me: true,
       first_completer: { id: 99, name: 'New pioneer', avatar: null } })
@@ -161,7 +161,7 @@ describe('single-quest metadata (#1992)', () => {
     expect(result.current.pioneer?.id).toBe(99)
     await act(async () => refreshQuestsCatalogCompletion(client, 'quest-a'))
     expect(fetchQuestByQuestId).toHaveBeenCalledTimes(2)
-    act(() => resetQuestsCatalogCompletion(client, 'quest-a'))
+    await act(() => resetQuestsCatalogCompletion(client, 'quest-a'))
     await waitFor(() => expect(result.current.completion.isCompletedByMe).toBe(false))
     await act(async () => refreshQuestsCatalogCompletion(client, 'quest-a'))
     expect(fetchQuestByQuestId).toHaveBeenCalledTimes(3)
@@ -174,10 +174,10 @@ describe('single-quest metadata (#1992)', () => {
   it('completion reset without a cached mark leaves the cold bundle load alone', async () => {
     let resolve!: (bundle: ApiQuestBundle) => void
     fetchQuestByQuestId.mockReturnValue(new Promise<ApiQuestBundle>((done) => { resolve = done }))
-    const { result } = renderHook(() => useDetail(), { wrapper })
+    const { result } = await renderHook(() => useDetail(), { wrapper })
     await waitFor(() => expect(fetchQuestByQuestId).toHaveBeenCalledTimes(1))
 
-    act(() => resetQuestsCatalogCompletion(client, 'quest-a'))
+    await act(() => resetQuestsCatalogCompletion(client, 'quest-a'))
     await act(async () => resolve(base))
 
     await waitFor(() => expect(result.current.loading).toBe(false))
@@ -187,11 +187,11 @@ describe('single-quest metadata (#1992)', () => {
 
   it('saving a review refreshes real rating hooks through the bundle key', async () => {
     submitQuestReview.mockResolvedValue({ id: 1, rating: 5, liked: '', disliked: '' })
-    const { result } = renderHook(() => ({ detail: useDetail(), review: useQuestReview({ questId: 7, questSlug: 'quest-a' }) }), { wrapper })
+    const { result } = await renderHook(() => ({ detail: useDetail(), review: useQuestReview({ questId: 7, questSlug: 'quest-a' }) }), { wrapper })
     await waitFor(() => expect(result.current.detail.rating.ratingCount).toBe(8))
     await waitFor(() => expect(result.current.review.isLoading).toBe(false))
     fetchQuestByQuestId.mockResolvedValue({ ...base, rating_count: 9, rating_avg: 4.6 })
-    act(() => result.current.review.submit({ rating: 5, liked: '', disliked: '' }))
+    await act(() => result.current.review.submit({ rating: 5, liked: '', disliked: '' }))
     await waitFor(() => expect(result.current.detail.rating).toEqual({ ratingAvg: 4.6, ratingCount: 9 }))
     expect(fetchQuestByQuestId).toHaveBeenCalledTimes(2)
     expect(fetchQuestsList).not.toHaveBeenCalled()

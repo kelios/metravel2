@@ -38,15 +38,15 @@ import QuestCard from '@/screens/tabs/QuestCard'
 
 const colors = { text: '#000', primary: '#000', background: '#fff' } as any
 
-const drivingText = (meters: number, seconds: number) =>
-  renderHook(() =>
+const drivingText = async (meters: number, seconds: number) =>
+  (await renderHook(() =>
     usePopupActions({
       colors,
       coord: '53.9,27.5',
       drivingDistanceMeters: meters,
       drivingDurationSeconds: seconds,
     }),
-  ).result.current.drivingText
+  )).result.current.drivingText
 
 describe('#1449 расстояние на экранах идёт через канонический форматтер', () => {
   afterEach(async () => {
@@ -66,16 +66,16 @@ describe('#1449 расстояние на экранах идёт через к�
       await i18n.changeLanguage(locale)
 
       // 2.5 км + 12 минут — короткая поездка, ETA остаётся рядом с расстоянием.
-      expect(drivingText(2_500, 720)).toContain(near)
+      expect(await drivingText(2_500, 720)).toContain(near)
       // >1000 км: ETA снимается, остаётся только расстояние с разрядами локали.
-      expect(drivingText(1_200_000, 60_000)).toBe(far)
+      expect(await drivingText(1_200_000, 60_000)).toBe(far)
     })
   })
 
   describe('карточка «квест для этого города» в статье', () => {
-    const renderSection = (distanceKm: number, cityName?: string) => {
+    const renderSection = async (distanceKm: number, cityName?: string) => {
       mockMatches.push({ quest: { id: 1, cityName }, distanceKm })
-      render(<QuestForCitySection travel={{ id: 7, cityName } as any} styles={{}} />)
+      await render(<QuestForCitySection travel={{ id: 7, cityName } as any} styles={{}} />)
       return eyebrows[eyebrows.length - 1]
     }
 
@@ -88,16 +88,16 @@ describe('#1449 расстояние на экранах идёт через к�
     ] as const)('печатает подпись расстояния по нормам локали %s', async (locale, withCity, withoutCity) => {
       await i18n.changeLanguage(locale)
 
-      expect(renderSection(2.5, 'Минск')).toBe(withCity)
+      expect(await renderSection(2.5, 'Минск')).toBe(withCity)
       eyebrows.length = 0
       mockMatches.length = 0
-      expect(renderSection(2.5)).toBe(withoutCity)
+      expect(await renderSection(2.5)).toBe(withoutCity)
     })
   })
 
   describe('карточка квеста в каталоге «рядом»', () => {
-    const renderCard = (distanceKm: number) => {
-      const view = render(
+    const renderCard = async (distanceKm: number) => {
+      const view = await render(
         <QuestCard
           styles={{}}
           cardWidth={320}
@@ -128,8 +128,8 @@ describe('#1449 расстояние на экранах идёт через к�
     ] as const)('печатает расстояние до квеста по нормам локали %s', async (locale, km, m) => {
       await i18n.changeLanguage(locale)
 
-      expect(renderCard(2.5).getByText(km)).toBeTruthy()
-      expect(renderCard(0.75).getByText(m)).toBeTruthy()
+      expect(await (await renderCard(2.5)).getByText(km)).toBeTruthy()
+      expect(await (await renderCard(0.75)).getByText(m)).toBeTruthy()
     })
   })
 

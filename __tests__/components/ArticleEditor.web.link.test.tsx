@@ -164,7 +164,7 @@ describe('ArticleEditor.web link', () => {
 
     const onChange = jest.fn();
 
-    const { getByTestId, getByText, getByPlaceholderText, getByLabelText } = render(
+    const { getByTestId, getByText, getByPlaceholderText, getByLabelText } = await render(
       <ArticleEditor content={'hello world'} onChange={onChange} />
     );
 
@@ -190,8 +190,8 @@ describe('ArticleEditor.web link', () => {
       expect(getByText('Ссылка')).toBeTruthy();
     });
 
-    fireEvent.changeText(getByPlaceholderText('https://...'), 'https://example.com');
-    fireEvent.press(getByLabelText('Сохранить') as any);
+    await fireEvent.changeText(getByPlaceholderText('https://...'), 'https://example.com');
+    await fireEvent.press(getByLabelText('Сохранить') as any);
 
     await waitFor(() => {
       expect(editor.formatText).toHaveBeenCalledWith(6, 5, 'link', 'https://example.com', 'user');
@@ -205,7 +205,7 @@ describe('ArticleEditor.web link', () => {
 
     const onChange = jest.fn();
 
-    const { getByTestId, getByText, getByPlaceholderText, getByLabelText } = render(
+    const { getByTestId, getByText, getByPlaceholderText, getByLabelText } = await render(
       <ArticleEditor content={'hello'} onChange={onChange} />
     );
 
@@ -225,8 +225,8 @@ describe('ArticleEditor.web link', () => {
       expect(getByText('Ссылка')).toBeTruthy();
     });
 
-    fireEvent.changeText(getByPlaceholderText('https://...'), 'https://example.com');
-    fireEvent.press(getByLabelText('Сохранить') as any);
+    await fireEvent.changeText(getByPlaceholderText('https://...'), 'https://example.com');
+    await fireEvent.press(getByLabelText('Сохранить') as any);
 
     await waitFor(() => {
       expect(editor.insertText).toHaveBeenCalledWith(3, 'https://example.com', { link: 'https://example.com' }, 'user');
@@ -257,7 +257,7 @@ describe('ArticleEditor.web link', () => {
         return realCreateElement(tagName);
       }) as any);
 
-    const { getByTestId } = render(<ArticleEditor content={'hello'} onChange={onChange} />);
+    const { getByTestId } = await render(<ArticleEditor content={'hello'} onChange={onChange} />);
 
     await waitFor(() => {
       expect(getByTestId('quill-mock')).toBeTruthy();
@@ -305,7 +305,7 @@ describe('ArticleEditor.web link', () => {
         return realCreateElement(tagName);
       }) as any);
 
-    const { getByLabelText, getByTestId } = render(
+    const { getByLabelText, getByTestId } = await render(
       <ArticleEditor content="hello" onChange={onChange} onManualSave={jest.fn()} />,
     );
 
@@ -345,7 +345,7 @@ describe('ArticleEditor.web link', () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default;
     ;(globalThis as any).__quillSelection__ = { index: 0, length: 12 };
 
-    const { getByLabelText, getByTestId } = render(
+    const { getByLabelText, getByTestId } = await render(
       <ArticleEditor
         content={'<p><strong>Hello</strong><img src="https://example.com/keep.jpg" alt="" />world</p>'}
         onChange={jest.fn()}
@@ -366,7 +366,7 @@ describe('ArticleEditor.web link', () => {
       ],
     });
 
-    fireEvent.press(getByLabelText('Очистить форматирование') as any);
+    await fireEvent.press(getByLabelText('Очистить форматирование') as any);
 
     await waitFor(() => {
       expect(editor.formatText).toHaveBeenCalledWith(0, 6, 'bold', false, 'user');
@@ -400,7 +400,7 @@ describe('ArticleEditor.web link', () => {
         return realCreateElement(tagName);
       }) as any);
 
-    const { getByTestId } = render(<ArticleEditor content={'hello'} onChange={jest.fn()} />);
+    const { getByTestId } = await render(<ArticleEditor content={'hello'} onChange={jest.fn()} />);
 
     await waitFor(() => {
       expect(getByTestId('quill-mock')).toBeTruthy();
@@ -434,7 +434,7 @@ describe('ArticleEditor.web link', () => {
     const file = new File(['binary-image'], 'fullscreen-drop.png', { type: 'image/png' });
     const documentAddEventListenerSpy = jest.spyOn(document, 'addEventListener');
 
-    const { getByTestId, getByLabelText } = render(
+    const { getByTestId, getByLabelText } = await render(
       <ArticleEditor content={'hello'} onChange={onChange} />
     );
 
@@ -443,7 +443,7 @@ describe('ArticleEditor.web link', () => {
       expect((globalThis as any).__quillEditor__).toBeTruthy();
     });
 
-    fireEvent.press(getByLabelText('Перейти в полноэкранный режим') as any);
+    await fireEvent.press(getByLabelText('Перейти в полноэкранный режим') as any);
 
     await waitFor(() => {
       expect(getByLabelText('Выйти из полноэкранного режима')).toBeTruthy();
@@ -481,7 +481,7 @@ describe('ArticleEditor.web link', () => {
     const firstOnChange = jest.fn();
     const secondOnChange = jest.fn();
 
-    const { getByTestId, rerender } = render(
+    const { getByTestId, rerender } = await render(
       <ArticleEditor content={'hello'} onChange={firstOnChange} />
     );
 
@@ -493,7 +493,7 @@ describe('ArticleEditor.web link', () => {
     const firstModules = (globalThis as any).__quillProps__?.modules;
     expect(firstModules).toBeTruthy();
 
-    rerender(<ArticleEditor content={'hello'} onChange={secondOnChange} />);
+    await rerender(<ArticleEditor content={'hello'} onChange={secondOnChange} />);
 
     await waitFor(() => {
       expect((globalThis as any).__quillProps__?.modules).toBe(firstModules);
@@ -531,7 +531,7 @@ describe('ArticleEditor.web link', () => {
         return realCreateElement(tagName);
       }) as any);
 
-    const { getByTestId, getByLabelText } = render(
+    const { getByTestId, getByLabelText } = await render(
       <ArticleEditor content={'hello'} onChange={jest.fn()} onManualSave={onManualSave} />
     );
 
@@ -553,7 +553,7 @@ describe('ArticleEditor.web link', () => {
       expect(uploadImage as jest.Mock).toHaveBeenCalledTimes(1);
     });
 
-    fireEvent.press(getByLabelText('Загрузка изображения…') as any);
+    await fireEvent.press(getByLabelText('Загрузка изображения…') as any);
     expect(onManualSave).not.toHaveBeenCalled();
 
     const finishUpload = resolveUpload as ((value: unknown) => void) | null;
@@ -565,7 +565,7 @@ describe('ArticleEditor.web link', () => {
       expect(getByLabelText('Сохранить путешествие')).toBeTruthy();
     });
 
-    fireEvent.press(getByLabelText('Сохранить путешествие') as any);
+    await fireEvent.press(getByLabelText('Сохранить путешествие') as any);
 
     await waitFor(() => {
       expect(onManualSave).toHaveBeenCalledWith(expect.stringContaining('https://example.com/uploaded.jpg'));

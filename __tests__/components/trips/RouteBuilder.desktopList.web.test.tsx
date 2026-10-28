@@ -103,8 +103,8 @@ const makeTrip = (route = makeRoute(50)): PlannedTrip => ({
   createdAt: '2026-08-27T08:00:00Z',
 })
 
-const renderBuilder = (pointCount = 50) =>
-  render(<RouteBuilder trip={makeTrip(makeRoute(pointCount))} />, {
+const renderBuilder = async (pointCount = 50) =>
+  await render(<RouteBuilder trip={makeTrip(makeRoute(pointCount))} />, {
     wrapper: createQueryWrapper().Wrapper,
   })
 
@@ -121,8 +121,8 @@ describe('RouteBuilder desktop long-list contract', () => {
 
   it.each([2, 10, 50] as const)(
     'keeps a %s-point route inside the bounded scroll surface',
-    (pointCount) => {
-      const { getByTestId } = renderBuilder(pointCount)
+    async (pointCount) => {
+      const { getByTestId } = await renderBuilder(pointCount)
       const scroll = getByTestId('route-builder-point-list-scroll')
       const scrollStyle = StyleSheet.flatten(scroll.props.style) as {
         maxHeight?: number | string
@@ -134,8 +134,8 @@ describe('RouteBuilder desktop long-list contract', () => {
     },
   )
 
-  it('bounds a long route in a scroll surface without removing keyboard or a11y controls', () => {
-    const { getByTestId } = renderBuilder()
+  it('bounds a long route in a scroll surface without removing keyboard or a11y controls', async () => {
+    const { getByTestId } = await renderBuilder()
 
     const scroll = getByTestId('route-builder-point-list-scroll')
     const scrollStyle = StyleSheet.flatten(scroll.props.style) as {
@@ -166,15 +166,15 @@ describe('RouteBuilder desktop long-list contract', () => {
   // Панель конструктора — колонка 380px: ручка и четыре иконки по 44dp забирали
   // 232px из 356px карточки, и тексту точки оставалось ~90px. В строке остались
   // правка и удаление, перестановка переехала в редактор точки.
-  it('keeps the point row down to two controls and moves reorder into the editor', () => {
-    const { getByTestId, queryByTestId } = renderBuilder(3)
+  it('keeps the point row down to two controls and moves reorder into the editor', async () => {
+    const { getByTestId, queryByTestId } = await renderBuilder(3)
 
     expect(getByTestId('route-builder-edit-1')).toBeTruthy()
     expect(getByTestId('route-builder-delete-1')).toBeTruthy()
     expect(queryByTestId('route-builder-move-up-1')).toBeNull()
     expect(queryByTestId('route-builder-move-down-1')).toBeNull()
 
-    fireEvent.press(getByTestId('route-builder-edit-1'))
+    await fireEvent.press(getByTestId('route-builder-edit-1'))
 
     expect(getByTestId('route-builder-move-up-1')).toBeTruthy()
     expect(getByTestId('route-builder-move-down-1')).toBeTruthy()
@@ -182,40 +182,40 @@ describe('RouteBuilder desktop long-list contract', () => {
     expect(getByTestId('route-builder-delete-1')).toHaveProp('accessibilityRole', 'button')
   })
 
-  it('never shows add and edit forms at the same time', () => {
-    const { getByTestId, queryByTestId } = renderBuilder()
+  it('never shows add and edit forms at the same time', async () => {
+    const { getByTestId, queryByTestId } = await renderBuilder()
 
     expect(getByTestId('route-builder-add-action')).toBeTruthy()
     expect(queryByTestId('route-builder-add-form')).toBeNull()
     expect(queryByTestId('route-builder-edit-form')).toBeNull()
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-add-action'))
 
     expect(getByTestId('route-builder-add-form')).toBeTruthy()
     expect(queryByTestId('route-builder-add-action')).toBeNull()
     expect(queryByTestId('route-builder-edit-form')).toBeNull()
 
-    fireEvent.press(getByTestId('route-builder-add-cancel'))
+    await fireEvent.press(getByTestId('route-builder-add-cancel'))
 
     expect(getByTestId('route-builder-add-action')).toBeTruthy()
     expect(queryByTestId('route-builder-add-form')).toBeNull()
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
-    fireEvent.press(getByTestId('route-builder-type-custom'))
-    fireEvent.changeText(getByTestId('route-builder-name'), 'Новая точка')
-    fireEvent.press(getByTestId('route-builder-add'))
+    await fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-type-custom'))
+    await fireEvent.changeText(getByTestId('route-builder-name'), 'Новая точка')
+    await fireEvent.press(getByTestId('route-builder-add'))
 
     expect(getByTestId('route-builder-add-action')).toBeTruthy()
     expect(queryByTestId('route-builder-add-form')).toBeNull()
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
-    fireEvent.press(getByTestId('route-builder-edit-5'))
+    await fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-edit-5'))
 
     expect(getByTestId('route-builder-edit-form')).toBeTruthy()
     expect(queryByTestId('route-builder-add-action')).toBeNull()
     expect(queryByTestId('route-builder-add-form')).toBeNull()
 
-    fireEvent.press(getByTestId('route-builder-edit-cancel'))
+    await fireEvent.press(getByTestId('route-builder-edit-cancel'))
 
     expect(getByTestId('route-builder-add-action')).toBeTruthy()
     expect(queryByTestId('route-builder-add-form')).toBeNull()

@@ -8,46 +8,30 @@
 import React from 'react'
 import { Platform } from 'react-native'
 import { render } from '@testing-library/react-native'
-import { Helmet, HelmetProvider, type HelmetServerState } from 'expo-router/vendor/react-helmet-async/lib'
+import { HelmetProvider } from 'expo-router/vendor/react-helmet-async/lib'
+import { emitHelmetScripts, readHelmetHead } from '../../helpers/helmetHead'
 
 import LazyInstantSEO from '@/components/seo/LazyInstantSEO'
 import { jsonLdScript } from '@/components/seo/jsonLdScript'
 
-const emitHelmetScripts = (node: React.ReactNode) => {
-  const context: { helmet?: HelmetServerState } = {}
-  const originalCanUseDOM = HelmetProvider.canUseDOM
-  let helmetScreen: ReturnType<typeof render> | undefined
-  HelmetProvider.canUseDOM = false
-  try {
-    helmetScreen = render(
-      <HelmetProvider context={context}>
-        <Helmet>{node}</Helmet>
-      </HelmetProvider>,
-    )
-    const html = context.helmet?.script.toString() ?? ''
-    const template = document.createElement('template')
-    template.innerHTML = html
-    const scripts = [...template.content.querySelectorAll('script')]
-    return { html, scripts }
-  } finally {
-    helmetScreen?.unmount()
-    HelmetProvider.canUseDOM = originalCanUseDOM
-  }
-}
+jest.mock('expo-router/head', () => require('../../helpers/helmetHead').createHelmetHeadMock())
 
 describe('JSON-LD Helmet contract (#1967)', () => {
   const originalOS = Platform.OS
+  const originalCanUseDOM = HelmetProvider.canUseDOM
 
   beforeAll(() => {
+    HelmetProvider.canUseDOM = false
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
   })
 
   afterAll(() => {
+    HelmetProvider.canUseDOM = originalCanUseDOM
     Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOS })
   })
 
-  it('keeps jsonLdScript string children and drops dangerouslySetInnerHTML', () => {
-    const kept = emitHelmetScripts(
+  it('keeps jsonLdScript string children and drops dangerouslySetInnerHTML', async () => {
+    const kept = await emitHelmetScripts(
       jsonLdScript({ '@context': 'https://schema.org', '@type': 'WebPage', url: 'https://metravel.by/map' }),
     )
     expect(kept.scripts).toHaveLength(1)
@@ -58,7 +42,7 @@ describe('JSON-LD Helmet contract (#1967)', () => {
       url: 'https://metravel.by/map',
     })
 
-    const dropped = emitHelmetScripts(
+    const dropped = await emitHelmetScripts(
       React.createElement('script', {
         type: 'application/ld+json',
         dangerouslySetInnerHTML: { __html: '{"@type":"WebPage"}' },
@@ -67,21 +51,20 @@ describe('JSON-LD Helmet contract (#1967)', () => {
     expect(dropped.scripts).toHaveLength(0)
   })
 
-  it('emits JSON-LD from real LazyInstantSEO additionalTags through Helmet', () => {
+  it('emits JSON-LD from real LazyInstantSEO additionalTags through Helmet', async () => {
     const data = {
       '@context': 'https://schema.org',
       '@type': 'ItemList',
       url: 'https://metravel.by/map',
     }
-    const screen = render(
+    await render(
       <LazyInstantSEO
         title="Карта маршрутов | Metravel"
         additionalTags={jsonLdScript(data, { key: 'map-structured-data' })}
       />,
     )
 
-    const { additionalTags } = screen.UNSAFE_root.findByType(LazyInstantSEO).props
-    const { scripts } = emitHelmetScripts(additionalTags)
+    const { scripts } = readHelmetHead()
     expect(scripts).toHaveLength(1)
     expect(scripts[0].type).toBe('application/ld+json')
     expect(scripts[0].getAttribute('data-rh')).toBe('true')

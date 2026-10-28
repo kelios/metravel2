@@ -1,3 +1,4 @@
+import { getOnlyHost, queryHost } from '@/__tests__/helpers/hostQueries'
 import React from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
 import { fireEvent, render } from '@testing-library/react-native';
@@ -36,14 +37,14 @@ jest.mock('@/hooks/useTheme', () => ({
 }));
 
 describe('ProfileTabs mobile layout', () => {
-  it('reads the live width from the first frame and keeps a 320 screen on the phone row (#2141, #2174)', () => {
+  it('reads the live width from the first frame and keeps a 320 screen on the phone row (#2141, #2174)', async () => {
     mockResponsiveOptions.length = 0;
     const previous = mockResponsiveValue;
     mockResponsiveValue = { ...previous, isPhone: false, isLargePhone: false, width: 320, height: 640 };
     try {
-      const { UNSAFE_queryAllByType } = render(<ProfileTabs activeTab="travels" onChangeTab={jest.fn()} />);
+      const { container: hostContainer } = await render(<ProfileTabs activeTab="travels" onChangeTab={jest.fn()} />);
       // телефонная строка — горизонтальная прокрутка, а не перенос desktop-вкладок столбиком
-      expect(UNSAFE_queryAllByType(ScrollView).length).toBeGreaterThan(0);
+      expect(hostContainer.queryAll(node => node.type === "RCTScrollView").length).toBeGreaterThan(0);
       // вкладки монтируются после гидратации: нулевой кадр width = 0 снят
       expect(mockResponsiveOptions).toContainEqual({ clientOnly: true });
     } finally {
@@ -64,8 +65,8 @@ describe('ProfileTabs mobile layout', () => {
     };
   });
 
-  it('keeps compact profile tabs on one line and mobile-safe inside the horizontal row', () => {
-    const { getByLabelText, getByText, UNSAFE_queryByType } = render(
+  it('keeps compact profile tabs on one line and mobile-safe inside the horizontal row', async () => {
+    const { getByLabelText, getByText, container: hostContainer } = await render(
       <ProfileTabs
         activeTab="travels"
         onChangeTab={jest.fn()}
@@ -85,22 +86,22 @@ describe('ProfileTabs mobile layout', () => {
     expect(firstTabStyle.flex).toBe(1);
     expect(firstTabStyle.minWidth).toBe(0);
 
-    expect(UNSAFE_queryByType(ScrollView)).toBeNull();
+    expect(queryHost(hostContainer, node => node.type === "RCTScrollView")).toBeNull();
   });
 
-  it('centers the active tab when it starts outside the mobile viewport', () => {
+  it('centers the active tab when it starts outside the mobile viewport', async () => {
     const scrollTo = jest.spyOn(ScrollView.prototype, 'scrollTo').mockImplementation(jest.fn());
-    const { getByLabelText, UNSAFE_getByType } = render(
+    const { getByLabelText, container: hostContainer } = await render(
       <ProfileTabs activeTab="overview" onChangeTab={jest.fn()} />
     );
 
-    const scrollView = UNSAFE_getByType(ScrollView);
+    const scrollView = getOnlyHost(hostContainer, node => node.type === "RCTScrollView");
     const activeTab = getByLabelText('Уровень, значки и достижения');
 
-    fireEvent(scrollView, 'layout', {
+    await fireEvent(scrollView, 'layout', {
       nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 44 } },
     });
-    fireEvent(activeTab, 'layout', {
+    await fireEvent(activeTab, 'layout', {
       nativeEvent: { layout: { x: 600, y: 0, width: 120, height: 44 } },
     });
 
@@ -108,7 +109,7 @@ describe('ProfileTabs mobile layout', () => {
     scrollTo.mockRestore();
   });
 
-  it('keeps the full desktop tab labels on one line without shortening labels', () => {
+  it('keeps the full desktop tab labels on one line without shortening labels', async () => {
     mockResponsiveValue = {
       isPhone: false,
       isLargePhone: false,
@@ -120,7 +121,7 @@ describe('ProfileTabs mobile layout', () => {
       height: 900,
     };
 
-    const { getByLabelText, getByText, UNSAFE_queryByType } = render(
+    const { getByLabelText, getByText, container: hostContainer } = await render(
       <ProfileTabs
         activeTab="worldmap"
         onChangeTab={jest.fn()}
@@ -137,6 +138,6 @@ describe('ProfileTabs mobile layout', () => {
     const worldMapTabStyle = StyleSheet.flatten(getByLabelText('Карта мира').props.style);
     expect(worldMapTabStyle.minWidth).toBeGreaterThanOrEqual(160);
     expect(worldMapTabStyle.flexBasis).toBeGreaterThanOrEqual(160);
-    expect(UNSAFE_queryByType(ScrollView)).toBeNull();
+    expect(queryHost(hostContainer, node => node.type === "RCTScrollView")).toBeNull();
   });
 });

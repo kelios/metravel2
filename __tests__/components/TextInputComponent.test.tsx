@@ -2,8 +2,8 @@ import { render, fireEvent } from '@testing-library/react-native'
 import TextInputComponent from '@/components/forms/TextInputComponent'
 
 describe('TextInputComponent', () => {
-  it('renders correctly with label', () => {
-    const { getByText, getByPlaceholderText } = render(
+  it('renders correctly with label', async () => {
+    const { getByText, getByPlaceholderText } = await render(
       <TextInputComponent
         label="Email"
         value=""
@@ -15,16 +15,16 @@ describe('TextInputComponent', () => {
     expect(getByPlaceholderText('Enter email')).toBeTruthy()
   })
 
-  it('displays the value', () => {
-    const { getByDisplayValue } = render(
+  it('displays the value', async () => {
+    const { getByDisplayValue } = await render(
       <TextInputComponent label="Email" value="test@example.com" onChange={() => {}} />
     )
     expect(getByDisplayValue('test@example.com')).toBeTruthy()
   })
 
-  it('calls onChange when text changes', () => {
+  it('calls onChange when text changes', async () => {
     const onChange = jest.fn()
-    const { getByPlaceholderText } = render(
+    const { getByPlaceholderText } = await render(
       <TextInputComponent
         label="Email"
         value=""
@@ -32,19 +32,19 @@ describe('TextInputComponent', () => {
         placeholder="Enter email"
       />
     )
-    fireEvent.changeText(getByPlaceholderText('Enter email'), 'new text')
+    await fireEvent.changeText(getByPlaceholderText('Enter email'), 'new text')
     expect(onChange).toHaveBeenCalledWith('new text')
   })
 
-  it('renders without label', () => {
-    const { queryByText } = render(
+  it('renders without label', async () => {
+    const { queryByText } = await render(
       <TextInputComponent value="" onChange={() => {}} />
     )
     expect(queryByText('Email')).toBeNull()
   })
 
-  it('applies secureTextEntry when provided', () => {
-    const { getByPlaceholderText } = render(
+  it('applies secureTextEntry when provided', async () => {
+    const { getByPlaceholderText } = await render(
       <TextInputComponent
         label="Password"
         value=""

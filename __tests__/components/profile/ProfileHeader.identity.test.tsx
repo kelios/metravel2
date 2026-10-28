@@ -28,10 +28,10 @@ const baseProps = {
 };
 
 describe('ProfileHeader identity (#847)', () => {
-  it('does not render verified copy/badge for a verified profile', () => {
+  it('does not render verified copy/badge for a verified profile', async () => {
     const profile = { is_verified: true, organizer_status: 'experienced' } as unknown as UserProfileDto;
 
-    const { queryByText } = render(
+    const { queryByText } = await render(
       <ProfileHeader {...baseProps} profile={profile} rank={{ level: 5, title: 'Эксперт' }} />
     );
 
@@ -40,10 +40,10 @@ describe('ProfileHeader identity (#847)', () => {
     expect(queryByText('Организатор с опытом')).toBeNull();
   });
 
-  it('renders the compact rank chip under the name', () => {
+  it('renders the compact rank chip under the name', async () => {
     const profile = { is_verified: true } as unknown as UserProfileDto;
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ProfileHeader {...baseProps} profile={profile} rank={{ level: 5, title: 'Эксперт' }} />
     );
 

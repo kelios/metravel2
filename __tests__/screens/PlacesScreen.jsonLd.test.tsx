@@ -1,4 +1,8 @@
-import { render, waitFor } from '@testing-library/react-native'
+import React from 'react'
+import { waitFor } from '@testing-library/react-native'
+import { HelmetProvider } from 'expo-router/vendor/react-helmet-async/lib'
+import { createRootRegistry } from '../helpers/rawRootLifecycle'
+import { readHelmetHead } from '../helpers/helmetHead'
 import { Platform } from 'react-native'
 
 import { createQueryWrapper } from '../helpers/testQueryClient'
@@ -31,8 +35,9 @@ jest.mock('@/api/places', () => ({
 jest.mock('@/components/seo/LazyInstantSEO', () => ({
   __esModule: true,
   default: (props: unknown) => {
+    const ActualSEO = jest.requireActual('@/components/seo/LazyInstantSEO').default
     mockSeoProps(props)
-    return null
+    return <ActualSEO {...props as object} />
   },
 }))
 // ItemList строит сам экран из `visiblePlaces`; карточки (♥/статус, auth,
@@ -101,19 +106,29 @@ const catalogPage: PlacesCatalogPage = {
   countryFacets: [],
 }
 
-const readItemListJsonLd = (): string | null => {
-  for (let index = mockSeoProps.mock.calls.length - 1; index >= 0; index -= 1) {
-    const tags = (mockSeoProps.mock.calls[index]?.[0] as { additionalTags?: any })?.additionalTags
-    const children = tags?.props?.children
-    if (typeof children === 'string' && children.includes('ItemList')) return children
-    const html = tags?.props?.dangerouslySetInnerHTML?.__html
-    if (typeof html === 'string' && html.includes('ItemList')) return html
-  }
-  return null
+jest.mock('expo-router/head', () => require('../helpers/helmetHead').createHelmetHeadMock())
+
+const webRoots = createRootRegistry()
+const queryClients: ReturnType<typeof createQueryWrapper>['queryClient'][] = []
+afterEach(async () => {
+  await webRoots.cleanup()
+  queryClients.splice(0).forEach((client) => client.clear())
+})
+const renderWebScreen = async () => {
+  const root = webRoots.createRoot()
+  const { Wrapper, queryClient } = createQueryWrapper()
+  queryClients.push(queryClient)
+  await React.act(() => root.render(<Wrapper><PlacesScreen /></Wrapper>))
 }
+
+const readItemListJsonLd = () => readHelmetHead().scripts
+  .find((script) => script.type === 'application/ld+json' && (script.textContent ?? '').includes('ItemList'))
+  ?.textContent ?? null
 
 describe('PlacesScreen JSON-LD (#1960)', () => {
   const originalOS = Platform.OS
+  const originalCanUseDOM = HelmetProvider.canUseDOM
+  beforeAll(() => { HelmetProvider.canUseDOM = false })
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -122,16 +137,19 @@ describe('PlacesScreen JSON-LD (#1960)', () => {
   })
 
   afterAll(() => {
+    HelmetProvider.canUseDOM = originalCanUseDOM
     ;(Platform as unknown as { OS: string }).OS = originalOS
   })
 
   it('lists canonical travel urls on the site host without ?id= or the API host', async () => {
-    render(<PlacesScreen />, { wrapper: createQueryWrapper().Wrapper })
+    await renderWebScreen()
 
     await waitFor(() => {
       expect(readItemListJsonLd()).toContain('forty-krakova')
     })
 
+    expect(readHelmetHead().scripts).toHaveLength(1)
+    expect(readHelmetHead().scripts[0].getAttribute('data-rh')).toBe('true')
     const html = readItemListJsonLd() ?? ''
     const data = JSON.parse(html) as { itemListElement: Array<{ url: string }> }
 
@@ -145,7 +163,7 @@ describe('PlacesScreen JSON-LD (#1960)', () => {
   })
 
   it('declares the SSG robots verdict so Helmet keeps noindex after hydration (#1968)', async () => {
-    render(<PlacesScreen />, { wrapper: createQueryWrapper().Wrapper })
+    await renderWebScreen()
 
     await waitFor(() => {
       expect(mockSeoProps).toHaveBeenCalled()
@@ -154,5 +172,6 @@ describe('PlacesScreen JSON-LD (#1960)', () => {
     expect(mockSeoProps).toHaveBeenCalledWith(
       expect.objectContaining({ robots: 'noindex, follow' }),
     )
+    expect(document.querySelector('meta[name="robots"]')?.getAttribute('content')).toBe('noindex, follow')
   })
 })

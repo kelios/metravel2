@@ -32,8 +32,8 @@ describe('HomeInspirationSection query config (#738)', () => {
     jest.clearAllMocks()
   })
 
-  it('disables refetchOnMount so fresh cache is not refetched on remount', () => {
-    render(
+  it('disables refetchOnMount so fresh cache is not refetched on remount', async () => {
+    await render(
       <HomeInspirationSection
         title="Популярное"
         subtitle="sub"
@@ -49,8 +49,8 @@ describe('HomeInspirationSection query config (#738)', () => {
     expect(options.refetchOnMount).toBe(false)
   })
 
-  it('does not fetch while the home tab is blurred', () => {
-    render(
+  it('does not fetch while the home tab is blurred', async () => {
+    await render(
       <HomeInspirationSection
         title="Популярное"
         queryKey="home-popular-travels"
@@ -63,15 +63,15 @@ describe('HomeInspirationSection query config (#738)', () => {
     expect(options.enabled).toBe(false)
   })
 
-  it('isolates home selections by session owner across login and logout', () => {
+  it('isolates home selections by session owner across login and logout', async () => {
     const ui = <HomeInspirationSection title="New" queryKey="home-new-travels" fetchFn={async () => ({ data: [], total: 0 })} />
-    const view = render(ui)
+    const view = await render(ui)
     expect(mockUseQuery.mock.lastCall?.[0].queryKey).toEqual(['home-new-travels', null])
     mockOwner = '242'
-    view.rerender(React.cloneElement(ui))
+    await view.rerender(React.cloneElement(ui))
     expect(mockUseQuery.mock.lastCall?.[0].queryKey).toEqual(['home-new-travels', '242'])
     mockOwner = null
-    view.rerender(React.cloneElement(ui))
+    await view.rerender(React.cloneElement(ui))
     expect(mockUseQuery.mock.lastCall?.[0].queryKey).toEqual(['home-new-travels', null])
   })
 })

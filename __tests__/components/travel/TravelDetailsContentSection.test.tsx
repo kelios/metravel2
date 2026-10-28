@@ -1,3 +1,4 @@
+import { within } from '@testing-library/react-native'
 import { createRef } from 'react'
 import type { ReactNode } from 'react'
 import { render, screen, waitFor } from '@testing-library/react-native'
@@ -9,6 +10,15 @@ import { TravelDetailsContentSection } from '@/components/travel/details/section
 import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 
 let mockProgressiveShouldLoad = true
+
+jest.mock('@/components/travel/details/TravelDetailsDeferredTransition', () => {
+  const React = require('react')
+  const actual = jest.requireActual('@/components/travel/details/TravelDetailsDeferredTransition')
+  return {
+    ...actual,
+    TravelDetailsDeferredTransition: jest.fn((props) => React.createElement(actual.TravelDetailsDeferredTransition, props)),
+  }
+})
 
 jest.mock('@/hooks/useProgressiveLoading', () => ({
   useProgressiveLoad: () => ({
@@ -137,13 +147,14 @@ const withQueryClient = () => {
 
 describe('TravelDetailsContentSection', () => {
   beforeEach(() => {
+    jest.mocked(TravelDetailsDeferredTransition).mockClear()
     mockProgressiveShouldLoad = true
   })
 
   // #2774: the article body comes first; the save CTA with its adjacent share
   // invitation follows the text, and nearby quests close the content section.
-  it('renders the article body before the save CTA, share invitation and nearby quests', () => {
-    const view = render(
+  it('renders the article body before the save CTA, share invitation and nearby quests', async () => {
+    const view = await render(
       <TravelDetailsContentSection
         travel={createTravel()}
         isMobile
@@ -160,11 +171,11 @@ describe('TravelDetailsContentSection', () => {
     expect(content.indexOf('travel-article-share-trip')).toBeLessThan(content.indexOf('travel-peer-badge-prompt'))
     expect(content.indexOf('travel-peer-badge-prompt')).toBeLessThan(content.indexOf('lazy-youtube'))
     expect(content.indexOf('lazy-youtube')).toBeLessThan(content.indexOf('travel-nearby-quests'))
-    expect(screen.getByTestId('travel-details-description').findAllByProps({ testID: 'travel-peer-badge-prompt' })).toHaveLength(0)
+    expect(within(screen.getByTestId('travel-details-description')).queryAllByTestId('travel-peer-badge-prompt', { includeHiddenElements: true })).toHaveLength(0)
   })
 
-  it('retains the share invitation when the published article has no description section', () => {
-    render(
+  it('retains the share invitation when the published article has no description section', async () => {
+    await render(
       <TravelDetailsContentSection
         travel={createTravel({ description: '', publish: true, moderation: true })}
         isMobile={false}
@@ -180,8 +191,8 @@ describe('TravelDetailsContentSection', () => {
     expect(screen.queryByTestId('travel-peer-badge-prompt')).toBeNull()
   })
 
-  it('renders canonical-only article text before the award invitation', () => {
-    const view = render(
+  it('renders canonical-only article text before the award invitation', async () => {
+    const view = await render(
       <TravelDetailsContentSection
         travel={createTravel({ description: '', rich_text: { description: { safe_html: '<p>Canonical article</p>', plain_text: 'Canonical article' } } })}
         isMobile={false}
@@ -195,8 +206,8 @@ describe('TravelDetailsContentSection', () => {
     expect(content.indexOf('travel-description-Тестовый маршрут')).toBeLessThan(content.indexOf('travel-peer-badge-prompt'))
   })
 
-  it.each(['<p><br></p>', '<p>&nbsp; &#160;</p>', ''])('does not invite an award for empty article markup %s', description => {
-    render(
+  it.each(['<p><br></p>', '<p>&nbsp; &#160;</p>', ''])('does not invite an award for empty article markup %s', async description => {
+    await render(
       <TravelDetailsContentSection
         travel={createTravel({ description, publish: true, moderation: true })}
         isMobile={false}
@@ -210,9 +221,9 @@ describe('TravelDetailsContentSection', () => {
     expect(screen.queryByTestId('travel-peer-badge-prompt')).toBeNull()
   })
 
-  it('preserves media-only article content without treating it as awardable article text', () => {
+  it('preserves media-only article content without treating it as awardable article text', async () => {
     const description = '<p><img src="https://example.com/article-photo.jpg" alt="Trip" /></p>'
-    render(
+    await render(
       <TravelDetailsContentSection
         travel={createTravel({ description, publish: true, moderation: true })}
         isMobile={false}
@@ -225,8 +236,8 @@ describe('TravelDetailsContentSection', () => {
     expect(screen.queryByTestId('travel-peer-badge-prompt')).toBeNull()
   })
 
-  it('renders description section for draft travel even when description is empty', () => {
-    render(
+  it('renders description section for draft travel even when description is empty', async () => {
+    await render(
       <TravelDetailsContentSection
         travel={createTravel({ description: '', publish: false as any })}
         isMobile={false}
@@ -237,7 +248,7 @@ describe('TravelDetailsContentSection', () => {
     )
 
     expect(screen.getByTestId('travel-details-description')).toBeTruthy()
-    expect(screen.UNSAFE_getByType(TravelDetailsDeferredTransition).props).toMatchObject({
+    expect(jest.mocked(TravelDetailsDeferredTransition).mock.calls.at(-1)?.[0]).toMatchObject({
       testID: 'travel-details-quest-transition',
       allowEmptyRuntime: true,
       runtimeFrameReady: true,
@@ -245,8 +256,8 @@ describe('TravelDetailsContentSection', () => {
     })
   })
 
-  it('opens the forced mobile insight tab', () => {
-    render(
+  it('opens the forced mobile insight tab', async () => {
+    await render(
       <TravelDetailsContentSection
         travel={createTravel()}
         isMobile
@@ -264,7 +275,7 @@ describe('TravelDetailsContentSection', () => {
 
   it('shows lazy youtube only when progressive video loading is ready', async () => {
     mockProgressiveShouldLoad = false
-    const view = render(
+    const view = await render(
       <TravelDetailsContentSection
         travel={createTravel()}
         isMobile={false}
@@ -277,7 +288,7 @@ describe('TravelDetailsContentSection', () => {
     expect(screen.queryByTestId('lazy-youtube')).toBeNull()
 
     mockProgressiveShouldLoad = true
-    view.rerender(
+    await view.rerender(
       <TravelDetailsContentSection
         travel={createTravel()}
         isMobile={false}

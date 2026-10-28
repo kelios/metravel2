@@ -73,7 +73,7 @@ beforeEach(() => {
 
 it('keeps the exact email route through login rather than a build-pdf export intent', async () => {
   mockAuth.isAuthenticated = false
-  render(<BookExportJobPage />)
+  await render(<BookExportJobPage />)
   await waitFor(() => expect(mockReplace).toHaveBeenCalled())
   const href = String(mockReplace.mock.calls[0][0])
   const parsed = new URL(href, 'https://metravel.by')
@@ -82,53 +82,53 @@ it('keeps the exact email route through login rather than a build-pdf export int
   expect(parsed.searchParams.get('intent')).not.toBe('build-pdf')
 })
 
-it('does not redirect before authentication is ready', () => {
+it('does not redirect before authentication is ready', async () => {
   mockAuth = { authReady: false, isAuthenticated: false }
-  render(<BookExportJobPage />)
+  await render(<BookExportJobPage />)
   expect(mockReplace).not.toHaveBeenCalled()
 })
 
-it('renders a private missing state without cached counters', () => {
+it('renders a private missing state without cached counters', async () => {
   mockController.isJobMissing = true
-  render(<BookExportJobPage />)
+  await render(<BookExportJobPage />)
   expect(screen.getByText('Книга не найдена')).toBeTruthy()
   expect(screen.queryByText('Страницы: 2 из 10')).toBeNull()
 })
 
-it('shows background delivery and an active job using existing status rendering', () => {
-  render(<BookExportJobPage />)
+it('shows background delivery and an active job using existing status rendering', async () => {
+  await render(<BookExportJobPage />)
   expect(screen.getByText('Идёт сборка · Сборка страниц')).toBeTruthy()
   expect(screen.getByText('background-email-hint')).toBeTruthy()
   expect(screen.getByText('Страницы: 2 из 10')).toBeTruthy()
 })
 
-it('keeps incomplete done output unavailable and offers status refresh', () => {
+it('keeps incomplete done output unavailable and offers status refresh', async () => {
   mockController.job = makeJob({ status: 'done', download: { available: false, checksum: null, size_bytes: null } })
-  render(<BookExportJobPage />)
+  await render(<BookExportJobPage />)
   expect(screen.queryByText('Скачать PDF')).toBeNull()
-  fireEvent.press(screen.getByText('Обновить статус'))
+  await fireEvent.press(screen.getByText('Обновить статус'))
   expect(mockController.refresh).toHaveBeenCalledTimes(1)
 })
 
-it('offers one refresh action when unavailable output also loses its server connection', () => {
+it('offers one refresh action when unavailable output also loses its server connection', async () => {
   mockController.job = makeJob({ status: 'done', download: { available: false, checksum: null, size_bytes: null } })
   mockController.isReconnecting = true
-  render(<BookExportJobPage />)
+  await render(<BookExportJobPage />)
   expect(screen.getAllByText('Обновить статус')).toHaveLength(1)
   expect(screen.getByText('Файл пока недоступен. Обновите статус книги.')).toBeTruthy()
 })
 
-it('shows failed error code and the route to rebuilding without a retry for REBUILD_REQUIRED', () => {
+it('shows failed error code and the route to rebuilding without a retry for REBUILD_REQUIRED', async () => {
   mockController.job = makeJob({ status: 'failed', error_code: 'REBUILD_REQUIRED', retryable: true })
-  render(<BookExportJobPage />)
+  await render(<BookExportJobPage />)
   expect(screen.getByText('Код ошибки: REBUILD_REQUIRED')).toBeTruthy()
   expect(screen.queryByText('Повторить')).toBeNull()
-  fireEvent.press(screen.getByText('Перейти к экспорту'))
+  await fireEvent.press(screen.getByText('Перейти к экспорту'))
   expect(mockPush).toHaveBeenCalledWith('/export')
 })
 
-it('declares noindex metadata without private job ID or email', () => {
-  render(<BookExportJobPage />)
+it('declares noindex metadata without private job ID or email', async () => {
+  await render(<BookExportJobPage />)
   const props = mockSeo.mock.calls[0][0] as { robots: string; title: string; description: string }
   expect(props.robots).toBe('noindex, nofollow')
   expect(`${props.title} ${props.description}`).not.toContain(JOB)

@@ -45,9 +45,9 @@ const result = (titles: string[], degraded = false): AiSearchResult => ({
   degraded,
 })
 
-function renderPanel() {
+async function renderPanel() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
+  return await render(
     <QueryClientProvider client={client}>
       <AiSearchPanel />
     </QueryClientProvider>,
@@ -66,14 +66,14 @@ describe('AiSearchPanel (#2459)', () => {
 
   it('stays idle for short input and searches after the debounce', async () => {
     mockFetchAiSearch.mockResolvedValue(result(['Ойцув с детьми', 'Квест по Кракову']))
-    const { getByTestId, queryByTestId, getByText, getAllByTestId } = renderPanel()
+    const { getByTestId, queryByTestId, getByText, getAllByTestId } = await renderPanel()
 
-    fireEvent.changeText(getByTestId('ai-search-input'), 'с ')
+    await fireEvent.changeText(getByTestId('ai-search-input'), 'с ')
     await new Promise((resolve) => setTimeout(resolve, AI_SEARCH_DEBOUNCE_MS + 200))
     expect(mockFetchAiSearch).not.toHaveBeenCalled()
     expect(queryByTestId('ai-search-results')).toBeNull()
 
-    fireEvent.changeText(getByTestId('ai-search-input'), 'с детьми под Краковом')
+    await fireEvent.changeText(getByTestId('ai-search-input'), 'с детьми под Краковом')
     await waitFor(() => expect(mockFetchAiSearch).toHaveBeenCalledTimes(1), { timeout: 3000 })
     expect(mockFetchAiSearch.mock.calls[0][0]).toMatchObject({ q: 'с детьми под Краковом', limit: 12 })
     await waitFor(() => expect(getByTestId('ai-search-results')).toBeTruthy())
@@ -84,16 +84,16 @@ describe('AiSearchPanel (#2459)', () => {
 
   it('shows the empty message when nothing matches', async () => {
     mockFetchAiSearch.mockResolvedValue(result([]))
-    const { getByTestId, queryByTestId } = renderPanel()
-    fireEvent.changeText(getByTestId('ai-search-input'), 'ничего такого нет')
+    const { getByTestId, queryByTestId } = await renderPanel()
+    await fireEvent.changeText(getByTestId('ai-search-input'), 'ничего такого нет')
     await waitFor(() => expect(getByTestId('ai-search-empty')).toBeTruthy(), { timeout: 3000 })
     expect(queryByTestId('ai-search-results')).toBeNull()
   })
 
   it('keeps the input and shows an unavailable note when the service fails', async () => {
     mockFetchAiSearch.mockRejectedValue(new Error('503'))
-    const { getByTestId, queryByTestId } = renderPanel()
-    fireEvent.changeText(getByTestId('ai-search-input'), 'замки беларуси')
+    const { getByTestId, queryByTestId } = await renderPanel()
+    await fireEvent.changeText(getByTestId('ai-search-input'), 'замки беларуси')
     await waitFor(() => expect(getByTestId('ai-search-unavailable')).toBeTruthy(), { timeout: 3000 })
     expect(getByTestId('ai-search-input')).toBeTruthy()
     expect(queryByTestId('ai-search-results')).toBeNull()

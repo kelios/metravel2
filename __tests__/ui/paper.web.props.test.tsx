@@ -1,6 +1,5 @@
 import React from 'react';
 import { act, render } from '@testing-library/react-native';
-import { Pressable } from 'react-native';
 
 import { Button, Card, IconButton, Paragraph, Snackbar, Text, Title } from '@/ui/paper.web';
 
@@ -9,8 +8,8 @@ import { Button, Card, IconButton, Paragraph, Snackbar, Text, Title } from '@/ui
 // использования, доходит до отрендеренного узла. Импорт идёт по явному пути
 // `@/ui/paper.web`, потому что jest резолвит `@/ui/paper` по платформе `ios`.
 describe('ui/paper.web prop forwarding', () => {
-  it('forwards heading semantics through Title', () => {
-    const { getByText } = render(
+  it('forwards heading semantics through Title', async () => {
+    const { getByText } = await render(
       <Title accessibilityRole="header" aria-level={2}>
         Популярные путешествия
       </Title>,
@@ -25,8 +24,8 @@ describe('ui/paper.web prop forwarding', () => {
     ['Text', Text],
     ['Title', Title],
     ['Paragraph', Paragraph],
-  ])('forwards numberOfLines and testID through %s', (_name, Component) => {
-    const { getByTestId } = render(
+  ])('forwards numberOfLines and testID through %s', async (_name, Component) => {
+    const { getByTestId } = await render(
       <Component testID="shim-text" numberOfLines={2}>
         подпись
       </Component>,
@@ -36,8 +35,8 @@ describe('ui/paper.web prop forwarding', () => {
     expect(node.props.numberOfLines).toBe(2);
   });
 
-  it('forwards pointerEvents through Text', () => {
-    const { getByTestId } = render(
+  it('forwards pointerEvents through Text', async () => {
+    const { getByTestId } = await render(
       <Text testID="shim-text" pointerEvents="none">
         подпись
       </Text>,
@@ -46,8 +45,8 @@ describe('ui/paper.web prop forwarding', () => {
     expect(getByTestId('shim-text').props.pointerEvents).toBe('none');
   });
 
-  it('keeps the style the shim applies while merging the caller style', () => {
-    const { getByText } = render(<Title style={{ color: 'red' }}>заголовок</Title>);
+  it('keeps the style the shim applies while merging the caller style', async () => {
+    const { getByText } = await render(<Title style={{ color: 'red' }}>заголовок</Title>);
 
     expect(getByText('заголовок').props.style).toEqual([
       { fontSize: 18, fontWeight: '700' },
@@ -55,8 +54,8 @@ describe('ui/paper.web prop forwarding', () => {
     ]);
   });
 
-  it('forwards testID and lets the caller override the default button role', () => {
-    const { getByTestId } = render(
+  it('forwards testID and lets the caller override the default button role', async () => {
+    const { getByTestId } = await render(
       <Button testID="preview" accessibilityRole="link" accessibilityLabel="Открыть предпросмотр">
         Предпросмотр
       </Button>,
@@ -67,22 +66,22 @@ describe('ui/paper.web prop forwarding', () => {
     expect(node.props.accessibilityLabel).toBe('Открыть предпросмотр');
   });
 
-  it('keeps the button role when the caller does not set one', () => {
-    const { getByTestId } = render(<Button testID="save">Сохранить</Button>);
+  it('keeps the button role when the caller does not set one', async () => {
+    const { getByTestId } = await render(<Button testID="save">Сохранить</Button>);
 
     expect(getByTestId('save').props.accessibilityRole).toBe('button');
   });
 
-  it('forwards testID through IconButton', () => {
-    const { getByTestId } = render(
+  it('forwards testID through IconButton', async () => {
+    const { getByTestId } = await render(
       <IconButton testID="next" icon={({ size }) => <Text>{String(size)}</Text>} onPress={() => {}} />,
     );
 
     expect(getByTestId('next')).toBeTruthy();
   });
 
-  it('applies the caller style on Card.Content', () => {
-    const { getByTestId } = render(
+  it('applies the caller style on Card.Content', async () => {
+    const { getByTestId } = await render(
       <Card testID="card">
         <Card.Content testID="card-content" style={{ padding: 4 }}>
           <Text>тело</Text>
@@ -93,19 +92,19 @@ describe('ui/paper.web prop forwarding', () => {
     expect(getByTestId('card-content').props.style).toEqual([{ padding: 12 }, { padding: 4 }]);
   });
 
-  it('calls onDismiss once the Snackbar duration elapses', () => {
+  it('calls onDismiss once the Snackbar duration elapses', async () => {
     jest.useFakeTimers();
     const onDismiss = jest.fn();
 
     try {
-      render(
+      await render(
         <Snackbar visible onDismiss={onDismiss} duration={5000}>
-          Не удалось сохранить
+          <Text>Не удалось сохранить</Text>
         </Snackbar>,
       );
 
       expect(onDismiss).not.toHaveBeenCalled();
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(5000);
       });
       expect(onDismiss).toHaveBeenCalledTimes(1);
@@ -130,17 +129,17 @@ describe('ui/paper.web prop forwarding', () => {
       'IconButton',
       <IconButton testID="next" disabled icon="→" onPress={() => {}} accessibilityLabel="Дальше" key="i" />,
     ],
-  ])('passes disabled down to Pressable in %s, not only accessibilityState', (_name, element) => {
-    const { getByTestId, UNSAFE_getByType } = render(element);
+  ])('passes disabled down to Pressable in %s, not only accessibilityState', async (_name, element) => {
+    const { getByTestId } = await render(element);
 
     expect(getByTestId(_name === 'Button' ? 'prev' : 'next').props.accessibilityState?.disabled).toBe(true);
 
-    const pressable = UNSAFE_getByType(Pressable);
+    const pressable = getByTestId(_name === 'Button' ? 'prev' : 'next');
     expect(pressable.props.disabled).toBe(true);
     expect(pressable.props.onPress).toBeUndefined();
   });
 
-  it('does not restart the Snackbar timer when onDismiss identity changes', () => {
+  it('does not restart the Snackbar timer when onDismiss identity changes', async () => {
     // paper держит колбэк через useLatestCallback. Если шим зависит от identity,
     // вызывающий с инлайновой стрелкой продлевает таймер каждым рендером и
     // snackbar на web не закрывается никогда, хотя на native закрывается.
@@ -149,21 +148,21 @@ describe('ui/paper.web prop forwarding', () => {
     const second = jest.fn();
 
     try {
-      const { rerender } = render(
+      const { rerender } = await render(
         <Snackbar visible onDismiss={first} duration={5000}>
-          Не удалось сохранить
+          <Text>Не удалось сохранить</Text>
         </Snackbar>,
       );
 
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(4000);
       });
-      rerender(
+      await rerender(
         <Snackbar visible onDismiss={second} duration={5000}>
-          Не удалось сохранить
+          <Text>Не удалось сохранить</Text>
         </Snackbar>,
       );
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(1000);
       });
 
@@ -174,18 +173,18 @@ describe('ui/paper.web prop forwarding', () => {
     }
   });
 
-  it('does not schedule a dismiss while the Snackbar is hidden', () => {
+  it('does not schedule a dismiss while the Snackbar is hidden', async () => {
     jest.useFakeTimers();
     const onDismiss = jest.fn();
 
     try {
-      render(
+      await render(
         <Snackbar visible={false} onDismiss={onDismiss}>
           Не удалось сохранить
         </Snackbar>,
       );
 
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(60_000);
       });
       expect(onDismiss).not.toHaveBeenCalled();

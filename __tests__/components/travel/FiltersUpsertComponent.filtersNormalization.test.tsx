@@ -64,7 +64,7 @@ describe('FiltersUpsertComponent - filters normalization', () => {
     jest.clearAllMocks();
   });
 
-  it('renders all filter selects with non-empty items for expected API shapes', () => {
+  it('renders all filter selects with non-empty items for expected API shapes', async () => {
     const filters: any = {
       categories: [
         { id: 1, name: 'Дайвинг' },
@@ -82,7 +82,7 @@ describe('FiltersUpsertComponent - filters normalization', () => {
       categoryTravelAddress: [{ id: 1, name: 'Акведук' }],
     };
 
-    render(
+    await render(
       <FiltersUpsertComponent
         filters={filters}
         formData={baseFormData}
@@ -140,7 +140,7 @@ describe('FiltersUpsertComponent - filters normalization', () => {
     expect(typeof month.items[0].name).toBe('string');
   });
 
-  it('supports alternative keys and still provides non-empty items', () => {
+  it('supports alternative keys and still provides non-empty items', async () => {
     const filters: any = {
       categoriesTravel: ['Горы', 'Море'],
       months: ['Январь'],
@@ -152,7 +152,7 @@ describe('FiltersUpsertComponent - filters normalization', () => {
       countries: [{ country_id: 3, title_ru: 'Беларусь' }],
     };
 
-    render(
+    await render(
       <FiltersUpsertComponent
         filters={filters}
         formData={baseFormData}
@@ -190,7 +190,7 @@ describe('FiltersUpsertComponent - filters normalization', () => {
     expect(countries.items.length).toBeGreaterThan(0);
   });
 
-  it('supports wrapped filters shape (data/result) and still provides non-empty items', () => {
+  it('supports wrapped filters shape (data/result) and still provides non-empty items', async () => {
     const filters: any = {
       data: {
         categories: [{ id: 1, name: 'Дайвинг' }],
@@ -204,7 +204,7 @@ describe('FiltersUpsertComponent - filters normalization', () => {
       },
     };
 
-    render(
+    await render(
       <FiltersUpsertComponent
         filters={filters}
         formData={baseFormData}
@@ -229,7 +229,7 @@ describe('FiltersUpsertComponent - filters normalization', () => {
     expect(getCallByLabel('Страны для путешествия *').items.length).toBeGreaterThan(0);
   });
 
-  it('supports deeply nested filters shape (data.filters.*) and still provides non-empty items', () => {
+  it('supports deeply nested filters shape (data.filters.*) and still provides non-empty items', async () => {
     const filters: any = {
       data: {
         filters: {
@@ -245,7 +245,7 @@ describe('FiltersUpsertComponent - filters normalization', () => {
       },
     };
 
-    render(
+    await render(
       <FiltersUpsertComponent
         filters={filters}
         formData={baseFormData}

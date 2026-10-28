@@ -15,14 +15,14 @@ describe('TelegramDiscussionSection', () => {
     jest.clearAllMocks();
   });
 
-  it('opens telegram discussion link via external helper', () => {
+  it('opens telegram discussion link via external helper', async () => {
     process.env.EXPO_PUBLIC_TELEGRAM_DISCUSSION_URL = 'https://t.me/metravel_discussion';
 
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <TelegramDiscussionSection travel={{ name: 'Test Travel' } as any} />
     );
 
-    fireEvent.press(getByLabelText('Открыть обсуждение в Telegram'));
+    await fireEvent.press(getByLabelText('Открыть обсуждение в Telegram'));
 
     expect(openExternalUrlInNewTab).toHaveBeenCalledWith(
       'https://t.me/metravel_discussion',

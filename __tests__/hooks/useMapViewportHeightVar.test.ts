@@ -55,20 +55,20 @@ describe('useMapViewportHeightVar', () => {
     pending.forEach((cb) => cb(0))
   }
 
-  it('writes the measured visible-viewport height on mount', () => {
+  it('writes the measured visible-viewport height on mount', async () => {
     installVisualViewport(742)
-    renderHook(() => useMapViewportHeightVar())
+    await renderHook(() => useMapViewportHeightVar())
 
     expect(document.documentElement.style.getPropertyValue(MAP_VIEWPORT_HEIGHT_CSS_VAR)).toBe(
       '742px',
     )
   })
 
-  it('skips redundant writes when the viewport height did not change', () => {
+  it('skips redundant writes when the viewport height did not change', async () => {
     const { emit } = installVisualViewport(742)
     const setProperty = jest.spyOn(document.documentElement.style, 'setProperty')
 
-    renderHook(() => useMapViewportHeightVar())
+    await renderHook(() => useMapViewportHeightVar())
     expect(setProperty).toHaveBeenCalledTimes(1)
 
     // iOS Safari emits these on every frame while the dynamic toolbar collapses.
@@ -78,9 +78,9 @@ describe('useMapViewportHeightVar', () => {
     expect(setProperty).toHaveBeenCalledTimes(1)
   })
 
-  it('writes again once the height actually changes', () => {
+  it('writes again once the height actually changes', async () => {
     const { vv, emit } = installVisualViewport(742)
-    renderHook(() => useMapViewportHeightVar())
+    await renderHook(() => useMapViewportHeightVar())
 
     vv.height = 812
     emit('resize')

@@ -1,3 +1,4 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 /**
  * #1475 — регрессия на реальный дефект прод-главной.
  *
@@ -16,7 +17,7 @@
  * (`priority="high"`) всё равно монтируется после первой отрисовки, а
  * глубокие `low`-секции остаются отложенными.
  *
- * Точность формулировки: под react-test-renderer host-ref резолвится в `null`,
+ * Точность формулировки: под test-renderer host-ref резолвится в `null`,
  * поэтому `useProgressiveLoad` выходит раньше `new IntersectionObserver(...)`
  * и наблюдатель здесь не конструируется. Заглушка всё равно обязательна: без
  * неё хук уходит в ветку «браузер без IntersectionObserver» и жадно монтирует
@@ -92,30 +93,30 @@ describe('Home — городские квесты монтируются без
     jest.clearAllMocks()
   })
 
-  const renderHome = () =>
-    render(
+  const renderHome = async () =>
+    await render(
       <QueryClientProvider client={queryClient}>
         <Home />
       </QueryClientProvider>,
     )
 
-  it('монтирует секцию квестов после первой отрисовки, даже если IntersectionObserver не срабатывает', () => {
-    const { queryByTestId } = renderHome()
+  it('монтирует секцию квестов после первой отрисовки, даже если IntersectionObserver не срабатывает', async () => {
+    const { queryByTestId } = await renderHome()
 
     // Ровно то состояние, что было на проде: наблюдатель молчит, секции нет.
     expect(queryByTestId('home-quests-promo')).toBeNull()
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1000)
     })
 
     expect(queryByTestId('home-quests-promo')).toBeTruthy()
   })
 
-  it('не делает жадными глубокие low-секции: FAQ остаётся отложенным', () => {
-    const { queryByTestId } = renderHome()
+  it('не делает жадными глубокие low-секции: FAQ остаётся отложенным', async () => {
+    const { queryByTestId } = await renderHome()
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(5000)
     })
 
@@ -123,14 +124,18 @@ describe('Home — городские квесты монтируются без
     expect(queryByTestId('home-faq')).toBeNull()
   })
 
-  it('ставит секцию квестов первым блоком после hero', () => {
-    const { getByTestId, UNSAFE_getByType } = renderHome()
+  it('ставит секцию квестов первым блоком после hero', async () => {
+    const { getByTestId, container: hostContainer } = await renderHome()
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1000)
     })
 
-    const scrollView = UNSAFE_getByType(require('react-native').ScrollView)
+    const scrollView = getOnlyHost(hostContainer, node => (
+      node.type === 'RCTScrollView'
+      && typeof node.props.scrollEventThrottle === 'number'
+      && node.queryAll((child) => child.props.testID === 'home-hero').length > 0
+    ))
     const hero = getByTestId('home-hero')
     const promo = getByTestId('home-quests-promo')
 

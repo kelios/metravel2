@@ -1,3 +1,4 @@
+import { getAllHosts } from '@/__tests__/helpers/hostQueries'
 /**
  * #2059 — на desktop ≥ 1280 карта конструктора высокая: `calc(100dvh − 180px)`
  * в пределах 420–760 px (макет §4). Ниже 1280 и в map-first раскладке высота
@@ -47,12 +48,12 @@ const route: RoutePoint[] = [
 const TALL = 'clamp(420px, calc(100dvh - 180px), 760px)'
 
 const shellHeight = async (element: React.ReactElement) => {
-  const screen = render(element)
+  const screen = await render(element)
   await waitFor(() =>
-    expect(screen.UNSAFE_queryAllByProps({ 'data-testid': 'trip-plan-map-layers' }).length).toBeGreaterThan(0),
+    expect(screen.container.queryAll(node => node.props["data-testid"] === 'trip-plan-map-layers').length).toBeGreaterThan(0),
   )
-  const shell = screen.UNSAFE_getAllByType('div').find((node) =>
-    node.findAll((child) => child.props?.['data-testid'] === 'trip-plan-map-layers').length > 0,
+  const shell = getAllHosts(screen.container, node => node.type === 'div').find((node) =>
+    node.queryAll((child) => child.props?.['data-testid'] === 'trip-plan-map-layers').length > 0,
   )
   return shell?.props.style.height
 }

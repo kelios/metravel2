@@ -57,8 +57,8 @@ const base: Omit<AccountMenuInput, 'surface' | 'platform'> = {
 
 const listStyles = { moreList: {}, moreListContent: {}, moreDivider: {}, moreItem: {}, moreItemText: {} }
 
-const renderMoreList = (isSuperuser: boolean) =>
-  render(
+const renderMoreList = async (isSuperuser: boolean) =>
+  await render(
     <BottomDockMoreList
       styles={listStyles}
       iconColor="#000"
@@ -110,30 +110,30 @@ describe('ролевые пункты аккаунта на всех повер�
     for (const entry of roleEntries) expect(regularKeys).not.toContain(entry.key)
   })
 
-  it('BottomDockMoreList рисует «Борд задач» админу и не рисует обычному', () => {
-    expect(renderMoreList(true).getByTestId('footer-more-item-task-board')).toBeTruthy()
-    expect(renderMoreList(false).queryByTestId('footer-more-item-task-board')).toBeNull()
+  it('BottomDockMoreList рисует «Борд задач» админу и не рисует обычному', async () => {
+    expect(await (await renderMoreList(true)).getByTestId('footer-more-item-task-board')).toBeTruthy()
+    expect(await (await renderMoreList(false)).queryByTestId('footer-more-item-task-board')).toBeNull()
   })
 
-  it('BottomDockMoreList рисует «Instagram: афишу» админу и не рисует обычному', () => {
-    expect(renderMoreList(true).getByTestId('footer-more-item-instagram-schedule')).toBeTruthy()
-    expect(renderMoreList(false).queryByTestId('footer-more-item-instagram-schedule')).toBeNull()
+  it('BottomDockMoreList рисует «Instagram: афишу» админу и не рисует обычному', async () => {
+    expect(await (await renderMoreList(true)).getByTestId('footer-more-item-instagram-schedule')).toBeTruthy()
+    expect(await (await renderMoreList(false)).queryByTestId('footer-more-item-instagram-schedule')).toBeNull()
   })
 
-  it('тап по «Борду задач» в листе «Ещё» на вложенном экране открывает борд внешней ссылкой', () => {
+  it('тап по «Борду задач» в листе «Ещё» на вложенном экране открывает борд внешней ссылкой', async () => {
     mockAuth.isSuperuser = true
-    const { getByTestId, queryByTestId } = render(<BottomDock />)
-    fireEvent.press(getByTestId('footer-item-more'))
-    fireEvent.press(getByTestId('footer-more-item-task-board'))
+    const { getByTestId, queryByTestId } = await render(<BottomDock />)
+    await fireEvent.press(getByTestId('footer-item-more'))
+    await fireEvent.press(getByTestId('footer-more-item-task-board'))
 
     expect(openExternalUrl).toHaveBeenCalledWith(TASK_BOARD_URL)
     expect(mockRouter.push).not.toHaveBeenCalled()
     expect(queryByTestId('footer-more-sheet-native')).toBeNull()
   })
 
-  it('у обычного пользователя в листе «Ещё» дока борда нет', () => {
-    const { getByTestId, queryByTestId } = render(<BottomDock />)
-    fireEvent.press(getByTestId('footer-item-more'))
+  it('у обычного пользователя в листе «Ещё» дока борда нет', async () => {
+    const { getByTestId, queryByTestId } = await render(<BottomDock />)
+    await fireEvent.press(getByTestId('footer-item-more'))
     expect(getByTestId('footer-more-sheet-native')).toBeTruthy()
     expect(queryByTestId('footer-more-item-task-board')).toBeNull()
   })

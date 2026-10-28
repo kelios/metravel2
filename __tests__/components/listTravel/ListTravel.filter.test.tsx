@@ -62,8 +62,8 @@ describe('ListTravel - Filter Management', () => {
         jest.clearAllMocks();
     });
 
-    const renderComponent = () => {
-        return render(
+    const renderComponent = async () => {
+        return await render(
             <QueryClientProvider client={queryClient}>
                 <FavoritesProvider>
                     <ListTravel />
@@ -81,7 +81,7 @@ describe('ListTravel - Filter Management', () => {
 
             (fetchTravels as jest.Mock).mockResolvedValue(mockData);
 
-            renderComponent();
+            await renderComponent();
 
             // Wait for initial load
             await waitFor(() => {
@@ -89,7 +89,7 @@ describe('ListTravel - Filter Management', () => {
             });
 
             // Simulate filter reset
-            act(() => {
+            await act(() => {
                 // This would be triggered by user interaction
                 // In real scenario, user clicks "Reset filters"
             });
@@ -114,10 +114,10 @@ describe('ListTravel - Filter Management', () => {
             const mockData = { total: 0, data: [] };
             (fetchTravels as jest.Mock).mockResolvedValue(mockData);
 
-            renderComponent();
+            await renderComponent();
 
             // Simulate filter with string IDs
-            act(() => {
+            await act(() => {
                 // This would be setFilter({ countries: ['1', '2'] })
             });
 
@@ -136,7 +136,7 @@ describe('ListTravel - Filter Management', () => {
             const mockData = { total: 0, data: [] };
             (fetchTravels as jest.Mock).mockResolvedValue(mockData);
 
-            renderComponent();
+            await renderComponent();
 
             await waitFor(() => {
                 const calls = (fetchTravels as jest.Mock).mock.calls;
@@ -166,7 +166,7 @@ describe('ListTravel - Filter Management', () => {
                 .mockResolvedValueOnce(mockData1)
                 .mockResolvedValueOnce(mockData2);
 
-            renderComponent();
+            await renderComponent();
 
             await waitFor(() => {
                 expect(fetchTravels).toHaveBeenCalled();
@@ -190,7 +190,7 @@ describe('ListTravel - Filter Management', () => {
                 .mockResolvedValueOnce(mockData1)
                 .mockResolvedValueOnce(mockData2);
 
-            renderComponent();
+            await renderComponent();
 
             // Simulate load more (page > 0)
             // Data should be appended, not replaced
@@ -202,7 +202,7 @@ describe('ListTravel - Filter Management', () => {
             const mockData = { total: 0, data: [] };
             (fetchTravels as jest.Mock).mockResolvedValue(mockData);
 
-            renderComponent();
+            await renderComponent();
 
             await waitFor(() => {
                 expect(fetchTravels).toHaveBeenCalledWith(
@@ -222,7 +222,7 @@ describe('ListTravel - Filter Management', () => {
             const mockData = { total: 0, data: [] };
             (fetchTravels as jest.Mock).mockResolvedValue(mockData);
 
-            renderComponent();
+            await renderComponent();
 
             await waitFor(() => {
                 const calls = (fetchTravels as jest.Mock).mock.calls;
@@ -243,7 +243,7 @@ describe('ListTravel - Filter Management', () => {
         it('renders empty state when no travels are returned', async () => {
             (fetchTravels as jest.Mock).mockResolvedValue({ total: 0, data: [] });
 
-            const { getByText } = renderComponent();
+            const { getByText } = await renderComponent();
 
             await waitFor(() => {
                 expect(getByText('Пока нет маршрутов')).toBeTruthy();
@@ -253,7 +253,7 @@ describe('ListTravel - Filter Management', () => {
         it('renders error state when request fails', async () => {
             (fetchTravels as jest.Mock).mockRejectedValue(new Error('network'));
 
-            const { getByText } = renderComponent();
+            const { getByText } = await renderComponent();
 
             await waitFor(() => {
                 expect(getByText('Ошибка загрузки')).toBeTruthy();

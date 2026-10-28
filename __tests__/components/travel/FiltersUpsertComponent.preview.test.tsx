@@ -60,11 +60,11 @@ describe('FiltersUpsertComponent preview opening', () => {
     jest.clearAllMocks();
   });
 
-  it('opens native preview via safe external helper', () => {
+  it('opens native preview via safe external helper', async () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'ios';
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <FiltersUpsertComponent
         filters={filters}
         formData={formData}
@@ -80,7 +80,7 @@ describe('FiltersUpsertComponent preview opening', () => {
       />
     );
 
-    fireEvent.press(getByText('Предпросмотр'));
+    await fireEvent.press(getByText('Предпросмотр'));
 
     expect(openExternalUrlInNewTab).toHaveBeenCalledWith(
       '/travels/sample-travel',

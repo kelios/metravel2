@@ -24,29 +24,29 @@ describe('useTravelDetailsMenu', () => {
     jest.restoreAllMocks()
   })
 
-  it('opens desktop menu after defer is allowed', () => {
-    const { result } = renderHook(() => useTravelDetailsMenu(false, true, 1200))
+  it('opens desktop menu after defer is allowed', async () => {
+    const { result } = await renderHook(() => useTravelDetailsMenu(false, true, 1200))
 
     expect(result.current.isMenuOpen).toBe(true)
     expect(result.current.menuWidthNum).toBe(288)
   })
 
-  it('does not open menu on mobile', () => {
-    const { result } = renderHook(() => useTravelDetailsMenu(true, true, 390))
+  it('does not open menu on mobile', async () => {
+    const { result } = await renderHook(() => useTravelDetailsMenu(true, true, 390))
 
     expect(result.current.isMenuOpen).toBe(false)
     expect(result.current.menuWidth).toBe('100%')
   })
 
-  it('does not open menu before defer is allowed', () => {
-    const { result } = renderHook(() => useTravelDetailsMenu(false, false, 1200))
+  it('does not open menu before defer is allowed', async () => {
+    const { result } = await renderHook(() => useTravelDetailsMenu(false, false, 1200))
 
     expect(result.current.isMenuOpen).toBe(true)
     expect(timingStart).not.toHaveBeenCalled()
   })
 
-  it('reuses the shared viewport snapshot when responsive width is not hydrated yet', () => {
-    const { result } = renderHook(() => useTravelDetailsMenu(false, true, 0))
+  it('reuses the shared viewport snapshot when responsive width is not hydrated yet', async () => {
+    const { result } = await renderHook(() => useTravelDetailsMenu(false, true, 0))
 
     expect(mockReadViewportWidth).toHaveBeenCalledTimes(1)
     expect(result.current.menuWidthNum).toBe(346)

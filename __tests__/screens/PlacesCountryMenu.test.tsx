@@ -14,29 +14,29 @@ jest.mock('@/ui/paper', () => {
 
 const colors = getThemedColors(false)
 
-it.each([false, true])('country anchor remains usable during pending scope (compact=%s)', (compact) => {
+it.each([false, true])('country anchor remains usable during pending scope (compact=%s)', async (compact) => {
   const onShow = jest.fn()
-  const result = render(<PlacesCountryMenu compact={compact} visible={false} selectedCountry={null} countryFacets={[]} catalogTotal={0} showLoadedCounts={false} scopeStatus="loading" onRetry={jest.fn()} onShow={onShow} onDismiss={jest.fn()} onSelect={jest.fn()} styles={createStyles(colors, compact, !compact)} colors={colors} />)
+  const result = await render(<PlacesCountryMenu compact={compact} visible={false} selectedCountry={null} countryFacets={[]} catalogTotal={0} showLoadedCounts={false} scopeStatus="loading" onRetry={jest.fn()} onShow={onShow} onDismiss={jest.fn()} onSelect={jest.fn()} styles={createStyles(colors, compact, !compact)} colors={colors} />)
   const anchor = result.getByTestId('places-country-select')
   expect(anchor.props.disabled).not.toBe(true)
   expect(StyleSheet.flatten(anchor.props.style).minHeight).toBeGreaterThanOrEqual(44)
-  fireEvent.press(anchor)
+  await fireEvent.press(anchor)
   expect(onShow).toHaveBeenCalledTimes(1)
   expect(result.queryByText(/\(0\)/)).toBeNull()
 })
 
-it.each([false, true])('country error exposes an actual labelled retry without inventing counts (compact=%s)', (compact) => {
+it.each([false, true])('country error exposes an actual labelled retry without inventing counts (compact=%s)', async (compact) => {
   const onRetry = jest.fn()
-  const result = render(<PlacesCountryMenu compact={compact} visible selectedCountry={null} countryFacets={[]} catalogTotal={0} showLoadedCounts={false} scopeStatus="error" onRetry={onRetry} onShow={jest.fn()} onDismiss={jest.fn()} onSelect={jest.fn()} styles={createStyles(colors, compact, !compact)} colors={colors} />)
+  const result = await render(<PlacesCountryMenu compact={compact} visible selectedCountry={null} countryFacets={[]} catalogTotal={0} showLoadedCounts={false} scopeStatus="error" onRetry={onRetry} onShow={jest.fn()} onDismiss={jest.fn()} onSelect={jest.fn()} styles={createStyles(colors, compact, !compact)} colors={colors} />)
   expect(result.getByText('Не удалось загрузить фильтры')).toBeTruthy()
   expect(result.getByText('Повторить')).toBeTruthy()
   expect(result.queryByText(/\(0\)/)).toBeNull()
-  fireEvent.press(result.getByTestId('places-scope-retry'))
+  await fireEvent.press(result.getByTestId('places-scope-retry'))
   expect(onRetry).toHaveBeenCalledTimes(1)
 })
 
-it('shows an honest zero only after a successful empty full-scope response', () => {
-  const result = render(<PlacesCountryMenu visible selectedCountry={null} countryFacets={[]} catalogTotal={0} showLoadedCounts scopeStatus="ready" onRetry={jest.fn()} onShow={jest.fn()} onDismiss={jest.fn()} onSelect={jest.fn()} styles={createStyles(colors, false, true)} colors={colors} />)
+it('shows an honest zero only after a successful empty full-scope response', async () => {
+  const result = await render(<PlacesCountryMenu visible selectedCountry={null} countryFacets={[]} catalogTotal={0} showLoadedCounts scopeStatus="ready" onRetry={jest.fn()} onShow={jest.fn()} onDismiss={jest.fn()} onSelect={jest.fn()} styles={createStyles(colors, false, true)} colors={colors} />)
   expect(result.getAllByText('Все страны (0)')).toHaveLength(2)
   expect(result.queryByTestId('places-scope-error')).toBeNull()
 })

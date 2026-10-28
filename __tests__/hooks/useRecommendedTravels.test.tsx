@@ -61,7 +61,7 @@ describe('useRecommendedTravels', () => {
     mockFetch.mockResolvedValue([dto(1), dto(2)] as any);
     const { wrapper } = makeWrapper();
 
-    const { result } = renderHook(() => useRecommendedTravels(), { wrapper });
+    const { result } = await renderHook(() => useRecommendedTravels(), { wrapper });
 
     await waitFor(() => expect(result.current).toHaveLength(2));
     expect(mockFetch).toHaveBeenCalledWith('user-1');
@@ -74,12 +74,12 @@ describe('useRecommendedTravels', () => {
     });
   });
 
-  it('is disabled for guests: no fetch, returns []', () => {
+  it('is disabled for guests: no fetch, returns []', async () => {
     authRef.isAuthenticated = false;
     authRef.userId = null;
     const { wrapper } = makeWrapper();
 
-    const { result } = renderHook(() => useRecommendedTravels(), { wrapper });
+    const { result } = await renderHook(() => useRecommendedTravels(), { wrapper });
 
     expect(result.current).toEqual([]);
     expect(mockFetch).not.toHaveBeenCalled();
@@ -89,12 +89,12 @@ describe('useRecommendedTravels', () => {
     mockFetch.mockResolvedValueOnce([dto(1)] as any);
     const { qc, wrapper } = makeWrapper();
 
-    const { result, rerender } = renderHook(() => useRecommendedTravels(), { wrapper });
+    const { result, rerender } = await renderHook(() => useRecommendedTravels(), { wrapper });
     await waitFor(() => expect(result.current).toHaveLength(1));
 
     authRef.userId = 'user-2';
     mockFetch.mockResolvedValueOnce([dto(9), dto(10)] as any);
-    rerender({});
+    await rerender({});
     await waitFor(() => expect(result.current).toHaveLength(2));
 
     expect(qc.getQueryData(queryKeys.recommendations('user-1'))).toHaveLength(1);
@@ -109,7 +109,7 @@ describe('useRecommendedTravels', () => {
     qc.setQueryData(queryKeys.recommendations('user-1'), seeded);
     mockFetch.mockResolvedValue([] as any);
 
-    const { result } = renderHook(() => useRecommendedTravels(), { wrapper });
+    const { result } = await renderHook(() => useRecommendedTravels(), { wrapper });
 
     await waitFor(() => expect(mockFetch).toHaveBeenCalled());
     expect(result.current).toHaveLength(1);

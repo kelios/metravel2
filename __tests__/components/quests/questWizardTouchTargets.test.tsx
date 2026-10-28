@@ -74,10 +74,10 @@ describe('мастер квеста — тач-таргеты шагового �
   // #2149: на телефоне ряда кружков больше нет — цели касания полосы маршрута и
   // строк листа «Маршрут» (≥ 44 pt) держит `questRouteStrip.test.tsx`.
 
-  it('широкоэкранная пилюля шага держит 44dp по высоте (было 28)', () => {
-    const tree = render(
+  it('широкоэкранная пилюля шага держит 44dp по высоте (было 28)', async () => {
+    const tree = await (await render(
       <QuestStepPill {...(dotProps as any)} styles={desktopStyles} label="Ратуша" indexLabel="3" />,
-    ).toJSON()
+    )).toJSON()
 
     expect(targetStyle(tree).minHeight).toBeGreaterThanOrEqual(MIN_TOUCH_TARGET)
   })

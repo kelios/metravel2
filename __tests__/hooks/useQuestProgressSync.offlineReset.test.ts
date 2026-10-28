@@ -172,7 +172,7 @@ const flushMicrotasks = async () => {
 };
 
 const advance = async (ms: number) => {
-  act(() => {
+  await act(() => {
     jest.advanceTimersByTime(ms);
   });
   await flushMicrotasks();
@@ -181,7 +181,7 @@ const advance = async (ms: number) => {
 const readStoredList = async (key: string): Promise<any[]> => JSON.parse((await AsyncStorage.getItem(key)) ?? '[]');
 
 const mountSync = async () => {
-  const rendered = renderHook(() => useQuestProgressSync(QUEST, true));
+  const rendered = await renderHook(() => useQuestProgressSync(QUEST, true));
   await flushMicrotasks();
   return rendered;
 };
@@ -255,7 +255,7 @@ describe('useQuestProgressSync — «Сбросить» без сети (#2043)'
     await act(async () => {
       await result.current.resetProgress();
     });
-    unmount();
+    await unmount();
 
     // Перезапуск: модульное состояние очереди пустое, на диске — намерение.
     __resetQuestProgressQueue();
@@ -275,7 +275,7 @@ describe('useQuestProgressSync — «Сбросить» без сети (#2043)'
     });
 
     // Игрок начинает заново, сети по-прежнему нет.
-    act(() => {
+    await act(() => {
       result.current.saveProgress(NEW_RUN);
     });
     await advance(2000);
@@ -378,7 +378,7 @@ describe('useQuestProgressSync — «Сбросить» без сети (#2043)'
   it('PATCH, стартовавший до «Сбросить», не возвращает экрану строку сброшенного прохождения', async () => {
     const { result } = await mountSync();
     const releaseResponse = holdResponses();
-    act(() => {
+    await act(() => {
       result.current.saveProgress(FINISHED_RUN_SAVE);
     });
     await advance(2000);
@@ -403,7 +403,7 @@ describe('useQuestProgressSync — «Сбросить» без сети (#2043)'
     const { result } = await mountSync();
     const releaseResponse = holdResponses();
     mockPatchError = new ApiError(0, 'offline', { offline: true });
-    act(() => {
+    await act(() => {
       result.current.saveProgress(FINISHED_RUN_SAVE);
     });
     await advance(2000);
@@ -447,24 +447,24 @@ describe('useQuestProgressSync — «Сбросить» без сети (#2043)'
   });
 
   it('«Сбросить» после смены аккаунта удаляет строку вошедшего игрока в его сессии', async () => {
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ isAuthenticated }: { isAuthenticated: boolean }) => useQuestProgressSync(QUEST, isAuthenticated),
       { initialProps: { isAuthenticated: true } },
     );
     await flushMicrotasks();
     // Прежний игрок сохранялся в этом маунте — владелец снапшота запомнен экраном.
-    act(() => {
+    await act(() => {
       result.current.saveProgress(FINISHED_RUN_SAVE);
     });
     await advance(2000);
 
     // Он вышел, и на том же экране вошёл другой игрок со своей строкой.
     useAuthStore.setState({ isAuthenticated: false, userId: null });
-    rerender({ isAuthenticated: false });
+    await rerender({ isAuthenticated: false });
     await flushMicrotasks();
     mockServerRow = { ...FINISHED_ROW, id: 77, user: 186 };
     useAuthStore.setState({ isAuthenticated: true, userId: '186' });
-    rerender({ isAuthenticated: true });
+    await rerender({ isAuthenticated: true });
     await flushMicrotasks();
     expect(result.current.progress?.id).toBe(77);
 

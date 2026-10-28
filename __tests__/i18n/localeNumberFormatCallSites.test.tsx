@@ -66,7 +66,7 @@ describe('#1459 отображаемые числа идут через кано
   it.each(LOCALE_CASES)('печатает оценку на звёздах по нормам локали %s', async (locale, rating) => {
     await i18n.changeLanguage(locale)
 
-    const { getByText } = render(<StarRating rating={4.6} testID="star-rating" />)
+    const { getByText } = await render(<StarRating rating={4.6} testID="star-rating" />)
 
     expect(getByText(rating)).toBeTruthy()
   })
@@ -90,7 +90,7 @@ describe('#1459 отображаемые числа идут через кано
     async (locale, _rating, _wholeRating, _size, duration) => {
       await i18n.changeLanguage(locale)
 
-      const { getByText } = render(<QuestForCityCard quest={quest} />)
+      const { getByText } = await render(<QuestForCityCard quest={quest} />)
 
       expect(getByText(duration)).toBeTruthy()
     },

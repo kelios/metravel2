@@ -70,7 +70,7 @@ describe('useMapCoordinates live location updates', () => {
       })
     }
 
-    const { result, unmount } = renderHook(() => useMapCoordinates())
+    const { result, unmount } = await renderHook(() => useMapCoordinates())
 
     await waitFor(() => {
       expect(result.current.coordinates).toEqual({ latitude: 52.2, longitude: 20.98 })
@@ -78,7 +78,7 @@ describe('useMapCoordinates live location updates', () => {
     })
     expect(watchPosition).toHaveBeenCalledTimes(1)
 
-    act(() => {
+    await act(() => {
       watchError?.({
         code: 2,
         message: 'temporarily unavailable',
@@ -94,7 +94,7 @@ describe('useMapCoordinates live location updates', () => {
 
     const stateBeforeTick = result.current.locationState
 
-    act(() => {
+    await act(() => {
       watchSuccess?.({
         coords: {
           latitude: 52.2004,
@@ -115,7 +115,7 @@ describe('useMapCoordinates live location updates', () => {
     expect(result.current.locationState).not.toHaveProperty('isRefreshing')
     expect(stateBeforeTick).not.toBe(result.current.locationState)
 
-    unmount()
+    await unmount()
     expect(clearWatch).toHaveBeenCalledWith(77)
   })
 
@@ -160,7 +160,7 @@ describe('useMapCoordinates live location updates', () => {
       })
     }
 
-    const { result, unmount } = renderHook(() => useMapCoordinates())
+    const { result, unmount } = await renderHook(() => useMapCoordinates())
 
     await waitFor(() => {
       expect(result.current.coordinates).toEqual({ latitude: 50.0614, longitude: 19.9366 })
@@ -169,7 +169,7 @@ describe('useMapCoordinates live location updates', () => {
 
     const beforeJitter = result.current.locationState
 
-    act(() => {
+    await act(() => {
       watchSuccess?.({
         coords: {
           latitude: 50.061405,
@@ -188,7 +188,7 @@ describe('useMapCoordinates live location updates', () => {
       expect.objectContaining({ latitude: 50.0614, longitude: 19.9366 }),
     )
 
-    unmount()
+    await unmount()
     expect(clearWatch).toHaveBeenCalledWith(78)
   })
 
@@ -223,7 +223,7 @@ describe('useMapCoordinates live location updates', () => {
       })
     }
 
-    const { result } = renderHook(() => useMapCoordinates())
+    const { result } = await renderHook(() => useMapCoordinates())
 
     await waitFor(() => expect(result.current.currentLocation).toEqual({
       latitude: 50.0614,
@@ -235,13 +235,13 @@ describe('useMapCoordinates live location updates', () => {
     // Движение: тик раз в секунду, каждый ~120 м. Ни один из них не имеет права
     // стать React-состоянием — иначе перерисовывается карта, список «рядом» и
     // радиус-круг. Обновляется только живой канал (по нему двигается маркер).
-    act(() => {
+    await act(() => {
       watchSuccess?.({
         coords: { latitude: 50.0625, longitude: 19.9366, accuracy: 10 },
         timestamp: 2000,
       } as GeolocationPosition)
     })
-    act(() => {
+    await act(() => {
       watchSuccess?.({
         coords: { latitude: 50.0636, longitude: 19.9366, accuracy: 10 },
         timestamp: 3000,
@@ -294,7 +294,7 @@ describe('useMapCoordinates live location updates', () => {
       })
     }
 
-    const { result } = renderHook(() => useMapCoordinates())
+    const { result } = await renderHook(() => useMapCoordinates())
 
     await waitFor(() => {
       expect(result.current.locationState).toEqual(expect.objectContaining({
@@ -325,7 +325,7 @@ describe('useMapCoordinates live location updates', () => {
       })
     }
 
-    const { result } = renderHook(() => useMapCoordinates())
+    const { result } = await renderHook(() => useMapCoordinates())
 
     await waitFor(() => expect(result.current.locationState.status).toBe('unavailable'))
     expect(result.current.coordinatesSource).toBe('default')
@@ -364,7 +364,7 @@ describe('useMapCoordinates live location updates', () => {
       })
     }
 
-    const { result } = renderHook(() => useMapCoordinates())
+    const { result } = await renderHook(() => useMapCoordinates())
 
     await waitFor(() => expect(result.current.locationState.status).toBe('error'))
     expect(result.current.coordinatesSource).toBe('default')
@@ -408,7 +408,7 @@ describe('useMapCoordinates live location updates', () => {
       })
     }
 
-    const { result } = renderHook(() => useMapCoordinates())
+    const { result } = await renderHook(() => useMapCoordinates())
 
     await waitFor(() => expect(result.current.locationState.status).toBe('current'))
     expect(calls).toHaveLength(2)
@@ -444,7 +444,7 @@ describe('useMapCoordinates live location updates', () => {
       })
     }
 
-    const { result } = renderHook(() => useMapCoordinates())
+    const { result } = await renderHook(() => useMapCoordinates())
 
     await waitFor(() => expect(result.current.locationState.status).toBe('denied'))
     expect(getCurrentPosition).toHaveBeenCalledTimes(1)
@@ -463,7 +463,7 @@ describe('useMapCoordinates live location updates', () => {
       getLastKnownPositionAsync: jest.fn().mockResolvedValue(null),
       Accuracy: { Balanced: 3 },
     })
-    const view = renderHook(() => useMapCoordinates())
+    const view = await renderHook(() => useMapCoordinates())
     await waitFor(() => expect(kind === 'unknown' ? logError : logMessage).toHaveBeenCalled())
     if (kind === 'unknown') expect(logError).toHaveBeenCalledWith(failure, expect.objectContaining({ step: 'getLocation' }))
     else {
@@ -471,7 +471,7 @@ describe('useMapCoordinates live location updates', () => {
       expect(logError).not.toHaveBeenCalled()
     }
     expect(view.result.current.coordinatesAreFallback).toBe(true)
-    view.unmount()
+    await view.unmount()
   })
 
   it('preserves native canAskAgain=false for the settings flow', async () => {
@@ -486,7 +486,7 @@ describe('useMapCoordinates live location updates', () => {
       Accuracy: { Balanced: 3 },
     })
 
-    const { result } = renderHook(() => useMapCoordinates())
+    const { result } = await renderHook(() => useMapCoordinates())
 
     await waitFor(() => {
       expect(result.current.locationState).toEqual({
@@ -517,7 +517,7 @@ describe('useMapCoordinates live location updates', () => {
       Accuracy: { Balanced: 3 },
     })
 
-    const { result } = renderHook(() => useMapCoordinates())
+    const { result } = await renderHook(() => useMapCoordinates())
 
     await waitFor(() => {
       expect(result.current.locationState).toEqual({
@@ -555,7 +555,7 @@ describe('useMapCoordinates live location updates', () => {
       Accuracy: { Balanced: 3 },
     })
 
-    const { result, unmount } = renderHook(() => useMapCoordinates())
+    const { result, unmount } = await renderHook(() => useMapCoordinates())
 
     await waitFor(() => {
       expect(watchPositionAsync).toHaveBeenCalledTimes(1)
@@ -564,7 +564,7 @@ describe('useMapCoordinates live location updates', () => {
       expect(result.current.currentLocation).toBeNull()
     })
 
-    act(() => {
+    await act(() => {
       watchSuccess?.({
         coords: { latitude: 52.2301, longitude: 21.0128, accuracy: 12 },
         timestamp: 5000,
@@ -575,7 +575,7 @@ describe('useMapCoordinates live location updates', () => {
     expect(result.current.currentLocation).toEqual({ latitude: 52.2301, longitude: 21.0128 })
     expect(result.current.coordinatesAreFallback).toBe(false)
 
-    unmount()
+    await unmount()
     expect(removeWatch).toHaveBeenCalledTimes(1)
   })
 
@@ -600,7 +600,7 @@ describe('useMapCoordinates live location updates', () => {
       Accuracy: { Balanced: 3 },
     })
 
-    const { result } = renderHook(() => useMapCoordinates())
+    const { result } = await renderHook(() => useMapCoordinates())
     await waitFor(() => expect(result.current.locationState.status).toBe('denied'))
 
     const openSettings = jest.fn().mockResolvedValue(undefined)
@@ -612,7 +612,7 @@ describe('useMapCoordinates live location updates', () => {
       await result.current.openLocationSettings()
     })
 
-    act(() => {
+    await act(() => {
       handleAppStateChange?.('background')
       handleAppStateChange?.('active')
     })
@@ -641,10 +641,10 @@ describe('useMapCoordinates live location updates', () => {
       Accuracy: { Balanced: 3 },
     })
 
-    const { result } = renderHook(() => useMapCoordinates())
+    const { result } = await renderHook(() => useMapCoordinates())
     await waitFor(() => expect(result.current.locationState.status).toBe('denied'))
 
-    act(() => {
+    await act(() => {
       handleAppStateChange?.('background')
       handleAppStateChange?.('active')
     })
@@ -668,7 +668,7 @@ describe('useMapCoordinates live location updates', () => {
       value: { geolocation: { getCurrentPosition, watchPosition, clearWatch } },
     })
 
-    const { rerender } = renderHook(
+    const { rerender } = await renderHook(
       ({ focused }: { focused: boolean }) => useMapCoordinates({ isFocused: focused }),
       { initialProps: { focused: false } },
     )
@@ -676,11 +676,11 @@ describe('useMapCoordinates live location updates', () => {
     expect(getCurrentPosition).not.toHaveBeenCalled()
     expect(watchPosition).not.toHaveBeenCalled()
 
-    rerender({ focused: true })
+    await rerender({ focused: true })
     await waitFor(() => expect(watchPosition).toHaveBeenCalledTimes(1))
     expect(getCurrentPosition).toHaveBeenCalledTimes(1)
 
-    rerender({ focused: false })
+    await rerender({ focused: false })
     expect(clearWatch).toHaveBeenCalledWith(91)
   })
 })

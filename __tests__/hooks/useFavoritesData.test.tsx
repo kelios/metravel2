@@ -246,7 +246,7 @@ describe('useFavoritesData (reactive read)', () => {
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <QueryClientProvider client={qc}>{children}</QueryClientProvider>
     );
-    const { result } = renderHook(() => useFavoritesData(), { wrapper });
+    const { result } = await renderHook(() => useFavoritesData(), { wrapper });
     expect(result.current).toEqual([]);
     expect(mockFetch).not.toHaveBeenCalled();
 
@@ -256,7 +256,7 @@ describe('useFavoritesData (reactive read)', () => {
     );
     // guest scope is null; hook reads userId 'user-1' by default — switch guest
     authRef.userId = null;
-    const { result: guestResult } = renderHook(() => useFavoritesData(), { wrapper });
+    const { result: guestResult } = await renderHook(() => useFavoritesData(), { wrapper });
     await waitFor(() => expect(guestResult.current).toHaveLength(1));
     expect(guestResult.current[0].id).toBe(99);
   });

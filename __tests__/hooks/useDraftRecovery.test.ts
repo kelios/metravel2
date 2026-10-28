@@ -64,7 +64,7 @@ describe('useDraftRecovery', () => {
       JSON.stringify({ data: { name: 'draft' }, timestamp: Date.now() - 60_000 })
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -87,7 +87,7 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -118,7 +118,7 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -177,7 +177,7 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -241,7 +241,7 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -271,7 +271,7 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -302,7 +302,7 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -326,7 +326,7 @@ describe('useDraftRecovery', () => {
       JSON.stringify({ data: { name: 'draft' }, timestamp: Date.now() - 60_000 })
     );
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       (props: { currentData: any }) =>
         useDraftRecovery({
           travelId,
@@ -356,7 +356,7 @@ describe('useDraftRecovery', () => {
       JSON.stringify({ data: { name: 'new-draft' }, timestamp: Date.now() - 1_000 })
     );
 
-    rerender({ currentData: { name: 'server-after-autosave' } });
+    await rerender({ currentData: { name: 'server-after-autosave' } });
 
     // Because the hook checks only once per draftKey, it must NOT re-enable hasPendingDraft.
     expect(result.current.hasPendingDraft).toBe(false);
@@ -364,7 +364,7 @@ describe('useDraftRecovery', () => {
 
   it('saveDraft writes normalized data after debounce and does not flip hasPendingDraft in same session', async () => {
     jest.useFakeTimers();
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       (props: { currentData: any }) =>
         useDraftRecovery({
           travelId,
@@ -384,11 +384,11 @@ describe('useDraftRecovery', () => {
     });
     expect(AsyncStorage.getItem).toHaveBeenCalledWith(draftKey);
 
-    act(() => {
+    await act(() => {
       result.current.saveDraft({ name: 'draft', optional: undefined } as any);
     });
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(2100);
     });
     // Flush microtasks from async timer callback.
@@ -406,7 +406,7 @@ describe('useDraftRecovery', () => {
 
     // Rerender with changed currentData: must not trigger recovery popup.
     AsyncStorage.getItem.mockClear();
-    rerender({ currentData: { name: 'server2' } });
+    await rerender({ currentData: { name: 'server2' } });
     await act(async () => {
       await Promise.resolve();
       await Promise.resolve();
@@ -420,7 +420,7 @@ describe('useDraftRecovery', () => {
   it('does not flush loaded server data on web pagehide before user edits', async () => {
     setPlatformOs('web');
 
-    renderHook(() =>
+    await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -429,7 +429,7 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    act(() => {
+    await act(() => {
       window.dispatchEvent(new Event('pagehide'));
     });
 
@@ -438,7 +438,7 @@ describe('useDraftRecovery', () => {
 
   it('keeps a new note draft apart from a new full-article draft (#2666)', async () => {
     jest.useFakeTimers();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId: null,
         isNew: true,
@@ -448,10 +448,10 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    act(() => {
+    await act(() => {
       result.current.saveDraft({ name: 'note draft' } as any);
     });
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(2100);
     });
     await act(async () => {
@@ -465,7 +465,7 @@ describe('useDraftRecovery', () => {
 
   it('uses a stable `_new` key for a new travel (never `_null`)', async () => {
     jest.useFakeTimers();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId: null,
         isNew: true,
@@ -474,10 +474,10 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    act(() => {
+    await act(() => {
       result.current.saveDraft({ name: 'draft' } as any);
     });
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(2100);
     });
     await act(async () => {
@@ -491,7 +491,7 @@ describe('useDraftRecovery', () => {
 
   it('does not write a draft while travelId is unresolved for an existing travel', async () => {
     jest.useFakeTimers();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId: null,
         isNew: false,
@@ -500,10 +500,10 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    act(() => {
+    await act(() => {
       result.current.saveDraft({ name: 'draft' } as any);
     });
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(2100);
     });
     await act(async () => {
@@ -517,7 +517,7 @@ describe('useDraftRecovery', () => {
 
   it('clearDraft cancels a pending autosave debounce so no orphan draft is written', async () => {
     jest.useFakeTimers();
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -526,7 +526,7 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    act(() => {
+    await act(() => {
       result.current.saveDraft({ name: 'pending' } as any);
     });
 
@@ -535,7 +535,7 @@ describe('useDraftRecovery', () => {
       await result.current.clearDraft();
     });
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(2100);
     });
     await act(async () => {
@@ -551,7 +551,7 @@ describe('useDraftRecovery', () => {
     // Leaving the screen mid-debounce is exactly when the local draft is the only
     // copy: the autosave payload in flight is older than these keystrokes, and an
     // author typing continuously restarts the 2s timer so it never fires on its own.
-    const { result, unmount } = renderHook(() =>
+    const { result, unmount } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -560,11 +560,11 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    act(() => {
+    await act(() => {
       result.current.saveDraft({ name: 'typed-then-left' } as any);
     });
 
-    unmount();
+    await unmount();
 
     await waitFor(async () => {
       const stored = await AsyncStorage.getItem(draftKey);
@@ -576,7 +576,7 @@ describe('useDraftRecovery', () => {
   it('writes nothing on unmount once a save has confirmed the data (#1511)', async () => {
     // clearDraft nulls the pending snapshot, so a confirmed form must not
     // resurrect a draft - and with it a false recovery prompt - on unmount.
-    const { result, unmount } = renderHook(() =>
+    const { result, unmount } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -585,7 +585,7 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    act(() => {
+    await act(() => {
       result.current.saveDraft({ name: 'pending' } as any);
     });
 
@@ -594,7 +594,7 @@ describe('useDraftRecovery', () => {
     });
 
     AsyncStorage.setItem.mockClear();
-    unmount();
+    await unmount();
 
     await act(async () => {
       await Promise.resolve();
@@ -613,7 +613,7 @@ describe('useDraftRecovery', () => {
       JSON.stringify({ data: { name: 'draft-while-new' }, timestamp: Date.now() - 1_000 })
     );
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       (props: { travelId: string | null; isNew: boolean }) =>
         useDraftRecovery({
           travelId: props.travelId,
@@ -627,7 +627,7 @@ describe('useDraftRecovery', () => {
     );
 
     // The new travel got id 777; controller pushes it into the URL.
-    rerender({ travelId: '777', isNew: false });
+    await rerender({ travelId: '777', isNew: false });
 
     await waitFor(() => {
       // The old `_new` draft must be gone so it cannot resurface under `_777`.
@@ -648,7 +648,7 @@ describe('useDraftRecovery', () => {
     // `_new` after the key-flip cleanup already removed that key would leave an
     // orphan draft that the next `/travel/new` session offers as a recovery
     // prompt containing another article's text (the F-09 class defect).
-    const { result, rerender, unmount } = renderHook(
+    const { result, rerender, unmount } = await renderHook(
       (props: { travelId: string | null; isNew: boolean }) =>
         useDraftRecovery({
           travelId: props.travelId,
@@ -659,13 +659,13 @@ describe('useDraftRecovery', () => {
       { initialProps: { travelId: null as string | null, isNew: true } }
     );
 
-    rerender({ travelId: '777', isNew: false });
+    await rerender({ travelId: '777', isNew: false });
 
-    act(() => {
+    await act(() => {
       result.current.saveDraft({ name: 'typed-after-flip' } as any);
     });
 
-    unmount();
+    await unmount();
 
     await waitFor(async () => {
       const stored = await AsyncStorage.getItem('metravel_travel_draft_777');
@@ -687,7 +687,7 @@ describe('useDraftRecovery', () => {
       JSON.stringify({ data: { name: 'edited-after-save' }, timestamp: Date.now() - 1_000 })
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId: '888',
         isNew: false,
@@ -708,7 +708,7 @@ describe('useDraftRecovery', () => {
   it('flushes the latest pending draft on web pagehide', async () => {
     setPlatformOs('web');
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -717,11 +717,11 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    act(() => {
+    await act(() => {
       result.current.saveDraft({ name: 'draft-on-hide', optional: undefined } as any);
     });
 
-    act(() => {
+    await act(() => {
       window.dispatchEvent(new Event('pagehide'));
     });
 
@@ -758,7 +758,7 @@ describe('useDraftRecovery', () => {
     });
     circularRuntimeValue.accessorItems = accessorRuntimeArray;
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -767,7 +767,7 @@ describe('useDraftRecovery', () => {
       })
     );
 
-    act(() => {
+    await act(() => {
       result.current.saveDraft({
         name: 'draft-with-runtime-value',
         runtimeValue: circularRuntimeValue,
@@ -798,7 +798,7 @@ describe('useDraftRecovery', () => {
       return { remove } as any;
     });
 
-    const { result, unmount } = renderHook(() =>
+    const { result, unmount } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -807,7 +807,7 @@ describe('useDraftRecovery', () => {
       }),
     );
 
-    act(() => result.current.saveDraft({ name: 'native-background-draft' } as any));
+    await act(() => result.current.saveDraft({ name: 'native-background-draft' } as any));
     await act(async () => {
       appStateListener?.('background');
       await Promise.resolve();
@@ -818,7 +818,7 @@ describe('useDraftRecovery', () => {
       draftKey,
       expect.stringContaining('native-background-draft'),
     );
-    unmount();
+    await unmount();
     expect(remove).toHaveBeenCalled();
   });
 
@@ -826,7 +826,7 @@ describe('useDraftRecovery', () => {
     jest.useFakeTimers();
     const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
     AsyncStorage.setItem.mockRejectedValueOnce(new Error('storage full'));
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -835,7 +835,7 @@ describe('useDraftRecovery', () => {
       }),
     );
 
-    act(() => result.current.saveDraft({ name: 'first edit' } as any));
+    await act(() => result.current.saveDraft({ name: 'first edit' } as any));
     await act(async () => {
       jest.advanceTimersByTime(2100);
       await Promise.resolve();
@@ -844,7 +844,7 @@ describe('useDraftRecovery', () => {
     expect(result.current.storageError?.message).toBe('storage full');
     expect(consoleWarnSpy).toHaveBeenCalledWith('Failed to save draft:', expect.any(Error));
 
-    act(() => result.current.saveDraft({ name: 'second edit' } as any));
+    await act(() => result.current.saveDraft({ name: 'second edit' } as any));
     await act(async () => {
       jest.advanceTimersByTime(2100);
       await Promise.resolve();
@@ -861,7 +861,7 @@ describe('useDraftRecovery', () => {
       }),
     );
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useDraftRecovery({
         travelId,
         isNew: false,
@@ -870,14 +870,14 @@ describe('useDraftRecovery', () => {
       }),
     );
 
-    act(() => result.current.saveDraft({ name: 'first pending edit' } as any));
+    await act(() => result.current.saveDraft({ name: 'first pending edit' } as any));
     let firstFlush!: Promise<boolean>;
-    act(() => {
+    await act(() => {
       firstFlush = result.current.flushDraft();
     });
     await waitFor(() => expect(AsyncStorage.setItem).toHaveBeenCalledTimes(1));
 
-    act(() => result.current.saveDraft({ name: 'newest pending edit' } as any));
+    await act(() => result.current.saveDraft({ name: 'newest pending edit' } as any));
     expect(AsyncStorage.setItem).toHaveBeenCalledTimes(1);
 
     await act(async () => {

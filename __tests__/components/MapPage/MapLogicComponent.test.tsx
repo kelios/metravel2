@@ -43,7 +43,7 @@ describe('MapLogicComponent radius fitBounds', () => {
       })),
     };
 
-    render(
+    await render(
       <MapLogicComponent
         mapClickHandler={() => undefined}
         mode="radius"
@@ -146,7 +146,7 @@ describe('MapLogicComponent radius fitBounds', () => {
       address: `far-${i}`,
     }));
 
-    render(
+    await render(
       <MapLogicComponent
         mapClickHandler={() => undefined}
         mode="radius"

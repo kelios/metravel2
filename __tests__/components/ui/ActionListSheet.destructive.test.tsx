@@ -11,8 +11,8 @@ describe('ActionListSheet destructive item', () => {
     { key: 'delete', label: 'Удалить поездку', icon: 'trash-2' as const, onPress: noop, destructive: true, testID: 'item-delete' },
   ]
 
-  it('рисует разделитель перед destructive-пунктом и красит его подпись', () => {
-    const { getAllByTestId, getByText } = render(
+  it('рисует разделитель перед destructive-пунктом и красит его подпись', async () => {
+    const { getAllByTestId, getByText } = await render(
       <ActionListSheet visible onClose={noop} title="Поездка" actions={items} />,
     )
     expect(getAllByTestId('action-sheet-separator')).toHaveLength(1)
@@ -21,8 +21,8 @@ describe('ActionListSheet destructive item', () => {
     expect(JSON.stringify(getByText('Поделиться').props.style)).not.toEqual(flat)
   })
 
-  it('без destructive разделителя нет', () => {
-    const { queryByTestId } = render(
+  it('без destructive разделителя нет', async () => {
+    const { queryByTestId } = await render(
       <ActionListSheet visible onClose={noop} title="Поездка" actions={[items[0]]} />,
     )
     expect(queryByTestId('action-sheet-separator')).toBeNull()

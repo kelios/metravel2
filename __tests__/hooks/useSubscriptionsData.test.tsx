@@ -64,7 +64,7 @@ describe('useSubscriptionsData', () => {
   it('distinguishes pending lists from a confirmed empty list', async () => {
     let resolveSubscriptions!: (profiles: unknown[]) => void;
     mockedFetchMySubscriptions.mockImplementation(() => new Promise((resolve) => { resolveSubscriptions = resolve; }));
-    const { result } = renderHook(() => useSubscriptionsData(), { wrapper: createQueryWrapper().Wrapper });
+    const { result } = await renderHook(() => useSubscriptionsData(), { wrapper: createQueryWrapper().Wrapper });
 
     expect(result.current.subscriptionsCount).toBeUndefined();
     expect(result.current.subscribersCount).toBeUndefined();
@@ -77,7 +77,7 @@ describe('useSubscriptionsData', () => {
     const { Wrapper, queryClient } = createQueryWrapper();
     queryClient.setQueryData(queryKeys.mySubscriptions('1'), [makeAuthor(2)]);
     mockedFetchMySubscriptions.mockRejectedValue(new Error('Network unavailable'));
-    const { result } = renderHook(() => useSubscriptionsData(), { wrapper: Wrapper });
+    const { result } = await renderHook(() => useSubscriptionsData(), { wrapper: Wrapper });
 
     expect(result.current.subscriptionsCount).toBe(1);
     const dataUpdatedAt = result.current.subscriptionsDataUpdatedAt;
@@ -87,7 +87,7 @@ describe('useSubscriptionsData', () => {
     expect(queryClient.getQueryState(queryKeys.mySubscriptions('1'))?.status).toBe('error');
     expect(result.current.subscriptionsCount).toBe(1);
     expect(result.current.subscriptionsDataUpdatedAt).toBe(dataUpdatedAt);
-    act(() => {
+    await act(() => {
       queryClient.setQueryData(queryKeys.mySubscriptions('1'), [], { updatedAt: dataUpdatedAt + 1 });
     });
     await waitFor(() => expect(result.current.subscriptionsCount).toBe(0));
@@ -112,7 +112,7 @@ describe('useSubscriptionsData', () => {
         })
     );
 
-    render(<SubscriptionsProbe />, {
+    await render(<SubscriptionsProbe />, {
       wrapper: createQueryWrapper().Wrapper,
     });
 

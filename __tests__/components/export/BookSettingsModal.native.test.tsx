@@ -38,16 +38,16 @@ const setPlatform = (os: typeof Platform.OS) => {
   Object.defineProperty(Platform, 'OS', { configurable: true, value: os })
 }
 
-function renderModal(props: Partial<React.ComponentProps<typeof BookSettingsModal>> = {}) {
+async function renderModal(props: Partial<React.ComponentProps<typeof BookSettingsModal>> = {}) {
   const onSave = jest.fn(async (_settings: BookSettings) => undefined)
   const onClose = jest.fn()
-  const view = render(
+  const view = await render(
     <BookSettingsModal visible onClose={onClose} onSave={onSave} defaultSettings={DEFAULTS} travelCount={2} {...props} />,
   )
   return { ...view, onSave, onClose }
 }
 
-const openAdvanced = (view: ReturnType<typeof renderModal>) => fireEvent.press(view.getByTestId('book-settings-advanced'))
+const openAdvanced = async (view: Awaited<ReturnType<typeof renderModal>>) => fireEvent.press(view.getByTestId('book-settings-advanced'))
 
 describe.each(['ios', 'android'] as const)('BookSettingsModal на %s (#2229)', (os) => {
   beforeEach(() => {
@@ -57,8 +57,8 @@ describe.each(['ios', 'android'] as const)('BookSettingsModal на %s (#2229)', 
   })
   afterAll(() => setPlatform(originalPlatform))
 
-  it('окно рисуется нативной разметкой, а не null: заголовок, число путешествий, подвал', () => {
-    const view = renderModal()
+  it('окно рисуется нативной разметкой, а не null: заголовок, число путешествий, подвал', async () => {
+    const view = await renderModal()
 
     expect(view.getByTestId('book-settings-native')).toBeTruthy()
     expect(view.getByText('Настройки фотоальбома')).toBeTruthy()
@@ -68,15 +68,15 @@ describe.each(['ios', 'android'] as const)('BookSettingsModal на %s (#2229)', 
   })
 
   it('onSave получает выбранные поля BookSettings: порядок, тема, название, оглавление', async () => {
-    const view = renderModal()
+    const view = await renderModal()
 
-    fireEvent.press(within(view.getByTestId('book-settings-sort')).getByLabelText('По стране'))
-    fireEvent.press(view.getByText('Классика'))
-    openAdvanced(view)
-    fireEvent.changeText(view.getByTestId('book-settings-title'), 'Лето 2026')
-    fireEvent.press(view.getByLabelText('Включить оглавление'))
+    await fireEvent.press(within(view.getByTestId('book-settings-sort')).getByLabelText('По стране'))
+    await fireEvent.press(view.getByText('Классика'))
+    await openAdvanced(view)
+    await fireEvent.changeText(view.getByTestId('book-settings-title'), 'Лето 2026')
+    await fireEvent.press(view.getByLabelText('Включить оглавление'))
     await act(async () => {
-      fireEvent.press(view.getByTestId('book-settings-save'))
+      await fireEvent.press(view.getByTestId('book-settings-save'))
     })
 
     expect(view.onSave).toHaveBeenCalledTimes(1)
@@ -87,41 +87,41 @@ describe.each(['ios', 'android'] as const)('BookSettingsModal на %s (#2229)', 
   })
 
   it('подзаголовок из 151 символа: ошибка видна, «Сохранить PDF» не срабатывает; 150 — сохраняет', async () => {
-    const view = renderModal()
-    openAdvanced(view)
+    const view = await renderModal()
+    await openAdvanced(view)
 
-    fireEvent.changeText(view.getByTestId('book-settings-subtitle'), 'я'.repeat(151))
+    await fireEvent.changeText(view.getByTestId('book-settings-subtitle'), 'я'.repeat(151))
     expect(view.getByText('151/150 символов')).toBeTruthy()
     expect(within(view.getByTestId('book-settings-errors')).getByText(/150/)).toBeTruthy()
     await act(async () => {
-      fireEvent.press(view.getByTestId('book-settings-save'))
+      await fireEvent.press(view.getByTestId('book-settings-save'))
     })
     expect(view.onSave).not.toHaveBeenCalled()
 
-    fireEvent.changeText(view.getByTestId('book-settings-subtitle'), 'я'.repeat(150))
+    await fireEvent.changeText(view.getByTestId('book-settings-subtitle'), 'я'.repeat(150))
     expect(view.queryByTestId('book-settings-errors')).toBeNull()
     await act(async () => {
-      fireEvent.press(view.getByTestId('book-settings-save'))
+      await fireEvent.press(view.getByTestId('book-settings-save'))
     })
     expect(view.onSave).toHaveBeenCalledWith(expect.objectContaining({ subtitle: 'я'.repeat(150) }))
   })
 
   it('чек-листы включены, но без разделов — ошибка и сохранения нет', async () => {
-    const view = renderModal()
+    const view = await renderModal()
 
-    fireEvent.press(view.getByLabelText('Добавить в PDF'))
+    await fireEvent.press(view.getByLabelText('Добавить в PDF'))
     for (const section of ['clothing', 'food', 'electronics']) {
-      fireEvent.press(view.getByTestId(`book-settings-checklist-${section}`))
+      await fireEvent.press(view.getByTestId(`book-settings-checklist-${section}`))
     }
     expect(view.getByTestId('book-settings-errors')).toBeTruthy()
     await act(async () => {
-      fireEvent.press(view.getByTestId('book-settings-save'))
+      await fireEvent.press(view.getByTestId('book-settings-save'))
     })
     expect(view.onSave).not.toHaveBeenCalled()
 
-    fireEvent.press(view.getByTestId('book-settings-checklist-food'))
+    await fireEvent.press(view.getByTestId('book-settings-checklist-food'))
     await act(async () => {
-      fireEvent.press(view.getByTestId('book-settings-save'))
+      await fireEvent.press(view.getByTestId('book-settings-save'))
     })
     expect(view.onSave).toHaveBeenCalledWith(
       expect.objectContaining({ includeChecklists: true, checklistSections: ['food'] }),
@@ -130,22 +130,22 @@ describe.each(['ios', 'android'] as const)('BookSettingsModal на %s (#2229)', 
 
   it('без премиума «Свое изображение» — paywall, тип обложки не меняется', async () => {
     mockIsPremium = false
-    const view = renderModal()
-    openAdvanced(view)
+    const view = await renderModal()
+    await openAdvanced(view)
 
-    fireEvent.press(within(view.getByTestId('book-settings-cover')).getByLabelText('Свое изображение (премиум)'))
+    await fireEvent.press(within(view.getByTestId('book-settings-cover')).getByLabelText('Свое изображение (премиум)'))
     expect(mockTrackPaywallView).toHaveBeenCalledWith('cover-custom')
     expect(mockRequireUnlock).toHaveBeenCalledWith('cover-custom')
 
     await act(async () => {
-      fireEvent.press(view.getByTestId('book-settings-save'))
+      await fireEvent.press(view.getByTestId('book-settings-save'))
     })
     expect(view.onSave).toHaveBeenCalledWith(expect.objectContaining({ coverType: 'auto' }))
   })
 
-  it('«Отмена» закрывает окно без печати', () => {
-    const view = renderModal()
-    fireEvent.press(view.getByTestId('book-settings-cancel'))
+  it('«Отмена» закрывает окно без печати', async () => {
+    const view = await renderModal()
+    await fireEvent.press(view.getByTestId('book-settings-cancel'))
 
     expect(view.onClose).toHaveBeenCalledTimes(1)
     expect(view.onSave).not.toHaveBeenCalled()
@@ -153,21 +153,21 @@ describe.each(['ios', 'android'] as const)('BookSettingsModal на %s (#2229)', 
 
   it('editing keeps the same input and validation while moving actions into the form scroll', async () => {
     const onPreview = jest.fn(async (_settings: BookSettings) => undefined)
-    const view = renderModal({ onPreview })
-    openAdvanced(view)
+    const view = await renderModal({ onPreview })
+    await openAdvanced(view)
     const title = view.getByTestId('book-settings-title')
-    fireEvent.changeText(title, 'Keyboard title')
-    fireEvent(title, 'focus')
+    await fireEvent.changeText(title, 'Keyboard title')
+    await fireEvent(title, 'focus')
     expect(view.getByTestId('book-settings-title')).toBe(title)
     expect(title.props.value).toBe('Keyboard title')
     expect(within(view.getByTestId('book-settings-form-scroll')).getByTestId('book-settings-save')).toBeTruthy()
-    fireEvent.changeText(view.getByTestId('book-settings-subtitle'), 'я'.repeat(151))
+    await fireEvent.changeText(view.getByTestId('book-settings-subtitle'), 'я'.repeat(151))
     expect(within(view.getByTestId('book-settings-form-scroll')).getByTestId('book-settings-errors')).toBeTruthy()
     const user = userEvent.setup()
     await user.press(view.getByTestId('book-settings-preview'))
     expect(onPreview).not.toHaveBeenCalled()
-    fireEvent.changeText(view.getByTestId('book-settings-subtitle'), 'valid')
-    await act(async () => fireEvent.press(view.getByTestId('book-settings-preview')))
+    await fireEvent.changeText(view.getByTestId('book-settings-subtitle'), 'valid')
+    await act(async () => await fireEvent.press(view.getByTestId('book-settings-preview')))
     expect(onPreview).toHaveBeenCalledTimes(1)
     expect(onPreview).toHaveBeenCalledWith(expect.objectContaining({ title: 'Keyboard title', subtitle: 'valid' }))
   })
@@ -175,36 +175,36 @@ describe.each(['ios', 'android'] as const)('BookSettingsModal на %s (#2229)', 
   it('flow chrome retains busy state and one Cancel handler during a real pending save', async () => {
     let finish!: () => void
     const onSave = jest.fn(() => new Promise<void>((resolve) => { finish = resolve }))
-    const view = renderModal({ onSave, onPreview: jest.fn() })
-    openAdvanced(view)
-    fireEvent(view.getByTestId('book-settings-title'), 'focus')
-    await act(async () => { fireEvent.press(view.getByTestId('book-settings-save')) })
+    const view = await renderModal({ onSave, onPreview: jest.fn() })
+    await openAdvanced(view)
+    await fireEvent(view.getByTestId('book-settings-title'), 'focus')
+    await act(async () => { await fireEvent.press(view.getByTestId('book-settings-save')) })
     expect(onSave).toHaveBeenCalledTimes(1)
     expect(view.getByTestId('book-settings-save').props.accessibilityState).toMatchObject({ busy: true, disabled: true })
-    fireEvent(view.getByTestId('book-settings-title'), 'blur')
+    await fireEvent(view.getByTestId('book-settings-title'), 'blur')
     expect(view.getByTestId('book-settings-preview').props.accessibilityState.disabled).toBe(true)
-    fireEvent.press(view.getByTestId('book-settings-cancel'))
+    await fireEvent.press(view.getByTestId('book-settings-cancel'))
     expect(view.onClose).toHaveBeenCalledTimes(1)
     await act(async () => finish())
   })
 
   it('«Превью» есть только с onPreview и отдаёт настройки в него', async () => {
-    expect(renderModal().queryByTestId('book-settings-preview')).toBeNull()
+    expect(await (await renderModal()).queryByTestId('book-settings-preview')).toBeNull()
 
     const onPreview = jest.fn(async (_settings: BookSettings) => undefined)
-    const view = renderModal({ onPreview })
+    const view = await renderModal({ onPreview })
     await act(async () => {
-      fireEvent.press(view.getByTestId('book-settings-preview'))
+      await fireEvent.press(view.getByTestId('book-settings-preview'))
     })
     expect(onPreview).toHaveBeenCalledWith(expect.objectContaining({ template: 'minimal' }))
   })
 })
 
 describe.each(['ios', 'android'] as const)('NativeModalFooter на %s (#2229)', (os) => {
-  const renderFooter = (props: Partial<React.ComponentProps<typeof NativeModalFooter>> = {}) => {
+  const renderFooter = async (props: Partial<React.ComponentProps<typeof NativeModalFooter>> = {}) => {
     const handlers = { onClose: jest.fn(), onSave: jest.fn(), onPreview: jest.fn() }
     return {
-      ...render(<NativeModalFooter isSaving={false} hasErrors={false} showPreview {...handlers} {...props} />),
+      ...await render(<NativeModalFooter isSaving={false} hasErrors={false} showPreview {...handlers} {...props} />),
       ...handlers,
     }
   }
@@ -226,7 +226,7 @@ describe.each(['ios', 'android'] as const)('NativeModalFooter на %s (#2229)', 
       }
 
       for (const showPreview of [false, true]) {
-        const view = renderFooter({ showPreview })
+        const view = await renderFooter({ showPreview })
         expect(view.getAllByRole('button')).toHaveLength(showPreview ? 3 : 2)
         expect(StyleSheet.flatten(view.getByTestId('book-settings-footer').props.style)).toMatchObject({
           flexDirection: 'column', flexShrink: 0,
@@ -246,13 +246,13 @@ describe.each(['ios', 'android'] as const)('NativeModalFooter на %s (#2229)', 
           expect(style.flex).toBeUndefined()
           expect(style.height).toBeUndefined()
         }
-        view.unmount()
+        await view.unmount()
       }
     },
   )
 
   it('сохранение и превью неактивны при ошибке, отмена остаётся доступной', async () => {
-    const view = renderFooter({ hasErrors: true })
+    const view = await renderFooter({ hasErrors: true })
     const user = userEvent.setup()
     // fireEvent searches composite ancestors and can invoke Button.onPress
     // above a disabled native host. userEvent targets actual touch responders.
@@ -268,7 +268,7 @@ describe.each(['ios', 'android'] as const)('NativeModalFooter на %s (#2229)', 
   })
 
   it('во время создания показывает индикатор и полную подпись; отмена работает', async () => {
-    const view = renderFooter({ isSaving: true })
+    const view = await renderFooter({ isSaving: true })
     const user = userEvent.setup()
     const save = view.getByTestId('book-settings-save')
     const label = within(save).getByText(translate('profile:components.export.BookSettingsModal_parts.sozdanie_14bbb42e'))
@@ -283,9 +283,9 @@ describe.each(['ios', 'android'] as const)('NativeModalFooter на %s (#2229)', 
     expect(view.onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('сохраняет исходные обработчики доступных действий', () => {
-    const view = renderFooter()
-    for (const action of ['cancel', 'preview', 'save']) fireEvent.press(view.getByTestId(`book-settings-${action}`))
+  it('сохраняет исходные обработчики доступных действий', async () => {
+    const view = await renderFooter()
+    for (const action of ['cancel', 'preview', 'save']) await fireEvent.press(view.getByTestId(`book-settings-${action}`))
     expect(view.onClose).toHaveBeenCalledTimes(1)
     expect(view.onPreview).toHaveBeenCalledTimes(1)
     expect(view.onSave).toHaveBeenCalledTimes(1)

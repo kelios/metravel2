@@ -25,8 +25,8 @@ const colors: any = {
   boxShadows: { light: 'none' },
 }
 
-const renderFallback = (overrides: Partial<React.ComponentProps<typeof GalleryControlsFallback>> = {}) =>
-  render(
+const renderFallback = async (overrides: Partial<React.ComponentProps<typeof GalleryControlsFallback>> = {}) =>
+  await render(
     <GalleryControlsFallback
       styles={createGalleryStyles(colors) as any}
       colors={colors}
@@ -46,15 +46,15 @@ const renderFallback = (overrides: Partial<React.ComponentProps<typeof GalleryCo
   )
 
 describe('GalleryControlsFallback (#1148)', () => {
-  it('оставляет съёмку доступной, пока занят только выбор файлов', () => {
-    const screen = renderFallback()
+  it('оставляет съёмку доступной, пока занят только выбор файлов', async () => {
+    const screen = await renderFallback()
 
     expect(screen.getByTestId('gallery-mobile-camera').props.disabled).toBe(false)
     expect(screen.getByTestId('gallery-mobile-pick').props.disabled).toBe(true)
   })
 
-  it('гасит съёмку только на время реальной загрузки пачки', () => {
-    const screen = renderFallback({ batchUploadProgress: { current: 1, total: 3 } })
+  it('гасит съёмку только на время реальной загрузки пачки', async () => {
+    const screen = await renderFallback({ batchUploadProgress: { current: 1, total: 3 } })
 
     expect(screen.getByTestId('gallery-mobile-camera').props.disabled).toBe(true)
   })

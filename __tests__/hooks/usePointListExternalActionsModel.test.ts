@@ -56,7 +56,7 @@ describe('usePointListExternalActionsModel', () => {
       writable: true,
     });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       usePointListExternalActionsModel({
         baseUrl: 'https://example.com/travel',
         buildMapUrl: (coord: string) => `map:${coord}`,
@@ -85,7 +85,7 @@ describe('usePointListExternalActionsModel', () => {
       writable: true,
     });
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       usePointListExternalActionsModel({
         baseUrl: 'https://example.com/travel',
         buildMapUrl: (coord: string) => `map:${coord}`,
@@ -105,7 +105,7 @@ describe('usePointListExternalActionsModel', () => {
   it('falls back to web telegram share url on web', async () => {
     (Platform as any).OS = 'web';
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       usePointListExternalActionsModel({
         baseUrl: 'https://example.com/travel',
         buildMapUrl: (coord: string) => `https://maps.example/?q=${encodeURIComponent(coord)}`,
@@ -125,8 +125,8 @@ describe('usePointListExternalActionsModel', () => {
     expect(mockOpenExternalUrl).not.toHaveBeenCalled();
   });
 
-  it('opens map and article urls through openExternal', () => {
-    const { result } = renderHook(() =>
+  it('opens map and article urls through openExternal', async () => {
+    const { result } = await renderHook(() =>
       usePointListExternalActionsModel({
         baseUrl: 'https://example.com/travel',
         buildMapUrl: (coord: string) => `map:${coord}`,
@@ -134,7 +134,7 @@ describe('usePointListExternalActionsModel', () => {
       })
     );
 
-    act(() => {
+    await act(() => {
       result.current.onOpenMap('53.9,27.56');
       result.current.onOpenArticle({ articleUrl: 'https://example.com/article' });
     });

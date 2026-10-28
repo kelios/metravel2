@@ -108,7 +108,7 @@ describe('FavoritesContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <FavoritesProvider>
           <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
@@ -150,7 +150,7 @@ describe('FavoritesContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <FavoritesProvider>
           <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
@@ -178,13 +178,11 @@ describe('FavoritesContext', () => {
     mockAuthContext.userId = null;
   });
 
-  it('throws error when useFavorites is used outside provider', () => {
+  it('throws error when useFavorites is used outside provider', async () => {
     // Suppress console.error for this test
     const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     
-    expect(() => {
-      render(<TestComponent />);
-    }).toThrow('useFavorites must be used within a FavoritesProvider');
+    await expect(render(<TestComponent />)).rejects.toThrow('useFavorites must be used within a FavoritesProvider');
     
     consoleSpy.mockRestore();
   });
@@ -192,7 +190,7 @@ describe('FavoritesContext', () => {
   it('provides default empty arrays when no data in storage', async () => {
     let contextValue: any;
     
-    render(
+    await render(
       <AuthProvider>
         <FavoritesProvider>
           <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
@@ -224,7 +222,7 @@ describe('FavoritesContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <FavoritesProvider>
           <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
@@ -241,7 +239,7 @@ describe('FavoritesContext', () => {
   it('adds favorite item', async () => {
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <FavoritesProvider>
           <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
@@ -292,7 +290,7 @@ describe('FavoritesContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <FavoritesProvider>
           <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
@@ -330,7 +328,7 @@ describe('FavoritesContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <FavoritesProvider>
           <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
@@ -348,7 +346,7 @@ describe('FavoritesContext', () => {
   it('adds item to view history', async () => {
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <FavoritesProvider>
           <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
@@ -389,7 +387,7 @@ describe('FavoritesContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <FavoritesProvider>
           <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
@@ -432,7 +430,7 @@ describe('FavoritesContext', () => {
 
     let contextValue: any;
 
-    render(
+    await render(
       <AuthProvider>
         <FavoritesProvider>
           <TestComponent onContext={(ctx) => { contextValue = ctx; }} />
@@ -465,7 +463,7 @@ describe('FavoritesContext', () => {
     );
 
     let contextValue: any;
-    render(
+    await render(
       <AuthProvider>
         <FavoritesProvider>
           <TestComponent onContext={(ctx) => { contextValue = ctx; }} />

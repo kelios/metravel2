@@ -48,8 +48,8 @@ describe('usePointsRecommendations (PERM-3)', () => {
     Platform.OS = originalPlatformOS;
   });
 
-  it('does not request geolocation on mount', () => {
-    renderHook(() => usePointsRecommendations({ setActivePointId: jest.fn() }));
+  it('does not request geolocation on mount', async () => {
+    await renderHook(() => usePointsRecommendations({ setActivePointId: jest.fn() }));
 
     expect(getCurrentPosition).not.toHaveBeenCalled();
   });
@@ -59,7 +59,7 @@ describe('usePointsRecommendations (PERM-3)', () => {
       resolve({ coords: { latitude: 53.95, longitude: 27.5 } }),
     );
     const setActivePointId = jest.fn();
-    const { result } = renderHook(() => usePointsRecommendations({ setActivePointId }));
+    const { result } = await renderHook(() => usePointsRecommendations({ setActivePointId }));
 
     await act(async () => {
       await result.current.handleOpenRecommendations(POINTS);
@@ -78,7 +78,7 @@ describe('usePointsRecommendations (PERM-3)', () => {
     getCurrentPosition.mockImplementation((_resolve: unknown, reject: (e: unknown) => void) =>
       reject(new Error('denied')),
     );
-    const { result } = renderHook(() => usePointsRecommendations({ setActivePointId: jest.fn() }));
+    const { result } = await renderHook(() => usePointsRecommendations({ setActivePointId: jest.fn() }));
 
     await act(async () => {
       await result.current.handleOpenRecommendations(POINTS);
@@ -96,7 +96,7 @@ describe('usePointsRecommendations (PERM-3)', () => {
       .mockImplementationOnce((resolve: (pos: unknown) => void) =>
         resolve({ coords: { latitude: 53.95, longitude: 27.5 } }),
       );
-    const { result } = renderHook(() => usePointsRecommendations({ setActivePointId: jest.fn() }));
+    const { result } = await renderHook(() => usePointsRecommendations({ setActivePointId: jest.fn() }));
 
     await act(async () => {
       await result.current.handleOpenRecommendations(POINTS);
@@ -121,7 +121,7 @@ describe('usePointsRecommendations (PERM-3)', () => {
       virtual: true,
     });
 
-    const { result } = renderHook(() => usePointsRecommendations({ setActivePointId: jest.fn() }));
+    const { result } = await renderHook(() => usePointsRecommendations({ setActivePointId: jest.fn() }));
     expect(requestForegroundPermissionsAsync).not.toHaveBeenCalled();
 
     await act(async () => {

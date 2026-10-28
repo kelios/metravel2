@@ -11,14 +11,14 @@ jest.mock('expo-location', () => ({
 
 const MINSK = { latitude: 53.9006, longitude: 27.559 } // exactly the default Minsk center
 
-function setup(
+async function setup(
   coordinates: any,
   coordinatesAreFallback?: boolean,
   providedUserLocation?: { latitude: number; longitude: number } | null,
   onRequestUserLocation?: () => void | Promise<void>,
 ) {
   const mapRef = { current: null } as any
-  return renderHook(() =>
+  return await renderHook(() =>
     useMapUserLocation({
       coordinates,
       coordinatesAreFallback,
@@ -33,28 +33,28 @@ describe('useMapUserLocation — explicit origin flag (#bug2)', () => {
   it('treats a REAL geolocation at Minsk as the user position (flag=false)', async () => {
     // Regression: a user physically near Minsk used to be misread as the fallback
     // center (coordinate-matching) and got no "you are here" marker.
-    const { result } = setup(MINSK, false)
+    const { result } = await setup(MINSK, false)
     await waitFor(() => {
       expect(result.current.userLocationLatLng).toEqual({ lat: MINSK.latitude, lng: MINSK.longitude })
     })
   })
 
   it('does NOT derive a user position from the DEFAULT center (flag=true)', async () => {
-    const { result } = setup(MINSK, true)
+    const { result } = await setup(MINSK, true)
     // Give effects a tick; userLocation must stay null (no false marker).
     await new Promise((r) => setTimeout(r, 0))
     expect(result.current.userLocationLatLng).toBeNull()
   })
 
   it('fails closed when the explicit origin flag is absent', async () => {
-    const { result } = setup(MINSK, undefined)
+    const { result } = await setup(MINSK, undefined)
     await new Promise((r) => setTimeout(r, 0))
     expect(result.current.userLocationLatLng).toBeNull()
   })
 
   it('derives a non-Minsk real location regardless of the flag', async () => {
     const KRAKOW = { latitude: 50.0614, longitude: 19.9366 }
-    const { result } = setup(KRAKOW, false)
+    const { result } = await setup(KRAKOW, false)
     await waitFor(() => {
       expect(result.current.userLocationLatLng).toEqual({ lat: KRAKOW.latitude, lng: KRAKOW.longitude })
     })
@@ -63,7 +63,7 @@ describe('useMapUserLocation — explicit origin flag (#bug2)', () => {
   it('uses an explicit user position instead of the current map center', async () => {
     const MAP_AREA = { latitude: 52.23, longitude: 21.01 }
     const USER = { latitude: 52.2, longitude: 20.98 }
-    const { result } = setup(MAP_AREA, undefined, USER)
+    const { result } = await setup(MAP_AREA, undefined, USER)
 
     await waitFor(() => {
       expect(result.current.userLocationLatLng).toEqual({ lat: USER.latitude, lng: USER.longitude })
@@ -74,7 +74,7 @@ describe('useMapUserLocation — explicit origin flag (#bug2)', () => {
     const MAP_AREA = { latitude: 52.23, longitude: 21.01 }
     const Location = require('expo-location')
     Location.requestForegroundPermissionsAsync.mockClear()
-    const { result } = setup(MAP_AREA, undefined, null)
+    const { result } = await setup(MAP_AREA, undefined, null)
 
     await new Promise((r) => setTimeout(r, 0))
     expect(result.current.userLocationLatLng).toBeNull()
@@ -83,7 +83,7 @@ describe('useMapUserLocation — explicit origin flag (#bug2)', () => {
 
   it('delegates an explicit center request to the controlled location owner', async () => {
     const onRequestUserLocation = jest.fn().mockResolvedValue(undefined)
-    const { result } = setup(
+    const { result } = await setup(
       { latitude: 52.23, longitude: 21.01 },
       true,
       null,

@@ -14,13 +14,29 @@
  *  - явный проп главнее индекса;
  *  - native не трогаем: там поля закрывает blur-слой expo-image.
  */
-const renderer = require('react-test-renderer');
+const { act } = require('react');
+const renderer = require('test-renderer');
 const { Platform, StyleSheet } = require('react-native');
+const mockWebImageProps = jest.fn();
+jest.mock('@/components/ui/ImageCardMediaWebHelpers', () => {
+  const actual = jest.requireActual('@/components/ui/ImageCardMediaWebHelpers');
+  const React = require('react');
+  return { ...actual, WebMainImage: (props: Record<string, unknown>) => {
+    mockWebImageProps(props);
+    return React.createElement(actual.WebMainImage, props);
+  } };
+});
 const { default: ImageCardMedia } = require('@/components/ui/ImageCardMedia');
 const {
   indexMediaImage,
   resetMediaPlaceholderIndex,
 } = require('@/utils/mediaPlaceholderIndex');
+const roots = new Set<import('test-renderer').Root>()
+afterEach(async () => {
+  for (const root of roots) await act(() => root.unmount())
+  roots.clear()
+})
+
 
 const INDEXED_COLOR = '#5c6252';
 const EXPLICIT_COLOR = '#7b7e78';
@@ -30,14 +46,11 @@ const RENDERED_SRC =
   'https://metravel.by/media-resize/legacy/355/conversions/e4dc7a17.webp?v=1785826436881&w=720&q=60&fit=contain';
 
 const hasFillLayer = (tree: any): boolean =>
-  tree.root.findAll((node: any) => node?.props?.testID === 'card-media-data-placeholder', {
-    deep: true,
-  }).length > 0;
+  tree.container.queryAll((node: any) => node?.props?.testID === 'card-media-data-placeholder').length > 0;
 
 const fillColor = (tree: any): string => {
-  const nodes = tree.root.findAll(
-    (n: any) => n?.props?.testID === 'card-media-data-placeholder',
-    { deep: true },
+  const nodes = tree.container.queryAll(
+    (n: any) => n?.props?.testID === 'card-media-data-placeholder'
   );
   for (const node of nodes) {
     const flattened = StyleSheet.flatten(node?.props?.style) as { backgroundColor?: string } | undefined;
@@ -46,19 +59,19 @@ const fillColor = (tree: any): string => {
   return '';
 };
 
-const renderMedia = (props: Record<string, unknown> = {}) => {
+const renderMedia = async (props: Record<string, unknown> = {}) => {
   let tree: any;
-  renderer.act(() => {
-    tree = renderer.create(
-      <ImageCardMedia
+  await act(() => {
+    tree = renderer.createRoot();
+      roots.add(tree)
+      tree.render(<ImageCardMedia
         testID="card-media"
         src={RENDERED_SRC}
         width={360}
         height={173}
         fit="contain"
         {...props}
-      />,
-    );
+      />)
   });
   return tree;
 };
@@ -67,6 +80,7 @@ describe('ImageCardMedia: заливка из общего индекса ман
   const originalPlatform = Platform.OS;
 
   beforeEach(() => {
+    mockWebImageProps.mockClear();
     resetMediaPlaceholderIndex();
     Platform.OS = 'web';
   });
@@ -75,30 +89,30 @@ describe('ImageCardMedia: заливка из общего индекса ман
     Platform.OS = originalPlatform;
   });
 
-  it('web: без индекса и без пропа заливки нет (состояние прода до правки)', () => {
-    expect(hasFillLayer(renderMedia())).toBe(false);
+  it('web: без индекса и без пропа заливки нет (состояние прода до правки)', async () => {
+    expect(hasFillLayer(await renderMedia())).toBe(false);
   });
 
-  it('web: проиндексированный манифест включает заливку без единого пропа', () => {
+  it('web: проиндексированный манифест включает заливку без единого пропа', async () => {
     indexMediaImage({ id: 355, dominant_color: INDEXED_COLOR, src: MANIFEST_SRC } as any);
 
-    const tree = renderMedia();
+    const tree = await renderMedia();
     expect(hasFillLayer(tree)).toBe(true);
     expect(String(fillColor(tree))).toContain('92, 98, 82'); // #5c6252 с альфой letterbox
   });
 
-  it('web: явный placeholderColor главнее индекса', () => {
+  it('web: явный placeholderColor главнее индекса', async () => {
     indexMediaImage({ id: 355, dominant_color: INDEXED_COLOR, src: MANIFEST_SRC } as any);
 
-    const tree = renderMedia({ placeholderColor: EXPLICIT_COLOR });
+    const tree = await renderMedia({ placeholderColor: EXPLICIT_COLOR });
     expect(String(fillColor(tree))).toContain('123, 126, 120'); // #7b7e78
   });
 
-  it('native: индекс не подменяет blur-слой expo-image', () => {
+  it('native: индекс не подменяет blur-слой expo-image', async () => {
     indexMediaImage({ id: 355, dominant_color: INDEXED_COLOR, src: MANIFEST_SRC } as any);
     Platform.OS = 'android';
 
-    expect(hasFillLayer(renderMedia({ showImmediately: true }))).toBe(false);
+    expect(hasFillLayer(await renderMedia({ showImmediately: true }))).toBe(false);
   });
 });
 
@@ -129,6 +143,7 @@ describe('ImageCardMedia: заливка из усреднённого кадр�
   const originalJestWorkerId = process.env.JEST_WORKER_ID;
 
   beforeEach(() => {
+    mockWebImageProps.mockClear();
     resetMediaPlaceholderIndex();
     Platform.OS = 'web';
     delete process.env.JEST_WORKER_ID;
@@ -143,28 +158,27 @@ describe('ImageCardMedia: заливка из усреднённого кадр�
     }
   });
 
-  const findWebImage = (tree: any) =>
-    tree.root.findAll((n: any) => typeof n?.props?.onDecoded === 'function', { deep: true })[0];
+  const webImageProps = () => mockWebImageProps.mock.calls.at(-1)?.[0];
 
-  it('contain-слот без манифеста получает заливку после декода кадра', () => {
-    const tree = renderMedia();
+  it('contain-слот без манифеста получает заливку после декода кадра', async () => {
+    const tree = await renderMedia();
     expect(hasFillLayer(tree)).toBe(false);
 
-    const node = findWebImage(tree);
-    expect(node).toBeTruthy();
-    renderer.act(() => {
-      node.props.onDecoded(decodedImage(RENDERED_SRC));
+    const imageProps = webImageProps();
+    expect(imageProps).toBeTruthy();
+    await act(() => {
+      imageProps.onDecoded(decodedImage(RENDERED_SRC));
     });
 
     expect(hasFillLayer(tree)).toBe(true);
     expect(fillColor(tree)).toContain('120, 90, 60');
   });
 
-  it('cover-слот кадр не семплит: полей у него нет', () => {
-    const tree = renderMedia({ fit: 'cover' });
-    const node = findWebImage(tree);
-    renderer.act(() => {
-      node.props.onDecoded(decodedImage('https://metravel.by/travel-image/9/conversions/cover.webp'));
+  it('cover-слот кадр не семплит: полей у него нет', async () => {
+    const tree = await renderMedia({ fit: 'cover' });
+    const imageProps = webImageProps();
+    await act(() => {
+      imageProps.onDecoded(decodedImage('https://metravel.by/travel-image/9/conversions/cover.webp'));
     });
 
     expect(hasFillLayer(tree)).toBe(false);

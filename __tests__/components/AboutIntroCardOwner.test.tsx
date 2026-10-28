@@ -8,8 +8,8 @@ import { METRAVEL_SOCIAL_LINKS } from '@/constants/socialLinks'
 // текстом сайта. На mobile web футера нет, поэтому имя несут «Контакты» и
 // «О проекте» через общую карточку AboutIntroCard — и попадают в статический HTML.
 describe('AboutIntroCard site owner line', () => {
-  it('shows the registered owner name exactly as filed with Meta', () => {
-    const { getByTestId } = render(
+  it('shows the registered owner name exactly as filed with Meta', async () => {
+    const { getByTestId } = await render(
       <AboutIntroCard
         email="metraveldev@gmail.com"
         onSendMail={jest.fn()}
@@ -28,8 +28,8 @@ describe('AboutIntroCard site owner line', () => {
   it.each([
     [false, false],
     [true, true],
-  ])('isPageHeading=%s -> метка screenHeader=%s', (isPageHeading, marked) => {
-    const { toJSON } = render(
+  ])('isPageHeading=%s -> метка screenHeader=%s', async (isPageHeading, marked) => {
+    const { toJSON } = await render(
       <AboutIntroCard
         email="metraveldev@gmail.com"
         onSendMail={jest.fn()}

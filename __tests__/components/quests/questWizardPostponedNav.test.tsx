@@ -104,7 +104,7 @@ afterEach(cleanup)
 describe('QuestWizard — граница состояния «отложена» в навигации (#1633)', () => {
   it('actual sidebar keeps an authored optional marker once in text and accessible label', async () => {
     const optionalSteps = [{ ...makeStep('optional', 'Башня (по желанию)'), pointRole: 'optional' as const }]
-    const view = render(<QuestWizard title="Роли" steps={optionalSteps} intro={intro} finale={{ story: 'Финал' } as any}
+    const view = await render(<QuestWizard title="Роли" steps={optionalSteps} intro={intro} finale={{ story: 'Финал' } as any}
       storageKey="optional_nav_once" questId="optional-nav" cityId="minsk" />)
     await act(async () => { await Promise.resolve() })
     expect(view.getByText('Башня (по желанию)')).toBeTruthy()
@@ -113,7 +113,7 @@ describe('QuestWizard — граница состояния «отложена»
   })
 
   it('метит только точку позади: текущая и ещё не пройденная долгом не считаются', async () => {
-    const view = render(
+    const view = await render(
       <QuestWizard
         title="Тест-квест"
         steps={steps}
@@ -131,7 +131,7 @@ describe('QuestWizard — граница состояния «отложена»
     })
 
     await act(async () => {
-      fireEvent.press(view.getByText('Начать квест'))
+      await fireEvent.press(view.getByText('Начать квест'))
       await Promise.resolve()
     })
 
@@ -139,7 +139,7 @@ describe('QuestWizard — граница состояния «отложена»
     expect(view.queryByLabelText(postponedLabel(1))).toBeNull()
 
     await act(async () => {
-      fireEvent.press(view.getByLabelText('Пропустить шаг'))
+      await fireEvent.press(view.getByLabelText('Пропустить шаг'))
       await Promise.resolve()
     })
 
@@ -152,16 +152,16 @@ describe('QuestWizard — граница состояния «отложена»
 })
 
 describe('QuestStepPill — метка отложенной точки', () => {
-  it('заменяет номер значком возврата и называет состояние словами', () => {
-    const view = render(<QuestStepPill {...(pillProps as any)} styles={desktopStyles} pending />)
+  it('заменяет номер значком возврата и называет состояние словами', async () => {
+    const view = await render(<QuestStepPill {...(pillProps as any)} styles={desktopStyles} pending />)
 
     expect(view.getByLabelText(postponedLabel(3))).toBeTruthy()
     // Номер уступает место значку: состояние читается и без цвета.
     expect(view.queryByText('3')).toBeNull()
   })
 
-  it('пройденную точку долгом не метит', () => {
-    const view = render(<QuestStepPill {...(pillProps as any)} styles={desktopStyles} pending done />)
+  it('пройденную точку долгом не метит', async () => {
+    const view = await render(<QuestStepPill {...(pillProps as any)} styles={desktopStyles} pending done />)
 
     expect(view.queryByLabelText(postponedLabel(3))).toBeNull()
     // #2146: пройденная читается словом и галочкой, а не номером.
@@ -171,13 +171,13 @@ describe('QuestStepPill — метка отложенной точки', () => {
 })
 
 describe('QuestStepPill — подпись диктора без повторов (#2146)', () => {
-  it('финал не повторяет своё название', () => {
-    const view = render(<QuestFinalePill colors={colors} styles={desktopStyles} onPress={jest.fn()} />)
+  it('финал не повторяет своё название', async () => {
+    const view = await render(<QuestFinalePill colors={colors} styles={desktopStyles} onPress={jest.fn()} />)
     expect(view.getByLabelText('Финал, доступен')).toBeTruthy()
   })
 
-  it('необязательная точка не повторяет роль: она уже в видимой подписи пилюли', () => {
-    const view = render(
+  it('необязательная точка не повторяет роль: она уже в видимой подписи пилюли', async () => {
+    const view = await render(
       <QuestStepPill {...(pillProps as any)} styles={desktopStyles} role="optional" label="Ратуша · Точка по желанию" />,
     )
     expect(view.getByLabelText('Ратуша · Точка по желанию: Точка 3 из 3, доступна')).toBeTruthy()

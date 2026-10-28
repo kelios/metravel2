@@ -44,8 +44,8 @@ describe('ArticleAuthorBanner', () => {
     })).toEqual({ name: 'Юлия Савран', userId: '42' })
   })
 
-  it('opens travels by author when author id exists', () => {
-    const { getByText, getByLabelText } = render(
+  it('opens travels by author when author id exists', async () => {
+    const { getByText, getByLabelText } = await render(
       <ArticleAuthorBanner
         article={{
           name: 'Article',
@@ -64,13 +64,13 @@ describe('ArticleAuthorBanner', () => {
     expect(getByText('Анна Автор')).toBeTruthy()
     expect(getByText('Путешествия автора')).toBeTruthy()
 
-    fireEvent.press(getByLabelText('Открыть путешествия автора Анна Автор'))
+    await fireEvent.press(getByLabelText('Открыть путешествия автора Анна Автор'))
 
     expect(mockPush).toHaveBeenCalledWith('/search?user_id=42')
   })
 
-  it('does not render a fake author when backend does not provide author fields', () => {
-    const { queryByText } = render(
+  it('does not render a fake author when backend does not provide author fields', async () => {
+    const { queryByText } = await render(
       <ArticleAuthorBanner
         article={{
           id: 1,

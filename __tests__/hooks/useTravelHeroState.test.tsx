@@ -26,32 +26,32 @@ describe('useWebHeroSliderUpgradeGate', () => {
     jest.useRealTimers()
   })
 
-  it('keeps the web hero slider disabled until the user interacts with the hero', () => {
-    const { result } = renderHook(() =>
+  it('keeps the web hero slider disabled until the user interacts with the hero', async () => {
+    const { result } = await renderHook(() =>
       __testables.useWebHeroSliderUpgradeGate(),
     )
 
     expect(result.current).toBe(true)
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(5000)
     })
 
     expect(result.current).toBe(true)
   })
 
-  it('keeps the web hero slider enabled even when pointer interaction happens later', () => {
+  it('keeps the web hero slider enabled even when pointer interaction happens later', async () => {
     const hero = document.createElement('div')
     hero.setAttribute('data-testid', 'travel-details-hero-slider-container')
     document.body.appendChild(hero)
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       __testables.useWebHeroSliderUpgradeGate(),
     )
 
     expect(result.current).toBe(true)
 
-    act(() => {
+    await act(() => {
       hero.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
     })
 
@@ -59,13 +59,13 @@ describe('useWebHeroSliderUpgradeGate', () => {
     hero.remove()
   })
 
-  it('stays enabled in automation mode', () => {
+  it('stays enabled in automation mode', async () => {
     Object.defineProperty(window.navigator, 'webdriver', {
       value: true,
       configurable: true,
     })
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       __testables.useWebHeroSliderUpgradeGate(),
     )
 
@@ -91,12 +91,12 @@ describe('useTravelHeroState', () => {
     useWindowDimensionsSpy.mockRestore()
   })
 
-  it.each([false, true])('reads the late navigator flag in the initial hero render (%s)', (automation) => {
+  it.each([false, true])('reads the late navigator flag in the initial hero render (%s)', async (automation) => {
     const flag = Object.getOwnPropertyDescriptor(navigator, 'webdriver')
     Object.defineProperty(navigator, 'webdriver', { configurable: true, value: automation })
     const frames: boolean[] = []
     try {
-      renderHook(() => {
+      await renderHook(() => {
         const hero = useTravelHeroState({ id: 42, gallery: [] } as any, true, jest.fn(), false)
         useLayoutEffect(() => { frames.push(hero.extrasReady) }, [hero.extrasReady])
         return hero
@@ -110,7 +110,7 @@ describe('useTravelHeroState', () => {
     }
   })
 
-  it('uses the first gallery image as the initial web hero media when gallery exists', () => {
+  it('uses the first gallery image as the initial web hero media when gallery exists', async () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 42,
@@ -122,7 +122,7 @@ describe('useTravelHeroState', () => {
       ],
     } as any
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelHeroState(travel, false, onFirstImageLoad, false),
     )
 
@@ -133,7 +133,7 @@ describe('useTravelHeroState', () => {
     expect(result.current.heroSliderImages[1]?.url).toBe('https://example.com/gallery-2.jpg')
   })
 
-  it('keeps the real gallery photo id apart from the index fallback (#2133)', () => {
+  it('keeps the real gallery photo id apart from the index fallback (#2133)', async () => {
     const travel = {
       id: 42,
       name: 'Photo ids',
@@ -144,13 +144,13 @@ describe('useTravelHeroState', () => {
       ],
     } as any
 
-    const { result } = renderHook(() => useTravelHeroState(travel, false, jest.fn(), false))
+    const { result } = await renderHook(() => useTravelHeroState(travel, false, jest.fn(), false))
 
     expect(result.current.heroSliderImages.map((img) => img.photoId ?? null)).toEqual([17, null, null])
     expect(result.current.heroSliderImages[1]?.id).toBe(1)
   })
 
-  it('keeps gallery order even when the first gallery image matches the cover media', () => {
+  it('keeps gallery order even when the first gallery image matches the cover media', async () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 43,
@@ -162,7 +162,7 @@ describe('useTravelHeroState', () => {
       ],
     } as any
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelHeroState(travel, false, onFirstImageLoad, false),
     )
 
@@ -172,7 +172,7 @@ describe('useTravelHeroState', () => {
     expect(result.current.heroSliderImages[1]?.url).toBe('https://example.com/gallery-2.jpg')
   })
 
-  it('does not build hero media from cover when gallery is empty', () => {
+  it('does not build hero media from cover when gallery is empty', async () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 44,
@@ -181,7 +181,7 @@ describe('useTravelHeroState', () => {
       gallery: [],
     } as any
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelHeroState(travel, false, onFirstImageLoad, false),
     )
 
@@ -190,7 +190,7 @@ describe('useTravelHeroState', () => {
     expect(result.current.heroSliderImages).toHaveLength(0)
   })
 
-  it('does not build hero media from small cover when gallery is empty and main cover is missing', () => {
+  it('does not build hero media from small cover when gallery is empty and main cover is missing', async () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 45,
@@ -200,7 +200,7 @@ describe('useTravelHeroState', () => {
       gallery: [],
     } as any
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelHeroState(travel, false, onFirstImageLoad, false),
     )
 
@@ -209,7 +209,7 @@ describe('useTravelHeroState', () => {
     expect(result.current.heroSliderImages).toHaveLength(0)
   })
 
-  it('uses a fixed 70 percent viewport height on web even for wide media', () => {
+  it('uses a fixed 70 percent viewport height on web even for wide media', async () => {
     const onFirstImageLoad = jest.fn()
     const travel = {
       id: 47,
@@ -224,14 +224,14 @@ describe('useTravelHeroState', () => {
       ],
     } as any
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelHeroState(travel, false, onFirstImageLoad, false),
     )
 
     expect(result.current.heroHeight).toBe(Math.round(1000 * 0.7))
   })
 
-  it('waits for an explicit hero-ready signal instead of auto-unblocking on a timer', () => {
+  it('waits for an explicit hero-ready signal instead of auto-unblocking on a timer', async () => {
     const originalUserAgent = window.navigator.userAgent
     Object.defineProperty(window.navigator, 'userAgent', {
       value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/122.0.0.0 Safari/537.36',
@@ -252,20 +252,20 @@ describe('useTravelHeroState', () => {
       ],
     } as any
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelHeroState(travel, false, onFirstImageLoad, false),
     )
 
     expect(result.current.webHeroLoaded).toBe(false)
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(500)
     })
 
     expect(result.current.webHeroLoaded).toBe(false)
     expect(onFirstImageLoad).not.toHaveBeenCalled()
 
-    act(() => {
+    await act(() => {
       result.current.handleWebHeroLoad()
     })
 
@@ -278,7 +278,7 @@ describe('useTravelHeroState', () => {
     })
   })
 
-  it('unblocks the mobile web hero slider when iPhone WebKit misses the LCP load event', () => {
+  it('unblocks the mobile web hero slider when iPhone WebKit misses the LCP load event', async () => {
     const originalUserAgent = window.navigator.userAgent
     const originalMaxTouchPoints = window.navigator.maxTouchPoints
     Object.defineProperty(window.navigator, 'userAgent', {
@@ -311,18 +311,18 @@ describe('useTravelHeroState', () => {
       ],
     } as any
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelHeroState(travel, true, onFirstImageLoad, false),
     )
 
     expect(result.current.webHeroLoaded).toBe(false)
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(799)
     })
     expect(result.current.webHeroLoaded).toBe(false)
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(1)
     })
     expect(result.current.webHeroLoaded).toBe(true)
@@ -342,7 +342,7 @@ describe('useTravelHeroState', () => {
   // если ни LCP-<img>, ни первый слайд слайдера не дёргают onLoad (кэш iOS WebKit),
   // цепочка бэкстопов обязана сама снять оверлей — иначе интерактивный слайдер
   // навсегда остаётся смонтированным под оверлеем с opacity:0 (мёртвый свайп).
-  it('unmounts the LCP overlay via backstops even when no load event ever fires (iPhone dead-swipe chain)', () => {
+  it('unmounts the LCP overlay via backstops even when no load event ever fires (iPhone dead-swipe chain)', async () => {
     const originalUserAgent = window.navigator.userAgent
     const originalMaxTouchPoints = window.navigator.maxTouchPoints
     Object.defineProperty(window.navigator, 'userAgent', {
@@ -365,7 +365,7 @@ describe('useTravelHeroState', () => {
       ],
     } as any
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelHeroState(travel, true, onFirstImageLoad, false),
     )
 
@@ -373,7 +373,7 @@ describe('useTravelHeroState', () => {
     expect(result.current.overlayUnmounted).toBe(false)
 
     // 1) hero-load backstop releases webHeroLoaded (slider mounts under overlay)
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(800)
     })
     expect(result.current.webHeroLoaded).toBe(true)
@@ -381,7 +381,7 @@ describe('useTravelHeroState', () => {
     expect(result.current.overlayUnmounted).toBe(false)
 
     // 2) slider-image fallback unmounts the overlay → gallery becomes visible/interactive
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(800)
     })
     expect(result.current.overlayUnmounted).toBe(true)

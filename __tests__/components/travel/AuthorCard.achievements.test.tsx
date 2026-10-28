@@ -83,51 +83,51 @@ const baseTravel: any = {
   travel_image_thumb_small_url: null,
 }
 
-const renderWithClient = (ui: React.ReactElement) => {
+const renderWithClient = async (ui: React.ReactElement) => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(ui, { wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider> })
+  return await render(ui, { wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider> })
 }
 
 describe('AuthorCard achievements block', () => {
   beforeEach(() => { mockAchievementsRef.data = mockData })
 
-  it('explains the rank with a "Уровень:" prefix', () => {
-    const { getByText } = renderWithClient(<AuthorCard travel={baseTravel} />)
+  it('explains the rank with a "Уровень:" prefix', async () => {
+    const { getByText } = await renderWithClient(<AuthorCard travel={baseTravel} />)
     expect(getByText('Уровень: Эксперт')).toBeTruthy()
   })
 
-  it('labels the top badges so they are not unexplained', () => {
-    const { getByText } = renderWithClient(<AuthorCard travel={baseTravel} />)
+  it('labels the top badges so they are not unexplained', async () => {
+    const { getByText } = await renderWithClient(<AuthorCard travel={baseTravel} />)
     expect(getByText('Значки автора')).toBeTruthy()
     expect(getByText('Хайкер')).toBeTruthy()
   })
 
-  it('opens BadgeDetailSheet with real badge data on badge tap', () => {
-    const { getByLabelText, getByTestId, getByText } = renderWithClient(
+  it('opens BadgeDetailSheet with real badge data on badge tap', async () => {
+    const { getByLabelText, getByTestId, getByText } = await renderWithClient(
       <AuthorCard travel={baseTravel} />,
     )
-    fireEvent.press(getByLabelText(/Хайкер, .*получен/))
+    await fireEvent.press(getByLabelText(/Хайкер, .*получен/))
     expect(getByTestId('badge-detail-sheet')).toBeTruthy()
     // Реальное описание значка из данных, а не выдуманный текст
     expect(getByText('За 3 завершённых похода')).toBeTruthy()
     expect(getByText('30 XP')).toBeTruthy()
   })
 
-  it.each([false, true])('uses the active author description after a locale change (cold=%s)', cold => {
-    const view = renderWithClient(<AuthorCard travel={baseTravel} />)
-    fireEvent.press(view.getByLabelText(/Хайкер, .*получен/))
+  it.each([false, true])('uses the active author description after a locale change (cold=%s)', async cold => {
+    const view = await renderWithClient(<AuthorCard travel={baseTravel} />)
+    await fireEvent.press(view.getByLabelText(/Хайкер, .*получен/))
     expect(view.getByText('За 3 завершённых похода')).toBeTruthy()
 
     if (cold) {
       mockAchievementsRef.data = undefined
-      view.rerender(<AuthorCard travel={{ ...baseTravel }} />)
+      await view.rerender(<AuthorCard travel={{ ...baseTravel }} />)
       expect(view.queryByText('За 3 завершённых похода')).toBeNull()
     }
     mockAchievementsRef.data = {
       ...mockData,
       earned: [{ ...mockData.earned[0], badge: { ...mockData.earned[0].badge, description: 'Opis po polsku' } }],
     }
-    view.rerender(<AuthorCard travel={{ ...baseTravel }} />)
+    await view.rerender(<AuthorCard travel={{ ...baseTravel }} />)
 
     expect(view.getByText('Opis po polsku')).toBeTruthy()
     expect(view.queryByText('За 3 завершённых похода')).toBeNull()

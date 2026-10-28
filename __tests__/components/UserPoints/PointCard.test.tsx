@@ -81,8 +81,8 @@ describe('PointCard', () => {
     mockPlaceListCard.mockClear();
   });
 
-  it('renders user point through the shared PlaceListCard template', () => {
-    render(<PointCard point={mockPoint} />);
+  it('renders user point through the shared PlaceListCard template', async () => {
+    await render(<PointCard point={mockPoint} />);
 
     expect(mockPlaceListCard).toHaveBeenCalled();
     const props = mockPlaceListCard.mock.calls[0]?.[0];
@@ -93,8 +93,8 @@ describe('PointCard', () => {
     expect(screen.getByText('Test Restaurant')).toBeTruthy();
   });
 
-  it('passes point metadata as content props and badges', () => {
-    render(<PointCard point={mockPoint} />);
+  it('passes point metadata as content props and badges', async () => {
+    await render(<PointCard point={mockPoint} />);
 
     const props = mockPlaceListCard.mock.calls[0]?.[0];
     expect(props.categoryLabel).toBe('Ресторан');
@@ -109,14 +109,14 @@ describe('PointCard', () => {
     expect(screen.getByText('Main Street 123, Kyiv')).toBeTruthy();
   });
 
-  it('shows a clean title when name is a raw reverse-geocode address', () => {
+  it('shows a clean title when name is a raw reverse-geocode address', async () => {
     const geocoded = {
       ...mockPoint,
       name: '3, Рыночная площадь, Old Town, Краков, Малопольское воеводство, Польша',
       address: '3, Рыночная площадь, Old Town, Краков, Малопольское воеводство, Польша',
       description: null,
     };
-    render(<PointCard point={geocoded} />);
+    await render(<PointCard point={geocoded} />);
 
     expect(screen.getByText('3, Рыночная площадь')).toBeTruthy();
     expect(
@@ -124,14 +124,14 @@ describe('PointCard', () => {
     ).toBeTruthy();
   });
 
-  it('does not render status label', () => {
-    render(<PointCard point={mockPoint} />);
+  it('does not render status label', async () => {
+    await render(<PointCard point={mockPoint} />);
     expect(screen.queryByText('Посещено')).toBeNull();
   });
 
-  it('does not pass coordinates when coordinates are missing', () => {
+  it('does not pass coordinates when coordinates are missing', async () => {
     const pointWithoutCoords = { ...mockPoint, latitude: Number.NaN, longitude: Number.NaN };
-    render(<PointCard point={pointWithoutCoords} />);
+    await render(<PointCard point={pointWithoutCoords} />);
 
     const props = mockPlaceListCard.mock.calls[0]?.[0];
     expect(props.coord).toBeUndefined();
@@ -141,9 +141,9 @@ describe('PointCard', () => {
 
   it('copies coordinates to clipboard on native', async () => {
     const Clipboard = require('expo-clipboard');
-    render(<PointCard point={mockPoint} />);
+    await render(<PointCard point={mockPoint} />);
 
-    fireEvent.press(screen.getByLabelText('Копировать координаты'));
+    await fireEvent.press(screen.getByLabelText('Копировать координаты'));
 
     await waitFor(() => {
       expect(Clipboard.setStringAsync).toHaveBeenCalledWith('50.450100, 30.523400');
@@ -165,8 +165,8 @@ describe('PointCard', () => {
     );
 
     try {
-      render(<PointCard point={mockPoint} />);
-      fireEvent.press(screen.getByLabelText('Копировать координаты'));
+      await render(<PointCard point={mockPoint} />);
+      await fireEvent.press(screen.getByLabelText('Копировать координаты'));
 
       await waitFor(() => {
         expect(writeText).toHaveBeenCalledWith('50.450100, 30.523400');
@@ -183,8 +183,8 @@ describe('PointCard', () => {
     }
   });
 
-  it('passes navigation actions into the shared card overflow model', () => {
-    render(<PointCard point={mockPoint} />);
+  it('passes navigation actions into the shared card overflow model', async () => {
+    await render(<PointCard point={mockPoint} />);
 
     const props = mockPlaceListCard.mock.calls[0]?.[0];
     expect(props.mapActions.map((action: any) => action.key)).toEqual([
@@ -198,25 +198,25 @@ describe('PointCard', () => {
     ]);
   });
 
-  it('desktop: правка и удаление — подписанные чипы ряда, «⋯» без них', () => {
+  it('desktop: правка и удаление — подписанные чипы ряда, «⋯» без них', async () => {
     mockViewportWidth = 1280;
     const onEdit = jest.fn();
     const onDelete = jest.fn();
-    render(<PointCard point={mockPoint} onEdit={onEdit} onDelete={onDelete} />);
+    await render(<PointCard point={mockPoint} onEdit={onEdit} onDelete={onDelete} />);
 
-    fireEvent.press(screen.getByLabelText('Редактировать'));
-    fireEvent.press(screen.getByLabelText('Удалить'));
+    await fireEvent.press(screen.getByLabelText('Редактировать'));
+    await fireEvent.press(screen.getByLabelText('Удалить'));
     expect(onEdit).toHaveBeenCalledWith(mockPoint);
     expect(onDelete).toHaveBeenCalledWith(mockPoint);
     expect(screen.queryByTestId('menu-edit')).toBeNull();
     expect(screen.queryByTestId('menu-delete')).toBeNull();
   });
 
-  it('телефон (#2101): правка и удаление уходят в «⋯», удаление последним и destructive, из ряда убраны', () => {
+  it('телефон (#2101): правка и удаление уходят в «⋯», удаление последним и destructive, из ряда убраны', async () => {
     mockViewportWidth = 390;
     const onEdit = jest.fn();
     const onDelete = jest.fn();
-    render(<PointCard point={mockPoint} onEdit={onEdit} onDelete={onDelete} />);
+    await render(<PointCard point={mockPoint} onEdit={onEdit} onDelete={onDelete} />);
 
     const props = mockPlaceListCard.mock.calls[mockPlaceListCard.mock.calls.length - 1][0];
     expect(props.menuActions.map((a: any) => a.key)).toEqual(['edit', 'delete']);
@@ -224,33 +224,33 @@ describe('PointCard', () => {
     expect((props.inlineActions ?? []).map((a: any) => a.key)).not.toContain('edit');
     expect((props.inlineActions ?? []).map((a: any) => a.key)).not.toContain('delete');
 
-    fireEvent.press(screen.getByTestId('menu-delete'));
+    await fireEvent.press(screen.getByTestId('menu-delete'));
     expect(onDelete).toHaveBeenCalledWith(mockPoint);
-    fireEvent.press(screen.getByTestId('menu-edit'));
+    await fireEvent.press(screen.getByTestId('menu-edit'));
     expect(onEdit).toHaveBeenCalledWith(mockPoint);
   });
 
-  it('passes selection action in selection mode', () => {
+  it('passes selection action in selection mode', async () => {
     const onToggleSelect = jest.fn();
-    render(<PointCard point={mockPoint} selectionMode selected onToggleSelect={onToggleSelect} />);
+    await render(<PointCard point={mockPoint} selectionMode selected onToggleSelect={onToggleSelect} />);
 
-    fireEvent.press(screen.getByLabelText('Точка выбрана'));
+    await fireEvent.press(screen.getByLabelText('Точка выбрана'));
     expect(onToggleSelect).toHaveBeenCalledWith(mockPoint);
   });
 
-  it('renders without description or address', () => {
+  it('renders without description or address', async () => {
     const pointWithoutDetails = { ...mockPoint, description: undefined, address: undefined };
-    render(<PointCard point={pointWithoutDetails} />);
+    await render(<PointCard point={pointWithoutDetails} />);
     expect(screen.getByText('Test Restaurant')).toBeTruthy();
   });
 
-  it('uses the shared card media area for points without and with photos', () => {
-    render(<PointCard point={mockPoint} />);
+  it('uses the shared card media area for points without and with photos', async () => {
+    await render(<PointCard point={mockPoint} />);
     expect(Number(screen.getByTestId('image-height').props.children)).toBeGreaterThan(0);
 
     mockPlaceListCard.mockClear();
     const pointWithPhoto = { ...mockPoint, photo: 'https://example.com/p.jpg' } as any;
-    render(<PointCard point={pointWithPhoto} />);
+    await render(<PointCard point={pointWithPhoto} />);
 
     expect(screen.getByTestId('image-url').props.children).toBe('https://example.com/p.jpg');
   });

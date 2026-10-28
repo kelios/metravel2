@@ -11,7 +11,7 @@ import QuestReviewsModal from '@/components/quests/QuestReviewsModal'
 import type { QuestReview } from '@/api/quests'
 
 // #2133: меню жалобы в рендере зовёт мутации блокировки — нужен QueryClient, как в приложении.
-const render = (ui: Parameters<typeof rtlRender>[0]) =>
+const render = async (ui: Parameters<typeof rtlRender>[0]) =>
   rtlRender(ui, { wrapper: createQueryWrapper().Wrapper })
 
 let mockReviews: QuestReview[] = []
@@ -86,8 +86,8 @@ describe('QuestReviewsModal photos', () => {
       baseReview({ id: 2, photos: [{ id: 13, url: 'https://cdn/other.jpg', stepId: null }] }),
     ]
     const onClose = jest.fn()
-    const view = render(<QuestReviewsModal questId="minsk-cmok" visible onClose={onClose} />)
-    fireEvent.press(view.getByTestId('quest-review-photo-open-12'))
+    const view = await render(<QuestReviewsModal questId="minsk-cmok" visible onClose={onClose} />)
+    await fireEvent.press(view.getByTestId('quest-review-photo-open-12'))
     const gallery = await view.findByTestId('review-fullscreen-gallery')
     expect(gallery.props.initialIndex).toBe(1)
     expect(gallery.props.maxImageSize).toBe(640)
@@ -96,7 +96,7 @@ describe('QuestReviewsModal photos', () => {
       { url: 'https://cdn/two.jpg', alt: 'Фото из отзыва о квесте' },
     ])
     expect(view.queryByTestId('quest-reviews-modal')).toBeNull()
-    fireEvent.press(view.getByTestId('review-gallery-close'))
+    await fireEvent.press(view.getByTestId('review-gallery-close'))
     expect(view.queryByTestId('review-fullscreen-gallery')).toBeNull()
     expect(view.getByTestId('quest-reviews-modal')).toBeTruthy()
     expect(onClose).not.toHaveBeenCalled()
@@ -105,20 +105,20 @@ describe('QuestReviewsModal photos', () => {
   it('clears the gallery when reviews close externally or the quest changes', async () => {
     mockReviews = [baseReview({ photos: [{ id: 11, url: 'https://cdn/one.jpg', stepId: null }] })]
     const onClose = jest.fn()
-    const view = render(<QuestReviewsModal questId="minsk-cmok" visible onClose={onClose} />)
-    fireEvent.press(view.getByTestId('quest-review-photo-open-11'))
+    const view = await render(<QuestReviewsModal questId="minsk-cmok" visible onClose={onClose} />)
+    await fireEvent.press(view.getByTestId('quest-review-photo-open-11'))
     await view.findByTestId('review-fullscreen-gallery')
-    view.rerender(<QuestReviewsModal questId="minsk-cmok" visible={false} onClose={onClose} />)
+    await view.rerender(<QuestReviewsModal questId="minsk-cmok" visible={false} onClose={onClose} />)
     expect(view.queryByTestId('review-fullscreen-gallery')).toBeNull()
-    view.rerender(<QuestReviewsModal questId="minsk-cmok" visible onClose={onClose} />)
+    await view.rerender(<QuestReviewsModal questId="minsk-cmok" visible onClose={onClose} />)
     expect(view.getByTestId('quest-reviews-modal')).toBeTruthy()
-    fireEvent.press(view.getByTestId('quest-review-photo-open-11'))
+    await fireEvent.press(view.getByTestId('quest-review-photo-open-11'))
     await view.findByTestId('review-fullscreen-gallery')
-    view.rerender(<QuestReviewsModal questId="another-quest" visible onClose={onClose} />)
+    await view.rerender(<QuestReviewsModal questId="another-quest" visible onClose={onClose} />)
     expect(view.queryByTestId('review-fullscreen-gallery')).toBeNull()
   })
 
-  it('renders the moderated photos the server returned', () => {
+  it('renders the moderated photos the server returned', async () => {
     mockReviews = [
       baseReview({
         photos: [
@@ -128,7 +128,7 @@ describe('QuestReviewsModal photos', () => {
       }),
     ]
 
-    const view = render(<QuestReviewsModal questId="minsk-cmok" visible onClose={jest.fn()} />)
+    const view = await render(<QuestReviewsModal questId="minsk-cmok" visible onClose={jest.fn()} />)
 
     const gallery = view.getByTestId('quest-review-photos-1')
     expect(gallery).toBeTruthy()
@@ -149,10 +149,10 @@ describe('QuestReviewsModal photos', () => {
     })
   })
 
-  it('renders a review without photos exactly as before, with no empty gallery slot', () => {
+  it('renders a review without photos exactly as before, with no empty gallery slot', async () => {
     mockReviews = [baseReview()]
 
-    const view = render(<QuestReviewsModal questId="minsk-cmok" visible onClose={jest.fn()} />)
+    const view = await render(<QuestReviewsModal questId="minsk-cmok" visible onClose={jest.fn()} />)
 
     expect(view.getByTestId('quest-review-item-1')).toBeTruthy()
     expect(view.queryByTestId('quest-review-photos-1')).toBeNull()

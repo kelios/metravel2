@@ -111,14 +111,14 @@ jest.mock('@/ui/paper', () => {
 
 import AddressListItem from '@/components/MapPage/AddressListItem';
 
-const renderWithProviders = (ui: React.ReactElement) => {
+const renderWithProviders = async (ui: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
       mutations: { retry: false },
     },
   });
-  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return await render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 };
 
 const baseTravel: any = {
@@ -137,11 +137,11 @@ describe('AddressListItem (web right panel)', () => {
     restoreWindowStubs();
   });
 
-  it('renders UnifiedTravelCard with travel data on web', () => {
+  it('renders UnifiedTravelCard with travel data on web', async () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
 
-    const { getByTestId } = renderWithProviders(<AddressListItem travel={baseTravel} isMobile={false} />);
+    const { getByTestId } = await renderWithProviders(<AddressListItem travel={baseTravel} isMobile={false} />);
 
     const card = getByTestId('place-list-card-mock');
     expect(card).toBeTruthy();
@@ -167,12 +167,12 @@ describe('AddressListItem (web right panel)', () => {
     (Platform as any).OS = prevOs;
   });
 
-  it('passes the API travel id of the card urlTravel to the related travel stack (#1960)', () => {
+  it('passes the API travel id of the card urlTravel to the related travel stack (#1960)', async () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
     mockPlaceListCard.mockClear();
 
-    renderWithProviders(
+    await renderWithProviders(
       <AddressListItem
         travel={{
           ...baseTravel,
@@ -203,12 +203,12 @@ describe('AddressListItem (web right panel)', () => {
   });
 
   // #2776: legacy-точка без place_id несёт в `name` статью, а место — в `address`.
-  it('titles the card with the place, the article as a secondary line and the distance from the search centre', () => {
+  it('titles the card with the place, the article as a secondary line and the distance from the search centre', async () => {
     const prevOs = Platform.OS;
     (Platform as any).OS = 'web';
     mockPlaceListCard.mockClear();
 
-    renderWithProviders(
+    await renderWithProviders(
       <AddressListItem
         travel={{
           ...baseTravel,
@@ -249,7 +249,7 @@ describe('AddressListItem (web right panel)', () => {
     jest.spyOn(RN.Linking, 'canOpenURL').mockResolvedValue(false);
     jest.spyOn(RN.Linking, 'openURL').mockResolvedValue(undefined);
 
-    const { getAllByLabelText, queryByLabelText } = renderWithProviders(
+    const { getAllByLabelText, queryByLabelText } = await renderWithProviders(
       <AddressListItem travel={baseTravel} isMobile={false} />
     );
 
@@ -265,7 +265,7 @@ describe('AddressListItem (web right panel)', () => {
     expect(getAllByLabelText('Поделиться в Telegram').length).toBeGreaterThan(0);
     expect(getAllByLabelText('Сохранить').length).toBeGreaterThan(0);
 
-    fireEvent.press(getAllByLabelText('Ещё действия')[0]);
+    await fireEvent.press(getAllByLabelText('Ещё действия')[0]);
 
     expect(getAllByLabelText('Открыть в Apple Maps').length).toBeGreaterThan(0);
     expect(getAllByLabelText('Открыть в Organic Maps').length).toBeGreaterThan(0);
@@ -274,65 +274,65 @@ describe('AddressListItem (web right panel)', () => {
     expect(getAllByLabelText('Проложить маршрут в Яндекс.Навигаторе').length).toBeGreaterThan(0);
     expect(getAllByLabelText('Открыть в OpenStreetMap').length).toBeGreaterThan(0);
 
-    fireEvent.press(getAllByLabelText('Открыть в Google Maps')[0]);
+    await fireEvent.press(getAllByLabelText('Открыть в Google Maps')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v.includes('google.com/maps/search'))).toBe(true);
     });
 
-    fireEvent.press(getAllByLabelText('Открыть в Apple Maps')[0]);
+    await fireEvent.press(getAllByLabelText('Открыть в Apple Maps')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v.includes('maps.apple.com'))).toBe(true);
     });
 
-    fireEvent.press(getAllByLabelText('Открыть страницу')[0]);
+    await fireEvent.press(getAllByLabelText('Открыть страницу')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v.includes('example.com/article'))).toBe(true);
     });
 
-    fireEvent.press(getAllByLabelText('Ещё действия')[0]);
+    await fireEvent.press(getAllByLabelText('Ещё действия')[0]);
 
-    fireEvent.press(getAllByLabelText('Открыть в Organic Maps')[0]);
+    await fireEvent.press(getAllByLabelText('Открыть в Organic Maps')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v.includes('omaps.app'))).toBe(true);
     });
 
-    fireEvent.press(getAllByLabelText('Ещё действия')[0]);
+    await fireEvent.press(getAllByLabelText('Ещё действия')[0]);
 
-    fireEvent.press(getAllByLabelText('Проложить маршрут в Waze')[0]);
+    await fireEvent.press(getAllByLabelText('Проложить маршрут в Waze')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v.includes('waze.com/ul'))).toBe(true);
     });
 
-    fireEvent.press(getAllByLabelText('Ещё действия')[0]);
+    await fireEvent.press(getAllByLabelText('Ещё действия')[0]);
 
-    fireEvent.press(getAllByLabelText('Открыть в Яндекс Картах')[0]);
+    await fireEvent.press(getAllByLabelText('Открыть в Яндекс Картах')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v.includes('yandex.ru/maps'))).toBe(true);
     });
 
-    fireEvent.press(getAllByLabelText('Ещё действия')[0]);
+    await fireEvent.press(getAllByLabelText('Ещё действия')[0]);
 
-    fireEvent.press(getAllByLabelText('Проложить маршрут в Яндекс.Навигаторе')[0]);
+    await fireEvent.press(getAllByLabelText('Проложить маршрут в Яндекс.Навигаторе')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v.includes('yandex.ru/navi'))).toBe(true);
     });
 
-    fireEvent.press(getAllByLabelText('Ещё действия')[0]);
+    await fireEvent.press(getAllByLabelText('Ещё действия')[0]);
 
-    fireEvent.press(getAllByLabelText('Открыть в OpenStreetMap')[0]);
+    await fireEvent.press(getAllByLabelText('Открыть в OpenStreetMap')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => v.includes('openstreetmap.org'))).toBe(true);
     });
 
-    fireEvent.press(getAllByLabelText('Поделиться в Telegram')[0]);
+    await fireEvent.press(getAllByLabelText('Поделиться в Telegram')[0]);
     await waitFor(() => {
       const calls = openSpy.mock.calls.map((c: any[]) => String(c?.[0] ?? ''));
       expect(calls.some((v) => /^(tg:\/\/|https:\/\/t\.me\/share\/url)/.test(v))).toBe(true);

@@ -9,6 +9,13 @@ import { expectedLocaleOwners, expectedLocalPresentationMemos } from '../helpers
 
 const plugin = require('../../i18n/babel-reactive-locale-plugin')
 const projectRoot = path.resolve(__dirname, '../..')
+const { listTrackedFiles, listUntrackedFiles } = require('../../scripts/guard-root-scratch-artifacts')
+const collectAppOwnedSources = (root: string): string[] =>
+  [...new Set<string>([...listTrackedFiles(root), ...listUntrackedFiles(root)])]
+    .filter(file => plugin.ROOTS.has(file.split('/')[0]))
+    .filter(file => /\.[jt]sx?$/.test(file) && !file.endsWith('.d.ts'))
+    .filter(file => fs.statSync(path.join(root, file), { throwIfNoEntry: false })?.isFile())
+    .sort()
 const transform = (source: string, filename = 'components/LocaleFixture.tsx', execute = false) =>
   transformSync(source, {
     filename: path.join(projectRoot, filename), configFile: false, babelrc: false,
@@ -245,7 +252,7 @@ describe('locale compatibility transform (#2442)', () => {
     let edit!: () => void
     await act(async () => { await i18n.changeLanguage('en') })
     const Fixture = exports.Screen!
-    render(<Fixture capture={callback => { edit = callback }} startup={startup} />)
+    await render(<Fixture capture={callback => { edit = callback }} startup={startup} />)
     await act(async () => edit())
     expect(screen.getByText('Cancel')).toBeTruthy()
     for (const [locale, label] of [['pl', 'Anuluj'], ['ru', 'Отмена'], ['en', 'Cancel']] as const) {
@@ -259,11 +266,34 @@ describe('locale compatibility transform (#2442)', () => {
     await act(async () => { await i18n.changeLanguage('ru') })
   })
 
+  it('inventories existing tracked and new app sources from the same working tree', () => {
+    const directory = fs.mkdtempSync(path.join(projectRoot, '.codex-temp', 'locale-inventory-'))
+    const write = (file: string, content = 'export const fixture = true') => {
+      fs.mkdirSync(path.dirname(path.join(directory, file)), { recursive: true })
+      fs.writeFileSync(path.join(directory, file), content)
+    }
+    try {
+      execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: directory })
+      write('components/kept.tsx')
+      write('components/deleted.tsx')
+      write('components/contracts.d.ts')
+      write('other/outside.tsx')
+      execFileSync('git', ['add', '--', 'components/kept.tsx', 'components/deleted.tsx', 'components/contracts.d.ts', 'other/outside.tsx'], { cwd: directory })
+      fs.unlinkSync(path.join(directory, 'components/deleted.tsx'))
+      write('.gitignore', 'components/ignored.tsx\n')
+      write('components/ignored.tsx')
+      write('components/Новая страница.tsx')
+      fs.mkdirSync(path.join(directory, 'components/not-a-file.tsx'))
+      expect(collectAppOwnedSources(directory)).toEqual(['components/kept.tsx', 'components/Новая страница.tsx'])
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true })
+    }
+  })
+
   it('covers the actual app-owned source without unsupported hook patterns', () => {
-    // Перечень файлов — из git-индекса, а не из внешнего `rg`: бинарь ripgrep есть не в каждом
-    // окружении (jest из харнесса/CI без него падал ENOENT), а git всегда под рукой.
-    const files = execFileSync('git', ['ls-files', '--', ...plugin.ROOTS], { cwd: projectRoot, encoding: 'utf8' })
-      .trim().split('\n').filter(file => /\.[jt]sx?$/.test(file) && !file.endsWith('.d.ts'))
+    // Enumerate current files through Git without depending on an external rg binary.
+    // Include new sources and exclude unstaged deletions before reading that same tree.
+    const files = collectAppOwnedSources(projectRoot)
     const failures: string[] = []
     const localMemoInventory: Array<{ file: string; line: number; kind: string }> = []
     let owners = 0

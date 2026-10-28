@@ -81,8 +81,8 @@ describe('QuestReviewPhotoPicker', () => {
       assets: [asset('a.jpg'), asset('b.jpg'), asset('c.jpg'), asset('d.jpg')],
     })
 
-    const view = render(<Host />)
-    fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
+    const view = await render(<Host />)
+    await fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
 
     await waitFor(() =>
       expect(view.getByTestId('quest-review-photo-picker-counter')).toHaveTextContent(
@@ -99,21 +99,21 @@ describe('QuestReviewPhotoPicker', () => {
   it('asks the picker for only the remaining slots', async () => {
     mockLaunchLibrary.mockResolvedValueOnce({ canceled: false, assets: [asset('a.jpg')] })
 
-    const view = render(<Host />)
-    fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
+    const view = await render(<Host />)
+    await fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
     await waitFor(() => expect(mockLaunchLibrary).toHaveBeenCalledTimes(1))
     expect(mockLaunchLibrary.mock.calls[0][0]).toMatchObject({ selectionLimit: 3 })
 
     mockLaunchLibrary.mockResolvedValueOnce({ canceled: false, assets: [asset('b.jpg')] })
-    fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
+    await fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
     await waitFor(() => expect(mockLaunchLibrary).toHaveBeenCalledTimes(2))
     expect(mockLaunchLibrary.mock.calls[1][0]).toMatchObject({ selectionLimit: 2 })
   })
 
   it('leaves the selection untouched when the player cancels the picker', async () => {
     mockLaunchLibrary.mockResolvedValueOnce({ canceled: false, assets: [asset('a.jpg')] })
-    const view = render(<Host />)
-    fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
+    const view = await render(<Host />)
+    await fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
     await waitFor(() =>
       expect(view.getByTestId('quest-review-photo-picker-counter')).toHaveTextContent(
         'Выбрано 1 из 3',
@@ -121,7 +121,7 @@ describe('QuestReviewPhotoPicker', () => {
     )
 
     mockLaunchLibrary.mockResolvedValueOnce({ canceled: true, assets: [] })
-    fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
+    await fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
 
     await waitFor(() => expect(mockLaunchLibrary).toHaveBeenCalledTimes(2))
     expect(view.getByTestId('quest-review-photo-picker-counter')).toHaveTextContent(
@@ -133,8 +133,8 @@ describe('QuestReviewPhotoPicker', () => {
   it('explains a denied gallery permission instead of failing silently', async () => {
     mockRequestMediaPermissions.mockResolvedValueOnce({ status: 'denied' })
 
-    const view = render(<Host />)
-    fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
+    const view = await render(<Host />)
+    await fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
 
     await waitFor(() =>
       expect(view.getByTestId('quest-review-photo-picker-error')).toHaveTextContent(
@@ -155,8 +155,8 @@ describe('QuestReviewPhotoPicker', () => {
       mockRequestMediaPermissions.mockResolvedValue({ status: 'denied', granted: false })
       mockLaunchLibrary.mockResolvedValueOnce({ canceled: false, assets: [asset('a.jpg')] })
 
-      const view = render(<Host />)
-      fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
+      const view = await render(<Host />)
+      await fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
 
       await waitFor(() =>
         expect(view.getByTestId('quest-review-photo-picker-counter')).toHaveTextContent(
@@ -181,8 +181,8 @@ describe('QuestReviewPhotoPicker', () => {
         canceled: false,
         assets: [{ uri: 'blob:web', fileName: 'no-file.jpg', mimeType: 'image/jpeg' }],
       })
-      const view = render(<Host />)
-      fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
+      const view = await render(<Host />)
+      await fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
 
       await waitFor(() =>
         expect(view.getByTestId('quest-review-photo-picker-error')).toHaveTextContent(
@@ -202,8 +202,8 @@ describe('QuestReviewPhotoPicker', () => {
   it('renders the preview through the shared media primitive with contain', async () => {
     mockLaunchLibrary.mockResolvedValueOnce({ canceled: false, assets: [asset('a.jpg')] })
 
-    const view = render(<Host />)
-    fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
+    const view = await render(<Host />)
+    await fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
 
     const preview = await view.findByTestId(/quest-review-photo-picker-preview-/)
     // Локальный URI прокси не переписывает (utils/imageProxy.ts:228,258),
@@ -231,8 +231,8 @@ describe('QuestReviewPhotoPicker', () => {
     })
     const onChange = jest.fn()
 
-    const view = render(<QuestReviewPhotoPicker value={[]} onChange={onChange} />)
-    fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
+    const view = await render(<QuestReviewPhotoPicker value={[]} onChange={onChange} />)
+    await fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
 
     await waitFor(() => expect(onChange).toHaveBeenCalledTimes(1))
     expect(onChange.mock.calls[0][0][0]).toMatchObject({
@@ -248,8 +248,8 @@ describe('QuestReviewPhotoPicker', () => {
 
   it('removes a selected photo', async () => {
     mockLaunchLibrary.mockResolvedValueOnce({ canceled: false, assets: [asset('a.jpg')] })
-    const view = render(<Host />)
-    fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
+    const view = await render(<Host />)
+    await fireEvent.press(view.getByTestId('quest-review-photo-picker-add'))
 
     await waitFor(() =>
       expect(view.getByTestId('quest-review-photo-picker-counter')).toHaveTextContent(
@@ -257,7 +257,7 @@ describe('QuestReviewPhotoPicker', () => {
       ),
     )
 
-    fireEvent.press(view.getByLabelText('Убрать фото a.jpg'))
+    await fireEvent.press(view.getByLabelText('Убрать фото a.jpg'))
     expect(view.getByTestId('quest-review-photo-picker-counter')).toHaveTextContent(
       'Выбрано 0 из 3',
     )

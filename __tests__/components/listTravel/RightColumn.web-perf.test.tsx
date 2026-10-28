@@ -78,7 +78,7 @@ jest.mock('@/components/ui/EmptyState', () => {
 
 let RightColumn: any
 
-const renderWithProviders = (ui: React.ReactElement) => {
+const renderWithProviders = async (ui: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -86,7 +86,7 @@ const renderWithProviders = (ui: React.ReactElement) => {
     },
   })
 
-  const rendered = render(
+  const rendered = await render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>{ui}</ThemeProvider>
     </QueryClientProvider>
@@ -94,12 +94,19 @@ const renderWithProviders = (ui: React.ReactElement) => {
 
   return {
     ...rendered,
-    rerenderWithProviders: (nextUi: React.ReactElement) =>
-      rendered.rerender(
+    rerenderWithProviders: async (nextUi: React.ReactElement) => {
+      const nextTree = (
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>{nextUi}</ThemeProvider>
         </QueryClientProvider>
-      ),
+      )
+      const rerenderAsync = (rendered as { rerenderAsync?: (ui: React.ReactElement) => Promise<void> }).rerenderAsync
+      if (rerenderAsync) {
+        await rerenderAsync(nextTree)
+        return
+      }
+      await rendered.rerender(nextTree)
+    },
   }
 }
 
@@ -153,8 +160,8 @@ describe('RightColumn web row paint optimization', () => {
     Platform.OS = 'web'
   })
 
-  it('paints the first visible row eagerly and defers later web rows', () => {
-    renderWithProviders(createRightColumn())
+  it('paints the first visible row eagerly and defers later web rows', async () => {
+    await renderWithProviders(createRightColumn())
 
     expect(getFlattenedRowStyle()).toMatchObject({
       contentVisibility: 'visible',
@@ -166,13 +173,13 @@ describe('RightColumn web row paint optimization', () => {
     })
   })
 
-  it('drops deferred paint hints when export mode is enabled', () => {
-    const { rerenderWithProviders } = renderWithProviders(createRightColumn())
+  it('drops deferred paint hints when export mode is enabled', async () => {
+    const { rerenderWithProviders } = await renderWithProviders(createRightColumn())
 
     expect(getFlattenedRowStyle().contentVisibility).toBe('visible')
     expect(getFlattenedRowStyle().containIntrinsicSize).toBe('none')
 
-    rerenderWithProviders(createRightColumn({ isExport: true }))
+    await rerenderWithProviders(createRightColumn({ isExport: true }))
 
     expect(getFlattenedRowStyle().contentVisibility).toBeUndefined()
     expect(getFlattenedRowStyle().containIntrinsicSize).toBeUndefined()
@@ -184,12 +191,12 @@ describe('RightColumn web row paint optimization', () => {
       return <Text testID={`travel-card-${String(travel.id)}`}>{String(hasUserScrolled)}</Text>
     })
 
-    renderWithProviders(createRightColumn({ renderItem: renderItemSpy }))
+    await renderWithProviders(createRightColumn({ renderItem: renderItemSpy }))
 
     expect(renderItemSpy.mock.calls.some((call) => call[2] === false)).toBe(true)
     const callsBeforeScroll = renderItemSpy.mock.calls.length
 
-    fireEvent.scroll(screen.getByTestId('right-column-scrollview'), {
+    await fireEvent.scroll(screen.getByTestId('right-column-scrollview'), {
       nativeEvent: {
         layoutMeasurement: { height: 844 },
         contentOffset: { y: 120 },
@@ -204,11 +211,11 @@ describe('RightColumn web row paint optimization', () => {
     })
   })
 
-  it('updates compact toolbar status props through the memo boundary', () => {
+  it('updates compact toolbar status props through the memo boundary', async () => {
     const onDensityChange = jest.fn()
     const onStatusModeChange = jest.fn()
     const refetch = jest.fn()
-    const { rerenderWithProviders } = renderWithProviders(
+    const { rerenderWithProviders } = await renderWithProviders(
       createRightColumn({
         isCompactToolbar: true,
         showDensityToggle: true,
@@ -222,7 +229,7 @@ describe('RightColumn web row paint optimization', () => {
 
     expect(screen.getByTestId('travel-status-all').props.accessibilityState.selected).toBe(true)
 
-    rerenderWithProviders(
+    await rerenderWithProviders(
       createRightColumn({
         isCompactToolbar: true,
         showDensityToggle: true,

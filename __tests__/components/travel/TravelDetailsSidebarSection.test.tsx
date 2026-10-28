@@ -19,6 +19,15 @@ const wrapper = ({ children }: { children: ReactNode }) => (
 let mockNearTravelListProps: Record<string, unknown> | null = null
 let mockIsFetchingCount = 0
 
+jest.mock('@/components/travel/details/TravelDetailsDeferredTransition', () => {
+  const React = require('react')
+  const actual = jest.requireActual('@/components/travel/details/TravelDetailsDeferredTransition')
+  return {
+    ...actual,
+    TravelDetailsDeferredTransition: jest.fn((props) => React.createElement(actual.TravelDetailsDeferredTransition, props)),
+  }
+})
+
 jest.mock('@tanstack/react-query', () => ({
   ...jest.requireActual('@tanstack/react-query'),
   useIsFetching: () => mockIsFetchingCount,
@@ -69,12 +78,13 @@ jest.mock('@/components/travel/details/TravelDetailsStyles', () => ({
 
 describe('TravelDetailsSidebarSection', () => {
   beforeEach(() => {
+    jest.mocked(TravelDetailsDeferredTransition).mockClear()
     mockNearTravelListProps = null
     mockIsFetchingCount = 0
   })
 
   it('renders nearby travels block when travel has valid id even if travelAddress is empty', async () => {
-    render(
+    await render(
       <TravelDetailsSidebarSection
         travel={{
           id: 123,
@@ -101,7 +111,7 @@ describe('TravelDetailsSidebarSection', () => {
     )
 
     expect(screen.getByTestId('travel-details-near-loaded')).toBeTruthy()
-    expect(screen.UNSAFE_getByType(TravelDetailsDeferredTransition).props).toMatchObject({
+    expect(jest.mocked(TravelDetailsDeferredTransition).mock.calls.at(-1)?.[0]).toMatchObject({
       testID: 'travel-details-related-navigation-transition',
       allowEmptyRuntime: true,
       runtimeFrameReady: true,
@@ -113,7 +123,7 @@ describe('TravelDetailsSidebarSection', () => {
 
   it('reports every real-frame resize to the deferred web transition, empty near included', async () => {
     const onRuntimeFrameReady = jest.fn()
-    render(
+    await render(
       <TravelDetailsSidebarSection
         travel={{ id: 321, slug: 'runtime-frame' } as Travel}
         anchors={{
@@ -140,7 +150,7 @@ describe('TravelDetailsSidebarSection', () => {
 
     // The reserve must never depend on `near` producing results: an empty or
     // failed list used to leave the whole sidebar behind an inert placeholder.
-    fireEvent(screen.getByTestId('travel-details-sidebar-runtime-frame'), 'layout', {
+    await fireEvent(screen.getByTestId('travel-details-sidebar-runtime-frame'), 'layout', {
       nativeEvent: { layout: { height: 300, width: 920, x: 0, y: 0 } },
     })
     expect(onRuntimeFrameReady).toHaveBeenCalledTimes(1)
@@ -154,7 +164,7 @@ describe('TravelDetailsSidebarSection', () => {
 
     // `Популярные` keeps growing after `Рядом` commits, so later resizes are
     // reported too — the transition, not the section, decides when it is quiet.
-    fireEvent(screen.getByTestId('travel-details-sidebar-runtime-frame'), 'layout', {
+    await fireEvent(screen.getByTestId('travel-details-sidebar-runtime-frame'), 'layout', {
       nativeEvent: { layout: { height: 548, width: 920, x: 0, y: 0 } },
     })
     expect(onRuntimeFrameReady).toHaveBeenCalledTimes(2)
@@ -168,7 +178,7 @@ describe('TravelDetailsSidebarSection', () => {
     mockIsFetchingCount = 1
     const onRuntimeFrameReady = jest.fn()
     const onRuntimeVisibilityReady = jest.fn()
-    render(
+    await render(
       <TravelDetailsSidebarSection
         travel={{ id: 654, slug: 'in-flight' } as Travel}
         anchors={{
@@ -193,12 +203,12 @@ describe('TravelDetailsSidebarSection', () => {
     )
 
     expect(await screen.findByTestId('mock-near-travel-list')).toBeTruthy()
-    fireEvent(screen.getByTestId('travel-details-sidebar-runtime-frame'), 'layout', {
+    await fireEvent(screen.getByTestId('travel-details-sidebar-runtime-frame'), 'layout', {
       nativeEvent: { layout: { height: 572, width: 920, x: 0, y: 0 } },
     })
     expect(onRuntimeFrameReady).not.toHaveBeenCalled()
     expect(onRuntimeVisibilityReady).toHaveBeenCalledTimes(1)
-    fireEvent(screen.getByTestId('travel-details-sidebar-runtime-frame'), 'layout', {
+    await fireEvent(screen.getByTestId('travel-details-sidebar-runtime-frame'), 'layout', {
       nativeEvent: { layout: { height: 0, width: 920, x: 0, y: 0 } },
     })
     expect(onRuntimeVisibilityReady).toHaveBeenCalledTimes(1)

@@ -40,8 +40,8 @@ describe('TabTravelCard content height rules', () => {
     Object.defineProperty(Platform, 'OS', { value: originalPlatform, configurable: true });
   });
 
-  it('uses a stable default content minHeight', () => {
-    const { getByTestId } = render(
+  it('uses a stable default content minHeight', async () => {
+    const { getByTestId } = await render(
       <TabTravelCard item={baseItem as any} onPress={() => undefined} testID="tab-card" />
     );
 
@@ -51,8 +51,8 @@ describe('TabTravelCard content height rules', () => {
     expect(style.minHeight).toBe(64);
   });
 
-  it('allows overriding content minHeight via prop for compact/expanded blocks', () => {
-    const { getByTestId } = render(
+  it('allows overriding content minHeight via prop for compact/expanded blocks', async () => {
+    const { getByTestId } = await render(
       <TabTravelCard
         item={baseItem as any}
         onPress={() => undefined}
@@ -67,8 +67,8 @@ describe('TabTravelCard content height rules', () => {
     expect(style.minHeight).toBe(48);
   });
 
-  it('enables shared web blur background on card media', () => {
-    render(
+  it('enables shared web blur background on card media', async () => {
+    await render(
       <TabTravelCard item={baseItem as any} onPress={() => undefined} testID="tab-card" />
     );
 
@@ -77,10 +77,10 @@ describe('TabTravelCard content height rules', () => {
     expect(props?.mediaProps?.blurBackground).toBe(true);
   });
 
-  it('uses horizontal-friendly web touch action for the default rail layout', () => {
+  it('uses horizontal-friendly web touch action for the default rail layout', async () => {
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
 
-    render(
+    await render(
       <TabTravelCard item={baseItem as any} onPress={() => undefined} testID="tab-card" />
     );
 
@@ -88,8 +88,8 @@ describe('TabTravelCard content height rules', () => {
     expect(props?.webTouchAction).toBe('pan-x pan-y');
   });
 
-  it('renders a formatted views badge in bottomRightSlot when views are positive', () => {
-    const { getByTestId } = render(
+  it('renders a formatted views badge in bottomRightSlot when views are positive', async () => {
+    const { getByTestId } = await render(
       <TabTravelCard
         item={{ ...baseItem, views: 15801 } as any}
         onPress={() => undefined}
@@ -102,8 +102,8 @@ describe('TabTravelCard content height rules', () => {
     expect(getByTestId('tab-card-views')).toBeTruthy();
   });
 
-  it('omits the views badge when views are zero or missing', () => {
-    const zero = render(
+  it('omits the views badge when views are zero or missing', async () => {
+    const zero = await render(
       <TabTravelCard
         item={{ ...baseItem, views: 0 } as any}
         onPress={() => undefined}
@@ -113,14 +113,14 @@ describe('TabTravelCard content height rules', () => {
     expect(mockUnifiedTravelCard.mock.calls.at(-1)?.[0]?.bottomRightSlot).toBeNull();
     expect(zero.queryByTestId('tab-card-zero-views')).toBeNull();
 
-    render(
+    await render(
       <TabTravelCard item={baseItem as any} onPress={() => undefined} testID="tab-card-none" />
     );
     expect(mockUnifiedTravelCard.mock.calls.at(-1)?.[0]?.bottomRightSlot).toBeNull();
   });
 
-  it('generates a stable fallback testID when one is not provided', () => {
-    render(
+  it('generates a stable fallback testID when one is not provided', async () => {
+    await render(
       <TabTravelCard item={baseItem as any} onPress={() => undefined} />
     );
 

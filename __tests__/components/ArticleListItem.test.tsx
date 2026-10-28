@@ -1,6 +1,7 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 import { render, fireEvent } from '@testing-library/react-native'
 import { Platform } from 'react-native'
-import type { ReactTestInstance } from 'react-test-renderer'
+import type { TestInstance } from 'test-renderer'
 import ArticleListItem from '@/components/article/ArticleListItem'
 
 // Mock expo-router
@@ -62,41 +63,41 @@ describe('ArticleListItem', () => {
     jest.clearAllMocks()
   })
 
-  it('renders correctly', () => {
-    const { getByText } = render(<ArticleListItem article={mockArticle} />)
+  it('renders correctly', async () => {
+    const { getByText } = await render(<ArticleListItem article={mockArticle} />)
     expect(getByText('Test Article')).toBeTruthy()
   })
 
-  it('navigates to article page when pressed', () => {
-    const { getByText } = render(<ArticleListItem article={mockArticle} />)
-    fireEvent.press(getByText('Test Article'))
+  it('navigates to article page when pressed', async () => {
+    const { getByText } = await render(<ArticleListItem article={mockArticle} />)
+    await fireEvent.press(getByText('Test Article'))
     expect(mockPush).toHaveBeenCalledWith('/article/1?from=%2Farticles')
   })
 
-  it('passes list return href with source to article detail navigation', () => {
-    const { getByText } = render(
+  it('passes list return href with source to article detail navigation', async () => {
+    const { getByText } = await render(
       <ArticleListItem article={mockArticle} returnHref="/articles?from=%2Fmap" />,
     )
-    fireEvent.press(getByText('Test Article'))
+    await fireEvent.press(getByText('Test Article'))
     expect(mockPush).toHaveBeenCalledWith('/article/1?from=%2Farticles%3Ffrom%3D%252Fmap')
   })
 
-  it('renders article type when available', () => {
-    const { getByText } = render(<ArticleListItem article={mockArticle} />)
+  it('renders article type when available', async () => {
+    const { getByText } = await render(<ArticleListItem article={mockArticle} />)
     expect(getByText('News')).toBeTruthy()
   })
 
-  it('renders without article type', () => {
+  it('renders without article type', async () => {
     const articleWithoutType = { ...mockArticle, article_type: null }
-    const { queryByText } = render(<ArticleListItem article={articleWithoutType} />)
+    const { queryByText } = await render(<ArticleListItem article={articleWithoutType} />)
     expect(queryByText('News')).toBeNull()
   })
 
-  it('uses compact neutral media geometry when an article image is missing', () => {
-    const withImage = render(<ArticleListItem article={mockArticle} />)
+  it('uses compact neutral media geometry when an article image is missing', async () => {
+    const withImage = await render(<ArticleListItem article={mockArticle} />)
     const imageHeight = withImage.getByTestId('article-list-media').props.height
 
-    const withoutImage = render(
+    const withoutImage = await render(
       <ArticleListItem
         article={{
           ...mockArticle,
@@ -111,7 +112,7 @@ describe('ArticleListItem', () => {
     expect(placeholder.props.height).toBeLessThan(imageHeight)
   })
 
-  it('keeps the first production article compact when cover fields are absent', () => {
+  it('keeps the first production article compact when cover fields are absent', async () => {
     const productionArticleWithoutCover = {
       id: 1,
       name: 'Розыгрыш трех термосов.',
@@ -119,15 +120,15 @@ describe('ArticleListItem', () => {
       article_type: { name: 'Розыгрыш' },
     } as any
 
-    const { getByTestId } = render(<ArticleListItem article={productionArticleWithoutCover} />)
+    const { getByTestId } = await render(<ArticleListItem article={productionArticleWithoutCover} />)
     const placeholder = getByTestId('article-list-media')
 
     expect(placeholder.props.src).toBeNull()
     expect(placeholder.props.height).toBeLessThanOrEqual(140)
   })
 
-  it('normalizes fallback article thumbnail URLs before passing them to media', () => {
-    const { getByTestId } = render(
+  it('normalizes fallback article thumbnail URLs before passing them to media', async () => {
+    const { getByTestId } = await render(
       <ArticleListItem
         article={{
           ...mockArticle,
@@ -141,12 +142,12 @@ describe('ArticleListItem', () => {
     expect(media.props.src).toBe('https://metravel.by/uploads/article-cover.jpg')
   })
 
-  it('switches broken article media to compact neutral placeholder after load error', () => {
-    const { getByTestId } = render(<ArticleListItem article={mockArticle} />)
+  it('switches broken article media to compact neutral placeholder after load error', async () => {
+    const { getByTestId } = await render(<ArticleListItem article={mockArticle} />)
     const media = getByTestId('article-list-media')
     const imageHeight = media.props.height
 
-    fireEvent(media, 'onError')
+    await fireEvent(media, 'onError')
 
     const placeholder = getByTestId('article-list-media')
     expect(placeholder.props.src).toBeNull()
@@ -161,8 +162,8 @@ describe('ArticleListItem', () => {
   // coverage in `screens/tabs/QuestCard.tsx` / `TravelListItem`'s own tests.
   describe('web link semantics (#1619)', () => {
     const originalPlatformOS = Platform.OS
-    const getWebCardLink = (root: ReactTestInstance) =>
-      root.find((node) => node.type === 'a')
+    const getWebCardLink = (root: TestInstance) =>
+      getOnlyHost(root, (node) => node.type === 'a')
 
     beforeEach(() => {
       ;(Platform as { OS: string }).OS = 'web'
@@ -172,10 +173,10 @@ describe('ArticleListItem', () => {
       ;(Platform as { OS: string }).OS = originalPlatformOS
     })
 
-    it('renders a real, crawlable anchor with the article href and a title-based accessible name', () => {
-      const { UNSAFE_root } = render(<ArticleListItem article={mockArticle} />)
+    it('renders a real, crawlable anchor with the article href and a title-based accessible name', async () => {
+      const { container } = await render(<ArticleListItem article={mockArticle} />)
 
-      const link = getWebCardLink(UNSAFE_root)
+      const link = getWebCardLink(container)
       expect(link.props.href).toBe('/article/1?from=%2Farticles')
       // The article title is the accessible name — no invented UI phrase, and
       // the excerpt/category text inside stays out of it (matches the Task
@@ -186,18 +187,18 @@ describe('ArticleListItem', () => {
       expect(link.props.tabIndex).toBeUndefined()
     })
 
-    it('uses client routing for a primary click and leaves modified clicks to the browser', () => {
-      const { UNSAFE_root } = render(<ArticleListItem article={mockArticle} />)
-      const link = getWebCardLink(UNSAFE_root)
+    it('uses client routing for a primary click and leaves modified clicks to the browser', async () => {
+      const { container } = await render(<ArticleListItem article={mockArticle} />)
+      const link = getWebCardLink(container)
 
       const primaryPreventDefault = jest.fn()
-      fireEvent(link, 'click', { button: 0, preventDefault: primaryPreventDefault })
+      await fireEvent(link, 'click', { button: 0, preventDefault: primaryPreventDefault })
       expect(primaryPreventDefault).toHaveBeenCalledTimes(1)
       expect(mockPush).toHaveBeenCalledWith('/article/1?from=%2Farticles')
 
       mockPush.mockClear()
       const modifiedPreventDefault = jest.fn()
-      fireEvent(link, 'click', {
+      await fireEvent(link, 'click', {
         button: 0,
         ctrlKey: true,
         preventDefault: modifiedPreventDefault,
@@ -208,24 +209,24 @@ describe('ArticleListItem', () => {
       expect(mockPush).not.toHaveBeenCalled()
     })
 
-    it('activates on Space, the one key anchors do not handle natively', () => {
-      const { UNSAFE_root } = render(<ArticleListItem article={mockArticle} />)
-      const link = getWebCardLink(UNSAFE_root)
+    it('activates on Space, the one key anchors do not handle natively', async () => {
+      const { container } = await render(<ArticleListItem article={mockArticle} />)
+      const link = getWebCardLink(container)
 
       const preventDefault = jest.fn()
-      fireEvent(link, 'keyDown', { key: ' ', preventDefault })
+      await fireEvent(link, 'keyDown', { key: ' ', preventDefault })
       expect(preventDefault).toHaveBeenCalledTimes(1)
       expect(mockPush).toHaveBeenCalledWith('/article/1?from=%2Farticles')
     })
 
-    it('keeps the whole card inside a single anchor with no nested interactive descendants', () => {
-      const { UNSAFE_root } = render(<ArticleListItem article={mockArticle} />)
+    it('keeps the whole card inside a single anchor with no nested interactive descendants', async () => {
+      const { container } = await render(<ArticleListItem article={mockArticle} />)
 
-      const links = UNSAFE_root.findAll((node) => node.type === 'a')
+      const links = container.queryAll((node) => node.type === 'a')
       expect(links).toHaveLength(1)
 
       const [link] = links
-      const nestedInteractive = link.findAll(
+      const nestedInteractive = link.queryAll(
         (node) =>
           node !== link &&
           (node.type === 'a' ||

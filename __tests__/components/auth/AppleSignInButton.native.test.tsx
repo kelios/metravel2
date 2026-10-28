@@ -99,7 +99,7 @@ describe('isAppleSignInCancellation', () => {
 describe('AppleSignInButton native', () => {
     it('ничего не рисует, пока Apple-вход недоступен', async () => {
         mockIsAvailableAsync.mockResolvedValue(false);
-        const screen = render(<AppleSignInButton onSuccess={jest.fn()} />);
+        const screen = await render(<AppleSignInButton onSuccess={jest.fn()} />);
 
         await waitFor(() => expect(mockIsAvailableAsync).toHaveBeenCalled());
         expect(screen.queryByTestId('apple-sign-in-button')).toBeNull();
@@ -107,7 +107,7 @@ describe('AppleSignInButton native', () => {
 
     it('не трогает Apple SDK на не-iOS платформе', async () => {
         (Platform.OS as any) = 'android';
-        const screen = render(<AppleSignInButton onSuccess={jest.fn()} />);
+        const screen = await render(<AppleSignInButton onSuccess={jest.fn()} />);
 
         expect(mockIsAvailableAsync).not.toHaveBeenCalled();
         expect(screen.queryByTestId('apple-sign-in-button')).toBeNull();
@@ -115,10 +115,10 @@ describe('AppleSignInButton native', () => {
 
     it('отдаёт credential наверх', async () => {
         const onSuccess = jest.fn();
-        const screen = render(<AppleSignInButton onSuccess={onSuccess} />);
+        const screen = await render(<AppleSignInButton onSuccess={onSuccess} />);
 
         const button = await screen.findByTestId('native-apple-button');
-        fireEvent.press(button);
+        await fireEvent.press(button);
 
         await waitFor(() => expect(onSuccess).toHaveBeenCalledWith({
             identityToken: 'apple-identity-token',
@@ -133,11 +133,11 @@ describe('AppleSignInButton native', () => {
         mockSignInAsync.mockRejectedValue({ code: 'ERR_REQUEST_CANCELED' });
         const onError = jest.fn();
         const onCancel = jest.fn();
-        const screen = render(
+        const screen = await render(
             <AppleSignInButton onSuccess={jest.fn()} onError={onError} onCancel={onCancel} />,
         );
 
-        fireEvent.press(await screen.findByTestId('native-apple-button'));
+        await fireEvent.press(await screen.findByTestId('native-apple-button'));
 
         await waitFor(() => expect(onCancel).toHaveBeenCalled());
         expect(onError).not.toHaveBeenCalled();
@@ -147,9 +147,9 @@ describe('AppleSignInButton native', () => {
         mockSignInAsync.mockRejectedValue({ code: 'ERR_REQUEST_FAILED' });
         const onSuccess = jest.fn();
         const onError = jest.fn();
-        const screen = render(<AppleSignInButton onSuccess={onSuccess} onError={onError} />);
+        const screen = await render(<AppleSignInButton onSuccess={onSuccess} onError={onError} />);
 
-        fireEvent.press(await screen.findByTestId('native-apple-button'));
+        await fireEvent.press(await screen.findByTestId('native-apple-button'));
 
         await waitFor(() => expect(onError).toHaveBeenCalledWith('authStatic:apple.signInFailed'));
         expect(onSuccess).not.toHaveBeenCalled();
@@ -159,9 +159,9 @@ describe('AppleSignInButton native', () => {
         mockSignInAsync.mockResolvedValue({ ...appleCredential, identityToken: null });
         const onSuccess = jest.fn();
         const onError = jest.fn();
-        const screen = render(<AppleSignInButton onSuccess={onSuccess} onError={onError} />);
+        const screen = await render(<AppleSignInButton onSuccess={onSuccess} onError={onError} />);
 
-        fireEvent.press(await screen.findByTestId('native-apple-button'));
+        await fireEvent.press(await screen.findByTestId('native-apple-button'));
 
         await waitFor(() => expect(onError).toHaveBeenCalledWith('authStatic:apple.signInFailed'));
         expect(onSuccess).not.toHaveBeenCalled();
@@ -169,9 +169,9 @@ describe('AppleSignInButton native', () => {
 
     it('disabled не запускает Apple-вход', async () => {
         const onSuccess = jest.fn();
-        const screen = render(<AppleSignInButton onSuccess={onSuccess} disabled />);
+        const screen = await render(<AppleSignInButton onSuccess={onSuccess} disabled />);
 
-        fireEvent.press(await screen.findByTestId('native-apple-button'));
+        await fireEvent.press(await screen.findByTestId('native-apple-button'));
 
         await waitFor(() => expect(mockIsAvailableAsync).toHaveBeenCalled());
         expect(mockSignInAsync).not.toHaveBeenCalled();

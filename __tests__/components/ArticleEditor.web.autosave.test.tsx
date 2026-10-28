@@ -137,7 +137,7 @@ describe('ArticleEditor.web autosave', () => {
       const onAutosave = jest.fn(async () => {})
       const autosaveDelay = 30
 
-      const { getByTestId } = render(
+      const { getByTestId } = await render(
         <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} autosaveMode="standalone" onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
       )
 
@@ -161,7 +161,7 @@ describe('ArticleEditor.web autosave', () => {
       const quillProps = (globalThis as any).__quillProps__
       expect(quillProps).toBeTruthy()
 
-      act(() => {
+      await act(() => {
         quillProps.onChange('<p>updated</p>', null, 'user')
       })
 
@@ -182,7 +182,7 @@ describe('ArticleEditor.web autosave', () => {
       const onAutosave = jest.fn(async () => {})
       const autosaveDelay = 20
 
-      const { getByTestId } = render(
+      const { getByTestId } = await render(
         <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} autosaveMode="standalone" onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
       )
 
@@ -200,7 +200,7 @@ describe('ArticleEditor.web autosave', () => {
       }
 
       const quillProps = (globalThis as any).__quillProps__
-      act(() => {
+      await act(() => {
         quillProps.onChange('<p>api</p>', null, 'api')
       })
 
@@ -217,7 +217,7 @@ describe('ArticleEditor.web autosave', () => {
         .mockRejectedValueOnce(new Error('network'))
         .mockResolvedValueOnce(undefined)
 
-      const { getByTestId } = render(
+      const { getByTestId } = await render(
         <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} autosaveMode="standalone" onAutosave={onAutosave} autosaveDelay={autosaveDelay} />
       )
 
@@ -233,7 +233,7 @@ describe('ArticleEditor.web autosave', () => {
       const quillProps = (globalThis as any).__quillProps__
       expect(quillProps).toBeTruthy()
 
-      act(() => {
+      await act(() => {
         quillProps.onChange('<p>updated</p>', null, 'user')
       })
 
@@ -250,7 +250,7 @@ describe('ArticleEditor.web autosave', () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default
 
     const autosaveDelay = 30
-    const { getByTestId, getByLabelText, getByPlaceholderText } = render(
+    const { getByTestId, getByLabelText, getByPlaceholderText } = await render(
       <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} autosaveMode="standalone" onAutosave={jest.fn(async () => {})} autosaveDelay={autosaveDelay} />
     )
 
@@ -265,11 +265,11 @@ describe('ArticleEditor.web autosave', () => {
     expect(editor).toBeTruthy()
     editor.getSelection.mockReturnValue({ index: 5, length: 0 })
 
-    fireEvent.press(getByLabelText('Вставить якорь'))
+    await fireEvent.press(getByLabelText('Вставить якорь'))
 
-    fireEvent.changeText(getByPlaceholderText('day-3'), 'day-3')
+    await fireEvent.changeText(getByPlaceholderText('day-3'), 'day-3')
 
-    fireEvent.press(getByLabelText('Вставить'))
+    await fireEvent.press(getByLabelText('Вставить'))
 
     const expectedIndex = 5 + '[#day-3]'.length
     expect(editor.setSelection).toHaveBeenCalledWith(expectedIndex, 0, 'silent')
@@ -278,7 +278,7 @@ describe('ArticleEditor.web autosave', () => {
   it('moves caret to end of selection when applying link to selection', async () => {
     const ArticleEditor = (await import('@/components/article/ArticleEditor.web')).default
 
-    const { getByTestId, getByLabelText } = render(
+    const { getByTestId, getByLabelText } = await render(
       <ArticleEditor content={'<p>start</p>'} onChange={jest.fn()} autosaveMode="standalone" onAutosave={jest.fn(async () => {})} autosaveDelay={20} />
     )
 
@@ -296,7 +296,7 @@ describe('ArticleEditor.web autosave', () => {
     const quillProps = (globalThis as any).__quillProps__
     expect(quillProps?.modules?.toolbar?.handlers?.link).toBeTruthy()
 
-    act(() => {
+    await act(() => {
       quillProps.modules.toolbar.handlers.link.call({ quill: editor }, true)
     })
 
@@ -304,7 +304,7 @@ describe('ArticleEditor.web autosave', () => {
       expect(getByLabelText('Сохранить')).toBeTruthy()
     })
 
-    fireEvent.press(getByLabelText('Сохранить'))
+    await fireEvent.press(getByLabelText('Сохранить'))
 
     await waitFor(() => {
       expect(editor.setSelection).toHaveBeenCalledWith({ index: 5, length: 0 }, 'silent')
@@ -316,7 +316,7 @@ describe('ArticleEditor.web autosave', () => {
 
     const onChange = jest.fn()
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ArticleEditor content={'<p>start</p>'} onChange={onChange} autosaveMode="standalone" onAutosave={jest.fn(async () => {})} autosaveDelay={20} />
     )
 
@@ -331,7 +331,7 @@ describe('ArticleEditor.web autosave', () => {
     expect(quillProps).toBeTruthy()
     const rawValue = '<p class="ql-align-center unsupported-class" onclick="alert(1)">Hi</p>'
 
-    act(() => {
+    await act(() => {
       quillProps.onChange(rawValue, null, 'user')
     })
 
@@ -351,7 +351,7 @@ describe('ArticleEditor.web autosave', () => {
 
     const onChange = jest.fn()
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ArticleEditor content={'<p>start</p>'} onChange={onChange} variant="compact" />
     )
 
@@ -362,7 +362,7 @@ describe('ArticleEditor.web autosave', () => {
     const quillProps = (globalThis as any).__quillProps__
     expect(quillProps).toBeTruthy()
 
-    act(() => {
+    await act(() => {
       quillProps.onChange('<p><br></p>', null, 'user')
     })
 
@@ -374,7 +374,7 @@ describe('ArticleEditor.web autosave', () => {
 
     const onChange = jest.fn()
 
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <ArticleEditor content={''} onChange={onChange} variant="compact" />
     )
 
@@ -385,7 +385,7 @@ describe('ArticleEditor.web autosave', () => {
     const quillProps = (globalThis as any).__quillProps__
     expect(quillProps).toBeTruthy()
 
-    act(() => {
+    await act(() => {
       quillProps.onChange('<p><img src="https://example.com/a.jpg" alt="img"></p>', null, 'user')
     })
 
@@ -398,7 +398,7 @@ describe('ArticleEditor.web autosave', () => {
     const onChange = jest.fn()
     const onManualSave = jest.fn(async () => {})
 
-    const { getByTestId, getByLabelText } = render(
+    const { getByTestId, getByLabelText } = await render(
       <ArticleEditor
         content={'<p>start</p>'}
         onChange={onChange}
@@ -421,13 +421,13 @@ describe('ArticleEditor.web autosave', () => {
     editor.root.innerHTML =
       '<p onclick="alert(1)">Safe</p><script>alert(1)</script><img src="https://example.com/a.jpg" onerror="alert(1)" />'
 
-    fireEvent.press(getByLabelText('Показать HTML-код'))
+    await fireEvent.press(getByLabelText('Показать HTML-код'))
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledWith('<p>Safe</p><img src="https://example.com/a.jpg" />')
     })
 
-    fireEvent.press(getByLabelText('Скрыть HTML-код'))
-    fireEvent.press(getByLabelText('Сохранить путешествие'))
+    await fireEvent.press(getByLabelText('Скрыть HTML-код'))
+    await fireEvent.press(getByLabelText('Сохранить путешествие'))
 
     await waitFor(() => {
       expect(onManualSave).toHaveBeenCalledWith('<p>Safe</p><img src="https://example.com/a.jpg" />')

@@ -118,20 +118,20 @@ describe('CommentsSection', () => {
       } as any);
     });
 
-    it('should show login prompt', () => {
-      render(<CommentsSection travelId={123} />, { wrapper });
+    it('should show login prompt', async () => {
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
       expect(screen.getByText('Войдите, чтобы оставить комментарий')).toBeTruthy();
     });
 
-    it('should not show comment form', () => {
-      render(<CommentsSection travelId={123} />, { wrapper });
+    it('should not show comment form', async () => {
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
       expect(screen.queryByPlaceholderText('Написать комментарий...')).toBeNull();
     });
 
-    it('should display existing comments', () => {
-      render(<CommentsSection travelId={123} />, { wrapper });
+    it('should display existing comments', async () => {
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
       expect(screen.getByText('Test comment')).toBeTruthy();
       expect(screen.getByText('Test User')).toBeTruthy();
@@ -162,14 +162,14 @@ describe('CommentsSection', () => {
       } as any);
     });
 
-    it('should show comment form', () => {
-      render(<CommentsSection travelId={123} />, { wrapper });
+    it('should show comment form', async () => {
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
       expect(screen.getByPlaceholderText('Написать комментарий...')).toBeTruthy();
     });
 
-    it('should not show login prompt', () => {
-      render(<CommentsSection travelId={123} />, { wrapper });
+    it('should not show login prompt', async () => {
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
       expect(screen.queryByText('Войдите, чтобы оставить комментарий')).toBeNull();
     });
@@ -181,13 +181,13 @@ describe('CommentsSection', () => {
         isPending: false,
       } as any);
 
-      render(<CommentsSection travelId={123} />, { wrapper });
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
       const input = screen.getByPlaceholderText('Написать комментарий...');
       const submitButton = screen.getByLabelText('Отправить комментарий');
 
-      fireEvent.changeText(input, 'New comment');
-      fireEvent.press(submitButton);
+      await fireEvent.changeText(input, 'New comment');
+      await fireEvent.press(submitButton);
 
       await waitFor(() => {
         expect(mutateMock).toHaveBeenCalledWith({
@@ -208,14 +208,14 @@ describe('CommentsSection', () => {
         isPending: false,
       } as any);
 
-      render(<CommentsSection travelId={123} />, { wrapper });
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
       const input = screen.getByPlaceholderText('Написать комментарий...');
       const submitButton = screen.getByLabelText('Отправить комментарий');
 
-      fireEvent.changeText(input, 'New comment');
-      fireEvent.press(submitButton);
-      fireEvent.press(submitButton);
+      await fireEvent.changeText(input, 'New comment');
+      await fireEvent.press(submitButton);
+      await fireEvent.press(submitButton);
 
       expect(mutateMock).toHaveBeenCalledTimes(1);
 
@@ -231,7 +231,7 @@ describe('CommentsSection', () => {
       mockUseAuth.mockReturnValue(createAuthState({ isAuthenticated: true, userId: '1', username: 'User' }));
     });
 
-    it('should show loading indicator when fetching travel comments', () => {
+    it('should show loading indicator when fetching travel comments', async () => {
       mockUseMainThread.mockReturnValue({
         data: undefined,
         isLoading: false,
@@ -246,14 +246,14 @@ describe('CommentsSection', () => {
         refetch: jest.fn(),
       } as any);
 
-      render(<CommentsSection travelId={123} />, { wrapper });
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
       const skeleton = screen.getByTestId('comments-skeleton');
       expect(skeleton).toBeTruthy();
       expect(skeleton.props.nativeID).toBe('comments');
     });
 
-    it('should show empty state when thread errors but comments load fine', () => {
+    it('should show empty state when thread errors but comments load fine', async () => {
       mockUseMainThread.mockReturnValue({
         data: undefined,
         isLoading: false,
@@ -268,13 +268,13 @@ describe('CommentsSection', () => {
         refetch: jest.fn(),
       } as any);
 
-      render(<CommentsSection travelId={123} />, { wrapper });
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
       expect(screen.getByText('Пока нет комментариев')).toBeTruthy();
       expect(screen.queryByText('Комментарии недоступны')).toBeNull();
     });
 
-    it('should show error message when comments fail to load', () => {
+    it('should show error message when comments fail to load', async () => {
       mockUseMainThread.mockReturnValue({
         data: undefined,
         isLoading: false,
@@ -289,12 +289,12 @@ describe('CommentsSection', () => {
         refetch: jest.fn(),
       } as any);
 
-      render(<CommentsSection travelId={123} />, { wrapper });
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
       expect(screen.getByText('Комментарии недоступны')).toBeTruthy();
     });
 
-    it('should show login prompt and empty state on 401 thread error (comments are public)', () => {
+    it('should show login prompt and empty state on 401 thread error (comments are public)', async () => {
       mockUseAuth.mockReturnValue(createAuthState());
 
       mockUseMainThread.mockReturnValue({
@@ -311,7 +311,7 @@ describe('CommentsSection', () => {
         refetch: jest.fn(),
       } as any);
 
-      render(<CommentsSection travelId={123} />, { wrapper });
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
       expect(screen.getByText('Войдите, чтобы оставить комментарий')).toBeTruthy();
       expect(screen.getByText('Пока нет комментариев')).toBeTruthy();
@@ -338,8 +338,8 @@ describe('CommentsSection', () => {
       } as any);
     });
 
-    it('should show empty state when no comments', () => {
-      render(<CommentsSection travelId={123} />, { wrapper });
+    it('should show empty state when no comments', async () => {
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
       expect(screen.getByText('Пока нет комментариев')).toBeTruthy();
       expect(screen.getByText('Оставьте первый комментарий — форма уже открыта выше.')).toBeTruthy();
@@ -366,8 +366,8 @@ describe('CommentsSection', () => {
       } as any);
     });
 
-    it('shows unavailable state instead of load button when comments cannot be loaded', () => {
-      render(
+    it('shows unavailable state instead of load button when comments cannot be loaded', async () => {
+      await render(
         <CommentsSection travelId={123} lazyLoad canLoadComments={false} />,
         { wrapper }
       );
@@ -389,7 +389,7 @@ describe('CommentsSection', () => {
       } as any);
     });
 
-    it('should organize comments into top-level and replies', () => {
+    it('should organize comments into top-level and replies', async () => {
       // Sub-thread model: comment 1 has sub_thread=100 (a thread ID).
       // Comment 2 lives in thread 100, so it's a reply to comment 1.
       mockUseTravelComments.mockReturnValue({
@@ -420,7 +420,7 @@ describe('CommentsSection', () => {
         refetch: jest.fn(),
       } as any);
 
-      render(<CommentsSection travelId={123} />, { wrapper });
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
       expect(screen.getByText('Top level comment')).toBeTruthy();
       // Replies are collapsed by default; the UI shows the toggle with count.
@@ -428,7 +428,7 @@ describe('CommentsSection', () => {
       expect(screen.queryByText('Reply to comment 1')).toBeNull();
     });
 
-    it('should show replies when clicking "Показать ответы"', () => {
+    it('should show replies when clicking "Показать ответы"', async () => {
       mockUseTravelComments.mockReturnValue({
         data: [
           {
@@ -447,15 +447,15 @@ describe('CommentsSection', () => {
         isLoading: false, error: null, refetch: jest.fn(),
       } as any);
 
-      render(<CommentsSection travelId={123} />, { wrapper });
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
-      fireEvent.press(screen.getByText('Показать ответы (1)'));
+      await fireEvent.press(screen.getByText('Показать ответы (1)'));
 
       expect(screen.getByText('Reply to comment 1')).toBeTruthy();
       expect(screen.getByText('Свернуть ответы (1)')).toBeTruthy();
     });
 
-    it('should handle string sub_thread from backend', () => {
+    it('should handle string sub_thread from backend', async () => {
       // sub_thread can arrive as a string from some backends.
       // Comment 10 has sub_thread='200' (string), replies live in thread 200.
       mockUseTravelComments.mockReturnValue({
@@ -476,11 +476,11 @@ describe('CommentsSection', () => {
         isLoading: false, error: null, refetch: jest.fn(),
       } as any);
 
-      render(<CommentsSection travelId={123} />, { wrapper });
+      await render(<CommentsSection travelId={123} />, { wrapper });
 
       expect(screen.getByText('Показать ответы (1)')).toBeTruthy();
 
-      fireEvent.press(screen.getByText('Показать ответы (1)'));
+      await fireEvent.press(screen.getByText('Показать ответы (1)'));
 
       expect(screen.getByText('Reply with string sub_thread')).toBeTruthy();
     });

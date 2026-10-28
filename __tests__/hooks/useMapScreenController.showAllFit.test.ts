@@ -181,9 +181,9 @@ const setData = (patch: Record<string, any>) => Object.assign(mockData, patch)
 // The engine fits to the result set it holds when called (web rebuilds the
 // API per data, native reads its own ref): the API is handed over again
 // whenever the map receives a new result set.
-const handMapApi = (result: any, fits: unknown[][]) => {
+const handMapApi = async (result: any, fits: unknown[][]) => {
   const places = mockData.travelsData
-  act(() => {
+  await act(() => {
     result.current.mapPanelProps.onMapUiApiReady({ fitToResults: () => fits.push(places) })
   })
 }
@@ -199,61 +199,61 @@ describe('useMapScreenController — «Показать всё» подгоня�
     setData({ travelsData: AMBAR, isFetching: false, isPlaceholderData: false, isDebouncingFilters: false })
   })
 
-  it('сброс → debounce → запрос → новые места → один fit по новым местам', () => {
+  it('сброс → debounce → запрос → новые места → один fit по новым местам', async () => {
     const fits: unknown[][] = []
-    const { result, rerender } = renderHook(() => useMapScreenController())
-    handMapApi(result, fits)
+    const { result, rerender } = await renderHook(() => useMapScreenController())
+    await handMapApi(result, fits)
 
     setData({ isDebouncingFilters: true })
-    act(() => {
+    await act(() => {
       result.current.showAllPlaces()
     })
-    rerender({})
+    await rerender({})
     expect(fits).toEqual([])
 
     setData({ isDebouncingFilters: false, isFetching: true, isPlaceholderData: true })
-    rerender({})
+    await rerender({})
     expect(fits).toEqual([])
 
     setData({ travelsData: ALL, isFetching: false, isPlaceholderData: false })
-    handMapApi(result, fits)
-    rerender({})
+    await handMapApi(result, fits)
+    await rerender({})
     expect(fits).toEqual([ALL])
 
     // Later refetches do not fit again: the request was one-shot.
     setData({ isFetching: true })
-    rerender({})
+    await rerender({})
     setData({ isFetching: false })
-    rerender({})
+    await rerender({})
     expect(fits).toEqual([ALL])
   })
 
-  it('из пустого результата подгоняет под вернувшиеся места', () => {
+  it('из пустого результата подгоняет под вернувшиеся места', async () => {
     setData({ travelsData: [] })
     const fits: unknown[][] = []
-    const { result, rerender } = renderHook(() => useMapScreenController())
-    handMapApi(result, fits)
+    const { result, rerender } = await renderHook(() => useMapScreenController())
+    await handMapApi(result, fits)
 
     setData({ isFetching: true, isPlaceholderData: true })
-    act(() => {
+    await act(() => {
       result.current.showAllPlaces()
     })
-    rerender({})
+    await rerender({})
     expect(fits).toEqual([])
 
     setData({ travelsData: ALL, isFetching: false, isPlaceholderData: false })
-    handMapApi(result, fits)
-    rerender({})
+    await handMapApi(result, fits)
+    await rerender({})
     expect(fits).toEqual([ALL])
   })
 
-  it('если сбрасывать нечего, подгоняет сразу по текущим местам', () => {
+  it('если сбрасывать нечего, подгоняет сразу по текущим местам', async () => {
     setData({ travelsData: ALL })
     const fits: unknown[][] = []
-    const { result } = renderHook(() => useMapScreenController())
-    handMapApi(result, fits)
+    const { result } = await renderHook(() => useMapScreenController())
+    await handMapApi(result, fits)
 
-    act(() => {
+    await act(() => {
       result.current.showAllPlaces()
     })
     expect(fits).toEqual([ALL])

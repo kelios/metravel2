@@ -58,7 +58,7 @@ describe('TravelHeroExtras', () => {
     Platform.OS = originalPlatformOS as any
   })
 
-  it('renders quick facts and passes hero-priority quick jump links on native', () => {
+  it('renders quick facts and passes hero-priority quick jump links on native', async () => {
     Platform.OS = 'ios' as any
 
     const travel: any = { id: 1, slug: 'hero-extra', name: 'Hero extra' }
@@ -71,7 +71,7 @@ describe('TravelHeroExtras', () => {
       { key: 'points', label: 'Точки', icon: 'map-pin' },
     ]
 
-    render(
+    await render(
       <TravelHeroExtras
         travel={travel}
         isMobile
@@ -96,14 +96,14 @@ describe('TravelHeroExtras', () => {
     )
   })
 
-  it('renders hero-priority quick jumps on web too', () => {
+  it('renders hero-priority quick jumps on web too', async () => {
     Platform.OS = 'web' as any
     const sectionLinks = [
       { key: 'description', label: 'Описание', icon: 'file-text' },
       { key: 'map', label: 'Карта', icon: 'map' },
     ]
 
-    render(
+    await render(
       <TravelHeroExtras
         travel={{ id: 2, slug: 'hero-web', name: 'Hero web' } as any}
         isMobile={false}
@@ -121,7 +121,7 @@ describe('TravelHeroExtras', () => {
     )
   })
 
-  it('рендерит TravelStatusButton с корректными пропсами для travel с slug', () => {
+  it('рендерит TravelStatusButton с корректными пропсами для travel с slug', async () => {
     Platform.OS = 'ios' as any
     const travel: any = {
       id: 5,
@@ -130,7 +130,7 @@ describe('TravelHeroExtras', () => {
       travel_image_thumb_url: 'https://example.com/img.jpg',
       countryName: 'Italy',
     }
-    render(
+    await render(
       <TravelHeroExtras
         travel={travel}
         isMobile
@@ -154,7 +154,7 @@ describe('TravelHeroExtras', () => {
   // отдельной плашкой над страницей, и сохраняет именно этот маршрут.
   it('рендерит «Сохранить офлайн» рядом со статусом под галереей', async () => {
     const travel: any = { id: 7, slug: 'grodno', name: 'Гродно за 1 день' }
-    render(
+    await render(
       <TravelHeroExtras
         travel={travel}
         isMobile
@@ -175,10 +175,10 @@ describe('TravelHeroExtras', () => {
   // #1673: на узком экране ряд действий переносился, и офлайн читался второй
   // главной кнопкой во всю ширину. Компактный чип оставляет оба действия в одной
   // строке; на широком экране раскладка ряда прежняя.
-  it('сжимает офлайн-чип до иконки только на узком экране', () => {
+  it('сжимает офлайн-чип до иконки только на узком экране', async () => {
     const travel: any = { id: 7, slug: 'grodno', name: 'Гродно за 1 день' }
 
-    render(
+    await render(
       <TravelHeroExtras travel={travel} isMobile sectionLinks={[]} onQuickJump={jest.fn()} />
     )
     expect(mockOfflineSaveControl).toHaveBeenCalledWith(
@@ -186,7 +186,7 @@ describe('TravelHeroExtras', () => {
     )
 
     mockOfflineSaveControl.mockClear()
-    render(
+    await render(
       <TravelHeroExtras
         travel={travel}
         isMobile={false}
@@ -202,10 +202,10 @@ describe('TravelHeroExtras', () => {
   // Вторая половина того же фикса: без снятой 240-px базы и без flexShrink ряд
   // переносится независимо от того, сжат чип или нет — статус с базой по
   // контенту не отдаёт место соседу и уходит на свою строку.
-  it('на узком экране статус теряет 240-px базу и умеет отдавать ширину', () => {
+  it('на узком экране статус теряет 240-px базу и умеет отдавать ширину', async () => {
     const travel: any = { id: 7, slug: 'grodno', name: 'Гродно за 1 день' }
 
-    render(
+    await render(
       <TravelHeroExtras travel={travel} isMobile sectionLinks={[]} onQuickJump={jest.fn()} />
     )
     const mobileStatus = StyleSheet.flatten(mockTravelStatusButton.mock.calls[0][0].style)
@@ -213,7 +213,7 @@ describe('TravelHeroExtras', () => {
     expect(mobileStatus.flexShrink).toBe(1)
 
     mockTravelStatusButton.mockClear()
-    render(
+    await render(
       <TravelHeroExtras
         travel={travel}
         isMobile={false}
@@ -225,8 +225,8 @@ describe('TravelHeroExtras', () => {
     expect(desktopStatus.flexBasis).toBe(240)
   })
 
-  it('не рендерит «Сохранить офлайн» без id маршрута', () => {
-    render(
+  it('не рендерит «Сохранить офлайн» без id маршрута', async () => {
+    await render(
       <TravelHeroExtras
         travel={{ slug: 'draft', name: 'Черновик' } as any}
         isMobile={false}
@@ -238,9 +238,9 @@ describe('TravelHeroExtras', () => {
     expect(mockOfflineSaveControl).not.toHaveBeenCalled()
   })
 
-  it('использует id как fallback в URL при отсутствии slug', () => {
+  it('использует id как fallback в URL при отсутствии slug', async () => {
     const travel: any = { id: 99, name: 'No Slug' }
-    render(
+    await render(
       <TravelHeroExtras
         travel={travel}
         isMobile={false}

@@ -45,8 +45,8 @@ describe('useProgressiveLoad', () => {
     (window as any).IntersectionObserver = originalIntersectionObserver;
   });
 
-  it('waits for visibility or fallback on web when enabled', () => {
-    const { result } = renderHook(() =>
+  it('waits for visibility or fallback on web when enabled', async () => {
+    const { result } = await renderHook(() =>
       useProgressiveLoad({
         priority: 'low',
         threshold: 0.05,
@@ -58,14 +58,14 @@ describe('useProgressiveLoad', () => {
 
     expect(result.current.shouldLoad).toBe(false);
 
-    act(() => {
+    await act(() => {
       result.current.setElementRef(document.createElement('div'));
     });
 
     expect(observers).toHaveLength(1);
     expect(observers[0]?.observe).toHaveBeenCalledTimes(1);
 
-    act(() => {
+    await act(() => {
       observers[0]?.callback([
         {
           isIntersecting: true,
@@ -77,8 +77,8 @@ describe('useProgressiveLoad', () => {
     expect(result.current.shouldLoad).toBe(true);
   });
 
-  it('loads after fallback delay when element never becomes visible', () => {
-    const { result } = renderHook(() =>
+  it('loads after fallback delay when element never becomes visible', async () => {
+    const { result } = await renderHook(() =>
       useProgressiveLoad({
         priority: 'low',
         threshold: 0.05,
@@ -88,21 +88,21 @@ describe('useProgressiveLoad', () => {
       }),
     );
 
-    act(() => {
+    await act(() => {
       result.current.setElementRef(document.createElement('div'));
     });
 
     expect(result.current.shouldLoad).toBe(false);
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(800);
     });
 
     expect(result.current.shouldLoad).toBe(true);
   });
 
-  it('does not load when disabled', () => {
-    const { result } = renderHook(() =>
+  it('does not load when disabled', async () => {
+    const { result } = await renderHook(() =>
       useProgressiveLoad({
         priority: 'low',
         enabled: false,
@@ -114,8 +114,8 @@ describe('useProgressiveLoad', () => {
 
   // #2010: блок финала квеста грузит каталог только по видимости — таймер не
   // должен подменять прокрутку, сколько бы страница ни была открыта.
-  it('keeps visibility-only content unloaded by time and loads it on intersection', () => {
-    const { result } = renderHook(() =>
+  it('keeps visibility-only content unloaded by time and loads it on intersection', async () => {
+    const { result } = await renderHook(() =>
       useProgressiveLoad({
         priority: 'low',
         threshold: 0,
@@ -124,17 +124,17 @@ describe('useProgressiveLoad', () => {
       }),
     );
 
-    act(() => {
+    await act(() => {
       result.current.setElementRef(document.createElement('div'));
     });
     expect(observers).toHaveLength(1);
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(60_000);
     });
     expect(result.current.shouldLoad).toBe(false);
 
-    act(() => {
+    await act(() => {
       observers[0]?.callback([
         {
           isIntersecting: true,
@@ -145,11 +145,11 @@ describe('useProgressiveLoad', () => {
     expect(result.current.shouldLoad).toBe(true);
   });
 
-  it('loads visibility-only content when IntersectionObserver is unavailable', () => {
+  it('loads visibility-only content when IntersectionObserver is unavailable', async () => {
     delete (window as any).IntersectionObserver;
     delete (global as any).IntersectionObserver;
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgressiveLoad({
         priority: 'low',
         enabled: true,
@@ -160,10 +160,10 @@ describe('useProgressiveLoad', () => {
     expect(result.current.shouldLoad).toBe(true);
   });
 
-  it('keeps deferred sections eager on Android', () => {
+  it('keeps deferred sections eager on Android', async () => {
     Platform.OS = 'android';
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useProgressiveLoad({
         priority: 'low',
         enabled: true,

@@ -42,17 +42,17 @@ describe('not-found SEO guard', () => {
     delete (window as unknown as Record<string, unknown>)[UNKNOWN_CITY_HYDRATION_STASH]
   })
 
-  it('hands a stashed unknown-city URL back to the router after the not-found frame', () => {
+  it('hands a stashed unknown-city URL back to the router after the not-found frame', async () => {
     ;(window as unknown as Record<string, unknown>)[UNKNOWN_CITY_HYDRATION_STASH] = '/quests/no-such-city-x'
-    const screen = render(<NotFoundScreen />)
+    const screen = await render(<NotFoundScreen />)
     expect(screen.getByTestId('static-not-found')).toBeTruthy()
     expect(mockReplace).toHaveBeenCalledTimes(1)
     expect(mockReplace).toHaveBeenCalledWith('/quests/no-such-city-x')
     expect((window as unknown as Record<string, unknown>)[UNKNOWN_CITY_HYDRATION_STASH]).toBeUndefined()
   })
 
-  it('marks the catch-all missing route as noindex', () => {
-    render(<NotFoundScreen />)
+  it('marks the catch-all missing route as noindex', async () => {
+    await render(<NotFoundScreen />)
     expect(mockSeoProps).toHaveBeenCalledTimes(1)
     expect(mockSeoProps.mock.calls[0][0]).toMatchObject({
       headKey: 'not-found',
@@ -66,8 +66,8 @@ describe('not-found SEO guard', () => {
   // пару «noindex + canonical на `/`». Здесь его быть не должно вовсе: клиентам
   // с JS canonical/og:url на сам запрошенный URL проставляет критический скрипт
   // в `app/+html.tsx`.
-  it('does not canonicalize the error page to another page', () => {
-    render(<NotFoundScreen />)
+  it('does not canonicalize the error page to another page', async () => {
+    await render(<NotFoundScreen />)
     expect(mockSeoProps.mock.calls[0][0].canonical).toBeUndefined()
   })
 })

@@ -102,7 +102,7 @@ describe('TravelRouteMapBlock', () => {
   })
 
   it('renders interactive map branch with route lines and elevation profiles', async () => {
-    render(<TravelRouteMapBlock {...baseProps} />)
+    await render(<TravelRouteMapBlock {...baseProps} />)
 
     await act(async () => {
       await Promise.resolve()
@@ -135,7 +135,7 @@ describe('TravelRouteMapBlock', () => {
     )
   })
 
-  it('renders loading fallback when route preview data is still loading and map data is absent', () => {
+  it('renders loading fallback when route preview data is still loading and map data is absent', async () => {
     mockUseTravelRouteMapBlockModel.mockReturnValueOnce({
       routeFileMarkers: [],
       routeLines: [],
@@ -144,7 +144,7 @@ describe('TravelRouteMapBlock', () => {
       shouldShowRouteLine: false,
     })
 
-    render(
+    await render(
       <TravelRouteMapBlock
         {...baseProps}
         hasMapData={false}
@@ -156,7 +156,7 @@ describe('TravelRouteMapBlock', () => {
     expect(mockTravelMap).not.toHaveBeenCalled()
   })
 
-  it('renders empty state when there is no map data and nothing is loading', () => {
+  it('renders empty state when there is no map data and nothing is loading', async () => {
     mockUseTravelRouteMapBlockModel.mockReturnValueOnce({
       routeFileMarkers: [],
       routeLines: [],
@@ -165,7 +165,7 @@ describe('TravelRouteMapBlock', () => {
       shouldShowRouteLine: false,
     })
 
-    render(
+    await render(
       <TravelRouteMapBlock
         {...baseProps}
         hasMapData={false}
@@ -190,7 +190,7 @@ describe('TravelRouteMapBlock', () => {
       shouldShowRouteLine: false,
     })
 
-    render(
+    await render(
       <TravelRouteMapBlock
         {...baseProps}
         routeFilePoints={[

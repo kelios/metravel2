@@ -120,7 +120,7 @@ describe('профиль «Мои квесты» обновляется от з�
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
 
-  const mount = () => renderHook(() => {
+  const mount = async () => await renderHook(() => {
     const mounts = useRef(0)
     useEffect(() => {
       mounts.current += 1
@@ -191,7 +191,7 @@ describe('профиль «Мои квесты» обновляется от з�
     progressRows = [OWN_COMPLETED, OTHER_COMPLETED]
     catalog = [catalogQuest(true)]
     mockFetchQuestProgress.mockResolvedValue(OWN_COMPLETED)
-    const { result } = mount()
+    const { result } = await mount()
 
     await until(() => {
       expect(result.current.sync.progress?.id).toBe(42)
@@ -219,7 +219,7 @@ describe('профиль «Мои квесты» обновляется от з�
   it('после успешного прохождения квест появляется в пройденных и коллекциях без перемонтирования', async () => {
     progressRows = [OTHER_COMPLETED]
     catalog = [catalogQuest(false)]
-    const { result } = mount()
+    const { result } = await mount()
 
     await until(() => {
       expect(result.current.profile.loading).toBe(false)
@@ -228,7 +228,7 @@ describe('профиль «Мои квесты» обновляется от з�
       expect(result.current.profile.collections).toEqual([])
     })
 
-    act(() => {
+    await act(() => {
       result.current.sync.saveProgress({
         currentIndex: 4,
         unlockedIndex: 4,

@@ -34,7 +34,7 @@ describe('Map Route Integration Tests', () => {
 
   describe('Building a route from scratch', () => {
     it('should build a route with start and end points', async () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       // Initially no points
       expect(result.current.points).toHaveLength(0);
@@ -42,7 +42,7 @@ describe('Map Route Integration Tests', () => {
       expect(result.current.endAddress).toBe('');
 
       // Add start point
-      act(() => {
+      await act(() => {
         result.current.handleAddressSelect(
           'Minsk, Independence Avenue 1',
           { lat: 53.9006, lng: 27.559 },
@@ -56,7 +56,7 @@ describe('Map Route Integration Tests', () => {
       });
 
       // Add end point
-      act(() => {
+      await act(() => {
         result.current.handleAddressSelect(
           'Minsk, Victory Square',
           { lat: 53.9045, lng: 27.5615 },
@@ -77,10 +77,10 @@ describe('Map Route Integration Tests', () => {
     });
 
     it('should replace start point when selecting new start', async () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       // Add initial start point
-      act(() => {
+      await act(() => {
         result.current.handleAddressSelect(
           'Old Start',
           { lat: 53.9, lng: 27.55 },
@@ -93,7 +93,7 @@ describe('Map Route Integration Tests', () => {
       });
 
       // Replace with new start point
-      act(() => {
+      await act(() => {
         result.current.handleAddressSelect(
           'New Start',
           { lat: 53.95, lng: 27.6 },
@@ -110,7 +110,7 @@ describe('Map Route Integration Tests', () => {
 
   describe('Converting coordinates between formats', () => {
     it('should convert map click [lng, lat] to route points', async () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       // Simulate map clicks in [lng, lat] format (as Leaflet provides)
       const mapClickPoints: [number, number][] = [
@@ -118,7 +118,7 @@ describe('Map Route Integration Tests', () => {
         [27.5615, 53.9045],
       ];
 
-      act(() => {
+      await act(() => {
         result.current.setRoutePoints(mapClickPoints);
       });
 
@@ -146,10 +146,10 @@ describe('Map Route Integration Tests', () => {
 
   describe('Setting route data from routing service', () => {
     it('should store full route coordinates and distance', async () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       // Add start and end points first
-      act(() => {
+      await act(() => {
         result.current.setRoutePoints([
           [27.559, 53.9006],
           [27.5615, 53.9045],
@@ -161,7 +161,7 @@ describe('Map Route Integration Tests', () => {
       });
 
       // Publish the complete real adapter result at the routing boundary.
-      act(() => {
+      await act(() => {
         result.current.publishRouteResult({
           ...routingServiceResponse,
           rebuildRevision: result.current.rebuildRevision,
@@ -182,17 +182,17 @@ describe('Map Route Integration Tests', () => {
 
   describe('Clearing and resetting route', () => {
     it('should clear all route data', async () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       // Build a route
-      act(() => {
+      await act(() => {
         result.current.setRoutePoints([
           [27.559, 53.9006],
           [27.5615, 53.9045],
         ]);
       });
 
-      act(() => {
+      await act(() => {
         result.current.publishRouteResult({
           ...routingServiceResponse,
           rebuildRevision: result.current.rebuildRevision,
@@ -205,7 +205,7 @@ describe('Map Route Integration Tests', () => {
       });
 
       // Clear route
-      act(() => {
+      await act(() => {
         result.current.handleClearRoute();
       });
 
@@ -221,14 +221,14 @@ describe('Map Route Integration Tests', () => {
 
   describe('Swapping start and end points', () => {
     it('should swap start and end addresses', async () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       // Add start and end
-      act(() => {
+      await act(() => {
         result.current.handleAddressSelect('Start Point', { lat: 53.9, lng: 27.55 }, true);
       });
 
-      act(() => {
+      await act(() => {
         result.current.handleAddressSelect('End Point', { lat: 54.0, lng: 28.0 }, false);
       });
 
@@ -240,7 +240,7 @@ describe('Map Route Integration Tests', () => {
       const originalEnd = result.current.endAddress;
 
       // Swap
-      act(() => {
+      await act(() => {
         result.current.swapStartEnd();
       });
 
@@ -253,17 +253,17 @@ describe('Map Route Integration Tests', () => {
 
   describe('Transport mode switching', () => {
     it('should change transport mode and clear route', async () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       // Build route
-      act(() => {
+      await act(() => {
         result.current.setRoutePoints([
           [27.559, 53.9006],
           [27.5615, 53.9045],
         ]);
       });
 
-      act(() => {
+      await act(() => {
         result.current.publishRouteResult({
           ...routingServiceResponse,
           rebuildRevision: result.current.rebuildRevision,
@@ -278,7 +278,7 @@ describe('Map Route Integration Tests', () => {
       });
 
       // Change transport mode
-      act(() => {
+      await act(() => {
         result.current.setTransportMode('bike');
       });
 
@@ -294,11 +294,11 @@ describe('Map Route Integration Tests', () => {
 
   describe('Mode switching', () => {
     it('should switch between radius and route modes', async () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       expect(result.current.mode).toBe('radius');
 
-      act(() => {
+      await act(() => {
         result.current.setMode('route');
       });
 
@@ -306,7 +306,7 @@ describe('Map Route Integration Tests', () => {
         expect(result.current.mode).toBe('route');
       });
 
-      act(() => {
+      await act(() => {
         result.current.setMode('radius');
       });
 
@@ -318,7 +318,7 @@ describe('Map Route Integration Tests', () => {
 
   describe('Error states', () => {
     it('should handle routing errors', async () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       expect(result.current.error).toBeNull();
       expect(result.current.isBuilding).toBe(false);
@@ -327,9 +327,9 @@ describe('Map Route Integration Tests', () => {
 
   describe('Edge cases and validation', () => {
     it('should handle empty point array gracefully', async () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
-      act(() => {
+      await act(() => {
         result.current.setRoutePoints([]);
       });
 
@@ -338,11 +338,11 @@ describe('Map Route Integration Tests', () => {
     });
 
     it('should handle invalid coordinates', async () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-      act(() => {
+      await act(() => {
         result.current.setRoutePoints([
           [NaN, 53.9],
           [27.55, NaN],
@@ -358,11 +358,11 @@ describe('Map Route Integration Tests', () => {
     });
 
     it('should handle partial point data', async () => {
-      const { result } = renderHook(() => useRouteStoreAdapter());
+      const { result } = await renderHook(() => useRouteStoreAdapter());
 
       const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
 
-      act(() => {
+      await act(() => {
         result.current.setRoutePoints([
           [27.559, 53.9006], // valid
           [27.56] as any, // invalid - missing lat
@@ -380,9 +380,9 @@ describe('Map Route Integration Tests', () => {
 
   describe('Performance and memoization', () => {
     it('should not recalculate routePoints if store.points unchanged', async () => {
-      const { result, rerender } = renderHook(() => useRouteStoreAdapter());
+      const { result, rerender } = await renderHook(() => useRouteStoreAdapter());
 
-      act(() => {
+      await act(() => {
         result.current.setRoutePoints([
           [27.559, 53.9006],
           [27.5615, 53.9045],
@@ -396,7 +396,7 @@ describe('Map Route Integration Tests', () => {
       const routePointsRef1 = result.current.routePoints;
 
       // Rerender without changing points
-      rerender({});
+      await rerender({});
 
       const routePointsRef2 = result.current.routePoints;
 

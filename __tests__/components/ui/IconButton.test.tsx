@@ -23,8 +23,8 @@ describe('IconButton', () => {
     jest.clearAllMocks()
   })
 
-  const renderIconButton = (props: Partial<React.ComponentProps<typeof IconButton>> = {}) => {
-    return render(
+  const renderIconButton = async (props: Partial<React.ComponentProps<typeof IconButton>> = {}) => {
+    return await render(
       <IconButton
         icon={<View testID="icon-view" />}
         label="Test icon button"
@@ -33,26 +33,26 @@ describe('IconButton', () => {
     )
   }
 
-  it('renders icon and has correct accessibility label', () => {
-    const { getByTestId, getByLabelText } = renderIconButton()
+  it('renders icon and has correct accessibility label', async () => {
+    const { getByTestId, getByLabelText } = await renderIconButton()
 
     expect(getByTestId('icon-view')).toBeTruthy()
     expect(getByLabelText('Test icon button')).toBeTruthy()
   })
 
-  it('calls onPress when pressed', () => {
+  it('calls onPress when pressed', async () => {
     const onPress = jest.fn()
-    const { getByRole } = renderIconButton({ onPress })
+    const { getByRole } = await renderIconButton({ onPress })
 
     const button = getByRole('button')
-    fireEvent.press(button)
+    await fireEvent.press(button)
 
     expect(onPress).toHaveBeenCalledTimes(1)
   })
 
-  it('does not call onPress when disabled', () => {
+  it('does not call onPress when disabled', async () => {
     const onPress = jest.fn()
-    const { getByRole } = renderIconButton({ onPress, disabled: true })
+    const { getByRole } = await renderIconButton({ onPress, disabled: true })
 
     const button = getByRole('button')
     expect(button.props.accessibilityState.disabled).toBe(true)
@@ -61,26 +61,26 @@ describe('IconButton', () => {
     expect(button.props.onClick).toBeUndefined()
   })
 
-  it('marks as active when active prop is true', () => {
-    const { getByRole } = renderIconButton({ active: true })
+  it('marks as active when active prop is true', async () => {
+    const { getByRole } = await renderIconButton({ active: true })
 
     const button = getByRole('button')
     expect(button.props.accessibilityState.selected).toBe(true)
   })
 
-  it('marks as not active when active prop is false', () => {
-    const { getByRole } = renderIconButton({ active: false })
+  it('marks as not active when active prop is false', async () => {
+    const { getByRole } = await renderIconButton({ active: false })
 
     const button = getByRole('button')
     expect(button.props.accessibilityState.selected).toBe(false)
   })
 
-  it.each([false, true])('ordinary action omits selection state (showLabel=%s)', (showLabel) => {
-    const { getByRole } = renderIconButton({ showLabel })
+  it.each([false, true])('ordinary action omits selection state (showLabel=%s)', async (showLabel) => {
+    const { getByRole } = await renderIconButton({ showLabel })
     expect(getByRole('button').props.accessibilityState).not.toHaveProperty('selected')
   })
 
-  it('обе размерности держат минимальный тач-таргет 44dp (#1280)', () => {
+  it('обе размерности держат минимальный тач-таргет 44dp (#1280)', async () => {
     // Здесь `Pressable` и есть видимая поверхность — внешней рамки нет, поэтому
     // объявленный размер И ЕСТЬ тач-таргет. До #1280 стояло 36/42: минимум был
     // задан, но ниже нормы, и его наследовали все потребители примитива.
@@ -89,7 +89,7 @@ describe('IconButton', () => {
     const flatten = (node: any) =>
       Array.isArray(node.props.style) ? Object.assign({}, ...node.props.style) : node.props.style
 
-    const { getByRole, rerender } = renderIconButton({ size: 'sm' })
+    const { getByRole, rerender } = await renderIconButton({ size: 'sm' })
     const sm = flatten(getByRole('button'))
     expect(sm.width).toBeGreaterThanOrEqual(44)
     expect(sm.height).toBeGreaterThanOrEqual(44)
@@ -110,8 +110,8 @@ describe('IconButton', () => {
     expect(md.width).toBeGreaterThanOrEqual(sm.width)
   })
 
-  it('дефолтный размер (без пропа size) тоже не ниже 44dp', () => {
-    const { getByRole } = renderIconButton({})
+  it('дефолтный размер (без пропа size) тоже не ниже 44dp', async () => {
+    const { getByRole } = await renderIconButton({})
     const style = getByRole('button').props.style
     const flat = Array.isArray(style) ? Object.assign({}, ...style) : style
 
@@ -119,7 +119,7 @@ describe('IconButton', () => {
     expect(flat.minHeight).toBeGreaterThanOrEqual(44)
   })
 
-  it('visualSize: рамка держит тач-таргет size, видимый круг — заданный размер (#1739)', () => {
+  it('visualSize: рамка держит тач-таргет size, видимый круг — заданный размер (#1739)', async () => {
     // Пять потребителей (панель маршрута, лёгкий список точек, календарь даты,
     // цветные чипы) ужимали `style` до 26–36dp и жили вне гейта. Режим
     // `visualSize` даёт им прежний круг внутри полной рамки: рамка не меньше
@@ -129,7 +129,7 @@ describe('IconButton', () => {
         ? Object.assign({}, ...node.props.style.filter(Boolean))
         : node.props.style
 
-    const { getByRole, getByTestId } = renderIconButton({
+    const { getByRole, getByTestId } = await renderIconButton({
       size: 'sm',
       visualSize: 26,
       testID: 'compact',
@@ -147,16 +147,16 @@ describe('IconButton', () => {
     expect(visual.backgroundColor).toBe('rgb(1, 2, 3)')
   })
 
-  it('visualSize не меньше рамки игнорируется — обычная кнопка без внутреннего круга', () => {
-    const { getByRole, queryByTestId } = renderIconButton({ size: 'sm', visualSize: 44, testID: 'plain' })
+  it('visualSize не меньше рамки игнорируется — обычная кнопка без внутреннего круга', async () => {
+    const { getByRole, queryByTestId } = await renderIconButton({ size: 'sm', visualSize: 44, testID: 'plain' })
     const style = getByRole('button').props.style
     const flat = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style
     expect(flat.margin).toBeUndefined()
     expect(queryByTestId('plain-visual')).toBeNull()
   })
 
-  it('forwards testID prop to Pressable', () => {
-    const { getByTestId } = renderIconButton({ testID: 'icon-button' })
+  it('forwards testID prop to Pressable', async () => {
+    const { getByTestId } = await renderIconButton({ testID: 'icon-button' })
 
     expect(getByTestId('icon-button')).toBeTruthy()
   })

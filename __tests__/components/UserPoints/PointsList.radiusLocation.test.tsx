@@ -70,10 +70,10 @@ describe('PointsList radius filter → location on user action (PERM-3)', () => 
     });
   });
 
-  const renderList = () => {
+  const renderList = async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const { PointsList } = require('@/components/UserPoints/PointsList');
-    return render(
+    return await render(
       <QueryClientProvider client={client}>
         <PointsList />
       </QueryClientProvider>,
@@ -86,7 +86,7 @@ describe('PointsList radius filter → location on user action (PERM-3)', () => 
     getCurrentPosition.mockImplementation((resolve: any) =>
       resolve({ coords: { latitude: 53.9, longitude: 27.56 } }),
     );
-    renderList();
+    await renderList();
     await waitFor(() => expect(mockHeaderParams.length).toBeGreaterThan(0));
     expect(getCurrentPosition).not.toHaveBeenCalled();
 
@@ -99,7 +99,7 @@ describe('PointsList radius filter → location on user action (PERM-3)', () => 
   });
 
   it('does not ask for location when the radius is cleared to "all points"', async () => {
-    renderList();
+    await renderList();
     await waitFor(() => expect(mockHeaderParams.length).toBeGreaterThan(0));
 
     const { filters, onFilterChange } = latestHeader();

@@ -154,7 +154,7 @@ describe('CalendarScreen status editor', () => {
     ;(Platform.OS as any) = os
     try {
       const Probe = () => <Text testID="active-header-title">{useActiveScreenHeader()?.title ?? ''}</Text>
-      render(<><CalendarScreen /><Probe /></>)
+      await render(<><CalendarScreen /><Probe /></>)
       await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
       expect(screen.queryByText('Назад')).toBeNull()
       expect(screen.getByTestId('active-header-title').props.children).toBe('Мой календарь')
@@ -168,7 +168,7 @@ describe('CalendarScreen status editor', () => {
     const prevOS = Platform.OS
     ;(Platform.OS as any) = 'web'
     try {
-      render(<CalendarScreen />)
+      await render(<CalendarScreen />)
       await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
       expect(screen.getAllByText('Назад')).toHaveLength(1)
     } finally {
@@ -177,15 +177,15 @@ describe('CalendarScreen status editor', () => {
   })
 
   it('allows changing calendar status from planned to visited', async () => {
-    render(<CalendarScreen />)
+    await render(<CalendarScreen />)
 
     await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
 
-    fireEvent.press(screen.getByLabelText('Изменить дату 2026-07-15'))
-    fireEvent.press(screen.getAllByRole('button', { name: 'Был' }).at(-1)!)
+    await fireEvent.press(screen.getByLabelText('Изменить дату 2026-07-15'))
+    await fireEvent.press(screen.getAllByRole('button', { name: 'Был' }).at(-1)!)
 
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Сохранить дату' }))
+      await fireEvent.press(screen.getByRole('button', { name: 'Сохранить дату' }))
     })
 
     expect(mockSetStatus).toHaveBeenCalledWith(
@@ -199,14 +199,14 @@ describe('CalendarScreen status editor', () => {
   })
 
   it('allows deleting an explicit status from calendar', async () => {
-    render(<CalendarScreen />)
+    await render(<CalendarScreen />)
 
     await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
 
-    fireEvent.press(screen.getByLabelText('Изменить дату 2026-07-15'))
+    await fireEvent.press(screen.getByLabelText('Изменить дату 2026-07-15'))
 
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Удалить из календаря' }))
+      await fireEvent.press(screen.getByRole('button', { name: 'Удалить из календаря' }))
     })
 
     expect(mockRemoveStatus).toHaveBeenCalledWith(123, '42')
@@ -214,12 +214,12 @@ describe('CalendarScreen status editor', () => {
 
   it('removes an authored future route from plans by moving it to visited', async () => {
     mockEntries = [makeEntry({ isAuthoredTravel: true })]
-    render(<CalendarScreen />)
+    await render(<CalendarScreen />)
 
     await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
 
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Убрать «Test Travel» из планов' }))
+      await fireEvent.press(screen.getByRole('button', { name: 'Убрать «Test Travel» из планов' }))
     })
 
     expect(mockSetStatus).toHaveBeenCalledWith(
@@ -233,12 +233,12 @@ describe('CalendarScreen status editor', () => {
   it('keeps an authored route actionable when the status mutation fails', async () => {
     mockEntries = [makeEntry({ isAuthoredTravel: true })]
     mockSetStatus.mockRejectedValueOnce(new Error('network'))
-    render(<CalendarScreen />)
+    await render(<CalendarScreen />)
 
     await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
 
     await act(async () => {
-      fireEvent.press(screen.getByRole('button', { name: 'Убрать «Test Travel» из планов' }))
+      await fireEvent.press(screen.getByRole('button', { name: 'Убрать «Test Travel» из планов' }))
     })
 
     expect(mockShowToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }))
@@ -252,10 +252,10 @@ describe('CalendarScreen status editor', () => {
     const prevOS = Platform.OS
     ;(Platform.OS as any) = 'web'
     try {
-      render(<CalendarScreen />)
+      await render(<CalendarScreen />)
 
       await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
-      fireEvent.press(screen.getByRole('button', { name: 'Назад' }))
+      await fireEvent.press(screen.getByRole('button', { name: 'Назад' }))
 
       expect(mockReplace).toHaveBeenCalledWith('/profile')
       expect(mockBack).not.toHaveBeenCalled()
@@ -267,7 +267,7 @@ describe('CalendarScreen status editor', () => {
   it('shows empty state when the user has no explicit travel statuses', async () => {
     mockEntries = []
 
-    render(<CalendarScreen />)
+    await render(<CalendarScreen />)
 
     await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
 
@@ -279,7 +279,7 @@ describe('CalendarScreen status editor', () => {
     mockParams = { status: 'visited' }
     mockEntries = [makeEntry({ status: 'visited', visitedDate: '2026-06-20', plannedDate: undefined })]
 
-    render(<CalendarScreen />)
+    await render(<CalendarScreen />)
 
     await waitFor(() => expect(mockLoadLocal).toHaveBeenCalledWith('42'))
 

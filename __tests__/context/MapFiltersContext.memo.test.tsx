@@ -11,9 +11,9 @@ function BusyProbe() {
 }
 
 describe('FiltersProvider context memo (ST-2)', () => {
-  it('propagates an isBusy change even when every other field is referentially stable', () => {
+  it('propagates an isBusy change even when every other field is referentially stable', async () => {
     const base = makeFiltersContext({ isBusy: true });
-    const { getByTestId, rerender } = render(
+    const { getByTestId, rerender } = await render(
       <FiltersProvider {...base}>
         <BusyProbe />
       </FiltersProvider>,
@@ -23,7 +23,7 @@ describe('FiltersProvider context memo (ST-2)', () => {
     // Same callbacks, same arrays — only the loading flag flips. The previous
     // hand-written dependency list omitted `isBusy`, so consumers kept the stale
     // value and rendered the empty state while the map was still loading.
-    rerender(
+    await rerender(
       <FiltersProvider {...base} isBusy={false}>
         <BusyProbe />
       </FiltersProvider>,
@@ -31,19 +31,19 @@ describe('FiltersProvider context memo (ST-2)', () => {
     expect(getByTestId('busy').props.children).toBe('false');
   });
 
-  it('keeps the context value referentially stable when nothing changed', () => {
+  it('keeps the context value referentially stable when nothing changed', async () => {
     const seen: unknown[] = [];
     function IdentityProbe() {
       seen.push(useFiltersContext());
       return null;
     }
     const base = makeFiltersContext();
-    const { rerender } = render(
+    const { rerender } = await render(
       <FiltersProvider {...base}>
         <IdentityProbe />
       </FiltersProvider>,
     );
-    rerender(
+    await rerender(
       <FiltersProvider {...base}>
         <IdentityProbe />
       </FiltersProvider>,

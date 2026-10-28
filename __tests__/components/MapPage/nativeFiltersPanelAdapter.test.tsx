@@ -36,15 +36,15 @@ function Harness({ flow }: { flow: boolean }) {
 }
 
 describe('native map filter composition', () => {
-  it('keeps the same input and one scroll when measured chrome moves into flow, preserving callbacks', () => {
+  it('keeps the same input and one scroll when measured chrome moves into flow, preserving callbacks', async () => {
     reset.mockClear()
-    const screen = render(<Harness flow={false} />)
+    const screen = await render(<Harness flow={false} />)
     const input = screen.getByTestId('input')
-    fireEvent.changeText(input, 'unchanged after snap')
+    await fireEvent.changeText(input, 'unchanged after snap')
     expect(screen.getByText('unchanged after snap')).toBeTruthy()
-    expect(screen.getByTestId('fixed-footer').findByProps({ testID: 'reset' })).toBeTruthy()
+    expect(within(screen.getByTestId('fixed-footer')).getByTestId('reset')).toBeTruthy()
     expect(within(screen.getByTestId('fixed-header')).getByTestId('sheet-header')).toBeTruthy()
-    screen.rerender(<Harness flow={true} />)
+    await screen.rerender(<Harness flow={true} />)
     expect(screen.getByTestId('input')).toBe(input)
     expect(screen.getByTestId('input').props.value).toBe('unchanged after snap')
     expect(screen.getAllByTestId('body-scroll')).toHaveLength(1)
@@ -52,10 +52,10 @@ describe('native map filter composition', () => {
     expect(screen.getAllByTestId('sheet-header')).toHaveLength(1)
     expect(within(screen.getByTestId('body-scroll')).getByTestId('sheet-header')).toBeTruthy()
     expect(within(screen.getByTestId('fixed-header')).queryByTestId('sheet-header')).toBeNull()
-    expect(screen.getByTestId('map-sheet-flow-footer').findByProps({ testID: 'reset' })).toBeTruthy()
-    fireEvent.press(screen.getByTestId('reset'))
+    expect(within(screen.getByTestId('map-sheet-flow-footer')).getByTestId('reset')).toBeTruthy()
+    await fireEvent.press(screen.getByTestId('reset'))
     expect(reset).toHaveBeenCalledTimes(1)
-    screen.rerender(<Harness flow={false} />)
+    await screen.rerender(<Harness flow={false} />)
     expect(screen.getByTestId('input')).toBe(input)
     expect(screen.getByTestId('input').props.value).toBe('unchanged after snap')
     expect(screen.queryByTestId('map-sheet-flow-footer')).toBeNull()

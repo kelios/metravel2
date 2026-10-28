@@ -26,9 +26,9 @@ it('#2482 marks map popup step titles and the toolbar quest title', async () => 
   const originalOS = Platform.OS
   Platform.OS = 'web'
   try {
-    const tree = render(<QuestFullMap title="Тайны дворца" steps={[{ lat: 53, lng: 27, title: 'Лесвіца ў Падміколле' }]} />)
+    const tree = await render(<QuestFullMap title="Тайны дворца" steps={[{ lat: 53, lng: 27, title: 'Лесвіца ў Падміколле' }]} />)
     await waitFor(() => expect(tree.getByText('Тайны дворца')).toBeTruthy())
-    const marked = tree.UNSAFE_root.findAll((node) => typeof node.props.lang === 'string')
+    const marked = tree.container.queryAll((node) => typeof node.props.lang === 'string')
     expect(marked.some((node) => node.props.lang === 'ru' && node.props.children === 'Тайны дворца')).toBe(true)
     expect(marked.some((node) => node.props.lang === 'be' && node.props.children === 'Лесвіца ў Падміколле')).toBe(true)
   } finally { Platform.OS = originalOS }

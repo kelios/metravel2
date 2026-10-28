@@ -155,7 +155,7 @@ describe('useQuestsApi hooks', () => {
     it('loads quests from API and adapts them', async () => {
       mockFetchQuestsList.mockResolvedValueOnce([API_META]);
 
-      const { result } = renderHook(() => useQuestsList(), { wrapper });
+      const { result } = await renderHook(() => useQuestsList(), { wrapper });
 
       // Initially loading
       expect(result.current.loading).toBe(true);
@@ -170,7 +170,7 @@ describe('useQuestsApi hooks', () => {
     it('sets error when API fails (no fallback)', async () => {
       mockFetchQuestsList.mockRejectedValueOnce(new Error('Network error'));
 
-      const { result } = renderHook(() => useQuestsList(), { wrapper });
+      const { result } = await renderHook(() => useQuestsList(), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -198,7 +198,7 @@ describe('useQuestsApi hooks', () => {
     it('asks for the slice instead of the whole catalog', async () => {
       mockFetchQuestsPreview.mockResolvedValueOnce([API_META]);
 
-      const { result } = renderHook(() => useQuestsPreview(2), { wrapper });
+      const { result } = await renderHook(() => useQuestsPreview(2), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -213,7 +213,7 @@ describe('useQuestsApi hooks', () => {
       const meta3 = { ...API_META, quest_id: 'gomel-palace' };
       queryClient.setQueryData(queryKeys.questsCatalog(getQuestContentLocale()), [API_META, meta2, meta3]);
 
-      const { result } = renderHook(() => useQuestsPreview(2), { wrapper });
+      const { result } = await renderHook(() => useQuestsPreview(2), { wrapper });
 
       expect(result.current.loading).toBe(false);
       expect(result.current.quests.map((quest) => quest.id)).toEqual([
@@ -233,7 +233,7 @@ describe('useQuestsApi hooks', () => {
         { ...API_META, id: 3, quest_id: 'played', completions_count: 2, views_count: 1 },
       ]);
 
-      const { result } = renderHook(() => useQuestsPreview(2), { wrapper });
+      const { result } = await renderHook(() => useQuestsPreview(2), { wrapper });
 
       expect(result.current.loading).toBe(false);
       expect(result.current.quests.map((quest) => quest.id)).toEqual(['played', 'seen-more']);
@@ -241,7 +241,7 @@ describe('useQuestsApi hooks', () => {
     });
 
     it('does not fetch while disabled', async () => {
-      renderHook(() => useQuestsPreview(2, { enabled: false }), { wrapper });
+      await renderHook(() => useQuestsPreview(2, { enabled: false }), { wrapper });
 
       await waitFor(() => expect(mockFetchQuestsPreview).not.toHaveBeenCalled());
     });
@@ -249,7 +249,7 @@ describe('useQuestsApi hooks', () => {
     it('reports an error message when the request fails', async () => {
       mockFetchQuestsPreview.mockRejectedValueOnce(new Error('Network error'));
 
-      const { result } = renderHook(() => useQuestsPreview(2), { wrapper });
+      const { result } = await renderHook(() => useQuestsPreview(2), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -270,7 +270,7 @@ describe('useQuestsApi hooks', () => {
       mockFetchQuestByQuestId.mockResolvedValueOnce(API_BUNDLE);
       mockFetchQuestsByCity.mockResolvedValue([API_META]);
 
-      const { result } = renderHook(() => useQuestBundle('krakow-dragon'), { wrapper });
+      const { result } = await renderHook(() => useQuestBundle('krakow-dragon'), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
       await waitFor(() => expect(result.current.bundle?.tags).toEqual([]));
@@ -290,7 +290,7 @@ describe('useQuestsApi hooks', () => {
       try {
         queryClient.setQueryData(queryKeys.questBundle('krakow-dragon', getQuestContentLocale()), API_BUNDLE);
         const frames: boolean[] = [];
-        const { result } = renderHook(
+        const { result } = await renderHook(
           () => {
             const state = useQuestBundle('krakow-dragon');
             frames.push(state.loading);
@@ -308,10 +308,10 @@ describe('useQuestsApi hooks', () => {
       }
     });
 
-    it('на native тёплый кэш отдаёт бандл первым же кадром — гидратации там нет', () => {
+    it('на native тёплый кэш отдаёт бандл первым же кадром — гидратации там нет', async () => {
       queryClient.setQueryData(queryKeys.questBundle('krakow-dragon', getQuestContentLocale()), API_BUNDLE);
       const frames: boolean[] = [];
-      renderHook(
+      await renderHook(
         () => {
           const state = useQuestBundle('krakow-dragon');
           frames.push(state.loading);
@@ -327,7 +327,7 @@ describe('useQuestsApi hooks', () => {
     it('sets error when API fails (no fallback)', async () => {
       mockFetchQuestByQuestId.mockRejectedValueOnce(new Error('Not found'));
 
-      const { result } = renderHook(() => useQuestBundle('nonexistent'), { wrapper });
+      const { result } = await renderHook(() => useQuestBundle('nonexistent'), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -338,7 +338,7 @@ describe('useQuestsApi hooks', () => {
     });
 
     it('returns null bundle for undefined questId', async () => {
-      const { result } = renderHook(() => useQuestBundle(undefined), { wrapper });
+      const { result } = await renderHook(() => useQuestBundle(undefined), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -355,13 +355,13 @@ describe('useQuestsApi hooks', () => {
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce([]);
 
-      const { result } = renderHook(() => useQuestBundle('krakow-dragon'), { wrapper });
+      const { result } = await renderHook(() => useQuestBundle('krakow-dragon'), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
       expect(result.current.bundle?.title).toBe('Тайна дракона (v1)');
       expect(mockFetchQuestByQuestId).toHaveBeenCalledTimes(1);
 
-      act(() => {
+      await act(() => {
         result.current.refetch();
       });
 
@@ -375,7 +375,7 @@ describe('useQuestsApi hooks', () => {
         { ...API_META, cover_url: 'https://img.com/cover.jpg' },
       ]);
 
-      const { result } = renderHook(() => useQuestBundle('krakow-dragon'), { wrapper });
+      const { result } = await renderHook(() => useQuestBundle('krakow-dragon'), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -389,7 +389,7 @@ describe('useQuestsApi hooks', () => {
         cover_url: 'https://img.com/detail-cover.jpg',
       });
 
-      const { result } = renderHook(() => useQuestBundle('krakow-dragon'), { wrapper });
+      const { result } = await renderHook(() => useQuestBundle('krakow-dragon'), { wrapper });
 
       await waitFor(() => expect(result.current.loading).toBe(false));
 
@@ -404,7 +404,7 @@ describe('useQuestsApi hooks', () => {
     it('loads progress for authenticated user', async () => {
       mockFetchQuestProgress.mockResolvedValueOnce(API_PROGRESS);
 
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useQuestProgressSync('krakow-dragon', true),
       );
 
@@ -417,7 +417,7 @@ describe('useQuestsApi hooks', () => {
     });
 
     it('does not load progress for unauthenticated user', async () => {
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useQuestProgressSync('krakow-dragon', false),
       );
 
@@ -428,7 +428,7 @@ describe('useQuestsApi hooks', () => {
     });
 
     it('does not load progress when questId is undefined', async () => {
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useQuestProgressSync(undefined, true),
       );
 
@@ -441,7 +441,7 @@ describe('useQuestsApi hooks', () => {
     it('handles progress load failure gracefully', async () => {
       mockFetchQuestProgress.mockRejectedValueOnce(new Error('Server down'));
 
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useQuestProgressSync('krakow-dragon', true),
       );
 
@@ -452,13 +452,13 @@ describe('useQuestsApi hooks', () => {
     });
 
     it('saveProgress is a no-op when not authenticated', async () => {
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useQuestProgressSync('krakow-dragon', false),
       );
 
       await waitFor(() => expect(result.current.progressLoading).toBe(false));
 
-      act(() => {
+      await act(() => {
         result.current.saveProgress({
           currentIndex: 1,
           unlockedIndex: 1,
@@ -480,13 +480,13 @@ describe('useQuestsApi hooks', () => {
       mockReadOrCreateProgress.mockResolvedValue(API_PROGRESS);
       mockUpdateProgress.mockResolvedValue(API_PROGRESS);
 
-      const { result, unmount } = renderHook(() =>
+      const { result, unmount } = await renderHook(() =>
         useQuestProgressSync('krakow-dragon', true),
       );
 
       await waitFor(() => expect(result.current.progressLoading).toBe(false));
 
-      act(() => {
+      await act(() => {
         result.current.saveProgress({
           currentIndex: 3,
           unlockedIndex: 4,
@@ -499,7 +499,7 @@ describe('useQuestsApi hooks', () => {
 
       // Unmount before the 2s debounce fires — change must still be persisted.
       expect(mockUpdateProgress).not.toHaveBeenCalled();
-      unmount();
+      await unmount();
 
       await waitFor(() => expect(mockUpdateProgress).toHaveBeenCalled());
       expect(mockUpdateProgress).toHaveBeenCalledWith(42, expect.objectContaining({
@@ -515,7 +515,7 @@ describe('useQuestsApi hooks', () => {
       mockFetchQuestProgress.mockResolvedValueOnce(API_PROGRESS);
       mockDeleteProgress.mockResolvedValueOnce(undefined);
 
-      const { result } = renderHook(() =>
+      const { result } = await renderHook(() =>
         useQuestProgressSync('krakow-dragon', true),
       );
 

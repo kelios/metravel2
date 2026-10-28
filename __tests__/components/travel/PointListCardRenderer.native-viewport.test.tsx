@@ -60,8 +60,8 @@ describe('PointListCardRenderer native viewport media gate', () => {
     ;(Platform as any).OS = originalPlatform
   })
 
-  it('keeps the card mounted but withholds its image until it nears the viewport', () => {
-    const screen = render(<PointListCardRenderer {...props} />)
+  it('keeps the card mounted but withholds its image until it nears the viewport', async () => {
+    const screen = await render(<PointListCardRenderer {...props} />)
 
     expect(screen.getByTestId('mock-place-list-card').props.imageUrl).toBeUndefined()
     const host = screen.getByTestId('travel-point-card-viewport-1')
@@ -69,7 +69,7 @@ describe('PointListCardRenderer native viewport media gate', () => {
     expect(host.props.onLayout).toBe(mockOnLayout)
 
     mockVisible = true
-    screen.rerender(<PointListCardRenderer {...props} item={{ ...props.item }} />)
+    await await screen.rerender(<PointListCardRenderer {...props} item={{ ...props.item }} />)
 
     expect(screen.getByTestId('mock-place-list-card').props.imageUrl).toBe(
       'https://example.com/point.jpg',

@@ -47,9 +47,9 @@ beforeEach(() => {
 })
 
 describe('useTripGear (#1839)', () => {
-  it('не ходит в сеть, пока читать нельзя', () => {
+  it('не ходит в сеть, пока читать нельзя', async () => {
     const client = makeClient()
-    renderHook(() => useTripGear(8001, false), { wrapper: wrapperFor(client) })
+    await renderHook(() => useTripGear(8001, false), { wrapper: wrapperFor(client) })
 
     expect(mockFetchTripGear).not.toHaveBeenCalled()
   })
@@ -59,7 +59,7 @@ describe('useTripGear (#1839)', () => {
     // Дефолт клиента здесь ни при чём: свой `retry` хука перебивает его, и
     // единственный вызов доказывает именно предикат хука.
     const client = makeClient()
-    const { result } = renderHook(() => useTripGear(8001), { wrapper: wrapperFor(client) })
+    const { result } = await renderHook(() => useTripGear(8001), { wrapper: wrapperFor(client) })
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(mockFetchTripGear).toHaveBeenCalledTimes(1)
@@ -78,9 +78,9 @@ describe('useUpdateTripGearItem — оптимистичный статус', ()
       }),
     )
 
-    const { result } = renderHook(() => useUpdateTripGearItem(), { wrapper: wrapperFor(client) })
+    const { result } = await renderHook(() => useUpdateTripGearItem(), { wrapper: wrapperFor(client) })
 
-    act(() => {
+    await act(() => {
       result.current.mutate({ tripId: 8001, itemId: 7, status: 'packed' })
     })
 
@@ -103,9 +103,9 @@ describe('useUpdateTripGearItem — оптимистичный статус', ()
     client.setQueryData<TripGearItem[]>(key, [item({ id: 7, status: 'owned' })])
     mockUpdateTripGearItem.mockRejectedValue(new ApiError(500, 'boom'))
 
-    const { result } = renderHook(() => useUpdateTripGearItem(), { wrapper: wrapperFor(client) })
+    const { result } = await renderHook(() => useUpdateTripGearItem(), { wrapper: wrapperFor(client) })
 
-    act(() => {
+    await act(() => {
       result.current.mutate({ tripId: 8001, itemId: 7, status: 'packed' })
     })
 
@@ -121,9 +121,9 @@ describe('useApplyTripGearTemplate', () => {
     client.setQueryData<TripGearItem[]>(key, [item({ id: 1 })])
     mockApplyTripGearTemplate.mockResolvedValue([item({ id: 2, title: 'Дождевик', category: 'clothing' })])
 
-    const { result } = renderHook(() => useApplyTripGearTemplate(), { wrapper: wrapperFor(client) })
+    const { result } = await renderHook(() => useApplyTripGearTemplate(), { wrapper: wrapperFor(client) })
 
-    act(() => {
+    await act(() => {
       result.current.mutate({ tripId: 8001 })
     })
 
@@ -137,9 +137,9 @@ describe('useApplyTripGearTemplate', () => {
     client.setQueryData<TripGearItem[]>(key, before)
     mockApplyTripGearTemplate.mockResolvedValue([])
 
-    const { result } = renderHook(() => useApplyTripGearTemplate(), { wrapper: wrapperFor(client) })
+    const { result } = await renderHook(() => useApplyTripGearTemplate(), { wrapper: wrapperFor(client) })
 
-    act(() => {
+    await act(() => {
       result.current.mutate({ tripId: 8001 })
     })
 
@@ -155,9 +155,9 @@ describe('useDeleteTripGearItem', () => {
     client.setQueryData<TripGearItem[]>(key, [item({ id: 1 }), item({ id: 2 })])
     mockDeleteTripGearItem.mockRejectedValue(new ApiError(500, 'boom'))
 
-    const { result } = renderHook(() => useDeleteTripGearItem(), { wrapper: wrapperFor(client) })
+    const { result } = await renderHook(() => useDeleteTripGearItem(), { wrapper: wrapperFor(client) })
 
-    act(() => {
+    await act(() => {
       result.current.mutate({ tripId: 8001, itemId: 2 })
     })
 

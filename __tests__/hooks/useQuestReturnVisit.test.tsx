@@ -43,7 +43,7 @@ describe('useQuestReturnVisit', () => {
   })
 
   it('молчит, когда завершённых квестов не было', async () => {
-    render(<Probe />)
+    await render(<Probe />)
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalled())
     expect(mockSendAnalyticsEvent).not.toHaveBeenCalled()
   })
@@ -51,7 +51,7 @@ describe('useQuestReturnVisit', () => {
   it('шлёт return_visit_after_finish один раз и помечает запись', async () => {
     await writeRecord({ questId: 'minsk-loshitsa', cityId: '4', finishedAt: NOW - 5 * DAY })
 
-    render(<Probe />)
+    await render(<Probe />)
 
     await waitFor(() => expect(mockSendAnalyticsEvent).toHaveBeenCalledTimes(1))
     expect(mockSendAnalyticsEvent).toHaveBeenCalledWith('return_visit_after_finish', {
@@ -65,7 +65,7 @@ describe('useQuestReturnVisit', () => {
 
     // Второй заход по той же записи события уже не даёт.
     mockSendAnalyticsEvent.mockClear()
-    render(<Probe />)
+    await render(<Probe />)
     await waitFor(() => expect(AsyncStorage.getItem).toHaveBeenCalled())
     expect(mockSendAnalyticsEvent).not.toHaveBeenCalled()
   })
@@ -77,7 +77,7 @@ describe('useQuestReturnVisit', () => {
       finishedAt: NOW - RETURN_VISIT_WINDOW_MS - DAY,
     })
 
-    render(<Probe />)
+    await render(<Probe />)
 
     await waitFor(() => expect(AsyncStorage.removeItem).toHaveBeenCalledWith(questFinishRecordKey('guest')))
     expect(mockSendAnalyticsEvent).not.toHaveBeenCalled()

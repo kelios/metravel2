@@ -191,21 +191,21 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
 })
 
 /** Правка маршрута без сохранения: точки перестают совпадать с серверными. */
-const editRoute = (getByTestId: (id: string) => unknown) => {
+const editRoute = async (getByTestId: (id: string) => unknown) => {
   // Перестановка живёт в редакторе точки: в строке остались правка и удаление,
   // иначе четыре иконки по 44dp не оставляли места названию.
-  fireEvent.press(getByTestId('route-builder-edit-1') as never)
-  fireEvent.press(getByTestId('route-builder-move-up-1') as never)
+  await fireEvent.press(getByTestId('route-builder-edit-1') as never)
+  await fireEvent.press(getByTestId('route-builder-move-up-1') as never)
 }
 
-const settleDebounce = () => {
-  act(() => {
+const settleDebounce = async () => {
+  await act(() => {
     jest.advanceTimersByTime(PREVIEW_DEBOUNCE_MS)
   })
 }
 
-const deliver = (result: UseMapRoutingResult) => {
-  act(() => {
+const deliver = async (result: UseMapRoutingResult) => {
+  await act(() => {
     mockEngine.onResult?.(result)
   })
 }
@@ -213,8 +213,8 @@ const deliver = (result: UseMapRoutingResult) => {
 
 // #1491: шаг «Точки маршрута» рендерит общий AddressSearch с /map, а он ходит за
 // адресами через React Query — конструктору нужен клиент, как и в приложении.
-const renderRouteBuilder = (element: React.ReactElement) =>
-  render(element, { wrapper: createQueryWrapper().Wrapper })
+const renderRouteBuilder = async (element: React.ReactElement) =>
+  await render(element, { wrapper: createQueryWrapper().Wrapper })
 
 describe('RouteBuilder live route preview', () => {
   beforeEach(() => {
@@ -232,8 +232,8 @@ describe('RouteBuilder live route preview', () => {
     jest.useRealTimers()
   })
 
-  it('leaves the saved route to the backend and does not build anything', () => {
-    const { queryByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('leaves the saved route to the backend and does not build anything', async () => {
+    const { queryByTestId, getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(queryByTestId('trip-route-preview-engine')).toBeNull()
     expect(getByTestId('route-map-geometry').props.children).toBe('3')
@@ -241,7 +241,7 @@ describe('RouteBuilder live route preview', () => {
   })
 
   it('repairs a saved healthy state without geometry as one display tuple', async () => {
-    const { getByTestId, queryByTestId, queryByText } = renderRouteBuilder(
+    const { getByTestId, queryByTestId, queryByText } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ routeGeometry: null })} />,
     )
 
@@ -263,7 +263,7 @@ describe('RouteBuilder live route preview', () => {
     expect(queryByText('Маршрут построен ORS')).toBeNull()
     expect(queryByText('118 км')).toBeNull()
 
-    deliver(engineResult())
+    await deliver(engineResult())
 
     // One result replaces geometry, state and summary together. Export uses
     // that same dense preview geometry instead of the stale saved metadata.
@@ -274,7 +274,7 @@ describe('RouteBuilder live route preview', () => {
     expect(queryByText('24 км')).toBeTruthy()
     expect(queryByText('118 км')).toBeNull()
 
-    fireEvent.press(getByTestId('trip-route-export-gpx'))
+    await fireEvent.press(getByTestId('trip-route-export-gpx'))
     await act(async () => undefined)
 
     expect(mockSaveRouteExportFile).toHaveBeenCalledTimes(1)
@@ -282,9 +282,9 @@ describe('RouteBuilder live route preview', () => {
     expect((exported.content.match(/<trkpt/g) ?? [])).toHaveLength(30)
   })
 
-  it('repairs stale not_enough_points once two coordinates are already present', () => {
+  it('repairs stale not_enough_points once two coordinates are already present', async () => {
     const onDisplayStateChange = jest.fn()
-    const { getByTestId, queryByTestId, queryByText, unmount } = renderRouteBuilder(
+    const { getByTestId, queryByTestId, queryByText, unmount } = await renderRouteBuilder(
       <RouteBuilder
         trip={makeTrip({
           routeGeometry: [
@@ -314,7 +314,7 @@ describe('RouteBuilder live route preview', () => {
       routablePointCount: 3,
     })
 
-    deliver(engineResult())
+    await deliver(engineResult())
 
     expect(getByTestId('route-map-geometry').props.children).toBe('30')
     expect(getByTestId('route-map-provider').props.children).toBe('preview')
@@ -323,12 +323,12 @@ describe('RouteBuilder live route preview', () => {
       routingState: expect.objectContaining({ provider: 'preview', isOptimal: true }),
     }))
 
-    unmount()
+    await unmount()
     expect(onDisplayStateChange).toHaveBeenLastCalledWith(null)
   })
 
-  it('replaces stale not_enough_points with a schematic tuple for non-routable transport', () => {
-    const { getByTestId, queryByTestId, queryByText } = renderRouteBuilder(
+  it('replaces stale not_enough_points with a schematic tuple for non-routable transport', async () => {
+    const { getByTestId, queryByTestId, queryByText } = await renderRouteBuilder(
       <RouteBuilder
         trip={makeTrip({
           transport: 'public',
@@ -350,12 +350,12 @@ describe('RouteBuilder live route preview', () => {
     expect(queryByTestId('route-summary-approximate')).toBeTruthy()
   })
 
-  it('fails closed when repair routing fails and keeps retry available', () => {
-    const { getByTestId, queryByTestId, queryByText } = renderRouteBuilder(
+  it('fails closed when repair routing fails and keeps retry available', async () => {
+    const { getByTestId, queryByTestId, queryByText } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ routeGeometry: null })} />,
     )
 
-    deliver(engineResult({ error: 'Сервис маршрутов недоступен' }))
+    await deliver(engineResult({ error: 'Сервис маршрутов недоступен' }))
 
     expect(getByTestId('route-map-geometry').props.children).toBe('0')
     expect(getByTestId('route-map-provider').props.children).toBe('direct')
@@ -366,25 +366,25 @@ describe('RouteBuilder live route preview', () => {
     expect(queryByText('Прямая линия')).toBeTruthy()
 
     const mountsBeforeRetry = mockEngine.mounts.length
-    fireEvent.press(queryByText('Повторить') as never)
+    await fireEvent.press(queryByText('Повторить') as never)
 
     expect(mockEngine.mounts.length).toBeGreaterThan(mountsBeforeRetry)
     expect(queryByText('Прямая линия')).toBeNull()
     expect(getByTestId('route-map-provider').props.children).toBe('none')
   })
 
-  it('does not offer retry when ORS answered that there is no road between the points (#2057)', () => {
-    const { queryByText } = renderRouteBuilder(
+  it('does not offer retry when ORS answered that there is no road between the points (#2057)', async () => {
+    const { queryByText } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ routeGeometry: null })} />,
     )
 
-    deliver(engineResult({ error: 'ors_http_404' }))
+    await deliver(engineResult({ error: 'ors_http_404' }))
 
     expect(queryByText('Прямая линия')).toBeTruthy()
     expect(queryByText('Повторить')).toBeNull()
   })
 
-  it('waits for the persisted elevation geometry source before starting repair', () => {
+  it('waits for the persisted elevation geometry source before starting repair', async () => {
     mockRouteElevationQuery = {
       data: {
         ...mockMissingElevationGeometry,
@@ -396,7 +396,7 @@ describe('RouteBuilder live route preview', () => {
       isFetching: true,
     }
     const trip = makeTrip({ routeGeometry: null })
-    const { getByTestId, queryByTestId, queryByText, rerender } = renderRouteBuilder(
+    const { getByTestId, queryByTestId, queryByText, rerender } = await renderRouteBuilder(
       <RouteBuilder trip={trip} />,
     )
 
@@ -407,31 +407,31 @@ describe('RouteBuilder live route preview', () => {
     expect(queryByText('118 км')).toBeNull()
 
     mockRouteElevationQuery = { data: mockMissingElevationGeometry, isFetching: false }
-    rerender(<RouteBuilder trip={{ ...trip }} />)
+    await rerender(<RouteBuilder trip={{ ...trip }} />)
 
     expect(queryByTestId('trip-route-preview-engine')).toBeTruthy()
     expect(mockEngine.mounts).toHaveLength(1)
   })
 
-  it('does not POST an elevation refresh while its GET is still in flight', () => {
+  it('does not POST an elevation refresh while its GET is still in flight', async () => {
     mockRouteElevationQuery = {
       data: mockMissingElevationGeometry,
       isFetching: true,
     }
     const trip = makeTrip()
-    const { rerender } = renderRouteBuilder(<RouteBuilder trip={trip} />)
+    const { rerender } = await renderRouteBuilder(<RouteBuilder trip={trip} />)
 
     expect(mockRefreshRouteElevation).not.toHaveBeenCalled()
 
     mockRouteElevationQuery = { data: mockMissingElevationGeometry, isFetching: false }
-    rerender(<RouteBuilder trip={{ ...trip }} />)
+    await rerender(<RouteBuilder trip={{ ...trip }} />)
 
     expect(mockRefreshRouteElevation).toHaveBeenCalledTimes(1)
     expect(mockRefreshRouteElevation).toHaveBeenCalledWith({ tripId: trip.id })
   })
 
-  it('does not call a backend summary a local estimate when routing state is absent', () => {
-    const { getByTestId, queryByText } = renderRouteBuilder(
+  it('does not call a backend summary a local estimate when routing state is absent', async () => {
+    const { getByTestId, queryByText } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ routingState: null })} />,
     )
 
@@ -439,16 +439,16 @@ describe('RouteBuilder live route preview', () => {
     expect(within(getByTestId('route-summary')).queryByText('118 км')).toBeTruthy()
   })
 
-  it('waits out the debounce before asking the routing engine', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('waits out the debounce before asking the routing engine', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    editRoute(getByTestId)
+    await editRoute(getByTestId)
 
     // Микро-правки не должны бить по провайдерам маршрутизации на каждый шаг.
     expect(queryByTestId('trip-route-preview-engine')).toBeNull()
     expect(getByTestId('route-map-geometry').props.children).toBe('0')
 
-    settleDebounce()
+    await settleDebounce()
 
     expect(queryByTestId('trip-route-preview-engine')).not.toBeNull()
     expect(getByTestId('preview-engine-mode').props.children).toBe('car')
@@ -462,12 +462,12 @@ describe('RouteBuilder live route preview', () => {
     ])
   })
 
-  it('draws the routed geometry and shows engine numbers without saving', () => {
-    const { getByTestId, queryByText } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('draws the routed geometry and shows engine numbers without saving', async () => {
+    const { getByTestId, queryByText } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    editRoute(getByTestId)
-    settleDebounce()
-    deliver(engineResult())
+    await editRoute(getByTestId)
+    await settleDebounce()
+    await deliver(engineResult())
 
     expect(getByTestId('route-map-geometry').props.children).toBe('30')
     expect(getByTestId('route-map-provider').props.children).toBe('preview')
@@ -481,16 +481,16 @@ describe('RouteBuilder live route preview', () => {
     expect(within(getByTestId('route-summary')).queryByText('3')).toBeTruthy()
   })
 
-  it('routes a fourth coordinate point and updates the stops chip without saving', () => {
-    const { getByTestId, queryByText } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('routes a fourth coordinate point and updates the stops chip without saving', async () => {
+    const { getByTestId, queryByText } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
-    fireEvent.press(getByTestId('route-builder-type-custom'))
-    fireEvent.changeText(getByTestId('route-builder-name'), 'QA Android point')
-    fireEvent.changeText(getByTestId('route-builder-lat'), '53.8400')
-    fireEvent.changeText(getByTestId('route-builder-lng'), '27.7200')
-    fireEvent.press(getByTestId('route-builder-add'))
-    settleDebounce()
+    await fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-type-custom'))
+    await fireEvent.changeText(getByTestId('route-builder-name'), 'QA Android point')
+    await fireEvent.changeText(getByTestId('route-builder-lat'), '53.8400')
+    await fireEvent.changeText(getByTestId('route-builder-lng'), '27.7200')
+    await fireEvent.press(getByTestId('route-builder-add'))
+    await settleDebounce()
 
     expect(getByTestId('preview-engine-points').props.children).toBe('4')
     expect(mockEngine.mounts.at(-1)?.points).toEqual([
@@ -500,7 +500,7 @@ describe('RouteBuilder live route preview', () => {
       [27.72, 53.84],
     ])
 
-    deliver(engineResult())
+    await deliver(engineResult())
 
     expect(getByTestId('route-map-provider').props.children).toBe('preview')
     expect(getByTestId('route-map-geometry').props.children).toBe('30')
@@ -509,12 +509,12 @@ describe('RouteBuilder live route preview', () => {
     expect(queryByText('Локальная оценка')).toBeNull()
   })
 
-  it('announces a direct line with a retry instead of passing it off as a route', () => {
-    const { getByTestId, queryByTestId, queryByText } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('announces a direct line with a retry instead of passing it off as a route', async () => {
+    const { getByTestId, queryByTestId, queryByText } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    editRoute(getByTestId)
-    settleDebounce()
-    deliver(engineResult({ error: 'Сервис маршрутов недоступен' }))
+    await editRoute(getByTestId)
+    await settleDebounce()
+    await deliver(engineResult({ error: 'Сервис маршрутов недоступен' }))
 
     expect(queryByText('Прямая линия')).toBeTruthy()
     expect(getByTestId('route-map-geometry').props.children).toBe('0')
@@ -524,80 +524,80 @@ describe('RouteBuilder live route preview', () => {
     // Повтор — это заново смонтированный движок: деградированный ответ намеренно
     // не кэшируется, поэтому свежий монтаж снова идёт к провайдерам.
     const mountsBefore = mockEngine.mounts.length
-    fireEvent.press(queryByText('Повторить') as never)
+    await fireEvent.press(queryByText('Повторить') as never)
 
     expect(mockEngine.mounts.length).toBeGreaterThan(mountsBefore)
     expect(queryByText('Прямая линия')).toBeNull()
   })
 
-  it('drops a stale answer as soon as the route changes again', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('drops a stale answer as soon as the route changes again', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    editRoute(getByTestId)
-    settleDebounce()
-    deliver(engineResult())
+    await editRoute(getByTestId)
+    await settleDebounce()
+    await deliver(engineResult())
     expect(getByTestId('route-map-geometry').props.children).toBe('30')
 
-    fireEvent.press(getByTestId('route-builder-delete-2'))
+    await fireEvent.press(getByTestId('route-builder-delete-2'))
 
     // Ответ описывает уже другой набор точек — держать его на карте нельзя.
     expect(getByTestId('route-map-geometry').props.children).toBe('0')
   })
 
-  it('rejects a late answer from the engine mounted for the previous points', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('rejects a late answer from the engine mounted for the previous points', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    editRoute(getByTestId)
-    settleDebounce()
+    await editRoute(getByTestId)
+    await settleDebounce()
     const staleCallback = mockEngine.callbacks.at(-1)
 
-    fireEvent.press(getByTestId('route-builder-delete-2'))
-    settleDebounce()
+    await fireEvent.press(getByTestId('route-builder-delete-2'))
+    await settleDebounce()
     const currentCallback = mockEngine.callbacks.at(-1)
     expect(currentCallback).not.toBe(staleCallback)
 
-    act(() => {
+    await act(() => {
       staleCallback?.(engineResult())
     })
     expect(getByTestId('route-map-geometry').props.children).toBe('0')
 
-    act(() => {
+    await act(() => {
       currentCallback?.(engineResult())
     })
     expect(getByTestId('route-map-geometry').props.children).toBe('30')
   })
 
-  it('rejects a late answer from the previous retry attempt', () => {
-    const { getByTestId, queryByText } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('rejects a late answer from the previous retry attempt', async () => {
+    const { getByTestId, queryByText } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    editRoute(getByTestId)
-    settleDebounce()
+    await editRoute(getByTestId)
+    await settleDebounce()
     const staleCallback = mockEngine.callbacks.at(-1)
-    act(() => {
+    await act(() => {
       staleCallback?.(engineResult({ error: 'routing failed' }))
     })
 
-    fireEvent.press(queryByText('Повторить') as never)
+    await fireEvent.press(queryByText('Повторить') as never)
     const currentCallback = mockEngine.callbacks.at(-1)
     expect(currentCallback).not.toBe(staleCallback)
 
-    act(() => {
+    await act(() => {
       currentCallback?.(engineResult())
       staleCallback?.(engineResult({ error: 'late failure' }))
     })
     expect(getByTestId('route-map-geometry').props.children).toBe('30')
   })
 
-  it('updates the elevation profile together with the preview', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder(
+  it('updates the elevation profile together with the preview', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ transport: 'bike' })} />,
     )
 
-    editRoute(getByTestId)
-    settleDebounce()
+    await editRoute(getByTestId)
+    await settleDebounce()
     expect(queryByTestId('route-elevation-profile')).toBeNull()
 
-    deliver(
+    await deliver(
       engineResult({
         elevationSamples: [
           { index: 0, elevationM: 200 },
@@ -611,13 +611,13 @@ describe('RouteBuilder live route preview', () => {
     expect(getByTestId('route-elevation-samples').props.children).toBe('3')
   })
 
-  it('keeps the saved route when only a point label changed', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('keeps the saved route when only a point label changed', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    fireEvent.press(getByTestId('route-builder-edit-0'))
-    fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Минск (старт)')
-    fireEvent.press(getByTestId('route-builder-edit-save'))
-    settleDebounce()
+    await fireEvent.press(getByTestId('route-builder-edit-0'))
+    await fireEvent.changeText(getByTestId('route-builder-edit-name'), 'Минск (старт)')
+    await fireEvent.press(getByTestId('route-builder-edit-save'))
+    await settleDebounce()
 
     // Геометрия зависит от координат, а не от подписи: опечатка в названии не
     // повод снимать сохранённую дорогу и жечь запрос к лимитированному ORS.
@@ -627,30 +627,30 @@ describe('RouteBuilder live route preview', () => {
     expect(getByTestId('route-map-provider').props.children).toBe('ors')
   })
 
-  it('keeps showing progress until the engine actually answers', () => {
-    const { getByTestId, queryByText } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('keeps showing progress until the engine actually answers', async () => {
+    const { getByTestId, queryByText } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    editRoute(getByTestId)
-    settleDebounce()
+    await editRoute(getByTestId)
+    await settleDebounce()
 
     // Свежесмонтированный useRouting сначала отдаёт пустое состояние — свой
     // дебаунс он ещё не отработал. Считать это готовым маршрутом нельзя.
-    deliver(engineResult({ loading: false, distance: 0, duration: 0, coords: [] }))
+    await deliver(engineResult({ loading: false, distance: 0, duration: 0, coords: [] }))
 
     expect(queryByText('Построение маршрута…')).toBeTruthy()
     expect(getByTestId('route-map-provider').props.children).toBe('none')
   })
 
-  it('counts a coordinate-less point in the stops chip right away', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('counts a coordinate-less point in the stops chip right away', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(within(getByTestId('route-summary')).queryByText('3')).toBeTruthy()
 
-    fireEvent.press(getByTestId('route-builder-add-action'))
-    fireEvent.press(getByTestId('route-builder-type-custom'))
-    fireEvent.changeText(getByTestId('route-builder-name'), 'Кофе по дороге')
-    fireEvent.press(getByTestId('route-builder-add'))
-    settleDebounce()
+    await fireEvent.press(getByTestId('route-builder-add-action'))
+    await fireEvent.press(getByTestId('route-builder-type-custom'))
+    await fireEvent.changeText(getByTestId('route-builder-name'), 'Кофе по дороге')
+    await fireEvent.press(getByTestId('route-builder-add'))
+    await settleDebounce()
 
     // Дорога не поменялась — серверные геометрия и цифры на месте, движок молчит.
     expect(queryByTestId('trip-route-preview-engine')).toBeNull()
@@ -659,13 +659,13 @@ describe('RouteBuilder live route preview', () => {
     expect(within(getByTestId('route-summary')).queryByText('4')).toBeTruthy()
   })
 
-  it('never auto-routes public transport and says the line is schematic', () => {
-    const { getByTestId, queryByTestId, queryByText } = renderRouteBuilder(
+  it('never auto-routes public transport and says the line is schematic', async () => {
+    const { getByTestId, queryByTestId, queryByText } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ transport: 'public', routingState: null })} />,
     )
 
-    editRoute(getByTestId)
-    settleDebounce()
+    await editRoute(getByTestId)
+    await settleDebounce()
 
     expect(queryByTestId('trip-route-preview-engine')).toBeNull()
     expect(getByTestId('route-map-provider').props.children).toBe('schematic')

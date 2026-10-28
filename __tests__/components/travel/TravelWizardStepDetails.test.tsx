@@ -117,9 +117,9 @@ const baseFormData: TravelFormData = {
   moderation: false,
 }
 
-const renderStep = (override: Partial<TravelFormData> = {}, props: any = {}) => {
+const renderStep = async (override: Partial<TravelFormData> = {}, props: any = {}) => {
   const setFormData = jest.fn()
-  const utils = render(
+  const utils = await render(
     <Suspense fallback={<Text>loading…</Text>}>
       <TravelWizardStepDetails
         currentStep={4}
@@ -137,7 +137,7 @@ const renderStep = (override: Partial<TravelFormData> = {}, props: any = {}) => 
 
 describe('TravelWizardStepDetails (Шаг 4)', () => {
   it('renders the three optional editors and the section title', async () => {
-    const { getByText, getByTestId } = renderStep()
+    const { getByText, getByTestId } = await renderStep()
 
     expect(getByText('Для кого это путешествие')).toBeTruthy()
     await waitFor(() => expect(getByTestId('editor-Плюсы')).toBeTruthy())
@@ -145,26 +145,26 @@ describe('TravelWizardStepDetails (Шаг 4)', () => {
     expect(getByTestId('editor-Рекомендации')).toBeTruthy()
   })
 
-  it('shows the title from stepMeta when provided', () => {
-    const { getByText } = renderStep({}, { stepMeta: { title: 'Кастомный заголовок' } })
+  it('shows the title from stepMeta when provided', async () => {
+    const { getByText } = await renderStep({}, { stepMeta: { title: 'Кастомный заголовок' } })
     expect(getByText('Кастомный заголовок')).toBeTruthy()
   })
 
-  it('counts filled recommendation fields (0 of 3 when all empty)', () => {
-    const { getByText } = renderStep()
+  it('counts filled recommendation fields (0 of 3 when all empty)', async () => {
+    const { getByText } = await renderStep()
     expect(getByText('0 из 3')).toBeTruthy()
   })
 
-  it('counts filled recommendation fields (2 of 3 when plus and minus set)', () => {
-    const { getByText } = renderStep({ plus: 'Удобно', minus: 'Дорого' })
+  it('counts filled recommendation fields (2 of 3 when plus and minus set)', async () => {
+    const { getByText } = await renderStep({ plus: 'Удобно', minus: 'Дорого' })
     expect(getByText('2 из 3')).toBeTruthy()
   })
 
   it('updates formData.plus through the Плюсы editor onChange', async () => {
-    const { getByLabelText, setFormData } = renderStep()
+    const { getByLabelText, setFormData } = await renderStep()
 
     await waitFor(() => expect(getByLabelText('change-Плюсы')).toBeTruthy())
-    fireEvent.press(getByLabelText('change-Плюсы'))
+    await fireEvent.press(getByLabelText('change-Плюсы'))
 
     expect(setFormData).toHaveBeenCalledTimes(1)
     const updater = setFormData.mock.calls[0][0]
@@ -173,10 +173,10 @@ describe('TravelWizardStepDetails (Шаг 4)', () => {
   })
 
   it('updates formData.minus through the Минусы editor onChange', async () => {
-    const { getByLabelText, setFormData } = renderStep()
+    const { getByLabelText, setFormData } = await renderStep()
 
     await waitFor(() => expect(getByLabelText('change-Минусы')).toBeTruthy())
-    fireEvent.press(getByLabelText('change-Минусы'))
+    await fireEvent.press(getByLabelText('change-Минусы'))
 
     const updater = setFormData.mock.calls[0][0]
     const next = typeof updater === 'function' ? updater(baseFormData) : updater
@@ -184,10 +184,10 @@ describe('TravelWizardStepDetails (Шаг 4)', () => {
   })
 
   it('updates formData.recommendation through the Рекомендации editor onChange', async () => {
-    const { getByLabelText, setFormData } = renderStep()
+    const { getByLabelText, setFormData } = await renderStep()
 
     await waitFor(() => expect(getByLabelText('change-Рекомендации')).toBeTruthy())
-    fireEvent.press(getByLabelText('change-Рекомендации'))
+    await fireEvent.press(getByLabelText('change-Рекомендации'))
 
     const updater = setFormData.mock.calls[0][0]
     const next = typeof updater === 'function' ? updater(baseFormData) : updater
@@ -195,7 +195,7 @@ describe('TravelWizardStepDetails (Шаг 4)', () => {
   })
 
   it('forwards existing field content into the editors', async () => {
-    const { getByText } = renderStep({
+    const { getByText } = await renderStep({
       plus: 'Существующий плюс',
       minus: 'Существующий минус',
     })
@@ -204,11 +204,11 @@ describe('TravelWizardStepDetails (Шаг 4)', () => {
     expect(getByText('editor:Минусы:Существующий минус')).toBeTruthy()
   })
 
-  it('fires onNext from the header primary action', () => {
+  it('fires onNext from the header primary action', async () => {
     const onNext = jest.fn()
-    const { getByText } = renderStep({}, { onNext })
+    const { getByText } = await renderStep({}, { onNext })
 
-    fireEvent.press(getByText('К публикации'))
+    await fireEvent.press(getByText('К публикации'))
     expect(onNext).toHaveBeenCalledTimes(1)
   })
 })

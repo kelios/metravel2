@@ -13,8 +13,8 @@ jest.mock('react-native', () => {
 });
 
 describe('useScrollNavigation', () => {
-  it('creates anchors for predefined section keys', () => {
-    const { result } = renderHook(() => useScrollNavigation());
+  it('creates anchors for predefined section keys', async () => {
+    const { result } = await renderHook(() => useScrollNavigation());
 
     const keys = Object.keys(result.current.anchors);
     expect(keys).toContain('gallery');
@@ -22,8 +22,8 @@ describe('useScrollNavigation', () => {
     expect(keys).toContain('popular');
   });
 
-  it('scrollTo uses measureLayout and scrollTo when anchor exists', () => {
-    const { result } = renderHook(() => useScrollNavigation());
+  it('scrollTo uses measureLayout and scrollTo when anchor exists', async () => {
+    const { result } = await renderHook(() => useScrollNavigation());
 
     const fakeScrollRef = {
       current: {
@@ -44,15 +44,15 @@ describe('useScrollNavigation', () => {
 
     (result.current as any).anchors['map'] = anchor;
 
-    act(() => {
+    await act(() => {
       result.current.scrollTo('map');
     });
 
     expect(fakeScrollRef.current.scrollTo).toHaveBeenCalledWith({ y: 0, animated: true });
   });
 
-  it('measureLayout uses native scroll ref, not a node-handle number (Android-bug 95)', () => {
-    const { result } = renderHook(() => useScrollNavigation());
+  it('measureLayout uses native scroll ref, not a node-handle number (Android-bug 95)', async () => {
+    const { result } = await renderHook(() => useScrollNavigation());
 
     const nativeScrollRef = { __nativeScrollRef: true };
     const getNativeScrollRef = jest.fn(() => nativeScrollRef);
@@ -64,7 +64,7 @@ describe('useScrollNavigation', () => {
     const measureLayout = jest.fn((_relativeTo, onSuccess) => onSuccess(0, 200));
     ;(result.current as any).anchors['description'] = { current: { measureLayout } };
 
-    act(() => {
+    await act(() => {
       result.current.scrollTo('description');
     });
 
@@ -75,9 +75,9 @@ describe('useScrollNavigation', () => {
     expect(typeof relativeArg).not.toBe('number');
   });
 
-  it('retries native scroll when a lazy section mounts after the first tap', () => {
+  it('retries native scroll when a lazy section mounts after the first tap', async () => {
     jest.useFakeTimers();
-    const { result } = renderHook(() => useScrollNavigation());
+    const { result } = await renderHook(() => useScrollNavigation());
 
     const nativeScrollRef = { __nativeScrollRef: true };
     const scrollTo = jest.fn();
@@ -87,7 +87,7 @@ describe('useScrollNavigation', () => {
     };
     ;(result.current as any).anchors['map'] = { current: null };
 
-    act(() => {
+    await act(() => {
       result.current.scrollTo('map');
     });
 
@@ -96,7 +96,7 @@ describe('useScrollNavigation', () => {
     const measureLayout = jest.fn((_relativeTo, onSuccess) => onSuccess(0, 240));
     ;(result.current as any).anchors['map'] = { current: { measureLayout } };
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(120);
     });
 
@@ -109,9 +109,9 @@ describe('useScrollNavigation', () => {
     jest.useRealTimers();
   });
 
-  it('keeps retrying when native measureLayout fails before a section can be measured', () => {
+  it('keeps retrying when native measureLayout fails before a section can be measured', async () => {
     jest.useFakeTimers();
-    const { result } = renderHook(() => useScrollNavigation());
+    const { result } = await renderHook(() => useScrollNavigation());
 
     const nativeScrollRef = { __nativeScrollRef: true };
     const scrollTo = jest.fn();
@@ -126,14 +126,14 @@ describe('useScrollNavigation', () => {
       .mockImplementationOnce((_relativeTo, onSuccess) => onSuccess(0, 360));
     ;(result.current as any).anchors['description'] = { current: { measureLayout } };
 
-    act(() => {
+    await act(() => {
       result.current.scrollTo('description');
     });
 
     expect(measureLayout).toHaveBeenCalledTimes(1);
     expect(scrollTo).not.toHaveBeenCalled();
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(120);
     });
 
@@ -144,9 +144,9 @@ describe('useScrollNavigation', () => {
 
   it.each(['description', 'map', 'points'] as const)(
     'recovers sticky quick jump navigation to %s after a transient native measure failure',
-    (sectionKey) => {
+    async (sectionKey) => {
       jest.useFakeTimers();
-      const { result } = renderHook(() => useScrollNavigation());
+      const { result } = await renderHook(() => useScrollNavigation());
 
       const nativeScrollRef = { __nativeScrollRef: true };
       const scrollTo = jest.fn();
@@ -162,13 +162,13 @@ describe('useScrollNavigation', () => {
         .mockImplementationOnce((_relativeTo, onSuccess) => onSuccess(0, targetY));
       ;(result.current as any).anchors[sectionKey] = { current: { measureLayout } };
 
-      act(() => {
+      await act(() => {
         result.current.scrollTo(sectionKey);
       });
 
       expect(scrollTo).not.toHaveBeenCalled();
 
-      act(() => {
+      await act(() => {
         jest.advanceTimersByTime(120);
       });
 
@@ -180,8 +180,8 @@ describe('useScrollNavigation', () => {
     },
   );
 
-  it('keeps native quick-jump targets below the sticky section navigation', () => {
-    const { result } = renderHook(() => useScrollNavigation());
+  it('keeps native quick-jump targets below the sticky section navigation', async () => {
+    const { result } = await renderHook(() => useScrollNavigation());
 
     const scrollTo = jest.fn();
     ;(result.current as any).scrollRef.current = {
@@ -194,23 +194,23 @@ describe('useScrollNavigation', () => {
       },
     };
 
-    act(() => {
+    await act(() => {
       result.current.scrollTo('points');
     });
 
     expect(scrollTo).toHaveBeenCalledWith({ y: 804, animated: true });
   });
 
-  it('does nothing when anchor or scrollRef is missing', () => {
+  it('does nothing when anchor or scrollRef is missing', async () => {
     jest.useFakeTimers();
-    const { result } = renderHook(() => useScrollNavigation());
+    const { result } = await renderHook(() => useScrollNavigation());
 
-    expect(() => {
+    await expect(
       act(() => {
         result.current.scrollTo('non-existing');
         jest.runOnlyPendingTimers();
-      });
-    }).not.toThrow();
+      })
+    ).resolves.toBeUndefined();
     jest.useRealTimers();
   });
 });

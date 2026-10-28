@@ -145,13 +145,13 @@ describe('QuestsContentPanel', () => {
      * иначе a11y-имя обещало бы включить уже включённую сортировку.
      */
     describe('popular sort chip', () => {
-        it('stays hidden while the slice has nothing to reorder', () => {
-            const { queryByTestId } = render(<QuestsContentPanel {...makeBaseProps()} />);
+        it('stays hidden while the slice has nothing to reorder', async () => {
+            const { queryByTestId } = await render(<QuestsContentPanel {...makeBaseProps()} />);
             expect(queryByTestId('quests-sort-popular')).toBeNull();
         });
 
-        it('stays hidden until the catalog is loaded', () => {
-            const { queryByTestId } = render(
+        it('stays hidden until the catalog is loaded', async () => {
+            const { queryByTestId } = await render(
                 <QuestsContentPanel {...makeBaseProps()} dataLoaded={false} availableSortOrders={['popular']} />,
             );
             expect(queryByTestId('quests-sort-popular')).toBeNull();
@@ -163,15 +163,15 @@ describe('QuestsContentPanel', () => {
          * (CLS 0,036 на телефоне), а на медленной сети это происходит на 28-й
          * секунде — под пальцем.
          */
-        it('reserves the count line and the sort chip while the catalog is loading', () => {
-            const { getByTestId, queryByTestId, rerender } = render(
+        it('reserves the count line and the sort chip while the catalog is loading', async () => {
+            const { getByTestId, queryByTestId, rerender } = await render(
                 <QuestsContentPanel {...makeBaseProps()} selectedCityId="__all__" dataLoaded={false} questsAll={[]} />,
             );
             // Резерв скрыт от скринридера (aria-hidden), поэтому ищем и скрытые узлы.
             expect(getByTestId('quests-sort-placeholder', HIDDEN)).toBeTruthy();
             expect(getByTestId('quests-grid-skeleton')).toBeTruthy();
 
-            rerender(<QuestsContentPanel {...makeBaseProps()} availableSortOrders={['popular']} />);
+            await rerender(<QuestsContentPanel {...makeBaseProps()} availableSortOrders={['popular']} />);
             expect(queryByTestId('quests-sort-placeholder', HIDDEN)).toBeNull();
             expect(queryByTestId('quests-grid-skeleton')).toBeNull();
             expect(getByTestId('quests-sort-popular')).toBeTruthy();
@@ -183,8 +183,8 @@ describe('QuestsContentPanel', () => {
             ['a city slice', { selectedCityId: 'minsk' }],
             ['the nearby slice', { selectedCityId: '__nearby__', userLoc: { latitude: 53.9, longitude: 27.56 } }],
             ['a map-area slice', { selectedCityId: '__all__', isMapAreaActive: true }],
-        ])('does not reserve a sort chip for %s', (_name, props) => {
-            const { queryByTestId } = render(
+        ])('does not reserve a sort chip for %s', async (_name, props) => {
+            const { queryByTestId } = await render(
                 <QuestsContentPanel {...makeBaseProps()} dataLoaded={false} questsAll={[]} {...props} />,
             );
             expect(queryByTestId('quests-sort-placeholder', HIDDEN)).toBeNull();
@@ -196,17 +196,17 @@ describe('QuestsContentPanel', () => {
         it.each([
             ['a phone', true],
             ['a wide screen', false],
-        ])('renders the same skeleton cells on %s', (_name, isMobile) => {
+        ])('renders the same skeleton cells on %s', async (_name, isMobile) => {
             mockIsMobile = isMobile;
-            const { getByTestId } = render(
+            const { getByTestId } = await render(
                 <QuestsContentPanel {...makeBaseProps()} isMobile={isMobile} dataLoaded={false} questsAll={[]} />,
             );
             expect(getByTestId('quests-grid-skeleton').children).toHaveLength(2);
         });
 
-        it('offers to sort, then to undo it, and reports the state to assistive tech', () => {
+        it('offers to sort, then to undo it, and reports the state to assistive tech', async () => {
             const onSelectSortOrder = jest.fn();
-            const { getByTestId, rerender } = render(
+            const { getByTestId, rerender } = await render(
                 <QuestsContentPanel
                     {...makeBaseProps()}
                     availableSortOrders={['popular']}
@@ -217,10 +217,10 @@ describe('QuestsContentPanel', () => {
             const chip = getByTestId('quests-sort-popular');
             expect(chip.props.accessibilityLabel).toBe('Сортировать по популярности');
             expect(chip.props.accessibilityState.selected).toBe(false);
-            fireEvent.press(chip);
+            await fireEvent.press(chip);
             expect(onSelectSortOrder).toHaveBeenCalledWith('popular');
 
-            rerender(
+            await rerender(
                 <QuestsContentPanel
                     {...makeBaseProps()}
                     availableSortOrders={['popular']}
@@ -241,17 +241,17 @@ describe('QuestsContentPanel', () => {
      * доступными, и держать выбранным ровно один.
      */
     describe('rating sort chip', () => {
-        it('stays hidden while the catalog has no publicly rated quests', () => {
-            const { queryByTestId } = render(
+        it('stays hidden while the catalog has no publicly rated quests', async () => {
+            const { queryByTestId } = await render(
                 <QuestsContentPanel {...makeBaseProps()} availableSortOrders={['popular']} />,
             );
             expect(queryByTestId('quests-sort-popular')).not.toBeNull();
             expect(queryByTestId('quests-sort-rating')).toBeNull();
         });
 
-        it('offers rating sort on its own when popularity has nothing to reorder', () => {
+        it('offers rating sort on its own when popularity has nothing to reorder', async () => {
             const onSelectSortOrder = jest.fn();
-            const { getByTestId, queryByTestId } = render(
+            const { getByTestId, queryByTestId } = await render(
                 <QuestsContentPanel
                     {...makeBaseProps()}
                     availableSortOrders={['rating']}
@@ -262,12 +262,12 @@ describe('QuestsContentPanel', () => {
 
             const chip = getByTestId('quests-sort-rating');
             expect(chip.props.accessibilityLabel).toBe('Сортировать по рейтингу');
-            fireEvent.press(chip);
+            await fireEvent.press(chip);
             expect(onSelectSortOrder).toHaveBeenCalledWith('rating');
         });
 
-        it('keeps exactly one order selected when both are offered', () => {
-            const { getByTestId } = render(
+        it('keeps exactly one order selected when both are offered', async () => {
+            const { getByTestId } = await render(
                 <QuestsContentPanel
                     {...makeBaseProps()}
                     availableSortOrders={['popular', 'rating']}
@@ -287,9 +287,9 @@ describe('QuestsContentPanel', () => {
      * ещё ничего не прошёл, — пустая сетка без объяснения читалась бы как
      * сломанный каталог.
      */
-    it('explains an empty personal slice and offers the way back to the catalog', () => {
+    it('explains an empty personal slice and offers the way back to the catalog', async () => {
         const onResetFilters = jest.fn();
-        const { getByText } = render(
+        const { getByText } = await render(
             <QuestsContentPanel
                 {...makeBaseProps()}
                 selectedCityId="__completed__"
@@ -301,12 +301,12 @@ describe('QuestsContentPanel', () => {
 
         expect(getByText('Квесты, пройденные мной')).toBeTruthy();
         expect(getByText('Вы ещё не прошли ни одного квеста')).toBeTruthy();
-        fireEvent.press(getByText('Выбрать первый квест'));
+        await fireEvent.press(getByText('Выбрать первый квест'));
         expect(onResetFilters).toHaveBeenCalledTimes(1);
     });
 
-    it('keeps the empty-slice explanation away from a slice that has results', () => {
-        const { queryByText, getByTestId, rerender } = render(
+    it('keeps the empty-slice explanation away from a slice that has results', async () => {
+        const { queryByText, getByTestId, rerender } = await render(
             <QuestsContentPanel {...makeBaseProps()} selectedCityId="__completed__" selectedCityName={null} />,
         );
 
@@ -315,7 +315,7 @@ describe('QuestsContentPanel', () => {
 
         // Пустой срез «Не пройденные» — не тот же случай: объяснение про
         // «ни одного квеста» там было бы ложью, поэтому оно к нему не липнет.
-        rerender(
+        await rerender(
             <QuestsContentPanel
                 {...makeBaseProps()}
                 selectedCityId="__uncompleted__"
@@ -328,22 +328,22 @@ describe('QuestsContentPanel', () => {
         expect(queryByText('Вы ещё не прошли ни одного квеста')).toBeNull();
     });
 
-    it.each(['web', 'android'])('keeps empty-state precedence and clears it when results arrive on %s', (platform) => {
+    it.each(['web', 'android'])('keeps empty-state precedence and clears it when results arrive on %s', async (platform) => {
         (Platform as { OS: string }).OS = platform;
         mockIsMobile = true;
         const props = { ...makeBaseProps(), isMobile: true, isMapAreaActive: true };
-        const { getAllByText, queryByText, rerender } = render(
+        const { getAllByText, queryByText, rerender } = await render(
             <QuestsContentPanel {...props} searchQuery="missing" questsAll={[]} />,
         );
 
         expect(getAllByText('Ничего не найдено')).toHaveLength(1);
         expect(queryByText('Рядом ничего не найдено')).toBeNull();
 
-        rerender(<QuestsContentPanel {...props} questsAll={[]} />);
+        await rerender(<QuestsContentPanel {...props} questsAll={[]} />);
         expect(getAllByText('Рядом ничего не найдено')).toHaveLength(1);
         expect(queryByText('Ничего не найдено')).toBeNull();
 
-        rerender(
+        await rerender(
             <QuestsContentPanel
                 {...props}
                 isMapAreaActive={false}
@@ -354,12 +354,12 @@ describe('QuestsContentPanel', () => {
         );
         expect(getAllByText('Рядом ничего не найдено')).toHaveLength(1);
 
-        rerender(<QuestsContentPanel {...props} searchQuery="quest" />);
+        await rerender(<QuestsContentPanel {...props} searchQuery="quest" />);
         expect(queryByText('Ничего не найдено')).toBeNull();
         expect(queryByText('Рядом ничего не найдено')).toBeNull();
     });
 
-    it.each(['web', 'android'])('distinguishes location lookup from catalog loading on %s', (platform) => {
+    it.each(['web', 'android'])('distinguishes location lookup from catalog loading on %s', async (platform) => {
         (Platform as { OS: string }).OS = platform;
         mockIsMobile = true;
         const props = {
@@ -368,45 +368,45 @@ describe('QuestsContentPanel', () => {
             selectedCityId: '__nearby__',
             geoRequesting: true,
         };
-        const { getByTestId, queryByTestId, queryByText, rerender } = render(
+        const { getByTestId, queryByTestId, queryByText, rerender } = await render(
             <QuestsContentPanel {...props} questsAll={[]} />,
         );
 
         expect(getByTestId('quests-nearby-loading')).toBeTruthy();
         expect(queryByText('Рядом ничего не найдено')).toBeNull();
 
-        rerender(<QuestsContentPanel {...props} dataLoaded={false} questsAll={[]} />);
+        await rerender(<QuestsContentPanel {...props} dataLoaded={false} questsAll={[]} />);
         expect(getByTestId('quests-grid-skeleton')).toBeTruthy();
         expect(queryByTestId('quests-nearby-loading')).toBeNull();
         expect(queryByText('Рядом ничего не найдено')).toBeNull();
     });
 
-    it('keeps the city-selection prompt alongside an empty map-area result on web', () => {
+    it('keeps the city-selection prompt alongside an empty map-area result on web', async () => {
         (Platform as { OS: string }).OS = 'web';
-        const { getByText } = render(
+        const { getByText } = await render(
             <QuestsContentPanel {...makeBaseProps()} selectedCityId={null} isMapAreaActive questsAll={[]} />,
         );
         expect(getByText('Рядом ничего не найдено')).toBeTruthy();
         expect(getByText('Выберите город')).toBeTruthy();
     });
 
-    it.each([false, true])('names other players explicitly in the completion slice (mobile=%s)', (mobile) => {
+    it.each([false, true])('names other players explicitly in the completion slice (mobile=%s)', async (mobile) => {
         mockIsMobile = mobile;
-        const { getByTestId, queryByText } = render(
+        const { getByTestId, queryByText } = await render(
             <QuestsContentPanel {...makeBaseProps()} selectedCityId="__completed_by_others__" selectedCityName={null} />,
         );
         expect(getByTestId('quests-content-title').props.children).toBe('Квесты, пройденные другими');
         expect(queryByText('Вы ещё не прошли ни одного квеста')).toBeNull();
     });
 
-    it('names the reviews slice without treating it as a city', () => {
-        const { getByTestId } = render(
+    it('names the reviews slice without treating it as a city', async () => {
+        const { getByTestId } = await render(
             <QuestsContentPanel {...makeBaseProps()} selectedCityId="__reviewed__" selectedCityName={null} />,
         );
         expect(getByTestId('quests-content-title').props.children).toBe('Квесты с отзывами');
     });
 
-    it('removes only the marked no-JS quest listing and its associated style on web mount', () => {
+    it('removes only the marked no-JS quest listing and its associated style on web mount', async () => {
         (Platform as { OS: string }).OS = 'web';
         document.body.innerHTML = [
             '<section data-ssg-quests-listing="true">No-JS quest catalog</section>',
@@ -417,17 +417,17 @@ describe('QuestsContentPanel', () => {
             '<style data-ssg-quests-listing-style="true">[data-ssg-quests-listing]{display:none}</style>',
         );
 
-        render(<QuestsContentPanel {...makeBaseProps()} />);
+        await render(<QuestsContentPanel {...makeBaseProps()} />);
 
         expect(document.querySelector('section[data-ssg-quests-listing="true"]')).toBeNull();
         expect(document.querySelector('style[data-ssg-quests-listing-style="true"]')).toBeNull();
         expect(document.querySelector('section[data-ssg-quest-city="true"]')?.textContent).toBe('City landing content');
     });
 
-    it('renders a neutral localized location heading without guessing a city prefix', () => {
+    it('renders a neutral localized location heading without guessing a city prefix', async () => {
         (Platform as { OS: string }).OS = 'web';
 
-        const { getByTestId, getByText, queryByText } = render(
+        const { getByTestId, getByText, queryByText } = await render(
             <QuestsContentPanel {...makeBaseProps()} selectedCityName="Минск" />,
         );
 
@@ -438,12 +438,12 @@ describe('QuestsContentPanel', () => {
         expect(heading.props['aria-level']).toBe(1);
     });
 
-    it('opens the city drawer from the mobile city button', () => {
+    it('opens the city drawer from the mobile city button', async () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'android';
         const onOpenFilterDrawer = jest.fn();
 
-        const { getByLabelText } = render(
+        const { getByLabelText } = await render(
             <QuestsContentPanel
                 styles={styles}
                 colors={colors}
@@ -468,53 +468,66 @@ describe('QuestsContentPanel', () => {
             />
         );
 
-        fireEvent.press(getByLabelText('Выбрать город'));
+        await fireEvent.press(getByLabelText('Выбрать город'));
 
         expect(onOpenFilterDrawer).toHaveBeenCalledTimes(1);
     });
 
-    it('uses a virtualized FlatList for Android mobile quest list scrolling', () => {
+    it('uses a virtualized FlatList for Android mobile quest list scrolling', async () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'android';
         const quests = Array.from({ length: 12 }, (_, index) => makeQuest(index));
+        // Геттер FlatList на react-native не подменяется присваиванием экспорта.
+        // Контракт окна виртуализации читаем с props класса, хост остаётся настоящим.
+        const flatListProps = new Map<string, any>();
+        const renderFlatList = FlatList.prototype.render;
+        const flatListSpy = jest.spyOn(FlatList.prototype, 'render').mockImplementation(function (this: any) {
+            if (this.props?.testID === 'quests-virtualized-list') flatListProps.set(this.props.testID, this.props);
+            return renderFlatList.call(this);
+        });
 
-        const { UNSAFE_getByType, getByTestId } = render(
-            <QuestsContentPanel
-                styles={styles}
-                colors={colors}
-                dataLoaded
-                viewMode="list"
-                selectedCityId="warsaw"
-                selectedCityName="Warsaw"
-                nearbyId="__nearby__"
-                nearbyRadiusKm={15}
-                questsAll={quests}
-                questCardWidth={320}
-                userLoc={null}
-                isMapAreaActive={false}
-                geoMessage={null}
-                geoRequesting={false}
-                radiiLg={24}
-                isMobile
-                onShowNearby={() => {}}
-                onOpenFilterDrawer={() => {}}
-                onToggleViewMode={() => {}}
-                onSetRadius={() => {}}
-            />
-        );
+        try {
+            const { getByTestId } = await render(
+                <QuestsContentPanel
+                    styles={styles}
+                    colors={colors}
+                    dataLoaded
+                    viewMode="list"
+                    selectedCityId="warsaw"
+                    selectedCityName="Warsaw"
+                    nearbyId="__nearby__"
+                    nearbyRadiusKm={15}
+                    questsAll={quests}
+                    questCardWidth={320}
+                    userLoc={null}
+                    isMapAreaActive={false}
+                    geoMessage={null}
+                    geoRequesting={false}
+                    radiiLg={24}
+                    isMobile
+                    onShowNearby={() => {}}
+                    onOpenFilterDrawer={() => {}}
+                    onToggleViewMode={() => {}}
+                    onSetRadius={() => {}}
+                />
+            );
 
-        const list = UNSAFE_getByType(FlatList);
+            const list = flatListProps.get('quests-virtualized-list');
+            expect(list).toBeDefined();
 
-        expect(getByTestId('quests-virtualized-list')).toBeTruthy();
-        expect(list.props.data).toHaveLength(12);
-        expect(list.props.initialNumToRender).toBe(4);
-        expect(list.props.maxToRenderPerBatch).toBe(4);
-        expect(list.props.updateCellsBatchingPeriod).toBe(50);
-        expect(list.props.windowSize).toBe(5);
-        expect(list.props.removeClippedSubviews).toBe(true);
+            expect(getByTestId('quests-virtualized-list')).toBeTruthy();
+            expect(list.data).toHaveLength(12);
+            expect(list.initialNumToRender).toBe(4);
+            expect(list.maxToRenderPerBatch).toBe(4);
+            expect(list.updateCellsBatchingPeriod).toBe(50);
+            expect(list.windowSize).toBe(5);
+            expect(list.removeClippedSubviews).toBe(true);
+        } finally {
+            flatListSpy.mockRestore();
+        }
     });
 
-    it('keeps the FlatList root (and search field) mounted when Android search narrows to zero results', () => {
+    it('keeps the FlatList root (and search field) mounted when Android search narrows to zero results', async () => {
         // Регрессия: раньше нативная ветка списка гейтилась на questsAll.length > 0,
         // поэтому «0 результатов» переключало корень View(FlatList) → ScrollView и
         // перемонтировало шапку с TextInput — поле теряло фокус, клавиатура
@@ -548,7 +561,7 @@ describe('QuestsContentPanel', () => {
             onSetRadius: () => {},
         };
 
-        const { getByTestId, queryByText, rerender } = render(
+        const { getByTestId, queryByText, rerender } = await render(
             <QuestsContentPanel {...baseProps} questsAll={[makeQuest(0), makeQuest(1)]} />
         );
 
@@ -556,7 +569,7 @@ describe('QuestsContentPanel', () => {
         expect(getByTestId('quests-search-input')).toBeTruthy();
 
         // Набор сузил результат до нуля — корень НЕ должен переключиться на ScrollView.
-        rerender(<QuestsContentPanel {...baseProps} questsAll={[]} />);
+        await rerender(<QuestsContentPanel {...baseProps} questsAll={[]} />);
 
         expect(getByTestId('quests-virtualized-list')).toBeTruthy();
         expect(getByTestId('quests-search-input')).toBeTruthy();
@@ -566,12 +579,12 @@ describe('QuestsContentPanel', () => {
     // #1826: сетка на web осталась сеткой (не FlatList), но в первый кадр
     // уходит окно, а не весь каталог: 177 карточек одним `map` рвали ввод в
     // поиске. Окно растёт по прокрутке.
-    it('renders a first window of the web grid and grows it on scroll', () => {
+    it('renders a first window of the web grid and grows it on scroll', async () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
         const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
 
-        const { getByTestId, queryByTestId } = render(
+        const { getByTestId, queryByTestId } = await render(
             <QuestsContentPanel
                 styles={styles}
                 colors={colors}
@@ -602,7 +615,7 @@ describe('QuestsContentPanel', () => {
         expect(queryByTestId('quest-card-quest-24')).toBeNull();
         expect(queryByTestId('quest-card-quest-53')).toBeNull();
 
-        const scrollToEnd = () => fireEvent.scroll(getByTestId('quests-content'), {
+        const scrollToEnd = async () => await fireEvent.scroll(getByTestId('quests-content'), {
             nativeEvent: {
                 contentOffset: { y: 10000 },
                 contentSize: { height: 10400, width: 390 },
@@ -610,11 +623,11 @@ describe('QuestsContentPanel', () => {
             },
         });
 
-        scrollToEnd();
+        await scrollToEnd();
         expect(getByTestId('quest-card-quest-24').props.accessibilityHint).toBe('24');
         expect(queryByTestId('quest-card-quest-48')).toBeNull();
 
-        scrollToEnd();
+        await scrollToEnd();
         expect(getByTestId('quest-card-quest-53').props.accessibilityHint).toBe('53');
     });
 
@@ -627,12 +640,12 @@ describe('QuestsContentPanel', () => {
     // вьюпорта ещё нет. Раскрытие обязано случиться на следующем событии, а не
     // зависеть от порядка. Высоту контента шлём только layout-ом самой сетки:
     // `onContentSizeChange` на web внутри вьюпорта не приходит вовсе.
-    it('grows the web grid window while the content still fits the viewport', () => {
+    it('grows the web grid window while the content still fits the viewport', async () => {
         mockIsMobile = false;
         (Platform as { OS: string }).OS = 'web';
         const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
 
-        const { getByTestId, queryByTestId } = render(
+        const { getByTestId, queryByTestId } = await render(
             <QuestsContentPanel
                 styles={styles}
                 colors={colors}
@@ -659,7 +672,7 @@ describe('QuestsContentPanel', () => {
 
         expect(queryByTestId('quest-card-quest-24')).toBeNull();
 
-        const layout = (testID: string, height: number) => fireEvent(
+        const layout = async (testID: string, height: number) => await fireEvent(
             getByTestId(testID),
             'layout',
             { nativeEvent: { layout: { height, width: 1440 } } },
@@ -667,27 +680,27 @@ describe('QuestsContentPanel', () => {
 
         // Первый батч ResizeObserver: вложенная сетка приходит раньше скроллера,
         // высоты вьюпорта ещё нет — раскрывать не по чему.
-        layout('quests-grid', 1200);
+        await layout('quests-grid', 1200);
         expect(queryByTestId('quest-card-quest-24')).toBeNull();
 
         // Вьюпорт заведомо выше сетки: скроллить нечего, окно обязано вырасти само.
-        layout('quests-content', 20000);
+        await layout('quests-content', 20000);
         expect(getByTestId('quest-card-quest-24')).toBeTruthy();
 
         // Раскрытие переизмеряет сетку: пока она помещается, окно растёт дальше.
-        layout('quests-grid', 2400);
+        await layout('quests-grid', 2400);
         expect(getByTestId('quest-card-quest-53')).toBeTruthy();
     });
 
     // Обратная сторона того же пути: пока сетка выше вьюпорта, прокрутка есть и
     // окно не должно раскрываться само — иначе виртуализация схлопнется в тот же
     // полный каталог, ради ухода от которого она и появилась.
-    it('keeps the web grid window closed while the grid overflows the viewport', () => {
+    it('keeps the web grid window closed while the grid overflows the viewport', async () => {
         mockIsMobile = false;
         (Platform as { OS: string }).OS = 'web';
         const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
 
-        const { getByTestId, queryByTestId } = render(
+        const { getByTestId, queryByTestId } = await render(
             <QuestsContentPanel
                 styles={styles}
                 colors={colors}
@@ -712,8 +725,8 @@ describe('QuestsContentPanel', () => {
             />
         );
 
-        fireEvent(getByTestId('quests-grid'), 'layout', { nativeEvent: { layout: { height: 3200, width: 1440 } } });
-        fireEvent(getByTestId('quests-content'), 'layout', { nativeEvent: { layout: { height: 900, width: 1440 } } });
+        await fireEvent(getByTestId('quests-grid'), 'layout', { nativeEvent: { layout: { height: 3200, width: 1440 } } });
+        await fireEvent(getByTestId('quests-content'), 'layout', { nativeEvent: { layout: { height: 900, width: 1440 } } });
 
         expect(queryByTestId('quest-card-quest-24')).toBeNull();
     });
@@ -722,7 +735,7 @@ describe('QuestsContentPanel', () => {
     // протухает. Layout скроллера, пришедший в это время, не должен раскрывать
     // окно по высоте прежней сетки: вернувшись в список, пользователь увидел бы
     // раздутое окно, которого никто не запрашивал.
-    it('does not reveal from a stale grid height while the grid is unmounted', () => {
+    it('does not reveal from a stale grid height while the grid is unmounted', async () => {
         mockIsMobile = false;
         (Platform as { OS: string }).OS = 'web';
         const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
@@ -752,25 +765,25 @@ describe('QuestsContentPanel', () => {
             />
         );
 
-        const { getByTestId, queryByTestId, rerender } = render(panel('list'));
+        const { getByTestId, queryByTestId, rerender } = await render(panel('list'));
 
         // Сетка выше вьюпорта: прокрутка есть, окно само не растёт.
-        fireEvent(getByTestId('quests-grid'), 'layout', { nativeEvent: { layout: { height: 3200, width: 1440 } } });
-        fireEvent(getByTestId('quests-content'), 'layout', { nativeEvent: { layout: { height: 900, width: 1440 } } });
+        await fireEvent(getByTestId('quests-grid'), 'layout', { nativeEvent: { layout: { height: 3200, width: 1440 } } });
+        await fireEvent(getByTestId('quests-content'), 'layout', { nativeEvent: { layout: { height: 900, width: 1440 } } });
         expect(queryByTestId('quest-card-quest-24')).toBeNull();
 
         // Карта снимает сетку с экрана; вертикальный ресайз в этот момент даёт
         // layout скроллера, но сравнивать его уже не с чем.
-        rerender(panel('map'));
-        fireEvent(getByTestId('quests-content'), 'layout', { nativeEvent: { layout: { height: 5000, width: 1440 } } });
+        await rerender(panel('map'));
+        await fireEvent(getByTestId('quests-content'), 'layout', { nativeEvent: { layout: { height: 5000, width: 1440 } } });
 
-        rerender(panel('list'));
+        await rerender(panel('list'));
         expect(queryByTestId('quest-card-quest-24')).toBeNull();
     });
 
     // Смена набора обязана начинать окно заново: иначе узкий срез после «всех
     // квестов» рисовался бы с раздутым окном.
-    it('restarts the web grid window when the catalog changes', () => {
+    it('restarts the web grid window when the catalog changes', async () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
         const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
@@ -800,9 +813,9 @@ describe('QuestsContentPanel', () => {
             />
         );
 
-        const { getByTestId, queryByTestId, rerender } = render(panel(quests));
+        const { getByTestId, queryByTestId, rerender } = await render(panel(quests));
 
-        fireEvent.scroll(getByTestId('quests-content'), {
+        await fireEvent.scroll(getByTestId('quests-content'), {
             nativeEvent: {
                 contentOffset: { y: 10000 },
                 contentSize: { height: 10400, width: 390 },
@@ -811,14 +824,14 @@ describe('QuestsContentPanel', () => {
         });
         expect(getByTestId('quest-card-quest-24')).toBeTruthy();
 
-        rerender(panel(quests.slice(0, 40)));
+        await rerender(panel(quests.slice(0, 40)));
         expect(queryByTestId('quest-card-quest-24')).toBeNull();
         expect(getByTestId('quest-card-quest-23')).toBeTruthy();
     });
 
     // Переключатель «Популярные» отдаёт новый массив того же набора. Окно,
     // привязанное к ссылке, схлопывалось бы на смене одного лишь порядка.
-    it('keeps the web grid window when only the order of the same catalog changes', () => {
+    it('keeps the web grid window when only the order of the same catalog changes', async () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
         const quests = Array.from({ length: 54 }, (_, index) => makeQuest(index));
@@ -848,8 +861,8 @@ describe('QuestsContentPanel', () => {
             />
         );
 
-        const { getByTestId, rerender } = render(panel(quests));
-        fireEvent.scroll(getByTestId('quests-content'), {
+        const { getByTestId, rerender } = await render(panel(quests));
+        await fireEvent.scroll(getByTestId('quests-content'), {
             nativeEvent: {
                 contentOffset: { y: 10000 },
                 contentSize: { height: 10400, width: 390 },
@@ -858,16 +871,16 @@ describe('QuestsContentPanel', () => {
         });
         expect(getByTestId('quest-card-quest-24')).toBeTruthy();
 
-        rerender(panel(quests.slice().reverse()));
+        await rerender(panel(quests.slice().reverse()));
         expect(getByTestId('quest-card-quest-29')).toBeTruthy();
     });
 
-    it('exposes the mobile nearby CTA and geolocation message in list mode', () => {
+    it('exposes the mobile nearby CTA and geolocation message in list mode', async () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
         const onShowNearby = jest.fn();
 
-        const { getByTestId, getByText } = render(
+        const { getByTestId, getByText } = await render(
             <QuestsContentPanel
                 styles={styles}
                 colors={colors}
@@ -894,18 +907,18 @@ describe('QuestsContentPanel', () => {
 
         const nearbyButton = getByTestId('quests-show-nearby');
         expect(nearbyButton.props.accessibilityState).toEqual({ selected: true, disabled: false });
-        fireEvent.press(nearbyButton);
+        await fireEvent.press(nearbyButton);
 
         expect(onShowNearby).toHaveBeenCalledTimes(1);
         expect(getByText('Разрешите доступ к геолокации.')).toBeTruthy();
     });
 
-    it('presents kids quests as an audience filter rather than fairytales', () => {
+    it('presents kids quests as an audience filter rather than fairytales', async () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
         const onShowKids = jest.fn();
 
-        const { getByLabelText, getByText, queryByText } = render(
+        const { getByLabelText, getByText, queryByText } = await render(
             <QuestsContentPanel
                 styles={styles}
                 colors={colors}
@@ -932,19 +945,19 @@ describe('QuestsContentPanel', () => {
             />,
         );
 
-        fireEvent.press(getByLabelText('Показать квесты для детей'));
+        await fireEvent.press(getByLabelText('Показать квесты для детей'));
 
         expect(onShowKids).toHaveBeenCalledTimes(1);
         expect(getByText('Квесты для детей')).toBeTruthy();
         expect(queryByText('Детские сказки')).toBeNull();
     });
 
-    it('keeps each quest backend city route inside a merged city catalog', () => {
+    it('keeps each quest backend city route inside a merged city catalog', async () => {
         (Platform as { OS: string }).OS = 'web';
         const quest = makeQuest(0);
         quest.cityId = 'warsaw';
 
-        const { getByTestId } = render(
+        const { getByTestId } = await render(
             <QuestsContentPanel
                 styles={styles}
                 colors={colors}
@@ -972,7 +985,7 @@ describe('QuestsContentPanel', () => {
         expect(getByTestId('quest-card-quest-0').props.accessibilityLabel).toBe('warsaw');
     });
 
-    it('shows the reset-filters chip when a filter narrows the catalog and hides it otherwise', () => {
+    it('shows the reset-filters chip when a filter narrows the catalog and hides it otherwise', async () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
         const onResetFilters = jest.fn();
@@ -1000,20 +1013,20 @@ describe('QuestsContentPanel', () => {
             onSetRadius: () => {},
         };
 
-        const { getByTestId, queryByTestId, rerender } = render(
+        const { getByTestId, queryByTestId, rerender } = await render(
             <QuestsContentPanel {...baseProps} selectedCityId="warsaw" filtersActive />
         );
 
-        fireEvent.press(getByTestId('quests-reset-filters'));
+        await fireEvent.press(getByTestId('quests-reset-filters'));
         expect(onResetFilters).toHaveBeenCalledTimes(1);
 
-        rerender(
+        await rerender(
             <QuestsContentPanel {...baseProps} selectedCityId="__nearby__" selectedCityName="Рядом" filtersActive={false} />
         );
         expect(queryByTestId('quests-reset-filters')).toBeNull();
     });
 
-    it('keeps the default full catalog distinct from nearby and map-area filters', () => {
+    it('keeps the default full catalog distinct from nearby and map-area filters', async () => {
         (Platform as { OS: string }).OS = 'web';
         const baseProps = {
             styles,
@@ -1035,7 +1048,7 @@ describe('QuestsContentPanel', () => {
             onToggleViewMode: () => {},
         };
 
-        const { getByText, getByTestId, queryAllByTestId, rerender } = render(
+        const { getByText, getByTestId, queryAllByTestId, rerender } = await render(
             <QuestsContentPanel
                 {...baseProps}
                 selectedCityId="__all__"
@@ -1048,7 +1061,7 @@ describe('QuestsContentPanel', () => {
         expect(getByTestId('quest-card-quest-0').props.accessibilityState?.selected).toBe(false);
         expect(queryAllByTestId('quests-seo-intro-faq')).toHaveLength(2);
 
-        rerender(
+        await rerender(
             <QuestsContentPanel
                 {...baseProps}
                 selectedCityId="__all__"
@@ -1062,7 +1075,7 @@ describe('QuestsContentPanel', () => {
         expect(queryAllByTestId('quests-seo-intro-faq')).toHaveLength(0);
     });
 
-    it('adds the catalog-wide player count only to the full catalog header (#2761)', () => {
+    it('adds the catalog-wide player count only to the full catalog header (#2761)', async () => {
         (Platform as { OS: string }).OS = 'web';
         mockPlayersCount = 26;
         const baseProps = {
@@ -1086,12 +1099,12 @@ describe('QuestsContentPanel', () => {
             onToggleViewMode: () => {},
         };
 
-        const { getByText, queryByText, rerender } = render(
+        const { getByText, queryByText, rerender } = await render(
             <QuestsContentPanel {...baseProps} selectedCityId="__all__" filtersActive={false} />,
         );
         expect(getByText('2 квеста · 3 прохождения · 26 игроков')).toBeTruthy();
 
-        rerender(
+        await rerender(
             <QuestsContentPanel
                 {...baseProps}
                 selectedCityId="warsaw"
@@ -1105,13 +1118,13 @@ describe('QuestsContentPanel', () => {
 
         // Нет числа (ошибка, офлайн, старый бэкенд) — шапка как раньше.
         mockPlayersCount = null;
-        rerender(<QuestsContentPanel {...baseProps} selectedCityId="__all__" filtersActive={false} />);
+        await rerender(<QuestsContentPanel {...baseProps} selectedCityId="__all__" filtersActive={false} />);
         expect(getByText('2 квеста · 3 прохождения')).toBeTruthy();
     });
 
-    it('waits for the catalog before asking for the player count', () => {
+    it('waits for the catalog before asking for the player count', async () => {
         (Platform as { OS: string }).OS = 'web';
-        render(
+        await render(
             <QuestsContentPanel
                 styles={styles}
                 colors={colors}
@@ -1138,10 +1151,10 @@ describe('QuestsContentPanel', () => {
         expect(mockUseQuestPlayersCount).toHaveBeenLastCalledWith(false);
     });
 
-    it('shows a geolocation failure message on desktop while falling back to all quests', () => {
+    it('shows a geolocation failure message on desktop while falling back to all quests', async () => {
         (Platform as { OS: string }).OS = 'web';
 
-        const { getByText } = render(
+        const { getByText } = await render(
             <QuestsContentPanel
                 styles={styles}
                 colors={colors}
@@ -1169,14 +1182,14 @@ describe('QuestsContentPanel', () => {
         expect(getByText('Геолокация запрещена. Показываем весь каталог.')).toBeTruthy();
     });
 
-    it('keeps the same header toggle row visible in map mode so the user can switch back to the list', () => {
+    it('keeps the same header toggle row visible in map mode so the user can switch back to the list', async () => {
         mockIsMobile = true;
         (Platform as { OS: string }).OS = 'web';
         const onToggleViewMode = jest.fn();
         const onOpenFilterDrawer = jest.fn();
         const onShowNearby = jest.fn();
 
-        const { getByTestId, getByLabelText } = render(
+        const { getByTestId, getByLabelText } = await render(
             <QuestsContentPanel
                 styles={styles}
                 colors={colors}
@@ -1202,32 +1215,32 @@ describe('QuestsContentPanel', () => {
         );
 
         // Same three icon controls as list mode: toggle view, pick city, show nearby.
-        fireEvent.press(getByTestId('quests-toggle-view-mode'));
+        await fireEvent.press(getByTestId('quests-toggle-view-mode'));
         expect(onToggleViewMode).toHaveBeenCalledTimes(1);
 
-        fireEvent.press(getByLabelText('Выбрать город'));
+        await fireEvent.press(getByLabelText('Выбрать город'));
         expect(onOpenFilterDrawer).toHaveBeenCalledTimes(1);
 
-        fireEvent.press(getByTestId('quests-show-nearby'));
+        await fireEvent.press(getByTestId('quests-show-nearby'));
         expect(onShowNearby).toHaveBeenCalledTimes(1);
     });
 
     // #2389: режим карты приходит готовым слотом; панель рисует только его,
     // без пустых состояний списка, а в списке слот не появляется.
-    it('renders the map slot instead of list empty-states in map mode', () => {
+    it('renders the map slot instead of list empty-states in map mode', async () => {
         (Platform as { OS: string }).OS = 'web';
         const { Text } = require('react-native') as typeof import('react-native');
         const mapSlot = <Text testID="quests-map-slot">map</Text>;
         const props = { ...makeBaseProps(), searchQuery: '', onSearchChange: () => {}, questsAll: [], isMapAreaActive: true, mapSlot };
 
-        const { getByTestId, queryByText, rerender, queryByTestId } = render(
+        const { getByTestId, queryByText, rerender, queryByTestId } = await render(
             <QuestsContentPanel {...props} viewMode="map" />,
         );
 
         expect(getByTestId('quests-map-slot')).toBeTruthy();
         expect(queryByText('Рядом ничего не найдено')).toBeNull();
 
-        rerender(<QuestsContentPanel {...props} viewMode="list" />);
+        await rerender(<QuestsContentPanel {...props} viewMode="list" />);
         expect(queryByTestId('quests-map-slot')).toBeNull();
         expect(queryByText('Рядом ничего не найдено')).toBeTruthy();
     });
@@ -1239,12 +1252,12 @@ describe('QuestsContentPanel', () => {
         ['web', 606, 606],
         ['web', 862, 415],
         ['android', 606, 320],
-    ])('на %s сетка %i px даёт карточке %i px', (os, gridWidth, cardWidth) => {
+    ])('на %s сетка %i px даёт карточке %i px', async (os, gridWidth, cardWidth) => {
         (Platform as { OS: string }).OS = os;
-        const { getByTestId } = render(<QuestsContentPanel {...makeBaseProps()} />);
+        const { getByTestId } = await render(<QuestsContentPanel {...makeBaseProps()} />);
         expect(getByTestId('quest-card-quest-0')).toHaveStyle({ width: 320 });
 
-        fireEvent(getByTestId('quests-grid'), 'layout', { nativeEvent: { layout: { height: 400, width: gridWidth } } });
+        await fireEvent(getByTestId('quests-grid'), 'layout', { nativeEvent: { layout: { height: 400, width: gridWidth } } });
 
         expect(getByTestId('quest-card-quest-0')).toHaveStyle({ width: cardWidth });
     });

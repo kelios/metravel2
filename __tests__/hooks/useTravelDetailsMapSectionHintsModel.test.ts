@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react-native'
 import { useTravelDetailsMapSectionHintsModel } from '@/components/travel/details/hooks/useTravelDetailsMapSectionHintsModel'
 
 describe('useTravelDetailsMapSectionHintsModel', () => {
-  it('derives place hints, transport hints and coordinate flags from travel data', () => {
+  it('derives place hints, transport hints and coordinate flags from travel data', async () => {
     const travel: any = {
       coordsMeTravel: [{ lat: 53.9, lng: 27.56 }],
       travelAddress: [
@@ -14,7 +14,7 @@ describe('useTravelDetailsMapSectionHintsModel', () => {
       transports: ['car', 'bike', 'car', 'пешком'],
     }
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useTravelDetailsMapSectionHintsModel(travel)
     )
 
@@ -31,8 +31,8 @@ describe('useTravelDetailsMapSectionHintsModel', () => {
     ])
   })
 
-  it('returns empty hints when travel has no usable places or transport tokens', () => {
-    const { result } = renderHook(() =>
+  it('returns empty hints when travel has no usable places or transport tokens', async () => {
+    const { result } = await renderHook(() =>
       useTravelDetailsMapSectionHintsModel({
         coordsMeTravel: [],
         travelAddress: [{ coord: '', name: '' }],

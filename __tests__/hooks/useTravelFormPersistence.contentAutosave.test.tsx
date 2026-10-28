@@ -72,7 +72,7 @@ const contentResponse = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-function setupPersistence(
+async function setupPersistence(
   baseline: Record<string, unknown>,
   paramOverrides: Record<string, unknown> = {},
 ) {
@@ -111,7 +111,7 @@ function setupPersistence(
     ...paramOverrides,
   };
 
-  const { result } = renderHook(() => useTravelFormPersistence(params));
+  const { result } = await renderHook(() => useTravelFormPersistence(params));
 
   const autosaveOptions = mockUseImprovedAutoSave.mock.calls.at(-1)?.[2] as any;
   return { result, params, formState, autosaveOptions };
@@ -126,7 +126,7 @@ beforeEach(() => {
 describe('#1516 — узкое фоновое сохранение текста', () => {
   it('шлёт только изменившееся текстовое поле и не трогает полный upsert', async () => {
     const baseline = travelSnapshot();
-    const { autosaveOptions } = setupPersistence(baseline);
+    const { autosaveOptions } = await setupPersistence(baseline);
     mockSaveTravelContent.mockResolvedValue(contentResponse() as any);
 
     const next = travelSnapshot({ description: '<p>Дописанный абзац.</p>' });
@@ -141,7 +141,7 @@ describe('#1516 — узкое фоновое сохранение текста'
 
   it('не пересобирает форму по ответу узкого пути: точки, галерея и обложка остаются', async () => {
     const baseline = travelSnapshot();
-    const { params, formState, autosaveOptions } = setupPersistence(baseline);
+    const { params, formState, autosaveOptions } = await setupPersistence(baseline);
     mockSaveTravelContent.mockResolvedValue(contentResponse() as any);
 
     const next = travelSnapshot({ description: '<p>Дописанный абзац.</p>' });
@@ -160,7 +160,7 @@ describe('#1516 — узкое фоновое сохранение текста'
 
   it('обновляет серверный baseline rich-text отправленным снимком', async () => {
     const baseline = travelSnapshot();
-    const { params, autosaveOptions } = setupPersistence(baseline);
+    const { params, autosaveOptions } = await setupPersistence(baseline);
     mockSaveTravelContent.mockResolvedValue(contentResponse() as any);
 
     const next = travelSnapshot({ description: '<p>Дописанный абзац.</p>' });
@@ -176,7 +176,7 @@ describe('#1516 — узкое фоновое сохранение текста'
 
   it('синхронизирует перестроенный сервером slug вместе с baseline движка', async () => {
     const baseline = travelSnapshot();
-    const { params, formState, autosaveOptions } = setupPersistence(baseline);
+    const { params, formState, autosaveOptions } = await setupPersistence(baseline);
     mockSaveTravelContent.mockResolvedValue(
       contentResponse({ slug: 'minsk-za-vyhodnye', changed_fields: ['name', 'slug'] }) as any,
     );
@@ -195,7 +195,7 @@ describe('#1516 — узкое фоновое сохранение текста'
 
   it('оставляет структурную правку на полном сохранении', async () => {
     const baseline = travelSnapshot();
-    const { autosaveOptions } = setupPersistence(baseline);
+    const { autosaveOptions } = await setupPersistence(baseline);
     mockSaveFormData.mockResolvedValue(travelSnapshot() as any);
 
     const next = travelSnapshot({
@@ -209,7 +209,7 @@ describe('#1516 — узкое фоновое сохранение текста'
 
   it('оставляет на полном пути автосейв без подтверждённого состояния', async () => {
     const baseline = travelSnapshot();
-    const { autosaveOptions } = setupPersistence(baseline);
+    const { autosaveOptions } = await setupPersistence(baseline);
     mockSaveFormData.mockResolvedValue(travelSnapshot() as any);
 
     await autosaveOptions.onSave(travelSnapshot({ description: '<p>Текст</p>' }), undefined, undefined);
@@ -220,7 +220,7 @@ describe('#1516 — узкое фоновое сохранение текста'
 
   it('прерывается внешним signal и не оставляет узкий запрос летящим', async () => {
     const baseline = travelSnapshot();
-    const { autosaveOptions } = setupPersistence(baseline);
+    const { autosaveOptions } = await setupPersistence(baseline);
     const controller = new AbortController();
     controller.abort();
     mockSaveTravelContent.mockRejectedValue(Object.assign(new Error('aborted'), { name: 'AbortError' }));
@@ -244,7 +244,7 @@ describe('#1516 — узкое фоновое сохранение текста'
 describe('#2040 — дата статьи не уходит в полный upsert', () => {
   it('не отправляет эхо даты существующей статьи', async () => {
     const baseline = travelSnapshot({ created_at: '2024-06-01T08:00:00Z' });
-    const { autosaveOptions } = setupPersistence(baseline);
+    const { autosaveOptions } = await setupPersistence(baseline);
     mockSaveFormData.mockResolvedValue(travelSnapshot() as any);
 
     const next = travelSnapshot({
@@ -261,7 +261,7 @@ describe('#2040 — дата статьи не уходит в полный upse
 
   it('не переносит дату черновика чужой статьи, восстановленного на new', async () => {
     const recoveredDraft = travelSnapshot({ id: null, created_at: '2023-05-04T10:00:00Z' });
-    const { autosaveOptions } = setupPersistence(recoveredDraft, { stableTravelId: null });
+    const { autosaveOptions } = await setupPersistence(recoveredDraft, { stableTravelId: null });
     mockSaveFormData.mockResolvedValue(travelSnapshot({ id: 700 }) as any);
 
     await autosaveOptions.onSave(recoveredDraft, undefined, undefined);
@@ -286,7 +286,7 @@ const deferredSave = () => {
 describe('#2685 — transient rejection options', () => {
   it('forwards the explicit reason without adding it to form state or subsequent saves', async () => {
     const baseline = travelSnapshot({ moderation_decision_reason: 'Historical API reason' });
-    const { result, params, autosaveOptions } = setupPersistence(baseline);
+    const { result, params, autosaveOptions } = await setupPersistence(baseline);
     mockSaveFormData.mockImplementation(async (data) => ({ ...data, moderation_decision_reason: 'API reason' }));
 
     await act(async () => {
@@ -311,7 +311,7 @@ describe('#2685 — transient rejection options', () => {
   it.each(['success', 'failure'])('waits for its own rejection %s after the previous save and ordinary tail', async (outcome) => {
     const baseline = travelSnapshot();
     const tailSnapshot = travelSnapshot({ categories: [1, 2, 3] });
-    const { result } = setupPersistence(baseline);
+    const { result } = await setupPersistence(baseline);
     const first = deferredSave();
     const tail = deferredSave();
     const rejection = deferredSave();
@@ -322,7 +322,7 @@ describe('#2685 — transient rejection options', () => {
     let queuedSave!: Promise<TravelFormData | void>;
     let rejectionSave!: Promise<TravelFormData | void>;
 
-    act(() => {
+    await act(() => {
       firstSave = result.current.handleManualSave();
       queuedSave = result.current.handleManualSave(tailSnapshot as unknown as TravelFormData);
       rejectionSave = result.current.handleManualSave(baseline as unknown as TravelFormData, {
@@ -375,7 +375,7 @@ describe('#2685 — transient rejection options', () => {
   it('continues with its own rejection when the preceding ordinary tail fails', async () => {
     const baseline = travelSnapshot();
     const tailSnapshot = travelSnapshot({ categories: [1, 2, 3] });
-    const { result } = setupPersistence(baseline);
+    const { result } = await setupPersistence(baseline);
     const first = deferredSave();
     const tail = deferredSave();
     const saved = { ...tailSnapshot, publish: false, moderation: false } as unknown as TravelFormData;
@@ -406,7 +406,7 @@ describe('#2685 — transient rejection options', () => {
 
   it('does not report success when unmounted while waiting for the previous save', async () => {
     const baseline = travelSnapshot();
-    const { result, params } = setupPersistence(baseline);
+    const { result, params } = await setupPersistence(baseline);
     const first = deferredSave();
     mockSaveFormData.mockReturnValueOnce(first.promise);
     const firstSave = result.current.handleManualSave();
@@ -431,7 +431,7 @@ const canonicalStates = ['draft', 'pending_review', 'approved', 'published'] as 
 describe('#2693 — canonical publication state in every persistence path', () => {
   it.each(canonicalStates)('manual, route, full autosave and content delta preserve %s', async (publication_status) => {
     const baseline = travelSnapshot({ publication_status, publish: false, moderation: false });
-    const { result, autosaveOptions } = setupPersistence(baseline);
+    const { result, autosaveOptions } = await setupPersistence(baseline);
     mockSaveFormData.mockImplementation(async data => data);
     mockSaveTravelContent.mockResolvedValue(contentResponse());
     expect(autosaveOptions.enabled).toBe(true);
@@ -453,7 +453,7 @@ describe('#2693 — canonical publication state in every persistence path', () =
 
   it.each([null, '', 'future_state'])('blocks unknown canonical %p before either full or content write', async (publication_status) => {
     const baseline = travelSnapshot({ publication_status });
-    const { result, autosaveOptions } = setupPersistence(baseline);
+    const { result, autosaveOptions } = await setupPersistence(baseline);
     const log = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     try {
       await expect(autosaveOptions.onSave({ ...baseline, description: '<p>Changed text</p>' }, undefined, baseline)).rejects.toThrow('Неизвестное состояние публикации');
@@ -467,7 +467,7 @@ describe('#2693 — canonical publication state in every persistence path', () =
 
   it('releases a failed unknown-status save so a corrected status can be saved or submitted', async () => {
     const baseline = travelSnapshot({ publication_status: 'future_state' });
-    const { result, params } = setupPersistence(baseline);
+    const { result, params } = await setupPersistence(baseline);
     const log = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     mockSaveFormData.mockImplementation(async data => data);
     try {
@@ -489,11 +489,11 @@ describe('#2693 — canonical publication state in every persistence path', () =
 
   it('rebases a queued ordinary save onto the confirmed command state', async () => {
     const baseline = travelSnapshot({ publication_status: 'pending_review' });
-    const { result } = setupPersistence(baseline);
+    const { result } = await setupPersistence(baseline);
     const approval = deferredSave();
     mockSaveFormData.mockReturnValueOnce(approval.promise).mockImplementation(async data => data);
     let command!: Promise<TravelFormData | void>;
-    act(() => {
+    await act(() => {
       command = result.current.handleManualSave(baseline as unknown as TravelFormData, { intent: 'approve' });
       void result.current.handleManualSave({ ...baseline, categories: [1, 2, 3] } as unknown as TravelFormData);
     });
@@ -510,12 +510,12 @@ describe('#2693 — canonical publication state in every persistence path', () =
 
   it('waits for an already dispatched autosave before sending a command', async () => {
     const baseline = travelSnapshot({ publication_status: 'pending_review' });
-    const { result, autosaveOptions } = setupPersistence(baseline);
+    const { result, autosaveOptions } = await setupPersistence(baseline);
     const background = deferredSave();
     mockSaveFormData.mockReturnValueOnce(background.promise).mockImplementation(async data => data);
     let autosave!: Promise<TravelFormData>;
     let command!: Promise<TravelFormData | void>;
-    act(() => {
+    await act(() => {
       autosave = autosaveOptions.onSave({ ...baseline, categories: [1, 2, 3] }, undefined, baseline);
       command = result.current.handleManualSave(undefined, { intent: 'approve' });
     });
@@ -532,12 +532,12 @@ describe('#2693 — canonical publication state in every persistence path', () =
 
   it('applies the first autosave server ID before a waiting submit even if engine onSuccess comes later', async () => {
     const baseline = travelSnapshot({ id: null, publication_status: 'draft' });
-    const { result, params, autosaveOptions, formState } = setupPersistence(baseline, { stableTravelId: null });
+    const { result, params, autosaveOptions, formState } = await setupPersistence(baseline, { stableTravelId: null });
     const creation = deferredSave();
     mockSaveFormData.mockReturnValueOnce(creation.promise).mockImplementation(async data => data);
     let background!: Promise<TravelFormData>;
     let submit!: Promise<TravelFormData | void>;
-    act(() => {
+    await act(() => {
       background = autosaveOptions.onSave(baseline, undefined, baseline);
       submit = result.current.handleManualSave(undefined, { intent: 'submit' });
     });
@@ -552,7 +552,7 @@ describe('#2693 — canonical publication state in every persistence path', () =
     expect(mockSaveFormData.mock.calls[1][0]).toEqual(expect.objectContaining({ id: 9001, slug: 'server-created-slug' }));
     expect(params.formDataRef.current.id).not.toBeNull();
     const resets = formState.reset.mock.calls.length;
-    act(() => autosaveOptions.onSuccess(created));
+    await act(() => autosaveOptions.onSuccess(created));
     expect(formState.reset).toHaveBeenCalledTimes(resets);
   });
 
@@ -582,11 +582,11 @@ describe('#2669 — authoritative moderation metadata across full and content sa
   describe.each(['manual', 'autosave'] as const)('%s full save', (mode) => {
     it.each(serverCases)('applies $label server metadata despite concurrent local content and stale feedback', async ({ metadata, status, expected }) => {
       const baseline = travelSnapshot(previousDecision);
-      const { result, params, formState, autosaveOptions } = setupPersistence(baseline);
+      const { result, params, formState, autosaveOptions } = await setupPersistence(baseline);
       const pending = deferredSave();
       mockSaveFormData.mockReturnValueOnce(pending.promise);
       let saving!: Promise<TravelFormData | void>;
-      act(() => {
+      await act(() => {
         saving = mode === 'manual'
           ? result.current.handleManualSave()
           : autosaveOptions.onSave({ ...baseline, categories: [1, 2, 3] }, undefined, baseline);
@@ -624,7 +624,7 @@ describe('#2669 — authoritative moderation metadata across full and content sa
   ])('retains confirmed $moderation_decision metadata when a real partial content response omits it', async (metadata) => {
     const baseline = travelSnapshot(metadata);
     const next = { ...baseline, description: '<p>New author text saved through the content endpoint.</p>' };
-    const { params, formState, autosaveOptions } = setupPersistence(baseline);
+    const { params, formState, autosaveOptions } = await setupPersistence(baseline);
     params.formDataRef.current = next;
     mockSaveTravelContent.mockResolvedValue(contentResponse({ description: next.description, slug: 'updated-route' }) as any);
 
@@ -641,7 +641,7 @@ describe('#2669 — authoritative moderation metadata across full and content sa
 
   it('rebases a stale pre-submit content snapshot onto the confirmed cleared decision before PATCH and baseline', async () => {
     const baseline = travelSnapshot(previousDecision);
-    const { result, params, autosaveOptions } = setupPersistence(baseline);
+    const { result, params, autosaveOptions } = await setupPersistence(baseline);
     mockSaveFormData.mockResolvedValue(travelSnapshot({ publication_status: 'pending_review', ...clearedMetadata }) as any);
     await act(async () => { await result.current.handleManualSave(undefined, { intent: 'submit' }); });
     const confirmedPending = params.formDataRef.current;

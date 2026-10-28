@@ -96,7 +96,7 @@ jest.mock('@/components/ui/EmptyState', () => {
   };
 });
 
-const renderWithProviders = (ui: React.ReactElement) => {
+const renderWithProviders = async (ui: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
@@ -110,7 +110,7 @@ const renderWithProviders = (ui: React.ReactElement) => {
     </QueryClientProvider>
   );
 
-  return render(ui, { wrapper: Wrapper });
+  return await render(ui, { wrapper: Wrapper });
 };
 
 describe('RightColumn layout invariants', () => {
@@ -132,7 +132,7 @@ describe('RightColumn layout invariants', () => {
     mockFlashListProps.mockClear();
   });
 
-  it('keeps one footer promotion and updates its destination between search and catalog', () => {
+  it('keeps one footer promotion and updates its destination between search and catalog', async () => {
     const props = {
       search: '', setSearch: jest.fn(), isRecommendationsVisible: false,
       handleRecommendationsVisibilityChange: jest.fn(), activeFiltersCount: 0,
@@ -141,17 +141,17 @@ describe('RightColumn layout invariants', () => {
       travels, gridColumns: 1, isMobile: true, showNextPageLoading: false,
       refetch: jest.fn(), renderItem,
     };
-    const view = renderWithProviders(<RightColumn {...props} contributionBannerVariant="search" />);
+    const view = await renderWithProviders(<RightColumn {...props} contributionBannerVariant="search" />);
     expect(view.getAllByTestId('contribution-footer')).toHaveLength(1);
     expect(view.getByText('search')).toBeTruthy();
-    view.rerender(<RightColumn {...props} contributionBannerVariant="author-catalog" />);
+    await view.rerender(<RightColumn {...props} contributionBannerVariant="author-catalog" />);
     expect(view.getAllByTestId('contribution-footer')).toHaveLength(1);
     expect(view.getByText('author-catalog')).toBeTruthy();
     expect(view.queryByText('search')).toBeNull();
   });
 
-  it('passes the bounded FlashList v2 draw distance without legacy no-op tuning props', () => {
-    renderWithProviders(
+  it('passes the bounded FlashList v2 draw distance without legacy no-op tuning props', async () => {
+    await renderWithProviders(
       <RightColumn
         search=""
         setSearch={jest.fn()}
@@ -183,8 +183,8 @@ describe('RightColumn layout invariants', () => {
     expect(props.estimatedItemSize).toBeUndefined();
   });
 
-  it('forces 1 column on mobile regardless of gridColumns prop', () => {
-    renderWithProviders(
+  it('forces 1 column on mobile regardless of gridColumns prop', async () => {
+    await renderWithProviders(
       <RightColumn
         search=""
         setSearch={jest.fn()}
@@ -214,8 +214,8 @@ describe('RightColumn layout invariants', () => {
     }
   });
 
-  it('splits rows by gridColumns on non-mobile', () => {
-    renderWithProviders(
+  it('splits rows by gridColumns on non-mobile', async () => {
+    await renderWithProviders(
       <RightColumn
         search=""
         setSearch={jest.fn()}
@@ -253,8 +253,8 @@ describe('RightColumn layout invariants', () => {
     expect(screen.queryByTestId('travel-row-3')).toBeNull();
   });
 
-  it('keeps the mobile results count visible when compact density uses a two-column card grid', () => {
-    renderWithProviders(
+  it('keeps the mobile results count visible when compact density uses a two-column card grid', async () => {
+    await renderWithProviders(
       <RightColumn
         search=""
         setSearch={jest.fn()}
@@ -285,8 +285,8 @@ describe('RightColumn layout invariants', () => {
     expect(screen.getByTestId('travel-row-0-item-1')).toBeTruthy();
   });
 
-  it('does not announce a misleading zero result count during initial loading', () => {
-    renderWithProviders(
+  it('does not announce a misleading zero result count during initial loading', async () => {
+    await renderWithProviders(
       <RightColumn
         search=""
         setSearch={jest.fn()}
@@ -349,12 +349,12 @@ describe('RightColumn layout invariants', () => {
       );
     };
 
-    renderWithProviders(<StatefulWrapper />);
+    await renderWithProviders(<StatefulWrapper />);
 
-    fireEvent.press(screen.getByTestId('sticky-search-bar-mock'));
+    await fireEvent.press(screen.getByTestId('sticky-search-bar-mock'));
 
     const header = await screen.findByTestId('recommendations-list-header');
-    fireEvent(header, 'layout', { nativeEvent: { layout: { y: 184, height: 376, width: 320 } } });
+    await fireEvent(header, 'layout', { nativeEvent: { layout: { y: 184, height: 376, width: 320 } } });
 
     await waitFor(() => {
       expect(listRef.current.scrollToOffset).toHaveBeenCalledWith({
@@ -364,8 +364,8 @@ describe('RightColumn layout invariants', () => {
     });
   });
 
-  it('rerenders when renderItem changes while travels length stays the same', () => {
-    const { rerender } = renderWithProviders(
+  it('rerenders when renderItem changes while travels length stays the same', async () => {
+    const { rerender } = await renderWithProviders(
       <RightColumn
         search=""
         setSearch={jest.fn()}
@@ -393,7 +393,7 @@ describe('RightColumn layout invariants', () => {
 
     expect(screen.getByText('off-1')).toBeTruthy();
 
-    rerender(
+    await rerender(
       <QueryClientProvider
         client={
           new QueryClient({
@@ -435,7 +435,7 @@ describe('RightColumn layout invariants', () => {
     expect(screen.getByText('on-1')).toBeTruthy();
   });
 
-  it('keeps the visible results subtree stable when only search text changes', () => {
+  it('keeps the visible results subtree stable when only search text changes', async () => {
     const queryClient = new QueryClient({
       defaultOptions: {
         queries: { retry: false },
@@ -468,7 +468,7 @@ describe('RightColumn layout invariants', () => {
       renderItem: renderItem as any,
     };
 
-    const { rerender } = render(
+    const { rerender } = await render(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <RightColumn
@@ -482,7 +482,7 @@ describe('RightColumn layout invariants', () => {
     const initialRenderCalls = renderItem.mock.calls.length;
     expect(initialRenderCalls).toBeGreaterThan(0);
 
-    rerender(
+    await rerender(
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <RightColumn

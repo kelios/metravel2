@@ -53,7 +53,7 @@ const RandomHarness = forwardRef<any, HarnessProps>(
 
 RandomHarness.displayName = 'UseRandomTravelDataHarness';
 
-const renderWithClient = (props: HarnessProps) => {
+const renderWithClient = async (props: HarnessProps) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -70,14 +70,14 @@ const renderWithClient = (props: HarnessProps) => {
     </QueryClientProvider>
   );
 
-  const utils = render(ui);
+  const utils = await render(ui);
 
   return {
     ref,
     queryClient,
     ...utils,
-    rerender(newProps: HarnessProps) {
-      utils.rerender(
+    async rerender(newProps: HarnessProps) {
+      await utils.rerender(
         <QueryClientProvider client={queryClient}>
           <TestHarness ref={ref} {...newProps} />
         </QueryClientProvider>,
@@ -98,13 +98,13 @@ describe('useListTravelData with infinite query', () => {
       data: createTravels('initial', 12),
     });
 
-    const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+    const { ref, queryClient, unmount } = await renderWithClient({ queryParams: {} });
 
     await waitFor(() => expect(ref.current?.isInitialLoading).toBe(false));
     expect(ref.current?.data).toHaveLength(12);
     expect(fetchTravels).toHaveBeenCalledTimes(1);
 
-    unmount();
+    await unmount();
     queryClient.clear();
   });
 
@@ -121,7 +121,7 @@ describe('useListTravelData with infinite query', () => {
     );
     (fetchTravels as jest.Mock).mockResolvedValueOnce(stalePage);
 
-    const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+    const { ref, queryClient, unmount } = await renderWithClient({ queryParams: {} });
 
     await waitFor(() => expect(ref.current?.isInitialLoading).toBe(false));
     expect(ref.current?.data).toHaveLength(1);
@@ -130,7 +130,7 @@ describe('useListTravelData with infinite query', () => {
       sourceEndpoint: '/travels/?page=0',
     });
 
-    unmount();
+    await unmount();
     queryClient.clear();
   });
 
@@ -145,18 +145,18 @@ describe('useListTravelData with infinite query', () => {
         data: createTravels('page-1', 6),
       });
 
-    const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+    const { ref, queryClient, unmount } = await renderWithClient({ queryParams: {} });
 
     await waitFor(() => expect(ref.current?.data).toHaveLength(12));
 
-    act(() => {
+    await act(() => {
       ref.current?.handleEndReached();
     });
 
     await waitFor(() => expect(ref.current?.data).toHaveLength(18));
     expect(fetchTravels).toHaveBeenCalledTimes(2);
 
-    unmount();
+    await unmount();
     queryClient.clear();
   });
 
@@ -177,7 +177,7 @@ describe('useListTravelData with infinite query', () => {
         ],
       });
 
-    const { ref, queryClient, unmount } = renderWithClient({
+    const { ref, queryClient, unmount } = await renderWithClient({
       queryParams: {},
       search: '  минск  ',
     });
@@ -188,7 +188,7 @@ describe('useListTravelData with infinite query', () => {
       'rank-2',
     ]);
 
-    act(() => {
+    await act(() => {
       ref.current?.handleEndReached();
     });
 
@@ -202,7 +202,7 @@ describe('useListTravelData with infinite query', () => {
     expect(fetchTravels).toHaveBeenNthCalledWith(1, 0, expect.any(Number), 'минск', {}, expect.any(Object));
     expect(fetchTravels).toHaveBeenNthCalledWith(2, 1, expect.any(Number), 'минск', {}, expect.any(Object));
 
-    unmount();
+    await unmount();
     queryClient.clear();
   });
 
@@ -217,11 +217,11 @@ describe('useListTravelData with infinite query', () => {
         data: [],
       });
 
-    const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+    const { ref, queryClient, unmount } = await renderWithClient({ queryParams: {} });
 
     await waitFor(() => expect(ref.current?.data).toHaveLength(20));
 
-    act(() => {
+    await act(() => {
       ref.current?.handleEndReached();
     });
 
@@ -232,7 +232,7 @@ describe('useListTravelData with infinite query', () => {
       expect(ref.current?.isNextPageLoading).toBe(false);
     });
 
-    act(() => {
+    await act(() => {
       ref.current?.handleEndReached();
     });
 
@@ -241,7 +241,7 @@ describe('useListTravelData with infinite query', () => {
     expect(fetchTravels).toHaveBeenCalledTimes(2);
     expect((fetchTravels as jest.Mock).mock.calls[1][0]).toBe(1);
 
-    unmount();
+    await unmount();
     queryClient.clear();
   });
 
@@ -256,16 +256,16 @@ describe('useListTravelData with infinite query', () => {
         data: createTravels('filtered', 4),
       });
 
-    const { ref, rerender, queryClient, unmount } = renderWithClient({ queryParams: {} });
+    const { ref, rerender, queryClient, unmount } = await renderWithClient({ queryParams: {} });
 
     await waitFor(() => expect(ref.current?.data).toHaveLength(12));
 
-    rerender({ queryParams: { countries: [3] } });
+    await rerender({ queryParams: { countries: [3] } });
 
     await waitFor(() => expect(ref.current?.data).toHaveLength(4));
     expect(fetchTravels).toHaveBeenCalledTimes(2);
 
-    unmount();
+    await unmount();
     queryClient.clear();
   });
 
@@ -275,14 +275,14 @@ describe('useListTravelData with infinite query', () => {
       data: [],
     });
 
-    const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+    const { ref, queryClient, unmount } = await renderWithClient({ queryParams: {} });
 
     await waitFor(() => expect(ref.current?.isInitialLoading).toBe(false));
 
     expect(ref.current?.data).toHaveLength(0);
     expect(ref.current?.isEmpty).toBe(true);
 
-    unmount();
+    await unmount();
     queryClient.clear();
   });
 
@@ -301,7 +301,7 @@ describe('useListTravelData with infinite query', () => {
         data: createTravels('refetched', 1),
       });
 
-    const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+    const { ref, queryClient, unmount } = await renderWithClient({ queryParams: {} });
 
     await waitFor(() => expect(ref.current?.data).toHaveLength(12));
 
@@ -312,19 +312,19 @@ describe('useListTravelData with infinite query', () => {
     await waitFor(() => expect(ref.current?.data).toHaveLength(1));
     expect(fetchTravels).toHaveBeenCalledTimes(3);
 
-    unmount();
+    await unmount();
     queryClient.clear();
   });
 
   it('marks isError when fetchTravels rejects', async () => {
     (fetchTravels as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
 
-    const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+    const { ref, queryClient, unmount } = await renderWithClient({ queryParams: {} });
 
     await waitFor(() => expect(ref.current?.status).toBe('error'));
     expect(ref.current?.isError).toBe(true);
 
-    unmount();
+    await unmount();
     queryClient.clear();
   });
 
@@ -351,21 +351,21 @@ describe('useListTravelData with infinite query', () => {
         total: 2,
       });
 
-      const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+      const { ref, queryClient, unmount } = await renderWithClient({ queryParams: {} });
 
       await waitFor(() => expect(ref.current?.isError).toBe(true));
       expect(ref.current?.status).toBe('pending');
       expect(ref.current?.isEmpty).toBe(false);
       expect(fetchTravels).not.toHaveBeenCalled();
 
-      act(() => {
+      await act(() => {
         onlineManager.setOnline(true);
       });
 
       await waitFor(() => expect(ref.current?.data).toHaveLength(2));
       expect(ref.current?.isError).toBe(false);
 
-      unmount();
+      await unmount();
       queryClient.clear();
     });
 
@@ -375,7 +375,7 @@ describe('useListTravelData with infinite query', () => {
         total: 3,
       });
 
-      const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+      const { ref, queryClient, unmount } = await renderWithClient({ queryParams: {} });
       await waitFor(() => expect(ref.current?.data).toHaveLength(3));
 
       await refetchWhileOffline(ref, queryClient);
@@ -384,14 +384,14 @@ describe('useListTravelData with infinite query', () => {
       expect(ref.current?.data).toHaveLength(3);
       expect(ref.current?.isError).toBe(false);
 
-      unmount();
+      await unmount();
       queryClient.clear();
     });
 
     it('keeps a cached empty result as isEmpty, not isError, while a refetch is paused', async () => {
       (fetchTravels as jest.Mock).mockResolvedValueOnce({ data: [], total: 0 });
 
-      const { ref, queryClient, unmount } = renderWithClient({ queryParams: {} });
+      const { ref, queryClient, unmount } = await renderWithClient({ queryParams: {} });
       await waitFor(() => expect(ref.current?.isEmpty).toBe(true));
 
       await refetchWhileOffline(ref, queryClient);
@@ -400,13 +400,13 @@ describe('useListTravelData with infinite query', () => {
       expect(ref.current?.isError).toBe(false);
       expect(ref.current?.isEmpty).toBe(true);
 
-      unmount();
+      await unmount();
       queryClient.clear();
     });
   });
 });
 
-const renderRandomWithClient = (props: HarnessProps) => {
+const renderRandomWithClient = async (props: HarnessProps) => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -423,7 +423,7 @@ const renderRandomWithClient = (props: HarnessProps) => {
     </QueryClientProvider>
   );
 
-  const utils = render(ui);
+  const utils = await render(ui);
 
   return {
     ref,
@@ -443,13 +443,13 @@ describe('useRandomTravelData', () => {
       data: createTravels('rnd', 3),
     });
 
-    const { ref, queryClient, unmount } = renderRandomWithClient({ queryParams: {} });
+    const { ref, queryClient, unmount } = await renderRandomWithClient({ queryParams: {} });
 
     await waitFor(() => expect(ref.current?.isInitialLoading).toBe(false));
     expect(ref.current?.data).toHaveLength(3);
     expect(fetchRandomTravels).toHaveBeenCalledTimes(1);
 
-    unmount();
+    await unmount();
     queryClient.clear();
   });
 
@@ -458,7 +458,7 @@ describe('useRandomTravelData', () => {
   it('isQueryEnabled:false — successful empty refetch sets isEmpty, nothing is fetched on mount', async () => {
     (fetchRandomTravels as jest.Mock).mockResolvedValueOnce({ total: 0, data: [] });
 
-    const { ref, queryClient, unmount } = renderRandomWithClient({ queryParams: {}, isQueryEnabled: false });
+    const { ref, queryClient, unmount } = await renderRandomWithClient({ queryParams: {}, isQueryEnabled: false });
 
     expect(fetchRandomTravels).not.toHaveBeenCalled();
     expect(ref.current?.isEmpty).toBe(false);
@@ -472,14 +472,14 @@ describe('useRandomTravelData', () => {
     expect(ref.current?.data).toHaveLength(0);
     expect(ref.current?.isError).toBe(false);
 
-    unmount();
+    await unmount();
     queryClient.clear();
   });
 
   it('isQueryEnabled:false — failed refetch is an error, not an empty result', async () => {
     (fetchRandomTravels as jest.Mock).mockRejectedValueOnce(new Error('network'));
 
-    const { ref, queryClient, unmount } = renderRandomWithClient({ queryParams: {}, isQueryEnabled: false });
+    const { ref, queryClient, unmount } = await renderRandomWithClient({ queryParams: {}, isQueryEnabled: false });
 
     await act(async () => {
       await ref.current?.refetch();
@@ -488,7 +488,7 @@ describe('useRandomTravelData', () => {
     await waitFor(() => expect(ref.current?.isError).toBe(true));
     expect(ref.current?.isEmpty).toBe(false);
 
-    unmount();
+    await unmount();
     queryClient.clear();
   });
 
@@ -498,13 +498,13 @@ describe('useRandomTravelData', () => {
       data: [],
     });
 
-    const { ref, queryClient, unmount } = renderRandomWithClient({ queryParams: {} });
+    const { ref, queryClient, unmount } = await renderRandomWithClient({ queryParams: {} });
 
     await waitFor(() => expect(ref.current?.isInitialLoading).toBe(false));
     expect(ref.current?.data).toHaveLength(0);
     expect(ref.current?.isEmpty).toBe(true);
 
-    unmount();
+    await unmount();
     queryClient.clear();
   });
 });

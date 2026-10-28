@@ -30,71 +30,71 @@ describe('UpsertTravelRoute entry key', () => {
     mockMount.mockClear()
   })
 
-  it('remounts the wizard when another create entry opens the same tab screen', () => {
-    const view = render(<UpsertTravelRoute />)
+  it('remounts the wizard when another create entry opens the same tab screen', async () => {
+    const view = await render(<UpsertTravelRoute />)
     expect(mockMount).toHaveBeenCalledTimes(1)
-    fireEvent.changeText(view.getByTestId('draft'), 'full draft')
+    await fireEvent.changeText(view.getByTestId('draft'), 'full draft')
 
     mockParams = { mode: 'note' }
-    view.rerender(<UpsertTravelRoute />)
+    await view.rerender(<UpsertTravelRoute />)
     expect(mockMount).toHaveBeenCalledTimes(2)
     expect(view.getByTestId('draft').props.value).toBe('')
 
     mockParams = { mode: 'note', source_travel_id: '42', place: 'Гродно' }
-    view.rerender(<UpsertTravelRoute />)
+    await view.rerender(<UpsertTravelRoute />)
     expect(mockMount).toHaveBeenCalledTimes(3)
 
-    fireEvent.changeText(view.getByTestId('draft'), 'note draft')
+    await fireEvent.changeText(view.getByTestId('draft'), 'note draft')
     mockParams = {}
-    view.rerender(<UpsertTravelRoute />)
+    await view.rerender(<UpsertTravelRoute />)
     expect(mockMount).toHaveBeenCalledTimes(4)
     expect(view.getByTestId('draft').props.value).toBe('')
   })
 
-  it('keeps the form when the created id is written into the URL or unknown params change', () => {
+  it('keeps the form when the created id is written into the URL or unknown params change', async () => {
     mockParams = { mode: 'note', source_travel_id: '42' }
-    const view = render(<UpsertTravelRoute />)
-    fireEvent.changeText(view.getByTestId('draft'), 'unsaved words')
+    const view = await render(<UpsertTravelRoute />)
+    await fireEvent.changeText(view.getByTestId('draft'), 'unsaved words')
 
     mockParams = { mode: 'note', source_travel_id: '42', id: '501' }
-    view.rerender(<UpsertTravelRoute />)
+    await view.rerender(<UpsertTravelRoute />)
     mockParams = { mode: 'note', source_travel_id: '42', id: '501', utm_source: 'x' }
-    view.rerender(<UpsertTravelRoute />)
+    await view.rerender(<UpsertTravelRoute />)
 
     expect(mockMount).toHaveBeenCalledTimes(1)
     expect(view.getByTestId('draft').props.value).toBe('unsaved words')
   })
 
-  it('keeps unsaved input when equivalent article context is normalized', () => {
+  it('keeps unsaved input when equivalent article context is normalized', async () => {
     mockParams = { mode: 'note', source_travel_id: '42', country: 'by', place: '  Старый   замок  ' }
-    const view = render(<UpsertTravelRoute />)
-    fireEvent.changeText(view.getByTestId('draft'), 'unsaved words')
+    const view = await render(<UpsertTravelRoute />)
+    await fireEvent.changeText(view.getByTestId('draft'), 'unsaved words')
 
     mockParams = { mode: ['note'], source_travel_id: 42, country: 'BY', place: 'Старый замок' }
-    view.rerender(<UpsertTravelRoute />)
+    await view.rerender(<UpsertTravelRoute />)
 
     expect(mockMount).toHaveBeenCalledTimes(1)
     expect(view.getByTestId('draft').props.value).toBe('unsaved words')
   })
 
-  it.each(['note', 'full'])('starts a fresh %s after leaving the saved record for the same create entry', (mode) => {
+  it.each(['note', 'full'])('starts a fresh %s after leaving the saved record for the same create entry', async (mode) => {
     mockParams = { mode }
-    const view = render(<UpsertTravelRoute />)
-    fireEvent.changeText(view.getByTestId('draft'), 'saved record')
+    const view = await render(<UpsertTravelRoute />)
+    await fireEvent.changeText(view.getByTestId('draft'), 'saved record')
 
     mockParams = { mode, id: '501' }
-    view.rerender(<UpsertTravelRoute />)
+    await view.rerender(<UpsertTravelRoute />)
     expect(mockMount).toHaveBeenCalledTimes(1)
     expect(view.getByTestId('draft').props.value).toBe('saved record')
 
     mockParams = { mode }
-    view.rerender(<UpsertTravelRoute />)
+    await view.rerender(<UpsertTravelRoute />)
     expect(mockMount).toHaveBeenCalledTimes(2)
     expect(view.getByTestId('draft').props.value).toBe('')
 
-    fireEvent.changeText(view.getByTestId('draft'), 'second record')
+    await fireEvent.changeText(view.getByTestId('draft'), 'second record')
     mockParams = { mode, id: '502' }
-    view.rerender(<UpsertTravelRoute />)
+    await view.rerender(<UpsertTravelRoute />)
     expect(mockMount).toHaveBeenCalledTimes(2)
     expect(view.getByTestId('draft').props.value).toBe('second record')
   })

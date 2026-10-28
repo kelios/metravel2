@@ -37,8 +37,8 @@ describe('PointListCardRenderer (web) — mobile-parity compact card', () => {
     { key: 'waze', icon: 'navigation' as const, label: 'Waze', title: 'Открыть точку в Waze', onPress: noop },
   ];
 
-  const renderCard = (address = 'Брестская крепость (Цитадель)') =>
-    render(
+  const renderCard = async (address = 'Брестская крепость (Цитадель)') =>
+    await render(
       <PointListCardRenderer
         colors={{ textOnDark: colors.textOnDark, textOnPrimary: colors.textOnPrimary }}
         isMobile={false}
@@ -68,8 +68,8 @@ describe('PointListCardRenderer (web) — mobile-parity compact card', () => {
       />
     );
 
-  it('collapses map-app buttons into a single «Навигация» popup control', () => {
-    renderCard();
+  it('collapses map-app buttons into a single «Навигация» popup control', async () => {
+    await renderCard();
 
     // The single overflow control only exists in the compact/popup path — on the
     // old non-compact web card overflowActions was empty and it never rendered.
@@ -80,14 +80,14 @@ describe('PointListCardRenderer (web) — mobile-parity compact card', () => {
     expect(screen.queryByLabelText('Открыть точку в Organic Maps')).toBeNull();
   })
 
-  it('shortens a pre-#1717 geocoder chain on the card title (#1750)', () => {
-    renderCard('332 · Soblówka · Силезское воеводство · Живецкий повят · Польша')
+  it('shortens a pre-#1717 geocoder chain on the card title (#1750)', async () => {
+    await renderCard('332 · Soblówka · Силезское воеводство · Живецкий повят · Польша')
     expect(screen.getByText('Soblówka')).toBeTruthy()
     expect(screen.queryByText(/Силезское воеводство/)).toBeNull()
   });
 
-  it('keeps the coord + save affordances visible like the mobile card', () => {
-    renderCard();
+  it('keeps the coord + save affordances visible like the mobile card', async () => {
+    await renderCard();
 
     expect(screen.getByLabelText('Скопировать координаты')).toBeTruthy();
     expect(screen.getByLabelText('Сохранить')).toBeTruthy();

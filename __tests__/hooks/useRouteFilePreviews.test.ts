@@ -77,8 +77,8 @@ describe('useRouteFilePreviews', () => {
     ;(Platform as any).OS = originalPlatform
   })
 
-  it('enables route files query on web before the map is opened when travel id exists', () => {
-    renderHook(() =>
+  it('enables route files query on web before the map is opened when travel id exists', async () => {
+    await renderHook(() =>
       useRouteFilePreviews({
         travelId: 528,
         canRenderHeavy: true,
@@ -100,33 +100,33 @@ describe('useRouteFilePreviews', () => {
     useTravelRouteFiles.mockReturnValue({ data: [{ id: 77, original_name: 'route.gpx', ext: 'gpx' }], isLoading: false, isFetching: false })
     downloadTravelRouteFileBlob.mockResolvedValue({ text: '<gpx/>' })
     parseRouteFileGeometry.mockReturnValue({ hasIndependentPoints: false, lines: [sourceLine, sourceLine], points: [] })
-    const { result, rerender } = renderHook(() => useRouteFilePreviews({ travelId: 88, canRenderHeavy: true, shouldRender: true, shouldForceRenderMap: false }))
+    const { result, rerender } = await renderHook(() => useRouteFilePreviews({ travelId: 88, canRenderHeavy: true, shouldRender: true, shouldForceRenderMap: false }))
     await waitFor(() => expect(result.current.routePreviewItems).toHaveLength(2))
     const downloads = downloadTravelRouteFileBlob.mock.calls.length
     const parses = parseRouteFileGeometry.mock.calls.length
     const initialItems = result.current.routePreviewItems
-    rerender({})
+    await rerender({})
     expect(result.current.routePreviewItems).toBe(initialItems)
     try {
       await act(async () => { await i18n.changeLanguage('en') })
       expect(result.current.routePreviewItems[0].label).toBe('route.gpx • track 1')
       expect(result.current.routePreviewItems[1].label).toBe('route.gpx • track 2')
       const translatedItems = result.current.routePreviewItems
-      rerender({})
+      await rerender({})
       expect(result.current.routePreviewItems).toBe(translatedItems)
       expect(downloadTravelRouteFileBlob).toHaveBeenCalledTimes(downloads)
       expect(parseRouteFileGeometry).toHaveBeenCalledTimes(parses)
     } finally { await act(async () => { await i18n.changeLanguage('ru') }) }
   })
 
-  it('reports loading while route files request is still in flight', () => {
+  it('reports loading while route files request is still in flight', async () => {
     useTravelRouteFiles.mockReturnValue({
       data: [],
       isLoading: true,
       isFetching: false,
     })
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useRouteFilePreviews({
         travelId: 528,
         canRenderHeavy: true,
@@ -168,7 +168,7 @@ describe('useRouteFilePreviews', () => {
       points: [],
     })
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useRouteFilePreviews({
         travelId: 563,
         canRenderHeavy: true,
@@ -208,7 +208,7 @@ describe('useRouteFilePreviews', () => {
     })
     buildElevationProfile.mockReturnValue(parsedPreview.elevationProfile)
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useRouteFilePreviews({
         travelId: 563,
         canRenderHeavy: true,
@@ -253,7 +253,7 @@ describe('useRouteFilePreviews', () => {
       ],
     })
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useRouteFilePreviews({
         travelId: 737,
         canRenderHeavy: true,
@@ -298,7 +298,7 @@ describe('useRouteFilePreviews', () => {
       points: [{ coord: '50,19', name: 'POI' }],
     })
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useRouteFilePreviews({
         travelId: 738,
         canRenderHeavy: true,
@@ -339,7 +339,7 @@ describe('useRouteFilePreviews', () => {
       points: [],
     })
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useRouteFilePreviews({
         travelId: 739,
         canRenderHeavy: true,

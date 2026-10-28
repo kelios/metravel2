@@ -99,9 +99,9 @@ describe('Map Component - Platform Specific', () => {
     longitude: 27.5,
   };
 
-  const renderWithQueryClient = (ui: React.ReactElement) => {
+  const renderWithQueryClient = async (ui: React.ReactElement) => {
     const { Wrapper } = createQueryWrapper();
-    return render(ui, { wrapper: Wrapper });
+    return await render(ui, { wrapper: Wrapper });
   };
 
   describe('iOS Platform', () => {
@@ -109,14 +109,14 @@ describe('Map Component - Platform Specific', () => {
       Platform.OS = 'ios';
     });
 
-    it('should render Map component on iOS', () => {
+    it('should render Map component on iOS', async () => {
       const Map = require('../../../components/MapPage/Map.ios').default;
-      expect(() => renderWithQueryClient(<Map travel={mockTravel} coordinates={mockCoordinates} />)).not.toThrow();
+      await expect(renderWithQueryClient(<Map travel={mockTravel} coordinates={mockCoordinates} />)).resolves.toBeDefined();
     });
 
-    it('should handle null coordinates on iOS', () => {
+    it('should handle null coordinates on iOS', async () => {
       const Map = require('../../../components/MapPage/Map.ios').default;
-      expect(() => renderWithQueryClient(<Map travel={mockTravel} coordinates={null} />)).not.toThrow();
+      await expect(renderWithQueryClient(<Map travel={mockTravel} coordinates={null} />)).resolves.toBeDefined();
     });
   });
 
@@ -125,14 +125,14 @@ describe('Map Component - Platform Specific', () => {
       Platform.OS = 'android';
     });
 
-    it('should render Map component on Android', () => {
+    it('should render Map component on Android', async () => {
       const Map = require('../../../components/MapPage/Map.android').default;
-      expect(() => renderWithQueryClient(<Map travel={mockTravel} coordinates={mockCoordinates} />)).not.toThrow();
+      await expect(renderWithQueryClient(<Map travel={mockTravel} coordinates={mockCoordinates} />)).resolves.toBeDefined();
     });
 
-    it('should handle null coordinates on Android', () => {
+    it('should handle null coordinates on Android', async () => {
       const Map = require('../../../components/MapPage/Map.android').default;
-      expect(() => renderWithQueryClient(<Map travel={mockTravel} coordinates={null} />)).not.toThrow();
+      await expect(renderWithQueryClient(<Map travel={mockTravel} coordinates={null} />)).resolves.toBeDefined();
     });
 
     it('should use same implementation as iOS', () => {

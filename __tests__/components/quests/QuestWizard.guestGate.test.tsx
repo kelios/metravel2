@@ -123,7 +123,7 @@ describe('QuestWizard guest gate', () => {
   })
 
   it('renders the intro start action before story, task and the collapsed trust footer', async () => {
-    const view = render(
+    const view = await render(
       <QuestWizard
         title="Тест-квест"
         steps={steps}
@@ -156,7 +156,7 @@ describe('QuestWizard guest gate', () => {
     const onGuestLogin = jest.fn()
     const onGuestRegister = jest.fn()
 
-    const { getByLabelText, getByRole, getByText, getByTestId, queryByTestId } = render(
+    const { getByLabelText, getByRole, getByText, getByTestId, queryByTestId } = await render(
       <QuestWizard
         title="Тест-квест"
         steps={steps}
@@ -188,7 +188,7 @@ describe('QuestWizard guest gate', () => {
 
     // intro → точка 1: на intro шаге кнопка «Начать квест» продвигает вперёд.
     await act(async () => {
-      fireEvent.press(getByText('Начать квест'))
+      await fireEvent.press(getByText('Начать квест'))
       await Promise.resolve()
     })
     // quest_start уходит для гостя, как только видна первая настоящая точка.
@@ -205,13 +205,13 @@ describe('QuestWizard guest gate', () => {
 
     // Отвечаем на точку 1 (auto-pass кнопка «Далее»).
     await act(async () => {
-      fireEvent.press(getByLabelText('Далее'))
+      await fireEvent.press(getByLabelText('Далее'))
     })
     expect(queryByTestId('quest-guest-gate')).toBeNull()
 
     // Отвечаем на точку 2 → упираемся в мягкий гейт перед точкой 3.
     await act(async () => {
-      fireEvent.press(getByLabelText('Далее'))
+      await fireEvent.press(getByLabelText('Далее'))
     })
 
     expect(getByTestId('quest-guest-gate')).toBeTruthy()
@@ -221,9 +221,9 @@ describe('QuestWizard guest gate', () => {
     ).toEqual(expect.objectContaining({ quest_id: 'test-quest', passed_count: 2 }))
 
     // Кнопки гейта дёргают колбэки на /login и /registration.
-    fireEvent.press(getByTestId('quest-guest-gate-login'))
+    await fireEvent.press(getByTestId('quest-guest-gate-login'))
     expect(onGuestLogin).toHaveBeenCalled()
-    fireEvent.press(getByTestId('quest-guest-gate-register'))
+    await fireEvent.press(getByTestId('quest-guest-gate-register'))
     expect(onGuestRegister).toHaveBeenCalled()
   })
 
@@ -231,7 +231,7 @@ describe('QuestWizard guest gate', () => {
   // отвеченную) точку и снимало гейт до конца сессии — гость проходил весь квест
   // без регистрации (завершения в аналитике без пользователя и прогресса).
   it('returns the guest to a passed point on dismiss and re-gates the next unanswered one', async () => {
-    const { getByLabelText, getByRole, getByText, getByTestId, queryByLabelText, queryByTestId } = render(
+    const { getByLabelText, getByRole, getByText, getByTestId, queryByLabelText, queryByTestId } = await render(
       <QuestWizard
         title="Тест-квест"
         steps={steps}
@@ -252,20 +252,20 @@ describe('QuestWizard guest gate', () => {
     })
 
     await act(async () => {
-      fireEvent.press(getByText('Начать квест'))
+      await fireEvent.press(getByText('Начать квест'))
       await Promise.resolve()
     })
     await act(async () => {
-      fireEvent.press(getByLabelText('Далее'))
+      await fireEvent.press(getByLabelText('Далее'))
     })
     await act(async () => {
-      fireEvent.press(getByLabelText('Далее'))
+      await fireEvent.press(getByLabelText('Далее'))
     })
     expect(getByTestId('quest-guest-gate')).toBeTruthy()
 
     // Закрываем гейт: гость должен оказаться на ПРОЙДЕННОЙ точке 2, а не на точке 3.
     await act(async () => {
-      fireEvent.press(getByTestId('quest-guest-gate-dismiss'))
+      await fireEvent.press(getByTestId('quest-guest-gate-dismiss'))
     })
     expect(queryByTestId('quest-guest-gate')).toBeNull()
     expect(getByText('Точка 2')).toBeTruthy()
@@ -276,14 +276,14 @@ describe('QuestWizard guest gate', () => {
     // Явная кнопка под сохранённым ответом ведёт дальше и снова показывает гейт:
     // пользователь не обязан догадываться, что продолжение спрятано в навигации.
     await act(async () => {
-      fireEvent.press(getByTestId('quest-step-continue'))
+      await fireEvent.press(getByTestId('quest-step-continue'))
     })
     expect(getByTestId('quest-guest-gate')).toBeTruthy()
     expect(queryByLabelText('Далее')).toBeNull()
   })
 
   it('returns from the last completed point to the finale with an explicit action', async () => {
-    const { getByLabelText, getByRole, getByText, getByTestId } = render(
+    const { getByLabelText, getByRole, getByText, getByTestId } = await render(
       <QuestWizard
         title="Тест-квест"
         steps={steps}
@@ -298,19 +298,19 @@ describe('QuestWizard guest gate', () => {
       await Promise.resolve()
     })
     await act(async () => {
-      fireEvent.press(getByText('Начать квест'))
+      await fireEvent.press(getByText('Начать квест'))
       await Promise.resolve()
     })
     await act(async () => {
-      fireEvent.press(getByLabelText('Далее'))
+      await fireEvent.press(getByLabelText('Далее'))
       await Promise.resolve()
     })
     await act(async () => {
-      fireEvent.press(getByLabelText('Далее'))
+      await fireEvent.press(getByLabelText('Далее'))
       await Promise.resolve()
     })
     await act(async () => {
-      fireEvent.press(getByLabelText('Далее'))
+      await fireEvent.press(getByLabelText('Далее'))
       await Promise.resolve()
     })
 
@@ -319,16 +319,16 @@ describe('QuestWizard guest gate', () => {
     await act(async () => {
       // #2149: на телефоне точки — в листе «Маршрут» за полосой маршрута;
       // #2146: пройденная несёт галочку вместо номера — ищем по подписи.
-      fireEvent.press(getByTestId('quest-route-strip'))
+      await fireEvent.press(getByTestId('quest-route-strip'))
     })
     await act(async () => {
-      fireEvent.press(getByLabelText(/Точка 3 из \d+, пройдена/))
+      await fireEvent.press(getByLabelText(/Точка 3 из \d+, пройдена/))
     })
     expect(getByRole('button', { name: 'Перейти к финалу' })).toBeTruthy()
 
     mockQuestFinalePanel.mockClear()
     await act(async () => {
-      fireEvent.press(getByTestId('quest-step-continue'))
+      await fireEvent.press(getByTestId('quest-step-continue'))
     })
     expect(mockQuestFinalePanel).toHaveBeenCalled()
   })
@@ -338,7 +338,7 @@ describe('QuestWizard guest gate', () => {
       { ...makeStep('required-1', 'Точка 1'), answer: (value: string) => value === 'ok' },
       { ...makeStep('required-2', 'Точка 2'), answer: (value: string) => value === 'ok' },
     ]
-    const { getByLabelText, getByText } = render(
+    const { getByLabelText, getByText } = await render(
       <QuestWizard
         title="Тест-квест"
         steps={manualSteps}
@@ -353,16 +353,16 @@ describe('QuestWizard guest gate', () => {
       await Promise.resolve()
     })
     await act(async () => {
-      fireEvent.press(getByText('Начать квест'))
+      await fireEvent.press(getByText('Начать квест'))
       await Promise.resolve()
     })
     await act(async () => {
-      fireEvent.press(getByLabelText('Пропустить шаг'))
+      await fireEvent.press(getByLabelText('Пропустить шаг'))
     })
 
     mockQuestFinalePanel.mockClear()
     await act(async () => {
-      fireEvent.press(getByLabelText('Пропустить шаг'))
+      await fireEvent.press(getByLabelText('Пропустить шаг'))
     })
     expect(mockQuestFinalePanel).toHaveBeenCalled()
   })
@@ -372,7 +372,7 @@ describe('QuestWizard guest gate', () => {
       { ...makeStep('required', 'Обязательная точка'), pointRole: 'required' as const },
       { ...makeStep('optional', 'Необязательная точка'), pointRole: 'optional' as const },
     ]
-    const { getByLabelText, getByTestId, getByText } = render(
+    const { getByLabelText, getByTestId, getByText } = await render(
       <QuestWizard
         title="Тест-квест"
         steps={stepsWithLastOptional}
@@ -387,29 +387,29 @@ describe('QuestWizard guest gate', () => {
       await Promise.resolve()
     })
     await act(async () => {
-      fireEvent.press(getByText('Начать квест'))
+      await fireEvent.press(getByText('Начать квест'))
       await Promise.resolve()
     })
     await act(async () => {
-      fireEvent.press(getByLabelText('Далее'))
+      await fireEvent.press(getByLabelText('Далее'))
     })
     expect(mockQuestFinalePanel).toHaveBeenCalled()
 
     await act(async () => {
       // #2149: точка открывается строкой листа «Маршрут» за полосой маршрута.
-      fireEvent.press(getByTestId('quest-route-strip'))
+      await fireEvent.press(getByTestId('quest-route-strip'))
     })
     await act(async () => {
-      fireEvent.press(getByLabelText(/Точка 2 из \d+/))
+      await fireEvent.press(getByLabelText(/Точка 2 из \d+/))
     })
     mockQuestFinalePanel.mockClear()
     await act(async () => {
-      fireEvent.press(getByLabelText('Далее'))
+      await fireEvent.press(getByLabelText('Далее'))
     })
     expect(mockQuestFinalePanel).toHaveBeenCalled()
   })
 
-  it('uses the shared Belkraj excursions section for a native quest', () => {
+  it('uses the shared Belkraj excursions section for a native quest', async () => {
     mockQuestWizardResponsiveModel = {
       ...mockQuestWizardResponsiveModel,
       screenW: 1200,
@@ -427,7 +427,7 @@ describe('QuestWizard guest gate', () => {
       countryCode: 'BY',
     }
 
-    render(
+    await render(
       <QuestWizard
         title="Тест-квест"
         steps={steps}
@@ -444,8 +444,8 @@ describe('QuestWizard guest gate', () => {
     )
   })
 
-  it('passes the bicycle routing profile to the quest map for bike-tagged quests', () => {
-    render(
+  it('passes the bicycle routing profile to the quest map for bike-tagged quests', async () => {
+    await render(
       <QuestWizard
         title="Велоквест"
         steps={steps}

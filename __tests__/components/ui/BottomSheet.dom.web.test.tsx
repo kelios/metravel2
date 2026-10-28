@@ -6,7 +6,7 @@ import type { Root } from 'react-dom/client'
 // DOM: клик по пустой поверхности листа доходит до `onClick` карточки, внутри
 // которой лист смонтирован (`UnifiedTravelCard` — `PlaceListCard` в `compact`).
 // Карточка пропускает клики только из-под `[data-card-action="true"]` (канон
-// RULES.md), поэтому корень листа несёт эту метку. react-test-renderer портал и
+// RULES.md), поэтому корень листа несёт эту метку. test renderer портал и
 // DOM не моделирует — здесь настоящий DOM react-native-web (рецепт #2035).
 let act: typeof import('react').act
 let createElement: typeof import('react').createElement

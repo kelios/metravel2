@@ -22,9 +22,9 @@ jest.mock('@/api/userSafety', () => ({
   isMockBlocked: jest.fn(() => false),
 }))
 
-const wrap = (node: React.ReactElement) => {
+const wrap = async (node: React.ReactElement) => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
-  return render(<QueryClientProvider client={client}>{node}</QueryClientProvider>)
+  return await render(<QueryClientProvider client={client}>{node}</QueryClientProvider>)
 }
 
 const MENU = 'travel-fullscreen-gallery-safety-menu'
@@ -34,29 +34,29 @@ describe('FullscreenGallery content safety', () => {
     useAuthStore.setState({ isAuthenticated: true, userId: '7' })
   })
 
-  it('shows the photo safety trigger for a gallery photo with a real id', () => {
-    const { getByTestId } = wrap(
+  it('shows the photo safety trigger for a gallery photo with a real id', async () => {
+    const { getByTestId } = await wrap(
       <FullscreenGallery visible images={[{ id: 11, url: 'https://example.com/1.jpg' }]} onClose={jest.fn()} safetyAuthorId={42} />,
     )
     expect(getByTestId(MENU)).toBeTruthy()
   })
 
-  it('shows nothing for a photo without a gallery id', () => {
-    const { queryByTestId } = wrap(
+  it('shows nothing for a photo without a gallery id', async () => {
+    const { queryByTestId } = await wrap(
       <FullscreenGallery visible images={[{ url: 'https://example.com/1.jpg' }]} onClose={jest.fn()} safetyAuthorId={42} />,
     )
     expect(queryByTestId(MENU)).toBeNull()
   })
 
-  it('hides the trigger on the travel author own photo', () => {
+  it('hides the trigger on the travel author own photo', async () => {
     useAuthStore.setState({ isAuthenticated: true, userId: '42' })
-    const { queryByTestId } = wrap(
+    const { queryByTestId } = await wrap(
       <FullscreenGallery visible images={[{ id: 11, url: 'https://example.com/1.jpg' }]} onClose={jest.fn()} safetyAuthorId={42} />,
     )
     expect(queryByTestId(MENU)).toBeNull()
   })
 
-  it('hero slider passes the real photo id, never the index fallback', () => {
+  it('hero slider passes the real photo id, never the index fallback', async () => {
     const images = [
       { id: 17, photoId: 17, url: 'https://example.com/a.jpg' },
       { id: 1, photoId: null, url: 'https://example.com/b.jpg' },
@@ -72,11 +72,11 @@ describe('FullscreenGallery content safety', () => {
       fullscreenVisible: true,
       safetyAuthorId: 42,
     }
-    const first = wrap(<TravelHeroInteractiveSlider {...props} fullscreenIndex={0} />)
+    const first = await wrap(<TravelHeroInteractiveSlider {...props} fullscreenIndex={0} />)
     expect(first.getByTestId(MENU)).toBeTruthy()
-    first.unmount()
+    await first.unmount()
 
-    const second = wrap(<TravelHeroInteractiveSlider {...props} fullscreenIndex={1} />)
+    const second = await wrap(<TravelHeroInteractiveSlider {...props} fullscreenIndex={1} />)
     expect(second.queryByTestId(MENU)).toBeNull()
   })
 })

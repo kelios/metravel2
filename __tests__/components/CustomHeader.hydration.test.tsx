@@ -1,3 +1,4 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 import React from 'react'
 import { render } from '@testing-library/react-native'
 import { usePathname, useRouter } from 'expo-router'
@@ -91,17 +92,16 @@ const setResponsive = (width: number, isHydrated: boolean) => {
   }
 }
 
-const renderHeader = () =>
-  render(
+const renderHeader = async () =>
+  await render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <CustomHeader />
     </QueryClientProvider>,
   )
 
-// Только host-узлы: `findAll` обходит и композитные элементы, поэтому один
-// `<Text dataSet=…>` иначе считается дважды.
-const findByDataSet = (utils: ReturnType<typeof renderHeader>, key: string, value: string) =>
-  utils.UNSAFE_root.findAll(
+// Count the rendered host nodes carrying each hydration marker.
+const findByDataSet = (utils: Awaited<ReturnType<typeof renderHeader>>, key: string, value: string) =>
+  utils.container.queryAll(
     (node) => typeof node.type === 'string' && (node.props as any)?.dataSet?.[key] === value,
   )
 
@@ -121,9 +121,9 @@ describe('CustomHeader: до-гидрационная геометрия стр�
     ;(global as any).__mockResponsive = undefined
   })
 
-  it('на узком экране до гидратации всё равно рисует desktop-бокс строки', () => {
+  it('на узком экране до гидратации всё равно рисует desktop-бокс строки', async () => {
     setResponsive(0, false)
-    const utils = renderHeader()
+    const utils = await renderHeader()
 
     // Словесная часть логотипа — тот самый узел, который расширял бокс 44 -> 115.
     expect(findByDataSet(utils, 'headerLogoWordmark', 'true')).toHaveLength(1)
@@ -136,9 +136,9 @@ describe('CustomHeader: до-гидрационная геометрия стр�
     expect(findByDataSet(utils, 'headerInner', 'true')).toHaveLength(1)
   })
 
-  it('после гидратации на узком экране отдаёт мобильную строку', () => {
+  it('после гидратации на узком экране отдаёт мобильную строку', async () => {
     setResponsive(390, true)
-    const utils = renderHeader()
+    const utils = await renderHeader()
 
     expect(findByDataSet(utils, 'headerLogoWordmark', 'true')).toHaveLength(0)
     expect(findByDataSet(utils, 'headerSlot', 'nav')).toHaveLength(0)
@@ -147,9 +147,9 @@ describe('CustomHeader: до-гидрационная геометрия стр�
     expect(findByDataSet(utils, 'headerSlot', 'account')).toHaveLength(1)
   })
 
-  it('после гидратации на desktop оставляет полную строку с навигацией', () => {
+  it('после гидратации на desktop оставляет полную строку с навигацией', async () => {
     setResponsive(1440, true)
-    const utils = renderHeader()
+    const utils = await renderHeader()
 
     expect(findByDataSet(utils, 'headerLogoWordmark', 'true')).toHaveLength(1)
     expect(findByDataSet(utils, 'headerSlot', 'nav')).toHaveLength(0)
@@ -157,11 +157,11 @@ describe('CustomHeader: до-гидрационная геометрия стр�
     expect(findByDataSet(utils, 'headerLangChevron', 'true')).toHaveLength(1)
   })
 
-  it('маркирует travel context fallback без конкурирующей inline-высоты', () => {
+  it('маркирует travel context fallback без конкурирующей inline-высоты', async () => {
     ;(usePathname as jest.Mock).mockReturnValue('/travels/e2e-stable-travel-details')
     setResponsive(0, false)
 
-    const utils = renderHeader()
+    const utils = await renderHeader()
     const fallbacks = findByDataSet(utils, 'headerContextFallback', 'travel')
 
     expect(fallbacks).toHaveLength(1)
@@ -169,12 +169,12 @@ describe('CustomHeader: до-гидрационная геометрия стр�
     expect(StyleSheet.flatten(fallbacks[0].props.style)?.minHeight).toBeUndefined()
   })
 
-  it('сохраняет тот же travel marker на Suspense fallback после гидратации', () => {
+  it('сохраняет тот же travel marker на Suspense fallback после гидратации', async () => {
     ;(usePathname as jest.Mock).mockReturnValue('/travels/e2e-stable-travel-details')
     mockContextBarShouldSuspend = true
     setResponsive(390, true)
 
-    const utils = renderHeader()
+    const utils = await renderHeader()
     const fallbacks = findByDataSet(utils, 'headerContextFallback', 'travel')
 
     expect(fallbacks).toHaveLength(1)
@@ -184,11 +184,11 @@ describe('CustomHeader: до-гидрационная геометрия стр�
 
   it.each(['/settings'])(
     'передаёт обычную web context-заглушку critical CSS для %s без inline-высоты',
-    (pathname) => {
+    async (pathname) => {
       ;(usePathname as jest.Mock).mockReturnValue(pathname)
       setResponsive(0, false)
 
-      const utils = renderHeader()
+      const utils = await renderHeader()
       const fallbacks = findByDataSet(utils, 'headerContextFallback', 'default')
 
       expect(fallbacks).toHaveLength(1)
@@ -199,10 +199,10 @@ describe('CustomHeader: до-гидрационная геометрия стр�
 
   it.each(['/quests/35/istanbul', '/pl/quests/35/istanbul'])(
     'keeps the quest screen-row fallback distinct from ordinary breadcrumbs for %s',
-    (pathname) => {
+    async (pathname) => {
       ;(usePathname as jest.Mock).mockReturnValue(pathname)
       setResponsive(0, false)
-      const utils = renderHeader()
+      const utils = await renderHeader()
       const fallbacks = findByDataSet(utils, 'headerContextFallback', 'quest')
       expect(fallbacks).toHaveLength(1)
       expect(StyleSheet.flatten(fallbacks[0].props.style)?.minHeight).toBeUndefined()
@@ -212,25 +212,25 @@ describe('CustomHeader: до-гидрационная геометрия стр�
 
   it.each(['/', '/settings', '/quests/minsk/e2e-quest'])(
     'не ставит travel marker на контрольном маршруте %s',
-    (pathname) => {
+    async (pathname) => {
       ;(usePathname as jest.Mock).mockReturnValue(pathname)
       setResponsive(0, false)
 
-      const utils = renderHeader()
+      const utils = await renderHeader()
 
       expect(findByDataSet(utils, 'headerContextFallback', 'travel')).toHaveLength(0)
     },
   )
 
   // The fallback is a real no-JS route in the existing visible account slot.
-  it('before hydration keeps a working More href instead of an aria-hidden empty account box', () => {
+  it('before hydration keeps a working More href instead of an aria-hidden empty account box', async () => {
     Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true })
     ;(useRouter as jest.Mock).mockReturnValue({ push: jest.fn() })
     ;(usePathname as jest.Mock).mockReturnValue('/')
     mockContextBarShouldSuspend = false
     setResponsive(390, false)
-    const utils = renderHeader()
-    const anchor = utils.UNSAFE_getByType('a' as any)
+    const utils = await renderHeader()
+    const anchor = getOnlyHost(utils.container, node => node.type === 'a')
     expect(anchor.props.href).toBe('/more')
     expect(anchor.props['aria-label']).toBeTruthy()
     expect(findByDataSet(utils, 'headerSlot', 'account')[0].props['aria-hidden']).toBeUndefined()

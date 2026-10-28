@@ -2,13 +2,16 @@
  * @jest-environment jsdom
  */
 
-import React from 'react'
-import { act } from 'react-test-renderer'
-import { render } from '@testing-library/react-native'
+import React, { act } from 'react'
+import { HelmetProvider } from 'expo-router/vendor/react-helmet-async/lib'
 import { QueryClientProvider } from '@tanstack/react-query'
+import { readHelmetHead } from '../../helpers/helmetHead'
+import { getOnlyHost } from '../../helpers/hostQueries'
+import { createRootRegistry } from '../../helpers/rawRootLifecycle'
 
 import { createTestQueryClient } from '@/__tests__/helpers/testQueryClient'
 
+const roots = createRootRegistry()
 const mockSetOptions = jest.fn()
 const mockTravelHeroSection = jest.fn<any, [any]>(() => null)
 let mockGallery: Array<{ id: number; url: string }> = []
@@ -26,15 +29,7 @@ jest.mock('expo-router', () => ({
   useNavigation: () => ({ setOptions: mockSetOptions }),
 }))
 
-jest.mock('expo-router/head', () => ({
-  __esModule: true,
-  default: ({ children }: { children?: React.ReactNode }) => children ?? null,
-}))
-
-jest.mock('@/components/seo/LazyInstantSEO', () => ({
-  __esModule: true,
-  default: () => null,
-}))
+jest.mock('expo-router/head', () => require('../../helpers/helmetHead').createHelmetHeadMock())
 
 jest.mock('@/hooks/useTdTrace', () => ({
   useTdTrace: () => jest.fn(),
@@ -171,10 +166,17 @@ const getLastHeroSectionProps = () =>
     | undefined
 
 describe('TravelDetailsContainer skeleton gating (web)', () => {
+  const originalCanUseDOM = HelmetProvider.canUseDOM
+
   beforeAll(() => {
+    HelmetProvider.canUseDOM = false
     const RN = require('react-native')
     RN.Platform.OS = 'web'
     RN.Platform.select = (obj: Record<string, unknown>) => obj.web || obj.default
+  })
+
+  afterAll(() => {
+    HelmetProvider.canUseDOM = originalCanUseDOM
   })
 
   beforeEach(() => {
@@ -187,25 +189,38 @@ describe('TravelDetailsContainer skeleton gating (web)', () => {
     mockPerformanceState.postLcpRuntimeReady = false
   })
 
-  afterEach(() => {
-    act(() => {
+  afterEach(async () => {
+    await roots.cleanup()
+    await act(() => {
       jest.runOnlyPendingTimers()
     })
     jest.useRealTimers()
   })
 
-  it('keeps the skeleton overlay visible until LCP is ready', () => {
-    // rerender() в @testing-library/react-native НЕ переприменяет { wrapper },
-    // а TravelDetailsContainer теперь рендерит QuestForCitySection (useQuery) —
-    // без ручной обёртки провайдером rerender падает «No QueryClient set».
+  it('keeps the skeleton overlay visible until LCP is ready', async () => {
     const Wrapper = withQueryClient()
-    const { UNSAFE_getByProps, rerender } = render(
-      <Wrapper>
-        <TravelDetailsContainer />
-      </Wrapper>,
-    )
+    const tree = roots.createRoot()
+    await act(() => {
+      tree.render(
+        <Wrapper>
+          <TravelDetailsContainer />
+        </Wrapper>,
+      )
+    })
 
-    const overlayBefore = UNSAFE_getByProps({ testID: 'travel-details-skeleton-overlay' })
+    const headings = tree.container.queryAll(node => node.type === 'h1' && node.props['data-testid'] === 'travel-details-title')
+    expect(headings).toHaveLength(1)
+    expect(headings[0].children).toEqual(['Маршрут в Бескидах'])
+
+    const { scripts } = readHelmetHead()
+    expect(scripts).toHaveLength(1)
+    expect(scripts[0].id).toBe('travel-article-jsonld')
+    expect(JSON.parse(scripts[0].textContent ?? '')['@graph']).toEqual(expect.arrayContaining([
+      expect.objectContaining({ '@type': 'Article', headline: 'Маршрут в Бескидах' }),
+    ]))
+
+    expect(tree.container.queryAll(node => node.props.testID === 'travel-details-skeleton-overlay')).toHaveLength(1)
+    const overlayBefore = getOnlyHost(tree.container, node => node.props.testID === 'travel-details-skeleton-overlay')
     expect(overlayBefore.props.style.visibility).toBe('visible')
     expect(overlayBefore.props.inert).toBe(true)
 
@@ -214,28 +229,33 @@ describe('TravelDetailsContainer skeleton gating (web)', () => {
     mockPerformanceState.deferAllowed = true
     mockPerformanceState.postLcpRuntimeReady = true
 
-    rerender(
-      <Wrapper>
-        <TravelDetailsContainer />
-      </Wrapper>,
-    )
+    await act(() => {
+      tree.render(
+        <Wrapper>
+          <TravelDetailsContainer />
+        </Wrapper>,
+      )
+    })
 
-    act(() => {
+    await act(() => {
       jest.advanceTimersByTime(300)
     })
 
-    const overlayAfter = UNSAFE_getByProps({ testID: 'travel-details-skeleton-overlay' })
+    const overlayAfter = getOnlyHost(tree.container, node => node.props.testID === 'travel-details-skeleton-overlay')
     expect(overlayAfter.props.style.visibility).toBe('hidden')
     expect(overlayAfter.props.inert).toBeUndefined()
   })
 
-  it('mounts the hero slider on web before LCP so media can preload under the LCP overlay', () => {
+  it('mounts the hero slider on web before LCP so media can preload under the LCP overlay', async () => {
     const Wrapper = withQueryClient()
-    const { rerender } = render(
-      <Wrapper>
-        <TravelDetailsContainer />
-      </Wrapper>,
-    )
+    const tree = roots.createRoot()
+    await act(() => {
+      tree.render(
+        <Wrapper>
+          <TravelDetailsContainer />
+        </Wrapper>,
+      )
+    })
 
     expect(getLastHeroSectionProps()?.renderSlider).toBe(true)
 
@@ -244,28 +264,31 @@ describe('TravelDetailsContainer skeleton gating (web)', () => {
     mockPerformanceState.deferAllowed = true
     mockPerformanceState.postLcpRuntimeReady = true
 
-    rerender(
-      <Wrapper>
-        <TravelDetailsContainer />
-      </Wrapper>,
-    )
+    await act(() => {
+      tree.render(
+        <Wrapper>
+          <TravelDetailsContainer />
+        </Wrapper>,
+      )
+    })
 
     expect(getLastHeroSectionProps()?.renderSlider).toBe(true)
   })
 
-  it('re-reads navigator on actual container rerender before the 500ms visual backstop', () => {
+  it('re-reads navigator on actual container rerender before the 500ms visual backstop', async () => {
     const flag = Object.getOwnPropertyDescriptor(navigator, 'webdriver')
     Object.defineProperty(navigator, 'webdriver', { configurable: true, value: false })
     mockGallery = [{ id: 1, url: 'https://example.com/hero.jpg' }]
     const Wrapper = withQueryClient()
     try {
-      const { UNSAFE_getByProps, rerender } = render(<Wrapper><TravelDetailsContainer /></Wrapper>)
-      act(() => { jest.advanceTimersByTime(20) })
-      expect(UNSAFE_getByProps({ testID: 'travel-details-skeleton-overlay' }).props.style.visibility).toBe('visible')
+      const tree = roots.createRoot()
+      await act(() => tree.render(<Wrapper><TravelDetailsContainer /></Wrapper>))
+      await act(() => { jest.advanceTimersByTime(20) })
+      expect(getOnlyHost(tree.container, node => node.props.testID === 'travel-details-skeleton-overlay').props.style.visibility).toBe('visible')
       Object.defineProperty(navigator, 'webdriver', { configurable: true, value: true })
-      rerender(<Wrapper><TravelDetailsContainer /></Wrapper>)
-      act(() => { jest.advanceTimersByTime(20) })
-      expect(UNSAFE_getByProps({ testID: 'travel-details-skeleton-overlay' }).props.style.visibility).toBe('hidden')
+      await act(() => tree.render(<Wrapper><TravelDetailsContainer /></Wrapper>))
+      await act(() => { jest.advanceTimersByTime(20) })
+      expect(getOnlyHost(tree.container, node => node.props.testID === 'travel-details-skeleton-overlay').props.style.visibility).toBe('hidden')
     } finally {
       if (flag) Object.defineProperty(navigator, 'webdriver', flag)
       else Reflect.deleteProperty(navigator, 'webdriver')

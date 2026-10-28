@@ -47,8 +47,8 @@ describe('NetworkStatus web offline banner', () => {
     await act(async () => { await i18n.changeLanguage('ru'); });
   });
 
-  it('does not intercept loaded-shell controls outside its action', () => {
-    const { getByTestId, getByText } = render(<NetworkStatus />);
+  it('does not intercept loaded-shell controls outside its action', async () => {
+    const { getByTestId, getByText } = await render(<NetworkStatus />);
 
     expect(getByTestId('network-status-banner').props.pointerEvents).toBe('box-none');
     expect(getByText('Нет подключения к интернету').props.numberOfLines).toBe(2);
@@ -57,28 +57,28 @@ describe('NetworkStatus web offline banner', () => {
 
   it('preloads the library module while the loaded shell is online', async () => {
     mockIsConnected.mockReturnValue(true);
-    render(<NetworkStatus />);
+    await render(<NetworkStatus />);
 
     expect(mockPreloadOfflineRoute).toHaveBeenCalledTimes(1);
   });
 
   it('opens the prefetched library without propagating the mobile tap', async () => {
     mockIsConnected.mockReturnValue(true);
-    const view = render(<NetworkStatus />);
+    const view = await render(<NetworkStatus />);
 
     await waitFor(() => expect(mockPreloadOfflineRoute).toHaveBeenCalledTimes(1));
     await act(async () => Promise.resolve());
 
     mockIsConnected.mockReturnValue(false);
-    view.rerender(<NetworkStatus />);
+    await view.rerender(<NetworkStatus />);
 
     const stopPropagation = jest.fn();
     const preventDefault = jest.fn();
-    fireEvent(view.getByText('Открыть сохранённое'), 'press', {
+    await fireEvent(view.getByText('Открыть сохранённое'), 'press', {
       stopPropagation,
       preventDefault,
     });
-    fireEvent(view.getByText('Открыть сохранённое'), 'press', {
+    await fireEvent(view.getByText('Открыть сохранённое'), 'press', {
       stopPropagation,
       preventDefault,
     });
@@ -89,40 +89,40 @@ describe('NetworkStatus web offline banner', () => {
     expect(mockPush).toHaveBeenCalledTimes(1);
   });
 
-  it('immediately anchors above the dock despite stale optional extents, then measures wrapping and dock resize', () => {
+  it('immediately anchors above the dock despite stale optional extents, then measures wrapping and dock resize', async () => {
     setBottomChromeReserve('consent-banner', 240);
     setBottomChromeReserve('app-install-bar', 400);
-    const view = render(<NetworkStatus position="bottom" />);
+    const view = await render(<NetworkStatus position="bottom" />);
     expect(getCriticalBottomChromeOwner()).toBe('network-status');
     expect(StyleSheet.flatten(view.getByTestId('network-status-banner').props.style).bottom).toBe('calc(max(var(--mt-dock-h, 0px), var(--mt-footer-h, 0px)) + 8px)');
-    fireEvent(view.getByTestId('network-status-banner'), 'layout', { nativeEvent: { layout: { height: 84 } } });
+    await fireEvent(view.getByTestId('network-status-banner'), 'layout', { nativeEvent: { layout: { height: 84 } } });
     expect(getBottomChromeReserve()).toBe(56 + 8 + 84 + 8);
     mockDockReserve = 0;
-    view.rerender(<NetworkStatus position="bottom" />);
+    await view.rerender(<NetworkStatus position="bottom" />);
     expect(getBottomChromeReserve()).toBe(8 + 84 + 8);
-    view.unmount();
+    await view.unmount();
     expect(getCriticalBottomChromeOwner()).toBeNull();
     expect(getBottomChromeReserve()).toBe(400); // The unmounted optional owners' stored extents were only masked.
   });
 
-  it('removes the offline banner and reserve while More is open, then restores both if still offline', () => {
-    const view = render(<NetworkStatus position="bottom" />);
+  it('removes the offline banner and reserve while More is open, then restores both if still offline', async () => {
+    const view = await render(<NetworkStatus position="bottom" />);
     expect(getBottomChromeReserve()).toBeGreaterThan(56);
-    act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: true } })));
+    await act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: true } })));
     expect(view.queryByTestId('network-status-banner')).toBeNull();
     expect(getBottomChromeReserve()).toBe(0);
     expect(getCriticalBottomChromeOwner()).toBe('network-status');
-    act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: false } })));
+    await act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: false } })));
     expect(view.getByTestId('network-status-banner')).toBeTruthy();
     expect(getBottomChromeReserve()).toBeGreaterThan(56);
-    view.unmount();
+    await view.unmount();
   });
 
   it('exits downward beyond its entire height and bottom offset without retaining hit targets or reserve', async () => {
     jest.useFakeTimers();
-    const view = render(<NetworkStatus position="bottom" />);
+    const view = await render(<NetworkStatus position="bottom" />);
     mockIsConnected.mockReturnValue(true);
-    view.rerender(<NetworkStatus position="bottom" />);
+    await view.rerender(<NetworkStatus position="bottom" />);
     expect(getBottomChromeReserve()).toBeGreaterThan(56);
     await act(async () => { jest.advanceTimersByTime(2000); });
     const exiting = view.getByTestId('network-status-banner', { includeHiddenElements: true });
@@ -141,22 +141,22 @@ describe('NetworkStatus web offline banner', () => {
     const schedule = jest.spyOn(global, 'setTimeout');
     const cancel = jest.spyOn(global, 'clearTimeout');
     try {
-      const view = render(<NetworkStatus position="bottom" />);
+      const view = await render(<NetworkStatus position="bottom" />);
       mockIsConnected.mockReturnValue(true);
-      view.rerender(<NetworkStatus position="bottom" />);
+      await view.rerender(<NetworkStatus position="bottom" />);
       await act(async () => { jest.advanceTimersByTime(1000); });
       mockIsConnected.mockReturnValue(false);
-      view.rerender(<NetworkStatus position="bottom" />);
+      await view.rerender(<NetworkStatus position="bottom" />);
       await act(async () => { jest.advanceTimersByTime(3000); });
       expect(view.getByTestId('network-status-banner').props.pointerEvents).toBe('box-none');
       mockIsConnected.mockReturnValue(true);
-      view.rerender(<NetworkStatus position="bottom" />);
+      await view.rerender(<NetworkStatus position="bottom" />);
       await act(async () => { jest.advanceTimersByTime(2000); });
       const ownedTimers = schedule.mock.results.flatMap((result, index) =>
         schedule.mock.calls[index][1] === 2000 || schedule.mock.calls[index][1] === 300 ? [result.value] : [],
       );
       expect(ownedTimers).toHaveLength(3); // cancelled reconnect + current dismiss + exit
-      view.unmount();
+      await view.unmount();
       for (const timer of ownedTimers) expect(cancel).toHaveBeenCalledWith(timer);
       // React act queues microtasks too; drain those without running any timeout.
       jest.runAllTicks();
@@ -174,23 +174,23 @@ describe('NetworkStatus web offline banner', () => {
 
   it('retains priority when connectivity is lost during the exit animation', async () => {
     jest.useFakeTimers();
-    const view = render(<NetworkStatus position="bottom" />);
+    const view = await render(<NetworkStatus position="bottom" />);
     mockIsConnected.mockReturnValue(true);
-    view.rerender(<NetworkStatus position="bottom" />);
+    await view.rerender(<NetworkStatus position="bottom" />);
     await act(async () => { jest.advanceTimersByTime(2000); });
     expect(getCriticalBottomChromeOwner()).toBe('network-status');
     mockIsConnected.mockReturnValue(false);
-    view.rerender(<NetworkStatus position="bottom" />);
+    await view.rerender(<NetworkStatus position="bottom" />);
     await act(async () => { jest.advanceTimersByTime(300); });
     expect(getCriticalBottomChromeOwner()).toBe('network-status');
     expect(view.getByTestId('network-status-banner').props.pointerEvents).toBe('box-none');
     expect(getBottomChromeReserve()).toBe(132);
-    view.unmount();
+    await view.unmount();
     expect(getCriticalBottomChromeOwner()).toBeNull();
   });
 
   it('updates a persistent offline notice through the project locale transform without a network rerender', async () => {
-    const view = render(<NetworkStatus position="bottom" />);
+    const view = await render(<NetworkStatus position="bottom" />);
     const banner = view.getByTestId('network-status-banner');
     const russianMessage = i18n.t('shared:components.ui.NetworkStatus.net_podklyucheniya_k_internetu_71e8692e');
     for (const locale of ['en', 'pl', 'be', 'uk', 'ru']) {

@@ -87,8 +87,8 @@ jest.mock('react-native', () => {
 });
 
 describe('CollapsibleBlock', () => {
-  it('should render with title and children', () => {
-    const { toJSON } = render(
+  it('should render with title and children', async () => {
+    const { toJSON } = await render(
       <CollapsibleBlock title="Test Block">
         <Text>Content</Text>
       </CollapsibleBlock>
@@ -101,8 +101,8 @@ describe('CollapsibleBlock', () => {
     expect(treeStr).toContain('Content');
   });
 
-  it('should render with description', () => {
-    const { toJSON } = render(
+  it('should render with description', async () => {
+    const { toJSON } = await render(
       <CollapsibleBlock 
         title="Test Block"
         description="Test description"
@@ -116,8 +116,8 @@ describe('CollapsibleBlock', () => {
     expect(treeStr).toContain('Test description');
   });
 
-  it('should render with icon', () => {
-    const { getByTestId } = render(
+  it('should render with icon', async () => {
+    const { getByTestId } = await render(
       <CollapsibleBlock 
         title="Test Block"
         icon="info"
@@ -129,60 +129,22 @@ describe('CollapsibleBlock', () => {
     expect(getByTestId('feather-info')).toBeTruthy();
   });
 
-  it('should toggle expanded state when header is pressed', () => {
+  it('should toggle expanded state when header is pressed', async () => {
     const onToggle = jest.fn();
-    const { UNSAFE_getAllByType } = render(
-      <CollapsibleBlock 
-        title="Test Block"
-        onToggle={onToggle}
-      >
-        <Text>Content</Text>
-      </CollapsibleBlock>
-    );
-
-    const { Pressable } = require('react-native');
-    const pressables = UNSAFE_getAllByType(Pressable);
-    
-    // Находим кнопку переключения (chevron)
-    const toggleButton = pressables.find((p: any) => 
-      p.props.accessibilityLabel?.includes('Развернуть') || 
-      p.props.accessibilityLabel?.includes('Свернуть')
-    );
-    
-    if (toggleButton) {
-      fireEvent.press(toggleButton);
-      expect(onToggle).toHaveBeenCalled();
-    }
+    const { getByLabelText } = await render(<CollapsibleBlock title="Test Block" onToggle={onToggle}><Text>Content</Text></CollapsibleBlock>);
+    await fireEvent.press(getByLabelText('Свернуть: Test Block'));
+    expect(onToggle).toHaveBeenCalled();
   });
 
-  it('should hide block when close button is pressed', () => {
+  it('should hide block when close button is pressed', async () => {
     const onHide = jest.fn();
-    const { UNSAFE_getAllByType } = render(
-      <CollapsibleBlock 
-        title="Test Block"
-        onHide={onHide}
-        hasCloseButton={true}
-      >
-        <Text>Content</Text>
-      </CollapsibleBlock>
-    );
-
-    const { Pressable } = require('react-native');
-    const pressables = UNSAFE_getAllByType(Pressable);
-    
-    // Находим кнопку закрытия
-    const closeButton = pressables.find((p: any) => 
-      p.props.accessibilityLabel === 'Скрыть блок'
-    );
-    
-    if (closeButton) {
-      fireEvent.press(closeButton);
-      expect(onHide).toHaveBeenCalled();
-    }
+    const { getByLabelText } = await render(<CollapsibleBlock title="Test Block" onHide={onHide} hasCloseButton><Text>Content</Text></CollapsibleBlock>);
+    await fireEvent.press(getByLabelText('Скрыть блок'));
+    expect(onHide).toHaveBeenCalled();
   });
 
-  it('should start collapsed when defaultExpanded is false', () => {
-    const { toJSON } = render(
+  it('should start collapsed when defaultExpanded is false', async () => {
+    const { toJSON } = await render(
       <CollapsibleBlock 
         title="Test Block"
         defaultExpanded={false}
@@ -195,8 +157,8 @@ describe('CollapsibleBlock', () => {
     expect(tree).toBeTruthy();
   });
 
-  it('should use controlled expanded state', () => {
-    const { toJSON, rerender } = render(
+  it('should use controlled expanded state', async () => {
+    const { toJSON, rerender } = await render(
       <CollapsibleBlock 
         title="Test Block"
         expanded={false}
@@ -209,7 +171,7 @@ describe('CollapsibleBlock', () => {
     expect(tree).toBeTruthy();
 
     // Перерендерим с expanded=true
-    rerender(
+    await rerender(
       <CollapsibleBlock 
         title="Test Block"
         expanded={true}
@@ -222,8 +184,8 @@ describe('CollapsibleBlock', () => {
     expect(tree).toBeTruthy();
   });
 
-  it('should render in compact mode', () => {
-    const { toJSON } = render(
+  it('should render in compact mode', async () => {
+    const { toJSON } = await render(
       <CollapsibleBlock 
         title="Test Block"
         compactMode={true}
@@ -236,8 +198,8 @@ describe('CollapsibleBlock', () => {
     expect(tree).toBeTruthy();
   });
 
-  it('should render header actions', () => {
-    const { toJSON } = render(
+  it('should render header actions', async () => {
+    const { toJSON } = await render(
       <CollapsibleBlock 
         title="Test Block"
         headerActions={<Text>Action</Text>}
@@ -251,8 +213,8 @@ describe('CollapsibleBlock', () => {
     expect(treeStr).toContain('Action');
   });
 
-  it('should not be collapsible when collapsible is false', () => {
-    const { toJSON } = render(
+  it('should not be collapsible when collapsible is false', async () => {
+    const { toJSON } = await render(
       <CollapsibleBlock 
         title="Test Block"
         collapsible={false}
@@ -265,8 +227,8 @@ describe('CollapsibleBlock', () => {
     expect(tree).toBeTruthy();
   });
 
-  it('should show hidden state when hidden', () => {
-    const { toJSON } = render(
+  it('should show hidden state when hidden', async () => {
+    const { toJSON } = await render(
       <CollapsibleBlock 
         title="Test Block"
         hidden={true}

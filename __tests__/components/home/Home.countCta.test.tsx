@@ -62,7 +62,7 @@ describe('Home confirmed count CTA', () => {
   it('keeps unknown pending and failed reads neutral and enables throwOnError', async () => {
     let rejectRead!: (error: Error) => void
     mockFetch.mockImplementation(() => new Promise((_resolve, reject) => { rejectRead = reject }))
-    const view = render(tree())
+    const view = await render(tree())
     expect(view.getByText(UNKNOWN)).toBeTruthy()
     expect(view.queryByText(EMPTY)).toBeNull()
     await waitFor(() => expect(mockFetch).toHaveBeenCalledWith({ user_id: '101', perPage: 1, throwOnError: true }))
@@ -74,7 +74,7 @@ describe('Home confirmed count CTA', () => {
 
   it.each([[0, EMPTY], [7, STARTED]])('uses confirmed %s and retains it after a failed refetch', async (total, label) => {
     mockFetch.mockResolvedValue({ data: [], total })
-    const view = render(tree())
+    const view = await render(tree())
     await waitFor(() => expect(view.getByText(label)).toBeTruthy())
     mockFetch.mockRejectedValue(new Error('refetch unavailable'))
     await act(async () => { await client.refetchQueries({ queryKey: queryKeys.myTravelsCount('101') }) })
@@ -84,40 +84,40 @@ describe('Home confirmed count CTA', () => {
 
   it('does not carry a previous user count into another user or guest', async () => {
     mockFetch.mockResolvedValueOnce({ data: [], total: 7 }).mockImplementation(() => new Promise(() => {}))
-    const view = render(tree())
+    const view = await render(tree())
     await waitFor(() => expect(view.getByText(STARTED)).toBeTruthy())
     mockAuth = { isAuthenticated: true, userId: '202' }
-    view.rerender(tree())
+    await view.rerender(tree())
     expect(view.getByText(UNKNOWN)).toBeTruthy()
     expect(view.queryByText(STARTED)).toBeNull()
     mockAuth = { isAuthenticated: false, userId: '' }
-    view.rerender(tree())
+    await view.rerender(tree())
     expect(view.getByText('Начать бесплатно')).toBeTruthy()
     expect(view.queryByText(EMPTY)).toBeNull()
   })
 
-  it('uses a generic creation action for unknown and preserves confirmed destinations', () => {
+  it('uses a generic creation action for unknown and preserves confirmed destinations', async () => {
     const cta = (count?: number) => <AuthProvider value={mockAuth}><HomeFinalCTA travelsCount={count} /></AuthProvider>
-    const view = render(cta())
-    fireEvent.press(view.getByText(UNKNOWN))
+    const view = await render(cta())
+    await fireEvent.press(view.getByText(UNKNOWN))
     expect(mockPush).toHaveBeenLastCalledWith('/travel/new')
-    view.rerender(cta(0))
-    fireEvent.press(view.getByText(EMPTY))
+    await view.rerender(cta(0))
+    await fireEvent.press(view.getByText(EMPTY))
     expect(mockPush).toHaveBeenLastCalledWith('/travel/new')
-    view.rerender(cta(7))
-    fireEvent.press(view.getByText(STARTED))
+    await view.rerender(cta(7))
+    await fireEvent.press(view.getByText(STARTED))
     expect(mockPush).toHaveBeenLastCalledWith('/export')
   })
 
   it('updates the unknown action when the locale changes without new count data', async () => {
-    const view = render(<AuthProvider value={mockAuth}><HomeFinalCTA /></AuthProvider>)
+    const view = await render(<AuthProvider value={mockAuth}><HomeFinalCTA /></AuthProvider>)
     expect(view.getByText(UNKNOWN)).toBeTruthy()
     try {
       await act(async () => { await i18n.changeLanguage('en') })
       expect(view.getByText(translate('navigationStatic:components.layout.AccountMenu.dobavit_puteshestvie_bebd3820'))).toBeTruthy()
       expect(view.queryByText(UNKNOWN)).toBeNull()
     } finally {
-      view.unmount()
+      await view.unmount()
       await act(async () => { await i18n.changeLanguage('ru') })
     }
   })

@@ -48,9 +48,9 @@ describe('ProfileHeader quick actions', () => {
     mockViewportWidth = 1280;
   });
 
-  it('moves quick actions to the top band of a compact cover below 360 (#2141)', () => {
+  it('moves quick actions to the top band of a compact cover below 360 (#2141)', async () => {
     mockViewportWidth = 320;
-    const { getByTestId, getAllByTestId } = render(<ProfileHeader {...baseProps} />);
+    const { getByTestId, getAllByTestId } = await render(<ProfileHeader {...baseProps} />);
 
     expect(getAllByTestId('profile-header-quick-actions')).toHaveLength(1);
     const bandStyle = StyleSheet.flatten(getByTestId('profile-header-quick-actions').props.style) ?? {};
@@ -58,25 +58,25 @@ describe('ProfileHeader quick actions', () => {
     expect(mockImageCardMedia).toHaveBeenCalledWith(expect.objectContaining({ height: 88 }));
   });
 
-  it('reads the live width from the first frame — the header mounts after hydration (#2174)', () => {
+  it('reads the live width from the first frame — the header mounts after hydration (#2174)', async () => {
     mockResponsiveOptions.length = 0;
-    render(<ProfileHeader {...baseProps} />);
+    await render(<ProfileHeader {...baseProps} />);
 
     expect(mockResponsiveOptions.length).toBeGreaterThan(0);
     expect(mockResponsiveOptions.every((options) => (options as { clientOnly?: boolean })?.clientOnly === true)).toBe(true);
   });
 
-  it('keeps quick actions at the bottom edge of the regular cover from 360 up', () => {
+  it('keeps quick actions at the bottom edge of the regular cover from 360 up', async () => {
     mockViewportWidth = 390;
-    const { getByTestId } = render(<ProfileHeader {...baseProps} />);
+    const { getByTestId } = await render(<ProfileHeader {...baseProps} />);
 
     const overlayStyle = StyleSheet.flatten(getByTestId('profile-header-quick-actions').props.style) ?? {};
     expect(overlayStyle).toMatchObject({ position: 'absolute', bottom: 8 });
     expect(mockImageCardMedia).toHaveBeenCalledWith(expect.objectContaining({ height: 132 }));
   });
 
-  it('renders the profile cover as a sharp image without blur backdrop', () => {
-    render(<ProfileHeader {...baseProps} />);
+  it('renders the profile cover as a sharp image without blur backdrop', async () => {
+    await render(<ProfileHeader {...baseProps} />);
 
     expect(mockImageCardMedia).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -88,8 +88,8 @@ describe('ProfileHeader quick actions', () => {
     );
   });
 
-  it('renders uploaded profile cover without blur backdrop', () => {
-    render(
+  it('renders uploaded profile cover without blur backdrop', async () => {
+    await render(
       <ProfileHeader
         {...baseProps}
         profile={{ cover_photo: 'https://metravel.by/media/profile-cover.jpg' } as any}
@@ -106,8 +106,8 @@ describe('ProfileHeader quick actions', () => {
     );
   });
 
-  it('keeps cover media decorative so web quick actions receive clicks', () => {
-    const { getByTestId } = render(<ProfileHeader {...baseProps} />);
+  it('keeps cover media decorative so web quick actions receive clicks', async () => {
+    const { getByTestId } = await render(<ProfileHeader {...baseProps} />);
 
     const coverMedia = getByTestId('profile-header-cover-media');
     const quickActions = getByTestId('profile-header-quick-actions');
@@ -122,24 +122,24 @@ describe('ProfileHeader quick actions', () => {
     expect(quickActionsStyle.zIndex).toBeGreaterThan(coverStyle.zIndex);
   });
 
-  it('passes calendar press to the profile screen action handler', () => {
+  it('passes calendar press to the profile screen action handler', async () => {
     const onQuickAction = jest.fn();
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <ProfileHeader {...baseProps} onQuickAction={onQuickAction} />
     );
 
-    fireEvent.press(getByLabelText('Календарь'));
+    await fireEvent.press(getByLabelText('Календарь'));
 
     expect(onQuickAction).toHaveBeenCalledWith('calendar');
   });
 
-  it('passes trips press to the profile screen action handler', () => {
+  it('passes trips press to the profile screen action handler', async () => {
     const onQuickAction = jest.fn();
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <ProfileHeader {...baseProps} onQuickAction={onQuickAction} />
     );
 
-    fireEvent.press(getByLabelText('Поездки'));
+    await fireEvent.press(getByLabelText('Поездки'));
 
     expect(onQuickAction).toHaveBeenCalledWith('trips');
   });

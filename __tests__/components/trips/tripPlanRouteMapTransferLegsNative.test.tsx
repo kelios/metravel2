@@ -55,8 +55,8 @@ describe('TripPlanRouteMap (native) — переезды (#2056)', () => {
     mockMapProps.length = 0
   })
 
-  it('sends the transfer arc and routed slices to the WebView payload', () => {
-    render(<TripPlanRouteMap route={route} routeGeometry={geometry} summary={summary} />)
+  it('sends the transfer arc and routed slices to the WebView payload', async () => {
+    await render(<TripPlanRouteMap route={route} routeGeometry={geometry} summary={summary} />)
     const markers = mockMapProps.at(-1)!.routePointMarkers as {
       lineSegments?: Array<{ style: string; line: Array<[number, number]> }>
       transferColor?: string
@@ -68,8 +68,8 @@ describe('TripPlanRouteMap (native) — переезды (#2056)', () => {
     expect(mockMapProps.at(-1)!.fullRouteCoords).toHaveLength(6)
   })
 
-  it('sends no segments without transfers', () => {
-    render(<TripPlanRouteMap route={route.map((item) => ({ ...item, arrivalMode: null }))} routeGeometry={geometry} />)
+  it('sends no segments without transfers', async () => {
+    await render(<TripPlanRouteMap route={route.map((item) => ({ ...item, arrivalMode: null }))} routeGeometry={geometry} />)
     const markers = mockMapProps.at(-1)!.routePointMarkers as Record<string, unknown>
     expect(markers).not.toHaveProperty('lineSegments')
   })

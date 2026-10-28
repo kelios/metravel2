@@ -63,14 +63,14 @@ describe('TripPlanRouteMap (native) — карта и слои', () => {
     useMapOverlaysStore.setState({ enabledOverlays: getDefaultOverlayState() })
   })
 
-  it('рендерит карту вместо прежней текстовой заглушки', () => {
-    const { getByTestId } = render(<TripPlanRouteMap route={route} />)
+  it('рендерит карту вместо прежней текстовой заглушки', async () => {
+    const { getByTestId } = await render(<TripPlanRouteMap route={route} />)
 
     expect(getByTestId('native-map')).toBeTruthy()
   })
 
-  it('отдаёт карте маршрут парами [lng, lat] в режиме route без серверных кластеров', () => {
-    render(
+  it('отдаёт карте маршрут парами [lng, lat] в режиме route без серверных кластеров', async () => {
+    await render(
       <TripPlanRouteMap
         route={route}
         routeGeometry={[
@@ -94,8 +94,8 @@ describe('TripPlanRouteMap (native) — карта и слои', () => {
     expect(props.coordinates).toEqual({ latitude: 53.9, longitude: 27.56 })
   })
 
-  it('рисует pending/direct waypoint fallback только предупреждающим пунктиром', () => {
-    const { getByText, queryByText, rerender } = render(
+  it('рисует pending/direct waypoint fallback только предупреждающим пунктиром', async () => {
+    const { getByText, queryByText, rerender } = await render(
       <TripPlanRouteMap
         route={route}
         routeGeometry={null}
@@ -113,7 +113,7 @@ describe('TripPlanRouteMap (native) — карта и слои', () => {
     expect(queryByText('Маршрут построен ORS')).toBeNull()
     expect(getByText('Линия приблизительная: проверьте дорогу или тропу перед поездкой.')).toBeTruthy()
 
-    rerender(
+    await rerender(
       <TripPlanRouteMap
         route={route}
         routeGeometry={null}
@@ -136,34 +136,34 @@ describe('TripPlanRouteMap (native) — карта и слои', () => {
     expect(getByText('Приблизительный маршрут')).toBeTruthy()
   })
 
-  it('показывает «Слои» с тем же набором, что на главной карте, и пишет выбор в общий store', () => {
-    const { getByTestId, queryByTestId } = render(<TripPlanRouteMap route={route} />)
+  it('показывает «Слои» с тем же набором, что на главной карте, и пишет выбор в общий store', async () => {
+    const { getByTestId, queryByTestId } = await render(<TripPlanRouteMap route={route} />)
 
     expect(queryByTestId('map-mobile-layers-popover')).toBeNull()
 
-    fireEvent.press(getByTestId('trip-plan-map-layers'))
+    await fireEvent.press(getByTestId('trip-plan-map-layers'))
 
     expect(getByTestId('map-mobile-layers-popover')).toBeTruthy()
     expect(getByTestId('map-overlay-osm-camping')).toBeTruthy()
     expect(getByTestId('map-overlay-osm-poi')).toBeTruthy()
     expect(getByTestId('map-overlay-osm-routes')).toBeTruthy()
 
-    fireEvent.press(getByTestId('map-overlay-osm-camping'))
+    await fireEvent.press(getByTestId('map-overlay-osm-camping'))
 
     expect(useMapOverlaysStore.getState().enabledOverlays['osm-camping']).toBe(true)
   })
 
-  it('клик по карте добавляет точку, а в readonly — нет', () => {
+  it('клик по карте добавляет точку, а в readonly — нет', async () => {
     const onAddPointFromMap = jest.fn()
 
-    const { rerender } = render(
+    const { rerender } = await render(
       <TripPlanRouteMap route={route} onAddPointFromMap={onAddPointFromMap} />,
     )
     ;(mockMapProps.at(-1)!.onMapClick as (lng: number, lat: number) => void)(27.7, 53.95)
     expect(onAddPointFromMap).toHaveBeenCalledWith({ lat: 53.95, lng: 27.7 })
 
     onAddPointFromMap.mockClear()
-    rerender(<TripPlanRouteMap route={route} readonly onAddPointFromMap={onAddPointFromMap} />)
+    await rerender(<TripPlanRouteMap route={route} readonly onAddPointFromMap={onAddPointFromMap} />)
     ;(mockMapProps.at(-1)!.onMapClick as (lng: number, lat: number) => void)(27.7, 53.95)
     expect(onAddPointFromMap).not.toHaveBeenCalled()
   })

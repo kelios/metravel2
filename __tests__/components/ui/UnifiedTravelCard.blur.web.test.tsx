@@ -2,10 +2,16 @@
  * @jest-environment jsdom
  */
 
-import React from 'react'
-import renderer from 'react-test-renderer'
+import React, { act } from 'react'
+import * as renderer from 'test-renderer'
 import { Platform, StyleSheet } from 'react-native'
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard'
+const roots = new Set<renderer.Root>()
+afterEach(async () => {
+  for (const root of roots) await act(() => root.unmount())
+  roots.clear()
+})
+
 
 const mockImageCardMedia: jest.Mock<any, any> = jest.fn((props: any) =>
   React.createElement('mock-image-card-media', props)
@@ -30,15 +36,15 @@ describe('UnifiedTravelCard blur background (web)', () => {
     Platform.OS = originalPlatform
   })
 
-  it('passes blur background and contain fit to ImageCardMedia', () => {
-    renderer.act(() => {
-      renderer.create(
-        <UnifiedTravelCard
+  it('passes blur background and contain fit to ImageCardMedia', async () => {
+    await act(() => {
+      const tree = renderer.createRoot()
+      roots.add(tree)
+      tree.render(<UnifiedTravelCard
           title="Test travel"
           imageUrl="https://example.com/photo.jpg"
           onPress={() => {}}
-        />
-      )
+        />)
     })
 
     expect(mockImageCardMedia.mock.calls.length).toBeGreaterThan(0)
@@ -48,16 +54,16 @@ describe('UnifiedTravelCard blur background (web)', () => {
     expect(props.fit).toBe('contain')
   })
 
-  it('passes allowCriticalWebBlur through mediaProps', () => {
-    renderer.act(() => {
-      renderer.create(
-        <UnifiedTravelCard
+  it('passes allowCriticalWebBlur through mediaProps', async () => {
+    await act(() => {
+      const tree = renderer.createRoot()
+      roots.add(tree)
+      tree.render(<UnifiedTravelCard
           title="Test travel"
           imageUrl="https://example.com/photo.jpg"
           onPress={() => {}}
           mediaProps={{ allowCriticalWebBlur: true, priority: 'high', loading: 'eager' }}
-        />
-      )
+        />)
     })
 
     const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
@@ -65,16 +71,16 @@ describe('UnifiedTravelCard blur background (web)', () => {
     expect(props.allowCriticalWebBlur).toBe(true)
   })
 
-  it('passes revealOnLoadOnly through mediaProps', () => {
-    renderer.act(() => {
-      renderer.create(
-        <UnifiedTravelCard
+  it('passes revealOnLoadOnly through mediaProps', async () => {
+    await act(() => {
+      const tree = renderer.createRoot()
+      roots.add(tree)
+      tree.render(<UnifiedTravelCard
           title="Test travel"
           imageUrl="https://example.com/photo.jpg"
           onPress={() => {}}
           mediaProps={{ revealOnLoadOnly: true }}
-        />
-      )
+        />)
     })
 
     const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
@@ -82,10 +88,11 @@ describe('UnifiedTravelCard blur background (web)', () => {
     expect(props.revealOnLoadOnly).toBe(true)
   })
 
-  it('passes list image performance props through mediaProps', () => {
-    renderer.act(() => {
-      renderer.create(
-        <UnifiedTravelCard
+  it('passes list image performance props through mediaProps', async () => {
+    await act(() => {
+      const tree = renderer.createRoot()
+      roots.add(tree)
+      tree.render(<UnifiedTravelCard
           title="Test travel"
           imageUrl="https://example.com/photo.jpg"
           onPress={() => {}}
@@ -97,8 +104,7 @@ describe('UnifiedTravelCard blur background (web)', () => {
               placeholderContentFit: 'contain',
             },
           }}
-        />
-      )
+        />)
     })
 
     const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
@@ -111,17 +117,17 @@ describe('UnifiedTravelCard blur background (web)', () => {
     })
   })
 
-  it('forwards explicit card media dimensions to ImageCardMedia', () => {
-    renderer.act(() => {
-      renderer.create(
-        <UnifiedTravelCard
+  it('forwards explicit card media dimensions to ImageCardMedia', async () => {
+    await act(() => {
+      const tree = renderer.createRoot()
+      roots.add(tree)
+      tree.render(<UnifiedTravelCard
           title="Sized travel"
           imageUrl="https://example.com/photo.jpg"
           onPress={() => {}}
           width={314}
           imageHeight={220}
-        />
-      )
+        />)
     })
 
     const props = mockImageCardMedia.mock.calls.at(-1)?.[0]
@@ -130,68 +136,68 @@ describe('UnifiedTravelCard blur background (web)', () => {
     expect(props.height).toBe(220)
   })
 
-  it('does not prefetch cross-origin card images on web', () => {
-    renderer.act(() => {
-      renderer.create(
-        <UnifiedTravelCard
+  it('does not prefetch cross-origin card images on web', async () => {
+    await act(() => {
+      const tree = renderer.createRoot()
+      roots.add(tree)
+      tree.render(<UnifiedTravelCard
           title="Test travel"
           imageUrl="https://example.com/photo.jpg"
           onPress={() => {}}
-        />
-      )
+        />)
     })
 
     expect(mockPrefetchImage).not.toHaveBeenCalled()
   })
 
-  it('delegates loading UI to ImageCardMedia instead of rendering a card-level shimmer overlay', () => {
-    let tree: renderer.ReactTestRenderer
+  it('delegates loading UI to ImageCardMedia instead of rendering a card-level shimmer overlay', async () => {
+    let tree: renderer.Root
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <UnifiedTravelCard
+    await act(() => {
+      tree = renderer.createRoot()
+      roots.add(tree)
+      tree.render(<UnifiedTravelCard
           title="Test travel"
           imageUrl="/travel-image/test.jpg"
           onPress={() => {}}
-        />
-      )
+        />)
     })
 
-    const renderedNodes = tree!.root.findAll((node: any) => {
+    const renderedNodes = tree!.container.queryAll((node: any) => {
       return node?.type === 'mock-image-card-media'
     })
 
     expect(renderedNodes.map((node: any) => node.type)).toEqual(['mock-image-card-media'])
   })
 
-  it('delegates showImmediately to ImageCardMedia (no card-level image cache)', () => {
+  it('delegates showImmediately to ImageCardMedia (no card-level image cache)', async () => {
     const imageUrl = '/travel-image/already-loaded-card.jpg'
 
-    renderer.act(() => {
-      renderer.create(
-        <UnifiedTravelCard
+    await act(() => {
+      const tree = renderer.createRoot()
+      roots.add(tree)
+      tree.render(<UnifiedTravelCard
           title="Loaded travel"
           imageUrl={imageUrl}
           onPress={() => {}}
-        />
-      )
+        />)
     })
 
     const firstProps = mockImageCardMedia.mock.calls.at(-1)?.[0]
     expect(firstProps?.showImmediately).toBe(false)
 
-    renderer.act(() => {
+    await act(() => {
       firstProps?.onLoad?.()
     })
 
-    renderer.act(() => {
-      renderer.create(
-        <UnifiedTravelCard
+    await act(() => {
+      const tree = renderer.createRoot()
+      roots.add(tree)
+      tree.render(<UnifiedTravelCard
           title="Loaded travel"
           imageUrl={imageUrl}
           onPress={() => {}}
-        />
-      )
+        />)
     })
 
     // UnifiedTravelCard no longer maintains its own image cache;
@@ -200,66 +206,66 @@ describe('UnifiedTravelCard blur background (web)', () => {
     expect(secondProps?.showImmediately).toBe(false)
   })
 
-  it('uses the modern sans-serif font stack for hero title overlays on web', () => {
-    let tree: renderer.ReactTestRenderer
+  it('uses the modern sans-serif font stack for hero title overlays on web', async () => {
+    let tree: renderer.Root
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <UnifiedTravelCard
+    await act(() => {
+      tree = renderer.createRoot()
+      roots.add(tree)
+      tree.render(<UnifiedTravelCard
           title="Beautiful title"
           imageUrl="https://example.com/photo.jpg"
           onPress={() => {}}
           heroTitleOverlay
-        />
-      )
+        />)
     })
 
-    const titleNode = tree!.root.find(
-      (node: any) => node.props?.children === 'Beautiful title'
-    )
+    const titleNodeMatches = tree!.container.queryAll((node: any) => node.props?.children === 'Beautiful title')
+    expect(titleNodeMatches).toHaveLength(1)
+    const [titleNode] = titleNodeMatches
 
     expect(titleNode.props.style.fontFamily).toBe(
       '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     )
   })
 
-  it('keeps the primary web action separate from nested card controls', () => {
-    let tree: renderer.ReactTestRenderer
+  it('keeps the primary web action separate from nested card controls', async () => {
+    let tree: renderer.Root
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <UnifiedTravelCard
+    await act(() => {
+      tree = renderer.createRoot()
+      roots.add(tree)
+      tree.render(<UnifiedTravelCard
           title="Actionable travel"
           onPress={() => {}}
           rightTopSlot={React.createElement('button', { 'aria-label': 'Secondary action' })}
-        />
-      )
+        />)
     })
 
-    const primaryAction = tree!.root.find(
-      (node: any) => node.props?.role === 'link' && node.props?.['aria-label']?.includes('Actionable travel')
-    )
-    expect(primaryAction.findAll((node: any) => node.type === 'button')).toHaveLength(0)
+    const primaryActionMatches = tree!.container.queryAll((node: any) => node.props?.role === 'link' && node.props?.['aria-label']?.includes('Actionable travel'))
+    expect(primaryActionMatches).toHaveLength(1)
+    const [primaryAction] = primaryActionMatches
+    expect(primaryAction.queryAll((node: any) => node.type === 'button')).toHaveLength(0)
   })
 
-  it('keeps default title and metadata at their natural height on web', () => {
-    let tree: renderer.ReactTestRenderer
+  it('keeps default title and metadata at their natural height on web', async () => {
+    let tree: renderer.Root
 
-    renderer.act(() => {
-      tree = renderer.create(
-        <UnifiedTravelCard
+    await act(() => {
+      tree = renderer.createRoot()
+      roots.add(tree)
+      tree.render(<UnifiedTravelCard
           title="Visible travel title"
           metaText="Kraków"
           imageUrl="https://example.com/photo.jpg"
           onPress={() => {}}
           style={{ height: 220 }}
-        />
-      )
+        />)
     })
 
-    const titleNode = tree!.root.find(
-      (node: any) => node.props?.children === 'Visible travel title'
-    )
+    const titleNodeMatches = tree!.container.queryAll((node: any) => node.props?.children === 'Visible travel title')
+    expect(titleNodeMatches).toHaveLength(1)
+    const [titleNode] = titleNodeMatches
     const contentStyle = StyleSheet.flatten(titleNode.parent!.props.style)
 
     expect(contentStyle.flexBasis).not.toBe(0)

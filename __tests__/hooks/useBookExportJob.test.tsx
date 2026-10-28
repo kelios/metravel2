@@ -30,10 +30,10 @@ const makeJob = (overrides: Partial<BookExportV2Job> = {}): BookExportV2Job => (
 const completeJob = () => makeJob({ status: 'done', completeness: 'complete',
   download: { available: true, checksum: 'hash', size_bytes: 100 } })
 
-function setup(initialJobId: string | null = JOB, enabled = true) {
+async function setup(initialJobId: string | null = JOB, enabled = true) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } } })
   const wrapper = ({ children }: { children: React.ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
-  const hook = renderHook(({ jobId, active }) => useBookExportJob(jobId, active), {
+  const hook = await renderHook(({ jobId, active }) => useBookExportJob(jobId, active), {
     initialProps: { jobId: initialJobId, active: enabled }, wrapper,
   })
   return { ...hook, client }
@@ -46,43 +46,43 @@ beforeEach(() => {
 })
 
 it('observes only the exact route job without capabilities, latest list or creating a job', async () => {
-  const { result } = setup()
+  const { result } = await setup()
   await waitFor(() => expect(result.current.job?.job_id).toBe(JOB))
   expect(mockedGet).toHaveBeenCalledTimes(1)
   expect(mockedGet).toHaveBeenCalledWith(`/exports/books/${JOB}/`)
   expect(mockedPost).not.toHaveBeenCalled()
 })
 
-it('does not read while auth is unready or the route ID is absent', () => {
-  setup(JOB, false)
-  setup(null)
+it('does not read while auth is unready or the route ID is absent', async () => {
+  await setup(JOB, false)
+  await setup(null)
   expect(mockedGet).not.toHaveBeenCalled()
 })
 
 it('does not expose a previous owner or route while the new job is loading', async () => {
-  const { result, rerender } = setup()
+  const { result, rerender } = await setup()
   await waitFor(() => expect(result.current.job).not.toBeNull())
   mockedGet.mockReturnValue(new Promise(() => undefined))
   mockOwner = 'owner-2'
-  rerender({ jobId: OTHER_JOB, active: true })
+  await rerender({ jobId: OTHER_JOB, active: true })
   expect(result.current.job).toBeNull()
   expect(result.current.isObservingJob).toBe(true)
 })
 
 it('hides cached private metadata immediately after a missing/foreign response', async () => {
-  const { result } = setup()
+  const { result } = await setup()
   await waitFor(() => expect(result.current.job).not.toBeNull())
   mockedGet.mockRejectedValue(new ApiError(404, 'not found'))
-  act(() => result.current.refresh())
+  await act(() => result.current.refresh())
   await waitFor(() => expect(result.current.isJobMissing).toBe(true))
   expect(result.current.job).toBeNull()
 })
 
 it('keeps confirmed progress during an observation error without creating another job', async () => {
-  const { result } = setup()
+  const { result } = await setup()
   await waitFor(() => expect(result.current.job).not.toBeNull())
   mockedGet.mockRejectedValue(new ApiError(500, 'offline'))
-  act(() => result.current.refresh())
+  await act(() => result.current.refresh())
   await waitFor(() => expect(result.current.isReconnecting).toBe(true))
   expect(result.current.job?.counters.pages.completed).toBe(1)
   expect(mockedPost).not.toHaveBeenCalled()
@@ -91,9 +91,9 @@ it('keeps confirmed progress during an observation error without creating anothe
 it('retries the same failed job and updates its exact cache without a create POST', async () => {
   mockedGet.mockResolvedValue(makeJob({ status: 'failed', retryable: true }))
   mockedPost.mockResolvedValue(makeJob({ status: 'queued' }))
-  const { result, client } = setup()
+  const { result, client } = await setup()
   await waitFor(() => expect(result.current.job?.status).toBe('failed'))
-  act(() => { result.current.retry(); result.current.retry() })
+  await act(() => { result.current.retry(); result.current.retry() })
   await waitFor(() => expect(result.current.job?.status).toBe('queued'))
   expect(mockedPost).toHaveBeenCalledTimes(1)
   expect(mockedPost).toHaveBeenCalledWith(`/exports/books/${JOB}/retry/`, {})
@@ -103,30 +103,30 @@ it('retries the same failed job and updates its exact cache without a create POS
 it('does not retry again after REBUILD_REQUIRED', async () => {
   mockedGet.mockResolvedValue(makeJob({ status: 'failed', retryable: true }))
   mockedPost.mockRejectedValue(new ApiError(409, 'rebuild', { error_code: 'REBUILD_REQUIRED' }))
-  const { result } = setup()
+  const { result } = await setup()
   await waitFor(() => expect(result.current.job).not.toBeNull())
-  act(() => result.current.retry())
+  await act(() => result.current.retry())
   await waitFor(() => expect(result.current.retryError).toBeTruthy())
-  act(() => result.current.retry())
+  await act(() => result.current.retry())
   expect(mockedPost).toHaveBeenCalledTimes(1)
 })
 
 it('prevents cancellation after cancellation was already requested', async () => {
   mockedGet.mockResolvedValue(makeJob({ status: 'cancel_requested' }))
-  const { result } = setup()
+  const { result } = await setup()
   await waitFor(() => expect(result.current.job).not.toBeNull())
-  act(() => result.current.cancel())
+  await act(() => result.current.cancel())
   expect(mockedPost).not.toHaveBeenCalled()
 })
 
 it('blocks stale download after JOB_EXPIRED and refreshes the exact job', async () => {
   mockedGet.mockResolvedValue(completeJob())
   mockedDownload.mockRejectedValue(new ApiError(410, 'expired', { error_code: 'JOB_EXPIRED' }))
-  const { result } = setup()
+  const { result } = await setup()
   await waitFor(() => expect(result.current.job).not.toBeNull())
-  act(() => result.current.download())
+  await act(() => result.current.download())
   await waitFor(() => expect(result.current.downloadError).toBeTruthy())
-  act(() => result.current.download())
+  await act(() => result.current.download())
   expect(mockedDownload).toHaveBeenCalledTimes(1)
   expect(mockedGet.mock.calls.length).toBeGreaterThanOrEqual(2)
 })
@@ -138,20 +138,20 @@ it('guards delayed ticket delivery after account change and unmount', async () =
     verifyOwner = guard
     return new Promise(() => undefined)
   })
-  const { result, rerender, unmount } = setup()
+  const { result, rerender, unmount } = await setup()
   await waitFor(() => expect(result.current.job).not.toBeNull())
-  act(() => result.current.download())
+  await act(() => result.current.download())
   await waitFor(() => expect(verifyOwner).toBeDefined())
   mockOwner = 'owner-2'
-  rerender({ jobId: JOB, active: true })
+  await rerender({ jobId: JOB, active: true })
   expect(() => verifyOwner?.()).toThrow('BOOK_EXPORT_OWNER_CHANGED')
-  unmount()
+  await unmount()
   expect(() => verifyOwner?.()).toThrow('BOOK_EXPORT_OWNER_CHANGED')
 })
 
 it('surfaces an initial read failure as observation/reconnection instead of an empty status', async () => {
   mockedGet.mockRejectedValue(new ApiError(500, 'server failed'))
-  const { result } = setup()
+  const { result } = await setup()
   await waitFor(() => expect(result.current.isReconnecting).toBe(true))
   expect(result.current.job).toBeNull()
   expect(result.current.isObservingJob).toBe(true)
@@ -160,7 +160,7 @@ it('surfaces an initial read failure as observation/reconnection instead of an e
 it('surfaces an initially paused offline read as reconnecting instead of a permanent skeleton', async () => {
   onlineManager.setOnline(false)
   try {
-    const { result } = setup()
+    const { result } = await setup()
     await waitFor(() => expect(result.current.isObservingJob).toBe(true))
     expect(result.current.isReconnecting).toBe(true)
     expect(mockedGet).not.toHaveBeenCalled()
@@ -171,13 +171,13 @@ it('surfaces an initially paused offline read as reconnecting instead of a perma
 
 it('stops polling once the server confirms a terminal job', async () => {
   mockedGet.mockResolvedValue(completeJob())
-  const { result, unmount } = setup()
+  const { result, unmount } = await setup()
   await waitFor(() => expect(result.current.job?.status).toBe('done'))
   jest.useFakeTimers()
   try {
     await act(async () => { await jest.advanceTimersByTimeAsync(12_000) })
     expect(mockedGet).toHaveBeenCalledTimes(1)
-    unmount()
+    await unmount()
     await act(async () => { await jest.runOnlyPendingTimersAsync() })
   } finally {
     jest.useRealTimers()
@@ -188,13 +188,13 @@ it('does not expose pending retry errors or responses after switching route and 
   mockedGet.mockResolvedValue(makeJob({ status: 'failed', retryable: true }))
   let rejectRetry: ((error: unknown) => void) | undefined
   mockedPost.mockImplementation(() => new Promise((_resolve, reject) => { rejectRetry = reject }))
-  const { result, rerender } = setup()
+  const { result, rerender } = await setup()
   await waitFor(() => expect(result.current.job?.status).toBe('failed'))
-  act(() => result.current.retry())
+  await act(() => result.current.retry())
   await waitFor(() => expect(rejectRetry).toBeDefined())
   mockOwner = 'owner-2'
   mockedGet.mockResolvedValue(makeJob({ job_id: OTHER_JOB }))
-  rerender({ jobId: OTHER_JOB, active: true })
+  await rerender({ jobId: OTHER_JOB, active: true })
   await act(async () => { rejectRetry?.(new ApiError(409, 'rebuild', { error_code: 'REBUILD_REQUIRED' })) })
   await waitFor(() => expect(result.current.job?.job_id).toBe(OTHER_JOB))
   expect(result.current.retryError).toBeNull()

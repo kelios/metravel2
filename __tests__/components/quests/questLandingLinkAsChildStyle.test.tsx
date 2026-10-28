@@ -76,8 +76,8 @@ const rowStyleOf = (link: { children: unknown[] }) => {
 }
 
 describe('вёрстка ссылок лендингов квестов', () => {
-  it('карточка города страны сохраняет рамку и колонку после слияния стилей Slot', () => {
-    render(<QuestCountryLandingSections country={COUNTRY} />)
+  it('карточка города страны сохраняет рамку и колонку после слияния стилей Slot', async () => {
+    await render(<QuestCountryLandingSections country={COUNTRY} />)
 
     const links = screen.getAllByRole('link')
     expect(links).toHaveLength(2)
@@ -98,8 +98,8 @@ describe('вёрстка ссылок лендингов квестов', () => 
     expect(screen.getByText('Барановичи')).toBeTruthy()
   })
 
-  it('карточка соседнего города сохраняет рамку после слияния стилей Slot', () => {
-    render(<QuestCityLandingSections city={CITY} nearbyCities={NEARBY} walk={null} />)
+  it('карточка соседнего города сохраняет рамку после слияния стилей Slot', async () => {
+    await render(<QuestCityLandingSections city={CITY} nearbyCities={NEARBY} walk={null} />)
 
     const links = screen.getAllByRole('link')
     expect(links.length).toBeGreaterThan(0)

@@ -56,12 +56,12 @@ describe('HomeAppPromoSection', () => {
   it.each([
     ['ios', APP_STORE_APP_URL],
     ['android', GOOGLE_PLAY_APP_URL],
-  ] as const)('opens the %s listing and reports both events from a phone', (platform, url) => {
+  ] as const)('opens the %s listing and reports both events from a phone', async (platform, url) => {
     mockStorePlatform = platform
     const HomeAppPromoSection = require('@/components/home/HomeAppPromoSection').default
-    const { getByLabelText } = render(<HomeAppPromoSection />)
+    const { getByLabelText } = await render(<HomeAppPromoSection />)
 
-    fireEvent.press(getByLabelText('homeStatic:homePromo.app.a11y'))
+    await fireEvent.press(getByLabelText('homeStatic:homePromo.app.a11y'))
 
     expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('HomeClick_InstallApp', { platform })
     expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('app_download_click', {
@@ -72,12 +72,12 @@ describe('HomeAppPromoSection', () => {
     expect(mockPush).not.toHaveBeenCalled()
   })
 
-  it('sends a desktop visitor to the /app landing with both stores', () => {
+  it('sends a desktop visitor to the /app landing with both stores', async () => {
     mockStorePlatform = null
     const HomeAppPromoSection = require('@/components/home/HomeAppPromoSection').default
-    const { getByLabelText } = render(<HomeAppPromoSection />)
+    const { getByLabelText } = await render(<HomeAppPromoSection />)
 
-    fireEvent.press(getByLabelText('homeStatic:homePromo.app.a11y'))
+    await fireEvent.press(getByLabelText('homeStatic:homePromo.app.a11y'))
 
     expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('HomeClick_InstallApp', { platform: 'landing' })
     expect(mockedSendAnalyticsEvent).not.toHaveBeenCalledWith('app_download_click', expect.anything())

@@ -48,7 +48,7 @@ describe('useKeyPointLabels (#1742)', () => {
       ;(Platform.OS as any) = os
       reverseGeocodePoint.mockImplementation(async (lat: number) => (lat === 49.5 ? BDC_TOWN : NOMINATIM_VILLAGE))
 
-      const { result } = renderHook(() => useKeyPointLabels(ROUTE))
+      const { result } = await renderHook(() => useKeyPointLabels(ROUTE))
 
       await waitFor(() => expect(result.current.keyPointLabels.finishName).toBe('Soblówka'))
       expect(result.current.keyPointLabels).toEqual({ startName: 'Soblówka', peakName: 'Żywiec', finishName: 'Soblówka' })
@@ -62,7 +62,7 @@ describe('useKeyPointLabels (#1742)', () => {
   it('prefers the locality over the object name (label is a place, not a POI)', async () => {
     reverseGeocodePoint.mockResolvedValue({ name: 'Muzeum', address: { town: 'Żywiec' } })
 
-    const { result } = renderHook(() => useKeyPointLabels(ROUTE))
+    const { result } = await renderHook(() => useKeyPointLabels(ROUTE))
 
     await waitFor(() => expect(result.current.keyPointLabels.startName).toBe('Żywiec'))
   })
@@ -73,7 +73,7 @@ describe('useKeyPointLabels (#1742)', () => {
       address: { house_number: '332', county: 'Żywiec County' },
     })
 
-    const { result } = renderHook(() => useKeyPointLabels(ROUTE))
+    const { result } = await renderHook(() => useKeyPointLabels(ROUTE))
 
     await waitFor(() => expect(result.current.keyPointLabels.startName).toBe('Soblówka'))
   })
@@ -81,22 +81,22 @@ describe('useKeyPointLabels (#1742)', () => {
   it('leaves labels null (never coordinates) when the shared geocoder has nothing', async () => {
     reverseGeocodePoint.mockResolvedValue(null)
 
-    const { result } = renderHook(() => useKeyPointLabels(ROUTE))
+    const { result } = await renderHook(() => useKeyPointLabels(ROUTE))
 
     await waitFor(() =>
       expect(result.current.keyPointLabels).toEqual({ startName: null, peakName: null, finishName: null }),
     )
   })
 
-  it('clears labels when the route has fewer than two points', () => {
-    const { result } = renderHook(() => useKeyPointLabels(SHORT_ROUTE))
+  it('clears labels when the route has fewer than two points', async () => {
+    const { result } = await renderHook(() => useKeyPointLabels(SHORT_ROUTE))
     expect(result.current.keyPointLabels).toEqual({})
     expect(reverseGeocodePoint).not.toHaveBeenCalled()
   })
 
-  it('does not re-render forever when a short preview is a fresh object each render', () => {
+  it('does not re-render forever when a short preview is a fresh object each render', async () => {
     let renders = 0
-    const { result } = renderHook(() => {
+    const { result } = await renderHook(() => {
       renders += 1
       return useKeyPointLabels({ linePoints: [{ coord: '1,2' }] } as any)
     })

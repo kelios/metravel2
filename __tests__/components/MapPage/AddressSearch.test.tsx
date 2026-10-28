@@ -42,8 +42,8 @@ describe('AddressSearch: результаты поиска точки маршр
     query = createQueryWrapper()
   })
 
-  // Размонтирование остаётся за авто-cleanup RNTL: он ждёт `unmountAsync`,
-  // а синхронный `cleanup()` бросает тот же act и роняет следующий `render`.
+  // RNTL 14 awaits root cleanup; the locale loop also awaits each unmount
+  // before the next locale reuses this QueryClient.
   afterEach(() => {
     query.queryClient.clear()
   })
@@ -55,12 +55,12 @@ describe('AddressSearch: результаты поиска точки маршр
     // сохраняется. Повторный RU должен взять RU-кэш, а не последний EN-ответ.
     for (const locale of ['ru', 'be', 'uk', 'pl', 'en', 'ru'] as const) {
       mockLocale = locale
-      const view = render(<AddressSearch placeholder="Search" onAddressSelect={jest.fn()} />, {
+      const view = await render(<AddressSearch placeholder="Search" onAddressSelect={jest.fn()} />, {
         wrapper: query.Wrapper,
       })
-      fireEvent.changeText(view.getByPlaceholderText('Search'), 'Острава')
+      await fireEvent.changeText(view.getByPlaceholderText('Search'), 'Острава')
       await waitFor(() => expect(view.getByText(`Ostrava (${locale})`)).toBeTruthy())
-      await view.unmountAsync()
+      await view.unmount()
     }
 
     expect(mockSearch).toHaveBeenCalledTimes(5)
@@ -79,13 +79,13 @@ describe('AddressSearch: результаты поиска точки маршр
     mockSearch
       .mockResolvedValueOnce(response([result('Острава, Чехия')]))
       .mockResolvedValueOnce(response([]))
-    const view = render(<AddressSearch placeholder="Search" onAddressSelect={jest.fn()} />, {
+    const view = await render(<AddressSearch placeholder="Search" onAddressSelect={jest.fn()} />, {
       wrapper: query.Wrapper,
     })
 
-    fireEvent.changeText(view.getByPlaceholderText('Search'), 'Острава')
+    await fireEvent.changeText(view.getByPlaceholderText('Search'), 'Острава')
     await waitFor(() => expect(view.getByText('Острава, Чехия')).toBeTruthy())
-    fireEvent.changeText(view.getByPlaceholderText('Search'), 'Неттакогоместа')
+    await fireEvent.changeText(view.getByPlaceholderText('Search'), 'Неттакогоместа')
 
     await waitFor(() => expect(view.getByText(/nichego_ne_naydeno_po_zaprosu/)).toBeTruthy())
     expect(view.queryByText('Острава, Чехия')).toBeNull()
@@ -96,17 +96,17 @@ describe('AddressSearch: результаты поиска точки маршр
       .mockRejectedValueOnce(new Error('Offline'))
       .mockResolvedValueOnce(response([result('Острава, Чехия')]))
     const select = jest.fn()
-    const view = render(<AddressSearch placeholder="Search" onAddressSelect={select} />, {
+    const view = await render(<AddressSearch placeholder="Search" onAddressSelect={select} />, {
       wrapper: query.Wrapper,
     })
 
-    fireEvent.changeText(view.getByPlaceholderText('Search'), 'Острава')
+    await fireEvent.changeText(view.getByPlaceholderText('Search'), 'Острава')
     await waitFor(() => expect(view.getByText(
       'map:components.MapPage.AddressSearch.ne_udalos_vypolnit_poisk_proverte_soedinenie_d006a955',
     )).toBeTruthy())
-    fireEvent.press(view.getByLabelText('map:components.MapPage.AddressSearch.povtorit_poisk_6e2f285c'))
+    await fireEvent.press(view.getByLabelText('map:components.MapPage.AddressSearch.povtorit_poisk_6e2f285c'))
     await waitFor(() => expect(view.getByText('Острава, Чехия')).toBeTruthy())
-    fireEvent.press(view.getByText('Острава, Чехия'))
+    await fireEvent.press(view.getByText('Острава, Чехия'))
 
     expect(mockSearch).toHaveBeenCalledTimes(2)
     expect(select).toHaveBeenCalledWith('Острава, Чехия', { lat: 49.8209, lng: 18.2625 })
@@ -116,7 +116,7 @@ describe('AddressSearch: результаты поиска точки маршр
   // компонента что-то показали», а «геокодер спрошен ровно один раз».
   it('берёт ответ на тот же запрос из общего кэша, не спрашивая геокодер второй раз', async () => {
     mockSearch.mockResolvedValue(response([result('Острава, Чехия')]))
-    const view = render(
+    const view = await render(
       <>
         <AddressSearch placeholder="Точка маршрута поездки" onAddressSelect={jest.fn()} />
         <LocationSearchInput placeholder="Точка маршрута статьи" onLocationSelect={jest.fn()} />
@@ -124,10 +124,10 @@ describe('AddressSearch: результаты поиска точки маршр
       { wrapper: query.Wrapper },
     )
 
-    fireEvent.changeText(view.getByPlaceholderText('Точка маршрута поездки'), 'Острава')
+    await fireEvent.changeText(view.getByPlaceholderText('Точка маршрута поездки'), 'Острава')
     await waitFor(() => expect(view.getByText('Острава, Чехия')).toBeTruthy())
 
-    fireEvent.changeText(view.getByPlaceholderText('Точка маршрута статьи'), 'Острава')
+    await fireEvent.changeText(view.getByPlaceholderText('Точка маршрута статьи'), 'Острава')
     await waitFor(() => expect(view.getByTestId('location-result-123')).toBeTruthy())
 
     expect(mockSearch).toHaveBeenCalledTimes(1)

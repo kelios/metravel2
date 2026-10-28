@@ -2,34 +2,17 @@ import React from 'react'
 import { render, waitFor, fireEvent, act } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Platform } from 'react-native'
-import { Helmet, HelmetProvider, type HelmetServerState } from 'expo-router/vendor/react-helmet-async/lib'
+import { HelmetProvider } from 'expo-router/vendor/react-helmet-async/lib'
+import { readHelmetHead } from '../helpers/helmetHead'
 import MapScreen from '@/screens/tabs/MapScreen'
-import LazyInstantSEO from '@/components/seo/LazyInstantSEO'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
 import { useRouteStore } from '@/stores/routeStore'
 
-const readHelmetJsonLd = (screen: ReturnType<typeof render>) => {
-  const { additionalTags } = screen.UNSAFE_root.findByType(LazyInstantSEO).props
-  const context: { helmet?: HelmetServerState } = {}
-  const originalCanUseDOM = HelmetProvider.canUseDOM
-  let helmetScreen: ReturnType<typeof render> | undefined
-  HelmetProvider.canUseDOM = false
-  try {
-    helmetScreen = render(
-      <HelmetProvider context={context}>
-        <Helmet>{additionalTags}</Helmet>
-      </HelmetProvider>,
-    )
-    const html = context.helmet?.script.toString() ?? ''
-    const template = document.createElement('template')
-    template.innerHTML = html
-    const scripts = template.content.querySelectorAll('script')
-    return { html, scripts }
-  } finally {
-    helmetScreen?.unmount()
-    HelmetProvider.canUseDOM = originalCanUseDOM
-  }
-}
+jest.mock('expo-router/head', () => require('../helpers/helmetHead').createHelmetHeadMock())
+
+const originalCanUseDOM = HelmetProvider.canUseDOM
+beforeAll(() => { HelmetProvider.canUseDOM = false })
+afterAll(() => { HelmetProvider.canUseDOM = originalCanUseDOM })
 
 let mockResponsiveState = { isPhone: true, isLargePhone: false, isMobile: true, width: 390 }
 let mockSearchParams: Record<string, string> = {}
@@ -231,9 +214,9 @@ const createTestClient = () =>
     },
   })
 
-const renderWithClient = () => {
+const renderWithClient = async () => {
   const client = createTestClient()
-  return render(
+  return await render(
     <QueryClientProvider client={client}>
       <MapScreen />
     </QueryClientProvider>
@@ -283,13 +266,13 @@ describe('MapScreen (map tab)', () => {
   })
 
   it('renders map placeholder and filters panel shell', async () => {
-    const { queryByTestId, getByTestId } = renderWithClient()
+    const { queryByTestId, getByTestId } = await renderWithClient()
 
     // On web mapReady=true from the start, so overlay should NOT be present.
     // Data loading is indicated by MapLoadingBar (thin progress bar), not by the full overlay.
     expect(queryByTestId('map-loading-overlay')).toBeNull()
 
-    act(() => {
+    await act(() => {
       useMapPanelStore.getState().requestOpen()
     })
 
@@ -303,7 +286,7 @@ describe('MapScreen (map tab)', () => {
   })
 
   it('does not render a separate floating radius pill on desktop web', async () => {
-    const { queryByTestId } = renderWithClient()
+    const { queryByTestId } = await renderWithClient()
 
     await waitFor(() => {
       expect(mockFetchTravelsForMap).toHaveBeenCalled()
@@ -312,10 +295,10 @@ describe('MapScreen (map tab)', () => {
     expect(queryByTestId('map-radius-pill')).toBeNull()
   })
 
-  const openPanelAndGoToListTab = async (utils: ReturnType<typeof renderWithClient>) => {
+  const openPanelAndGoToListTab = async (utils: Awaited<ReturnType<typeof renderWithClient>>) => {
     const { getByTestId } = utils
 
-    act(() => {
+    await act(() => {
       useMapPanelStore.getState().requestOpen()
     })
 
@@ -324,13 +307,13 @@ describe('MapScreen (map tab)', () => {
     })
 
     const listTab = getByTestId('map-panel-tab-travels')
-    fireEvent.press(listTab)
+    await fireEvent.press(listTab)
   }
 
   it('desktop header: three tabs, «Фильтры» selected on start, help on the map, no header actions', async () => {
-    const { getByTestId, queryByTestId, getAllByRole } = renderWithClient()
+    const { getByTestId, queryByTestId, getAllByRole } = await renderWithClient()
 
-    act(() => {
+    await act(() => {
       useMapPanelStore.getState().requestOpen()
     })
 
@@ -360,11 +343,11 @@ describe('MapScreen (map tab)', () => {
 
     // Панель на desktop не скрывается: выбор «Места» и возврат на «Фильтры»
     // оставляют все три вкладки.
-    fireEvent.press(getByTestId('map-panel-tab-travels'))
+    await fireEvent.press(getByTestId('map-panel-tab-travels'))
     await waitFor(() => {
       expect(selectedTabIds()).toEqual(['map-panel-tab-travels'])
     })
-    fireEvent.press(getByTestId('map-panel-tab-filters'))
+    await fireEvent.press(getByTestId('map-panel-tab-filters'))
     await waitFor(() => {
       expect(getByTestId('filters-panel')).toBeTruthy()
     })
@@ -372,7 +355,7 @@ describe('MapScreen (map tab)', () => {
   })
 
   it('shows correct travels count in list tab after data is loaded', async () => {
-    const utils = renderWithClient();
+    const utils = await renderWithClient();
     const { getByTestId } = utils;
 
     // Запрос на данные карты начинается только после получения геолокации
@@ -430,9 +413,9 @@ describe('MapScreen (map tab)', () => {
   it('keeps the built route when switching from route tab to «Фильтры» (#2252)', async () => {
     seedBuiltRoute();
 
-    const { getByTestId, queryByText } = renderWithClient();
+    const { getByTestId, queryByText } = await renderWithClient();
 
-    act(() => {
+    await act(() => {
       useMapPanelStore.getState().requestOpen();
     });
 
@@ -440,7 +423,7 @@ describe('MapScreen (map tab)', () => {
       expect(getByTestId('map-panel-tab-filters')).toBeTruthy();
     });
 
-    fireEvent.press(getByTestId('map-panel-tab-filters'));
+    await fireEvent.press(getByTestId('map-panel-tab-filters'));
 
     await waitFor(() => {
       expect(useRouteStore.getState().mode).toBe('radius');
@@ -450,7 +433,7 @@ describe('MapScreen (map tab)', () => {
     expect(queryByText('Пешком')).toBeNull();
 
     // Возврат во «Маршрут» показывает те же точки.
-    fireEvent.press(getByTestId('map-panel-tab-route'));
+    await fireEvent.press(getByTestId('map-panel-tab-route'));
     await waitFor(() => {
       expect(useRouteStore.getState().mode).toBe('route');
     });
@@ -460,9 +443,9 @@ describe('MapScreen (map tab)', () => {
   it('keeps the built route when «Фильтры» is pressed in the collapsed strip (#2252)', async () => {
     seedBuiltRoute();
 
-    const { getByTestId, getByLabelText } = renderWithClient();
+    const { getByTestId, getByLabelText } = await renderWithClient();
 
-    act(() => {
+    await act(() => {
       useMapPanelStore.getState().requestOpen();
     });
 
@@ -470,13 +453,13 @@ describe('MapScreen (map tab)', () => {
       expect(getByTestId('map-panel-collapse-button')).toBeTruthy();
     });
 
-    fireEvent.press(getByTestId('map-panel-collapse-button'));
+    await fireEvent.press(getByTestId('map-panel-collapse-button'));
 
     await waitFor(() => {
       expect(getByTestId('map-panel-expand-button')).toBeTruthy();
     });
 
-    fireEvent.press(getByLabelText('Фильтры'));
+    await fireEvent.press(getByLabelText('Фильтры'));
 
     await waitFor(() => {
       expect(useRouteStore.getState().mode).toBe('radius');
@@ -490,14 +473,14 @@ describe('MapScreen (map tab)', () => {
     (RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 390, height: 844 });
     seedBuiltRoute();
 
-    renderWithClient();
+    await renderWithClient();
 
     await waitFor(() => {
       expect(mockMapMobileLayout).toHaveBeenCalled();
     });
 
     const lastProps = mockMapMobileLayout.mock.calls.at(-1)?.[0];
-    act(() => {
+    await act(() => {
       lastProps.onOpenFilters();
     });
 
@@ -511,21 +494,21 @@ describe('MapScreen (map tab)', () => {
   // the 56 strip; the tour's steps 2–4 point at the panel tabs, so the panel is
   // expanded before the tour starts.
   it('«Подсказки» with the panel collapsed expand it so the tour targets exist (#2263)', async () => {
-    const { getByTestId, queryByTestId } = renderWithClient();
+    const { getByTestId, queryByTestId } = await renderWithClient();
 
-    act(() => {
+    await act(() => {
       useMapPanelStore.getState().requestOpen();
     });
     await waitFor(() => {
       expect(getByTestId('map-panel-collapse-button')).toBeTruthy();
     });
-    fireEvent.press(getByTestId('map-panel-collapse-button'));
+    await fireEvent.press(getByTestId('map-panel-collapse-button'));
     await waitFor(() => {
       expect(getByTestId('map-panel-expand-button')).toBeTruthy();
     });
     expect(queryByTestId('map-panel-tab-filters')).toBeNull();
 
-    fireEvent.press(getByTestId('map-desktop-help-button'));
+    await fireEvent.press(getByTestId('map-desktop-help-button'));
 
     await waitFor(() => {
       expect(getByTestId('map-panel-tab-filters')).toBeTruthy();
@@ -541,7 +524,7 @@ describe('MapScreen (map tab)', () => {
     const RN = require('react-native');
     (RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 390, height: 844 });
 
-    const { queryByLabelText } = renderWithClient();
+    const { queryByLabelText } = await renderWithClient();
 
     await waitFor(() => {
       expect(mockFetchTravelsForMap).toHaveBeenCalled();
@@ -569,7 +552,7 @@ describe('MapScreen (map tab)', () => {
     const RN = require('react-native');
     (RN.useWindowDimensions as jest.Mock).mockReturnValue({ width: 390, height: 844 });
 
-    renderWithClient();
+    await renderWithClient();
 
     await waitFor(() => {
       expect(mockMapMobileLayout).toHaveBeenCalled();
@@ -602,13 +585,10 @@ describe('MapScreen (map tab)', () => {
       },
     });
 
-    const screen = renderWithClient();
-    const { UNSAFE_root } = screen;
-
-    const readJsonLd = () =>
-      UNSAFE_root.findAll(
-        (node: any) => node.type === 'script' && node.props?.type === 'application/ld+json',
-      ).map((node: any) => String(node.props.children ?? node.props.dangerouslySetInnerHTML?.__html ?? ''));
+    await renderWithClient();
+    const readJsonLd = () => readHelmetHead().scripts
+      .filter((node) => node.type === 'application/ld+json')
+      .map((node) => node.textContent ?? '');
 
     await waitFor(() => {
       expect(readJsonLd().some((html) => html.includes('forty-krakova'))).toBe(true);
@@ -626,7 +606,7 @@ describe('MapScreen (map tab)', () => {
     expect(html).not.toContain('?id=');
     expect(html).not.toContain('localhost');
 
-    const helmet = readHelmetJsonLd(screen);
+    const helmet = readHelmetHead();
     expect(helmet.scripts).toHaveLength(1);
     expect(helmet.scripts[0].type).toBe('application/ld+json');
     expect(helmet.scripts[0].getAttribute('data-rh')).toBe('true');
@@ -637,7 +617,7 @@ describe('MapScreen (map tab)', () => {
   it('shows error display when map data loading fails', async () => {
     mockFetchTravelsForMap.mockRejectedValue(new Error('Network error'));
 
-    const utils = renderWithClient();
+    const utils = await renderWithClient();
     const { getByText, getByTestId } = utils;
 
     // Запрос на данные карты начинается только после получения геолокации

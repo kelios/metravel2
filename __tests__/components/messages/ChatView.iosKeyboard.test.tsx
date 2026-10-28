@@ -5,7 +5,7 @@ import type { Message } from '@/api/messages';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 // #2133: меню жалобы в рендере зовёт мутации блокировки — нужен QueryClient, как в приложении.
-const render = (ui: Parameters<typeof rtlRender>[0]) =>
+const render = async (ui: Parameters<typeof rtlRender>[0]) =>
     rtlRender(ui, { wrapper: createQueryWrapper().Wrapper });
 
 const SAFE_AREA_BOTTOM = 34;
@@ -69,10 +69,10 @@ describe('ChatView composer vs iOS keyboard', () => {
         Platform.OS = originalOS;
     });
 
-    it('lifts the composer by the keyboard height without adding the safe-area twice', () => {
-        const { getByTestId } = render(<ChatView {...defaultProps} />);
+    it('lifts the composer by the keyboard height without adding the safe-area twice', async () => {
+        const { getByTestId } = await render(<ChatView {...defaultProps} />);
 
-        act(() => {
+        await act(() => {
             listeners.keyboardDidShow?.({ endCoordinates: { height: 320 } });
         });
 
@@ -80,13 +80,13 @@ describe('ChatView composer vs iOS keyboard', () => {
         expect(composerStyle.paddingBottom).toBe(320 + DESIGN_TOKENS.spacing.xs);
     });
 
-    it('restores the safe-area reserve when the keyboard hides', () => {
-        const { getByTestId } = render(<ChatView {...defaultProps} />);
+    it('restores the safe-area reserve when the keyboard hides', async () => {
+        const { getByTestId } = await render(<ChatView {...defaultProps} />);
 
-        act(() => {
+        await act(() => {
             listeners.keyboardDidShow?.({ endCoordinates: { height: 320 } });
         });
-        act(() => {
+        await act(() => {
             listeners.keyboardDidHide?.();
             // iPad can continue emitting frame changes after it reports that an
             // undocked/floating keyboard no longer covers the bottom edge.
@@ -99,11 +99,11 @@ describe('ChatView composer vs iOS keyboard', () => {
         );
     });
 
-    it('tracks a changed docked-keyboard frame without re-adding the safe-area', () => {
+    it('tracks a changed docked-keyboard frame without re-adding the safe-area', async () => {
         jest.mocked(Keyboard.isVisible).mockReturnValue(true);
-        const { getByTestId } = render(<ChatView {...defaultProps} />);
+        const { getByTestId } = await render(<ChatView {...defaultProps} />);
 
-        act(() => {
+        await act(() => {
             listeners.keyboardDidShow?.({ endCoordinates: { height: 320 } });
             listeners.keyboardDidChangeFrame?.({ endCoordinates: { height: 360 } });
         });
@@ -112,7 +112,7 @@ describe('ChatView composer vs iOS keyboard', () => {
         expect(composerStyle.paddingBottom).toBe(360 + DESIGN_TOKENS.spacing.xs);
     });
 
-    it('uses current keyboard metrics on mount and removes every listener on unmount', () => {
+    it('uses current keyboard metrics on mount and removes every listener on unmount', async () => {
         jest.mocked(Keyboard.isVisible).mockReturnValue(true);
         jest.mocked(Keyboard.metrics).mockReturnValue({
             height: 280,
@@ -120,12 +120,12 @@ describe('ChatView composer vs iOS keyboard', () => {
             screenY: 564,
             width: 390,
         });
-        const { getByTestId, unmount } = render(<ChatView {...defaultProps} />);
+        const { getByTestId, unmount } = await render(<ChatView {...defaultProps} />);
 
         const composerStyle = StyleSheet.flatten(getByTestId('message-composer').props.style);
         expect(composerStyle.paddingBottom).toBe(280 + DESIGN_TOKENS.spacing.xs);
 
-        unmount();
+        await unmount();
         expect(removers.keyboardDidShow).toHaveBeenCalledTimes(1);
         expect(removers.keyboardDidHide).toHaveBeenCalledTimes(1);
         expect(removers.keyboardDidChangeFrame).toHaveBeenCalledTimes(1);

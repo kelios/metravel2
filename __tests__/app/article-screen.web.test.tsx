@@ -1,5 +1,6 @@
 import React from 'react'
-import { render, waitFor } from '@testing-library/react-native'
+import { waitFor } from '@testing-library/react-native'
+import { createRootRegistry } from '../helpers/rawRootLifecycle'
 
 import ArticleScreen from '@/app/(tabs)/article/[id].web'
 
@@ -73,6 +74,11 @@ jest.mock('@/ui/paper', () => {
   return { Card, Title }
 })
 
+// The .web route deliberately contains HTML headings. Keep the real web
+// subtree under the generic renderer; native tests retain strict RNTL rules.
+const webRoots = createRootRegistry()
+afterEach(() => webRoots.cleanup())
+
 describe('ArticleScreen web SEO focus behavior', () => {
   beforeEach(() => {
     jest.clearAllMocks()
@@ -87,7 +93,8 @@ describe('ArticleScreen web SEO focus behavior', () => {
   })
 
   it('renders SEO on web even when navigation focus is false', async () => {
-    render(<ArticleScreen />)
+    const root = webRoots.createRoot()
+    await React.act(() => root.render(<ArticleScreen />))
 
     await waitFor(() => {
       expect(mockSeo).toHaveBeenCalled()

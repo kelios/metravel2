@@ -1,10 +1,13 @@
 import React from 'react';
 import { render, act, fireEvent } from '@testing-library/react-native';
 import { Platform } from 'react-native';
-import { FlashList } from '@shopify/flash-list';
 
 import FavoritesScreen from '@/app/(tabs)/favorites';
 import { resetScreenHeaderForTests, useActiveScreenHeader } from '@/components/layout/ScreenHeaderContext';
+
+// Observe the public list boundary while retaining the shared mock's rendering.
+const mockFlashList = jest.spyOn(require('@shopify/flash-list'), 'FlashList');
+const latestListProps = () => mockFlashList.mock.calls.at(-1)![0] as Record<string, any>;
 
 const mockUseAuth = jest.fn();
 const mockUseFavorites = jest.fn();
@@ -125,16 +128,16 @@ describe('FavoritesScreen', () => {
     resetScreenHeaderForTests();
   });
 
-  it('shows login prompt when not authenticated', () => {
+  it('shows login prompt when not authenticated', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false, authReady: true });
 
-    const { getByText } = render(<FavoritesScreen />);
+    const { getByText } = await render(<FavoritesScreen />);
 
     expect(getByText('Войдите в аккаунт')).toBeTruthy();
   });
 
   it('shows empty state when favorites are empty', async () => {
-    const utils = render(<FavoritesScreen />);
+    const utils = await render(<FavoritesScreen />);
 
     await act(async () => {
       jest.advanceTimersByTime(350);
@@ -155,13 +158,13 @@ describe('FavoritesScreen', () => {
       clearFavorites: jest.fn(),
     });
 
-    const utils = render(<FavoritesScreen />);
+    const utils = await render(<FavoritesScreen />);
 
     await act(async () => {
       jest.advanceTimersByTime(350);
     });
 
-    fireEvent.press(utils.getByText('Назад'));
+    await fireEvent.press(utils.getByText('Назад'));
 
     expect(mockBack).toHaveBeenCalledTimes(1);
   });
@@ -180,13 +183,13 @@ describe('FavoritesScreen', () => {
       clearFavorites: jest.fn(),
     });
 
-    const utils = render(<FavoritesScreen />);
+    const utils = await render(<FavoritesScreen />);
 
     await act(async () => {
       jest.advanceTimersByTime(350);
     });
 
-    fireEvent.press(utils.getByText('Назад'));
+    await fireEvent.press(utils.getByText('Назад'));
 
     expect(mockBack).not.toHaveBeenCalled();
     expect(mockReplace).toHaveBeenCalledWith('/profile');
@@ -205,7 +208,7 @@ describe('FavoritesScreen', () => {
       clearFavorites: jest.fn(),
     });
 
-    const utils = render(<><FavoritesScreen /><ActiveHeaderProbe /></>);
+    const utils = await render(<><FavoritesScreen /><ActiveHeaderProbe /></>);
     expect(utils.queryByText('Назад')).toBeNull();
     expect(utils.getByTestId('active-header-title').props.children).toBe('Хочу поехать');
 
@@ -230,7 +233,7 @@ describe('FavoritesScreen', () => {
       clearFavorites: jest.fn(),
     });
 
-    const utils = render(<FavoritesScreen />);
+    const utils = await render(<FavoritesScreen />);
     expect(utils.getAllByText('Назад')).toHaveLength(1);
 
     await act(async () => {
@@ -251,17 +254,17 @@ describe('FavoritesScreen', () => {
     });
     mockRefreshFavoritesFromServer.mockRejectedValueOnce(new Error('offline'));
 
-    const utils = render(<FavoritesScreen />);
+    await render(<FavoritesScreen />);
     await act(async () => {
       jest.advanceTimersByTime(350);
     });
 
-    const list = utils.UNSAFE_getByType(FlashList);
+    const list = latestListProps();
     await act(async () => {
-      await list.props.onRefresh();
+      await list.onRefresh();
     });
 
     expect(mockRefreshFavoritesFromServer).toHaveBeenCalledWith('104');
-    expect(utils.UNSAFE_getByType(FlashList).props.refreshing).toBe(false);
+    expect(latestListProps().refreshing).toBe(false);
   });
 });

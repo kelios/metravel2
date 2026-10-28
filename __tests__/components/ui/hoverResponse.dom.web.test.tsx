@@ -5,7 +5,7 @@ import type { Root } from 'react-dom/client'
 
 // #2036: hover-отклики жили ключом `':hover'` в стилях RN, а react-native-web 0.21
 // компилирует его в `.r-:hover-…{:hover:[object Object];}` — правило, которое браузер
-// отбрасывает. react-test-renderer видит объект стиля и проходит, поэтому здесь —
+// отбрасывает. test renderer видит объект стиля и проходит, поэтому здесь —
 // настоящий DOM react-native-web: мышь наводится событием указателя, а стиль
 // читается из `getComputedStyle`. Касание (`pointerType: 'touch'`) — mobile web:
 // RNW не отдаёт ему `hovered`, и вид обязан остаться прежним.

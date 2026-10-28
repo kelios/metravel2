@@ -74,14 +74,14 @@ describe('SubscriptionsScreen', () => {
         mockedFetchMyTravels.mockResolvedValue([]);
     });
 
-    it('shows login prompt when not authenticated', () => {
+    it('shows login prompt when not authenticated', async () => {
         mockedUseAuth.mockReturnValue(createAuthValue({
             isAuthenticated: false,
             authReady: true,
             userId: null,
         }));
 
-        const { getByText } = render(<SubscriptionsScreen />, {
+        const { getByText } = await render(<SubscriptionsScreen />, {
             wrapper: createQueryWrapper().Wrapper,
         });
 
@@ -91,7 +91,7 @@ describe('SubscriptionsScreen', () => {
     it('shows empty state when no subscriptions', async () => {
         mockedFetchMySubscriptions.mockResolvedValue([]);
 
-        const { findByText } = render(<SubscriptionsScreen />, {
+        const { findByText } = await render(<SubscriptionsScreen />, {
             wrapper: createQueryWrapper().Wrapper,
         });
 
@@ -103,7 +103,7 @@ describe('SubscriptionsScreen', () => {
         mockedFetchMySubscriptions.mockResolvedValue([SUBSCRIPTION_AUTHOR_FIXTURE]);
         mockedFetchMyTravels.mockResolvedValue([]);
 
-        const { findByText } = render(<SubscriptionsScreen />, {
+        const { findByText } = await render(<SubscriptionsScreen />, {
             wrapper: createQueryWrapper().Wrapper,
         });
 
@@ -119,7 +119,7 @@ describe('SubscriptionsScreen', () => {
         mockedFetchMySubscriptions.mockResolvedValue([SUBSCRIPTION_AUTHOR_FIXTURE]);
         mockedFetchMyTravels.mockResolvedValue([]);
 
-        const { findByText } = render(<SubscriptionsScreen />, {
+        const { findByText } = await render(<SubscriptionsScreen />, {
             wrapper: createQueryWrapper().Wrapper,
         });
 
@@ -127,7 +127,7 @@ describe('SubscriptionsScreen', () => {
         expect(subtitle).toBeTruthy();
     });
 
-    it('shows loading state when auth is not ready', () => {
+    it('shows loading state when auth is not ready', async () => {
         mockedUseAuth.mockReturnValue(createAuthValue({
             isAuthenticated: true,
             authReady: false,
@@ -135,7 +135,7 @@ describe('SubscriptionsScreen', () => {
         }));
 
         const Probe = () => <Text testID="declared-title">{useActiveScreenHeader()?.title}</Text>;
-        const { getByTestId } = render(<><SubscriptionsScreen /><Probe /></>, {
+        const { getByTestId } = await render(<><SubscriptionsScreen /><Probe /></>, {
             wrapper: createQueryWrapper().Wrapper,
         });
 
@@ -147,7 +147,7 @@ describe('SubscriptionsScreen', () => {
         mockedFetchMySubscribers.mockResolvedValue([]);
         mockedFetchMyTravels.mockResolvedValue([]);
 
-        const { findByText } = render(<SubscriptionsScreen />, {
+        const { findByText } = await render(<SubscriptionsScreen />, {
             wrapper: createQueryWrapper().Wrapper,
         });
 
@@ -163,12 +163,12 @@ describe('SubscriptionsScreen', () => {
         mockedFetchMySubscribers.mockResolvedValue([SUBSCRIBER_FIXTURE]);
         mockedFetchMyTravels.mockResolvedValue([]);
 
-        const { findByText, findByLabelText } = render(<SubscriptionsScreen />, {
+        const { findByText, findByLabelText } = await render(<SubscriptionsScreen />, {
             wrapper: createQueryWrapper().Wrapper,
         });
 
         const subscribersTab = await findByLabelText('Подписчики');
-        fireEvent.press(subscribersTab);
+        await fireEvent.press(subscribersTab);
 
         const subscriberName = await findByText('Мария Сидорова');
         expect(subscriberName).toBeTruthy();
@@ -179,12 +179,12 @@ describe('SubscriptionsScreen', () => {
         mockedFetchMySubscribers.mockResolvedValue([]);
         mockedFetchMyTravels.mockResolvedValue([]);
 
-        const { findByText, findByLabelText } = render(<SubscriptionsScreen />, {
+        const { findByText, findByLabelText } = await render(<SubscriptionsScreen />, {
             wrapper: createQueryWrapper().Wrapper,
         });
 
         const subscribersTab = await findByLabelText('Подписчики');
-        fireEvent.press(subscribersTab);
+        await fireEvent.press(subscribersTab);
 
         const emptyText = await findByText('У вас пока нет подписчиков');
         expect(emptyText).toBeTruthy();
@@ -198,20 +198,20 @@ describe('SubscriptionsScreen', () => {
             { id: 102, title: 'Travel With Id Only' },
         ]);
 
-        const { findByLabelText } = render(<SubscriptionsScreen />, {
+        const { findByLabelText } = await render(<SubscriptionsScreen />, {
             wrapper: createQueryWrapper().Wrapper,
         });
 
         const withUrl = await findByLabelText(/Travel With Url/);
-        fireEvent.press(withUrl);
+        await fireEvent.press(withUrl);
         expect(mockPush).toHaveBeenCalledWith('/custom/travel-url');
 
         const withSlug = await findByLabelText(/Travel With Slug/);
-        fireEvent.press(withSlug);
+        await fireEvent.press(withSlug);
         expect(mockPush).toHaveBeenCalledWith('/travels/slug-trip');
 
         const withIdOnly = await findByLabelText(/Travel With Id Only/);
-        fireEvent.press(withIdOnly);
+        await fireEvent.press(withIdOnly);
         expect(mockPush).toHaveBeenCalledWith('/travels/102');
     });
 });

@@ -25,17 +25,17 @@ const gesture = (dy: number, dx = 0): PanResponderGestureState => ({
 describe('ActionListSheet: свайп вниз по шапке (native)', () => {
   const touch = {} as Parameters<NonNullable<PanResponderCallbacks['onPanResponderRelease']>>[0]
 
-  const setup = () => {
+  const setup = async () => {
     const createSpy = jest.spyOn(PanResponder, 'create')
     const onClose = jest.fn()
-    const utils = render(<ActionListSheet visible onClose={onClose} title="Мои поездки" />)
+    const utils = await render(<ActionListSheet visible onClose={onClose} title="Мои поездки" />)
     const config = createSpy.mock.calls.at(-1)?.[0] as PanResponderCallbacks
     createSpy.mockRestore()
     return { ...utils, config, onClose }
   }
 
-  it('шапка берёт касание на старте и не отдаёт жест на полпути', () => {
-    const { config } = setup()
+  it('шапка берёт касание на старте и не отдаёт жест на полпути', async () => {
+    const { config } = await setup()
     expect(config.onStartShouldSetPanResponder?.(touch, gesture(0))).toBe(true)
     // Захват — во всплытии, не в capture: capture-фаза идёт от предков к потомкам,
     // и шапка отняла бы касание у ✕ на устройстве, а `fireEvent.press` ниже это не ловит.
@@ -43,8 +43,8 @@ describe('ActionListSheet: свайп вниз по шапке (native)', () => 
     expect(config.onPanResponderTerminationRequest?.(touch, gesture(30))).toBe(false)
   })
 
-  it('свайп вниз дальше порога закрывает лист, короткий и вверх — нет', () => {
-    const { config, onClose } = setup()
+  it('свайп вниз дальше порога закрывает лист, короткий и вверх — нет', async () => {
+    const { config, onClose } = await setup()
     config.onPanResponderRelease?.(touch, gesture(30))
     config.onPanResponderRelease?.(touch, gesture(-120))
     expect(onClose).not.toHaveBeenCalled()
@@ -52,14 +52,14 @@ describe('ActionListSheet: свайп вниз по шапке (native)', () => 
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('жест висит на шапке: в ней ✕ и заголовок, тело листа — снаружи', () => {
-    const { UNSAFE_root } = render(
+  it('жест висит на шапке: в ней ✕ и заголовок, тело листа — снаружи', async () => {
+    const { container } = await render(
       <ActionListSheet visible onClose={jest.fn()} title="Мои поездки">
         <Text testID="sheet-body">Абзац пояснения</Text>
       </ActionListSheet>,
     )
     // onMoveShouldSetResponder даёт только PanResponder (у Pressable его нет) — это шапка.
-    const headers = UNSAFE_root.findAll(
+    const headers = container.queryAll(
       (node) => typeof node.type === 'string' && typeof node.props.onMoveShouldSetResponder === 'function',
     )
     expect(headers).toHaveLength(1)
@@ -70,9 +70,9 @@ describe('ActionListSheet: свайп вниз по шапке (native)', () => 
     expect(within(header).queryByTestId('sheet-body')).toBeNull()
   })
 
-  it('крестик закрывает лист как раньше', () => {
-    const { getByLabelText, onClose } = setup()
-    fireEvent.press(getByLabelText('Закрыть'))
+  it('крестик закрывает лист как раньше', async () => {
+    const { getByLabelText, onClose } = await setup()
+    await fireEvent.press(getByLabelText('Закрыть'))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

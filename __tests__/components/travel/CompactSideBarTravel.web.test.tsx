@@ -167,7 +167,7 @@ const defaultProps = {
 // переносит в DOM только его. Сырой `data-*` этот тест видел, а страница — нет,
 // поэтому поиск идёт по `dataSet`; до DOM его доводит CompactSideBarTravel.dom.web.test.
 const withDataSet = (root: any, key: string, value = 'true'): any[] =>
-  root.findAll((node: any) => node.props?.dataSet?.[key] === value);
+  root.queryAll((node: any) => node.props?.dataSet?.[key] === value, { includeSelf: true });
 
 describe('CompactSideBarTravel - Web', () => {
   beforeAll(() => {
@@ -198,8 +198,8 @@ describe('CompactSideBarTravel - Web', () => {
   });
 
   describe('Рендеринг компонентов', () => {
-    it('сразу запрашивает профиль автора на десктопном web без hover', () => {
-      render(<CompactSideBarTravel {...defaultProps} />);
+    it('сразу запрашивает профиль автора на десктопном web без hover', async () => {
+      await render(<CompactSideBarTravel {...defaultProps} />);
 
       expect(mockUseUserProfileCached).toHaveBeenCalledWith(
         'user-1',
@@ -207,14 +207,14 @@ describe('CompactSideBarTravel - Web', () => {
       );
     });
 
-    it('должен отрендерить карточку автора', () => {
-      render(<CompactSideBarTravel {...defaultProps} />);
+    it('должен отрендерить карточку автора', async () => {
+      await render(<CompactSideBarTravel {...defaultProps} />);
 
       expect(screen.getAllByText(/Юлия/i).length).toBeGreaterThan(0);
     });
 
-    it('должен отрендерить все пункты меню', () => {
-      render(<CompactSideBarTravel {...defaultProps} />);
+    it('должен отрендерить все пункты меню', async () => {
+      await render(<CompactSideBarTravel {...defaultProps} />);
 
       expect(screen.getByText('Храм Родник')).toBeTruthy();
       expect(screen.getByText('Галерея')).toBeTruthy();
@@ -226,31 +226,31 @@ describe('CompactSideBarTravel - Web', () => {
       expect(screen.getByText('Популярные маршруты')).toBeTruthy();
     });
 
-    it('должен показывать метаинформацию путешествия', () => {
-      render(<CompactSideBarTravel {...defaultProps} />);
+    it('должен показывать метаинформацию путешествия', async () => {
+      await render(<CompactSideBarTravel {...defaultProps} />);
 
       expect(screen.getByText(/Октябрь/i)).toBeTruthy();
       expect(screen.getByText(/2022/i)).toBeTruthy();
     });
 
-    it('должен показывать количество просмотров', () => {
-      render(<CompactSideBarTravel {...defaultProps} />);
+    it('должен показывать количество просмотров', async () => {
+      await render(<CompactSideBarTravel {...defaultProps} />);
 
       expect(screen.getByText('100')).toBeTruthy();
     });
 
-    it('не должен показывать категории', () => {
-      render(<CompactSideBarTravel {...defaultProps} />);
+    it('не должен показывать категории', async () => {
+      await render(<CompactSideBarTravel {...defaultProps} />);
 
       expect(screen.queryByText('Религия')).toBeNull();
     });
   });
 
   describe('Компактность (без скролла)', () => {
-    it('карточка автора должна иметь компактные размеры', () => {
-      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
+    it('карточка автора должна иметь компактные размеры', async () => {
+      const { container: _hostContainer } = await render(<CompactSideBarTravel {...defaultProps} />);
 
-      const card = withDataSet(UNSAFE_root, 'sidebarCard')[0];
+      const card = withDataSet(_hostContainer, 'sidebarCard')[0];
       expect(card).toBeTruthy();
 
       // Проверяем что карточка имеет компактный padding
@@ -258,18 +258,25 @@ describe('CompactSideBarTravel - Web', () => {
       expect(styles.padding).toBeLessThanOrEqual(12);
     });
 
-    it('аватарка должна быть компактной на desktop web', () => {
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...defaultProps} />);
+    it('аватарка должна быть компактной на desktop web', async () => {
+      const { container: _hostContainer2 } = await render(<CompactSideBarTravel {...defaultProps} />);
 
-      const media = UNSAFE_getAllByProps({ alt: 'Юлия' })[0];
-      expect(media).toBeTruthy();
-      const styles = StyleSheet.flatten(media.props.style) || {};
+      const images = _hostContainer2.queryAll(node => node.props.alt === 'Юлия');
+      expect(images).toHaveLength(1);
+      // The image fills its media frame. Measure the nearest host frame with
+      // concrete dimensions, rather than the image's percentage fill style.
+      let frame = images[0].parent;
+      while (frame && typeof StyleSheet.flatten(frame.props.style)?.width !== 'number') frame = frame.parent;
+      expect(frame).toBeTruthy();
+      const styles = StyleSheet.flatten(frame!.props.style) || {};
+      expect(styles.width).toBeGreaterThan(0);
+      expect(styles.height).toBeGreaterThan(0);
       expect(styles.width).toBeLessThanOrEqual(40);
       expect(styles.height).toBeLessThanOrEqual(40);
     });
 
-    it('действия автора имеют доступный touch-target (44px)', () => {
-      render(<CompactSideBarTravel {...defaultProps} />);
+    it('действия автора имеют доступный touch-target (44px)', async () => {
+      await render(<CompactSideBarTravel {...defaultProps} />);
 
       const actionButton = screen.getByLabelText('Экспорт в PDF');
       const resolvedStyle =
@@ -281,10 +288,10 @@ describe('CompactSideBarTravel - Web', () => {
       expect(styles.height).toBe(44);
     });
 
-    it('пункты меню должны иметь компактные отступы', () => {
-      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
+    it('пункты меню должны иметь компактные отступы', async () => {
+      const { container: _hostContainer3 } = await render(<CompactSideBarTravel {...defaultProps} />);
 
-      const menuItems = withDataSet(UNSAFE_root, 'sidebarLink');
+      const menuItems = withDataSet(_hostContainer3, 'sidebarLink');
       expect(menuItems.length).toBeGreaterThan(0);
 
       // Проверяем что padding не превышает 12px по вертикали
@@ -295,20 +302,21 @@ describe('CompactSideBarTravel - Web', () => {
       });
     });
 
-    it('иконки пунктов меню компактные (18px на desktop)', () => {
-      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
+    it('иконки пунктов меню компактные (18px на desktop)', async () => {
+      const { container: _hostContainer4 } = await render(<CompactSideBarTravel {...defaultProps} />);
 
-      const icons = withDataSet(UNSAFE_root, 'sidebarLinkIcon').filter((node) => node.props.name);
+      const icons = withDataSet(_hostContainer4, 'sidebarLinkIcon');
       expect(icons.length).toBeGreaterThanOrEqual(mockLinks.length);
       icons.forEach((icon) => {
+        expect(icon.props.testID).toMatch(/^feather-/);
         expect(icon.props.size).toBeLessThanOrEqual(18);
       });
     });
 
-    it('текст должен быть 14px', () => {
-      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
+    it('текст должен быть 14px', async () => {
+      const { container: _hostContainer5 } = await render(<CompactSideBarTravel {...defaultProps} />);
 
-      const textElements = withDataSet(UNSAFE_root, 'sidebarLinkLabel');
+      const textElements = withDataSet(_hostContainer5, 'sidebarLinkLabel');
       expect(textElements.length).toBeGreaterThan(0);
 
       textElements.forEach((text) => {
@@ -319,39 +327,39 @@ describe('CompactSideBarTravel - Web', () => {
   });
 
   describe('Навигация', () => {
-    it('должен вызывать onNavigate при клике на пункт меню', () => {
-      render(<CompactSideBarTravel {...defaultProps} />);
+    it('должен вызывать onNavigate при клике на пункт меню', async () => {
+      await render(<CompactSideBarTravel {...defaultProps} />);
 
       const galleryLink = screen.getByLabelText('Галерея');
-      fireEvent.press(galleryLink);
+      await fireEvent.press(galleryLink);
 
       expect(defaultProps.onNavigate).toHaveBeenCalledWith('gallery');
     });
 
-    it('должен закрывать меню на мобильном после клика', () => {
+    it('должен закрывать меню на мобильном после клика', async () => {
       const mobileProps = { ...defaultProps, isMobile: true };
-      render(<CompactSideBarTravel {...mobileProps} />);
+      await render(<CompactSideBarTravel {...mobileProps} />);
 
       const galleryLink = screen.getByLabelText('Галерея');
-      fireEvent.press(galleryLink);
+      await fireEvent.press(galleryLink);
 
       expect(defaultProps.closeMenu).toHaveBeenCalled();
     });
 
-    it('не должен закрывать меню на десктопе после клика', () => {
-      render(<CompactSideBarTravel {...defaultProps} />);
+    it('не должен закрывать меню на десктопе после клика', async () => {
+      await render(<CompactSideBarTravel {...defaultProps} />);
 
       const galleryLink = screen.getByLabelText('Галерея');
-      fireEvent.press(galleryLink);
+      await fireEvent.press(galleryLink);
 
       expect(defaultProps.closeMenu).not.toHaveBeenCalled();
     });
 
-    it('должен подсвечивать активную секцию', () => {
+    it('должен подсвечивать активную секцию', async () => {
       const propsWithActive = { ...defaultProps, activeSection: 'gallery' };
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...propsWithActive} />);
+      const { container: _hostContainer6 } = await render(<CompactSideBarTravel {...propsWithActive} />);
 
-      const activeLink = UNSAFE_getAllByProps({ 'aria-current': 'page' })[0];
+      const activeLink = _hostContainer6.queryAll(node => Object.entries({ 'aria-current': 'page' }).every(([key, value]) => node.props[key] === value), { includeSelf: true })[0];
       expect(activeLink).toBeTruthy();
       expect(activeLink.props.accessibilityLabel).toBe('Галерея');
     });
@@ -372,10 +380,10 @@ describe('CompactSideBarTravel - Web', () => {
         refetch: jest.fn(),
       });
 
-      render(<CompactSideBarTravel {...defaultProps} />);
+      await render(<CompactSideBarTravel {...defaultProps} />);
 
       const downloadButton = await screen.findByLabelText('Скачать маршрут');
-      fireEvent.press(downloadButton);
+      await fireEvent.press(downloadButton);
 
       await waitFor(() => {
         expect(mockDownloadTravelRouteFileBlob).toHaveBeenCalledWith(
@@ -398,41 +406,41 @@ describe('CompactSideBarTravel - Web', () => {
         error: null,
         refetch: jest.fn(),
       });
-      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
+      const { container: _hostContainer7 } = await render(<CompactSideBarTravel {...defaultProps} />);
       await screen.findByLabelText('Скачать маршрут');
 
       const labels = new Set(
-        withDataSet(UNSAFE_root, 'sidebarLink').map((node) => node.props.accessibilityLabel),
+        withDataSet(_hostContainer7, 'sidebarLink').map((node) => node.props.accessibilityLabel),
       );
       expect(labels).toEqual(new Set([...mockLinks.map((link) => link.label), 'Скачать маршрут']));
     });
 
-    it('иконка и подпись пункта помечены для цвета при наведении', () => {
-      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
+    it('иконка и подпись пункта помечены для цвета при наведении', async () => {
+      const { container: _hostContainer8 } = await render(<CompactSideBarTravel {...defaultProps} />);
 
-      const labels = withDataSet(UNSAFE_root, 'sidebarLinkLabel').map((node) => node.props.children);
+      const labels = withDataSet(_hostContainer8, 'sidebarLinkLabel').map((node) => node.props.children);
       expect(labels).toEqual(expect.arrayContaining(mockLinks.map((link) => link.label)));
-      expect(withDataSet(UNSAFE_root, 'sidebarLinkIcon').filter((node) => node.props.name)).toHaveLength(
+      expect(withDataSet(_hostContainer8, 'sidebarLinkIcon')).toHaveLength(
         mockLinks.length,
       );
     });
 
-    it('активный пункт узнаётся по aria-current — hover-правило его не перекрашивает', () => {
-      const { UNSAFE_root } = render(
+    it('активный пункт узнаётся по aria-current — hover-правило его не перекрашивает', async () => {
+      const { container: _hostContainer9 } = await render(
         <CompactSideBarTravel {...defaultProps} activeSection="gallery" />,
       );
 
-      const current = withDataSet(UNSAFE_root, 'sidebarLink').filter(
+      const current = withDataSet(_hostContainer9, 'sidebarLink').filter(
         (node) => node.props['aria-current'] === 'page',
       );
       expect(current.length).toBeGreaterThan(0);
       current.forEach((node) => expect(node.props.accessibilityLabel).toBe('Галерея'));
     });
 
-    it('карточка автора несёт маркер sidebarCard', () => {
-      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
+    it('карточка автора несёт маркер sidebarCard', async () => {
+      const { container: _hostContainer0 } = await render(<CompactSideBarTravel {...defaultProps} />);
 
-      expect(withDataSet(UNSAFE_root, 'sidebarCard').length).toBeGreaterThan(0);
+      expect(withDataSet(_hostContainer0, 'sidebarCard').length).toBeGreaterThan(0);
     });
   });
 
@@ -440,7 +448,7 @@ describe('CompactSideBarTravel - Web', () => {
     it('должен показывать кнопку редактирования для владельца', async () => {
       mockAuthState.userId = 'user-1';
       const propsWithEdit = { ...defaultProps };
-      render(<CompactSideBarTravel {...propsWithEdit} />);
+      await render(<CompactSideBarTravel {...propsWithEdit} />);
 
       await waitFor(() => {
         expect(screen.getByLabelText('Редактировать путешествие')).toBeTruthy();
@@ -450,24 +458,24 @@ describe('CompactSideBarTravel - Web', () => {
     it('должен показывать кнопку редактирования для суперпользователя', async () => {
       mockAuthState.isSuperuser = true;
       const propsWithSuper = { ...defaultProps };
-      render(<CompactSideBarTravel {...propsWithSuper} />);
+      await render(<CompactSideBarTravel {...propsWithSuper} />);
 
       await waitFor(() => {
         expect(screen.getByLabelText('Редактировать путешествие')).toBeTruthy();
       });
     });
 
-    it('не должен показывать кнопку редактирования для чужого пользователя', () => {
+    it('не должен показывать кнопку редактирования для чужого пользователя', async () => {
       mockAuthState.userId = 'other-user';
       const propsNoEdit = { ...defaultProps };
-      render(<CompactSideBarTravel {...propsNoEdit} />);
+      await render(<CompactSideBarTravel {...propsNoEdit} />);
 
       const editButton = screen.queryByLabelText('Редактировать путешествие');
       expect(editButton).not.toBeTruthy();
     });
 
     it('должен показывать кнопку PDF только на веб', async () => {
-      render(<CompactSideBarTravel {...defaultProps} />);
+      await render(<CompactSideBarTravel {...defaultProps} />);
 
       await waitFor(() => {
         expect(screen.getByLabelText('Экспорт в PDF')).toBeTruthy();
@@ -476,23 +484,23 @@ describe('CompactSideBarTravel - Web', () => {
   });
 
   describe('Адаптивность', () => {
-    it('должен применять мобильные стили на мобильном', () => {
+    it('должен применять мобильные стили на мобильном', async () => {
       const mobileProps = { ...defaultProps, isMobile: true };
-      render(<CompactSideBarTravel {...mobileProps} />);
+      await render(<CompactSideBarTravel {...mobileProps} />);
 
       expect(screen.getByTestId('travel-details-sidebar-menu')).toBeTruthy();
     });
 
-    it('должен показывать кнопку закрытия на мобильном', () => {
+    it('должен показывать кнопку закрытия на мобильном', async () => {
       const mobileProps = { ...defaultProps, isMobile: true };
-      render(<CompactSideBarTravel {...mobileProps} />);
+      await render(<CompactSideBarTravel {...mobileProps} />);
 
       const closeButtons = screen.getAllByLabelText('Закрыть меню');
       expect(closeButtons.length).toBe(2);
     });
 
-    it('не должен показывать кнопку закрытия на десктопе', () => {
-      render(<CompactSideBarTravel {...defaultProps} />);
+    it('не должен показывать кнопку закрытия на десктопе', async () => {
+      await render(<CompactSideBarTravel {...defaultProps} />);
 
       const closeButton = screen.queryByLabelText('Закрыть меню');
       expect(closeButton).toBeNull();
@@ -500,48 +508,48 @@ describe('CompactSideBarTravel - Web', () => {
   });
 
   describe('Маркеры web-стилей', () => {
-    it('сайдбар не ставит сырых data-* — react-native-web отбрасывает их до DOM', () => {
+    it('сайдбар не ставит сырых data-* — react-native-web отбрасывает их до DOM', async () => {
       mockAuthState.isSuperuser = true;
       mockAuthState.userId = 'user-1';
-      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
+      const { container: _hostContainer1 } = await render(<CompactSideBarTravel {...defaultProps} />);
 
       // Маркеры, которые сайдбар, карточка автора, её кнопки и виджет погоды ставили
       // сырым пропом до #2032. Чужой долг вложенных общих компонентов (например,
       // `data-testid` скелетона картинки) ведёт guard:web-style-channels.
       const SIDEBAR_MARKERS = /^data-(?:sidebar|link|icon|active|action-btn|author-name|disabled|weather)/;
-      const rawDataProps = UNSAFE_root
-        .findAll(() => true)
+      const rawDataProps = _hostContainer1
+        .queryAll(() => true, { includeSelf: true })
         .flatMap((node: any) => Object.keys(node.props || {}).filter((key) => SIDEBAR_MARKERS.test(key)));
       expect(rawDataProps).toEqual([]);
     });
 
-    it('разделитель перед картой рендерится', () => {
-      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
+    it('разделитель перед картой рендерится', async () => {
+      const { container: _hostContainer10 } = await render(<CompactSideBarTravel {...defaultProps} />);
 
-      const dividers = UNSAFE_root.findAll(
+      const dividers = _hostContainer10.queryAll(
         (node: any) =>
           typeof node.type === 'string' &&
           String(StyleSheet.flatten(node.props.style)?.backgroundImage ?? '').startsWith('linear-gradient(90deg'),
-      );
+      { includeSelf: true });
       expect(dividers.length).toBeGreaterThanOrEqual(1);
     });
   });
 
   describe('Производительность', () => {
-    it('должен рендериться быстро (< 400ms)', () => {
+    it('должен рендериться быстро (< 400ms)', async () => {
       const start = performance.now();
-      render(<CompactSideBarTravel {...defaultProps} />);
+      await render(<CompactSideBarTravel {...defaultProps} />);
       const end = performance.now();
 
       expect(end - start).toBeLessThan(400);
     });
 
-    it('должен использовать memo для оптимизации', () => {
-      const { rerender } = render(<CompactSideBarTravel {...defaultProps} />);
+    it('должен использовать memo для оптимизации', async () => {
+      const { rerender } = await render(<CompactSideBarTravel {...defaultProps} />);
 
       // Перерендер с теми же props
       const start = performance.now();
-      rerender(<CompactSideBarTravel {...defaultProps} />);
+      await rerender(<CompactSideBarTravel {...defaultProps} />);
       const end = performance.now();
 
       // Должно быть очень быстро благодаря memo
@@ -550,29 +558,29 @@ describe('CompactSideBarTravel - Web', () => {
   });
 
   describe('Accessibility', () => {
-    it('все кнопки должны иметь accessibilityRole="button"', () => {
-      const { UNSAFE_root } = render(<CompactSideBarTravel {...defaultProps} />);
+    it('все кнопки должны иметь accessibilityRole="button"', async () => {
+      const { container: _hostContainer11 } = await render(<CompactSideBarTravel {...defaultProps} />);
 
-      const links = withDataSet(UNSAFE_root, 'sidebarLink');
+      const links = withDataSet(_hostContainer11, 'sidebarLink');
       expect(links.length).toBeGreaterThan(0);
       links.forEach((link) => {
         expect(link.props.accessibilityRole).toBe('button');
       });
     });
 
-    it('все элементы должны иметь aria-label', () => {
-      render(<CompactSideBarTravel {...defaultProps} />);
+    it('все элементы должны иметь aria-label', async () => {
+      await render(<CompactSideBarTravel {...defaultProps} />);
 
       const pdfButton = screen.getByLabelText('Экспорт в PDF');
 
       expect(pdfButton).toBeTruthy();
     });
 
-    it('активный пункт должен иметь selected состояние', () => {
+    it('активный пункт должен иметь selected состояние', async () => {
       const propsWithActive = { ...defaultProps, activeSection: 'gallery' };
-      const { UNSAFE_getAllByProps } = render(<CompactSideBarTravel {...propsWithActive} />);
+      const { container: _hostContainer12 } = await render(<CompactSideBarTravel {...propsWithActive} />);
 
-      const activeLink = UNSAFE_getAllByProps({ 'aria-current': 'page' })[0];
+      const activeLink = _hostContainer12.queryAll(node => Object.entries({ 'aria-current': 'page' }).every(([key, value]) => node.props[key] === value), { includeSelf: true })[0];
       expect(activeLink.props['aria-pressed']).toBe(true);
     });
   });

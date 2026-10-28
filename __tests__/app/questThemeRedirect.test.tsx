@@ -8,10 +8,10 @@ jest.mock('expo-router', () => ({
     useLocalSearchParams: () => ({ theme: mockTheme }),
     Redirect: (props: unknown) => { mockRedirect(props); return null; },
 }));
-it.each(['halloween', 'unknown', 'http://external.example', ['halloween', 'detective']])('redirects %s only to the catalog without importing quest detail', (theme) => {
+it.each(['halloween', 'unknown', 'http://external.example', ['halloween', 'detective']])('redirects %s only to the catalog without importing quest detail', async (theme) => {
     mockTheme = theme;
     mockRedirect.mockClear();
-    render(<QuestThemeRedirect />);
+    await render(<QuestThemeRedirect />);
     expect(mockRedirect).toHaveBeenCalledWith({ href: { pathname: '/quests', params: { theme: typeof theme === 'string' ? theme : '' } } });
     const source = fs.readFileSync('app/(tabs)/quests/theme/[theme].tsx', 'utf8');
     expect(source).not.toMatch(/useQuestBundle|questId|useQuestsApi/);

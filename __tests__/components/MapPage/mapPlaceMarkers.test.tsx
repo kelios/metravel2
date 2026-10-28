@@ -126,7 +126,7 @@ const makeLeafletHarness = (): LeafletHarness => {
  * маркеров и пересоздаёт их (см. MarkerClusterGroup «marker options changed»),
  * что замаскировало бы ровно то, что здесь измеряется — стабильность ключей мест.
  */
-const renderMarkers = (harness: LeafletHarness, points: Point[]) => {
+const renderMarkers = async (harness: LeafletHarness, points: Point[]) => {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
@@ -148,10 +148,10 @@ const renderMarkers = (harness: LeafletHarness, points: Point[]) => {
     </QueryClientProvider>
   )
 
-  const view = render(tree(points))
+  const view = await render(tree(points))
   return {
     ...view,
-    rerenderPoints: (nextPoints: Point[]) => view.rerender(tree(nextPoints)),
+    rerenderPoints: async (nextPoints: Point[]) => view.rerender(tree(nextPoints)),
   }
 }
 
@@ -169,9 +169,9 @@ describe('#1573 web renderer: один marker на физическое мест
     ;(global as any).document = originalDocument
   })
 
-  it('сливает две записи одного place_id в один marker и один hit target', () => {
+  it('сливает две записи одного place_id в один marker и один hit target', async () => {
     const harness = makeLeafletHarness()
-    renderMarkers(harness, [libraryRecordA, libraryRecordB, operaRecord])
+    await renderMarkers(harness, [libraryRecordA, libraryRecordB, operaRecord])
 
     expect(harness.L.marker).toHaveBeenCalledTimes(2)
     expect(harness.createdMarkerCoords).toEqual([
@@ -180,22 +180,22 @@ describe('#1573 web renderer: один marker на физическое мест
     ])
   })
 
-  it('не сливает разные place_id и оставляет legacy-запись без place_id отдельной', () => {
+  it('не сливает разные place_id и оставляет legacy-запись без place_id отдельной', async () => {
     const harness = makeLeafletHarness()
-    renderMarkers(harness, [libraryRecordA, operaRecord, legacyRecord])
+    await renderMarkers(harness, [libraryRecordA, operaRecord, legacyRecord])
 
     expect(harness.L.marker).toHaveBeenCalledTimes(3)
   })
 
-  it('переупорядочивание dataset не пересоздаёт маркеры (keyed diff #1347)', () => {
+  it('переупорядочивание dataset не пересоздаёт маркеры (keyed diff #1347)', async () => {
     const harness = makeLeafletHarness()
-    const view = renderMarkers(harness, [libraryRecordA, libraryRecordB, operaRecord])
+    const view = await renderMarkers(harness, [libraryRecordA, libraryRecordB, operaRecord])
     expect(harness.L.marker).toHaveBeenCalledTimes(2)
 
     // Refetch: свежие объекты записей с тем же содержимым, порядок мест другой.
     // Внутри места порядок записей сохраняется — репрезентативная запись места
     // (её ссылку/превью рисует popup) остаётся прежней.
-    view.rerenderPoints([{ ...operaRecord }, { ...libraryRecordA }, { ...libraryRecordB }] as Point[])
+    await view.rerenderPoints([{ ...operaRecord }, { ...libraryRecordA }, { ...libraryRecordB }] as Point[])
 
     // Ни одного нового L.marker и ни одного снятия слоя: ключи мест стабильны
     // между обновлениями dataset, поэтому маркеры переживают refresh.

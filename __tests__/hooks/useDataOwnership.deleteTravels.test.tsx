@@ -66,7 +66,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
   </QueryClientProvider>
 );
 
-const renderDataOwnership = () => renderHook(() => useDataOwnership(), { wrapper });
+const renderDataOwnership = async () => await renderHook(() => useDataOwnership(), { wrapper });
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -171,7 +171,7 @@ describe('#1828 copy of the destructive data-ownership action', () => {
 
 describe('#1828 two-step confirmation before the destructive call', () => {
   it('does not call the endpoint when the first step is dismissed', async () => {
-    const { result } = renderDataOwnership();
+    const { result } = await renderDataOwnership();
 
     await act(async () => {
       await result.current.deleteTravels();
@@ -183,7 +183,7 @@ describe('#1828 two-step confirmation before the destructive call', () => {
 
   it('does not call the endpoint when only the first step is confirmed', async () => {
     mockConfirm.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
-    const { result } = renderDataOwnership();
+    const { result } = await renderDataOwnership();
 
     await act(async () => {
       await result.current.deleteTravels();
@@ -195,7 +195,7 @@ describe('#1828 two-step confirmation before the destructive call', () => {
 
   it('calls the endpoint only after both steps are confirmed', async () => {
     mockConfirm.mockResolvedValue(true);
-    const { result } = renderDataOwnership();
+    const { result } = await renderDataOwnership();
 
     await act(async () => {
       await result.current.deleteTravels();
@@ -216,7 +216,7 @@ describe('#1828 busy state while the confirmation is being prepared', () => {
       })) as never,
     );
 
-    const { result } = renderDataOwnership();
+    const { result } = await renderDataOwnership();
     expect(result.current.isDeletingTravels).toBe(false);
 
     let pending: Promise<void> | undefined;
@@ -237,7 +237,7 @@ describe('#1828 busy state while the confirmation is being prepared', () => {
 
   it('ignores a second press while the first one is still counting', async () => {
     mockCount.mockImplementation((() => new Promise(() => {})) as never);
-    const { result } = renderDataOwnership();
+    const { result } = await renderDataOwnership();
 
     await act(async () => {
       void result.current.deleteTravels();
@@ -253,7 +253,7 @@ describe('#1828 busy state while the confirmation is being prepared', () => {
 describe('#1878 how many travels the confirmation names', () => {
   it('names both halves of the summary the server returned', async () => {
     mockCount.mockResolvedValueOnce({ travels_to_delete: 7, co_authored_to_detach: 2 });
-    const { result } = renderDataOwnership();
+    const { result } = await renderDataOwnership();
 
     await act(async () => {
       await result.current.deleteTravels();
@@ -273,7 +273,7 @@ describe('#1878 how many travels the confirmation names', () => {
   // только первые: числа обязаны приходить из ручки, которая знает разделение.
   it('reads the numbers from the endpoint that performs the deletion', async () => {
     mockCount.mockResolvedValueOnce({ travels_to_delete: 1, co_authored_to_detach: 0 });
-    const { result } = renderDataOwnership();
+    const { result } = await renderDataOwnership();
 
     await act(async () => {
       await result.current.deleteTravels();
@@ -286,7 +286,7 @@ describe('#1878 how many travels the confirmation names', () => {
   // «Удалить 0 путешествий» читается как ошибка, а не как факт.
   it('never prints a zero half of the summary', async () => {
     mockCount.mockResolvedValueOnce({ travels_to_delete: 0, co_authored_to_detach: 3 });
-    const { result } = renderDataOwnership();
+    const { result } = await renderDataOwnership();
 
     await act(async () => {
       await result.current.deleteTravels();
@@ -304,7 +304,7 @@ describe('#1878 how many travels the confirmation names', () => {
   // Оба нуля — считать нечего, и подтверждение обязано вернуться к копии без чисел.
   it('falls back to the countless message when nothing is affected', async () => {
     mockCount.mockResolvedValueOnce({ travels_to_delete: 0, co_authored_to_detach: 0 });
-    const { result } = renderDataOwnership();
+    const { result } = await renderDataOwnership();
 
     await act(async () => {
       await result.current.deleteTravels();
@@ -318,7 +318,7 @@ describe('#1878 how many travels the confirmation names', () => {
   // Мусор вместо числа — это тот же отказ счётчика, а не «0» и не «NaN».
   it('falls back to the countless message when the summary is not numeric', async () => {
     mockCount.mockResolvedValueOnce({ travels_to_delete: null, co_authored_to_detach: 4 } as never);
-    const { result } = renderDataOwnership();
+    const { result } = await renderDataOwnership();
 
     await act(async () => {
       await result.current.deleteTravels();
@@ -346,7 +346,7 @@ describe('#1878 how many travels the confirmation names', () => {
         for (const count of [1, 2, 5]) {
           mockConfirm.mockClear();
           mockCount.mockResolvedValueOnce({ travels_to_delete: count, co_authored_to_detach: count });
-          const { result } = renderDataOwnership();
+          const { result } = await renderDataOwnership();
           await act(async () => {
             await result.current.deleteTravels();
           });
@@ -384,7 +384,7 @@ describe('#1878 how many travels the confirmation names', () => {
   // Провалившийся счётчик не имеет права превратиться в честный на вид ноль.
   it('falls back to the countless message when the count request fails', async () => {
     mockCount.mockRejectedValueOnce(new Error('offline'));
-    const { result } = renderDataOwnership();
+    const { result } = await renderDataOwnership();
 
     await act(async () => {
       await result.current.deleteTravels();
@@ -401,7 +401,7 @@ describe('#1878 how many travels the confirmation names', () => {
     jest.useFakeTimers();
     try {
       mockCount.mockImplementation((() => new Promise(() => {})) as never);
-      const { result } = renderDataOwnership();
+      const { result } = await renderDataOwnership();
 
       let pending: Promise<void> | undefined;
       await act(async () => {
@@ -424,7 +424,7 @@ describe('#1878 how many travels the confirmation names', () => {
 
   it('falls back to the countless message for a session without a user id', async () => {
     authRef.userId = null;
-    const { result } = renderDataOwnership();
+    const { result } = await renderDataOwnership();
 
     await act(async () => {
       await result.current.deleteTravels();

@@ -67,8 +67,8 @@ const makeReceived = (
 // ── пустой items → null ─────────────────────────────────────────────────────
 
 describe('PeerBadgeReceivedRow — empty items', () => {
-  it('renders null (nothing) when items is empty', () => {
-    const { toJSON } = render(<PeerBadgeReceivedRow items={[]} />)
+  it('renders null (nothing) when items is empty', async () => {
+    const { toJSON } = await render(<PeerBadgeReceivedRow items={[]} />)
     expect(toJSON()).toBeNull()
   })
 })
@@ -76,7 +76,7 @@ describe('PeerBadgeReceivedRow — empty items', () => {
 // ── badge name + count ──────────────────────────────────────────────────────
 
 describe('PeerBadgeReceivedRow — badge name and count', () => {
-  it('renders flat API summaries without catalogue IDs or visual metadata', () => {
+  it('renders flat API summaries without catalogue IDs or visual metadata', async () => {
     const { peerReceived } = mapPublic({
       rank: {}, earned_badges: [],
       peer_received: [
@@ -86,7 +86,7 @@ describe('PeerBadgeReceivedRow — badge name and count', () => {
     })
     const consoleError = jest.spyOn(console, 'error')
     try {
-      const { getByText, getByLabelText } = render(<PeerBadgeReceivedRow items={peerReceived} />)
+      const { getByText, getByLabelText } = await render(<PeerBadgeReceivedRow items={peerReceived} />)
 
       expect(getByText('Любимый автор')).toBeTruthy()
       expect(getByText('Вдохновил меня')).toBeTruthy()
@@ -100,33 +100,33 @@ describe('PeerBadgeReceivedRow — badge name and count', () => {
     }
   })
 
-  it('renders badge name', () => {
-    const { getByText } = render(
+  it('renders badge name', async () => {
+    const { getByText } = await render(
       <PeerBadgeReceivedRow items={[makeReceived({ name: 'Любимый автор' })]} />,
     )
     expect(getByText('Любимый автор')).toBeTruthy()
   })
 
-  it('renders count pill value', () => {
-    const { getByText } = render(
+  it('renders count pill value', async () => {
+    const { getByText } = await render(
       <PeerBadgeReceivedRow items={[makeReceived({}, 42)]} />,
     )
     expect(getByText('42')).toBeTruthy()
   })
 
-  it('renders count=0 in pill', () => {
-    const { getByText } = render(
+  it('renders count=0 in pill', async () => {
+    const { getByText } = await render(
       <PeerBadgeReceivedRow items={[makeReceived({}, 0)]} />,
     )
     expect(getByText('0')).toBeTruthy()
   })
 
-  it('renders all badges when multiple items provided', () => {
+  it('renders all badges when multiple items provided', async () => {
     const items: PeerBadgeReceived[] = [
       makeReceived({ id: 101, name: 'Любимый автор', slug: 'a' }, 10),
       makeReceived({ id: 102, name: 'Вдохновил меня', slug: 'b' }, 7),
     ]
-    const { getByText } = render(<PeerBadgeReceivedRow items={items} />)
+    const { getByText } = await render(<PeerBadgeReceivedRow items={items} />)
     expect(getByText('Любимый автор')).toBeTruthy()
     expect(getByText('Вдохновил меня')).toBeTruthy()
     expect(getByText('10')).toBeTruthy()
@@ -137,29 +137,29 @@ describe('PeerBadgeReceivedRow — badge name and count', () => {
 // ── title prop ──────────────────────────────────────────────────────────────
 
 describe('PeerBadgeReceivedRow — title prop', () => {
-  it('renders custom title when provided', () => {
-    const { getByText } = render(
+  it('renders custom title when provided', async () => {
+    const { getByText } = await render(
       <PeerBadgeReceivedRow items={[makeReceived()]} title="Награды читателей" />,
     )
     expect(getByText('Награды читателей')).toBeTruthy()
   })
 
-  it('renders default title "От сообщества" when title omitted', () => {
-    const { getByText } = render(
+  it('renders default title "От сообщества" when title omitted', async () => {
+    const { getByText } = await render(
       <PeerBadgeReceivedRow items={[makeReceived()]} />,
     )
     expect(getByText('От сообщества')).toBeTruthy()
   })
 
-  it('does not render heading when title is null', () => {
-    const { queryByText } = render(
+  it('does not render heading when title is null', async () => {
+    const { queryByText } = await render(
       <PeerBadgeReceivedRow items={[makeReceived()]} title={null} />,
     )
     expect(queryByText('От сообщества')).toBeNull()
   })
 
-  it('does not render heading when title is empty string', () => {
-    const { queryByText } = render(
+  it('does not render heading when title is empty string', async () => {
+    const { queryByText } = await render(
       <PeerBadgeReceivedRow items={[makeReceived()]} title="" />,
     )
     // empty-string title is falsy → same branch as null
@@ -170,8 +170,8 @@ describe('PeerBadgeReceivedRow — title prop', () => {
 // ── testID forwarding ───────────────────────────────────────────────────────
 
 describe('PeerBadgeReceivedRow — testID', () => {
-  it('forwards testID to root View', () => {
-    const { getByTestId } = render(
+  it('forwards testID to root View', async () => {
+    const { getByTestId } = await render(
       <PeerBadgeReceivedRow items={[makeReceived()]} testID="peer-row" />,
     )
     expect(getByTestId('peer-row')).toBeTruthy()

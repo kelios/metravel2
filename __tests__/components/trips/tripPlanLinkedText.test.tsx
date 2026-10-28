@@ -1,3 +1,4 @@
+import { getAllHosts } from '@/__tests__/helpers/hostQueries'
 import { render } from '@testing-library/react-native'
 import React from 'react'
 import { Platform } from 'react-native'
@@ -199,19 +200,19 @@ describe('TripPlanLinkedText rendering', () => {
     Platform.OS = originalPlatform
   })
 
-  it('passes href to the link segment on web and keeps the text selectable', () => {
+  it('passes href to the link segment on web and keeps the text selectable', async () => {
     Platform.OS = 'web'
-    const { getByTestId, UNSAFE_getAllByProps } = render(
+    const { getByTestId, container: hostContainer } = await render(
       <TripPlanLinkedText text="Бронь https://example.com/info" testID="desc" />,
     )
     expect(getByTestId('desc').props.selectable).toBe(true)
-    expect(UNSAFE_getAllByProps({ href: 'https://example.com/info' }).length).toBeGreaterThan(0)
+    expect(getAllHosts(hostContainer, node => node.props["href"] === 'https://example.com/info').length).toBeGreaterThan(0)
   })
 
   // RN #22811: selectable-текст на Android перехватывает тапы по вложенным ссылкам.
-  it('does not enable selection on android', () => {
+  it('does not enable selection on android', async () => {
     Platform.OS = 'android'
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <TripPlanLinkedText text="Бронь https://example.com/info" testID="desc" />,
     )
     expect(getByTestId('desc').props.selectable).toBe(false)

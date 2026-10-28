@@ -50,9 +50,9 @@ describe('map tour on the phone layout (#2303)', () => {
     ])
   })
 
-  it.each(['radius', 'route'] as const)('registers measurable refs on the actual phone controls (%s)', mode => {
+  it.each(['radius', 'route'] as const)('registers measurable refs on the actual phone controls (%s)', async mode => {
     const targetRegistry = Object.fromEntries(phoneTargets.map(id => [id, createRef<View>()]))
-    const view = render(<MapMobileTopOverlay {...(baseProps as any)} mode={mode} targetRegistry={targetRegistry} />)
+    const view = await render(<MapMobileTopOverlay {...(baseProps as any)} mode={mode} targetRegistry={targetRegistry} />)
     for (const id of phoneTargets) {
       expect(view.getByTestId(id)).toBeTruthy()
       expect((targetRegistry[id].current as any)?.props.testID).toBe(id)
@@ -60,8 +60,8 @@ describe('map tour on the phone layout (#2303)', () => {
     }
   })
 
-  it.each(['radius', 'route'] as const)('every step target exists in the phone top overlay (%s mode)', (mode) => {
-    const { queryByTestId } = render(<MapMobileTopOverlay {...(baseProps as any)} mode={mode} />)
+  it.each(['radius', 'route'] as const)('every step target exists in the phone top overlay (%s mode)', async (mode) => {
+    const { queryByTestId } = await render(<MapMobileTopOverlay {...(baseProps as any)} mode={mode} />)
     const missing = phoneTargets.filter((id) => queryByTestId(id) == null)
     expect(missing).toEqual([])
   })

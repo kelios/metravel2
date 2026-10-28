@@ -69,9 +69,9 @@ describe('TripRoutePreviewEngines (#2056)', () => {
     mockEngines.length = 0
   })
 
-  it('two walking parts and a flight → two routing requests, none across the flight', () => {
+  it('two walking parts and a flight → two routing requests, none across the flight', async () => {
     const route = [pt('a', [0, 0]), pt('b', [1, 0]), pt('c', [5, 0], 'flight'), pt('d', [6, 0])]
-    const { getByTestId } = render(<Harness route={route} />)
+    const { getByTestId } = await render(<Harness route={route} />)
 
     expect(mockEngines.map((engine) => engine.points)).toEqual([
       [[0, 0], [1, 0]],
@@ -80,10 +80,10 @@ describe('TripRoutePreviewEngines (#2056)', () => {
     expect(mockEngines.every((engine) => engine.transportMode === 'foot')).toBe(true)
     expect(getByTestId('preview-loading').props.children).toBe('true')
 
-    act(() => mockEngines[0].onResult(answer(12_000, 10_800, [[0, 0], [0.5, 0.1], [1, 0]])))
+    await act(() => mockEngines[0].onResult(answer(12_000, 10_800, [[0, 0], [0.5, 0.1], [1, 0]])))
     // Один прогон ответил — итог ещё не собран.
     expect(getByTestId('preview-loading').props.children).toBe('true')
-    act(() => mockEngines[1].onResult(answer(3_000, 2_700, [[5, 0], [6, 0]])))
+    await act(() => mockEngines[1].onResult(answer(3_000, 2_700, [[5, 0], [6, 0]])))
 
     expect(getByTestId('preview-loading').props.children).toBe('false')
     const summary = JSON.parse(String(getByTestId('preview-summary').props.children))
@@ -93,9 +93,9 @@ describe('TripRoutePreviewEngines (#2056)', () => {
     expect(summary.legs.map((leg: { mode: string }) => leg.mode)).toEqual(['route', 'flight', 'route'])
   })
 
-  it('a trip without transfers mounts one engine with every point, as before', () => {
+  it('a trip without transfers mounts one engine with every point, as before', async () => {
     const route = [pt('a', [0, 0]), pt('b', [1, 0]), pt('c', [5, 0])]
-    render(<Harness route={route} />)
+    await render(<Harness route={route} />)
     expect(mockEngines).toHaveLength(1)
     expect(mockEngines[0].points).toEqual([[0, 0], [1, 0], [5, 0]])
   })

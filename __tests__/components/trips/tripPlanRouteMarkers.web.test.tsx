@@ -1,3 +1,4 @@
+import { createWebMapTestRuntime, type WebMapTestRuntime } from '@/__tests__/helpers/webMapTestRuntime'
 /**
  * #2059 — маркеры web-карты конструктора: номер как в списке, активная точка
  * крупнее и вне кластеров, близкие точки — в кластерах механизма /map
@@ -8,17 +9,18 @@
  * кластеров, а не прямо на карту.
  */
 import React from 'react'
-import { act, render, waitFor } from '@testing-library/react-native'
+let act: typeof import('react').act
+let render: typeof import('@testing-library/react/pure').render
+let waitFor: typeof import('@testing-library/react/pure').waitFor
 
 import type { RoutePoint } from '@/api/plannedTrips'
 import { MAP_CLUSTER_GROUP_OPTIONS } from '@/components/MapPage/Map/mapClusterGroup'
-import TripPlanRouteMarkers from '@/components/trips/planning/TripPlanRouteMarkers'
+let TripPlanRouteMarkers: typeof import('@/components/trips/planning/TripPlanRouteMarkers').default
 import { FOCUS_POINT_ZOOM } from '@/components/trips/planning/tripPlanRouteMap.types'
 import { getThemedColors } from '@/constants/designSystem'
 
 const core = require('@react-leaflet/core')
 
-jest.mock('react-dom', () => ({ createPortal: (node: unknown) => node }))
 
 type Captured = { props: Record<string, any>; container: unknown }
 
@@ -99,10 +101,14 @@ const markersTree = (
     </core.LeafletContext.Provider>
   )
 
-const renderMarkers = (
+const renderMarkers = async (
   env: ReturnType<typeof setup>,
   props: Partial<React.ComponentProps<typeof TripPlanRouteMarkers>> = {},
-) => render(markersTree(env, props))
+) => {
+  const result = render(markersTree(env, props))
+  expect(result.container.firstElementChild).not.toBeNull()
+  return result
+}
 
 const lastByIndex = (captured: Captured[]) => {
   const byKey = new Map<string, Captured>()
@@ -113,7 +119,7 @@ const lastByIndex = (captured: Captured[]) => {
 describe('#2059 TripPlanRouteMarkers.web', () => {
   it('кладёт маркеры в группу кластеров /map с её настройками', async () => {
     const env = setup()
-    renderMarkers(env)
+    await renderMarkers(env)
 
     await waitFor(() => expect(lastByIndex(env.captured)).toHaveLength(20))
     expect(env.L.markerClusterGroup).toHaveBeenCalledTimes(1)
@@ -137,7 +143,7 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
 
   it('номер на маркере совпадает с номером строки списка', async () => {
     const env = setup()
-    renderMarkers(env)
+    await renderMarkers(env)
 
     await waitFor(() => expect(lastByIndex(env.captured)).toHaveLength(20))
     lastByIndex(env.captured).forEach((entry, index) => {
@@ -149,7 +155,7 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
 
   it('активная точка крупнее и живёт вне кластеров', async () => {
     const env = setup()
-    renderMarkers(env, { activeIndex: 3 })
+    await renderMarkers(env, { activeIndex: 3 })
 
     await waitFor(() => expect(lastByIndex(env.captured)).toHaveLength(20))
     const active = lastByIndex(env.captured).find((entry) => entry.props.title === '4. Точка 4')
@@ -162,7 +168,7 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
   it('перетаскивание остаётся на маркере в кластере (#1781)', async () => {
     const env = setup()
     const dragEnd = jest.fn()
-    renderMarkers(env, { onDragEnd: (index) => () => dragEnd(index) })
+    await renderMarkers(env, { onDragEnd: (index) => () => dragEnd(index) })
 
     await waitFor(() => expect(lastByIndex(env.captured)).toHaveLength(20))
     const second = lastByIndex(env.captured)[1]
@@ -175,20 +181,20 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
     const env = setup()
     const dragEnd = jest.fn()
     const props = { onDragEnd: (index: number) => () => dragEnd(index) }
-    const utils = renderMarkers(env, props)
+    const utils = await renderMarkers(env, props)
     await waitFor(() => expect(lastByIndex(env.captured)).toHaveLength(20))
     const byTitle = (title: string) => lastByIndex(env.captured).find((entry) => entry.props.title === title)
 
     // Отпустили рядом с третьей точкой; `RouteBuilder` округляет до 6 знаков.
     const drop = { lat: 47.5198764, lng: 12.0201234 }
-    act(() => {
+    await act(() => {
       byTitle('2. Точка 2')?.props.eventHandlers.dragend({ target: { getLatLng: () => drop } })
     })
     expect(dragEnd).toHaveBeenCalledWith(1)
     const moved = route.map((point, index) =>
       index === 1 ? { ...point, coordinates: [12.020123, 47.519876] as [number, number] } : point,
     )
-    utils.rerender(markersTree(env, { ...props, route: moved }))
+    await utils.rerender(markersTree(env, { ...props, route: moved }))
 
     expect(byTitle('2. Точка 2')?.container).toBeUndefined()
     // Не активная: обычная капля без подъёма над соседями.
@@ -199,16 +205,16 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
     const edited = moved.map((point, index) =>
       index === 1 ? { ...point, coordinates: [12.5, 47.9] as [number, number] } : point,
     )
-    utils.rerender(markersTree(env, { ...props, route: edited }))
+    await utils.rerender(markersTree(env, { ...props, route: edited }))
     expect(byTitle('2. Точка 2')?.container).toBe(env.group)
   })
 
   it('отклонённый перенос оставляет маркер в кластерах', async () => {
     const env = setup()
-    renderMarkers(env)
+    await renderMarkers(env)
     await waitFor(() => expect(lastByIndex(env.captured)).toHaveLength(20))
 
-    act(() => {
+    await act(() => {
       lastByIndex(env.captured)[1].props.eventHandlers.dragend({
         target: { getLatLng: () => ({ lat: 47.9, lng: 12.9 }) },
       })
@@ -219,7 +225,7 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
 
   it('кластер показывает число точек и подписан для скринридера', async () => {
     const env = setup()
-    renderMarkers(env)
+    await renderMarkers(env)
 
     await waitFor(() => expect(env.cluster._icon.attrs['aria-label']).toBe('Кластер: 12 точек'))
     const [[options]] = env.L.markerClusterGroup.mock.calls as unknown as Array<[{ iconCreateFunction: (c: unknown) => any }]>
@@ -230,7 +236,7 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
 
   it('маршрут до 15 точек не кластеризуется — каждая точка видна с номером', async () => {
     const env = setup()
-    renderMarkers(env, { route: route.slice(0, 15) })
+    await renderMarkers(env, { route: route.slice(0, 15) })
 
     await waitFor(() => expect(lastByIndex(env.captured)).toHaveLength(15))
     expect(env.L.markerClusterGroup).not.toHaveBeenCalled()
@@ -239,7 +245,7 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
 
   it('без кластеров активная точка не меняет порядок маркеров (порядок маршрута)', async () => {
     const env = setup()
-    renderMarkers(env, { route: route.slice(0, 15), activeIndex: 3 })
+    await renderMarkers(env, { route: route.slice(0, 15), activeIndex: 3 })
 
     await waitFor(() => expect(lastByIndex(env.captured)).toHaveLength(15))
     expect(env.captured.slice(0, 15).map((entry) => entry.props.title)).toEqual(
@@ -281,14 +287,14 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
         />
       </core.LeafletContext.Provider>
     )
-    const utils = render(tree(route))
+    const utils = await render(tree(route))
     await waitFor(() => expect(instances).toHaveLength(20))
     const before = env.captured.slice(-20)
 
     // Ввод в панели конструктора перерисовывает карту тем же маршрутом, а
     // переименование — новым массивом с теми же координатами.
     const renamed = route.map((point, index) => (index === 1 ? { ...point, name: 'Мирский замок' } : { ...point }))
-    utils.rerender(tree(renamed))
+    await utils.rerender(tree(renamed))
     const after = env.captured.slice(-20)
 
     after.forEach((entry, index) => {
@@ -332,7 +338,7 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
       return <>{props.children}</>
     }
     env.RL.Marker = LiveMarker
-    renderMarkers(env, { draggable: true })
+    await renderMarkers(env, { draggable: true })
 
     await waitFor(() => expect(instances).toHaveLength(20))
     instances.forEach((instance) => {
@@ -364,7 +370,7 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
       return <>{props.children}</>
     }
     env.RL.Marker = LiveMarker
-    renderMarkers(env, { draggable: false })
+    await renderMarkers(env, { draggable: false })
 
     await waitFor(() => expect(instances).toHaveLength(20))
     instances.forEach((instance) => {
@@ -410,7 +416,7 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
       return <>{props.children}</>
     }
     env.RL.Marker = LiveMarker
-    renderMarkers(env, { draggable: true, route: route.slice(0, 1) })
+    await renderMarkers(env, { draggable: true, route: route.slice(0, 1) })
 
     await waitFor(() => expect(capturedInstance).not.toBeNull())
     expect(capturedEventHandlers?.add).toEqual(expect.any(Function))
@@ -433,10 +439,21 @@ describe('#2059 TripPlanRouteMarkers.web', () => {
 
   it('без ядра react-leaflet маркеры идут прямо на карту', async () => {
     const env = setup()
-    renderMarkers(env, { RLCore: undefined })
+    await renderMarkers(env, { RLCore: undefined })
 
     await waitFor(() => expect(lastByIndex(env.captured)).toHaveLength(20))
     expect(env.L.markerClusterGroup).not.toHaveBeenCalled()
     for (const entry of lastByIndex(env.captured)) expect(entry.container).toBeUndefined()
   })
 })
+
+let web: WebMapTestRuntime<typeof TripPlanRouteMarkers>
+beforeAll(() => {
+  web = createWebMapTestRuntime(React, () => require('@/components/trips/planning/TripPlanRouteMarkers').default, { sharedModules: { '@react-leaflet/core': core } })
+  TripPlanRouteMarkers = web.subject
+  ;({ render, waitFor } = web)
+  act = React.act
+  expect.extend(web.matchers)
+})
+afterEach(() => web.cleanup())
+afterAll(() => expect.extend(require('@testing-library/react-native/matchers')))

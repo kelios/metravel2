@@ -11,35 +11,35 @@ const path = require('path')
 const originalOS = Platform.OS
 const setOS = (os: string) => Object.defineProperty(Platform, 'OS', { configurable: true, get: () => os })
 
-const renderInQuest = (text: string, contentLocale: string, countryCode?: string) =>
-  render(
+const renderInQuest = async (text: string, contentLocale: string, countryCode?: string) =>
+  await render(
     <QuestContentLanguageProvider contentLocale={contentLocale} countryCode={countryCode}>
       <QuestContentText testID="content">{text}</QuestContentText>
     </QuestContentLanguageProvider>,
   )
 
-const langParts = (tree: ReturnType<typeof render>) =>
-  tree.UNSAFE_root.findAll((node) => typeof node.props.lang === 'string' && typeof node.type !== 'string')
+const langParts = (tree: Awaited<ReturnType<typeof render>>) =>
+  tree.container.queryAll((node) => typeof node.props.lang === 'string')
     .map((node) => `${node.props.children}=${node.props.lang}`)
 
 describe('QuestContentText', () => {
   afterEach(() => setOS(originalOS))
 
-  it('на web кириллическая вывеска в PL/EN-тексте получает lang языка оригинала', () => {
+  it('на web кириллическая вывеска в PL/EN-тексте получает lang языка оригинала', async () => {
     setOS('web')
-    const pl = renderInQuest('Zajrzyj do kawiarni «Ландыш» przy placu.', 'pl', 'BY')
+    const pl = await renderInQuest('Zajrzyj do kawiarni «Ландыш» przy placu.', 'pl', 'BY')
     expect(langParts(pl)).toEqual(['Ландыш=ru'])
     expect(pl.getByTestId('content')).toHaveTextContent('Zajrzyj do kawiarni «Ландыш» przy placu.')
 
-    expect(langParts(renderInQuest('The «Лесвіца ў Падміколле» stairs.', 'en', 'BY'))).toEqual(['Лесвіца ў Падміколле=be'])
-    expect(langParts(renderInQuest('Find «Львівська копальня кави».', 'en', 'UA'))).toEqual(['Львівська копальня кави=uk'])
+    expect(langParts(await renderInQuest('The «Лесвіца ў Падміколле» stairs.', 'en', 'BY'))).toEqual(['Лесвіца ў Падміколле=be'])
+    expect(langParts(await renderInQuest('Find «Львівська копальня кави».', 'en', 'UA'))).toEqual(['Львівська копальня кави=uk'])
   })
 
-  it('кириллическая локаль контента и native не размечаются', () => {
+  it('кириллическая локаль контента и native не размечаются', async () => {
     setOS('web')
-    expect(langParts(renderInQuest('Кавярня «Ландыш»', 'be', 'BY'))).toEqual([])
+    expect(langParts(await renderInQuest('Кавярня «Ландыш»', 'be', 'BY'))).toEqual([])
     setOS('ios')
-    const native = renderInQuest('Zajrzyj do kawiarni «Ландыш».', 'pl', 'BY')
+    const native = await renderInQuest('Zajrzyj do kawiarni «Ландыш».', 'pl', 'BY')
     expect(langParts(native)).toEqual([])
     expect(native.getByTestId('content')).toHaveTextContent('Zajrzyj do kawiarni «Ландыш».')
   })

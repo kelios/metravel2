@@ -66,18 +66,18 @@ describe('FacebookSignInButton.web Facebook JS SDK locale (#1975)', () => {
         delete window.fbAsyncInit;
     });
 
-    it('does not insert facebook-jssdk until locale is resolved', () => {
-        render(<FacebookSignInButton onSuccess={jest.fn()} />);
+    it('does not insert facebook-jssdk until locale is resolved', async () => {
+        await render(<FacebookSignInButton onSuccess={jest.fn()} />);
         expect(readSdkSrc()).toBeNull();
     });
 
-    it('loads en_US after a late locale resolution instead of keeping ru_RU', () => {
-        const { rerender } = render(<FacebookSignInButton onSuccess={jest.fn()} />);
+    it('loads en_US after a late locale resolution instead of keeping ru_RU', async () => {
+        const { rerender } = await render(<FacebookSignInButton onSuccess={jest.fn()} />);
         expect(readSdkSrc()).toBeNull();
 
         mockLocaleState.locale = 'en';
         mockLocaleState.isHydrated = true;
-        rerender(<FacebookSignInButton onSuccess={jest.fn()} />);
+        await rerender(<FacebookSignInButton onSuccess={jest.fn()} />);
 
         expect(readSdkSrc()).toBe(sdkSrcFor('en'));
         expect(readSdkSrc()).not.toContain('/ru_RU/');
@@ -89,32 +89,32 @@ describe('FacebookSignInButton.web Facebook JS SDK locale (#1975)', () => {
         ['uk', 'uk_UA'],
         ['pl', 'pl_PL'],
         ['en', 'en_US'],
-    ] as const)('maps locale %s to Facebook SDK %s', (locale, fbLocale) => {
+    ] as const)('maps locale %s to Facebook SDK %s', async (locale, fbLocale) => {
         mockLocaleState.locale = locale;
         mockLocaleState.isHydrated = true;
-        render(<FacebookSignInButton onSuccess={jest.fn()} />);
+        await render(<FacebookSignInButton onSuccess={jest.fn()} />);
         expect(readSdkSrc()).toBe(`https://connect.facebook.net/${fbLocale}/sdk.js`);
     });
 
-    it('rewrites src when locale changes after the first insert', () => {
+    it('rewrites src when locale changes after the first insert', async () => {
         mockLocaleState.isHydrated = true;
         mockLocaleState.locale = 'ru';
-        const { rerender } = render(<FacebookSignInButton onSuccess={jest.fn()} />);
+        const { rerender } = await render(<FacebookSignInButton onSuccess={jest.fn()} />);
         expect(readSdkSrc()).toBe(sdkSrcFor('ru'));
 
         mockLocaleState.locale = 'en';
-        rerender(<FacebookSignInButton onSuccess={jest.fn()} />);
+        await rerender(<FacebookSignInButton onSuccess={jest.fn()} />);
 
         expect(readSdkSrc()).toBe(sdkSrcFor('en'));
         expect(document.querySelectorAll(`#${SDK_ID}`)).toHaveLength(1);
         expect(window.FB).toBeUndefined();
     });
 
-    it('still opens the Facebook login flow after a locale-correct load', () => {
+    it('still opens the Facebook login flow after a locale-correct load', async () => {
         mockLocaleState.isHydrated = true;
         mockLocaleState.locale = 'pl';
         const onSuccess = jest.fn();
-        const screen = render(<FacebookSignInButton onSuccess={onSuccess} />);
+        const screen = await render(<FacebookSignInButton onSuccess={onSuccess} />);
         const script = document.getElementById(SDK_ID) as HTMLScriptElement;
         expect(script.getAttribute('src')).toBe(sdkSrcFor('pl'));
 
@@ -130,11 +130,11 @@ describe('FacebookSignInButton.web Facebook JS SDK locale (#1975)', () => {
             },
         );
         window.FB = { init: jest.fn(), login };
-        act(() => {
+        await act(() => {
             script.dispatchEvent(new Event('load'));
         });
 
-        fireEvent.press(screen.getByTestId('facebook-sign-in-button'));
+        await fireEvent.press(screen.getByTestId('facebook-sign-in-button'));
         expect(login).toHaveBeenCalled();
         expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ accessToken: 'token' }));
     });

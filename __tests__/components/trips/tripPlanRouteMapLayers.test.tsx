@@ -1,3 +1,4 @@
+import { createWebMapTestRuntime, type WebMapTestRuntime } from '@/__tests__/helpers/webMapTestRuntime'
 /**
  * #1306 — слои главной карты на карте конструктора маршрута.
  *
@@ -11,7 +12,9 @@
  */
 import React from 'react'
 import { Platform } from 'react-native'
-import { fireEvent, render, waitFor } from '@testing-library/react-native'
+let fireEvent: typeof import('@testing-library/react/pure').fireEvent
+let render: typeof import('@testing-library/react/pure').render
+let waitFor: typeof import('@testing-library/react/pure').waitFor
 
 import type { RoutePoint } from '@/api/plannedTrips'
 import { getDefaultOverlayState, useMapOverlaysStore } from '@/stores/mapOverlaysStore'
@@ -30,7 +33,6 @@ const makeController = (id: string): Controller => {
   return controller
 }
 
-jest.mock('react-dom', () => ({ createPortal: (node: unknown) => node }))
 
 jest.mock('@/utils/ensureLeafletCss', () => ({ ensureLeafletCss: jest.fn() }))
 
@@ -140,7 +142,7 @@ jest.mock('@/hooks/useTheme', () => ({
     new Proxy({}, { get: (_t, key) => String(key) }) as unknown as Record<string, string>,
 }))
 
-import TripPlanRouteMap from '@/components/trips/planning/TripPlanRouteMap.web'
+let TripPlanRouteMap: typeof import('@/components/trips/planning/TripPlanRouteMap.web').default
 
 const LAYERS_LABEL = 'Слои карты'
 
@@ -159,13 +161,13 @@ const route: RoutePoint[] = [
 ]
 
 const renderMap = async () => {
-  const utils = render(<TripPlanRouteMap route={route} />)
-  await waitFor(() => utils.UNSAFE_getByProps({ 'data-testid': 'trip-plan-map-layers' }))
+  const utils = await render(<TripPlanRouteMap route={route} />)
+  await waitFor(() => utils.getByTestId('trip-plan-map-layers'))
   return utils
 }
 
-const openLayers = (utils: Awaited<ReturnType<typeof renderMap>>) => {
-  fireEvent(utils.UNSAFE_getByProps({ 'data-testid': 'trip-plan-map-layers' }), 'click')
+const openLayers = async (utils: Awaited<ReturnType<typeof renderMap>>) => {
+  fireEvent.click(utils.getByTestId('trip-plan-map-layers'))
 }
 
 describe('TripPlanRouteMap — слои карты (#1306)', () => {
@@ -189,7 +191,7 @@ describe('TripPlanRouteMap — слои карты (#1306)', () => {
     const utils = await renderMap()
 
     expect(
-      utils.UNSAFE_getByProps({ 'data-testid': 'trip-plan-map-layers' }).props['aria-label'],
+      utils.getByTestId('trip-plan-map-layers').getAttribute('aria-label'),
     ).toBe(LAYERS_LABEL)
     expect(utils.queryByTestId('map-mobile-layers-popover')).toBeNull()
   })
@@ -197,7 +199,7 @@ describe('TripPlanRouteMap — слои карты (#1306)', () => {
   it('открывает поповер с тем же набором слоёв, что на главной карте', async () => {
     const utils = await renderMap()
 
-    openLayers(utils)
+    await openLayers(utils)
 
     expect(utils.getByTestId('map-mobile-layers-popover')).toBeTruthy()
     // Ночлег/кемпинги, POI и маршруты — те же id, что на /map.
@@ -220,8 +222,8 @@ describe('TripPlanRouteMap — слои карты (#1306)', () => {
   it('включение слоя стартует его контроллер и сохраняет выбор в общий store', async () => {
     const utils = await renderMap()
 
-    openLayers(utils)
-    fireEvent.press(utils.getByTestId('map-overlay-osm-camping'))
+    await openLayers(utils)
+    fireEvent.click(utils.getByTestId('map-overlay-osm-camping'))
 
     await waitFor(() => expect(controllers['osm-camping'].start).toHaveBeenCalled())
     expect(controllers['osm-camping'].layer.addTo).toHaveBeenCalled()
@@ -236,7 +238,7 @@ describe('TripPlanRouteMap — слои карты (#1306)', () => {
 
     const utils = await renderMap()
 
-    expect(utils.getByTestId('trip-plan-weather-legend').props.children).toContain('weather-temp')
+    expect(utils.getByTestId('trip-plan-weather-legend').textContent).toContain('weather-temp')
   })
 
   // #2073: во встроенной desktop-карте (`fill=false`, TripPlanRouteMap.web.tsx)
@@ -251,18 +253,16 @@ describe('TripPlanRouteMap — слои карты (#1306)', () => {
   ]]
   const DEFAULT_TRACK_LEGEND_BOTTOM = 12
 
-  const trackLegendBottom = (utils: { getByTestId: (id: string) => { props: { style?: unknown } } }) => {
-    const style = utils.getByTestId('trip-plan-map-original-track-legend').props.style
-    const flat = (Array.isArray(style) ? style : [style]) as Array<Record<string, unknown> | undefined>
-    const withBottom = flat.reverse().find((entry) => entry && typeof entry.bottom === 'number')
-    return withBottom?.bottom as number | undefined
+  const trackLegendBottom = (utils: ReturnType<typeof render>) => {
+    const legend = utils.getByTestId('trip-plan-map-original-track-legend')
+    return Number.parseFloat(window.getComputedStyle(legend).bottom)
   }
 
   it('#2073 поднимает легенду трека над легендой погоды, а не прячет её, пока на встроенной карте активен погодный слой', async () => {
     useMapOverlaysStore.getState().setOverlayEnabled('weather-temp', true)
 
-    const utils = render(<TripPlanRouteMap route={route} originalTrackSegments={originalTrackSegments} />)
-    await waitFor(() => utils.UNSAFE_getByProps({ 'data-testid': 'trip-plan-map-layers' }))
+    const utils = await render(<TripPlanRouteMap route={route} originalTrackSegments={originalTrackSegments} />)
+    await waitFor(() => utils.getByTestId('trip-plan-map-layers'))
 
     expect(utils.getByTestId('trip-plan-weather-legend')).toBeTruthy()
     // Обе легенды видны одновременно (Task Contract), поэтому трек не исчез —
@@ -272,10 +272,20 @@ describe('TripPlanRouteMap — слои карты (#1306)', () => {
   })
 
   it('#2073 держит легенду трека на дефолтном отступе, когда погодный слой выключен', async () => {
-    const utils = render(<TripPlanRouteMap route={route} originalTrackSegments={originalTrackSegments} />)
-    await waitFor(() => utils.UNSAFE_getByProps({ 'data-testid': 'trip-plan-map-layers' }))
+    const utils = await render(<TripPlanRouteMap route={route} originalTrackSegments={originalTrackSegments} />)
+    await waitFor(() => utils.getByTestId('trip-plan-map-layers'))
 
     expect(utils.getByTestId('trip-plan-map-original-track-legend')).toBeTruthy()
     expect(trackLegendBottom(utils)).toBe(DEFAULT_TRACK_LEGEND_BOTTOM)
   })
 })
+
+let web: WebMapTestRuntime<typeof TripPlanRouteMap>
+beforeAll(() => {
+  web = createWebMapTestRuntime(React, () => require('@/components/trips/planning/TripPlanRouteMap.web').default, { sharedModules: { '@/stores/mapOverlaysStore': require('@/stores/mapOverlaysStore') } })
+  TripPlanRouteMap = web.subject
+  ;({ fireEvent, render, waitFor } = web)
+  expect.extend(web.matchers)
+})
+afterEach(() => web.cleanup())
+afterAll(() => expect.extend(require('@testing-library/react-native/matchers')))

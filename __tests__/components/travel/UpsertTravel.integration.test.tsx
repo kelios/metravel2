@@ -221,7 +221,7 @@ describe('Travel wizard publish step (integration)', () => {
     mockPush.mockClear();
   });
 
-  const renderPublishStep = (overrideForm: Partial<TravelFormData> & Record<string, any> = {}) => {
+  const renderPublishStep = async (overrideForm: Partial<TravelFormData> & Record<string, any> = {}) => {
     const formData: TravelFormData = { ...baseFormData, ...(overrideForm as any) };
 
     const setFormData = jest.fn();
@@ -229,7 +229,7 @@ describe('Travel wizard publish step (integration)', () => {
     const onGoBack = jest.fn();
     const onFinish = jest.fn(async () => undefined);
 
-    const utils = render(
+    const utils = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -248,10 +248,10 @@ describe('Travel wizard publish step (integration)', () => {
   };
 
   it('saves draft with correct status and sends analytics', async () => {
-    const { getByText, onManualSave } = renderPublishStep({ moderation: false, publish: false });
+    const { getByText, onManualSave } = await renderPublishStep({ moderation: false, publish: false });
 
     const primaryButton = getByText('Сохранить черновик');
-    fireEvent.press(primaryButton);
+    await fireEvent.press(primaryButton);
 
     await waitFor(() => {
       expect(onManualSave).toHaveBeenCalled();
@@ -261,7 +261,7 @@ describe('Travel wizard publish step (integration)', () => {
   });
 
   it('shows moderation checklist errors and does not finish when required fields are missing', async () => {
-    const { getByTestId, getByText, onFinish } = renderPublishStep({
+    const { getByTestId, getByText, onFinish } = await renderPublishStep({
       countries: [],
       coordsMeTravel: [],
       moderation: false,
@@ -269,10 +269,10 @@ describe('Travel wizard publish step (integration)', () => {
     });
 
     const statusModeration = getByTestId('status-moderation');
-    fireEvent.press(statusModeration);
+    await fireEvent.press(statusModeration);
 
     const primaryButton = getByTestId('primary-button');
-    fireEvent.press(primaryButton);
+    await fireEvent.press(primaryButton);
 
     await waitFor(() => {
       expect(getByText('Нельзя отправить: исправьте ошибки')).toBeTruthy();
@@ -287,7 +287,7 @@ describe('Travel wizard publish step (integration)', () => {
   });
 
   it('successfully sends to moderation and redirects to "/metravel" when checklist is complete', async () => {
-    const { getByTestId, onFinish } = renderPublishStep({
+    const { getByTestId, onFinish } = await renderPublishStep({
       countries: ['1'],
       categories: ['city'],
       coordsMeTravel: [{ lat: 1, lng: 2, categories: ['1'] } as any],
@@ -297,10 +297,10 @@ describe('Travel wizard publish step (integration)', () => {
     } as any);
 
     const statusModeration = getByTestId('status-moderation');
-    fireEvent.press(statusModeration);
+    await fireEvent.press(statusModeration);
 
     const primaryButton = getByTestId('primary-button');
-    fireEvent.press(primaryButton);
+    await fireEvent.press(primaryButton);
 
     await waitFor(() => {
       expect(onFinish).toHaveBeenCalled();
@@ -326,7 +326,7 @@ describe('Travel wizard publish step (integration)', () => {
     const onGoBack = jest.fn();
     const onFinish = jest.fn(async () => undefined);
 
-    const { getByText } = render(
+    const { getByText } = await render(
       <TravelWizardStepPublish
         currentStep={6}
         totalSteps={6}
@@ -355,7 +355,7 @@ describe('Travel wizard publish step (integration)', () => {
     expect(categoriesIssue).toBeTruthy();
 
     // Mock renders checklist row labels; tap by label text
-    fireEvent.press(getByText(categoriesIssue!.label));
+    await fireEvent.press(getByText(categoriesIssue!.label));
 
     expect(onNavigateToIssue).toHaveBeenCalledWith(categoriesIssue);
   });

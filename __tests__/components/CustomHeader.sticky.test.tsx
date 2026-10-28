@@ -1,5 +1,5 @@
 import React from 'react';
-import renderer, { act } from 'react-test-renderer';
+import { render } from '@testing-library/react-native';
 import { Platform, StyleSheet } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -70,15 +70,12 @@ describe('CustomHeader sticky behavior on web', () => {
     Object.defineProperty(Platform, 'OS', { value: 'web' });
 
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    let tree: renderer.ReactTestRenderer;
-    await act(async () => {
-      tree = renderer.create(
-        <QueryClientProvider client={queryClient}>
-          <CustomHeader />
-        </QueryClientProvider>,
-      );
-    });
-    const header = tree.root.findByProps({ testID: 'main-header' });
+    const { getByTestId } = await render(
+      <QueryClientProvider client={queryClient}>
+        <CustomHeader />
+      </QueryClientProvider>,
+    );
+    const header = getByTestId('main-header');
     const style = StyleSheet.flatten(header.props.style);
 
     expect(style.position).toBe('sticky');

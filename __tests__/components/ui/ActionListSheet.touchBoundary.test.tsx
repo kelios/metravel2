@@ -1,7 +1,7 @@
 import React from 'react'
 import { Pressable, ScrollView, Text } from 'react-native'
 import { render, within } from '@testing-library/react-native'
-import type { ReactTestInstance } from 'react-test-renderer'
+import type { TestInstance } from 'test-renderer'
 
 import ActionListSheet from '@/components/ui/ActionListSheet'
 
@@ -18,22 +18,22 @@ import ActionListSheet from '@/components/ui/ActionListSheet'
 // `Pressable` в jest-окружении проекта заменён упрощённым View с `onPress`
 // (`__tests__/setup.ts`), а настоящий Pressable берёт касание на старте всегда,
 // пока не `disabled`. Поэтому хост-узел с `onPress` считается отвечающим «да».
-const claimsStart = (node: ReactTestInstance): boolean => {
+const claimsStart = (node: TestInstance): boolean => {
   const ask = node.props.onStartShouldSetResponder
   if (typeof ask === 'function') return ask({ nativeEvent: {} }) === true
   return typeof node.props.onPress === 'function' && node.props.disabled !== true
 }
 
-const startResponder = (target: ReactTestInstance): ReactTestInstance | null => {
-  for (let node: ReactTestInstance | null = target; node; node = node.parent) {
+const startResponder = (target: TestInstance): TestInstance | null => {
+  for (let node: TestInstance | null = target; node; node = node.parent) {
     if (typeof node.type === 'string' && claimsStart(node)) return node
   }
   return null
 }
 
 describe('ActionListSheet: касания внутри листа не доходят до предка вне Modal (native)', () => {
-  const setup = () =>
-    render(
+  const setup = async () =>
+    await render(
       <Pressable testID="card-under-sheet" onPress={jest.fn()}>
         <ActionListSheet
           visible
@@ -51,8 +51,8 @@ describe('ActionListSheet: касания внутри листа не дохо�
       </Pressable>,
     )
 
-  it('без границы касание пустого места досталось бы карточке: она отвечает на старте', () => {
-    const { getByTestId } = setup()
+  it('без границы касание пустого места досталось бы карточке: она отвечает на старте', async () => {
+    const { getByTestId } = await setup()
     const card = getByTestId('card-under-sheet')
     expect(startResponder(card)).toBe(card)
   })
@@ -61,20 +61,20 @@ describe('ActionListSheet: касания внутри листа не дохо�
     ['отступ панели', 'bottom-sheet-panel'],
     ['разделитель над разрушительным пунктом', 'action-sheet-separator'],
     ['текст тела внутри ScrollView', 'sheet-body-text'],
-  ])('касание пустой поверхности (%s) берёт граница листа, а не карточка', (_name, testID) => {
-    const { getByTestId } = setup()
+  ])('касание пустой поверхности (%s) берёт граница листа, а не карточка', async (_name, testID) => {
+    const { getByTestId } = await setup()
     const responder = startResponder(getByTestId(testID))
     expect(responder?.props.testID).toBe('bottom-sheet-touch-boundary')
   })
 
-  it('граница не отдаёт касание предку на движении', () => {
-    const { getByTestId } = setup()
+  it('граница не отдаёт касание предку на движении', async () => {
+    const { getByTestId } = await setup()
     const boundary = getByTestId('bottom-sheet-touch-boundary')
     expect(boundary.props.onResponderTerminationRequest({ nativeEvent: {} })).toBe(false)
   })
 
-  it('граница лежит ВНЕ Modal: нативно она не предок содержимого листа и не перехватывает прокрутку тела', () => {
-    const { getByTestId, UNSAFE_root } = setup()
+  it('граница лежит ВНЕ Modal: нативно она не предок содержимого листа и не перехватывает прокрутку тела', async () => {
+    const { getByTestId, container } = await setup()
     const boundary = getByTestId('bottom-sheet-touch-boundary')
     // Оба узла существуют — иначе проверка ниже пуста.
     expect(getByTestId('bottom-sheet-root')).toBeTruthy()
@@ -82,7 +82,7 @@ describe('ActionListSheet: касания внутри листа не дохо�
     // Android: вью-ответчик перехватывает нативные касания своих потомков
     // (JSResponderHandler.onInterceptTouchEvent). Панель или корень внутри Modal
     // в роли ответчика отняли бы жест у ScrollView тела листа.
-    const insideModal = UNSAFE_root.findAll(
+    const insideModal = container.queryAll(
       (node) =>
         typeof node.type === 'string' &&
         typeof node.props.onStartShouldSetResponder === 'function' &&
@@ -93,8 +93,8 @@ describe('ActionListSheet: касания внутри листа не дохо�
     expect(boundary.props.style).toEqual(expect.objectContaining({ position: 'absolute', width: 0, height: 0 }))
   })
 
-  it('пункт, ✕ и шапка выигрывают своё касание сами — граница им не мешает', () => {
-    const { getByTestId, getByText, getByLabelText } = setup()
+  it('пункт, ✕ и шапка выигрывают своё касание сами — граница им не мешает', async () => {
+    const { getByTestId, getByText, getByLabelText } = await setup()
     const boundary = getByTestId('bottom-sheet-touch-boundary')
     const card = getByTestId('card-under-sheet')
 

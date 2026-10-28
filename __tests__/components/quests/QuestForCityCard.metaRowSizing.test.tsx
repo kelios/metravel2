@@ -1,3 +1,4 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 // #1947 (IOS-06), семья NATIVE-TEXT-ROW-001. Мета-ряд карточки квеста
 // («8 точек · ~2,5 ч · Средне») — вложенные `flexDirection: 'row'`, а сама
 // карточка несёт `overflow: 'hidden'`. В RN `flexShrink` по умолчанию 0, поэтому
@@ -52,7 +53,7 @@ const quest = {
   lng: 28.6,
 }
 
-const renderCard = () => render(<QuestForCityCard quest={quest as any} />)
+const renderCard = async () => await render(<QuestForCityCard quest={quest as any} />)
 
 const flatten = (testID: string) =>
   StyleSheet.flatten(screen.getByTestId(testID).props.style) as Record<string, unknown>
@@ -63,8 +64,8 @@ describe('QuestForCityCard — мета-ряд при длинной подпи�
     mockUseBreakpoints.mockReturnValue({ isMobile: true, isPhone: true, isSmallPhone: false })
   })
 
-  it('переносит мета-ряд и не задаёт ему фиксированной высоты', () => {
-    renderCard()
+  it('переносит мета-ряд и не задаёт ему фиксированной высоты', async () => {
+    await renderCard()
 
     const row = flatten('quest-card-meta-row')
 
@@ -75,8 +76,8 @@ describe('QuestForCityCard — мета-ряд при длинной подпи�
 
   it.each(['points', 'duration', 'difficulty'])(
     'даёт группе «%s» выход на сжатие внутри строки',
-    (key) => {
-      renderCard()
+    async (key) => {
+      await renderCard()
 
       const group = flatten(`quest-card-meta-${key}`)
 
@@ -88,14 +89,14 @@ describe('QuestForCityCard — мета-ряд при длинной подпи�
 
   it.each(['duration', 'difficulty'])(
     'держит разделитель перед группой «%s» несжимаемым — сжиматься должна подпись, а не точка',
-    (key) => {
-      renderCard()
+    async (key) => {
+      await renderCard()
 
       // Выход на сжатие в группе обязан быть ровно один (NATIVE-TEXT-ROW-001):
       // конкурирующий flexShrink у разделителя вернёт тихую обрезку подписи.
       const dots = screen
         .getByTestId(`quest-card-meta-${key}`)
-        .findAllByType(require('react-native').View)
+        .queryAll(node => node.type === 'View')
         .map((node: { props: { style?: unknown } }) =>
           StyleSheet.flatten(node.props.style) as Record<string, unknown>,
         )
@@ -106,13 +107,10 @@ describe('QuestForCityCard — мета-ряд при длинной подпи�
     },
   )
 
-  it('оставляет подписи явное многоточие вместо тихой обрезки', () => {
-    renderCard()
+  it('оставляет подписи явное многоточие вместо тихой обрезки', async () => {
+    await renderCard()
 
-    const label = screen.getByTestId('quest-card-meta-points').findAllByType(
-      require('react-native').Text,
-    )
-    const questLabel = label[label.length - 1]
+    const questLabel = getOnlyHost(screen.getByTestId('quest-card-meta-points'), node => node.props.numberOfLines === 1)
 
     expect(questLabel.props.numberOfLines).toBe(1)
     expect(StyleSheet.flatten(questLabel.props.style).flexShrink).toBe(1)

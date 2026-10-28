@@ -279,7 +279,7 @@ describe('queryOnlineManager: recovery from a stuck offline state (#603)', () =>
   it('delivers the recovered state to useNetworkStatus (offline banner source) through the NetInfo fan-out', async () => {
     const runtime = loadRuntime();
     runtime.setupQueryOnlineManager();
-    const { result } = renderHook(() => useNetworkStatus());
+    const { result } = await renderHook(() => useNetworkStatus());
     await act(async () => {
       await flush();
     });

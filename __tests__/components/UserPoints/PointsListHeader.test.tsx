@@ -27,8 +27,8 @@ afterAll(() => setPlatformOS(originalOS))
 
 const noop = () => {}
 
-const renderHeader = (overrides: Record<string, unknown> = {}) =>
-  render(
+const renderHeader = async (overrides: Record<string, unknown> = {}) =>
+  await render(
     <PointsListHeader
       styles={{}}
       colors={{ text: '#111', textMuted: '#666', textOnPrimary: '#fff' }}
@@ -62,48 +62,48 @@ const renderHeader = (overrides: Record<string, unknown> = {}) =>
   )
 
 describe('PointsListHeader — actions row', () => {
-  it('names every available action with visible text on a phone', () => {
-    const { getByText, queryByTestId } = renderHeader()
+  it('names every available action with visible text on a phone', async () => {
+    const { getByText, queryByTestId } = await renderHeader()
 
     expect(getByText('Управление точками')).toBeTruthy()
     expect(getByText('Показать фильтры')).toBeTruthy()
     expect(queryByTestId('userpoints-map-settings-toggle')).toBeNull()
   })
 
-  it('shows a labelled settings action when the map supports it', () => {
-    const { getByText } = renderHeader({ canShowMapSettings: true })
+  it('shows a labelled settings action when the map supports it', async () => {
+    const { getByText } = await renderHeader({ canShowMapSettings: true })
     expect(getByText('Показать настройки карты')).toBeTruthy()
   })
 
-  it('keeps the visible caption in sync with the toggled state', () => {
-    const { getByText } = renderHeader({ canShowMapSettings: true, showFilters: true, showMapSettings: true })
+  it('keeps the visible caption in sync with the toggled state', async () => {
+    const { getByText } = await renderHeader({ canShowMapSettings: true, showFilters: true, showMapSettings: true })
 
     expect(getByText('Скрыть фильтры')).toBeTruthy()
     expect(getByText('Скрыть настройки карты')).toBeTruthy()
   })
 
-  it('fires each action handler', () => {
+  it('fires each action handler', async () => {
     const onOpenActions = jest.fn()
     const onToggleFilters = jest.fn()
     const onToggleMapSettings = jest.fn()
-    const { getByTestId } = renderHeader({
+    const { getByTestId } = await renderHeader({
       canShowMapSettings: true,
       onOpenActions,
       onToggleFilters,
       onToggleMapSettings,
     })
 
-    fireEvent.press(getByTestId('userpoints-actions-open'))
-    fireEvent.press(getByTestId('userpoints-filters-toggle'))
-    fireEvent.press(getByTestId('userpoints-map-settings-toggle'))
+    await fireEvent.press(getByTestId('userpoints-actions-open'))
+    await fireEvent.press(getByTestId('userpoints-filters-toggle'))
+    await fireEvent.press(getByTestId('userpoints-map-settings-toggle'))
 
     expect(onOpenActions).toHaveBeenCalledTimes(1)
     expect(onToggleFilters).toHaveBeenCalledTimes(1)
     expect(onToggleMapSettings).toHaveBeenCalledTimes(1)
   })
 
-  it('gives each action row the full width and the 44dp touch floor', () => {
-    const { getByTestId } = renderHeader()
+  it('gives each action row the full width and the 44dp touch floor', async () => {
+    const { getByTestId } = await renderHeader()
 
     for (const testID of [
       'userpoints-actions-open',

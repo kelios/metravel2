@@ -62,14 +62,14 @@ const createTestClient = () =>
     },
   });
 
-const renderItem = (
+const renderItem = async (
   overrides: Partial<Travel> = {},
   props: Partial<Omit<ComponentProps<typeof TravelListItem>, 'travel'>> = {},
 ) => {
   const queryClient = createTestClient();
   const travel: Travel = { ...baseTravel, ...overrides } as any;
 
-  return render(
+  return await render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <FavoritesProvider>
@@ -87,8 +87,8 @@ const renderItem = (
 };
 
 describe('TravelListItem content & metadata', () => {
-  it('renders the travel title', () => {
-    const { getByText } = renderItem();
+  it('renders the travel title', async () => {
+    const { getByText } = await renderItem();
     expect(getByText('Test travel')).toBeTruthy();
   });
 
@@ -99,8 +99,8 @@ describe('TravelListItem content & metadata', () => {
       'over-two-line',
       'Большое путешествие по городам и природным маршрутам Польши с подробным планом на каждый день',
     ],
-  ])('keeps the %s title in the shared two-line slot', (_caseName, title) => {
-    const { getAllByText, getByText } = renderItem({ name: title });
+  ])('keeps the %s title in the shared two-line slot', async (_caseName, title) => {
+    const { getAllByText, getByText } = await renderItem({ name: title });
     const titleElement = getByText(title);
     const titleStyle = StyleSheet.flatten(titleElement.props.style);
 
@@ -143,13 +143,13 @@ describe('TravelListItem content & metadata', () => {
     });
   });
 
-  it('renders image stub when image URL is missing', () => {
-    const { getByTestId } = renderItem({ travel_image_thumb_url: '' } as any);
+  it('renders image stub when image URL is missing', async () => {
+    const { getByTestId } = await renderItem({ travel_image_thumb_url: '' } as any);
     expect(getByTestId('image-stub')).toBeTruthy();
   });
 
-  it('renders the separate title line even when image URL is missing (draft-like)', () => {
-    const { getAllByText, getByText } = renderItem({ travel_image_thumb_url: '' } as any);
+  it('renders the separate title line even when image URL is missing (draft-like)', async () => {
+    const { getAllByText, getByText } = await renderItem({ travel_image_thumb_url: '' } as any);
     const titleElement = getByText('Test travel');
     expect(titleElement).toBeTruthy();
     expect(getAllByText('Test travel')).toHaveLength(1);
@@ -157,37 +157,37 @@ describe('TravelListItem content & metadata', () => {
     expect(StyleSheet.flatten(titleElement.props.style)?.color).not.toBe('#ffffff');
   });
 
-  it('renders image stub when image URL is from watermark domain', () => {
-    const { getByTestId } = renderItem({
+  it('renders image stub when image URL is from watermark domain', async () => {
+    const { getByTestId } = await renderItem({
       travel_image_thumb_url: 'https://shutterstock.com/image-photo/test.jpg',
     } as any);
     expect(getByTestId('image-stub')).toBeTruthy();
   });
 
-  it('renders views meta when views are zero (shows 0)', () => {
-    const { queryByTestId, queryByText } = renderItem({ countUnicIpView: '0' } as any);
+  it('renders views meta when views are zero (shows 0)', async () => {
+    const { queryByTestId, queryByText } = await renderItem({ countUnicIpView: '0' } as any);
     expect(queryByTestId('views-meta')).toBeNull();
     expect(queryByTestId('views-overlay')).toBeNull();
     expect(queryByText('0')).toBeNull();
   });
 
-  it('renders views on the media overlay from the public threshold', () => {
-    const { getByTestId, queryByTestId } = renderItem({ countUnicIpView: '50' } as any);
+  it('renders views on the media overlay from the public threshold', async () => {
+    const { getByTestId, queryByTestId } = await renderItem({ countUnicIpView: '50' } as any);
     expect(queryByTestId('views-meta')).toBeNull();
     expect(getByTestId('views-overlay')).toBeTruthy();
   });
 
   // #2780: «Просмотров: 1» на свежей статье отталкивает читателя.
-  it('hides a small view count from readers but keeps it for the author', () => {
-    const reader = renderItem({ countUnicIpView: '8' } as any);
+  it('hides a small view count from readers but keeps it for the author', async () => {
+    const reader = await renderItem({ countUnicIpView: '8' } as any);
     expect(reader.queryByTestId('views-overlay')).toBeNull();
-    reader.unmount();
-    const author = renderItem({ countUnicIpView: '8' } as any, { renderAuthorFeedback: () => null });
+    await reader.unmount();
+    const author = await renderItem({ countUnicIpView: '8' } as any, { renderAuthorFeedback: () => null });
     expect(author.getByTestId('views-overlay')).toBeTruthy();
   });
 
-  it('keeps views and author on media overlays on narrow desktop grid cards', () => {
-    const { getByTestId, queryByTestId, getByText } = renderItem(
+  it('keeps views and author on media overlays on narrow desktop grid cards', async () => {
+    const { getByTestId, queryByTestId, getByText } = await renderItem(
       {
         countryName: 'Беларусь',
         countUnicIpView: '430',
@@ -207,26 +207,26 @@ describe('TravelListItem content & metadata', () => {
     expect(getByText('Long Author Name')).toBeTruthy();
   });
 
-  it('renders the year on web travel cards', () => {
-    const { getByTestId, getByText } = renderItem({ year: '2024' } as any);
+  it('renders the year on web travel cards', async () => {
+    const { getByTestId, getByText } = await renderItem({ year: '2024' } as any);
 
     expect(getByTestId('year-meta')).toBeTruthy();
     expect(getByText('2024')).toBeTruthy();
   });
 
-  it('omits the year when it is empty or invalid', () => {
-    const empty = renderItem({ year: '' } as any);
+  it('omits the year when it is empty or invalid', async () => {
+    const empty = await renderItem({ year: '' } as any);
     expect(empty.queryByTestId('year-meta')).toBeNull();
 
-    const invalid = renderItem({ year: 'not-a-year' } as any);
+    const invalid = await renderItem({ year: 'not-a-year' } as any);
     expect(invalid.queryByTestId('year-meta')).toBeNull();
 
-    const outOfRange = renderItem({ year: '1200' } as any);
+    const outOfRange = await renderItem({ year: '1200' } as any);
     expect(outOfRange.queryByTestId('year-meta')).toBeNull();
   });
 
-  it('renders engagement metrics on the travel card when stats exist', () => {
-    const { getByLabelText } = renderItem({
+  it('renders engagement metrics on the travel card when stats exist', async () => {
+    const { getByLabelText } = await renderItem({
       engagementStats: {
         favoritesCount: 1,
         wishlistCount: 2,
@@ -239,8 +239,8 @@ describe('TravelListItem content & metadata', () => {
     expect(getByLabelText('Планируют: 3')).toBeTruthy();
   });
 
-  it('does not render author rank badge on the travel card', () => {
-    const { queryByTestId, queryByText } = renderItem({
+  it('does not render author rank badge on the travel card', async () => {
+    const { queryByTestId, queryByText } = await renderItem({
       authorRank: { level: 5, title: 'Эксперт' },
     } as any);
 
@@ -248,14 +248,14 @@ describe('TravelListItem content & metadata', () => {
     expect(queryByText('Эксперт')).toBeNull();
   });
 
-  it('renders countries list with up to 2 countries joined inline', () => {
-    const { getByText, queryByText } = renderItem({ countryName: 'USA, France, Germany' } as any);
+  it('renders countries list with up to 2 countries joined inline', async () => {
+    const { getByText, queryByText } = await renderItem({ countryName: 'USA, France, Germany' } as any);
     expect(getByText('USA, France')).toBeTruthy();
     expect(queryByText('Germany')).toBeNull();
   });
 
-  it('prefers travel.user name fields and allows navigating to author profile', () => {
-    const { getByLabelText: _getByLabelText, getByText } = renderItem({
+  it('prefers travel.user name fields and allows navigating to author profile', async () => {
+    const { getByLabelText: _getByLabelText, getByText } = await renderItem({
       user: { id: 99, first_name: 'John', last_name: 'Doe' } as any,
       userIds: undefined as any,
       userName: 'Fallback Author',
@@ -268,11 +268,11 @@ describe('TravelListItem content & metadata', () => {
     expect(getByText('John Doe')).toBeTruthy();
   });
 
-  it('does not render decorative Popular/New badges', () => {
+  it('does not render decorative Popular/New badges', async () => {
     const now = new Date();
     const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
 
-    const { queryByText } = renderItem({
+    const { queryByText } = await renderItem({
       countUnicIpView: '1001',
       created_at: twoDaysAgo.toISOString(),
     } as any);
@@ -283,23 +283,23 @@ describe('TravelListItem content & metadata', () => {
 
   // Регрессионные тесты для условного отображения контента
   describe('Content area conditional rendering', () => {
-    it('renders content area when author exists', () => {
-      const { getByText } = renderItem({ user: { name: 'John Doe' } } as any);
+    it('renders content area when author exists', async () => {
+      const { getByText } = await renderItem({ user: { name: 'John Doe' } } as any);
       expect(getByText('John Doe')).toBeTruthy();
     });
 
-    it('renders content area when country exists', () => {
-      const { getByText } = renderItem({ countryName: 'France' } as any);
+    it('renders content area when country exists', async () => {
+      const { getByText } = await renderItem({ countryName: 'France' } as any);
       expect(getByText('France')).toBeTruthy();
     });
 
-    it('renders content area when views exist', () => {
-      const { getByTestId } = renderItem({ countUnicIpView: '120' } as any);
+    it('renders content area when views exist', async () => {
+      const { getByTestId } = await renderItem({ countUnicIpView: '120' } as any);
       expect(getByTestId('views-overlay')).toBeTruthy();
     });
 
-    it('does not render content area when no information exists', () => {
-      const { queryByTestId, queryByText } = renderItem({
+    it('does not render content area when no information exists', async () => {
+      const { queryByTestId, queryByText } = await renderItem({
         userName: '', // Убираем автора
         userIds: '', // Убираем ID автора
         countryName: '',
@@ -315,8 +315,8 @@ describe('TravelListItem content & metadata', () => {
       expect(queryByText('star')).toBeNull();
     });
 
-    it('renders partial content when only some information exists', () => {
-      const { getByText, queryByTestId, queryByText } = renderItem({
+    it('renders partial content when only some information exists', async () => {
+      const { getByText, queryByTestId, queryByText } = await renderItem({
         user: { name: 'John Doe' },
         countryName: '',
         countUnicIpView: '0',
@@ -334,9 +334,9 @@ describe('TravelListItem content & metadata', () => {
       expect(queryByText('Россия')).toBeNull(); // Базовая страна отсутствует
     });
 
-    it('maintains consistent card height regardless of content', () => {
-      const cardWithContent = renderItem({ user: { name: 'John Doe' } } as any);
-      const cardWithoutContent = renderItem({
+    it('maintains consistent card height regardless of content', async () => {
+      const cardWithContent = await renderItem({ user: { name: 'John Doe' } } as any);
+      const cardWithoutContent = await renderItem({
         user: null,
         countryName: '',
         countUnicIpView: '0',

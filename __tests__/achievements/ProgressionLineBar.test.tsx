@@ -1,3 +1,4 @@
+import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 import { render } from '@testing-library/react-native'
 import type { ProgressionLine } from '@/api/gamification'
 
@@ -38,18 +39,18 @@ const makeLine = (overrides: Partial<ProgressionLine> = {}): ProgressionLine => 
 // ── 1. Не-max линейка: базовые поля ───────────────────────────────────────────
 
 describe('ProgressionLineBar — не-max линейка', () => {
-  it('рендерит activityName как заголовок трека', () => {
-    const { getByText } = render(<ProgressionLineBar line={makeLine({ activityName: 'Участник' })} />)
+  it('рендерит activityName как заголовок трека', async () => {
+    const { getByText } = await render(<ProgressionLineBar line={makeLine({ activityName: 'Участник' })} />)
     expect(getByText('Участник')).toBeTruthy()
   })
 
-  it('рендерит чип уровня в формате "Ур. {level}"', () => {
-    const { getByText } = render(<ProgressionLineBar line={makeLine({ level: 2 })} />)
+  it('рендерит чип уровня в формате "Ур. {level}"', async () => {
+    const { getByText } = await render(<ProgressionLineBar line={makeLine({ level: 2 })} />)
     expect(getByText('Ур. 2')).toBeTruthy()
   })
 
-  it('рендерит description из пропа line.description', () => {
-    const { getByText } = render(
+  it('рендерит description из пропа line.description', async () => {
+    const { getByText } = await render(
       <ProgressionLineBar
         line={makeLine({ description: 'Совместные поездки, к которым вы присоединились' })}
       />,
@@ -57,19 +58,19 @@ describe('ProgressionLineBar — не-max линейка', () => {
     expect(getByText('Совместные поездки, к которым вы присоединились')).toBeTruthy()
   })
 
-  it('рендерит значение current', () => {
-    const { getByText } = render(<ProgressionLineBar line={makeLine({ current: 47 })} />)
+  it('рендерит значение current', async () => {
+    const { getByText } = await render(<ProgressionLineBar line={makeLine({ current: 47 })} />)
     expect(getByText('47')).toBeTruthy()
   })
 
-  it('рендерит подпись "очк." рядом с current', () => {
-    const { getByText } = render(<ProgressionLineBar line={makeLine()} />)
+  it('рендерит подпись "очк." рядом с current', async () => {
+    const { getByText } = await render(<ProgressionLineBar line={makeLine()} />)
     expect(getByText('очк.')).toBeTruthy()
   })
 
-  it('рендерит подпись прогресса с remaining = nextLevelMin - current', () => {
+  it('рендерит подпись прогресса с remaining = nextLevelMin - current', async () => {
     // current=47, nextLevelMin=75 → remaining=28
-    const { getByText } = render(
+    const { getByText } = await render(
       <ProgressionLineBar
         line={makeLine({
           current: 47,
@@ -83,9 +84,9 @@ describe('ProgressionLineBar — не-max линейка', () => {
     expect(getByText('«Следопыт стаи» · ещё 28 до «Надёжный спутник»')).toBeTruthy()
   })
 
-  it('remaining корректно считается при current=currentLevelMin (только начал уровень)', () => {
+  it('remaining корректно считается при current=currentLevelMin (только начал уровень)', async () => {
     // current=25, nextLevelMin=75 → remaining=50
-    const { getByText } = render(
+    const { getByText } = await render(
       <ProgressionLineBar
         line={makeLine({
           current: 25,
@@ -115,13 +116,13 @@ describe('ProgressionLineBar — максимальный уровень', () =>
     isMaxLevel: true,
   })
 
-  it('рендерит подпись «"levelTitle" — максимальный уровень»', () => {
-    const { getByText } = render(<ProgressionLineBar line={maxLine} />)
+  it('рендерит подпись «"levelTitle" — максимальный уровень»', async () => {
+    const { getByText } = await render(<ProgressionLineBar line={maxLine} />)
     expect(getByText('«Мудрая лиса» — максимальный уровень')).toBeTruthy()
   })
 
-  it('НЕ рендерит текст "ещё ... до" в подписи при максимальном уровне', () => {
-    const { queryByText } = render(<ProgressionLineBar line={maxLine} />)
+  it('НЕ рендерит текст "ещё ... до" в подписи при максимальном уровне', async () => {
+    const { queryByText } = await render(<ProgressionLineBar line={maxLine} />)
     expect(queryByText(/ещё \d+ до/)).toBeNull()
   })
 })
@@ -129,8 +130,8 @@ describe('ProgressionLineBar — максимальный уровень', () =>
 // ── 3. FE-фолбэк описания ─────────────────────────────────────────────────────
 
 describe('ProgressionLineBar — FE-фолбэк ACTIVITY_DESC', () => {
-  it('показывает ACTIVITY_DESC[participant] когда description=null', () => {
-    const { getByText } = render(
+  it('показывает ACTIVITY_DESC[participant] когда description=null', async () => {
+    const { getByText } = await render(
       <ProgressionLineBar
         line={makeLine({ activityKind: 'participant', description: null })}
       />,
@@ -138,8 +139,8 @@ describe('ProgressionLineBar — FE-фолбэк ACTIVITY_DESC', () => {
     expect(getByText('Совместные поездки, к которым вы присоединились')).toBeTruthy()
   })
 
-  it('показывает ACTIVITY_DESC[author] когда description=null и activityKind=author', () => {
-    const { getByText } = render(
+  it('показывает ACTIVITY_DESC[author] когда description=null и activityKind=author', async () => {
+    const { getByText } = await render(
       <ProgressionLineBar
         line={makeLine({
           slug: 'boar',
@@ -151,8 +152,8 @@ describe('ProgressionLineBar — FE-фолбэк ACTIVITY_DESC', () => {
     expect(getByText('Опубликованные путешествия и статьи')).toBeTruthy()
   })
 
-  it('показывает ACTIVITY_DESC[reader] когда description=null и activityKind=reader', () => {
-    const { getByText } = render(
+  it('показывает ACTIVITY_DESC[reader] когда description=null и activityKind=reader', async () => {
+    const { getByText } = await render(
       <ProgressionLineBar
         line={makeLine({
           slug: 'fox',
@@ -164,8 +165,8 @@ describe('ProgressionLineBar — FE-фолбэк ACTIVITY_DESC', () => {
     expect(getByText('Прочитанные истории путешествий')).toBeTruthy()
   })
 
-  it('показывает ACTIVITY_DESC[explorer] когда description=null и activityKind=explorer', () => {
-    const { getByText } = render(
+  it('показывает ACTIVITY_DESC[explorer] когда description=null и activityKind=explorer', async () => {
+    const { getByText } = await render(
       <ProgressionLineBar
         line={makeLine({
           slug: 'bird',
@@ -177,8 +178,8 @@ describe('ProgressionLineBar — FE-фолбэк ACTIVITY_DESC', () => {
     expect(getByText('Открытые места и точки на карте')).toBeTruthy()
   })
 
-  it('BE-приоритет: при непустом description показывается именно он, а не фолбэк', () => {
-    const { getByText, queryByText } = render(
+  it('BE-приоритет: при непустом description показывается именно он, а не фолбэк', async () => {
+    const { getByText, queryByText } = await render(
       <ProgressionLineBar
         line={makeLine({
           activityKind: 'participant',
@@ -194,16 +195,16 @@ describe('ProgressionLineBar — FE-фолбэк ACTIVITY_DESC', () => {
 // ── 4. Регрессионный assert: name зверя НЕ в тексте трека ─────────────────────
 
 describe('ProgressionLineBar — регрессия: звериное имя тропы убрано из вёрстки', () => {
-  it('текст line.name ("Собачья") НЕ рендерится как текстовый узел', () => {
-    const { queryByText } = render(
+  it('текст line.name ("Собачья") НЕ рендерится как текстовый узел', async () => {
+    const { queryByText } = await render(
       <ProgressionLineBar line={makeLine({ name: 'Собачья' })} />,
     )
     // Имя тропы несёт только иконка-медальон, в текстовом дереве его быть не должно.
     expect(queryByText('Собачья')).toBeNull()
   })
 
-  it('текст line.name ("Кабанья") НЕ рендерится как текстовый узел', () => {
-    const { queryByText } = render(
+  it('текст line.name ("Кабанья") НЕ рендерится как текстовый узел', async () => {
+    const { queryByText } = await render(
       <ProgressionLineBar
         line={makeLine({ slug: 'boar', name: 'Кабанья', activityKind: 'author' })}
       />,
@@ -215,21 +216,21 @@ describe('ProgressionLineBar — регрессия: звериное имя т�
 // ── 5. Прочее ─────────────────────────────────────────────────────────────────
 
 describe('ProgressionLineBar — прочее', () => {
-  it('принимает testID и пробрасывает в корневой элемент', () => {
-    const { getByTestId } = render(
+  it('принимает testID и пробрасывает в корневой элемент', async () => {
+    const { getByTestId } = await render(
       <ProgressionLineBar line={makeLine()} testID="progression-line-bar-test" />,
     )
     expect(getByTestId('progression-line-bar-test')).toBeTruthy()
   })
 
-  it('корневой элемент имеет accessibilityRole="summary"', () => {
-    const { UNSAFE_getByProps } = render(<ProgressionLineBar line={makeLine()} />)
-    expect(UNSAFE_getByProps({ accessibilityRole: 'summary' })).toBeTruthy()
+  it('корневой элемент имеет accessibilityRole="summary"', async () => {
+    const { container } = await render(<ProgressionLineBar line={makeLine()} />)
+    expect(getOnlyHost(container, node => node.props.accessibilityRole === 'summary')).toBeTruthy()
   })
 
-  it('рендерится без краша когда current превышает nextLevelMin (remaining зажат в 0)', () => {
+  it('рендерится без краша когда current превышает nextLevelMin (remaining зажат в 0)', async () => {
     // remaining = max(0, 75 - 200) = 0
-    const { getByText } = render(
+    const { getByText } = await render(
       <ProgressionLineBar
         line={makeLine({
           current: 200,

@@ -85,7 +85,7 @@ describe('useQuestsForLocation', () => {
       },
     ])
 
-    const { result } = renderHook(() => useQuestsForLocation(KRAKOW_QUERY, { limit: 6 }), {
+    const { result } = await renderHook(() => useQuestsForLocation(KRAKOW_QUERY, { limit: 6 }), {
       wrapper: createWrapper(),
     })
 
@@ -109,7 +109,7 @@ describe('useQuestsForLocation', () => {
   it('передаёт серверу город, страну, код страны и первую координату', async () => {
     mockFetchQuestsNearLocation.mockResolvedValueOnce([])
 
-    const { result } = renderHook(() => useQuestsForLocation(KRAKOW_QUERY, { limit: 6 }), {
+    const { result } = await renderHook(() => useQuestsForLocation(KRAKOW_QUERY, { limit: 6 }), {
       wrapper: createWrapper(),
     })
 
@@ -133,7 +133,7 @@ describe('useQuestsForLocation', () => {
     mockFetchQuestsNearLocation.mockRejectedValueOnce(new ApiError(404, 'Not found'))
     mockFetchQuestsList.mockResolvedValueOnce([apiQuest])
 
-    const { result } = renderHook(() => useQuestsForLocation(KRAKOW_QUERY, { limit: 6 }), {
+    const { result } = await renderHook(() => useQuestsForLocation(KRAKOW_QUERY, { limit: 6 }), {
       wrapper: createWrapper(),
     })
 
@@ -153,7 +153,7 @@ describe('useQuestsForLocation', () => {
   it('пустой ответ сервера не поднимает широкую загрузку каталога', async () => {
     mockFetchQuestsNearLocation.mockResolvedValueOnce([])
 
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () =>
         useQuestsForLocation(
           {
@@ -176,7 +176,7 @@ describe('useQuestsForLocation', () => {
 
   /** Единственный оставшийся клиентский гейт: без локации сети быть не должно. */
   it('без локации не делает ни одного запроса', async () => {
-    const { result } = renderHook(
+    const { result } = await renderHook(
       () => useQuestsForLocation({ cityName: '  ', countryName: null, coords: [] }, { limit: 6 }),
       { wrapper: createWrapper() },
     )

@@ -23,7 +23,7 @@ const mockGetItem = AsyncStorage.getItem as jest.MockedFunction<typeof AsyncStor
 const mockSetItem = AsyncStorage.setItem as jest.MockedFunction<typeof AsyncStorage.setItem>
 
 const renderFreshOnboarding = async () => {
-  const result = render(<OnboardingScreen />)
+  const result = await render(<OnboardingScreen />)
   await waitFor(() => expect(result.getAllByRole('button')).toHaveLength(2))
   return result
 }
@@ -44,7 +44,7 @@ describe('OnboardingScreen native persistence', () => {
     )
     const screen = await renderFreshOnboarding()
 
-    fireEvent.press(screen.getAllByRole('button')[1])
+    await fireEvent.press(screen.getAllByRole('button')[1])
 
     expect(mockSetItem).toHaveBeenCalledWith('metravel.onboarding.v1', '1')
     expect(screen.getAllByRole('button')).toHaveLength(2)
@@ -63,11 +63,11 @@ describe('OnboardingScreen native persistence', () => {
     )
     const screen = await renderFreshOnboarding()
 
-    fireEvent.press(screen.getAllByRole('button')[0])
-    fireEvent.press(screen.getAllByRole('button')[0])
+    await fireEvent.press(screen.getAllByRole('button')[0])
+    await fireEvent.press(screen.getAllByRole('button')[0])
     expect(screen.getAllByRole('button')).toHaveLength(1)
 
-    fireEvent.press(screen.getByRole('button'))
+    await fireEvent.press(screen.getByRole('button'))
 
     expect(mockSetItem).toHaveBeenCalledWith('metravel.onboarding.v1', '1')
     expect(screen.getAllByRole('button')).toHaveLength(1)
@@ -81,7 +81,7 @@ describe('OnboardingScreen native persistence', () => {
     mockSetItem.mockRejectedValue(new Error('storage unavailable'))
     const screen = await renderFreshOnboarding()
 
-    fireEvent.press(screen.getAllByRole('button')[1])
+    await fireEvent.press(screen.getAllByRole('button')[1])
 
     await waitFor(() => expect(screen.queryAllByRole('button')).toHaveLength(0))
   })

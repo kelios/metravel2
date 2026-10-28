@@ -118,8 +118,8 @@ const makeTrip = (overrides: Partial<PlannedTrip> = {}): PlannedTrip => ({
 
 // #1491: шаг «Точки маршрута» рендерит общий AddressSearch с /map, а он ходит за
 // адресами через React Query — конструктору нужен клиент, как и в приложении.
-const renderRouteBuilder = (element: React.ReactElement) =>
-  render(element, { wrapper: createQueryWrapper().Wrapper })
+const renderRouteBuilder = async (element: React.ReactElement) =>
+  await render(element, { wrapper: createQueryWrapper().Wrapper })
 
 const STORED_ORIGINAL: PlannedTripRouteFile = {
   id: 7,
@@ -138,8 +138,8 @@ describe('RouteBuilder route download', () => {
     mockStoredRouteFiles = undefined
   })
 
-  it('offers GPX and KML download next to the map', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('offers GPX and KML download next to the map', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     expect(getByTestId('route-builder-export')).toBeTruthy()
     expect(getByTestId('trip-route-export-gpx')).toBeTruthy()
@@ -149,8 +149,8 @@ describe('RouteBuilder route download', () => {
   // #1902 собрал импорт и GPX/KML в одну рамку «Файл маршрута», но в сжатом ряду
   // подписи обрезались до «И…», «G.», «K..» (#2053). Теперь блок — стопка по
   // макету: импорт во всю ширину, GPX и KML поровну, подписи полные.
-  it('stacks the «Route file» block with full labels (#1902, #2053)', () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+  it('stacks the «Route file» block with full labels (#1902, #2053)', async () => {
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
     const block = within(getByTestId('route-builder-route-file'))
     expect(block.getByText('Файл маршрута')).toBeTruthy()
@@ -178,7 +178,7 @@ describe('RouteBuilder route download', () => {
 
   it('downloads the saved original from its card, not from the export row (#2053)', async () => {
     mockStoredRouteFiles = [STORED_ORIGINAL]
-    const { getByTestId, queryByTestId, queryByText } = renderRouteBuilder(
+    const { getByTestId, queryByTestId, queryByText } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip()} />,
     )
 
@@ -194,7 +194,7 @@ describe('RouteBuilder route download', () => {
     expect(queryByTestId('trip-route-original-download-block')).toBeNull()
     expect(queryByText(/Исходный файл маршрута/)).toBeNull()
 
-    fireEvent.press(download)
+    await fireEvent.press(download)
     await waitFor(() => expect(mockDownloadOriginal).toHaveBeenCalledTimes(1))
     expect(mockDownloadOriginal).toHaveBeenCalledWith(22, STORED_ORIGINAL)
   })
@@ -202,9 +202,9 @@ describe('RouteBuilder route download', () => {
   it('reports a failed original download inside the card', async () => {
     mockStoredRouteFiles = [STORED_ORIGINAL]
     mockDownloadOriginal.mockResolvedValueOnce(false)
-    const { findByTestId, getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    const { findByTestId, getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    fireEvent.press(getByTestId('trip-route-import-download-original'))
+    await fireEvent.press(getByTestId('trip-route-import-download-original'))
 
     const error = await findByTestId('trip-route-import-original-download-error')
     expect(
@@ -218,8 +218,8 @@ describe('RouteBuilder route download', () => {
   // владельца (#2053). У участника того блока нет: GPX/KML остаются обычным
   // рядом инструментов — на телефоне (jest рендерит окно 750 px) короткие
   // подписи, кнопки не растянуты на всю ширину.
-  it('keeps the compact download row for a participant who cannot edit the route', () => {
-    const { getByTestId, queryByTestId } = renderRouteBuilder(
+  it('keeps the compact download row for a participant who cannot edit the route', async () => {
+    const { getByTestId, queryByTestId } = await renderRouteBuilder(
       <RouteBuilder trip={makeTrip({ isOwner: false })} />,
     )
 
@@ -237,9 +237,9 @@ describe('RouteBuilder route download', () => {
   })
 
   it('builds a real file through the shared export path', async () => {
-    const { getByTestId } = renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
+    const { getByTestId } = await renderRouteBuilder(<RouteBuilder trip={makeTrip()} />)
 
-    fireEvent.press(getByTestId('trip-route-export-gpx'))
+    await fireEvent.press(getByTestId('trip-route-export-gpx'))
 
     await waitFor(() => expect(mockSaveRouteExportFile).toHaveBeenCalledTimes(1))
     expect(mockSaveRouteExportFile.mock.calls[0][0]).toEqual(
@@ -247,8 +247,8 @@ describe('RouteBuilder route download', () => {
     )
   })
 
-  it('disables the buttons until the route has two points with coordinates', () => {
-    const { getByTestId } = renderRouteBuilder(
+  it('disables the buttons until the route has two points with coordinates', async () => {
+    const { getByTestId } = await renderRouteBuilder(
       <RouteBuilder
         trip={makeTrip({
           route: [
@@ -267,8 +267,8 @@ describe('RouteBuilder route download', () => {
   // временно недоступен…» стояла и в «Итоге маршрута», и в «Файле маршрута».
   // Причину показывает шапка карты (в этом тесте карта заглушена), «Файл
   // маршрута» говорит про экспорт одной короткой строкой (макет §1 и §2).
-  it('keeps the degradation reason out of the steps: summary chip and a short export line', () => {
-    const { getByTestId, queryByText } = renderRouteBuilder(
+  it('keeps the degradation reason out of the steps: summary chip and a short export line', async () => {
+    const { getByTestId, queryByText } = await renderRouteBuilder(
       <RouteBuilder
         trip={makeTrip({
           transport: 'foot',

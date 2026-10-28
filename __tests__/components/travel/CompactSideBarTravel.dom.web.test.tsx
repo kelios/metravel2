@@ -4,7 +4,7 @@ import type React from 'react'
 import type { Root } from 'react-dom/client'
 
 // #2032: hover-стили бокового меню деталей путешествия жили в `*.web.css`, а
-// селекторы целились в сырые `data-*` пропы. react-test-renderer такие пропы
+// селекторы целились в сырые `data-*` пропы. Host-рендерер такие пропы
 // видит, поэтому соседний `CompactSideBarTravel.web.test.tsx` проходил, а на
 // странице не было ни атрибутов, ни правил. Здесь — настоящий DOM react-native-web
 // и настоящий `app/global.css`: каждое правило бокового меню обязано находить

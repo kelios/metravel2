@@ -44,45 +44,45 @@ beforeEach(() => {
 })
 
 describe('AdminGrantRareAward — role gating', () => {
-  it('renders nothing for a non-superuser', () => {
-    const { queryByLabelText } = render(<AdminGrantRareAward recipientId={42} />)
+  it('renders nothing for a non-superuser', async () => {
+    const { queryByLabelText } = await render(<AdminGrantRareAward recipientId={42} />)
     expect(queryByLabelText('Выдать редкую награду')).toBeNull()
   })
 
-  it('renders the grant control for a superuser', () => {
+  it('renders the grant control for a superuser', async () => {
     mockIsSuperuser = true
-    const { getByLabelText } = render(<AdminGrantRareAward recipientId={42} />)
+    const { getByLabelText } = await render(<AdminGrantRareAward recipientId={42} />)
     expect(getByLabelText('Выдать редкую награду')).toBeTruthy()
   })
 })
 
 describe('AdminGrantRareAward — submit', () => {
-  it('grants only after a category and reason are chosen', () => {
+  it('grants only after a category and reason are chosen', async () => {
     mockIsSuperuser = true
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <AdminGrantRareAward recipientId={42} recipientName="Иван" />,
     )
     // Open the sheet.
-    fireEvent.press(getByLabelText('Выдать редкую награду'))
+    await fireEvent.press(getByLabelText('Выдать редкую награду'))
     // Pick category + fill reason.
-    fireEvent.press(getByLabelText('Амбассадор'))
-    fireEvent.changeText(getByLabelText('Причина выдачи награды'), 'За вклад')
-    fireEvent.press(getByLabelText('Выдать награду'))
+    await fireEvent.press(getByLabelText('Амбассадор'))
+    await fireEvent.changeText(getByLabelText('Причина выдачи награды'), 'За вклад')
+    await fireEvent.press(getByLabelText('Выдать награду'))
     expect(mockMutate).toHaveBeenCalledWith(
       { userId: 42, awardSlug: 'ambassador', reason: 'За вклад' },
       expect.any(Object),
     )
   })
 
-  it('uses the selected award description when the reason field is empty', () => {
+  it('uses the selected award description when the reason field is empty', async () => {
     mockIsSuperuser = true
-    const { getByLabelText } = render(
+    const { getByLabelText } = await render(
       <AdminGrantRareAward recipientId={42} recipientName="Иван" />,
     )
 
-    fireEvent.press(getByLabelText('Выдать редкую награду'))
-    fireEvent.press(getByLabelText('Амбассадор'))
-    fireEvent.press(getByLabelText('Выдать награду'))
+    await fireEvent.press(getByLabelText('Выдать редкую награду'))
+    await fireEvent.press(getByLabelText('Амбассадор'))
+    await fireEvent.press(getByLabelText('Выдать награду'))
 
     expect(mockMutate).toHaveBeenCalledWith(
       { userId: 42, awardSlug: 'ambassador', reason: 'd' },

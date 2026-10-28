@@ -90,93 +90,93 @@ describe('TravelListItem - Action Buttons', () => {
     Platform.OS = 'web';
   });
 
-  it('should prevent navigation when favorite button is clicked', () => {
+  it('should prevent navigation when favorite button is clicked', async () => {
     const { router } = require('expo-router');
     
-    render(<TravelListItem {...mockProps} />);
+    await render(<TravelListItem {...mockProps} />);
     
     const favoriteButton = screen.getByTestId('favorite-button');
     
     // Simulate click on favorite button
-    fireEvent.press(favoriteButton);
+    await fireEvent.press(favoriteButton);
     
     // Should not navigate to travel detail
     expect(router.push).not.toHaveBeenCalledWith('/travels/1');
   });
 
-  it('should prevent navigation when edit button is clicked', () => {
+  it('should prevent navigation when edit button is clicked', async () => {
     const { router } = require('expo-router');
     
-    render(<TravelListItem {...mockProps} />);
+    await render(<TravelListItem {...mockProps} />);
     
     // Find edit button (it has edit-2 icon)
     const editButton = screen.getByLabelText('Редактировать');
     
     // Simulate click on edit button
-    fireEvent.press(editButton);
+    await fireEvent.press(editButton);
     
     // Should navigate to edit page, not travel detail
     expect(router.push).toHaveBeenCalledWith('/travel/1');
     expect(router.push).not.toHaveBeenCalledWith('/travels/1');
   });
 
-  it('preserves search as returnTo when edit is opened from search results', () => {
+  it('preserves search as returnTo when edit is opened from search results', async () => {
     mockPathname = '/search';
     const { router } = require('expo-router');
 
-    render(<TravelListItem {...mockProps} />);
+    await render(<TravelListItem {...mockProps} />);
 
-    fireEvent.press(screen.getByLabelText('Редактировать'));
+    await fireEvent.press(screen.getByLabelText('Редактировать'));
 
     expect(router.push).toHaveBeenCalledWith('/travel/1?returnTo=%2Fsearch');
   });
 
-  it('should prevent navigation when delete button is clicked', () => {
+  it('should prevent navigation when delete button is clicked', async () => {
     const { router } = require('expo-router');
     
-    render(<TravelListItem {...mockProps} />);
+    await render(<TravelListItem {...mockProps} />);
     
     // Find delete button (it has trash-2 icon)
     const deleteButton = screen.getByLabelText('Удалить');
     
     // Simulate click on delete button
-    fireEvent.press(deleteButton);
+    await fireEvent.press(deleteButton);
     
     // Should call delete handler, not navigate
     expect(mockProps.onDeletePress).toHaveBeenCalledWith(1);
     expect(router.push).not.toHaveBeenCalled();
   });
 
-  it('should navigate to travel detail when card is clicked (not action buttons)', () => {
+  it('should navigate to travel detail when card is clicked (not action buttons)', async () => {
     const { router } = require('expo-router');
     
-    render(<TravelListItem {...mockProps} />);
+    await render(<TravelListItem {...mockProps} />);
     
     // Click on the card container (not an action button)
     const card = screen.getByTestId('travel-card-test-travel');
-    fireEvent.press(card);
+    await fireEvent.press(card);
     
     // Should navigate to travel detail
     expect(router.push).toHaveBeenCalledWith('/travels/test-travel');
   });
 
-  it('should work correctly on mobile platform', () => {
+  it('should work correctly on mobile platform', async () => {
     // Mock mobile platform
     Platform.OS = 'ios';
     
     const { router } = require('expo-router');
     
-    render(<TravelListItem {...mockProps} />);
+    await render(<TravelListItem {...mockProps} />);
     
     // Click on card title
     const cardTitle = screen.getByText('Test Travel');
-    fireEvent.press(cardTitle);
+    await fireEvent.press(cardTitle);
     
     // Should still navigate on mobile
     expect(router.push).toHaveBeenCalledWith('/travels/test-travel');
   });
 
-  it('should open draft editor route from metravel for drafts', () => {
+  it('should open draft editor route from metravel for drafts', async () => {
     const { router } = require('expo-router');
 
     const draftTravel = {
@@ -185,7 +185,7 @@ describe('TravelListItem - Action Buttons', () => {
       moderation: 0,
     };
 
-    render(
+    await render(
       <TravelListItem
         {...mockProps}
         travel={draftTravel as any}
@@ -194,37 +194,37 @@ describe('TravelListItem - Action Buttons', () => {
     );
 
     const card = screen.getByTestId('travel-card-test-travel');
-    fireEvent.press(card);
+    await fireEvent.press(card);
 
     expect(router.push).toHaveBeenCalledWith('/travel/1?returnTo=%2Fmetravel');
     expect(router.push).not.toHaveBeenCalledWith('/travels/test-travel?returnTo=%2Fmetravel');
   });
 
-  it('should handle events correctly with stopPropagation and preventDefault', () => {
+  it('should handle events correctly with stopPropagation and preventDefault', async () => {
     // Test the behavior through component interaction
-    render(<TravelListItem {...mockProps} />);
+    await render(<TravelListItem {...mockProps} />);
     
     // Just verify the component renders without crashing
     expect(screen.getByText('Test Travel')).toBeTruthy();
   });
 
-  it('рендерит TravelStatusButton в compact-режиме рядом с кнопкой избранного', () => {
-    render(<TravelListItem {...mockProps} />)
+  it('рендерит TravelStatusButton в compact-режиме рядом с кнопкой избранного', async () => {
+    await render(<TravelListItem {...mockProps} />)
     expect(screen.getByTestId('travel-status-button-compact')).toBeTruthy()
     expect(mockTravelStatusButtonCompact).toHaveBeenCalledWith(
       expect.objectContaining({ compact: true, travelId: 1 })
     )
   })
 
-  it('передаёт корректный travelUrl в TravelStatusButton compact', () => {
-    render(<TravelListItem {...mockProps} />)
+  it('передаёт корректный travelUrl в TravelStatusButton compact', async () => {
+    await render(<TravelListItem {...mockProps} />)
     expect(mockTravelStatusButtonCompact).toHaveBeenCalledWith(
       expect.objectContaining({ travelUrl: expect.stringContaining('test-travel') })
     )
   })
 
-  it('TravelStatusButton compact скрыт в selectable-режиме (rightTopSlot=null)', () => {
-    render(<TravelListItem {...mockProps} selectable isSelected={false} />)
+  it('TravelStatusButton compact скрыт в selectable-режиме (rightTopSlot=null)', async () => {
+    await render(<TravelListItem {...mockProps} selectable isSelected={false} />)
     // В selectable-режиме rightTopSlot не рендерится → TravelStatusButton не показывается
     expect(screen.queryByTestId('travel-status-button-compact')).toBeNull()
   })
