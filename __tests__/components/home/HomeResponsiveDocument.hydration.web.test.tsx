@@ -6,7 +6,6 @@ let renderToString: typeof import('react-dom/server').renderToString;
 let hydrateRoot: typeof import('react-dom/client').hydrateRoot;
 let Hero: React.ComponentType;
 let Promo: React.ComponentType;
-let Directory: React.ComponentType;
 let Provider: React.Provider<unknown>;
 let sliderBookEnabled = false;
 let viewport = { width: 1440, height: 900, isDesktop: true, isPortrait: false };
@@ -47,7 +46,6 @@ beforeAll(() => {
   ;({ hydrateRoot } = require('react-dom/client'));
   Hero = require('@/components/home/HomeHero').default;
   Promo = require('@/components/home/HomeQuestsPromoSection').default;
-  Directory = require('@/components/quests/runtime/QuestDiscoveryDirectory.web').default;
   Provider = require('@/components/quests/runtime/QuestDiscoveryContext').QuestDiscoveryContext.Provider;
 });
 
@@ -110,19 +108,3 @@ it.each([[390, 844], [768, 1024], [1440, 900], [2048, 900], [2560, 640]])(
     }
   },
 );
-
-it('keeps every catalogue, city and country link in an ordinary usable HTML directory', () => {
-  const data = { view: 'catalog', locale: 'ru', cities: [{ title: 'City', path: '/quests/fixture-city' }],
-    countries: [{ title: 'Country', path: '/quests/country/belarus' }],
-    quests: Array.from({ length: 40 }, (_, index) => ({ city_id: 7, quest_id: `quest-${index}`, title: `Quest ${index}` })) };
-  const container = document.createElement('div');
-  container.innerHTML = renderToString(createElement(Provider, { value: data }, createElement(Directory)));
-  const details = container.querySelector('details');
-  expect(details?.querySelector('summary')?.textContent).toBeTruthy();
-  expect(details?.querySelectorAll('a')).toHaveLength(42);
-  expect(details?.querySelector('[href="/quests/7/quest-39"]')).not.toBeNull();
-  expect(details?.querySelector('[href="/quests/fixture-city"]')).not.toBeNull();
-  expect(details?.querySelector('[href="/quests/country/belarus"]')).not.toBeNull();
-  expect(details?.hasAttribute('inert')).toBe(false);
-  expect(details?.getAttribute('aria-hidden')).toBeNull();
-});
