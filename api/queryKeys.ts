@@ -224,8 +224,8 @@ export const queryKeys = {
     ['gamification', 'character', 'user', userId] as const,
   privacySettings: (userId: string | null) => ['privacy', 'settings', userId] as const,
   securityJournal: (userId: string | null) => ['security', 'journal', userId] as const,
-  appTelemetryStats: (query?: { from?: string; to?: string; platform?: string; appVersion?: string } | null) =>
-    ['app-telemetry-stats', query?.from, query?.to, query?.platform, query?.appVersion] as const,
+  appTelemetryStats: (query: { from: string; to: string; platform: string; appVersion: string }) =>
+    ['app-telemetry-stats', query.from, query.to, query.platform, query.appVersion] as const,
   publicTrips: (filters: Record<string, unknown>) => ['public-trips', filters] as const,
   publicTripsAll: () => ['public-trips'] as const,
   publicTrip: (tripId: string | number | null | undefined) =>
