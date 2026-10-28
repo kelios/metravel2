@@ -32,7 +32,7 @@ describe('useQuestWizardProgress', () => {
       showMap: false,
     }
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -70,7 +70,7 @@ describe('useQuestWizardProgress', () => {
     // показывали интро, и через кадр карточка шага прыгала (CLS при перезагрузке).
     const renders: number[] = []
     const onProgressChange = jest.fn()
-    const { result } = renderHook(() => {
+    const { result } = await renderHook(() => {
       const state = useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -114,7 +114,7 @@ describe('useQuestWizardProgress', () => {
     }))
 
     const onProgressChange = jest.fn()
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -171,7 +171,7 @@ describe('useQuestWizardProgress', () => {
     }))
 
     const onProgressChange = jest.fn()
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -216,7 +216,7 @@ describe('useQuestWizardProgress', () => {
     }))
 
     const onProgressChange = jest.fn()
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -236,7 +236,7 @@ describe('useQuestWizardProgress', () => {
     const storageKey = 'quest_progress_untouched_no_row'
     const onProgressChange = jest.fn()
 
-    renderHook(() =>
+    await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -272,7 +272,7 @@ describe('useQuestWizardProgress', () => {
     }))
 
     const onProgressChange = jest.fn()
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -326,7 +326,7 @@ describe('useQuestWizardProgress', () => {
       updatedAt,
     })
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ initialProgress }) =>
         useQuestWizardProgress({
           allSteps,
@@ -340,12 +340,12 @@ describe('useQuestWizardProgress', () => {
     await waitFor(() => expect(result.current.answers['step-1']).toBe('dragon'))
 
     // Игрок на шаге 2 этого устройства.
-    act(() => {
+    await act(() => {
       result.current.setCurrentIndex(2)
     })
 
     // Ответ второго устройства прилетел в ответе сервера.
-    rerender({
+    await rerender({
       initialProgress: makeInitial(
         { 'step-1': 'dragon', 'step-2': 'castle' },
         1_785_000_900_000,
@@ -369,7 +369,7 @@ describe('useQuestWizardProgress', () => {
     }))
 
     const onProgressChange = jest.fn()
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -407,7 +407,7 @@ describe('useQuestWizardProgress', () => {
       showMap: true,
     }
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -437,7 +437,7 @@ describe('useQuestWizardProgress', () => {
       showMap: true,
     })
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ initialProgress }) =>
         useQuestWizardProgress({
           allSteps,
@@ -453,14 +453,14 @@ describe('useQuestWizardProgress', () => {
     })
 
     // Игрок отвечает на step-2 и продвигается дальше.
-    act(() => {
+    await act(() => {
       result.current.setAnswers((prev) => ({ ...prev, 'step-2': 'castle' }))
       result.current.setCurrentIndex(2)
     })
     expect(result.current.currentIndex).toBe(2)
 
     // Эхо: тот же storageKey, новый объект initialProgress (стейл current_index=1).
-    rerender({ initialProgress: makeInitial() })
+    await rerender({ initialProgress: makeInitial() })
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -496,7 +496,7 @@ describe('useQuestWizardProgress', () => {
       showMap: true,
     }
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...stepsWithOptional],
         steps: stepsWithOptional,
@@ -524,7 +524,7 @@ describe('useQuestWizardProgress', () => {
       { id: 'finish', answer: checker, pointRole: 'final' as const },
     ]
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -547,7 +547,7 @@ describe('useQuestWizardProgress', () => {
     expect(result.current.routeGateClosed).toBe(false)
     expect(result.current.pendingSteps.map((step) => step.id)).toEqual(['finish'])
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers((prev) => ({ ...prev, finish: 'done' }))
     })
 
@@ -571,7 +571,7 @@ describe('useQuestWizardProgress', () => {
     ]
     const storageKey = 'quest_progress_skip_far_middle'
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -581,16 +581,16 @@ describe('useQuestWizardProgress', () => {
 
     await waitFor(() => expect(result.current.requiredCount).toBe(5))
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-1': 'a', 'p-2': 'b' })
     })
-    act(() => {
+    await act(() => {
       result.current.markStepSkipped('p-far')
     })
 
     expect(result.current.questCompleted).toBe(false)
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers((prev) => ({ ...prev, 'p-4': 'd', 'p-5': 'e' }))
     })
 
@@ -607,7 +607,7 @@ describe('useQuestWizardProgress', () => {
       expect(JSON.parse(saved!).skipped).toEqual({ 'p-far': true })
     })
 
-    const remounted = renderHook(() =>
+    const remounted = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -630,7 +630,7 @@ describe('useQuestWizardProgress', () => {
       { id: 'p-3', answer: checker },
     ]
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -640,7 +640,7 @@ describe('useQuestWizardProgress', () => {
 
     await waitFor(() => expect(result.current.requiredCount).toBe(3))
 
-    act(() => {
+    await act(() => {
       routeSteps.forEach((step) => result.current.markStepSkipped(step.id))
     })
 
@@ -660,7 +660,7 @@ describe('useQuestWizardProgress', () => {
     const storageKey = 'quest_progress_policy_one_answer'
     const onProgressChange = jest.fn()
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -671,10 +671,10 @@ describe('useQuestWizardProgress', () => {
 
     await waitFor(() => expect(result.current.requiredCount).toBe(9))
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-1': 'a' })
     })
-    act(() => {
+    await act(() => {
       routeSteps.slice(1).forEach((step) => result.current.markStepSkipped(step.id))
     })
 
@@ -695,7 +695,7 @@ describe('useQuestWizardProgress', () => {
     })
 
     // Частичный финал не финальный приговор: добор точек до порога засчитывает квест.
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-1': 'a', 'p-2': 'b', 'p-3': 'c', 'p-4': 'd', 'p-5': 'e', 'p-6': 'f' })
     })
 
@@ -719,7 +719,7 @@ describe('useQuestWizardProgress', () => {
       { id: 'p-3', answer: checker },
     ]
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -729,12 +729,12 @@ describe('useQuestWizardProgress', () => {
 
     await waitFor(() => expect(result.current.requiredCount).toBe(3))
 
-    act(() => {
+    await act(() => {
       result.current.markStepSkipped('p-1')
     })
     expect(result.current.questCompleted).toBe(false)
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-2': 'b', 'p-3': 'c' })
     })
 
@@ -753,7 +753,7 @@ describe('useQuestWizardProgress', () => {
       { id: 'p-2', answer: checker },
     ]
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -763,12 +763,12 @@ describe('useQuestWizardProgress', () => {
 
     await waitFor(() => expect(result.current.requiredCount).toBe(2))
 
-    act(() => {
+    await act(() => {
       routeSteps.forEach((step) => result.current.markStepSkipped(step.id))
     })
     expect(result.current.questFinished).toBe(false)
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-1': 'a' })
     })
 
@@ -776,7 +776,7 @@ describe('useQuestWizardProgress', () => {
     expect(result.current.questFinished).toBe(true)
     expect(result.current.questCompleted).toBe(false)
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-1': 'a', 'p-2': 'b' })
     })
 
@@ -790,7 +790,7 @@ describe('useQuestWizardProgress', () => {
     const checker = () => true
     const routeSteps = Array.from({ length: 6 }, (_, i) => ({ id: `p-${i + 1}`, answer: checker }))
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -800,10 +800,10 @@ describe('useQuestWizardProgress', () => {
 
     await waitFor(() => expect(result.current.requiredCount).toBe(6))
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-2': 'b', 'p-3': 'c', 'p-4': 'd', 'p-5': 'e' })
     })
-    act(() => {
+    await act(() => {
       result.current.markStepSkipped('p-1')
       result.current.markStepSkipped('p-6')
     })
@@ -824,7 +824,7 @@ describe('useQuestWizardProgress', () => {
       { id: 'p-new', answer: checker },
     ]
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...grownSteps],
         steps: grownSteps,
@@ -856,7 +856,7 @@ describe('useQuestWizardProgress', () => {
     ]
     const storageKey = 'quest_progress_finish_here'
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -868,10 +868,10 @@ describe('useQuestWizardProgress', () => {
 
     // Две точки из трёх берут порог зачёта — финиш на месте остаётся полноценным
     // прохождением, а не частичным.
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-1': 'a', 'p-2': 'b' })
     })
-    act(() => {
+    await act(() => {
       result.current.finishEarly()
     })
 
@@ -882,7 +882,7 @@ describe('useQuestWizardProgress', () => {
       expect(JSON.parse(saved!)).toMatchObject({ completed: true, earlyFinish: true })
     })
 
-    const remounted = renderHook(() =>
+    const remounted = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -901,7 +901,7 @@ describe('useQuestWizardProgress', () => {
     ]
     const onProgressChange = jest.fn()
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -912,7 +912,7 @@ describe('useQuestWizardProgress', () => {
 
     await waitFor(() => expect(result.current.requiredCount).toBe(2))
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-1': 'ответ' })
       result.current.markStepSkipped('p-far')
       result.current.finishEarly()
@@ -936,7 +936,7 @@ describe('useQuestWizardProgress', () => {
     const routeSteps = Array.from({ length: 9 }, (_, i) => ({ id: `p-${i + 1}`, answer: checker }))
     const storageKey = 'quest_progress_finish_here_early'
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -946,10 +946,10 @@ describe('useQuestWizardProgress', () => {
 
     await waitFor(() => expect(result.current.requiredCount).toBe(9))
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-1': 'a', 'p-2': 'b' })
     })
-    act(() => {
+    await act(() => {
       result.current.finishEarly()
     })
 
@@ -979,7 +979,7 @@ describe('useQuestWizardProgress', () => {
     const storageKey = 'quest_progress_second_device'
     const onProgressChange = jest.fn()
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -1001,7 +1001,7 @@ describe('useQuestWizardProgress', () => {
     // Форс-редиректа в финал у прежнего финишера по-прежнему нет (#1431).
     expect(result.current.questCompleted).toBe(false)
 
-    act(() => {
+    await act(() => {
       result.current.setShowMap(false)
     })
 
@@ -1027,7 +1027,7 @@ describe('useQuestWizardProgress', () => {
     const storageKey = 'quest_progress_reset_clears_completed'
     const onProgressChange = jest.fn()
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -1038,7 +1038,7 @@ describe('useQuestWizardProgress', () => {
 
     await waitFor(() => expect(result.current.requiredCount).toBe(2))
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-1': 'a', 'p-2': 'b' })
     })
     await waitFor(() => {
@@ -1051,7 +1051,7 @@ describe('useQuestWizardProgress', () => {
       await result.current.resetProgress()
     })
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-1': 'a' })
     })
 
@@ -1088,7 +1088,7 @@ describe('useQuestWizardProgress', () => {
     }))
 
     const onProgressChange = jest.fn()
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps: [{ id: 'intro' }, ...routeSteps],
         steps: routeSteps,
@@ -1112,7 +1112,7 @@ describe('useQuestWizardProgress', () => {
     expect(result.current.currentIndex).toBe(0)
     expect(result.current.questCompleted).toBe(false)
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-1': 'свой ответ' })
     })
 
@@ -1151,7 +1151,7 @@ describe('useQuestWizardProgress', () => {
       updatedAt: Date.now(),
     }))
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -1177,7 +1177,7 @@ describe('useQuestWizardProgress', () => {
     }))
 
     const onProgressReset = jest.fn()
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -1238,7 +1238,7 @@ describe('useQuestWizardProgress', () => {
     }
 
     const onProgressChange = jest.fn()
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ storageKey }: { storageKey: string }) =>
         useQuestWizardProgress({
           allSteps: [{ id: 'intro' }, ...routeSteps],
@@ -1251,7 +1251,7 @@ describe('useQuestWizardProgress', () => {
     )
 
     await waitFor(() => expect(result.current.requiredCount).toBe(2))
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-1': 'лев', 'p-2': 'мост' })
     })
     await waitFor(() => expect(result.current.questCompleted).toBe(true))
@@ -1260,7 +1260,7 @@ describe('useQuestWizardProgress', () => {
     )
 
     onProgressChange.mockClear()
-    rerender({ storageKey: keyB })
+    await rerender({ storageKey: keyB })
 
     await waitFor(() => expect(result.current.answers).toEqual({}))
     expect(result.current.questCompleted).toBe(false)
@@ -1271,7 +1271,7 @@ describe('useQuestWizardProgress', () => {
     }
 
     // Своё прохождение квеста B засчитанным предыдущим не становится.
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-1': 'свой ответ' })
     })
     await waitFor(() => {
@@ -1304,7 +1304,7 @@ describe('useQuestWizardProgress', () => {
     const pendingKey = buildQuestProgressStorageKey('golshany-black-monk', { isAuthenticated: true })
     const userKey = buildQuestProgressStorageKey('golshany-black-monk', { isAuthenticated: true, userId: '184' })
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ storageKey }: { storageKey: string }) =>
         useQuestWizardProgress({
           allSteps: [{ id: 'intro' }, ...routeSteps],
@@ -1315,16 +1315,287 @@ describe('useQuestWizardProgress', () => {
     )
 
     await waitFor(() => expect(result.current.requiredCount).toBe(2))
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ 'p-1': 'чёрный монах' })
     })
     await waitFor(() => expect(result.current.answers['p-1']).toBe('чёрный монах'))
 
-    rerender({ storageKey: pendingKey })
+    await rerender({ storageKey: pendingKey })
     expect(result.current.answers).toEqual({ 'p-1': 'чёрный монах' })
 
-    rerender({ storageKey: userKey })
+    await rerender({ storageKey: userKey })
     expect(result.current.answers).toEqual({ 'p-1': 'чёрный монах' })
+  })
+})
+
+describe('useQuestWizardProgress — гидратация владельца (#2850)', () => {
+  type Initial = Parameters<typeof useQuestWizardProgress>[0]['initialProgress']
+  const base = 'quest_owner_hydration'
+  const guest = buildQuestProgressStorageKey(base, { isAuthenticated: false })
+  const pending = buildQuestProgressStorageKey(base, { isAuthenticated: true })
+  const userA = buildQuestProgressStorageKey(base, { isAuthenticated: true, userId: 17 })
+  const userB = buildQuestProgressStorageKey(base, { isAuthenticated: true, userId: 42 })
+  const empty = { currentIndex: 0, unlockedIndex: 0, answers: {}, attempts: {}, hints: {}, showMap: true }
+  const record = (answers: Record<string, string>, serverId = 0) => JSON.stringify({
+    index: 1, unlocked: 1, answers, attempts: {}, hints: {}, showMap: true, completed: false, serverId,
+  })
+  const readRecord = async (key: string): Promise<unknown> => JSON.parse((await AsyncStorage.getItem(key)) ?? 'null')
+  const mountProgress = (storageKey: string, initialProgress?: Initial, onProgressChange = jest.fn(), onProgressReset = jest.fn()) =>
+    renderHook(({ storageKey, initialProgress }: { storageKey: string; initialProgress: Initial }) =>
+      useQuestWizardProgress({ allSteps, steps: questSteps, storageKey, initialProgress, onProgressChange, onProgressReset }),
+    { initialProps: { storageKey, initialProgress } })
+
+  const holdRead = (keyToHold: string) => {
+    const getItem = jest.mocked(AsyncStorage.getItem)
+    const original = getItem.getMockImplementation()!
+    let release: ((value: string | null) => void) | undefined
+    let held = false
+    getItem.mockImplementation((key) => {
+      if (key === keyToHold && !held) {
+        held = true
+        return new Promise<string | null>((resolve) => { release = resolve })
+      }
+      return original(key)
+    })
+    return {
+      release(value: string | null) { expect(release).toBeDefined(); release!(value) },
+      restore() { release?.(null); getItem.mockImplementation(original) },
+    }
+  }
+
+  beforeEach(async () => {
+    jest.clearAllMocks()
+    await AsyncStorage.clear()
+  })
+
+  it.each([false, true])('сохраняет живое прохождение guest → pending → user после await, server seed=%s', async (withServer) => {
+    await AsyncStorage.setItem(pending, record({ 'step-2': 'чужая pending-копия' }, 99))
+    const initial = withServer ? { ...empty, serverId: 0 } : undefined
+    const view = await mountProgress(guest, initial)
+    await act(() => {
+      view.result.current.setAnswers({ 'step-1': 'dragon' })
+      view.result.current.setAttempts({ 'step-1': 2 })
+      view.result.current.setHints({ 'step-1': true })
+      view.result.current.markStepSkipped('step-2')
+      view.result.current.setCurrentIndex(1)
+      view.result.current.setUnlockedIndex(2)
+      view.result.current.setShowMap(false)
+      view.result.current.finishEarly()
+    })
+    const accumulated = {
+      answers: { 'step-1': 'dragon' }, attempts: { 'step-1': 2 }, hints: { 'step-1': true },
+      skipped: { 'step-2': true }, earlyFinish: true, showMap: false,
+    }
+    await view.rerender({ storageKey: pending, initialProgress: initial })
+    expect(view.result.current).toMatchObject(accumulated)
+    expect(await readRecord(pending)).toMatchObject({ answers: { 'step-2': 'чужая pending-копия' } })
+    await view.rerender({ storageKey: userA, initialProgress: initial })
+    expect(view.result.current).toMatchObject(accumulated)
+    await waitFor(async () => expect(await readRecord(userA)).toMatchObject({ ...accumulated, serverId: 0 }))
+  })
+
+  it('при входе объединяет гостевую память со своей user-копией и сервером', async () => {
+    await AsyncStorage.setItem(userA, record({ 'step-2': 'castle' }, 57))
+    const view = await mountProgress(guest)
+    await act(() => view.result.current.setAnswers({ 'step-1': 'dragon' }))
+    await view.rerender({ storageKey: pending, initialProgress: undefined })
+    await view.rerender({ storageKey: userA, initialProgress: { ...empty, answers: { intro: 'start' }, serverId: 57 } })
+    expect(view.result.current.answers).toEqual({ intro: 'start', 'step-1': 'dragon', 'step-2': 'castle' })
+    expect(await readRecord(userA)).toMatchObject({ answers: view.result.current.answers, serverId: 57 })
+  })
+
+  it('quarantine сохраняет ещё не записанный ответ только вернувшемуся аккаунту A', async () => {
+    const initial = { ...empty, answers: { 'step-1': 'old A' }, serverId: 42 }
+    const view = await mountProgress(userA, initial)
+    const setItem = jest.mocked(AsyncStorage.setItem)
+    const original = setItem.getMockImplementation()!
+    let completeWrite: (() => Promise<void>) | undefined
+    let held = false
+    setItem.mockImplementation((key, value) => {
+      if (key === userA && !held && JSON.parse(value).answers['step-1'] === 'latest A') {
+        held = true
+        return new Promise<void>((resolve) => { completeWrite = async () => { await original(key, value); resolve() } })
+      }
+      return original(key, value)
+    })
+    try {
+      await act(() => view.result.current.setAnswers({ 'step-1': 'latest A' }))
+      expect(completeWrite).toBeDefined()
+      expect(await readRecord(userA)).toMatchObject({ answers: { 'step-1': 'old A' } })
+      await view.rerender({ storageKey: pending, initialProgress: initial })
+      expect(view.result.current.answers).toEqual({})
+      expect(setItem.mock.calls.filter(([key]) => key === pending)).toHaveLength(0)
+      await view.rerender({ storageKey: userA, initialProgress: initial })
+      expect(view.result.current.answers).toEqual({ 'step-1': 'latest A' })
+      await act(async () => { await completeWrite!() })
+      completeWrite = undefined
+      expect(await readRecord(userA)).toMatchObject({ answers: { 'step-1': 'latest A' }, serverId: 42 })
+    } finally {
+      await act(async () => { await completeWrite?.() })
+      setItem.mockImplementation(original)
+    }
+  })
+
+  it.each([false, true])('A → pending → B не принимает прежний initialProgress A, clone=%s', async (clone) => {
+    const initialA = { ...empty, answers: { 'step-1': 'private A' }, serverId: 42 }
+    await AsyncStorage.setItem(userB, record({ 'step-2': 'own B' }, 57))
+    const onChange = jest.fn()
+    const view = await mountProgress(userA, initialA, onChange)
+    await view.rerender({ storageKey: pending, initialProgress: initialA })
+    expect(view.result.current.answers).toEqual({})
+    const beforeB = jest.mocked(AsyncStorage.setItem).mock.calls.length
+    onChange.mockClear()
+    await view.rerender({ storageKey: userB, initialProgress: clone ? { ...initialA } : initialA })
+    expect(view.result.current.answers).toEqual({ 'step-2': 'own B' })
+    expect(await readRecord(userB)).toMatchObject({ answers: { 'step-2': 'own B' }, serverId: 57 })
+    for (const [key, value] of jest.mocked(AsyncStorage.setItem).mock.calls.slice(beforeB)) {
+      if (key === userB) expect(JSON.parse(value).answers).not.toHaveProperty('step-1')
+    }
+    expect(onChange.mock.calls.every(([value]) => !value.answers['step-1'])).toBe(true)
+  })
+
+  it('пустой initialProgress A/null не выдаёт отсутствие строки A за отсутствие строки B', async () => {
+    const noServerA = { ...empty, serverId: null }
+    await AsyncStorage.setItem(userB, record({ 'step-2': 'own B' }, 57))
+    const view = await mountProgress(userA, noServerA)
+    await view.rerender({ storageKey: pending, initialProgress: noServerA })
+    await view.rerender({ storageKey: userB, initialProgress: noServerA })
+    expect(view.result.current.answers).toEqual({ 'step-2': 'own B' })
+    expect(await readRecord(userB)).toMatchObject({ answers: { 'step-2': 'own B' }, serverId: 57 })
+  })
+
+  it.each([guest, `${base}__u:malformed`])('выход/неизвестный owner не наследует private A: %s', async (nextKey) => {
+    const initialA = { ...empty, answers: { 'step-1': 'private A' }, serverId: 42 }
+    const view = await mountProgress(userA, initialA)
+    await view.rerender({ storageKey: nextKey, initialProgress: initialA })
+    expect(view.result.current.answers).toEqual({})
+    expect(await readRecord(nextKey)).toMatchObject({ answers: {}, serverId: 0 })
+  })
+
+  it('чтение прежнего квеста не меняет новую сессию и не выполняет seed-write', async () => {
+    const deferred = holdRead(userA)
+    const nextKey = buildQuestProgressStorageKey('another_quest', { isAuthenticated: true, userId: 17 })
+    await AsyncStorage.setItem(nextKey, record({ 'step-2': 'new quest' }))
+    try {
+      const view = await mountProgress(userA)
+      await view.rerender({ storageKey: nextKey, initialProgress: undefined })
+      expect(view.result.current.answers).toEqual({ 'step-2': 'new quest' })
+      jest.mocked(AsyncStorage.setItem).mockClear()
+      await act(() => deferred.release(record({ 'step-1': 'old quest' })))
+      expect(view.result.current.answers).toEqual({ 'step-2': 'new quest' })
+      expect(AsyncStorage.setItem).not.toHaveBeenCalled()
+    } finally { deferred.restore() }
+  })
+
+  it('запоздалое чтение после reset не возвращает стёртое поколение', async () => {
+    const deferred = holdRead(userA)
+    const initial = { ...empty, answers: { 'step-1': 'old run' }, serverId: 42 }
+    const onReset = jest.fn()
+    try {
+      const view = await mountProgress(userA, initial, jest.fn(), onReset)
+      await act(async () => { await view.result.current.resetProgress() })
+      expect(onReset).toHaveBeenCalledWith(42)
+      await act(() => deferred.release(record({ 'step-1': 'old run' }, 42)))
+      expect(view.result.current.answers).toEqual({})
+      expect(await readRecord(userA)).toMatchObject({ answers: {}, serverId: 0 })
+    } finally { deferred.restore() }
+  })
+
+  it('после unmount чтение не пишет snapshot и не уведомляет caller', async () => {
+    const deferred = holdRead(userA)
+    const onChange = jest.fn()
+    try {
+      const view = await mountProgress(userA, undefined, onChange)
+      await view.unmount()
+      jest.mocked(AsyncStorage.setItem).mockClear()
+      onChange.mockClear()
+      await act(() => deferred.release(record({ 'step-1': 'late' })))
+      expect(AsyncStorage.setItem).not.toHaveBeenCalled()
+      expect(onChange).not.toHaveBeenCalled()
+    } finally { deferred.restore() }
+  })
+
+  it('ответ во время текущего storage-чтения выигрывает у его старого snapshot', async () => {
+    const deferred = holdRead(userA)
+    try {
+      const view = await mountProgress(userA, { ...empty, serverId: 0 })
+      await act(() => view.result.current.setAnswers({ 'step-1': 'fresh' }))
+      const old = { ...JSON.parse(record({ 'step-1': 'old' })), updatedAt: 1, answeredAt: { 'step-1': 1 } }
+      await act(() => deferred.release(JSON.stringify(old)))
+      expect(view.result.current.answers).toEqual({ 'step-1': 'fresh' })
+      expect(await readRecord(userA)).toMatchObject({ answers: { 'step-1': 'fresh' } })
+    } finally { deferred.restore() }
+  })
+
+  it.each(['switch', 'unmount', 'same'] as const)('задержанный remove не сбрасывает чужую/новую сессию, target=%s', async (target) => {
+    const initialA = { ...empty, answers: { 'step-1': 'private A' }, serverId: 42 }
+    let currentOwner = '17'
+    const resetOwners: string[] = []
+    const onReset = jest.fn(() => { resetOwners.push(currentOwner); return Promise.resolve(true) })
+    const view = await mountProgress(userA, initialA, jest.fn(), onReset)
+    const removeItem = jest.mocked(AsyncStorage.removeItem)
+    const original = removeItem.getMockImplementation()!
+    let completeRemove: (() => Promise<void>) | undefined
+    let released = false
+    removeItem.mockImplementationOnce((key) => new Promise<void>((resolve) => {
+      completeRemove = async () => {
+        if (released) return
+        released = true
+        await original(key)
+        resolve()
+      }
+    }))
+    let resetPromise!: ReturnType<typeof view.result.current.resetProgress>
+    try {
+      await act(() => { resetPromise = view.result.current.resetProgress() })
+      expect(completeRemove).toBeDefined()
+      // Consumer useQuestsApi захватывает auth owner при вызове callback.
+      expect(resetOwners).toEqual(['17'])
+      expect(onReset).toHaveBeenCalledWith(42)
+      if (target === 'switch') {
+        currentOwner = '42'
+        await view.rerender({ storageKey: userB, initialProgress: undefined })
+        await act(() => view.result.current.setAnswers({ 'step-2': 'fresh B' }))
+      } else if (target === 'unmount') await view.unmount()
+      else await view.rerender({ storageKey: userA, initialProgress: initialA })
+      jest.mocked(AsyncStorage.setItem).mockClear()
+      await act(async () => { await completeRemove!(); await resetPromise })
+      const result = await resetPromise
+      await expect(result.serverDeletionPending).resolves.toBe(true)
+      expect(resetOwners).toEqual(['17'])
+      if (target === 'same') {
+        expect(view.result.current.answers).toEqual({})
+        expect(await readRecord(userA)).toMatchObject({ answers: {}, serverId: 0 })
+      } else {
+        expect(AsyncStorage.setItem).not.toHaveBeenCalled()
+        if (target === 'switch') {
+          expect(view.result.current.answers).toEqual({ 'step-2': 'fresh B' })
+          expect(await readRecord(userB)).toMatchObject({ answers: { 'step-2': 'fresh B' } })
+        }
+      }
+    } finally {
+      await act(async () => { await completeRemove?.() })
+      removeItem.mockImplementation(original)
+    }
+  })
+
+  it.each([null, 57])('quarantine не воскрешает известное старое поколение после server=%s', async (serverId) => {
+    const initialA = { ...empty, answers: { 'step-1': 'old run' }, serverId: 42 }
+    const view = await mountProgress(userA, initialA)
+    await view.rerender({ storageKey: pending, initialProgress: initialA })
+    await view.rerender({ storageKey: userA, initialProgress: { ...empty, serverId } })
+    expect(view.result.current.answers).toEqual({})
+    expect(await readRecord(userA)).toMatchObject({ answers: {}, serverId: serverId ?? 0 })
+  })
+
+  it('перед merge отбрасывает старую user-копию, но сохраняет свежую guest-копию без поколения', async () => {
+    await AsyncStorage.setItem(userA, record({ 'step-2': 'old run' }, 42))
+    const view = await mountProgress(guest)
+    await act(() => view.result.current.setAnswers({ 'step-1': 'fresh guest' }))
+    await view.rerender({ storageKey: pending, initialProgress: undefined })
+    await view.rerender({ storageKey: userA, initialProgress: { ...empty, answers: { intro: 'start' }, serverId: 57 } })
+    expect(view.result.current.answers).toEqual({ intro: 'start', 'step-1': 'fresh guest' })
+    expect(await readRecord(userA)).toMatchObject({ answers: view.result.current.answers, serverId: 57 })
   })
 })
 
@@ -1354,7 +1625,7 @@ describe('useQuestWizardProgress — поколение прохождения (
   }
   const readStored = async () => JSON.parse((await AsyncStorage.getItem(storageKey))!)
   /** Даёт отработать эффектам и записи в хранилище. */
-  const settle = () => act(async () => {
+  const settle = async () => act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
   })
 
@@ -1366,7 +1637,7 @@ describe('useQuestWizardProgress — поколение прохождения (
     await AsyncStorage.setItem(storageKey, JSON.stringify(finishedCopy))
     const onProgressChange = jest.fn()
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -1390,7 +1661,7 @@ describe('useQuestWizardProgress — поколение прохождения (
     await AsyncStorage.setItem(storageKey, JSON.stringify(finishedCopy))
     const onProgressChange = jest.fn()
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -1418,7 +1689,7 @@ describe('useQuestWizardProgress — поколение прохождения (
     await AsyncStorage.setItem(storageKey, JSON.stringify(finishedCopy))
     const onProgressChange = jest.fn()
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -1443,7 +1714,7 @@ describe('useQuestWizardProgress — поколение прохождения (
     await AsyncStorage.setItem(storageKey, JSON.stringify(offlineCopy))
     const onProgressChange = jest.fn()
 
-    renderHook(() =>
+    await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -1472,7 +1743,7 @@ describe('useQuestWizardProgress — поколение прохождения (
     }))
     const onProgressChange = jest.fn()
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -1484,7 +1755,7 @@ describe('useQuestWizardProgress — поколение прохождения (
 
     await waitFor(async () => expect((await readStored()).serverId).toBe(42))
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers((prev) => ({ ...prev, 'step-1': 'dragon' }))
     })
 
@@ -1508,7 +1779,7 @@ describe('useQuestWizardProgress — поколение прохождения (
       serverId: 42,
     }
 
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ initialProgress }: { initialProgress: any }) =>
         useQuestWizardProgress({ allSteps, steps: questSteps, storageKey, initialProgress, onProgressChange }),
       { initialProps: { initialProgress: loaded } },
@@ -1517,7 +1788,7 @@ describe('useQuestWizardProgress — поколение прохождения (
     onProgressChange.mockClear()
 
     // Флаш экрана узнал о сбросе: хук синхронизации сообщает «строки нет».
-    rerender({ initialProgress: { ...emptyServer, serverId: null } })
+    await rerender({ initialProgress: { ...emptyServer, serverId: null } })
 
     await waitFor(() => expect(result.current.answers).toEqual({}))
     await settle()
@@ -1534,7 +1805,7 @@ describe('useQuestWizardProgress — поколение прохождения (
     let settleServerDeletion!: (pending: boolean) => void
     const onProgressReset = jest.fn(() => new Promise<boolean>((resolve) => { settleServerDeletion = resolve }))
 
-    const { result } = renderHook(() =>
+    const { result } = await renderHook(() =>
       useQuestWizardProgress({
         allSteps,
         steps: questSteps,
@@ -1561,7 +1832,7 @@ describe('useQuestWizardProgress — поколение прохождения (
 
   it('сброс здесь: новое прохождение забывает прежнее поколение и узнаёт своё из первой отправки', async () => {
     const onProgressChange = jest.fn()
-    const { result, rerender } = renderHook(
+    const { result, rerender } = await renderHook(
       ({ initialProgress }: { initialProgress: any }) =>
         useQuestWizardProgress({ allSteps, steps: questSteps, storageKey, initialProgress, onProgressChange }),
       {
@@ -1584,9 +1855,9 @@ describe('useQuestWizardProgress — поколение прохождения (
     })
     expect(await readStored()).toMatchObject({ answers: {}, serverId: 0 })
     // Хук синхронизации подтвердил удаление: копия нового прохождения не стирается.
-    rerender({ initialProgress: { ...emptyServer, serverId: null } })
+    await rerender({ initialProgress: { ...emptyServer, serverId: null } })
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers({ intro: 'start' })
     })
     await waitFor(() => expect(onProgressChange).toHaveBeenLastCalledWith(expect.objectContaining({
@@ -1595,10 +1866,10 @@ describe('useQuestWizardProgress — поколение прохождения (
     })))
 
     // Ответ на первую отправку: сервер создал строку 57.
-    rerender({ initialProgress: { ...emptyServer, answers: { intro: 'start' }, serverId: 57 } })
+    await rerender({ initialProgress: { ...emptyServer, answers: { intro: 'start' }, serverId: 57 } })
     await waitFor(async () => expect((await readStored()).serverId).toBe(57))
 
-    act(() => {
+    await act(() => {
       result.current.setAnswers((prev) => ({ ...prev, 'step-1': 'dragon' }))
     })
     await waitFor(() => expect(onProgressChange).toHaveBeenLastCalledWith(expect.objectContaining({
