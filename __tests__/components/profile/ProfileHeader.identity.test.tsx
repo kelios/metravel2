@@ -1,5 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react-native';
+import type { TestInstance } from 'test-renderer';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import type { UserProfileDto } from '@/api/user';
 
@@ -49,9 +50,11 @@ describe('ProfileHeader identity (#847)', () => {
 
     const nameRow = getByTestId('profile-header-name-row');
     const metaRow = getByTestId('profile-header-meta-row');
+    const hostsWithText = (root: TestInstance, text: string) =>
+      root.queryAll((node) => node.props.children === text);
 
-    expect(nameRow.findAllByProps({ children: 'Julia I' }).length).toBeGreaterThan(0);
-    expect(nameRow.findAllByProps({ children: 'Ур.5 · Эксперт' })).toHaveLength(0);
-    expect(metaRow.findAllByProps({ children: 'Ур.5 · Эксперт' }).length).toBeGreaterThan(0);
+    expect(hostsWithText(nameRow, 'Julia I').length).toBeGreaterThan(0);
+    expect(hostsWithText(nameRow, 'Ур.5 · Эксперт')).toHaveLength(0);
+    expect(hostsWithText(metaRow, 'Ур.5 · Эксперт').length).toBeGreaterThan(0);
   });
 });

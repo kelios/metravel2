@@ -97,19 +97,32 @@ describe('PlacesScreen pre-hydration chrome', () => {
   })
 
   it('renders both catalog headers while the width is unknown', async () => {
-    const root = await renderWebScreen()
-    const { getByTestId } = within(root.container)
-
-    expect(getByTestId('places-compact-bar')).toBeTruthy()
-    expect(getByTestId('places-topbar')).toBeTruthy()
-    expect(getByTestId('places-sidebar')).toBeTruthy()
-    expect(getByTestId('places-main')).toBeTruthy()
-    expect(getByTestId('places-cards-grid')).toBeTruthy()
-    const layout = getByTestId('places-layout')
-    expect(layout.props.dataSet).toMatchObject({ placesPrehydration: 'true' })
-    expect(StyleSheet.flatten(layout.props.style)).toMatchObject({
-      minHeight: 'calc(100vh - 168px)',
+    // act flushes the catalog query. An already resolved empty page replaces
+    // the skeleton grid; the pre-hydration shell is the in-flight loading tree.
+    let releaseCatalog!: (page: PlacesCatalogPage) => void
+    const pendingCatalog = new Promise<PlacesCatalogPage>((resolve) => {
+      releaseCatalog = resolve
     })
+    ;(fetchPlacesCatalog as jest.Mock).mockImplementation(() => pendingCatalog)
+    try {
+      const root = await renderWebScreen()
+      const { getByTestId } = within(root.container)
+
+      expect(getByTestId('places-compact-bar')).toBeTruthy()
+      expect(getByTestId('places-topbar')).toBeTruthy()
+      expect(getByTestId('places-sidebar')).toBeTruthy()
+      expect(getByTestId('places-main')).toBeTruthy()
+      expect(getByTestId('places-cards-grid')).toBeTruthy()
+      const layout = getByTestId('places-layout')
+      expect(layout.props.dataSet).toMatchObject({ placesPrehydration: 'true' })
+      expect(StyleSheet.flatten(layout.props.style)).toMatchObject({
+        minHeight: 'calc(100vh - 168px)',
+      })
+    } finally {
+      await domAct(async () => {
+        releaseCatalog(catalogPage)
+      })
+    }
   })
 
   it('keeps only the compact bar once a phone width is measured', async () => {

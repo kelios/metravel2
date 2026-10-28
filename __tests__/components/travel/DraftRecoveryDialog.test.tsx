@@ -68,7 +68,9 @@ describe('DraftRecoveryDialog', () => {
       />,
     );
 
-    getOnlyHost(screen.container, node => node.type === 'Modal').props.onRequestClose();
+    // The suite mock renders Modal as a host View, so the hardware-back
+    // contract is the onRequestClose prop, not the host type name.
+    getOnlyHost(screen.container, node => typeof node.props.onRequestClose === 'function').props.onRequestClose();
 
     expect(onDiscard).not.toHaveBeenCalled();
   });

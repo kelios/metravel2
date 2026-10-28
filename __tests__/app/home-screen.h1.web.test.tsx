@@ -1,5 +1,8 @@
-import { render, waitFor } from '@testing-library/react-native'
+import { act } from 'react'
+import { waitFor } from '@testing-library/react-native'
 import { Platform } from 'react-native'
+
+import { createRootRegistry } from '../helpers/rawRootLifecycle'
 
 // #1609: the home screen's single semantic <h1> is HomeHeroBookLayout's
 // visible hero title (accessibilityRole="header" + aria-level=1, which
@@ -32,6 +35,10 @@ function loadHomeScreen() {
   return require('@/app/(tabs)/index').default
 }
 
+// The web screen renders a real <h2> SEO line. RNTL allows text only inside
+// Text, so this file uses the generic renderer, same as home-screen.regression.
+const webRoots = createRootRegistry()
+
 describe('HomeScreen SSG H1 cleanup (#1609)', () => {
   const originalUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`
 
@@ -39,9 +46,18 @@ describe('HomeScreen SSG H1 cleanup (#1609)', () => {
     document.body.innerHTML = ''
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    await webRoots.cleanup()
     window.history.replaceState(null, '', originalUrl)
   })
+
+  async function renderHomeScreen() {
+    const HomeScreen = loadHomeScreen()
+    const root = webRoots.createRoot()
+    await act(() => {
+      root.render(<HomeScreen />)
+    })
+  }
 
   it('removes the SSG-injected sr-only <h1 data-ssg-travel-h1> once the real content mounts', async () => {
     const ssg = document.createElement('h1')
@@ -50,8 +66,7 @@ describe('HomeScreen SSG H1 cleanup (#1609)', () => {
     document.body.insertBefore(ssg, document.body.firstChild)
     expect(document.querySelectorAll('h1[data-ssg-travel-h1]').length).toBe(1)
 
-    const HomeScreen = loadHomeScreen()
-    await render(<HomeScreen />)
+    await renderHomeScreen()
 
     await waitFor(() => {
       expect(document.querySelectorAll('h1[data-ssg-travel-h1]').length).toBe(0)
@@ -68,8 +83,7 @@ describe('HomeScreen SSG H1 cleanup (#1609)', () => {
     ssg.setAttribute('data-ssg-travel-h1', 'true')
     document.body.insertBefore(ssg, document.body.firstChild)
 
-    const HomeScreen = loadHomeScreen()
-    await render(<HomeScreen />)
+    await renderHomeScreen()
 
     // HomeScreen renders null (not home path) and never mounts the cleanup
     // effect; the marker belongs to whatever other route is actually live.

@@ -2,6 +2,7 @@ import React from 'react'
 import type { PropsWithChildren } from 'react'
 import { StyleSheet } from 'react-native'
 import { render } from '@testing-library/react-native'
+import type { TestInstance } from 'test-renderer'
 
 import type { Badge } from '@/api/achievements'
 
@@ -60,9 +61,17 @@ describe('ShareCardPreview brand row sizing', () => {
 
     const brandLabel = getByText('metravel.by')
     const ctaLabel = getByText('Build your collection')
+    // test-renderer 1.3 dropped the extra host between Text and brandGroup.
+    // The group itself still owns maxWidth 100%; the label stays inflexible.
+    const brandGroupStyle = (label: TestInstance) => {
+      const group = [label.parent, label.parent?.parent].find((node) =>
+        StyleSheet.flatten(node?.props.style)?.maxWidth === '100%',
+      )
+      return StyleSheet.flatten(group?.props.style)
+    }
 
-    expect(StyleSheet.flatten(brandLabel.parent?.parent?.props.style).maxWidth).toBe('100%')
-    expect(StyleSheet.flatten(ctaLabel.parent?.parent?.props.style).maxWidth).toBe('100%')
+    expect(brandGroupStyle(brandLabel)).toMatchObject({ maxWidth: '100%', flexDirection: 'row' })
+    expect(brandGroupStyle(ctaLabel)).toMatchObject({ maxWidth: '100%', flexDirection: 'row' })
     expect(StyleSheet.flatten(brandLabel.props.style).flex).toBeUndefined()
     expect(StyleSheet.flatten(ctaLabel.props.style).flex).toBeUndefined()
     expect(StyleSheet.flatten(brandLabel.props.style).flexShrink).toBeUndefined()
