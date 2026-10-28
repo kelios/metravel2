@@ -680,6 +680,24 @@ const webVendorOffenders = (
 const vendorWebGraph = webValueGraph()
 
 describe('состав eager-бандла (#1148)', () => {
+  it('keeps server metadata dependencies outside the client quest projection renderer (#2738)', () => {
+    const screen = join(ROOT, 'components/quests/runtime/QuestPublicLoaderScreen.web.tsx')
+    const presentation = join(ROOT, 'components/quests/runtime/questPublicStructuredData.ts')
+    expect(syncPathTo(screen, presentation)).not.toBeNull()
+    for (const target of [
+      'components/quests/runtime/questPublicSeo.ts',
+      'components/quests/runtime/questRouteLoader.ts',
+      'utils/ssr/fetchPublicRouteJson.ts',
+      'utils/questPublicPage.js',
+      'utils/seoRoutes/routeMetadata.ts',
+      'utils/seoRoutes/staticRoutes.js',
+    ]) expect({ target, chain: syncPathTo(screen, join(ROOT, target)) }).toEqual({ target, chain: null })
+    const source = readFileSync(screen, 'utf8')
+    // The same parser must identify the former import when it returns.
+    expect(syncDepsOfSource(screen, source + "\nimport { questPublicAlternates } from './questPublicSeo';"))
+      .toContain(join(ROOT, 'components/quests/runtime/questPublicSeo.ts'))
+  })
+
   it('обход включает вспомогательные web-исходники и вложенные локали (#2086)', () => {
     // Проверяем результат реального обхода, а не наличие имени в SOURCE_DIRS.
     expect(sourceFiles.map((file) => relative(ROOT, file))).toEqual(

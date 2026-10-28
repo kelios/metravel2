@@ -4566,6 +4566,21 @@ guard, падающий в CI на попытке обойти этот конт
 - Recurrence 26.10.2026 (#2738): атрибуция source-map сборок `.codex-temp/task-2389/head-attrib.json` → HEAD 83ff45cd2 (рецепт `.codex-temp/bb2738-*`): +147 KB raw — react-dom/expo-router SDK 58 ~38, выключенные на проде AI-фичи 59.5 (экран ассистента — отдельный чанк 18.4 KB gzip), остальное «вширь»; манифесты `__METRAVEL_CHUNK_DEPS__` — ~61 KB gzip TOTAL (полные хеши путей). Снято без подъёма потолков: AI-фичи вне сборки без флага (литерал `process.env` в точке `import()`, тест `aiFeatureBuildGate`), одна копия `@react-native/normalize-colors` на web, маркер `index:trips` после #2740 → TOTAL gzip 3341.7 → 3319.7, eager 768.5 → 767.6. Ловушка: убрать статические импорты блоков подбора (ListTravelBase, SearchPageSkeleton, деталь квеста) — хуже: группировка по сходству маршрутов разложила 47 KB Brotli `__shared-0` в 5 чанков, eager profile 782.6 > 775; удалять код из shared-графа — только с замером eager. Остаток (TOTAL ~35 KB, сайдбар travel 0.1, trips-plan 0.1) рефакторингом в рамках карточки не закрывается.
 - Architecture 26.10.2026 (#2741): web-экспорт на штатном granular-чанкинге Expo; слияние групп по маршрутам доставки (≥0.4, одинаковые наборы, группы без маршрутов — одним файлом) — `scripts/lib/granularChunkMerge.js` от `rawAtoms` (размещение как у старого патча: нормализация апстрима «гарантированно загружено» переносила ~45 KB shared-кода в именные route-чанки). Патч `@expo/metro-config` — 2 ханка (хук + флаг в `metro.config.js`), `patches/expo+58.0.19.patch` и манифест `__METRAVEL_*` сняты; `guard-chunk-closure` проверяет замыкание от корней `__r` и массивов `paths`, именные строки бюджета меряются без метаданных загрузчика. Замер против main 3931b3b60: TOTAL gzip 3319.9 → 3313.7, eager 767.6 → 751.2 KB Brotli, запросы 19 → 18; `__shared:quests-catalog` оставлен красным решением владельца (45.6 > 44.9 KB raw, 12.1 > 12.0 Brotli; 2.8 KB кода каталога ушли из глобального `__shared-0`), потолок не перенесён. Изменённый патч требует `rm -rf node_modules/@expo/metro-config node_modules/expo && yarn install --frozen-lockfile --check-files` в основном чекауте перед выкатом.
 
+- Continuation 28.10.2026 (#2738): обязательный deploy-guard выявил прежний
+  долг (server-сборка e3a79647: TOTAL 3352,1 > 3284,9 KB gzip, 11 breach).
+  Сравнение с фактическим production ffb0 показывает прежний TOTAL 3345,8 KB;
+  это не доказательство утечки новой native-телеметрии. Подтверждён ещё один
+  import-chain: клиентский `QuestPublicLoaderScreen.web` брал JSON-LD из
+  `questPublicSeo`, который также импортировал server loader и metadata graph.
+  Чистые JSON-LD/alternates вынесены в отдельного владельца; прежние server
+  exports сохранены. Web-only helper разрешает установленному Metro/Terser
+  распределять имена параметров фабрик без изменения positional ABI или
+  compress options; native сохраняет defaults. Постоянный контроль — реальный
+  source graph с отрицательным former-import probe, SEO-паритет проекций,
+  VM-фабрики установленного minifier и seasonal serialization. Потолки и
+  allowlists не меняются; offline estimate не заменяет свежий export/0 breach
+  и последующую production-проверку.
+
 ### APP-SHELL-BOOT-001 — пол TBT задаёт общий каркас, а не код маршрута
 
 - **Инвариант:** медианный prod mobile TBT укладывается в сайтовый бюджет

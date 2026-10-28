@@ -8,7 +8,7 @@ import type { QuestPublicProjection } from '@/utils/questPublicPage';
 import type { QuestServingProjection } from '@/utils/questLocaleRouting';
 import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import { quotedCyrillicSegments } from '@/utils/cyrillicLanguage';
-import { buildQuestPublicStructuredData, questPublicAlternates } from './questPublicSeo';
+import { buildQuestPublicStructuredData, questPublicAlternates } from './questPublicStructuredData';
 
 const PUBLIC_STYLES = `
 [data-quest-public-page]{box-sizing:border-box;width:100%;max-width:840px;margin:0 auto;padding:24px 20px 100px;color:var(--color-text);font:16px/1.55 system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
