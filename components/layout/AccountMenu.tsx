@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
-import { router } from 'expo-router'
+import { router, usePathname } from 'expo-router'
 
 import { DialogMenu } from '@/ui/paper'
 import ThemeToggle from '@/components/layout/ThemeToggle'
@@ -208,6 +208,7 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
   const [hovered, setHovered] = useState(false)
   const { avatarUri, setAvatarLoadError } = useAvatarUri({ userAvatar, profileRefreshToken })
   const { count: unreadCount } = useDeferredUnreadCount(isAuthenticated && visible, visible)
+  const pathname = usePathname()
   const lastHandledInitialOpenKeyRef = useRef(shouldOpenInitially ? initialOpenKey : 0)
 
   const [expandedSections, setExpandedSections] = useState<ExpandedSections>({
@@ -258,9 +259,9 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
   const navigate = useCallback(
     (path: string, external?: boolean) => {
       closeMenu()
-      handleHeaderNavPress(router, path, external)
+      handleHeaderNavPress(router, path, external, pathname)
     },
-    [closeMenu],
+    [closeMenu, pathname],
   )
 
   const handleLogout = useCallback(async () => {

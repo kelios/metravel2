@@ -87,7 +87,7 @@ describe('UpsertTravelRoute entry key', () => {
     expect(mockMount).toHaveBeenCalledTimes(1)
     expect(view.getByTestId('draft').props.value).toBe('saved record')
 
-    mockParams = { mode }
+    mockParams = { mode, id: undefined }
     await view.rerender(<UpsertTravelRoute />)
     expect(mockMount).toHaveBeenCalledTimes(2)
     expect(view.getByTestId('draft').props.value).toBe('')

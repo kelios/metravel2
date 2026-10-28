@@ -52,6 +52,17 @@ describe('handleHeaderNavPress', () => {
     expect(router.push).toHaveBeenCalledWith('/quests')
   })
 
+  it('drops a saved travel id when the create screen is opened again', () => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
+    window.history.replaceState(null, '', '/travel/new?mode=note&id=946')
+    const router = { push: jest.fn(), setParams: jest.fn() }
+
+    handleHeaderNavPress(router, '/travel/new?mode=note')
+
+    expect(router.push).toHaveBeenCalledWith('/travel/new?mode=note')
+    expect(router.setParams).toHaveBeenCalledWith(expect.objectContaining({ id: undefined, mode: 'note' }))
+  })
+
   it('keeps external navigation in centralized helpers', () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
     const router = { push: jest.fn() }

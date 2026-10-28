@@ -37,8 +37,9 @@ export default function UpsertTravelRoute() {
   const hasId = Boolean(params.id);
   const [entry, setEntry] = useState({ hasId, revision: 0 });
 
-  // Первое сохранение добавляет id без сброса. Повторный вход «создать» удаляет
-  // его: прежняя запись не должна остаться в форме новой заметки или статьи.
+  // Первое сохранение добавляет id без сброса. Повторный вход «создать»
+  // снимает его через setParams (push того же экрана id оставляет, #2829):
+  // прежняя запись не должна остаться в форме новой заметки или статьи.
   if (entry.hasId !== hasId) {
     setEntry({ hasId, revision: entry.revision + (hasId ? 0 : 1) });
   }

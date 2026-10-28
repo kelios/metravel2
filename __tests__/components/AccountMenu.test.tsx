@@ -8,7 +8,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 jest.mock('expo-router', () => ({
   router: {
     push: jest.fn(),
+    setParams: jest.fn(),
   },
+  usePathname: () => '/',
 }));
 
 jest.mock('@/context/AuthContext', () => ({

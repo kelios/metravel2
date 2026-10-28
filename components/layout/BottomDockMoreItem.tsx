@@ -80,6 +80,10 @@ function BottomDockMoreItem({ item, styles, onClose, onOpenView }: Props) {
     const route = Platform.OS !== 'web' && item.route === '/articles'
       ? buildArticlesHrefFromSource(pathname)
       : item.route
+    if (typeof route === 'string') {
+      handleHeaderNavPress(router, route, false, pathname)
+      return
+    }
     if (route) router.push(route)
   }
 
