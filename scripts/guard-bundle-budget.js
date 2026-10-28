@@ -22,6 +22,7 @@
 const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
+const { createReportContext, roundedByteLimit } = require('./lib/bundleBudgetReport')
 
 const repoRoot = path.join(__dirname, '..')
 const DEFAULT_TOLERANCE_PCT = 5
@@ -58,8 +59,12 @@ const args = process.argv.slice(2)
 const FAIL = args.includes('--fail')
 const JSON_OUT = args.includes('--json')
 const UPDATE = args.includes('--update')
+const report = !UPDATE && (JSON_OUT || args.includes('--report'))
+  ? createReportContext({ root: repoRoot, budgetPath, persist: args.includes('--report') })
+  : null
 
 function die(msg) {
+  if (report) report.errors.push(msg)
   console.error(msg)
   process.exit(1)
 }
@@ -339,6 +344,7 @@ const ownerCandidates = []
 // a split logical name, per owner.
 const chunks = new Map()
 const fileSizes = new Map()
+const namedFiles = new Map()
 let allRaw = 0
 let allGzip = 0
 let allBrotli = 0
@@ -383,6 +389,9 @@ for (const file of files) {
     if (matched.length === 1) budgetKey = matched[0]
   }
   const prev = chunks.get(budgetKey) || { raw: 0, gzip: 0, brotli: 0, files: 0 }
+  const named = namedFiles.get(budgetKey) || {}
+  named[file] = { raw: budgetRaw, gzip: budgetGzip, brotli: budgetBrotli }
+  namedFiles.set(budgetKey, named)
   chunks.set(budgetKey, {
     raw: prev.raw + budgetRaw,
     gzip: prev.gzip + budgetGzip,
@@ -553,6 +562,7 @@ const totalGzip = allGzip - deferredGzip
 const totalBrotli = allBrotli - deferredBrotli
 
 const breaches = []
+const exactBreaches = new Map()
 for (const name of forbiddenChunkNames) {
   if (chunks.has(name)) {
     breaches.push({ label: `Forbidden chunk present: ${name}`, forbidden: true })
@@ -564,11 +574,16 @@ for (const [key, { marker, files: carriers }] of ownerFiles) {
   // leaves its row guarding nothing.
   if (!carriers.length) breaches.push({ label: `Owner marker not found in build: ${key} ("${marker}")`, missing: true })
 }
-function check(label, actualKB, maxKB, tolerance = tol) {
+function check(label, actualKB, maxKB, tolerance = tol, actualBytes) {
   if (maxKB == null) return
   const limit = Math.round(maxKB * tolerance * 10) / 10
   if (actualKB > limit) {
     breaches.push({ label, actualKB, maxKB, limitKB: limit })
+    exactBreaches.set(label, {
+      label, actual: actualBytes, limit: roundedByteLimit(limit), unit: 'bytes',
+      policy: 'rounded_kib_0.1', configured_limit_kib: maxKB, checked_limit_kib: limit,
+      ...(label.startsWith('EAGER ') ? { basis: budget?.eager?.htmlRoutes === true ? 'html_scripts_with_loader_metadata' : 'configured_chunks_without_loader_metadata' } : {}),
+    })
   }
 }
 
@@ -586,6 +601,7 @@ function checkCount(label, actual, max) {
   if (max == null) return
   if (actual > max) {
     breaches.push({ label, actual, max })
+    exactBreaches.set(label, { label, actual, limit: max, unit: 'count' })
   }
 }
 
@@ -605,14 +621,14 @@ for (const [route, limit] of Object.entries(budget?.eager?.maxRequestsByRoute ||
 for (const [name, b] of Object.entries(budget.chunks || {})) {
   const c = chunks.get(name)
   if (!c) continue // chunk dropped/renamed — not a size regression
-  check(`${name} (raw)`, toKB(c.raw), b.maxRawKB)
-  check(`${name} (gzip)`, toKB(c.gzip), b.maxGzipKB)
-  check(`${name} (brotli)`, toKB(c.brotli), b.maxBrotliKB)
+  check(`${name} (raw)`, toKB(c.raw), b.maxRawKB, tol, c.raw)
+  check(`${name} (gzip)`, toKB(c.gzip), b.maxGzipKB, tol, c.gzip)
+  check(`${name} (brotli)`, toKB(c.brotli), b.maxBrotliKB, tol, c.brotli)
 }
 if (budget.total) {
-  check('TOTAL (raw)', toKB(totalRaw), budget.total.maxRawKB)
-  check('TOTAL (gzip)', toKB(totalGzip), budget.total.maxGzipKB)
-  check('TOTAL (brotli)', toKB(totalBrotli), budget.total.maxBrotliKB)
+  check('TOTAL (raw)', toKB(totalRaw), budget.total.maxRawKB, tol, totalRaw)
+  check('TOTAL (gzip)', toKB(totalGzip), budget.total.maxGzipKB, tol, totalGzip)
+  check('TOTAL (brotli)', toKB(totalBrotli), budget.total.maxBrotliKB, tol, totalBrotli)
 }
 
 const eagerChunkNames = Array.isArray(budget?.eager?.chunks) ? budget.eager.chunks : []
@@ -634,6 +650,7 @@ let eagerRequests = 0
 let eagerRequestsPage = null
 const eagerRequestBreaches = new Map()
 const eagerRequestRoutes = new Set()
+const allRouteRequests = new Map()
 const payloadRouteCounts = new Map()
 if (budget?.eager?.htmlRoutes === true) {
   if (!fs.existsSync(htmlDir)) {
@@ -702,6 +719,12 @@ if (budget?.eager?.htmlRoutes === true) {
           path.relative(htmlDir, candidate.file) || path.basename(candidate.file),
         )
         const routeMax = eagerRequestLimits.get(routeKey)
+        const previous = allRouteRequests.get(routeKey)
+        allRouteRequests.set(routeKey, {
+          requests: Math.max(candidate.requests, previous?.requests ?? 0),
+          limit: routeMax ?? budget?.eager?.maxRequests ?? null,
+          missing_files: [...new Set([...(previous?.missing_files || []), ...candidate.missing])],
+        })
         if (routeMax == null) continue
         eagerRequestRoutes.add(routeKey)
         if (candidate.requests > routeMax) {
@@ -791,9 +814,9 @@ if (budget.eager) {
     breaches.push({ label: `EAGER chunk missing: ${name}`, missing: true })
   }
   const eagerTol = 1 + (Number(budget.eager.tolerancePct) || 0) / 100
-  check('EAGER (raw)', toKB(eager.raw), budget.eager.maxRawKB, eagerTol)
-  check('EAGER (gzip)', toKB(eager.gzip), budget.eager.maxGzipKB, eagerTol)
-  check('EAGER (brotli)', toKB(eager.brotli), budget.eager.maxBrotliKB, eagerTol)
+  check('EAGER (raw)', toKB(eager.raw), budget.eager.maxRawKB, eagerTol, eager.raw)
+  check('EAGER (gzip)', toKB(eager.gzip), budget.eager.maxGzipKB, eagerTol, eager.gzip)
+  check('EAGER (brotli)', toKB(eager.brotli), budget.eager.maxBrotliKB, eagerTol, eager.brotli)
   const wantsRequestBudget =
     budget.eager.maxRequests != null || budget.eager.maxRequestsByRoute != null
   if (wantsRequestBudget && !eagerRequests) {
@@ -826,10 +849,52 @@ if (budget.eager) {
   }
 }
 
+if (report) {
+  const incomplete = breaches.some((breach) => breach.missing || breach.attribution)
+  const eagerConfigured = budget?.eager?.htmlRoutes === true || eagerChunkNames.length > 0
+  const eagerAvailable = eagerConfigured && (budget?.eager?.htmlRoutes === true
+    ? eagerPage !== null && ![...allRouteRequests.values()].some((route) => route.missing_files.length)
+    : missingEagerChunks.length === 0)
+  const diagnosticEager = !eagerAvailable ? null : budget?.eager?.htmlRoutes === true ? eager
+    : [...new Set(eagerChunkNames.flatMap((name) => Object.keys(namedFiles.get(name) || {})))].reduce(
+      (sum, file) => {
+        const sizes = fileSizes.get(file)
+        return { raw: sum.raw + sizes.raw, gzip: sum.gzip + sizes.gzip, brotli: sum.brotli + sizes.brotli }
+      },
+      { raw: 0, gzip: 0, brotli: 0 },
+    )
+  report.measurement_status = incomplete ? 'incomplete' : 'complete'
+  report.measurements = {
+    named: Object.fromEntries([...chunks].map(([name, sizes]) => [name, { raw: sizes.raw, gzip: sizes.gzip, brotli: sizes.brotli, files: namedFiles.get(name) }])),
+    files: Object.fromEntries(fileSizes),
+    total: { raw: totalRaw, gzip: totalGzip, brotli: totalBrotli },
+    all: { raw: allRaw, gzip: allGzip, brotli: allBrotli },
+    deferred: { raw: deferredRaw, gzip: deferredGzip, brotli: deferredBrotli },
+    eager: {
+      status: !eagerConfigured ? 'not_configured' : eagerAvailable ? 'complete' : 'incomplete',
+      source: !eagerConfigured ? 'not_configured' : budget?.eager?.htmlRoutes === true ? 'html_routes' : 'configured_chunks',
+      raw: diagnosticEager?.raw ?? null, gzip: diagnosticEager?.gzip ?? null, brotli: diagnosticEager?.brotli ?? null,
+      route: eagerPage,
+      requests: eagerRequestsPage === null ? null : eagerRequests,
+      requests_route: eagerRequestsPage,
+      requests_by_route: Object.fromEntries(allRouteRequests),
+      payload_routes: Object.fromEntries(Object.keys(budget?.eager?.payloadRoutes || {}).map((name) => [name, payloadRouteCounts.get(name) || { routes: null, total: null }])),
+    },
+  }
+  report.breaches = breaches.map((breach) => exactBreaches.get(breach.label) || {
+    label: breach.label,
+    actual: breach.forbidden ? 1 : null,
+    limit: breach.forbidden ? 0 : null,
+    unit: breach.forbidden ? 'count' : 'unavailable',
+  })
+  report.verdict = report.errors.length ? 'error' : breaches.length ? 'fail' : 'pass'
+}
+
 if (JSON_OUT) {
   console.log(
     JSON.stringify(
       {
+        diagnostic_report: report,
         totalRawKB: toKB(totalRaw),
         totalGzipKB: toKB(totalGzip),
         totalBrotliKB: toKB(totalBrotli),

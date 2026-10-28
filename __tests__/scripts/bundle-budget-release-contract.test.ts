@@ -190,7 +190,7 @@ const validateCommittedBudget = (configPath: string, pinSourcePath = contractTes
 describe('bundle budget release contract', () => {
   it('checks the completed production client before compression and publication', () => {
     const source = fs.readFileSync(path.join(ROOT, 'build-prod.sh'), 'utf8')
-    const invocation = 'node scripts/guard-bundle-budget.js --fail'
+    const invocation = 'node scripts/guard-bundle-budget.js --fail --report'
     const guard = source.indexOf(invocation)
     expect(guard).toBeGreaterThan(source.indexOf('node scripts/postprocess-route-shells.js --dist'))
     expect(guard).toBeLessThan(source.indexOf('node scripts/precompress-static-assets.js "dist/$ENV"'))

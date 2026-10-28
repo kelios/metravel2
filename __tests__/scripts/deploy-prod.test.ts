@@ -58,6 +58,12 @@ const BUILD_STUB = [
   'echo "⏱  stub stage: 0 с"',
   'echo "⏱  Время этапов:"',
   'echo "      0 с  stub stage"',
+  'if [[ "${STUB_BUNDLE_GUARD:-0}" == "1" ]]; then',
+  '  mkdir -p .codex-temp/bundle-fixture/js',
+  '  printf "a%.0s" {1..200} > .codex-temp/bundle-fixture/js/entry-abcdef.js',
+  '  printf \'{"tolerancePct":0,"chunks":{"entry":{"maxRawKB":%s}}}\' "${STUB_BUNDLE_MAX:-1}" > .codex-temp/bundle-fixture/budget.json',
+  '  BUNDLE_BUDGET_JS_DIR="$PWD/.codex-temp/bundle-fixture/js" BUNDLE_BUDGET_CONFIG="$PWD/.codex-temp/bundle-fixture/budget.json" node scripts/guard-bundle-budget.js --fail --report',
+  'fi',
   'exit "${STUB_EXIT:-0}"',
 ].join('\n')
 
@@ -87,6 +93,11 @@ function makeFixture(): Fixture {
   git(repo, ['checkout', '-q', '-b', 'main'])
   fs.mkdirSync(path.join(repo, 'scripts'), { recursive: true })
   fs.copyFileSync(DEPLOY_SCRIPT, path.join(repo, 'scripts/deploy-prod.sh'))
+  for (const script of ['guard-bundle-budget.js', 'build-lock.js', 'lib/bundleBudgetReport.js']) {
+    const target = path.join(repo, 'scripts', script)
+    fs.mkdirSync(path.dirname(target), { recursive: true })
+    fs.copyFileSync(path.join(process.cwd(), 'scripts', script), target)
+  }
   fs.chmodSync(path.join(repo, 'scripts/deploy-prod.sh'), 0o755)
   writeFile(path.join(repo, 'scripts/run-with-build-lock.js'), LOCK_RUNNER_STUB)
   writeFile(path.join(repo, 'build-prod.sh'), BUILD_STUB, 0o755)
@@ -232,4 +243,27 @@ describe('scripts/deploy-prod.sh', () => {
       removeDir(fixture.root)
     }
   })
+
+  it.each([{ max: '1', status: 0, verdict: 'pass' }, { max: '0.1', status: 1, verdict: 'fail' }])(
+    'retains the real $verdict guard report outside its cleaned worktree',
+    ({ max, status, verdict }) => {
+      const fixture = makeFixture()
+      try {
+        const sha = git(fixture.repo, ['rev-parse', 'HEAD'])
+        const result = runDeploy(fixture, [], { STUB_BUNDLE_GUARD: '1', STUB_BUNDLE_MAX: max, DEPLOY_QUIET: '1' })
+        expect(result.status).toBe(status)
+        expect(fs.existsSync(fixture.worktree)).toBe(false)
+        const archive = path.join(fixture.repo, '.codex-temp/deploy')
+        const files = fs.readdirSync(archive)
+        const reportName = files.find((name) => name.endsWith('.json'))
+        expect(reportName).toBeDefined()
+        const reportPath = path.join(archive, reportName!)
+        const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
+        expect(report).toMatchObject({ sha, dirty: false, verdict, measurements: { total: { raw: 200 } } })
+        expect(result.stdout).toContain(reportPath)
+        const log = files.find((name) => name.endsWith('.log'))!
+        expect(fs.readFileSync(path.join(archive, log), 'utf8')).toContain(reportPath)
+      } finally { removeDir(fixture.root) }
+    },
+  )
 })

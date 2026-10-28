@@ -32,6 +32,8 @@ DEPLOY="${DEPLOY:-1}"
 # снимается следующим, а не копится рядом под новым именем.
 WT="$(dirname "$MT")/worktrees/deploy-prod"
 LOG_DIR="$MT/.codex-temp/deploy"
+# Reports must outlive the isolated worktree, on both green and red guards.
+export BUNDLE_BUDGET_REPORT_DIR="$LOG_DIR"
 # Строки сводки этапов build-prod.sh (`   65 с  экспорт Metro`) начинаются с
 # пробелов — без своей ветки тихий режим оставил бы от таблицы один заголовок.
 QUIET_PATTERN='^(▶|⏱|🎉|❌|⚠️|✅|📊|🔖)|^ +[0-9]+ с  |Error|ERROR|^(Number of regular files transferred|Total transferred file size|Literal data|Matched data):'

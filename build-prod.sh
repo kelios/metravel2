@@ -450,7 +450,7 @@ if [[ "$ENV" == "prod" ]]; then
   stage "бюджет JavaScript"
   BUNDLE_BUDGET_JS_DIR="$PWD/dist/$ENV/_expo/static/js/web" \
     BUNDLE_BUDGET_HTML_DIR="$PWD/dist/$ENV" \
-    node scripts/guard-bundle-budget.js --fail
+    node scripts/guard-bundle-budget.js --fail --report
 fi
 
 # #2484: nginx отдаёт `<file>.br` (brotli_static on) вместо сжатия на лету в q6.
