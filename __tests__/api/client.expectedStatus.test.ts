@@ -11,6 +11,7 @@ import {
   enqueueAppCrashReport,
   flushAppCrashReports,
   getAppTelemetryEnvironment,
+  setAppTelemetryEnabled,
 } from '@/utils/appTelemetry'
 
 jest.mock('@/utils/fetchWithTimeout', () => ({
@@ -124,4 +125,25 @@ it('keeps a crash after HTTP 200 with a valid ack and removes it only after HTTP
   await flushAppCrashReports()
   expect(JSON.parse((await AsyncStorage.getItem(APP_CRASH_QUEUE_KEY))!)).toEqual([])
   expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({ id })
+})
+
+it('does not send telemetry when the switch turns off during the token read', async () => {
+  jest.mocked(readSecureItem).mockImplementation(async () => {
+    await setAppTelemetryEnabled(false)
+    return { value: null, unavailable: false }
+  })
+  fetchMock.mockResolvedValue(response(202))
+  await enqueueAppCrashReport({
+    ...getAppTelemetryEnvironment(),
+    id: '11111111-1111-4111-8111-111111111111',
+    install_id: '22222222-2222-4222-8222-222222222222',
+    session_id: '33333333-3333-4333-8333-333333333333',
+    ts: '2026-10-28T10:00:00.000Z',
+    kind: 'js_exception',
+    fatal: false,
+    message: 'TypeError',
+    stack: '',
+  })
+  await flushAppCrashReports()
+  expect(fetchMock).not.toHaveBeenCalled()
 })

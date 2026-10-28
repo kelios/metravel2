@@ -10,11 +10,13 @@ import { Platform } from 'react-native'
 
 import { apiClient } from '@/api/client'
 import { getActiveLocale } from '@/i18n/format'
-import { createPersistentDeliveryQueue } from '@/utils/persistentDeliveryQueue'
+import { createPersistentDeliveryQueue, DeliveryPausedError } from '@/utils/persistentDeliveryQueue'
 import { createUuidV4 } from '@/utils/uuid'
 
 export const APP_INSTALL_ID_KEY = 'metravel_app_install_id_v1'
 export const APP_CRASH_QUEUE_KEY = 'metravel_app_crash_queue_v1'
+/** Общий с событиями (#2841). Нет ключа — сбор включён. '0' — выключен. */
+export const APP_TELEMETRY_ENABLED_KEY = 'metravel_app_telemetry_enabled_v1'
 
 export const CRASH_MESSAGE_MAX = 500
 export const CRASH_STACK_MAX = 16 * 1024
@@ -45,6 +47,73 @@ export type AppCrashReport = AppTelemetryEnvironment & {
 let installId: string | null = null
 let installIdPromise: Promise<string> | null = null
 let sessionId: string | null = null
+let telemetryEnabled: boolean | null = null
+let telemetryEnabledPromise: Promise<boolean> | null = null
+let telemetryRevision = 0
+let enabledWrite: Promise<void> = Promise.resolve()
+let onTelemetryDisabled: (() => Promise<void>) | null = null
+
+/** Синхронный снимок. Пока значение не прочитано, сбор включён. */
+export function isAppTelemetryCollectionAllowed(): boolean {
+  return telemetryEnabled !== false
+}
+
+/** true только после чтения хранилища, когда сбор включён. */
+export function isAppTelemetryEnabledSnapshot(): boolean {
+  return telemetryEnabled === true
+}
+
+/** Очередь событий регистрирует очистку, не создавая цикл импортов. */
+export function registerTelemetryDisabledHook(hook: () => Promise<void>): void {
+  onTelemetryDisabled = hook
+}
+
+/**
+ * Выключатель «Помогать улучшать приложение».
+ * Пока значение не прочитано, сбор считается включённым — это значение по умолчанию.
+ */
+export async function isAppTelemetryEnabled(): Promise<boolean> {
+  if (telemetryEnabled !== null) return telemetryEnabled
+  if (!telemetryEnabledPromise) {
+    telemetryEnabledPromise = (async () => {
+      try {
+        const stored = await AsyncStorage.getItem(APP_TELEMETRY_ENABLED_KEY)
+        return stored !== '0'
+      } catch {
+        return true
+      }
+    })()
+      .then((value) => {
+        if (telemetryEnabled === null) telemetryEnabled = value
+        return telemetryEnabled
+      })
+      .finally(() => {
+        telemetryEnabledPromise = null
+      })
+  }
+  return telemetryEnabledPromise
+}
+
+export async function setAppTelemetryEnabled(enabled: boolean): Promise<void> {
+  const revision = ++telemetryRevision
+  telemetryEnabled = enabled
+  const write = enabledWrite.then(async () => {
+    if (revision !== telemetryRevision) return
+    try {
+      await AsyncStorage.setItem(APP_TELEMETRY_ENABLED_KEY, telemetryEnabled === false ? '0' : '1')
+    } catch {
+      // Выбор этого процесса остаётся в памяти, даже если диск недоступен.
+    }
+  })
+  enabledWrite = write
+  await write
+  // Старый «выкл» не должен стереть очередь после более нового «вкл».
+  if (revision !== telemetryRevision || telemetryEnabled !== false) return
+  const crashCleared = clearAppCrashQueue()
+  const eventsCleared = onTelemetryDisabled ? onTelemetryDisabled() : Promise.resolve()
+  await crashCleared
+  await eventsCleared
+}
 
 /** Анонимный id установки: не рекламный, живёт до удаления приложения. */
 export async function getAppInstallId(): Promise<string> {
@@ -128,8 +197,15 @@ const crashQueue = createPersistentDeliveryQueue<AppCrashReport>({
   batchSize: 1,
   idOf: (report) => report.id,
   isValid: isCrashReport,
+  allowSend: () => isAppTelemetryEnabled(),
   send: async ([report]) => {
-    const acknowledgement = await apiClient.post<unknown>('/app-telemetry/crashes/', report, undefined, { expectedStatus: 202 })
+    if (!isAppTelemetryCollectionAllowed()) throw new DeliveryPausedError()
+    const acknowledgement = await apiClient.post<unknown>('/app-telemetry/crashes/', report, undefined, {
+      expectedStatus: 202,
+      beforeFetch: () => {
+        if (!isAppTelemetryCollectionAllowed()) throw new DeliveryPausedError()
+      },
+    })
     // Удаляем отчёт только после HTTP 202 и явного подтверждения одного
     // принятого/дублирующего id; неожиданный ответ оставляем для повтора.
     const ack = acknowledgement as { accepted?: unknown; duplicates?: unknown } | null
@@ -144,8 +220,30 @@ const crashQueue = createPersistentDeliveryQueue<AppCrashReport>({
   },
 })
 
-export const enqueueAppCrashReport = crashQueue.enqueue
-export const flushAppCrashReports = crashQueue.flush
+const isTelemetrySwitchOff = () => telemetryEnabled === false
+
+export async function enqueueAppCrashReport(report: AppCrashReport): Promise<boolean> {
+  if (isTelemetrySwitchOff()) return false
+  const saved = await crashQueue.enqueue(report)
+  // Выключатель мог смениться, пока запись ждала диск.
+  if (isTelemetrySwitchOff()) {
+    await crashQueue.clear()
+    return false
+  }
+  return saved
+}
+
+export async function flushAppCrashReports(): Promise<void> {
+  if (!(await isAppTelemetryEnabled())) {
+    await crashQueue.clear()
+    return
+  }
+  return crashQueue.flush()
+}
+
+export function clearAppCrashQueue(): Promise<boolean> {
+  return crashQueue.clear()
+}
 
 /** Только для тестов. */
 export function __resetAppTelemetry(): void {
@@ -153,4 +251,8 @@ export function __resetAppTelemetry(): void {
   installId = null
   installIdPromise = null
   sessionId = null
+  telemetryEnabled = null
+  telemetryEnabledPromise = null
+  telemetryRevision = 0
+  enabledWrite = Promise.resolve()
 }

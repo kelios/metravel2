@@ -39,6 +39,7 @@ import { setActiveQueryClient } from "@/api/activeQueryClient";
 import { patchWebShadowStyles } from "@/utils/patchWebShadowStyles";
 import { installChunkErrorReloadHandler } from "@/utils/chunkReload";
 import { installCrashReporting } from "@/utils/crashReporting";
+import { installAppEventTelemetry } from "@/utils/appEventTelemetry";
 import { ThemeProvider, useThemedColors, useTheme } from "@/hooks/useTheme";
 import { useLaunchReadinessStore } from '@/stores/launchReadinessStore';
 import { navigationThemeColors } from "@/components/layout/navigationTheme";
@@ -95,6 +96,8 @@ if (!isWeb) {
 
 /** Сбор падений в наш бэкенд — как можно раньше, до первого рендера (#2840). */
 installCrashReporting();
+/** События удержания: первое открытие, сессия, очередь (#2841). На web — пустышка. */
+installAppEventTelemetry();
 
 export default function RootLayout() {
     // Web-only: снимает фокус с элементов, попавших под aria-hidden (см. хук).

@@ -1,5 +1,8 @@
+import { Platform } from 'react-native'
+
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { getAnalyticsContext } from '@/utils/analyticsContext'
+import { isAppTelemetryEnabledSnapshot } from '@/utils/appTelemetry'
 import { readConsent } from '@/utils/consent'
 
 /**
@@ -82,7 +85,12 @@ type QuestFunnelParams = {
   stepsCount?: number
 }
 
-const isAnalyticsAllowed = () => readConsent()?.analytics === true
+const isAnalyticsAllowed = () => {
+  // На native нет cookie-баннера. Воронка идёт в наш приёмник, пока включён
+  // «Помогать улучшать приложение». Пока выбор не прочитан, старт не защёлкиваем.
+  if (Platform.OS === 'android' || Platform.OS === 'ios') return isAppTelemetryEnabledSnapshot()
+  return readConsent()?.analytics === true
+}
 
 const storage = (): Storage | undefined => {
   try {
@@ -194,10 +202,10 @@ export const trackQuestView = (params: QuestFunnelParams & { source?: string }) 
  * до шага, а не число событий, и возврат к брошенному квесту — настоящий заход.
  * Отличить его позволяет `is_resumed`.
  *
- * Возвращает `false`, если прохождение не заведено (нет согласия на аналитику).
- * Вызывающий по этому признаку не защёлкивает «старт отправлен»: игрок мог
- * принять баннер уже внутри квеста, и следующая же закрытая точка заводит
- * воронку целиком, вместо того чтобы молчать до конца маршрута.
+ * Возвращает `false`, если прохождение не заведено: на web нет согласия на
+ * аналитику, на Android/iOS выключен «Помогать улучшать приложение» или выбор
+ * ещё не прочитан. Вызывающий по этому признаку не защёлкивает «старт
+ * отправлен», и следующая точка пробует снова.
  */
 export const trackQuestStart = (params: QuestFunnelParams): boolean => {
   if (!isAnalyticsAllowed()) return false

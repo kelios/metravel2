@@ -39,6 +39,7 @@ import AccountSection from '@/components/settings/AccountSection';
 import DataManagementSection from '@/components/settings/DataManagementSection';
 import NavCardSection from '@/components/settings/NavCardSection';
 import AppVersionSection from '@/components/settings/AppVersionSection';
+import AppTelemetrySection from '@/components/settings/AppTelemetrySection';
 import LanguageSection from '@/components/settings/LanguageSection';
 import OfflineSettingsSection from '@/components/settings/OfflineSettingsSection';
 import NotificationSettingsSection from '@/components/settings/NotificationSettingsSection';
@@ -271,6 +272,11 @@ export default function SettingsScreen() {
     if (!isAuthenticated) {
         return (
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+                {isWeb ? null : (
+                    <View style={styles.pageContainer}>
+                        <AppTelemetrySection styles={styles} colors={colors} />
+                    </View>
+                )}
                 <EmptyState
                     density="full"
                     icon="settings"
@@ -409,6 +415,8 @@ export default function SettingsScreen() {
                     />
 
                     <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.privatnost_i_dannye_1e79e641')}</Text>
+
+                    {isWeb ? null : <AppTelemetrySection styles={styles} colors={colors} />}
 
                     <NavCardSection
                         styles={styles}

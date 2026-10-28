@@ -152,7 +152,7 @@ describe('crash reporting', () => {
     expect(mockPost).toHaveBeenCalledWith(
       '/app-telemetry/crashes/',
       expect.objectContaining({ kind: 'abnormal_exit', session_id: 'prev-session', app_version: '1.0.4' }),
-      undefined, { expectedStatus: 202 },
+      undefined, expect.objectContaining({ expectedStatus: 202 }),
     )
     const marker = JSON.parse((await AsyncStorage.getItem(APP_SESSION_MARKER_KEY)) as string)
     expect(marker.session_id).not.toBe('prev-session')
@@ -206,7 +206,7 @@ describe('crash reporting', () => {
       await flushPromises()
       expect(mockPost).toHaveBeenCalledWith('/app-telemetry/crashes/', expect.objectContaining({
         kind: 'unhandled_rejection', fatal: false,
-      }), undefined, { expectedStatus: 202 })
+      }), undefined, expect.objectContaining({ expectedStatus: 202 }))
     } finally {
       ;(globalThis as any).HermesInternal = previousHermes
     }
@@ -267,7 +267,7 @@ describe('crash reporting', () => {
     mockPost.mockClear()
     mockPost.mockResolvedValue({ accepted: 1, duplicates: 0 })
     await flushAppCrashReports()
-    expect(mockPost).toHaveBeenCalledWith('/app-telemetry/crashes/', expect.objectContaining({ id: report.id }), undefined, { expectedStatus: 202 })
+    expect(mockPost).toHaveBeenCalledWith('/app-telemetry/crashes/', expect.objectContaining({ id: report.id }), undefined, expect.objectContaining({ expectedStatus: 202 }))
     expect(await readQueue()).toEqual([])
   })
 
@@ -293,7 +293,7 @@ describe('crash reporting', () => {
     getMonitoringService()?.captureMessage('a private article', 'error', { token: 'private' })
     await flushPromises()
     await flushAppCrashReports()
-    expect(mockPost).toHaveBeenCalledWith('/app-telemetry/crashes/', expect.objectContaining({ message: 'Error' }), undefined, { expectedStatus: 202 })
+    expect(mockPost).toHaveBeenCalledWith('/app-telemetry/crashes/', expect.objectContaining({ message: 'Error' }), undefined, expect.objectContaining({ expectedStatus: 202 }))
     expect(JSON.stringify(mockPost.mock.calls)).not.toMatch(/private article|"token"/)
   })
 
@@ -356,7 +356,7 @@ describe('crash reporting', () => {
     expect(mockPost).toHaveBeenCalledWith(
       '/app-telemetry/crashes/',
       expect.objectContaining({ kind: 'render_error', fatal: false, component: 'in TravelDetails' }),
-      undefined, { expectedStatus: 202 },
+      undefined, expect.objectContaining({ expectedStatus: 202 }),
     )
 
     mockPost.mockClear()
@@ -447,5 +447,30 @@ describe('crash reporting', () => {
     }
 
     expect(setGlobalHandler).not.toHaveBeenCalled()
+  })
+
+  it('drops crash delivery when the shared improve-app switch is off', async () => {
+    const { setAppTelemetryEnabled } = require('@/utils/appTelemetry')
+    await setAppTelemetryEnabled(false)
+    const saved = await enqueueAppCrashReport({
+      id: '11111111-1111-4111-8111-111111111111',
+      install_id: '22222222-2222-4222-8222-222222222222',
+      session_id: '33333333-3333-4333-8333-333333333333',
+      platform: 'android',
+      app_version: '1.2.3',
+      build_number: '23',
+      os_version: '34',
+      device_model: 'Pixel',
+      locale: 'pl',
+      ts: '2026-10-28T00:00:00.000Z',
+      kind: 'js_exception',
+      fatal: false,
+      message: 'Error',
+      stack: '',
+    })
+    expect(saved).toBe(false)
+    await flushAppCrashReports()
+    expect(mockPost).not.toHaveBeenCalled()
+    expect(await readQueue()).toEqual([])
   })
 })

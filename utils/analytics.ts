@@ -190,9 +190,10 @@ export const sendAnalyticsEvent = async (
         return;
     }
 
-    // Native analytics is intentionally disabled until the app has an approved
-    // secret-free SDK or backend proxy. Client bundles must never ship provider secrets.
-    return;
+    // Native: очередь в наш бэкенд, без стороннего SDK и секретов в бандле (#2841).
+    // Динамический импорт: web-сборка берёт пустой appEventTelemetry.web.ts.
+    const { recordNativeAnalyticsEvent } = await import('@/utils/appEventTelemetry');
+    await recordNativeAnalyticsEvent(eventName, eventParams);
 };
 
 export const trackWizardEvent = async (

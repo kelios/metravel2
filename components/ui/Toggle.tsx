@@ -9,6 +9,8 @@ interface ToggleProps {
   onValueChange: (value: boolean) => void;
   disabled?: boolean;
   style?: ViewStyle;
+  accessibilityLabel?: string;
+  testID?: string;
   /**
    * Если Toggle вложен в строку, которая сама несёт role="switch"
    * (см. FiltersPanelMapSettings), делаем его презентационным, чтобы не было
@@ -23,6 +25,8 @@ export const Toggle: React.FC<ToggleProps> = ({
   disabled = false,
   style,
   presentational = false,
+  accessibilityLabel,
+  testID,
 }) => {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -34,7 +38,8 @@ export const Toggle: React.FC<ToggleProps> = ({
     : ({
         accessibilityRole: 'switch',
         accessibilityState: { checked: value, disabled },
-        accessibilityLabel: value ? i18nT('shared:components.ui.Toggle.vklyucheno_f9570372') : i18nT('shared:components.ui.Toggle.vyklyucheno_b3b084c0'),
+        accessibilityLabel: accessibilityLabel ?? (value ? i18nT('shared:components.ui.Toggle.vklyucheno_f9570372') : i18nT('shared:components.ui.Toggle.vyklyucheno_b3b084c0')),
+        testID,
         'aria-checked': value,
         'aria-disabled': disabled || undefined,
       } as any);

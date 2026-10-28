@@ -1,4 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { Platform } from 'react-native'
+
 import { queueAnalyticsEvent } from '@/utils/analytics'
+import { __resetAppTelemetry, setAppTelemetryEnabled } from '@/utils/appTelemetry'
 import { readConsent } from '@/utils/consent'
 import {
   QUEST_FUNNEL_EVENTS,
@@ -10,6 +14,15 @@ import {
   trackQuestView,
 } from '@/utils/questFunnelAnalytics'
 
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: {
+    expoConfig: { version: '1.2.3', android: { versionCode: 23 }, ios: { buildNumber: '42' } },
+    platform: { ios: { buildNumber: '42' } },
+  },
+}))
+jest.mock('expo-device', () => ({ modelName: 'Pixel', modelId: 'pixel' }))
+jest.mock('@/i18n/format', () => ({ getActiveLocale: () => 'ru' }))
 jest.mock('@/utils/analytics', () => ({ queueAnalyticsEvent: jest.fn() }))
 jest.mock('@/utils/consent', () => ({ readConsent: jest.fn() }))
 jest.mock('@/utils/analyticsContext', () => ({
@@ -25,6 +38,7 @@ jest.mock('@/utils/analyticsContext', () => ({
 
 const mockedQueue = queueAnalyticsEvent as jest.MockedFunction<typeof queueAnalyticsEvent>
 const mockedConsent = readConsent as jest.MockedFunction<typeof readConsent>
+const originalOS = Platform.OS
 
 const QUEST = { questId: 'minsk-1', cityId: 'minsk' }
 /** Восьмиточечный квест: пороги не слипаются с первой точкой (1/8 = 12.5%). */
@@ -39,9 +53,14 @@ const allowAnalytics = () =>
 
 describe('questFunnelAnalytics', () => {
   beforeEach(() => {
+    ;(Platform as { OS: string }).OS = 'web'
     mockedQueue.mockClear()
     window.localStorage.clear()
     allowAnalytics()
+  })
+
+  afterAll(() => {
+    ;(Platform as { OS: string }).OS = originalOS
   })
 
   it('не шлёт событий и не пишет в хранилище без согласия на аналитику', () => {
@@ -190,5 +209,33 @@ describe('questFunnelAnalytics', () => {
   it('не считает вехи до старта прохождения', () => {
     trackQuestProgress({ ...QUEST, passedCount: 3, stepsCount: STEPS })
     expect(mockedQueue).not.toHaveBeenCalled()
+  })
+
+  describe('native improve-app switch', () => {
+    beforeEach(async () => {
+      ;(Platform as { OS: string }).OS = 'android'
+      mockedConsent.mockReturnValue(null)
+      __resetAppTelemetry()
+      await AsyncStorage.clear()
+      mockedQueue.mockClear()
+    })
+
+    afterEach(() => {
+      __resetAppTelemetry()
+    })
+
+    it('queues quest_view and quest_start while the switch is on', async () => {
+      await setAppTelemetryEnabled(true)
+      trackQuestView(QUEST)
+      expect(trackQuestStart({ ...QUEST, passedCount: 0, stepsCount: STEPS })).toBe(true)
+      expect(emitted()).toEqual([QUEST_FUNNEL_EVENTS.view, QUEST_FUNNEL_EVENTS.start])
+    })
+
+    it('does not latch a start while the switch is off', async () => {
+      await setAppTelemetryEnabled(false)
+      trackQuestView(QUEST)
+      expect(trackQuestStart({ ...QUEST, passedCount: 0, stepsCount: STEPS })).toBe(false)
+      expect(mockedQueue).not.toHaveBeenCalled()
+    })
   })
 })

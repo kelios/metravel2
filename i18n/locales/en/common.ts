@@ -61,4 +61,6 @@ export const common = {
   'action.cancel': "Cancel",
   'action.close': "Close",
   'action.delete': "Delete",
+  'appTelemetry.improveTitle': "Help improve the app",
+  'appTelemetry.improveDescription': "Anonymous details about crashes and how you use the app. Email, text and coordinates are not sent.",
 } as const

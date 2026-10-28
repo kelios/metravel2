@@ -10,6 +10,14 @@ import { devWarn } from '@/utils/logger'
 const RETRY_BASE_MS = 2000
 const RETRY_MAX_MS = 60 * 1000
 
+/** Очередь остановили снаружи (выключатель). Не ретраить и не выбрасывать элементы. */
+export class DeliveryPausedError extends Error {
+  constructor() {
+    super('Delivery paused')
+    this.name = 'DeliveryPausedError'
+  }
+}
+
 export type PersistentDeliveryQueueOptions<T> = {
   storageKey: string
   /** Потолок очереди: переполнение дропает самые старые элементы. */
@@ -18,13 +26,20 @@ export type PersistentDeliveryQueueOptions<T> = {
   idOf: (item: T) => string
   isValid: (value: unknown) => value is T
   send: (batch: T[]) => Promise<unknown>
+  /** false — не отправлять и не планировать повтор. Очередь на диске не трогаем. */
+  allowSend?: () => Promise<boolean>
 }
 
 export type PersistentDeliveryQueue<T> = {
-  /** true — запись переживёт завершение процесса; false — осталась только в памяти. */
+  /** true — запись переживёт завершение процесса; false — элемент в очередь не попал. */
   enqueue: (item: T) => Promise<boolean>
+  /** Копия очереди после чтения диска. */
+  snapshot: () => Promise<T[]>
   /** Сериализованный флаш: параллельный вызов встаёт за текущим. */
   flush: () => Promise<void>
+  /** Стереть очередь и отменить повтор. Явное действие пользователя, не ошибка чтения. */
+  clear: () => Promise<boolean>
+  size: () => Promise<number>
   /** Только для тестов: сбрасывает модульное состояние очереди. */
   __reset: () => void
 }
@@ -32,7 +47,7 @@ export type PersistentDeliveryQueue<T> = {
 export function createPersistentDeliveryQueue<T>(
   options: PersistentDeliveryQueueOptions<T>,
 ): PersistentDeliveryQueue<T> {
-  const { storageKey, maxItems, batchSize, idOf, isValid, send } = options
+  const { storageKey, maxItems, batchSize, idOf, isValid, send, allowSend } = options
 
   let items: T[] | null = null
   let loadPromise: Promise<T[]> | null = null
@@ -40,10 +55,13 @@ export function createPersistentDeliveryQueue<T>(
   let retryAttempt = 0
   let retryTimer: ReturnType<typeof setTimeout> | null = null
   let persistChain: Promise<boolean> = Promise.resolve(true)
+  // clear() во время чтения диска не должен вернуть старые элементы обратно.
+  let epoch = 0
 
   const load = async (): Promise<T[]> => {
     if (items) return items
     if (!loadPromise) {
+      const epochAtStart = epoch
       loadPromise = (async () => {
         // Ошибка чтения не означает пустую очередь: не перезаписываем диск
         // новым отчётом, если старые пока невозможно прочитать.
@@ -57,6 +75,7 @@ export function createPersistentDeliveryQueue<T>(
         }
       })()
         .then((loaded) => {
+          if (epoch !== epochAtStart) return items ?? []
           items = loaded
           return loaded
         })
@@ -106,6 +125,7 @@ export function createPersistentDeliveryQueue<T>(
   }
 
   const drain = async (): Promise<void> => {
+    if (allowSend && !(await allowSend())) return
     await load()
     if (!items?.length) return
     clearRetryTimer()
@@ -121,6 +141,7 @@ export function createPersistentDeliveryQueue<T>(
         await persist()
         retryAttempt = 0
       } catch (error) {
+        if (error instanceof DeliveryPausedError) return
         const status = error instanceof ApiError ? error.status : undefined
         if (status === 400) {
           devWarn(`Delivery queue ${storageKey}: batch rejected with ${status}, dropped`)
@@ -148,8 +169,32 @@ export function createPersistentDeliveryQueue<T>(
     // в захваченный до await — это потерянный элемент.
     const queue = items ?? (items = [])
     queue.push(item)
-    if (queue.length > maxItems) queue.splice(0, queue.length - maxItems)
+    const evicted = queue.length > maxItems ? queue.splice(0, queue.length - maxItems) : []
+    const saved = await persist()
+    if (saved) return true
+    // Снимок не записался. Иначе флаш отправит событие, которого нет на диске,
+    // а следующий запуск решит, что его не было, и создаст второе.
+    const index = queue.lastIndexOf(item)
+    if (index >= 0) queue.splice(index, 1)
+    if (evicted.length) queue.unshift(...evicted)
+    return false
+  }
+
+  const snapshot = async (): Promise<T[]> => {
+    await load()
+    return [...(items ?? [])]
+  }
+
+  const clear = async (): Promise<boolean> => {
+    clearRetryTimer()
+    epoch += 1
+    items = []
     return persist()
+  }
+
+  const size = async (): Promise<number> => {
+    await load()
+    return items?.length ?? 0
   }
 
   const __reset = () => {
@@ -158,8 +203,9 @@ export function createPersistentDeliveryQueue<T>(
     loadPromise = null
     flushChain = null
     retryAttempt = 0
+    epoch = 0
     persistChain = Promise.resolve(true)
   }
 
-  return { enqueue, flush, __reset }
+  return { enqueue, snapshot, flush, clear, size, __reset }
 }

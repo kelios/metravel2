@@ -44,9 +44,14 @@ describe('utils/analytics', () => {
     }
   })
 
-  it.each(['ios', 'android'])('does not perform native analytics network I/O on %s', async (os) => {
+  it.each(['ios', 'android'])('queues native product events without third-party network I/O on %s', async (os) => {
+    const recordNativeAnalyticsEvent = jest.fn(async () => {})
     jest.doMock('react-native', () => ({
       Platform: { OS: os },
+    }))
+    jest.doMock('@/utils/appEventTelemetry', () => ({
+      recordNativeAnalyticsEvent,
+      installAppEventTelemetry: () => {},
     }))
 
     const fetchMock = jest.fn()
@@ -54,10 +59,12 @@ describe('utils/analytics', () => {
 
     const { sendAnalyticsEvent } = require('@/utils/analytics')
 
+    await sendAnalyticsEvent('quest_start', { quest_id: 'q1' })
     await sendAnalyticsEvent('AuthViewed', { source: 'test' })
-    await sendAnalyticsEvent('AuthSuccess', { source: 'test' })
 
     expect(fetchMock).not.toHaveBeenCalled()
+    expect(recordNativeAnalyticsEvent).toHaveBeenNthCalledWith(1, 'quest_start', { quest_id: 'q1' })
+    expect(recordNativeAnalyticsEvent).toHaveBeenNthCalledWith(2, 'AuthViewed', { source: 'test' })
   })
 
   it('sends web product events to both GA4 and Yandex Metrika when both are ready', async () => {
@@ -292,8 +299,14 @@ describe('utils/analytics', () => {
   })
 
   describe('pre-provider analytics intent (#2281)', () => {
+    const recordNativeAnalyticsEvent = jest.fn(async () => {})
     const setup = (automation: boolean, consent = true, os = 'web') => {
+      recordNativeAnalyticsEvent.mockClear()
       jest.doMock('react-native', () => ({ Platform: { OS: os } }))
+      jest.doMock('@/utils/appEventTelemetry', () => ({
+        recordNativeAnalyticsEvent,
+        installAppEventTelemetry: () => {},
+      }))
       jest.doMock('@/utils/consent', () => ({ readConsent: () => ({ necessary: true, analytics: consent }) }))
       stubWindowProperty('navigator', { webdriver: automation })
       const listeners: Record<string, Array<(event: Event) => void>> = {}
@@ -371,6 +384,11 @@ describe('utils/analytics', () => {
       expect(w.gtag).not.toHaveBeenCalled()
       expect(w.ym).not.toHaveBeenCalled()
       expect(w.metravelLoadAnalytics).not.toHaveBeenCalled()
+      if (mode === 'ios' || mode === 'android') {
+        expect(recordNativeAnalyticsEvent).toHaveBeenCalledWith('next_quest_click', { quest_id: 'q1' })
+      } else {
+        expect(recordNativeAnalyticsEvent).not.toHaveBeenCalled()
+      }
     })
   })
 

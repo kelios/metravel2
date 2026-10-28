@@ -80,7 +80,12 @@ const UNSAFE_HTTP_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const isUnsafeHttpMethod = (method: RequestInit['method']): boolean =>
     UNSAFE_HTTP_METHODS.has(String(method ?? 'GET').toUpperCase());
 
-type ApiRequestOptions = RequestInit & { skipAuth?: boolean; expectedStatus?: number };
+type ApiRequestOptions = RequestInit & {
+    skipAuth?: boolean;
+    expectedStatus?: number;
+    /** После чтения токена и непосредственно перед fetch. Бросок отменяет сеть. */
+    beforeFetch?: () => void | Promise<void>;
+};
 
 class ApiClient {
     private baseURL: string;
@@ -332,7 +337,7 @@ class ApiClient {
         options: ApiRequestOptions = {},
         timeout: number = DEFAULT_TIMEOUT
     ): Promise<T> {
-        const { skipAuth = false, expectedStatus, ...fetchOptions } = options;
+        const { skipAuth = false, expectedStatus, beforeFetch, ...fetchOptions } = options;
         const parseResponse = (response: Response): Promise<T> => {
             if (expectedStatus !== undefined && response.status !== expectedStatus) {
                 throw new ApiError(response.status, `Expected HTTP ${expectedStatus}, received ${response.status}`);
@@ -390,7 +395,12 @@ class ApiClient {
 
         const headers = this.authHeaders(token, { includeDefaults: true, extra: options.headers });
 
+        const runBeforeFetch = async () => {
+            if (beforeFetch) await beforeFetch();
+        };
+
         try {
+            await runBeforeFetch();
             const response = await fetchWithTimeout(
                 `${this.baseURL}${endpoint}`,
                 { ...fetchOptions, ...getApiRequestCredentials(skipAuth), headers },
@@ -444,6 +454,7 @@ class ApiClient {
                             ...options.headers,
                         };
 
+                        await runBeforeFetch();
                         const retryResponse = await fetchWithTimeout(
                             `${this.baseURL}${endpoint}`,
                             { ...fetchOptions, ...getApiRequestCredentials(), headers: retryHeaders },
@@ -460,6 +471,7 @@ class ApiClient {
 
                         successfulRetry = retryResponse;
                     } catch (error) {
+                        if (error instanceof Error && error.name === 'DeliveryPausedError') throw error;
                         // Refresh не сработал — падаем в общий путь пробы+fallback ниже.
                         rotationSuperseded = isSessionSupersededError(error);
                     }
@@ -495,6 +507,7 @@ class ApiClient {
                     includeDefaults: true,
                     extra: options.headers,
                 });
+                await runBeforeFetch();
                 const fallbackResponse = await fetchWithTimeout(
                     `${this.baseURL}${endpoint}`,
                     { ...fetchOptions, ...getApiRequestCredentials(true), headers: fallbackHeaders },
@@ -514,6 +527,11 @@ class ApiClient {
 
             return await parseResponse(response);
         } catch (error) {
+            // Выключатель телеметрии отменяет запрос до сети: это не сбой API.
+            if (error instanceof Error && error.name === 'DeliveryPausedError') {
+                this.releaseRateLimitSlot(rateLimitSlot);
+                throw error;
+            }
             const errorName = error instanceof Error ? error.name : '';
             const errorMessage = error instanceof Error ? error.message : String(error);
             const isAbortError =
@@ -712,7 +730,7 @@ class ApiClient {
         endpoint: string,
         data?: unknown,
         timeout?: number,
-        options?: Pick<ApiRequestOptions, 'expectedStatus'>
+        options?: Pick<ApiRequestOptions, 'expectedStatus' | 'beforeFetch'>
     ): Promise<T> {
         return this.request<T>(
             endpoint,

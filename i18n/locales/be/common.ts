@@ -61,4 +61,6 @@ export const common = {
   'action.cancel': "Скасаваць",
   'action.close': "Зачыніць",
   'action.delete': "Выдаліць",
+  'appTelemetry.improveTitle': "Дапамагаць паляпшаць праграму",
+  'appTelemetry.improveDescription': "Ананімныя звесткі пра збоі і пра тое, як вы карыстаецеся праграмай. Пошта, тэксты і каардынаты не адпраўляюцца.",
 } as const
