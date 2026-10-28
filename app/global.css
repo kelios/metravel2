@@ -1710,7 +1710,6 @@ html[data-season] [data-header-logo-travel] {
 [data-home-quest-grid]{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:16px!important}
 [data-home-quest-grid]>*{width:100%!important;min-width:0!important}
 [data-home-quest-grid]>*:nth-child(n+5){display:none!important}
-[data-home-quest-more]{display:flex!important;gap:12px!important;margin-top:16px!important}
 [data-home-quest-promo] [data-quest-card-media]{width:132px!important;height:132px!important}
 [data-home-quest-promo] [data-quest-card-arrow],[data-home-quest-scenario-cta]{display:none!important}
 [data-home-quest-scenario]{gap:12px!important;margin-top:16px!important;padding:12px 14px!important}
@@ -1724,7 +1723,6 @@ html[data-season] [data-header-logo-travel] {
 [data-home-quest-subtitle]{font-size:16px!important}
 [data-home-quest-grid]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 [data-home-quest-grid]>*:nth-child(n+5){display:flex!important}
-[data-home-quest-more-index="4"],[data-home-quest-more-index="5"]{display:none!important}
 [data-home-quest-promo] [data-quest-card-arrow],[data-home-quest-scenario-cta]{display:flex!important}
 [data-home-quest-scenario]{gap:16px!important;margin-top:24px!important;padding:16px 20px!important}}
 @media(min-width:768px) and (max-width:769.98px){

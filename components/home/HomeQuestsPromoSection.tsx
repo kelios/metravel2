@@ -22,8 +22,8 @@ const IS_WEB = Platform.OS === 'web'
 // Одним запросом (?sort=popular&page_size=N) забираем ровно столько карточек,
 // сколько показываем: через полный useQuestsList блок тянул весь каталог
 // квестов ради нескольких плиток. Порядок отбора задаёт бэкенд — прохождения,
-// просмотры, id (#1798), поэтому мобильные 4 это префикс десктопных 6, а те —
-// префикс восьми ссылок статического среза главной. 6 хватает на сетку 2×3 на
+// просмотры, id (#1798), поэтому мобильные 4 это префикс десктопных 6.
+// 6 хватает на сетку 2×3 на
 // десктопе; мобайл показывает 4, чтобы секция сразу после hero осталась в
 // пределах первых экранов прокрутки.
 const MAX_QUESTS = 6
@@ -37,7 +37,7 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
   const responsiveWeb = IS_WEB && discovery?.view === 'home'
   const { width, isPhone, isLargePhone } = useResponsive()
   const isMobile = !responsiveWeb && isPhoneLayout({ width, isPhone, isLargePhone })
-  const { quests: previewQuests, loading } = useQuestsPreview(responsiveWeb ? 8 : MAX_QUESTS, { enabled })
+  const { quests: previewQuests, loading } = useQuestsPreview(MAX_QUESTS, { enabled })
   const [hovered, setHovered] = useState(false)
   const [scenarioHovered, setScenarioHovered] = useState(false)
 
@@ -61,7 +61,7 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
   // reach it, so the server-rendered home carries it in the body (#2817).
   const itemListJsonLd = useMemo(() => {
     if (!responsiveWeb) return null
-    const itemListElement = previewQuests.flatMap((quest) => {
+    const itemListElement = visibleQuests.flatMap((quest) => {
       const path = buildQuestPath(quest.cityId, quest.id)
       return path ? [{ url: buildCanonicalUrl(path), name: quest.title }] : []
     }).map((entry, index) => ({ '@type': 'ListItem', position: index + 1, ...entry }))
@@ -73,7 +73,7 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
       numberOfItems: itemListElement.length,
       itemListElement,
     } : null
-  }, [responsiveWeb, previewQuests])
+  }, [responsiveWeb, visibleQuests])
 
   // Без скелетонов: пока грузится или пусто — секции на главной нет (бережём LCP).
   if (loading || visibleQuests.length === 0) return null
@@ -109,17 +109,6 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
             </View>
           ))}
         </View>
-
-        {responsiveWeb && (
-          <View {...webDataSetProps({ homeQuestMore: true })}>
-            {previewQuests.slice(MAX_QUESTS_MOBILE, 8).map((quest, offset) => {
-              const href = buildQuestPath(quest.cityId, quest.id)
-              return href ? <Link key={quest.id} href={href as Href}
-                {...webDataSetProps({ homeQuestMoreIndex: offset + MAX_QUESTS_MOBILE })}
-                style={{ color: colors.primaryText, fontSize: 14, lineHeight: 20 }}>{quest.title}</Link> : null
-            })}
-          </View>
-        )}
 
         {/* Подарочный сценарий-вход: отдельный CTA под подбор «квест в подарок».
             Настоящая ссылка, а не только onPress: краулер видит её в HTML (#2817). */}

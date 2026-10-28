@@ -21,6 +21,7 @@ beforeAll(() => {
         : React.createElement(require('react-native').Text, { ...props, href }, children);
     } }));
   jest.doMock('@expo/vector-icons/Feather', () => () => null);
+  jest.doMock('@/components/layout/NavigationIcon', () => () => null);
   jest.doMock('@/hooks/useTheme', () => ({ useThemedColors: () => require('@/constants/designSystem').getThemedColors(false) }));
   jest.doMock('@/components/home/useHomeViewport', () => ({ useHomeViewport: () => viewport }));
   jest.doMock('@/components/home/useHomeHeroSlider', () => ({
@@ -77,18 +78,15 @@ it.each([[390, 844], [768, 1024], [1440, 900], [2048, 900], [2560, 640]])(
     expect(container.querySelectorAll('[data-home-popular-card] img[loading="lazy"]')).toHaveLength(4);
     expect(container.querySelector('[data-home-quest-grid]')?.children).toHaveLength(6);
     const cardHrefs = [...container.querySelectorAll('[data-home-quest-grid] a')].map((link) => link.getAttribute('href'));
-    const moreLinks = [...container.querySelectorAll('[data-home-quest-more] a')];
-    const expectedHrefs = Array.from({ length: 8 }, (_, index) => `/quests/7/quest-${index}`);
-    // CSS shows four cards plus four compact links on mobile; six plus two on
-    // desktop. The normal visible link set stays the old selected eight.
-    expect([...cardHrefs.slice(0, 4), ...moreLinks.map((link) => link.getAttribute('href'))]).toEqual(expectedHrefs);
-    expect([...cardHrefs, ...moreLinks.filter((link) => Number(link.getAttribute('data-home-quest-more-index')) >= 6)
-      .map((link) => link.getAttribute('href'))]).toEqual(expectedHrefs);
+    const expectedHrefs = Array.from({ length: 6 }, (_, index) => `/quests/7/quest-${index}`);
+    expect(cardHrefs).toEqual(expectedHrefs);
+    expect(container.querySelector('[data-home-quest-more]')).toBeNull();
+    expect(container.textContent).not.toMatch(/Quest [67]/);
     // #2817: the server HTML carries the section's ItemList and a real scenario link.
     const itemLists = container.querySelectorAll('script[data-seo-jsonld="home-quests-itemlist"]');
     expect(itemLists).toHaveLength(1);
     const itemList = JSON.parse(itemLists[0].textContent || '{}');
-    expect(itemList.numberOfItems).toBe(8);
+    expect(itemList.numberOfItems).toBe(6);
     expect(itemList.itemListElement.map((entry: { url: string }) => new URL(entry.url).pathname)).toEqual(expectedHrefs);
     expect(container.querySelectorAll('a[href="/quests/scenario"]')).toHaveLength(1);
     const errors: unknown[] = [];
@@ -102,6 +100,8 @@ it.each([[390, 844], [768, 1024], [1440, 900], [2048, 900], [2560, 640]])(
       expect(container.querySelector('h1')?.textContent).toBe(title);
       expect(container.querySelector('[data-home-book-subtitle]')?.textContent).toBe(subtitle);
       expect(container.querySelector('[data-home-quest-grid]')?.children).toHaveLength(6);
+      expect(container.querySelector('[data-home-quest-more]')).toBeNull();
+      expect(container.textContent).not.toMatch(/Quest [67]/);
       expect(container.querySelectorAll('h1')).toHaveLength(1);
       expect(sliderBookEnabled).toBe(width >= 1280);
     } finally {
