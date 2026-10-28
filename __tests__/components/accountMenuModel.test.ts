@@ -124,6 +124,7 @@ describe('accountMenuModel (#2139)', () => {
       'public-profile',
       'task-board',
       'instagram-schedule',
+      'app-stats',
       'logout',
     ])
   })

@@ -73,6 +73,7 @@ jest.mock('@/components/quests/questOfflineMapExport', () => ({
 
 import { QuestWizard } from '@/components/quests/QuestWizard'
 import { useQuestWizardAnalytics } from '@/components/quests/hooks/useQuestWizardAnalytics'
+import { __resetAppTelemetry, setAppTelemetryEnabled } from '@/utils/appTelemetry'
 import { buildAnswerChecker } from '@/utils/questAdapters'
 
 const autoPass = () => true
@@ -263,9 +264,17 @@ describe('useQuestWizardAnalytics (#1498)', () => {
     guestAnsweredCount: 0,
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks()
     window.localStorage.clear()
+    // Jest идёт как native: старт воронки ждёт тумблер «Помогать улучшать
+    // приложение», а не web-согласие, которое замокано выше.
+    __resetAppTelemetry()
+    await setAppTelemetryEnabled(true)
+  })
+
+  afterEach(() => {
+    __resetAppTelemetry()
   })
 
   // Возврат к пройденной точке размывал бы кривую доходимости, ради которой

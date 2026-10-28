@@ -312,9 +312,10 @@ describe('useRouting - Safety Tests', () => {
         )
       );
 
+      // 500 на ORS повторяется трижды с паузами 1 с и 2 с, потом идёт запасной маршрут.
       await waitFor(() => {
         expect(result.current.loading).toBe(false);
-      });
+      }, { timeout: 10000 });
     });
   });
 

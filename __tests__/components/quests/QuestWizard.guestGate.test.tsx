@@ -9,6 +9,8 @@
 import React from 'react'
 import { act, fireEvent, render } from '@testing-library/react-native'
 
+import { __resetAppTelemetry, setAppTelemetryEnabled } from '@/utils/appTelemetry'
+
 const mockQueueAnalyticsEvent = jest.fn()
 const mockQuestExcursionsInline = jest.fn(() => null)
 const mockQuestDesktopMapPanel = jest.fn(() => null)
@@ -107,9 +109,12 @@ const collectRenderedTestIds = (node: unknown, result: string[] = []): string[] 
 }
 
 describe('QuestWizard guest gate', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks()
     window.localStorage.clear()
+    // Jest идёт как native: quest_start ждёт включённый тумблер телеметрии.
+    __resetAppTelemetry()
+    await setAppTelemetryEnabled(true)
     mockQuestWizardResponsiveModel = {
       screenW: 390,
       screenH: 844,
@@ -120,6 +125,10 @@ describe('QuestWizard guest gate', () => {
       useWideInlineLayout: false,
       useWideExcursionsSidebar: false,
     }
+  })
+
+  afterEach(() => {
+    __resetAppTelemetry()
   })
 
   it('renders the intro start action before story, task and the collapsed trust footer', async () => {

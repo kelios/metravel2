@@ -128,6 +128,7 @@ export const BLOCK_EXEMPT_ROOTS: Readonly<Record<string, string>> = {
   gamification: 'прогресс; экран профиля скрыт при блоке',
   privacy: 'свои настройки',
   security: 'свой журнал',
+  'app-telemetry-stats': 'сводка телеметрии приложения для staff; чужого авторского контента нет',
   'planned-trips': 'свои поездки',
   'planned-trip': 'деталь своей/участвуемой поездки',
   'trip-route-elevation': 'профиль высот',
