@@ -32,14 +32,23 @@ export function resolveUpsertTravelEntryKey(params: Record<string, unknown>): st
 // пересоздаёт форму, а возврат на тот же адрес сохраняет набранное.
 export default function UpsertTravelRoute() {
   const [retryKey, setRetryKey] = useState(0);
-  const entryKey = resolveUpsertTravelEntryKey(useLocalSearchParams());
+  const params = useLocalSearchParams();
+  const entryKey = resolveUpsertTravelEntryKey(params);
+  const hasId = Boolean(params.id);
+  const [entry, setEntry] = useState({ hasId, revision: 0 });
+
+  // Первое сохранение добавляет id без сброса. Повторный вход «создать» удаляет
+  // его: прежняя запись не должна остаться в форме новой заметки или статьи.
+  if (entry.hasId !== hasId) {
+    setEntry({ hasId, revision: entry.revision + (hasId ? 0 : 1) });
+  }
 
   const handleRetry = useCallback(() => {
     setRetryKey((value) => value + 1);
   }, []);
 
   return (
-    <TravelFormErrorBoundary key={`${retryKey}:${entryKey}`} onRetry={handleRetry}>
+    <TravelFormErrorBoundary key={`${retryKey}:${entry.revision}:${entryKey}`} onRetry={handleRetry}>
       <UpsertTravel />
     </TravelFormErrorBoundary>
   );

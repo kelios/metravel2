@@ -77,6 +77,28 @@ describe('UpsertTravelRoute entry key', () => {
     expect(view.getByTestId('draft').props.value).toBe('unsaved words')
   })
 
+  it.each(['note', 'full'])('starts a fresh %s after leaving the saved record for the same create entry', (mode) => {
+    mockParams = { mode }
+    const view = render(<UpsertTravelRoute />)
+    fireEvent.changeText(view.getByTestId('draft'), 'saved record')
+
+    mockParams = { mode, id: '501' }
+    view.rerender(<UpsertTravelRoute />)
+    expect(mockMount).toHaveBeenCalledTimes(1)
+    expect(view.getByTestId('draft').props.value).toBe('saved record')
+
+    mockParams = { mode }
+    view.rerender(<UpsertTravelRoute />)
+    expect(mockMount).toHaveBeenCalledTimes(2)
+    expect(view.getByTestId('draft').props.value).toBe('')
+
+    fireEvent.changeText(view.getByTestId('draft'), 'second record')
+    mockParams = { mode, id: '502' }
+    view.rerender(<UpsertTravelRoute />)
+    expect(mockMount).toHaveBeenCalledTimes(2)
+    expect(view.getByTestId('draft').props.value).toBe('second record')
+  })
+
   it('treats anything but an exact note mode as the full wizard', () => {
     expect(resolveUpsertTravelEntryKey({})).toBe('/travel/new')
     expect(resolveUpsertTravelEntryKey({ mode: 'full' })).toBe('/travel/new')
