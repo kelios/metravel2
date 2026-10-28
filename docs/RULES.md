@@ -646,6 +646,45 @@ npx serve dist/prod -l 3000 -s
   - Prefer Playwright or a headed browser capture over reasoning from code alone.
   - For visual loading bugs, inspect both DOM state and network state before changing timing logic.
 
+### Outcome-bound scope and effort
+
+- Keep the user's observable outcome and its acceptance source fixed throughout
+  the task. Record the initial metric/behavior, target, evidence layer and
+  smallest next probe. A Task Contract or new ticket does not authorize replacing
+  that outcome with an easier internal metric.
+- Establish a causal path before a performance fix: affected user interaction or
+  field attribution → responsible work → owning code. Passing unit tests, fewer
+  style reads, a smaller bundle or successful deployment are supporting evidence;
+  they do not prove a different user-facing metric has passed.
+- After two disproved hypotheses, a failed optimization or about 15 minutes
+  without new causal evidence, make a compact checkpoint: what was ruled out,
+  whether the next probe can change the decision, and the cheapest useful next
+  step. Continue relevant work; do not answer uncertainty by adding unrelated
+  audits, agents, speculative changes or repeated builds.
+- Keep a release blocker separate from the product defect. Respect mandatory
+  gates; do not bypass them. Reuse an existing owner's evidence or hand off the
+  exact failing artifact. Taking over a broad adjacent task needs a bounded plan
+  tied to the original outcome; a red gate alone is not that causal link.
+- Give an independent agent a compact brief and artifact paths. Full chat history
+  needs a concrete reason. Add a role only for a distinct decision, independent
+  review or executable artifact; do not create a standing role chain for routine
+  discovery, board clerical work or repeated status acknowledgements.
+- Retrieve large board/history/log data once, filter and summarize before model
+  output, and reuse a saved artifact. Limit searches by text file type and scope;
+  do not dump binary files, complete thread histories or unfiltered board lists.
+  For coordination use compact snapshots and one exact handoff request.
+- Before an expensive experiment, state the expected magnitude of benefit. Use a
+  cheap upper bound when available. Judge an incremental fix against its stated
+  causal contribution; a bounded combination may close the gap jointly. Reject
+  experiments that cannot meaningfully advance that contribution. Preserve
+  failed build artifacts so another attempt uses new evidence. For generated
+  artifact diagnosis, choose a documented retention path before launch;
+  cleanup-deleted output cannot be replaced with stale samples.
+- Report progress against the original outcome, separately from code/guard
+  status. If it is unproved or blocked, say so with the exact missing evidence,
+  owner and next action. A field-data collection window is not a promise that
+  the metric will turn green by itself.
+
 ### Architectural solutions over quick fixes
 
 Owner rule (2026-10-03): the project does not take "cheap paths". Every bug,
@@ -660,14 +699,11 @@ not by the fastest patch that makes the symptom disappear.
   implementations). A one-screen padding, a hidden menu item, a loosened
   threshold, a guard that passes on token adjacency, or "remove the prompt so the
   reviewer stops seeing it" are not solutions.
-- Non-trivial scope is designed before it is coded, with roles delegated to the
-  matching agents: business analysis (`ios-analyst`, `task-author`: requirement,
-  acceptance, source of truth), design (`ios-designer`,
-  `metravel-screen-redesign`: UX, HIG, parity across surfaces), architecture
-  (`ios-architect`, `Plan`: boundaries shared/web/iOS/Android/backend, data
-  contracts, validation plan), implementation (feature expert), independent
-  review (`review-auditor`, `code-review-gate`). The analysis is recorded in the
-  task card (Task Contract, Design evidence) before implementation starts.
+- Design non-trivial work before coding, proportionally to the decision.
+  Start with the owning specialist; add analysis, design or architecture roles
+  only for unresolved requirements, actual UX work or a distinct boundary/risk
+  decision. Independent review remains mandatory. Record the decision and
+  evidence in the task card; a multi-role ceremony is not an architectural fix.
 - "Minimal diff" in the workflow means no unrelated changes in the same commit;
   it never means choosing the cheaper of two designs. When the architectural
   option is larger than one card, split it into linked cards on the board and

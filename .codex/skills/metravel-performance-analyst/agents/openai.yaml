@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Performance Analyst"
-  short_description: "Measure Lighthouse, bundles, and performance budgets"
-  default_prompt: "Use $metravel-performance-analyst to measure the same live URL before and after, include negative probes, and request required deploy access instead of parking unverified work."
+  short_description: "Diagnose Core Web Vitals on the reported metric"
+  default_prompt: "Use $metravel-performance-analyst to diagnose the reported metric causally and verify that same outcome on the intended target."

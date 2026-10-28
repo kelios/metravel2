@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Codex Orchestrator"
-  short_description: "Choose skills, prompts, rules, validation, and handoff."
-  default_prompt: "Use $metravel-codex-orchestrator to route work only within our project repositories, verify repository ownership and platform scope, and keep upstream read-only."
+  short_description: "Keep outcomes fixed and coordinate bounded work"
+  default_prompt: "Use $metravel-codex-orchestrator to preserve the user's outcome and coordinate only necessary bounded work with compact evidence."

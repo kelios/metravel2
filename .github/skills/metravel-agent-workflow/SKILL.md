@@ -1,76 +1,55 @@
 ---
 name: metravel-agent-workflow
-description: "Coordinate a small role-based metravel workflow when analysis, implementation, platform work, QA, review, or release must be separated. Use only for genuinely multi-role tasks or controlled bug/release loops."
+description: "Coordinate necessary independent metravel roles with bounded handoffs and one user outcome. Use for genuinely multi-role implementation, review, QA or release work."
 ---
 
 # Metravel Agent Workflow
 
-Do not use for docs-only work, one isolated bugfix/refactor, a single check or
-board update, or read-only analysis without a downstream handoff. `AGENTS.md` is
-inherited; use `docs/CODEX.md` for routing and load only task-specific references.
+Do not use for an isolated check, board update, docs edit or read-only question
+without a real handoff. `AGENTS.md` is inherited. Scope and checkpoints follow
+`docs/RULES.md` → «Outcome-bound scope and effort».
 
-## Build the smallest chain
+## Smallest useful chain
 
-Choose only stages that produce an artifact consumed by the next stage:
+Start with one owning specialist. Add a role only when its decision or artifact
+is needed by another stage: unresolved requirements, a design/boundary decision,
+separate platform work, independent review, or target-specific QA/operations.
+Do not launch BA → designer → architect → developer → QA by default.
 
-1. Discovery: project/business analyst only for unclear requirements or broad
-   repository scope.
-2. Design: system architect/domain expert/UI/i18n only for affected contracts.
-3. Implementation: one owning domain/feature/native skill.
-4. Review: `$metravel-code-reviewer` after code changes, preferably independent;
-   this stage is code-only.
-5. Testing: browser/mobile/QA skill only after review passes and the reviewed
-   commit enters `testing`.
-6. Operations: board, deploy, production smoke, or store operator only when that
-   external stage is explicitly in scope.
+After code changes preserve the required independent review-and-fix/gate.
+Review is code-only; runtime QA starts after reviewed publication enters testing.
+Existing authority covers the normal frontend release pipeline; independent
+store-stage permissions remain unchanged.
 
-Never launch the full chain by default. Domain skills own travel/map/profile/
-achievements/quests; Android and iOS roles own only their platform-specific
-surface. Backend diagnosis is read-only.
-
-## Role contract
-
-Each role receives:
+## Role brief
 
 ```text
-Role/skill and one bounded objective:
-Owned paths or raw evidence:
-Platform/localization impact:
-Task-specific constraints and authority:
-Expected artifact:
-Validation or handoff consumer:
+Original user outcome and acceptance criterion:
+One bounded objective and owned paths:
+Raw evidence/artifact paths and smallest next probe:
+Platform/localization impact; task-specific authority:
+Expected artifact and its consumer:
 ```
 
-Do not paste global project rules into role prompts. Analysts/QA/audit roles are
-read-only unless their selected skill explicitly owns fixes. Keep unrelated
-worktree changes outside every role's ownership.
+Prefer an independent, compact context over a full-history fork. Do not copy
+inherited rules, give a desired verdict, or ask multiple roles to reread the same
+sources. Return one concise artifact; acknowledgements do not need a new turn.
 
-## Control gates
+## Coordinate without changing the goal
 
-- No frontend role edits backend/Django/server working trees.
-- Production/store mutations require exact target authorization; each iOS stage
-  is separate and Android EAS remains prohibited.
-- Apply operation coordination before build/deploy/full tests/e2e/Lighthouse/
-  device install. Do not duplicate an active target or treat `SKIPPED` as pass.
-- Board work uses Problem Memory → Task Contract → Ticket Board. `blocked_by` is
-  only a hard implementation dependency; `testing` is active QA or an exact
-  recheck, never parking.
-- Select testing roles and reuse evidence by `docs/TESTING.md` → `Risk-based
-  validation and evidence reuse`; do not assign several testers to prove the
-  same unchanged shared contract.
-- Reviewer gets the original task, complete task diff, task-owned paths, and raw
-  code-level checks. It fixes confirmed in-scope findings and re-reviews without
-  browser/API/device runtime QA.
+- Separate supporting checks and release blockers from product acceptance.
+  Board status/test counts never prove a different reported metric.
+- Use the canonical hypothesis/effort checkpoint before adding another branch.
+  Estimate each fix's contribution, including a bounded combination when needed;
+  an insufficient benefit for that stated contribution ends the experiment.
+- One owner per task/operation; respect active locks. `SKIPPED` is not pass.
+  Request a precise result/handoff once; do not poll or retry the same blocked
+  command. Reuse compatible evidence under `docs/TESTING.md` → «Risk-based
+  validation and evidence reuse».
+- Backend/source and production mutations stay within inherited exact authority.
+  Do not use coordination to take over unrelated work or loosen a guard.
+- A failed experiment produces preserved evidence and a revised decision, not an
+  automatic new review/deploy cycle on another speculative candidate.
 
-## Bug loop
-
-Use only the needed roles: reproduce with evidence → owning implementer fixes →
-independent code-only reviewer repairs/passes → ticket enters `testing` → same
-observable layer retests. Add deploy/release only after a separate explicit
-request.
-
-## Handoff
-
-Return one compact artifact per role. The final coordinator reports artifacts
-consumed, changed files, checks, unresolved blockers, and residual risk; omit
-role transcripts and repeated policy text.
+The coordinator reports the user's achieved result, commands/evidence, changed
+paths and concrete unresolved work. Do not report the role transcript.

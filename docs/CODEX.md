@@ -6,7 +6,8 @@
 
 ## Context budget
 
-1. Определи task type, task-owned paths, platform/localization impact и риск.
+1. Зафиксируй результат пользователя и критерий его доказательства; затем task type,
+   task-owned paths, platform/localization impact и риск.
 2. Выбери один primary skill по runtime catalog.
 3. Прочитай его `SKILL.md` полностью.
 4. Загрузи только названные им разделы canonical docs и ближайший feature doc.
@@ -37,7 +38,7 @@
 | Сценарии и запись видео для App Review | `$metravel-app-review-director` | один кандидат, один батч сцен; аккаунты и приватный ввод по `docs/WORKFLOW_OPERATIONS.md` 3.1 |
 | Пакет для Apple App Review | `$metravel-app-review-evidence` | покрытие сцен, manifest, вложение и Reply/Notes; запись/монтаж — recorder/editor, внешние шаги — release operator |
 | Deploy/release/prod smoke | devops/release operator или production smoke | operation gate и exact target обязательны |
-| Новая функция/contract/recurring complex bug | OpenSpec explore/propose | apply — только отдельным запросом |
+| Новая функция/contract/recurring complex bug | OpenSpec explore/propose | прямое «сделай/исправь» разрешает proposal → apply; planning-only остаётся планом |
 
 Полный grouped index нужен только при обслуживании каталога:
 `docs/CODEX_SKILLS.md`. Runtime catalog и frontmatter `description` — источник
@@ -68,6 +69,22 @@ Output/validation: <artifact and checks>.
 Не повторяй в prompt содержание `AGENTS.md`, `RULES.md` и `CODEX.md`; передавай
 только task-specific facts. Reviewer/QA получает исходный scope и evidence без
 подсказки желаемого verdict.
+
+### Ограничение контекста и расширения задачи
+
+Канон — `docs/RULES.md` → «Outcome-bound scope and effort». Кодовые/guard-метрики
+не заменяют исходный результат; после двух опровергнутых гипотез пересмотри
+причинную связь, прежде чем запускать новую ветку работы.
+
+В Codex для самостоятельной подзадачи предпочитай `fork_turns="none"` и короткий
+полный brief с исходным запросом, paths и evidence. Полную историю передавай
+только при обоснованной зависимости от неё. Не отправляй весь разговор ради
+доступа к одному логу. Получай большой tool-result в переменную, затем выводи
+только проверенный нужный срез; повторное чтение заменяй ignored артефактом.
+
+При разборе затрат используй реальные usage records, отделяй cached input от
+нового input, reasoning как часть output и собственное дерево агентов от чужих
+чатов. Укажи временную границу; без данных не придумывай токены или стоимость.
 
 ### Media-agent dispatch
 
@@ -131,7 +148,7 @@ Output/validation: <artifact and checks>.
 | Small code scope | targeted check or `npm run check:fast` |
 | Medium code scope before/during review | relevant static/unit tests, lint, typecheck, and guards; no e2e |
 | Large/cross-cutting code | `npm run lint` + `npm run test:run` |
-| Testing after review | `npm run check:preflight` or scoped runtime/e2e gate |
+| Testing after review | Required evidence from `docs/TESTING.md` → `Validation selection gate`; no automatic full preflight/runtime sweep |
 | Responsive/visual UI change in testing | mobile web first, then desktop web; changed states/screenshots/console |
 | Identical shared behavior/content | nearest reliable behavior/data check and one representative web flow if needed |
 | Android/iOS-specific in testing | affected emulator/simulator; physical/processed candidate only for the required capability/release gate |
@@ -139,8 +156,9 @@ Output/validation: <artifact and checks>.
 | External links | `npm run guard:external-links` or governance verification |
 | Release/performance in testing/authorized release stage | production build and target-specific real-URL evidence |
 
-Выбор минимального scope, переиспользование evidence и узкий production smoke —
-`docs/TESTING.md` → «Risk-based validation and evidence reuse».
+До назначения tester и подготовки окружения — `docs/TESTING.md` →
+«Validation selection gate». Матрица, reuse и узкий production smoke находятся
+в том же разделе «Risk-based validation and evidence reuse».
 
 Перед long/shared command примени operation gate. Чужой `SKIPPED` — не зелёная
 проверка. После code changes полный task diff проходит `$metravel-code-reviewer`

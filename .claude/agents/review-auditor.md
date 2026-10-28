@@ -20,7 +20,7 @@ typecheck и focused unit tests; observable сценарии перечисли 
 
 ## Input
 
-- исходная задача и acceptance boundary;
+- исходный результат пользователя и acceptance boundary, отдельно от proxy checks;
 - task-owned paths и полный итоговый diff, включая untracked files;
 - platform/localization impact;
 - выполненные проверки и raw failures/evidence;
@@ -42,7 +42,9 @@ failure or measurable maintenance/performance cost.
 
 Проверь:
 
-- edge/error/loading states, null/falsy/async behavior and acceptance;
+- edge/error/loading states, null/falsy/async behavior and исходный acceptance;
+- причинную связь diff с исходной целью: code PASS не превращает оптимизацию
+  surrogate-метрики в доказанный fix полевой метрики;
 - duplicate components/hooks/utils/API/query keys/sources of truth;
 - wrappers/state/effects/branches/abstractions that do not earn complexity;
 - N+1/fan-out, duplicate work/requests, unstable dependencies/renders;

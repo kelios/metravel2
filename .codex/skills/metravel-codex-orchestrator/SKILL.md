@@ -1,80 +1,58 @@
 ---
 name: metravel-codex-orchestrator
-description: "Route broad or high-risk metravel work to the smallest set of skills, context, agents, and validation. Use for unclear multi-domain, cross-platform, production, release, or external-dependency tasks."
+description: "Route broad or high-risk metravel work to the smallest necessary skills, agents and evidence while preserving the user's outcome."
 ---
 
 # Metravel Codex Orchestrator
 
-Use only when one specialist skill is insufficient. `AGENTS.md` is inherited;
-do not reread it. Use `docs/CODEX.md` as the compact router, then load only the
-exact canonical headings and feature docs required by the chosen route.
+Use only when one specialist cannot handle the task reliably. `AGENTS.md` is
+inherited. Follow `docs/RULES.md` → «Outcome-bound scope and effort»; use only
+matching headings in `docs/CODEX.md` and the owning feature contract.
 
 ## Triage
 
-Return a compact internal route:
+Keep one compact decision record:
 
 ```text
-Outcome and task-owned paths:
-Repository target and project ownership:
-Primary skill:
-Conditional skills/agents:
-Platform/localization impact:
-Authority and risk gates:
-Context to load:
-Validation/evidence:
-Can proceed:
+User outcome, acceptance source and initial evidence:
+Owned repository/paths; platform/localization impact:
+Primary skill; distinct decision each extra role will produce:
+Smallest causal probe and expected useful result:
+Authority, operation gates and separate release blockers:
 ```
 
-- Start with one primary skill.
-- Add a skill only for a distinct responsibility: UI/i18n, test/browser/device,
-  security, board, backend diagnosis, or deploy/release.
-- Use a domain expert directly for travel/map/profile/achievements/quests.
-- Use OpenSpec only for new features, contract changes, or genuinely complex/
-  recurring work; implementation requires a separate apply request.
-- Use multi-agent only when work is independently parallelizable or requires an
-  independent QA/review boundary. Do not build a full role chain by default.
+Start with the domain specialist. Add UI/design, architecture, platform, board or
+operations only for an actual responsibility; a production target does not
+require a full role chain. Independent code review remains mandatory.
+Before validation dispatch or target prerequisites, use `docs/TESTING.md` →
+«Validation selection gate» to select the necessary targets and evidence reuse.
+OpenSpec follows `docs/RULES.md` → «Development workflow»: a direct fix request
+already authorizes necessary proposal → apply; planning-only stays planning.
 
-## Context discipline
+## Control the work
 
-- Never ask every role to read full `RULES.md`, `README.md`, and `CODEX.md`.
-- Pass source scope, exact paths, raw diff/log/evidence, and only task-specific
-  constraints. Workspace instructions are inherited.
-- For a canonical rule, link an exact heading; load the full document only when
-  the entire document is genuinely in scope.
-- Keep researcher/QA/reviewer prompts neutral; do not pre-seed a desired verdict.
+- Keep the original acceptance criterion visible in every handoff. Do not replace
+  it with test counts, a smaller diff or a convenient proxy metric.
+- Before code, connect the proposed change to the observed mechanism. Before a
+  costly experiment, estimate its causal contribution, individually or as part
+  of a bounded combination; discard insufficient experiments.
+- At the canonical checkpoint, reassess the next probe instead of spawning more
+  researchers or silently adopting a neighboring task. A release blocker has
+  its own owner/evidence and does not redefine product success.
+- For an independent subtask, send the original request plus a compact brief and
+  artifact paths; avoid a full-history fork. Reuse a role only for new necessary
+  work, not status acknowledgements or duplicate source reading.
+- Filter large connector/log results before output. Use a saved ignored artifact
+  and compact thread snapshots rather than repeated full-board/history reads.
 
-Compact role prompt:
+## Authority and handoff
 
-```text
-Use $<skill> for <scope>.
-Owned paths/evidence: <files, diff, logs>.
-Platform/localization impact: <values>.
-Task-specific constraints: <only the delta>.
-Output/validation: <artifact and checks>.
-```
+Inherited repository ownership, frontend/backend boundaries, operation locks,
+review/testing separation and exact store-stage gates remain binding. Honor
+existing authorization; do not introduce a second approval for an already
+allowed frontend pipeline step or weaken a required guard to unblock it.
 
-## Hard gates
-
-- Enforce `docs/RULES.md` → «Owned repositories only (mandatory)» before
-  delegation or remote mutations. Upstream is read-only; a board card or account
-  choice never authorizes external forks, commits, issues, PRs or publication.
-- Frontend/app/docs only; backend working trees remain read-only. «Do all
-  todos» does not authorize `area=back` implementation or a backend cwd/worktree.
-- Preserve unrelated changes and protected-path rules.
-- Production/store mutations require the exact current authorization and target.
-- Apply the operation gate before build/deploy/full tests/e2e/Lighthouse/device
-  install; runtime QA starts only after review in `testing` and never duplicates
-  a live target process.
-- Testing targets and reused evidence follow `docs/TESTING.md` → `Risk-based
-  validation and evidence reuse`; each additional tester/platform needs a distinct
-  changed contract or assigned release requirement.
-- Board mutation: Problem Memory → Task Contract → Ticket Board.
-- After code changes, send the complete task diff and code-level validation to an
-  independent `$metravel-code-reviewer`; reviewer fixes/rechecks code only, then
-  hands observable QA to `testing`.
-
-## Handoff
-
-Report the chosen route, changed files, checks/evidence, deliberately excluded
-scope, blockers, and residual risk. Do not dump repeated policy text or role
-transcripts.
+Review receives the complete task diff and raw code-level evidence; runtime QA
+starts in testing and proves the original observable contract on its target.
+Report achieved outcome, supporting checks, excluded scope and exact remaining
+blocker. If the requested result is unproved, state it explicitly.

@@ -1,6 +1,6 @@
 ---
 name: guard-enforcer
-description: "Запускает project guards и чинит доказанные source violations. Для падений guard/governance; пороги, allowlists и tests не ослабляет, unrelated refactor не делает."
+description: "Проверяет назначенный guard и чинит доказанный механизм в его scope. Для конкретного guard failure; полный аудит — только по соответствующему запросу."
 prompt_mode: full
 agents_md: true
 ---

@@ -14,7 +14,7 @@ re-reviews its own result and does not spawn another reviewer.
 
 ## Inputs
 
-- Original task and acceptance boundary.
+- Original user outcome and acceptance boundary, separately from proxy checks.
 - `git status --short` and the complete task-owned diff.
 - Task-owned paths plus known unrelated/user changes.
 - Repository targets and canonical origins under `docs/RULES.md` →
@@ -38,7 +38,8 @@ Check:
 
 - project ownership of Git/GitHub targets, including delegated plans; never use
   review or a board contract to authorize upstream mutations;
-- behavior, edge/failure states, and stated acceptance;
+- behavior, edge/failure states, original acceptance and the causal relevance
+  of the diff; a rewritten Task Contract must not hide goal drift;
 - unnecessary wrappers/state/effects/branches/abstractions/comments;
 - duplication versus existing components/hooks/utils/adapters/tests;
 - repeated requests/computation, unstable dependencies, avoidable renders or
