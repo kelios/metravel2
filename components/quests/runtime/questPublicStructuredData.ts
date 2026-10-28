@@ -30,4 +30,3 @@ export function buildQuestPublicStructuredData(data: QuestPublicProjection) {
   };
   return { '@context': 'https://schema.org', '@graph': [entity, breadcrumb] };
 }
-

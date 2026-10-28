@@ -27,6 +27,7 @@
 const fs = require('fs')
 const path = require('path')
 const { parseChunk } = require('./lib/webChunkGraph')
+const { readChunkMetadataRegistry, registryFromSources, moduleRoots, hasCompactChunkMetadata } = require('./lib/webChunkMetadataArtifact')
 
 const args = process.argv.slice(2)
 const dirArg = args.find((a) => !a.startsWith('--'))
@@ -46,15 +47,21 @@ if (!fs.existsSync(jsDir)) {
   process.exit(1)
 }
 
-const RUN_MODULE = /__r\((\d+)\)/g
 const chunks = new Map() // url path -> { defs, roots }
 const fileByModule = new Map()
-for (const file of fs.readdirSync(jsDir)) {
-  if (!file.endsWith('.js')) continue
-  const source = fs.readFileSync(path.join(jsDir, file), 'utf8')
+const sources = new Map(fs.readdirSync(jsDir).filter((file) => file.endsWith('.js'))
+  .map((file) => [file, fs.readFileSync(path.join(jsDir, file), 'utf8')]))
+const registry = registryFromSources(sources.values())
+let registryUrl = null
+for (const [file, source] of sources) {
   const url = `/_expo/static/js/web/${file}`
-  const defs = parseChunk(source)
-  chunks.set(url, { defs, roots: [...source.matchAll(RUN_MODULE)].map((match) => Number(match[1])) })
+  if (readChunkMetadataRegistry(source)) registryUrl = url
+  const defs = parseChunk(source, registry)
+  chunks.set(url, {
+    defs,
+    compact: hasCompactChunkMetadata(source),
+    roots: moduleRoots(source),
+  })
   for (const id of defs.keys()) fileByModule.set(id, url)
 }
 
@@ -114,6 +121,15 @@ for (const { scripts, route } of routesByScriptKey.values()) {
   for (const url of scripts) {
     if (!chunks.has(url)) report('missing-chunk', -1, url, route)
   }
+  if (scripts.some((url) => chunks.get(url)?.compact)
+      && (!registryUrl || !scripts.includes(registryUrl))) {
+    report('missing-runtime', -1, registryUrl ?? 'web chunk metadata registry', route)
+  } else if (registryUrl && scripts.includes(registryUrl)) {
+    const runtimeIndex = scripts.indexOf(registryUrl)
+    if (scripts.some((url, index) => index < runtimeIndex && chunks.get(url)?.compact)) {
+      report('runtime-order', -1, registryUrl, route)
+    }
+  }
 
   const asyncQueue = []
   const seenAsync = new Set()
@@ -126,7 +142,7 @@ for (const { scripts, route } of routesByScriptKey.values()) {
       if (seen.has(id)) continue
       seen.add(id)
       const def = loaded.get(id)
-      if (!def) continue
+      if (!def) { report(kind, id, id, via); continue }
       for (const dep of def.deps) {
         if (!loaded.has(dep)) report(kind, id, dep, via)
         else stack.push(dep)

@@ -18,15 +18,6 @@ jest.mock('@/components/MapPage/Map', () => ({
     require('react-native').Platform.OS === 'web' ? mockWebMap(props) : mockNativeMap(props),
 }))
 
-const styles = {
-  geoBanner: {},
-  geoBannerText: {},
-  mapLoading: {},
-  mapContainer: {},
-  mapSearchAreaBtn: {},
-  mapSearchAreaBtnText: {},
-} as never
-
 const colors = {
   primary: '#222',
   textOnPrimary: '#fff',
@@ -56,8 +47,10 @@ const makeQuest = (id: string, lat: number, lng: number): QuestMeta => ({
 })
 
 const makeProps = (): React.ComponentProps<typeof QuestsMapSection> => ({
-  styles,
+  loadingStyle: {},
   colors,
+  screenWidth: 1440,
+  screenHeight: 900,
   dataLoaded: true,
   quests: [makeQuest('old-town', 52.25, 21.01)],
   cities: [{ id: 'warsaw', name: 'Warsaw', lat: 52.23, lng: 21.0 }],
@@ -83,7 +76,7 @@ describe('QuestsMapSection', () => {
   })
 
   it('turns the quests into map points and centres on the selected city', async () => {
-    render(<QuestsMapSection {...makeProps()} />)
+    await render(<QuestsMapSection {...makeProps()} />)
 
     await waitFor(() => expect(mockWebMap).toHaveBeenCalled())
     expect(lastMapProps()).toEqual(
@@ -107,7 +100,7 @@ describe('QuestsMapSection', () => {
   })
 
   it('centres a slice without its own city on the average of its quests', async () => {
-    render(
+    await render(
       <QuestsMapSection
         {...makeProps()}
         selectedCityId="__kids__"
@@ -123,7 +116,7 @@ describe('QuestsMapSection', () => {
   })
 
   it('shows a geolocation-disabled banner for «nearby» without a location', async () => {
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <QuestsMapSection {...makeProps()} selectedCityId="__nearby__" />,
     )
 
@@ -133,7 +126,7 @@ describe('QuestsMapSection', () => {
   })
 
   it('passes the real user location marker to the map', async () => {
-    const { queryByTestId } = render(
+    const { queryByTestId } = await render(
       <QuestsMapSection {...makeProps()} selectedCityId="__nearby__" userLoc={{ lat: 53.91, lng: 27.57 }} />,
     )
 
@@ -148,7 +141,7 @@ describe('QuestsMapSection', () => {
   })
 
   it('keeps the map mounted with zero results', async () => {
-    render(
+    await render(
       <QuestsMapSection
         {...makeProps()}
         quests={[]}
@@ -168,7 +161,7 @@ describe('QuestsMapSection', () => {
   it('shows the search-this-area action and forwards map moves', async () => {
     const onMapMove = jest.fn()
     const onSearchMapArea = jest.fn()
-    const { getByTestId } = render(
+    const { getByTestId } = await render(
       <QuestsMapSection
         {...makeProps()}
         showMapAreaSearch
@@ -177,15 +170,15 @@ describe('QuestsMapSection', () => {
       />,
     )
 
-    fireEvent.press(getByTestId('quests-map-search-area'))
+    await fireEvent.press(getByTestId('quests-map-search-area'))
     expect(onSearchMapArea).toHaveBeenCalledTimes(1)
     await waitFor(() => expect(mockWebMap).toHaveBeenCalled())
     expect(lastMapProps()).toEqual(expect.objectContaining({ onMapMove }))
   })
 
-  it('renders the native map without the web chunk and opens a quest from its marker', () => {
+  it('renders the native map without the web chunk and opens a quest from its marker', async () => {
     ;(Platform as { OS: string }).OS = 'android'
-    render(<QuestsMapSection {...makeProps()} />)
+    await render(<QuestsMapSection {...makeProps()} />)
 
     expect(mockWebMap).not.toHaveBeenCalled()
     const nativeProps = mockNativeMap.mock.calls[mockNativeMap.mock.calls.length - 1]?.[0] as {
@@ -198,8 +191,8 @@ describe('QuestsMapSection', () => {
     expect(mockRouterPush).toHaveBeenCalledTimes(1)
   })
 
-  it('shows only the loader until the catalog is loaded', () => {
-    const { queryByTestId } = render(
+  it('shows only the loader until the catalog is loaded', async () => {
+    const { queryByTestId } = await render(
       <QuestsMapSection {...makeProps()} dataLoaded={false} selectedCityId="__nearby__" />,
     )
 

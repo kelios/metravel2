@@ -3,7 +3,7 @@ import path from 'path'
 import zlib from 'zlib'
 import { makeTempDir, removeDir, runNodeCli } from './cli-test-utils'
 
-const { persistReport, readReport, validateReport, MAX_REPORT_BYTES, MAX_AGE_MS, roundedByteLimit } = require('../../scripts/lib/bundleBudgetReport')
+const { createReportContext, persistReport, readReport, validateReport, MAX_REPORT_BYTES, MAX_AGE_MS, roundedByteLimit } = require('../../scripts/lib/bundleBudgetReport')
 const root = process.cwd()
 const guard = path.join(root, 'scripts/guard-bundle-budget.js')
 const compare = path.join(root, 'scripts/compare-bundle-budget-reports.js')
@@ -16,7 +16,7 @@ function fixture() {
   const config = path.join(dir, 'worktree/budget.json')
   fs.mkdirSync(js, { recursive: true })
   fs.mkdirSync(html, { recursive: true })
-  const source = 'const payloadMarker = "owner";'.repeat(7)
+  const source = 'var payloadMarker = "owner";'.repeat(7)
   fs.writeFileSync(path.join(js, 'entry-abcdef.js'), source)
   fs.writeFileSync(path.join(html, 'index.html'), '<script src="/_expo/static/js/web/entry-abcdef.js"></script>')
   fs.writeFileSync(path.join(html, 'search.html'), '<script src="/_expo/static/js/web/entry-abcdef.js"></script>')
@@ -42,6 +42,18 @@ function fixture() {
 const reportFiles = (directory: string): string[] => fs.readdirSync(directory).filter((name) => name.endsWith('.json')).map((name) => path.join(directory, name))
 
 describe('exact bundle budget reports', () => {
+  it('resolves toolchain versions from the requested root and keeps malformed package fallback', () => {
+    const f = fixture()
+    try {
+      const reportRoot = path.dirname(f.config)
+      for (const name of ['expo', 'metro']) fs.mkdirSync(path.join(reportRoot, 'node_modules', name), { recursive: true })
+      fs.writeFileSync(path.join(reportRoot, 'node_modules/expo/package.json'), JSON.stringify({ version: 'root-expo' }))
+      fs.writeFileSync(path.join(reportRoot, 'node_modules/metro/package.json'), '{malformed')
+      const report = createReportContext({ root: reportRoot, budgetPath: f.config, persist: false })
+      expect(report.toolchain.versions).toMatchObject({ expo: 'root-expo', metro: null })
+    } finally { removeDir(f.dir) }
+  })
+
   it('retains full and named bytes, healthy requests, payload totals and legacy JSON after cleanup', () => {
     const f = fixture()
     try {
@@ -74,13 +86,14 @@ describe('exact bundle budget reports', () => {
   it('preserves named metadata stripping and full TOTAL/eager measurement', () => {
     const f = fixture()
     try {
-      const metadata = ',"paths":{"1":"/x.js"}'
-      fs.appendFileSync(path.join(f.js, 'entry-abcdef.js'), metadata)
+      const namedSource = f.source + '__d(function(){},1,{"0":7});'
+      const fullSource = f.source + '__d(function(){},1,{"0":7,"paths":{"1":"/x.js"}});'
+      fs.writeFileSync(path.join(f.js, 'entry-abcdef.js'), fullSource)
       const report = JSON.parse(f.run().stdout).diagnostic_report
-      expect(report.measurements.named.entry.raw).toBe(Buffer.byteLength(f.source))
-      expect(report.measurements.all.raw).toBe(Buffer.byteLength(f.source + metadata))
-      expect(report.measurements.total.raw).toBe(Buffer.byteLength(f.source + metadata))
-      expect(report.measurements.eager.raw).toBe(Buffer.byteLength(f.source + metadata))
+      expect(report.measurements.named.entry.raw).toBe(Buffer.byteLength(namedSource))
+      expect(report.measurements.all.raw).toBe(Buffer.byteLength(fullSource))
+      expect(report.measurements.total.raw).toBe(Buffer.byteLength(fullSource))
+      expect(report.measurements.eager.raw).toBe(Buffer.byteLength(fullSource))
     } finally { removeDir(f.dir) }
   })
 
@@ -108,16 +121,17 @@ describe('exact bundle budget reports', () => {
   it('reports full configured eager files while preserving the legacy named-basis guard', () => {
     const f = fixture()
     try {
-      const metadata = ',"paths":{"1":"/x.js"}'
-      fs.appendFileSync(path.join(f.js, 'entry-abcdef.js'), metadata)
+      const namedSource = f.source + '__d(function(){},1,{"0":7});'
+      const fullSource = f.source + '__d(function(){},1,{"0":7,"paths":{"1":"/x.js"}});'
+      fs.writeFileSync(path.join(f.js, 'entry-abcdef.js'), fullSource)
       fs.writeFileSync(f.config, JSON.stringify({ tolerancePct: 0, chunks: { entry: {} }, eager: { chunks: ['entry'], maxRawKB: 0.1 } }))
       const result = f.run()
       const legacy = JSON.parse(result.stdout)
       const report = legacy.diagnostic_report
       expect(result.status).toBe(1)
-      expect(report.measurements.eager).toMatchObject({ status: 'complete', source: 'configured_chunks', raw: Buffer.byteLength(f.source + metadata), route: null })
-      expect(legacy.eagerRawKB).toBe(Math.round(Buffer.byteLength(f.source) / 1024 * 10) / 10)
-      expect(report.breaches).toContainEqual(expect.objectContaining({ label: 'EAGER (raw)', actual: Buffer.byteLength(f.source), basis: 'configured_chunks_without_loader_metadata' }))
+      expect(report.measurements.eager).toMatchObject({ status: 'complete', source: 'configured_chunks', raw: Buffer.byteLength(fullSource), route: null })
+      expect(legacy.eagerRawKB).toBe(Math.round(Buffer.byteLength(namedSource) / 1024 * 10) / 10)
+      expect(report.breaches).toContainEqual(expect.objectContaining({ label: 'EAGER (raw)', actual: Buffer.byteLength(namedSource), basis: 'configured_chunks_without_loader_metadata' }))
       const [file] = reportFiles(f.archive)
       expect(runNodeCli([compare, file, file]).stdout).toContain('eager.source: configured_chunks -> configured_chunks')
     } finally { removeDir(f.dir) }

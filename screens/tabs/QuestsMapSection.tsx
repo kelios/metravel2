@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, Platform, Pressable, Text, View, type StyleProp, type ViewStyle } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useRouter } from 'expo-router'
 
@@ -17,12 +17,14 @@ import {
   type QuestCatalogCity,
   type QuestMapArea,
 } from './QuestsScreen.helpers'
-import type { getStyles } from './QuestsScreen.styles'
+import { getQuestsMapStyles } from './QuestsMapSection.styles'
 import type { QuestMeta } from './questsShared'
 
 type QuestsMapSectionProps = {
-  styles: ReturnType<typeof getStyles>
+  loadingStyle: StyleProp<ViewStyle>
   colors: ThemedColors
+  screenWidth: number
+  screenHeight?: number
   dataLoaded: boolean
   quests: QuestMeta[]
   cities: QuestCatalogCity[]
@@ -43,8 +45,10 @@ type QuestsMapSectionProps = {
  * переключения на карту, поэтому живут отдельным чанком, а не в `/quests`.
  */
 export default function QuestsMapSection({
-  styles,
+  loadingStyle,
   colors,
+  screenWidth,
+  screenHeight,
   dataLoaded,
   quests,
   cities,
@@ -59,6 +63,10 @@ export default function QuestsMapSection({
   onMapMove,
 }: QuestsMapSectionProps) {
   const router = useRouter()
+  const styles = useMemo(
+    () => getQuestsMapStyles(colors, screenWidth, screenHeight),
+    [colors, screenWidth, screenHeight],
+  )
 
   const mapPoints = useMemo<MapPoint[]>(() => {
     if (!dataLoaded) return []
@@ -135,7 +143,7 @@ export default function QuestsMapSection({
   }
 
   const mapLoading = (
-    <View style={styles.mapLoading}>
+    <View style={loadingStyle}>
       <ActivityIndicator color={colors.primary} />
     </View>
   )

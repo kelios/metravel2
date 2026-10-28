@@ -34,13 +34,13 @@ function reportIdentity(root, budgetPath) {
   } catch {
     errors.push('Source identity unavailable')
   }
-  const version = (name) => {
-    try { return require(require.resolve(`${name}/package.json`, { paths: [root] })).version } catch { return null }
+  const version = (resolvePackageJson) => {
+    try { return JSON.parse(fs.readFileSync(resolvePackageJson(), 'utf8')).version } catch { return null }
   }
   const versions = {
     node: process.versions.node,
-    expo: version('expo'),
-    metro: version('metro'),
+    expo: version(() => require.resolve('expo/package.json', { paths: [root] })),
+    metro: version(() => require.resolve('metro/package.json', { paths: [root] })),
     zlib: process.versions.zlib || null,
     brotli: process.versions.brotli || null,
   }

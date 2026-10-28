@@ -32,3 +32,133 @@ index cfa717d..5305e46 100644
          // Unsupported async imports inside a worker switch this entire graph, including application
          // chunks, to legacy. Workers with only synchronous dependencies remain supported.
          // TODO: Support async imports inside workers, with separate module registries and one URL
+diff --git a/node_modules/@expo/metro-config/build/serializer/chunking/Chunk.js b/node_modules/@expo/metro-config/build/serializer/chunking/Chunk.js
+--- a/node_modules/@expo/metro-config/build/serializer/chunking/Chunk.js
++++ b/node_modules/@expo/metro-config/build/serializer/chunking/Chunk.js
+@@ -149,6 +149,11 @@
+         const preModules = [
+             ...(options.preModules ?? this.preModules).values()
+         ];
++        const metadata = this.unstable_metravelChunkMetadata;
++        if (options.preModules == null) {
++            const prelude = metadata?.getPrelude(this);
++            if (prelude) preModules.push(prelude);
++        }
+         const dependencies = [
+             ...this.deps
+         ];
+@@ -163,6 +168,7 @@
+             skipWrapping: true,
+             computedAsyncModulePaths: null,
+             ...this.strategy.getStableSerializationOptions(this),
++            ...metadata?.getSerializationOptions(this, options.unstable_metravelChunkFilenames),
+             ...options
+         });
+         return {
+@@ -224,6 +230,7 @@
+             sourceMapUrl: this.getAdjustedSourceMapUrl(filename) ?? undefined,
+             debugId,
+             preModules,
++            unstable_metravelChunkFilenames: filenamesByChunk,
+             ...this.strategy.getSerializationOptions(this, chunksByPath, filenamesByChunk)
+         });
+     }
+@@ -239,6 +246,8 @@
+         let finalPreModules = [
+             ...this.preModules
+         ];
++        const prelude = this.unstable_metravelChunkMetadata?.getPrelude(this, filenamesByChunk);
++        if (prelude) finalPreModules.push(prelude);
+         if (unstable_beforeAssetSerializationPlugins) {
+             for (const plugin of unstable_beforeAssetSerializationPlugins){
+                 finalPreModules = plugin({
+diff --git a/node_modules/@expo/metro-config/build/serializer/chunking/chunkingStrategy.js b/node_modules/@expo/metro-config/build/serializer/chunking/chunkingStrategy.js
+--- a/node_modules/@expo/metro-config/build/serializer/chunking/chunkingStrategy.js
++++ b/node_modules/@expo/metro-config/build/serializer/chunking/chunkingStrategy.js
+@@ -138,8 +138,11 @@
+     }
+     return chunkByPath;
+ }
+-async function serializeChunksAsync(chunks, { serializerConfig, serializeChunkOptions, options }) {
++async function serializeChunksAsync(chunks, context) {
++    const { serializerConfig, serializeChunkOptions, options } = context;
+     const chunksByPath = makeChunkByPathLookupMap(chunks);
++    // METRAVEL_COMPACT_CHUNK_METADATA: prepare service-data encoding before filename hashing.
++    serializerConfig?.unstable_prepareWebChunkMetadata?.(chunks, context, chunksByPath);
+     const filenamesByChunk = (0, _computeChunkFilenames.precomputeChunkFilenames)({
+         chunks,
+         chunksByPath,
+diff --git a/node_modules/@expo/metro-config/build/serializer/chunking/computeChunkFilenames.js b/node_modules/@expo/metro-config/build/serializer/chunking/computeChunkFilenames.js
+--- a/node_modules/@expo/metro-config/build/serializer/chunking/computeChunkFilenames.js
++++ b/node_modules/@expo/metro-config/build/serializer/chunking/computeChunkFilenames.js
+@@ -8,6 +8,11 @@
+         return precomputeChunkFilenames;
+     }
+ });
++// METRAVEL_COMPACT_CHUNK_METADATA: registry URLs affect runtime hashing, never delivery.
++const hashTargets = (chunk, chunksByPath)=>new Set([
++    ...chunk.getAsyncChunkTargets(chunksByPath),
++    ...chunk.unstable_metravelHashTargets ?? []
++]);
+ /** Tarjan's SCC partition, exposing lazy transitive reachability per chunk */ const makeTopologicalSet = (chunks, chunksByPath)=>{
+     const discoveryIndex = new Map();
+     const lowLink = new Map();
+@@ -21,7 +26,7 @@
+         nextIndex++;
+         path.push(node);
+         onPath.add(node);
+-        for (const neighbor of node.getAsyncChunkTargets(chunksByPath)){
++        for (const neighbor of hashTargets(node, chunksByPath)){
+             if (!discoveryIndex.has(neighbor)) {
+                 visit(neighbor);
+                 lowLink.set(node, Math.min(lowLink.get(node), lowLink.get(neighbor)));
+@@ -53,7 +58,7 @@
+         const closure = new Set(group);
+         _closureCache.set(group, closure);
+         for (const member of group){
+-            for (const target of member.getAsyncChunkTargets(chunksByPath)){
++            for (const target of hashTargets(member, chunksByPath)){
+                 const transitiveGroup = groupOf.get(target);
+                 if (transitiveGroup === group) continue;
+                 for (const reachable of collect(transitiveGroup)){
+diff --git a/node_modules/@expo/metro-config/build/serializer/fork/baseJSBundle.js b/node_modules/@expo/metro-config/build/serializer/fork/baseJSBundle.js
+--- a/node_modules/@expo/metro-config/build/serializer/fork/baseJSBundle.js
++++ b/node_modules/@expo/metro-config/build/serializer/fork/baseJSBundle.js
+@@ -125,7 +125,8 @@
+         splitChunks: options.splitChunks,
+         skipWrapping: options.skipWrapping,
+         computedAsyncModulePaths: options.computedAsyncModulePaths,
+-        unstable_getAsyncDependencyPath: options.unstable_getAsyncDependencyPath
++        unstable_getAsyncDependencyPath: options.unstable_getAsyncDependencyPath,
++        unstable_encodeAsyncPaths: options.unstable_encodeAsyncPaths
+     };
+     // Do not prepend polyfills or the require runtime when only modules are requested
+     if (options.modulesOnly) {
+@@ -158,7 +159,7 @@
+     if (options.includeChunkCompletion && options.platform === 'web' && !options.dev) {
+         // Read the URL from currentScript because this footer contributes to the chunk's filename hash.
+         const key = JSON.stringify(`${options.globalPrefix ?? ''}__expo_chunk_completion__`);
+-        const code = `(function(){var s=typeof document!=="undefined"&&document.currentScript;if(s&&s.namespaceURI==="http://www.w3.org/1999/xhtml"&&s.tagName==="SCRIPT"&&typeof s.src==="string"&&s.src){var k=${key};(globalThis[k]||(globalThis[k]=new Set())).add(s.src);}})();`;
++        const code = options.unstable_metravelChunkCompletion ?? `(function(){var s=typeof document!=="undefined"&&document.currentScript;if(s&&s.namespaceURI==="http://www.w3.org/1999/xhtml"&&s.tagName==="SCRIPT"&&typeof s.src==="string"&&s.src){var k=${key};(globalThis[k]||(globalThis[k]=new Set())).add(s.src);}})();`;
+         modulesWithAnnotations.unshift({
+             path: 'expo-chunk-completion',
+             dependencies: new Map(),
+diff --git a/node_modules/@expo/metro-config/build/serializer/fork/js.js b/node_modules/@expo/metro-config/build/serializer/fork/js.js
+--- a/node_modules/@expo/metro-config/build/serializer/fork/js.js
++++ b/node_modules/@expo/metro-config/build/serializer/fork/js.js
+@@ -158,11 +158,13 @@
+         }
+         return id;
+     });
++    // Keep expanded `paths` as independent asset metadata; compact only factory parameters.
++    const encodedPaths = options.unstable_encodeAsyncPaths?.(module1, paths);
+     const params = [
+         moduleId,
+-        hasPaths ? {
++        hasPaths || encodedPaths !== undefined ? {
+             ...dependencyMapArray,
+-            paths
++            paths: encodedPaths === undefined ? paths : encodedPaths
+         } : dependencyMapArray
+     ];
+     if (options.dev) {

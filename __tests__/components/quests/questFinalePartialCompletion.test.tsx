@@ -51,6 +51,7 @@ jest.mock('@/utils/questReturnVisit', () => ({
   questRetentionOwnerId: () => 'guest',
 }))
 
+jest.mock('@/components/quests/QuestFinaleVideo', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/quests/questWizardMedia', () => ({
   BelkrajWidgetLazy: () => null,
   NativeQuestVideoLazy: () => null,
@@ -70,8 +71,8 @@ const styles = {
   buttonText: {},
 }
 
-const renderFinale = (overrides: Record<string, unknown>) =>
-  render(
+const renderFinale = async (overrides: Record<string, unknown>) =>
+  await render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
     <QuestFinalePanel
       colors={{}}
@@ -100,8 +101,8 @@ const renderFinale = (overrides: Record<string, unknown>) =>
   )
 
 describe('QuestFinalePanel: частичное прохождение (#1443)', () => {
-  it('не выдаёт значок, «первопроходца» и счётчик, но объясняет недобор', () => {
-    const { getByTestId, queryByTestId, getByText } = renderFinale({})
+  it('не выдаёт значок, «первопроходца» и счётчик, но объясняет недобор', async () => {
+    const { getByTestId, queryByTestId, getByText } = await renderFinale({})
 
     expect(getByText('Квест пройден частично')).toBeTruthy()
     expect(getByTestId('quest-finale-not-credited')).toBeTruthy()
@@ -118,8 +119,8 @@ describe('QuestFinalePanel: частичное прохождение (#1443)', 
     expect(queryByTestId('quest-review-section')).toBeNull()
   })
 
-  it('засчитанное прохождение остаётся полноценным финалом с наградами', () => {
-    const { getByTestId, queryByTestId, getByText } = renderFinale({
+  it('засчитанное прохождение остаётся полноценным финалом с наградами', async () => {
+    const { getByTestId, queryByTestId, getByText } = await renderFinale({
       questCompleted: true,
       stepsMissingForCompletion: 0,
       completedCount: 8,

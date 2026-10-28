@@ -17,14 +17,13 @@ import QuestNextStepSection from './QuestNextStepSection'
 import QuestPioneerBlock from './QuestPioneerBlock'
 import QuestProgressPendingNotice from './QuestProgressPendingNotice'
 import QuestReviewSection from './QuestReviewSection'
+import QuestFinaleVideo from './QuestFinaleVideo'
 import type { QuestMapApp } from './questWizardHelpers'
 import type { QuestRouteMode } from './questRouteGeometry'
 
 import {
   BelkrajWidgetLazy,
-  NativeQuestVideoLazy,
   QuestFullMapLazy,
-  QuestWebVideo,
 } from './questWizardMedia'
 import { translate as i18nT, translatePlural } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider'
@@ -634,24 +633,22 @@ export function QuestFinalePanel({
                     </Pressable>
                   </View>
                 </>
-              ) : Platform.OS === 'web' ? (
-                <QuestWebVideo src={videoUri ?? (typeof finale.video === 'string' ? finale.video : finale.video?.uri)} poster={posterUri} onError={() => { if (mediaVisit.current.revision === revision) handleVideoError() }} onPlayingChange={onPlayingChange} />
               ) : (
-                <Suspense fallback={poster}>
-                  <NativeQuestVideoLazy
-                    source={typeof finale.video === 'string' ? { uri: finale.video } : finale.video}
-                    posterSource={typeof finale.poster === 'string' ? { uri: finale.poster } : finale.poster}
-                    usePoster={!!finale.poster}
-                    style={StyleSheet.absoluteFill}
-                    useNativeControls
-                    shouldPlay={false}
-                    isLooping={false}
-                    onError={() => {
-                      if (mediaVisit.current.revision === revision) setVideoOk(false)
-                    }}
-                    onPlayingChange={onPlayingChange}
-                  />
-                </Suspense>
+                <QuestFinaleVideo
+                  source={typeof finale.video === 'string' ? { uri: finale.video } : finale.video}
+                  posterSource={typeof finale.poster === 'string' ? { uri: finale.poster } : finale.poster}
+                  usePoster={!!finale.poster}
+                  src={videoUri ?? (typeof finale.video === 'string' ? finale.video : finale.video?.uri)}
+                  poster={posterUri}
+                  fallback={poster}
+                  onWebError={() => {
+                    if (mediaVisit.current.revision === revision) handleVideoError()
+                  }}
+                  onNativeError={() => {
+                    if (mediaVisit.current.revision === revision) setVideoOk(false)
+                  }}
+                  onPlayingChange={onPlayingChange}
+                />
               )}
               {showVideoCaption ? (
                 <View

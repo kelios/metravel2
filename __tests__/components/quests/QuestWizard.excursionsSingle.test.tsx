@@ -40,6 +40,7 @@ jest.mock('@/components/belkraj/belkrajAvailability', () => ({
   canRenderBelkrajWidget: () => true,
 }))
 
+jest.mock('@/components/quests/QuestFinaleVideo', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/quests/questWizardMedia', () => {
   const ReactModule = jest.requireActual('react') as typeof React
   const { View } = jest.requireActual('react-native') as typeof import('react-native')
@@ -121,7 +122,7 @@ const setPlatform = (os: string) => {
   Object.defineProperty(Platform, 'OS', { configurable: true, value: os })
 }
 
-const renderWizard = () => render(
+const renderWizard = async () => await render(
   <QuestWizard
     title="Квест по Познани: козлики и Старый рынок"
     steps={steps}
@@ -138,20 +139,20 @@ afterEach(() => {
 })
 
 describe('QuestWizard: секция «Экскурсии рядом» на карточке шага', () => {
-  it('на native рендерит блок ровно один раз, а не двумя секциями подряд', () => {
+  it('на native рендерит блок ровно один раз, а не двумя секциями подряд', async () => {
     setPlatform('android')
 
-    const { getAllByText, getByTestId } = renderWizard()
+    const { getAllByText, getByTestId } = await renderWizard()
 
     // Ключевая проверка регресса #1452: один заголовок, а не два подряд.
     expect(getAllByText(EXCURSIONS_TITLE)).toHaveLength(1)
     expect(getByTestId('quest-excursions-section')).toBeTruthy()
   })
 
-  it('на native держит Belkraj-виджет и партнёрские офферы в одной карточке', () => {
+  it('на native держит Belkraj-виджет и партнёрские офферы в одной карточке', async () => {
     setPlatform('android')
 
-    const { getAllByText, getByTestId } = renderWizard()
+    const { getAllByText, getByTestId } = await renderWizard()
 
     expect(getAllByText(EXCURSIONS_TITLE)).toHaveLength(1)
     expect(getByTestId('quest-belkraj-widget')).toBeTruthy()
@@ -159,10 +160,10 @@ describe('QuestWizard: секция «Экскурсии рядом» на ка�
     expect(getAllByText('Экскурсии и гиды')).toHaveLength(1)
   })
 
-  it('на mobile web оставляет ровно один блок и не добавляет партнёрские офферы', () => {
+  it('на mobile web оставляет ровно один блок и не добавляет партнёрские офферы', async () => {
     setPlatform('web')
 
-    const { getAllByText, queryByText } = renderWizard()
+    const { getAllByText, queryByText } = await renderWizard()
 
     expect(getAllByText(EXCURSIONS_TITLE)).toHaveLength(1)
     expect(queryByText('Экскурсии и гиды')).toBeNull()

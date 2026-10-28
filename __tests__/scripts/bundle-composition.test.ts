@@ -680,6 +680,37 @@ const webVendorOffenders = (
 const vendorWebGraph = webValueGraph()
 
 describe('состав eager-бандла (#1148)', () => {
+  it.each(['expo-video', 'expo-image-manipulator'])(
+    'keeps native media %s outside every web value edge (#2738)',
+    (pkg) => {
+      const offenders = [...vendorWebGraph]
+        .filter(([, imports]) => [...imports.sync, ...imports.dynamic]
+          .some((specifier) => specifier === pkg || specifier.startsWith(`${pkg}/`)))
+        .map(([file]) => relative(ROOT, file))
+      expect(offenders).toEqual([])
+    },
+  )
+
+  it.each([
+    ['utils/imageCompressor.web.ts', 'utils/imageCompressor.ts', 'expo-image-manipulator'],
+    ['components/quests/QuestFinaleVideo.web.tsx', 'components/quests/QuestFinaleVideo.tsx', 'expo-video'],
+  ])('detects a native media import through its shared owner: %s', (web, shared, pkg) => {
+    const root = join(ROOT, web)
+    const target = join(ROOT, shared)
+    const bare = `@/${shared.replace(/\.[jt]sx?$/, '')}`
+    expect(resolveImport(bare, ROOT)).toBe(root)
+    expect(resolveImport(bare, ROOT, 'ios')).toBe(target)
+    expect(resolveImport(bare, ROOT, 'android')).toBe(target)
+    expect(vendorWebGraph.has(target)).toBe(false)
+    // Explicit shared-file imports must not be hidden by platform-pair filtering.
+    const graph = webValueGraph([root], (file) => file === root
+      ? `export * from '@/${shared}'`
+      : readFileSync(file, 'utf8'))
+    expect(graph.has(target)).toBe(true)
+    const imports = graph.get(target)!
+    expect([...imports.sync, ...imports.dynamic]).toContain(pkg)
+  })
+
   it('keeps server metadata dependencies outside the client quest projection renderer (#2738)', () => {
     const screen = join(ROOT, 'components/quests/runtime/QuestPublicLoaderScreen.web.tsx')
     const presentation = join(ROOT, 'components/quests/runtime/questPublicStructuredData.ts')

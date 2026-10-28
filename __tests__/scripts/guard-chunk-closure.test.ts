@@ -19,6 +19,7 @@ const ROOT = path.resolve(__dirname, '..', '..')
 const GUARD = path.join(ROOT, 'scripts/guard-chunk-closure.js')
 
 const JS_DIR = '_expo/static/js/web'
+const { prelude } = require('../../scripts/lib/webChunkMetadataCodec')
 
 type ChunkSpec = { name: string; source: string }
 
@@ -37,7 +38,7 @@ const writeExport = (
 }
 
 /** Модуль в формате метро-выпуска: фабрика, id, карта зависимостей. */
-const moduleDef = (id: number, deps: Record<string, number>, paths?: Record<number, string | string[]>) => {
+const moduleDef = (id: number, deps: Record<string, number>, paths?: Record<number, string | string[]> | [string, number]) => {
   const map: Record<string, unknown> = { ...deps }
   if (paths) map.paths = paths
   return `__d(function(g,r,i,a,m,e,d){},${id},${JSON.stringify(map)});`
@@ -47,6 +48,83 @@ const moduleDef = (id: number, deps: Record<string, number>, paths?: Record<numb
 const run = (id: number) => `__r(${id});`
 
 describe('guard-chunk-closure', () => {
+  const compactExport = (dir: string, scripts = ['runtime.js', 'entry.js'], includeDependency = true) => {
+    const table = { v: 'mc1', f: [`/${JS_DIR}/shared.js`, `/${JS_DIR}/route.js`], c: [[0, 1]], m: [{ 7: 0 }], p: '' }
+    writeExport(dir, {
+      chunks: [
+        { name: 'runtime.js', source: prelude(table) },
+        { name: 'entry.js', source: moduleDef(1, { 0: 7 }, ['mc1', 0]) + run(1) },
+        { name: 'route.js', source: moduleDef(7, { 0: 8 }) },
+        { name: 'shared.js', source: includeDependency ? moduleDef(8, {}) : '' },
+      ], html: { 'index.html': scripts },
+    })
+  }
+
+  it('proves the same closure from emitted compact paths and their runtime table', () => {
+    const dir = makeTempDir('chunk-closure-compact')
+    compactExport(dir)
+    expect(runNodeCli([GUARD, dir]).status).toBe(0)
+  })
+
+  it('does not hide a missing dependency behind a valid compact descriptor', () => {
+    const dir = makeTempDir('chunk-closure-compact-gap')
+    compactExport(dir, undefined, false)
+    const result = runNodeCli([GUARD, dir])
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('модуль 7 требует 8')
+  })
+
+  it.each([
+    [['entry.js'], 'missing-runtime'],
+    [['entry.js', 'runtime.js'], 'runtime-order'],
+  ])('requires runtime metadata before importing compact chunks: %j', (scripts, reason) => {
+    const dir = makeTempDir('chunk-closure-compact-runtime')
+    compactExport(dir, scripts as string[])
+    const result = runNodeCli([GUARD, dir])
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain(reason as string)
+  })
+
+  it('fails closed for an unknown descriptor version', () => {
+    const dir = makeTempDir('chunk-closure-compact-version')
+    compactExport(dir)
+    const file = path.join(dir, JS_DIR, 'entry.js')
+    fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace('["mc1",0]', '["mc2",0]'))
+    const result = runNodeCli([GUARD, dir])
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('descriptor version')
+  })
+
+  it.each([
+    '__d(function(){var diagnostic="__mtc1"},1,[]);__r(1);',
+    `__d(function(){var diagnostic=${JSON.stringify('{"paths":["mc1",0]}')};},1,[]);__r(1);`,
+    '__d(function(){globalThis["__mtc1"]()},1,[]);__r(1);',
+  ])('does not require compact runtime for legacy app code: %s', (source) => {
+    const dir = makeTempDir('chunk-closure-legacy-compact-text')
+    writeExport(dir, { chunks: [{ name: 'entry.js', source }], html: { 'index.html': ['entry.js'] } })
+    expect(runNodeCli([GUARD, dir]).status).toBe(0)
+  })
+
+  it('fails closed for a real compact descriptor without any runtime registry', () => {
+    const dir = makeTempDir('chunk-closure-compact-no-registry')
+    compactExport(dir, ['entry.js'])
+    fs.unlinkSync(path.join(dir, JS_DIR, 'runtime.js'))
+    const result = runNodeCli([GUARD, dir])
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('missing registry')
+  })
+
+  it('requires runtime for an actual top-level compact completion call', () => {
+    const dir = makeTempDir('chunk-closure-compact-completion')
+    writeExport(dir, {
+      chunks: [{ name: 'entry.js', source: moduleDef(1, {}) + run(1) + 'globalThis["__mtc1"]();' }],
+      html: { 'index.html': ['entry.js'] },
+    })
+    const result = runNodeCli([GUARD, dir])
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('missing-runtime')
+  })
+
   it('пропускает выпуск, где async-цель везёт свои синхронные зависимости', () => {
     const dir = makeTempDir('chunk-closure-ok')
     writeExport(dir, {
@@ -143,5 +221,26 @@ describe('guard-chunk-closure', () => {
     const result = runNodeCli([GUARD, dir])
     expect(result.status).toBe(1)
     expect(result.stderr).toContain('нет ни одного __r(id)')
+  })
+
+  it('отказывает, если исполняемый корень не определён', () => {
+    const dir = makeTempDir('chunk-closure-missing-root')
+    writeExport(dir, {
+      chunks: [{ name: 'entry.js', source: moduleDef(1, {}) + run(999) }],
+      html: { 'index.html': ['entry.js'] },
+    })
+    const result = runNodeCli([GUARD, dir])
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('модуль 999 требует 999')
+  })
+
+  it('не принимает app-строку или отложенный вызов за исполняемый корень', () => {
+    const dir = makeTempDir('chunk-closure-root-string')
+    writeExport(dir, {
+      chunks: [{ name: 'entry.js', source: moduleDef(1, {})
+        + 'var text="__r(999)";var later=function(){__r(998)};' + run(1) }],
+      html: { 'index.html': ['entry.js'] },
+    })
+    expect(runNodeCli([GUARD, dir]).status).toBe(0)
   })
 })

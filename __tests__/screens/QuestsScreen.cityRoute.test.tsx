@@ -60,7 +60,7 @@ it('keeps the URL slice: no normalizing leave, the city grid and the route foote
     const onLeave = jest.fn();
     const footer = <Text>footer</Text>;
     const route: QuestsCatalogRoute = { selectionId: '4', onLeave, seo: null, footer };
-    const { rerender } = render(<QuestsScreen route={route} />);
+    const { rerender } = await render(<QuestsScreen route={route} />);
 
     await waitFor(() => expect(ids(mockContentProps.questsAll)).toEqual(['minsk-a', 'minsk-b']));
     await act(async () => { await Promise.resolve(); });
@@ -69,7 +69,7 @@ it('keeps the URL slice: no normalizing leave, the city grid and the route foote
     expect(onLeave).not.toHaveBeenCalled();
 
     // /quests/minsk → /quests/grodno на том же экземпляре экрана вкладки.
-    rerender(<QuestsScreen route={{ ...route, selectionId: '5' }} />);
+    await rerender(<QuestsScreen route={{ ...route, selectionId: '5' }} />);
     await waitFor(() => expect(ids(mockContentProps.questsAll)).toEqual(['grodno-a']));
     expect(mockContentProps.selectedCityId).toBe('5');
     expect(onLeave).not.toHaveBeenCalled();
@@ -80,12 +80,12 @@ it('keeps the URL slice: no normalizing leave, the city grid and the route foote
 
 it('does not offer the in-place map-area search over the URL-owned slice', async () => {
     const route: QuestsCatalogRoute = { selectionId: '4', onLeave: jest.fn(), seo: null };
-    render(<QuestsScreen route={route} />);
+    await render(<QuestsScreen route={route} />);
     await waitFor(() => expect(mockContentProps.selectedCityId).toBe('4'));
 
-    act(() => { mockContentProps.onToggleViewMode(); });
+    await act(() => { mockContentProps.onToggleViewMode(); });
     await waitFor(() => expect(mockContentProps.mapSlot).toBeTruthy());
-    act(() => { mapSectionProps().onMapMove({ latitude: 53.9, longitude: 27.56 }); });
+    await act(() => { mapSectionProps().onMapMove({ latitude: 53.9, longitude: 27.56 }); });
     await act(async () => { await Promise.resolve(); });
 
     expect(mapSectionProps().showMapAreaSearch).toBe(false);

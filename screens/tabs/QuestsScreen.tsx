@@ -542,8 +542,10 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
         || Boolean(selectedTheme);
     const mapSlot = useMemo(() => (viewMode === 'map' ? (
         <QuestsMapSection
-            styles={s}
+            loadingStyle={s.mapLoading}
             colors={colors}
+            screenWidth={width}
+            screenHeight={height}
             dataLoaded={dataLoaded}
             quests={questsAll}
             cities={CITIES}
@@ -557,7 +559,7 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
             onUserLocationChange={handleMapUserLocationChange}
             onMapMove={handleMapMove}
         />
-    ) : null), [viewMode, s, colors, dataLoaded, questsAll, CITIES, selectedCityId, searchTerm, centerMapOnQuests, userLoc, activeMapAreaCenter, pendingMapAreaCenter, route, handleSearchMapArea, handleMapUserLocationChange, handleMapMove]);
+    ) : null), [viewMode, s.mapLoading, colors, width, height, dataLoaded, questsAll, CITIES, selectedCityId, searchTerm, centerMapOnQuests, userLoc, activeMapAreaCenter, pendingMapAreaCenter, route, handleSearchMapArea, handleMapUserLocationChange, handleMapMove]);
 
     // Фильтр «сужает» каталог: выбран конкретный город, явный «Рядом» с радиусом
     // или область карты. В этих случаях показываем быстрый сброс к «Все квесты».
@@ -686,8 +688,8 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
 
     // Один набор пропсов на мобильный drawer и десктопную колонку (#2087).
     const sidebarProps: React.ComponentProps<typeof QuestsSidebar> = {
-        styles: s,
         colors,
+        screenWidth: width,
         viewMode,
         selectedCityId,
         activeCountryCode,

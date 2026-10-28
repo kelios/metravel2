@@ -4573,13 +4573,46 @@ guard, падающий в CI на попытке обойти этот конт
   import-chain: клиентский `QuestPublicLoaderScreen.web` брал JSON-LD из
   `questPublicSeo`, который также импортировал server loader и metadata graph.
   Чистые JSON-LD/alternates вынесены в отдельного владельца; прежние server
-  exports сохранены. Web-only helper разрешает установленному Metro/Terser
-  распределять имена параметров фабрик без изменения positional ABI или
-  compress options; native сохраняет defaults. Постоянный контроль — реальный
-  source graph с отрицательным former-import probe, SEO-паритет проекций,
-  VM-фабрики установленного minifier и seasonal serialization. Потолки и
-  allowlists не меняются; offline estimate не заменяет свежий export/0 breach
-  и последующую production-проверку.
+  exports сохранены. Эксперимент свободных имён фабрик прошёл ABI-тесты, но
+  фактический server-export `1b6321866` опроверг offline estimate: raw
+  11835,9 → 11809,5 KB, gzip 3352,1 → 3389,4 KB, Brotli 2635,4 → 2666,7 KB;
+  223 чанка, 17 breach вместо 11. Публикация остановлена до server mutation;
+  флаг и его специальные fixtures откачены, прежний minifier/native config
+  сохранён. Постоянный контроль pure SEO — реальный source graph с
+  отрицательным former-import probe и SEO-паритет проекций. Дальнейшие
+  кандидаты сначала проходят стандартный локальный `DEPLOY=0` export с
+  сохранением артефакта для атрибуции. Потолки и allowlists не меняются;
+  offline estimate и ABI pass не заменяют свежий export/0 breach и
+  последующую production-проверку.
+
+- Source repair 28.10.2026 (#2738): воспроизводимый SSR baseline после
+  отката minifier — 3346,5 KB gzip, 223 чанка, eager 756,4 KB Brotli,
+  11 превышений. Штатный global ESM/tree-shaking кандидат дал 3300,3 KB gzip,
+  но 19 превышений; он полностью снят. Установлены отдельные механизмы:
+  нативные media imports в общих модулях, повторные loader paths/completion,
+  home CSS в клиентском JS и SSR body, приватные стили ленивых частей каталога
+  в eager-владельце. Source tests не считаются замером итоговой сборки.
+- Постоянные controls #2738: `.web`-пары imageCompressor/QuestFinaleVideo
+  исключают native SDK из web на уровне dependency collection; source graph
+  проверяет и sync, и async рёбра с отрицательным импортом shared-владельца.
+  `forbiddenPayloads` запрещает видео/image-manipulator во всех выпущенных JS,
+  включая deferred/shared; прежнее разрешение отдельного video chunk удалено.
+- Loader codec #2738: `scripts/lib/webChunkMetadataCodec.js` создаёт mc1
+  registry до hashing, сохраняя caller-local maps (одинаковый module ID может
+  иметь разные closures). Runtime hash зависит от URL targets через прежний
+  SCC-механизм; delivery graph и upstream Expo loader сохраняются. Реальные
+  Metro/Expo fixtures проверяют roundtrip, cache hash, concurrent loading,
+  `_result`, retry, prefetch, worker и completion. AST attribution не вырезает
+  строки приложения; TOTAL/eager учитывают registry/decoder/helper полностью.
+- CSS controls #2738: home template имеет одного build-time владельца и
+  generated-region в `app/global.css`; `build-prod.sh` запускает генератор
+  с `--check` до export. Приватные Sidebar/Map styles принадлежат их ленивым
+  модулям; прежние snapshots и 11232 комбинации значений сверены. Cold CSS
+  прибавил 2574 gzip bytes до export: итог оценивается вместе с HTML и JS.
+- Follow-up: #2847 сохраняет точный budget report за пределами удаляемого
+  deploy worktree; #2848 отдельно разделяет filesystem/sharing по платформам.
+  Полевой INP #2846 и эти будущие границы не подменяют Done gate #2738:
+  новый artifact с нулём превышений, штатная публикация и живая web-приёмка.
 
 ### APP-SHELL-BOOT-001 — пол TBT задаёт общий каркас, а не код маршрута
 

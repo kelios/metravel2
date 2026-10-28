@@ -11,6 +11,7 @@ jest.mock('@/components/belkraj/belkrajAvailability', () => ({
   canRenderBelkrajWidget: () => mockBelkrajRenderable,
 }))
 
+jest.mock('@/components/quests/QuestFinaleVideo', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/quests/questWizardMedia', () => ({
   BelkrajWidgetLazy: (props: Record<string, unknown>) => {
     const ReactModule = jest.requireActual('react') as typeof React
@@ -38,7 +39,7 @@ describe('QuestExcursionsInline Belkraj integration', () => {
     mockBelkrajRenderable = true
   })
 
-  it('passes the quest city coordinates to the shared Belkraj widget', () => {
+  it('passes the quest city coordinates to the shared Belkraj widget', async () => {
     const city = {
       name: 'Минск',
       lat: 53.9,
@@ -46,7 +47,7 @@ describe('QuestExcursionsInline Belkraj integration', () => {
       countryCode: 'BY',
     }
 
-    const { getByTestId, getByText } = render(
+    const { getByTestId, getByText } = await render(
       <QuestExcursionsInline
         colors={{}}
         styles={styles}
@@ -67,10 +68,10 @@ describe('QuestExcursionsInline Belkraj integration', () => {
   // #1452: обвязка секции (разделитель + карточка + заголовок) рисовалась даже
   // тогда, когда виджет молча возвращал null — на экране оставалась пустая
   // карточка-призрак с одним заголовком «Экскурсии рядом».
-  it('renders nothing when neither the widget nor affiliate offers have content', () => {
+  it('renders nothing when neither the widget nor affiliate offers have content', async () => {
     mockBelkrajRenderable = false
 
-    const { queryByText, queryByTestId } = render(
+    const { queryByText, queryByTestId } = await render(
       <QuestExcursionsInline
         colors={{}}
         styles={styles}
@@ -83,8 +84,8 @@ describe('QuestExcursionsInline Belkraj integration', () => {
     expect(queryByText('Экскурсии рядом')).toBeNull()
   })
 
-  it('keeps exactly one «Экскурсии рядом» heading in the step-card section', () => {
-    const { getAllByText } = render(
+  it('keeps exactly one «Экскурсии рядом» heading in the step-card section', async () => {
+    const { getAllByText } = await render(
       <QuestExcursionsInline
         colors={{}}
         styles={styles}
@@ -120,12 +121,12 @@ describe('QuestDesktopMapPanel route classification', () => {
     mockQuestFullMapLazy.mockClear()
   })
 
-  it('does not build a pedestrian route while quest tags are still loading', () => {
-    const { rerender } = render(<QuestDesktopMapPanel {...mapProps} />)
+  it('does not build a pedestrian route while quest tags are still loading', async () => {
+    const { rerender } = await render(<QuestDesktopMapPanel {...mapProps} />)
 
     expect(mockQuestFullMapLazy).not.toHaveBeenCalled()
 
-    rerender(<QuestDesktopMapPanel {...mapProps} routeMode="bike" closeLoopRoute />)
+    await rerender(<QuestDesktopMapPanel {...mapProps} routeMode="bike" closeLoopRoute />)
 
     expect(mockQuestFullMapLazy).toHaveBeenCalledWith(
       expect.objectContaining({ routeMode: 'bike', closeLoop: true }),

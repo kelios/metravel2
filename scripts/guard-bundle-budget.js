@@ -23,6 +23,7 @@ const fs = require('fs')
 const path = require('path')
 const zlib = require('zlib')
 const { createReportContext, roundedByteLimit } = require('./lib/bundleBudgetReport')
+const { registryFromSources, stripCompactChunkMetadata } = require('./lib/webChunkMetadataArtifact')
 
 const repoRoot = path.join(__dirname, '..')
 const DEFAULT_TOLERANCE_PCT = 5
@@ -285,14 +286,14 @@ function ownerGroupName(name) {
 const KB = 1024
 const toKB = (bytes) => Math.round((bytes / KB) * 10) / 10
 
-const CHUNK_COMPLETION_MARKER =
-  /\n?\(function\(\)\{var s=typeof document!=="undefined"&&document\.currentScript;[^\n]*?__expo_chunk_completion__[^\n]*?\}\)\(\);/g
-const IMPORT_PATHS = /,?"paths":\{(?:"\d+":(?:"[^"]*"|\[(?:"[^"]*",?)*\]),?)*\}/g
 function stripLoaderMetadata(source) {
-  return source.replace(CHUNK_COMPLETION_MARKER, '').replace(IMPORT_PATHS, '')
+  return stripCompactChunkMetadata(source, metadataRegistry)
 }
 
 const files = fs.readdirSync(jsDir).filter((f) => f.endsWith('.js'))
+const sources = new Map(files.map((file) => [file, fs.readFileSync(path.join(jsDir, file), 'utf8')]))
+let metadataRegistry
+try { metadataRegistry = registryFromSources(sources.values()) } catch (error) { die(error.message) }
 const sizeLabel = (c) => `${toKB(c.raw)} KB raw / ${toKB(c.gzip)} KB gzip / ${toKB(c.brotli)} KB brotli`
 
 // #2085: Metro names a route chunk after its source file, so every
@@ -305,13 +306,7 @@ const sizeLabel = (c) => `${toKB(c.raw)} KB raw / ${toKB(c.gzip)} KB gzip / ${to
 // between builds — and source maps are off in the prod export. A file with no
 // owner or with several, and a marker carried by several files, are breaches:
 // summing them back silently is exactly the blind spot being closed.
-function readOwnerSplits() {
-  let config
-  try {
-    config = JSON.parse(fs.readFileSync(budgetPath, 'utf8'))
-  } catch {
-    return new Map() // a missing or invalid config is reported by the update/check paths below
-  }
+function readOwnerSplits(config) {
   const rows = config && config.chunks && typeof config.chunks === 'object' ? config.chunks : {}
   const splits = new Map()
   for (const [key, spec] of Object.entries(rows)) {
@@ -336,7 +331,26 @@ function readOwnerSplits() {
   }
   return splits
 }
-const ownerSplits = readOwnerSplits()
+function readForbiddenPayloads(value) {
+  if (value === undefined) return new Map()
+  if (!value || typeof value !== 'object' || Array.isArray(value) || !Object.keys(value).length) die('Invalid bundle budget: forbiddenPayloads must be a non-empty object.')
+  return new Map(Object.entries(value).map(([name, spec]) => {
+    const markers = spec?.markers
+    if (!name.trim() || !spec || typeof spec !== 'object' || Array.isArray(spec)
+        || !Array.isArray(markers) || !markers.length
+        || markers.some((marker) => typeof marker !== 'string' || !marker.trim())
+        || new Set(markers).size !== markers.length) {
+      die(`Invalid bundle budget: forbiddenPayloads.${name} must declare non-empty unique string markers.`)
+    }
+    return [name, markers]
+  }))
+}
+let attributionBudget
+try { attributionBudget = JSON.parse(fs.readFileSync(budgetPath, 'utf8')) } catch {
+  // Preserve the existing update/check diagnostics for missing or invalid config.
+}
+const ownerSplits = readOwnerSplits(attributionBudget)
+const forbiddenPayloads = readForbiddenPayloads(attributionBudget?.forbiddenPayloads)
 const ownerCandidates = []
 
 // Aggregate per logical chunk (a logical name can map to >1 hashed file
@@ -365,8 +379,9 @@ for (const file of files) {
   // manifest prefix; Expo's granular chunking instead writes each import()'s
   // file array into `paths` and appends a completion marker to async chunks
   // (~0.3 KB, more than some route-stub ceilings).
-  const source = buf.toString('utf8')
-  const budgetSource = stripLoaderMetadata(source)
+  const source = sources.get(file)
+  let budgetSource
+  try { budgetSource = stripLoaderMetadata(source) } catch (error) { die(`${file}: ${error.message}`) }
   const budgetBuf = budgetSource.length === source.length ? buf : Buffer.from(budgetSource)
   const budgetRaw = budgetBuf.length
   const budgetGzip = budgetBuf === buf ? gzip : zlib.gzipSync(budgetBuf).length
@@ -474,6 +489,7 @@ if (UPDATE) {
     ...(Array.isArray(existingBudget.forbiddenChunks)
       ? { forbiddenChunks: existingBudget.forbiddenChunks }
       : {}),
+    ...(existingBudget.forbiddenPayloads ? { forbiddenPayloads: existingBudget.forbiddenPayloads } : {}),
     ...(existingBudget.eager ? { eager: existingBudget.eager } : {}),
     total: {
       maxRawKB: toKB(allRaw - deferredRaw),
@@ -563,6 +579,15 @@ const totalBrotli = allBrotli - deferredBrotli
 
 const breaches = []
 const exactBreaches = new Map()
+const forbiddenPayloadFiles = new Map()
+for (const [name, markers] of forbiddenPayloads) {
+  const carriers = files.filter((file) => markers.some((marker) => sources.get(file).includes(marker)))
+  forbiddenPayloadFiles.set(name, carriers)
+  if (!carriers.length) continue
+  const label = `Forbidden payload present: ${name} in ${carriers.join(', ')}`
+  breaches.push({ label, forbidden: true })
+  exactBreaches.set(label, { label, actual: carriers.length, limit: 0, unit: 'count', policy: 'all_emitted_web_js' })
+}
 for (const name of forbiddenChunkNames) {
   if (chunks.has(name)) {
     breaches.push({ label: `Forbidden chunk present: ${name}`, forbidden: true })
@@ -918,6 +943,7 @@ if (JSON_OUT) {
           [...payloadRouteCounts].map(([payloadName, value]) => [payloadName, value.routes]),
         ),
         forbiddenChunks: forbiddenChunkNames,
+        forbiddenPayloads: Object.fromEntries(forbiddenPayloadFiles),
         ownerChunks: Object.fromEntries(
           [...ownerFiles].map(([key, { files: carriers }]) => {
             const c = chunks.get(key) || { raw: 0, gzip: 0, brotli: 0 }

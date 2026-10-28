@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
@@ -14,12 +14,12 @@ import { OTHER_COUNTRY_CODE } from './useQuestCountrySelection';
 import { toCountrySelectionId } from '@/utils/questCatalogSelection';
 import { translate as i18nT } from '@/i18n'
 import { webTitleRef } from '@/utils/webProps'
-
+import { getQuestsSidebarStyles, type QuestsSidebarStyles } from './QuestsSidebar.styles';
 
 const EMPTY_THEMES: QuestThemeEntry[] = [];
 
 type SidebarActionButtonProps = {
-    styles: any;
+    styles: QuestsSidebarStyles;
     colors: ThemedColors;
     isMobile: boolean;
     icon: NavigationIconName;
@@ -113,7 +113,7 @@ function SidebarActionButton({
 }
 
 type SidebarFilterRowProps = {
-    styles: any;
+    styles: QuestsSidebarStyles;
     colors: ThemedColors;
     iconSize: number;
     icon: NavigationIconName;
@@ -176,8 +176,8 @@ type CountryGroup = {
 };
 
 type QuestsSidebarProps = {
-    styles: any;
     colors: ThemedColors;
+    screenWidth: number;
     testID?: string;
     viewMode: 'list' | 'map';
     selectedCityId: string | null;
@@ -209,8 +209,8 @@ type QuestsSidebarProps = {
 };
 
 function QuestsSidebar({
-    styles,
     colors,
+    screenWidth,
     testID,
     viewMode,
     selectedCityId,
@@ -234,6 +234,7 @@ function QuestsSidebar({
     onToggleAllCountryGroups,
     onCloseDrawer,
 }: QuestsSidebarProps) {
+    const styles = useMemo(() => getQuestsSidebarStyles(colors, screenWidth), [colors, screenWidth]);
     // #1826: только ширина — высоту сайдбар не читает, а подписка на неё
     // перерисовывала его на каждый кадр изменения вьюпорта.
     const { isMobile } = useBreakpoints();

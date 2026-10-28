@@ -6,7 +6,7 @@
  * Проверка идёт от точки монтирования — `QuestFinalePanel` с засчитанным
  * прохождением — с настоящими секцией и хуком каталога; мокнута только сеть.
  * Видимость отдаёт управляемая подмена `useProgressiveLoad`, как в тестах
- * деталей путешествия: host-ref мокнутого `View` под react-test-renderer — не
+ * деталей путешествия: host-ref мокнутого `View` в тестовом host-дереве — не
  * DOM-узел, и настоящий хук до IntersectionObserver здесь не дошёл бы. Что хук
  * с этой конфигурацией не грузит по таймеру и грузит по пересечению —
  * `__tests__/hooks/useProgressiveLoading.test.tsx`.
@@ -41,6 +41,7 @@ jest.mock('@/components/quests/QuestReviewSection', () => ({ __esModule: true, d
 jest.mock('@/hooks/useQuestCompletionMeta', () => ({
   useQuestCompletionMeta: () => ({ isCompletedByMe: true, completionsCount: 3 }),
 }))
+jest.mock('@/components/quests/QuestFinaleVideo', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/quests/questWizardMedia', () => ({
   BelkrajWidgetLazy: () => null,
   NativeQuestVideoLazy: () => null,
@@ -164,7 +165,7 @@ describe('Блок «следующий квест рядом»: каталог 
   })
 
   it('открытие пройденного квеста не запрашивает каталог, пока блок не на экране', async () => {
-    const { queryByTestId } = render(finale())
+    const { queryByTestId } = await render(finale())
     await act(async () => {})
 
     expect(queryByTestId('quest-next-step-anchor')).toBeTruthy()
@@ -178,11 +179,11 @@ describe('Блок «следующий квест рядом»: каталог 
   })
 
   it('когда блок доходит до экрана, каталог уходит один раз и блок работает как раньше', async () => {
-    const { getByTestId, getByText, queryByTestId, rerender } = render(finale())
+    const { getByTestId, getByText, queryByTestId, rerender } = await render(finale())
     expect(mockFetchCompactCatalog).not.toHaveBeenCalled()
 
     mockShouldLoad = true
-    rerender(finale())
+    await rerender(finale())
 
     await waitFor(() => expect(getByTestId('quest-next-step-section')).toBeTruthy())
     expect(queryByTestId('quest-next-step-anchor')).toBeNull()
@@ -192,8 +193,8 @@ describe('Блок «следующий квест рядом»: каталог 
     expect(getByText('Дворики')).toBeTruthy()
   })
 
-  it('финиш в этой сессии запоминается сразу, не дожидаясь прокрутки к блоку', () => {
-    render(finale({ completionFinishedAt: 123 }))
+  it('финиш в этой сессии запоминается сразу, не дожидаясь прокрутки к блоку', async () => {
+    await render(finale({ completionFinishedAt: 123 }))
 
     expect(mockRememberQuestFinish).toHaveBeenCalledTimes(1)
     expect(mockRememberQuestFinish.mock.calls[0][0]).toMatchObject({ questId: 'minsk-cipher', finishedAt: 123 })
@@ -202,21 +203,21 @@ describe('Блок «следующий квест рядом»: каталог 
 
   it('каталог из кэша показывается сразу, а перепроверяется только на экране', async () => {
     client.setQueryData(queryKeys.questsCompactCatalog(null, getQuestContentLocale()), CATALOG, { updatedAt: 1 })
-    const { getByText, rerender } = render(finale())
+    const { getByText, rerender } = await render(finale())
 
     expect(getByText('Дворики')).toBeTruthy()
     expect(observedTestID()).toBe('quest-next-step-section')
     expect(mockFetchCompactCatalog).not.toHaveBeenCalled()
 
     mockShouldLoad = true
-    rerender(finale())
+    await rerender(finale())
 
     await waitFor(() => expect(mockFetchCompactCatalog).toHaveBeenCalledTimes(1))
   })
 
   it('непройденный квест по-прежнему не монтирует блок и не ходит за каталогом', async () => {
     mockShouldLoad = true
-    const { queryByTestId } = render(finale({ questCompleted: false, stepsMissingForCompletion: 3 }))
+    const { queryByTestId } = await render(finale({ questCompleted: false, stepsMissingForCompletion: 3 }))
     await act(async () => {})
 
     expect(queryByTestId('quest-next-step-anchor')).toBeNull()

@@ -93,7 +93,8 @@ function makeFixture(): Fixture {
   git(repo, ['checkout', '-q', '-b', 'main'])
   fs.mkdirSync(path.join(repo, 'scripts'), { recursive: true })
   fs.copyFileSync(DEPLOY_SCRIPT, path.join(repo, 'scripts/deploy-prod.sh'))
-  for (const script of ['guard-bundle-budget.js', 'build-lock.js', 'lib/bundleBudgetReport.js']) {
+  for (const script of ['guard-bundle-budget.js', 'build-lock.js', 'lib/bundleBudgetReport.js',
+    'lib/webChunkMetadataArtifact.js', 'lib/webChunkMetadataCodec.js', 'lib/webChunkMetadataRuntime.js']) {
     const target = path.join(repo, 'scripts', script)
     fs.mkdirSync(path.dirname(target), { recursive: true })
     fs.copyFileSync(path.join(process.cwd(), 'scripts', script), target)
@@ -102,7 +103,7 @@ function makeFixture(): Fixture {
   writeFile(path.join(repo, 'scripts/run-with-build-lock.js'), LOCK_RUNNER_STUB)
   writeFile(path.join(repo, 'build-prod.sh'), BUILD_STUB, 0o755)
   writeFile(path.join(repo, '.gitignore'), 'node_modules\n.env.*\n.codex-temp/')
-  fs.mkdirSync(path.join(repo, 'node_modules'))
+  fs.symlinkSync(path.join(process.cwd(), 'node_modules'), path.join(repo, 'node_modules'), 'dir')
   writeFile(path.join(repo, '.env.prod'), 'APP_ENV=production')
   writeFile(path.join(repo, '.env.deploy'), 'PROD_SSH_USER=stub')
   git(repo, ['add', '-A'])

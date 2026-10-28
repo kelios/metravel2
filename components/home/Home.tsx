@@ -19,7 +19,6 @@ import { useHomeViewport } from './useHomeViewport'
 import { HOME_WEB_SCROLL_DOCK_CLIP, homeWebScrollEndPadding } from './homeScrollDockClip'
 import { buildCanonicalUrl } from '@/utils/seo'
 import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext'
-import HomeResponsiveStyles from './HomeResponsiveStyles'
 import { webDataSetProps } from '@/utils/webProps'
 import {
   EmailSubscriptionForm,
@@ -291,7 +290,6 @@ function Home() {
         )
       }
     >
-      {responsiveHome && <HomeResponsiveStyles />}
       <HomeHero
         travelsCount={travelsCount}
         travelsCountLoading={isAuthenticated && travelsCountLoading}

@@ -370,7 +370,15 @@ function collectEdges(file, text) {
     } else if (isCall(node, 'require.resolve')) {
       // A finite source path is consumed by packagers without executing its module.
       const argument = node.arguments[0]
-      if (node.arguments.length === 1 && argument && ts.isStringLiteralLike(argument)) add(argument.text, 'type')
+      const options = node.arguments[1]
+      const property = options && ts.isObjectLiteralExpression(options) && options.properties.length === 1
+        ? options.properties[0] : null
+      const packageSearchPaths = node.arguments.length === 2 && argument && ts.isStringLiteralLike(argument)
+        && !localSpecifier(argument.text) && property && ts.isPropertyAssignment(property)
+        && (ts.isIdentifier(property.name) || ts.isStringLiteralLike(property.name)) && property.name.text === 'paths'
+        && ts.isArrayLiteralExpression(property.initializer)
+        && property.initializer.elements.every((element) => !ts.isSpreadElement(element) && !ts.isOmittedExpression(element))
+      if (argument && ts.isStringLiteralLike(argument) && (node.arguments.length === 1 || packageSearchPaths)) add(argument.text, 'type')
       else {
         const resolved = node.arguments.length === 1 && argument ? resolveLoaderArgument(argument) : null
         if (resolved?.kind === 'finite') add(resolved.target, 'type')

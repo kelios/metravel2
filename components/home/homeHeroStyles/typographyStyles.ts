@@ -212,13 +212,5 @@ export const createTypographyStyles = (ctx: HeroStyleContext) => {
       color: DESIGN_TOKENS.colors.textOnPrimary,
       opacity: 0.86,
     },
-    sectionLabel: {
-      color: inkStrong,
-      fontSize: 13,
-      lineHeight: 18,
-      fontWeight: '600',
-      letterSpacing: 0.2,
-      ...Platform.select({ web: { fontFamily: sansSerif } as any }),
-    },
   } as const
 }

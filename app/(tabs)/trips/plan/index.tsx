@@ -1,15 +1,8 @@
-import { useEffect } from 'react';
-import { useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata';
 
 export default function PlannedTripsRedirect() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/trips/my');
-  }, [router]);
-
-  return null;
+  return <Redirect href="/trips/my" />;
 }
 
 // #2740: head статического HTML объявляет маршрут (Expo SDK 58 пишет его из

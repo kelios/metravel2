@@ -1,63 +1,76 @@
-// __tests__/utils/imageCompressor.test.ts
-// AND-15: Tests for image compression utility.
+const mockPlatform = { OS: 'android' };
+const mockManipulateAsync = jest.fn();
+const mockManipulatorFactory = jest.fn(() => ({
+  manipulateAsync: mockManipulateAsync,
+  SaveFormat: { JPEG: 'jpeg' },
+}));
+const mockReactNativeFactory = jest.fn(() => ({ Platform: mockPlatform }));
 
-import { Platform } from 'react-native';
+jest.mock('expo-image-manipulator', () => mockManipulatorFactory());
+jest.mock('react-native', () => mockReactNativeFactory());
 
-describe('imageCompressor', () => {
-  const originalPlatform = Platform.OS;
-
-  afterEach(() => {
-    // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
-    Platform.OS = originalPlatform;
+describe('imageCompressor platform contract', () => {
+  beforeEach(() => {
     jest.resetModules();
+    jest.clearAllMocks();
+    mockPlatform.OS = 'android';
+    mockManipulateAsync.mockResolvedValue({ uri: 'file:///compressed.jpg', width: 1920, height: 1280 });
   });
 
-  it('returns original URI on web', async () => {
-    // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
-    Platform.OS = 'web';
-
-    // Re-import to get web behavior
-    jest.resetModules();
-    const { compressImage } = require('@/utils/imageCompressor');
-
-    const result = await compressImage('file:///test.jpg');
-    expect(result.uri).toBe('file:///test.jpg');
+  it.each(['file:///test.jpg', 'blob:preview-image', ''])('preserves %j and zero dimensions on web for every export', async (uri) => {
+    const { compressImage, compressAvatar, compressTravelPhoto } = require('@/utils/imageCompressor.web.ts');
+    const options = Object.freeze({ maxDimension: 128, quality: 0.1, squareCrop: true });
+    for (const compress of [compressImage, compressAvatar, compressTravelPhoto]) {
+      const result = compress(uri);
+      expect(result).toBeInstanceOf(Promise);
+      expect(await result).toEqual({ uri, width: 0, height: 0 });
+    }
+    expect(await compressImage(uri, options)).toEqual({ uri, width: 0, height: 0 });
+    expect(mockManipulatorFactory).not.toHaveBeenCalled();
+    expect(mockManipulateAsync).not.toHaveBeenCalled();
+    expect(mockReactNativeFactory).not.toHaveBeenCalled();
   });
 
-  it('compressAvatar returns compressed result on native', async () => {
-    // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
-    Platform.OS = 'android';
-
-    jest.resetModules();
-    const { compressAvatar } = require('@/utils/imageCompressor');
-
-    const result = await compressAvatar('file:///avatar.jpg');
-    // The mock returns the same URI with dimensions
-    expect(result.uri).toBeTruthy();
-    expect(typeof result.width).toBe('number');
-    expect(typeof result.height).toBe('number');
+  it('keeps the explicit base-module web fallback compatible without loading the SDK', async () => {
+    mockPlatform.OS = 'web';
+    const { compressImage } = require('@/utils/imageCompressor.ts');
+    expect(await compressImage('file:///test.jpg')).toEqual({ uri: 'file:///test.jpg', width: 0, height: 0 });
+    expect(mockManipulatorFactory).not.toHaveBeenCalled();
   });
 
-  it('compressTravelPhoto returns compressed result on native', async () => {
-    // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
-    Platform.OS = 'android';
+  it('compresses avatars on native with the existing size and quality', async () => {
+    const { compressAvatar } = require('@/utils/imageCompressor.ts');
+    expect(await compressAvatar('file:///avatar.jpg')).toEqual({
+      uri: 'file:///compressed.jpg', width: 1920, height: 1280,
+    });
+    expect(mockManipulatorFactory).toHaveBeenCalledTimes(1);
+    expect(mockManipulateAsync).toHaveBeenCalledWith('file:///avatar.jpg', [
+      { resize: { width: 512, height: 512 } },
+    ], { compress: 0.85, format: 'jpeg' });
+  });
 
-    jest.resetModules();
-    const { compressTravelPhoto } = require('@/utils/imageCompressor');
-
+  it('compresses travel photos on native with the existing size and quality', async () => {
+    const { compressTravelPhoto } = require('@/utils/imageCompressor.ts');
     const result = await compressTravelPhoto('file:///photo.jpg');
-    expect(result.uri).toBeTruthy();
+    expect(result).toEqual({ uri: 'file:///compressed.jpg', width: 1920, height: 1280 });
+    expect(mockManipulateAsync).toHaveBeenCalledWith('file:///photo.jpg', [
+      { resize: { width: 1920, height: 1920 } },
+    ], { compress: 0.8, format: 'jpeg' });
   });
 
-  it('compressImage with squareCrop option', async () => {
-    // @ts-ignore -- test mutates Platform.OS to emulate runtime platform
-    Platform.OS = 'ios';
+  it('preserves the native squareCrop option and custom compression quality', async () => {
+    mockPlatform.OS = 'ios';
+    const { compressImage } = require('@/utils/imageCompressor.ts');
+    await compressImage('file:///photo.jpg', { squareCrop: true, quality: 0.6, maxDimension: 100 });
+    expect(mockManipulateAsync).toHaveBeenCalledWith('file:///photo.jpg', [
+      { resize: { width: 512, height: 512 } },
+    ], { compress: 0.6, format: 'jpeg' });
+  });
 
-    jest.resetModules();
-    const { compressImage } = require('@/utils/imageCompressor');
-
-    const result = await compressImage('file:///photo.jpg', { squareCrop: true });
-    expect(result.uri).toBeTruthy();
+  it('preserves the native original-URI fallback when manipulation rejects', async () => {
+    mockManipulateAsync.mockRejectedValueOnce(new Error('decoder unavailable'));
+    const { compressImage } = require('@/utils/imageCompressor.ts');
+    expect(await compressImage('file:///photo.jpg')).toEqual({ uri: 'file:///photo.jpg', width: 0, height: 0 });
   });
 });
 

@@ -149,6 +149,20 @@ const validateCommittedBudget = (configPath: string, pinSourcePath = contractTes
   if (forbiddenChunks.length !== 1 || forbiddenChunks[0] !== '__common') {
     throw new Error('bundle budget.forbiddenChunks must keep __common as its only forbidden chunk.')
   }
+  const forbiddenPayloads = requireRecord(budget.forbiddenPayloads, 'bundle budget.forbiddenPayloads')
+  for (const [name, expected] of Object.entries({
+    expoVideo: ['clearVideoCacheAsync', 'mountVideoView', 'useVideoPlayer'],
+    expoImageManipulator: ['manipulateAsync', 'ImageManipulatorContext'],
+  })) {
+    const spec = requireRecord(forbiddenPayloads[name], `bundle budget.forbiddenPayloads.${name}`)
+    const markers = requireStringArray(spec.markers, `bundle budget.forbiddenPayloads.${name}.markers`)
+    if (expected.some((marker) => !markers.includes(marker))) {
+      throw new Error(`bundle budget.forbiddenPayloads.${name} must retain native SDK absence markers.`)
+    }
+  }
+  if (Object.prototype.hasOwnProperty.call(requireRecord(budget.chunks, 'bundle budget.chunks'), 'index:expo-video')) {
+    throw new Error('native expo-video must keep the zero-payload rule instead of a byte allowance.')
+  }
 
   const eager = requireRecord(budget.eager, 'bundle budget.eager')
   const eagerChunks = requireStringArray(eager.chunks, 'bundle budget.eager.chunks')
@@ -1016,6 +1030,8 @@ describe('bundle budget release contract', () => {
       'index:quests': { marker: QUESTS_MARKER, maxRawKB: 2 },
     }
     const chunkSource = (marker: string, padding: number) => `globalThis.t='${marker}';/*${'x'.repeat(padding)}*/`
+    const legacyCompletion = (prefix = '') =>
+      `(function(){var s=typeof document!=="undefined"&&document.currentScript;if(s&&s.namespaceURI==="http://www.w3.org/1999/xhtml"&&s.tagName==="SCRIPT"&&typeof s.src==="string"&&s.src){var k=${JSON.stringify(`${prefix}__expo_chunk_completion__`)};(globalThis[k]||(globalThis[k]=new Set())).add(s.src);}})();`
 
     const writeFixture = (tmpDir: string, chunkFiles: Record<string, string>, budget: JsonRecord) => {
       const jsDir = path.join(tmpDir, 'js')
@@ -1033,6 +1049,121 @@ describe('bundle budget release contract', () => {
         BUNDLE_BUDGET_JS_DIR: jsDir,
         BUNDLE_BUDGET_CONFIG: testBudgetPath,
       })
+
+    it.each([
+      ['late-native-aaaa1111.js', 'clearVideoCacheAsync'],
+      ['renamed-bbbb2222.js', 'mountVideoView'],
+      ['__shared-cafe-cccc3333.js', 'useVideoPlayer'],
+      ['unloaded-dddd4444.js', 'manipulateAsync'],
+      ['__shared-beef-eeee5555.js', 'ImageManipulatorContext'],
+    ])('forbids a native payload in every emitted JS, including deferred/shared: %s', (file, marker) => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-forbidden-payload-')
+      const { jsDir, testBudgetPath } = writeFixture(tmpDir, {
+        'index-11111111.js': chunkSource(HOME_MARKER, 10),
+        'index-22222222.js': chunkSource(QUESTS_MARKER, 10),
+        [file]: `globalThis.sdk=${JSON.stringify(marker)};`,
+      }, { tolerancePct: 0, chunks: ownerRows, forbiddenPayloads: {
+        native: { markers: ['clearVideoCacheAsync', 'mountVideoView', 'useVideoPlayer', 'manipulateAsync', 'ImageManipulatorContext'] },
+      } })
+      const result = runGuard(jsDir, testBudgetPath)
+      expect(result.status).toBe(1)
+      const report = JSON.parse(result.stdout)
+      expect(report.forbiddenPayloads.native).toEqual([file])
+      expect(report.breaches).toContainEqual({ label: `Forbidden payload present: native in ${file}`, forbidden: true })
+      expect(report.diagnostic_report.breaches).toContainEqual(expect.objectContaining({ actual: 1, limit: 0, unit: 'count' }))
+    })
+
+    it('allows zero payload carriers while still requiring every ordinary owner marker', () => {
+      const tmpDir = makeTempDir('metravel-bundle-budget-no-native-')
+      const { jsDir, testBudgetPath } = writeFixture(tmpDir, {
+        'index-11111111.js': chunkSource(HOME_MARKER, 10),
+        'index-22222222.js': chunkSource(QUESTS_MARKER, 10),
+      }, { tolerancePct: 0, chunks: ownerRows, forbiddenPayloads: { native: { markers: ['clearVideoCacheAsync'] } } })
+      const green = runGuard(jsDir, testBudgetPath)
+      expect(green.status).toBe(0)
+      expect(JSON.parse(green.stdout).forbiddenPayloads.native).toEqual([])
+      fs.unlinkSync(path.join(jsDir, 'index-22222222.js'))
+      const red = runGuard(jsDir, testBudgetPath)
+      expect(red.status).toBe(1)
+      expect(JSON.parse(red.stdout).breaches).toContainEqual({ label: `Owner marker not found in build: index:quests ("${QUESTS_MARKER}")`, missing: true })
+    })
+
+    it.each([[], {}, null, { native: { markers: [] } }, { native: { markers: [' '] } },
+      { native: { markers: [7] } }, { native: { markers: ['same', 'same'] } }, { native: ['marker'] }].map((value) => [value]))(
+      'rejects malformed forbidden payload declarations: %j', (forbiddenPayloads) => {
+        const tmpDir = makeTempDir('metravel-bundle-budget-bad-forbidden-')
+        const { jsDir, testBudgetPath } = writeFixture(tmpDir, {
+          'index-11111111.js': chunkSource(HOME_MARKER, 10),
+          'index-22222222.js': chunkSource(QUESTS_MARKER, 10),
+        }, { tolerancePct: 0, chunks: ownerRows, forbiddenPayloads })
+        const result = runGuard(jsDir, testBudgetPath)
+        expect(result.status).toBe(1)
+        expect(result.stderr).toContain('forbiddenPayloads')
+      },
+    )
+
+    it('excludes validated compact service data only from named rows, retaining exact TOTAL bytes', () => {
+      const { prelude, COMPLETION_KEY } = require('../../scripts/lib/webChunkMetadataCodec')
+      const table = { v: 'mc1', f: Array.from({ length: 30 }, (_, i) => `/${'p'.repeat(95)}-${i}.js`), c: [Array.from({ length: 30 }, (_, i) => i)], m: [{ 7: 0 }], p: '' }
+      const app = `__d(function(){${chunkSource(HOME_MARKER, 1000)}},1,{"0":7});`
+      const compact = app.replace('{"0":7}', '{"0":7,"paths":["mc1",0]}') + `globalThis[${JSON.stringify(COMPLETION_KEY)}]();`
+      const chunkFiles = { 'index-11111111.js': compact, 'index-22222222.js': chunkSource(QUESTS_MARKER, 10), '__expo-metro-runtime-33333333.js': prelude(table) }
+      const tmpDir = makeTempDir('metravel-bundle-budget-compact-')
+      const { jsDir, testBudgetPath } = writeFixture(tmpDir, chunkFiles, { tolerancePct: 0, chunks: ownerRows, total: { maxRawKB: 4 } })
+      const result = runGuard(jsDir, testBudgetPath)
+      expect(result.status).toBe(1)
+      const report = JSON.parse(result.stdout)
+      expect(report.diagnostic_report.measurements.named['index:home'].raw).toBe(Buffer.byteLength(app))
+      expect(report.diagnostic_report.measurements.total.raw).toBe(Object.values(chunkFiles).reduce((sum, source) => sum + Buffer.byteLength(source), 0))
+      expect(report.breaches.map((breach: any) => breach.label)).toEqual(['TOTAL (raw)'])
+      fs.writeFileSync(path.join(jsDir, 'index-11111111.js'), compact.replace('["mc1",0]', '["mc2",0]'))
+      const malformed = runGuard(jsDir, testBudgetPath)
+      expect(malformed.status).toBe(1)
+      expect(malformed.stderr).toContain('descriptor version')
+    })
+
+    it.each([
+      `var text='keep,"paths":{"7":["/a.js"]}';`,
+      `var text=${JSON.stringify(legacyCompletion())};`,
+      `__d(function(){${legacyCompletion()}},1,[]);`,
+      legacyCompletion().replace('var k=', 'globalThis.app=1;var k='),
+    ])('retains app bytes resembling legacy loader data: %s', (appCode) => {
+      const source = chunkSource(HOME_MARKER, 10) + appCode
+      const tmpDir = makeTempDir('metravel-bundle-budget-legacy-app-bytes-')
+      const { jsDir, testBudgetPath } = writeFixture(tmpDir, {
+        'index-11111111.js': source,
+        'index-22222222.js': chunkSource(QUESTS_MARKER, 10),
+      }, { tolerancePct: 0, chunks: ownerRows })
+      const result = runGuard(jsDir, testBudgetPath)
+      expect(result.status).toBe(0)
+      expect(JSON.parse(result.stdout).diagnostic_report.measurements.named['index:home'].raw).toBe(Buffer.byteLength(source))
+    })
+
+    it.each(['', 'qa_'])('excludes only actual legacy params and generated completion, prefix=%s', (prefix) => {
+      const app = `${prefix}__d(function(){${chunkSource(HOME_MARKER, 10)}},1,{"0":7});`
+      const source = app.replace('{"0":7}', '{"0":7,"paths":{"7":["/a.js"],"9":"/worker.js","11":[]}}') + legacyCompletion(prefix)
+      const chunkFiles = { 'index-11111111.js': source, 'index-22222222.js': chunkSource(QUESTS_MARKER, 10) }
+      const tmpDir = makeTempDir('metravel-bundle-budget-legacy-real-')
+      const { jsDir, testBudgetPath } = writeFixture(tmpDir, chunkFiles, { tolerancePct: 0, chunks: ownerRows })
+      const result = runGuard(jsDir, testBudgetPath)
+      expect(result.status).toBe(0)
+      const report = JSON.parse(result.stdout)
+      expect(report.diagnostic_report.measurements.named['index:home'].raw).toBe(Buffer.byteLength(app))
+      expect(report.diagnostic_report.measurements.total.raw).toBe(Object.values(chunkFiles).reduce((sum, body) => sum + Buffer.byteLength(body), 0))
+    })
+
+    it.each([null, 'bad', { 7: null }, { 7: [null] }, { bad: '/a.js' }].map((value) => [value]))(
+      'rejects malformed actual legacy paths instead of excluding bytes: %j', (paths) => {
+        const tmpDir = makeTempDir('metravel-bundle-budget-legacy-invalid-')
+        const { jsDir, testBudgetPath } = writeFixture(tmpDir, {
+          'index-11111111.js': `__d(function(){${chunkSource(HOME_MARKER, 10)}},1,{"paths":${JSON.stringify(paths)}});`,
+          'index-22222222.js': chunkSource(QUESTS_MARKER, 10),
+        }, { tolerancePct: 0, chunks: ownerRows })
+        const result = runGuard(jsDir, testBudgetPath)
+        expect(result.status).toBe(1)
+        expect(result.stderr).toContain('Invalid legacy chunk paths')
+      },
+    )
 
     it('preserves index ceilings except the owner-approved synchronous trips budget', () => {
       const budget = validateCommittedBudget(budgetPath)
@@ -1159,8 +1290,7 @@ describe('bundle budget release contract', () => {
       const SHARED_MARKER = 'quests.catalog.content'
       const files = Array.from({ length: 40 }, (_, index) => `/_expo/static/js/web/__shared-${index}abc-${'0'.repeat(32)}.js`)
       const paths = `{"0":12,"paths":{"7":${JSON.stringify(files)}}}`
-      const completion =
-        '\n(function(){var s=typeof document!=="undefined"&&document.currentScript;if(s&&s.src){var k="__expo_chunk_completion__";(globalThis[k]||(globalThis[k]=new Set())).add(s.src);}})();'
+      const completion = legacyCompletion()
       try {
         const budget = {
           tolerancePct: 0,
@@ -1304,6 +1434,7 @@ describe('bundle budget release contract', () => {
         expect(updated.chunks['index:home']).toMatchObject({ marker: HOME_MARKER, maxRawKB: 1 })
         expect(updated.chunks['index:quests']).toMatchObject({ marker: QUESTS_MARKER, maxRawKB: 3 })
         expect(updated.chunks).not.toHaveProperty('index')
+        expect(updated.forbiddenPayloads).toEqual(committed.forbiddenPayloads)
 
         const updatedSource = fs.readFileSync(testBudgetPath, 'utf8')
         fs.writeFileSync(path.join(jsDir, 'index-0f0f0f0f.js'), 'globalThis.u=1;')

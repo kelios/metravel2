@@ -8,6 +8,7 @@
 import React from 'react'
 import { render } from '@testing-library/react-native'
 
+jest.mock('@/components/quests/QuestFinaleVideo', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/quests/questWizardMedia', () => ({
   BelkrajWidgetLazy: (props: Record<string, unknown>) => {
     const ReactModule = jest.requireActual('react') as typeof React
@@ -44,16 +45,16 @@ describe('QuestExcursionsInline country gate', () => {
     process.env.NODE_ENV = originalNodeEnv
   })
 
-  it('shows the partner widget for a Belarusian quest city', () => {
-    const { getByTestId } = render(
+  it('shows the partner widget for a Belarusian quest city', async () => {
+    const { getByTestId } = await render(
       <QuestExcursionsInline colors={{}} styles={styles} city={MINSK} title="Квест по Минску" />,
     )
 
     expect(getByTestId('quest-belkraj-widget').props.countryCode).toBe('BY')
   })
 
-  it('drops the widget — and the whole ghost card — outside Belarus', () => {
-    const { queryByTestId, queryByText } = render(
+  it('drops the widget — and the whole ghost card — outside Belarus', async () => {
+    const { queryByTestId, queryByText } = await render(
       <QuestExcursionsInline colors={{}} styles={styles} city={LIMASSOL} title="Квест по Лимасолу" />,
     )
 
@@ -62,8 +63,8 @@ describe('QuestExcursionsInline country gate', () => {
     expect(queryByText('Экскурсии рядом')).toBeNull()
   })
 
-  it('drops the widget when only the coords say the city is abroad', () => {
-    const { queryByTestId } = render(
+  it('drops the widget when only the coords say the city is abroad', async () => {
+    const { queryByTestId } = await render(
       <QuestExcursionsInline
         colors={{}}
         styles={styles}

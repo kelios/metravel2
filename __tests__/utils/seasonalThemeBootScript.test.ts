@@ -36,8 +36,7 @@ describe('shared seasonal boot calendar', () => {
       presets: ['@babel/preset-typescript'], plugins: ['@babel/plugin-transform-modules-commonjs'],
     })!.code!
     const minifier = require('metro-minify-terser')
-    const defaults = require('metro-config/private/defaults/index').default.getDefaultValues(process.cwd()).transformer
-    const config = require('../../scripts/lib/webMinifierConfig').applyWebBuildMinifier(defaults, { EXPO_WEB_BUILD_MINIFY: 'true' }).minifierConfig
+    const config = require('metro-config/private/defaults/index').default.getDefaultValues(process.cwd()).transformer.minifierConfig
     const minified = await minifier({ code: compiled, filename: 'seasonalCalendarCore.js', reserved: [], config })
     const module = { exports: {} as { seasonalCalendarCore?: typeof seasonalCalendarCore } }
     vm.runInNewContext(minified.code, module)

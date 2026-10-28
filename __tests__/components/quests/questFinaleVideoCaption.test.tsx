@@ -18,20 +18,27 @@ jest.mock('@/utils/questReturnVisit', () => ({
   questRetentionOwnerId: () => 'guest',
 }))
 
-const mockPlayer: { onPlayingChange?: (playing: boolean) => void } = {}
+const mockPlayer: {
+  onPlayingChange?: (playing: boolean) => void
+  onWebError?: () => void
+  onNativeError?: () => void
+  src?: string
+  source?: unknown
+  poster?: string
+  posterSource?: unknown
+} = {}
 
-jest.mock('@/components/quests/questWizardMedia', () => {
-  const capture = (props: { onPlayingChange?: (playing: boolean) => void }) => {
-    mockPlayer.onPlayingChange = props.onPlayingChange
+jest.mock('@/components/quests/questWizardMedia', () => ({
+  BelkrajWidgetLazy: () => null,
+  QuestFullMapLazy: () => null,
+}))
+jest.mock('@/components/quests/QuestFinaleVideo', () => ({
+  __esModule: true,
+  default: (props: typeof mockPlayer) => {
+    Object.assign(mockPlayer, props)
     return null
-  }
-  return {
-    BelkrajWidgetLazy: () => null,
-    NativeQuestVideoLazy: capture,
-    QuestFullMapLazy: () => null,
-    QuestWebVideo: capture,
-  }
-})
+  },
+}))
 
 import { i18n, translate as i18nT } from '@/i18n'
 import { QuestFinalePanel } from '@/components/quests/questWizardSections'
@@ -83,7 +90,7 @@ const finaleElement = (overrides: Record<string, unknown> = {}) => (
     </QueryClientProvider>
   )
 
-const renderFinale = (overrides: Record<string, unknown> = {}) => render(finaleElement(overrides))
+const renderFinale = async (overrides: Record<string, unknown> = {}) => await render(finaleElement(overrides))
 
 const originalPlatform = Platform.OS
 
@@ -92,14 +99,16 @@ afterAll(() => configure({ defaultIncludeHiddenElements: false }))
 afterEach(async () => {
   Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform })
   mockPlayer.onPlayingChange = undefined
+  mockPlayer.onWebError = undefined
+  mockPlayer.onNativeError = undefined
   await act(async () => {
     await i18n.changeLanguage('ru')
   })
 })
 
 describe('QuestFinalePanel: надпись поверх финального видео (#2207)', () => {
-  it('на русском показывает поздравление и город поверх ролика', () => {
-    const screen = renderFinale()
+  it('на русском показывает поздравление и город поверх ролика', async () => {
+    const screen = await renderFinale()
     const caption = within(screen.getByTestId('quest-finale-video-caption'))
 
     expect(caption.getByText('Квест пройден!')).toBeTruthy()
@@ -110,7 +119,7 @@ describe('QuestFinalePanel: надпись поверх финального в�
     await act(async () => {
       await i18n.changeLanguage('en')
     })
-    const screen = renderFinale({ cityName: 'Minsk' })
+    const screen = await renderFinale({ cityName: 'Minsk' })
     const caption = screen.getByTestId('quest-finale-video-caption')
 
     expect(within(caption).getByText('Quest complete!')).toBeTruthy()
@@ -122,94 +131,127 @@ describe('QuestFinalePanel: надпись поверх финального в�
     await act(async () => {
       await i18n.changeLanguage(locale)
     })
-    const screen = renderFinale()
+    const screen = await renderFinale()
     const expected = i18nT('questShareStatic:finaleMedia.completedCaption')
 
     expect(expected).not.toContain('finaleMedia')
     expect(within(screen.getByTestId('quest-finale-video-caption')).getByText(expected)).toBeTruthy()
   })
 
-  it('надпись не дублирует заголовок финала для скринридера', () => {
-    const screen = renderFinale()
+  it('надпись не дублирует заголовок финала для скринридера', async () => {
+    const screen = await renderFinale()
 
     expect(screen.getByTestId('quest-finale-video-caption')).toBeTruthy()
     expect(screen.queryByTestId('quest-finale-video-caption', { includeHiddenElements: false })).toBeNull()
   })
 
-  it('незасчитанное прохождение не поздравляет, но подписывает город', () => {
-    const screen = renderFinale({ questCompleted: false, stepsMissingForCompletion: 3, completedCount: 6 })
+  it('незасчитанное прохождение не поздравляет, но подписывает город', async () => {
+    const screen = await renderFinale({ questCompleted: false, stepsMissingForCompletion: 3, completedCount: 6 })
     const caption = within(screen.getByTestId('quest-finale-video-caption'))
 
     expect(caption.queryByText('Квест пройден!')).toBeNull()
     expect(caption.getByText('Минск')).toBeTruthy()
   })
 
-  it.each(['ios', 'web'] as const)('%s: пока ролик играет, надпись убрана; пауза и конец возвращают её', (os) => {
+  it.each(['ios', 'web'] as const)('%s: пока ролик играет, надпись убрана; пауза и конец возвращают её', async (os) => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: os })
-    const screen = renderFinale()
+    const screen = await renderFinale()
 
     expect(screen.getByTestId('quest-finale-video-caption')).toBeTruthy()
     expect(mockPlayer.onPlayingChange).toBeDefined()
 
-    act(() => mockPlayer.onPlayingChange?.(true))
+    await act(() => mockPlayer.onPlayingChange?.(true))
     expect(screen.queryByTestId('quest-finale-video-caption')).toBeNull()
 
-    act(() => mockPlayer.onPlayingChange?.(false))
+    await act(() => mockPlayer.onPlayingChange?.(false))
     expect(screen.getByTestId('quest-finale-video-caption')).toBeTruthy()
   })
 
-  it('YouTube-финал и сломанное видео — без надписи поверх', () => {
+  it('YouTube-финал и сломанное видео — без надписи поверх', async () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
-    const youtube = renderFinale({ youtubeEmbedUri: 'https://www.youtube.com/embed/abc' })
+    const youtube = await renderFinale({ youtubeEmbedUri: 'https://www.youtube.com/embed/abc' })
     expect(youtube.queryByTestId('quest-finale-video-caption')).toBeNull()
-    youtube.unmount()
+    await youtube.unmount()
 
-    const broken = renderFinale({ videoOk: false })
+    const broken = await renderFinale({ videoOk: false })
     expect(broken.queryByTestId('quest-finale-video-caption')).toBeNull()
   })
-  it('renders poster-only finale without creating a player, including on native', () => {
+  it('renders poster-only finale without creating a player, including on native', async () => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' })
-    const screen = renderFinale({ finale: { text: 'Poster story', poster: 'https://metravel.by/poster.jpg' }, videoUri: undefined })
+    const screen = await renderFinale({ finale: { text: 'Poster story', poster: 'https://metravel.by/poster.jpg' }, videoUri: undefined })
     expect(screen.getByTestId('quest-finale-media-frame')).toBeTruthy()
     expect(screen.getByTestId('quest-finale-poster')).toBeTruthy()
     expect(screen.getByTestId('quest-finale-video-caption')).toBeTruthy()
     expect(mockPlayer.onPlayingChange).toBeUndefined()
   })
 
-  it('does not create a media frame without a video or poster, or before route finish', () => {
-    const noMedia = renderFinale({ finale: { text: 'Story' }, posterUri: undefined, videoUri: undefined })
+  it('does not create a media frame without a video or poster, or before route finish', async () => {
+    const noMedia = await renderFinale({ finale: { text: 'Story' }, posterUri: undefined, videoUri: undefined })
     expect(noMedia.queryByTestId('quest-finale-media-frame')).toBeNull()
-    noMedia.unmount()
-    const unfinished = renderFinale({ questFinished: false })
+    await noMedia.unmount()
+    const unfinished = await renderFinale({ questFinished: false })
     expect(unfinished.queryByTestId('quest-finale-video-caption')).toBeNull()
   })
 
   it('updates caption on live locale changes without remounting the panel', async () => {
-    const screen = renderFinale({ cityName: 'Minsk' })
+    const screen = await renderFinale({ cityName: 'Minsk' })
     expect(screen.getByText('Квест пройден!')).toBeTruthy()
     await act(async () => { await i18n.changeLanguage('en') })
     expect(screen.getByText('Quest complete!')).toBeTruthy()
     expect(screen.queryByText('Квест пройден!')).toBeNull()
   })
 
-  it('resets playback for a source visit and rejects callbacks from previous visits', () => {
-    const screen = renderFinale()
+  it('resets playback for a source visit and rejects callbacks from previous visits', async () => {
+    const screen = await renderFinale()
     const oldPlaying = mockPlayer.onPlayingChange!
-    act(() => oldPlaying(true))
+    await act(() => oldPlaying(true))
     expect(screen.queryByTestId('quest-finale-video-caption')).toBeNull()
-    screen.rerender(finaleElement({ questId: 'next-quest', videoUri: 'https://metravel.by/next.mp4' }))
+    await screen.rerender(finaleElement({ questId: 'next-quest', videoUri: 'https://metravel.by/next.mp4' }))
     expect(screen.getByTestId('quest-finale-video-caption')).toBeTruthy()
-    act(() => oldPlaying(true))
+    await act(() => oldPlaying(true))
     expect(screen.getByTestId('quest-finale-video-caption')).toBeTruthy()
-    act(() => mockPlayer.onPlayingChange!(true))
+    await act(() => mockPlayer.onPlayingChange!(true))
     expect(screen.queryByTestId('quest-finale-video-caption')).toBeNull()
   })
 
-  it('passes taps through the caption and does not invent congratulations for partial/no-city', () => {
-    const screen = renderFinale({ questCompleted: false, cityName: undefined })
+  it('passes taps through the caption and does not invent congratulations for partial/no-city', async () => {
+    const screen = await renderFinale({ questCompleted: false, cityName: undefined })
     expect(screen.queryByTestId('quest-finale-video-caption')).toBeNull()
-    screen.rerender(finaleElement())
+    await screen.rerender(finaleElement())
     expect(screen.getByTestId('quest-finale-video-caption').props.pointerEvents).toBe('none')
+  })
+
+  it('retains platform-specific source aliases and errors, rejecting callbacks from a previous visit', async () => {
+    const webError = jest.fn()
+    const nativeError = jest.fn()
+    const screen = await renderFinale({
+      finale: { text: 'Story', video: { uri: 'native-source.mp4' }, poster: { uri: 'native-poster.webp' } },
+      videoUri: 'web-source.mp4',
+      posterUri: 'web-poster.webp',
+      handleVideoError: webError,
+      setVideoOk: nativeError,
+    })
+    expect(mockPlayer.source).toEqual({ uri: 'native-source.mp4' })
+    expect(mockPlayer.posterSource).toEqual({ uri: 'native-poster.webp' })
+    expect(mockPlayer.src).toBe('web-source.mp4')
+    expect(mockPlayer.poster).toBe('web-poster.webp')
+    const oldWebError = mockPlayer.onWebError!
+    const oldNativeError = mockPlayer.onNativeError!
+    await act(() => oldWebError())
+    expect(webError).toHaveBeenCalledTimes(1)
+    expect(nativeError).not.toHaveBeenCalled()
+    await act(() => oldNativeError())
+    expect(nativeError).toHaveBeenLastCalledWith(false)
+
+    await screen.rerender(finaleElement({ questId: 'next-visit' }))
+    webError.mockClear()
+    nativeError.mockClear()
+    await act(() => {
+      oldWebError()
+      oldNativeError()
+    })
+    expect(webError).not.toHaveBeenCalled()
+    expect(nativeError).not.toHaveBeenCalled()
   })
 
 })

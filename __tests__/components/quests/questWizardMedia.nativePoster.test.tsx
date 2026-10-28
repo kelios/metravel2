@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import { act, cleanupAsync, renderAsync } from '@testing-library/react-native/pure'
+import { act, cleanup, render } from '@testing-library/react-native/pure'
 import { View } from 'react-native'
 
 const mockRemoveListener = jest.fn()
@@ -34,25 +34,29 @@ jest.mock('@/components/ui/ImageCardMedia', () => {
   return { __esModule: true, default: (props: object) => React.createElement(View, props) }
 })
 
-import { NativeQuestVideoLazy, QuestWebVideo } from '@/components/quests/questWizardMedia'
+import QuestFinaleVideo, { NativeQuestVideoLazy } from '@/components/quests/QuestFinaleVideo'
+import QuestWebVideo from '@/components/quests/QuestFinaleVideo.web'
 
 const video = (uri = 'https://cdn.example/finale.mp4', usePoster = true, onError = jest.fn(), onPlayingChange = jest.fn()) => (
-  <Suspense fallback={<View testID="loading-video" />}>
-    <NativeQuestVideoLazy source={{ uri }} posterSource={{ uri: 'https://cdn.example/poster.webp' }}
-      usePoster={usePoster} style={{ width: 300, height: 200 }} useNativeControls shouldPlay isLooping onError={onError} onPlayingChange={onPlayingChange} />
-  </Suspense>
+  // Keep the query host mounted while Suspense replaces its loading branch.
+  <View>
+    <Suspense fallback={<View testID="loading-video" />}>
+      <NativeQuestVideoLazy source={{ uri }} posterSource={{ uri: 'https://cdn.example/poster.webp' }}
+        usePoster={usePoster} style={{ width: 300, height: 200 }} useNativeControls shouldPlay isLooping onError={onError} onPlayingChange={onPlayingChange} />
+    </Suspense>
+  </View>
 )
 
 afterEach(async () => {
-  await cleanupAsync()
+  await cleanup()
   mockListeners.clear()
   mockPlayer.playing = false
   jest.clearAllMocks()
 })
 
 it('uses the actual SDK first-frame boundary, keeps player controls and resets poster for a new source', async () => {
-  const screen = await renderAsync(video())
-  const poster = screen.getByTestId('quest-video-poster')
+  const screen = await render(video())
+  const poster = await screen.findByTestId('quest-video-poster')
   expect(poster.props.source).toEqual({ uri: 'https://cdn.example/poster.webp' })
   expect(poster.props.fit).toBe('contain')
   const firstVideo = screen.getByTestId('sdk-video')
@@ -62,27 +66,28 @@ it('uses the actual SDK first-frame boundary, keeps player controls and resets p
   expect(mockPlayer.loop).toBe(true)
   expect(mockPlayer.play).toHaveBeenCalled()
 
-  act(() => firstFrameRender())
+  await act(() => firstFrameRender())
   expect(screen.queryByTestId('quest-video-poster')).toBeNull()
-  await screen.rerenderAsync(video('https://cdn.example/other.mp4'))
+  await screen.rerender(video('https://cdn.example/other.mp4'))
   expect(screen.getByTestId('quest-video-poster')).toBeTruthy()
-  act(() => firstFrameRender())
+  await act(() => firstFrameRender())
   expect(screen.getByTestId('quest-video-poster')).toBeTruthy()
-  act(() => screen.getByTestId('sdk-video').props.onFirstFrameRender())
+  await act(() => screen.getByTestId('sdk-video').props.onFirstFrameRender())
   expect(screen.queryByTestId('quest-video-poster')).toBeNull()
-  act(() => firstFrameRender())
+  await act(() => firstFrameRender())
   expect(screen.queryByTestId('quest-video-poster')).toBeNull()
-  await screen.rerenderAsync(video())
+  await screen.rerender(video())
   expect(screen.getByTestId('quest-video-poster')).toBeTruthy()
 })
 
 it('does not add a poster when disabled and preserves actual status/error subscription cleanup', async () => {
   const onError = jest.fn()
-  const screen = await renderAsync(video(undefined, false, onError))
+  const screen = await render(video(undefined, false, onError))
+  await screen.findByTestId('sdk-video')
   expect(screen.queryByTestId('quest-video-poster')).toBeNull()
-  act(() => mockStatusListener({ status: 'error' }))
+  await act(() => mockStatusListener({ status: 'error' }))
   expect(onError).toHaveBeenCalledTimes(1)
-  await screen.unmountAsync()
+  await screen.unmount()
   expect(mockRemoveListener).toHaveBeenCalled()
 })
 
@@ -90,39 +95,41 @@ it('does not add a poster when disabled and preserves actual status/error subscr
 it('seeds actual playing state, handles SDK pause/end, and removes all event subscriptions', async () => {
   mockPlayer.playing = true
   const changed = jest.fn()
-  const screen = await renderAsync(video(undefined, true, jest.fn(), changed))
+  const screen = await render(video(undefined, true, jest.fn(), changed))
+  await screen.findByTestId('sdk-video')
   expect(changed).toHaveBeenLastCalledWith(true)
-  act(() => mockListeners.get('playingChange')!({ isPlaying: false }))
+  await act(() => mockListeners.get('playingChange')!({ isPlaying: false }))
   expect(changed).toHaveBeenLastCalledWith(false)
-  act(() => mockListeners.get('playingChange')!({ isPlaying: true }))
+  await act(() => mockListeners.get('playingChange')!({ isPlaying: true }))
   expect(changed).toHaveBeenLastCalledWith(true)
-  act(() => mockListeners.get('playToEnd')!())
+  await act(() => mockListeners.get('playToEnd')!())
   expect(changed).toHaveBeenLastCalledWith(false)
-  await screen.unmountAsync()
+  await screen.unmount()
   expect(mockRemoveListener).toHaveBeenCalledTimes(3)
 })
 
 it('ignores playing/end/error events from previous source visits, including returning to the same URI', async () => {
   const changed = jest.fn()
   const error = jest.fn()
-  const screen = await renderAsync(video(undefined, true, error, changed))
+  const screen = await render(video(undefined, true, error, changed))
+  await screen.findByTestId('sdk-video')
   const previousPlaying = mockListeners.get('playingChange')!
   const previousEnd = mockListeners.get('playToEnd')!
   const previousError = mockListeners.get('statusChange')!
-  await screen.rerenderAsync(video('https://cdn.example/second.mp4', true, error, changed))
+  await screen.rerender(video('https://cdn.example/second.mp4', true, error, changed))
   changed.mockClear()
-  act(() => {
+  await act(() => {
     previousPlaying({ isPlaying: true })
     previousEnd()
     previousError({ status: 'error' })
   })
   expect(changed).not.toHaveBeenCalled()
   expect(error).not.toHaveBeenCalled()
-  act(() => mockListeners.get('playingChange')!({ isPlaying: true }))
+  await act(() => mockListeners.get('playingChange')!({ isPlaying: true }))
   expect(changed).toHaveBeenCalledWith(true)
-  await screen.rerenderAsync(video(undefined, true, error, changed))
+  await screen.rerender(video(undefined, true, error, changed))
   changed.mockClear()
-  act(() => previousPlaying({ isPlaying: true }))
+  await act(() => previousPlaying({ isPlaying: true }))
   expect(changed).not.toHaveBeenCalled()
 })
 
@@ -130,18 +137,46 @@ it('ignores playing/end/error events from previous source visits, including retu
 it('web maps actual play, pause, ended and error events to caption state without hiding controls', async () => {
   const playing = jest.fn()
   const error = jest.fn()
-  const screen = await renderAsync(<QuestWebVideo src="https://cdn.example/finale.mp4" onError={error} onPlayingChange={playing} />)
-  const node = screen.UNSAFE_getByType('video')
+  const nativeError = jest.fn()
+  const screen = await render(<QuestWebVideo source={{ uri: 'https://cdn.example/native.mp4' }}
+    src="https://cdn.example/finale.mp4" poster="https://cdn.example/poster.webp" fallback={null}
+    onWebError={error} onNativeError={nativeError} onPlayingChange={playing} />)
+  const node = screen.toJSON()
+  if (!node || Array.isArray(node)) throw new Error('Expected a single rendered video element')
+  expect(node.type).toBe('video')
+  expect(node.props.src).toBe('https://cdn.example/finale.mp4')
+  expect(node.props.poster).toBe('https://cdn.example/poster.webp')
   expect(node.props.controls).toBe(true)
   expect(node.props.playsInline).toBe(true)
-  act(() => node.props.onPlay())
+  expect(node.props.preload).toBe('metadata')
+  await act(() => node.props.onPlay())
   expect(playing).toHaveBeenLastCalledWith(true)
-  act(() => node.props.onPause())
+  await act(() => node.props.onPause())
   expect(playing).toHaveBeenLastCalledWith(false)
-  act(() => node.props.onPlay())
-  act(() => node.props.onEnded())
+  await act(() => node.props.onPlay())
+  await act(() => node.props.onEnded())
   expect(playing).toHaveBeenLastCalledWith(false)
-  act(() => node.props.onError())
+  await act(() => node.props.onError())
   expect(playing).toHaveBeenLastCalledWith(false)
   expect(error).toHaveBeenCalledTimes(1)
+  expect(nativeError).not.toHaveBeenCalled()
+})
+
+it('native adapter retains the original source, controls, paused start and native error callback', async () => {
+  const nativeError = jest.fn()
+  const webError = jest.fn()
+  const screen = await render(<View><QuestFinaleVideo source={{ uri: 'https://cdn.example/native-source.mp4' }}
+    src="https://cdn.example/web-alias.mp4" posterSource={{ uri: 'https://cdn.example/native-poster.webp' }}
+    poster="https://cdn.example/web-poster.webp" usePoster fallback={<View testID="loading-video" />}
+    onWebError={webError} onNativeError={nativeError} /></View>)
+
+  await screen.findByTestId('sdk-video')
+  expect(mockUseVideoPlayer).toHaveBeenLastCalledWith('https://cdn.example/native-source.mp4', expect.any(Function))
+  expect(screen.getByTestId('quest-video-poster').props.source).toEqual({ uri: 'https://cdn.example/native-poster.webp' })
+  expect(screen.getByTestId('sdk-video').props.nativeControls).toBe(true)
+  expect(mockPlayer.loop).toBe(false)
+  expect(mockPlayer.play).not.toHaveBeenCalled()
+  await act(() => mockStatusListener({ status: 'error' }))
+  expect(nativeError).toHaveBeenCalledTimes(1)
+  expect(webError).not.toHaveBeenCalled()
 })

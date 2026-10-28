@@ -257,6 +257,7 @@ build_env() {
 
   echo "🚀 Сборка для $ENV → $DIR"
   apply_env "$ENV"
+  node scripts/generate-home-responsive-css.js --check
 
   if [[ "${METRAVEL_WEB_OUTPUT:-static}" == "server" ]]; then
     rm -rf "$DIR" "$SSR_EXPORT_DIR" "$SSR_RELEASE_DIR"

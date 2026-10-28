@@ -236,8 +236,25 @@ describe('module production reachability', () => {
     expect(graph.unreachable).toContain('utils/source.ts');
   });
 
+  it.each(['expo/package.json', '@expo/metro-config/package.json'])(
+    'accepts the literal external package resolver %s with explicit search paths', specifier => {
+      const graph = cleanGraph(fixture({
+        'scripts/report.js': `const root = process.cwd(); require.resolve(${JSON.stringify(specifier)}, { paths: [root] });`,
+        'utils/source.ts': 'export const source = 1;',
+      }));
+      expect(graph.unreachable).toEqual(['utils/source.ts']);
+      expect(graph.runtime).not.toContain('utils/source.ts');
+    },
+  );
+
   it.each([
     'require.resolve(process.argv[2]);',
+    'require.resolve(process.argv[2], { paths: [process.cwd()] });',
+    'require.resolve("expo/package.json", { paths: process.argv });',
+    'require.resolve("expo/package.json", { paths: [...process.argv] });',
+    'require.resolve("expo/package.json", { ...options, paths: [process.cwd()] });',
+    'require.resolve("expo/package.json", { paths: [process.cwd()], paths: [] });',
+    'require.resolve("expo/package.json", { paths: [process.cwd()] }, extra);',
     'require.resolve("../utils/source.ts", { paths: [process.argv[2]] });',
   ])('fails closed on an unresolved or customized source resolver: %s', source => {
     const graph = analyzeGraph(fixture({ 'scripts/packager.js': source, 'utils/source.ts': 'export const source = 1;' }));

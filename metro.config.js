@@ -180,6 +180,13 @@ config.resolver.resolveRequest = ((orig) => {
     const resolverEnvironment = context.customResolverOptions?.environment
     const isWebServerEnvironment =
       resolverEnvironment === 'node' || resolverEnvironment === 'react-server'
+    // Decode compact export metadata at async use, while Expo keeps loading/readiness semantics.
+    const asyncRequireAdapter = path.resolve(__dirname, 'metro-stubs/expoAsyncRequire.web.js')
+    if (platform === 'web' && !isWebServerEnvironment
+        && moduleName === 'expo/internal/async-require-module'
+        && context.originModulePath !== asyncRequireAdapter) {
+      return { filePath: asyncRequireAdapter, type: 'sourceFile' }
+    }
     if (platform === 'web' && !isWebServerEnvironment && moduleName === 'expo-router/_ctx') {
       return {
         filePath: path.resolve(__dirname, 'metro-stubs/expo-router-context.web.js'),
@@ -611,13 +618,15 @@ if (process.env.ANALYZE_BUNDLE === '1') {
 
 // #2741: the web export uses Expo's granular chunk planner, and our pass merges
 // its shared groups by delivery routes (ROUTE-BUNDLE-001). Both keys are read by
-// the two-line patch in patches/@expo+metro-config; native and dev bundles are
+// the project extension patch in patches/@expo+metro-config; native and dev bundles are
 // never granular (withExpoSerializers gates it on a non-lazy web client export).
 const { mergeGranularChunkPlan } = require('./scripts/lib/granularChunkMerge')
+const { prepareWebChunkMetadata } = require('./scripts/lib/webChunkMetadataCodec')
 config.serializer = {
   ...config.serializer,
   unstable_granularWebExport: true,
   unstable_mergeGranularChunkPlan: mergeGranularChunkPlan,
+  unstable_prepareWebChunkMetadata: prepareWebChunkMetadata,
 }
 
 const { applyWebBuildMinifier } = require('./scripts/lib/webMinifierConfig')

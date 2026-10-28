@@ -20,6 +20,8 @@ export const DESIGN_COLORS = {
   // (green parks / grey roads), readable on light & dark themes with white halo.
   routeLine: '#2563eb',
   strava: '#fc4c02',
+  // Video letterboxing stays black independently of the application theme.
+  videoBackdrop: '#000',
 
   // Web shell / critical CSS fallbacks (must be plain values).
   themeColorLight: '#ffffff',

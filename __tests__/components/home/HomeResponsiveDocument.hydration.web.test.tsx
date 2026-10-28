@@ -6,7 +6,6 @@ let renderToString: typeof import('react-dom/server').renderToString;
 let hydrateRoot: typeof import('react-dom/client').hydrateRoot;
 let Hero: React.ComponentType;
 let Promo: React.ComponentType;
-let Styles: React.ComponentType;
 let Directory: React.ComponentType;
 let Provider: React.Provider<unknown>;
 let sliderBookEnabled = false;
@@ -47,7 +46,6 @@ beforeAll(() => {
   ;({ hydrateRoot } = require('react-dom/client'));
   Hero = require('@/components/home/HomeHero').default;
   Promo = require('@/components/home/HomeQuestsPromoSection').default;
-  Styles = require('@/components/home/HomeResponsiveStyles.web').default;
   Directory = require('@/components/quests/runtime/QuestDiscoveryDirectory.web').default;
   Provider = require('@/components/quests/runtime/QuestDiscoveryContext').QuestDiscoveryContext.Provider;
 });
@@ -56,10 +54,12 @@ it.each([[390, 844], [768, 1024], [1440, 900], [2048, 900], [2560, 640]])(
   'keeps the same real hero and six selected cards when the document hydrates at %sx%s', async (width, height) => {
     viewport = { width: 1440, height: 900, isDesktop: true, isPortrait: false };
     const tree = createElement(Provider, { value: { view: 'home', locale: 'ru' } },
-      createElement(Styles), createElement(Hero), createElement(Promo));
+      createElement(Hero), createElement(Promo));
     const container = document.createElement('div');
     container.innerHTML = renderToString(tree);
     document.body.appendChild(container);
+    // Responsive CSS is the root render-blocking asset, never a duplicate body style.
+    expect(container.querySelector('style')).toBeNull();
     const hero = container.querySelector('[data-home-responsive-hero]');
     const book = container.querySelector('[data-home-book-wrapper]');
     const title = container.querySelector('h1')?.textContent;

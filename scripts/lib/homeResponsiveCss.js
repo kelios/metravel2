@@ -1,14 +1,17 @@
-import { buildHomeBookGeometryCSS } from './homeBookGeometryCss';
-import { homeWebScrollEndPadding } from './homeScrollDockClip';
-import { HOME_BOOK_GEOMETRY } from './homeBookGeometry';
-import { QUEST_TILE_MEDIA_SIZE, QUEST_TILE_MEDIA_SIZE_COMPACT } from '@/components/quests/questCoverTileGeometry';
+// Canonical responsive-home CSS, generated into app/global.css before publication.
+// Keep derived values in their shared pure owners; this module is build-time only.
+const { buildHomeBookGeometryCSS } = require('../../components/home/homeBookGeometryCss')
+const { homeWebScrollEndPadding } = require('../../components/home/homeScrollDockClip')
+const { HOME_BOOK_GEOMETRY } = require('../../components/home/homeBookGeometry')
+const { QUEST_TILE_MEDIA_SIZE, QUEST_TILE_MEDIA_SIZE_COMPACT } = require('../../components/quests/questCoverTileGeometry')
 
 const hero = '[data-home-responsive-hero="true"]';
 const book = `${hero} [data-home-book-wrapper]`;
 const left = `${hero} [data-home-book-left]`;
 const media = `${hero} [data-home-book-media]`;
 
-export const HOME_RESPONSIVE_WEB_CSS = `
+function buildHomeResponsiveCss() {
+  return `
 [data-home-runtime-layout]{--home-gap-hero:28px;--home-gap-weekends:36px;--home-gap-sections:40px;--home-gap-faq:48px;--home-gap-final:24px;--home-height-weekends:520px;--home-height-feed:500px;--home-scroll-end:${homeWebScrollEndPadding(96)}}
 ${hero}{padding-top:8px!important;padding-bottom:16px!important}
 ${hero} [data-home-hero-container]{padding:8px 16px!important;max-width:1920px!important}
@@ -117,6 +120,7 @@ ${hero} [data-home-responsive-mood-rail],${hero} [data-home-responsive-popular],
 }
 @media(min-width:1280px) and (min-height:1000px){${hero} [data-home-book-note-meta]{display:block!important}}
 ${buildHomeBookGeometryCSS({ book, page: left, title: `${hero} [data-home-book-title]`, subtitle: `${hero} [data-home-book-subtitle]`, week: media }, { important: true })}
-`;
+`
+}
 
-export default function HomeResponsiveStyles() { return <style>{HOME_RESPONSIVE_WEB_CSS}</style>; }
+module.exports = { buildHomeResponsiveCss }

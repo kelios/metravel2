@@ -1,3 +1,4 @@
+/* global module */
 /**
  * Геометрия медиа-плитки карточки квеста (`QuestForCityCard`), #1542.
  *
@@ -27,21 +28,21 @@
  */
 
 /** Сторона квадратной медиа-плитки карточки квеста, CSS px. */
-export const QUEST_TILE_MEDIA_SIZE = 132
+const QUEST_TILE_MEDIA_SIZE = 132
 
 /**
  * Пропорция медиа-слота плитки. Единица — квадрат, и она НЕ функция обложки:
  * если слот начнёт считаться от `aspect_ratio` кадра, рейл потеряет
  * выравнивание. Охраняется тестом #1542.
  */
-export const QUEST_TILE_SLOT_RATIO = 1
+const QUEST_TILE_SLOT_RATIO = 1
 
 /**
  * Высота плитки. Считается через пропорцию, а не вторым литералом: так
  * `QUEST_TILE_SLOT_RATIO` остаётся несущей константой, и уход слота от
  * квадрата виден и в разметке, и в тесте, а не только в комментарии.
  */
-export const QUEST_TILE_MEDIA_HEIGHT = QUEST_TILE_MEDIA_SIZE / QUEST_TILE_SLOT_RATIO
+const QUEST_TILE_MEDIA_HEIGHT = QUEST_TILE_MEDIA_SIZE / QUEST_TILE_SLOT_RATIO
 
 /**
  * Сторона плитки на телефоне (<480pt), CSS px. #1673.
@@ -57,8 +58,16 @@ export const QUEST_TILE_MEDIA_HEIGHT = QUEST_TILE_MEDIA_SIZE / QUEST_TILE_SLOT_R
  * заголовку 238px, и на всей выдаче не остаётся ни одного названия длиннее трёх
  * строк.
  */
-export const QUEST_TILE_MEDIA_SIZE_COMPACT = 96
+const QUEST_TILE_MEDIA_SIZE_COMPACT = 96
 
 /** Высота компактной плитки — через ту же пропорцию, что и основная. */
-export const QUEST_TILE_MEDIA_HEIGHT_COMPACT =
+const QUEST_TILE_MEDIA_HEIGHT_COMPACT =
   QUEST_TILE_MEDIA_SIZE_COMPACT / QUEST_TILE_SLOT_RATIO
+
+module.exports = {
+  QUEST_TILE_MEDIA_SIZE,
+  QUEST_TILE_SLOT_RATIO,
+  QUEST_TILE_MEDIA_HEIGHT,
+  QUEST_TILE_MEDIA_SIZE_COMPACT,
+  QUEST_TILE_MEDIA_HEIGHT_COMPACT,
+}

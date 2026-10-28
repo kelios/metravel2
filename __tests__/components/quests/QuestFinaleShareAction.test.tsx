@@ -1,6 +1,6 @@
 import React from 'react'
 import { act, render, fireEvent, waitFor } from '@testing-library/react-native'
-import { KeyboardAvoidingView, Share, StyleSheet } from 'react-native'
+import { Share, StyleSheet } from 'react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // Верификация вирусной петли финала ([INV2-02], #1472) без браузера: живой финал
@@ -23,6 +23,7 @@ jest.mock('@/components/quests/QuestNextStepSection', () => ({ __esModule: true,
 jest.mock('@/hooks/useQuestCompletionMeta', () => ({
   useQuestCompletionMeta: () => ({ isCompletedByMe: false, completionsCount: 7 }),
 }))
+jest.mock('@/components/quests/QuestFinaleVideo', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/quests/questWizardMedia', () => ({
   BelkrajWidgetLazy: () => null,
   NativeQuestVideoLazy: () => null,
@@ -93,8 +94,8 @@ const styles = {
   buttonText: {},
 }
 
-const renderCompletedFinale = () =>
-  render(
+const renderCompletedFinale = async () =>
+  await render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <QuestFinalePanel
         colors={{}}
@@ -135,16 +136,16 @@ beforeEach(() => {
 describe('QuestFinaleShareAction ([INV2-02] #1472)', () => {
   it('shows the share button on a credited completion and copies a referral-tagged link', async () => {
     mockCreateCard.mockRejectedValue(new Error('no backend yet'))
-    const { getByTestId } = renderCompletedFinale()
+    const { getByTestId } = await renderCompletedFinale()
 
     const shareBtn = getByTestId('quest-finale-share')
-    fireEvent.press(shareBtn)
+    await fireEvent.press(shareBtn)
 
     // Ссылка-каналы доступны даже без серверной карточки (деградация до ссылки).
     const copy = await waitFor(() => getByTestId('quest-share-channel-copy'))
     expect(getByTestId('quest-share-channel-telegram')).toBeTruthy()
 
-    fireEvent.press(copy)
+    await fireEvent.press(copy)
 
     await waitFor(() => expect(mockСlipboardSet).toHaveBeenCalledTimes(1))
     const copiedLink = mockСlipboardSet.mock.calls[0][0]
@@ -155,9 +156,9 @@ describe('QuestFinaleShareAction ([INV2-02] #1472)', () => {
 
   it('hides image channels while the result-card endpoint is unavailable', async () => {
     mockCreateCard.mockRejectedValue(new Error('no backend yet'))
-    const { getByTestId, queryByTestId } = renderCompletedFinale()
+    const { getByTestId, queryByTestId } = await renderCompletedFinale()
 
-    fireEvent.press(getByTestId('quest-finale-share'))
+    await fireEvent.press(getByTestId('quest-finale-share'))
     await waitFor(() => getByTestId('quest-share-channel-copy'))
 
     expect(queryByTestId('quest-share-channel-instagram')).toBeNull()
@@ -172,14 +173,14 @@ describe('QuestFinaleShareAction ([INV2-02] #1472)', () => {
       publicUrl: 'https://metravel.by/quests/result/42',
       expiresAt: null,
     })
-    const { getByTestId } = renderCompletedFinale()
+    const { getByTestId } = await renderCompletedFinale()
 
-    fireEvent.press(getByTestId('quest-finale-share'))
+    await fireEvent.press(getByTestId('quest-finale-share'))
 
     const instagram = await waitFor(() => getByTestId('quest-share-channel-instagram'))
     expect(getByTestId('quest-result-hero-name')).toBeTruthy()
 
-    fireEvent.press(instagram)
+    await fireEvent.press(instagram)
     await waitFor(() =>
       expect(mockTrack).toHaveBeenCalledWith({ questId: 'minsk-cipher', channel: 'instagram' }),
     )
@@ -201,11 +202,11 @@ describe('QuestFinaleShareAction ([INV2-02] #1472)', () => {
       publicUrl: 'https://metravel.by/quests/result/42',
       expiresAt: null,
     })
-    const { getByTestId } = renderCompletedFinale()
+    const { getByTestId } = await renderCompletedFinale()
 
-    fireEvent.press(getByTestId('quest-finale-share'))
+    await fireEvent.press(getByTestId('quest-finale-share'))
     const copy = await waitFor(() => getByTestId('quest-share-channel-copy'))
-    fireEvent.press(copy)
+    await fireEvent.press(copy)
 
     await waitFor(() => expect(mockСlipboardSet).toHaveBeenCalled())
     const copiedLink = mockСlipboardSet.mock.calls[0][0]
@@ -220,12 +221,12 @@ describe('QuestFinaleShareAction ([INV2-02] #1472)', () => {
       .mockImplementationOnce(() => new Promise((resolve) => { resolveInitial = resolve }))
       .mockImplementationOnce(() => new Promise((resolve) => { resolveEdited = resolve }))
 
-    const { getByTestId } = renderCompletedFinale()
-    fireEvent.press(getByTestId('quest-finale-share'))
+    const { getByTestId } = await renderCompletedFinale()
+    await fireEvent.press(getByTestId('quest-finale-share'))
 
     const nameInput = await waitFor(() => getByTestId('quest-result-hero-name'))
-    fireEvent.changeText(nameInput, 'Новая героиня')
-    fireEvent(nameInput, 'blur')
+    await fireEvent.changeText(nameInput, 'Новая героиня')
+    await fireEvent(nameInput, 'blur')
 
     resolveEdited({
       shareToken: 'new',
@@ -248,7 +249,7 @@ describe('QuestFinaleShareAction ([INV2-02] #1472)', () => {
     })
 
     const copy = getByTestId('quest-share-channel-copy')
-    fireEvent.press(copy)
+    await fireEvent.press(copy)
     await waitFor(() => expect(mockСlipboardSet).toHaveBeenCalled())
     expect(mockСlipboardSet.mock.calls.at(-1)?.[0]).toContain('/quests/result/new')
   })
@@ -257,16 +258,16 @@ describe('QuestFinaleShareAction ([INV2-02] #1472)', () => {
   // любой ширине, а текст сообщения — называть результат и домен.
   it('labels every share channel and sends a human-readable caption with the domain', async () => {
     mockCreateCard.mockRejectedValue(new Error('no backend yet'))
-    const { getByTestId, getByText } = renderCompletedFinale()
+    const { getByTestId, getByText } = await renderCompletedFinale()
 
-    fireEvent.press(getByTestId('quest-finale-share'))
+    await fireEvent.press(getByTestId('quest-finale-share'))
     await waitFor(() => getByTestId('quest-share-channel-copy'))
 
     // Подписи каналов видимы как текст, а не только в accessibilityLabel.
     expect(getByText('Ссылка')).toBeTruthy()
     expect(getByText('Telegram')).toBeTruthy()
 
-    fireEvent.press(getByTestId('quest-share-channel-telegram'))
+    await fireEvent.press(getByTestId('quest-share-channel-telegram'))
     await waitFor(() => expect(mockOpenExternal).toHaveBeenCalled())
 
     const telegramUrl = String(mockOpenExternal.mock.calls.at(-1)?.[0])
@@ -280,12 +281,12 @@ describe('QuestFinaleShareAction ([INV2-02] #1472)', () => {
   // BottomSheet owns the inset; the scrolling body must not add it again.
   it('keeps the channel row clear of the system inset at the bottom edge', async () => {
     mockCreateCard.mockRejectedValue(new Error('no backend yet'))
-    const { getByTestId, UNSAFE_getByType } = renderCompletedFinale()
+    const { getByTestId } = await renderCompletedFinale()
 
-    fireEvent.press(getByTestId('quest-finale-share'))
+    await fireEvent.press(getByTestId('quest-finale-share'))
     await waitFor(() => getByTestId('quest-share-channel-copy'))
 
-    expect(UNSAFE_getByType(KeyboardAvoidingView)).toBeTruthy()
+    expect(getByTestId('bottom-sheet-keyboard-container')).toBeTruthy()
     const panel = StyleSheet.flatten(getByTestId('bottom-sheet-panel').props.style)
     expect(panel.paddingBottom).toBe(34)
     expect(getByTestId('quest-share-sheet').props.keyboardShouldPersistTaps).toBe('handled')

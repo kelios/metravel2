@@ -1,4 +1,5 @@
-import { webDockReserve } from '@/components/layout/bottomChromeInset'
+/* global module, require */
+const { webDockReserve } = require('../layout/webBottomChromeCss')
 
 /**
  * #2359: прокрутка главной на web заканчивается над нижним доком тем же
@@ -18,9 +19,11 @@ import { webDockReserve } from '@/components/layout/bottomChromeInset'
  * та же полоса, что у SSG-оболочки. На desktop и при выключенном доке
  * `--mt-dock-h` = 0px, формулы сводятся к прежним.
  */
-export const HOME_WEB_SCROLL_DOCK_CLIP = webDockReserve()
+const HOME_WEB_SCROLL_DOCK_CLIP = webDockReserve()
 
 /** Нижний отступ контента главной на web: прежний конец страницы над доком/плашкой согласия. */
-export function homeWebScrollEndPadding(minimum: number): string {
+function homeWebScrollEndPadding(minimum) {
   return `calc(max(${minimum}px, var(--mt-consent-h, 0px)) + 8px - ${HOME_WEB_SCROLL_DOCK_CLIP})`
 }
+
+module.exports = { HOME_WEB_SCROLL_DOCK_CLIP, homeWebScrollEndPadding }
