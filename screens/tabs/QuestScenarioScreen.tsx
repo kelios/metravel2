@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo } from 'react'
-import { Dimensions, Platform, Pressable, ScrollView, Text, View } from 'react-native'
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import { Link, useIsFocused, useNavigation, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
-import { asBottomDimension, useDockReservePx, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
+import { ResponsiveContainer } from '@/components/layout'
+import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { jsonLdScript } from '@/components/seo/jsonLdScript'
 import EmailSubscriptionForm from '@/components/common/EmailSubscriptionForm'
 import QuestsSeoIntroFaq, { type QuestFaqItem } from '@/screens/tabs/QuestsSeoIntroFaq'
-import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
 import { useQuestsList } from '@/hooks/useQuestsApi'
 import { useBreakpoints } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -97,6 +97,7 @@ function CtaLink({
           alignItems: 'center',
           gap: 8,
           alignSelf: 'flex-start',
+          maxWidth: '100%',
           backgroundColor: colors.primary,
           borderRadius: DESIGN_TOKENS.radii.full,
           paddingHorizontal: 20,
@@ -104,7 +105,7 @@ function CtaLink({
           ...(IS_WEB ? ({ cursor: 'pointer' } as Record<string, unknown>) : {}),
         }}
       >
-        <Text style={{ color: colors.textOnPrimary, fontWeight: '800', fontSize: 15 }}>{label}</Text>
+        <Text style={{ color: colors.textOnPrimary, fontWeight: '800', fontSize: 15, flexShrink: 1 }}>{label}</Text>
         <Feather name="arrow-right" size={16} color={colors.textOnPrimary} />
       </Pressable>
     </Link>
@@ -137,11 +138,8 @@ export default function QuestScenarioScreen() {
     navigation.setOptions({ title: navigationTitle })
   }, [navigation, navigationTitle])
 
-  const { width: bpWidth, isMobile } = useBreakpoints()
+  const { isMobile } = useBreakpoints()
   const mobileDockPadding = useScrollBottomPadding(spacing.xl)
-  const dockPx = useDockReservePx()
-  const height = IS_WEB ? 0 : Dimensions.get('window').height
-  const s = useMemo(() => getStyles(colors, bpWidth, height, dockPx), [colors, bpWidth, height, dockPx])
 
   const includes = useMemo(() => getQuestScenarioIncludes(), [])
   const steps = useMemo(() => getQuestScenarioSteps(), [])
@@ -233,7 +231,7 @@ export default function QuestScenarioScreen() {
 
   return (
     <ScrollView
-      style={s.root}
+      style={{ flex: 1, minHeight: 0, backgroundColor: colors.background }}
       contentContainerStyle={{
         padding: spacing.lg,
         gap: spacing.lg,
@@ -257,6 +255,14 @@ export default function QuestScenarioScreen() {
       ) : null}
       {isFocused && jsonLdInBody ? structuredData : null}
 
+      <ResponsiveContainer
+        maxWidth={COLUMN_MAX_WIDTH}
+        padding={false}
+        paddingHorizontal={false}
+        paddingVertical={false}
+        style={{ gap: spacing.lg }}
+        testID="quest-scenario-content"
+      >
       <Link href={QUEST_LIST_ROUTE} asChild>
         <Pressable
           style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 6 }}
@@ -270,7 +276,7 @@ export default function QuestScenarioScreen() {
         </Pressable>
       </Link>
 
-      <View style={{ gap: 12, maxWidth: COLUMN_MAX_WIDTH }}>
+      <View style={{ gap: 12 }}>
         <View
           style={{
             flexDirection: 'row',
@@ -314,7 +320,7 @@ export default function QuestScenarioScreen() {
         <CtaLink colors={colors} href={QUEST_LIST_ROUTE} label={i18nT('quests:screens.tabs.QuestScenarioScreen.cta')} />
       </View>
 
-      <View style={{ gap: 12, maxWidth: COLUMN_MAX_WIDTH }}>
+      <View style={{ gap: 12 }}>
         <SectionHeading colors={colors} text={i18nT('quests:screens.tabs.QuestScenarioScreen.includesTitle')} />
         {includes.map((item) => (
           <View key={item.q} style={{ flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
@@ -327,7 +333,7 @@ export default function QuestScenarioScreen() {
         ))}
       </View>
 
-      <View style={{ gap: 12, maxWidth: COLUMN_MAX_WIDTH }}>
+      <View style={{ gap: 12 }}>
         <SectionHeading colors={colors} text={i18nT('quests:screens.tabs.QuestScenarioScreen.stepsTitle')} />
         {steps.map((step, index) => (
           <View key={step.q} style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start' }}>
@@ -352,7 +358,7 @@ export default function QuestScenarioScreen() {
         ))}
       </View>
 
-      <View style={{ gap: 10, maxWidth: COLUMN_MAX_WIDTH }}>
+      <View style={{ gap: 10 }}>
         <SectionHeading colors={colors} text={i18nT('quests:screens.tabs.QuestScenarioScreen.occasionsTitle')} />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {occasions.map((occasion) => (
@@ -374,7 +380,7 @@ export default function QuestScenarioScreen() {
       </View>
 
       {cityLinks.length > 0 ? (
-        <View style={{ gap: 10, maxWidth: COLUMN_MAX_WIDTH }}>
+        <View style={{ gap: 10 }}>
           <SectionHeading colors={colors} text={i18nT('quests:screens.tabs.QuestScenarioScreen.citiesTitle')} />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {cityLinks.map((city) => (
@@ -426,7 +432,7 @@ export default function QuestScenarioScreen() {
         testID="quest-scenario-faq"
       />
 
-      <View style={{ maxWidth: COLUMN_MAX_WIDTH, width: '100%' }} testID="quest-scenario-email-subscribe">
+      <View style={{ width: '100%' }} testID="quest-scenario-email-subscribe">
         <EmailSubscriptionForm
           source="scenario"
           pageUrl={canonical}
@@ -436,6 +442,7 @@ export default function QuestScenarioScreen() {
       </View>
 
       <CtaLink colors={colors} href={QUEST_LIST_ROUTE} label={i18nT('quests:screens.tabs.QuestScenarioScreen.cta')} />
+      </ResponsiveContainer>
     </ScrollView>
   )
 }
