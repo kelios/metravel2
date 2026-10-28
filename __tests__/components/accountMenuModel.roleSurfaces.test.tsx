@@ -82,6 +82,10 @@ describe('ролевые пункты аккаунта на всех повер�
 
   it('у суперпользователя есть хотя бы «Борд задач», у обычного — ничего', () => {
     expect(roleEntries.map((entry) => entry.key)).toContain('task-board')
+    expect(roleEntries).toContainEqual(expect.objectContaining({
+      key: 'app-stats',
+      target: { kind: 'route', path: '/app-stats' },
+    }))
     expect(buildAccountRoleEntries({ isSuperuser: false })).toEqual([])
   })
 
@@ -118,6 +122,16 @@ describe('ролевые пункты аккаунта на всех повер�
   it('BottomDockMoreList рисует «Instagram: афишу» админу и не рисует обычному', async () => {
     expect(await (await renderMoreList(true)).getByTestId('footer-more-item-instagram-schedule')).toBeTruthy()
     expect(await (await renderMoreList(false)).queryByTestId('footer-more-item-instagram-schedule')).toBeNull()
+  })
+
+  it('тап по «Статистике приложения» в листе «Ещё» открывает экран маршрутом', async () => {
+    mockAuth.isSuperuser = true
+    const { getByTestId } = await render(<BottomDock />)
+    await fireEvent.press(getByTestId('footer-item-more'))
+    await fireEvent.press(getByTestId('footer-more-item-app-stats'))
+
+    expect(mockRouter.push).toHaveBeenCalledWith('/app-stats')
+    expect(openExternalUrl).not.toHaveBeenCalled()
   })
 
   it('тап по «Борду задач» в листе «Ещё» на вложенном экране открывает борд внешней ссылкой', async () => {

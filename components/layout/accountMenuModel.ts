@@ -132,6 +132,12 @@ export const buildAccountRoleEntries = ({ isSuperuser }: Pick<AccountMenuInput, 
           icon: 'instagram',
           target: { kind: 'external', url: INSTAGRAM_SCHEDULE_URL },
         },
+        {
+          key: 'app-stats',
+          title: i18nT('appStatsStatic:menu.label'),
+          icon: 'bar-chart-2',
+          target: { kind: 'route', path: '/app-stats' },
+        },
       ]
     : []
 

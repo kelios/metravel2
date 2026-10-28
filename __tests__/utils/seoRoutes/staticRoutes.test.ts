@@ -20,7 +20,7 @@ describe('utils/seoRoutes/staticRoutes (#2740)', () => {
       '/roulette', '/favorites', '/privacy', '/cookies', '/login', '/registration', '/register',
       '/accountconfirmation', '/set-password', '/subscribe/confirm', '/subscribe/unsubscribe', '/travelsby',
       '/quests', '/quests/scenario', '/history', '/messages', '/export', '/metravel', '/profile', '/settings',
-      '/subscriptions', '/quests/map', '/userpoints',
+      '/subscriptions', '/quests/map', '/userpoints', '/app-stats',
     ]);
   });
 
@@ -50,7 +50,7 @@ describe('utils/seoRoutes/staticRoutes (#2740)', () => {
       '/subscribe/unsubscribe=noindex, nofollow', '/history=noindex, nofollow', '/messages=noindex, nofollow',
       '/export=noindex, nofollow', '/metravel=noindex, nofollow', '/profile=noindex, nofollow',
       '/settings=noindex, nofollow', '/subscriptions=noindex, nofollow', '/quests/map=noindex, nofollow',
-      '/userpoints=noindex, nofollow',
+      '/userpoints=noindex, nofollow', '/app-stats=noindex, nofollow',
     ]);
   });
 

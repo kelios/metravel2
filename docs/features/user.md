@@ -1,6 +1,6 @@
 # User/profile feature map
 
-Актуализировано: 2026-10-20.
+Актуализировано: 2026-10-28.
 
 Документ описывает личный и публичный профиль, settings, collections,
 subscriptions, travel-status calendar, author engagement и profile integrations.
@@ -18,6 +18,7 @@ subscriptions, travel-status calendar, author engagement и profile integrations
 | `/subscriptions` | subscriptions/subscribers |
 | `/calendar` | personal travel statuses |
 | `/userpoints` | пользовательские geo points |
+| `/app-stats` | статистика приложения, только суперпользователь (#2843) |
 
 ## Ownership
 
@@ -152,6 +153,21 @@ backend-dependent. Hidden contact нельзя раскрывать через f
 - ширина панели остаётся 320 px: имя получает 221 px, контейнер ограничен
   1000 px, и каждые +10 px панели отнимались бы у чата (680 px). Адаптивная
   ширина 320–380 px отклонена по этой причине.
+
+## Статистика приложения (`/app-stats`)
+
+Экран только для `isSuperuser`. Гость и обычный пользователь не видят пункт
+меню и при прямом заходе уходят на главную без запроса
+`GET /api/app-telemetry/stats/`. Пункт «Статистика приложения» приходит из
+`buildAccountRoleEntries` на все поверхности меню аккаунта.
+
+Данные: `from`/`to` (период 7, 30 или 90 дней, UTC, включительно),
+`platform` (`android`/`ios` или все) и `app_version`. Ответ #2842 рисуется
+пятью блоками: установки и активность по дням (полоски без библиотеки
+графиков), удержание D1/D7/D30, доля сессий без падений по версиям, топ
+падений со стеком внутри блока и воронка событий. Состояния: загрузка,
+ошибка с повтором, пустой период. Тексты — namespace `appStatsStatic` (RU/BE/UK/PL/EN),
+числа и даты — `i18n/format.ts`. В выдачу страница не попадает (`noindex`).
 
 ## Validation
 

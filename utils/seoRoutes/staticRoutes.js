@@ -248,6 +248,12 @@ const STATIC_ROUTE_SEO = Object.freeze([
     description: 'Управляй своими точками на карте.',
     robots: 'noindex, nofollow',
   },
+  {
+    route: '/app-stats',
+    title: 'Статистика приложения | Metravel',
+    description: 'Статистика установок, удержания и падений приложения. Только для администратора.',
+    robots: 'noindex, nofollow',
+  },
 ]);
 
 function requireText(value, what) {

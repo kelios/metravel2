@@ -287,6 +287,7 @@ export default function TabLayout() {
                 <Tabs.Screen name="settings" options={HIDDEN} />
                 <Tabs.Screen name="offline" options={HIDDEN} />
                 <Tabs.Screen name="userpoints" options={HIDDEN} />
+                <Tabs.Screen name="app-stats" options={HIDDEN} />
                 <Tabs.Screen name="messages" options={HIDDEN} />
                 <Tabs.Screen name="subscriptions" options={HIDDEN} />
                 <Tabs.Screen name="travels/[param]" options={travelDetailsOptions} />
