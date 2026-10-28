@@ -5,6 +5,10 @@ const {
   MapLogicComponent,
   shouldDeferRadiusAutoFit,
 } = require('@/components/MapPage/Map/MapLogicComponent');
+const {
+  __resetProgrammaticMapMoveForTests,
+  noteUserMapGesture,
+} = require('@/components/MapPage/Map/programmaticMoveSignal');
 
 describe('MapLogicComponent radius zoom initialization', () => {
   const originalRaf = global.requestAnimationFrame;
@@ -15,6 +19,91 @@ describe('MapLogicComponent radius zoom initialization', () => {
 
   afterAll(() => {
     global.requestAnimationFrame = originalRaf;
+  });
+
+  beforeEach(() => {
+    __resetProgrammaticMapMoveForTests();
+  });
+
+  it('#2790 — a user zoom blocks the startup fit and a later result arrival', async () => {
+    __resetProgrammaticMapMoveForTests();
+    noteUserMapGesture();
+
+    const map = {
+      fitBounds: jest.fn(),
+      setView: jest.fn(),
+      closePopup: jest.fn(),
+      getZoom: jest.fn(() => 11),
+      getCenter: jest.fn(() => ({ lat: 53.9, lng: 27.56 })),
+      on: jest.fn(),
+      off: jest.fn(),
+      stop: jest.fn(),
+    };
+    const bounds = {
+      pad: jest.fn(() => 'padded-bounds'),
+      getSouthWest: () => ({ lat: 53, lng: 27 }),
+      getNorthEast: () => ({ lat: 54, lng: 28 }),
+      isValid: () => true,
+      extend: jest.fn(),
+    };
+    const onInitialViewReady = jest.fn();
+    const props = {
+      mapClickHandler: () => undefined,
+      mode: 'radius',
+      coordinates: { lat: 53.9, lng: 27.56 },
+      userLocation: { lat: 53.9, lng: 27.56 },
+      disableFitBounds: false,
+      L: {
+        latLng: jest.fn((lat: number, lng: number) => ({ lat, lng })),
+        latLngBounds: jest.fn(() => bounds),
+      },
+      circleCenter: { lat: 53.9, lng: 27.56 },
+      radiusInMeters: 50000,
+      fitBoundsPadding: { paddingTopLeft: [0, 0], paddingBottomRight: [0, 0] },
+      setMapZoom: jest.fn(),
+      mapRef: { current: null },
+      onMapReady: jest.fn(),
+      onInitialViewReady,
+      savedMapViewRef: { current: null },
+      hasInitializedRef: { current: false },
+      lastModeRef: { current: null },
+      lastAutoFitKeyRef: { current: null },
+      leafletBaseLayerRef: { current: null },
+      leafletOverlayLayersRef: { current: new Map() },
+      leafletControlRef: { current: null },
+      useMap: jest.fn(() => map),
+      useMapEvents: jest.fn(() => null),
+    };
+
+    const { rerender } = await render(
+      <MapLogicComponent {...props} initialResultsSettled travelData={[]} />,
+    );
+    await act(async () => {});
+
+    expect(map.fitBounds).not.toHaveBeenCalled();
+    expect(map.setView).not.toHaveBeenCalled();
+    expect(onInitialViewReady).toHaveBeenCalledTimes(1);
+
+    await rerender(
+      <MapLogicComponent
+        {...props}
+        initialResultsSettled
+        travelData={[{ id: 1, coord: '53.9,27.56', address: 'A' }]}
+      />,
+    );
+    await act(async () => {});
+    expect(map.fitBounds).not.toHaveBeenCalled();
+
+    await rerender(
+      <MapLogicComponent
+        {...props}
+        initialResultsSettled
+        radiusInMeters={10000}
+        travelData={[{ id: 1, coord: '53.9,27.56', address: 'A' }]}
+      />,
+    );
+    await act(async () => {});
+    expect(map.fitBounds).toHaveBeenCalledTimes(1);
   });
 
   it('runs the first radius fit synchronously, before base tiles can mount', () => {

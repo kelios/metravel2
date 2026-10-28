@@ -39,7 +39,11 @@ import {
   getSafeCenter,
   normalizeLngLatWithHint as normalizeLngLatWithHintHelper,
 } from './Map/mapWebGeometry'
-import { beginProgrammaticMapMove, isProgrammaticMapMoveActive } from './Map/programmaticMoveSignal'
+import {
+  beginProgrammaticMapMove,
+  isProgrammaticMapMoveActive,
+  noteUserMapGesture,
+} from './Map/programmaticMoveSignal'
 
 type ReactLeafletNS = typeof import('react-leaflet')
 
@@ -414,8 +418,20 @@ const MapPageComponent: React.FC<Props> = (props) => {
     [onMarkerSelect, requestBottomSheetCollapse, suppressLeafletPopupOnSelect],
   )
 
-  const handleZoomIn = useCallback(() => safeInvoke(() => mapRef.current?.zoomIn?.()), [])
-  const handleZoomOut = useCallback(() => safeInvoke(() => mapRef.current?.zoomOut?.()), [])
+  const applyUserZoom = useCallback((direction: 'in' | 'out') => {
+    safeInvoke(() => {
+      const map = mapRef.current
+      if (!map) return
+      // #2790 — жест отменяет ещё не доигравший авто-фит. Иначе zoomOut
+      // вычитает единицу из цели фита, а data-map-zoom ещё показывает старт.
+      noteUserMapGesture()
+      map.stop?.()
+      if (direction === 'in') map.zoomIn?.()
+      else map.zoomOut?.()
+    })
+  }, [])
+  const handleZoomIn = useCallback(() => applyUserZoom('in'), [applyUserZoom])
+  const handleZoomOut = useCallback(() => applyUserZoom('out'), [applyUserZoom])
 
   // Stable identity so React.memo(MarkerClusterGroup) can actually skip re-renders
   // on zoom/pan — an inline closure here would change every render and force the

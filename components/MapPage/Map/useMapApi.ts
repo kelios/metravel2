@@ -7,7 +7,7 @@ import type { LatLng } from '@/types/coordinates';
 import { buildGpx, buildKml, downloadTextFileWeb } from '@/utils/routeExport';
 import { WEB_MAP_BASE_LAYERS } from '@/config/mapWebLayers';
 import { createLeafletLayer } from '@/utils/mapWebLayers';
-import { beginProgrammaticMapMove } from './programmaticMoveSignal';
+import { beginProgrammaticMapMove, noteUserMapGesture } from './programmaticMoveSignal';
 import { getLiveUserPosition } from '@/hooks/map/liveUserPosition';
 import type { OsmPoiCategory } from '@/utils/overpass';
 import type { LeafletControlRef } from './leafletBridgeTypes';
@@ -229,6 +229,8 @@ export function useMapApi({
     return {
       zoomIn: () => {
         try {
+          noteUserMapGesture();
+          map.stop?.();
           map.zoomIn();
         } catch {
           // noop
@@ -236,6 +238,8 @@ export function useMapApi({
       },
       zoomOut: () => {
         try {
+          noteUserMapGesture();
+          map.stop?.();
           map.zoomOut();
         } catch {
           // noop

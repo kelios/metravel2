@@ -5,7 +5,11 @@ import { EARTH_RADIUS_M } from '@/utils/geoDistance';
 import type { LeafletControlRef } from './leafletBridgeTypes';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
 import { strToLatLng } from './utils';
-import { beginProgrammaticMapMove } from './programmaticMoveSignal';
+import {
+  beginProgrammaticMapMove,
+  clearUserMapGesture,
+  hasUserAdjustedMapView,
+} from './programmaticMoveSignal';
 
 const isTestEnv =
   typeof process !== 'undefined' &&
@@ -358,9 +362,14 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       const r = Number(radiusInMeters);
       const radiusKey = Number.isFinite(r) && r > 0 ? String(Math.round(r)) : 'invalid-radius';
       if (lastRadiusKeyRef.current !== radiusKey) {
+        const radiusChanged = lastRadiusKeyRef.current !== null;
         lastRadiusKeyRef.current = radiusKey;
         hasInitializedRef.current = false;
         lastAutoFitKeyRef.current = null;
+        // Первая фиксация радиуса — не жест пользователя. Сбрасываем флаг только
+        // когда радиус действительно сменился, иначе стартовый эффект стирает
+        // уже сделанный zoom-out.
+        if (radiusChanged) clearUserMapGesture();
       }
     }
 
@@ -371,6 +380,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     if (lastModeRef.current === 'route' && mode === 'radius') {
       hasInitializedRef.current = false;
       lastAutoFitKeyRef.current = null;
+      clearUserMapGesture();
     }
 
     lastModeRef.current = mode;
@@ -414,6 +424,16 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     const resultsKey = hasRadiusResults ? 'results' : 'empty';
     const autoFitKey = `${mode}:${resultsKey}:${initialLocationKey}:${radiusKey}`;
     if (lastAutoFitKeyRef.current === autoFitKey) return;
+
+    // #2790 — пользователь уже отдал или приблизил карту. Приход точек, поздний
+    // авто-фит и первый фикс локации не возвращают масштаб. Новый радиус и
+    // возврат из маршрута сбрасывают флаг выше и подгоняют вид заново.
+    if (hasUserAdjustedMapView()) {
+      lastAutoFitKeyRef.current = autoFitKey;
+      hasInitializedRef.current = true;
+      signalInitialViewReady();
+      return;
+    }
 
     const hasValidCircle = hasValidRadiusCircle;
 
@@ -542,7 +562,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       };
 
       const runFit = () => {
-        if (cancelled) return;
+        if (cancelled || hasUserAdjustedMapView()) return;
         try {
           map.invalidateSize?.({ animate: false } as any);
         } catch {

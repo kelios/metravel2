@@ -57,6 +57,255 @@ function buildMockMapPoints(options: {
   return points;
 }
 
+/**
+ * #2790 — локальная проба: кто меняет zoom. Продукт не трогаем.
+ * Вешается до навигации и пишет setView/fitBounds/zoomIn/zoomOut/flyTo и zoomend.
+ */
+async function installMapZoomProbe(page: any) {
+  await page.addInitScript(() => {
+    const w = window as unknown as {
+      __mapZoomLog?: Array<Record<string, unknown>>;
+      __REACT_DEVTOOLS_GLOBAL_HOOK__?: {
+        supportsFiber?: boolean;
+        renderers?: Map<number, unknown>;
+        inject?: (renderer: unknown) => number;
+        onCommitFiberRoot?: (...args: unknown[]) => void;
+        onCommitFiberUnmount?: (...args: unknown[]) => void;
+        __zoomProbeWrapped?: unknown;
+      };
+    };
+    const log: Array<Record<string, unknown>> = [];
+    w.__mapZoomLog = log;
+    const patched = new WeakSet<object>();
+
+    const push = (entry: Record<string, unknown>) => {
+      entry.t = Math.round(performance.now());
+      log.push(entry);
+      if (log.length > 300) log.shift();
+    };
+
+    const zoomOf = (map: { getZoom?: () => number }) => {
+      try {
+        const zoom = map.getZoom?.();
+        return Number.isFinite(zoom) ? zoom : null;
+      } catch {
+        return null;
+      }
+    };
+
+    const summarize = (name: string, args: unknown[]) => {
+      if (name === 'setView' || name === 'flyTo' || name === 'setZoom') {
+        const zoom = Number(args[1] ?? args[0]);
+        return Number.isFinite(zoom) ? zoom : null;
+      }
+      if (name === 'zoomIn' || name === 'zoomOut' || name === 'setZoomAround') {
+        const delta = Number(args[0]);
+        return Number.isFinite(delta) ? delta : 1;
+      }
+      if (name === 'fitBounds') {
+        const options = args[1] as { maxZoom?: number } | undefined;
+        return Number.isFinite(options?.maxZoom) ? options?.maxZoom : null;
+      }
+      return null;
+    };
+
+    const stackOf = () => {
+      const raw = new Error().stack || '';
+      return raw
+        .split('\n')
+        .slice(2, 8)
+        .map((line) => line.trim())
+        .join(' | ');
+    };
+
+    const patchMap = (map: any) => {
+      if (!map || typeof map !== 'object' || patched.has(map)) return;
+      if (typeof map.getZoom !== 'function' || typeof map.fitBounds !== 'function') return;
+      patched.add(map);
+      const proto = Object.getPrototypeOf(map);
+      if (proto && !proto.__zoomProbe) {
+        proto.__zoomProbe = true;
+        for (const name of ['setZoom', 'setView', 'fitBounds', 'flyTo', 'zoomIn', 'zoomOut', 'setZoomAround']) {
+          const orig = proto[name];
+          if (typeof orig !== 'function') continue;
+          proto[name] = function patchedZoomMethod(this: any, ...args: unknown[]) {
+            const before = zoomOf(this);
+            const requested = summarize(name, args);
+            let failed: string | null = null;
+            try {
+              return orig.apply(this, args);
+            } catch (error) {
+              failed = String(error);
+              throw error;
+            } finally {
+              const after = zoomOf(this);
+              (window as unknown as { __metravelLiveZoom?: number | null }).__metravelLiveZoom = after;
+              push({
+                kind: 'call',
+                name,
+                before,
+                after,
+                requested,
+                failed,
+                stack: stackOf(),
+              });
+            }
+          };
+        }
+      }
+      if (typeof map.on === 'function') {
+        map.on('zoomstart zoom zoomend moveend', (event: { type?: string }) => {
+          const zoom = zoomOf(map);
+          (window as unknown as { __metravelLiveZoom?: number | null }).__metravelLiveZoom = zoom;
+          push({ kind: 'event', type: event?.type || 'unknown', zoom });
+        });
+      }
+      const zoom = zoomOf(map);
+      (window as unknown as { __metravelLiveZoom?: number | null }).__metravelLiveZoom = zoom;
+      push({ kind: 'attached', zoom });
+    };
+
+    const consider = (value: any, depth = 0) => {
+      if (!value || typeof value !== 'object' || depth > 3) return;
+      patchMap(value);
+      consider(value.map, depth + 1);
+      consider(value.current, depth + 1);
+    };
+
+    const inspectFiber = (node: any) => {
+      if (!node || typeof node !== 'object') return;
+      const props = node.memoizedProps;
+      consider(node.stateNode);
+      consider(props?.value);
+      consider(props?.map);
+      // react-leaflet держит инстанс в контексте `{ map }` и в useRef.current,
+      // а не на stateNode хост-узла.
+      let hookState = node.memoizedState;
+      for (let index = 0; hookState && index < 40; index += 1) {
+        consider(hookState.memoizedState);
+        consider(hookState.baseState);
+        hookState = hookState.next;
+      }
+    };
+
+    const walk = (root: any) => {
+      const start = root?.current || root;
+      if (!start || typeof start !== 'object') return;
+      const stack = [start];
+      const seen = new Set<object>();
+      let steps = 0;
+      while (stack.length && steps < 12000) {
+        const node = stack.pop();
+        if (!node || typeof node !== 'object' || seen.has(node)) continue;
+        seen.add(node);
+        steps += 1;
+        inspectFiber(node);
+        if (node.child) stack.push(node.child);
+        if (node.sibling) stack.push(node.sibling);
+      }
+    };
+
+    const walkUp = (fiber: any) => {
+      let node = fiber;
+      let steps = 0;
+      while (node && steps < 80) {
+        inspectFiber(node);
+        node = node.return;
+        steps += 1;
+      }
+    };
+
+    const wrapHook = () => {
+      const hook = w.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+      if (!hook) {
+        w.__REACT_DEVTOOLS_GLOBAL_HOOK__ = {
+          supportsFiber: true,
+          renderers: new Map(),
+          inject: () => 1,
+          onCommitFiberRoot: (_id: unknown, root: unknown) => walk(root),
+          onCommitFiberUnmount: () => undefined,
+        };
+        w.__REACT_DEVTOOLS_GLOBAL_HOOK__!.__zoomProbeWrapped =
+          w.__REACT_DEVTOOLS_GLOBAL_HOOK__!.onCommitFiberRoot;
+        return;
+      }
+      if (hook.__zoomProbeWrapped === hook.onCommitFiberRoot) return;
+      const prev = hook.onCommitFiberRoot;
+      const wrapped = function wrappedCommit(this: unknown, ...args: unknown[]) {
+        try {
+          prev?.apply(this, args);
+        } catch {
+          // проба не должна ломать рендер
+        }
+        try {
+          walk(args[1]);
+        } catch {
+          // noop
+        }
+      };
+      hook.onCommitFiberRoot = wrapped;
+      hook.__zoomProbeWrapped = wrapped;
+    };
+
+    let scanMissLogged = false;
+    const scanDom = () => {
+      const nodes = [
+        document.getElementById('root'),
+        document.body,
+        ...Array.from(document.querySelectorAll('.leaflet-container')),
+      ];
+      let sawFiber = false;
+      for (const node of nodes) {
+        if (!node) continue;
+        const key = Object.keys(node).find((name) => (
+          name.startsWith('__reactFiber')
+          || name.startsWith('__reactContainer')
+          || name.startsWith('__reactInternalInstance')
+        ));
+        if (!key) continue;
+        sawFiber = true;
+        const fiber = (node as unknown as Record<string, unknown>)[key];
+        walk(fiber);
+        walkUp(fiber);
+      }
+      if (!sawFiber && !scanMissLogged && document.querySelector('.leaflet-container')) {
+        scanMissLogged = true;
+        push({ kind: 'scan-miss' });
+      }
+    };
+
+    push({ kind: 'boot' });
+    wrapHook();
+    window.setInterval(() => {
+      wrapHook();
+      try {
+        scanDom();
+      } catch {
+        // проба не должна ломать карту
+      }
+    }, 50);
+  });
+}
+
+async function readMapZoomLog(page: any) {
+  return page.evaluate(() => (window as unknown as { __mapZoomLog?: unknown[] }).__mapZoomLog ?? []);
+}
+
+async function markMapZoom(page: any, label: string) {
+  await page.evaluate((name: string) => {
+    const w = window as unknown as { __mapZoomLog?: Array<Record<string, unknown>> };
+    const attr = document
+      .querySelector('[data-testid="map-leaflet-wrapper"]')
+      ?.getAttribute('data-map-zoom');
+    w.__mapZoomLog?.push({
+      kind: 'mark',
+      label: name,
+      t: Math.round(performance.now()),
+      attr,
+    });
+  }, label);
+}
+
 async function installMobileFiltersPanelMocks(page: any, points: any[]) {
   await page.route('**/api/filterformap/**', async (route: any) => {
     await route.fulfill({
@@ -523,6 +772,7 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
   });
 
   test('desktop: clicking cluster expands markers (zoom-to-area behavior)', async ({ page }) => {
+    await installMapZoomProbe(page);
     await installTileMock(page);
 
     // Ensure we get enough nearby points to form at least one cluster.
@@ -537,6 +787,19 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(mockedPoints),
+      });
+    });
+    // Серверные кластеры иначе подмешивают живые точки Минска и чужой масштаб.
+    await page.route('**/api/map/clusters/**', async (route: any) => {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          clusters: [],
+          markers: [],
+          total_count: 0,
+          source: 'travel_addresses',
+        }),
       });
     });
 
@@ -563,26 +826,85 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
     await waitForMapUi(page, 90_000);
 
     const mapWrapper = page.getByTestId('map-leaflet-wrapper');
-    await expect
-      .poll(async () => Number(await mapWrapper.getAttribute('data-map-zoom')), { timeout: 30_000 })
-      .toBeGreaterThan(0);
-
-    // Radius-mode initialization may legitimately start as close as zoom 14,
-    // where a cluster click can spiderfy without changing zoom. Move out first
-    // so this scenario deterministically exercises the zoom-to-area branch.
-    const zoomOut = page.getByRole('button', { name: 'Отдалить карту', exact: true });
-    await expect(zoomOut).toBeVisible({ timeout: 30_000 });
-    for (let index = 0; index < 2; index += 1) {
-      const zoomBeforeStep = Number(await mapWrapper.getAttribute('data-map-zoom'));
-      await zoomOut.click();
+    // #2790 — data-map-zoom стартует с 11 ещё до авто-фита. Равенство с живым
+    // зумом в этот момент ложное: клик «Отдалить» вычитает единицу уже из цели
+    // fitBounds. Ждём zoomend именно этого fitBounds, опубликованный в атрибут.
+    let zoomAfterOut = 0;
+    try {
       await expect
-        .poll(async () => Number(await mapWrapper.getAttribute('data-map-zoom')), { timeout: 10_000 })
-        .toBeLessThan(zoomBeforeStep);
+        .poll(async () => page.evaluate(() => {
+          const w = window as unknown as {
+            __metravelLiveZoom?: number | null;
+            __mapZoomLog?: Array<Record<string, unknown>>;
+          };
+          const attr = Number(
+            document.querySelector('[data-testid="map-leaflet-wrapper"]')?.getAttribute('data-map-zoom'),
+          );
+          const live = w.__metravelLiveZoom;
+          if (typeof live !== 'number' || !Number.isFinite(live) || live !== attr) return null;
+          const log = w.__mapZoomLog ?? [];
+          const state = w as unknown as { __zoomStableZoom?: number | null; __zoomStableAt?: number };
+          const lastFit = [...log].reverse().find((entry) => entry.kind === 'call' && entry.name === 'fitBounds');
+          if (lastFit) {
+            const fitAt = Number(lastFit.t);
+            const zoomendAfterFit = [...log].reverse().find((entry) => (
+              entry.kind === 'event'
+              && entry.type === 'zoomend'
+              && Number(entry.t) >= fitAt
+              && Number(entry.zoom) === attr
+            ));
+            if (zoomendAfterFit) return attr;
+            const before = Number(lastFit.before);
+            const after = Number(lastFit.after);
+            if (after === attr && after !== before) return attr;
+          }
+          // Проба могла подключиться уже после fitBounds. Тогда в журнале нет
+          // вызова, но живой зум и атрибут совпадают. Принимаем это только если
+          // совпадение держится: стартовые 11/11 до авто-фита сюда не проходят.
+          const attached = log.some((entry) => entry.kind === 'attached');
+          if (!attached) {
+            state.__zoomStableZoom = null;
+            state.__zoomStableAt = 0;
+            return null;
+          }
+          const now = performance.now();
+          if (state.__zoomStableZoom !== live) {
+            state.__zoomStableZoom = live;
+            state.__zoomStableAt = now;
+            return null;
+          }
+          if (now - Number(state.__zoomStableAt || 0) < 500) return null;
+          return attr;
+        }), { timeout: 30_000 })
+        .not.toBeNull();
+
+      // Radius-mode initialization may legitimately start as close as zoom 14,
+      // where a cluster click can spiderfy without changing zoom. Move out first
+      // so this scenario deterministically exercises the zoom-to-area branch.
+      const zoomOut = page.getByRole('button', { name: 'Отдалить карту', exact: true });
+      await expect(zoomOut).toBeVisible({ timeout: 30_000 });
+      for (let index = 0; index < 2; index += 1) {
+        const zoomBeforeStep = Number(await mapWrapper.getAttribute('data-map-zoom'));
+        await markMapZoom(page, `zoom-out-before-${index}:${zoomBeforeStep}`);
+        await zoomOut.click();
+        await markMapZoom(page, `zoom-out-click-${index}`);
+        await expect
+          .poll(async () => Number(await mapWrapper.getAttribute('data-map-zoom')), { timeout: 10_000 })
+          .toBeLessThan(zoomBeforeStep);
+        zoomAfterOut = Number(await mapWrapper.getAttribute('data-map-zoom'));
+        await markMapZoom(page, `zoom-out-after-${index}:${zoomAfterOut}`);
+      }
+    } finally {
+      const zoomLog = await readMapZoomLog(page);
+      const fs = require('fs') as typeof import('fs');
+      fs.writeFileSync('/tmp/task-2790-zoom-log.json', JSON.stringify(zoomLog, null, 2));
+      console.log(`ZOOM_LOG_COUNT ${Array.isArray(zoomLog) ? zoomLog.length : 0}`);
     }
 
-    // Wait for clusters to render.
+    // Wait for clusters to render. Авто-фит не должен вернуть масштаб назад.
     const clusterIcons = page.locator('.metravel-cluster-icon');
     await expect.poll(() => clusterIcons.count(), { timeout: 30_000 }).toBeGreaterThan(0);
+    expect(Number(await mapWrapper.getAttribute('data-map-zoom'))).toBeLessThanOrEqual(zoomAfterOut);
 
     const clusterNumbers = await clusterIcons.evaluateAll((nodes) =>
       nodes.map((node) => Number.parseInt((node.textContent || '').trim(), 10) || 0)

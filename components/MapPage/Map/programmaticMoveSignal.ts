@@ -14,6 +14,12 @@
  * suppressed because they don't open this window.
  */
 let suppressUntil = 0
+/**
+ * Пользователь нажал «Приблизить» или «Отдалить». Пока флаг стоит,
+ * авто-подгонка того же радиуса не переписывает этот зум. Сбрасывается
+ * сменой радиуса и возвратом из маршрута в радиус.
+ */
+let userAdjustedView = false
 
 const now = (): number =>
   typeof performance !== 'undefined' && typeof performance.now === 'function'
@@ -34,6 +40,20 @@ export function programmaticMapMoveRemainingMs(): number {
 
 export function isProgrammaticMapMoveActive(): boolean {
   return programmaticMapMoveRemainingMs() > 0
+}
+
+/** Зафиксировать, что вид карты выбрал пользователь, а не авто-фит. */
+export function noteUserMapGesture(): void {
+  userAdjustedView = true
+}
+
+export function hasUserAdjustedMapView(): boolean {
+  return userAdjustedView
+}
+
+/** Разрешить следующую авто-подгонку после смены радиуса или возврата из маршрута. */
+export function clearUserMapGesture(): void {
+  userAdjustedView = false
 }
 
 // --- Подписка (#2450) ----------------------------------------------------------
@@ -65,5 +85,6 @@ export function subscribeProgrammaticMapMove(listener: Listener): () => void {
 /** Только для тестов: сбросить окно и подписчиков. */
 export function __resetProgrammaticMapMoveForTests(): void {
   suppressUntil = 0
+  userAdjustedView = false
   listeners.clear()
 }
