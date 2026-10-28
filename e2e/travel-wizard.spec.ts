@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 
 import { test, expect } from './fixtures';
 import { devices, request } from '@playwright/test';
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 import { acceptAuthTerms, ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
 import { seedNecessaryConsent } from './helpers/storage';
@@ -367,39 +367,68 @@ const waitForAutosaveOk = async (page: Page, timeoutMs: number = 30_000) => {
   }
 };
 
+const NEXT_BUTTON_NAMES = [
+  /^(далее|далее:.*)$/i,
+  /^к медиа/i,
+  /^к деталям/i,
+  /^к доп/i,
+  /^к публикации/i,
+];
+
+const readWizardStep = async (page: Page): Promise<number | null> => {
+  const select = page.getByTestId('travel-wizard-step-select').first();
+  if ((await select.count()) === 0) return null;
+  const label = await select.getAttribute('aria-label');
+  const match = label?.match(/Шаг\s+(\d+)/i);
+  return match ? Number(match[1]) : null;
+};
+
+const describeNextHit = (hit: { topTestId: string | null; topLabel: string | null }) =>
+  hit.topTestId ?? hit.topLabel ?? 'another element';
+
+const hitTestButton = async (button: Locator) => button.evaluate((el) => {
+  const rect = el.getBoundingClientRect();
+  const x = Math.round(rect.left + rect.width / 2);
+  const y = Math.round(rect.top + rect.height / 2);
+  const top = document.elementFromPoint(x, y);
+  const marked = top?.closest('[data-testid]');
+  const rawLabel = top?.getAttribute('aria-label') || top?.textContent || '';
+  return {
+    x,
+    y,
+    owns: top === el || (top != null && el.contains(top)),
+    topTestId: marked?.getAttribute('data-testid') ?? null,
+    topLabel: rawLabel.trim().replace(/\s+/g, ' ').slice(0, 120) || null,
+  };
+});
+
 const clickNext = async (page: Page) => {
-  const candidates = [
-    // Prefer accessible name (more stable than exact DOM).
-    page.getByRole('button', { name: /^(далее|далее:.*)$/i }),
-    page.getByRole('button', { name: /^к медиа/i }),
-    page.getByRole('button', { name: /^к деталям/i }),
-    page.getByRole('button', { name: /^к доп/i }),
-    page.getByRole('button', { name: /^к публикации/i }),
-  ];
-
-  for (const c of candidates) {
-    const loc = c.first();
-    if (!(await loc.isVisible().catch(() => false))) continue;
-    await loc.scrollIntoViewIfNeeded().catch(() => null);
-
-    // Avoid clicking disabled buttons.
-    const disabled = await loc.isDisabled().catch(() => false);
-    if (disabled) continue;
-
-    await loc.click({ timeout: 30_000 }).catch(async () => {
-      // Last attempt: overlays can intercept clicks.
-      await loc.click({ timeout: 30_000, force: true }).catch(() => null);
-    });
-
-    return;
+  let button: Locator | null = null;
+  for (const name of NEXT_BUTTON_NAMES) {
+    const candidate = page.getByRole('button', { name }).first();
+    if (!(await candidate.isVisible().catch(() => false))) continue;
+    if (await candidate.isDisabled().catch(() => false)) continue;
+    button = candidate;
+    break;
+  }
+  if (!button) {
+    throw new Error('Wizard next button is missing or disabled');
   }
 
-  // Last resort: click any visible next-ish button.
-  const any = page
-    .getByRole('button', { name: /далее|к медиа|к деталям|к доп|к публикации/i })
-    .first();
-  await any.scrollIntoViewIfNeeded().catch(() => null);
-  await any.click({ timeout: 30_000, force: true });
+  await button.scrollIntoViewIfNeeded();
+  const before = await readWizardStep(page);
+  if (before == null) {
+    throw new Error('Wizard step number was not readable before Next');
+  }
+  const hit = await hitTestButton(button);
+  if (!hit.owns) {
+    throw new Error(
+      `Next click intercepted at (${hit.x}, ${hit.y}) by ${describeNextHit(hit)}; wizard stayed on step ${before}`,
+    );
+  }
+
+  await button.click({ timeout: 15_000 });
+  await expect.poll(async () => readWizardStep(page), { timeout: 15_000 }).toBeGreaterThan(before);
 };
 
 const ensureOnStep2 = async (page: Page) => {
@@ -872,6 +901,25 @@ test.describe('Создание путешествия - Полный flow', () 
 
   test('@smoke галерея загружается на desktop web без вечного fallback', async ({ page }) => {
     await verifyGalleryLoads(page, 'desktop');
+  });
+
+  test('перехваченное «Далее» не считается переходом шага', async ({ page }) => {
+    await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
+    await ensureCanCreateTravel(page);
+    await fillMinimumValidBasics(page, 'E2E: blocked next');
+    await page.evaluate(() => {
+      const cover = document.createElement('div');
+      cover.dataset.testid = 'e2e-next-cover';
+      cover.setAttribute('aria-label', 'e2e next cover');
+      cover.style.position = 'fixed';
+      cover.style.inset = '0';
+      cover.style.zIndex = '2000';
+      document.body.appendChild(cover);
+    });
+
+    await expect(clickNext(page)).rejects.toThrow(/intercepted at .* by e2e-next-cover/);
+    await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toHaveValue('E2E: blocked next');
+    await expect(page.getByTestId('travel-wizard.step-route.scroll')).toHaveCount(0);
   });
 
   test.describe('галерея на mobile web', () => {

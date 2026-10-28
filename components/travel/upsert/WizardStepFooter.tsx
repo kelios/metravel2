@@ -3,7 +3,7 @@ import { type ViewInstance, Platform, StyleSheet, View, useWindowDimensions } fr
 import Feather from '@expo/vector-icons/Feather'
 import { useFocusEffect } from 'expo-router'
 
-import { useNativeBottomChromeOcclusion } from '@/components/layout/bottomChromeInset'
+import { asBottomDimension, useNativeBottomChromeOcclusion, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import Button from '@/components/ui/Button'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -47,6 +47,7 @@ export const WizardStepFooter = React.memo(function WizardStepFooter({
   const focused = useRef(false)
   const generation = useRef(0)
   const { width, height } = useWindowDimensions()
+  const floatingChromeGap = useScrollBottomPadding(0)
   const visible = isMobile && Boolean(onPrimary || onBack)
   const measureFooter = useCallback(() => {
     if (!focused.current || Platform.OS === 'web') return
@@ -104,6 +105,10 @@ export const WizardStepFooter = React.memo(function WizardStepFooter({
           borderTopColor: colors.border,
           paddingBottom: DESIGN_TOKENS.spacing.sm + (insets?.bottom ?? 0),
         },
+        // Fixed consent and install bars publish their height into the shared
+        // chrome inset. The footer is in normal flow, so the gap keeps «Далее»
+        // above that box instead of under it.
+        Platform.OS === 'web' ? { marginBottom: asBottomDimension(floatingChromeGap) } : null,
       ]}
       testID="travel-wizard.step-footer"
     >
