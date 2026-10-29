@@ -5,6 +5,7 @@ import {
   prepareAuthenticatedMessaging,
 } from './helpers/messages';
 import { gotoWithRetry } from './helpers/navigation';
+import { waitForMoreSheetController } from './helpers/chrome';
 
 test.describe('Messages — unread integration', () => {
   test('desktop account menu shows the exact aggregate unread count', async ({ page }) => {
@@ -37,6 +38,7 @@ test.describe('Messages — unread integration', () => {
 
     const openMenu = page.getByTestId('mobile-menu-open');
     await expect(openMenu).toBeVisible({ timeout: 20_000 });
+    await waitForMoreSheetController(page);
     await openMenu.click();
     await expect(page.getByText('Сообщения (4)', { exact: true })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByLabel(/Сообщения.*4.*непрочитанных/i)).toBeVisible();

@@ -1,15 +1,46 @@
 import { test, expect } from './fixtures';
-import { preacceptCookies } from './helpers/navigation';
+import { FALLBACK_TRAVEL_ID, FALLBACK_TRAVEL_SLUG, mockFallbackTravelDetails, preacceptCookies } from './helpers/navigation';
 
-const article = '/travels/marshruty-vykhodnogo-dnia-iz-minska-13-poezdok';
+const article = `/travels/${FALLBACK_TRAVEL_SLUG}`;
+const photoUrl = 'https://example.com/e2e/inline-river.svg';
+const narrative = 'Река проходит вдоль старого парка, где можно гулять по тропинкам и любоваться долиной. '.repeat(12);
+const description = `<h3>Река Ислочь</h3><p>${narrative}</p><p class="img-float-right"><img src="${photoUrl}" alt="Речная долина" /></p><h2>Следующая остановка</h2><p>Продолжаем маршрут после прогулки у реки.</p>`;
 
 for (const width of [1280, 2048, 390]) {
-  test(`article672 keeps its inline photo with its own narrative at ${width}px`, async ({ page }) => {
+  test(`article keeps its inline photo with its own narrative at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 });
     await preacceptCookies(page);
+    // Layout must not depend on a live article edit or production media storage.
+    await mockFallbackTravelDetails(page, { description });
+    await page.route((url) => url.pathname === '/api/travels/' || url.pathname === '/travels/', (route) => {
+      if (route.request().method() !== 'GET') return route.fallback();
+      return route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({ total: 1, data: [{
+          id: FALLBACK_TRAVEL_ID, slug: FALLBACK_TRAVEL_SLUG, url: article,
+          name: 'E2E stable travel details', countryName: 'Беларусь', cityName: 'Гомель',
+          travel_image_thumb_url: photoUrl, travel_image_thumb_small_url: photoUrl,
+          publish: true, moderation: true,
+        }] }),
+      });
+    });
+    await page.route(photoUrl, (route) => route.fulfill({
+      status: 200, contentType: 'image/svg+xml',
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="480"><rect width="320" height="480" fill="#32876c"/></svg>',
+    }));
     const errors: string[] = [];
     page.on('pageerror', error => errors.push(error.message));
-    await page.goto(article, { waitUntil: 'domcontentloaded' });
+    // A fictional article has no matching static document. Enter its mocked
+    // content through the real SPA card, after the catalog shell has hydrated,
+    // so API-only fixture data cannot disagree with a server-rendered article.
+    await page.goto('/search', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('html')).toHaveClass(/app-hydrated/);
+    const catalogCard = page.locator('a[data-testid="travel-card-link"]').first();
+    await expect(catalogCard).toHaveAttribute('href', article);
+    const documentStart = await page.evaluate(() => performance.timeOrigin);
+    await catalogCard.click();
+    await expect(page).toHaveURL((url) => url.pathname === article);
+    expect(await page.evaluate(() => performance.timeOrigin)).toBe(documentStart);
     const heading = page.locator('.travel-rich-text h3', { hasText: 'Река Ислочь' });
     await heading.scrollIntoViewIfNeeded();
     const group = heading.locator('xpath=following-sibling::*[1]');

@@ -96,6 +96,6 @@ test.describe('AI picks on /search (#2459)', () => {
     await expect(page.getByTestId('ai-search-unavailable')).toBeVisible({ timeout: PANEL_TIMEOUT_MS });
     await expect(page.getByTestId('ai-search-input')).toBeVisible();
     await expect(page.getByTestId('ai-search-results')).toHaveCount(0);
-    await expect(page.getByRole('searchbox', { name: /Поиск путешествий/i })).toBeVisible();
+    await expect(page.getByRole('searchbox', { name: /^Поиск маршрутов(?:\.|$)/ })).toBeVisible();
   });
 });

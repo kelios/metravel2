@@ -127,7 +127,7 @@ describe('Slider (web) blur background', () => {
     await act(async () => {
       tree = await renderTree(
         <SliderWeb
-          images={images as any}
+          images={images.map((image, index) => ({ ...image, caption: `Photo ${index + 1}` }))}
           showArrows
           showDots={false}
           autoPlay={false}
@@ -150,6 +150,8 @@ describe('Slider (web) blur background', () => {
 
     expect(within(tree.container).getByTestId('slider-image-0', { includeHiddenElements: true })).toBeTruthy()
     expect(within(tree.container).getByTestId('slider-image-2', { includeHiddenElements: true })).toBeTruthy()
+    expect(within(tree.container).getByText('03')).toBeTruthy()
+    expect(within(tree.container).getByText('Photo 3')).toBeTruthy()
   })
 
   it('mounts only the active slide window on web', async () => {

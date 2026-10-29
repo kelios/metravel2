@@ -293,6 +293,13 @@ test.describe('#1542 square quest cover tile', () => {
       if (/\/user\/\d+\/profile/.test(pathname)) {
         return fulfillJson(route, { id: 7, name: 'E2E', email: 'e2e@example.com', is_premium: false })
       }
+      if (pathname === `/api/quests/serving/1/${QUEST_ID}`) {
+        return fulfillJson(route, {
+          schema_version: 1, release_id: 'e2e-square-cover-release', city_id: 1,
+          quest_slug: QUEST_ID, locale: 'ru', state: 'available',
+          canonical_path: `/quests/1/${QUEST_ID}`, ru_source_path: `/quests/1/${QUEST_ID}`, versions: [],
+        })
+      }
       if (pathname.includes(`/quests/by-quest-id/${QUEST_ID}`)) return fulfillJson(route, questBundle)
       if (pathname.includes(`/quest-progress/quest/${QUEST_ID}`)) {
         return fulfillJson(route, {

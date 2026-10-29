@@ -209,9 +209,11 @@ describe('Slider', () => {
     )
 
     expect(getByText('1/2')).toBeTruthy()
+    expect(getByText('01')).toBeTruthy()
     expect(getByText('First photo caption')).toBeTruthy()
     await fireEvent.press(getByLabelText('Next slide'))
     expect(getByText('2/2')).toBeTruthy()
+    expect(getByText('02')).toBeTruthy()
     expect(getByText('Second photo caption')).toBeTruthy()
     expect(queryByText('First photo caption')).toBeNull()
   })

@@ -59,6 +59,11 @@ export type QuestProgressSnapshot = {
     serverId: number
 }
 
+/** Bootstrap may confirm that no server row exists; normalized snapshots use 0. */
+type QuestProgressSnapshotInput = Omit<Partial<QuestProgressSnapshot>, 'serverId'> & {
+    serverId?: number | null
+}
+
 /**
  * Снапшот принадлежит прохождению, которого на сервере больше нет (#2033):
  * строку удалили «Сбросить» на другом устройстве или создали на её месте новую.
@@ -114,7 +119,7 @@ export const countAnsweredSteps = (answers: Record<string, string> | undefined):
     answers ? Object.values(answers).filter(Boolean).length : 0
 
 export const normalizeQuestProgressSnapshot = (
-    raw: Partial<QuestProgressSnapshot> | null | undefined,
+    raw: QuestProgressSnapshotInput | null | undefined,
 ): QuestProgressSnapshot => ({
     currentIndex: toFiniteNumber(raw?.currentIndex),
     unlockedIndex: toFiniteNumber(raw?.unlockedIndex),
@@ -144,7 +149,7 @@ export const normalizeQuestProgressSnapshot = (
  * обратное), и её переключение прохождением не является.
  */
 export const hasQuestProgressStarted = (
-    raw: Partial<QuestProgressSnapshot> | null | undefined,
+    raw: QuestProgressSnapshotInput | null | undefined,
 ): boolean => {
     if (!raw) return false
     const snapshot = normalizeQuestProgressSnapshot(raw)

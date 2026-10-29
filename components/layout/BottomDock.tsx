@@ -313,7 +313,7 @@ function BottomDock({ onDockHeight, renderDock = true }: BottomDockProps) {
   const containerProps = isNativeContainer ? ({ edges: ['left', 'right'] } as any) : {};
 
   return (
-    <Container style={[styles.container, !renderDock && styles.controllerOnly, showMore && styles.containerOpen]} {...containerProps}>
+    <Container testID="footer-more-controller" style={[styles.container, !renderDock && styles.controllerOnly, showMore && styles.containerOpen]} {...containerProps}>
       {renderDock && <View
         style={[
           styles.dockWrapper,

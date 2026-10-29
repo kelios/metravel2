@@ -50,7 +50,7 @@ test.describe('Travel details — sticky actions bar stays in the viewport (#211
     await expectStickyActionsInViewport(page, 1200, 'before navigation')
 
     // Бар порталится в body: экран стека, ушедший из фокуса, не должен оставлять его поверх.
-    await page.getByTestId('footer-item-quests').click()
+    await page.getByTestId('footer-dock-row').getByTestId('footer-item-quests').click()
     await expect(page).not.toHaveURL(new RegExp(`/travels/${FALLBACK_TRAVEL_SLUG}`))
     await expect(stickyActionsToolbar(page)).toHaveCount(0)
   })

@@ -108,6 +108,7 @@ export function createQuestFixture(options: QuestFixtureOptions): QuestFixture {
 
   const open = async (page: Page) => {
     let serverRow = freshServerRow()
+    let recommendationsFulfilled = false
     patched.length = 0
 
     await ensureAuthedStorageFallback(page, { userId: '1', userName: 'Quest E2E User' })
@@ -115,9 +116,10 @@ export function createQuestFixture(options: QuestFixtureOptions): QuestFixture {
     // Гео-рекомендации не входят в фикстуру визарда: живые карточки зависят от
     // каталога и медиа локального S3. Пустой ответ оставляет сеть и геометрию
     // детерминированными, не скрывая ошибки других запросов.
-    await page.route((url) => url.pathname === '/api/travels/near-location/', (route) => {
+    await page.route((url) => url.pathname === '/api/travels/near-location/', async (route) => {
       if (route.request().method() !== 'GET') return route.fallback()
-      return fulfillJson(route, { results: [], count: 0 })
+      await fulfillJson(route, { results: [], count: 0 })
+      recommendationsFulfilled = true
     })
     await page.route(`**/api/quests/by-quest-id/${questId}/**`, (route) => fulfillJson(route, questBundle))
     await page.route(`**/api/quest-progress/quest/${questId}/**`, (route) => fulfillJson(route, serverRow))
@@ -147,18 +149,12 @@ export function createQuestFixture(options: QuestFixtureOptions): QuestFixture {
     await page.setViewportSize(options.viewport ?? { width: 1280, height: 900 })
     await seedActionConsents(page)
 
-    // The intro already mounts its related-travel query. Finish this owned read
-    // before the programmed step transition; keep cancellations visible to specs.
-    const [recommendationsResponse] = await Promise.all([
-      page.waitForResponse((response) =>
-        new URL(response.url()).pathname === '/api/travels/near-location/' &&
-        response.request().method() === 'GET' && response.status() === 200,
-      { timeout: 60_000 }),
-      page.goto(`/quests/${questCity.id}/${questId}`, { waitUntil: 'domcontentloaded' }),
-    ])
+    await page.goto(`/quests/${questCity.id}/${questId}`, { waitUntil: 'domcontentloaded' })
     const startButton = page.getByRole('button', { name: 'Начать квест' })
     await expect(startButton).toBeVisible({ timeout: 60_000 })
-    expect(await recommendationsResponse.finished()).toBeNull()
+    // Await our stub's fulfilled response rather than Response.finished(): the
+    // latter stalled three parallel specs for 120s with the intro already ready.
+    await expect.poll(() => recommendationsFulfilled, { timeout: 10_000 }).toBe(true)
     await startButton.click()
   }
 

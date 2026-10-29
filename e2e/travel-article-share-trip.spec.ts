@@ -1,7 +1,7 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { DRAFT_PLACEHOLDER_PREFIX } from '../utils/travelFormNormalization';
 
-import { mockFakeAuthApis, WEB_AUTH_COOKIE_NAME } from './helpers/auth';
+import { hasWebAuthCookie, mockFakeAuthApis, WEB_AUTH_COOKIE_NAME } from './helpers/auth';
 import { installAnalyticsIntentRecorder, readAnalyticsIntents } from './helpers/analytics';
 import {
   FALLBACK_TRAVEL_ID,
@@ -21,13 +21,14 @@ const isUpsert = (url: URL) => /\/(?:api\/)?travels\/upsert\/?$/.test(url.pathna
 type FixtureState = {
   registrations: number;
   logins: number;
+  loginUrl: string | null;
   upserts: Record<string, unknown>[];
   unexpectedMutations: string[];
 };
 
 async function prepareArticleFlow(page: Page): Promise<FixtureState> {
   const state: FixtureState = {
-    registrations: 0, logins: 0, upserts: [], unexpectedMutations: [],
+    registrations: 0, logins: 0, loginUrl: null, upserts: [], unexpectedMutations: [],
   };
 
   await preacceptCookies(page);
@@ -72,11 +73,13 @@ async function prepareArticleFlow(page: Page): Promise<FixtureState> {
   await page.route((url) => url.pathname === '/api/user/login/', async (route) => {
     if (route.request().method() !== 'POST') return route.fallback();
     state.logins += 1;
-    const secure = new URL(route.request().url()).protocol === 'https:' ? '; Secure' : '';
+    state.loginUrl = route.request().url();
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      headers: { 'set-cookie': `${WEB_AUTH_COOKIE_NAME}=article-reader-fixture; Path=/; HttpOnly; SameSite=Lax${secure}` },
+      // Match the backend cookie even on trustworthy HTTP loopback, as the
+      // shared auth helper and Google-login fixture already do.
+      headers: { 'set-cookie': `${WEB_AUTH_COOKIE_NAME}=article-reader-fixture; Path=/; HttpOnly; Secure; SameSite=Lax` },
       body: JSON.stringify({
         token: 'article-reader-fixture', refresh: 'article-reader-refresh-fixture',
         id: 1, name: 'Article reader', email: READER_EMAIL, is_superuser: false,
@@ -117,20 +120,21 @@ async function prepareArticleFlow(page: Page): Promise<FixtureState> {
   return state;
 }
 
-function expectCreateContext(href: string, origin: string): void {
+function expectCreateContext(href: string, origin: string, mode?: 'note'): void {
   const target = new URL(href, origin);
   expect(target.origin).toBe(origin);
   expect(target.pathname).toBe('/travel/new');
   expect(Object.fromEntries(target.searchParams)).toEqual({
     source_travel_id: String(FALLBACK_TRAVEL_ID), country: 'PL', place: PLACE,
+    ...(mode ? { mode } : {}),
   });
 }
 
-async function expectAuthContext(page: Page, pathname: '/registration' | '/login'): Promise<void> {
+async function expectAuthContext(page: Page, pathname: '/registration' | '/login', mode?: 'note'): Promise<void> {
   await expect(page).toHaveURL((url) => url.pathname === pathname);
   const authUrl = new URL(page.url());
   expect(authUrl.searchParams.get('intent')).toBe('share-trip');
-  expectCreateContext(authUrl.searchParams.get('redirect') ?? '', authUrl.origin);
+  expectCreateContext(authUrl.searchParams.get('redirect') ?? '', authUrl.origin, mode);
 }
 
 function activeAuthForm(page: Page, route: '/registration' | '/login'): Locator {
@@ -153,15 +157,46 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
   test.describe(`Article share-trip roundtrip ${viewport.width}px`, () => {
     test.use({ viewport, storageState: { cookies: [], origins: [] } });
 
+    test('primary invitation keeps note mode and article context through login', async ({ page }) => {
+      const state = await prepareArticleFlow(page);
+      await page.goto(`/travels/${FALLBACK_TRAVEL_SLUG}`, { waitUntil: 'domcontentloaded' });
+      const invite = page.getByTestId('travel-article-share-trip-button');
+      await expect(invite).toHaveAccessibleName('Были здесь? Расскажите о своей поездке');
+      await invite.click();
+      await expectAuthContext(page, '/registration', 'note');
+      await activeAuthForm(page, '/registration')
+        .getByRole('button', { name: 'Войти в аккаунт', exact: true }).click();
+      await expectAuthContext(page, '/login', 'note');
+      const form = activeAuthForm(page, '/login');
+      await fillAuthForm(form);
+      await form.getByRole('button', { name: 'Войти', exact: true }).click();
+
+      await expect(page.getByTestId('travel-note.root')).toBeVisible();
+      expectCreateContext(page.url(), new URL(page.url()).origin, 'note');
+      await expect(page.locator('#field-name input')).toHaveCount(0);
+      await expect(page.getByRole('progressbar')).toHaveAttribute('aria-label', /^Шаг 1 из 2:/);
+      // The mobile header delegates its primary action to WizardStepFooter.
+      const next = page.getByTestId(viewport.width === 390 ? 'travel-note.footer-next' : 'travel-note.next');
+      await expect(next).toBeVisible();
+      await next.click();
+      await expect(page.getByTestId('travel-note.name')).toHaveValue(PLACE);
+      await expect(page.getByTestId('travel-note.story')).toHaveValue('');
+      expect(state.registrations).toBe(0);
+      expect(state.logins).toBe(1);
+      expect(state.upserts).toEqual([]);
+      expect(state.unexpectedMutations).toEqual([]);
+    });
+
     test('email registration without a session retains context through login and seeds an editable own trip', async ({ page }, testInfo) => {
       const state = await prepareArticleFlow(page);
       const pageErrors: string[] = [];
       page.on('pageerror', (error) => pageErrors.push(error.message));
       await page.goto(`/travels/${FALLBACK_TRAVEL_SLUG}`, { waitUntil: 'domcontentloaded' });
 
-      const invite = page.getByTestId('travel-article-share-trip-button');
+      // This regression covers the full editor, including changing the seeded country.
+      const invite = page.getByTestId('travel-article-share-trip-full-button');
       await expect(invite).toBeVisible();
-      await expect(invite).toHaveAccessibleName('Были здесь? Расскажите о своей поездке');
+      await expect(invite).toHaveAccessibleName('Написать полную статью с маршрутом');
       await invite.scrollIntoViewIfNeeded();
       const box = await invite.boundingBox();
       expect(box?.height, 'Invitation must be a usable touch target').toBeGreaterThanOrEqual(44);
@@ -207,8 +242,14 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       await expect(countries).toContainText('Польша');
       expectCreateContext(page.url(), new URL(page.url()).origin);
       expect(state.logins).toBe(1);
-      const cookie = (await page.context().cookies()).find((entry) => entry.name === WEB_AUTH_COOKIE_NAME);
-      expect(cookie?.httpOnly, 'Login must establish a real browser cookie session').toBe(true);
+      expect(state.loginUrl, 'The fixture must observe the login request').not.toBeNull();
+      // Keep the whole cookie jar: Playwright's URL filter drops Secure cookies
+      // on HTTP loopback. The auth helper validates this session's host and path.
+      const cookies = await page.context().cookies();
+      expect(hasWebAuthCookie(cookies, state.loginUrl!), 'Login must establish a browser session on its API origin').toBe(true);
+      const cookie = cookies.find((entry) => hasWebAuthCookie([entry], state.loginUrl!));
+      expect(cookie?.httpOnly, 'The matching session cookie must be HttpOnly').toBe(true);
+      expect(cookie?.secure, 'The matching session cookie must preserve the backend Secure contract').toBe(true);
 
       const editor = viewport.width === 390
         ? page.getByTestId('travel-wizard.basic.description.mobile-input')

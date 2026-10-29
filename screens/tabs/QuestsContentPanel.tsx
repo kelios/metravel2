@@ -327,7 +327,10 @@ function QuestsContentPanel({
     // а не в липкой шапке: шапка обязана укладываться в ~20% вьюпорта.
     const titleBlock = (
         <View
-            style={isMobile ? styles.mobileTitleRow : styles.contentTitleBlock}
+            style={isMobile ? styles.mobileTitleRow : [
+                styles.contentTitleBlock,
+                filtersActive && styles.filteredContentTitleBlock,
+            ]}
             testID={isMobile ? 'quests-mobile-title' : undefined}
         >
             <Text

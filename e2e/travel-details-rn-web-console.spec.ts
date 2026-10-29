@@ -16,6 +16,7 @@ import {
   preacceptCookies,
   tid,
 } from './helpers/navigation'
+import { waitForRuntimeHeader } from './helpers/chrome'
 
 const RN_WEB_TEXT_NODE_ERROR =
   'Unexpected text node: . A text node cannot be a child of a <View>.'
@@ -143,7 +144,7 @@ function attachApiResponseCollector(page: Page) {
 async function waitForTravelDetails(page: Page) {
   await expect(page.getByTestId('travel-details-page')).toBeVisible({ timeout: 60_000 })
   await expect(page.getByTestId('travel-details-description')).toBeVisible({ timeout: 30_000 })
-  await expect(page.locator('[data-header-slot="account"]')).toHaveCount(0)
+  await waitForRuntimeHeader(page)
   await expect(page.locator('[data-header-context-fallback="travel"]')).toHaveCount(0)
 }
 

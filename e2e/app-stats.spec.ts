@@ -3,6 +3,7 @@ import type { Page } from '@playwright/test'
 import { test, expect } from './fixtures'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
 import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth'
+import { waitForMoreSheetController } from './helpers/chrome'
 
 const STATS = {
   days: [{ date: '2026-10-27', new_installs: 2, active_installs: 5, sessions: 8 }],
@@ -86,7 +87,8 @@ test.describe('статистика приложения для админист
     await preacceptCookies(page)
     await gotoWithRetry(page, '/', { waitUntil: 'domcontentloaded', timeout: 60_000, attempts: 4 })
 
-    await page.getByTestId('footer-item-more').click()
+    await waitForMoreSheetController(page)
+    await page.getByTestId('footer-dock-row').getByTestId('footer-item-more').click()
     await expect(page.getByTestId('footer-more-item-app-stats')).toBeVisible()
   })
 

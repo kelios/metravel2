@@ -13,7 +13,7 @@ function fixture() {
   } as unknown as Page
   const matches = (matcher: Matcher, url: URL) => typeof matcher === 'function' ? matcher(url) :
     new RegExp('^' + matcher.split('**').map((part) => part.split('*').map((value) => value.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('[^/]*')).join('.*') + '$').test(url.href)
-  const request = async (pathname: string, method = 'GET', omitExactEndpoint = false) => {
+  const request = async (pathname: string, method = 'GET', omitExactEndpoint = false, payload?: unknown) => {
     const url = new URL(pathname, 'https://example.test')
     const candidates = routes.filter(({ matcher }) => matches(matcher, url) && !(omitExactEndpoint && typeof matcher === 'function')).reverse()
     const fulfill = jest.fn()
@@ -21,7 +21,7 @@ function fixture() {
     const run = async (index: number): Promise<unknown> => {
       if (!candidates[index]) return continueRequest()
       return candidates[index].handler({
-        request: () => ({ method: () => method }), fulfill,
+        request: () => ({ method: () => method, postDataJSON: () => payload, url: () => url.href }), fulfill,
         fallback: () => run(index + 1), continue: continueRequest,
       } as unknown as Route)
     }
@@ -87,4 +87,30 @@ it.each([null, '', 'bad', '-1', '1.5'])('defaults invalid fixture identity %s co
   await mockFakeAuthApis(page)
   expect(JSON.parse((await request('/api/user/me/')).response.body).id).toBe(1)
   expect(JSON.parse((await request('/api/user/1/profile/')).response.body)).toMatchObject({ id: 1, user: 1 })
+})
+
+it.each(['ru', 'be', 'uk', 'pl', 'en'])('owns the authenticated locale-only profile sync for %s', async (language) => {
+  const { page, request } = fixture()
+  await ensureAuthedStorageFallback(page, { userId: '27' })
+  await mockFakeAuthApis(page)
+  const result = await request('/api/user/27/profile/update/', 'PUT', false, { language })
+  expect(result.response.status).toBe(200)
+  expect(JSON.parse(result.response.body)).toMatchObject({ id: 27, user: 27, language })
+  expect(result.continueRequest).not.toHaveBeenCalled()
+})
+
+it('does not claim profile edits or another user\'s language sync', async () => {
+  const { page, request } = fixture()
+  await ensureAuthedStorageFallback(page, { userId: '27' })
+  await mockFakeAuthApis(page)
+  for (const [pathname, method, payload] of [
+    ['/api/user/27/profile/update/', 'PUT', { language: 'invalid' }],
+    ['/api/user/27/profile/update/', 'PUT', { language: 'en', first_name: 'New' }],
+    ['/api/user/27/profile/update/', 'PATCH', { language: 'en' }],
+    ['/api/user/1/profile/update/', 'PUT', { language: 'en' }],
+  ] as const) {
+    const result = await request(pathname, method, false, payload)
+    expect(result.fulfill).not.toHaveBeenCalled()
+    expect(result.continueRequest).toHaveBeenCalledTimes(1)
+  }
 })

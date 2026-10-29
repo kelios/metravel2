@@ -578,20 +578,18 @@ test.describe('Profile AwardsHub — visual verification', () => {
     await expect(earnedText).toBeVisible({ timeout: 5_000 })
 
     // Also assert badge name or description is visible (semantic check, not DOM snapshot)
-    // MOCK_BADGES[9] = 'crowd-favorite', name = 'Любимец публики'
-    await expect(sheet.getByText(/Любимец публики/)).toBeVisible()
+    // The title belongs to the surrounding BottomSheet header.
+    await expect(page.getByTestId('bottom-sheet-panel').filter({ has: sheet })
+      .getByRole('heading', { name: 'Любимец публики', exact: true })).toBeVisible()
 
     await page.screenshot({
       path: path.join(SCREENSHOTS_DIR, 'desktop-badge-detail.png'),
     })
 
-    // Close sheet by pressing backdrop/close button
-    await page.keyboard.press('Escape')
-    // Fallback: click close button if Escape didn't dismiss
-    await sheet.waitFor({ state: 'detached', timeout: 3_000 }).catch(async () => {
-      await page.getByRole('button', { name: /Закрыть/ }).first().click()
-      await sheet.waitFor({ state: 'detached', timeout: 3_000 }).catch(() => {})
-    })
+    // The backdrop has a different close label and its center is behind the panel.
+    await page.getByTestId('bottom-sheet-panel').filter({ has: sheet })
+      .getByRole('button', { name: 'Закрыть', exact: true }).click()
+    await expect(sheet).toHaveCount(0)
   })
 
   test('mobile — click recent-award opens BadgeDetailSheet with earned date', async ({ page }) => {
@@ -611,18 +609,17 @@ test.describe('Profile AwardsHub — visual verification', () => {
     await sheet.waitFor({ state: 'visible', timeout: 8_000 })
 
     await expect(sheet.getByText(/Получен/)).toBeVisible({ timeout: 5_000 })
-    await expect(sheet.getByText(/Любимец публики/)).toBeVisible()
+    await expect(page.getByTestId('bottom-sheet-panel').filter({ has: sheet })
+      .getByRole('heading', { name: 'Любимец публики', exact: true })).toBeVisible()
 
     await page.screenshot({
       path: path.join(SCREENSHOTS_DIR, 'mobile-badge-detail.png'),
     })
 
-    // Close sheet
-    await page.keyboard.press('Escape')
-    await sheet.waitFor({ state: 'detached', timeout: 3_000 }).catch(async () => {
-      await page.getByRole('button', { name: /Закрыть/ }).first().click()
-      await sheet.waitFor({ state: 'detached', timeout: 3_000 }).catch(() => {})
-    })
+    // The backdrop has a different close label and its center is behind the panel.
+    await page.getByTestId('bottom-sheet-panel').filter({ has: sheet })
+      .getByRole('button', { name: 'Закрыть', exact: true }).click()
+    await expect(sheet).toHaveCount(0)
   })
 
   test('desktop — "recent-awards-how" link opens AchievementsGalleryModal', async ({ page }) => {

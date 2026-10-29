@@ -32,61 +32,21 @@ async function openUserPoints(page: any): Promise<void> {
 }
 
 test.describe('User points', () => {
-  async function openFiltersPanelTab(page: any) {
-    const legacyTabButton = page.getByTestId('userpoints-panel-tab-filters').first();
-    const segmentedTabButton = page.getByTestId('segmented-filters').first();
-    const panelTabs = page.getByRole('radiogroup', { name: 'Панель' }).first();
-    const filtersRadio = panelTabs.getByRole('radio', { name: 'Фильтры', exact: true }).first();
-    const actionsButton = page.getByTestId('userpoints-actions-open').first();
-
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if ((await filtersRadio.count()) > 0) {
-        await filtersRadio.click({ timeout: 30_000, force: true }).catch(() => undefined);
-        await filtersRadio.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
-      } else {
-        const tabButton = (await segmentedTabButton.count()) > 0 ? segmentedTabButton : legacyTabButton;
-        await tabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
-        await tabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
-      }
-      await page.waitForTimeout(150);
-
-      if ((await actionsButton.count()) > 0) {
-        await expect(actionsButton).toBeVisible({ timeout: 5_000 });
-        return;
-      }
-    }
-
-    await expect(actionsButton).toBeVisible({ timeout: 30_000 });
+  async function openFiltersPanelTab(page: import('@playwright/test').Page) {
+    const panel = page.getByTestId('userpoints-screen').getByRole('radiogroup', { name: 'Панель', exact: true });
+    const filters = panel.getByTestId('segmented-filters');
+    await filters.click();
+    await expect(filters).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('userpoints-actions-open')).toBeVisible({ timeout: 30_000 });
   }
 
-  async function openListPanelTab(page: any) {
-    const legacyTabButton = page.getByTestId('userpoints-panel-tab-list').first();
-    const segmentedTabButton = page.getByTestId('segmented-list').first();
-    const panelTabs = page.getByRole('radiogroup', { name: 'Панель' }).first();
-    const listRadio = panelTabs.getByRole('radio', { name: /^Список/, exact: false }).first();
-    const searchBox = page.getByTestId('userpoints-list-search').first();
-    const listContent = page.getByTestId('userpoints-panel-content-list').first();
-
-    // RN-web overlays/animations can occasionally swallow the first click.
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if ((await listRadio.count()) > 0) {
-        await listRadio.click({ timeout: 30_000, force: true }).catch(() => undefined);
-        await listRadio.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
-      } else {
-        const tabButton = (await segmentedTabButton.count()) > 0 ? segmentedTabButton : legacyTabButton;
-        await tabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
-        // Fallback: sometimes Playwright click doesn't trigger RN-web onPress reliably.
-        await tabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
-      }
-      await page.waitForTimeout(150);
-
-      if ((await listContent.count()) > 0 && (await searchBox.count()) > 0) {
-        await expect(listContent).toBeVisible({ timeout: 5_000 });
-        return;
-      }
-    }
-
-    await expect(listContent).toBeVisible({ timeout: 30_000 });
+  async function openListPanelTab(page: import('@playwright/test').Page) {
+    const panel = page.getByTestId('userpoints-screen').getByRole('radiogroup', { name: 'Панель', exact: true });
+    const list = panel.getByTestId('segmented-list');
+    await list.click();
+    await expect(list).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('userpoints-panel-content-list')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('userpoints-list-search')).toBeVisible();
   }
 
   async function installTileMock(page: any) {
@@ -195,8 +155,8 @@ test.describe('User points', () => {
 
     // Search + recommendations live in the Filters tab.
     await openFiltersPanelTab(page);
-    await expect(page.getByRole('textbox', { name: 'Поиск по точкам', exact: true })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole('button', { name: '3 случайные точки' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('searchbox', { name: 'Поиск по точкам', exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('button', { name: 'Выбрать 3 случайные точки', exact: true })).toBeVisible({ timeout: 30_000 });
 
     // List item card should also expose the same coordinate actions.
     await openListPanelTab(page);
@@ -403,7 +363,7 @@ test.describe('User points', () => {
     await expect(page.locator('.leaflet-container').first()).toBeVisible({ timeout: 30_000 });
 
     await openFiltersPanelTab(page);
-    const searchBox = page.getByRole('textbox', { name: 'Поиск по точкам', exact: true });
+    const searchBox = page.getByRole('searchbox', { name: 'Поиск по точкам', exact: true });
     await searchBox.fill('Warsaw');
 
     // Wait for debounce + fetch.

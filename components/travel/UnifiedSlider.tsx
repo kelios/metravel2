@@ -730,7 +730,7 @@ const UnifiedSliderComponent = (props: SliderProps, ref: React.Ref<SliderRef>) =
           }}
         />
       </View>
-      {showCaption && <SliderCaption caption={images[currentIndex]?.caption} />}
+      {showCaption && <SliderCaption caption={images[currentIndex]?.caption} currentIndex={currentIndex} total={images.length} />}
     </View>
   );
 };

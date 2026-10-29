@@ -107,7 +107,7 @@ export function ProfileTravelListView({
   const emptyBody = isSectionTab ? null : isTravelsTabLoading ? (
     listSkeleton
   ) : (
-    <View style={styles.emptyWrap}>
+    <View style={styles.fullRow}>
       <EmptyState {...emptyStateProps} density="compact" />
     </View>
   );
@@ -126,7 +126,7 @@ export function ProfileTravelListView({
         {isSectionTab ? null : isTravelsTabLoading ? (
           <View testID="profile-travel-list">{listSkeleton}</View>
         ) : currentData.length === 0 ? (
-          <View style={styles.emptyWrap} {...SCREEN_CONTENT_FIRST_PROPS}>
+          <View style={styles.fullRow} {...SCREEN_CONTENT_FIRST_PROPS}>
             <EmptyState {...emptyStateProps} density="compact" />
           </View>
         ) : (

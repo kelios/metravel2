@@ -64,7 +64,9 @@ test.describe('Messages — deterministic user flows', () => {
           const errors: string[] = [];
           let messageRequests = 0;
           page.on('pageerror', (error) => errors.push(error.message));
-          page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+          page.on('console', (message) => {
+            if (message.type() === 'error') errors.push(`${message.text()} (${message.location().url})`);
+          });
           page.on('request', (request) => {
             if (new URL(request.url()).pathname === '/api/messages/') messageRequests += 1;
           });
@@ -515,7 +517,21 @@ test.describe('Messages — deterministic user flows', () => {
     await expect(deleteAction).toHaveCSS('opacity', '1');
 
     await page.keyboard.press('Tab');
-    await expect(deleteButton).toBeFocused();
+    const focusAfterTab = await page.evaluate(() => {
+      const active = document.activeElement;
+      const row = document.querySelector('[data-testid="thread-item-10"]');
+      const describe = (element: Element) => ({
+        tag: element.tagName,
+        label: element.getAttribute('aria-label'),
+        testId: element.getAttribute('data-testid'),
+        tabIndex: element.getAttribute('tabindex'),
+      });
+      return {
+        active: active ? describe(active) : null,
+        rowTabStops: [...(row?.querySelectorAll('[tabindex]') ?? [])].map(describe),
+      };
+    });
+    await expect(deleteButton, `Tab from dialog row: ${JSON.stringify(focusAfterTab)}`).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(page.getByLabel('Подтвердить удаление диалога')).toBeVisible();
   });

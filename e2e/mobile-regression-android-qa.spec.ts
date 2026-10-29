@@ -394,7 +394,7 @@ test.describe('@mobile BUG-CLASS-8: no layout artifacts on mobile', () => {
 
     // The layout invariant is valid for success and recoverable API-error states.
     await expect(page.getByRole('heading', { name: 'Места', level: 1 })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByRole('textbox', { name: 'Найти место' })).toBeVisible();
+    await expect(page.getByRole('searchbox', { name: 'Найти место', exact: true })).toBeVisible();
 
     // Scroll to bottom
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));

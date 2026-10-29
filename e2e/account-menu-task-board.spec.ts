@@ -57,15 +57,21 @@ const expectCompactAccountMenu = async (menu: any) => {
   const layout = await menu.evaluate((element: HTMLElement) => {
     const rect = element.getBoundingClientRect()
     return {
+      top: rect.top,
       bottom: rect.bottom,
-      clientHeight: element.clientHeight,
-      scrollHeight: element.scrollHeight,
+      overflowY: getComputedStyle(element).overflowY,
       viewportHeight: window.innerHeight,
     }
   })
 
+  expect(layout.top).toBeGreaterThanOrEqual(7)
   expect(layout.bottom).toBeLessThanOrEqual(layout.viewportHeight - 7)
-  expect(layout.scrollHeight).toBeLessThanOrEqual(layout.clientHeight + 1)
+  // Admin actions can exceed the panel height; they remain reachable within
+  // the viewport through the menu's own scroll area.
+  expect(layout.overflowY).toBe('auto')
+  const lastAction = menu.getByRole('button', { name: 'Документы', exact: true })
+  await lastAction.scrollIntoViewIfNeeded()
+  await expect(lastAction).toBeInViewport()
 }
 
 test.describe('@smoke AccountMenu: task-board item visibility', () => {
@@ -89,10 +95,17 @@ test.describe('@smoke AccountMenu: task-board item visibility', () => {
     await menuAction(page, 'Путешествия').click()
     await expect(menu.getByRole('link', { name: 'Добавить путешествие', exact: true })).toBeVisible()
     // #2829: рядом с полным мастером — вход в короткую заметку.
-    await expect(menu.getByRole('link', { name: 'Короткая заметка', exact: true }))
-      .toHaveAttribute('href', '/travel/new?mode=note')
+    const noteLink = menu.getByRole('link', { name: 'Короткая заметка', exact: true })
+    await expect(noteLink).toBeVisible()
     await expect(taskBoardItem(page)).toHaveCount(0)
     await expectCompactAccountMenu(menu)
+
+    const documentStartedAt = await page.evaluate(() => performance.timeOrigin)
+    await noteLink.click()
+    await expect(page).toHaveURL((url) => url.pathname === '/travel/new' && url.searchParams.get('mode') === 'note')
+    await expect(page.getByTestId('travel-note.root')).toBeVisible({ timeout: 30_000 })
+    await expect(menu).toBeHidden()
+    expect(await page.evaluate(() => performance.timeOrigin)).toBe(documentStartedAt)
   })
 
   test('regular authenticated user does NOT see the task-board item', async ({ page }) => {

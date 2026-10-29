@@ -10,6 +10,7 @@ import {
   preacceptCookies,
 } from './helpers/navigation'
 import { collectMetrics, injectPerfObservers } from './helpers/perfBudget'
+import { waitForRuntimeHeader as waitForRuntimeHeaderControls } from './helpers/chrome'
 
 type StaticHeaderGeometry = {
   bottom: number
@@ -86,7 +87,7 @@ async function readStaticHeader(
 }
 
 async function waitForRuntimeHeader(page: Page) {
-  await expect(page.locator('[data-header-slot="account"]')).toHaveCount(0)
+  await waitForRuntimeHeaderControls(page)
   await expect(page.locator('[data-header-context-fallback="travel"]')).toHaveCount(0)
 
   const box = await page.getByTestId('main-header').boundingBox()
@@ -195,7 +196,7 @@ test.describe('Travel header hydration geometry #1563', () => {
 
       await gotoWithRetry(page, '/quests/minsk/header-hydration-control')
       await expect(page.getByTestId('main-header')).toBeVisible({ timeout: 30_000 })
-      await expect(page.locator('[data-header-slot="account"]')).toHaveCount(0)
+      await waitForRuntimeHeaderControls(page)
       await expect(page.getByTestId('header-context-bar')).toBeVisible({ timeout: 30_000 })
       await expect(page.locator('[data-header-context-fallback="travel"]')).toHaveCount(0)
 

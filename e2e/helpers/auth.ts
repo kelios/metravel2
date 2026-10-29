@@ -3,6 +3,7 @@
  */
 
 import type { Page } from '@playwright/test';
+import { isSupportedLocale } from '@/i18n/config';
 
 /**
  * Проверяет, авторизован ли пользователь
@@ -202,6 +203,22 @@ export async function mockFakeAuthApis(page: Page): Promise<void> {
       });
     }
     return route.continue();
+  });
+
+  // Explicit locale preferences sync on session hydration, including reloads.
+  // Own only that write; profile-form mutations retain their scenario handlers.
+  await page.route((url) => /^\/api\/user\/\d+\/profile\/update\/$/.test(url.pathname), async (route) => {
+    if (route.request().method() !== 'PUT') return route.fallback();
+    const payload = route.request().postDataJSON() as Record<string, unknown> | null;
+    if (!payload || Object.keys(payload).length !== 1 || !isSupportedLocale(payload.language)) {
+      return route.fallback();
+    }
+    const id = await fixtureUserId();
+    if (new URL(route.request().url()).pathname !== `/api/user/${id}/profile/update/`) return route.fallback();
+    return route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ id, user: id, avatar: null, language: payload.language }),
+    });
   });
 
   // Mock token refresh to prevent 401 cascade

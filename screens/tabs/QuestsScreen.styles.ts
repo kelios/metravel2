@@ -207,6 +207,11 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             flexShrink: 1,
             minWidth: 0,
         },
+        filteredContentTitleBlock: {
+            // A saved slice gains reset/sort chips after loading. Reserve its
+            // two 28px rows plus the gap from the first frame (global.css).
+            minHeight: Platform.OS === 'web' ? 2 * 28 + spacing.xxs : undefined,
+        },
         mobileTitleRow: {
             paddingHorizontal: headerPadding,
             paddingTop: spacing.sm,

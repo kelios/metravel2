@@ -12,8 +12,7 @@ interface ChipProps {
   selected?: boolean;
   count?: number;
   /**
-   * Число ещё грузится: слот счётчика занят невидимым «(0)», чтобы появление числа
-   * не расширяло чип и не сдвигало соседние (#2114).
+   * Число ещё грузится: счётчик занимает тот же слот, что после загрузки.
    */
   countPending?: boolean;
   icon?: React.ReactNode;
@@ -113,6 +112,12 @@ function Chip({
       color: colors.textMuted,
       fontSize: DESIGN_TOKENS.typography.sizes.sm,
       fontWeight: '500',
+      // Loading `(0)` must reserve room for a two-digit result, not only zero.
+      // Tabular digits also keep equal-length counts from changing the width.
+      minWidth: spacing.xl,
+      fontVariant: ['tabular-nums'],
+      textAlign: 'center',
+      flexShrink: 0,
     },
     countSelected: {
       color: colors.primaryText,

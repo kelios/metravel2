@@ -872,6 +872,12 @@ select:focus-visible {
     min-height: 28px !important;
   }
 
+  /* Hydration replaces the SSR mobile-title node before restoring selection.
+     Keep the same inner title height throughout that intermediate commit. */
+  html.quests-slice-restored [data-testid="quests-content-header"]:not(:has([data-testid="quests-mobile-chips"])) > :first-child {
+    min-height: 60px;
+  }
+
   [data-testid="quests-content-body"] {
     padding: 16px 24px 24px !important;
   }
@@ -884,6 +890,14 @@ select:focus-visible {
   [data-testid="quests-seo-lead"] {
     font-size: 16px !important;
     line-height: 26px !important;
+    /* SSR starts with the phone's three-line Text; desktop must already show
+       the full lead before useBreakpoints replaces that markup. */
+    display: block !important;
+    -webkit-line-clamp: unset !important;
+  }
+
+  [data-testid="quests-seo-lead-toggle"] {
+    display: none !important;
   }
 
   [data-testid="quests-seo-scenario-link-text"] {
@@ -912,6 +926,11 @@ select:focus-visible {
     padding: 16px 24px 8px !important;
   }
 
+  /* Filtered title: two 28px rows + 4px gap + this SSR node's padding. */
+  html.quests-slice-restored [data-testid="quests-mobile-title"] {
+    min-height: 84px;
+  }
+
   [data-testid="quests-content-header"]:has([data-testid="quests-mobile-chips"]) {
     flex: 0 0 100% !important;
     padding: 0 24px 12px !important;
@@ -924,6 +943,10 @@ select:focus-visible {
   [data-testid="quests-mobile-title"] {
     flex: 0 1 auto !important;
     padding: 16px 0 12px 24px !important;
+  }
+
+  html.quests-slice-restored [data-testid="quests-mobile-title"] {
+    min-height: 88px;
   }
 
   [data-testid="quests-content-header"]:has([data-testid="quests-mobile-chips"]) {
@@ -1768,3 +1791,29 @@ html[data-season] [data-header-logo-travel] {
 @media(min-width:1280px) and (min-height:1000px){[data-home-responsive-hero="true"] [data-home-book-note-meta]{display:block!important}}
 @media(min-width:1280px){[data-home-responsive-hero="true"] [data-home-book-wrapper]{--home-book-width:min(calc(100vw - 80px),1200px)!important;--home-book-height:max(240px,min(calc(100vh - 180px),calc(var(--home-book-width) * 0.7355769230769231)))!important;--home-book-usable-height:calc(var(--home-book-height) * 0.61)!important;width:var(--home-book-width)!important;height:var(--home-book-height)!important;grid-template-columns:49% 51%!important}[data-home-responsive-hero="true"] [data-home-book-left]{padding-top:calc(var(--home-book-height) * 0.132)!important;padding-bottom:calc(var(--home-book-height) * 0.258)!important;padding-left:calc(var(--home-book-width) * 0.156)!important;padding-right:calc(var(--home-book-width) * 0.0345)!important}[data-home-responsive-hero="true"] [data-home-book-title]{font-size:max(24px,min(1.9vw,32px,calc(var(--home-book-usable-height) * .1)))!important;line-height:1.2!important}[data-home-responsive-hero="true"] [data-home-book-subtitle]{font-size:max(12px,min(0.85vw,13px,calc(var(--home-book-usable-height) * .03)))!important;line-height:1.5!important}[data-home-responsive-hero="true"] [data-home-book-media]{--home-week-width:min(calc(var(--home-book-width) * 0.312),calc(var(--home-book-usable-height) * 1.5))!important;top:calc(var(--home-book-height) * 0.132 + (var(--home-book-usable-height) - var(--home-week-width) / 1.5) / 2)!important;width:var(--home-week-width)!important;margin-left:calc(var(--home-book-width) * 0.026 + (var(--home-book-width) * 0.312 - var(--home-week-width)) / 2)!important}}@media(min-width:1480px){[data-home-responsive-hero="true"] [data-home-book-wrapper]{--home-book-width:min(calc(100vw - 80px),1200px)!important;--home-book-height:max(240px,min(calc(100vh - 180px),calc(var(--home-book-width) * 0.7355769230769231)))!important;--home-book-usable-height:calc(var(--home-book-height) * 0.61)!important;width:var(--home-book-width)!important;height:var(--home-book-height)!important;grid-template-columns:50% 50%!important}[data-home-responsive-hero="true"] [data-home-book-left]{padding-top:calc(var(--home-book-height) * 0.132)!important;padding-bottom:calc(var(--home-book-height) * 0.258)!important;padding-left:calc(var(--home-book-width) * 0.156)!important;padding-right:calc(var(--home-book-width) * 0.0445)!important}[data-home-responsive-hero="true"] [data-home-book-title]{font-size:max(24px,min(2.1vw,38px,calc(var(--home-book-usable-height) * .1)))!important;line-height:1.2!important}[data-home-responsive-hero="true"] [data-home-book-subtitle]{font-size:max(12px,min(0.9vw,14px,calc(var(--home-book-usable-height) * .03)))!important;line-height:1.5!important}[data-home-responsive-hero="true"] [data-home-book-media]{--home-week-width:min(calc(var(--home-book-width) * 0.30599999999999994),calc(var(--home-book-usable-height) * 1.5))!important;top:calc(var(--home-book-height) * 0.132 + (var(--home-book-usable-height) - var(--home-week-width) / 1.5) / 2)!important;width:var(--home-week-width)!important;margin-left:calc(var(--home-book-width) * 0.032 + (var(--home-book-width) * 0.30599999999999994 - var(--home-week-width)) / 2)!important}}@media(min-width:1920px){[data-home-responsive-hero="true"] [data-home-book-wrapper]{--home-book-width:min(calc(100vw - 80px),1360px)!important;--home-book-height:max(240px,min(calc(100vh - 180px),calc(var(--home-book-width) * 0.7355769230769231)))!important;--home-book-usable-height:calc(var(--home-book-height) * 0.61)!important;width:var(--home-book-width)!important;height:var(--home-book-height)!important;grid-template-columns:50% 50%!important}[data-home-responsive-hero="true"] [data-home-book-left]{padding-top:calc(var(--home-book-height) * 0.132)!important;padding-bottom:calc(var(--home-book-height) * 0.258)!important;padding-left:calc(var(--home-book-width) * 0.156)!important;padding-right:calc(var(--home-book-width) * 0.0445)!important}[data-home-responsive-hero="true"] [data-home-book-title]{font-size:max(24px,min(2.4vw,58px,calc(var(--home-book-usable-height) * .1)))!important;line-height:1.2!important}[data-home-responsive-hero="true"] [data-home-book-subtitle]{font-size:max(12px,min(0.95vw,18px,calc(var(--home-book-usable-height) * .03)))!important;line-height:1.5!important}[data-home-responsive-hero="true"] [data-home-book-media]{--home-week-width:min(calc(var(--home-book-width) * 0.30599999999999994),calc(var(--home-book-usable-height) * 1.5))!important;top:calc(var(--home-book-height) * 0.132 + (var(--home-book-usable-height) - var(--home-week-width) / 1.5) / 2)!important;width:var(--home-week-width)!important;margin-left:calc(var(--home-book-width) * 0.032 + (var(--home-book-width) * 0.30599999999999994 - var(--home-week-width)) / 2)!important}}@media(min-width:2560px){[data-home-responsive-hero="true"] [data-home-book-wrapper]{--home-book-width:min(calc(100vw - 80px),1520px)!important;--home-book-height:max(240px,min(calc(100vh - 180px),calc(var(--home-book-width) * 0.7355769230769231)))!important;--home-book-usable-height:calc(var(--home-book-height) * 0.61)!important;width:var(--home-book-width)!important;height:var(--home-book-height)!important;grid-template-columns:50% 50%!important}[data-home-responsive-hero="true"] [data-home-book-left]{padding-top:calc(var(--home-book-height) * 0.132)!important;padding-bottom:calc(var(--home-book-height) * 0.258)!important;padding-left:calc(var(--home-book-width) * 0.156)!important;padding-right:calc(var(--home-book-width) * 0.0445)!important}[data-home-responsive-hero="true"] [data-home-book-title]{font-size:max(24px,min(2.8vw,74px,calc(var(--home-book-usable-height) * .1)))!important;line-height:1.2!important}[data-home-responsive-hero="true"] [data-home-book-subtitle]{font-size:max(12px,min(1.1vw,22px,calc(var(--home-book-usable-height) * .03)))!important;line-height:1.5!important}[data-home-responsive-hero="true"] [data-home-book-media]{--home-week-width:min(calc(var(--home-book-width) * 0.31999999999999995),calc(var(--home-book-usable-height) * 1.5))!important;top:calc(var(--home-book-height) * 0.132 + (var(--home-book-usable-height) - var(--home-week-width) / 1.5) / 2)!important;width:var(--home-week-width)!important;margin-left:calc(var(--home-book-width) * 0.028 + (var(--home-book-width) * 0.31999999999999995 - var(--home-week-width)) / 2)!important}}
 /* generated:home-responsive:end */
+
+/* Caption-only typeface; no preload and no late font-swap layout shift. */
+@font-face {
+  font-family: 'LoraCaption';
+  font-style: italic;
+  font-weight: 400;
+  font-display: optional;
+  src: url('/assets/fonts/lora-italic-v37-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'LoraCaption';
+  font-style: italic;
+  font-weight: 400;
+  font-display: optional;
+  src: url('/assets/fonts/lora-italic-v37-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'LoraCaption';
+  font-style: italic;
+  font-weight: 400;
+  font-display: optional;
+  src: url('/assets/fonts/lora-italic-v37-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}

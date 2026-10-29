@@ -58,9 +58,6 @@ export const createProfileScreenStyles = ({
     rowSeparator: {
       height: gapSize,
     },
-    emptyWrap: {
-      paddingHorizontal: contentPadding,
-    },
     skeletonWrap: {
       gap: 0,
       overflow: 'hidden',

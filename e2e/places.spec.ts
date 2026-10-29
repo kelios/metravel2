@@ -64,7 +64,8 @@ test.describe('@smoke Places catalog', () => {
     const card = page.getByTestId('places-card-101');
     await expect(card).toBeVisible();
 
-    await card.getByLabel('Открыть место на карте').click();
+    await card.getByRole('button', { name: 'Навигация и действия', exact: true }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Открыть место на карте', exact: true }).click();
 
     await expect(page).toHaveURL(/\/map\?.*placeId=101/);
   });

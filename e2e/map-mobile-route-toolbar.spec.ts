@@ -152,12 +152,14 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
     const hint = byTid(page, 'map-mobile-route-hint')
 
     await test.step('Selected place offers a one-tap route from the trusted position', async () => {
-      const marker = page.locator('.metravel-pin-marker').first()
-      await expect(marker).toBeVisible({ timeout: 30_000 })
-      await marker.click({ force: true })
+      // The first fixture equals the GPS fix, so the <100 m guard correctly
+      // refuses a route there. Pick the distant fixture by name instead of
+      // depending on marker order or overlapping live-location pins.
+      await byTid(page, 'map-mobile-open-list').click()
+      await page.getByTestId('map-travel-card').filter({ hasText: 'Комсомольское озеро' }).click()
       const cardAction = byTid(page, 'popup-primary-action')
       await expect(cardAction).toContainText('Маршрут от меня', { timeout: 15_000 })
-      await cardAction.click({ force: true })
+      await cardAction.click()
       await expect(byTid(page, 'map-mobile-route-summary')).toBeVisible({ timeout: 15_000 })
       // #1440: разделитель дробной части берётся из локали интерфейса — на RU
       // это запятая, а не английская точка из toFixed.
@@ -173,10 +175,9 @@ test.describe('@smoke mobile map route toolbar (#597)', () => {
 
     await test.step('Radius mode: route entry visible, contextual icons hidden', async () => {
       await expect(routeBtn).toBeVisible({ timeout: 30_000 })
-      // Вход в маршрут — компактная иконка верхнего тулбара без видимой
-      // подписи; назначение остаётся доступно через семантическое имя.
+      // #2777: вход в маршрут сохраняет видимую подпись в верхнем тулбаре.
       await expect(routeBtn).toHaveAccessibleName('Построить маршрут')
-      await expect(routeBtn.getByText('Маршрут', { exact: true })).not.toBeVisible()
+      await expect(routeBtn.getByText('Маршрут', { exact: true })).toBeVisible()
       await expect(radiusBtn).toBeVisible()
       await expect(transportBtn).toHaveCount(0)
       await expect(clearBtn).toHaveCount(0)

@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
+import { waitForMoreSheetController } from './helpers/chrome'
 
 const MOBILE_VIEWPORT = { width: 390, height: 844 }
 const THEME_COLOR_DARK = '#1a1a1a'
@@ -39,6 +40,7 @@ test.describe('@mobile Mobile dark theme', () => {
     await gotoWithRetry(page, '/')
 
     // #2779: кнопка меню шапки открывает лист «Ещё»; тема — его подэкран.
+    await waitForMoreSheetController(page)
     await page.getByTestId('mobile-menu-open').click()
     await expect(page.getByTestId('footer-more-list')).toBeVisible()
     await page.getByTestId('footer-more-item-theme').click()

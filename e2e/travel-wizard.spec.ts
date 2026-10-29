@@ -766,7 +766,8 @@ const verifyPointCategoryRefreshOnReturn = async (page: Page, viewport: 'desktop
   await page.goto(`/travel/${travelId}`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByPlaceholder('Например: Неделя в Грузии')).toHaveValue('E2E category freshness');
   const stepResponse = page.waitForResponse((response) =>
-    response.url().includes('/getFiltersTravel/?_fresh=') && response.ok());
+    new URL(response.url()).pathname.endsWith('/getFiltersTravel/')
+      && new URL(response.url()).searchParams.has('_fresh') && response.ok());
   await clickNext(page);
   await stepResponse;
   const stepRefreshedAt = Date.now();
@@ -793,7 +794,8 @@ const verifyPointCategoryRefreshOnReturn = async (page: Page, viewport: 'desktop
   pointCategories.push(newCategory);
   holdResponse = true;
   const freshResponse = page.waitForResponse((response) =>
-    response.url().includes('/getFiltersTravel/?_fresh=') && response.ok());
+    new URL(response.url()).pathname.endsWith('/getFiltersTravel/')
+      && new URL(response.url()).searchParams.has('_fresh') && response.ok());
   try {
     expect(Date.now() - stepRefreshedAt).toBeLessThan(60_000);
     await page.evaluate(() => {
@@ -1163,17 +1165,19 @@ test.describe('Создание путешествия - Полный flow', () 
       await expect(page.locator('text=Категории маршрута')).toBeVisible();
       await expect(page.locator('text=Фото или обложка')).toBeVisible();
 
-      // Выбираем "Сохранить как черновик"
-      await page.click('text=Сохранить как черновик');
+      // Обычное сохранение сохраняет текущий статус черновика.
+      await page.getByRole('button', { name: 'Сохранить изменения', exact: true }).click();
 
-      // Сохраняем. В текущем UI на шаге 6 есть кнопка "Сохранить".
-      await page.locator('button:has-text("Сохранить")').first().click();
-
-      // Проверяем редирект или успешное сообщение/индикатор.
-      await Promise.race([
-        page.waitForURL(/\/metravel|\/travels\//, { timeout: 30_000 }).catch(() => null),
-        page.locator('text=Сохранено').first().waitFor({ state: 'visible', timeout: 30_000 }).catch(() => null),
-      ]);
+      const savedResponse = page.waitForResponse((response) =>
+        ['POST', 'PUT'].includes(response.request().method())
+          && /\/travels\/upsert\/?$/.test(new URL(response.url()).pathname),
+      { timeout: 30_000 });
+      await page.getByTestId('primary-button').filter({ visible: true }).first().click();
+      const response = await savedResponse;
+      expect(response.ok(), `Draft save returned HTTP ${response.status()}`).toBe(true);
+      const body = response.request().postDataJSON() as Record<string, unknown> & { data?: Record<string, unknown> };
+      expect((body.data ?? body).publication_status).toBe('draft');
+      await expect(page).toHaveURL(/\/metravel(?:[?#]|$)/);
     });
   });
 
@@ -1210,7 +1214,9 @@ test.describe('Создание путешествия - Полный flow', () 
 
     // Черновик создаётся по первому выбранному фото, не при открытии страницы.
     expect(upserts).toHaveLength(0);
-    await page.locator('input[type="file"]').first().setInputFiles({
+    // The lazy dropzone fallback also contains an input, but has no change handler.
+    // Its replacement exposes accept/multiple once file selection is ready.
+    await page.getByTestId('travel-note.root').locator('input[type="file"][multiple][accept]').setInputFiles({
       name: 'note-photo.png',
       mimeType: 'image/png',
       buffer: tinyPngBuffer,
@@ -1424,73 +1430,8 @@ test.describe('Создание путешествия - Полный flow', () 
       await maybeMockTravelUpsert(page);
     }
 
-    const apiBaseUrl = (process.env.E2E_API_URL || process.env.EXPO_PUBLIC_API_URL || '').replace(/\/+$/, '');
-    await page.route('**/travels/upsert/**', async (route) => {
-      if (!USE_REAL_API) {
-        await route.fallback();
-        return;
-      }
-      if (!apiBaseUrl) {
-        await route.fallback();
-        return;
-      }
-
-      const token = await page
-        .evaluate(() => {
-          try {
-            const encrypted = window.localStorage?.getItem('secure_userToken');
-            if (!encrypted) return null;
-            const key = 'metravel_encryption_key_v1';
-            const raw = atob(encrypted);
-            let result = '';
-            for (let i = 0; i < raw.length; i++) {
-              result += String.fromCharCode(raw.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-            }
-            return result;
-          } catch {
-            return null;
-          }
-        })
-        .catch(() => null);
-
-      if (!token) {
-        await route.fallback();
-        return;
-      }
-
-      const req = route.request();
-      const url = `${apiBaseUrl}/api/travels/upsert/`;
-
-      let body: string | undefined;
-      try {
-        body = req.postData() ?? undefined;
-      } catch {
-        body = undefined;
-      }
-
-      const resp = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Token ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body,
-      }).catch(() => null);
-
-      if (!resp) {
-        await route.abort('failed');
-        return;
-      }
-
-      const respText = await resp.text().catch(() => '');
-      await route.fulfill({
-        status: resp.status,
-        headers: {
-          'content-type': resp.headers.get('content-type') || 'application/json',
-        },
-        body: respText,
-      });
-    });
+    // Real mode uses the browser's cookie session through the configured web
+    // proxy. A Node fetch + route.fulfill would hide real records from cleanup.
 
     // Заполняем название
     const upsertReqPromise = page

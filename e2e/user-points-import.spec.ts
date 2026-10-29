@@ -30,24 +30,10 @@ test.describe('User points import (mock API)', () => {
     await expect(page.getByTestId('userpoints-screen').first()).toBeVisible({ timeout: 30_000 });
   }
 
-  async function openFiltersPanelTab(page: any) {
-    const legacyTabButton = page.getByTestId('userpoints-panel-tab-filters').first();
-    const segmentedTabButton = page.getByTestId('segmented-filters').first();
-    const searchBox = page.getByRole('textbox', { name: 'Поиск по точкам', exact: true });
-
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const tabButton = (await segmentedTabButton.count()) > 0 ? segmentedTabButton : legacyTabButton;
-      await tabButton.click({ timeout: 30_000, force: true }).catch(() => undefined);
-      await tabButton.evaluate((el: any) => (el as HTMLElement)?.click?.()).catch(() => undefined);
-      await page.waitForTimeout(150);
-
-      if ((await searchBox.count()) > 0) {
-        await expect(searchBox).toBeVisible({ timeout: 5_000 });
-        return;
-      }
-    }
-
-    await expect(searchBox).toBeVisible({ timeout: 30_000 });
+  async function openFiltersPanelTab(page: import('@playwright/test').Page) {
+    await page.getByTestId('segmented-filters').click();
+    await expect(page.getByRole('searchbox', { name: 'Поиск по точкам', exact: true }))
+      .toBeVisible({ timeout: 30_000 });
   }
 
   async function openImportWizard(page: any) {

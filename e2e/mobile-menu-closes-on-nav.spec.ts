@@ -1,6 +1,7 @@
 import { test, expect } from './fixtures';
 import { preacceptCookies, gotoWithRetry } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
+import { waitForMoreSheetController } from './helpers/chrome';
 
 // #2779: у шапки телефона своего меню нет — кнопка меню открывает лист «Ещё»
 // нижнего дока. После перехода по пункту лист обязан закрыться.
@@ -13,6 +14,7 @@ test.describe('Mobile menu navigation', () => {
 
     const burger = page.locator('[data-testid="mobile-menu-open"]:visible').first();
     await expect(burger).toBeVisible({ timeout: 30_000 });
+    await waitForMoreSheetController(page);
     await burger.click();
 
     const sheet = page.getByTestId('footer-more-sheet');

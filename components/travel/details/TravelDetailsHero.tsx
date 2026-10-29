@@ -306,7 +306,7 @@ function TravelHeroSectionInner({
             </Suspense>
           )}
         </View>
-        <SliderCaption caption={heroSliderImages[currentIndex]?.caption} />
+        <SliderCaption caption={heroSliderImages[currentIndex]?.caption} currentIndex={currentIndex} total={heroSliderImages.length} />
       </View>
 
       {isRouterSsrTravel ? (

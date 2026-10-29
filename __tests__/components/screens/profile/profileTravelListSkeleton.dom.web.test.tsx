@@ -141,7 +141,7 @@ describe('каркас списка маршрутов профиля (#2176)', 
 
     it('карточки встают на место каркаса: обёртка списка одна и без своего отступа', () => {
       const styles = screenStyles(gapSize)
-      const render = (loading: boolean) =>
+      const render = (loading: boolean, count = 2) =>
         toHost(
           createElement(ProfileTravelListView, {
             styles,
@@ -149,7 +149,7 @@ describe('каркас списка маршрутов профиля (#2176)', 
             contentPaddingBottom: 32,
             listHeader: createElement(View, { testID: 'list-header' }),
             emptyStateProps: { icon: 'map', title: 'Пусто' },
-            currentData: loading ? [] : travels(2),
+            currentData: loading ? [] : travels(count),
             isSectionTab: false,
             isTravelsTabLoading: loading,
             activeTab: 'travels',
@@ -186,6 +186,13 @@ describe('каркас списка маршрутов профиля (#2176)', 
       expect(geometryOf(loadingList)).toBe(geometryOf(loadedList))
       // Своей геометрии у обёртки нет вовсе — голый `View`: ни отступа, ни зазора.
       expect(geometryOf(loadingList)).toBe(geometryOf(reference()))
+
+      // The list already owns its horizontal inset. Repeating it around an
+      // empty state wraps its description again and pushes the CTA under the
+      // dock on a 320×640 profile with a two-line name and visible rank.
+      const empty = render(false, 0).querySelector('[data-screen-content="first"]')!
+      expect(empty).not.toBeNull()
+      expect(geometryOf(empty)).toBe(geometryOf(reference(styles.fullRow)))
     })
   })
 

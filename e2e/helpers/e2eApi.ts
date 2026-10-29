@@ -1,6 +1,6 @@
 import { expect, request } from '@playwright/test';
 import fs from 'node:fs';
-import { acceptAuthTerms } from './auth';
+import { acceptAuthTerms, webAuthTokenFromCookies } from './auth';
 
 type LoginResponse = {
   token?: string;
@@ -33,6 +33,14 @@ function tokenFromStorageState(): string {
   try {
     const raw = fs.readFileSync(storageStatePath(), 'utf8');
     const json = JSON.parse(raw) as any;
+    // Cookies belong to the web origin, which may differ from the API host.
+    // Reuse global-setup's HttpOnly session instead of rotating it via login.
+    const webUrl = String(process.env.BASE_URL || '').trim() ||
+      `http://127.0.0.1:${Number(process.env.E2E_WEB_PORT || '8085')}`;
+    const cookieToken = webAuthTokenFromCookies(Array.isArray(json?.cookies) ? json.cookies : [], webUrl);
+    if (cookieToken) return normalizeToken(cookieToken);
+
+    // Older storage states can still contain the legacy localStorage token.
     const origins = Array.isArray(json?.origins) ? json.origins : [];
     for (const origin of origins) {
       const ls = Array.isArray(origin?.localStorage) ? origin.localStorage : [];
@@ -190,6 +198,14 @@ export function installCreatedTravelsTracker(page: any) {
       const url = String(resp?.url?.() ?? '');
       if (!url.includes('/travels/upsert/')) return;
 
+      const req = resp.request?.();
+      const method = String(req?.method?.() ?? '').toUpperCase();
+      if (method !== 'PUT' && method !== 'POST') return;
+      if (!resp.ok?.()) return;
+      // Browser route.fulfill responses have no remote server address. Their
+      // fixture ids must never trigger live cleanup or a new shared-account login.
+      if (!(await resp.serverAddr())) return;
+
       if (!apiBase) {
         try {
           apiBase = new URL(url).origin;
@@ -198,10 +214,6 @@ export function installCreatedTravelsTracker(page: any) {
         }
       }
 
-      const req = resp.request?.();
-      const method = String(req?.method?.() ?? '').toUpperCase();
-      if (method !== 'PUT' && method !== 'POST') return;
-      if (!resp.ok?.()) return;
       if (!token) {
         const headers = (req?.headers?.() ?? {}) as Record<string, string>;
         const auth = headers.authorization || headers.Authorization || '';

@@ -1,7 +1,7 @@
 import type { Locator, Page } from '@playwright/test'
 
 import { expect, test } from './fixtures'
-import { webAuthTokenFromCookies } from './helpers/auth'
+import { prepareMobileScreenBudgetAuth } from './helpers/mobileScreenBudgetAuth'
 import {
   MOBILE_SCREEN_BUDGET,
   MOBILE_VIEWPORTS,
@@ -32,53 +32,10 @@ import { preacceptCookies } from './helpers/navigation'
  * 402×874 × light/dark) снимаются поверх неё (`measureScreenAllCombos`) —
  * было 52 теста по ~9 с (7,9 мин на одном воркере), стало 13.
  *
- * Авторизованные экраны используют storageState `global-setup.ts` — нужен
- * `E2E_AUTH_MODE=required` (иначе экраны откроются гостем и упадут на
- * собственных редиректах, а не дадут тихий ложный успех).
+ * Авторизованные экраны явно получают fixture-сессию и согласованные private
+ * API данные: дефолтный regression работает с E2E_AUTH_MODE=guest, без логинов
+ * и зависимости от состояния аккаунта. Гостевые квесты остаются гостевыми.
  */
-
-/**
- * Авторизованному экрану нужна живая веб-сессия на ЭТОМ origin. В полном прогоне
- * release:check сессия из storageState global-setup терялась по ходу (токен e2e-
- * аккаунта удаляется любым logout), и экран открывался гостем — метрики молча
- * снимались с заглушки входа. Поэтому сначала проверяем сессию, и только если
- * она мертва — входим тем же путём, что global-setup: `context.request` на origin
- * прогона (e2e-прокси ставит HttpOnly-cookie на этот хост) + витрина `userId`.
- * Вход ограничен бэкендом (`auth_login` 5/min) — отсюда проверка и повтор на 429.
- */
-async function ensureLiveSession(page: Page, baseURL: string | undefined): Promise<void> {
-  const base = String(baseURL || '').replace(/\/+$/, '')
-  const request = page.context().request
-  // Сессия из storageState: токен — заголовком, банк cookie на 127.0.0.1
-  // Playwright из Node не отправит, и проба отвечала бы 401 (#2173).
-  const token = webAuthTokenFromCookies(await page.context().cookies(), base)
-  const probe = token
-    ? await request.get(`${base}/api/user/me/verifications/`, { headers: { Authorization: `Token ${token}` } })
-    : null
-  if (probe?.ok()) return
-
-  const email = String(process.env.E2E_EMAIL || '').trim()
-  const password = String(process.env.E2E_PASSWORD || '').trim()
-  if (!email || !password || !base) {
-    throw new Error('Авторизованный экран без e2e-учётки: нужны E2E_AUTH_MODE=required и E2E_EMAIL/E2E_PASSWORD')
-  }
-  let response = await request.post(`${base}/api/user/login/`, { data: { email, password } })
-  for (let attempt = 1; response.status() === 429 && attempt <= 2; attempt += 1) {
-    await new Promise((resolve) => setTimeout(resolve, 30_000 * attempt))
-    response = await request.post(`${base}/api/user/login/`, { data: { email, password } })
-  }
-  expect(response.ok(), `вход e2e-аккаунта: ${response.status()}`).toBeTruthy()
-  const json = (await response.json().catch(() => null)) as { id?: number | string } | null
-  const userId = json?.id != null ? String(json.id) : ''
-  expect(userId, 'вход не вернул id пользователя').toBeTruthy()
-  await page.addInitScript((value: string) => {
-    try {
-      window.localStorage.setItem('userId', value)
-    } catch {
-      // ignore
-    }
-  }, userId)
-}
 
 async function measureScreen(page: Page, screen: ScreenDef): Promise<void> {
   const target = await resolveScreenTarget(page, screen)
@@ -134,8 +91,8 @@ test.describe('Mobile screen budget (#2094)', () => {
     expect((await sampleDarkBottomColor(page)).matchesThemeBackground, 'control restored').toBe(true)
   })
   for (const screen of SCREENS.filter((s) => !s.guest)) {
-    test(screen.key, async ({ page, baseURL }) => {
-      if (screen.requiresAuth) await ensureLiveSession(page, baseURL)
+    test(screen.key, async ({ page }) => {
+      if (screen.requiresAuth) await prepareMobileScreenBudgetAuth(page)
       await measureScreen(page, screen)
     })
   }
@@ -156,11 +113,11 @@ test.describe('Mobile screen budget (#2094)', () => {
   })
 
   // #2104: пустая вкладка профиля — компактная заглушка `ui/EmptyState`, кнопка
-  // «Создать маршрут» целиком выше дока без прокрутки. Вкладка «Опубл.»: у
-  // e2e-аккаунта опубликованных маршрутов нет (черновики есть — «Маршруты» не пуста).
+  // «Создать маршрут» целиком выше дока без прокрутки. Пустой опубликованный
+  // срез и начальные счётчики задаём одной согласованной fixture.
   for (const viewport of MOBILE_VIEWPORTS) {
-    test(`profile empty tab CTA above dock @ ${viewport.name}`, async ({ page, baseURL }) => {
-      await ensureLiveSession(page, baseURL)
+    test(`profile empty tab CTA above dock @ ${viewport.name}`, async ({ page }) => {
+      await prepareMobileScreenBudgetAuth(page, { emptyPublished: true })
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
       await page.goto('/profile')
       const publishedTab = page.getByRole('tab', { name: /Опубл/ }).first()
@@ -178,8 +135,8 @@ test.describe('Mobile screen budget (#2094)', () => {
   // #2141: узкий экран 320×640. До правки вкладки профиля шли desktop-веткой
   // (по одной в строку, tablist 464 px), быстрые действия — отдельным рядом, и
   // заголовок заглушки стоял на 909 px (прод 04.10.2026, зазор кнопки −497).
-  test('profile empty tab fits the first screen @ 320x640', async ({ page, baseURL }) => {
-    await ensureLiveSession(page, baseURL)
+  test('profile empty tab fits the first screen @ 320x640', async ({ page }) => {
+    await prepareMobileScreenBudgetAuth(page, { emptyPublished: true })
     await page.setViewportSize({ width: 320, height: 640 })
     await page.goto('/profile')
     const publishedTab = page.getByRole('tab', { name: /Опубл/ }).first()
@@ -190,6 +147,7 @@ test.describe('Mobile screen budget (#2094)', () => {
     const tablistHeight = await page.locator('[role="tablist"]').first().evaluate((el) => el.getBoundingClientRect().height)
     const gap = await measureEmptyCtaDockGap(page)
     console.log(`[mobile-screen-budget] profile-published-empty @ 320x640: tablistHeight=${Math.round(tablistHeight)} emptyCtaDockGap=${gap}`)
+    await test.info().attach('profile-empty-320', { body: await page.screenshot(), contentType: 'image/png' })
     expect(tablistHeight, 'вкладки профиля одной строкой, а не столбиком').toBeLessThan(100)
     expect(gap, 'низ кнопки заглушки над доком без прокрутки').not.toBeNull()
     expect(gap as number).toBeGreaterThanOrEqual(0)
@@ -198,14 +156,16 @@ test.describe('Mobile screen budget (#2094)', () => {
   // #2114: /trips/my без сдвигов при подгрузке данных — блок «Обновления по
   // поездкам» монтируется под устоявшимся списком, счётчики сегментов держат слот.
   // Прод до правки: 390 — 0,027; 800 — 0,035–0,045; 1024 — 0,045 (источник
-  // `my-trips-updates`). CLS считается с начала навигации, авторизация — живая сессия.
+  // `my-trips-updates`). CLS считается с начала навигации, ответы fixture удерживаются до первого кадра.
   for (const viewport of [
     { name: '390x844', width: 390, height: 844 },
     { name: '800x1024', width: 800, height: 1024 },
     { name: '1024x768', width: 1024, height: 768 },
   ]) {
-    test(`trips-my CLS while data loads @ ${viewport.name}`, async ({ page, baseURL }) => {
-      await ensureLiveSession(page, baseURL)
+    test(`trips-my CLS while data loads @ ${viewport.name}`, async ({ page }) => {
+      let releaseTripLists = () => {}
+      const tripListsHeld = new Promise<void>((resolve) => { releaseTripLists = resolve })
+      await prepareMobileScreenBudgetAuth(page, { beforeTripListsResponse: () => tripListsHeld })
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
       await page.addInitScript(() => {
         type Shift = { hadRecentInput: boolean; value: number; sources?: Array<{ node?: Element; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }> }
@@ -218,32 +178,41 @@ test.describe('Mobile screen budget (#2094)', () => {
             w.__mtCls += entry.value
             const sources = (entry.sources ?? [])
               .slice(0, 3)
-              .map((src) => `${src.node?.getAttribute?.('data-testid') ?? src.node?.nodeName ?? '?'}:${Math.round(src.previousRect.top)}>${Math.round(src.currentRect.top)}`)
+              .map((src) => `${src.node?.getAttribute?.('data-testid') ?? src.node?.nodeName ?? '?'}:${JSON.stringify(src.previousRect)}>${JSON.stringify(src.currentRect)}`)
             w.__mtShifts.push(`${entry.value.toFixed(4)} ${sources.join(' ')}`)
           }
         }).observe({ type: 'layout-shift', buffered: true })
       })
-      await page.goto('/trips/my')
-      // Страница под живой сессией: после ответа списка у сегмента всегда есть «(N)».
-      // Гостю запросы выключены, блок монтируется сразу и CLS ≈ 0 — это не замер.
-      // Невидимый резерв «(0)» (countPending) тоже текст — сначала он должен уйти.
-      await expect(page.getByTestId('my-trips-segment-organized-count-pending')).toHaveCount(0, { timeout: 60_000 })
-      await expect(page.getByTestId('my-trips-segment-organized')).toContainText(/\(\d+\)/, { timeout: 60_000 })
-      await expect(page.getByTestId('my-trips-updates')).toBeVisible({ timeout: 60_000 })
-      // Дать догрузиться уведомлениям и картинкам карточек.
-      await page.waitForLoadState('networkidle').catch(() => null)
-      const { cls, shifts } = await page.evaluate(() => {
-        const w = window as unknown as { __mtCls: number; __mtShifts: string[] }
-        return { cls: w.__mtCls, shifts: w.__mtShifts }
-      })
-      console.log(`[mobile-screen-budget] trips-my @ ${viewport.name}: cls=${cls.toFixed(4)} shifts=${JSON.stringify(shifts)}`)
-      expect(cls).toBeLessThanOrEqual(0.05)
-      // Механизм #2114 не вернулся: ни блок «Обновления», ни сегменты не сдвигаются
-      // (до правки они и были источником; один порог 0,05 этого не отличал).
-      expect(shifts.filter((line) => /my-trips-updates/.test(line))).toEqual([])
-      // #2157: иконка сегмента «от планшета» стоит в разметке с первого кадра
-      // (CHIP_LAYOUT + critical CSS) — появление иконки не расширяет чип и не сдвигает соседей.
-      expect(shifts.filter((line) => /my-trips-segment-/.test(line))).toEqual([])
+      try {
+        await page.goto('/trips/my')
+        await expect(page.getByTestId('my-trips-segment-organized-count-pending')).toBeAttached()
+        await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))))
+        releaseTripLists()
+        // Авторизованный fixture: 12 организуемых поездок, 3 участия и 2 заявки.
+        // Гостю запросы выключены, блок монтируется сразу и CLS ≈ 0 — это не замер.
+        // Невидимый резерв «(0)» (countPending) тоже текст — сначала он должен уйти.
+        await expect(page.getByTestId('my-trips-segment-organized-count-pending')).toHaveCount(0, { timeout: 60_000 })
+        await expect(page.getByTestId('my-trips-segment-organized')).toContainText('(12)', { timeout: 60_000 })
+        await expect(page.getByTestId('my-trips-segment-participating')).toContainText('(3)')
+        await expect(page.getByTestId('my-trips-segment-applications')).toContainText('(2)')
+        await expect(page.getByTestId('my-trips-updates')).toBeVisible({ timeout: 60_000 })
+        // Дать догрузиться уведомлениям и картинкам карточек.
+        await page.waitForLoadState('networkidle').catch(() => null)
+        const { cls, shifts } = await page.evaluate(() => {
+          const w = window as unknown as { __mtCls: number; __mtShifts: string[] }
+          return { cls: w.__mtCls, shifts: w.__mtShifts }
+        })
+        console.log(`[mobile-screen-budget] trips-my @ ${viewport.name}: cls=${cls.toFixed(4)} shifts=${JSON.stringify(shifts)}`)
+        expect(cls).toBeLessThanOrEqual(0.05)
+        // Механизм #2114 не вернулся: ни блок «Обновления», ни сегменты не сдвигаются
+        // (до правки они и были источником; один порог 0,05 этого не отличал).
+        expect(shifts.filter((line) => /my-trips-updates/.test(line))).toEqual([])
+        // #2157: иконка сегмента «от планшета» стоит в разметке с первого кадра
+        // (CHIP_LAYOUT + critical CSS) — появление иконки не расширяет чип и не сдвигает соседей.
+        expect(shifts.filter((line) => /my-trips-segment-/.test(line))).toEqual([])
+      } finally {
+        releaseTripLists()
+      }
     })
   }
 
@@ -256,8 +225,11 @@ test.describe('Mobile screen budget (#2094)', () => {
     { name: '390x844', width: 390, height: 844 },
     { name: '1280x900', width: 1280, height: 900 },
   ]) {
-    test(`profile travels skeleton holds the cards' place @ ${viewport.name}`, async ({ page, baseURL }) => {
-      await ensureLiveSession(page, baseURL)
+    test(`profile travels skeleton holds the cards' place @ ${viewport.name}`, async ({ page }) => {
+      // The baseline skeleton reserves title + secondary metadata. A draft
+      // without a supplied duration exercises that variant, not the optional
+      // decision row covered by populated screen fixtures elsewhere.
+      await prepareMobileScreenBudgetAuth(page, { profileTravelDurationDays: null })
       await page.setViewportSize({ width: viewport.width, height: viewport.height })
       await page.addInitScript(() => {
         type Shift = { hadRecentInput: boolean; value: number; sources?: Array<{ node?: Element; previousRect: DOMRectReadOnly; currentRect: DOMRectReadOnly }> }
@@ -280,7 +252,7 @@ test.describe('Mobile screen budget (#2094)', () => {
       })
       await page.route(/\/api\/travels\/\?/, async (route) => {
         await travelsHeld
-        await route.continue()
+        await route.fallback()
       })
       const profileList = page.getByTestId('profile-travel-list')
       const rectOf = (target: Locator) =>
@@ -296,11 +268,16 @@ test.describe('Mobile screen budget (#2094)', () => {
       const skeletonCell = await rectOf(profileList.getByTestId('travel-list-item-skeleton'))
 
       releaseTravels()
-      // У e2e-аккаунта есть черновики, поэтому «Маршруты» не пуста.
+      // Два черновика fixture гарантируют непустую вкладку «Маршруты».
       await expect(profileList.getByTestId('travel-card-link').first()).toBeVisible({ timeout: 60_000 })
       await expect(page.getByTestId('profile-travel-grid-skeleton')).toHaveCount(0)
+      const cardLink = profileList.getByTestId('travel-card-link').first()
+      await expect(cardLink).toHaveAccessibleName(/Статус: Черновик/)
+      await expect(cardLink).toHaveAccessibleName(/Страны: Беларусь/)
+      await expect(profileList.getByTestId('publication-status-icon').first()).toBeVisible()
+      await expect(profileList.getByTestId('decision-meta')).toHaveCount(0)
       const list = await rectOf(profileList)
-      const card = await rectOf(profileList.getByTestId('travel-card-link'))
+      const card = await rectOf(cardLink)
       const shifts = await page.evaluate(() => (window as unknown as { __mtShifts: string[] }).__mtShifts)
       console.log(
         `[mobile-screen-budget] profile-travels @ ${viewport.name}: skeletonTop=${Math.round(skeletonCell.top)} cardTop=${Math.round(card.top)} ` +
@@ -311,8 +288,8 @@ test.describe('Mobile screen budget (#2094)', () => {
       expect(Math.abs(card.top - skeletonCell.top)).toBeLessThanOrEqual(0.5)
       expect(Math.abs(card.left - skeletonCell.left)).toBeLessThanOrEqual(0.5)
       expect(Math.abs(card.width - skeletonCell.width), 'ячейка каркаса — той же ширины, что карточка').toBeLessThanOrEqual(0.5)
-      // Высота: медиа-слот у обоих квадратный, текстовый блок каркаса — карточка без
-      // значков; чип «Черновик» добавляет карточке 4 px.
+      // Both slots are square; the asserted no-duration draft keeps the same
+      // title + secondary metadata rows as the skeleton's baseline variant.
       expect(Math.abs(card.height - skeletonCell.height)).toBeLessThanOrEqual(6)
       // Узел списка один и тот же до и после ответа: его сдвиг браузер записал бы сюда.
       expect(shifts.filter((line) => /profile-travel-list/.test(line))).toEqual([])
@@ -324,8 +301,8 @@ test.describe('Mobile screen budget (#2094)', () => {
     { name: '390x844', width: 390, height: 844 },
     { name: '1280x900', width: 1280, height: 900 },
   ]) {
-    test(`profile tabs have counters in their first frame without list-response shifts @ ${viewport.name}`, async ({ page, baseURL }) => {
-      await ensureLiveSession(page, baseURL)
+    test(`profile tabs have counters in their first frame without list-response shifts @ ${viewport.name}`, async ({ page }) => {
+      await prepareMobileScreenBudgetAuth(page)
       await page.setViewportSize(viewport)
       await page.addInitScript(() => {
         type Shift = { hadRecentInput: boolean; sources?: Array<{ node?: Node }> }
@@ -357,7 +334,7 @@ test.describe('Mobile screen budget (#2094)', () => {
       await page.route(/\/api\/(?:travels\/\?|user\/(?:subscribers|subscriptions)\/)/, async (route) => {
         const gate = gates.find(({ key }) => route.request().url().includes(`/${key}/`))
         await gate?.held
-        await route.continue()
+        await route.fallback()
       })
       const profileResponse = page.waitForResponse((response) => /\/api\/user\/\d+\/profile\/$/.test(response.url()) && response.ok())
       try {

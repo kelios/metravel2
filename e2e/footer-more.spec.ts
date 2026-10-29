@@ -1,6 +1,7 @@
 import { test, expect } from './fixtures';
 import { getTravelsListPath } from './helpers/routes';
 import { preacceptCookies } from './helpers/navigation';
+import { waitForMoreSheetController } from './helpers/chrome';
 
 test.describe('Footer dock (web mobile) - More modal', () => {
   test('shows More (Ещё), keeps it inside the dock, and opens legal + support links', async ({ page }) => {
@@ -48,6 +49,7 @@ test.describe('Footer dock (web mobile) - More modal', () => {
     expect(bb.y + bb.height).toBeLessThanOrEqual(dockBb.y + dockBb.height + 1);
 
     // Open More modal.
+    await waitForMoreSheetController(page);
     await moreInDock.click();
 
     await expect(page.getByTestId('footer-more-sheet')).toBeVisible();
@@ -73,6 +75,7 @@ test.describe('Footer dock (web mobile) - More modal', () => {
 
     const trigger = page.getByTestId('footer-item-more');
     await expect(trigger).toBeVisible();
+    await waitForMoreSheetController(page);
     await trigger.focus();
     await trigger.press('Enter');
 

@@ -1,5 +1,7 @@
 import { render, fireEvent } from '@testing-library/react-native';
 import Chip from '@/components/ui/Chip';
+import { StyleSheet } from 'react-native';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
 
 // Mock Platform
 jest.mock('react-native', () => {
@@ -160,5 +162,14 @@ describe('Chip', () => {
     const { queryByTestId, getByText } = await render(<Chip label="Организую" count={3} countPending testID="chip" />);
     expect(queryByTestId('chip-count-pending', { includeHiddenElements: true })).toBeNull();
     expect(getByText('(3)')).toBeTruthy();
+  });
+
+  it('keeps the counter reservation when a pending count becomes a two-digit result', async () => {
+    const { getByTestId, getByText, rerender } = await render(<Chip label="Организую" countPending testID="chip" />);
+    const pending = StyleSheet.flatten(getByTestId('chip-count-pending', { includeHiddenElements: true }).props.style);
+    await rerender(<Chip label="Организую" count={12} testID="chip" />);
+    const loaded = StyleSheet.flatten(getByText('(12)').props.style);
+    expect(pending).toMatchObject({ minWidth: DESIGN_TOKENS.spacing.xl, fontVariant: ['tabular-nums'], flexShrink: 0 });
+    expect(loaded).toMatchObject({ minWidth: pending.minWidth, fontVariant: pending.fontVariant, flexShrink: 0 });
   });
 });

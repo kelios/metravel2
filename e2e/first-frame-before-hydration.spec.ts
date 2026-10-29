@@ -275,10 +275,20 @@ test.describe('кадр до гидратации (#2170)', () => {
       await preacceptCookies(page)
       await page.addInitScript(() => {
         ;(window as any).__firstFrameCls = 0
+        ;(window as any).__firstFrameShifts = []
         new PerformanceObserver((list) => {
           for (const entry of list.getEntries() as any[]) {
-            if (!entry.hadRecentInput)
-              (window as any).__firstFrameCls += entry.value
+            if (entry.hadRecentInput) continue
+            ;(window as any).__firstFrameCls += entry.value
+            ;(window as any).__firstFrameShifts.push({
+              value: entry.value,
+              sources: (entry.sources ?? []).map((source: any) => ({
+                node: source.node?.getAttribute?.('data-testid') ?? source.node?.nodeName,
+                text: source.node?.textContent?.slice(0, 80),
+                previousRect: source.previousRect,
+                currentRect: source.currentRect,
+              })),
+            })
           }
         }).observe({ type: 'layout-shift', buffered: true })
       })
@@ -317,9 +327,11 @@ test.describe('кадр до гидратации (#2170)', () => {
       expect(topAfter, 'тело каталога не сдвигается при ответе API').toBe(
         topBefore,
       )
-      expect(
-        await page.evaluate(() => (window as any).__firstFrameCls),
-      ).toBeLessThanOrEqual(0.01)
+      const cls = await page.evaluate(() => ({
+        value: (window as any).__firstFrameCls,
+        shifts: (window as any).__firstFrameShifts,
+      }))
+      expect(cls.value, `CLS sources: ${JSON.stringify(cls.shifts)}`).toBeLessThanOrEqual(0.01)
     })
   }
 })
@@ -454,9 +466,19 @@ test.describe('каталог квестов с сохранённым срез�
       await page.addInitScript((cityId) => {
         window.localStorage.setItem('quests_selected_city_v2', cityId)
         ;(window as any).__firstFrameCls = 0
+        ;(window as any).__firstFrameShifts = []
         new PerformanceObserver((list) => {
           for (const entry of list.getEntries() as any[]) {
-            if (!entry.hadRecentInput) (window as any).__firstFrameCls += entry.value
+            if (entry.hadRecentInput) continue
+            ;(window as any).__firstFrameCls += entry.value
+            ;(window as any).__firstFrameShifts.push({
+              value: entry.value,
+              sources: (entry.sources ?? []).map((source: any) => ({
+                node: source.node?.getAttribute?.('data-testid') ?? source.node?.nodeName,
+                previousRect: source.previousRect,
+                currentRect: source.currentRect,
+              })),
+            })
           }
         }).observe({ type: 'layout-shift', buffered: true })
       }, QUEST.city_id)
@@ -486,7 +508,11 @@ test.describe('каталог квестов с сохранённым срез�
         { timeout: 30_000 },
       )
       await expect(page.locator('[data-quests-seo-slot]')).toHaveCount(0)
-      expect(await page.evaluate(() => (window as any).__firstFrameCls)).toBeLessThanOrEqual(0.01)
+      const cls = await page.evaluate(() => ({
+        value: (window as any).__firstFrameCls,
+        shifts: (window as any).__firstFrameShifts,
+      }))
+      expect(cls.value, `CLS sources: ${JSON.stringify(cls.shifts)}`).toBeLessThanOrEqual(0.01)
     })
   }
 })

@@ -355,6 +355,17 @@ describe('mergeQuestProgress', () => {
 // Признак «прохождение начато»: до #1803 строка на сервере появлялась от одного
 // открытия экрана, и восемь записей прода из сорока восьми были просмотрами.
 describe('hasQuestProgressStarted', () => {
+  it('does not treat a confirmed missing server row as a started playthrough', () => {
+    expect(hasQuestProgressStarted({ serverId: null })).toBe(false)
+    expect(normalizeQuestProgressSnapshot({ serverId: null }).serverId).toBe(0)
+  })
+
+  it('preserves answers and started state when the bootstrap server identity is null', () => {
+    const initial = { serverId: null, answers: { intro: 'start', 'step-1': 'answer' } }
+    expect(normalizeQuestProgressSnapshot(initial).answers).toEqual(initial.answers)
+    expect(hasQuestProgressStarted(initial)).toBe(true)
+  })
+
   const UNTOUCHED = {
     currentIndex: 0,
     unlockedIndex: 0,
