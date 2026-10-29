@@ -12,6 +12,7 @@ Non-goals: rewrite the catalog controller or gameplay progression, change APIs/c
 
 - Extract `QuestSectionFrame` and its four layout styles from the catalog; keep the catalog's selection/controller and pass its sidebar slots. Informational/map pages use a small navigation adapter built from existing catalog selectors and the same sidebar renderer. Rejected wrapping pages in the entire catalog screen: it would run catalog return/review/geolocation lifecycle on informational routes.
 - `QuestPageColumns` owns one advertising node inside each existing content scroll: inline below 1600 px and a right rail on wider screens. This leaves room for the existing left sidebar and gameplay's map/reading split. The shared breakpoint registry is emitted in critical CSS. Generic/contextual `AffiliateOffers` is the default; gameplay supplies its existing provider slot and disables its replaced mounts.
+- Keep navigation models and advertising providers behind lazy slot boundaries; the shared frame owns geometry rather than loading catalog selectors or a provider unused by the caller. Country cards use the grid's measured width without a second viewport-based model.
 - Keep gameplay progress navigation and scroll/ref identities. Public pages use the catalog navigation; gameplay uses its contextual route navigation in the same sidebar/content/advertising composition.
 - Reuse existing localized labels and provider disclosure; no locale resources change. Affiliate navigation remains in the existing external-link helper.
 
@@ -25,6 +26,7 @@ Data/API: existing quest query/cache and selectors; no new endpoints or server c
 - SSR starts with narrow React geometry → retain the sidebar's existing first-frame selectors and register advertising breakpoints from one source.
 - Duplicate advertising or gameplay remounts → replace old mounts in the same diff, keep the reading host/ref, and test single-provider rendering and a guest step.
 - Drawer locks can conflict → move the catalog lock to the shared frame so it has one owner and restores prior values on close/unmount.
+- Public navigation loads lazily → retain one web navigation host after its first display so closing the drawer or resizing does not discard expanded countries. Native retains conditional drawer mounts to avoid hidden live Yoga subtrees.
 
 ## Migration Plan
 

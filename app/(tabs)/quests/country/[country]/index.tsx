@@ -23,14 +23,12 @@ import {
 import type { QuestLandingMetaTarget } from '@/components/quests/QuestLandingLayout'
 import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
-import { useQuestCatalogResponsiveModel } from '@/hooks/useQuestCatalogResponsiveModel'
 import { useQuestReturnVisit } from '@/hooks/useQuestReturnVisit'
 import { useQuestsList } from '@/hooks/useQuestsApi'
 import { useBreakpoints } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useLocale, useTranslation } from '@/i18n/LocaleProvider'
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles'
-import { QUESTS_GRID_WEB_GAP, QUESTS_LANDING_CONTENT_WIDTH } from '@/constants/questLayout'
 import { pluralizeQuest } from '@/screens/tabs/questsShared'
 import { buildQuestCountryLandingGroups } from '@/utils/questCountryLanding'
 
@@ -72,7 +70,6 @@ export default function QuestsByCountryScreen() {
   const height = Platform.OS === 'web' ? 0 : Dimensions.get('window').height
   const dockPx = useDockReservePx()
   const s = useMemo(() => getStyles(colors, bpWidth, height, dockPx), [bpWidth, colors, height, dockPx])
-  const catalogModel = useQuestCatalogResponsiveModel(countryQuests.length, { hasSidebar: false, contentMaxWidth: QUESTS_LANDING_CONTENT_WIDTH, columnGap: QUESTS_GRID_WEB_GAP })
   const countryName = country?.countryName || countryParam
   const canonical = buildCanonicalUrl(`/quests/country/${country?.countryAlias || countryParam}`)
   const seoTitle = useMemo(
@@ -164,7 +161,6 @@ export default function QuestsByCountryScreen() {
       <QuestLandingGrid
         styles={s}
         quests={countryQuests}
-        cardWidth={catalogModel.cardWidth}
       />
       </View>
       </QuestPageColumns>

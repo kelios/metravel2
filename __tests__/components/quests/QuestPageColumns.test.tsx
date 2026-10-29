@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { render } from '@testing-library/react-native'
+import { render, waitFor } from '@testing-library/react-native'
 import { Text } from 'react-native'
 
 import { getAffiliateOffers } from '@/components/affiliate/affiliateConfig'
@@ -32,7 +32,7 @@ beforeEach(() => {
 
 it('keeps one advertising mount when the viewport moves between inline and rail layouts', async () => {
   const { getAllByTestId, rerender } = await render(<QuestPageColumns><Text>Reading</Text></QuestPageColumns>)
-  expect(getAllByTestId('generic-promotion')).toHaveLength(1)
+  await waitFor(() => expect(getAllByTestId('generic-promotion')).toHaveLength(1))
   mockWidth = 2048
   await rerender(<QuestPageColumns><Text>Reading</Text></QuestPageColumns>)
   expect(getAllByTestId('generic-promotion')).toHaveLength(1)

@@ -1,13 +1,14 @@
-import { useMemo, type ReactNode } from 'react'
+import { lazy, Suspense, useMemo, type ReactNode } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 
-import AffiliateOffers from '@/components/affiliate/AffiliateOffers'
 import { getAffiliateOffers, type AffiliateOfferContext } from '@/components/affiliate/affiliateConfig'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useBreakpoints } from '@/hooks/useResponsive'
 import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
 import { webViewStyle } from '@/utils/webProps'
 import { QUEST_PAGE_COLUMNS_LAYOUT, QUEST_PAGE_COLUMNS_MIN_WIDTH } from './questPageColumnsLayout'
+
+const QuestAffiliatePromotion = lazy(() => import('./QuestAffiliatePromotion'))
 
 export type QuestPageColumnsProps = {
   children: ReactNode
@@ -48,7 +49,9 @@ export function QuestPageColumns({ children, affiliateContext, promotion, hasPro
           {...breakpointLayoutProps(QUEST_PAGE_COLUMNS_LAYOUT, 'promotion')}
           testID="quest-page-promotion"
         >
-          {hasCustomPromotion ? promotion : <AffiliateOffers {...affiliateContext} />}
+          {hasCustomPromotion ? promotion : (
+            <Suspense fallback={null}><QuestAffiliatePromotion {...affiliateContext} /></Suspense>
+          )}
         </View>
       ) : null}
     </View>

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { act, fireEvent, render } from '@testing-library/react-native'
 import { Platform, Text } from 'react-native'
 
@@ -66,4 +66,43 @@ it('releases the mobile lock on a desktop resize without replacing the content h
   expect(getByText('Page content')).toBe(reading)
   expect(document.body.style.overflow).toBe('auto')
   expect(close).not.toHaveBeenCalled()
+})
+
+it('preserves one web navigation mount and its state through close/reopen and responsive changes', async () => {
+  let mounts = 0
+  function Navigation() {
+    const [expanded, setExpanded] = useState(false)
+    useEffect(() => { mounts++ }, [])
+    return <Text onPress={() => setExpanded(true)}>{expanded ? 'Expanded country' : 'Collapsed country'}</Text>
+  }
+  const close = jest.fn()
+  const navigation = <Navigation />
+  const frame = (open: boolean) => (
+    <QuestSectionFrame sidebar={navigation} drawerSidebar={navigation} drawerOpen={open} onCloseDrawer={close}>
+      <Text>Reading</Text>
+    </QuestSectionFrame>
+  )
+  const { getByText, getByTestId, rerender } = await render(frame(false))
+  expect(mounts).toBe(0)
+  await rerender(frame(true))
+  await fireEvent.press(getByText('Collapsed country'))
+  await rerender(frame(false))
+  expect(getByTestId('quests-desktop-sidebar-slot', { includeHiddenElements: true })).toHaveStyle({ display: 'none' })
+  await rerender(frame(true))
+  expect(getByText('Expanded country')).toBeTruthy()
+  mockWidth = 1600
+  await rerender(frame(false))
+  expect(getByText('Expanded country')).toBeTruthy()
+  mockWidth = 390
+  await rerender(frame(true))
+  expect(getByText('Expanded country')).toBeTruthy()
+  expect(mounts).toBe(1)
+})
+
+it('unmounts the closed native drawer instead of keeping a hidden Yoga subtree', async () => {
+  ;(Platform as { OS: string }).OS = 'ios'
+  const { queryByText, rerender } = await render(page(true, jest.fn()))
+  expect(queryByText('Drawer navigation')).toBeTruthy()
+  await rerender(page(false, jest.fn()))
+  expect(queryByText('Drawer navigation', { includeHiddenElements: true })).toBeNull()
 })
