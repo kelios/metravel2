@@ -84,7 +84,6 @@ function numberIcon(L: any, n: number | string, colors: ThemedColors, active = f
     const textColor = active ? palette.point : palette.pointText;
     const shadow = colors.boxShadows.medium ?? colors.boxShadows.light ?? '0 8px 18px rgba(0,0,0,.22)';
     const size = active ? 40 : 34;
-    const dotSize = active ? 30 : 26;
     const fontSize = active ? 14 : 13;
     const ring = active
         ? `<div style="position:absolute;inset:-7px;border-radius:9999px;border:2px solid ${palette.route};opacity:0.45;animation:qpulse 1.8s ease-in-out infinite"></div>`
@@ -93,24 +92,12 @@ function numberIcon(L: any, n: number | string, colors: ThemedColors, active = f
     <div style="position:relative;width:${size}px;height:${size}px">
       ${ring}
       <div style="
-        width:${size}px;height:${size}px;border-radius:9999px;
-        background:${palette.point};border:2px solid ${palette.point};
-        display:flex;align-items:center;justify-content:center;
-        box-shadow:${shadow};position:relative;z-index:1
-      ">
-        <div style="
-          width:${dotSize}px;height:${dotSize}px;border-radius:9999px;
-          background:${bg};border:2px solid ${stroke};
-          color:${textColor};display:flex;align-items:center;justify-content:center;
-          font-weight:800;font-size:${fontSize}px;line-height:1;padding:0 4px;
-        ">${String(n)}</div>
-      </div>
-      <div style="
-        position:absolute;left:50%;bottom:-2px;width:10px;height:10px;
-        background:${palette.point};border-right:2px solid ${palette.point};
-        border-bottom:2px solid ${palette.point};transform:translateX(-50%) rotate(45deg);
-        box-shadow:${shadow};z-index:0
-      "></div>
+        width:${size}px;height:${size}px;border-radius:9999px;box-sizing:border-box;
+        background:${bg};border:2px solid ${stroke};outline:3px solid ${palette.point};
+        color:${textColor};display:flex;align-items:center;justify-content:center;
+        box-shadow:${shadow};position:relative;z-index:1;
+        font-weight:800;font-size:${fontSize}px;line-height:1;padding:0 4px;
+      ">${String(n)}</div>
     </div>`;
     const half = size / 2;
     return L.divIcon({ className: 'qmark', html, iconSize: [size, size], iconAnchor: [half, half] });

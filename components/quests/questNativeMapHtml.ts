@@ -74,6 +74,7 @@ export const buildQuestNativeMapHtml = ({
         var activeMarkerZIndexOffset = ${ACTIVE_QUEST_MARKER_Z_INDEX_OFFSET};
         var navProviders = ${serializeForInlineScript(questNavProviders)};
         var theme = ${serializeForInlineScript({
+            warning: colors.warning,
             warningDark: colors.warningDark,
             text: colors.text,
             surface: colors.surface,
@@ -132,24 +133,15 @@ export const buildQuestNativeMapHtml = ({
 
         function iconFor(label, active) {
           var size = active ? 40 : 34;
-          var dotSize = active ? 30 : 26;
           var fontSize = active ? 14 : 13;
           var bg = active ? theme.mapPalette.route : theme.mapPalette.point;
           var stroke = active ? theme.mapPalette.route : theme.mapPalette.pointBorder;
           var color = active ? theme.mapPalette.point : theme.mapPalette.pointText;
-          var html = '<div style="position:relative;width:' + size + 'px;height:' + size + 'px">' +
-            '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:9999px;' +
-            'background:' + theme.mapPalette.point + ';border:2px solid ' + theme.mapPalette.point + ';' +
-            'display:flex;align-items:center;justify-content:center;' +
-            'box-shadow:0 8px 18px rgba(0,0,0,.22);position:relative;z-index:1">' +
-            '<div style="width:' + dotSize + 'px;height:' + dotSize + 'px;border-radius:9999px;' +
-            'background:' + bg + ';border:2px solid ' + stroke + ';color:' + color + ';' +
+          var html = '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:9999px;box-sizing:border-box;' +
+            'background:' + bg + ';border:2px solid ' + stroke + ';outline:3px solid ' + theme.mapPalette.point + ';color:' + color + ';' +
             'display:flex;align-items:center;justify-content:center;font-weight:800;' +
-            'font-size:' + fontSize + 'px;line-height:1;padding:0 4px">' + label + '</div>' +
-            '</div><div style="position:absolute;left:50%;bottom:-2px;width:10px;height:10px;' +
-            'background:' + theme.mapPalette.point + ';border-right:2px solid ' + theme.mapPalette.point + ';' +
-            'border-bottom:2px solid ' + theme.mapPalette.point + ';transform:translateX(-50%) rotate(45deg);' +
-            'box-shadow:0 8px 18px rgba(0,0,0,.22);z-index:0"></div></div>';
+            'font-size:' + fontSize + 'px;line-height:1;padding:0 4px;' +
+            'box-shadow:0 8px 18px rgba(0,0,0,.22)">' + label + '</div>';
           return L.divIcon({ className: 'qmark', html: html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
         }
 
