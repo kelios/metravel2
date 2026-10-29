@@ -12,6 +12,8 @@ beforeAll(() => {
   jest.doMock('react-native', () => jest.requireActual('react-native-web'))
   jest.doMock('@/hooks/useTheme', () => ({ useThemedColors: () => ({ text: 'black', textMuted: 'gray', surface: 'white' }) }))
   jest.doMock('@/components/travel/DeferredStableContent', () => () => null)
+  jest.doMock('@/components/travel/TravelDescriptionHtml', () =>
+    jest.requireActual('@/components/travel/TravelDescriptionHtml.web'))
   ;({ createElement, act } = require('react'))
   ;({ renderToString } = require('react-dom/server.node'))
   ;({ hydrateRoot } = require('react-dom/client'))
@@ -37,6 +39,12 @@ it.each([390, 768, 1440])('hydrates the actual RNW description island at width %
   container.innerHTML = renderToString(tree)
   document.body.appendChild(container)
   const island = container.querySelector('[data-ssr-html-island="description"]')
+  expect(island?.classList.contains('travel-rich-text')).toBe(true)
+  expect(island?.classList.contains('travel-rich-text--full-width')).toBe(true)
+  const styles = container.querySelector('style[data-travel-description-styles]')?.textContent
+  expect(styles).toContain('.travel-rich-text img')
+  expect(styles).toContain('object-fit: contain')
+  expect(styles).toContain('max-height: 70vh')
   expect(island?.textContent).toContain('Канонический текст статьи.')
   expect(island?.querySelector('script')).toBeNull()
   expect(island?.querySelector('img')?.hasAttribute('onerror')).toBe(false)

@@ -140,7 +140,7 @@ describe('TravelDescription', () => {
 
     expect(IntersectionObserver).toHaveBeenCalledWith(
       expect.any(Function),
-      expect.objectContaining({ rootMargin: '0px 0px 400px 0px', threshold: 0.01 }),
+      expect.objectContaining({ rootMargin: '0px 0px 400px 0px', threshold: 0 }),
     )
     expect(observe).toHaveBeenCalledWith(expect.anything())
 
@@ -157,7 +157,8 @@ describe('TravelDescription', () => {
     expect(requestIdleCallback).not.toHaveBeenCalled()
 
     await act(() => {
-      intersectionCallback?.([{ isIntersecting: true, intersectionRatio: 0.1 }])
+      // A long SSR article exposes less than 1% of its height at once.
+      intersectionCallback?.([{ isIntersecting: true, intersectionRatio: 0.008 }])
     })
     expect(requestIdleCallback).toHaveBeenCalledTimes(1)
     expect(queryByTestId('stable-content')).toBeNull()

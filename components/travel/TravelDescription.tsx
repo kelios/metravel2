@@ -12,6 +12,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import DeferredStableContent from '@/components/travel/DeferredStableContent';
+import TravelDescriptionHtml from '@/components/travel/TravelDescriptionHtml';
 import { runAfterInteractions } from '@/utils/runAfterInteractions';
 import type { ArticleBodyMediaIndex } from '@/components/travel/stableContent/articleBodyMedia';
 import { translate as i18nT } from '@/i18n'
@@ -178,7 +179,10 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
                                 scheduleReveal();
                             }
                         },
-                        { rootMargin: HEAVY_HTML_REVEAL_ROOT_MARGIN, threshold: 0.01 },
+                        // A server-rendered article can exceed 100 viewports.
+                        // Reveal on contact; a percentage of its full height may
+                        // never fit inside the viewport, even while reading it.
+                        { rootMargin: HEAVY_HTML_REVEAL_ROOT_MARGIN, threshold: 0 },
                     )
                 } catch {
                     observer = null;
@@ -338,7 +342,7 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
               fallback={contentFallback}
             />
           ) : initialDescriptionHtml !== null ? (
-            <div data-ssr-html-island="description" dangerouslySetInnerHTML={{ __html: initialDescriptionHtml }} />
+            <TravelDescriptionHtml html={initialDescriptionHtml} fullWidth={noBox} />
           ) : (
             contentFallback
           )}
