@@ -21,6 +21,12 @@ jest.mock('@/hooks/useQuestsApi', () => ({
   },
 }))
 jest.mock('@/components/common/EmailSubscriptionForm', () => () => null)
+jest.mock('@/components/quests/QuestPublicPageFrame', () => ({ __esModule: true,
+  default: ({ children }: { children: React.ReactNode }) => children,
+}))
+jest.mock('@/components/quests/QuestPageColumns', () => ({
+  QuestPageColumns: ({ children }: { children: React.ReactNode }) => children,
+}))
 
 beforeEach(async () => {
   jest.clearAllMocks()

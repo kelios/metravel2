@@ -3,7 +3,6 @@ import { StyleSheet, Platform, type TextStyle, type ViewStyle } from 'react-nati
 
 import { asBottomDimension, webBottomChromeInset } from '@/components/layout/bottomChromeInset';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { LAYOUT } from '@/constants/layout';
 import {
     QUEST_CARD_BASE_HEIGHT,
     QUEST_CARD_PHONE_HEIGHT,
@@ -12,10 +11,10 @@ import {
 } from '@/constants/questLayout';
 import type { ThemedColors } from '@/hooks/useTheme';
 
-import { getQuestCatalogMapHeight, getQuestCatalogSidebarWidth } from './QuestsStyleMetrics';
+import { getQuestCatalogMapHeight } from './QuestsStyleMetrics';
+import { getQuestSectionStyles } from '@/components/quests/questSectionStyles';
 
 const { spacing, radii, typography, touchTarget } = DESIGN_TOKENS;
-const PANEL_RADIUS = radii.lg;
 const CONTROL_RADIUS = radii.sm;
 
 type WebDecorativeViewStyle = ViewStyle & {
@@ -34,7 +33,6 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
     // Шапка каталога в один ряд (заголовок | поиск) — от 1280: уже счётчик с
     // чипом «Популярные» и поиском не помещаются в колонку контента.
     const isWideDesktop = screenWidth >= DESIGN_TOKENS.breakpoints.xl;
-    const SIDEBAR_WIDTH = getQuestCatalogSidebarWidth(screenWidth);
     const headerPadding = isMobileW ? spacing.md : spacing.lg;
     const badgeFontSize = isSmallPhone ? 12 : 11;
     const categoryFontSize = isSmallPhone ? 12 : 10;
@@ -76,32 +74,7 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
     };
 
     return StyleSheet.create({
-        /* ---- Root Layout (Two-column, Premium) ---- */
-        root: {
-            flex: 1,
-            // Без minHeight:0 в column-flex (mobile web) дочерний ScrollView
-            // получает flex-basis от высоты КОНТЕНТА, а не от вьюпорта, поэтому
-            // внутренний скролл-контейнер «думает», что прокручивать нечего
-            // (scrollTop застревает на 0), хотя scrollHeight в разы больше.
-            minHeight: 0,
-            backgroundColor: colors.background,
-            flexDirection: isMobileW ? 'column' : 'row',
-            // На десктоп-вебе НЕ ставим minHeight:100vh: root живёт во flex-
-            // родителе высотой (вьюпорт − navbar), а 100vh перекрывает клип
-            // overflow:hidden оболочки приложения, и низ скролл-колонки content
-            // (с последним рядом карточек) уходит за границу клипа. flex:1 +
-            // minHeight:0 заполняют родителя ровно по высоте → скролл доходит
-            // до конца. На мобильном вебе скроллит сама страница (body).
-        },
-        desktopSidebarSlot: {
-            display: isMobileW ? 'none' : 'flex',
-            flexGrow: 0,
-            flexShrink: 0,
-            flexBasis: isMobileW ? 0 : SIDEBAR_WIDTH,
-            width: isMobileW ? 0 : SIDEBAR_WIDTH,
-            minHeight: 0,
-            flexDirection: 'row',
-        },
+        ...getQuestSectionStyles(colors, screenWidth),
 
         /* ---- Right Content (Premium, atmospheric) ---- */
         content: {
@@ -398,73 +371,6 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
         },
         questVirtualizedItem: {
             marginBottom: spacing.lg,
-        },
-
-        /* ---- Mobile sidebar overlay (Smooth backdrop) ---- */
-        sidebarOverlay: {
-            ...Platform.select({
-                web: {
-                    position: 'fixed',
-                    top: LAYOUT.headerHeight + spacing.sm,
-                    left: 0,
-                    right: 0,
-                    bottom: 'var(--mt-dock-h, 0px)',
-                    backgroundColor: colors.overlay,
-                    backdropFilter: 'blur(4px)',
-                    WebkitBackdropFilter: 'blur(4px)',
-                    zIndex: 999,
-                    animationKeyframes: 'fadeIn',
-                    animationDuration: '0.2s',
-                    animationTimingFunction: 'ease',
-                    touchAction: 'none',
-                    overscrollBehavior: 'none',
-                } as any,
-                // Native: position the backdrop explicitly — web-only styles above
-                // left the overlay zero-sized on iOS/Android, so the drawer never
-                // appeared visually (F-20).
-                default: {
-                    ...StyleSheet.absoluteFill,
-                    backgroundColor: colors.overlay,
-                    zIndex: 999,
-                    elevation: 8,
-                },
-            }),
-        },
-        sidebarMobile: {
-            ...Platform.select({
-                web: {
-                    position: 'fixed',
-                    top: LAYOUT.headerHeight + spacing.sm,
-                    left: 0,
-                    bottom: 'var(--mt-dock-h, 0px)',
-                    width: 340,
-                    maxWidth: '88vw',
-                    height: 'auto',
-                    maxHeight: `calc(100dvh - ${LAYOUT.headerHeight + spacing.sm}px - var(--mt-dock-h, 0px))`,
-                    paddingTop: 'env(safe-area-inset-top, 0px)',
-                    paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-                    zIndex: 1000,
-                    borderTopRightRadius: PANEL_RADIUS,
-                    borderBottomRightRadius: PANEL_RADIUS,
-                    overflow: 'hidden',
-                    boxShadow: ((colors.boxShadows as any)?.modal ?? DESIGN_TOKENS.shadows.modal) as any,
-                    animationKeyframes: 'slideInLeft',
-                    animationDuration: '0.25s',
-                    animationTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
-                } as any,
-                default: {
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    bottom: 0,
-                    width: Math.min(340, Math.round(screenWidth * 0.88)),
-                    zIndex: 1000,
-                    elevation: 12,
-                    borderTopRightRadius: PANEL_RADIUS,
-                    borderBottomRightRadius: PANEL_RADIUS,
-                    overflow: 'hidden',
-                },
-            }),
         },
 
         /* ---- Quest Card Styles (Modern, Atmospheric) ---- */

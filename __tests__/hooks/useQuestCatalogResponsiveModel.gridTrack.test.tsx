@@ -24,6 +24,10 @@ const layoutEvent = (width: number) =>
   ({ nativeEvent: { layout: { x: 0, y: 0, width, height: 1200 } } }) as LayoutChangeEvent
 
 describe('трек CSS-сетки каталога', () => {
+  it('sizes landing cards from the available main column rather than the whole viewport', () => {
+    expect(getQuestGridTrack(600, QUESTS_GRID_WEB_GAP, 240)).toEqual({ columns: 2, cardWidth: 284 })
+    expect(getQuestGridTrack(470, QUESTS_GRID_WEB_GAP, 240)).toEqual({ columns: 1, cardWidth: 470 })
+  })
   it.each([
     [300, 1, 300],
     [358, 1, 358],

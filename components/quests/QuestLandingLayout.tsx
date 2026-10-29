@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { ViewStyle } from 'react-native'
 import { Link, useIsFocused, useRouter } from 'expo-router'
 import type { Href } from 'expo-router'
@@ -8,10 +8,10 @@ import Feather from '@expo/vector-icons/Feather'
 import { jsonLdScript } from '@/components/seo/jsonLdScript'
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useQuestGridCardWidth } from '@/hooks/useQuestCatalogResponsiveModel'
 import {
   QUESTS_LANDING_CARD_MAX_WIDTH,
   QUESTS_LANDING_CARD_MIN_WIDTH,
-  QUESTS_LANDING_CONTENT_WIDTH,
   QUESTS_LANDING_PADDING,
 } from '@/constants/questLayout'
 import type { useThemedColors } from '@/hooks/useTheme'
@@ -233,7 +233,6 @@ export function QuestLandingScroll({
       style={[styles.root, { flexDirection: 'column' }]}
       contentContainerStyle={{
         width: '100%',
-        maxWidth: QUESTS_LANDING_CONTENT_WIDTH + QUESTS_LANDING_PADDING * 2,
         alignSelf: 'center',
         padding: QUESTS_LANDING_PADDING,
         gap: spacing.md,
@@ -335,16 +334,19 @@ export function QuestLandingSectionTitle({ colors, children }: { colors: ThemedC
 export function QuestLandingGrid({
   styles,
   quests,
-  cardColumns,
-  cardWidth,
+  cardWidth: fallbackCardWidth = QUESTS_LANDING_CARD_MIN_WIDTH,
 }: {
   styles: QuestsScreenStyles
   quests: QuestMeta[]
-  cardColumns: number
-  cardWidth: number
+  /** Native keeps the route's responsive model; web measures its actual column. */
+  cardWidth?: number
 }) {
+  const { gridRef, onGridLayout, cardWidth } = useQuestGridCardWidth(
+    fallbackCardWidth, Platform.OS === 'web', QUESTS_LANDING_CARD_MIN_WIDTH,
+  )
   return (
-    <View style={[styles.questsGrid, { gridTemplateColumns: `repeat(${cardColumns}, minmax(0, 1fr))` } as ViewStyle]}>
+    <View ref={gridRef} onLayout={onGridLayout}
+      style={[styles.questsGrid, { gridTemplateColumns: `repeat(auto-fill, minmax(min(100%, ${QUESTS_LANDING_CARD_MIN_WIDTH}px), 1fr))` } as ViewStyle]}>
       {quests.map((quest, index) => (
         <QuestCard
           key={`${quest.cityId}:${quest.id}`}

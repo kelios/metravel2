@@ -28,8 +28,8 @@ export type QuestCatalogResponsiveOptions = {
  * Трек CSS-сетки `repeat(auto-fill, minmax(min(100%, 380px), 1fr))`: колонок
  * столько, сколько минимумов влезает с зазорами, остаток делится поровну.
  */
-export function getQuestGridTrack(containerWidth: number, columnGap = QUESTS_GRID_WEB_GAP) {
-  const columns = Math.max(1, Math.floor((containerWidth + columnGap) / (QUESTS_GRID_MIN_COLUMN_WIDTH + columnGap)))
+export function getQuestGridTrack(containerWidth: number, columnGap = QUESTS_GRID_WEB_GAP, minColumnWidth = QUESTS_GRID_MIN_COLUMN_WIDTH) {
+  const columns = Math.max(1, Math.floor((containerWidth + columnGap) / (minColumnWidth + columnGap)))
   return { columns, cardWidth: (containerWidth - columnGap * (columns - 1)) / columns }
 }
 
@@ -83,7 +83,7 @@ export function useQuestCatalogResponsiveModel(
  * считала 660 при реальных 606 и клала карточку 318 в колонку 606. На native
  * сетка раскладывается по модели, там отдаётся `fallbackWidth`.
  */
-export function useQuestGridCardWidth(fallbackWidth: number, enabled: boolean) {
+export function useQuestGridCardWidth(fallbackWidth: number, enabled: boolean, minColumnWidth = QUESTS_GRID_MIN_COLUMN_WIDTH) {
   const isWeb = Platform.OS === 'web'
   const gridRef = useRef<ViewInstance>(null)
   const gridWidthRef = useRef(0)
@@ -121,6 +121,6 @@ export function useQuestGridCardWidth(fallbackWidth: number, enabled: boolean) {
     if (isWeb) measureGrid(event.nativeEvent.layout.width)
   }, [isWeb, measureGrid])
 
-  const cardWidth = isWeb && enabled && gridWidth > 0 ? getQuestGridTrack(gridWidth).cardWidth : fallbackWidth
+  const cardWidth = isWeb && enabled && gridWidth > 0 ? getQuestGridTrack(gridWidth, QUESTS_GRID_WEB_GAP, minColumnWidth).cardWidth : fallbackWidth
   return { gridRef, onGridLayout, cardWidth }
 }

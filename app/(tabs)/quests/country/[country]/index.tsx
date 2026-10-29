@@ -1,8 +1,12 @@
 import React, { useEffect, useMemo } from 'react'
-import { Dimensions, Platform } from 'react-native'
+import { Dimensions, Platform, View } from 'react-native'
 import { useIsFocused, useLocalSearchParams, useNavigation } from 'expo-router'
 
 import QuestCountryLandingSections from '@/components/quests/QuestCountryLandingSections'
+import QuestPublicPageFrame from '@/components/quests/QuestPublicPageFrame'
+import { toCountrySelectionId } from '@/utils/questCatalogSelection'
+import { QuestPageColumns } from '@/components/quests/QuestPageColumns'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import {
   getQuestLandingRouteParam,
   QUEST_LANDING_DESCRIPTION_META_TARGETS,
@@ -116,7 +120,10 @@ export default function QuestsByCountryScreen() {
   }
 
   return (
+    <QuestPublicPageFrame selectedCityId={toCountrySelectionId(country.countryCode)}>
     <QuestLandingScroll styles={s} isMobile={isMobile}>
+      <QuestPageColumns affiliateContext={{ country: countryName, countryCode: country.countryCode, travelId: `quest-country-${country.countryAlias}` }}>
+      <View style={{ gap: DESIGN_TOKENS.spacing.md, minWidth: 0 }}>
       {isFocused ? (
         <InstantSEO
           headKey={`quests-country-${country.countryAlias}`}
@@ -157,10 +164,12 @@ export default function QuestsByCountryScreen() {
       <QuestLandingGrid
         styles={s}
         quests={countryQuests}
-        cardColumns={catalogModel.cardColumns}
         cardWidth={catalogModel.cardWidth}
       />
+      </View>
+      </QuestPageColumns>
     </QuestLandingScroll>
+    </QuestPublicPageFrame>
   )
 }
 

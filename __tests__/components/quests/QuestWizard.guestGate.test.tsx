@@ -45,7 +45,7 @@ jest.mock('@/components/quests/hooks/useQuestWizardResponsiveModel', () => ({
 jest.mock('@/components/quests/questWizardSections', () => ({
   QuestDesktopMapPanel: (props: any) => mockQuestDesktopMapPanel(props),
   QuestExcursionsInline: (props: any) => mockQuestExcursionsInline(props),
-  QuestExcursionsSidebar: () => null,
+  QuestExcursionsColumns: ({ children }: { children: React.ReactNode }) => children,
   QuestFinalePanel: (props: any) => mockQuestFinalePanel(props),
 }))
 jest.mock('@/components/quests/useQuestFinaleMedia', () => ({

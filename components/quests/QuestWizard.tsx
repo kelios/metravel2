@@ -28,7 +28,7 @@ import { isPrintAvailable } from '@/utils/printHtml';
 import {
     QuestDesktopMapPanel,
     QuestExcursionsInline,
-    QuestExcursionsSidebar,
+    QuestExcursionsColumns,
     QuestFinalePanel,
 } from './questWizardSections';
 import { QuestStepCard, clearQuestCooldowns } from './questWizardStepCard';
@@ -169,7 +169,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
     const {
         screenW, screenH, isMobile,
         compactDesktopLayout,
-        useWideInlineLayout, useWideExcursionsSidebar,
+        useWideInlineLayout,
     } = wizardModel;
 
     const { colors, styles } = useQuestWizardTheme(isMobile, screenW);
@@ -689,9 +689,17 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         />
     ), [cityId, questId, resolvedCountModel, title]);
     const mainContent = (
-        <View key="quest-main-content" ref={headerPlacement.mainContentRef} collapsable={false} testID="quest-main-content-anchor" style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageRow : undefined}>
+        <View key="quest-main-content" ref={headerPlacement.mainContentRef} collapsable={false} testID="quest-main-content-anchor">
+          <QuestExcursionsColumns
+            colors={colors}
+            styles={styles}
+            city={city}
+            title={title}
+            questId={questId}
+            enabled={!showFinaleOnly && Boolean(currentStep)}
+          >
             {/* Левая колонка: шаги + карта + финал */}
-            <View style={useWideExcursionsSidebar && city && Platform.OS === 'web' ? styles.pageMain : undefined}>
+            <View>
                 {/* Гостевой мягкий гейт после лимита бесплатных точек */}
                 {guestGateActive && (
                     <QuestGuestGate
@@ -766,10 +774,8 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                     </View>
                 )}
 
-                {/* Экскурсии рядом — в основном потоке, когда нет отдельной правой
-                    колонки. Одна секция на оба источника (Belkraj + affiliate):
-                    отдельная native-секция с тем же заголовком задваивала блок (#1452). */}
-                {(Platform.OS !== 'web' || !useWideExcursionsSidebar) && (!showFinaleOnly) && currentStep && city && (
+                {/* Native retains its existing inline provider; web uses the shared columns. */}
+                {Platform.OS !== 'web' && !showFinaleOnly && currentStep && city && (
                     <QuestExcursionsInline
                         colors={colors}
                         styles={styles}
@@ -819,16 +825,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                 )}
             </View>
 
-            {/* Правая колонка: блок экскурсий — постоянно видим на desktop */}
-            {useWideExcursionsSidebar && city && Platform.OS === 'web' && (
-                <QuestExcursionsSidebar
-                    colors={colors}
-                    styles={styles}
-                    city={city}
-                    title={title}
-                    questId={questId}
-                />
-            )}
+          </QuestExcursionsColumns>
         </View>
     );
 
@@ -937,7 +934,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                 onMomentumScrollEnd={headerPlacement.onScrollEnd}
                                 onScroll={handleReadingScroll}
                                 scrollEventThrottle={16}
-                                contentContainerStyle={[{ paddingBottom: Platform.OS === 'web' ? asBottomDimension(webReadingBottomPadding) : SPACING.xl + 96 + keyboardInset }, useWideExcursionsSidebar && styles.contentInner]}
+                                contentContainerStyle={{ paddingBottom: Platform.OS === 'web' ? asBottomDimension(webReadingBottomPadding) : SPACING.xl + 96 + keyboardInset }}
                             >
                                 {!showDesktopSidebar && headerPlacement.headerInContentFlow ? questHeader : null}
                                 {mainContent}

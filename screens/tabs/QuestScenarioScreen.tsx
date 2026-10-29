@@ -4,6 +4,8 @@ import { Link, useIsFocused, useNavigation, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import { ResponsiveContainer } from '@/components/layout'
+import QuestPublicPageFrame from '@/components/quests/QuestPublicPageFrame'
+import { QuestPageColumns } from '@/components/quests/QuestPageColumns'
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { jsonLdScript } from '@/components/seo/jsonLdScript'
@@ -230,6 +232,7 @@ export default function QuestScenarioScreen() {
   }, [faqItems, steps, canonical])
 
   return (
+    <QuestPublicPageFrame>
     <ScrollView
       style={{ flex: 1, minHeight: 0, backgroundColor: colors.background }}
       contentContainerStyle={{
@@ -255,6 +258,7 @@ export default function QuestScenarioScreen() {
       ) : null}
       {isFocused && jsonLdInBody ? structuredData : null}
 
+      <QuestPageColumns affiliateContext={{ travelId: 'quest-scenario' }}>
       <ResponsiveContainer
         maxWidth={COLUMN_MAX_WIDTH}
         padding={false}
@@ -446,6 +450,8 @@ export default function QuestScenarioScreen() {
 
       <CtaLink colors={colors} href={QUEST_LIST_ROUTE} label={i18nT('quests:screens.tabs.QuestScenarioScreen.cta')} />
       </ResponsiveContainer>
+      </QuestPageColumns>
     </ScrollView>
+    </QuestPublicPageFrame>
   )
 }

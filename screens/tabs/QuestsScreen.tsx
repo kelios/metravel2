@@ -1,8 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import {
-    View, Pressable, Platform,
+    Platform,
     Dimensions,
-    ViewStyle,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -30,6 +29,7 @@ import { getQuestFaqItems } from './QuestsSeoIntroFaq';
 import type { QuestMeta } from './questsShared';
 import { createQuestCatalogStructuredData } from '@/utils/discoverySeo';
 import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext';
+import { QuestSectionFrame } from '@/components/quests/QuestSectionFrame';
 import { getStyles } from './QuestsScreen.styles';
 import {
     STORAGE_SELECTED_CITY,
@@ -118,6 +118,7 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
     const [geoMessage, setGeoMessage] = useState<string | null>(null);
     const nearbyRadiusKm = DEFAULT_NEARBY_RADIUS_KM;
     const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+    const closeFilterDrawer = useCallback(() => setFilterDrawerOpen(false), []);
     const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
     const [sortOrder, setSortOrder] = useState<QuestSortOrder>('default');
     const [pendingMapAreaCenter, setPendingMapAreaCenter] = useState<QuestMapArea | null>(null);
@@ -325,25 +326,6 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
         })();
         return () => { cancelled = true; };
     }, [selectedCityId, setSelectedCityId, viewMode, nearbyRequestVersion]);
-
-    useEffect(() => {
-        if (Platform.OS !== 'web' || !filterDrawerOpen) return undefined;
-        const html = document.documentElement;
-        const body = document.body;
-        const previousHtmlOverflow = html.style.overflow;
-        const previousBodyOverflow = body.style.overflow;
-        const previousBodyTouchAction = body.style.touchAction;
-
-        html.style.overflow = 'hidden';
-        body.style.overflow = 'hidden';
-        body.style.touchAction = 'none';
-
-        return () => {
-            html.style.overflow = previousHtmlOverflow;
-            body.style.overflow = previousBodyOverflow;
-            body.style.touchAction = previousBodyTouchAction;
-        };
-    }, [filterDrawerOpen]);
 
     // ── Derived data ──
     const kidsQuests = useMemo(() => filterKidsQuests(ALL_QUESTS), [ALL_QUESTS]);
@@ -713,7 +695,9 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
     };
 
     return (
-        <View style={s.root as ViewStyle} testID="quests-root">
+        <QuestSectionFrame drawerOpen={filterDrawerOpen} onCloseDrawer={closeFilterDrawer}
+            sidebar={!isMobile ? <Suspense fallback={null}><QuestsSidebar {...sidebarProps} testID="quests-desktop-sidebar" /></Suspense> : null}
+            drawerSidebar={<Suspense fallback={null}><QuestsSidebar {...sidebarProps} onCloseDrawer={closeFilterDrawer} /></Suspense>}>
             {isFocused && route ? route.seo : null}
             {isFocused && !route && (
                 <InstantSEO
@@ -727,37 +711,6 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
                 />
             )}
             {isFocused && !route && jsonLdInBody ? questsSeoTags : null}
-
-            {/* Mobile: Filter drawer overlay */}
-            {isMobile && filterDrawerOpen && (
-                <>
-                    <Pressable
-                        style={s.sidebarOverlay as ViewStyle}
-                        onPress={() => setFilterDrawerOpen(false)}
-                        accessibilityRole="button"
-                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsScreen.zakryt_menyu_fbe0ff41')}
-                    />
-                    <View style={s.sidebarMobile as ViewStyle}>
-                        <Suspense fallback={null}>
-                            <QuestsSidebar
-                                {...sidebarProps}
-                                onCloseDrawer={() => setFilterDrawerOpen(false)}
-                            />
-                        </Suspense>
-                    </View>
-                </>
-            )}
-
-            {/* Reserve the desktop sidebar before hydration. The server snapshot
-                intentionally uses the mobile breakpoint; the CSS media query on
-                this slot still allocates its final width before the first paint. */}
-            <View style={s.desktopSidebarSlot as ViewStyle} testID="quests-desktop-sidebar-slot">
-                {!isMobile && (
-                    <Suspense fallback={null}>
-                        <QuestsSidebar {...sidebarProps} testID="quests-desktop-sidebar" />
-                    </Suspense>
-                )}
-            </View>
 
             <QuestsContentPanel
                 noticeSlot={reviewPromptSlot}
@@ -795,7 +748,12 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
                 onOpenFilterDrawer={handleOpenFilterDrawer}
                 onToggleViewMode={handleToggleViewMode}
                 footerSlot={route?.footer}
+                affiliateContext={{
+                    city: CITIES.find((city) => city.id === selectedCityId)?.name,
+                    countryCode: selectedCountry?.code ?? CITIES.find((city) => city.id === selectedCityId)?.countryCode,
+                    travelId: 'quests-catalog',
+                }}
             />
-        </View>
+        </QuestSectionFrame>
     );
 }

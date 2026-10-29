@@ -23,6 +23,9 @@ import { ALL_QUESTS_ID, COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVI
 import { getQuestThemeById } from '@/utils/questThemes';
 import QuestsMobileToolbar from './QuestsMobileToolbar';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
+import { QuestPageColumns } from '@/components/quests/QuestPageColumns';
+import AffiliateOffers from '@/components/affiliate/AffiliateOffers';
+import type { AffiliateOfferContext } from '@/components/affiliate/affiliateConfig';
 import { pluralizeCompletions, pluralizePlayers, pluralizeQuest, type QuestMeta, type QuestSortOrder, type QuestThemeEntry } from './questsShared';
 import QuestsSortChips, { EMPTY_SORT_ORDERS } from './QuestsSortChips';
 
@@ -77,6 +80,7 @@ type QuestsContentPanelProps = {
     noticeSlot?: React.ReactNode;
     /** Copy owned by the route below the grid (city page, #2654); hidden while searching. */
     footerSlot?: React.ReactNode;
+    affiliateContext?: AffiliateOfferContext;
 };
 
 type QuestListItem = QuestMeta & { _distanceKm?: number };
@@ -89,6 +93,7 @@ const SEO_INTRO_SLOT_PROPS = webDataSetProps({ questsSeoSlot: 'intro' });
 const SEO_FAQ_SLOT_PROPS = webDataSetProps({ questsSeoSlot: 'faq' });
 
 function QuestsContentPanel({
+    affiliateContext,
     styles,
     colors,
     dataLoaded,
@@ -515,6 +520,8 @@ function QuestsContentPanel({
             >
                 {geoMessageBlock}
 
+                <QuestPageColumns affiliateContext={affiliateContext}
+                    promotion={Platform.OS !== 'web' && viewMode === 'map' ? null : undefined}>
                 {viewMode === 'map' ? (
                     <View style={styles.mapSection}>
                         <Suspense fallback={<View style={styles.mapLoading}><ActivityIndicator color={colors.primary} /></View>}>
@@ -548,6 +555,7 @@ function QuestsContentPanel({
                         {searchActive ? null : footerSlot}
                     </>
                 )}
+                </QuestPageColumns>
             </View>
         </>
     );
@@ -569,7 +577,7 @@ function QuestsContentPanel({
                             {seoIntroSlot}
                         </>
                     }
-                    ListFooterComponent={<>{seoFaqSlot}{searchActive ? null : footerSlot}</>}
+                    ListFooterComponent={<>{seoFaqSlot}{searchActive ? null : footerSlot}<AffiliateOffers {...affiliateContext} /></>}
                     ListEmptyComponent={listEmptyContent}
                     keyboardShouldPersistTaps="handled"
                     initialNumToRender={4}

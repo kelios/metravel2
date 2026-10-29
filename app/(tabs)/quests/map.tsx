@@ -8,6 +8,7 @@ import {
     StyleSheet,
     Pressable,
     ActivityIndicator,
+    ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
@@ -22,9 +23,40 @@ import { buildQuestPath } from '@/utils/routePaths';
 import Map from '@/components/MapPage/Map';
 import { translate as i18nT } from '@/i18n'
 import { staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
+import QuestPublicPageFrame from '@/components/quests/QuestPublicPageFrame';
+import { QuestPageColumns } from '@/components/quests/QuestPageColumns';
+import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset';
+import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { useBreakpoints } from '@/hooks/useResponsive';
+import { getQuestCatalogMapHeight } from '@/screens/tabs/QuestsStyleMetrics';
 
 
 const LazyMap = React.lazy(() => import('@/components/MapPage/Map.web'));
+const MAP_AFFILIATE_CONTEXT = { travelId: 'quests-map' };
+
+/** The map keeps its own bounded viewport; the section owns navigation and advertising. */
+function QuestMapWebFrame({ children }: { children: React.ReactNode }) {
+    const { width } = useBreakpoints();
+    const bottomPadding = useScrollBottomPadding(DESIGN_TOKENS.spacing.lg);
+    return (
+    <QuestPublicPageFrame viewMode="map">
+            <ScrollView
+                style={{ flex: 1, minHeight: 0 }}
+                contentContainerStyle={{
+                    padding: DESIGN_TOKENS.spacing.lg,
+                    paddingBottom: asBottomDimension(bottomPadding),
+                }}
+                testID="quest-map-section-scroll"
+            >
+                <QuestPageColumns affiliateContext={MAP_AFFILIATE_CONTEXT}>
+                    <View style={{ height: getQuestCatalogMapHeight(width), minHeight: 420 }} testID="quest-map-viewport">
+                        {children}
+                    </View>
+                </QuestPageColumns>
+            </ScrollView>
+        </QuestPublicPageFrame>
+    );
+}
 
 type Point = {
     id?: number;
@@ -194,6 +226,7 @@ export default function QuestsMapScreen() {
 
     if (questsLoading) {
         return (
+          <QuestMapWebFrame>
             <View style={styles.fallback}>
                 {seoBlock}
                 <ActivityIndicator
@@ -202,11 +235,13 @@ export default function QuestsMapScreen() {
                 />
                 <Text style={styles.fallbackText}>{i18nT('quests:app.tabs.quests.map.zagruzhaem_kartu_kvestov_6b50ed3f')}</Text>
             </View>
+          </QuestMapWebFrame>
         );
     }
 
     if (travel.data.length === 0) {
         return (
+          <QuestMapWebFrame>
             <View style={styles.fallback}>
                 {seoBlock}
                 <Feather name="map" size={48} color={colors.textMuted} />
@@ -216,24 +251,24 @@ export default function QuestsMapScreen() {
                     <Text style={styles.backBtnTxt}>{i18nT('quests:app.tabs.quests.map.k_spisku_kvestov_e40d397b')}</Text>
                 </Pressable>
             </View>
+          </QuestMapWebFrame>
         );
     }
 
     return (
+      <QuestMapWebFrame>
         <View style={{ flex: 1 }}>
             {seoBlock}
             {Platform.OS === 'web' && (
-                <h1 style={{
-                    position: 'absolute' as const,
+                <Text accessibilityRole="header" aria-level={1} style={{
+                    position: 'absolute',
                     width: 1,
                     height: 1,
                     padding: 0,
                     margin: -1,
                     overflow: 'hidden' as const,
-                    clip: 'rect(0,0,0,0)',
-                    whiteSpace: 'nowrap',
                     borderWidth: 0,
-                } as any}>{title}</h1>
+                }}>{title}</Text>
             )}
             <Suspense fallback={
                 <View style={styles.fallback}>
@@ -266,6 +301,7 @@ export default function QuestsMapScreen() {
                 <Feather name="arrow-left" size={18} color={colors.text} />
             </Pressable>
         </View>
+      </QuestMapWebFrame>
     );
 }
 

@@ -45,7 +45,7 @@ jest.mock('@/hooks/useBreadcrumbModel', () => ({
 jest.mock('@/components/quests/questWizardSections', () => ({
   QuestDesktopMapPanel: () => null,
   QuestExcursionsInline: () => null,
-  QuestExcursionsSidebar: () => null,
+  QuestExcursionsColumns: ({ children }: { children: React.ReactNode }) => children,
   QuestFinalePanel: jest.requireActual('@/components/quests/questWizardSections').QuestFinalePanel,
 }))
 jest.mock('@/components/quests/useQuestFinaleMedia', () => ({

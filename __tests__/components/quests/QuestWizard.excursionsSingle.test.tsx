@@ -11,8 +11,14 @@
  * повторную секцию, добавленную в реальное дерево визарда.
  */
 import React from 'react'
-import { render } from '@testing-library/react-native'
-import { Platform } from 'react-native'
+import { fireEvent, render } from '@testing-library/react-native'
+import { Platform, TextInput } from 'react-native'
+
+let mockViewportWidth = 390
+jest.mock('@/hooks/useResponsive', () => ({
+  ...jest.requireActual('@/hooks/useResponsive'),
+  useBreakpoints: () => ({ width: mockViewportWidth }),
+}))
 
 const EXCURSIONS_TITLE = 'Экскурсии рядом'
 
@@ -88,6 +94,7 @@ jest.mock('@/components/quests/questOfflineMapExport', () => ({
 }))
 
 import { QuestWizard } from '@/components/quests/QuestWizard'
+import { QuestExcursionsColumns } from '@/components/quests/questWizardSections'
 
 const anyAnswer = () => true
 
@@ -136,6 +143,7 @@ const renderWizard = async () => await render(
 
 afterEach(() => {
   setPlatform(originalPlatformOS)
+  mockViewportWidth = 390
 })
 
 describe('QuestWizard: секция «Экскурсии рядом» на карточке шага', () => {
@@ -167,5 +175,34 @@ describe('QuestWizard: секция «Экскурсии рядом» на ка�
 
     expect(getAllByText(EXCURSIONS_TITLE)).toHaveLength(1)
     expect(queryByText('Экскурсии и гиды')).toBeNull()
+  })
+
+  it.each([390, 1200, 1440])('на web %ipx использует один provider group в общей раскладке', async (width) => {
+    setPlatform('web')
+    mockViewportWidth = width
+    const { getAllByText, getAllByTestId, queryByText } = await renderWizard()
+    expect(getAllByText(EXCURSIONS_TITLE)).toHaveLength(1)
+    expect(getAllByTestId('quest-page-promotion')).toHaveLength(1)
+    expect(getAllByTestId('quest-belkraj-widget')).toHaveLength(1)
+    expect(queryByText('Экскурсии и гиды')).toBeNull()
+  })
+
+  it('сохраняет введённый ответ, когда город и рекламная колонка появляются позже', async () => {
+    setPlatform('web')
+    function ReadingAnswer() {
+      const [answer, setAnswer] = React.useState('')
+      return <TextInput testID="reading-answer" value={answer} onChangeText={setAnswer} />
+    }
+    const props = { colors: {}, styles: {}, title: 'Квест', questId: 'draft', enabled: true }
+    const { getByTestId, queryByTestId, rerender } = await render(
+      <QuestExcursionsColumns {...props}><ReadingAnswer /></QuestExcursionsColumns>,
+    )
+    await fireEvent.changeText(getByTestId('reading-answer'), 'сохранить ответ')
+    expect(queryByTestId('quest-page-promotion')).toBeNull()
+
+    mockViewportWidth = 1440
+    await rerender(<QuestExcursionsColumns {...props} city={city}><ReadingAnswer /></QuestExcursionsColumns>)
+    expect(getByTestId('reading-answer').props.value).toBe('сохранить ответ')
+    expect(getByTestId('quest-page-promotion')).toBeTruthy()
   })
 })
