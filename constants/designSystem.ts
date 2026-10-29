@@ -19,6 +19,14 @@ export const DESIGN_COLORS = {
   // Route polyline color — vivid navigation blue, high contrast over OSM tiles
   // (green parks / grey roads), readable on light & dark themes with white halo.
   routeLine: '#2563eb',
+  // Quest navigation keeps a stable palette over tiles, independent of seasonal UI accents.
+  questMap: {
+    route: '#0f766e',
+    halo: '#ffffff',
+    point: '#ffffff',
+    pointBorder: '#334155',
+    pointText: '#0f172a',
+  },
   strava: '#fc4c02',
   // Video letterboxing stays black independently of the application theme.
   videoBackdrop: '#000',

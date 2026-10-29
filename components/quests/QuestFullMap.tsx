@@ -78,22 +78,23 @@ const getRouteStatusText = (route: QuestRouteGeometryState, routeMode: QuestRout
 
 // n теперь может быть числом или строкой "1,2"
 function numberIcon(L: any, n: number | string, colors: ThemedColors, active = false) {
-    const bg = active ? colors.primary : colors.surface;
-    const stroke = active ? colors.primaryDark : colors.primary;
-    const textColor = active ? colors.textOnPrimary : colors.primaryDark;
+    const palette = DESIGN_COLORS.questMap;
+    const bg = active ? palette.route : palette.point;
+    const stroke = active ? palette.route : palette.pointBorder;
+    const textColor = active ? palette.point : palette.pointText;
     const shadow = colors.boxShadows.medium ?? colors.boxShadows.light ?? '0 8px 18px rgba(0,0,0,.22)';
     const size = active ? 40 : 34;
     const dotSize = active ? 30 : 26;
     const fontSize = active ? 14 : 13;
     const ring = active
-        ? `<div style="position:absolute;inset:-7px;border-radius:9999px;border:2px solid ${colors.primary};opacity:0.45;animation:qpulse 1.8s ease-in-out infinite"></div>`
+        ? `<div style="position:absolute;inset:-7px;border-radius:9999px;border:2px solid ${palette.route};opacity:0.45;animation:qpulse 1.8s ease-in-out infinite"></div>`
         : '';
     const html = `
     <div style="position:relative;width:${size}px;height:${size}px">
       ${ring}
       <div style="
         width:${size}px;height:${size}px;border-radius:9999px;
-        background:${colors.surface};border:2px solid ${colors.surface};
+        background:${palette.point};border:2px solid ${palette.point};
         display:flex;align-items:center;justify-content:center;
         box-shadow:${shadow};position:relative;z-index:1
       ">
@@ -106,8 +107,8 @@ function numberIcon(L: any, n: number | string, colors: ThemedColors, active = f
       </div>
       <div style="
         position:absolute;left:50%;bottom:-2px;width:10px;height:10px;
-        background:${colors.surface};border-right:2px solid ${colors.surface};
-        border-bottom:2px solid ${colors.surface};transform:translateX(-50%) rotate(45deg);
+        background:${palette.point};border-right:2px solid ${palette.point};
+        border-bottom:2px solid ${palette.point};transform:translateX(-50%) rotate(45deg);
         box-shadow:${shadow};z-index:0
       "></div>
     </div>`;
@@ -554,7 +555,7 @@ function QuestFullMap({
                 <Feather
                     name={routeGeometry.status === 'loading' ? 'loader' : routeIsRouted ? 'navigation' : 'alert-triangle'}
                     size={14}
-                    color={routeIsRouted ? colors.primary : routeGeometry.status === 'loading' ? colors.textMuted : colors.warningDark}
+                    color={routeIsRouted ? DESIGN_COLORS.questMap.route : routeGeometry.status === 'loading' ? colors.textMuted : colors.warningDark}
                 />
                 <Text style={styles.routeStatusText} numberOfLines={1}>
                     {routeStatusText}
@@ -633,11 +634,14 @@ function QuestFullMap({
                 </TouchableOpacity>
             </Modal>
 
-            <View ref={mapDivRef as any} style={styles.mapBox}>
+            <View ref={mapDivRef as any} style={styles.mapBox} dataSet={{ questMap: 'true' }}>
                 <MapCanvas
                     engine={engine}
                     bounds={bounds}
-                    mapStyle={styles.map as React.CSSProperties}
+                    mapStyle={{
+                        ...styles.map as React.CSSProperties,
+                        ...{ '--metravel-map-background': DESIGN_COLORS.questMap.point },
+                    }}
                     scrollWheelZoom={false}
                     zoomControl={Platform.OS === 'web'}
                     dragging={Platform.OS === 'web'}
@@ -653,7 +657,7 @@ function QuestFullMap({
                             <Polyline
                                 positions={routeLinePositions}
                                 pathOptions={{
-                                    color: colors.surface,
+                                    color: DESIGN_COLORS.questMap.halo,
                                     weight: routeIsRouted ? 9 : 7,
                                     opacity: 0.92,
                                     lineCap: 'round',
@@ -663,7 +667,7 @@ function QuestFullMap({
                             <Polyline
                                 positions={routeLinePositions}
                                 pathOptions={{
-                                    color: routeIsRouted ? DESIGN_COLORS.routeLine : colors.warningDark,
+                                    color: routeIsRouted ? DESIGN_COLORS.questMap.route : colors.warningDark,
                                     weight: routeIsRouted ? 5 : 4,
                                     opacity: routeIsRouted ? 0.96 : 0.78,
                                     dashArray: routeIsRouted ? undefined : '8 10',

@@ -37,7 +37,9 @@ export const buildQuestNativeMapHtml = ({
     questNavProviders: ReadonlyArray<{ app: QuestMapApp; label: string }>;
 }) =>
     buildLeafletWebViewHtml({
-        headStyles: `        .leaflet-overlay-pane { z-index: 450 !important; }
+        headStyles: `        #map { background: ${DESIGN_COLORS.questMap.point}; }
+        .leaflet-tile-pane { filter: grayscale(0.75) saturate(0.45) contrast(0.95); }
+        .leaflet-overlay-pane { z-index: 450 !important; }
         .leaflet-marker-pane { z-index: 650 !important; }
         .qmark {
           background: transparent !important;
@@ -72,14 +74,11 @@ export const buildQuestNativeMapHtml = ({
         var activeMarkerZIndexOffset = ${ACTIVE_QUEST_MARKER_Z_INDEX_OFFSET};
         var navProviders = ${serializeForInlineScript(questNavProviders)};
         var theme = ${serializeForInlineScript({
-            primary: colors.primary,
-            primaryDark: colors.primaryDark,
-            warning: colors.warning,
             warningDark: colors.warningDark,
             text: colors.text,
-            textOnPrimary: colors.textOnPrimary,
             surface: colors.surface,
-            routeLine: DESIGN_COLORS.routeLine,
+            routeLine: DESIGN_COLORS.questMap.route,
+            mapPalette: DESIGN_COLORS.questMap,
         })};
         var initialCenter = waypointPoints[0] || routePoints[0] || [53.9, 27.56];
 
@@ -113,7 +112,7 @@ export const buildQuestNativeMapHtml = ({
 
         var routeHalo = routePoints.length > 1
           ? L.polyline(routePoints, {
-              color: theme.surface,
+              color: theme.mapPalette.halo,
               weight: routeIsRouted ? 9 : 7,
               opacity: 0.92,
               lineCap: 'round',
@@ -135,12 +134,12 @@ export const buildQuestNativeMapHtml = ({
           var size = active ? 40 : 34;
           var dotSize = active ? 30 : 26;
           var fontSize = active ? 14 : 13;
-          var bg = active ? theme.primary : theme.surface;
-          var stroke = active ? theme.primaryDark : theme.primary;
-          var color = active ? theme.textOnPrimary : theme.primaryDark;
+          var bg = active ? theme.mapPalette.route : theme.mapPalette.point;
+          var stroke = active ? theme.mapPalette.route : theme.mapPalette.pointBorder;
+          var color = active ? theme.mapPalette.point : theme.mapPalette.pointText;
           var html = '<div style="position:relative;width:' + size + 'px;height:' + size + 'px">' +
             '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:9999px;' +
-            'background:' + theme.surface + ';border:2px solid ' + theme.surface + ';' +
+            'background:' + theme.mapPalette.point + ';border:2px solid ' + theme.mapPalette.point + ';' +
             'display:flex;align-items:center;justify-content:center;' +
             'box-shadow:0 8px 18px rgba(0,0,0,.22);position:relative;z-index:1">' +
             '<div style="width:' + dotSize + 'px;height:' + dotSize + 'px;border-radius:9999px;' +
@@ -148,8 +147,8 @@ export const buildQuestNativeMapHtml = ({
             'display:flex;align-items:center;justify-content:center;font-weight:800;' +
             'font-size:' + fontSize + 'px;line-height:1;padding:0 4px">' + label + '</div>' +
             '</div><div style="position:absolute;left:50%;bottom:-2px;width:10px;height:10px;' +
-            'background:' + theme.surface + ';border-right:2px solid ' + theme.surface + ';' +
-            'border-bottom:2px solid ' + theme.surface + ';transform:translateX(-50%) rotate(45deg);' +
+            'background:' + theme.mapPalette.point + ';border-right:2px solid ' + theme.mapPalette.point + ';' +
+            'border-bottom:2px solid ' + theme.mapPalette.point + ';transform:translateX(-50%) rotate(45deg);' +
             'box-shadow:0 8px 18px rgba(0,0,0,.22);z-index:0"></div></div>';
           return L.divIcon({ className: 'qmark', html: html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
         }
