@@ -54,15 +54,12 @@ export const TravelHeroExtras: React.FC<{
           styles.sectionContainer,
           styles.contentStable,
           styles.quickFactsContainer,
+          !isMobile && actionStyles.summaryRow,
         ]}
       >
         <QuickFacts travel={travel} onCategoryPress={handleCategoryPress} />
-        {/* Ряд действий: статус растягивается остатком строки, чип встаёт справа.
-            #1673: на узком экране перенос давал две пилюли одна под другой, и
-            офлайн читался вторым главным действием. Поэтому на мобильном чип
-            сжимается до иконки, а статус теряет 240-px базу — оба контрола
-            помещаются в одну строку. Развилка по ширине, а не по платформе:
-            mobile web, Android и iPhone получают одну и ту же раскладку. */}
+        {/* На широком экране действия идут за фактами по размеру содержимого.
+            На мобильном статус делит отдельный ряд с иконочным офлайн-чипом. */}
         <View style={actionStyles.row}>
           <TravelStatusButton
             travelId={travel.id}
@@ -108,6 +105,12 @@ export const TravelHeroExtras: React.FC<{
 }
 
 const actionStyles = StyleSheet.create({
+  summaryRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
   row: {
     alignItems: 'center',
     flexDirection: 'row',
@@ -115,20 +118,12 @@ const actionStyles = StyleSheet.create({
     gap: DESIGN_TOKENS.spacing.xs,
   },
   status: {
-    // Растёт остатком строки, но не ужимается ниже читаемой ширины — при нехватке
-    // места строка переносится, и статус снова занимает всю ширину.
-    flexBasis: 240,
-    flexGrow: 1,
-  },
-  statusMobile: {
-    // Рядом стоит иконочный чип, поэтому запас в 240px больше не страхует
-    // читаемость, а только выталкивает статус в отдельную строку на 320–390pt.
-    // flexShrink здесь несущий: по умолчанию он 0, и статус с базой по контенту
-    // («Планирую · дата», длинная локаль, системное укрупнение шрифта) снова
-    // уносил бы ряд в две строки. С ним лишнее отдаёт подпись, а не строка.
     flexBasis: 'auto',
     flexShrink: 1,
     minWidth: 0,
+  },
+  statusMobile: {
+    flexGrow: 1,
   },
   offline: {
     alignSelf: 'center',

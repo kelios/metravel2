@@ -173,8 +173,7 @@ describe('TravelHeroExtras', () => {
   })
 
   // #1673: на узком экране ряд действий переносился, и офлайн читался второй
-  // главной кнопкой во всю ширину. Компактный чип оставляет оба действия в одной
-  // строке; на широком экране раскладка ряда прежняя.
+  // главной кнопкой во всю ширину. Компактный чип оставляет оба действия в одной строке.
   it('сжимает офлайн-чип до иконки только на узком экране', async () => {
     const travel: any = { id: 7, slug: 'grodno', name: 'Гродно за 1 день' }
 
@@ -199,10 +198,7 @@ describe('TravelHeroExtras', () => {
     )
   })
 
-  // Вторая половина того же фикса: без снятой 240-px базы и без flexShrink ряд
-  // переносится независимо от того, сжат чип или нет — статус с базой по
-  // контенту не отдаёт место соседу и уходит на свою строку.
-  it('на узком экране статус теряет 240-px базу и умеет отдавать ширину', async () => {
+  it('растягивает статус только на мобильном, оставляя desktop-ряд компактным', async () => {
     const travel: any = { id: 7, slug: 'grodno', name: 'Гродно за 1 день' }
 
     await render(
@@ -211,6 +207,7 @@ describe('TravelHeroExtras', () => {
     const mobileStatus = StyleSheet.flatten(mockTravelStatusButton.mock.calls[0][0].style)
     expect(mobileStatus.flexBasis).toBe('auto')
     expect(mobileStatus.flexShrink).toBe(1)
+    expect(mobileStatus.flexGrow).toBe(1)
 
     mockTravelStatusButton.mockClear()
     await render(
@@ -222,7 +219,8 @@ describe('TravelHeroExtras', () => {
       />
     )
     const desktopStatus = StyleSheet.flatten(mockTravelStatusButton.mock.calls[0][0].style)
-    expect(desktopStatus.flexBasis).toBe(240)
+    expect(desktopStatus.flexBasis).toBe('auto')
+    expect(desktopStatus.flexGrow ?? 0).toBe(0)
   })
 
   it('не рендерит «Сохранить офлайн» без id маршрута', async () => {

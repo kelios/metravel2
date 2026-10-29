@@ -153,7 +153,7 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
       </SafeView>
 
       {categories.length > 0 && (
-        <SafeView style={styles.categoriesContainer}>
+        <SafeView style={[styles.categoriesContainer, isMobile && styles.categoriesContainerMobile]}>
           <SafeView style={styles.categoriesHeader}>
             <Feather name="tag" size={iconSize} color={iconColor} />
             <Text style={styles.categoriesLabel}>{i18nT('travel:components.travel.QuickFacts.kategorii_074cf050')}</Text>
@@ -188,6 +188,11 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   container: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    flexShrink: 1,
+    maxWidth: '100%',
     gap: Platform.select({
       default: 6,
       web: 8,
@@ -203,6 +208,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderColor: 'transparent',
   },
   containerMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
     paddingVertical: 6,
     paddingHorizontal: 0,
     gap: 6,
@@ -210,6 +217,8 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   factsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    flexShrink: 1,
+    maxWidth: '100%',
     alignItems: 'center',
     gap: Platform.select({
       default: 5,
@@ -257,8 +266,12 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
   },
   categoriesContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    flexShrink: 1,
+    maxWidth: '100%',
     gap: 6,
+  },
+  categoriesContainerMobile: {
     width: '100%',
   },
   categoriesHeader: {
