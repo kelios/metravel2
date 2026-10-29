@@ -144,13 +144,7 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
       ]}
       accessibilityLabel={i18nT('travel:components.travel.QuickFacts.klyuchevaya_informatsiya_o_puteshestvii_353cd257')}
     >
-      <SafeView style={styles.factsRow}>
-        {factItems.map((item, i) => (
-          <React.Fragment key={i}>
-            {item}
-          </React.Fragment>
-        ))}
-      </SafeView>
+      {factItems}
 
       {categories.length > 0 && (
         <SafeView style={[styles.categoriesContainer, isMobile && styles.categoriesContainerMobile]}>
@@ -208,22 +202,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
     borderColor: 'transparent',
   },
   containerMobile: {
-    flexDirection: 'column',
-    alignItems: 'stretch',
     paddingVertical: 6,
     paddingHorizontal: 0,
     gap: 6,
-  },
-  factsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    flexShrink: 1,
-    maxWidth: '100%',
-    alignItems: 'center',
-    gap: Platform.select({
-      default: 5,
-      web: 6,
-    }),
   },
   factItem: {
     flexDirection: 'row',
