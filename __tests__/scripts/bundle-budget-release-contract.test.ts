@@ -794,33 +794,6 @@ describe('bundle budget release contract', () => {
       }
     })
 
-    it('pins the committed payload attribution so it cannot be quietly dropped', () => {
-      const budget = JSON.parse(fs.readFileSync(budgetPath, 'utf8'))
-      const spec = budget?.eager?.payloadRoutes?.geoCountryOutlines
-
-      ensure(!!spec, 'config/bundle-budget.json must keep eager.payloadRoutes.geoCountryOutlines.')
-      // Маркер — фрагмент первого кольца контура Грузии. Пин по имени чанка не
-      // годится: `__shared-N` перенумеровывается от сборки к сборке.
-      expect(spec.marker).toBe('4155,4241,-5,23,-8,10')
-      // #1543: таблица контуров ушла из eager HTML полностью. Нулевой пин —
-      // самый строгий односторонний ratchet: любое повторное попадание в route падает.
-      expect(spec.maxRoutes).toBe(0)
-      // Односторонний рэтчет по числу разрешил бы освободить главную и тем же
-      // числом нагрузить карту, поэтому отвоёванные маршруты закреплены поимённо.
-      expect(spec.mustNotLoad).toEqual(
-        expect.arrayContaining([
-          'index.html',
-          'search.html',
-          'map.html',
-          'quests.html',
-          'profile.html',
-          'articles.html',
-          'login.html',
-          'terms.html',
-        ]),
-      )
-    })
-
     it('counts only the routes that actually load the payload', () => {
       const tmpDir = makeTempDir('metravel-bundle-budget-payload-count-')
       try {

@@ -1,34 +1,25 @@
-import { lazy, Suspense, useMemo, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { Platform, StyleSheet, View } from 'react-native'
 
-import { getAffiliateOffers, type AffiliateOfferContext } from '@/components/affiliate/affiliateConfig'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useBreakpoints } from '@/hooks/useResponsive'
 import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
 import { webViewStyle } from '@/utils/webProps'
 import { QUEST_PAGE_COLUMNS_LAYOUT, QUEST_PAGE_COLUMNS_MIN_WIDTH } from './questPageColumnsLayout'
 
-const QuestAffiliatePromotion = lazy(() => import('./QuestAffiliatePromotion'))
-
 export type QuestPageColumnsProps = {
   children: ReactNode
-  affiliateContext?: AffiliateOfferContext
-  /** A caller-owned advertising provider replaces, never accompanies, generic offers. */
+  /** A caller-owned provider; pages without one reserve no promotion space. */
   promotion?: ReactNode
   hasPromotion?: boolean
   readingWidth?: number
 }
 
 /** One advertising mount: a right rail on wide screens and an inline section below. */
-export function QuestPageColumns({ children, affiliateContext, promotion, hasPromotion, readingWidth }: QuestPageColumnsProps) {
+export function QuestPageColumns({ children, promotion, hasPromotion, readingWidth }: QuestPageColumnsProps) {
   const { width } = useBreakpoints()
   const isWide = width >= QUEST_PAGE_COLUMNS_MIN_WIDTH
-  const { city, country, countryCode, travelId } = affiliateContext ?? {}
-  const hasCustomPromotion = promotion !== undefined
-  const showPromotion = useMemo(() => (
-    hasCustomPromotion ? (hasPromotion ?? Boolean(promotion))
-      : getAffiliateOffers({ city, country, countryCode, travelId }).length > 0
-  ), [hasCustomPromotion, hasPromotion, promotion, city, country, countryCode, travelId])
+  const showPromotion = Boolean(promotion) && (hasPromotion ?? true)
 
   return (
     <View
@@ -49,9 +40,7 @@ export function QuestPageColumns({ children, affiliateContext, promotion, hasPro
           {...breakpointLayoutProps(QUEST_PAGE_COLUMNS_LAYOUT, 'promotion')}
           testID="quest-page-promotion"
         >
-          {hasCustomPromotion ? promotion : (
-            <Suspense fallback={null}><QuestAffiliatePromotion {...affiliateContext} /></Suspense>
-          )}
+          {promotion}
         </View>
       ) : null}
     </View>

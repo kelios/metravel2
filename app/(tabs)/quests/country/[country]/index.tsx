@@ -119,7 +119,7 @@ export default function QuestsByCountryScreen() {
   return (
     <QuestPublicPageFrame selectedCityId={toCountrySelectionId(country.countryCode)}>
     <QuestLandingScroll styles={s} isMobile={isMobile}>
-      <QuestPageColumns affiliateContext={{ country: countryName, countryCode: country.countryCode, travelId: `quest-country-${country.countryAlias}` }}>
+      <QuestPageColumns>
       <View style={{ gap: DESIGN_TOKENS.spacing.md, minWidth: 0 }}>
       {isFocused ? (
         <InstantSEO

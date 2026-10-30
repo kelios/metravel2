@@ -22,24 +22,7 @@ jest.mock('@/hooks/useResponsive', () => ({
 
 const EXCURSIONS_TITLE = 'Экскурсии рядом'
 
-const mockOffers = [
-  {
-    key: 'tours',
-    title: 'Экскурсии и гиды',
-    subtitle: 'Авторские экскурсии и местные гиды — Познань',
-    cta: 'Посмотреть экскурсии',
-    url: 'https://tp.media/r?marker=1&p=1&trs=1&u=https%3A%2F%2Fexample.com',
-  },
-]
-
-jest.mock('@/components/affiliate/affiliateConfig', () => ({
-  ...(jest.requireActual('@/components/affiliate/affiliateConfig') as object),
-  isAffiliateEnabled: () => true,
-  getAffiliateOffers: () => mockOffers,
-}))
-
-// Belkraj рендерится только в production-сборке — в jest гейт открываем явно,
-// иначе сценарий «виджет + офферы в одной карточке» не воспроизводится.
+// Open the production Belkraj gate explicitly for the remaining provider.
 jest.mock('@/components/belkraj/belkrajAvailability', () => ({
   ...(jest.requireActual('@/components/belkraj/belkrajAvailability') as object),
   isBelkrajEnabled: () => true,
@@ -157,15 +140,14 @@ describe('QuestWizard: секция «Экскурсии рядом» на ка�
     expect(getByTestId('quest-excursions-section')).toBeTruthy()
   })
 
-  it('на native держит Belkraj-виджет и партнёрские офферы в одной карточке', async () => {
+  it('на native сохраняет Belkraj без удалённых предложений Travelpayouts', async () => {
     setPlatform('android')
 
-    const { getAllByText, getByTestId } = await renderWizard()
+    const { getAllByText, getByTestId, queryByTestId } = await renderWizard()
 
     expect(getAllByText(EXCURSIONS_TITLE)).toHaveLength(1)
     expect(getByTestId('quest-belkraj-widget')).toBeTruthy()
-    // Партнёрская поверхность не потерялась при слиянии секций.
-    expect(getAllByText('Экскурсии и гиды')).toHaveLength(1)
+    expect(queryByTestId('affiliate-offers')).toBeNull()
   })
 
   it('на mobile web оставляет ровно один блок и не добавляет партнёрские офферы', async () => {
@@ -193,7 +175,7 @@ describe('QuestWizard: секция «Экскурсии рядом» на ка�
       const [answer, setAnswer] = React.useState('')
       return <TextInput testID="reading-answer" value={answer} onChangeText={setAnswer} />
     }
-    const props = { colors: {}, styles: {}, title: 'Квест', questId: 'draft', enabled: true }
+    const props = { colors: {}, styles: {}, title: 'Квест', enabled: true }
     const { getByTestId, queryByTestId, rerender } = await render(
       <QuestExcursionsColumns {...props}><ReadingAnswer /></QuestExcursionsColumns>,
     )

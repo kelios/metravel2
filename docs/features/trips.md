@@ -182,7 +182,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
                      │          TripSuggestionsPanel, TripTelegramGroupCard,
                      │          TripChatPanel
                      ├─ export: TripRouteExportMenu → TripRouteDownloadButtons
-                     └─ more  : TripReportForm, TripRatingPanel, TripAffiliateBlock
+                     └─ more  : TripReportForm, TripRatingPanel
 ```
 
 | Файл | LOC | Зона ответственности |
@@ -245,7 +245,6 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/planning/TripPlanLinksBlock.tsx` | 85 | блок «Ссылки» — чипы с доменами из описания поездки |
 | `components/trips/planning/TripPlanCollapsibleText.tsx` | 140 | кнопка «Показать полностью» под обрезанным описанием поездки |
 | `components/trips/tripFormatting.ts` | 74 | метки/цвета статусов каталога, даты, места |
-| `components/trips/planning/TripAffiliateBlock.tsx` | 74 | партнёрские ссылки |
 | `components/trips/TripsPageSeo.tsx` | 71 | SEO-обёртка всех trips-роутов |
 | `components/trips/TripStatusBadge.tsx` | 66 | бейдж статуса поездки/заявки |
 | `components/trips/planning/routePointReorder.ts` | 61 | чистая арифметика переупорядочивания |
@@ -1281,7 +1280,7 @@ Unit/component (Jest):
   `tripDateGovernance.test.ts` — презентационный слой и даты;
 - `__tests__/components/trips/**` — `tripCreateForm`, `MyCreatedTripsList`,
   `MyTripsDashboard`, `TripPlanCard`, `TripParticipantsList`, `TripRatingPanel`,
-  `TripAffiliateBlock`, `TripsPageSeo`, `tripInvitePanel`, `tripReportForm`,
+  `TripsPageSeo`, `tripInvitePanel`, `tripReportForm`,
   `tripRouteExportMenu`, `tripTelegramGroupCard`, `tripConsent`,
   `tripPlanLinkedText`, `routeBuilder.pointDescription`, `tripFallbackCover`,
   `publicTripFallbackCover`, `tripPlanRouteMapFullscreen`,

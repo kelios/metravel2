@@ -258,7 +258,7 @@ export default function QuestScenarioScreen() {
       ) : null}
       {isFocused && jsonLdInBody ? structuredData : null}
 
-      <QuestPageColumns affiliateContext={{ travelId: 'quest-scenario' }}>
+      <QuestPageColumns>
       <ResponsiveContainer
         maxWidth={COLUMN_MAX_WIDTH}
         padding={false}

@@ -120,7 +120,6 @@ jest.mock('@/components/trips/planning/TripSuggestPointForm', () => mockStub('tr
 jest.mock('@/components/trips/planning/TripSuggestionsPanel', () => mockStub('trip-suggestions-panel'));
 jest.mock('@/components/trips/planning/TripReportForm', () => mockStub('trip-report-form'));
 jest.mock('@/components/trips/planning/TripRatingPanel', () => mockStub('trip-rating-panel'));
-jest.mock('@/components/trips/planning/TripAffiliateBlock', () => mockStub('trip-affiliate-block'));
 jest.mock('@/components/trips/planning/TripGearChecklist', () => mockStub('trip-gear-checklist'));
 jest.mock('@/components/trips/communication/TripTelegramGroupCard', () => mockStub('trip-telegram-group-card'));
 jest.mock('@/components/trips/chat/TripChatPanel', () => mockStub('trip-chat-panel'));

@@ -567,8 +567,7 @@ export function adaptFinale(apiFinale: ApiQuestFinale): QuestFinale {
 //
 // Замер прод-API 2026-08-10: `country_code` непустой у всех 139 квестов
 // (27 различных кодов, ни одного пропуска), то есть фолбэк не срабатывал ни разу.
-// Таблица контуров осталась там, где по координатам действительно ищут страну, —
-// у партнёрских блоков (`AffiliateSection`, `TripAffiliateBlock`, `BelkrajWidget`).
+// Квесты используют код страны API без загрузки таблицы контуров.
 export function normalizeQuestCountryCode(rawCode: unknown): string | undefined {
     const normalizedRawCode = typeof rawCode === 'string'
         ? rawCode.trim().toUpperCase()

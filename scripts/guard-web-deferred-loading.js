@@ -55,7 +55,6 @@ const APPROVED_DEFERRED_LOADING = Object.freeze({
   'components/ui/ImageCardMediaWebHelpers.tsx': 2,
   // наблюдатель есть, но ничего не загружает
   'components/MapPage/Map/useMapWebLayoutEffects.ts': 1,
-  'components/affiliate/useAffiliateImpression.ts': 1,
   'hooks/useActiveSection.ts': 1,
   'hooks/useTrackedImpression.ts': 1,
 })

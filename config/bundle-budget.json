@@ -42,29 +42,7 @@
       "(tabs)/profile.html": 27,
       "(tabs)/trips/plan/[id].html": 26
     },
-    "payloadRoutes": {
-      "geoCountryOutlines": {
-        "marker": "4155,4241,-5,23,-8,10",
-        "maxRoutes": 0,
-        "mustNotLoad": [
-          "index.html",
-          "search.html",
-          "(tabs)/search.html",
-          "map.html",
-          "(tabs)/map.html",
-          "quests.html",
-          "(tabs)/quests.html",
-          "profile.html",
-          "(tabs)/profile.html",
-          "articles.html",
-          "(tabs)/articles.html",
-          "login.html",
-          "(tabs)/login.html",
-          "terms.html",
-          "(tabs)/terms.html"
-        ]
-      }
-    },
+    "payloadRoutes": {},
     "tolerancePct": 0
   },
   "total": {

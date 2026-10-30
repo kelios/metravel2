@@ -788,7 +788,7 @@ fallback в `app/+html.tsx` для первого paint и runtime `LazyInstantS
 - post-trip report form;
 - trip chat;
 - Telegram group integration;
-- affiliate block и trip analytics events.
+- trip analytics events.
 
 ### Messages and contact access
 

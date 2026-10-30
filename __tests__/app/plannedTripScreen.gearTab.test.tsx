@@ -47,7 +47,6 @@ const mockStub = (testID: string) => () => {
 jest.mock('@/components/trips/planning/RouteBuilder', () => mockStub('route-builder'))
 jest.mock('@/components/trips/planning/TripReportForm', () => mockStub('trip-report-form'))
 jest.mock('@/components/trips/planning/TripRatingPanel', () => mockStub('trip-rating-panel'))
-jest.mock('@/components/trips/planning/TripAffiliateBlock', () => mockStub('trip-affiliate-block'))
 
 const gearItem: TripGearItem = {
   id: 1,

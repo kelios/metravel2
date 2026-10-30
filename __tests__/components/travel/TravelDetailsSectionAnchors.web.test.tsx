@@ -56,13 +56,7 @@ jest.mock('@/hooks/useTheme', () => ({ useThemedColors: () => ({}) }))
 jest.mock('@/hooks/useProgressiveLoading', () => ({
   useProgressiveLoad: () => ({ shouldLoad: false, setElementRef: jest.fn() }),
 }))
-jest.mock('@/hooks/useCountryCodeByCoords', () => ({ useCountryCodeByCoords: () => 'BY' }))
 jest.mock('@/components/belkraj/belkrajAvailability', () => ({ canRenderBelkrajWidget: () => true }))
-jest.mock('@/components/affiliate/affiliateConfig', () => ({
-  isAffiliateEnabled: () => true,
-  getAffiliateOffers: () => [{ id: 'offer' }],
-}))
-jest.mock('@/components/affiliate/AffiliateOffers', () => () => null)
 jest.mock('@/components/belkraj/BelkrajWidget', () => () => null)
 jest.mock('@/components/travel/TravelDescription', () => () => null)
 jest.mock('@/components/travel/PointList', () => () => null)
@@ -211,7 +205,7 @@ describe('travel section anchors in the real React Native Web DOM (#2024)', () =
     // No useTravelDetailsNavigation and no timer advancement can repair these props.
     await act(async () => root.render(<Sections anchors={anchors} isMobile={isMobile} />))
     const navigationKeys = buildTravelSectionLinks(travel, { platform: 'web' }).map(({ key }) => key)
-    const expectedKeys = [...navigationKeys, 'rating', 'affiliate'].sort()
+    const expectedKeys = [...navigationKeys, 'rating'].sort()
     const elements = Array.from(container.querySelectorAll<HTMLElement>('[data-section-key]'))
     expect(elements.map((element) => element.dataset.sectionKey).sort()).toEqual(expectedKeys)
     for (const key of navigationKeys) {

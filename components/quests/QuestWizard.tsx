@@ -695,7 +695,6 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
             styles={styles}
             city={city}
             title={title}
-            questId={questId}
             enabled={!showFinaleOnly && Boolean(currentStep)}
           >
             {/* Левая колонка: шаги + карта + финал */}
@@ -781,7 +780,6 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                         styles={styles}
                         city={city}
                         title={title}
-                        questId={questId}
                     />
                 )}
 
@@ -910,7 +908,6 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                     offlineQuestState={offlineQuestState}
                                     ratingSlot={ratingSlot}
                                     completionSlot={completionSlot}
-                                    questId={questId}
                                     showExcursions={false}
                                     routeTriggerRef={headerPlacement.routeTriggerRef}
                                 />

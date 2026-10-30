@@ -748,11 +748,6 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
                 onOpenFilterDrawer={handleOpenFilterDrawer}
                 onToggleViewMode={handleToggleViewMode}
                 footerSlot={route?.footer}
-                affiliateContext={{
-                    city: CITIES.find((city) => city.id === selectedCityId)?.name,
-                    countryCode: selectedCountry?.code ?? CITIES.find((city) => city.id === selectedCityId)?.countryCode,
-                    travelId: 'quests-catalog',
-                }}
             />
         </QuestSectionFrame>
     );

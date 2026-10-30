@@ -334,7 +334,7 @@ describe('читаемость ключей стилей travel details', () => 
 
     expect([
       // прополз пропом, модуль набора не импортирует
-      files.includes('components/travel/details/sections/AffiliateSection.tsx'),
+      files.includes('components/travel/details/sections/ExcursionsSection.tsx'),
       // вне фичи, но импортирует shell-набор напрямую
       files.includes('hooks/useTravelDetailsLayout.ts'),
     ]).toEqual([true, true])

@@ -12,8 +12,8 @@
     "utils"
   ],
   "totals": {
-    "styleCast": 1351,
-    "logicCast": 1141,
+    "styleCast": 1348,
+    "logicCast": 1137,
     "tsIgnore": 42,
     "tsExpectError": 1,
     "eslintDisable": 27
@@ -27,8 +27,8 @@
       "eslintDisable": 1
     },
     "components": {
-      "styleCast": 1224,
-      "logicCast": 981,
+      "styleCast": 1221,
+      "logicCast": 977,
       "tsIgnore": 42,
       "tsExpectError": 1,
       "eslintDisable": 15
@@ -244,13 +244,6 @@
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 1
-    },
-    "components/affiliate/AffiliateOffers.tsx": {
-      "styleCast": 3,
-      "logicCast": 1,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
     },
     "components/article/ArticleActivationCtaSection.tsx": {
       "styleCast": 0,
@@ -1977,13 +1970,6 @@
     "components/travel/details/hooks/useTravelDetailsMapSectionModel.ts": {
       "styleCast": 0,
       "logicCast": 1,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
-    "components/travel/details/sections/AffiliateSection.tsx": {
-      "styleCast": 0,
-      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0

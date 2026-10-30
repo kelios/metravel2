@@ -32,7 +32,6 @@ import { getQuestCatalogMapHeight } from '@/screens/tabs/QuestsStyleMetrics';
 
 
 const LazyMap = React.lazy(() => import('@/components/MapPage/Map.web'));
-const MAP_AFFILIATE_CONTEXT = { travelId: 'quests-map' };
 
 /** The map keeps its own bounded viewport; the section owns navigation and advertising. */
 function QuestMapWebFrame({ children }: { children: React.ReactNode }) {
@@ -48,7 +47,7 @@ function QuestMapWebFrame({ children }: { children: React.ReactNode }) {
                 }}
                 testID="quest-map-section-scroll"
             >
-                <QuestPageColumns affiliateContext={MAP_AFFILIATE_CONTEXT}>
+                <QuestPageColumns>
                     <View style={{ height: getQuestCatalogMapHeight(width), minHeight: 420 }} testID="quest-map-viewport">
                         {children}
                     </View>

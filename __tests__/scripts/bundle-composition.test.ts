@@ -131,15 +131,6 @@ const LAZY_ONLY_MODULES: Array<{ file: string; allowedSyncImporters: string[]; t
     allowedSyncImporters: [],
     ticket: '#1148',
   },
-  // #1543: резолвер стран тянет за собой таблицу контуров (67 КБ). Синхронного
-  // импортёра у него быть не должно вообще — единственная точка входа —
-  // динамический `import()` в `hooks/useCountryCodeByCoords.ts` (см.
-  // DYNAMIC_IMPORT_CHOKEPOINTS ниже).
-  {
-    file: 'utils/geoCountry.ts',
-    allowedSyncImporters: [],
-    ticket: '#1543',
-  },
   // #1552: адаптер тянет sanitize-html/htmlparser2 и offline catalog, но нужен
   // только в уже асинхронных офлайн-ветках travel-детали. Любой value-import
   // вернёт это поддерево на eager-путь публичной статьи.
@@ -192,11 +183,6 @@ const LAZY_ONLY_MODULES: Array<{ file: string; allowedSyncImporters: string[]; t
  * нарушение (#2084).
  */
 const DYNAMIC_IMPORT_CHOKEPOINTS: Array<{ file: string; owner: string; ticket: string }> = [
-  {
-    file: 'utils/geoCountry.ts',
-    owner: 'hooks/useCountryCodeByCoords.ts',
-    ticket: '#1543',
-  },
   {
     file: 'services/offline/travelOfflineAdapter.ts',
     owner: 'services/offline/loadTravelOfflineAdapter.ts',
@@ -285,32 +271,7 @@ const ROUTE_SCOPED_PAYLOADS: Array<{
   allowedRoutes: string[]
   control: { module: string; route: string }
   ticket: string
-}> = [
-  {
-    // Ключ в `config/bundle-budget.json` → `eager.payloadRoutes`: тот же payload
-    // считает гейт по собранному бандлу, и расхождение пинов ловит отдельный
-    // тест ниже.
-    payload: 'geoCountryOutlines',
-    module: 'utils/geoCountryOutlines.ts',
-    // #1543: синхронных потребителей не осталось ни одного. Оба партнёрских
-    // блока (travel-детали и планировщик поездки) резолвят страну через
-    // `hooks/useCountryCodeByCoords`, то есть за `import()`, поэтому таблица не
-    // имеет права попасть в стартовый граф НИ ОДНОГО маршрута. Квестам она не
-    // нужна с #1393 — `country_code` приходит из API (замер прода 2026-08-10:
-    // 139 из 139 квестов), координатный фолбэк из `questAdapters` убран.
-    allowedRoutes: [],
-    // Контроль детектора. Раньше им было `mustReachFrom` на самой таблице, но
-    // теперь «ноль маршрутов» — это и есть ожидаемый результат, и от сломанного
-    // резолвера он неотличим. Поэтому контроль переехал на ВЛАДЕЛЬЦА payload'а:
-    // компонент, ради которого таблица грузится, обязан остаться синхронно
-    // достижимым со своего маршрута. Не достижим — сломан обход, а не бандл.
-    control: {
-      module: 'components/trips/planning/TripAffiliateBlock.tsx',
-      route: 'app/(tabs)/trips/plan/[id].tsx',
-    },
-    ticket: '#1543',
-  },
-]
+}> = []
 
 /**
  * #1499: «lazy, побеждённый статическим импортом».
@@ -1005,9 +966,8 @@ describe('состав eager-бандла (#1148)', () => {
     },
   )
 
-  it.each(ROUTE_SCOPED_PAYLOADS)(
-    'payload $module остаётся в стартовом графе только своих маршрутов ($ticket)',
-    ({ module, allowedRoutes, control }) => {
+  for (const { module, allowedRoutes, control, ticket } of ROUTE_SCOPED_PAYLOADS) {
+    it(`payload ${module} остаётся в стартовом графе только своих маршрутов (${ticket})`, () => {
       const target = join(ROOT, module)
       const routeRoots = collectSourceFiles(join(ROOT, 'app'))
       const reached = routeRoots
@@ -1025,8 +985,8 @@ describe('состав eager-бандла (#1148)', () => {
       const offenders = reached.filter((hit) => !allowedRoutes.includes(hit.root))
       // Цепочка в сообщении — сразу видно, каким ребром payload попал на маршрут.
       expect(offenders.map((hit) => `${hit.root}: ${hit.chain!.join(' -> ')}`)).toEqual([])
-    },
-  )
+    })
+  }
 
   it.each(ROUTE_DEFERRED_SECTIONS)(
     'маршрут $route не тянет отложенные секции синхронно ($ticket)',

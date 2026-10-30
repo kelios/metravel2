@@ -38,7 +38,6 @@ import {
 import { shouldRenderTripRouteExportMenu } from '@/components/trips/planning/tripRouteExport';
 import TripPlanScreenHeader from '@/components/trips/planning/TripPlanScreenHeader';
 import { useIsScreenHeaderMobile } from '@/components/layout/ScreenHeaderContext';
-import TripAffiliateBlock from '@/components/trips/planning/TripAffiliateBlock';
 import TripPlanCollapsibleText, {
   tripPlanTextCharsPerWidth,
 } from '@/components/trips/planning/TripPlanCollapsibleText';
@@ -1022,7 +1021,6 @@ export default function PlannedTripScreen() {
                   {trip.status === 'completed' ? <TripRatingPanel trip={trip} /> : null}
                   <TripGearChecklist trip={trip} />
                 </Suspense>
-                <TripAffiliateBlock trip={trip} />
               </View>
             ) : null}
 

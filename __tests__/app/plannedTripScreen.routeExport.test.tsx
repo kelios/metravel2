@@ -111,13 +111,6 @@ jest.mock('@/components/trips/planning/TripRatingPanel', () => {
   };
 });
 
-jest.mock('@/components/trips/planning/TripAffiliateBlock', () => {
-  return function TripAffiliateBlock() {
-    const { View } = require('react-native');
-    return <View testID="trip-affiliate-block" />;
-  };
-});
-
 jest.mock('@/components/trips/communication/TripTelegramGroupCard', () => {
   return function TripTelegramGroupCard() {
     const { View } = require('react-native');

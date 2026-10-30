@@ -68,7 +68,7 @@ describe('QuestExcursionsInline Belkraj integration', () => {
   // #1452: обвязка секции (разделитель + карточка + заголовок) рисовалась даже
   // тогда, когда виджет молча возвращал null — на экране оставалась пустая
   // карточка-призрак с одним заголовком «Экскурсии рядом».
-  it('renders nothing when neither the widget nor affiliate offers have content', async () => {
+  it('renders no empty section when the remaining widget is unavailable', async () => {
     mockBelkrajRenderable = false
 
     const { queryByText, queryByTestId } = await render(

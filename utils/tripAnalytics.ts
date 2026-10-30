@@ -23,8 +23,6 @@ export const TRIP_EVENTS = {
   routeExported: 'route_exported',
   inviteSent: 'trip_invite_sent',
   rsvp: 'trip_rsvp',
-  // Монетизация (FE-trip-monetization #460)
-  affiliateClick: 'trip_affiliate_click',
 } as const;
 
 export function trackTripCatalogViewed(count: number): void {
@@ -90,14 +88,4 @@ export function trackTripInviteSent(tripId: number, count: number): void {
 
 export function trackTripRsvp(tripId: number, rsvp: string): void {
   void sendAnalyticsEvent(TRIP_EVENTS.rsvp, { trip_id: tripId, rsvp });
-}
-
-export function trackTripAffiliateClick(
-  tripId: number,
-  offerKey: string,
-): void {
-  void sendAnalyticsEvent(TRIP_EVENTS.affiliateClick, {
-    trip_id: tripId,
-    offer: offerKey,
-  });
 }
