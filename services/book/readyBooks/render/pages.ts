@@ -30,7 +30,9 @@ function map(input: ReadyBookRenderInput) {
 
 function credit(input: ReadyBookRenderInput, stop: EditorialStop) {
   const asset = input.assets[stop.id];
-  return `<div class="collage-credit" data-check-overflow><p>${asset.illustrated ? 'Иллюстрация' : 'Фото'}: ${e(asset.credit)} · ${e(asset.rights)}</p><p><a href="${e(asset.sourceUrl)}">${e(asset.sourceUrl.replace('https://', ''))}</a></p>${asset.licenseUrl ? `<p><a href="${e(asset.licenseUrl)}">${e(asset.licenseUrl.replace('https://', ''))}</a></p>` : ''}${text('Пропорциональное уменьшение; без обрезки.')}<p>История и посещение: <a href="${e(stop.source.url)}">${e(stop.source.url.replace('https://', ''))}</a></p></div>`;
+  const sourceAlreadyPrinted = stop.natureRoute && [stop.natureRoute.metricsSourceUrl, stop.natureRoute.officialAlertsUrl].includes(stop.source.url);
+  const source = sourceAlreadyPrinted ? '' : `<p>История и посещение: <a href="${e(stop.source.url)}">${e(stop.source.url.replace('https://', ''))}</a></p>`;
+  return `<div class="collage-credit" data-check-overflow><p>${asset.illustrated ? 'Иллюстрация' : 'Фото'}: ${e(asset.credit)} · ${e(asset.rights)}</p><p><a href="${e(asset.sourceUrl)}">${e(asset.sourceUrl.replace('https://', ''))}</a></p>${asset.licenseUrl ? `<p><a href="${e(asset.licenseUrl)}">${e(asset.licenseUrl.replace('https://', ''))}</a></p>` : ''}${text('Пропорциональное уменьшение; без обрезки.')}${source}</div>`;
 }
 
 function natureRoute(stop: EditorialStop) {

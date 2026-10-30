@@ -48,6 +48,11 @@ describe('ready-book physical rendering', () => {
       officialAlertsUrl: 'https://example.org/alerts', metricsSourceUrl: 'https://example.org/route', metricNote: 'Опубликованный ориентир.'};
     const html = buildReadyBookHtml(book).bodyPages[8].replace(/\u00a0/g, ' ');
     for (const value of ['2,4 км', '226 м', '60 мин', 'в одну сторону; обратный путь добавляется', 'Камни могут быть скользкими.', 'Проверить снег и закрытия.', 'https://example.org/alerts', 'https://example.org/route']) expect(html).toContain(value);
+    book.book.stops[0].source.url = book.book.stops[0].natureRoute.metricsSourceUrl;
+    const sharedSource = buildReadyBookHtml(book).bodyPages[8];
+    expect(sharedSource.match(/href="https:\/\/example.org\/route"/g)).toHaveLength(1);
+    expect(sharedSource).toContain(image.sourceUrl);
+    expect(sharedSource).not.toContain('История и посещение:');
     const memory = buildReadyBookHtml(book).bodyPages[6];
     expect(memory).toContain('<header>Дата');
     expect(memory).not.toContain('<p class="small">Дата');

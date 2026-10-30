@@ -63,7 +63,10 @@ export async function loadReadyBookInputs(country, profileId, purpose) {
     fonts[key] = await embeddedFile(`${fontsRoot}/fonts/${file}`, 'font/ttf', pinned.sha256);
   }
   const qr = {};
-  for (const stop of book.stops) qr[stop.id] = await QRCode.toDataURL(stop.source.url, {type: 'image/png', errorCorrectionLevel: 'M', margin: 4, scale: 8});
+  for (const stop of book.stops) {
+    const svg = await QRCode.toString(stop.source.url, {type: 'svg', errorCorrectionLevel: 'M', margin: 4});
+    qr[stop.id] = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
+  }
   const profile = {id: profileId, widthMm: profileId === 'album-a5' ? 148 : 150, heightMm: profileId === 'album-a5' ? 210 : 100,
     bleedMm: purpose === 'read' ? 0 : 3, safeMm: 5, bindingMm: 15, binding: 'rings'};
   return {book, profile, purpose, assets, cover, fonts, qr, editorialPath, assetsHash: sha(JSON.stringify(items.map(item => [item.id, item.sha256]).sort()))};
