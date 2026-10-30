@@ -1,6 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {Link} from 'expo-router';
 import Button from '@/components/ui/Button';
+import {hasPrintSupplements} from '@/services/book/readyBooks/publicationState';
 import {findReadyBook} from '@/services/book/readyBooks/catalog';
 import type {PublishedArtifact} from '@/services/book/readyBooks/publication';
 import {fetchBookArtifact} from '@/services/book/readyBooks/download';
@@ -43,7 +44,7 @@ export default function ReadyBookDetails({slug}:{slug:unknown}){
     finally{if(active.current===controller)setBusy(null);}
   };
   return <BooksFrame title={book.title} path={`/books/${book.slug}`} headingLang={book.contentLocale}>
-    <Link href="/books">{bookT('back')}</Link><p>{bookT('language')}</p><p>{bookT('counts',{places:formatNumber(book.stopCount),pages:formatNumber(book.bodyPageCount)})}</p><p className="ready-books-note">{bookT(book.missing.some(item=>['stickers','instructions','print-passport'].includes(item))?'partial':'digitalKit')}</p>
+    <Link href="/books">{bookT('back')}</Link><p>{bookT('language')}</p><p>{bookT('counts',{places:formatNumber(book.stopCount),pages:formatNumber(book.bodyPageCount)})}</p><p className="ready-books-note">{bookT(hasPrintSupplements(book)?'digitalKit':'partial')}</p>
     <h2>{bookT('size')}</h2><div className="ready-books-controls">{book.profiles.map(profile=><label key={profile.id}><input type="radio" name="book-format" checked={profileId===profile.id} onChange={()=>{setProfile(profile.id);setFailed(null);trackReadyBookEvent('ReadyBookProfileSelected',book,getActiveLocale(),{profileId:profile.id});}}/>{bookT(profile.id==='album-a5'?'album':'pocket')}</label>)}</div>
     <p>{bookT('photoSpace')}</p>
     <div ref={opener}><Button label={bookT('preview')} onPress={()=>{setPreview(true);trackReadyBookEvent('ReadyBookPreviewOpened',book,getActiveLocale(),{profileId});}}/></div>

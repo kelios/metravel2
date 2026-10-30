@@ -1,8 +1,9 @@
 import data from '../../../data/travelBooks/providers.json';
-import {printDirectorySchema, type PrintCountry, type PrintProvider} from '../../../data/travelBooks/schema/providers';
+import type {PrintDirectory, PrintCountry, PrintProvider} from '../../../data/travelBooks/schema/providers';
 import type {PrintProfile} from '../../../types/readyBook';
 
-export const printDirectory = printDirectorySchema.parse(data);
+// The publication validator checks this registry before release; the UI reads only metadata.
+export const printDirectory = data as PrintDirectory;
 export type PrintProviderQuery = {
   country: PrintCountry; city: string; profileId: PrintProfile['id']; copies: number;
   bodyPageCount: number; binding: PrintProfile['binding']; artifactSha256?: string;

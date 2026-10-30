@@ -1,5 +1,5 @@
 import copy from '../../../../data/travelBooks/instructions/ru.json';
-import {BOOK_PROFILES} from '../../../../data/travelBooks/schema/profiles';
+import {BOOK_PROFILES} from '../../../../data/travelBooks/profiles';
 import {buildImpositionPlan} from '../imposition';
 import type {PublishedBook,PublishedArtifact} from '../publication';
 

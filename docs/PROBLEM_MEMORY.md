@@ -7533,6 +7533,11 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
   Регрессии — `printProviders.test.tsx`, `stickers.test.ts`, `printingGuide.test.ts`
   и `books-publication-copy.test.ts`. Эти проверки не заменяют приёмку точных
   файлов провайдером и бумажный H1.
+  Браузерные метаданные используют отдельные чистые физические константы;
+  Zod-схемы остаются в авторской проверке и тестах. `browserMetadata.test.ts`
+  собирает настоящий граф esbuild: schemas/Zod отсутствуют в браузерном входе,
+  но сохраняются в валидаторе. `publicationState.test.ts` закрепляет общий
+  признак цифрового комплекта без обещания физической готовности.
 
 ### FOCUS-TRAP-EAGER-STYLE-SCAN-001 — открытие диалога проверяет все controls
 

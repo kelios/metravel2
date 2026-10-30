@@ -1,4 +1,4 @@
-import {BOOK_PROFILES} from '../../../../data/travelBooks/schema/profiles.ts';
+import {BOOK_PROFILES} from '../../../../data/travelBooks/profiles.ts';
 import {padPageCount, signatureSizes} from '../composition.ts';
 import type {PrintProfile} from '../../../../types/readyBook.ts';
 

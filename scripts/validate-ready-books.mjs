@@ -23,9 +23,14 @@ if (args[0] === '--publication') {
   if(!file||args.length!==4||args[2]!=='--assets-root'||!args[3])throw new Error('Use --publication manifest.json --assets-root cache-directory');
   const output=await ensureDirectory(await realpath('.codex-temp'),'books-validator');
   const bundle=path.join(output,'publication.cjs');
+  const providersBundle=path.join(output,'providers.cjs');
   await rm(bundle,{force:true});
-  await build({entryPoints:['services/book/readyBooks/publication.ts'],outfile:bundle,bundle:true,platform:'node',format:'cjs',logLevel:'silent'});
-  const {publicationSchema}=createRequire(import.meta.url)(bundle);
+  await rm(providersBundle,{force:true});
+  await build({entryPoints:{publication:'services/book/readyBooks/publication.ts',providers:'data/travelBooks/schema/providers.ts'},outdir:output,outExtension:{'.js':'.cjs'},bundle:true,platform:'node',format:'cjs',logLevel:'silent'});
+  const require=createRequire(import.meta.url);
+  const {publicationSchema}=require(bundle);
+  const {printDirectorySchema}=require(providersBundle);
+  const providers=printDirectorySchema.parse(JSON.parse(await readFile('data/travelBooks/providers.json','utf8')));
   const manifest=publicationSchema.parse(JSON.parse(await readFile(file,'utf8')));
   const assets=collectAssets([manifest]),root=await realpath(args[3]);
   for(const asset of assets){
@@ -35,7 +40,7 @@ if (args[0] === '--publication') {
     if(bytes.length!==asset.bytes||createHash('sha256').update(bytes).digest('hex')!==asset.sha256)throw new Error('Publication byte/hash mismatch: '+asset.relative);
     if(asset.relative.endsWith('.pdf')&&bytes.subarray(0,5).toString()!=='%PDF-')throw new Error('Invalid PDF resource');
   }
-  console.log(JSON.stringify({publication:'partial',books:manifest.books.length,resources:assets.length,hashesVerified:true,printReady:false}));
+  console.log(JSON.stringify({publication:'partial',books:manifest.books.length,resources:assets.length,providers:providers.providers.length,printCities:providers.cities.length,hashesVerified:true,printReady:false}));
   process.exit(0);
 }
 if (args[0] === '--sources') {

@@ -37,3 +37,5 @@ export const printDirectorySchema = z.strictObject({
 });
 export type PrintProvider = z.infer<typeof printProviderSchema>;
 export type PrintCountry = z.infer<typeof country>;
+
+export type PrintDirectory = z.infer<typeof printDirectorySchema>;
