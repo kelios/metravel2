@@ -16,7 +16,7 @@ jest.mock('@/components/books/BooksFrame',()=>({BooksFrame:({children,title,head
 // virtual module for this extensionless relative import.
 jest.mock('../../../components/books/preview/ReadyBookPreview',()=>({__esModule:true,default:({onClose}:any)=><button onClick={onClose}>close</button>}),{virtual:true});
 jest.mock('@/components/ui/Button',()=>({__esModule:true,default:({label,onPress,disabled}:any)=><button disabled={disabled} onClick={onPress}>{label}</button>}));
-jest.mock('expo-router',()=>({Link:({children,href}:any)=><a href={href}>{children}</a>,useLocalSearchParams:()=>({slug:'belarus'})}));
+jest.mock('expo-router',()=>({Link:({children,href}:any)=><a href={href}>{children}</a>,useLocalSearchParams:()=>({slug:'belarus'}),useFocusEffect:(callback:()=>void|(()=>void))=>require('react').useEffect(callback,[callback])}));
 jest.mock('@/utils/growthFunnelAnalytics',()=>({trackReadyBookEvent:jest.fn()}));
 jest.mock('@/services/book/readyBooks/download',()=>({fetchBookArtifact:jest.fn()}));
 

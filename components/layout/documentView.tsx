@@ -8,6 +8,7 @@ export type DocumentView = {
   kind: 'route' | 'not-found'
   pathname: string
   deniedEditorPathname?: string
+  bookHydrationPathname?: string
 }
 
 const DocumentViewContext = createContext<DocumentView | null>(null)
@@ -46,16 +47,36 @@ type DocumentRoute = {
   state?: { index?: number; routes: readonly DocumentRoute[] }
 }
 
-export function isDeniedEditorScreen(pathname: string | undefined, route: DocumentRoute | undefined) {
-  if (!pathname || !route) return false
+function focusedDocumentRoute(route: DocumentRoute | undefined) {
+  if (!route) return undefined
   let focused = route
   while (focused.state) {
     const child = focused.state.routes[focused.state.index ?? 0]
-    if (!child) return false
+    if (!child) return undefined
     focused = child
   }
+  return focused
+}
+
+export function isDeniedEditorScreen(pathname: string | undefined, route: DocumentRoute | undefined) {
+  const focused = focusedDocumentRoute(route)
+  if (!pathname || !focused) return false
   return focused.name === 'travel/[id]' && focused.params !== undefined && 'id' in focused.params
     && typeof focused.params.id === 'string' && `/travel/${focused.params.id}` === pathname
+}
+
+function bookSlugFromDocumentPath(pathname: string) {
+  const segment = /^\/books\/([^/]+)$/.exec(pathname)?.[1]
+  if (!segment) return null
+  try { return decodeURIComponent(segment) } catch { return null }
+}
+
+export function isBookHydrationScreen(pathname: string | undefined, route: DocumentRoute | undefined) {
+  const focused = focusedDocumentRoute(route)
+  if (!pathname || !focused) return false
+  if (focused.name !== 'books/[slug]' || !focused.params || !('slug' in focused.params)
+    || typeof focused.params.slug !== 'string') return false
+  return bookSlugFromDocumentPath(pathname) === focused.params.slug
 }
 
 function readDeniedEditorDocument() {
@@ -65,17 +86,36 @@ function readDeniedEditorDocument() {
   return document.getElementById(UNKNOWN_CITY_NOT_FOUND_ELEMENT_ID) ? pathname : null
 }
 
+function readBookHydrationDocument() {
+  if (Platform.OS !== 'web' || typeof window === 'undefined' || typeof document === 'undefined') return null
+  const pathname = window.location.pathname
+  if (bookSlugFromDocumentPath(pathname) === null) return null
+  return document.getElementById(UNKNOWN_CITY_NOT_FOUND_ELEMENT_ID) ? pathname : null
+}
+
 /** The delivered document is a rendering hint, never an access decision. */
 export function useRootDocumentView(pathname: string, segments: readonly string[]): DocumentView {
   const [deniedPathname] = useState(readDeniedEditorDocument)
+  const [bookHydrationPathname, setBookHydrationPathname] = useState(readBookHydrationDocument)
   const consumed = useRef(false)
   useEffect(() => {
     if (deniedPathname && pathname !== deniedPathname) consumed.current = true
   }, [deniedPathname, pathname])
+  // The static 404 owns the hydration frame. Afterwards the book route owns its
+  // own unavailable-edition screen; unlike editor denial, this hint is one-shot.
+  useEffect(() => { setBookHydrationPathname(null) }, [])
 
   const denied = deniedPathname !== null && !consumed.current && pathname === deniedPathname
-  const kind = Platform.OS === 'web' && (denied || isNotFoundRoute(pathname, segments)) ? 'not-found' : 'route'
-  return useMemo(() => ({ kind, pathname, ...(denied ? { deniedEditorPathname: deniedPathname } : {}) }), [kind, pathname, denied, deniedPathname])
+  // Expo resolves route params into a decoded pathname; location retains URI
+  // escaping. Keep the delivered URI for the leaf match, comparing both forms.
+  const bookHydration = bookHydrationPathname !== null && (pathname === bookHydrationPathname
+    || pathname === `/books/${bookSlugFromDocumentPath(bookHydrationPathname)}`)
+  const kind = Platform.OS === 'web' && (denied || bookHydration || isNotFoundRoute(pathname, segments)) ? 'not-found' : 'route'
+  return useMemo(() => ({
+    kind, pathname,
+    ...(denied ? { deniedEditorPathname: deniedPathname } : {}),
+    ...(bookHydration ? { bookHydrationPathname } : {}),
+  }), [kind, pathname, denied, deniedPathname, bookHydration, bookHydrationPathname])
 }
 
 export function getDocumentPresentation(view: DocumentView) {

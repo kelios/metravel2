@@ -25,6 +25,19 @@ function shellRoute(route) {
   return { file, pathname, params }
 }
 
+function publicationShells(route) {
+  const shells = [shellRoute(route)]
+  if (route.page !== '/(tabs)/books/[slug]') return shells
+  // Server export does not prerender generateStaticParams. Books are a finite,
+  // local publication: render their documents from the same catalogue pointer.
+  const { books } = require('../data/travelBooks/manifest.json')
+  for (const { slug } of books) {
+    if (typeof slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('Invalid published book slug')
+    shells.push({ file: `books/${slug}.html`, pathname: `/books/${slug}`, params: { slug } })
+  }
+  return shells
+}
+
 function publicConfig(envFile, env = process.env) {
   const values = { ...(envFile ? parseEnv(fs.readFileSync(envFile, 'utf8')) : {}), ...env }
   const result = {}
@@ -43,12 +56,13 @@ async function renderLegacyShells(rendererFile, { manifest, staticDir }) {
     throw new Error('Expected the installed Expo streaming renderer and metadata resolver')
   }
   const emitted = new Set()
-  for (const route of [...manifest.htmlRoutes, ...manifest.notFoundRoutes]) {
-    const shell = shellRoute(route)
+  const shells = [...manifest.htmlRoutes, ...manifest.notFoundRoutes]
+    .flatMap(route => publicationShells(route).map(shell => ({ route, shell })))
+  for (const { route, shell } of shells) {
     if (emitted.has(shell.file)) continue
     const matchedRoute = { file: route.file, page: route.page, ...(route.generated ? { generated: true } : {}) }
-    // No request and no entity parameters: metadata/loaders cannot fetch
-    // content. Render only the finite route shells using this SAME export.
+    // No request: dynamic entities keep placeholder parameters. Only local,
+    // published books have concrete parameters; no API content is prerendered.
     const metadata = route.generated ? null
       : await renderer.resolveMetadata({ route: matchedRoute, request: undefined, params: shell.params })
     const assets = {
@@ -158,5 +172,5 @@ async function main() {
   await prepareWebSsr(options)
 }
 
-module.exports = { shellRoute, publicConfig, writePublicConfig, sharedCriticalCss, writeSharedCss, prepareWebSsr }
+module.exports = { shellRoute, publicConfig, writePublicConfig, sharedCriticalCss, writeSharedCss, renderLegacyShells, prepareWebSsr }
 if (require.main === module) main().catch((error) => { console.error(`[prepare-web-ssr] ${error.message}`); process.exitCode = 1 })

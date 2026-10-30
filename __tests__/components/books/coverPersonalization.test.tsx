@@ -8,6 +8,15 @@ import {openWebWindow} from '@/utils/externalLinks';
 import {publishedFixture} from '../../services/book/readyBooks/publicationFixtures';
 import {coverClientFixture} from '../../services/book/readyBooks/coverClientFixtures';
 
+let mockBookFocused=true;
+jest.mock('expo-router',()=>({
+  useFocusEffect:(callback:()=>void|(()=>void))=>{
+    const {useEffect}=require('react');
+    const focused=mockBookFocused;
+    useEffect(()=>focused?callback():undefined,[callback,focused]);
+  },
+}));
+
 jest.mock('@expo/vector-icons/Feather',()=>({__esModule:true,default:()=>null}));
 jest.mock('@/components/ui/Button',()=>({__esModule:true,default:({label,onPress,disabled}:any)=><button disabled={disabled} onClick={onPress}>{label}</button>}));
 jest.mock('@/i18n/LocaleProvider',()=>({useTranslation:()=>({t:(key:string)=>key.replace(/^books:/,''),ready:true})}));
@@ -20,6 +29,7 @@ const originalRevoke=Object.getOwnPropertyDescriptor(URL,'revokeObjectURL');
 const originalFetch=global.fetch;
 let urlCounter=0;
 beforeEach(()=>{
+  mockBookFocused=true;
   jest.clearAllMocks();
   jest.mocked(createPersonalizedCoverBlob).mockReset().mockResolvedValue(new Blob(['my-pdf'],{type:'application/pdf'}));
   jest.mocked(downloadBlobOnWeb).mockReturnValue(true);
@@ -125,4 +135,67 @@ it('aborts and revokes private state when the editor unmounts',async()=>{
   const url=jest.mocked(URL.createObjectURL).mock.results[0].value;
   unmount();
   expect(URL.revokeObjectURL).toHaveBeenCalledWith(url);
+});
+
+it('releases the private PDF on cached-route blur without unmounting and returns without a stale result',async()=>{
+  const {book}=coverClientFixture();
+  const {rerender}=render(<Editor book={book} profileId="album-a5"/>);
+  ownTitle('Личный текст до ухода');
+  fireEvent.change(screen.getByRole('combobox'),{target:{value:'print-shop'}});
+  await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'coverGenerate'}));});
+  const section=screen.getByRole('heading',{name:'coverEditorTitle'}).closest('section');
+  const url=jest.mocked(URL.createObjectURL).mock.results[0].value;
+  mockBookFocused=false;
+  rerender(<Editor book={book} profileId="album-a5"/>);
+  expect(screen.getByRole('heading',{name:'coverEditorTitle'}).closest('section')).toBe(section);
+  expect(URL.revokeObjectURL).toHaveBeenCalledWith(url);
+  expect(screen.queryByRole('button',{name:'coverDownloadPdf'})).toBeNull();
+  expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('');
+  expect((screen.getByRole('radio',{name:'coverOwnText'}) as HTMLInputElement).checked).toBe(true);
+  expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('print-shop');
+  mockBookFocused=true;
+  rerender(<Editor book={book} profileId="album-a5"/>);
+  expect(screen.queryByRole('button',{name:'coverDownloadPdf'})).toBeNull();
+  expect(screen.queryByRole('button',{name:'coverPreviewPdf'})).toBeNull();
+  expect(screen.queryByText('coverReady')).toBeNull();
+  expect(createPersonalizedCoverBlob).toHaveBeenCalledTimes(1);
+});
+it('aborts on blur and ignores its late completion after a new generation starts on the retained screen',async()=>{
+  const {book}=coverClientFixture(),old=deferred<Blob>(),fresh=deferred<Blob>();
+  jest.mocked(createPersonalizedCoverBlob).mockReturnValueOnce(old.promise).mockReturnValueOnce(fresh.promise);
+  const {rerender}=render(<Editor book={book} profileId="album-a5"/>);
+  ownTitle('Старая личная надпись');
+  fireEvent.click(screen.getByRole('button',{name:'coverGenerate'}));
+  const oldSignal=jest.mocked(createPersonalizedCoverBlob).mock.calls[0][0].signal!;
+  mockBookFocused=false;
+  rerender(<Editor book={book} profileId="album-a5"/>);
+  expect(oldSignal.aborted).toBe(true);
+  mockBookFocused=true;
+  rerender(<Editor book={book} profileId="album-a5"/>);
+  ownTitle('Новая надпись после возвращения');
+  fireEvent.click(screen.getByRole('button',{name:'coverGenerate'}));
+  const freshSignal=jest.mocked(createPersonalizedCoverBlob).mock.calls[1][0].signal!;
+  await act(async()=>{old.resolve(new Blob(['obsolete-pdf']));});
+  expect(URL.createObjectURL).not.toHaveBeenCalled();
+  expect(freshSignal.aborted).toBe(false);
+  expect((screen.getByRole('button',{name:'coverGenerating'}) as HTMLButtonElement).disabled).toBe(true);
+  const freshBlob=new Blob(['fresh-private-pdf'],{type:'application/pdf'});
+  await act(async()=>{fresh.resolve(freshBlob);});
+  expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+  expect(URL.createObjectURL).toHaveBeenCalledWith(freshBlob);
+  fireEvent.click(screen.getByRole('button',{name:'coverDownloadPdf'}));
+  expect(downloadBlobOnWeb).toHaveBeenCalledWith(freshBlob,`${book.slug}-${book.revision}-album-a5-read-personal-cover.pdf`);
+});
+it('keeps the draft during focused edits, profile changes and retries without rerunning route cleanup',async()=>{
+  const {book}=coverClientFixture();
+  const {rerender}=render(<Editor book={book} profileId="pocket-150x100"/>);
+  ownTitle('Черновик остаётся на текущей странице');
+  expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('Черновик остаётся на текущей странице');
+  rerender(<Editor book={book} profileId="album-a5"/>);
+  expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('Черновик остаётся на текущей странице');
+  jest.mocked(createPersonalizedCoverBlob).mockRejectedValueOnce(new CoverTextError('COVER_TEXT_OVERFLOW'));
+  await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'coverGenerate'}));});
+  expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('Черновик остаётся на текущей странице');
+  await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'retry'}));});
+  expect(jest.mocked(createPersonalizedCoverBlob).mock.calls[1][0]).toMatchObject({text:'Черновик остаётся на текущей странице',profileId:'album-a5'});
 });

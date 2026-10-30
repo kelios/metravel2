@@ -1,5 +1,6 @@
 import React,{useCallback,useEffect,useId,useRef,useState} from 'react';
 import Feather from '@expo/vector-icons/Feather';
+import {useFocusEffect} from 'expo-router';
 import Button from '@/components/ui/Button';
 import {DESIGN_TOKENS} from '@/constants/designSystem';
 import {formatNumber} from '@/i18n';
@@ -44,7 +45,13 @@ export default function CoverPersonalizationEditor({book,profileId}:{book:Publis
   },[]);
   useEffect(()=>()=>release(identity),[identity,release]);
   useEffect(()=>()=>release(),[release]);
-  const invalidate=()=>{release();setResult(null);setBusy(null);setError(null);setPreviewNotice(false);};
+  const invalidate=useCallback(()=>{release();setResult(null);setBusy(null);setError(null);setPreviewNotice(false);},[release]);
+  // Expo can retain this screen after navigation: blur must release private PDF
+  // state even when neither the book identity nor the component mount changes.
+  useFocusEffect(useCallback(()=>()=>{
+    invalidate();
+    setCustomText('');
+  },[invalidate]));
   const available=result&&result===currentResult.current&&result.identity===identity?result:null;
   const selectedError=error?.identity===identity?error.code:null;
   const errorText=selectedError==='COVER_TEXT_EMPTY'?t('books:coverErrorEmpty'):
