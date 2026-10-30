@@ -1,12 +1,21 @@
 /** @jest-environment node */
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
+import {webcrypto} from 'node:crypto';
 import ts from 'typescript';
 import {PDFArray,PDFDict,PDFDocument,PDFName,PDFRawStream,StandardFonts,decodePDFRawStream,rgb} from '@cantoo/pdf-lib';
 import {createPersonalizedCoverPdf,normalizeCoverText,type CoverTextRegion} from '@/services/book/readyBooks/coverText';
 import coverCopy from '@/data/travelBooks/cover-copy.json';
 
 const fontBytes=new Uint8Array(readFileSync(path.resolve('data/travelBooks/assets/fonts/marckscript/MarckScript-Regular.ttf')));
+const cryptoDescriptor=Object.getOwnPropertyDescriptor(globalThis,'crypto');
+beforeAll(()=>Object.defineProperty(globalThis,'crypto',{configurable:true,value:{subtle:{
+  digest(algorithm:string,bytes:BufferSource){
+    const view=ArrayBuffer.isView(bytes)?new Uint8Array(bytes.buffer,bytes.byteOffset,bytes.byteLength):new Uint8Array(bytes);
+    return webcrypto.subtle.digest(algorithm,Buffer.from(Array.from(view)));
+  },
+}}}));
+afterAll(()=>{if(cryptoDescriptor)Object.defineProperty(globalThis,'crypto',cryptoDescriptor);else Reflect.deleteProperty(globalThis,'crypto');});
 const pt=(mm:number)=>mm*72/25.4;
 const regions:Record<string,{widthMm:number;heightMm:number;count:number;region:CoverTextRegion}>={
   read:{widthMm:150,heightMm:100,count:4,region:{pageIndex:0,xMm:15,yMm:8,widthMm:120,heightMm:28,minFontSizePt:12,maxFontSizePt:20,lineHeight:1.18,colorHex:'#31443d'}},
@@ -89,6 +98,8 @@ it('rejects unsupported glyphs, real overflow and wrong physical templates witho
   await expect(createPersonalizedCoverPdf({...base,expectedPageCount:2})).rejects.toThrow('COVER_TEMPLATE_INVALID');
   await expect(createPersonalizedCoverPdf({...base,widthMm:151})).rejects.toThrow('COVER_TEMPLATE_INVALID');
   await expect(createPersonalizedCoverPdf({...base,textRegion:{...spec.region,xMm:149}})).rejects.toThrow('COVER_TEMPLATE_INVALID');
+  const alteredFont=fontBytes.slice();alteredFont[alteredFont.length-1]^=1;
+  await expect(createPersonalizedCoverPdf({...base,fontBytes:alteredFont})).rejects.toThrow('COVER_FONT_INVALID');
 });
 it('has no eager PDF/fontkit runtime imports or server DOM/fetch dependency',()=>{
   const source=readFileSync(path.resolve('services/book/readyBooks/coverText.ts'),'utf8');
@@ -103,4 +114,7 @@ it('has no eager PDF/fontkit runtime imports or server DOM/fetch dependency',()=
   }
   visit(file);
   expect(forbidden).toEqual([]);
+  expect(source).not.toContain("import('@cantoo/fontkit')");
+  expect(source).toContain("import('./pdfCoverVendor')");
+  expect(source).toContain("import('./marckFontAdapter')");
 });

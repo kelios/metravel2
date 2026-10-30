@@ -1,4 +1,4 @@
-import type {Font} from '@cantoo/fontkit';
+import type {CoverFont} from './marckFontAdapter';
 
 export type CoverTextRegion = {
   pageIndex: 0;
@@ -39,7 +39,7 @@ type Line = {text: string; ink: Ink};
 
 // Match the glyph advances that pdf-lib writes into the embedded font's W
 // table. Fontkit positioning adjustments are not emitted by drawText's Tj.
-function inkAtSize(font: Font, text: string, size: number): Ink {
+function inkAtSize(font: CoverFont, text: string, size: number): Ink {
   const scale = size / font.unitsPerEm;
   let advance = 0, minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (const glyph of font.layout(text).glyphs) {
@@ -58,7 +58,7 @@ function inkAtSize(font: Font, text: string, size: number): Ink {
     : {minX: minX * scale, maxX: maxX * scale, minY: minY * scale, maxY: maxY * scale};
 }
 
-function layoutAtSize(font: Font, text: string, size: number, width: number, height: number, lineHeight: number) {
+function layoutAtSize(font: CoverFont, text: string, size: number, width: number, height: number, lineHeight: number) {
   const lines: Line[] = [];
   for (const paragraph of text.split(/\r\n?|\n/)) {
     if (!paragraph.trim()) {
@@ -108,7 +108,7 @@ export async function createPersonalizedCoverPdf(input: PersonalizedCoverInput):
       !Number.isFinite(region.lineHeight) || region.lineHeight < 1 || region.lineHeight > 3 || !/^#[a-f\d]{6}$/i.test(region.colorHex)) {
     throw new CoverTextError('COVER_TEMPLATE_INVALID');
   }
-  const [{PDFDocument, rgb}, fontkit] = await Promise.all([import('@cantoo/pdf-lib'), import('@cantoo/fontkit')]);
+  const [{PDFDocument, rgb}, {createMarckFontkit}] = await Promise.all([import('./pdfCoverVendor'), import('./marckFontAdapter')]);
   let pdf: import('@cantoo/pdf-lib').PDFDocument;
   try {
     pdf = await PDFDocument.load(input.templateBytes, {updateMetadata: false});
@@ -120,8 +120,10 @@ export async function createPersonalizedCoverPdf(input: PersonalizedCoverInput):
     const box = page.getMediaBox();
     return ![box.x,box.y,box.width,box.height].every(Number.isFinite) || Math.abs(box.width - mmToPt(input.widthMm)) > 0.1 || Math.abs(box.height - mmToPt(input.heightMm)) > 0.1;
   }) || pages[0].getRotation().angle % 360 !== 0) throw new CoverTextError('COVER_TEMPLATE_INVALID');
-  let metrics: Font;
+  let metrics: CoverFont;
+  let fontkit: Awaited<ReturnType<typeof createMarckFontkit>>;
   try {
+    fontkit = await createMarckFontkit(input.fontBytes);
     const parsed = fontkit.create(input.fontBytes);
     if (!('layout' in parsed) || !finitePositive(parsed.unitsPerEm)) throw new Error('font');
     metrics = parsed;
