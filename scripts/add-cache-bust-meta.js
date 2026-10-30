@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Adds anti-cache meta tags to all HTML files in the build directory.
+ * Adds anti-cache meta tags to app HTML routes in the build directory.
+ * Immutable travel-books documents retain their published bytes.
  * This forces browsers to reload HTML even if they have it cached.
  * 
  * The script adds:
@@ -61,7 +62,7 @@ function processHtmlFile(filePath) {
   }
 }
 
-function processDirectory(dir, processedInodes = new Set()) {
+function processDirectory(dir, processedInodes = new Set(), root = dir) {
   const entries = fs.readdirSync(dir);
   const results = [];
   
@@ -79,7 +80,10 @@ function processDirectory(dir, processedInodes = new Set()) {
     }
 
     if (stats.isDirectory()) {
-      const subResults = processDirectory(fullPath, processedInodes);
+      // This namespace contains hash-verified publication assets, not app shells.
+      // Charset and metadata guards still validate its ready HTML documents.
+      if (path.relative(root, fullPath) === 'travel-books') continue;
+      const subResults = processDirectory(fullPath, processedInodes, root);
       results.push(...subResults);
     } else if (stats.isFile() && entry.endsWith('.html')) {
       // SSG writes flat and directory-index routes as hardlinks. Mutate their

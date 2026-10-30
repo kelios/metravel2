@@ -12,7 +12,7 @@ import {useBookCopy} from './bookCopy';
 import ReadyBookPreview from './preview/ReadyBookPreview';
 import PrintingGuide from './printingGuide/PrintingGuide.web';
 import PrintProviders from './printProviders/PrintProviders.web';
-import {bookArtifactFilename} from '@/services/book/readyBooks/printingGuide';
+import {bookArtifactFilename} from '@/services/book/readyBooks/artifactFilename';
 import CoverPersonalizationEditor from './cover/CoverPersonalizationEditor.web';
 
 const purposeKey={read:'read','home-rings':'rings','home-sewn':'sewn','print-shop':'shop',control:'control',stickers:'stickers',instructions:'instructions','print-passport':'passport'} as const;
@@ -62,6 +62,6 @@ export default function ReadyBookDetails({slug}:{slug:unknown}){
       {failed===file.id&&<p role="alert">{bookT('downloadError')}</p>}
     </li>)}</ul><p>{bookT('revision')}: {book.revision}</p>
     <PrintingGuide book={book} profileId={profileId}/>
-    <PrintProviders profileId={profileId} bodyPageCount={book.bodyPageCount} artifactSha256={book.artifacts.find(file=>file.profileId===profileId&&file.purpose==='print-shop'&&file.component==='body')?.sha256}/>
+    <PrintProviders book={book} profileId={profileId} bodyPageCount={book.bodyPageCount} artifactSha256={book.artifacts.find(file=>file.profileId===profileId&&file.purpose==='print-shop'&&file.component==='body')?.sha256}/>
   </BooksFrame>;
 }

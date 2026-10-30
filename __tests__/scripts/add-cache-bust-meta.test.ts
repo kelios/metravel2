@@ -26,6 +26,21 @@ describe('add-cache-bust-meta', () => {
     return { flat, index }
   }
 
+  it('preserves immutable book document hashes while app shells get build metadata', () => {
+    const guide = path.join(distDir, 'travel-books', 'belarus-memory', 'revision-one', 'album-a5', 'instructions.html')
+    const html = '<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Печать</title><meta name="robots" content="noindex,nofollow"><style>body{max-width:72ch}</style></head><body>Инструкция</body></html>'
+    writeTextFile(guide, html)
+    const app = path.join(distDir, 'books', 'index.html')
+    writeTextFile(app, '<html><head><meta charset="utf-8"><title>Книги</title><meta name="description" content="Книги"></head><body></body></html>')
+    const before = fs.readFileSync(guide)
+    expect(processDirectory(distDir)).toEqual([app])
+    const {externalizeDist} = require('@/scripts/externalize-head-styles')
+    externalizeDist(distDir)
+    expect(fs.readFileSync(guide)).toEqual(before)
+    expect(fs.readFileSync(app, 'utf8')).toContain('name="build-version"')
+    expect(require('@/scripts/guard-html-meta-description').checkDist(distDir).ok).toBe(true)
+  })
+
   it('normalizes shared HTML bytes once and still reports both routes and a separate identical file', () => {
     const html = '<html><head><title>Квест</title><meta charset="utf-8"/></head><body>Путь</body></html>'
     const { flat, index } = writePair(html)

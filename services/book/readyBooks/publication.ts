@@ -40,6 +40,8 @@ export const publishedBookSchema = z.strictObject({
   quality:z.array(z.strictObject({profileId,printReady:z.literal(false),minIllustrationPpi:z.number().positive(),physicalChecks:z.array(z.enum(['image-resolution','provider-acceptance','paper-check'])).min(2)})).length(2),
   profiles:z.array(printProfileSchema).length(2),
   coverPersonalization:coverPersonalizationSchema.optional(),
+  printGuidePages:z.array(z.strictObject({...coverResource,profileId,mime:z.literal('text/html'),bytes:z.number().int().positive().max(1024*1024)})).length(2).optional(),
+  printDirectory:z.strictObject({...coverResource,mime:z.literal('application/json'),bytes:z.number().int().positive().max(1024*1024)}).optional(),
   artifacts:z.array(z.strictObject({id:identifier,revision:identifier,profileId,purpose:z.enum(['read','home-rings','home-sewn','print-shop','control','stickers','instructions','print-passport']),component:z.enum(['body','cover','stickers','instructions','passport']),variant:z.enum(['color','no-background']).optional(),outputPageMm:z.strictObject({width:z.number().positive(),height:z.number().positive()}).optional(),controlFor:z.enum(['home-rings','home-sewn']).optional(),uri:assetUri,mime:z.literal('application/pdf'),sha256,bytes:z.number().int().positive(),pageCount:z.number().int().positive()})),
   preview:z.array(z.strictObject({revision:z.string(),profileId,component:z.enum(['body','cover']),sourceSha256:sha256,pages:z.array(page)})).length(4),
 }).superRefine((book,ctx)=>{
@@ -66,7 +68,12 @@ export const publishedBookSchema = z.strictObject({
   const resources=new Map<string,{sha256:string,bytes:number}>();
   const cover=book.coverPersonalization;
   const coverResources=cover?[cover.font,cover.font.license,...cover.templates]:[];
-  for(const a of [...book.artifacts,...book.preview.flatMap(p=>p.pages),...coverResources]){
+  const printResources=[...(book.printGuidePages??[]),...(book.printDirectory?[book.printDirectory]:[])];
+  if(Boolean(book.printGuidePages)!==Boolean(book.printDirectory))fail('Print HTML and directory must be published together');
+  if(book.printGuidePages&&(new Set(book.printGuidePages.map(p=>p.profileId)).size!==2||book.printGuidePages.some(p=>!p.uri.endsWith('/'+p.profileId+'/instructions.html'))))fail('Both exact HTML print-guide profiles are required');
+  if(book.printDirectory&&!book.printDirectory.uri.endsWith('/providers.json'))fail('Print directory must identify providers.json');
+  if(printResources.some(a=>!a.uri.includes('/'+book.id+'/'+book.revision+'/')))fail('Mixed print resource revision');
+  for(const a of [...book.artifacts,...book.preview.flatMap(p=>p.pages),...coverResources,...printResources]){
     const prior=resources.get(a.uri);
     if(prior&&(prior.sha256!==a.sha256||prior.bytes!==a.bytes))fail('Conflicting immutable asset metadata');
     resources.set(a.uri,a);

@@ -1,9 +1,6 @@
-import data from '../../../data/travelBooks/providers.json';
 import type {PrintDirectory, PrintCountry, PrintProvider} from '../../../data/travelBooks/schema/providers';
 import type {PrintProfile} from '../../../types/readyBook';
 
-// The publication validator checks this registry before release; the UI reads only metadata.
-export const printDirectory = data as PrintDirectory;
 export type PrintProviderQuery = {
   country: PrintCountry; city: string; profileId: PrintProfile['id']; copies: number;
   bodyPageCount: number; binding: PrintProfile['binding']; artifactSha256?: string;
@@ -19,11 +16,11 @@ export function bookPrintBindings(profileId: PrintProfile['id']): PrintProfile['
 }
 
 /** A candidate has no known conflict. Unknown parameters never become confirmation. */
-export function resolvePrintProviders(query: PrintProviderQuery, providers: PrintProvider[] = printDirectory.providers): ProviderMatch[] {
+export function resolvePrintProviders(query: PrintProviderQuery, directory: PrintDirectory): ProviderMatch[] {
   if (!Number.isSafeInteger(query.copies) || query.copies < 1 || !Number.isSafeInteger(query.bodyPageCount) || query.bodyPageCount < 1) return [];
   if (!bookPrintBindings(query.profileId).includes(query.binding)) return [];
-  if (!printDirectory.cities.some(city => city.country === query.country && city.name === query.city)) return [];
-  return providers.filter(provider => provider.country === query.country).flatMap(provider => {
+  if (!directory.cities.some(city => city.country === query.country && city.name === query.city)) return [];
+  return directory.providers.filter(provider => provider.country === query.country).flatMap(provider => {
     const local = provider.city === query.city && provider.fulfillment === 'local';
     const delivery = provider.deliveryCoverage.includes(query.country) || provider.deliveryCoverage.includes(query.city);
     if (!local && !delivery) return [];

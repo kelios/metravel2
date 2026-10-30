@@ -3,10 +3,9 @@ import {BOOK_PROFILES} from '../../../../data/travelBooks/profiles';
 import {buildImpositionPlan} from '../imposition';
 import type {PublishedBook,PublishedArtifact} from '../publication';
 
-/** The browser and the printed guide use exactly the same download names. */
-export function bookArtifactFilename(book:Pick<PublishedBook,'slug'|'revision'>,file:Pick<PublishedArtifact,'id'>){
-  return `${book.slug}-${book.revision}-${file.id}.pdf`;
-}
+import {bookArtifactFilename} from '../artifactFilename';
+export {bookArtifactFilename} from '../artifactFilename';
+
 export function buildPrintGuide(book:PublishedBook,profileId:PublishedArtifact['profileId']){
   const profile=book.profiles.find(item=>item.id===profileId);
   if(!profile)throw new Error('Guide profile is absent');

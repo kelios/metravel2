@@ -3,10 +3,9 @@ import providerData from '@/data/travelBooks/providers.json';
 import {BOOK_PROFILES} from '@/data/travelBooks/profiles';
 import {BOOK_PROFILES as schemaProfiles,printProfileSchema} from '@/data/travelBooks/schema/profiles';
 import {printDirectorySchema} from '@/data/travelBooks/schema/providers';
-import {printDirectory} from '@/services/book/readyBooks/providers';
 
 it('validates the exact provider registry consumed by the browser before publication',()=>{
-  expect(printDirectorySchema.parse(providerData)).toEqual(printDirectory);
+  expect(printDirectorySchema.parse(providerData).providers).toHaveLength(8);
   const invalid=JSON.parse(JSON.stringify(providerData));
   invalid.providers[0].minimumCopies=0;
   expect(printDirectorySchema.safeParse(invalid).success).toBe(false);
@@ -28,13 +27,17 @@ it('bundles real browser metadata without authoring schemas while retaining the 
   const output=execFileSync(process.execPath,['-e',`
     const {buildSync}=require('esbuild');
     const options={bundle:true,write:false,metafile:true,platform:'browser',format:'esm',logLevel:'silent'};
-    const browser=buildSync({...options,stdin:{contents:"export * from './services/book/readyBooks/providers'; export * from './services/book/readyBooks/printingGuide';",resolveDir:process.cwd(),sourcefile:'book-metadata.ts'}});
+    const browser=buildSync({...options,stdin:{contents:"export * from './services/book/readyBooks/providers'; export * from './services/book/readyBooks/printResources'; export * from './services/book/readyBooks/artifactFilename';",resolveDir:process.cwd(),sourcefile:'book-metadata.ts'}});
     const validator=buildSync({...options,entryPoints:['data/travelBooks/schema/providers.ts']});
     console.log(JSON.stringify({browser:Object.keys(browser.metafile.inputs),validator:Object.keys(validator.metafile.inputs)}));
   `],{encoding:'utf8',cwd:process.cwd(),timeout:30000});
   const graph=JSON.parse(output) as {browser:string[];validator:string[]};
-  expect(graph.browser).toContain('data/travelBooks/providers.json');
-  expect(graph.browser).toContain('services/book/readyBooks/printingGuide/index.ts');
+  expect(graph.browser).toContain('services/book/readyBooks/printResources.ts');
+  expect(graph.browser).toContain('services/book/readyBooks/artifactFilename.ts');
+  expect(graph.browser).not.toContain('data/travelBooks/providers.json');
+  expect(graph.browser).not.toContain('data/travelBooks/instructions/ru.json');
+  expect(graph.browser).not.toContain('services/book/readyBooks/printingGuide/index.ts');
+  expect(graph.browser).not.toContain('services/book/readyBooks/imposition/index.ts');
   expect(graph.browser.some(file=>file.includes('data/travelBooks/schema/')||file.includes('node_modules/zod/'))).toBe(false);
   expect(graph.validator.some(file=>file.includes('node_modules/zod/'))).toBe(true);
 });

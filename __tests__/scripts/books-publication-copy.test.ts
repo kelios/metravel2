@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 
-const {collectAssets, copyPublication, ensureDirectory} = require('../../scripts/books/copy-publication.cjs');
+const {collectAssets, copyPublication, ensureDirectory, writePublicationStagingMetadata} = require('../../scripts/books/copy-publication.cjs');
 const digest = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex');
 const pdf = Buffer.from('%PDF-1.7 fixture');
 const asset = (revision = 'r1') => ({uri: `https://metravel.by/travel-books/book/${revision}/read-body.pdf`, bytes: pdf.length, sha256: digest(pdf)});
@@ -33,6 +33,25 @@ describe('ready-book publication build boundary', () => {
     await expect(ensureDirectory(buildDir, outside)).rejects.toThrow('escapes root');
   });
 
+  it.each(['manifest.json', 'related.json', 'supplement-acceptance.json'])('refuses an existing %s metadata symlink before writing the staging set', async name => {
+    const outside = path.join(root, 'outside.json');
+    await fs.writeFile(outside, 'preserve');
+    await fs.symlink(outside, path.join(buildDir, name));
+    await expect(writePublicationStagingMetadata(buildDir, {manifest:'manifest',related:'related',acceptance:'acceptance'})).rejects.toThrow('metadata already exists');
+    expect(await fs.readFile(outside, 'utf8')).toBe('preserve');
+    expect(await fs.readdir(buildDir)).toEqual([name]);
+  });
+
+  it('writes a complete new staging metadata set without overwriting it on retry', async () => {
+    const metadata={manifest:'manifest',related:'related',acceptance:'acceptance'};
+    await writePublicationStagingMetadata(buildDir,metadata);
+    expect(await fs.readFile(path.join(buildDir,'manifest.json'),'utf8')).toBe(metadata.manifest);
+    expect(await fs.readFile(path.join(buildDir,'related.json'),'utf8')).toBe(metadata.related);
+    expect(await fs.readFile(path.join(buildDir,'supplement-acceptance.json'),'utf8')).toBe(metadata.acceptance);
+    await expect(writePublicationStagingMetadata(buildDir,{...metadata,manifest:'different'})).rejects.toThrow('metadata already exists');
+    expect(await fs.readFile(path.join(buildDir,'manifest.json'),'utf8')).toBe(metadata.manifest);
+  });
+
   it('copies verified current and archived editions, with the current public pointer', async () => {
     const historical = JSON.stringify(manifest('old')) + '\n';
     await fs.writeFile(path.join(root, 'data/travelBooks/releases', digest(historical) + '.json'), historical);
@@ -44,6 +63,24 @@ describe('ready-book publication build boundary', () => {
     download.mockClear();
     await copyPublication({root, buildDir, cacheDir, download});
     expect(download).not.toHaveBeenCalled();
+  });
+
+
+  it('copies declared HTML guides and canonical directory JSON with byte integrity',async()=>{
+    const html=Buffer.from('<!doctype html><html lang="ru"><head><meta charset="utf-8"></head><body>r1</body></html>');
+    const directory=Buffer.from(JSON.stringify({schemaVersion:1,providers:[{id:'fixture'}],cities:[{name:'fixture'}]}));
+    const book={...manifest().books[0],id:'book',revision:'r1',printGuidePages:['pocket-150x100','album-a5'].map(profileId=>({profileId,uri:`https://metravel.by/travel-books/book/r1/${profileId}/instructions.html`,mime:'text/html',bytes:html.length,sha256:digest(html)})),printDirectory:{uri:'https://metravel.by/travel-books/book/r1/providers.json',mime:'application/json',bytes:directory.length,sha256:digest(directory)}};
+    await fs.writeFile(path.join(root,'data/travelBooks/manifest.json'),JSON.stringify({schemaVersion:1,releaseId:'travel-books-v1',books:[book]}));
+    const download=jest.fn(async(a:{relative:string})=>a.relative.endsWith('.html')?html:a.relative.endsWith('.json')?directory:pdf);
+    const result=await copyPublication({root,buildDir,cacheDir,download});
+    expect(result.files).toBe(4);
+    expect(await fs.readFile(path.join(buildDir,'travel-books/book/r1/providers.json'))).toEqual(directory);
+    expect(await fs.readFile(path.join(buildDir,'travel-books/book/r1/album-a5/instructions.html'))).toEqual(html);
+  });
+
+  it('rejects an empty HTML guide set paired with a directory', () => {
+    const input={...manifest(),books:[{...manifest().books[0],id:'book',revision:'r1',printGuidePages:[],printDirectory:{...asset(),uri:'https://metravel.by/travel-books/book/r1/providers.json',mime:'application/json'}}]};
+    expect(()=>collectAssets([input])).toThrow('Invalid print document resources');
   });
 
   it('refuses a bad download without activating a manifest', async () => {

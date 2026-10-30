@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import {createHash} from 'node:crypto';
-import {readFile, realpath, stat} from 'node:fs/promises';
+import {readFile, realpath, stat,lstat} from 'node:fs/promises';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
@@ -18,7 +18,7 @@ if (args[0] === '--publication') {
   const {build}=await import('esbuild');
   const {createRequire}=await import('node:module');
   const {rm}=await import('node:fs/promises');
-  const {collectAssets,ensureDirectory}=createRequire(import.meta.url)('./books/copy-publication.cjs');
+  const {collectAssets,ensureDirectory,checkContent}=createRequire(import.meta.url)('./books/copy-publication.cjs');
   const file=args[1];
   if(!file||args.length!==4||args[2]!=='--assets-root'||!args[3])throw new Error('Use --publication manifest.json --assets-root cache-directory');
   const output=await ensureDirectory(await realpath('.codex-temp'),'books-validator');
@@ -26,19 +26,28 @@ if (args[0] === '--publication') {
   const providersBundle=path.join(output,'providers.cjs');
   await rm(bundle,{force:true});
   await rm(providersBundle,{force:true});
-  await build({entryPoints:{publication:'services/book/readyBooks/publication.ts',providers:'data/travelBooks/schema/providers.ts'},outdir:output,outExtension:{'.js':'.cjs'},bundle:true,platform:'node',format:'cjs',logLevel:'silent'});
+  await build({entryPoints:{publication:'services/book/readyBooks/publication.ts',providers:'data/travelBooks/schema/providers.ts',guide:'scripts/books/print-guide-entry.ts'},outdir:output,outExtension:{'.js':'.cjs'},bundle:true,platform:'node',format:'cjs',logLevel:'silent'});
   const require=createRequire(import.meta.url);
   const {publicationSchema}=require(bundle);
   const {printDirectorySchema}=require(providersBundle);
+  const {buildPrintGuide}=require(path.join(output,'guide.cjs'));
+  const {renderPrintGuideHtml}=await import('./books/render-print-guide-html.mjs');
   const providers=printDirectorySchema.parse(JSON.parse(await readFile('data/travelBooks/providers.json','utf8')));
   const manifest=publicationSchema.parse(JSON.parse(await readFile(file,'utf8')));
   const assets=collectAssets([manifest]),root=await realpath(args[3]);
   for(const asset of assets){
+    let current=root;for(const part of asset.relative.split('/')){current=path.join(current,part);if((await lstat(current)).isSymbolicLink())throw new Error('Publication asset is a symlink');}
     const resolved=await realpath(path.join(root,asset.relative));
     if(!resolved.startsWith(root+path.sep))throw new Error('Publication asset escapes cache');
     const bytes=await readFile(resolved);
     if(bytes.length!==asset.bytes||createHash('sha256').update(bytes).digest('hex')!==asset.sha256)throw new Error('Publication byte/hash mismatch: '+asset.relative);
-    if(asset.relative.endsWith('.pdf')&&bytes.subarray(0,5).toString()!=='%PDF-')throw new Error('Invalid PDF resource');
+    checkContent(asset,bytes);
+    if(asset.kind==='print-directory'&&JSON.stringify(printDirectorySchema.parse(JSON.parse(bytes.toString('utf8'))))!==JSON.stringify(providers))throw new Error('Published directory differs from validated canonical data');
+  }
+  for(const book of manifest.books)for(const page of book.printGuidePages??[]){
+    const relative=page.uri.slice('https://metravel.by/travel-books/'.length);
+    const actual=await readFile(path.join(root,relative),'utf8');
+    if(actual!==renderPrintGuideHtml(buildPrintGuide(book,page.profileId),{slug:book.slug,artifacts:book.artifacts}))throw new Error('HTML guide differs from its exact PDF model');
   }
   console.log(JSON.stringify({publication:'partial',books:manifest.books.length,resources:assets.length,providers:providers.providers.length,printCities:providers.cities.length,hashesVerified:true,printReady:false}));
   process.exit(0);
