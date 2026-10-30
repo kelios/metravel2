@@ -101,6 +101,19 @@ async function openWizard(page: Page) {
   await ensureAuthedStorageFallback(page);
   await mockTravelUpsert(page);
   await mockImageUpload(page);
+  // Author previews open a second page through the editor shell. Its dictionary
+  // reads must use the same fixture rather than falling through to the backend.
+  await page.context().route((url) => /^\/(?:api\/)?(?:getFiltersTravel|countries)\/?$/.test(url.pathname), async (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    const countries = route.request().url().includes('/countries');
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(countries
+        ? [{ country_id: 112, title_ru: 'Беларусь', country_code: 'BY' }]
+        : { categories: [], transports: [], companions: [], complexity: [], month: [], over_nights_stay: [], categoryTravelAddress: [], sortings: [] }),
+    });
+  });
 
   await page.goto('/travel/new', { waitUntil: 'domcontentloaded' });
   await dismissConsentBanner(page);

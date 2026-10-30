@@ -108,7 +108,7 @@ export async function mockFallbackTravelDetails(
   const routeHandler = async (route: any) => {
     const request = route.request();
     if (request.method() !== 'GET') {
-      await route.continue();
+      await route.fallback();
       return;
     }
 
@@ -152,7 +152,7 @@ export async function mockFallbackTravelDetails(
       return;
     }
 
-    await route.continue();
+    await route.fallback();
   };
 
   await page.route('**/api/travels/resolve-slug/**', routeHandler);

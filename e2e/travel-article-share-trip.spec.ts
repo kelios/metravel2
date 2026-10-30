@@ -24,12 +24,22 @@ type FixtureState = {
   loginUrl: string | null;
   upserts: Record<string, unknown>[];
   unexpectedMutations: string[];
+  unexpectedReads: string[];
 };
 
 async function prepareArticleFlow(page: Page): Promise<FixtureState> {
   const state: FixtureState = {
-    registrations: 0, logins: 0, loginUrl: null, upserts: [], unexpectedMutations: [],
+    registrations: 0, logins: 0, loginUrl: null, upserts: [], unexpectedMutations: [], unexpectedReads: [],
   };
+
+  // Register before every endpoint owner: an undeclared read is a fixture
+  // failure, never a live-backend request carrying the synthetic session.
+  await page.route('**/api/**', (route) => {
+    const request = route.request();
+    if (request.method() !== 'GET') return route.fallback();
+    state.unexpectedReads.push(`${request.method()} ${new URL(request.url()).pathname}`);
+    return route.fulfill({ status: 500, contentType: 'application/json', body: '{"detail":"Unexpected fixture read"}' });
+  });
 
   await preacceptCookies(page);
   await installAnalyticsIntentRecorder(page);
@@ -38,6 +48,35 @@ async function prepareArticleFlow(page: Page): Promise<FixtureState> {
   (route) => route.fulfill({ status: 204, body: '' }));
 
   await mockFakeAuthApis(page);
+  // Retained article widgets share this synthetic reader session. Letting their
+  // reads reach Django would delete its intentionally unknown fixture cookie.
+  const fixtureReads = new Map<string, { status: number; data: unknown }>([
+    ['/api/countriesforsearch/', { status: 200, data: [{ country_id: 616, title_ru: 'Польша', country_code: 'PL' }] }],
+    ['/api/travels/facets/', { status: 200, data: { total: 1, facets: {} } }],
+    ['/api/quest-cities/', { status: 200, data: { count: 0, next: null, previous: null, results: [] } }],
+    ['/api/quests/near-location/', { status: 200, data: { results: [], count: 0 } }],
+    ['/api/user/subscriptions/', { status: 200, data: [] }],
+    ['/api/achievements/user/99/', { status: 200, data: { rank: {}, earned_badges: [], peer_received: [] } }],
+    [`/api/achievements/travel/${FALLBACK_TRAVEL_ID}/`, { status: 200, data: { peer_received: [] } }],
+    ['/api/achievements/peer-badges/', { status: 200, data: [] }],
+    [`/api/travels/travel${FALLBACK_TRAVEL_ID}/rating/users/1/`, { status: 404, data: { detail: 'Not found' } }],
+  ]);
+  await page.route((url) => fixtureReads.has(url.pathname), (route) => {
+    const fixture = fixtureReads.get(new URL(route.request().url()).pathname);
+    if (route.request().method() !== 'GET' || !fixture) return route.fallback();
+    return route.fulfill({ status: fixture.status, contentType: 'application/json', body: JSON.stringify(fixture.data) });
+  });
+  await page.route((url) => url.pathname === '/api/travels/' || url.pathname === '/travels/', (route) => {
+    if (route.request().method() !== 'GET') return route.fallback();
+    return route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ total: 1, data: [{
+        id: FALLBACK_TRAVEL_ID, slug: FALLBACK_TRAVEL_SLUG, url: `/travels/${FALLBACK_TRAVEL_SLUG}`,
+        name: 'Заголовок исходной статьи не является местом', countryName: 'Польша', cityName: PLACE,
+        countryCode: 'PL', publish: true, moderation: true,
+      }] }),
+    });
+  });
   await mockFallbackTravelDetails(page, {
     name: 'Заголовок исходной статьи не является местом',
     cityName: PLACE,
@@ -144,6 +183,34 @@ function activeAuthForm(page: Page, route: '/registration' | '/login'): Locator 
   return page.getByRole('heading', { level: 1, name: title, exact: true }).locator('..');
 }
 
+async function openSourceArticle(page: Page): Promise<void> {
+  // Client-only fictional details have no matching server-rendered document.
+  // Enter through a hydrated catalog card so both flows exercise real SPA navigation.
+  await page.goto('/search', { waitUntil: 'domcontentloaded' });
+  await expect(page.locator('html')).toHaveClass(/app-hydrated/);
+  const card = page.locator('a[data-testid="travel-card-link"]').first();
+  const article = `/travels/${FALLBACK_TRAVEL_SLUG}`;
+  await expect.poll(async () => {
+    const href = await card.getAttribute('href');
+    if (!href) return null;
+    const target = new URL(href, page.url());
+    return { origin: target.origin, pathname: target.pathname, query: Object.fromEntries(target.searchParams) };
+  }).toEqual({ origin: new URL(page.url()).origin, pathname: article, query: { returnTo: '/search' } });
+  const documentStart = await page.evaluate(() => performance.timeOrigin);
+  await card.click();
+  await expect(page).toHaveURL(url => url.pathname === article && url.searchParams.get('returnTo') === '/search');
+  expect(await page.evaluate(() => performance.timeOrigin)).toBe(documentStart);
+}
+
+async function expectReaderSessionCookie(page: Page, loginUrl: string): Promise<void> {
+  // The URL-filtered cookie jar omits Secure cookies on HTTP loopback.
+  const cookies = await page.context().cookies();
+  expect(hasWebAuthCookie(cookies, loginUrl), 'Login must establish and retain a browser session on its API origin').toBe(true);
+  const cookie = cookies.find((entry) => hasWebAuthCookie([entry], loginUrl));
+  expect(cookie?.httpOnly, 'The matching session cookie must be HttpOnly').toBe(true);
+  expect(cookie?.secure, 'The matching session cookie must preserve the backend Secure contract').toBe(true);
+}
+
 async function fillAuthForm(form: Locator): Promise<void> {
   await expect(form).toBeVisible();
   await form.locator('input[type="email"]').fill(READER_EMAIL);
@@ -159,7 +226,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
 
     test('primary invitation keeps note mode and article context through login', async ({ page }) => {
       const state = await prepareArticleFlow(page);
-      await page.goto(`/travels/${FALLBACK_TRAVEL_SLUG}`, { waitUntil: 'domcontentloaded' });
+      await openSourceArticle(page);
       const invite = page.getByTestId('travel-article-share-trip-button');
       await expect(invite).toHaveAccessibleName('Были здесь? Расскажите о своей поездке');
       await invite.click();
@@ -174,7 +241,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       await expect(page.getByTestId('travel-note.root')).toBeVisible();
       expectCreateContext(page.url(), new URL(page.url()).origin, 'note');
       await expect(page.locator('#field-name input')).toHaveCount(0);
-      await expect(page.getByRole('progressbar')).toHaveAttribute('aria-label', /^Шаг 1 из 2:/);
+      await expect(page.getByTestId('travel-wizard-progress')).toHaveRole('progressbar');
+      await expect(page.getByTestId('travel-wizard-progress')).toHaveAttribute('aria-label', /^Шаг 1 из 2:/);
       // The mobile header delegates its primary action to WizardStepFooter.
       const next = page.getByTestId(viewport.width === 390 ? 'travel-note.footer-next' : 'travel-note.next');
       await expect(next).toBeVisible();
@@ -183,15 +251,18 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       await expect(page.getByTestId('travel-note.story')).toHaveValue('');
       expect(state.registrations).toBe(0);
       expect(state.logins).toBe(1);
+      expect(state.loginUrl).not.toBeNull();
+      await expectReaderSessionCookie(page, state.loginUrl!);
       expect(state.upserts).toEqual([]);
       expect(state.unexpectedMutations).toEqual([]);
+      expect(state.unexpectedReads, 'Every API read must have an explicit scenario fixture').toEqual([]);
     });
 
     test('email registration without a session retains context through login and seeds an editable own trip', async ({ page }, testInfo) => {
       const state = await prepareArticleFlow(page);
       const pageErrors: string[] = [];
       page.on('pageerror', (error) => pageErrors.push(error.message));
-      await page.goto(`/travels/${FALLBACK_TRAVEL_SLUG}`, { waitUntil: 'domcontentloaded' });
+      await openSourceArticle(page);
 
       // This regression covers the full editor, including changing the seeded country.
       const invite = page.getByTestId('travel-article-share-trip-full-button');
@@ -243,13 +314,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       expectCreateContext(page.url(), new URL(page.url()).origin);
       expect(state.logins).toBe(1);
       expect(state.loginUrl, 'The fixture must observe the login request').not.toBeNull();
-      // Keep the whole cookie jar: Playwright's URL filter drops Secure cookies
-      // on HTTP loopback. The auth helper validates this session's host and path.
-      const cookies = await page.context().cookies();
-      expect(hasWebAuthCookie(cookies, state.loginUrl!), 'Login must establish a browser session on its API origin').toBe(true);
-      const cookie = cookies.find((entry) => hasWebAuthCookie([entry], state.loginUrl!));
-      expect(cookie?.httpOnly, 'The matching session cookie must be HttpOnly').toBe(true);
-      expect(cookie?.secure, 'The matching session cookie must preserve the backend Secure contract').toBe(true);
+      await expectReaderSessionCookie(page, state.loginUrl!);
 
       const editor = viewport.width === 390
         ? page.getByTestId('travel-wizard.basic.description.mobile-input')
@@ -293,7 +358,9 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
         expect(JSON.stringify(payload)).not.toContain(SOURCE_DESCRIPTION);
       }
       expect(state.unexpectedMutations, 'Fixture flow must never write to a live backend').toEqual([]);
+      expect(state.unexpectedReads, 'Every API read must have an explicit scenario fixture').toEqual([]);
       expect(pageErrors).toEqual([]);
+      await expectReaderSessionCookie(page, state.loginUrl!);
       expect(await page.evaluate(() => window.localStorage.getItem('secure_userToken'))).toBeNull();
     });
   });

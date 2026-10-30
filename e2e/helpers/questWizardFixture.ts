@@ -121,6 +121,18 @@ export function createQuestFixture(options: QuestFixtureOptions): QuestFixture {
       await fulfillJson(route, { results: [], count: 0 })
       recommendationsFulfilled = true
     })
+    // Publication is part of this synthetic quest identity too; the live catalog
+    // cannot resolve the fixture slug used by the map and wizard scenarios.
+    await page.route((url) => url.pathname === `/api/quests/serving/${questCity.id}/${questId}/`
+      && url.searchParams.get('lang') === 'ru', (route) => {
+      if (route.request().method() !== 'GET') return route.fallback()
+      return fulfillJson(route, {
+        schema_version: 1, release_id: 'e2e-fixture-release', city_id: questCity.id,
+        quest_slug: questId, locale: 'ru', state: 'available',
+        canonical_path: `/quests/${questCity.id}/${questId}`,
+        ru_source_path: `/quests/${questCity.id}/${questId}`, versions: [],
+      })
+    })
     await page.route(`**/api/quests/by-quest-id/${questId}/**`, (route) => fulfillJson(route, questBundle))
     await page.route(`**/api/quest-progress/quest/${questId}/**`, (route) => fulfillJson(route, serverRow))
     // Строка прогресса живая: PATCH её обновляет, чтобы следующий писатель

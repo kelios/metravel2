@@ -150,11 +150,11 @@ test.describe('@perf CLS audit', () => {
   // #2331: source regression for the late context-bar mount. Desktop execution
   // is deferred when the current acceptance scope is mobile web only.
   for (const width of [1024, 1280, 1440]) {
-    test(`late header context keeps its hydration geometry @ ${width}`, async ({ page }) => {
+    test(`late header context keeps its hydration geometry @ ${width}`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 });
       await preacceptCookies(page);
       await page.addInitScript(() => {
-        const state = { heights: [] as number[], headerShifts: [] as number[] };
+        const state = { heights: [] as number[], headerShifts: [] as number[], shiftDetails: [] as unknown[] };
         (window as any).__headerHydration = state;
         const sample = () => {
           const header = document.querySelector('[data-testid="main-header"]');
@@ -167,7 +167,19 @@ test.describe('@perf CLS audit', () => {
           for (const entry of list.getEntries() as any[]) {
             if (entry.hadRecentInput) continue;
             if (entry.sources?.some((source: any) => source.node instanceof Element &&
-              source.node.closest('[data-testid="main-header"]'))) state.headerShifts.push(entry.value);
+              source.node.closest('[data-testid="main-header"]'))) {
+              state.headerShifts.push(entry.value);
+              const rect = (value: DOMRectReadOnly) => ({ x: value.x, y: value.y, width: value.width, height: value.height });
+              state.shiftDetails.push({
+                value: entry.value, time: entry.startTime,
+                sources: (entry.sources || []).map((source: any) => ({
+                  testID: source.node instanceof Element ? source.node.closest('[data-testid]')?.getAttribute('data-testid') : null,
+                  headerSlot: source.node instanceof Element ? source.node.closest('[data-header-slot]')?.getAttribute('data-header-slot') : null,
+                  tagName: source.node instanceof Element ? source.node.tagName : null,
+                  previousRect: rect(source.previousRect), currentRect: rect(source.currentRect),
+                })),
+              });
+            }
           }
         });
         observer.observe({ type: 'layout-shift', buffered: true });
@@ -177,8 +189,9 @@ test.describe('@perf CLS audit', () => {
       const state = await page.evaluate(async () => {
         await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
         cancelAnimationFrame((window as any).__headerHydrationFrame);
-        return (window as any).__headerHydration as { heights: number[]; headerShifts: number[] };
+        return (window as any).__headerHydration as { heights: number[]; headerShifts: number[]; shiftDetails: unknown[] };
       });
+      await testInfo.attach('header-hydration-state', { body: JSON.stringify({ width, ...state }, null, 2), contentType: 'application/json' });
       expect(state.heights.length).toBeGreaterThan(1);
       expect(Math.max(...state.heights) - Math.min(...state.heights)).toBeLessThanOrEqual(0.5);
       if (width === 1280) expect(state.heights.at(-1)).toBe(124);

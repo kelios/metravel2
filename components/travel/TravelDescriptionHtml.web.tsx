@@ -1,12 +1,14 @@
 import React, { useMemo } from 'react';
 
-import type { TravelDescriptionHtmlProps } from './TravelDescriptionHtml';
+import type { TravelDescriptionHtmlProps } from './TravelDescriptionHtml.types';
 import {
   getWebRichTextStyles,
   WEB_RICH_TEXT_CLASS,
   WEB_RICH_TEXT_FULL_WIDTH_CLASS,
 } from './stableContent/webStyles';
 import { useThemedColors } from '@/hooks/useTheme';
+
+export type { TravelDescriptionHtmlProps } from './TravelDescriptionHtml.types';
 
 export default function TravelDescriptionHtml({ html, fullWidth }: TravelDescriptionHtmlProps) {
   const colors = useThemedColors();

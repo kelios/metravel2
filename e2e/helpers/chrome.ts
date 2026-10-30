@@ -8,7 +8,12 @@ export async function waitForMoreSheetController(page: Page): Promise<void> {
 /** Account is a permanent responsive slot; its controls load after hydration. */
 export async function waitForRuntimeHeader(page: Page): Promise<void> {
   await expect(page.locator('html')).toHaveClass(/\bapp-hydrated\b/, { timeout: 30_000 })
-  const header = page.locator('[data-testid="main-header"]:visible')
+  // Stack navigation retains the previous screen under aria-hidden while its
+  // header still satisfies Playwright's geometric :visible.
+  const header = page.locator(
+    '[data-testid="main-header"]:visible:not([aria-hidden="true"]):not([aria-hidden="true"] *)',
+  )
+  await expect(header).toHaveCount(1, { timeout: 30_000 })
   await expect(header.locator('[data-header-context-fallback]')).toHaveCount(0, { timeout: 30_000 })
   // Nested phone screens intentionally remove the whole brand/account row.
   if (await header.getByTestId('main-header-row').count() === 0) return

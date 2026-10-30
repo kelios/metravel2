@@ -34,4 +34,36 @@ describe('WebAppRuntimeEffects', () => {
       expect(document.activeElement).toBe(main)
     })
   })
+
+  it('preserves a control focused before lazy mount, then focuses main on a real navigation', async () => {
+    const main = document.createElement('div')
+    main.id = 'main-content'
+    const button = document.createElement('button')
+    button.textContent = 'Open conversation'
+    main.appendChild(button)
+    document.body.appendChild(main)
+    button.focus()
+
+    const view = await render(<WebAppRuntimeEffects pathname="/messages" />)
+
+    expect(document.activeElement).toBe(button)
+
+    await view.rerender(<WebAppRuntimeEffects pathname="/places" />)
+    expect(document.activeElement).toBe(main)
+  })
+
+  it('focuses main when the initial active element is the application root', async () => {
+    const root = document.createElement('div')
+    root.id = 'root'
+    root.tabIndex = -1
+    const main = document.createElement('div')
+    main.id = 'main-content'
+    root.appendChild(main)
+    document.body.appendChild(root)
+    root.focus()
+
+    await render(<WebAppRuntimeEffects pathname="/messages" />)
+
+    expect(document.activeElement).toBe(main)
+  })
 })

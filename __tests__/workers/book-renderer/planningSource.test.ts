@@ -38,27 +38,63 @@ describe('bounded original UTF8 feeds and chapter metadata', () => {
   }
 
   it('restores at every feed across one-byte UTF8 splits, preserving original B1 codepoint windows', async () => {
-    const text = '\ufeff' + '<p>\ufeffёлка😀𐐀 € &amp;\ufeff</p>'.repeat(80)
+    // Six durable rows cover repeated 2/3/4-byte characters and BOMs without
+    // thousands of duplicate filesystem reopen/checkpoint cycles per budget.
+    const text = '\ufeff' + '<p>\ufeffёлка😀𐐀 € &amp;\ufeff</p>'.repeat(4)
     const { f, out } = await fixture(text, 17)
     const metadata = await startTravelMetadata(new PlanningStorage(out, LIMITS), f.document, f.manifest.length, 41)
+    const rows = metadata.counts.fields.description ?? 0
+    expect(rows).toBe(Math.ceil(Array.from(text).length / 17))
     for (const bytes of [1, 17, 257, 65_536]) {
       let previous: unknown
       let actual = ''
       let done = false
       let calls = 0
+      let readBytes = 0
+      const completedRows = new Set<number>()
+      const carryLengths = new Set<number>()
       while (!done) {
         const feed = await readFieldSourceFeed(f.jobDir, new PlanningStorage(out, LIMITS), f.document, f.manifest.length, 41,
-          'description', metadata.counts.fields.description ?? 0, previous, bytes)
+          'description', rows, previous, bytes)
         expect(feed.text.length).toBeLessThanOrEqual(256)
         expect(feed.read_bytes).toBeLessThanOrEqual(Math.min(255, bytes))
-        expect(Buffer.from(feed.cursor.utf8_carry_base64, 'base64').length).toBeLessThanOrEqual(3)
+        const carryLength = Buffer.from(feed.cursor.utf8_carry_base64, 'base64').length
+        expect(carryLength).toBeLessThanOrEqual(3)
+        carryLengths.add(carryLength)
+        readBytes += feed.read_bytes
+        if (feed.cursor.byte_offset === 0) {
+          completedRows.add(feed.cursor.row)
+          expect(feed.cursor.next_character_offset).toBe(Math.min(feed.cursor.row * 17, Array.from(text).length) + 1)
+        }
         actual += feed.text; previous = JSON.parse(JSON.stringify(feed.cursor)) as unknown; done = feed.eof
         if (feed.eof) expect(feed.cursor.next_character_offset).toBe(Array.from(text).length + 1)
         expect(++calls).toBeLessThan(20_000)
       }
       expect(actual).toBe(text)
+      expect(readBytes).toBe(Buffer.byteLength(text))
+      expect([...completedRows]).toEqual(Array.from({ length: rows }, (_, index) => index + 1))
+      if (bytes === 1) expect([...carryLengths].sort()).toEqual([0, 1, 2, 3])
     }
   }, 60_000)
+
+  it('caps oversized input budgets at 255 bytes and restores the split codepoint', async () => {
+    const text = 'ё'.repeat(127) + '😀end'
+    const { f, out } = await fixture(text, 512)
+    for (const budget of [257, 65_536]) {
+      const first = await readFieldSourceFeed(f.jobDir, new PlanningStorage(out, LIMITS), f.document, f.manifest.length, 41,
+        'description', 1, undefined, budget)
+      expect(first.read_bytes).toBe(255)
+      expect(first.text).toBe('ё'.repeat(127))
+      expect(first.cursor.utf8_carry_base64).toBe(Buffer.from('😀').subarray(0, 1).toString('base64'))
+      expect(first.eof).toBe(false)
+      const resumed = await readFieldSourceFeed(f.jobDir, new PlanningStorage(out, LIMITS), f.document, f.manifest.length, 41,
+        'description', 1, JSON.parse(JSON.stringify(first.cursor)), budget)
+      expect(resumed.text).toBe('😀end')
+      expect(resumed.eof).toBe(true)
+      expect(resumed.cursor.next_character_offset).toBe(Array.from(text).length + 1)
+      expect(first.read_bytes + resumed.read_bytes).toBe(Buffer.byteLength(text))
+    }
+  })
 
   it('produces the existing pinned chapter metadata using one related record per call', async () => {
     const { f, out } = await fixture('<p>Book</p>')

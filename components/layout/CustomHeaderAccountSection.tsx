@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { View } from 'react-native'
+import { Platform, View } from 'react-native'
 import {
   CustomHeaderDesktopAccountSectionComp,
   CustomHeaderMobileAccountSectionComp,
@@ -17,8 +17,8 @@ export default function CustomHeaderAccountSection({
   styles,
 }: CustomHeaderAccountSectionProps) {
   const content = isMobile ? (
-    // Мобильный бокс держит обёртка ниже (`rightSectionMobile`), поэтому пустой
-    // fallback ничего не двигает.
+    // На web бокс держит родительский account slot; native использует обёртку
+    // ниже. Пустой fallback не добавляет второго flex-владельца на web.
     <Suspense fallback={null}>
       <CustomHeaderMobileAccountSectionComp activePath={activePath} styles={styles} />
     </Suspense>
@@ -33,5 +33,7 @@ export default function CustomHeaderAccountSection({
     </Suspense>
   )
 
-  return isMobile ? <View style={styles.rightSectionMobile}>{content}</View> : <>{content}</>
+  return isMobile && Platform.OS !== 'web'
+    ? <View style={styles.rightSectionMobile}>{content}</View>
+    : <>{content}</>
 }

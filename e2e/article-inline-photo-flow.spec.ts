@@ -36,10 +36,15 @@ for (const width of [1280, 2048, 390]) {
     await page.goto('/search', { waitUntil: 'domcontentloaded' });
     await expect(page.locator('html')).toHaveClass(/app-hydrated/);
     const catalogCard = page.locator('a[data-testid="travel-card-link"]').first();
-    await expect(catalogCard).toHaveAttribute('href', article);
+    await expect.poll(async () => {
+      const href = await catalogCard.getAttribute('href');
+      if (!href) return null;
+      const target = new URL(href, page.url());
+      return { origin: target.origin, pathname: target.pathname, query: Object.fromEntries(target.searchParams) };
+    }).toEqual({ origin: new URL(page.url()).origin, pathname: article, query: { returnTo: '/search' } });
     const documentStart = await page.evaluate(() => performance.timeOrigin);
     await catalogCard.click();
-    await expect(page).toHaveURL((url) => url.pathname === article);
+    await expect(page).toHaveURL((url) => url.pathname === article && url.searchParams.get('returnTo') === '/search');
     expect(await page.evaluate(() => performance.timeOrigin)).toBe(documentStart);
     const heading = page.locator('.travel-rich-text h3', { hasText: 'Река Ислочь' });
     await heading.scrollIntoViewIfNeeded();

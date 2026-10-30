@@ -108,33 +108,27 @@ test.describe('@perf Skeleton transition (no layout shift)', () => {
     for (let i = 0; i < 10; i++) {
       // Desktop footer must not flash on mobile during loading.
        
-      await expect(page.getByTestId('footer-desktop-bar')).toHaveCount(0);
+      await expect(page.getByTestId('footer-desktop-bar')).toHaveCount(1);
+      await expect(page.getByTestId('footer-desktop-bar')).toBeHidden();
 
        
       const h = await dock.boundingBox().then((b: any) => (b ? b.height : 0));
       expect(h, `footer dock must be compact during loading (height=${h}px, sample=${i})`).toBeLessThanOrEqual(120);
 
       const dockItem0 = dock.getByTestId('footer-item-home');
-      const dockItem1 = dock.getByTestId('footer-item-search');
+      const dockItem1 = dock.getByTestId('footer-item-map');
+      await expect(dockItem0).toBeVisible({ timeout: 5_000 });
+      await expect(dockItem1).toBeVisible({ timeout: 5_000 });
 
-      const has0 = (await dockItem0.count()) > 0;
-      const has1 = (await dockItem1.count()) > 0;
-      if (has0 && has1) {
-        await Promise.all([
-          dockItem0.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => null),
-          dockItem1.waitFor({ state: 'visible', timeout: 5_000 }).catch(() => null),
-        ]);
-
-        const [b0, b1] = await Promise.all([
-          dockItem0.boundingBox(),
-          dockItem1.boundingBox(),
-        ]);
-        expect(b0, 'expected first dock item to have a bounding box during loading').not.toBeNull();
-        expect(b1, 'expected second dock item to have a bounding box during loading').not.toBeNull();
-        if (b0 && b1) {
-          const yDiff = Math.abs(b0.y - b1.y);
-          expect(yDiff, `footer dock must be single-row during loading (yDiff=${yDiff}px, sample=${i})`).toBeLessThanOrEqual(10);
-        }
+      const [b0, b1] = await Promise.all([
+        dockItem0.boundingBox(),
+        dockItem1.boundingBox(),
+      ]);
+      expect(b0, 'expected first dock item to have a bounding box during loading').not.toBeNull();
+      expect(b1, 'expected second dock item to have a bounding box during loading').not.toBeNull();
+      if (b0 && b1) {
+        const yDiff = Math.abs(b0.y - b1.y);
+        expect(yDiff, `footer dock must be single-row during loading (yDiff=${yDiff}px, sample=${i})`).toBeLessThanOrEqual(10);
       }
 
        

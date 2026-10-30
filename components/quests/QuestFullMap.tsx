@@ -621,7 +621,9 @@ function QuestFullMap({
                 </TouchableOpacity>
             </Modal>
 
-            <View ref={mapDivRef as any} style={styles.mapBox} dataSet={{ questMap: 'true' }}>
+            <View ref={mapDivRef as any} style={styles.mapBox}
+                {...(Platform.OS === 'web' ? { dataSet: { questMap: 'true' } } : {})}
+            >
                 <MapCanvas
                     engine={engine}
                     bounds={bounds}

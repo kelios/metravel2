@@ -218,6 +218,7 @@ export const SimpleMultiSelect: React.FC<SimpleMultiSelectProps> = ({
         onPress={() => handleToggleItem(item)}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: isSelected }}
+        {...(Platform.OS === 'web' ? { 'aria-checked': isSelected } : {})}
       >
         <View style={[styles.checkbox, { borderColor: colors.border }]}>
           {isSelected && (

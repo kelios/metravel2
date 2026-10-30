@@ -8,6 +8,7 @@ import {
 import { installNoConsoleErrorsGuard } from './helpers/consoleGuards';
 import { preacceptCookies, gotoWithRetry, waitForMainListRender } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
+import { waitForMoreSheetController } from './helpers/chrome';
 
 // Alias for backward compat within this file
 const preacceptCookiesAndStabilize = preacceptCookies;
@@ -324,6 +325,7 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
         return;
       }
 
+      await waitForMoreSheetController(page);
       await burger.click();
 
       const overlay = page.getByTestId('footer-more-backdrop');

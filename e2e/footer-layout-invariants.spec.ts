@@ -74,7 +74,7 @@ test.describe('@perf Footer layout invariants (web)', () => {
     const desktopBar = page.getByTestId('footer-desktop-bar');
     await expect(desktopBar).toBeVisible({ timeout: 30_000 });
 
-    const desktopItems = page.locator('[data-testid^="footer-item-"]');
+    const desktopItems = desktopBar.locator('[data-testid^="footer-item-"]');
 
     // Stroboscopic guard: within the first second, footer must not become a tall vertical list.
     // This catches layout that persists long enough to be visible to users.
@@ -97,7 +97,7 @@ test.describe('@perf Footer layout invariants (web)', () => {
     }
 
     // Desktop footer contains the copyright text.
-    const footerCopy = page.getByText(/©\s*MeTravel/i);
+    const footerCopy = desktopBar.getByText(/©\s*MeTravel/i);
     await expect(footerCopy).toBeVisible({ timeout: 30_000 });
 
     // Icons must be rendered (no missing-glyph placeholder squares).
@@ -113,8 +113,9 @@ test.describe('@perf Footer layout invariants (web)', () => {
       expect(copyBox.x + copyBox.width, 'footer should not overflow viewport (right)').toBeLessThanOrEqual(viewportW + 1);
     }
 
-    // On desktop, mobile dock should not render.
-    await expect(page.getByTestId('footer-dock-wrapper')).toHaveCount(0);
+    // Root keeps both responsive shells mounted; desktop must hide the mobile dock.
+    await expect(page.getByTestId('footer-dock-wrapper')).toHaveCount(1);
+    await expect(page.getByTestId('footer-dock-wrapper')).toBeHidden();
   });
 
   test('desktop: consent banner does not push footer over page content', async ({ page }) => {
@@ -170,7 +171,8 @@ test.describe('@perf Footer layout invariants (web)', () => {
     // Stroboscopic guard: dock must never become tall (half-screen regression).
     for (let i = 0; i < 10; i++) {
        
-      await expect(page.getByTestId('footer-desktop-bar')).toHaveCount(0);
+      await expect(page.getByTestId('footer-desktop-bar')).toHaveCount(1);
+      await expect(page.getByTestId('footer-desktop-bar')).toBeHidden();
 
        
       const h = await dock.boundingBox().then((b) => (b ? b.height : 0));
@@ -246,7 +248,8 @@ test.describe('@perf Footer layout invariants (web)', () => {
       await expect(dock).toBeVisible({ timeout: 30_000 });
       for (let i = 0; i < 10; i++) {
          
-        await expect(page.getByTestId('footer-desktop-bar')).toHaveCount(0);
+        await expect(page.getByTestId('footer-desktop-bar')).toHaveCount(1);
+        await expect(page.getByTestId('footer-desktop-bar')).toBeHidden();
 
          
         const h = await dock.boundingBox().then((b) => (b ? b.height : 0));
@@ -255,7 +258,7 @@ test.describe('@perf Footer layout invariants (web)', () => {
         await page.waitForTimeout(100);
       }
 
-      const items = page.locator('[data-testid^="footer-item-"]');
+      const items = dock.locator('[data-testid^="footer-item-"]');
       const count = await items.count();
       expect(count, `expected at least 3 footer items at width=${w}`).toBeGreaterThanOrEqual(3);
 

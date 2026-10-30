@@ -14,7 +14,7 @@ export async function assertTravelMobileCls(
     const page = await context.newPage();
     const errors: string[] = [], writes: string[] = [];
     const api = new Map<any, { id: number; method: string; path: string; status: number | null; finished: boolean; failed: boolean }>();
-    page.on('pageerror', error => errors.push(error.name));
+    page.on('pageerror', error => errors.push(`${error.name}: ${error.message}`));
     page.on('console', message => { if (message.type() === 'error') errors.push('console-error'); });
     page.on('request', request => {
       const path = new URL(request.url()).pathname;
@@ -68,7 +68,7 @@ export async function assertTravelMobileCls(
         clamped: document.querySelectorAll('[data-reserve-release-state="clamped"]').length,
       };
     };
-    let failure: string | null = null, observation: any = null, final: any = null;
+    let failure: string | null = null, observation: any = null, first: any = null, final: any = null;
     let moved = false;
     let settledRequestIds: number[] = [];
     const samples: any[] = [];
@@ -78,7 +78,7 @@ export async function assertTravelMobileCls(
       await page.waitForFunction(() => document.documentElement.classList.contains('app-hydrated'));
       const fontsStatus = await page.evaluate(async () => { await document.fonts.ready; return document.fonts.status; });
       expect(fontsStatus).toBe('loaded');
-      const first = await page.evaluate(snapshot);
+      first = await page.evaluate(snapshot);
       expect(first?.wheelHitIsOwner).toBe(true);
       expect(first?.overflow).toMatch(/auto|scroll/);
       expect(first!.height - first!.viewport).toBeGreaterThan(first!.viewport);
@@ -110,7 +110,7 @@ export async function assertTravelMobileCls(
       final = await page.evaluate(snapshot);
       observation = await page.evaluate(() => (window as any).__travelMobileCls);
     } catch (error) {
-      failure = error instanceof Error ? error.name : 'runtime-failure';
+      failure = error instanceof Error ? `${error.name}: ${error.message}` : 'runtime-failure';
       observation = await page.evaluate(() => (window as any).__travelMobileCls).catch(() => null);
     }
     await context.close();
@@ -120,7 +120,7 @@ export async function assertTravelMobileCls(
     const rawSum = valid ? observation.entries.reduce((sum: number, entry: any) => sum + entry.value, 0) : null;
     const ledger = [...api.values()];
     const stableApiWindow = ledger.length === settledRequestIds.length && ledger.every((entry, index) => entry.id === settledRequestIds[index]);
-    results.push({ sample, samples, final, observation, cumulative, rawSum, settledRequestIds, stableApiWindow, ledger, errors, writes, failure,
+    results.push({ sample, first, samples, final, observation, cumulative, rawSum, settledRequestIds, stableApiWindow, ledger, errors, writes, failure,
       pass: !failure && valid && moved && final?.top + final?.viewport >= final?.height - 2 &&
         final?.footerVisible === true && final?.transitionsReady === true && final?.clamped === 0 && cumulative <= 0.1 &&
         errors.length === 0 && writes.length === 0 && stableApiWindow && ledger.length > 0 && ledger.every(entry => entry.finished && !entry.failed && entry.status !== null && entry.status < 400) });
