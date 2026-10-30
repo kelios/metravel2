@@ -20,6 +20,7 @@ import { normalizeMediaUrl } from '@/utils/mediaUrl';
 import { normalizeQuestCityLegacyIds } from '@/utils/questCityAlias';
 import { questTagNames } from '@/utils/questTags';
 import { isSameWordForm, matchesAnyWordForm } from '@/utils/questAnswerMorphology';
+import { isQuestNumericLiteral, parseQuestNumber } from '@/utils/questNumericAnswer';
 import {
     normalize,
     questAnswerNormalizers,
@@ -289,17 +290,18 @@ function createAnswerChecker(answerType: string, answerValue: string): QuestStep
         }
 
         case 'exact': {
+            const numericTarget = parseQuestNumber(answerValue);
+            if (numericTarget !== null || isQuestNumericLiteral(answerValue)) {
+                return (input: string) => numericTarget !== null && parseQuestNumber(input) === numericTarget;
+            }
             // Обе стороны сравнения проходят одну нормализацию. Раньше эталон брался
             // как `toLowerCase()`, и значение с «ё», дефисом или пунктуацией было
             // недостижимо: ввод игрока их терял, эталон — нет.
             const targetFor = memoizeByRule((rule) => rule.normalize(answerValue));
             return (input: string, contentLocale?: string) => {
-                // Пробуем как число
-                const asNum = parseInt(input, 10);
                 return questAnswerNormalizers(contentLocale).some((rule) => {
                     const target = targetFor(rule);
                     const n = rule.normalize(input);
-                    if (!Number.isNaN(asNum) && String(asNum) === target) return true;
                     if (n === target) return true;
                     // Второй проход — словоформа эталона (#1631). Он не способен
                     // отменить уже работающий ответ: до него доходят только вводы,
@@ -313,16 +315,21 @@ function createAnswerChecker(answerType: string, answerValue: string): QuestStep
             try {
                 const parsed: unknown = JSON.parse(answerValue);
                 if (!Array.isArray(parsed)) return () => false;
+                const rawVariants = parsed.map(String);
+                const numericVariants = rawVariants.map(parseQuestNumber).filter((value): value is number => value !== null);
+                const textVariants = rawVariants.filter(value => parseQuestNumber(value) === null && !isQuestNumericLiteral(value));
                 // Нормализуем словарь один раз при сборке чекера, а не на каждую
                 // попытку. Пустые после нормализации варианты выкидываем: иначе
                 // словарь с `"-"` принимал бы любой ввод, схлопнувшийся в пустую
                 // строку. Аудит прода 06.08.2026: 161 вариант в 93 шагах был
                 // недостижим, из них 63 — единственная форма ответа на шаге.
-                const variantsFor = memoizeByRule((rule) => parsed
-                    .map((v) => rule.normalize(String(v)))
+                const variantsFor = memoizeByRule((rule) => textVariants
+                    .map((v) => rule.normalize(v))
                     .filter((v) => v.length > 0));
-                return (input: string, contentLocale?: string) =>
-                    questAnswerNormalizers(contentLocale).some((rule) => {
+                return (input: string, contentLocale?: string) => {
+                    const numericInput = parseQuestNumber(input);
+                    if (numericInput !== null && numericVariants.includes(numericInput)) return true;
+                    return questAnswerNormalizers(contentLocale).some((rule) => {
                         const variants = variantsFor(rule);
                         const n = rule.normalize(input);
                         if (matchesNormalizedVariants(n, variants, rule)) return true;
@@ -331,6 +338,7 @@ function createAnswerChecker(answerType: string, answerValue: string): QuestStep
                         const stripped = rule.stripLeadingWords?.(n) ?? n;
                         return stripped !== n && matchesNormalizedVariants(stripped, variants, rule);
                     });
+                };
             } catch {
                 return () => false;
             }
@@ -340,8 +348,8 @@ function createAnswerChecker(answerType: string, answerValue: string): QuestStep
             try {
                 const { min, max } = JSON.parse(answerValue);
                 return (input: string) => {
-                    const n = parseInt(input, 10);
-                    return !Number.isNaN(n) && n >= min && n <= max;
+                    const n = parseQuestNumber(input);
+                    return n !== null && Number.isInteger(n) && n >= min && n <= max;
                 };
             } catch {
                 return () => false;
@@ -366,14 +374,17 @@ function createAnswerChecker(answerType: string, answerValue: string): QuestStep
         }
 
         case 'any_number':
-            return (input: string) => !Number.isNaN(parseInt(input, 10));
+            return (input: string) => {
+                const n = parseQuestNumber(input);
+                return n !== null && Number.isInteger(n);
+            };
 
         case 'approx': {
             try {
                 const { target, tolerance } = JSON.parse(answerValue);
                 return (input: string) => {
-                    const val = parseFloat(input.replace(',', '.'));
-                    return !Number.isNaN(val) && Math.abs(val - target) < tolerance;
+                    const val = parseQuestNumber(input);
+                    return val !== null && Math.abs(val - target) < tolerance;
                 };
             } catch {
                 return () => false;

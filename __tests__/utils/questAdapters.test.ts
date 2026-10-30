@@ -182,6 +182,68 @@ describe('questAdapters', () => {
       expect(check('15')).toBe(false);
     });
 
+    it('Polotsk Sofia accepts the same tower count in digits and words', () => {
+      const quests = require('@/scripts/polotsk-ancient-quest-data.js') as Array<{
+        steps: Array<{ step_id: string; answer_pattern: { type: string; value: string } }>;
+      }>;
+      const sofia = quests[0].steps.find((step) => step.step_id === 'sofia')!;
+      const check = buildAnswerChecker(sofia.answer_pattern.type, sofia.answer_pattern.value);
+
+      ['2', 'два', 'две', 'дзве', 'дві', 'dwa', 'dwie', 'two'].forEach((answer) =>
+        expect({ answer, accepted: check(answer) }).toEqual({ answer, accepted: true }));
+      ['3', 'три', 'второй', '2.5', '2abc', 'два три', 'два или три'].forEach((answer) =>
+        expect({ answer, accepted: check(answer) }).toEqual({ answer, accepted: false }));
+    });
+
+    it.each(['exact', 'exact_any'])('%s compares complete numeric values before text normalization', (type) => {
+      const check = buildAnswerChecker(type, type === 'exact' ? '2' : '["2","крест"]');
+      ['2', '02', 'два', 'две', 'two'].forEach((answer) => expect(check(answer)).toBe(true));
+      ['2.5', '2abc', '-2', 'второй', 'два крест'].forEach((answer) => expect(check(answer)).toBe(false));
+      expect(buildAnswerChecker(type, type === 'exact' ? '25' : '["25"]')('2.5')).toBe(false);
+    });
+
+    it('numeric words work in either direction without changing authored text answers', () => {
+      expect(buildAnswerChecker('exact', 'два')('2')).toBe(true);
+      expect(buildAnswerChecker('exact_any', '["два","крест"]')('2')).toBe(true);
+      expect(buildAnswerChecker('exact_any', '["два","крест"]')('крест')).toBe(true);
+      expect(buildAnswerChecker('exact', 'пять')('пятый')).toBe(false);
+    });
+
+    it('all numeric checkers reject partial numbers and retain their integer or decimal contract', () => {
+      const integer = buildAnswerChecker('any_number', '');
+      const approximate = buildAnswerChecker('approx', '{"target":2,"tolerance":0.1}');
+      expect(integer('двадцать два')).toBe(true);
+      expect(integer('2.5')).toBe(false);
+      expect(integer('2abc')).toBe(false);
+      expect(approximate('два')).toBe(true);
+      expect(approximate('2,05')).toBe(true);
+      expect(approximate('2abc')).toBe(false);
+      expect(approximate('2.5')).toBe(false);
+    });
+
+    it('does not round fractional inputs into integer counts or treat unsafe numeric targets as text', () => {
+      for (const type of ['exact', 'exact_any', 'range', 'any_number']) {
+        const value = type === 'exact' ? '2' : type === 'exact_any' ? '["2"]' : type === 'range' ? '{"min":2,"max":2}' : '';
+        const check = buildAnswerChecker(type, value);
+        expect(check('2.0000000000000001')).toBe(false);
+        expect(check('9007199254740990.5')).toBe(false);
+      }
+      expect(buildAnswerChecker('exact', '9007199254740993')('9007199254740993')).toBe(false);
+      expect(buildAnswerChecker('exact_any', '["9007199254740993","крест"]')('9007199254740993')).toBe(false);
+      expect(buildAnswerChecker('exact_any', '["9007199254740993","крест"]')('крест')).toBe(true);
+    });
+
+    it('preserves exact decimal quantities without conflating them with punctuation-stripped integers', () => {
+      for (const [type, value] of [['exact', '2.5'], ['exact_any', '["2.5","крест"]']]) {
+        const check = buildAnswerChecker(type, value);
+        expect(check('2.5')).toBe(true);
+        expect(check('2,5')).toBe(true);
+        expect(check('25')).toBe(false);
+        expect(check('двадцать пять')).toBe(false);
+      }
+      expect(buildAnswerChecker('range', '{"min":2,"max":3}')('2.5')).toBe(false);
+    });
+
     it('any_text: checks minimum length', () => {
       const check = buildAnswerChecker('any_text', '{"min_length":3}');
       expect(check('abc')).toBe(true);

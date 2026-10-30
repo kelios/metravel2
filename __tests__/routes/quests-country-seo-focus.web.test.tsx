@@ -50,6 +50,7 @@ jest.mock('@/hooks/useQuestsApi', () => {
 })
 jest.mock('@/hooks/useQuestReturnVisit', () => ({ useQuestReturnVisit: () => undefined }))
 jest.mock('@/hooks/useQuestCatalogResponsiveModel', () => ({
+  ...jest.requireActual('@/hooks/useQuestCatalogResponsiveModel'),
   useQuestCatalogResponsiveModel: () => ({ cardWidth: 404, cardColumns: 2 }),
 }))
 jest.mock('@/hooks/useResponsive', () => ({
@@ -57,16 +58,7 @@ jest.mock('@/hooks/useResponsive', () => ({
 }))
 jest.mock('@/hooks/useTheme', () => ({
   useTheme: () => ({ activeSeasonalTheme: null }),
-  useThemedColors: () => ({
-    primary: '#227744',
-    primaryDark: '#115533',
-    primarySoft: '#e8f5ec',
-    primaryAlpha30: '#2277444d',
-    primaryText: '#174d2e',
-    text: '#17251e',
-    textMuted: '#5f756c',
-    textSubtle: '#71857b',
-  }),
+  useThemedColors: () => jest.requireActual('@/constants/designSystem').getThemedColors(false),
 }))
 jest.mock('@/i18n/LocaleProvider', () => {
   const t = (key: string) => {

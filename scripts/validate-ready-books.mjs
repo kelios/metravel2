@@ -14,6 +14,11 @@ if (!process.execArgv.includes('--experimental-strip-types')) {
 
 const {validateEditorialBookDraft, validateReadyBook, buildReadyBookPagePlan} = await import('../services/book/readyBooks/validation/index.ts');
 const args = process.argv.slice(2);
+if (args[0] === '--production') {
+  const child = spawnSync(process.execPath, [...process.execArgv, 'scripts/books/validate-production.mjs', ...args.slice(1)], {stdio: 'inherit'});
+  if (child.error) console.error(child.error.message);
+  process.exit(child.status ?? 1);
+}
 const editorial = args.includes('--editorial');
 const metadataOnly = args.includes('--metadata-only');
 let assetsRoot;

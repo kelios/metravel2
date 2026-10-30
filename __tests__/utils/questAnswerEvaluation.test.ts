@@ -64,8 +64,8 @@ describe('evaluateQuestAnswer — вердикты по всем типам buil
       answerType: 'any_number',
       answerValue: '',
       inputType: 'number',
-      accepted: ['7', '2014'],
-      rejected: ['семь'],
+      accepted: ['7', '2014', 'семь'],
+      rejected: ['седьмой', '7abc', '7.5'],
     },
     {
       answerType: 'approx',
