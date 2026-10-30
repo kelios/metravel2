@@ -36,7 +36,12 @@ export const editorialStop = z.strictObject({
     kind: z.enum(['official', 'place', 'travel-address', 'quest-step']),
     id: nonempty, url: httpsUrl,
   }),
-  text: z.strictObject({compact: z.string().trim().min(350).max(550), album: z.string().trim().min(350).max(900)}),
+  text: z.strictObject({compact: z.string().trim().min(100).max(550), album: z.string().trim().min(100).max(900)}),
+  navigation: z.strictObject({
+    authorId: z.literal(1), pointId: z.number().int().positive(), sourceTravelId: z.number().int().positive(),
+    mapUrl: httpsUrl, articleUrl: httpsUrl, verifiedAt: checkedDate,
+    quest: z.strictObject({url: httpsUrl, id: z.number().int().positive(), evidence: nonempty}).optional(),
+  }).optional(),
   fact: nonempty,
   legend: z.strictObject({label: z.literal('Легенда'), text: nonempty, sourceUrl: httpsUrl}).optional(),
   observation: nonempty,
@@ -47,7 +52,7 @@ export const editorialStop = z.strictObject({
 export const editorialShape = {
   schemaVersion: z.literal(1), id: identifier, slug: identifier, revision: identifier,
   country: z.enum(['BY', 'PL']), contentLocale: z.literal('ru'), title: nonempty,
-  stops: z.array(editorialStop).length(12),
+  stops: z.array(editorialStop).min(1),
   miniTrips: z.array(z.strictObject({
     id: identifier, title: nonempty, stopIds: z.array(identifier).min(1), note: nonempty,
   })).min(1),
@@ -82,7 +87,7 @@ export function checkEditorialComposition(book: EditorialComposition, ctx: z.Ref
       covered.add(id);
     }
   });
-  if ([...stopIds].some(id => !covered.has(id))) issue(['miniTrips'], 'Mini-trips must cover all 12 stops');
+  if ([...stopIds].some(id => !covered.has(id))) issue(['miniTrips'], 'Mini-trips must cover every selected stop');
 }
 
 export const editorialBookDraftSchema = z.strictObject({

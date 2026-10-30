@@ -13,13 +13,19 @@ describe('ready-book publication contract', () => {
     expect(validateEditorialBookDraft(makeReadyBook()).success).toBe(false);
   });
 
-  it('keeps 56 internal pages separate from the four cover sides', () => {
-    const plan = buildReadyBookPagePlan(makeEditorialDraft());
-    expect(plan.map(page => page.number)).toEqual(Array.from({length: 56}, (_, index) => index + 1));
-    expect(plan.filter(page => page.kind === 'destination').map(page => page.number)).toEqual(Array.from({length: 12}, (_, index) => 6 + 4 * index));
-    expect(plan[6]).toMatchObject({number: 7, kind: 'photo-memory', stopId: 'stop-0'});
-    expect(plan[49]).toMatchObject({number: 50, kind: 'destination', stopId: 'stop-11'});
-    expect(plan[55]).toMatchObject({number: 56, kind: 'credits'});
+  it.each([
+    [undefined, 8, 'map'],
+    [2, 8, 'map'],
+    [1, 9, 'credits'],
+  ] as const)('derives separate cover numbering and three place roles for layout %s', (layoutVersion, firstDestination, lastKind) => {
+    const draft = makeEditorialDraft();
+    const plan = buildReadyBookPagePlan({...draft, layoutVersion});
+    expect(plan.map(page => page.number)).toEqual(Array.from({length: 104}, (_, index) => index + 1));
+    expect(plan.filter(page => page.kind === 'destination').map(page => page.number)).toEqual(Array.from({length: draft.stops.length}, (_, index) => firstDestination + 3 * index));
+    expect(plan[firstDestination]).toMatchObject({number: firstDestination + 1, kind: 'photo-memory', stopId: draft.stops[0].id});
+    expect(plan[firstDestination + 1]).toMatchObject({number: firstDestination + 2, kind: 'notes', stopId: draft.stops[0].id});
+    expect(plan.at(-1)).toMatchObject({number: 104, kind: lastKind});
+    expect(plan.filter(page => page.kind === 'map')).toEqual([{number: layoutVersion === 1 ? 8 : 104, kind: 'map'}]);
   });
 
   const invalid: [string, (book: ReadyBook) => void, string][] = [
@@ -30,6 +36,7 @@ describe('ready-book publication contract', () => {
     ['invalid coordinate', b => {b.stops[0].lat = 91;}, 'stops.0.lat'],
     ['invalid date', b => {b.stops[0].references[0].checkedAt = '2026-02-30';}, 'stops.0.references.0.checkedAt'],
     ['unsafe source URL', b => {b.stops[0].source.url = 'javascript:alert(1)';}, 'stops.0.source.url'],
+    ['insufficient physical resolution', b => {b.stops[0].image.effectivePpi = 181;}, 'stops.0.image.effectivePpi'],
     ['missing print permission', b => {Object.assign(b.stops[0].image, {printAllowed: false});}, 'stops.0.image.printAllowed'],
     ['unlabelled AI image', b => {Object.assign(b.stops[0].image, {rightsBasis: 'ai-generated', illustrated: false});}, 'stops.0.image.illustrated'],
     ['bad SHA-256', b => {b.artifacts[0].sha256 = 'bad';}, 'artifacts.0.sha256'],

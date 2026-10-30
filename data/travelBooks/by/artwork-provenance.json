@@ -1,0 +1,1673 @@
+{
+  "schemaVersion": 1,
+  "bookId": "belarus-memory",
+  "country": "BY",
+  "contentLocale": "ru",
+  "sourceRevision": "2026-10-30.collage.e3fb67bc4f32",
+  "publicationRevision": "2026-10-30.collage.e3fb67bc4f32.fee41d2425a3",
+  "publicationManifestSha256": "de0c9016e7038a599baaa7d71d862829cbc1ac4267f39e8813312ef2e2da9b82",
+  "stopCount": 31,
+  "assets": [
+    {
+      "stopId": "point-356",
+      "pointId": 356,
+      "articleId": 133,
+      "articleUrl": "https://metravel.by/travels/reka-isloch-gde-guliat-i-otdykhat-s-sobakoi",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/0164614223c74af281706241ce101fb3.jpg.webp",
+        "originalUri": "https://metravel.by/travel-description-image/0164614223c74af281706241ce101fb3.jpg.webp",
+        "sha256": "49baacd96596c13a3c6ddd34bd39fa04a4b2d1400b11f43acdc3321bcdbbc451",
+        "widthPx": 1000,
+        "heightPx": 1333,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article133 section «Туристическая поляна» contains the sole landscape photo with alt describing the Isloch bend; media.article_body.gallery[id1].variants.original."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 133,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "8347f46e0343013b6b17858d5fca4bac22e8736beaf9981148ccf21abe2c8898",
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "3c93c6db8ae4c1390225c393f9b6f33935f1c837f1810d16b2149ab61752a45e",
+          "quality": 88,
+          "bytes": 410551
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Create a production artwork background for the approved MeTravel photo diary series. Output a single FLAT A5 portrait artwork, high resolution 2048×2912 pixels if available, no page mockup. Input image 1 is the OWNER'S EXACT PHOTOGRAPH of this place and defines the actual subject, geometry and viewpoint. Input image 2 is the already APPROVED Mir watercolor diary background, STYLE/PALETTE/LAYOUT ONLY: never import Mir castle or any of its objects into this different place. Use delicate transparent watercolor on warm ivory paper, sage foliage, soft blue-grey sky, light terracotta where real. A single airy collage that dissolves organically into paper at all four edges, no rectangular photo boundary. Preserve the actual recognizable place and viewpoint from photograph 1. Keep the entire important subject between 14% and 64% of page height, with soft paper wash above and below. Topmost 12% must stay pale/quiet for a real title added later. Lower 30% almost empty pale ivory for real handwritten copy and real QR codes added later; extremely faint edge washes only, no contrast or shapes in the bottom area. No text, letters, labels, emblems, watermark, frame, border, rules, QR, UI, stickers, invented buildings or landmark details. Actual subject: the Isloch River bend at Tourist Meadow, Belarus: sandy bluff on the right, pine forest beyond, green meadow left and river curve. Focus only the natural place. Omit the foreground person; no people in the illustration. Preserve the real terrain, river bend and forest from the photograph, no castle or buildings.",
+        "promptSha256": "82360a5a898914aa06f40225ea63502dd560e74ef7eb0ac7fd3757b999899a02",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-421",
+      "pointId": 421,
+      "articleId": 138,
+      "articleUrl": "https://metravel.by/travels/smoliany-belarus-ruiny-legendy-i-starinnye-khramy",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/39db96486ba944d7b1ad2658f4a92600.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/39db96486ba944d7b1ad2658f4a92600.JPG.webp",
+        "sha256": "0b22ffea3453356b63bee69ac65755e47dc40f69761db392a9d1622bc8826da5",
+        "widthPx": 1000,
+        "heightPx": 1510,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 138 HTML and media.article_body.gallery[id2]; alt: Руины башни замка Белый Ковель"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 138,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "cd102aee82e82ed0b445756899c74ebc1b84140460648f42b56adc03870d16a9",
+        "widthPx": 1053,
+        "heightPx": 1493,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "f56f3928c6bdb9529d6b7d1e6c7b28071d48a6f286bd0b5a832dffddea9ed223",
+          "quality": 88,
+          "bytes": 440719
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.66
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration (2048x2912 if available), no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Башня «Белый Ковель», Смоляны, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or objects into this new place.\nTransform image1 into delicate transparent watercolor on warm ivory paper, sage foliage and soft blue-grey sky, real architectural colors. Preserve the recognizable visible place, geometry and viewpoint; do not invent hidden architecture. Omit foreground people if present, focus on the actual place. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height, top 12% pale quiet for a title added later. Lower 30% almost empty ivory for text and real QR added later: only extremely faint peripheral washes, no contrasting shapes. Match reference paper and delicate treatment. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. Do not invent extra buildings or towers.",
+        "promptSha256": "6512484141a8e30a83acd275102b5e058479dbf25faf79bd0b429defe9d56f47",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-587",
+      "pointId": 587,
+      "articleId": 148,
+      "articleUrl": "https://metravel.by/travels/usadba-gatovskikh-v-krasnom-berege-sudby-voiny-i-pamiat",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/0d49cc58286848a7acea0bace4a7cccb.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/0d49cc58286848a7acea0bace4a7cccb.JPG.webp",
+        "sha256": "33e26542af4262be0154835e1beba57c8137c2458cff83ec1ca583bb583fc2e0",
+        "widthPx": 1000,
+        "heightPx": 662,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 148 HTML and media.article_body.gallery[id1]; alt: Усадебный дом с зелёной крышей за строительным ограждением"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 148,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "e466049ebc58bb17ba2bd0e2e1de1506197d382a643f215b334a797d8b2c417a",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "bcd8d6cca637ff531e86d579b0a28d5bc14c19f27c290a2a673264ce47575639",
+          "quality": 88,
+          "bytes": 407054
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.66
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration (2048x2912 if available), no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Дворец в Красном Береге, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or objects into this new place.\nTransform image1 into delicate transparent watercolor on warm ivory paper, sage foliage and soft blue-grey sky, real architectural colors. Preserve the recognizable visible place, geometry and viewpoint; do not invent hidden architecture. Omit foreground people if present, focus on the actual place. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height, top 12% pale quiet for a title added later. Lower 30% almost empty ivory for text and real QR added later: only extremely faint peripheral washes, no contrasting shapes. Match reference paper and delicate treatment. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. Do not invent extra buildings or towers.",
+        "promptSha256": "0e720eedf6cc2dc958bba40be0aee0a8416e85e5e122d2bb5839706344ba4060",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-2624",
+      "pointId": 2624,
+      "articleId": 176,
+      "articleUrl": "https://metravel.by/travels/logoisk-dvorets-tyshkevichei-i-rodnik-sviatogo-iuriia",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/679f07d5599d49c18f89ae616f4f355f.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/679f07d5599d49c18f89ae616f4f355f.JPG.webp",
+        "sha256": "c2705996445cb53bb96546e46360da3b795f5d7e8765845ec7b04de5bf8c64cb",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article176 places this exact photo immediately after the paragraph about surviving fragments of the Tyszkiewicz palace walls and the park cascade; gallery[id4]."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 176,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "8b27ad7c2293e30f57c4e177708b24d7ac855548637a02934d66e9740fed3c84",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "1942390e0212bd8ff6037684264cb7d62cae8211a7c7e21b4ede5f195dc622f9",
+          "quality": 88,
+          "bytes": 478954
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.66
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration (2048x2912 if available), no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Руины дворца Тышкевичей, Логойск, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or objects into this new place.\nTransform image1 into delicate transparent watercolor on warm ivory paper, sage foliage and soft blue-grey sky, real architectural colors. Preserve the recognizable visible place, geometry and viewpoint; do not invent hidden architecture. Omit foreground people if present, focus on the actual place. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height, top 12% pale quiet for a title added later. Lower 30% almost empty ivory for text and real QR added later: only extremely faint peripheral washes, no contrasting shapes. Match reference paper and delicate treatment. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. Do not invent extra buildings or towers.",
+        "promptSha256": "cd208d02b1d142c05b323f7b79a5fce86b734572fa86b407733a74152960753e",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-2633",
+      "pointId": 2633,
+      "articleId": 169,
+      "articleUrl": "https://metravel.by/travels/ozero-glubokoe-samoe-prozrachnoe-ozero-v-belarusi",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/b4ac9295471e4d16b5cb4bd0c12a6568.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/b4ac9295471e4d16b5cb4bd0c12a6568.JPG.webp",
+        "sha256": "452617d2ba50a4d2931ee232ead6f7329e3aff43bddbc93f9047fc5214a45d6c",
+        "widthPx": 1000,
+        "heightPx": 750,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article169 gallery[id3] immediately follows the paragraph about the transparent lake water and sandy bottom; earlier images show the approach road and field."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 169,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "3adc3192a6a936f7de8e4d0f67852c44a4bb4d6c71c6b0a7ffb5c61924a737a3",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "6f3754467f4618258bac66997a6b1a78734b57c2633e926c15e607ef282fc18c",
+          "quality": 88,
+          "bytes": 429943
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.66
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration (2048x2912 if available), no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Озеро Глубокое, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or objects into this new place.\nTransform image1 into delicate transparent watercolor on warm ivory paper, sage foliage and soft blue-grey sky, real architectural colors. Preserve the recognizable visible place, geometry and viewpoint; do not invent hidden architecture. Omit foreground people if present, focus on the actual place. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height, top 12% pale quiet for a title added later. Lower 30% almost empty ivory for text and real QR added later: only extremely faint peripheral washes, no contrasting shapes. Match reference paper and delicate treatment. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. Do not invent extra buildings or towers.",
+        "promptSha256": "c8ac839109b8026d348f7c2450247152b2e16086fed2c286e332f145773c60d5",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-2758",
+      "pointId": 2758,
+      "articleId": 143,
+      "articleUrl": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/f9c6f96f840d4d51b781775f3405e848.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/f9c6f96f840d4d51b781775f3405e848.JPG.webp",
+        "sha256": "55917115986dab8d4cc46c12ad1d445fa2b661762575b95bbcd352477ac6878a",
+        "widthPx": 1000,
+        "heightPx": 662,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article143 media.article_body.gallery[id1]. Визуально сопоставлен фасад с фото exact point2758: то же вытянутое двухэтажное здание с центральным ризалитом, белым декором и розовыми простенками. Выбран body1; body0 с мемориалом1986 исключён."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 143,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "0a59e3b113c8816fb2879e2ad37d22aa92cb0e4a0fdfa36a68a362dd05072378",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "ef9f3fb44c8baeb70171b712e106e33d12ed33301e33445be49e49a77e234a44",
+          "quality": 88,
+          "bytes": 366219
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.66
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration (2048x2912 if available), no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Дворец Горваттов, Наровля, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or objects into this new place.\nTransform image1 into delicate transparent watercolor on warm ivory paper, sage foliage and soft blue-grey sky, real architectural colors. Preserve the recognizable visible place, geometry and viewpoint; do not invent hidden architecture. Omit foreground people if present, focus on the actual place. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height, top 12% pale quiet for a title added later. Lower 30% almost empty ivory for text and real QR added later: only extremely faint peripheral washes, no contrasting shapes. Match reference paper and delicate treatment. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. Do not invent extra buildings or towers.",
+        "promptSha256": "8c4104fa185c5baf4653fbfdd7e15497ec1f5c08a439a2fd39ee5539e495187d",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-2913",
+      "pointId": 2913,
+      "articleId": 179,
+      "articleUrl": "https://metravel.by/travels/rodniki-sviatye-krinitsy-ekotropa-v-37-km-ot-minska",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/7a2c23abb7744ba29d3acfdd33ce01bf.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/7a2c23abb7744ba29d3acfdd33ce01bf.JPG.webp",
+        "sha256": "aebdab601b93bea112a0cafcd34141c98e45267416cfe5044f2d55fcda703684",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 179 HTML and media.article_body.gallery[id7]; alt: Родник, стекающий по склону"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 179,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "c01c102a14bbb90b8e3d4463e6b3776ecf4fc47ad75f61c6d558302c1e253416",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "113d10e746702a8704de9c0b4754bd8e6a06328214217cc5669694a36d164a0f",
+          "quality": 88,
+          "bytes": 472401
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.72
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration (2048x2912 if available), no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Родники Святые Криницы, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or objects into this new place.\nTransform image1 into delicate transparent watercolor on warm ivory paper, sage foliage and soft blue-grey sky, real architectural colors. Preserve the recognizable visible place, geometry and viewpoint; do not invent hidden architecture. Omit foreground people if present, focus on the actual place. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height, top 12% pale quiet for a title added later. Lower 30% almost empty ivory for text and real QR added later: only extremely faint peripheral washes, no contrasting shapes. Match reference paper and delicate treatment. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. Do not invent extra buildings or towers.",
+        "promptSha256": "e793efffb9aeb8d12431a393754846b19d61c8d3ef57e6091ca5f12025f89c3f",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-3011",
+      "pointId": 3011,
+      "articleId": 147,
+      "articleUrl": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/ac1bcb375d404436ab1bc67e09752eb3.jpg.webp",
+        "originalUri": "https://metravel.by/travel-description-image/ac1bcb375d404436ab1bc67e09752eb3.jpg.webp",
+        "sha256": "8c7428f1074609efddd9e7cde516a9390584c4177c6fc8805fb8b423c281cc7c",
+        "widthPx": 1000,
+        "heightPx": 564,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 147 HTML and media.article_body.gallery[id1]; alt: Дворец Пусловских в Коссово в строительных лесах: белые башни с зубцами и красные крыши над зелёным холмом"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 147,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "fa1bf6d9ef27cb11e1825821bf025216a8d6958077e890681c0bf94c857a00ac",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "cfe4acd1df86d25b2f60f92b04102a6a3dc3253fab1c93ca3ef20ca956a0f3cd",
+          "quality": 88,
+          "bytes": 338708
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.66
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration (2048x2912 if available), no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Дворец Пусловских, Коссово, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or objects into this new place.\nTransform image1 into delicate transparent watercolor on warm ivory paper, sage foliage and soft blue-grey sky, real architectural colors. Preserve the recognizable visible place, geometry and viewpoint; do not invent hidden architecture. Omit foreground people if present, focus on the actual place. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height, top 12% pale quiet for a title added later. Lower 30% almost empty ivory for text and real QR added later: only extremely faint peripheral washes, no contrasting shapes. Match reference paper and delicate treatment. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. Do not invent extra buildings or towers.",
+        "promptSha256": "d9e5e19bb5d4933f9734a7a7d4eb9c12546844b33dbe9c5d0fde13e2642a0ed7",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-3014",
+      "pointId": 3014,
+      "articleId": 147,
+      "articleUrl": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/49b53e4b9a9948978221a4e1e5612fb9.jpg.webp",
+        "originalUri": "https://metravel.by/travel-description-image/49b53e4b9a9948978221a4e1e5612fb9.jpg.webp",
+        "sha256": "cd43e694cf1f8c2f095b898a17b6a06da973c960624db868646b393da8bf29c8",
+        "widthPx": 1000,
+        "heightPx": 564,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 147 HTML and media.article_body.gallery[id4]; alt: Руины Ружанского дворца Сапег: длинная аркада слева и главный корпус с фронтоном над зелёным двором"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 147,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "600e7297d1f322def1f81926681b5b91d93ff8841d93cb7cc28441c3b6228b71",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "cf977ff20e5aaba427dfddcc16934dd94ffd872fae0448c12f263eeeed32571d",
+          "quality": 88,
+          "bytes": 324245
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.66
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration (2048x2912 if available), no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Дворец Сапег, Ружаны, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or objects into this new place.\nTransform image1 into delicate transparent watercolor on warm ivory paper, sage foliage and soft blue-grey sky, real architectural colors. Preserve the recognizable visible place, geometry and viewpoint; do not invent hidden architecture. Omit foreground people if present, focus on the actual place. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height, top 12% pale quiet for a title added later. Lower 30% almost empty ivory for text and real QR added later: only extremely faint peripheral washes, no contrasting shapes. Match reference paper and delicate treatment. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. Do not invent extra buildings or towers.",
+        "promptSha256": "7badc31ede1f3087bc1be89c80dedf34e9a6ce5140366f486958957dc6afaf54",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-3251",
+      "pointId": 3251,
+      "articleId": 187,
+      "articleUrl": "https://metravel.by/travels/mogilev-usadba-tolstykh-i-bykhovskii-zamok",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/3266/conversions/BDiSPfF4j5lIADmORrxDE0XHGj2w5l5ONQ8tFW0w-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/3266/conversions/BDiSPfF4j5lIADmORrxDE0XHGj2w5l5ONQ8tFW0w-thumb_400_wp.webp",
+        "sha256": "ae59e7bf90f654275042776351852c9a871bea509ccb4f44c2a2b85d1f1367d1",
+        "widthPx": 400,
+        "heightPx": 400,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[3251] image and media.address_images[3251].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 187,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "34153a7a33ac2ef19995ad5833866d10daefec18e17770cbf283897a090bd7d3",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "b9880b1fb4f69e6fbe555a26970e23cf6d977966a02124f0b0279de12c997f8c",
+          "quality": 88,
+          "bytes": 359187
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.69
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Быховский замок, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "aa04940edaaf251a59ef2dc6efb66fbfc1206fdf9ce7eb930a09983769d46fe4",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-3836",
+      "pointId": 3836,
+      "articleId": 189,
+      "articleUrl": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/45a8513ae52f46f59cda9207d0ca4e61.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/45a8513ae52f46f59cda9207d0ca4e61.JPG.webp",
+        "sha256": "071beaa892a57caecf25bed2d2069ad9d3c2a22e0f39ce61c9681290253659ef",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article189 media.article_body.gallery[id51]. Визуально сопоставлен с фото exact point3836: тот же фигурный фронтон с1906, центральное арочное окно и облупленная охристая отделка. Выбран body51 вместо body50, чтобы совпадало видимое состояние фасада."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 189,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "07a34c4ac7c9b53da7b65ec344c73afea91d4f0a452c18061615a512f3fa6c27",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "c046455ef04dae61c978385bfea1c08722d508cfe0c5ef2ef179f768019000d7",
+          "quality": 88,
+          "bytes": 377828
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.69
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Дворец Бохвицей, Павлиново, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "77f72b5d742238b2aeafc1da740f0a712ef2a58f54fd9b3d83c8711d564389ce",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-3841",
+      "pointId": 3841,
+      "articleId": 189,
+      "articleUrl": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/70bcfcf8317d4bb9bdfde17ec98ec749.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/70bcfcf8317d4bb9bdfde17ec98ec749.JPG.webp",
+        "sha256": "d1925cfb36565dbfadc8a7e39016826e02c92ba35c149eb0aae1c9ed72fc6e21",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article189 gallery[id44] is in the Yastrembel/Kotlubaev section following the school-boarding and abandoned-estate paragraph; the later Pavlinovo photos begin at id50."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 189,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "cc1413b583020029573130c7a8afc022d23d0438a0c29c7e56106a90cc9cf944",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "c97ee9ec0384ad6facf59edf1ed3181d11ef3fb1fe9a33764a22fe17ff5bd304",
+          "quality": 88,
+          "bytes": 433600
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.69
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Дворец Котлубаев, Ястрембель, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "efb041ca36597477d648b875ab473c58627df56ee5d7b082519b6553fdd280ce",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-4530",
+      "pointId": 4530,
+      "articleId": 153,
+      "articleUrl": "https://metravel.by/travels/grodno-za-1-den-chto-posmotret-i-kak-doekhat",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/3395/conversions/uHHyLSZrfCCgCf6zPFlnV53oBHw4Bpst64SxlZSa-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/3395/conversions/uHHyLSZrfCCgCf6zPFlnV53oBHw4Bpst64SxlZSa-thumb_400_wp.webp",
+        "sha256": "3a478a2f4a1afef60a73fd3cabbde83da718d1b2760494699fd97863b97dcc63",
+        "widthPx": 400,
+        "heightPx": 400,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[4530] image and media.address_images[4530].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 153,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "245cbebe40122f9ccdc4bc3bea90858a11ee283bbb496720d93736d08b44f73f",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "bd4cd99bec443e23643ce4519ea18f898f0931b7675e184e962bc15b107911ca",
+          "quality": 88,
+          "bytes": 376722
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.69
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Новый замок, Гродно, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "45a59eac245486e3443e73cac722a59ae87000e36f87a0e5155ba31e5d9a6df7",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-4801",
+      "pointId": 4801,
+      "articleId": 196,
+      "articleUrl": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/c46b31675537413c9c4f25427ab725a8.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/c46b31675537413c9c4f25427ab725a8.JPG.webp",
+        "sha256": "8127797da91270016111f999627148b812522ebf20693017d257944e6c2ccd35",
+        "widthPx": 1000,
+        "heightPx": 750,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact selected point4801 belongs to article196; that route describes the stop after Krevo as flooded quarry. Gallery[id9] is explicitly alt «Затопленный карьер с песчаным берегом». The proper reservoir name remains unproven."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 196,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "a3bcb06fbcffd7fd80c4269769eb80a4b57702734563d3326bbbeb4fdea4a90c",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "03485f42782bbf60837a3a8637a28d5d7b9a60369d2df8be47c09a2bd737418f",
+          "quality": 88,
+          "bytes": 337727
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.69
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Водохранилище на маршруте Крево — Гольшаны, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "b486aea2aa6fa45db04302856a0da740585f379e8a2e4eb2a7fb690ff26c4d43",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-4805",
+      "pointId": 4805,
+      "articleId": 196,
+      "articleUrl": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/b34b406d796e4e11961b56796fac280c.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/b34b406d796e4e11961b56796fac280c.JPG.webp",
+        "sha256": "680511e9d95dec5a8919c1b10990250b580a99b143d69349b89631cf9c0f6cb7",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 196 HTML and media.article_body.gallery[id28]; alt: Руины стен Гольшанского замка"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 196,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "72020f1d349ec9565a7f71c16923260791f1d53657d1eab6faeb56f239c2096b",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "b7c852c5a31c47cfb4c7da2a4db18a63db3b4e79341bbb957f565e69f43e1934",
+          "quality": 88,
+          "bytes": 397091
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.69
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Гольшанский замок, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "0b95d747fff3e3eb8d8a31c98d2de0f443833efa815e5dd90fd48eadaa351cdb",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-4810",
+      "pointId": 4810,
+      "articleId": 196,
+      "articleUrl": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/fade57216f38454d912d37bc53156d02.jpg.webp",
+        "originalUri": "https://metravel.by/travel-description-image/fade57216f38454d912d37bc53156d02.jpg.webp",
+        "sha256": "d11d1e827d120783c742a0e4b29c9bad5397936b59d722867ea551da7cb71eca",
+        "widthPx": 1000,
+        "heightPx": 750,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 196 HTML and media.article_body.gallery[id7]; alt: Руины стен Кревского замка на лугу"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 196,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "37dbb2b3b4462ae5752662763796755b246d2f197501620f9ec11fa1f9b9ce5b",
+        "widthPx": 1055,
+        "heightPx": 1491,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "2ffd10b949b78fea54702df1d52757b768bb93ef1021be3acf17582419c97bc3",
+          "quality": 88,
+          "bytes": 331026
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.69
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Кревский замок, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "4a9fcb1052c50095bbe2d4879637b2d4b20799eaa92fd6afed790f83145f3be8",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-4843",
+      "pointId": 4843,
+      "articleId": 197,
+      "articleUrl": "https://metravel.by/travels/velomarshrut-15-km-na-lesnoe-ozero-dikoe",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/3640/conversions/yibFRDVf3fPKWv9xSTw1o3EhUFYoxOua3WPkWwoy-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/3640/conversions/yibFRDVf3fPKWv9xSTw1o3EhUFYoxOua3WPkWwoy-thumb_400_wp.webp",
+        "sha256": "d7eaddd5f5fc31565ba6898543e0a02f3a23e57a0b9a0cda5bf7908faa99872a",
+        "widthPx": 400,
+        "heightPx": 400,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[4843] image and media.address_images[4843].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 197,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "3bc0b043826fae98f9933f8f7703a4efc921246e5385c64a9ad60e18190cd733",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "3521b8528e6b408d83fd479f3b9299f6ae71669fea2ea70c15229aaf39bfbbc6",
+          "quality": 88,
+          "bytes": 384736
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.69
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Озеро Дикое, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "8fdc75a1ee67c8e2e9ea7db70d57581b927e511174fc56995bd117a3c74961a8",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-5116",
+      "pointId": 5116,
+      "articleId": 200,
+      "articleUrl": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/75dd7fd111834e6da71c0ff7e6988399.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/75dd7fd111834e6da71c0ff7e6988399.JPG.webp",
+        "sha256": "e044791d343a4cf2e309f37656855430591b37ac233cfdcca9eef40e3cdfa9e6",
+        "widthPx": 1000,
+        "heightPx": 662,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article200 media.article_body.gallery[id1]. Визуально сопоставлены краснокирпичные стены и квадратная башня с фото exact point5116. Выбран body1 со стеной и башней; body0 с людьми у фестивального щита LidBeer исключён."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 200,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "edf52b3bd46033c70e87fea25d7a86341ee48dc8fc0ac7649b2586f2ca7ea85f",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "3851403b61291827f1628cc2ff9ef877934d01450f8fd24b30e514eb2bb16661",
+          "quality": 88,
+          "bytes": 356192
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.72
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Лидский замок, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "9ae095a69c3f37b166429567be14b8c7159198e9e5972a4a084f286e35ca192e",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-5246",
+      "pointId": 5246,
+      "articleId": 201,
+      "articleUrl": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/36c9befe82ee4b4f9ffca78d6f505a74.jpg.webp",
+        "originalUri": "https://metravel.by/travel-description-image/36c9befe82ee4b4f9ffca78d6f505a74.jpg.webp",
+        "sha256": "f4776c6a02aeec816c2334764526f36c24ae0748f655eab8e7558d4723761b86",
+        "widthPx": 1000,
+        "heightPx": 750,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article201 Nesvizh section exact image alt «Вид на Несвижский замок» and media.article_body.gallery[id3].variants.original."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 201,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "bb9347a419d97d7fc85d97d878ce2a676c68b3c766ae9c90796ece90ef447146",
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "acbc09e31eba825cf78f218075be658c06406b56ffbe08607a06b551c4e1aa31",
+          "quality": 88,
+          "bytes": 393828
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Create a production artwork background for the approved MeTravel photo diary series. Output a single FLAT A5 portrait artwork, high resolution 2048×2912 pixels if available, no page mockup. Input image 1 is the OWNER'S EXACT PHOTOGRAPH of this place and defines the actual subject, geometry and viewpoint. Input image 2 is the already APPROVED Mir watercolor diary background, STYLE/PALETTE/LAYOUT ONLY: never import Mir castle or any of its objects into this different place. Use delicate transparent watercolor on warm ivory paper, sage foliage, soft blue-grey sky, light terracotta where real. A single airy collage that dissolves organically into paper at all four edges, no rectangular photo boundary. Preserve the actual recognizable place and viewpoint from photograph 1. Keep the entire important subject between 14% and 64% of page height, with soft paper wash above and below. Topmost 12% must stay pale/quiet for a real title added later. Lower 30% almost empty pale ivory for real handwritten copy and real QR codes added later; extremely faint edge washes only, no contrast or shapes in the bottom area. No text, letters, labels, emblems, watermark, frame, border, rules, QR, UI, stickers, invented buildings or landmark details. Actual subject: Nesvizh Radziwill palace seen across its defensive brick wall and moat, with the yellow palace roof/tower, green ramparts and tree branches, exactly the source photo. Keep the palace and defensive-wall geometry, no extra towers.",
+        "promptSha256": "1a637633a56738545de779d251af7ec736275f2ea3b2b74e41e9c6f7dab0222c",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-5247",
+      "pointId": 5247,
+      "articleId": 201,
+      "articleUrl": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp",
+        "sha256": "03ddc105802698b2ad7f136cf4a292b2bc9b923ca8e7355ff87874e1a001b9c9",
+        "widthPx": 1000,
+        "heightPx": 662,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article201 Mir section contains this exact image with alt «Мирский замок, общий вид»; media.article_body.gallery[id18].variants.original."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 201,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "e0f71ea9724e01c12062550e066907a086009d0347a6759e75821336daa068fc",
+          "quality": 88,
+          "bytes": 380142
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "historical-exact-prompt-unavailable",
+        "exactPrompt": null,
+        "promptSha256": null,
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27",
+        "historicalEvidenceSha256": "55330d3c7d935f7da81ee7d0e78f443acde81e14e09ba51061ffb8ff1d25cc08"
+      }
+    },
+    {
+      "stopId": "point-5485",
+      "pointId": 5485,
+      "articleId": 203,
+      "articleUrl": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/c4c12a8726b444818f391b7b6cdafe12.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/c4c12a8726b444818f391b7b6cdafe12.JPG.webp",
+        "sha256": "cec0b69d0680e2b414d957f54576a735adaff3ca98f30c46827405b25dc0c4de",
+        "widthPx": 1000,
+        "heightPx": 750,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 203 HTML and media.article_body.gallery[id19]; alt: Болотное озерко и одинокая сосна на верховом болоте Ельня"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 203,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "674ac568bb3a7b59079e9b307b4014d3a4902c4ad929296dbeadb2f9cdf1d5b1",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "455ffb2ae5d1bd5d0760d987f2abf716594b6411b8fa22c52bf941d583857138",
+          "quality": 88,
+          "bytes": 340031
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.72
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Заказник «Ельня», BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "72be2bdec279feb1e7c9bda5fd6caf2ca30434abbbf74b0d0be6bdd32d9030e3",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-5486",
+      "pointId": 5486,
+      "articleId": 203,
+      "articleUrl": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/1dcfcf273cb24ba8a385ebd9bcb33e24.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/1dcfcf273cb24ba8a385ebd9bcb33e24.JPG.webp",
+        "sha256": "d4efc57fb3ca5d5d3a6d5cb25adbf061f2f3fbf1ec811d1e409d6a754dadf442",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 203 HTML and media.article_body.gallery[id12]; alt: Деревянный настил с перилами уходит в болото на экотропе «Озёравки»"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 203,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "2a0ea8c2c123d83c208cde63350cc0423efbd91df5ea4e98c578c9388ffbdd85",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "ae371755ba123c798b235746f0f9d9809d8e5bd806ab9ac8e86be68a717856de",
+          "quality": 88,
+          "bytes": 354351
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.72
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Экотропа «Озеравки», Ельня, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "d386767ffd91997222ca72d937106afe35402239cbe62d87bb9591d4c2b7dd9f",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-5487",
+      "pointId": 5487,
+      "articleId": 203,
+      "articleUrl": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/d88347c3654d436e8ce496d542ff24b6.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/d88347c3654d436e8ce496d542ff24b6.JPG.webp",
+        "sha256": "138e88955f233192386b6ed40b61d2613ce167e06b4682c5180050a2fa209bd3",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 203 HTML and media.article_body.gallery[id26]; alt: Руины дворца Нитославских: фасад с пустыми окнами в деревне Опытная"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 203,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "cc936b26491f0c064e65e2d935e13066d162cd0d5d3d2222d7632836acb53691",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "fefe7d31b886c09972dd718637eaf9876c8aa79e32b8ccb7adfc45a910fe6f44",
+          "quality": 88,
+          "bytes": 455442
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.72
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Дворец Нитославских, Опытная, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "dfcaef033d42d3b140b4315c1e6391888cda8d3f6c34f97b47f52bc383041a69",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-6479",
+      "pointId": 6479,
+      "articleId": 222,
+      "articleUrl": "https://metravel.by/travels/ektropa-v-gidrologicheskom-zakaznike-korytenskiy-moh",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/6479/conversions/d27aeb7fb0634ff99ab5a1cd15c01756.webp",
+        "originalUri": "https://metravel.by/address-image/6479/conversions/d27aeb7fb0634ff99ab5a1cd15c01756.webp",
+        "sha256": "ee1de004b5a7161ea560301a2e6bb4a3eba40e8601002dbca8455eb15d7e67da",
+        "widthPx": 768,
+        "heightPx": 1024,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[6479] image and media.address_images[6479].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 222,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "ce65b3d241bad71f9bbe74212c93874df36f2d6c5ddefb6a95f5edc3595f6079",
+        "widthPx": 1055,
+        "heightPx": 1491,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "81f421c860f4e8055f8b18adc5b26367921f9c721fed987585894fa90982540c",
+          "quality": 88,
+          "bytes": 430539
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.72
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Экотропа «Тайны болота», Корытенский Мох, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "a1fe023db510d9241d6524bab8e2fbbb4255df6c7642ac33c64583eed7fbb571",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-8562",
+      "pointId": 8562,
+      "articleId": 243,
+      "articleUrl": "https://metravel.by/travels/dvorets-slotvinskikh-i-usadba-pototskikh-za-den",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/3598/conversions/gNZKPh2o9Md7kCTlEf8hazKU5FtTkZif01qdQQPB-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/3598/conversions/gNZKPh2o9Md7kCTlEf8hazKU5FtTkZif01qdQQPB-thumb_400_wp.webp",
+        "sha256": "557592b32980b45682a9716579c9f22b44bdcf8968a87801a317e9c873696464",
+        "widthPx": 400,
+        "heightPx": 400,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[8562] image and media.address_images[8562].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 243,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "f7a3e073f7b858551ff33c9a7b902f2c1e1801060dcc877171e80998370572c9",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "65f3f318cd15530f80dee032a1b78597853f3aba03a444f022debc90d6353cc2",
+          "quality": 88,
+          "bytes": 393797
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.72
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Дворец Слотвинских, Рованичи, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "c994ad0f05129ce2e46e5e1b24fef83f0625c2eabddf09cb937dd4e5fbfc029b",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-13504",
+      "pointId": 13504,
+      "articleId": 135,
+      "articleUrl": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/13504/conversions/6168c0896d4d4287a5af7e326cdc811a.JPG",
+        "originalUri": "https://metravel.by/address-image/13504/conversions/6168c0896d4d4287a5af7e326cdc811a.JPG",
+        "sha256": "5d41078012d6790e3ea56aec24ce36eae2620323264bd951d6eb33afda7e31dd",
+        "widthPx": 1024,
+        "heightPx": 576,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[13504] image and media.address_images[13504].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 135,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "e23d6541a9bc29b4c127bfed4ef127983f189ab8ca998472aaa9203f6afc6930",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "10de89345916c7ec27fb15acbde04fa54bfef9491d7e27ec1f7aa8452f610879",
+          "quality": 88,
+          "bytes": 395516
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.72
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Дворец Умястовских, Жемыславль, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "e8044ce2df338a44659fa8851ad514b24be92ea0829690360c5c765ddfda193d",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-3468",
+      "pointId": 3468,
+      "articleId": 188,
+      "articleUrl": "https://metravel.by/travels/zheludok-i-usadby-grodnenshchiny-kak-dobratsia",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/3468/conversions/5e83d2e881db4853a6ea19019ed25070.JPG",
+        "originalUri": "https://metravel.by/address-image/3468/conversions/5e83d2e881db4853a6ea19019ed25070.JPG",
+        "sha256": "83cf5b00b19353342df009010ce75b9e7184dfbf3a80c99ffecdc6a83adef311",
+        "widthPx": 768,
+        "heightPx": 1024,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[3468] image and media.address_images[3468].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 188,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "ebb3bf3d2a45364a2b2ec67b0ac2905b22dd62e117024d91db10c11faf41b345",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "9e00802c3ef364f6a761d40e6633f0cfdfa23b4a422c1c19a54dc62c093ce702",
+          "quality": 88,
+          "bytes": 368357
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.72
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Дворец Четвертинских, Желудок, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "e61683942922ac453e9bc44c23e5e98bc0db4d3715d5da3f8058e1c8727028f4",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-15049",
+      "pointId": 15049,
+      "articleId": 566,
+      "articleUrl": "https://metravel.by/travels/kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/15049/conversions/8a042ff5dd2d47d2bf3c59011b002cc4.webp",
+        "originalUri": "https://metravel.by/address-image/15049/conversions/8a042ff5dd2d47d2bf3c59011b002cc4.webp",
+        "sha256": "284ef7445a7987fc667c7bdb55a1ccebf59718f7d3f62130e16fd426d58c070e",
+        "widthPx": 1024,
+        "heightPx": 768,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[15049] image and media.address_images[15049].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 566,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "a364e6a5347f53aaa310e14c3b95d176c3b16638c65401b061ad8b587880a9e0",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "9883ffe06463b949f38d0761e46eb72146ba53663b567d5f7365cc8083faf047",
+          "quality": 88,
+          "bytes": 368537
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.72
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Хозяйственные постройки усадебного комплекса, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "8ee943371eb9c71a5604b14a0e0f8d584c301611039f72c28513c9ef1e256e05",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-15057",
+      "pointId": 15057,
+      "articleId": 566,
+      "articleUrl": "https://metravel.by/travels/kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/566/description/24482e3c192048dfa34420752c0e1317.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/566/description/24482e3c192048dfa34420752c0e1317.JPG.webp",
+        "sha256": "7174bfe0a4f4bf865ed144ab213e851689977fea780134efd3f4e57ad6a88134",
+        "widthPx": 1024,
+        "heightPx": 768,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 566 HTML and media.article_body.gallery[id14]; alt: Усадьба Новицких в Совейках: портик с колоннами, балюстрада и велосипед у крыльца"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 566,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "eed63f998e8e84456f87846a03a55b5eea59cf0f1f378ddc93080ee75b6b43aa",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "06177efd5e24477f8245e832cf338e47d4ecf92546794ce977eacd22a1edde91",
+          "quality": 88,
+          "bytes": 415723
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.72
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Дворец Новицких, Совейки, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "25de6767ec23e1251faf9e2787e959974d141752ab4199394aafbff05af2a2e5",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-15827",
+      "pointId": 15827,
+      "articleId": 672,
+      "articleUrl": "https://metravel.by/travels/marshruty-vykhodnogo-dnia-iz-minska-13-poezdok",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/6553/conversions/uPQ0SPJlTSvuaBnMQ2gmt6Pmos64qMfEdf975rDX-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/6553/conversions/uPQ0SPJlTSvuaBnMQ2gmt6Pmos64qMfEdf975rDX-thumb_400_wp.webp",
+        "sha256": "de8dc75a5c55d094e0a70a3e04a38822b92b12a0812dca739a70d2b5fa3a0437",
+        "widthPx": 400,
+        "heightPx": 400,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[15827] image and media.address_images[15827].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 672,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "97ccb30713ee8dd7fe7ec0180bd03ec8d71d2209a9e87da3385fdeb85e373b91",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "ee855d626bb7e60434e48e2c6f1b71f39ecbc9f26b7135fc498e020cd8d0e816",
+          "quality": 88,
+          "bytes": 353234
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.72
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Юцковские родники, BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "ca72161046fd71abf89735a809bbb6ef9b9f70523f53a30b0a4f5f4c184e2cb5",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    },
+    {
+      "stopId": "point-3843",
+      "pointId": 3843,
+      "articleId": 189,
+      "articleUrl": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+      "authorId": 1,
+      "verifiedOn": "2026-10-30",
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/944c74d13b094a64b3adc4576eb8ca63.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/944c74d13b094a64b3adc4576eb8ca63.JPG.webp",
+        "sha256": "b98f4629f39f4259a25de78737fd6f7acf9e60228f3a64654394e066a3b9fd3d",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article189 gallery[id6] directly follows the Repikhovo estate park paragraph; IDs6–18 show the same park, bridges and cellar, before the later route leaves for Netchin."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 189,
+          "permission": "owner-commissioned-photo-diary"
+        }
+      },
+      "artwork": {
+        "sha256": "475659be1eae52a70553a528a4c2d763dab0b0a8d0c5baf3c516dc625c9e18e4",
+        "widthPx": 1054,
+        "heightPx": 1492,
+        "embeddedEncoding": {
+          "format": "jpeg",
+          "sha256": "9a0beaf8d9573877185ed6032176c378a3eaf523d035ae47fa628194e28e0d9a",
+          "quality": 88,
+          "bytes": 439530
+        },
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.72
+        },
+        "illustrated": true,
+        "upscaled": false
+      },
+      "generation": {
+        "tool": "built-in image_gen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in image_gen",
+        "promptStatus": "exact-prompt-recorded",
+        "exactPrompt": "Use case: style-transfer. Asset: production background for the approved MeTravel watercolor photo diary, one FLAT A5 portrait illustration, no page mockup.\nImage 1 is the OWNER'S EXACT PHOTOGRAPH of Усадебный парк «Репихово», BY, and defines the actual subject, geometry and viewpoint. Image 2 is the approved watercolor reference for STYLE, PALETTE and PAGE COMPOSITION ONLY; never copy its Mir castle or any architecture into this new place.\nTransform image 1 into delicate transparent watercolor on warm ivory paper, soft natural foliage and blue-grey sky, retaining the real photographed colors. Preserve the recognizable visible place, exact building geometry, number and shapes of towers, ruined condition, natural landforms and viewpoint; do not reconstruct ruins or invent hidden architecture. Omit foreground people and intrusive signs if present. One airy cohesive collage dissolving organically into paper on all four edges, no rectangular image boundary.\nPlace the entire important subject between 14% and 64% of the page height; leave the top 12% pale and quiet for a later title. The lower 30% must be nearly empty ivory for later text and real QR, with only extremely faint peripheral pigment. Match the reference's delicate hand-painted pigment and paper. No text, letters, labels, numbers, emblems, watermarks, borders, frames, rules, QR, UI or stickers. No extra buildings or towers.\n",
+        "promptSha256": "5c4987a6687e3720d72a047e33cbe52a8f6741f69571657e97783f5d8d5df38a",
+        "styleReferenceSha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27"
+      }
+    }
+  ],
+  "cover": {
+    "stopId": "point-5247",
+    "sourceTravelId": 201,
+    "articleUrl": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+    "sourceOriginalUri": "https://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp",
+    "sourcePhotoSha256": "03ddc105802698b2ad7f136cf4a292b2bc9b923ca8e7355ff87874e1a001b9c9",
+    "sha256": "85830f4578e0c1fc5f15faf52b1c22c9c5b1c3277f0d7735f731afd276963a27",
+    "encodedSha256": "e0f71ea9724e01c12062550e066907a086009d0347a6759e75821336daa068fc"
+  },
+  "font": {
+    "family": "Marck Script",
+    "author": "Denis Masharov",
+    "sha256": "504de8cc6f919163bc9afb67b9bc208d258230c5e8d00cb82ec52474f9fafc3b",
+    "license": "SIL Open Font License 1.1",
+    "licenseSha256": "f22a2beea88d631a620b15683fd03e79f13ad3297ad97fa5e42283c0b1a3a038"
+  },
+  "physicalPrintReady": false
+}

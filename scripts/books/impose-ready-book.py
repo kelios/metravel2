@@ -14,8 +14,8 @@ from reportlab.pdfgen.canvas import Canvas
 
 def impose(source, plan, output):
     reader = PdfReader(source)
-    expected = 56 if plan['component'] == 'body' else 4
-    folios = [p['folio'] for sheet in plan['sheets'] for side in ('front', 'back') for p in sheet[side]]
+    expected = plan['logicalPageCount']
+    folios = [p['folio'] for sheet in plan['sheets'] for side in ('front', 'back') for p in sheet[side] if p['folio'] is not None]
     if len(reader.pages) != expected or sorted(folios) != list(range(1, expected + 1)):
         raise ValueError('Source or plan omits or duplicates folios')
     if plan['scale'] != 1:
@@ -27,6 +27,8 @@ def impose(source, plan, output):
         for side in ('front', 'back'):
             canvas = writer.add_blank_page(width * mm, height * mm)
             for item in sheet[side]:
+                if item['folio'] is None:
+                    continue
                 page = copy.copy(reader.pages[item['folio'] - 1])
                 box = page.mediabox
                 if abs(float(box.width) / mm - page_width) > .1 or abs(float(box.height) / mm - page_height) > .1:
@@ -44,7 +46,8 @@ def control_document(plan, output, root):
     font = root / 'docs/design/travel-memory-books-v1/assets/fonts/NotoSans-Regular.ttf'
     pdfmetrics.registerFont(TTFont('Noto', str(font)))
     width, height = plan['sheetMm']
-    canvas = Canvas(str(output), pagesize=(width * mm, height * mm), invariant=1)
+    canvas = Canvas(str(output), pagesize=(width * mm, height * mm), invariant=1,
+                    initialFontName='Noto', initialFontSize=9)
     # The feed test must share the imposed file's orientation and duplex edge.
     # A portrait test printed short-edge cannot prove landscape short-edge feed.
     shift = height - 297
@@ -106,7 +109,7 @@ def control_document(plan, output, root):
             canvas.setFont('Noto', 8)
             y = height - 20
         for side in ('front', 'back'):
-            placements = '; '.join(f"стр. {p['folio']} → x={p['xMm']}, y={p['yMm']} мм" for p in sheet[side])
+            placements = '; '.join(f"{('стр. ' + str(p['folio'])) if p['folio'] is not None else 'пустая позиция'} → x={p['xMm']}, y={p['yMm']} мм" for p in sheet[side])
             canvas.drawString(15 * mm, y * mm, f"Лист {index + 1}, {'лицо' if side == 'front' else 'оборот'}: {placements}")
             y -= 6
         y -= 2
@@ -120,11 +123,12 @@ def main():
     parser.add_argument('--source', required=True)
     parser.add_argument('--plan', required=True)
     parser.add_argument('--output', required=True)
-    parser.add_argument('--control', required=True)
+    parser.add_argument('--control')
     args = parser.parse_args()
     plan = json.loads(Path(args.plan).read_text())
     impose(args.source, plan, args.output)
-    control_document(plan, args.control, Path(__file__).resolve().parents[2])
+    if args.control:
+        control_document(plan, args.control, Path(__file__).resolve().parents[2])
 
 
 if __name__ == '__main__':

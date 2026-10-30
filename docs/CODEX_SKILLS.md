@@ -13,6 +13,7 @@ catalog по frontmatter `description`.
   `visual-asset-designer`, `child-quest-visuals`, `article-editor-agent`,
   `quest-writer`, `quest-editor`, `quest-geo-verifier`,
   `quest-playthrough-reviewer`, `instagram-editor`, `instagram-visuals`.
+- Ready photo diaries: `travel-book-designer`, `travel-book-builder`.
 - Validation/review: `test-runner`, `test-writer`, `e2e-runner`,
   `browser-reviewer`, `mobile-tester`, `qa-agent`, `quality-fixer`,
   `code-reviewer`, `security-reviewer`, `release-checks`,
@@ -69,7 +70,8 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
 `$metravel-seo-index-operator`, `$metravel-sprint-reviewer`,
 `$metravel-system-architect`, `$metravel-task-contract`,
 `$metravel-test-runner`, `$metravel-test-writer`, `$metravel-ticket-board`,
-`$metravel-travel-expert`, `$metravel-ui-guardrails`,
+`$metravel-travel-expert`, `$metravel-travel-book-designer`,
+`$metravel-travel-book-builder`, `$metravel-ui-guardrails`,
 `$metravel-visual-asset-designer`.
 
 ## Правила каталога

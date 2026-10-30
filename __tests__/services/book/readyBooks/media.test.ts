@@ -2,8 +2,8 @@ import {runCli} from '../../../scripts/cli-test-utils';
 
 // Use actual print assets: mocks cannot prove rights coverage or image density.
 describe('ready-book print-media gate', () => {
-  it('checks the complete 24-place and two-cover registry', () => {
-    const result = runCli(process.execPath, ['scripts/books/media-check.mjs']);
+  it('keeps the historical print-media registry independently verifiable without publishing it', () => {
+    const result = runCli(process.execPath, ['scripts/books/media-check.mjs', '--legacy']);
     expect(result.status).toBe(0);
     expect(result.stdout).toContain('26 images; 24 stops + 2 covers');
   });

@@ -1,0 +1,4 @@
+interface:
+  display_name: "MeTravel Photo Diary Designer"
+  short_description: "Design photo diary art and page samples"
+  default_prompt: "Use $metravel-travel-book-designer to prepare the requested approval page or style comparison for the photo diary."

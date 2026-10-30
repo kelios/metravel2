@@ -14,6 +14,11 @@ if (!process.execArgv.includes('--experimental-strip-types')) {
 
 const {validateEditorialBookDraft, validateReadyBook, buildReadyBookPagePlan} = await import('../services/book/readyBooks/validation/index.ts');
 const args = process.argv.slice(2);
+if (args[0] === '--sources') {
+  const {loadSelectedBook} = await import('./books/source-ready-book.mjs');
+  for (const country of ['by', 'pl']) {const {book} = await loadSelectedBook(country); const result = validateEditorialBookDraft(book); if (!result.success) throw new Error(JSON.stringify(result.issues)); console.log(`${country}: ${book.stops.length} selected author-1 places; ${buildReadyBookPagePlan(book).length} body pages; approved source/art association verified`);}
+  process.exit(0);
+}
 if (args[0] === '--production') {
   const child = spawnSync(process.execPath, [...process.execArgv, 'scripts/books/validate-production.mjs', ...args.slice(1)], {stdio: 'inherit'});
   if (child.error) console.error(child.error.message);
@@ -80,6 +85,7 @@ for (const file of files) {
     if (assetsRoot) await verifyAssets(book);
     const plan = buildReadyBookPagePlan(book);
     console.log(`${file}: ${editorial ? 'EDITORIAL' : metadataOnly ? 'METADATA ONLY' : 'ASSETS VERIFIED'} ${book.id}@${book.revision}; ${plan.length} body pages + 4 separate cover pages`);
+    if (editorial && book.stops.length < 30) console.log('  Archived editorial composition; fewer than 30 selected places cannot be published as the current edition.');
     if (editorial && book.gaps?.length) console.log(`  Unresolved editorial gaps (not ready for acceptance): ${book.gaps.join('; ')}`);
   } catch (error) {
     failed = true;

@@ -3,6 +3,7 @@ import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from '
 import { Link, useLocalSearchParams } from 'expo-router';
 import { useIsFocused } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
+import { ReadyBookRelatedLink } from '@/components/books/ReadyBookRelatedLink';
 
 import { QuestWizard as QuestWizardDirect } from '@/components/quests/QuestWizard';
 import QuestConsentGate from '@/components/quests/QuestConsentGate';
@@ -697,6 +698,7 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
           countryCode={bundle.city?.countryCode}
           coords={coords}
         />
+        <ReadyBookRelatedLink questId={bundle.id} />
         {/* #2459: статьи по смыслу текста квеста — поверх гео-блока, без дубля квестов. */}
         <AiSimilarSection type="quest" id={Number(bundle.id)} limit={3} />
       </>

@@ -4,6 +4,7 @@ import path from 'path'
 import {
   APP_PARAM_ROUTE_ROOTS,
   APP_ROUTE_ROOTS,
+  APP_WEB_ONLY_ROUTE_ROOTS,
   isAppRoutePath,
   resolveAppRouteForSiteUrl,
   resolveSitePath,
@@ -41,8 +42,12 @@ describe('siteLinks', () => {
   it('keeps the app route allowlist in sync with the expo-router file tree', () => {
     const { indexRoots, paramRoots } = readRouteRoots()
 
-    expect([...APP_ROUTE_ROOTS].sort()).toEqual([...indexRoots].sort())
+    expect([...APP_ROUTE_ROOTS, ...APP_WEB_ONLY_ROUTE_ROOTS].sort()).toEqual([...indexRoots].sort())
     expect([...APP_PARAM_ROUTE_ROOTS].sort()).toEqual([...paramRoots].sort())
+    for (const root of APP_WEB_ONLY_ROUTE_ROOTS) {
+      expect(APP_ROUTE_ROOTS.has(root)).toBe(false)
+      expect(APP_PARAM_ROUTE_ROOTS.has(root)).toBe(false)
+    }
   })
 
   it('resolves own-site paths for relative and metravel.by URLs only', () => {
@@ -59,6 +64,15 @@ describe('siteLinks', () => {
     expect(resolveSitePath('mailto:a@b.by')).toBeNull()
     expect(resolveSitePath('#section')).toBeNull()
     expect(resolveSitePath(null)).toBeNull()
+  })
+
+  it('keeps web-only book links outside native routes while preserving the cookie fallback', () => {
+    for (const href of ['/books', '/books/belarus?profile=album-a5#download', 'https://metravel.by/books/belarus']) {
+      expect(resolveAppRouteForSiteUrl(href)).toBeNull()
+    }
+    expect(isAppRoutePath('/books')).toBe(false)
+    expect(isAppRoutePath('/books/belarus')).toBe(false)
+    expect(resolveAppRouteForSiteUrl('/cookies')).toBe('/cookies')
   })
 
   it('treats only paths with an app screen as app routes', () => {

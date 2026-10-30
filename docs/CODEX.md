@@ -28,9 +28,15 @@
 | Видимый web UI | domain/feature skill | `$metravel-ui-guardrails`; browser QA только после code review в `testing` |
 | Tests/e2e/quality | `$metravel-test-runner`, `$metravel-test-writer` или `$metravel-e2e-runner` | `$metravel-quality-fixer` только для полного цикла |
 | Docs/skills/prompts | `$metravel-docs-maintainer` | `$metravel-prompt-maintainer` только для prompt/metadata |
+| Готовые книги-фотодневники | `$metravel-travel-book-designer` / `travel-book-designer` для стиля и макета; `$metravel-travel-book-builder` / `travel-book-builder` для сборки PDF | `imagegen` для иллюстраций, `pdf` для авторского контроля макета; текущий состав и формат — `docs/features/travel-memory-books.md` |
 | Наборы/обучение/GGUF metravel-llm | `$metravel-llm-training` / `llm-trainer` | независимая оценка — `$metravel-llm-evaluation` / `llm-judge`; app/retrieval changes — feature owner |
 | Task board | `$metravel-problem-memory` → `$metravel-task-contract` → `$metravel-ticket-board` | sprint reviewer только для acceptance |
 | Backend/API diagnosis | `$metravel-backend-diagnostician` | read-only; board route для owner handoff |
+
+Новые роли книг выбираются по фактическому списку Agent tool. Если
+`travel-book-designer` или `travel-book-builder` ещё не доступны как `agent_type`,
+передай соответствующий `.claude/agents/travel-book-*.md` доступному `default`
+агенту; наличие файла адаптера само по себе не доказывает загрузку роли в runtime.
 | Android-specific | `$metravel-android-developer` | mobile tester/local builder/operator по точному stage |
 | iPhone-specific | соответствующий iOS analyst/architect/developer/tester | release operator только по exact authorization |
 | Performance/security/growth/SEO | соответствующий analyst/reviewer/operator | implementation skill только если правки разрешены |

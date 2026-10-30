@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
+import { ReadyBookRelatedLink } from '@/components/books/ReadyBookRelatedLink'
 
 import { useThemedColors } from '@/hooks/useTheme';
 import { SEMANTIC_ACTION_ICON } from '@/components/navigation/navigationActionMeta';
@@ -285,6 +286,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
           />
 
           {ratingSlot ? <View style={styles.ratingSlot}>{ratingSlot}</View> : null}
+          <ReadyBookRelatedLink sourceTravelId={relatedTravelId} />
 
           {showInlineRelatedTravelActions && relatedTravelUrl ? (
             <View style={styles.inlineRelatedTravelActions}>

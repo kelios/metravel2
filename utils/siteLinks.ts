@@ -61,10 +61,10 @@ export function resolveSitePath(href?: string | null): string | null {
 }
 
 /**
- * Корневые сегменты экранов `app/` (expo-router), у которых есть index-экран.
- * Пустая строка — главная. Синхронность с файловой системой проверяет
- * `__tests__/utils/siteLinks.test.ts`: экран без записи здесь открывался бы с
- * native в системном браузере, а удалённый — в +not-found.
+ * Корневые сегменты экранов `app/` (expo-router), доступных на native и имеющих index.
+ * Пустая строка — главная. Тест `__tests__/utils/siteLinks.test.ts` сверяет их вместе
+ * с APP_WEB_ONLY_ROUTE_ROOTS с файловой системой: пропущенный native-экран открылся
+ * бы в браузере, а удалённый — в +not-found.
  */
 export const APP_ROUTE_ROOTS: ReadonlySet<string> = new Set([
   '',
@@ -120,6 +120,9 @@ export const APP_PARAM_ROUTE_ROOTS: ReadonlySet<string> = new Set([
   'travels',
   'user',
 ])
+
+/** Экраны сайта с пустым native fallback: ссылки на них остаются в системном браузере. */
+export const APP_WEB_ONLY_ROUTE_ROOTS: ReadonlySet<string> = new Set(['books'])
 
 /** Есть ли у пути сайта экран приложения. `/api/…`, `/media/…`, `/board` — нет. */
 export function isAppRoutePath(path: string): boolean {

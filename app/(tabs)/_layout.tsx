@@ -313,6 +313,8 @@ export default function TabLayout() {
                 <Tabs.Screen name="article/[id]" options={HIDDEN} />
                 <Tabs.Screen name="export" options={HIDDEN} />
                 <Tabs.Screen name="book-exports/[job_id]" options={HIDDEN} />
+                <Tabs.Screen name="books/index" options={HIDDEN} />
+                <Tabs.Screen name="books/[slug]" options={HIDDEN} />
                 <Tabs.Screen name="quests/scenario" options={HIDDEN} />
                 <Tabs.Screen name="quests/theme/[theme]" options={HIDDEN} />
                 <Tabs.Screen name="quests/country/[country]/index" options={HIDDEN} />

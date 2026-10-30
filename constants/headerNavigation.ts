@@ -30,6 +30,7 @@ export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
   { path: '/trips', get label() { return i18nT('navigationStatic:constants.headerNavigation.poputchiki_d9961c8c') }, icon: 'users', priority: 'primary', desktopBar: false },
   { path: '/roulette', get label() { return i18nT('navigationStatic:constants.headerNavigation.sluchaynyy_marshrut_3f437e35') }, icon: 'dice', priority: 'primary' },
   { path: '/quests', get label() { return i18nT('navigationStatic:constants.headerNavigation.kvesty_ec386501') }, icon: 'quest-route', priority: 'primary' },
+  { path: '/books', get label() { return i18nT('books:title') }, icon: 'book-open', priority: 'primary', desktopBar: false },
   // #2460: ассистент сайта — только под фича-флагом (локально включён, на проде выключен).
   ...(isAiAssistantEnabled()
     ? [{ path: '/assistant', get label() { return i18nT('aiAssistStatic:nav.assistant') }, icon: 'message-circle' as const, priority: 'primary' as const }]

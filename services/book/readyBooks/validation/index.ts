@@ -22,13 +22,4 @@ export function validateReadyBook(value: unknown): BookValidationResult<ReadyBoo
   return validate(readyBookSchema, value);
 }
 
-/** Covers have their own numbering and never shift the even left-hand stop page. */
-export function buildReadyBookPagePlan(book: Pick<EditorialBookDraft, 'stops'>) {
-  const opening = ['title', 'preparation', 'usage', 'contents', 'map'];
-  const closing = ['extra-memory', 'checklist', 'credits'];
-  return [
-    ...opening.map((kind, index) => ({number: index + 1, kind})),
-    ...book.stops.flatMap((stop, index) => ['destination', 'photo-memory', 'notes', 'collage'].map((kind, offset) => ({number: 6 + index * 4 + offset, kind, stopId: stop.id}))),
-    ...closing.map((kind, index) => ({number: index + 54, kind})),
-  ];
-}
+export {buildReadyBookPagePlan} from '../composition.ts';

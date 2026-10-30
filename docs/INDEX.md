@@ -119,6 +119,10 @@
 `QUEST_REVIEW_FILTER_1792.md`, `contact-feedback-success.md`,
 `userpoints-map-settings-1787.md`.
 
+`docs/design/travel-memory-books-v1/owner-selection-2026-10-30.md` —
+подтверждённый владельцем состав белорусской книги, связь с точками и статьями
+автора 1; актуальный блок из трёх страниц и ещё не снятые вопросы идентичности.
+
 ## Native/store operations
 
 - `docs/IOS_OWNER_GUIDE.md` — историческая owner-инструкция подготовки Apple

@@ -1,0 +1,62 @@
+import {translate, type TranslationParams} from '@/i18n';
+import {useLocaleRevision} from '@/i18n/useLocaleRevision';
+
+// Literal keys let the web compiler extract the exact locale catalog.
+const copy = {
+  title: () => translate('books:title'),
+  intro: () => translate('books:intro'),
+  partial: () => translate('books:partial'),
+  language: () => translate('books:language'),
+  counts: (params?: TranslationParams) => translate('books:counts', params),
+  pageCount: (params?: TranslationParams) => translate('books:pageCount', params),
+  photoSpace: () => translate('books:photoSpace'),
+  millimeters: () => translate('books:millimeters'),
+  quality: () => translate('books:quality'),
+  proofOnly: () => translate('books:proofOnly'),
+  illustrationPpi: (params?: TranslationParams) => translate('books:illustrationPpi', params),
+  physicalChecks: () => translate('books:physicalChecks'),
+  resolutionPending: () => translate('books:resolutionPending'),
+  providerAcceptance: () => translate('books:providerAcceptance'),
+  paperCheck: () => translate('books:paperCheck'),
+  explore: () => translate('books:explore'),
+  size: () => translate('books:size'),
+  pocket: () => translate('books:pocket'),
+  album: () => translate('books:album'),
+  inside: () => translate('books:inside'),
+  downloads: () => translate('books:downloads'),
+  preview: () => translate('books:preview'),
+  read: () => translate('books:read'),
+  rings: () => translate('books:rings'),
+  sewn: () => translate('books:sewn'),
+  shop: () => translate('books:shop'),
+  control: () => translate('books:control'),
+  body: () => translate('books:body'),
+  cover: () => translate('books:cover'),
+  download: () => translate('books:download'),
+  downloadError: () => translate('books:downloadError'),
+  retry: () => translate('books:retry'),
+  close: () => translate('books:close'),
+  previous: () => translate('books:previous'),
+  next: () => translate('books:next'),
+  page: () => translate('books:page'),
+  zoom: () => translate('books:zoom'),
+  contents: () => translate('books:contents'),
+  pageError: () => translate('books:pageError'),
+  coverTab: () => translate('books:coverTab'),
+  bodyTab: () => translate('books:bodyTab'),
+  back: () => translate('books:back'),
+  notFound: () => translate('books:notFound'),
+  preparing: () => translate('books:preparing'),
+  pending: () => translate('books:pending'),
+  related: () => translate('books:related'),
+  revision: () => translate('books:revision'),
+  megabytes: () => translate('books:megabytes'),
+  downloading: () => translate('books:downloading'),
+  providerPending: () => translate('books:providerPending'),
+  loadingPage: () => translate('books:loadingPage'),
+};
+export const bookT=(key:keyof typeof copy,params?:TranslationParams)=>copy[key](params);
+export function useBookCopy(){
+  useLocaleRevision();
+  return bookT;
+}

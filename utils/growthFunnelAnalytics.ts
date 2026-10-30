@@ -42,6 +42,15 @@ export type AppDownloadSource = 'home_promo' | 'install_bar' | 'app_page' | 'abo
 
 type EventParams = Record<string, unknown>;
 
+export type ReadyBookEvent = 'ReadyBookViewed' | 'ReadyBookPreviewOpened' | 'ReadyBookProfileSelected' | 'ReadyBookDownloadStarted' | 'ReadyBookDownloadFailed' | 'ReadyBookInstructionsViewed' | 'ReadyBookProviderOpened';
+/** DownloadStarted means verified bytes delivered to the browser, never an order. */
+export function trackReadyBookEvent(event:ReadyBookEvent,book:{id:string,revision:string,country:'BY'|'PL'},uiLocale:string,extra:{profileId?:string,artifactPurpose?:string,providerId?:string}={}){
+  queueAnalyticsEvent(event,{
+    book_id:book.id,revision:book.revision,country:book.country,ui_locale:uiLocale,content_locale:'ru',
+    ...(extra.profileId?{profile_id:extra.profileId}:{}),...(extra.artifactPurpose?{artifact_purpose:extra.artifactPurpose}:{}),...(extra.providerId?{provider_id:extra.providerId}:{}),
+  });
+}
+
 type RegistrationParams = {
   source?: unknown;
   intent?: unknown;

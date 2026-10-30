@@ -1,102 +1,77 @@
 import {buildReadyBookHtml, embeddedImage, type ReadyBookRenderInput} from '../../../../services/book/readyBooks/render';
-import {splitStory} from '../../../../services/book/readyBooks/render/pages';
-import type {EditorialBookDraft} from '../../../../types/readyBook';
+import {makeEditorialDraft} from './fixtures';
+import {buildReadyBookPagePlan} from '../../../../services/book/readyBooks/composition';
 
-const draft = require('../../../../data/travelBooks/by/editorial.json') as EditorialBookDraft;
-const image = {dataUri: 'data:image/png;base64,aGVsbG8=', credit: 'Test author', sourceUrl: 'https://example.org/photo', rights: 'CC BY 4.0', illustrated: false};
-function input(profileId: 'pocket-150x100' | 'album-a5' = 'pocket-150x100'): ReadyBookRenderInput {
-  return {book: structuredClone(draft), profile: {id: profileId, widthMm: profileId === 'album-a5' ? 148 : 150,
-    heightMm: profileId === 'album-a5' ? 210 : 100, bleedMm: 0, safeMm: 5, bindingMm: 15, binding: 'rings'},
-  purpose: 'read', assets: Object.fromEntries(draft.stops.map(stop => [stop.id, image])), cover: {...image, illustrated: true},
-  qr: Object.fromEntries(draft.stops.map(stop => [stop.id, image.dataUri])),
-  fonts: {regular: 'data:font/ttf;base64,aGVsbG8=', bold: 'data:font/ttf;base64,aGVsbG8=', serif: 'data:font/ttf;base64,aGVsbG8='}};
+const image = {dataUri: 'data:image/png;base64,aGVsbG8=', credit: 'Test author', sourceUrl: 'https://example.org/photo', rights: 'Owner commissioned artwork', illustrated: true};
+function input(profileId: 'pocket-150x100' | 'album-a5' = 'pocket-150x100', count=30): ReadyBookRenderInput {
+  const book=makeEditorialDraft(count);
+  return {book,profile:{id:profileId,widthMm:profileId==='album-a5'?148:150,heightMm:profileId==='album-a5'?210:100,bleedMm:0,safeMm:5,bindingMm:15,binding:'rings'},purpose:'read',assets:Object.fromEntries(book.stops.map(stop=>[stop.id,image])),cover:image,
+    qr:Object.fromEntries(book.stops.map(stop=>[stop.id,{map:image.dataUri,article:image.dataUri,sizeMm:22}])),fonts:{regular:'data:font/ttf;base64,aGVsbG8=',bold:'data:font/ttf;base64,aGVsbG8=',serif:'data:font/ttf;base64,aGVsbG8='}};
 }
 
-describe('ready-book physical rendering', () => {
-  it.each(['pocket-150x100', 'album-a5'] as const)('keeps 56 internal pages and four separate covers in %s', id => {
-    const book = input(id);
-    const output = buildReadyBookHtml(book);
-    expect(output.bodyPages).toHaveLength(56);
-    expect(output.coverPages).toHaveLength(4);
-    expect(output.pageMap[5]).toEqual({folio: 6, kind: 'destination', stopId: draft.stops[0].id});
-    expect(output.pageMap[49]).toEqual({folio: 50, kind: 'destination', stopId: draft.stops[11].id});
-    expect(output.bodyPages[5]).toContain('class="book-page left');
-    expect(output.bodyPages[6]).toContain('class="book-page right');
-    expect(output.stylesCss).toContain(`@page{size:${book.profile.widthMm}mm ${book.profile.heightMm}mm`);
-    expect(output.stylesCss).toContain(id === 'album-a5' ? 'width:108mm;height:158mm' : 'width:100mm;height:70mm');
-    expect(output.stylesCss).toContain(id === 'album-a5' ? 'font-size:10.5pt' : 'font-size:9pt');
-    expect(output.bodyPages[8]).toContain(image.credit);
-    expect(output.bodyPages[8]).toContain(image.sourceUrl);
-    // A short notes field must contain explicit vector ink, not a CSS gradient
-    // that disappeared in Chromium's paginated output on the 8 mm compact field.
-    expect(output.bodyPages[7]).toContain('<svg class="lines"');
-    expect(output.bodyPages[7]).toContain('y1="5.925" y2="5.925"');
-    // Preserve the healthy 42 mm compact control's seven complete strokes;
-    // the last 0.15 mm stroke ends at the viewport edge without being clipped.
-    const controlLines = [...output.bodyPages[53].matchAll(/<line\s[^>]*y1="([\d.]+)"/g)].map(match => Number(match[1]));
-    expect(controlLines).toHaveLength(id === 'pocket-150x100' ? 7 : 23);
-    expect(controlLines[controlLines.length - 1] + 0.075).toBeLessThanOrEqual(id === 'pocket-150x100' ? 42 : 140);
-    expect(output.stylesCss).not.toContain('repeating-linear-gradient');
-    expect(output.bodyHtml).not.toContain('overflow:hidden');
+describe('approved photo-diary physical rendering',()=>{
+  it.each(['pocket-150x100','album-a5'] as const)('renders all three roles at native %s size',profile=>{
+    const source=input(profile,31),result=buildReadyBookHtml(source);
+    expect(result.bodyPages).toHaveLength(108);expect(result.coverPages).toHaveLength(4);
+    expect(result.pageMap.filter(page=>page.kind==='destination')).toHaveLength(31);
+    const first=result.pageMap.findIndex(page=>page.kind==='destination');
+    expect(result.bodyPages[first]).toContain('Место на карте');expect(result.bodyPages[first]).toContain('Статья на сайте');expect(result.bodyPages[first]).not.toContain('Квест');
+    expect(result.bodyPages[first+1]).toContain('personal-photo-space');expect(result.bodyPages[first+2]).toContain('blank-diary-space');
+    for(const page of result.bodyPages.slice(first,first+3)){expect(page).not.toContain('<header>');expect(page).not.toContain('<footer>');expect(page).not.toContain('photo-frame');expect(page).not.toContain('class="lines"');}
+    expect(result.stylesCss).toContain(`@page{size:${source.profile.widthMm}mm ${source.profile.heightMm}mm`);
+    expect(result.stylesCss).toContain(profile==='album-a5'?'width:108mm;height:158mm':'width:100mm;height:70mm');
+    if(profile==='pocket-150x100'){expect(result.stylesCss).toContain('bottom:5mm');expect(result.stylesCss).toContain('width:62mm;height:42mm');expect(result.stylesCss).toContain('.art-crop::after');}
+    expect(result.stylesCss).toContain('font-family:BookHand');expect(result.stylesCss).toContain('#805e45');
+    expect(result.stylesCss).not.toMatch(/\.place-story\{[^}]*overflow/);
   });
-
-  it('extends only production page boxes, preserving the trim dimensions and margins', () => {
-    const book = input();
-    book.purpose = 'print-shop';
-    book.profile.bleedMm = 3;
-    const output = buildReadyBookHtml(book);
-    expect(output.stylesCss).toContain('@page{size:156mm 106mm');
-    expect(output.stylesCss).toContain('left:3mm;top:3mm;width:150mm;height:100mm');
-    expect(output.bodyPages[5]).toContain('--inner:15mm;--outer:5mm');
-    expect(output.bodyHtml).not.toMatch(/CMYK|PDF\/X/);
-  });
-
-  it('prints mountain metrics, direction and current safety sources in the same stop block', () => {
-    const book = input();
-    book.book.stops[0].natureRoute = {name: 'Тестовый горный маршрут', direction: 'one-way', distanceKm: 2.4,
-      elevationGainM: 226, durationMinutes: 60, difficulty: 'Камни могут быть скользкими.', seasonality: 'Проверить снег и закрытия.',
-      officialAlertsUrl: 'https://example.org/alerts', metricsSourceUrl: 'https://example.org/route', metricNote: 'Опубликованный ориентир.'};
-    const html = buildReadyBookHtml(book).bodyPages[8].replace(/\u00a0/g, ' ');
-    for (const value of ['2,4 км', '226 м', '60 мин', 'в одну сторону; обратный путь добавляется', 'Камни могут быть скользкими.', 'Проверить снег и закрытия.', 'https://example.org/alerts', 'https://example.org/route']) expect(html).toContain(value);
-    book.book.stops[0].source.url = book.book.stops[0].natureRoute.metricsSourceUrl;
-    const sharedSource = buildReadyBookHtml(book).bodyPages[8];
-    expect(sharedSource.match(/href="https:\/\/example.org\/route"/g)).toHaveLength(1);
-    expect(sharedSource).toContain(image.sourceUrl);
-    expect(sharedSource).not.toContain('История и посещение:');
-    const memory = buildReadyBookHtml(book).bodyPages[6];
-    expect(memory).toContain('<header>Дата');
-    expect(memory).not.toContain('<p class="small">Дата');
-  });
-
-  it('retains every word when the story continues on the notes page', () => {
-    const source = Array.from({length: 90}, (_, index) => `слово${index}`).join(' ');
-    for (const pocket of [true, false]) {
-      const parts = splitStory(source, pocket);
-      expect(parts.filter(Boolean).join(' ')).toBe(source);
-      expect(parts[0].length).toBeLessThanOrEqual(pocket ? 385 : 730);
+  it.each([
+    ['pocket-150x100', 30, 104],
+    ['pocket-150x100', 31, 107],
+    ['album-a5', 30, 104],
+    ['album-a5', 31, 107],
+  ] as const)('renders the final %s map and its complete legend for %i places', (profile, count, mapFolio) => {
+    const source = input(profile, count), result = buildReadyBookHtml(source);
+    const plan = buildReadyBookPagePlan(source.book);
+    expect(result.pageMap).toEqual(plan.map(({number, ...entry}) => ({folio: number, ...entry})));
+    expect(result.pageMap.find(page => page.kind === 'destination')!.folio).toBe(8);
+    const map = plan.find(page => page.kind === 'map')!;
+    expect(map.number).toBe(mapFolio);
+    expect(plan.filter(page => page.kind !== 'padding').at(-1)).toEqual(map);
+    const mapHtml = result.bodyPages[map.number - 1];
+    expect(mapHtml).toContain('Места этой книги на карте');
+    expect(mapHtml).toContain(`data-country-outline="${source.book.country}"`);
+    expect([...mapHtml.matchAll(/data-stop-id="([^"]+)"/g)].map(match => match[1])).toEqual(source.book.stops.map(stop => stop.id));
+    expect(result.bodyPages.filter(page => page.includes('data-country-outline='))).toHaveLength(1);
+    const legend = plan.filter(page => page.kind === 'checklist');
+    const legendHtml = legend.map(page => result.bodyPages[page.number - 1]).join('');
+    expect(legend.flatMap(page => page.stopIds)).toEqual(source.book.stops.map(stop => stop.id));
+    for (const [index, stop] of source.book.stops.entries()) {
+      const destination = plan.find(page => page.kind === 'destination' && page.stopId === stop.id)!;
+      expect(legendHtml).toContain(`<li><span>□ ${index + 1}. ${stop.title}</span><span>${destination.number}</span></li>`);
     }
+    expect(legend.at(-1)!.number).toBeLessThan(map.number);
   });
-
-  it('escapes editorial text and requires self-contained images and fonts', () => {
-    const book = input();
-    book.book.stops[0].title = '<script>alert("story")</script>';
-    const output = buildReadyBookHtml(book);
-    expect(output.bodyHtml).toContain('&lt;script&gt;alert(&quot;story&quot;)&lt;/script&gt;');
-    expect(output.bodyHtml).not.toContain('<script>');
-    expect(() => embeddedImage('https://example.org/picture.jpg')).toThrow('embedded image');
-    book.fonts.regular = 'https://example.org/font.ttf';
-    expect(() => buildReadyBookHtml(book)).toThrow('Embedded TTF');
+  it('omits a repeated local name that differs only by case',()=>{
+    const source=input();source.book.stops[0].title='Мирский замок';source.book.stops[0].localName='Мирский Замок';const result=buildReadyBookHtml(source);const first=result.pageMap.findIndex(page=>page.kind==='destination');expect(result.bodyPages[first]).not.toContain('Мирский Замок');expect(result.bodyPages[first]).not.toContain('<p>');
   });
-
-  it('rejects missing media, invalid margins and bleed in reading files', () => {
-    const book = input();
-    delete book.assets[book.book.stops[0].id];
-    expect(() => buildReadyBookHtml(book)).toThrow('Missing image');
-    const invalid = input();
-    invalid.profile.bindingMm = 50;
-    expect(() => buildReadyBookHtml(invalid)).toThrow();
-    const bleeding = input();
-    bleeding.profile.bleedMm = 2;
-    expect(() => buildReadyBookHtml(bleeding)).toThrow('Bleed');
+  it.each([
+    ['экто тропа',''],
+    ['Ошмяны - Боруны - граница Минской области',''],
+    ['Замок Пескова-Скала (Zamek Pieskowa Skała)','Zamek Pieskowa Skała'],
+    ['Zamek Rabsztyn','Zamek Rabsztyn'],
+  ])('prints only a distinct native local name from %s',(localName,expected)=>{
+    const source=input();source.book.stops[0].title='Замок';source.book.stops[0].localName=localName;const result=buildReadyBookHtml(source);const first=result.pageMap.findIndex(page=>page.kind==='destination');
+    if(expected){expect(result.bodyPages[first]).toContain(`<p>${expected}</p>`);}else expect(result.bodyPages[first]).not.toContain('<p>');
+  });
+  it('prints a third QR only with a verified exact-place quest',()=>{
+    const source=input();source.book.stops[0].navigation!.quest={url:'https://metravel.by/quests/16/mir-castle',id:16,evidence:'Verified exact-place step'};source.qr[source.book.stops[0].id].quest=image.dataUri;
+    const result=buildReadyBookHtml(source);const first=result.pageMap.findIndex(page=>page.kind==='destination');expect(result.bodyPages[first]).toContain('>Квест</span>');expect(result.bodyPages[first]).toContain('/quests/16/mir-castle');
+  });
+  it('preserves bleed and separate numbering without rendering the retired prototype',()=>{
+    const source=input();source.purpose='print-shop';source.profile.bleedMm=3;expect(buildReadyBookHtml(source).stylesCss).toContain('@page{size:156mm 106mm');expect(()=>buildReadyBookHtml(input('album-a5',12))).toThrow('at least 30');
+    expect(buildReadyBookPagePlan(source.book).filter(page=>page.stopId===source.book.stops[0].id).map(page=>page.kind)).toEqual(['destination','photo-memory','notes']);
+  });
+  it('escapes editorial text and requires self-contained images and fonts',()=>{
+    const source=input();source.book.stops[0].title='<script>alert("story")</script>';const result=buildReadyBookHtml(source);expect(result.bodyHtml).not.toContain('<script>');expect(result.bodyHtml).toContain('&lt;script&gt;');expect(()=>embeddedImage('https://example.org/image.jpg')).toThrow('embedded image');source.fonts.regular='https://example.org/font.ttf';expect(()=>buildReadyBookHtml(source)).toThrow('Embedded TTF');
   });
 });

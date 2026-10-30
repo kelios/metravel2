@@ -121,6 +121,7 @@ runStep('node', ['scripts/prepare-dist-prod.js', '--src', exportPath, '--dest', 
 runStep('node', ['scripts/postprocess-route-shells.js', '--dist', stagingPath])
 runStep('node', ['scripts/guard-site-owner-name.js', '--dist', stagingPath])
 runStep('node', ['scripts/copy-public-files.js', stagingPath])
+runStep('node', ['scripts/books/copy-publication.cjs', stagingPath])
 runStep('node', ['scripts/add-cache-bust-meta.js', stagingPath])
 // #2088: add-cache-bust-meta.js is where the charset-position fix runs
 // (scripts/lib/htmlCharset.js); guard it right after, before anything else

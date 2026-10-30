@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "maxCharacters": 120,
+  "defaultPresetId": "home-memories",
+  "presets": [
+    {"id": "home-memories", "text": "Хорошо, когда есть куда вернуться. Прекрасно, когда есть что вспомнить"},
+    {"id": "world-memories", "text": "Однажды мы выйдем за порог — и принесём домой целый мир воспоминаний"}
+  ]
+}

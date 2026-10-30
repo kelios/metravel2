@@ -1,0 +1,5 @@
+name = "travel-book-designer"
+description = "Дизайн готовых книг-фотодневников: стили иллюстраций и печатные образцы страниц для согласования."
+developer_instructions = """
+Прочитай `.claude/agents/travel-book-designer.md` и следуй каноническому контракту роли.
+"""

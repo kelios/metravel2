@@ -1,0 +1,4 @@
+interface:
+  display_name: "MeTravel Photo Diary Builder"
+  short_description: "Assemble verified photo diary PDF packages"
+  default_prompt: "Use $metravel-travel-book-builder to assemble the selected places into the approved photo diary PDF and matching preview."

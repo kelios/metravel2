@@ -1,0 +1,2164 @@
+{
+  "schemaVersion": 1,
+  "country": "PL",
+  "authorId": 1,
+  "verifiedOn": "2026-10-30",
+  "status": "source-verified-assembly-input",
+  "compositionCount": 30,
+  "records": [
+    {
+      "id": "point-15434",
+      "pointId": 15434,
+      "country": "PL",
+      "printTitle": "Замок Мальборк",
+      "localName": "Замок Мальборк (Muzeum Zamkowe w Malborku)",
+      "copyRu": "Мальборк вытянулся вдоль реки Ногат длинной стеной из красного кирпича. Внутри замкового комплекса сохранились дворы, галереи и готические залы. Авторская поездка сюда стала отдельным выездом во время отдыха на Балтике.",
+      "coordinates": {
+        "lat": 54.03936,
+        "lng": 19.02812
+      },
+      "article": {
+        "id": 630,
+        "url": "https://metravel.by/travels/zamok-malbork-krupneishii-kirpichnyi-zamok-mira",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-10T08:47:55.364525Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/15434/conversions/0869ed182ca64d3cba4229406238b4bc.webp",
+        "originalUri": "https://metravel.by/address-image/15434/conversions/0869ed182ca64d3cba4229406238b4bc.webp",
+        "publicImageUri": "https://metravel.by/address-image/15434/conversions/0869ed182ca64d3cba4229406238b4bc.webp",
+        "representation": "article-original-representation",
+        "width": 1600,
+        "height": 1200,
+        "alt": "Замок Мальборк (Muzeum Zamkowe w Malborku)",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[15434] image and media.address_images[15434].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 630,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Замок Мальборк (Muzeum Zamkowe w Malborku)",
+          "metadataLocation": "media.address_images.15434.alt",
+          "html": []
+        },
+        "editorialCaption": "Замок Мальборк"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=54.03936&lng=19.02812&placeId=15434&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%9C%D0%B0%D0%BB%D1%8C%D0%B1%D0%BE%D1%80%D0%BA",
+        "article": "https://metravel.by/travels/zamok-malbork-krupneishii-kirpichnyi-zamok-mira",
+        "quest": "https://metravel.by/quests/84/malbork-marienburg"
+      },
+      "quest": {
+        "status": "verified-associated",
+        "id": 90,
+        "url": "https://metravel.by/quests/84/malbork-marienburg",
+        "title": "Квест по Мальборку: ядро, промахнувшееся мимо Ордена",
+        "evidence": {
+          "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+          "publicDetailUrl": "https://metravel.by/api/quests/90/?lang=ru",
+          "publishedPublicDetailStatus": 200,
+          "publishedPageStatus": 200,
+          "stepId": 899,
+          "stepTitle": "Замок: ядро предателя и крепость, которую купили (по желанию)",
+          "stepLocation": "Muzeum Zamkowe, вход с ул. Starościńska",
+          "stepCoordinates": {
+            "lat": 54.039031,
+            "lng": 19.030312
+          },
+          "distanceM": 148,
+          "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+          "verifiedOn": "2026-10-30"
+        }
+      },
+      "sourceEvidence": {
+        "rawTitle": "Замок Мальборк (Muzeum Zamkowe w Malborku)",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "В замок Мальборк мы съездили во время нашего длительного пребывания на Балтике. От Гданьска до него около 60 километров по трассе S7 и DK22, дорога на машине занимает примерно час, хотя летом и в выходные лучше закладывать больше времени.\n\nРечь именно о кирпичных замках и о площади. Комплекс занимает около 20–21 гектара и состоит из трёх укреплённых частей — Высокого замка, Среднего замка и Предзамка, разделённых рвами и стенами. Строительство начали около 1276 года, а после переноса сюда резиденции великого магистра в 1309 году крепость расширяли под нужды столицы орденского государства. В 1997 году Мальборк включили в список Всемирного наследия ЮНЕСКО.",
+        "sourceSnapshot": "public-travel-api:630",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,172"
+      }
+    },
+    {
+      "id": "point-16094",
+      "pointId": 16094,
+      "country": "PL",
+      "printTitle": "Вавельский замок",
+      "localName": "Королевский замок на Вавеле (Zamek Królewski na Wawelu)",
+      "copyRu": "Королевский замок стоит на Вавельском холме над Вислой. Его дворы и фасады составляют отдельную прогулку в историческом Кракове. В авторском путеводителе Вавель соседствует с собором, набережной и другими местами старого города.",
+      "coordinates": {
+        "lat": 50.0544051,
+        "lng": 19.9360223
+      },
+      "article": {
+        "id": 568,
+        "url": "https://metravel.by/travels/krakov-putevoditel-po-mestam-chto-posmotret-v-gorode-i-gde-guliat",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-26T06:40:22.448814Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/16094/conversions/987ab05ed2cd4578b1e1959c7e4fd068.webp",
+        "originalUri": "https://metravel.by/address-image/16094/conversions/987ab05ed2cd4578b1e1959c7e4fd068.webp",
+        "publicImageUri": "https://metravel.by/address-image/16094/conversions/987ab05ed2cd4578b1e1959c7e4fd068.webp",
+        "representation": "article-original-representation",
+        "width": 1200,
+        "height": 900,
+        "alt": "Королевский замок на Вавеле (Zamek Królewski na Wawelu)",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[16094] image and media.address_images[16094].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 568,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Королевский замок на Вавеле (Zamek Królewski na Wawelu)",
+          "metadataLocation": "media.address_images.16094.alt",
+          "html": []
+        },
+        "editorialCaption": "Вавельский замок"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.0544051&lng=19.9360223&placeId=16094&focusPlace=1&placeTitle=%D0%92%D0%B0%D0%B2%D0%B5%D0%BB%D1%8C%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/krakov-putevoditel-po-mestam-chto-posmotret-v-gorode-i-gde-guliat"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Королевский замок на Вавеле (Zamek Królewski na Wawelu)",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Поэтому этот путеводитель получился не в формате «20 мест, которые нужно успеть за один день». Скорее это большая карта Кракова, из которой можно собрать свой маршрут: классический первый день с Рыночной площадью и Вавелем, вечер в Казимеже, историческое Подгуже, социалистическую Нову-Хуту, музейный день, прогулку по лесу, маршрут по всем курганам или целый день, посвящённый технической истории города.\n\nВавель — главный ориентир города, но мы бы не превращали его в марафон по всем залам подряд. Королевский замок и кафедральный собор — это два отдельных больших объекта, плюс территория холма, дворы, башня, сады, пещера дракона и прогулка вдоль стен.",
+        "sourceSnapshot": "public-travel-api:568",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 5,69"
+      }
+    },
+    {
+      "id": "point-14636",
+      "pointId": 14636,
+      "country": "PL",
+      "printTitle": "Замок Ксёнж",
+      "localName": "Zamek Książ",
+      "copyRu": "Ксёнж стоит на скале над рекой Пелчницей среди лесов Нижней Силезии. Замковый ансамбль соединяет парадные фасады, террасы и большой парк. В авторской поездке важной частью впечатления стали и архитектура, и природное окружение.",
+      "coordinates": {
+        "lat": 50.842158,
+        "lng": 16.291979
+      },
+      "article": {
+        "id": 493,
+        "url": "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T15:37:28.904518Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/gallery/6799/conversions/GVjLceiyTAkbyWtnnmqgZlg8cpYIkXumlVMHXYRB-detail_hd.jpg",
+        "originalUri": "https://metravel.by/gallery/6799/conversions/GVjLceiyTAkbyWtnnmqgZlg8cpYIkXumlVMHXYRB-detail_hd.jpg",
+        "publicImageUri": "https://metravel.by/gallery/6799/conversions/GVjLceiyTAkbyWtnnmqgZlg8cpYIkXumlVMHXYRB-detail_hd.jpg",
+        "representation": "article-original-representation",
+        "width": 1080,
+        "height": 1080,
+        "alt": "GVjLceiyTAkbyWtnnmqgZlg8cpYIkXumlVMHXYRB",
+        "association": {
+          "kind": "same-article-gallery",
+          "evidence": "Article493 gallery[id2733] caption explicitly says «Замок Ксёнж на скале над ущельем Пелчницы, вид сверху»; originalURI comes from the same media.gallery[id2733].variants.original, not inferred from a thumbnail."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 493,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "GVjLceiyTAkbyWtnnmqgZlg8cpYIkXumlVMHXYRB",
+          "metadataLocation": "media.gallery.alt",
+          "html": []
+        },
+        "editorialCaption": "Замок Ксёнж"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.842158&lng=16.291979&placeId=14636&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%9A%D1%81%D1%91%D0%BD%D0%B6",
+        "article": "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Zamek Książ",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Замок Ксёнж в Валбжихе — третий по величине замок Польши после Вавеля и Мальборка. Он стоит на скале над рекой Пелчницей, среди густых лесов и ущелий Нижней Силезии, и притягивает сразу несколькими сюжетами: аристократическая роскошь Гохбергов, драматичная история княгини Дейзи фон Плесс и загадочные подземелья нацистского проекта «Риезе». Сюда едут и за архитектурой, и за тайнами Второй мировой.\n\nЗамок стоит на скале над рекой Пелчницей в окрестностях Валбжиха и уступает по размерам только Вавелю и Мальборку. Первое укрепление здесь построил князь Болко I Суровый ещё в 1288 году — оно контролировало важные торговые пути Нижней Силезии. Главная глава истории связана с родом Гохбергов: они владели Ксёнжем больше 400 лет и превратили крепость в роскошную резиденцию с парадными залами, террасами и художественными коллекциями. Золотую эпоху замка олицетворяет княгиня Дейзи фон Плесс, чьи дневники до сих пор используют историки.",
+        "sourceSnapshot": "public-travel-api:493",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,24"
+      }
+    },
+    {
+      "id": "point-16231",
+      "pointId": 16231,
+      "country": "PL",
+      "printTitle": "Замок Пескова-Скала",
+      "localName": "Замок Пескова-Скала (Zamek Pieskowa Skała)",
+      "copyRu": "Замок Пескова-Скала возвышается над долиной Прандника в Ойцовском парке. Рядом находится известняковый останец Мачуга Геркулеса. В статье — велопоездка по долине со скалами и лугами.",
+      "coordinates": {
+        "lat": 50.2436333,
+        "lng": 19.78085
+      },
+      "article": {
+        "id": 598,
+        "url": "https://metravel.by/travels/oitsovskii-park-na-velosipede-iz-krakova-ili-legkii-marshrut-po-doline-prandnika",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:11:33.741759Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/16231/conversions/3c3f01b7f7b14e8da2d18895f807416f.webp",
+        "originalUri": "https://metravel.by/address-image/16231/conversions/3c3f01b7f7b14e8da2d18895f807416f.webp",
+        "publicImageUri": "https://metravel.by/address-image/16231/conversions/3c3f01b7f7b14e8da2d18895f807416f.webp",
+        "representation": "article-original-representation",
+        "width": 768,
+        "height": 1024,
+        "alt": "Замок Пескова-Скала (Zamek Pieskowa Skała)",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[16231] image and media.address_images[16231].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 598,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Замок Пескова-Скала (Zamek Pieskowa Skała)",
+          "metadataLocation": "media.address_images.16231.alt",
+          "html": []
+        },
+        "editorialCaption": "Замок Пескова-Скала"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.2436333&lng=19.78085&placeId=16231&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%9F%D0%B5%D1%81%D0%BA%D0%BE%D0%B2%D0%B0-%D0%A1%D0%BA%D0%B0%D0%BB%D0%B0",
+        "article": "https://metravel.by/travels/oitsovskii-park-na-velosipede-iz-krakova-ili-legkii-marshrut-po-doline-prandnika",
+        "quest": "https://metravel.by/quests/74/ojcow-lokietek"
+      },
+      "quest": {
+        "status": "verified-associated",
+        "id": 80,
+        "url": "https://metravel.by/quests/74/ojcow-lokietek",
+        "title": "Квест по Ойцувской долине: паук, спасший короля",
+        "evidence": {
+          "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+          "publicDetailUrl": "https://metravel.by/api/quests/80/?lang=ru",
+          "publishedPublicDetailStatus": 200,
+          "publishedPageStatus": 200,
+          "stepId": 820,
+          "stepTitle": "Пескова Скала — замок, названный в честь пёсика",
+          "stepLocation": "Zamek Pieskowa Skała",
+          "stepCoordinates": {
+            "lat": 50.24421,
+            "lng": 19.78004
+          },
+          "distanceM": 86,
+          "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+          "verifiedOn": "2026-10-30"
+        }
+      },
+      "sourceEvidence": {
+        "rawTitle": "Замок Пескова-Скала (Zamek Pieskowa Skała)",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Река Prądnik тысячелетиями прорезала здесь известняковые породы, поэтому дорога идёт между скалами, лесом и старыми зданиями. В долине сохранились старые мельницы, а вокруг находится множество карстовых источников и пещер.\n\nПодробнее про сам замок и весь Ойцовский национальный парк пешком — в отдельной статье Замок Пескова Скала и Ойцовский национальный парк.",
+        "sourceSnapshot": "public-travel-api:598",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 69,139"
+      }
+    },
+    {
+      "id": "point-16233",
+      "pointId": 16233,
+      "country": "PL",
+      "printTitle": "Замок в Ойцове",
+      "localName": "Руины замка в Ойцове (Zamek w Ojcowie)",
+      "copyRu": "Руины замка в Ойцове находятся на скале над долиной Прандника. Сохранившиеся стены напоминают об укреплённой резиденции среди известняковых склонов. В авторском маршруте замок стал одной из остановок велосипедной прогулки по национальному парку.",
+      "coordinates": {
+        "lat": 50.2118242,
+        "lng": 19.8300165
+      },
+      "article": {
+        "id": 598,
+        "url": "https://metravel.by/travels/oitsovskii-park-na-velosipede-iz-krakova-ili-legkii-marshrut-po-doline-prandnika",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:11:33.741759Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/16233/conversions/a0e54ed480224138a2752307469c4a23.webp",
+        "originalUri": "https://metravel.by/address-image/16233/conversions/a0e54ed480224138a2752307469c4a23.webp",
+        "publicImageUri": "https://metravel.by/address-image/16233/conversions/a0e54ed480224138a2752307469c4a23.webp",
+        "representation": "article-original-representation",
+        "width": 1024,
+        "height": 768,
+        "alt": "Руины замка в Ойцове (Zamek w Ojcowie)",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[16233] image and media.address_images[16233].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 598,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Руины замка в Ойцове (Zamek w Ojcowie)",
+          "metadataLocation": "media.address_images.16233.alt",
+          "html": []
+        },
+        "editorialCaption": "Замок в Ойцове"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.2118242&lng=19.8300165&placeId=16233&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%B2+%D0%9E%D0%B9%D1%86%D0%BE%D0%B2%D0%B5",
+        "article": "https://metravel.by/travels/oitsovskii-park-na-velosipede-iz-krakova-ili-legkii-marshrut-po-doline-prandnika",
+        "quest": "https://metravel.by/quests/74/ojcow-lokietek"
+      },
+      "quest": {
+        "status": "verified-associated",
+        "id": 80,
+        "url": "https://metravel.by/quests/74/ojcow-lokietek",
+        "title": "Квест по Ойцувской долине: паук, спасший короля",
+        "evidence": {
+          "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+          "publicDetailUrl": "https://metravel.by/api/quests/80/?lang=ru",
+          "publishedPublicDetailStatus": 200,
+          "publishedPageStatus": 200,
+          "stepId": 817,
+          "stepTitle": "Замок «Отец у скалы» — сыновний подарок Казимира",
+          "stepLocation": "Руины замка Казимира Великого, Ойцув",
+          "stepCoordinates": {
+            "lat": 50.211383,
+            "lng": 19.828506
+          },
+          "distanceM": 118,
+          "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+          "verifiedOn": "2026-10-30"
+        }
+      },
+      "sourceEvidence": {
+        "rawTitle": "Руины замка в Ойцове (Zamek w Ojcowie)",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Вы не пытаетесь на машине заехать в самый центр Ойцова в воскресенье, не ищете место среди сотен туристов, а спокойно оставляете машину в начале долины и дальше едете на велосипеде.\n\nПро Ойцовскую долину у нас уже есть свой квест — ссылка в разделе «Наш квест по Ойцовскому парку» чуть выше. А если после велосипеда останутся силы или захочется добавить в поездку ещё немного игры, в самом Кракове есть несколько маршрутов в похожем формате: идёшь по городу или на велосипеде и по дороге отвечаешь на вопросы, всё бесплатно и с телефона.",
+        "sourceSnapshot": "public-travel-api:598",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 49,163"
+      }
+    },
+    {
+      "id": "point-13224",
+      "pointId": 13224,
+      "country": "PL",
+      "printTitle": "Замок Огродзенец",
+      "localName": "Замок Огродзенец (Zamek Ogrodzieniec)",
+      "copyRu": "Замок Огродзенец возвышается среди известняковых скал над Подзамче. Руины стен и башен выглядят продолжением самого каменного ландшафта. На фотографиях авторской поездки заснеженные дворы и склоны делают этот силуэт особенно выразительным.",
+      "coordinates": {
+        "lat": 50.45312,
+        "lng": 19.5529604
+      },
+      "article": {
+        "id": 267,
+        "url": "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-26T16:06:51.464522Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/fc929542e2ed409caef2b93b7254eb28.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/fc929542e2ed409caef2b93b7254eb28.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/fc929542e2ed409caef2b93b7254eb28.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 563,
+        "alt": "Замок Огродзенец и посёлок Подзамче с высоты: заснеженные руины XIV века",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 267 HTML and media.article_body.gallery[id0]; alt: Замок Огродзенец и посёлок Подзамче с высоты: заснеженные руины XIV века"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 267,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Замок Огродзенец и посёлок Подзамче с высоты: заснеженные руины XIV века",
+          "metadataLocation": "media.article_body.gallery.0.alt",
+          "html": [
+            {
+              "alt": "Замок Огродзенец и посёлок Подзамче с высоты: заснеженные руины XIV века",
+              "src": "https://metravel.by/travel-description-image/fc929542e2ed409caef2b93b7254eb28.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Замок Огродзенец"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.45312&lng=19.5529604&placeId=13224&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%9E%D0%B3%D1%80%D0%BE%D0%B4%D0%B7%D0%B5%D0%BD%D0%B5%D1%86",
+        "article": "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Замок Огродзенец (Zamek Ogrodzieniec)",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Замок Огродзенец (Zamek Ogrodzieniec) в Подзамче — один из самых сохранившихся замков «Орлиных гнёзд» в Польше, построенный в XIV веке при Казимире Великом. Рядом — известняковые скалы Скального города, которые облюбовали альпинисты, и полузасыпанный бункер «Тобрук» времён Второй мировой. Полдня на всё; парковка платная, вход в замок — 30 злотых со взрослого и 21 льготный (тариф с 1 января 2026 года).\n\nЧастые вопросы: Замок Огродзенец и Скальный город Подзамче",
+        "sourceSnapshot": "public-travel-api:267",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,29"
+      }
+    },
+    {
+      "id": "point-12590",
+      "pointId": 12590,
+      "country": "PL",
+      "printTitle": "Замок Мирув",
+      "localName": "Zamek Mirów",
+      "copyRu": "Мирув входит в группу замков «Орлиные гнёзда». Его каменные руины стоят на известняковом возвышении среди открытых лугов. Автор соединяет эту остановку с пещерами и соседним замком Боболице в одной прогулке по Юрскому краю.",
+      "coordinates": {
+        "lat": 50.6144677,
+        "lng": 19.4750991
+      },
+      "article": {
+        "id": 264,
+        "url": "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-06T18:39:16.474337Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/be418b3005c84a8092058a9a0cd8f751.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/be418b3005c84a8092058a9a0cd8f751.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/be418b3005c84a8092058a9a0cd8f751.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 750,
+        "height": 1000,
+        "alt": null,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article264 begins with the section «Замок Мирув / Zamek Mirów»; gallery[id0] is its opening image, before the later Bobolice section."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 264,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": null,
+          "metadataLocation": "media.article_body.gallery.0.alt",
+          "html": [
+            {
+              "alt": null,
+              "src": "https://metravel.by/travel-description-image/be418b3005c84a8092058a9a0cd8f751.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Замок Мирув"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.6144677&lng=19.4750991&placeId=12590&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%9C%D0%B8%D1%80%D1%83%D0%B2",
+        "article": "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Zamek Mirów",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Замки Мирув и Боболице стоят в нескольких сотнях метров друг от друга — их удобно объединить в один маршрут. Мирув (XIV век) разрушен в 1787 году; до наших дней дошли руины двух башен и отрезки стен. Боболице отреставрированы в 2010-х и частично открыты для посещения. Пещера Конюшня (Jaskinia Stajnia) — одна из важнейших доисторических пещер Польши: в ней найдены украшения и орудия труда возрастом около 115 000 лет, а также кости пещерного льва и мамонта. Парковка у замка Мирув бесплатная; вход в руины Мируза — свободный, в Боболице — платный (актуально на 2026 год, уточняйте). Расстояние от Кракова: ~90 км, около 1,5 часа.\n\nМежду Мирувом и Боболице около 2 км по грунтовой тропе через лес, пещера Конюшня — чуть в стороне. С прогулкой, фотопаузами и обходом обоих замков уходит 4–5 часов, общая пешая часть 5–8 км с небольшим перепадом высот. Парковка у Мирува бесплатная (у Боболице по координатам 50.5641, 19.6381), вход на территорию обоих — около 7 zł, можно с собаками, дрон запрещён. Цены актуальны на 2026 год, проверяйте перед поездкой.",
+        "sourceSnapshot": "public-travel-api:264",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 34,41"
+      }
+    },
+    {
+      "id": "point-12593",
+      "pointId": 12593,
+      "country": "PL",
+      "printTitle": "Замок Боболице",
+      "localName": "Zamek Bobolice",
+      "copyRu": "Боболице — ещё один замок польского Юрского края. Его силуэт с башнями заметен на фоне скалистых окрестностей. В авторском маршруте знакомство с этим местом продолжает прогулку от замка Мирув через пещеры и известняковые тропы.",
+      "coordinates": {
+        "lat": 50.6133267,
+        "lng": 19.4931879
+      },
+      "article": {
+        "id": 264,
+        "url": "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-06T18:39:16.474337Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/4373/conversions/rjBQTrKxqZ0lwhYLN7cfKqlad3QfMShNlA1MBI1V-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/4373/conversions/rjBQTrKxqZ0lwhYLN7cfKqlad3QfMShNlA1MBI1V-thumb_400_wp.webp",
+        "publicImageUri": "https://metravel.by/address-image/4373/conversions/rjBQTrKxqZ0lwhYLN7cfKqlad3QfMShNlA1MBI1V-thumb_400_wp.webp",
+        "representation": "api-original-representation-low-resolution",
+        "width": 400,
+        "height": 400,
+        "alt": "Zamek Bobolice",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[12593] image and media.address_images[12593].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 264,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Zamek Bobolice",
+          "metadataLocation": "media.address_images.12593.alt",
+          "html": []
+        },
+        "editorialCaption": "Замок Боболице"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.6133267&lng=19.4931879&placeId=12593&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%91%D0%BE%D0%B1%D0%BE%D0%BB%D0%B8%D1%86%D0%B5",
+        "article": "https://metravel.by/travels/zamki-miruv-i-bobolitse-marshrut-na-odin-den"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Zamek Bobolice",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Замки Мирув и Боболице стоят в нескольких сотнях метров друг от друга — их удобно объединить в один маршрут. Мирув (XIV век) разрушен в 1787 году; до наших дней дошли руины двух башен и отрезки стен. Боболице отреставрированы в 2010-х и частично открыты для посещения. Пещера Конюшня (Jaskinia Stajnia) — одна из важнейших доисторических пещер Польши: в ней найдены украшения и орудия труда возрастом около 115 000 лет, а также кости пещерного льва и мамонта. Парковка у замка Мирув бесплатная; вход в руины Мируза — свободный, в Боболице — платный (актуально на 2026 год, уточняйте). Расстояние от Кракова: ~90 км, около 1,5 часа.\n\nМаршрут Мирув–Конюшня–Бобольце — классический однодневный выезд из Кракова или Ченстоховы. Общая длина пешей части около 5–8 км, перепад высот небольшой. Замки Мирув и Бобольце расположены в 2 км друг от друга, между ними идёт грунтовая тропа через лес. Пещера Конюшня находится чуть в стороне, в скальном выходе. Парковка у замка Бобольце: координаты 50.5641° N, 19.6381° E.",
+        "sourceSnapshot": "public-travel-api:264",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 34,36"
+      }
+    },
+    {
+      "id": "point-13455",
+      "pointId": 13455,
+      "country": "PL",
+      "printTitle": "Замок Рабштын",
+      "localName": "Zamek Rabsztyn",
+      "copyRu": "Рабштын стоит на холме среди лесов и относится к замкам «Орлиные гнёзда». В его стенах соединяются следы разных перестроек и разрушений. На авторских снимках с высоты особенно хорошо видны башня, двор и расположение крепости над окрестностями.",
+      "coordinates": {
+        "lat": 50.299486,
+        "lng": 19.5926571
+      },
+      "article": {
+        "id": 293,
+        "url": "https://metravel.by/travels/zamok-rabshtyn-zamok-i-nacionalnyy-park-v-oycove",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T15:59:50.019381Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/d83bd18dfc504f7c949f7570127a26d8.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/d83bd18dfc504f7c949f7570127a26d8.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/d83bd18dfc504f7c949f7570127a26d8.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 563,
+        "alt": "Замок Рабштын с воздуха: стены и башня на холме",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 293 HTML and media.article_body.gallery[id0]; alt: Замок Рабштын с воздуха: стены и башня на холме"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 293,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Замок Рабштын с воздуха: стены и башня на холме",
+          "metadataLocation": "media.article_body.gallery.0.alt",
+          "html": [
+            {
+              "alt": "Замок Рабштын с воздуха: стены и башня на холме",
+              "src": "https://metravel.by/travel-description-image/d83bd18dfc504f7c949f7570127a26d8.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Замок Рабштын"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.299486&lng=19.5926571&placeId=13455&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%A0%D0%B0%D0%B1%D1%88%D1%82%D1%8B%D0%BD",
+        "article": "https://metravel.by/travels/zamok-rabshtyn-zamok-i-nacionalnyy-park-v-oycove"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Zamek Rabsztyn",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "1) Замок в Рабштыне / Zamek Rabsztyn\n\nЗамок входит в группу замков орлиных гнезд.\n\n- первое упоминание в 13 веке, при Казимире Великом замок перестраивают и усиливают.\n\n- на протяжении столетий замок передается из рук в руки (череда заговоров и войн)\n\n- в 17 веке замок перестраивают в стиле ренессанса (у подножия верхнего замка строят нижний)\n\n- во время шведского нашествия (1657 году) замок разграблен и разрушен\n\n- во второй половине 19 века кладоискатели взрывают оставшуюся башню и стены нижнего замка...\n\n- в 2009 году закончилась реставрация башни и главных ворот (в замке проводятся рыцарские турниры)",
+        "sourceSnapshot": "public-travel-api:293",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article293 rich_text.description.safe_html p/h/li extraction blocks 0,1,3,4,5,6,7,8",
+        "excludedExcerpt": {
+          "text": "Частые вопросы: замок Рабштын и Ойцовский парк\n\nАнтоний Коцян возглавлял отдел авиационной разведки польского подполья и считается «человеком, выигравшим войну»: благодаря его данным союзники разбомбили завод ракет V1/V2 на острове Узедом. Он родился в усадьбе, которую и перевезли из района Олькуша к парковке Рабштына — оригинальный дом 1862 года снесли в 2004-м, потом восстановили. Расстрелян нацистами в Варшаве в 1944 году.",
+          "location": "article.rich_text.description.safe_html text blocks 81,82",
+          "reason": "The selected FAQ paragraph describes the nearby Kocyan house, not the castle. Use the opening castle/history section."
+        },
+        "snapshotSha256": "36a5ed15facdd362767753f746648c8f4428caa1c7d14d723ff02d3dbbb40c5e"
+      }
+    },
+    {
+      "id": "point-13468",
+      "pointId": 13468,
+      "country": "PL",
+      "printTitle": "Замок Тенчин",
+      "localName": "Zamek Tenczyn",
+      "copyRu": "Руины замка Тенчин стали первой остановкой авторской поездки из Кракова. Высокие стены и башни сохранили заметный силуэт над окрестностями. Этот замок можно рассматривать как самостоятельную прогулку, а в статье он объединён с Величкой.",
+      "coordinates": {
+        "lat": 50.1020657,
+        "lng": 19.5819819
+      },
+      "article": {
+        "id": 297,
+        "url": "https://metravel.by/travels/chto-posmotret-riadom-s-krakovom-za-odin-den",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T10:01:51.685659Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/13468/conversions/8deb892a042648b19d96d005cd3ff14e.JPG",
+        "originalUri": "https://metravel.by/address-image/13468/conversions/8deb892a042648b19d96d005cd3ff14e.JPG",
+        "publicImageUri": "https://metravel.by/address-image/13468/conversions/8deb892a042648b19d96d005cd3ff14e.JPG",
+        "representation": "article-original-representation",
+        "width": 1024,
+        "height": 576,
+        "alt": "Zamek Tenczyn",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[13468] image and media.address_images[13468].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 297,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Zamek Tenczyn",
+          "metadataLocation": "media.address_images.13468.alt",
+          "html": []
+        },
+        "editorialCaption": "Замок Тенчин"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.1020657&lng=19.5819819&placeId=13468&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%A2%D0%B5%D0%BD%D1%87%D0%B8%D0%BD",
+        "article": "https://metravel.by/travels/chto-posmotret-riadom-s-krakovom-za-odin-den"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Zamek Tenczyn",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Когда живешь или отдыхаешь в Кракове, в какой-то момент хочется выбраться за пределы центра. Не на весь день в горы, а куда-то ближе. Чтобы без долгой дороги, но с интересными местами. У нас получился очень удачный маршрут: сначала руины замка Тэнчин, потом соляная шахта Величка и в конце старый замок Жупный.\n\nПервый деревянный замок появился здесь примерно в XIV веке. Позже его перестраивали и расширяли владельцы рода Тенчинских. Во время шведского потопа в XVII веке замок сильно пострадал после пожара. Потом его восстановили, но спустя время в башню ударила молния и начался еще один крупный пожар. После этого разрушение уже практически не остановилось.",
+        "sourceSnapshot": "public-travel-api:297",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,6"
+      }
+    },
+    {
+      "id": "point-12574",
+      "pointId": 12574,
+      "country": "PL",
+      "printTitle": "Замок Ольштын, Юра",
+      "localName": "Ruiny Zamku Olsztyn",
+      "copyRu": "Замок Ольштын стоит среди скал польского Юрского края. От крепости сохранились стены и башни на известняковом холме. Авторская зимняя поездка соединяет осмотр этих руин с прогулкой к каменоломне Кельники и окрестным пещерам.",
+      "coordinates": {
+        "lat": 50.7495963,
+        "lng": 19.2741308
+      },
+      "article": {
+        "id": 266,
+        "url": "https://metravel.by/travels/zamok-olshtyn-peshchery-i-karer-v-kelnikakh",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-06T18:39:25.245901Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/3e94d90758a245768421a608eb440f82.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/3e94d90758a245768421a608eb440f82.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/3e94d90758a245768421a608eb440f82.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 563,
+        "alt": "Замок Ольштын руины XIII век Силезское воеводство Польша",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 266 HTML and media.article_body.gallery[id0]; alt: Замок Ольштын руины XIII век Силезское воеводство Польша"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 266,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Замок Ольштын руины XIII век Силезское воеводство Польша",
+          "metadataLocation": "media.article_body.gallery.0.alt",
+          "html": [
+            {
+              "alt": "Замок Ольштын руины XIII век Силезское воеводство Польша",
+              "src": "https://metravel.by/travel-description-image/3e94d90758a245768421a608eb440f82.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Замок Ольштын, Юра"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.7495963&lng=19.2741308&placeId=12574&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%9E%D0%BB%D1%8C%D1%88%D1%82%D1%8B%D0%BD%2C+%D0%AE%D1%80%D0%B0",
+        "article": "https://metravel.by/travels/zamok-olshtyn-peshchery-i-karer-v-kelnikakh"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Ruiny Zamku Olsztyn",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Замок Ольштын (Ruiny Zamku Olsztyn) в Силезском воеводстве — один из классических замков «Орлиных гнёзд». Построен в XIII веке, разрушен шведами в 1655 году, дважды разобран на камни местными жителями. Рядом — каменоломня Кельники с пещерой Склад и живописными скалами. Парковка 10 злотых, вход в замок около 7 злотых (актуально на 2026 год, уточняйте).\n\nЭта 35-метровая башня — донжон XIV века, надстроенный при Казимире III Великом из местного юрского известняка с поясом из бурого кирпича на самом верху. Высота выбрана не для красоты: с неё контролировался отрезок старого торгового пути Краков — Силезия, а сигнальные огни связывали Ольштын с соседними «орлиными гнёздами». Известняк брали тут же — позже это место превратилось в каменоломню Кельники, которую вы видели рядом.",
+        "sourceSnapshot": "public-travel-api:266",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,38"
+      }
+    },
+    {
+      "id": "point-13707",
+      "pointId": 13707,
+      "country": "PL",
+      "printTitle": "Замок Мошна",
+      "localName": "Мошненский замок",
+      "copyRu": "Мошненский замок запоминается множеством башен и сложным силуэтом дворца. Вокруг него расположен большой парк. В авторской поездке этот ансамбль стал одной из четырёх исторических остановок на маршруте по Опольскому воеводству.",
+      "coordinates": {
+        "lat": 50.4406925,
+        "lng": 17.7676113
+      },
+      "article": {
+        "id": 319,
+        "url": "https://metravel.by/travels/zamki-opolskogo-voevodstva-moshna-uiazd-i-khshelitse",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T15:29:07.251246Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/3145/conversions/IklQJxIlk2xF3K4zrFo0qL60jjLi4yfDwdUJAPTu-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/3145/conversions/IklQJxIlk2xF3K4zrFo0qL60jjLi4yfDwdUJAPTu-thumb_400_wp.webp",
+        "publicImageUri": "https://metravel.by/address-image/3145/conversions/IklQJxIlk2xF3K4zrFo0qL60jjLi4yfDwdUJAPTu-thumb_400_wp.webp",
+        "representation": "api-original-representation-low-resolution",
+        "width": 400,
+        "height": 400,
+        "alt": "Мошненский замок",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[13707] image and media.address_images[13707].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 319,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Мошненский замок",
+          "metadataLocation": "media.address_images.13707.alt",
+          "html": []
+        },
+        "editorialCaption": "Замок Мошна"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.4406925&lng=17.7676113&placeId=13707&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%9C%D0%BE%D1%88%D0%BD%D0%B0",
+        "article": "https://metravel.by/travels/zamki-opolskogo-voevodstva-moshna-uiazd-i-khshelitse"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Мошненский замок",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Частые вопросы: замки Опольского воеводства — Мошна, Уязд, Хшелице\n\nДа, Юля прошла Pławniowice — Уязд — Мошна — Хшелице за день, маршрут реально умещается. Из Кракова около 200 км в одну сторону, из Вроцлава — 100 км. На Pławniowice заложите 1,5 часа (вход в парк 5 PLN, в замок 10 PLN в обычное время), на Мошну — минимум 2 часа с парком, остальное по 30–40 минут. Шенген C для въезда, валюта PLN, в Pławniowice строгий запрет на коммерческую съёмку и дроны — учитывайте при планировании контента.",
+        "sourceSnapshot": "public-travel-api:319",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 134,138"
+      }
+    },
+    {
+      "id": "point-13726",
+      "pointId": 13726,
+      "country": "PL",
+      "printTitle": "Замок Чоха",
+      "localName": "Zamek Czocha",
+      "copyRu": "Замок Чоха стоит на берегу Леснянского озера в Нижней Силезии. Каменные стены поднимаются над водой и скалистыми берегами. Именно ради этого места автор задумала поездку по замкам, а прогулка к озеру дополнила впечатление от крепости.",
+      "coordinates": {
+        "lat": 51.030436,
+        "lng": 15.303557
+      },
+      "article": {
+        "id": 321,
+        "url": "https://metravel.by/travels/zamki-nizhnei-silezii-chokha-grodzets-i-kostelniki",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T16:14:45.962536Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/3181/conversions/PJQGnQwdChL2QhQamARaYLu5BLYaf8ArFu57eEnv-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/3181/conversions/PJQGnQwdChL2QhQamARaYLu5BLYaf8ArFu57eEnv-thumb_400_wp.webp",
+        "publicImageUri": "https://metravel.by/address-image/3181/conversions/PJQGnQwdChL2QhQamARaYLu5BLYaf8ArFu57eEnv-thumb_400_wp.webp",
+        "representation": "api-original-representation-low-resolution",
+        "width": 400,
+        "height": 400,
+        "alt": "Zamek Czocha",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[13726] image and media.address_images[13726].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 321,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Zamek Czocha",
+          "metadataLocation": "media.address_images.13726.alt",
+          "html": []
+        },
+        "editorialCaption": "Замок Чоха"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=51.030436&lng=15.303557&placeId=13726&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%A7%D0%BE%D1%85%D0%B0",
+        "article": "https://metravel.by/travels/zamki-nizhnei-silezii-chokha-grodzets-i-kostelniki"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Zamek Czocha",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "В замке появляется призрак еще одной женщины - Гертруды. Она - Белая Дама замка Чоха.\n\nЧастые вопросы: замки Нижней Силезии — Чоха, Костельники Гурне, Гродзец",
+        "sourceSnapshot": "public-travel-api:321",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 76,191"
+      }
+    },
+    {
+      "id": "point-13729",
+      "pointId": 13729,
+      "country": "PL",
+      "printTitle": "Замок Гродзец",
+      "localName": "Zamek Grodziec",
+      "copyRu": "Замок Гродзец возвышается на отдельном вулканическом холме. Подъём и положение крепости над окрестностями делают её хорошо узнаваемой. В авторской поездке этот замок стал финальной исторической остановкой перед закатом.",
+      "coordinates": {
+        "lat": 51.1769835,
+        "lng": 15.7595251
+      },
+      "article": {
+        "id": 321,
+        "url": "https://metravel.by/travels/zamki-nizhnei-silezii-chokha-grodzets-i-kostelniki",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T16:14:45.962536Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/3184/conversions/dLTxdZHKiOcts3IUFXQWh6TUeIICaOdmwfx2vRzT-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/3184/conversions/dLTxdZHKiOcts3IUFXQWh6TUeIICaOdmwfx2vRzT-thumb_400_wp.webp",
+        "publicImageUri": "https://metravel.by/address-image/3184/conversions/dLTxdZHKiOcts3IUFXQWh6TUeIICaOdmwfx2vRzT-thumb_400_wp.webp",
+        "representation": "api-original-representation-low-resolution",
+        "width": 400,
+        "height": 400,
+        "alt": "Zamek Grodziec",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[13729] image and media.address_images[13729].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 321,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Zamek Grodziec",
+          "metadataLocation": "media.address_images.13729.alt",
+          "html": []
+        },
+        "editorialCaption": "Замок Гродзец"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=51.1769835&lng=15.7595251&placeId=13729&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%93%D1%80%D0%BE%D0%B4%D0%B7%D0%B5%D1%86",
+        "article": "https://metravel.by/travels/zamki-nizhnei-silezii-chokha-grodzets-i-kostelniki"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Zamek Grodziec",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "В итоге, свой выбор мы останавливаем на Замке Гродзец (о котором будет чуть ниже) ноооооо, почему-то навигатор я поставила на этот замок (а между ними 40 минут) ...\n\nГродзец стоит на потухшем вулкане высотой 389 метров — это один из старейших замков Силезии (упоминается с XII века, нынешний вид — XV–XVI вв., владельцы Шеллендорфы и Промницы). В 1800 году здесь прошёл один из первых в Европе исторических ивентов с реконструкцией, идею предложил князь Генрих фон Стольберг-Вернигероде. Билет около 15 PLN, открыто ежедневно в сезон. Подъём пешком от парковки занимает 10–15 минут, виды на Качавские горы того стоят.",
+        "sourceSnapshot": "public-travel-api:321",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 92,193"
+      }
+    },
+    {
+      "id": "point-14488",
+      "pointId": 14488,
+      "country": "PL",
+      "printTitle": "Замок Пщины",
+      "localName": "Zamek w Pszczynie",
+      "copyRu": "Замок Пщины стоит рядом с большим парком, прудами и старой рыночной площадью. Его длинный светлый фасад и терраса хорошо видны с парковых дорожек. Автор приехала сюда прежде всего погулять и провести спокойный день среди зелени.",
+      "coordinates": {
+        "lat": 49.9781631,
+        "lng": 18.9404984
+      },
+      "article": {
+        "id": 477,
+        "url": "https://metravel.by/travels/zamok-pshchiny",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T15:40:10.281084Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/e9bb9a9356354ca38abdeb549088923e.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/e9bb9a9356354ca38abdeb549088923e.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/e9bb9a9356354ca38abdeb549088923e.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 800,
+        "height": 600,
+        "alt": "Замок Пщины: длинный светлый фасад с мансардными окнами и терраса с балюстрадой",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 477 HTML and media.article_body.gallery[id0]; alt: Замок Пщины: длинный светлый фасад с мансардными окнами и терраса с балюстрадой"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 477,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Замок Пщины: длинный светлый фасад с мансардными окнами и терраса с балюстрадой",
+          "metadataLocation": "media.article_body.gallery.0.alt",
+          "html": [
+            {
+              "alt": "Замок Пщины: длинный светлый фасад с мансардными окнами и терраса с балюстрадой",
+              "src": "https://metravel.by/travel-description-image/e9bb9a9356354ca38abdeb549088923e.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Замок Пщины"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=49.9781631&lng=18.9404984&placeId=14488&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%9F%D1%89%D0%B8%D0%BD%D1%8B",
+        "article": "https://metravel.by/travels/zamok-pshchiny"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Zamek w Pszczynie",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Замок Пщины (Pszczyna) мы поехали смотреть из Кракова на день, без плана попасть внутрь — просто погулять. 106 километров по A4 и S1, около часа десяти в дороге, и вместо большого города вокруг оказывается маленький силезский городок с рыночной площадью, огромным парком, прудами с кувшинками и загоном, в котором лежат зубры. На всё это спокойно уходит целый день.\n\nОт костёла до замка — метров сто, от костёла до евангелической церкви и того меньше. Центр Пщины обходится за час, а дальше можно спокойно уйти в парк на весь остаток дня.",
+        "sourceSnapshot": "public-travel-api:477",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,21"
+      }
+    },
+    {
+      "id": "point-14188",
+      "pointId": 14188,
+      "country": "PL",
+      "printTitle": "Замок Дунаец, Недзица",
+      "localName": "Zamek Dunajec",
+      "copyRu": "Замок Дунаец стоит на скале над Чорштынским озером в Недзице. С его двора и террас открываются виды на воду и окружающие горы. В авторской осенней поездке утренний туман над озером стал частью знакомства с этой крепостью.",
+      "coordinates": {
+        "lat": 49.4224691,
+        "lng": 20.3196537
+      },
+      "article": {
+        "id": 424,
+        "url": "https://metravel.by/travels/zamok-dunaets-i-gora-liuban-den-iz-krakova",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:52:57.525306Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/d74a5215ecff4af79e34ea3f7ff2572f.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/d74a5215ecff4af79e34ea3f7ff2572f.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/d74a5215ecff4af79e34ea3f7ff2572f.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 800,
+        "height": 450,
+        "alt": "Замок Дунаец на скале над Чорштынским озером, утренний туман над водой",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 424 HTML and media.article_body.gallery[id0]; alt: Замок Дунаец на скале над Чорштынским озером, утренний туман над водой"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 424,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Замок Дунаец на скале над Чорштынским озером, утренний туман над водой",
+          "metadataLocation": "media.article_body.gallery.0.alt",
+          "html": [
+            {
+              "alt": "Замок Дунаец на скале над Чорштынским озером, утренний туман над водой",
+              "src": "https://metravel.by/travel-description-image/d74a5215ecff4af79e34ea3f7ff2572f.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Замок Дунаец, Недзица"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=49.4224691&lng=20.3196537&placeId=14188&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%94%D1%83%D0%BD%D0%B0%D0%B5%D1%86%2C+%D0%9D%D0%B5%D0%B4%D0%B7%D0%B8%D1%86%D0%B0",
+        "article": "https://metravel.by/travels/zamok-dunaets-i-gora-liuban-den-iz-krakova",
+        "quest": "https://metravel.by/quests/75/niedzica-skarb-inkow"
+      },
+      "quest": {
+        "status": "verified-associated",
+        "id": 81,
+        "url": "https://metravel.by/quests/75/niedzica-skarb-inkow",
+        "title": "Квест по Недзице: клад инков над Дунайцем",
+        "evidence": {
+          "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+          "publicDetailUrl": "https://metravel.by/api/quests/81/?lang=ru",
+          "publishedPublicDetailStatus": 200,
+          "publishedPageStatus": 200,
+          "stepId": 824,
+          "stepTitle": "Брама — тот самый порог",
+          "stepLocation": "Въездная брама замка Дунаец",
+          "stepCoordinates": {
+            "lat": 49.42251,
+            "lng": 20.31962
+          },
+          "distanceM": 5,
+          "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+          "verifiedOn": "2026-10-30"
+        }
+      },
+      "sourceEvidence": {
+        "rawTitle": "Zamek Dunajec",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Осенью не тянет на длинные маршруты с десятком точек по дороге, и в тот октябрьский день мы поехали из Кракова всего за двумя вещами: замком над водой и горой, с которой этот замок видно сверху. Утром был Zamek Dunajec в Недзице — туман над Чорштынским озером, гулкий двор и история про спрятанный инкский клад. Вечером — Любань, 1211 метров, деревянная башня на вершине и закат над Пенинами. Между ними полчаса на машине.\n\nЧастые вопросы: Замок Дунаец в Недзице и гора Любань",
+        "sourceSnapshot": "public-travel-api:424",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,53"
+      }
+    },
+    {
+      "id": "point-14088",
+      "pointId": 14088,
+      "country": "PL",
+      "printTitle": "Руины дворца Крыжтопор",
+      "localName": "Ruiny zamku \"Krzyżtopór\"",
+      "copyRu": "Крыжтопор — большой дворцовый комплекс, сохранившийся в руинах. Открытые дворы, длинные стены и пустые оконные проёмы дают почувствовать прежний масштаб. Автор включила его в отдельную поездку по историческим местам Свентокшиского воеводства.",
+      "coordinates": {
+        "lat": 50.7141954,
+        "lng": 21.3102228
+      },
+      "article": {
+        "id": 412,
+        "url": "https://metravel.by/travels/ruiny-dvorca-karskih-i-ruiny-zamka-kryzhtopor",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T14:10:15.216185Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/5443/conversions/uoTPGhueI3eZW5cgEvrnPzfLoJRM9ulZMKUEABeB-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/5443/conversions/uoTPGhueI3eZW5cgEvrnPzfLoJRM9ulZMKUEABeB-thumb_400_wp.webp",
+        "publicImageUri": "https://metravel.by/address-image/5443/conversions/uoTPGhueI3eZW5cgEvrnPzfLoJRM9ulZMKUEABeB-thumb_400_wp.webp",
+        "representation": "api-original-representation-low-resolution",
+        "width": 400,
+        "height": 400,
+        "alt": "Ruiny zamku \"Krzyżtopór\"",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[14088] image and media.address_images[14088].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 412,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Ruiny zamku \"Krzyżtopór\"",
+          "metadataLocation": "media.address_images.14088.alt",
+          "html": []
+        },
+        "editorialCaption": "Руины дворца Крыжтопор"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.7141954&lng=21.3102228&placeId=14088&focusPlace=1&placeTitle=%D0%A0%D1%83%D0%B8%D0%BD%D1%8B+%D0%B4%D0%B2%D0%BE%D1%80%D1%86%D0%B0+%D0%9A%D1%80%D1%8B%D0%B6%D1%82%D0%BE%D0%BF%D0%BE%D1%80",
+        "article": "https://metravel.by/travels/ruiny-dvorca-karskih-i-ruiny-zamka-kryzhtopor"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Ruiny zamku \"Krzyżtopór\"",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "4) Руины замка Кшыжтопор / Ruiny zamku \"Krzyżtopór\"\n\nОсновная цель нашей поездки был как раз этот замок! Вживую он производит намного сильнее впечатления, чем на фото.",
+        "sourceSnapshot": "public-travel-api:412",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article412 rich_text.description.safe_html p/h/li extraction blocks 43,44",
+        "excludedExcerpt": {
+          "text": "Всю информацию я почерпнула из этого источника (там же можно увидеть старые фотографии дворца, и прочитать рассказ о дворце со слов его наследника) https://www.zwiadowcahistorii.pl/ruiny-palacu-karskich-we-wlostowie-spotkanie-z-wlascicielem/\n\nКшижтопор построен в 1627–1644 годах Кшиштофом Болдуином Оссолинским и до возведения Версаля считался крупнейшим дворцом Европы. Архитектура — каменный календарь: 4 главные башни (сезоны), 12 больших залов (месяцы), 52 комнаты (недели в году) и 365 окон (дни). В 1655 году замок разграбили шведы, и с тех пор он стоит руинами, но впечатления вживую гораздо сильнее, чем на фото — Юля специально отмечает это. С местом связаны легенды о добром призраке-основателе и Безголовой Белой Даме.",
+          "location": "article.rich_text.description.safe_html text blocks 10,81",
+          "reason": "The selected first paragraph cites the Karski palace at Wlostow, a different object; use the actual Krzyztopor heading and author impression."
+        },
+        "snapshotSha256": "3ed3379e228130fae067fceb10610612e1447989b4b275f0f93d90dd10be62fd"
+      }
+    },
+    {
+      "id": "point-14656",
+      "pointId": 14656,
+      "country": "PL",
+      "printTitle": "Дворец на острове, Лазенки",
+      "localName": "Pałac na Wyspie",
+      "copyRu": "Дворец на острове окружён водой в варшавском парке Лазенки. Светлый фасад с колоннадой отражается в пруду, а рядом проходят прогулочные дорожки. Для авторской поездки эта точка стала частью отдельного дня в большом королевском парке.",
+      "coordinates": {
+        "lat": 52.215042,
+        "lng": 21.0355997
+      },
+      "article": {
+        "id": 502,
+        "url": "https://metravel.by/travels/varshavskie-lazenki",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T18:34:34.316888Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/9a64f4c6ca3e43a99d7d7388f1cb4e3e.webp",
+        "originalUri": "https://metravel.by/travel-description-image/9a64f4c6ca3e43a99d7d7388f1cb4e3e.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/9a64f4c6ca3e43a99d7d7388f1cb4e3e.webp",
+        "representation": "article-original-representation",
+        "width": 1024,
+        "height": 768,
+        "alt": "Дворец на воде в варшавских Лазенках, вид через пруд зимой",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 502 HTML and media.article_body.gallery[id0]; alt: Дворец на воде в варшавских Лазенках, вид через пруд зимой"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 502,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Дворец на воде в варшавских Лазенках, вид через пруд зимой",
+          "metadataLocation": "media.article_body.gallery.0.alt",
+          "html": [
+            {
+              "alt": "Дворец на воде в варшавских Лазенках, вид через пруд зимой",
+              "src": "https://metravel.by/travel-description-image/9a64f4c6ca3e43a99d7d7388f1cb4e3e.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Дворец на острове, Лазенки"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=52.215042&lng=21.0355997&placeId=14656&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%BD%D0%B0+%D0%BE%D1%81%D1%82%D1%80%D0%BE%D0%B2%D0%B5%2C+%D0%9B%D0%B0%D0%B7%D0%B5%D0%BD%D0%BA%D0%B8",
+        "article": "https://metravel.by/travels/varshavskie-lazenki"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Pałac na Wyspie",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "В Лазенки я собиралась после Жемыславля — белорусской усадьбы, чей парк регулярно сравнивают с варшавским. В поездку в Варшаву мы заложили на королевский парк отдельный день и всё равно не успели обойти даже главные точки: 76 гектаров, дворец на острове, амфитеатр со сценой на воде, оранжерея с придворным театром XVIII века. Плюс февраль, в котором свет заканчивается рано.\n\nТу самую купальню Любомирского, построенную в 1683–1689 годах, — Pałac na Wyspie, если искать по карте, — в 1772–1793 годах перестроили в классицистический дворец: работали Доминик Мерлини и Ян Кристиан Камзетцер, живопись и скульптуру делали Марчелло Баччарелли и Ян Богумил Плерш. С 1775 года дворец служил летней резиденцией короля. Он стоит на искусственном острове и соединён с берегом двумя мостами, поэтому с любого берега пруда выглядит как декорация: фасад плюс его отражение.",
+        "sourceSnapshot": "public-travel-api:502",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,4"
+      }
+    },
+    {
+      "id": "point-15926",
+      "pointId": 15926,
+      "country": "PL",
+      "printTitle": "Замок Болчув",
+      "localName": "Замок Болчув",
+      "copyRu": "Руины замка Болчув стоят среди гранитных скал и леса в Рудавах Яновицких. Каменные стены крепости соединяются с естественным рельефом холма. В авторской поездке осмотр замка стал частью лесной прогулки с собакой.",
+      "coordinates": {
+        "lat": 50.86065,
+        "lng": 15.91221
+      },
+      "article": {
+        "id": 641,
+        "url": "https://metravel.by/travels/zamok-bolchuv-v-rudavakh-ianovitskikh-progulka",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T16:01:40.155939Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/gallery/641/gallery/2fea194f8a504f70904d7b28ca6de2fe.webp",
+        "originalUri": "https://metravel.by/gallery/641/gallery/2fea194f8a504f70904d7b28ca6de2fe.webp",
+        "publicImageUri": "https://metravel.by/gallery/641/gallery/2fea194f8a504f70904d7b28ca6de2fe.webp",
+        "representation": "article-original-representation",
+        "width": 768,
+        "height": 1024,
+        "alt": "mtup_76448452.jpg",
+        "association": {
+          "kind": "same-article-gallery",
+          "evidence": "Article641 gallery[id4932] caption is exactly «Замок Болчув» and media.gallery[id4932].variants.original gives this exact file; source travelAddress15926 belongs to the same article."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 641,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "mtup_76448452.jpg",
+          "metadataLocation": "media.gallery.alt",
+          "html": []
+        },
+        "editorialCaption": "Замок Болчув"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.86065&lng=15.91221&placeId=15926&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BC%D0%BE%D0%BA+%D0%91%D0%BE%D0%BB%D1%87%D1%83%D0%B2",
+        "article": "https://metravel.by/travels/zamok-bolchuv-v-rudavakh-ianovitskikh-progulka"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Замок Болчув",
+        "identityNote": "Руины конкретного замка в Рудавах Яновицких; собственная опубликованная статья автора1 и точный point15926. Заменяет исключённый Плавнёвице по поручению root из-за указанного в исходной статье ограничения использования фотографий.",
+        "excerpt": "Болчув построили во второй половине XIV века — вероятнее всего, между 1371 и 1386 годами. Первым известным владельцем был рыцарь Clericus Bolze, связанный с двором свидницко-яворских князей. Часть стен возвели прямо между естественными гранитными скалами, поэтому со стороны леса замок буквально сливается с горой.\n\nСейчас от Болчува сохранилось действительно много: ворота, стены, два двора, проходы между скалами, лестницы и остатки жилой части. Это не тот случай, когда приезжаешь к «руинам», а на месте лежат три камня и информационная табличка. По замку можно долго ходить, подниматься на верхний уровень и рассматривать, как строители включили естественные гранитные глыбы в оборонительные стены.",
+        "sourceSnapshot": "public-travel-api:641",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 34,41"
+      }
+    },
+    {
+      "id": "point-14971",
+      "pointId": 14971,
+      "country": "PL",
+      "printTitle": "Охотничий дворец Промнице",
+      "localName": "Pałac myśliwski w Promnicach",
+      "copyRu": "Охотничий дворец в Промницах находится рядом с озером Попроцаны. Усадебная архитектура здесь соседствует с лесом и прогулкой у воды. Автор включила эту точку в тёплый летний маршрут вокруг озера из Кракова.",
+      "coordinates": {
+        "lat": 50.0799944,
+        "lng": 18.9694194
+      },
+      "article": {
+        "id": 554,
+        "url": "https://metravel.by/travels/iz-krakova-k-ozeru-poprotsany-i-dvortsu-v-promnitsakh",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:49:33.734880Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/14971/conversions/d8aafe2d027f4379ba95b82e583b25a2.webp",
+        "originalUri": "https://metravel.by/address-image/14971/conversions/d8aafe2d027f4379ba95b82e583b25a2.webp",
+        "publicImageUri": "https://metravel.by/address-image/14971/conversions/d8aafe2d027f4379ba95b82e583b25a2.webp",
+        "representation": "article-original-representation",
+        "width": 768,
+        "height": 1024,
+        "alt": "Pałac myśliwski w Promnicach",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[14971] image and media.address_images[14971].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 554,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Pałac myśliwski w Promnicach",
+          "metadataLocation": "media.address_images.14971.alt",
+          "html": []
+        },
+        "editorialCaption": "Охотничий дворец Промнице"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.0799944&lng=18.9694194&placeId=14971&focusPlace=1&placeTitle=%D0%9E%D1%85%D0%BE%D1%82%D0%BD%D0%B8%D1%87%D0%B8%D0%B9+%D0%B4%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%9F%D1%80%D0%BE%D0%BC%D0%BD%D0%B8%D1%86%D0%B5",
+        "article": "https://metravel.by/travels/iz-krakova-k-ozeru-poprotsany-i-dvortsu-v-promnitsakh"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Pałac myśliwski w Promnicach",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "В такие дни лучшее решение — сесть в машину или на поезд и уехать к воде. И одно из таких направлений — озеро Попроцаны (Staw Paprocany) в Тыхах: тихая вода, лесные тропы вокруг и охотничий дворец XIX века прямо на берегу.\n\nПервое здание на этом месте построили в 1760–1766 годах по заказу рода Промниц, владевших тогда Пшчинским герцогством. В 1861 году князь Ганс Генрих XI Хохберг возвёл новую охотничью резиденцию в стиле английской неоготики — по проекту королевского архитектора Оливье Павельта. В 1867 году здание пострадало от пожара при невыясненных обстоятельствах и в 1868-м было отстроено заново. Дворец принимал особых гостей на охотах в Пшчинских лесах — в том числе кайзера Вильгельма I и Вильгельма II. До 1938 года оставался собственностью семьи Хохбергов, затем перешёл государству. С 2018 года находится в ведении Замкового музея в Пшчине.",
+        "sourceSnapshot": "public-travel-api:554",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 1,19"
+      }
+    },
+    {
+      "id": "point-14382",
+      "pointId": 14382,
+      "country": "PL",
+      "printTitle": "Дворец в Кровярках",
+      "localName": "Zespół pałacowo-parkowy w Krowiarkach",
+      "copyRu": "Дворцово-парковый комплекс в Кровярках окружён старыми деревьями. На авторских снимках с высоты хорошо видны фасады, крыши и устройство ансамбля. Во время поездки автору удалось осмотреть территорию этого частного дворца.",
+      "coordinates": {
+        "lat": 50.13703,
+        "lng": 18.0827665
+      },
+      "article": {
+        "id": 452,
+        "url": "https://metravel.by/travels/dvorcovo-parkovyy-kompleks-v-krovyarkah",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:52:22.795211Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/aad6c82c6dc9461c8b5d1fe5fcdec9fc.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/aad6c82c6dc9461c8b5d1fe5fcdec9fc.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/aad6c82c6dc9461c8b5d1fe5fcdec9fc.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 800,
+        "height": 450,
+        "alt": "Дворец в Кровярках Силезия Польша аэросъёмка",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 452 HTML and media.article_body.gallery[id0]; alt: Дворец в Кровярках Силезия Польша аэросъёмка"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 452,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Дворец в Кровярках Силезия Польша аэросъёмка",
+          "metadataLocation": "media.article_body.gallery.0.alt",
+          "html": [
+            {
+              "alt": "Дворец в Кровярках Силезия Польша аэросъёмка",
+              "src": "https://metravel.by/travel-description-image/aad6c82c6dc9461c8b5d1fe5fcdec9fc.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Дворец в Кровярках"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.13703&lng=18.0827665&placeId=14382&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%B2+%D0%9A%D1%80%D0%BE%D0%B2%D1%8F%D1%80%D0%BA%D0%B0%D1%85",
+        "article": "https://metravel.by/travels/dvorcovo-parkovyy-kompleks-v-krovyarkah"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Zespół pałacowo-parkowy w Krowiarkach",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Дворцово-парковый комплекс в Кровярках (Zespół pałacowo-parkowy w Krowiarkach, Силезское воеводство) — неоклассический дворец 1826 года постройки в окружении старинного парка. Сейчас в частной собственности: попасть на территорию можно по предварительному согласованию или если повезёт — как нам. Краков до Кровярок: ~167 км, около 2 часов.\n\nДворец в Кровярках — один из хорошо сохранившихся образцов «помещичьего классицизма» польского Силезского пограничья первой половины XIX века. Несмотря на бурную историю смены владельцев и годы запустения, фасад и парковый ансамбль дошли до наших дней в состоянии, позволяющем оценить первоначальный замысел архитектора. Главный корпус с портиком и пилястрами фланкируют два симметричных флигеля; перед фасадом — французский регулярный партер, переходящий в английский пейзажный парк с вековыми дубами и липами. Фасад дворца выдержан в кремово-белых тонах, характерных для силезской интерпретации венского классицизма.",
+        "sourceSnapshot": "public-travel-api:452",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,18"
+      }
+    },
+    {
+      "id": "point-14499",
+      "pointId": 14499,
+      "country": "PL",
+      "printTitle": "Дворец Малаховских, Бялачув",
+      "localName": "Pałac Małachowskich w Białaczowie",
+      "copyRu": "Дворец Малаховских в Бялачуве построили в конце XVIII века. Позднее в здании сменялись разные учреждения, а затем оно опустело. Автор увидела этот ансамбль во время поездки по тихим местам Польши, связанным с отдыхом у воды.",
+      "coordinates": {
+        "lat": 51.299845,
+        "lng": 20.2865982
+      },
+      "article": {
+        "id": 475,
+        "url": "https://metravel.by/travels/domik-na-ostrove-v-gabrielne-otdykh-v-polshe",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T12:18:19.528255Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/6483/conversions/g75zJ8xDNggsS61kAf4eBfnN4uXTwkf0URwjqOIg-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/6483/conversions/g75zJ8xDNggsS61kAf4eBfnN4uXTwkf0URwjqOIg-thumb_400_wp.webp",
+        "publicImageUri": "https://metravel.by/address-image/6483/conversions/g75zJ8xDNggsS61kAf4eBfnN4uXTwkf0URwjqOIg-thumb_400_wp.webp",
+        "representation": "api-original-representation-low-resolution",
+        "width": 400,
+        "height": 400,
+        "alt": "Pałac Małachowskich w Białaczowie",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[14499] image and media.address_images[14499].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 475,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Pałac Małachowskich w Białaczowie",
+          "metadataLocation": "media.address_images.14499.alt",
+          "html": []
+        },
+        "editorialCaption": "Дворец Малаховских, Бялачув"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=51.299845&lng=20.2865982&placeId=14499&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%9C%D0%B0%D0%BB%D0%B0%D1%85%D0%BE%D0%B2%D1%81%D0%BA%D0%B8%D1%85%2C+%D0%91%D1%8F%D0%BB%D0%B0%D1%87%D1%83%D0%B2",
+        "article": "https://metravel.by/travels/domik-na-ostrove-v-gabrielne-otdykh-v-polshe"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Pałac Małachowskich w Białaczowie",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Дворец Малаховских в Белачуве\n\nДворец построили в 1799 году как резиденцию рода Малаховских.",
+        "sourceSnapshot": "public-travel-api:475",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 59,61"
+      }
+    },
+    {
+      "id": "point-14244",
+      "pointId": 14244,
+      "country": "PL",
+      "printTitle": "Блендне Скалы",
+      "localName": "Błędne Skały",
+      "copyRu": "Блендне Скалы — каменный лабиринт в Столовых горах. Узкие проходы ведут между высокими скальными стенками и необычными останцами. В авторской поездке эта прогулка стала одной из природных остановок недельного маршрута по Нижней Силезии.",
+      "coordinates": {
+        "lat": 50.4803339,
+        "lng": 16.2871754
+      },
+      "article": {
+        "id": 438,
+        "url": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T16:08:34.155526Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/5870/conversions/Ch3Uw7EWt2GlCbFayERRA87upEkWX7Bv1AglcyOi-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/5870/conversions/Ch3Uw7EWt2GlCbFayERRA87upEkWX7Bv1AglcyOi-thumb_400_wp.webp",
+        "publicImageUri": "https://metravel.by/address-image/5870/conversions/Ch3Uw7EWt2GlCbFayERRA87upEkWX7Bv1AglcyOi-thumb_400_wp.webp",
+        "representation": "api-original-representation-low-resolution",
+        "width": 400,
+        "height": 400,
+        "alt": "Błędne Skały",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[14244] image and media.address_images[14244].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 438,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Błędne Skały",
+          "metadataLocation": "media.address_images.14244.alt",
+          "html": []
+        },
+        "editorialCaption": "Блендне Скалы"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.4803339&lng=16.2871754&placeId=14244&focusPlace=1&placeTitle=%D0%91%D0%BB%D0%B5%D0%BD%D0%B4%D0%BD%D0%B5+%D0%A1%D0%BA%D0%B0%D0%BB%D1%8B",
+        "article": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Błędne Skały",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Нижняя Силезия за одну неделю: Блуждающие скалы (Błędne Skały) в Столовых горах, подземный комплекс «Влодаж», замок Шарфенек, крепость Сребжна-Гура, Вроцлав и загадочный Клодзко — маршрут по самым атмосферным местам польского пограничья с Чехией. За семь дней мы проехали больше тысячи километров и убедились, что Нижняя Силезия умеет удивлять в любое время года.\n\n5) Национальный парк в Столовых горах \"Блендне Скалы\" / Błędne Skały",
+        "sourceSnapshot": "public-travel-api:438",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,58"
+      }
+    },
+    {
+      "id": "point-14243",
+      "pointId": 14243,
+      "country": "PL",
+      "printTitle": "Щелинец-Вельки: смотровая",
+      "localName": "Punkt widokowy na Szczeliniec Wielki",
+      "copyRu": "Смотровая точка на Щелинце-Вельки находится среди скал Столовых гор. Отсюда можно увидеть лесистые склоны и окружающие долины. Автор включила этот скальный маршрут в путешествие по Нижней Силезии вместе с Блуждающими скалами.",
+      "coordinates": {
+        "lat": 50.4781857,
+        "lng": 16.2951612
+      },
+      "article": {
+        "id": 438,
+        "url": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T16:08:34.155526Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/5871/conversions/M33k9HYFQnuRj6gGLoY3Tl6XNzVwA3QynPYhP7i9-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/5871/conversions/M33k9HYFQnuRj6gGLoY3Tl6XNzVwA3QynPYhP7i9-thumb_400_wp.webp",
+        "publicImageUri": "https://metravel.by/address-image/5871/conversions/M33k9HYFQnuRj6gGLoY3Tl6XNzVwA3QynPYhP7i9-thumb_400_wp.webp",
+        "representation": "api-original-representation-low-resolution",
+        "width": 400,
+        "height": 400,
+        "alt": "Punkt widokowy na Szczeliniec Wielki",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[14243] image and media.address_images[14243].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 438,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Punkt widokowy na Szczeliniec Wielki",
+          "metadataLocation": "media.address_images.14243.alt",
+          "html": []
+        },
+        "editorialCaption": "Щелинец-Вельки: смотровая"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.4781857&lng=16.2951612&placeId=14243&focusPlace=1&placeTitle=%D0%A9%D0%B5%D0%BB%D0%B8%D0%BD%D0%B5%D1%86-%D0%92%D0%B5%D0%BB%D1%8C%D0%BA%D0%B8%3A+%D1%81%D0%BC%D0%BE%D1%82%D1%80%D0%BE%D0%B2%D0%B0%D1%8F",
+        "article": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Punkt widokowy na Szczeliniec Wielki",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Регион: Нижнесилезское воеводство (Dolnośląskie), юго-западная Польша, граница с Чехией. Базовый лагерь: удобнее всего базироваться в Клодзко, Кудова-Здруй или в районе Душников-Здруй — отсюда до Блуждающих скал, Влодажа и Осувки не более 30–40 км. Альтернатива — Вроцлав (около 90 км от Клодзко по дороге), если планируете начать или закончить маршрут в городе. Как добраться из Кракова: на машине ~320–340 км через Катовице и Клодзко, около 3,5–4 часов. Поездом до Вроцлава (около 2 ч 50 мин в самом быстром поезде IC; расписание — на intercity.pl), далее на машине или автобусе до Клодзко (1 ч). Когда ехать: сезон трасс на Блуждающих скалах и Щелинце — по расписанию парка (в 2026 году по 11 ноября), потом вход бесплатный и без обслуживания. Подземные комплексы открыты круглый год: во Влодаже около 7 °C, в Клодзко 8–10 °C. Валюта: польский злотый (PLN). Карты принимают в большинстве мест, но на парковках у скал и в кассах комплексов стоит иметь наличные. Билеты и расписание: Блуждающие скалы — pngs.gov.pl/informacje-o-biletach; Влодаж — wlodarz.pl; Осувка — osowka.pl; крепость Сребжна-Гура — forty.pl (актуально на 2026, уточняйте перед поездкой).\n\nКраков → Яворница (339 км, ~4 ч) → Блуждающие скалы → Щелинец Великий → Клодзко → Замок Шарфенек → Комплекс Влодаж → Осувка → Вроцлав → Краков. Общий пробег за неделю — около 1000–1100 км.",
+        "sourceSnapshot": "public-travel-api:438",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 326,328"
+      }
+    },
+    {
+      "id": "point-13482",
+      "pointId": 13482,
+      "country": "PL",
+      "printTitle": "Блендовская пустыня",
+      "localName": "Pustynia Błędowska",
+      "copyRu": "Блендовская пустыня выглядит песчаным островом среди сосновых лесов. Со смотровой Чубатка хорошо заметны её открытые пространства. Авторская мартовская прогулка соединила заснеженный лесной склон, сухие пески и окрестные скальные тропы.",
+      "coordinates": {
+        "lat": 50.3391501,
+        "lng": 19.5128174
+      },
+      "article": {
+        "id": 299,
+        "url": "https://metravel.by/travels/peshii-marshrut-po-blendovskoi-pustyne-1",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-04T20:44:11.607132Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/f6eec721867d4936a2da9bd3c12b0232.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/f6eec721867d4936a2da9bd3c12b0232.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/f6eec721867d4936a2da9bd3c12b0232.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 563,
+        "alt": "Блендовская пустыня с высоты: песчаный остров в кольце сосновых лесов",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 299 HTML and media.article_body.gallery[id2]; alt: Блендовская пустыня с высоты: песчаный остров в кольце сосновых лесов"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 299,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Блендовская пустыня с высоты: песчаный остров в кольце сосновых лесов",
+          "metadataLocation": "media.article_body.gallery.2.alt",
+          "html": [
+            {
+              "alt": "Блендовская пустыня с высоты: песчаный остров в кольце сосновых лесов",
+              "src": "https://metravel.by/travel-description-image/f6eec721867d4936a2da9bd3c12b0232.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Блендовская пустыня"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.3391501&lng=19.5128174&placeId=13482&focusPlace=1&placeTitle=%D0%91%D0%BB%D0%B5%D0%BD%D0%B4%D0%BE%D0%B2%D1%81%D0%BA%D0%B0%D1%8F+%D0%BF%D1%83%D1%81%D1%82%D1%8B%D0%BD%D1%8F",
+        "article": "https://metravel.by/travels/peshii-marshrut-po-blendovskoi-pustyne-1"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Pustynia Błędowska",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "В марте на смотровой площадке над Блендовской пустыней ещё лежал снег — полосами по утоптанной земле, вперемешку со следами шин. А через полтора часа мы шли по открытым пескам, и под ногами было сухо и мягко, как на дюнах у моря. В этом весь фокус места: пятьдесят километров от Кракова, сорок от Катовиц — и вдруг посреди Малопольши десять километров песка, на которых почти ничего не растёт.\n\nБлендовская пустыня — крупнейшая песчаная зона Центральной Европы (~150 км², местами пески до 60 м глубиной), но её происхождение антропогенное: в Средние века вырубка лесов и добыча руды у Олькуша обрушили уровень грунтовых вод, и началось опустынивание. По легенде, дьявол засыпал серебряную шахту песком. Сейчас сосны постепенно отвоёвывают территорию — у нас осталось буквально несколько десятилетий, чтобы увидеть пустыню в полном виде.",
+        "sourceSnapshot": "public-travel-api:299",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,48"
+      }
+    },
+    {
+      "id": "point-15457",
+      "pointId": 15457,
+      "country": "PL",
+      "printTitle": "Голубые источники",
+      "localName": "Заповедник Голубые источники (Niebieskie Źródła)",
+      "copyRu": "В заповеднике Niebieskie Źródła выходы источников просвечивают бирюзовыми пятнами сквозь воду. Вокруг водоёма проложены дорожки для короткой прогулки. Автор остановилась здесь по дороге к Балтике, чтобы отдохнуть от дороги вместе с собакой.",
+      "coordinates": {
+        "lat": 51.51096,
+        "lng": 20.02409
+      },
+      "article": {
+        "id": 634,
+        "url": "https://metravel.by/travels/golubye-istochniki-niebieskie-zrodla-v-polshe",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T15:48:51.297125Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/15457/conversions/e183c99127894fe4bccc710126cf2747.webp",
+        "originalUri": "https://metravel.by/address-image/15457/conversions/e183c99127894fe4bccc710126cf2747.webp",
+        "publicImageUri": "https://metravel.by/address-image/15457/conversions/e183c99127894fe4bccc710126cf2747.webp",
+        "representation": "article-original-representation",
+        "width": 1024,
+        "height": 768,
+        "alt": "Заповедник Голубые источники (Niebieskie Źródła)",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[15457] image and media.address_images[15457].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 634,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Заповедник Голубые источники (Niebieskie Źródła)",
+          "metadataLocation": "media.address_images.15457.alt",
+          "html": []
+        },
+        "editorialCaption": "Голубые источники"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=51.51096&lng=20.02409&placeId=15457&focusPlace=1&placeTitle=%D0%93%D0%BE%D0%BB%D1%83%D0%B1%D1%8B%D0%B5+%D0%B8%D1%81%D1%82%D0%BE%D1%87%D0%BD%D0%B8%D0%BA%D0%B8",
+        "article": "https://metravel.by/travels/golubye-istochniki-niebieskie-zrodla-v-polshe"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Заповедник Голубые источники (Niebieskie Źródła)",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "По дороге на отдых на Балтике мы искали, где бы прогуляться с Тимом и немного отдохнуть от дороги, поэтому мы заехали в природный заповедник Niebieskie Źródła — Голубые источники.\n\nЦвет даёт не краситель и не минералы, а свет: часть волн поглощается водой, а голубые и зелёные отражаются от светлого песчаного дна. Поэтому в солнечную погоду вода выглядит ярко-бирюзовой, а в пасмурную становится зеленоватой или серой. Мы были в солнечный апрельский день, и пятна источников на дне читались очень отчётливо.",
+        "sourceSnapshot": "public-travel-api:634",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,89"
+      }
+    },
+    {
+      "id": "point-14045",
+      "pointId": 14045,
+      "country": "PL",
+      "printTitle": "Водопад Сиклава",
+      "localName": "Siklawa",
+      "copyRu": "Водопад Сиклава находится на горном маршруте к Долине пяти озёр в Татрах. Поток падает по отвесной скальной стене рядом с туристической тропой. Авторская августовская поездка объединила этот водопад, подъём в долину и отдых у озёр.",
+      "coordinates": {
+        "lat": 49.2141245,
+        "lng": 20.0439617
+      },
+      "article": {
+        "id": 400,
+        "url": "https://metravel.by/travels/dolina-pyati-ozer",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:53:22.736327Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/eaa88463789a47909c9a5738d44693ee.jpeg.webp",
+        "originalUri": "https://metravel.by/travel-description-image/eaa88463789a47909c9a5738d44693ee.jpeg.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/eaa88463789a47909c9a5738d44693ee.jpeg.webp",
+        "representation": "article-original-representation",
+        "width": 800,
+        "height": 1067,
+        "alt": "Водопад Сиклава падает отвесной скальной стеной",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 400 HTML and media.article_body.gallery[id30]; alt: Водопад Сиклава падает отвесной скальной стеной"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 400,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Водопад Сиклава падает отвесной скальной стеной",
+          "metadataLocation": "media.article_body.gallery.30.alt",
+          "html": [
+            {
+              "alt": "Водопад Сиклава падает отвесной скальной стеной",
+              "src": "https://metravel.by/travel-description-image/eaa88463789a47909c9a5738d44693ee.jpeg.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Водопад Сиклава"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=49.2141245&lng=20.0439617&placeId=14045&focusPlace=1&placeTitle=%D0%92%D0%BE%D0%B4%D0%BE%D0%BF%D0%B0%D0%B4+%D0%A1%D0%B8%D0%BA%D0%BB%D0%B0%D0%B2%D0%B0",
+        "article": "https://metravel.by/travels/dolina-pyati-ozer"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Siklawa",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Долина пяти озер (Dolina Pięciu Stawów Polskich) в польских Татрах — одна из самых красивых горных долин региона: пять озёр разной высоты, соединённых водопадом Сиклава, и приют Schronisko PTTK на берегу самого крупного озера. Старт от парковки Palenica Białczańska (Кузьница/Морское Око), подъём вдоль водопада занимает около 2–2,5 часов в одну сторону. Парковку в 2026 году нужно бронировать заранее на tpn.gov.pl — цена ~35–85 zł за день в зависимости от сезона, вход в Татранский нацпарк — отдельно (около 7–10 zł). Стоит ли ехать: да, но без брони парковки на популярные даты лучше не рассчитывать — альтернатива — приехать со стороны Словакии.\n\nВозвращаясь обратно, мы шли по зеленой тропе, вдоль водопада Сиклава. Дорога достаточно опасная в дождливое время года и даже в абсолютно сухую погоду спускать страшновато. Сиклава — самый мощный водопад польских Татр: вода падает почти отвесной 70-метровой скальной стеной, разделяющей Долину пяти ставов и Долину Ростоки.",
+        "sourceSnapshot": "public-travel-api:400",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,44"
+      }
+    },
+    {
+      "id": "point-16150",
+      "pointId": 16150,
+      "country": "PL",
+      "printTitle": "Экотропа Bobrowisko",
+      "localName": "Деревянные настилы экотропы Bobrowisko",
+      "copyRu": "Bobrowisko — короткая экотропа в Старом Сонче между Дунайцем и Попрадом. Деревянные настилы проходят среди воды и камышей к наблюдательным павильонам. Авторская зимняя прогулка здесь стала спокойной остановкой у речной старицы.",
+      "coordinates": {
+        "lat": 49.5856306,
+        "lng": 20.6437944
+      },
+      "article": {
+        "id": 759,
+        "url": "https://metravel.by/travels/bobrowisko-v-starom-sonche-ekotropa-i-progulka-vdol-poprada",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T15:47:47.938257Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/16150/conversions/c2ace96b6c034f38aafff682078bfeb3.webp",
+        "originalUri": "https://metravel.by/address-image/16150/conversions/c2ace96b6c034f38aafff682078bfeb3.webp",
+        "publicImageUri": "https://metravel.by/address-image/16150/conversions/c2ace96b6c034f38aafff682078bfeb3.webp",
+        "representation": "article-original-representation",
+        "width": 1200,
+        "height": 900,
+        "alt": "Деревянные настилы экотропы Bobrowisko",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[16150] image and media.address_images[16150].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 759,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Деревянные настилы экотропы Bobrowisko",
+          "metadataLocation": "media.address_images.16150.alt",
+          "html": []
+        },
+        "editorialCaption": "Экотропа Bobrowisko"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=49.5856306&lng=20.6437944&placeId=16150&focusPlace=1&placeTitle=%D0%AD%D0%BA%D0%BE%D1%82%D1%80%D0%BE%D0%BF%D0%B0+Bobrowisko",
+        "article": "https://metravel.by/travels/bobrowisko-v-starom-sonche-ekotropa-i-progulka-vdol-poprada"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Деревянные настилы экотропы Bobrowisko",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Bobrowisko в Старом Сонче — короткая экотропа в вилке Дунайца и Попрада: деревянные настилы, вода, камыши и две чатовни — деревянные павильоны для наблюдения за животными. Ехать сюда в расчёте на полноценный пеший маршрут на несколько часов не стоит — настилов здесь около 400 метров. Но как место для спокойной прогулки, особенно зимой, нам оно очень понравилось.\n\nЕсли пройти только сами деревянные настилы, Bobrowisko действительно закончится очень быстро. На саму экотропу можно потратить около получаса, а если останавливаться в наблюдательных пунктах — примерно час.",
+        "sourceSnapshot": "public-travel-api:759",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,21"
+      }
+    },
+    {
+      "id": "point-15648",
+      "pointId": 15648,
+      "country": "PL",
+      "printTitle": "Водопад Каменьчик",
+      "localName": "Водопад Каменьчик",
+      "copyRu": "Каменьчик — водопад в Карконоше рядом со Шклярской-Порембой. Туристический путь проходит над ущельем, а вниз ведут металлические лестницы и площадки. Автор включила эту остановку в горную поездку к Шренице и Снежным Котлам.",
+      "coordinates": {
+        "lat": 50.81427,
+        "lng": 15.49719
+      },
+      "article": {
+        "id": 640,
+        "url": "https://metravel.by/travels/snezhnye-kotly-pokhod-po-karkonoshe-cherez-shrenitsu",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:48:24.156254Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/15648/conversions/f2a39438c11e422493da7b64f143970c.webp",
+        "originalUri": "https://metravel.by/address-image/15648/conversions/f2a39438c11e422493da7b64f143970c.webp",
+        "publicImageUri": "https://metravel.by/address-image/15648/conversions/f2a39438c11e422493da7b64f143970c.webp",
+        "representation": "article-original-representation",
+        "width": 1200,
+        "height": 1600,
+        "alt": "Водопад Каменьчик",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[15648] image and media.address_images[15648].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 640,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Водопад Каменьчик",
+          "metadataLocation": "media.address_images.15648.alt",
+          "html": []
+        },
+        "editorialCaption": "Водопад Каменьчик"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=50.81427&lng=15.49719&placeId=15648&focusPlace=1&placeTitle=%D0%92%D0%BE%D0%B4%D0%BE%D0%BF%D0%B0%D0%B4+%D0%9A%D0%B0%D0%BC%D0%B5%D0%BD%D1%8C%D1%87%D0%B8%D0%BA",
+        "article": "https://metravel.by/travels/snezhnye-kotly-pokhod-po-karkonoshe-cherez-shrenitsu"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Водопад Каменьчик",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Наш маршрут начинался у водопада Каменьчика, затем мы поднялись к приюту Hala Szrenicka, вышли на Шреницу и пошли по главному хребту Карконоше до Снежных Котлов. Обратно возвращались другой дорогой — через приют под Лабским Щитом. Именно обратная часть оказалась самой выматывающей, хотя технически весь маршрут довольно простой.\n\nЯ спускаться не стала — к самому водопаду в ущелье пошёл только Сергей. Поэтому этот момент лучше учитывать заранее: посмотреть Каменьчик сверху можно без проблем, а спуск вниз уже зависит от того, насколько спокойно вы чувствуете себя на металлических лестницах и открытых площадках.",
+        "sourceSnapshot": "public-travel-api:640",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 4,18"
+      }
+    },
+    {
+      "id": "point-16174",
+      "pointId": 16174,
+      "country": "PL",
+      "printTitle": "Национальный парк Волин",
+      "localName": "Национальный парк Волин",
+      "copyRu": "Национальный парк Волин стал одной из остановок авторского путешествия по западной Польше. Лесной ландшафт острова сменяет озёра и сельские дороги предыдущих дней. Эта точка добавляет в маршрут отдельную прогулку среди балтийской природы.",
+      "coordinates": {
+        "lat": 53.9764528,
+        "lng": 14.5559028
+      },
+      "article": {
+        "id": 593,
+        "url": "https://metravel.by/travels/zapadnaia-polsha-na-mashine-ozera-ostrov-volin-i-zabroshennyi-dvorets",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:48:39.454813Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/16174/conversions/eafe6ea8af924fd388934e2b24b9e0fc.webp",
+        "originalUri": "https://metravel.by/address-image/16174/conversions/eafe6ea8af924fd388934e2b24b9e0fc.webp",
+        "publicImageUri": "https://metravel.by/address-image/16174/conversions/eafe6ea8af924fd388934e2b24b9e0fc.webp",
+        "representation": "article-original-representation",
+        "width": 1200,
+        "height": 900,
+        "alt": "Национальный парк Волин",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[16174] image and media.address_images[16174].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 593,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Национальный парк Волин",
+          "metadataLocation": "media.address_images.16174.alt",
+          "html": []
+        },
+        "editorialCaption": "Национальный парк Волин"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=53.9764528&lng=14.5559028&placeId=16174&focusPlace=1&placeTitle=%D0%9D%D0%B0%D1%86%D0%B8%D0%BE%D0%BD%D0%B0%D0%BB%D1%8C%D0%BD%D1%8B%D0%B9+%D0%BF%D0%B0%D1%80%D0%BA+%D0%92%D0%BE%D0%BB%D0%B8%D0%BD",
+        "article": "https://metravel.by/travels/zapadnaia-polsha-na-mashine-ozera-ostrov-volin-i-zabroshennyi-dvorets"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Национальный парк Волин",
+        "identityNote": "Конкретный объект опубликованного путешествия автора1; точныйpointId дополнительно сверяется source-records.",
+        "excerpt": "Волинский национальный парк и маяк Кикут\n\nПро отдельные маршруты по острову Волин у нас есть другие статьи, поэтому здесь подробно останавливаться на них не буду.",
+        "sourceSnapshot": "public-travel-api:593",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 45,93"
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "pointId": 13700,
+      "title": "Дворец Плавнёвице",
+      "travelId": 319,
+      "travelUrl": "https://metravel.by/travels/zamki-opolskogo-voevodstva-moshna-uiazd-i-khshelitse",
+      "reason": "В собственной статье зафиксированы ограничения использования фотографий дворца; основание для выпуска изображения в книге не подтверждено. Исключён из издания, производная AI-картинка не используется как обход ограничения.",
+      "replacementPointId": 15926,
+      "sourceExcerpt": "фотографировать замок снаружи в коммерческих целях ... только с договором и оплатой; внутри ... фотографировать можно, но публиковать нигде нельзя"
+    }
+  ],
+  "questVerification": {
+    "verifiedOn": "2026-10-30",
+    "publicCatalogCount": 282,
+    "relevantAnonymousDetailCount": 15,
+    "rule": "Только подтверждённая связь конкретного шага/объекта и координат. Для остальных точек третий QR отсутствует.",
+    "associatedCount": 4
+  }
+}

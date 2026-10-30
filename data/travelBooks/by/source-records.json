@@ -1,0 +1,2387 @@
+{
+  "schemaVersion": 1,
+  "country": "BY",
+  "authorId": 1,
+  "verifiedOn": "2026-10-30",
+  "status": "source-verified-assembly-input",
+  "compositionCount": 31,
+  "records": [
+    {
+      "id": "point-356",
+      "pointId": 356,
+      "country": "BY",
+      "printTitle": "Ислочь: Туристическая поляна",
+      "localName": "Туристическая Поляна",
+      "copyRu": "Туристическая поляна находится на берегу Ислочи. К ней ведёт лесная тропа от дороги Н8331 в сторону Междуречья. Над речной излучиной виден песчаный обрыв, а рядом с водой — сосновый бор и зелёная пойма.",
+      "coordinates": {
+        "lat": 53.9793698,
+        "lng": 26.9763966
+      },
+      "article": {
+        "id": 133,
+        "url": "https://metravel.by/travels/reka-isloch-gde-guliat-i-otdykhat-s-sobakoi",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:56:35.694774Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/0164614223c74af281706241ce101fb3.jpg.webp",
+        "originalUri": "https://metravel.by/travel-description-image/0164614223c74af281706241ce101fb3.jpg.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/0164614223c74af281706241ce101fb3.jpg.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 1333,
+        "alt": "Песчаный обрыв над излучиной Ислочи: сосновый бор на одном берегу и зелёная пойма на другом",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article133 section «Туристическая поляна» contains the sole landscape photo with alt describing the Isloch bend; media.article_body.gallery[id1].variants.original."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 133,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Песчаный обрыв над излучиной Ислочи: сосновый бор на одном берегу и зелёная пойма на другом",
+          "metadataLocation": "media.article_body.gallery.1.alt",
+          "html": [
+            {
+              "alt": "Песчаный обрыв над излучиной Ислочи: сосновый бор на одном берегу и зелёная пойма на другом",
+              "src": "https://metravel.by/travel-description-image/0164614223c74af281706241ce101fb3.jpg.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Ислочь: Туристическая поляна"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=53.9793698&lng=26.9763966&placeId=356&focusPlace=1&placeTitle=%D0%98%D1%81%D0%BB%D0%BE%D1%87%D1%8C%3A+%D0%A2%D1%83%D1%80%D0%B8%D1%81%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B0%D1%8F+%D0%BF%D0%BE%D0%BB%D1%8F%D0%BD%D0%B0",
+        "article": "https://metravel.by/travels/reka-isloch-gde-guliat-i-otdykhat-s-sobakoi"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Туристическая Поляна",
+        "identityNote": "«Река Ислочь — стоянка „Туристическая поляна“» из повторного скриншота — тот же объект. Дубликат не увеличивает число выбранных мест.",
+        "excerpt": "Туристическая поляна у Междуречья\n\nЮлия с лабрадором Тимом ехала к точке «Туристическая Поляна» у деревни Междуречье в Раковском сельсовете Воложинского района — это удобный плоский съезд по дороге Н8331, с обустроенной парковкой и тропами вдоль берега. Подъезжать можно прямо на легковой, особенно летом и в начале осени, но после сильных дождей грунтовка может быть размытой. От Минска — около 50 км через Раков, что делает локацию хорошим вариантом «выехать на полдня».",
+        "sourceSnapshot": "public-travel-api:133",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 6,22"
+      }
+    },
+    {
+      "id": "point-421",
+      "pointId": 421,
+      "country": "BY",
+      "printTitle": "Башня «Белый Ковель», Смоляны",
+      "localName": "Башня замка «Белый Ковель»",
+      "copyRu": "От замка «Белый Ковель» в Смолянах сохранилась высокая башня. Пустые окна и фрагменты кирпичных стен напоминают о прежнем масштабе крепости. Руины стали одной из самых узнаваемых точек этого старинного местечка.",
+      "coordinates": {
+        "lat": 54.6012569,
+        "lng": 30.0543494
+      },
+      "article": {
+        "id": 138,
+        "url": "https://metravel.by/travels/smoliany-belarus-ruiny-legendy-i-starinnye-khramy",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T16:04:48.664574Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/39db96486ba944d7b1ad2658f4a92600.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/39db96486ba944d7b1ad2658f4a92600.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/39db96486ba944d7b1ad2658f4a92600.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 1510,
+        "alt": "Руины башни замка Белый Ковель",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 138 HTML and media.article_body.gallery[id2]; alt: Руины башни замка Белый Ковель"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 138,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Руины башни замка Белый Ковель",
+          "metadataLocation": "media.article_body.gallery.2.alt",
+          "html": [
+            {
+              "alt": "Руины башни замка Белый Ковель",
+              "src": "https://metravel.by/travel-description-image/39db96486ba944d7b1ad2658f4a92600.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Башня «Белый Ковель», Смоляны"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=54.6012569&lng=30.0543494&placeId=421&focusPlace=1&placeTitle=%D0%91%D0%B0%D1%88%D0%BD%D1%8F+%C2%AB%D0%91%D0%B5%D0%BB%D1%8B%D0%B9+%D0%9A%D0%BE%D0%B2%D0%B5%D0%BB%D1%8C%C2%BB%2C+%D0%A1%D0%BC%D0%BE%D0%BB%D1%8F%D0%BD%D1%8B",
+        "article": "https://metravel.by/travels/smoliany-belarus-ruiny-legendy-i-starinnye-khramy"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Башня замка «Белый Ковель»",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Частые вопросы: Смоляны, замок Белый Ковель и старинные храмы\n\nЗамок Белый Ковель построил в XVII веке князь Сангушко-Ковельский — это была одна из самых мощных частных резиденций восточной Беларуси с глубокими подвалами. В 1880 году имение перешло в казну, и большую часть стен попросту разобрали на кирпич для городских нужд Орши. Сегодня от него осталась башня и фрагменты стен — этого хватает, чтобы представить масштаб, но не сам ансамбль. Легенда про подземные ходы до Орши документально не подтверждена, однако подвалы под уцелевшей башней реальные.",
+        "sourceSnapshot": "public-travel-api:138",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 51,52"
+      }
+    },
+    {
+      "id": "point-587",
+      "pointId": 587,
+      "country": "BY",
+      "printTitle": "Дворец в Красном Береге",
+      "localName": "Дворцово-парковый комплекс Козел-Поклевских",
+      "copyRu": "Дворец в Красном Береге известен как усадьба Гатовских и Козелл-Поклевских. В его оформлении соединены черты разных архитектурных эпох. Вокруг усадебных построек сохранился английский парк со старой липовой аллеей.",
+      "coordinates": {
+        "lat": 52.9654099,
+        "lng": 29.7841898
+      },
+      "article": {
+        "id": 148,
+        "url": "https://metravel.by/travels/usadba-gatovskikh-v-krasnom-berege-sudby-voiny-i-pamiat",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-24T07:42:20.988291Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/0d49cc58286848a7acea0bace4a7cccb.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/0d49cc58286848a7acea0bace4a7cccb.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/0d49cc58286848a7acea0bace4a7cccb.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 662,
+        "alt": "Усадебный дом с зелёной крышей за строительным ограждением",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 148 HTML and media.article_body.gallery[id1]; alt: Усадебный дом с зелёной крышей за строительным ограждением"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 148,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Усадебный дом с зелёной крышей за строительным ограждением",
+          "metadataLocation": "media.article_body.gallery.1.alt",
+          "html": [
+            {
+              "alt": "Усадебный дом с зелёной крышей за строительным ограждением",
+              "src": "https://metravel.by/travel-description-image/0d49cc58286848a7acea0bace4a7cccb.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Дворец в Красном Береге"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=52.9654099&lng=29.7841898&placeId=587&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%B2+%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D0%BC+%D0%91%D0%B5%D1%80%D0%B5%D0%B3%D0%B5",
+        "article": "https://metravel.by/travels/usadba-gatovskikh-v-krasnom-berege-sudby-voiny-i-pamiat"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Дворцово-парковый комплекс Козел-Поклевских",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Усадьба Козел-Поклевских в Красном Берегу — неоготический дворец конца XIX века в Жлобинском районе Гомельской области, который местные и путеводители по старой памяти называют ещё и усадьбой Гатовских. Здесь же, в той же деревне, стоит мемориал «Детям — жертвам войны».\n\nВ статье сохранено привычное название Гатовских; официальное название учреждения сейчас — «Музей-усадьба XIX в. Козелл-Поклевских». Ищите оба варианта, речь об одном комплексе в Красном Береге.",
+        "sourceSnapshot": "public-travel-api:148",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,27"
+      }
+    },
+    {
+      "id": "point-2624",
+      "pointId": 2624,
+      "country": "BY",
+      "printTitle": "Руины дворца Тышкевичей, Логойск",
+      "localName": "Дворец Тышкевичей (руины 1819г)",
+      "copyRu": "Дворец Тышкевичей находился в Логойском парке у реки Гайны. От большого здания XIX века сохранились фрагменты стен. Рядом с руинами можно увидеть старые деревья, ручьи и каскад водопадов бывшего усадебного парка.",
+      "coordinates": {
+        "lat": 54.2053365,
+        "lng": 27.8447456
+      },
+      "article": {
+        "id": 176,
+        "url": "https://metravel.by/travels/logoisk-dvorets-tyshkevichei-i-rodnik-sviatogo-iuriia",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T10:33:42.108601Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/679f07d5599d49c18f89ae616f4f355f.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/679f07d5599d49c18f89ae616f4f355f.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/679f07d5599d49c18f89ae616f4f355f.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 750,
+        "height": 1000,
+        "alt": null,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article176 places this exact photo immediately after the paragraph about surviving fragments of the Tyszkiewicz palace walls and the park cascade; gallery[id4]."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 176,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": null,
+          "metadataLocation": "media.article_body.gallery.4.alt",
+          "html": [
+            {
+              "alt": null,
+              "src": "https://metravel.by/travel-description-image/679f07d5599d49c18f89ae616f4f355f.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Руины дворца Тышкевичей, Логойск"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=54.2053365&lng=27.8447456&placeId=2624&focusPlace=1&placeTitle=%D0%A0%D1%83%D0%B8%D0%BD%D1%8B+%D0%B4%D0%B2%D0%BE%D1%80%D1%86%D0%B0+%D0%A2%D1%8B%D1%88%D0%BA%D0%B5%D0%B2%D0%B8%D1%87%D0%B5%D0%B9%2C+%D0%9B%D0%BE%D0%B3%D0%BE%D0%B9%D1%81%D0%BA",
+        "article": "https://metravel.by/travels/logoisk-dvorets-tyshkevichei-i-rodnik-sviatogo-iuriia"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Дворец Тышкевичей (руины 1819г)",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Веломаршрут на 1 день из Логойска (Минская область): руины дворца Тышкевичей XIX века, родник у церкви Святого Николая, купели и родник Святого Юрия в лесу за деревней Нивки — круговой маршрут около 24 км по холмистой местности с перелесками и видами на реку Гайна.\n\nДворец построил граф Пий Тышкевич в 1814–1819 годах в стиле ампир — монументальное двухэтажное здание 70×20 метров на высоком цоколе. В 1842 году его сыновья Константин и Евстафий Тышкевичи основали здесь первый в Беларуси историко-археологический музей древностей с коллекцией находок их собственных раскопок. В годы Великой Отечественной войны в подвалах располагалась тюрьма гестапо; после войны дворец взорвали, а кирпич разобрали местные жители. Сегодня в логойском парке сохранились только два фрагмента стен и каскад водопадов на реке Гайна — именно их и проезжает веломаршрут.",
+        "sourceSnapshot": "public-travel-api:176",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,67"
+      }
+    },
+    {
+      "id": "point-2633",
+      "pointId": 2633,
+      "country": "BY",
+      "printTitle": "Озеро Глубокое",
+      "localName": "Глубокое озеро",
+      "copyRu": "Озеро Глубокое скрыто среди лесов недалеко от деревни Большое Ситно. В авторской поездке особенно запомнились прозрачная вода и песчаное дно. Лесная дорога к озеру стала отдельной частью этого путешествия.",
+      "coordinates": {
+        "lat": 55.6949836,
+        "lng": 29.4528694
+      },
+      "article": {
+        "id": 169,
+        "url": "https://metravel.by/travels/ozero-glubokoe-samoe-prozrachnoe-ozero-v-belarusi",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-25T10:08:30.047762Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/b4ac9295471e4d16b5cb4bd0c12a6568.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/b4ac9295471e4d16b5cb4bd0c12a6568.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/b4ac9295471e4d16b5cb4bd0c12a6568.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 750,
+        "alt": null,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article169 gallery[id3] immediately follows the paragraph about the transparent lake water and sandy bottom; earlier images show the approach road and field."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 169,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": null,
+          "metadataLocation": "media.article_body.gallery.3.alt",
+          "html": [
+            {
+              "alt": null,
+              "src": "https://metravel.by/travel-description-image/b4ac9295471e4d16b5cb4bd0c12a6568.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Озеро Глубокое"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=55.6949836&lng=29.4528694&placeId=2633&focusPlace=1&placeTitle=%D0%9E%D0%B7%D0%B5%D1%80%D0%BE+%D0%93%D0%BB%D1%83%D0%B1%D0%BE%D0%BA%D0%BE%D0%B5",
+        "article": "https://metravel.by/travels/ozero-glubokoe-samoe-prozrachnoe-ozero-v-belarusi"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Глубокое озеро",
+        "identityNote": "Точная точка 55.6949836,29.4528694 и авторская статья169; в статье озеро описано как Глубокое у Большого Ситно. Административный район отдельно не проверен.",
+        "excerpt": "Озеро Глубокое под Полоцком — самое чистое и прозрачное озеро Беларуси: летом дно просматривается на глубину до 9,5 метров, а максимальная глубина доходит до 11,5 м. Оно лежит среди лесов ландшафтного заказника недалеко от деревни Большое Ситно — и добраться сюда оказалось целым приключением.\n\nГлавная особенность — вода. Озеро олиготрофное (бедное питательными веществами), и летом прозрачность достигает 9,5 м — по этому показателю Глубокое считается самым прозрачным озером Беларуси. Вода слабокислая и сильно минерализованная (pH около 4,5–5), поэтому она такая «стеклянная», какой и запомнилась нам с песчаным дном, просматриваемым на глубину.",
+        "sourceSnapshot": "public-travel-api:169",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,31"
+      }
+    },
+    {
+      "id": "point-2758",
+      "pointId": 2758,
+      "country": "BY",
+      "printTitle": "Дворец Горваттов, Наровля",
+      "localName": "Дворцово-парковый комплекс Горваттов",
+      "copyRu": "Дворцово-парковый комплекс Горваттов находится в Наровле на берегу Припяти. Дворец XIX века сохранился в полуразрушенном состоянии. Старинный парк и речной пейзаж составляют важную часть впечатления от этого места.",
+      "coordinates": {
+        "lat": 51.8044553,
+        "lng": 29.5012715
+      },
+      "article": {
+        "id": 143,
+        "url": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:56:13.709502Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/f9c6f96f840d4d51b781775f3405e848.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/f9c6f96f840d4d51b781775f3405e848.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/f9c6f96f840d4d51b781775f3405e848.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 662,
+        "alt": null,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article143 media.article_body.gallery[id1]. Визуально сопоставлен фасад с фото exact point2758: то же вытянутое двухэтажное здание с центральным ризалитом, белым декором и розовыми простенками. Выбран body1; body0 с мемориалом1986 исключён.",
+          "visualVerification": {
+            "status": "verified-same-object",
+            "verifiedOn": "2026-10-30",
+            "method": "actual selected image compared against same-article exact-point photo",
+            "exactPointImageUri": "https://metravel.by/address-image/2758/conversions/08d2b643f84840f38e6b024cff891c33.jpeg",
+            "evidenceArtifact": ".codex-temp/books-source-fix/sheet.jpg"
+          }
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 143,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": null,
+          "metadataLocation": "media.article_body.gallery.1.alt",
+          "html": [
+            {
+              "alt": null,
+              "src": "https://metravel.by/travel-description-image/f9c6f96f840d4d51b781775f3405e848.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Дворец Горваттов, Наровля"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=51.8044553&lng=29.5012715&placeId=2758&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%93%D0%BE%D1%80%D0%B2%D0%B0%D1%82%D1%82%D0%BE%D0%B2%2C+%D0%9D%D0%B0%D1%80%D0%BE%D0%B2%D0%BB%D1%8F",
+        "article": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Дворцово-парковый комплекс Горваттов",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "В 1816 году Игнатий Горватт приобрел Наровлянское имение вместе с окрестными землями. Уже в середине XIX века здесь был построен роскошный дворец в стиле классицизма, который стал центром культурной жизни региона.\n\nИгнатий Горватт приобрёл Наровлянское имение в 1816 году. В середине XIX века здесь возвели роскошный дворец в стиле классицизма с бальным залом, библиотекой и картинной галереей — здание стало культурным центром округи: давали балы и музыкальные вечера. Вокруг разбили парк площадью более 8 гектаров с аллеями, фонтаном, беседками и редкими породами деревьев — дубами, ясенями, липами, клёнами и декоративными грабами.",
+        "sourceSnapshot": "public-travel-api:143",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 14,52"
+      }
+    },
+    {
+      "id": "point-2913",
+      "pointId": 2913,
+      "country": "BY",
+      "printTitle": "Родники Святые Криницы",
+      "localName": "Родники Святые Криницы",
+      "copyRu": "Святые Криницы — родники у деревни Курганы недалеко от Минска. К ним ведёт короткая лесная тропа с деревянными настилами и лестницами. Вода стекает по склону среди старых деревьев и дальше встречается с речкой Удрой.",
+      "coordinates": {
+        "lat": 54.2011784,
+        "lng": 27.3848648
+      },
+      "article": {
+        "id": 179,
+        "url": "https://metravel.by/travels/rodniki-sviatye-krinitsy-ekotropa-v-37-km-ot-minska",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-25T08:47:14.026969Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/7a2c23abb7744ba29d3acfdd33ce01bf.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/7a2c23abb7744ba29d3acfdd33ce01bf.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/7a2c23abb7744ba29d3acfdd33ce01bf.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 750,
+        "height": 1000,
+        "alt": "Родник, стекающий по склону",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 179 HTML and media.article_body.gallery[id7]; alt: Родник, стекающий по склону"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 179,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Родник, стекающий по склону",
+          "metadataLocation": "media.article_body.gallery.7.alt",
+          "html": [
+            {
+              "alt": "Родник, стекающий по склону",
+              "src": "https://metravel.by/travel-description-image/7a2c23abb7744ba29d3acfdd33ce01bf.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Родники Святые Криницы"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=54.2011784&lng=27.3848648&placeId=2913&focusPlace=1&placeTitle=%D0%A0%D0%BE%D0%B4%D0%BD%D0%B8%D0%BA%D0%B8+%D0%A1%D0%B2%D1%8F%D1%82%D1%8B%D0%B5+%D0%9A%D1%80%D0%B8%D0%BD%D0%B8%D1%86%D1%8B",
+        "article": "https://metravel.by/travels/rodniki-sviatye-krinitsy-ekotropa-v-37-km-ot-minska"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Родники Святые Криницы",
+        "identityNote": "Повторный скриншот «Родники Святые Криницы» не увеличивает число выбранных мест. Есть поздний дубль15826 с той же точкой.",
+        "excerpt": "«Родники Святые Криницы» у деревни Курганы — место нашей воскресной прогулки в августе 2020 года. От Минска до родников около 48 км по дороге; за лесной дорогой здесь начинается короткая тропа с деревянными настилами и лестницами.\n\nЧастые вопросы: экотропа «Родники Святые Криницы»",
+        "sourceSnapshot": "public-travel-api:179",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,28"
+      }
+    },
+    {
+      "id": "point-3011",
+      "pointId": 3011,
+      "country": "BY",
+      "printTitle": "Дворец Пусловских, Коссово",
+      "localName": "Дворец Пусловских в Коссово",
+      "copyRu": "Дворец Пусловских возвышается на холме в Коссово. Его зубчатые башни и красные крыши хорошо видны на фоне зелени. В авторской поездке дворец ещё стоял в строительных лесах, а рядом уже можно было увидеть усадьбу Костюшко.",
+      "coordinates": {
+        "lat": 52.765534,
+        "lng": 25.1217778
+      },
+      "article": {
+        "id": 147,
+        "url": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:56:04.905403Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/ac1bcb375d404436ab1bc67e09752eb3.jpg.webp",
+        "originalUri": "https://metravel.by/travel-description-image/ac1bcb375d404436ab1bc67e09752eb3.jpg.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/ac1bcb375d404436ab1bc67e09752eb3.jpg.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 564,
+        "alt": "Дворец Пусловских в Коссово в строительных лесах: белые башни с зубцами и красные крыши над зелёным холмом",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 147 HTML and media.article_body.gallery[id1]; alt: Дворец Пусловских в Коссово в строительных лесах: белые башни с зубцами и красные крыши над зелёным холмом"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 147,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Дворец Пусловских в Коссово в строительных лесах: белые башни с зубцами и красные крыши над зелёным холмом",
+          "metadataLocation": "media.article_body.gallery.1.alt",
+          "html": [
+            {
+              "alt": "Дворец Пусловских в Коссово в строительных лесах: белые башни с зубцами и красные крыши над зелёным холмом",
+              "src": "https://metravel.by/travel-description-image/ac1bcb375d404436ab1bc67e09752eb3.jpg.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Дворец Пусловских, Коссово"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=52.765534&lng=25.1217778&placeId=3011&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%9F%D1%83%D1%81%D0%BB%D0%BE%D0%B2%D1%81%D0%BA%D0%B8%D1%85%2C+%D0%9A%D0%BE%D1%81%D1%81%D0%BE%D0%B2%D0%BE",
+        "article": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+        "quest": "https://metravel.by/quests/20/kossovo-ruzhany-palaces"
+      },
+      "quest": {
+        "status": "verified-associated",
+        "id": 16,
+        "url": "https://metravel.by/quests/20/kossovo-ruzhany-palaces",
+        "title": "Квест Коссово — Ружаны: дворцы Пусловских и Сапегов",
+        "evidence": {
+          "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+          "publicDetailUrl": "https://metravel.by/api/quests/16/?lang=ru",
+          "publishedPublicDetailStatus": 200,
+          "publishedPageStatus": 200,
+          "stepId": 181,
+          "stepTitle": "Дворец Пусловских в Коссово",
+          "stepLocation": "Дворец Пусловских (Коссовский замок)",
+          "stepCoordinates": {
+            "lat": 52.765558,
+            "lng": 25.121513
+          },
+          "distanceM": 18,
+          "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+          "verifiedOn": "2026-10-30"
+        }
+      },
+      "sourceEvidence": {
+        "rawTitle": "Дворец Пусловских в Коссово",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Строить дворец начал в 1830 году Войцех Пусловский, достраивал его сын Вандалин, проект делал варшавский архитектор Франтишек Ящолд, позже перестройкой занимался Владислав Маркони. Внутри было 132 помещения, и ни одно не повторяло другое, а двенадцать восьмигранных башен читаются как месяцы года — отсюда и привычное «Коссовский замок». В 1944 году здание выгорело, и почти семьдесят лет от него оставалась обгоревшая коробка.\n\nДворец Пусловских и музей-усадьба Тадеуша Костюшко работают как единый комплекс «Коссовский дворец», входные билеты продаются отдельно или комплектом, оплата в BYN. Цены и расписание лучше уточнять на официальном сайте музея и по телефону перед поездкой — данные актуальны на 2026, в выходные и в высокий сезон бывает запись на экскурсии. В сельской местности удобнее иметь наличные на случай проблем с терминалом.",
+        "sourceSnapshot": "public-travel-api:147",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 14,34"
+      }
+    },
+    {
+      "id": "point-3014",
+      "pointId": 3014,
+      "country": "BY",
+      "printTitle": "Дворец Сапег, Ружаны",
+      "localName": "Дворцовый комплекс князей Сапег",
+      "copyRu": "Дворцовый комплекс Сапег в Ружанах запоминается масштабом открытого двора. Длинная аркада ведёт взгляд к корпусу с фронтоном и пустыми окнами. В авторской поездке эта остановка стала продолжением знакомства с дворцами Коссово.",
+      "coordinates": {
+        "lat": 52.860402,
+        "lng": 24.8958478
+      },
+      "article": {
+        "id": 147,
+        "url": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:56:04.905403Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/49b53e4b9a9948978221a4e1e5612fb9.jpg.webp",
+        "originalUri": "https://metravel.by/travel-description-image/49b53e4b9a9948978221a4e1e5612fb9.jpg.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/49b53e4b9a9948978221a4e1e5612fb9.jpg.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 564,
+        "alt": "Руины Ружанского дворца Сапег: длинная аркада слева и главный корпус с фронтоном над зелёным двором",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 147 HTML and media.article_body.gallery[id4]; alt: Руины Ружанского дворца Сапег: длинная аркада слева и главный корпус с фронтоном над зелёным двором"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 147,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Руины Ружанского дворца Сапег: длинная аркада слева и главный корпус с фронтоном над зелёным двором",
+          "metadataLocation": "media.article_body.gallery.4.alt",
+          "html": [
+            {
+              "alt": "Руины Ружанского дворца Сапег: длинная аркада слева и главный корпус с фронтоном над зелёным двором",
+              "src": "https://metravel.by/travel-description-image/49b53e4b9a9948978221a4e1e5612fb9.jpg.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Дворец Сапег, Ружаны"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=52.860402&lng=24.8958478&placeId=3014&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%A1%D0%B0%D0%BF%D0%B5%D0%B3%2C+%D0%A0%D1%83%D0%B6%D0%B0%D0%BD%D1%8B",
+        "article": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+        "quest": "https://metravel.by/quests/20/kossovo-ruzhany-palaces"
+      },
+      "quest": {
+        "status": "verified-associated",
+        "id": 16,
+        "url": "https://metravel.by/quests/20/kossovo-ruzhany-palaces",
+        "title": "Квест Коссово — Ружаны: дворцы Пусловских и Сапегов",
+        "evidence": {
+          "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+          "publicDetailUrl": "https://metravel.by/api/quests/16/?lang=ru",
+          "publishedPublicDetailStatus": 200,
+          "publishedPageStatus": 200,
+          "stepId": 180,
+          "stepTitle": "Дворец Сапегов в Ружанах",
+          "stepLocation": "Дворцовый комплекс Сапегов (Ружаны)",
+          "stepCoordinates": {
+            "lat": 52.860661,
+            "lng": 24.895943
+          },
+          "distanceM": 30,
+          "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+          "verifiedOn": "2026-10-30"
+        }
+      },
+      "sourceEvidence": {
+        "rawTitle": "Дворцовый комплекс князей Сапег",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "От Коссово до Ружан 25 километров и полчаса дороги. Здесь всё наоборот: не восстановленный дворец на холме, а руины, у которых подняли парадную часть. Мы вышли на огромный двор — слева тянулась длинная аркада, в глубине стоял корпус с фронтоном и пустыми окнами. Людей было мало, и от этого масштаб чувствовался сильнее.\n\nЮля рекомендует 2–3 часа на Коссово (дворец Пусловских + музей-усадьба Костюшко + парк) и 1,5–2 часа на Ружаны (главные ворота, корпуса, музей рода Сапег, внутренний двор). Между точками — около 25 км и 30 минут езды. На день получается комфортный темп без спешки; если хотите ещё заехать в Жировичи или в Слоним, выезжайте из Минска утром.",
+        "sourceSnapshot": "public-travel-api:147",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 23,36"
+      }
+    },
+    {
+      "id": "point-3251",
+      "pointId": 3251,
+      "country": "BY",
+      "printTitle": "Быховский замок",
+      "localName": "Быховский замок",
+      "copyRu": "Быховский замок — отдельная остановка в поездке по востоку Беларуси. Старые стены и сохранившиеся части здания напоминают о прошлом укреплённой резиденции. Автор объединила его с Могилёвом и усадьбой Толстых.",
+      "coordinates": {
+        "lat": 53.5180096,
+        "lng": 30.2588882
+      },
+      "article": {
+        "id": 187,
+        "url": "https://metravel.by/travels/mogilev-usadba-tolstykh-i-bykhovskii-zamok",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-04T12:42:39.283314Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/3266/conversions/BDiSPfF4j5lIADmORrxDE0XHGj2w5l5ONQ8tFW0w-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/3266/conversions/BDiSPfF4j5lIADmORrxDE0XHGj2w5l5ONQ8tFW0w-thumb_400_wp.webp",
+        "publicImageUri": "https://metravel.by/address-image/3266/conversions/BDiSPfF4j5lIADmORrxDE0XHGj2w5l5ONQ8tFW0w-thumb_400_wp.webp",
+        "representation": "api-original-representation-low-resolution",
+        "width": 400,
+        "height": 400,
+        "alt": "Быховский замок",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[3251] image and media.address_images[3251].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 187,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Быховский замок",
+          "metadataLocation": "media.address_images.3251.alt",
+          "html": []
+        },
+        "editorialCaption": "Быховский замок"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=53.5180096&lng=30.2588882&placeId=3251&focusPlace=1&placeTitle=%D0%91%D1%8B%D1%85%D0%BE%D0%B2%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/mogilev-usadba-tolstykh-i-bykhovskii-zamok"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Быховский замок",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Могилёв, заброшенная усадьба графов Толстых в Грудиновке, древний Быховский замок и лесные родники Захаренка — маршрут на один день из Минска, который стоит сохранить. Иногда для хорошего путешествия не нужен отпуск: достаточно одного свободного дня, полного бака и желания свернуть с привычного маршрута. За день мы проехали около 300 километров и собрали столько впечатлений, что их хватило бы на полноценные выходные.\n\nСначала уютный городской Могилев с любимым обедом и прогулкой. Потом тихая, немного печальная усадьба Толсты����, где время будто остановилось. После суровые стены Быховского замка с тяжелой историей. И в завершение лесные криницы, где день закончился тишиной, водой и ощущением полного спокойствия.",
+        "sourceSnapshot": "public-travel-api:187",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,95"
+      }
+    },
+    {
+      "id": "point-3836",
+      "pointId": 3836,
+      "country": "BY",
+      "printTitle": "Дворец Бохвицей, Павлиново",
+      "localName": "Дворец Бохвицей (1906)",
+      "copyRu": "Дворец Бохвицей в Павлиново построен в начале XX века. Рядом с ним сохранились старый парк, пруд и хозяйственные постройки усадьбы. В авторской велопоездке он стал одной из главных остановок после Репихово и Ястрембеля.",
+      "coordinates": {
+        "lat": 53.0274504,
+        "lng": 25.8163776
+      },
+      "article": {
+        "id": 189,
+        "url": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T17:06:58.831214Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/45a8513ae52f46f59cda9207d0ca4e61.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/45a8513ae52f46f59cda9207d0ca4e61.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/45a8513ae52f46f59cda9207d0ca4e61.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 750,
+        "height": 1000,
+        "alt": null,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article189 media.article_body.gallery[id51]. Визуально сопоставлен с фото exact point3836: тот же фигурный фронтон с1906, центральное арочное окно и облупленная охристая отделка. Выбран body51 вместо body50, чтобы совпадало видимое состояние фасада.",
+          "visualVerification": {
+            "status": "verified-same-object",
+            "verifiedOn": "2026-10-30",
+            "method": "actual selected image compared against same-article exact-point photo",
+            "exactPointImageUri": "https://metravel.by/address-image/3836/conversions/548a066c9f5f439b88e15cdd53b738f7.JPG",
+            "evidenceArtifact": ".codex-temp/books-source-fix/sheet.jpg"
+          }
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 189,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": null,
+          "metadataLocation": "media.article_body.gallery.51.alt",
+          "html": [
+            {
+              "alt": null,
+              "src": "https://metravel.by/travel-description-image/45a8513ae52f46f59cda9207d0ca4e61.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Дворец Бохвицей, Павлиново"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=53.0274504&lng=25.8163776&placeId=3836&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%91%D0%BE%D1%85%D0%B2%D0%B8%D1%86%D0%B5%D0%B9%2C+%D0%9F%D0%B0%D0%B2%D0%BB%D0%B8%D0%BD%D0%BE%D0%B2%D0%BE",
+        "article": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Дворец Бохвицей (1906)",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Усадьба Бохвицей в деревне Павлиново Барановичского района — памятник архитектуры начала XX века в стиле неоготики. В 1897 году имение у Новицких приобрёл Ян Оттон Бохвиц, представитель известного шляхетского рода, сын философа и писателя Флориана Бохвица; название Павлиново усадьба получила в честь его матери. В 1906 году заложен главный усадебный дом, строительство завершилось в 1909 году — дата закладки до сих пор видна над готическим окном центрального ризалита. Дворец стоит на берегу озера Павлиново, которое питает речка Кочерыжка; здание прямоугольное в плане (28×15 м), трёхэтажное, с мансардным третьим этажом. После 1915 года усадьба перешла к сыну основателя, Тадеушу Оттону Бохвицу, а в 1930 году — к внуку Яну Оттону. Во время Второй мировой войны в усадьбе располагался военный госпиталь; вплоть до 1995 года комплекс использовался для медицинских нужд. В начале XXI века усадьбу выкупил частный владелец, реставрация ведётся поэтапно — часть фасадов уже обновлена, остальные постройки пока ждут своей очереди.\n\nНеоготический дворец Бохвицей 1906 года в советское время отдали под профилакторий и столовую, сейчас здание законсервировано и официально закрыто, осмотр только снаружи. Рядом сохранились конюшня и фрагменты парка с прудами — гулять по территории свободно. Дворец построил Ян Оттон Бохвиц, представитель шляхетского рода, владевшего Павлиново с 1897 года; позже усадьба перешла к его сыну Тадеушу Оттону Бохвицу. По всему парку видны следы планировки в английском стиле.",
+        "sourceSnapshot": "public-travel-api:189",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 114,119"
+      }
+    },
+    {
+      "id": "point-3841",
+      "pointId": 3841,
+      "country": "BY",
+      "printTitle": "Дворец Котлубаев, Ястрембель",
+      "localName": "Дворцово-парковый комплекс Котлубаев",
+      "copyRu": "Усадебный дом Котлубаев находится в Ястрембеле рядом с Барановичами. В нём размещалась школа-интернат, а позднее усадьба опустела. В авторской поездке особенно заметны были старые фасады и заросшая территория.",
+      "coordinates": {
+        "lat": 53.0307502,
+        "lng": 25.9607062
+      },
+      "article": {
+        "id": 189,
+        "url": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T17:06:58.831214Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/70bcfcf8317d4bb9bdfde17ec98ec749.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/70bcfcf8317d4bb9bdfde17ec98ec749.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/70bcfcf8317d4bb9bdfde17ec98ec749.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 750,
+        "height": 1000,
+        "alt": null,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article189 gallery[id44] is in the Yastrembel/Kotlubaev section following the school-boarding and abandoned-estate paragraph; the later Pavlinovo photos begin at id50."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 189,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": null,
+          "metadataLocation": "media.article_body.gallery.44.alt",
+          "html": [
+            {
+              "alt": null,
+              "src": "https://metravel.by/travel-description-image/70bcfcf8317d4bb9bdfde17ec98ec749.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Дворец Котлубаев, Ястрембель"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=53.0307502&lng=25.9607062&placeId=3841&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%9A%D0%BE%D1%82%D0%BB%D1%83%D0%B1%D0%B0%D0%B5%D0%B2%2C+%D0%AF%D1%81%D1%82%D1%80%D0%B5%D0%BC%D0%B1%D0%B5%D0%BB%D1%8C",
+        "article": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Дворцово-парковый комплекс Котлубаев",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Усадебный дом Котлубаев (1897 год) находится на территории кадетского училища. Мы подошли к охраннику и спросили, можно ли нам попасть на территорию — он, по-моему, и удивился, и сказал, что конечно идите)\n\nИстория самой усадьбы печальная. Конечно же, в начале это был роскошный дом и сад, но в 1917 году хозяин усадьбы отправляется в тюрьму, и усадьба попадает в руки советской власти. Тут располагается по традиции детский дом, после — школа-интернат. С 1990 года усадьба пустовала. В 2014 году её купили, но судя по состоянию — реставрация пока не планируется.",
+        "sourceSnapshot": "public-travel-api:189",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article189 rich_text.description.safe_html p/h/li extraction blocks 73,75",
+        "excludedExcerpt": {
+          "text": "Двухдневный веломаршрут по Брестской области (~30 км в день) через доты и капониры Первой мировой войны, сказочный парк усадьбы Потоцких в Репихово, усадебный дом Котлубаев в Ястрембеле и неоготический дворец Бохвицей в Павлиново. Маршрут планировался вдоль Огинского канала — но по пути встретилось слишком много соблазнов.\n\nЗаброшенные усадьбы Слонимского края: Альбертин, Ястрембель, дворец Рдултовских — тот же Слонимский и Барановичский кусты усадеб. Веломаршрут от часовни 1809 г. до усадьбы Новицких в Совейках — соседний маршрут по усадьбам Брестской области. Усадьба Бохвицей в деревне Флерьяново — ещё одно родовое имение Бохвицей, другая ветвь семьи. Усадьба Бохвицев в Подороске — панская усадьба того же рода на берегу озера. Куда поехать в Беларуси на выходные: 4 готовых маршрута Усадьба Котлубаев в деревне Ястрембель — история усадьбы из этого маршрута подробнее, глазами нашего читателя. Павлиново: усадьба Бохвицей — ещё один рассказ о неоготическом дворце из второго дня маршрута.",
+          "location": "article.rich_text.description.safe_html text blocks 0,116",
+          "reason": "Replace a generic related-links paragraph with the exact Kotlubai house section; remove unsupported post-war timing from book copy."
+        },
+        "snapshotSha256": "aa2684b616ba38b750c86691aa763bb20da7178fd522414f9dc03e7b943cc623"
+      }
+    },
+    {
+      "id": "point-4530",
+      "pointId": 4530,
+      "country": "BY",
+      "printTitle": "Новый замок, Гродно",
+      "localName": "Новый замок в Гродно",
+      "copyRu": "Новый замок расположен рядом со Старым замком в Гродно. Он был построен в XVIII веке как летняя королевская резиденция. С этой конкретной дворцовой площадки начинается знакомство с ещё одной страницей истории над Неманом.",
+      "coordinates": {
+        "lat": 53.676146,
+        "lng": 23.8244834
+      },
+      "article": {
+        "id": 153,
+        "url": "https://metravel.by/travels/grodno-za-1-den-chto-posmotret-i-kak-doekhat",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:55:55.220096Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/3395/conversions/uHHyLSZrfCCgCf6zPFlnV53oBHw4Bpst64SxlZSa-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/3395/conversions/uHHyLSZrfCCgCf6zPFlnV53oBHw4Bpst64SxlZSa-thumb_400_wp.webp",
+        "publicImageUri": "https://metravel.by/address-image/3395/conversions/uHHyLSZrfCCgCf6zPFlnV53oBHw4Bpst64SxlZSa-thumb_400_wp.webp",
+        "representation": "api-original-representation-low-resolution",
+        "width": 400,
+        "height": 400,
+        "alt": "Новый замок в Гродно",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[4530] image and media.address_images[4530].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 153,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Новый замок в Гродно",
+          "metadataLocation": "media.address_images.4530.alt",
+          "html": []
+        },
+        "editorialCaption": "Новый замок, Гродно"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=53.676146&lng=23.8244834&placeId=4530&focusPlace=1&placeTitle=%D0%9D%D0%BE%D0%B2%D1%8B%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA%2C+%D0%93%D1%80%D0%BE%D0%B4%D0%BD%D0%BE",
+        "article": "https://metravel.by/travels/grodno-za-1-den-chto-posmotret-i-kak-doekhat"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Новый замок в Гродно",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Новый замок стоит напротив Старого, через ров, и был построен в 1737–1751 годах как летняя резиденция польских королей — в эпоху, когда средневековый Старый замок уже не отвечал требованиям комфорта и представительности. Именно здесь в 1793 году состоялся печально знаменитый «Немой сейм» Речи Посполитой, на котором под дулами российских орудий, без единого возражения, был утверждён второй раздел страны — отсюда и название. Через два года, в 1795-м, здесь же был подписан акт отречения последнего короля Станислава Августа Понятовского, фактически завершивший историю Речи Посполитой.\n\nКороль Речи Посполитой Стефан Баторий в XVI веке сделал Гродно одной из своих резиденций — здесь проходили сеймы и принимались важные государственные решения, здесь же он и умер в 1586 году. Главное место, связанное с его именем, — Старый замок на холме над Неманом: сегодня в нём работает историко-археологический музей с 8 тысячами экспонатов. По легенде, даже необычная форма здания драмтеатра-«короны», построенного в 1984 году, отсылает к короне этого короля.",
+        "sourceSnapshot": "public-travel-api:153",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 18,80"
+      }
+    },
+    {
+      "id": "point-4801",
+      "pointId": 4801,
+      "country": "BY",
+      "printTitle": "Водохранилище на маршруте Крево — Гольшаны",
+      "localName": "Ошмяны - Боруны - граница Минской области",
+      "copyRu": "Эта водная остановка находится на маршруте между Крево и Гольшанами. В авторской поездке она описана как затопленный карьер с песчаным берегом и прозрачной водой. Пейзаж у воды меняет настроение насыщенного дня среди замков и усадеб.",
+      "coordinates": {
+        "lat": 54.2905449,
+        "lng": 26.1648846
+      },
+      "article": {
+        "id": 196,
+        "url": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T16:04:10.817999Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/c46b31675537413c9c4f25427ab725a8.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/c46b31675537413c9c4f25427ab725a8.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/c46b31675537413c9c4f25427ab725a8.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 750,
+        "alt": "Затопленный карьер с песчаным берегом",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact selected point4801 belongs to article196; that route describes the stop after Krevo as flooded quarry. Gallery[id9] is explicitly alt «Затопленный карьер с песчаным берегом». The proper reservoir name remains unproven."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 196,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Затопленный карьер с песчаным берегом",
+          "metadataLocation": "media.article_body.gallery.9.alt",
+          "html": [
+            {
+              "alt": "Затопленный карьер с песчаным берегом",
+              "src": "https://metravel.by/travel-description-image/c46b31675537413c9c4f25427ab725a8.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Водохранилище на маршруте Крево — Гольшаны"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=54.2905449&lng=26.1648846&placeId=4801&focusPlace=1&placeTitle=%D0%92%D0%BE%D0%B4%D0%BE%D1%85%D1%80%D0%B0%D0%BD%D0%B8%D0%BB%D0%B8%D1%89%D0%B5+%D0%BD%D0%B0+%D0%BC%D0%B0%D1%80%D1%88%D1%80%D1%83%D1%82%D0%B5+%D0%9A%D1%80%D0%B5%D0%B2%D0%BE+%E2%80%94+%D0%93%D0%BE%D0%BB%D1%8C%D1%88%D0%B0%D0%BD%D1%8B",
+        "article": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Ошмяны - Боруны - граница Минской области",
+        "identityNote": "Это точка-водохранилище 54.2905449,26.1648846 из статьи196, а не город или весь маршрут. Собственное название водоёма из каталога/текста не установлено; сохраняем точку, подпись нужно уточнить до PDF.",
+        "excerpt": "Минск → Новоспасск → Крево → затопленный карьер → усадьба Хрептовичей «Одровонж» → Боруны → Гольшаны\n\nЮля проехала маршрут Минск → Новоспасск → Крево → затопленный карьер → усадьба «Одровонж» → Боруны → Гольшаны, и это удачный порядок: руины Спасо-Преображенской церкви XVIII века смотрятся лучше всего на утреннем свете, а в Гольшаны вы попадаете под вечер, когда замок особенно фотогеничен. От Минска до Новоспасска ~114 км по трассе, дальше расстояния между точками 11–19 км, без спешки укладываетесь до сумерек.",
+        "sourceSnapshot": "public-travel-api:196",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 3,107"
+      }
+    },
+    {
+      "id": "point-4805",
+      "pointId": 4805,
+      "country": "BY",
+      "printTitle": "Гольшанский замок",
+      "localName": "Гольшанский замок",
+      "copyRu": "Руины Гольшанского замка стоят на краю старинного местечка. Здесь сохранились кирпичные стены, пустые оконные проёмы и части башен. Авторская поездка соединяет эту остановку с Крево, Борунами и усадьбой Хрептовичей.",
+      "coordinates": {
+        "lat": 54.2511747,
+        "lng": 26.0204315
+      },
+      "article": {
+        "id": 196,
+        "url": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T16:04:10.817999Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/b34b406d796e4e11961b56796fac280c.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/b34b406d796e4e11961b56796fac280c.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/b34b406d796e4e11961b56796fac280c.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 750,
+        "height": 1000,
+        "alt": "Руины стен Гольшанского замка",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 196 HTML and media.article_body.gallery[id28]; alt: Руины стен Гольшанского замка"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 196,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Руины стен Гольшанского замка",
+          "metadataLocation": "media.article_body.gallery.28.alt",
+          "html": [
+            {
+              "alt": "Руины стен Гольшанского замка",
+              "src": "https://metravel.by/travel-description-image/b34b406d796e4e11961b56796fac280c.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Гольшанский замок"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=54.2511747&lng=26.0204315&placeId=4805&focusPlace=1&placeTitle=%D0%93%D0%BE%D0%BB%D1%8C%D1%88%D0%B0%D0%BD%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+        "quest": "https://metravel.by/quests/67/golshany-black-monk"
+      },
+      "quest": {
+        "status": "verified-associated",
+        "id": 74,
+        "url": "https://metravel.by/quests/67/golshany-black-monk",
+        "title": "Квест по Гольшанам: Чёрный монах и Белая дама",
+        "evidence": {
+          "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+          "publicDetailUrl": "https://metravel.by/api/quests/74/?lang=ru",
+          "publishedPublicDetailStatus": 200,
+          "publishedPageStatus": 200,
+          "stepId": 762,
+          "stepTitle": "Замок Сапег — стены Чёрного монаха",
+          "stepLocation": "Руины Гольшанского замка, ул. Замковая",
+          "stepCoordinates": {
+            "lat": 54.251378,
+            "lng": 26.020302
+          },
+          "distanceM": 24,
+          "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+          "verifiedOn": "2026-10-30"
+        }
+      },
+      "sourceEvidence": {
+        "rawTitle": "Гольшанский замок",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Минск → Новоспасск → Крево → затопленный карьер → усадьба Хрептовичей «Одровонж» → Боруны → Гольшаны\n\nЧистая велосипедная связка из Минска без машины тяжёлая: 114 км до Новоспасска и обратно за день не уложатся. Реалистичная схема — поезд до Молодечно или Сморгони (rasp.rw.by), оттуда либо такси до Крево, либо велосипед в багажном вагоне. Маршрутки от Ошмян до Борунов и Гольшан ходят, но редко (расписание на mintrans.gov.by). В деревнях рассчитываться удобнее наличными BYN — карты принимают только у Гольшанского замка.",
+        "sourceSnapshot": "public-travel-api:196",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 3,110"
+      }
+    },
+    {
+      "id": "point-4810",
+      "pointId": 4810,
+      "country": "BY",
+      "printTitle": "Кревский замок",
+      "localName": "Кревский замок",
+      "copyRu": "Кревский замок сохранился в виде каменных и кирпичных руин среди зелёного луга. Массивные стены и башни позволяют представить прежний масштаб крепости. В авторском маршруте Крево стало одной из остановок перед Гольшанами.",
+      "coordinates": {
+        "lat": 54.3092241,
+        "lng": 26.2830305
+      },
+      "article": {
+        "id": 196,
+        "url": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T16:04:10.817999Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/fade57216f38454d912d37bc53156d02.jpg.webp",
+        "originalUri": "https://metravel.by/travel-description-image/fade57216f38454d912d37bc53156d02.jpg.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/fade57216f38454d912d37bc53156d02.jpg.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 750,
+        "alt": "Руины стен Кревского замка на лугу",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 196 HTML and media.article_body.gallery[id7]; alt: Руины стен Кревского замка на лугу"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 196,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Руины стен Кревского замка на лугу",
+          "metadataLocation": "media.article_body.gallery.7.alt",
+          "html": [
+            {
+              "alt": "Руины стен Кревского замка на лугу",
+              "src": "https://metravel.by/travel-description-image/fade57216f38454d912d37bc53156d02.jpg.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Кревский замок"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=54.3092241&lng=26.2830305&placeId=4810&focusPlace=1&placeTitle=%D0%9A%D1%80%D0%B5%D0%B2%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+        "quest": "https://metravel.by/quests/72/krevo-walled-maiden"
+      },
+      "quest": {
+        "status": "verified-associated",
+        "id": 78,
+        "url": "https://metravel.by/quests/72/krevo-walled-maiden",
+        "title": "Квест по Крево: замурованная невеста",
+        "evidence": {
+          "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+          "publicDetailUrl": "https://metravel.by/api/quests/78/?lang=ru",
+          "publishedPublicDetailStatus": 200,
+          "publishedPageStatus": 200,
+          "stepId": 797,
+          "stepTitle": "Внешняя граница замка",
+          "stepLocation": "Кревский замок — восстановленные главные ворота, снаружи",
+          "stepCoordinates": {
+            "lat": 54.309615,
+            "lng": 26.282816
+          },
+          "distanceM": 46,
+          "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+          "verifiedOn": "2026-10-30"
+        }
+      },
+      "sourceEvidence": {
+        "rawTitle": "Кревский замок",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Если хочется не просто прокатиться, а совместить дорогу с интересными местами, то этот маршрут оказался очень удачным. За день мы успели посмотреть руины старой церкви, Кревский замок, затопленный карьер, заброшенную усадьбу Хрептовичей, Боруны и Гольшаны. Планировали еще заехать к мельнице и больше покататься по лесным дорогам, но времени уже не хватило.\n\nКревский замок — место подписания Кревской унии 1385 года между ВКЛ и Польшей и один из старейших каменных замков Беларуси. Реконструкция, начатая в 2010-х, частично закрыла внутренний двор: сейчас вы в основном осматриваете фасад со стороны улицы Дзержинского. Если хочется увидеть «дикие» руины, как в 2012 году у Юли — уже не получится, но и новодела пока не сделали. Рядом с замком есть магазины и точки перекуса.",
+        "sourceSnapshot": "public-travel-api:196",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,108"
+      }
+    },
+    {
+      "id": "point-4843",
+      "pointId": 4843,
+      "country": "BY",
+      "printTitle": "Озеро Дикое",
+      "localName": "Дикое озеро",
+      "copyRu": "Озеро Дикое находится в конце лесного веломаршрута от деревни Заполье. По дороге автор встречала старые укрепления, хутор и мостик через Черноочку. У воды устроена стоянка, а сама поездка соединяет лесные дорожки и озёрный берег.",
+      "coordinates": {
+        "lat": 54.2275684,
+        "lng": 28.1285727
+      },
+      "article": {
+        "id": 197,
+        "url": "https://metravel.by/travels/velomarshrut-15-km-na-lesnoe-ozero-dikoe",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-25T10:09:14.382674Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/3640/conversions/yibFRDVf3fPKWv9xSTw1o3EhUFYoxOua3WPkWwoy-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/3640/conversions/yibFRDVf3fPKWv9xSTw1o3EhUFYoxOua3WPkWwoy-thumb_400_wp.webp",
+        "publicImageUri": "https://metravel.by/address-image/3640/conversions/yibFRDVf3fPKWv9xSTw1o3EhUFYoxOua3WPkWwoy-thumb_400_wp.webp",
+        "representation": "api-original-representation-low-resolution",
+        "width": 400,
+        "height": 400,
+        "alt": "Дикое озеро",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[4843] image and media.address_images[4843].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 197,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Дикое озеро",
+          "metadataLocation": "media.address_images.4843.alt",
+          "html": []
+        },
+        "editorialCaption": "Озеро Дикое"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=54.2275684&lng=28.1285727&placeId=4843&focusPlace=1&placeTitle=%D0%9E%D0%B7%D0%B5%D1%80%D0%BE+%D0%94%D0%B8%D0%BA%D0%BE%D0%B5",
+        "article": "https://metravel.by/travels/velomarshrut-15-km-na-lesnoe-ozero-dikoe"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Дикое озеро",
+        "identityNote": "Конкретное Дикое озеро из статьи197; точка54.2275684,28.1285727. Район по координатам независимо не проверен, одноимённых озёр не подставляем.",
+        "excerpt": "Веломаршрут 15 км к лесному озеру Дикое в Червенском районе Минской области — короткая, но насыщенная вылазка: по пути встречаются древние каменные укрепления (возможно, городища эпохи раннего средневековья), заброшенный хутор Старый Млын, грибные поляны и оборудованная стоянка у самого озера. Старт — у деревни Заполье.\n\nСтарт: парковка у д. Заполье (54.262374, 28.173569). Протяжённость велосипедного кольца: ~15 км. Покрытие: лесные грунтовки и просеки, после дождей местами заболоченные. На маршруте: каменные укрепления (54.259222, 28.171327 — приблизительно) → хутор Старый Млын → мостик через р. Черноочку → озеро Дикое. У озера — оборудованная стоянка с кострищем. Обратно можно выехать грунтовкой, которая через ~1 км выходит на асфальт.",
+        "sourceSnapshot": "public-travel-api:197",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,47"
+      }
+    },
+    {
+      "id": "point-5116",
+      "pointId": 5116,
+      "country": "BY",
+      "printTitle": "Лидский замок",
+      "localName": "Лидский замок",
+      "copyRu": "Лидский замок сохранил мощные стены и башни средневековой крепости. Большой внутренний двор помогает почувствовать масштаб этого сооружения. В авторской поездке замок стал самостоятельной остановкой в старой части Лиды.",
+      "coordinates": {
+        "lat": 53.8871222,
+        "lng": 25.3034824
+      },
+      "article": {
+        "id": 200,
+        "url": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T15:33:16.640175Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/75dd7fd111834e6da71c0ff7e6988399.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/75dd7fd111834e6da71c0ff7e6988399.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/75dd7fd111834e6da71c0ff7e6988399.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 662,
+        "alt": null,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article200 media.article_body.gallery[id1]. Визуально сопоставлены краснокирпичные стены и квадратная башня с фото exact point5116. Выбран body1 со стеной и башней; body0 с людьми у фестивального щита LidBeer исключён.",
+          "visualVerification": {
+            "status": "verified-same-object",
+            "verifiedOn": "2026-10-30",
+            "method": "actual selected image compared against same-article exact-point photo",
+            "exactPointImageUri": "https://metravel.by/address-image/3786/conversions/kPfCn6hhZoJ8LixwvEyA8Drmoac4attRGYjzPuMq-thumb_400_wp.webp",
+            "evidenceArtifact": ".codex-temp/books-source-fix/sheet.jpg"
+          }
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 200,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": null,
+          "metadataLocation": "media.article_body.gallery.1.alt",
+          "html": [
+            {
+              "alt": null,
+              "src": "https://metravel.by/travel-description-image/75dd7fd111834e6da71c0ff7e6988399.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Лидский замок"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=53.8871222&lng=25.3034824&placeId=5116&focusPlace=1&placeTitle=%D0%9B%D0%B8%D0%B4%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
+        "quest": "https://metravel.by/quests/15/lida-castle"
+      },
+      "quest": {
+        "status": "verified-associated",
+        "id": 11,
+        "url": "https://metravel.by/quests/15/lida-castle",
+        "title": "Квест по Лиде: замок Гедимина",
+        "evidence": {
+          "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+          "publicDetailUrl": "https://metravel.by/api/quests/11/?lang=ru",
+          "publishedPublicDetailStatus": 200,
+          "publishedPageStatus": 200,
+          "stepId": 152,
+          "stepTitle": "Лидский замок",
+          "stepLocation": "Лидский замок",
+          "stepCoordinates": {
+            "lat": 53.887207,
+            "lng": 25.302842
+          },
+          "distanceM": 43,
+          "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+          "verifiedOn": "2026-10-30"
+        }
+      },
+      "sourceEvidence": {
+        "rawTitle": "Лидский замок",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Лидский замок — средневековая крепость Великого княжества Литовского, построенная по приказу князя Гедимина около 1323 года. Один из четырёх замков кастельного типа на территории ВКЛ (наряду с Ковенским, Кревским и Медницким), сегодня полностью отреставрирован и открыт для посещения круглый год.\n\nИсторию Лидского замка можно «прожить» в нашем городском квесте «Лида: замок Гедимина» — маршрут раскрывает легенды крепости и средневековый дух города за 75 минут.",
+        "sourceSnapshot": "public-travel-api:200",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,32"
+      }
+    },
+    {
+      "id": "point-5246",
+      "pointId": 5246,
+      "country": "BY",
+      "printTitle": "Несвижский замок",
+      "localName": "Несвижский замок Радзивиллов",
+      "copyRu": "Несвижский замок — бывшая резиденция Радзивиллов. Рядом с дворцом раскинулись Старый, Английский, Японский и Марысин парки. В этой поездке можно соединить знакомство с замком и долгую прогулку по парковым дорожкам.",
+      "coordinates": {
+        "lat": 53.2228373,
+        "lng": 26.6917241
+      },
+      "article": {
+        "id": 201,
+        "url": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T15:33:30.636321Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/36c9befe82ee4b4f9ffca78d6f505a74.jpg.webp",
+        "originalUri": "https://metravel.by/travel-description-image/36c9befe82ee4b4f9ffca78d6f505a74.jpg.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/36c9befe82ee4b4f9ffca78d6f505a74.jpg.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 750,
+        "alt": "Вид на Несвижский замок",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article201 Nesvizh section exact image alt «Вид на Несвижский замок» and media.article_body.gallery[id3].variants.original."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 201,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Вид на Несвижский замок",
+          "metadataLocation": "media.article_body.gallery.3.alt",
+          "html": [
+            {
+              "alt": "Вид на Несвижский замок",
+              "src": "https://metravel.by/travel-description-image/36c9befe82ee4b4f9ffca78d6f505a74.jpg.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Несвижский замок"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=53.2228373&lng=26.6917241&placeId=5246&focusPlace=1&placeTitle=%D0%9D%D0%B5%D1%81%D0%B2%D0%B8%D0%B6%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+        "quest": "https://metravel.by/quests/17/nesvizh-radziwill"
+      },
+      "quest": {
+        "status": "verified-associated",
+        "id": 13,
+        "url": "https://metravel.by/quests/17/nesvizh-radziwill",
+        "title": "Квест по Несвижу: дворец Радзивиллов",
+        "evidence": {
+          "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+          "publicDetailUrl": "https://metravel.by/api/quests/13/?lang=ru",
+          "publishedPublicDetailStatus": 200,
+          "publishedPageStatus": 200,
+          "stepId": 163,
+          "stepTitle": "Несвижский замок",
+          "stepLocation": "Несвижский замок",
+          "stepCoordinates": {
+            "lat": 53.222798,
+            "lng": 26.691765
+          },
+          "distanceM": 5,
+          "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+          "verifiedOn": "2026-10-30"
+        }
+      },
+      "sourceEvidence": {
+        "rawTitle": "Несвижский замок Радзивиллов",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "На посещение Несвижа советую потратить день, тогда у вас будет время прогуляться не только по замку, но и по всем паркам (Старый, Японский, Английский и Марысин).\n\nНесвижский замок Радзивиллов (с 1583 года, первая «итальянская» резиденция в ВКЛ работы круга Бернардони), Фарный костёл 1584 года с семейным склепом Радзивиллов (более 100 захоронений), Слуцкую браму XVI века, Брам-колокольню, монастырь бенедиктинок 1591 года — первый женский монастырь на территории современной Беларуси. И обязательно — все четыре парка: Старый, Английский, Японский и Марысин, на которые нужно минимум полдня. Город входит в список Всемирного наследия ЮНЕСКО с 2005 года.",
+        "sourceSnapshot": "public-travel-api:201",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 32,95"
+      }
+    },
+    {
+      "id": "point-5247",
+      "pointId": 5247,
+      "country": "BY",
+      "printTitle": "Мирский замок",
+      "localName": "Мирский Замок",
+      "copyRu": "Мирский замок начали строить Ильиничи, а позже его достраивали Радзивиллы. В архитектуре сочетаются готика, ренессанс и барокко. Вокруг замка и пруда можно устроить неспешную прогулку.",
+      "coordinates": {
+        "lat": 53.4511815,
+        "lng": 26.4729416
+      },
+      "article": {
+        "id": 201,
+        "url": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T15:33:30.636321Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 662,
+        "alt": "Мирский замок, общий вид",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article201 Mir section contains this exact image with alt «Мирский замок, общий вид»; media.article_body.gallery[id18].variants.original."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 201,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Мирский замок, общий вид",
+          "metadataLocation": "media.article_body.gallery.18.alt",
+          "html": [
+            {
+              "alt": "Мирский замок, общий вид",
+              "src": "https://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Мирский замок"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=53.4511815&lng=26.4729416&placeId=5247&focusPlace=1&placeTitle=%D0%9C%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+        "quest": "https://metravel.by/quests/16/mir-castle"
+      },
+      "quest": {
+        "status": "verified-associated",
+        "id": 12,
+        "url": "https://metravel.by/quests/16/mir-castle",
+        "title": "Квест по Миру: Мирский замок и местечко",
+        "evidence": {
+          "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+          "publicDetailUrl": "https://metravel.by/api/quests/12/?lang=ru",
+          "publishedPublicDetailStatus": 200,
+          "publishedPageStatus": 200,
+          "stepId": 157,
+          "stepTitle": "Мирский замок",
+          "stepLocation": "Мирский замок",
+          "stepCoordinates": {
+            "lat": 53.450995,
+            "lng": 26.473133
+          },
+          "distanceM": 24,
+          "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+          "verifiedOn": "2026-10-30"
+        }
+      },
+      "sourceEvidence": {
+        "rawTitle": "Мирский Замок",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Расстояние между Несвижским и Мирским замками — около 30 км, это 30–35 минут на машине через Городею. От Минска до Нового Сверженя около 70 км, до Несвижа — около 110 км, до Мира — около 100 км по трассе М1.\n\nИстория: начинали строить Ильиничи, достраивали Радзивиллы. Стиль — редкое сочетание готики, ренессанса и барокко.",
+        "sourceSnapshot": "public-travel-api:201",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 3,70"
+      }
+    },
+    {
+      "id": "point-5485",
+      "pointId": 5485,
+      "country": "BY",
+      "printTitle": "Заказник «Ельня»",
+      "localName": "Заповедник \"Ельня\"",
+      "copyRu": "Ельня — большой болотный ландшафт с мхами, клюквой и озёрками. Среди осенних трав встречаются невысокие сосны и открытые участки верхового болота. Автор знакомилась с заказником во время отдельной поездки по северу Беларуси.",
+      "coordinates": {
+        "lat": 55.575453,
+        "lng": 27.7308869
+      },
+      "article": {
+        "id": 203,
+        "url": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-19T19:32:47.785766Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/c4c12a8726b444818f391b7b6cdafe12.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/c4c12a8726b444818f391b7b6cdafe12.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/c4c12a8726b444818f391b7b6cdafe12.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 1000,
+        "height": 750,
+        "alt": "Болотное озерко и одинокая сосна на верховом болоте Ельня",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 203 HTML and media.article_body.gallery[id19]; alt: Болотное озерко и одинокая сосна на верховом болоте Ельня"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 203,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Болотное озерко и одинокая сосна на верховом болоте Ельня",
+          "metadataLocation": "media.article_body.gallery.19.alt",
+          "html": [
+            {
+              "alt": "Болотное озерко и одинокая сосна на верховом болоте Ельня",
+              "src": "https://metravel.by/travel-description-image/c4c12a8726b444818f391b7b6cdafe12.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Заказник «Ельня»"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=55.575453&lng=27.7308869&placeId=5485&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BA%D0%B0%D0%B7%D0%BD%D0%B8%D0%BA+%C2%AB%D0%95%D0%BB%D1%8C%D0%BD%D1%8F%C2%BB",
+        "article": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Заповедник \"Ельня\"",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Маршрут на один день по северу Витебской области объединяет три совершенно разных места: экотропу «Озёравки» на крупнейшем верховом болоте Беларуси — заказнике «Ельня», руины дворца Нитославских в деревне Опытная и усадебно-парковый комплекс Шадурских на берегу Освейского озера. Около 330 км на машине, 8–10 часов в пути — и три эпохи в одном дне.\n\nРеспубликанский ландшафтный заказник «Ельня» лежит в Миорском и Шарковщинском районах Витебской области. Его создали в 1968 году как гидрологический, ландшафтным он стал в 2007-м. Площадь заказника — 25 301 га, из них около 18,8 тыс. га занимает само верховое болото. С 2002 года Ельня — Рамсарское угодье, то есть водно-болотная территория международного значения. Здесь больше 400 видов сосудистых растений (18 из них занесены в Красную книгу Беларуси) и 24 вида птиц из Красной книги.",
+        "sourceSnapshot": "public-travel-api:203",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,25"
+      }
+    },
+    {
+      "id": "point-5486",
+      "pointId": 5486,
+      "country": "BY",
+      "printTitle": "Экотропа «Озеравки», Ельня",
+      "localName": "Экотропа «Озеравки» в заказнике «Ельня»",
+      "copyRu": "Экотропа «Озеравки» проходит по деревянному настилу в заказнике «Ельня». Дорожка выводит из леса к болотным травам и озёркам. На фотографиях авторской поездки хорошо видно, как узкая тропа меняет обычный лесной пейзаж на открытое болото.",
+      "coordinates": {
+        "lat": 55.5594982,
+        "lng": 27.7583098
+      },
+      "article": {
+        "id": 203,
+        "url": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-19T19:32:47.785766Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/1dcfcf273cb24ba8a385ebd9bcb33e24.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/1dcfcf273cb24ba8a385ebd9bcb33e24.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/1dcfcf273cb24ba8a385ebd9bcb33e24.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 750,
+        "height": 1000,
+        "alt": "Деревянный настил с перилами уходит в болото на экотропе «Озёравки»",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 203 HTML and media.article_body.gallery[id12]; alt: Деревянный настил с перилами уходит в болото на экотропе «Озёравки»"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 203,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Деревянный настил с перилами уходит в болото на экотропе «Озёравки»",
+          "metadataLocation": "media.article_body.gallery.12.alt",
+          "html": [
+            {
+              "alt": "Деревянный настил с перилами уходит в болото на экотропе «Озёравки»",
+              "src": "https://metravel.by/travel-description-image/1dcfcf273cb24ba8a385ebd9bcb33e24.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Экотропа «Озеравки», Ельня"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=55.5594982&lng=27.7583098&placeId=5486&focusPlace=1&placeTitle=%D0%AD%D0%BA%D0%BE%D1%82%D1%80%D0%BE%D0%BF%D0%B0+%C2%AB%D0%9E%D0%B7%D0%B5%D1%80%D0%B0%D0%B2%D0%BA%D0%B8%C2%BB%2C+%D0%95%D0%BB%D1%8C%D0%BD%D1%8F",
+        "article": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Экотропа «Озеравки» в заказнике «Ельня»",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Маршрут на один день по северу Витебской области объединяет три совершенно разных места: экотропу «Озёравки» на крупнейшем верховом болоте Беларуси — заказнике «Ельня», руины дворца Нитославских в деревне Опытная и усадебно-парковый комплекс Шадурских на берегу Освейского озера. Около 330 км на машине, 8–10 часов в пути — и три эпохи в одном дне.\n\nЭкотропа «Озёравки» в заказнике «Ельня» с деревянным настилом — идеальный вариант для прогулки. От Минска около 235 км, 3 ч 20 минут на машине. В 2020 году настил был около 1,5 км; по данным заказника на 2026 год экскурсионный маршрут — около 2,5 км.",
+        "sourceSnapshot": "public-travel-api:203",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,8"
+      }
+    },
+    {
+      "id": "point-5487",
+      "pointId": 5487,
+      "country": "BY",
+      "printTitle": "Дворец Нитославских, Опытная",
+      "localName": "Дворцово-парковый комплекс Нитославских",
+      "copyRu": "В деревне Опытная сохранились руины дворца Нитославских и старый усадебный парк. В фасадах заметны пустые окна, кирпичные порталы и своды. Автор включила этот комплекс в одну поездку с болотом Ельня и Освеей.",
+      "coordinates": {
+        "lat": 55.8533064,
+        "lng": 27.7160919
+      },
+      "article": {
+        "id": 203,
+        "url": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-19T19:32:47.785766Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/d88347c3654d436e8ce496d542ff24b6.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/d88347c3654d436e8ce496d542ff24b6.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/d88347c3654d436e8ce496d542ff24b6.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 750,
+        "height": 1000,
+        "alt": "Руины дворца Нитославских: фасад с пустыми окнами в деревне Опытная",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 203 HTML and media.article_body.gallery[id26]; alt: Руины дворца Нитославских: фасад с пустыми окнами в деревне Опытная"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 203,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Руины дворца Нитославских: фасад с пустыми окнами в деревне Опытная",
+          "metadataLocation": "media.article_body.gallery.26.alt",
+          "html": [
+            {
+              "alt": "Руины дворца Нитославских: фасад с пустыми окнами в деревне Опытная",
+              "src": "https://metravel.by/travel-description-image/d88347c3654d436e8ce496d542ff24b6.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Дворец Нитославских, Опытная"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=55.8533064&lng=27.7160919&placeId=5487&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%9D%D0%B8%D1%82%D0%BE%D1%81%D0%BB%D0%B0%D0%B2%D1%81%D0%BA%D0%B8%D1%85%2C+%D0%9E%D0%BF%D1%8B%D1%82%D0%BD%D0%B0%D1%8F",
+        "article": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Дворцово-парковый комплекс Нитославских",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Маршрут на один день по северу Витебской области объединяет три совершенно разных места: экотропу «Озёравки» на крупнейшем верховом болоте Беларуси — заказнике «Ельня», руины дворца Нитославских в деревне Опытная и усадебно-парковый комплекс Шадурских на берегу Освейского озера. Около 330 км на машине, 8–10 часов в пути — и три эпохи в одном дне.\n\nОт дворца Нитославских в деревне Опытная остались живописные руины: владелец Витольд Нитославский эмигрировал в 1917-м, после чего здание побывало пограничной заставой, сельхозстанцией, госпиталем и ветеринарным техникумом до 1965 года. Усадьба Шадурских XVIII века в Освее сохранилась хуже — дворец разрушен ещё в Первую мировую, остался монастырский госпиталь 1859 года и парк с легендами о подземных ходах. Главная награда — само Освейское озеро, второе по площади в Беларуси, с островом Ду посередине, на котором археологи находили древние орудия труда.",
+        "sourceSnapshot": "public-travel-api:203",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,138"
+      }
+    },
+    {
+      "id": "point-6479",
+      "pointId": 6479,
+      "country": "BY",
+      "printTitle": "Экотропа «Тайны болота», Корытенский Мох",
+      "localName": "экто тропа",
+      "copyRu": "Экотропа «Тайны болота» знакомит с заказником «Корытенский Мох». Деревянный настил проходит над торфяником, а маршрут дополняют информационные стенды и смотровая вышка. В авторской поездке особенно запомнились тишина и болотный пейзаж.",
+      "coordinates": {
+        "lat": 55.5361972,
+        "lng": 30.2303244
+      },
+      "article": {
+        "id": 222,
+        "url": "https://metravel.by/travels/ektropa-v-gidrologicheskom-zakaznike-korytenskiy-moh",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-04T12:42:34.597739Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/6479/conversions/d27aeb7fb0634ff99ab5a1cd15c01756.webp",
+        "originalUri": "https://metravel.by/address-image/6479/conversions/d27aeb7fb0634ff99ab5a1cd15c01756.webp",
+        "publicImageUri": "https://metravel.by/address-image/6479/conversions/d27aeb7fb0634ff99ab5a1cd15c01756.webp",
+        "representation": "article-original-representation",
+        "width": 768,
+        "height": 1024,
+        "alt": "экто тропа",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[6479] image and media.address_images[6479].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 222,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "экто тропа",
+          "metadataLocation": "media.address_images.6479.alt",
+          "html": []
+        },
+        "editorialCaption": "Экотропа «Тайны болота», Корытенский Мох"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=55.5361972&lng=30.2303244&placeId=6479&focusPlace=1&placeTitle=%D0%AD%D0%BA%D0%BE%D1%82%D1%80%D0%BE%D0%BF%D0%B0+%C2%AB%D0%A2%D0%B0%D0%B9%D0%BD%D1%8B+%D0%B1%D0%BE%D0%BB%D0%BE%D1%82%D0%B0%C2%BB%2C+%D0%9A%D0%BE%D1%80%D1%8B%D1%82%D0%B5%D0%BD%D1%81%D0%BA%D0%B8%D0%B9+%D0%9C%D0%BE%D1%85",
+        "article": "https://metravel.by/travels/ektropa-v-gidrologicheskom-zakaznike-korytenskiy-moh"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "экто тропа",
+        "identityNote": "Авторская статья222 идентифицирует объект как экотропу «Тайны болота» заказника «Корытенский Мох». Название в каталоге «экто тропа» сохраняется как sourceTitle.",
+        "excerpt": "Республиканский гидрологический заказник «Корытенский Мох» в Городокском районе Витебской области — одно из немногих нетронутых верховых болот Беларуси с экотропой «Тайны болота» длиной ~6 км, смотровой вышкой и деревянным настилом прямо над торфяником. Создан в 1981 году для охраны редких реликтовых растений: морошки и мелкоплодной клюквы.\n\nЧастые вопросы: экотропа «Тайны болота» в заказнике «Корытенский Мох»",
+        "sourceSnapshot": "public-travel-api:222",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,33"
+      }
+    },
+    {
+      "id": "point-8562",
+      "pointId": 8562,
+      "country": "BY",
+      "printTitle": "Дворец Слотвинских, Рованичи",
+      "localName": "Дворцово-парковый комплекс Слацьвинских",
+      "copyRu": "В Рованичах сохранился дворцово-парковый комплекс Слотвинских. Главное здание и флигели окружены старым парком с водоёмом. Авторская поездка соединяет осмотр этого ансамбля с Березино и другими историческими остановками.",
+      "coordinates": {
+        "lat": 53.8843624,
+        "lng": 28.6151962
+      },
+      "article": {
+        "id": 243,
+        "url": "https://metravel.by/travels/dvorets-slotvinskikh-i-usadba-pototskikh-za-den",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T11:27:40.362444Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/3598/conversions/gNZKPh2o9Md7kCTlEf8hazKU5FtTkZif01qdQQPB-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/3598/conversions/gNZKPh2o9Md7kCTlEf8hazKU5FtTkZif01qdQQPB-thumb_400_wp.webp",
+        "publicImageUri": "https://metravel.by/address-image/3598/conversions/gNZKPh2o9Md7kCTlEf8hazKU5FtTkZif01qdQQPB-thumb_400_wp.webp",
+        "representation": "api-original-representation-low-resolution",
+        "width": 400,
+        "height": 400,
+        "alt": "Дворцово-парковый комплекс Слацьвинских",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[8562] image and media.address_images[8562].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 243,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Дворцово-парковый комплекс Слацьвинских",
+          "metadataLocation": "media.address_images.8562.alt",
+          "html": []
+        },
+        "editorialCaption": "Дворец Слотвинских, Рованичи"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=53.8843624&lng=28.6151962&placeId=8562&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%A1%D0%BB%D0%BE%D1%82%D0%B2%D0%B8%D0%BD%D1%81%D0%BA%D0%B8%D1%85%2C+%D0%A0%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%87%D0%B8",
+        "article": "https://metravel.by/travels/dvorets-slotvinskikh-i-usadba-pototskikh-za-den"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Дворцово-парковый комплекс Слацьвинских",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Формирование усадебного комплекса в Рованичах (Червенский район Минской области) началось при Антонии Слотвинском на рубеже XVIII–XIX веков. В середине XIX века маршалок Минской губернии Людвик Слотвинский полностью реконструировал усадьбу: возвёл дворец в стиле классицизма, разбил пейзажный парк с искусственным водоёмом, симметрично поставил два флигеля — кухонный и жилой для прислуги. Слотвинские владели имением до 1917 года.\n\nФормирование усадебного комплекса началось при Антонии Слотвинском на рубеже XVIII–XIX веков, а в середине XIX века маршалок Минской губернии Людвик Слотвинский полностью реконструировал имение: дворец в стиле классицизма, два симметричных флигеля и пейзажный парк с водоёмом. Семья владела Рованичами до 1917 года. После Второй мировой здание восстановили в 1952 году под школу, с 1971 по 1993 в нём была участковая больница, а после — забвение. За руинами сохранилось старое кладбище с надгробиями Слотвинских 1885 года.",
+        "sourceSnapshot": "public-travel-api:243",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 36,66"
+      }
+    },
+    {
+      "id": "point-13504",
+      "pointId": 13504,
+      "country": "BY",
+      "printTitle": "Дворец Умястовских, Жемыславль",
+      "localName": "Дворец Умястовских в Жемыславле",
+      "copyRu": "Дворец Умястовских в Жемыславле напоминает варшавский Дворец на воде своими классическими пропорциями. Вокруг сохранились парк и хозяйственные постройки. Авторский материал обращает внимание на колоннаду и детали усадебного ансамбля.",
+      "coordinates": {
+        "lat": 54.1323642,
+        "lng": 25.7652322
+      },
+      "article": {
+        "id": 135,
+        "url": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:56:31.213393Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/13504/conversions/6168c0896d4d4287a5af7e326cdc811a.JPG",
+        "originalUri": "https://metravel.by/address-image/13504/conversions/6168c0896d4d4287a5af7e326cdc811a.JPG",
+        "publicImageUri": "https://metravel.by/address-image/13504/conversions/6168c0896d4d4287a5af7e326cdc811a.JPG",
+        "representation": "article-original-representation",
+        "width": 1024,
+        "height": 576,
+        "alt": "Дворец Умястовских в Жемыславле",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[13504] image and media.address_images[13504].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 135,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Дворец Умястовских в Жемыславле",
+          "metadataLocation": "media.address_images.13504.alt",
+          "html": []
+        },
+        "editorialCaption": "Дворец Умястовских, Жемыславль"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=54.1323642&lng=25.7652322&placeId=13504&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%A3%D0%BC%D1%8F%D1%81%D1%82%D0%BE%D0%B2%D1%81%D0%BA%D0%B8%D1%85%2C+%D0%96%D0%B5%D0%BC%D1%8B%D1%81%D0%BB%D0%B0%D0%B2%D0%BB%D1%8C",
+        "article": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Дворец Умястовских в Жемыславле",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Дворец Умястовских в Жемыславле\n\nДворец Умястовских в Жемыславле (Ивьевский район Гродненской области) — заброшенная усадьба XIX века, почти точная копия варшавских Лазенок. Классический фасад с колоннадой, парк у реки Гавьи и атмосфера старой шляхетской резиденции, пережившей войны, смену эпох и пожар 2012 года. Внутрь сейчас не попасть, но снаружи дворец производит сильное впечатление. От Минска — около 170 км, удобно одним днём.",
+        "sourceSnapshot": "public-travel-api:135",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,1"
+      }
+    },
+    {
+      "id": "point-3468",
+      "pointId": 3468,
+      "country": "BY",
+      "printTitle": "Дворец Четвертинских, Желудок",
+      "localName": "Усадьба Святополк-Четвертинских в Желудке",
+      "copyRu": "Дворец Святополк-Четвертинских находится в Желудке. В авторской поездке особенно запомнились его фасады, старые интерьеры и множество ласточек. Рядом сохранились флигель, каретная и конюшни большого усадебного комплекса.",
+      "coordinates": {
+        "lat": 53.6008917,
+        "lng": 24.9576159
+      },
+      "article": {
+        "id": 188,
+        "url": "https://metravel.by/travels/zheludok-i-usadby-grodnenshchiny-kak-dobratsia",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-04T16:16:34.293574Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/3468/conversions/5e83d2e881db4853a6ea19019ed25070.JPG",
+        "originalUri": "https://metravel.by/address-image/3468/conversions/5e83d2e881db4853a6ea19019ed25070.JPG",
+        "publicImageUri": "https://metravel.by/address-image/3468/conversions/5e83d2e881db4853a6ea19019ed25070.JPG",
+        "representation": "article-original-representation",
+        "width": 768,
+        "height": 1024,
+        "alt": "Усадьба Святополк-Четвертинских в Желудке",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[3468] image and media.address_images[3468].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 188,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Усадьба Святополк-Четвертинских в Желудке",
+          "metadataLocation": "media.address_images.3468.alt",
+          "html": []
+        },
+        "editorialCaption": "Дворец Четвертинских, Желудок"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=53.6008917&lng=24.9576159&placeId=3468&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%A7%D0%B5%D1%82%D0%B2%D0%B5%D1%80%D1%82%D0%B8%D0%BD%D1%81%D0%BA%D0%B8%D1%85%2C+%D0%96%D0%B5%D0%BB%D1%83%D0%B4%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/zheludok-i-usadby-grodnenshchiny-kak-dobratsia",
+        "quest": "https://metravel.by/quests/63/zheludok-palace"
+      },
+      "quest": {
+        "status": "verified-associated",
+        "id": 70,
+        "url": "https://metravel.by/quests/63/zheludok-palace",
+        "title": "Квест по Желудку: усадьба из кино и наследие местечка",
+        "evidence": {
+          "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+          "publicDetailUrl": "https://metravel.by/api/quests/70/?lang=ru",
+          "publishedPublicDetailStatus": 200,
+          "publishedPageStatus": 200,
+          "stepId": 729,
+          "stepTitle": "Дворец Четвертинских — звезда без грима",
+          "stepLocation": "Дворец Святополк-Четвертинских, ул. Мира",
+          "stepCoordinates": {
+            "lat": 53.60086,
+            "lng": 24.957625
+          },
+          "distanceM": 4,
+          "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+          "verifiedOn": "2026-10-30"
+        }
+      },
+      "sourceEvidence": {
+        "rawTitle": "Усадьба Святополк-Четвертинских в Желудке",
+        "identityNote": "Скриншотный заголовок совпадает с двумя чужими primary-source карточками13761/travel329 и13808/travel338 в Желудке. Для того же дворца выбран проверенный авторский источник point3468/travel188 (user1), не замена объекта. Exact screenshot rowID пока неоднозначен.",
+        "excerpt": "Усадьбы Гробовских (Дикушки) и Ходкевичей (Большое Можейково) — гродненский маршрут одного дня; но если бы я составляла ТОП белорусских усадеб, то усадьба Святополк-Четвертинских в д. Желудок однозначно была бы на первом месте. Это путешествие, было по сути составлено для посещения именно этой усадьбы, все остальные после нее смотреть уже не сильно интересно... но все же приключение получилось еще-то)\n\nЕсли хочется не просто сфотографировать усадьбу, а разобраться в истории Желудка целиком — от местечка при дороге до наследия рода Четвертинских, — у нас есть бесплатный городской квест «Желудок: усадьба из кино и наследие местечка» — маршрут с историями и заданиями у каждой точки.",
+        "sourceSnapshot": "public-travel-api:188",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,22"
+      }
+    },
+    {
+      "id": "point-15049",
+      "pointId": 15049,
+      "country": "BY",
+      "printTitle": "Хозяйственные постройки усадебного комплекса",
+      "localName": "Бывший усадебный комплекс: хозяйственные постройки 1904 г.",
+      "copyRu": "Эта остановка — хозяйственные постройки бывшего усадебного комплекса. На авторском снимке виден светлый двухэтажный корпус с колоннами у входа и сохранившейся крышей. Пустые окна и старые деревья вокруг передают атмосферу усадебного места.",
+      "coordinates": {
+        "lat": 55.5487667,
+        "lng": 26.8250111
+      },
+      "article": {
+        "id": 566,
+        "url": "https://metravel.by/travels/kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:49:17.389202Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/15049/conversions/8a042ff5dd2d47d2bf3c59011b002cc4.webp",
+        "originalUri": "https://metravel.by/address-image/15049/conversions/8a042ff5dd2d47d2bf3c59011b002cc4.webp",
+        "publicImageUri": "https://metravel.by/address-image/15049/conversions/8a042ff5dd2d47d2bf3c59011b002cc4.webp",
+        "representation": "article-original-representation",
+        "width": 1024,
+        "height": 768,
+        "alt": "Бывший усадебный комплекс: хозяйственные постройки 1904 г.",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[15049] image and media.address_images[15049].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 566,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Бывший усадебный комплекс: хозяйственные постройки 1904 г.",
+          "metadataLocation": "media.address_images.15049.alt",
+          "html": []
+        },
+        "editorialCaption": "Хозяйственные постройки усадебного комплекса"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=55.5487667&lng=26.8250111&placeId=15049&focusPlace=1&placeTitle=%D0%A5%D0%BE%D0%B7%D1%8F%D0%B9%D1%81%D1%82%D0%B2%D0%B5%D0%BD%D0%BD%D1%8B%D0%B5+%D0%BF%D0%BE%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B8+%D1%83%D1%81%D0%B0%D0%B4%D0%B5%D0%B1%D0%BD%D0%BE%D0%B3%D0%BE+%D0%BA%D0%BE%D0%BC%D0%BF%D0%BB%D0%B5%D0%BA%D1%81%D0%B0",
+        "article": "https://metravel.by/travels/kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Бывший усадебный комплекс: хозяйственные постройки 1904 г.",
+        "identityNote": "Конкретные хозяйственные постройки15049:55.5487667,26.8250111. В~35м другая точка7186 «Усадебно-парковый комплекс Плятеров», статья231. Статья566 описывает дворец Плятеров в Опсе1903–1904г. Связь с ансамблем Опсы сильная, но отдельное историческое название именно этих построек пока не подтверждено.",
+        "excerpt": "Бывший усадебный комплекс: хозяйственные постройки 1904 г.",
+        "sourceSnapshot": "public-travel-api:566",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article566 travelAddress[15049].address (exact point metadata)",
+        "excludedExcerpt": {
+          "text": "На этом маршруте постоянно попадаются вот такие корпуса без имени: два яруса арок в середине фасада, обвалившаяся крыша, бурьян в человеческий рост.",
+          "location": "article566 paragraph immediately before body image id9",
+          "reason": "Generic neighbouring paragraph is not verified to describe point15049 and contradicts the exact point photo; not used as this place description."
+        }
+      }
+    },
+    {
+      "id": "point-15057",
+      "pointId": 15057,
+      "country": "BY",
+      "printTitle": "Дворец Новицких, Совейки",
+      "localName": "Дворец Новицких в Совейках",
+      "copyRu": "Усадьба Новицких в Совейках сохранила главный дом с портиком и балюстрадой. Рядом стоят старые хозяйственные корпуса и бровар. В авторской поездке этот ансамбль стал финальной остановкой среди усадебных мест Беларуси.",
+      "coordinates": {
+        "lat": 52.9170306,
+        "lng": 26.4114056
+      },
+      "article": {
+        "id": 566,
+        "url": "https://metravel.by/travels/kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:49:17.389202Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/566/description/24482e3c192048dfa34420752c0e1317.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/566/description/24482e3c192048dfa34420752c0e1317.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/566/description/24482e3c192048dfa34420752c0e1317.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 1024,
+        "height": 768,
+        "alt": "Усадьба Новицких в Совейках: портик с колоннами, балюстрада и велосипед у крыльца",
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 566 HTML and media.article_body.gallery[id14]; alt: Усадьба Новицких в Совейках: портик с колоннами, балюстрада и велосипед у крыльца"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 566,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Усадьба Новицких в Совейках: портик с колоннами, балюстрада и велосипед у крыльца",
+          "metadataLocation": "media.article_body.gallery.14.alt",
+          "html": [
+            {
+              "alt": "Усадьба Новицких в Совейках: портик с колоннами, балюстрада и велосипед у крыльца",
+              "src": "https://metravel.by/travel-description-image/566/description/24482e3c192048dfa34420752c0e1317.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Дворец Новицких, Совейки"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=52.9170306&lng=26.4114056&placeId=15057&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%9D%D0%BE%D0%B2%D0%B8%D1%86%D0%BA%D0%B8%D1%85%2C+%D0%A1%D0%BE%D0%B2%D0%B5%D0%B9%D0%BA%D0%B8",
+        "article": "https://metravel.by/travels/kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Дворец Новицких в Совейках",
+        "identityNote": "Точный объект из каталога; исходная карточка связана с опубликованной статьёй автора1.",
+        "excerpt": "Финал — Совейки. Усадьба Новицких XIX века здесь сохранилась лучше всех остальных на маршруте: главный дом соединяет классицизм с необарочными фронтонами, рядом стоят официна, флигель, амбар и бровар. Бровар Теофил Новицкий получил разрешение строить в 1901 году — четыре разновысоких корпуса из колотого камня красных и серых тонов. Въездная аллея — около 450 метров длиной и 12 метров шириной, обсаженная елями; в парке искусственные пруды и арочные мостики. Новицкие владели Совейками до 1939 года, дворец разрушили в войну и восстановили в 1959-м. Мы приезжали сюда на велосипедах — велосипед на кадре как раз стоит у крыльца.\n\nЛучшее время по всем четырём маршрутам — май и сентябрь: нет жары, нет толпы и кладку руин не закрывает листва. Дворец Новицких в Гончарах удобно объединить с усыпальницей в том же сельсовете и заехать в Ляховичи. Берите наличные BYN на сельские магазины и кофе, заранее сохраняйте офлайн-карты Maps.me или Organic Maps — мобильный интернет в Брестской и Гродненской глубинке падает до edge.",
+        "sourceSnapshot": "public-travel-api:566",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 41,55"
+      }
+    },
+    {
+      "id": "point-15827",
+      "pointId": 15827,
+      "country": "BY",
+      "printTitle": "Юцковские родники",
+      "localName": "Юцковские родники",
+      "copyRu": "Юцковские родники выходят на склон оврага вдоль речки Славки. Автор объединяет их с ДОТом и усадьбой Костровицких в поездку «природа плюс история». Прогулку у воды можно продолжить вдоль оврага, сохранив отдельные впечатления об этой точке.",
+      "coordinates": {
+        "lat": 53.7973976,
+        "lng": 27.16799
+      },
+      "article": {
+        "id": 672,
+        "url": "https://metravel.by/travels/marshruty-vykhodnogo-dnia-iz-minska-13-poezdok",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-11T16:58:45.282567Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/address-image/6553/conversions/uPQ0SPJlTSvuaBnMQ2gmt6Pmos64qMfEdf975rDX-thumb_400_wp.webp",
+        "originalUri": "https://metravel.by/address-image/6553/conversions/uPQ0SPJlTSvuaBnMQ2gmt6Pmos64qMfEdf975rDX-thumb_400_wp.webp",
+        "publicImageUri": "https://metravel.by/address-image/6553/conversions/uPQ0SPJlTSvuaBnMQ2gmt6Pmos64qMfEdf975rDX-thumb_400_wp.webp",
+        "representation": "api-original-representation-low-resolution",
+        "width": 400,
+        "height": 400,
+        "alt": "Юцковские родники",
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[15827] image and media.address_images[15827].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 672,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": "Юцковские родники",
+          "metadataLocation": "media.address_images.15827.alt",
+          "html": []
+        },
+        "editorialCaption": "Юцковские родники"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=53.7973976&lng=27.16799&placeId=15827&focusPlace=1&placeTitle=%D0%AE%D1%86%D0%BA%D0%BE%D0%B2%D1%81%D0%BA%D0%B8%D0%B5+%D1%80%D0%BE%D0%B4%D0%BD%D0%B8%D0%BA%D0%B8",
+        "article": "https://metravel.by/travels/marshruty-vykhodnogo-dnia-iz-minska-13-poezdok"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Юцковские родники",
+        "identityNote": "Юцковские родники: дубли14544/travel480,15639/travel638,15827/travel672 имеют одинаковые координаты53.7973976,27.16799. Представитель15827 соответствует plural label и авторской фотографии14544; парковку14545 не включаем.",
+        "excerpt": "Юцковские родники, ДОТ №34 и усадьба Костровицких\n\nМаршрут Юцковские родники — ДОТ №34 — усадебный дом Костровицких — наш любимый пример поездки «природа плюс история» за один выезд. В 40 км от Минска, в Дзержинском районе, родники бьют в живописном овраге вдоль речки Славки, рядом сохранился ДОТ №34 Линии Сталина с уцелевшими дверями, а в Больших Новосёлках стоит усадьба Костровицких 1830–1840-х годов. При желании прогулку вдоль оврага можно продолжить до «каменного сада».",
+        "sourceSnapshot": "public-travel-api:672",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 11,12"
+      }
+    },
+    {
+      "id": "point-3843",
+      "pointId": 3843,
+      "country": "BY",
+      "printTitle": "Усадебный парк «Репихово»",
+      "localName": "Усадебный парк Потоцких \"Репихово\"",
+      "copyRu": "В Репихово от усадьбы Потоцких сохранились парк, пруды и старый погреб. Среди деревьев проходит дорога к мостику через озеро. В авторской велопоездке этот парк запомнился ухоженными дорожками и спокойной лесной атмосферой.",
+      "coordinates": {
+        "lat": 52.8534568,
+        "lng": 26.1462207
+      },
+      "article": {
+        "id": 189,
+        "url": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T17:06:58.831214Z"
+      },
+      "photo": {
+        "articleImageUri": "https://metravel.by/travel-description-image/944c74d13b094a64b3adc4576eb8ca63.JPG.webp",
+        "originalUri": "https://metravel.by/travel-description-image/944c74d13b094a64b3adc4576eb8ca63.JPG.webp",
+        "publicImageUri": "https://metravel.by/travel-description-image/944c74d13b094a64b3adc4576eb8ca63.JPG.webp",
+        "representation": "article-original-representation",
+        "width": 750,
+        "height": 1000,
+        "alt": null,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article189 gallery[id6] directly follows the Repikhovo estate park paragraph; IDs6–18 show the same park, bridges and cellar, before the later route leaves for Netchin."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 189,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "sourceHashStatus": "root-download-and-hash-pending",
+        "printResolutionStatus": "original-metadata-recorded;final-asset-ppi-not-yet-tested",
+        "sourceAlt": {
+          "metadata": null,
+          "metadataLocation": "media.article_body.gallery.6.alt",
+          "html": [
+            {
+              "alt": null,
+              "src": "https://metravel.by/travel-description-image/944c74d13b094a64b3adc4576eb8ca63.JPG.webp"
+            }
+          ]
+        },
+        "editorialCaption": "Усадебный парк «Репихово»"
+      },
+      "qr": {
+        "map": "https://metravel.by/map?lat=52.8534568&lng=26.1462207&placeId=3843&focusPlace=1&placeTitle=%D0%A3%D1%81%D0%B0%D0%B4%D0%B5%D0%B1%D0%BD%D1%8B%D0%B9+%D0%BF%D0%B0%D1%80%D0%BA+%C2%AB%D0%A0%D0%B5%D0%BF%D0%B8%D1%85%D0%BE%D0%B2%D0%BE%C2%BB",
+        "article": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei"
+      },
+      "quest": {
+        "status": "unavailable",
+        "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+        "checkedOn": "2026-10-30",
+        "catalogCount": 282,
+        "associationRequired": "published quest step with exact-object identity and matching coordinates"
+      },
+      "sourceEvidence": {
+        "rawTitle": "Усадебный парк Потоцких \"Репихово\"",
+        "identityNote": "В статье189 два photo-point одного парка:3843(52.8534568,26.1462207) и3844(52.8560158,26.1441286). Это один выбранный парк, не две дополнительные позиции. Представитель3843; если потребуется exact screenshot photo, сверить изображения3843/3844.",
+        "excerpt": "Двухдневный веломаршрут по Брестской области (~30 км в день) через доты и капониры Первой мировой войны, сказочный парк усадьбы Потоцких в Репихово, усадебный дом Котлубаев в Ястрембеле и неоготический дворец Бохвицей в Павлиново. Маршрут планировался вдоль Огинского канала — но по пути встретилось слишком много соблазнов.\n\n1) Минск - Усадебный парк Потоцких \"Репихово\" (180 км ~2 часа 20 минут)",
+        "sourceSnapshot": "public-travel-api:189",
+        "verifiedOn": "2026-10-30",
+        "excerptLocation": "article.rich_text.description.safe_html text blocks 0,5"
+      }
+    }
+  ],
+  "questVerification": {
+    "verifiedOn": "2026-10-30",
+    "publicCatalogCount": 282,
+    "relevantAnonymousDetailCount": 15,
+    "rule": "Только подтверждённая связь конкретного шага/объекта и координат. Для остальных точек третий QR отсутствует.",
+    "associatedCount": 8
+  },
+  "sourceCorrections": [
+    {
+      "pointId": 2758,
+      "correctedOn": "2026-10-30",
+      "previousUri": "https://metravel.by/travel-description-image/dbd1064b74834d749bacdf78618c735f.JPG.webp",
+      "replacementUri": "https://metravel.by/travel-description-image/f9c6f96f840d4d51b781775f3405e848.JPG.webp",
+      "reason": "Визуально сопоставлен фасад с фото exact point2758: то же вытянутое двухэтажное здание с центральным ризалитом, белым декором и розовыми простенками. Выбран body1; body0 с мемориалом1986 исключён."
+    },
+    {
+      "pointId": 3836,
+      "correctedOn": "2026-10-30",
+      "previousUri": "https://metravel.by/travel-description-image/4ed3f074454d48e0862827a1bbbcef03.JPG.webp",
+      "replacementUri": "https://metravel.by/travel-description-image/45a8513ae52f46f59cda9207d0ca4e61.JPG.webp",
+      "reason": "Визуально сопоставлен с фото exact point3836: тот же фигурный фронтон с1906, центральное арочное окно и облупленная охристая отделка. Выбран body51 вместо body50, чтобы совпадало видимое состояние фасада."
+    },
+    {
+      "pointId": 5116,
+      "correctedOn": "2026-10-30",
+      "previousUri": "https://metravel.by/travel-description-image/ba2f8e8d086f4d218a06e0e727ca8bcd.JPG.webp",
+      "replacementUri": "https://metravel.by/travel-description-image/75dd7fd111834e6da71c0ff7e6988399.JPG.webp",
+      "reason": "Визуально сопоставлены краснокирпичные стены и квадратная башня с фото exact point5116. Выбран body1 со стеной и башней; body0 с людьми у фестивального щита LidBeer исключён."
+    }
+  ]
+}

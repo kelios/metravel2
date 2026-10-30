@@ -11,14 +11,15 @@ export type PdfValidationReport = {
   bookId: string; revision: string; profileId: PrintProfile['id']; component: 'body' | 'cover';
   purpose: 'read' | 'print-shop'; pageCount: number;
   checks: {name: string; status: 'pass' | 'fail'; details: string}[];
-  artifactHashes: Record<string, string>; digitalPass: boolean;
+  artifactHashes: Record<string, string>; digitalPass: boolean; digitalIntegrityPass: boolean;
+  minIllustrationPpi: number; printResolutionPass: boolean; printReady: false;
   colorSpace: 'RGB'; pdfX: false; providerReady: false;
 };
 
-/** A digital pass never asserts that a provider accepted these exact bytes. */
-export function validatePdfInspection({bookId, revision, profile, component, purpose, inspection, expectedSha256}: {
+/** Low-resolution artwork can be an honest digital proof; it cannot pass the physical gate. */
+export function validatePdfInspection({bookId, revision, profile, component, purpose, inspection, expectedSha256, expectedPageCount, expectedImageCount}: {
   bookId: string; revision: string; profile: PrintProfile; component: 'body' | 'cover';
-  purpose: 'read' | 'print-shop'; inspection: PdfInspection; expectedSha256: string;
+  purpose: 'read' | 'print-shop'; inspection: PdfInspection; expectedSha256: string; expectedPageCount: number; expectedImageCount: number;
 }): PdfValidationReport {
   const {widthMm: width, heightMm: height} = profile;
   const bleed = purpose === 'print-shop' ? profile.bleedMm : 0;
@@ -27,19 +28,21 @@ export function validatePdfInspection({bookId, revision, profile, component, pur
   const close = (a: Box, b: Box) => a.length === 4 && a.every((value, index) => Number.isFinite(value) && Math.abs(value - b[index]) <= .1);
   const checks: PdfValidationReport['checks'] = [];
   const check = (name: string, pass: boolean, details: string) => checks.push({name, status: pass ? 'pass' : 'fail', details});
+  const validPpis = inspection.imagePpis.length >= expectedImageCount && inspection.imagePpis.every(ppi => Number.isFinite(ppi) && ppi > 0);
+  const minIllustrationPpi = validPpis ? Math.min(...inspection.imagePpis) : 0;
+  const printResolutionPass = validPpis && minIllustrationPpi >= 300;
   check('sha256', /^[a-f0-9]{64}$/.test(expectedSha256) && expectedSha256 === inspection.sha256, 'Сверены реальные байты файла с индексом сборки');
-  check('page-count', inspection.pageCount === (component === 'body' ? 56 : 4), `${inspection.pageCount} страниц`);
-  check('physical-boxes', inspection.boxes.length === inspection.pageCount && inspection.boxes.every(box =>
-    close(box.media, expectedMedia) && close(box.trim, expectedTrim) && close(box.bleed, expectedMedia)), 'MediaBox/TrimBox/BleedBox каждой страницы; допуск 0,1 мм');
+  check('page-count', inspection.pageCount === expectedPageCount, `${inspection.pageCount} страниц; ожидается ${expectedPageCount}`);
+  check('physical-boxes', inspection.boxes.length === inspection.pageCount && inspection.boxes.every(box => close(box.media, expectedMedia) && close(box.trim, expectedTrim) && close(box.bleed, expectedMedia)), 'MediaBox/TrimBox/BleedBox каждой страницы; допуск 0,1 мм');
   check('bleed-profile', purpose === 'print-shop' ? bleed === 2 || bleed === 3 : profile.bleedMm === 0, 'Печатный профиль и назначение файла согласованы');
   check('fonts', inspection.fonts.length > 0 && inspection.fonts.every(font => font.embedded && font.unicode), 'Все шрифты встроены и имеют Unicode mapping');
   check('cyrillic', inspection.hasCyrillic, 'Poppler извлекает кириллицу');
   check('complete-text', inspection.missingText.length === 0, `${inspection.missingText.length} отсутствующих текстовых фрагментов`);
-  check('image-resolution', inspection.imagePpis.length >= (component === 'body' ? 12 : 1) && inspection.imagePpis.every(ppi => Number.isFinite(ppi) && ppi >= 300), 'Фактическое разрешение размещённых растров не ниже 300 ppi');
+  check('image-integrity', validPpis, `Размещённые иллюстрации: минимум ${minIllustrationPpi} ppi; нативные пиксели без увеличения`);
+  check('image-resolution', printResolutionPass, `Фактический минимум ${minIllustrationPpi} ppi; физический порог 300 ppi${printResolutionPass ? '' : ' не пройден'}`);
   check('embedded-resources', !inspection.externalResources, 'Растровые ресурсы содержатся внутри PDF');
-  return {
-    bookId, revision, profileId: profile.id, component, purpose, pageCount: inspection.pageCount,
-    checks, artifactHashes: {[`${purpose}:${component}`]: inspection.sha256},
-    digitalPass: checks.every(item => item.status === 'pass'), colorSpace: 'RGB', pdfX: false, providerReady: false,
-  };
+  return {bookId, revision, profileId: profile.id, component, purpose, pageCount: inspection.pageCount, checks,
+    artifactHashes: {[`${purpose}:${component}`]: inspection.sha256}, digitalPass: checks.every(item => item.status === 'pass'),
+    digitalIntegrityPass: checks.filter(item => item.name !== 'image-resolution').every(item => item.status === 'pass'),
+    minIllustrationPpi, printResolutionPass, printReady: false, colorSpace: 'RGB', pdfX: false, providerReady: false};
 }

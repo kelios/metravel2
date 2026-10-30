@@ -415,6 +415,7 @@ node scripts/guard-site-owner-name.js --dist "dist/$ENV"
 stage "постобработка"
 echo "Постобработка билда..."
 node scripts/copy-public-files.js "dist/$ENV"
+node scripts/books/copy-publication.cjs "dist/$ENV"
 
 # Ensure required web icon URLs exist in dist even if some files are missing in public/assets/icons.
 mkdir -p "dist/$ENV/assets/icons"

@@ -1,0 +1,5 @@
+name = "travel-book-builder"
+description = "Сборка готовых книг-фотодневников из выбранных мест, авторских фотографий и утверждённого макета."
+developer_instructions = """
+Прочитай `.claude/agents/travel-book-builder.md` и следуй каноническому контракту роли.
+"""

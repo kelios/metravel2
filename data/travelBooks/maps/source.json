@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "dataset": "Natural Earth Admin 0 Countries",
+  "version": "5.1.1",
+  "scale": "1:110m",
+  "coordinateReferenceSystem": "WGS84 longitude/latitude (EPSG:4326)",
+  "sourceUrl": "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.1/geojson/ne_110m_admin_0_countries.geojson",
+  "datasetPage": "https://www.naturalearthdata.com/downloads/110m-cultural-vectors/110m-admin-0-countries/",
+  "termsUrl": "https://www.naturalearthdata.com/about/terms-of-use/",
+  "license": "Public domain",
+  "attributionRequired": false,
+  "checkedAt": "2026-10-30",
+  "upstreamSha256": "6866c877d39cba9c357620878839b336d569f8c662d3cfab4cb1dbe2d39c977f",
+  "extractedSha256": "1c012f5550d472b16a681860d278148cf480958b0a177da8c2a418a47695759c",
+  "extraction": "Keep BY and PL country geometries unchanged; retain only isoA2 and editorial Russian country-name properties. No SVG projection coordinates are reused.",
+  "countries": [
+    "BY",
+    "PL"
+  ]
+}

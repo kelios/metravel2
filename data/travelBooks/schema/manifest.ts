@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import {MIN_READY_BOOK_STOPS, readyBookBodyPageCount, padPageCount, signatureSizes} from '../../../services/book/readyBooks/composition.ts';
 import {checkEditorialComposition, editorialShape, editorialStop, httpsUrl, identifier, nonempty} from './editorial.ts';
 import {printProfileSchema, profileId} from './profiles.ts';
 
@@ -10,7 +11,7 @@ export const assetUri = z.string().refine((value) => {
 }, 'Expected a stable HTTPS or root-relative asset path');
 
 const imageSchema = z.strictObject({
-  uri: assetUri, sha256, credit: nonempty, rights: nonempty,
+  uri: assetUri, sha256, credit: nonempty, rights: nonempty, effectivePpi: z.number().min(300),
   rightsBasis: z.enum(['owned', 'licensed', 'public-domain', 'ai-generated']),
   rightsSource: httpsUrl, printAllowed: z.literal(true), illustrated: z.boolean(),
 }).superRefine((image, ctx) => {
@@ -42,11 +43,14 @@ const previewSchema = z.strictObject({
 
 export const readyBookSchema = z.strictObject({
   ...editorialShape, status: z.literal('ready'),
-  stops: z.array(editorialStop.extend({image: imageSchema})).length(12),
-  bodyPageCount: z.literal(56), coverPageCount: z.literal(4),
+  stops: z.array(editorialStop.extend({image: imageSchema, navigation: editorialStop.shape.navigation.unwrap()})).min(MIN_READY_BOOK_STOPS),
+  bodyPageCount: z.number().int().positive(), coverPageCount: z.literal(4),
   artifacts: z.array(bookArtifactSchema).min(1), preview: z.array(previewSchema).length(4),
 }).superRefine(checkEditorialComposition).superRefine((book, ctx) => {
+  if (!book.stops.length) return;
+  const bodyCount = readyBookBodyPageCount(book.stops.length);
   const fail = (path: (string | number)[], message: string) => ctx.addIssue({code: 'custom', path, message});
+  if (book.bodyPageCount !== bodyCount) fail(['bodyPageCount'], `Expected ${bodyCount} logical body pages for ${book.stops.length} places`);
   if (book.gaps?.length) fail(['gaps'], 'A ready edition cannot have unresolved editorial gaps');
   book.stops.forEach((stop, index) => {
     if (stop.natureRoute?.elevationGainM === null) fail(['stops', index, 'natureRoute'], 'Ready routes need verified elevation');
@@ -98,19 +102,19 @@ export const readyBookSchema = z.strictObject({
     if (file.purpose === 'home-rings' || file.purpose === 'home-sewn') {
       size = file.profileId === 'album-a5' ? {width: 297, height: 210} : {width: 210, height: 297};
       imposition = file.purpose === 'home-sewn' ? 'a4-signatures' : 'a4-cut';
-      if (file.pageCount < (file.component === 'body' ? 28 : 2)) fail([...path, 'pageCount'], 'Home package cannot omit imposed pages');
+      if (file.pageCount !== padPageCount(file.component === 'body' ? bodyCount : 4, 4) / 2) fail([...path, 'pageCount'], 'Home package cannot omit imposed pages');
       if (file.purpose === 'home-rings' && binding === 'sewn') fail([...path, 'printProfile', 'binding'], 'Ring package cannot use sewn binding');
     } else if (['stickers', 'instructions', 'print-passport'].includes(file.purpose)) {
       size = {width: 210, height: 297};
     }
     if (file.purpose === 'home-sewn') {
       if (file.profileId !== 'album-a5' || binding !== 'sewn') fail(path, 'Sewn package is only available for A5 with sewn binding');
-      if (JSON.stringify(file.signatures) !== '[16,16,16,8]') fail([...path, 'signatures'], 'Expected signatures 16+16+16+8');
+      if (JSON.stringify(file.signatures) !== JSON.stringify(signatureSizes(bodyCount))) fail([...path, 'signatures'], 'Signatures must cover all body folios with padding only at the end');
     } else if (file.signatures !== undefined) fail([...path, 'signatures'], 'Signatures belong only to home-sewn');
     if (file.imposition !== imposition) fail([...path, 'imposition'], `Expected ${imposition}`);
     if (file.outputPageMm.width !== size.width || file.outputPageMm.height !== size.height) fail([...path, 'outputPageMm'], `Expected PDF page ${size.width}×${size.height} mm`);
     if (file.purpose === 'read' || file.purpose === 'print-shop') {
-      if (file.pageCount !== (file.component === 'body' ? 56 : 4)) fail([...path, 'pageCount'], 'Body is 56 pages; separate cover is 4 pages');
+      if (file.pageCount !== (file.component === 'body' ? bodyCount : 4)) fail([...path, 'pageCount'], 'Body count must match the selected places; separate cover is four pages');
     }
     if (file.purpose === 'stickers' && file.pageCount !== 2) fail([...path, 'pageCount'], 'Expected two sticker sheets');
   });
@@ -129,7 +133,7 @@ export const readyBookSchema = z.strictObject({
     const source = book.artifacts.find(file => file.profileId === preview.profileId && file.purpose === 'read' && file.component === preview.component);
     if (!source || source.sha256 !== preview.sourceSha256) fail([...path, 'sourceSha256'], 'Preview must identify the exact reading PDF');
     if (preview.revision !== book.revision) fail([...path, 'revision'], 'Preview revision differs from edition');
-    const count = preview.component === 'body' ? 56 : 4;
+    const count = preview.component === 'body' ? bodyCount : 4;
     if (preview.pages.length !== count || preview.pages.some((page, pageIndex) => page.number !== pageIndex + 1)) fail([...path, 'pages'], `Expected ordered pages 1–${count}`);
     preview.pages.forEach((page, pageIndex) => {
       checkResource(page.uri, {kind: 'image', sha256: page.sha256, bytes: page.bytes}, [...path, 'pages', pageIndex, 'uri']);
