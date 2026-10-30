@@ -3,6 +3,12 @@ import {useLocaleRevision} from '@/i18n/useLocaleRevision';
 
 // Literal keys let the web compiler extract the exact locale catalog.
 const copy = {
+  digitalKit: () => translate('books:digitalKit'),
+  stickers: () => translate('books:stickers'),
+  instructions: () => translate('books:instructions'),
+  passport: () => translate('books:passport'),
+  color: () => translate('books:color'),
+  noBackground: () => translate('books:noBackground'),
   title: () => translate('books:title'),
   intro: () => translate('books:intro'),
   partial: () => translate('books:partial'),

@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 
-const {collectAssets, copyPublication} = require('../../scripts/books/copy-publication.cjs');
+const {collectAssets, copyPublication, ensureDirectory} = require('../../scripts/books/copy-publication.cjs');
 const digest = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex');
 const pdf = Buffer.from('%PDF-1.7 fixture');
 const asset = (revision = 'r1') => ({uri: `https://metravel.by/travel-books/book/${revision}/read-body.pdf`, bytes: pdf.length, sha256: digest(pdf)});
@@ -22,6 +22,16 @@ describe('ready-book publication build boundary', () => {
     await fs.writeFile(path.join(root, 'data/travelBooks/manifest.json'), JSON.stringify(manifest()));
   });
   afterEach(async () => { await fs.rm(root, {recursive: true, force: true}); });
+
+  it('rejects traversal and pre-existing nested symlinks before authoring directories', async () => {
+    const outside = path.join(root, 'outside');
+    await fs.mkdir(outside);
+    await fs.symlink(outside, path.join(buildDir, 'book'));
+    await expect(ensureDirectory(buildDir, 'book/new-revision')).rejects.toThrow('symlink');
+    await expect(fs.stat(path.join(outside, 'new-revision'))).rejects.toThrow();
+    await expect(ensureDirectory(buildDir, '../outside/new')).rejects.toThrow('escapes root');
+    await expect(ensureDirectory(buildDir, outside)).rejects.toThrow('escapes root');
+  });
 
   it('copies verified current and archived editions, with the current public pointer', async () => {
     const historical = JSON.stringify(manifest('old')) + '\n';

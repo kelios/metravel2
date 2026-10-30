@@ -62,6 +62,7 @@ function checkContent(asset, bytes) {
 async function readJson(file) { return JSON.parse(await fs.readFile(file, 'utf8')); }
 
 async function ensureDirectory(root, relative) {
+  if (path.isAbsolute(relative) || relative.split(path.sep).includes('..')) throw new Error('Publication directory escapes root');
   let directory = root;
   for (const part of relative.split(path.sep).filter(Boolean)) {
     directory = path.join(directory, part);
@@ -136,4 +137,4 @@ if (require.main === module) {
     .then(result => console.log(`Ready books: ${result.files} verified files, ${result.bytes} bytes`))
     .catch(error => { console.error(error.message); process.exitCode = 1; });
 }
-module.exports = {collectAssets, copyPublication};
+module.exports = {collectAssets, copyPublication, ensureDirectory};

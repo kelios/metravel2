@@ -9,9 +9,12 @@ import {trackReadyBookEvent} from '@/utils/growthFunnelAnalytics';
 import {BooksFrame} from './BooksFrame';
 import {useBookCopy} from './bookCopy';
 import ReadyBookPreview from './preview/ReadyBookPreview';
+import PrintingGuide from './printingGuide/PrintingGuide.web';
+import PrintProviders from './printProviders/PrintProviders.web';
+import {bookArtifactFilename} from '@/services/book/readyBooks/printingGuide';
 import CoverPersonalizationEditor from './cover/CoverPersonalizationEditor.web';
 
-const purposeKey={read:'read','home-rings':'rings','home-sewn':'sewn','print-shop':'shop',control:'control'} as const;
+const purposeKey={read:'read','home-rings':'rings','home-sewn':'sewn','print-shop':'shop',control:'control',stickers:'stickers',instructions:'instructions','print-passport':'passport'} as const;
 const physicalCheckKey={'image-resolution':'resolutionPending','provider-acceptance':'providerAcceptance','paper-check':'paperCheck'} as const;
 export default function ReadyBookDetails({slug}:{slug:unknown}){
   const bookT=useBookCopy();
@@ -32,7 +35,7 @@ export default function ReadyBookDetails({slug}:{slug:unknown}){
       const blob=await fetchBookArtifact(file,controller.signal);
       if(controller.signal.aborted)return;
       const uri=URL.createObjectURL(blob),anchor=document.createElement('a');
-      anchor.href=uri;anchor.download=`${book.slug}-${book.revision}-${file.id}.pdf`;
+      anchor.href=uri;anchor.download=bookArtifactFilename(book,file);
       document.body.appendChild(anchor);anchor.click();anchor.remove();
       setTimeout(()=>URL.revokeObjectURL(uri),60000);
       trackReadyBookEvent('ReadyBookDownloadStarted',book,getActiveLocale(),{profileId:file.profileId,artifactPurpose:file.purpose});
@@ -40,7 +43,7 @@ export default function ReadyBookDetails({slug}:{slug:unknown}){
     finally{if(active.current===controller)setBusy(null);}
   };
   return <BooksFrame title={book.title} path={`/books/${book.slug}`} headingLang={book.contentLocale}>
-    <Link href="/books">{bookT('back')}</Link><p>{bookT('language')}</p><p>{bookT('counts',{places:formatNumber(book.stopCount),pages:formatNumber(book.bodyPageCount)})}</p><p className="ready-books-note">{bookT('partial')}</p>
+    <Link href="/books">{bookT('back')}</Link><p>{bookT('language')}</p><p>{bookT('counts',{places:formatNumber(book.stopCount),pages:formatNumber(book.bodyPageCount)})}</p><p className="ready-books-note">{bookT(book.missing.some(item=>['stickers','instructions','print-passport'].includes(item))?'partial':'digitalKit')}</p>
     <h2>{bookT('size')}</h2><div className="ready-books-controls">{book.profiles.map(profile=><label key={profile.id}><input type="radio" name="book-format" checked={profileId===profile.id} onChange={()=>{setProfile(profile.id);setFailed(null);trackReadyBookEvent('ReadyBookProfileSelected',book,getActiveLocale(),{profileId:profile.id});}}/>{bookT(profile.id==='album-a5'?'album':'pocket')}</label>)}</div>
     <p>{bookT('photoSpace')}</p>
     <div ref={opener}><Button label={bookT('preview')} onPress={()=>{setPreview(true);trackReadyBookEvent('ReadyBookPreviewOpened',book,getActiveLocale(),{profileId});}}/></div>
@@ -53,9 +56,11 @@ export default function ReadyBookDetails({slug}:{slug:unknown}){
     </section>
     <h2>{bookT('inside')}</h2><details><summary>{bookT('contents')}</summary><ol lang={book.contentLocale}>{book.stops.map(stop=><li key={stop.id}>{stop.title} · {formatNumber(stop.page)}</li>)}</ol></details>
     <h2>{bookT('downloads')}</h2><p>{bookT('providerPending')}</p><ul className="ready-books-files">{book.artifacts.filter(file=>file.profileId===profileId).map(file=><li key={file.id}>
-      <span>{bookT(purposeKey[file.purpose])} · {file.controlFor&&<>{bookT(purposeKey[file.controlFor])} · </>}{bookT(file.component)} · PDF · {bookT('pageCount',{count:formatNumber(file.pageCount)})} · {formatNumber(file.bytes/1024/1024,{maximumFractionDigits:1})} {bookT('megabytes')}</span>
+      <span>{bookT(purposeKey[file.purpose])} · {file.controlFor&&<>{bookT(purposeKey[file.controlFor])} · </>}{['body','cover'].includes(file.component)&&<>{bookT(file.component)} · </>}{file.variant&&<>{bookT(file.variant==='color'?'color':'noBackground')} · </>}PDF · {bookT('pageCount',{count:formatNumber(file.pageCount)})} · {formatNumber(file.bytes/1024/1024,{maximumFractionDigits:1})} {bookT('megabytes')}</span>
       <Button disabled={busy!==null} label={busy===file.id?bookT('downloading'):failed===file.id?bookT('retry'):bookT('download')} onPress={()=>void download(file)}/>
       {failed===file.id&&<p role="alert">{bookT('downloadError')}</p>}
     </li>)}</ul><p>{bookT('revision')}: {book.revision}</p>
+    <PrintingGuide book={book} profileId={profileId}/>
+    <PrintProviders profileId={profileId} bodyPageCount={book.bodyPageCount} artifactSha256={book.artifacts.find(file=>file.profileId===profileId&&file.purpose==='print-shop'&&file.component==='body')?.sha256}/>
   </BooksFrame>;
 }

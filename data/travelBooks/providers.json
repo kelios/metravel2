@@ -1,0 +1,369 @@
+{
+  "schemaVersion": 1,
+  "cities": [
+    {
+      "country": "BY",
+      "name": "Минск"
+    },
+    {
+      "country": "BY",
+      "name": "Брест"
+    },
+    {
+      "country": "BY",
+      "name": "Витебск"
+    },
+    {
+      "country": "BY",
+      "name": "Гомель"
+    },
+    {
+      "country": "BY",
+      "name": "Гродно"
+    },
+    {
+      "country": "BY",
+      "name": "Могилёв"
+    },
+    {
+      "country": "PL",
+      "name": "Warszawa"
+    },
+    {
+      "country": "PL",
+      "name": "Kraków"
+    },
+    {
+      "country": "PL",
+      "name": "Łódź"
+    },
+    {
+      "country": "PL",
+      "name": "Wrocław"
+    },
+    {
+      "country": "PL",
+      "name": "Poznań"
+    },
+    {
+      "country": "PL",
+      "name": "Gdańsk"
+    },
+    {
+      "country": "PL",
+      "name": "Szczecin"
+    },
+    {
+      "country": "PL",
+      "name": "Bydgoszcz"
+    },
+    {
+      "country": "PL",
+      "name": "Toruń"
+    },
+    {
+      "country": "PL",
+      "name": "Lublin"
+    },
+    {
+      "country": "PL",
+      "name": "Białystok"
+    },
+    {
+      "country": "PL",
+      "name": "Kielce"
+    },
+    {
+      "country": "PL",
+      "name": "Olsztyn"
+    },
+    {
+      "country": "PL",
+      "name": "Rzeszów"
+    },
+    {
+      "country": "PL",
+      "name": "Opole"
+    },
+    {
+      "country": "PL",
+      "name": "Katowice"
+    },
+    {
+      "country": "PL",
+      "name": "Gorzów Wielkopolski"
+    },
+    {
+      "country": "PL",
+      "name": "Zielona Góra"
+    }
+  ],
+  "providers": [
+    {
+      "id": "salamandra-brochures",
+      "name": "Salamandra",
+      "country": "BY",
+      "city": "Минск",
+      "url": "https://salamandra.by/products/reklamnoinformacionnaya-poligrafiya-listovaya/broshyury",
+      "fulfillment": "local",
+      "deliveryCoverage": [],
+      "minimumCopies": null,
+      "publishedProfiles": [
+        "album-a5"
+      ],
+      "customFormat": false,
+      "formatsComplete": false,
+      "bindings": [
+        "stapled"
+      ],
+      "minimumBodyPages": null,
+      "maximumBodyPages": null,
+      "bodyPageMultiple": null,
+      "genericPdfAcceptance": "unknown",
+      "acceptsRuPdf": "unknown",
+      "contactLanguages": [],
+      "supportedProfiles": [],
+      "checkedAt": "2026-10-30",
+      "sourceUrls": [
+        "https://salamandra.by/products/reklamnoinformacionnaya-poligrafiya-listovaya/broshyury"
+      ],
+      "verification": "published",
+      "acceptedFiles": []
+    },
+    {
+      "id": "beleksprint-spiral",
+      "name": "Beleksprint",
+      "country": "BY",
+      "city": "Минск",
+      "url": "https://beleksprint.by/broshyury-na-pruzhine/",
+      "fulfillment": "local",
+      "deliveryCoverage": [
+        "BY"
+      ],
+      "minimumCopies": 10,
+      "publishedProfiles": [
+        "album-a5"
+      ],
+      "customFormat": true,
+      "formatsComplete": false,
+      "bindings": [
+        "spiral"
+      ],
+      "minimumBodyPages": null,
+      "maximumBodyPages": null,
+      "bodyPageMultiple": null,
+      "genericPdfAcceptance": "unknown",
+      "acceptsRuPdf": "unknown",
+      "contactLanguages": [],
+      "supportedProfiles": [],
+      "checkedAt": "2026-10-30",
+      "sourceUrls": [
+        "https://beleksprint.by/broshyury-na-pruzhine/"
+      ],
+      "verification": "published",
+      "acceptedFiles": []
+    },
+    {
+      "id": "print-co-book-binding",
+      "name": "Печатная компания",
+      "country": "BY",
+      "city": "Минск",
+      "url": "https://www.print-co.by/index.php/requirements",
+      "fulfillment": "local",
+      "deliveryCoverage": [
+        "Минск"
+      ],
+      "minimumCopies": null,
+      "publishedProfiles": [],
+      "customFormat": false,
+      "formatsComplete": false,
+      "bindings": [
+        "spiral",
+        "stapled"
+      ],
+      "minimumBodyPages": null,
+      "maximumBodyPages": null,
+      "bodyPageMultiple": null,
+      "genericPdfAcceptance": "yes",
+      "acceptsRuPdf": "unknown",
+      "contactLanguages": [],
+      "supportedProfiles": [],
+      "checkedAt": "2026-10-30",
+      "sourceUrls": [
+        "https://www.print-co.by/index.php/requirements",
+        "https://www.print-co.by/index.php/contacts",
+        "https://www.print-co.by/index.php/services/delivery"
+      ],
+      "verification": "published",
+      "acceptedFiles": []
+    },
+    {
+      "id": "slavprint-small-run",
+      "name": "SlavPrint",
+      "country": "BY",
+      "city": "Минск",
+      "url": "https://slavprint.by/pechat-knig-minsk/",
+      "fulfillment": "delivery",
+      "deliveryCoverage": [
+        "Минск"
+      ],
+      "minimumCopies": 1,
+      "publishedProfiles": [
+        "album-a5"
+      ],
+      "customFormat": true,
+      "formatsComplete": false,
+      "bindings": [
+        "soft",
+        "hard"
+      ],
+      "minimumBodyPages": null,
+      "maximumBodyPages": null,
+      "bodyPageMultiple": null,
+      "genericPdfAcceptance": "yes",
+      "acceptsRuPdf": "unknown",
+      "contactLanguages": [],
+      "supportedProfiles": [],
+      "checkedAt": "2026-10-30",
+      "sourceUrls": [
+        "https://slavprint.by/pechat-knig-minsk/"
+      ],
+      "verification": "published",
+      "acceptedFiles": []
+    },
+    {
+      "id": "cyfrus-spiral",
+      "name": "CYFRUS.PL",
+      "country": "PL",
+      "city": "Wrocław",
+      "url": "https://cyfrus.pl/druk_ksiazek_spiralowanych",
+      "fulfillment": "local",
+      "deliveryCoverage": [
+        "PL"
+      ],
+      "minimumCopies": null,
+      "publishedProfiles": [],
+      "customFormat": false,
+      "formatsComplete": false,
+      "bindings": [
+        "spiral"
+      ],
+      "minimumBodyPages": null,
+      "maximumBodyPages": null,
+      "bodyPageMultiple": null,
+      "genericPdfAcceptance": "yes",
+      "acceptsRuPdf": "unknown",
+      "contactLanguages": [],
+      "supportedProfiles": [],
+      "checkedAt": "2026-10-30",
+      "sourceUrls": [
+        "https://cyfrus.pl/druk_ksiazek_spiralowanych",
+        "https://cyfrus.pl/artykul/pokaz/pomoc11",
+        "https://cyfrus.pl/regulamin1/regulamin/"
+      ],
+      "verification": "published",
+      "acceptedFiles": []
+    },
+    {
+      "id": "versoprint-glued",
+      "name": "Versoprint",
+      "country": "PL",
+      "city": "Szczecin",
+      "url": "https://versoprint.pl/ksiazki-katalogi-klejone",
+      "fulfillment": "local",
+      "deliveryCoverage": [
+        "PL"
+      ],
+      "minimumCopies": 1,
+      "publishedProfiles": [
+        "album-a5"
+      ],
+      "customFormat": true,
+      "formatsComplete": false,
+      "bindings": [
+        "glued"
+      ],
+      "minimumBodyPages": null,
+      "maximumBodyPages": null,
+      "bodyPageMultiple": null,
+      "genericPdfAcceptance": "yes",
+      "acceptsRuPdf": "unknown",
+      "contactLanguages": [],
+      "supportedProfiles": [],
+      "checkedAt": "2026-10-30",
+      "sourceUrls": [
+        "https://versoprint.pl/ksiazki-katalogi-klejone",
+        "https://www.sklep.versoprint.pl/regulamin1/regulamin/",
+        "https://versoprint.pl/kontakt"
+      ],
+      "verification": "published",
+      "acceptedFiles": []
+    },
+    {
+      "id": "openprint-spiral",
+      "name": "Openprint — spiral catalogue",
+      "country": "PL",
+      "city": "Poznań",
+      "url": "https://www.openprint.pl/katalog-spiralowany",
+      "fulfillment": "delivery",
+      "deliveryCoverage": [
+        "PL"
+      ],
+      "minimumCopies": 50,
+      "publishedProfiles": [
+        "album-a5"
+      ],
+      "customFormat": false,
+      "formatsComplete": true,
+      "bindings": [
+        "spiral"
+      ],
+      "minimumBodyPages": null,
+      "maximumBodyPages": 56,
+      "bodyPageMultiple": null,
+      "genericPdfAcceptance": "yes",
+      "acceptsRuPdf": "unknown",
+      "contactLanguages": [],
+      "supportedProfiles": [],
+      "checkedAt": "2026-10-30",
+      "sourceUrls": [
+        "https://www.openprint.pl/katalog-spiralowany",
+        "https://www.openprint.pl/kategoria/katalogi",
+        "https://www.openprint.pl/kontakt"
+      ],
+      "verification": "published",
+      "acceptedFiles": []
+    },
+    {
+      "id": "openprint-hardcover-one",
+      "name": "Openprint — hardcover from one",
+      "country": "PL",
+      "city": "Poznań",
+      "url": "https://www.openprint.pl/ksiazki-od-1-sztuki",
+      "fulfillment": "delivery",
+      "deliveryCoverage": [
+        "PL"
+      ],
+      "minimumCopies": 1,
+      "publishedProfiles": [],
+      "customFormat": false,
+      "formatsComplete": true,
+      "bindings": [
+        "hard"
+      ],
+      "minimumBodyPages": 24,
+      "maximumBodyPages": 96,
+      "bodyPageMultiple": 8,
+      "genericPdfAcceptance": "yes",
+      "acceptsRuPdf": "unknown",
+      "contactLanguages": [],
+      "supportedProfiles": [],
+      "checkedAt": "2026-10-30",
+      "sourceUrls": [
+        "https://www.openprint.pl/ksiazki-od-1-sztuki"
+      ],
+      "verification": "published",
+      "acceptedFiles": []
+    }
+  ]
+}

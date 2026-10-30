@@ -14,6 +14,30 @@ if (!process.execArgv.includes('--experimental-strip-types')) {
 
 const {validateEditorialBookDraft, validateReadyBook, buildReadyBookPagePlan} = await import('../services/book/readyBooks/validation/index.ts');
 const args = process.argv.slice(2);
+if (args[0] === '--publication') {
+  const {build}=await import('esbuild');
+  const {createRequire}=await import('node:module');
+  const {rm}=await import('node:fs/promises');
+  const {collectAssets,ensureDirectory}=createRequire(import.meta.url)('./books/copy-publication.cjs');
+  const file=args[1];
+  if(!file||args.length!==4||args[2]!=='--assets-root'||!args[3])throw new Error('Use --publication manifest.json --assets-root cache-directory');
+  const output=await ensureDirectory(await realpath('.codex-temp'),'books-validator');
+  const bundle=path.join(output,'publication.cjs');
+  await rm(bundle,{force:true});
+  await build({entryPoints:['services/book/readyBooks/publication.ts'],outfile:bundle,bundle:true,platform:'node',format:'cjs',logLevel:'silent'});
+  const {publicationSchema}=createRequire(import.meta.url)(bundle);
+  const manifest=publicationSchema.parse(JSON.parse(await readFile(file,'utf8')));
+  const assets=collectAssets([manifest]),root=await realpath(args[3]);
+  for(const asset of assets){
+    const resolved=await realpath(path.join(root,asset.relative));
+    if(!resolved.startsWith(root+path.sep))throw new Error('Publication asset escapes cache');
+    const bytes=await readFile(resolved);
+    if(bytes.length!==asset.bytes||createHash('sha256').update(bytes).digest('hex')!==asset.sha256)throw new Error('Publication byte/hash mismatch: '+asset.relative);
+    if(asset.relative.endsWith('.pdf')&&bytes.subarray(0,5).toString()!=='%PDF-')throw new Error('Invalid PDF resource');
+  }
+  console.log(JSON.stringify({publication:'partial',books:manifest.books.length,resources:assets.length,hashesVerified:true,printReady:false}));
+  process.exit(0);
+}
 if (args[0] === '--sources') {
   const {loadSelectedBook} = await import('./books/source-ready-book.mjs');
   for (const country of ['by', 'pl']) {const {book} = await loadSelectedBook(country); const result = validateEditorialBookDraft(book); if (!result.success) throw new Error(JSON.stringify(result.issues)); console.log(`${country}: ${book.stops.length} selected author-1 places; ${buildReadyBookPagePlan(book).length} body pages; approved source/art association verified`);}

@@ -40,7 +40,7 @@ export const publishedBookSchema = z.strictObject({
   quality:z.array(z.strictObject({profileId,printReady:z.literal(false),minIllustrationPpi:z.number().positive(),physicalChecks:z.array(z.enum(['image-resolution','provider-acceptance','paper-check'])).min(2)})).length(2),
   profiles:z.array(printProfileSchema).length(2),
   coverPersonalization:coverPersonalizationSchema.optional(),
-  artifacts:z.array(z.strictObject({id:identifier,revision:identifier,profileId,purpose:z.enum(['read','home-rings','home-sewn','print-shop','control']),component:z.enum(['body','cover']),controlFor:z.enum(['home-rings','home-sewn']).optional(),uri:assetUri,mime:z.literal('application/pdf'),sha256,bytes:z.number().int().positive(),pageCount:z.number().int().positive()})),
+  artifacts:z.array(z.strictObject({id:identifier,revision:identifier,profileId,purpose:z.enum(['read','home-rings','home-sewn','print-shop','control','stickers','instructions','print-passport']),component:z.enum(['body','cover','stickers','instructions','passport']),variant:z.enum(['color','no-background']).optional(),outputPageMm:z.strictObject({width:z.number().positive(),height:z.number().positive()}).optional(),controlFor:z.enum(['home-rings','home-sewn']).optional(),uri:assetUri,mime:z.literal('application/pdf'),sha256,bytes:z.number().int().positive(),pageCount:z.number().int().positive()})),
   preview:z.array(z.strictObject({revision:z.string(),profileId,component:z.enum(['body','cover']),sourceSha256:sha256,pages:z.array(page)})).length(4),
 }).superRefine((book,ctx)=>{
   const fail=(message:string)=>ctx.addIssue({code:'custom',message});
@@ -74,13 +74,28 @@ export const publishedBookSchema = z.strictObject({
   if(coverResources.some(a=>!a.uri.includes('/'+book.id+'/'+book.revision+'/')))fail('Mixed cover template or font revision');
   for(const a of book.artifacts){
     if(a.revision!==book.revision||!a.uri.includes('/'+book.revision+'/')) fail('Mixed artifact revision');
-    const count=a.purpose==='control'?a.pageCount:a.purpose==='home-rings'||a.purpose==='home-sewn'?padPageCount(a.component==='body'?bodyCount:4,4)/2:(a.component==='body'?bodyCount:4);
+    const supplemental=['stickers','instructions','print-passport'].includes(a.purpose);
+    const count=supplemental?a.pageCount:a.purpose==='control'?a.pageCount:a.purpose==='home-rings'||a.purpose==='home-sewn'?padPageCount(a.component==='body'?bodyCount:4,4)/2:(a.component==='body'?bodyCount:4);
     if(a.purpose==='control'){
       if(a.pageCount<2)fail('Control document needs the physical duplex pair');
       if(!a.controlFor||!book.artifacts.some(home=>home.profileId===a.profileId&&home.purpose===a.controlFor&&home.component===a.component))fail('Control document must identify its exact assembly package');
     }else if(a.controlFor!==undefined)fail('Assembly discriminator belongs only to control documents');
     if(a.pageCount!==count)fail('Incorrect physical-package page count');
+    if(supplemental){
+      const component={stickers:'stickers',instructions:'instructions','print-passport':'passport'}[a.purpose as 'stickers'|'instructions'|'print-passport'];
+      if(a.outputPageMm?.width!==210||a.outputPageMm?.height!==297)fail('Supplement must declare A4 geometry');
+      if(a.component!==component)fail('Supplement component differs from purpose');
+      if(a.purpose==='stickers'?(a.pageCount!==2||!a.variant):a.variant!==undefined)fail('Supplement variant or sheet count differs');
+    }else if(!['body','cover'].includes(a.component)||a.variant!==undefined)fail('Core package has invalid component/variant');
     if(a.purpose==='home-sewn'&&(a.profileId!=='album-a5'||a.component!=='body'))fail('Sewn binding belongs only to the A5 body');
+  }
+  for(const purpose of ['stickers','instructions','print-passport'] as const){
+    const present=book.artifacts.filter(a=>a.purpose===purpose);
+    if(book.missing.includes(purpose)!==(present.length===0))fail('Missing list contradicts actual supplements');
+    if(present.length){
+      const expected=purpose==='stickers'?4:2;
+      if(present.length!==expected||new Set(present.map(a=>a.profileId+':'+(a.variant??''))).size!==expected)fail('Incomplete or duplicate supplements');
+    }
   }
   for(const p of book.preview){
     const source=book.artifacts.find(a=>a.profileId===p.profileId&&a.component===p.component&&a.purpose==='read');

@@ -1,0 +1,50 @@
+import {translate, type TranslationParams} from '@/i18n';
+import {useLocaleRevision} from '@/i18n/useLocaleRevision';
+
+const copy = {
+  providerPageLimits: (params?: TranslationParams) => translate('books:providerPageLimits', params),
+  providerTitle: (params?: TranslationParams) => translate('books:providerTitle', params),
+  providerIntro: (params?: TranslationParams) => translate('books:providerIntro', params),
+  providerCountry: (params?: TranslationParams) => translate('books:providerCountry', params),
+  providerCity: (params?: TranslationParams) => translate('books:providerCity', params),
+  providerBY: (params?: TranslationParams) => translate('books:providerBY', params),
+  providerPL: (params?: TranslationParams) => translate('books:providerPL', params),
+  providerCopies: (params?: TranslationParams) => translate('books:providerCopies', params),
+  providerBinding: (params?: TranslationParams) => translate('books:providerBinding', params),
+  providerSpiral: (params?: TranslationParams) => translate('books:providerSpiral', params),
+  providerRings: (params?: TranslationParams) => translate('books:providerRings', params),
+  providerSewn: (params?: TranslationParams) => translate('books:providerSewn', params),
+  providerFormat: (params?: TranslationParams) => translate('books:providerFormat', params),
+  providerPocket: (params?: TranslationParams) => translate('books:providerPocket', params),
+  providerAlbum: (params?: TranslationParams) => translate('books:providerAlbum', params),
+  providerDirectoryPending: (params?: TranslationParams) => translate('books:providerDirectoryPending', params),
+  providerCandidates: (params?: TranslationParams) => translate('books:providerCandidates', params),
+  providerEmpty: (params?: TranslationParams) => translate('books:providerEmpty', params),
+  providerLocal: (params?: TranslationParams) => translate('books:providerLocal', params),
+  providerDelivery: (params?: TranslationParams) => translate('books:providerDelivery', params),
+  providerMinimum: (params?: TranslationParams) => translate('books:providerMinimum', params),
+  providerUnknownMinimum: (params?: TranslationParams) => translate('books:providerUnknownMinimum', params),
+  providerRuPdf: (params?: TranslationParams) => translate('books:providerRuPdf', params),
+  providerLanguages: (params?: TranslationParams) => translate('books:providerLanguages', params),
+  providerUnknown: (params?: TranslationParams) => translate('books:providerUnknown', params),
+  providerYes: (params?: TranslationParams) => translate('books:providerYes', params),
+  providerNo: (params?: TranslationParams) => translate('books:providerNo', params),
+  providerChecked: (params?: TranslationParams) => translate('books:providerChecked', params),
+  providerWebsite: (params?: TranslationParams) => translate('books:providerWebsite', params),
+  providerSource: (params?: TranslationParams) => translate('books:providerSource', params),
+  providerExcluded: (params?: TranslationParams) => translate('books:providerExcluded', params),
+  providerExcludeCopies: (params?: TranslationParams) => translate('books:providerExcludeCopies', params),
+  providerExcludeFormat: (params?: TranslationParams) => translate('books:providerExcludeFormat', params),
+  providerExcludeBinding: (params?: TranslationParams) => translate('books:providerExcludeBinding', params),
+  providerExcludePages: (params?: TranslationParams) => translate('books:providerExcludePages', params),
+  providerExcludeRuPdf: (params?: TranslationParams) => translate('books:providerExcludeRuPdf', params),
+  providerInvalidCopies: (params?: TranslationParams) => translate('books:providerInvalidCopies', params),
+  providerOpenError: (params?: TranslationParams) => translate('books:providerOpenError', params),
+  providerFileConfirmed: (params?: TranslationParams) => translate('books:providerFileConfirmed', params),
+  providerDetails: (params?: TranslationParams) => translate('books:providerDetails', params),
+  providerNoTransfer: (params?: TranslationParams) => translate('books:providerNoTransfer', params),
+};
+export function useProviderCopy() {
+  useLocaleRevision();
+  return (key: keyof typeof copy, params?: TranslationParams) => copy[key](params);
+}
