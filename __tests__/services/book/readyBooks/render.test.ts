@@ -27,6 +27,16 @@ describe('ready-book physical rendering', () => {
     expect(output.stylesCss).toContain(id === 'album-a5' ? 'font-size:10.5pt' : 'font-size:9pt');
     expect(output.bodyPages[8]).toContain(image.credit);
     expect(output.bodyPages[8]).toContain(image.sourceUrl);
+    // A short notes field must contain explicit vector ink, not a CSS gradient
+    // that disappeared in Chromium's paginated output on the 8 mm compact field.
+    expect(output.bodyPages[7]).toContain('<svg class="lines"');
+    expect(output.bodyPages[7]).toContain('y1="5.925" y2="5.925"');
+    // Preserve the healthy 42 mm compact control's seven complete strokes;
+    // the last 0.15 mm stroke ends at the viewport edge without being clipped.
+    const controlLines = [...output.bodyPages[53].matchAll(/<line\s[^>]*y1="([\d.]+)"/g)].map(match => Number(match[1]));
+    expect(controlLines).toHaveLength(id === 'pocket-150x100' ? 7 : 23);
+    expect(controlLines[controlLines.length - 1] + 0.075).toBeLessThanOrEqual(id === 'pocket-150x100' ? 42 : 140);
+    expect(output.stylesCss).not.toContain('repeating-linear-gradient');
     expect(output.bodyHtml).not.toContain('overflow:hidden');
   });
 

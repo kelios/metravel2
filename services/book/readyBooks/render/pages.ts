@@ -4,7 +4,10 @@ import {embeddedImage, type ReadyBookRenderInput} from './index';
 import {formatNumber} from '../../../../i18n/format';
 
 const text = (value: string, className = '') => `<p class="${className}">${e(value)}</p>`;
-const lines = (height = 24) => `<div class="lines" style="height:${height}mm"></div>`;
+const lines = (height = 24) => `<svg class="lines" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 ${height}" preserveAspectRatio="none" style="height:${height}mm" aria-hidden="true">${Array.from({length: Math.floor(height / 6)}, (_, index) => {
+  const y = (index + 1) * 6 - 0.075;
+  return `<line x1="0" x2="100" y1="${y}" y2="${y}" stroke="#bdc7be" stroke-width="0.15"/>`;
+}).join('')}</svg>`;
 const content = (value: string, className = '') => `<main class="content ${className}">${value}</main>`;
 const flow = (value: string) => content(`<div class="flow">${value}</div>`);
 
