@@ -6,7 +6,20 @@ const {createHash} = require('node:crypto');
 const {execFileSync} = require('node:child_process');
 
 const BASE = 'https://metravel.by/travel-books/';
+const ROOT_BASE = '/travel-books/';
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+
+// Only preview images (including their cover alias) may omit our origin.
+function publicationAssetLocation(uri, previewBook) {
+  if (typeof uri !== 'string' || /[%\\?#\s]/.test(uri)) throw new Error('Invalid publication asset URI');
+  let relative;
+  if (uri.startsWith(BASE)) relative = uri.slice(BASE.length);
+  else if (previewBook && uri.startsWith(ROOT_BASE)) relative = uri.slice(ROOT_BASE.length);
+  else throw new Error('Invalid publication asset URI');
+  if (!relative || relative.split('/').some(part => !part || part === '.' || part === '..')) throw new Error('Invalid publication asset path');
+  if (previewBook && (!relative.startsWith(previewBook.id + '/' + previewBook.revision + '/') || !relative.endsWith('.webp'))) throw new Error('Preview resource revision or path differs');
+  return {uri: BASE + relative, relative};
+}
 
 function collectAssets(manifests) {
   const assets = new Map();
@@ -18,12 +31,13 @@ function collectAssets(manifests) {
       const guidePages=book.printGuidePages??[];
       const directory=book.printDirectory;
       if(Boolean(book.printGuidePages)!==Boolean(directory)||book.printGuidePages&&(guidePages.length!==2||new Set(guidePages.map(p=>p.profileId)).size!==2||guidePages.some(p=>!['pocket-150x100','album-a5'].includes(p.profileId))))throw new Error('Invalid print document resources');
-      const entries = [...guidePages,...(directory?[directory]:[]),...book.artifacts, ...book.preview.flatMap(group => group.pages), ...(cover?[cover.font,cover.font.license,...cover.templates]:[])];
+      const previewPages=book.preview.flatMap(group=>group.pages);
+      if(book.coverUri!==undefined)publicationAssetLocation(book.coverUri,book);
+      const entries = [...guidePages,...(directory?[directory]:[]),...book.artifacts, ...previewPages, ...(cover?[cover.font,cover.font.license,...cover.templates]:[])];
       for (const entry of entries) {
-        const {uri, bytes, sha256} = entry;
-        if (typeof uri !== 'string' || !uri.startsWith(BASE) || /[%\\?#\s]/.test(uri)) throw new Error('Invalid publication asset URI');
-        const relative = uri.slice(BASE.length);
-        if (!relative || relative.split('/').some(part => !part || part === '.' || part === '..') || !/\.(pdf|webp|ttf|txt|html|json)$/.test(relative)) throw new Error('Invalid publication asset path');
+        const {bytes, sha256} = entry;
+        const {uri,relative}=publicationAssetLocation(entry.uri,previewPages.includes(entry)?book:undefined);
+        if (!/\.(pdf|webp|ttf|txt|html|json)$/.test(relative)) throw new Error('Invalid publication asset path');
         const extension=relative.split('.').pop();
         const guideEntry=guidePages.includes(entry),directoryEntry=entry===directory;
         if(extension==='html'&&!guideEntry||extension==='json'&&!directoryEntry)throw new Error('Print document must be declared');
@@ -160,4 +174,4 @@ if (require.main === module) {
     .then(result => console.log(`Ready books: ${result.files} verified files, ${result.bytes} bytes`))
     .catch(error => { console.error(error.message); process.exitCode = 1; });
 }
-module.exports = {collectAssets, copyPublication, ensureDirectory, checkContent, writePublicationStagingMetadata};
+module.exports = {collectAssets, copyPublication, ensureDirectory, checkContent, writePublicationStagingMetadata, publicationAssetLocation};

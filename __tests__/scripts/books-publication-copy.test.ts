@@ -5,8 +5,13 @@ import {createHash} from 'node:crypto';
 const {collectAssets, copyPublication, ensureDirectory, writePublicationStagingMetadata} = require('../../scripts/books/copy-publication.cjs');
 const digest = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex');
 const pdf = Buffer.from('%PDF-1.7 fixture');
+const webp = Buffer.from('RIFF0000WEBPfixture');
 const asset = (revision = 'r1') => ({uri: `https://metravel.by/travel-books/book/${revision}/read-body.pdf`, bytes: pdf.length, sha256: digest(pdf)});
 const manifest = (revision = 'r1') => ({schemaVersion: 1, releaseId: 'travel-books-v1', books: [{artifacts: [asset(revision)], preview: []}]});
+const previewManifest = (relative = false) => {
+  const uri=(relative?'':'https://metravel.by')+'/travel-books/book/r1/preview-cover-1.webp';
+  return {schemaVersion:1,releaseId:'travel-books-v1',books:[{id:'book',revision:'r1',coverUri:uri,artifacts:[asset()],preview:[{pages:[{uri,bytes:webp.length,sha256:digest(webp)}]}]}]};
+};
 
 describe('ready-book publication build boundary', () => {
   let root: string;
@@ -63,6 +68,47 @@ describe('ready-book publication build boundary', () => {
     download.mockClear();
     await copyPublication({root, buildDir, cacheDir, download});
     expect(download).not.toHaveBeenCalled();
+  });
+
+  it('deduplicates legacy absolute and root-relative previews and fetches absolute own-origin URLs',async()=>{
+    const current=previewManifest(true),historical=JSON.stringify(previewManifest());
+    await fs.writeFile(path.join(root,'data/travelBooks/manifest.json'),JSON.stringify(current));
+    await fs.writeFile(path.join(root,'data/travelBooks/releases',digest(historical)+'.json'),historical);
+    const download=jest.fn(async(a:{uri:string;relative:string})=>{
+      expect(a.uri).toBe('https://metravel.by/travel-books/'+a.relative);
+      return a.relative.endsWith('.webp')?webp:pdf;
+    });
+    expect(await copyPublication({root,buildDir,cacheDir,download})).toEqual({files:2,bytes:pdf.length+webp.length});
+    expect(download).toHaveBeenCalledTimes(2);
+    expect(await fs.readFile(path.join(buildDir,'travel-books/book/r1/preview-cover-1.webp'))).toEqual(webp);
+    expect(JSON.parse(await fs.readFile(path.join(buildDir,'travel-books/manifest.json'),'utf8'))).toEqual(current);
+    const conflicting=previewManifest(true);
+    conflicting.books[0].preview[0].pages[0].sha256='f'.repeat(64);
+    expect(()=>collectAssets([previewManifest(),conflicting])).toThrow('changed');
+  });
+
+  it.each([
+    '//metravel.by/travel-books/book/r1/preview.webp',
+    'https://foreign.invalid/travel-books/book/r1/preview.webp',
+    '/travel-books/other/r1/preview.webp',
+    '/travel-books/book/other/preview.webp',
+    '/travel-books/book/r1/../preview.webp',
+    '/travel-books/book/r1/%2e%2e/preview.webp',
+    '/travel-books/book/r1/./preview.webp',
+    '/travel-books/book/r1/preview.webp?query=1',
+    '/travel-books/book/r1/preview.pdf',
+  ])('rejects unsupported root-relative preview or cover path %s',uri=>{
+    const input=previewManifest(true);
+    input.books[0].preview[0].pages[0].uri=uri;
+    expect(()=>collectAssets([input])).toThrow();
+    const cover=previewManifest(true);cover.books[0].coverUri=uri;
+    expect(()=>collectAssets([cover])).toThrow();
+  });
+
+  it('keeps root-relative support exclusive to preview images',()=>{
+    const input=previewManifest(true);
+    input.books[0].artifacts[0].uri='/travel-books/book/r1/read-body.pdf';
+    expect(()=>collectAssets([input])).toThrow('Invalid publication asset URI');
   });
 
 

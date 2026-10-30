@@ -11,7 +11,7 @@ import {loadSelectedBook} from './source-ready-book.mjs';
 import {buildStickerArtifacts} from './build-stickers.mjs';
 import {renderPrintGuideHtml} from './render-print-guide-html.mjs';
 import publicationFiles from './copy-publication.cjs';
-const {ensureDirectory,collectAssets,checkContent,writePublicationStagingMetadata}=publicationFiles;
+const {ensureDirectory,collectAssets,checkContent,writePublicationStagingMetadata,publicationAssetLocation}=publicationFiles;
 
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const json=async file=>JSON.parse(await readFile(file,'utf8'));
@@ -20,9 +20,12 @@ const resources=book=>[...(book.printGuidePages??[]),...(book.printDirectory?[bo
 export function supplementedRevision(book,generatorHash,stickers){
   return hash(JSON.stringify({book,generatorHash,stickers:stickers.map(({variant,sha256})=>({variant,sha256}))})).slice(0,32);
 }
-async function verifiedResource(root,entry){
-  const relative=entry.uri.slice(base.length);
-  if(!entry.uri.startsWith(base)||!relative||relative.split('/').some(part=>!part||part==='.'||part==='..')||/[%\\?#\s]/.test(relative))throw new Error('Invalid immutable resource');
+export function normalizePreviewUris(book){
+  for(const page of book.preview.flatMap(group=>group.pages))page.uri='/travel-books/'+publicationAssetLocation(page.uri,book).relative;
+  book.coverUri='/travel-books/'+publicationAssetLocation(book.coverUri,book).relative;
+}
+async function verifiedResource(root,entry,previewBook){
+  const {relative}=publicationAssetLocation(entry.uri,previewBook);
   let current=root;for(const part of relative.split('/')){current=path.join(current,part);if((await lstat(current)).isSymbolicLink())throw new Error('Publication resource is a symlink');}
   const file=await realpath(path.join(root,relative));
   if(!file.startsWith(root+path.sep))throw new Error('Source escapes publication cache');
@@ -82,12 +85,14 @@ export async function augmentPublication({manifest='data/travelBooks/manifest.js
     book.printDirectory={uri:new URL(relative+'/providers.json',base).href,mime:'application/json',bytes:providerBytes.length,sha256:hash(providerBytes)};
     await writeFile(path.join(directory,'providers.json'),providerBytes,{flag:'wx'});
     const rewrite=uri=>uri.replace('/'+old.revision+'/','/'+revision+'/');
-    for(const entry of [...book.artifacts,...book.preview.flatMap(group=>group.pages),...(book.coverPersonalization?[book.coverPersonalization.font,book.coverPersonalization.font.license,...book.coverPersonalization.templates]:[])]){
-      const bytes=await verifiedResource(cacheRoot,entry);
+    const previewPages=book.preview.flatMap(group=>group.pages);
+    for(const entry of [...book.artifacts,...previewPages,...(book.coverPersonalization?[book.coverPersonalization.font,book.coverPersonalization.font.license,...book.coverPersonalization.templates]:[])]){
+      const previewEntry=previewPages.includes(entry);
+      const bytes=await verifiedResource(cacheRoot,entry,previewEntry?old:undefined);
       const uri=rewrite(entry.uri);
       if(uri===entry.uri)throw new Error('Source resource belongs to another revision');
       entry.uri=uri;
-      const target=path.join(outputPath,uri.slice(base.length));
+      const target=path.join(outputPath,publicationAssetLocation(uri,previewEntry?book:undefined).relative);
       await mkdir(path.dirname(target),{recursive:true});await writeFile(target,bytes,{flag:'wx'});
     }
     book.coverUri=rewrite(book.coverUri);
@@ -119,6 +124,8 @@ export async function augmentPublication({manifest='data/travelBooks/manifest.js
       book.printGuidePages.push(descriptor);
     }
     book.missing=book.missing.filter(key=>!['stickers','instructions','print-passport'].includes(key));
+    // Compact only the output metadata, after revision/PDF/HTML models are fixed.
+    normalizePreviewUris(book);
     books.push(book);
   }
   const result=publicationSchema.parse({...prior,books});

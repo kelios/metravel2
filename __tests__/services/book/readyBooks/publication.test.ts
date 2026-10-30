@@ -1,10 +1,27 @@
 import {publishedFixture} from './publicationFixtures';
-import {publishedBookSchema} from '@/services/book/readyBooks/publication';
+import {publishedBookSchema,publicationSchema} from '@/services/book/readyBooks/publication';
+import currentPublication from '@/data/travelBooks/manifest.json';
 import {bookPreview,previewWindow} from '@/services/book/readyBooks/preview';
 import {fetchBookArtifact} from '@/services/book/readyBooks/download';
 import {fixturePdf,fixtureHash} from './fixtures';
 
 describe('partial publication integrity',()=>{
+  it('parses both legacy absolute and root-relative preview publication metadata',()=>{
+    const relative=structuredClone(currentPublication);
+    for(const book of relative.books){
+      book.coverUri=book.coverUri.replace(/^https:\/\/metravel\.by/,'');
+      for(const page of book.preview.flatMap(group=>group.pages))page.uri=page.uri.replace(/^https:\/\/metravel\.by/,'');
+    }
+    expect(publicationSchema.safeParse(currentPublication).success).toBe(true);
+    const parsed=publicationSchema.parse(relative);
+    for(const book of parsed.books){
+      expect(book.coverUri).toMatch(/^\/travel-books\//);
+      expect(book.preview.every(group=>group.pages.every(page=>page.uri.startsWith('/travel-books/')))).toBe(true);
+    }
+    const invalid=structuredClone(relative);invalid.books[0].preview[0].pages[0].uri='//metravel.by'+relative.books[0].preview[0].pages[0].uri;
+    expect(publicationSchema.safeParse(invalid).success).toBe(false);
+  });
+
   it('keeps historical front-map revisions valid while enforcing the new end-map version',()=>{
     const current=publishedFixture(31);
     expect(current.layoutVersion).toBe(2);
