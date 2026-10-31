@@ -28,9 +28,9 @@ module.exports = [
             task: 'Нажми «Начать квест» и отправляйся к Центральной мечети по адресу: ул. Пушкина, 16.',
             hint: null,
             answer_pattern: { type: 'any', value: '' },
-            lat: 0,
-            lng: 0,
-            mapsUrl: '',
+            lat: 43.268289,
+            lng: 76.953136,
+            mapsUrl: 'https://maps.google.com/?q=43.268289,76.953136',
         },
         steps: [
             {
