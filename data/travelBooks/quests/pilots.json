@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 1,
+  "status": "candidate-selection",
+  "pilots": [
+    {
+      "status": "candidate",
+      "country": "BY",
+      "questId": "mir-castle",
+      "questNumericId": 12,
+      "title": "Квест по Миру: Мирский замок и местечко",
+      "questUrl": "https://metravel.by/quests/mir/mir-castle",
+      "source": {
+        "catalogUrl": "https://metravel.by/api/quests/?lang=ru&limit=500",
+        "bundleUrl": "https://metravel.by/api/quests/12/?lang=ru",
+        "verifiedOn": "2026-10-31",
+        "contentLocale": "ru",
+        "contentSha256": "1dce595d5c94269cef2f1f47ec5ae58007c43e2f6e61d6311e05a9fdcb506630",
+        "canonicalization": "quest-book-content-v1"
+      },
+      "durationMinutes": 90,
+      "difficulty": "medium",
+      "sourceTags": {
+        "castle": true,
+        "unesco": true,
+        "history": true,
+        "citywalk": true
+      },
+      "audience": null,
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/12/main/50e54bf59db540618e9cf9339b2216ff.webp",
+        "sha256": "6511a1a3f6819124830f4a045563f74b71a8096b7faf6b89cb1cc751893af236",
+        "bytes": 202500,
+        "widthPx": 1200,
+        "heightPx": 800,
+        "printRights": "unverified"
+      },
+      "steps": [
+        {
+          "stepId": "castle",
+          "numericId": 157,
+          "title": "Мирский замок",
+          "role": "required",
+          "lat": 53.450995,
+          "lng": 26.473133,
+          "imageUri": null
+        },
+        {
+          "stepId": "spot",
+          "numericId": 356,
+          "title": "✨ Княжеский двор (по желанию)",
+          "role": "optional",
+          "lat": 53.451195,
+          "lng": 26.473324,
+          "imageUri": null
+        },
+        {
+          "stepId": "chapel",
+          "numericId": 158,
+          "title": "Часовня-усыпальница Святополк-Мирских",
+          "role": "required",
+          "lat": 53.451451,
+          "lng": 26.475351,
+          "imageUri": null
+        },
+        {
+          "stepId": "zaslavsky-chapel",
+          "numericId": 2924,
+          "title": "Часовня на перекрёстке",
+          "role": "required",
+          "lat": 53.451389,
+          "lng": 26.469615,
+          "imageUri": null
+        },
+        {
+          "stepId": "kostel",
+          "numericId": 159,
+          "title": "Костёл Святого Николая",
+          "role": "required",
+          "lat": 53.452713,
+          "lng": 26.465373,
+          "imageUri": null
+        },
+        {
+          "stepId": "cafe",
+          "numericId": 223,
+          "title": "☕ Лихтарик 1876 (по желанию)",
+          "role": "optional",
+          "lat": 53.453507,
+          "lng": 26.466384,
+          "imageUri": null
+        },
+        {
+          "stepId": "church",
+          "numericId": 160,
+          "title": "Троицкая церковь",
+          "role": "required",
+          "lat": 53.454653,
+          "lng": 26.467196,
+          "imageUri": null
+        },
+        {
+          "stepId": "shtetl",
+          "numericId": 161,
+          "title": "Еврейское местечко и иешива",
+          "role": "final",
+          "lat": 53.45488,
+          "lng": 26.463226,
+          "imageUri": null
+        }
+      ],
+      "readiness": {
+        "editorial": "pending",
+        "geography": "pending",
+        "audience": "pending",
+        "mediaPrintRights": "pending",
+        "layoutApproval": "pending",
+        "pdf": "not-built",
+        "preview": "not-built",
+        "physical": "not-tested",
+        "publication": "not-published"
+      },
+      "releaseGateTaskId": 2807
+    },
+    {
+      "status": "candidate",
+      "country": "PL",
+      "questId": "torun-copernicus",
+      "questNumericId": 20,
+      "title": "Квест по Торуни: Коперник и пряники",
+      "questUrl": "https://metravel.by/quests/torun/torun-copernicus",
+      "source": {
+        "catalogUrl": "https://metravel.by/api/quests/?lang=ru&limit=500",
+        "bundleUrl": "https://metravel.by/api/quests/20/?lang=ru",
+        "verifiedOn": "2026-10-31",
+        "contentLocale": "ru",
+        "contentSha256": "ae92b45a599a1fc2b62d4028fd99130c4608726aab06766a3b1b52a3e47d163d",
+        "canonicalization": "quest-book-content-v1"
+      },
+      "durationMinutes": 100,
+      "difficulty": "medium",
+      "sourceTags": {
+        "unesco": true,
+        "history": true,
+        "citywalk": true,
+        "architecture": true
+      },
+      "audience": null,
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/20/main/b2cf57b100494306a7635d0bb9b8a086.webp",
+        "sha256": "e6e4fe160db4e6b661347f2ca124cf83bc15405084e1373ad4f989da258fa63c",
+        "bytes": 206810,
+        "widthPx": 1200,
+        "heightPx": 800,
+        "printRights": "unverified"
+      },
+      "steps": [
+        {
+          "stepId": "ratusz",
+          "numericId": 203,
+          "title": "Староместская ратуша",
+          "role": "required",
+          "lat": 53.010523,
+          "lng": 18.604369,
+          "imageUri": null
+        },
+        {
+          "stepId": "monument",
+          "numericId": 204,
+          "title": "Памятник Копернику",
+          "role": "required",
+          "lat": 53.010305,
+          "lng": 18.604949,
+          "imageUri": null
+        },
+        {
+          "stepId": "spot",
+          "numericId": 347,
+          "title": "✨ Restauracja Luizjana (Dwór Artusa) (по желанию)",
+          "role": "optional",
+          "lat": 53.009841,
+          "lng": 18.604492,
+          "imageUri": null
+        },
+        {
+          "stepId": "cafe",
+          "numericId": 232,
+          "title": "☕ Grande Coffee (по желанию)",
+          "role": "optional",
+          "lat": 53.009432,
+          "lng": 18.603669,
+          "imageUri": null
+        },
+        {
+          "stepId": "dom",
+          "numericId": 205,
+          "title": "Дом Коперника",
+          "role": "required",
+          "lat": 53.009309,
+          "lng": 18.603884,
+          "imageUri": null
+        },
+        {
+          "stepId": "krzywa",
+          "numericId": 206,
+          "title": "Башня, что стоит не как все",
+          "role": "required",
+          "lat": 53.008382,
+          "lng": 18.602074,
+          "imageUri": null
+        },
+        {
+          "stepId": "katedra",
+          "numericId": 207,
+          "title": "Кафедральный собор святых Янов",
+          "role": "required",
+          "lat": 53.009368,
+          "lng": 18.606332,
+          "imageUri": null
+        },
+        {
+          "stepId": "flisak",
+          "numericId": 239,
+          "title": "Фонтан плотогона",
+          "role": "final",
+          "lat": 53.010284,
+          "lng": 18.604012,
+          "imageUri": null
+        }
+      ],
+      "readiness": {
+        "editorial": "pending",
+        "geography": "pending",
+        "audience": "pending",
+        "mediaPrintRights": "pending",
+        "layoutApproval": "pending",
+        "pdf": "not-built",
+        "preview": "not-built",
+        "physical": "not-tested",
+        "publication": "not-published"
+      },
+      "releaseGateTaskId": 2807
+    }
+  ]
+}
