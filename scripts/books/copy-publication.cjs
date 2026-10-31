@@ -130,6 +130,7 @@ async function copyPublication({root, buildDir, cacheDir, download = fetchAsset}
   await fs.mkdir(cacheDir, {recursive: true});
   const cacheRoot = await fs.realpath(cacheDir);
   const outputRoot = await fs.realpath(buildDir);
+  const verifiedCopies = new Map();
   let total = 0;
   for (const asset of assets) {
     const cached = path.join(cacheRoot, asset.relative);
@@ -156,7 +157,15 @@ async function copyPublication({root, buildDir, cacheDir, download = fetchAsset}
     await ensureDirectory(outputRoot, path.join('travel-books', path.dirname(asset.relative)));
     // Do not follow a pre-existing destination symlink.
     await fs.rm(destination, {force: true});
-    await fs.writeFile(destination, bytes, {flag: 'wx'});
+    const contentKey = asset.sha256 + ':' + asset.bytes;
+    const firstCopy = verifiedCopies.get(contentKey);
+    // Link only build-owned copies, after checking this source independently.
+    // A failed link must refuse publication rather than inflate the disk payload.
+    if (firstCopy) await fs.link(firstCopy, destination);
+    else {
+      await fs.writeFile(destination, bytes, {flag: 'wx'});
+      verifiedCopies.set(contentKey, destination);
+    }
     total += bytes.length;
   }
   await ensureDirectory(outputRoot, 'travel-books');

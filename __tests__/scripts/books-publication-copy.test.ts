@@ -70,6 +70,77 @@ describe('ready-book publication build boundary', () => {
     expect(download).not.toHaveBeenCalled();
   });
 
+  it('shares verified identical bytes across revisions inside the build while isolating the cache',async()=>{
+    const historical=JSON.stringify(manifest('old'));
+    await fs.writeFile(path.join(root,'data/travelBooks/releases',digest(historical)+'.json'),historical);
+    const download=jest.fn(async()=>pdf);
+    const currentFile=path.join(buildDir,'travel-books/book/r1/read-body.pdf');
+    const oldFile=path.join(buildDir,'travel-books/book/old/read-body.pdf');
+    const currentCache=path.join(cacheDir,'book/r1/read-body.pdf');
+    const oldCache=path.join(cacheDir,'book/old/read-body.pdf');
+    for(let run=0;run<2;run++){
+      await copyPublication({root,buildDir,cacheDir,download});
+      const [current,old,cachedCurrent,cachedOld]=await Promise.all([currentFile,oldFile,currentCache,oldCache].map(file=>fs.stat(file)));
+      expect([current.dev,current.ino]).toEqual([old.dev,old.ino]);
+      expect(current.nlink).toBe(2);
+      expect(current.ino).not.toBe(cachedCurrent.ino);
+      expect(current.ino).not.toBe(cachedOld.ino);
+      expect(cachedCurrent.nlink).toBe(1);
+      expect(cachedOld.nlink).toBe(1);
+      for(const file of [currentFile,oldFile,currentCache,oldCache])expect(await fs.readFile(file)).toEqual(pdf);
+    }
+    expect(download).toHaveBeenCalledTimes(2);
+    await fs.writeFile(currentFile,Buffer.from('modified output'));
+    expect(await fs.readFile(currentCache)).toEqual(pdf);
+    expect(await fs.readFile(oldCache)).toEqual(pdf);
+  });
+
+  it('keeps different verified content in separate build inodes',async()=>{
+    const different=Buffer.from('%PDF-1.7 another');
+    const historical=manifest('old');historical.books[0].artifacts[0]={...asset('old'),bytes:different.length,sha256:digest(different)};
+    const payload=JSON.stringify(historical);
+    await fs.writeFile(path.join(root,'data/travelBooks/releases',digest(payload)+'.json'),payload);
+    await copyPublication({root,buildDir,cacheDir,download:async(a:{relative:string})=>a.relative.includes('/old/')?different:pdf});
+    const current=path.join(buildDir,'travel-books/book/r1/read-body.pdf'),old=path.join(buildDir,'travel-books/book/old/read-body.pdf');
+    expect((await fs.stat(current)).ino).not.toBe((await fs.stat(old)).ino);
+    expect(await fs.readFile(current)).toEqual(pdf);
+    expect(await fs.readFile(old)).toEqual(different);
+  });
+
+  it('checks a repeated source hash before linking it instead of trusting an earlier valid copy',async()=>{
+    const historical=JSON.stringify(manifest('old'));
+    await fs.writeFile(path.join(root,'data/travelBooks/releases',digest(historical)+'.json'),historical);
+    await fs.mkdir(path.join(cacheDir,'book/old'),{recursive:true});
+    const corrupt=Buffer.from(pdf);corrupt[corrupt.length-1]^=1;
+    await fs.writeFile(path.join(cacheDir,'book/old/read-body.pdf'),corrupt);
+    const link=jest.spyOn(fs,'link');
+    try{
+      await expect(copyPublication({root,buildDir,cacheDir,download:async()=>pdf})).rejects.toThrow('checksum');
+      expect(link).not.toHaveBeenCalled();
+      await expect(fs.stat(path.join(buildDir,'travel-books/book/old/read-body.pdf'))).rejects.toMatchObject({code:'ENOENT'});
+      await expect(fs.stat(path.join(buildDir,'travel-books/manifest.json'))).rejects.toMatchObject({code:'ENOENT'});
+    }finally{link.mockRestore();}
+  });
+
+  it('fails closed when a build hardlink cannot be created',async()=>{
+    const historical=JSON.stringify(manifest('old'));
+    await fs.writeFile(path.join(root,'data/travelBooks/releases',digest(historical)+'.json'),historical);
+    const link=jest.spyOn(fs,'link').mockRejectedValueOnce(Object.assign(new Error('link refused'),{code:'EXDEV'}));
+    try{
+      await expect(copyPublication({root,buildDir,cacheDir,download:async()=>pdf})).rejects.toThrow('link refused');
+      await expect(fs.stat(path.join(buildDir,'travel-books/book/old/read-body.pdf'))).rejects.toMatchObject({code:'ENOENT'});
+      await expect(fs.stat(path.join(buildDir,'travel-books/manifest.json'))).rejects.toMatchObject({code:'ENOENT'});
+    }finally{link.mockRestore();}
+  });
+
+  it('checks each resource content role even when its bytes match a previously verified file',async()=>{
+    const input=previewManifest();
+    input.books[0].preview[0].pages[0]={uri:input.books[0].coverUri,bytes:pdf.length,sha256:digest(pdf)};
+    await fs.writeFile(path.join(root,'data/travelBooks/manifest.json'),JSON.stringify(input));
+    await expect(copyPublication({root,buildDir,cacheDir,download:async()=>pdf})).rejects.toThrow('Invalid WebP');
+    await expect(fs.stat(path.join(buildDir,'travel-books/manifest.json'))).rejects.toMatchObject({code:'ENOENT'});
+  });
+
   it('deduplicates legacy absolute and root-relative previews and fetches absolute own-origin URLs',async()=>{
     const current=previewManifest(true),historical=JSON.stringify(previewManifest());
     await fs.writeFile(path.join(root,'data/travelBooks/manifest.json'),JSON.stringify(current));

@@ -7457,6 +7457,15 @@ Android/iOS-specific behavior; его отсутствие вне scope не б�
 
 ### TRAVEL-BOOKS-READY-PRINT-001 — готовое издание отличается от экспорта личных статей
 
+- **Физическое хранение D (31.10.2026):** выкат `a13051a2` остановлен до
+  загрузки: candidate1085 MiB + reserve720 > free1651. По текущим и историческим
+  manifest 2028 URI содержат 269 уникальных SHA/bytes; отдельные копии давали
+  940 MiB allocated. Корректирующий слой — hardlinks проверенных повторов
+  внутри build и сохранение topology на local packaging/remote rsync через
+  `-H`. Все URI и checksums сохраняются; cache inode независимы, каждый повтор
+  проверяется до dedupe, link errors fail closed. Контроль: inode/nlink,
+  повреждённый повтор, transport hop и реальный `du` кандидата. Резерв не
+  снижается, backend storage и ручная очистка не используются.
 - **Popup-контроль D (31.10.2026):** production `d5330272e` открывал HTML и
   провайдера, но `Boolean(Window handle)` показывал ложный отказ: `noopener`
   законно возвращает `null`. Общий chokepoint разделяет dispatch и handle;

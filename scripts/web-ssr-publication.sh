@@ -39,7 +39,7 @@ case "$action" in
     ssh "${ssh_args[@]}" "$PROD_SSH_TARGET" bash -s -- preflight \
       "$PROD_REMOTE_DIR" "$payload_kib" "${DEPLOY_DISK_RESERVE_MB:-720}" "${DEPLOY_BACKEND_BUILD_MB:-1536}" \
       < "$SCRIPT_DIR/deploy-disk-guard.sh"
-    rsync -azhe ssh --delete --mkpath --protect-args "$candidate/" \
+    rsync -azHhe ssh --delete --mkpath --protect-args "$candidate/" \
       "$PROD_SSH_TARGET:$PROD_REMOTE_DIR/web-ssr/incoming/$sha/"
     if [[ "${EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR:-false}" == "true" ]]; then
       metravel_deploy_defaults

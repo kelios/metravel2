@@ -465,7 +465,8 @@ if [[ "$SSR_CODE_RELEASE" == "1" ]]; then
   # Publish the finished shell metadata, markers and precompressed assets from
   # the same export as its server. No runtime code is copied into public dist.
   rm -rf "$SSR_RELEASE_DIR/client"
-  cp -R "dist/$ENV" "$SSR_RELEASE_DIR/client"
+  # Preserve immutable publication hardlinks inside the fresh candidate.
+  rsync -aH "dist/$ENV/" "$SSR_RELEASE_DIR/client/"
 fi
 
 if [[ "$DEPLOY" == "1" ]]; then
