@@ -202,6 +202,7 @@ export async function openExternalUrl(rawUrl: string, options: OpenExternalUrlOp
   return openWithYandexFallback(normalized, options.onError);
 }
 
+/** Returns whether the request was dispatched, not whether a page loaded. */
 export async function openExternalUrlInNewTab(
   rawUrl: string,
   options: OpenExternalUrlInNewTabOptions = {},
@@ -210,14 +211,13 @@ export async function openExternalUrlInNewTab(
   if (!normalized) return false;
 
   if (Platform.OS === 'web') {
-    const openedWindow = openWebWindow(normalized, {
+    return dispatchWebWindow(normalized, {
       target: '_blank',
       // Keep noopener by default for security, but preserve the referrer
       // unless a caller explicitly asks for noreferrer.
       windowFeatures: options.windowFeatures ?? 'noopener',
       onError: options.onError,
     });
-    return Boolean(openedWindow);
   }
 
   if (openSiteRouteInApp(normalized)) return true;
@@ -260,19 +260,33 @@ export function startBrowserFileDownload(url: string): boolean {
   }
 }
 
-export function openWebWindow(rawUrl: string, options: OpenWebWindowOptions = {}): Window | null {
-  if (typeof window === 'undefined' || typeof window.open !== 'function') return null;
+function openWebWindowResult(rawUrl: string, options: OpenWebWindowOptions): {handle: Window | null; dispatched: boolean} {
+  if (typeof window === 'undefined' || typeof window.open !== 'function') return {handle:null,dispatched:false};
   try {
     const openedWindow = window.open(rawUrl, options.target ?? '_blank', options.windowFeatures ?? 'noopener');
-    if (!openedWindow) return null;
-    try {
-      openedWindow.opener = null;
-    } catch {
-      // noop
+    if (openedWindow) {
+      try {
+        openedWindow.opener = null;
+      } catch {
+        // noop
+      }
     }
-    return openedWindow;
+    return {handle:openedWindow,dispatched:true};
   } catch (error) {
     options.onError?.(error);
-    return null;
+    return {handle:null,dispatched:false};
   }
+}
+
+/**
+ * Dispatches a trusted raw URL, including a locally created Blob URL.
+ * Does not validate URLs; use openExternalUrlInNewTab for external input.
+ * Noopener can return null on success; popup blocking cannot be inferred.
+ */
+export function dispatchWebWindow(rawUrl: string, options: OpenWebWindowOptions = {}): boolean {
+  return openWebWindowResult(rawUrl,options).dispatched;
+}
+
+export function openWebWindow(rawUrl: string, options: OpenWebWindowOptions = {}): Window | null {
+  return openWebWindowResult(rawUrl,options).handle;
 }

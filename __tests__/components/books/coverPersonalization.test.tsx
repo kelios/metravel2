@@ -4,7 +4,7 @@ import Editor from '@/components/books/cover/CoverPersonalizationEditor.web';
 import {createPersonalizedCoverBlob} from '@/services/book/readyBooks/coverPersonalization';
 import {CoverTextError} from '@/services/book/readyBooks/coverText';
 import {downloadBlobOnWeb} from '@/utils/downloadUrlOnWeb';
-import {openWebWindow} from '@/utils/externalLinks';
+import {dispatchWebWindow} from '@/utils/externalLinks';
 import {publishedFixture} from '../../services/book/readyBooks/publicationFixtures';
 import {coverClientFixture} from '../../services/book/readyBooks/coverClientFixtures';
 
@@ -22,7 +22,7 @@ jest.mock('@/components/ui/Button',()=>({__esModule:true,default:({label,onPress
 jest.mock('@/i18n/LocaleProvider',()=>({useTranslation:()=>({t:(key:string)=>key.replace(/^books:/,''),ready:true})}));
 jest.mock('@/services/book/readyBooks/coverPersonalization',()=>({...jest.requireActual('@/services/book/readyBooks/coverPersonalization'),createPersonalizedCoverBlob:jest.fn()}));
 jest.mock('@/utils/downloadUrlOnWeb',()=>({downloadBlobOnWeb:jest.fn()}));
-jest.mock('@/utils/externalLinks',()=>({openWebWindow:jest.fn()}));
+jest.mock('@/utils/externalLinks',()=>({dispatchWebWindow:jest.fn()}));
 
 const originalCreate=Object.getOwnPropertyDescriptor(URL,'createObjectURL');
 const originalRevoke=Object.getOwnPropertyDescriptor(URL,'revokeObjectURL');
@@ -33,7 +33,7 @@ beforeEach(()=>{
   jest.clearAllMocks();
   jest.mocked(createPersonalizedCoverBlob).mockReset().mockResolvedValue(new Blob(['my-pdf'],{type:'application/pdf'}));
   jest.mocked(downloadBlobOnWeb).mockReturnValue(true);
-  jest.mocked(openWebWindow).mockReturnValue({} as Window);
+  jest.mocked(dispatchWebWindow).mockReturnValue(true);
   Object.defineProperty(URL,'createObjectURL',{configurable:true,value:jest.fn(()=>`blob:personal-cover-${++urlCounter}`)});
   Object.defineProperty(URL,'revokeObjectURL',{configurable:true,value:jest.fn()});
   global.fetch=jest.fn();
@@ -82,7 +82,13 @@ it('previews and downloads the same generated Blob and revokes it when text chan
     const url=jest.mocked(URL.createObjectURL).mock.results[0].value;
     expect(URL.createObjectURL).toHaveBeenCalledWith(blob);
     fireEvent.click(screen.getByRole('button',{name:'coverPreviewPdf'}));
-    expect(openWebWindow).toHaveBeenCalledWith(url,{windowFeatures:'noopener,noreferrer'});
+    expect(dispatchWebWindow).toHaveBeenCalledWith(url,{windowFeatures:'noopener,noreferrer'});
+    expect(screen.queryByText('coverPreviewHelp')).toBeNull();
+    jest.mocked(dispatchWebWindow).mockReturnValueOnce(false);
+    fireEvent.click(screen.getByRole('button',{name:'coverPreviewPdf'}));
+    expect(screen.getByText('coverPreviewHelp')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button',{name:'coverPreviewPdf'}));
+    expect(screen.queryByText('coverPreviewHelp')).toBeNull();
     fireEvent.click(screen.getByRole('button',{name:'coverDownloadPdf'}));
     expect(downloadBlobOnWeb).toHaveBeenCalledWith(blob,`${book.slug}-${book.revision}-album-a5-read-personal-cover.pdf`);
     expect(storage).not.toHaveBeenCalled();

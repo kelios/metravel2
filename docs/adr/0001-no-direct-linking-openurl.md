@@ -11,7 +11,7 @@
 
 - На Android и iPhone нужно корректно обрабатывать deeplink/app-link/
   Universal Link schemes и in-app browser lifecycle (Custom Tabs / Safari view).
-- На web — `window.open` с `noopener,noreferrer`, плюс аналитика кликов и обработка blocked popups.
+- На web — `window.open` с `noopener,noreferrer`, плюс аналитика кликов и обработка ошибок отправки запроса.
 - Нужна централизованная точка для логирования, телеметрии, white/blacklist доменов.
 
 Прямой вызов `Linking.openURL` или `window.open` по кодовой базе размазывает эту логику и делает невозможным централизованные изменения.
@@ -19,6 +19,22 @@
 ## Решение
 
 Все внешние переходы идут через `@/utils/externalLinks.openExternalUrl`.
+
+### Результат открытия web-вкладки
+
+`openExternalUrlInNewTab` и `dispatchWebWindow` возвращают факт отправки
+запроса без исключения, а не подтверждение открытия или загрузки страницы.
+При `noopener`/`noreferrer` браузер возвращает `null` и после успешного открытия;
+тот же результат возможен при блокировке popup. Поэтому отсутствие handle
+не вызывает ложную ошибку приложения. Защита `noopener` сохраняется, блокировку
+показывает сам браузер. Недоступный API или исключение по-прежнему дают
+`false`. `openExternalUrlInNewTab` также отклоняет недопустимые URL.
+`dispatchWebWindow` не валидирует адрес: это API для доверенного источника,
+например локально созданного Blob; внешние данные проходят через
+`openExternalUrlInNewTab`. `openWebWindow` сохраняет отдельный контракт
+`Window | null` для кода, которому нужна ссылка на окно.
+
+Основание: [MDN Window.open](https://developer.mozilla.org/en-US/docs/Web/API/Window/open).
 
 Соблюдение обеспечивается двумя уровнями:
 

@@ -5,6 +5,7 @@ import {
   normalizeHttpOrInternalUrl,
   openExternalUrl,
   openExternalUrlInNewTab,
+  dispatchWebWindow,
   openWebWindow,
 } from '@/utils/externalLinks';
 
@@ -153,6 +154,40 @@ describe('externalLinks', () => {
       expect(windowOpen).not.toHaveBeenCalled();
     } finally {
       (window as any).open = originalOpen;
+      (Platform.OS as any) = originalPlatform;
+    }
+  });
+
+  it.each(['noopener', 'noopener,noreferrer'])('reports dispatch when %s hides the window handle', async windowFeatures => {
+    const originalPlatform = Platform.OS;
+    const originalOpen = window.open;
+    try {
+      (Platform.OS as any) = 'web';
+      window.open = jest.fn().mockReturnValue(null);
+      await expect(openExternalUrlInNewTab('https://metravel.by/books', {windowFeatures})).resolves.toBe(true);
+      expect(window.open).toHaveBeenCalledWith('https://metravel.by/books', '_blank', windowFeatures);
+      expect(dispatchWebWindow('blob:https://metravel.by/private-cover', {windowFeatures})).toBe(true);
+      expect(openWebWindow('about:blank', {windowFeatures})).toBeNull();
+    } finally {
+      window.open = originalOpen;
+      (Platform.OS as any) = originalPlatform;
+    }
+  });
+
+  it('reports a failed dispatch for unavailable or throwing window.open', async () => {
+    const originalPlatform = Platform.OS;
+    const originalOpen = window.open;
+    try {
+      (Platform.OS as any) = 'web';
+      (window as any).open = undefined;
+      await expect(openExternalUrlInNewTab('https://metravel.by/books')).resolves.toBe(false);
+      const error = new Error('open failed');
+      window.open = jest.fn(() => {throw error;});
+      const onError = jest.fn();
+      await expect(openExternalUrlInNewTab('https://metravel.by/books', {onError})).resolves.toBe(false);
+      expect(onError).toHaveBeenCalledWith(error);
+    } finally {
+      window.open = originalOpen;
       (Platform.OS as any) = originalPlatform;
     }
   });

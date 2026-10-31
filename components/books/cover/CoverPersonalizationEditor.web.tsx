@@ -9,7 +9,7 @@ import type {PublishedBook} from '@/services/book/readyBooks/publication';
 import {createPersonalizedCoverBlob,CoverPersonalizationError,type CoverOutputMode} from '@/services/book/readyBooks/coverPersonalization';
 import {CoverTextError} from '@/services/book/readyBooks/coverText';
 import {downloadBlobOnWeb} from '@/utils/downloadUrlOnWeb';
-import {openWebWindow} from '@/utils/externalLinks';
+import {dispatchWebWindow} from '@/utils/externalLinks';
 
 type Result = {blob:Blob;url:string;identity:string};
 type Request = {controller:AbortController;identity:string};
@@ -104,7 +104,7 @@ export default function CoverPersonalizationEditor({book,profileId}:{book:Publis
       <Button label={busy===identity?t('books:coverGenerating'):selectedError?t('books:retry'):t('books:coverGenerate')} disabled={busy===identity} icon={<Feather name="type" size={18} color={colors.bookPageAccent}/>} onPress={()=>void generate()}/>
       {available&&<>
         <Button label={t('books:coverPreviewPdf')} variant="outline" icon={<Feather name="eye" size={18} color={colors.bookPageAccent}/>} onPress={()=>{
-          if(currentIdentity.current===available.identity&&currentResult.current===available)setPreviewNotice(!openWebWindow(available.url,{windowFeatures:'noopener,noreferrer'}));
+          if(currentIdentity.current===available.identity&&currentResult.current===available)setPreviewNotice(!dispatchWebWindow(available.url,{windowFeatures:'noopener,noreferrer'}));
         }}/>
         <Button label={t('books:coverDownloadPdf')} icon={<Feather name="download" size={18} color={colors.bookPageAccent}/>} onPress={()=>{
           if(currentIdentity.current===available.identity&&currentResult.current===available&&!downloadBlobOnWeb(available.blob,`${book.slug}-${book.revision}-${profileId}-${mode}-personal-cover.pdf`))setError({identity,code:'COVER_GENERATE'});
