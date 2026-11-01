@@ -393,7 +393,7 @@ TR/DE/CY/BE 4, GE/ES/MD/DK/UZ 3, остальные 1–2). Открытых к�
 | FRONT | коды стран AE, EG, ME, GB, IE, IS, MT, MA, MX, CU, ID в `COUNTRY_NAME_KEYS` + ключи RU/BE/UK/PL/EN | #2869 | todo |
 | E1 Турция | Алания (`alanya-red-tower`), Измир (`izmir-kemeralti-clock`), Гёреме roadtrip (`goreme-fairy-chimneys`), Бодрум (`bodrum-knights-of-halicarnassus`; заменил Сиде — у Сиде автор насчитал 5 якорей, см. `.codex-temp/quests-plan/side/research.md`) | #2870 | на проде 01.11.2026: квесты 294 `izmir-kemeralti-clock` (город 206), 295 `alanya-red-tower` (207), 296 `goreme-fairy-chimneys` (208), 297 `bodrum-knights-of-halicarnassus` (209); обложки — по PROMPT.md, финале-видео после обложек |
 | E6 Беларусь | Орша (`orsha-korotkevich-collegium`), Слоним (`slonim-oginski-canal`), Кобрин (`kobrin-suvorov-park`), Станьково (`stankovo-czapski-skarbczyk`) | #2871 | на проде 01.11.2026: квесты 299 `stankovo-czapski-skarbczyk` (город 210), 300 `orsha-korotkevich-collegium` (211), 301 `kobrin-suvorov-park` (212), 302 `slonim-oginski-canal` (213); обложки — по PROMPT.md, финале-видео после обложек |
-| E5 Россия | Сочи (`sochi-prometheus-riviera`), Суздаль (`suzdal-kremlin-bells`), Пятигорск (`pyatigorsk-lermontov-proval`), Смоленск (`smolensk-fortress-key`) | #2872 | todo |
+| E5 Россия | Сочи (`sochi-prometheus-riviera`), Суздаль (`suzdal-kremlin-bells`), Пятигорск (`pyatigorsk-lermontov-proval`), Смоленск (`smolensk-fortress-key`) | #2872 | на проде 01.11.2026: квесты 303 `suzdal-kremlin-bells` (город 214), 304 `smolensk-fortress-key` (215), 305 `pyatigorsk-lermontov-proval` (216), 306 `sochi-prometheus-riviera` (217); обложки — по PROMPT.md, финале-видео после обложек |
 | E4 Кавказ и Ташкент | Мцхета (`mtskheta-svetitskhoveli`), Сигнахи (`sighnaghi-pirosmani-roses`), Гюмри (`gyumri-kumayri-black-fortress`), Ташкент (`tashkent-chorsu-hast-imam`) | #2873 | todo |
 | E2 новые страны | Дубай (`dubai-al-fahidi-creek`), Каир (`cairo-khan-el-khalili`), Котор (`kotor-cats-and-walls`), Будва (`budva-ballerina-old-town`) | #2874 | blocked_by #2869 |
 | E3 Таиланд/Вьетнам | Пхукет-Таун (`phuket-town-sino-portuguese`), Нячанг (`nha-trang-po-nagar`), Хойан (`hoi-an-lantern-bridge`), Чиангмай (`chiang-mai-three-kings`) | #2875 | todo |
@@ -487,6 +487,22 @@ QUEST_DEMAND_LOG.md 2026-07-18)
   прохождении: высота маскаронов в лоджии, забор у дома Шахворостова (обещали снять
   осенью 2026), рейтинг «Додо Пицца» на привале. Обложка — только PROMPT.md,
   переводы be/uk/pl/en не делались (как у E1).
+- 2026-11-01 (пакет E5 «Россия», #2872): на проде квесты 303 `suzdal-kremlin-bells`
+  (Суздаль, город 214, 9 точек, 3,2 км, 6 проверяемых), 304 `smolensk-fortress-key`
+  (Смоленск, 215, 9 точек, 2,2 км, 6 проверяемых), 305 `pyatigorsk-lermontov-proval`
+  (Пятигорск, 216, 11 точек, 2,8 км, 7 проверяемых), 306 `sochi-prometheus-riviera` (Сочи,
+  217, 9 точек, 2,9 км, 6 проверяемых). Бриф `.codex-temp/quests-plan/brief-e5.md` впервые
+  несёт уроки ревью E1/E6 (подсказка только «куда смотреть», без вопросов о форме) —
+  авторы сдали заметно чище. Ревью оркестратора: Суздаль 2 (формулировка «вместо
+  привычных цифр» давала ответ) и 9 («великому» угадывалось — заменено вопросом по списку
+  актёров на табличке), Пятигорск 4 (подсказка «что извивается») и 7 (табличка выше 3 м →
+  свободный ответ). Памятника Прометею в центре Сочи нет (Орлиные скалы, 12 км) — только
+  в story. Код-ревью (2 прохода): циферблат курантов Суздаля (мелкие знаки на 15 м) →
+  свободный ответ, вместо него проверяемый шаг про окна в шатре Антипиевской колокольни;
+  вопросы-определения «музыкальный инструмент» (лира), «подносят к губам» (труба), «вместо
+  узора» (ноты) переписаны нейтрально. Сверить при первом прохождении: звезда на шпиле
+  Морского вокзала после реставрации, окна в шатре Антипиевской колокольни зимой, пушки у
+  Исторического музея Смоленска под снегом, цифры «1898» на арке «Ривьеры».
 - 2026-11-01 (пакет E6 «Беларусь», #2871): на проде квесты 299 `stankovo-czapski-skarbczyk`
   (Станьково, город 210, 9 точек, 2,1 км, 7 проверяемых — по сигналу GSC «станьково что
   посмотреть»), 300 `orsha-korotkevich-collegium` (Орша, 211, 9 точек, 2,7 км, 6

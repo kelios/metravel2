@@ -279,6 +279,10 @@ const QUESTS = [
     { questId: 'orsha-korotkevich-collegium', dir: 'orshaKorotkevichCollegium', finaleId: 297 },
     { questId: 'kobrin-suvorov-park', dir: 'kobrinSuvorovPark', finaleId: 298 },
     { questId: 'slonim-oginski-canal', dir: 'slonimOginskiCanal', finaleId: 299 },
+    { questId: 'suzdal-kremlin-bells', dir: 'suzdalKremlinBells', finaleId: 300 },
+    { questId: 'smolensk-fortress-key', dir: 'smolenskFortressKey', finaleId: 301 },
+    { questId: 'pyatigorsk-lermontov-proval', dir: 'pyatigorskLermontovProval', finaleId: 302 },
+    { questId: 'sochi-prometheus-riviera', dir: 'sochiPrometheusRiviera', finaleId: 303 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
