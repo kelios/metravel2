@@ -148,10 +148,14 @@ const MapPageComponent: React.FC<Props> = (props) => {
     onMapMove,
     hideFloatingControls = false,
     onMarkerSelect,
+    onMarkerOpened,
     onMapBackgroundTap,
     suppressLeafletPopupOnSelect = false,
     pointsOnly = false,
   } = props
+  // Через ref: телеметрия не должна менять identity handleMarkerZoom и слоёв маркеров.
+  const onMarkerOpenedRef = useRef(onMarkerOpened)
+  onMarkerOpenedRef.current = onMarkerOpened
 
   const { L, RL: rl, loading: leafletLoading, error: leafletError, ready: leafletReady } =
     useLeafletLoader({
@@ -321,6 +325,10 @@ const MapPageComponent: React.FC<Props> = (props) => {
       })
 
       if (focusPlan.shouldCollapseSheet) requestBottomSheetCollapse()
+
+      // #2908: одно событие на тап по маркеру, только если хост (экран /map) подписался;
+      // способ показа — карточка (mobile web) или попап.
+      onMarkerOpenedRef.current?.(point, suppressLeafletPopupOnSelect ? 'card' : 'popup')
 
       // #207 — mobile-web: surface the point as a bottom card instead of the
       // anchored Leaflet popup. We still pan/zoom toward the point (below) so the

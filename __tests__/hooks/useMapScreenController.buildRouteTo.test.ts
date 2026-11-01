@@ -139,6 +139,7 @@ jest.mock('@/utils/mapFiltersStorage', () => ({
 }))
 
 import { useMapScreenController } from '@/hooks/useMapScreenController'
+import { reportMapScreenMarkerOpened } from '@/utils/mapAnalytics'
 
 describe('useMapScreenController.buildRouteTo', () => {
   beforeEach(() => {
@@ -211,6 +212,11 @@ describe('useMapScreenController.buildRouteTo', () => {
 
     // Critical regression guard: we must not update global search coordinates
     expect(mockUpdateCoordinates).not.toHaveBeenCalled()
+  })
+
+  it('subscribes only the /map screen to marker-open telemetry (#2908)', async () => {
+    const { result } = await renderHook(() => useMapScreenController())
+    expect(result.current.mapPanelProps.onMarkerOpened).toBe(reportMapScreenMarkerOpened)
   })
 
   it('does not pass fallback viewport coordinates as route origin', async () => {

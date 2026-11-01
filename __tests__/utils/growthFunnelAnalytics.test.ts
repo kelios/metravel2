@@ -2,6 +2,9 @@ import { queueAnalyticsEvent, sendAnalyticsEvent } from '@/utils/analytics';
 import {
   GROWTH_FUNNEL_EVENTS,
   trackAppDownloadClicked,
+  trackAuthGateSucceeded,
+  trackAuthGateViewed,
+  trackLoginSucceeded,
   trackPeerBadgePromptClicked,
   trackPeerBadgePromptImpression,
   trackFavoriteIntentGuest,
@@ -407,5 +410,22 @@ describe('growthFunnelAnalytics', () => {
         content_length: 1280,
       },
     );
+  });
+
+  it('keeps login and auth-gate goals distinct, with the intent as the gate source (#2908)', () => {
+    trackLoginSucceeded({ method: 'google', intent: ['build-pdf'] });
+    trackLoginSucceeded({ method: 'email' });
+    trackAuthGateSucceeded({ flow: 'registration', method: 'apple', intent: 'share-trip' });
+    trackAuthGateSucceeded({ flow: 'login', method: 'email', intent: '' });
+    trackAuthGateSucceeded({ flow: 'login', method: 'email' });
+    trackAuthGateViewed({ intent: [' share-trip '] });
+    trackAuthGateViewed({});
+
+    expect(mockedSendAnalyticsEvent.mock.calls).toEqual([
+      ['login_success', { method: 'google', intent: 'build-pdf' }],
+      ['login_success', { method: 'email', intent: '' }],
+      ['AuthSuccess', { source: 'share-trip', intent: 'share-trip', flow: 'registration', method: 'apple' }],
+      ['AuthViewed', { source: 'share-trip', intent: 'share-trip' }],
+    ]);
   });
 });

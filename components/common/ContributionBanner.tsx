@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Link, useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
@@ -10,7 +10,12 @@ import { useAuthStore } from '@/stores/authStore'
 import { ResponsiveContainer } from '@/components/layout'
 import Button from '@/components/ui/Button'
 import { buildLoginHref } from '@/utils/authNavigation'
-import { trackContentCreateCtaClicked, trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
+import {
+  trackContentCreateCtaClicked,
+  trackContentCreateCtaImpression,
+  trackRegisterCtaClicked,
+} from '@/utils/growthFunnelAnalytics'
+import { useTrackedImpression } from '@/hooks/useTrackedImpression'
 import { translate as i18nT } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider'
 
@@ -92,6 +97,7 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
   const { t } = useTranslation()
   const router = useRouter()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const authReady = useAuthStore((state) => state.authReady)
   const { isMobile } = useResponsive()
   const isCompact = density === 'compact'
   const colors = useThemedColors()
@@ -104,11 +110,30 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
   const authState = isAuthenticated ? 'authenticated' : 'guest'
   const source = `contribution_banner_${variant}`
   const isAuthorVariant = variant === 'author-home' || variant === 'author-catalog'
+  const authorSource = variant === 'author-home' ? 'home' : 'travelsby'
+  // #2908: показ считается той же поверхностью и тем же `source`, что и клик,
+  // иначе CTR `content_create_cta_click / content_create_cta_impression` не читается.
+  const impressionSource = isAuthorVariant ? authorSource : source
+  const impressionIntent = isAuthorVariant ? 'create-travel' : 'add-place'
+  // До восстановления сессии `isAuthenticated=false`: показ ждёт `authReady`,
+  // иначе вошедший пользователь засчитывался бы дважды — как guest и как authenticated.
+  const impression = useTrackedImpression(
+    `contribution-banner:${variant}:${authReady ? authState : 'pending'}`,
+    useCallback(() => {
+      if (!authReady) return
+      trackContentCreateCtaImpression({
+        contentType: 'route',
+        source: impressionSource,
+        intent: impressionIntent,
+        authState,
+      })
+    }, [authReady, authState, impressionIntent, impressionSource]),
+  )
 
   const handleAuthorLink = () => {
     trackContentCreateCtaClicked({
       contentType: 'route',
-      source: variant === 'author-home' ? 'home' : 'travelsby',
+      source: authorSource,
       authState,
       intent: 'create-travel',
       action: 'learn_more',
@@ -148,7 +173,7 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
   }
 
   return (
-    <View style={styles.wrapper}>
+    <View ref={impression.ref} onLayout={impression.onLayout} style={styles.wrapper}>
       <ResponsiveContainer maxWidth="xl" padding>
         <View style={styles.card}>
           <View style={styles.iconRow}>

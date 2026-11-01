@@ -27,8 +27,8 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation';
 import AuthBenefits from '@/components/auth/AuthBenefits';
-import { sendAnalyticsEvent } from '@/utils/analytics';
 import {
+    trackAuthGateSucceeded,
     trackRegistrationFailed,
     trackRegistrationSubmitted,
     trackRegistrationSucceeded,
@@ -147,9 +147,7 @@ export default function RegisterForm() {
             // submitted держит её disabled до фактического router.replace.
             setSubmitted(true);
             trackRegistrationSucceeded({ source: 'registration', intent, redirect, method: 'email' });
-            if (intent) {
-                sendAnalyticsEvent('AuthSuccess', { source: 'home', intent });
-            }
+            trackAuthGateSucceeded({ flow: 'registration', method: 'email', intent });
             if (navTimerRef.current) clearTimeout(navTimerRef.current);
             navTimerRef.current = setTimeout(() => {
                 navTimerRef.current = null;
@@ -179,9 +177,7 @@ export default function RegisterForm() {
             const outcome = await loginWithGoogle(credential, terms.termsVersion);
             if (outcome.ok) {
                 trackRegistrationSucceeded({ source: 'registration', intent, redirect, method: 'google' });
-                if (intent) {
-                    sendAnalyticsEvent('AuthSuccess', { source: 'google', intent });
-                }
+                trackAuthGateSucceeded({ flow: 'registration', method: 'google', intent });
                 navigating = true;
                 setSubmitted(true);
                 notifyAuthProgressSaved(hasReturnContext);
@@ -239,9 +235,7 @@ export default function RegisterForm() {
             const result = await loginWithApple(credential, terms.termsVersion);
             if (result.status === 'authenticated') {
                 trackRegistrationSucceeded({ source: 'registration', intent, redirect, method: 'apple' });
-                if (intent) {
-                    sendAnalyticsEvent('AuthSuccess', { source: 'apple', intent });
-                }
+                trackAuthGateSucceeded({ flow: 'registration', method: 'apple', intent });
                 navigating = true;
                 setSubmitted(true);
                 notifyAuthProgressSaved(hasReturnContext);
@@ -289,7 +283,7 @@ export default function RegisterForm() {
 
     const handleFacebookAuthenticated = () => {
         trackRegistrationSucceeded({ source: 'registration', intent, redirect, method: 'facebook' });
-        if (intent) sendAnalyticsEvent('AuthSuccess', { source: 'facebook', intent });
+        trackAuthGateSucceeded({ flow: 'registration', method: 'facebook', intent });
         setSubmitted(true);
         notifyAuthProgressSaved(hasReturnContext);
         replaceAfterAuth();

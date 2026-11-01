@@ -22,7 +22,7 @@ describe('author ContributionBanner variants', () => {
   beforeEach(async () => {
     jest.clearAllMocks()
     await i18n.changeLanguage('ru')
-    mockAuthStore.mockImplementation((select) => select({ isAuthenticated: false }))
+    mockAuthStore.mockImplementation((select) => select({ isAuthenticated: false, authReady: true }))
   })
   afterEach(async () => { await act(async () => { await i18n.changeLanguage('ru') }) })
 
@@ -63,5 +63,27 @@ describe('author ContributionBanner variants', () => {
     await act(async () => { await i18n.changeLanguage('pl') })
     expect(screen.getByText('Zostań autorem')).toBeTruthy()
     expect(screen.queryByText('Стать автором')).toBeNull()
+  })
+
+  it.each([
+    ['author-home', 'home', 'create-travel'],
+    ['search', 'contribution_banner_search', 'add-place'],
+  ] as const)('reports the %s impression with the same source as its click (#2908)', async (variant, source, intent) => {
+    const screen = await render(<ContributionBanner variant={variant} />)
+    const root = screen.toJSON() as { props: { onLayout?: () => void } }
+    await act(async () => { root.props.onLayout?.() })
+    await act(async () => { root.props.onLayout?.() })
+    expect(mockQueue).toHaveBeenCalledTimes(1)
+    expect(mockQueue).toHaveBeenCalledWith('content_create_cta_impression', {
+      content_type: 'route', source, auth_state: 'guest', intent,
+    })
+  })
+
+  it('holds the impression until the session is restored (#2908)', async () => {
+    mockAuthStore.mockImplementation((select) => select({ isAuthenticated: false, authReady: false }))
+    const screen = await render(<ContributionBanner variant="search" />)
+    const root = screen.toJSON() as { props: { onLayout?: () => void } }
+    await act(async () => { root.props.onLayout?.() })
+    expect(mockQueue).not.toHaveBeenCalled()
   })
 })

@@ -64,6 +64,11 @@ export interface MapProps {
    * caller can show a bottom card instead of the anchored Leaflet popup.
    */
   onMarkerSelect?: (point: Point) => void;
+  /**
+   * #2908 — телеметрия тапа по маркеру; передаёт только экран /map. Без него
+   * карта ничего не шлёт (квесты, планировщик, точки пользователя).
+   */
+  onMarkerOpened?: (point: Point, surface: 'popup' | 'card') => void;
   /** #207 — fired on an empty-map tap so the caller can dismiss the bottom card. */
   onMapBackgroundTap?: () => void;
   /**

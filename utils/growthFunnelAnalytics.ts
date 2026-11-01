@@ -173,6 +173,39 @@ type QuestCardParams = {
 };
 
 /**
+ * Вход и цель auth-гейта (#2908) — два события с разным смыслом, не дубли:
+ * - `login_success{method, intent}` — любой успешный вход (регистрация считается
+ *   отдельно `registration_complete`);
+ * - `AuthSuccess{source=intent, intent, flow, method}` — цель гейта: вход или
+ *   регистрация, начатые с намерением (`intent`), пара к `AuthViewed{source=intent}`.
+ *   Без намерения не отправляется. До #2908 `source` был то намерением, то
+ *   провайдером, то константой `home` — теперь всегда намерение, провайдер — `method`.
+ */
+export const trackAuthGateViewed = ({ intent }: { intent?: unknown }) => {
+  const resolvedIntent = safeString(intent);
+  if (!resolvedIntent) return;
+  void sendAnalyticsEvent('AuthViewed', { source: resolvedIntent, intent: resolvedIntent });
+};
+
+export const trackLoginSucceeded = ({ method, intent }: { method: GrowthRegistrationMethod; intent?: unknown }) => {
+  void sendAnalyticsEvent('login_success', { method, intent: safeString(intent) ?? '' });
+};
+
+export const trackAuthGateSucceeded = ({
+  flow,
+  method,
+  intent,
+}: {
+  flow: 'login' | 'registration';
+  method: GrowthRegistrationMethod;
+  intent?: unknown;
+}) => {
+  const resolvedIntent = safeString(intent);
+  if (!resolvedIntent) return;
+  void sendAnalyticsEvent('AuthSuccess', { source: resolvedIntent, intent: resolvedIntent, flow, method });
+};
+
+/**
  * Единая активационная цель `cta_register_click` (тикет #768): любой клик по
  * CTA «Зарегистрироваться» в любом месте UI. Точечные события конкретных
  * поверхностей (quest_guest_gate_register_click и т.п.) остаются как детализация.

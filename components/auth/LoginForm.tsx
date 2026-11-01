@@ -24,8 +24,12 @@ import { useYupForm } from '@/hooks/useYupForm';
 import FormFieldWithValidation from '@/components/forms/FormFieldWithValidation';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { sendAnalyticsEvent } from '@/utils/analytics';
-import { trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics';
+import {
+    trackAuthGateSucceeded,
+    trackAuthGateViewed,
+    trackLoginSucceeded,
+    trackRegisterCtaClicked,
+} from '@/utils/growthFunnelAnalytics';
 import { notifyAuthProgressSaved } from '@/utils/authProgressToast';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -106,8 +110,7 @@ export default function Login() {
 
     React.useEffect(() => {
         if (!isFocused) return;
-        if (!intent) return;
-        sendAnalyticsEvent('AuthViewed', { source: String(intent || 'unknown'), intent });
+        trackAuthGateViewed({ intent });
     }, [intent, isFocused]);
 
     // Native fix (#670): /login is a tab route, so on native the screen stays
@@ -168,10 +171,8 @@ export default function Login() {
             showMsg('');
             const outcome = await login(values.email.trim(), values.password, terms.termsVersion);
             if (outcome.ok) {
-                sendAnalyticsEvent('login_success', { method: 'email', intent: String(intent || '') });
-                if (intent) {
-                    sendAnalyticsEvent('AuthSuccess', { source: String(intent || 'unknown'), intent });
-                }
+                trackLoginSucceeded({ method: 'email', intent });
+                trackAuthGateSucceeded({ flow: 'login', method: 'email', intent });
                 // Держим форму заблокированной до фактической навигации (finally вызовет
                 // setSubmitting(false), но submitted оставляет кнопки disabled).
                 setSubmitted(true);
@@ -200,10 +201,8 @@ export default function Login() {
             showMsg('');
             const outcome = await loginWithGoogle(credential, terms.termsVersion);
             if (outcome.ok) {
-                sendAnalyticsEvent('login_success', { method: 'google', intent: String(intent || '') });
-                if (intent) {
-                    sendAnalyticsEvent('AuthSuccess', { source: 'google', intent });
-                }
+                trackLoginSucceeded({ method: 'google', intent });
+                trackAuthGateSucceeded({ flow: 'login', method: 'google', intent });
                 navigating = true;
                 setSubmitted(true);
                 notifyAuthProgressSaved(hasReturnContext);
@@ -234,10 +233,8 @@ export default function Login() {
             showMsg('');
             const result = await loginWithApple(credential, terms.termsVersion);
             if (result.status === 'authenticated') {
-                sendAnalyticsEvent('login_success', { method: 'apple', intent: String(intent || '') });
-                if (intent) {
-                    sendAnalyticsEvent('AuthSuccess', { source: 'apple', intent });
-                }
+                trackLoginSucceeded({ method: 'apple', intent });
+                trackAuthGateSucceeded({ flow: 'login', method: 'apple', intent });
                 navigating = true;
                 setSubmitted(true);
                 notifyAuthProgressSaved(hasReturnContext);
@@ -258,8 +255,8 @@ export default function Login() {
     };
 
     const handleFacebookAuthenticated = () => {
-        sendAnalyticsEvent('login_success', { method: 'facebook', intent: String(intent || '') });
-        if (intent) sendAnalyticsEvent('AuthSuccess', { source: 'facebook', intent });
+        trackLoginSucceeded({ method: 'facebook', intent });
+        trackAuthGateSucceeded({ flow: 'login', method: 'facebook', intent });
         setSubmitted(true);
         notifyAuthProgressSaved(hasReturnContext);
         replaceAfterAuth();

@@ -20,6 +20,8 @@ import { useMapOverlays } from '@/hooks/map/useMapOverlays';
 import { useMapUrlAnchors } from '@/hooks/map/useMapUrlAnchors';
 import { useMapFiltersPanelProps } from '@/hooks/map/useMapFiltersPanelProps';
 import { preloadMapFiltersPanel } from '@/hooks/map/mapFiltersPanelLoader';
+import { useMapAnalytics } from '@/hooks/map/useMapAnalytics';
+import { reportMapScreenMarkerOpened } from '@/utils/mapAnalytics';
 
 // Lazy-load filters panel components — only needed when the user opens the filters drawer
 /**
@@ -219,6 +221,25 @@ export function useMapScreenController() {
     requestFitToResults();
   }, [resetFilters, requestFitToResults]);
 
+  // #2908: телеметрия /map — открытие, фильтры из панели, построенный маршрут.
+  const { trackedFilterChange, trackedResetFilters } = useMapAnalytics({
+    isFocused,
+    isMobile,
+    hasUrlPlace: Boolean(urlSelectedPlace),
+    hasUrlCoordinates: Boolean(urlCoordinates),
+    handleFilterChangeForPanel,
+    resetFilters,
+    transportMode,
+    routePointsCount: Array.isArray(routeStorePoints) ? routeStorePoints.length : 0,
+    routeDistance,
+  });
+
+  // #2908: тапы маркеров считаются только на этом экране — общий Map.web их не шлёт сам.
+  const screenMapPanelProps = useMemo(
+    () => (mapPanelProps ? { ...mapPanelProps, onMarkerOpened: reportMapScreenMarkerOpened } : mapPanelProps),
+    [mapPanelProps],
+  );
+
   // Filters panel props (FiltersProvider pattern) — assembled from independent
   // memoized slices in useMapFiltersPanelProps. The controller re-exposes the
   // stable slices for narrow subscriptions in the screen.
@@ -230,8 +251,8 @@ export function useMapScreenController() {
   } = useMapFiltersPanelProps({
     filters,
     filterValues,
-    handleFilterChangeForPanel,
-    resetFilters,
+    handleFilterChangeForPanel: trackedFilterChange,
+    resetFilters: trackedResetFilters,
     allTravelsData,
     overlayOptions,
     enabledOverlays,
@@ -282,7 +303,7 @@ export function useMapScreenController() {
     mapReady,
 
     // Map
-    mapPanelProps,
+    mapPanelProps: screenMapPanelProps,
 
     // Panel
     rightPanelTab,
@@ -359,7 +380,7 @@ export function useMapScreenController() {
     themedColors,
     styles,
     mapReady,
-    mapPanelProps,
+    screenMapPanelProps,
     rightPanelTab,
     isDesktopCollapsed,
     desktopPanelWidth,

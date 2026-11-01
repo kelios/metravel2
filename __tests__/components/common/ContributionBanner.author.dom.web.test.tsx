@@ -83,6 +83,7 @@ beforeAll(() => {
   }))
   jest.doMock('@/utils/growthFunnelAnalytics', () => ({
     trackContentCreateCtaClicked: mockTrack,
+    trackContentCreateCtaImpression: jest.fn(),
     trackRegisterCtaClicked: jest.fn(),
   }))
   jest.doMock('@/hooks/useResponsive', () => ({ useResponsive: () => ({ isMobile: true }) }))

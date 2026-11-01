@@ -14,6 +14,12 @@
 
 const { getAccessToken } = require('./lib/google-token')
 const { readOptionalSecretToken } = require('./lib/yandex-token')
+const { readCatalog } = require('./lib/metrics-summary-sources')
+const {
+  DEFAULT_WINDOW_DAYS: PUBLISH_WINDOW_DAYS,
+  countAuthorPublications,
+  buildPublishFunnelAlert,
+} = require('./lib/publishFunnelHealth')
 
 const GA_SCOPE = 'https://www.googleapis.com/auth/analytics.readonly'
 const GSC_SCOPE = 'https://www.googleapis.com/auth/webmasters.readonly'
@@ -139,6 +145,43 @@ async function pullGa4(args, startDate, endDate) {
   })
 
   return { propertyId, totalsByDate, googleByDate, rows }
+}
+
+// #2908: события публикации за 30 дней — окно шире основного (4 дня), потому что
+// публикации редкие и сравниваются с каталогом API, а не по дням.
+async function pullPublishFunnel(args, ga4PropertyPromise) {
+  const { startDate, endDate } = dateRange(PUBLISH_WINDOW_DAYS)
+  try {
+    const { accessToken } = await getAccessToken(GA_SCOPE)
+    // Свойство уже ищет pullGa4 — второй discovery-запрос не нужен.
+    const propertyId = args.property || (await ga4PropertyPromise) || (await discoverGa4Property(accessToken))
+    if (!propertyId) throw new Error('GA4 property id not found')
+    const report = await ga4RunReport(accessToken, propertyId, {
+      dateRanges: [{ startDate, endDate }],
+      dimensions: [{ name: 'eventName' }],
+      metrics: [{ name: 'eventCount' }],
+      dimensionFilter: {
+        filter: { fieldName: 'eventName', inListFilter: { values: ['travel_publish', 'route_create_publish_attempt'] } },
+      },
+    })
+    const counts = Object.fromEntries((report.rows || []).map((r) => [r.dimensionValues[0].value, Number(r.metricValues[0].value || 0)]))
+    const params = new URLSearchParams({ where: JSON.stringify({ publish: 1, moderation: 1 }), page: '1', perPage: '100' })
+    // readCatalog сам не ограничен по времени: без сигнала зависший ответ API
+    // держал бы весь отчёт (Promise.all в main) бесконечно.
+    const travels = await readCatalog(`https://metravel.by/api/travels/?${params}`, AbortSignal.timeout(60_000))
+    const { count, bulkDays } = countAuthorPublications(travels, { startDate, endDate })
+    return {
+      ok: true,
+      startDate,
+      endDate,
+      gaPublishEvents: counts.travel_publish || 0,
+      gaPublishAttempts: counts.route_create_publish_attempt || 0,
+      apiPublications: count,
+      bulkDays,
+    }
+  } catch (error) {
+    return { ok: false, startDate, endDate, error: error.message }
+  }
 }
 
 async function gscQuery(token, site, body) {
@@ -365,6 +408,11 @@ function buildAlerts(result) {
     }
   }
 
+  if (result.publishFunnel?.ok) {
+    const alert = buildPublishFunnelAlert({ ...result.publishFunnel, windowDays: PUBLISH_WINDOW_DAYS })
+    if (alert) alerts.push(alert)
+  }
+
   const failedProbes = result.production.filter((p) => !p.ok)
   if (failedProbes.length) alerts.push(`${failedProbes.length} production Google-entry probes failed`)
   const missingMetrika = result.production.filter((p) => p.ok && !p.hasMetrika)
@@ -404,6 +452,15 @@ function printHuman(result) {
     }
   }
 
+  console.log(`\nPublish funnel (${PUBLISH_WINDOW_DAYS} days):`)
+  const pf = result.publishFunnel
+  if (!pf?.ok) {
+    console.log(`  skipped: ${pf?.error || 'not collected'}`)
+  } else {
+    console.log(`  ${pf.startDate} .. ${pf.endDate}: GA4 travel_publish=${pf.gaPublishEvents}, publish attempts=${pf.gaPublishAttempts}; API non-owner publications=${pf.apiPublications}`)
+    for (const b of pf.bulkDays) console.log(`  excluded bulk day ${b.day}: ${b.count} publications`)
+  }
+
   console.log('\nProduction Google-entry probes:')
   for (const p of result.production) {
     const status = p.ok ? 'OK' : 'FAIL'
@@ -425,11 +482,13 @@ async function main() {
   const args = parseArgs(process.argv)
   const { startDate, endDate } = dateRange(args.days)
 
-  const [ga4, gsc, metrika, production] = await Promise.all([
-    pullGa4(args, startDate, endDate),
+  const ga4Promise = pullGa4(args, startDate, endDate)
+  const [ga4, gsc, metrika, production, publishFunnel] = await Promise.all([
+    ga4Promise,
     pullGsc(args, startDate, endDate),
     pullMetrika(args, startDate, endDate),
     probeProduction(args.urls, args.metrikaId),
+    pullPublishFunnel(args, ga4Promise.then((r) => r.propertyId, () => null)),
   ])
 
   const result = {
@@ -440,6 +499,7 @@ async function main() {
     gsc,
     metrika,
     production,
+    publishFunnel,
   }
   result.alerts = buildAlerts(result)
 

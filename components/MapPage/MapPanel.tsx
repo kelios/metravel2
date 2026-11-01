@@ -65,6 +65,7 @@ interface MapPanelProps {
     onMapMove?: (center: MapMovePayload) => void;
     hideFloatingControls?: boolean;
     onMarkerSelect?: (point: any) => void;
+    onMarkerOpened?: (point: any, surface: 'popup' | 'card') => void;
     onMapBackgroundTap?: () => void;
     suppressLeafletPopupOnSelect?: boolean;
 }
@@ -120,6 +121,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                onMapMove,
                                                hideFloatingControls = false,
                                                onMarkerSelect,
+                                               onMarkerOpened,
                                                onMapBackgroundTap,
                                                suppressLeafletPopupOnSelect = false,
 	                                           }) => {
@@ -251,6 +253,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                       onMapMove={onMapMove}
                       hideFloatingControls={hideFloatingControls}
                       onMarkerSelect={onMarkerSelect}
+                      onMarkerOpened={onMarkerOpened}
                       onMapBackgroundTap={onMapBackgroundTap}
                       suppressLeafletPopupOnSelect={suppressLeafletPopupOnSelect}
                   />
