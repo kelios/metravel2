@@ -39,6 +39,13 @@ export const createAssistantStyles = (colors: ThemedColors, isMobile: boolean) =
       gap: spacing.xs,
       marginTop: spacing.md,
     },
+    // Пилюля примера обязана помещаться в ширину ряда: без maxWidth кнопка
+    // берёт ширину подписи в одну строку, и на 320–390 px текст обрезается
+    // с обеих сторон (#2894); с ограничением подпись переносится на 2 строки.
+    exampleChip: {
+      maxWidth: '100%',
+      flexShrink: 1,
+    },
     turn: {
       gap: spacing.sm,
     },

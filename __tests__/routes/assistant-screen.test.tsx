@@ -1,3 +1,4 @@
+import { StyleSheet } from 'react-native'
 import { act, fireEvent, render, screen } from '@testing-library/react-native'
 
 import Route from '@/app/(tabs)/assistant'
@@ -60,6 +61,13 @@ describe('/assistant route under feature flag (#2460)', () => {
 
     const examples = screen.getAllByTestId('assistant-example')
     expect(examples).toHaveLength(3)
+    // #2894: пилюля ограничена шириной ряда, иначе длинный пример на 375 px
+    // обрезается с обеих сторон; подпись при этом переносится на 2 строки.
+    for (const chip of examples) {
+      const style = chip.props.style
+      const flat = StyleSheet.flatten(typeof style === 'function' ? style({ pressed: false, hovered: false }) : style)
+      expect(flat).toEqual(expect.objectContaining({ maxWidth: '100%', flexShrink: 1 }))
+    }
     await act(async () => {
       await fireEvent.press(examples[1])
     })

@@ -130,6 +130,7 @@ export default function AssistantScreen() {
                     size="sm"
                     label={example}
                     labelNumberOfLines={2}
+                    style={styles.exampleChip}
                     onPress={() => send(example)}
                     disabled={chat.busy || (chat.remaining !== null && chat.remaining <= 0)}
                     testID="assistant-example"
