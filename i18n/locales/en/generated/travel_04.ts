@@ -429,6 +429,7 @@ export const travelGenerated4 = {
   "components.listTravel.ListTravelBaseHelpers.twoFiltersEmpty": "Filters {{value1}} and {{value2}} found nothing.",
   "components.listTravel.ListTravelBaseHelpers.manyFiltersEmpty": "Filters {{value1}} and {{value2}} found nothing.",
   "components.listTravel.ListTravelBaseHelpers.filterSuggestionSuffix": "{{value1}} Try removing filters or changing your query.",
+  "components.listTravel.ListTravelBaseHelpers.searchOnlyEmpty": "No routes match “{{value1}}”.",
   "components.travel.TravelWizardStepDetails.defaultTitle": "Route details",
   "components.travel.TravelWizardStepDetails.defaultNext": "For publication",
   "components.travel.TravelWizardStepPublish.defaultTitle": "Travel publication",

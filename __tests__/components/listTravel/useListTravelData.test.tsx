@@ -286,6 +286,20 @@ describe('useListTravelData with infinite query', () => {
     queryClient.clear();
   });
 
+  // #2895: на пустой выдаче ListTravelBase держит скелетон, пока любой запасной шаг
+  // `isInitialLoading`. Выключенный шаг (запрос без фильтров — шагов нет) не должен
+  // загружаться ни на кадр, иначе пустое состояние недостижимо.
+  it('a disabled fallback query never reports isInitialLoading', async () => {
+    const { ref, queryClient, unmount } = await renderWithClient({ queryParams: {}, isQueryEnabled: false });
+
+    expect(ref.current?.isInitialLoading).toBe(false);
+    expect(ref.current?.isEmpty).toBe(false);
+    expect(fetchTravels).not.toHaveBeenCalled();
+
+    await unmount();
+    queryClient.clear();
+  });
+
   it('handleRefresh invalidates query and refetches data', async () => {
     (fetchTravels as jest.Mock)
       .mockResolvedValueOnce({

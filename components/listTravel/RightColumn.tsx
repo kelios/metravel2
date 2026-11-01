@@ -72,6 +72,7 @@ export interface RightColumnProps {
     description: string
     variant: 'search' | 'error' | 'default' | 'empty' | 'inspire'
     suggestions?: string[]
+    popularFallback?: boolean
     action?: { label: string; onPress: () => void }
   } | null
   travels: Travel[]

@@ -2,9 +2,25 @@ import type { Locator, Page } from '@playwright/test';
 import { test, expect } from './fixtures';
 import { preacceptCookies } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
+import { installAnalyticsIntentRecorder, readAnalyticsIntents } from './helpers/analytics';
 
 const SEARCH_TIMEOUT_MS = 30_000;
 const SEARCH_DEBOUNCE_MS = 600;
+const PIXEL = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+// #2895: popular routes under an empty search come from a fixture, not from the live ranking.
+const POPULAR_TRAVELS = Array.from({ length: 3 }, (_, index) => ({
+  id: 981_500 + index,
+  slug: `e2e-popular-${index}`,
+  url: `/travels/e2e-popular-${index}`,
+  name: `Популярный маршрут e2e ${index + 1}`,
+  countryName: 'Беларусь',
+  cityName: 'Минск',
+  travel_image_thumb_url: PIXEL,
+  travel_image_thumb_small_url: PIXEL,
+  publish: true,
+  moderation: true,
+  year: '2026',
+}));
 
 const waitForSearchResults = async (page: Page) => {
   // We accept either cards, skeletons, or empty state as valid.
@@ -65,6 +81,7 @@ test.describe('@smoke Search', () => {
 
   test('zero-result text search never retries without the query', async ({ page }) => {
     await preacceptCookies(page);
+    await installAnalyticsIntentRecorder(page);
 
     const noMatchQuery = 'metravel-e2e-no-match-1582';
     const observedQueries: string[] = [];
@@ -86,6 +103,9 @@ test.describe('@smoke Search', () => {
         body: JSON.stringify({ data: [], total: 0 }),
       });
     });
+    await page.route('**/travels/popular/**', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(POPULAR_TRAVELS) }),
+    );
 
     await page.goto(`/search?search=${encodeURIComponent(noMatchQuery)}`, {
       waitUntil: 'domcontentloaded',
@@ -96,10 +116,24 @@ test.describe('@smoke Search', () => {
     await expect(page.getByText('Ничего не найдено', { exact: true })).toBeVisible({
       timeout: SEARCH_TIMEOUT_MS,
     });
+    // #2895: the empty state is terminal — the SSG shell is gone, the message names the
+    // query, and popular routes keep the page from being a dead end.
+    await expect(page.locator('#ssg-skeleton')).toHaveCount(0, { timeout: SEARCH_TIMEOUT_MS });
+    await expect(page.getByText(`По запросу «${noMatchQuery}» маршрутов нет.`, { exact: true })).toBeVisible();
+    await expect(page.getByText('Популярное у путешественников', { exact: true })).toBeVisible({
+      timeout: SEARCH_TIMEOUT_MS,
+    });
+    await expect(page.getByText('Популярный маршрут e2e 1', { exact: true }).first()).toBeVisible();
     await page.waitForTimeout(SEARCH_DEBOUNCE_MS);
 
     expect(observedQueries.length).toBeGreaterThan(0);
     expect(observedQueries.every((query) => query === noMatchQuery)).toBe(true);
+    // #2908: the zero-result outcome reaches analytics with the query.
+    await expect.poll(async () => (await readAnalyticsIntents(page, 'search_zero_results')).length, {
+      timeout: SEARCH_TIMEOUT_MS,
+    }).toBe(1);
+    const [zeroResults] = await readAnalyticsIntents(page, 'search_zero_results');
+    expect(zeroResults.params).toMatchObject({ source: 'travel_catalog', search_term: noMatchQuery });
   });
 
   test('search box filters list and can be cleared', async ({ page }) => {

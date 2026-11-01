@@ -1,8 +1,8 @@
-import React, { memo } from 'react'
+import React, { memo, Suspense } from 'react'
 import { View, type StyleProp, type ViewStyle } from 'react-native'
 
 import EmptyState from '@/components/ui/EmptyState'
-import { RecommendationsPlaceholder } from '@/components/listTravel/RightColumn.parts'
+import { RecommendationsPlaceholder, SearchEmptyPopularRoutes } from '@/components/listTravel/RightColumn.parts'
 import type { RightColumnProps } from '@/components/listTravel/RightColumn'
 import TravelListItemSkeleton from '@/components/listTravel/TravelListItemSkeleton'
 import type { createTravelListRowLayout } from './travelListRowLayout'
@@ -143,6 +143,11 @@ function RightColumnListStatus({
               }
               suggestions={getEmptyStateMessage.suggestions}
             />
+            {getEmptyStateMessage.variant === 'search' && getEmptyStateMessage.popularFallback ? (
+              <Suspense fallback={null}>
+                <SearchEmptyPopularRoutes surface="search_empty" />
+              </Suspense>
+            ) : null}
           </View>
         )}
     </>

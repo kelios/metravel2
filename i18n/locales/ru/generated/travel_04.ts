@@ -429,6 +429,7 @@ export const travelGenerated4 = {
   "components.listTravel.ListTravelBaseHelpers.twoFiltersEmpty": "По фильтрам {{value1}} и {{value2}} ничего не найдено.",
   "components.listTravel.ListTravelBaseHelpers.manyFiltersEmpty": "По фильтрам {{value1}} и {{value2}} ничего не найдено.",
   "components.listTravel.ListTravelBaseHelpers.filterSuggestionSuffix": "{{value1}} Попробуйте убрать фильтры или изменить запрос.",
+  "components.listTravel.ListTravelBaseHelpers.searchOnlyEmpty": "По запросу «{{value1}}» маршрутов нет.",
   "components.travel.TravelWizardStepDetails.defaultTitle": "Детали маршрута",
   "components.travel.TravelWizardStepDetails.defaultNext": "К публикации",
   "components.travel.TravelWizardStepPublish.defaultTitle": "Публикация путешествия",

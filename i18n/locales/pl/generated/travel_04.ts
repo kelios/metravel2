@@ -429,6 +429,7 @@ export const travelGenerated4 = {
   "components.listTravel.ListTravelBaseHelpers.twoFiltersEmpty": "Filtry {{value1}} i {{value2}} nic nie znalazły.",
   "components.listTravel.ListTravelBaseHelpers.manyFiltersEmpty": "Filtry {{value1}} i {{value2}} nic nie znalazły.",
   "components.listTravel.ListTravelBaseHelpers.filterSuggestionSuffix": "{{value1}} Spróbuj usunąć filtry lub zmienić zapytanie.",
+  "components.listTravel.ListTravelBaseHelpers.searchOnlyEmpty": "Brak tras dla zapytania „{{value1}}”.",
   "components.travel.TravelWizardStepDetails.defaultTitle": "Szczegóły trasy",
   "components.travel.TravelWizardStepDetails.defaultNext": "Do publikacji",
   "components.travel.TravelWizardStepPublish.defaultTitle": "Publikacja podróżnicza",

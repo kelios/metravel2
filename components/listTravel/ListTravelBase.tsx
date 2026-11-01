@@ -27,6 +27,7 @@ import { buildTravelFilterGroups } from './utils/filterGroups'
 import {
   buildActiveConditionChips,
   buildEmptyStateMessage,
+  buildSearchAnalyticsFilters,
 } from './ListTravelBase.helpers'
 import type { ActiveConditionChip } from './ListTravelBase.helpers'
 import { useRecommendationsVisibility } from './hooks/useRecommendationsVisibility'
@@ -50,6 +51,7 @@ import {
 } from './listTravelBaseModel'
 import { useListTravelViewportState } from './hooks/useListTravelViewportState'
 import { useSearchAlsoFound } from './hooks/useSearchAlsoFound'
+import { useTravelCatalogSearchAnalytics } from './useTravelCatalogSearchAnalytics'
 import ListTravelOwnUserGate, {
   getListTravelOwnUserGateMode,
 } from './parts/ListTravelOwnUserGate'
@@ -445,6 +447,8 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     // Оптимизируем расчет путем использования стабильных ссылок на filter
     const activeFiltersCount = useMemo(() => getListTravelActiveFiltersCount(filter, debSearch), [filter, debSearch]);
 
+    const isSiteSearch = !isExport && !isMeTravel && !isTravelBy && !user_id && isSearchPathname(pathname);
+
     const getEmptyStateMessage = useMemo(() => {
       return buildEmptyStateMessage({
         showEmptyState,
@@ -452,11 +456,13 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         options,
         debSearch,
         isMeTravel,
+        // #2895: пустой поиск по сайту не тупик — под сообщением популярные маршруты.
+        showPopularFallback: isSiteSearch,
         onCreateTravel: () => router.push('/travel/new'),
       });
     // Intentional granular deps (options?.* sub-keys) to avoid recompute on options object-identity change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [showEmptyState, filter, options?.categories, options?.transports, options?.categoryTravelAddress, debSearch, isMeTravel, router]);
+    }, [showEmptyState, filter, options?.categories, options?.transports, options?.categoryTravelAddress, debSearch, isMeTravel, isSiteSearch, router]);
 
     const filterGroups = useMemo(
       () => buildTravelFilterGroups({
@@ -570,6 +576,22 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     }, [firstScreenReady]);
     useEffect(() => () => { firstScreenCleanupRef.current?.(); }, []);
 
+    const searchAnalyticsFilters = useMemo(
+      () => (isSiteSearch ? buildSearchAnalyticsFilters(queryParams, filter) : null),
+      [isSiteSearch, queryParams, filter],
+    );
+    useTravelCatalogSearchAnalytics({
+      enabled: isSiteSearch,
+      query: debSearch,
+      filtersKey: searchAnalyticsFilters?.filtersKey ?? '',
+      hasFilters: searchAnalyticsFilters?.hasFilters ?? false,
+      settled: firstScreenReady && !isSearchPending,
+      isZeroResults: displayedShowEmptyState,
+      isError,
+      resultsCount: displayedTotal,
+      relaxedFilters: !!activeFallbackMatch,
+    });
+
     // Троттл lastEndReachedAtRef общий для всех источников. При переключении основной
     // выдачи ↔ fallback сбрасываем его, иначе первый onEndReached нового списка будет
     // проглочен таймстампом от предыдущего источника (залипание подгрузки).
@@ -590,7 +612,6 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         displayedHandleEndReached();
     }, [displayedHandleEndReached, hasDisplayedItems]);
 
-    const isSiteSearch = !isExport && !isMeTravel && !isTravelBy && !user_id && isSearchPathname(pathname);
     // #2459: строка смыслового подбора только на /search (не «мои», не экспорт) и под флагом.
     const showAiSearchPanel = isAiPicksEnabled() && isSiteSearch;
     // #2775: строка «Ещё по запросу» (квесты и места) — над карточками, фиксированной высоты.

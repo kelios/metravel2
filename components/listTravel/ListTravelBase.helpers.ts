@@ -3,6 +3,7 @@ import type { Travel } from '@/types/types'
 import { queryKeys } from '@/api/queryKeys'
 import type { FilterOptions, FilterState } from './utils/listTravelTypes'
 import { getSortingLabel } from './utils/sortings'
+import { getListTravelActiveFiltersCount } from './listTravelBaseModel'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -40,6 +41,8 @@ export type EmptyStateMessage =
       description: string
       variant: 'search'
       suggestions: string[]
+      /** #2895: under the message, popular routes keep an empty site search from being a dead end. */
+      popularFallback?: boolean
     }
 
 export const normalizeNamedOptions = (items: unknown): Array<{ id: string; name: string }> => {
@@ -384,6 +387,7 @@ export const buildEmptyStateMessage = ({
   options,
   debSearch,
   isMeTravel,
+  showPopularFallback = false,
   onCreateTravel,
 }: {
   showEmptyState: boolean
@@ -391,6 +395,7 @@ export const buildEmptyStateMessage = ({
   options?: FilterOptions
   debSearch: string
   isMeTravel: boolean
+  showPopularFallback?: boolean
   onCreateTravel: () => void
 }): EmptyStateMessage | null => {
   if (!showEmptyState) return null
@@ -438,6 +443,7 @@ export const buildEmptyStateMessage = ({
   if (filter.draftsOnly === true) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.chernoviki_f3bb503d'))
   if (filter.publishedOnly === true) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.opublikovannye_2c3a77ca'))
   if (filter.allAuthorsUnpublishedOnly === true) activeFilters.push(i18nT('travel:components.listTravel.ModernFilters.status.allAuthorsUnpublishedOnly'))
+  const searchOnly = activeFilters.length === 0 && !!debSearch
   if (debSearch) activeFilters.push(i18nT('travel:components.listTravel.ListTravelBase_helpers.poisk_value1_844fca95', { value1: debSearch }))
 
   // Формируем сообщение
@@ -465,7 +471,10 @@ export const buildEmptyStateMessage = ({
 
   // Формируем красивое описание
   let description: string
-  if (activeFilters.length === 1) {
+  if (searchOnly) {
+    // #2895: единственное условие — сам запрос: «По запросу «…» маршрутов нет», без «убрать фильтры».
+    description = i18nT('travel:components.listTravel.ListTravelBaseHelpers.searchOnlyEmpty', { value1: debSearch })
+  } else if (activeFilters.length === 1) {
     description = i18nT('travel:components.listTravel.ListTravelBaseHelpers.oneFilterEmpty', { value1: activeFilters[0] })
   } else if (activeFilters.length === 2) {
     description = i18nT('travel:components.listTravel.ListTravelBaseHelpers.twoFiltersEmpty', { value1: activeFilters[0], value2: activeFilters[1] })
@@ -475,7 +484,9 @@ export const buildEmptyStateMessage = ({
     description = i18nT('travel:components.listTravel.ListTravelBaseHelpers.manyFiltersEmpty', { value1: otherFilters, value2: lastFilter })
   }
 
-  description = i18nT('travel:components.listTravel.ListTravelBaseHelpers.filterSuggestionSuffix', { value1: description })
+  if (!searchOnly) {
+    description = i18nT('travel:components.listTravel.ListTravelBaseHelpers.filterSuggestionSuffix', { value1: description })
+  }
 
   const suggestions = debSearch
     ? [i18nT('travel:components.listTravel.ListTravelBase_helpers.proverte_napisanie_4b385427'), i18nT('travel:components.listTravel.ListTravelBase_helpers.poprobuyte_drugie_klyuchevye_slova_981edc0e')]
@@ -487,5 +498,21 @@ export const buildEmptyStateMessage = ({
     description,
     variant: 'search' as const,
     suggestions,
+    popularFallback: showPopularFallback,
+  }
+}
+
+/**
+ * #2908: what makes a catalog search "new" for analytics. Sorting reorders the same
+ * results, so it neither starts a new search nor counts as a narrowing filter.
+ */
+export const buildSearchAnalyticsFilters = (
+  queryParams: Record<string, unknown>,
+  filter: FilterState,
+): { filtersKey: string; hasFilters: boolean } => {
+  const { sort: _sort, ...params } = queryParams
+  return {
+    filtersKey: JSON.stringify(params),
+    hasFilters: getListTravelActiveFiltersCount({ ...filter, sort: undefined }, '') > 0,
   }
 }

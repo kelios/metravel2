@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { sendAnalyticsEvent } from '@/utils/analytics';
+import { isAnalyticsSearchTerm } from '@/utils/analyticsSearchTerm';
 
 type SearchAnalyticsOptions = {
     query: string;
@@ -8,11 +9,6 @@ type SearchAnalyticsOptions = {
     resultsCount: number;
     ready: boolean;
     focused: boolean;
-};
-
-const isSearchTerm = (query: string) => {
-    if (query.length < 2 || query.length > 100 || /@|https?:\/\/|www\./i.test(query)) return false;
-    return !(/^[+\d\s().-]+$/.test(query) && query.replace(/\D/g, '').length >= 7);
 };
 
 /** Measures a settled search against its own results, before grid pagination. */
@@ -28,7 +24,7 @@ export function useQuestCatalogSearchAnalytics({
 
     useEffect(() => {
         if (!term) lastTrackedTerm.current = null;
-        if (Platform.OS !== 'web' || !ready || !focused || !isSearchTerm(term)
+        if (Platform.OS !== 'web' || !ready || !focused || !isAnalyticsSearchTerm(term)
             || term !== appliedSearchTerm || term === lastTrackedTerm.current) return;
 
         const timer = setTimeout(() => {

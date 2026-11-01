@@ -6,6 +6,9 @@ import { RECOMMENDATIONS_TOTAL_HEIGHT } from '@/components/listTravel/rightColum
 
 export const RecommendationsTabs = memo(RecommendationsTabsBase)
 
+// #2895: popular routes under an empty site search; native ships one bundle, no lazy chunk.
+export { default as SearchEmptyPopularRoutes } from '@/components/home/HomePopularRoutesSection'
+
 export const RecommendationsPlaceholder = () => (
   <View
     style={{

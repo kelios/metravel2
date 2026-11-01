@@ -40,6 +40,8 @@ interface HomeSectionProps {
   fixedCount?: number
   layout?: 'editorial' | 'rail'
   enabled?: boolean
+  /** Where the rail is shown. Under an empty site search (#2895) it is a bonus without actions of its own. */
+  surface?: 'home' | 'search_empty'
 }
 
 const IS_WEB = Platform.OS === 'web'
@@ -134,6 +136,7 @@ export function HomeInspirationSection({
   fixedCount,
   layout = 'editorial',
   enabled = true,
+  surface = 'home',
 }: HomeSectionProps) {
   const router = useRouter()
   const colors = useThemedColors()
@@ -234,6 +237,11 @@ export function HomeInspirationSection({
       </View>
     )
   }
+
+  // #2895: под пустым поиском рельса — дополнение к его собственному «Сбросить условия»:
+  // без карточек или при сбое её просто нет, а «Все маршруты» не дублирует сброс.
+  const isSearchEmptySurface = surface === 'search_empty'
+  if (isSearchEmptySurface && (isError || travelsList.length === 0)) return null
 
   if (isError) {
     return (
@@ -342,7 +350,7 @@ export function HomeInspirationSection({
           />
         )}
 
-        {travelsList.length > 0 && (
+        {travelsList.length > 0 && !isSearchEmptySurface && (
           <View style={[styles.headerActions, { marginTop: isMobile ? 14 : 20 }]}>
             {renderViewMoreButton()}
           </View>

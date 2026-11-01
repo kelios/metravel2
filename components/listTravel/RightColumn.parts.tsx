@@ -43,6 +43,19 @@ export const RecommendationsTabs = lazy(async () => {
   }
 })
 
+// #2895: popular routes under an empty site search. A separate chunk, loaded only when
+// the search came back empty; on failure the section is simply absent — it is a bonus.
+export const SearchEmptyPopularRoutes = lazy(async () => {
+  try {
+    return await importWithRetry(() => import('@/components/home/HomePopularRoutesSection'))
+  } catch (e) {
+    devError('[SearchEmptyPopularRoutes] failed to load after retries:', e)
+    return {
+      default: () => null,
+    } as unknown as typeof import('@/components/home/HomePopularRoutesSection')
+  }
+})
+
 // Simple placeholder for loading state (must match the reserved header height)
 export const RecommendationsPlaceholder = () => (
   <View
