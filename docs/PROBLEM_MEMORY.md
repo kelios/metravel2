@@ -696,6 +696,29 @@ guard, падающий в CI на попытке обойти этот конт
 - **Evidence:** `cls135/readiness/startup-reset-negative-result.json` и
   сохранённые исходные five-raw/faithful diagnostics в `.codex-temp/publish-20261007/`.
 
+### QA-HIDDEN-PANE-NO-PAINT-001 — проба в скрытой браузерной панели даёт «вечный SSG-скелетон»
+
+- **Инвариант:** время до первого экрана, снятие `#ssg-skeleton` и гидратация
+  меряются в рисующем браузере: изолированный Playwright (`chromium.launch()`)
+  или панель, в которой подтверждены 2×`requestAnimationFrame` за 3 с и
+  paint-записи. Скрытая панель — не доказательство дефекта.
+- **Каноническая задача:** #2895 (P1 из UX-аудита 01.11.2026 «пустой поиск висит
+  в скелетоне»).
+- **Подтверждение:** 01.11.2026, прод `5057e6db3`: скрытая браузерная панель
+  (`tabs_context` → «currently hidden») — `visibilityState: 'visible'`, но rAF не
+  вызывается и `performance.getEntriesByType('paint')` пуст; `/search?search=qwertyuiop`
+  и `?search=Гродно` одинаково стоят под шеллом до 45-с страховки, хотя пустое
+  состояние / карточки отрисованы под ним за 2–3 с. Изолированный Playwright,
+  mobile 375, CPU ×6: шелл снят за 2,6 с.
+- **Механизм:** снятие шелла (`scripts/ssg-skeletons.js:564`) ждёт FCP,
+  `#root[data-first-screen-ready]` (двойной rAF в `markSsgFirstScreenReady`,
+  `hooks/useHydrationReady.ts:53`) или `app-hydrated` (после rAF,
+  `components/layout/RootWebDeferredChrome.tsx:81`); без отрисовки кадров ни один
+  сигнал не приходит, остаётся только 45-с `deep`-страховка.
+- **Маршрутизация:** жалоба «скелетон не снимается» — сначала повторить
+  Playwright-пробой; воспроизвелось там — новая карточка по LIST/SSG-семейству,
+  нет — закрыть как артефакт пробы со ссылкой на эту запись.
+
 ### LIST-SKELETON-GEOMETRY-001 — каркас списка занимает место карточек, которые его заменят
 
 - **Инвариант:** каркас списка стоит в той же сетке, что карточки, а его ячейка
