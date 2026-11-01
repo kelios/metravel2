@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from 'react'
+import { lazy, memo, Suspense, useCallback, useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
@@ -19,7 +19,9 @@ import { KIND_ICONS } from './adventDoorVisuals'
 import { formatDoorDate } from './AdventDoorTile'
 import AdventRiddleTask from './AdventRiddleTask'
 import AdventGeoTask from './AdventGeoTask'
-import AdventYearInReviewCard from './AdventYearInReviewCard'
+
+// Только для дверцы 24 — отдельным чанком, вместе с контуром шеринга.
+const AdventYearInReviewCard = lazy(() => import('./AdventYearInReviewCard'))
 
 type Props = {
   door: AdventDoorView | null
@@ -169,7 +171,9 @@ function AdventDoorSheet({ door, isAuthenticated, creditedDays, campaignYear, on
           </Section>
           {/* Финал основной серии — личные «Итоги года» (#2868); нужен аккаунт. */}
           {door.day === ADVENT_MAIN_DOORS && !door.bonus && isAuthenticated ? (
-            <AdventYearInReviewCard year={campaignYear} />
+            <Suspense fallback={null}>
+              <AdventYearInReviewCard year={campaignYear} />
+            </Suspense>
           ) : null}
           <Section icon="target" title={i18nT('adventStatic:sheet.task')} styles={styles} colors={colors}>
             <Text style={styles.body}>{door.task.text}</Text>

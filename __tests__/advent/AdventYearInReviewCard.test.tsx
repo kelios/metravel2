@@ -1,4 +1,4 @@
-import { fireEvent, render } from '@testing-library/react-native'
+import { fireEvent, render, waitFor } from '@testing-library/react-native'
 
 import AdventYearInReviewCard from '@/components/advent/AdventYearInReviewCard'
 import AdventShareCard from '@/components/advent/AdventShareCard'
@@ -48,6 +48,7 @@ describe('AdventYearInReviewCard (#2868)', () => {
     expect(screen.getByText('24/24')).toBeTruthy()
     expect(screen.getByText('Польша')).toBeTruthy()
     await fireEvent.press(screen.getByTestId('advent-yir-share'))
+    await waitFor(() => expect(mockShare).toHaveBeenCalled())
     expect(mockShare).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'year', year: 2026, text: 'Мои итоги 2026 года путешественника на MeTravel' }),
     )
@@ -79,6 +80,7 @@ describe('AdventShareCard (#2868)', () => {
     const screen = await render(<AdventShareCard openedCount={12} streak={5} year={2026} />)
     expect(screen.getByText('Мой адвент 12/24')).toBeTruthy()
     await fireEvent.press(screen.getByTestId('advent-share-card-share'))
+    await waitFor(() => expect(mockShare).toHaveBeenCalled())
     expect(mockShare).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'progress', text: 'Открыто 12 из 24 дверец моего адвент-календаря путешественника на MeTravel' }),
     )

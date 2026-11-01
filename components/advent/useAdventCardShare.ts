@@ -1,9 +1,23 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Platform } from 'react-native'
 
 import { sendAnalyticsEvent } from '@/utils/analytics'
-import { downloadAdventCard, shareAdventCard, type AdventShareKind } from '@/utils/advent/adventShare'
-import { renderAdventCardPng, type AdventCardSpec } from '@/utils/advent/adventShareImage'
+import type { AdventShareKind } from '@/utils/advent/adventShare'
+import type { AdventCardSpec } from '@/utils/advent/adventShareImage'
+
+type AdventShareKit = typeof import('@/utils/advent/adventShareKit')
+
+let kitPromise: Promise<AdventShareKit> | null = null
+/** Один чанк на сессию; ошибку загрузки не кэшируем — следующее нажатие повторит. */
+const loadAdventShareKit = (): Promise<AdventShareKit> => {
+  if (!kitPromise) {
+    kitPromise = Promise.resolve(import('@/utils/advent/adventShareKit')).catch((error: unknown) => {
+      kitPromise = null
+      throw error
+    })
+  }
+  return kitPromise
+}
 
 export type AdventCardShareStatus = 'idle' | 'busy' | 'copied' | 'failed'
 
@@ -22,7 +36,22 @@ export function useAdventCardShare(params: {
   const { kind, year, filename, buildSpec, shareTitle, shareText } = params
   const [status, setStatus] = useState<AdventCardShareStatus>('idle')
   const busyRef = useRef(false)
+  const kitRef = useRef<AdventShareKit | null>(null)
   const canDownload = Platform.OS === 'web'
+
+  // Предзагрузка при показе карточки: к нажатию модуль уже есть, и до
+  // `navigator.share` не встаёт `await` — iOS Safari иначе теряет жест.
+  useEffect(() => {
+    let alive = true
+    loadAdventShareKit()
+      .then((kit) => {
+        if (alive) kitRef.current = kit
+      })
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [])
 
   const run = useCallback(
     async (action: () => Promise<AdventCardShareStatus>) => {
@@ -43,9 +72,10 @@ export function useAdventCardShare(params: {
   const share = useCallback(
     () =>
       run(async () => {
-        // Без `await` до шеринга: жест пользователя должен дожить до `navigator.share`.
-        const image = Platform.OS === 'web' ? renderAdventCardPng(buildSpec()) : null
-        const result = await shareAdventCard({ title: shareTitle, text: shareText, year, kind, image, filename })
+        // Без `await` до шеринга, если модуль уже загружен: жест должен дожить до `navigator.share`.
+        const kit = kitRef.current ?? (await loadAdventShareKit())
+        const image = Platform.OS === 'web' ? kit.renderAdventCardPng(buildSpec()) : null
+        const result = await kit.shareAdventCard({ title: shareTitle, text: shareText, year, kind, image, filename })
         sendAnalyticsEvent('Advent_Share', { kind, result, withImage: !!image })
         if (result === 'copied') return 'copied'
         if (result === 'failed') return 'failed'
@@ -57,8 +87,9 @@ export function useAdventCardShare(params: {
   const download = useCallback(
     () =>
       run(async () => {
-        const image = renderAdventCardPng(buildSpec())
-        const ok = !!image && downloadAdventCard(image, filename)
+        const kit = kitRef.current ?? (await loadAdventShareKit())
+        const image = kit.renderAdventCardPng(buildSpec())
+        const ok = !!image && kit.downloadAdventCard(image, filename)
         sendAnalyticsEvent('Advent_Download', { kind, ok })
         return ok ? 'idle' : 'failed'
       }),

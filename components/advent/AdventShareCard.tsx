@@ -7,7 +7,6 @@ import { ADVENT_MAIN_DOORS } from '@/constants/advent'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { formatInteger } from '@/i18n/format'
 import { translate as i18nT } from '@/i18n'
-import { adventFooterUrl } from '@/utils/advent/adventShare'
 import type { AdventCardSpec } from '@/utils/advent/adventShareImage'
 import AdventShareActions from './AdventShareActions'
 import { useAdventCardShare } from './useAdventCardShare'
@@ -31,7 +30,6 @@ function AdventShareCard({ openedCount, streak, year }: Props) {
       hero: `${opened}/${total}`,
       subtitle: streakText,
       stats: [],
-      footer: adventFooterUrl(),
     }),
     [opened, total, streakText],
   )

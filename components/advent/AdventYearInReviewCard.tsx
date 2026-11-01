@@ -12,7 +12,6 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { formatInteger } from '@/i18n/format'
 import { translate as i18nT } from '@/i18n'
 import type { AdventCardSpec, AdventCardStat } from '@/utils/advent/adventShareImage'
-import { adventFooterUrl } from '@/utils/advent/adventShare'
 import AdventShareActions from './AdventShareActions'
 import { useAdventCardShare } from './useAdventCardShare'
 
@@ -75,7 +74,6 @@ function AdventYearInReviewCard({ year }: Props) {
       title,
       subtitle: data?.countries.names.slice(0, 4).join(' · ') || undefined,
       stats: stats.map(({ value, label }) => ({ value, label })),
-      footer: adventFooterUrl(),
     }),
     [title, data, stats],
   )

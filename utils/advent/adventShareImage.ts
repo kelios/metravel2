@@ -7,6 +7,7 @@
 // соцсети и не зависит от темы того, кто её сохранил.
 
 import { getSeasonalThemePalette } from '@/constants/seasonalThemePalettes'
+import { adventFooterUrl } from '@/utils/advent/adventShare'
 
 export const ADVENT_CARD_WIDTH = 1080
 export const ADVENT_CARD_HEIGHT = 1350
@@ -21,7 +22,8 @@ export type AdventCardSpec = {
   hero?: string
   subtitle?: string
   stats: AdventCardStat[]
-  footer: string
+  /** Подпись внизу; по умолчанию адрес `/advent` без протокола. */
+  footer?: string
 }
 
 const FONT = '"Helvetica Neue", Arial, sans-serif'
@@ -157,7 +159,7 @@ export const drawAdventCard = (canvas: HTMLCanvasElement, spec: AdventCardSpec):
   ctx.fillStyle = gold
   ctx.font = `700 38px ${FONT}`
   ctx.textBaseline = 'bottom'
-  ctx.fillText(spec.footer, pad, H - pad + 20)
+  ctx.fillText(spec.footer ?? adventFooterUrl(), pad, H - pad + 20)
   return true
 }
 

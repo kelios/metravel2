@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 
@@ -9,7 +9,6 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { ADVENT_ROUTE } from '@/constants/advent'
 import { useAdventCampaign, type AdventDoorView } from '@/hooks/useAdventCampaign'
 import { useAdventCampaignQuery, useAdventServerSync } from '@/hooks/useAdventApi'
-import BadgeUnlockToast from '@/components/achievements/BadgeUnlockToast'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
@@ -21,6 +20,10 @@ import AdventHeader from './AdventHeader'
 import AdventGrid from './AdventGrid'
 import AdventDoorSheet from './AdventDoorSheet'
 import AdventShareCard from './AdventShareCard'
+
+// Отдельным чанком: тост тянет весь контур значков, а статический импорт
+// перекраивал общие чанки сайта (бюджет начальных запросов `/search`).
+const BadgeUnlockToast = lazy(() => import('@/components/achievements/BadgeUnlockToast'))
 
 /** Экран `/advent`: 27 дверец, прогресс и серия, лист дверцы (#2861). */
 export default function AdventScreen() {
@@ -118,7 +121,11 @@ export default function AdventScreen() {
         onCompleteTask={handleCompleteTask}
       />
       {/* Значки адвента выдаёт сервер после синхронизации (#2864) — тост как в квестах. */}
-      <BadgeUnlockToast enabled={isAuthenticated} />
+      {isAuthenticated ? (
+        <Suspense fallback={null}>
+          <BadgeUnlockToast enabled />
+        </Suspense>
+      ) : null}
     </View>
   )
 }

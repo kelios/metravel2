@@ -121,6 +121,7 @@ export const BLOCK_EXEMPT_ROOTS: Readonly<Record<string, string>> = {
   'quest-cities': 'редакционный справочник городов для поиска квестов; пользовательского контента и id авторов нет',
   'quests-near-location': 'квесты редакционные',
   'quest-progress': 'своё прохождение',
+  advent: 'адвент-календарь (#2867, #2868): публичный конфиг кампании и свой прогресс и итоги года; чужого контента нет',
   articleRating: 'своя оценка',
   placeRating: 'своя оценка места',
   strava: 'свои данные Strava',
