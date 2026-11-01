@@ -375,7 +375,7 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
 
             await fireEvent.press(screen.getByText('Добавить точку вручную'));
 
-            const fileInputs = screen.root.findAll((node: any) => node.type === 'input');
+            const fileInputs = screen.container.queryAll(node => node.type === 'input');
             const fileInput = fileInputs.find((node: any) => node?.props?.type === 'file');
 
             expect(fileInput).toBeTruthy();
@@ -432,7 +432,7 @@ describe('TravelWizardStepRoute (Шаг 2)', () => {
             );
 
             await fireEvent.press(screen.getByText('Добавить точку вручную'));
-            const fileInputs = screen.root.findAll((node: any) => node.type === 'input');
+            const fileInputs = screen.container.queryAll(node => node.type === 'input');
             const fileInput = fileInputs.find((node: any) => node?.props?.type === 'file');
             expect(fileInput).toBeTruthy();
 
