@@ -275,6 +275,10 @@ const QUESTS = [
     { questId: 'alanya-red-tower', dir: 'alanyaRedTower', finaleId: 292 },
     { questId: 'goreme-fairy-chimneys', dir: 'goremeFairyChimneys', finaleId: 293 },
     { questId: 'bodrum-knights-of-halicarnassus', dir: 'bodrumKnightsOfHalicarnassus', finaleId: 294 },
+    { questId: 'stankovo-czapski-skarbczyk', dir: 'stankovoCzapskiSkarbczyk', finaleId: 296 },
+    { questId: 'orsha-korotkevich-collegium', dir: 'orshaKorotkevichCollegium', finaleId: 297 },
+    { questId: 'kobrin-suvorov-park', dir: 'kobrinSuvorovPark', finaleId: 298 },
+    { questId: 'slonim-oginski-canal', dir: 'slonimOginskiCanal', finaleId: 299 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)

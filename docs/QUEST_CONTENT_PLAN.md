@@ -392,7 +392,7 @@ TR/DE/CY/BE 4, GE/ES/MD/DK/UZ 3, остальные 1–2). Открытых к�
 |---|---|---|---|
 | FRONT | коды стран AE, EG, ME, GB, IE, IS, MT, MA, MX, CU, ID в `COUNTRY_NAME_KEYS` + ключи RU/BE/UK/PL/EN | #2869 | todo |
 | E1 Турция | Алания (`alanya-red-tower`), Измир (`izmir-kemeralti-clock`), Гёреме roadtrip (`goreme-fairy-chimneys`), Бодрум (`bodrum-knights-of-halicarnassus`; заменил Сиде — у Сиде автор насчитал 5 якорей, см. `.codex-temp/quests-plan/side/research.md`) | #2870 | на проде 01.11.2026: квесты 294 `izmir-kemeralti-clock` (город 206), 295 `alanya-red-tower` (207), 296 `goreme-fairy-chimneys` (208), 297 `bodrum-knights-of-halicarnassus` (209); обложки — по PROMPT.md, финале-видео после обложек |
-| E6 Беларусь | Орша (`orsha-korotkevich-collegium`), Слоним (`slonim-oginski-canal`), Кобрин (`kobrin-suvorov-park`), Станьково (`stankovo-czapski-skarbczyk`) | #2871 | todo |
+| E6 Беларусь | Орша (`orsha-korotkevich-collegium`), Слоним (`slonim-oginski-canal`), Кобрин (`kobrin-suvorov-park`), Станьково (`stankovo-czapski-skarbczyk`) | #2871 | на проде 01.11.2026: квесты 299 `stankovo-czapski-skarbczyk` (город 210), 300 `orsha-korotkevich-collegium` (211), 301 `kobrin-suvorov-park` (212), 302 `slonim-oginski-canal` (213); обложки — по PROMPT.md, финале-видео после обложек |
 | E5 Россия | Сочи (`sochi-prometheus-riviera`), Суздаль (`suzdal-kremlin-bells`), Пятигорск (`pyatigorsk-lermontov-proval`), Смоленск (`smolensk-fortress-key`) | #2872 | todo |
 | E4 Кавказ и Ташкент | Мцхета (`mtskheta-svetitskhoveli`), Сигнахи (`sighnaghi-pirosmani-roses`), Гюмри (`gyumri-kumayri-black-fortress`), Ташкент (`tashkent-chorsu-hast-imam`) | #2873 | todo |
 | E2 новые страны | Дубай (`dubai-al-fahidi-creek`), Каир (`cairo-khan-el-khalili`), Котор (`kotor-cats-and-walls`), Будва (`budva-ballerina-old-town`) | #2874 | blocked_by #2869 |
@@ -487,6 +487,18 @@ QUEST_DEMAND_LOG.md 2026-07-18)
   прохождении: высота маскаронов в лоджии, забор у дома Шахворостова (обещали снять
   осенью 2026), рейтинг «Додо Пицца» на привале. Обложка — только PROMPT.md,
   переводы be/uk/pl/en не делались (как у E1).
+- 2026-11-01 (пакет E6 «Беларусь», #2871): на проде квесты 299 `stankovo-czapski-skarbczyk`
+  (Станьково, город 210, 9 точек, 2,1 км, 7 проверяемых — по сигналу GSC «станьково что
+  посмотреть»), 300 `orsha-korotkevich-collegium` (Орша, 211, 9 точек, 2,7 км, 6
+  проверяемых), 301 `kobrin-suvorov-park` (Кобрин, 212, 10 точек, 3,3 км, 6 проверяемых),
+  302 `slonim-oginski-canal` (Слоним, 213, 11 точек, 1,8 км, 6 проверяемых). Бриф
+  `.codex-temp/quests-plan/brief-e6.md` с правилом источников РБ и зимними
+  ограничениями; `scan-content-sources` 0 попаданий, `quest:gates` 20/20 и geocheck 0 FAIL
+  у всех. Ревью оркестратора: пять подсказок-определений переписаны в «куда смотреть»
+  (Кобрин 2/7/8/9, Слоним 3). Сверить при первом прохождении: бак на водонапорной башне
+  Станьково (ржавый, может быть снят) и леса на скарбчике (реставрация запланирована на
+  2027); доска во дворе Спасского монастыря Кобрина (доступ во двор не гарантирован); забор
+  у синагоги Слонима (реставрация); знак «Гвардия» на кубе мемориала «Катюша» (одно фото).
 - 2026-11-01 (пакет E1 «Турция», #2870): на проде квесты 294 `izmir-kemeralti-clock`
   (Измир, город 206, 10 точек, 1,4 км, 6 проверяемых), 295 `alanya-red-tower` (Алания,
   207, 9 точек, 1,7 км, 6 проверяемых), 296 `goreme-fairy-chimneys` (Гёреме, 208,
