@@ -13,6 +13,11 @@ const PROFILES = [
     name: 'mobile 390x844',
     options: {
       viewport: { width: 390, height: 844 },
+      // #2923: the `chromium` project inherits `Desktop Chrome` with a 1920×1080
+      // `screen`; a phone with a desktop screen made the HTML parser fetch the
+      // hero's desktop `<img src>` (1280) before selecting the mobile `<source>`
+      // and cancel it (ERR_ABORTED). A real iPhone's screen is its viewport.
+      screen: { width: 390, height: 844 },
       isMobile: true,
       hasTouch: true,
       deviceScaleFactor: 3,
