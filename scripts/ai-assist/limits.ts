@@ -9,10 +9,10 @@
  * `REDIS_URL` и при его ошибке — память процесса: лимит тогда живёт до рестарта,
  * но ассистент не падает.
  */
+import { AI_ASK_DAY_TIME_ZONE, secondsToDayEnd } from '../../api/aiAssist/policy.ts'
 import type { RedisClient } from './redis.ts'
 
-export const DEFAULT_DAY_TIME_ZONE = 'Europe/Minsk'
-const SECONDS_PER_DAY = 86_400
+export const DEFAULT_DAY_TIME_ZONE = AI_ASK_DAY_TIME_ZONE
 /** Запас TTL ключа после полуночи: счётчик дня не должен исчезнуть раньше, чем сменится ключ дня. */
 const KEY_TTL_MARGIN_SEC = 60
 const MEMORY_SWEEP_SIZE = 10_000
@@ -48,10 +48,9 @@ export function createDayClock(timeZone: string = DEFAULT_DAY_TIME_ZONE): DayClo
       const p = parts(now)
       return `${p.year}-${p.month}-${p.day}`
     },
+    // Тот же расчёт, что у экрана (#2884): срок «до полуночи» клиент и сервер считают одним кодом.
     secondsToMidnight(now = new Date()) {
-      const p = parts(now)
-      const passed = Number(p.hour) * 3600 + Number(p.minute) * 60 + Number(p.second)
-      return Math.max(1, SECONDS_PER_DAY - passed)
+      return secondsToDayEnd(now, timeZone)
     },
   }
 }

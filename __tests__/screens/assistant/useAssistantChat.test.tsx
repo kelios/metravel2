@@ -1,6 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native'
 
+import { AskError, type AskClient, type AskResult } from '@/api/aiAssist/askProvider'
 import { AiGeneratorError, type Generator } from '@/api/aiAssist/generator'
+import { secondsToDayEnd } from '@/api/aiAssist/policy'
 import { consumeQuestion, readOffTopicState, readRemainingQuestions, registerOffTopicStrike } from '@/api/aiAssist/limits'
 import { logDemand } from '@/api/aiAssist/demandLog'
 import { searchSiteMaterials } from '@/api/aiAssist/retrieval'
@@ -335,5 +337,261 @@ describe('useAssistantChat: уточнение в диалоге (#2719)', () =>
       'Какие квесты есть в Гродно? А там есть музеи?',
       'Какие квесты есть в Гродно? А там есть музеи?',
     ])
+  })
+})
+
+describe('useAssistantChat: провайдер ask — серверный /ai/ask (#2884)', () => {
+  type AskRequest = Parameters<AskClient['ask']>[0]
+  const doneEvent = (patch: Partial<AskResult['done']> = {}): AskResult['done'] => ({
+    status: 'done',
+    reason: null,
+    strikes: null,
+    strikesToBlock: null,
+    removedLinks: 0,
+    usage: null,
+    remaining: null,
+    ...patch,
+  })
+  /** Фальшивая служба: отдаёт источники, затем накопленный текст кусками, затем done. */
+  const scriptedClient = (script: (request: AskRequest) => { sources?: AiSource[]; remaining?: number; texts?: string[]; done: AskResult['done'] }) => {
+    const ask = jest.fn(async (request: AskRequest): Promise<AskResult> => {
+      const step = script(request)
+      const sources = step.sources ?? []
+      request.onSources?.({ sources, degraded: false, remaining: step.remaining ?? null })
+      let text = ''
+      for (const piece of step.texts ?? []) {
+        text = piece
+        request.onText?.(text)
+      }
+      return { sources, text, done: step.done }
+    })
+    return { ask, client: { ask } as AskClient }
+  }
+  const failingClient = (error: Error): AskClient => ({
+    ask: async () => {
+      throw error
+    },
+  })
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  it('один вызов службы с вопросом, локалью и историей; подбор, модель, лимит и журнал на клиенте не трогаются', async () => {
+    const { ask, client } = scriptedClient(() => ({
+      sources: [source],
+      remaining: 19,
+      texts: ['Поезжайте ', 'Поезжайте под Гродно: https://metravel.by/travels/vyhodnye-pod-grodno'],
+      done: doneEvent({ removedLinks: 1, remaining: 19, usage: { prompt_tokens: 100, completion_tokens: 20, ttft_ms: 50, tokens_per_s: 40 } }),
+    }))
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'pl', askClient: client }))
+    expect(result.current.remaining).toBeNull()
+    expect(result.current.generatorConfigured).toBe(true)
+
+    await act(async () => {
+      await result.current.ask(' Jakie questy są w  Grodnie? ')
+    })
+
+    expect(ask).toHaveBeenCalledTimes(1)
+    expect(ask.mock.calls[0][0]).toMatchObject({ question: 'Jakie questy są w Grodnie?', locale: 'pl', history: [] })
+    expect(result.current.turns[0]).toMatchObject({
+      status: 'done',
+      sources: [source],
+      answer: 'Поезжайте под Гродно: https://metravel.by/travels/vyhodnye-pod-grodno',
+      removedLinks: 1,
+      usage: { completion_tokens: 20 },
+    })
+    expect(result.current.remaining).toBe(19)
+    expect(mockedSearch).not.toHaveBeenCalled()
+    expect(mockedConsume).not.toHaveBeenCalled()
+    expect(mockedRemaining).not.toHaveBeenCalled()
+    expect(mockedOffTopicState).not.toHaveBeenCalled()
+    expect(mockedLogDemand).not.toHaveBeenCalled()
+
+    // Уточнение: истории отдаются завершённые пары, опору сервер берёт из неё сам.
+    await act(async () => {
+      await result.current.ask('А какой z nich dla dzieci?')
+    })
+    expect(ask.mock.calls[1][0].history).toEqual([
+      { role: 'user', text: 'Jakie questy są w Grodnie?' },
+      { role: 'assistant', text: 'Поезжайте под Гродно: https://metravel.by/travels/vyhodnye-pod-grodno' },
+    ])
+  })
+
+  it('вопрос не по теме: предупреждение с номером от сервера; отказ модели — без номера; нет карточек — no_sources', async () => {
+    const { client } = scriptedClient(({ question }) =>
+      question === 'каша'
+        ? { remaining: 20, done: doneEvent({ status: 'off_topic', reason: 'offtopic_warning', strikes: 2, strikesToBlock: 3 }) }
+        : question === 'refusal'
+          ? { sources: [source], remaining: 19, texts: ['Я помогаю только'], done: doneEvent({ status: 'off_topic', reason: 'model_refusal' }) }
+          : { remaining: 18, done: doneEvent({ status: 'no_sources' }) },
+    )
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: client }))
+    for (const question of ['каша', 'refusal', 'Исландия зимой']) {
+      await act(async () => {
+        await result.current.ask(question)
+      })
+    }
+    expect(result.current.turns.map((turn) => [turn.status, turn.offTopicStrikes, turn.answer, turn.sources.length])).toEqual([
+      ['off_topic', 2, '', 0],
+      ['off_topic', null, '', 0],
+      ['no_sources', null, '', 0],
+    ])
+    expect(result.current.offTopicBlocked).toBe(false)
+    expect(result.current.remaining).toBe(18)
+    expect(mockedStrike).not.toHaveBeenCalled()
+  })
+
+  it('429 offtopic_blocked: блок до полуночи с сервера — ход с подписью блока, следующий вопрос не уходит в сеть', async () => {
+    const ask = jest.fn(async () => {
+      throw new AskError('offtopic_blocked', 'blocked', { status: 429, retryAfterSec: 3600, strikes: 3 })
+    })
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: { ask } }))
+    await act(async () => {
+      await result.current.ask('рецепт борща')
+    })
+    expect(result.current.turns[0]).toMatchObject({ status: 'off_topic', offTopicStrikes: 3 })
+    expect(result.current.offTopicBlocked).toBe(true)
+
+    await act(async () => {
+      await result.current.ask('Куда поехать?')
+    })
+    expect(ask).toHaveBeenCalledTimes(1)
+    expect(result.current.inputError).toBe('offTopicBlocked')
+    expect(result.current.turns).toHaveLength(1)
+  })
+
+  it('429 limit: вопрос снимается с ленты, счётчик — ноль, подпись лимита; повтор не уходит в сеть', async () => {
+    const ask = jest.fn(async () => {
+      throw new AskError('limit', 'limit', { status: 429, retryAfterSec: 3600 })
+    })
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: { ask } }))
+    await act(async () => {
+      await result.current.ask('Куда поехать?')
+    })
+    expect(result.current.turns).toHaveLength(0)
+    expect(result.current.remaining).toBe(0)
+    expect(result.current.inputError).toBe('limit')
+    await act(async () => {
+      await result.current.ask('Куда поехать?')
+    })
+    expect(ask).toHaveBeenCalledTimes(1)
+  })
+
+  it('лимит и блок с сервера держатся до Retry-After, remaining=0 из ответа — до конца дня сервера; затем вопрос снова уходит на сервер', async () => {
+    jest.useFakeTimers()
+    try {
+      const ask = jest
+        .fn<Promise<AskResult>, [AskRequest]>()
+        .mockResolvedValueOnce({ sources: [source], text: 'Последний', done: doneEvent({ remaining: 0 }) })
+        .mockRejectedValueOnce(new AskError('limit', 'limit', { status: 429, retryAfterSec: 60 }))
+        .mockRejectedValueOnce(new AskError('offtopic_blocked', 'blocked', { status: 429, retryAfterSec: 30, strikes: 3 }))
+        .mockResolvedValue({ sources: [source], text: 'Ответ', done: doneEvent({ remaining: 19 }) })
+      const { result, unmount } = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: { ask } }))
+
+      // Двадцатый вопрос дня: сервер отдал remaining 0 без Retry-After — срок до конца дня сервера.
+      await act(async () => {
+        await result.current.ask('Куда поехать?')
+      })
+      expect(result.current.remaining).toBe(0)
+      await act(async () => {
+        await result.current.ask('Куда поехать?')
+      })
+      expect(ask).toHaveBeenCalledTimes(1)
+      await act(async () => {
+        jest.advanceTimersByTime(secondsToDayEnd() * 1000 + 1000)
+      })
+      expect(result.current.remaining).toBeNull()
+
+      // 429 limit: срок из Retry-After.
+      await act(async () => {
+        await result.current.ask('Куда поехать?')
+      })
+      expect(ask).toHaveBeenCalledTimes(2)
+      expect(result.current.inputError).toBe('limit')
+      expect(result.current.remaining).toBe(0)
+      await act(async () => {
+        jest.advanceTimersByTime(61_000)
+      })
+      expect(result.current.remaining).toBeNull()
+      expect(result.current.inputError).toBeNull()
+
+      // 429 offtopic_blocked: блок до Retry-After, после — композер открыт и вопрос уходит на сервер.
+      await act(async () => {
+        await result.current.ask('рецепт борща')
+      })
+      expect(ask).toHaveBeenCalledTimes(3)
+      expect(result.current.offTopicBlocked).toBe(true)
+      await act(async () => {
+        await result.current.ask('Куда поехать?')
+      })
+      expect(ask).toHaveBeenCalledTimes(3)
+      expect(result.current.inputError).toBe('offTopicBlocked')
+      await act(async () => {
+        jest.advanceTimersByTime(31_000)
+      })
+      expect(result.current.offTopicBlocked).toBe(false)
+      expect(result.current.inputError).toBeNull()
+      await act(async () => {
+        await result.current.ask('Куда поехать?')
+      })
+      expect(ask).toHaveBeenCalledTimes(4)
+      expect(result.current.turns.at(-1)).toMatchObject({ status: 'done', answer: 'Ответ' })
+      expect(result.current.remaining).toBe(19)
+      unmount()
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('служба недоступна → unavailable без журнала на клиенте; retry повторяет вопрос; 429 busy → busy с Retry-After', async () => {
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: failingClient(new AskError('unavailable', 'down', { status: 503 })) }))
+    await act(async () => {
+      await result.current.ask('Куда поехать?')
+    })
+    expect(result.current.turns[0].status).toBe('unavailable')
+    expect(result.current.remaining).toBeNull()
+    expect(mockedLogDemand).not.toHaveBeenCalled()
+    const turnId = result.current.turns[0].id
+    await act(async () => {
+      await result.current.retry(turnId)
+    })
+    expect(result.current.turns).toHaveLength(1)
+    expect(result.current.turns[0].id).not.toBe(turnId)
+    expect(result.current.turns[0].status).toBe('unavailable')
+
+    const busy = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: failingClient(new AskError('busy', 'busy', { status: 429, retryAfterSec: 15 })) }))
+    await act(async () => {
+      await busy.result.current.ask('q')
+    })
+    expect(busy.result.current.turns[0]).toMatchObject({ status: 'busy', retryAfterSec: 15 })
+
+    // Обрыв посреди ответа: показанное остаётся, статус — «недоступен» с кнопкой «Повторить».
+    const broken = await renderHook(() =>
+      useAssistantChat({ locale: 'ru', askClient: scriptedClient(() => ({ sources: [source], remaining: 19, texts: ['обрыв'], done: doneEvent({ status: 'unavailable' }) })).client }),
+    )
+    await act(async () => {
+      await broken.result.current.ask('q')
+    })
+    expect(broken.result.current.turns[0]).toMatchObject({ status: 'unavailable', answer: 'обрыв', sources: [source] })
+  })
+
+  it('«Остановить» отменяет запрос службы → aborted', async () => {
+    let stop: (() => void) | null = null
+    const client: AskClient = {
+      ask: ({ signal }) =>
+        new Promise((_resolve, reject) => {
+          signal?.addEventListener('abort', () => reject(new AskError('aborted', 'aborted')))
+          // Посетитель нажимает «Остановить», пока служба ещё отвечает.
+          setTimeout(() => stop?.(), 0)
+        }),
+    }
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: client }))
+    stop = () => result.current.stop()
+    await act(async () => {
+      await result.current.ask('Куда поехать?')
+    })
+    expect(result.current.turns[0].status).toBe('aborted')
+    expect(result.current.busy).toBe(false)
   })
 })

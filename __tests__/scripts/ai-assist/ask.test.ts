@@ -6,6 +6,7 @@ import http from 'http'
 import type { AddressInfo } from 'net'
 import { join } from 'path'
 
+import { ASK_HISTORY_TEXT_LIMIT } from '@/api/aiAssist/askProvider'
 import { AiGeneratorError, type GenerateRequest, type Generator } from '@/api/aiAssist/generator'
 import { OFFTOPIC_REPLY_RU } from '@/api/aiAssist/prompt'
 import { AI_ASK_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK } from '@/api/aiAssist/policy'
@@ -171,7 +172,7 @@ function fakeGenerator(script: (request: GenerateRequest) => Promise<string> | s
   }
 }
 
-function makeServer(overrides: { generator?: Generator | null; dailyLimit?: number; now?: () => Date; queueTimeoutMs?: number } = {}) {
+function makeServer(overrides: { generator?: Generator | null; dailyLimit?: number; now?: () => Date; queueTimeoutMs?: number; embedQuery?: typeof fakeEmbedQuery } = {}) {
   const logDir = makeTempDir('ai-demand-')
   const demandPath = join(logDir, 'nested', 'ai-demand.jsonl')
   const limits = new AskLimits({
@@ -184,7 +185,7 @@ function makeServer(overrides: { generator?: Generator | null; dailyLimit?: numb
   const server = createApp({
     index: loadFixtureIndex(),
     modelKey: MODEL,
-    embedQuery: fakeEmbedQuery,
+    embedQuery: overrides.embedQuery ?? fakeEmbedQuery,
     lexical: async () => [],
     cache: new ResponseCache({ capacity: 10, ttlSeconds: 60 }),
     queueTimeoutMs: 200,
@@ -290,6 +291,40 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
         event: 'done',
         data: { status: 'done', removed_links: 1, usage: { prompt_tokens: 100, completion_tokens: 20, ttft_ms: 50, tokens_per_s: 40 }, remaining: AI_ASK_DAILY_LIMIT - 1 },
       })
+    } finally {
+      await close(server)
+    }
+  })
+
+  it('опора уточнений (#2719/#2884): уточнение ищется вместе с последним самостоятельным вопросом истории, модель получает исходный вопрос', async () => {
+    const embedded: string[] = []
+    const prompts: string[] = []
+    const generator = fakeGenerator((request) => {
+      prompts.push(String(request.messages.at(-1)?.content ?? ''))
+      return 'Загляните в [Ярмарки Польши](https://metravel.by/travels/816)'
+    })
+    const { server } = makeServer({
+      generator,
+      embedQuery: async (q) => {
+        embedded.push(q)
+        return fakeEmbedQuery(q)
+      },
+    })
+    await listen(server)
+    try {
+      const history = [
+        { role: 'user', text: 'ярмарки краков' },
+        { role: 'assistant', text: 'Загляните в [Ярмарки Польши](https://metravel.by/travels/816)' },
+        { role: 'user', text: 'А какой из них подойдёт детям?' },
+        { role: 'assistant', text: 'Любой.' },
+      ]
+      const follow = await post(server, '/ai/ask', { q: 'А там есть музеи?', locale: 'ru', history })
+      expect(follow.status).toBe(200)
+      const own = await post(server, '/ai/ask', { q: 'А в Бресте что посмотреть?', locale: 'ru', history })
+      expect(own.status).toBe(200)
+      expect(embedded).toEqual(['ярмарки краков А там есть музеи?', 'А в Бресте что посмотреть?'])
+      expect(prompts[0]).toContain('Вопрос посетителя: А там есть музеи?')
+      expect(prompts[0]).not.toContain('Вопрос посетителя: ярмарки краков')
     } finally {
       await close(server)
     }
@@ -462,6 +497,11 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
       expect((await post(server, '/ai/ask', { q: '  ' })).json).toMatchObject({ error: 'bad_request' })
       expect((await post(server, '/ai/ask', { q: 'ярмарки', locale: 'de' })).status).toBe(400)
       expect((await post(server, '/ai/ask', { q: 'ярмарки', history: [{ role: 'system', text: 'x' }] })).json.detail).toMatch(/history/)
+      // Потолок истории совпадает с клиентским `ASK_HISTORY_TEXT_LIMIT`: клиент обрезает до него, сервер его принимает.
+      const atLimit = [{ role: 'assistant', text: 'а'.repeat(ASK_HISTORY_TEXT_LIMIT) }]
+      expect((await post(server, '/ai/ask', { q: 'ярмарки', history: atLimit })).status).not.toBe(400)
+      const overLimit = [{ role: 'assistant', text: 'а'.repeat(ASK_HISTORY_TEXT_LIMIT + 1) }]
+      expect((await post(server, '/ai/ask', { q: 'ярмарки', history: overLimit })).json.detail).toMatch(/history/)
       const { port } = server.address() as AddressInfo
       const status = await new Promise<number>((resolve) => http.get({ host: '127.0.0.1', port, path: '/ai/ask' }, (response) => resolve(response.statusCode ?? 0)))
       expect(status).toBe(405)

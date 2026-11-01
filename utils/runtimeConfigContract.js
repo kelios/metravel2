@@ -13,10 +13,14 @@ const MOCK_FLAG_NAMES = [
   'EXPO_PUBLIC_OSRM_MOCK',
 ]
 
-// #2460: ассистент сайта под фича-флагом. Флаг требует адреса llama-server;
-// локальный адрес модели в production-сборке — ошибка конфигурации.
+// #2460: ассистент сайта под фича-флагом. Провайдер (#2884): `ask` (по умолчанию) —
+// серверный `/ai/ask` по адресу службы metravel-assist (как у смыслового подбора);
+// `llamacpp` — прямой `llama-server`, требует адреса модели; локальный адрес в
+// production-сборке — ошибка конфигурации.
 const AI_ASSISTANT_FLAG_NAME = 'EXPO_PUBLIC_AI_ASSISTANT'
 const AI_ASSISTANT_URL_NAME = 'EXPO_PUBLIC_AI_ASSISTANT_URL'
+const AI_ASSISTANT_PROVIDER_NAME = 'EXPO_PUBLIC_AI_ASSISTANT_PROVIDER'
+const AI_ASSISTANT_PROVIDERS = ['ask', 'llamacpp']
 const AI_PICKS_FLAG_NAME = 'EXPO_PUBLIC_AI_PICKS'
 const AI_PICKS_URL_NAME = 'EXPO_PUBLIC_AI_PICKS_URL'
 
@@ -46,46 +50,8 @@ const isLikelySelfProxyApiUrl = (parsed) => {
 
 const isTruthyFlag = (value) => ['1', 'true'].includes(String(value || '').trim().toLowerCase())
 
-const getAiAssistantDiagnosticsCore = (env = process.env, { isProduction = false } = {}) => {
-  if (!isTruthyFlag(env[AI_ASSISTANT_FLAG_NAME])) return []
-  const diagnostics = []
-  const rawUrl = String(env[AI_ASSISTANT_URL_NAME] || '').trim()
-  let parsed = null
-  try {
-    parsed = rawUrl ? new URL(rawUrl) : null
-  } catch {
-    parsed = null
-  }
-  if (!parsed || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')) {
-    diagnostics.push({
-      code: 'AI_ASSISTANT_URL_INVALID',
-      severity: 'error',
-      message: `${AI_ASSISTANT_FLAG_NAME}=1 requires ${AI_ASSISTANT_URL_NAME} with an absolute http/https URL of the llama-server.`,
-    })
-  } else if (isProduction && isLocalHost(parsed.hostname)) {
-    diagnostics.push({
-      code: 'AI_ASSISTANT_LOCAL_URL_IN_PRODUCTION',
-      severity: 'error',
-      message: `${AI_ASSISTANT_URL_NAME} points to a local host in a production build; the site assistant would call a server that does not exist for visitors.`,
-    })
-  }
-  if (isProduction) {
-    diagnostics.push({
-      code: 'AI_ASSISTANT_ENABLED_IN_PRODUCTION',
-      severity: 'warning',
-      message: `${AI_ASSISTANT_FLAG_NAME}=1 in a production build: the site assistant is enabled (owner decision 18.10.2026 keeps it off until metravel-llm has a server).`,
-    })
-  }
-  return diagnostics
-}
-
-/**
- * Смысловой подбор (#2459): флаг без адреса допустим (same-origin `/ai/`), но
- * явный `EXPO_PUBLIC_AI_PICKS_URL` обязан быть абсолютным http(s)-адресом и не
- * может указывать на локальный хост в production-сборке.
- */
-const getAiPicksDiagnosticsCore = (env = process.env, { isProduction = false } = {}) => {
-  if (!isTruthyFlag(env[AI_PICKS_FLAG_NAME])) return []
+/** Явный `EXPO_PUBLIC_AI_PICKS_URL`: абсолютный http(s)-origin службы, не локальный в production. */
+const getAiServiceUrlDiagnosticsCore = (env = process.env, { isProduction = false, consumer = 'recommendation blocks' } = {}) => {
   const rawUrl = String(env[AI_PICKS_URL_NAME] || '').trim()
   if (!rawUrl) return []
   let parsed = null
@@ -105,10 +71,68 @@ const getAiPicksDiagnosticsCore = (env = process.env, { isProduction = false } =
     return [{
       code: 'AI_PICKS_LOCAL_URL_IN_PRODUCTION',
       severity: 'error',
-      message: `${AI_PICKS_URL_NAME} points to a local host in a production build; recommendation blocks would call a server that does not exist for visitors.`,
+      message: `${AI_PICKS_URL_NAME} points to a local host in a production build; ${consumer} would call a server that does not exist for visitors.`,
     }]
   }
   return []
+}
+
+const getAiAssistantDiagnosticsCore = (env = process.env, { isProduction = false } = {}) => {
+  if (!isTruthyFlag(env[AI_ASSISTANT_FLAG_NAME])) return []
+  const diagnostics = []
+  const rawProvider = String(env[AI_ASSISTANT_PROVIDER_NAME] || '').trim().toLowerCase()
+  if (rawProvider && !AI_ASSISTANT_PROVIDERS.includes(rawProvider)) {
+    diagnostics.push({
+      code: 'AI_ASSISTANT_PROVIDER_INVALID',
+      severity: 'error',
+      message: `${AI_ASSISTANT_PROVIDER_NAME} must be one of ${AI_ASSISTANT_PROVIDERS.join('|')} (empty means ask).`,
+    })
+  }
+  const provider = rawProvider === 'llamacpp' ? 'llamacpp' : 'ask'
+  if (provider === 'llamacpp') {
+    const rawUrl = String(env[AI_ASSISTANT_URL_NAME] || '').trim()
+    let parsed = null
+    try {
+      parsed = rawUrl ? new URL(rawUrl) : null
+    } catch {
+      parsed = null
+    }
+    if (!parsed || (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')) {
+      diagnostics.push({
+        code: 'AI_ASSISTANT_URL_INVALID',
+        severity: 'error',
+        message: `${AI_ASSISTANT_PROVIDER_NAME}=llamacpp requires ${AI_ASSISTANT_URL_NAME} with an absolute http/https URL of the llama-server.`,
+      })
+    } else if (isProduction && isLocalHost(parsed.hostname)) {
+      diagnostics.push({
+        code: 'AI_ASSISTANT_LOCAL_URL_IN_PRODUCTION',
+        severity: 'error',
+        message: `${AI_ASSISTANT_URL_NAME} points to a local host in a production build; the site assistant would call a server that does not exist for visitors.`,
+      })
+    }
+  } else if (!isTruthyFlag(env[AI_PICKS_FLAG_NAME])) {
+    // Адрес службы общий со смысловым подбором; при выключенных блоках подбора его
+    // проверяет ассистент, иначе та же диагностика пришла бы дважды.
+    diagnostics.push(...getAiServiceUrlDiagnosticsCore(env, { isProduction, consumer: 'the site assistant' }))
+  }
+  if (isProduction) {
+    diagnostics.push({
+      code: 'AI_ASSISTANT_ENABLED_IN_PRODUCTION',
+      severity: 'warning',
+      message: `${AI_ASSISTANT_FLAG_NAME}=1 in a production build: the site assistant is enabled (owner decision 18.10.2026 keeps it off until metravel-llm has a server).`,
+    })
+  }
+  return diagnostics
+}
+
+/**
+ * Смысловой подбор (#2459): флаг без адреса допустим (same-origin `/ai/`), но
+ * явный `EXPO_PUBLIC_AI_PICKS_URL` обязан быть абсолютным http(s)-адресом и не
+ * может указывать на локальный хост в production-сборке.
+ */
+const getAiPicksDiagnosticsCore = (env = process.env, { isProduction = false } = {}) => {
+  if (!isTruthyFlag(env[AI_PICKS_FLAG_NAME])) return []
+  return getAiServiceUrlDiagnosticsCore(env, { isProduction })
 }
 
 const isLocalApiEnabled = (env = process.env) =>
@@ -237,6 +261,7 @@ const getRuntimeConfigDiagnosticsCore = (env = process.env, options = {}) => {
 
 module.exports = {
   AI_ASSISTANT_FLAG_NAME,
+  AI_ASSISTANT_PROVIDER_NAME,
   AI_ASSISTANT_URL_NAME,
   AI_PICKS_FLAG_NAME,
   AI_PICKS_URL_NAME,
