@@ -51,7 +51,8 @@ test.describe('Мягкий старт первой точки квеста (#29
 
     // Точка засчитана, игрок на второй точке с прежней механикой.
     await expect(page.getByText(`Задания: 1 / ${quest.stepTotal}`)).toBeVisible({ timeout: 30_000 })
-    await expect(page.getByText('Точка 2', { exact: true })).toBeVisible()
+    // «Точка 2» есть и в заголовке карточки, и в навигации по маршруту — берём текущий пункт навигации.
+    await expect(page.getByRole('button', { name: /Точка 2 из 2, текущая/ })).toBeVisible()
     await expect(page.getByTestId('quest-step-soft-reveal-link')).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Пропустить шаг', exact: true })).toBeVisible()
   })

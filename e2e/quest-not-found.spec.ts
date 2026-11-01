@@ -58,12 +58,15 @@ const mockCatalog = async (page: Page) => {
 }
 
 test.describe('Неизвестный адрес раздела квестов (#2896)', () => {
-  test('@smoke /quests/<неизвестный slug> отвечает 404 и показывает экран «Такого квеста нет» с каталогом', async ({ page }) => {
+  // HTTP 404 документа — контракт прод-сервера (SSR + nginx), его держат `curl` и проба
+  // `NOT_FOUND_PROBE_PATHS` в `scripts/post-deploy-seo-check.js`. Локальный статический
+  // e2e-сервер отдаёт на этот адрес оболочку маршрута `[city]` с кодом 200, поэтому
+  // регрессионная спека проверяет терминальное состояние клиента, а не статус.
+  test('@smoke /quests/<неизвестный slug> показывает экран «Такого квеста нет» с каталогом', async ({ page }) => {
     await preacceptCookies(page)
     await mockCatalog(page)
 
-    const response = await page.goto('/quests/this-quest-does-not-exist-123', { waitUntil: 'domcontentloaded' })
-    expect(response?.status(), 'документ на неизвестный slug обязан быть 404').toBe(404)
+    await page.goto('/quests/this-quest-does-not-exist-123', { waitUntil: 'domcontentloaded' })
 
     const screen = page.getByTestId('quest-not-found')
     await expect(screen).toBeVisible({ timeout: 60_000 })
