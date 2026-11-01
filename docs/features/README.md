@@ -47,6 +47,9 @@
   места в форме точки маршрута (#1782)
 - [trips-packing-checklist-mock](./trips-packing-checklist-mock.md) — чеклист
   снаряжения в планировщике: есть / купить / взято
+- [ux-audit-2026-11-mocks](./ux-audit-2026-11-mocks.md) — макеты по UX-аудиту
+  01.11.2026: экран входа по намерению гостя, плашки hero, GPX/навигатор, первый
+  экран статьи на mobile, баннер установки, мягкий старт квеста (#2895–#2910)
 - [trips-end-date-mock](./trips-end-date-mock.md) — дата окончания planned trip
 - [trips-plan-route-tab-mock](./trips-plan-route-tab-mock.md) — вкладка
   «Маршрут» и шапка поездки на mobile и desktop: файл маршрута, статус

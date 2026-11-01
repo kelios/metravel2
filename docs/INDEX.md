@@ -195,6 +195,7 @@ Dated snapshots — использовать только с указанным 
 - `docs/SEO_AUDIT_2026-07-18.md` — snapshot 2026-07-18 (on-page зрелость: рычаги = индексация + off-site + title-redirects);
 - `docs/SEO_AUDIT_2026-07-27.md` — snapshot 2026-07-27 (P0: travel-URL отдают noindex-заглушку; индексация 291/306 закрыта; кластер «вторая страница»; 301-ремонт заголовков разблокирован);
 - `docs/SEO_AUDIT_2026-08-08.md` — snapshot 2026-08-08 (авария 26.07 закрыта, цель 90 дн. перевыполнена; SSG режет тело статьи на 9 000 симв.; две страницы 55.6/25.8 МБ из-за base64 в `media`; `stats:index` проверял 0 статей);
+- `docs/UX_AUDIT_2026-11-01.md` — UX-аудит сайта и приложения 01.11.2026: проход глазами пользователя, GA4/GSC-воронки за октябрь, Lighthouse mobile (главная 42, LCP 5,2 с), 15 карточек #2895–#2910 в спринте 27; макеты — `docs/features/ux-audit-2026-11-mocks.md`.
 - `docs/SEO_AUDIT_2026-09-13.md` — snapshot 2026-09-13 (индекс здоров 691/755, тревога по графику HTTPS ложная; спад авг→сен = сезон водных тем при держащихся позициях; структурное падение CTR 3.24%→2.61% год к году; страны квестов 1/18 в индексе).
 - `docs/SOCIAL_CONTENT_PACK_2026-07.md` — content pack по июльскому GSC snapshot.
 - `docs/INSTAGRAM_CONTENT_SPEC.md` — ТЗ владельца (10.10.2026) для контент-агентов Instagram @metravelby: недельная сетка, сезонность, работа со статьями, фото и люди, стиль, QA; роли `instagram-planner` → `instagram-researcher` → `instagram-creator` → `instagram-visual-qa`, оператор `instagram-editor`; раздел 25 — жёсткие правила владельца 04–06.10.2026.
