@@ -21,9 +21,9 @@
 
 - [x] 4.1 `PublishedBook.visualStyle`, уникальность country+style, старые JSON как акварель (One edition identity across visual styles).
 - [x] 4.2 Переключатель стиля в каталоге и на странице издания, i18n RU/BE/UK/PL/EN (Style choice on the site).
-- [ ] 4.3 Публикация ревизий (staging .codex-temp/books-photo/publication готов 01.11.2026), активация в catalog/manifest, copy-publication, SSR-оболочки новых slug — после коммита F1 #2808.
+- [x] 4.3 Публикация ревизий: активация в manifest/related + снимок релиза (f212856d6, 784bdef4c), copy-publication и SSR-оболочки новых slug — выкат cf073ae84 01.11.2026.
 
 ## 5. Проверка
 
-- [ ] 5.1 typecheck, целевые Jest, test:i18n, review-and-fix и code-review-gate.
-- [ ] 5.2 После выката: приёмка на проде mobile 390 → desktop 1440 по Task Contract #2854.
+- [x] 5.1 typecheck, целевые Jest, eslint (изолированный worktree), code-review-gate pass 01.11.2026.
+- [x] 5.2 Приёмка на проде 01.11.2026: mobile 390 → desktop 1440, байты/SHA, переключатель стиля, гидратация `?profile=`, предпросмотр, скачивание — #2854 done.
