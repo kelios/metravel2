@@ -415,6 +415,84 @@ describe('normal deploy Expo overlay byte budget', () => {
     }
   })
 
+  // The SSR publisher runs the helper twice over one fresh root: against the
+  // previous release and against the asset pointer (#2857). The second pass
+  // must stamp nothing the first pass carried: those chunks share inodes with
+  // the previous release, so a blanket touch collapsed every generation into
+  // the replaced release's and backdated nothing — 538 MB carried past both
+  // bounds on prod on 31.10.2026.
+  it('does not restamp carried chunks or the previous release on a second pass', () => {
+    const fixture = makeFixture()
+    const assets = path.join(fixture.root, 'assets')
+    const fresh = path.join(fixture.root, 'second')
+
+    try {
+      const old = writeGenerationFile(fixture.previous, 'js/web/old.js', 10, 5 * 86400)
+      const live = writeGenerationFile(fixture.previous, 'js/web/live.js', 10, 120)
+      const oldStamp = Math.floor(fs.statSync(old).mtimeMs / 1000)
+      const liveStamp = Math.floor(fs.statSync(live).mtimeMs / 1000)
+      writeGenerationFile(assets, 'js/web/asset-only.js', 10, 3 * 86400)
+      const own = writeFile(fresh, 'js/web/second.js', 'second release')
+      ageFile(own, 30)
+
+      runOverlay(fresh, fixture.previous, 14, 256)
+      runOverlay(fresh, assets, 14, 256)
+
+      const stamp = (file: string) => Math.floor(fs.statSync(file).mtimeMs / 1000)
+      expect(stamp(path.join(fresh, 'js/web/old.js'))).toBe(oldStamp)
+      expect(stamp(path.join(fresh, 'js/web/live.js'))).toBe(liveStamp)
+      expect(stamp(old)).toBe(oldStamp)
+      expect(stamp(live)).toBe(liveStamp)
+      // The payload itself is stamped at publish time, whatever its build mtime.
+      expect(Date.now() - fs.statSync(own).mtimeMs).toBeLessThan(60 * 1000)
+      expect(listFiles(fresh)).toEqual([
+        'js/web/asset-only.js',
+        'js/web/live.js',
+        'js/web/old.js',
+        'js/web/second.js',
+      ])
+
+      // The third deploy sees the true ages: only the replaced release stays
+      // inside a zero budget.
+      const third = path.join(fixture.root, 'third')
+      writeFile(third, 'js/web/third.js', 'third release')
+      runOverlay(third, fresh, 14, 0)
+      expect(listFiles(third)).toEqual(['js/web/second.js', 'js/web/third.js'])
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
+  // In steady state both passes of the SSR publisher read the same previous
+  // release (static/dist and assets-client point at it). The budget is spent
+  // per fresh root: the second pass must not carry what the first one dropped.
+  it('keeps one budget across two passes over the same previous release', () => {
+    const fixture = makeFixture()
+    const fresh = path.join(fixture.root, 'fresh-pass')
+
+    try {
+      writeGenerationFile(fixture.previous, 'js/web/replaced.js', 100, 60)
+      for (let generation = 1; generation <= 6; generation += 1) {
+        writeGenerationFile(fixture.previous, `js/web/gen-${generation}.js`, 1024, generation * 3600)
+      }
+      writeFile(fresh, 'js/web/fresh.js', 'fresh release')
+
+      const first = runOverlay(fresh, fixture.previous, 14, 2)
+      // 100 KiB of the replaced release + 1 MiB of gen-1 fit; gen-2 would exceed 2 MB.
+      expect(first).toContain('перенесено — поколений 2, файлов 2, 1 МБ')
+      const second = runOverlay(fresh, fixture.previous, 14, 2)
+      expect(second).toContain('перенесено — поколений 0, файлов 0, 0 МБ')
+      expect(second).toContain('ранее перенесено 1 МБ')
+      expect(listFiles(fresh)).toEqual([
+        'js/web/fresh.js',
+        'js/web/gen-1.js',
+        'js/web/replaced.js',
+      ])
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
   // The selection cannot run without perl. Carrying everything instead would
   // bring the unbounded growth back silently, so the helper stops the deploy.
   it('fails closed without perl', () => {

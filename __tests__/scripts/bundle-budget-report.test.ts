@@ -68,7 +68,7 @@ describe('exact bundle budget reports', () => {
       expect(report.toolchain).toMatchObject({ fingerprint: expect.stringMatching(/^[0-9a-f]{64}$/), versions: { node: process.versions.node } })
       const sizes = { raw: Buffer.byteLength(f.source), gzip: zlib.gzipSync(f.source).length, brotli: zlib.brotliCompressSync(f.source, { params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 } }).length }
       expect(report.measurements.named.entry).toEqual({ ...sizes, files: { 'entry-abcdef.js': sizes } })
-      expect(report.measurements.all).toEqual(sizes)
+      expect(report.measurements.all).toEqual({ ...sizes, files: 1 })
       expect(report.measurements.eager.status).toBe('complete')
       expect(report.measurements.eager.requests_by_route).toEqual({
         'index.html': { requests: 1, limit: 1, missing_files: [] },
@@ -115,6 +115,26 @@ describe('exact bundle budget reports', () => {
         expect(toKB(upper)).toBeLessThanOrEqual(limit)
         expect(toKB(upper + 1)).toBeGreaterThan(limit)
       }
+    } finally { removeDir(f.dir) }
+  })
+
+  it('fails the whole export on bytes and file count above the all-files row', () => {
+    const f = fixture()
+    try {
+      fs.writeFileSync(path.join(f.js, 'deferred-abcdef.js'), 'x'.repeat(2048))
+      f.budget.deferredChunks = ['deferred']
+      f.budget.total.maxRawKB = 1
+      ;(f.budget as Record<string, unknown>).all = { maxRawKB: 1, maxFiles: 1 }
+      f.saveBudget()
+      const result = f.run()
+      expect(result.status).toBe(1)
+      const report = JSON.parse(result.stdout).diagnostic_report
+      expect(report.measurements.all.files).toBe(2)
+      expect(report.measurements.all.raw).toBe(Buffer.byteLength(f.source) + 2048)
+      expect(report.breaches.map((breach: { label: string }) => breach.label)).toEqual(expect.arrayContaining(['ALL (raw)', 'ALL (files)']))
+      expect(report.breaches).toContainEqual({ label: 'ALL (files)', actual: 2, limit: 1, unit: 'count' })
+      expect(report.breaches.some((breach: { label: string }) => breach.label === 'TOTAL (raw)')).toBe(false)
+      expect(validateReport(report)).toBe(report)
     } finally { removeDir(f.dir) }
   })
 

@@ -7,6 +7,11 @@ const {execFileSync} = require('node:child_process');
 
 const BASE = 'https://metravel.by/travel-books/';
 const ROOT_BASE = '/travel-books/';
+// Publication assets are immutable by revision, so their mtime carries no
+// information. One fixed stamp lets the SSR publisher recognise them by size and
+// mtime and hard-link them from the shared store on prod instead of uploading
+// and storing 226 MB with every release (#2857, scripts/web-ssr-publication.sh).
+const PUBLICATION_MTIME = new Date('2024-01-01T00:00:00Z');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 // Only preview images (including their cover alias) may omit our origin.
@@ -164,6 +169,7 @@ async function copyPublication({root, buildDir, cacheDir, download = fetchAsset}
     if (firstCopy) await fs.link(firstCopy, destination);
     else {
       await fs.writeFile(destination, bytes, {flag: 'wx'});
+      await fs.utimes(destination, PUBLICATION_MTIME, PUBLICATION_MTIME);
       verifiedCopies.set(contentKey, destination);
     }
     total += bytes.length;
@@ -183,4 +189,4 @@ if (require.main === module) {
     .then(result => console.log(`Ready books: ${result.files} verified files, ${result.bytes} bytes`))
     .catch(error => { console.error(error.message); process.exitCode = 1; });
 }
-module.exports = {collectAssets, copyPublication, ensureDirectory, checkContent, writePublicationStagingMetadata, publicationAssetLocation};
+module.exports = {collectAssets, copyPublication, ensureDirectory, checkContent, writePublicationStagingMetadata, publicationAssetLocation, PUBLICATION_MTIME};

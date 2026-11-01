@@ -289,6 +289,10 @@ describe('bundle budget release contract', () => {
       expect(normalizedRequestBudget(updatedPin)).toEqual(normalizedRequestBudget(updatedEager))
       expect(updatedPin.maxRequestsByRoute['search.html']).toBe(27)
       expect(requireRecord(updatedBudget.total, 'updated bundle budget.total').maxRawKB).toBe(4)
+      // #2857: the whole-export row follows the build on --update like TOTAL does.
+      const updatedAll = requireRecord(updatedBudget.all, 'updated bundle budget.all')
+      expect(updatedAll.maxRawKB).toBeGreaterThanOrEqual(4)
+      expect(updatedAll.maxFiles).toBe(Object.keys(updatedBudget.chunks).length)
       expect(() => validateCommittedBudget(mutatedBudgetPath, updatedContractPath)).not.toThrow()
 
       const synchronizedConfig = fs.readFileSync(mutatedBudgetPath, 'utf8')

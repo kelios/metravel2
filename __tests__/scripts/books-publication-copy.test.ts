@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 
-const {collectAssets, copyPublication, ensureDirectory, writePublicationStagingMetadata} = require('../../scripts/books/copy-publication.cjs');
+const {collectAssets, copyPublication, ensureDirectory, writePublicationStagingMetadata, PUBLICATION_MTIME} = require('../../scripts/books/copy-publication.cjs');
 const digest = (bytes: Buffer | string) => createHash('sha256').update(bytes).digest('hex');
 const pdf = Buffer.from('%PDF-1.7 fixture');
 const webp = Buffer.from('RIFF0000WEBPfixture');
@@ -68,6 +68,15 @@ describe('ready-book publication build boundary', () => {
     download.mockClear();
     await copyPublication({root, buildDir, cacheDir, download});
     expect(download).not.toHaveBeenCalled();
+  });
+
+  // The SSR publisher hard-links unchanged books from the shared store on prod
+  // by size and mtime (#2857): a build-time mtime would re-upload every file.
+  it('stamps immutable publication files with the fixed publication mtime', async () => {
+    await copyPublication({root, buildDir, cacheDir, download: async () => pdf});
+    const copied = await fs.stat(path.join(buildDir, 'travel-books/book/r1/read-body.pdf'));
+    expect(copied.mtime.toISOString()).toBe(PUBLICATION_MTIME.toISOString());
+    expect(PUBLICATION_MTIME.getTime()).toBeLessThan(Date.now() - 365 * 24 * 3600 * 1000);
   });
 
   it('shares verified identical bytes across revisions inside the build while isolating the cache',async()=>{

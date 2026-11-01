@@ -49,6 +49,10 @@
     "maxRawKB": 12015.3,
     "maxGzipKB": 3450
   },
+  "all": {
+    "maxRawKB": 14800,
+    "maxFiles": 250
+  },
   "chunks": {
     "entry": {
       "maxRawKB": 1026,

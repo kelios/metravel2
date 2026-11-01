@@ -496,6 +496,10 @@ if (UPDATE) {
       maxGzipKB: toKB(allGzip - deferredGzip),
       maxBrotliKB: toKB(allBrotli - deferredBrotli),
     },
+    all: {
+      maxRawKB: toKB(allRaw),
+      maxFiles: files.length,
+    },
     chunks: {},
   }
   for (const [name, c] of [...chunks.entries()].sort((a, b) => b[1].raw - a[1].raw)) {
@@ -654,6 +658,16 @@ if (budget.total) {
   check('TOTAL (raw)', toKB(totalRaw), budget.total.maxRawKB, tol, totalRaw)
   check('TOTAL (gzip)', toKB(totalGzip), budget.total.maxGzipKB, tol, totalGzip)
   check('TOTAL (brotli)', toKB(totalBrotli), budget.total.maxBrotliKB, tol, totalBrotli)
+}
+// #2857: the whole export directory — every file, deferred chunks included.
+// TOTAL excludes deferred chunks and the named rows pin feature code, so the
+// bytes and the file count one release puts on the prod disk had no ceiling:
+// a release of 15 MB passed while the sealed release on prod held 538 MB. The
+// prod side is measured after the stage by scripts/web-ssr-release-audit.sh;
+// this row keeps the export itself from growing unnoticed.
+if (budget.all) {
+  check('ALL (raw)', toKB(allRaw), budget.all.maxRawKB, tol, allRaw)
+  checkCount('ALL (files)', files.length, budget.all.maxFiles)
 }
 
 const eagerChunkNames = Array.isArray(budget?.eager?.chunks) ? budget.eager.chunks : []
@@ -893,7 +907,7 @@ if (report) {
     named: Object.fromEntries([...chunks].map(([name, sizes]) => [name, { raw: sizes.raw, gzip: sizes.gzip, brotli: sizes.brotli, files: namedFiles.get(name) }])),
     files: Object.fromEntries(fileSizes),
     total: { raw: totalRaw, gzip: totalGzip, brotli: totalBrotli },
-    all: { raw: allRaw, gzip: allGzip, brotli: allBrotli },
+    all: { raw: allRaw, gzip: allGzip, brotli: allBrotli, files: files.length },
     deferred: { raw: deferredRaw, gzip: deferredGzip, brotli: deferredBrotli },
     eager: {
       status: !eagerConfigured ? 'not_configured' : eagerAvailable ? 'complete' : 'incomplete',

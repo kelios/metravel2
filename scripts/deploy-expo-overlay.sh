@@ -36,8 +36,19 @@ mkdir -p "$fresh_root"
 # still using it. Stamp every current JS/CSS asset at publish time before the
 # previous generation is overlaid; the overlay then carries that generation age
 # through the supported overlap window.
+#
+# Only the release's own payload is stamped (#2857). The SSR publisher runs
+# this helper twice over one fresh root — against the previous release and
+# against the asset pointer — and the carried chunks of the first pass are
+# hard links shared with the previous release. A second blanket `touch`
+# restamped them all: every generation collapsed into the one of the release
+# being replaced, which is carried past both bounds, and the previous release
+# lost its own stamp through the shared inodes (8 570 chunks, 538 MB on prod
+# on 31.10.2026). A file the payload brought itself has exactly one link;
+# anything the overlay carried has at least two.
 find "$fresh_root" \
   -type f \
+  -links 1 \
   \( -name '*.js' -o -name '*.css' \) \
   -exec touch -- {} +
 
@@ -87,7 +98,7 @@ trap 'rm -f "$overlay_list" "$overlay_summary"' EXIT
   -type f \
   \( -name '*.js' -o -name '*.css' \) \
   -print0) |
-  perl -e '
+  perl -MFile::Find -e '
     use strict;
     use warnings;
 
@@ -117,7 +128,19 @@ trap 'rm -f "$overlay_list" "$overlay_summary"' EXIT
     }
 
     my $budget = $budget_mb eq q{} ? undef : $budget_mb * 1024 * 1024;
-    my %kept = (generations => 0, files => 0, bytes => 0);
+    # The budget belongs to the fresh root, not to one pass (#2857): the SSR
+    # publisher runs this helper twice over one release, and in steady state
+    # both previous roots are the same release, so a pass that started at
+    # zero would carry what the first pass dropped for another budget. What
+    # an earlier pass carried is hard-linked (two or more links, the same
+    # mark the stamp above relies on) and is counted before the walk.
+    my $carried = 0;
+    find({ no_chdir => 1, wanted => sub {
+      return unless /\.(?:js|css)\z/;
+      my @stat = lstat $_ or return;
+      $carried += $stat[7] if -f _ && $stat[3] > 1;
+    } }, $fresh);
+    my %kept = (generations => 0, files => 0, bytes => $carried);
     my %dropped = (generations => 0, files => 0, bytes => 0);
     my $open = 1;
     for my $generation (@generations) {
@@ -144,9 +167,11 @@ trap 'rm -f "$overlay_list" "$overlay_summary"' EXIT
       );
     };
     open(my $summary, q{>}, $summary_path) or die "cannot write $summary_path: $!\n";
-    printf {$summary} "📊 Overlay старых чанков: перенесено — %s; отброшено — %s (предел %s, срок %d дн.)\n",
+    $kept{bytes} -= $carried;
+    printf {$summary} "📊 Overlay старых чанков: перенесено — %s; отброшено — %s (предел %s, срок %d дн.%s)\n",
       $describe->(\%kept), $describe->(\%dropped),
-      defined $budget ? "$budget_mb МБ" : "не задан", $days;
+      defined $budget ? "$budget_mb МБ" : "не задан", $days,
+      $carried ? sprintf(", ранее перенесено %.0f МБ", $carried / (1024 * 1024)) : q{};
     close($summary) or die "cannot write $summary_path: $!\n";
   ' "$previous_root" "$fresh_abs" "$budget_mb" "$generation_window_seconds" \
     "$retention_days" "$overlay_summary" > "$overlay_list"
@@ -164,10 +189,17 @@ if [[ -s "$overlay_list" ]]; then
 
   # cpio reports some refusals on stderr only and still exits 0, so the
   # published set is checked explicitly: a missing chunk here would 404 an
-  # open tab.
+  # open tab. A carried chunk must also share its inode with the previous
+  # root: a copy would carry one link and be restamped by the next pass of
+  # this helper (see the stamp above), so a host that cannot link refuses the
+  # deploy instead of bringing the unbounded growth back silently.
   while IFS= read -r -d '' relative_path; do
     if [[ ! -f "$fresh_abs/$relative_path" ]]; then
       echo "ERROR: overlay did not publish $relative_path" >&2
+      exit 1
+    fi
+    if [[ ! "$fresh_abs/$relative_path" -ef "$previous_root/$relative_path" ]]; then
+      echo "ERROR: overlay copied $relative_path instead of linking it" >&2
       exit 1
     fi
   done < "$overlay_list"
