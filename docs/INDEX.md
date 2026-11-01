@@ -73,6 +73,9 @@
   читать ДО любой правки, касающейся картинок, чтобы не переизобретать пайплайн;
 - `docs/features/social-trips-gamification-roadmap.md` — current social
   trips/gamification feature map, не backlog;
+- `docs/features/advent-calendar.md` — «Адвент-календарь путешественника» (спринт 31,
+  #2861–#2868): механика дверец, типы заданий, награды, план контента, поезда; статус —
+  планирование;
 - макеты состояний рядом с feature maps:
   `docs/features/map-current-location-route-mobile-mock.svg`,
   `docs/features/article-image-text-wrap-mock.md`,
