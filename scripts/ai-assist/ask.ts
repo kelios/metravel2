@@ -2,7 +2,7 @@
  * POST /ai/ask (#2713; серверная часть ассистента #2460): вопрос посетителя →
  * фильтр тем → лимиты на IP → подбор по индексу → промпт → metravel-llm → страж
  * ссылок, ответ одним SSE-потоком `sources → text* → done`. Правила фильтра,
- * промпт, страж и клиент модели — те же модули, что у экрана `/assistant`
+ * опора уточнений, промпт, страж и клиент модели — те же модули, что у экрана `/assistant`
  * (`api/aiAssist/*`): сервер и клиент не расходятся, а блок «третий вопрос не по
  * теме — до полуночи» держится на сервере, что бы ни делал клиент.
  *
@@ -23,6 +23,7 @@ import type http from 'node:http'
 import { type Generator, isAiGeneratorError } from '../../api/aiAssist/generator.ts'
 import { countKeptSourceLinks, enforceSourceLinks, guardStreamingText } from '../../api/aiAssist/linkGuard.ts'
 import { buildAssistantMessages, MAX_HISTORY_ITEMS } from '../../api/aiAssist/prompt.ts'
+import { buildRetrievalQuery, resolveRetrievalAnchor } from '../../api/aiAssist/retrievalQuery.ts'
 import { classifyQuestion, isModelOffTopicReply } from '../../api/aiAssist/topicGate.ts'
 import type { AiHistoryItem, AiSource } from '../../api/aiAssist/types.ts'
 import type { DemandLog } from './demandLog.ts'
@@ -170,9 +171,12 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       })
     }
 
+    // Опора уточнений (#2719/#2884): «А какой подойдёт детям?» ищется вместе с последним
+    // самостоятельным вопросом из истории; модель получает исходный вопрос и историю.
+    const retrievalQuery = buildRetrievalQuery(question, resolveRetrievalAnchor(history))
     let retrieved: RetrievalResult
     try {
-      retrieved = await deps.retrieve(question, locale)
+      retrieved = await deps.retrieve(retrievalQuery, locale)
     } catch (error) {
       await refund()
       throw error

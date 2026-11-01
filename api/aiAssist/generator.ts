@@ -8,7 +8,8 @@
  * (решение владельца 17.10.2026).
  *
  * Стрим читается через `ReadableStream` там, где он есть (web); native `fetch`
- * тела не стримит — тогда SSE разбирается целиком из `text()`, контракт тот же.
+ * тела не стримит — тогда SSE разбирается целиком из `text()`, контракт тот же
+ * (`consumeSseResponse`, общий с провайдером `ask`).
  */
 
 import type { AiChatMessage, AiGenerateResult, AiUsage } from './types'
@@ -71,6 +72,40 @@ export const splitSseEvents = (buffer: string): { events: string[]; rest: string
   const parts = normalized.split('\n\n')
   const rest = parts.pop() ?? ''
   return { events: parts.filter((part) => part.trim().length > 0), rest }
+}
+
+/**
+ * Читает SSE-ответ до конца или пока `isFinished()` не скажет, что событий больше не
+ * ждём: по мере прихода через `ReadableStream` (web) или целиком из `text()` (native
+ * `fetch` тела не стримит). Все события одного куска отдаются `consume` — финальный
+ * `usage` llama.cpp приходит после `finish_reason` в том же куске. Общий для
+ * провайдеров `llamacpp` и `ask` (#2884).
+ */
+export const consumeSseResponse = async (
+  response: Response,
+  { consume, isFinished }: { consume: (event: string) => void; isFinished: () => boolean },
+): Promise<void> => {
+  const body = response.body as ReadableStream<Uint8Array> | null | undefined
+  if (body && typeof body.getReader === 'function' && typeof TextDecoder !== 'undefined') {
+    const reader = body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (!isFinished()) {
+      const { value, done } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const { events, rest } = splitSseEvents(buffer)
+      buffer = rest
+      for (const event of events) consume(event)
+    }
+    if (!isFinished() && buffer.trim()) consume(buffer)
+    if (isFinished()) void reader.cancel().catch(() => undefined)
+    return
+  }
+  const text = await response.text()
+  const { events, rest } = splitSseEvents(text)
+  for (const event of events) consume(event)
+  if (rest.trim()) consume(rest)
 }
 
 /** Одно событие SSE → дельта текста, признак конца и usage из финального чанка. */
@@ -274,27 +309,7 @@ export class LlamaCppGenerator implements Generator {
         throw new AiGeneratorError('unavailable', `generator responded ${response.status}`, { status: response.status })
       }
 
-      const body = response.body as ReadableStream<Uint8Array> | null | undefined
-      if (body && typeof body.getReader === 'function' && typeof TextDecoder !== 'undefined') {
-        const reader = body.getReader()
-        const decoder = new TextDecoder()
-        let buffer = ''
-        while (!finished) {
-          const { value, done } = await reader.read()
-          if (done) break
-          buffer += decoder.decode(value, { stream: true })
-          const { events, rest } = splitSseEvents(buffer)
-          buffer = rest
-          for (const event of events) consumeEvent(event)
-        }
-        if (!finished && buffer.trim()) consumeEvent(buffer)
-        if (finished) void reader.cancel().catch(() => undefined)
-      } else {
-        const text = await response.text()
-        const { events, rest } = splitSseEvents(text)
-        for (const event of events) consumeEvent(event)
-        if (rest.trim()) consumeEvent(rest)
-      }
+      await consumeSseResponse(response, { consume: consumeEvent, isFinished: () => finished })
 
       return { text: full, usage: buildUsage(usage, startedAt, firstTokenAt, this.now()) }
     } catch (error) {

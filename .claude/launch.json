@@ -998,6 +998,26 @@
       ],
       "port": 8093,
       "autoPort": false
+    },
+    {
+      "name": "AI Sprint29 Assist 8787 (ask)",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "PATH=/opt/homebrew/opt/node@22/bin:$PATH AI_INDEX_DIR=.codex-temp/ai-index/dist BACKEND_URL=https://metravel.by AI_LLM_URL=http://127.0.0.1:8080 PORT=8787 npm run -s ai:assist:dev"
+      ],
+      "port": 8787,
+      "autoPort": false
+    },
+    {
+      "name": "AI Sprint29 Web 8094 (llamacpp)",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-s29b\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-s29b\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true EXPO_PUBLIC_AI_ASSISTANT=1 EXPO_PUBLIC_AI_ASSISTANT_PROVIDER=llamacpp EXPO_PUBLIC_AI_ASSISTANT_URL=http://127.0.0.1:8080 EXPO_PUBLIC_AI_PICKS=1 npx expo start --web --port 8094"
+      ],
+      "port": 8094,
+      "autoPort": false
     }
   ]
 }

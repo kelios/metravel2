@@ -1,3 +1,4 @@
+import { AI_ASK_DAY_TIME_ZONE, secondsToDayEnd } from '@/api/aiAssist/policy'
 import { DEMAND_LOG_MAX_ENTRIES, exportDemandLog, logDemand, readDemandLog } from '@/api/aiAssist/demandLog'
 import {
   AI_ASK_DAILY_LIMIT,
@@ -93,5 +94,17 @@ describe('aiAssist off-topic strikes (#2711)', () => {
     expect(await registerOffTopicStrike({ storage, now })).toEqual({ strikes: AI_OFFTOPIC_STRIKES_TO_BLOCK, blocked: true })
     expect(await readRemainingQuestions({ storage, now })).toBe(AI_ASK_DAILY_LIMIT)
     expect(await readOffTopicState({ storage, now: () => new Date(2026, 9, 26, 0, 1) })).toEqual({ strikes: 0, blocked: false })
+  })
+})
+
+describe('policy: секунды до конца дня сервера (#2884)', () => {
+  it('считает до полуночи по зоне сервера, а не по UTC; неизвестная зона — по часам устройства', () => {
+    expect(AI_ASK_DAY_TIME_ZONE).toBe('Europe/Minsk')
+    // 2026-07-01 20:59:30 UTC = 23:59:30 в Минске (UTC+3): до полуночи 30 с.
+    expect(secondsToDayEnd(new Date('2026-07-01T20:59:30Z'))).toBe(30)
+    // 2026-07-01 21:00:00 UTC = 00:00:00 следующего дня в Минске: полные сутки.
+    expect(secondsToDayEnd(new Date('2026-07-01T21:00:00Z'))).toBe(86_400)
+    const local = new Date(2026, 6, 1, 23, 0, 0)
+    expect(secondsToDayEnd(local, 'Nowhere/Invalid')).toBe(3600)
   })
 })

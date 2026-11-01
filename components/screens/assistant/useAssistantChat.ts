@@ -1,22 +1,36 @@
 /**
- * Состояние диалога ассистента (#2460): один вопрос за раз, пайплайн
- * «фильтр тем → подбор карточек → промпт → metravel-llm → страж ссылок», дневной
- * лимит и журнал спроса. Вопрос не по теме (#2711) получает отказ без подбора и
- * модели; третий за день закрывает ассистент до завтра. Экран только рисует
- * `turns` и зовёт `ask/stop/retry`.
+ * Состояние диалога ассистента (#2460): один вопрос за раз, экран только рисует
+ * `turns` и зовёт `ask/stop/retry`. Два провайдера (#2884, `utils/aiAssistantConfig.ts`):
+ *
+ * - `ask` (по умолчанию) — серверный `POST /ai/ask` службы metravel-assist (#2713):
+ *   фильтр тем, лимит и блок «не по теме» на IP, подбор по индексу, промпт, модель и
+ *   страж ссылок живут на сервере; клиент показывает поток `sources → text* → done`,
+ *   а «осталось вопросов» и номер предупреждения берёт из ответа сервера;
+ * - `llamacpp` — прямой `llama-server`: пайплайн «фильтр тем → подбор карточек →
+ *   промпт → metravel-llm → страж ссылок» выполняется здесь, дневной лимит, счётчик
+ *   вопросов не по теме (#2711) и журнал спроса — в хранилище устройства.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import { createAskClient, isAskError, type AskClient } from '@/api/aiAssist/askProvider'
 import { logDemand } from '@/api/aiAssist/demandLog'
 import { createGenerator, isAiGeneratorError, type Generator } from '@/api/aiAssist/generator'
-import { consumeQuestion, readOffTopicState, readRemainingQuestions, registerOffTopicStrike } from '@/api/aiAssist/limits'
+import {
+  AI_OFFTOPIC_STRIKES_TO_BLOCK,
+  consumeQuestion,
+  readOffTopicState,
+  readRemainingQuestions,
+  registerOffTopicStrike,
+} from '@/api/aiAssist/limits'
 import { countKeptSourceLinks, enforceSourceLinks, guardStreamingText } from '@/api/aiAssist/linkGuard'
+import { secondsToDayEnd } from '@/api/aiAssist/policy'
 import { MAX_QUESTION_LENGTH, buildAssistantMessages } from '@/api/aiAssist/prompt'
 import { buildRetrievalQuery, searchSiteMaterials } from '@/api/aiAssist/retrieval'
 import { classifyQuestion, isModelOffTopicReply } from '@/api/aiAssist/topicGate'
 import type { AiHistoryItem, AiSource, AiUsage } from '@/api/aiAssist/types'
-import { getAiAssistantBaseUrl } from '@/utils/aiAssistantConfig'
+import { getAiAssistantBaseUrl, getAiAssistantProvider, type AiAssistantProvider } from '@/utils/aiAssistantConfig'
+import { getAiPicksBaseUrl } from '@/utils/aiPicksConfig'
 
 export type AssistantTurnStatus =
   | 'searching'
@@ -47,7 +61,10 @@ export type AssistantInputError = 'tooLong' | 'limit' | 'offTopicBlocked' | null
 
 export type UseAssistantChatOptions = {
   locale: string
+  /** Подмена провайдера `llamacpp` в тестах; `null` — модель не настроена. */
   generator?: Generator | null
+  /** Подмена провайдера `ask` в тестах; задан — путь через сервер. */
+  askClient?: AskClient
 }
 
 const STREAM_FLUSH_MS = 40
@@ -68,42 +85,82 @@ export const buildHistoryFromTurns = (turns: readonly AssistantTurn[]): AiHistor
       { role: 'assistant' as const, text: turn.answer },
     ])
 
-export function useAssistantChat({ locale, generator: generatorOverride }: UseAssistantChatOptions) {
+type ResolvedProvider =
+  | { kind: 'ask'; client: AskClient }
+  | { kind: 'llamacpp'; generator: Generator | null }
+
+const resolveProvider = (options: Pick<UseAssistantChatOptions, 'generator' | 'askClient'>): ResolvedProvider => {
+  if (options.askClient) return { kind: 'ask', client: options.askClient }
+  if (options.generator !== undefined) return { kind: 'llamacpp', generator: options.generator }
+  const provider: AiAssistantProvider = getAiAssistantProvider()
+  if (provider === 'llamacpp') return { kind: 'llamacpp', generator: createGenerator(getAiAssistantBaseUrl()) }
+  return { kind: 'ask', client: createAskClient(getAiPicksBaseUrl()) }
+}
+
+export function useAssistantChat(options: UseAssistantChatOptions) {
+  const { locale } = options
   const [turns, setTurns] = useState<AssistantTurn[]>([])
   const [remaining, setRemaining] = useState<number | null>(null)
   const [offTopicBlocked, setOffTopicBlocked] = useState(false)
   const [inputError, setInputError] = useState<AssistantInputError>(null)
   const [activeTurnId, setActiveTurnId] = useState<string | null>(null)
   const turnsRef = useRef<AssistantTurn[]>([])
+  const remainingRef = useRef<number | null>(null)
+  const offTopicBlockedRef = useRef(false)
+  /**
+   * Провайдер `ask`: лимит и блок, полученные с сервера, держатся до срока
+   * (`Retry-After` или конец дня по зоне сервера) и снимаются таймером. Экран может
+   * жить дольше суток (native), а сервер к тому времени уже обнулил счётчики —
+   * после срока следующий вопрос снова уходит на сервер.
+   */
+  const limitResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const blockResetRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
   /**
-   * Последний самостоятельный вопрос по теме — опора уточнений (#2719). Склеенный запрос
-   * опорой не становится: цепочка уточнений иначе копила бы все прошлые вопросы, а бэкенд
-   * требует от статьи все слова запроса; повтор хода склеивал бы вопрос сам с собой.
+   * Провайдер `llamacpp`: последний самостоятельный вопрос по теме — опора уточнений
+   * (#2719). Склеенный запрос опорой не становится: цепочка уточнений иначе копила бы все
+   * прошлые вопросы, а бэкенд требует от статьи все слова запроса; повтор хода склеивал
+   * бы вопрос сам с собой. Для `ask` ту же опору сервер берёт из истории диалога.
    */
   const lastSearchQueryRef = useRef<string | null>(null)
 
-  const generator = useMemo<Generator | null>(
-    () => (generatorOverride !== undefined ? generatorOverride : createGenerator(getAiAssistantBaseUrl())),
-    [generatorOverride],
+  // Провайдер фиксируется подменами из тестов, иначе — конфигурацией сборки.
+  const { generator: generatorOverride, askClient: askClientOverride } = options
+  const provider = useMemo<ResolvedProvider>(
+    () => resolveProvider({ generator: generatorOverride, askClient: askClientOverride }),
+    [generatorOverride, askClientOverride],
   )
+  const serverSide = provider.kind === 'ask'
+
+  const updateRemaining = useCallback((left: number | null) => {
+    if (left === null) return
+    remainingRef.current = left
+    if (mountedRef.current) setRemaining(left)
+  }, [])
+
+  const updateOffTopicBlocked = useCallback((blocked: boolean) => {
+    offTopicBlockedRef.current = blocked
+    if (mountedRef.current) setOffTopicBlocked(blocked)
+  }, [])
 
   useEffect(() => {
     mountedRef.current = true
-    void readRemainingQuestions().then((left) => {
-      if (mountedRef.current) setRemaining(left)
-    })
-    void readOffTopicState().then((state) => {
-      if (mountedRef.current) setOffTopicBlocked(state.blocked)
-    })
+    // Серверный провайдер: счётчики на IP приходят с ответом, хранилище устройства
+    // не читается — его очистка и так ничего не снимает.
+    if (!serverSide) {
+      void readRemainingQuestions().then(updateRemaining)
+      void readOffTopicState().then((state) => updateOffTopicBlocked(state.blocked))
+    }
     return () => {
       mountedRef.current = false
       abortRef.current?.abort()
       if (flushTimerRef.current) clearTimeout(flushTimerRef.current)
+      if (limitResetRef.current) clearTimeout(limitResetRef.current)
+      if (blockResetRef.current) clearTimeout(blockResetRef.current)
     }
-  }, [])
+  }, [serverSide, updateOffTopicBlocked, updateRemaining])
 
   const commitTurns = useCallback((updater: (prev: AssistantTurn[]) => AssistantTurn[]) => {
     turnsRef.current = updater(turnsRef.current)
@@ -117,10 +174,62 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
     [commitTurns],
   )
 
-  const finishQuota = useCallback(async () => {
-    const left = await consumeQuestion()
-    if (mountedRef.current) setRemaining(left)
+  const clearFlush = useCallback(() => {
+    if (flushTimerRef.current) {
+      clearTimeout(flushTimerRef.current)
+      flushTimerRef.current = null
+    }
   }, [])
+
+  /** Остаток лимита перед вопросом: у `ask` — последний ответ сервера (до первого — без ограничения). */
+  const readRemaining = useCallback(
+    async (): Promise<number> => (serverSide ? (remainingRef.current ?? Number.POSITIVE_INFINITY) : readRemainingQuestions()),
+    [serverSide],
+  )
+
+  const readBlocked = useCallback(
+    async (): Promise<boolean> => (serverSide ? offTopicBlockedRef.current : (await readOffTopicState()).blocked),
+    [serverSide],
+  )
+
+  /** Через `retryAfterSec` (или к концу дня сервера) снимает лимит: счётчик снова неизвестен до ответа сервера. */
+  const scheduleLimitReset = useCallback((retryAfterSec: number | null) => {
+    if (limitResetRef.current) clearTimeout(limitResetRef.current)
+    const seconds = retryAfterSec !== null && retryAfterSec > 0 ? retryAfterSec : secondsToDayEnd()
+    limitResetRef.current = setTimeout(() => {
+      limitResetRef.current = null
+      remainingRef.current = null
+      if (!mountedRef.current) return
+      setRemaining(null)
+      setInputError((current) => (current === 'limit' ? null : current))
+    }, seconds * 1000)
+  }, [])
+
+  const scheduleBlockReset = useCallback(
+    (retryAfterSec: number | null) => {
+      if (blockResetRef.current) clearTimeout(blockResetRef.current)
+      const seconds = retryAfterSec !== null && retryAfterSec > 0 ? retryAfterSec : secondsToDayEnd()
+      blockResetRef.current = setTimeout(() => {
+        blockResetRef.current = null
+        updateOffTopicBlocked(false)
+        if (mountedRef.current) setInputError((current) => (current === 'offTopicBlocked' ? null : current))
+      }, seconds * 1000)
+    },
+    [updateOffTopicBlocked],
+  )
+
+  /** Остаток с сервера; ноль — лимит исчерпан до конца дня сервера (без `Retry-After` в событиях потока). */
+  const applyServerRemaining = useCallback(
+    (left: number | null) => {
+      updateRemaining(left)
+      if (left === 0) scheduleLimitReset(null)
+    },
+    [scheduleLimitReset, updateRemaining],
+  )
+
+  const finishQuota = useCallback(async () => {
+    updateRemaining(await consumeQuestion())
+  }, [updateRemaining])
 
   /** Ход «не по теме» по фильтру тем: отказ без источников, счётчик за день; на третьем — журнал и блок до завтра. */
   const finishOffTopic = useCallback(
@@ -129,47 +238,97 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
       patchTurn(id, { status: 'off_topic', answer: '', sources: [], removedLinks: 0, offTopicStrikes: state.strikes })
       if (!state.blocked) return
       void logDemand({ q: question, locale, reason: 'offtopic_blocked' })
-      if (mountedRef.current) setOffTopicBlocked(true)
+      updateOffTopicBlocked(true)
     },
-    [locale, patchTurn],
+    [locale, patchTurn, updateOffTopicBlocked],
   )
 
-  const ask = useCallback(
-    async (rawQuestion: string): Promise<void> => {
-      const question = String(rawQuestion ?? '').replace(/\s+/g, ' ').trim()
-      if (!question || abortRef.current) return
-      if (question.length > MAX_QUESTION_LENGTH) {
-        setInputError('tooLong')
-        return
+  /** Провайдер `ask`: один `POST /ai/ask`, состояния хода — из событий и кодов сервера. */
+  const askViaServer = useCallback(
+    async (client: AskClient, id: string, question: string, controller: AbortController, history: AiHistoryItem[]) => {
+      try {
+        const result = await client.ask({
+          question,
+          locale,
+          history,
+          signal: controller.signal,
+          onSources: (event) => {
+            applyServerRemaining(event.remaining)
+            if (event.sources.length) patchTurn(id, { sources: event.sources, status: 'streaming' })
+          },
+          onText: (text) => patchTurn(id, { answer: text }),
+        })
+        const { done } = result
+        applyServerRemaining(done.remaining)
+        switch (done.status) {
+          case 'done':
+            patchTurn(id, { answer: result.text, sources: result.sources, removedLinks: done.removedLinks, status: 'done', usage: done.usage })
+            if (__DEV__) {
+              console.info('[ai-assist] usage', { ...done.usage, removedLinks: done.removedLinks, sources: result.sources.length })
+            }
+            return
+          case 'off_topic':
+            // Отказ модели (`model_refusal`) в счётчик не идёт — без номера предупреждения.
+            patchTurn(id, {
+              status: 'off_topic',
+              answer: '',
+              sources: [],
+              removedLinks: 0,
+              offTopicStrikes: done.reason === 'offtopic_warning' ? done.strikes : null,
+            })
+            return
+          case 'no_sources':
+            patchTurn(id, { status: 'no_sources', answer: '', sources: [] })
+            return
+          case 'unavailable':
+            patchTurn(id, { status: 'unavailable' })
+            return
+          default:
+            patchTurn(id, { status: 'error' })
+        }
+      } catch (error) {
+        if (isAskError(error)) {
+          switch (error.kind) {
+            case 'aborted':
+              patchTurn(id, { status: 'aborted' })
+              return
+            case 'busy':
+              patchTurn(id, { status: 'busy', retryAfterSec: error.retryAfterSec })
+              return
+            case 'limit':
+              // Сервер отказал до ответа: вопрос не занимает место на ленте, как и при
+              // локальной проверке лимита; счётчик на сегодня — ноль.
+              commitTurns((prev) => prev.filter((turn) => turn.id !== id))
+              updateRemaining(0)
+              scheduleLimitReset(error.retryAfterSec)
+              setInputError('limit')
+              return
+            case 'offtopic_blocked':
+              // Блок на IP держит сервер; после обновления страницы о нём узнаём отсюда.
+              patchTurn(id, {
+                status: 'off_topic',
+                answer: '',
+                sources: [],
+                removedLinks: 0,
+                offTopicStrikes: error.strikes ?? AI_OFFTOPIC_STRIKES_TO_BLOCK,
+              })
+              updateOffTopicBlocked(true)
+              scheduleBlockReset(error.retryAfterSec)
+              return
+            default:
+              patchTurn(id, { status: 'unavailable' })
+              return
+          }
+        }
+        patchTurn(id, { status: controller.signal.aborted ? 'aborted' : 'error' })
       }
-      // Занимаем очередь синхронно: `busy` поднимется только после чтения
-      // лимита, и двойное нажатие успело бы запустить второй вопрос, который
-      // перетёр бы `abortRef` (кнопка «Остановить» отменяла бы чужой запрос).
-      const controller = new AbortController()
-      abortRef.current = controller
-      if ((await readOffTopicState()).blocked) {
-        abortRef.current = null
-        setOffTopicBlocked(true)
-        setInputError('offTopicBlocked')
-        return
-      }
-      const left = await readRemainingQuestions()
-      if (left <= 0) {
-        abortRef.current = null
-        setRemaining(0)
-        setInputError('limit')
-        return
-      }
-      setInputError(null)
+    },
+    [applyServerRemaining, commitTurns, locale, patchTurn, scheduleBlockReset, scheduleLimitReset, updateOffTopicBlocked, updateRemaining],
+  )
 
-      const id = makeTurnId()
-      setActiveTurnId(id)
-      const history = buildHistoryFromTurns(turnsRef.current)
-      commitTurns((prev) => [
-        ...prev,
-        { id, question, answer: '', sources: [], status: 'searching', removedLinks: 0, retryAfterSec: null, usage: null, offTopicStrikes: null },
-      ])
-
+  /** Провайдер `llamacpp`: подбор, промпт, модель и страж на клиенте, счётчики в хранилище. */
+  const askViaLlamaCpp = useCallback(
+    async (generator: Generator | null, id: string, question: string, controller: AbortController, history: AiHistoryItem[]) => {
       try {
         // Чужая тема не тратит ни подбор, ни модель, ни дневной лимит.
         if (classifyQuestion(question).offTopic) {
@@ -217,10 +376,7 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
             if (!flushTimerRef.current) flushTimerRef.current = setTimeout(flush, STREAM_FLUSH_MS)
           },
         })
-        if (flushTimerRef.current) {
-          clearTimeout(flushTimerRef.current)
-          flushTimerRef.current = null
-        }
+        clearFlush()
         const guarded = enforceSourceLinks(result.text, sources)
         if (isModelOffTopicReply(guarded.text, countKeptSourceLinks(guarded.text, sources))) {
           // Второй рубеж: фильтр пропустил, модель узнала чужую тему по правилу промпта.
@@ -238,10 +394,7 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
         }
         await finishQuota()
       } catch (error) {
-        if (flushTimerRef.current) {
-          clearTimeout(flushTimerRef.current)
-          flushTimerRef.current = null
-        }
+        clearFlush()
         if (isAiGeneratorError(error)) {
           if (error.kind === 'aborted') {
             patchTurn(id, { status: 'aborted' })
@@ -256,12 +409,55 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
         } else {
           patchTurn(id, { status: 'error' })
         }
+      }
+    },
+    [clearFlush, finishOffTopic, finishQuota, locale, patchTurn],
+  )
+
+  const ask = useCallback(
+    async (rawQuestion: string): Promise<void> => {
+      const question = String(rawQuestion ?? '').replace(/\s+/g, ' ').trim()
+      if (!question || abortRef.current) return
+      if (question.length > MAX_QUESTION_LENGTH) {
+        setInputError('tooLong')
+        return
+      }
+      // Занимаем очередь синхронно: `busy` поднимется только после чтения
+      // лимита, и двойное нажатие успело бы запустить второй вопрос, который
+      // перетёр бы `abortRef` (кнопка «Остановить» отменяла бы чужой запрос).
+      const controller = new AbortController()
+      abortRef.current = controller
+      if (await readBlocked()) {
+        abortRef.current = null
+        updateOffTopicBlocked(true)
+        setInputError('offTopicBlocked')
+        return
+      }
+      if ((await readRemaining()) <= 0) {
+        abortRef.current = null
+        updateRemaining(0)
+        setInputError('limit')
+        return
+      }
+      setInputError(null)
+
+      const id = makeTurnId()
+      setActiveTurnId(id)
+      const history = buildHistoryFromTurns(turnsRef.current)
+      commitTurns((prev) => [
+        ...prev,
+        { id, question, answer: '', sources: [], status: 'searching', removedLinks: 0, retryAfterSec: null, usage: null, offTopicStrikes: null },
+      ])
+
+      try {
+        if (provider.kind === 'ask') await askViaServer(provider.client, id, question, controller, history)
+        else await askViaLlamaCpp(provider.generator, id, question, controller, history)
       } finally {
         if (abortRef.current === controller) abortRef.current = null
         if (mountedRef.current) setActiveTurnId((current) => (current === id ? null : current))
       }
     },
-    [commitTurns, finishOffTopic, finishQuota, generator, locale, patchTurn],
+    [askViaLlamaCpp, askViaServer, commitTurns, provider, readBlocked, readRemaining, updateOffTopicBlocked, updateRemaining],
   )
 
   const stop = useCallback(() => {
@@ -274,10 +470,10 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
       if (!turn || abortRef.current) return
       // Ход снимается с ленты только когда повтор действительно стартует: при
       // исчерпанном лимите вопрос остаётся на экране вместе с подписью лимита.
-      const left = await readRemainingQuestions()
+      const left = await readRemaining()
       if (left <= 0 || abortRef.current) {
         if (left <= 0) {
-          setRemaining(0)
+          updateRemaining(0)
           setInputError('limit')
         }
         return
@@ -285,7 +481,7 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
       commitTurns((prev) => prev.filter((item) => item.id !== turnId))
       await ask(turn.question)
     },
-    [ask, commitTurns],
+    [ask, commitTurns, readRemaining, updateRemaining],
   )
 
   const clearInputError = useCallback(() => setInputError(null), [])
@@ -296,7 +492,8 @@ export function useAssistantChat({ locale, generator: generatorOverride }: UseAs
     offTopicBlocked,
     inputError,
     busy: activeTurnId !== null,
-    generatorConfigured: generator !== null,
+    /** У `ask` служба всегда настроена (same-origin); у `llamacpp` — задан ли адрес модели. */
+    generatorConfigured: provider.kind === 'ask' || provider.generator !== null,
     ask,
     stop,
     retry,

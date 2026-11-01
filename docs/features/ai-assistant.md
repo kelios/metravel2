@@ -9,29 +9,40 @@
 Посетитель задаёт вопрос, ассистент отвечает коротко и только по материалам
 сайта, каждая рекомендация — со ссылкой на нашу статью или квест. Текст пишет
 собственная модель `metravel-llm` (Qwen3.5-4B + LoRA на корпусе сайта, #2462)
-через OpenAI-совместимый `llama-server`. Ссылки модели не доверяем: их даёт
-подбор карточек, а страж вырезает из ответа любой адрес вне найденных карточек.
+через OpenAI-совместимый `llama-server`. Экран ходит к ней через серверный
+`POST /ai/ask` службы metravel-assist (провайдер `ask`, #2884): подбор по
+индексу, лимиты и блок «не по теме» на IP — на сервере; прямой `llama-server`
+(провайдер `llamacpp`) остаётся для локальной отладки модели. Ссылки модели не
+доверяем: их даёт подбор карточек, а страж вырезает из ответа любой адрес вне
+найденных карточек.
 
 ## Фича-флаг
 
 | переменная | dev (`.env.dev`) | prod (`.env.prod`) |
 | --- | --- | --- |
 | `EXPO_PUBLIC_AI_ASSISTANT` | `1` | отсутствует (выключено) |
-| `EXPO_PUBLIC_AI_ASSISTANT_URL` | `http://127.0.0.1:8080` | — |
+| `EXPO_PUBLIC_AI_ASSISTANT_PROVIDER` | пусто = `ask` (`llamacpp` — прямой `llama-server`) | — |
+| `EXPO_PUBLIC_AI_ASSISTANT_URL` | `http://127.0.0.1:8080` (нужен только `llamacpp`) | — |
 
 Чтение — только `utils/aiAssistantConfig.ts` (`isAiAssistantEnabled`,
-`getAiAssistantBaseUrl`). При выключенном флаге:
+`getAiAssistantProvider`, `getAiAssistantBaseUrl`); адрес службы для `ask` —
+`utils/aiPicksConfig.ts` (`getAiPicksBaseUrl`: same-origin на web, origin API на
+native, `EXPO_PUBLIC_AI_PICKS_URL` переопределяет). При выключенном флаге:
 
 - роут `app/(tabs)/assistant.tsx` отдаёт `NotFoundContent` (noindex), экран
   не грузится (React.lazy-чанк);
 - пункта в `HEADER_NAV_ITEMS` нет (меню шапки, мобильное меню, меню аккаунта);
 - кнопки «Спросить ассистента» на `/search` нет;
-- запросов к `llama-server` нет ни на одной платформе.
+- запросов к `/ai/ask` и `llama-server` нет ни на одной платформе.
 
 Диагностика конфигурации — `utils/runtimeConfigContract.js`:
-`AI_ASSISTANT_URL_INVALID` (флаг без адреса), `AI_ASSISTANT_LOCAL_URL_IN_PRODUCTION`
-(локальный адрес модели в production-сборке — ошибка),
-`AI_ASSISTANT_ENABLED_IN_PRODUCTION` (предупреждение).
+`AI_ASSISTANT_PROVIDER_INVALID` (значение не `ask|llamacpp`),
+`AI_ASSISTANT_URL_INVALID` (`llamacpp` без адреса модели),
+`AI_ASSISTANT_LOCAL_URL_IN_PRODUCTION` (локальный адрес модели в
+production-сборке — ошибка), для `ask` явный `EXPO_PUBLIC_AI_PICKS_URL` проходит
+проверки `AI_PICKS_URL_INVALID` / `AI_PICKS_LOCAL_URL_IN_PRODUCTION` (один раз,
+даже когда блоки подбора выключены), `AI_ASSISTANT_ENABLED_IN_PRODUCTION`
+(предупреждение).
 
 ## Точки входа
 
@@ -56,9 +67,43 @@
   дисклеймер.
 - `useAssistantChat.ts` — состояние диалога и пайплайн одного вопроса.
 
+## Провайдеры (#2884)
+
+`useAssistantChat` держит один вопрос за раз и два пути за одним состоянием хода
+(`AssistantTurn`); экран не знает, какой выбран.
+
+- `ask` (по умолчанию) — `api/aiAssist/askProvider.ts` (`HttpAskClient`): один
+  `POST {служба}/ai/ask {q, locale, history}`, `history` — завершённые пары
+  (`buildHistoryFromTurns`, ≤ 3). События SSE → ход: `sources` → карточки и
+  статус `streaming` (`remaining` → «осталось вопросов»), `text` → накопленный
+  текст после серверного стража (не дельта), `done {status}` → `done`
+  (`removed_links`, `usage`, `remaining`) / `off_topic` (`offtopic_warning` с
+  номером `strikes`; `model_refusal` — без номера) / `no_sources` /
+  `unavailable` / `error`. Отказы до потока: `429 limit` → вопрос снимается с
+  ленты, счётчик 0 и подпись лимита; `429 offtopic_blocked` → ход с подписью
+  блока, композер закрыт (блок держит сервер: обновление страницы его не
+  снимает — следующий вопрос снова получит `429`); `429 busy` / `503 busy` →
+  `busy` с `Retry-After`; `503 generator_unavailable`, сеть, таймаут 120 с,
+  обрыв потока без `done` → `unavailable` + «Повторить». Лимит и блок с
+  сервера держатся на экране до `Retry-After`; после срока следующий вопрос
+  снова уходит на сервер (экран в приложении может жить дольше суток). Фильтр
+  тем, подбор, лимит, журнал спроса и хранилище устройства на клиенте не
+  используются; до первого ответа счётчик на экране не показывается.
+- `llamacpp` — прежний клиентский пайплайн: `topicGate` → `retrieval` →
+  `prompt` → `generator` (`LlamaCppGenerator`) → `linkGuard`, лимит и счётчик
+  «не по теме» в AsyncStorage (`limits.ts`), журнал в `demandLog.ts`. Нужен
+  `EXPO_PUBLIC_AI_ASSISTANT_URL`; без службы и индекса.
+- Опора уточнений (#2719) — общий модуль `api/aiAssist/retrievalQuery.ts` без
+  `@/`-импортов: `buildRetrievalQuery` склеивает уточнение без своего места с
+  последним самостоятельным вопросом; клиент `llamacpp` помнит его в
+  `lastSearchQueryRef`, сервер `/ai/ask` берёт из `history`
+  (`resolveRetrievalAnchor`: последний вопрос посетителя, который сам по себе
+  ищется). Модель в обоих случаях получает исходный вопрос и историю.
+
 ## Данные
 
-Пайплайн (`api/aiAssist/`):
+Пайплайн провайдера `llamacpp` (`api/aiAssist/`; у `ask` те же модули выполняет
+сервер, см. ниже):
 
 1. `retrieval.ts` → `searchSiteMaterials`: статьи — `fetchTravels(0, 8, значимые
    слова вопроса)` (поиск бэкенда `/api/travels/?query=`; страницы с нуля,
@@ -87,8 +132,8 @@
    записей, экспорт JSONL той же формы, что серверный `logs/ai-demand.jsonl`.
 
 Серверный `/ai/ask` (#2713, раздел ниже: SSE `sources → text* → done`, лимит и
-блок «не по теме» на IP) переиспользует эти же модули; клиент тогда меняет только
-провайдера.
+блок «не по теме» на IP) переиспользует эти же модули; провайдер `ask` (#2884)
+меняет на клиенте только транспорт.
 
 ## Локальный стек для проверки
 
@@ -128,9 +173,15 @@ DOM-`click()` через `javascript_tool`, якоря `<a>` кликаются 
 
 ## Тесты
 
-- `__tests__/api/aiAssist/{prompt,linkGuard,generator,retrieval,limits}.test.ts`;
-- `__tests__/screens/assistant/useAssistantChat.test.tsx` — пайплайн, отказ,
-  недоступность, лимит, retry;
+- `__tests__/api/aiAssist/{prompt,linkGuard,generator,retrieval,retrievalQuery,askProvider,limits}.test.ts`
+  (`askProvider` — разбор SSE и коды отказов `/ai/ask`; `retrievalQuery` — опора
+  уточнений, общая с сервером);
+- `__tests__/screens/assistant/useAssistantChat.test.tsx` — оба провайдера:
+  пайплайн, отказ, недоступность, лимит, retry, блок с сервера;
+- `__tests__/scripts/ai-assist/ask.test.ts` — сервер `/ai/ask`, включая опору
+  уточнений из `history`;
+- `e2e/ai-assistant-ask.spec.ts` — экран на `dist` с моком `/ai/ask` (поток,
+  источники, 503/429), без прямых запросов к модели;
 - `__tests__/routes/assistant-screen.test.tsx` — флаг выкл/вкл, композер, источники;
 - `__tests__/constants/headerNavigation.assistantFlag.test.ts`;
 - `__tests__/utils/runtimeConfigDiagnostics*.test.ts` — диагностики флага;
@@ -202,13 +253,13 @@ DOM-`click()` через `javascript_tool`, якоря `<a>` кликаются 
   `AI_LLM_URL`): «как готовить кашу» ×2 → 200 с предупреждениями 1 и 2, ×3 → 429
   `Retry-After` до полуночи и строка в журнале; «квесты в Гродно» с того же IP →
   429, с другого — 503. Тесты — `__tests__/scripts/ai-assist/ask.test.ts`.
-- Клиент пока ходит в `llama-server` напрямую (провайдер `llamacpp`); переход
-  экрана на `/ai/ask` — вместе с выкладкой контейнеров (#2457): compose должен
-  дать сервису `AI_LLM_URL`, `REDIS_URL` и том под `logs/`, не публиковать 8787
+- Экран ходит сюда провайдером `ask` (#2884, раздел «Провайдеры»); на проде
+  ассистент включится после выкладки контейнеров (#2457): compose должен дать
+  сервису `AI_LLM_URL`, `REDIS_URL` и том под `logs/`, не публиковать 8787
   наружу, а `location /ai/` — ставить `X-Real-IP $remote_addr` и `proxy_buffering off`.
-  Известное расхождение: сервер подбирает карточки по самому вопросу, опора
-  уточнений `buildRetrievalQuery` (#2719) живёт в `retrieval.ts` с `@/`-импортами
-  и серверу недоступна — переносится вместе с переходом экрана.
+- Опора уточнений (#2719) применяется и здесь: подбор идёт по
+  `buildRetrievalQuery(q, resolveRetrievalAnchor(history))` из общего
+  `api/aiAssist/retrievalQuery.ts`, модель получает исходный `q`.
 
 ## Контур оценки (#2710)
 
@@ -255,9 +306,9 @@ DOM-`click()` через `javascript_tool`, якоря `<a>` кликаются 
   переводом ключевых слов на RU перед поиском.
 - Стоп-слова подбора — только русские (`QUERY_STOPWORDS` в `retrieval.ts`).
 
-- Подбор по словам (без эмбеддингов) слаб на синонимах; смысловой индекс — #2454/#2456.
-- Лимит и журнал — на устройстве до появления сервиса (#2456).
-- e2e на `dist` с моком `/ai/ask` появится вместе с серверным эндпоинтом.
+- Боли подбора по словам выше касаются только провайдера `llamacpp`; у `ask`
+  подбор идёт по смысловому индексу службы.
+- Лимит и журнал на устройстве — только у `llamacpp`; у `ask` — на IP на сервере.
 - Оценочный набор 40 вопросов на GGUF v1 (#2463, `eval.py --server`): без карточек
   в промпте модель проходит 9/40 как и MLX-адаптер (ссылки по городу/стране выдумывает),
   с карточками — все URL из списка (Гродно 8/8); поэтому подбор карточек обязателен.

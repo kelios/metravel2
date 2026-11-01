@@ -14,18 +14,34 @@ describe('getRuntimeConfigDiagnostics', () => {
       expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: 'false', EXPO_PUBLIC_AI_ASSISTANT_URL: 'nope' }).some((c) => c.startsWith('AI_ASSISTANT'))).toBe(false);
     });
 
-    it('requires an absolute http(s) llama-server url when the flag is on', () => {
-      expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: '1' })).toContain('AI_ASSISTANT_URL_INVALID:error');
-      expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: 'true', EXPO_PUBLIC_AI_ASSISTANT_URL: 'ws://x' })).toContain('AI_ASSISTANT_URL_INVALID:error');
-      const dev = codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_URL: 'http://127.0.0.1:8080/' });
+    it('provider ask (default, #2884): no llama-server url needed; the shared service url is checked when picks are off', () => {
+      expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: '1' }).some((c) => c.startsWith('AI_'))).toBe(false);
+      expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'ask', EXPO_PUBLIC_AI_ASSISTANT_URL: 'nope' }).some((c) => c.startsWith('AI_'))).toBe(false);
+      expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_PICKS_URL: 'ws://x' })).toContain('AI_PICKS_URL_INVALID:error');
+      const prodLocal = codes({ ...base, NODE_ENV: 'production', EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_PICKS_URL: 'http://127.0.0.1:8787' });
+      expect(prodLocal).toContain('AI_PICKS_LOCAL_URL_IN_PRODUCTION:error');
+      expect(prodLocal).not.toContain('AI_ASSISTANT_LOCAL_URL_IN_PRODUCTION:error');
+      // С включёнными блоками подбора ту же диагностику даёт их проверка — не дважды.
+      const both = codes({ ...base, NODE_ENV: 'production', EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_PICKS: '1', EXPO_PUBLIC_AI_PICKS_URL: 'http://127.0.0.1:8787' });
+      expect(both.filter((c) => c === 'AI_PICKS_LOCAL_URL_IN_PRODUCTION:error')).toHaveLength(1);
+      expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'openai' })).toContain('AI_ASSISTANT_PROVIDER_INVALID:error');
+      expect(codes({ ...base, EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'openai' }).some((c) => c.startsWith('AI_'))).toBe(false);
+    });
+
+    it('provider llamacpp requires an absolute http(s) llama-server url', () => {
+      const llama = { ...base, EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'llamacpp' };
+      expect(codes(llama)).toContain('AI_ASSISTANT_URL_INVALID:error');
+      expect(codes({ ...llama, EXPO_PUBLIC_AI_ASSISTANT: 'true', EXPO_PUBLIC_AI_ASSISTANT_URL: 'ws://x' })).toContain('AI_ASSISTANT_URL_INVALID:error');
+      const dev = codes({ ...llama, EXPO_PUBLIC_AI_ASSISTANT_URL: 'http://127.0.0.1:8080/' });
       expect(dev.some((c) => c.startsWith('AI_ASSISTANT'))).toBe(false);
     });
 
     it('flags a local model url and the enabled assistant in a production build', () => {
-      const prod = codes({ ...base, NODE_ENV: 'production', EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_URL: 'http://127.0.0.1:8080' });
+      const prod = codes({ ...base, NODE_ENV: 'production', EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'llamacpp', EXPO_PUBLIC_AI_ASSISTANT_URL: 'http://127.0.0.1:8080' });
       expect(prod).toContain('AI_ASSISTANT_LOCAL_URL_IN_PRODUCTION:error');
       expect(prod).toContain('AI_ASSISTANT_ENABLED_IN_PRODUCTION:warning');
-      const prodRemote = codes({ ...base, EXPO_PUBLIC_ENV: 'production', EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_URL: 'https://metravel.by/ai' });
+      expect(codes({ ...base, NODE_ENV: 'production', EXPO_PUBLIC_AI_ASSISTANT: '1' })).toContain('AI_ASSISTANT_ENABLED_IN_PRODUCTION:warning');
+      const prodRemote = codes({ ...base, EXPO_PUBLIC_ENV: 'production', EXPO_PUBLIC_AI_ASSISTANT: '1', EXPO_PUBLIC_AI_ASSISTANT_PROVIDER: 'llamacpp', EXPO_PUBLIC_AI_ASSISTANT_URL: 'https://metravel.by/ai' });
       expect(prodRemote).toEqual(expect.arrayContaining(['AI_ASSISTANT_ENABLED_IN_PRODUCTION:warning']));
       expect(prodRemote).not.toContain('AI_ASSISTANT_LOCAL_URL_IN_PRODUCTION:error');
     });
