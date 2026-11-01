@@ -49,9 +49,14 @@ export const editorialStop = z.strictObject({
   natureRoute: natureRoute.optional(),
 });
 
+/** Visual editions of one country share composition; absent means the original watercolor series. */
+export const bookVisualStyle = z.enum(['watercolor', 'photo', 'graphic', 'fantasy']);
+export type BookVisualStyle = z.infer<typeof bookVisualStyle>;
+
 export const editorialShape = {
   schemaVersion: z.literal(1), id: identifier, slug: identifier, revision: identifier,
   country: z.enum(['BY', 'PL']), contentLocale: z.literal('ru'), title: nonempty,
+  visualStyle: bookVisualStyle.optional(),
   stops: z.array(editorialStop).min(1),
   miniTrips: z.array(z.strictObject({
     id: identifier, title: nonempty, stopIds: z.array(identifier).min(1), note: nonempty,

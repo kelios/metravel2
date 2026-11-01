@@ -13,7 +13,6 @@ import {
   QuestLandingLoading,
   renderQuestLandingStructuredData,
   useQuestLandingHeadMeta,
-  useQuestLandingNotFoundRedirect,
   useQuestLandingSsgFallbackCleanup,
 } from '@/components/quests/QuestLandingLayout'
 import TravelsForQuestSection from '@/components/quests/TravelsForQuestSection'
@@ -24,6 +23,7 @@ import { useQuestsList } from '@/hooks/useQuestsApi'
 import { useQuestCityWalk } from '@/hooks/useQuestCityWalk'
 import { useBreakpoints } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
+import { buildQuestPath } from '@/utils/routePaths'
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo'
 import { buildBrandedSeoTitle } from '@/utils/questSeo'
 import { STORAGE_PENDING_CATALOG_SELECTION } from '@/utils/questCatalogSelection'
@@ -55,13 +55,39 @@ function preloadQuestsScreen() {
 }
 if (Platform.OS === 'web' && typeof window !== 'undefined') void preloadQuestsScreen()
 const QuestsScreen = React.lazy(preloadQuestsScreen)
+// Терминальный экран редкого пути (#2896) не едет в чанке маршрута города: статический
+// импорт поднял `index:quests-city` над бюджетом (ROUTE-BUNDLE-001), а нужен он
+// только на неизвестном адресе — чанк грузится в момент показа.
+const QuestNotFoundScreen = React.lazy(() => import('@/components/quests/QuestNotFoundScreen'))
+
+type Props = {
+  /**
+   * SSR-loader ответил «нет такого адреса» на клиентский запрос данных (#2896):
+   * экран «не найдено» рисуется сразу, не дожидаясь каталога.
+   */
+  notFound?: boolean
+}
+
+/**
+ * Сегмент совпал с alias квеста без id (`/quests/<quest-alias>`): такой адрес
+ * ведёт на канонический `/quests/<cityId>/<alias>` (#2896, п. 3). Сравнение
+ * регистронезависимое, как у сегментов города.
+ */
+export function findQuestByAliasSegment<T extends { id: string; cityId: string }>(
+  segment: string,
+  quests: readonly T[],
+): T | null {
+  const raw = segment.trim().toLowerCase()
+  if (!raw) return null
+  return quests.find((quest) => quest.id.toLowerCase() === raw) ?? null
+}
 
 /**
  * `/quests/<city>` — каталог с городом из URL (#2654): тот же сайдбар, заголовок
  * и сетка, что у `/quests`, плюс SEO города и его заметки под сеткой. Возврат
  * (#1484) считает сам экран каталога.
  */
-export default function QuestsByCityScreen() {
+export default function QuestsByCityScreen({ notFound: loaderNotFound = false }: Props) {
   const params = useLocalSearchParams<{ city?: string | string[] }>()
   const cityParam = getQuestLandingRouteParam(params.city)
   const navigation = useNavigation()
@@ -111,8 +137,20 @@ export default function QuestsByCityScreen() {
   const canonicalSegment = cityGroup?.segment || cityParam
   const canonical = buildCanonicalUrl(`/quests/${canonicalSegment}`)
 
-  // Unknown city (no quests) → fall back to the full catalog.
-  useQuestLandingNotFoundRedirect(!loading && !resolved)
+  // Сегмент — alias квеста без id: уводим на канонический адрес квеста (#2896).
+  const aliasQuest = useMemo(
+    () => (!loading && !resolved ? findQuestByAliasSegment(cityParam, quests) : null),
+    [cityParam, loading, quests, resolved],
+  )
+  const aliasQuestPath = aliasQuest ? buildQuestPath(aliasQuest.cityId, aliasQuest.id) : null
+  useEffect(() => {
+    if (isFocused && aliasQuestPath) router.replace(aliasQuestPath as Parameters<typeof router.replace>[0])
+  }, [aliasQuestPath, isFocused, router])
+  // Неизвестный сегмент (не город, не alias квеста) — терминальный экран «Квест
+  // не найден», а не редирект в каталог и не пустота (#2896). Маркер loader'а
+  // лишь не ждёт каталога: публикация и каталог — разные источники, и город,
+  // который каталог всё же разрешил, страницей «не найдено» не накрывается.
+  const notFound = !aliasQuestPath && !resolved && (loaderNotFound || !loading)
 
   // Navigation/stack header title = localized city name (from the resolved
   // city_name), never the raw URL segment («4» / «minsk»). Matches the pattern
@@ -209,6 +247,14 @@ export default function QuestsByCityScreen() {
     () => ({ selectionId, onLeave: handleLeave, seo, footer }),
     [footer, handleLeave, selectionId, seo],
   )
+
+  if (notFound) {
+    return (
+      <Suspense fallback={<QuestLandingLoading styles={s} colors={colors} />}>
+        <QuestNotFoundScreen kind="city" segment={cityParam} quests={quests} styles={s} />
+      </Suspense>
+    )
+  }
 
   if (loading || !cityGroup) {
     return <QuestLandingLoading styles={s} colors={colors} />

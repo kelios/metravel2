@@ -271,6 +271,10 @@ const QUESTS = [
     { questId: 'new-york-new-amsterdam', dir: 'newYorkNewAmsterdam', finaleId: 234 },
     { questId: 'beijing-drum-bell-hutongs', dir: 'beijingDrumBellHutongs', finaleId: 235 },
     { questId: 'baku-icheri-sheher', dir: 'bakuIcheriSheher', finaleId: 236 },
+    { questId: 'izmir-kemeralti-clock', dir: 'izmirKemeraltiClock', finaleId: 291 },
+    { questId: 'alanya-red-tower', dir: 'alanyaRedTower', finaleId: 292 },
+    { questId: 'goreme-fairy-chimneys', dir: 'goremeFairyChimneys', finaleId: 293 },
+    { questId: 'bodrum-knights-of-halicarnassus', dir: 'bodrumKnightsOfHalicarnassus', finaleId: 294 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)

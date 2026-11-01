@@ -314,4 +314,13 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsContentPanel.themeShowA11y": "Показати добірку «{{value1}}»",
   "screens.tabs.QuestsScreen.themeTitle": "{{value1}}: {{value2}} {{value3}} | MeTravel",
   "screens.tabs.QuestsScreen.themeDescription": "Добірка «{{value1}}»: офлайн-квести містами з легендами та завданнями дорогою — точки на карті, старт із міста.",
+  "components.quests.QuestNotFoundScreen.screenTitle": "Квест не знайдено",
+  "components.quests.QuestNotFoundScreen.title": "Такого квесту немає",
+  "components.quests.QuestNotFoundScreen.countryTitle": "Такої країни в каталозі немає",
+  "components.quests.QuestNotFoundScreen.lead": "Адреса «{{value1}}» не веде ні до квесту, ні до міста. Можливо, посилання застаріло або в ньому помилка.",
+  "components.quests.QuestNotFoundScreen.allQuests": "Усі квести",
+  "components.quests.QuestNotFoundScreen.belarus": "Квести в Білорусі",
+  "components.quests.QuestNotFoundScreen.popularTitle": "Популярні квести",
+  "components.quests.QuestNotFoundScreen.seoTitle": "Квест не знайдено | Metravel",
+  "components.quests.QuestNotFoundScreen.seoDescription": "Такого квесту немає. Відкрийте каталог квестів Metravel або популярні маршрути містами.",
 } as const

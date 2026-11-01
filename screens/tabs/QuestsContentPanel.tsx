@@ -24,7 +24,8 @@ import { getQuestThemeById } from '@/utils/questThemes';
 import QuestsMobileToolbar from './QuestsMobileToolbar';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
 import { QuestPageColumns } from '@/components/quests/QuestPageColumns';
-import { pluralizeCompletions, pluralizePlayers, pluralizeQuest, type QuestMeta, type QuestSortOrder, type QuestThemeEntry } from './questsShared';
+import { pluralizeCities, pluralizeCompletions, pluralizeCountries, pluralizePlayers, pluralizeQuest, type QuestMeta, type QuestSortOrder, type QuestThemeEntry } from './questsShared';
+import { countQuestCatalogScale, isCatalogCompletionsPublic, isCatalogPlayersPublic } from '@/utils/questPublicStatsPolicy';
 import QuestsSortChips, { EMPTY_SORT_ORDERS } from './QuestsSortChips';
 
 import { translate as i18nT } from '@/i18n'
@@ -301,10 +302,21 @@ function QuestsContentPanel({
     // этого города. Запрос идёт после каталога и не спорит с ним за сеть.
     const isFullCatalog = selectedCityId === ALL_QUESTS_ID && !searchActive && !isMapAreaActive;
     const playersCount = useQuestPlayersCount(dataLoaded && isFullCatalog);
+    // Ниже порогов (#2906) маленькие числа работают против доверия: вместо них
+    // полный каталог показывает масштаб — города и страны; пороги —
+    // `utils/questPublicStatsPolicy.ts`, и при их достижении формат возвращается сам.
+    const showCompletions = isCatalogCompletionsPublic(completionsTotal);
+    const showPlayers = isFullCatalog && isCatalogPlayersPublic(playersCount);
+    const catalogScale = useMemo(
+        () => (isFullCatalog && !showCompletions ? countQuestCatalogScale(questsAll) : null),
+        [isFullCatalog, questsAll, showCompletions],
+    );
     const countText = [
         pluralizeQuest(questsAll.length),
-        completionsTotal > 0 ? pluralizeCompletions(completionsTotal) : null,
-        isFullCatalog && playersCount ? pluralizePlayers(playersCount) : null,
+        showCompletions ? pluralizeCompletions(completionsTotal) : null,
+        showPlayers && playersCount ? pluralizePlayers(playersCount) : null,
+        catalogScale && catalogScale.cities > 0 ? pluralizeCities(catalogScale.cities) : null,
+        catalogScale && catalogScale.countries > 0 ? pluralizeCountries(catalogScale.countries) : null,
     ].filter(Boolean).join(' · ');
 
     const sortChips = dataLoaded ? (

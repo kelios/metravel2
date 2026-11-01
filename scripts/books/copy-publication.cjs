@@ -84,7 +84,7 @@ function checkContent(asset, bytes) {
   if(extension==='html'){
     const html=bytes.toString('utf8');
     if(!html.startsWith('<!doctype html>')||!html.includes('<html lang="ru">')||!html.includes('<meta charset="utf-8">')||!html.includes(asset.revision)||/<(?:script|iframe|object|embed|form|base|link)\b|\son[a-z]+\s*=/i.test(html))throw new Error('Invalid static print guide');
-    for(const match of html.matchAll(/href="([^"]+)"/g)){const url=new URL(match[1].replace(/&amp;/g,'&'));if(url.origin!=='https://metravel.by'||url.search||url.hash||(!url.pathname.startsWith(`/travel-books/${asset.bookId}/${asset.revision}/`)&&!/^\/books\/[a-z]+$/.test(url.pathname)))throw new Error('External or mixed-revision HTML link');}
+    for(const match of html.matchAll(/href="([^"]+)"/g)){const url=new URL(match[1].replace(/&amp;/g,'&'));if(url.origin!=='https://metravel.by'||url.search||url.hash||(!url.pathname.startsWith(`/travel-books/${asset.bookId}/${asset.revision}/`)&&!/^\/books\/[a-z]+(?:-[a-z]+)*$/.test(url.pathname)))throw new Error('External or mixed-revision HTML link');}
   }
   if(extension==='json'){const data=JSON.parse(bytes.toString('utf8'));if(data.schemaVersion!==1||!Array.isArray(data.providers)||!data.providers.length||!Array.isArray(data.cities)||!data.cities.length)throw new Error('Invalid provider directory JSON');}
   if(extension==='txt'&&!bytes.toString('utf8').includes('SIL OPEN FONT LICENSE Version 1.1'))throw new Error('Invalid font license publication resource');

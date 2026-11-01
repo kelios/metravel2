@@ -105,3 +105,33 @@ it('distinguishes ring-body, ring-cover and sewn-body controls and downloads uni
     Object.defineProperty(URL,'revokeObjectURL',{configurable:true,writable:true,value:revoke});
   }
 });
+
+it('links the other visual edition of the same country and keeps the selected size through the profile query',()=>{
+  const catalog=require('@/services/book/readyBooks/catalog');
+  const watercolor=publishedFixture(31);
+  const photo=publishedFixture(31,{id:'belarus-photo-memory',slug:'belarus-photo',title:'Беларусь. Фотокнига воспоминаний',visualStyle:'photo'});
+  catalog.readyBooks.push(watercolor,photo);
+  jest.mocked(findReadyBook).mockReturnValue(watercolor);
+  try{
+    render(<BookRoute/>);
+    expect(screen.getByText('styleWatercolor')).toBeTruthy();
+    const link=screen.getByRole('link',{name:'stylePhoto'});
+    expect(link.getAttribute('href')).toBe('/books/belarus-photo?profile=pocket-150x100');
+    fireEvent.click(screen.getByLabelText(/album/));
+    expect(screen.getByRole('link',{name:'stylePhoto'}).getAttribute('href')).toBe('/books/belarus-photo?profile=album-a5');
+  }finally{catalog.readyBooks.splice(0);}
+});
+it('opens the edition on the physical size named by the profile query',()=>{
+  const Details=require('@/components/books/ReadyBookDetails.web').default;
+  const catalog=require('@/services/book/readyBooks/catalog');
+  const book=publishedFixture(31);
+  catalog.readyBooks.push(book,publishedFixture(31,{id:'belarus-photo-memory',slug:'belarus-photo',title:'Беларусь. Фотокнига воспоминаний',visualStyle:'photo'}));
+  jest.mocked(findReadyBook).mockReturnValue(book);
+  // The static shell never sees the query: server markup keeps the first profile, the client applies it after hydration.
+  expect(renderToStaticMarkup(<Details slug={book.slug} initialProfileId="album-a5"/>)).toContain('href="/books/belarus-photo?profile=pocket-150x100"');
+  render(<Details slug={book.slug} initialProfileId="album-a5"/>);
+  expect((screen.getByLabelText(/album/) as HTMLInputElement).checked).toBe(true);
+  render(<Details slug={book.slug} initialProfileId="unknown"/>);
+  expect(screen.getAllByLabelText(/pocket/).some(input=>(input as HTMLInputElement).checked)).toBe(true);
+  catalog.readyBooks.splice(0);
+});

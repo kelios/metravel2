@@ -479,4 +479,8 @@ export const questsGenerated1 = {
   "components.quests.questWizardStepCard.inaccuracy.sent": "Дзякуй, адзнака адпраўлена — пункт праверым.",
   "components.quests.questWizardStepCard.inaccuracy.already": "Вы ўжо адзначалі гэты пункт.",
   "components.quests.questWizardStepCard.inaccuracy.failed": "Не ўдалося адправіць адзнаку. Паспрабуйце пазней.",
+  "components.quests.questWizardStepCard.softStart.reveal": "Адкрыць адказ і ісці далей",
+  "components.quests.questWizardStepCard.softStart.wrong": "Не зусім. Зазірніце ў падказку вышэй — або адкрыйце адказ і ідзіце далей.",
+  "components.quests.QuestWizard.answerRevealed": "Адказ: {{value1}}",
+  "screens.tabs.QuestCard.beFirst": "Будзьце першым",
 } as const

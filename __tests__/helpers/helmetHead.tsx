@@ -1,5 +1,7 @@
 import React, { useLayoutEffect, useState } from 'react'
-import { renderToStaticMarkup } from 'react-dom/server'
+// `.node`: браузерная сборка серверного рендера (react-dom 19.3) требует
+// MessageChannel, которого нет в jsdom — как и в остальных hydration-тестах.
+import { renderToStaticMarkup } from 'react-dom/server.node'
 import { Helmet, HelmetProvider, type HelmetServerState } from 'expo-router/vendor/react-helmet-async/lib'
 
 type HeadEntry = {

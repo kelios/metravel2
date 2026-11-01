@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { Suspense, useEffect, useMemo } from 'react'
 import { Dimensions, Platform, View } from 'react-native'
 import { useIsFocused, useLocalSearchParams, useNavigation } from 'expo-router'
 
@@ -37,8 +37,16 @@ import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/util
 import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 const COUNTRY_HEADER_BLOCK_STYLE = { gap: 8, width: '100%', maxWidth: 840 } as const
+// Экран неизвестного адреса (#2896) — отдельный ленивый чанк, не вес маршрута страны
+// (ROUTE-BUNDLE-001): нужен только на неизвестном alias.
+const QuestNotFoundScreen = React.lazy(() => import('@/components/quests/QuestNotFoundScreen'))
 
-export default function QuestsByCountryScreen() {
+type Props = {
+  /** SSR-loader ответил «нет такого адреса» на клиентский запрос данных (#2896). */
+  notFound?: boolean
+}
+
+export default function QuestsByCountryScreen({ notFound: loaderNotFound = false }: Props) {
   useQuestReturnVisit()
 
   const params = useLocalSearchParams<{ country?: string | string[] }>()
@@ -60,7 +68,11 @@ export default function QuestsByCountryScreen() {
   )
   const countryQuests = useMemo(() => country?.quests ?? [], [country])
 
-  useQuestLandingNotFoundRedirect(Platform.OS !== 'web' || (!loading && !country))
+  // Лендинг страны — только web; native уходит в каталог. Неизвестный alias на
+  // web — терминальный экран «не найдено», а не редирект и не пустота (#2896).
+  useQuestLandingNotFoundRedirect(Platform.OS !== 'web')
+  // Маркер loader'а лишь не ждёт каталога; страну, которую каталог разрешил, он не накрывает.
+  const notFound = Platform.OS === 'web' && !country && (loaderNotFound || !loading)
 
   useEffect(() => {
     if (country?.countryName) navigation.setOptions({ title: country.countryName })
@@ -111,6 +123,14 @@ export default function QuestsByCountryScreen() {
       keyPrefix: 'quests-country',
     })
   }, [canonical, country, countryName, countryQuests, t])
+
+  if (notFound) {
+    return (
+      <Suspense fallback={<QuestLandingLoading styles={s} colors={colors} />}>
+        <QuestNotFoundScreen kind="country" segment={countryParam} quests={quests} styles={s} />
+      </Suspense>
+    )
+  }
 
   if (loading || !country || Platform.OS !== 'web') {
     return <QuestLandingLoading styles={s} colors={colors} />

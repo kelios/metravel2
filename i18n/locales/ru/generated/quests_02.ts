@@ -314,4 +314,13 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsContentPanel.themeShowA11y": "Показать подборку «{{value1}}»",
   "screens.tabs.QuestsScreen.themeTitle": "{{value1}}: {{value2}} {{value3}} | MeTravel",
   "screens.tabs.QuestsScreen.themeDescription": "Подборка «{{value1}}»: офлайн-квесты по городам с легендами и заданиями по пути — точки на карте, старт из города.",
+  "components.quests.QuestNotFoundScreen.screenTitle": "Квест не найден",
+  "components.quests.QuestNotFoundScreen.title": "Такого квеста нет",
+  "components.quests.QuestNotFoundScreen.countryTitle": "Такой страны в каталоге нет",
+  "components.quests.QuestNotFoundScreen.lead": "Адрес «{{value1}}» не ведёт ни к квесту, ни к городу. Возможно, ссылка устарела или в ней опечатка.",
+  "components.quests.QuestNotFoundScreen.allQuests": "Все квесты",
+  "components.quests.QuestNotFoundScreen.belarus": "Квесты в Беларуси",
+  "components.quests.QuestNotFoundScreen.popularTitle": "Популярные квесты",
+  "components.quests.QuestNotFoundScreen.seoTitle": "Квест не найден | Metravel",
+  "components.quests.QuestNotFoundScreen.seoDescription": "Такого квеста нет. Откройте каталог квестов Metravel или популярные маршруты по городам.",
 } as const

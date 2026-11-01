@@ -61,8 +61,10 @@ export function useQuestLandingSsgFallbackCleanup(enabled: boolean, kind: 'city'
 }
 
 /**
- * An unknown landing alias sends the visitor to the catalog, but only from the focused
- * screen. On web a browser back (`popstate` → `resetRoot` to the history record made
+ * Sends the visitor to the catalog from the focused screen — today only the native
+ * country landing uses it (the landing is web-only). An unknown alias on web is no
+ * longer a redirect: the route renders `QuestNotFoundScreen` (#2896). Redirects only
+ * from the focused screen. On web a browser back (`popstate` → `resetRoot` to the history record made
  * before this tab route was first opened) resets the params of the still-mounted hidden
  * landing to empty; that screen then took the empty alias for an unknown one and replaced
  * the page the visitor had just returned to with `/quests` (#2090).

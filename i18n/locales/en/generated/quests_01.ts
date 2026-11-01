@@ -479,4 +479,8 @@ export const questsGenerated1 = {
   "components.quests.questWizardStepCard.inaccuracy.sent": "Thank you, the flag is sent — we will check the point.",
   "components.quests.questWizardStepCard.inaccuracy.already": "You have already flagged this point.",
   "components.quests.questWizardStepCard.inaccuracy.failed": "Could not send the flag. Please try again later.",
+  "components.quests.questWizardStepCard.softStart.reveal": "Reveal the answer and move on",
+  "components.quests.questWizardStepCard.softStart.wrong": "Not quite. Check the hint above — or reveal the answer and move on.",
+  "components.quests.QuestWizard.answerRevealed": "Answer: {{value1}}",
+  "screens.tabs.QuestCard.beFirst": "Be the first",
 } as const

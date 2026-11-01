@@ -9,6 +9,7 @@ import type { QuestServingProjection } from '@/utils/questLocaleRouting';
 import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import { quotedCyrillicSegments } from '@/utils/cyrillicLanguage';
 import { buildQuestPublicStructuredData, questPublicAlternates } from './questPublicStructuredData';
+import { isQuestRouteNotFound, type QuestRouteLoaderPayload } from './questRouteLoader';
 
 const PUBLIC_STYLES = `
 [data-quest-public-page]{box-sizing:border-box;width:100%;max-width:840px;margin:0 auto;padding:24px 20px 100px;color:var(--color-text);font:16px/1.55 system-ui,-apple-system,sans-serif;overflow-wrap:anywhere}
@@ -72,6 +73,12 @@ function QuestPublicDocument({ data }: { data: QuestPublicProjection }) {
 
 const subscribeNever = () => () => {};
 
+/** Что loader знает об адресе помимо проекции (#2896). */
+export type QuestPublicLoaderState = {
+  /** Публикация ответила «нет такого адреса» на клиентский запрос данных маршрута. */
+  notFound: boolean;
+};
+
 /**
  * The projection document is the server HTML only (crawlers, no-JS, first paint).
  * React reads the server snapshot while rendering on the server and hydrating, so
@@ -80,11 +87,18 @@ const subscribeNever = () => () => {};
  * regular app screen without a document frame (#2831, #2832).
  */
 export default function QuestPublicLoaderScreen({ children }: {
-  /** The app screen; a detail receives the loader projection as its publication proof. */
-  children: (projection: QuestServingProjection | null) => React.ReactNode;
+  /**
+   * The app screen; a detail receives the loader projection as its publication proof.
+   * `state.notFound` — публикация ответила 404/410 на клиентский запрос данных (#2896):
+   * экран рисует «не найдено» сразу, не дожидаясь каталога.
+   */
+  children: (projection: QuestServingProjection | null, state: QuestPublicLoaderState) => React.ReactNode;
 }) {
-  const data = useLoaderData() as QuestPublicProjection | null;
+  const payload = useLoaderData() as QuestRouteLoaderPayload;
+  const notFound = isQuestRouteNotFound(payload);
+  const data = payload && !notFound ? payload as QuestPublicProjection : null;
   const serverMarkup = useSyncExternalStore(subscribeNever, () => false, () => true);
   const projection = useMemo(() => (data ? servingProjection(data) : null), [data]);
-  return data && serverMarkup ? <QuestPublicDocument key={data.canonical_path} data={data} /> : <>{children(projection)}</>;
+  const state = useMemo<QuestPublicLoaderState>(() => ({ notFound }), [notFound]);
+  return data && serverMarkup ? <QuestPublicDocument key={data.canonical_path} data={data} /> : <>{children(projection, state)}</>;
 }

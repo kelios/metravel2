@@ -31,7 +31,7 @@ export async function loadReadyBookCompiler(output) {
 }
 
 export async function loadReadyBookInputs(country, profileId, purpose, options = {}) {
-  const source = options.source ?? await loadSelectedBook(country, options);
+  const source = options.source ?? await loadSelectedBook(country, {...options, profileId});
   const qr = {};
   for (const stop of source.book.stops) {
     const links = {map: stop.navigation.mapUrl, article: stop.navigation.articleUrl, ...(stop.navigation.quest ? {quest: stop.navigation.quest.url} : {})};
@@ -85,7 +85,7 @@ async function artifact(file, purpose, component, pageCount) {
   return {path: file, purpose, component, sha256: sha(bytes), bytes: bytes.length, pageCount};
 }
 
-export async function renderReadyBooks({output, python, check = false, registryPath, sourcesRoot}) {
+export async function renderReadyBooks({output, python, check = false, registryPath, sourcesRoot, style = 'watercolor'}) {
   output = path.resolve(output);
   await mkdir(output, {recursive: true});
   const compiler = await loadReadyBookCompiler(output);
@@ -97,8 +97,11 @@ export async function renderReadyBooks({output, python, check = false, registryP
       browser = await chromium.launch({headless: true});
     }
     for (const country of ['by', 'pl']) {
-      const source = await loadSelectedBook(country, {registryPath, sourcesRoot});
-      const entry = {bookId: '', revision: '', bodyPageCount: 0, stopCount: 0, country: country.toUpperCase(), editorialPath: `data/travelBooks/${country}/editorial.json`, profiles: []};
+      // The photographic edition composes a collage per physical profile; the watercolor artwork is shared.
+      const loadSource = profileId => loadSelectedBook(country, {registryPath, sourcesRoot, style, profileId});
+      const shared = style === 'photo' ? null : await loadSource();
+      let source = shared ?? await loadSource('pocket-150x100');
+      const entry = {bookId: '', revision: '', visualStyle: style, bodyPageCount: 0, stopCount: 0, country: country.toUpperCase(), editorialPath: `data/travelBooks/${country}/editorial.json`, profiles: []};
       entry.coverPersonalization = {...source.coverPersonalization, font: {...source.coverPersonalization.font, license: {...source.coverPersonalization.font.license}}, templates: []};
       const fontBytes = await readFile(source.coverPersonalization.font.path);
       const defaultCoverText = source.coverPersonalization.presets.find(preset => preset.id === source.coverPersonalization.defaultPresetId)?.text;
@@ -115,8 +118,10 @@ export async function renderReadyBooks({output, python, check = false, registryP
       for (const profileId of ['pocket-150x100', 'album-a5']) {
         const profileEntry = {profile: null, artifacts: [], controls: []};
         let readFiles, readCoverTemplate;
+        if (!shared && profileId !== 'pocket-150x100') source = await loadSource(profileId);
         for (const purpose of ['read', 'print-shop']) {
           const input = await loadReadyBookInputs(country, profileId, purpose, {source});
+          if (entry.revision && entry.revision !== input.book.revision) throw new Error('Profiles of one edition must share the revision');
           entry.bookId = input.book.id;
           entry.revision = input.book.revision;
           const html = compiler.buildReadyBookHtml(input);
@@ -180,7 +185,7 @@ export async function renderReadyBooks({output, python, check = false, registryP
     }
   } finally {await browser?.close();}
   if (!check) {
-    const index = {schemaVersion: 1, status: 'production-intermediate', publishable: false, color: 'RGB', providerAcceptance: 'unverified', books};
+    const index = {schemaVersion: 1, status: 'production-intermediate', visualStyle: style, publishable: false, color: 'RGB', providerAcceptance: 'unverified', books};
     const tmp = path.join(output, 'production-index.json.tmp');
     await writeFile(tmp, JSON.stringify(index, null, 2) + '\n');
     await rename(tmp, path.join(output, 'production-index.json'));

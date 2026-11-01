@@ -575,9 +575,9 @@ describe('QuestCard', () => {
             mockIsPhone = false;
         });
 
-        // Контроль русских форм: 1 → «раз», 2/3/4 → «раза», 5/11/21 → «раз».
+        // Контроль русских форм: 2/3/4 → «раза», 5/11/21 → «раз». Единица ниже
+        // порога доверия (#2906) и в этот набор не входит.
         it.each([
-            [1, 'Пройдено 1 раз'],
             [2, 'Пройдено 2 раза'],
             [3, 'Пройдено 3 раза'],
             [4, 'Пройдено 4 раза'],
@@ -615,8 +615,8 @@ describe('QuestCard', () => {
             expect(getByText('Первым прошёл: Roman Shakun')).toBeTruthy();
         });
 
-        it('нулевое состояние не показывает статистику прохождений в оверлее', async () => {
-            const { queryByTestId, queryByText } = await renderWithQueryClient(
+        it('нулевое состояние не показывает статистику прохождений в оверлее, а зовёт стать первым (#2906)', async () => {
+            const { queryByTestId, queryByText, getByTestId } = await renderWithQueryClient(
                 <QuestCard
                     styles={styles}
                     cardWidth={380}
@@ -628,6 +628,27 @@ describe('QuestCard', () => {
             expect(queryByTestId('quest-card-completions-minsk-empty')).toBeNull();
             expect(queryByText('Ещё никто не проходил')).toBeNull();
             expect(queryByText(/Пройдено/)).toBeNull();
+            expect(getByTestId('quest-card-be-first-minsk-empty')).toBeTruthy();
+            expect(queryByText('Будьте первым')).toBeTruthy();
+        });
+
+        it('одно прохождение ниже порога доверия: ни счётчика, ни первопроходца — «Будьте первым» (#2906)', async () => {
+            const { queryByTestId, queryByText, getByText } = await renderWithQueryClient(
+                <QuestCard
+                    styles={styles}
+                    cardWidth={380}
+                    cityId="minsk"
+                    quest={makeQuest({
+                        id: 'minsk-one',
+                        completionsCount: 1,
+                        firstCompleter: { id: 7, name: 'Roman Shakun', avatar: null },
+                    })}
+                />,
+            );
+
+            expect(queryByTestId('quest-card-completions-minsk-one')).toBeNull();
+            expect(queryByText(/Первым прошёл/)).toBeNull();
+            expect(getByText('Будьте первым')).toBeTruthy();
         });
     });
 

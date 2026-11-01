@@ -188,6 +188,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         showMap,
         setShowMap,
         completedSteps,
+        requiredSteps,
         pendingSteps,
         requiredCount,
         progress,
@@ -375,6 +376,24 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         continueFromCurrentStep();
     }, [continueFromCurrentStep, currentRealIndex, currentStep, questId, setAnswers, setAttempts, setHints]);
 
+    // Мягкий старт (#2905): первая обязательная точка — вход в игру. 55 % стартовавших
+    // уходили, не ответив ни разу: строгий отказ на первой же загадке читался как
+    // «не для меня». Здесь подсказка открыта сразу, а отказ ведёт к «Открыть ответ и
+    // идти дальше» — прогресс засчитывается с пометкой `revealed` в телеметрии.
+    // Действует только там, где есть что открыть: у свободного ответа, шага-паузы
+    // и шага без `answerDisplay` ни авто-подсказки, ни событий `quest_point_1_*`,
+    // иначе воронка мягкого старта считала бы точки, где его не было.
+    const softStartStepId = requiredSteps[0]?.id ?? null;
+    const softStartActive = !!currentStep && currentStep.id === softStartStepId && !!currentStep.answerDisplay && !answers[currentStep.id];
+    const softStartHintUntouched = softStartActive && !!currentStep?.hint && hints[currentStep.id] === undefined;
+    useEffect(() => {
+        if (!softStartHintUntouched || !currentStep) return;
+        const stepId = currentStep.id;
+        // Апдейтер остаётся чистым (StrictMode зовёт его дважды) — событие снаружи.
+        setHints(prev => (prev[stepId] === undefined ? { ...prev, [stepId]: true } : prev));
+        queueAnalyticsEvent('quest_point_1_hint_open', { quest_id: questId, step_index: currentRealIndex, auto: true });
+    }, [currentRealIndex, currentStep, questId, setHints, softStartHintUntouched]);
+
     const handleCurrentStepWrongAttempt = useCallback(() => {
         if (!currentStep) return;
         setAttempts(prev => ({ ...prev, [currentStep.id]: (prev[currentStep.id] || 0) + 1 }));
@@ -384,9 +403,26 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         if (!currentStep) return;
         // Событие шлём только на раскрытие и снаружи апдейтера: он обязан
         // остаться чистым (StrictMode вызывает его дважды).
-        if (!hints[currentStep.id]) trackHintOpened({ attemptNo: attempts[currentStep.id] || 0 });
+        if (!hints[currentStep.id]) {
+            trackHintOpened({ attemptNo: attempts[currentStep.id] || 0 });
+            if (softStartActive) queueAnalyticsEvent('quest_point_1_hint_open', { quest_id: questId, step_index: currentRealIndex, auto: false });
+        }
         setHints(prev => ({ ...prev, [currentStep.id]: !prev[currentStep.id] }));
-    }, [attempts, currentStep, hints, setHints, trackHintOpened]);
+    }, [attempts, currentRealIndex, currentStep, hints, questId, setHints, softStartActive, trackHintOpened]);
+
+    // «Открыть ответ и идти дальше» (#2905): ответ показывается тостом, точка
+    // засчитывается как пройденная (`quest_point_done` уходит из обработчика
+    // ответа), а в воронке остаётся пометка `quest_point_1_revealed`.
+    const revealCurrentStepAnswer = useCallback(() => {
+        if (!currentStep?.answerDisplay) return;
+        queueAnalyticsEvent('quest_point_1_revealed', {
+            quest_id: questId,
+            step_index: currentRealIndex,
+            attempt_no: attempts[currentStep.id] || 0,
+        });
+        notifyQuest(i18nT('quests:components.quests.QuestWizard.answerRevealed', { value1: currentStep.answerDisplay }));
+        handleCurrentStepAnswer(currentStep.answerDisplay);
+    }, [attempts, currentRealIndex, currentStep, handleCurrentStepAnswer, questId]);
 
     const toggleMap = useCallback(() => {
         setShowMap(prev => !prev);
@@ -732,6 +768,8 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                 onSkip={skipStep}
                                 onSkipFarStep={skipFarStep}
                                 onSkipStuckStep={skipStuckStep}
+                                softStart={softStartActive}
+                                onRevealAnswer={softStartActive ? revealCurrentStepAnswer : undefined}
                                 approachLeg={farStepModel.approach}
                                 nextLeg={farStepModel.nextLeg}
                                 isFarStep={farStepModel.currentIsFar}

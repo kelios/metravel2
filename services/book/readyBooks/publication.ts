@@ -5,6 +5,7 @@ import {profileId, printProfileSchema} from '../../../data/travelBooks/schema/pr
 import {buildImpositionPlan} from './imposition';
 import {coverTextGeometry, imposedCoverTextGeometry} from './render/coverGeometry';
 import type {PrintProfile} from '../../../types/readyBook';
+import {bookVisualStyle} from '../../../data/travelBooks/schema/editorial';
 
 const page = z.strictObject({number:z.number().int().positive(),uri:assetUri,sha256,bytes:z.number().int().positive(),alt:z.string().min(1)});
 const identifier=z.string().regex(/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/);
@@ -31,7 +32,9 @@ export const coverPersonalizationSchema=z.strictObject({
   }
 });
 export const publishedBookSchema = z.strictObject({
-  id:identifier,slug:z.string().regex(/^[a-z]+$/),title:z.string().min(1),country:z.enum(['BY','PL']),
+  id:identifier,slug:z.string().regex(/^[a-z]+(?:-[a-z]+)*$/),title:z.string().min(1),country:z.enum(['BY','PL']),
+  // Absent on the original watercolor series (#2786); every later visual edition names its style (#2854).
+  visualStyle:bookVisualStyle.optional(),
   revision:identifier,contentLocale:z.literal('ru'),status:z.literal('partial'),
   layoutVersion:z.union([z.literal(1),z.literal(2)]).default(1),
   bodyPageCount:z.number().int().positive(),coverPageCount:z.literal(4),stopCount:z.number().int().min(MIN_READY_BOOK_STOPS),coverUri:assetUri,
@@ -110,8 +113,12 @@ export const publishedBookSchema = z.strictObject({
     if(!source||source.sha256!==p.sourceSha256||p.revision!==book.revision||p.pages.length!==count||p.pages.some((a,i)=>a.number!==i+1||!a.uri.includes('/'+book.revision+'/'))) fail('Preview must match the complete reading PDF');
   }
 });
-export const publicationSchema=z.strictObject({schemaVersion:z.literal(1),releaseId:z.literal('travel-books-v1'),books:z.array(publishedBookSchema).length(2)}).superRefine((value,ctx)=>{
-  for(const field of ['id','slug','country'] as const) if(new Set(value.books.map(b=>b[field])).size!==2) ctx.addIssue({code:'custom',message:'Duplicate '+field});
+export const publicationSchema=z.strictObject({schemaVersion:z.literal(1),releaseId:z.literal('travel-books-v1'),books:z.array(publishedBookSchema).min(2)}).superRefine((value,ctx)=>{
+  for(const field of ['id','slug'] as const) if(new Set(value.books.map(b=>b[field])).size!==value.books.length) ctx.addIssue({code:'custom',message:'Duplicate '+field});
+  // One current edition per country and visual style; the watercolor pair stays mandatory.
+  const identities=value.books.map(book=>`${book.country}:${book.visualStyle??'watercolor'}`);
+  if(new Set(identities).size!==identities.length) ctx.addIssue({code:'custom',message:'Duplicate country style'});
+  for(const country of ['BY','PL']) if(!identities.includes(`${country}:watercolor`)) ctx.addIssue({code:'custom',message:'Missing watercolor edition: '+country});
 });
 export type PublishedBook=z.infer<typeof publishedBookSchema>;
 export type PublishedArtifact=PublishedBook['artifacts'][number];

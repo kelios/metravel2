@@ -16,7 +16,7 @@ const identifier=/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 
 export function publicationRevision(source,{editorial,publisherHash,rasterizerVersion,encoderVersions}){
   return source.revision+'.'+hash(JSON.stringify({editorial,publisherHash,rasterizerVersion,encoderVersions,
-    layoutVersion:2,coverPersonalization:source.coverPersonalization?coverPersonalizationDescriptor(source,filename=>filename):null,
+    layoutVersion:2,visualStyle:editorial.visualStyle??'watercolor',coverPersonalization:source.coverPersonalization?coverPersonalizationDescriptor(source,filename=>filename):null,
     profiles:source.profiles.map(profile=>({profile:profile.profile,artifacts:profile.artifacts.map(a=>({purpose:a.purpose,component:a.component,sha256:a.sha256})),controls:profile.controls.map(control=>({sha256:control.sha256,controlFor:control.controlFor,component:control.component}))})),
   })).slice(0,12);
 }
@@ -119,7 +119,8 @@ export async function preparePublication({input,output,baseUrl}){
     }
     const destinationPages=buildReadyBookPagePlan(editorial).filter(page=>page.kind==='destination');
     const quality=source.profiles.map(profile=>{const reports=acceptance.reports.filter(report=>report.bookId===source.bookId&&report.profileId===profile.profile.id&&report.purpose==='read');const minIllustrationPpi=Math.min(...reports.map(report=>report.minIllustrationPpi));return {profileId:profile.profile.id,printReady:false,minIllustrationPpi,physicalChecks:[...(minIllustrationPpi<300?['image-resolution']:[]),'provider-acceptance','paper-check']};});
-    books.push({id:editorial.id,slug:editorial.slug,title:editorial.title,country:editorial.country,revision,contentLocale:'ru',status:'partial',layoutVersion:2,coverPersonalization,bodyPageCount:source.bodyPageCount,coverPageCount:4,stopCount:editorial.stops.length,quality,
+    // The watercolor series keeps its historical JSON shape; other visual editions carry their style explicitly.
+    books.push({id:editorial.id,slug:editorial.slug,title:editorial.title,country:editorial.country,...(editorial.visualStyle&&editorial.visualStyle!=='watercolor'?{visualStyle:editorial.visualStyle}:{}),revision,contentLocale:'ru',status:'partial',layoutVersion:2,coverPersonalization,bodyPageCount:source.bodyPageCount,coverPageCount:4,stopCount:editorial.stops.length,quality,
       coverUri:preview.find(p=>p.profileId==='pocket-150x100'&&p.component==='cover').pages[0].uri,
       missing:['stickers','instructions','print-passport','provider-acceptance','paper-check'],
       stops:editorial.stops.map((stop,i)=>({id:stop.id,title:stop.title,page:destinationPages[i].number,sourceUrl:stop.navigation.articleUrl,pointId:stop.navigation.pointId,sourceTravelId:stop.navigation.sourceTravelId,authorId:1,...(stop.navigation.quest?{questId:stop.navigation.quest.id}:{})})),

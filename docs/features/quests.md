@@ -82,8 +82,8 @@ runtime-доказательствами под задачу, а не налич
 | `/quests` | `app/(tabs)/quests/index.tsx` (19 LOC) → `screens/tabs/QuestsScreenRoute.tsx` → `screens/tabs/QuestsScreen.tsx` | каталог: города/фильтры/поиск, список ↔ карта, SEO-интро и FAQ |
 | `/quests/map` | `app/(tabs)/quests/map.tsx` (314 LOC) | все квесты точками на общей `Map`/`Map.web`; статический сегмент, матчится раньше `[city]` |
 | `/quests/scenario` | `app/(tabs)/quests/scenario.tsx` (9 LOC) → `screens/tabs/QuestScenarioScreen.tsx` (435 LOC) | DIY-лендинг «квест-бук для печати»; тоже статический сегмент перед `[city]` |
-| `/quests/{city}` | `app/(tabs)/quests/[city]/index.tsx` (229 LOC) | лендинг города: сегмент — numeric `city_id` ИЛИ alias (`minsk`); неизвестный сегмент → `router.replace('/quests')` |
-| `/quests/country/{country}` | `app/(tabs)/quests/country/[country]/index.tsx` | web-лендинг страны: валидный ISO alpha-2 из каталога → стабильный alias (`BY → belarus`, `PL → poland`); неизвестный alias → `/quests`. Из сайдбара каталога не открывается (#2011): там страна фильтруется на месте; ссылки на лендинг даёт серверный HTML каталога и лендингов городов (SSR-проекция `scripts/lib/questWebProjection.js`) |
+| `/quests/{city}` | `app/(tabs)/quests/[city]/index.tsx` | лендинг города: сегмент — numeric `city_id` ИЛИ alias (`minsk`); сегмент, равный alias квеста без id (`grodno-royal`) → `router.replace` на канонический `/quests/<cityId>/<alias>`; неизвестный сегмент → терминальный экран `components/quests/QuestNotFoundScreen.tsx` (ссылки «Все квесты», «Квесты в Беларуси», 4 популярных, `noindex`), не редирект (#2896) |
+| `/quests/country/{country}` | `app/(tabs)/quests/country/[country]/index.tsx` | web-лендинг страны: валидный ISO alpha-2 из каталога → стабильный alias (`BY → belarus`, `PL → poland`); неизвестный alias → тот же `QuestNotFoundScreen` (`kind="country"`, #2896); native → `/quests`. Из сайдбара каталога не открывается (#2011): там страна фильтруется на месте; ссылки на лендинг даёт серверный HTML каталога и лендингов городов (SSR-проекция `scripts/lib/questWebProjection.js`) |
 | `/quests/{city}/{questId}` | `app/(tabs)/quests/[city]/[questId].tsx` (688 LOC) | деталь и прохождение: bundle, прогресс, гость/consent, SEO+JSON-LD, модалка отзывов |
 | Промо на главной | `components/home/HomeQuestsPromoSection.tsx` | сразу после hero: 6 карточек (desktop) / 4 (mobile) через `useQuestsPreview(6)` + подарочный вход-блок → `/quests/scenario`; отбор — популярные (`?sort=popular`: прохождения, просмотры, id), а не первые по id (#1798); серверный двойник — `discovery.preview` SSR-проекции (`selectPopularQuests`, те же 8 ссылок тем же правилом), рендерится внутри `#root` (#2766) |
 | Промо в travel-детали | `components/travel/details/sections/QuestForCitySection.tsx` (+ `Deferred*.tsx` / `Deferred*.web.tsx`) | «квест по этому городу» на странице путешествия |
@@ -1034,6 +1034,19 @@ mounted regression short/tall/width/interaction и исходные14cases/56row
 - Подсказка предлагается после первой неверной попытки (`hintSuggestedAfter =
   1`), приглашение пропустить шаг — после `SKIP_SUGGESTED_AFTER = 3`; на
   свободном ответе приглашение не показывается (отказ там означает «коротко»).
+- **Мягкий старт первой обязательной точки (#2905).** 55 % стартовавших
+  уходили, не ответив ни разу (GA4 02–31.10.2026: `quest_start` 33 →
+  `quest_point_1_done` 15). На первой точке из `requiredSteps` визард сам
+  открывает подсказку (`hints[id] === undefined` → `true`, событие
+  `quest_point_1_hint_open{auto}`), ссылка «Пропустить» заменена на «Открыть
+  ответ и идти дальше», а неверный ответ встречает спокойный текст без красного
+  (`softErrorContainer`) и ту же кнопку. «Открыть ответ» показывает
+  `step.answerDisplay` тостом, засчитывает точку обычным `handleCurrentStepAnswer`
+  (уходит `quest_point_done`) и пишет `quest_point_1_revealed{attempt_no}`.
+  Мягкий старт не действует на свободный ответ, шаг-паузу и шаг без
+  `answerDisplay` — там открывать нечего. Остальные точки прежние.
+- Шаг-пауза (`any`, кнопка «Далее») пишет `quest_answer_submit{is_correct:true,
+  attempt_no:1}`: до #2905 такие шаги в воронке попыток читались как «нет данных».
 - **Вердикт виден без ручной прокрутки (#1072, #2271).** После появления
   обратной связи по ответу (ошибка, пауза, подсказка, приглашение пропустить)
   её низ доматывается в видимую область: над клавиатурой, если она открыта, и
@@ -1176,6 +1189,7 @@ mounted regression short/tall/width/interaction и исходные14cases/56row
   | 1 | `quest_view` | карточка квеста открыта, бандл загружен |
   | 2 | `quest_start` | игрок встал на первую настоящую точку |
   | 3 | `quest_point_1_done` | закрыта первая точка |
+  | 3a | `quest_point_1_hint_open` / `quest_point_1_revealed` | мягкий старт (#2905): подсказка первой точки открыта (`auto` — визардом, иначе игроком) / ответ открыт кнопкой; через 14 дней после выката сравнить `quest_start → quest_point_1_done` с октябрём (45 %) |
   | 4 | `quest_progress_25` | закрыто ≥25 % точек |
   | 5 | `quest_progress_50` | закрыто ≥50 % |
   | 6 | `quest_progress_75` | закрыто ≥75 % |
@@ -1362,7 +1376,19 @@ JSON-LD и видимое тело читают тот же loader result. `requ
 HTML (поисковики, no-JS, первый кадр): `useSyncExternalStore` отдаёт серверный
 снимок при SSR и гидратации, поэтому разметка совпадает, и сразу после неё
 посетитель получает обычный экран приложения. Клиентская навигация монтирует
-экран приложения без кадра документа (#2831, #2832). Детали квеста экран
+экран приложения без кадра документа (#2831, #2832).
+
+Неизвестный адрес (#2896): публикация отвечает 404/410, документ сервер отдаёт
+кодом 404 (`handleRouteError` в `scripts/serve-web-ssr.js`; nginx с
+`proxy_intercept_errors` кладёт поверх оболочку `+not-found.html`). Клиентский
+же запрос данных маршрута — `/_expo/loaders/<route>`, который expo-router делает
+при переходе и после гидратации оболочки — раньше получал тот же 404 и падал
+`Failed to load loader data for route` (экран ошибки или пустота). Теперь
+`loadQuestPublicRoute` отличает его по `Accept: application/json` (сервер
+переписывает путь loader-запроса в путь маршрута до вызова) и отдаёт маркер
+`{ kind: 'not_found', path, httpStatus }`; `QuestPublicLoaderScreen` передаёт
+экрану `state.notFound`, метаданные берут `notFoundRouteMetadata()`. Документ
+по-прежнему 404: маркер никогда не делает несуществующий адрес индексируемым. Детали квеста экран
 получает проекцию loader'а как `publicProjection` — доказательство публикации
 версии вместо отдельного запроса serving. Native и неактивированный web
 используют прежние маршруты.
@@ -1462,6 +1488,14 @@ HTML (поисковики, no-JS, первый кадр): `useSyncExternalStore
 - `sitemap.xml` фронт не генерирует: 18 страновых адресов, которые Django
   публикует по своему порогу «городов ≥ 2» (#1771), после этой правки отдают
   `noindex`. Снять адреса из карты сайта может только backend-задача.
+- Пороги публичной статистики (#2906) — `utils/questPublicStatsPolicy.ts`, одно
+  место: счётчик прохождений каталога показывается от 100, число игроков
+  (`GET /api/quests/stats/`, #2761) — от 50, ниже полный каталог показывает
+  масштаб «N квестов · M городов · K стран» (`countQuestCatalogScale`); на
+  карточке «Пройдено N раз» и «Первым прошёл …» — от двух прохождений, иначе
+  «Будьте первым» (desktop-оверлей); лист (i) детали скрывает строку прохождений
+  по тому же правилу. При достижении порога прежний формат возвращается сам.
+
 - Правило отбора популярных — `utils/questPopularity.js` (CommonJS, общий для
   приложения и SSR-проекции) и оно обязано совпадать с серверным `?sort=popular`
   (`-completions_count`, `-views_count`, `id`): приложение берёт порядок у
