@@ -102,3 +102,27 @@ export interface AdventProgressSnapshot {
   tasksDone: Record<string, string>
   streak: number
 }
+
+/**
+ * Переводы контента дверцы (#2883): только текстовые поля поверх RU-источника.
+ * Даты, ссылки, `answer_pattern`, гео и награды в XP живут в RU-конфиге.
+ */
+export interface AdventRiddleQuestionOverlay {
+  question?: string
+  hint?: string
+  /** Тот же порядок и число вариантов, что в RU; иначе варианты остаются RU. */
+  options?: string[]
+}
+
+export interface AdventDoorOverlay {
+  gift?: { title?: string; text?: string; linkLabel?: string }
+  task?: { text?: string; ctaLabel?: string; riddle?: { questions: AdventRiddleQuestionOverlay[] } }
+  reward?: { label?: string }
+}
+
+export interface AdventCampaignOverlay {
+  locale: string
+  year: number
+  /** Ключ — `day` дверцы в виде строки. */
+  doors: Record<string, AdventDoorOverlay>
+}

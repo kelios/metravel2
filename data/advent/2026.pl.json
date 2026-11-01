@@ -1,0 +1,244 @@
+{
+  "locale": "pl",
+  "year": 2026,
+  "doors": {
+    "1": {
+      "gift": {
+        "title": "Otwarcie: zimowa podróż dnia",
+        "text": "Toruń — stare miasto z czerwonej cegły, gdzie pachnie piernikami, a na rynku warzą grzane wino. Trasa na jeden zimowy dzień: od Ratusza do Muzeum Piernika.",
+        "linkLabel": "Czytaj trasę"
+      },
+      "task": { "text": "Otwórz pierwsze drzwiczki — i seria się zaczęła. Wróć jutro: następne otworzą się o północy." }
+    },
+    "2": {
+      "gift": {
+        "title": "Ukryte miejsca Białorusi",
+        "text": "W katalogu miejsc są punkty, do których nie dojeżdżają autokary turystyczne: dwory, latarnie nad jeziorami, opuszczone kościoły. Zacznij od zestawienia miejsc na mapie.",
+        "linkLabel": "Otwórz miejsca"
+      },
+      "task": { "text": "Dodaj trzy trasy do „Chcę pojechać” — to Twoja zimowa lista marzeń.", "ctaLabel": "Wybierz trasy" }
+    },
+    "3": {
+      "gift": {
+        "title": "Zagadka: zgadnij miasto",
+        "text": "Miasto z pałacem Radziwiłłów i parkiem wpisanym na listę UNESCO. Zimą stawy zamarzają, a pałac odbija się w śniegu.",
+        "linkLabel": "Otwórz mapę"
+      },
+      "task": {
+        "text": "Nazwij to miasto.",
+        "riddle": { "questions": [ {
+          "question": "Które miasto Białorusi słynie z zespołu pałacowo-parkowego Radziwiłłów, obiektu UNESCO?",
+          "hint": "Obwód miński, niedaleko Miru."
+        } ] }
+      }
+    },
+    "4": {
+      "gift": {
+        "title": "Historia autora o zimie",
+        "text": "Autorzy MeTravel opowiadają, jak podróżują zimą: krótki dzień, mróz, puste zamki bez kolejek. Czytaj artykuły społeczności i wybieraj swoich autorów.",
+        "linkLabel": "Czytaj artykuły"
+      },
+      "task": { "text": "Zaobserwuj autora, którego trasa Ci się spodobała — nowe wyjazdy pojawią się w Twoich aktualnościach.", "ctaLabel": "Znajdź autora" }
+    },
+    "5": {
+      "gift": {
+        "title": "Zimowa ruletka pomysłów",
+        "text": "Kiedy nie wiesz, gdzie pojechać w weekend, niech zdecyduje los: ruletka wybiera trasę z katalogu.",
+        "linkLabel": "Zakręć ruletką"
+      },
+      "task": { "text": "Zakręć ruletką i zapisz trasę, która Ci się spodoba, w „Chcę pojechać”.", "ctaLabel": "Do ruletki" }
+    },
+    "6": {
+      "gift": {
+        "title": "Kolady: fakt dnia",
+        "text": "Kolędy (białoruskie Kolady) trwają na Białorusi od Bożego Narodzenia do Chrztu Pańskiego. Kolędnicy chodzą po domach z gwiazdą na drzewcu, śpiewają i życzą gospodarzom dobra, a we wsi Siemieżewo pod Kopylem odbywa się obrzęd „Kolady Cary”, wpisany na listę UNESCO."
+      },
+      "task": {
+        "text": "Quiz: trzy pytania o Koladach.",
+        "riddle": { "questions": [
+          { "question": "Którego dnia stycznia prawosławni chrześcijanie Białorusi obchodzą Boże Narodzenie?", "options": ["6", "7", "14"] },
+          { "question": "Jaki symbol niosą na drzewcu na czele procesji kolędników?", "options": ["Gwiazda", "Słońce", "Dzwon"] },
+          { "question": "Jak nazywa się kolędowy obrzęd ze wsi Siemieżewo, wpisany na listę UNESCO?", "options": ["Kolady Cary", "Hukanie wiosny", "Kupalle"] }
+        ] }
+      }
+    },
+    "7": {
+      "gift": {
+        "title": "Jarmarki bożonarodzeniowe Polski",
+        "text": "Kraków, Wrocław, Katowice, Gdańsk, Poznań, Warszawa: daty, adresy i rady, kiedy jechać, by nie stać w kolejce po opłatki i grzane wino.",
+        "linkLabel": "Czytaj zestawienie"
+      },
+      "task": { "text": "Wybierz jarmark i oznacz wyjazd statusem „Planuję” z datą.", "ctaLabel": "Zaplanuj" },
+      "reward": { "label": "Odznaka „7 drzwiczek”" }
+    },
+    "8": {
+      "gift": {
+        "title": "Zimowy quest w Grodnie",
+        "text": "Quest „Boże Narodzenie i Nowy Rok” po Grodnie: stare miasto, zamki nad Niemnem i choinka na placu. Przechodzi się go pieszo w dwie godziny, podpowiedzi — w telefonie.",
+        "linkLabel": "Otwórz quest"
+      },
+      "task": { "text": "Przejdź pierwszy krok zimowego questu w swoim mieście.", "ctaLabel": "Wybierz miasto" }
+    },
+    "9": {
+      "gift": {
+        "title": "Gdzie to jest? Mapa",
+        "text": "Zamek z XVI wieku w miasteczku w obwodzie grodzieńskim, obiekt UNESCO: pięć wież, dziedziniec i staw, który zimą zamienia się w lodowisko."
+      },
+      "task": { "text": "Kliknij na mapie tam, gdzie stoi ten zamek. Liczy się trafienie w promieniu 5 km." }
+    },
+    "10": {
+      "gift": {
+        "title": "Artykuły o zimie",
+        "text": "Jak się ubrać na zimową trasę, gdzie się ogrzać na starym mieście i które zamki są otwarte w styczniu — zestawienie artykułów społeczności.",
+        "linkLabel": "Do artykułów"
+      },
+      "task": { "text": "Przeczytaj artykuł i wystaw mu ocenę — autorzy widzą każdą.", "ctaLabel": "Oceń artykuł" }
+    },
+    "11": {
+      "gift": {
+        "title": "Gdzie na weekend zimą",
+        "text": "Trasy weekendowe po Białorusi: jeden dzień, bez noclegu, z ciepłą kawiarnią na końcu. Wyszukiwanie po regionach i odległości od domu.",
+        "linkLabel": "Otwórz wyszukiwanie"
+      },
+      "task": { "text": "Znajdź trasę na najbliższy weekend i otwórz jej stronę.", "ctaLabel": "Szukaj trasy" }
+    },
+    "12": {
+      "gift": {
+        "title": "Zdjęcie dnia od społeczności",
+        "text": "Zimowe fotografie podróżników: zaśnieżone kościoły, zamarznięte jeziora, światła jarmarków. Najlepsze zdjęcia grudnia otrzymają rzadką nagrodę od zespołu."
+      },
+      "task": { "text": "Wgraj swoje zimowe zdjęcie do nowego wyjazdu lub notatki.", "ctaLabel": "Dodaj zdjęcie" },
+      "reward": { "label": "Kandydat do rzadkiej nagrody" }
+    },
+    "13": {
+      "gift": {
+        "title": "Profil podróżnika",
+        "text": "Wypełniony profil to Twoja księga podróży: kraje, miasta, odznaki i ranga. Inni podróżnicy znajdują dzięki niemu towarzyszy podróży."
+      },
+      "task": { "text": "Wypełnij profil na 100%: imię, zdjęcie, o sobie.", "ctaLabel": "Otwórz profil" }
+    },
+    "14": {
+      "gift": {
+        "title": "Jak dziękować autorom",
+        "text": "Nagroda peer to odznaka, którą jeden podróżnik daje drugiemu za przydatną trasę. Autor widzi, kto i za co podziękował."
+      },
+      "task": { "text": "Podaruj odznakę autorowi trasy, która Ci pomogła.", "ctaLabel": "Znajdź trasę" },
+      "reward": { "label": "Odznaka „14 drzwiczek”" }
+    },
+    "15": {
+      "gift": {
+        "title": "Polskie zimowe questy",
+        "text": "Kraków, Wrocław, Gdańsk i jeszcze piętnaście miast Polski — bożonarodzeniowe questy po starych miastach z jarmarkami i szopkami.",
+        "linkLabel": "Quest po Krakowie"
+      },
+      "task": { "text": "Otwórz stronę miasta i zapisz trasę questu.", "ctaLabel": "Miasta questów" }
+    },
+    "16": {
+      "gift": {
+        "title": "Zagadka: zgadnij miejsce",
+        "text": "Największe jezioro Białorusi: 80 kilometrów kwadratowych wody, sosnowy brzeg i sanatoria, gdzie zimą jest cicho jak nigdzie indziej."
+      },
+      "task": {
+        "text": "Nazwij to jezioro.",
+        "riddle": { "questions": [ {
+          "question": "Które jezioro jest największe na Białorusi?",
+          "hint": "Obwód miński, rejon miadziolski."
+        } ] }
+      }
+    },
+    "17": {
+      "gift": {
+        "title": "Księga wspomnień",
+        "text": "Ze swoich wyjazdów na MeTravel można złożyć książkę PDF: zdjęcia, trasy i notatki. W grudniu książka jest bezpłatna — prezent dla siebie lub bliskich.",
+        "linkLabel": "Złóż książkę"
+      },
+      "task": { "text": "Złóż książkę PDF ze swoich wyjazdów.", "ctaLabel": "Do eksportu" },
+      "reward": { "label": "Książka PDF bezpłatnie" }
+    },
+    "18": {
+      "gift": {
+        "title": "Wspólne wyjazdy",
+        "text": "Podróżnicy szukają towarzyszy na zimowe wyjazdy: od jednodniowych wypadów do noworocznych wycieczek. Zobacz plany innych lub stwórz własny.",
+        "linkLabel": "Zobacz wyjazdy"
+      },
+      "task": { "text": "Zgłoś się do wspólnego wyjazdu lub stwórz plan.", "ctaLabel": "Do wyjazdów" }
+    },
+    "19": {
+      "gift": {
+        "title": "Artykuł, który czeka na dokończenie",
+        "text": "Wielu z nas ma w szkicach wyjazd, o którym nigdy nie opowiedziało. Grudzień to czas, by go dokończyć: czytelnicy szukają zimowych pomysłów właśnie teraz."
+      },
+      "task": { "text": "Opublikuj szkic lub zacznij nowy artykuł.", "ctaLabel": "Do szkiców" }
+    },
+    "20": {
+      "gift": {
+        "title": "Zimowe trasy Białorusi",
+        "text": "Zimą na Białorusi działają wszystkie zamki i muzea, a drogi do nich odśnieża się w pierwszej kolejności. Mir, Nieśwież, Lida, Nowogródek — klasyczna zimowa pętla na dwa dni.",
+        "linkLabel": "Trasy po Białorusi"
+      },
+      "task": { "text": "Oznacz pięć wyjazdów statusem „Był” — trafią do Twojego kalendarza podróży.", "ctaLabel": "Otwórz kalendarz" }
+    },
+    "21": {
+      "gift": {
+        "title": "Najdłuższa noc",
+        "text": "21 grudnia to przesilenie zimowe: w Mińsku jest jasno około siedmiu godzin. Najlepszy czas na wieczorne trasy z iluminacją: ratusze, zamki i jarmarki są najpiękniejsze po zachodzie słońca."
+      },
+      "task": {
+        "text": "Quiz: trzy pytania o najdłuższej nocy.",
+        "riddle": { "questions": [
+          { "question": "Ile mniej więcej godzin trwa dzień w Mińsku 21 grudnia?", "options": ["7", "10", "12"] },
+          { "question": "Jak nazywa się zjawisko astronomiczne, gdy noc jest najdłuższa w roku?" },
+          { "question": "W jakim kraju leży najbardziej wysunięta na północ stolica Europy — Reykjavík?", "options": ["Islandia", "Norwegia", "Finlandia"] }
+        ] }
+      }
+    },
+    "22": {
+      "gift": {
+        "title": "Opowieść roku",
+        "text": "Który wyjazd 2026 roku najbardziej zapadł Ci w pamięć? Krótka notatka — trzy akapity i jedno zdjęcie — stanie się częścią „Podsumowania roku” społeczności."
+      },
+      "task": { "text": "Napisz krótką notatkę „Moja podróż 2026”.", "ctaLabel": "Napisz notatkę" },
+      "reward": { "label": "Kandydat do rzadkiej nagrody" }
+    },
+    "23": {
+      "gift": {
+        "title": "Plany na 2027",
+        "text": "Podróż, która ma datę, zdarza się częściej. Wybierz trasę na rok 2027 i ustaw jej datę — kalendarz przypomni."
+      },
+      "task": { "text": "Zaplanuj wyjazd w 2027 roku z datą w kalendarzu.", "ctaLabel": "Otwórz kalendarz" }
+    },
+    "24": {
+      "gift": {
+        "title": "Podsumowanie roku podróżnika",
+        "text": "Twój rok 2026 w liczbach: odwiedzone kraje i miasta, wyjazdy, questy i odznaki. Osobista karta podsumowania pojawi się w tych drzwiczkach — śledź aktualizację.",
+        "linkLabel": "Otwórz profil"
+      },
+      "task": { "text": "Otwórz ostatnie główne drzwiczki. Seria 24 dni „dzień w dzień” daje legendarną odznakę." },
+      "reward": { "label": "Złoto „Śnieżny Wędrowiec”" }
+    },
+    "25": {
+      "gift": {
+        "title": "Boże Narodzenie: kartka w prezencie",
+        "text": "Wesołych Świąt! Zimowa grafika MeTravel — kartka, którą możesz podzielić się z tymi, z kim chcesz pojechać w nowym roku."
+      },
+      "task": { "text": "Bonusowe drzwiczki otwierają się prezentem — zadania nie ma." },
+      "reward": { "label": "Bonusowa odznaka" }
+    },
+    "26": {
+      "gift": {
+        "title": "Nowy Rok: życzenie",
+        "text": "Niech w 2027 roku będzie więcej dróg niż planów i więcej planów niż wymówek. Złóż listę marzeń na rok — przynajmniej trzy miejsca."
+      },
+      "task": { "text": "Dodaj trzy trasy do „Chcę pojechać” na rok 2027.", "ctaLabel": "Moja lista" },
+      "reward": { "label": "Bonusowa odznaka" }
+    },
+    "27": {
+      "gift": {
+        "title": "Kolady: sekretne drzwiczki",
+        "text": "Wesołych Świąt! Kolady (białoruskie Kolędy) trwają do Chrztu Pańskiego: w te dni w białoruskich wsiach wciąż chodzą z gwiazdą. Dziękujemy, że byliście z nami przez cały grudzień."
+      },
+      "task": { "text": "Sekretne drzwiczki: otwierają się tylko w swoim dniu." },
+      "reward": { "label": "Sekretna odznaka" }
+    }
+  }
+}

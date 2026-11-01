@@ -16,7 +16,7 @@ function AdventProgressCard() {
   const router = useRouter()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
-  const { isInWindow, openedCount, streak } = useAdventCampaign()
+  const { isInWindow, openedCount, streak } = useAdventCampaign({ content: false })
 
   const handlePress = useCallback(() => {
     router.push(ADVENT_ROUTE as never)

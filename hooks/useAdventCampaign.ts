@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Platform } from 'react-native'
 
 import { getAdventNow } from '@/constants/advent'
+import { useAdventContentOverlay } from '@/hooks/useAdventContentOverlay'
 import { useLocalCalendarDate } from '@/hooks/useLocalCalendarDate'
+import { applyAdventOverlay } from '@/services/advent/applyOverlay'
 import { getAdventCampaign } from '@/services/advent/loadCampaign'
 import {
   EMPTY_ADVENT_PROGRESS,
@@ -53,14 +55,20 @@ export type AdventCampaignView = AdventProgressApi & {
 /** Состояния 27 дверец из конфига, местной даты и локального прогресса (#2861). */
 const BEFORE_CAMPAIGN = '0000-00-00'
 
-export function useAdventCampaign(): AdventCampaignView {
+export type UseAdventCampaignOptions = {
+  /** `false` — тексты дверец не переводятся (нужны только счётчики), накладка не грузится. */
+  content?: boolean
+}
+
+export function useAdventCampaign(options: UseAdventCampaignOptions = {}): AdventCampaignView {
   const now = useLocalCalendarDate({ readNow: getAdventNow })
   const [hydrated, setHydrated] = useState(Platform.OS !== 'web')
   useEffect(() => {
     setHydrated(true)
   }, [])
   const today = hydrated ? todayIsoOf(now) : BEFORE_CAMPAIGN
-  const campaign = useMemo(() => getAdventCampaign(), [])
+  const overlay = useAdventContentOverlay(options.content !== false)
+  const campaign = useMemo(() => applyAdventOverlay(getAdventCampaign(), overlay), [overlay])
   const progressApi = useAdventProgress()
   const progress = hydrated ? progressApi.progress : EMPTY_ADVENT_PROGRESS
 

@@ -1,4 +1,4 @@
-// Валидатор конфига адвент-календаря (#2862). CommonJS: его читают и гейт
+// Валидатор конфига адвент-календаря (#2862) и накладок переводов (#2883). CommonJS: его читают и гейт
 // `scripts/validate-advent-config.mjs`, и юнит-тест `__tests__/advent`.
 //
 // Проверки: 27 дверец, дни 1…27 по порядку, даты уникальны и возрастают и лежат
@@ -136,4 +136,96 @@ function validateAdventConfig(config, options = {}) {
   return errors
 }
 
-module.exports = { validateAdventConfig, defaultRouteExists }
+
+const OVERLAY_FORBIDDEN_KEYS = ['link', 'ctaRoute', 'date', 'kind', 'answer_pattern', 'geo', 'xp', 'badgeSlug', 'bonus', 'secret', 'image', 'type', 'day']
+const SUPPORTED_OVERLAY_LOCALES = new Set(['be', 'uk', 'pl', 'en'])
+
+const findForbiddenKeys = (value, pathLabel, errors) => {
+  if (!value || typeof value !== 'object') return
+  for (const [key, child] of Object.entries(value)) {
+    if (OVERLAY_FORBIDDEN_KEYS.includes(key)) errors.push(`${pathLabel}.${key}: поле не переводится — живёт в RU-конфиге`)
+    else findForbiddenKeys(child, `${pathLabel}.${key}`, errors)
+  }
+}
+
+const normalizeAnswer = (value) => String(value).trim().toLowerCase()
+
+/**
+ * Накладка переводов (#2883): полный перевод каждой дверцы RU-конфига — текстовые
+ * поля непустые, число вопросов и вариантов совпадает, варианты викторин входят в
+ * `answer_pattern` RU-источника (иначе ответ на этом языке не засчитается),
+ * непереводимые поля отсутствуют.
+ * @param {unknown} overlay
+ * @param {unknown} config валидный RU-конфиг
+ * @param {{ locale?: string }} [options] ожидаемая локаль (из имени файла)
+ * @returns {string[]}
+ */
+function validateAdventOverlay(overlay, config, options = {}) {
+  const errors = []
+  if (!overlay || typeof overlay !== 'object') return ['overlay: ожидался объект']
+  if (!config || typeof config !== 'object' || !Array.isArray(config.doors)) return ['overlay: нужен валидный RU-конфиг для сверки']
+  const { locale, year, doors } = overlay
+  if (!SUPPORTED_OVERLAY_LOCALES.has(locale)) errors.push(`locale: ожидалась одна из ${[...SUPPORTED_OVERLAY_LOCALES].join(', ')}, получено ${JSON.stringify(locale)}`)
+  if (options.locale && locale !== options.locale) errors.push(`locale: в файле ${JSON.stringify(locale)}, по имени файла ожидалась ${options.locale}`)
+  if (year !== config.year) errors.push(`year: ожидалось ${config.year}, получено ${JSON.stringify(year)}`)
+  if (!doors || typeof doors !== 'object' || Array.isArray(doors)) return [...errors, 'doors: ожидался объект day → перевод']
+
+  const knownDays = new Set(config.doors.map((door) => String(door.day)))
+  for (const key of Object.keys(doors)) {
+    if (!knownDays.has(key)) errors.push(`doors[${key}]: такой дверцы нет в RU-конфиге`)
+  }
+
+  config.doors.forEach((door) => {
+    const label = `doors[${door.day}]`
+    const patch = doors[String(door.day)]
+    if (!patch || typeof patch !== 'object') {
+      errors.push(`${label}: перевод отсутствует`)
+      return
+    }
+    findForbiddenKeys(patch, label, errors)
+    const expectText = (value, fieldLabel) => {
+      if (!isNonEmptyString(value)) errors.push(`${label}.${fieldLabel}: перевод пуст`)
+    }
+    expectText(patch.gift && patch.gift.title, 'gift.title')
+    expectText(patch.gift && patch.gift.text, 'gift.text')
+    if (door.gift && door.gift.linkLabel !== undefined) expectText(patch.gift && patch.gift.linkLabel, 'gift.linkLabel')
+    expectText(patch.task && patch.task.text, 'task.text')
+    if (door.task && door.task.ctaLabel !== undefined) expectText(patch.task && patch.task.ctaLabel, 'task.ctaLabel')
+    if (door.reward && door.reward.label !== undefined) expectText(patch.reward && patch.reward.label, 'reward.label')
+
+    const sourceQuestions = door.task && door.task.riddle && Array.isArray(door.task.riddle.questions) ? door.task.riddle.questions : []
+    if (sourceQuestions.length) {
+      const translated = patch.task && patch.task.riddle && Array.isArray(patch.task.riddle.questions) ? patch.task.riddle.questions : null
+      if (!translated || translated.length !== sourceQuestions.length) {
+        errors.push(`${label}.task.riddle.questions: ожидалось ${sourceQuestions.length} вопросов`)
+        return
+      }
+      sourceQuestions.forEach((question, index) => {
+        const qLabel = `${label}.task.riddle.questions[${index}]`
+        const patchQuestion = translated[index] || {}
+        expectText(patchQuestion.question, `task.riddle.questions[${index}].question`)
+        if (question.hint !== undefined) expectText(patchQuestion.hint, `task.riddle.questions[${index}].hint`)
+        if (Array.isArray(question.options)) {
+          const options = patchQuestion.options
+          if (!Array.isArray(options) || options.length !== question.options.length || !options.every(isNonEmptyString)) {
+            errors.push(`${qLabel}.options: ожидалось ${question.options.length} непустых вариантов в том же порядке`)
+            return
+          }
+          const pattern = question.answer_pattern || {}
+          const answers = (Array.isArray(pattern.value) ? pattern.value : [pattern.value]).map(normalizeAnswer)
+          const ruCorrect = question.options.findIndex((option) => answers.includes(normalizeAnswer(option)))
+          if (ruCorrect >= 0 && !answers.includes(normalizeAnswer(options[ruCorrect]))) {
+            errors.push(`${qLabel}.options[${ruCorrect}] ${JSON.stringify(options[ruCorrect])}: верный вариант этого языка не входит в answer_pattern RU-конфига`)
+          }
+        } else if (patchQuestion.options !== undefined) {
+          errors.push(`${qLabel}.options: у свободной загадки вариантов нет`)
+        }
+      })
+    } else if (patch.task && patch.task.riddle !== undefined) {
+      errors.push(`${label}.task.riddle: у дверцы без загадки перевода вопросов быть не должно`)
+    }
+  })
+  return errors
+}
+
+module.exports = { validateAdventConfig, validateAdventOverlay, defaultRouteExists, SUPPORTED_OVERLAY_LOCALES }

@@ -6,6 +6,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { formatInteger } from '@/i18n/format'
 import { translate as i18nT } from '@/i18n'
+import { useLocaleRevision } from '@/i18n/useLocaleRevision'
 import type { AdventRiddleQuestion } from '@/types/advent'
 import { buildAdventAnswerChecker } from '@/utils/advent/adventRiddle'
 
@@ -26,11 +27,12 @@ function AdventRiddleTask({ questions, onComplete }: Props) {
   const [status, setStatus] = useState<'idle' | 'wrong' | 'correct'>('idle')
   const question = questions[index]
   const checker = useMemo(() => (question ? buildAdventAnswerChecker(question.answer_pattern) : null), [question])
+  const locale = useLocaleRevision()
 
   const submit = useCallback(
     (answer: string) => {
       if (!checker) return
-      if (!checker(answer)) {
+      if (!checker(answer, locale)) {
         setStatus('wrong')
         return
       }
@@ -43,7 +45,7 @@ function AdventRiddleTask({ questions, onComplete }: Props) {
       setInput('')
       setStatus('idle')
     },
-    [checker, index, questions.length, onComplete],
+    [checker, locale, index, questions.length, onComplete],
   )
 
   if (!question) return null

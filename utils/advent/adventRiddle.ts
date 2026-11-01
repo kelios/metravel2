@@ -2,19 +2,22 @@ import { buildAnswerChecker } from '@/utils/questAdapters'
 import { haversineMeters } from '@/utils/geoDistance'
 import type { AdventAnswerPattern, AdventGeoTarget } from '@/types/advent'
 
-export type AdventAnswerChecker = (input: string) => boolean
+/** `locale` — язык, на котором показана загадка (#2883): к правилам RU-источника добавляются правила этого языка. */
+export type AdventAnswerChecker = (input: string, locale?: string | null) => boolean
 
 /**
  * Чекер ответа загадки — тот же `buildAnswerChecker`, что и у шагов квестов:
- * нормализация регистра, ё/е, пробелов и словоформ едина для всего сайта (#2862).
+ * нормализация регистра, ё/е, пробелов и словоформ едина для всего сайта (#2862);
+ * нормализаторы языка интерфейса (артикли, диакритика) — те же, что у переводов квестов (#2196).
  */
 export const buildAdventAnswerChecker = (pattern: AdventAnswerPattern): AdventAnswerChecker => {
   const value = Array.isArray(pattern.value) ? JSON.stringify(pattern.value) : String(pattern.value ?? '')
   const type = pattern.type === 'exact_any' && !Array.isArray(pattern.value) ? 'exact' : pattern.type
   const checker = buildAnswerChecker(type, value)
-  return (input: string) => {
+  return (input: string, locale?: string | null) => {
     const trimmed = String(input ?? '').trim()
-    return trimmed.length > 0 && checker(trimmed, 'ru')
+    if (trimmed.length === 0) return false
+    return checker(trimmed, 'ru') || (!!locale && locale !== 'ru' && checker(trimmed, locale))
   }
 }
 

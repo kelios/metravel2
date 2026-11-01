@@ -162,6 +162,16 @@ AdventScreen
 Этап B — тот же контракт отдаёт бэк (`GET /api/advent/campaigns/current/`), фронт читает сервер
 с fallback на локальный конфиг только в DEV.
 
+Переводы контента (#2883): RU-конфиг остаётся источником; BE/UK/PL/EN лежат накладками
+`data/advent/2026.<loc>.json` (`AdventCampaignOverlay`: только `gift.title/text/linkLabel`,
+`task.text/ctaLabel`, вопросы/подсказки/варианты загадок, `reward.label` по `day`). Слияние —
+`services/advent/applyOverlay.ts`; пустой или отсутствующий перевод оставляет RU-текст. Web грузит
+накладку ленивым чанком `advent-<loc>` (`services/advent/campaignOverlay.web.ts`) по активной локали
+(`hooks/useAdventContentOverlay.ts`), до загрузки экран показывает RU — тот же текст, что в статическом
+HTML; native держит все накладки в бандле. В бюджете JS чанки `advent-<loc>` считаются как языковые
+каталоги (`deferredChunks`), отдельно от общего размера релиза. Ответы загадок принимаются на всех
+пяти языках: варианты накладок входят в `answer_pattern` RU-источника, валидатор это проверяет.
+
 ### Прогресс
 
 - Локально: `advent-progress:<userId|guest>` → `{ opened: {day: isoDate}, tasksDone: {day: isoDate}, streak }`.

@@ -1,0 +1,273 @@
+{
+  "locale": "en",
+  "year": 2026,
+  "doors": {
+    "1": {
+      "gift": {
+        "title": "Opening: the winter trip of the day",
+        "text": "Torun is an old town of red brick where the air smells of gingerbread and mulled wine simmers on the market square. A route for one winter day: from the Town Hall to the Gingerbread Museum.",
+        "linkLabel": "Read the route"
+      },
+      "task": { "text": "Open the first door and your streak has begun. Come back tomorrow: the next one opens at midnight." }
+    },
+    "2": {
+      "gift": {
+        "title": "Hidden places of Belarus",
+        "text": "The places catalog has spots that tour buses never reach: manor houses, lakeside lighthouses, abandoned churches. Start with a selection of places on the map.",
+        "linkLabel": "Open places"
+      },
+      "task": { "text": "Add three routes to \"I want to go\" — this is your winter wish list.", "ctaLabel": "Pick routes" }
+    },
+    "3": {
+      "gift": {
+        "title": "Riddle: guess the town",
+        "text": "A town with a Radziwill family palace and a UNESCO-listed park. In winter the ponds freeze over and the palace is reflected in the snow.",
+        "linkLabel": "Open the map"
+      },
+      "task": {
+        "text": "Name this town.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Which town in Belarus is known for the Radziwiłł palace and park ensemble, a UNESCO World Heritage Site?",
+              "hint": "Minsk region, near Mir."
+            }
+          ]
+        }
+      }
+    },
+    "4": {
+      "gift": {
+        "title": "An author's story about winter",
+        "text": "MeTravel authors share how they travel in winter: short days, frost, empty castles with no lines. Read the community's articles and pick your favorite authors.",
+        "linkLabel": "Read articles"
+      },
+      "task": { "text": "Follow an author whose route you liked — their new trips will show up in your feed.", "ctaLabel": "Find an author" }
+    },
+    "5": {
+      "gift": {
+        "title": "Winter idea roulette",
+        "text": "When you don't know where to go for the weekend, let chance decide: the roulette picks a route from the catalog.",
+        "linkLabel": "Spin the roulette"
+      },
+      "task": { "text": "Spin the roulette and save the route you like to \"I want to go\".", "ctaLabel": "To the roulette" }
+    },
+    "6": {
+      "gift": {
+        "title": "Kalyady: fact of the day",
+        "text": "Kalyady, the Belarusian Christmastide, runs from Christmas to Epiphany. Carolers go from house to house with a star on a pole, singing and wishing the hosts well, and in the village of Semezhevo near Kopyl the UNESCO-listed \"Kalyady Tsars\" rite takes place."
+      },
+      "task": {
+        "text": "Quiz: three questions about Kalyady.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "On which day of January do Orthodox Christians in Belarus celebrate Christmas?",
+              "options": ["6", "7", "14"]
+            },
+            {
+              "question": "Which symbol is carried on a pole at the head of a Kalyady procession?",
+              "options": ["Star", "Sun", "Bell"]
+            },
+            {
+              "question": "What is the name of the UNESCO-listed Kalyady rite from the village of Semezhevo?",
+              "options": ["Kalyady Tsars", "Hukanne Viasny", "Kupalle"]
+            }
+          ]
+        }
+      }
+    },
+    "7": {
+      "gift": {
+        "title": "Christmas markets of Poland",
+        "text": "Krakow, Wroclaw, Katowice, Gdansk, Poznan, Warsaw: dates, addresses and tips on when to go so you don't have to wait in line for oplatek wafers and mulled wine.",
+        "linkLabel": "Read the guide"
+      },
+      "task": { "text": "Choose a market and mark the trip with the \"I'm planning\" status and a date.", "ctaLabel": "Plan a trip" },
+      "reward": { "label": "\"7 doors\" badge" }
+    },
+    "8": {
+      "gift": {
+        "title": "Winter quest in Grodno",
+        "text": "The \"Christmas and New Year\" quest in Grodno: the old town, castles above the Neman River and the Christmas tree on the square. It takes two hours on foot, with hints on your phone.",
+        "linkLabel": "Open the quest"
+      },
+      "task": { "text": "Complete the first step of a winter quest in your city.", "ctaLabel": "Choose a city" }
+    },
+    "9": {
+      "gift": {
+        "title": "Where is this? Map",
+        "text": "A 16th-century castle in a small town in the Grodno region, a UNESCO World Heritage Site: five towers, an inner courtyard and a pond that turns into an ice rink in winter."
+      },
+      "task": { "text": "Tap the map where this castle stands. A hit within a 5 km radius counts." }
+    },
+    "10": {
+      "gift": {
+        "title": "Articles about winter",
+        "text": "How to dress for a winter route, where to warm up in an old town and which castles are open in January — a selection of community articles.",
+        "linkLabel": "To the articles"
+      },
+      "task": { "text": "Read an article and give it a rating — authors see every one.", "ctaLabel": "Rate an article" }
+    },
+    "11": {
+      "gift": {
+        "title": "Where to go for a winter weekend",
+        "text": "Weekend routes around Belarus: one day, no overnight stay, with a warm cafe at the end. Search by region and distance from home.",
+        "linkLabel": "Open search"
+      },
+      "task": { "text": "Find a route for the coming weekend and open its page.", "ctaLabel": "Search routes" }
+    },
+    "12": {
+      "gift": {
+        "title": "Photo of the day from the community",
+        "text": "Winter photos by travelers: snow-covered churches, frozen lakes, the lights of Christmas markets. The best shots of December will receive a rare award from the team."
+      },
+      "task": { "text": "Upload your winter photo to a new trip or note.", "ctaLabel": "Add a photo" },
+      "reward": { "label": "Rare award candidate" }
+    },
+    "13": {
+      "gift": {
+        "title": "Traveler profile",
+        "text": "A completed profile is your travel book: countries, cities, badges and rank. Other travelers use it to find travel companions."
+      },
+      "task": { "text": "Complete your profile to 100%: name, photo, about you.", "ctaLabel": "Open profile" }
+    },
+    "14": {
+      "gift": {
+        "title": "How to thank authors",
+        "text": "A peer award is a badge one traveler gives another for a helpful route. The author sees who thanked them and for what."
+      },
+      "task": { "text": "Give a badge to the author of a route that helped you.", "ctaLabel": "Find a route" },
+      "reward": { "label": "\"14 doors\" badge" }
+    },
+    "15": {
+      "gift": {
+        "title": "Polish winter quests",
+        "text": "Krakow, Wroclaw, Gdansk and fifteen more Polish cities — Christmas quests through old towns with markets and nativity scenes.",
+        "linkLabel": "Krakow quest"
+      },
+      "task": { "text": "Open a city landing page and save the quest route.", "ctaLabel": "Quest cities" }
+    },
+    "16": {
+      "gift": {
+        "title": "Riddle: guess the place",
+        "text": "The largest lake in Belarus: 80 square kilometers of water, a pine-covered shore and health resorts where winter is quieter than anywhere else."
+      },
+      "task": {
+        "text": "Name this lake.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Which lake is the largest in Belarus?",
+              "hint": "Minsk region, Myadel district."
+            }
+          ]
+        }
+      }
+    },
+    "17": {
+      "gift": {
+        "title": "Memory book",
+        "text": "You can turn your MeTravel trips into a PDF book: photos, routes and notes. In December the book is free — a gift for yourself or your loved ones.",
+        "linkLabel": "Build a book"
+      },
+      "task": { "text": "Build a PDF book from your trips.", "ctaLabel": "To export" },
+      "reward": { "label": "Free PDF book" }
+    },
+    "18": {
+      "gift": {
+        "title": "Group trips",
+        "text": "Travelers are looking for companions for winter trips: from one-day outings to New Year tours. Browse the plans or create your own.",
+        "linkLabel": "See trips"
+      },
+      "task": { "text": "Apply to join a group trip or create a plan.", "ctaLabel": "To trips" }
+    },
+    "19": {
+      "gift": {
+        "title": "The article you never finished",
+        "text": "Many of us have a trip sitting in drafts that we never got around to telling about. December is the time to finish it: readers are looking for winter ideas right now."
+      },
+      "task": { "text": "Publish a draft or start a new article.", "ctaLabel": "To drafts" }
+    },
+    "20": {
+      "gift": {
+        "title": "Winter routes of Belarus",
+        "text": "In winter all the castles and museums in Belarus are open, and the roads to them are cleared first. Mir, Nesvizh, Lida, Novogrudok — the classic two-day winter loop.",
+        "linkLabel": "Routes in Belarus"
+      },
+      "task": { "text": "Mark five trips with the \"Was\" status — they will appear in your travel calendar.", "ctaLabel": "Open calendar" }
+    },
+    "21": {
+      "gift": {
+        "title": "The longest night",
+        "text": "December 21 is the winter solstice: Minsk gets about seven hours of daylight. The best time for evening routes with illuminations: town halls, castles and Christmas markets are at their most beautiful after sunset."
+      },
+      "task": {
+        "text": "Quiz: three questions about the longest night.",
+        "riddle": {
+          "questions": [
+            {
+              "question": "Roughly how many hours of daylight does Minsk get on December 21?",
+              "options": ["7", "10", "12"]
+            },
+            {
+              "question": "What is the name of the astronomical event when the night is the longest of the year?"
+            },
+            {
+              "question": "In which country is Reykjavik, the northernmost capital of Europe?",
+              "options": ["Iceland", "Norway", "Finland"]
+            }
+          ]
+        }
+      }
+    },
+    "22": {
+      "gift": {
+        "title": "Story of the year",
+        "text": "Which trip of 2026 do you remember most? A short note — three paragraphs and one photo — will become part of the community's \"Year in Review\"."
+      },
+      "task": { "text": "Write a short note \"My trip of 2026\".", "ctaLabel": "Write a note" },
+      "reward": { "label": "Rare award candidate" }
+    },
+    "23": {
+      "gift": {
+        "title": "Plans for 2027",
+        "text": "A trip with a date happens more often. Choose a route for 2027 and give it a date — the calendar will remind you."
+      },
+      "task": { "text": "Plan a 2027 trip with a date in the calendar.", "ctaLabel": "Open calendar" }
+    },
+    "24": {
+      "gift": {
+        "title": "Traveler's year in review",
+        "text": "Your 2026 in numbers: the countries and cities you visited, trips, quests and badges. Your personal year-in-review card will appear in this door — watch for the update.",
+        "linkLabel": "Open profile"
+      },
+      "task": { "text": "Open the last main door. A 24-day streak of opening every door on its day earns a legendary badge." },
+      "reward": { "label": "Gold \"Snow Wanderer\"" }
+    },
+    "25": {
+      "gift": {
+        "title": "Christmas: a card for you",
+        "text": "Merry Christmas! MeTravel winter art — a card to share with the people you want to travel with in the new year."
+      },
+      "task": { "text": "The bonus door opens with a gift — there is no task." },
+      "reward": { "label": "Bonus badge" }
+    },
+    "26": {
+      "gift": {
+        "title": "New Year: a wish",
+        "text": "May 2027 bring more roads than plans, and more plans than excuses. Put together a wish list for the year — at least three places."
+      },
+      "task": { "text": "Add three routes to \"I want to go\" for 2027.", "ctaLabel": "My list" },
+      "reward": { "label": "Bonus badge" }
+    },
+    "27": {
+      "gift": {
+        "title": "Kalyady: the secret door",
+        "text": "Merry Christmas! Kalyady continues until Epiphany: on these days people in Belarusian villages still walk with the star. Thank you for being with us all December."
+      },
+      "task": { "text": "A secret door: it opens only on its own day." },
+      "reward": { "label": "Secret badge" }
+    }
+  }
+}
