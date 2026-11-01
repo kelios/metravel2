@@ -1,9 +1,9 @@
-import { useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ProfileCompleteness } from '@/components/profile/ProfileCompleteness';
 import RankProgressCard from '@/components/profile/RankProgressCard';
-import AdventProgressCard from '@/components/profile/AdventProgressCard';
+import { AdventProgressCard } from '@/components/profile/profileDeferredCards';
 import ProfileFirstStepsCard from '@/components/profile/ProfileFirstStepsCard';
 import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader';
 import AwardsHub from '@/components/achievements/AwardsHub';
@@ -12,7 +12,9 @@ import PlaceFirstBadgesSection from '@/components/achievements/PlaceFirstBadgesS
 import ProfileQuestCollections from '@/components/profile/ProfileQuestCollections';
 import ProfileCompletedQuests from '@/components/profile/ProfileCompletedQuests';
 import { ProfileSectionsHub } from '@/components/screens/profile/ProfileSectionsHub';
+import { getAdventNow, isAdventCampaignWindow } from '@/constants/advent';
 import { useMyAchievements } from '@/hooks/useAchievementsApi';
+import { useLocalCalendarDate } from '@/hooks/useLocalCalendarDate';
 import { useSeedGamificationFromAchievements } from '@/hooks/useGamification';
 import { translate as i18nT } from '@/i18n'
 
@@ -41,6 +43,14 @@ export function ProfileOverviewTab({
   const { data: achievements } = useMyAchievements();
   const [awardsTab, setAwardsTab] = useState<{ key: 'all'; token: number } | null>(null);
   const tokenRef = useRef(0);
+  // #2866: карточка адвента — только в окне кампании и после монтирования, чтобы
+  // первый клиентский рендер не зависел от даты; на web её чанк грузится лениво.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  const adventNow = useLocalCalendarDate({ readNow: getAdventNow });
+  const adventActive = mounted && isAdventCampaignWindow(adventNow);
 
   const styles = useMemo(
     () =>
@@ -62,7 +72,11 @@ export function ProfileOverviewTab({
     <View style={styles.wrap}>
       <GamificationOnboarding />
       <RankProgressCard rank={achievements?.rank} onPress={openAwardsDetails} />
-      <AdventProgressCard />
+      {adventActive ? (
+        <Suspense fallback={null}>
+          <AdventProgressCard />
+        </Suspense>
+      ) : null}
       <ProfileFirstStepsCard
         travelsCount={travelsCount}
         rank={achievements?.rank}
