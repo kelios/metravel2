@@ -91,7 +91,10 @@ describe('useTravelHeroState', () => {
     useWindowDimensionsSpy.mockRestore()
   })
 
-  it.each([false, true])('reads the late navigator flag in the initial hero render (%s)', async (automation) => {
+  // #2912: серверный HTML не знает `navigator.webdriver`, поэтому первый кадр
+  // extras одинаков для пользователя и автоматизации (отложены), иначе гидрация
+  // падает с React #418; под автоматизацией extras включаются со второго кадра.
+  it.each([false, true])('keeps the first hero frame equal to SSR regardless of navigator.webdriver (%s)', async (automation) => {
     const flag = Object.getOwnPropertyDescriptor(navigator, 'webdriver')
     Object.defineProperty(navigator, 'webdriver', { configurable: true, value: automation })
     const frames: boolean[] = []
@@ -101,8 +104,7 @@ describe('useTravelHeroState', () => {
         useLayoutEffect(() => { frames.push(hero.extrasReady) }, [hero.extrasReady])
         return hero
       })
-      // A cached import-time constant would miss the true first layout, then the effect repairs it.
-      expect(frames[0]).toBe(automation)
+      expect(frames[0]).toBe(false)
       expect(frames.at(-1)).toBe(true)
     } finally {
       if (flag) Object.defineProperty(navigator, 'webdriver', flag)

@@ -14,7 +14,6 @@ import { toContentId } from '@/types/contentSafety'
 import type { Travel, TravelMediaImage } from '@/types/types'
 import { findGalleryMediaImage } from '@/utils/travelMediaVariants'
 import { translate as i18nT } from '@/i18n'
-import { isWebAutomationNavigator } from '@/utils/isWebAutomation'
 
 
 type ImgLike = {
@@ -260,13 +259,12 @@ function useHeroMediaModel(
 }
 
 function useDeferredHeroExtras(deferExtras: boolean) {
-  const isWebAutomation =
-    Platform.OS === 'web' &&
-    typeof navigator !== 'undefined' &&
-    isWebAutomationNavigator(navigator)
-  const [extrasReady, setExtrasReady] = useState(
-    Platform.OS !== 'web' || (!deferExtras && isWebAutomation),
-  )
+  // #2912: на web первый кадр всегда «extras отложены» — ровно как в серверном
+  // HTML, который не знает `navigator.webdriver`. Под автоматизацией extras
+  // раньше включались уже в первом рендере, и гидрация падала с React #418.
+  // Эффект ниже снимает отсрочку сразу после первого commit, так что приёмочные
+  // прогоны получают extras со второго кадра без расхождения с сервером.
+  const [extrasReady, setExtrasReady] = useState(Platform.OS !== 'web')
   useEffect(() => {
     if (Platform.OS !== 'web') {
       setExtrasReady(true)
@@ -278,7 +276,7 @@ function useDeferredHeroExtras(deferExtras: boolean) {
     }
 
     setExtrasReady(false)
-  }, [deferExtras, isWebAutomation])
+  }, [deferExtras])
 
   return {
     extrasReady,

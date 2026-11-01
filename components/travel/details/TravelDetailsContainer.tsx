@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react'
 import { Platform } from 'react-native'
-import { isWebAutomationNavigator } from '@/utils/isWebAutomation'
 import { useIsFocused, useNavigation } from 'expo-router'
 import { useRouter } from 'expo-router'
 
@@ -12,6 +11,7 @@ import { useSkeletonPhase } from '@/hooks/useSkeletonPhase'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useTravelDetails } from '@/hooks/travel-details'
 import { useTravelDetailsTrace } from '@/hooks/useTravelDetailsTrace'
+import { useWebAutomation } from '@/hooks/useWebAutomation'
 import { getTravelDetailsShellStyles } from '@/components/travel/details/TravelDetailsShellStyles'
 import { isTravelDetailsFirstScreenReady } from '@/components/travel/details/travelDetailsCriticalShellModel'
 import TravelDetailsAccessibilityChrome from '@/components/travel/details/TravelDetailsAccessibilityChrome'
@@ -40,14 +40,6 @@ import { useTravelLoaderPayload } from './travelLoaderData'
 const RUNTIME_LAYERS = getTravelDetailsRuntimeLayers(Platform.OS)
 
 const SKELETON_FALLBACK = <TravelDetailsLoadingFallback />
-
-function isWebAutomationRuntime() {
-  return (
-    Platform.OS === 'web' &&
-    typeof navigator !== 'undefined' &&
-    isWebAutomationNavigator(navigator)
-  )
-}
 
 function useSkipToContentLinkVisibility() {
   const [isSkipLinkVisible, setSkipLinkVisible] = useState(Platform.OS !== 'web')
@@ -221,7 +213,9 @@ export default function TravelDetailsContainer() {
     travel?.travel_image_thumb_url,
   ])
 
-  const isWebAutomation = isWebAutomationRuntime()
+  // #2912: признак читается только после гидрации — первый клиентский кадр
+  // (скелет, critical/deferred chrome) обязан совпадать с серверным HTML.
+  const isWebAutomation = useWebAutomation()
   const isFirstScreenReady = isTravelDetailsFirstScreenReady(travel, lcpLoaded)
   const skeletonPhase = useSkeletonPhase({
     isDataReady: Boolean(travel),

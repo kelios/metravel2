@@ -1,5 +1,4 @@
 import React from 'react'
-import { getOnlyHost } from '@/__tests__/helpers/hostQueries'
 import { render, fireEvent, waitFor } from '@testing-library/react-native'
 import { Platform, StyleSheet } from 'react-native'
 import SimpleMultiSelect from '@/components/forms/SimpleMultiSelect'
@@ -33,7 +32,8 @@ describe('SimpleMultiSelect', () => {
     )
 
     expect(mockFlashListProps).toHaveLength(0)
-    expect(getOnlyHost(screen.container, node => node.type === "RCTScrollView")).toBeTruthy()
+    // #2915: RNTL 13 бросает на `container`; host-дерево ищем от `root`.
+    expect(screen.root.findAll((node: any) => node.type === "RCTScrollView")).toHaveLength(1)
 
     await fireEvent.press(screen.getByLabelText('Открыть выбор'))
 

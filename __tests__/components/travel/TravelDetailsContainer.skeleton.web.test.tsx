@@ -14,6 +14,7 @@ import { createTestQueryClient } from '@/__tests__/helpers/testQueryClient'
 const roots = createRootRegistry()
 const mockSetOptions = jest.fn()
 const mockTravelHeroSection = jest.fn<any, [any]>(() => null)
+const mockScrollRuntime = jest.fn<any, [any]>(() => null)
 let mockGallery: Array<{ id: number; url: string }> = []
 const mockPerformanceState = {
   lcpLoaded: false,
@@ -135,7 +136,7 @@ jest.mock('@/components/travel/details/TravelDetailsDeferred', () => ({
 
 jest.mock('@/components/travel/details/TravelDetailsScrollRuntime', () => ({
   __esModule: true,
-  default: () => null,
+  default: (props: any) => mockScrollRuntime(props),
 }))
 
 jest.mock('@/components/travel/details/TravelDetailsHero', () => ({
@@ -182,6 +183,7 @@ describe('TravelDetailsContainer skeleton gating (web)', () => {
   beforeEach(() => {
     jest.useFakeTimers()
     mockTravelHeroSection.mockClear()
+    mockScrollRuntime.mockClear()
     mockGallery = []
     mockPerformanceState.lcpLoaded = false
     mockPerformanceState.sliderReady = false
@@ -273,6 +275,33 @@ describe('TravelDetailsContainer skeleton gating (web)', () => {
     })
 
     expect(getLastHeroSectionProps()?.renderSlider).toBe(true)
+  })
+
+  // #2912: сервер рендерит статью без признака автоматизации, поэтому первый
+  // клиентский кадр под `navigator.webdriver = true` обязан совпадать с ним:
+  // critical chrome не смонтирован, скелет виден. Ускорение приёмок остаётся,
+  // но начинается после гидрации — со второго кадра.
+  it('renders the first frame under navigator.webdriver exactly like SSR and accelerates only after hydration', async () => {
+    const flag = Object.getOwnPropertyDescriptor(navigator, 'webdriver')
+    Object.defineProperty(navigator, 'webdriver', { configurable: true, value: true })
+    mockGallery = [{ id: 1, url: 'https://example.com/hero.jpg' }]
+    const Wrapper = withQueryClient()
+    try {
+      const tree = roots.createRoot()
+      await act(() => tree.render(<Wrapper><TravelDetailsContainer /></Wrapper>))
+
+      const firstFrame = mockScrollRuntime.mock.calls[0]?.[0]
+      expect(firstFrame).toBeDefined()
+      expect(firstFrame.criticalChromeReady).toBe(false)
+
+      await act(() => { jest.advanceTimersByTime(20) })
+      const lastFrame = mockScrollRuntime.mock.calls.at(-1)?.[0]
+      expect(lastFrame.criticalChromeReady).toBe(true)
+      expect(getOnlyHost(tree.container, node => node.props.testID === 'travel-details-skeleton-overlay').props.style.visibility).toBe('hidden')
+    } finally {
+      if (flag) Object.defineProperty(navigator, 'webdriver', flag)
+      else Reflect.deleteProperty(navigator, 'webdriver')
+    }
   })
 
   it('re-reads navigator on actual container rerender before the 500ms visual backstop', async () => {
