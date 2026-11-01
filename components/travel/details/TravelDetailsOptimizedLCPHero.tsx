@@ -6,7 +6,7 @@ import { IMAGE_QUALITY, IMAGE_WIDTHS } from '@/constants/imageContract';
 import { METRICS } from '@/constants/layout';
 import { useThemedColors } from '@/hooks/useTheme';
 import { createSafeImageUrl } from '@/utils/travelMedia';
-import { buildVersionedImageUrl } from '@/utils/imageOptimization';
+import { buildGalleryFrameBaseUrl } from '@/utils/imageOptimization';
 import {
   buildResponsiveImagePropsPreferringMedia,
   getMediaPlaceholderData,
@@ -24,8 +24,8 @@ type ImgLike = {
   id?: number | string;
 };
 
-const buildVersioned = (url?: string, updated_at?: string | null, id?: any) =>
-  createSafeImageUrl(url, updated_at, id);
+const buildVersioned = (url?: string, updated_at?: string | null) =>
+  createSafeImageUrl(url, updated_at);
 
 const buildApiPrefixedUrl = (value: string): string | null => {
   try {
@@ -99,10 +99,12 @@ function OptimizedLCPHeroInner({
   const didNotifyLoadRef = useRef(false);
   const colors = useThemedColors();
 
-  const baseSrc = buildVersionedImageUrl(
-    buildVersioned(img.url, img.updated_at ?? null, img.id),
+  // #2923: первый кадр SSR-статьи строится без манифеста галереи; адрес обязан
+  // совпасть с вариантом манифеста после фоновой догрузки (без `v=<id>`), иначе
+  // hero качается дважды — см. `buildGalleryFrameBaseUrl`.
+  const baseSrc = buildGalleryFrameBaseUrl(
+    buildVersioned(img.url, img.updated_at ?? null),
     img.updated_at ?? null,
-    img.id,
   );
   const ratio = img.width && img.height ? img.width / img.height : 16 / 9;
   const useMobileSource = isMobile && !viewportHeight;

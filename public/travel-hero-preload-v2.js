@@ -506,7 +506,9 @@
           var first = gallery[0];
           url = typeof first === 'string' ? first : first && first.url;
           updatedAt = typeof first === 'string' ? undefined : first.updated_at;
-          id = typeof first === 'string' ? undefined : first.id;
+          // #2923: like buildGalleryFrameBaseUrl() — a gallery frame is versioned
+          // by updated_at only; the media manifest carries no `v`.
+          id = undefined;
         }
 
         if (!url) {

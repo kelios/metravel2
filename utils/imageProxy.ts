@@ -393,6 +393,26 @@ export function optimizeImageUrl(
   }
 }
 
+/**
+ * #2923: базовый адрес кадра галереи для слотов, чей канонический адрес даёт
+ * media-манифест (hero и слайдер travel-деталей).
+ *
+ * Варианты манифеста версии не несут (`/gallery/<file>?w=720`), а у элементов
+ * галереи нет `updated_at` — `v=<id>` от `buildVersionedImageUrl` кэш не
+ * сбрасывает (id строки не меняется при замене файла, новый файл получает новый
+ * путь) и только делает второй адрес того же файла. Первый кадр SSR-статьи
+ * строится без манифеста (loader отдаёт только cover, #1479/#2768), после
+ * фоновой догрузки тот же слот переходил на адрес манифеста: hero качался
+ * дважды, а снятый `<img>` обрывал первую загрузку (ERR_ABORTED). Версия по
+ * `updated_at` остаётся — она меняется вместе с содержимым.
+ */
+export function buildGalleryFrameBaseUrl(
+  rawUrl: string,
+  updatedAt?: string | null,
+): string {
+  return buildVersionedImageUrl(rawUrl, updatedAt ?? null);
+}
+
 export function buildVersionedImageUrl(
   rawUrl: string,
   updatedAt?: string | null,

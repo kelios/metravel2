@@ -13,6 +13,7 @@ export type { ResponsiveImageSource } from './imageSrcSet';
 export {
   optimizeImageUrl,
   buildVersionedImageUrl,
+  buildGalleryFrameBaseUrl,
   getPreferredImageFormat,
   getOptimalImageWidth,
 } from './imageProxy';

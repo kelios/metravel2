@@ -15,7 +15,7 @@
 import { Platform } from 'react-native';
 
 import { buildResponsiveImagePropsPreferringMedia } from '@/utils/travelMediaVariants';
-import { buildVersionedImageUrl } from '@/utils/imageOptimization';
+import { buildGalleryFrameBaseUrl } from '@/utils/imageOptimization';
 import { createSafeImageUrl } from '@/utils/travelMedia';
 import { PROD_GALLERY_ITEM } from '../fixtures/prodMediaManifest';
 
@@ -78,10 +78,9 @@ const DESKTOP_OPTIONS = {
 // Ровно то, как TravelDetailsOptimizedLCPHero собирает базовый URL первого кадра.
 const clientBaseSrc = (): string => {
   const gallery = DETAIL.gallery[0] as { id: number; url: string; updated_at?: string | null };
-  return buildVersionedImageUrl(
-    createSafeImageUrl(gallery.url, gallery.updated_at ?? null, gallery.id),
+  return buildGalleryFrameBaseUrl(
+    createSafeImageUrl(gallery.url, gallery.updated_at ?? null),
     gallery.updated_at ?? null,
-    gallery.id,
   );
 };
 

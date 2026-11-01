@@ -1,7 +1,7 @@
 import { PixelRatio, Platform } from 'react-native';
 import { METRICS } from '@/constants/layout';
 import { IMAGE_QUALITY } from '@/constants/imageContract';
-import { buildVersionedImageUrl, optimizeImageUrl } from '@/utils/imageOptimization';
+import { buildGalleryFrameBaseUrl, buildVersionedImageUrl, optimizeImageUrl } from '@/utils/imageOptimization';
 import { buildResponsiveImagePropsFromMedia } from '@/utils/travelMediaVariants';
 import type { SliderImage } from './types';
 
@@ -224,7 +224,9 @@ export const buildUriWeb = (
   _containerHeight?: number,
   fit: 'contain' | 'cover' = 'contain',
 ) => {
-  const versionedUrl = buildVersionedImageUrl(img.url, img.updated_at, img.id);
+  // #2923: адрес кадра без манифеста обязан совпадать с адресом манифеста после
+  // фоновой догрузки — без `v=<id>`, см. `buildGalleryFrameBaseUrl`.
+  const versionedUrl = buildGalleryFrameBaseUrl(img.url, img.updated_at);
   const fitForUrl: 'contain' | 'cover' = fit === 'cover' ? 'contain' : fit;
 
   if (containerWidth) {
