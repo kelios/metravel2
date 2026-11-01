@@ -944,6 +944,60 @@
       ],
       "port": 8080,
       "autoPort": false
+    },
+    {
+      "name": "Llama Server v4 GPU 8080 (sprint29)",
+      "runtimeExecutable": "llama-server",
+      "runtimeArgs": [
+        "-m",
+        "/Users/juliasavran/metravel-ai/gguf/metravel-llm-v4-Q4_K_M.gguf",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8080",
+        "-c",
+        "8192",
+        "--parallel",
+        "2",
+        "-ngl",
+        "99",
+        "--jinja",
+        "--no-warmup"
+      ],
+      "port": 8080,
+      "autoPort": false
+    },
+    {
+      "name": "Llama Server v5-rag GPU 8090 (sprint29)",
+      "runtimeExecutable": "llama-server",
+      "runtimeArgs": [
+        "-m",
+        "/Users/juliasavran/metravel-ai/gguf/metravel-llm-v5-rag-Q4_K_M.gguf",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8090",
+        "-c",
+        "8192",
+        "--parallel",
+        "2",
+        "-ngl",
+        "99",
+        "--jinja",
+        "--no-warmup"
+      ],
+      "port": 8090,
+      "autoPort": false
+    },
+    {
+      "name": "AI Sprint29 Web 8093",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-s29\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-s29\" PATH=/opt/homebrew/opt/node@22/bin:$PATH NODE_OPTIONS=--max-old-space-size=12288 EXPO_NO_DOTENV=1 EXPO_PUBLIC_API_URL=http://localhost:4622 EXPO_PUBLIC_IS_LOCAL_API=true EXPO_PUBLIC_AI_ASSISTANT=1 EXPO_PUBLIC_AI_ASSISTANT_URL=http://127.0.0.1:8080 EXPO_PUBLIC_AI_PICKS=1 npx expo start --web --port 8093"
+      ],
+      "port": 8093,
+      "autoPort": false
     }
   ]
 }
