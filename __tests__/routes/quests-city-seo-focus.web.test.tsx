@@ -37,6 +37,8 @@ const WALK_MODEL = {
 
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children?: React.ReactNode }) => children ?? null,
+  // #2896: неизвестный город рисует QuestNotFoundScreen со своим заголовком стека.
+  Stack: { Screen: () => null },
   useIsFocused: () => mockUseIsFocused(),
   useLocalSearchParams: () => ({ city: mockCityParam }),
   useNavigation: () => ({ setOptions: jest.fn() }),
@@ -44,6 +46,15 @@ jest.mock('expo-router', () => ({
 }))
 
 jest.mock('@expo/vector-icons/Feather', () => () => null)
+
+// #2896: сам экран «не найдено» покрыт `__tests__/components/quests/QuestNotFoundScreen.test.tsx`;
+// здесь проверяется только ветка маршрута (экран вместо редиректа). Лёгкая заглушка
+// вместо ленивого дерева с сеткой популярных — холодная компиляция того дерева
+// не укладывалась в таймаут теста.
+jest.mock('@/components/quests/QuestNotFoundScreen', () => {
+  const { View } = require('react-native')
+  return { __esModule: true, default: () => <View testID="quest-not-found" /> }
+})
 
 jest.mock('@/components/seo/LazyInstantSEO', () => ({
   __esModule: true,
@@ -253,15 +264,16 @@ describe('quest city SEO focus lifecycle', () => {
     expect(mockReplace).not.toHaveBeenCalled()
   })
 
-  it('redirects an unknown city alias only once its screen is focused', async () => {
-    mockUseIsFocused.mockReturnValue(false)
+  // #2896: неизвестный алиас больше не уводит в каталог — экран «квест не найден»
+  // (noindex) остаётся на адресе пользователя с выходом в каталог и популярными.
+  it('shows the not-found screen for an unknown city alias instead of redirecting (#2896)', async () => {
+    // Ленивый экран «не найдено» резолвится промисом; фейковые таймеры набора его не пропускают.
+    jest.useRealTimers()
     mockCityParam = 'unknown-city'
     const screen = await render(<QuestsByCityScreen />)
-    expect(mockReplace).not.toHaveBeenCalled()
 
-    mockUseIsFocused.mockReturnValue(true)
-    await screen.rerender(<QuestsByCityScreen />)
-    expect(mockReplace).toHaveBeenCalledWith('/quests')
+    expect(await screen.findByTestId('quest-not-found')).toBeTruthy()
+    expect(mockReplace).not.toHaveBeenCalled()
   })
 
   it('removes city descriptions on blur when the previous head had none', async () => {

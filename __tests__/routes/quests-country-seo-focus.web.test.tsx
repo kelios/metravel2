@@ -12,6 +12,8 @@ let mockCountryParam = 'belarus'
 
 jest.mock('expo-router', () => ({
   Link: ({ children }: { children?: React.ReactNode }) => children ?? null,
+  // #2896: неизвестная страна рисует QuestNotFoundScreen со своим заголовком стека.
+  Stack: { Screen: () => null },
   useIsFocused: () => mockUseIsFocused(),
   useLocalSearchParams: () => ({ country: mockCountryParam }),
   useNavigation: () => ({ setOptions: jest.fn() }),
@@ -19,6 +21,15 @@ jest.mock('expo-router', () => ({
 }))
 
 jest.mock('@expo/vector-icons/Feather', () => () => null)
+
+// #2896: сам экран «не найдено» покрыт `__tests__/components/quests/QuestNotFoundScreen.test.tsx`;
+// здесь проверяется только ветка маршрута (экран вместо редиректа). Лёгкая заглушка
+// вместо ленивого дерева с сеткой популярных — холодная компиляция того дерева
+// не укладывалась в таймаут теста.
+jest.mock('@/components/quests/QuestNotFoundScreen', () => {
+  const { View } = require('react-native')
+  return { __esModule: true, default: () => <View testID="quest-not-found" /> }
+})
 jest.mock('@/components/seo/LazyInstantSEO', () => ({ __esModule: true, default: () => null }))
 jest.mock('@/components/quests/QuestCountryLandingSections', () => ({
   __esModule: true,
@@ -201,11 +212,16 @@ describe('quest country SEO focus lifecycle', () => {
     document.body.innerHTML = ''
   })
 
-  it('redirects an unknown alias instead of rendering an indexable empty page', async () => {
+  // #2896: вместо ухода в каталог — экран «не найдено» без canonical (noindex),
+  // а не индексируемая пустая посадочная.
+  it('shows the not-found screen for an unknown alias instead of an indexable empty page (#2896)', async () => {
+    // Ленивый экран «не найдено» резолвится промисом; фейковые таймеры набора его не пропускают.
+    jest.useRealTimers()
     mockCountryParam = 'unknown-country'
-    await render(<QuestsByCountryScreen />)
+    const screen = await render(<QuestsByCountryScreen />)
 
-    expect(mockReplace).toHaveBeenCalledWith('/quests')
+    expect(await screen.findByTestId('quest-not-found')).toBeTruthy()
+    expect(mockReplace).not.toHaveBeenCalled()
     expect(document.querySelector('link[rel="canonical"]')).toBeNull()
   })
 
@@ -226,14 +242,16 @@ describe('quest country SEO focus lifecycle', () => {
     expect(mockReplace).not.toHaveBeenCalled()
   })
 
-  it('redirects an unknown alias only once its screen is focused', async () => {
+  it('never redirects an unknown alias, focused or hidden (#2896)', async () => {
+    // Ленивый экран «не найдено» резолвится промисом; фейковые таймеры набора его не пропускают.
+    jest.useRealTimers()
     mockUseIsFocused.mockReturnValue(false)
     mockCountryParam = 'unknown-country'
     const screen = await render(<QuestsByCountryScreen />)
-    expect(mockReplace).not.toHaveBeenCalled()
 
     mockUseIsFocused.mockReturnValue(true)
     await screen.rerender(<QuestsByCountryScreen />)
-    expect(mockReplace).toHaveBeenCalledWith('/quests')
+    expect(await screen.findByTestId('quest-not-found')).toBeTruthy()
+    expect(mockReplace).not.toHaveBeenCalled()
   })
 })

@@ -851,7 +851,9 @@ mounted regression short/tall/width/interaction и исходные14cases/56row
    `resolveQuestCitySegment` (numeric `city_id` или alias); заголовок стека
    ставится по локализованному `city_name`, а не по сегменту URL; JSON-LD —
    `ItemList` + `BreadcrumbList`, позиции с непригодным сегментом отбрасываются
-   через `buildQuestPath` (#1185). Неизвестный город → `replace('/quests')`.
+   через `buildQuestPath` (#1185). Неизвестный город или страна → экран
+   `QuestNotFoundScreen` (noindex, выход в каталог и популярные) на том же
+   адресе, без `replace('/quests')` (#2896).
 3. **Деталь `/quests/{city}/{questId}`.** Загрузка идёт только при
    `useIsFocused()`. Ветки: loading → «не найден/ошибка» (`noindex, nofollow`) →
    гость (`QuestWizard guestMode`) → согласие (`QuestConsentGate`) → визард.

@@ -98,9 +98,13 @@ describe('run-e2e-changed', () => {
     // Production quest catalogue surfaces live under `screens/tabs`, not
     // `components/quests`; keep the real task path here so this contract cannot
     // stay green while the changed-file router silently skips the catalogue.
+    // #2896 / #2905: экран «квест не найден» и мягкий старт первой точки — тоже
+    // контракты каталога квестов.
     expect(getSpecsForChangedFiles(['screens/tabs/QuestCard.tsx'])).toEqual([
+      'e2e/quest-not-found.spec.ts',
       'e2e/quest-return-loop.spec.ts',
       'e2e/quest-reviews-reader.spec.ts',
+      'e2e/quest-soft-start.spec.ts',
       'e2e/quests-list-detail.spec.ts',
     ])
   })

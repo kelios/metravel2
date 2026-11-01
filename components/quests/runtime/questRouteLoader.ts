@@ -3,22 +3,11 @@ import { memoizePublicRouteData } from '@/utils/ssr/publicRouteData';
 import { fetchPublicRouteJson } from '@/utils/ssr/fetchPublicRouteJson';
 import { parseQuestPublicRoute, validateQuestPublicProjection, type QuestPublicProjection } from '@/utils/questPublicPage';
 
-/**
- * #2896: публикация ответила 404/410 на клиентский запрос данных маршрута.
- * Документ на такой адрес сервер по-прежнему отдаёт кодом 404 (nginx кладёт
- * поверх него оболочку `+not-found.html`), а вот клиентский переход — после
- * гидратации этой оболочки или по ссылке — expo-router делает отдельным запросом
- * `/_expo/loaders/...`: брошенный там 404 превращался в
- * `Failed to load loader data for route` и экран ошибки/пустоту вместо страницы
- * «Квест не найден». Маркер отдаёт экрану факт «нет такого адреса» данными.
- */
-export type QuestRouteNotFound = { kind: 'not_found'; path: string; httpStatus: 404 | 410 };
+import type { QuestRouteNotFound } from './questRouteNotFound';
+
+export { isQuestRouteNotFound, type QuestRouteNotFound } from './questRouteNotFound';
 
 export type QuestRouteLoaderPayload = QuestPublicProjection | QuestRouteNotFound | null;
-
-export function isQuestRouteNotFound(data: unknown): data is QuestRouteNotFound {
-  return !!data && typeof data === 'object' && (data as { kind?: unknown }).kind === 'not_found';
-}
 
 /**
  * Клиентский запрос данных маршрута: expo-router шлёт его с `Accept:

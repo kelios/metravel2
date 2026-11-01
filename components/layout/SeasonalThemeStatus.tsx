@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Link } from 'expo-router';
 import { useTheme, useThemedColors } from '@/hooks/useTheme';
@@ -29,6 +30,12 @@ type Props = {
 export default function SeasonalThemeStatus({ showAdventLink = false }: Props) {
   const { seasonalTheme, seasonalCalendar } = useTheme();
   const colors = useThemedColors();
+  // Прямой ребёнок `Link asChild` получает один плоский объект стиля: массив или
+  // функция стиля теряются при слиянии пропсов Slot на web (#2931, тот же приём, что в #2830).
+  const linkStyle = useMemo(
+    () => StyleSheet.flatten([styles.link, { color: colors.primaryDark }]),
+    [colors.primaryDark],
+  );
   const { t } = useTranslation();
   const showStatus = seasonalTheme === 'auto' && !!seasonalCalendar;
   const showAdvent = showAdventLink && isAdventCampaignWindow();
@@ -59,7 +66,7 @@ export default function SeasonalThemeStatus({ showAdventLink = false }: Props) {
       ) : null}
       {showAdvent ? (
         <Link href={ADVENT_ROUTE as never} asChild>
-          <Text testID="seasonal-theme-advent-link" accessibilityRole="link" style={[styles.link, { color: colors.primaryDark }]}>
+          <Text testID="seasonal-theme-advent-link" accessibilityRole="link" style={linkStyle}>
             {t('adventStatic:status.link')}
           </Text>
         </Link>

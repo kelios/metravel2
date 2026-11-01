@@ -5,17 +5,18 @@ import type { AdventCampaignOverlay } from '@/types/advent'
  * как языковые каталоги интерфейса (`i18n/deferred/locale-<loc>`): они не ездят с
  * каждой страницей и считаются в бюджете отдельно от общего размера релиза.
  * До загрузки экран показывает RU-источник — тот же текст, что в статическом HTML.
+ * `Promise.resolve(import(...))` — правило 3 `docs/NATIVE_COMPAT_RULES.md` (#2931).
  */
 const importOverlay = (locale: string): Promise<AdventCampaignOverlay | null> => {
   switch (locale) {
     case 'be':
-      return import('./overlays/advent-be').then((module) => module.default)
+      return Promise.resolve(import('./overlays/advent-be')).then((module) => module.default)
     case 'uk':
-      return import('./overlays/advent-uk').then((module) => module.default)
+      return Promise.resolve(import('./overlays/advent-uk')).then((module) => module.default)
     case 'pl':
-      return import('./overlays/advent-pl').then((module) => module.default)
+      return Promise.resolve(import('./overlays/advent-pl')).then((module) => module.default)
     case 'en':
-      return import('./overlays/advent-en').then((module) => module.default)
+      return Promise.resolve(import('./overlays/advent-en')).then((module) => module.default)
     default:
       return Promise.resolve(null)
   }

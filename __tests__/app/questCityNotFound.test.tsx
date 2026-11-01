@@ -12,12 +12,13 @@ const mockReplace = jest.fn()
 const mockPush = jest.fn()
 let mockCityParam = 'this-quest-does-not-exist-123'
 let mockLoading = false
+let mockIsFocused = true
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ city: mockCityParam }),
   useNavigation: () => ({ setOptions: jest.fn() }),
   useRouter: () => ({ replace: mockReplace, push: mockPush }),
-  useIsFocused: () => true,
+  useIsFocused: () => mockIsFocused,
   Stack: { Screen: () => null },
   Link: ({ children }: { children: React.ReactNode }) => children,
 }))
@@ -56,6 +57,7 @@ beforeEach(() => {
   mockReplace.mockClear()
   mockPush.mockClear()
   mockLoading = false
+  mockIsFocused = true
 })
 
 it('неизвестный сегмент рисует экран «Квест не найден» и не уводит в каталог', async () => {
@@ -71,6 +73,19 @@ it('alias квеста без id уходит на канонический /que
   const { queryByTestId } = await render(<QuestsByCityScreen />)
   expect(mockReplace).toHaveBeenCalledWith('/quests/11/grodno-royal')
   expect(queryByTestId('quest-not-found')).toBeNull()
+})
+
+// #2090 / #2931: скрытый (ещё смонтированный) экран таба не уводит пользователя —
+// редирект alias → канонический адрес только когда экран в фокусе.
+it('alias квеста на скрытом экране не уходит, пока экран не получит фокус', async () => {
+  mockIsFocused = false
+  mockCityParam = 'grodno-royal'
+  const screen = await render(<QuestsByCityScreen />)
+  expect(mockReplace).not.toHaveBeenCalled()
+
+  mockIsFocused = true
+  await screen.rerender(<QuestsByCityScreen />)
+  expect(mockReplace).toHaveBeenCalledWith('/quests/11/grodno-royal')
 })
 
 it('известный город не считается не найденным', async () => {
