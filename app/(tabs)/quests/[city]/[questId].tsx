@@ -55,6 +55,8 @@ import { formatRatingValue } from '@/utils/ratingHelpers';
 import { hasPublicQuestRating } from '@/api/questRating';
 import { readSyncImport } from '@/utils/syncImport';
 import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata';
+import { buildActiveQuestHref } from '@/utils/activeQuestResume';
+import { useRememberActiveQuestRoute } from '@/hooks/useRememberActiveQuestRoute';
 
 
 // #2484: same handover as the quest screen in `app/[...missing].web.tsx` (#2465).
@@ -514,6 +516,13 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
     viewTrackedRef.current = questId;
     trackQuestView({ questId, cityId: cityId || undefined, source: 'quest_detail' });
   }, [usableBundle, cityId, isFocused, questId]);
+
+  // Native: ОС выгружает приложение, пока человек идёт по внешней карте, — холодный
+  // старт вернёт на этот квест, а не на главную (useResumeActiveQuest).
+  useRememberActiveQuestRoute(
+    route ? null : buildActiveQuestHref(cityId, questId),
+    isFocused && Boolean(usableBundle),
+  );
 
   const completionMeta = useQuestCompletionMeta(shouldLoadQuest ? questId : undefined, bundle?.id);
   // #1922 — прохождение, сделанное без сети, ждёт отправки: пометка живёт рядом

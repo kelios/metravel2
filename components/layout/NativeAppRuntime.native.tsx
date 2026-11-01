@@ -2,12 +2,15 @@ import { Fragment } from 'react';
 
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useIncomingAppLinks } from '@/hooks/useIncomingAppLinks.native';
+import { useResumeActiveQuest } from '@/hooks/useResumeActiveQuest.native';
 import BiometricGate from '@/components/layout/BiometricGate';
 import OnboardingScreen from '@/components/onboarding/OnboardingScreen';
 
 export default function NativeAppRuntime() {
   useIncomingAppLinks();
   usePushNotifications();
+  // Возврат в квест, если ОС выгрузила приложение посреди прохождения.
+  useResumeActiveQuest();
 
   // BiometricGate renders an absolute-fill overlay above app content when armed.
   // OnboardingScreen is a sibling overlay (lower zIndex) shown once on first run;
