@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-11-01",
+  "decision": "integration-not-ready",
+  "purpose": "Справочное исследование F3 #2810; приложение этот файл не потребляет.",
+  "semantics": {
+    "verification": "Уровень проверки партнёрского API/договора, а не достоверность публичной карточки товара.",
+    "nullableCapabilities": "quoteSupported, statusWebhookSupported и cancelSupported относятся к машинному API; null означает неизвестно, false требует явного подтверждения отсутствия.",
+    "supportedProfiles": "Только профили MeTravel с подтверждённым приёмом конкретного файла и требований печати; пустой массив означает отсутствие подтверждений, а не невозможность печати.",
+    "publishedProfiles": "Формат присутствует в публичной услуге; это не приём нашего PDF и не разрешение прямого заказа.",
+    "retentionDays": "Подтверждённый срок хранения печатных PDF у партнёра; не срок хранения cookie, счёта или заявки."
+  },
+  "partners": [
+    {
+      "id": "beleksprint-spiral",
+      "name": "Beleksprint",
+      "country": "BY",
+      "city": "Минск",
+      "verification": "unknown",
+      "checkedAt": "2026-11-01",
+      "sourceUrls": [
+        "https://beleksprint.by/broshyury-na-pruzhine/",
+        "https://beleksprint.by/klientam/"
+      ],
+      "supportedProfiles": [],
+      "publishedProfiles": ["album-a5"],
+      "pocket150x100": "unknown",
+      "minimumCopies": 10,
+      "genericPdfAcceptance": "unknown",
+      "acceptsRuPdf": "unknown",
+      "bindings": ["spiral"],
+      "deliveryCoverage": ["BY"],
+      "quoteSupported": null,
+      "statusWebhookSupported": null,
+      "cancelSupported": null,
+      "retentionDays": null,
+      "outreachDraft": {
+        "state": "not-sent",
+        "contactUrl": "https://beleksprint.by/klientam/",
+        "subject": "MeTravel: пружинная книга, единичный пробник и разрешённая API-интеграция",
+        "message": "Добрый день. MeTravel рассматривает печать дневника путешествий. На странице брошюр указан тираж от 10 шт. Возможен ли один пробник и затем заказ от 1 шт.? Нужны пружина, 150×100 мм landscape либо A5 148×210 мм portrait, место для вклеек и RU PDF со встроенными шрифтами. Просим паспорт PDF/цвета/бумаги/обложки и ограничения файлов. Разрешаете ли прямой заказ от MeTravel с доставкой пользователю по РБ? Если да, просим API-документацию и тестовый доступ: quote без заказа, auth, idempotency, статусы/callback, cancel и условия оплаты. Кто продавец, кто отвечает за дефект/доставку и возврат? Как хранятся и удаляются файлы/адреса? Если API или такой формат сотрудничества недоступен, просим подтвердить это письменно. Это запрос условий, не заказ."
+      },
+      "evidence": [
+        {
+          "fields": ["publishedProfiles", "pocket150x100", "minimumCopies", "bindings", "deliveryCoverage"],
+          "sourceUrls": ["https://beleksprint.by/broshyury-na-pruzhine/"],
+          "finding": "Пружина, A5 и индивидуальный размер, от 10 шт., доставка по РБ. Точный 150×100 не назван."
+        },
+        {
+          "fields": ["quoteSupported", "statusWebhookSupported", "cancelSupported", "verification"],
+          "sourceUrls": ["https://beleksprint.by/klientam/"],
+          "finding": "Описаны заявка, согласование параметров и файла, предоплата, доставка. Публичный API-контракт в проверенных страницах не установлен; это не отказ партнёра."
+        },
+        {
+          "fields": ["supportedProfiles", "genericPdfAcceptance", "acceptsRuPdf", "retentionDays", "responsibility", "returns"],
+          "sourceUrls": ["https://beleksprint.by/klientam/"],
+          "finding": "Точный профиль, RU PDF, срок хранения файлов, распределение ответственности и условия отмены/возврата в проверенных условиях не подтверждены."
+        }
+      ]
+    },
+    {
+      "id": "slavprint-small-run",
+      "name": "SlavPrint",
+      "country": "BY",
+      "city": "Минск",
+      "verification": "unknown",
+      "checkedAt": "2026-11-01",
+      "sourceUrls": [
+        "https://slavprint.by/pechat-knig-minsk/",
+        "https://slavprint.by/"
+      ],
+      "supportedProfiles": [],
+      "publishedProfiles": ["album-a5"],
+      "pocket150x100": "unknown",
+      "minimumCopies": 1,
+      "genericPdfAcceptance": "yes",
+      "acceptsRuPdf": "unknown",
+      "bindings": ["soft", "hard"],
+      "deliveryCoverage": ["Минск"],
+      "quoteSupported": null,
+      "statusWebhookSupported": null,
+      "cancelSupported": null,
+      "retentionDays": null,
+      "outreachDraft": {
+        "state": "not-sent",
+        "contactUrl": "https://slavprint.by/",
+        "subject": "MeTravel: книга от одного экземпляра, печатный профиль и партнёрский API",
+        "message": "Добрый день. MeTravel рассматривает дневник путешествий от 1 экземпляра, как указано в вашем FAQ. Подтвердите, пожалуйста, 150×100 мм landscape и A5 148×210 мм portrait, возможность колец/пружины вместо мягкого/твёрдого переплёта и запас для вклеек. Принимаете ли RU PDF со встроенными шрифтами? Просим точные требования к body/cover, цвету, бумаге, страницам и размеру файла. Возможны ли доставка одному получателю по РБ за пределами Минска и заказ через разрешённый API MeTravel? Просим документацию/sandbox, quote, оплату, idempotency, callback/status, cancel; распределение ответственности, отмены/возвраты, срок и место хранения/удаления PDF и адресов. Если API или прямая отправка недоступны, просим письменное подтверждение. Это запрос условий, не заказ."
+      },
+      "evidence": [
+        {
+          "fields": ["publishedProfiles", "pocket150x100", "minimumCopies", "genericPdfAcceptance", "bindings", "deliveryCoverage"],
+          "sourceUrls": ["https://slavprint.by/pechat-knig-minsk/"],
+          "finding": "FAQ: от 1 экземпляра; упомянут A5, мягкий/твёрдый переплёт, PDF и доставка по Минску. Индивидуальный размер требует согласования; 150×100 не подтверждён."
+        },
+        {
+          "fields": ["quoteSupported", "statusWebhookSupported", "cancelSupported", "verification"],
+          "sourceUrls": ["https://slavprint.by/pechat-knig-minsk/", "https://slavprint.by/"],
+          "finding": "Публичный маршрут — связаться, согласовать макет, напечатать. В проверенных страницах не установлен API-контракт; контакты не являются API или разрешением отправки."
+        },
+        {
+          "fields": ["supportedProfiles", "acceptsRuPdf", "retentionDays", "responsibility", "returns"],
+          "sourceUrls": ["https://slavprint.by/pechat-knig-minsk/"],
+          "finding": "Русский сайт и общая готовность принять PDF не доказывают приём нашего файла. Печатный профиль, хранение, ответственность и отмена/возвраты не подтверждены."
+        }
+      ]
+    },
+    {
+      "id": "versoprint-glued",
+      "name": "Versoprint",
+      "country": "PL",
+      "city": "Szczecin",
+      "verification": "unknown",
+      "checkedAt": "2026-11-01",
+      "sourceUrls": [
+        "https://versoprint.pl/ksiazki-katalogi-klejone",
+        "https://www.sklep.versoprint.pl/regulamin1/regulamin/",
+        "https://versoprint.pl/polityka-prywatnosci",
+        "https://versoprint.pl/print-on-demand-druk-na-zadanie-logistyka-ksiaz",
+        "https://versoprint.pl/kontakt"
+      ],
+      "supportedProfiles": [],
+      "publishedProfiles": ["album-a5"],
+      "pocket150x100": "unknown",
+      "minimumCopies": 1,
+      "genericPdfAcceptance": "yes",
+      "acceptsRuPdf": "unknown",
+      "bindings": ["glued"],
+      "deliveryCoverage": ["PL"],
+      "quoteSupported": null,
+      "statusWebhookSupported": null,
+      "cancelSupported": null,
+      "retentionDays": null,
+      "outreachDraft": {
+        "state": "not-sent",
+        "contactUrl": "https://versoprint.pl/kontakt",
+        "subject": "MeTravel: единичные дневники для PL и проверка возможности API",
+        "message": "Добрый день. MeTravel рассматривает печать дневников от 1 шт. с доставкой пользователю по Польше. На вашем сайте есть книга из PDF и статья об API в POD. Доступен ли именно у Versoprint разрешённый партнёрский order API для MeTravel? Просим документацию, auth/sandbox, quote, idempotency, callback/status, cancel и hosted payment. Требуются 150×100 мм landscape либо A5 148×210 мм portrait, RU PDF со встроенными шрифтами, место для рукописных заметок и вклеек. Возможен ли переплёт на кольца/пружину, либо какой допустим запас у клеевого переплёта? Просим точный профиль body/cover/spine, PDF/X/ICC и лимиты. Уточните применимость §3–6 правил магазина к партнёрскому заказу, продавца/ответственность, сроки хранения/удаления PDF и адреса. Если API или такой заказ недоступны, просим письменный ответ. Это запрос условий, не заказ."
+      },
+      "evidence": [
+        {
+          "fields": ["publishedProfiles", "pocket150x100", "minimumCopies", "genericPdfAcceptance", "bindings", "supportedProfiles", "acceptsRuPdf"],
+          "sourceUrls": ["https://versoprint.pl/ksiazki-katalogi-klejone"],
+          "finding": "От 1 шт., A5 148×210, клеевой переплёт, PDF: body отдельными страницами и отдельная обложка с корешком, вылеты 3 мм. Другие размеры согласуются; 150×100 и наш RU PDF не подтверждены. Клеевая обложка требует другого профиля, чем текущие кольца/пружина."
+        },
+        {
+          "fields": ["deliveryCoverage", "responsibility", "returns", "cancelSupported"],
+          "sourceUrls": ["https://www.sklep.versoprint.pl/regulamin1/regulamin/"],
+          "finding": "§3: оплаченный заказ отменяется до приёмки проверяющим; возврат переводом до 14 рабочих дней, возможен сбор 35 PLN; по тексту правил отказ от индивидуального изделия исключён. §4: доставка курьером только по PL. §5: заказчик отвечает за права, содержание и подготовку; проверяются параметры. Это условия магазина, не API cancel."
+        },
+        {
+          "fields": ["retentionDays"],
+          "sourceUrls": ["https://versoprint.pl/polityka-prywatnosci", "https://www.sklep.versoprint.pl/regulamin1/regulamin/"],
+          "finding": "Указаны обработка заказов и доступ сотрудников к файлам; фиксированный срок хранения печатных PDF не установлен. Нельзя подставлять срок возврата денег вместо retention."
+        },
+        {
+          "fields": ["verification", "quoteSupported", "statusWebhookSupported", "cancelSupported"],
+          "sourceUrls": ["https://versoprint.pl/print-on-demand-druk-na-zadanie-logistyka-ksiaz", "https://www.sklep.versoprint.pl/regulamin1/regulamin/"],
+          "finding": "Статья описывает API в общем процессе POD; не публикует base URL, auth, схему заказа или право MeTravel на доступ. Магазин требует регистрацию и платёж. Возможности API остаются unknown."
+        }
+      ]
+    }
+  ]
+}
