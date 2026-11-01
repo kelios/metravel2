@@ -9,7 +9,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { formatDate, formatInteger } from '@/i18n/format'
 import { translate as i18nT } from '@/i18n'
-import { isoDateToLocalMidnight } from '@/constants/advent'
+import { ADVENT_MAIN_DOORS, isoDateToLocalMidnight } from '@/constants/advent'
 import type { AdventDoorView } from '@/hooks/useAdventCampaign'
 import { buildAdventDoorCtaHref, buildAdventReturnPath } from '@/utils/advent/adventTaskLinks'
 import { buildLoginHref, buildRegistrationHref } from '@/utils/authNavigation'
@@ -19,10 +19,14 @@ import { KIND_ICONS } from './adventDoorVisuals'
 import { formatDoorDate } from './AdventDoorTile'
 import AdventRiddleTask from './AdventRiddleTask'
 import AdventGeoTask from './AdventGeoTask'
+import AdventYearInReviewCard from './AdventYearInReviewCard'
 
 type Props = {
   door: AdventDoorView | null
   isAuthenticated: boolean
+  /** Дверцы, задания которых засчитал сервер по действию на сайте (#2867). */
+  creditedDays?: ReadonlySet<number>
+  campaignYear: number
   onClose: () => void
   onCompleteTask: (day: number) => void
 }
@@ -46,7 +50,7 @@ const Section = memo(function Section({ icon, title, children, styles, colors }:
 })
 
 /** Подарок, задание и награда одной дверцы; гостю вместо задания — вход с возвратом на `/advent` (#2861). */
-function AdventDoorSheet({ door, isAuthenticated, onClose, onCompleteTask }: Props) {
+function AdventDoorSheet({ door, isAuthenticated, creditedDays, campaignYear, onClose, onCompleteTask }: Props) {
   const router = useRouter()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -109,13 +113,19 @@ function AdventDoorSheet({ door, isAuthenticated, onClose, onCompleteTask }: Pro
       )
     }
     if (door.state === 'done' && door.doneAt) {
+      const doneDate = formatDate(isoDateToLocalMidnight(door.doneAt), { day: 'numeric', month: 'long' })
+      if (door.task.type !== 'open' && creditedDays?.has(door.day)) {
+        return (
+          <Text style={styles.done} testID="advent-task-credited">
+            {i18nT('adventStatic:sheet.taskCredited', { value1: doneDate })}
+          </Text>
+        )
+      }
       return (
         <Text style={styles.done} testID="advent-task-done">
           {door.task.type === 'open'
             ? i18nT('adventStatic:sheet.openedAuto')
-            : i18nT('adventStatic:sheet.taskDone', {
-                value1: formatDate(isoDateToLocalMidnight(door.doneAt), { day: 'numeric', month: 'long' }),
-              })}
+            : i18nT('adventStatic:sheet.taskDone', { value1: doneDate })}
         </Text>
       )
     }
@@ -157,6 +167,10 @@ function AdventDoorSheet({ door, isAuthenticated, onClose, onCompleteTask }: Pro
               />
             ) : null}
           </Section>
+          {/* Финал основной серии — личные «Итоги года» (#2868); нужен аккаунт. */}
+          {door.day === ADVENT_MAIN_DOORS && !door.bonus && isAuthenticated ? (
+            <AdventYearInReviewCard year={campaignYear} />
+          ) : null}
           <Section icon="target" title={i18nT('adventStatic:sheet.task')} styles={styles} colors={colors}>
             <Text style={styles.body}>{door.task.text}</Text>
             {renderTask()}

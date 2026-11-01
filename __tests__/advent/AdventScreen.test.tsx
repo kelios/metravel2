@@ -1,9 +1,27 @@
-import { fireEvent, render } from '@testing-library/react-native'
+import { fireEvent, render, waitFor } from '@testing-library/react-native'
+import { QueryClientProvider } from '@tanstack/react-query'
 
 import AdventScreen from '@/components/advent/AdventScreen'
+import { ApiError } from '@/api/clientErrors'
 import { useAdventProgressStore } from '@/stores/adventProgressStore'
+import { useAuthStore } from '@/stores/authStore'
 import { i18n } from '@/i18n'
+import { createTestQueryClient } from '../helpers/testQueryClient'
 import { fakeToday } from './fakeToday'
+
+// Сервер адвента (#2864/#2865): по умолчанию «не выкачен» (404), как на проде сейчас.
+const mockFetchAdventCampaign = jest.fn()
+const mockFetchAdventProgress = jest.fn()
+const mockSyncAdventProgress = jest.fn()
+const mockFetchYearInReview = jest.fn()
+jest.mock('@/api/advent', () => ({
+  ...jest.requireActual('@/api/advent'),
+  fetchAdventCampaign: (...args: unknown[]) => mockFetchAdventCampaign(...args),
+  fetchAdventProgress: (...args: unknown[]) => mockFetchAdventProgress(...args),
+  syncAdventProgress: (...args: unknown[]) => mockSyncAdventProgress(...args),
+  fetchYearInReview: (...args: unknown[]) => mockFetchYearInReview(...args),
+}))
+jest.mock('@/hooks/useAchievementsApi', () => ({ useMyAchievements: () => ({ data: undefined }) }))
 
 let mockAuth = { isAuthenticated: true, userId: '7', authReady: true }
 jest.mock('@/context/AuthContext', () => ({ useAuth: () => mockAuth }))
@@ -19,13 +37,25 @@ jest.mock('@/hooks/useResponsive', () => ({ useResponsive: () => ({ isPhone: fal
 
 const renderAt = async (date: Date) => {
   fakeToday(date)
-  return await render(<AdventScreen />)
+  const client = createTestQueryClient()
+  return await render(
+    <QueryClientProvider client={client}>
+      <AdventScreen />
+    </QueryClientProvider>,
+  )
 }
+
+const missing = () => Promise.reject(new ApiError(404, 'Not found'))
 
 describe('AdventScreen (#2861)', () => {
   beforeEach(async () => {
     useAdventProgressStore.setState({ byOwner: {} })
     mockAuth = { isAuthenticated: true, userId: '7', authReady: true }
+    useAuthStore.setState({ isAuthenticated: false, userId: null })
+    mockFetchAdventCampaign.mockImplementation(missing)
+    mockFetchAdventProgress.mockImplementation(missing)
+    mockSyncAdventProgress.mockImplementation(missing)
+    mockFetchYearInReview.mockImplementation(missing)
     await i18n.changeLanguage('ru')
   })
   afterEach(() => jest.useRealTimers())
@@ -111,5 +141,73 @@ describe('AdventScreen (#2861)', () => {
     await fireEvent.press(screen.getByTestId('advent-door-1'))
     expect(useAdventProgressStore.getState().byOwner.u8.opened['1']).toBe('2026-12-02')
     expect(useAdventProgressStore.getState().byOwner.u7.tasksDone).toEqual({})
+  })
+
+  describe('server progress (#2867)', () => {
+    beforeEach(() => {
+      useAuthStore.setState({ isAuthenticated: true, userId: '7' })
+    })
+
+    it('moves guest progress of this device into the account after sign-in', async () => {
+      useAdventProgressStore.setState({ byOwner: { guest: { opened: { '1': '2026-12-01' }, tasksDone: {} } } })
+      const screen = await renderAt(new Date(2026, 11, 2, 12))
+      await waitFor(() => expect(useAdventProgressStore.getState().byOwner.u7?.opened['1']).toBe('2026-12-01'))
+      expect(useAdventProgressStore.getState().byOwner.guest).toBeUndefined()
+      expect(screen.getByText('Открыто 1 из 24 дверец')).toBeTruthy()
+    })
+
+    it('merges server progress, shows the credited mark instead of the button and syncs local extras once', async () => {
+      useAdventProgressStore.setState({ byOwner: { u7: { opened: { '1': '2026-12-01' }, tasksDone: {} } } })
+      mockFetchAdventProgress.mockResolvedValue({ opened: { '2': '2026-12-02' }, tasksDone: { '2': '2026-12-02' }, streak: 2 })
+      mockSyncAdventProgress.mockImplementation(async (maps: { opened: Record<string, string>; tasksDone: Record<string, string> }) => ({
+        opened: maps.opened,
+        tasksDone: maps.tasksDone,
+        streak: 2,
+      }))
+      const screen = await renderAt(new Date(2026, 11, 2, 12))
+      expect(await screen.findByTestId('advent-sync-synced')).toBeTruthy()
+      expect(mockSyncAdventProgress).toHaveBeenCalledTimes(1)
+      expect(mockSyncAdventProgress.mock.calls[0][0]).toEqual({
+        opened: { '1': '2026-12-01', '2': '2026-12-02' },
+        tasksDone: { '2': '2026-12-02' },
+      })
+      // Серия видна в шапке и в шеринг-карточке — обе берут серверное значение.
+      expect(screen.getAllByText('Серия день в день: 2')).toHaveLength(2)
+      await fireEvent.press(screen.getByTestId('advent-door-2'))
+      expect(screen.getByTestId('advent-task-credited')).toBeTruthy()
+      expect(screen.queryByTestId('advent-task-done-button')).toBeNull()
+    })
+
+    it('does not claim "saved to account" when the server response drops a local door', async () => {
+      useAdventProgressStore.setState({ byOwner: { u7: { opened: { '2': '2026-12-02' }, tasksDone: {} } } })
+      mockFetchAdventProgress.mockResolvedValue({ opened: {}, tasksDone: {}, streak: 0 })
+      mockSyncAdventProgress.mockResolvedValue({ opened: {}, tasksDone: {}, streak: 0 })
+      const screen = await renderAt(new Date(2026, 11, 2, 12))
+      await waitFor(() => expect(mockSyncAdventProgress).toHaveBeenCalledTimes(1))
+      expect(await screen.findByTestId('advent-sync-local')).toBeTruthy()
+      expect(screen.queryByTestId('advent-sync-synced')).toBeNull()
+      expect(mockSyncAdventProgress).toHaveBeenCalledTimes(1)
+    })
+
+    it('stays on local progress and says so when the advent backend is not deployed', async () => {
+      const screen = await renderAt(new Date(2026, 11, 2, 12))
+      expect(await screen.findByTestId('advent-sync-local')).toBeTruthy()
+      await fireEvent.press(screen.getByTestId('advent-door-2'))
+      expect(useAdventProgressStore.getState().byOwner.u7.opened['2']).toBe('2026-12-02')
+      expect(mockSyncAdventProgress).not.toHaveBeenCalled()
+    })
+
+    it('shows the year-in-review postcard on door 24 when the aggregate is unavailable (#2868)', async () => {
+      const screen = await renderAt(new Date(2026, 11, 24, 12))
+      await fireEvent.press(screen.getByTestId('advent-door-24'))
+      expect(await screen.findByTestId('advent-yir-unavailable')).toBeTruthy()
+    })
+  })
+
+  it('offers the N/24 share card once a door is opened (#2868)', async () => {
+    const screen = await renderAt(new Date(2026, 11, 3, 12))
+    expect(screen.queryByTestId('advent-share-card')).toBeNull()
+    await fireEvent.press(screen.getByTestId('advent-door-2'))
+    expect(screen.getByText('Мой адвент 1/24')).toBeTruthy()
   })
 })

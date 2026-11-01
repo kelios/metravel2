@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Platform } from 'react-native'
 
 import type { AdventProgressMaps } from '@/utils/advent/adventCalendar'
+import { isAdventProgressEmpty, mergeAdventProgress, sameAdventProgress } from '@/utils/advent/adventProgressMerge'
 
 export const ADVENT_GUEST_OWNER = 'guest'
 
@@ -28,6 +29,14 @@ type AdventProgressState = {
   openDoor: (owner: string, day: number, isoDate: string) => void
   completeTask: (owner: string, day: number, isoDate: string) => void
   resetOwner: (owner: string) => void
+  /** Объединяет присланный прогресс (сервер) с локальным владельца (#2867). */
+  mergeOwner: (owner: string, maps: AdventProgressMaps) => void
+  /**
+   * Перенос гостевого прогресса в аккаунт после входа на этом устройстве (#2867):
+   * объединение и очистка гостевой записи, чтобы её не унёс следующий аккаунт.
+   * Возвращает `true`, если было что переносить.
+   */
+  adoptGuest: (owner: string) => boolean
 }
 
 const emptyMaps = (): AdventProgressMaps => ({ opened: {}, tasksDone: {} })
@@ -37,7 +46,7 @@ const isStringMap = (value: unknown): value is Record<string, string> =>
 
 export const useAdventProgressStore = create<AdventProgressState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       byOwner: {},
       openDoor: (owner, day, isoDate) =>
         set((state) => {
@@ -69,6 +78,25 @@ export const useAdventProgressStore = create<AdventProgressState>()(
           delete next[owner]
           return { byOwner: next }
         }),
+      mergeOwner: (owner, maps) =>
+        set((state) => {
+          const current = state.byOwner[owner] ?? emptyMaps()
+          const merged = mergeAdventProgress(current, maps)
+          if (sameAdventProgress(current, merged)) return state
+          return { byOwner: { ...state.byOwner, [owner]: merged } }
+        }),
+      adoptGuest: (owner) => {
+        if (owner === ADVENT_GUEST_OWNER) return false
+        const guest = get().byOwner[ADVENT_GUEST_OWNER]
+        if (!guest || isAdventProgressEmpty(guest)) return false
+        set((state) => {
+          const next = { ...state.byOwner }
+          next[owner] = mergeAdventProgress(state.byOwner[owner] ?? emptyMaps(), guest)
+          delete next[ADVENT_GUEST_OWNER]
+          return { byOwner: next }
+        })
+        return true
+      },
     }),
     {
       name: 'advent-progress-storage',

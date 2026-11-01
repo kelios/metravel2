@@ -153,11 +153,14 @@ const CATEGORY_ICONS: Record<string, FeatherName> = {
   social: 'heart',
   geo: 'globe',
   monthly: 'trending-up',
+  advent: 'gift',
   other: 'award',
 };
 
 // Точечные оверрайды по ключевым словам в slug значка (категория «theme» общая).
 const SLUG_ICON_HINTS: Array<[RegExp, FeatherName]> = [
+  // Префикс слага, а не подстрока: `car-adventure` — значок темы, не адвента.
+  [/^advent[_-]|адвент/i, 'gift'],
   [/hik|поход|trek/i, 'compass'],
   [/cycl|bike|вело/i, 'navigation'],
   [/auto|car|авто/i, 'map'],

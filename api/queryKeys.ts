@@ -189,6 +189,10 @@ export const queryKeys = {
     ['strava', 'activities', userId, params] as const,
   stravaActivity: (userId: string | null, activityId: string | number | null | undefined) =>
     ['strava', 'activity', userId, activityId] as const,
+  // Адвент-календарь (#2867, #2868): конфиг публичный, прогресс и итоги — личные.
+  adventCampaign: (year: number) => ['advent', 'campaign', year] as const,
+  adventProgress: (userId: string | null) => ['advent', 'progress', userId] as const,
+  adventYearInReview: (userId: string | null, year: number) => ['advent', 'year-in-review', userId, year] as const,
   achievementsBadgesAll: () => ['achievements', 'badges'] as const,
   achievementsBadges: (locale: string) => ['achievements', 'badges', locale] as const,
   achievementsMeAll: (userId: string | null) => ['achievements', 'me', userId] as const,

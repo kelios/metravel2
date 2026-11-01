@@ -63,6 +63,14 @@ export const MOCK_BADGES: Badge[] = [
   badge(12, 'quest-pioneer', 'Первопроходец', 'Первым прошёл квест — до вас его не проходил никто', 'quests', 'Квесты', 'gold', 75),
   badge(10, 'crowd-favorite', 'Любимец публики', '50 лайков на путешествиях', 'social', 'Сообщество', 'silver', 40),
   badge(11, 'world-citizen', 'Гражданин мира', '15 посещённых стран', 'geo', 'География', 'legendary', 200),
+  // Адвент-календарь 2026 (#2867, сид — #2864): слаги совпадают с `reward.badgeSlug`
+  // в `data/advent/2026.json`; ступени — `docs/features/advent-calendar.md` → «Награды».
+  badge(13, 'advent_7', '7 дверец', 'Открыты 7 дверец адвент-календаря', 'advent', 'Адвент', 'bronze', 20),
+  badge(14, 'advent_14', '14 дверец', 'Открыты 14 дверец адвент-календаря', 'advent', 'Адвент', 'silver', 40),
+  badge(15, 'advent_24', 'Снежный странник', 'Открыты все 24 дверцы адвент-календаря', 'advent', 'Адвент', 'gold', 120),
+  badge(16, 'advent_streak_24', 'День в день', 'Все 24 дверцы открыты каждая в свой день', 'advent', 'Адвент', 'legendary', 200),
+  badge(17, 'advent_bonus', 'Бонусная дверца', 'Открыта бонусная дверца 25 или 31 декабря', 'advent', 'Адвент', 'bronze', 15),
+  { ...badge(18, 'advent_secret', 'Рождественский секрет', 'Открыта секретная дверца 7 января', 'advent', 'Адвент', 'silver', 50), isSecret: true },
 ];
 
 const badgeById = (id: number): Badge => {

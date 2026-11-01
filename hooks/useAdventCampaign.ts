@@ -58,6 +58,12 @@ const BEFORE_CAMPAIGN = '0000-00-00'
 export type UseAdventCampaignOptions = {
   /** `false` — тексты дверец не переводятся (нужны только счётчики), накладка не грузится. */
   content?: boolean
+  /**
+   * Конфиг с сервера (#2867, `useAdventCampaignQuery`), если бэкенд его отдаёт;
+   * иначе бандловый `data/advent/2026.json`. Накладки переводов ложатся поверх
+   * по номеру дверцы одинаково для обоих источников.
+   */
+  serverCampaign?: AdventCampaignConfig | null
 }
 
 export function useAdventCampaign(options: UseAdventCampaignOptions = {}): AdventCampaignView {
@@ -68,7 +74,11 @@ export function useAdventCampaign(options: UseAdventCampaignOptions = {}): Adven
   }, [])
   const today = hydrated ? todayIsoOf(now) : BEFORE_CAMPAIGN
   const overlay = useAdventContentOverlay(options.content !== false)
-  const campaign = useMemo(() => applyAdventOverlay(getAdventCampaign(), overlay), [overlay])
+  const serverCampaign = hydrated ? (options.serverCampaign ?? null) : null
+  const campaign = useMemo(
+    () => applyAdventOverlay(serverCampaign ?? getAdventCampaign(), overlay),
+    [serverCampaign, overlay],
+  )
   const progressApi = useAdventProgress()
   const progress = hydrated ? progressApi.progress : EMPTY_ADVENT_PROGRESS
 

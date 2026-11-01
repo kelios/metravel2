@@ -8,6 +8,8 @@ import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { ADVENT_ROUTE } from '@/constants/advent'
 import { useAdventCampaign, type AdventDoorView } from '@/hooks/useAdventCampaign'
+import { useAdventCampaignQuery, useAdventServerSync } from '@/hooks/useAdventApi'
+import BadgeUnlockToast from '@/components/achievements/BadgeUnlockToast'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
@@ -18,14 +20,23 @@ import { webTouchScrollStyle } from '@/utils'
 import AdventHeader from './AdventHeader'
 import AdventGrid from './AdventGrid'
 import AdventDoorSheet from './AdventDoorSheet'
+import AdventShareCard from './AdventShareCard'
 
 /** Экран `/advent`: 27 дверец, прогресс и серия, лист дверцы (#2861). */
 export default function AdventScreen() {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const { width } = useResponsive()
-  const campaign = useAdventCampaign()
+  const serverCampaign = useAdventCampaignQuery()
+  const campaign = useAdventCampaign({ serverCampaign })
   const { doors, ready, isAuthenticated, openDoor, completeTask } = campaign
+  const sync = useAdventServerSync({
+    ownerKey: campaign.ownerKey,
+    localProgress: campaign.progress,
+    enabled: campaign.hydrated,
+  })
+  // Серия считается сервером по датам открытия (#2864); до синхронизации — локальная.
+  const streak = sync.serverStreak ?? campaign.streak
   const params = useLocalSearchParams<{ day?: string }>()
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
 
@@ -84,11 +95,15 @@ export default function AdventScreen() {
             <AdventHeader
               openedCount={campaign.openedCount}
               doneCount={campaign.doneCount}
-              streak={campaign.streak}
+              streak={streak}
               nextDoor={campaign.nextDoor}
               now={campaign.now}
               hydrated={campaign.hydrated}
+              syncState={sync.state}
             />
+            {campaign.hydrated && campaign.openedCount > 0 ? (
+              <AdventShareCard openedCount={campaign.openedCount} streak={streak} year={campaign.campaign.year} />
+            ) : null}
             <AdventGrid doors={doors} width={width} disabled={!ready || !campaign.hydrated} onPressDoor={handlePressDoor} />
             <Text style={styles.rules}>{i18nT('adventStatic:page.rules')}</Text>
           </View>
@@ -97,9 +112,13 @@ export default function AdventScreen() {
       <AdventDoorSheet
         door={selectedDoor}
         isAuthenticated={isAuthenticated}
+        creditedDays={sync.creditedDays}
+        campaignYear={campaign.campaign.year}
         onClose={() => setSelectedDay(null)}
         onCompleteTask={handleCompleteTask}
       />
+      {/* Значки адвента выдаёт сервер после синхронизации (#2864) — тост как в квестах. */}
+      <BadgeUnlockToast enabled={isAuthenticated} />
     </View>
   )
 }
