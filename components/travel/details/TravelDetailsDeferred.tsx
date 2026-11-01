@@ -267,7 +267,12 @@ export const TravelDeferredSections: React.FC<{
         >
           {shouldLoadSidebarSection ? (
             <Suspense fallback={sidebarPlaceholder}>
+              {/* #2917: экземпляр сайдбара принадлежит одной статье. Без ключа при
+                  SPA-переходе смонтированные списки получали новый `travel`, их
+                  near-запрос стартовал с ключом новой статьи и тут же обрывался
+                  сбросом прогрессивного гейта под неё (ERR_ABORTED в smoke). */}
               <TravelDetailsSidebarSectionLazy
+                key={travel.id}
                 travel={travel}
                 anchors={anchors}
                 canRenderHeavy={canRenderHeavy}

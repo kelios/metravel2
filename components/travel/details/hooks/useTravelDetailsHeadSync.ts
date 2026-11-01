@@ -3,11 +3,20 @@ import { useEffect } from 'react'
 import { Platform } from 'react-native'
 
 import { ensureSingleTitleTag } from '@/utils/seo'
+import { isDocumentAtPath } from '@/utils/webHeadManager'
 import { DEFAULT_LOCALE, i18n } from '@/i18n'
 
 type UseTravelDetailsHeadSyncArgs = {
   canonicalUrl?: string
   isFocused: boolean
+  /**
+   * #2916: адреса этой статьи (`/travels/<slug>`, `/travels/<id>`). Патчер пишет
+   * head только пока документ стоит на одном из них: после popstate фокус
+   * экрана снимается следующим коммитом, и за это окно наблюдатель успевал
+   * перезаписать теги нового владельца (Back на /search возвращал title и
+   * canonical статьи). Пустой список — гейта нет (нативные вызовы, тесты).
+   */
+  routePaths?: readonly string[]
   readyDesc: string | null
   readyImage: string
   readyTitle: string | null
@@ -20,9 +29,11 @@ export function useTravelDetailsHeadSync({
   readyDesc,
   readyImage,
   readyTitle,
+  routePaths,
   syncNavigationTitle,
 }: UseTravelDetailsHeadSyncArgs) {
   const localeRevision = useLocaleRevision()
+  const routePathsKey = routePaths?.join('\n') ?? ''
   useEffect(() => {
     if (!readyTitle || readyTitle === 'Metravel') return undefined
     if (!isFocused) return undefined
@@ -98,7 +109,12 @@ export function useTravelDetailsHeadSync({
       })
     }
 
+    const ownsDocument = () =>
+      !routePathsKey || routePathsKey.split('\n').some((path) => isDocumentAtPath(path))
+
     const applyAll = () => {
+      // Документ уже на другом адресе: head принадлежит его странице.
+      if (!ownsDocument()) return
       enforceHtmlLang()
       ensureSingleTitleTag(readyTitle)
       patchMeta('meta[property="og:title"]', 'content', readyTitle)
@@ -134,5 +150,5 @@ export function useTravelDetailsHeadSync({
       window.clearTimeout(timeout)
       observer.disconnect()
     }
-  }, [canonicalUrl, isFocused, readyDesc, readyImage, readyTitle, syncNavigationTitle, localeRevision])
+  }, [canonicalUrl, isFocused, readyDesc, readyImage, readyTitle, routePathsKey, syncNavigationTitle, localeRevision])
 }

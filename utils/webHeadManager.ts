@@ -178,6 +178,30 @@ export function releaseHeadTags(owner: symbol): void {
   state.owner = null
 }
 
+/**
+ * #2916: императивный патчер head страницы (детали статьи, квест) вправе писать
+ * только пока документ стоит на адресе этой страницы. Фокус экрана меняется
+ * следующим коммитом после popstate, а наблюдатель head уже смонтированной
+ * страницы успевает за это окно перезаписать теги, которые только что записал
+ * новый владелец (Back со статьи на /search возвращал title/canonical статьи).
+ * Адрес документа меняется синхронно с переходом, поэтому он и есть граница
+ * владения.
+ */
+export function isDocumentAtPath(pathOrUrl: string | null | undefined): boolean {
+  if (typeof window === 'undefined' || !pathOrUrl) return false
+  const path = /^https?:\/\//i.test(pathOrUrl) ? new URL(pathOrUrl).pathname : pathOrUrl
+  // Слаг может быть кириллическим: браузер держит его в pathname percent-encoded,
+  // а builder кодирует сам — сравниваем декодированные формы.
+  const decode = (value: string) => {
+    try {
+      return decodeURIComponent(value)
+    } catch {
+      return value
+    }
+  }
+  return decode(normalizePath(window.location.pathname)) === decode(normalizePath(path))
+}
+
 /** Только для тестов: забыть снимок документа. */
 export function resetHeadManagerForTests(): void {
   state = null

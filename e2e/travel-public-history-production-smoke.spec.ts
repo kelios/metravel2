@@ -1,4 +1,4 @@
-import { test, expect, type BrowserContext, type CDPSession, type Locator, type Page, type TestInfo } from '@playwright/test'
+import { test, expect, type BrowserContext, type CDPSession, type Locator, type Page, type Request, type TestInfo } from '@playwright/test'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
 
 test.use({ screenshot: 'only-on-failure' })
@@ -34,7 +34,14 @@ type NearResponses = Map<number, Promise<NearCard[] | Error>>
 type Traversals = { programmatic: number; popstate: number }
 type Observations = { errors: string[]; failedRequests: string[]; badResponses: string[]; apiWrites: string[] }
 const observations = new WeakMap<BrowserContext, Observations>()
-const pendingLocationReads = new WeakMap<Page, Set<Promise<Error | null>>>()
+type PendingRead = { url: string; finished: Promise<Error | null> }
+const pendingLocationReads = new WeakMap<Page, Set<PendingRead>>()
+const PENDING_READS_BUDGET_MS = 20_000
+/** Окно после прекондишна ухода, в котором обрыв загрузки картинки — навигация. */
+const DEPARTURE_WINDOW_MS = 3_000
+const departures = new WeakMap<Page, number>()
+/** Собственные медиа-маршруты: `<img>` и `<link rel="prefetch" as="image">` (#2917). */
+const OWN_MEDIA_PATH = /^\/(?:gallery|travel-image|travel-description-image|address-image|media-resize)\//
 
 function safeUrl(url: string) {
   try {
@@ -52,16 +59,55 @@ async function readTraversals(page: Page): Promise<Traversals> {
   return page.evaluate(() => (window as Window & { __travelHistoryTraversals?: Traversals }).__travelHistoryTraversals!)
 }
 
+// The page's own data reads (`near/`, `popular/`, quest cities…): their
+// cancellation is product-side (a query observer gone mid-flight) and must not be
+// provoked by the scenario leaving too early. Pictures are not awaited: a 1 MB
+// hero on a mobile profile outlives any traversal budget, and the browser dropping
+// an unmounted <img> is not a product defect (see the `requestfailed` observation).
+function isOwnDataRead(target: Page, request: Request) {
+  if (request.method() !== 'GET' || !['fetch', 'xhr'].includes(request.resourceType())) return false
+  let pageOrigin = 'null'
+  try { pageOrigin = new URL(target.url()).origin } catch { /* no committed document yet */ }
+  return pageOrigin !== 'null' && new URL(request.url()).origin === pageOrigin
+}
+
 async function finishPendingLocationReads(page: Page) {
   const pending = pendingLocationReads.get(page)!
-  // Article SEO can commit while its nearby-quest response body is still in
-  // flight. Complete already-started reads before deliberately leaving their
-  // last query observer; keep all cancellation/error observations strict.
-  while (pending.size) {
-    const results = await Promise.all([...pending])
-    expect(results, 'started nearby-quest response bodies complete before navigation')
-      .toEqual(results.map(() => null))
+  // Article SEO can commit while its own reads are still in flight: the
+  // nearby-quest body (#2703) and, on the SSR article (#2917), `near/` and
+  // `popular/` at ~2 s on production. Leaving mid-flight cancels them (React
+  // Query aborts by signal), which the zero-error observation could not tell
+  // from a product-side cancellation. Complete every already-started
+  // same-origin data read before deliberately leaving its last observer; the
+  // cancellation/error observations themselves stay strict.
+  const deadline = Date.now() + PENDING_READS_BUDGET_MS
+  for (;;) {
+    if (!pending.size) {
+      // Paginated reads (`/api/quest-cities/` page 2) start right after the
+      // previous page settles: a follow-up read within a short quiet window
+      // re-enters the loop, otherwise the page is idle.
+      const followUp = await page.waitForEvent('request', { predicate: (request) => isOwnDataRead(page, request), timeout: 150 })
+        .then(() => true, () => false)
+      if (!followUp && !pending.size) break
+      continue
+    }
+    const reads = [...pending]
+    let budgetTimer: ReturnType<typeof setTimeout> | undefined
+    const settled = await Promise.race([
+      Promise.all(reads.map((read) => read.finished)),
+      new Promise<'budget'>((resolve) => { budgetTimer = setTimeout(() => resolve('budget'), Math.max(0, deadline - Date.now())) }),
+    ])
+    clearTimeout(budgetTimer)
+    // A read that never settles within the budget is reported by address instead
+    // of stalling the whole scenario until the test timeout.
+    expect(settled === 'budget' ? reads.map((read) => read.url) : [],
+      'same-origin reads of the page we leave settle within the budget').toEqual([])
+    expect(settled, 'started same-origin reads of the page we leave complete before navigation')
+      .toEqual(reads.map(() => null))
   }
+  // Every deliberate departure (card click, Back, Forward) passes through here;
+  // picture loads the browser drops right after it belong to that departure.
+  departures.set(page, Date.now())
 }
 
 async function readMetadata(page: Page) {
@@ -257,15 +303,18 @@ test.describe('Public travel browser history — production smoke (#2703)', () =
     const log: Observations = { errors: [], failedRequests: [], badResponses: [], apiWrites: [] }
     observations.set(context, log)
     const observePage = (target: Page) => {
-      const pending = new Set<Promise<Error | null>>()
+      const pending = new Set<PendingRead>()
       pendingLocationReads.set(target, pending)
       target.on('request', (request) => {
-        if (request.method() !== 'GET' || !/\/api\/quests\/near-location\/$/.test(new URL(request.url()).pathname)) return
-        const finished = request.response()
-          .then((response) => response ? response.finished() : new Error('Nearby-quest request ended without a response'))
-          .catch((error: Error) => new Error(safeMessage(error.message)))
-        pending.add(finished)
-        void finished.then(() => pending.delete(finished))
+        if (!isOwnDataRead(target, request)) return
+        const read: PendingRead = {
+          url: safeUrl(request.url()),
+          finished: request.response()
+            .then((response) => response ? response.finished() : new Error(`${safeUrl(request.url())} ended without a response`))
+            .catch((error: Error) => new Error(safeMessage(error.message))),
+        }
+        pending.add(read)
+        void read.finished.then(() => pending.delete(read))
       })
       target.on('console', (message) => {
         if (message.type() === 'error') log.errors.push(safeMessage(message.text()))
@@ -275,7 +324,18 @@ test.describe('Public travel browser history — production smoke (#2703)', () =
     observePage(page)
     context.on('page', observePage)
     context.on('requestfailed', (request) => {
-      log.failedRequests.push(`${request.method()} ${safeUrl(request.url())}: ${safeMessage(request.failure()?.errorText || '')}`)
+      const errorText = request.failure()?.errorText || ''
+      // #2917: a picture or image prefetch the browser drops because its node left
+      // the document on a deliberate departure is navigation, not a product
+      // cancellation. The exemption holds only inside the departure window; a
+      // picture the product itself aborts on a settled page, and every other
+      // failure (data reads, documents, scripts, any non-abort error), stays strict.
+      const departedAt = departures.get(request.frame().page())
+      const withinDeparture = departedAt != null && Date.now() - departedAt < DEPARTURE_WINDOW_MS
+      const isOwnMedia = request.resourceType() === 'image' ||
+        (request.resourceType() === 'other' && OWN_MEDIA_PATH.test(new URL(request.url()).pathname))
+      if (withinDeparture && isOwnMedia && errorText === 'net::ERR_ABORTED') return
+      log.failedRequests.push(`${request.method()} ${request.resourceType()} ${safeUrl(request.url())}: ${safeMessage(errorText)}`)
     })
     context.on('response', (response) => {
       if (response.status() >= 400) log.badResponses.push(`${response.status()} ${safeUrl(response.url())}`)
@@ -377,6 +437,7 @@ test.describe('Public travel browser history — production smoke (#2703)', () =
         const catalogCard = page.locator('a[data-testid="travel-card-link"][href^="/travels/"]:visible').first()
         await expect(catalogCard, 'real public catalog must contain an existing article card').toBeVisible({ timeout: 30_000 })
         const path = new URL((await catalogCard.getAttribute('href'))!, page.url()).pathname
+        await finishPendingLocationReads(page)
         await catalogCard.click({ position: { x: 12, y: 12 } })
         const article = await articleSnapshot(page, path)
         const articleHistory = await checkpoint(page, cdp, info, 'catalog-to-detail')

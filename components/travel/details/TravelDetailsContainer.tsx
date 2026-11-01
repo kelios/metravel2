@@ -31,7 +31,7 @@ import { RichMediaViewportProvider } from '@/components/ui/richMediaViewport'
 import { useTravelDetailsContainerViewModel } from '@/components/travel/details/hooks/useTravelDetailsContainerViewModel'
 import { useTravelDetailsHeadSync } from '@/components/travel/details/hooks/useTravelDetailsHeadSync'
 import type { Travel } from '@/types/types'
-import { buildTravelPathFromTravel } from '@/utils/routePaths'
+import { buildTravelPath, buildTravelPathFromTravel } from '@/utils/routePaths'
 import { cacheTravelOffline } from '@/hooks/useOfflineTravelCache'
 import { translate as i18nT } from '@/i18n'
 import { useTravelLoaderPayload } from './travelLoaderData'
@@ -291,12 +291,22 @@ export default function TravelDetailsContainer() {
     readyTitle,
   })
 
+  // #2916: адреса статьи для гейта владения head — параметр маршрута (в том
+  // числе прежний слаг, по которому открыли статью), актуальный слаг и id.
+  const headRoutePaths = useMemo(
+    () =>
+      [buildTravelPath(slug), buildTravelPath(travel?.slug), buildTravelPath(travel?.id)].filter(
+        (path): path is string => Boolean(path),
+      ),
+    [slug, travel?.id, travel?.slug],
+  )
   useTravelDetailsHeadSync({
     canonicalUrl,
     isFocused,
     readyDesc,
     readyImage,
     readyTitle,
+    routePaths: headRoutePaths,
     syncNavigationTitle,
   })
 

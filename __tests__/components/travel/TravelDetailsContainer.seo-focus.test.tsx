@@ -111,6 +111,8 @@ describe('TravelDetailsContainer SEO focus guard', () => {
   })
 
   beforeEach(() => {
+    // #2916: патчер head статьи пишет только на адресе статьи — как в браузере.
+    window.history.replaceState(null, '', '/travels/energylandia-polskiy-disneylend')
     const RN = require('react-native')
     RN.Platform.OS = 'web'
     RN.Platform.select = (options: Record<string, unknown>) => options.web ?? options.default

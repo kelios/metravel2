@@ -10,6 +10,7 @@ const mockTransitionScope = createContext<Map<string, TransitionProps> | null>(n
 const mockAuthorCardSpy: jest.Mock<any, any> = jest.fn(() => null)
 const mockMapSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
 const mockSidebarSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
+const mockSidebarLifecycle: string[] = []
 const mockFooterSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
 const mockCommentsSectionSpy: jest.Mock<any, any> = jest.fn(() => null)
 const mockTravelDescriptionSpy: jest.Mock<any, any> = jest.fn(() => null)
@@ -74,10 +75,24 @@ jest.mock('@/components/travel/details/sections/TravelDetailsMapSection', () => 
   TravelDetailsMapSection: (props: any) => mockMapSectionSpy(props),
 }))
 
-jest.mock('@/components/travel/details/sections/TravelDetailsSidebarSection', () => ({
-  __esModule: true,
-  TravelDetailsSidebarSection: (props: any) => mockSidebarSectionSpy(props),
-}))
+jest.mock('@/components/travel/details/sections/TravelDetailsSidebarSection', () => {
+  const React = require('react')
+  return {
+    __esModule: true,
+    TravelDetailsSidebarSection: (props: any) => {
+      // #2917: экземпляр сайдбара помечает своё рождение и смерть id статьи, с
+      // которой смонтирован, — так видно, пережил ли он смену статьи.
+      // Ленивое начальное состояние фиксирует id на момент монтирования: оно
+      // меняется только вместе с экземпляром, поэтому эффект и видит remount.
+      const [mountedTravelId] = React.useState(() => props.travel.id)
+      React.useEffect(() => {
+        mockSidebarLifecycle.push(`mount:${mountedTravelId}`)
+        return () => { mockSidebarLifecycle.push(`unmount:${mountedTravelId}`) }
+      }, [mountedTravelId])
+      return mockSidebarSectionSpy(props)
+    },
+  }
+})
 
 jest.mock('@/components/travel/details/sections/TravelDetailsFooterSection', () => ({
   __esModule: true,
@@ -523,5 +538,29 @@ describe('TravelDeferredSections (web author defer)', () => {
       jest.advanceTimersByTime(6000)
     })
     expect(commentsTransition().runtimeFrameReady).toBe(true)
+  })
+
+  // #2917: при SPA-переходе смонтированные списки сайдбара получали новый
+  // `travel`, их near-запрос стартовал с ключом новой статьи и тут же обрывался
+  // сбросом прогрессивного гейта. Экземпляр сайдбара принадлежит одной статье.
+  it('remounts the sidebar instance when the travel changes instead of re-keying a live one', async () => {
+    const { TravelDeferredSections } = require('@/components/travel/details/TravelDetailsDeferred.tsx')
+    const anchors: any = Object.fromEntries(['comments', 'description', 'excursions', 'gallery', 'map', 'minus',
+      'near', 'plus', 'points', 'popular', 'recommendation', 'video'].map((key) => [key, { current: null }]))
+    const travelOf = (id: number): any => ({ id, name: `Travel ${id}`, description: '<p>Test</p>', gallery: [] })
+    const transitions = new Map<string, TransitionProps>()
+    const sections = (travel: any) => (
+      <mockTransitionScope.Provider value={transitions}><Suspense fallback={null}>
+        <TravelDeferredSections travel={travel} isMobile={false} forceOpenKey="near" anchors={anchors} scrollToMapSection={() => {}} />
+      </Suspense></mockTransitionScope.Provider>
+    )
+    mockSidebarLifecycle.length = 0
+    let tree: RenderResult
+    await act(async () => { tree = await renderTree(sections(travelOf(6))); await Promise.resolve() })
+    expect(mockSidebarLifecycle).toEqual(['mount:6'])
+
+    await act(async () => { tree.rerender(sections(travelOf(7))); await Promise.resolve() })
+    expect(mockSidebarLifecycle).toEqual(['mount:6', 'unmount:6', 'mount:7'])
+    expect(mockSidebarSectionSpy.mock.calls.at(-1)?.[0]?.travel.id).toBe(7)
   })
 })
