@@ -71,6 +71,41 @@ describe('approved photo-diary physical rendering',()=>{
     const source=input();source.purpose='print-shop';source.profile.bleedMm=3;expect(buildReadyBookHtml(source).stylesCss).toContain('@page{size:156mm 106mm');expect(()=>buildReadyBookHtml(input('album-a5',12))).toThrow('at least 30');
     expect(buildReadyBookPagePlan(source.book).filter(page=>page.stopId===source.book.stops[0].id).map(page=>page.kind)).toEqual(['destination','photo-memory','notes']);
   });
+  it.each(['pocket-150x100','album-a5'] as const)('renders the photographic edition with its own type and wording on %s',profile=>{
+    const source=input(profile,31);
+    source.book.visualStyle='photo';
+    source.fonts.heading='data:font/ttf;base64,aGVhZGluZw==';
+    const result=buildReadyBookHtml(source);
+    const plan=buildReadyBookPagePlan(source.book);
+    const first=result.pageMap.findIndex(page=>page.kind==='destination');
+    expect(result.bodyPages[first]).toContain(`alt="Фотография: ${source.book.stops[0].title}"`);
+    expect(result.bodyPages[first]).not.toContain('Акварель');
+    expect(result.bodyPages[first]).toContain('Место на карте');
+    expect(result.coverPages[0]).toContain('alt="Фотографии места из книги"');
+    expect(result.bodyPages[plan.find(page=>page.kind==='usage')!.number-1]).toContain('фотографии автора и короткий рассказ');
+    const credits=result.bodyPages[plan.find(page=>page.kind==='credits')!.number-1];
+    expect(credits).toContain('Lora — The Lora Project Authors, SIL Open Font License 1.1');
+    expect(credits).toContain('Фотографии сделаны автором');
+    expect(credits).not.toContain('Основой акварелей');
+    expect(result.stylesCss).toContain("@font-face{font-family:BookHeading;src:url('data:font/ttf;base64,aGVhZGluZw==')}");
+    expect(result.stylesCss).toContain('h1,h2{font-family:BookHeading,BookHand,serif');
+    expect(result.stylesCss).toContain(profile==='album-a5'?'left:15mm;right:15mm;top:137mm;height:34mm;text-align:center;font-size:11.2pt;line-height:1.2}':'left:80mm;right:15mm;top:22mm;height:42mm;text-align:left;font-size:9pt;line-height:1.15}');
+    expect(result.pageMap).toEqual(plan.map(({number,...entry})=>({folio:number,...entry})));
+    expect(result.bodyPages).toHaveLength(108);
+  });
+  it('keeps the watercolor wording and single handwritten face when no style is set',()=>{
+    const result=buildReadyBookHtml(input('album-a5',31));
+    const first=result.pageMap.findIndex(page=>page.kind==='destination');
+    expect(result.bodyPages[first]).toContain('alt="Акварель:');
+    expect(result.stylesCss).not.toContain('BookHeading');
+    expect(result.stylesCss).toContain('h1,h2{font-family:BookHand,cursive');
+    const plan=buildReadyBookPagePlan(makeEditorialDraft(31));
+    expect(result.bodyPages[plan.find(page=>page.kind==='credits')!.number-1]).toContain('Marck Script — Denis Masharov');
+    expect(result.stylesCss).toContain('left:18mm;right:18mm;top:138mm;height:28mm;text-align:center;font-size:12.5pt;line-height:1.2}');
+    expect(buildReadyBookHtml(input('pocket-150x100',31)).stylesCss).toContain('left:82mm;right:15mm;top:23mm;height:38mm;text-align:left;font-size:10pt;line-height:1.2}');
+    const invalid=input('album-a5',31);invalid.fonts.heading='https://example.org/heading.ttf';
+    expect(()=>buildReadyBookHtml(invalid)).toThrow('Embedded TTF');
+  });
   it('escapes editorial text and requires self-contained images and fonts',()=>{
     const source=input();source.book.stops[0].title='<script>alert("story")</script>';const result=buildReadyBookHtml(source);expect(result.bodyHtml).not.toContain('<script>');expect(result.bodyHtml).toContain('&lt;script&gt;');expect(()=>embeddedImage('https://example.org/image.jpg')).toThrow('embedded image');source.fonts.regular='https://example.org/font.ttf';expect(()=>buildReadyBookHtml(source)).toThrow('Embedded TTF');
   });

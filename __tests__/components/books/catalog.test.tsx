@@ -29,3 +29,11 @@ it.each([31,37])('shows data-driven counts for a valid %i-place edition',count=>
   expect(book.stopCount).toBe(count);
   expect(book.bodyPageCount).toBeGreaterThan(56);
 });
+
+it('names the visual style of every edition and keeps the watercolor default for legacy metadata',()=>{
+  books.push(publishedFixture(31),publishedFixture(31,{id:'belarus-photo-memory',slug:'belarus-photo',title:'Беларусь. Фотокнига воспоминаний',visualStyle:'photo'}));
+  render(<Catalog/>);
+  expect(screen.getByText('style: styleWatercolor')).toBeTruthy();
+  expect(screen.getByText('style: stylePhoto')).toBeTruthy();
+  expect(screen.getAllByRole('link').map(link=>link.getAttribute('href'))).toEqual(['/books/belarus','/books/belarus-photo']);
+});

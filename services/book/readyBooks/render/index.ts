@@ -25,7 +25,8 @@ export interface ReadyBookRenderInput {
   estimatedMinIllustrationPpi?: number;
   assets: Record<string, EmbeddedBookAsset>;
   cover: EmbeddedBookAsset;
-  fonts: {regular: string; bold: string; serif: string};
+  /** `heading` is optional: the watercolor series sets every role in one handwritten face. */
+  fonts: {regular: string; bold: string; serif: string; heading?: string};
   /** QR is generated locally from the canonical source URL, including its quiet zone. */
   qr: Record<string, {map: string; article: string; quest?: string; sizeMm: number}>;
 }
@@ -55,7 +56,7 @@ export function buildReadyBookHtml(input: ReadyBookRenderInput) {
   }
   embeddedImage(input.cover.dataUri);
   const plan = buildReadyBookPagePlan(book);
-  const stylesCss = readyBookStyles(profile, input.fonts);
+  const stylesCss = readyBookStyles(profile, input.fonts, book.visualStyle);
   const page = (number: number, kind: string, content: string, component = 'body') => {
     const side = number % 2 === 0 ? 'left' : 'right';
     return `<section class="book-page ${profile.id === 'pocket-150x100' ? 'pocket-layout' : 'album-layout'} ${side} ${component} ${kind}" data-folio="${number}" data-kind="${kind}" style="--inner:${profile.bindingMm}mm;--outer:${profile.safeMm}mm"><div class="trim">${content}</div></section>`;
