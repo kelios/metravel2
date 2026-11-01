@@ -41,3 +41,11 @@ export const pluralizeCompletions = (n: number): string => {
 export const pluralizePlayers = (n: number): string => {
     return translatePlural('shared:screens.tabs.questsShared.playersCount', n, { value1: n });
 };
+
+export const pluralizeCities = (n: number): string => {
+    return translatePlural('shared:screens.tabs.questsShared.citiesCount', n, { value1: n });
+};
+
+export const pluralizeCountries = (n: number): string => {
+    return translatePlural('shared:screens.tabs.questsShared.countriesCount', n, { value1: n });
+};

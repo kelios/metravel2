@@ -95,6 +95,9 @@ const E2E_CATEGORY_DEFINITIONS = [
       'e2e/quests-list-detail.spec.ts',
       'e2e/quest-reviews-reader.spec.ts',
       'e2e/quest-return-loop.spec.ts',
+      // #2896 / #2905: неизвестный slug → 404-экран; мягкий старт первой точки.
+      'e2e/quest-not-found.spec.ts',
+      'e2e/quest-soft-start.spec.ts',
     ],
   },
   {

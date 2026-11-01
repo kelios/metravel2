@@ -51,6 +51,21 @@ export const createAnswerStyles = (colors: QuestColors, isMobile: boolean, _scre
         borderColor: 'rgba(239,68,68,0.15)',
     },
     errorText: { color: colors.danger, fontSize: Math.round(13 * fontScale), fontWeight: '600', flex: 1 },
+    // Мягкий старт (#2905): отказ на первой точке — спокойная заметка, не красная
+    // рамка: тот же ритм, что у errorContainer, но нейтральная поверхность.
+    softErrorContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 4,
+        marginBottom: SPACING.sm,
+        padding: 10,
+        backgroundColor: colors.surfaceMuted,
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    softErrorText: { color: colors.text, fontSize: Math.round(13 * fontScale), fontWeight: '500', flex: 1, lineHeight: Math.round(18 * fontScale) },
 
     primaryButton: {
         paddingHorizontal: SPACING.xl,

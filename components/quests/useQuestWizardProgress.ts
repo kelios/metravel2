@@ -692,6 +692,8 @@ export function useQuestWizardProgress({
     skipped,
     earlyFinish,
     completedSteps,
+    /** Обязательные точки в порядке маршрута: первая из них — вход в игру (#2905). */
+    requiredSteps,
     /** Гейтящие точки без ответа и без официального пропуска (#1633). */
     pendingSteps,
     requiredCount,

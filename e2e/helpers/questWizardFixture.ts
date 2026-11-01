@@ -18,7 +18,15 @@ import { seedActionConsents } from './actionConsent'
  * точек подменяет карточку шага), а `saveProgress` молча выходит и PATCH не уходит.
  */
 
-export type QuestFixturePoint = { id: string; lat: number; lng: number }
+export type QuestFixturePoint = {
+  id: string
+  lat: number
+  lng: number
+  /** Проверяемый ответ точки (#2905); по умолчанию — свободный текст от одного символа. */
+  answerPattern?: { type: string; value: unknown }
+  hint?: string
+  task?: string
+}
 
 export type QuestFixtureOptions = {
   questId: string
@@ -57,9 +65,9 @@ export function createQuestFixture(options: QuestFixtureOptions): QuestFixture {
       title: `Точка ${index + 1}`,
       location: 'Минск',
       story: 'Детерминированный шаг спеки визарда.',
-      task: 'Введите любое слово.',
-      hint: 'Подойдёт любой непустой ответ.',
-      answer_pattern: { type: 'any_text', value: { min_length: 1 } },
+      task: point.task ?? 'Введите любое слово.',
+      hint: point.hint ?? 'Подойдёт любой непустой ответ.',
+      answer_pattern: point.answerPattern ?? { type: 'any_text', value: { min_length: 1 } },
       lat: point.lat,
       lng: point.lng,
       maps_url: `https://www.openstreetmap.org/?mlat=${point.lat}&mlon=${point.lng}`,

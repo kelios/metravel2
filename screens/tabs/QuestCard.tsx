@@ -32,6 +32,7 @@ import { formatDistance } from '@/utils/distanceCalculator'
 import { formatRatingValue } from '@/utils/ratingHelpers'
 import { hasPublicQuestRating } from '@/api/questRating'
 import { buildQuestPath } from '@/utils/routePaths'
+import { isQuestCompletionsPublic } from '@/utils/questPublicStatsPolicy'
 
 
 const loadedQuestImageCache = new Set<string>();
@@ -161,6 +162,9 @@ function QuestCard({
         ? QUEST_CARD_PHONE_HEIGHT
         : Math.round((cardWidth / QUESTS_GRID_MIN_COLUMN_WIDTH) * QUEST_CARD_BASE_HEIGHT);
     const showOverlayMeta = !isPhone;
+    // Ниже порога (#2906) «Пройдено 1 раз» и «Первым прошёл» работают против
+    // доверия: вместо них карточка зовёт стать первым. Порог — один на проект.
+    const showCompletions = isQuestCompletionsPublic(quest.completionsCount);
 
     // Ширина обложки = CSS-слот × плотность экрана, с потолком DPR 2.
     //
@@ -397,7 +401,7 @@ function QuestCard({
                                         </Text>
                                     </View>
                                 )}
-                                {quest.completionsCount > 0 && (
+                                {showCompletions && (
                                     <View
                                         style={styles.questCardMetaItem}
                                         testID={`quest-card-completions-${quest.id}`}
@@ -411,11 +415,18 @@ function QuestCard({
                         </View>
                     )}
 
-                    {showOverlayMeta && quest.firstCompleter && (
+                    {showOverlayMeta && showCompletions && quest.firstCompleter && (
                         <View style={styles.questCardPioneerRow}>
                             <UserAvatar uri={quest.firstCompleter.avatar} size="sm" />
                             <Text style={styles.questCardPioneerText} numberOfLines={1}>
                                 {i18nT('quests:screens.tabs.QuestCard.pervym_proshel_0647d9f1', { value1: quest.firstCompleter.name })}</Text>
+                        </View>
+                    )}
+                    {showOverlayMeta && !showCompletions && (
+                        <View style={styles.questCardPioneerRow} testID={`quest-card-be-first-${quest.id}`}>
+                            <Feather name="flag" size={13} color="rgba(255,255,255,0.9)" />
+                            <Text style={styles.questCardPioneerText} numberOfLines={1}>
+                                {i18nT('quests:screens.tabs.QuestCard.beFirst')}</Text>
                         </View>
                     )}
                 </View>
@@ -478,7 +489,7 @@ function QuestCard({
                                 <Text style={styles.questCardDetailsText}>{quest.ratingCount}</Text>
                             </Pressable>
                         )}
-                        {quest.completionsCount > 0 && (
+                        {showCompletions && (
                             <View
                                 style={styles.questCardDetailsItem}
                                 pointerEvents={Platform.OS === 'web' ? 'none' : undefined}

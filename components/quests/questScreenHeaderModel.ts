@@ -1,4 +1,5 @@
 import type Feather from '@expo/vector-icons/Feather'
+import { isQuestCompletionsPublic } from '@/utils/questPublicStatsPolicy'
 
 import type { ScreenHeaderConfig } from '@/components/layout/ScreenHeaderContext'
 import type { ActionListSheetItem } from '@/components/ui/ActionListSheet'
@@ -77,7 +78,8 @@ function buildQuestInfo(countModel: QuestCountModel, meta?: QuestScreenMeta): st
   if (meta?.isCompletedByMe) {
     info.push(i18nT('quests:components.quests.QuestCompletionBadge.vy_proshli_etot_kvest_7e00d905'))
   }
-  if (meta && meta.completionsCount > 0) {
+  // Ниже порога (#2906) «Пройдено 1 раз» работает против доверия — строка не показывается.
+  if (meta && isQuestCompletionsPublic(meta.completionsCount)) {
     info.push(translatePlural('quests:components.quests.QuestCompletionBadge.completionCount', meta.completionsCount))
   }
   if (meta && meta.rating.count > 0) {
