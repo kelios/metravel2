@@ -7,7 +7,6 @@ import { useIsFocused } from 'expo-router'
 import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import QuestCityLandingSections from '@/components/quests/QuestCityLandingSections'
-import QuestNotFoundScreen from '@/components/quests/QuestNotFoundScreen'
 import {
   getQuestLandingRouteParam,
   QUEST_LANDING_DESCRIPTION_META_TARGETS,
@@ -56,6 +55,10 @@ function preloadQuestsScreen() {
 }
 if (Platform.OS === 'web' && typeof window !== 'undefined') void preloadQuestsScreen()
 const QuestsScreen = React.lazy(preloadQuestsScreen)
+// Терминальный экран редкого пути (#2896) не едет в чанке маршрута города: статический
+// импорт поднял `index:quests-city` над бюджетом (ROUTE-BUNDLE-001), а нужен он
+// только на неизвестном адресе — чанк грузится в момент показа.
+const QuestNotFoundScreen = React.lazy(() => import('@/components/quests/QuestNotFoundScreen'))
 
 type Props = {
   /**
@@ -246,7 +249,11 @@ export default function QuestsByCityScreen({ notFound: loaderNotFound = false }:
   )
 
   if (notFound) {
-    return <QuestNotFoundScreen kind="city" segment={cityParam} quests={quests} styles={s} />
+    return (
+      <Suspense fallback={<QuestLandingLoading styles={s} colors={colors} />}>
+        <QuestNotFoundScreen kind="city" segment={cityParam} quests={quests} styles={s} />
+      </Suspense>
+    )
   }
 
   if (loading || !cityGroup) {

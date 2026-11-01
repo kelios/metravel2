@@ -60,8 +60,9 @@ beforeEach(() => {
 
 it('неизвестный сегмент рисует экран «Квест не найден» и не уводит в каталог', async () => {
   mockCityParam = 'this-quest-does-not-exist-123'
-  const { getByTestId } = await render(<QuestsByCityScreen />)
-  expect(getByTestId('quest-not-found').props.children).toBe('city:this-quest-does-not-exist-123')
+  // Экран «не найдено» — ленивый чанк (#2896, ROUTE-BUNDLE-001): ждём его появления.
+  const { findByTestId } = await render(<QuestsByCityScreen />)
+  expect((await findByTestId('quest-not-found')).props.children).toBe('city:this-quest-does-not-exist-123')
   expect(mockReplace).not.toHaveBeenCalled()
 })
 
@@ -82,8 +83,8 @@ it('известный город не считается не найденны�
 it('маркер notFound от SSR-loader рисует экран, пока каталог ещё грузится', async () => {
   mockCityParam = 'nope'
   mockLoading = true
-  const { getByTestId } = await render(<QuestsByCityScreen notFound />)
-  expect(getByTestId('quest-not-found').props.children).toBe('city:nope')
+  const { findByTestId } = await render(<QuestsByCityScreen notFound />)
+  expect((await findByTestId('quest-not-found')).props.children).toBe('city:nope')
 })
 
 it('маркер notFound не накрывает город, который каталог разрешил: публикация и каталог — разные источники', async () => {

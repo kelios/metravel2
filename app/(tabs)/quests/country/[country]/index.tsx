@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { Suspense, useEffect, useMemo } from 'react'
 import { Dimensions, Platform, View } from 'react-native'
 import { useIsFocused, useLocalSearchParams, useNavigation } from 'expo-router'
 
 import QuestCountryLandingSections from '@/components/quests/QuestCountryLandingSections'
-import QuestNotFoundScreen from '@/components/quests/QuestNotFoundScreen'
 import QuestPublicPageFrame from '@/components/quests/QuestPublicPageFrame'
 import { toCountrySelectionId } from '@/utils/questCatalogSelection'
 import { QuestPageColumns } from '@/components/quests/QuestPageColumns'
@@ -38,6 +37,9 @@ import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/util
 import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 const COUNTRY_HEADER_BLOCK_STYLE = { gap: 8, width: '100%', maxWidth: 840 } as const
+// Экран неизвестного адреса (#2896) — отдельный ленивый чанк, не вес маршрута страны
+// (ROUTE-BUNDLE-001): нужен только на неизвестном alias.
+const QuestNotFoundScreen = React.lazy(() => import('@/components/quests/QuestNotFoundScreen'))
 
 type Props = {
   /** SSR-loader ответил «нет такого адреса» на клиентский запрос данных (#2896). */
@@ -123,7 +125,11 @@ export default function QuestsByCountryScreen({ notFound: loaderNotFound = false
   }, [canonical, country, countryName, countryQuests, t])
 
   if (notFound) {
-    return <QuestNotFoundScreen kind="country" segment={countryParam} quests={quests} styles={s} />
+    return (
+      <Suspense fallback={<QuestLandingLoading styles={s} colors={colors} />}>
+        <QuestNotFoundScreen kind="country" segment={countryParam} quests={quests} styles={s} />
+      </Suspense>
+    )
   }
 
   if (loading || !country || Platform.OS !== 'web') {
