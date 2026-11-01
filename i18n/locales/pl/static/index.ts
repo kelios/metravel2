@@ -1,3 +1,4 @@
+import { adventStaticResources } from './advent_static'
 import { aiAssistStaticResources } from './ai_assist_static'
 import { aiPicksStaticResources } from './ai_picks_static'
 import { appStatsStaticResources } from './app_stats_static'
@@ -13,6 +14,7 @@ import { sharedStaticResources } from './shared_static'
 import { tripsStaticResources } from './trips_static'
 
 export const staticResources = {
+  adventStatic: adventStaticResources,
   aiAssistStatic: aiAssistStaticResources,
   aiPicksStatic: aiPicksStaticResources,
   appStatsStatic: appStatsStaticResources,

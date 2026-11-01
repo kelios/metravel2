@@ -1,4 +1,5 @@
 import EmailSubscriptionFormDefault from '@/components/common/EmailSubscriptionForm'
+import HomeAdventPromoSectionDefault from './HomeAdventPromoSection'
 import HomeAppPromoSectionDefault from './HomeAppPromoSection'
 import HomeBottomCtaSectionDefault from './HomeBottomCtaSection'
 import HomeFAQSectionDefault from './HomeFAQSection'
@@ -9,6 +10,7 @@ import HomeQuestsPromoSectionDefault from './HomeQuestsPromoSection'
 import HomeWeekendRoutesSectionDefault from './HomeWeekendRoutesSection'
 
 export const EmailSubscriptionForm = EmailSubscriptionFormDefault
+export const HomeAdventPromoSection = HomeAdventPromoSectionDefault
 export const HomeAppPromoSection = HomeAppPromoSectionDefault
 export const HomeFAQSection = HomeFAQSectionDefault
 export const HomeInspirationSections = HomeInspirationSectionsDefault

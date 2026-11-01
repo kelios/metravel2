@@ -59,7 +59,8 @@ jest.mock('react-native-paper', () => {
 // список дополнительных пунктов (#2779).
 const navigationTitles = () => [
   ...HEADER_NAV_ITEMS.filter((item) => isNavRouteAvailable(item.path)).map((item) => item.label),
-  ...SUPPLEMENTARY_NAV_ITEMS.map((item) => item.label),
+  // #2866: «Адвент-календарь» виден только в окне кампании — та же политика, что в renderLinks.
+  ...SUPPLEMENTARY_NAV_ITEMS.filter((item) => isNavRouteAvailable(item.path)).map((item) => item.label),
 ]
 
 const renderMenu = async () =>

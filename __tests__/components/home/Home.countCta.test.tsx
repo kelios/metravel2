@@ -40,6 +40,7 @@ jest.mock('@/components/home/homeDeferredSections', () => ({
   HomeNewRoutesSection: () => null,
   HomePopularRoutesSection: () => null,
   HomeQuestsPromoSection: () => null,
+  HomeAdventPromoSection: () => null,
   HomeWeekendRoutesSection: () => null,
 }))
 

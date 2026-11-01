@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { ProfileCompleteness } from '@/components/profile/ProfileCompleteness';
 import RankProgressCard from '@/components/profile/RankProgressCard';
+import AdventProgressCard from '@/components/profile/AdventProgressCard';
 import ProfileFirstStepsCard from '@/components/profile/ProfileFirstStepsCard';
 import ProfileSectionHeader from '@/components/profile/ProfileSectionHeader';
 import AwardsHub from '@/components/achievements/AwardsHub';
@@ -61,6 +62,7 @@ export function ProfileOverviewTab({
     <View style={styles.wrap}>
       <GamificationOnboarding />
       <RankProgressCard rank={achievements?.rank} onPress={openAwardsDetails} />
+      <AdventProgressCard />
       <ProfileFirstStepsCard
         travelsCount={travelsCount}
         rank={achievements?.rank}

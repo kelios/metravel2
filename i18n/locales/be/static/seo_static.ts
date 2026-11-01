@@ -19,6 +19,8 @@ export const seoStaticResources = {
   "root.quests.description": "Праходзьце гарадскія квэсты Metravel: маршруты з заданнямі, кропкамі на карце і ідэямі для прагулак і паездак.",
   "root.roulette.title": "Рулетка ідэй для спантаннай паездкі | Metravel",
   "root.roulette.description": "Адкрыйце выпадковы маршрут для спантаннага выезду і знайдзіце новую ідэю падарожжа на Metravel.",
+  "root.advent.title": "Адвэнт-каляндар падарожніка 2026 | Metravel",
+  "root.advent.description": "27 дзверцаў з 1 снежня па 7 студзеня: падарункі, заданні і ўзнагароды для падарожнікаў. Адчыняйце дзверцы кожны дзень, збірайце серыю і значкі на Metravel.",
   "root.article.title": "Артыкул | Metravel",
   "root.article.description": "Старонка артыкула ў Metravel. Адкрывайце матэрыялы аб падарожжах, маршрутах і карысных знаходках.",
   "critical.travel": "Падарожжа",

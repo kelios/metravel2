@@ -19,6 +19,8 @@ export const seoStaticResources = {
   "root.quests.description": "Wykonuj zadania miejskie Metravel: trasy z zadaniami, punktami na mapie i pomysłami na spacery i wycieczki.",
   "root.roulette.title": "Ruletka pomysłów na spontaniczny wyjazd | Metravel",
   "root.roulette.description": "Odkryj losowy plan spontanicznego wypadu i znajdź nowy pomysł na podróż w Metravel.",
+  "root.advent.title": "Kalendarz adwentowy podróżnika 2026 | Metravel",
+  "root.advent.description": "27 okienek od 1 grudnia do 7 stycznia: prezenty, zadania i nagrody dla podróżników. Otwieraj okienko każdego dnia, buduj serię i zdobywaj odznaki na Metravel.",
   "root.article.title": "Artykuł | Metravel",
   "root.article.description": "Strona artykułu w Metravel. Odkryj materiały o podróżach, trasach i przydatnych znaleziskach.",
   "critical.travel": "Podróż",

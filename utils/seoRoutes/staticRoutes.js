@@ -108,6 +108,13 @@ const STATIC_ROUTE_SEO = Object.freeze([
     breadcrumb: 'Рулетка маршрутов',
   },
   {
+    // #2866: адвент-календарь — страница в индексе, в sitemap не добавляется без отдельного запроса
+    route: '/advent',
+    titleKey: 'seoStatic:root.advent.title',
+    descriptionKey: 'seoStatic:root.advent.description',
+    breadcrumbKey: 'adventStatic:nav.label',
+  },
+  {
     route: '/favorites',
     title: 'Избранные маршруты и места | Metravel',
     description: 'Твои сохранённые путешествия и маршруты.',

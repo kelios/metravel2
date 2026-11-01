@@ -389,7 +389,7 @@ export default function SettingsScreen() {
                         description={translateTheme('navigationStatic:seasonalTheme.description')}
                         headerIcon="gift"
                         accessibilityLabel={translateTheme('navigationStatic:seasonalTheme.title')}
-                        footer={<SeasonalThemeStatus />}
+                        footer={<SeasonalThemeStatus showAdventLink />}
                     />
 
                     {/* AND-17: Biometric authentication toggle (native only) */}

@@ -20,8 +20,11 @@ import { HOME_WEB_SCROLL_DOCK_CLIP, homeWebScrollEndPadding } from './homeScroll
 import { buildCanonicalUrl } from '@/utils/seo'
 import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext'
 import { webDataSetProps } from '@/utils/webProps'
+import { getAdventNow, isAdventCampaignWindow } from '@/constants/advent'
+import { useLocalCalendarDate } from '@/hooks/useLocalCalendarDate'
 import {
   EmailSubscriptionForm,
+  HomeAdventPromoSection,
   HomeAppPromoSection,
   HomeBottomCtaSection,
   HomeFAQSection,
@@ -197,6 +200,13 @@ function Home() {
   const discovery = useQuestDiscovery()
   const responsiveHome = IS_WEB && discovery?.view === 'home'
   const isFocused = useIsFocused()
+  // #2866: окно адвента — после гидратации, чтобы статический HTML и первый клиентский рендер совпали.
+  const [homeMounted, setHomeMounted] = useState(false)
+  useEffect(() => {
+    setHomeMounted(true)
+  }, [])
+  const adventNow = useLocalCalendarDate({ readNow: getAdventNow })
+  const adventActive = homeMounted && isAdventCampaignWindow(adventNow)
   const { isAuthenticated, userId } = useAuth()
   const colors = useThemedColors()
   const queryClient = useQueryClient()
@@ -313,6 +323,15 @@ function Home() {
       >
         <HomeQuestsPromoSection enabled={isFocused} />
       </DeferredSection>
+
+      {/* #2866: адвент-календарь — только в окне кампании 01.12–07.01. Окно читается
+          после гидратации (статический HTML один на весь год), вне окна ни обёртки,
+          ни чанка нет; внутри — lazy-чанк за Suspense, без отложенной секции. */}
+      {adventActive ? (
+        <Suspense fallback={null}>
+          <HomeAdventPromoSection enabled={isFocused} topGap={sectionGap('hero')} />
+        </Suspense>
+      ) : null}
 
       <DeferredSection marginTop={sectionGap('weekends')} minHeight={sectionHeight('weekends', 520, 560)} container={{}} fallback={<SectionSkeleton />}>
         <HomeWeekendRoutesSection enabled={isFocused} />

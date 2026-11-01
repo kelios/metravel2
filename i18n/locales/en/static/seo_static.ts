@@ -19,6 +19,8 @@ export const seoStaticResources = {
   "root.quests.description": "Complete Metravel city quests: routes with tasks, points on the map and ideas for walks and trips.",
   "root.roulette.title": "Roulette of ideas for a spontaneous trip | Metravel",
   "root.roulette.description": "Discover a random itinerary for a spontaneous getaway and find a new travel idea on Metravel.",
+  "root.advent.title": "Traveller's Advent Calendar 2026 | Metravel",
+  "root.advent.description": "27 doors from 1 December to 7 January: gifts, tasks and rewards for travellers. Open a door every day, build a streak and earn badges on Metravel.",
   "root.article.title": "Article | Metravel",
   "root.article.description": "Article page in Metravel. Discover materials about travel, routes and useful finds.",
   "critical.travel": "Travel",

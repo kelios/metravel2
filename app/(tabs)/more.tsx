@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link, type Href } from 'expo-router'
 import { Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -9,6 +10,7 @@ import { BOTTOM_DOCK_ITEM_DEFS } from '@/components/layout/bottomDockItemDefs'
 import { BOTTOM_DOCK_MORE_MENU_SECTIONS } from '@/components/layout/bottomDockModel'
 import { webAccessibilityProps } from '@/utils/webProps'
 import { routeMetadata } from '@/utils/seoRoutes/routeMetadata'
+import { ADVENT_ROUTE, isAdventCampaignWindow } from '@/constants/advent'
 
 // Real prerendered destination for More before the optional sheet controller loads.
 // Only ordinary existing public routes/labels; no role-specific actions/auth/menu model.
@@ -20,10 +22,17 @@ export default function MoreScreen() {
   const title = BOTTOM_DOCK_ITEM_DEFS.find(item => item.isMore)!.label
   useScreenHeader({ title })
   const bottom = useScrollBottomPadding(DESIGN_TOKENS.spacing.lg)
+  // #2866: «Адвент-календарь» — только в окне кампании; окно читается после
+  // гидратации, чтобы статический HTML (один на весь год) совпал с первым рендером.
+  const [adventVisible, setAdventVisible] = useState(false)
+  useEffect(() => {
+    setAdventVisible(isAdventCampaignWindow())
+  }, [])
   const links: { route: Href; label: string }[] = [
     ...BOTTOM_DOCK_ITEM_DEFS.filter(item => !item.isMore).map(item => ({ route: item.route, label: item.label })),
     ...BOTTOM_DOCK_MORE_MENU_SECTIONS.flatMap(section => section.items)
       .filter(item => item.route !== undefined && !item.external)
+      .filter(item => item.route !== ADVENT_ROUTE || adventVisible)
       .map(item => ({ route: item.route as Href, label: item.label })),
   ]
   return <ScrollView testID="more-navigation-page" contentContainerStyle={[styles.content, { paddingBottom: asBottomDimension(bottom) }]}>

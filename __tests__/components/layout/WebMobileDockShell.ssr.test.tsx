@@ -56,6 +56,8 @@ describe('persistent real SSR dock (#2216)', () => {
     const sheetRoutes = BOTTOM_DOCK_MORE_MENU_SECTIONS.flatMap((section: { items: { route?: string; external?: boolean }[] }) => section.items)
       .filter((item: { route?: string; external?: boolean }) => item.route && !item.external)
       .map((item: { route?: string }) => item.route)
+      // #2866: «Адвент-календарь» в статический HTML не попадает — страница добавляет его после гидратации в окне кампании.
+      .filter((route: string) => route !== '/advent')
     expect([...more.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual(['/search', '/map', '/quests', '/profile', ...sheetRoutes])
     expect(sheetRoutes).toEqual(expect.arrayContaining(['/travelsby', '/places', '/trips', '/roulette', '/articles', '/history', '/privacy', '/contact']))
     expect([...more.querySelectorAll('a')].every(a => a.getAttribute('href')?.startsWith('/') && a.getAttribute('href') !== '/more' && a.textContent?.trim())).toBe(true)

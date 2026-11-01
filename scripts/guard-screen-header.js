@@ -28,6 +28,7 @@ const SCREEN_HEADER_OWNERS = [
   // #2148: экран прохождения квеста — декларацию зовёт визард
   // (`guard-screen-actions.js` требует вызов в `QuestWizard.tsx`).
   'components/quests/useQuestScreenHeader.ts',
+  'components/advent/AdventScreen.tsx',
 ]
 
 // Файл → причина, почему прямой заголовок в теле допустим.

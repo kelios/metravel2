@@ -4,9 +4,9 @@
  */
 
 import { useEffect, useMemo, useRef, useState, useCallback, createContext, useContext, createElement, type Context } from 'react';
-import { AppState, Appearance, Platform, useColorScheme } from 'react-native';
+import { Appearance, Platform, useColorScheme } from 'react-native';
 import { DESIGN_COLORS, getThemedColors } from '@/constants/designSystem';
-import { millisecondsUntilLocalMidnight } from '@/utils/seasonalThemeClock';
+import { useLocalCalendarDate } from '@/hooks/useLocalCalendarDate';
 import {
   SEASONAL_THEME_DOM_ATTRIBUTE,
   SEASONAL_THEME_STORAGE_KEY,
@@ -191,52 +191,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // лишь синхронизируется с настройкой после чтения хранилища.
   const [seasonalTheme, setSeasonalThemeState] = useState<SeasonalThemePreference>('auto');
   // Местная календарная дата обновляется в полночь и после восстановления вкладки.
-  const [calendarDate, setCalendarDate] = useState(() => new Date());
+  const calendarDate = useLocalCalendarDate();
   const calendar = useMemo(() => getSeasonalCalendar(calendarDate), [calendarDate]);
   const activeSeasonalTheme = useMemo(
     () => seasonalTheme === 'auto' ? calendar.activeId : resolveSeasonalTheme(seasonalTheme, calendarDate),
     [seasonalTheme, calendarDate, calendar],
   );
 
-  useEffect(() => {
-    const isWeb = Platform.OS === 'web';
-    if (isWeb && (typeof document === 'undefined' || typeof window === 'undefined')) return;
-    let midnightTimer: ReturnType<typeof setTimeout> | undefined;
-    let appState = isWeb ? null : AppState.currentState;
-    const refresh = () => {
-      clearTimeout(midnightTimer);
-      const now = new Date();
-      setCalendarDate(now);
-      // Civil midnight preserves 23/25-hour DST days. Native background has no timer.
-      if (isWeb || appState == null || appState === 'active') {
-        midnightTimer = setTimeout(refresh, millisecondsUntilLocalMidnight(now));
-      }
-    };
-    refresh();
-    if (!isWeb) {
-      const subscription = AppState.addEventListener('change', (nextState) => {
-        appState = nextState;
-        if (nextState === 'active') refresh();
-        else clearTimeout(midnightTimer);
-      });
-      return () => {
-        clearTimeout(midnightTimer);
-        subscription.remove();
-      };
-    }
-    const onVisible = () => {
-      if (document.visibilityState === 'visible') refresh();
-    };
-    document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', refresh);
-    window.addEventListener('pageshow', refresh);
-    return () => {
-      clearTimeout(midnightTimer);
-      document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', refresh);
-      window.removeEventListener('pageshow', refresh);
-    };
-  }, []);
 
   // До чтения хранилища атрибуты `<html>` не трогаем (#2376, #2381): SSR-дефолты
   // (`auto`/светлая) расходятся с сохранёнными, и первый эффект на них затирал

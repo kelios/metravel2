@@ -45,6 +45,8 @@ export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
  * навигации (`TOP_LEVEL_SECTION_PATHS`) и потерял бы строку «Назад».
  */
 export const SUPPLEMENTARY_NAV_ITEMS: HeaderNavItem[] = [
+  // #2866: виден только в окне кампании — отсекает общая политика `isNavRouteAvailable`.
+  { path: '/advent', get label() { return i18nT('adventStatic:nav.label') }, get hint() { return i18nT('adventStatic:nav.hint') }, icon: 'gift', priority: 'secondary' },
   { path: '/articles', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.stati_ad8e46b8') }, get hint() { return i18nT('navigationStatic:constants.headerNavigation.hint.articles') }, icon: 'file-text', priority: 'secondary' },
   { path: '/favorites', get label() { return i18nT('navigationStatic:components.layout.AccountMenu.hochu_poehat_fa6b46d5') }, icon: 'heart', priority: 'secondary' },
   { path: '/history', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.vy_smotreli_b91d245f') }, get accessibilityLabel() { return i18nT('navigationStatic:components.layout.bottomDockModel.vy_smotreli_istoriya_prosmotrov_1ce8007f') }, icon: 'clock', priority: 'secondary' },

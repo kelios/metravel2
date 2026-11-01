@@ -57,7 +57,7 @@ test.describe('SSR route hydration', () => {
     });
 
     for (const route of ['/login', '/registration', '/places',
-      '/places?category=Замок', '/places?q=замок', '/places?country=Беларусь', '/roulette']) {
+      '/places?category=Замок', '/places?q=замок', '/places?country=Беларусь', '/roulette', '/advent', '/advent?day=1']) {
       await gotoWithRetry(page, route);
       await expect(page.locator('#main-content')).toBeVisible({ timeout: 30_000 });
       await page.waitForTimeout(750);

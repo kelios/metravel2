@@ -2,9 +2,10 @@
 
 **Последняя актуализация:** 2026-11-01
 **Ответственный:** владелец продукта (постановка), frontend — агент фичи после назначения
-**Статус:** планирование. Кода нет; документ — источник истины для постановки карточек
-спринта 31 «Адвент-календарь путешественника — Рождество и Новый год 2026». Когда появится код, разделы «Точки входа», «Ключевые
-компоненты» и «Данные» переписываются по факту.
+**Статус:** этап A реализован во фронте (#2861, #2862, #2866; поезд A спринта 31) — экран,
+конфиг и точки входа работают на локальном прогрессе без бэкенда. Контент 27 дверец (#2863) —
+черновик RU в `data/advent/2026.json`, таблица согласования `.codex-temp/advent/content-review.md`,
+ждёт утверждения владельца. Бэкенд (#2864, #2865) и поезд B (#2867, #2868) — не начаты.
 
 ## TL;DR
 
@@ -112,16 +113,20 @@
 Переводы контента на BE/UK/PL/EN — вторым шагом после утверждения RU; при нехватке времени
 контент дверец показывается на RU с UI на языке пользователя (как editorial/API content).
 
-## Точки входа (план)
+## Точки входа (факт, #2866)
 
 | Путь | Назначение |
 | --- | --- |
-| `app/(tabs)/advent.tsx` (+ `.web.tsx` при необходимости SSG) | экран календаря |
-| `components/home/HomeAdventPromoSection.tsx` | баннер на главной, виден только в окне кампании (по образцу `HomeQuestsPromoSection.tsx`) |
-| пункт меню и карточка в профиле (`ProfileOverviewTab`) | возврат к текущей дверце, серия |
-| `components/layout/SeasonalThemeStatus.tsx` | ссылка «Открыть дверцу дня» рядом со статусом темы |
+| `app/(tabs)/advent.tsx` → `components/advent/AdventScreen.tsx` | экран календаря; SEO — запись `/advent` в `utils/seoRoutes/staticRoutes.js` (`seoStatic:root.advent.*`), `generateMetadata` через `staticRouteMetadata`; в sitemap не добавлен |
+| `components/home/HomeAdventPromoSection.tsx` | баннер на главной в отложенной секции (`homeDeferredSections*`), рисует `null` вне окна кампании; не зависит от настройки оформления |
+| `components/profile/AdventProgressCard.tsx` в `ProfileOverviewTab` | прогресс N/24, серия, ссылка на `/advent`; вне окна не рендерится |
+| `constants/headerNavigation.ts` → `SUPPLEMENTARY_NAV_ITEMS` (`/advent`, иконка `gift`) | пункт меню аккаунта desktop и листа «Ещё» телефона; окно кампании отсекает общая политика `isNavRouteAvailable` (`constants/platformNavRoutes.ts`) |
+| `components/layout/SeasonalThemeStatus.tsx` | ссылка «Открыть дверцу дня» рядом со статусом темы (и при выключенной теме) |
 
-## Ключевые компоненты (план)
+Окно кампании и маршрут — `constants/advent.ts` (`ADVENT_CAMPAIGN_WINDOW`, `isAdventCampaignWindow`,
+`toLocalIsoDate`): модуль без зависимостей, его читает навигация.
+
+## Ключевые компоненты (факт, #2861)
 
 ```
 AdventScreen
@@ -133,17 +138,29 @@ AdventScreen
  └─ AdventYearInReviewCard  — финал 24.12, шеринг
 ```
 
-`components/advent/**`, hooks `hooks/useAdventCampaign.ts` (конфиг + дата → состояния дверец),
-`hooks/useAdventProgress.ts` (локальный + серверный прогресс), `stores/adventProgressStore.ts`.
+`components/advent/**` (`AdventScreen`, `AdventHeader` + `AdventCountdown`, `AdventGrid` + `AdventDoorTile`,
+`AdventDoorSheet` на `components/ui/BottomSheet`, задания `AdventRiddleTask` и `AdventGeoTask` — карта
+`UserPointsMap` грузится лениво при открытии гео-дверцы). Хуки: `hooks/useAdventCampaign.ts`
+(`useLocalCalendarDate` с пересчётом по местной полуночи, focus/visibility/pageshow и AppState — как
+`hooks/useTheme.ts`; состояния `locked | available | opened | done`), `hooks/useAdventProgress.ts`
+(владелец `guest` | `u<id>`, ничего не пишет до `authReady`). Логика без React — `utils/advent/adventCalendar.ts`
+(состояния, серия, следующая дверца), `utils/advent/adventRiddle.ts` (чекер ответа = `buildAnswerChecker`
+квестов, гео-радиус = `haversineMeters`), `utils/advent/adventTaskLinks.ts` (`?from=advent&day=N`, возврат
+после входа `/advent?day=N`). Стор `stores/adventProgressStore.ts` — persist `advent-progress-storage`,
+карта `byOwner` (образец `hiddenContentStore`). Тесты — `__tests__/advent/**`.
 
 ## Данные (план)
 
 ### Конфиг кампании
 
-Этап A — статический конфиг `data/advent/2026.json` (дни, тип, ссылки на контент, тип
-задания, параметры проверки, награда); этап B — тот же контракт отдаёт бэк
-(`GET /api/advent/campaigns/current/`), фронт читает сервер с fallback на локальный конфиг
-только в DEV.
+Этап A (сделано) — статический конфиг `data/advent/2026.json` по типу `AdventCampaignConfig`
+(`types/advent.ts`): `day`, `date`, `bonus`, `secret`, `kind`, `gift {title, text, image?, link?}`,
+`task {type: open | route | riddle | geo, text, ctaRoute?, riddle {questions[] с answer_pattern квестов}, geo {lat, lng, radiusMeters}}`,
+`reward {xp, badgeSlug?}`. Загрузчик — `services/advent/loadCampaign.ts`. Валидатор
+`scripts/validate-advent-config.mjs` (`npm run guard:advent-config`, входит в `npm run lint`): даты по порядку
+и в окне, 24 основные подряд с 01.12, у загадок `answer_pattern`, у гео радиус, маршруты CTA существуют в `app/`.
+Этап B — тот же контракт отдаёт бэк (`GET /api/advent/campaigns/current/`), фронт читает сервер
+с fallback на локальный конфиг только в DEV.
 
 ### Прогресс
 

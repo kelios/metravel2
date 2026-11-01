@@ -1,6 +1,7 @@
 import { Platform } from 'react-native'
 
 import { isPrintAvailable } from '@/utils/printAvailability'
+import { ADVENT_ROUTE, getAdventNow, isAdventCampaignWindow } from '@/constants/advent'
 
 /** Экран управления cookie-согласием сайта. */
 export const COOKIE_SETTINGS_ROUTE = '/cookies'
@@ -41,9 +42,11 @@ const toRoutePath = (route: unknown): string => {
 }
 
 /** Показывать ли на текущей платформе пункт навигации, ведущий на `route`. */
-export function isNavRouteAvailable(route: unknown, os: string = Platform.OS): boolean {
-  if (os === 'web') return true
+export function isNavRouteAvailable(route: unknown, os: string = Platform.OS, now: Date = getAdventNow()): boolean {
   const path = toRoutePath(route)
+  // #2866: пункт «Адвент-календарь» в меню и листе «Ещё» — только в окне кампании по местной дате.
+  if (path === ADVENT_ROUTE) return isAdventCampaignWindow(now)
+  if (os === 'web') return true
   if (WEB_ONLY_NAV_ROUTES.includes(path)) return false
   if (PRINT_NAV_ROUTES.includes(path)) return isPrintAvailable()
   return true
