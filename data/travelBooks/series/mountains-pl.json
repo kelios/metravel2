@@ -4,8 +4,8 @@
   "theme": "mountains",
   "authorId": 1,
   "selectedOn": "2026-11-01",
-  "decision": "Владелец выбрал пилоты «Горы Польши» и «Замки Польши» 01.11.2026 (#2809). Объём 30 мест — как у изданных книг BY/PL; места из книг BY/PL не повторяются.",
-  "selectionRule": "Из таблицы 01.11.2026 исключены места со слабым фото (нет подписи места в статье) и без официального источника, при сохранении всех районов гор; в замки из резерва подняты места с авторским фото и официальным сайтом; исключённые — в резерве с причиной.",
+  "decision": "Владелец выбрал пилоты «Горы Польши» (40 мест) и «Замки Польши» (30 мест) 01.11.2026 (#2809); места из изданных книг BY/PL не повторяются.",
+  "selectionRule": "Все 40 мест таблицы 01.11.2026 по решению владельца; в резерве остальные кандидаты таблицы с причиной.",
   "places": [
     {
       "pointId": 14117,
@@ -73,6 +73,49 @@
         "articleImages": 34,
         "maxArticleLongSidePx": 1080,
         "sampleAlt": "Склон горной долины в низких облаках на подходе к Каспровому Верху",
+        "printResolution": "unknown"
+      },
+      "route": {
+        "authorComplexity": [
+          "зелёный (лёгкий)",
+          "жёлтый (средний)"
+        ],
+        "officialDifficulty": null,
+        "season": {
+          "status": "official",
+          "source": "https://tpn.gov.pl/komunikat-turystyczny",
+          "checkedOn": "2026-11-01",
+          "text": "С 1 марта по 30 ноября запрещено движение по всем тропам TPN от сумерек до рассвета; зимой действует лавинная опасность (бюллетень lawiny.topr.pl); отдельные закрытия публикуются в коммюнике. Сезонное закрытие участков 1.12–15.05 подтверждено только вторичными источниками (radiokrakow.pl) — для конкретного маршрута unknown."
+        },
+        "trail": null,
+        "distanceKm": null,
+        "elevationGainM": null,
+        "durationMinutes": null
+      }
+    },
+    {
+      "pointId": 14558,
+      "travelId": 482,
+      "title": "Чёрный Став Гонсеницовый",
+      "sourceTitle": "Czarny Staw Gąsienicowy",
+      "category": "Национальный парк, Озеро",
+      "country": "PL",
+      "region": "Татры",
+      "lat": 49.2305797,
+      "lng": 20.0182228,
+      "articleUrl": "https://metravel.by/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina",
+      "articleTitle": "Czarny Staw и другие радости: треки, термы и ночи у камина",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://tpn.gov.pl/",
+        "organization": "Tatrzański Park Narodowy",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 19,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
         "printResolution": "unknown"
       },
       "route": {
@@ -222,6 +265,49 @@
       }
     },
     {
+      "pointId": 14442,
+      "travelId": 466,
+      "title": "Пещеры Раптавицка и Мыльна",
+      "sourceTitle": "Jaskinia Raptawicka",
+      "category": "Пещера, Национальный парк",
+      "country": "PL",
+      "region": "Татры",
+      "lat": 49.2398157,
+      "lng": 19.8620088,
+      "articleUrl": "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den",
+      "articleTitle": "Долина Костелиска: маршрут по Татрам за день",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://tpn.gov.pl/",
+        "organization": "Tatrzański Park Narodowy",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 10,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Окно Павликовского в пещере Мыльна",
+        "printResolution": "unknown"
+      },
+      "route": {
+        "authorComplexity": [
+          "зелёный (лёгкий)",
+          "жёлтый (средний)"
+        ],
+        "officialDifficulty": null,
+        "season": {
+          "status": "official",
+          "source": "https://tpn.gov.pl/komunikat-turystyczny",
+          "checkedOn": "2026-11-01",
+          "text": "С 1 марта по 30 ноября запрещено движение по всем тропам TPN от сумерек до рассвета; зимой действует лавинная опасность (бюллетень lawiny.topr.pl); отдельные закрытия публикуются в коммюнике. Сезонное закрытие участков 1.12–15.05 подтверждено только вторичными источниками (radiokrakow.pl) — для конкретного маршрута unknown."
+        },
+        "trail": null,
+        "distanceKm": null,
+        "elevationGainM": null,
+        "durationMinutes": null
+      }
+    },
+    {
       "pointId": 15039,
       "travelId": 563,
       "title": "Хохоловская долина (поляна с крокусами)",
@@ -249,6 +335,48 @@
       "route": {
         "authorComplexity": [
           "зелёный (лёгкий)"
+        ],
+        "officialDifficulty": null,
+        "season": {
+          "status": "official",
+          "source": "https://tpn.gov.pl/komunikat-turystyczny",
+          "checkedOn": "2026-11-01",
+          "text": "С 1 марта по 30 ноября запрещено движение по всем тропам TPN от сумерек до рассвета; зимой действует лавинная опасность (бюллетень lawiny.topr.pl); отдельные закрытия публикуются в коммюнике. Сезонное закрытие участков 1.12–15.05 подтверждено только вторичными источниками (radiokrakow.pl) — для конкретного маршрута unknown."
+        },
+        "trail": null,
+        "distanceKm": null,
+        "elevationGainM": null,
+        "durationMinutes": null
+      }
+    },
+    {
+      "pointId": 14967,
+      "travelId": 553,
+      "title": "Тропа над Реглями, Закопане",
+      "sourceTitle": "Ścieżka nad Reglami",
+      "category": "Национальный парк, Треккинговый маршрут, Водопад",
+      "country": "PL",
+      "region": "Татры",
+      "lat": 49.2594139,
+      "lng": 19.9303139,
+      "articleUrl": "https://metravel.by/travels/zakopane-legkaia-tropa-sciezka-nad-reglami",
+      "articleTitle": "Закопане: лёгкая тропа Ścieżka nad Reglami",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://tpn.gov.pl/",
+        "organization": "Tatrzański Park Narodowy",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 11,
+        "maxArticleLongSidePx": 1024,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "route": {
+        "authorComplexity": [
+          "жёлтый (средний)"
         ],
         "officialDifficulty": null,
         "season": {
@@ -553,6 +681,46 @@
       }
     },
     {
+      "pointId": 14347,
+      "travelId": 445,
+      "title": "Могелица, смотровая башня",
+      "sourceTitle": "Rezerwat Mogielica",
+      "category": "Вежа, Заповедник, Обзорная точка",
+      "country": "PL",
+      "region": "Бескид Высповый",
+      "lat": 49.6551661,
+      "lng": 20.2767406,
+      "articleUrl": "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m",
+      "articleTitle": "Заповедник Могелица и смотровая вежа (1171м)",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 21,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Смотровая вежа на Могелице зимой",
+        "printResolution": "unknown"
+      },
+      "route": {
+        "authorComplexity": [
+          "зелёный (лёгкий)"
+        ],
+        "officialDifficulty": null,
+        "season": {
+          "status": "unknown",
+          "source": null,
+          "text": "Вне национальных парков официальный оператор троп не установлен (PTTK/ландшафтные парки) — unknown."
+        },
+        "trail": null,
+        "distanceKm": null,
+        "elevationGainM": null,
+        "durationMinutes": null
+      }
+    },
+    {
       "pointId": 14648,
       "travelId": 498,
       "title": "Модынь, смотровая башня",
@@ -574,6 +742,46 @@
         "articleImages": 12,
         "maxArticleLongSidePx": 1080,
         "sampleAlt": "Пеший маршрут от парковки у Млыньчиска к смотровой башне на Модыни на экране телефона",
+        "printResolution": "unknown"
+      },
+      "route": {
+        "authorComplexity": [
+          "зелёный (лёгкий)"
+        ],
+        "officialDifficulty": null,
+        "season": {
+          "status": "unknown",
+          "source": null,
+          "text": "Вне национальных парков официальный оператор троп не установлен (PTTK/ландшафтные парки) — unknown."
+        },
+        "trail": null,
+        "distanceKm": null,
+        "elevationGainM": null,
+        "durationMinutes": null
+      }
+    },
+    {
+      "pointId": 14385,
+      "travelId": 453,
+      "title": "Любонь Вельки",
+      "sourceTitle": "Schronisko PTTK na Luboniu Wielkim",
+      "category": "Гора, Приют",
+      "country": "PL",
+      "region": "Бескид Высповый",
+      "lat": 49.6534108,
+      "lng": 19.9919039,
+      "articleUrl": "https://metravel.by/travels/lyubon-velki-1022m-v-vyspovyh-beskidah",
+      "articleTitle": "Любонь Вельки (1022м) в Высповых Бескидах",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 17,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
         "printResolution": "unknown"
       },
       "route": {
@@ -795,6 +1003,46 @@
       }
     },
     {
+      "pointId": 14665,
+      "travelId": 503,
+      "title": "Мосорны Гронь, смотровая башня",
+      "sourceTitle": "Wieża widokowa na Mosornym Groniu",
+      "category": "Башня, Обзорная точка",
+      "country": "PL",
+      "region": "Бескид Живецкий",
+      "lat": 49.6224227,
+      "lng": 19.5642096,
+      "articleUrl": "https://metravel.by/travels/marshrut-v-beskidakh-ot-parkovki-do-smotrovoi-cherez-vodopad",
+      "articleTitle": "Маршрут в Бескидах: от парковки до смотровой через водопад",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 15,
+        "maxArticleLongSidePx": 1024,
+        "sampleAlt": "Трасса Mosorny Groń: вид со склона",
+        "printResolution": "unknown"
+      },
+      "route": {
+        "authorComplexity": [
+          "зелёный (лёгкий)"
+        ],
+        "officialDifficulty": null,
+        "season": {
+          "status": "unknown",
+          "source": null,
+          "text": "Вне национальных парков официальный оператор троп не установлен (PTTK/ландшафтные парки) — unknown."
+        },
+        "trail": null,
+        "distanceKm": null,
+        "elevationGainM": null,
+        "durationMinutes": null
+      }
+    },
+    {
       "pointId": 14646,
       "travelId": 497,
       "title": "Маркове Шчавины, Музей горного туризма PTTK",
@@ -876,6 +1124,46 @@
       }
     },
     {
+      "pointId": 14226,
+      "travelId": 436,
+      "title": "Бяла Виселка — исток Вислы под Бараньей Гурой",
+      "sourceTitle": "Biała Wisełka",
+      "category": "Водопад, Заповедник",
+      "country": "PL",
+      "region": "Бескид Силезский",
+      "lat": 49.6199825,
+      "lng": 18.9858764,
+      "articleUrl": "https://metravel.by/travels/barania-gora-istok-visly-v-beskidakh-polsha",
+      "articleTitle": "Баранья гора: исток Вислы в Бескидах, Польша",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 33,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "route": {
+        "authorComplexity": [
+          "зелёный (лёгкий)"
+        ],
+        "officialDifficulty": null,
+        "season": {
+          "status": "unknown",
+          "source": null,
+          "text": "Вне национальных парков официальный оператор троп не установлен (PTTK/ландшафтные парки) — unknown."
+        },
+        "trail": null,
+        "distanceKm": null,
+        "elevationGainM": null,
+        "durationMinutes": null
+      }
+    },
+    {
       "pointId": 16157,
       "travelId": 594,
       "title": "Блатня (приют PTTK)",
@@ -897,6 +1185,46 @@
         "articleImages": 31,
         "maxArticleLongSidePx": 1920,
         "sampleAlt": "Широкая лесная дорога на подъёме к Błatnia",
+        "printResolution": "unknown"
+      },
+      "route": {
+        "authorComplexity": [
+          "зелёный (лёгкий)"
+        ],
+        "officialDifficulty": null,
+        "season": {
+          "status": "unknown",
+          "source": null,
+          "text": "Вне национальных парков официальный оператор троп не установлен (PTTK/ландшафтные парки) — unknown."
+        },
+        "trail": null,
+        "distanceKm": null,
+        "elevationGainM": null,
+        "durationMinutes": null
+      }
+    },
+    {
+      "pointId": 14230,
+      "travelId": 437,
+      "title": "Шиндзельня, смотровая башня",
+      "sourceTitle": "Wieża widokowa przy Kolei Linowej Szyndzielnia",
+      "category": "Обзорная точка, Башня, Заповедник",
+      "country": "PL",
+      "region": "Бескид Силезский",
+      "lat": 49.7602615,
+      "lng": 19.0019435,
+      "articleUrl": "https://metravel.by/travels/belsko-byala-smotrovaya-bashnya-i-podem-na-tri-kopce",
+      "articleTitle": "Бельско-Бяла: смотровая башня и подъем на Три Копце",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 27,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Канатная дорога Шиндзельня / Kolej Linowa Szyndzielnia — Польша",
         "printResolution": "unknown"
       },
       "route": {
@@ -1121,6 +1449,87 @@
       }
     },
     {
+      "pointId": 14165,
+      "travelId": 421,
+      "title": "Дикий водопад",
+      "sourceTitle": "Dziki Wodospad",
+      "category": "Водопад",
+      "country": "PL",
+      "region": "Карконоше",
+      "lat": 50.7686566,
+      "lng": 15.7277656,
+      "articleUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+      "articleTitle": "Шклярска-Поремба за 3 дня: замки и Снежка",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://kpn.gov.pl/",
+        "organization": "Karkonoski Park Narodowy",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 128,
+        "maxArticleLongSidePx": 1280,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "route": {
+        "authorComplexity": [
+          "зелёный (лёгкий)"
+        ],
+        "officialDifficulty": null,
+        "season": {
+          "status": "unknown",
+          "source": "https://kpn.gov.pl/",
+          "text": "Официальный список зимних (лавинных) закрытий не удалось прочитать; вторичные источники (wroclaw.pl, mapa-turystyczna.pl) говорят о зимних закрытиях части троп к Снежке и Kocioł Łomniczki — проверить в KPN перед печатью."
+        },
+        "trail": null,
+        "distanceKm": null,
+        "elevationGainM": null,
+        "durationMinutes": null
+      }
+    },
+    {
+      "pointId": 14156,
+      "travelId": 421,
+      "title": "Цветные озёрца, Рудавы Яновицке",
+      "sourceTitle": "Kolorowe Jeziorka",
+      "category": "Озеро, Заповедник",
+      "country": "PL",
+      "region": "Рудавы Яновицке",
+      "lat": 50.8287848,
+      "lng": 15.9741082,
+      "articleUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+      "articleTitle": "Шклярска-Поремба за 3 дня: замки и Снежка",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 128,
+        "maxArticleLongSidePx": 1280,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "route": {
+        "authorComplexity": [
+          "зелёный (лёгкий)"
+        ],
+        "officialDifficulty": null,
+        "season": {
+          "status": "unknown",
+          "source": null,
+          "text": "Вне национальных парков официальные сезонные ограничения не установлены — unknown."
+        },
+        "trail": null,
+        "distanceKm": null,
+        "elevationGainM": null,
+        "durationMinutes": null
+      }
+    },
+    {
       "pointId": 14247,
       "travelId": 438,
       "title": "Смотровая скала у Щитны (Столовые горы)",
@@ -1245,425 +1654,6 @@
     }
   ],
   "reserve": [
-    {
-      "pointId": 14558,
-      "travelId": 482,
-      "title": "Чёрный Став Гонсеницовый",
-      "sourceTitle": "Czarny Staw Gąsienicowy",
-      "category": "Национальный парк, Озеро",
-      "country": "PL",
-      "region": "Татры",
-      "lat": 49.2305797,
-      "lng": 20.0182228,
-      "articleUrl": "https://metravel.by/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina",
-      "articleTitle": "Czarny Staw и другие радости: треки, термы и ночи у камина",
-      "officialSource": {
-        "status": "verified-200",
-        "url": "https://tpn.gov.pl/",
-        "organization": "Tatrzański Park Narodowy",
-        "checkedOn": "2026-11-01"
-      },
-      "photo": {
-        "status": "article-has-photos-no-alt-match",
-        "articleImages": 19,
-        "maxArticleLongSidePx": 1080,
-        "sampleAlt": null,
-        "printResolution": "unknown"
-      },
-      "route": {
-        "authorComplexity": [
-          "зелёный (лёгкий)",
-          "жёлтый (средний)"
-        ],
-        "officialDifficulty": null,
-        "season": {
-          "status": "official",
-          "source": "https://tpn.gov.pl/komunikat-turystyczny",
-          "checkedOn": "2026-11-01",
-          "text": "С 1 марта по 30 ноября запрещено движение по всем тропам TPN от сумерек до рассвета; зимой действует лавинная опасность (бюллетень lawiny.topr.pl); отдельные закрытия публикуются в коммюнике. Сезонное закрытие участков 1.12–15.05 подтверждено только вторичными источниками (radiokrakow.pl) — для конкретного маршрута unknown."
-        },
-        "trail": null,
-        "distanceKm": null,
-        "elevationGainM": null,
-        "durationMinutes": null
-      },
-      "reason": "Слабое фото: в статье нет подписи с местом"
-    },
-    {
-      "pointId": 14442,
-      "travelId": 466,
-      "title": "Пещеры Раптавицка и Мыльна",
-      "sourceTitle": "Jaskinia Raptawicka",
-      "category": "Пещера, Национальный парк",
-      "country": "PL",
-      "region": "Татры",
-      "lat": 49.2398157,
-      "lng": 19.8620088,
-      "articleUrl": "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den",
-      "articleTitle": "Долина Костелиска: маршрут по Татрам за день",
-      "officialSource": {
-        "status": "verified-200",
-        "url": "https://tpn.gov.pl/",
-        "organization": "Tatrzański Park Narodowy",
-        "checkedOn": "2026-11-01"
-      },
-      "photo": {
-        "status": "gallery-caption-match",
-        "articleImages": 10,
-        "maxArticleLongSidePx": 1080,
-        "sampleAlt": "Окно Павликовского в пещере Мыльна",
-        "printResolution": "unknown"
-      },
-      "route": {
-        "authorComplexity": [
-          "зелёный (лёгкий)",
-          "жёлтый (средний)"
-        ],
-        "officialDifficulty": null,
-        "season": {
-          "status": "official",
-          "source": "https://tpn.gov.pl/komunikat-turystyczny",
-          "checkedOn": "2026-11-01",
-          "text": "С 1 марта по 30 ноября запрещено движение по всем тропам TPN от сумерек до рассвета; зимой действует лавинная опасность (бюллетень lawiny.topr.pl); отдельные закрытия публикуются в коммюнике. Сезонное закрытие участков 1.12–15.05 подтверждено только вторичными источниками (radiokrakow.pl) — для конкретного маршрута unknown."
-        },
-        "trail": null,
-        "distanceKm": null,
-        "elevationGainM": null,
-        "durationMinutes": null
-      },
-      "reason": "Пещеры, а не горная точка; в Татрах остаётся 6 мест"
-    },
-    {
-      "pointId": 14967,
-      "travelId": 553,
-      "title": "Тропа над Реглями, Закопане",
-      "sourceTitle": "Ścieżka nad Reglami",
-      "category": "Национальный парк, Треккинговый маршрут, Водопад",
-      "country": "PL",
-      "region": "Татры",
-      "lat": 49.2594139,
-      "lng": 19.9303139,
-      "articleUrl": "https://metravel.by/travels/zakopane-legkaia-tropa-sciezka-nad-reglami",
-      "articleTitle": "Закопане: лёгкая тропа Ścieżka nad Reglami",
-      "officialSource": {
-        "status": "verified-200",
-        "url": "https://tpn.gov.pl/",
-        "organization": "Tatrzański Park Narodowy",
-        "checkedOn": "2026-11-01"
-      },
-      "photo": {
-        "status": "article-has-photos-no-alt-match",
-        "articleImages": 11,
-        "maxArticleLongSidePx": 1024,
-        "sampleAlt": null,
-        "printResolution": "unknown"
-      },
-      "route": {
-        "authorComplexity": [
-          "жёлтый (средний)"
-        ],
-        "officialDifficulty": null,
-        "season": {
-          "status": "official",
-          "source": "https://tpn.gov.pl/komunikat-turystyczny",
-          "checkedOn": "2026-11-01",
-          "text": "С 1 марта по 30 ноября запрещено движение по всем тропам TPN от сумерек до рассвета; зимой действует лавинная опасность (бюллетень lawiny.topr.pl); отдельные закрытия публикуются в коммюнике. Сезонное закрытие участков 1.12–15.05 подтверждено только вторичными источниками (radiokrakow.pl) — для конкретного маршрута unknown."
-        },
-        "trail": null,
-        "distanceKm": null,
-        "elevationGainM": null,
-        "durationMinutes": null
-      },
-      "reason": "Слабое фото: в статье нет подписи с местом"
-    },
-    {
-      "pointId": 14347,
-      "travelId": 445,
-      "title": "Могелица, смотровая башня",
-      "sourceTitle": "Rezerwat Mogielica",
-      "category": "Вежа, Заповедник, Обзорная точка",
-      "country": "PL",
-      "region": "Бескид Высповый",
-      "lat": 49.6551661,
-      "lng": 20.2767406,
-      "articleUrl": "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m",
-      "articleTitle": "Заповедник Могелица и смотровая вежа (1171м)",
-      "officialSource": {
-        "status": "unknown",
-        "url": null,
-        "note": "официальный сайт не найден/не проверен"
-      },
-      "photo": {
-        "status": "gallery-caption-match",
-        "articleImages": 21,
-        "maxArticleLongSidePx": 1080,
-        "sampleAlt": "Смотровая вежа на Могелице зимой",
-        "printResolution": "unknown"
-      },
-      "route": {
-        "authorComplexity": [
-          "зелёный (лёгкий)"
-        ],
-        "officialDifficulty": null,
-        "season": {
-          "status": "unknown",
-          "source": null,
-          "text": "Вне национальных парков официальный оператор троп не установлен (PTTK/ландшафтные парки) — unknown."
-        },
-        "trail": null,
-        "distanceKm": null,
-        "elevationGainM": null,
-        "durationMinutes": null
-      },
-      "reason": "Нет официального источника; Бескид Высповый представлен Модынью и Любомиром"
-    },
-    {
-      "pointId": 14385,
-      "travelId": 453,
-      "title": "Любонь Вельки",
-      "sourceTitle": "Schronisko PTTK na Luboniu Wielkim",
-      "category": "Гора, Приют",
-      "country": "PL",
-      "region": "Бескид Высповый",
-      "lat": 49.6534108,
-      "lng": 19.9919039,
-      "articleUrl": "https://metravel.by/travels/lyubon-velki-1022m-v-vyspovyh-beskidah",
-      "articleTitle": "Любонь Вельки (1022м) в Высповых Бескидах",
-      "officialSource": {
-        "status": "unknown",
-        "url": null,
-        "note": "официальный сайт не найден/не проверен"
-      },
-      "photo": {
-        "status": "article-has-photos-no-alt-match",
-        "articleImages": 17,
-        "maxArticleLongSidePx": 1080,
-        "sampleAlt": null,
-        "printResolution": "unknown"
-      },
-      "route": {
-        "authorComplexity": [
-          "зелёный (лёгкий)"
-        ],
-        "officialDifficulty": null,
-        "season": {
-          "status": "unknown",
-          "source": null,
-          "text": "Вне национальных парков официальный оператор троп не установлен (PTTK/ландшафтные парки) — unknown."
-        },
-        "trail": null,
-        "distanceKm": null,
-        "elevationGainM": null,
-        "durationMinutes": null
-      },
-      "reason": "Слабое фото: в статье нет подписи с местом"
-    },
-    {
-      "pointId": 14665,
-      "travelId": 503,
-      "title": "Мосорны Гронь, смотровая башня",
-      "sourceTitle": "Wieża widokowa na Mosornym Groniu",
-      "category": "Башня, Обзорная точка",
-      "country": "PL",
-      "region": "Бескид Живецкий",
-      "lat": 49.6224227,
-      "lng": 19.5642096,
-      "articleUrl": "https://metravel.by/travels/marshrut-v-beskidakh-ot-parkovki-do-smotrovoi-cherez-vodopad",
-      "articleTitle": "Маршрут в Бескидах: от парковки до смотровой через водопад",
-      "officialSource": {
-        "status": "unknown",
-        "url": null,
-        "note": "официальный сайт не найден/не проверен"
-      },
-      "photo": {
-        "status": "gallery-caption-match",
-        "articleImages": 15,
-        "maxArticleLongSidePx": 1024,
-        "sampleAlt": "Трасса Mosorny Groń: вид со склона",
-        "printResolution": "unknown"
-      },
-      "route": {
-        "authorComplexity": [
-          "зелёный (лёгкий)"
-        ],
-        "officialDifficulty": null,
-        "season": {
-          "status": "unknown",
-          "source": null,
-          "text": "Вне национальных парков официальный оператор троп не установлен (PTTK/ландшафтные парки) — unknown."
-        },
-        "trail": null,
-        "distanceKm": null,
-        "elevationGainM": null,
-        "durationMinutes": null
-      },
-      "reason": "Нет официального источника; Бескид Живецкий представлен тремя точками"
-    },
-    {
-      "pointId": 14226,
-      "travelId": 436,
-      "title": "Бяла Виселка — исток Вислы под Бараньей Гурой",
-      "sourceTitle": "Biała Wisełka",
-      "category": "Водопад, Заповедник",
-      "country": "PL",
-      "region": "Бескид Силезский",
-      "lat": 49.6199825,
-      "lng": 18.9858764,
-      "articleUrl": "https://metravel.by/travels/barania-gora-istok-visly-v-beskidakh-polsha",
-      "articleTitle": "Баранья гора: исток Вислы в Бескидах, Польша",
-      "officialSource": {
-        "status": "unknown",
-        "url": null,
-        "note": "официальный сайт не найден/не проверен"
-      },
-      "photo": {
-        "status": "article-has-photos-no-alt-match",
-        "articleImages": 33,
-        "maxArticleLongSidePx": 1080,
-        "sampleAlt": null,
-        "printResolution": "unknown"
-      },
-      "route": {
-        "authorComplexity": [
-          "зелёный (лёгкий)"
-        ],
-        "officialDifficulty": null,
-        "season": {
-          "status": "unknown",
-          "source": null,
-          "text": "Вне национальных парков официальный оператор троп не установлен (PTTK/ландшафтные парки) — unknown."
-        },
-        "trail": null,
-        "distanceKm": null,
-        "elevationGainM": null,
-        "durationMinutes": null
-      },
-      "reason": "Слабое фото: в статье нет подписи с местом"
-    },
-    {
-      "pointId": 14230,
-      "travelId": 437,
-      "title": "Шиндзельня, смотровая башня",
-      "sourceTitle": "Wieża widokowa przy Kolei Linowej Szyndzielnia",
-      "category": "Обзорная точка, Башня, Заповедник",
-      "country": "PL",
-      "region": "Бескид Силезский",
-      "lat": 49.7602615,
-      "lng": 19.0019435,
-      "articleUrl": "https://metravel.by/travels/belsko-byala-smotrovaya-bashnya-i-podem-na-tri-kopce",
-      "articleTitle": "Бельско-Бяла: смотровая башня и подъем на Три Копце",
-      "officialSource": {
-        "status": "unknown",
-        "url": null,
-        "note": "официальный сайт не найден/не проверен"
-      },
-      "photo": {
-        "status": "gallery-caption-match",
-        "articleImages": 27,
-        "maxArticleLongSidePx": 1080,
-        "sampleAlt": "Канатная дорога Шиндзельня / Kolej Linowa Szyndzielnia — Польша",
-        "printResolution": "unknown"
-      },
-      "route": {
-        "authorComplexity": [
-          "зелёный (лёгкий)"
-        ],
-        "officialDifficulty": null,
-        "season": {
-          "status": "unknown",
-          "source": null,
-          "text": "Вне национальных парков официальный оператор троп не установлен (PTTK/ландшафтные парки) — unknown."
-        },
-        "trail": null,
-        "distanceKm": null,
-        "elevationGainM": null,
-        "durationMinutes": null
-      },
-      "reason": "Нет официального источника; Бескид Силезский представлен Блатней"
-    },
-    {
-      "pointId": 14165,
-      "travelId": 421,
-      "title": "Дикий водопад",
-      "sourceTitle": "Dziki Wodospad",
-      "category": "Водопад",
-      "country": "PL",
-      "region": "Карконоше",
-      "lat": 50.7686566,
-      "lng": 15.7277656,
-      "articleUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
-      "articleTitle": "Шклярска-Поремба за 3 дня: замки и Снежка",
-      "officialSource": {
-        "status": "verified-200",
-        "url": "https://kpn.gov.pl/",
-        "organization": "Karkonoski Park Narodowy",
-        "checkedOn": "2026-11-01"
-      },
-      "photo": {
-        "status": "article-has-photos-no-alt-match",
-        "articleImages": 128,
-        "maxArticleLongSidePx": 1280,
-        "sampleAlt": null,
-        "printResolution": "unknown"
-      },
-      "route": {
-        "authorComplexity": [
-          "зелёный (лёгкий)"
-        ],
-        "officialDifficulty": null,
-        "season": {
-          "status": "unknown",
-          "source": "https://kpn.gov.pl/",
-          "text": "Официальный список зимних (лавинных) закрытий не удалось прочитать; вторичные источники (wroclaw.pl, mapa-turystyczna.pl) говорят о зимних закрытиях части троп к Снежке и Kocioł Łomniczki — проверить в KPN перед печатью."
-        },
-        "trail": null,
-        "distanceKm": null,
-        "elevationGainM": null,
-        "durationMinutes": null
-      },
-      "reason": "Слабое фото: в статье нет подписи с местом"
-    },
-    {
-      "pointId": 14156,
-      "travelId": 421,
-      "title": "Цветные озёрца, Рудавы Яновицке",
-      "sourceTitle": "Kolorowe Jeziorka",
-      "category": "Озеро, Заповедник",
-      "country": "PL",
-      "region": "Рудавы Яновицке",
-      "lat": 50.8287848,
-      "lng": 15.9741082,
-      "articleUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
-      "articleTitle": "Шклярска-Поремба за 3 дня: замки и Снежка",
-      "officialSource": {
-        "status": "unknown",
-        "url": null,
-        "note": "официальный сайт не найден/не проверен"
-      },
-      "photo": {
-        "status": "article-has-photos-no-alt-match",
-        "articleImages": 128,
-        "maxArticleLongSidePx": 1280,
-        "sampleAlt": null,
-        "printResolution": "unknown"
-      },
-      "route": {
-        "authorComplexity": [
-          "зелёный (лёгкий)"
-        ],
-        "officialDifficulty": null,
-        "season": {
-          "status": "unknown",
-          "source": null,
-          "text": "Вне национальных парков официальные сезонные ограничения не установлены — unknown."
-        },
-        "trail": null,
-        "distanceKm": null,
-        "elevationGainM": null,
-        "durationMinutes": null
-      },
-      "reason": "Слабое фото: в статье нет подписи с местом"
-    },
     {
       "pointId": 13719,
       "travelId": 320,

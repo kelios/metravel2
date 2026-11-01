@@ -16,11 +16,11 @@ const input = () => structuredClone({
 });
 const messages = (value: ReturnType<typeof input>) => validateSeriesCollection(value).issues.map(issue => issue.message).join('\n');
 
-it('accepts both planned Polish pilots with 30 places and no repeats from published books', () => {
+it('accepts both planned Polish pilots at their target size with no repeats from published books', () => {
   const result = validateSeriesCollection(input());
   expect(result.issues).toEqual([]);
   expect(result.series.map(({series, kit}) => [series.id, series.status, kit.places.length])).toEqual([
-    ['mountains-pl', 'planned', 30], ['castles-pl', 'planned', 30],
+    ['mountains-pl', 'planned', 40], ['castles-pl', 'planned', 30],
   ]);
 });
 
@@ -38,7 +38,7 @@ it('rejects a duplicated point and a wrong place count', () => {
   value.kits['mountains-pl.json'].places.pop();
   const text = messages(value);
   expect(text).toContain('A point occurs more than once in the kit');
-  expect(text).toContain('Expected 30 places, got 29');
+  expect(text).toContain('Expected 40 places, got 39');
 });
 
 it('keeps ready status behind a published book, print resolution and full mountain metrics', () => {
@@ -59,8 +59,8 @@ it('requires route evidence for every mountain place', () => {
 it('keeps every place inside the series countries', () => {
   const value = input();
   value.kits['castles-pl.json'].places[0].country = 'BY';
-  value.catalog.series[0].countries = ['PL', 'PL'];
-  const text = messages(value);
-  expect(text).toContain('Place is outside the series countries');
-  expect(text).toContain('Duplicate country');
+  expect(messages(value)).toContain('Place is outside the series countries');
+  const duplicate = input();
+  duplicate.catalog.series[0].countries = ['PL', 'PL'];
+  expect(messages(duplicate)).toContain('Duplicate country');
 });
