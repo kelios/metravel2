@@ -1,0 +1,1489 @@
+{
+  "schemaVersion": 1,
+  "seriesId": "castles-pl",
+  "theme": "castles",
+  "authorId": 1,
+  "selectedOn": "2026-11-01",
+  "decision": "Владелец выбрал пилоты «Горы Польши» и «Замки Польши» 01.11.2026 (#2809). Объём 30 мест — как у изданных книг BY/PL; места из книг BY/PL не повторяются.",
+  "selectionRule": "Из таблицы 01.11.2026 исключены места со слабым фото (нет подписи места в статье) и без официального источника, при сохранении всех районов гор; в замки из резерва подняты места с авторским фото и официальным сайтом; исключённые — в резерве с причиной.",
+  "places": [
+    {
+      "pointId": 12626,
+      "travelId": 261,
+      "title": "Замок Морско",
+      "sourceTitle": "Zamek Morsko",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.5506133,
+      "lng": 19.5205464,
+      "articleUrl": "https://metravel.by/travels/zamok-bekovets-i-dvorets-varshitskogo-marshrut",
+      "articleTitle": "Замок Бековец и дворец Варшицкого: маршрут",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 28,
+        "maxArticleLongSidePx": 1333,
+        "sampleAlt": "Руины замка Морско («Бековец») в тумане",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 12523,
+      "travelId": 269,
+      "title": "Руины замка Смолень (резерват)",
+      "sourceTitle": "Rezerwat Smoleń",
+      "category": "Руины замка, Заповедник",
+      "country": "PL",
+      "region": null,
+      "lat": 50.4383453,
+      "lng": 19.6752831,
+      "articleUrl": "https://metravel.by/travels/dvorets-moesa-v-verbke-i-zamok-pilcha-marshrut",
+      "articleTitle": "Дворец Моэса в Вербке и замок Пильча: маршрут",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 47,
+        "maxArticleLongSidePx": 1333,
+        "sampleAlt": "Долина Водаки и пещеры Смоленского заповедника — Польша",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 12717,
+      "travelId": 268,
+      "title": "Руины замка в резервате Остренжник",
+      "sourceTitle": "Rezerwat Ostrężnik",
+      "category": "Заповедник, Пещера, Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.6750061,
+      "lng": 19.4012622,
+      "articleUrl": "https://metravel.by/travels/zamok-onstrenzhnik",
+      "articleTitle": "Замок Остренжник.",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 12,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Замок Остренжник / Zamek Ostrężnik (XIV век) — Польша",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 13117,
+      "travelId": 280,
+      "title": "Замок Липовец",
+      "sourceTitle": "Rezerwat Lipowiec",
+      "category": "Руины замка, Замок, Заповедник",
+      "country": "PL",
+      "region": null,
+      "lat": 50.0768142,
+      "lng": 19.4448416,
+      "articleUrl": "https://metravel.by/travels/zamok-lipovets-ruiny-i-skansen-pod-krakovom",
+      "articleTitle": "Замок Липовец: руины и скансен под Краковом",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 26,
+        "maxArticleLongSidePx": 1333,
+        "sampleAlt": "Замок Липовец с высоты",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 13334,
+      "travelId": 282,
+      "title": "Замок в Бендзине",
+      "sourceTitle": "Zamek Będzin",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 50.3271023,
+      "lng": 19.1291156,
+      "articleUrl": "https://metravel.by/travels/bendzinskii-zamok-dvorets-meroshevskikh-i-podzemele",
+      "articleTitle": "Бендзинский замок, дворец Мерошевских и подземелье",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://muzeumzaglebia.pl/",
+        "organization": "Muzeum Zagłębia w Będzinie (замок — его филиал; страница замка не проверена)",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 30,
+        "maxArticleLongSidePx": 1333,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 13471,
+      "travelId": 297,
+      "title": "Жупный замок, Величка",
+      "sourceTitle": "Zamek Żupny",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 49.9839259,
+      "lng": 20.0593926,
+      "articleUrl": "https://metravel.by/travels/chto-posmotret-riadom-s-krakovom-za-odin-den",
+      "articleTitle": "Что посмотреть рядом с Краковом за один день",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://muzeum.wieliczka.pl/",
+        "organization": "Muzeum Żup Krakowskich Wieliczka – Kopalnia i Zamek",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 31,
+        "maxArticleLongSidePx": 1333,
+        "sampleAlt": "Соляная шахта Величка / Kopalnia Soli Wieliczka — Польша",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 13516,
+      "travelId": 303,
+      "title": "Королевский замок в Хенцинах",
+      "sourceTitle": "Zamek w Chęcinach",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.7973124,
+      "lng": 20.4603088,
+      "articleUrl": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
+      "articleTitle": "Хенцинский замок и дворец Дембинских: маршрут",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://www.zamek.checiny.pl/",
+        "organization": "Zamek Królewski w Chęcinach",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "author-photo-matched",
+        "articleImages": 49,
+        "maxArticleLongSidePx": 1333,
+        "sampleAlt": "Хенцинский замок на скале с воздуха, видны две уцелевшие башни",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 13531,
+      "travelId": 308,
+      "title": "Замок в Пилице",
+      "sourceTitle": "Zamek w Pilicy",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 50.4677726,
+      "lng": 19.6489009,
+      "articleUrl": "https://metravel.by/travels/zamok-v-pilice",
+      "articleTitle": "Замок в Пилице.",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "author-photo-matched",
+        "articleImages": 28,
+        "maxArticleLongSidePx": 1333,
+        "sampleAlt": "Замок в Пилице Zamek w Pilicy Польша зима",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 13716,
+      "travelId": 320,
+      "title": "Замок Чорштын",
+      "sourceTitle": "Zamek Czorsztyn",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 49.4349049,
+      "lng": 20.3130727,
+      "articleUrl": "https://metravel.by/travels/peninskiy-narodnyy-park-sokolica",
+      "articleTitle": "Соколица - Пенинский национальный парк.",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://piepn.gov.pl/",
+        "organization": "Pieniński Park Narodowy (замок на территории/в ведении ПН — уточнить)",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 44,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 13728,
+      "travelId": 321,
+      "title": "Замок в Гостишуве",
+      "sourceTitle": "Zamek w Gościszowie",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 51.1608919,
+      "lng": 15.4555224,
+      "articleUrl": "https://metravel.by/travels/zamki-nizhnei-silezii-chokha-grodzets-i-kostelniki",
+      "articleTitle": "Замки Нижней Силезии: Чоха, Гродзец и Костельники",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 63,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Замок в Gościszów / Zamek w Gościszowie — Польша",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 13787,
+      "travelId": 330,
+      "title": "Замок Поморских князей, Слупск",
+      "sourceTitle": "Zamek Książąt Pomorskich w Słupsku",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 54.4643211,
+      "lng": 17.0350485,
+      "articleUrl": "https://metravel.by/travels/slovinskiy-nacionalnyy-park-slupsk",
+      "articleTitle": "Словинский национальный парк - Слупск",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://muzeum.slupsk.pl/",
+        "organization": "Muzeum Pomorza Środkowego w Słupsku",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 90,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 13877,
+      "travelId": 360,
+      "title": "Замок в Освенциме",
+      "sourceTitle": "Zamek w Oświęcimiu",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 50.0398705,
+      "lng": 19.219373,
+      "articleUrl": "https://metravel.by/travels/osvencim-koncentracionnyy-lager-i-lager-smerti-aushvic",
+      "articleTitle": "Освенцим. Концентрационный лагерь и лагерь смерти Аушвиц.",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://muzeum-zamek.pl/",
+        "organization": "Muzeum Zamek w Oświęcimiu",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "author-photo-matched-below-1000px",
+        "articleImages": 40,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Река Сола рядом с Освенцимом",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 13900,
+      "travelId": 369,
+      "title": "Руины замка Тевтонского ордена, Торунь",
+      "sourceTitle": "Zamek Krzyżacki w Toruniu",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 53.0092578,
+      "lng": 18.6107669,
+      "articleUrl": "https://metravel.by/travels/torun-staryi-gorod-i-muzei-prianika-polsha",
+      "articleTitle": "Торунь: старый город и музей пряника, Польша",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://www.tak.torun.pl/zamek/",
+        "organization": "Toruńska Agenda Kulturalna – Zamek Krzyżacki",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "author-photo-matched-below-1000px",
+        "articleImages": 58,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Гданиско — уцелевшая башня Тевтонского замка в Торуни",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14098,
+      "travelId": 413,
+      "title": "Королевский замок в Сандомире",
+      "sourceTitle": "Muzeum Okręgowe w Sandomierzu",
+      "category": "Замок, Музей",
+      "country": "PL",
+      "region": null,
+      "lat": 50.6758165,
+      "lng": 21.7475674,
+      "articleUrl": "https://metravel.by/travels/sandomir-chto-posmotret-za-den-zamok-i-podzemelia",
+      "articleTitle": "Сандомир: что посмотреть за день — замок и подземелья",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://zamek-sandomierz.pl/",
+        "organization": "Muzeum Zamkowe w Sandomierzu",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "author-photo-matched-below-1000px",
+        "articleImages": 29,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Старый город Сандомира над Вислой, вид сверху",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14151,
+      "travelId": 421,
+      "title": "Замок Болькув",
+      "sourceTitle": "Zamek Bolków",
+      "category": "Замок, Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.9217593,
+      "lng": 16.0979458,
+      "articleUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+      "articleTitle": "Шклярска-Поремба за 3 дня: замки и Снежка",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 128,
+        "maxArticleLongSidePx": 1280,
+        "sampleAlt": "Болькувский замок (Zamek Bolków)",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14152,
+      "travelId": 421,
+      "title": "Замок Свины",
+      "sourceTitle": "Zamek Świny",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.9387164,
+      "lng": 16.1122484,
+      "articleUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+      "articleTitle": "Шклярска-Поремба за 3 дня: замки и Снежка",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://zamekswiny.pl/",
+        "organization": "Zamek Świny",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 128,
+        "maxArticleLongSidePx": 1280,
+        "sampleAlt": "Замок Швины / Zamek Świny — Польша",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14153,
+      "travelId": 421,
+      "title": "Замок в Роздоке",
+      "sourceTitle": "Zamek w Roztoce",
+      "category": "Замок, Дворец",
+      "country": "PL",
+      "region": null,
+      "lat": 50.9579753,
+      "lng": 16.2261672,
+      "articleUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+      "articleTitle": "Шклярска-Поремба за 3 дня: замки и Снежка",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 128,
+        "maxArticleLongSidePx": 1280,
+        "sampleAlt": "Замок в Розтоке / Zamek w Roztoce — Польша",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14179,
+      "travelId": 422,
+      "title": "Королевский замок в Добчице",
+      "sourceTitle": "Zamek Królewski w Dobczycach",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 49.8767968,
+      "lng": 20.0849776,
+      "articleUrl": "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut",
+      "articleTitle": "Дворец в Пекарах и замок в Добчице: маршрут",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 58,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Замок в Добчице / Zamek Królewski w Dobczycach — Польша",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14207,
+      "travelId": 434,
+      "title": "Замок Тропштын",
+      "sourceTitle": "Zamek Tropsztyn",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 49.7962565,
+      "lng": 20.6450981,
+      "articleUrl": "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
+      "articleTitle": "Замки Малопольши: Чхув, Тропштын и Новы-Сонч",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 59,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Замок Тропштын / Zamek Tropsztyn — Польша",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14208,
+      "travelId": 434,
+      "title": "Замок в Чхуве",
+      "sourceTitle": "Zamek w Czchowie",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 49.833196,
+      "lng": 20.6774169,
+      "articleUrl": "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
+      "articleTitle": "Замки Малопольши: Чхув, Тропштын и Новы-Сонч",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 59,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Замок в Чхуве с высоты",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14246,
+      "travelId": 438,
+      "title": "Замок Лесьна Скала",
+      "sourceTitle": "Leśna Skała",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 50.412248,
+      "lng": 16.457758,
+      "articleUrl": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko",
+      "articleTitle": "Нижняя Силезия за неделю: Столовые горы, Вроцлав, Клодзко",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "author-photo-matched-below-1000px",
+        "articleImages": 153,
+        "maxArticleLongSidePx": 1422,
+        "sampleAlt": "Лесная тропа среди елей",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14255,
+      "travelId": 438,
+      "title": "Крепость Сребрна-Гура",
+      "sourceTitle": "Twierdza Srebrna Góra",
+      "category": "Форт, Крепость",
+      "country": "PL",
+      "region": null,
+      "lat": 50.5740451,
+      "lng": 16.642251,
+      "articleUrl": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko",
+      "articleTitle": "Нижняя Силезия за неделю: Столовые горы, Вроцлав, Клодзко",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://forty.pl/",
+        "organization": "Twierdza Srebrna Góra",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 153,
+        "maxArticleLongSidePx": 1422,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14365,
+      "travelId": 450,
+      "title": "Замок Каменец, Одрживонь",
+      "sourceTitle": "Zamek Kamieniec",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 49.7424403,
+      "lng": 21.7869272,
+      "articleUrl": "https://metravel.by/travels/podkarpatskoe-voevodstvo-beshchady-zamki-i-marshrut",
+      "articleTitle": "Подкарпатское воеводство: Бещады, замки и маршрут",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://zamekkamieniec.pl/",
+        "organization": "Zamek Kamieniec w Korczynie-Odrzykoniu",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 46,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Руины замка Каменец зимой",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14367,
+      "travelId": 450,
+      "title": "Замок в Красичине",
+      "sourceTitle": "Zamek w Krasiczynie",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 49.7762232,
+      "lng": 22.6494012,
+      "articleUrl": "https://metravel.by/travels/podkarpatskoe-voevodstvo-beshchady-zamki-i-marshrut",
+      "articleTitle": "Подкарпатское воеводство: Бещады, замки и маршрут",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://www.krasiczyn.com.pl/",
+        "organization": "Zamek w Krasiczynie (сайт отеля-замка)",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 46,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14526,
+      "travelId": 478,
+      "title": "Руины замка в Яновце",
+      "sourceTitle": "Ruiny zamku w Janowcu",
+      "category": "Замок, Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 51.3243929,
+      "lng": 21.8935504,
+      "articleUrl": "https://metravel.by/travels/kazimezh-dolnyy",
+      "articleTitle": "Казимеж Дольный",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://mnkd.pl/",
+        "organization": "Muzeum Nadwiślańskie w Kazimierzu Dolnym (Janowiec — его филиал по общим сведениям; страница не проверена)",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 70,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Паромная переправа в Яновец / Przeprawa Janowiec — Польша",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14639,
+      "travelId": 494,
+      "title": "Замок Гродно, Загуже-Слёнске",
+      "sourceTitle": "Zamek Grodno",
+      "category": "Замок, Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.7493163,
+      "lng": 16.4105594,
+      "articleUrl": "https://metravel.by/travels/zamok-grodno",
+      "articleTitle": "Замок Гродно и комлекс Жечка (Complex Rzeczka)",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://zamekgrodno.pl/",
+        "organization": "Zamek Grodno – Zagórze Śląskie",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "author-photo-matched",
+        "articleImages": 21,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Интерьер замка Гродно: зал с портретами и трофеем на стене",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14699,
+      "travelId": 511,
+      "title": "Руины замка в Рытро",
+      "sourceTitle": "Ruiny Zamku w Rytrze",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 49.4889391,
+      "lng": 20.6866765,
+      "articleUrl": "https://metravel.by/travels/ot-zamka-rytro-do-schronisko-cyrla-marshrut",
+      "articleTitle": "От замка Рытро до Schronisko Cyrla: маршрут",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "author-photo-matched",
+        "articleImages": 28,
+        "maxArticleLongSidePx": 1024,
+        "sampleAlt": "Экран навигатора с треком от парковки в Рытро к Schronisko Cyrla",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14348,
+      "travelId": 446,
+      "title": "Руины замка Волек",
+      "sourceTitle": "Zamek Wołek",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 49.8312216,
+      "lng": 19.2031242,
+      "articleUrl": "https://metravel.by/travels/ruiny-zamka-volek",
+      "articleTitle": "Руины замка Волек",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 19,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Краков — руины замка Волек (64 км, 1 час) — Польша",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 14413,
+      "travelId": 461,
+      "title": "Руины Пенинского замка",
+      "sourceTitle": "Pieniny Castle",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 49.4199828,
+      "lng": 20.4202291,
+      "articleUrl": "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
+      "articleTitle": "Три Короны в Пенинах: маршрут из Сромовце",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://piepn.gov.pl/",
+        "organization": "Pieniński Park Narodowy",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "author-photo-matched",
+        "articleImages": 19,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Указатель «Zamek Pieniny 750 m n.p.m.» и стенд Пенинского национального парка у поворота к руинам",
+        "printResolution": "unknown"
+      }
+    },
+    {
+      "pointId": 15997,
+      "travelId": 577,
+      "title": "Люблинский замок (точка «Zamkowa 9»)",
+      "sourceTitle": "Zamkowa 9",
+      "category": "Замок, Музей",
+      "country": "PL",
+      "region": null,
+      "lat": 51.2474861,
+      "lng": 22.5653611,
+      "articleUrl": "https://metravel.by/travels/liublin-zamosts-i-zamok-v-krupe-marshrut-na-3-dnia-po-vostoku-polshi",
+      "articleTitle": "Люблин, Замосць и замок в Крупе: маршрут на 3 дня по востоку Польши",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://zamek-lublin.pl/",
+        "organization": "Muzeum Narodowe w Lublinie – Zamek (домен 200, <title> пуст)",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "author-photo-matched",
+        "articleImages": 47,
+        "maxArticleLongSidePx": 2500,
+        "sampleAlt": "Крыши Старого города Люблина с высоты",
+        "printResolution": "unknown"
+      }
+    }
+  ],
+  "reserve": [
+    {
+      "pointId": 13436,
+      "travelId": 290,
+      "title": "Замок в Немодлине",
+      "sourceTitle": "Zamek Książąt Niemodlińskich",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 50.6418898,
+      "lng": 17.6230831,
+      "articleUrl": "https://metravel.by/travels/zamok-nemodlin-i-dvorets-kopitse-zabroshennaia-opolshchina",
+      "articleTitle": "Замок Немодлин и дворец Копице: заброшенная Опольщина",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 30,
+        "maxArticleLongSidePx": 1333,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "reason": "Слабое фото и нет официального сайта"
+    },
+    {
+      "pointId": 13490,
+      "travelId": 300,
+      "title": "Епископский замок в Северже",
+      "sourceTitle": "Zamek biskupi w Siewierzu",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.467287,
+      "lng": 19.2416761,
+      "articleUrl": "https://metravel.by/travels/sokolinye-gory-marshrut-po-tropam-i-peshcheram",
+      "articleTitle": "Соколиные горы: маршрут по тропам и пещерам",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 33,
+        "maxArticleLongSidePx": 1333,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "reason": "Слабое фото и нет официального сайта"
+    },
+    {
+      "pointId": 13566,
+      "travelId": 311,
+      "title": "Руины замка в Тваркуве",
+      "sourceTitle": "Ruiny zamku w Tworkowie",
+      "category": "Руины дворца, Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.0117298,
+      "lng": 18.2371545,
+      "articleUrl": "https://metravel.by/travels/dvortsy-silezii-cherventsitse-slavikov-tvorkuv",
+      "articleTitle": "Дворцы Силезии: Червенцице, Славиков, Творкув",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 78,
+        "maxArticleLongSidePx": 1333,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "reason": "Слабое фото и нет официального сайта"
+    },
+    {
+      "pointId": 13701,
+      "travelId": 319,
+      "title": "Замок вроцлавских епископов, Уязд",
+      "sourceTitle": "Zamek biskupów wrocławskich",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.3908917,
+      "lng": 18.3491603,
+      "articleUrl": "https://metravel.by/travels/zamki-opolskogo-voevodstva-moshna-uiazd-i-khshelitse",
+      "articleTitle": "Замки Опольского воеводства: Мошна, Уязд и Хшелице",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 58,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "reason": "Одна статья на три замка (Уязд, Прушкув, Хшелице), нет подписи фото и официального сайта"
+    },
+    {
+      "pointId": 13705,
+      "travelId": 319,
+      "title": "Замок в Прушкуве (Опольское)",
+      "sourceTitle": "Zamek Prószkowskich",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 50.577424,
+      "lng": 17.8693786,
+      "articleUrl": "https://metravel.by/travels/zamki-opolskogo-voevodstva-moshna-uiazd-i-khshelitse",
+      "articleTitle": "Замки Опольского воеводства: Мошна, Уязд и Хшелице",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 58,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "reason": "Одна статья на три замка (Уязд, Прушкув, Хшелице), нет подписи фото и официального сайта"
+    },
+    {
+      "pointId": 13706,
+      "travelId": 319,
+      "title": "Руины замка в Хшелицах",
+      "sourceTitle": "Ruiny zamku książąt opolskich",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.465215,
+      "lng": 17.7372293,
+      "articleUrl": "https://metravel.by/travels/zamki-opolskogo-voevodstva-moshna-uiazd-i-khshelitse",
+      "articleTitle": "Замки Опольского воеводства: Мошна, Уязд и Хшелице",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 58,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "reason": "Одна статья на три замка (Уязд, Прушкув, Хшелице), нет подписи фото и официального сайта"
+    },
+    {
+      "pointId": 14210,
+      "travelId": 434,
+      "title": "Руины королевского замка, Новы-Сонч",
+      "sourceTitle": "Ruiny Zamku Królewskiego w Nowym Sączu",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 49.6286474,
+      "lng": 20.6895655,
+      "articleUrl": "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
+      "articleTitle": "Замки Малопольши: Чхув, Тропштын и Новы-Сонч",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 59,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "reason": "Слабое фото и нет официального сайта"
+    },
+    {
+      "pointId": 14254,
+      "travelId": 438,
+      "title": "Ренессансный замок Шарфенек",
+      "sourceTitle": "Renesansowy zamek Scharfeneck",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 50.5462163,
+      "lng": 16.4625943,
+      "articleUrl": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko",
+      "articleTitle": "Нижняя Силезия за неделю: Столовые горы, Вроцлав, Клодзко",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 153,
+        "maxArticleLongSidePx": 1422,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "reason": "Слабое фото и нет официального сайта"
+    },
+    {
+      "pointId": 12976,
+      "travelId": 277,
+      "title": "Руины замка Удуж",
+      "sourceTitle": "Ruiny zamku Udórz",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.445023,
+      "lng": 19.7690499,
+      "articleUrl": "https://metravel.by/travels/uduzhskiy-zamok",
+      "articleTitle": "Скала Великое окно и Удужский замок",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 29,
+        "maxArticleLongSidePx": 1333,
+        "sampleAlt": "Удужский замок / Ruiny zamku Udórz (14 век) — Польша",
+        "printResolution": "unknown"
+      },
+      "reason": "Резерв таблицы 01.11.2026"
+    },
+    {
+      "pointId": 13515,
+      "travelId": 303,
+      "title": "Рыцарский замок в Собкове",
+      "sourceTitle": "Zamek Rycerski w Sobkowie",
+      "category": "Замок, Руины дворца",
+      "country": "PL",
+      "region": null,
+      "lat": 50.7062509,
+      "lng": 20.4449236,
+      "articleUrl": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
+      "articleTitle": "Хенцинский замок и дворец Дембинских: маршрут",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "author-photo-matched",
+        "articleImages": 49,
+        "maxArticleLongSidePx": 1333,
+        "sampleAlt": "Филин на присаде во дворе замка в Собкове",
+        "printResolution": "unknown"
+      },
+      "reason": "Резерв таблицы 01.11.2026"
+    },
+    {
+      "pointId": 13580,
+      "travelId": 313,
+      "title": "Руины замка в Свеклянце",
+      "sourceTitle": "Ruiny zamku w Świerklańcu",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.4356468,
+      "lng": 18.9477983,
+      "articleUrl": "https://metravel.by/travels/park-sverklanets-ruiny-zamka-dvortsy-i-bunkery",
+      "articleTitle": "Парк Сверкланец: руины замка, дворцы и бункеры",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 46,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "reason": "Резерв таблицы 01.11.2026"
+    },
+    {
+      "pointId": 13904,
+      "travelId": 374,
+      "title": "Руины замка Дыбув, Торунь",
+      "sourceTitle": "Ruiny Zamku Dybowskiego",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 53.0011258,
+      "lng": 18.6001024,
+      "articleUrl": "https://metravel.by/travels/torun-zamok-dybovski-i-10-fort",
+      "articleTitle": "Торунь. Замок Дыбовски, 10 и 14 форт.",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 23,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Замок Дыбовски / Ruiny Zamku Dybowskiego — Польша",
+        "printResolution": "unknown"
+      },
+      "reason": "Резерв таблицы 01.11.2026"
+    },
+    {
+      "pointId": 14391,
+      "travelId": 456,
+      "title": "Руины замка в Быдлине",
+      "sourceTitle": "Zamek w Bydlinie",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.3887323,
+      "lng": 19.6430461,
+      "articleUrl": "https://metravel.by/travels/zamok-v-bydline-i-dvorec-v-nakle",
+      "articleTitle": "Замок в Быдлине и дворец в Накле",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 10,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "reason": "Резерв таблицы 01.11.2026"
+    },
+    {
+      "pointId": 14324,
+      "travelId": 442,
+      "title": "Руины замка краковских епископов (Славкув)",
+      "sourceTitle": "Ruiny zamku biskupów krakowskich",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.2965746,
+      "lng": 19.3915751,
+      "articleUrl": "https://metravel.by/travels/park-grudek-v-iavozhno-polskie-maldivy",
+      "articleTitle": "Парк Грудек в Явожно: «польские Мальдивы»",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "author-photo-matched-below-1000px",
+        "articleImages": 27,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Руины замка краковских епископов в Славкове: остатки каменных стен на валу",
+        "printResolution": "unknown"
+      },
+      "reason": "Резерв таблицы 01.11.2026"
+    },
+    {
+      "pointId": 14574,
+      "travelId": 443,
+      "title": "Руины замка в Бялы-Косцёле",
+      "sourceTitle": "Pozostałości ruin zamku w Białym Kościele",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.1614325,
+      "lng": 19.828463,
+      "articleUrl": "https://metravel.by/travels/krakovskie-dolinki",
+      "articleTitle": "Краковские долинки.",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 97,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "reason": "Резерв таблицы 01.11.2026"
+    },
+    {
+      "pointId": 14344,
+      "travelId": 444,
+      "title": "Руины замка в Ланцкороне",
+      "sourceTitle": "Ruiny zamku książąt oświęcimskich z XIV wieku",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 49.8530364,
+      "lng": 19.6523212,
+      "articleUrl": "https://metravel.by/travels/kalvariia-zebzhidovskaia-i-gora-zhar-marshrut",
+      "articleTitle": "Кальвария Зебжидовская и гора Жар: маршрут",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 27,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "reason": "Резерв таблицы 01.11.2026"
+    },
+    {
+      "pointId": 14638,
+      "travelId": 493,
+      "title": "Старый Ксёнж",
+      "sourceTitle": "Stary Książ",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.8377316,
+      "lng": 16.2950742,
+      "articleUrl": "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret",
+      "articleTitle": "Замок Ксёнж: как доехать и что посмотреть",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 10,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "reason": "Резерв таблицы 01.11.2026"
+    },
+    {
+      "pointId": 15995,
+      "travelId": 577,
+      "title": "Руины замка в Крупе",
+      "sourceTitle": "Krupe",
+      "category": "Руины, Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 51.0284805,
+      "lng": 23.220959,
+      "articleUrl": "https://metravel.by/travels/liublin-zamosts-i-zamok-v-krupe-marshrut-na-3-dnia-po-vostoku-polshi",
+      "articleTitle": "Люблин, Замосць и замок в Крупе: маршрут на 3 дня по востоку Польши",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "author-photo-matched",
+        "articleImages": 47,
+        "maxArticleLongSidePx": 2500,
+        "sampleAlt": "Руины замка в Крупе и пруд рядом с ними",
+        "printResolution": "unknown"
+      },
+      "reason": "Резерв таблицы 01.11.2026"
+    },
+    {
+      "pointId": 14533,
+      "travelId": 478,
+      "title": "Руины замка в Казимеже-Дольном (точка «Zamkowa»)",
+      "sourceTitle": "Zamkowa",
+      "category": "Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 51.3235589,
+      "lng": 21.9503478,
+      "articleUrl": "https://metravel.by/travels/kazimezh-dolnyy",
+      "articleTitle": "Казимеж Дольный",
+      "officialSource": {
+        "status": "unknown",
+        "url": null,
+        "note": "официальный сайт не найден/не проверен"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 70,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Казимеж-Дольны и Висла с высоты",
+        "printResolution": "unknown"
+      },
+      "reason": "Резерв таблицы 01.11.2026"
+    },
+    {
+      "pointId": 16094,
+      "travelId": 568,
+      "title": "Вавель",
+      "sourceTitle": "Королевский замок на Вавеле (Zamek Królewski na Wawelu)",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 50.0544051,
+      "lng": 19.9360223,
+      "articleUrl": "https://metravel.by/travels/krakov-putevoditel-po-mestam-chto-posmotret-v-gorode-i-gde-guliat",
+      "articleTitle": "Краков: путеводитель по местам — что посмотреть в городе и где гулять",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://wawel.krakow.pl/",
+        "organization": "Zamek Królewski na Wawelu",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "author-photo-matched",
+        "articleImages": 92,
+        "maxArticleLongSidePx": 1600,
+        "sampleAlt": "Вавель, Краков",
+        "printResolution": "unknown"
+      },
+      "reason": "Уже в изданной книге PL №2 «Вавельский замок»"
+    },
+    {
+      "pointId": 15434,
+      "travelId": 630,
+      "title": "Мальборк",
+      "sourceTitle": "Замок Мальборк (Muzeum Zamkowe w Malborku)",
+      "category": "Замок, Музей",
+      "country": "PL",
+      "region": null,
+      "lat": 54.03936,
+      "lng": 19.02812,
+      "articleUrl": "https://metravel.by/travels/zamok-malbork-krupneishii-kirpichnyi-zamok-mira",
+      "articleTitle": "Замок Мальборк: крупнейший кирпичный замок мира",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://zamek.malbork.pl/",
+        "organization": "Muzeum Zamkowe w Malborku",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "author-photo-matched",
+        "articleImages": 67,
+        "maxArticleLongSidePx": 1024,
+        "sampleAlt": "Замок Мальборк с воды: почти километр кирпичных стен вдоль Ногата",
+        "printResolution": "unknown"
+      },
+      "reason": "Уже в изданной книге PL №1 «Замок Мальборк»"
+    },
+    {
+      "pointId": 14636,
+      "travelId": 493,
+      "title": "Замок Ксёнж",
+      "sourceTitle": "Zamek Książ",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 50.842158,
+      "lng": 16.291979,
+      "articleUrl": "https://metravel.by/travels/zamok-ksenzh-kak-doekhat-i-chto-posmotret",
+      "articleTitle": "Замок Ксёнж: как доехать и что посмотреть",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://www.ksiaz.walbrzych.pl/",
+        "organization": "Zamek Książ w Wałbrzychu (oficjalna strona)",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 10,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Замок Ксёнж на скале над ущельем Пелчницы, вид сверху",
+        "printResolution": "unknown"
+      },
+      "reason": "Уже в изданной книге PL №3 «Замок Ксёнж»"
+    },
+    {
+      "pointId": 16231,
+      "travelId": 598,
+      "title": "Пескова-Скала",
+      "sourceTitle": "Замок Пескова-Скала (Zamek Pieskowa Skała)",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 50.2436333,
+      "lng": 19.78085,
+      "articleUrl": "https://metravel.by/travels/oitsovskii-park-na-velosipede-iz-krakova-ili-legkii-marshrut-po-doline-prandnika",
+      "articleTitle": "Ойцовский парк на велосипеде: из Кракова или лёгкий маршрут по Долине Прандника",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://pieskowaskala.eu/",
+        "organization": "Zamek Pieskowa Skała",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "author-photo-matched",
+        "articleImages": 34,
+        "maxArticleLongSidePx": 2048,
+        "sampleAlt": "Замок Пескова-Скала и скала Мачуга Геркулеса над долиной Прондника зимой",
+        "printResolution": "unknown"
+      },
+      "reason": "Уже в изданной книге PL №4 «Замок Пескова-Скала»"
+    },
+    {
+      "pointId": 13224,
+      "travelId": 267,
+      "title": "Огродзенец",
+      "sourceTitle": "Замок Огродзенец (Zamek Ogrodzieniec)",
+      "category": "Замок, Руины замка",
+      "country": "PL",
+      "region": null,
+      "lat": 50.45312,
+      "lng": 19.5529604,
+      "articleUrl": "https://metravel.by/travels/zamok-ogrodzenets-i-skalnyi-gorod-podzamche",
+      "articleTitle": "Замок Огродзенец и скальный город Подзамче",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://www.zamek-ogrodzieniec.pl/",
+        "organization": "Zamek Ogrodzieniec",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "author-photo-matched",
+        "articleImages": 20,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Замок Огродзенец и посёлок Подзамче с высоты: заснеженные руины XIV века",
+        "printResolution": "unknown"
+      },
+      "reason": "Уже в изданной книге PL №6 «Замок Огродзенец»"
+    },
+    {
+      "pointId": 13726,
+      "travelId": 321,
+      "title": "Замок Чоха",
+      "sourceTitle": "Zamek Czocha",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 51.030436,
+      "lng": 15.303557,
+      "articleUrl": "https://metravel.by/travels/zamki-nizhnei-silezii-chokha-grodzets-i-kostelniki",
+      "articleTitle": "Замки Нижней Силезии: Чоха, Гродзец и Костельники",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://zamekczocha.com/",
+        "organization": "Zamek Czocha",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "article-has-photos-no-alt-match",
+        "articleImages": 63,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": null,
+        "printResolution": "unknown"
+      },
+      "reason": "Уже в изданной книге PL №13 «Замок Чоха»"
+    },
+    {
+      "pointId": 13707,
+      "travelId": 319,
+      "title": "Замок Мошна",
+      "sourceTitle": "Мошненский замок",
+      "category": "Замок, Отель",
+      "country": "PL",
+      "region": null,
+      "lat": 50.4406925,
+      "lng": 17.7676113,
+      "articleUrl": "https://metravel.by/travels/zamki-opolskogo-voevodstva-moshna-uiazd-i-khshelitse",
+      "articleTitle": "Замки Опольского воеводства: Мошна, Уязд и Хшелице",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://mosznazamek.pl/",
+        "organization": "Zamek Moszna",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 58,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Мошненский замок с высоты",
+        "printResolution": "unknown"
+      },
+      "reason": "Уже в изданной книге PL №12 «Замок Мошна»"
+    },
+    {
+      "pointId": 14188,
+      "travelId": 424,
+      "title": "Замок Дунаец, Недзица",
+      "sourceTitle": "Zamek Dunajec",
+      "category": "Замок",
+      "country": "PL",
+      "region": null,
+      "lat": 49.4224691,
+      "lng": 20.3196537,
+      "articleUrl": "https://metravel.by/travels/zamok-dunaets-i-gora-liuban-den-iz-krakova",
+      "articleTitle": "Замок Дунаец и гора Любань: день из Кракова",
+      "officialSource": {
+        "status": "verified-200",
+        "url": "https://zamekniedzica.pl/",
+        "organization": "Muzeum – Zespół Zamkowy w Niedzicy",
+        "checkedOn": "2026-11-01"
+      },
+      "photo": {
+        "status": "gallery-caption-match",
+        "articleImages": 32,
+        "maxArticleLongSidePx": 1080,
+        "sampleAlt": "Замок Дунаец в Недзице над Чорштынским озером",
+        "printResolution": "unknown"
+      },
+      "reason": "Уже в изданной книге PL №16 «Замок Дунаец, Недзица»"
+    }
+  ]
+}

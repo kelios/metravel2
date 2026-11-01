@@ -57,6 +57,21 @@ if (args[0] === '--sources') {
   for (const country of ['by', 'pl']) {const {book} = await loadSelectedBook(country); const result = validateEditorialBookDraft(book); if (!result.success) throw new Error(JSON.stringify(result.issues)); console.log(`${country}: ${book.stops.length} selected author-1 places; ${buildReadyBookPagePlan(book).length} body pages; approved source/art association verified`);}
   process.exit(0);
 }
+if (args[0] === '--series') {
+  const {validateSeriesCollection} = await import('../data/travelBooks/schema/series.ts');
+  const read = async file => JSON.parse(await readFile(file, 'utf8'));
+  const catalog = await read('data/travelBooks/series/catalog.json');
+  const kits = {};
+  for (const {kit} of catalog.series ?? []) kits[kit] = await read(path.join('data/travelBooks/series', path.basename(kit))).catch(() => undefined);
+  for (const key of Object.keys(kits)) if (kits[key] === undefined) delete kits[key];
+  const publishedBookIds = (await read('data/travelBooks/manifest.json')).books.map(book => book.id);
+  const publishedPlaces = [];
+  for (const country of ['by', 'pl']) for (const row of (await read(`data/travelBooks/${country}/selection.json`)).rows) publishedPlaces.push({pointId: row.pointId, lat: row.lat, lng: row.lng, title: row.title});
+  const result = validateSeriesCollection({catalog, kits, publishedBookIds, publishedPlaces});
+  for (const issue of result.issues) console.error(`${issue.path}: ${issue.message}`);
+  for (const {series, kit} of result.series) console.log(`${series.id}: ${series.status} «${series.title}»; ${kit.places.length} places + ${kit.reserve.length} reserve; no repeats from published BY/PL books`);
+  process.exit(result.success ? 0 : 1);
+}
 if (args[0] === '--production') {
   const child = spawnSync(process.execPath, [...process.execArgv, 'scripts/books/validate-production.mjs', ...args.slice(1)], {stdio: 'inherit'});
   if (child.error) console.error(child.error.message);

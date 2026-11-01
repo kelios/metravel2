@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "series": [
+    {
+      "id": "mountains-pl",
+      "theme": "mountains",
+      "countries": [
+        "PL"
+      ],
+      "bookIds": [
+        "poland-mountains-memory"
+      ],
+      "status": "planned",
+      "title": "Горы Польши",
+      "kit": "mountains-pl.json",
+      "targetPlaces": 30
+    },
+    {
+      "id": "castles-pl",
+      "theme": "castles",
+      "countries": [
+        "PL"
+      ],
+      "bookIds": [
+        "poland-castles-memory"
+      ],
+      "status": "planned",
+      "title": "Замки Польши",
+      "kit": "castles-pl.json",
+      "targetPlaces": 30
+    }
+  ]
+}
