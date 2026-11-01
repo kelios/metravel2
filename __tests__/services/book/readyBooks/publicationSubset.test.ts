@@ -18,8 +18,9 @@ it.each([
 type Catalog = {schemaVersion: 1; releaseId: 'travel-books-v1'; books: PublishedBook[]};
 const current = () => {
   const catalog = structuredClone(currentPublication) as unknown as Catalog;
-  catalog.books = catalog.books.filter(book => !book.visualStyle || ['watercolor', 'photo'].includes(book.visualStyle));
-  return catalog;
+  const books=catalog.books.filter(book=>book.kind!=='quests'&&(!book.visualStyle||['watercolor','photo'].includes(book.visualStyle)));
+  // This fixture isolates the global edition-pair contract; typed sidecars are tested separately.
+  return {schemaVersion:catalog.schemaVersion,releaseId:catalog.releaseId,books};
 };
 const subset = (prior: Catalog, style: 'photo' | 'fantasy'): Catalog => ({
   schemaVersion: 1,

@@ -4,6 +4,8 @@ import {renderToStaticMarkup} from 'react-dom/server';
 import {formatNumber} from '@/i18n';
 import BookRoute,{generateMetadata} from '@/app/(tabs)/books/[slug]';
 import {findReadyBook} from '@/services/book/readyBooks/catalog';
+import {loadReadyBookMetadata} from '@/services/book/readyBooks/bookMetadata';
+import type {PublishedBook} from '@/services/book/readyBooks/publication';
 import {fetchBookArtifact} from '@/services/book/readyBooks/download';
 import {publishedFixture} from '../../services/book/readyBooks/publicationFixtures';
 
@@ -18,20 +20,27 @@ jest.mock('../../../components/books/preview/ReadyBookPreview',()=>({__esModule:
 jest.mock('@/components/ui/Button',()=>({__esModule:true,default:({label,onPress,disabled}:any)=><button disabled={disabled} onClick={onPress}>{label}</button>}));
 jest.mock('expo-router',()=>({Link:({children,href}:any)=><a href={href}>{children}</a>,useLocalSearchParams:()=>({slug:'belarus'}),useFocusEffect:(callback:()=>void|(()=>void))=>require('react').useEffect(callback,[callback])}));
 jest.mock('@/utils/growthFunnelAnalytics',()=>({trackReadyBookEvent:jest.fn()}));
+jest.mock('@/services/book/readyBooks/bookMetadata',()=>({loadReadyBookMetadata:jest.fn()}));
 jest.mock('@/services/book/readyBooks/download',()=>({fetchBookArtifact:jest.fn()}));
 
+function givenBook(book:PublishedBook){
+  jest.mocked(findReadyBook).mockReturnValue({...book,metadata:{kind:'book-metadata',bookId:book.id,revision:book.revision,uri:`https://metravel.by/travel-books/${book.id}/${book.revision}/book.json`,mime:'application/json',bytes:100,sha256:'a'.repeat(64)}});
+  jest.mocked(loadReadyBookMetadata).mockResolvedValue(book);
+}
+async function renderDetails(){await act(async()=>{render(<BookRoute/>);});}
 beforeEach(()=>{
-  jest.mocked(findReadyBook).mockReturnValue(publishedFixture());
+  jest.mocked(loadReadyBookMetadata).mockReset();
+  givenBook(publishedFixture());
   jest.mocked(fetchBookArtifact).mockReset().mockRejectedValue(new Error('offline'));
 });
 it('renders actual published book details in server markup and gives the route its own canonical',()=>{
   const book=publishedFixture();
   const html=renderToStaticMarkup(<BookRoute/>);
   expect(html).toContain(book.title);
-  expect(html).toContain(book.stops[book.stops.length-1].title);
+  expect(html).toContain('metadataLoading');
+  expect(html).not.toContain(book.stops[book.stops.length-1].title);
   expect(html).toContain('lang="ru"');
-  expect(html).toContain('counts:');
-  expect(html).toContain(String(book.stopCount));
+  expect(loadReadyBookMetadata).not.toHaveBeenCalled();
   const metadata=generateMetadata(undefined,{slug:book.slug});
   expect(metadata.alternates?.canonical).toBe('https://metravel.by/books/'+book.slug);
   expect(metadata.title).toBe(book.title);
@@ -41,13 +50,13 @@ it('keeps unknown editions out of the search index',()=>{
   jest.mocked(findReadyBook).mockReturnValue(undefined);
   expect(generateMetadata(undefined,{slug:'missing'}).robots).toBe('noindex, nofollow');
 });
-it('shows measured print quality for the selected profile and returns focus after preview closes',()=>{
+it('shows measured print quality for the selected profile and returns focus after preview closes',async()=>{
   const book=publishedFixture();
   const pocket=book.quality.find(item=>item.profileId==='pocket-150x100')!;
   pocket.minIllustrationPpi=318;
   pocket.physicalChecks=['provider-acceptance','paper-check'];
-  jest.mocked(findReadyBook).mockReturnValue(book);
-  render(<BookRoute/>);
+  givenBook(book);
+  await renderDetails();
   const quality=book.quality.find(item=>item.profileId===book.profiles[0].id)!;
   expect(screen.getByText('illustrationPpi:'+JSON.stringify({ppi:formatNumber(quality.minIllustrationPpi,{maximumFractionDigits:1})}))).toBeTruthy();
   expect(screen.getByText('proofOnly')).toBeTruthy();
@@ -65,8 +74,8 @@ it('shows measured print quality for the selected profile and returns focus afte
 });
 it('preserves the selected format and retries the same file after a failed guest download',async()=>{
   const book=publishedFixture();
-  jest.mocked(findReadyBook).mockReturnValue(book);
-  render(<BookRoute/>);
+  givenBook(book);
+  await renderDetails();
   fireEvent.click(screen.getByRole('radio',{name:'album'}));
   const file=book.artifacts.find(item=>item.profileId==='album-a5')!;
   await act(async()=>{fireEvent.click(screen.getAllByRole('button',{name:'download'})[0]);});
@@ -79,7 +88,7 @@ it('preserves the selected format and retries the same file after a failed guest
 });
 it('distinguishes ring-body, ring-cover and sewn-body controls and downloads unique filenames',async()=>{
   const book=publishedFixture(),names:string[]=[];
-  jest.mocked(findReadyBook).mockReturnValue(book);
+  givenBook(book);
   jest.mocked(fetchBookArtifact).mockResolvedValue(new Blob(['verified-control'],{type:'application/pdf'}));
   const create=URL.createObjectURL,revoke=URL.revokeObjectURL;
   Object.defineProperty(URL,'createObjectURL',{configurable:true,writable:true,value:jest.fn(()=>'blob:verified-control')});
@@ -87,7 +96,7 @@ it('distinguishes ring-body, ring-cover and sewn-body controls and downloads uni
   const click=jest.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(function(this:HTMLAnchorElement){names.push(this.download);});
   jest.useFakeTimers();
   try{
-    render(<BookRoute/>);fireEvent.click(screen.getByRole('radio',{name:'album'}));
+    await renderDetails();fireEvent.click(screen.getByRole('radio',{name:'album'}));
     const controls=book.artifacts.filter(file=>file.profileId==='album-a5'&&file.purpose==='control');
     expect(controls).toHaveLength(3);
     for(const file of controls){
@@ -106,14 +115,14 @@ it('distinguishes ring-body, ring-cover and sewn-body controls and downloads uni
   }
 });
 
-it('links the other visual edition of the same country and keeps the selected size through the profile query',()=>{
+it('links the other visual edition of the same country and keeps the selected size through the profile query',async()=>{
   const catalog=require('@/services/book/readyBooks/catalog');
   const watercolor=publishedFixture(31);
   const photo=publishedFixture(31,{id:'belarus-photo-memory',slug:'belarus-photo',title:'Беларусь. Фотокнига воспоминаний',visualStyle:'photo'});
   catalog.readyBooks.push(watercolor,photo);
-  jest.mocked(findReadyBook).mockReturnValue(watercolor);
+  givenBook(watercolor);
   try{
-    render(<BookRoute/>);
+    await renderDetails();
     expect(screen.getByText('styleWatercolor')).toBeTruthy();
     const link=screen.getByRole('link',{name:'stylePhoto'});
     expect(link.getAttribute('href')).toBe('/books/belarus-photo?profile=pocket-150x100');
@@ -121,17 +130,27 @@ it('links the other visual edition of the same country and keeps the selected si
     expect(screen.getByRole('link',{name:'stylePhoto'}).getAttribute('href')).toBe('/books/belarus-photo?profile=album-a5');
   }finally{catalog.readyBooks.splice(0);}
 });
-it('opens the edition on the physical size named by the profile query',()=>{
+it('opens the edition on the physical size named by the profile query',async()=>{
   const Details=require('@/components/books/ReadyBookDetails.web').default;
   const catalog=require('@/services/book/readyBooks/catalog');
   const book=publishedFixture(31);
   catalog.readyBooks.push(book,publishedFixture(31,{id:'belarus-photo-memory',slug:'belarus-photo',title:'Беларусь. Фотокнига воспоминаний',visualStyle:'photo'}));
-  jest.mocked(findReadyBook).mockReturnValue(book);
+  givenBook(book);
   // The static shell never sees the query: server markup keeps the first profile, the client applies it after hydration.
-  expect(renderToStaticMarkup(<Details slug={book.slug} initialProfileId="album-a5"/>)).toContain('href="/books/belarus-photo?profile=pocket-150x100"');
-  render(<Details slug={book.slug} initialProfileId="album-a5"/>);
+  expect(renderToStaticMarkup(<Details slug={book.slug} initialProfileId="album-a5"/>)).toContain('metadataLoading');
+  await act(async()=>{render(<Details slug={book.slug} initialProfileId="album-a5"/>);});
   expect((screen.getByLabelText(/album/) as HTMLInputElement).checked).toBe(true);
-  render(<Details slug={book.slug} initialProfileId="unknown"/>);
+  await act(async()=>{render(<Details slug={book.slug} initialProfileId="unknown"/>);});
   expect(screen.getAllByLabelText(/pocket/).some(input=>(input as HTMLInputElement).checked)).toBe(true);
   catalog.readyBooks.splice(0);
+});
+
+it('keeps the summary title during metadata errors and retries without showing stale edition controls',async()=>{
+  jest.mocked(loadReadyBookMetadata).mockRejectedValueOnce(new Error('offline'));
+  await renderDetails();
+  expect(screen.getByRole('alert').textContent).toContain('metadataError');
+  expect(screen.queryByRole('button',{name:'preview'})).toBeNull();
+  await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'retry'}));});
+  expect(screen.getByRole('button',{name:'preview'})).toBeTruthy();
+  expect(loadReadyBookMetadata).toHaveBeenCalledTimes(2);
 });

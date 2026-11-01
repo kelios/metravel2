@@ -3,9 +3,10 @@ import {MIN_READY_BOOK_STOPS, readyBookBodyPageCount, buildReadyBookPagePlan, pa
 import {assetUri, sha256} from '../../../data/travelBooks/schema/manifest';
 import {profileId, printProfileSchema} from '../../../data/travelBooks/schema/profiles';
 import {buildImpositionPlan} from './imposition';
-import {coverTextGeometry, imposedCoverTextGeometry} from './render/coverGeometry';
+import {coverTextGeometry, imposedCoverTextGeometry, coverTextColor} from './render/coverGeometry';
 import type {PrintProfile} from '../../../types/readyBook';
-import {bookVisualStyle} from '../../../data/travelBooks/schema/editorial';
+import {buildQuestBookPagePlan} from './questBooks/composition';
+import {bookVisualStyle, type BookVisualStyle} from '../../../data/travelBooks/schema/editorial';
 
 const page = z.strictObject({number:z.number().int().positive(),uri:assetUri,sha256,bytes:z.number().int().positive(),alt:z.string().min(1)});
 const identifier=z.string().regex(/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/);
@@ -25,21 +26,23 @@ export const coverPersonalizationSchema=z.strictObject({
   for(const template of descriptor.templates){
     const pocket=template.profileId==='pocket-150x100';
     const profile:PrintProfile={id:template.profileId,widthMm:pocket?150:148,heightMm:pocket?100:210,bleedMm:template.mode==='print-shop'?3:0,safeMm:5,bindingMm:15,binding:'rings'};
-    const geometry=template.mode==='home-rings'?imposedCoverTextGeometry(profile,buildImpositionPlan({profileId:profile.id,mode:'home-rings',component:'cover',pageCount:4})):coverTextGeometry(profile);
+    const style=template.textRegion.colorHex===coverTextColor('graphic')?'graphic':undefined;
+    const geometry=template.mode==='home-rings'?imposedCoverTextGeometry(profile,buildImpositionPlan({profileId:profile.id,mode:'home-rings',component:'cover',pageCount:4}),style):coverTextGeometry(profile,style);
     if(!template.uri.endsWith('.pdf')||template.pageCount!==(template.mode==='home-rings'?2:4)||Math.abs(template.widthMm-geometry.widthMm)>.001||Math.abs(template.heightMm-geometry.heightMm)>.001||Object.entries(geometry.textRegion).some(([key,value])=>typeof value==='number'?Math.abs(Number(template.textRegion[key as keyof typeof template.textRegion])-value)>.001:template.textRegion[key as keyof typeof template.textRegion]!==value))fail('Cover template geometry differs from the canonical physical layout');
     const r=template.textRegion;
     if(r.xMm+r.widthMm>template.widthMm||r.yMm+r.heightMm>template.heightMm||r.minFontSizePt>r.maxFontSizePt)fail('Cover text region exceeds the actual MediaBox');
   }
 });
-export const publishedBookSchema = z.strictObject({
-  id:identifier,slug:z.string().regex(/^[a-z]+(?:-[a-z]+)*$/),title:z.string().min(1),country:z.enum(['BY','PL']),
+const coverStyleMatches=(cover:z.infer<typeof coverPersonalizationSchema>,style?:BookVisualStyle)=>cover.templates.every(template=>template.textRegion.colorHex===coverTextColor(style));
+/** A standalone template has physical geometry; its edition owns the approved palette. */
+export const coverPersonalizationSchemaForStyle=(style?:BookVisualStyle)=>coverPersonalizationSchema.refine(cover=>coverStyleMatches(cover,style),'Cover template palette differs from edition style');
+const commonBookSchema = z.strictObject({
+  id:identifier,slug:identifier,title:z.string().min(1),country:z.enum(['BY','PL']),
   // Absent on the original watercolor series (#2786); every later visual edition names its style (#2854).
   visualStyle:bookVisualStyle.optional(),
   revision:identifier,contentLocale:z.literal('ru'),status:z.literal('partial'),
-  layoutVersion:z.union([z.literal(1),z.literal(2)]).default(1),
-  bodyPageCount:z.number().int().positive(),coverPageCount:z.literal(4),stopCount:z.number().int().min(MIN_READY_BOOK_STOPS),coverUri:assetUri,
+  bodyPageCount:z.number().int().positive(),coverPageCount:z.literal(4),stopCount:z.number().int().positive(),coverUri:assetUri,
   missing:z.array(z.enum(['stickers','instructions','print-passport','provider-acceptance','paper-check'])).min(1),
-  stops:z.array(z.strictObject({id:identifier,title:z.string().min(1),page:z.number().int().positive(),sourceUrl:z.string().url(),pointId:z.number().int().positive(),sourceTravelId:z.number().int().positive(),authorId:z.literal(1),questId:z.number().int().positive().optional()})).min(MIN_READY_BOOK_STOPS),
   quality:z.array(z.strictObject({profileId,printReady:z.literal(false),minIllustrationPpi:z.number().positive(),physicalChecks:z.array(z.enum(['image-resolution','provider-acceptance','paper-check'])).min(2)})).length(2),
   profiles:z.array(printProfileSchema).length(2),
   coverPersonalization:coverPersonalizationSchema.optional(),
@@ -47,14 +50,11 @@ export const publishedBookSchema = z.strictObject({
   printDirectory:z.strictObject({...coverResource,mime:z.literal('application/json'),bytes:z.number().int().positive().max(1024*1024)}).optional(),
   artifacts:z.array(z.strictObject({id:identifier,revision:identifier,profileId,purpose:z.enum(['read','home-rings','home-sewn','print-shop','control','stickers','instructions','print-passport']),component:z.enum(['body','cover','stickers','instructions','passport']),variant:z.enum(['color','no-background']).optional(),outputPageMm:z.strictObject({width:z.number().positive(),height:z.number().positive()}).optional(),controlFor:z.enum(['home-rings','home-sewn']).optional(),uri:assetUri,mime:z.literal('application/pdf'),sha256,bytes:z.number().int().positive(),pageCount:z.number().int().positive()})),
   preview:z.array(z.strictObject({revision:z.string(),profileId,component:z.enum(['body','cover']),sourceSha256:sha256,pages:z.array(page)})).length(4),
-}).superRefine((book,ctx)=>{
+});
+type PhysicalBook = z.infer<typeof commonBookSchema>;
+
+function checkPhysicalPackage(book:PhysicalBook,bodyCount:number,ctx:z.RefinementCtx){
   const fail=(message:string)=>ctx.addIssue({code:'custom',message});
-  if(!book.stops.length)return;
-  const bodyCount=readyBookBodyPageCount(book.stops.length);
-  if(book.stopCount!==book.stops.length||book.bodyPageCount!==bodyCount)fail('Composition count differs from selected places');
-  if(new Set(book.stops.map(stop=>stop.id)).size!==book.stops.length||new Set(book.stops.map(stop=>stop.pointId)).size!==book.stops.length){fail('Duplicate selected place');return;}
-  const destinations=buildReadyBookPagePlan(book).filter(page=>page.kind==='destination');
-  if(book.stops.some((stop,index)=>stop.page!==destinations[index]?.number))fail('Contents do not match the revision layout version');
   if(new Set(book.quality.map(q=>q.profileId)).size!==2)fail('Missing per-profile measured quality');
   for(const quality of book.quality){if(new Set(quality.physicalChecks).size!==quality.physicalChecks.length||!quality.physicalChecks.includes('provider-acceptance')||!quality.physicalChecks.includes('paper-check')||(quality.minIllustrationPpi<300)!==quality.physicalChecks.includes('image-resolution'))fail('Physical quality limitations differ from measured artwork');}
   if(new Set(book.profiles.map(p=>p.id)).size!==2) fail('Both physical profiles are required');
@@ -70,6 +70,7 @@ export const publishedBookSchema = z.strictObject({
   }
   const resources=new Map<string,{sha256:string,bytes:number}>();
   const cover=book.coverPersonalization;
+  if(cover&&!coverStyleMatches(cover,book.visualStyle))fail('Cover template palette differs from edition style');
   const coverResources=cover?[cover.font,cover.font.license,...cover.templates]:[];
   const printResources=[...(book.printGuidePages??[]),...(book.printDirectory?[book.printDirectory]:[])];
   if(Boolean(book.printGuidePages)!==Boolean(book.printDirectory))fail('Print HTML and directory must be published together');
@@ -112,18 +113,70 @@ export const publishedBookSchema = z.strictObject({
     const count=p.component==='body'?bodyCount:4;
     if(!source||source.sha256!==p.sourceSha256||p.revision!==book.revision||p.pages.length!==count||p.pages.some((a,i)=>a.number!==i+1||!a.uri.includes('/'+book.revision+'/'))) fail('Preview must match the complete reading PDF');
   }
+}
+
+export const publishedPlaceBookSchema = commonBookSchema.extend({
+  kind:z.literal('places'),slug:z.string().regex(/^[a-z]+(?:-[a-z]+)*$/),
+  layoutVersion:z.union([z.literal(1),z.literal(2)]).default(1),
+  stopCount:z.number().int().min(MIN_READY_BOOK_STOPS),
+  stops:z.array(z.strictObject({id:identifier,title:z.string().min(1),page:z.number().int().positive(),sourceUrl:z.string().url(),pointId:z.number().int().positive(),sourceTravelId:z.number().int().positive(),authorId:z.literal(1),questId:z.number().int().positive().optional()})).min(MIN_READY_BOOK_STOPS),
+}).superRefine((book,ctx)=>{
+  const fail=(message:string)=>ctx.addIssue({code:'custom',message});
+  const bodyCount=readyBookBodyPageCount(book.stops.length);
+  if(book.stopCount!==book.stops.length||book.bodyPageCount!==bodyCount)fail('Composition count differs from selected places');
+  if(new Set(book.stops.map(stop=>stop.id)).size!==book.stops.length||new Set(book.stops.map(stop=>stop.pointId)).size!==book.stops.length){fail('Duplicate selected place');return;}
+  const destinations=buildReadyBookPagePlan(book).filter(page=>page.kind==='destination');
+  if(book.stops.some((stop,index)=>stop.page!==destinations[index]?.number))fail('Contents do not match the revision layout version');
+  checkPhysicalPackage(book,bodyCount,ctx);
 });
-export const publicationSchema=z.strictObject({schemaVersion:z.literal(1),releaseId:z.literal('travel-books-v1'),books:z.array(publishedBookSchema).min(2)}).superRefine((value,ctx)=>{
-  for(const field of ['id','slug'] as const) if(new Set(value.books.map(b=>b[field])).size!==value.books.length) ctx.addIssue({code:'custom',message:'Duplicate '+field});
-  // One current edition per country and visual style; the watercolor pair stays mandatory.
-  const identities=value.books.map(book=>`${book.country}:${book.visualStyle??'watercolor'}`);
-  if(new Set(identities).size!==identities.length) ctx.addIssue({code:'custom',message:'Duplicate country style'});
-  for(const country of ['BY','PL']) if(!identities.includes(`${country}:watercolor`)) ctx.addIssue({code:'custom',message:'Missing watercolor edition: '+country});
+
+export const publishedQuestBookSchema = commonBookSchema.extend({
+  kind:z.literal('quests'),seriesId:identifier,volume:z.number().int().positive(),layoutVersion:z.literal(3),
+  endMatterPages:z.array(z.enum(['country-map','answers'])).min(1),
+  stops:z.array(z.strictObject({id:identifier,title:z.string().min(1),page:z.number().int().positive(),sourceUrl:z.string().url(),questId:z.number().int().positive(),questSlug:identifier})).min(1),
+}).superRefine((book,ctx)=>{
+  const fail=(message:string)=>ctx.addIssue({code:'custom',message});
+  if(new Set(book.endMatterPages).size!==book.endMatterPages.length)fail('Duplicate ending page');
+  if(new Set(book.stops.map(stop=>stop.id)).size!==book.stops.length||new Set(book.stops.map(stop=>stop.questId)).size!==book.stops.length||new Set(book.stops.map(stop=>stop.questSlug)).size!==book.stops.length){fail('Duplicate selected quest');return;}
+  for(const stop of book.stops){
+    if(stop.id!==stop.questSlug)fail('Quest contents must preserve the exact source ID');
+    try{
+      const url=new URL(stop.sourceUrl),segments=url.pathname.split('/');
+      if(url.origin!=='https://metravel.by'||url.username||url.password||url.search||url.hash||segments.length!==4||segments[1]!=='quests'||!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(segments[2])||segments[3]!==stop.questSlug)fail('Quest source must identify its exact published route');
+    }catch{fail('Quest source must identify its exact published route');}
+  }
+  const plan=buildQuestBookPagePlan({quests:book.stops.map(stop=>({questId:stop.questSlug}))},{endMatterPages:book.endMatterPages});
+  const entries=plan.filter(page=>page.kind==='quest-story');
+  if(book.stopCount!==book.stops.length||book.bodyPageCount!==plan.length||book.stops.some((stop,index)=>stop.page!==entries[index]?.number))fail('Quest composition and contents differ');
+  checkPhysicalPackage(book,plan.length,ctx);
+});
+
+// Legacy immutable JSON has no kind. Normalize before choosing a strict branch.
+export const publishedBookSchema=z.preprocess(value=>{
+  if(value&&typeof value==='object'&&!Array.isArray(value)&&!('kind' in value))return {...value,kind:'places'};
+  return value;
+},z.discriminatedUnion('kind',[publishedPlaceBookSchema,publishedQuestBookSchema]));
+
+export const bookMetadataSchema=z.strictObject({
+  kind:z.literal('book-metadata'),bookId:identifier,revision:identifier,
+  ...coverResource,mime:z.literal('application/json'),bytes:z.number().int().positive().max(1024*1024),
+}).superRefine((asset,ctx)=>{
+  if(asset.uri!==`https://metravel.by/travel-books/${asset.bookId}/${asset.revision}/book.json`)ctx.addIssue({code:'custom',message:'Book metadata must identify its exact immutable book revision'});
+});
+
+export const publicationSchema=z.strictObject({schemaVersion:z.literal(1),releaseId:z.literal('travel-books-v1'),books:z.array(publishedBookSchema).min(2),bookMetadata:z.array(bookMetadataSchema).optional()}).superRefine((value,ctx)=>{
+  for(const field of ['id','slug'] as const)if(new Set(value.books.map(book=>book[field])).size!==value.books.length)ctx.addIssue({code:'custom',message:'Duplicate '+field});
+  const identities=value.books.map(book=>book.kind==='places'?`places:${book.country}:${book.visualStyle??'watercolor'}`:`quests:${book.country}:${book.seriesId}:${book.volume}`);
+  if(new Set(identities).size!==identities.length)ctx.addIssue({code:'custom',message:'Duplicate country series volume'});
+  for(const country of ['BY','PL'])if(!identities.includes(`places:${country}:watercolor`))ctx.addIssue({code:'custom',message:'Missing watercolor edition: '+country});
+  if(value.bookMetadata&&(value.bookMetadata.length!==value.books.length||new Set(value.bookMetadata.map(asset=>asset.bookId)).size!==value.books.length||value.bookMetadata.some(asset=>!value.books.some(book=>book.id===asset.bookId&&book.revision===asset.revision))))ctx.addIssue({code:'custom',message:'Book metadata must cover every exact current edition once'});
 });
 export type PublishedBook=z.infer<typeof publishedBookSchema>;
 export type PublishedArtifact=PublishedBook['artifacts'][number];
+export type BookMetadataDescriptor=z.infer<typeof bookMetadataSchema>;
 export type CoverPersonalization=z.infer<typeof coverPersonalizationSchema>;
 export type CoverTemplate=CoverPersonalization['templates'][number];
 export type CoverTextRegion=CoverTemplate['textRegion'];
 
 export {buildReadyBookPagePlan} from './composition';
+export {buildQuestBookPagePlan} from './questBooks/composition';

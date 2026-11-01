@@ -18,6 +18,13 @@ export function bookPrintGuidePage(book:PublishedBook,profileId:PublishedArtifac
   return book.printGuidePages?.find(page=>page.profileId===profileId);
 }
 
+/** Addresses and public requirements change independently of a book revision. */
+export async function loadCurrentPrintDirectory():Promise<PrintDirectory>{
+  const {default:directory}=await import('../../../data/travelBooks/providers.json');
+  // Code-level checks validate the source; keep authoring Zod out of the browser.
+  return directory as PrintDirectory;
+}
+
 export async function loadPrintDirectory(book:Pick<PublishedBook,'id'|'revision'|'printDirectory'>,signal?:AbortSignal):Promise<PrintDirectory>{
   const asset=book.printDirectory;
   if(!asset)throw new Error('BOOK_PRINT_DIRECTORY_UNAVAILABLE');

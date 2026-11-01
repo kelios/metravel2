@@ -1,13 +1,13 @@
 import {
   lngToTileX,
   latToTileY,
-  calculateFitZoom,
   loadCrossOriginImage,
   drawRoundRect,
   filterValidCoords,
   filterValidRouteLine,
 } from './shared'
 import { getOsmTileUrl } from '@/config/mapWebTileContract'
+import {buildCanvasMapViewport} from './viewport'
 
 const MAP_COLORS = {
   route: '#0f5ea8',
@@ -35,6 +35,9 @@ export async function generateCanvasMapSnapshot(
     maxZoom?: number
     fitPaddingFactor?: number
     showLabels?: boolean
+    showMarkers?: boolean
+    /** Print authoring must not publish a partially blank geographic basemap. */
+    requireCompleteTiles?: boolean
   } = {},
 ): Promise<string | null> {
   if (typeof document === 'undefined' || typeof window === 'undefined') return null
@@ -47,32 +50,10 @@ export async function generateCanvasMapSnapshot(
   const routeLine = filterValidRouteLine(options.routeLine ?? [])
   const validPoints = filterValidCoords(points)
 
-  const allCoords = [
-    ...validPoints.map((p) => [p.lat, p.lng] as [number, number]),
-    ...routeLine,
-  ]
-  if (!allCoords.length) return null
-
-  const lats = allCoords.map((c) => c[0])
-  const lngs = allCoords.map((c) => c[1])
-  const minLat = Math.min(...lats)
-  const maxLat = Math.max(...lats)
-  const minLng = Math.min(...lngs)
-  const maxLng = Math.max(...lngs)
-
-  const zoom = Math.min(maxZoom, calculateFitZoom(minLat, maxLat, minLng, maxLng, width, height, fitPaddingFactor, maxZoom))
-  const centerLat = (minLat + maxLat) / 2
-  const centerLng = (minLng + maxLng) / 2
-
-  const cxPx = lngToTileX(centerLng, zoom) * 256
-  const cyPx = latToTileY(centerLat, zoom) * 256
-
+  if (!validPoints.length && !routeLine.length) return null
+  const viewport = buildCanvasMapViewport(validPoints, routeLine, width, height, maxZoom, fitPaddingFactor)
+  const {zoom, centerXPx: cxPx, centerYPx: cyPx, startTX, endTX, startTY, endTY} = viewport
   const tileSize = 256
-  const maxTile = Math.pow(2, zoom) - 1
-  const startTX = Math.max(0, Math.floor((cxPx - width / 2) / tileSize))
-  const endTX = Math.min(maxTile, Math.floor((cxPx + width / 2) / tileSize))
-  const startTY = Math.max(0, Math.floor((cyPx - height / 2) / tileSize))
-  const endTY = Math.min(maxTile, Math.floor((cyPx + height / 2) / tileSize))
 
   const canvas = document.createElement('canvas')
   canvas.width = width
@@ -85,6 +66,7 @@ export async function generateCanvasMapSnapshot(
 
   const tileUrlTemplate = getOsmTileUrl()
   const tilePromises: Promise<void>[] = []
+  const missingTiles: string[] = []
 
   for (let tx = startTX; tx <= endTX; tx++) {
     for (let ty = startTY; ty <= endTY; ty++) {
@@ -101,13 +83,14 @@ export async function generateCanvasMapSnapshot(
             ctx.drawImage(img, drawX, drawY, tileSize, tileSize)
           })
           .catch(() => {
-            /* skip failed tiles */
+            missingTiles.push(url)
           }),
       )
     }
   }
 
   await Promise.all(tilePromises)
+  if (options.requireCompleteTiles && missingTiles.length) throw new Error(`MAP_TILES_INCOMPLETE: ${missingTiles.join(', ')}`)
 
   const toCanvasX = (lng: number) => lngToTileX(lng, zoom) * 256 - (cxPx - width / 2)
   const toCanvasY = (lat: number) => latToTileY(lat, zoom) * 256 - (cyPx - height / 2)
@@ -153,7 +136,7 @@ export async function generateCanvasMapSnapshot(
 
   const labelRects: Array<{ x: number; y: number; w: number; h: number }> = []
 
-  validPoints.forEach((point, index) => {
+  if (options.showMarkers !== false) validPoints.forEach((point, index) => {
     const px = toCanvasX(point.lng)
     const py = toCanvasY(point.lat)
     const isStart = index === 0

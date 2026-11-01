@@ -7,6 +7,7 @@ import {createRequire} from 'node:module';
 import {spawnSync} from 'node:child_process';
 import {build} from 'esbuild';
 import {fileURLToPath} from 'node:url';
+import {thinBookCatalogue,relatedBookIndex} from './catalog-metadata.mjs';
 import {loadSelectedBook} from './source-ready-book.mjs';
 import {buildStickerArtifacts} from './build-stickers.mjs';
 import {renderPrintGuideHtml} from './render-print-guide-html.mjs';
@@ -145,10 +146,23 @@ export async function activatePublication({result,outputPath,cacheRoot,root=proc
   const scratch=await realpath(path.join(root,'.codex-temp'));
   if(!cacheRoot.startsWith(scratch+path.sep))throw new Error('Activation cache must remain in .codex-temp');
   const entries=collectAssets([result]);
+  const catalogPayload=result.bookMetadata?Buffer.from(JSON.stringify(thinBookCatalogue(result),null,2)+'\n'):null;
+  const relatedPayload=Buffer.from(JSON.stringify(relatedBookIndex(result),null,2)+'\n');
+  const prior=JSON.parse(await readFile(path.join(root,'data/travelBooks/manifest.json'),'utf8'));
+  const accepted=new Map(collectAssets([prior]).map(asset=>[asset.relative,asset]));
+  const resource=async entry=>{
+    try{return await verifiedResource(outputPath,entry);}
+    catch(error){
+      if(error.code!=='ENOENT')throw error;
+      const old=accepted.get(entry.relative);
+      if(!old||old.bytes!==entry.bytes||old.sha256!==entry.sha256)throw new Error('Missing new publication resource: '+entry.relative);
+      return verifiedResource(cacheRoot,entry);
+    }
+  };
   // First inspect the complete staging set; no pointer/cache writes on bad input.
-  for(const entry of entries)checkContent(entry,await verifiedResource(outputPath,entry));
+  for(const entry of entries)checkContent(entry,await resource(entry));
   for(const entry of entries){
-    const bytes=await verifiedResource(outputPath,entry);
+    const bytes=await resource(entry);
     await ensureDirectory(cacheRoot,path.dirname(entry.relative));
     const target=path.join(cacheRoot,entry.relative);
     try{
@@ -162,9 +176,9 @@ export async function activatePublication({result,outputPath,cacheRoot,root=proc
   await ensureDirectory(root,'data/travelBooks/releases');
   const snapshot=path.join(snapshots,hash(payload)+'.json');
   try{await writeFile(snapshot,payload,{flag:'wx'});}catch(error){if(error.code!=='EEXIST')throw error;if(!(await lstat(snapshot)).isFile())throw new Error('Snapshot leaf is not a regular file');if(!(await readFile(snapshot)).equals(payload))throw new Error('Immutable snapshot differs');}
-  for(const [name,bytes] of [['related.json',await readFile(path.join(outputPath,'related.json'))],['manifest.json',payload]]){
+  for(const [name,bytes] of [['related.json',relatedPayload],['manifest.json',payload],...(catalogPayload?[['catalog.json',catalogPayload]]:[])]){
     const target=path.resolve(root,'data/travelBooks',name),temporary=target+'.tmp-'+process.pid;
-    if(!(await lstat(target)).isFile())throw new Error('Publication pointer must be a regular file');
+    try{if(!(await lstat(target)).isFile())throw new Error('Publication pointer must be a regular file');}catch(error){if(error.code!=='ENOENT'||name!=='catalog.json')throw error;}
     await writeFile(temporary,bytes,{flag:'wx'});await rename(temporary,target);
   }
 }

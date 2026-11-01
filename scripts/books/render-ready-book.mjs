@@ -11,10 +11,10 @@ const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const require = createRequire(import.meta.url);
 const {pureSource} = require('../build-book-renderer.js');
 
-export async function loadReadyBookCompiler(output) {
+export async function loadReadyBookCompiler(output, entryPoint = 'scripts/books/render-entry.ts') {
   const bundle = path.resolve(output, 'ready-book-source.cjs');
   await mkdir(path.dirname(bundle), {recursive: true});
-  await build({entryPoints: ['scripts/books/render-entry.ts'], outfile: bundle, bundle: true, platform: 'node', format: 'cjs', packages: 'external', logLevel: 'silent',
+  const compiled=await build({entryPoints: [entryPoint],metafile:true, outfile: bundle, bundle: true, platform: 'node', format: 'cjs', packages: 'external', logLevel: 'silent',
     // The canonical PDF helper reaches imageProxy. Reuse the worker's existing pure adapter
     // rather than bringing React Native platform discovery into a production compiler.
     plugins: [{name: 'canonical-print-policy', setup(builder) {
@@ -27,12 +27,14 @@ export async function loadReadyBookCompiler(output) {
       builder.onResolve({filter: /^\.\/instance$/}, args => args.importer.endsWith('/i18n/format.ts')
         ? {path: path.resolve('workers/book-renderer/localeInstance.ts')} : null);
     }}]});
+  await writeFile(path.resolve(output,'ready-book-source.meta.json'),JSON.stringify(compiled.metafile,null,2)+'\n');
   return require(bundle);
 }
 
 export async function loadReadyBookInputs(country, profileId, purpose, options = {}) {
   const source = options.source ?? await loadSelectedBook(country, {...options, profileId});
   const qr = {};
+  const graphic = source.book.visualStyle === 'graphic';
   for (const stop of source.book.stops) {
     const links = {map: stop.navigation.mapUrl, article: stop.navigation.articleUrl, ...(stop.navigation.quest ? {quest: stop.navigation.quest.url} : {})};
     const codes = {};
@@ -40,7 +42,7 @@ export async function loadReadyBookInputs(country, profileId, purpose, options =
     for (const [kind, url] of Object.entries(links)) {
       const model = QRCode.create(url, {errorCorrectionLevel: 'M'});
       sizeMm = Math.max(sizeMm, Math.ceil((model.modules.size + 8) * .28 * 10) / 10);
-      const svg = await QRCode.toString(url, {type: 'svg', errorCorrectionLevel: 'M', margin: 4, color: {dark: '#4a6655ff', light: '#fffefaff'}});
+      const svg = await QRCode.toString(url, {type: 'svg', errorCorrectionLevel: 'M', margin: 4, color: {dark: graphic ? '#111111ff' : '#4a6655ff', light: graphic ? '#ffffffff' : '#fffefaff'}});
       codes[kind] = `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`;
     }
     if (sizeMm > 29) throw new Error(`Verified QR target too dense for this physical layout: ${stop.id} (${sizeMm} mm)`);
@@ -48,8 +50,8 @@ export async function loadReadyBookInputs(country, profileId, purpose, options =
   }
   const profile = {id: profileId, widthMm: profileId === 'album-a5' ? 148 : 150, heightMm: profileId === 'album-a5' ? 210 : 100,
     bleedMm: purpose === 'read' ? 0 : 3, safeMm: 5, bindingMm: 15, binding: 'rings'};
-  const imagePpis = Object.values(source.assets).map(asset => {const bounds=asset.artworkBounds;return profileId==='album-a5'?Math.max(asset.widthPx/148,asset.heightPx/210)*25.4:Math.max(asset.widthPx*bounds.width/62,asset.heightPx*bounds.height/42)*25.4;});
-  imagePpis.push(Math.max(source.cover.widthPx/profile.widthMm,source.cover.heightPx/profile.heightMm)*25.4);
+  const imagePpis = Object.values(source.assets).map(asset => {const bounds=asset.artworkBounds;return profileId==='album-a5'?Math.max(asset.widthPx/(graphic?130:148),asset.heightPx/(graphic?260/3:210))*25.4:Math.max(asset.widthPx*bounds.width/62,asset.heightPx*bounds.height/42)*25.4;});
+  imagePpis.push(Math.max(source.cover.widthPx/(graphic?(profileId==='album-a5'?148:120):profile.widthMm),source.cover.heightPx/(graphic?(profileId==='album-a5'?106:41):profile.heightMm))*25.4);
   return {...source, profile, purpose, qr, estimatedMinIllustrationPpi: Math.round(Math.min(...imagePpis))};
 }
 
@@ -58,7 +60,7 @@ function pythonRun(python, args) {
   if (result.error || result.status !== 0) throw new Error(`PDF processing failed: ${result.error?.message || result.stderr}`);
 }
 
-async function compilePdf(page, html, output, profile, python) {
+export async function compilePdf(page, html, output, profile, python) {
   await page.setContent(html, {waitUntil: 'load'});
   await page.evaluate(async () => {
     await document.fonts.ready;
@@ -85,6 +87,91 @@ async function artifact(file, purpose, component, pageCount) {
   return {path: file, purpose, component, sha256: sha(bytes), bytes: bytes.length, pageCount};
 }
 
+/** One physical PDF/imposition/personalization pipeline for place and quest editorial adapters. */
+export async function renderPhysicalEdition({source,loadInput,buildHtml,compiler,browser,output,python,check=false,style='watercolor'}) {
+  const entry = {bookId: '', revision: '', ...(source.book.kind==='quests'?{}:{visualStyle:style}), bodyPageCount: 0, stopCount: 0, country: source.book.country, editorialPath: '', profiles: []};
+  if(source.book.kind==='quests'){entry.kind='quests';entry.endMatterPages=source.book.endMatterPages;}
+  entry.coverPersonalization = {...source.coverPersonalization, font: {...source.coverPersonalization.font, license: {...source.coverPersonalization.font.license}}, templates: []};
+  const fontBytes = await readFile(source.coverPersonalization.font.path);
+  const defaultCoverText = source.coverPersonalization.presets.find(preset => preset.id === source.coverPersonalization.defaultPresetId)?.text;
+  if (!defaultCoverText) throw new Error('The default cover preset is missing');
+  if (!check) {
+    const fontDirectory = path.join(output, source.book.id, source.book.revision, 'fonts');
+    await mkdir(fontDirectory, {recursive: true});
+    const fontPath = path.join(fontDirectory, 'MarckScript-Regular.ttf'), licensePath = path.join(fontDirectory, 'OFL.txt');
+    await copyFile(source.coverPersonalization.font.path, fontPath);
+    await copyFile(source.coverPersonalization.font.license.path, licensePath);
+    entry.coverPersonalization.font.path = fontPath;
+    entry.coverPersonalization.font.license.path = licensePath;
+  }
+  for (const profileId of ['pocket-150x100', 'album-a5']) {
+    const profileEntry = {profile: null, artifacts: [], controls: []};
+    let readFiles, readCoverTemplate;
+    for (const purpose of ['read', 'print-shop']) {
+      const input = await loadInput(profileId, purpose);
+      if (entry.revision && entry.revision !== input.book.revision) throw new Error('Profiles of one edition must share the revision');
+      entry.bookId = input.book.id;
+      entry.revision = input.book.revision;
+      const html = buildHtml(input);
+      entry.bodyPageCount = html.bodyPages.length;
+      entry.stopCount = input.book.kind === 'quests' ? input.book.quests.length : input.book.stops.length;
+      profileEntry.profile = {...input.profile, bleedMm: 0};
+      const directory = path.join(output, input.book.id, input.book.revision, profileId);
+      if (check) continue;
+      await mkdir(directory, {recursive: true});
+      entry.editorialPath = path.resolve(directory, 'source-book.json');
+      await writeFile(entry.editorialPath, JSON.stringify(input.book, null, 2) + '\n');
+      await writeFile(path.join(directory, 'source-provenance.json'), JSON.stringify(input.provenance, null, 2) + '\n');
+      await writeFile(path.join(directory, 'page-map.json'), JSON.stringify(html.pageMap, null, 2) + '\n');
+      const page = await browser.newPage();
+      page.setDefaultTimeout(180_000);
+      await page.route('**/*', route => route.request().url().startsWith('data:') ? route.continue() : route.abort());
+      try {
+        const files = {};
+        for (const component of ['body', 'cover']) {
+          const file = path.join(directory, `${purpose}-${component}.pdf`);
+          if (component === 'cover') {
+            const template = path.join(directory, `${purpose}-cover-template.pdf`);
+            await compilePdf(page, html.coverHtml, template, input.profile, python);
+            const geometry = compiler.coverTextGeometry(input.profile, style);
+            const templateBytes = await readFile(template);
+            entry.coverPersonalization.templates.push({path: template, profileId, mode: purpose, mime: 'application/pdf', bytes: templateBytes.length, sha256: sha(templateBytes), pageCount: 4, ...geometry});
+            if (purpose === 'read') readCoverTemplate = template;
+            const personalized = await compiler.createPersonalizedCoverPdf({templateBytes, fontBytes, text: defaultCoverText, maxCharacters: source.coverPersonalization.maxCharacters, textRegion: geometry.textRegion, expectedPageCount: 4, widthMm: geometry.widthMm, heightMm: geometry.heightMm});
+            await writeFile(file, personalized);
+          } else await compilePdf(page, html.bodyHtml, file, input.profile, python);
+          files[component] = file;
+          const info = await artifact(file, purpose, component, component === 'body' ? html.bodyPages.length : html.coverPages.length);
+          profileEntry.artifacts.push({...info, pageMapPath: path.join(directory, 'page-map.json'), printProfile: input.profile, assetsHash: input.assetsHash});
+        }
+        if (purpose === 'read') readFiles = files;
+      } finally {await page.close();}
+    }
+    for (const mode of profileId === 'album-a5' ? ['home-rings', 'home-sewn'] : ['home-rings']) {
+      for (const component of mode === 'home-sewn' ? ['body'] : ['body', 'cover']) {
+        const plan = compiler.buildImpositionPlan({profileId, mode, component, pageCount: component === 'body' ? entry.bodyPageCount : 4});
+        if (check) continue;
+        const directory = path.dirname(readFiles.body);
+        const planPath = path.join(directory, `${mode}-${component}.plan.json`);
+        const file = path.join(directory, `${mode}-${component}.pdf`);
+        const controlPath = path.join(directory, `${mode}-${component}-control.pdf`);
+        await writeFile(planPath, JSON.stringify(plan, null, 2) + '\n');
+        pythonRun(python, ['scripts/books/impose-ready-book.py', '--source', readFiles[component], '--plan', planPath, '--output', file, '--control', controlPath]);
+        if (component === 'cover') {
+          const template = path.join(directory, `${mode}-cover-template.pdf`);
+          pythonRun(python, ['scripts/books/impose-ready-book.py', '--source', readCoverTemplate, '--plan', planPath, '--output', template]);
+          const bytes = await readFile(template);
+          entry.coverPersonalization.templates.push({path: template, profileId, mode, mime: 'application/pdf', bytes: bytes.length, sha256: sha(bytes), pageCount: plan.sheets.length * 2, ...compiler.imposedCoverTextGeometry(profileEntry.profile, plan, style), planPath});
+        }
+        profileEntry.artifacts.push({...await artifact(file, mode, component, plan.sheets.length * 2), planPath, printProfile: {...profileEntry.profile, binding: mode === 'home-sewn' ? 'sewn' : 'rings'}});
+        profileEntry.controls.push({path: controlPath, planPath, pageCount: Number((await import('node:child_process')).execFileSync(python, ['-c', 'from pypdf import PdfReader; import sys; print(len(PdfReader(sys.argv[1]).pages))', controlPath], {encoding: 'utf8'}).trim()), sha256: sha(await readFile(controlPath))});
+      }
+    }
+    entry.profiles.push(profileEntry);
+  }
+  return entry;
+}
+
 export async function renderReadyBooks({output, python, check = false, registryPath, sourcesRoot, style = 'watercolor'}) {
   output = path.resolve(output);
   await mkdir(output, {recursive: true});
@@ -101,87 +188,11 @@ export async function renderReadyBooks({output, python, check = false, registryP
       const loadSource = profileId => loadSelectedBook(country, {registryPath, sourcesRoot, style, profileId});
       const shared = style === 'photo' ? null : await loadSource();
       let source = shared ?? await loadSource('pocket-150x100');
-      const entry = {bookId: '', revision: '', visualStyle: style, bodyPageCount: 0, stopCount: 0, country: country.toUpperCase(), editorialPath: `data/travelBooks/${country}/editorial.json`, profiles: []};
-      entry.coverPersonalization = {...source.coverPersonalization, font: {...source.coverPersonalization.font, license: {...source.coverPersonalization.font.license}}, templates: []};
-      const fontBytes = await readFile(source.coverPersonalization.font.path);
-      const defaultCoverText = source.coverPersonalization.presets.find(preset => preset.id === source.coverPersonalization.defaultPresetId)?.text;
-      if (!defaultCoverText) throw new Error('The default cover preset is missing');
-      if (!check) {
-        const fontDirectory = path.join(output, source.book.id, source.book.revision, 'fonts');
-        await mkdir(fontDirectory, {recursive: true});
-        const fontPath = path.join(fontDirectory, 'MarckScript-Regular.ttf'), licensePath = path.join(fontDirectory, 'OFL.txt');
-        await copyFile(source.coverPersonalization.font.path, fontPath);
-        await copyFile(source.coverPersonalization.font.license.path, licensePath);
-        entry.coverPersonalization.font.path = fontPath;
-        entry.coverPersonalization.font.license.path = licensePath;
-      }
-      for (const profileId of ['pocket-150x100', 'album-a5']) {
-        const profileEntry = {profile: null, artifacts: [], controls: []};
-        let readFiles, readCoverTemplate;
-        if (!shared && profileId !== 'pocket-150x100') source = await loadSource(profileId);
-        for (const purpose of ['read', 'print-shop']) {
-          const input = await loadReadyBookInputs(country, profileId, purpose, {source});
-          if (entry.revision && entry.revision !== input.book.revision) throw new Error('Profiles of one edition must share the revision');
-          entry.bookId = input.book.id;
-          entry.revision = input.book.revision;
-          const html = compiler.buildReadyBookHtml(input);
-          entry.bodyPageCount = html.bodyPages.length;
-          entry.stopCount = input.book.stops.length;
-          profileEntry.profile = {...input.profile, bleedMm: 0};
-          const directory = path.join(output, input.book.id, input.book.revision, profileId);
-          if (check) continue;
-          await mkdir(directory, {recursive: true});
-          entry.editorialPath = path.resolve(directory, 'source-book.json');
-          await writeFile(entry.editorialPath, JSON.stringify(input.book, null, 2) + '\n');
-          await writeFile(path.join(directory, 'source-provenance.json'), JSON.stringify(input.provenance, null, 2) + '\n');
-          await writeFile(path.join(directory, 'page-map.json'), JSON.stringify(html.pageMap, null, 2) + '\n');
-          const page = await browser.newPage();
-          page.setDefaultTimeout(180_000);
-          await page.route('**/*', route => route.request().url().startsWith('data:') ? route.continue() : route.abort());
-          try {
-            const files = {};
-            for (const component of ['body', 'cover']) {
-              const file = path.join(directory, `${purpose}-${component}.pdf`);
-              if (component === 'cover') {
-                const template = path.join(directory, `${purpose}-cover-template.pdf`);
-                await compilePdf(page, html.coverHtml, template, input.profile, python);
-                const geometry = compiler.coverTextGeometry(input.profile);
-                const templateBytes = await readFile(template);
-                entry.coverPersonalization.templates.push({path: template, profileId, mode: purpose, mime: 'application/pdf', bytes: templateBytes.length, sha256: sha(templateBytes), pageCount: 4, ...geometry});
-                if (purpose === 'read') readCoverTemplate = template;
-                const personalized = await compiler.createPersonalizedCoverPdf({templateBytes, fontBytes, text: defaultCoverText, maxCharacters: source.coverPersonalization.maxCharacters, textRegion: geometry.textRegion, expectedPageCount: 4, widthMm: geometry.widthMm, heightMm: geometry.heightMm});
-                await writeFile(file, personalized);
-              } else await compilePdf(page, html.bodyHtml, file, input.profile, python);
-              files[component] = file;
-              const info = await artifact(file, purpose, component, component === 'body' ? html.bodyPages.length : html.coverPages.length);
-              profileEntry.artifacts.push({...info, pageMapPath: path.join(directory, 'page-map.json'), printProfile: input.profile, assetsHash: input.assetsHash});
-            }
-            if (purpose === 'read') readFiles = files;
-          } finally {await page.close();}
-        }
-        for (const mode of profileId === 'album-a5' ? ['home-rings', 'home-sewn'] : ['home-rings']) {
-          for (const component of mode === 'home-sewn' ? ['body'] : ['body', 'cover']) {
-            const plan = compiler.buildImpositionPlan({profileId, mode, component, pageCount: component === 'body' ? entry.bodyPageCount : 4});
-            if (check) continue;
-            const directory = path.dirname(readFiles.body);
-            const planPath = path.join(directory, `${mode}-${component}.plan.json`);
-            const file = path.join(directory, `${mode}-${component}.pdf`);
-            const controlPath = path.join(directory, `${mode}-${component}-control.pdf`);
-            await writeFile(planPath, JSON.stringify(plan, null, 2) + '\n');
-            pythonRun(python, ['scripts/books/impose-ready-book.py', '--source', readFiles[component], '--plan', planPath, '--output', file, '--control', controlPath]);
-            if (component === 'cover') {
-              const template = path.join(directory, `${mode}-cover-template.pdf`);
-              pythonRun(python, ['scripts/books/impose-ready-book.py', '--source', readCoverTemplate, '--plan', planPath, '--output', template]);
-              const bytes = await readFile(template);
-              entry.coverPersonalization.templates.push({path: template, profileId, mode, mime: 'application/pdf', bytes: bytes.length, sha256: sha(bytes), pageCount: plan.sheets.length * 2, ...compiler.imposedCoverTextGeometry(profileEntry.profile, plan), planPath});
-            }
-            profileEntry.artifacts.push({...await artifact(file, mode, component, plan.sheets.length * 2), planPath, printProfile: {...profileEntry.profile, binding: mode === 'home-sewn' ? 'sewn' : 'rings'}});
-            profileEntry.controls.push({path: controlPath, planPath, pageCount: Number((await import('node:child_process')).execFileSync(python, ['-c', 'from pypdf import PdfReader; import sys; print(len(PdfReader(sys.argv[1]).pages))', controlPath], {encoding: 'utf8'}).trim()), sha256: sha(await readFile(controlPath))});
-          }
-        }
-        entry.profiles.push(profileEntry);
-      }
-      books.push(entry);
+      let sourceProfile='pocket-150x100';
+      books.push(await renderPhysicalEdition({source,compiler,browser,output,python,check,style,buildHtml:compiler.buildReadyBookHtml,loadInput:async(profileId,purpose)=>{
+        if(!shared&&profileId!==sourceProfile){source=await loadSource(profileId);sourceProfile=profileId;}
+        return loadReadyBookInputs(country,profileId,purpose,{source});
+      }}));
     }
   } finally {await browser?.close();}
   if (!check) {

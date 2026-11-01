@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 1,
+  "taskId": 2855,
+  "visualStyle": "graphic",
+  "recordedOn": "2026-11-01",
+  "recordedAt": "2026-11-01T21:58:26.310876+00:00",
+  "scope": "Completed local artifact authoring and additive immutable catalog stage; production acceptance is recorded separately.",
+  "authoringInputs": {
+    "path": "data/travelBooks/styles/graphic/inputs.json",
+    "sha256": "0bc667d33b9a3fc42d588a2295c01236750119a564390c72485d13c5e6f02643",
+    "bytes": 2031
+  },
+  "approval": {
+    "path": "data/travelBooks/styles/graphic/approval.json",
+    "sha256": "b0477397ca703ce75c55de3d9b69dcc45d5736da4c98a9bc323dfc71666bbf15",
+    "bytes": 2345
+  },
+  "styleReference": {
+    "path": "data/travelBooks/styles/graphic/style-reference.png",
+    "sha256": "f89fbe4748088f690aca191ef8312fa7b9a918e2fb46528cb7626aff9d21445f",
+    "bytes": 3361150
+  },
+  "fontProvenance": {
+    "path": "data/travelBooks/styles/graphic/font-provenance.json",
+    "sha256": "6180b1dcac696cec1618599af37c8fb300a3c64067200aa01976e278f5829aff",
+    "bytes": 2314
+  },
+  "countryEvidence": [
+    {
+      "country": "BY",
+      "placeCount": 31,
+      "evidence": {
+        "path": "data/travelBooks/by/graphic-evidence.json",
+        "sha256": "9f410d1cd4220c05a9555e9e85ab35f98a65c9208d4b0a4056db88fd428c7d5b",
+        "bytes": 230806
+      }
+    },
+    {
+      "country": "PL",
+      "placeCount": 30,
+      "evidence": {
+        "path": "data/travelBooks/pl/graphic-evidence.json",
+        "sha256": "75431b329469309d94ec53b01e4b9d6e2e866e7db533b0a4c11e50b07b93f7e3",
+        "bytes": 213051
+      }
+    }
+  ],
+  "approvedMirUnchanged": {
+    "pointId": 5247,
+    "artworkSha256": "f89fbe4748088f690aca191ef8312fa7b9a918e2fb46528cb7626aff9d21445f"
+  },
+  "generation": {
+    "selectedArtworkCount": 61,
+    "reusedApprovedArtworkCount": 1,
+    "newSelectedArtworkCount": 60,
+    "builtInGenerationCalls": 64,
+    "rejectedAttempts": 4,
+    "tool": "image_gen.imagegen",
+    "modelIdentifier": null,
+    "nativeDimensionsPx": [
+      1536,
+      1024
+    ],
+    "upscaled": false
+  },
+  "production": {
+    "index": {
+      "path": ".codex-temp/books-e2/final-production/production-index.json",
+      "sha256": "102d257b088207cee02988d72c9105943a1195294d409fefc6156bfca04d5844",
+      "bytes": 47555
+    },
+    "pdfCount": 48,
+    "standardAndControlPdfCount": 36,
+    "cleanTemplatePdfCount": 12,
+    "publisherSha256": "fb7d0853c08191dd84fa3767775a0b9344c2a631d29e0bfc367e8241a4385ed3",
+    "books": [
+      {
+        "id": "belarus-graphic-memory",
+        "revision": "2026-11-01.graphic.e5434d02447e.1227125e9d5d",
+        "country": "BY",
+        "stopCount": 31,
+        "bodyPageCount": 108,
+        "coverPageCount": 4,
+        "profiles": [
+          "pocket-150x100",
+          "album-a5"
+        ],
+        "quality": [
+          {
+            "profileId": "pocket-150x100",
+            "printReady": false,
+            "minIllustrationPpi": 630,
+            "physicalChecks": [
+              "provider-acceptance",
+              "paper-check"
+            ]
+          },
+          {
+            "profileId": "album-a5",
+            "printReady": false,
+            "minIllustrationPpi": 264,
+            "physicalChecks": [
+              "image-resolution",
+              "provider-acceptance",
+              "paper-check"
+            ]
+          }
+        ],
+        "readingPdfs": [
+          {
+            "id": "pocket-150x100.read.body",
+            "revision": "2026-11-01.graphic.e5434d02447e.1227125e9d5d",
+            "profileId": "pocket-150x100",
+            "purpose": "read",
+            "component": "body",
+            "uri": "https://metravel.by/travel-books/belarus-graphic-memory/2026-11-01.graphic.e5434d02447e.1227125e9d5d/pocket-150x100/read-body.pdf",
+            "mime": "application/pdf",
+            "sha256": "66179a259bb31ad416bc2570fec849a3cbf2d303398555e245438142d432a8b6",
+            "bytes": 16714297,
+            "pageCount": 108
+          },
+          {
+            "id": "pocket-150x100.read.cover",
+            "revision": "2026-11-01.graphic.e5434d02447e.1227125e9d5d",
+            "profileId": "pocket-150x100",
+            "purpose": "read",
+            "component": "cover",
+            "uri": "https://metravel.by/travel-books/belarus-graphic-memory/2026-11-01.graphic.e5434d02447e.1227125e9d5d/pocket-150x100/read-cover.pdf",
+            "mime": "application/pdf",
+            "sha256": "999c8188bf9c6990e07ff7712a5d060aa5f803ddce7b362feb330d7ea08a75b0",
+            "bytes": 551774,
+            "pageCount": 4
+          },
+          {
+            "id": "album-a5.read.body",
+            "revision": "2026-11-01.graphic.e5434d02447e.1227125e9d5d",
+            "profileId": "album-a5",
+            "purpose": "read",
+            "component": "body",
+            "uri": "https://metravel.by/travel-books/belarus-graphic-memory/2026-11-01.graphic.e5434d02447e.1227125e9d5d/album-a5/read-body.pdf",
+            "mime": "application/pdf",
+            "sha256": "c962e98adf88afe371ab42b7469c39bd5811f75ce19ffc50fc7fc6b59c6f6fc1",
+            "bytes": 16954883,
+            "pageCount": 108
+          },
+          {
+            "id": "album-a5.read.cover",
+            "revision": "2026-11-01.graphic.e5434d02447e.1227125e9d5d",
+            "profileId": "album-a5",
+            "purpose": "read",
+            "component": "cover",
+            "uri": "https://metravel.by/travel-books/belarus-graphic-memory/2026-11-01.graphic.e5434d02447e.1227125e9d5d/album-a5/read-cover.pdf",
+            "mime": "application/pdf",
+            "sha256": "0346e878efa6d030b41172973591b6bfb3c3c786a740131fb36e34f812ba725e",
+            "bytes": 553498,
+            "pageCount": 4
+          }
+        ],
+        "previewSourceBindings": [
+          {
+            "profileId": "pocket-150x100",
+            "component": "body",
+            "sourceSha256": "66179a259bb31ad416bc2570fec849a3cbf2d303398555e245438142d432a8b6",
+            "pageCount": 108
+          },
+          {
+            "profileId": "pocket-150x100",
+            "component": "cover",
+            "sourceSha256": "999c8188bf9c6990e07ff7712a5d060aa5f803ddce7b362feb330d7ea08a75b0",
+            "pageCount": 4
+          },
+          {
+            "profileId": "album-a5",
+            "component": "body",
+            "sourceSha256": "c962e98adf88afe371ab42b7469c39bd5811f75ce19ffc50fc7fc6b59c6f6fc1",
+            "pageCount": 108
+          },
+          {
+            "profileId": "album-a5",
+            "component": "cover",
+            "sourceSha256": "0346e878efa6d030b41172973591b6bfb3c3c786a740131fb36e34f812ba725e",
+            "pageCount": 4
+          }
+        ]
+      },
+      {
+        "id": "poland-graphic-memory",
+        "revision": "2026-11-01.graphic.31464daff96c.b0ad2adc3958",
+        "country": "PL",
+        "stopCount": 30,
+        "bodyPageCount": 104,
+        "coverPageCount": 4,
+        "profiles": [
+          "pocket-150x100",
+          "album-a5"
+        ],
+        "quality": [
+          {
+            "profileId": "pocket-150x100",
+            "printReady": false,
+            "minIllustrationPpi": 630,
+            "physicalChecks": [
+              "provider-acceptance",
+              "paper-check"
+            ]
+          },
+          {
+            "profileId": "album-a5",
+            "printReady": false,
+            "minIllustrationPpi": 264,
+            "physicalChecks": [
+              "image-resolution",
+              "provider-acceptance",
+              "paper-check"
+            ]
+          }
+        ],
+        "readingPdfs": [
+          {
+            "id": "pocket-150x100.read.body",
+            "revision": "2026-11-01.graphic.31464daff96c.b0ad2adc3958",
+            "profileId": "pocket-150x100",
+            "purpose": "read",
+            "component": "body",
+            "uri": "https://metravel.by/travel-books/poland-graphic-memory/2026-11-01.graphic.31464daff96c.b0ad2adc3958/pocket-150x100/read-body.pdf",
+            "mime": "application/pdf",
+            "sha256": "b6d5ae12e8b2464d0d4642addc1bb159708ac90105f80768223912cb5adf247a",
+            "bytes": 16057678,
+            "pageCount": 104
+          },
+          {
+            "id": "pocket-150x100.read.cover",
+            "revision": "2026-11-01.graphic.31464daff96c.b0ad2adc3958",
+            "profileId": "pocket-150x100",
+            "purpose": "read",
+            "component": "cover",
+            "uri": "https://metravel.by/travel-books/poland-graphic-memory/2026-11-01.graphic.31464daff96c.b0ad2adc3958/pocket-150x100/read-cover.pdf",
+            "mime": "application/pdf",
+            "sha256": "5f514781430278bd6daa6858c90d31d39d8860ba2e8c8cfae81de560e7547fa0",
+            "bytes": 467534,
+            "pageCount": 4
+          },
+          {
+            "id": "album-a5.read.body",
+            "revision": "2026-11-01.graphic.31464daff96c.b0ad2adc3958",
+            "profileId": "album-a5",
+            "purpose": "read",
+            "component": "body",
+            "uri": "https://metravel.by/travel-books/poland-graphic-memory/2026-11-01.graphic.31464daff96c.b0ad2adc3958/album-a5/read-body.pdf",
+            "mime": "application/pdf",
+            "sha256": "c1af8a82d94e5b5e3a263cb5ed91ee868b61ec18c2217479daaf21698f7a170c",
+            "bytes": 16291810,
+            "pageCount": 104
+          },
+          {
+            "id": "album-a5.read.cover",
+            "revision": "2026-11-01.graphic.31464daff96c.b0ad2adc3958",
+            "profileId": "album-a5",
+            "purpose": "read",
+            "component": "cover",
+            "uri": "https://metravel.by/travel-books/poland-graphic-memory/2026-11-01.graphic.31464daff96c.b0ad2adc3958/album-a5/read-cover.pdf",
+            "mime": "application/pdf",
+            "sha256": "f24efc61d86ddccb43b9c42dac7164de0d135ec8b679e69425968a84ffb5401f",
+            "bytes": 469247,
+            "pageCount": 4
+          }
+        ],
+        "previewSourceBindings": [
+          {
+            "profileId": "pocket-150x100",
+            "component": "body",
+            "sourceSha256": "b6d5ae12e8b2464d0d4642addc1bb159708ac90105f80768223912cb5adf247a",
+            "pageCount": 104
+          },
+          {
+            "profileId": "pocket-150x100",
+            "component": "cover",
+            "sourceSha256": "5f514781430278bd6daa6858c90d31d39d8860ba2e8c8cfae81de560e7547fa0",
+            "pageCount": 4
+          },
+          {
+            "profileId": "album-a5",
+            "component": "body",
+            "sourceSha256": "c1af8a82d94e5b5e3a263cb5ed91ee868b61ec18c2217479daaf21698f7a170c",
+            "pageCount": 104
+          },
+          {
+            "profileId": "album-a5",
+            "component": "cover",
+            "sourceSha256": "f24efc61d86ddccb43b9c42dac7164de0d135ec8b679e69425968a84ffb5401f",
+            "pageCount": 4
+          }
+        ]
+      }
+    ]
+  },
+  "validation": {
+    "digitalIntegrityPass": true,
+    "printReady": false,
+    "artifactReport": {
+      "path": ".codex-temp/books-e2/final-production/validation/report.json",
+      "sha256": "045f1e6fe101aeeabd7f43b8511f5246a8a1a1a5ff2eb752d2abce6900c36845",
+      "bytes": 63896
+    },
+    "packageReports": 26,
+    "controlDocumentsInspected": 10,
+    "coverTemplatePass": true,
+    "coverTemplateCount": 12,
+    "qrReport": {
+      "path": ".codex-temp/books-e2/final-production/validation/qr-report.json",
+      "sha256": "4207c44be9fd3e3b05f17c3850c3a02c7c82b7eb2d4725265e63bbb8bf2dc556",
+      "bytes": 213369
+    },
+    "readingBodyPdfs": 4,
+    "colorGrayscaleStopChecks": 244,
+    "decodedUrlObservations": 536,
+    "samePdfPreviewGroups": 8,
+    "samePdfPreviewPages": 440,
+    "fontReport": {
+      "path": ".codex-temp/books-e2/series/review/final-pdf-type-report.json",
+      "sha256": "edc4afbdb25bdc0585454888b56130b23d5adcda9d3ffe25cd766590bf14304d",
+      "bytes": 4039
+    },
+    "nominalMinimumPt": 9,
+    "actualPdfMinimumPt": 8.992500050832474,
+    "fontSizeDisclosure": "Actual PDF text-matrix minimum is8.9925000508pt for nominal9pt SVG labels; not claimed as actual>=9pt. Tolerance distinguishes Chromium coordinate quantization from designed undersized type.",
+    "all48PdfBytesPreservedAcrossReportWordingRefresh": true,
+    "limitations": [
+      "RGB; PDF/X и CMYK не подтверждены.",
+      "Приём точных файлов выбранной типографией не подтверждён; пользователь самостоятельно уточняет её требования.",
+      "Домашняя бумажная проба не выполнена; она необязательна для цифрового выпуска."
+    ]
+  },
+  "localCatalogStage": {
+    "baseManifestSha256": "02e7aef97f0d01f9658b3145156e66d0f4e7bd79581c39eb9cbcb747e4e1d6eb",
+    "snapshot": {
+      "path": "data/travelBooks/releases/2b943814997fc9a703bef611242e088fe69926db669b6cbcf90f4a8673007c75.json",
+      "sha256": "2b943814997fc9a703bef611242e088fe69926db669b6cbcf90f4a8673007c75",
+      "bytes": 999422
+    },
+    "books": 8,
+    "metadataResources": 8,
+    "relatedIndexEntries": 8,
+    "rawBooksPreserved": 6,
+    "oldResourcesPreserved": 1504,
+    "oldRelatedEntriesPreserved": 6,
+    "newResources": 494,
+    "totalResources": 1998,
+    "preservationReport": {
+      "path": ".codex-temp/books-e2/series/review/graphic-preservation-report.json",
+      "sha256": "524a718ee089c07a44a765a8d7b2f81cf6d84bc77c2b697aebec48c797e78456",
+      "bytes": 1198
+    }
+  },
+  "noAuthoringInputMutationDuringPublication": true
+}

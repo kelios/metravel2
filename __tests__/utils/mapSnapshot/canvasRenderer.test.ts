@@ -1,4 +1,4 @@
-const mockLoadCrossOriginImage = jest.fn((_url: string) =>
+const mockLoadCrossOriginImage = jest.fn((_url: string):Promise<HTMLImageElement> =>
   Promise.reject(new Error('tile unavailable')),
 )
 
@@ -15,6 +15,7 @@ describe('generateCanvasMapSnapshot provider compliance', () => {
     arc: jest.fn(),
     beginPath: jest.fn(),
     ellipse: jest.fn(),
+    drawImage:jest.fn(),
     fill: jest.fn(),
     fillRect: jest.fn(),
     fillStyle: '',
@@ -33,6 +34,7 @@ describe('generateCanvasMapSnapshot provider compliance', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    mockLoadCrossOriginImage.mockReset().mockRejectedValue(new Error('tile unavailable'))
     jest.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context as any)
     jest.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue('data:image/png;base64,map')
   })
@@ -61,4 +63,15 @@ describe('generateCanvasMapSnapshot provider compliance', () => {
       176,
     )
   })
+  it('fails closed on an incomplete authoring basemap while legacy runtime keeps its fallback',async()=>{
+    await expect(generateCanvasMapSnapshot([{lat:53.9,lng:27.56}],{width:320,height:180,requireCompleteTiles:true})).rejects.toThrow('MAP_TILES_INCOMPLETE');
+  })
+  it('authors the complete basemap without bitmap markers so vector labels stay physically sized',async()=>{
+    mockLoadCrossOriginImage.mockResolvedValue({} as HTMLImageElement)
+    await expect(generateCanvasMapSnapshot([{lat:53.9,lng:27.56}],{width:320,height:180,showMarkers:false,showLabels:false,requireCompleteTiles:true})).resolves.toBe('data:image/png;base64,map')
+    expect(context.drawImage).toHaveBeenCalled()
+    expect(context.arc).not.toHaveBeenCalled()
+    expect(fillText.mock.calls.every(call=>call[0]==='© OpenStreetMap contributors')).toBe(true)
+  })
+
 })

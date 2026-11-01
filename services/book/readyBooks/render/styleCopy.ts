@@ -38,11 +38,21 @@ const FANTASY: BookStyleCopy = {
   creditsFont: 'Cormorant Garamond — The Cormorant Project Authors, SIL Open Font License 1.1. Эпиграф обложки — Marck Script, Denis Masharov, SIL OFL 1.1. Русский язык.',
 };
 
+const GRAPHIC: BookStyleCopy = {
+  style: 'graphic',
+  artAlt: 'Графическая иллюстрация',
+  coverAlt: 'Графическая иллюстрация места из книги',
+  usage: 'У каждого места три страницы: чёрно-белая графика и короткий рассказ, свободное место для собственного снимка и чистая страница для записей.',
+  creditsSource: 'Основой графических иллюстраций стали фотографии автора опубликованных путешествий MeTravel. Источники и происхождение производных изображений сохранены в реестре издания.',
+  creditsFont: 'Noto Serif и Noto Sans — The Noto Project Authors, SIL Open Font License 1.1. Эпиграф обложки — Marck Script, Denis Masharov, SIL OFL 1.1. Русский язык.',
+};
+
 export function bookStyleCopy(style: BookVisualStyle | undefined): BookStyleCopy {
   switch (style ?? 'watercolor') {
     case 'watercolor': return WATERCOLOR;
     case 'photo': return PHOTO;
     case 'fantasy': return FANTASY;
+    case 'graphic': return GRAPHIC;
     default: throw new Error(`Visual style has no approved edition yet: ${style}`);
   }
 }

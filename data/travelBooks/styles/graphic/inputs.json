@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "taskId": 2855,
+  "visualStyle": "graphic",
+  "recordedOn": "2026-11-01",
+  "status": "verified-inputs-not-assembled-not-published",
+  "printReady": false,
+  "countries": [
+    {
+      "country": "BY",
+      "placeCount": 31,
+      "evidence": {
+        "path": "data/travelBooks/by/graphic-evidence.json",
+        "sha256": "9f410d1cd4220c05a9555e9e85ab35f98a65c9208d4b0a4056db88fd428c7d5b",
+        "bytes": 230806
+      }
+    },
+    {
+      "country": "PL",
+      "placeCount": 30,
+      "evidence": {
+        "path": "data/travelBooks/pl/graphic-evidence.json",
+        "sha256": "75431b329469309d94ec53b01e4b9d6e2e866e7db533b0a4c11e50b07b93f7e3",
+        "bytes": 213051
+      }
+    }
+  ],
+  "approval": {
+    "path": "data/travelBooks/styles/graphic/approval.json",
+    "sha256": "b0477397ca703ce75c55de3d9b69dcc45d5736da4c98a9bc323dfc71666bbf15",
+    "bytes": 2345
+  },
+  "styleReference": {
+    "path": "data/travelBooks/styles/graphic/style-reference.png",
+    "sha256": "f89fbe4748088f690aca191ef8312fa7b9a918e2fb46528cb7626aff9d21445f",
+    "bytes": 3361150
+  },
+  "font": {
+    "path": "data/travelBooks/styles/graphic/font-provenance.json",
+    "sha256": "6180b1dcac696cec1618599af37c8fb300a3c64067200aa01976e278f5829aff",
+    "bytes": 2314
+  },
+  "historicalProof": {
+    "path": "docs/design/travel-memory-books-v1/assets/graphic-style-sample-provenance.json",
+    "sha256": "f5af364df2c29e46fa885cbfcd045d16fda276fadf0ca32a44c460454bdc458e",
+    "bytes": 13836
+  },
+  "localAssetState": "All61 original photographs and selected artwork files remain in existing ignored staging paths; no network substitution allowed. Mir approved specimen retained unchanged.",
+  "remainingChecks": [
+    "Shared loader/source/renderer style integration",
+    "Four full country/profile PDF packages",
+    "All61heading/story fit and embedded static TTF inspection",
+    "244actual PDF QR targets and same-PDF preview hashes",
+    "Independent review, additive publication and production acceptance"
+  ]
+}

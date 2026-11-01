@@ -1,0 +1,499 @@
+{
+  "schemaVersion": 1,
+  "books": [
+    {
+      "id": "belarus-memory",
+      "slug": "belarus",
+      "kind": "places",
+      "title": "Беларусь. Книга воспоминаний",
+      "country": "BY",
+      "revision": "7a7f22a529343ba4ea6356a30107d610",
+      "contentLocale": "ru",
+      "status": "partial",
+      "coverUri": "/travel-books/belarus-memory/7a7f22a529343ba4ea6356a30107d610/pocket-150x100/preview-cover-1.webp",
+      "stopCount": 31,
+      "bodyPageCount": 108,
+      "profiles": [
+        {
+          "id": "pocket-150x100",
+          "widthMm": 150,
+          "heightMm": 100,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        },
+        {
+          "id": "album-a5",
+          "widthMm": 148,
+          "heightMm": 210,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        }
+      ],
+      "missing": [
+        "provider-acceptance",
+        "paper-check"
+      ],
+      "metadata": {
+        "kind": "book-metadata",
+        "bookId": "belarus-memory",
+        "revision": "7a7f22a529343ba4ea6356a30107d610",
+        "uri": "https://metravel.by/travel-books/belarus-memory/7a7f22a529343ba4ea6356a30107d610/book.json",
+        "mime": "application/json",
+        "bytes": 89960,
+        "sha256": "4ce024533518827406f6ce26d3b48aa4df98ece6ee251c6a9da4d8bfc2419648"
+      }
+    },
+    {
+      "id": "poland-memory",
+      "slug": "poland",
+      "kind": "places",
+      "title": "Польша. Книга воспоминаний",
+      "country": "PL",
+      "revision": "fb705e626b9f350f0fc0baa08513fd24",
+      "contentLocale": "ru",
+      "status": "partial",
+      "coverUri": "/travel-books/poland-memory/fb705e626b9f350f0fc0baa08513fd24/pocket-150x100/preview-cover-1.webp",
+      "stopCount": 30,
+      "bodyPageCount": 104,
+      "profiles": [
+        {
+          "id": "pocket-150x100",
+          "widthMm": 150,
+          "heightMm": 100,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        },
+        {
+          "id": "album-a5",
+          "widthMm": 148,
+          "heightMm": 210,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        }
+      ],
+      "missing": [
+        "provider-acceptance",
+        "paper-check"
+      ],
+      "metadata": {
+        "kind": "book-metadata",
+        "bookId": "poland-memory",
+        "revision": "fb705e626b9f350f0fc0baa08513fd24",
+        "uri": "https://metravel.by/travel-books/poland-memory/fb705e626b9f350f0fc0baa08513fd24/book.json",
+        "mime": "application/json",
+        "bytes": 85853,
+        "sha256": "62fea6f2347ecd0ac9d3f75748a406a13031b1540d87afab39ce69bd3df34a12"
+      }
+    },
+    {
+      "id": "belarus-photo-memory",
+      "slug": "belarus-photo",
+      "kind": "places",
+      "visualStyle": "photo",
+      "title": "Беларусь. Фотокнига воспоминаний",
+      "country": "BY",
+      "revision": "2026-11-01.photo.f556fd3ffcf3.07603515604d",
+      "contentLocale": "ru",
+      "status": "partial",
+      "coverUri": "https://metravel.by/travel-books/belarus-photo-memory/2026-11-01.photo.f556fd3ffcf3.07603515604d/pocket-150x100/preview-cover-1.webp",
+      "stopCount": 31,
+      "bodyPageCount": 108,
+      "profiles": [
+        {
+          "id": "pocket-150x100",
+          "widthMm": 150,
+          "heightMm": 100,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        },
+        {
+          "id": "album-a5",
+          "widthMm": 148,
+          "heightMm": 210,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        }
+      ],
+      "missing": [
+        "stickers",
+        "instructions",
+        "print-passport",
+        "provider-acceptance",
+        "paper-check"
+      ],
+      "metadata": {
+        "kind": "book-metadata",
+        "bookId": "belarus-photo-memory",
+        "revision": "2026-11-01.photo.f556fd3ffcf3.07603515604d",
+        "uri": "https://metravel.by/travel-books/belarus-photo-memory/2026-11-01.photo.f556fd3ffcf3.07603515604d/book.json",
+        "mime": "application/json",
+        "bytes": 95756,
+        "sha256": "4247643706a364053f986367b689eda21336c70a801c4f628fb12dfc2303ade3"
+      }
+    },
+    {
+      "id": "poland-photo-memory",
+      "slug": "poland-photo",
+      "kind": "places",
+      "visualStyle": "photo",
+      "title": "Польша. Фотокнига воспоминаний",
+      "country": "PL",
+      "revision": "2026-11-01.photo.002d395ce546.700ca00708e0",
+      "contentLocale": "ru",
+      "status": "partial",
+      "coverUri": "https://metravel.by/travel-books/poland-photo-memory/2026-11-01.photo.002d395ce546.700ca00708e0/pocket-150x100/preview-cover-1.webp",
+      "stopCount": 30,
+      "bodyPageCount": 104,
+      "profiles": [
+        {
+          "id": "pocket-150x100",
+          "widthMm": 150,
+          "heightMm": 100,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        },
+        {
+          "id": "album-a5",
+          "widthMm": 148,
+          "heightMm": 210,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        }
+      ],
+      "missing": [
+        "stickers",
+        "instructions",
+        "print-passport",
+        "provider-acceptance",
+        "paper-check"
+      ],
+      "metadata": {
+        "kind": "book-metadata",
+        "bookId": "poland-photo-memory",
+        "revision": "2026-11-01.photo.002d395ce546.700ca00708e0",
+        "uri": "https://metravel.by/travel-books/poland-photo-memory/2026-11-01.photo.002d395ce546.700ca00708e0/book.json",
+        "mime": "application/json",
+        "bytes": 91319,
+        "sha256": "14fb22aea176cf877ec8d492aecb07b7e8e0060e1ffbfacb428649adeed6b283"
+      }
+    },
+    {
+      "id": "belarus-fantasy-memory",
+      "slug": "belarus-fantasy",
+      "kind": "places",
+      "visualStyle": "fantasy",
+      "title": "Беларусь. Книга воспоминаний",
+      "country": "BY",
+      "revision": "2026-11-01.fantasy.daa0240da909.4380f26c74fe",
+      "contentLocale": "ru",
+      "status": "partial",
+      "coverUri": "https://metravel.by/travel-books/belarus-fantasy-memory/2026-11-01.fantasy.daa0240da909.4380f26c74fe/pocket-150x100/preview-cover-1.webp",
+      "stopCount": 31,
+      "bodyPageCount": 108,
+      "profiles": [
+        {
+          "id": "pocket-150x100",
+          "widthMm": 150,
+          "heightMm": 100,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        },
+        {
+          "id": "album-a5",
+          "widthMm": 148,
+          "heightMm": 210,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        }
+      ],
+      "missing": [
+        "stickers",
+        "instructions",
+        "print-passport",
+        "provider-acceptance",
+        "paper-check"
+      ],
+      "metadata": {
+        "kind": "book-metadata",
+        "bookId": "belarus-fantasy-memory",
+        "revision": "2026-11-01.fantasy.daa0240da909.4380f26c74fe",
+        "uri": "https://metravel.by/travel-books/belarus-fantasy-memory/2026-11-01.fantasy.daa0240da909.4380f26c74fe/book.json",
+        "mime": "application/json",
+        "bytes": 94968,
+        "sha256": "2c69c76aaa34af1e05f55340f9a2db08092510c543a6399307d4ccf930d6afb5"
+      }
+    },
+    {
+      "id": "poland-fantasy-memory",
+      "slug": "poland-fantasy",
+      "kind": "places",
+      "visualStyle": "fantasy",
+      "title": "Польша. Книга воспоминаний",
+      "country": "PL",
+      "revision": "2026-11-01.fantasy.154fe03a2389.069156deb479",
+      "contentLocale": "ru",
+      "status": "partial",
+      "coverUri": "https://metravel.by/travel-books/poland-fantasy-memory/2026-11-01.fantasy.154fe03a2389.069156deb479/pocket-150x100/preview-cover-1.webp",
+      "stopCount": 30,
+      "bodyPageCount": 104,
+      "profiles": [
+        {
+          "id": "pocket-150x100",
+          "widthMm": 150,
+          "heightMm": 100,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        },
+        {
+          "id": "album-a5",
+          "widthMm": 148,
+          "heightMm": 210,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        }
+      ],
+      "missing": [
+        "stickers",
+        "instructions",
+        "print-passport",
+        "provider-acceptance",
+        "paper-check"
+      ],
+      "metadata": {
+        "kind": "book-metadata",
+        "bookId": "poland-fantasy-memory",
+        "revision": "2026-11-01.fantasy.154fe03a2389.069156deb479",
+        "uri": "https://metravel.by/travel-books/poland-fantasy-memory/2026-11-01.fantasy.154fe03a2389.069156deb479/book.json",
+        "mime": "application/json",
+        "bytes": 90566,
+        "sha256": "df7e40142eb920b2ae87b570c721bc8afaf9ceaf0e22c4bd03b0e88add431a25"
+      }
+    },
+    {
+      "id": "belarus-graphic-memory",
+      "slug": "belarus-graphic",
+      "kind": "places",
+      "visualStyle": "graphic",
+      "title": "Беларусь. Книга воспоминаний",
+      "country": "BY",
+      "revision": "2026-11-01.graphic.e5434d02447e.1227125e9d5d",
+      "contentLocale": "ru",
+      "status": "partial",
+      "coverUri": "https://metravel.by/travel-books/belarus-graphic-memory/2026-11-01.graphic.e5434d02447e.1227125e9d5d/pocket-150x100/preview-cover-1.webp",
+      "stopCount": 31,
+      "bodyPageCount": 108,
+      "profiles": [
+        {
+          "id": "pocket-150x100",
+          "widthMm": 150,
+          "heightMm": 100,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        },
+        {
+          "id": "album-a5",
+          "widthMm": 148,
+          "heightMm": 210,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        }
+      ],
+      "missing": [
+        "stickers",
+        "instructions",
+        "print-passport",
+        "provider-acceptance",
+        "paper-check"
+      ],
+      "metadata": {
+        "kind": "book-metadata",
+        "bookId": "belarus-graphic-memory",
+        "revision": "2026-11-01.graphic.e5434d02447e.1227125e9d5d",
+        "uri": "https://metravel.by/travel-books/belarus-graphic-memory/2026-11-01.graphic.e5434d02447e.1227125e9d5d/book.json",
+        "mime": "application/json",
+        "bytes": 94995,
+        "sha256": "a52e3521b57280f67be838f78f74fb7ad7b51117c678c82450e3425468cf83e0"
+      }
+    },
+    {
+      "id": "poland-graphic-memory",
+      "slug": "poland-graphic",
+      "kind": "places",
+      "visualStyle": "graphic",
+      "title": "Польша. Книга воспоминаний",
+      "country": "PL",
+      "revision": "2026-11-01.graphic.31464daff96c.b0ad2adc3958",
+      "contentLocale": "ru",
+      "status": "partial",
+      "coverUri": "https://metravel.by/travel-books/poland-graphic-memory/2026-11-01.graphic.31464daff96c.b0ad2adc3958/pocket-150x100/preview-cover-1.webp",
+      "stopCount": 30,
+      "bodyPageCount": 104,
+      "profiles": [
+        {
+          "id": "pocket-150x100",
+          "widthMm": 150,
+          "heightMm": 100,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        },
+        {
+          "id": "album-a5",
+          "widthMm": 148,
+          "heightMm": 210,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        }
+      ],
+      "missing": [
+        "stickers",
+        "instructions",
+        "print-passport",
+        "provider-acceptance",
+        "paper-check"
+      ],
+      "metadata": {
+        "kind": "book-metadata",
+        "bookId": "poland-graphic-memory",
+        "revision": "2026-11-01.graphic.31464daff96c.b0ad2adc3958",
+        "uri": "https://metravel.by/travel-books/poland-graphic-memory/2026-11-01.graphic.31464daff96c.b0ad2adc3958/book.json",
+        "mime": "application/json",
+        "bytes": 90593,
+        "sha256": "4ad9988505b5aa4742bf1f7ce2c44406db4123647464d1eed7c985c50e82d178"
+      }
+    },
+    {
+      "id": "belarus-quests-1",
+      "slug": "belarus-quests-1",
+      "kind": "quests",
+      "title": "Беларусь. Книга квестов. Часть 1",
+      "country": "BY",
+      "revision": "q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.7edef4f428c6.1068ed96d547",
+      "contentLocale": "ru",
+      "status": "partial",
+      "coverUri": "https://metravel.by/travel-books/belarus-quests-1/q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.7edef4f428c6.1068ed96d547/pocket-150x100/preview-cover-1.webp",
+      "stopCount": 41,
+      "bodyPageCount": 174,
+      "profiles": [
+        {
+          "id": "pocket-150x100",
+          "widthMm": 150,
+          "heightMm": 100,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        },
+        {
+          "id": "album-a5",
+          "widthMm": 148,
+          "heightMm": 210,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        }
+      ],
+      "missing": [
+        "stickers",
+        "instructions",
+        "print-passport",
+        "provider-acceptance",
+        "paper-check"
+      ],
+      "seriesId": "belarus-quests",
+      "volume": 1,
+      "metadata": {
+        "kind": "book-metadata",
+        "bookId": "belarus-quests-1",
+        "revision": "q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.7edef4f428c6.1068ed96d547",
+        "uri": "https://metravel.by/travel-books/belarus-quests-1/q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.7edef4f428c6.1068ed96d547/book.json",
+        "mime": "application/json",
+        "bytes": 160903,
+        "sha256": "79f8167c714c15ca7d6e7c39c40a54a3d407713122f39943f64dffe4ac538819"
+      }
+    },
+    {
+      "id": "poland-quests-1",
+      "slug": "poland-quests-1",
+      "kind": "quests",
+      "title": "Польша. Книга квестов. Часть 1",
+      "country": "PL",
+      "revision": "q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.73485f7633fb.faf009a5a3f8",
+      "contentLocale": "ru",
+      "status": "partial",
+      "coverUri": "https://metravel.by/travel-books/poland-quests-1/q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.73485f7633fb.faf009a5a3f8/pocket-150x100/preview-cover-1.webp",
+      "stopCount": 37,
+      "bodyPageCount": 156,
+      "profiles": [
+        {
+          "id": "pocket-150x100",
+          "widthMm": 150,
+          "heightMm": 100,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        },
+        {
+          "id": "album-a5",
+          "widthMm": 148,
+          "heightMm": 210,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        }
+      ],
+      "missing": [
+        "stickers",
+        "instructions",
+        "print-passport",
+        "provider-acceptance",
+        "paper-check"
+      ],
+      "seriesId": "poland-quests",
+      "volume": 1,
+      "metadata": {
+        "kind": "book-metadata",
+        "bookId": "poland-quests-1",
+        "revision": "q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.73485f7633fb.faf009a5a3f8",
+        "uri": "https://metravel.by/travel-books/poland-quests-1/q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.73485f7633fb.faf009a5a3f8/book.json",
+        "mime": "application/json",
+        "bytes": 144558,
+        "sha256": "578845556eb9991e86d3970e8f975cdfc61e14fb587f06a375bd7ae25636b691"
+      }
+    }
+  ]
+}

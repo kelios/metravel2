@@ -12,29 +12,32 @@ from PIL import Image, ImageOps
 
 
 def inspect(pdf, book, page_map, output):
-    destination = {page['stopId']: page['folio'] for page in page_map if page['kind'] == 'destination'}
-    if len(destination) != len(book['stops']):
+    quests = book.get('kind') == 'quests'
+    sources = book['quests'] if quests else book['stops']
+    destination = {page['questId' if quests else 'stopId']: page['folio'] for page in page_map if page['kind'] == ('quest-story' if quests else 'destination')}
+    if len(destination) != len(sources):
         raise ValueError('PDF page map must cover each selected place exactly once')
     output.mkdir(parents=True, exist_ok=True)
     reports = []
-    for stop in book['stops']:
-        if not re.fullmatch(r'[a-z0-9]+(?:[.-][a-z0-9]+)*', stop['id']):
+    for stop in sources:
+        stop_id = stop['questId'] if quests else stop['id']
+        if not re.fullmatch(r'[a-z0-9]+(?:[.-][a-z0-9]+)*', stop_id):
             raise ValueError('Invalid source point identifier')
-        navigation = stop['navigation']
-        expected = [navigation['mapUrl'], navigation['articleUrl']]
-        if navigation.get('quest'):
+        navigation = stop.get('navigation', {})
+        expected = [stop['questUrl']] if quests else [navigation['mapUrl'], navigation['articleUrl']]
+        if not quests and navigation.get('quest'):
             expected.append(navigation['quest']['url'])
-        folio = destination[stop['id']]
-        prefix = output / stop['id']
+        folio = destination[stop_id]
+        prefix = output / stop_id
         subprocess.run(['pdftoppm', '-f', str(folio), '-l', str(folio), '-r', '300', '-singlefile', '-png', str(pdf), str(prefix)], check=True, capture_output=True, timeout=60)
         raster = Path(str(prefix) + '.png')
         with Image.open(raster) as image:
             for mode in ('color', 'grayscale'):
                 decoded = [barcode.text for barcode in zxingcpp.read_barcodes(image if mode == 'color' else ImageOps.grayscale(image))]
                 passed = len(decoded) == len(expected) and set(decoded) == set(expected)
-                reports.append({'stopId': stop['id'], 'folio': folio, 'dpi': 300, 'mode': mode, 'expected': expected, 'decoded': decoded, 'pass': passed})
+                reports.append({'stopId': stop_id, 'folio': folio, 'dpi': 300, 'mode': mode, 'expected': expected, 'decoded': decoded, 'pass': passed})
         raster.unlink()
-    return {'sha256': hashlib.sha256(pdf.read_bytes()).hexdigest(), 'stopCount': len(book['stops']), 'digitalPass': all(report['pass'] for report in reports), 'reports': reports}
+    return {'sha256': hashlib.sha256(pdf.read_bytes()).hexdigest(), 'stopCount': len(sources), 'digitalPass': all(report['pass'] for report in reports), 'reports': reports}
 
 
 def main():

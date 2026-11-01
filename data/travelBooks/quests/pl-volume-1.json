@@ -1,0 +1,4215 @@
+{
+  "schemaVersion": 1,
+  "kind": "quests",
+  "status": "editorial-draft",
+  "id": "poland-quests-1",
+  "slug": "poland-quests-1",
+  "seriesId": "poland-quests",
+  "country": "PL",
+  "volume": 1,
+  "revision": "q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678",
+  "contentLocale": "ru",
+  "title": "Польша. Книга квестов. Часть 1",
+  "catalog": {
+    "verifiedAt": "2026-10-31",
+    "sha256": "abb02404ab4ea2a9a80452eebce8bc1505d63c5ba3e4ec2fadf0189ba9123ecd",
+    "sourceUrl": "https://metravel.by/api/quests/?lang=ru&limit=500",
+    "countryCount": 73
+  },
+  "quests": [
+    {
+      "id": 1,
+      "questId": "krakow-dragon",
+      "title": "Квест по Кракову: Вавельский дракон",
+      "city": "Краков",
+      "questUrl": "https://metravel.by/quests/krakow/krakow-dragon",
+      "durationMinutes": 120,
+      "difficulty": "easy",
+      "tags": [
+        "legend",
+        "history",
+        "citywalk"
+      ],
+      "overview": "След Вавельского дракона ведёт через Краков к его легендарному логову. По дороге город открывается через ворота, фасады, гербы, мосты и башни. История места соседствует с преданием, а внимательное наблюдение помогает находить улики. Начало маршрута — у Флорианских ворот.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/1/?lang=ru",
+        "sha256": "283c9c70446fc528edaf9866acbd2b2ae94dc89b4a5546d942f908b6dfd3f16d",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/1/main/f0011e5186cb4bc4a809e17388e1d189.webp",
+        "sha256": "88932824bfd615f151a7164168deade9c8efb05b8b62ac6c8e3d84e4d7980558",
+        "bytes": 45978,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 109,
+          "stepId": "4-barbakan",
+          "title": "Флорианские ворота — страж на рубеже",
+          "location": "Флорианские ворота",
+          "lat": 50.064856,
+          "lng": 19.941353,
+          "role": "required"
+        },
+        {
+          "id": 80,
+          "stepId": "2-mariacki",
+          "title": "Мариацкий костёл — оборванная мелодия",
+          "location": "Bazylika Mariacka",
+          "lat": 50.061721,
+          "lng": 19.939094,
+          "role": "required"
+        },
+        {
+          "id": 81,
+          "stepId": "3-sukiennice",
+          "title": "Суконные ряды — улика под сводом",
+          "location": "Sukiennice",
+          "lat": 50.061667,
+          "lng": 19.937373,
+          "role": "required"
+        },
+        {
+          "id": 79,
+          "stepId": "1-rynek",
+          "title": "Рыночная площадь — пробуждение легенды",
+          "location": "Rynek Główny",
+          "lat": 50.061541,
+          "lng": 19.936191,
+          "role": "required"
+        },
+        {
+          "id": 340,
+          "stepId": "spot",
+          "title": "✨ Szara Gęś (по желанию)",
+          "location": "Rynek Główny 17, Краков",
+          "lat": 50.060541,
+          "lng": 19.937249,
+          "role": "optional"
+        },
+        {
+          "id": 214,
+          "stepId": "cafe",
+          "title": "☕ Good Day Coffee & Cake (по желанию)",
+          "location": "Good Day Coffee & Cake",
+          "lat": 50.057315,
+          "lng": 19.940737,
+          "role": "optional"
+        },
+        {
+          "id": 110,
+          "stepId": "5-kazimierz",
+          "title": "Казимеж — перекрёсток голосов",
+          "location": "Старая синагога",
+          "lat": 50.051527,
+          "lng": 19.948649,
+          "role": "required"
+        },
+        {
+          "id": 82,
+          "stepId": "6-wawel",
+          "title": "Кладка Бернатка — между водой и небом",
+          "location": "Kładka Ojca Bernatka",
+          "lat": 50.046563,
+          "lng": 19.947499,
+          "role": "required"
+        },
+        {
+          "id": 111,
+          "stepId": "7-smocza-jama",
+          "title": "Smocza Jama — логово чудовища",
+          "location": "Пещера дракона",
+          "lat": 50.053175,
+          "lng": 19.933599,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "questId": "pakocim-voices",
+      "title": "Парк Прокоцим: семейный квест в Кракове",
+      "city": "Краков",
+      "questUrl": "https://metravel.by/quests/krakow/pakocim-voices",
+      "durationMinutes": 90,
+      "difficulty": "easy",
+      "tags": [
+        "park",
+        "family",
+        "nature",
+        "history"
+      ],
+      "overview": "Прокоцим предлагает прислушаться к тихой истории парка: старому гербу, дворцу за деревьями, пруду, австрийскому форту и лесному ручью. Семейный маршрут складывается из небольших наблюдений за камнем, корой и водой. Первой страницей становится каменный герб у костёла.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/2/?lang=ru",
+        "sha256": "21501dcc14d085cdfdf1908f81093401e89d334efe9367e8e87a45ffc87976bd",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/2/main/bff051add9074235a8c1ef4efc8cf5e2.webp",
+        "sha256": "d7d0f2f776d2d6d173986c8ecc5a67d5d515ab423902b4683b9821166e200219",
+        "bytes": 177020,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 83,
+          "stepId": "1-herb",
+          "title": "У ворот",
+          "location": "Костёл св. Николая из Толентино",
+          "lat": 50.018536,
+          "lng": 19.994134,
+          "role": "required"
+        },
+        {
+          "id": 84,
+          "stepId": "2-palace",
+          "title": "Сердце усадьбы",
+          "location": "Дворец",
+          "lat": 50.019348,
+          "lng": 19.995399,
+          "role": "required"
+        },
+        {
+          "id": 85,
+          "stepId": "3-pond",
+          "title": "Живая вода",
+          "location": "Пруд",
+          "lat": 50.020948,
+          "lng": 20.004057,
+          "role": "required"
+        },
+        {
+          "id": 86,
+          "stepId": "4-oak",
+          "title": "Страж времени",
+          "location": "Старое дерево",
+          "lat": 50.017682,
+          "lng": 20.012507,
+          "role": "required"
+        },
+        {
+          "id": 87,
+          "stepId": "5-hedgehog",
+          "title": "Маленький сосед",
+          "location": "Уголок с домиками и табличками в глубине парка",
+          "lat": 50.013842,
+          "lng": 20.01445,
+          "role": "required"
+        },
+        {
+          "id": 88,
+          "stepId": "6-birdhouses",
+          "title": "Хор парка",
+          "location": "Скворечники и качели",
+          "lat": 50.013073,
+          "lng": 20.014758,
+          "role": "required"
+        },
+        {
+          "id": 90,
+          "stepId": "8-fort",
+          "title": "Стены старого форта",
+          "location": "Форт Прокоцим",
+          "lat": 50.010556,
+          "lng": 19.997223,
+          "role": "required"
+        },
+        {
+          "id": 91,
+          "stepId": "9-bridge",
+          "title": "Переход",
+          "location": "Мост через ручей",
+          "lat": 50.015474,
+          "lng": 19.991301,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "questId": "warsaw-syrenka",
+      "title": "Квест по Варшаве: Сирена и Старый город",
+      "city": "Варшава",
+      "questUrl": "https://metravel.by/quests/warsaw/warsaw-syrenka",
+      "durationMinutes": 180,
+      "difficulty": "easy",
+      "tags": [
+        "legend",
+        "culture",
+        "history",
+        "citywalk",
+        "architecture"
+      ],
+      "overview": "Сирена на гербе Варшавы связывает легенду о защитнице города с историей разрушенного и восстановленного Старого города. Маршрут знакомит также с Базилишеком и Золотой уткой. Прогулка идёт с севера на юг: от Барбакана через Рыночную площадь и Королевский тракт к Дворцу культуры.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/6/?lang=ru",
+        "sha256": "44a4d01a117574e09198ee8c2f99004330e27ced2aa33d3461a97effa009e73b",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/6/main/75b7d35379454b5e83bc598e32d41f07.webp",
+        "sha256": "577d82a1950fe65c838b69098fbba4d0e9cc701b86506c4394c1712d8ea2dc22",
+        "bytes": 207328,
+        "widthPx": 1200,
+        "heightPx": 900
+      },
+      "points": [
+        {
+          "id": 114,
+          "stepId": "1-barbakan",
+          "title": "Барбакан — последний рубеж",
+          "location": "Барбакан (Barbakan)",
+          "lat": 52.250607,
+          "lng": 21.010346,
+          "role": "required"
+        },
+        {
+          "id": 343,
+          "stepId": "spot",
+          "title": "✨ Stolica (по желанию)",
+          "location": "Szeroki Dunaj 1/3, Варшава (Старый город)",
+          "lat": 52.249508,
+          "lng": 21.010415,
+          "role": "optional"
+        },
+        {
+          "id": 115,
+          "stepId": "2-syrenka",
+          "title": "Сирена — хранительница Варшавы",
+          "location": "Рыночная площадь Старого города, статуя Сирены",
+          "lat": 52.24979,
+          "lng": 21.01217,
+          "role": "required"
+        },
+        {
+          "id": 116,
+          "stepId": "3-bazyliszek",
+          "title": "Базилишек — взгляд, обращающий в камень",
+          "location": "Улица Кривое Колесо (Krzywe Koło)",
+          "lat": 52.25031,
+          "lng": 21.01207,
+          "role": "required"
+        },
+        {
+          "id": 117,
+          "stepId": "4-katedra",
+          "title": "Кафедральный собор Святого Иоанна",
+          "location": "Архикафедральный собор Святого Иоанна Крестителя",
+          "lat": 52.24888,
+          "lng": 21.01362,
+          "role": "required"
+        },
+        {
+          "id": 118,
+          "stepId": "5-kolumna",
+          "title": "Колонна Сигизмунда",
+          "location": "Замковая площадь, Колонна короля Сигизмунда III",
+          "lat": 52.24725,
+          "lng": 21.01338,
+          "role": "required"
+        },
+        {
+          "id": 119,
+          "stepId": "6-zamek",
+          "title": "Королевский замок",
+          "location": "Королевский замок (Zamek Królewski)",
+          "lat": 52.2479,
+          "lng": 21.01516,
+          "role": "required"
+        },
+        {
+          "id": 123,
+          "stepId": "7-anny",
+          "title": "Костёл Святой Анны — лучший вид на город",
+          "location": "Костёл Святой Анны, смотровая башня",
+          "lat": 52.24621,
+          "lng": 21.01439,
+          "role": "required"
+        },
+        {
+          "id": 217,
+          "stepId": "cafe",
+          "title": "☕ Café Bristol (по желанию)",
+          "location": "Café Bristol, Krakowskie Przedmieście 42/44",
+          "lat": 52.2421169,
+          "lng": 21.015898,
+          "role": "optional"
+        },
+        {
+          "id": 120,
+          "stepId": "8-kopernik",
+          "title": "Памятник Копернику",
+          "location": "Памятник Николаю Копернику, Краковское предместье",
+          "lat": 52.23816,
+          "lng": 21.01797,
+          "role": "required"
+        },
+        {
+          "id": 121,
+          "stepId": "9-zlota-kaczka",
+          "title": "Золотая утка — заколдованная принцесса",
+          "location": "Фонтан «Золотая утка», улица Тамка",
+          "lat": 52.23667,
+          "lng": 21.024,
+          "role": "required"
+        },
+        {
+          "id": 122,
+          "stepId": "10-palac-kultury",
+          "title": "Дворец культуры и науки — финал",
+          "location": "Дворец культуры и науки",
+          "lat": 52.23177,
+          "lng": 21.00618,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "questId": "wroclaw-gnomes",
+      "title": "Квест по Вроцлаву: в поисках гномов",
+      "city": "Вроцлав",
+      "questUrl": "https://metravel.by/quests/wroclaw/wroclaw-gnomes",
+      "durationMinutes": 150,
+      "difficulty": "medium",
+      "tags": [
+        "family",
+        "history",
+        "citywalk",
+        "architecture"
+      ],
+      "overview": "Во Вроцлаве большая история города переплетается с поиском маленьких бронзовых гномов. Их предшественниками стали рисунки «Оранжевой альтернативы», появлявшиеся поверх закрашенных лозунгов. Начиная с Рыночной площади, можно читать архитектуру разных эпох и замечать городских героев у дверей и под ногами.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/17/?lang=ru",
+        "sha256": "739311cdba892b2875a2cf3cbf5b3172641733dcbbbbd1306666c89337c1a634",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/17/main/810b60aefe174837b7253a0573d8fb6a.webp",
+        "sha256": "153933723ea0c2920bed16380ab766d4b1e86af2c399f91d37357db41fcfe840",
+        "bytes": 298212,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 185,
+          "stepId": "rynek",
+          "title": "Рыночная площадь и Ратуша",
+          "location": "Ратуша (Рынок)",
+          "lat": 51.109581,
+          "lng": 17.032078,
+          "role": "required"
+        },
+        {
+          "id": 344,
+          "stepId": "spot",
+          "title": "☕ Cegielnia (по желанию)",
+          "location": "Stare Miasto, у Рынка",
+          "lat": 51.108475,
+          "lng": 17.032269,
+          "role": "optional"
+        },
+        {
+          "id": 186,
+          "stepId": "gnomes",
+          "title": "Вроцлавские гномы",
+          "location": "Папа Краснал и гномы у Свидницкой",
+          "lat": 51.107544,
+          "lng": 17.032513,
+          "role": "required"
+        },
+        {
+          "id": 187,
+          "stepId": "magdalena",
+          "title": "Костёл Святой Марии Магдалины",
+          "location": "Костёл Святой Марии Магдалины",
+          "lat": 51.109505,
+          "lng": 17.035057,
+          "role": "required"
+        },
+        {
+          "id": 228,
+          "stepId": "cafe",
+          "title": "☕ Bulwar Bistro & Cafe (по желанию)",
+          "location": "Bulwar Bistro & Cafe, bulwar Xawerego Dunikowskiego",
+          "lat": 51.11233,
+          "lng": 17.0429,
+          "role": "optional"
+        },
+        {
+          "id": 2975,
+          "stepId": "kominek",
+          "title": "Кардинал у въезда на мост",
+          "location": "Остров Пясек, площадь у костёла Девы Марии на Пясеке — перед въездом на Тумский мост",
+          "lat": 51.114919,
+          "lng": 17.041549,
+          "role": "required"
+        },
+        {
+          "id": 188,
+          "stepId": "most-tumski",
+          "title": "Тумский мост",
+          "location": "Тумский мост (Most Tumski)",
+          "lat": 51.11482,
+          "lng": 17.041822,
+          "role": "required"
+        },
+        {
+          "id": 189,
+          "stepId": "katedra",
+          "title": "Кафедральный собор Иоанна Крестителя",
+          "location": "Архикафедральный собор Святого Иоанна Крестителя",
+          "lat": 51.114217,
+          "lng": 17.04663,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "questId": "gdansk-amber",
+      "title": "Квест по Гданьску: янтарный город",
+      "city": "Гданьск",
+      "questUrl": "https://metravel.by/quests/gdansk/gdansk-amber",
+      "durationMinutes": 120,
+      "difficulty": "medium",
+      "tags": [
+        "history",
+        "citywalk",
+        "architecture"
+      ],
+      "overview": "Гданьск раскрывается как город янтаря и ганзейских купцов, разрушенный войной и восстановленный по старым изображениям. Путь от Золотых ворот к набережной Мотлавы повторяет парадное направление польских монархов. Золотые детали статуй, фонтана и ратуши становятся ориентирами внимательной прогулки.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/18/?lang=ru",
+        "sha256": "017acf6b2a7325818f77ada359f93cf4acc2442aecf5db480d7b77757fa6dbc8",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/18/main/9d5a42534bb94b0ebf47573f923379e2.webp",
+        "sha256": "036a54c72645d4aed0761dcdf811e284d9ed9f7c357f078665d2d095d5295c79",
+        "bytes": 249152,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 192,
+          "stepId": "zlota-brama",
+          "title": "Золотые ворота",
+          "location": "Золотые ворота (Złota Brama)",
+          "lat": 54.349673,
+          "lng": 18.648021,
+          "role": "required"
+        },
+        {
+          "id": 229,
+          "stepId": "cafe",
+          "title": "☕ Ratuszowa Caffe Cocktails (по желанию)",
+          "location": "Ratuszowa Caffe Cocktails",
+          "lat": 54.348858,
+          "lng": 18.652492,
+          "role": "optional"
+        },
+        {
+          "id": 193,
+          "stepId": "neptun",
+          "title": "Фонтан на Длинном рынке",
+          "location": "Длинный рынок (Długi Targ)",
+          "lat": 54.348547,
+          "lng": 18.653229,
+          "role": "required"
+        },
+        {
+          "id": 194,
+          "stepId": "ratusz",
+          "title": "Ратуша Главного города",
+          "location": "Ратуша Главного города",
+          "lat": 54.348791,
+          "lng": 18.652659,
+          "role": "required"
+        },
+        {
+          "id": 195,
+          "stepId": "mariacka",
+          "title": "Базилика Девы Марии",
+          "location": "Базилика Вознесения Девы Марии (Мариацкий костёл)",
+          "lat": 54.349807,
+          "lng": 18.653013,
+          "role": "required"
+        },
+        {
+          "id": 345,
+          "stepId": "spot",
+          "title": "✨ Literacka Wine Bar (по желанию)",
+          "location": "ul. Mariacka 50/52, Гданьск",
+          "lat": 54.349901,
+          "lng": 18.654134,
+          "role": "optional"
+        },
+        {
+          "id": 196,
+          "stepId": "zuraw",
+          "title": "Журав — портовый кран",
+          "location": "Журав (средневековый кран на Мотлаве)",
+          "lat": 54.350567,
+          "lng": 18.657455,
+          "role": "required"
+        },
+        {
+          "id": 241,
+          "stepId": "mariacka-street",
+          "title": "Мариацкая улица и Мариацкие ворота",
+          "location": "Мариацкая улица (Brama Mariacka)",
+          "lat": 54.349409,
+          "lng": 18.656747,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "questId": "poznan-goats",
+      "title": "Квест по Познани: козлики и Старый рынок",
+      "city": "Познань",
+      "questUrl": "https://metravel.by/quests/poznan/poznan-goats",
+      "durationMinutes": 120,
+      "difficulty": "medium",
+      "tags": [
+        "history",
+        "citywalk",
+        "architecture"
+      ],
+      "overview": "Маршрут по Познани соединяет молодую императорскую резиденцию с древней историей острова на Варте. Между ними лежит Старый рынок с ратушными козликами — героями городской легенды о несостоявшемся праздничном обеде. Прогулка начинается у Императорского замка и ведёт к истокам польской государственности.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/19/?lang=ru",
+        "sha256": "e7efbef9adcad00686c47868b20c84a69f2ef7836bb37e6025fd071d740d98b1",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/19/main/1d9236c62c714f778a6f28cab0f7b6f2.webp",
+        "sha256": "2ecf31d5435dca58f3f16b2ac3d872c6e4836018b154d010fb65143ba68dfddb",
+        "bytes": 219502,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 201,
+          "stepId": "zamek",
+          "title": "Императорский замок",
+          "location": "Императорский замок (Zamek Cesarski)",
+          "lat": 52.407424,
+          "lng": 16.918116,
+          "role": "required"
+        },
+        {
+          "id": 2974,
+          "stepId": "zamek-kryptolodzy",
+          "title": "Обелиск у ступеней замка",
+          "location": "Ул. Święty Marcin, перед главным входом в замок (CK Zamek)",
+          "lat": 52.407496,
+          "lng": 16.919197,
+          "role": "required"
+        },
+        {
+          "id": 2973,
+          "stepId": "bazar-cegielski",
+          "title": "Базар — дело бывшего учителя",
+          "location": "Улица Ignacego Paderewskiego, наружная стена здания Bazar у въездной арки",
+          "lat": 52.407812,
+          "lng": 16.930188,
+          "role": "required"
+        },
+        {
+          "id": 199,
+          "stepId": "fara",
+          "title": "Фара — барочный костёл",
+          "location": "Базилика-коллегиата (Фара)",
+          "lat": 52.406496,
+          "lng": 16.934106,
+          "role": "required"
+        },
+        {
+          "id": 346,
+          "stepId": "spot",
+          "title": "✨ Ratuszova (по желанию)",
+          "location": "Stary Rynek 55, Познань",
+          "lat": 52.407491,
+          "lng": 16.934031,
+          "role": "optional"
+        },
+        {
+          "id": 198,
+          "stepId": "ratusz",
+          "title": "Ратуша, козлики и каменный столб",
+          "location": "Познаньская ратуша (Старый рынок)",
+          "lat": 52.408524,
+          "lng": 16.934244,
+          "role": "required"
+        },
+        {
+          "id": 230,
+          "stepId": "croissant-museum",
+          "title": "Музей познаньского рогалика",
+          "location": "Rogalowe Muzeum Poznania",
+          "lat": 52.408378,
+          "lng": 16.935015,
+          "role": "required"
+        },
+        {
+          "id": 231,
+          "stepId": "cafe",
+          "title": "☕ LAGACCA Cafe (по желанию)",
+          "location": "LAGACCA Cafe, ul. Woźna 21",
+          "lat": 52.40794,
+          "lng": 16.935571,
+          "role": "optional"
+        },
+        {
+          "id": 200,
+          "stepId": "katedra",
+          "title": "Кафедральный собор на Тумском острове",
+          "location": "Архикафедра Святых Петра и Павла",
+          "lat": 52.411569,
+          "lng": 16.948696,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "questId": "torun-copernicus",
+      "title": "Квест по Торуни: Коперник и пряники",
+      "city": "Торунь",
+      "questUrl": "https://metravel.by/quests/torun/torun-copernicus",
+      "durationMinutes": 100,
+      "difficulty": "medium",
+      "tags": [
+        "unesco",
+        "history",
+        "citywalk",
+        "architecture"
+      ],
+      "overview": "Готическая Торунь сохранила старый городской облик и память о Николае Копернике. От ратуши маршрут ведёт к его памятнику и дому, падающей башне, собору и фонтану с лягушками. Детали фасадов и городские фигуры помогают прочитать историю места, где учёный родился и вырос.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/20/?lang=ru",
+        "sha256": "f8f3f8f91408da79382a19b1e5fca073452847dbee90014b9b0fdd3377c70eef",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/20/main/b2cf57b100494306a7635d0bb9b8a086.webp",
+        "sha256": "e6e4fe160db4e6b661347f2ca124cf83bc15405084e1373ad4f989da258fa63c",
+        "bytes": 206810,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 203,
+          "stepId": "ratusz",
+          "title": "Староместская ратуша",
+          "location": "Староместская ратуша",
+          "lat": 53.010523,
+          "lng": 18.604369,
+          "role": "required"
+        },
+        {
+          "id": 204,
+          "stepId": "monument",
+          "title": "Памятник Копернику",
+          "location": "Памятник Николаю Копернику",
+          "lat": 53.010305,
+          "lng": 18.604949,
+          "role": "required"
+        },
+        {
+          "id": 347,
+          "stepId": "spot",
+          "title": "✨ Restauracja Luizjana (Dwór Artusa) (по желанию)",
+          "location": "Rynek Staromiejski 6, Торунь",
+          "lat": 53.009841,
+          "lng": 18.604492,
+          "role": "optional"
+        },
+        {
+          "id": 232,
+          "stepId": "cafe",
+          "title": "☕ Grande Coffee (по желанию)",
+          "location": "Grande Coffee",
+          "lat": 53.009432,
+          "lng": 18.603669,
+          "role": "optional"
+        },
+        {
+          "id": 205,
+          "stepId": "dom",
+          "title": "Дом Коперника",
+          "location": "Дом Николая Коперника",
+          "lat": 53.009309,
+          "lng": 18.603884,
+          "role": "required"
+        },
+        {
+          "id": 206,
+          "stepId": "krzywa",
+          "title": "Башня, что стоит не как все",
+          "location": "Оборонительная башня XIV века в линии городских укреплений",
+          "lat": 53.008382,
+          "lng": 18.602074,
+          "role": "required"
+        },
+        {
+          "id": 207,
+          "stepId": "katedra",
+          "title": "Кафедральный собор святых Янов",
+          "location": "Кафедральный собор Святых Иоаннов",
+          "lat": 53.009368,
+          "lng": 18.606332,
+          "role": "required"
+        },
+        {
+          "id": 239,
+          "stepId": "flisak",
+          "title": "Фонтан плотогона",
+          "location": "Фонтан плотогона (Pomnik Flisaka)",
+          "lat": 53.010284,
+          "lng": 18.604012,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "questId": "lublin-old-town",
+      "title": "Квест по Люблину: Старый город",
+      "city": "Люблин",
+      "questUrl": "https://metravel.by/quests/lublin/lublin-old-town",
+      "durationMinutes": 110,
+      "difficulty": "medium",
+      "tags": [
+        "history",
+        "citywalk",
+        "architecture"
+      ],
+      "overview": "В центре люблинской истории — союз Польши и Литвы, заключённый на сейме в замке в 1569 году. Его следы предлагается искать на гербах, фронтонах и башнях Старого города. Прогулка начинается у Краковских ворот и соединяет городские легенды с памятью о встрече двух государств.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/21/?lang=ru",
+        "sha256": "a26cd2f9ac925a313d699e2835b5248967c0ff85bd3b5b086b42c0b21b8c58b8",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/21/main/47d24bda8ed2484b90ad4954b423a594.webp",
+        "sha256": "e6f6b7c0e67cd848b1ed28d965e736fb322adb6de059246a3ce85eed9964debf",
+        "bytes": 231266,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 209,
+          "stepId": "brama",
+          "title": "Краковские ворота",
+          "location": "Краковские ворота (Brama Krakowska)",
+          "lat": 51.247557,
+          "lng": 22.566404,
+          "role": "required"
+        },
+        {
+          "id": 210,
+          "stepId": "trybunal",
+          "title": "Коронный трибунал",
+          "location": "Коронный трибунал (Рынок)",
+          "lat": 51.24783,
+          "lng": 22.567982,
+          "role": "required"
+        },
+        {
+          "id": 240,
+          "stepId": "trynitarska",
+          "title": "Тринитарская башня",
+          "location": "Тринитарская башня (Wieża Trynitarska)",
+          "lat": 51.247057,
+          "lng": 22.568109,
+          "role": "required"
+        },
+        {
+          "id": 211,
+          "stepId": "katedra",
+          "title": "Кафедральный собор",
+          "location": "Архикафедральный собор Святого Иоанна Крестителя",
+          "lat": 51.246717,
+          "lng": 22.568724,
+          "role": "required"
+        },
+        {
+          "id": 233,
+          "stepId": "cafe",
+          "title": "☕ Bubble.Vibe (по желанию)",
+          "location": "Bubble.Vibe",
+          "lat": 51.248576,
+          "lng": 22.569062,
+          "role": "optional"
+        },
+        {
+          "id": 2923,
+          "stepId": "po-farze",
+          "title": "Площадь на месте фары",
+          "location": "Площадь По Фаре (Plac po Farze), ул. Гродская",
+          "lat": 51.248625,
+          "lng": 22.56943,
+          "role": "required"
+        },
+        {
+          "id": 212,
+          "stepId": "brama-grodzka",
+          "title": "Гродская брама",
+          "location": "Гродская брама (Brama Grodzka)",
+          "lat": 51.249651,
+          "lng": 22.569869,
+          "role": "required"
+        },
+        {
+          "id": 213,
+          "stepId": "zamek",
+          "title": "Люблинский замок",
+          "location": "Люблинский замок и часовня Святой Троицы",
+          "lat": 51.25046,
+          "lng": 22.572404,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 29,
+      "questId": "krakow-kazimierz",
+      "title": "Квест по Казимежу: еврейский квартал Кракова",
+      "city": "Краков",
+      "questUrl": "https://metravel.by/quests/krakow/krakow-kazimierz",
+      "durationMinutes": 120,
+      "difficulty": "easy",
+      "tags": [
+        "legend",
+        "culture",
+        "history",
+        "citywalk"
+      ],
+      "overview": "Казимеж был отдельным городом, основанным Казимиром Великим, и стал еврейским сердцем Кракова. Предание об Эстерке соседствует здесь с памятью улиц, синагог и кладбища. На фасадах, надгробиях и дверных косяках маршрут предлагает искать улики прежней жизни и отделять документальную историю от легенды.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/29/?lang=ru",
+        "sha256": "3564fe9f75fd9836cace6dce1966de6b6a25dd929821a94b9df12b058fb3c9b7",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/29/main/effa8ae26e294cc1ab8f5bfb6465402a.webp",
+        "sha256": "3abccb8badae2075889f6d3e329e44aa5436eed8b5b81fd6022d9d2db195dcad",
+        "bytes": 198218,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 299,
+          "stepId": "1-plac-nowy",
+          "title": "Площадь Plac Nowy и «Okrąglak»",
+          "location": "Plac Nowy",
+          "lat": 50.0518,
+          "lng": 19.9447,
+          "role": "required"
+        },
+        {
+          "id": 333,
+          "stepId": "cafe",
+          "title": "☕ Bazaar Bistro (по желанию)",
+          "location": "Bazaar Bistro, Plac Nowy 6, Краков",
+          "lat": 50.051573,
+          "lng": 19.944431,
+          "role": "optional"
+        },
+        {
+          "id": 300,
+          "stepId": "2-stara-synagoga",
+          "title": "Старая синагога",
+          "location": "ul. Szeroka 24",
+          "lat": 50.0517,
+          "lng": 19.9479,
+          "role": "required"
+        },
+        {
+          "id": 301,
+          "stepId": "3-remuh",
+          "title": "Кладбище Ремух и «стена плача»",
+          "location": "ul. Szeroka 40",
+          "lat": 50.052664,
+          "lng": 19.947402,
+          "role": "required"
+        },
+        {
+          "id": 302,
+          "stepId": "4-wysoka",
+          "title": "Высокая синагога и следы мезуз",
+          "location": "ul. Józefa",
+          "lat": 50.051,
+          "lng": 19.9469,
+          "role": "required"
+        },
+        {
+          "id": 341,
+          "stepId": "spot",
+          "title": "✨ Starka (по желанию)",
+          "location": "ul. Józefa 14, Краков (Казимеж)",
+          "lat": 50.05066,
+          "lng": 19.944398,
+          "role": "optional"
+        },
+        {
+          "id": 303,
+          "stepId": "5-corpus-christi",
+          "title": "Базилика Божьего Тела",
+          "location": "ul. Bożego Ciała 26",
+          "lat": 50.0497,
+          "lng": 19.9446,
+          "role": "required"
+        },
+        {
+          "id": 304,
+          "stepId": "6-esterka",
+          "title": "Дом Эстерки",
+          "location": "ul. Krakowska",
+          "lat": 50.0478,
+          "lng": 19.9438,
+          "role": "required"
+        },
+        {
+          "id": 305,
+          "stepId": "7-skalka",
+          "title": "Костёл на Скалке",
+          "location": "ul. Skałeczna 15",
+          "lat": 50.0488,
+          "lng": 19.9382,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 30,
+      "questId": "krakow-podgorze",
+      "title": "Квест по Подгуже: курган Крака и память гетто",
+      "city": "Краков",
+      "questUrl": "https://metravel.by/quests/krakow/krakow-podgorze",
+      "durationMinutes": 120,
+      "difficulty": "medium",
+      "tags": [
+        "legend",
+        "memory",
+        "history",
+        "citywalk"
+      ],
+      "overview": "Подгуже на другом берегу Вислы соединяет предание о князе Краке с тяжёлой памятью краковского гетто и фабрики Шиндлера. Путь ведёт от площади памяти к Кургану Крака, откуда открывается город. У мемориальных мест важна тишина; в конце прогулки предстоит подъём.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/30/?lang=ru",
+        "sha256": "701dd1888a6f9c18768f24fe840b6d481b30a5bdb278d10018f4b85e41b82ad8",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/30/main/9e9ccaee414d4e7a8f0bd8a3d92f74b9.webp",
+        "sha256": "091933203c7acc327f180fdf44cbf2d11f562a058a8d6cfd0be7584cc27047b7",
+        "bytes": 196838,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 307,
+          "stepId": "1-plac-getta",
+          "title": "Площадь Героев Гетто",
+          "location": "Plac Bohaterów Getta",
+          "lat": 50.046524,
+          "lng": 19.954268,
+          "role": "required"
+        },
+        {
+          "id": 308,
+          "stepId": "2-apteka",
+          "title": "Аптека, которая осталась в гетто",
+          "location": "Plac Bohaterów Getta 18",
+          "lat": 50.046236,
+          "lng": 19.954148,
+          "role": "required"
+        },
+        {
+          "id": 309,
+          "stepId": "3-schindler",
+          "title": "Фабрика Шиндлера",
+          "location": "ul. Lipowa 4",
+          "lat": 50.0476,
+          "lng": 19.9618,
+          "role": "required"
+        },
+        {
+          "id": 342,
+          "stepId": "spot",
+          "title": "✨ Kuchnia Polska Gąska (по желанию)",
+          "location": "ul. Limanowskiego 1, Краков (Подгуже)",
+          "lat": 50.045057,
+          "lng": 19.950205,
+          "role": "optional"
+        },
+        {
+          "id": 334,
+          "stepId": "cafe",
+          "title": "☕ Cafe Lukier (по желанию)",
+          "location": "Cafe Lukier, Rynek Podgórski 4, Краков",
+          "lat": 50.043761,
+          "lng": 19.949897,
+          "role": "optional"
+        },
+        {
+          "id": 310,
+          "stepId": "4-josef",
+          "title": "Костёл святого Иосифа",
+          "location": "Rynek Podgórski",
+          "lat": 50.043274,
+          "lng": 19.949897,
+          "role": "required"
+        },
+        {
+          "id": 311,
+          "stepId": "5-benedykt",
+          "title": "Костёл святого Бенедикта",
+          "location": "Холм Лясота",
+          "lat": 50.043316,
+          "lng": 19.957191,
+          "role": "required"
+        },
+        {
+          "id": 312,
+          "stepId": "6-kurhan",
+          "title": "Курган Крака",
+          "location": "Kopiec Krakusa",
+          "lat": 50.0381,
+          "lng": 19.9584,
+          "role": "required"
+        },
+        {
+          "id": 313,
+          "stepId": "7-liban",
+          "title": "Каменоломня Либан",
+          "location": "Kamieniołom Liban",
+          "lat": 50.038082,
+          "lng": 19.958435,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 31,
+      "questId": "krakow-nowahuta",
+      "title": "Квест по Нова-Хуте: соцгород Кракова",
+      "city": "Краков",
+      "questUrl": "https://metravel.by/quests/krakow/krakow-nowahuta",
+      "durationMinutes": 100,
+      "difficulty": "easy",
+      "tags": [
+        "culture",
+        "history",
+        "citywalk",
+        "architecture"
+      ],
+      "overview": "Нова-Хута задумывалась как идеальный рабочий город вокруг металлургического комбината. Широкие проспекты и парадные дома до сих пор хранят этот замысел, но церковь и история протестов говорят о жизни, вышедшей за чертёж. Компактный маршрут предлагает читать район как утопию и искать места, где план изменили люди.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/31/?lang=ru",
+        "sha256": "a78c07f40b49076c57b9823ba5b4306efd6eaa028b532c5398f6f89170784d77",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/31/main/58444e0120af4b06858dfc7cdf5b561f.webp",
+        "sha256": "28f4fddf8880dc9de852abdcd085748b1c409ee45a8ee07b3756566efea76ca7",
+        "bytes": 161146,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 321,
+          "stepId": "7-laki",
+          "title": "Новохуцкие луга",
+          "location": "Łąki Nowohuckie",
+          "lat": 50.0665,
+          "lng": 20.0354,
+          "role": "required"
+        },
+        {
+          "id": 315,
+          "stepId": "1-plac-centralny",
+          "title": "Центральная площадь",
+          "location": "Plac Centralny, Нова-Хута",
+          "lat": 50.0719,
+          "lng": 20.0369,
+          "role": "required"
+        },
+        {
+          "id": 317,
+          "stepId": "3-arkady",
+          "title": "Аркады центра",
+          "location": "Plac Centralny, восточные кварталы os. Centrum",
+          "lat": 50.0724,
+          "lng": 20.0384,
+          "role": "required"
+        },
+        {
+          "id": 316,
+          "stepId": "2-aleja-roz",
+          "title": "Аллея Роз",
+          "location": "Столовая 1956 года, угол Plac Centralny и Aleja Róż",
+          "lat": 50.073344,
+          "lng": 20.037421,
+          "role": "required"
+        },
+        {
+          "id": 335,
+          "stepId": "cafe",
+          "title": "☕ Stylowa (по желанию)",
+          "location": "Restauracja Stylowa, os. Centrum C 3 (al. Róż), Краков",
+          "lat": 50.074697,
+          "lng": 20.037878,
+          "role": "optional"
+        },
+        {
+          "id": 320,
+          "stepId": "6-shelters",
+          "title": "Убежища под школой",
+          "location": "Podziemna Nowa Huta, os. Szkolne 37",
+          "lat": 50.076533,
+          "lng": 20.050409,
+          "role": "required"
+        },
+        {
+          "id": 1344,
+          "stepId": "8-teatr-ludowy",
+          "title": "Сцена для рабочих",
+          "location": "os. Teatralne 34, Нова-Хута",
+          "lat": 50.080364,
+          "lng": 20.03375,
+          "role": "required"
+        },
+        {
+          "id": 319,
+          "stepId": "5-arka-pana",
+          "title": "Церковь «Ковчег Господень»",
+          "location": "Arka Pana, ul. Obrońców Krzyża 1",
+          "lat": 50.084992,
+          "lng": 20.02935,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 35,
+      "questId": "bialystok-zamenhof",
+      "title": "Квест по Белостоку: Заменгоф и эсперанто",
+      "city": "Белосток",
+      "questUrl": "https://metravel.by/quests/bialystok/bialystok-zamenhof",
+      "durationMinutes": 120,
+      "difficulty": "easy",
+      "tags": [
+        "culture",
+        "history",
+        "citywalk",
+        "architecture"
+      ],
+      "overview": "История Белостока рассказывается через мечту Людвика Заменгофа об общем языке. Он вырос среди польской, еврейской, русской и немецкой речи и создал эсперанто. От места его родного дома маршрут проходит через храмы разных культур к дворцу Браницких, соединяя многоязычный город одной прогулкой.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/35/?lang=ru",
+        "sha256": "748b3237f737ae6625bd0d68397e3c194d164c1f22995b5740cb572dfbbef22b",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/35/main/85b701fa9a764d009e3d3e1c31f04c75.webp",
+        "sha256": "8fbee7825a0af93a2d77b2ae8eda1688dcfe17b6c3cceb26809eeb597e43b9a8",
+        "bytes": 138414,
+        "widthPx": 1200,
+        "heightPx": 900
+      },
+      "points": [
+        {
+          "id": 375,
+          "stepId": "1-mural-zamenhofa",
+          "title": "Мурал Заменгофа — дом, которого нет",
+          "location": "Мурал на ул. Заменгофа, 26 (место рождения Людвика Заменгофа)",
+          "lat": 53.134796,
+          "lng": 23.161085,
+          "role": "required"
+        },
+        {
+          "id": 376,
+          "stepId": "2-pomnik-zamenhofa",
+          "title": "Бюст доктора Эсперанто",
+          "location": "Памятник Людвику Заменгофу, сквер на углу ул. Малмеда и Бялувны",
+          "lat": 53.133458,
+          "lng": 23.157078,
+          "role": "required"
+        },
+        {
+          "id": 377,
+          "stepId": "3-sobor-mikolaja",
+          "title": "Собор святого Николая — восточная нота",
+          "location": "Православный собор св. Николая Чудотворца, ул. Липова, 15",
+          "lat": 53.132726,
+          "lng": 23.154478,
+          "role": "required"
+        },
+        {
+          "id": 378,
+          "stepId": "4-wielka-synagoga",
+          "title": "Памятник Большой синагоге",
+          "location": "Памятник Сожжённой Большой синагоге, между ул. Сураской и Легионовой",
+          "lat": 53.130705,
+          "lng": 23.157513,
+          "role": "required"
+        },
+        {
+          "id": 379,
+          "stepId": "5-ratusz",
+          "title": "Ратуша, которая не была ратушей",
+          "location": "Ратуша, Рынок Костюшко, 10",
+          "lat": 53.13239,
+          "lng": 23.158771,
+          "role": "required"
+        },
+        {
+          "id": 380,
+          "stepId": "6-katedra",
+          "title": "Два костёла в одном — хитрость по-белостокски",
+          "location": "Архикафедральная базилика Успения Девы Марии, ул. Косцельна, 2",
+          "lat": 53.132626,
+          "lng": 23.163012,
+          "role": "required"
+        },
+        {
+          "id": 381,
+          "stepId": "7-brama-wielka",
+          "title": "Брама Велька — парадные ворота Версаля",
+          "location": "Брама Велька (Большие ворота) дворца Браницких",
+          "lat": 53.131603,
+          "lng": 23.167255,
+          "role": "required"
+        },
+        {
+          "id": 382,
+          "stepId": "8-palac-branickich",
+          "title": "Дворец Браницких — польский Версаль",
+          "location": "Дворец Браницких и барочные сады, ул. Килиньского, 1",
+          "lat": 53.130788,
+          "lng": 23.164863,
+          "role": "required"
+        },
+        {
+          "id": 383,
+          "stepId": "9-centrum-zamenhofa",
+          "title": "Центр Заменгофа — по желанию",
+          "location": "Центр им. Людвика Заменгофа, ул. Варшавска, 19",
+          "lat": 53.13369,
+          "lng": 23.169872,
+          "role": "optional"
+        }
+      ]
+    },
+    {
+      "id": 79,
+      "questId": "swiety-krzyz-lysa-gora",
+      "title": "Квест на Лысу-Гуру: гора ведьм и Святого Креста",
+      "city": "Нова-Слупя",
+      "questUrl": "https://metravel.by/quests/swiety-krzyz/swiety-krzyz-lysa-gora",
+      "durationMinutes": 210,
+      "difficulty": "medium",
+      "tags": [
+        "forest",
+        "legend",
+        "nature",
+        "history",
+        "mountain"
+      ],
+      "overview": "Королевская дорога ведёт из Новой Слупи на Лысую Гору: мимо каменного паломника Эмерика, языческого вала и каменной реки к монастырю Святого Креста. Предания сопровождают историю паломничества. Это настоящее восхождение; для пути нужны удобная обувь и вода, а условия посещения стоит проверить перед поездкой.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/79/?lang=ru",
+        "sha256": "5345c2621b189de17d78dfd3b4e344895c262afa3c5d5c1fd92682fcaaa1d4c7",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/79/main/537426fc8708445e9aa78cdb46bbf656.webp",
+        "sha256": "1eb6bd693984c6d425ec937b36e328f76b375ed851077f96e0750d46ba4bb021",
+        "bytes": 155792,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 803,
+          "stepId": "1-rynek-nowa-slupia",
+          "title": "Рынок Новой Слупи — где гордец встал на колени",
+          "location": "Костёл Святого Вавжинца, улица Kielecka, 1, Nowa Słupia",
+          "lat": 50.8632395,
+          "lng": 21.0895318,
+          "role": "required"
+        },
+        {
+          "id": 804,
+          "stepId": "2-figura-emeryka",
+          "title": "Эмерик — пилигрим, который ползёт к концу света",
+          "location": "Фигура свентокшиского пилигрима, вход в нацпарк",
+          "lat": 50.86023,
+          "lng": 21.07815,
+          "role": "required"
+        },
+        {
+          "id": 805,
+          "stepId": "3-droga-krolewska",
+          "title": "Королевская дорога — грот среди леса",
+          "location": "Грот у Королевской дороги перед вершиной, синий шлях на Святой Кшиж",
+          "lat": 50.8575797,
+          "lng": 21.0590645,
+          "role": "required"
+        },
+        {
+          "id": 806,
+          "stepId": "4-waly-kultowe",
+          "title": "Языческий вал — граница священной горы",
+          "location": "Wały kultowe, привершинное плато Лысой горы",
+          "lat": 50.8592,
+          "lng": 21.0552,
+          "role": "required"
+        },
+        {
+          "id": 807,
+          "stepId": "5-bazylika",
+          "title": "Базилика Святого Креста — сердце горы",
+          "location": "Восточная наружная стена базилики, большая нижняя ниша со сценой распятия",
+          "lat": 50.859075,
+          "lng": 21.05358,
+          "role": "required"
+        },
+        {
+          "id": 808,
+          "stepId": "6-kaplica-olesnickich",
+          "title": "Каплица Олесницких — реликвия Святого Креста (по желанию)",
+          "location": "Kaplica Oleśnickich, монастырь Święty Krzyż",
+          "lat": 50.85928,
+          "lng": 21.05343,
+          "role": "optional"
+        },
+        {
+          "id": 809,
+          "stepId": "7-krypta-wisniowieckiego",
+          "title": "Крипта князя Вишневецкого — спящий в подземелье",
+          "location": "Krypta księcia Jeremiego Wiśniowieckiego",
+          "lat": 50.8591,
+          "lng": 21.05306,
+          "role": "required"
+        },
+        {
+          "id": 2976,
+          "stepId": "7a-krzyz-morowy",
+          "title": "Моровой крест — старинный обычай на новый лад",
+          "location": "Каменная ограда у подножия базилики, Święty Krzyż",
+          "lat": 50.8589029,
+          "lng": 21.0527715,
+          "role": "required"
+        },
+        {
+          "id": 810,
+          "stepId": "8-telebashnya",
+          "title": "Телебашня — новый великан Лысой горы",
+          "location": "RTCN Święty Krzyż",
+          "lat": 50.86025,
+          "lng": 21.04848,
+          "role": "required"
+        },
+        {
+          "id": 811,
+          "stepId": "9-goloborze",
+          "title": "Голоборье — камни, которые уронили черти",
+          "location": "Смотровая галерея на голоборье Кобендзы",
+          "lat": 50.86109,
+          "lng": 21.04747,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 80,
+      "questId": "ojcow-lokietek",
+      "title": "Квест по Ойцувской долине: паук, спасший короля",
+      "city": "Ойцув",
+      "questUrl": "https://metravel.by/quests/ojcow/ojcow-lokietek",
+      "durationMinutes": 300,
+      "difficulty": "medium",
+      "tags": [
+        "castle",
+        "forest",
+        "hiking",
+        "legend",
+        "nature"
+      ],
+      "overview": "Ойцувская долина собирает легенды о спасшем Локетка пауке, скале Твардовского и верном псе у замка. Путь от Злота-Гуры идёт к королевской пещере, Краковским воротам, руинам Ойцува и часовне «На воде», затем к Мачуге Геркулеса и Песковой Скале. Прогулка длинная и требует удобной обуви, воды и запаса времени.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/80/?lang=ru",
+        "sha256": "50ca9ee84b11de3688b784680acce6b67ba2c681808c2cb1c9a29dc80756d420",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/80/main/148f393b72624c2fbe68dd96d1b1366f.webp",
+        "sha256": "1f4eb9b901e3ef6c7425aa7f8978fd77446e2b2bd5723b6d79993717e291cf99",
+        "bytes": 259726,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 813,
+          "stepId": "1-jaskinia-lokietka",
+          "title": "Пещера Локетка — паутина, обманувшая погоню",
+          "location": "Jaskinia Łokietka, гора Хелмова",
+          "lat": 50.201728,
+          "lng": 19.818614,
+          "role": "required"
+        },
+        {
+          "id": 814,
+          "stepId": "2-brama-krakowska",
+          "title": "Краковские ворота — каменный портал долины",
+          "location": "Brama Krakowska, долина Прондника",
+          "lat": 50.19609,
+          "lng": 19.82888,
+          "role": "required"
+        },
+        {
+          "id": 815,
+          "stepId": "3-zrodelko-milosci",
+          "title": "Источник Любви — глоток на двоих",
+          "location": "Źródełko Miłości",
+          "lat": 50.19582,
+          "lng": 19.83002,
+          "role": "required"
+        },
+        {
+          "id": 816,
+          "stepId": "4-jaskinia-ciemna",
+          "title": "Тёмная пещера — самые древние поляки (по желанию)",
+          "location": "Jaskinia Ciemna, гора Коронна",
+          "lat": 50.19684,
+          "lng": 19.83175,
+          "role": "optional"
+        },
+        {
+          "id": 817,
+          "stepId": "5-zamek-ojcow",
+          "title": "Замок «Отец у скалы» — сыновний подарок Казимира",
+          "location": "Руины замка Казимира Великого, Ойцув",
+          "lat": 50.211383,
+          "lng": 19.828506,
+          "role": "required"
+        },
+        {
+          "id": 818,
+          "stepId": "6-kaplica-na-wodzie",
+          "title": "Часовня «На воде» — святыня в обход указа",
+          "location": "Kaplica «Na Wodzie», Ойцув",
+          "lat": 50.21446,
+          "lng": 19.83061,
+          "role": "required"
+        },
+        {
+          "id": 2925,
+          "stepId": "6b-grodzisko",
+          "title": "Пустынь Саломеи — обелиск над долиной",
+          "location": "Пустынь блаженной Саломеи, Гродзиско",
+          "lat": 50.22955,
+          "lng": 19.82405,
+          "role": "required"
+        },
+        {
+          "id": 819,
+          "stepId": "7-maczuga-herkulesa",
+          "title": "Мачуга Геркулеса — скала, воткнутая дьяволом",
+          "location": "Maczuga Herkulesa, Пескова Скала",
+          "lat": 50.2429,
+          "lng": 19.78299,
+          "role": "required"
+        },
+        {
+          "id": 820,
+          "stepId": "8-pieskowa-skala",
+          "title": "Пескова Скала — замок, названный в честь пёсика",
+          "location": "Zamek Pieskowa Skała",
+          "lat": 50.24421,
+          "lng": 19.78004,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 81,
+      "questId": "niedzica-skarb-inkow",
+      "title": "Квест по Недзице: клад инков над Дунайцем",
+      "city": "Недзица",
+      "questUrl": "https://metravel.by/quests/niedzica/niedzica-skarb-inkow",
+      "durationMinutes": 150,
+      "difficulty": "easy",
+      "tags": [
+        "lake",
+        "castle",
+        "legend",
+        "history"
+      ],
+      "overview": "Замок Дунаец в Недзице связан с легендой об Умине и сокровище инков, а также с рассказом о найденном под порогом узелковом письме. Судьба находки остаётся неясной. Короткий маршрут ведёт от кассы и хозяйственных построек к замку и плотине; руины Чорштына на другом берегу посещаются по желанию.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/81/?lang=ru",
+        "sha256": "0a96acab98a4f92853f3e884de2e9db2c6efe55c3aa8d9bf7e6a5f2e0a454a5e",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/81/main/bb38145dba0d42a69a078c6a87c6f94c.webp",
+        "sha256": "1f37452e65c1ac6e334d8d3fc45327cdea3eaa05f64044a1dfc95e6669b341bb",
+        "bytes": 154224,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 822,
+          "stepId": "1-spichlerz",
+          "title": "Спихлеж — амбар у подножия",
+          "location": "Spichlerz, Niedzica-Zamek",
+          "lat": 49.42137,
+          "lng": 20.31825,
+          "role": "required"
+        },
+        {
+          "id": 823,
+          "stepId": "2-wozownia",
+          "title": "Возовня — на чём ездили последние графы (по желанию)",
+          "location": "Wozownia, Niedzica-Zamek",
+          "lat": 49.42204,
+          "lng": 20.31781,
+          "role": "optional"
+        },
+        {
+          "id": 824,
+          "stepId": "3-brama-prog",
+          "title": "Брама — тот самый порог",
+          "location": "Въездная брама замка Дунаец",
+          "lat": 49.42251,
+          "lng": 20.31962,
+          "role": "required"
+        },
+        {
+          "id": 825,
+          "stepId": "4-studnia",
+          "title": "Колодец пленников — не называй имён",
+          "location": "Двор верхнего замка, колодец",
+          "lat": 49.4225,
+          "lng": 20.3197,
+          "role": "required"
+        },
+        {
+          "id": 826,
+          "stepId": "5-taras",
+          "title": "Терраса — два замка, одно озеро",
+          "location": "Терраса среднего замка",
+          "lat": 49.42249,
+          "lng": 20.3198,
+          "role": "required"
+        },
+        {
+          "id": 827,
+          "stepId": "6-zapora",
+          "title": "Плотина — прогулка по стене воды",
+          "location": "Zapora Niedzica, корона плотины",
+          "lat": 49.42005,
+          "lng": 20.3217,
+          "role": "required"
+        },
+        {
+          "id": 828,
+          "stepId": "7-czorsztyn",
+          "title": "Чорштын — замок-соперник (по желанию)",
+          "location": "Руины замка Чорштын, Подзамче",
+          "lat": 49.43494,
+          "lng": 20.31311,
+          "role": "optional"
+        }
+      ]
+    },
+    {
+      "id": 82,
+      "questId": "zakopane-spiacy-rycerze",
+      "title": "Квест по Закопане: спящие рыцари Гевонта",
+      "city": "Закопане",
+      "questUrl": "https://metravel.by/quests/zakopane/zakopane-spiacy-rycerze",
+      "durationMinutes": 200,
+      "difficulty": "easy",
+      "tags": [
+        "legend",
+        "history",
+        "citywalk",
+        "mountain"
+      ],
+      "overview": "Силуэт Гевонта напоминает спящего рыцаря, а гуральское предание поселяет внутри горы заколдованное войско. Городской маршрут по Закопане идёт от Велькой Крокви через места его врачей, сказителей и создателей архитектурного стиля к старому костёлу и Губалувке. Подъём завершает прогулку панорамой гор.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/82/?lang=ru",
+        "sha256": "b51726e4557aa823398e30976c7997937f8ed956b05f7b3d77aa1aac47795363",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/82/main/dcb81d09a165407dbee41a15b91bcc94.webp",
+        "sha256": "5d9fa8e4492d0bd5e0a46be117a4d1a724645ec6ff07806e36d00c5bcace5355",
+        "bytes": 170330,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 830,
+          "stepId": "1-wielka-krokiew",
+          "title": "Велька Крокев — трамплин под горой",
+          "location": "Wielka Krokiew, ул. Броняслава Чеха",
+          "lat": 49.27925,
+          "lng": 19.96366,
+          "role": "required"
+        },
+        {
+          "id": 831,
+          "stepId": "2-pomnik-sabaly",
+          "title": "Двое, придумавшие Закопане",
+          "location": "Памятник Халубинскому и Сабале",
+          "lat": 49.28723,
+          "lng": 19.97072,
+          "role": "required"
+        },
+        {
+          "id": 832,
+          "stepId": "3-krupowki",
+          "title": "Крупувки — найди рыцаря",
+          "location": "Улица Крупувки, средняя часть променада",
+          "lat": 49.2929,
+          "lng": 19.955,
+          "role": "required"
+        },
+        {
+          "id": 2977,
+          "stepId": "3a-pomnik-grunwaldzki",
+          "title": "Король над Крупувками — подарок горцев",
+          "location": "Сквер Пилецкого на площади Неподлеглосци, у Крупувок",
+          "lat": 49.2929492,
+          "lng": 19.953466,
+          "role": "required"
+        },
+        {
+          "id": 833,
+          "stepId": "4-stary-kosciol",
+          "title": "Старый костёл — люди, поднявшие железо на рыцаря",
+          "location": "Старый костёл св. Климента, ул. Косцелиска",
+          "lat": 49.29614,
+          "lng": 19.94645,
+          "role": "required"
+        },
+        {
+          "id": 834,
+          "stepId": "5-peksowy-brzyzek",
+          "title": "Пенксовы Бжизек — кладбище, где хоронят легенды",
+          "location": "Cmentarz na Pęksowym Brzyzku",
+          "lat": 49.29686,
+          "lng": 19.94722,
+          "role": "required"
+        },
+        {
+          "id": 835,
+          "stepId": "6-willa-koliba",
+          "title": "Вилла Колиба — первый дом закопанского стиля (по желанию)",
+          "location": "Willa Koliba, ул. Косцелиска 18",
+          "lat": 49.29434,
+          "lng": 19.94292,
+          "role": "optional"
+        },
+        {
+          "id": 836,
+          "stepId": "7-gubalowka",
+          "title": "Губалувка — рыцарь целиком",
+          "location": "Вершина Губалувки (1126 м)",
+          "lat": 49.306528,
+          "lng": 19.9335,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 83,
+      "questId": "kruszwica-mysia-wieza",
+      "title": "Квест по Крушвице: король, которого съели мыши",
+      "city": "Крушвица",
+      "questUrl": "https://metravel.by/quests/kruszwica/kruszwica-mysia-wieza",
+      "durationMinutes": 130,
+      "difficulty": "easy",
+      "tags": [
+        "lake",
+        "castle",
+        "legend",
+        "history"
+      ],
+      "overview": "Над озером Гопло легенда о князе Попеле и мышах встречается с преданием о гостеприимном Пясте. Нынешняя Мышиная башня появилась значительно позже героев этих историй. Маршрут по Крушвице соединяет романскую коллегиату, мост, Старый рынок и остатки замка с панорамой озера.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/83/?lang=ru",
+        "sha256": "f412a8959cfa0ae2080a14a46c561568e4814cc19469809a6b3bb00fc6f32b97",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/83/main/45b5e8bbfb644c72b608b34fe6148ff4.webp",
+        "sha256": "1b02f5f7bc9d2b2d65e952d3ec70e756426f4798f70367186db2117f487ba376",
+        "bytes": 123198,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 838,
+          "stepId": "1-kolegiata",
+          "title": "Коллегиата — камень времён первых Пястов",
+          "location": "Базилика свв. Петра и Павла",
+          "lat": 52.679835,
+          "lng": 18.327486,
+          "role": "required"
+        },
+        {
+          "id": 839,
+          "stepId": "2-most-kosciuszki",
+          "title": "Мост над тёмной водой",
+          "location": "Мост Тадеуша Костюшко",
+          "lat": 52.673975,
+          "lng": 18.328142,
+          "role": "required"
+        },
+        {
+          "id": 840,
+          "stepId": "3-stary-rynek",
+          "title": "Старый Рынок — соль вместо денег",
+          "location": "Stary Rynek, Крушвица",
+          "lat": 52.6734,
+          "lng": 18.3221,
+          "role": "required"
+        },
+        {
+          "id": 841,
+          "stepId": "4-most-zwodzony",
+          "title": "Подъёмный мост — вход в замчище Попеля",
+          "location": "Most zwodzony, полуостров Жемповский",
+          "lat": 52.672612,
+          "lng": 18.327693,
+          "role": "required"
+        },
+        {
+          "id": 842,
+          "stepId": "5-mysia-wieza",
+          "title": "Мышиная башня — алиби длиной в пятьсот лет",
+          "location": "Mysia Wieża",
+          "lat": 52.672112,
+          "lng": 18.327373,
+          "role": "required"
+        },
+        {
+          "id": 843,
+          "stepId": "6-przystan-rusalka",
+          "title": "Пристань Русалки — королева озера и новый житель легенды",
+          "location": "Пристань «Rusałka», аллея полуострова",
+          "lat": 52.671825,
+          "lng": 18.327175,
+          "role": "required"
+        },
+        {
+          "id": 844,
+          "stepId": "7-grodzisko",
+          "title": "Городище гоплян — где всё было на самом деле (по желанию)",
+          "location": "Grodzisko, южная часть полуострова",
+          "lat": 52.667743,
+          "lng": 18.329502,
+          "role": "optional"
+        }
+      ]
+    },
+    {
+      "id": 84,
+      "questId": "karpacz-duch-gor",
+      "title": "Квест по Карпачу: во владениях Духа Гор",
+      "city": "Карпач",
+      "questUrl": "https://metravel.by/quests/karpacz/karpacz-duch-gor",
+      "durationMinutes": 240,
+      "difficulty": "medium",
+      "tags": [
+        "legend",
+        "nature",
+        "history",
+        "mountain"
+      ],
+      "overview": "Легендарный хозяин Карконошей — Дух Гор — сопровождает путь по Карпачу. Предания рассказывают о его испытаниях для путников и об обманувшей его принцессе. Прогулка идёт от Музея игрушек мимо музеев и памятника вдоль Ломницы к норвежской церкви; направление постепенно набирает высоту.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/84/?lang=ru",
+        "sha256": "2f1485a0240f986f36bdc2f01a01bdfb201fbb5f33be1daad87ee7aeacddce96",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/84/main/83ca7c9c91e34ec6af80f6d30a1b0b71.webp",
+        "sha256": "47930d40f7c0169e1ef8d9ad5ff27594d14ae22924ad16f79246d4eddcce1ac1",
+        "bytes": 179666,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 846,
+          "stepId": "1-muzeum-zabawek",
+          "title": "Музей игрушек — гости в королевстве Духа",
+          "location": "Miejskie Muzeum Zabawek, ул. Kolejowa 3",
+          "lat": 50.7824,
+          "lng": 15.7618,
+          "role": "required"
+        },
+        {
+          "id": 847,
+          "stepId": "2-muzeum-sportu",
+          "title": "Музей спорта и туризма — портреты хозяина (по желанию)",
+          "location": "Muzeum Sportu i Turystyki, ул. Kopernika 2",
+          "lat": 50.77483,
+          "lng": 15.75913,
+          "role": "optional"
+        },
+        {
+          "id": 2990,
+          "stepId": "2b-kamien-everestu",
+          "title": "Камень зимнего Эвереста",
+          "location": "Сквер Zdobywców перед городской управой, ул. Konstytucji 3 Maja 54",
+          "lat": 50.775,
+          "lng": 15.754434,
+          "role": "required"
+        },
+        {
+          "id": 848,
+          "stepId": "3-karkonoskie-tajemnice",
+          "title": "Карконошские тайны — подземное королевство",
+          "location": "Karkonoskie Tajemnice, ул. Mickiewicza 1a",
+          "lat": 50.77392,
+          "lng": 15.7499,
+          "role": "required"
+        },
+        {
+          "id": 849,
+          "stepId": "4-pomnik-liczyrzepy",
+          "title": "Личирепа с карты 1561 года",
+          "location": "Памятник Личирепе, сквер у Konstytucji 3 Maja",
+          "lat": 50.77583,
+          "lng": 15.74541,
+          "role": "required"
+        },
+        {
+          "id": 850,
+          "stepId": "5-zapora-lomnica",
+          "title": "Плотина на Ломнице — ответ людей на гнев Духа",
+          "location": "Zapora na Łomnicy",
+          "lat": 50.77707,
+          "lng": 15.74483,
+          "role": "required"
+        },
+        {
+          "id": 852,
+          "stepId": "7-kolej-na-kope",
+          "title": "Канатка на Копу — ворота в верхнее королевство (по желанию)",
+          "location": "Главный вход нижней станции канатной дороги на Копу, улица Olimpijska",
+          "lat": 50.767673,
+          "lng": 15.7291395,
+          "role": "optional"
+        },
+        {
+          "id": 851,
+          "stepId": "6-dziki-wodospad",
+          "title": "Дикий водопад — водопад, которого нет",
+          "location": "Dziki Wodospad",
+          "lat": 50.76867,
+          "lng": 15.72777,
+          "role": "required"
+        },
+        {
+          "id": 853,
+          "stepId": "8-swiatynia-wang",
+          "title": "Церковь Ванг — норвежская гостья",
+          "location": "Świątynia Wang, Karpacz Górny",
+          "lat": 50.77739,
+          "lng": 15.72415,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 85,
+      "questId": "leczyca-boruta",
+      "title": "Квест по Ленчице: чёрт Борута, страж сокровищ",
+      "city": "Ленчица",
+      "questUrl": "https://metravel.by/quests/leczyca/leczyca-boruta",
+      "durationMinutes": 150,
+      "difficulty": "easy",
+      "tags": [
+        "castle",
+        "legend",
+        "history",
+        "citywalk"
+      ],
+      "overview": "Ленчица рассказывает о Боруте — болотном духе, ставшем в преданиях чертом-шляхтичем и хранителем замкового золота. От костёла святого Андрея путь проходит через стены и рынок к королевскому замку и его коллекции дьяволов. По желанию история продолжается в Туме у романской коллегиаты.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/85/?lang=ru",
+        "sha256": "e9b98788d0f0711bbfffabf84d7666dd512d40c4d08b73869d3b2b10544ac254",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/85/main/2f76485762f647748b43c1b60a005ab7.webp",
+        "sha256": "004b7640d499c2ba6183725d5b1c40570efda2796b6da40545042ce427b34823",
+        "bytes": 119074,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 855,
+          "stepId": "1-kosciol-andrzeja",
+          "title": "Костёл св. Андрея и городские стены",
+          "location": "Костёл св. Андрея Апостола",
+          "lat": 52.058664,
+          "lng": 19.200381,
+          "role": "required"
+        },
+        {
+          "id": 856,
+          "stepId": "2-rynek-ratusz",
+          "title": "Рынок и ратуша королевского архитектора",
+          "location": "Plac Tadeusza Kościuszki",
+          "lat": 52.059497,
+          "lng": 19.201458,
+          "role": "required"
+        },
+        {
+          "id": 857,
+          "stepId": "3-pomnik-bzury",
+          "title": "Память Бзуры — сентябрь 1939-го",
+          "location": "Памятник героям битвы на Бзуре",
+          "lat": 52.058675,
+          "lng": 19.201597,
+          "role": "required"
+        },
+        {
+          "id": 858,
+          "stepId": "4-bernardyni",
+          "title": "Бернардинцы — чёрт на подработке (по желанию)",
+          "location": "Костёл бернардинцев",
+          "lat": 52.061481,
+          "lng": 19.201068,
+          "role": "optional"
+        },
+        {
+          "id": 859,
+          "stepId": "5-figura-boruty",
+          "title": "Борута собственной персоной",
+          "location": "Фигура Боруты у входа в музей, замок",
+          "lat": 52.05911,
+          "lng": 19.203532,
+          "role": "required"
+        },
+        {
+          "id": 860,
+          "stepId": "6-zamek",
+          "title": "Королевский замок — башня над лохами",
+          "location": "Королевский замок Ленчицы, двор и башня",
+          "lat": 52.058929,
+          "lng": 19.203884,
+          "role": "required"
+        },
+        {
+          "id": 861,
+          "stepId": "7-muzeum-diablow",
+          "title": "Четыреста чертей под одной крышей",
+          "location": "Музей в Ленчице, экспозиция «Дьявол Борута»",
+          "lat": 52.05911,
+          "lng": 19.203532,
+          "role": "required"
+        },
+        {
+          "id": 862,
+          "stepId": "8-tum",
+          "title": "Тум — следы когтей на святыне (по желанию)",
+          "location": "Архиколлегиата в Туме",
+          "lat": 52.056108,
+          "lng": 19.232615,
+          "role": "optional"
+        }
+      ]
+    },
+    {
+      "id": 90,
+      "questId": "malbork-marienburg",
+      "title": "Квест по Мальборку: ядро, промахнувшееся мимо Ордена",
+      "city": "Мальборк",
+      "questUrl": "https://metravel.by/quests/malbork/malbork-marienburg",
+      "durationMinutes": 180,
+      "difficulty": "easy",
+      "tags": [
+        "castle",
+        "legend",
+        "history",
+        "citywalk"
+      ],
+      "overview": "Мариенбург, город Марии, стал столицей Тевтонского ордена и вырос в огромный замковый комплекс. Предания о Белой даме, сокровищах и душах магистров сопровождают его историю. Маршрут начинается с западного берега Ногата и знакомит с крепостью, которую в итоге приобрели за деньги, а не взяли штурмом.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/90/?lang=ru",
+        "sha256": "704f57327650a390e4a4c897cba4b8e4afb7f16cd30383a648e2f9f6999d8033",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/90/main/ebbb6722fcee4e56b1225554b10adb00.webp",
+        "sha256": "8a8a0fa2629588c169487f9d9dc472d7c2ec6715f4d24a087b2b2931bc11120c",
+        "bytes": 124290,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 895,
+          "stepId": "1-panorama-nogat",
+          "title": "Панорама с Ногата — вся мощь Ордена разом",
+          "location": "Смотровая точка на западном берегу Ногата",
+          "lat": 54.041394,
+          "lng": 19.024416,
+          "role": "required"
+        },
+        {
+          "id": 896,
+          "stepId": "2-szkola-lacinska",
+          "title": "Кладка через Ногат и Школа Лацинская",
+          "location": "Szkoła Łacińska, набережная Килярского",
+          "lat": 54.037706,
+          "lng": 19.025226,
+          "role": "required"
+        },
+        {
+          "id": 897,
+          "stepId": "3-ratusz",
+          "title": "Староместская ратуша — уцелевший свидетель",
+          "location": "Ratusz Staromiejski",
+          "lat": 54.03705,
+          "lng": 19.02628,
+          "role": "required"
+        },
+        {
+          "id": 898,
+          "stepId": "4-brama-garncarska",
+          "title": "Гончарные ворота — вход в исчезнувший город",
+          "location": "Brama Garncarska",
+          "lat": 54.036934,
+          "lng": 19.028249,
+          "role": "required"
+        },
+        {
+          "id": 899,
+          "stepId": "5-zamek-muzeum",
+          "title": "Замок: ядро предателя и крепость, которую купили (по желанию)",
+          "location": "Muzeum Zamkowe, вход с ул. Starościńska",
+          "lat": 54.039031,
+          "lng": 19.030312,
+          "role": "optional"
+        },
+        {
+          "id": 900,
+          "stepId": "6-madonna",
+          "title": "Мадонна на стене — 71 год спустя",
+          "location": "Восточная стена костёла НМП, вид с ул. Parkowa",
+          "lat": 54.0402,
+          "lng": 19.0302,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 91,
+      "questId": "kazimierz-dolny-kogut",
+      "title": "Квест по Казимежу-Дольному: чёрт, петух и Эстерка",
+      "city": "Казимеж-Дольны",
+      "questUrl": "https://metravel.by/quests/kazimierz-dolny/kazimierz-dolny-kogut",
+      "durationMinutes": 180,
+      "difficulty": "easy",
+      "tags": [
+        "river",
+        "legend",
+        "history",
+        "citywalk"
+      ],
+      "overview": "Казимеж-Дольны хранит легенду о петухе, спасённом от чёрта, — отсюда знаменитый хлебный сувенир города. Предание об Эстерке добавляет замку королевскую историю. Кольцевая прогулка начинается у колодца на Рынке, поднимается к храму, замку, башне и горе Трёх Крестов, затем возвращается к пекарне и Висле.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/91/?lang=ru",
+        "sha256": "3bd03f7ca75a28e603267a633984859781594eec6bc7b976c84ae9c0402d581d",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/91/main/41b248581d9a4279a8eb6b18d90e13af.webp",
+        "sha256": "4fa43ff1dd15593c0a45554d3b2bf5ec99cab5cb7b105ae5381d78a5d81c441a",
+        "bytes": 154444,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 902,
+          "stepId": "1-rynek-studnia",
+          "title": "Студня на Рынке — глоток с последствиями",
+          "location": "Rynek, старинный колодец",
+          "lat": 51.3221,
+          "lng": 21.9474,
+          "role": "required"
+        },
+        {
+          "id": 903,
+          "stepId": "2-kamienice-przybylow",
+          "title": "Каменицы Пшибылов — святые тёзки братьев",
+          "location": "Kamienice Przybyłów, Rynek 12",
+          "lat": 51.32172,
+          "lng": 21.94752,
+          "role": "required"
+        },
+        {
+          "id": 904,
+          "stepId": "3-fara",
+          "title": "Фара — четыреста лет одного органа",
+          "location": "Фарный костёл свв. Иоанна Крестителя и Варфоломея",
+          "lat": 51.32279,
+          "lng": 21.94873,
+          "role": "required"
+        },
+        {
+          "id": 905,
+          "stepId": "4-zamek",
+          "title": "Замок — руины с любовной историей",
+          "location": "Руины замка Казимира Великого, тропа к башне",
+          "lat": 51.32358,
+          "lng": 21.95035,
+          "role": "required"
+        },
+        {
+          "id": 906,
+          "stepId": "5-baszta",
+          "title": "Башта — «голодная башня»",
+          "location": "Сторожевая башня (baszta)",
+          "lat": 51.32473,
+          "lng": 21.95276,
+          "role": "required"
+        },
+        {
+          "id": 907,
+          "stepId": "6-gora-trzech-krzyzy",
+          "title": "Гора Трёх Крестов — память о море",
+          "location": "Góra Trzech Krzyży",
+          "lat": 51.32188,
+          "lng": 21.95036,
+          "role": "required"
+        },
+        {
+          "id": 908,
+          "stepId": "7-synagoga",
+          "title": "Синагога — память еврейского Казимежа (по желанию)",
+          "location": "Dawna Synagoga, ул. Lubelska 4",
+          "lat": 51.32175,
+          "lng": 21.94806,
+          "role": "optional"
+        },
+        {
+          "id": 909,
+          "stepId": "8-sarzynski-kogut",
+          "title": "Пекарня Сажиньских — легенда, которую можно съесть",
+          "location": "Piekarnia Sarzyński, ул. Nadrzeczna 6",
+          "lat": 51.32152,
+          "lng": 21.94624,
+          "role": "required"
+        },
+        {
+          "id": 910,
+          "stepId": "9-kamienica-celejowska",
+          "title": "Каменица Целеёвска — городок художников (по желанию)",
+          "location": "Kamienica Celejowska, ул. Senatorska 11/13",
+          "lat": 51.32209,
+          "lng": 21.94546,
+          "role": "optional"
+        },
+        {
+          "id": 911,
+          "stepId": "10-bulwar-wisly",
+          "title": "Бульвар Вислы — река, которая всё это построила",
+          "location": "Набережная Вислы, пристань",
+          "lat": 51.32495,
+          "lng": 21.94595,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 92,
+      "questId": "sleza-swieta-gora",
+      "title": "Квест на Сленжу: силезский Олимп",
+      "city": "Собутка",
+      "questUrl": "https://metravel.by/quests/sleza/sleza-swieta-gora",
+      "durationMinutes": 300,
+      "difficulty": "hard",
+      "tags": [
+        "forest",
+        "legend",
+        "nature",
+        "mountain"
+      ],
+      "overview": "Сленжа над силезской равниной хранит каменные валы, древние фигуры и память о дохристианском почитании горы. Маршрут из Собутки ведёт от санктуария святой Анны через рынок к идолам и вершине с костёлом. Это продолжительный подъём: важны подходящая обувь, вода и готовность к переменчивой горной погоде.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/92/?lang=ru",
+        "sha256": "7b896d72cf2c973b144a2032cc08279a8aa3a3c30a9dce77c0c5631d8b3db80d",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/92/main/e7ff09a8624a4d148041e21ec27a1273.webp",
+        "sha256": "f7c55fa6361729b01baf757e663ad39d2141e7500dbb28ba9d8e4f2fb6f42fd1",
+        "bytes": 212586,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 913,
+          "stepId": "1-swieta-anna-grzyb",
+          "title": "Святая Анна и «Гриб» — первый идол",
+          "location": "Санктуарий св. Анны Самотшечей, Собутка",
+          "lat": 50.8996,
+          "lng": 16.74404,
+          "role": "required"
+        },
+        {
+          "id": 914,
+          "stepId": "2-rynek-sobotka",
+          "title": "Рынок Собутки — городок у святой горы",
+          "location": "Rynek, Собутка",
+          "lat": 50.89821,
+          "lng": 16.74558,
+          "role": "required"
+        },
+        {
+          "id": 915,
+          "stepId": "3-muzeum-slezanskie",
+          "title": "Слензаньский музей — следы древних верований (по желанию)",
+          "location": "Muzeum Ślężańskie, ул. św. Jakuba 18",
+          "lat": 50.8977,
+          "lng": 16.7451,
+          "role": "optional"
+        },
+        {
+          "id": 916,
+          "stepId": "4-mnich",
+          "title": "«Монах» — страж дороги",
+          "location": "Скульптура Mnich, ул. Armii Krajowej",
+          "lat": 50.89147,
+          "lng": 16.73603,
+          "role": "required"
+        },
+        {
+          "id": 917,
+          "stepId": "5-dom-pod-wiezyca",
+          "title": "Дом под Вежицей — развилка шляхов",
+          "location": "Dom Turysty «Pod Wieżycą», трейлхед",
+          "lat": 50.89274,
+          "lng": 16.7265,
+          "role": "required"
+        },
+        {
+          "id": 918,
+          "stepId": "6-idol-na-sklonie",
+          "title": "Идол на полпути — та, что ждёт в лесу",
+          "location": "Гранитное изваяние у красного шляха, склон Сленжи",
+          "lat": 50.87235,
+          "lng": 16.72127,
+          "role": "required"
+        },
+        {
+          "id": 919,
+          "stepId": "7-szczyt-niedzwiedz",
+          "title": "Вершина: костёл, замок под стеклом и медведь",
+          "location": "Вершина Сленжи, 718 м",
+          "lat": 50.86529,
+          "lng": 16.70815,
+          "role": "required"
+        },
+        {
+          "id": 920,
+          "stepId": "8-wieza-widokowa",
+          "title": "Смотровая башня — полстраны с силезского Олимпа",
+          "location": "Смотровая башня на вершине Сленжи",
+          "lat": 50.86406,
+          "lng": 16.70745,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 121,
+      "questId": "bielsko-biala-cartoon-vienna",
+      "title": "Бельско-Бяла: маленькая Вена и город мультяшек",
+      "city": "Бельско-Бяла",
+      "questUrl": "https://metravel.by/quests/bielsko-biala/bielsko-biala-cartoon-vienna",
+      "durationMinutes": 90,
+      "difficulty": "easy",
+      "tags": [
+        "art",
+        "story",
+        "family",
+        "culture",
+        "citywalk",
+        "architecture"
+      ],
+      "overview": "Бельско-Бяла выросла из двух городов по разным берегам реки. Венская архитектурная школа оставила здесь нарядные фасады, а студия рисованных фильмов — героев, ставших бронзовыми памятниками. Прогулка соединяет собор и старый рынок Бельска с замком, мультяшками и бывшим рынком Бялой.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/121/?lang=ru",
+        "sha256": "dfa2f57da871f31b11eab97ea08b27c54c02c3f60a686cf7542e60e6d396d409",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/121/main/181245baa9a3462daf2626e1a16bebcf.webp",
+        "sha256": "a1d66e0fc5cb60fff6dc7305e0f5ec9c625d74e80d692125cae3f82770fc6278",
+        "bytes": 193172,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 1175,
+          "stepId": "1-katedra",
+          "title": "1. Собор с венским акцентом",
+          "location": "Кафедральный собор Святого Николая",
+          "lat": 49.82024,
+          "lng": 19.042996,
+          "role": "required"
+        },
+        {
+          "id": 1176,
+          "stepId": "2-rynek",
+          "title": "2. Старый рынок Бельска",
+          "location": "Рыночная площадь (Rynek)",
+          "lat": 49.821225,
+          "lng": 19.042777,
+          "role": "required"
+        },
+        {
+          "id": 1177,
+          "stepId": "3-lody",
+          "title": "3. Мороженое на Рынке (по желанию)",
+          "location": "Кафе-мороженое у Рынка",
+          "lat": 49.821138,
+          "lng": 19.043812,
+          "role": "optional"
+        },
+        {
+          "id": 1178,
+          "stepId": "4-zamek",
+          "title": "4. Замок князей Сулковских",
+          "location": "Замок Сулковских, Исторический музей",
+          "lat": 49.821675,
+          "lng": 19.044558,
+          "role": "required"
+        },
+        {
+          "id": 1179,
+          "stepId": "5-reksio",
+          "title": "5. Четвероногая звезда",
+          "location": "Сквер у реки Бялы, между ул. 11 Листопада и Стояловского",
+          "lat": 49.823099,
+          "lng": 19.048312,
+          "role": "required"
+        },
+        {
+          "id": 1180,
+          "stepId": "6-pampalini",
+          "title": "6. Охотник, который никого не поймал",
+          "location": "Памятник Пампалини, ул. Стояловского",
+          "lat": 49.82112,
+          "lng": 19.050245,
+          "role": "required"
+        },
+        {
+          "id": 2920,
+          "stepId": "6b-smok-bartolini",
+          "title": "7. Повар и дракон в поисках учёного",
+          "location": "Угол ул. 11 Листопада у площади Войска Польского",
+          "lat": 49.82298,
+          "lng": 19.051138,
+          "role": "required"
+        },
+        {
+          "id": 1181,
+          "stepId": "7-zaby",
+          "title": "8. Самый весёлый дом города",
+          "location": "Каменица на углу площади Войска Польского, 12",
+          "lat": 49.823814,
+          "lng": 19.051577,
+          "role": "required"
+        },
+        {
+          "id": 1182,
+          "stepId": "8-bolek-lolek",
+          "title": "9. Близнецы, которых знает весь мир",
+          "location": "Памятник Болеку и Лёлеку, ул. Мостова",
+          "lat": 49.826409,
+          "lng": 19.048522,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 122,
+      "questId": "szklarska-poreba-glass-town",
+      "title": "Шклярска-Поремба: город, выдутый из стекла",
+      "city": "Шклярска-Поремба",
+      "questUrl": "https://metravel.by/quests/szklarska-poreba/szklarska-poreba-glass-town",
+      "durationMinutes": 150,
+      "difficulty": "medium",
+      "tags": [
+        "art",
+        "story",
+        "culture",
+        "history",
+        "citywalk",
+        "mountain"
+      ],
+      "overview": "История Шклярской-Порембы начинается со стекольных гут у подножия Шренницы. К ремеслу добавились художники и писатели долины Каменной, а легенды отдали горы их таинственному Духу. Маршрут от памятного камня стеклоделов проходит через скалы и центр к действующей гуте, костёлу и дому писателей; по пути есть подъёмы.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/122/?lang=ru",
+        "sha256": "5c5639b52674f760321425328260f6dc94c101a66c1ecd33d083641583897fca",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/122/main/5f09cd13ead54e158fc38d1015025fda.webp",
+        "sha256": "a1270f0108ae62a27bb1f68a0228a8fd589d98c18bfb51cb5646a43c5a494390",
+        "bytes": 78334,
+        "widthPx": 1200,
+        "heightPx": 800
+      },
+      "points": [
+        {
+          "id": 1184,
+          "stepId": "1-kamen-1366",
+          "title": "1. Камень стеклоделов",
+          "location": "Памятный знак 600-летия стеклоделия",
+          "lat": 50.826448,
+          "lng": 15.505485,
+          "role": "required"
+        },
+        {
+          "id": 1185,
+          "stepId": "2-krucze-skaly",
+          "title": "2. Кручьи скалы",
+          "location": "Krucze Skały над рекой Каменной",
+          "lat": 50.826278,
+          "lng": 15.51106,
+          "role": "required"
+        },
+        {
+          "id": 1186,
+          "stepId": "3-duch-gor",
+          "title": "3. Хозяин Карконошей",
+          "location": "Скульптура Духа Гор, сквер Radiowej Trójki",
+          "lat": 50.826695,
+          "lng": 15.52193,
+          "role": "required"
+        },
+        {
+          "id": 1187,
+          "stepId": "4-beza",
+          "title": "4. Карконошское безе (по желанию)",
+          "location": "Кафе с фирменным безе, центр",
+          "lat": 50.826656,
+          "lng": 15.523049,
+          "role": "optional"
+        },
+        {
+          "id": 1188,
+          "stepId": "5-lesna-huta",
+          "title": "5. Последняя хута",
+          "location": "Стеклодувная мастерская «Leśna Huta»",
+          "lat": 50.825169,
+          "lng": 15.539149,
+          "role": "required"
+        },
+        {
+          "id": 1189,
+          "stepId": "6-kostel",
+          "title": "6. Костёл с картинами художника",
+          "location": "Костёл Тела Господня (Bożego Ciała)",
+          "lat": 50.83263,
+          "lng": 15.530956,
+          "role": "required"
+        },
+        {
+          "id": 1190,
+          "stepId": "7-hofman",
+          "title": "7. Художник, оставшийся в горах",
+          "location": "Кладбище у костёла, надгробие художника",
+          "lat": 50.832474,
+          "lng": 15.526521,
+          "role": "required"
+        },
+        {
+          "id": 1191,
+          "stepId": "8-hauptmann",
+          "title": "8. Дом двух братьев",
+          "location": "Дом Карла и Герхарта Хауптманов — Карконошский музей",
+          "lat": 50.839296,
+          "lng": 15.529944,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 125,
+      "questId": "krakow-bike-tyniec",
+      "title": "Велоквест из Кракова: Твардовский, Тынец и белая гора",
+      "city": "Краков",
+      "questUrl": "https://metravel.by/quests/krakow/krakow-bike-tyniec",
+      "durationMinutes": 240,
+      "difficulty": "medium",
+      "tags": [
+        "bike",
+        "loop",
+        "river",
+        "legend",
+        "nature",
+        "history",
+        "roadtrip",
+        "monastery"
+      ],
+      "overview": "Велокольцо на запад от Кракова ведёт вдоль Вислы к Закжувеку и монастырю в Тыньце. Обратный берег открывает горную реку, замок и деревянную часовню. Большая часть пути проходит по велодорожкам и набережным, но есть участки обычной улицы и короткий подъём; перед поездкой проверяют велосипед и берут воду.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/125/?lang=ru",
+        "sha256": "dbc3de32e460128cfac3f2b4421a2031ca90fd2b8b34209467ed8918b8270c9b",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/125/main/ce8b3ba9a47b4dcd98fc57a4955983e6.webp",
+        "sha256": "997a06b2ea1fc3a0be8900834f64c7e294eea8169836c28fd712222940064702",
+        "bytes": 130356,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 1211,
+          "stepId": "1-smok",
+          "title": "Дракон, с которого начинается дорога",
+          "location": "Скульптура Вавельского дракона, бульвар под Вавелем",
+          "lat": 50.0533,
+          "lng": 19.9333,
+          "role": "required"
+        },
+        {
+          "id": 1212,
+          "stepId": "2-zakrzowek",
+          "title": "Закжувек: карьер, ставший лагуной",
+          "location": "Смотровая парка Закжувек",
+          "lat": 50.03698,
+          "lng": 19.91105,
+          "role": "required"
+        },
+        {
+          "id": 1213,
+          "stepId": "3-twardowski",
+          "title": "Скалки Твардовского: здесь взорвалась лаборатория",
+          "location": "Скалки Твардовского, тропа вдоль скал",
+          "lat": 50.04035,
+          "lng": 19.90694,
+          "role": "required"
+        },
+        {
+          "id": 1214,
+          "stepId": "4-tyniec",
+          "title": "Тынец: тысяча лет над Вислой",
+          "location": "Бенедиктинское аббатство в Тыньце, двор",
+          "lat": 50.01845,
+          "lng": 19.8029,
+          "role": "required"
+        },
+        {
+          "id": 1215,
+          "stepId": "prival-tyniec",
+          "title": "Привал у бенедиктинцев (по желанию)",
+          "location": "Kawiarnia Benedyktyńska, двор аббатства",
+          "lat": 50.0186,
+          "lng": 19.8032,
+          "role": "optional"
+        },
+        {
+          "id": 1216,
+          "stepId": "5-kladka",
+          "title": "Кладка над плотиной: переправа",
+          "location": "Пешеходно-велосипедная кладка у гидроузла Костюшко",
+          "lat": 50.03066,
+          "lng": 19.81928,
+          "role": "required"
+        },
+        {
+          "id": 1217,
+          "stepId": "6-kolna",
+          "title": "Кольна: горная река, сделанная руками",
+          "location": "Кольна: канал бурной воды у берега Вислы",
+          "lat": 50.03159,
+          "lng": 19.82436,
+          "role": "required"
+        },
+        {
+          "id": 1218,
+          "stepId": "7-przegorzaly",
+          "title": "Замок, которого не должно было быть",
+          "location": "Вид на замок в Пшегожалах со стороны реки",
+          "lat": 50.04826,
+          "lng": 19.86641,
+          "role": "required"
+        },
+        {
+          "id": 1219,
+          "stepId": "8-salwator",
+          "title": "Сальватор: деревянная часовня с секретом",
+          "location": "Часовня св. Малгожаты, ул. св. Брониславы",
+          "lat": 50.05256,
+          "lng": 19.91267,
+          "role": "required"
+        },
+        {
+          "id": 1220,
+          "stepId": "9-norbertanki",
+          "title": "Норбертанки: стены, из которых выезжает Лайконик",
+          "location": "Монастырь норбертанок на Звежинце",
+          "lat": 50.05207,
+          "lng": 19.91459,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 126,
+      "questId": "krakow-bike-pradnik",
+      "title": "Велоквест из Кракова: долина Прондника и замок Коржкев",
+      "city": "Краков",
+      "questUrl": "https://metravel.by/quests/krakow/krakow-bike-pradnik",
+      "durationMinutes": 270,
+      "difficulty": "medium",
+      "tags": [
+        "bike",
+        "loop",
+        "castle",
+        "forest",
+        "legend",
+        "nature",
+        "spring",
+        "history",
+        "roadtrip"
+      ],
+      "overview": "Долина Прондника связывает епископскую усадьбу, ренессансный костёл, австрийский форт и замок с воротами Ойцувского парка. Велокольцо проходит и по долинам, и по плато, поэтому требует готовности к подъёмам. Старт — у Белопрондницкой усадьбы; часть пути идёт общими просёлками, нужны вода и перекус.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/126/?lang=ru",
+        "sha256": "a29184dfa2553260b432ab2ba2bd7264b1b7df7127d5e3edaf8551f6c007fcd5",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/126/main/ae04bc3fc7064675ad3563c6b7c40ec4.webp",
+        "sha256": "bad229dc39e274e3d55263b3ff4ecc653dc2727bd33b7ee9cca953348da55326",
+        "bytes": 154736,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 1222,
+          "stepId": "1-dwor",
+          "title": "Двор Белопрондницкий: хлеб для королей",
+          "location": "Dwór Białoprądnicki, ул. Паперница 2",
+          "lat": 50.09283,
+          "lng": 19.94092,
+          "role": "required"
+        },
+        {
+          "id": 1223,
+          "stepId": "2-zielonki",
+          "title": "Зелёнки: костёл каменщиков Возрождения",
+          "location": "Костёл Рождества Девы Марии, Зелёнки",
+          "lat": 50.11642,
+          "lng": 19.915535,
+          "role": "required"
+        },
+        {
+          "id": 1224,
+          "stepId": "3-fort",
+          "title": "Форт 45: каменное кольцо Кракова",
+          "location": "Конец дороги «Do Fortu», у ворот форта 45, Зелёнки",
+          "lat": 50.12715,
+          "lng": 19.93749,
+          "role": "required"
+        },
+        {
+          "id": 1225,
+          "stepId": "4-zamek",
+          "title": "Коржкев: замок, восставший из руин",
+          "location": "Замок Коржкев",
+          "lat": 50.162106,
+          "lng": 19.882912,
+          "role": "required"
+        },
+        {
+          "id": 1226,
+          "stepId": "5-kosciol-korzkiew",
+          "title": "Костёл над замком: печать фундатора",
+          "location": "Костёл Рождества св. Иоанна Крестителя, Коржкев",
+          "lat": 50.16416,
+          "lng": 19.88227,
+          "role": "required"
+        },
+        {
+          "id": 1228,
+          "stepId": "6-opn",
+          "title": "Ворота страны скал: король и паук",
+          "location": "Граница Ойцувского нацпарка, ул. Ojcowska, Прондник Коржкевский",
+          "lat": 50.17225,
+          "lng": 19.8483,
+          "role": "required"
+        },
+        {
+          "id": 1227,
+          "stepId": "prival-bazanty",
+          "title": "Привал «Под фазанами» (по желанию)",
+          "location": "Restauracja Pod Bażantami, Прондник Коржкевский",
+          "lat": 50.15574,
+          "lng": 19.86456,
+          "role": "optional"
+        },
+        {
+          "id": 1229,
+          "stepId": "7-giebultow",
+          "title": "Гебултов: святой на обратной дороге",
+          "location": "Костёл в селе Гебултов, табличка у входа",
+          "lat": 50.14179,
+          "lng": 19.88355,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 127,
+      "questId": "krakow-bike-wanda",
+      "title": "Велоквест из Кракова: курган Ванды и висленский восток",
+      "city": "Краков",
+      "questUrl": "https://metravel.by/quests/krakow/krakow-bike-wanda",
+      "durationMinutes": 300,
+      "difficulty": "medium",
+      "tags": [
+        "bike",
+        "lake",
+        "loop",
+        "river",
+        "legend",
+        "nature",
+        "history",
+        "memorial",
+        "roadtrip"
+      ],
+      "overview": "Восточное велокольцо Кракова соединяет легенду княжны Ванды с лугами, карьерными озёрами и висленскими валами. Путь ведёт через залив Новохуцкий, усадьбу Матейко и Могилу, возвращаясь вдоль реки через мост Ванды. На открытых валах мало тени; воду и перекус берут заранее, на обычных улицах соблюдают осторожность.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/127/?lang=ru",
+        "sha256": "c909f39e39a9e65f5d996cddc007a2c78ee530d0440cd43489174bafccfcea20",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/127/main/1b8ba0f3229e475f9fa33d1286f92e73.webp",
+        "sha256": "906d0c3f6d79c6fe745647dee52cc45b76a724ec84790e35af1445f6a96df739",
+        "bytes": 140050,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 1231,
+          "stepId": "1-zalew",
+          "title": "Залив Новохуцкий: море соцгорода",
+          "location": "Zalew Nowohucki, ул. Бульварова",
+          "lat": 50.0765,
+          "lng": 20.053,
+          "role": "required"
+        },
+        {
+          "id": 1232,
+          "stepId": "2-fort49",
+          "title": "Форт 49: тихое место с тяжёлой памятью",
+          "location": "Fort 49 «Krzesławice», мемориал",
+          "lat": 50.09833,
+          "lng": 20.05556,
+          "role": "required"
+        },
+        {
+          "id": 1233,
+          "stepId": "3-matejko",
+          "title": "Усадьба Матейко (по желанию)",
+          "location": "Dworek Jana Matejki, Кшеславице, ул. Ваньковича 25",
+          "lat": 50.08184,
+          "lng": 20.0553,
+          "role": "optional"
+        },
+        {
+          "id": 1234,
+          "stepId": "4-mogila",
+          "title": "Могила: восемьсот лет цистерцианцев",
+          "location": "Аббатство цистерцианцев в Могиле, ул. Клашторна 11",
+          "lat": 50.06444,
+          "lng": 20.05278,
+          "role": "required"
+        },
+        {
+          "id": 1235,
+          "stepId": "5-bartlomiej",
+          "title": "Церковь напротив: единственная в своём роде",
+          "location": "Костёл св. Варфоломея, Могила",
+          "lat": 50.06568,
+          "lng": 20.05176,
+          "role": "required"
+        },
+        {
+          "id": 1236,
+          "stepId": "6-kopiec-wandy",
+          "title": "Курган Ванды: княжна, что не хотела немца",
+          "location": "Kopiec Wandy, ул. Уястек Могильский",
+          "lat": 50.07028,
+          "lng": 20.06806,
+          "role": "required"
+        },
+        {
+          "id": 1237,
+          "stepId": "7-przylasek",
+          "title": "Пшилясек Русецкий: озёра, где ищут кипяток",
+          "location": "Купальня Пшилясек Русецкий",
+          "lat": 50.0483,
+          "lng": 20.15986,
+          "role": "required"
+        },
+        {
+          "id": 1238,
+          "stepId": "8-przewoz",
+          "title": "Ступень Пшевуз: река со ступеньками",
+          "location": "Висленский вал напротив гидроузла Пшевуз",
+          "lat": 50.044,
+          "lng": 20.096,
+          "role": "required"
+        },
+        {
+          "id": 1239,
+          "stepId": "9-most-wandy",
+          "title": "Мост Ванды: армейское наследство",
+          "location": "Most Wandy, переправа через Вислу",
+          "lat": 50.05126,
+          "lng": 20.04981,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 128,
+      "questId": "krakow-kids-dragon-keeper",
+      "title": "Экзамен смотрителя драконят",
+      "city": "Краков",
+      "questUrl": "https://metravel.by/quests/krakow/krakow-kids-dragon-keeper",
+      "durationMinutes": 80,
+      "difficulty": "easy",
+      "tags": [
+        "kids",
+        "family",
+        "legend",
+        "age-8-10",
+        "citywalk",
+        "sculpture",
+        "public-walk",
+        "adult-recommended"
+      ],
+      "overview": "В детской истории дедушка Смок ищет младшего смотрителя драконят, расселившихся по Кракову бронзовыми фигурками. Маленькому участнику предстоит собрать семь знаков смотрителя. Взрослый сопровождает его и помогает на переходах; задания решает ребёнок, памятники рассматривают глазами и не отходят от напарника.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/128/?lang=ru",
+        "sha256": "5b4778a90ed59f9c8a55d0e493efe44f157decda85067235df818eeb75bf8811",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/128/main/bfa69b94fa6f4c61a9ba7440dd7f041b.webp",
+        "sha256": "719db3007a678c1380d62575eeec94711c099d7857ce7a3f0eefdc9ba3be4162",
+        "bytes": 163060,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 1241,
+          "stepId": "1-lions",
+          "title": "1. Каменные стражи башни",
+          "location": "Ратушная башня (Wieża Ratuszowa)",
+          "lat": 50.0617,
+          "lng": 19.93573,
+          "role": "required"
+        },
+        {
+          "id": 1242,
+          "stepId": "2-obwarzanek",
+          "title": "2. Драконье лакомство",
+          "location": "Тележка с угощением на Рыночной площади",
+          "lat": 50.0609,
+          "lng": 19.9373,
+          "role": "required"
+        },
+        {
+          "id": 1243,
+          "stepId": "3-wojciech",
+          "title": "3. Самый старый малыш площади",
+          "location": "Костёл св. Войцеха (kościół św. Wojciecha)",
+          "lat": 50.06104,
+          "lng": 19.9384,
+          "role": "required"
+        },
+        {
+          "id": 1244,
+          "stepId": "4-apostles",
+          "title": "4. Каменная стража у ворот",
+          "location": "Костёл свв. Петра и Павла (ul. Grodzka)",
+          "lat": 50.0569,
+          "lng": 19.9389,
+          "role": "required"
+        },
+        {
+          "id": 1245,
+          "stepId": "5-andrzej",
+          "title": "5. Церковь-крепость",
+          "location": "Костёл св. Анджея (ul. Grodzka)",
+          "lat": 50.05659,
+          "lng": 19.93843,
+          "role": "required"
+        },
+        {
+          "id": 1246,
+          "stepId": "cafe",
+          "title": "☕ Good Lood — мороженое (по желанию)",
+          "location": "Good Lood, ul. Grodzka 60",
+          "lat": 50.05537,
+          "lng": 19.93844,
+          "role": "optional"
+        },
+        {
+          "id": 1247,
+          "stepId": "6-bones",
+          "title": "7. Драконий оберег на цепи",
+          "location": "Вавельский собор, вход (Wawel)",
+          "lat": 50.0546,
+          "lng": 19.9354,
+          "role": "required"
+        },
+        {
+          "id": 1248,
+          "stepId": "7-smok-wodny",
+          "title": "8. Первый драконёнок",
+          "location": "Фигурка Smok Wodny, plac Na Groblach",
+          "lat": 50.05547,
+          "lng": 19.93175,
+          "role": "required"
+        },
+        {
+          "id": 1249,
+          "stepId": "8-smok",
+          "title": "9. Огненный экзамен",
+          "location": "Памятник Вавельскому дракону, набережная Вислы",
+          "lat": 50.05302,
+          "lng": 19.93359,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 129,
+      "questId": "warsaw-kids-bazyliszek",
+      "title": "Детский квест по Варшаве: знаки для базилишка",
+      "city": "Варшава",
+      "questUrl": "https://metravel.by/quests/warsaw/warsaw-kids-bazyliszek",
+      "durationMinutes": 75,
+      "difficulty": "easy",
+      "tags": [
+        "kids",
+        "family",
+        "legend",
+        "age-8-10",
+        "citywalk",
+        "detective",
+        "public-walk",
+        "adult-recommended"
+      ],
+      "overview": "Старый варшавский портной зовёт детектива на помощь: в легендарном подвале снова будто бы зашуршал базилишек. По Старому городу нужно собрать шесть знаков смелого исследователя. Взрослый идёт рядом и следит за дорогой, а ребёнок ищет ответы сам; памятники преимущественно рассматривают, не трогая руками.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/129/?lang=ru",
+        "sha256": "a0fcde16913f94d0753887833e16e2135571e67a798d4374095d0e3aee55e7c1",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/129/main/a08d7e89be4c4b899b2e5ea0fc774199.webp",
+        "sha256": "9fcb4e0039fb6127e347ddde2331446117d13138c1fdbef004c1951f03f9a938",
+        "bytes": 208194,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 1251,
+          "stepId": "1-bear",
+          "title": "1. Знак терпения",
+          "location": "Каменный зверь у костёла иезуитов, ул. Świętojańska 10",
+          "lat": 52.249,
+          "lng": 21.01317,
+          "role": "required"
+        },
+        {
+          "id": 1252,
+          "stepId": "2-bell",
+          "title": "2. Знак удачи",
+          "location": "Колокол на площади Канония (Kanonia)",
+          "lat": 52.24894,
+          "lng": 21.01462,
+          "role": "required"
+        },
+        {
+          "id": 1253,
+          "stepId": "3-narrow-house",
+          "title": "3. Знак смекалки",
+          "location": "Самый узкий дом Варшавы, Kanonia 20/22",
+          "lat": 52.24941,
+          "lng": 21.01396,
+          "role": "required"
+        },
+        {
+          "id": 1254,
+          "stepId": "4-gnojna-gora",
+          "title": "4. Знак зоркости",
+          "location": "Смотровая площадка Гнойная гора (Góra Gnojna), конец ул. Celna",
+          "lat": 52.24996,
+          "lng": 21.0141,
+          "role": "required"
+        },
+        {
+          "id": 1255,
+          "stepId": "5-syrenka",
+          "title": "5. Знак храбрости",
+          "location": "Статуя Сирены, Рыночная площадь Старого города",
+          "lat": 52.24979,
+          "lng": 21.01217,
+          "role": "required"
+        },
+        {
+          "id": 1256,
+          "stepId": "6-maly-powstaniec",
+          "title": "6. Знак отваги",
+          "location": "Памятник Маленькому Повстанцу, городские стены у ул. Podwale",
+          "lat": 52.24928,
+          "lng": 21.00962,
+          "role": "required"
+        },
+        {
+          "id": 1257,
+          "stepId": "icecream",
+          "title": "✨ Мороженое Hoduń (по желанию)",
+          "location": "Lody Hoduń, ул. Nowomiejska 7/9",
+          "lat": 52.25007,
+          "lng": 21.01097,
+          "role": "optional"
+        },
+        {
+          "id": 1258,
+          "stepId": "7-krzywe-kolo",
+          "title": "8. Логово базилишка",
+          "location": "Улица Кривое Колесо (Krzywe Koło)",
+          "lat": 52.25031,
+          "lng": 21.01207,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 130,
+      "questId": "wroclaw-kids-gnome-service",
+      "title": "Стажёр гномьей службы Вроцлава",
+      "city": "Вроцлав",
+      "questUrl": "https://metravel.by/quests/wroclaw/wroclaw-kids-gnome-service",
+      "durationMinutes": 75,
+      "difficulty": "easy",
+      "tags": [
+        "kids",
+        "story",
+        "family",
+        "age-8-10",
+        "citywalk",
+        "sculpture",
+        "public-walk",
+        "adult-recommended"
+      ],
+      "overview": "Тайная Гномья служба Вроцлава ищет стажёра для обхода семи постов Старого города. Ребёнок читает истории, выполняет задания и считает встреченных бронзовых гномов, а взрослый помогает безопасно переходить улицы. Первый пост расположен на Рынке у памятника писателю; фигурки нельзя тянуть и дёргать.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/130/?lang=ru",
+        "sha256": "fcb2b3201be2339f7cbcf8d40aeab410de6cc56554e7d7b432dd63ea498ecb4e",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/130/main/e20d5c8972ed45baa981d1d808207d60.webp",
+        "sha256": "8ffcd8e75ea69288951596e30a8f3fcf1a0f54ecfeb7c3f0d2dfab151fad3b4d",
+        "bytes": 150632,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 1260,
+          "stepId": "1-fredro",
+          "title": "1. Самый большой подопечный",
+          "location": "Памятник Александру Фредро, Рынок",
+          "lat": 51.109657,
+          "lng": 17.031299,
+          "role": "required"
+        },
+        {
+          "id": 1261,
+          "stepId": "2-zyczliwek",
+          "title": "2. Урок доброты",
+          "location": "Гном Жичливек у стеклянного фонтана, западная сторона Рынка",
+          "lat": 51.110452,
+          "lng": 17.031199,
+          "role": "required"
+        },
+        {
+          "id": 1262,
+          "stepId": "3-jas-malgosia",
+          "title": "3. Домики, которые дружат",
+          "location": "Домики Ясь и Малгося, угол Рынка у костёла св. Елизаветы",
+          "lat": 51.111167,
+          "lng": 17.030694,
+          "role": "required"
+        },
+        {
+          "id": 1263,
+          "stepId": "4-jatki",
+          "title": "4. Бронзовое стадо",
+          "location": "Улочка Старе-Ятки, памятник животным",
+          "lat": 51.112111,
+          "lng": 17.031056,
+          "role": "required"
+        },
+        {
+          "id": 1264,
+          "stepId": "5-wiezien",
+          "title": "5. Гном за решёткой",
+          "location": "Улица Вензенна 6, окно старой городской тюрьмы",
+          "lat": 51.11243,
+          "lng": 17.032486,
+          "role": "required"
+        },
+        {
+          "id": 1265,
+          "stepId": "6-szermierz",
+          "title": "6. Фонтан с секретом",
+          "location": "Фонтан «Фехтовальщик», площадь Универсытецка",
+          "lat": 51.113853,
+          "lng": 17.034119,
+          "role": "required"
+        },
+        {
+          "id": 1266,
+          "stepId": "icecream",
+          "title": "✨ Мороженое Baroli (по желанию)",
+          "location": "Lody Naturalne Baroli, ул. Кузнича 65/66",
+          "lat": 51.110881,
+          "lng": 17.033442,
+          "role": "optional"
+        },
+        {
+          "id": 1267,
+          "stepId": "7-syzyfki",
+          "title": "8. Гномы-силачи",
+          "location": "Гномы Сизифки, ул. Свидницка 1 у Рынка",
+          "lat": 51.108938,
+          "lng": 17.032889,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 135,
+      "questId": "lodz-murals",
+      "title": "Квест по Лодзи: город-фабрика, ставший галереей",
+      "city": "Лодзь",
+      "questUrl": "https://metravel.by/quests/lodz/lodz-murals",
+      "durationMinutes": 150,
+      "difficulty": "easy",
+      "tags": [
+        "art",
+        "culture",
+        "citywalk",
+        "urbanism",
+        "street-art",
+        "public-art-walk"
+      ],
+      "overview": "Бывшие фабричные стены Лодзи стали полотнами городской галереи: фонд Urban Forms приглашал художников превращать пустые фасады в огромные муралы. Прогулка ведёт с севера на юг от Мануфактуры к южной Пётрковской. Ребусы, сияющий двор и танцующие великаны предлагают внимательно читать рисунки прямо на месте.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/135/?lang=ru",
+        "sha256": "81985b22cd9ef222bb0cac304d4652108e8041a84430aaf10b8b12dc76d6333a",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/135/main/81f939b980f4449ab70b0cc11db6b973.webp",
+        "sha256": "cff472552200d3986e490e0f1baaf2fa13c19b7980f9ecd205c16a9514d81811",
+        "bytes": 185480,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 1310,
+          "stepId": "1-sobie",
+          "title": "Слова на стене",
+          "location": "ул. Ogrodowa 4, боковая стена",
+          "lat": 51.778596,
+          "lng": 19.453259,
+          "role": "required"
+        },
+        {
+          "id": 1311,
+          "stepId": "2-mcity",
+          "title": "Машина города",
+          "location": "ул. Legionów 21, стена у Театра Повшехного",
+          "lat": 51.776567,
+          "lng": 19.450286,
+          "role": "required"
+        },
+        {
+          "id": 1312,
+          "stepId": "3-pasaz-rozy",
+          "title": "Двор, который собирает свет",
+          "location": "Пассаж Розы, ул. Piotrkowska 3 (двор)",
+          "lat": 51.775804,
+          "lng": 19.454627,
+          "role": "required"
+        },
+        {
+          "id": 1313,
+          "stepId": "4-twozywo",
+          "title": "Ребус во дворе",
+          "location": "ул. Piotrkowska 26 (двор, тыльная стена)",
+          "lat": 51.773548,
+          "lng": 19.456795,
+          "role": "required"
+        },
+        {
+          "id": 1314,
+          "stepId": "5-siudmak",
+          "title": "Рождение дня",
+          "location": "ул. Więckowskiego 4, «Narodziny dnia»",
+          "lat": 51.772264,
+          "lng": 19.454989,
+          "role": "required"
+        },
+        {
+          "id": 1315,
+          "stepId": "6-kobra",
+          "title": "Гений дурачится",
+          "location": "ул. Sienkiewicza 18, угол Traugutta",
+          "lat": 51.768849,
+          "lng": 19.461211,
+          "role": "required"
+        },
+        {
+          "id": 1316,
+          "stepId": "7-kenor",
+          "title": "Стена, которая звучит",
+          "location": "ал. Kościuszki 32",
+          "lat": 51.766162,
+          "lng": 19.454582,
+          "role": "required"
+        },
+        {
+          "id": 1317,
+          "stepId": "cafe",
+          "title": "OFF Piotrkowska — привал на фабрике (по желанию)",
+          "location": "OFF Piotrkowska Center, ул. Piotrkowska 138/140",
+          "lat": 51.761114,
+          "lng": 19.459789,
+          "role": "optional"
+        },
+        {
+          "id": 1318,
+          "stepId": "8-osgemeos-aryz",
+          "title": "Танцующие великаны",
+          "location": "ул. Roosevelta 5, торец дома",
+          "lat": 51.760516,
+          "lng": 19.459747,
+          "role": "required"
+        },
+        {
+          "id": 1319,
+          "stepId": "9-piotrkowska152",
+          "title": "Рекорд 2001 года",
+          "location": "ул. Piotrkowska 152",
+          "lat": 51.760095,
+          "lng": 19.458791,
+          "role": "required"
+        },
+        {
+          "id": 1320,
+          "stepId": "10-wiedzmin",
+          "title": "Страж южной Пётрковской",
+          "location": "ул. Piotrkowska 182, высотки «Манхэттена»",
+          "lat": 51.7578,
+          "lng": 19.460234,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 136,
+      "questId": "gniezno-white-eagle",
+      "title": "Квест по Гнезно: Лех и белый орёл",
+      "city": "Гнезно",
+      "questUrl": "https://metravel.by/quests/gniezno/gniezno-white-eagle",
+      "durationMinutes": 130,
+      "difficulty": "easy",
+      "tags": [
+        "legend",
+        "history",
+        "citywalk",
+        "religion"
+      ],
+      "overview": "Гнезно связывает предание о Лехе и белом орле с ранней историей польских князей, архиепископства и коронаций. Путь от озера Еленек поднимается на Холм Леха к собору, затем выходит к Рынку и площадям королей. Маленькие бронзовые проводники сопровождают прогулку по городу, имя которого означает гнездо.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/136/?lang=ru",
+        "sha256": "de45520b4b088aee2ec0c2cc60f3d313c9f0a4eac79d1edda1e4fad0fb23328b",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/136/main/f2caf39282254bb781dd81af982f0901.webp",
+        "sha256": "4e206d5b06037342aaa9d7301af0c8c9b4672b62954ce8f1d63837867b2bb1ad",
+        "bytes": 144626,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 1322,
+          "stepId": "1-muzeum-poczatkow",
+          "title": "Музей Начал — вся история в одном здании",
+          "location": "Muzeum Początków Państwa Polskiego, ul. Kostrzewskiego 1",
+          "lat": 52.53392,
+          "lng": 17.583207,
+          "role": "required"
+        },
+        {
+          "id": 1323,
+          "stepId": "2-legenda-o-lechu",
+          "title": "Лех над озером — здесь увидели знак",
+          "location": "Скульптура «Legenda o Lechu», Park Piastowski, берег оз. Еленек",
+          "lat": 52.535865,
+          "lng": 17.586502,
+          "role": "required"
+        },
+        {
+          "id": 1324,
+          "stepId": "3-krolik-woj",
+          "title": "Маленький страж у подножия холма",
+          "location": "Бронзовая фигурка «Woj Piastowski», подъём к Холму Леха",
+          "lat": 52.537028,
+          "lng": 17.590101,
+          "role": "required"
+        },
+        {
+          "id": 1325,
+          "stepId": "4-pomnik-chrobrego",
+          "title": "Первый король — трижды рождённый памятник",
+          "location": "Pomnik Bolesława Chrobrego, площадь перед собором",
+          "lat": 52.536508,
+          "lng": 17.591835,
+          "role": "required"
+        },
+        {
+          "id": 1326,
+          "stepId": "5-katedra",
+          "title": "Собор — золото за святого и бронзовые врата",
+          "location": "Katedra Gnieźnieńska (Bazylika Archikatedralna), Wzgórze Lecha",
+          "lat": 52.536817,
+          "lng": 17.592589,
+          "role": "required"
+        },
+        {
+          "id": 1327,
+          "stepId": "6-sw-jerzy",
+          "title": "Костёл св. Ежи — здесь стоял град Леха",
+          "location": "Kolegiata św. Jerzego, ul. Kolegiaty 3",
+          "lat": 52.537388,
+          "lng": 17.593096,
+          "role": "required"
+        },
+        {
+          "id": 1328,
+          "stepId": "7-tumska-krolik-skryba",
+          "title": "Тумская — дорога королей и её ушастые проводники",
+          "location": "ul. Tumska, бронзовый «Skryba»",
+          "lat": 52.536693,
+          "lng": 17.595835,
+          "role": "required"
+        },
+        {
+          "id": 1329,
+          "stepId": "8-rynek-herb",
+          "title": "Рынок — от гнезда к гербу",
+          "location": "Rynek, фонтан",
+          "lat": 52.535974,
+          "lng": 17.595886,
+          "role": "required"
+        },
+        {
+          "id": 1330,
+          "stepId": "9-przerwa-misz-masz",
+          "title": "Привал на Рынке (по желанию)",
+          "location": "Misz-Masz Cafe&Bistro, Rynek 5",
+          "lat": 52.535544,
+          "lng": 17.595636,
+          "role": "optional"
+        },
+        {
+          "id": 1331,
+          "stepId": "10-mieszko-ii",
+          "title": "Мешко II — король, у которого украли столицу",
+          "location": "Статуя Mieszko II, зб. ул. Kilińskiego / Grzybowo / Krzywe Koło",
+          "lat": 52.537417,
+          "lng": 17.598502,
+          "role": "required"
+        },
+        {
+          "id": 1332,
+          "stepId": "11-boleslaw-smialy",
+          "title": "Болеслав с двумя прозвищами",
+          "location": "Статуя Bolesław Śmiały, сквер на зб. ул. Dąbrówki / Łubieńskiego",
+          "lat": 52.535861,
+          "lng": 17.600903,
+          "role": "required"
+        },
+        {
+          "id": 1333,
+          "stepId": "12-sw-wojciech",
+          "title": "Святой Войцех — тот, кто шёл дальше всех",
+          "location": "Pomnik Świętego Wojciecha, сквер на зб. ул. Chrobrego / Łubieńskiego",
+          "lat": 52.534791,
+          "lng": 17.600218,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 137,
+      "questId": "sasino-stilo",
+      "title": "Квест по Сашино: хранители маяка Stilo",
+      "city": "Сашино",
+      "questUrl": "https://metravel.by/quests/sasino/sasino-stilo",
+      "durationMinutes": 210,
+      "difficulty": "medium",
+      "tags": [
+        "sea",
+        "tower",
+        "family",
+        "forest",
+        "hiking",
+        "legend",
+        "nature",
+        "history"
+      ],
+      "overview": "Из Сашино дорога ведёт на север через усадебный парк, Осетник и сосновые дюны к маяку Stilo и Балтике. Историю дополняют дворец, поколения маячников и остатки туманной станции. Линейный маршрут требует учесть обратный путь; деревенскую и лесную части можно разделить поездкой до Осетника.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/137/?lang=ru",
+        "sha256": "fcfc06b49b6a87585fb9040be3e26277ba9c37da2245f4d700cbe932c94d918b",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/137/main/bfc41312aa3a4415a5fb027ee201eab6.webp",
+        "sha256": "5468c696fecce45872d1c11cd8c6dbdc51bc45f192c966f3bce76b836dcad34b",
+        "bytes": 261286,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 1335,
+          "stepId": "1-sasino-village",
+          "title": "Сашино — деревня, начавшаяся заново",
+          "location": "Костёл Милосердия Божия, центр Сашино",
+          "lat": 54.75955,
+          "lng": 17.75561,
+          "role": "required"
+        },
+        {
+          "id": 1336,
+          "stepId": "2-palac-sasino",
+          "title": "Дворец за английским парком",
+          "location": "Въезд в усадьбу Pałac Sasino, ul. Pałacowa",
+          "lat": 54.77251,
+          "lng": 17.75633,
+          "role": "required"
+        },
+        {
+          "id": 1337,
+          "stepId": "3-osetnik",
+          "title": "Осетник, который был Стило",
+          "location": "Осада Осетник, модель маяка у площадки с жарильнями",
+          "lat": 54.78121,
+          "lng": 17.73816,
+          "role": "required"
+        },
+        {
+          "id": 1338,
+          "stepId": "4-smazalnia",
+          "title": "Привал: рыба из Балтики (по желанию)",
+          "location": "Smażalnia ryb «U Zamojskich», Osetnik 6",
+          "lat": 54.78161,
+          "lng": 17.74012,
+          "role": "optional"
+        },
+        {
+          "id": 1339,
+          "stepId": "5-bukowy-las",
+          "title": "Буковый собор",
+          "location": "Середина лесной дороги от Осетника к маяку",
+          "lat": 54.78425,
+          "lng": 17.73573,
+          "role": "required"
+        },
+        {
+          "id": 1340,
+          "stepId": "6-latarnia",
+          "title": "Железная башня",
+          "location": "Маяк Stilo на вершине лесной дюны",
+          "lat": 54.78685,
+          "lng": 17.73397,
+          "role": "required"
+        },
+        {
+          "id": 1341,
+          "stepId": "7-latarnicy",
+          "title": "Хранители огня",
+          "location": "Памятные таблички у входа в маяк",
+          "lat": 54.78682,
+          "lng": 17.73396,
+          "role": "required"
+        },
+        {
+          "id": 1342,
+          "stepId": "8-nautofon",
+          "title": "Голос в тумане",
+          "location": "Руины туманных сигнальных станций на приморской дюне",
+          "lat": 54.79577,
+          "lng": 17.73444,
+          "role": "required"
+        },
+        {
+          "id": 1343,
+          "stepId": "9-plaza-stilo",
+          "title": "Пляж Stilo — финал у воды",
+          "location": "Выход на пляж Stilo за дюной",
+          "lat": 54.79615,
+          "lng": 17.7338,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 138,
+      "questId": "hel-jurata-amber",
+      "title": "Квест Сашино — Хель: янтарь Юраты и начало Польши",
+      "city": "Хель",
+      "questUrl": "https://metravel.by/quests/hel/hel-jurata-amber",
+      "durationMinutes": 480,
+      "difficulty": "medium",
+      "tags": [
+        "sea",
+        "legend",
+        "nature",
+        "history",
+        "roadtrip"
+      ],
+      "overview": "Дорога от Сашино к Хельской косе связана легендой о Юрате: разбитый янтарный дворец богини будто бы до сих пор возвращается на берег осколками. За этой историей открываются монастырь, замок, маяки, рыбацкие поселения и памятные знаки побережья. Маршрут рассчитан на автомобильный день с остановками, а последние точки Хеля проходят пешком. Летом стоит учитывать пробки на единственной дороге косы. Все четырнадцать остановок, включая три необязательные, сохранены в списке и на карте.",
+      "compactOverview": "Легенда о Юрате ведёт от Сашино к Хельской косе через монастырь, замок, маяки и рыбацкие поселения. Маршрут автомобильный; завершение в Хеле — пешком.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/138/?lang=ru",
+        "sha256": "6776db3357fcaadae6c2ad6ee43d5ccb4f616c2ee019da16cf0db22b8bb6391a",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/138/main/cc597541b229437b994641d6e190351e.webp",
+        "sha256": "e18df9b50bf8ca6e1097bdc1a4bc6fecca50879e8a20410fce1927032d5ff53c",
+        "bytes": 163798,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 1346,
+          "stepId": "zarnowiec-klasztor",
+          "title": "Жарновец: монастырь, которому не давали своей аббатисы",
+          "location": "Костёл Благовещения и опактво бенедиктинок, Жарновец",
+          "lat": 54.78748,
+          "lng": 18.081829,
+          "role": "required"
+        },
+        {
+          "id": 1347,
+          "stepId": "krokowa-zamek",
+          "title": "Крокова: замок, где братья оказались по разные стороны",
+          "location": "Замок Крокова и костёл святой Екатерины Александрийской",
+          "lat": 54.776982,
+          "lng": 18.163682,
+          "role": "required"
+        },
+        {
+          "id": 1348,
+          "stepId": "gwiazda-polnocy",
+          "title": "Звезда Севера: два метра, которые всё изменили",
+          "location": "Обелиск «Gwiazda Północy», Ястшембя-Гура",
+          "lat": 54.834912,
+          "lng": 18.302737,
+          "role": "required"
+        },
+        {
+          "id": 1349,
+          "stepId": "lisi-jar",
+          "title": "Лисий Яр: король, которого спрятал овраг",
+          "location": "Обелиск памяти Сигизмунда III Вазы, вход в Лисий Яр",
+          "lat": 54.831745,
+          "lng": 18.324754,
+          "role": "required"
+        },
+        {
+          "id": 1350,
+          "stepId": "rozewie-latarnia",
+          "title": "Розеве: маяк и легенда, которую придумал смотритель",
+          "location": "Маяк Розеве, мыс Розеве",
+          "lat": 54.830374,
+          "lng": 18.336263,
+          "role": "required"
+        },
+        {
+          "id": 1351,
+          "stepId": "wladyslawowo-hallerowka",
+          "title": "Владиславово: дом генерала, который женил Польшу с морем",
+          "location": "Халлерувка, ул. Morska 6, Владиславово",
+          "lat": 54.796623,
+          "lng": 18.400289,
+          "role": "required"
+        },
+        {
+          "id": 1352,
+          "stepId": "chalupy-przerwanie",
+          "title": "Халупы: место, где косу пытались разрезать",
+          "location": "Памятный камень у лесной дороги между Халупами и Кузьницей",
+          "lat": 54.748479,
+          "lng": 18.541999,
+          "role": "required"
+        },
+        {
+          "id": 1353,
+          "stepId": "kuznica-przetwornia",
+          "title": "✨ Кузьница: место поцелуя и рыба на привал (по желанию)",
+          "location": "«Przetwórnia», ул. Generała Józefa Hallera, Кузьница",
+          "lat": 54.734191,
+          "lng": 18.580289,
+          "role": "optional"
+        },
+        {
+          "id": 1354,
+          "stepId": "jastarnia-kosciol",
+          "title": "Ястарня: дом из разбитых кораблей и амвон, который плывёт",
+          "location": "Костёл Посещения Пресвятой Девы Марии, Ястарня",
+          "lat": 54.702972,
+          "lng": 18.671436,
+          "role": "required"
+        },
+        {
+          "id": 1355,
+          "stepId": "jurata-pomnik",
+          "title": "Юрата: богиня, которую приковали к скале",
+          "location": "Памятник и фонтан Юраты, ул. Międzymorze / Wojska Polskiego, Юрата",
+          "lat": 54.683049,
+          "lng": 18.714547,
+          "role": "required"
+        },
+        {
+          "id": 1356,
+          "stepId": "hel-muzeum-obrony",
+          "title": "✨ Музей обороны побережья (по желанию)",
+          "location": "Музей обороны побережья, ул. Helska 16, Хель",
+          "lat": 54.623066,
+          "lng": 18.801469,
+          "role": "optional"
+        },
+        {
+          "id": 1357,
+          "stepId": "hel-fokarium",
+          "title": "✨ Фокарий: самые крупные хищники Балтики (по желанию)",
+          "location": "Фокарий Морской станции Института океанографии ГУ, ул. Morska 2, Хель",
+          "lat": 54.606889,
+          "lng": 18.800052,
+          "role": "optional"
+        },
+        {
+          "id": 1358,
+          "stepId": "hel-latarnia",
+          "title": "Маяк Хеля: сорок один метр над концом земли",
+          "location": "Маяк Хель, Хель",
+          "lat": 54.600008,
+          "lng": 18.812898,
+          "role": "required"
+        },
+        {
+          "id": 1359,
+          "stepId": "hel-kopiec-kaszubow",
+          "title": "Курган кашубов: а это, вообще-то, начало",
+          "location": "Курган кашубов, Хельский цыпель",
+          "lat": 54.59538,
+          "lng": 18.807726,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 139,
+      "questId": "hel-fishermen",
+      "title": "Квест по Хелю: колокола затонувшего города",
+      "city": "Хель",
+      "questUrl": "https://metravel.by/quests/hel/hel-fishermen",
+      "durationMinutes": 140,
+      "difficulty": "easy",
+      "tags": [
+        "sea",
+        "food",
+        "memory",
+        "culture",
+        "history",
+        "citywalk"
+      ],
+      "overview": "Старый Хель исчезал под действием моря, а легенда превратила это в рассказ о буре, погубившей богатый город. Новый Хель вырос из рыбацкой кашубской жизни. Маршрут от вокзала ведёт к воде через надписи, дома и памятные знаки; необязательные остановки остаются на выбор, а финал обращён к месту прежнего города.",
+      "compactOverview": "Легенда о затонувшем Старом Хеле соседствует с историей нового города кашубских рыбаков. Путь от вокзала к воде читается по домам, надписям и памятным знакам; необязательные остановки остаются на выбор.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/139/?lang=ru",
+        "sha256": "6892fc71064348c43aa8814544fe038b13cc6789dc595fff7a2f587b2ac23092",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/139/main/8d3770432f214c7abdaaa0d7a25ea02e.webp",
+        "sha256": "52a6433787aacf1826acb6b57ed0e56500d70baa21fa6ddfe04dbade9eabc2f6",
+        "bytes": 131670,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 1361,
+          "stepId": "hel-cmentarz-obroncow",
+          "title": "✨ Пролог: старое кладбище (по желанию)",
+          "location": "Городское кладбище, ул. Dworcowa, Хель",
+          "lat": 54.611823,
+          "lng": 18.802092,
+          "role": "optional"
+        },
+        {
+          "id": 1362,
+          "stepId": "hel-dom-necla",
+          "title": "Дом рыбака, который стал кашубским Сенкевичем",
+          "location": "Дом Августина Нецеля, ул. Generała Władysława Sikorskiego, Хель",
+          "lat": 54.609576,
+          "lng": 18.798758,
+          "role": "required"
+        },
+        {
+          "id": 1363,
+          "stepId": "hel-rzepka-zeromski",
+          "title": "Парк у вокзала: десять тонн в Книге Гиннесса",
+          "location": "Парк у станции PKP Hel, ул. Дворцовая / Липовая, Хель",
+          "lat": 54.60914,
+          "lng": 18.800861,
+          "role": "required"
+        },
+        {
+          "id": 1364,
+          "stepId": "hel-pomnik-myslisza",
+          "title": "Кашуб с деда-прадеда",
+          "location": "Памятный камень Яна Мыслиша, ул. Stefana Żeromskiego, Хель",
+          "lat": 54.60846,
+          "lng": 18.802744,
+          "role": "required"
+        },
+        {
+          "id": 1365,
+          "stepId": "hel-kosciol",
+          "title": "Костёл, который выпросили рыбаки",
+          "location": "Приходский костёл, ул. Stefana Żeromskiego 1, Хель",
+          "lat": 54.607524,
+          "lng": 18.803331,
+          "role": "required"
+        },
+        {
+          "id": 1366,
+          "stepId": "hel-willa-jeannette",
+          "title": "✨ Вилла у порта: здесь жил первый океанограф (по желанию)",
+          "location": "Вилла с памятной табличкой К. Демеля, ул. Portowa, Хель",
+          "lat": 54.607622,
+          "lng": 18.79934,
+          "role": "optional"
+        },
+        {
+          "id": 1367,
+          "stepId": "hel-fokarium",
+          "title": "✨ Фокарий: те, кого возвращают в море (по желанию)",
+          "location": "Фокарий Морской станции Института океанографии ГУ, ул. Morska 2, Хель",
+          "lat": 54.606889,
+          "lng": 18.800052,
+          "role": "optional"
+        },
+        {
+          "id": 1368,
+          "stepId": "hel-wedzarnia",
+          "title": "✨ Привал: селёдка, у которой чистая пятёрка (по желанию)",
+          "location": "Фуд-трак «U Marchewki w Helu», ул. Morska, у спуска на бульвар, Хель",
+          "lat": 54.606433,
+          "lng": 18.800708,
+          "role": "optional"
+        },
+        {
+          "id": 1369,
+          "stepId": "hel-laboratorium",
+          "title": "Дом, с которого началась польская наука о море",
+          "location": "Памятные таблички Морской рыбацкой лаборатории, ул. Wiejska 40, Хель",
+          "lat": 54.606028,
+          "lng": 18.801896,
+          "role": "required"
+        },
+        {
+          "id": 1370,
+          "stepId": "hel-dab-franciszek",
+          "title": "Дуб, который старше всего города вокруг",
+          "location": "Дуб «Франтишек», ул. Wiejska 46, у бывшей плебании, Хель",
+          "lat": 54.605469,
+          "lng": 18.80232,
+          "role": "required"
+        },
+        {
+          "id": 1371,
+          "stepId": "hel-muzeum-rybolowstwa",
+          "title": "Костёл, ставший музеем рыболовства",
+          "location": "Музей рыболовства, Bulwar Nadmorski 2, Хель",
+          "lat": 54.605172,
+          "lng": 18.802209,
+          "role": "required"
+        },
+        {
+          "id": 1372,
+          "stepId": "hel-patron-herb",
+          "title": "Апостол-рыбак и якорь, который вытянули сетями",
+          "location": "Капличка патрона Хеля и старый якорь, ул. Żeglarska / Bulwar Nadmorski, Хель",
+          "lat": 54.604865,
+          "lng": 18.802062,
+          "role": "required"
+        },
+        {
+          "id": 1373,
+          "stepId": "hel-krzyz-rybakow",
+          "title": "Крест на бульваре: две половины одной фразы",
+          "location": "Крест рыбаков, ул. Żeglarska, у Бульвара Надморского, Хель",
+          "lat": 54.604723,
+          "lng": 18.802152,
+          "role": "required"
+        },
+        {
+          "id": 1374,
+          "stepId": "hel-pirs-rybacki",
+          "title": "Рыбацкий пирс: те, кто возвращается",
+          "location": "Рыбацкий пирс, порт Хеля, Bulwar Nadmorski, Хель",
+          "lat": 54.6026,
+          "lng": 18.801,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 159,
+      "questId": "jaworzno-grodek",
+      "title": "Квест по парку Грудек: польские Мальдивы на дне карьера",
+      "city": "Явожно",
+      "questUrl": "https://metravel.by/quests/jaworzno/jaworzno-grodek",
+      "durationMinutes": 120,
+      "difficulty": "easy",
+      "tags": [
+        "lake",
+        "park",
+        "hiking",
+        "nature",
+        "history"
+      ],
+      "overview": "Бывший доломитовый карьер Грудек превратился в парк с бирюзовой водой, кладками и смотровыми площадками. Маршрут проходит от входа мимо большой чаши к малой и показывает новую жизнь промышленного ландшафта. Воду и перекус берут с собой; купаться в карьерах нельзя, а настилы в холодную погоду бывают скользкими.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/159/?lang=ru",
+        "sha256": "844ce6f1398f63e1c0d037e3850a82e075330a1bd9fccd97d42164a787011484",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/159/main/5aca763bf7a841dcb9160179c06b7453.webp",
+        "sha256": "cb418d968896b90257f2d851b9ea29452ef0f82db3ae810b629772314905f0c2",
+        "bytes": 132376,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 1599,
+          "stepId": "1-planeta",
+          "title": "Планета у ворот карьера",
+          "location": "Северный вход в парк Грудек, начало тропы у парковки",
+          "lat": 50.233525,
+          "lng": 19.309909,
+          "role": "required"
+        },
+        {
+          "id": 1600,
+          "stepId": "2-sciezka",
+          "title": "Тропа, которая задаёт вопросы",
+          "location": "Природная тропа у деревянной бацувки, первый щит тропы",
+          "lat": 50.231564,
+          "lng": 19.312651,
+          "role": "required"
+        },
+        {
+          "id": 1601,
+          "stepId": "3-wawoz",
+          "title": "Теснина с легендарным именем",
+          "location": "Узкое скальное ущелье на природной тропе, щит у входа в него",
+          "lat": 50.230397,
+          "lng": 19.312867,
+          "role": "required"
+        },
+        {
+          "id": 1602,
+          "stepId": "4-bolshaya-chasha",
+          "title": "Что держало карьер сухим",
+          "location": "Беседки и настил на северном берегу большого водоёма",
+          "lat": 50.229295,
+          "lng": 19.311196,
+          "role": "required"
+        },
+        {
+          "id": 1603,
+          "stepId": "5-baza",
+          "title": "Ворота базы на восточном берегу",
+          "location": "Дайв-база на восточном берегу большого водоёма, у ворот",
+          "lat": 50.228839,
+          "lng": 19.31245,
+          "role": "required"
+        },
+        {
+          "id": 1604,
+          "stepId": "6-obryv",
+          "title": "Взгляд сверху на стены",
+          "location": "Восточная смотровая площадка над обрывом большого водоёма",
+          "lat": 50.229291,
+          "lng": 19.315346,
+          "role": "required"
+        },
+        {
+          "id": 1605,
+          "stepId": "7-planety",
+          "title": "Планеты, которые жмутся друг к другу",
+          "location": "Навес с лавками у скопления щитов модели Солнечной системы",
+          "lat": 50.227297,
+          "lng": 19.316187,
+          "role": "required"
+        },
+        {
+          "id": 1606,
+          "stepId": "8-vtoroe-imya",
+          "title": "Второе имя парка",
+          "location": "Большой щит с названием парка у тропы над малым водоёмом",
+          "lat": 50.226971,
+          "lng": 19.316929,
+          "role": "required"
+        },
+        {
+          "id": 1607,
+          "stepId": "9-zver",
+          "title": "Бронзовый зверь в беседке",
+          "location": "Деревянная беседка на северном берегу малого бирюзового водоёма",
+          "lat": 50.22616,
+          "lng": 19.315106,
+          "role": "required"
+        },
+        {
+          "id": 1608,
+          "stepId": "10-kladka",
+          "title": "Кладка над водой",
+          "location": "Деревянный настил с беседками, проложенный над малым водоёмом",
+          "lat": 50.225685,
+          "lng": 19.316106,
+          "role": "required"
+        },
+        {
+          "id": 1609,
+          "stepId": "11-yuzhny-obryv",
+          "title": "Южный обрыв — финал маршрута",
+          "location": "Смотровая площадка на южном берегу малого водоёма",
+          "lat": 50.225002,
+          "lng": 19.316352,
+          "role": "final"
+        }
+      ]
+    },
+    {
+      "id": 161,
+      "questId": "krakow-zakrzowek",
+      "title": "Квест по Закжувку: лагуна пана Твардовского",
+      "city": "Краков",
+      "questUrl": "https://metravel.by/quests/krakow/krakow-zakrzowek",
+      "durationMinutes": 120,
+      "difficulty": "easy",
+      "tags": [
+        "lake",
+        "park",
+        "legend",
+        "mystic",
+        "nature"
+      ],
+      "overview": "Закжувек — затопленный известняковый карьер среди Кракова, над которым поднимаются Скалки Твардовского. Легенда о чернокнижнике сопровождает кольцо вокруг лагуны: от купальни к скалам и пещере. Маршрут включает подъёмы; глубокую лагуну осматривают с берега, а для купания предназначены только оборудованные бассейны.",
+      "source": {
+        "bundleUrl": "https://metravel.by/api/quests/161/?lang=ru",
+        "sha256": "e5b0052f0a974978e3cd4fbaa36023df21f7fb317749e5fd00d8472ae26f0356",
+        "verifiedAt": "2026-10-31"
+      },
+      "cover": {
+        "uri": "https://metravel.by/quest-cover/quests/161/main/c1dfd911e6c142a1a227b3affd98d88c.webp",
+        "sha256": "344e90a5e449ece558712b9a3fd9662525fa269b3aeab980cd3f62d993517d74",
+        "bytes": 177036,
+        "widthPx": 1200,
+        "heightPx": 675
+      },
+      "points": [
+        {
+          "id": 1623,
+          "stepId": "1-brama",
+          "title": "Южные ворота: город кончается здесь",
+          "location": "Главный южный вход в парк Закжувек, у остановки Norymberska",
+          "lat": 50.030121,
+          "lng": 19.911594,
+          "role": "required"
+        },
+        {
+          "id": 1624,
+          "stepId": "2-kapielisko",
+          "title": "Купальня между скал",
+          "location": "Купальня парка Закжувек, деревянные мостки на воде",
+          "lat": 50.033851,
+          "lng": 19.911719,
+          "role": "required"
+        },
+        {
+          "id": 1625,
+          "stepId": "3-plaza-wschodnia",
+          "title": "Восточный берег: у кромки глубины",
+          "location": "Гравийный пляж на восточном берегу лагуны, ниже Центра водных видов спорта",
+          "lat": 50.037327,
+          "lng": 19.911313,
+          "role": "required"
+        },
+        {
+          "id": 1626,
+          "stepId": "4-cafe-panorama-optional",
+          "title": "Кофе над лагуной (по желанию)",
+          "location": "Кафе Panorama Zakrzówek у Центра водных видов спорта, восточный берег",
+          "lat": 50.037057,
+          "lng": 19.912041,
+          "role": "optional"
+        },
+        {
+          "id": 1627,
+          "stepId": "5-stawy-plazow",
+          "title": "Пруды маленьких хозяев",
+          "location": "Пруды у восточной тропы парка (Staw z Jaszczurką), деревянные инфостенды",
+          "lat": 50.03832,
+          "lng": 19.91572,
+          "role": "required"
+        },
+        {
+          "id": 1628,
+          "stepId": "6-skalodrom",
+          "title": "Сухой карьер: стены вертикальных людей",
+          "location": "Верхний сухой карьер, скальные стенки Baba Jaga и Problemówka",
+          "lat": 50.0402,
+          "lng": 19.91515,
+          "role": "required"
+        },
+        {
+          "id": 1629,
+          "stepId": "7-sciana-solvay",
+          "title": "Стена «Сольвая»: студент с вагонеткой",
+          "location": "Северная смотровая над лагуной, у стенда «Historia kamieniołomów»",
+          "lat": 50.03987,
+          "lng": 19.91138,
+          "role": "required"
+        },
+        {
+          "id": 1630,
+          "stepId": "8-uroczysko",
+          "title": "Имя этого места",
+          "location": "Зелёный инфостенд ZZM на тропе к Скалкам Твардовского",
+          "lat": 50.041305,
+          "lng": 19.910104,
+          "role": "required"
+        },
+        {
+          "id": 1631,
+          "stepId": "9-elvis",
+          "title": "Аллея короля (не польского)",
+          "location": "Памятный камень на аллее в лесу Скалок Твардовского",
+          "lat": 50.04105,
+          "lng": 19.908994,
+          "role": "required"
+        },
+        {
+          "id": 1632,
+          "stepId": "10-grota-twardowskiego",
+          "title": "Пещера чернокнижника",
+          "location": "Скалы у входа в пещеру Твардовского (Jaskinia Twardowskiego), западная часть парка",
+          "lat": 50.038923,
+          "lng": 19.902446,
+          "role": "required"
+        },
+        {
+          "id": 1633,
+          "stepId": "11-balkon",
+          "title": "Юго-западный балкон: прощание с лагуной",
+          "location": "Смотровая точка на юго-западном берегу лагуны",
+          "lat": 50.034919,
+          "lng": 19.909266,
+          "role": "final"
+        }
+      ]
+    }
+  ]
+}

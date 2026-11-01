@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto';
 import providerData from '@/data/travelBooks/providers.json';
-import {assertBookPrintResource,loadPrintDirectory} from '@/services/book/readyBooks/printResources';
+import {assertBookPrintResource,loadCurrentPrintDirectory,loadPrintDirectory} from '@/services/book/readyBooks/printResources';
 import {publishedFixture} from './publicationFixtures';
 
 const originalFetch=global.fetch;
@@ -12,6 +12,11 @@ const resourceBook=()=>{
   book.printDirectory={mime:'application/json',uri:`https://metravel.by/travel-books/${book.id}/${book.revision}/providers.json`,bytes:payload.length,sha256};
   return book;
 };
+it('loads current walk-in information separately from immutable book resources without a request',async()=>{
+  global.fetch=jest.fn();
+  await expect(loadCurrentPrintDirectory()).resolves.toEqual(providerData);
+  expect(global.fetch).not.toHaveBeenCalled();
+});
 beforeEach(()=>{
   Object.defineProperty(global.crypto,'subtle',{configurable:true,value:{digest:jest.fn().mockResolvedValue(Uint8Array.from(Buffer.from(sha256,'hex')).buffer)}});
   global.fetch=jest.fn().mockResolvedValue({ok:true,arrayBuffer:async()=>Uint8Array.from(payload).buffer});

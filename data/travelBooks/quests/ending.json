@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "status": "owner-approved",
+  "pages": [
+    "country-map"
+  ],
+  "ownerDecision": {
+    "command": "Общая карта страны со всеми квестами",
+    "recordedAt": "2026-11-01",
+    "source": "Explicit owner reply relayed by root"
+  },
+  "priorImplementationChoice": {
+    "recordedAt": "2026-11-01",
+    "decidedBy": "codex-root",
+    "basis": "Общая карта страны со всеми квестами текущего тома — рабочий выбор в пределах порученной страновой книги. Дополнительный ключ ответов не запрошен и не добавляется. Вопрос о предпочтении был необязательным; ответа или отдельного одобрения владельца не получено.",
+    "sha256": "b66195d3176046e969e9900f9d9658a75c403ce8be3f1e2126f7ff94cd0be416"
+  }
+}

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "taskId": 2855,
+  "recordedOn": "2026-11-01",
+  "family": "Noto Sans / Noto Serif",
+  "style": "Regular body / Bold heading",
+  "font": {
+    "path": "docs/design/travel-memory-books-v1/assets/fonts/NotoSans-Regular.ttf",
+    "sha256": "b85c38ecea8a7cfb39c24e395a4007474fa5a4fc864f6ee33309eb4948d232d5",
+    "bytes": 569208
+  },
+  "headingFont": {
+    "path": "docs/design/travel-memory-books-v1/assets/fonts/NotoSerif-Bold.ttf",
+    "sha256": "3b2086a869bcded2aeb4416fc281ceec9d6ce3c06756cda19f8f763636204e7d",
+    "bytes": 638164
+  },
+  "license": {
+    "path": "docs/design/travel-memory-books-v1/assets/fonts/LICENSE.txt",
+    "sha256": "0dab92d0544f7b233403f14b84a663bdbfa746982eda629e7f4f9ffe1b036feb",
+    "bytes": 4377,
+    "name": "SIL Open Font License 1.1"
+  },
+  "source": "Reused unchanged tracked static TTFs and complete license from owner-approved graphic proof.",
+  "approval": {
+    "path": "data/travelBooks/styles/graphic/approval.json",
+    "sha256": "b0477397ca703ce75c55de3d9b69dcc45d5736da4c98a9bc323dfc71666bbf15",
+    "bytes": 2345
+  },
+  "pdfEmbedding": "Final book PDF embedding and story overflow remain to be checked during assembly.",
+  "glyphCheck": {
+    "checkedOn": "2026-11-01",
+    "tool": "@cantoo/fontkit",
+    "locales": [
+      "ru",
+      "be",
+      "uk",
+      "pl",
+      "en"
+    ],
+    "checkedCharacters": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzАБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцшщъыьэюяІіЎўЇїЄєҐґĄąĆćĘęŁłŃńÓóŚśŹźŻż0123456789«»—–…’№",
+    "faces": [
+      {
+        "path": "docs/design/travel-memory-books-v1/assets/fonts/NotoSans-Regular.ttf",
+        "static": true,
+        "missing": [],
+        "missingDecorativeGlyphs": [
+          "□"
+        ]
+      },
+      {
+        "path": "docs/design/travel-memory-books-v1/assets/fonts/NotoSerif-Bold.ttf",
+        "static": true,
+        "missing": [],
+        "missingDecorativeGlyphs": [
+          "□"
+        ]
+      }
+    ],
+    "limitation": "Noto Sans and/or Serif lacks U+25A1 checkbox. Graphic renderer must use deterministic vector/CSS checkbox for checklist rather than a missing glyph or unlicensed implicit system fallback."
+  }
+}

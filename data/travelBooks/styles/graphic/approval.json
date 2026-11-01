@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "taskId": 2855,
+  "recordedOn": "2026-11-01",
+  "visualStyle": "graphic",
+  "status": "owner-approved-series-production",
+  "approved": true,
+  "ownerStatement": "Утверждаю образец, продолжай серию",
+  "approvalSource": "Current owner instruction relayed by root session",
+  "scope": {
+    "countries": {
+      "BY": 31,
+      "PL": 30
+    },
+    "headingFont": "Noto Serif Bold",
+    "bodyFont": "Noto Sans Regular",
+    "sameSharedBookPipeline": true
+  },
+  "historicalProof": {
+    "path": "docs/design/travel-memory-books-v1/assets/graphic-style-sample-provenance.json",
+    "sha256": "f5af364df2c29e46fa885cbfcd045d16fda276fadf0ca32a44c460454bdc458e",
+    "bytes": 13836
+  },
+  "approvedArtwork": {
+    "path": "data/travelBooks/styles/graphic/style-reference.png",
+    "sha256": "f89fbe4748088f690aca191ef8312fa7b9a918e2fb46528cb7626aff9d21445f",
+    "bytes": 3361150
+  },
+  "fonts": {
+    "body": {
+      "path": "docs/design/travel-memory-books-v1/assets/fonts/NotoSans-Regular.ttf",
+      "sha256": "b85c38ecea8a7cfb39c24e395a4007474fa5a4fc864f6ee33309eb4948d232d5",
+      "bytes": 569208
+    },
+    "heading": {
+      "path": "docs/design/travel-memory-books-v1/assets/fonts/NotoSerif-Bold.ttf",
+      "sha256": "3b2086a869bcded2aeb4416fc281ceec9d6ce3c06756cda19f8f763636204e7d",
+      "bytes": 638164
+    },
+    "license": {
+      "path": "docs/design/travel-memory-books-v1/assets/fonts/LICENSE.txt",
+      "sha256": "0dab92d0544f7b233403f14b84a663bdbfa746982eda629e7f4f9ffe1b036feb",
+      "bytes": 4377
+    },
+    "choices": "Noto Serif Bold heading; Noto Sans Regular body; SIL OFL 1.1"
+  },
+  "geometry": {
+    "profileId": "album-a5",
+    "widthMm": 148,
+    "heightMm": 210,
+    "bindingMm": 15,
+    "safeMm": 5,
+    "artworkWidthMm": 130,
+    "artworkHeightMm": 86.66666666666667,
+    "ppiAtPlacedSize": 300.1
+  },
+  "historicalProofPreserved": true,
+  "printReadinessNotImplied": true,
+  "approvedStage": "visual-direction-and-series-continuation",
+  "ownerCommand": "Утверждаю образец, продолжай серию",
+  "ownerCommandDate": "2026-11-01",
+  "styleReference": {
+    "path": "data/travelBooks/styles/graphic/style-reference.png",
+    "sha256": "f89fbe4748088f690aca191ef8312fa7b9a918e2fb46528cb7626aff9d21445f",
+    "bytes": 3361150
+  }
+}

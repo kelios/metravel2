@@ -100,6 +100,90 @@
   ],
   "providers": [
     {
+      "id": "karandash-documents",
+      "name": "Карандаш",
+      "country": "BY",
+      "city": "Минск",
+      "url": "https://www.karandash.by/ru/polygraphy/print",
+      "fulfillment": "local",
+      "deliveryCoverage": [],
+      "minimumCopies": 1,
+      "publishedProfiles": [
+        "album-a5"
+      ],
+      "customFormat": true,
+      "formatsComplete": false,
+      "bindings": [
+        "spiral"
+      ],
+      "minimumBodyPages": null,
+      "maximumBodyPages": null,
+      "bodyPageMultiple": null,
+      "genericPdfAcceptance": "yes",
+      "acceptsRuPdf": "unknown",
+      "contactLanguages": [],
+      "supportedProfiles": [],
+      "checkedAt": "2026-11-01",
+      "sourceUrls": [
+        "https://www.karandash.by/ru/polygraphy/print",
+        "https://www.karandash.by/files/rules_karandash.pdf",
+        "https://www.karandash.by/ru/about/contact",
+        "https://www.karandash.by/ru/polygraphy/brochures"
+      ],
+      "verification": "published",
+      "acceptedFiles": [],
+      "printHelp": {
+        "address": "ул. Гикало, 3",
+        "fontPolicy": "confirm-embedded",
+        "a4Printing": "published",
+        "binding": "published",
+        "technicalSourceUrl": "https://www.karandash.by/files/rules_karandash.pdf",
+        "serviceSourceUrl": "https://www.karandash.by/ru/polygraphy/print",
+        "addressSourceUrl": "https://www.karandash.by/ru/about/contact"
+      }
+    },
+    {
+      "id": "copy-general-documents",
+      "name": "Copy General",
+      "country": "PL",
+      "city": "Warszawa",
+      "url": "https://www.copygeneral.pl/prace-dyplomowe/",
+      "fulfillment": "local",
+      "deliveryCoverage": [],
+      "minimumCopies": null,
+      "publishedProfiles": [],
+      "customFormat": false,
+      "formatsComplete": false,
+      "bindings": [
+        "spiral"
+      ],
+      "minimumBodyPages": null,
+      "maximumBodyPages": null,
+      "bodyPageMultiple": null,
+      "genericPdfAcceptance": "yes",
+      "acceptsRuPdf": "unknown",
+      "contactLanguages": [],
+      "supportedProfiles": [],
+      "checkedAt": "2026-11-01",
+      "sourceUrls": [
+        "https://www.copygeneral.pl/prace-dyplomowe/",
+        "https://www.copygeneral.pl/druk-a4-a3/",
+        "https://www.copygeneral.pl/druk-techniczny-CAD/",
+        "https://www.copygeneral.pl/kontakt/"
+      ],
+      "verification": "published",
+      "acceptedFiles": [],
+      "printHelp": {
+        "address": "Al. Jerozolimskie 93, Nowogrodzka Square",
+        "fontPolicy": "embedded",
+        "a4Printing": "published",
+        "binding": "published",
+        "technicalSourceUrl": "https://www.copygeneral.pl/druk-techniczny-CAD/",
+        "serviceSourceUrl": "https://www.copygeneral.pl/druk-a4-a3/",
+        "addressSourceUrl": "https://www.copygeneral.pl/kontakt/"
+      }
+    },
+    {
       "id": "salamandra-brochures",
       "name": "Salamandra",
       "country": "BY",
@@ -255,14 +339,23 @@
       "acceptsRuPdf": "unknown",
       "contactLanguages": [],
       "supportedProfiles": [],
-      "checkedAt": "2026-10-30",
+      "checkedAt": "2026-11-01",
       "sourceUrls": [
         "https://cyfrus.pl/druk_ksiazek_spiralowanych",
-        "https://cyfrus.pl/artykul/pokaz/pomoc11",
-        "https://cyfrus.pl/regulamin1/regulamin/"
+        "https://cyfrus.pl/faq",
+        "https://cyfrus.pl/kontakt"
       ],
       "verification": "published",
-      "acceptedFiles": []
+      "acceptedFiles": [],
+      "printHelp": {
+        "address": "ul. Kościuszki 29 G, 50-011 Wrocław",
+        "fontPolicy": "embedded",
+        "a4Printing": "published",
+        "binding": "published",
+        "technicalSourceUrl": "https://cyfrus.pl/faq",
+        "serviceSourceUrl": "https://cyfrus.pl/druk_ksiazek_spiralowanych",
+        "addressSourceUrl": "https://cyfrus.pl/kontakt"
+      }
     },
     {
       "id": "versoprint-glued",

@@ -8,6 +8,7 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {build} from 'esbuild';
 import sharp from 'sharp';
+import {stageBookMetadata,relatedBookIndex} from './catalog-metadata.mjs';
 import {coverResources, coverPersonalizationDescriptor, readCoverResource} from './cover-resources.mjs';
 
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -19,6 +20,7 @@ export function planPublicationMerge(current, staged, validate) {
   if (!Array.isArray(current?.books) || !Array.isArray(staged?.books) || !staged.books.length) throw new Error('Current catalog and staged editions are required');
   const incomingIds = new Set(staged.books.map(book => book.id));
   const combined = {...current, ...staged, books: [...current.books.filter(book => !incomingIds.has(book.id)), ...staged.books]};
+  if(current.bookMetadata||staged.bookMetadata)combined.bookMetadata=[...(current.bookMetadata??[]).filter(asset=>!incomingIds.has(asset.bookId)),...(staged.bookMetadata??[])];
   // Schema defaults/normalizers are validation details, not permission to rewrite
   // accepted edition metadata or introduce another feature's fields into staging.
   validate(combined);
@@ -27,7 +29,7 @@ export function planPublicationMerge(current, staged, validate) {
 
 export function publicationRevision(source,{editorial,publisherHash,rasterizerVersion,encoderVersions}){
   return source.revision+'.'+hash(JSON.stringify({editorial,publisherHash,rasterizerVersion,encoderVersions,
-    layoutVersion:2,visualStyle:editorial.visualStyle??'watercolor',coverPersonalization:source.coverPersonalization?coverPersonalizationDescriptor(source,filename=>filename):null,
+    ...(source.kind==='quests'?{kind:'quests'}:{}),layoutVersion:source.kind==='quests'?3:2,visualStyle:editorial.visualStyle??'watercolor',coverPersonalization:source.coverPersonalization?coverPersonalizationDescriptor(source,filename=>filename):null,
     profiles:source.profiles.map(profile=>({profile:profile.profile,artifacts:profile.artifacts.map(a=>({purpose:a.purpose,component:a.component,sha256:a.sha256})),controls:profile.controls.map(control=>({sha256:control.sha256,controlFor:control.controlFor,component:control.component}))})),
   })).slice(0,12);
 }
@@ -63,10 +65,12 @@ export async function preparePublication({input,output,baseUrl}){
   const validation=path.join(output,'publication-validator.cjs');
   await build({entryPoints:['services/book/readyBooks/publication.ts'],outfile:validation,bundle:true,platform:'node',format:'cjs',logLevel:'silent'});
   const {createRequire}=await import('node:module');
-  const {publicationSchema,coverPersonalizationSchema,buildReadyBookPagePlan}=createRequire(import.meta.url)(validation);
+  const {publicationSchema,coverPersonalizationSchemaForStyle,buildReadyBookPagePlan,buildQuestBookPagePlan}=createRequire(import.meta.url)(validation);
   const books=[];
   for(const source of index.books){
     const editorial=await readJson(source.editorialPath);
+    const isQuest=source.kind==='quests';
+    if(isQuest!==(editorial.kind==='quests'))throw new Error('Production kind differs from editorial source');
     if(editorial.id!==source.bookId||editorial.revision!==source.revision||editorial.country!==source.country) throw new Error('Editorial snapshot mismatch');
     if(!identifier.test(source.bookId)||!identifier.test(source.revision)||source.profiles.some(p=>!['pocket-150x100','album-a5'].includes(p.profile.id)))throw new Error('Invalid production identity');
     for(const profile of source.profiles)for(const control of profile.controls){
@@ -83,7 +87,7 @@ export async function preparePublication({input,output,baseUrl}){
     try {await stat(directory);throw new Error('Immutable revision already staged: '+relative);} catch(error){if(error.code!=='ENOENT') throw error;}
     await mkdir(directory,{recursive:true});
     const uri=file=>new URL(`${relative}/${file}`,base.href.replace(/\/?$/,'/')).href;
-    const coverPersonalization=coverPersonalizationSchema.parse(coverPersonalizationDescriptor(source,uri));
+    const coverPersonalization=coverPersonalizationSchemaForStyle(editorial.visualStyle).parse(coverPersonalizationDescriptor(source,uri));
     for(const resource of coverResources(source)){
       const bytes=await readCoverResource(resource,root);
       await mkdir(path.dirname(path.join(directory,resource.filename)),{recursive:true});
@@ -128,20 +132,20 @@ export async function preparePublication({input,output,baseUrl}){
         artifacts.push({id:`${id}.control.${control.controlFor}.${control.component}`,revision,profileId:id,purpose:'control',component:control.component,controlFor:control.controlFor,uri:uri(filename),mime:'application/pdf',sha256:control.sha256,bytes:bytes.length,pageCount:control.pageCount});
       }
     }
-    const destinationPages=buildReadyBookPagePlan(editorial).filter(page=>page.kind==='destination');
+    const destinationPages=isQuest?buildQuestBookPagePlan(editorial,{endMatterPages:editorial.endMatterPages}).filter(page=>page.kind==='quest-story'):buildReadyBookPagePlan(editorial).filter(page=>page.kind==='destination');
     const quality=source.profiles.map(profile=>{const reports=acceptance.reports.filter(report=>report.bookId===source.bookId&&report.profileId===profile.profile.id&&report.purpose==='read');const minIllustrationPpi=Math.min(...reports.map(report=>report.minIllustrationPpi));return {profileId:profile.profile.id,printReady:false,minIllustrationPpi,physicalChecks:[...(minIllustrationPpi<300?['image-resolution']:[]),'provider-acceptance','paper-check']};});
     // The watercolor series keeps its historical JSON shape; other visual editions carry their style explicitly.
-    books.push({id:editorial.id,slug:editorial.slug,title:editorial.title,country:editorial.country,...(editorial.visualStyle&&editorial.visualStyle!=='watercolor'?{visualStyle:editorial.visualStyle}:{}),revision,contentLocale:'ru',status:'partial',layoutVersion:2,coverPersonalization,bodyPageCount:source.bodyPageCount,coverPageCount:4,stopCount:editorial.stops.length,quality,
+    books.push({...(isQuest?{kind:'quests',seriesId:editorial.seriesId,volume:editorial.volume,endMatterPages:editorial.endMatterPages}:{}),id:editorial.id,slug:editorial.slug,title:editorial.title,country:editorial.country,...(editorial.visualStyle&&editorial.visualStyle!=='watercolor'?{visualStyle:editorial.visualStyle}:{}),revision,contentLocale:'ru',status:'partial',layoutVersion:isQuest?3:2,coverPersonalization,bodyPageCount:source.bodyPageCount,coverPageCount:4,stopCount:isQuest?editorial.quests.length:editorial.stops.length,quality,
       coverUri:preview.find(p=>p.profileId==='pocket-150x100'&&p.component==='cover').pages[0].uri,
       missing:['stickers','instructions','print-passport','provider-acceptance','paper-check'],
-      stops:editorial.stops.map((stop,i)=>({id:stop.id,title:stop.title,page:destinationPages[i].number,sourceUrl:stop.navigation.articleUrl,pointId:stop.navigation.pointId,sourceTravelId:stop.navigation.sourceTravelId,authorId:1,...(stop.navigation.quest?{questId:stop.navigation.quest.id}:{})})),
+      stops:isQuest?editorial.quests.map((quest,i)=>({id:quest.questId,title:quest.title,page:destinationPages[i].number,sourceUrl:quest.questUrl,questId:quest.id,questSlug:quest.questId})):editorial.stops.map((stop,i)=>({id:stop.id,title:stop.title,page:destinationPages[i].number,sourceUrl:stop.navigation.articleUrl,pointId:stop.navigation.pointId,sourceTravelId:stop.navigation.sourceTravelId,authorId:1,...(stop.navigation.quest?{questId:stop.navigation.quest.id}:{})})),
       profiles:source.profiles.map(p=>p.profile),artifacts,preview});
   }
-  const {staged:manifest}=planPublicationMerge(await readJson('data/travelBooks/manifest.json'),{schemaVersion:1,releaseId:'travel-books-v1',books},value=>publicationSchema.parse(value));
+  const {staged:manifest}=planPublicationMerge(await readJson('data/travelBooks/manifest.json'),await stageBookMetadata({schemaVersion:1,releaseId:'travel-books-v1',books},output),value=>publicationSchema.parse(value));
   const temporary=path.join(output,'manifest.json.tmp');
   await writeFile(temporary,JSON.stringify(manifest,null,2)+'\n');
   await rename(temporary,path.join(output,'manifest.json'));
-  await writeFile(path.join(output,'related.json'),JSON.stringify(books.map(({country,slug,title,stops})=>({country,slug,title,sourceTravelIds:[...new Set(stops.map(stop=>stop.sourceTravelId))],pointIds:stops.map(stop=>stop.pointId),...(stops.some(stop=>stop.questId)?{questIds:[...new Set(stops.filter(stop=>stop.questId).map(stop=>stop.questId))]}:{})})),null,2)+'\n');
+  await writeFile(path.join(output,'related.json'),JSON.stringify(relatedBookIndex(manifest),null,2)+'\n');
   return {books:books.length,manifest:path.join(output,'manifest.json'),output};
 }
 async function main(){

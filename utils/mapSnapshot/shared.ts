@@ -63,34 +63,7 @@ export function normalizeCoordPair(lat: number, lng: number): string {
   return `${safeLat},${safeLng}`
 }
 
-export function lngToTileX(lng: number, zoom: number): number {
-  return ((lng + 180) / 360) * Math.pow(2, zoom)
-}
-
-export function latToTileY(lat: number, zoom: number): number {
-  const r = (lat * Math.PI) / 180
-  return ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * Math.pow(2, zoom)
-}
-
-export function calculateFitZoom(
-  minLat: number,
-  maxLat: number,
-  minLng: number,
-  maxLng: number,
-  width: number,
-  height: number,
-  paddingFactor: number = 1.3,
-  maxCandidateZoom: number = 16,
-): number {
-  for (let z = maxCandidateZoom; z >= 2; z--) {
-    const x1 = lngToTileX(minLng, z) * 256
-    const x2 = lngToTileX(maxLng, z) * 256
-    const y1 = latToTileY(maxLat, z) * 256
-    const y2 = latToTileY(minLat, z) * 256
-    if ((x2 - x1) * paddingFactor <= width && (y2 - y1) * paddingFactor <= height) return z
-  }
-  return 2
-}
+export {lngToTileX, latToTileY, calculateFitZoom} from './viewport'
 
 export function loadCrossOriginImage(
   url: string,

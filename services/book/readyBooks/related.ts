@@ -1,6 +1,7 @@
 import summaries from '@/data/travelBooks/related.json';
 
 export type RelatedBookSummary = {
+  kind?:'quests';
   country: 'BY' | 'PL';
   slug: string;
   title: string;
@@ -28,7 +29,9 @@ export function relatedBookForSource(source: BookSource) {
   const travelId = positiveId(source.sourceTravelId);
   const pointId = positiveId(source.pointId);
   const questId = positiveId(source.questId);
-  return (summaries as RelatedBookSummary[]).find(book =>
+  const editions=summaries as RelatedBookSummary[];
+  const questEdition=questId!==undefined?editions.find(book=>book.kind==='quests'&&book.questIds?.includes(questId)):undefined;
+  return questEdition??editions.find(book =>
     (pointId !== undefined && book.pointIds.includes(pointId)) ||
     (travelId !== undefined && book.sourceTravelIds.includes(travelId)) ||
     (questId !== undefined && book.questIds?.includes(questId)),

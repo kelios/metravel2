@@ -9,6 +9,7 @@ export {renderCoverPage} from './cover';
 
 const text = (value: string, className = '') => `<p class="${className}">${e(value)}</p>`;
 const content = (value: string, className = '') => `<main class="content ${className}">${value}</main>`;
+const graphicCheckbox = '<svg class="checklist-box" viewBox="0 0 12 12" aria-hidden="true"><rect x="1" y="1" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1"/></svg>';
 const flow = (value: string) => content(`<div class="flow">${value}</div>`);
 
 function qrLinks(input: ReadyBookRenderInput, stop: EditorialStop) {
@@ -55,7 +56,7 @@ export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage
   if (kind === 'map') return flow(`<h2>Места этой книги на карте</h2>${renderReadyBookEndMap(book, profile)}${text('Номера соответствуют списку мест на предыдущих страницах. Для точной навигации откройте QR выбранного места.', 'small')}`);
   if (kind === 'checklist') {
     const destinations = new Map(buildReadyBookPagePlan(book).filter(page => page.kind === 'destination').map(page => [page.stopId, page.number]));
-    return flow(`<h2>Места на карте</h2>${text('Номер · место · страница', 'small')}<ol class="contents-list">${book.stops.filter(item => selected.has(item.id)).map(item => `<li><span>□ ${book.stops.indexOf(item) + 1}. ${e(item.title)}</span><span>${destinations.get(item.id)}</span></li>`).join('')}</ol>`);
+    return flow(`<h2>Места на карте</h2>${text('Номер · место · страница', 'small')}<ol class="contents-list">${book.stops.filter(item => selected.has(item.id)).map(item => `<li><span>${book.visualStyle === 'graphic' ? graphicCheckbox : '□'} ${book.stops.indexOf(item) + 1}. ${e(item.title)}</span><span>${destinations.get(item.id)}</span></li>`).join('')}</ol>`);
   }
   return flow(`<h2>Об этой книге</h2>${text(`MeTravel · ${book.title} · редакция ${book.revision}.`)}${text(copy.creditsSource)} ${text(copy.creditsFont)} ${text('Файлы подготовлены для цифрового чтения и пробной печати. Профиль типографии и бумажный образец проверяются отдельно.', 'small')}`);
 }

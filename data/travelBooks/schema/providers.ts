@@ -17,6 +17,12 @@ export const printProviderSchema = z.strictObject({
   acceptsRuPdf: answer, contactLanguages: z.array(z.string().min(1)), supportedProfiles: z.array(profileId),
   checkedAt: z.string().date(), sourceUrls: z.array(https).min(1),
   verification: z.enum(['published', 'sample-confirmed']),
+  // Current walk-in information does not certify an immutable book PDF.
+  printHelp: z.strictObject({
+    address: z.string().min(1), fontPolicy: z.enum(['embedded', 'confirm-embedded']),
+    a4Printing: z.literal('published'), binding: z.literal('published'),
+    technicalSourceUrl: https, serviceSourceUrl: https, addressSourceUrl: https,
+  }).optional(),
   acceptedFiles: z.array(z.strictObject({
     profileId, sha256: z.string().regex(/^[a-f0-9]{64}$/), sourceUrl: https, checkedAt: z.string().date(),
   })),
@@ -32,6 +38,10 @@ export const printDirectorySchema = z.strictObject({
     ids.add(provider.id);
     if (provider.acceptedFiles.some(file => !provider.supportedProfiles.includes(file.profileId))) {
       ctx.addIssue({code: 'custom', path: ['providers', index, 'acceptedFiles'], message: 'Accepted file needs a supported profile'});
+    }
+    if (provider.printHelp && [provider.printHelp.technicalSourceUrl, provider.printHelp.serviceSourceUrl, provider.printHelp.addressSourceUrl]
+      .some(url => !provider.sourceUrls.includes(url))) {
+      ctx.addIssue({code: 'custom', path: ['providers', index, 'printHelp'], message: 'Printing information needs its primary sources'});
     }
   }
 });

@@ -3,6 +3,10 @@ import {useLocaleRevision} from '@/i18n/useLocaleRevision';
 
 // Literal keys let the web compiler extract the exact locale catalog.
 const copy = {
+  metadataLoading: () => translate('books:metadataLoading'),
+  metadataError: () => translate('books:metadataError'),
+  questCounts: (params?: TranslationParams) => translate('books:questCounts', params),
+  questPhotoSpace: () => translate('books:questPhotoSpace'),
   digitalKit: () => translate('books:digitalKit'),
   stickers: () => translate('books:stickers'),
   instructions: () => translate('books:instructions'),

@@ -4,7 +4,8 @@ import Button from '@/components/ui/Button';
 import {bookStyleKey,hasPrintSupplements} from '@/services/book/readyBooks/publicationState';
 import {useHydrationReady} from '@/hooks/useHydrationReady';
 import {findReadyBook,readyBooks} from '@/services/book/readyBooks/catalog';
-import type {PublishedArtifact} from '@/services/book/readyBooks/publication';
+import {loadReadyBookMetadata} from '@/services/book/readyBooks/bookMetadata';
+import type {PublishedBook,PublishedArtifact} from '@/services/book/readyBooks/publication';
 import {fetchBookArtifact} from '@/services/book/readyBooks/download';
 import {formatNumber,getActiveLocale} from '@/i18n';
 import {trackReadyBookEvent} from '@/utils/growthFunnelAnalytics';
@@ -20,7 +21,29 @@ const purposeKey={read:'read','home-rings':'rings','home-sewn':'sewn','print-sho
 const physicalCheckKey={'image-resolution':'resolutionPending','provider-acceptance':'providerAcceptance','paper-check':'paperCheck'} as const;
 export default function ReadyBookDetails({slug,initialProfileId}:{slug:unknown;initialProfileId?:unknown}){
   const bookT=useBookCopy();
-  const book=findReadyBook(slug);
+  const summary=findReadyBook(slug);
+  const [loaded,setLoaded]=useState<{key:string;book?:PublishedBook;failed?:boolean}>();
+  const [attempt,setAttempt]=useState(0);
+  const key=summary?`${summary.id}:${summary.revision}:${summary.metadata.sha256}`:'';
+  useEffect(()=>{
+    if(!summary)return;
+    const controller=new AbortController();
+    setLoaded({key});
+    loadReadyBookMetadata(summary,controller.signal).then(book=>{
+      if(!controller.signal.aborted)setLoaded({key,book});
+    }).catch(()=>{if(!controller.signal.aborted)setLoaded({key,failed:true});});
+    return()=>controller.abort();
+  },[summary,key,attempt]);
+  if(!summary)return <BooksFrame title={bookT('notFound')} path="/books" robots="noindex, nofollow"><Link href="/books">{bookT('back')}</Link></BooksFrame>;
+  if(loaded?.key===key&&loaded.book)return <LoadedBookDetails key={key} book={loaded.book} initialProfileId={initialProfileId}/>;
+  return <BooksFrame title={summary.title} path={`/books/${summary.slug}`} headingLang={summary.contentLocale}>
+    <Link href="/books">{bookT('back')}</Link>
+    {loaded?.key===key&&loaded.failed?<div role="alert"><p>{bookT('metadataError')}</p><Button label={bookT('retry')} onPress={()=>setAttempt(value=>value+1)}/></div>:<p role="status">{bookT('metadataLoading')}</p>}
+  </BooksFrame>;
+}
+
+function LoadedBookDetails({book,initialProfileId}:{book:PublishedBook;initialProfileId?:unknown}){
+  const bookT=useBookCopy();
   // A style switch keeps the chosen physical size through the `profile` query of the other edition.
   // The static shell knows no query, so the size is applied only after hydration (docs/RULES.md, hydration policy).
   const [profileId,setProfile]=useState(book?.profiles[0]?.id??'pocket-150x100');
@@ -36,7 +59,6 @@ export default function ReadyBookDetails({slug,initialProfileId}:{slug:unknown;i
   const active=useRef<AbortController|null>(null);
   useEffect(()=>{if(book)trackReadyBookEvent('ReadyBookViewed',book,getActiveLocale());return()=>active.current?.abort();},[book]);
   const close=()=>{setPreview(false);opener.current?.querySelector<HTMLElement>('[role="button"],button')?.focus();};
-  if(!book)return <BooksFrame title={bookT('notFound')} path="/books" robots="noindex, nofollow"><Link href="/books">{bookT('back')}</Link></BooksFrame>;
   const quality=book.quality.find(item=>item.profileId===profileId)!;
   const download=async(file:PublishedArtifact)=>{
     active.current?.abort();const controller=new AbortController();active.current=controller;
@@ -53,10 +75,10 @@ export default function ReadyBookDetails({slug,initialProfileId}:{slug:unknown;i
     finally{if(active.current===controller)setBusy(null);}
   };
   return <BooksFrame title={book.title} path={`/books/${book.slug}`} headingLang={book.contentLocale}>
-    <Link href="/books">{bookT('back')}</Link><p>{bookT('language')}</p><p>{bookT('counts',{places:formatNumber(book.stopCount),pages:formatNumber(book.bodyPageCount)})}</p><p className="ready-books-note">{bookT(hasPrintSupplements(book)?'digitalKit':'partial')}</p>
+    <Link href="/books">{bookT('back')}</Link><p>{bookT('language')}</p><p>{book.kind==='quests'?bookT('questCounts',{quests:formatNumber(book.stopCount),pages:formatNumber(book.bodyPageCount),volume:formatNumber(book.volume)}):bookT('counts',{places:formatNumber(book.stopCount),pages:formatNumber(book.bodyPageCount)})}</p><p className="ready-books-note">{bookT(hasPrintSupplements(book)?'digitalKit':'partial')}</p>
     <h2>{bookT('size')}</h2><div className="ready-books-controls">{book.profiles.map(profile=><label key={profile.id}><input type="radio" name="book-format" checked={profileId===profile.id} onChange={()=>{setProfile(profile.id);setFailed(null);trackReadyBookEvent('ReadyBookProfileSelected',book,getActiveLocale(),{profileId:profile.id});}}/>{bookT(profile.id==='album-a5'?'album':'pocket')}</label>)}</div>
-    <p>{bookT('photoSpace')}</p>
-    <h2>{bookT('style')}</h2><p>{bookT(bookStyleKey(book.visualStyle))}</p>
+    <p>{bookT(book.kind==='quests'?'questPhotoSpace':'photoSpace')}</p>
+    {book.kind!=='quests'&&<><h2>{bookT('style')}</h2><p>{bookT(bookStyleKey(book.visualStyle))}</p></>}
     {otherStyles.length>0&&<nav aria-label={bookT('styleOthers')} className="ready-books-controls">{otherStyles.map(other=><Link key={other.id} href={`/books/${other.slug}?profile=${profileId}`}>{bookT(bookStyleKey(other.visualStyle))}</Link>)}</nav>}
     <div ref={opener}><Button label={bookT('preview')} onPress={()=>{setPreview(true);trackReadyBookEvent('ReadyBookPreviewOpened',book,getActiveLocale(),{profileId});}}/></div>
     {preview&&<ReadyBookPreview key={book.id} book={book} profileId={profileId} onClose={close}/>}

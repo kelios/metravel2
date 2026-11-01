@@ -17,6 +17,8 @@ const {validatePdfInspection} = await import('../../services/book/readyBooks/val
 const {buildImpositionPlan} = await import('../../services/book/readyBooks/imposition/index.ts');
 const {readyBookBodyPageCount, buildReadyBookPagePlan} = await import('../../services/book/readyBooks/composition.ts');
 const {editorialBookDraftSchema} = await import('../../data/travelBooks/schema/editorial.ts');
+const {countryQuestBookSchema}=await import('../../data/travelBooks/schema/questBooks.ts');
+const {buildQuestBookPagePlan}=await import('../../services/book/readyBooks/questBooks/composition.ts');
 const {printProfileSchema} = await import('../../data/travelBooks/schema/profiles.ts');
 const args = process.argv.slice(2);
 let indexFile, digitalOnly = false;
@@ -47,18 +49,22 @@ const reports = [];
 const coverPersonalizationReports = [];
 const coverSchemaBundle=path.join(root,'cover-personalization-validator.cjs');
 await build({entryPoints:['services/book/readyBooks/publication.ts'],outfile:coverSchemaBundle,bundle:true,platform:'node',format:'cjs',logLevel:'silent'});
-const {coverPersonalizationSchema}=createRequire(import.meta.url)(coverSchemaBundle);
+const {coverPersonalizationSchemaForStyle}=createRequire(import.meta.url)(coverSchemaBundle);
 const checkPath = async file => {
   const resolved = await realpath(file);
   if (!resolved.startsWith(root + path.sep)) throw new Error('Production artifact escapes package');
   return resolved;
 };
 for (const book of index.books) {
-  const editorial = editorialBookDraftSchema.parse(JSON.parse(await readFile(book.editorialPath, 'utf8')));
-  const bodyCount = readyBookBodyPageCount(editorial.stops.length);
-  if (editorial.stops.length < 30 || book.bodyPageCount !== bodyCount || book.stopCount !== editorial.stops.length) throw new Error('Production composition differs from selected places');
+  const isQuest=book.kind==='quests';
+  const editorial=(isQuest?countryQuestBookSchema:editorialBookDraftSchema).parse(JSON.parse(await readFile(book.editorialPath,'utf8')));
+  if(isQuest&&(!editorial.endMatterPages?.length||editorial.endMatterPages.some(kind=>kind!=='country-map')))throw new Error('Quest ending has no approved content');
+  const canonicalPlan=isQuest?buildQuestBookPagePlan(editorial,{endMatterPages:editorial.endMatterPages}):buildReadyBookPagePlan(editorial);
+  const bodyCount=isQuest?canonicalPlan.length:readyBookBodyPageCount(editorial.stops.length);
+  const sourceCount=isQuest?editorial.quests.length:editorial.stops.length;
+  if ((!isQuest&&sourceCount<30)||book.bodyPageCount!==bodyCount||book.stopCount!==sourceCount) throw new Error('Production composition differs from selected places');
   if (editorial.id !== book.bookId || editorial.revision !== book.revision || editorial.country !== book.country) throw new Error('Production edition identity differs from editorial source');
-  coverPersonalizationSchema.parse(coverPersonalizationDescriptor(book,filename=>`https://metravel.by/travel-books/${book.bookId}/${book.revision}/${filename}`));
+  coverPersonalizationSchemaForStyle(book.visualStyle).parse(coverPersonalizationDescriptor(book,filename=>`https://metravel.by/travel-books/${book.bookId}/${book.revision}/${filename}`));
   for(const resource of coverResources(book))await readCoverResource(resource,root);
   const fullFontSha='504de8cc6f919163bc9afb67b9bc208d258230c5e8d00cb82ec52474f9fafc3b';
   if(book.coverPersonalization.font.sha256!==fullFontSha)throw new Error('Personalized covers require the licensed full Marck Script font');
@@ -71,7 +77,7 @@ for (const book of index.books) {
   for (const group of book.profiles) {
     const pageMapPath = await checkPath(group.artifacts.find(artifact => artifact.purpose === 'read' && artifact.component === 'body')?.pageMapPath);
     const pageMap = JSON.parse(await readFile(pageMapPath, 'utf8'));
-    const canonicalMap = buildReadyBookPagePlan(editorial).map(({number, ...entry}) => ({folio: number, ...entry}));
+    const canonicalMap = canonicalPlan.map(({number, ...entry}) => ({folio: number, ...entry}));
     if (JSON.stringify(pageMap) !== JSON.stringify(canonicalMap)) throw new Error('Body page map differs from the canonical composition');
     const required = ['read:body', 'read:cover', 'print-shop:body', 'print-shop:cover', 'home-rings:body', 'home-rings:cover', ...(group.profile.id === 'album-a5' ? ['home-sewn:body'] : [])];
     const combinations = group.artifacts.map(a => `${a.purpose}:${a.component}`);
@@ -90,7 +96,7 @@ for (const book of index.books) {
       const inspection = JSON.parse(result.stdout);
       let report;
       if (['read', 'print-shop'].includes(artifact.purpose)) {
-        report = validatePdfInspection({bookId: book.bookId, revision: book.revision, profile: artifact.printProfile, component: artifact.component, purpose: artifact.purpose, inspection, expectedSha256: artifact.sha256, expectedPageCount: artifact.component === 'body' ? bodyCount : 4, expectedImageCount: artifact.component === 'body' ? editorial.stops.length : 1});
+        report = validatePdfInspection({bookId: book.bookId, revision: book.revision, profile: artifact.printProfile, component: artifact.component, purpose: artifact.purpose, inspection, expectedSha256: artifact.sha256, expectedPageCount: artifact.component === 'body' ? bodyCount : 4, expectedImageCount: artifact.component === 'body' ? (isQuest?editorial.quests.length*2:editorial.stops.length) : 1});
         if (inspection.bytes !== artifact.bytes || inspection.pageCount !== artifact.pageCount) report.checks.push({name: 'index-counts', status: 'fail', details: 'Byte/page count differs from production index'});
         if(artifact.component==='cover')report.checks.push({name:'default-cover-text',status:inspection.defaultCoverTextPresent===true?'pass':'fail',details:'The shared PDF text engine stamped the exact default preset'});
         report.digitalPass = report.checks.every(check => check.status === 'pass');
@@ -122,8 +128,8 @@ for (const book of index.books) {
   }
 }
 const coverPersonalizationPass=coverPersonalizationReports.length===2&&coverPersonalizationReports.every(report=>report.pass);
-const report = {schemaVersion: 1, reports, coverPersonalizationPass, coverPersonalizationReports, digitalPass: coverPersonalizationPass&&reports.every(r => r.digitalPass), digitalIntegrityPass: coverPersonalizationPass&&reports.every(r => r.digitalIntegrityPass), providerReady: false, publishable: false, limitations: ['RGB; PDF/X и CMYK не подтверждены.', 'Нет подтверждения приёма точных файлов провайдерами BY/PL. Зависимость #2803.', 'Бумажная проверка H1 не выполнена.']};
+const report = {schemaVersion: 1, reports, coverPersonalizationPass, coverPersonalizationReports, digitalPass: coverPersonalizationPass&&reports.every(r => r.digitalPass), digitalIntegrityPass: coverPersonalizationPass&&reports.every(r => r.digitalIntegrityPass), providerReady: false, publishable: false, limitations: ['RGB; PDF/X и CMYK не подтверждены.', 'Приём точных файлов выбранной типографией не подтверждён; пользователь самостоятельно уточняет её требования.', 'Домашняя бумажная проба не выполнена; она необязательна для цифрового выпуска.']};
 await mkdir(path.join(root, 'validation'), {recursive: true});
 await writeFile(path.join(root, 'validation', 'report.json'), JSON.stringify(report, null, 2) + '\n');
-console.log('Provider acceptance: NOT VERIFIED; production publication: NOT READY');
+console.log(`Digital integrity: ${report.digitalIntegrityPass?'PASS':'FAIL'}; physical provider/paper acceptance: NOT VERIFIED; printReady: false`);
 process.exitCode = report.digitalIntegrityPass && digitalOnly ? 0 : 1;

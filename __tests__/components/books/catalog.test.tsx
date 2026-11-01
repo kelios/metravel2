@@ -1,6 +1,7 @@
 import React from 'react';
 import {render,screen} from '@testing-library/react';
 import Catalog from '@/components/books/catalog/ReadyBooksCatalog.web';
+import type {ReadyBookSummary} from '@/services/book/readyBooks/bookMetadata';
 import {publishedFixture} from '../../services/book/readyBooks/publicationFixtures';
 jest.mock('@/components/books/bookCopy',()=>({useBookCopy:()=>((key:string,params?:Record<string,unknown>)=>params?key+':'+JSON.stringify(params):key)}));
 jest.mock('@/components/ui/ImageCardMedia',()=>({__esModule:true,default:({src,alt}:any)=><img src={src} alt={alt}/>}));
@@ -28,6 +29,23 @@ it.each([31,37])('shows data-driven counts for a valid %i-place edition',count=>
   expect(screen.getByText('counts:'+JSON.stringify({places:String(book.stopCount),pages:String(book.bodyPageCount)}))).toBeTruthy();
   expect(book.stopCount).toBe(count);
   expect(book.bodyPageCount).toBeGreaterThan(56);
+});
+
+it('shows quest count and volume without presenting quests as places',()=>{
+  const base=publishedFixture(37);
+  const summary:ReadyBookSummary={
+    kind:'quests',seriesId:'poland-quests',volume:2,id:'poland-quests-2',slug:'poland-quests-2',
+    title:'Польша. Квесты, часть 2',country:'PL',revision:base.revision,contentLocale:base.contentLocale,
+    status:base.status,coverUri:base.coverUri.replace(`/${base.id}/`,'/poland-quests-2/'),stopCount:37,bodyPageCount:156,
+    profiles:base.profiles,missing:base.missing,
+    metadata:{kind:'book-metadata',bookId:'poland-quests-2',revision:base.revision,
+      uri:`https://metravel.by/travel-books/poland-quests-2/${base.revision}/book.json`,mime:'application/json',bytes:123,sha256:'a'.repeat(64)},
+  };
+  books.push(summary);
+  render(<Catalog/>);
+  expect(screen.getByText('questCounts:'+JSON.stringify({quests:'37',pages:'156',volume:'2'}))).toBeTruthy();
+  expect(screen.queryByText(/^counts:/)).toBeNull();
+  expect(screen.queryByText(/^style:/)).toBeNull();
 });
 
 it('names the visual style of every edition and keeps the watercolor default for legacy metadata',()=>{

@@ -1,9 +1,12 @@
-import {mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync} from 'node:fs';
+import {mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import path from 'node:path';
 import {runCli} from '../../../scripts/cli-test-utils';
 import {buildReadyBookPagePlan, validateEditorialBookDraft, validateReadyBook} from '../../../../services/book/readyBooks/validation';
 import type {ReadyBook} from '../../../../types/readyBook';
 import {fixturePdf, makeEditorialDraft, makeReadyBook} from './fixtures';
+import {publishedFixture} from './publicationFixtures';
+import currentPrintDirectory from '../../../../data/travelBooks/providers.json';
 
 describe('ready-book publication contract', () => {
   it('accepts complete independent profiles and keeps draft readiness separate', () => {
@@ -80,6 +83,119 @@ describe('ready-book CLI integrity gate', () => {
   });
   afterEach(() => rmSync(root, {recursive: true, force: true}));
   const cli = (...args: string[]) => runCli(process.execPath, ['scripts/validate-ready-books.mjs', ...args]);
+
+  it('validates immutable legacy metadata and print snapshots independently of current directories and guide templates', () => {
+    const hash = (bytes: Buffer) => createHash('sha256').update(bytes).digest('hex');
+    // Only byte/signature integrity is under test; these fixtures are not printable media.
+    const previewBytes = Buffer.from('RIFF0000WEBP');
+    const directoryBytes = Buffer.from(JSON.stringify({...currentPrintDirectory,
+      providers: currentPrintDirectory.providers.map((provider, index) => index === 0 ? {...provider, name: 'Archived print-shop snapshot'} : provider),
+    }));
+    const companions = new Map<string, Buffer>();
+    const books = [
+      {country: 'BY', id: 'belarus-memory', slug: 'belarus'},
+      {country: 'PL', id: 'poland-memory', slug: 'poland'},
+    ].map(identity => {
+      const {kind: _kind, coverPersonalization: _cover, ...book} = publishedFixture(30, identity);
+      const base = `https://metravel.by/travel-books/${book.id}/${book.revision}/`;
+      book.artifacts = book.artifacts.map(asset => ({...asset, uri: base + asset.id + '.pdf'}));
+      book.preview = book.preview.map((group, index) => ({...group, pages: group.pages.map(page => ({
+        ...page, uri: `${base}preview-${index}-${page.number}.webp`, sha256: hash(previewBytes), bytes: previewBytes.length,
+      }))}));
+      book.coverUri = book.preview[0].pages[0].uri;
+      book.printDirectory = {uri: base + 'providers.json', mime: 'application/json', bytes: directoryBytes.length, sha256: hash(directoryBytes)};
+      companions.set(book.printDirectory.uri, directoryBytes);
+      book.printGuidePages = book.profiles.map(profile => {
+        const artifact = book.artifacts.find(asset => asset.profileId === profile.id && asset.purpose === 'read' && asset.component === 'body')!;
+        const bytes = Buffer.from(`<!doctype html><html lang="ru"><head><meta charset="utf-8"></head><body><p>Archived guide from an earlier template: ${book.revision}</p><a href="${artifact.uri}">PDF</a></body></html>`);
+        const descriptor = {profileId: profile.id, uri: base + profile.id + '/instructions.html', mime: 'text/html' as const, bytes: bytes.length, sha256: hash(bytes)};
+        companions.set(descriptor.uri, bytes);
+        return descriptor;
+      });
+      return book;
+    });
+    const writeAsset = (uri: string, bytes: Buffer) => {
+      const target = path.join(root, uri.slice('https://metravel.by/travel-books/'.length));
+      mkdirSync(path.dirname(target), {recursive: true});
+      writeFileSync(target, bytes);
+    };
+    for (const book of books) {
+      for (const asset of book.artifacts) writeAsset(asset.uri, fixturePdf);
+      for (const page of book.preview.flatMap(group => group.pages)) writeAsset(page.uri, previewBytes);
+    }
+    for (const [uri, bytes] of companions) writeAsset(uri, bytes);
+    const manifest = path.join(root, 'publication.json');
+    const pinManifest = () => {
+      const bookMetadata = books.map(book => {
+        const bytes = Buffer.from(JSON.stringify(book) + '\n');
+        const uri = `https://metravel.by/travel-books/${book.id}/${book.revision}/book.json`;
+        writeAsset(uri, bytes);
+        return {kind: 'book-metadata', bookId: book.id, revision: book.revision,
+          uri, mime: 'application/json', bytes: bytes.length, sha256: hash(bytes)};
+      });
+      const raw = JSON.stringify({schemaVersion: 1, releaseId: 'travel-books-v1', books, bookMetadata});
+      writeFileSync(manifest, raw);
+      return raw;
+    };
+    const raw = pinManifest();
+    const accepted = cli('--publication', manifest, '--assets-root', root);
+    expect(accepted.stderr).toBe('');
+    expect(accepted.status).toBe(0);
+    expect(JSON.parse(accepted.stdout)).toMatchObject({books: 2, hashesVerified: true});
+    expect(readFileSync(manifest, 'utf8')).toBe(raw);
+    expect(books.every(book => !Object.hasOwn(book, 'kind'))).toBe(true);
+
+    const directory = books[0].printDirectory!;
+    writeAsset(directory.uri, Buffer.concat([directoryBytes, Buffer.from('\n')]));
+    const tampered = cli('--publication', manifest, '--assets-root', root);
+    expect(tampered.status).toBe(1);
+    expect(tampered.stderr).toContain('Publication byte/hash mismatch');
+
+    const malformedDirectory = Buffer.from(JSON.stringify({...currentPrintDirectory,
+      providers: currentPrintDirectory.providers.map((provider, index) => index === 0 ? {...provider, minimumCopies: 0} : provider),
+    }));
+    writeAsset(directory.uri, malformedDirectory);
+    books[0].printDirectory = {...directory, bytes: malformedDirectory.length, sha256: hash(malformedDirectory)};
+    pinManifest();
+    const malformedSnapshot = cli('--publication', manifest, '--assets-root', root);
+    expect(malformedSnapshot.status).toBe(1);
+    expect(malformedSnapshot.stderr).toContain('minimumCopies');
+    books[0].printDirectory = directory;
+    writeAsset(directory.uri, directoryBytes);
+
+    const guide = books[0].printGuidePages![0];
+    const unsafeHtml = Buffer.from(companions.get(guide.uri)!.toString().replace('</body>', '<script>alert(1)</script></body>'));
+    writeAsset(guide.uri, unsafeHtml);
+    books[0].printGuidePages![0] = {...guide, bytes: unsafeHtml.length, sha256: hash(unsafeHtml)};
+    pinManifest();
+    const unsafeGuide = cli('--publication', manifest, '--assets-root', root);
+    expect(unsafeGuide.status).toBe(1);
+    expect(unsafeGuide.stderr).toContain('Invalid static print guide');
+
+    const mixedRevisionHtml = Buffer.from(companions.get(guide.uri)!.toString().replace('/' + books[0].revision + '/', '/another-revision/'));
+    writeAsset(guide.uri, mixedRevisionHtml);
+    books[0].printGuidePages![0] = {...guide, bytes: mixedRevisionHtml.length, sha256: hash(mixedRevisionHtml)};
+    pinManifest();
+    const mixedGuide = cli('--publication', manifest, '--assets-root', root);
+    expect(mixedGuide.status).toBe(1);
+    expect(mixedGuide.stderr).toContain('External or mixed-revision HTML link');
+    books[0].printGuidePages![0] = guide;
+    writeAsset(guide.uri, companions.get(guide.uri)!);
+    pinManifest();
+
+    const {bookMetadata} = JSON.parse(raw);
+    books[0].title = 'Changed without updating the pinned metadata';
+    writeFileSync(manifest, JSON.stringify({schemaVersion: 1, releaseId: 'travel-books-v1', books, bookMetadata}));
+    const swapped = cli('--publication', manifest, '--assets-root', root);
+    expect(swapped.status).toBe(1);
+    expect(swapped.stderr).toContain('Book metadata must match the exact raw published record');
+
+    books[0].stopCount--;
+    writeFileSync(manifest, JSON.stringify({schemaVersion: 1, releaseId: 'travel-books-v1', books, bookMetadata}));
+    const malformed = cli('--publication', manifest, '--assets-root', root);
+    expect(malformed.status).toBe(1);
+    expect(malformed.stderr).toContain('Composition count differs from selected places');
+  }, 20000); // Seven isolated canonical CLI invocations share one fixture and no network.
 
   it('checks actual bytes and catches file corruption after a valid manifest', () => {
     const book = makeReadyBook();

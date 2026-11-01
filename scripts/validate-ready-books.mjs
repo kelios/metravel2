@@ -26,15 +26,15 @@ if (args[0] === '--publication') {
   const providersBundle=path.join(output,'providers.cjs');
   await rm(bundle,{force:true});
   await rm(providersBundle,{force:true});
-  await build({entryPoints:{publication:'services/book/readyBooks/publication.ts',providers:'data/travelBooks/schema/providers.ts',guide:'scripts/books/print-guide-entry.ts'},outdir:output,outExtension:{'.js':'.cjs'},bundle:true,platform:'node',format:'cjs',logLevel:'silent'});
+  await build({entryPoints:{publication:'services/book/readyBooks/publication.ts',providers:'data/travelBooks/schema/providers.ts'},outdir:output,outExtension:{'.js':'.cjs'},bundle:true,platform:'node',format:'cjs',logLevel:'silent'});
   const require=createRequire(import.meta.url);
   const {publicationSchema}=require(bundle);
   const {printDirectorySchema}=require(providersBundle);
-  const {buildPrintGuide}=require(path.join(output,'guide.cjs'));
-  const {renderPrintGuideHtml}=await import('./books/render-print-guide-html.mjs');
-  const providers=printDirectorySchema.parse(JSON.parse(await readFile('data/travelBooks/providers.json','utf8')));
-  const manifest=publicationSchema.parse(JSON.parse(await readFile(file,'utf8')));
+  const manifest=JSON.parse(await readFile(file,'utf8'));
+  // Defaults validate legacy records but must not rewrite their pinned book.json bytes.
+  publicationSchema.parse(manifest);
   const assets=collectAssets([manifest]),root=await realpath(args[3]);
+  const providerIds=new Set(),printCities=new Set();
   for(const asset of assets){
     let current=root;for(const part of asset.relative.split('/')){current=path.join(current,part);if((await lstat(current)).isSymbolicLink())throw new Error('Publication asset is a symlink');}
     const resolved=await realpath(path.join(root,asset.relative));
@@ -42,14 +42,15 @@ if (args[0] === '--publication') {
     const bytes=await readFile(resolved);
     if(bytes.length!==asset.bytes||createHash('sha256').update(bytes).digest('hex')!==asset.sha256)throw new Error('Publication byte/hash mismatch: '+asset.relative);
     checkContent(asset,bytes);
-    if(asset.kind==='print-directory'&&JSON.stringify(printDirectorySchema.parse(JSON.parse(bytes.toString('utf8'))))!==JSON.stringify(providers))throw new Error('Published directory differs from validated canonical data');
+    // Published companions keep their own schema-checked, hash-pinned snapshot.
+    // The current UI directory and current guide generator may evolve independently.
+    if(asset.kind==='print-directory'){
+      const directory=printDirectorySchema.parse(JSON.parse(bytes.toString('utf8')));
+      for(const provider of directory.providers)providerIds.add(provider.country+':'+provider.id);
+      for(const city of directory.cities)printCities.add(city.country+':'+city.name);
+    }
   }
-  for(const book of manifest.books)for(const page of book.printGuidePages??[]){
-    const relative=page.uri.slice('https://metravel.by/travel-books/'.length);
-    const actual=await readFile(path.join(root,relative),'utf8');
-    if(actual!==renderPrintGuideHtml(buildPrintGuide(book,page.profileId),{slug:book.slug,artifacts:book.artifacts}))throw new Error('HTML guide differs from its exact PDF model');
-  }
-  console.log(JSON.stringify({publication:'partial',books:manifest.books.length,resources:assets.length,providers:providers.providers.length,printCities:providers.cities.length,hashesVerified:true,printReady:false}));
+  console.log(JSON.stringify({publication:'partial',books:manifest.books.length,resources:assets.length,providers:providerIds.size,printCities:printCities.size,hashesVerified:true,printReady:false}));
   process.exit(0);
 }
 if (args[0] === '--sources') {

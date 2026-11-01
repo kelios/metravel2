@@ -1,7 +1,7 @@
-import manifest from '@/data/travelBooks/manifest.json';
-import type {PublishedBook} from './publication';
+import catalogue from '@/data/travelBooks/catalog.json';
+import type {ReadyBookSummary} from './bookMetadata';
 
 // The publication CLI validates the full payload before this pointer is committed.
-// Only metadata is bundled; PDF bytes and preview images stay in media storage.
-export const readyBooks=manifest.books as PublishedBook[];
+// Full book data, preview arrays and PDF bytes are loaded only for the selected edition.
+export const readyBooks=catalogue.books as ReadyBookSummary[];
 export const findReadyBook=(slug:unknown)=>typeof slug==='string'?readyBooks.find(book=>book.slug===slug):undefined;

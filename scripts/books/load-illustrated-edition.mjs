@@ -91,7 +91,7 @@ export async function loadIllustratedEdition({country, style, stops, sources, so
     const bounds = art.artworkBounds;
     requireThat(bounds && [bounds.left, bounds.top, bounds.width, bounds.height].every(Number.isFinite) && bounds.left >= 0 && bounds.top >= 0 && bounds.width > 0 && bounds.height > 0 && bounds.left + bounds.width <= 1 && bounds.top + bounds.height <= 1, `invalid artwork bounds: ${stop.id}`);
     // Encoding changes bytes but never the native dimensions or photographed subject.
-    const encoded = await sharp(native).flatten({background: '#fffefa'}).jpeg({quality: 88, mozjpeg: true}).toBuffer();
+    const encoded = await sharp(native).flatten({background: style === 'graphic' ? '#fff' : '#fffefa'}).jpeg({quality: 88, mozjpeg: true}).toBuffer();
     assets[stop.id] = {dataUri: 'data:image/jpeg;base64,' + encoded.toString('base64'), credit: 'MeTravel / автор 1', sourceUrl: article.url, rights: 'Авторская фотография; заказанная владельцем производная иллюстрация', illustrated: true, artworkBounds: bounds, widthPx: size.width, heightPx: size.height};
     assetsProvenance.push({stopId: stop.id, pointId: place.pointId, sourceTravelId: article.id, articleUrl: article.url, articleImageUri: source.articleImageUri, sourceOriginalUri: source.originalUri, sourcePhotoSha256: source.sha256, sourcePhotoLocalPath: source.path, sourcePhotoNativeWidthPx: source.widthPx, sourcePhotoNativeHeightPx: source.heightPx, artworkPath: art.path, artworkSha256: art.sha256, nativeWidthPx: size.width, nativeHeightPx: size.height, artworkBounds: bounds, encodedSha256: sha(encoded), encodedBytes: encoded.length, encodedFormat: 'jpeg', encodedQuality: 88, tool: generation.tool, generation, visualReview: place.visualReview});
   }
