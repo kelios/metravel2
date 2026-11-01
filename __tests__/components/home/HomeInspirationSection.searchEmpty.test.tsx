@@ -8,8 +8,10 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ push: jest.fn() }),
 }))
 jest.mock('@/components/listTravel/RenderTravelItem', () => {
+  const { createElement } = jest.requireActual('react')
+  const { View } = jest.requireActual('react-native')
   return function MockRenderTravelItem() {
-    return null
+    return createElement(View, { testID: 'rail-travel-card' })
   }
 })
 jest.mock('@/api/map')
@@ -61,5 +63,13 @@ describe('HomeInspirationSection under an empty site search', () => {
     mockUseQuery.mockReturnValue({ data: undefined, isLoading: false, isError: true, error: new Error('x') } as never)
     const failed = await renderSection('search_empty')
     expect(failed.toJSON()).toBeNull()
+  })
+
+  it('caps the popular rail under an empty search at six routes', async () => {
+    const { default: HomePopularRoutesSection } = jest.requireActual('@/components/home/HomePopularRoutesSection')
+    const data = Array.from({ length: 10 }, (_, index) => ({ id: index + 1 }))
+    mockUseQuery.mockReturnValue({ data, isLoading: false } as never)
+    await render(<HomePopularRoutesSection surface="search_empty" />)
+    expect(screen.getAllByTestId('rail-travel-card')).toHaveLength(6)
   })
 })

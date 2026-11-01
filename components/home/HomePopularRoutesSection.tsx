@@ -4,6 +4,8 @@ import { HomeInspirationSection } from './HomeInspirationSection'
 import { translate as i18nT } from '@/i18n'
 
 
+const SEARCH_EMPTY_POPULAR_COUNT = 6
+
 const fetchHomePopularTravels = (options?: { signal?: AbortSignal }) =>
   fetchTravelsPopular({ ...options, limit: 10 })
 
@@ -24,6 +26,8 @@ export default function HomePopularRoutesSection({
       layout="rail"
       enabled={enabled}
       surface={surface}
+      // Под пустым поиском — запасной вариант, а не подборка: 3–6 маршрутов (#2895).
+      fixedCount={surface === 'search_empty' ? SEARCH_EMPTY_POPULAR_COUNT : undefined}
     />
   )
 }
