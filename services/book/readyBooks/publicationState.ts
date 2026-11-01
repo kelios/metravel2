@@ -5,5 +5,8 @@ export function hasPrintSupplements(book:Pick<PublishedBook,'missing'>):boolean{
   return !book.missing.some(purpose=>purpose==='stickers'||purpose==='instructions'||purpose==='print-passport');
 }
 
-/** Editions without a style are the original watercolor series; later styles name themselves (#2854). */
-export const bookStyleKey=(style:string|undefined):'styleWatercolor'|'stylePhoto'=>style==='photo'?'stylePhoto':'styleWatercolor';
+import type {BookVisualStyle} from '../../../data/travelBooks/schema/editorial';
+
+/** Editions without a style are the original watercolor series; every other published style names itself (#2854). */
+const STYLE_KEYS:Record<BookVisualStyle,'styleWatercolor'|'stylePhoto'|'styleGraphic'|'styleFantasy'>={watercolor:'styleWatercolor',photo:'stylePhoto',graphic:'styleGraphic',fantasy:'styleFantasy'};
+export const bookStyleKey=(style:BookVisualStyle|undefined)=>STYLE_KEYS[style??'watercolor'];

@@ -2,6 +2,7 @@ import React,{useEffect,useRef,useState} from 'react';
 import {Link} from 'expo-router';
 import Button from '@/components/ui/Button';
 import {bookStyleKey,hasPrintSupplements} from '@/services/book/readyBooks/publicationState';
+import {useHydrationReady} from '@/hooks/useHydrationReady';
 import {findReadyBook,readyBooks} from '@/services/book/readyBooks/catalog';
 import type {PublishedArtifact} from '@/services/book/readyBooks/publication';
 import {fetchBookArtifact} from '@/services/book/readyBooks/download';
@@ -21,7 +22,11 @@ export default function ReadyBookDetails({slug,initialProfileId}:{slug:unknown;i
   const bookT=useBookCopy();
   const book=findReadyBook(slug);
   // A style switch keeps the chosen physical size through the `profile` query of the other edition.
-  const [profileId,setProfile]=useState(book?.profiles.find(profile=>profile.id===initialProfileId)?.id??book?.profiles[0]?.id??'pocket-150x100');
+  // The static shell knows no query, so the size is applied only after hydration (docs/RULES.md, hydration policy).
+  const [profileId,setProfile]=useState(book?.profiles[0]?.id??'pocket-150x100');
+  const hydrated=useHydrationReady();
+  const requestedProfileId=book?.profiles.find(profile=>profile.id===initialProfileId)?.id;
+  useEffect(()=>{if(hydrated&&requestedProfileId)setProfile(requestedProfileId);},[hydrated,requestedProfileId]);
   // Only place editions of the same country switch styles; quest collections (kind 'quests', F1 #2808) are not alternatives.
   const isPlaces=(edition:object)=>((edition as {kind?:string}).kind??'places')==='places';
   const otherStyles=book&&isPlaces(book)?readyBooks.filter(other=>other.id!==book.id&&other.country===book.country&&isPlaces(other)):[];

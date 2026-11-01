@@ -57,6 +57,8 @@ export const books = {
   "style": "Стиль издания",
   "styleWatercolor": "Акварель",
   "stylePhoto": "Фотографии автора",
+  "styleGraphic": "Графика",
+  "styleFantasy": "Фэнтези",
   "styleOthers": "Другие стили этой страны",
   "explore": "Посмотреть книгу",
   "size": "Размер книги и фотографии",

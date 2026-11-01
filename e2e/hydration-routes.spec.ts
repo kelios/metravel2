@@ -57,7 +57,9 @@ test.describe('SSR route hydration', () => {
     });
 
     for (const route of ['/login', '/registration', '/places',
-      '/places?category=Замок', '/places?q=замок', '/places?country=Беларусь', '/roulette', '/advent', '/advent?day=1']) {
+      '/places?category=Замок', '/places?q=замок', '/places?country=Беларусь', '/roulette', '/advent', '/advent?day=1',
+      // #2854: the size query of a style switch is applied only after hydration.
+      '/books/belarus-photo?profile=album-a5']) {
       await gotoWithRetry(page, route);
       await expect(page.locator('#main-content')).toBeVisible({ timeout: 30_000 });
       await page.waitForTimeout(750);

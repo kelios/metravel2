@@ -32,8 +32,14 @@ it.each([31,37])('shows data-driven counts for a valid %i-place edition',count=>
 
 it('names the visual style of every edition and keeps the watercolor default for legacy metadata',()=>{
   books.push(publishedFixture(31),publishedFixture(31,{id:'belarus-photo-memory',slug:'belarus-photo',title:'Беларусь. Фотокнига воспоминаний',visualStyle:'photo'}));
-  render(<Catalog/>);
+  const first=render(<Catalog/>);
   expect(screen.getByText('style: styleWatercolor')).toBeTruthy();
   expect(screen.getByText('style: stylePhoto')).toBeTruthy();
+  first.unmount();
+  // The readiness note is per edition: the watercolor kit is complete, the photo edition still misses supplements.
+  books[0].missing=['provider-acceptance','paper-check'];
+  render(<Catalog/>);
+  expect(screen.getAllByText('digitalKit')).toHaveLength(1);
+  expect(screen.getAllByText('partial')).toHaveLength(1);
   expect(screen.getAllByRole('link').map(link=>link.getAttribute('href'))).toEqual(['/books/belarus','/books/belarus-photo']);
 });

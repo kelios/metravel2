@@ -83,7 +83,8 @@ export async function loadSelectedBook(country, {sourcesRoot = 'data/travelBooks
     ? await loadPhotoEdition({country, countryCode, profileId, stops, sources, sourcesRoot, collageRegistryPath, originalsIndexPath, assets, provenance})
     : await loadWatercolorEdition({country, countryCode, registryPath, stops, sources, assets, provenance, coverPersonalization});
   // The photographic edition hashes both physical profiles at once so that pocket and A5 share one revision.
-  const revision = `${edition.revisionDate}.${style === 'photo' ? 'photo' : 'collage'}.` + sha256(JSON.stringify({selection, source, ...(edition.revisionSeed ?? {provenance, cover: edition.cover.encodedSha256}), fonts: edition.fontHashes})).slice(0, 12);
+  // The watercolor seed keeps its historical shape (`font`) so the accepted revisions stay reproducible.
+  const revision = `${edition.revisionDate}.${style === 'photo' ? 'photo' : 'collage'}.` + sha256(JSON.stringify(style === 'photo' ? {selection, source, ...edition.revisionSeed, fonts: edition.fontHashes} : {selection, source, provenance, cover: edition.cover.encodedSha256, font: edition.fontHashes})).slice(0, 12);
   const book = {schemaVersion: 1, status: 'editorial-draft', id: identity.id, slug: identity.slug, revision, country: countryCode, contentLocale: 'ru', title: identity.title, ...(style === 'photo' ? {visualStyle: 'photo'} : {}), stops,
     miniTrips: [{id: 'selected-places', title: 'Самостоятельные поездки', stopIds: stops.map(stop => stop.id), note: 'Выбранные места не образуют один непрерывный маршрут.'}]};
   return {book, assets, cover: edition.cover.asset, coverPersonalization, fonts: edition.fonts, provenance: {style, selectionPath, recordsPath, ...edition.provenancePaths, assets: provenance, font: edition.fontProvenance, cover: edition.cover.provenance}, assetsHash: sha256(JSON.stringify(provenance))};

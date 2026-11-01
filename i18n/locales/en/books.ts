@@ -57,6 +57,8 @@ export const books = {
   "style": "Edition style",
   "styleWatercolor": "Watercolor",
   "stylePhoto": "Author photographs",
+  "styleGraphic": "Graphic",
+  "styleFantasy": "Fantasy",
   "styleOthers": "Other styles of this country",
   "explore": "Explore the book",
   "size": "Book and photo size",
