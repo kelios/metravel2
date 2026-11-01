@@ -14,6 +14,17 @@ const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const readJson=async file=>JSON.parse(await readFile(file,'utf8'));
 const identifier=/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/;
 
+/** Validate the complete catalog, while preserving raw immutable records and the staged subset. */
+export function planPublicationMerge(current, staged, validate) {
+  if (!Array.isArray(current?.books) || !Array.isArray(staged?.books) || !staged.books.length) throw new Error('Current catalog and staged editions are required');
+  const incomingIds = new Set(staged.books.map(book => book.id));
+  const combined = {...current, ...staged, books: [...current.books.filter(book => !incomingIds.has(book.id)), ...staged.books]};
+  // Schema defaults/normalizers are validation details, not permission to rewrite
+  // accepted edition metadata or introduce another feature's fields into staging.
+  validate(combined);
+  return {combined, staged};
+}
+
 export function publicationRevision(source,{editorial,publisherHash,rasterizerVersion,encoderVersions}){
   return source.revision+'.'+hash(JSON.stringify({editorial,publisherHash,rasterizerVersion,encoderVersions,
     layoutVersion:2,visualStyle:editorial.visualStyle??'watercolor',coverPersonalization:source.coverPersonalization?coverPersonalizationDescriptor(source,filename=>filename):null,
@@ -126,16 +137,19 @@ export async function preparePublication({input,output,baseUrl}){
       stops:editorial.stops.map((stop,i)=>({id:stop.id,title:stop.title,page:destinationPages[i].number,sourceUrl:stop.navigation.articleUrl,pointId:stop.navigation.pointId,sourceTravelId:stop.navigation.sourceTravelId,authorId:1,...(stop.navigation.quest?{questId:stop.navigation.quest.id}:{})})),
       profiles:source.profiles.map(p=>p.profile),artifacts,preview});
   }
-  const manifest=publicationSchema.parse({schemaVersion:1,releaseId:'travel-books-v1',books});
+  const {staged:manifest}=planPublicationMerge(await readJson('data/travelBooks/manifest.json'),{schemaVersion:1,releaseId:'travel-books-v1',books},value=>publicationSchema.parse(value));
   const temporary=path.join(output,'manifest.json.tmp');
   await writeFile(temporary,JSON.stringify(manifest,null,2)+'\n');
   await rename(temporary,path.join(output,'manifest.json'));
   await writeFile(path.join(output,'related.json'),JSON.stringify(books.map(({country,slug,title,stops})=>({country,slug,title,sourceTravelIds:[...new Set(stops.map(stop=>stop.sourceTravelId))],pointIds:stops.map(stop=>stop.pointId),...(stops.some(stop=>stop.questId)?{questIds:[...new Set(stops.filter(stop=>stop.questId).map(stop=>stop.questId))]}:{})})),null,2)+'\n');
   return {books:books.length,manifest:path.join(output,'manifest.json'),output};
 }
-if(process.argv[1]&&path.resolve(process.argv[1])===new URL(import.meta.url).pathname){
+async function main(){
   const options={};
   for(let i=2;i<process.argv.length;i+=2){const key={'--input':'input','--output':'output','--base-url':'baseUrl'}[process.argv[i]];if(!key||!process.argv[i+1]) throw new Error('Use --input DIR --output DIR --base-url HTTPS_URL');options[key]=process.argv[i+1];}
   if(!options.input||!options.output||!options.baseUrl) throw new Error('All three publication arguments are required');
   console.log(JSON.stringify(await preparePublication(options)));
+}
+if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
+  main().catch(error=>{console.error(error.message);process.exitCode=1;});
 }

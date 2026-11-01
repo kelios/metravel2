@@ -162,7 +162,7 @@
     },
     "index:books": {
       "marker": "path:\"/books\"",
-      "maxRawKB": 1.7,
+      "maxRawKB": 1.5,
       "maxGzipKB": 0.8,
       "maxBrotliKB": 0.6
     },

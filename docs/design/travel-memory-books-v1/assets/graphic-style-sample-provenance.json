@@ -1,0 +1,237 @@
+{
+  "schemaVersion": 1,
+  "taskId": 2855,
+  "visualStyle": "graphic",
+  "createdOn": "2026-11-01",
+  "status": "one-page-approval-sample-awaiting-owner-visual-decision",
+  "approved": false,
+  "fullBooksBuilt": 0,
+  "published": false,
+  "place": {
+    "pointId": 5247,
+    "stopId": "point-5247",
+    "article": {
+      "id": 201,
+      "url": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+      "userId": 1,
+      "publicationStatus": "published",
+      "pointIdVerified": true,
+      "verifiedOn": "2026-10-30",
+      "snapshotUpdatedAt": "2026-10-18T15:33:30.636321Z"
+    }
+  },
+  "sourcePhoto": {
+    "originalUri": "https://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp",
+    "articleImageUri": "https://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp",
+    "sha256": "03ddc105802698b2ad7f136cf4a292b2bc9b923ca8e7355ff87874e1a001b9c9",
+    "association": {
+      "kind": "same-article-body",
+      "evidence": "Article201 Mir section contains this exact image with alt «Мирский замок, общий вид»; media.article_body.gallery[id18].variants.original."
+    },
+    "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 201,
+      "permission": "owner-commissioned-photo-diary"
+    }
+  },
+  "artwork": {
+    "path": "docs/design/travel-memory-books-v1/assets/graphic-style-artwork-proposal.png",
+    "sha256": "f89fbe4748088f690aca191ef8312fa7b9a918e2fb46528cb7626aff9d21445f",
+    "bytes": 3361150,
+    "widthPx": 1536,
+    "heightPx": 1024,
+    "derivedIllustration": true,
+    "originalPhoto": false,
+    "upscaled": false,
+    "editing": "No raster edit. Original PNG is embedded unchanged; page CSS composes paper and dissolving outer edges."
+  },
+  "generation": {
+    "tool": "image_gen (historical integrated tool)",
+    "modelIdentifier": null,
+    "modelDisclosure": "Historical tool model was not recorded; not inferred.",
+    "promptSource": {
+      "path": ".codex-temp/books-template/PROMPTS.md",
+      "sha256": "10b37959dd2769439e078746cbd519f64f20f022631075841592b2bc3da273b1",
+      "bytes": 3308
+    },
+    "sourceEvidence": {
+      "path": ".codex-temp/books-template/photo-provenance.json",
+      "sha256": "4c535a81f3fc0b49897a55cf2960cf00680464af3601e7eeb757ba1766880581",
+      "bytes": 683
+    },
+    "additionalGenerationCalls": 0,
+    "historicalPromptRecord": "# Образцы Мирского замка: промпты и происхождение\n\nСпособ: встроенный `image_gen`, три отдельных вызова style-transfer.\nЧетвёртый вариант — исходная фотография без генерации.\n\nИсточник: статья 201, userIds=1, галерея 18, «Мирский замок, общий вид».\nТочный URI original также присутствует в rich_text.description.safe_html:\nhttps://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp\nSHA-256 исходного скачанного файла:\n03ddc105802698b2ad7f136cf4a292b2bc9b923ca8e7355ff87874e1a001b9c9\n\n## Общая часть каждого вызова\n\nUse case: style-transfer. Create an art-only landscape illustration for a real travel-memory photodiary, aspect ratio 3:2. Input image is the owner's actual photo of Mir Castle in Belarus, used as the exact architectural and viewpoint reference. Preserve the same distinctive red-brick and white plaster towers, roof silhouettes, walls, relative proportions, perspective and courtyard. Do not turn it into a generic European castle. Preserve the object identity faithfully. Output only the illustration, no page mockup, no typography, no QR codes, no labels or watermark.\n\n## 1. Графика\n\nStyle: elegant BLACK AND WHITE architectural pen-and-ink engraving, hand-drawn fine lines, controlled crosshatching, ample white paper negative space. Restrained, crisp, sophisticated adult travel journal, pure black ink and white, no gray photographic overlay. Recognisable architecture, lovely printable line work.\n\n## 2. Акварель\n\nStyle: luminous traditional WATERCOLOR on warm white cotton paper. Transparent loose washes, delicate precise architectural line accents, subtle bleeding edges, soft sage greens and muted terracotta brick, grey-blue sky. Mature art travel journal; charming, light, spacious. Preserve landmark architecture, not a cartoon.\n\n## 3. Фотография\n\nИспользован mir-author-photo.webp. Погода, здание и содержимое снимка не изменялись. В PDF выполнено только пропорциональное размещение изображения.\n\n## 4. Фэнтези\n\nStyle: tasteful FANTASY travel-journal illustration, painterly magical realism. Mir Castle remains clearly recognisable with the same existing towers and perspective. Warm golden window glows, soft enchanted indigo twilight, restrained tiny firefly lights and a dreamy pale sky. Rich but elegant colours. No extra towers, no dragons, people, invented landmarks, or changes to actual architectural massing. This is visibly an artistic fantasy interpretation, not documentary photography.\n\n## Сборка\n\nТекст и QR собраны отдельно от растрового изображения через ReportLab в настоящие A5-страницы. PDF содержит четыре варианта первой страницы и две общие страницы: место под фото 102×152 мм и дневник без линеек. Это образец для согласования, а не выпущенная книга.\n",
+    "historicalSourceEvidence": {
+      "articleId": 201,
+      "authorId": "1",
+      "sourceUrl": "https://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp",
+      "exactInHtml": true,
+      "photoSha256": "03ddc105802698b2ad7f136cf4a292b2bc9b923ca8e7355ff87874e1a001b9c9",
+      "checkedAt": "2026-10-30T10:01:55.053Z",
+      "originalUsedForPhotoVariant": true,
+      "derivedArt": [
+        {
+          "style": "graphic",
+          "path": "mir-graphic.png",
+          "kind": "AI style transfer"
+        },
+        {
+          "style": "watercolor",
+          "path": "mir-watercolor.png",
+          "kind": "AI style transfer"
+        },
+        {
+          "style": "fantasy",
+          "path": "mir-fantasy.png",
+          "kind": "AI style transfer"
+        }
+      ]
+    },
+    "exactPrompt": "Use case: style-transfer. Create an art-only landscape illustration for a real travel-memory photodiary, aspect ratio 3:2. Input image is the owner's actual photo of Mir Castle in Belarus, used as the exact architectural and viewpoint reference. Preserve the same distinctive red-brick and white plaster towers, roof silhouettes, walls, relative proportions, perspective and courtyard. Do not turn it into a generic European castle. Preserve the object identity faithfully. Output only the illustration, no page mockup, no typography, no QR codes, no labels or watermark.\n\nStyle: elegant BLACK AND WHITE architectural pen-and-ink engraving, hand-drawn fine lines, controlled crosshatching, ample white paper negative space. Restrained, crisp, sophisticated adult travel journal, pure black ink and white, no gray photographic overlay. Recognisable architecture, lovely printable line work.",
+    "promptSha256": "6f2280e5f7ce4185480cfbb585da12aa4ff193d2cfa4887d12649d8e6c79d0c7",
+    "promptStatus": "historical-common-prompt-plus-graphic-preset-recorded"
+  },
+  "fonts": {
+    "body": {
+      "path": "docs/design/travel-memory-books-v1/assets/fonts/NotoSans-Regular.ttf",
+      "sha256": "b85c38ecea8a7cfb39c24e395a4007474fa5a4fc864f6ee33309eb4948d232d5",
+      "bytes": 569208
+    },
+    "heading": {
+      "path": "docs/design/travel-memory-books-v1/assets/fonts/NotoSerif-Bold.ttf",
+      "sha256": "3b2086a869bcded2aeb4416fc281ceec9d6ce3c06756cda19f8f763636204e7d",
+      "bytes": 638164
+    },
+    "license": {
+      "path": "docs/design/travel-memory-books-v1/assets/fonts/LICENSE.txt",
+      "sha256": "0dab92d0544f7b233403f14b84a663bdbfa746982eda629e7f4f9ffe1b036feb",
+      "bytes": 4377
+    },
+    "choices": "Noto Serif Bold heading; Noto Sans Regular body; SIL OFL 1.1"
+  },
+  "geometry": {
+    "profileId": "album-a5",
+    "widthMm": 148,
+    "heightMm": 210,
+    "bindingMm": 15,
+    "safeMm": 5,
+    "artworkWidthMm": 130,
+    "artworkHeightMm": 86.66666666666667,
+    "ppiAtPlacedSize": 300.1
+  },
+  "navigation": {
+    "map": "https://metravel.by/map?lat=53.4511815&lng=26.4729416&placeId=5247&focusPlace=1&placeTitle=%D0%9C%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+    "article": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+    "quest": "https://metravel.by/quests/16/mir-castle"
+  },
+  "fit": {
+    "fonts": [
+      {
+        "family": "BookHand",
+        "status": "loaded"
+      },
+      {
+        "family": "BookHeading",
+        "status": "loaded"
+      }
+    ],
+    "boxes": {
+      "place-heading": {
+        "xMm": 14.998567708333333,
+        "yMm": 14.998567708333333,
+        "widthMm": 118.00003255208333,
+        "heightMm": 24.998990885416664
+      },
+      "place-art": {
+        "xMm": 8.999967447916665,
+        "yMm": 42.998925781249994,
+        "widthMm": 129.99723307291666,
+        "heightMm": 86.66344401041665
+      },
+      "place-story": {
+        "xMm": 17.99993489583333,
+        "yMm": 137.99674479166666,
+        "widthMm": 111.99729817708332,
+        "heightMm": 27.99622395833333
+      },
+      "qr-row": {
+        "xMm": 14.998567708333333,
+        "yMm": 171.80553385416667,
+        "widthMm": 118.00003255208333,
+        "heightMm": 28.194661458333332
+      }
+    },
+    "overflow": []
+  },
+  "renderer": {
+    "helper": "loadSelectedBook → loadReadyBookInputs → buildReadyBookHtml; select exactly one current Mir destination page",
+    "profile": "Current shared A5 title/story/QR geometry; proof-only monochrome palette and landscape art placement",
+    "harness": {
+      "path": ".codex-temp/books-e2/render-sample.mjs",
+      "sha256": "e04586a0caa202209e462dcf51daa0ee9581b2c5708cb681f0f817c19f38892d",
+      "bytes": 9276
+    },
+    "proofCss": "body,h1,h2,.qr-link{color:#111!important}.book-page{background:#fff}\n  .place-art{left:9mm;top:43mm;width:130mm;height:86.66666666666667mm;object-fit:contain}\n  .destination-content::after{content:\"\";position:absolute;left:9mm;top:43mm;width:130mm;height:86.66666666666667mm;pointer-events:none;background:linear-gradient(90deg,#fff,transparent 5%,transparent 95%,#fff),linear-gradient(#fff,transparent 5%,transparent 95%,#fff)}"
+  },
+  "artifacts": {
+    "pdf": {
+      "path": "docs/design/travel-memory-books-v1/assets/graphic-style-sample-a5.pdf",
+      "sha256": "2d4a83d658226f3c02a402d51c9c105e55ffd6e7a1c988ce530dc8bd2422dfbf",
+      "bytes": 2913272
+    },
+    "preview": {
+      "path": "docs/design/travel-memory-books-v1/assets/graphic-style-sample-a5.png",
+      "sha256": "2afb1bfa087a270f3ee08e349ae0a38ab415fe42624b7da9de1c193f519e415e",
+      "bytes": 2856041
+    },
+    "qrReport": {
+      "path": ".codex-temp/books-e2/sample/qr-report.json",
+      "sha256": "890039966b017478cb2678462470a75f9c4957f92bec190fb27a0990f4eb1ac9",
+      "bytes": 1763,
+      "record": {
+        "sha256": "2d4a83d658226f3c02a402d51c9c105e55ffd6e7a1c988ce530dc8bd2422dfbf",
+        "stopCount": 1,
+        "digitalPass": true,
+        "reports": [
+          {
+            "stopId": "point-5247",
+            "folio": 1,
+            "dpi": 300,
+            "mode": "color",
+            "expected": [
+              "https://metravel.by/map?lat=53.4511815&lng=26.4729416&placeId=5247&focusPlace=1&placeTitle=%D0%9C%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+              "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+              "https://metravel.by/quests/16/mir-castle"
+            ],
+            "decoded": [
+              "https://metravel.by/map?lat=53.4511815&lng=26.4729416&placeId=5247&focusPlace=1&placeTitle=%D0%9C%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+              "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+              "https://metravel.by/quests/16/mir-castle"
+            ],
+            "pass": true
+          },
+          {
+            "stopId": "point-5247",
+            "folio": 1,
+            "dpi": 300,
+            "mode": "grayscale",
+            "expected": [
+              "https://metravel.by/map?lat=53.4511815&lng=26.4729416&placeId=5247&focusPlace=1&placeTitle=%D0%9C%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+              "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+              "https://metravel.by/quests/16/mir-castle"
+            ],
+            "decoded": [
+              "https://metravel.by/map?lat=53.4511815&lng=26.4729416&placeId=5247&focusPlace=1&placeTitle=%D0%9C%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+              "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+              "https://metravel.by/quests/16/mir-castle"
+            ],
+            "pass": true
+          }
+        ]
+      }
+    }
+  },
+  "limit": "Only this one graphic page was assembled. It is not a full edition or publication; full-series resolution, cover, physical provider and paper acceptance remain unverified.",
+  "draftStorage": "Durable design proposal for owner visual decision. Not approved, not published, not production artwork registration."
+}

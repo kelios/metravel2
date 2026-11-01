@@ -29,10 +29,20 @@ const PHOTO: BookStyleCopy = {
   creditsFont: 'Lora — The Lora Project Authors, SIL Open Font License 1.1. Эпиграф обложки — Marck Script, Denis Masharov, SIL OFL 1.1. Русский язык.',
 };
 
+const FANTASY: BookStyleCopy = {
+  style: 'fantasy',
+  artAlt: 'Фэнтези-иллюстрация',
+  coverAlt: 'Фэнтези-иллюстрация места из книги',
+  usage: 'У каждого места три страницы: фэнтези-иллюстрация и короткий рассказ, свободное место для собственного снимка и чистая страница для записей.',
+  creditsSource: 'Основой иллюстраций стали фотографии автора опубликованных путешествий MeTravel. Художественная атмосфера не меняет фактические рассказы о местах. Источники и происхождение производных изображений сохранены в реестре издания.',
+  creditsFont: 'Cormorant Garamond — The Cormorant Project Authors, SIL Open Font License 1.1. Эпиграф обложки — Marck Script, Denis Masharov, SIL OFL 1.1. Русский язык.',
+};
+
 export function bookStyleCopy(style: BookVisualStyle | undefined): BookStyleCopy {
   switch (style ?? 'watercolor') {
     case 'watercolor': return WATERCOLOR;
     case 'photo': return PHOTO;
+    case 'fantasy': return FANTASY;
     default: throw new Error(`Visual style has no approved edition yet: ${style}`);
   }
 }

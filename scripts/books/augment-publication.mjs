@@ -139,8 +139,10 @@ export async function augmentPublication({manifest='data/travelBooks/manifest.js
   return {activated:activate,manifest:path.join(outputPath,'manifest.json'),books:books.map(b=>({id:b.id,revision:b.revision,artifacts:b.artifacts.length}))};
 }
 /** Cache all verified bytes before replacing the tracked publication pointer. */
-async function activatePublication({result,outputPath,cacheRoot}){
-  const scratch=await realpath('.codex-temp');
+export async function activatePublication({result,outputPath,cacheRoot,root=process.cwd()}){
+  root=await realpath(root);
+  cacheRoot=await realpath(cacheRoot);
+  const scratch=await realpath(path.join(root,'.codex-temp'));
   if(!cacheRoot.startsWith(scratch+path.sep))throw new Error('Activation cache must remain in .codex-temp');
   const entries=collectAssets([result]);
   // First inspect the complete staging set; no pointer/cache writes on bad input.
@@ -156,12 +158,12 @@ async function activatePublication({result,outputPath,cacheRoot}){
     }catch(error){if(error.code!=='ENOENT')throw error;await writeFile(target,bytes,{flag:'wx'});}
   }
   const payload=Buffer.from(JSON.stringify(result,null,2)+'\n');
-  const snapshots=path.resolve('data/travelBooks/releases');
-  await ensureDirectory(process.cwd(),'data/travelBooks/releases');
+  const snapshots=path.resolve(root,'data/travelBooks/releases');
+  await ensureDirectory(root,'data/travelBooks/releases');
   const snapshot=path.join(snapshots,hash(payload)+'.json');
   try{await writeFile(snapshot,payload,{flag:'wx'});}catch(error){if(error.code!=='EEXIST')throw error;if(!(await lstat(snapshot)).isFile())throw new Error('Snapshot leaf is not a regular file');if(!(await readFile(snapshot)).equals(payload))throw new Error('Immutable snapshot differs');}
   for(const [name,bytes] of [['related.json',await readFile(path.join(outputPath,'related.json'))],['manifest.json',payload]]){
-    const target=path.resolve('data/travelBooks',name),temporary=target+'.tmp-'+process.pid;
+    const target=path.resolve(root,'data/travelBooks',name),temporary=target+'.tmp-'+process.pid;
     if(!(await lstat(target)).isFile())throw new Error('Publication pointer must be a regular file');
     await writeFile(temporary,bytes,{flag:'wx'});await rename(temporary,target);
   }

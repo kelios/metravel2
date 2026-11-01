@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "taskId": 2856,
+  "visualStyle": "fantasy",
+  "recordedOn": "2026-11-01",
+  "status": "verified-inputs-not-assembled-not-published",
+  "printReady": false,
+  "countries": [
+    {
+      "country": "BY",
+      "placeCount": 31,
+      "evidence": {
+        "path": "data/travelBooks/by/fantasy-evidence.json",
+        "sha256": "29b8dca20f677ad6c790ea104b28d29383ad22a9201db00872ed2962096aa7da",
+        "bytes": 190344
+      }
+    },
+    {
+      "country": "PL",
+      "placeCount": 30,
+      "evidence": {
+        "path": "data/travelBooks/pl/fantasy-evidence.json",
+        "sha256": "119476a7ac90b0fd0ee13208ada42be405219bdcc63d06f7f8253495b1060b5b",
+        "bytes": 175541
+      }
+    }
+  ],
+  "approval": {
+    "path": "data/travelBooks/styles/fantasy/approval.json",
+    "sha256": "a0ab7d69fc1add2e5594f0d9b2a32f5f0f1adc1badb53d5a4268d0510bb8d8d0",
+    "bytes": 1461
+  },
+  "styleReference": {
+    "path": "data/travelBooks/styles/fantasy/style-reference.png",
+    "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+    "bytes": 2477074
+  },
+  "font": {
+    "path": "data/travelBooks/assets/fonts/cormorant-garamond/provenance.json",
+    "sha256": "f503672e8ec4ee3f1e792372b97bd7ec3e531491a042c5f7780f5a347ee0cf44",
+    "bytes": 1721
+  },
+  "historicalSamples": {
+    "provenance": {
+      "path": ".codex-temp/books-e3/sample/provenance.json",
+      "sha256": "fa9adf156f5db04fb1a540fe7499c0ace2bc6af5801b1a628e760ccf9ffecd09",
+      "bytes": 14862
+    },
+    "pdfs": [
+      {
+        "path": ".codex-temp/books-e3/sample/sample-pocket-150x100.pdf",
+        "sha256": "fe8a872dbd2ec0e755847ef8b81a50b43e50dbd0e89f010924e112f08913b473",
+        "bytes": 6565457
+      },
+      {
+        "path": ".codex-temp/books-e3/sample/sample-album-a5.pdf",
+        "sha256": "2d8e0b90190b7ec2b897ae6f3696a23dafbd5dc8acb3d00c87b5cf244eb16764",
+        "bytes": 6567831
+      }
+    ],
+    "documentationImages": [
+      {
+        "path": "docs/design/travel-memory-books-v1/assets/fantasy-style-sample-a5-mir.jpg",
+        "sha256": "e4c49efbd7b3001cad4662b1ad6184e091f1a481895725d0c905dbab497785f3",
+        "bytes": 279920,
+        "widthPx": 987,
+        "heightPx": 1400,
+        "source": {
+          "path": ".codex-temp/books-e3/sample/album-a5-place-mir.png",
+          "sha256": "9a83664fd61db1bff0c292431011656c162e320ccde01ac604058048bc4bbd8d",
+          "bytes": 4211523
+        },
+        "purpose": "Downscaled documentation preview of the approved historical PDF sample; not a print asset."
+      },
+      {
+        "path": "docs/design/travel-memory-books-v1/assets/fantasy-style-sample-pocket-mir.jpg",
+        "sha256": "841d97a0f88fc83df8af185551667e18752af8ebe11176d99e9b7bfd08be3270",
+        "bytes": 80383,
+        "widthPx": 1000,
+        "heightPx": 667,
+        "source": {
+          "path": ".codex-temp/books-e3/sample/pocket-150x100-place-mir.png",
+          "sha256": "dad640ffa8b880a944a9cb87cedbcf5105c9556f7c08df1afded193b05ffbbc9",
+          "bytes": 545218
+        },
+        "purpose": "Downscaled documentation preview of the approved historical PDF sample; not a print asset."
+      },
+      {
+        "path": "docs/design/travel-memory-books-v1/assets/fantasy-style-sample-a5-cover.jpg",
+        "sha256": "c2bbc82f31550dc680ccb68772b8cb316cf811c42cedce49da4addfc11acd738",
+        "bytes": 178383,
+        "widthPx": 987,
+        "heightPx": 1400,
+        "source": {
+          "path": ".codex-temp/books-e3/sample/album-a5-cover-1-front.png",
+          "sha256": "05645dfccff2cc1fd197f0fb865aee169908bd91c33bfef7fda75c1ea8356f4b",
+          "bytes": 2296909
+        },
+        "purpose": "Downscaled documentation preview of the approved historical PDF sample; not a print asset."
+      }
+    ]
+  },
+  "localAssetState": "Original photos and all 61 full-size artwork PNGs remain in the existing ignored staging paths recorded in each country evidence. No network substitution is allowed.",
+  "remainingChecks": [
+    "Shared loader/style adapter integration",
+    "Four full country/profile PDF packages",
+    "Embedded static TTF and overflow inspection",
+    "All actual PDF QR targets and preview hashes",
+    "Independent code review, production publication and browser acceptance"
+  ]
+}

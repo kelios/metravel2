@@ -1,0 +1,3011 @@
+{
+  "schemaVersion": 1,
+  "taskId": 2856,
+  "country": "BY",
+  "visualStyle": "fantasy",
+  "authorId": 1,
+  "recordedOn": "2026-11-01",
+  "placeCount": 31,
+  "status": "verified-artwork-inputs-not-assembled",
+  "printReady": false,
+  "approval": {
+    "path": "data/travelBooks/styles/fantasy/approval.json",
+    "sha256": "a0ab7d69fc1add2e5594f0d9b2a32f5f0f1adc1badb53d5a4268d0510bb8d8d0",
+    "bytes": 1461
+  },
+  "sourceInputs": [
+    {
+      "path": "data/travelBooks/by/selection.json",
+      "sha256": "265997a43341cb92ecfc666b6e4bb26789033498b86951c562421a9fc3decc67"
+    },
+    {
+      "path": "data/travelBooks/by/source-records.json",
+      "sha256": "86ca384235b7dfb25a4ce6046c2219552f8bb774011c35aa99e2601eccbcd698"
+    },
+    {
+      "path": "data/travelBooks/by/artwork-provenance.json",
+      "sha256": "a4b9537dc912ff6a9200abf5ea42f5869e73bafef7069fe99a734a750b7ee2f9"
+    }
+  ],
+  "cover": {
+    "sourceStopId": "point-5247",
+    "artworkSha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+    "policy": "Reuse the same selected real cover place as the accepted watercolor edition, in the fantasy style."
+  },
+  "places": [
+    {
+      "stopId": "point-356",
+      "pointId": 356,
+      "order": 1,
+      "printTitle": "Ислочь: Туристическая поляна",
+      "article": {
+        "id": 133,
+        "url": "https://metravel.by/travels/reka-isloch-gde-guliat-i-otdykhat-s-sobakoi",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:56:35.694774Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-356.webp",
+        "sha256": "49baacd96596c13a3c6ddd34bd39fa04a4b2d1400b11f43acdc3321bcdbbc451",
+        "originalUri": "https://metravel.by/travel-description-image/0164614223c74af281706241ce101fb3.jpg.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/0164614223c74af281706241ce101fb3.jpg.webp",
+        "widthPx": 1000,
+        "heightPx": 1333,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article133 section «Туристическая поляна» contains the sole landscape photo with alt describing the Isloch bend; media.article_body.gallery[id1].variants.original."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 133,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 279584
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-356.png",
+        "sha256": "ed3c8fca0ad636a44304cdd0082b3c443785d80f730c447875bcc5d1e79bd8ff",
+        "bytes": 2516460,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Ислочь: Туристическая поляна». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Песчаный обрыв над излучиной Ислочи: сосновый бор на одном берегу и зелёная пойма на другом.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n\nCOMPOSITION CORRECTION: Shrink the entire river, sandy bank and forest vignette so it occupies ONLY the central band from 20% to 58% of page height. Everything below 62% MUST be nearly blank warm ivory paper, no river, log, bank, foliage or reflections there. Preserve the photograph's river bend, sand slope and forest arrangement within that smaller central vignette. This is a book background that needs the bottom third entirely clear, not a full-page landscape.\n",
+        "promptSha256": "7ef54d5cf04c071aa1a1fbb8f78e8a690d9ca20f56dc9bee1a1b11d6f59526ca",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 2,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-356.json",
+          "sha256": "a1c5ecf87cc910ead5e7adb44cbe0d64f38634d8c7d67f4642d9a663a2df3346",
+          "bytes": 4837
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "River bend, sandy right bank and pine forest match source; person removed; bottom30% pale; no castle or lettering. Composition correction selected.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=53.9793698&lng=26.9763966&placeId=356&focusPlace=1&placeTitle=%D0%98%D1%81%D0%BB%D0%BE%D1%87%D1%8C%3A+%D0%A2%D1%83%D1%80%D0%B8%D1%81%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B0%D1%8F+%D0%BF%D0%BE%D0%BB%D1%8F%D0%BD%D0%B0",
+        "article": "https://metravel.by/travels/reka-isloch-gde-guliat-i-otdykhat-s-sobakoi",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-421",
+      "pointId": 421,
+      "order": 2,
+      "printTitle": "Башня «Белый Ковель», Смоляны",
+      "article": {
+        "id": 138,
+        "url": "https://metravel.by/travels/smoliany-belarus-ruiny-legendy-i-starinnye-khramy",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T16:04:48.664574Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-421.webp",
+        "sha256": "0b22ffea3453356b63bee69ac65755e47dc40f69761db392a9d1622bc8826da5",
+        "originalUri": "https://metravel.by/travel-description-image/39db96486ba944d7b1ad2658f4a92600.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/39db96486ba944d7b1ad2658f4a92600.JPG.webp",
+        "widthPx": 1000,
+        "heightPx": 1510,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 138 HTML and media.article_body.gallery[id2]; alt: Руины башни замка Белый Ковель"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 138,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 309722
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-421.png",
+        "sha256": "50ce428d45fd7515c9418969cdf6dc7c8c1d680762247527151459c81e5060d4",
+        "bytes": 2726146,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Башня «Белый Ковель», Смоляны». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Руины башни замка Белый Ковель.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "58adc6f1cfdb158e8aba0299339b91ce41da9e542ee29d74a93616c90b164941",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-421.json",
+          "sha256": "de7798ad1ba5376370b00c1377875895df6b5dbc6c04d23d3f12d7551e9fd6bf",
+          "bytes": 4007
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Single ruined square tower, broken upper openings and wall relief correspond to source; no restored roof, imported castle or lettering; pale upper band and lower30%.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=54.6012569&lng=30.0543494&placeId=421&focusPlace=1&placeTitle=%D0%91%D0%B0%D1%88%D0%BD%D1%8F+%C2%AB%D0%91%D0%B5%D0%BB%D1%8B%D0%B9+%D0%9A%D0%BE%D0%B2%D0%B5%D0%BB%D1%8C%C2%BB%2C+%D0%A1%D0%BC%D0%BE%D0%BB%D1%8F%D0%BD%D1%8B",
+        "article": "https://metravel.by/travels/smoliany-belarus-ruiny-legendy-i-starinnye-khramy",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-587",
+      "pointId": 587,
+      "order": 3,
+      "printTitle": "Дворец в Красном Береге",
+      "article": {
+        "id": 148,
+        "url": "https://metravel.by/travels/usadba-gatovskikh-v-krasnom-berege-sudby-voiny-i-pamiat",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-24T07:42:20.988291Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-587.webp",
+        "sha256": "33e26542af4262be0154835e1beba57c8137c2458cff83ec1ca583bb583fc2e0",
+        "originalUri": "https://metravel.by/travel-description-image/0d49cc58286848a7acea0bace4a7cccb.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/0d49cc58286848a7acea0bace4a7cccb.JPG.webp",
+        "widthPx": 1000,
+        "heightPx": 662,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 148 HTML and media.article_body.gallery[id1]; alt: Усадебный дом с зелёной крышей за строительным ограждением"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 148,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 135674
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-587.png",
+        "sha256": "356824f3adbc7a040c8b97a007f0481cafb06fd1ea3c16b712e47eb827f84997",
+        "bytes": 2621015,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Дворец в Красном Береге». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Усадебный дом с зелёной крышей за строительным ограждением.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "9bd7a66a039c1b787385e5a84d68d696fa60d0d673208109cca0616f1ec43882",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-587.json",
+          "sha256": "354dfbd5641fe1a1df8d8b960d3f7bff717144b0a033dcc54633997cffe68012",
+          "bytes": 4044
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Green roof, gable, single left spire, right scaffolding, foreground tree/fence and viewpoint retained; no new architecture; top12% and bottom30% quiet, no lettering.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=52.9654099&lng=29.7841898&placeId=587&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%B2+%D0%9A%D1%80%D0%B0%D1%81%D0%BD%D0%BE%D0%BC+%D0%91%D0%B5%D1%80%D0%B5%D0%B3%D0%B5",
+        "article": "https://metravel.by/travels/usadba-gatovskikh-v-krasnom-berege-sudby-voiny-i-pamiat",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-2624",
+      "pointId": 2624,
+      "order": 4,
+      "printTitle": "Руины дворца Тышкевичей, Логойск",
+      "article": {
+        "id": 176,
+        "url": "https://metravel.by/travels/logoisk-dvorets-tyshkevichei-i-rodnik-sviatogo-iuriia",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T10:33:42.108601Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-2624.webp",
+        "sha256": "c2705996445cb53bb96546e46360da3b795f5d7e8765845ec7b04de5bf8c64cb",
+        "originalUri": "https://metravel.by/travel-description-image/679f07d5599d49c18f89ae616f4f355f.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/679f07d5599d49c18f89ae616f4f355f.JPG.webp",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article176 places this exact photo immediately after the paragraph about surviving fragments of the Tyszkiewicz palace walls and the park cascade; gallery[id4]."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 176,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 263868
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-2624.png",
+        "sha256": "c62adaa90376a582e5fc508d001fff95ef6c495937b4258a746b6c2ed80f35b0",
+        "bytes": 2698999,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Руины дворца Тышкевичей, Логойск». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Руины дворца Тышкевичей, Логойск.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n\nCOMPOSITION CORRECTION: On the portrait canvas, render a SMALLER complete woodland-ruin vignette, all high-contrast masonry and trees confined to the middle band y=22% through y=58%. Reserve the entire lower40% as nearly blank warm ivory paper, no wall, tree trunks or foliage there. Fade the vignette fully by60% page height. Preserve the exact ruin opening and flanking trees, without rebuilding the wall. Do not fill the page with a close-up.\n",
+        "promptSha256": "7d56f23e3ca71c4222896d64d555d19478acb94aa874b638cd9f160e6a692127",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 2,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-2624.json",
+          "sha256": "ec48e9e30b0fe50b4f349cc1fed275568a2e4e693640753633b628ce9aead169",
+          "bytes": 4762
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Broken tall opening, plaster/brick ruin and flanking birch/woodland match source; no restoration; composition reduced and lower third quiet; no lettering or castle import.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=54.2053365&lng=27.8447456&placeId=2624&focusPlace=1&placeTitle=%D0%A0%D1%83%D0%B8%D0%BD%D1%8B+%D0%B4%D0%B2%D0%BE%D1%80%D1%86%D0%B0+%D0%A2%D1%8B%D1%88%D0%BA%D0%B5%D0%B2%D0%B8%D1%87%D0%B5%D0%B9%2C+%D0%9B%D0%BE%D0%B3%D0%BE%D0%B9%D1%81%D0%BA",
+        "article": "https://metravel.by/travels/logoisk-dvorets-tyshkevichei-i-rodnik-sviatogo-iuriia",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-2633",
+      "pointId": 2633,
+      "order": 5,
+      "printTitle": "Озеро Глубокое",
+      "article": {
+        "id": 169,
+        "url": "https://metravel.by/travels/ozero-glubokoe-samoe-prozrachnoe-ozero-v-belarusi",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-25T10:08:30.047762Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-2633.webp",
+        "sha256": "452617d2ba50a4d2931ee232ead6f7329e3aff43bddbc93f9047fc5214a45d6c",
+        "originalUri": "https://metravel.by/travel-description-image/b4ac9295471e4d16b5cb4bd0c12a6568.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/b4ac9295471e4d16b5cb4bd0c12a6568.JPG.webp",
+        "widthPx": 1000,
+        "heightPx": 750,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article169 gallery[id3] immediately follows the paragraph about the transparent lake water and sandy bottom; earlier images show the approach road and field."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 169,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 235390
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-2633.png",
+        "sha256": "7caacedd5edfad1b9fcd840df0092b0d319734b8f578954989949d03f69216a0",
+        "bytes": 2719544,
+        "widthPx": 1053,
+        "heightPx": 1493,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.6
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Озеро Глубокое». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Озеро Глубокое.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n\nTARGETED CORRECTION: REMOVE the woman and black dog from the photograph entirely. Show ONLY the actual lake shore, reeds, shallow clear water, fallen log and forest. No humans or animals anywhere. Place this landscape vignette above60% page height, with the entire bottom35% blank ivory paper.\n",
+        "promptSha256": "69cccbedf2cabc9ae59ebe6f89110a050e76c8e3656a96331be88bf0c8d74fa9",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 2,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-2633.json",
+          "sha256": "031d8bc015cc1ce11d339a2e0432692f9fcbdd26cbe7c374c41ceb1a04e64cc6",
+          "bytes": 4496
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Lake shore, left reeds/log and opposite pine forest retained; correction removes source woman/dog; no invented buildings; lower30% quiet ivory and no lettering.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=55.6949836&lng=29.4528694&placeId=2633&focusPlace=1&placeTitle=%D0%9E%D0%B7%D0%B5%D1%80%D0%BE+%D0%93%D0%BB%D1%83%D0%B1%D0%BE%D0%BA%D0%BE%D0%B5",
+        "article": "https://metravel.by/travels/ozero-glubokoe-samoe-prozrachnoe-ozero-v-belarusi",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-2758",
+      "pointId": 2758,
+      "order": 6,
+      "printTitle": "Дворец Горваттов, Наровля",
+      "article": {
+        "id": 143,
+        "url": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:56:13.709502Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-2758.webp",
+        "sha256": "55917115986dab8d4cc46c12ad1d445fa2b661762575b95bbcd352477ac6878a",
+        "originalUri": "https://metravel.by/travel-description-image/f9c6f96f840d4d51b781775f3405e848.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/f9c6f96f840d4d51b781775f3405e848.JPG.webp",
+        "widthPx": 1000,
+        "heightPx": 662,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article143 media.article_body.gallery[id1]. Визуально сопоставлен фасад с фото exact point2758: то же вытянутое двухэтажное здание с центральным ризалитом, белым декором и розовыми простенками. Выбран body1; body0 с мемориалом1986 исключён.",
+          "visualVerification": {
+            "status": "verified-same-object",
+            "verifiedOn": "2026-10-30",
+            "method": "actual selected image compared against same-article exact-point photo",
+            "exactPointImageUri": "https://metravel.by/address-image/2758/conversions/08d2b643f84840f38e6b024cff891c33.jpeg",
+            "evidenceArtifact": ".codex-temp/books-source-fix/sheet.jpg"
+          }
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 143,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 137726
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-2758.png",
+        "sha256": "a822e17ba790ce5712be433e393cc4fa6befcaf122bd033e6607bafde9708cdb",
+        "bytes": 2471236,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Дворец Горваттов, Наровля». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Дворец Горваттов, Наровля.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "ad4fd0bbe2e2a5050265feb8e44ece6662bf3d28bc684de6ed5b1eab55c62c32",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-2758.json",
+          "sha256": "bc58c845d6c1c25dabeaa38830f05153179c9486554d2c5cc03379801b442364",
+          "bytes": 3987
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Two-storey derelict palace, flat ruined roofline and central arched-window bay match source; weathered plaster retained, no rebuilt castle; no people/text; bottom third quiet.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=51.8044553&lng=29.5012715&placeId=2758&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%93%D0%BE%D1%80%D0%B2%D0%B0%D1%82%D1%82%D0%BE%D0%B2%2C+%D0%9D%D0%B0%D1%80%D0%BE%D0%B2%D0%BB%D1%8F",
+        "article": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-2913",
+      "pointId": 2913,
+      "order": 7,
+      "printTitle": "Родники Святые Криницы",
+      "article": {
+        "id": 179,
+        "url": "https://metravel.by/travels/rodniki-sviatye-krinitsy-ekotropa-v-37-km-ot-minska",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-25T08:47:14.026969Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-2913.webp",
+        "sha256": "aebdab601b93bea112a0cafcd34141c98e45267416cfe5044f2d55fcda703684",
+        "originalUri": "https://metravel.by/travel-description-image/7a2c23abb7744ba29d3acfdd33ce01bf.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/7a2c23abb7744ba29d3acfdd33ce01bf.JPG.webp",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 179 HTML and media.article_body.gallery[id7]; alt: Родник, стекающий по склону"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 179,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 333734
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-2913.png",
+        "sha256": "5e7ba7b4b5fb6e8b604ea6e8e61092a62b61a050f36965a0c3aa92d1cf5262f1",
+        "bytes": 2738023,
+        "widthPx": 1052,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.5
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Родники Святые Криницы». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Родник, стекающий по склону.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n\nCOMPOSITION CORRECTION: Render the complete forest spring as a much SMALLER vignette in the middle of the page, from y=22% to y=58%. All dark tree trunks, stream, soil, rocks and foliage must END by60% of total page height. Top15% and bottom35% must be nearly blank warm ivory paper. Do not make the spring fill the whole page; preserve the actual short narrow cascade, not a grand waterfall.\n",
+        "promptSha256": "5595ef5bcbeb30f65c0f99b3fcac79b94f51ce2cc5f14727742fcae24053b953",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 2,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-2913.json",
+          "sha256": "58f6f51ef2a86a664eb8d2202bf708ac6cd0a34af0d77c93cfb8575e5819dd31",
+          "bytes": 4648
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Narrow forest spring, small cascade and dark earthy banks match source; not a grand waterfall; corrected quiet top and lower30%; no buildings/characters/text.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=54.2011784&lng=27.3848648&placeId=2913&focusPlace=1&placeTitle=%D0%A0%D0%BE%D0%B4%D0%BD%D0%B8%D0%BA%D0%B8+%D0%A1%D0%B2%D1%8F%D1%82%D1%8B%D0%B5+%D0%9A%D1%80%D0%B8%D0%BD%D0%B8%D1%86%D1%8B",
+        "article": "https://metravel.by/travels/rodniki-sviatye-krinitsy-ekotropa-v-37-km-ot-minska",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-3011",
+      "pointId": 3011,
+      "order": 8,
+      "printTitle": "Дворец Пусловских, Коссово",
+      "article": {
+        "id": 147,
+        "url": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:56:04.905403Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-3011.webp",
+        "sha256": "8c7428f1074609efddd9e7cde516a9390584c4177c6fc8805fb8b423c281cc7c",
+        "originalUri": "https://metravel.by/travel-description-image/ac1bcb375d404436ab1bc67e09752eb3.jpg.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/ac1bcb375d404436ab1bc67e09752eb3.jpg.webp",
+        "widthPx": 1000,
+        "heightPx": 564,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 147 HTML and media.article_body.gallery[id1]; alt: Дворец Пусловских в Коссово в строительных лесах: белые башни с зубцами и красные крыши над зелёным холмом"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 147,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 88176
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-3011.png",
+        "sha256": "69450e626a284fa3932a6f70a1c8b6b4f5e7aeac945fd2c81dabfc8d57278163",
+        "bytes": 2523714,
+        "widthPx": 1053,
+        "heightPx": 1493,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.6
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Дворец Пусловских, Коссово». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Дворец Пусловских в Коссово в строительных лесах: белые башни с зубцами и красные крыши над зелёным холмом.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "4065f30ac4a98621e516edb4941e9ac472f8cf8d02cd7202bcd10aad7314832c",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-3011.json",
+          "sha256": "24cd3a1a32ef26b30da066e1032c2f46ad2547414d8b1429ec57fe67da002b3c",
+          "bytes": 4145
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Kossovo facade/towers, crenellated silhouette, construction scaffolds and approach angle retained; no imported Mir architecture; lower30% clear, top quiet, no people/text.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=52.765534&lng=25.1217778&placeId=3011&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%9F%D1%83%D1%81%D0%BB%D0%BE%D0%B2%D1%81%D0%BA%D0%B8%D1%85%2C+%D0%9A%D0%BE%D1%81%D1%81%D0%BE%D0%B2%D0%BE",
+        "article": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+        "quest": {
+          "status": "verified-associated",
+          "id": 16,
+          "url": "https://metravel.by/quests/20/kossovo-ruzhany-palaces",
+          "title": "Квест Коссово — Ружаны: дворцы Пусловских и Сапегов",
+          "evidence": {
+            "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+            "publicDetailUrl": "https://metravel.by/api/quests/16/?lang=ru",
+            "publishedPublicDetailStatus": 200,
+            "publishedPageStatus": 200,
+            "stepId": 181,
+            "stepTitle": "Дворец Пусловских в Коссово",
+            "stepLocation": "Дворец Пусловских (Коссовский замок)",
+            "stepCoordinates": {
+              "lat": 52.765558,
+              "lng": 25.121513
+            },
+            "distanceM": 18,
+            "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+            "verifiedOn": "2026-10-30"
+          }
+        }
+      }
+    },
+    {
+      "stopId": "point-3014",
+      "pointId": 3014,
+      "order": 9,
+      "printTitle": "Дворец Сапег, Ружаны",
+      "article": {
+        "id": 147,
+        "url": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:56:04.905403Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-3014.webp",
+        "sha256": "cd43e694cf1f8c2f095b898a17b6a06da973c960624db868646b393da8bf29c8",
+        "originalUri": "https://metravel.by/travel-description-image/49b53e4b9a9948978221a4e1e5612fb9.jpg.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/49b53e4b9a9948978221a4e1e5612fb9.jpg.webp",
+        "widthPx": 1000,
+        "heightPx": 564,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 147 HTML and media.article_body.gallery[id4]; alt: Руины Ружанского дворца Сапег: длинная аркада слева и главный корпус с фронтоном над зелёным двором"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 147,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 92752
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-3014.png",
+        "sha256": "4da823ce175f3b4889e067bdd81f541220f2b4b8907c1132ffc468cdeb9133f5",
+        "bytes": 2333086,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Дворец Сапег, Ружаны». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Руины Ружанского дворца Сапег: длинная аркада слева и главный корпус с фронтоном над зелёным двором.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "9382a3ad6d8e28b288724b248fb871700afb827b50870bee3924b7762e9d2242",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-3014.json",
+          "sha256": "127299ed94f534487907121ba31c965c56dc3995afba4da6c4c42dd82c1cb228",
+          "bytes": 4114
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Ruzhany roofless central pediment and left colonnade/right ruined wing match source, no rebuilt roof or Mir towers; original viewpoint/path retained; top/bottom quiet; no text.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=52.860402&lng=24.8958478&placeId=3014&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%A1%D0%B0%D0%BF%D0%B5%D0%B3%2C+%D0%A0%D1%83%D0%B6%D0%B0%D0%BD%D1%8B",
+        "article": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+        "quest": {
+          "status": "verified-associated",
+          "id": 16,
+          "url": "https://metravel.by/quests/20/kossovo-ruzhany-palaces",
+          "title": "Квест Коссово — Ружаны: дворцы Пусловских и Сапегов",
+          "evidence": {
+            "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+            "publicDetailUrl": "https://metravel.by/api/quests/16/?lang=ru",
+            "publishedPublicDetailStatus": 200,
+            "publishedPageStatus": 200,
+            "stepId": 180,
+            "stepTitle": "Дворец Сапегов в Ружанах",
+            "stepLocation": "Дворцовый комплекс Сапегов (Ружаны)",
+            "stepCoordinates": {
+              "lat": 52.860661,
+              "lng": 24.895943
+            },
+            "distanceM": 30,
+            "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+            "verifiedOn": "2026-10-30"
+          }
+        }
+      }
+    },
+    {
+      "stopId": "point-3251",
+      "pointId": 3251,
+      "order": 10,
+      "printTitle": "Быховский замок",
+      "article": {
+        "id": 187,
+        "url": "https://metravel.by/travels/mogilev-usadba-tolstykh-i-bykhovskii-zamok",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-04T12:42:39.283314Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-3251.webp",
+        "sha256": "ae59e7bf90f654275042776351852c9a871bea509ccb4f44c2a2b85d1f1367d1",
+        "originalUri": "https://metravel.by/address-image/3266/conversions/BDiSPfF4j5lIADmORrxDE0XHGj2w5l5ONQ8tFW0w-thumb_400_wp.webp",
+        "articleImageUri": "https://metravel.by/address-image/3266/conversions/BDiSPfF4j5lIADmORrxDE0XHGj2w5l5ONQ8tFW0w-thumb_400_wp.webp",
+        "widthPx": 400,
+        "heightPx": 400,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[3251] image and media.address_images[3251].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 187,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 18648
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-3251.png",
+        "sha256": "e66fb4260cfecb6333158d9890901a4398716fe4e2bf6292d8a7fa6962a179ef",
+        "bytes": 2442068,
+        "widthPx": 1053,
+        "heightPx": 1493,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.6
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Быховский замок». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Быховский замок.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "def1ffb1cf3c99e77643999e306d68329e5568a2966a1bd40e64af47f6965077",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-3251.json",
+          "sha256": "4694f4385534b3df387bc5325f5052024c8324a201e19236f016190be1b83ae7",
+          "bytes": 3972
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Derelict L-shaped courtyard facade, boarded upper windows and blocked lower openings match the400px source; roofline and peeling plaster retained; no new towers; bottom30% quiet, no text.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=53.5180096&lng=30.2588882&placeId=3251&focusPlace=1&placeTitle=%D0%91%D1%8B%D1%85%D0%BE%D0%B2%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/mogilev-usadba-tolstykh-i-bykhovskii-zamok",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-3836",
+      "pointId": 3836,
+      "order": 11,
+      "printTitle": "Дворец Бохвицей, Павлиново",
+      "article": {
+        "id": 189,
+        "url": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T17:06:58.831214Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-3836.webp",
+        "sha256": "071beaa892a57caecf25bed2d2069ad9d3c2a22e0f39ce61c9681290253659ef",
+        "originalUri": "https://metravel.by/travel-description-image/45a8513ae52f46f59cda9207d0ca4e61.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/45a8513ae52f46f59cda9207d0ca4e61.JPG.webp",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article189 media.article_body.gallery[id51]. Визуально сопоставлен с фото exact point3836: тот же фигурный фронтон с1906, центральное арочное окно и облупленная охристая отделка. Выбран body51 вместо body50, чтобы совпадало видимое состояние фасада.",
+          "visualVerification": {
+            "status": "verified-same-object",
+            "verifiedOn": "2026-10-30",
+            "method": "actual selected image compared against same-article exact-point photo",
+            "exactPointImageUri": "https://metravel.by/address-image/3836/conversions/548a066c9f5f439b88e15cdd53b738f7.JPG",
+            "evidenceArtifact": ".codex-temp/books-source-fix/sheet.jpg"
+          }
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 189,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 148922
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-3836.png",
+        "sha256": "1e71bbcad0aa3142ac9663b32a2401a5c959ec2f535c9db6cd1358d165594252",
+        "bytes": 2150002,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "LAYOUT-ONLY EDIT. Preserve the existing golden fantasy painting from input image1 exactly: same four first-floor rectangular windows, pointed top window, two round apertures, door, damaged plaster, proportions, colours and perspective. The only requested change is to make the ENTIRE existing painted vignette substantially smaller on the same portrait ivory paper. The final page must be mostly blank paper: blank top15%, whole painted building only from20% down to55% page height, fully BLANK bottom40%. The painting should occupy approximately HALF its current linear size, centered horizontally in the upper half of the page. Keep all existing painting detail together as one scaled-down unit; do not zoom into it, do not crop, do not add architecture. Dissolve its perimeter into ivory paper. No text, symbols, watermarks or new objects. Input2 is the original author photograph as identity constraint only. Output the same portrait aspect ratio, native resolution with no upscaling.",
+        "promptSha256": "ae463a8fb820db880333427653d7c4daba6210936c3aa6723060d519dba262e3",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 4,
+        "selectedAttempt": 4,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-3836.json",
+          "sha256": "bd560bebd76951e89ea690af499c6db5544e77ccac439dd06d05f5404f03fe36",
+          "bytes": 5674
+        },
+        "actualFinalInputImages": [
+          {
+            "role": "derived-layout-edit-target",
+            "path": ".codex-temp/books-e3/series/attempts/BY-point-3836-identity-corrected.png",
+            "sha256": "4187b2e9847ab6cbb15ecc1d440775c124cc6f066bb7ef0a19e0c26641fec062"
+          },
+          {
+            "role": "exact-original-photo-identity-reference",
+            "path": ".codex-temp/books-e3/series/sources/BY-point-3836.webp",
+            "sha256": "071beaa892a57caecf25bed2d2069ad9d3c2a22e0f39ce61c9681290253659ef"
+          }
+        ],
+        "intermediateGeneration": {
+          "artworkPath": ".codex-temp/books-e3/series/attempts/BY-point-3836-identity-corrected.png",
+          "artworkSha256": "4187b2e9847ab6cbb15ecc1d440775c124cc6f066bb7ef0a19e0c26641fec062",
+          "exactPrompt": "Create a single flat portrait illustration for a fantasy travel diary, from the cropped real facade in input image1. Input2 gives ONLY golden painterly style and ivory paper, never its architecture. Reproduce ONLY the actual close-up facade portion and same low upward tilted view in photograph1, without extending either side beyond the photograph's crop. Count the first-floor rectangular windows: exactly FOUR openings in view, leftmost partially cropped and then THREE complete ones. NO fifth first-floor window or partial additional opening on the right. The upper gable has exactly ONE pointed arch window and TWO round apertures. Preserve the stepped weathered roofline, damaged plaster and brick courses, central wooden ground-floor door and visible lower windows exactly as photograph1. Do not rebuild this ruin or invent symmetrical wings. Small airy architectural vignette in the UPPER HALF of the paper: top roof at20% and the entire bottom of the door at58% of image height, no architecture below60%. Bottom35% completely empty ivory paper with extremely faint texture only. Top12% quiet ivory. Soft organic fade around the exact cropped fragment, warm magical twilight, subtle warm window glow, no photorealism. No people, text, graffiti lettering, logos, watermark, QR, borders, frames or additional objects. Output native portrait PNG, no mockup, no upscaling.",
+          "sourcePhotoPath": ".codex-temp/books-e3/series/sources/BY-point-3836.webp",
+          "styleReferencePath": ".codex-temp/books-e3/series/style-reference.png"
+        },
+        "previousSelectedEvidence": ".codex-temp/books-e3/series/attempts/BY-point-3836-previous.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Corrected identity: four first-floor openings including partial left, two round apertures, pointed top window and central door. Final layout edit shrank the entire facade, leaves pale top and bottom40%; no extra fifth opening. Original ruined plaster and crop retained."
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=53.0274504&lng=25.8163776&placeId=3836&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%91%D0%BE%D1%85%D0%B2%D0%B8%D1%86%D0%B5%D0%B9%2C+%D0%9F%D0%B0%D0%B2%D0%BB%D0%B8%D0%BD%D0%BE%D0%B2%D0%BE",
+        "article": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-3841",
+      "pointId": 3841,
+      "order": 12,
+      "printTitle": "Дворец Котлубаев, Ястрембель",
+      "article": {
+        "id": 189,
+        "url": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T17:06:58.831214Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-3841.webp",
+        "sha256": "d1925cfb36565dbfadc8a7e39016826e02c92ba35c149eb0aae1c9ed72fc6e21",
+        "originalUri": "https://metravel.by/travel-description-image/70bcfcf8317d4bb9bdfde17ec98ec749.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/70bcfcf8317d4bb9bdfde17ec98ec749.JPG.webp",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article189 gallery[id44] is in the Yastrembel/Kotlubaev section following the school-boarding and abandoned-estate paragraph; the later Pavlinovo photos begin at id50."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 189,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 208138
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-3841.png",
+        "sha256": "553cb60a826fcb0364f1354df4545d354724ae3b8a2e4bc3418540980113c2b9",
+        "bytes": 2675282,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Дворец Котлубаев, Ястрембель». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Дворец Котлубаев, Ястрембель.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "8483cd7170ffb6e13b3eeeb692a073d98ced32076e73ed82db0082625642f06c",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-3841.json",
+          "sha256": "a2a8316a87cbf9d40bf23afa70f24195a6825e8ef2abac47d9293f124097e1cb",
+          "bytes": 4032
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Single left tower/spire, porch with wooden canopy, boarded lower windows, arched upper windows and right leafy framing match source; no invented castle; lower30% quiet, no lettering.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=53.0307502&lng=25.9607062&placeId=3841&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%9A%D0%BE%D1%82%D0%BB%D1%83%D0%B1%D0%B0%D0%B5%D0%B2%2C+%D0%AF%D1%81%D1%82%D1%80%D0%B5%D0%BC%D0%B1%D0%B5%D0%BB%D1%8C",
+        "article": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-4530",
+      "pointId": 4530,
+      "order": 13,
+      "printTitle": "Новый замок, Гродно",
+      "article": {
+        "id": 153,
+        "url": "https://metravel.by/travels/grodno-za-1-den-chto-posmotret-i-kak-doekhat",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:55:55.220096Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-4530.webp",
+        "sha256": "3a478a2f4a1afef60a73fd3cabbde83da718d1b2760494699fd97863b97dcc63",
+        "originalUri": "https://metravel.by/address-image/3395/conversions/uHHyLSZrfCCgCf6zPFlnV53oBHw4Bpst64SxlZSa-thumb_400_wp.webp",
+        "articleImageUri": "https://metravel.by/address-image/3395/conversions/uHHyLSZrfCCgCf6zPFlnV53oBHw4Bpst64SxlZSa-thumb_400_wp.webp",
+        "widthPx": 400,
+        "heightPx": 400,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[4530] image and media.address_images[4530].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 153,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 37912
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-4530.png",
+        "sha256": "66f8a6463babe1057d870e053eaedaff3d36434b0742a3c69c7f3f1818c100ca",
+        "bytes": 2638307,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Новый замок, Гродно». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Новый замок в Гродно.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n\nARCHITECTURAL CORRECTION: The source photograph has a FLAT horizontal central attic/parapet over the columned portico, partly hidden by the tree. Do NOT invent a triangular classical pediment above the columns. Reproduce only the photograph's visible flat horizontal roof/attic silhouette, with the same tree obscuring the center. Preserve the actual columns and facade; no museum letters or people. Keep lower30% blank ivory.\n",
+        "promptSha256": "650cb02fa7b4396e440b0900f2315c67558257030b742f868406181b7cd3f582",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 2,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-4530.json",
+          "sha256": "5f5161a896badca77b0e1e7f5e5f57677e88f44688fa384b8dfbfec8061830f1",
+          "bytes": 4757
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "White columned facade, broad central tree, flat attic outer roofline and viewpoint retained; correction obscures central pediment with source tree; museum lettering/people removed; bottom30% quiet. Source400px limits hidden detail verification.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=53.676146&lng=23.8244834&placeId=4530&focusPlace=1&placeTitle=%D0%9D%D0%BE%D0%B2%D1%8B%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA%2C+%D0%93%D1%80%D0%BE%D0%B4%D0%BD%D0%BE",
+        "article": "https://metravel.by/travels/grodno-za-1-den-chto-posmotret-i-kak-doekhat",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-4801",
+      "pointId": 4801,
+      "order": 14,
+      "printTitle": "Водохранилище на маршруте Крево — Гольшаны",
+      "article": {
+        "id": 196,
+        "url": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T16:04:10.817999Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-4801.webp",
+        "sha256": "8127797da91270016111f999627148b812522ebf20693017d257944e6c2ccd35",
+        "originalUri": "https://metravel.by/travel-description-image/c46b31675537413c9c4f25427ab725a8.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/c46b31675537413c9c4f25427ab725a8.JPG.webp",
+        "widthPx": 1000,
+        "heightPx": 750,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact selected point4801 belongs to article196; that route describes the stop after Krevo as flooded quarry. Gallery[id9] is explicitly alt «Затопленный карьер с песчаным берегом». The proper reservoir name remains unproven."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 196,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 129360
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-4801.png",
+        "sha256": "2d4424dfbb6574d47e2069664ad4bd08e0d2afc64bf157a7139de605703c9845",
+        "bytes": 2397545,
+        "widthPx": 1054,
+        "heightPx": 1493,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.6
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Водохранилище на маршруте Крево — Гольшаны». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Затопленный карьер с песчаным берегом.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "f4826e5a8d3f3f7c453c20864c79b58ef88f22dfac031d0d7ea7330a057cc227",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-4801.json",
+          "sha256": "0fcf6d6ba48f92862a94b1308a5f9aa2b612716ef6f1e74eb4271f0ad20e9a95",
+          "bytes": 4087
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Reservoir, low sandy far bank and treeline match source; no mountains, buildings or fictional elements; native landscape transformed only in atmosphere; top/bottom quiet, no text.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=54.2905449&lng=26.1648846&placeId=4801&focusPlace=1&placeTitle=%D0%92%D0%BE%D0%B4%D0%BE%D1%85%D1%80%D0%B0%D0%BD%D0%B8%D0%BB%D0%B8%D1%89%D0%B5+%D0%BD%D0%B0+%D0%BC%D0%B0%D1%80%D1%88%D1%80%D1%83%D1%82%D0%B5+%D0%9A%D1%80%D0%B5%D0%B2%D0%BE+%E2%80%94+%D0%93%D0%BE%D0%BB%D1%8C%D1%88%D0%B0%D0%BD%D1%8B",
+        "article": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-4805",
+      "pointId": 4805,
+      "order": 15,
+      "printTitle": "Гольшанский замок",
+      "article": {
+        "id": 196,
+        "url": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T16:04:10.817999Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-4805.webp",
+        "sha256": "680511e9d95dec5a8919c1b10990250b580a99b143d69349b89631cf9c0f6cb7",
+        "originalUri": "https://metravel.by/travel-description-image/b34b406d796e4e11961b56796fac280c.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/b34b406d796e4e11961b56796fac280c.JPG.webp",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 196 HTML and media.article_body.gallery[id28]; alt: Руины стен Гольшанского замка"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 196,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 127644
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-4805.png",
+        "sha256": "76f0c8948d9e1656190d72a829394cb4ebea091632bafca4c9091adef9660226",
+        "bytes": 2704467,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Гольшанский замок». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Руины стен Гольшанского замка.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "b4111ff7dbeee0bee8d78b7d534f38de7ae96dc824ee12e53b842d0119eaee36",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-4805.json",
+          "sha256": "84a60b860f85c763438330d559e13bd5dcd2c25d72706463264edcb5439a6aa1",
+          "bytes": 3986
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Holshany ruined brick courtyard, two lower arched openings and surviving rear wall fragment match exact source; rubble/vegetation and no rebuilt roof; lower30% quiet, no lettering/people.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=54.2511747&lng=26.0204315&placeId=4805&focusPlace=1&placeTitle=%D0%93%D0%BE%D0%BB%D1%8C%D1%88%D0%B0%D0%BD%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+        "quest": {
+          "status": "verified-associated",
+          "id": 74,
+          "url": "https://metravel.by/quests/67/golshany-black-monk",
+          "title": "Квест по Гольшанам: Чёрный монах и Белая дама",
+          "evidence": {
+            "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+            "publicDetailUrl": "https://metravel.by/api/quests/74/?lang=ru",
+            "publishedPublicDetailStatus": 200,
+            "publishedPageStatus": 200,
+            "stepId": 762,
+            "stepTitle": "Замок Сапег — стены Чёрного монаха",
+            "stepLocation": "Руины Гольшанского замка, ул. Замковая",
+            "stepCoordinates": {
+              "lat": 54.251378,
+              "lng": 26.020302
+            },
+            "distanceM": 24,
+            "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+            "verifiedOn": "2026-10-30"
+          }
+        }
+      }
+    },
+    {
+      "stopId": "point-4810",
+      "pointId": 4810,
+      "order": 16,
+      "printTitle": "Кревский замок",
+      "article": {
+        "id": 196,
+        "url": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T16:04:10.817999Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-4810.webp",
+        "sha256": "d11d1e827d120783c742a0e4b29c9bad5397936b59d722867ea551da7cb71eca",
+        "originalUri": "https://metravel.by/travel-description-image/fade57216f38454d912d37bc53156d02.jpg.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/fade57216f38454d912d37bc53156d02.jpg.webp",
+        "widthPx": 1000,
+        "heightPx": 750,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 196 HTML and media.article_body.gallery[id7]; alt: Руины стен Кревского замка на лугу"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 196,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 118760
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-4810.png",
+        "sha256": "2dd86e6d37864612ef477b700abe65f4a40b39f44438dd5f0e7ca3ed6c55af95",
+        "bytes": 2430711,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Кревский замок». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Руины стен Кревского замка на лугу.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "5b333fc7b49c02142aacacea0cfadd4fd893c020970808ad86b568f26d52d059",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-4810.json",
+          "sha256": "94a0fe81cf637c0999b44c2e6ff93cce8a257e082abbfc693a8b500999465f69",
+          "bytes": 3973
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Krevo low irregular stone wall, central gap and two tall right fragments match photo, collapsed wooden shelter retained; no castle reconstruction; no text/people; lower30% clear.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=54.3092241&lng=26.2830305&placeId=4810&focusPlace=1&placeTitle=%D0%9A%D1%80%D0%B5%D0%B2%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+        "quest": {
+          "status": "verified-associated",
+          "id": 78,
+          "url": "https://metravel.by/quests/72/krevo-walled-maiden",
+          "title": "Квест по Крево: замурованная невеста",
+          "evidence": {
+            "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+            "publicDetailUrl": "https://metravel.by/api/quests/78/?lang=ru",
+            "publishedPublicDetailStatus": 200,
+            "publishedPageStatus": 200,
+            "stepId": 797,
+            "stepTitle": "Внешняя граница замка",
+            "stepLocation": "Кревский замок — восстановленные главные ворота, снаружи",
+            "stepCoordinates": {
+              "lat": 54.309615,
+              "lng": 26.282816
+            },
+            "distanceM": 46,
+            "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+            "verifiedOn": "2026-10-30"
+          }
+        }
+      }
+    },
+    {
+      "stopId": "point-4843",
+      "pointId": 4843,
+      "order": 17,
+      "printTitle": "Озеро Дикое",
+      "article": {
+        "id": 197,
+        "url": "https://metravel.by/travels/velomarshrut-15-km-na-lesnoe-ozero-dikoe",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-25T10:09:14.382674Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-4843.webp",
+        "sha256": "d7eaddd5f5fc31565ba6898543e0a02f3a23e57a0b9a0cda5bf7908faa99872a",
+        "originalUri": "https://metravel.by/address-image/3640/conversions/yibFRDVf3fPKWv9xSTw1o3EhUFYoxOua3WPkWwoy-thumb_400_wp.webp",
+        "articleImageUri": "https://metravel.by/address-image/3640/conversions/yibFRDVf3fPKWv9xSTw1o3EhUFYoxOua3WPkWwoy-thumb_400_wp.webp",
+        "widthPx": 400,
+        "heightPx": 400,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[4843] image and media.address_images[4843].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 197,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 28192
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-4843.png",
+        "sha256": "66619b99e0d1c72f19fcfead62d6591aecc1bd74a99f61d973dd544bbb8fd842",
+        "bytes": 2400894,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Озеро Дикое». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Дикое озеро.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n\nLAYOUT-ONLY CORRECTION: Input image3 is the existing candidate derived from photo1/style2. Preserve that exact lake/trees/logs painting, but SHRINK the complete vignette vertically into the middle of the portrait paper, ending by62% canvas height. No new scene. Top15% and bottom35% entirely quiet pale ivory. Especially move the three foreground logs upward so none extends into the bottom third. Keep its subject geometry unchanged.\n",
+        "promptSha256": "ad981f0eb92ba87a8b648824ad9e6c42b88f01f74ac2f2cf1203e23d56a11292",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 2,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-4843.json",
+          "sha256": "9e6a0b6d94a32a76232afbd52d273c024d50d588f607f7b712a8e0edb97691ee",
+          "bytes": 4991
+        },
+        "additionalCorrectionInput": {
+          "path": "/Users/juliasavran/.codex/generated_images/01a196ae-5c5b-7e22-a002-c3e03b196313/exec-60849204-436f-4acf-bcbc-ec1f9e2a76f6.png",
+          "role": "existing derived candidate used as image3 for layout-only correction",
+          "sha256": "3e439e01fcd3617c5f205b53e2a4635b828c9b258ef0aeeac9cb8d8f064a34f7"
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Lake inlet, right reed fringe, forest reflection and three foreground logs match source; layout correction moves logs above lower30%; no buildings, mountains, people or text.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=54.2275684&lng=28.1285727&placeId=4843&focusPlace=1&placeTitle=%D0%9E%D0%B7%D0%B5%D1%80%D0%BE+%D0%94%D0%B8%D0%BA%D0%BE%D0%B5",
+        "article": "https://metravel.by/travels/velomarshrut-15-km-na-lesnoe-ozero-dikoe",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-5116",
+      "pointId": 5116,
+      "order": 18,
+      "printTitle": "Лидский замок",
+      "article": {
+        "id": 200,
+        "url": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T15:33:16.640175Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-5116.webp",
+        "sha256": "e044791d343a4cf2e309f37656855430591b37ac233cfdcca9eef40e3cdfa9e6",
+        "originalUri": "https://metravel.by/travel-description-image/75dd7fd111834e6da71c0ff7e6988399.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/75dd7fd111834e6da71c0ff7e6988399.JPG.webp",
+        "widthPx": 1000,
+        "heightPx": 662,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article200 media.article_body.gallery[id1]. Визуально сопоставлены краснокирпичные стены и квадратная башня с фото exact point5116. Выбран body1 со стеной и башней; body0 с людьми у фестивального щита LidBeer исключён.",
+          "visualVerification": {
+            "status": "verified-same-object",
+            "verifiedOn": "2026-10-30",
+            "method": "actual selected image compared against same-article exact-point photo",
+            "exactPointImageUri": "https://metravel.by/address-image/3786/conversions/kPfCn6hhZoJ8LixwvEyA8Drmoac4attRGYjzPuMq-thumb_400_wp.webp",
+            "evidenceArtifact": ".codex-temp/books-source-fix/sheet.jpg"
+          }
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 200,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 64034
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-5116.png",
+        "sha256": "72f5a50e4c5172846dfa8b18c9bfd31eb23b903440d94d1c7a49fb5f59dba340",
+        "bytes": 2409584,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Лидский замок». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Лидский замок.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "299dd57842ac6255968e76c505504cf82bae7196a0941d0dfec2952a40a11e70",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-5116.json",
+          "sha256": "2b2421b843d7f8aa2eaeed554a103d037b8c679ac52c83fa71166b611bb43eff",
+          "bytes": 3953
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Lida brick wall receding from left, stone base, single visible pyramidal-roof tower and foliage match source viewpoint; no additional towers or invented facade; lower30% quiet, no text/people.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=53.8871222&lng=25.3034824&placeId=5116&focusPlace=1&placeTitle=%D0%9B%D0%B8%D0%B4%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/lidskii-zamok-istoriia-chto-posmotret-i-kak-dobratsia",
+        "quest": {
+          "status": "verified-associated",
+          "id": 11,
+          "url": "https://metravel.by/quests/15/lida-castle",
+          "title": "Квест по Лиде: замок Гедимина",
+          "evidence": {
+            "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+            "publicDetailUrl": "https://metravel.by/api/quests/11/?lang=ru",
+            "publishedPublicDetailStatus": 200,
+            "publishedPageStatus": 200,
+            "stepId": 152,
+            "stepTitle": "Лидский замок",
+            "stepLocation": "Лидский замок",
+            "stepCoordinates": {
+              "lat": 53.887207,
+              "lng": 25.302842
+            },
+            "distanceM": 43,
+            "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+            "verifiedOn": "2026-10-30"
+          }
+        }
+      }
+    },
+    {
+      "stopId": "point-5246",
+      "pointId": 5246,
+      "order": 19,
+      "printTitle": "Несвижский замок",
+      "article": {
+        "id": 201,
+        "url": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T15:33:30.636321Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-5246.webp",
+        "sha256": "f4776c6a02aeec816c2334764526f36c24ae0748f655eab8e7558d4723761b86",
+        "originalUri": "https://metravel.by/travel-description-image/36c9befe82ee4b4f9ffca78d6f505a74.jpg.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/36c9befe82ee4b4f9ffca78d6f505a74.jpg.webp",
+        "widthPx": 1000,
+        "heightPx": 750,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article201 Nesvizh section exact image alt «Вид на Несвижский замок» and media.article_body.gallery[id3].variants.original."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 201,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 141426
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-5246.png",
+        "sha256": "ac07f12456dd7bc261efee724f2760816e006709b055f4e16e9f4c8c7bff0d98",
+        "bytes": 2615128,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Несвижский замок». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Вид на Несвижский замок.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "e6f8d599a660778aade22be45f18cb71ba272fd397bf1147e8b5e64768a9614a",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-5246.json",
+          "sha256": "1efc00a945d88b3b5dfc4e75716068d674b688dc8ff1fb1ae06f95d94f58780e",
+          "bytes": 3956
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Nesvizh yellow palace, red roofs, outer brick bastion/single sentry turret, moat and tree-framed viewpoint retained; no Mir architecture; bottom30% quiet, no text/people.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=53.2228373&lng=26.6917241&placeId=5246&focusPlace=1&placeTitle=%D0%9D%D0%B5%D1%81%D0%B2%D0%B8%D0%B6%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+        "quest": {
+          "status": "verified-associated",
+          "id": 13,
+          "url": "https://metravel.by/quests/17/nesvizh-radziwill",
+          "title": "Квест по Несвижу: дворец Радзивиллов",
+          "evidence": {
+            "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+            "publicDetailUrl": "https://metravel.by/api/quests/13/?lang=ru",
+            "publishedPublicDetailStatus": 200,
+            "publishedPageStatus": 200,
+            "stepId": 163,
+            "stepTitle": "Несвижский замок",
+            "stepLocation": "Несвижский замок",
+            "stepCoordinates": {
+              "lat": 53.222798,
+              "lng": 26.691765
+            },
+            "distanceM": 5,
+            "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+            "verifiedOn": "2026-10-30"
+          }
+        }
+      }
+    },
+    {
+      "stopId": "point-5247",
+      "pointId": 5247,
+      "order": 20,
+      "printTitle": "Мирский замок",
+      "article": {
+        "id": 201,
+        "url": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-18T15:33:30.636321Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-5247.webp",
+        "sha256": "03ddc105802698b2ad7f136cf4a292b2bc9b923ca8e7355ff87874e1a001b9c9",
+        "originalUri": "https://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp",
+        "widthPx": 1000,
+        "heightPx": 662,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article201 Mir section contains this exact image with alt «Мирский замок, общий вид»; media.article_body.gallery[id18].variants.original."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 201,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 76782
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-5247.png",
+        "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+        "bytes": 2477074,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in imagegen",
+        "exactPrompt": "Create a production artwork background for the MeTravel photo diary series, FANTASY\nedition. Output a single FLAT A5 portrait artwork, 2048×2912 pixels if available, no\npage mockup. Input image 1 is the OWNER'S EXACT PHOTOGRAPH of this place and defines\nthe real subject, silhouette, number and shape of towers, proportions and viewpoint;\ndo not invent architecture. Render it as an enchanted storybook illustration: soft\npainterly brushwork, golden twilight light, luminous mist drifting over the water,\nwarm glowing windows, gentle floating motes of light, slightly heightened but real\nbrick-red and foliage-green colours, a dreamlike yet recognisable Mir Castle. A single\nairy composition that dissolves organically into warm ivory paper at all four edges,\nno rectangular photo boundary. Composition correction: keep the castle and all\nimportant architecture between 18% and 54% of page height, with the entire castle\nending above 60%; keep the topmost 12% pale, quiet, and free of clouds or strong color;\nkeep the lower 30% almost entirely empty warm ivory paper, with only extremely faint\nedge washes and no water reflections, plants, mist shapes, or contrast behind real\nstory copy and QR codes. No characters, creatures, dragons, people, no franchise or\nlogo references, no text, letters, labels, emblems, watermark, frame, border, rules,\nQR, UI, stickers. Actual subject: Mir Castle general view across the pond from the\nsouth, exactly the source photo.",
+        "promptSha256": "0c45c87c9528920485da2e68f51eae1d753554057ec826db6f84b162f555b71d",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 3,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-5247.json",
+          "sha256": "0c2f450b4582b578f5021cad31872e152423e4702c4765455a9d71fb3c3fef4f",
+          "bytes": 5754
+        }
+      },
+      "visualReview": {
+        "status": "existing-selected-sample",
+        "notes": "Final previously generated sample; owner requested continuation."
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=53.4511815&lng=26.4729416&placeId=5247&focusPlace=1&placeTitle=%D0%9C%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+        "quest": {
+          "status": "verified-associated",
+          "id": 12,
+          "url": "https://metravel.by/quests/16/mir-castle",
+          "title": "Квест по Миру: Мирский замок и местечко",
+          "evidence": {
+            "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+            "publicDetailUrl": "https://metravel.by/api/quests/12/?lang=ru",
+            "publishedPublicDetailStatus": 200,
+            "publishedPageStatus": 200,
+            "stepId": 157,
+            "stepTitle": "Мирский замок",
+            "stepLocation": "Мирский замок",
+            "stepCoordinates": {
+              "lat": 53.450995,
+              "lng": 26.473133
+            },
+            "distanceM": 24,
+            "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+            "verifiedOn": "2026-10-30"
+          }
+        }
+      }
+    },
+    {
+      "stopId": "point-5485",
+      "pointId": 5485,
+      "order": 21,
+      "printTitle": "Заказник «Ельня»",
+      "article": {
+        "id": 203,
+        "url": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-19T19:32:47.785766Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-5485.webp",
+        "sha256": "cec0b69d0680e2b414d957f54576a735adaff3ca98f30c46827405b25dc0c4de",
+        "originalUri": "https://metravel.by/travel-description-image/c4c12a8726b444818f391b7b6cdafe12.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/c4c12a8726b444818f391b7b6cdafe12.JPG.webp",
+        "widthPx": 1000,
+        "heightPx": 750,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 203 HTML and media.article_body.gallery[id19]; alt: Болотное озерко и одинокая сосна на верховом болоте Ельня"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 203,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 140220
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-5485.png",
+        "sha256": "126b35f75e4db97eeccea9d5eec3d8ec026667adb9c9eb2828d3a338ca4a40d5",
+        "bytes": 2526530,
+        "widthPx": 1052,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.5
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in tool",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Заказник «Ельня»». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Болотное озерко и одинокая сосна на верховом болоте Ельня.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "c0dedabed8780bca26f4aabf25eaede8199de30a5438e973756b6452059a35e0",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": null,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-5485.json",
+          "sha256": "588b3b7d3823452e73272f9e9c2d4f5dbb79a7c9b3b460a92648f1a4fb3337d3",
+          "bytes": 4022
+        },
+        "generationCallLog": ".codex-temp/books-e3/series/first-batch-call-log.json"
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Yelnya bog pools, sparse left birch, low marsh vegetation and flat distant treeline match source; no invented mountains/castles/boardwalk; upper12% and lower30% quiet; no text/people.",
+        "reviewer": "fantasy_by_first",
+        "reviewedOn": "2026-11-01"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=55.575453&lng=27.7308869&placeId=5485&focusPlace=1&placeTitle=%D0%97%D0%B0%D0%BA%D0%B0%D0%B7%D0%BD%D0%B8%D0%BA+%C2%AB%D0%95%D0%BB%D1%8C%D0%BD%D1%8F%C2%BB",
+        "article": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-5486",
+      "pointId": 5486,
+      "order": 22,
+      "printTitle": "Экотропа «Озеравки», Ельня",
+      "article": {
+        "id": 203,
+        "url": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-19T19:32:47.785766Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-5486.webp",
+        "sha256": "d4efc57fb3ca5d5d3a6d5cb25adbf061f2f3fbf1ec811d1e409d6a754dadf442",
+        "originalUri": "https://metravel.by/travel-description-image/1dcfcf273cb24ba8a385ebd9bcb33e24.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/1dcfcf273cb24ba8a385ebd9bcb33e24.JPG.webp",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 203 HTML and media.article_body.gallery[id12]; alt: Деревянный настил с перилами уходит в болото на экотропе «Озёравки»"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 203,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 139796
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-5486.png",
+        "sha256": "f61258aaf36f27a3a3ccde8e7139cfcd7df45f91d887a75f88cb398e2b28b79a",
+        "bytes": 2479122,
+        "widthPx": 1055,
+        "heightPx": 1491,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.3
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in imagegen",
+        "exactPrompt": "Make ONE composition correction to input image 3 (the first generated illustration). Input1 is the exact owner photograph: preserve its actual subject, viewpoint and geometry. Input2 defines the selected fantasy style. Input3 is the illustration to edit. Keep the artwork style and subject, but scale the WHOLE painted scene down to 70 percent of its present size and move it upward. Keep ALL contrast, all buildings, branches, plants, path planks and reflections entirely ABOVE 60 percent of page height. From 65 percent to the bottom edge use ONLY blank pale warm ivory paper: no vignette objects, shadows, clouds, plants, water, border or shapes. The bottom35 percent must be uniformly quiet paper for real text and QR. Keep top12 percent quiet pale paper. Preserve portrait aspect ratio. Do not crop or lose the subject; make the central scene smaller within the page. No letters, labels, emblems, logos, creatures, people, frames or watermarks. \n",
+        "promptSha256": "a261d193701860ee058c7d82a89613d75043e6fde550ec167a2d1169e7e70991",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 2,
+        "selectedAttempt": 2,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-5486.json",
+          "sha256": "18d01d2b0a715d8e5ffbd98cab4ec985e2e24ca052892d7d3c4befb88f25fdd7",
+          "bytes": 6457
+        },
+        "referencedInputs": [
+          {
+            "path": ".codex-temp/books-e3/series/sources/BY-point-5486.webp",
+            "sha256": "d4efc57fb3ca5d5d3a6d5cb25adbf061f2f3fbf1ec811d1e409d6a754dadf442"
+          },
+          {
+            "path": ".codex-temp/books-e3/series/style-reference.png",
+            "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271"
+          },
+          {
+            "path": ".codex-temp/books-e3/series/attempts/BY-point-5486-attempt1.png",
+            "sha256": "3aebec983bd5cbfa592550c90cdd293e7666b65048c9042dde6b6dff01281af0"
+          }
+        ]
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Настил с правыми перилами сохранён. Сцена уменьшена и поднята, нижние35% свободны, нет перенесённых замков.",
+        "reviewer": "fantasy_middle",
+        "scope": "artwork/source identity and visible composition; no PDF or print proof"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=55.5594982&lng=27.7583098&placeId=5486&focusPlace=1&placeTitle=%D0%AD%D0%BA%D0%BE%D1%82%D1%80%D0%BE%D0%BF%D0%B0+%C2%AB%D0%9E%D0%B7%D0%B5%D1%80%D0%B0%D0%B2%D0%BA%D0%B8%C2%BB%2C+%D0%95%D0%BB%D1%8C%D0%BD%D1%8F",
+        "article": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-5487",
+      "pointId": 5487,
+      "order": 23,
+      "printTitle": "Дворец Нитославских, Опытная",
+      "article": {
+        "id": 203,
+        "url": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-19T19:32:47.785766Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-5487.webp",
+        "sha256": "138e88955f233192386b6ed40b61d2613ce167e06b4682c5180050a2fa209bd3",
+        "originalUri": "https://metravel.by/travel-description-image/d88347c3654d436e8ce496d542ff24b6.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/d88347c3654d436e8ce496d542ff24b6.JPG.webp",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 203 HTML and media.article_body.gallery[id26]; alt: Руины дворца Нитославских: фасад с пустыми окнами в деревне Опытная"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 203,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 267994
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-5487.png",
+        "sha256": "17eaf6bfc6c603d29d936ce292b7988d0fc3e15d026f6d350c81a91f62ffff22",
+        "bytes": 2585681,
+        "widthPx": 1052,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.5
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in imagegen",
+        "exactPrompt": "Edit input image1, the generated illustration of the ruined Nitoslawski palace facade among trees. Input image2 is the exact owner photo, for the identity of this SAME RUINED WALL, empty window openings, broken plaster, brick and foreground tree trunks. Make the entire painting one smaller vignette at HALF its current linear size in the upper-middle of a portrait page. Final image mostly blank warm ivory paper, blank top15 percent and bottom40 percent. Keep the real facade ruined, without roofing, glass, restoration or new buildings. Do not redraw, crop, replace or change the facade; only move the whole existing vignette upward and reduce it. No castle, towers, water, Mir architecture, invented windows or other buildings. No painting, shadows, branches or texture contrast in lower40 percent. Soft organic edges dissolve into paper. No letters, text, labels, logos, creatures or people.\n",
+        "promptSha256": "9e1f9fe34d219bd038787997c56fff0e584211b1b043553739c851d7eb1bc194",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 3,
+        "selectedAttempt": 3,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-5487.json",
+          "sha256": "e0a6161bfb159f92518678f610ac0250a153b18dd3b414ab7de2d8c5d1958fd5",
+          "bytes": 8155
+        },
+        "referencedInputs": [
+          {
+            "path": ".codex-temp/books-e3/series/attempts/BY-point-5487-attempt1.png",
+            "sha256": "76e3d633b53af57fa7f87e519b19948b82541f989919d5db8afc6d95a64e1889"
+          },
+          {
+            "path": ".codex-temp/books-e3/series/sources/BY-point-5487.webp",
+            "sha256": "138e88955f233192386b6ed40b61d2613ce167e06b4682c5180050a2fa209bd3"
+          }
+        ]
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "После отклонённой подмены восстановлен именно разрушенный фасад Нитославских: пустые оконные проёмы, дерево, кирпич и штукатурка. Нижние40% свободны.",
+        "reviewer": "fantasy_middle",
+        "scope": "artwork/source identity and visible composition; no PDF or print proof"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=55.8533064&lng=27.7160919&placeId=5487&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%9D%D0%B8%D1%82%D0%BE%D1%81%D0%BB%D0%B0%D0%B2%D1%81%D0%BA%D0%B8%D1%85%2C+%D0%9E%D0%BF%D1%8B%D1%82%D0%BD%D0%B0%D1%8F",
+        "article": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-6479",
+      "pointId": 6479,
+      "order": 24,
+      "printTitle": "Экотропа «Тайны болота», Корытенский Мох",
+      "article": {
+        "id": 222,
+        "url": "https://metravel.by/travels/ektropa-v-gidrologicheskom-zakaznike-korytenskiy-moh",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-04T12:42:34.597739Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-6479.webp",
+        "sha256": "ee1de004b5a7161ea560301a2e6bb4a3eba40e8601002dbca8455eb15d7e67da",
+        "originalUri": "https://metravel.by/address-image/6479/conversions/d27aeb7fb0634ff99ab5a1cd15c01756.webp",
+        "articleImageUri": "https://metravel.by/address-image/6479/conversions/d27aeb7fb0634ff99ab5a1cd15c01756.webp",
+        "widthPx": 768,
+        "heightPx": 1024,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[6479] image and media.address_images[6479].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 222,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 252164
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-6479.png",
+        "sha256": "b3c559633bd9c2da4cb0b3a38111eb7e4bda78e58687b41fb6eb6ca068558c95",
+        "bytes": 2723854,
+        "widthPx": 1053,
+        "heightPx": 1493,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.6
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in imagegen",
+        "exactPrompt": "Make ONE composition correction to input image 3 (the first generated illustration). Input1 is the exact owner photograph: preserve its actual subject, viewpoint and geometry. Input2 defines the selected fantasy style. Input3 is the illustration to edit. Keep the artwork style and subject, but scale the WHOLE painted scene down to 70 percent of its present size and move it upward. Keep ALL contrast, all buildings, branches, plants, path planks and reflections entirely ABOVE 60 percent of page height. From 65 percent to the bottom edge use ONLY blank pale warm ivory paper: no vignette objects, shadows, clouds, plants, water, border or shapes. The bottom35 percent must be uniformly quiet paper for real text and QR. Keep top12 percent quiet pale paper. Preserve portrait aspect ratio. Do not crop or lose the subject; make the central scene smaller within the page. No letters, labels, emblems, logos, creatures, people, frames or watermarks. \n",
+        "promptSha256": "a261d193701860ee058c7d82a89613d75043e6fde550ec167a2d1169e7e70991",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 2,
+        "selectedAttempt": 2,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-6479.json",
+          "sha256": "e1972785c719a489e6bcce43185b81de06f02695c9139f01f28d422075e0004e",
+          "bytes": 6220
+        },
+        "referencedInputs": [
+          {
+            "path": ".codex-temp/books-e3/series/sources/BY-point-6479.webp",
+            "sha256": "ee1de004b5a7161ea560301a2e6bb4a3eba40e8601002dbca8455eb15d7e67da"
+          },
+          {
+            "path": ".codex-temp/books-e3/series/style-reference.png",
+            "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271"
+          },
+          {
+            "path": ".codex-temp/books-e3/series/attempts/BY-point-6479-attempt1.png",
+            "sha256": "2c0cf7b3f55cd63b47378341a861a36272465fafd26644954d7a26cb2784951c"
+          }
+        ]
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Сохранены сосновый лес и деревянный настил без перил; после коррекции нижние35% свободны.",
+        "reviewer": "fantasy_middle",
+        "scope": "artwork/source identity and visible composition; no PDF or print proof"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=55.5361972&lng=30.2303244&placeId=6479&focusPlace=1&placeTitle=%D0%AD%D0%BA%D0%BE%D1%82%D1%80%D0%BE%D0%BF%D0%B0+%C2%AB%D0%A2%D0%B0%D0%B9%D0%BD%D1%8B+%D0%B1%D0%BE%D0%BB%D0%BE%D1%82%D0%B0%C2%BB%2C+%D0%9A%D0%BE%D1%80%D1%8B%D1%82%D0%B5%D0%BD%D1%81%D0%BA%D0%B8%D0%B9+%D0%9C%D0%BE%D1%85",
+        "article": "https://metravel.by/travels/ektropa-v-gidrologicheskom-zakaznike-korytenskiy-moh",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-8562",
+      "pointId": 8562,
+      "order": 25,
+      "printTitle": "Дворец Слотвинских, Рованичи",
+      "article": {
+        "id": 243,
+        "url": "https://metravel.by/travels/dvorets-slotvinskikh-i-usadba-pototskikh-za-den",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T11:27:40.362444Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-8562.webp",
+        "sha256": "557592b32980b45682a9716579c9f22b44bdcf8968a87801a317e9c873696464",
+        "originalUri": "https://metravel.by/address-image/3598/conversions/gNZKPh2o9Md7kCTlEf8hazKU5FtTkZif01qdQQPB-thumb_400_wp.webp",
+        "articleImageUri": "https://metravel.by/address-image/3598/conversions/gNZKPh2o9Md7kCTlEf8hazKU5FtTkZif01qdQQPB-thumb_400_wp.webp",
+        "widthPx": 400,
+        "heightPx": 400,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[8562] image and media.address_images[8562].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 243,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 32600
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-8562.png",
+        "sha256": "ac105889e0500f78e96efec922912b910bb4b78d6d542c0005daa2ba3808502a",
+        "bytes": 2682083,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in imagegen",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Дворец Слотвинских, Рованичи». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Дворцово-парковый комплекс Слацьвинских.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "52daaf322c33573855edc8513123de4621755bd2649ff4756c3aac4539b4d363",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": 1,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-8562.json",
+          "sha256": "d341d995d853e387caca99a57f91680cdc9bd2b9e59493066ad6fe6c9102ce75",
+          "bytes": 3331
+        },
+        "referencedInputs": [
+          {
+            "path": ".codex-temp/books-e3/series/sources/BY-point-8562.webp",
+            "sha256": "557592b32980b45682a9716579c9f22b44bdcf8968a87801a317e9c873696464"
+          },
+          {
+            "path": ".codex-temp/books-e3/series/style-reference.png",
+            "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271"
+          }
+        ]
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Аэроракурс, руины колоннады и открытые комнаты сохранены; нижние30% светлые."
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=53.8843624&lng=28.6151962&placeId=8562&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%A1%D0%BB%D0%BE%D1%82%D0%B2%D0%B8%D0%BD%D1%81%D0%BA%D0%B8%D1%85%2C+%D0%A0%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D1%87%D0%B8",
+        "article": "https://metravel.by/travels/dvorets-slotvinskikh-i-usadba-pototskikh-za-den",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-13504",
+      "pointId": 13504,
+      "order": 26,
+      "printTitle": "Дворец Умястовских, Жемыславль",
+      "article": {
+        "id": 135,
+        "url": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:56:31.213393Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-13504.webp",
+        "sha256": "5d41078012d6790e3ea56aec24ce36eae2620323264bd951d6eb33afda7e31dd",
+        "originalUri": "https://metravel.by/address-image/13504/conversions/6168c0896d4d4287a5af7e326cdc811a.JPG",
+        "articleImageUri": "https://metravel.by/address-image/13504/conversions/6168c0896d4d4287a5af7e326cdc811a.JPG",
+        "widthPx": 1024,
+        "heightPx": 576,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[13504] image and media.address_images[13504].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 135,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 316184
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-13504.png",
+        "sha256": "909172199f01f7f1edfabd439202f2f58507229da43ec22d1f21c065808b0599",
+        "bytes": 2557781,
+        "widthPx": 1053,
+        "heightPx": 1493,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.6
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in imagegen",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Дворец Умястовских, Жемыславль». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Дворец Умястовских в Жемыславле.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "9e9a22167592346db548e0e474fb13ad25538e0cefe300af648c0ce1ce78bf73",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": 1,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-13504.json",
+          "sha256": "b8650f55072b64d73b4ce4a7537f2e4275f38d0ff7df501f9bfd77983f687dc3",
+          "bytes": 3374
+        },
+        "referencedInputs": [
+          {
+            "path": ".codex-temp/books-e3/series/sources/BY-point-13504.webp",
+            "sha256": "5d41078012d6790e3ea56aec24ce36eae2620323264bd951d6eb33afda7e31dd"
+          },
+          {
+            "path": ".codex-temp/books-e3/series/style-reference.png",
+            "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271"
+          }
+        ]
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Фасад с четырьмя центральными колоннами, разрушенный верх, балюстрада совпадают; нижняя зона свободна."
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=54.1323642&lng=25.7652322&placeId=13504&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%A3%D0%BC%D1%8F%D1%81%D1%82%D0%BE%D0%B2%D1%81%D0%BA%D0%B8%D1%85%2C+%D0%96%D0%B5%D0%BC%D1%8B%D1%81%D0%BB%D0%B0%D0%B2%D0%BB%D1%8C",
+        "article": "https://metravel.by/travels/zhemyslavl-dvorets-umiastovskikh-i-marshrut-iz-minska",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-3468",
+      "pointId": 3468,
+      "order": 27,
+      "printTitle": "Дворец Четвертинских, Желудок",
+      "article": {
+        "id": 188,
+        "url": "https://metravel.by/travels/zheludok-i-usadby-grodnenshchiny-kak-dobratsia",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-04T16:16:34.293574Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-3468.webp",
+        "sha256": "83cf5b00b19353342df009010ce75b9e7184dfbf3a80c99ffecdc6a83adef311",
+        "originalUri": "https://metravel.by/address-image/3468/conversions/5e83d2e881db4853a6ea19019ed25070.JPG",
+        "articleImageUri": "https://metravel.by/address-image/3468/conversions/5e83d2e881db4853a6ea19019ed25070.JPG",
+        "widthPx": 768,
+        "heightPx": 1024,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[3468] image and media.address_images[3468].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 188,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 247575
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-3468.png",
+        "sha256": "e7e371f4b71d6959e7d2f3ba0ee9d4809eb25df0370c3366ee381b21828ab8a1",
+        "bytes": 2584471,
+        "widthPx": 1052,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.5
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in imagegen",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Дворец Четвертинских, Желудок». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Усадьба Святополк-Четвертинских в Желудке.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "f03f3e44afedf89b98afb8546a46d92884a66155a293f78804bd131b65ae4691",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": 1,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-3468.json",
+          "sha256": "aeb9b542337da7ce649be78a0dc8788e4179cf26cbf5f97cbafb0347b26c414e",
+          "bytes": 3346
+        },
+        "referencedInputs": [
+          {
+            "path": ".codex-temp/books-e3/series/sources/BY-point-3468.webp",
+            "sha256": "83cf5b00b19353342df009010ce75b9e7184dfbf3a80c99ffecdc6a83adef311"
+          },
+          {
+            "path": ".codex-temp/books-e3/series/style-reference.png",
+            "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271"
+          }
+        ]
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Сохранены эркер, портик и разрушения, без выдуманных башен; нижняя зона свободна."
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=53.6008917&lng=24.9576159&placeId=3468&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%A7%D0%B5%D1%82%D0%B2%D0%B5%D1%80%D1%82%D0%B8%D0%BD%D1%81%D0%BA%D0%B8%D1%85%2C+%D0%96%D0%B5%D0%BB%D1%83%D0%B4%D0%BE%D0%BA",
+        "article": "https://metravel.by/travels/zheludok-i-usadby-grodnenshchiny-kak-dobratsia",
+        "quest": {
+          "status": "verified-associated",
+          "id": 70,
+          "url": "https://metravel.by/quests/63/zheludok-palace",
+          "title": "Квест по Желудку: усадьба из кино и наследие местечка",
+          "evidence": {
+            "publicCatalog": "https://metravel.by/api/quests/?compact=1",
+            "publicDetailUrl": "https://metravel.by/api/quests/70/?lang=ru",
+            "publishedPublicDetailStatus": 200,
+            "publishedPageStatus": 200,
+            "stepId": 729,
+            "stepTitle": "Дворец Четвертинских — звезда без грима",
+            "stepLocation": "Дворец Святополк-Четвертинских, ул. Мира",
+            "stepCoordinates": {
+              "lat": 53.60086,
+              "lng": 24.957625
+            },
+            "distanceM": 4,
+            "identity": "Название/location шага относятся к выбранному конкретному объекту; это не ссылка только на соседний город.",
+            "verifiedOn": "2026-10-30"
+          }
+        }
+      }
+    },
+    {
+      "stopId": "point-15049",
+      "pointId": 15049,
+      "order": 28,
+      "printTitle": "Хозяйственные постройки усадебного комплекса",
+      "article": {
+        "id": 566,
+        "url": "https://metravel.by/travels/kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:49:17.389202Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-15049.webp",
+        "sha256": "284ef7445a7987fc667c7bdb55a1ccebf59718f7d3f62130e16fd426d58c070e",
+        "originalUri": "https://metravel.by/address-image/15049/conversions/8a042ff5dd2d47d2bf3c59011b002cc4.webp",
+        "articleImageUri": "https://metravel.by/address-image/15049/conversions/8a042ff5dd2d47d2bf3c59011b002cc4.webp",
+        "widthPx": 1024,
+        "heightPx": 768,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[15049] image and media.address_images[15049].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 566,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 182744
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-15049.png",
+        "sha256": "fab52e050bd3617912b8e81278884ff500a4f2e03a694be580003c8ada5beb83",
+        "bytes": 2600510,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in imagegen",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Хозяйственные постройки усадебного комплекса». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Бывший усадебный комплекс: хозяйственные постройки 1904 г..\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "b3d18d4dd800283df788d4643fea21cb1766a1fea9a02e6cae8da0999b6c9539",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": 1,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-15049.json",
+          "sha256": "9e0a022502ca5d3667b9f886ba12b5409bf33171fc1f28da17a0ec4c3bb3e10e",
+          "bytes": 3411
+        },
+        "referencedInputs": [
+          {
+            "path": ".codex-temp/books-e3/series/sources/BY-point-15049.webp",
+            "sha256": "284ef7445a7987fc667c7bdb55a1ccebf59718f7d3f62130e16fd426d58c070e"
+          },
+          {
+            "path": ".codex-temp/books-e3/series/style-reference.png",
+            "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271"
+          }
+        ]
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Левый двухэтажный объём, центральный портик и правое крыло сохранены; низ свободен."
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=55.5487667&lng=26.8250111&placeId=15049&focusPlace=1&placeTitle=%D0%A5%D0%BE%D0%B7%D1%8F%D0%B9%D1%81%D1%82%D0%B2%D0%B5%D0%BD%D0%BD%D1%8B%D0%B5+%D0%BF%D0%BE%D1%81%D1%82%D1%80%D0%BE%D0%B9%D0%BA%D0%B8+%D1%83%D1%81%D0%B0%D0%B4%D0%B5%D0%B1%D0%BD%D0%BE%D0%B3%D0%BE+%D0%BA%D0%BE%D0%BC%D0%BF%D0%BB%D0%B5%D0%BA%D1%81%D0%B0",
+        "article": "https://metravel.by/travels/kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-15057",
+      "pointId": 15057,
+      "order": 29,
+      "printTitle": "Дворец Новицких, Совейки",
+      "article": {
+        "id": 566,
+        "url": "https://metravel.by/travels/kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-09-23T07:49:17.389202Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-15057.webp",
+        "sha256": "7174bfe0a4f4bf865ed144ab213e851689977fea780134efd3f4e57ad6a88134",
+        "originalUri": "https://metravel.by/travel-description-image/566/description/24482e3c192048dfa34420752c0e1317.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/566/description/24482e3c192048dfa34420752c0e1317.JPG.webp",
+        "widthPx": 1024,
+        "heightPx": 768,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Exact image in article 566 HTML and media.article_body.gallery[id14]; alt: Усадьба Новицких в Совейках: портик с колоннами, балюстрада и велосипед у крыльца"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 566,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 233960
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-15057.png",
+        "sha256": "4703b8f7fb39b21efd97bd0792eb5bf2c32fc079e37e1ffd54f3359a4646f770",
+        "bytes": 2905114,
+        "widthPx": 1053,
+        "heightPx": 1493,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.6
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in imagegen",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Дворец Новицких, Совейки». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Усадьба Новицких в Совейках: портик с колоннами, балюстрада и велосипед у крыльца.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "9c707239673ae0611a62a3c2206011dc576f342c89190153b9dc236e55c99a43",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": 1,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-15057.json",
+          "sha256": "f8bf735236eadf4568f441661bf247e0c353cadfa45012fa0908b6b3a0785ea5",
+          "bytes": 3457
+        },
+        "referencedInputs": [
+          {
+            "path": ".codex-temp/books-e3/series/sources/BY-point-15057.webp",
+            "sha256": "7174bfe0a4f4bf865ed144ab213e851689977fea780134efd3f4e57ad6a88134"
+          },
+          {
+            "path": ".codex-temp/books-e3/series/style-reference.png",
+            "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271"
+          }
+        ]
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Совейки: центральная лестница, шесть колонн, балюстрада, круглый проём и велосипед сохранены; низ светлый."
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=52.9170306&lng=26.4114056&placeId=15057&focusPlace=1&placeTitle=%D0%94%D0%B2%D0%BE%D1%80%D0%B5%D1%86+%D0%9D%D0%BE%D0%B2%D0%B8%D1%86%D0%BA%D0%B8%D1%85%2C+%D0%A1%D0%BE%D0%B2%D0%B5%D0%B9%D0%BA%D0%B8",
+        "article": "https://metravel.by/travels/kuda-poekhat-v-belarusi-na-vykhodnye-4-marshruta",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-15827",
+      "pointId": 15827,
+      "order": 30,
+      "printTitle": "Юцковские родники",
+      "article": {
+        "id": 672,
+        "url": "https://metravel.by/travels/marshruty-vykhodnogo-dnia-iz-minska-13-poezdok",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-10-11T16:58:45.282567Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-15827.webp",
+        "sha256": "de8dc75a5c55d094e0a70a3e04a38822b92b12a0812dca739a70d2b5fa3a0437",
+        "originalUri": "https://metravel.by/address-image/6553/conversions/uPQ0SPJlTSvuaBnMQ2gmt6Pmos64qMfEdf975rDX-thumb_400_wp.webp",
+        "articleImageUri": "https://metravel.by/address-image/6553/conversions/uPQ0SPJlTSvuaBnMQ2gmt6Pmos64qMfEdf975rDX-thumb_400_wp.webp",
+        "widthPx": 400,
+        "heightPx": 400,
+        "association": {
+          "kind": "same-article-point",
+          "evidence": "Exact travelAddress[15827] image and media.address_images[15827].variants.original"
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 672,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 38992
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-15827.png",
+        "sha256": "e8077af2af7a23891e185a30071074154a6b06947816841a733a0cf2db522ca8",
+        "bytes": 2666787,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in imagegen",
+        "exactPrompt": "Create one FLAT A5 portrait artwork for the MeTravel FANTASY photo diary.\nInput image 1 is the OWNER'S EXACT PHOTOGRAPH of the place «Юцковские родники». It alone defines the real subject, geometry, architecture, vegetation, proportions and viewpoint. Preserve the actual number and shape of towers and existing ruins; do not rebuild ruins, invent buildings, bridges or mountains. Source description: Юцковские родники.\nInput image 2 is the selected Mir Castle FANTASY STYLE REFERENCE ONLY: use its painterly brushwork, golden twilight atmosphere, warm ivory paper, soft glow and palette. Never import its castle, towers, pond or objects into this different place. Adapt atmospheric light to the actual subject; add window glow or water mist only where windows or water exist in input 1. No fictional historical facts or invented landmarks.\nKeep the entire important subject between 18% and 54% of page height and end above 60%. Topmost 12% pale and quiet, without strong clouds or contrast, for a title. Lower 30% almost entirely empty warm ivory, without reflections, plants or contrasting shapes, for real copy and QR added by the renderer. Dissolve organically into warm ivory at all four edges; no rectangular photo boundary.\nNo characters, creatures, dragons, people, franchise references, logos, text, letters, labels, emblems, watermark, frames, borders, rules, QR, UI or stickers. Single artwork, no page mockup. Native high-resolution portrait if available; no upscaling.\n",
+        "promptSha256": "2bdfdebd435fc60864456146bd202496a824333350b0df112f705c12a7af9894",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 1,
+        "selectedAttempt": 1,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-15827.json",
+          "sha256": "c50ae59b55d504fc7dbe28dde39f222e0affe56e463062ec86edccc2f95c3838",
+          "bytes": 3293
+        },
+        "referencedInputs": [
+          {
+            "path": ".codex-temp/books-e3/series/sources/BY-point-15827.webp",
+            "sha256": "de8dc75a5c55d094e0a70a3e04a38822b92b12a0812dca739a70d2b5fa3a0437"
+          },
+          {
+            "path": ".codex-temp/books-e3/series/style-reference.png",
+            "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271"
+          }
+        ]
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Кладка камней на мшистом валуне в ручье узнаваема, атмосферное освещение; низ светлый."
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=53.7973976&lng=27.16799&placeId=15827&focusPlace=1&placeTitle=%D0%AE%D1%86%D0%BA%D0%BE%D0%B2%D1%81%D0%BA%D0%B8%D0%B5+%D1%80%D0%BE%D0%B4%D0%BD%D0%B8%D0%BA%D0%B8",
+        "article": "https://metravel.by/travels/marshruty-vykhodnogo-dnia-iz-minska-13-poezdok",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    },
+    {
+      "stopId": "point-3843",
+      "pointId": 3843,
+      "order": 31,
+      "printTitle": "Усадебный парк «Репихово»",
+      "article": {
+        "id": 189,
+        "url": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+        "userId": 1,
+        "publicationStatus": "published",
+        "pointIdVerified": true,
+        "verifiedOn": "2026-10-30",
+        "snapshotUpdatedAt": "2026-08-04T17:06:58.831214Z"
+      },
+      "sourcePhoto": {
+        "path": ".codex-temp/books-e3/series/sources/BY-point-3843.webp",
+        "sha256": "b98f4629f39f4259a25de78737fd6f7acf9e60228f3a64654394e066a3b9fd3d",
+        "originalUri": "https://metravel.by/travel-description-image/944c74d13b094a64b3adc4576eb8ca63.JPG.webp",
+        "articleImageUri": "https://metravel.by/travel-description-image/944c74d13b094a64b3adc4576eb8ca63.JPG.webp",
+        "widthPx": 750,
+        "heightPx": 1000,
+        "association": {
+          "kind": "same-article-body",
+          "evidence": "Article189 gallery[id6] directly follows the Repikhovo estate park paragraph; IDs6–18 show the same park, bridges and cellar, before the later route leaves for Netchin."
+        },
+        "rights": {
+          "basis": "owner-author-photo",
+          "ownerUserId": 1,
+          "sourceTravelId": 189,
+          "permission": "owner-commissioned-photo-diary"
+        },
+        "bytes": 260408
+      },
+      "artwork": {
+        "path": ".codex-temp/books-e3/series/artwork/BY-point-3843.png",
+        "sha256": "3c8cdbe903524be4ff1277b4cf71787bc89530f489a67a4828e787c6d41b154c",
+        "bytes": 2249747,
+        "widthPx": 1053,
+        "heightPx": 1494,
+        "artworkBounds": {
+          "left": 0,
+          "top": 0.04,
+          "width": 1,
+          "height": 0.65
+        },
+        "derivedIllustration": true,
+        "originalPhoto": false,
+        "upscaled": false,
+        "ppiAtFullA5": 180.7
+      },
+      "generation": {
+        "tool": "image_gen.imagegen",
+        "modelIdentifier": null,
+        "modelDisclosure": "not exposed by built-in imagegen",
+        "exactPrompt": "Edit input image1, the generated fantasy artwork, as a layout correction. Input image2 is the original owner photo for identity only. Keep the entire painting as one smaller vignette at HALF its current linear size in the upper-middle of a portrait page. Final image must be mostly blank warm ivory paper, with blank top15 percent and bottom40 percent. No painting, shadows, branches, rocks, reflections or texture contrast in the lower40 percent. Do not redraw or crop the real subject: just make the whole painting smaller and position it higher while retaining all source architecture and viewpoint. Soft organic edges dissolve into paper, no rectangular border. No new objects, letters, text, labels, logos, creatures or people. Retain the three blue posts, blank dark shield and right birdhouse exactly.\n",
+        "promptSha256": "40cabcefa661e21521450da43022ba700d566b94beef5a25f11633bd07cb3c26",
+        "styleReference": {
+          "path": "data/travelBooks/styles/fantasy/style-reference.png",
+          "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+          "bytes": 2477074
+        },
+        "successfulGenerationAttempts": 2,
+        "selectedAttempt": 2,
+        "evidence": {
+          "path": ".codex-temp/books-e3/series/evidence/BY-point-3843.json",
+          "sha256": "3a886d4c1c55f025e6f8ecb2272a8b2433ea450462fec7245a406c3202c13fe2",
+          "bytes": 6007
+        },
+        "referencedInputs": [
+          {
+            "path": ".codex-temp/books-e3/series/attempts/BY-point-3843-attempt1.png",
+            "sha256": "017a0e2961c53554026c5cf4f509628b56e704cb620bf860bf4932e9842aacc6"
+          },
+          {
+            "path": ".codex-temp/books-e3/series/sources/BY-point-3843.webp",
+            "sha256": "b98f4629f39f4259a25de78737fd6f7acf9e60228f3a64654394e066a3b9fd3d"
+          }
+        ]
+      },
+      "visualReview": {
+        "status": "pass",
+        "notes": "Сохранены три синих столба, пустой щит, наклонное дерево и правый скворечник; сцена поднята, нижние40% свободны.",
+        "reviewer": "fantasy_middle",
+        "scope": "artwork/source identity and visible composition; no PDF or print proof"
+      },
+      "navigation": {
+        "map": "https://metravel.by/map?lat=52.8534568&lng=26.1462207&placeId=3843&focusPlace=1&placeTitle=%D0%A3%D1%81%D0%B0%D0%B4%D0%B5%D0%B1%D0%BD%D1%8B%D0%B9+%D0%BF%D0%B0%D1%80%D0%BA+%C2%AB%D0%A0%D0%B5%D0%BF%D0%B8%D1%85%D0%BE%D0%B2%D0%BE%C2%BB",
+        "article": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+        "quest": {
+          "status": "unavailable",
+          "reason": "В проверенном публичном каталоге и релевантных деталях не подтверждён опубликованный шаг, относящийся именно к этому объекту. Ссылка только на соседний город не подставляется; третий QR отсутствует.",
+          "checkedOn": "2026-10-30",
+          "catalogCount": 282,
+          "associationRequired": "published quest step with exact-object identity and matching coordinates"
+        }
+      }
+    }
+  ]
+}

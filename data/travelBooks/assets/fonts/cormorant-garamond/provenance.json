@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "family": "Cormorant Garamond",
+  "style": "Regular",
+  "source": {
+    "path": ".codex-temp/books-e3/fonts/CormorantGaramond[wght].ttf",
+    "sha256": "b20b7d9626dd956b2c5e558692ad328b1f19e3275e2782db4fa07670d83f35e0",
+    "bytes": 1195560,
+    "sampleProvenanceSha256": "fa9adf156f5db04fb1a540fe7499c0ace2bc6af5801b1a628e760ccf9ffecd09"
+  },
+  "font": {
+    "path": "data/travelBooks/assets/fonts/cormorant-garamond/CormorantGaramond-Regular.ttf",
+    "sha256": "67a9da018f4cae694840d9e962215e7e5fca669f6c5de6ab9e675da53ec1e400",
+    "bytes": 773992
+  },
+  "license": {
+    "path": "data/travelBooks/assets/fonts/cormorant-garamond/OFL.txt",
+    "sha256": "60700d351cac4650c51f3f9db318d2a420f8b45052dba2715eb5fec41f0f6956",
+    "bytes": 4387,
+    "name": "SIL Open Font License 1.1"
+  },
+  "instance": {
+    "tool": "fontTools.varLib.instancer",
+    "version": "4.68.0",
+    "axes": {
+      "wght": 400
+    },
+    "allAxesFrozen": true,
+    "updateFontNames": true
+  },
+  "glyphCheck": {
+    "checkedOn": "2026-11-01",
+    "tool": "fontTools.ttLib.TTFont.getBestCmap",
+    "locales": [
+      "ru",
+      "be",
+      "uk",
+      "pl",
+      "en"
+    ],
+    "checkedCharacters": " ,-.0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz«»ÓóĄąĆćĘęŁłŃńŚśŹźŻżЁЄІЇЎАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдежзийклмнопрстуфхцчшщъыьэюяёєіїўҐґ–—’…№",
+    "missing": []
+  },
+  "pdfEmbedding": "Static TTF input ready; final PDF font embedding and story overflow must be checked during assembly.",
+  "coverEpigraphFont": "data/travelBooks/assets/fonts/marckscript/MarckScript-Regular.ttf"
+}

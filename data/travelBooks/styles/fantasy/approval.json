@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "taskId": 2856,
+  "visualStyle": "fantasy",
+  "approvedStage": "visual-direction-and-series-continuation",
+  "ownerCommand": "доделывай",
+  "ownerCommandDate": "2026-11-01",
+  "recordedOn": "2026-11-01",
+  "evidence": {
+    "path": ".codex-temp/books-e3/series/generation-plan.json",
+    "sha256": "179f1a3bfee3a0733a2681768ba7addab6806a194912d82e7164988ce0b2a6f9",
+    "bytes": 241143,
+    "field": "continuationInstruction",
+    "verbatim": "Owner said «доделывай» on 2026-11-01 after the final sample; continue with this style.",
+    "sourceKind": "prior-session-owner-command-record"
+  },
+  "historicalSample": {
+    "path": ".codex-temp/books-e3/sample/provenance.json",
+    "sha256": "fa9adf156f5db04fb1a540fe7499c0ace2bc6af5801b1a628e760ccf9ffecd09",
+    "bytes": 14862,
+    "statusPreserved": "approval-sample — не согласован владельцем; не книга, не публикация, printReady=false",
+    "laterContinuationSupersedesPendingVisualDecision": true
+  },
+  "styleReference": {
+    "path": "data/travelBooks/styles/fantasy/style-reference.png",
+    "sha256": "88fb9d36a9f6af15e1610486c92ba57c93f040985146d7932398cfab2ffae271",
+    "bytes": 2477074
+  },
+  "limits": [
+    "Visual direction and continuation only. Final full PDF edition is not yet assembled, accepted or published.",
+    "Native A5 illustration resolution is below 300 ppi; printReady remains false."
+  ]
+}

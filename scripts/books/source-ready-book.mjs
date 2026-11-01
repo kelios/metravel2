@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import {readFile, realpath} from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';
+import {loadIllustratedEdition} from './load-illustrated-edition.mjs';
 
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const json = async file => JSON.parse(await readFile(file, 'utf8'));
@@ -18,6 +19,7 @@ export const PHOTO_FONTS = {
 export const BOOK_IDENTITY = {
   watercolor: {by: {id: 'belarus-memory', slug: 'belarus', title: 'Беларусь. Книга воспоминаний'}, pl: {id: 'poland-memory', slug: 'poland', title: 'Польша. Книга воспоминаний'}},
   photo: {by: {id: 'belarus-photo-memory', slug: 'belarus-photo', title: 'Беларусь. Фотокнига воспоминаний'}, pl: {id: 'poland-photo-memory', slug: 'poland-photo', title: 'Польша. Фотокнига воспоминаний'}},
+  fantasy: {by: {id: 'belarus-fantasy-memory', slug: 'belarus-fantasy', title: 'Беларусь. Книга воспоминаний'}, pl: {id: 'poland-fantasy-memory', slug: 'poland-fantasy', title: 'Польша. Книга воспоминаний'}},
 };
 
 export async function loadCoverPersonalizationSource() {
@@ -73,7 +75,7 @@ export async function loadSelectedBook(country, {sourcesRoot = 'data/travelBooks
       source: {kind: 'travel-address', id: String(row.pointId), url: article.url}, text: {compact: record.copyRu.trim(), album: record.copyRu.trim()},
       fact: record.sourceEvidence.excerpt || record.copyRu.trim(), observation: 'Сохраните своё впечатление об этом месте.',
       references: [{url: article.url, checkedAt: article.verifiedOn, claims: [record.sourceEvidence.excerpt || record.copyRu.trim()]}],
-      imageBrief: style === 'photo' ? 'Коллаж из фотографий автора этого места из той же авторской статьи.' : 'Утверждённая акварель по фотографии этого места из той же авторской статьи.',
+      imageBrief: style === 'photo' ? 'Коллаж из фотографий автора этого места из той же авторской статьи.' : style === 'fantasy' ? 'Утверждённая фэнтези-иллюстрация по фотографии этого места из той же авторской статьи.' : 'Утверждённая акварель по фотографии этого места из той же авторской статьи.',
       navigation: {authorId: 1, pointId: row.pointId, sourceTravelId: article.id, mapUrl: record.qr.map, articleUrl: article.url, verifiedAt: article.verifiedOn, ...(quest ? {quest: {url: quest.url, id: quest.id, evidence: typeof quest.evidence === 'string' ? quest.evidence : JSON.stringify(quest.evidence)}} : {})}});
   }
   const countryCode = selection.country;
@@ -81,11 +83,17 @@ export async function loadSelectedBook(country, {sourcesRoot = 'data/travelBooks
   const coverPersonalization = await loadCoverPersonalizationSource();
   const edition = style === 'photo'
     ? await loadPhotoEdition({country, countryCode, profileId, stops, sources, sourcesRoot, collageRegistryPath, originalsIndexPath, assets, provenance})
-    : await loadWatercolorEdition({country, countryCode, registryPath, stops, sources, assets, provenance, coverPersonalization});
+    : style === 'fantasy'
+      ? await loadIllustratedEdition({country, style, stops, sources, sourcesRoot, projectFile})
+      : await loadWatercolorEdition({country, countryCode, registryPath, stops, sources, assets, provenance, coverPersonalization});
+  if (edition.assets) {
+    Object.assign(assets, edition.assets);
+    provenance.push(...edition.assetsProvenance);
+  }
   // The photographic edition hashes both physical profiles at once so that pocket and A5 share one revision.
   // The watercolor seed keeps its historical shape (`font`) so the accepted revisions stay reproducible.
-  const revision = `${edition.revisionDate}.${style === 'photo' ? 'photo' : 'collage'}.` + sha256(JSON.stringify(style === 'photo' ? {selection, source, ...edition.revisionSeed, fonts: edition.fontHashes} : {selection, source, provenance, cover: edition.cover.encodedSha256, font: edition.fontHashes})).slice(0, 12);
-  const book = {schemaVersion: 1, status: 'editorial-draft', id: identity.id, slug: identity.slug, revision, country: countryCode, contentLocale: 'ru', title: identity.title, ...(style === 'photo' ? {visualStyle: 'photo'} : {}), stops,
+  const revision = `${edition.revisionDate}.${style === 'photo' ? 'photo' : style === 'fantasy' ? 'fantasy' : 'collage'}.` + sha256(JSON.stringify(style === 'photo' || style === 'fantasy' ? {selection, source, ...edition.revisionSeed, fonts: edition.fontHashes} : {selection, source, provenance, cover: edition.cover.encodedSha256, font: edition.fontHashes})).slice(0, 12);
+  const book = {schemaVersion: 1, status: 'editorial-draft', id: identity.id, slug: identity.slug, revision, country: countryCode, contentLocale: 'ru', title: identity.title, ...(style !== 'watercolor' ? {visualStyle: style} : {}), stops,
     miniTrips: [{id: 'selected-places', title: 'Самостоятельные поездки', stopIds: stops.map(stop => stop.id), note: 'Выбранные места не образуют один непрерывный маршрут.'}]};
   return {book, assets, cover: edition.cover.asset, coverPersonalization, fonts: edition.fonts, provenance: {style, selectionPath, recordsPath, ...edition.provenancePaths, assets: provenance, font: edition.fontProvenance, cover: edition.cover.provenance}, assetsHash: sha256(JSON.stringify(provenance))};
 }
