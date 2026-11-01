@@ -314,4 +314,13 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsContentPanel.themeShowA11y": "Pokaż kolekcję „{{value1}}”",
   "screens.tabs.QuestsScreen.themeTitle": "{{value1}}: {{value2}} {{value3}} | MeTravel",
   "screens.tabs.QuestsScreen.themeDescription": "Kolekcja „{{value1}}”: questy offline po miastach z legendami i zadaniami po drodze — punkty na mapie, start z miasta.",
+  "components.quests.QuestNotFoundScreen.screenTitle": "Quest nie znaleziony",
+  "components.quests.QuestNotFoundScreen.title": "Nie ma takiego questu",
+  "components.quests.QuestNotFoundScreen.countryTitle": "Nie ma takiego kraju w katalogu",
+  "components.quests.QuestNotFoundScreen.lead": "Adres „{{value1}}” nie prowadzi ani do questu, ani do miasta. Link mógł się zdezaktualizować albo zawiera literówkę.",
+  "components.quests.QuestNotFoundScreen.allQuests": "Wszystkie questy",
+  "components.quests.QuestNotFoundScreen.belarus": "Questy na Białorusi",
+  "components.quests.QuestNotFoundScreen.popularTitle": "Popularne questy",
+  "components.quests.QuestNotFoundScreen.seoTitle": "Quest nie znaleziony | Metravel",
+  "components.quests.QuestNotFoundScreen.seoDescription": "Nie ma takiego questu. Otwórz katalog questów Metravel albo popularne trasy po miastach.",
 } as const

@@ -314,4 +314,13 @@ export const questsGenerated2 = {
   "screens.tabs.QuestsContentPanel.themeShowA11y": "Паказаць падборку «{{value1}}»",
   "screens.tabs.QuestsScreen.themeTitle": "{{value1}}: {{value2}} {{value3}} | MeTravel",
   "screens.tabs.QuestsScreen.themeDescription": "Падборка «{{value1}}»: афлайн-квэсты па гарадах з легендамі і заданнямі па дарозе — кропкі на карце, старт з горада.",
+  "components.quests.QuestNotFoundScreen.screenTitle": "Квэст не знойдзены",
+  "components.quests.QuestNotFoundScreen.title": "Такога квэста няма",
+  "components.quests.QuestNotFoundScreen.countryTitle": "Такой краіны ў каталогу няма",
+  "components.quests.QuestNotFoundScreen.lead": "Адрас «{{value1}}» не вядзе ні да квэста, ні да горада. Магчыма, спасылка састарэла або ў ёй памылка.",
+  "components.quests.QuestNotFoundScreen.allQuests": "Усе квэсты",
+  "components.quests.QuestNotFoundScreen.belarus": "Квэсты ў Беларусі",
+  "components.quests.QuestNotFoundScreen.popularTitle": "Папулярныя квэсты",
+  "components.quests.QuestNotFoundScreen.seoTitle": "Квэст не знойдзены | Metravel",
+  "components.quests.QuestNotFoundScreen.seoDescription": "Такога квэста няма. Адкрыйце каталог квэстаў Metravel або папулярныя маршруты па гарадах.",
 } as const

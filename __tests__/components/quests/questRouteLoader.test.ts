@@ -48,6 +48,27 @@ describe('quest public loader', () => {
     expect(JSON.stringify(results)).not.toMatch(/"(?:task|hint|answer_pattern|progress)"/);
   });
 
+  // #2896: публикация ответила 404. Документ по-прежнему падает кодом 404 (его
+  // отдаст nginx оболочкой «не найдено»), а клиентский запрос данных маршрута —
+  // `Accept: application/json` от expo-router — получает маркер `not_found`:
+  // иначе переход на такой адрес заканчивался «Failed to load loader data».
+  it('turns a publication 404 into a not_found marker for client loader-data requests only', async () => {
+    const notFound = Object.assign(new Error('Not Found'), { httpStatus: 404 });
+    fetchMock.mockRejectedValue(notFound);
+    const documentRequest = { signal: new AbortController().signal,
+      headers: new Headers({ accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' }) } as unknown as ImmutableRequest;
+    await expect(loadQuestPublicRoute(documentRequest, { city: 'this-quest-does-not-exist-123' })).rejects.toMatchObject({ httpStatus: 404 });
+    await expect(loadQuestPublicRoute(request(), { city: 'this-quest-does-not-exist-123' })).rejects.toMatchObject({ httpStatus: 404 });
+
+    const dataRequest = { signal: new AbortController().signal, headers: new Headers({ accept: 'application/json' }) } as unknown as ImmutableRequest;
+    await expect(loadQuestPublicRoute(dataRequest, { city: 'this-quest-does-not-exist-123' })).resolves.toEqual(
+      { kind: 'not_found', path: '/quests/this-quest-does-not-exist-123', httpStatus: 404 });
+    await expect(loadQuestPublicRoute(dataRequest, { country: 'nope-xyz' })).resolves.toMatchObject({ kind: 'not_found', path: '/quests/country/nope-xyz' });
+    // 503 — не «нет такого адреса»: клиент не должен рисовать «не найдено» на сбое.
+    fetchMock.mockRejectedValue(Object.assign(new Error('Service Unavailable'), { httpStatus: 503 }));
+    await expect(loadQuestPublicRoute(dataRequest, { city: 'grodno' })).rejects.toMatchObject({ httpStatus: 503 });
+  });
+
   it('fails closed on a response from another locale or a broken publication', async () => {
     fetchMock.mockResolvedValueOnce(raw('pl'));
     await expect(loadQuestPublicRoute(request(), { city: '7', questId: 'fixture-city-walk' })).rejects.toMatchObject({ httpStatus: 503 });

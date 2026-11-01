@@ -711,6 +711,39 @@ async function loadTargetUrls() {
   }
 }
 
+/**
+ * Адреса, которые ОБЯЗАНЫ отвечать 404 (#2896): неизвестный slug квеста раньше
+ * отдавал оболочку без содержания; статус документа — единственное, что видит
+ * робот, поэтому выкат проверяет его отдельно от карты сайта. Путь нарочно не
+ * похож ни на город, ни на страну и не попадёт в каталог.
+ */
+const NOT_FOUND_PROBE_PATHS = ['/quests/this-quest-does-not-exist-404']
+
+function validateNotFoundProbe(response) {
+  const issues = []
+  if (response.status !== 404) {
+    issues.push({
+      severity: 'error',
+      code: 'notfound.status',
+      message: `Unknown quest slug must answer 404, got HTTP ${response.status}`,
+    })
+  }
+  if (response.finalUrl !== response.url) {
+    issues.push({
+      severity: 'error',
+      code: 'notfound.redirect',
+      message: `Unknown quest slug must not redirect (final URL ${response.finalUrl})`,
+    })
+  }
+  return {
+    url: response.url,
+    finalUrl: response.finalUrl,
+    pageType: 'not-found-probe',
+    title: '',
+    issues,
+  }
+}
+
 function printSummary(summary) {
   if (JSON_OUTPUT) {
     console.log(JSON.stringify(summary, null, 2))
@@ -779,7 +812,25 @@ async function main() {
       }
     }
   })
-  const checked = [validateSitemapResponse(sitemapResponse), ...pageChecks]
+  const notFoundChecks = await mapLimit(NOT_FOUND_PROBE_PATHS, CONCURRENCY, async (probePath) => {
+    const url = `${SITE}${probePath}`
+    try {
+      return validateNotFoundProbe(await fetchUrl(url))
+    } catch (error) {
+      return {
+        url,
+        finalUrl: url,
+        pageType: 'not-found-probe',
+        title: '',
+        issues: [{
+          severity: 'error',
+          code: 'fetch.failed',
+          message: error instanceof Error ? error.message : String(error),
+        }],
+      }
+    }
+  })
+  const checked = [validateSitemapResponse(sitemapResponse), ...pageChecks, ...notFoundChecks]
 
   const summary = {
     site: SITE,
@@ -820,6 +871,8 @@ if (typeof module !== 'undefined' && module.exports) {
     validateHomeAssets,
     validatePageResult,
     validateSitemapResponse,
+    validateNotFoundProbe,
+    NOT_FOUND_PROBE_PATHS,
     validateRobots,
     validateSocialMeta,
     validateTitle,

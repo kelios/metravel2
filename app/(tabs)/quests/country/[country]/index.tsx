@@ -3,6 +3,7 @@ import { Dimensions, Platform, View } from 'react-native'
 import { useIsFocused, useLocalSearchParams, useNavigation } from 'expo-router'
 
 import QuestCountryLandingSections from '@/components/quests/QuestCountryLandingSections'
+import QuestNotFoundScreen from '@/components/quests/QuestNotFoundScreen'
 import QuestPublicPageFrame from '@/components/quests/QuestPublicPageFrame'
 import { toCountrySelectionId } from '@/utils/questCatalogSelection'
 import { QuestPageColumns } from '@/components/quests/QuestPageColumns'
@@ -38,7 +39,12 @@ import { shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 const COUNTRY_HEADER_BLOCK_STYLE = { gap: 8, width: '100%', maxWidth: 840 } as const
 
-export default function QuestsByCountryScreen() {
+type Props = {
+  /** SSR-loader ответил «нет такого адреса» на клиентский запрос данных (#2896). */
+  notFound?: boolean
+}
+
+export default function QuestsByCountryScreen({ notFound: loaderNotFound = false }: Props) {
   useQuestReturnVisit()
 
   const params = useLocalSearchParams<{ country?: string | string[] }>()
@@ -60,7 +66,11 @@ export default function QuestsByCountryScreen() {
   )
   const countryQuests = useMemo(() => country?.quests ?? [], [country])
 
-  useQuestLandingNotFoundRedirect(Platform.OS !== 'web' || (!loading && !country))
+  // Лендинг страны — только web; native уходит в каталог. Неизвестный alias на
+  // web — терминальный экран «не найдено», а не редирект и не пустота (#2896).
+  useQuestLandingNotFoundRedirect(Platform.OS !== 'web')
+  // Маркер loader'а лишь не ждёт каталога; страну, которую каталог разрешил, он не накрывает.
+  const notFound = Platform.OS === 'web' && !country && (loaderNotFound || !loading)
 
   useEffect(() => {
     if (country?.countryName) navigation.setOptions({ title: country.countryName })
@@ -111,6 +121,10 @@ export default function QuestsByCountryScreen() {
       keyPrefix: 'quests-country',
     })
   }, [canonical, country, countryName, countryQuests, t])
+
+  if (notFound) {
+    return <QuestNotFoundScreen kind="country" segment={countryParam} quests={quests} styles={s} />
+  }
 
   if (loading || !country || Platform.OS !== 'web') {
     return <QuestLandingLoading styles={s} colors={colors} />

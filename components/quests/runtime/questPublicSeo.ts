@@ -1,6 +1,6 @@
 import type { ImmutableRequest } from 'expo-server';
-import { routeMetadata, shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata';
-import { loadQuestPublicRoute } from './questRouteLoader';
+import { notFoundRouteMetadata, routeMetadata, shellRouteMetadata } from '@/utils/seoRoutes/routeMetadata';
+import { isQuestRouteNotFound, loadQuestPublicRoute } from './questRouteLoader';
 import { questPublicAlternates } from './questPublicStructuredData';
 
 export { buildQuestPublicStructuredData, questPublicAlternates } from './questPublicStructuredData';
@@ -8,6 +8,8 @@ export { buildQuestPublicStructuredData, questPublicAlternates } from './questPu
 export async function questPublicRouteMetadata(request: ImmutableRequest | undefined, params: Record<string, string | string[]>) {
   const data = await loadQuestPublicRoute(request, params);
   if (!data) return shellRouteMetadata();
+  // #2896: клиентский переход на несуществующий адрес — head страницы «не найдено».
+  if (isQuestRouteNotFound(data)) return notFoundRouteMetadata();
   return routeMetadata({ ...data.page.meta, ogType: 'website',
     robots: data.quality.indexable ? 'index, follow' : 'noindex, follow', alternates: questPublicAlternates(data) });
 }

@@ -15,9 +15,22 @@ const {
   validateSitemapResponse,
   validateTravelHtml,
   hasVisibleTravelSsgH1,
+  validateNotFoundProbe,
+  NOT_FOUND_PROBE_PATHS,
 } = require('@/scripts/post-deploy-seo-check')
 
 describe('post-deploy SEO check helpers', () => {
+  // #2896: неизвестный slug квеста обязан отвечать 404 без редиректа.
+  it('requires the unknown quest slug probe to answer 404 in place', () => {
+    const url = 'https://metravel.by/quests/this-quest-does-not-exist-404'
+    expect(NOT_FOUND_PROBE_PATHS).toContain('/quests/this-quest-does-not-exist-404')
+    expect(validateNotFoundProbe({ url, finalUrl: url, status: 404, headers: {}, body: '' }).issues).toEqual([])
+    expect(validateNotFoundProbe({ url, finalUrl: url, status: 200, headers: {}, body: '<html></html>' }).issues.map((issue: { code: string }) => issue.code))
+      .toEqual(['notfound.status'])
+    expect(validateNotFoundProbe({ url, finalUrl: 'https://metravel.by/quests', status: 200, headers: {}, body: '' }).issues.map((issue: { code: string }) => issue.code))
+      .toEqual(['notfound.status', 'notfound.redirect'])
+  })
+
   it('classifies page types by URL', () => {
     expect(detectPageType('https://metravel.by/')).toBe('home')
     expect(detectPageType('https://metravel.by/travels/test')).toBe('travel')
