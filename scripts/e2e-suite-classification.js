@@ -48,6 +48,8 @@ const PRODUCTION_SMOKE_SPECS = [
   // tabs on the production build; the 820 × 1180 check stays in the default
   // suite (`map-page.spec.ts`), both over `e2e/helpers/mapPanelTabs.ts`.
   'map-panel-tabs-production-smoke.spec.ts',
+  // #2800: real public book metadata, guest wheel/SPA/Back only; no API writes.
+  'ready-books-scroll-navigation.spec.ts',
 ]
 
 const getE2ESuiteSelection = (suite) => {
