@@ -502,7 +502,11 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
       setError(freeTextMinLength
         ? translatePlural('quests:components.quests.questWizardStepCard.freeTextTooShort', freeTextMinLength)
         : softStartActive
-          ? i18nT('quests:components.quests.questWizardStepCard.softStart.wrong')
+          // Подсказка рендерится под полем, а у точки её может не быть вовсе:
+          // текст не ссылается на расположение и без подсказки о ней молчит (#2914).
+          ? i18nT(step.hint
+            ? 'quests:components.quests.questWizardStepCard.softStart.wrong'
+            : 'quests:components.quests.questWizardStepCard.softStart.wrongNoHint')
           : i18nT('quests:components.quests.questWizardStepCard.nevernyy_otvet_22371740'))
       onWrongAttempt()
       if (isBruteForceable) {

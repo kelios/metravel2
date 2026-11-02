@@ -25,7 +25,7 @@ import QuestsMobileToolbar from './QuestsMobileToolbar';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
 import { QuestPageColumns } from '@/components/quests/QuestPageColumns';
 import { pluralizeCities, pluralizeCompletions, pluralizeCountries, pluralizePlayers, pluralizeQuest, type QuestMeta, type QuestSortOrder, type QuestThemeEntry } from './questsShared';
-import { countQuestCatalogScale, isCatalogCompletionsPublic, isCatalogPlayersPublic } from '@/utils/questPublicStatsPolicy';
+import { countQuestCatalogScale, isCatalogCompletionsPublic, isCatalogStatsPublic } from '@/utils/questPublicStatsPolicy';
 import QuestsSortChips, { EMPTY_SORT_ORDERS } from './QuestsSortChips';
 
 import { translate as i18nT } from '@/i18n'
@@ -305,11 +305,16 @@ function QuestsContentPanel({
     // Ниже порогов (#2906) маленькие числа работают против доверия: вместо них
     // полный каталог показывает масштаб — города и страны; пороги —
     // `utils/questPublicStatsPolicy.ts`, и при их достижении формат возвращается сам.
-    const showCompletions = isCatalogCompletionsPublic(completionsTotal);
-    const showPlayers = isFullCatalog && isCatalogPlayersPublic(playersCount);
+    // Полный каталог решает по одному флагу — оба порога сразу (#2914); у среза
+    // числа игроков нет, и он смотрит только на прохождения.
+    const statsPublic = isFullCatalog
+        ? isCatalogStatsPublic(completionsTotal, playersCount)
+        : isCatalogCompletionsPublic(completionsTotal);
+    const showCompletions = statsPublic;
+    const showPlayers = isFullCatalog && statsPublic;
     const catalogScale = useMemo(
-        () => (isFullCatalog && !showCompletions ? countQuestCatalogScale(questsAll) : null),
-        [isFullCatalog, questsAll, showCompletions],
+        () => (isFullCatalog && !statsPublic ? countQuestCatalogScale(questsAll) : null),
+        [isFullCatalog, questsAll, statsPublic],
     );
     const countText = [
         pluralizeQuest(questsAll.length),

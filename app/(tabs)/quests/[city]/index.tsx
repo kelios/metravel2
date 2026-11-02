@@ -59,6 +59,8 @@ const QuestsScreen = React.lazy(preloadQuestsScreen)
 // импорт поднял `index:quests-city` над бюджетом (ROUTE-BUNDLE-001), а нужен он
 // только на неизвестном адресе — чанк грузится в момент показа.
 const QuestNotFoundScreen = React.lazy(() => import('@/components/quests/QuestNotFoundScreen'))
+// Ошибка загрузки каталога (#2914) — тоже отдельный ленивый чанк.
+const QuestLandingLoadError = React.lazy(() => import('@/components/quests/QuestLandingLoadError'))
 
 type Props = {
   /**
@@ -96,7 +98,7 @@ export default function QuestsByCityScreen({ notFound: loaderNotFound = false }:
   const colors = useThemedColors()
   const { t } = useTranslation()
 
-  const { quests, loading } = useQuestsList()
+  const { quests, loading, error, refetch, refetching } = useQuestsList({ trackRefetching: true })
 
   const cityGroups = useMemo(() => buildQuestCityLandingGroups(quests), [quests])
 
@@ -150,7 +152,12 @@ export default function QuestsByCityScreen({ notFound: loaderNotFound = false }:
   // не найден», а не редирект в каталог и не пустота (#2896). Маркер loader'а
   // лишь не ждёт каталога: публикация и каталог — разные источники, и город,
   // который каталог всё же разрешил, страницей «не найдено» не накрывается.
-  const notFound = !aliasQuestPath && !resolved && (loaderNotFound || !loading)
+  // Упавший каталог (обрыв сети) ничего не решает: пустой список — не «такого
+  // квеста нет», а ошибка с повтором (#2914). Ответ loader'а остаётся в силе.
+  // Сбой фонового обновления при данных в кеше каталог не отнимает — он решает.
+  const catalogFailed = Boolean(error) && quests.length === 0
+  const notFound = !aliasQuestPath && !resolved && (loaderNotFound || (!loading && !catalogFailed))
+  const loadError = !notFound && !resolved && !loading && catalogFailed
 
   // Navigation/stack header title = localized city name (from the resolved
   // city_name), never the raw URL segment («4» / «minsk»). Matches the pattern
@@ -252,6 +259,14 @@ export default function QuestsByCityScreen({ notFound: loaderNotFound = false }:
     return (
       <Suspense fallback={<QuestLandingLoading styles={s} colors={colors} />}>
         <QuestNotFoundScreen kind="city" segment={cityParam} quests={quests} styles={s} />
+      </Suspense>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <Suspense fallback={<QuestLandingLoading styles={s} colors={colors} />}>
+        <QuestLandingLoadError styles={s} onRetry={refetch} retrying={refetching} />
       </Suspense>
     )
   }

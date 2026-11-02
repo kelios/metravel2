@@ -40,6 +40,8 @@ const COUNTRY_HEADER_BLOCK_STYLE = { gap: 8, width: '100%', maxWidth: 840 } as c
 // Экран неизвестного адреса (#2896) — отдельный ленивый чанк, не вес маршрута страны
 // (ROUTE-BUNDLE-001): нужен только на неизвестном alias.
 const QuestNotFoundScreen = React.lazy(() => import('@/components/quests/QuestNotFoundScreen'))
+// Ошибка загрузки каталога (#2914) — тоже отдельный ленивый чанк.
+const QuestLandingLoadError = React.lazy(() => import('@/components/quests/QuestLandingLoadError'))
 
 type Props = {
   /** SSR-loader ответил «нет такого адреса» на клиентский запрос данных (#2896). */
@@ -56,7 +58,7 @@ export default function QuestsByCountryScreen({ notFound: loaderNotFound = false
   const colors = useThemedColors()
   const { locale } = useLocale()
   const { t } = useTranslation()
-  const { quests, loading } = useQuestsList()
+  const { quests, loading, error, refetch, refetching } = useQuestsList({ trackRefetching: true })
 
   const countryGroups = useMemo(
     () => buildQuestCountryLandingGroups(quests, { locale }),
@@ -72,7 +74,11 @@ export default function QuestsByCountryScreen({ notFound: loaderNotFound = false
   // web — терминальный экран «не найдено», а не редирект и не пустота (#2896).
   useQuestLandingNotFoundRedirect(Platform.OS !== 'web')
   // Маркер loader'а лишь не ждёт каталога; страну, которую каталог разрешил, он не накрывает.
-  const notFound = Platform.OS === 'web' && !country && (loaderNotFound || !loading)
+  // Упавший каталог — ошибка с повтором, а не «не найдено» (#2914); сбой фонового
+  // обновления при данных в кеше каталог не отнимает.
+  const catalogFailed = Boolean(error) && quests.length === 0
+  const notFound = Platform.OS === 'web' && !country && (loaderNotFound || (!loading && !catalogFailed))
+  const loadError = Platform.OS === 'web' && !notFound && !country && !loading && catalogFailed
 
   useEffect(() => {
     if (country?.countryName) navigation.setOptions({ title: country.countryName })
@@ -128,6 +134,14 @@ export default function QuestsByCountryScreen({ notFound: loaderNotFound = false
     return (
       <Suspense fallback={<QuestLandingLoading styles={s} colors={colors} />}>
         <QuestNotFoundScreen kind="country" segment={countryParam} quests={quests} styles={s} />
+      </Suspense>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <Suspense fallback={<QuestLandingLoading styles={s} colors={colors} />}>
+        <QuestLandingLoadError styles={s} onRetry={refetch} retrying={refetching} />
       </Suspense>
     )
   }

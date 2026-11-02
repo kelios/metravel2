@@ -8,6 +8,8 @@
  * первым». Когда порог достигнут, прежний формат возвращается сам, без правки кода.
  * Все пороги — здесь, в одном месте.
  */
+import { buildQuestCityLandingGroups } from '@/utils/questCityAlias'
+
 export const QUEST_PUBLIC_STATS_THRESHOLDS = {
   /** Прохождения по всему каталогу: ниже — счётчик прохождений не показывается. */
   catalogCompletions: 100,
@@ -25,22 +27,31 @@ export function isCatalogPlayersPublic(players: number | null | undefined): bool
   return typeof players === 'number' && Number.isFinite(players) && players >= QUEST_PUBLIC_STATS_THRESHOLDS.catalogPlayers
 }
 
+/**
+ * Статистика полного каталога публична, только когда оба порога достигнуты
+ * сразу (#2906, #2914): иначе шапка показывает масштаб, а не одно из чисел.
+ */
+export function isCatalogStatsPublic(completions: number, players: number | null | undefined): boolean {
+  return isCatalogCompletionsPublic(completions) && isCatalogPlayersPublic(players)
+}
+
 /** «Пройдено N раз» и «Первым прошёл …» показываются от двух прохождений. */
 export function isQuestCompletionsPublic(count: number | null | undefined): boolean {
   return typeof count === 'number' && Number.isFinite(count) && count >= QUEST_PUBLIC_STATS_THRESHOLDS.questCompletions
 }
 
-/** Масштаб каталога вместо счётчиков ниже порога: разных городов и стран. */
-export function countQuestCatalogScale<T extends { cityId?: string | null; countryCode?: string | null }>(
+/**
+ * Масштаб каталога вместо счётчиков ниже порога: разных городов и стран. Города
+ * считаются группами лендингов (`buildQuestCityLandingGroups`), а не по `cityId`:
+ * город с двумя id (legacy) — один город, как и его страница `/quests/<город>` (#2914).
+ */
+export function countQuestCatalogScale<T extends { id: string; cityId?: string | null; countryCode?: string | null }>(
   quests: readonly T[],
 ): { cities: number; countries: number } {
-  const cities = new Set<string>()
   const countries = new Set<string>()
   for (const quest of quests) {
-    const city = String(quest.cityId ?? '').trim().toLowerCase()
-    if (city) cities.add(city)
     const country = String(quest.countryCode ?? '').trim().toUpperCase()
     if (country) countries.add(country)
   }
-  return { cities: cities.size, countries: countries.size }
+  return { cities: buildQuestCityLandingGroups([...quests]).length, countries: countries.size }
 }

@@ -23,6 +23,7 @@ const REVEAL = i18nT('quests:components.quests.questWizardStepCard.softStart.rev
 const SKIP = i18nT('quests:components.quests.questWizardStepCard.propustit_0358f4b6')
 const WRONG = i18nT('quests:components.quests.questWizardStepCard.nevernyy_otvet_22371740')
 const SOFT_WRONG = i18nT('quests:components.quests.questWizardStepCard.softStart.wrong')
+const SOFT_WRONG_NO_HINT = i18nT('quests:components.quests.questWizardStepCard.softStart.wrongNoHint')
 
 const baseStep = {
   id: 'step-1',
@@ -95,6 +96,25 @@ it('неверный ответ встречает спокойный текст
   await fireEvent.press(screen.getByTestId('quest-step-soft-reveal'))
   expect(props.onRevealAnswer).toHaveBeenCalledTimes(1)
   expect(screen.queryByText(REVEAL)).toBeTruthy()
+})
+
+// #2914: подсказка рендерится под полем, а у точки её может не быть — текст отказа
+// не говорит «выше» и без подсказки о ней не упоминает.
+it('текст мягкого отказа не ссылается на расположение подсказки', () => {
+  expect(SOFT_WRONG).not.toMatch(/выше/i)
+  expect(SOFT_WRONG_NO_HINT).not.toMatch(/подсказ/i)
+})
+
+it('на точке без подсказки мягкий отказ не упоминает подсказку', async () => {
+  const { screen } = await renderCard({
+    hintVisible: false,
+    step: { ...baseStep, hint: undefined, answer: buildAnswerChecker('exact', 'камень') },
+  })
+  await fireEvent.changeText(screen.getByPlaceholderText(/Ваш ответ/), 'дерево')
+  await fireEvent.press(screen.getByTestId('quest-step-check'))
+  expect(screen.getByTestId('quest-step-soft-error')).toBeTruthy()
+  expect(screen.queryByText(SOFT_WRONG_NO_HINT)).toBeTruthy()
+  expect(screen.queryByText(SOFT_WRONG)).toBeNull()
 })
 
 it('без мягкого старта карточка прежняя: «Пропустить» и красный «Неверный ответ»', async () => {

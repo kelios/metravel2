@@ -480,7 +480,8 @@ export const questsGenerated1 = {
   "components.quests.questWizardStepCard.inaccuracy.already": "Вы уже отмечали эту точку.",
   "components.quests.questWizardStepCard.inaccuracy.failed": "Не удалось отправить отметку. Попробуйте позже.",
   "components.quests.questWizardStepCard.softStart.reveal": "Открыть ответ и идти дальше",
-  "components.quests.questWizardStepCard.softStart.wrong": "Не совсем. Загляните в подсказку выше — или откройте ответ и идите дальше.",
+  "components.quests.questWizardStepCard.softStart.wrong": "Не совсем. Загляните в подсказку — или откройте ответ и идите дальше.",
+  "components.quests.questWizardStepCard.softStart.wrongNoHint": "Не совсем. Попробуйте ещё раз — или откройте ответ и идите дальше.",
   "components.quests.QuestWizard.answerRevealed": "Ответ: {{value1}}",
   "screens.tabs.QuestCard.beFirst": "Будьте первым",
 } as const

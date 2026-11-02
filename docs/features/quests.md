@@ -82,8 +82,8 @@ runtime-доказательствами под задачу, а не налич
 | `/quests` | `app/(tabs)/quests/index.tsx` (19 LOC) → `screens/tabs/QuestsScreenRoute.tsx` → `screens/tabs/QuestsScreen.tsx` | каталог: города/фильтры/поиск, список ↔ карта, SEO-интро и FAQ |
 | `/quests/map` | `app/(tabs)/quests/map.tsx` (314 LOC) | все квесты точками на общей `Map`/`Map.web`; статический сегмент, матчится раньше `[city]` |
 | `/quests/scenario` | `app/(tabs)/quests/scenario.tsx` (9 LOC) → `screens/tabs/QuestScenarioScreen.tsx` (435 LOC) | DIY-лендинг «квест-бук для печати»; тоже статический сегмент перед `[city]` |
-| `/quests/{city}` | `app/(tabs)/quests/[city]/index.tsx` | лендинг города: сегмент — numeric `city_id` ИЛИ alias (`minsk`); сегмент, равный alias квеста без id (`grodno-royal`) → `router.replace` на канонический `/quests/<cityId>/<alias>`; неизвестный сегмент → терминальный экран `components/quests/QuestNotFoundScreen.tsx` (ссылки «Все квесты», «Квесты в Беларуси», 4 популярных, `noindex`), не редирект (#2896) |
-| `/quests/country/{country}` | `app/(tabs)/quests/country/[country]/index.tsx` | web-лендинг страны: валидный ISO alpha-2 из каталога → стабильный alias (`BY → belarus`, `PL → poland`); неизвестный alias → тот же `QuestNotFoundScreen` (`kind="country"`, #2896); native → `/quests`. Из сайдбара каталога не открывается (#2011): там страна фильтруется на месте; ссылки на лендинг даёт серверный HTML каталога и лендингов городов (SSR-проекция `scripts/lib/questWebProjection.js`) |
+| `/quests/{city}` | `app/(tabs)/quests/[city]/index.tsx` | лендинг города: сегмент — numeric `city_id` ИЛИ alias (`minsk`); сегмент, равный alias квеста без id (`grodno-royal`) → `router.replace` на канонический `/quests/<cityId>/<alias>`; неизвестный сегмент → терминальный экран `components/quests/QuestNotFoundScreen.tsx` (ссылки «Все квесты», «Квесты в Беларуси», 4 популярных, `noindex`), не редирект (#2896); каталог не загрузился (сеть) и кэша нет → `components/quests/QuestLandingLoadError.tsx` с «Повторить», не «не найдено»; маркер `notFound` SSR-loader'а остаётся в силе (#2914) |
+| `/quests/country/{country}` | `app/(tabs)/quests/country/[country]/index.tsx` | web-лендинг страны: валидный ISO alpha-2 из каталога → стабильный alias (`BY → belarus`, `PL → poland`); неизвестный alias → тот же `QuestNotFoundScreen` (`kind="country"`, #2896); упавший каталог без кэша → `QuestLandingLoadError` (#2914); native → `/quests`. Из сайдбара каталога не открывается (#2011): там страна фильтруется на месте; ссылки на лендинг даёт серверный HTML каталога и лендингов городов (SSR-проекция `scripts/lib/questWebProjection.js`) |
 | `/quests/{city}/{questId}` | `app/(tabs)/quests/[city]/[questId].tsx` (688 LOC) | деталь и прохождение: bundle, прогресс, гость/consent, SEO+JSON-LD, модалка отзывов |
 | Промо на главной | `components/home/HomeQuestsPromoSection.tsx` | сразу после hero: 6 карточек (desktop) / 4 (mobile) через `useQuestsPreview(6)` + подарочный вход-блок → `/quests/scenario`; отбор — популярные (`?sort=popular`: прохождения, просмотры, id), а не первые по id (#1798); серверный двойник — `discovery.preview` SSR-проекции (`selectPopularQuests`, те же 8 ссылок тем же правилом), рендерится внутри `#root` (#2766) |
 | Промо в travel-детали | `components/travel/details/sections/QuestForCitySection.tsx` (+ `Deferred*.tsx` / `Deferred*.web.tsx`) | «квест по этому городу» на странице путешествия |
@@ -1042,7 +1042,10 @@ mounted regression short/tall/width/interaction и исходные14cases/56row
   открывает подсказку (`hints[id] === undefined` → `true`, событие
   `quest_point_1_hint_open{auto}`), ссылка «Пропустить» заменена на «Открыть
   ответ и идти дальше», а неверный ответ встречает спокойный текст без красного
-  (`softErrorContainer`) и ту же кнопку. «Открыть ответ» показывает
+  (`softErrorContainer`) и ту же кнопку. Текст не ссылается на место подсказки
+  (она под полем ответа): `softStart.wrong` — «загляните в подсказку», у точки
+  без подсказки — `softStart.wrongNoHint` «попробуйте ещё раз» (#2914).
+  «Открыть ответ» показывает
   `step.answerDisplay` тостом, засчитывает точку обычным `handleCurrentStepAnswer`
   (уходит `quest_point_done`) и пишет `quest_point_1_revealed{attempt_no}`.
   Мягкий старт не действует на свободный ответ, шаг-паузу и шаг без
@@ -1491,9 +1494,12 @@ HTML (поисковики, no-JS, первый кадр): `useSyncExternalStore
   публикует по своему порогу «городов ≥ 2» (#1771), после этой правки отдают
   `noindex`. Снять адреса из карты сайта может только backend-задача.
 - Пороги публичной статистики (#2906) — `utils/questPublicStatsPolicy.ts`, одно
-  место: счётчик прохождений каталога показывается от 100, число игроков
-  (`GET /api/quests/stats/`, #2761) — от 50, ниже полный каталог показывает
-  масштаб «N квестов · M городов · K стран» (`countQuestCatalogScale`); на
+  место. Полный каталог решает по одному флагу `isCatalogStatsPublic` (#2914):
+  прохождения и игроки (`GET /api/quests/stats/`, #2761) показываются, только
+  когда прохождений ≥ 100 И игроков ≥ 50; иначе, в том числе без числа игроков,
+  — масштаб «N квестов · M городов · K стран» (`countQuestCatalogScale`; города
+  считаются группами лендингов `buildQuestCityLandingGroups`, город с двумя
+  `city_id` — один). Срез города смотрит только на прохождения (≥ 100); на
   карточке «Пройдено N раз» и «Первым прошёл …» — от двух прохождений, иначе
   «Будьте первым» (desktop-оверлей); лист (i) детали скрывает строку прохождений
   по тому же правилу. При достижении порога прежний формат возвращается сам.

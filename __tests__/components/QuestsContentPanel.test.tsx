@@ -1117,10 +1117,30 @@ describe('QuestsContentPanel', () => {
         expect(queryByText(/игрок/)).toBeNull();
         expect(mockUseQuestPlayersCount).toHaveBeenLastCalledWith(false);
 
-        // Нет числа (ошибка, офлайн, старый бэкенд) — шапка как раньше.
+        // Нет числа игроков (ошибка, офлайн, старый бэкенд) — порог игроков не
+        // подтверждён, и полный каталог показывает масштаб (#2914).
         mockPlayersCount = null;
         await rerender(<QuestsContentPanel {...baseProps} selectedCityId="__all__" filtersActive={false} />);
-        expect(getByText('2 квеста · 300 прохождений')).toBeTruthy();
+        expect(getByText('2 квеста · 1 город')).toBeTruthy();
+        expect(queryByText(/прохожден/)).toBeNull();
+    });
+
+    it('decides the full catalog header by both thresholds at once: 300 completions and 30 players show scale (#2914)', async () => {
+        (Platform as { OS: string }).OS = 'web';
+        mockPlayersCount = 30;
+        const { getByText, queryByText } = await render(
+            <QuestsContentPanel
+                {...makeBaseProps()}
+                questsAll={[{ ...makeQuest(0), completionsCount: 300, countryCode: 'PL' }, makeQuest(1)]}
+                selectedCityId="__all__"
+                selectedCityName={null}
+                isMobile={false}
+                filtersActive={false}
+            />,
+        );
+        expect(getByText('2 квеста · 1 город · 1 страна')).toBeTruthy();
+        expect(queryByText(/прохожден/)).toBeNull();
+        expect(queryByText(/игрок/)).toBeNull();
     });
 
     it('hides small completion and player counts below the trust threshold and shows catalog scale instead (#2906)', async () => {
@@ -1129,10 +1149,11 @@ describe('QuestsContentPanel', () => {
         const baseProps = {
             ...makeBaseProps(),
             dataLoaded: true,
+            // Города считаются группами лендингов (#2914): alias — из API, как на проде.
             questsAll: [
-                { ...makeQuest(0), completionsCount: 44 },
-                { ...makeQuest(1), cityId: 'krakow', cityName: 'Kraków', countryCode: 'PL' },
-                { ...makeQuest(2), countryCode: 'PL' },
+                { ...makeQuest(0), cityAlias: 'warsaw', completionsCount: 44 },
+                { ...makeQuest(1), cityId: 'krakow', cityAlias: 'krakow', cityName: 'Kraków', countryCode: 'PL' },
+                { ...makeQuest(2), cityAlias: 'warsaw', countryCode: 'PL' },
             ],
             isMobile: false,
         };

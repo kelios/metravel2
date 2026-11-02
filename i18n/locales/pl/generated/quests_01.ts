@@ -480,7 +480,8 @@ export const questsGenerated1 = {
   "components.quests.questWizardStepCard.inaccuracy.already": "Ten punkt został już przez Ciebie zgłoszony.",
   "components.quests.questWizardStepCard.inaccuracy.failed": "Nie udało się wysłać zgłoszenia. Spróbuj później.",
   "components.quests.questWizardStepCard.softStart.reveal": "Odkryj odpowiedź i idź dalej",
-  "components.quests.questWizardStepCard.softStart.wrong": "Nie całkiem. Zajrzyj do podpowiedzi powyżej — albo odkryj odpowiedź i idź dalej.",
+  "components.quests.questWizardStepCard.softStart.wrong": "Nie całkiem. Zajrzyj do podpowiedzi — albo odkryj odpowiedź i idź dalej.",
+  "components.quests.questWizardStepCard.softStart.wrongNoHint": "Nie całkiem. Spróbuj jeszcze raz — albo odkryj odpowiedź i idź dalej.",
   "components.quests.QuestWizard.answerRevealed": "Odpowiedź: {{value1}}",
   "screens.tabs.QuestCard.beFirst": "Bądź pierwszy",
 } as const

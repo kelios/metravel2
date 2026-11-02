@@ -480,7 +480,8 @@ export const questsGenerated1 = {
   "components.quests.questWizardStepCard.inaccuracy.already": "Ви вже позначали цю точку.",
   "components.quests.questWizardStepCard.inaccuracy.failed": "Не вдалося надіслати позначку. Спробуйте пізніше.",
   "components.quests.questWizardStepCard.softStart.reveal": "Відкрити відповідь і йти далі",
-  "components.quests.questWizardStepCard.softStart.wrong": "Не зовсім. Зазирніть у підказку вище — або відкрийте відповідь і йдіть далі.",
+  "components.quests.questWizardStepCard.softStart.wrong": "Не зовсім. Зазирніть у підказку — або відкрийте відповідь і йдіть далі.",
+  "components.quests.questWizardStepCard.softStart.wrongNoHint": "Не зовсім. Спробуйте ще раз — або відкрийте відповідь і йдіть далі.",
   "components.quests.QuestWizard.answerRevealed": "Відповідь: {{value1}}",
   "screens.tabs.QuestCard.beFirst": "Будьте першим",
 } as const

@@ -90,17 +90,18 @@ const getErrorMessage = (error: unknown, fallback: string): string =>
 // ===================== ХУКИ =====================
 
 /** Хук для загрузки списка квестов */
-export function useQuestsList(opts?: { enabled?: boolean }) {
+export function useQuestsList(opts?: { enabled?: boolean; trackRefetching?: boolean }) {
     const enabled = opts?.enabled ?? true;
     const locale = useQuestContentLocale();
     const discovery = useQuestDiscovery();
     const initial = discovery?.locale === locale && discovery.view !== 'home' ? discovery.quests : undefined;
-    const { data, isPending, error } = useQuery<ApiQuestMeta[]>({
+    const query = useQuery<ApiQuestMeta[]>({
         ...questsListQueryOptions(locale),
         enabled,
         initialData: initial,
         initialDataUpdatedAt: initial ? 0 : undefined,
     });
+    const { data, isPending, error, refetch } = query;
 
     const quests = useMemo<QuestMeta[]>(
         () => (data ?? []).map(adaptMeta),
@@ -112,7 +113,15 @@ export function useQuestsList(opts?: { enabled?: boolean }) {
         : null;
     if (error) devWarn('Failed to load quests list:', errorMessage);
 
-    return { quests, loading: enabled && isPending, error: errorMessage };
+    // Повтор после ошибки — лендинги города и страны показывают её с «Повторить» (#2914).
+    const retry = useCallback(() => { void refetch(); }, [refetch]);
+
+    // `isPending` после ошибки остаётся false — повтор виден только по `isFetching`.
+    // React Query подписывает на прочитанные поля, поэтому `isFetching` читают лишь
+    // те, кто просил (лендинги с «Повторить»): остальным фоновое обновление каталога
+    // не даёт лишних рендеров.
+    const refetching = opts?.trackRefetching ? query.isFetching : false;
+    return { quests, loading: enabled && isPending, error: errorMessage, refetch: retry, refetching };
 }
 
 /**
