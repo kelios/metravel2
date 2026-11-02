@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { parse, type Rule } from 'postcss'
 import { SEASONAL_THEME_IDS } from '@/constants/seasonalThemes'
+import { getHomeBookWidthLimit } from '@/components/home/homeBookGeometry'
 
 const stylesheet = parse(fs.readFileSync(path.join(process.cwd(), 'app/global.css'), 'utf8'))
 const baseRules: Rule[] = []
@@ -140,6 +141,31 @@ describe('base artistic theme safety', () => {
     }
   })
 
+  it('keeps stronger mountain and constellation scenes in empty desktop book margins', () => {
+    const edges = baseRules.filter(rule =>
+      rule.selector.includes('[data-testid="home-hero"]::before') &&
+      rule.parent?.type === 'atrule' && rule.parent.params === '(min-width: 1280px)',
+    )
+    const scene = edges.find(rule => declarations(rule)['background-image'])!
+    expect(declarations(scene)).toMatchObject({
+      width: 'max(0px, calc((100% - var(--base-atlas-book-cap)) / 2))',
+      'max-width': '320px',
+      height: 'min(640px, calc(100vh - 180px))',
+      'pointer-events': 'none',
+      position: 'absolute',
+    })
+    for (const breakpoint of [1280, 1920, 2560]) {
+      const cap = baseRules.find(rule => rule.selector === 'html:not([data-season]) [data-testid="home-hero"]' &&
+        rule.parent?.type === 'atrule' && rule.parent.params === `(min-width: ${breakpoint}px)`)!
+      expect(declarations(cap)['--base-atlas-book-cap']).toBe(`${getHomeBookWidthLimit(breakpoint)}px`)
+    }
+    for (const suffix of ['::before', '::after']) {
+      const selectors = baseRules.filter(rule => rule.selector.includes(`[data-testid="home-hero"]${suffix}`))
+      expect(selectors.every(rule => rule.parent?.type === 'atrule' &&
+        ['(min-width: 1280px)', 'print'].includes(rule.parent.params))).toBe(true)
+    }
+  })
+
   it('excludes all seasonal appearances and leaves article/map surfaces undecorated', () => {
     const page = document.implementation.createHTMLDocument()
     page.body.innerHTML = '<div data-testid="main-header"><div data-testid="main-header-row"><div data-travel-nav-active="true"><div data-travel-nav-icon="map-pin"><span></span><svg><path stroke="currentColor" fill="currentColor"></path></svg></div></div></div></div><div data-testid="home-hero"></div><div data-header-logo-frame></div><div data-header-logo-travel></div><div data-testid="travel-details-description"></div><div data-testid="map-container"></div><div data-testid="account-icon"></div>'
@@ -173,7 +199,7 @@ describe('base artistic theme safety', () => {
       })
     })
     expect(fallback).toEqual(dark)
-    for (const suffix of ['[data-testid="main-header-row"]', '[data-testid="home-hero"]', '[data-testid="main-header"]::before', '[data-header-logo-frame]::before', '[data-header-logo-frame]::after', '[data-travel-nav-icon]::before']) {
+    for (const suffix of ['[data-testid="main-header-row"]', '[data-testid="home-hero"]', '[data-testid="home-hero"]::before', '[data-testid="home-hero"]::after', '[data-testid="main-header"]::before', '[data-header-logo-frame]::before', '[data-header-logo-frame]::after', '[data-travel-nav-icon]::before']) {
       expect(hidden.has(`html:not([data-season]) ${suffix}`)).toBe(true)
     }
   })
