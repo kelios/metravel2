@@ -22,12 +22,12 @@ const loadUnder = (os: 'web' | 'ios') => {
     })
   })
   jest.doMock('@/api/geoQueries', () => ({
-    reverseGeocodePoint: jest.fn(async () => GEOCODE),
+    reverseGeocodeRoutePoint: jest.fn(async () => GEOCODE),
   }))
   const helpers = require('@/components/travel/stepRoute/helpers') as typeof import('@/components/travel/stepRoute/helpers')
   const { buildPointTitleFromGeocode } = require('@/utils/geocodeHelpers') as typeof import('@/utils/geocodeHelpers')
-  const { reverseGeocodePoint } = require('@/api/geoQueries') as { reverseGeocodePoint: jest.Mock }
-  return { helpers, buildPointTitleFromGeocode, reverseGeocodePoint }
+  const { reverseGeocodeRoutePoint } = require('@/api/geoQueries') as { reverseGeocodeRoutePoint: jest.Mock }
+  return { helpers, buildPointTitleFromGeocode, reverseGeocodeRoutePoint }
 }
 
 describe('stepRoute reverseGeocode per platform (#1738)', () => {
@@ -38,13 +38,13 @@ describe('stepRoute reverseGeocode per platform (#1738)', () => {
   })
 
   it.each(['web', 'ios'] as const)('on %s asks the shared geocoder and names the point after the place', async (os) => {
-    const { helpers, buildPointTitleFromGeocode, reverseGeocodePoint } = loadUnder(os)
+    const { helpers, buildPointTitleFromGeocode, reverseGeocodeRoutePoint } = loadUnder(os)
 
     const data = await helpers.reverseGeocode(COORDS.lat, COORDS.lng)
     const { name: countryName } = helpers.getReverseGeocodeCountry(data)
     const title = buildPointTitleFromGeocode(data, COORDS, undefined)
 
-    expect(reverseGeocodePoint).toHaveBeenCalledWith(COORDS.lat, COORDS.lng)
+    expect(reverseGeocodeRoutePoint).toHaveBeenCalledWith(COORDS.lat, COORDS.lng)
     expect(data).toMatchObject({ name: 'Soblówka' })
     expect(countryName).toBe('Polska')
     expect(title).toBe('Soblówka')

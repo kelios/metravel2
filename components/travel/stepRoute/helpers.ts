@@ -1,6 +1,6 @@
 import type { TravelFilters } from '@/hooks/useTravelFilters'
 import { removePendingImageFile } from '@/utils/pendingImageFiles'
-import { reverseGeocodePoint } from '@/api/geoQueries'
+import { reverseGeocodeRoutePoint } from '@/api/geoQueries'
 import { translate as i18nT } from '@/i18n'
 
 import type { ManualPointState } from './types'
@@ -106,7 +106,7 @@ export function revokeManualPreview(previewUrl: string | null) {
  * Копий больше нет: разбор один на все поверхности, и разойтись им негде.
  */
 export async function reverseGeocode(lat: number, lng: number) {
-  return reverseGeocodePoint(lat, lng)
+  return reverseGeocodeRoutePoint(lat, lng)
 }
 
 // #1722 — высота полотна native-пикера. Фиксированные 380 пт занимали видимую

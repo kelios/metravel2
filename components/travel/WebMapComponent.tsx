@@ -9,7 +9,7 @@ import { showToastMessage } from '@/utils/toast';
 import { registerPendingImageFile, removePendingImageFile, getPendingImageFile } from '@/utils/pendingImageFiles';
 import { prepareWebImageFileForUpload } from '@/utils/webImageUpload';
 import { matchCountryId, buildAddressFromGeocode, buildPointTitleFromGeocode } from '@/utils/geocodeHelpers';
-import { reverseGeocodePoint } from '@/api/geoQueries';
+import { reverseGeocodeRoutePoint } from '@/api/geoQueries';
 import { buildLeafletPopupCss, createWebMapStyles } from '@/components/travel/WebMapComponent.styles';
 import WebMapMarkerPopup from '@/components/travel/WebMapMarkerPopup';
 // #992 — общий web-движок карты: MapContainer + единый OSM tile-провайдер.
@@ -37,7 +37,7 @@ type ReactLeafletNS = typeof import('react-leaflet');
 // Шаг нужен и на web: точка из фото сначала получает адрес и страну, потом
 // сохраняется, и только по выданному backend id грузится её фото.
 const reverseGeocode = async (latlng: any) =>
-    reverseGeocodePoint(Number(latlng.lat), Number(latlng.lng));
+    reverseGeocodeRoutePoint(Number(latlng.lat), Number(latlng.lng));
 
 export { matchCountryId, buildAddressFromGeocode };
 

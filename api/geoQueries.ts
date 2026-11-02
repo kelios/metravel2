@@ -5,6 +5,8 @@ import { queryKeys } from '@/api/queryKeys'
 import { createOptimizedQueryClient } from '@/utils/reactQueryConfig'
 import { bigDataCloudReverse } from '@/api/external/bigdatacloud'
 import { nominatimReverse, nominatimSearch } from '@/api/external/nominatim'
+import { overpassQuery } from '@/api/external/overpass'
+import { buildGeocodeParts } from '@/utils/geocodeHelpers'
 import { getActiveLocale, getActiveLocaleDefinition, translate as i18nT } from '@/i18n'
 
 // Geo data changes rarely — keep results warm for 10 minutes.
@@ -226,6 +228,118 @@ export async function reverseGeocodePoint(lat: number, lng: number): Promise<Rev
   }
 
   return null
+}
+
+/** Радиус поиска объекта вокруг точки: погрешность GPS снимка плюс размер здания. */
+const NAMED_PLACE_RADIUS_M = 60
+/** Площадные объекты (парк, замок) отбрасываются, если их центр дальше этого. */
+const NAMED_PLACE_MAX_CENTER_M = 250
+const NAMED_PLACE_TIMEOUT_MS = 6000
+/**
+ * Основной сервер Overpass регулярно отвечает 502 «at capacity», поэтому есть
+ * второй адрес. Оба разрешены в prod-CSP (`nginx/nginx.conf`, `connect-src`).
+ */
+const NAMED_PLACE_ENDPOINTS = [
+  process.env.EXPO_PUBLIC_OVERPASS_ENDPOINT || 'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+]
+
+/**
+ * Классы OSM, имя которых годится в подпись точки маршрута: приют, вершина,
+ * часовня, руины. `tourism=information` исключён — это указатели и доски,
+ * которые называются по тропе, а тропа как раз то, от чего уходим.
+ */
+const buildNamedPlaceQuery = (lat: number, lng: number) => {
+  const around = `(around:${NAMED_PLACE_RADIUS_M},${lat},${lng})`
+  return `[out:json][timeout:8];
+(
+  nwr${around}["name"]["tourism"]["tourism"!="information"];
+  nwr${around}["name"]["historic"];
+  nwr${around}["name"]["natural"~"^(peak|saddle|spring|waterfall|cave_entrance|rock|stone|cliff|volcano|hill)$"];
+  nwr${around}["name"]["amenity"~"^(shelter|place_of_worship|monastery|fountain)$"];
+  nwr${around}["name"]["man_made"~"^(tower|lighthouse|windmill|watermill|cross)$"];
+  nwr${around}["name"]["leisure"~"^(park|garden)$"];
+);
+out center tags;`
+}
+
+const distanceMeters = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+  const toRad = Math.PI / 180
+  const x = (lng2 - lng1) * toRad * Math.cos(((lat1 + lat2) / 2) * toRad)
+  const y = (lat2 - lat1) * toRad
+  return Math.sqrt(x * x + y * y) * 6371000
+}
+
+type OverpassNamedElement = {
+  lat?: number
+  lon?: number
+  center?: { lat?: number; lon?: number }
+  tags?: Record<string, string>
+}
+
+/**
+ * Ближайший объект с именем вокруг точки — через Overpass, а не Nominatim.
+ * Nominatim reverse отдаёт ближайший узел, а у приюта это безымянные
+ * дефибриллятор, скамейка или указатель; подпись тогда собиралась из `road`,
+ * которым у горной точки оказывается тропа («Czerwony szlak Na Turbacz»
+ * вместо «Schronisko PTTK na Maciejowej»). Ошибка и таймаут дают `null`:
+ * точка остаётся с подписью Nominatim, как раньше.
+ */
+export async function findNamedPlaceNear(lat: number, lng: number): Promise<string | null> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), NAMED_PLACE_TIMEOUT_MS)
+  try {
+    let data: { elements?: OverpassNamedElement[] } | null = null
+    for (const endpoint of NAMED_PLACE_ENDPOINTS) {
+      try {
+        const response = await overpassQuery(buildNamedPlaceQuery(lat, lng), { signal: controller.signal, endpoint })
+        if (response.ok) {
+          data = await response.json()
+          break
+        }
+      } catch (error) {
+        if (controller.signal.aborted) throw error
+      }
+    }
+    if (!data) return null
+    const language = getActiveLocaleDefinition().geocoderLanguage
+    let best: { name: string; distance: number } | null = null
+    for (const element of Array.isArray(data?.elements) ? data.elements : []) {
+      const elLat = element.lat ?? element.center?.lat
+      const elLng = element.lon ?? element.center?.lon
+      const name = element.tags?.[`name:${language}`] || element.tags?.name
+      if (!name || typeof elLat !== 'number' || typeof elLng !== 'number') continue
+      const distance = distanceMeters(lat, lng, elLat, elLng)
+      if (distance > NAMED_PLACE_MAX_CENTER_M) continue
+      if (!best || distance < best.distance) best = { name, distance }
+    }
+    return best?.name ?? null
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * Обратный геокод именно для точки маршрута: `reverseGeocodePoint` плюс имя
+ * ближайшего объекта, когда у ответа геокодера своего имени нет. Дом с адресом
+ * не трогаем: в городе «Floriańska 12» точнее, чем соседний отель. Подписям
+ * ключевых точек (`useKeyPointLabels`) нужен населённый пункт, поэтому они
+ * остаются на `reverseGeocodePoint` и лишнего запроса не делают.
+ */
+export async function reverseGeocodeRoutePoint(
+  lat: number,
+  lng: number,
+): Promise<ReverseGeocodePointResult | null> {
+  const data = await reverseGeocodePoint(lat, lng)
+  const hasOwnName = !!data && !!buildGeocodeParts(data).poi
+  if (hasOwnName || data?.address?.house_number) return data
+
+  const placeName = await findNamedPlaceNear(lat, lng)
+  if (!placeName) return data
+  return { ...(data ?? {}), name: placeName }
 }
 
 // LC-2: резервный клиент только для вызова до монтирования корневого layout
