@@ -494,6 +494,112 @@
         "bytes": 144558,
         "sha256": "578845556eb9991e86d3970e8f975cdfc61e14fb587f06a375bd7ae25636b691"
       }
+    },
+    {
+      "id": "poland-mountains-memory",
+      "slug": "poland-mountains",
+      "kind": "places",
+      "visualStyle": "photo",
+      "title": "Горы Польши",
+      "country": "PL",
+      "revision": "2026-11-02.series.7845a9ee6e61.0ebca98b07f1",
+      "contentLocale": "ru",
+      "status": "partial",
+      "coverUri": "https://metravel.by/travel-books/poland-mountains-memory/2026-11-02.series.7845a9ee6e61.0ebca98b07f1/pocket-150x100/preview-cover-1.webp",
+      "stopCount": 40,
+      "bodyPageCount": 136,
+      "profiles": [
+        {
+          "id": "pocket-150x100",
+          "widthMm": 150,
+          "heightMm": 100,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        },
+        {
+          "id": "album-a5",
+          "widthMm": 148,
+          "heightMm": 210,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        }
+      ],
+      "missing": [
+        "stickers",
+        "instructions",
+        "print-passport",
+        "provider-acceptance",
+        "paper-check"
+      ],
+      "sourceContract": "thematic-v1",
+      "seriesId": "mountains-pl",
+      "theme": "mountains",
+      "metadata": {
+        "kind": "book-metadata",
+        "bookId": "poland-mountains-memory",
+        "revision": "2026-11-02.series.7845a9ee6e61.0ebca98b07f1",
+        "uri": "https://metravel.by/travel-books/poland-mountains-memory/2026-11-02.series.7845a9ee6e61.0ebca98b07f1/book.json",
+        "mime": "application/json",
+        "bytes": 223739,
+        "sha256": "3a99b55a7cf055038c84fa1a8d6b49bb21dfc18d5de60f3f2a23aab10a4862bc"
+      }
+    },
+    {
+      "id": "poland-castles-memory",
+      "slug": "poland-castles",
+      "kind": "places",
+      "visualStyle": "photo",
+      "title": "Замки Польши",
+      "country": "PL",
+      "revision": "2026-11-02.series.7fd00e00a0bb.54e36adcca11",
+      "contentLocale": "ru",
+      "status": "partial",
+      "coverUri": "https://metravel.by/travel-books/poland-castles-memory/2026-11-02.series.7fd00e00a0bb.54e36adcca11/pocket-150x100/preview-cover-1.webp",
+      "stopCount": 30,
+      "bodyPageCount": 104,
+      "profiles": [
+        {
+          "id": "pocket-150x100",
+          "widthMm": 150,
+          "heightMm": 100,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        },
+        {
+          "id": "album-a5",
+          "widthMm": 148,
+          "heightMm": 210,
+          "bleedMm": 0,
+          "safeMm": 5,
+          "bindingMm": 15,
+          "binding": "rings"
+        }
+      ],
+      "missing": [
+        "stickers",
+        "instructions",
+        "print-passport",
+        "provider-acceptance",
+        "paper-check"
+      ],
+      "sourceContract": "thematic-v1",
+      "seriesId": "castles-pl",
+      "theme": "castles",
+      "metadata": {
+        "kind": "book-metadata",
+        "bookId": "poland-castles-memory",
+        "revision": "2026-11-02.series.7fd00e00a0bb.54e36adcca11",
+        "uri": "https://metravel.by/travel-books/poland-castles-memory/2026-11-02.series.7fd00e00a0bb.54e36adcca11/book.json",
+        "mime": "application/json",
+        "bytes": 136925,
+        "sha256": "d500077ccb6c983f2747c3dde9e0e3466ae5541924bdcaa7b58701cf7ca3bca7"
+      }
     }
   ]
 }

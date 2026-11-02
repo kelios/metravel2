@@ -1,6 +1,8 @@
 import catalog from '@/data/travelBooks/series/catalog.json';
 import castles from '@/data/travelBooks/series/castles-pl.json';
 import mountains from '@/data/travelBooks/series/mountains-pl.json';
+import mountainSources from '@/data/travelBooks/series/mountains-pl-sources.json';
+import castleSources from '@/data/travelBooks/series/castles-pl-sources.json';
 import manifest from '@/data/travelBooks/manifest.json';
 import bySelection from '@/data/travelBooks/by/selection.json';
 import plSelection from '@/data/travelBooks/pl/selection.json';
@@ -9,7 +11,7 @@ import {validateSeriesCollection} from '@/data/travelBooks/schema/series';
 const publishedPlaces = [...bySelection.rows, ...plSelection.rows]
   .map(({pointId, lat, lng, title}) => ({pointId, lat, lng, title}));
 const input = () => structuredClone({
-  catalog,
+  catalog: {...catalog, series: catalog.series.map(series => ({...series, status: 'planned', kit: `${series.id}.json`}))},
   kits: {'castles-pl.json': castles, 'mountains-pl.json': mountains} as Record<string, any>,
   publishedBookIds: manifest.books.map(book => book.id),
   publishedPlaces,
@@ -44,6 +46,7 @@ it('rejects a duplicated point and a wrong place count', () => {
 it('keeps ready status behind a published book, print resolution and full mountain metrics', () => {
   const value = input();
   value.catalog.series.forEach(series => { series.status = 'ready'; });
+  value.publishedBookIds = [];
   const text = messages(value);
   expect(text).toContain('Ready series references unpublished book poland-mountains-memory');
   expect(text).toContain('Ready series needs verified print resolution');
@@ -63,4 +66,14 @@ it('keeps every place inside the series countries', () => {
   const duplicate = input();
   duplicate.catalog.series[0].countries = ['PL', 'PL'];
   expect(messages(duplicate)).toContain('Duplicate country');
+});
+
+it('validates the current reviewed v2 source kits separately from the unchanged v1 compatibility fixtures', () => {
+  const result = validateSeriesCollection({catalog,
+    kits: {'mountains-pl-sources.json': mountainSources, 'castles-pl-sources.json': castleSources},
+    publishedBookIds: manifest.books.map(book => book.id), publishedPlaces});
+  expect(result.issues).toEqual([]);
+  expect(result.series.map(({series, kit}) => [series.id, series.status, kit.schemaVersion, kit.places.length])).toEqual([
+    ['mountains-pl', 'ready', 2, 40], ['castles-pl', 'ready', 2, 30],
+  ]);
 });

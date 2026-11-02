@@ -3,14 +3,18 @@ import {runNodeCli} from './cli-test-utils';
 it('versions every input that can change immutable PDF, control or preview bytes',()=>{
   const result=runNodeCli(['--input-type=module','-e',`
     import {publicationRevision} from './scripts/books/publish.mjs';
-    const source={revision:'r1',profiles:[{profile:{id:'pocket-150x100'},artifacts:[{purpose:'read',component:'body',sha256:'pdf'}],controls:[{sha256:'control'}]}]};
+    const source={revision:'r1',sourceContract:'thematic-v1',seriesId:'mountains-pl',profiles:[{profile:{id:'pocket-150x100'},artifacts:[{purpose:'read',component:'body',sha256:'pdf'}],controls:[{sha256:'control'}]}]};
     const inputs={editorial:{title:'book'},publisherHash:'publisher',rasterizerVersion:'poppler',encoderVersions:{webp:'1'}};
     const base=publicationRevision(source,inputs);
     const changedControl=structuredClone(source);changedControl.profiles[0].controls[0].sha256='other';
     const changedControlPlan=structuredClone(source);Object.assign(changedControlPlan.profiles[0].controls[0],{controlFor:'home-rings',component:'cover'});
+    const changedPdf=structuredClone(source);changedPdf.profiles[0].artifacts[0].sha256='changed-renderer-style-qr-or-imposition-output';
+    const changedProfile=structuredClone(source);changedProfile.profiles[0].profile.widthMm=150;
     console.log(JSON.stringify({base,repeat:publicationRevision(source,inputs),changed:[
       publicationRevision(changedControl,inputs),
       publicationRevision(changedControlPlan,inputs),
+      publicationRevision(changedPdf,inputs),
+      publicationRevision(changedProfile,inputs),
       publicationRevision(source,{...inputs,publisherHash:'new-publisher'}),
       publicationRevision(source,{...inputs,rasterizerVersion:'new-poppler'}),
       publicationRevision(source,{...inputs,encoderVersions:{webp:'2'}}),
@@ -20,7 +24,7 @@ it('versions every input that can change immutable PDF, control or preview bytes
   expect(result.status).toBe(0);
   const {base,repeat,changed}=JSON.parse(result.stdout);
   expect(repeat).toBe(base);
-  expect(new Set([base,...changed]).size).toBe(7);
+  expect(new Set([base,...changed]).size).toBe(9);
 });
 
 it('versions cover templates, the full font, its license, presets and physical text layout',()=>{

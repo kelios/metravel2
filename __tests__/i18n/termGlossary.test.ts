@@ -107,12 +107,22 @@ const TERMS: Term[] = [
   {
     name: '«тема» — тема оформления',
     ru: RU_THEME_WORD,
-    // «Вопрос не по теме» ассистента (#2711) — тема разговора, а не оформления.
-    except: { ru: /не\s+по\s+теме|на\s+другие\s+темы/i },
+    // Разговор и тематика книги — другие значения слова, не оформление интерфейса.
+    except: { ru: /не\s+по\s+теме|на\s+другие\s+темы|тема\s+книги|в\s+этой\s+теме\s+пока\s+нет\s+книг/i },
     minEntries: 8,
     locales: {
       en: { required: /\btheme/i, forbidden: /\b(topic|subject)/i },
       pl: { required: /motyw/i, forbidden: /temat/i },
+    },
+  },
+  {
+    name: '«тема книги» — предмет подборки, а не оформление (#2809)',
+    ru: /тема\s+книги|в\s+этой\s+теме\s+пока\s+нет\s+книг/i,
+    keys: /^(theme|noBooks)$/,
+    minEntries: 2,
+    locales: {
+      en: { required: /\b(theme|topic|subject)/i },
+      pl: { required: /temat/i, forbidden: /motyw/i },
     },
   },
   {

@@ -8,6 +8,7 @@ import {loadReadyBookMetadata} from '@/services/book/readyBooks/bookMetadata';
 import type {PublishedBook} from '@/services/book/readyBooks/publication';
 import {fetchBookArtifact} from '@/services/book/readyBooks/download';
 import {publishedFixture} from '../../services/book/readyBooks/publicationFixtures';
+import {thematicPublished} from '../../services/book/readyBooks/thematicFixtures';
 
 jest.mock('@/components/books/ReadyBookDetails',()=>jest.requireActual('@/components/books/ReadyBookDetails.web'));
 jest.mock('@/services/book/readyBooks/catalog',()=>({findReadyBook:jest.fn(),readyBooks:[]}));
@@ -143,6 +144,20 @@ it('opens the edition on the physical size named by the profile query',async()=>
   await act(async()=>{render(<Details slug={book.slug} initialProfileId="unknown"/>);});
   expect(screen.getAllByLabelText(/pocket/).some(input=>(input as HTMLInputElement).checked)).toBe(true);
   catalog.readyBooks.splice(0);
+});
+
+it('keeps thematic photo series out of the country style alternatives',async()=>{
+  const catalog=require('@/services/book/readyBooks/catalog');
+  const country=publishedFixture(30,{country:'PL',id:'poland-memory',slug:'poland'});
+  const photo=publishedFixture(30,{country:'PL',id:'poland-photo-memory',slug:'poland-photo',visualStyle:'photo'});
+  catalog.readyBooks.push(country,photo,{...thematicPublished(),id:'poland-mountains-memory',slug:'poland-mountains',visualStyle:'photo'},
+    {...thematicPublished('castles-pl'),id:'poland-castles-memory',slug:'poland-castles',visualStyle:'photo'});
+  givenBook(country);
+  try{
+    await renderDetails();
+    const styleLinks=screen.getByRole('navigation',{name:'styleOthers'}).querySelectorAll('a');
+    expect(Array.from(styleLinks).map(link=>link.getAttribute('href'))).toEqual(['/books/poland-photo?profile=pocket-150x100']);
+  }finally{catalog.readyBooks.splice(0);}
 });
 
 it('keeps the summary title during metadata errors and retries without showing stale edition controls',async()=>{

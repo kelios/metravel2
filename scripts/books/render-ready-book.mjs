@@ -50,8 +50,10 @@ export async function loadReadyBookInputs(country, profileId, purpose, options =
   }
   const profile = {id: profileId, widthMm: profileId === 'album-a5' ? 148 : 150, heightMm: profileId === 'album-a5' ? 210 : 100,
     bleedMm: purpose === 'read' ? 0 : 3, safeMm: 5, bindingMm: 15, binding: 'rings'};
-  const imagePpis = Object.values(source.assets).map(asset => {const bounds=asset.artworkBounds;return profileId==='album-a5'?Math.max(asset.widthPx/(graphic?130:148),asset.heightPx/(graphic?260/3:210))*25.4:Math.max(asset.widthPx*bounds.width/62,asset.heightPx*bounds.height/42)*25.4;});
-  imagePpis.push(Math.max(source.cover.widthPx/(graphic?(profileId==='album-a5'?148:120):profile.widthMm),source.cover.heightPx/(graphic?(profileId==='album-a5'?106:41):profile.heightMm))*25.4);
+  const thematic=source.book.sourceContract==='thematic-v1';
+  const imagePpis = thematic ? source.book.stops.map(stop=>stop.thematic.media.placements.find(p=>p.profileId===profileId).effectivePpi)
+    : Object.values(source.assets).map(asset => {const bounds=asset.artworkBounds;return profileId==='album-a5'?Math.max(asset.widthPx/(graphic?130:148),asset.heightPx/(graphic?260/3:210))*25.4:Math.max(asset.widthPx*bounds.width/62,asset.heightPx*bounds.height/42)*25.4;});
+  imagePpis.push(Math.max(source.cover.widthPx/(graphic||thematic?(profileId==='album-a5'?148:120):profile.widthMm),source.cover.heightPx/(graphic||thematic?(profileId==='album-a5'?106:41):profile.heightMm))*25.4);
   return {...source, profile, purpose, qr, estimatedMinIllustrationPpi: Math.round(Math.min(...imagePpis))};
 }
 
@@ -62,7 +64,7 @@ function pythonRun(python, args) {
 
 export async function compilePdf(page, html, output, profile, python) {
   await page.setContent(html, {waitUntil: 'load'});
-  await page.evaluate(async () => {
+  const nativePlacements = await page.evaluate(async () => {
     await document.fonts.ready;
     await Promise.all([...document.images].map(image => image.decode()));
     // Titles can use the approved physical range; body prose is never truncated or shrunk.
@@ -74,12 +76,18 @@ export async function compilePdf(page, html, output, profile, python) {
     const overflow = [...document.querySelectorAll('[data-check-overflow],.flow,.content')].filter(element => element.scrollHeight > element.clientHeight + 2 || element.scrollWidth > element.clientWidth + 2);
     if (overflow.length) throw new Error(`PRINT_OVERFLOW: ${overflow.map(element => `${element.closest('.book-page')?.getAttribute('data-folio')}:${element.className}`).join(', ')}`);
     if ([...document.images].some(image => !image.complete || !image.naturalWidth)) throw new Error('PRINT_IMAGE_DECODE_FAILED');
+    return [...document.querySelectorAll('img[data-thematic-photo]')].map(image=>{
+      const box=image.getBoundingClientRect(),widthMm=box.width*25.4/96,heightMm=box.height*25.4/96;
+      return {stopId:image.getAttribute('data-thematic-photo'),widthMm,heightMm,widthPx:image.naturalWidth,heightPx:image.naturalHeight,
+        effectivePpi:Math.min(image.naturalWidth/widthMm,image.naturalHeight/heightMm)*25.4};
+    });
   });
   const raw = `${output}.raw.pdf`;
   await page.pdf({path: raw, printBackground: true, preferCSSPageSize: true, displayHeaderFooter: false});
   pythonRun(python, ['scripts/books/render-pdf-boxes.py', '--source', raw, '--output', output,
     '--width-mm', String(profile.widthMm), '--height-mm', String(profile.heightMm), '--bleed-mm', String(profile.bleedMm)]);
   await unlink(raw);
+  return {nativePlacements};
 }
 
 async function artifact(file, purpose, component, pageCount) {
@@ -90,6 +98,7 @@ async function artifact(file, purpose, component, pageCount) {
 /** One physical PDF/imposition/personalization pipeline for place and quest editorial adapters. */
 export async function renderPhysicalEdition({source,loadInput,buildHtml,compiler,browser,output,python,check=false,style='watercolor'}) {
   const entry = {bookId: '', revision: '', ...(source.book.kind==='quests'?{}:{visualStyle:style}), bodyPageCount: 0, stopCount: 0, country: source.book.country, editorialPath: '', profiles: []};
+  if(source.book.sourceContract==='thematic-v1')Object.assign(entry,{sourceContract:source.book.sourceContract,seriesId:source.book.seriesId,theme:source.book.theme});
   if(source.book.kind==='quests'){entry.kind='quests';entry.endMatterPages=source.book.endMatterPages;}
   entry.coverPersonalization = {...source.coverPersonalization, font: {...source.coverPersonalization.font, license: {...source.coverPersonalization.font.license}}, templates: []};
   const fontBytes = await readFile(source.coverPersonalization.font.path);
@@ -139,7 +148,17 @@ export async function renderPhysicalEdition({source,loadInput,buildHtml,compiler
             if (purpose === 'read') readCoverTemplate = template;
             const personalized = await compiler.createPersonalizedCoverPdf({templateBytes, fontBytes, text: defaultCoverText, maxCharacters: source.coverPersonalization.maxCharacters, textRegion: geometry.textRegion, expectedPageCount: 4, widthMm: geometry.widthMm, heightMm: geometry.heightMm});
             await writeFile(file, personalized);
-          } else await compilePdf(page, html.bodyHtml, file, input.profile, python);
+          } else {
+            const measured=await compilePdf(page, html.bodyHtml, file, input.profile, python);
+            if(input.book.sourceContract==='thematic-v1'){
+              if(measured.nativePlacements.length!==input.book.stops.length)throw new Error('Every thematic source photo needs an actual placed resolution measurement');
+              for(const stop of input.book.stops){
+                const actual=measured.nativePlacements.find(p=>p.stopId===stop.id),expected=stop.thematic.media.placements.find(p=>p.profileId===profileId);
+                if(!actual||!expected||Math.abs(actual.widthMm-expected.widthMm)>.03||Math.abs(actual.heightMm-expected.heightMm)>.03||Math.abs(actual.effectivePpi-expected.effectivePpi)>1)throw new Error('Thematic photo placement differs from native resolution evidence: '+stop.id);
+              }
+              if(purpose==='read')profileEntry.nativePhotoPlacements=measured.nativePlacements;
+            }
+          }
           files[component] = file;
           const info = await artifact(file, purpose, component, component === 'body' ? html.bodyPages.length : html.coverPages.length);
           profileEntry.artifacts.push({...info, pageMapPath: path.join(directory, 'page-map.json'), printProfile: input.profile, assetsHash: input.assetsHash});

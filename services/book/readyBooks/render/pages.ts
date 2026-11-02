@@ -1,10 +1,11 @@
 import {escapeHtml as e} from '../../../pdf-export/utils/htmlUtils';
-import type {EditorialStop} from '../../../../types/readyBook';
+import type {PlaceBookStop} from '../../../../types/readyBook';
 import type {ReadyBookPage} from '../composition';
 import {buildReadyBookPagePlan} from '../composition';
 import {embeddedImage, type ReadyBookRenderInput} from './index';
 import {renderReadyBookEndMap} from './endMap';
 import {bookStyleCopy} from './styleCopy';
+import {renderThematicFacts, thematicPhotoPlacement} from './thematic';
 export {renderCoverPage} from './cover';
 
 const text = (value: string, className = '') => `<p class="${className}">${e(value)}</p>`;
@@ -12,7 +13,7 @@ const content = (value: string, className = '') => `<main class="content ${class
 const graphicCheckbox = '<svg class="checklist-box" viewBox="0 0 12 12" aria-hidden="true"><rect x="1" y="1" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1"/></svg>';
 const flow = (value: string) => content(`<div class="flow">${value}</div>`);
 
-function qrLinks(input: ReadyBookRenderInput, stop: EditorialStop) {
+function qrLinks(input: ReadyBookRenderInput, stop: PlaceBookStop) {
   const codes = input.qr[stop.id];
   const targets = stop.navigation;
   if (!targets) throw new Error(`Missing verified navigation: ${stop.id}`);
@@ -21,11 +22,16 @@ function qrLinks(input: ReadyBookRenderInput, stop: EditorialStop) {
   return `<nav class="qr-row" aria-label="Проверенные ссылки места">${links.map(link => `<a class="qr-link" href="${e(link.url)}"><img class="qr" src="${embeddedImage(link.image)}" alt="QR: ${e(link.label)}" style="width:${codes.sizeMm}mm;height:${codes.sizeMm}mm"><span>${e(link.label)}</span></a>`).join('')}</nav>`;
 }
 
-export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage, stop?: EditorialStop): string {
+export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage, stop?: PlaceBookStop): string {
   const {book, profile} = input;
   const pocket = profile.id === 'pocket-150x100';
-  const country = book.country === 'BY' ? 'Беларусь' : 'Польша';
-  const copy = bookStyleCopy(book.visualStyle);
+  const country = 'sourceContract' in book && book.sourceContract === 'thematic-v1' ? book.title : book.country === 'BY' ? 'Беларусь' : 'Польша';
+  const styleCopy = bookStyleCopy(book.visualStyle);
+  const thematic = 'sourceContract' in book && book.sourceContract === 'thematic-v1';
+  const copy = thematic ? {...styleCopy,
+    usage: 'У каждого места три страницы: фотография с подписью и рассказом, свободное место для вашего снимка и чистая страница для записей. Маршруты служат справкой; перед выходом проверьте официальные сообщения.',
+    creditsSource: 'Использованы фотографии из опубликованных путешествий автора MeTravel (user_id=1) и предоставленных владельцем архивов. Разрешение на этот фотодневник, байты, размеры и привязки сохранены в реестре. Контекстные виды подписаны отдельно; имя фотографа не установлено.',
+  } : styleCopy;
   const {kind} = entry;
   if (stop) {
     if (kind === 'destination') {
@@ -35,6 +41,12 @@ export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage
       const image = asset.dataUri;
       const bounds = asset.artworkBounds ?? {left: 0, top: .04, width: 1, height: .65};
       const nativeWidth = asset.widthPx ?? 1024, nativeHeight = asset.heightPx ?? 1536;
+      if ('thematic' in stop) {
+        const placement = thematicPhotoPlacement(nativeWidth, nativeHeight, profile.id);
+        const photoStyle = `left:${placement.left}mm;top:${placement.top}mm;width:${placement.width}mm;height:${placement.height}mm`;
+        const caption = stop.thematic.media.caption;
+        return content(`<div class="thematic-photo-wrap" style="${photoStyle}"><img class="thematic-photo" data-thematic-photo="${e(stop.id)}" src="${embeddedImage(image)}" alt="${e(caption)}"></div><div class="place-heading" data-check-overflow><h2>${e(stop.title)}</h2>${subtitle ? `<p>${e(subtitle)}</p>` : ''}</div><p class="thematic-caption" data-check-overflow>${e(caption)}</p><div class="thematic-story" data-check-overflow><p>${e(pocket ? stop.text.compact : stop.text.album)}</p> ${renderThematicFacts(stop.thematic)}</div>${qrLinks(input, stop)}`, 'destination-content');
+      }
       const scale = Math.min(62 / (nativeWidth * bounds.width), 42 / (nativeHeight * bounds.height));
       const renderedWidth = nativeWidth * scale, renderedHeight = nativeHeight * scale;
       const cropStyle = `width:${renderedWidth}mm;height:${renderedHeight}mm;left:${(62 - renderedWidth * bounds.width) / 2 - bounds.left * renderedWidth}mm;top:${(42 - renderedHeight * bounds.height) / 2 - bounds.top * renderedHeight}mm`;
@@ -45,18 +57,18 @@ export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage
     return content('', kind === 'photo-memory' ? 'personal-photo-space' : 'blank-diary-space');
   }
   if (kind === 'padding' || kind === 'extra-memory') return content('', 'blank-diary-space');
-  if (kind === 'title') return flow(`<h1>${e(country)}</h1>${text(book.title, 'subtitle')}${text(`${book.stops.length} мест · фотодневник`)}${text('Для самостоятельных поездок, любимых кадров и своих историй.')}<p class="small">Русский язык · ${profile.widthMm}×${profile.heightMm} мм · ${e(book.revision)}</p>${text(`${input.estimatedMinIllustrationPpi ? `Иллюстрации: около ${input.estimatedMinIllustrationPpi} ppi. ` : ''}Цифровое чтение и пробная печать; бумажный образец и профиль типографии не проверены.`, 'small')}`);
-  if (kind === 'preparation') return flow(`<h2>Перед поездкой</h2>${text('Выберите место и откройте статью автора по QR. Точки в книге описывают разные самостоятельные поездки.')} ${text('Проверьте актуальные условия посещения. Координаты показывают место из авторского маршрута; отдельный вход может находиться в стороне.')} ${text('Сохраните свободную полосу у переплёта для колец или пружины.', 'small')}`);
+  if (kind === 'title') return flow(`<h1>${e(country)}</h1>${thematic ? '' : text(book.title, 'subtitle')}${text(`${book.stops.length} мест · фотодневник`)}${text('Для самостоятельных поездок, любимых кадров и своих историй.')}<p class="small">Русский язык · ${profile.widthMm}×${profile.heightMm} мм · ${e(book.revision)}</p>${text(`${input.estimatedMinIllustrationPpi ? `Иллюстрации: около ${input.estimatedMinIllustrationPpi} ppi. ` : ''}Цифровое чтение и пробная печать; бумажный образец и профиль типографии не проверены.`, 'small')}`);
+  if (kind === 'preparation') return flow(`<h2>Перед поездкой</h2>${text('Выберите место и откройте статью автора по QR. Точки в книге описывают разные самостоятельные поездки.')} ${text(thematic ? 'Проверьте официальные сообщения и погоду перед выходом. На карте отмечена физическая цель; фотография и исходная точка статьи могут показывать её окрестности. Подпись объясняет различие.' : 'Проверьте актуальные условия посещения. Координаты показывают место из авторского маршрута; отдельный вход может находиться в стороне.')} ${text('Сохраните свободную полосу у переплёта для колец или пружины.', 'small')}`);
   if (kind === 'usage') return flow(`<h2>Место для вашей истории</h2>${text(copy.usage)} ${text(pocket ? 'Сюда помещается фотография до 100×70 мм.' : 'Свободная область вмещает вертикальную фотографию до 102×152 мм. Горизонтальный кадр можно повернуть.')} ${text('«Место на карте» открывает выбранную точку, «Статья на сайте» — опубликованное путешествие автора. «Квест» появляется только при проверенной связи с этим местом.', 'small')}`);
   const selected = new Set(entry.stopIds);
   if (kind === 'contents') {
     const plan = buildReadyBookPagePlan(book);
-    return flow(`<h2>Выбранные места</h2><ol class="contents-list">${book.stops.filter(item => selected.has(item.id)).map(item => `<li><span>${book.stops.indexOf(item) + 1}. ${e(item.title)}</span><span>${plan.find(page => page.kind === 'destination' && page.stopId === item.id)!.number}</span></li>`).join('')}</ol>`);
+    return flow(`<h2>Выбранные места</h2><ol class="contents-list">${book.stops.filter(item => selected.has(item.id)).map(item => `<li><span>${book.stops.findIndex(stop => stop.id === item.id) + 1}. ${e(item.title)}</span><span>${plan.find(page => page.kind === 'destination' && page.stopId === item.id)!.number}</span></li>`).join('')}</ol>`);
   }
   if (kind === 'map') return flow(`<h2>Места этой книги на карте</h2>${renderReadyBookEndMap(book, profile)}${text('Номера соответствуют списку мест на предыдущих страницах. Для точной навигации откройте QR выбранного места.', 'small')}`);
   if (kind === 'checklist') {
     const destinations = new Map(buildReadyBookPagePlan(book).filter(page => page.kind === 'destination').map(page => [page.stopId, page.number]));
-    return flow(`<h2>Места на карте</h2>${text('Номер · место · страница', 'small')}<ol class="contents-list">${book.stops.filter(item => selected.has(item.id)).map(item => `<li><span>${book.visualStyle === 'graphic' ? graphicCheckbox : '□'} ${book.stops.indexOf(item) + 1}. ${e(item.title)}</span><span>${destinations.get(item.id)}</span></li>`).join('')}</ol>`);
+    return flow(`<h2>Места на карте</h2>${text('Номер · место · страница', 'small')}<ol class="contents-list">${book.stops.filter(item => selected.has(item.id)).map(item => `<li><span>${book.visualStyle === 'graphic' ? graphicCheckbox : '□'} ${book.stops.findIndex(stop => stop.id === item.id) + 1}. ${e(item.title)}</span><span>${destinations.get(item.id)}</span></li>`).join('')}</ol>`);
   }
   return flow(`<h2>Об этой книге</h2>${text(`MeTravel · ${book.title} · редакция ${book.revision}.`)}${text(copy.creditsSource)} ${text(copy.creditsFont)} ${text('Файлы подготовлены для цифрового чтения и пробной печати. Профиль типографии и бумажный образец проверяются отдельно.', 'small')}`);
 }

@@ -1,4 +1,23 @@
 import {runNodeCli} from '../../../scripts/cli-test-utils';
+
+it('keeps thematic families in thin metadata and indexes only verified exact target points',()=>{
+ const result=runNodeCli(['--input-type=module','-e',`
+  import assert from 'node:assert/strict';
+  import {thinBookCatalogue,relatedBookIndex} from './scripts/books/catalog-metadata.mjs';
+  const book={kind:'places',id:'mountain-diary',slug:'mountains',country:'PL',title:'Mountains',revision:'test.1',sourceContract:'thematic-v1',seriesId:'mountains-pl',theme:'mountains',stops:[
+   {sourceTravelId:101,thematic:{sourceRelation:'exact-place',sourcePointId:11,mapTarget:{kind:'published-point',pointId:11}}},
+   {sourceTravelId:102,thematic:{sourceRelation:'area-context',sourcePointId:22,mapTarget:{kind:'verified-coordinate',lat:49,lng:22}}},
+   {sourceTravelId:103,pointId:33,thematic:{sourceRelation:'approach-context',sourcePointId:33,mapTarget:{kind:'published-point',pointId:44}}}
+  ]};
+  const manifest={books:[book],bookMetadata:[{bookId:book.id,revision:book.revision}]};
+  const thin=thinBookCatalogue(manifest).books[0], related=relatedBookIndex(manifest)[0];
+  assert.equal(thin.sourceContract,'thematic-v1');assert.equal(thin.seriesId,'mountains-pl');assert.equal(thin.theme,'mountains');
+  assert.deepEqual(related.pointIds,[11]);assert.deepEqual(related.sourceTravelIds,[101,102,103]);
+  console.log('thematic metadata and exact target index passed');
+ `]);
+ expect(result.status).toBe(0);expect(result.stdout).toContain('thematic metadata and exact target index passed');
+});
+
 it('adds typed lazy metadata without rewriting six accepted records or treating book JSON as providers',()=>{
  const result=runNodeCli(['--input-type=module','-e',`
   import assert from 'node:assert/strict';import {readFile,mkdtemp,rm} from 'node:fs/promises';import path from 'node:path';import {createRequire} from 'node:module';

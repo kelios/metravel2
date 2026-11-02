@@ -196,6 +196,7 @@ describe('AddressListItem (web right panel)', () => {
       expect.objectContaining({
         relatedTravelUrl: 'https://metravel.by/travels/forty-krakova',
         relatedTravelId: 435,
+        sourcePointId: 1,
       }),
     );
 

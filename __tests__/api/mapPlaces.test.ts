@@ -11,6 +11,7 @@ import {
   isSameMapPlaceSource,
   materializeMapPlaceRecord,
   normalizeMapPlaceSource,
+  resolveMapPointSourceId,
   type MapPlaceRecordLike,
   type MapPlaceSource,
 } from '@/api/mapPlaces';
@@ -57,6 +58,15 @@ beforeEach(() => {
 });
 
 describe('map place source identity', () => {
+  it('uses the exact source point rather than grouped place or article identity', () => {
+    const primarySource = normalizeMapPlaceSource(RAW_LIBRARY_SOURCE_A)!;
+    expect(resolveMapPointSourceId({id: 389, placeId: LIBRARY_PLACE_UUID, primarySource})).toBe(14029);
+    expect(resolveMapPointSourceId({id: '2039'})).toBe(2039);
+    expect(resolveMapPointSourceId({placeId: 2039})).toBeNull();
+    expect(resolveMapPointSourceId({id: 2039, primarySource: {...primarySource, pointId: null}})).toBeNull();
+    for (const id of [0, -1, 1.5, Infinity, 'invalid']) expect(resolveMapPointSourceId({id})).toBeNull();
+  });
+
   it('canonicalizes a live point-id source_id onto travel-address:<point_id>', () => {
     expect(canonicalizeMapPlaceSourceId('14029', 14029)).toBe('travel-address:14029');
     expect(canonicalizeMapPlaceSourceId('travel-address:14029', 14029)).toBe(

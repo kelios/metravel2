@@ -4,6 +4,15 @@ import type {ReadyBookSummary} from '@/services/book/readyBooks/bookMetadata';
 
 // Literal keys let the web compiler extract the exact locale catalog.
 const copy = {
+  theme: () => translate('books:theme'),
+  themeAll: () => translate('books:themeAll'),
+  themeMixed: () => translate('books:themeMixed'),
+  themeCastles: () => translate('books:themeCastles'),
+  themeMountains: () => translate('books:themeMountains'),
+  themeQuests: () => translate('books:themeQuests'),
+  seriesPlanned: () => translate('books:seriesPlanned'),
+  seriesPlaces: (params?: TranslationParams) => translate('books:seriesPlaces', params),
+  noBooks: () => translate('books:noBooks'),
   metadataLoading: () => translate('books:metadataLoading'),
   metadataError: () => translate('books:metadataError'),
   questCounts: (params?: TranslationParams) => translate('books:questCounts', params),
@@ -33,6 +42,7 @@ const copy = {
   style: () => translate('books:style'),
   styleWatercolor: () => translate('books:styleWatercolor'),
   stylePhoto: () => translate('books:stylePhoto'),
+  stylePhotoSources: () => translate('books:stylePhotoSources'),
   styleGraphic: () => translate('books:styleGraphic'),
   styleFantasy: () => translate('books:styleFantasy'),
   styleOthers: () => translate('books:styleOthers'),

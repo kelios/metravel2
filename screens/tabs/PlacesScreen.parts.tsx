@@ -293,6 +293,7 @@ export const PlaceCard = React.memo(function PlaceCard({
         }
         relatedTravelUrl={relatedTravelUrl}
         relatedTravelId={place.relatedTravelId}
+        sourcePointId={place.sourcePointId}
         relatedTravelCountry={place.country}
         onCardPress={() => onOpenMap(place)}
         mapActions={mapActions}
@@ -306,7 +307,7 @@ export const PlaceCard = React.memo(function PlaceCard({
                   {
                     key: 'article',
                     label: i18nT('map:screens.tabs.PlacesScreen_parts.statya_28264f10'),
-                    icon: 'book-open' as const,
+                    icon: 'file-text' as const,
                     onPress: () => onOpenTravel(place),
                     title: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_statyu_6f4d1411'),
                   },

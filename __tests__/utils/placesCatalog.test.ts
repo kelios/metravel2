@@ -75,6 +75,14 @@ describe('mapPlacesCatalogResponse', () => {
     expect(page.places[0]).toMatchObject({ id: '701', travelId: 129, relatedTravelId: 129 })
   })
 
+  it('keeps the exact source point separate from the grouped place and article ids', () => {
+    const page = mapPlacesCatalogResponse(rawResponse({ results: [rawItem({
+      id: 701, primary_source: { point_id: 2039, travel_id: 169 },
+    }), rawItem({ id: 2039 })] }))
+    expect(page.places[0]).toMatchObject({ id: '701', sourcePointId: 2039, relatedTravelId: 169 })
+    expect(page.places[1].sourcePointId).toBeNull()
+  })
+
   it('maps the server catalog payload to CatalogPlace shape', () => {
     const page = mapPlacesCatalogResponse(rawResponse())
 

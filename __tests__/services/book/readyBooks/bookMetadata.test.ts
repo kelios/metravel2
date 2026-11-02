@@ -2,6 +2,7 @@
 import {loadReadyBookMetadata,type ReadyBookSummary} from '@/services/book/readyBooks/bookMetadata';
 import {fetchVerifiedBookAsset} from '@/services/book/readyBooks/download';
 import {publishedFixture} from './publicationFixtures';
+import {thematicPublished} from './thematicFixtures';
 jest.mock('@/services/book/readyBooks/download',()=>({fetchVerifiedBookAsset:jest.fn()}));
 const fixture=()=>{
   const book=publishedFixture();
@@ -34,4 +35,15 @@ test('does not accept same-ID metadata with swapped style/count or a catalogue s
 test('honours an already aborted selection before returning cached metadata',async()=>{
   const {summary}=fixture(),controller=new AbortController();controller.abort();
   await expect(loadReadyBookMetadata(summary,controller.signal)).rejects.toMatchObject({name:'AbortError'});
+});
+
+test('authenticates thematic series identity and rejects a swapped family even on cached bytes', async () => {
+  const book = thematicPublished();
+  const summary: ReadyBookSummary = {...book, metadata: {kind: 'book-metadata', bookId: book.id, revision: book.revision,
+    uri: `https://metravel.by/travel-books/${book.id}/${book.revision}/book.json`, mime: 'application/json', bytes: 123, sha256: 'd'.repeat(64)}};
+  jest.mocked(fetchVerifiedBookAsset).mockResolvedValue(new TextEncoder().encode(JSON.stringify(book)).buffer as ArrayBuffer);
+  expect(await loadReadyBookMetadata(summary)).toEqual(book);
+  const swapped: ReadyBookSummary = {...summary, seriesId: 'castles-pl', theme: 'castles'};
+  await expect(loadReadyBookMetadata(swapped)).rejects.toThrow('BOOK_METADATA_IDENTITY');
+  expect(fetchVerifiedBookAsset).toHaveBeenCalledTimes(1);
 });

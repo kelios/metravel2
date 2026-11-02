@@ -9,6 +9,7 @@ import MapIcon from './MapIcon'
 import PlaceListCard from '@/components/places/PlaceListCard'
 import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
 import { resolveMapPointRelatedTravelId } from '@/utils/relatedTravel'
+import { resolveMapPointSourceId } from '@/api/mapPlaces'
 import { translate as i18nT } from '@/i18n'
 import { getTransportLabel } from './transportModes'
 
@@ -128,6 +129,7 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
           categoryLabel={categoryName || undefined}
           relatedTravelUrl={place.urlTravel}
           relatedTravelId={resolveMapPointRelatedTravelId(place)}
+          sourcePointId={resolveMapPointSourceId(place)}
           relatedTravelCountry={typeof place.countryName === 'string' ? place.countryName : undefined}
           relatedTravelCity={typeof place.cityName === 'string' ? place.cityName : undefined}
           badges={badges}

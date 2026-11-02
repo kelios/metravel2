@@ -4,6 +4,7 @@ import type Feather from '@expo/vector-icons/Feather'
 import PlaceListCard from '@/components/places/PlaceListCard'
 import { TravelCoords } from '@/types/types'
 import { resolveMapPointRelatedTravelId } from '@/utils/relatedTravel'
+import { resolveMapPointSourceId } from '@/api/mapPlaces'
 
 import { PLACE_CARD_STYLE } from './constants'
 import { getTransportLabel } from '../transportModes'
@@ -137,6 +138,7 @@ const AddressListItemCard: React.FC<Props> = ({
       // `urlTravel` — поле этой же записи `travel` (index.tsx:46), id из того же
       // ответа API: без него список делал бы запрос статьи на карточку (#1960).
       relatedTravelId={resolveMapPointRelatedTravelId(travel)}
+      sourcePointId={resolveMapPointSourceId(travel)}
       relatedTravelCountry={typeof travelRecord.countryName === 'string' ? travelRecord.countryName : undefined}
       relatedTravelCity={typeof travelRecord.cityName === 'string' ? travelRecord.cityName : undefined}
       isFavorite={isFavorite}

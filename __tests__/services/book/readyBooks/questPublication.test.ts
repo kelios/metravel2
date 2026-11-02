@@ -2,7 +2,7 @@
 import {publishedFixture} from './publicationFixtures';
 import {publishedBookSchema,publicationSchema} from '@/services/book/readyBooks/publication';
 import {buildQuestBookPagePlan} from '@/services/book/readyBooks/questBooks/composition';
-import current from '@/data/travelBooks/manifest.json';
+import acceptedCountryPublication from '@/data/travelBooks/releases/b356fc6cad239e0073732ce3c1bbd672c54d0edd3f2153181ac5e72c8a32df0f.json';
 const questFixture=()=>{
   const base=publishedFixture(),ids=['mir-castle','nesvizh-radziwill'];
   const plan=buildQuestBookPagePlan({quests:ids.map(questId=>({questId}))},{endMatterPages:['country-map']});
@@ -23,7 +23,7 @@ it('uses four-page quest composition without inventing place authors or articles
  const book=publishedBookSchema.parse(canonicalFixture());expect(book.kind).toBe('quests');expect(book.bodyPageCount).toBe(12);
  if(book.kind!=='quests')throw new Error('Quest discriminator');
  expect(book.stops.map(stop=>stop.page)).toEqual([4,8]);expect(book.stops.every(stop=>!('authorId'in stop)&&!('sourceTravelId'in stop))).toBe(true);
- const books=current.books.filter(book=>(book as {kind?:string}).kind!=='quests');
+ const books=acceptedCountryPublication.books;
  expect(publicationSchema.safeParse({schemaVersion:1,releaseId:'travel-books-v1',books:[...books,canonicalFixture(),canonicalFixture('PL')]}).success).toBe(true);
 });
 it('rejects swapped quest URLs, omitted pages, duplicate endings and fake place fields',()=>{
@@ -32,7 +32,7 @@ it('rejects swapped quest URLs, omitted pages, duplicate endings and fake place 
 });
 
 it('accepts eight and ten additive editions while both original watercolor countries remain mandatory',()=>{
- const base=current.books.filter(book=>(book as {kind?:string}).kind!=='quests'&&book.visualStyle!=='graphic');
+ const base=acceptedCountryPublication.books;
  const questPair=[canonicalFixture(),canonicalFixture('PL')];
  const graphicPair=base.filter(book=>!book.visualStyle).map(book=>{
    const stem=book.country==='BY'?'belarus':'poland',id=`${stem}-graphic-memory`;

@@ -72,6 +72,8 @@ export type PlaceListCardProps = {
   /** Название связанной статьи, если `title` карточки — имя места (#2776). */
   relatedTravelTitle?: string | null
   relatedTravelId?: number | null
+  /** Exact TravelAddress source of this physical point; never a grouped placeId or article id. */
+  sourcePointId?: number | null
   relatedTravelCountry?: string | null
   relatedTravelCity?: string | null
   isFavorite?: boolean

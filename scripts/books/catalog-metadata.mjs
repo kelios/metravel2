@@ -14,7 +14,7 @@ export function relatedBookIndex(manifest){
   return manifest.books.map(({kind,country,slug,title,stops})=>({
     ...(kind==='quests'?{kind}:{}),country,slug,title,
     sourceTravelIds:[...new Set(stops.flatMap(stop=>stop.sourceTravelId?[stop.sourceTravelId]:[]))],
-    pointIds:stops.flatMap(stop=>stop.pointId?[stop.pointId]:[]),
+    pointIds:stops.flatMap(stop=>stop.thematic ? (stop.thematic.sourceRelation==='exact-place' && stop.thematic.mapTarget.kind==='published-point' ? [stop.thematic.mapTarget.pointId] : []) : stop.pointId?[stop.pointId]:[]),
     ...(stops.some(stop=>stop.questId)?{questIds:[...new Set(stops.filter(stop=>stop.questId).map(stop=>stop.questId))]}:{}),
   }));
 }
@@ -26,7 +26,7 @@ export function thinBookCatalogue(manifest){
     if(matches.length!==1)throw new Error('Missing or duplicate book metadata');
     const {id,slug,title,country,revision,contentLocale,status,coverUri,stopCount,bodyPageCount,profiles,missing,visualStyle}=book;
     return {id,slug,kind:book.kind??'places',...(visualStyle?{visualStyle}:{}),title,country,revision,contentLocale,status,coverUri,stopCount,bodyPageCount,profiles,missing,
-      ...(book.kind==='quests'?{seriesId:book.seriesId,volume:book.volume}:{}),metadata:matches[0]};
+      ...(book.kind==='quests'?{seriesId:book.seriesId,volume:book.volume}:book.sourceContract==='thematic-v1'?{sourceContract:book.sourceContract,seriesId:book.seriesId,theme:book.theme}:{}),metadata:matches[0]};
   })};
 }
 

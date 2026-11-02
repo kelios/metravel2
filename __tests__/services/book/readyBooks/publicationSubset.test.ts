@@ -1,5 +1,7 @@
 /** @jest-environment node */
 import currentPublication from '../../../../data/travelBooks/manifest.json';
+import acceptedCountryPublication from '../../../../data/travelBooks/releases/f6071d0f8b0d428c7aa6dd3de04fee8e5a2a25c491d8a9f2602d99bb4d7b5480.json';
+import acceptedPriorPublication from '../../../../data/travelBooks/releases/46330b9545ed5326d7f277d27dc659d01efc47e4b26b738b225c4ee040a537b0.json';
 import {publicationSchema, type PublishedBook} from '../../../../services/book/readyBooks/publication';
 import {runNodeCli} from '../../../scripts/cli-test-utils';
 
@@ -17,10 +19,9 @@ it.each([
 
 type Catalog = {schemaVersion: 1; releaseId: 'travel-books-v1'; books: PublishedBook[]};
 const current = () => {
-  const catalog = structuredClone(currentPublication) as unknown as Catalog;
-  const books=catalog.books.filter(book=>book.kind!=='quests'&&(!book.visualStyle||['watercolor','photo'].includes(book.visualStyle)));
+  const catalog = structuredClone(acceptedCountryPublication) as unknown as Catalog;
   // This fixture isolates the global edition-pair contract; typed sidecars are tested separately.
-  return {schemaVersion:catalog.schemaVersion,releaseId:catalog.releaseId,books};
+  return {schemaVersion:catalog.schemaVersion,releaseId:catalog.releaseId,books:catalog.books};
 };
 const subset = (prior: Catalog, style: 'photo' | 'fantasy'): Catalog => ({
   schemaVersion: 1,
@@ -31,6 +32,18 @@ const subset = (prior: Catalog, style: 'photo' | 'fantasy'): Catalog => ({
     const serialized = JSON.stringify(book).split(`/${book.id}/${book.revision}/`).join(`/${id}/${book.revision}/`);
     return {...JSON.parse(serialized), id, slug: `${stem}-${style}`, visualStyle: style};
   }),
+});
+
+it('validates the current twelve editions while preserving the ten accepted raw books and their metadata', () => {
+  const parsed = publicationSchema.parse(currentPublication);
+  const priorIds = new Set(acceptedPriorPublication.books.map(book => book.id));
+  expect(parsed.books).toHaveLength(12);
+  expect(currentPublication.books.filter(book => priorIds.has(book.id))).toEqual(acceptedPriorPublication.books);
+  expect(currentPublication.bookMetadata.filter(asset => priorIds.has(asset.bookId))).toEqual(acceptedPriorPublication.bookMetadata);
+  expect(parsed.books.filter(book => 'sourceContract' in book && book.sourceContract === 'thematic-v1')
+    .map(book => [book.id, book.stopCount, book.bodyPageCount])).toEqual([
+    ['poland-mountains-memory', 40, 136], ['poland-castles-memory', 30, 104],
+  ]);
 });
 
 it.each(['photo', 'fantasy'] as const)('validates a standalone %s subset against the complete canonical catalog', style => {

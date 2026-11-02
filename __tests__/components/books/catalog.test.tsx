@@ -1,15 +1,18 @@
 import React from 'react';
-import {render,screen} from '@testing-library/react';
+import {render,screen,fireEvent} from '@testing-library/react';
 import Catalog from '@/components/books/catalog/ReadyBooksCatalog.web';
 import type {ReadyBookSummary} from '@/services/book/readyBooks/bookMetadata';
 import {publishedFixture} from '../../services/book/readyBooks/publicationFixtures';
+import {thematicPublished} from '../../services/book/readyBooks/thematicFixtures';
 jest.mock('@/components/books/bookCopy',()=>({...jest.requireActual('@/components/books/bookCopy'),useBookCopy:()=>((key:string,params?:Record<string,unknown>)=>params?key+':'+JSON.stringify(params):key)}));
 jest.mock('@/components/ui/ImageCardMedia',()=>({__esModule:true,default:({src,alt}:any)=><img src={src} alt={alt}/>}));
 jest.mock('@/components/books/BooksFrame',()=>({BooksFrame:({children,title}:any)=><main><h1>{title}</h1>{children}</main>}));
 jest.mock('expo-router',()=>({Link:({children,href}:any)=><a href={href}>{children}</a>}));
 jest.mock('@/services/book/readyBooks/catalog',()=>({readyBooks:[]}));
+jest.mock('@/services/book/readyBooks/seriesCatalog',()=>({...jest.requireActual('@/services/book/readyBooks/seriesCatalog'),bookSeries:[]}));
 const books=require('@/services/book/readyBooks/catalog').readyBooks;
-afterEach(()=>books.splice(0));
+const series=require('@/services/book/readyBooks/seriesCatalog').bookSeries;
+afterEach(()=>{books.splice(0);series.splice(0);});
 describe('book catalogue',()=>{
   it('never offers fake downloads while publication is not ready',()=>{
     render(<Catalog/>);expect(screen.getByText('preparing')).toBeTruthy();expect(screen.queryByRole('link')).toBeNull();
@@ -20,6 +23,33 @@ describe('book catalogue',()=>{
     expect(screen.getByRole('link').getAttribute('href')).toBe('/books/belarus');expect(screen.getByText('partial')).toBeTruthy();
     expect(screen.queryByText('order')).toBeNull();
   });
+});
+
+it('shows planned series without links and filters them by declared theme',()=>{
+  series.push(...require('@/data/travelBooks/series/catalog.json').series.map((item:any)=>({...item,status:'planned'})));
+  books.push(publishedFixture());
+  render(<Catalog/>);
+  expect(screen.getAllByText('seriesPlanned')).toHaveLength(2);
+  fireEvent.click(screen.getByRole('radio',{name:'themeMountains'}));
+  expect(screen.getByRole('heading',{name:'Горы Польши'})).toBeTruthy();
+  expect(screen.queryByRole('heading',{name:'Замки Польши'})).toBeNull();
+  expect(screen.queryByRole('link')).toBeNull();
+  fireEvent.click(screen.getByRole('radio',{name:'themeMixed'}));
+  expect(screen.getByRole('link').getAttribute('href')).toBe('/books/belarus');
+  expect(screen.queryByText('seriesPlanned')).toBeNull();
+});
+
+it('offers only published editions from a ready series and never substitutes a country book',()=>{
+  series.push(...require('@/data/travelBooks/series/catalog.json').series.map((item:any)=>({...item,status:'ready'})));
+  const mountain={...thematicPublished(),id:'poland-mountains-memory',slug:'poland-mountains',title:'Горы Польши'};
+  books.push(publishedFixture(),mountain);
+  render(<Catalog/>);
+  fireEvent.click(screen.getByRole('radio',{name:'themeMountains'}));
+  expect(screen.getByRole('link').getAttribute('href')).toBe('/books/poland-mountains');
+  expect(screen.queryByText('seriesPlanned')).toBeNull();
+  fireEvent.click(screen.getByRole('radio',{name:'themeCastles'}));
+  expect(screen.getByText('seriesPlanned')).toBeTruthy();
+  expect(screen.queryByRole('link')).toBeNull();
 });
 
 it.each([31,37])('shows data-driven counts for a valid %i-place edition',count=>{

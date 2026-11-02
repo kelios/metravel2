@@ -1,0 +1,3125 @@
+{
+  "schemaVersion": 2,
+  "sourceContract": "thematic-v1",
+  "seriesId": "mountains-pl",
+  "theme": "mountains",
+  "authorId": 1,
+  "selectedOn": "2026-11-02",
+  "decision": "Владелец выбрал пилоты «Горы Польши» (40 мест) и «Замки Польши» (30 мест) 01.11.2026 (#2809); места из изданных книг BY/PL не повторяются.",
+  "selectionRule": "Все 40 мест таблицы 01.11.2026 по решению владельца; в резерве остальные кандидаты таблицы с причиной.",
+  "places": [
+    {
+      "id": "mountains-pl-01",
+      "title": "Гевонт (крест на вершине)",
+      "localName": "Krzyż na Giewoncie",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14117,
+        "sourceTravelId": 416,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/zakopane-4-dnya-gevont-nosal-hoholovskie-termy",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Krzyż na Giewoncie; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14117,
+          "lat": 49.2502602,
+          "lng": 19.9347267,
+          "sourceUrl": "https://metravel.by/travels/zakopane-4-dnya-gevont-nosal-hoholovskie-termy",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/40fb20b084cf4ab7b829bb317f5ef30f.JPG.webp",
+          "sha256": "b3d7d3a38a4fdebb636e9701e17a8c82b2cbe87553436c8d88672a4a3c672574",
+          "bytes": 143520,
+          "widthPx": 600,
+          "heightPx": 800,
+          "depiction": "target",
+          "caption": "Крест на вершине Гевонта.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 923.6363636363636
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 383.3962264150943
+            }
+          ]
+        },
+        "route": {
+          "start": "Kuźnice",
+          "via": [
+            "Kalatówki",
+            "Hala Kondratowa",
+            "Kondracka Przełęcz",
+            "Wyżnia Kondracka Przełęcz"
+          ],
+          "finish": "Крест Giewont",
+          "scope": "Подъём в одну сторону",
+          "distanceKm": 6,
+          "elevationGainM": 965,
+          "durationMinutes": 195,
+          "metricNote": "Метрики — оценка указанного варианта; подход к началу и остановки не включены.",
+          "sourceUrls": [
+            "https://malopolska.szlaki.pttk.pl/481-pttk-malopolska-giewont-kuznice"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "В Татрах возможны снег, лёд и лавинная опасность; проверять перед выходом",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://tpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "TPN сообщает о снеге и льде; 01.03–30.11 движение ночью запрещено. Сверить предупреждения."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-02",
+      "title": "Каспровы Верх",
+      "localName": "Kasprowy Wierch",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14538,
+        "sourceTravelId": 479,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/kasprovy-verkh-vysota-1987-m-podem-i-kak-dobratsia",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Kasprowy Wierch; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14538,
+          "lat": 49.2317904,
+          "lng": 19.9815742,
+          "sourceUrl": "https://metravel.by/travels/kasprovy-verkh-vysota-1987-m-podem-i-kak-dobratsia",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/3abc26f16c26484f8a85b13ce49dc75e.JPG.webp",
+          "sha256": "4f681603e3ff685d3006e78c6580babadb9e47fe4f9ccb2558cca8c650493d12",
+          "bytes": 139512,
+          "widthPx": 600,
+          "heightPx": 800,
+          "depiction": "target",
+          "caption": "Здание на вершине Каспровы Верх.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 923.6363636363636
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 383.3962264150943
+            }
+          ]
+        },
+        "route": {
+          "start": "Kuźnice",
+          "via": [
+            "Myślenickie Turnie"
+          ],
+          "finish": "Верхняя станция / район Kasprowy Wierch",
+          "scope": "Подъём в одну сторону",
+          "distanceKm": 6.6,
+          "elevationGainM": 1062,
+          "durationMinutes": 225,
+          "metricNote": "Метрики — оценка указанного варианта; подход к началу и остановки не включены.",
+          "sourceUrls": [
+            "https://malopolska.szlaki.pttk.pl/483-pttk-malopolska-kasprowy-wierch-kuznice"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "В Татрах возможны снег, лёд и лавинная опасность; проверять перед выходом",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://tpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "TPN сообщает о снеге и льде; 01.03–30.11 движение ночью запрещено. Сверить предупреждения."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-03",
+      "title": "Чёрный Став Гонсеницовый",
+      "localName": "Czarny Staw Gąsienicowy",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14558,
+        "sourceTravelId": 482,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Czarny Staw Gąsienicowy; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14558,
+          "lat": 49.2305797,
+          "lng": 20.0182228,
+          "sourceUrl": "https://metravel.by/travels/czarny-staw-i-drugie-radosti-treki-termy-i-nochi-u-kamina",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/8af828674ef5403280fb8e1a2d9ee748.JPG.webp",
+          "sha256": "53d65b53e1133032dbdfce30178585013b1aec4bc6ecb66a6924298d96001fdb",
+          "bytes": 141594,
+          "widthPx": 800,
+          "heightPx": 600,
+          "depiction": "target",
+          "caption": "Чёрный Став Гонсеницовый.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 29.333333333333332,
+              "heightMm": 22,
+              "effectivePpi": 692.7272727272727
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 70.66666666666667,
+              "heightMm": 53,
+              "effectivePpi": 287.5471698113207
+            }
+          ]
+        },
+        "route": {
+          "start": "Приют Murowaniec",
+          "via": [],
+          "finish": "Северный берег Czarny Staw",
+          "scope": "Подход в одну сторону",
+          "distanceKm": 1.6,
+          "elevationGainM": 139,
+          "durationMinutes": 38,
+          "metricNote": "Набор 139 м опубликован провайдером; сырая сумма GPX 154 м хранится отдельно.",
+          "sourceUrls": [
+            "https://mapa-turystyczna.pl/route/3kw"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "В Татрах возможны снег, лёд и лавинная опасность; проверять перед выходом",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://tpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "TPN сообщает о снеге и льде; 01.03–30.11 движение ночью запрещено. Сверить предупреждения."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-04",
+      "title": "Морское Око",
+      "localName": "Schronisko PTTK Morskie Oko",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 13886,
+        "sourceTravelId": 362,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/morskoe-oko-v-mae-ozero-v-tatrakh-polsha",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Schronisko PTTK Morskie Oko; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 13886,
+          "lat": 49.196939,
+          "lng": 20.0704594,
+          "sourceUrl": "https://metravel.by/travels/morskoe-oko-v-mae-ozero-v-tatrakh-polsha",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/4854/conversions/o9N2dy3TLAdYW6vsbD48Eiqe1gVplSZgdMxTDai4-detail_hd.jpg",
+          "sha256": "dcfc76d4cedd75af2be1a81ce4ef6319bb42e58e8313255cbbe90ba6fa549864",
+          "bytes": 1014333,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Берег Морского Ока.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        },
+        "route": {
+          "start": "Приют / северный берег Morskie Oko",
+          "via": [],
+          "finish": "Развилка под Czarny Staw",
+          "scope": "Участок тропы",
+          "distanceKm": 1.3,
+          "elevationGainM": 77,
+          "durationMinutes": 35,
+          "metricNote": "Только западный берег озера, без дороги от парковки.",
+          "sourceUrls": [
+            "https://malopolska.szlaki.pttk.pl/462-pttk-malopolska-wokol-morskiego-oka-czesc-zachodnia"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "В Татрах возможны снег, лёд и лавинная опасность; проверять перед выходом",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://tpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "TPN сообщает о снеге и льде; 01.03–30.11 движение ночью запрещено. Сверить предупреждения."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-05",
+      "title": "Долина Пяти Польских Ставов",
+      "localName": "Schronisko PTTK w Dolinie Pięciu Stawów Polskich",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14042,
+        "sourceTravelId": 400,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/dolina-pyati-ozer",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Schronisko PTTK w Dolinie Pięciu Stawów Polskich; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14042,
+          "lat": 49.2118503,
+          "lng": 20.0489876,
+          "sourceUrl": "https://metravel.by/travels/dolina-pyati-ozer",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/be6e6e3f7cbf43ca843abfe2b7f6a5ab.jpeg.webp",
+          "sha256": "50edbb01e69c0c678b8fce5c1dc4fd7ef255bed1f9eb93db32d5262cf2de8fc7",
+          "bytes": 291156,
+          "widthPx": 800,
+          "heightPx": 1067,
+          "depiction": "target",
+          "caption": "Один из ставов Долины Пяти Польских Ставов.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.49484536082474,
+              "heightMm": 22,
+              "effectivePpi": 1231.8999999999999
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.737582005623246,
+              "heightMm": 53,
+              "effectivePpi": 511.354716981132
+            }
+          ]
+        },
+        "route": {
+          "start": "Развилка чёрной тропы в Dolina Roztoki",
+          "via": [],
+          "finish": "Приют Pięciu Stawów",
+          "scope": "Участок тропы",
+          "distanceKm": 1.1,
+          "elevationGainM": 321,
+          "durationMinutes": 55,
+          "metricNote": "Короткий летний подход к приюту, не весь дневной поход.",
+          "sourceUrls": [
+            "https://malopolska.szlaki.pttk.pl/489-pttk-malopolska-szlak-letni"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "В Татрах возможны снег, лёд и лавинная опасность; проверять перед выходом",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://tpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "TPN сообщает о снеге и льде; 01.03–30.11 движение ночью запрещено. Сверить предупреждения."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-06",
+      "title": "Смречиньский Став, долина Косцелиска",
+      "localName": "Smreczyński Staw w Dolinie Kościeliskiej",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14444,
+        "sourceTravelId": 466,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Smreczyński Staw w Dolinie Kościeliskiej; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14444,
+          "lat": 49.2221731,
+          "lng": 19.8639293,
+          "sourceUrl": "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/6238/conversions/LpMsKAps6tfK8hSB9iUiXon2uPJD5oHqwsTn812o-detail_hd.jpg",
+          "sha256": "a4f9af1a387c16ce616bc24631f4f6878ff20a7de3f0bdaa2790d2d3f888a013",
+          "bytes": 437327,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Смречиньский Став в тумане.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        },
+        "route": {
+          "start": "Развилка Hala Ornak",
+          "via": [],
+          "finish": "Берег Smreczyński Staw",
+          "scope": "Участок тропы",
+          "distanceKm": 1.2,
+          "elevationGainM": 146,
+          "durationMinutes": 35,
+          "metricNote": "Метрики — оценка указанного варианта; подход к началу и остановки не включены.",
+          "sourceUrls": [
+            "https://malopolska.szlaki.pttk.pl/498-pttk-malopolska-hala-ornak-smreczynski-staw"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "В Татрах возможны снег, лёд и лавинная опасность; проверять перед выходом",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://tpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "TPN сообщает о снеге и льде; 01.03–30.11 движение ночью запрещено. Сверить предупреждения."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-07",
+      "title": "Пещеры Раптавицка и Мыльна",
+      "localName": "Jaskinia Raptawicka",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14442,
+        "sourceTravelId": 466,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Jaskinia Raptawicka; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14442,
+          "lat": 49.2398157,
+          "lng": 19.8620088,
+          "sourceUrl": "https://metravel.by/travels/dolina-kosteliska-marshrut-po-tatram-za-den",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/6235/conversions/b5WmEGh4rG4NVx9wvagqCpwJhwegj4rDTg2U1ElR-detail_hd.jpg",
+          "sha256": "8b7498b7b0c89a365eb042dd7f60008881b56ba4b4e21649d67b8e060e3bf9ab",
+          "bytes": 688248,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Вход в пещеру Раптавицка; пещера Мыльна этим кадром не иллюстрируется.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        },
+        "route": {
+          "start": "Развилка в Dolina Kościeliska",
+          "via": [],
+          "finish": "Вход Raptawicka",
+          "scope": "Участок тропы",
+          "distanceKm": 0.304,
+          "elevationGainM": 141,
+          "durationMinutes": 20,
+          "metricNote": "Только подход ко входу Раптавицкой, без прохождения пещер.",
+          "sourceUrls": [
+            "https://malopolska.szlaki.pttk.pl/507-pttk-malopolska-dol-koscieliska-do-mylnej-i-raptawickiej-jaskinia-raptawicka"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "В Татрах возможны снег, лёд и лавинная опасность; проверять перед выходом",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://tpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "TPN сообщает о снеге и льде; 01.03–30.11 движение ночью запрещено. Сверить предупреждения."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-08",
+      "title": "Хохоловская долина (поляна с крокусами)",
+      "localName": "Ścieżka nad Reglami",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 15039,
+        "sourceTravelId": 563,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/khokholovskaia-dolina-vesnoi-krokusy-i-marshrut",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Ścieżka nad Reglami; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 15039,
+          "lat": 49.2366556,
+          "lng": 19.7936694,
+          "sourceUrl": "https://metravel.by/travels/khokholovskaia-dolina-vesnoi-krokusy-i-marshrut",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/15039/conversions/d41f56af4049468f9cb2cb5467399a6d.webp",
+          "sha256": "01b3e149bc7215bf63a7f4de4e0301c48d8d2f231a30730fded3f64cbe9d7d7a",
+          "bytes": 275622,
+          "widthPx": 1024,
+          "heightPx": 768,
+          "depiction": "target",
+          "caption": "Крокусы на поляне Хохоловской долины.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 29.333333333333332,
+              "heightMm": 22,
+              "effectivePpi": 886.690909090909
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 70.66666666666667,
+              "heightMm": 53,
+              "effectivePpi": 368.0603773584905
+            }
+          ]
+        },
+        "route": {
+          "start": "Приют Chochołowska",
+          "via": [],
+          "finish": "Polana Chochołowska",
+          "scope": "Участок тропы",
+          "distanceKm": 0.692,
+          "elevationGainM": 21,
+          "durationMinutes": 20,
+          "metricNote": "Только участок от приюта до поляны, без подхода через долину.",
+          "sourceUrls": [
+            "https://malopolska.szlaki.pttk.pl/443-pttk-malopolska-szlak-do-kapliczki-sw-jana"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "В Татрах возможны снег, лёд и лавинная опасность; проверять перед выходом",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://tpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "TPN сообщает о снеге и льде; 01.03–30.11 движение ночью запрещено. Сверить предупреждения."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-09",
+      "title": "Тропа над Реглями, Закопане",
+      "localName": "Ścieżka nad Reglami",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14967,
+        "sourceTravelId": 553,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/zakopane-legkaia-tropa-sciezka-nad-reglami",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "approach-context",
+        "sourceEvidence": "Точка источника: Ścieżka nad Reglami; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "verified-coordinate",
+          "accuracy": "site-center",
+          "lat": 49.261877,
+          "lng": 19.930121,
+          "sourceUrl": "https://malopolska.szlaki.pttk.pl/item/gpx/475",
+          "checkedOn": "2026-11-01",
+          "evidence": "Representative point on actual main-trail section; not the waterfall; Literal official GPX475 main-trail vertex; source14967/Siklawica lies274.2m offmaintrail"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/14967/conversions/3949727363a44848b1430526632f664b.webp",
+          "sha256": "a7d01d49577e64bb3dd6fdb9a530567f46f50f148ec37c151c0141b003ad6cac",
+          "bytes": 233398,
+          "widthPx": 768,
+          "heightPx": 1024,
+          "depiction": "context",
+          "caption": "Водопад Сиклавица на отдельной боковой ветви от Ścieżka nad Reglami.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 1182.2545454545455
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 490.7471698113207
+            }
+          ]
+        },
+        "route": {
+          "start": "Wyżnia Kira Miętusia",
+          "via": [],
+          "finish": "Polana Kalatówki",
+          "scope": "Участок тропы",
+          "distanceKm": 9.8,
+          "elevationGainM": 1200,
+          "durationMinutes": 330,
+          "metricNote": "Основная тропа; водопадная ветка Сиклавицы считается отдельно.",
+          "sourceUrls": [
+            "https://malopolska.szlaki.pttk.pl/475-pttk-malopolska-sciezka-nad-reglami"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "В Татрах возможны снег, лёд и лавинная опасность; проверять перед выходом",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://tpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "TPN сообщает о снеге и льде; 01.03–30.11 движение ночью запрещено. Сверить предупреждения."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-10",
+      "title": "Три Короны",
+      "localName": "Three Crowns",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14411,
+        "sourceTravelId": 461,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Three Crowns; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14411,
+          "lat": 49.413581,
+          "lng": 20.4143143,
+          "sourceUrl": "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/6495/conversions/7uzU940muOANk0x6Sc4on2dFwbzOq7LyccfsEBAE-detail_hd.jpg",
+          "sha256": "a70afb0586d4fbc8763b8ac958da3e57318216d981874007b0da81224c7d15f1",
+          "bytes": 819064,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Вершина Три Короны, подход со стороны перевала Шопка.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        },
+        "route": {
+          "start": "Sromowce Niżne",
+          "via": [
+            "Wąwóz Szopczański",
+            "Przełęcz Szopka"
+          ],
+          "finish": "Sromowce Niżne",
+          "scope": "Круг с возвращением",
+          "distanceKm": {
+            "min": 6,
+            "max": 7
+          },
+          "elevationGainM": 500,
+          "durationMinutes": 145,
+          "metricNote": "Примерные значения из авторской статьи; относятся ко всему указанному выходу.",
+          "sourceUrls": [
+            "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "author-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://piepn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "PPN предупреждает о планируемых работах у Trzy Korony на рубеже октября–ноября; точные даты проверить."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-11",
+      "title": "Соколица",
+      "localName": "Sosna na Sokolicy",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 13720,
+        "sourceTravelId": 320,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/peninskiy-narodnyy-park-sokolica",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Sosna na Sokolicy; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 13720,
+          "lat": 49.4176342,
+          "lng": 20.4403982,
+          "sourceUrl": "https://metravel.by/travels/peninskiy-narodnyy-park-sokolica",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/3174/conversions/lXQmmpCAhLwPzPXDpL5VkVR8Bb7xqMSWppbnyGTG-detail_hd.jpg",
+          "sha256": "ceedd199e3d6382560cfa9fb777c70ccddf5d623f4d88e6d0a3aca3f8d7c10b4",
+          "bytes": 701916,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "context",
+          "caption": "Панорама со смотровой площадки Соколицы.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        },
+        "route": {
+          "start": "Krościenko",
+          "via": [],
+          "finish": "Смотровая Sokolica",
+          "scope": "Подход в одну сторону",
+          "distanceKm": 3.5,
+          "elevationGainM": 406,
+          "durationMinutes": 90,
+          "metricNote": "Старт отличается от авторского; вариант местного оператора PTTK.",
+          "sourceUrls": [
+            "https://www.orlica.com/blog/szlak-na-sokolice-z-kroscienka-co-warto-wiedziec"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://piepn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Проверить сообщения PPN и условия доступа к смотровой; текущий доступ не гарантирован."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-12",
+      "title": "Дзвонкувка над Щавницей",
+      "localName": "Dzwonkówka",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 16055,
+        "sourceTravelId": 584,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/shchavnitsa-zimoi-marshrut-na-dzwonkowke-cherez-sewerynowke-i-bacowke-pod-beresnikiem",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Dzwonkówka; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 16055,
+          "lat": 49.4646389,
+          "lng": 20.4816278,
+          "sourceUrl": "https://metravel.by/travels/shchavnitsa-zimoi-marshrut-na-dzwonkowke-cherez-sewerynowke-i-bacowke-pod-beresnikiem",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/16055/conversions/c3c1bbfc5cb74621a124a16005c757a0.webp",
+          "sha256": "1a8aa3a4461b3df290703916c7ad55c95648187efb83314a44ef8f15882191ca",
+          "bytes": 442308,
+          "widthPx": 900,
+          "heightPx": 1200,
+          "depiction": "target",
+          "caption": "Туристические указатели на Дзвонкувке.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 1385.4545454545455
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 575.0943396226414
+            }
+          ]
+        },
+        "route": {
+          "start": "Szczawnica",
+          "via": [],
+          "finish": "Szczawnica",
+          "scope": "Круг с возвращением",
+          "distanceKm": 13.8,
+          "elevationGainM": 650,
+          "durationMinutes": {
+            "min": 300,
+            "max": 360
+          },
+          "metricNote": "Примерные значения из авторской статьи; относятся ко всему указанному выходу.",
+          "sourceUrls": [
+            "https://metravel.by/travels/shchavnitsa-zimoi-marshrut-na-dzwonkowke-cherez-sewerynowke-i-bacowke-pod-beresnikiem"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "author-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-13",
+      "title": "Турбач",
+      "localName": "Konfederacji Tatrzańskiej",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14380,
+        "sourceTravelId": 451,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/gora-turbach-1310-m-pokhod-v-gortse-polsha",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Konfederacji Tatrzańskiej; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14380,
+          "lat": 49.5389538,
+          "lng": 20.1100659,
+          "sourceUrl": "https://metravel.by/travels/gora-turbach-1310-m-pokhod-v-gortse-polsha",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "owner-original",
+          "sourceId": "owner-20261101-14380",
+          "sha256": "273747864dab109a71450344b83e5aa4903ca6cedaba819debe79ed169cc18a8",
+          "bytes": 4096000,
+          "widthPx": 4240,
+          "heightPx": 2400,
+          "depiction": "context",
+          "caption": "Вид с района Турбача на Татры, февраль 2022.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 38.86666666666667,
+              "heightMm": 22,
+              "effectivePpi": 2770.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 93.63333333333334,
+              "heightMm": 53,
+              "effectivePpi": 1150.1886792452829
+            }
+          ],
+          "publishedAssociation": {
+            "uri": "https://metravel.by/address-image/6109/conversions/B0Ry3PwtV6FTH3tRQCtcTMfrQTzTfCcXShpQ6XCp-thumb_400_wp.webp",
+            "sha256": "683b629c6c3d2587c653c6fd6ca4a65bb3b13a3b2e4bba7528e7cc455285441b",
+            "bytes": 12694,
+            "widthPx": 400,
+            "heightPx": 400,
+            "relationship": "exact-visual-match"
+          }
+        },
+        "route": {
+          "start": "Obidowa",
+          "via": [
+            "Turbacz",
+            "приют"
+          ],
+          "finish": "Obidowa",
+          "scope": "Круг с возвращением",
+          "distanceKm": 16.649,
+          "elevationGainM": 742,
+          "durationMinutes": 315,
+          "metricNote": "Вся петля через вершину и приют, не последний участок к точке.",
+          "sourceUrls": [
+            "https://visitmalopolska.pl/trasa/-/poi/sladami-olimpijczykow-na-turbacz"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://gpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Проверить погоду и сообщения GPN; отсутствие сообщения не гарантирует открытость тропы."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-14",
+      "title": "Смотровая башня на Горце",
+      "localName": "Wieża widokowa na Gorcu",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14184,
+        "sourceTravelId": 422,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Wieża widokowa na Gorcu; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14184,
+          "lat": 49.5648716,
+          "lng": 20.2529547,
+          "sourceUrl": "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/5640/conversions/dT9ei9b3GzL5zKVJBGkwFCstQous4WbxsL5ii5ux-detail_hd.jpg",
+          "sha256": "e994ab942ff4b6d185bc50f0042635160a2eb126f222bb0cb3314e244b2b5a0c",
+          "bytes": 408615,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Смотровая башня на Горце.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        },
+        "route": {
+          "start": "Lubomierz-Rzeki",
+          "via": [],
+          "finish": "Башня Gorc",
+          "scope": "Подход в одну сторону",
+          "distanceKm": 5,
+          "elevationGainM": 574,
+          "durationMinutes": 131,
+          "metricNote": "Длина и время — сводка источника; набор рассчитан по GPX, не заявлен парком.",
+          "sourceUrls": [
+            "https://gpn.gov.pl/szlaki-turystyczne/gorc-z-lubomierza-rzek"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://gpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Проверить погоду и сообщения GPN; отсутствие сообщения не гарантирует открытость тропы."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-15",
+      "title": "Смотровая башня на Магурках",
+      "localName": "Wieża widokowa na Magurkach",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14359,
+        "sourceTravelId": 448,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/magurki",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Wieża widokowa na Magurkach; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14359,
+          "lat": 49.5306297,
+          "lng": 20.1826862,
+          "sourceUrl": "https://metravel.by/travels/magurki",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/6061/conversions/N6VLLDRQlqtUwPM9OWwnlkVZ1ddLyesekWLMipFW-detail_hd.jpg",
+          "sha256": "e6e6a41fb359090d43afe37af70e88ac8c47ebdc3da15ca53db66d4806b6382f",
+          "bytes": 501460,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Смотровая башня на Магурках.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        },
+        "route": {
+          "start": "Kosarzyska",
+          "via": [
+            "Łonna",
+            "Pańska Przehybka",
+            "Magurki",
+            "Borsuczyny"
+          ],
+          "finish": "Kosarzyska",
+          "scope": "Круг с возвращением",
+          "distanceKm": 8,
+          "elevationGainM": 400,
+          "durationMinutes": 240,
+          "metricNote": "Круг из Kosarzyska, другой старт относительно авторского.",
+          "sourceUrls": [
+            "https://turystyka.ochotnica.pl/trasy/83"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://gpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Проверить погоду и сообщения GPN; отсутствие сообщения не гарантирует открытость тропы."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-16",
+      "title": "Любань, смотровая башня",
+      "localName": "Luban mountain lookout tower",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14190,
+        "sourceTravelId": 424,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/zamok-dunaets-i-gora-liuban-den-iz-krakova",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Luban mountain lookout tower; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14190,
+          "lat": 49.489352,
+          "lng": 20.3390002,
+          "sourceUrl": "https://metravel.by/travels/zamok-dunaets-i-gora-liuban-den-iz-krakova",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/b4d479e900304de8838762a074c8e1b3.JPG.webp",
+          "sha256": "5d6257c52ee0cf90a5de1aba498042ff6ec9aeab67c8594fed7a6c542f1e8335",
+          "bytes": 42178,
+          "widthPx": 800,
+          "heightPx": 453,
+          "depiction": "target",
+          "caption": "Смотровая башня на Любани.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 38.852097130242825,
+              "heightMm": 22,
+              "effectivePpi": 523.0090909090909
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 93.59823399558499,
+              "heightMm": 53,
+              "effectivePpi": 217.09811320754716
+            }
+          ]
+        },
+        "route": {
+          "start": "Костёл Ochotnica Dolna",
+          "via": [
+            "Lubań",
+            "Jaworzyny Ochotnickie"
+          ],
+          "finish": "Ochotnica Dolna",
+          "scope": "Круг с возвращением",
+          "distanceKm": 14,
+          "elevationGainM": 810,
+          "durationMinutes": 300,
+          "metricNote": "Весь круг из Ochotnica Dolna, другой старт относительно авторского.",
+          "sourceUrls": [
+            "https://turystyka.ochotnica.pl/trasy/58"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-17",
+      "title": "Могелица, смотровая башня",
+      "localName": "Rezerwat Mogielica",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14347,
+        "sourceTravelId": 445,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Rezerwat Mogielica; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14347,
+          "lat": 49.6551661,
+          "lng": 20.2767406,
+          "sourceUrl": "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/6016/conversions/5weyqMq60R1kr7ZXZJYQFbadZnBDa4etddDNduvm-detail_hd.jpg",
+          "sha256": "5f3342e2f5cb10a2e8ebb9f38a454f97c393e2d426aa7033775a45f0097826a2",
+          "bytes": 732790,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Смотровая башня на Могелице зимой.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        },
+        "route": {
+          "start": "Парковка Chyszówki",
+          "via": [],
+          "finish": "Mogielica",
+          "scope": "Подъём в одну сторону",
+          "distanceKm": 2.7,
+          "elevationGainM": 350,
+          "durationMinutes": 60,
+          "metricNote": "Примерные значения из авторской статьи; относятся ко всему указанному выходу.",
+          "sourceUrls": [
+            "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "author-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-18",
+      "title": "Модынь, смотровая башня",
+      "localName": "Wieża widokowa na Modyni",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14648,
+        "sourceTravelId": 498,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/modyn-odna-iz-samykh-vysokikh-vershin-beskidov-1029",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Wieża widokowa na Modyni; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14648,
+          "lat": 49.6210958,
+          "lng": 20.3754249,
+          "sourceUrl": "https://metravel.by/travels/modyn-odna-iz-samykh-vysokikh-vershin-beskidov-1029",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/3621b88fe55847b582aeed7ac91fefe6.webp",
+          "sha256": "3926b70ce14e66fb4343956a61e4f0d11e2897c7351d70fdbd9f8b1bd75bd7ec",
+          "bytes": 224186,
+          "widthPx": 768,
+          "heightPx": 1024,
+          "depiction": "target",
+          "caption": "Смотровая башня на Модыни зимой.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 1182.2545454545455
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 490.7471698113207
+            }
+          ]
+        },
+        "route": {
+          "start": "Парковка под Modyń",
+          "via": [],
+          "finish": "Modyń",
+          "scope": "Подъём в одну сторону",
+          "distanceKm": 3.8,
+          "elevationGainM": 500,
+          "durationMinutes": {
+            "min": 60,
+            "max": 90
+          },
+          "metricNote": "Примерные значения из авторской статьи; относятся ко всему указанному выходу.",
+          "sourceUrls": [
+            "https://metravel.by/travels/modyn-odna-iz-samykh-vysokikh-vershin-beskidov-1029"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "author-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-19",
+      "title": "Любонь Вельки",
+      "localName": "Schronisko PTTK na Luboniu Wielkim",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14385,
+        "sourceTravelId": 453,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/lyubon-velki-1022m-v-vyspovyh-beskidah",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Schronisko PTTK na Luboniu Wielkim; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14385,
+          "lat": 49.6534108,
+          "lng": 19.9919039,
+          "sourceUrl": "https://metravel.by/travels/lyubon-velki-1022m-v-vyspovyh-beskidah",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/3b7e6487715a4571903db49fbbc32d1d.JPG.webp",
+          "sha256": "86131eeb0bd1090268834cb44e2e36b482e9dc929dc7f59967d5e6342e6e0f3a",
+          "bytes": 83656,
+          "widthPx": 800,
+          "heightPx": 600,
+          "depiction": "target",
+          "caption": "Вершинная площадка Любонь Вельки.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 29.333333333333332,
+              "heightMm": 22,
+              "effectivePpi": 692.7272727272727
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 70.66666666666667,
+              "heightMm": 53,
+              "effectivePpi": 287.5471698113207
+            }
+          ]
+        },
+        "route": {
+          "start": "Парковка Bęnkowa",
+          "via": [],
+          "finish": "Luboń Wielki",
+          "scope": "Подъём в одну сторону",
+          "distanceKm": 3,
+          "elevationGainM": 350,
+          "durationMinutes": 60,
+          "metricNote": "Примерные значения из авторской статьи; относятся ко всему указанному выходу.",
+          "sourceUrls": [
+            "https://metravel.by/travels/lyubon-velki-1022m-v-vyspovyh-beskidah"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "author-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-20",
+      "title": "Любомир, обсерватория",
+      "localName": "Obserwatorium astronomiczne im. Tadeusza Banachiewicza",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14395,
+        "sourceTravelId": 457,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/gora-liubomir-904-m-observatoriia-i-marshrut",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Obserwatorium astronomiczne im. Tadeusza Banachiewicza; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14395,
+          "lat": 49.7684877,
+          "lng": 20.054673,
+          "sourceUrl": "https://metravel.by/travels/gora-liubomir-904-m-observatoriia-i-marshrut",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/6339/conversions/XhKAYR83NCu6hzc8l3bIuqTmvwKH51CEANrS1yNV-detail_hd.jpg",
+          "sha256": "99ea9d6ca4b1f5489df37ef0d1ddc7c15f08ec1642b1246c445698a1cdd1ed5e",
+          "bytes": 752849,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Обсерватория на Любомире.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        },
+        "route": {
+          "start": "Парковка Kobielnik",
+          "via": [],
+          "finish": "Обсерватория Lubomir",
+          "scope": "Подъём в одну сторону",
+          "distanceKm": 2.7,
+          "elevationGainM": 350,
+          "durationMinutes": 90,
+          "metricNote": "Примерные значения из авторской статьи; относятся ко всему указанному выходу.",
+          "sourceUrls": [
+            "https://metravel.by/travels/gora-liubomir-904-m-observatoriia-i-marshrut"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "author-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-21",
+      "title": "Элиашувка, смотровая башня",
+      "localName": "Wieża widokowa na Eliaszówce",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14845,
+        "sourceTravelId": 543,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Wieża widokowa na Eliaszówce; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14845,
+          "lat": 49.4012903,
+          "lng": 20.6435251,
+          "sourceUrl": "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/14845/conversions/2c3970094ef2428989ab1ed6507009ef.webp",
+          "sha256": "0ad1f236bdb52a4c0742ab356bb55515985d67bd98e5d740784dd2e3a0cceac9",
+          "bytes": 106484,
+          "widthPx": 1024,
+          "heightPx": 576,
+          "depiction": "target",
+          "caption": "Смотровая башня на Элиашувке среди леса.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 39.111111111111114,
+              "heightMm": 22,
+              "effectivePpi": 665.0181818181817
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 94.22222222222223,
+              "heightMm": 53,
+              "effectivePpi": 276.0452830188679
+            }
+          ]
+        },
+        "route": {
+          "start": "Долина Piwniczna-Zdrój",
+          "via": [],
+          "finish": "Eliaszówka",
+          "scope": "Подъём в одну сторону",
+          "distanceKm": 8.1,
+          "elevationGainM": 737,
+          "durationMinutes": 150,
+          "metricNote": "Примерные значения из авторской статьи; относятся ко всему указанному выходу.",
+          "sourceUrls": [
+            "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "author-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-22",
+      "title": "Яворжина Крыницка",
+      "localName": "Schronisko PTTK Jaworzyna Krynicka",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 16133,
+        "sourceTravelId": 586,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/krynitsa-zdrui-i-iavorzhina-krynitska-zimoi-korotkii-khaik-i-chto-posmotret-riadom",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Schronisko PTTK Jaworzyna Krynicka; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 16133,
+          "lat": 49.421375,
+          "lng": 20.8938444,
+          "sourceUrl": "https://metravel.by/travels/krynitsa-zdrui-i-iavorzhina-krynitska-zimoi-korotkii-khaik-i-chto-posmotret-riadom",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/16133/conversions/f256fe3a08204b42b82cebf1a132f938.webp",
+          "sha256": "8ad6b7ae32e9cc103db1b76f12b68eb74a3787d7b4cba187c4ead9df6073bb7f",
+          "bytes": 162354,
+          "widthPx": 900,
+          "heightPx": 1200,
+          "depiction": "target",
+          "caption": "Приют PTTK Jaworzyna Krynicka.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 1385.4545454545455
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 575.0943396226414
+            }
+          ]
+        },
+        "route": {
+          "start": "Нижняя станция Jaworzyna",
+          "via": [],
+          "finish": "Приют у Jaworzyna",
+          "scope": "Подход в одну сторону",
+          "distanceKm": 4.3,
+          "elevationGainM": 403,
+          "durationMinutes": 107,
+          "metricNote": "Подход к приюту, без поездки на канатке.",
+          "sourceUrls": [
+            "https://mapa-turystyczna.pl/route?q=49.4208170%2C20.9248880%3B49.4213750%2C20.8938444"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-23",
+      "title": "Рысянка (приют PTTK)",
+      "localName": "Schronisko PTTK na Rysiance",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14572,
+        "sourceTravelId": 484,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Schronisko PTTK na Rysiance; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14572,
+          "lat": 49.5362398,
+          "lng": 19.2342324,
+          "sourceUrl": "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/e8b6bc520223459fb2c2fd5c484444a1.webp",
+          "sha256": "02239c0906bd3d809b33a09c096deace8a7ac8a086e69d8601a0f7c89642b205",
+          "bytes": 106286,
+          "widthPx": 1024,
+          "heightPx": 768,
+          "depiction": "target",
+          "caption": "Фасад приюта PTTK Rysianka.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 29.333333333333332,
+              "heightMm": 22,
+              "effectivePpi": 886.690909090909
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 70.66666666666667,
+              "heightMm": 53,
+              "effectivePpi": 368.0603773584905
+            }
+          ]
+        },
+        "route": {
+          "start": "Sopotnia Wielka / Kolonia",
+          "via": [
+            "Rysianka",
+            "приют"
+          ],
+          "finish": "Sopotnia Wielka / Kolonia",
+          "scope": "Круг с возвращением",
+          "distanceKm": 10,
+          "elevationGainM": 600,
+          "durationMinutes": {
+            "min": 180,
+            "max": 240
+          },
+          "metricNote": "Весь выход с возвращением, не отдельный участок у приюта.",
+          "sourceUrls": [
+            "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-24",
+      "title": "Перевал Пшегибек (к Вельке Рыцежовой)",
+      "localName": "Перевал Пшегибек (Przegibek)",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 15174,
+        "sourceTravelId": 573,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/zhivetskie-beskidy-pokhod-k-wielka-rycerzowa-cherez-pshegibek",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Перевал Пшегибек (Przegibek); физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 15174,
+          "lat": 49.4133,
+          "lng": 19.05948,
+          "sourceUrl": "https://metravel.by/travels/zhivetskie-beskidy-pokhod-k-wielka-rycerzowa-cherez-pshegibek",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/15174/conversions/335d825bf198495fb7c7e016475711a4.webp",
+          "sha256": "e4f27b75c7f3d2b83bb1d9e60cea9d876d2e3eecd17b8dece728592c45609254",
+          "bytes": 343672,
+          "widthPx": 768,
+          "heightPx": 1024,
+          "depiction": "context",
+          "caption": "Лесная тропа на авторском переходе к Пшегибеку.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 1182.2545454545455
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 490.7471698113207
+            }
+          ]
+        },
+        "route": {
+          "start": "Morgi / Soblówka",
+          "via": [
+            "Hala Rycerzowa",
+            "Halna",
+            "Przegibek"
+          ],
+          "finish": "Приют на Przegibek",
+          "scope": "Переход в одну сторону",
+          "distanceKm": 9,
+          "elevationGainM": {
+            "min": 650,
+            "max": 700
+          },
+          "durationMinutes": {
+            "min": 240,
+            "max": 300
+          },
+          "metricNote": "Весь переход через Hala Rycerzowa, без отдельного выхода на вершину.",
+          "sourceUrls": [
+            "https://metravel.by/travels/zhivetskie-beskidy-pokhod-k-wielka-rycerzowa-cherez-pshegibek"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-25",
+      "title": "Мосорны Гронь, смотровая башня",
+      "localName": "Wieża widokowa na Mosornym Groniu",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 15582,
+        "sourceTravelId": 637,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/gory-polshi-19-peshikh-marshrutov",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Wieża widokowa na Mosornym Groniu; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 15582,
+          "lat": 49.6224227,
+          "lng": 19.5642096,
+          "sourceUrl": "https://metravel.by/travels/gory-polshi-19-peshikh-marshrutov",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/15582/conversions/7c210d988b3544b9be7fd226bfe4f65b.webp",
+          "sha256": "c0f55e0c0000180a618376348d8fc105978489e583f9b28dc406e5a3770ee181",
+          "bytes": 65704,
+          "widthPx": 768,
+          "heightPx": 1024,
+          "depiction": "target",
+          "caption": "Смотровая башня на Мосорны Гронь.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 1182.2545454545455
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 490.7471698113207
+            }
+          ]
+        },
+        "route": {
+          "start": "Mosorne",
+          "via": [],
+          "finish": "Район башни Mosorny Groń",
+          "scope": "Подход в одну сторону",
+          "distanceKm": 2.7,
+          "elevationGainM": 390,
+          "durationMinutes": 78,
+          "metricNote": "Метрики — оценка указанного варианта; подход к началу и остановки не включены.",
+          "sourceUrls": [
+            "https://mapa-turystyczna.pl/route?q=49.6355780%2C19.5533252%3B49.6224227%2C19.5642096"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-26",
+      "title": "Маркове Шчавины, Музей горного туризма PTTK",
+      "localName": "Muzeum Turystyki Górskiej, Markowe Szczawiny",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14646,
+        "sourceTravelId": 497,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/zimnii-pokhod-na-pereval-brona-przelecz-brona-1408-m-1",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "approach-context",
+        "sourceEvidence": "Точка источника: Muzeum Turystyki Górskiej PTTK; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "verified-coordinate",
+          "accuracy": "site-center",
+          "lat": 49.588149,
+          "lng": 19.517341,
+          "sourceUrl": "https://malopolska.szlaki.pttk.pl/3357-pttk-malopolska-babiogorski-osrodek-historii-turystyki-gorskiej-na-markowych-szczawinach",
+          "checkedOn": "2026-11-01",
+          "evidence": "Official PTTK museum marker for separate former GOPR building; not exact door; official catalog marker; sourceAPIpoint~81.6m away"
+        },
+        "media": {
+          "kind": "owner-original",
+          "sourceId": "owner-20261101-14646-shelter-context",
+          "sha256": "4ae5c428e55dc5b9874f99e402eef337bd973f836d20c51b7e6f2e5a3aeb23af",
+          "bytes": 3290223,
+          "widthPx": 4032,
+          "heightPx": 3024,
+          "depiction": "context",
+          "caption": "Главный приют Markowe Szczawiny рядом с музеем; здание действующей экспозиции на снимке не показано.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 29.333333333333332,
+              "heightMm": 22,
+              "effectivePpi": 3491.3454545454547
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 70.66666666666666,
+              "heightMm": 53,
+              "effectivePpi": 1449.2377358490564
+            }
+          ],
+          "publishedAssociation": {
+            "uri": "https://metravel.by/address-image/6857/conversions/inz101XMv3r98HQwpQoUFaqcB0QF1JhEV3o4FDLn-thumb_400_wp.webp",
+            "sha256": "66b653af173c96b797a34649f08d0a8710bbcba1ed442952bdae765313167e32",
+            "bytes": 24964,
+            "widthPx": 400,
+            "heightPx": 400,
+            "relationship": "exact-visual-match"
+          }
+        },
+        "route": {
+          "start": "Zawoja Markowa",
+          "via": [],
+          "finish": "Район комплекса Markowe Szczawiny",
+          "scope": "Подход в одну сторону",
+          "distanceKm": 3.2,
+          "elevationGainM": 461,
+          "durationMinutes": 100,
+          "metricNote": "Подход в район музея; последний участок к двери не измерен.",
+          "sourceUrls": [
+            "https://mapa-turystyczna.pl/route?q=49.6083242%2C19.5173058%3B49.588149%2C19.517341"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://bgpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "BgPN сообщает о снеге и льде на высоких тропах; проверить условия подхода и работу музея."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-27",
+      "title": "Велька Рача, смотровая башня",
+      "localName": "wieża widokowa na Wielkiej Raczy",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14415,
+        "sourceTravelId": 462,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/pokhod-na-velika-racha-wielka-racza-1236-m",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: wieża widokowa na Wielkiej Raczy; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14415,
+          "lat": 49.4130087,
+          "lng": 18.9691315,
+          "sourceUrl": "https://metravel.by/travels/pokhod-na-velika-racha-wielka-racza-1236-m",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/782d8efae4024dbba9a14ac893419bd2.webp",
+          "sha256": "1202d3d93e3ca96213bc234b29570226ebe276106b53775537539a1bc2d6879e",
+          "bytes": 104158,
+          "widthPx": 1024,
+          "heightPx": 768,
+          "depiction": "target",
+          "caption": "Смотровая беседка и крест на Вельке Раче.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 29.333333333333332,
+              "heightMm": 22,
+              "effectivePpi": 886.690909090909
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 70.66666666666667,
+              "heightMm": 53,
+              "effectivePpi": 368.0603773584905
+            }
+          ]
+        },
+        "route": {
+          "start": "Парковка Pogwarka",
+          "via": [],
+          "finish": "Wielka Racza",
+          "scope": "Подъём в одну сторону",
+          "distanceKm": 5.5,
+          "elevationGainM": 600,
+          "durationMinutes": {
+            "min": 150,
+            "max": 180
+          },
+          "metricNote": "Примерные значения из авторской статьи; относятся ко всему указанному выходу.",
+          "sourceUrls": [
+            "https://metravel.by/travels/pokhod-na-velika-racha-wielka-racza-1236-m"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "author-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-28",
+      "title": "Бяла Виселка — исток Вислы под Бараньей Гурой",
+      "localName": "Biała Wisełka — долина и каскад",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14226,
+        "sourceTravelId": 436,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/barania-gora-istok-visly-v-beskidakh-polsha",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "area-context",
+        "sourceEvidence": "Точка источника: Biała Wisełka; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "verified-coordinate",
+          "lat": 49.6199825,
+          "lng": 18.9858764,
+          "sourceUrl": "https://metravel.by/travels/barania-gora-istok-visly-v-beskidakh-polsha",
+          "checkedOn": "2026-11-01",
+          "evidence": "Координаты опубликованной точки отмечают каскад/участок долины, а не буквальный исток; исходная точка сохранена только как контекст.",
+          "accuracy": "site-center"
+        },
+        "media": {
+          "kind": "owner-original",
+          "sourceId": "owner-20261101-14226",
+          "sha256": "ea94781f8dd797629f36056702b7e1289b85764e162fa68658c646db024cc080",
+          "bytes": 6600855,
+          "widthPx": 3024,
+          "heightPx": 4032,
+          "depiction": "context",
+          "caption": "Водопад на Бялой Виселке; не фотография буквального истока.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 4655.127272727273
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 1932.3169811320754
+            }
+          ],
+          "publishedAssociation": {
+            "uri": "https://metravel.by/address-image/5829/conversions/lMrDc25AEtiJ2gdTQNs3ee7szDCtNUJMczcfskI1-thumb_400_wp.webp",
+            "sha256": "b65c33e83ba3586dcbd5e759d5bcaa83cc970f2691d4fc4747fa99c23cd8ae6b",
+            "bytes": 58320,
+            "widthPx": 400,
+            "heightPx": 400,
+            "relationship": "exact-visual-match"
+          }
+        },
+        "route": {
+          "start": "Начало долины Biała Wisełka",
+          "via": [],
+          "finish": "Каскад долины Biała Wisełka",
+          "scope": "Подход в одну сторону",
+          "distanceKm": 3.2,
+          "elevationGainM": 185,
+          "durationMinutes": 65,
+          "metricNote": "Участок долины и каскад, не буквальный исток.",
+          "sourceUrls": [
+            "https://mapa-turystyczna.pl/route?q=49.6206351%2C18.9461857%3B49.6199825%2C18.9858764"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-29",
+      "title": "Блатня (приют PTTK)",
+      "localName": "Schronisko PTTK na Błatniej",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 16157,
+        "sourceTravelId": 594,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/blatnia-blatnia-nash-pokhod-k-schronisko-pttk-na-blatniej-v-polskikh-beskidakh",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Schronisko PTTK na Błatniej; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 16157,
+          "lat": 49.7474639,
+          "lng": 18.9429028,
+          "sourceUrl": "https://metravel.by/travels/blatnia-blatnia-nash-pokhod-k-schronisko-pttk-na-blatniej-v-polskikh-beskidakh",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/16157/conversions/08133dc6f61e40878ac46016eb167610.webp",
+          "sha256": "407d02d45a31ef042375026296683e5aef088594cf13ae848ac418e8c1a634f7",
+          "bytes": 441582,
+          "widthPx": 1200,
+          "heightPx": 900,
+          "depiction": "target",
+          "caption": "Приют PTTK na Błatniej.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 29.333333333333336,
+              "heightMm": 22,
+              "effectivePpi": 1039.090909090909
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 70.66666666666666,
+              "heightMm": 53,
+              "effectivePpi": 431.3207547169811
+            }
+          ]
+        },
+        "route": {
+          "start": "Wapienica, конец Tartaczna",
+          "via": [],
+          "finish": "Приют Błatnia",
+          "scope": "Подход в одну сторону",
+          "distanceKm": 5.6,
+          "elevationGainM": 490,
+          "durationMinutes": 120,
+          "metricNote": "Примерные значения из авторской статьи; относятся ко всему указанному выходу.",
+          "sourceUrls": [
+            "https://metravel.by/travels/blatnia-blatnia-nash-pokhod-k-schronisko-pttk-na-blatniej-v-polskikh-beskidakh"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "author-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-30",
+      "title": "Шиндзельня, смотровая башня",
+      "localName": "Wieża widokowa przy Kolei Linowej Szyndzielnia",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14230,
+        "sourceTravelId": 437,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/belsko-byala-smotrovaya-bashnya-i-podem-na-tri-kopce",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Wieża widokowa przy Kolei Linowej Szyndzielnia; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14230,
+          "lat": 49.7602615,
+          "lng": 19.0019435,
+          "sourceUrl": "https://metravel.by/travels/belsko-byala-smotrovaya-bashnya-i-podem-na-tri-kopce",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/5859/conversions/7NYDIepa08RI22CqSr7WwPsiPHAvO4564XMLvDSa-detail_hd.jpg",
+          "sha256": "b5ebbd4509fc3eb8afd77c1c8c3930861c8873c9d8b2a6872d103e41e9763a40",
+          "bytes": 701549,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Смотровая башня рядом с верхней станцией Szyndzielnia.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        },
+        "route": {
+          "start": "Dolina Wapienicy",
+          "via": [],
+          "finish": "Район башни Szyndzielnia",
+          "scope": "Подъём в одну сторону, без лестницы башни",
+          "distanceKm": 5,
+          "elevationGainM": 534,
+          "durationMinutes": 127,
+          "metricNote": "Подъём к башне, без ступеней и посещения башни.",
+          "sourceUrls": [
+            "https://mapa-turystyczna.pl/route?q=49.7869950%2C18.9808390%3B49.7602615%2C19.0019435"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-31",
+      "title": "Лесковец (922 м)",
+      "localName": "Leskowiec 922 m npm",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14630,
+        "sourceTravelId": 492,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/leskovets-922-m-legkii-marshrut-v-beskidakh",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Leskowiec 922 m npm; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14630,
+          "lat": 49.7882894,
+          "lng": 19.4436121,
+          "sourceUrl": "https://metravel.by/travels/leskovets-922-m-legkii-marshrut-v-beskidakh",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/8a8165f0c5f1405b90dc0bcb208db6ef.webp",
+          "sha256": "6ed9cdcef9200baf8891bb7465e7a00ca8c12ca2cf6e2019a87cb5c49d9e3ffc",
+          "bytes": 200862,
+          "widthPx": 768,
+          "heightPx": 1024,
+          "depiction": "target",
+          "caption": "Заснеженный подход к вершине Лесковца и кресту.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 1182.2545454545455
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 490.7471698113207
+            }
+          ]
+        },
+        "route": {
+          "start": "Rzyki / Mydlarze",
+          "via": [],
+          "finish": "Rzyki / Mydlarze",
+          "scope": "Круг с возвращением",
+          "distanceKm": 6,
+          "elevationGainM": 400,
+          "durationMinutes": {
+            "min": 150,
+            "max": 210
+          },
+          "metricNote": "Примерные значения из авторской статьи; относятся ко всему указанному выходу.",
+          "sourceUrls": [
+            "https://metravel.by/travels/leskovets-922-m-legkii-marshrut-v-beskidakh"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "author-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-32",
+      "title": "Тронка и хатка «Лимба»",
+      "localName": "Смотровая беседка на вершине Trzonka (около 727–729 м)",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 16249,
+        "sourceTravelId": 608,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/chatka-ktg-limba-i-osennii-marshrut-po-beskid-maly",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Смотровая беседка на вершине Trzonka (около 727–729 м); физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 16249,
+          "lat": 49.8166167,
+          "lng": 19.2751361,
+          "sourceUrl": "https://metravel.by/travels/chatka-ktg-limba-i-osennii-marshrut-po-beskid-maly",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/16249/conversions/7902180cf50a4245904ac1e9ea63bfb3.webp",
+          "sha256": "d5c2a20c67c1a2c453ea26d25e28e6af1b12c0e9d5a345aab412be734c92de55",
+          "bytes": 156778,
+          "widthPx": 900,
+          "heightPx": 1200,
+          "depiction": "target",
+          "caption": "Смотровая беседка на Тронке; хатка «Лимба» в кадре не показана.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 1385.4545454545455
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 575.0943396226414
+            }
+          ]
+        },
+        "route": {
+          "start": "Wielka Puszcza",
+          "via": [
+            "Tronka"
+          ],
+          "finish": "Район хатки Limba",
+          "scope": "Подход в одну сторону",
+          "distanceKm": 5,
+          "elevationGainM": 356,
+          "durationMinutes": 109,
+          "metricNote": "Подход проходит Тронку и район хатки; её работа не подтверждена.",
+          "sourceUrls": [
+            "https://mapa-turystyczna.pl/route?q=49.8088611%2C19.2514639%3B49.8166167%2C19.2751361%3B49.8142823%2C19.2800403"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-33",
+      "title": "Снежка",
+      "localName": "Śnieżka / Sněžka",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14162,
+        "sourceTravelId": 421,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Śnieżka / Sněžka; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14162,
+          "lat": 50.7359303,
+          "lng": 15.7397819,
+          "sourceUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/5aab07c140f7415595927842f05a9a8e.JPG.webp",
+          "sha256": "b0623a201c8b2ef338d2c28fee66135057308a3916709d70e6ca609248a4c149",
+          "bytes": 97130,
+          "widthPx": 800,
+          "heightPx": 600,
+          "depiction": "target",
+          "caption": "Вершина Снежки.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 29.333333333333332,
+              "heightMm": 22,
+              "effectivePpi": 692.7272727272727
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 70.66666666666667,
+              "heightMm": 53,
+              "effectivePpi": 287.5471698113207
+            }
+          ]
+        },
+        "route": {
+          "start": "Pec pod Sněžkou",
+          "via": [
+            "Obří důl"
+          ],
+          "finish": "Вершина Sněžka",
+          "scope": "Подъём в одну сторону",
+          "distanceKm": 7,
+          "elevationGainM": 863,
+          "durationMinutes": 192,
+          "metricNote": "Чешский вариант через Obří důl, не авторский маршрут.",
+          "sourceUrls": [
+            "https://www.krkonose.eu/en/pec-pod-snezkou-through-obri-dul-snezka"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "gpx-measurement",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://kpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "KPN сообщает о снеге, льде и тумане; актуальные ограничения проверить перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-34",
+      "title": "Снежные Котлы",
+      "localName": "Снежные Котлы (обсерватория)",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 15652,
+        "sourceTravelId": 640,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/snezhnye-kotly-pokhod-po-karkonoshe-cherez-shrenitsu",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Снежные Котлы (обсерватория); физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 15652,
+          "lat": 50.77755,
+          "lng": 15.55955,
+          "sourceUrl": "https://metravel.by/travels/snezhnye-kotly-pokhod-po-karkonoshe-cherez-shrenitsu",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/15652/conversions/a197f5958ce3413a90695269615a01f9.webp",
+          "sha256": "72f966f41eb5123be4f3d1cf6af65a364fff005f8f948742bc36ee9e1645de16",
+          "bytes": 171582,
+          "widthPx": 768,
+          "heightPx": 1024,
+          "depiction": "target",
+          "caption": "Снежные Котлы и здание над котловиной.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 1182.2545454545455
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 490.7471698113207
+            }
+          ]
+        },
+        "route": {
+          "start": "Szklarska Poręba",
+          "via": [
+            "Kamieńczyk",
+            "Szrenica",
+            "Śnieżne Kotły",
+            "приют pod Łabskim"
+          ],
+          "finish": "Szklarska Poręba",
+          "scope": "Круг с возвращением",
+          "distanceKm": {
+            "min": 18,
+            "max": 20
+          },
+          "elevationGainM": 900,
+          "durationMinutes": {
+            "min": 480,
+            "max": 540
+          },
+          "metricNote": "Вся петля через Szrenica и котлы, не короткий подход к виду.",
+          "sourceUrls": [
+            "https://metravel.by/travels/snezhnye-kotly-pokhod-po-karkonoshe-cherez-shrenitsu"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://kpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "KPN сообщает о снеге, льде и тумане; актуальные ограничения проверить перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-35",
+      "title": "Лабский Щит",
+      "localName": "Łabski Szczyt / Violík",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 15674,
+        "sourceTravelId": 640,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/snezhnye-kotly-pokhod-po-karkonoshe-cherez-shrenitsu",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "area-context",
+        "sourceEvidence": "Точка источника: Лабский Щит; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "verified-coordinate",
+          "accuracy": "site-center",
+          "lat": 50.7804462,
+          "lng": 15.5456429,
+          "sourceUrl": "https://www.openstreetmap.org/node/343645604",
+          "checkedOn": "2026-11-01",
+          "evidence": "Łabski Szczyt / Violík summit rock; walking route runs beside it, no climb claim; OSM peak coordinate, cross-identified by official KRNAP PDF; not park-survey precision"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/15674/conversions/c212a0e674074550b525582f38ae6976.webp",
+          "sha256": "b731f18979d231eb72389e579cf602242915589b7b23a0aab6d99a6ed299345b",
+          "bytes": 401714,
+          "widthPx": 1600,
+          "heightPx": 1200,
+          "depiction": "context",
+          "caption": "Вид с хребта в сторону приюта под Лабским Щитом; вершина Violík не подтверждена в кадре.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 29.333333333333332,
+              "heightMm": 22,
+              "effectivePpi": 1385.4545454545455
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 70.66666666666667,
+              "heightMm": 53,
+              "effectivePpi": 575.0943396226414
+            }
+          ]
+        },
+        "route": {
+          "start": "Верхняя станция Szrenica",
+          "via": [
+            "Łabski Szczyt",
+            "Śnieżne Kotły"
+          ],
+          "finish": "Минералогический музей, Szklarska Poręba",
+          "scope": "Пеший переход в одну сторону после канатки",
+          "distanceKm": 15.5,
+          "elevationGainM": 621,
+          "durationMinutes": 320,
+          "metricNote": "Пеший переход после канатки; рядом со скалой, без восхождения на неё.",
+          "sourceUrls": [
+            "https://turystyczna.szklarskaporeba.pl/2799-szklarskaporeba-latwizna-dla-twardzieli"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://kpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "KPN сообщает о снеге, льде и тумане; актуальные ограничения проверить перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-36",
+      "title": "Дикий водопад",
+      "localName": "Dziki Wodospad",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14165,
+        "sourceTravelId": 421,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Dziki Wodospad; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14165,
+          "lat": 50.7686566,
+          "lng": 15.7277656,
+          "sourceUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/d54535fcf4814264ac28a1f787b826d5.JPG.webp",
+          "sha256": "ef4cd7dc6ef88241267d724ab803ed32444986b20a28d9b4512429138e5c696f",
+          "bytes": 173216,
+          "widthPx": 800,
+          "heightPx": 600,
+          "depiction": "target",
+          "caption": "Дикий водопад на Ломнице; архивная фотография из статьи.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 29.333333333333332,
+              "heightMm": 22,
+              "effectivePpi": 692.7272727272727
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 70.66666666666667,
+              "heightMm": 53,
+              "effectivePpi": 287.5471698113207
+            }
+          ]
+        },
+        "route": {
+          "start": "Karpacz, Olimpijska",
+          "via": [
+            "район Dziki Wodospad"
+          ],
+          "finish": "Karpacz, Nad Łomnicą",
+          "scope": "Переход в одну сторону",
+          "distanceKm": 4.5,
+          "elevationGainM": 178,
+          "durationMinutes": 84,
+          "metricNote": "Историческая прогулка 08.08.2020; время — средняя оценка провайдера, не запись длительности.",
+          "sourceUrls": [
+            "https://www.traseo.pl/trasa/spacer-do-dzikiego-wodospadu"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "historical-provider",
+          "routeDate": "2020-08-08",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "restricted",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://kpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Ограждения повреждённой плотины у Дикого водопада.",
+            "note": "Исторический маршрут 2020 года. По сообщению KPN, подход за ограждения у повреждённой плотины ограничен; не пересекайте ограждения. Это не означает закрытие всех видовых точек."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-37",
+      "title": "Цветные озёрца, Рудавы Яновицке",
+      "localName": "Kolorowe Jeziorka",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14156,
+        "sourceTravelId": 421,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Kolorowe Jeziorka; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14156,
+          "lat": 50.8287848,
+          "lng": 15.9741082,
+          "sourceUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/4b0c6244a56445d3b1ee9a46755afedd.JPG.webp",
+          "sha256": "229640ce1ef3c9866279f0ce8ce37c14b2918ebf24984174b819fa4ff1b3621d",
+          "bytes": 129000,
+          "widthPx": 800,
+          "heightPx": 450,
+          "depiction": "target",
+          "caption": "Цветные озёрца в Рудавах Яновицких.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 39.111111111111114,
+              "heightMm": 22,
+              "effectivePpi": 519.5454545454545
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 94.22222222222221,
+              "heightMm": 53,
+              "effectivePpi": 215.66037735849056
+            }
+          ]
+        },
+        "route": {
+          "start": "Парковка у Kolorowe Jeziorka",
+          "via": [
+            "Kolorowe Jeziorka",
+            "Pod Wielką Kopą"
+          ],
+          "finish": "Та же парковка",
+          "scope": "Круг с возвращением",
+          "distanceKm": 6.3,
+          "elevationGainM": 324,
+          "durationMinutes": 134,
+          "metricNote": "Весь круг через озёрца и Pod Wielką Kopą, не короткий вход к нижнему озеру. Набор провайдера 324 м, сырая сумма GPX 352 м — отдельно.",
+          "sourceUrls": [
+            "https://mapa-turystyczna.pl/route/30kde"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-38",
+      "title": "Смотровая скала у Щитны (Столовые горы)",
+      "localName": "Skała Widokowa koło Szczytnej (Góry Stołowe)",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14247,
+        "sourceTravelId": 438,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Skała Widokowa koło Szczytnej (Góry Stołowe); физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14247,
+          "lat": 50.4110584,
+          "lng": 16.4566743,
+          "sourceUrl": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "owner-original",
+          "sourceId": "owner-20261101-14247",
+          "sha256": "bc110292655595161a1d7521a70fa6f9504f3bb1389414852bc97df9a088dec0",
+          "bytes": 5272347,
+          "widthPx": 3024,
+          "heightPx": 4032,
+          "depiction": "target",
+          "caption": "Смотровая скала и ограждение у Щитны.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 4655.127272727273
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 1932.3169811320754
+            }
+          ]
+        },
+        "route": {
+          "start": "Начало жёлтой тропы у Щитны",
+          "via": [
+            "ворота Leśna Skała"
+          ],
+          "finish": "Смотровая скала Orle Skały",
+          "scope": "Подход в одну сторону",
+          "distanceKm": 0.9,
+          "elevationGainM": 108,
+          "durationMinutes": 24,
+          "metricNote": "Подход к скале через район замковых ворот; доступ нужно проверить.",
+          "sourceUrls": [
+            "https://mapa-turystyczna.pl/route?q=50.4135430%2C16.4488370%3B50.4110584%2C16.4566743"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": "https://pngs.gov.pl/godziny-udostepniania-tras-turystycznych",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-39",
+      "title": "Велька Сова, смотровая башня",
+      "localName": "Wieża widokowa na Wielkiej Sowie",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14642,
+        "sourceTravelId": 495,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/gora-bolshaya-sova-1015",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Wieża widokowa na Wielkiej Sowie; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14642,
+          "lat": 50.6802981,
+          "lng": 16.485723,
+          "sourceUrl": "https://metravel.by/travels/gora-bolshaya-sova-1015",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/4296205d8e514a4c886c719b0a2534d9.webp",
+          "sha256": "e009c376bfd2ee8bee36bed138416a756e61bf2a6c11d007fbbc993b46a2c048",
+          "bytes": 107208,
+          "widthPx": 1024,
+          "heightPx": 576,
+          "depiction": "context",
+          "caption": "Панорама со смотровой башни Велька Сова.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 39.111111111111114,
+              "heightMm": 22,
+              "effectivePpi": 665.0181818181817
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 94.22222222222223,
+              "heightMm": 53,
+              "effectivePpi": 276.0452830188679
+            }
+          ]
+        },
+        "route": {
+          "start": "Kamionki, Lipowa 5",
+          "via": [],
+          "finish": "Башня Wielka Sowa",
+          "scope": "Подъём в одну сторону",
+          "distanceKm": 7.3,
+          "elevationGainM": 686,
+          "durationMinutes": 130,
+          "metricNote": "Примерные значения из авторской статьи; относятся ко всему указанному выходу.",
+          "sourceUrls": [
+            "https://metravel.by/travels/gora-bolshaya-sova-1015"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "author-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-01",
+            "authorityUrl": null,
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Текущий доступ не подтверждён; сверить предупреждения перед выходом."
+          }
+        }
+      }
+    },
+    {
+      "id": "mountains-pl-40",
+      "title": "Тарница (Бещады)",
+      "localName": "Tarnica",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14370,
+        "sourceTravelId": 450,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/podkarpatskoe-voevodstvo-beshchady-zamki-i-marshrut",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "area-context",
+        "sourceEvidence": "Точка источника: Jaskinia w Tarnicy; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "verified-coordinate",
+          "accuracy": "site-center",
+          "lat": 49.074529,
+          "lng": 22.726319,
+          "sourceUrl": "https://bdpn.gov.pl/uploads/files/657acebcb28fa809508472.gpx",
+          "checkedOn": "2026-11-01",
+          "evidence": "Tarnica summit, official BdPN linked-GPX endpoint; GPX published endpoint; not fabricated API ID"
+        },
+        "media": {
+          "kind": "owner-original",
+          "sourceId": "owner-20261101-14370",
+          "sha256": "3ee052200286f69d05ceaa6edaa441d947d28fc72bbc2f05be789f01409cd400",
+          "bytes": 1752192,
+          "widthPx": 4032,
+          "heightPx": 3024,
+          "depiction": "context",
+          "caption": "Зимний поход в массиве Тарницы, январь 2022; вершина и крест не показаны.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 29.333333333333332,
+              "heightMm": 22,
+              "effectivePpi": 3491.3454545454547
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 70.66666666666666,
+              "heightMm": 53,
+              "effectivePpi": 1449.2377358490564
+            }
+          ],
+          "publishedAssociation": {
+            "uri": "https://metravel.by/travel-description-image/eca869b5cd1340bc85c0d0cd1d357cbe.JPG.webp",
+            "sha256": "54a0e104d548864c640b27aeca4c8f1d6ac7a501547527b800f8c88232767dac",
+            "bytes": 35760,
+            "widthPx": 800,
+            "heightPx": 600,
+            "relationship": "exact-visual-match"
+          }
+        },
+        "route": {
+          "start": "Wołosate, старое бойковское кладбище",
+          "via": [
+            "Przełęcz pod Tarnicą"
+          ],
+          "finish": "Вершина Tarnica",
+          "scope": "Подход в одну сторону",
+          "distanceKm": 4.4,
+          "elevationGainM": 620,
+          "durationMinutes": 125,
+          "metricNote": "По официальному GPX к вершине; зимняя фотография относится к массиву.",
+          "sourceUrls": [
+            "https://bdpn.gov.pl/szlaki-turystyczne/sciezka-przyrodniczo-historyczna-wolosate-tarnica"
+          ],
+          "checkedOn": "2026-11-01",
+          "routeUse": "itinerary-reference",
+          "sourceType": "provider-estimate",
+          "difficulty": "Официальная оценка не проверена",
+          "seasonality": "Проверить погоду и сезонные ограничения",
+          "availability": {
+            "status": "unknown",
+            "checkedOn": "2026-11-02",
+            "authorityUrl": "https://bdpn.gov.pl/komunikat-turystyczny",
+            "affectedScope": "Указанный вариант маршрута; открытость всех участков не подтверждена.",
+            "note": "Проверить свежие сообщения BdPN; найденное предупреждение о ветре датировано 08.10, доступ не гарантирован."
+          }
+        }
+      }
+    }
+  ],
+  "reserve": []
+}

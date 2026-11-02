@@ -31,6 +31,8 @@ export type CatalogPlace = TravelCoords & {
   id: string
   travelId: number | null
   relatedTravelId: number | null
+  /** Exact article point supplied by the catalog, distinct from the grouped place id. */
+  sourcePointId?: number | null
   title: string
   category: string
   categoryId: number | null
@@ -71,7 +73,7 @@ type RawCatalogImage = { thumb_url?: unknown; landscape_url?: unknown }
 type RawCatalogItem = {
   id?: unknown
   travel_id?: unknown
-  primary_source?: { travel_id?: unknown } | null
+  primary_source?: { travel_id?: unknown; point_id?: unknown } | null
   urlTravel?: unknown
   title?: unknown
   address?: unknown
@@ -333,6 +335,7 @@ const mapCatalogItem = (raw: unknown): CatalogPlace | null => {
     id,
     travelId,
     relatedTravelId: travelId,
+    sourcePointId: parseTravelId(item.primary_source?.point_id),
     title,
     category,
     categoryId,

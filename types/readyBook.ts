@@ -1,5 +1,5 @@
 import type {z} from 'zod';
-import type {editorialBookDraftSchema, editorialStop} from '../data/travelBooks/schema/editorial.ts';
+import type {editorialBookDraftSchema, editorialStop, thematicEditorialBookDraftSchema, thematicEditorialStop, placeBookDraftSchema} from '../data/travelBooks/schema/editorial.ts';
 import type {bookArtifactSchema, readyBookSchema} from '../data/travelBooks/schema/manifest.ts';
 import type {printProfileSchema} from '../data/travelBooks/schema/profiles.ts';
 
@@ -11,3 +11,9 @@ export type BookArtifact = z.infer<typeof bookArtifactSchema>;
 export type PrintProfile = z.infer<typeof printProfileSchema>;
 export type Preview = ReadyBook['preview'][number];
 export type {BookSeries, SeriesKit} from '../data/travelBooks/schema/series.ts';
+
+export type ThematicEditorialBookDraft = z.infer<typeof thematicEditorialBookDraftSchema>;
+export type ThematicEditorialStop = z.infer<typeof thematicEditorialStop>;
+export type PlaceBookDraft = z.infer<typeof placeBookDraftSchema>;
+export type PlaceBookStop = EditorialStop | ThematicEditorialStop;
+export type {ThematicEvidence} from '../data/travelBooks/schema/thematic.ts';

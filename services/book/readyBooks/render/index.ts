@@ -1,10 +1,11 @@
 import {escapeHtml, buildSafeImageUrl} from '../../../pdf-export/utils/htmlUtils';
 import {buildReadyBookPagePlan, MIN_READY_BOOK_STOPS} from '../composition';
 import {printProfileSchema} from '../../../../data/travelBooks/schema/profiles';
-import {editorialBookDraftSchema} from '../../../../data/travelBooks/schema/editorial';
-import type {EditorialBookDraft, PrintProfile} from '../../../../types/readyBook';
+import {placeBookDraftSchema} from '../../../../data/travelBooks/schema/editorial';
+import type {PlaceBookDraft, PrintProfile} from '../../../../types/readyBook';
 import {readyBookStyles} from './styles';
 import {renderBodyPage, renderCoverPage} from './pages';
+import {thematicPrintStyles} from './thematic';
 
 export interface EmbeddedBookAsset {
   dataUri: string;
@@ -19,7 +20,7 @@ export interface EmbeddedBookAsset {
   widthPx?: number; heightPx?: number;
 }
 export interface ReadyBookRenderInput {
-  book: EditorialBookDraft;
+  book: PlaceBookDraft;
   profile: PrintProfile;
   purpose: 'read' | 'print-shop';
   estimatedMinIllustrationPpi?: number;
@@ -41,7 +42,7 @@ export function embeddedImage(value: string): string {
 /** Physical editorial layouts are independent of the personal travel-export settings. */
 export function buildReadyBookHtml(input: ReadyBookRenderInput) {
   const {book, purpose} = input;
-  editorialBookDraftSchema.parse(book);
+  placeBookDraftSchema.parse(book);
   if (book.stops.length < MIN_READY_BOOK_STOPS) throw new Error(`Ready books require at least ${MIN_READY_BOOK_STOPS} selected places`);
   const profile = printProfileSchema.parse(input.profile);
   if ((purpose === 'read') !== (profile.bleedMm === 0)) throw new Error('Bleed does not match output purpose');
@@ -56,10 +57,11 @@ export function buildReadyBookHtml(input: ReadyBookRenderInput) {
   }
   embeddedImage(input.cover.dataUri);
   const plan = buildReadyBookPagePlan(book);
-  const stylesCss = readyBookStyles(profile, input.fonts, book.visualStyle);
+  const thematic = 'sourceContract' in book && book.sourceContract === 'thematic-v1';
+  const stylesCss = readyBookStyles(profile, input.fonts, book.visualStyle) + (thematic ? thematicPrintStyles : '');
   const page = (number: number, kind: string, content: string, component = 'body') => {
     const side = number % 2 === 0 ? 'left' : 'right';
-    return `<section class="book-page ${profile.id === 'pocket-150x100' ? 'pocket-layout' : 'album-layout'} ${side} ${component} ${kind}" data-folio="${number}" data-kind="${kind}" style="--inner:${profile.bindingMm}mm;--outer:${profile.safeMm}mm"><div class="trim">${content}</div></section>`;
+    return `<section class="book-page ${profile.id === 'pocket-150x100' ? 'pocket-layout' : 'album-layout'} ${side} ${component} ${kind}${thematic ? ' thematic' : ''}" data-folio="${number}" data-kind="${kind}" style="--inner:${profile.bindingMm}mm;--outer:${profile.safeMm}mm"><div class="trim">${content}</div></section>`;
   };
   const bodyPages = plan.map(entry => {
     const stop = 'stopId' in entry ? book.stops.find(item => item.id === entry.stopId) : undefined;

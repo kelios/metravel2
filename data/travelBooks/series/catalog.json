@@ -10,9 +10,9 @@
       "bookIds": [
         "poland-mountains-memory"
       ],
-      "status": "planned",
+      "status": "ready",
       "title": "Горы Польши",
-      "kit": "mountains-pl.json",
+      "kit": "mountains-pl-sources.json",
       "targetPlaces": 40
     },
     {
@@ -24,9 +24,9 @@
       "bookIds": [
         "poland-castles-memory"
       ],
-      "status": "planned",
+      "status": "ready",
       "title": "Замки Польши",
-      "kit": "castles-pl.json",
+      "kit": "castles-pl-sources.json",
       "targetPlaces": 30
     }
   ]

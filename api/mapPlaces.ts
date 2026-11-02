@@ -222,11 +222,18 @@ export const readMapPlaceMarkerFields = (
   return out;
 };
 
+/** Exact TravelAddress identity; grouped placeId and article travelId are different entities. */
+export const resolveMapPointSourceId = (record: MapPlaceRecordLike | null | undefined): number | null => {
+  if (!record) return null;
+  const pointId = readNumberOrNull(record.primarySource ? record.primarySource.pointId : record.id);
+  return pointId != null && Number.isSafeInteger(pointId) && pointId > 0 ? pointId : null;
+};
+
 /** Best-effort source из плоской legacy-записи (для локального слияния). */
 const derivePlaceSourceFromRecord = (record: MapPlaceRecordLike): MapPlaceSource | null => {
   if (record.primarySource) return record.primarySource;
 
-  const pointId = readNumberOrNull(record.id);
+  const pointId = resolveMapPointSourceId(record);
   const articleUrl = readStringOrNull(record.articleUrl) ?? readStringOrNull(record.urlTravel);
   const thumbnailUrl =
     readStringOrNull(record.travelImageThumbUrl) ?? readStringOrNull(record.imageUrl);

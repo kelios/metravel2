@@ -2,10 +2,36 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[4] / 'scripts/books'))
-from pdf_text import missing_book_text, story_present
+from pdf_text import missing_book_text, missing_thematic_links, story_present
 
 
 class PdfTextTest(unittest.TestCase):
+    def test_thematic_caption_route_ranges_access_and_links_stay_on_their_folio(self):
+        route = {'start': 'Начало', 'via': ['Перевал'], 'finish': 'Вершина', 'scope': 'В одну сторону',
+                 'distanceKm': {'min': 5, 'max': 6}, 'elevationGainM': {'min': 100, 'max': 200}, 'durationMinutes': 90,
+                 'metricNote': 'Время оценочное.', 'difficulty': 'Оценка сложности не проверена.',
+                 'seasonality': 'Снег возможен.', 'sourceType': 'provider-estimate', 'sourceUrls': ['https://trail.example/route/1'],
+                 'availability': {'checkedOn': '2026-11-02', 'note': 'За ограждение не заходить.', 'authorityUrl': 'https://park.example/notices'}}
+        stop = {'id': 'mountain', 'title': 'Гора', 'text': {'compact': 'История горы.'},
+                'thematic': {'media': {'caption': 'Контекстный вид массива.'}, 'route': route}}
+        book = {'sourceContract': 'thematic-v1', 'stops': [stop]}
+        page_map = [{'kind': 'destination', 'stopId': 'mountain', 'folio': 5}]
+        whole = ('Гора История горы. Контекстный вид массива. Начало → Перевал → Вершина. В одну сторону. '
+                 '5–6 км · ↑ 100–200 м · 90 мин. Время оценочное. Оценка сложности не проверена. Снег возможен. '
+                 'Доступ (2026-11-02): За ограждение не заходить. Оценка провайдера: trail.example. Доступ: park.example.')
+        pages = [''] * 6; pages[4] = whole
+        self.assertEqual(missing_book_text(book, pages, 'pocket-150x100', page_map), [])
+        pages[4] = whole.replace('Контекстный вид массива.', '').replace('За ограждение не заходить.', '')
+        pages[5] = whole
+        missing = missing_book_text(book, pages, 'pocket-150x100', page_map)
+        self.assertIn('Контекстный вид массива.', missing)
+        self.assertIn('За ограждение не заходить.', missing)
+        plan = {'sheets': [{'front': [{'folio': 5}], 'back': [{'folio': None}]}]}
+        self.assertEqual(missing_book_text(book, [whole, ''], 'pocket-150x100', page_map, plan), [])
+        expected = set(route['sourceUrls'] + [route['availability']['authorityUrl']])
+        self.assertEqual(missing_thematic_links(book, [expected, set()], page_map, plan), [])
+        self.assertEqual(len(missing_thematic_links(book, [set(), expected], page_map, plan)), 2)
+
     def test_whole_prose_stays_on_destination(self):
         self.assertTrue(story_present('Целый рассказ.', 'Место Целый\nрассказ.'))
         self.assertFalse(story_present('Первое слово. Второе слово.', 'Первое слово. Другое слово.'))

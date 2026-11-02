@@ -8,7 +8,7 @@ export const booksCss=`
 .ready-books-grid{display:grid;grid-template-columns:1fr;gap:24px}.ready-books-card{border:1px solid currentColor;border-radius:${DESIGN_TOKENS.radii.lg}px;overflow:hidden}
 .ready-books-card>div{padding:20px}.ready-books-card img{display:block;width:100%;aspect-ratio:1.5;object-fit:contain}
 .ready-books-note{border:1px solid currentColor;padding:16px;border-radius:${DESIGN_TOKENS.radii.md}px}.ready-books-note h2{margin-top:0}.ready-books summary{cursor:pointer;min-height:44px}
-.ready-books-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:16px 0}.ready-books-controls label{display:flex;gap:8px;align-items:center;min-height:44px}
+.ready-books-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:16px 0}.ready-books-controls label{display:flex;gap:8px;align-items:center;min-height:44px}.ready-books fieldset.ready-books-controls{padding:12px 16px;border:1px solid currentColor;border-radius:${DESIGN_TOKENS.radii.md}px;min-width:0}
 .ready-books-pages{display:flex;gap:12px;align-items:flex-start;overflow:auto;min-height:280px}.ready-books-paper{position:relative;flex:1;min-width:0;display:flex;align-items:center;justify-content:center;border:1px solid currentColor}.ready-books-paper img{width:100%;display:block}
 .ready-books-preview{padding:20px;border:1px solid currentColor;border-radius:${DESIGN_TOKENS.radii.lg}px;margin-top:20px}
 .ready-books-files{list-style:none;padding:0}.ready-books-files li{padding:16px 0;border-bottom:1px solid currentColor;display:flex;flex-wrap:wrap;gap:12px;align-items:center}.ready-books-files li>span{flex:1;min-width:180px}

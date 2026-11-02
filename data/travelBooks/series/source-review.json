@@ -1,0 +1,1049 @@
+{
+  "schemaVersion": 1,
+  "checkedOn": "2026-11-01",
+  "authorId": 1,
+  "draftSha256": "16899d845d58f457a3cee34b2f2efeabf793354da0d7d849fa0b6e2f7b7597c5",
+  "independentReview": "Все 70 выборов источников приняты с обязательной видимой ролью контекста, границами маршрутов и отдельной проверкой публикации. Это не признание готовности PDF.",
+  "records": [
+    {
+      "id": "mountains-pl-01",
+      "sourcePointId": 14117,
+      "sourceTravelId": 416,
+      "sourceApiSha256": "f9fcbcf2a695b5643e66358588afe65b254ccf3f255f7b7a36dfedaf71fb7fb2",
+      "mediaSha256": "b3d7d3a38a4fdebb636e9701e17a8c82b2cbe87553436c8d88672a4a3c672574",
+      "originalSelectionPointId": 14117,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "published cumulative ascent",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://malopolska.szlaki.pttk.pl/481-pttk-malopolska-giewont-kuznice"
+      ],
+      "selectedRouteScope": "one-way-ascent",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-02",
+      "sourcePointId": 14538,
+      "sourceTravelId": 479,
+      "sourceApiSha256": "8671ee7220fb57af7cafc306b0bdd68624ef726fc6a5c9b8a6cb0bcbd6c18e37",
+      "mediaSha256": "4f681603e3ff685d3006e78c6580babadb9e47fe4f9ccb2558cca8c650493d12",
+      "originalSelectionPointId": 14538,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "published cumulative ascent",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://malopolska.szlaki.pttk.pl/483-pttk-malopolska-kasprowy-wierch-kuznice"
+      ],
+      "selectedRouteScope": "one-way-ascent",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-03",
+      "sourcePointId": 14558,
+      "sourceTravelId": 482,
+      "sourceApiSha256": "858be1135ab595d5c3388fe100842d6b6bb420064c6c0773936d77fe00767bb6",
+      "mediaSha256": "53d65b53e1133032dbdfce30178585013b1aec4bc6ecb66a6924298d96001fdb",
+      "originalSelectionPointId": 14558,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "primary provider published cumulative ascent",
+        "durationMinutes": "route-planner estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://mapa-turystyczna.pl/route/3kw"
+      ],
+      "selectedRouteScope": "one-way Schronisko PTTK Murowaniec door-side mapped point via Rozejście szlaków/Hala Gąsienicowa to Czarny Staw north bank",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-04",
+      "sourcePointId": 13886,
+      "sourceTravelId": 362,
+      "sourceApiSha256": "28539a0a09656ed8c64ff4b93467f6faa49f2e698a7347cb6b71fcdb97e9f859",
+      "mediaSha256": "dcfc76d4cedd75af2be1a81ce4ef6319bb42e58e8313255cbbe90ba6fa549864",
+      "originalSelectionPointId": 13886,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "published cumulative ascent",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://malopolska.szlaki.pttk.pl/462-pttk-malopolska-wokol-morskiego-oka-czesc-zachodnia"
+      ],
+      "selectedRouteScope": "western-shore-walk-segment",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-05",
+      "sourcePointId": 14042,
+      "sourceTravelId": 400,
+      "sourceApiSha256": "b0d946c68beae3fe3cd8df1a84ad69c1aa7ce34d1346bc5cf48c67a74c20644c",
+      "mediaSha256": "50edbb01e69c0c678b8fce5c1dc4fd7ef255bed1f9eb93db32d5262cf2de8fc7",
+      "originalSelectionPointId": 14042,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "published cumulative ascent",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://malopolska.szlaki.pttk.pl/489-pttk-malopolska-szlak-letni"
+      ],
+      "selectedRouteScope": "named-short-summer-approach-segment",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-06",
+      "sourcePointId": 14444,
+      "sourceTravelId": 466,
+      "sourceApiSha256": "ef5f08ca54565a1f5ce227f2ae7f5bb0524601d0895c95f21b71a025f265b407",
+      "mediaSha256": "a4f9af1a387c16ce616bc24631f4f6878ff20a7de3f0bdaa2790d2d3f888a013",
+      "originalSelectionPointId": 14444,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "published cumulative ascent",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://malopolska.szlaki.pttk.pl/498-pttk-malopolska-hala-ornak-smreczynski-staw"
+      ],
+      "selectedRouteScope": "named-short-approach-segment",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-07",
+      "sourcePointId": 14442,
+      "sourceTravelId": 466,
+      "sourceApiSha256": "ef5f08ca54565a1f5ce227f2ae7f5bb0524601d0895c95f21b71a025f265b407",
+      "mediaSha256": "8b7498b7b0c89a365eb042dd7f60008881b56ba4b4e21649d67b8e060e3bf9ab",
+      "originalSelectionPointId": 14442,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "published cumulative ascent",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://malopolska.szlaki.pttk.pl/507-pttk-malopolska-dol-koscieliska-do-mylnej-i-raptawickiej-jaskinia-raptawicka"
+      ],
+      "selectedRouteScope": "named-short-approach-segment",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-08",
+      "sourcePointId": 15039,
+      "sourceTravelId": 563,
+      "sourceApiSha256": "c62b9219822aa0c5b97131178a98160670fe0e63e45f63c85d6a1ca3092a73b2",
+      "mediaSha256": "01b3e149bc7215bf63a7f4de4e0301c48d8d2f231a30730fded3f64cbe9d7d7a",
+      "originalSelectionPointId": 15039,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "published cumulative ascent",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://malopolska.szlaki.pttk.pl/443-pttk-malopolska-szlak-do-kapliczki-sw-jana"
+      ],
+      "selectedRouteScope": "named-meadow-walk-segment",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-09",
+      "sourcePointId": 14967,
+      "sourceTravelId": 553,
+      "sourceApiSha256": "067da2d385c266c6448167f98627b08b9860a6f6674e2ea620ee1a4f5cc8814a",
+      "mediaSha256": "a7d01d49577e64bb3dd6fdb9a530567f46f50f148ec37c151c0141b003ad6cac",
+      "originalSelectionPointId": 14967,
+      "contextCaption": true,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "published cumulative ascent",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://malopolska.szlaki.pttk.pl/475-pttk-malopolska-sciezka-nad-reglami"
+      ],
+      "selectedRouteScope": "named-eastern-main-trail-section",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-10",
+      "sourcePointId": 14411,
+      "sourceTravelId": 461,
+      "sourceApiSha256": "d1b3e948a2a89a1f9de4adfa06a7cf01453c3ce79b7e44c4f89037e5647a8a5a",
+      "mediaSha256": "a70afb0586d4fbc8763b8ac958da3e57318216d981874007b0da81224c7d15f1",
+      "originalSelectionPointId": 14411,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "author-published approximate length",
+        "ascentM": "author-published approximate cumulative ascent",
+        "durationMinutes": "85 min up + separately published 60 min down; arithmetic sum, no scaling"
+      },
+      "selectedRouteSourceUrls": [
+        "https://metravel.by/travels/tri-korony-v-peninakh-marshrut-iz-sromovtse"
+      ],
+      "selectedRouteScope": "return-hike",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-11",
+      "sourcePointId": 13720,
+      "sourceTravelId": 320,
+      "sourceApiSha256": "a42793f0411b3a3a5c32564ee0bc62cc9fc256ba86a01f7086f9c60d84c69947",
+      "mediaSha256": "ceedd199e3d6382560cfa9fb777c70ccddf5d623f4d88e6d0a3aca3f8d7c10b4",
+      "originalSelectionPointId": 13720,
+      "contextCaption": true,
+      "routeMetricKinds": {
+        "distanceKm": "published",
+        "ascentM": "published sum of ascent",
+        "durationMinutes": "published"
+      },
+      "selectedRouteSourceUrls": [
+        "https://www.orlica.com/blog/szlak-na-sokolice-z-kroscienka-co-warto-wiedziec"
+      ],
+      "selectedRouteScope": "one-way approach",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-12",
+      "sourcePointId": 16055,
+      "sourceTravelId": 584,
+      "sourceApiSha256": "b78fdb3a4f8316cf7cd09ff8a6653c7e57a769b20bf276f3a06f0495b9111fb9",
+      "mediaSha256": "1a8aa3a4461b3df290703916c7ad55c95648187efb83314a44ef8f15882191ca",
+      "originalSelectionPointId": 16055,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "author-published approximate length",
+        "ascentM": "author-published approximate cumulative ascent",
+        "durationMinutes": "author-published estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://metravel.by/travels/shchavnitsa-zimoi-marshrut-na-dzwonkowke-cherez-sewerynowke-i-bacowke-pod-beresnikiem"
+      ],
+      "selectedRouteScope": "named hiking loop",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-13",
+      "sourcePointId": 14380,
+      "sourceTravelId": 451,
+      "sourceApiSha256": "95127f72ac57bb7db951acbe1e893d55e394b394cfb7c0bc9e90e7cf8db5905c",
+      "mediaSha256": "273747864dab109a71450344b83e5aa4903ca6cedaba819debe79ed169cc18a8",
+      "originalSelectionPointId": 14380,
+      "contextCaption": true,
+      "routeMetricKinds": {
+        "distanceKm": "computed Haversine of official-linked GPX",
+        "ascentM": "sum positive raw GPX ele deltas, unsmoothed; not altitude difference",
+        "durationMinutes": "published"
+      },
+      "selectedRouteSourceUrls": [
+        "https://visitmalopolska.pl/trasa/-/poi/sladami-olimpijczykow-na-turbacz"
+      ],
+      "selectedRouteScope": "whole-loop via actual Turbacz summit and selected source point",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-14",
+      "sourcePointId": 14184,
+      "sourceTravelId": 422,
+      "sourceApiSha256": "db7776b0fffaca4dad1adf503bb6730b2541ab35b250ae302e5f271918abb745",
+      "mediaSha256": "e994ab942ff4b6d185bc50f0042635160a2eb126f222bb0cb3314e244b2b5a0c",
+      "originalSelectionPointId": 14184,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "raw positive GPX elevation deltas, not published/smoothed",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://gpn.gov.pl/szlaki-turystyczne/gorc-z-lubomierza-rzek"
+      ],
+      "selectedRouteScope": "Lubomierz-Rzeki → Koszarki → Gorc tower; one-way",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-15",
+      "sourcePointId": 14359,
+      "sourceTravelId": 448,
+      "sourceApiSha256": "69e0d5c7f11b1f20bc06fc263ffa294fa2a18d188586afd206996115fba1a9d5",
+      "mediaSha256": "e6e6a41fb359090d43afe37af70e88ac8c47ebdc3da15ca53db66d4806b6382f",
+      "originalSelectionPointId": 14359,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "published cumulative ascent",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://turystyka.ochotnica.pl/trasy/83"
+      ],
+      "selectedRouteScope": "Kosarzyska → Łonna → Pańska Przehybka → Magurki tower → Borsuczyny → Kosarzyska; whole loop",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-16",
+      "sourcePointId": 14190,
+      "sourceTravelId": 424,
+      "sourceApiSha256": "c05331a9b6d9a5aba5c65d9669b1757abeac492ca266e8de5d149cb65585e6bc",
+      "mediaSha256": "5d6257c52ee0cf90a5de1aba498042ff6ec9aeab67c8594fed7a6c542f1e8335",
+      "originalSelectionPointId": 14190,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "published cumulative ascent",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://turystyka.ochotnica.pl/trasy/58"
+      ],
+      "selectedRouteScope": "Ochotnica Dolna church → Lubań tower → Jaworzyny Ochotnickie → Ochotnica Dolna; whole loop",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-17",
+      "sourcePointId": 14347,
+      "sourceTravelId": 445,
+      "sourceApiSha256": "5be9a2af1d08f1bbcf74bdd8087e9a8a15cfb7f72d1427b47bbe26120255b5af",
+      "mediaSha256": "5f3342e2f5cb10a2e8ebb9f38a454f97c393e2d426aa7033775a45f0097826a2",
+      "originalSelectionPointId": 14347,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "author-published approximate length",
+        "ascentM": "author-published approximate cumulative ascent",
+        "durationMinutes": "author-published estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://metravel.by/travels/zapovednik-mogelica-i-smotrovaya-vezha-1171m"
+      ],
+      "selectedRouteScope": "one-way ascent",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-18",
+      "sourcePointId": 14648,
+      "sourceTravelId": 498,
+      "sourceApiSha256": "813a500b1c4cdff01a5857fe00d73909caceea845678a4eefd03137eda2b6e29",
+      "mediaSha256": "3926b70ce14e66fb4343956a61e4f0d11e2897c7351d70fdbd9f8b1bd75bd7ec",
+      "originalSelectionPointId": 14648,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "author-published approximate length",
+        "ascentM": "author-published approximate cumulative ascent",
+        "durationMinutes": "author-published estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://metravel.by/travels/modyn-odna-iz-samykh-vysokikh-vershin-beskidov-1029"
+      ],
+      "selectedRouteScope": "one-way ascent",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-19",
+      "sourcePointId": 14385,
+      "sourceTravelId": 453,
+      "sourceApiSha256": "9f9298d4976270fa7d0ac98fec3630dcafd8fe3b3e18a722ed09583ff975b464",
+      "mediaSha256": "86131eeb0bd1090268834cb44e2e36b482e9dc929dc7f59967d5e6342e6e0f3a",
+      "originalSelectionPointId": 14385,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "author-published approximate length",
+        "ascentM": "author-published approximate cumulative ascent",
+        "durationMinutes": "author-published estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://metravel.by/travels/lyubon-velki-1022m-v-vyspovyh-beskidah"
+      ],
+      "selectedRouteScope": "one-way winter ascent",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-20",
+      "sourcePointId": 14395,
+      "sourceTravelId": 457,
+      "sourceApiSha256": "fdacc546ca4a353e24df2b61955f7c6152c5395e0670c93d119dc00f51df1294",
+      "mediaSha256": "99ea9d6ca4b1f5489df37ef0d1ddc7c15f08ec1642b1246c445698a1cdd1ed5e",
+      "originalSelectionPointId": 14395,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "author-published approximate length",
+        "ascentM": "author-published approximate cumulative ascent",
+        "durationMinutes": "author-published estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://metravel.by/travels/gora-liubomir-904-m-observatoriia-i-marshrut"
+      ],
+      "selectedRouteScope": "one-way ascent",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-21",
+      "sourcePointId": 14845,
+      "sourceTravelId": 543,
+      "sourceApiSha256": "67ca362d9a754b16c7e4d35b2b4651c5e1208da04297009ff918618a25bff18f",
+      "mediaSha256": "0ad1f236bdb52a4c0742ab356bb55515985d67bd98e5d740784dd2e3a0cceac9",
+      "originalSelectionPointId": 14845,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "author-published approximate length",
+        "ascentM": "author-published approximate cumulative ascent",
+        "durationMinutes": "author-published estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://metravel.by/travels/smotrovaia-bashnia-eliaszowka-marshrut-v-beskidakh"
+      ],
+      "selectedRouteScope": "one-way to summit",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-22",
+      "sourcePointId": 16133,
+      "sourceTravelId": 586,
+      "sourceApiSha256": "5c74915a9f48308ead751c71ed7b98f57db6d317054b8a2d31340ff5ef384e61",
+      "mediaSha256": "8ad6b7ae32e9cc103db1b76f12b68eb74a3787d7b4cba187c4ead9df6073bb7f",
+      "originalSelectionPointId": 16133,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "primary planner published estimate",
+        "ascentM": "primary planner published cumulative ascent",
+        "durationMinutes": "primary planner walking estimate, not author elapsed time"
+      },
+      "selectedRouteSourceUrls": [
+        "https://mapa-turystyczna.pl/route?q=49.4208170%2C20.9248880%3B49.4213750%2C20.8938444"
+      ],
+      "selectedRouteScope": "one-way-approach-to-refuge",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-23",
+      "sourcePointId": 14572,
+      "sourceTravelId": 484,
+      "sourceApiSha256": "f76566092312dc99f71fdb696e67f57aaeb9458c6305fc136ceb3271a7c6ba16",
+      "mediaSha256": "02239c0906bd3d809b33a09c096deace8a7ac8a086e69d8601a0f7c89642b205",
+      "originalSelectionPointId": 14572,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "published cumulative ascent",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://metravel.by/travels/gora-rysianka-v-beskidakh-marshrut-na-den"
+      ],
+      "selectedRouteScope": "Sopotnia Wielka/Kolonia → Rysianka summit via refuge → return; full outing",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-24",
+      "sourcePointId": 15174,
+      "sourceTravelId": 573,
+      "sourceApiSha256": "4066ede4d6ca17a981edf1ba3a615732800aef8325eee47aae08a0a9c65b0cdf",
+      "mediaSha256": "e4f27b75c7f3d2b83bb1d9e60cea9d876d2e3eecd17b8dece728592c45609254",
+      "originalSelectionPointId": 15174,
+      "contextCaption": true,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "published cumulative ascent",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://metravel.by/travels/zhivetskie-beskidy-pokhod-k-wielka-rycerzowa-cherez-pshegibek"
+      ],
+      "selectedRouteScope": "Morgi → Hala Rycerzowa → Halna → Przegibek → Przegibek refuge, excluding summit detour; whole one-way traverse",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-25",
+      "sourcePointId": 15582,
+      "sourceTravelId": 637,
+      "sourceApiSha256": "42cf07660b752964960dcc846b25a57a3086d94674ae9965099329ff9853c7cd",
+      "mediaSha256": "c0f55e0c0000180a618376348d8fc105978489e583f9b28dc406e5a3770ee181",
+      "originalSelectionPointId": 14665,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "primary planner published estimate",
+        "ascentM": "primary planner published cumulative ascent",
+        "durationMinutes": "primary planner walking estimate, not author elapsed time"
+      },
+      "selectedRouteSourceUrls": [
+        "https://mapa-turystyczna.pl/route?q=49.6355780%2C19.5533252%3B49.6224227%2C19.5642096"
+      ],
+      "selectedRouteScope": "one-way-approach",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-26",
+      "sourcePointId": 14646,
+      "sourceTravelId": 497,
+      "sourceApiSha256": "e949cd9f4e111842275e32134936e3a5af9a574321bed76fcd92bd214a3b988c",
+      "mediaSha256": "4ae5c428e55dc5b9874f99e402eef337bd973f836d20c51b7e6f2e5a3aeb23af",
+      "originalSelectionPointId": 14646,
+      "contextCaption": true,
+      "routeMetricKinds": {
+        "distanceKm": "primary planner published estimate",
+        "ascentM": "primary planner published cumulative ascent",
+        "durationMinutes": "primary planner walking estimate, not author elapsed time"
+      },
+      "selectedRouteSourceUrls": [
+        "https://mapa-turystyczna.pl/route?q=49.6083242%2C19.5173058%3B49.588149%2C19.517341"
+      ],
+      "selectedRouteScope": "one-way-approach-to-museum-complex-vicinity",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-27",
+      "sourcePointId": 14415,
+      "sourceTravelId": 462,
+      "sourceApiSha256": "f6dec3d756f0f515992266e26970c86e9f0653986ab221a001c8317663d43a3c",
+      "mediaSha256": "1202d3d93e3ca96213bc234b29570226ebe276106b53775537539a1bc2d6879e",
+      "originalSelectionPointId": 14415,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "author-published approximate length",
+        "ascentM": "author-published approximate cumulative ascent",
+        "durationMinutes": "author-published estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://metravel.by/travels/pokhod-na-velika-racha-wielka-racza-1236-m"
+      ],
+      "selectedRouteScope": "one-way ascent",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-28",
+      "sourcePointId": 14226,
+      "sourceTravelId": 436,
+      "sourceApiSha256": "e573d01ee923f52afff3f2fa9855eceecd00e6d65d170913bf5de66e21118fda",
+      "mediaSha256": "ea94781f8dd797629f36056702b7e1289b85764e162fa68658c646db024cc080",
+      "originalSelectionPointId": 14226,
+      "contextCaption": true,
+      "routeMetricKinds": {
+        "distanceKm": "primary planner published estimate",
+        "ascentM": "primary planner published cumulative ascent",
+        "durationMinutes": "primary planner walking estimate, not author elapsed time"
+      },
+      "selectedRouteSourceUrls": [
+        "https://mapa-turystyczna.pl/route?q=49.6206351%2C18.9461857%3B49.6199825%2C18.9858764"
+      ],
+      "selectedRouteScope": "one-way-valley-watercourse-approach-not-literal-headspring",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-29",
+      "sourcePointId": 16157,
+      "sourceTravelId": 594,
+      "sourceApiSha256": "23720590347c5a914334c59ee07406951343b6e2554aa4dca1087c8d65ecb07b",
+      "mediaSha256": "407d02d45a31ef042375026296683e5aef088594cf13ae848ac418e8c1a634f7",
+      "originalSelectionPointId": 16157,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "author-published approximate length",
+        "ascentM": "author-published approximate cumulative ascent",
+        "durationMinutes": "map estimate quoted by author, not author elapsed time"
+      },
+      "selectedRouteSourceUrls": [
+        "https://metravel.by/travels/blatnia-blatnia-nash-pokhod-k-schronisko-pttk-na-blatniej-v-polskikh-beskidakh"
+      ],
+      "selectedRouteScope": "one-way to refuge",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-30",
+      "sourcePointId": 14230,
+      "sourceTravelId": 437,
+      "sourceApiSha256": "12a14945f6c7f02a28e00cdd037b5c64f7ffa7ac321b6b8f17741a835e303bc8",
+      "mediaSha256": "b5ebbd4509fc3eb8afd77c1c8c3930861c8873c9d8b2a6872d103e41e9763a40",
+      "originalSelectionPointId": 14230,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "primary provider published cumulative ascent",
+        "durationMinutes": "route-planner estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://mapa-turystyczna.pl/route?q=49.7869950%2C18.9808390%3B49.7602615%2C19.0019435"
+      ],
+      "selectedRouteScope": "one-way from mapped DolinaWapienicy start49.787016,18.980850 via yellowtrail, PodSzyndzielnią/uppergondolastation to49.760268,19.001852 within7m of ownerselectedtower; towerstairaccessseparate",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-31",
+      "sourcePointId": 14630,
+      "sourceTravelId": 492,
+      "sourceApiSha256": "1a65a500f6ca571a0c0aad6c2d59785b56ffb976289adb65b56281a214480462",
+      "mediaSha256": "6ed9cdcef9200baf8891bb7465e7a00ca8c12ca2cf6e2019a87cb5c49d9e3ffc",
+      "originalSelectionPointId": 14630,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "author-published approximate length",
+        "ascentM": "author-published approximate cumulative ascent",
+        "durationMinutes": "author-published estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://metravel.by/travels/leskovets-922-m-legkii-marshrut-v-beskidakh"
+      ],
+      "selectedRouteScope": "return hike",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-32",
+      "sourcePointId": 16249,
+      "sourceTravelId": 608,
+      "sourceApiSha256": "1b14a8eac701dc1540b287697a0561ce97e138dafcad8a8fca77ff958ecc7696",
+      "mediaSha256": "d5c2a20c67c1a2c453ea26d25e28e6af1b12c0e9d5a345aab412be734c92de55",
+      "originalSelectionPointId": 16249,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "primary planner published estimate",
+        "ascentM": "primary planner published cumulative ascent",
+        "durationMinutes": "primary planner walking estimate, not author elapsed time"
+      },
+      "selectedRouteSourceUrls": [
+        "https://mapa-turystyczna.pl/route?q=49.8088611%2C19.2514639%3B49.8166167%2C19.2751361%3B49.8142823%2C19.2800403"
+      ],
+      "selectedRouteScope": "one-way-approach-via-both-owner-objects",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-33",
+      "sourcePointId": 14162,
+      "sourceTravelId": 421,
+      "sourceApiSha256": "cf24a208baf317ab9f4cbe3aeb62408e054776ee5dddb10048e7ea8fc2c68af4",
+      "mediaSha256": "b0623a201c8b2ef338d2c28fee66135057308a3916709d70e6ca609248a4c149",
+      "originalSelectionPointId": 14162,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "computed raw positive elevation deltas",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://www.krkonose.eu/en/pec-pod-snezkou-through-obri-dul-snezka"
+      ],
+      "selectedRouteScope": "one-way ascent from Pec pod Sněžkou through Obří důl to Sněžka summit; Czech-side alternative, not author route",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-34",
+      "sourcePointId": 15652,
+      "sourceTravelId": 640,
+      "sourceApiSha256": "cad3d39a2407ee7aab76ee97afeff0fc905d70e13476d3d01c0d591605c6b0b6",
+      "mediaSha256": "72f966f41eb5123be4f3d1cf6af65a364fff005f8f948742bc36ee9e1645de16",
+      "originalSelectionPointId": 15652,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "published cumulative ascent",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://metravel.by/travels/snezhnye-kotly-pokhod-po-karkonoshe-cherez-shrenitsu"
+      ],
+      "selectedRouteScope": "Szklarska Poręba → Kamieńczyk → Hala Szrenicka → Szrenica → Śnieżne Kotły → refuge pod Łabskim → Szklarska; whole loop",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-35",
+      "sourcePointId": 15674,
+      "sourceTravelId": 640,
+      "sourceApiSha256": "cad3d39a2407ee7aab76ee97afeff0fc905d70e13476d3d01c0d591605c6b0b6",
+      "mediaSha256": "b731f18979d231eb72389e579cf602242915589b7b23a0aab6d99a6ed299345b",
+      "originalSelectionPointId": 15674,
+      "contextCaption": true,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "published cumulative ascent",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://turystyczna.szklarskaporeba.pl/2799-szklarskaporeba-latwizna-dla-twardzieli"
+      ],
+      "selectedRouteScope": "whole post-chairlift walking traverse via Łabski Szczyt to Snow Pits/lakes and return to town; not a summit-only approach",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-36",
+      "sourcePointId": 14165,
+      "sourceTravelId": 421,
+      "sourceApiSha256": "cf24a208baf317ab9f4cbe3aeb62408e054776ee5dddb10048e7ea8fc2c68af4",
+      "mediaSha256": "ef4cd7dc6ef88241267d724ab803ed32444986b20a28d9b4512429138e5c696f",
+      "originalSelectionPointId": 14165,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "primary provider published cumulative ascent",
+        "durationMinutes": "provider-published average time, NOT recorded elapsed time"
+      },
+      "selectedRouteSourceUrls": [
+        "https://www.traseo.pl/trasa/spacer-do-dzikiego-wodospadu"
+      ],
+      "selectedRouteScope": "whole-one-way-historical-walk",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-37",
+      "sourcePointId": 14156,
+      "sourceTravelId": 421,
+      "sourceApiSha256": "cf24a208baf317ab9f4cbe3aeb62408e054776ee5dddb10048e7ea8fc2c68af4",
+      "mediaSha256": "229640ce1ef3c9866279f0ce8ce37c14b2918ebf24984174b819fa4ff1b3621d",
+      "originalSelectionPointId": 14156,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "primary provider published cumulative ascent",
+        "durationMinutes": "route-planner estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://mapa-turystyczna.pl/route/30kde"
+      ],
+      "selectedRouteScope": "whole loop from parking50.8297029,15.9733171 through Kolorowe Jeziorka and Pod Wielką Kopą back to same start, not short lower-lake access",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-38",
+      "sourcePointId": 14247,
+      "sourceTravelId": 438,
+      "sourceApiSha256": "8b9735ca021f19f7125c1dcf600cf567689cf287ee0f72eaeec3bbe51db9fab6",
+      "mediaSha256": "bc110292655595161a1d7521a70fa6f9504f3bb1389414852bc97df9a088dec0",
+      "originalSelectionPointId": 14247,
+      "contextCaption": false,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "primary provider published cumulative ascent",
+        "durationMinutes": "route-planner estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://mapa-turystyczna.pl/route?q=50.4135430%2C16.4488370%3B50.4110584%2C16.4566743"
+      ],
+      "selectedRouteScope": "one-way named coordinate start50.4135430,16.4488370 via yellowtrail/Leśna castle gate to Orle Skały viewpoint at owner-selected rock coordinates; gate access limited",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-39",
+      "sourcePointId": 14642,
+      "sourceTravelId": 495,
+      "sourceApiSha256": "5c85676b9abccc16b09e644ddc15eec5b5bdfd5db29a13e012626f83fee12f8d",
+      "mediaSha256": "e009c376bfd2ee8bee36bed138416a756e61bf2a6c11d007fbbc993b46a2c048",
+      "originalSelectionPointId": 14642,
+      "contextCaption": true,
+      "routeMetricKinds": {
+        "distanceKm": "author-published approximate length",
+        "ascentM": "author-published approximate cumulative ascent",
+        "durationMinutes": "author-published estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://metravel.by/travels/gora-bolshaya-sova-1015"
+      ],
+      "selectedRouteScope": "one-way ascent",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "mountains-pl-40",
+      "sourcePointId": 14370,
+      "sourceTravelId": 450,
+      "sourceApiSha256": "2590d120825a2238bc94f96911c2453ea675d64a1ae53770290906da0dc27ffe",
+      "mediaSha256": "3ee052200286f69d05ceaa6edaa441d947d28fc72bbc2f05be789f01409cd400",
+      "originalSelectionPointId": 14370,
+      "contextCaption": true,
+      "routeMetricKinds": {
+        "distanceKm": "published route length",
+        "ascentM": "raw positive GPX elevation deltas, not published/smoothed",
+        "durationMinutes": "published walking estimate"
+      },
+      "selectedRouteSourceUrls": [
+        "https://bdpn.gov.pl/szlaki-turystyczne/sciezka-przyrodniczo-historyczna-wolosate-tarnica"
+      ],
+      "selectedRouteScope": "Old Boyko cemetery Wołosate → blue → Przełęcz pod Tarnicą → yellow → Tarnica summit; one-way",
+      "sourceCheckedOn": "2026-11-01"
+    },
+    {
+      "id": "castles-pl-01",
+      "sourcePointId": 12626,
+      "sourceTravelId": 261,
+      "sourceApiSha256": "f87d7812b5f48e4af04afca640ff9b0139a02b0ef8ca7f1afbef48044a8fc591",
+      "mediaSha256": "883ac561827144c97016777523f571223fb2a568dc51a3f4d03d8ca6e8f8520d",
+      "originalSelectionPointId": 12626,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-02",
+      "sourcePointId": 12523,
+      "sourceTravelId": 269,
+      "sourceApiSha256": "62169eda3f7f447a7ea0dd7f586422e3264b00a3112e895bbb0ce86b0e2b907e",
+      "mediaSha256": "aea6b51b8281fa402a933d9ca9486aaee0a54b9c90721a930d3cbfcbc3af9142",
+      "originalSelectionPointId": 12523,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-03",
+      "sourcePointId": 15995,
+      "sourceTravelId": 577,
+      "sourceApiSha256": "18648f5f99f9b40fa84eab1a7360ca957c5453adf7172f636eed492b4d21a4d7",
+      "mediaSha256": "713f1bd507c6f6b2189a719a0b6f0bcb1b2edd3e4924523eee5de3ca829d1197",
+      "originalSelectionPointId": 12717,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-04",
+      "sourcePointId": 13117,
+      "sourceTravelId": 280,
+      "sourceApiSha256": "3cf35fc2c7c382423b723c7b7ca7ea6a2a7f6915511a651aa9c7d7e10618b552",
+      "mediaSha256": "2fa5c253cfdb1c0e7dd1560106d92d85d6c65e945505f75a2afc04ed826d390d",
+      "originalSelectionPointId": 13117,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-05",
+      "sourcePointId": 13334,
+      "sourceTravelId": 282,
+      "sourceApiSha256": "d21a0ece0e8ec6b26e4cd78b6a4fef5ee86813b923524c841cf0f95347e876e8",
+      "mediaSha256": "8124a4889ea7bc8d60cc4083ed0f332eefa97398872e413d96b5d91b0258f350",
+      "originalSelectionPointId": 13334,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-06",
+      "sourcePointId": 13471,
+      "sourceTravelId": 297,
+      "sourceApiSha256": "e597dd34bcfc22fa11dacacf3875f88e0e0e6e38c282d83b01b55d910ef608b9",
+      "mediaSha256": "3ccb249a3aef5694a7c96d4f97bef6edb1bf77f535078cd7c5942a72eb74c75e",
+      "originalSelectionPointId": 13471,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-07",
+      "sourcePointId": 13516,
+      "sourceTravelId": 303,
+      "sourceApiSha256": "fe13e4a61a6d24e8aecd67bf58d37329eb4cc2989a2c5d61c2627ef7edaa3c13",
+      "mediaSha256": "3ef440a1a05cb6e659f2d2c709b5b4bc9dca8f5b6cfeb4d0e4dd7182dbe19b2c",
+      "originalSelectionPointId": 13516,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-08",
+      "sourcePointId": 13531,
+      "sourceTravelId": 308,
+      "sourceApiSha256": "322baf6cb5fc1610866bbe145e6a2c230c6363088a5cbe6e11d4e4e876980753",
+      "mediaSha256": "16639d9a3563eccff279f956f41525a7313b7e393cd7b305f4844bbcade50f75",
+      "originalSelectionPointId": 13531,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-09",
+      "sourcePointId": 13716,
+      "sourceTravelId": 320,
+      "sourceApiSha256": "a42793f0411b3a3a5c32564ee0bc62cc9fc256ba86a01f7086f9c60d84c69947",
+      "mediaSha256": "746ce8840dc461099944857aac233b6ada0aef7ee92897893be0cf7e6fd0f85f",
+      "originalSelectionPointId": 13716,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-10",
+      "sourcePointId": 13728,
+      "sourceTravelId": 321,
+      "sourceApiSha256": "c378ef5d29d6d7b761ef22d55a3d08802f77fdd59581a561161fd2aefb433848",
+      "mediaSha256": "90553bf69e2e262f2222209a0d95fc3cffad46ca864977f3938e2d170f322e3f",
+      "originalSelectionPointId": 13728,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-11",
+      "sourcePointId": 13787,
+      "sourceTravelId": 330,
+      "sourceApiSha256": "9bc563ebbc559d5ea0c45bafe4ff0f7f75d253f87d81f66c70928a0def6e5438",
+      "mediaSha256": "cf6540882dd2a844d4ea0029ce2274657d88e2f13f6c094574f1f223ddc317ae",
+      "originalSelectionPointId": 13787,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-12",
+      "sourcePointId": 13877,
+      "sourceTravelId": 360,
+      "sourceApiSha256": "905a23212bdb0c678750c029862e4c46504d2e8b94cfbddfd93ffc0a8e35ee42",
+      "mediaSha256": "523da139ce8e42e1fa9cbeabbeaa9f30ff84cf22341b6aaea1edea6ca50cf251",
+      "originalSelectionPointId": 13877,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-13",
+      "sourcePointId": 13900,
+      "sourceTravelId": 369,
+      "sourceApiSha256": "d56f53ae2c055956c1c4f7d54dae451902fe7407fbb13a343aedcdb3ca324e02",
+      "mediaSha256": "8a4e19aef9943c90663e1ea9a67d490049710a60b5966822db433f6c8eb96859",
+      "originalSelectionPointId": 13900,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-14",
+      "sourcePointId": 14098,
+      "sourceTravelId": 413,
+      "sourceApiSha256": "b9ec9e071c4dcc539ba98a66fbd1121e3345cdab98416b1637cb7513aab56720",
+      "mediaSha256": "0277a75ba2679f3d8de35b07f87b6bff1e08a19ba4854b24c18026329cfbfa93",
+      "originalSelectionPointId": 14098,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-15",
+      "sourcePointId": 14151,
+      "sourceTravelId": 421,
+      "sourceApiSha256": "cf24a208baf317ab9f4cbe3aeb62408e054776ee5dddb10048e7ea8fc2c68af4",
+      "mediaSha256": "b5add60660c8df6617122a92f6ebc3567a83551a45057416f6d2dce3463ac47a",
+      "originalSelectionPointId": 14151,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-16",
+      "sourcePointId": 14152,
+      "sourceTravelId": 421,
+      "sourceApiSha256": "cf24a208baf317ab9f4cbe3aeb62408e054776ee5dddb10048e7ea8fc2c68af4",
+      "mediaSha256": "ee8a0cfbd4a355ecf7816c91489eb7dad9426646042bf76bd72886a52de71830",
+      "originalSelectionPointId": 14152,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-17",
+      "sourcePointId": 14153,
+      "sourceTravelId": 421,
+      "sourceApiSha256": "cf24a208baf317ab9f4cbe3aeb62408e054776ee5dddb10048e7ea8fc2c68af4",
+      "mediaSha256": "63a4f5a5e636e41784ec8b2a1cd5cda0d837c89178d67ea80fb1bb209b42092e",
+      "originalSelectionPointId": 14153,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-18",
+      "sourcePointId": 14179,
+      "sourceTravelId": 422,
+      "sourceApiSha256": "db7776b0fffaca4dad1adf503bb6730b2541ab35b250ae302e5f271918abb745",
+      "mediaSha256": "2f16f4af40b140ad3545e61cbd7b3bf6d34915a92bc81046e2bfcbfd1fcb6f57",
+      "originalSelectionPointId": 14179,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-19",
+      "sourcePointId": 14207,
+      "sourceTravelId": 434,
+      "sourceApiSha256": "a5011d0a46c57e77679db61c7378585f07715a25e863a624d705b9a99bce6fdb",
+      "mediaSha256": "cae14651a8effce44d8fdcd917815a365f6a6c117580c5efaa0e21ad731054db",
+      "originalSelectionPointId": 14207,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-20",
+      "sourcePointId": 14208,
+      "sourceTravelId": 434,
+      "sourceApiSha256": "a5011d0a46c57e77679db61c7378585f07715a25e863a624d705b9a99bce6fdb",
+      "mediaSha256": "9fa3a0c2df6aa1eba76c362a7397d0956e6806f6ac1a19b1f51876478e6fd032",
+      "originalSelectionPointId": 14208,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-21",
+      "sourcePointId": 14246,
+      "sourceTravelId": 438,
+      "sourceApiSha256": "8b9735ca021f19f7125c1dcf600cf567689cf287ee0f72eaeec3bbe51db9fab6",
+      "mediaSha256": "c652ded13bbf4491056dafe3c62956788a29846c3404d611f2f2df4333a40736",
+      "originalSelectionPointId": 14246,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-22",
+      "sourcePointId": 14255,
+      "sourceTravelId": 438,
+      "sourceApiSha256": "8b9735ca021f19f7125c1dcf600cf567689cf287ee0f72eaeec3bbe51db9fab6",
+      "mediaSha256": "e1d3713ccb927cecd3133f16d55d3109c38a67a80104aec5054893bc2462bbf4",
+      "originalSelectionPointId": 14255,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-23",
+      "sourcePointId": 14365,
+      "sourceTravelId": 450,
+      "sourceApiSha256": "2590d120825a2238bc94f96911c2453ea675d64a1ae53770290906da0dc27ffe",
+      "mediaSha256": "46a16e2f64776900c5781419bbf154c219cc222d8292aba15a4455df91f5fdce",
+      "originalSelectionPointId": 14365,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-24",
+      "sourcePointId": 14367,
+      "sourceTravelId": 450,
+      "sourceApiSha256": "2590d120825a2238bc94f96911c2453ea675d64a1ae53770290906da0dc27ffe",
+      "mediaSha256": "b187b61d889ca690bd0fe829793f154b8cb6de9ad03cf094522541b048d0cc14",
+      "originalSelectionPointId": 14367,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-25",
+      "sourcePointId": 14526,
+      "sourceTravelId": 478,
+      "sourceApiSha256": "de92a0538ac1b40f9f6aa65b5b25d6fa72724dd17797adaf5b6fe036e6eee92f",
+      "mediaSha256": "7bd4ba4e0947744ec4dda37c4b17231890ef189a5887a37a3411a1a7b2e2fea0",
+      "originalSelectionPointId": 14526,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-26",
+      "sourcePointId": 14639,
+      "sourceTravelId": 494,
+      "sourceApiSha256": "75b3174803f2e8637590ab117ef4a5bab2e7238c28388ed00977289732602deb",
+      "mediaSha256": "3d0ace1d7dc419a33e329be619b50031cfa67536bea1c670b5fb15448df03d9b",
+      "originalSelectionPointId": 14639,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-27",
+      "sourcePointId": 14699,
+      "sourceTravelId": 511,
+      "sourceApiSha256": "06155f857a93053eef2cd65ca79c078b11aceb4f239e9e79e71415e399b826d4",
+      "mediaSha256": "5155aa89afa3def2d900a7ca09b3c8023a33778c4350e6a9369d780eee8058f3",
+      "originalSelectionPointId": 14699,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-28",
+      "sourcePointId": 14348,
+      "sourceTravelId": 446,
+      "sourceApiSha256": "5c49148643e042fe1aa2c1aac780becf6afa801b6223fc7c33c7ed4beab51593",
+      "mediaSha256": "08f2eb46e670d3f2dc322c557fddafc060279e58a6d4a8a7b21c7355cf9c2876",
+      "originalSelectionPointId": 14348,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-29",
+      "sourcePointId": 14533,
+      "sourceTravelId": 478,
+      "sourceApiSha256": "de92a0538ac1b40f9f6aa65b5b25d6fa72724dd17797adaf5b6fe036e6eee92f",
+      "mediaSha256": "5d255c0810e9ed412290528b6895b39528a8e49e548ac16271e25ddb3a2f91a7",
+      "originalSelectionPointId": 14413,
+      "contextCaption": false
+    },
+    {
+      "id": "castles-pl-30",
+      "sourcePointId": 15997,
+      "sourceTravelId": 577,
+      "sourceApiSha256": "18648f5f99f9b40fa84eab1a7360ca957c5453adf7172f636eed492b4d21a4d7",
+      "mediaSha256": "6ec8f1ae473d86ea8e7b04c0e74b57e17f676248085470d85a95906afada3075",
+      "originalSelectionPointId": 15997,
+      "contextCaption": false
+    }
+  ],
+  "currentOfficialAlertsCheckedOn": "2026-11-02",
+  "currentOfficialAlertsSources": [
+    "https://tpn.gov.pl/komunikat-turystyczny",
+    "https://kpn.gov.pl/komunikat-turystyczny",
+    "https://piepn.gov.pl/komunikat-turystyczny",
+    "https://pngs.gov.pl/komunikat-turystyczny",
+    "https://bdpn.gov.pl/komunikat-turystyczny",
+    "https://gpn.gov.pl/komunikat-turystyczny",
+    "https://bgpn.gov.pl/komunikat-turystyczny"
+  ]
+}

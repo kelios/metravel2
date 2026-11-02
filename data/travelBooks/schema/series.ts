@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {haversineMeters} from '../../../utils/geoDistance.ts';
 import {checkedDate, httpsUrl, identifier, nonempty} from './editorial.ts';
+import {thematicEvidenceSchema, hasDuplicateThematicTargets} from './thematic.ts';
 
 // Published BY/PL books are not repeated: same pointId or a point closer than this is an overlap.
 export const SERIES_OVERLAP_RADIUS_M = 400;
@@ -66,6 +67,24 @@ export const seriesKitSchema = z.strictObject({
   });
 });
 
+export const thematicSeriesPlaceSchema = z.strictObject({
+  id: identifier, title: nonempty, localName: nonempty, country, thematic: thematicEvidenceSchema,
+});
+export const thematicSeriesKitSchema = z.strictObject({
+  schemaVersion: z.literal(2), sourceContract: z.literal('thematic-v1'), seriesId: identifier, theme,
+  authorId: z.literal(1), selectedOn: checkedDate, decision: nonempty, selectionRule: nonempty,
+  places: z.array(thematicSeriesPlaceSchema).min(1),
+  reserve: z.array(thematicSeriesPlaceSchema.extend({reason: nonempty})),
+}).superRefine((kit, ctx) => {
+  const all = [...kit.places, ...kit.reserve];
+  if (new Set(all.map(p => p.id)).size !== all.length) ctx.addIssue({code: 'custom', path: ['places'], message: 'A place occurs more than once in the kit'});
+  if (hasDuplicateThematicTargets(kit.places.map(p => p.thematic.mapTarget))) ctx.addIssue({code: 'custom', path: ['places'], message: 'A physical target occurs more than once in the kit'});
+  all.forEach((place, index) => {
+    if ((kit.theme === 'mountains' && !place.thematic.route) || (kit.theme === 'castles' && place.thematic.route)) ctx.addIssue({code: 'custom', path: index < kit.places.length ? ['places', index, 'thematic', 'route'] : ['reserve', index - kit.places.length, 'thematic', 'route'], message: 'Mountain entries require complete routes and castle entries cannot carry them'});
+  });
+});
+export const anySeriesKitSchema = z.union([seriesKitSchema, thematicSeriesKitSchema]);
+
 export const bookSeriesSchema = z.strictObject({
   id: identifier, theme,
   countries: z.array(country).min(1).refine(list => new Set(list).size === list.length, 'Duplicate country'),
@@ -84,7 +103,7 @@ export const seriesCatalogSchema = z.strictObject({
 });
 
 export type BookSeries = z.infer<typeof bookSeriesSchema>;
-export type SeriesKit = z.infer<typeof seriesKitSchema>;
+export type SeriesKit = z.infer<typeof anySeriesKitSchema>;
 export type PublishedPlace = {pointId: number; lat: number; lng: number; title: string};
 export type SeriesIssue = {path: string; message: string};
 
@@ -106,7 +125,7 @@ export function validateSeriesCollection(input: {
       fail('kit', `Missing kit ${series.kit}`);
       continue;
     }
-    const kit = seriesKitSchema.safeParse(input.kits[series.kit]);
+    const kit = anySeriesKitSchema.safeParse(input.kits[series.kit]);
     if (!kit.success) {
       zodIssues(series.id, kit.error);
       continue;
@@ -119,18 +138,24 @@ export function validateSeriesCollection(input: {
       if (!series.countries.includes(item.country)) fail(`${path}.country`, 'Place is outside the series countries');
     });
     places.forEach((item, index) => {
-      const overlap = input.publishedPlaces.find(published => published.pointId === item.pointId ||
-        haversineMeters(published.lat, published.lng, item.lat, item.lng) < SERIES_OVERLAP_RADIUS_M);
+      const target = 'thematic' in item ? item.thematic.mapTarget : item;
+      const pointId = 'thematic' in item ? (item.thematic.mapTarget.kind === 'published-point' ? item.thematic.mapTarget.pointId : undefined) : item.pointId;
+      const overlap = input.publishedPlaces.find(published => published.pointId === pointId ||
+        haversineMeters(published.lat, published.lng, target.lat, target.lng) < SERIES_OVERLAP_RADIUS_M);
       if (overlap) fail(`places.${index}`, `${item.title} repeats «${overlap.title}» from a published book`);
     });
     if (series.status === 'ready') {
       series.bookIds.filter(id => !input.publishedBookIds.includes(id))
         .forEach(id => fail('bookIds', `Ready series references unpublished book ${id}`));
       places.forEach((item, index) => {
-        if (item.photo.printResolution !== 'verified') fail(`places.${index}.photo`, 'Ready series needs verified print resolution');
-        const r = item.route;
-        if (r && [r.trail, r.distanceKm, r.elevationGainM, r.durationMinutes].includes(null)) {
-          fail(`places.${index}.route`, 'Ready mountain series needs trail, distance, elevation and duration');
+        if ('thematic' in item) {
+          if (!item.thematic.media.placements) fail(`places.${index}.thematic.media`, 'Ready series needs verified native photo placement resolution');
+        } else {
+          if (item.photo.printResolution !== 'verified') fail(`places.${index}.photo`, 'Ready series needs verified print resolution');
+          const r = item.route;
+          if (r && [r.trail, r.distanceKm, r.elevationGainM, r.durationMinutes].includes(null)) {
+            fail(`places.${index}.route`, 'Ready mountain series needs trail, distance, elevation and duration');
+          }
         }
       });
     }

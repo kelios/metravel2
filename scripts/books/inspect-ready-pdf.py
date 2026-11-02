@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 
 from pypdf import PdfReader
-from pdf_text import missing_book_text
+from pdf_text import missing_book_text, missing_thematic_links
 
 MM = 72 / 25.4
 
@@ -52,6 +52,15 @@ def inspect(pdf_path, book, component, profile_id, purpose, plan=None, page_map=
             if '/F' in stream or '/FFilter' in stream:
                 external = True
     contents = pdf.read_bytes()
+    page_links = []
+    for page in reader.pages:
+        uris = set()
+        for ref in page.get('/Annots', []):
+            action = ref.get_object().get('/A')
+            action = action.get_object() if action else {}
+            if action.get('/URI'):
+                uris.add(str(action['/URI']))
+        page_links.append(uris)
     default_cover_text = None
     if component == 'cover' and purpose != 'control':
         copy = json.loads((Path(__file__).resolve().parents[2] / 'data/travelBooks/cover-copy.json').read_text())
@@ -61,7 +70,8 @@ def inspect(pdf_path, book, component, profile_id, purpose, plan=None, page_map=
         'sha256': hashlib.sha256(contents).hexdigest(), 'bytes': len(contents),
         'pageCount': len(reader.pages), 'boxes': boxes, 'fonts': fonts,
         'hasCyrillic': bool(re.search('[А-Яа-яЁё]', text)),
-        'missingText': missing_book_text(book, pages, profile_id, page_map, plan) if component == 'body' else [],
+        'missingText': (missing_book_text(book, pages, profile_id, page_map, plan)
+                        + missing_thematic_links(book, page_links, page_map, plan)) if component == 'body' else [],
         'imagePpis': image_ppis, 'externalResources': external,
         'defaultCoverTextPresent': default_cover_text,
     }

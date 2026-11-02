@@ -7,6 +7,7 @@ import {createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
 import {build} from 'esbuild';
 import {coverResources, coverPersonalizationDescriptor, readCoverResource} from './cover-resources.mjs';
+import {assertProductionEditionSet, assertProductionEditorialIdentity, thematicEditorialAcceptance} from './production-contract.mjs';
 
 if (!process.execArgv.includes('--experimental-strip-types')) {
   const child = spawnSync(process.execPath, ['--experimental-strip-types', '--no-warnings', fileURLToPath(import.meta.url), ...process.argv.slice(2)], {stdio: 'inherit'});
@@ -16,7 +17,7 @@ if (!process.execArgv.includes('--experimental-strip-types')) {
 const {validatePdfInspection} = await import('../../services/book/readyBooks/validation/pdf.ts');
 const {buildImpositionPlan} = await import('../../services/book/readyBooks/imposition/index.ts');
 const {readyBookBodyPageCount, buildReadyBookPagePlan} = await import('../../services/book/readyBooks/composition.ts');
-const {editorialBookDraftSchema} = await import('../../data/travelBooks/schema/editorial.ts');
+const {placeBookDraftSchema} = await import('../../data/travelBooks/schema/editorial.ts');
 const {countryQuestBookSchema}=await import('../../data/travelBooks/schema/questBooks.ts');
 const {buildQuestBookPagePlan}=await import('../../services/book/readyBooks/questBooks/composition.ts');
 const {printProfileSchema} = await import('../../data/travelBooks/schema/profiles.ts');
@@ -33,7 +34,7 @@ if (!indexFile || !python) throw new Error('Usage: --production <production-inde
 const root = path.dirname(await realpath(indexFile));
 if (!root.startsWith(path.resolve('.codex-temp') + path.sep)) throw new Error('Production index must be in ignored .codex-temp/');
 const index = JSON.parse(await readFile(indexFile, 'utf8'));
-if (index.schemaVersion !== 1 || index.books?.length !== 2 || new Set(index.books.map(b => b.country)).size !== 2 || !index.books.every(b => ['BY', 'PL'].includes(b.country))) throw new Error('Expected both BY and PL production editions');
+assertProductionEditionSet(index);
 // Reject invalid physical metadata before reading resources or starting inspectors.
 for (const book of index.books) {
   if (book.profiles?.length !== 2 || new Set(book.profiles.map(p => p.profile.id)).size !== 2 || !book.profiles.every(p => ['pocket-150x100', 'album-a5'].includes(p.profile.id))) throw new Error('Expected two physical profiles');
@@ -47,6 +48,7 @@ for (const book of index.books) {
 }
 const reports = [];
 const coverPersonalizationReports = [];
+const editorialSources = [];
 const coverSchemaBundle=path.join(root,'cover-personalization-validator.cjs');
 await build({entryPoints:['services/book/readyBooks/publication.ts'],outfile:coverSchemaBundle,bundle:true,platform:'node',format:'cjs',logLevel:'silent'});
 const {coverPersonalizationSchemaForStyle}=createRequire(import.meta.url)(coverSchemaBundle);
@@ -57,13 +59,16 @@ const checkPath = async file => {
 };
 for (const book of index.books) {
   const isQuest=book.kind==='quests';
-  const editorial=(isQuest?countryQuestBookSchema:editorialBookDraftSchema).parse(JSON.parse(await readFile(book.editorialPath,'utf8')));
+  const editorialPath=book.sourceContract==='thematic-v1'?await checkPath(book.editorialPath):book.editorialPath;
+  const editorialBytes=await readFile(editorialPath);
+  const editorial=(isQuest?countryQuestBookSchema:placeBookDraftSchema).parse(JSON.parse(editorialBytes.toString('utf8')));
+  const editorialAcceptance=book.sourceContract==='thematic-v1'?thematicEditorialAcceptance(book,editorialBytes):null;
   if(isQuest&&(!editorial.endMatterPages?.length||editorial.endMatterPages.some(kind=>kind!=='country-map')))throw new Error('Quest ending has no approved content');
   const canonicalPlan=isQuest?buildQuestBookPagePlan(editorial,{endMatterPages:editorial.endMatterPages}):buildReadyBookPagePlan(editorial);
   const bodyCount=isQuest?canonicalPlan.length:readyBookBodyPageCount(editorial.stops.length);
   const sourceCount=isQuest?editorial.quests.length:editorial.stops.length;
   if ((!isQuest&&sourceCount<30)||book.bodyPageCount!==bodyCount||book.stopCount!==sourceCount) throw new Error('Production composition differs from selected places');
-  if (editorial.id !== book.bookId || editorial.revision !== book.revision || editorial.country !== book.country) throw new Error('Production edition identity differs from editorial source');
+  assertProductionEditorialIdentity(book, editorial);
   coverPersonalizationSchemaForStyle(book.visualStyle).parse(coverPersonalizationDescriptor(book,filename=>`https://metravel.by/travel-books/${book.bookId}/${book.revision}/${filename}`));
   for(const resource of coverResources(book))await readCoverResource(resource,root);
   const fullFontSha='504de8cc6f919163bc9afb67b9bc208d258230c5e8d00cb82ec52474f9fafc3b';
@@ -75,6 +80,13 @@ for (const book of index.books) {
   const templateInspection=JSON.parse(templateResult.stdout);
   coverPersonalizationReports.push({bookId:book.bookId,revision:book.revision,pass:templateInspection.pass,fontSha256:book.coverPersonalization.font.sha256,licenseSha256:book.coverPersonalization.font.license.sha256,templates:templateInspection.reports});
   for (const group of book.profiles) {
+    if(editorial.sourceContract==='thematic-v1'){
+      if(group.nativePhotoPlacements?.length!==editorial.stops.length)throw new Error('Thematic photos lack actual native placement measurements');
+      for(const stop of editorial.stops){
+        const actual=group.nativePhotoPlacements.find(p=>p.stopId===stop.id),media=stop.thematic.media,expected=media.placements.find(p=>p.profileId===group.profile.id);
+        if(!actual||!expected||actual.widthPx!==media.widthPx||actual.heightPx!==media.heightPx||Math.abs(actual.widthMm-expected.widthMm)>.03||Math.abs(actual.heightMm-expected.heightMm)>.03||Math.abs(actual.effectivePpi-expected.effectivePpi)>1)throw new Error('Native placement proof differs from current thematic source');
+      }
+    }
     const pageMapPath = await checkPath(group.artifacts.find(artifact => artifact.purpose === 'read' && artifact.component === 'body')?.pageMapPath);
     const pageMap = JSON.parse(await readFile(pageMapPath, 'utf8'));
     const canonicalMap = canonicalPlan.map(({number, ...entry}) => ({folio: number, ...entry}));
@@ -126,9 +138,14 @@ for (const book of index.books) {
       if(inspection.pageCount!==control.pageCount||inspection.pageCount<2||!inspection.fonts.length||!inspection.fonts.every(font=>font.embedded&&font.unicode)||inspection.externalResources||!inspection.boxes.every(box=>Math.abs(box.media[0])<.1&&Math.abs(box.media[1])<.1&&Math.abs(box.media[2]-plan.sheetMm[0])<.1&&Math.abs(box.media[3]-plan.sheetMm[1])<.1))throw new Error('Control physical pages or embedded fonts differ from canonical assembly');
     }
   }
+  if(editorialAcceptance){
+    const current=thematicEditorialAcceptance(book,await readFile(editorialPath));
+    if(current.sha256!==editorialAcceptance.sha256)throw new Error('Thematic editorial source changed during PDF inspection');
+    editorialSources.push(editorialAcceptance);
+  }
 }
 const coverPersonalizationPass=coverPersonalizationReports.length===2&&coverPersonalizationReports.every(report=>report.pass);
-const report = {schemaVersion: 1, reports, coverPersonalizationPass, coverPersonalizationReports, digitalPass: coverPersonalizationPass&&reports.every(r => r.digitalPass), digitalIntegrityPass: coverPersonalizationPass&&reports.every(r => r.digitalIntegrityPass), providerReady: false, publishable: false, limitations: ['RGB; PDF/X и CMYK не подтверждены.', 'Приём точных файлов выбранной типографией не подтверждён; пользователь самостоятельно уточняет её требования.', 'Домашняя бумажная проба не выполнена; она необязательна для цифрового выпуска.']};
+const report = {schemaVersion: 1, ...(index.sourceContract==='thematic-v1'?{editorialSources}:{}), reports, coverPersonalizationPass, coverPersonalizationReports, digitalPass: coverPersonalizationPass&&reports.every(r => r.digitalPass), digitalIntegrityPass: coverPersonalizationPass&&reports.every(r => r.digitalIntegrityPass), providerReady: false, publishable: false, limitations: ['RGB; PDF/X и CMYK не подтверждены.', 'Приём точных файлов выбранной типографией не подтверждён; пользователь самостоятельно уточняет её требования.', 'Домашняя бумажная проба не выполнена; она необязательна для цифрового выпуска.']};
 await mkdir(path.join(root, 'validation'), {recursive: true});
 await writeFile(path.join(root, 'validation', 'report.json'), JSON.stringify(report, null, 2) + '\n');
 console.log(`Digital integrity: ${report.digitalIntegrityPass?'PASS':'FAIL'}; physical provider/paper acceptance: NOT VERIFIED; printReady: false`);

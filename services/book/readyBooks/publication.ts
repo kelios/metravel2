@@ -1,3 +1,5 @@
+import {thematicEvidenceSchema, thematicTheme, hasDuplicateThematicTargets} from '../../../data/travelBooks/schema/thematic.ts';
+import {editionIdentity} from './editionFamily.ts';
 import {z} from 'zod';
 import {MIN_READY_BOOK_STOPS, readyBookBodyPageCount, buildReadyBookPagePlan, padPageCount} from './composition';
 import {assetUri, sha256} from '../../../data/travelBooks/schema/manifest';
@@ -130,6 +132,34 @@ export const publishedPlaceBookSchema = commonBookSchema.extend({
   checkPhysicalPackage(book,bodyCount,ctx);
 });
 
+/** Thematic places carry source/target evidence without relaxing legacy exact-point stops. */
+export const publishedThematicBookSchema = commonBookSchema.extend({
+  kind: z.literal('places'), sourceContract: z.literal('thematic-v1'), seriesId: identifier, theme: thematicTheme,
+  slug: z.string().regex(/^[a-z]+(?:-[a-z]+)*$/), layoutVersion: z.literal(2),
+  stopCount: z.number().int().min(MIN_READY_BOOK_STOPS),
+  stops: z.array(z.strictObject({
+    id: identifier, title: z.string().min(1), page: z.number().int().positive(), sourceUrl: z.string().url(),
+    sourceTravelId: z.number().int().positive(), authorId: z.literal(1), pointId: z.number().int().positive().optional(),
+    thematic: thematicEvidenceSchema,
+  })).min(MIN_READY_BOOK_STOPS),
+}).superRefine((book, ctx) => {
+  const fail = (message: string) => ctx.addIssue({code: 'custom', message});
+  const bodyCount = readyBookBodyPageCount(book.stops.length);
+  if (book.stopCount !== book.stops.length || book.bodyPageCount !== bodyCount) fail('Composition count differs from selected places');
+  if (new Set(book.stops.map(stop => stop.id)).size !== book.stops.length) fail('Duplicate selected place');
+  if (hasDuplicateThematicTargets(book.stops.map(stop => stop.thematic.mapTarget))) fail('Duplicate thematic target');
+  const destinations = buildReadyBookPagePlan(book).filter(page => page.kind === 'destination');
+  book.stops.forEach((stop, index) => {
+    const evidence = stop.thematic;
+    if (stop.page !== destinations[index]?.number) fail('Contents do not match the revision layout version');
+    if (stop.sourceUrl !== evidence.articleUrl || stop.sourceTravelId !== evidence.sourceTravelId) fail('Thematic contents must identify the verified source article');
+    if (stop.pointId !== undefined && (evidence.sourceRelation !== 'exact-place' || evidence.mapTarget.kind !== 'published-point' || stop.pointId !== evidence.mapTarget.pointId)) fail('A context source cannot create an exact published point association');
+    if ((book.theme === 'mountains' && !evidence.route) || (book.theme === 'castles' && evidence.route)) fail('Mountain entries require complete routes and castle entries cannot carry them');
+    if (!evidence.media.placements) fail('Published thematic photographs require measured native placements');
+  });
+  checkPhysicalPackage(book, bodyCount, ctx);
+});
+
 export const publishedQuestBookSchema = commonBookSchema.extend({
   kind:z.literal('quests'),seriesId:identifier,volume:z.number().int().positive(),layoutVersion:z.literal(3),
   endMatterPages:z.array(z.enum(['country-map','answers'])).min(1),
@@ -155,7 +185,7 @@ export const publishedQuestBookSchema = commonBookSchema.extend({
 export const publishedBookSchema=z.preprocess(value=>{
   if(value&&typeof value==='object'&&!Array.isArray(value)&&!('kind' in value))return {...value,kind:'places'};
   return value;
-},z.discriminatedUnion('kind',[publishedPlaceBookSchema,publishedQuestBookSchema]));
+},z.union([publishedPlaceBookSchema,publishedThematicBookSchema,publishedQuestBookSchema]));
 
 export const bookMetadataSchema=z.strictObject({
   kind:z.literal('book-metadata'),bookId:identifier,revision:identifier,
@@ -166,9 +196,9 @@ export const bookMetadataSchema=z.strictObject({
 
 export const publicationSchema=z.strictObject({schemaVersion:z.literal(1),releaseId:z.literal('travel-books-v1'),books:z.array(publishedBookSchema).min(2),bookMetadata:z.array(bookMetadataSchema).optional()}).superRefine((value,ctx)=>{
   for(const field of ['id','slug'] as const)if(new Set(value.books.map(book=>book[field])).size!==value.books.length)ctx.addIssue({code:'custom',message:'Duplicate '+field});
-  const identities=value.books.map(book=>book.kind==='places'?`places:${book.country}:${book.visualStyle??'watercolor'}`:`quests:${book.country}:${book.seriesId}:${book.volume}`);
+  const identities=value.books.map(editionIdentity);
   if(new Set(identities).size!==identities.length)ctx.addIssue({code:'custom',message:'Duplicate country series volume'});
-  for(const country of ['BY','PL'])if(!identities.includes(`places:${country}:watercolor`))ctx.addIssue({code:'custom',message:'Missing watercolor edition: '+country});
+  for(const country of ['BY','PL'])if(!identities.includes(`places:${country}:country:watercolor`))ctx.addIssue({code:'custom',message:'Missing watercolor edition: '+country});
   if(value.bookMetadata&&(value.bookMetadata.length!==value.books.length||new Set(value.bookMetadata.map(asset=>asset.bookId)).size!==value.books.length||value.bookMetadata.some(asset=>!value.books.some(book=>book.id===asset.bookId&&book.revision===asset.revision))))ctx.addIssue({code:'custom',message:'Book metadata must cover every exact current edition once'});
 });
 export type PublishedBook=z.infer<typeof publishedBookSchema>;

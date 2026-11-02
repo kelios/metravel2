@@ -8,7 +8,8 @@ type ReadyBookSummaryCommon = Pick<PublishedBook,
     metadata: BookMetadataDescriptor;
   };
 export type ReadyBookSummary = ReadyBookSummaryCommon & (
-  {kind: 'places'} |
+  {kind: 'places'; sourceContract?: undefined; seriesId?: undefined; theme?: undefined} |
+  Pick<Extract<PublishedBook, {sourceContract: 'thematic-v1'}>, 'kind'|'sourceContract'|'seriesId'|'theme'> |
   Pick<Extract<PublishedBook, {kind: 'quests'}>, 'kind'|'seriesId'|'volume'>
 );
 
@@ -28,9 +29,16 @@ export async function loadReadyBookMetadata(summary: ReadyBookSummary, signal?: 
   }
   const key = `${summary.id}:${summary.revision}:${asset.sha256}`;
   const cached = loadedBooks.get(key);
-  if (cached) return cached;
+  if (cached) { assertSummaryIdentity(cached, summary); return cached; }
   const bytes = await fetchVerifiedBookAsset(asset, signal);
   const value = JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(bytes)) as PublishedBook;
+  assertSummaryIdentity(value, summary);
+  abortIfNeeded(signal);
+  loadedBooks.set(key, value);
+  return value;
+}
+
+function assertSummaryIdentity(value: PublishedBook, summary: ReadyBookSummary): void {
   // Full schemas run in the publisher, not the initial browser bundle. The byte hash
   // authenticates that validation; these checks prevent a swapped summary/revision.
   if (!value || typeof value !== 'object' || value.id !== summary.id || value.slug !== summary.slug ||
@@ -45,10 +53,9 @@ export async function loadReadyBookMetadata(summary: ReadyBookSummary, signal?: 
       !Array.isArray(value.quality) || value.quality.length !== 2 ||
       JSON.stringify(value.profiles) !== JSON.stringify(summary.profiles) ||
       JSON.stringify(value.missing) !== JSON.stringify(summary.missing) ||
+      ('sourceContract' in value ? value.sourceContract : undefined) !== ('sourceContract' in summary ? summary.sourceContract : undefined) ||
+      (summary.kind === 'places' && summary.sourceContract === 'thematic-v1' && (!('sourceContract' in value) || value.sourceContract !== 'thematic-v1' || value.seriesId !== summary.seriesId || value.theme !== summary.theme)) ||
       (summary.kind === 'quests' && (value.kind !== 'quests' || value.seriesId !== summary.seriesId || value.volume !== summary.volume))) {
     throw new Error('BOOK_METADATA_IDENTITY');
   }
-  abortIfNeeded(signal);
-  loadedBooks.set(key, value);
-  return value;
 }

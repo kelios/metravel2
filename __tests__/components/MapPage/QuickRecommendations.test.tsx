@@ -128,6 +128,7 @@ describe('QuickRecommendations', () => {
       expect.objectContaining({
         relatedTravelUrl: 'https://metravel.by/travels/mirskiy-zamok',
         relatedTravelId: 512,
+        sourcePointId: 2,
       }),
     );
   });

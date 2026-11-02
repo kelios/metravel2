@@ -1,0 +1,1513 @@
+{
+  "schemaVersion": 2,
+  "sourceContract": "thematic-v1",
+  "seriesId": "castles-pl",
+  "theme": "castles",
+  "authorId": 1,
+  "selectedOn": "2026-11-02",
+  "decision": "Владелец выбрал пилоты «Горы Польши» (40 мест) и «Замки Польши» (30 мест) 01.11.2026 (#2809); места из изданных книг BY/PL не повторяются.",
+  "selectionRule": "Из таблицы 01.11.2026 исключены места со слабым фото (нет подписи места в статье) и без официального источника; из резерва подняты места с авторским фото и официальным сайтом; исключённые — в резерве с причиной. Два неподтверждённых снимка руин заменены проверенными резервами Крупе и Казимеж-Дольны; 30 мест сохранены.",
+  "places": [
+    {
+      "id": "castles-pl-01",
+      "title": "Замок Морско",
+      "localName": "Zamek Morsko",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 12626,
+        "sourceTravelId": 261,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/zamok-bekovets-i-dvorets-varshitskogo-marshrut",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek Morsko; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 12626,
+          "lat": 50.5506133,
+          "lng": 19.5205464,
+          "sourceUrl": "https://metravel.by/travels/zamok-bekovets-i-dvorets-varshitskogo-marshrut",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/1891/conversions/zI1TL9LNXdA6Y07yF1S0Z4GLo5B8bzTJAJMsre3Y-detail_hd.jpg",
+          "sha256": "883ac561827144c97016777523f571223fb2a568dc51a3f4d03d8ca6e8f8520d",
+          "bytes": 238761,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Руины замка Морско («Бековец») в тумане.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-02",
+      "title": "Руины замка Смолень (резерват)",
+      "localName": "Rezerwat Smoleń",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 12523,
+        "sourceTravelId": 269,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/dvorets-moesa-v-verbke-i-zamok-pilcha-marshrut",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Rezerwat Smoleń; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 12523,
+          "lat": 50.4383453,
+          "lng": 19.6752831,
+          "sourceUrl": "https://metravel.by/travels/dvorets-moesa-v-verbke-i-zamok-pilcha-marshrut",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/cd6d30428de64a7eb80a0f206ce8af1e.JPG.webp",
+          "sha256": "aea6b51b8281fa402a933d9ca9486aaee0a54b9c90721a930d3cbfcbc3af9142",
+          "bytes": 165356,
+          "widthPx": 1000,
+          "heightPx": 563,
+          "depiction": "target",
+          "caption": "Руины замка Смолень (резерват).",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 39.07637655417407,
+              "heightMm": 22.000000000000004,
+              "effectivePpi": 650.0090909090908
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 94.1385435168739,
+              "heightMm": 53,
+              "effectivePpi": 269.8150943396226
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-03",
+      "title": "Руины замка в Крупе",
+      "localName": "Krupe",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 15995,
+        "sourceTravelId": 577,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/liublin-zamosts-i-zamok-v-krupe-marshrut-na-3-dnia-po-vostoku-polshi",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Krupe; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 15995,
+          "lat": 51.0284805,
+          "lng": 23.220959,
+          "sourceUrl": "https://metravel.by/travels/liublin-zamosts-i-zamok-v-krupe-marshrut-na-3-dnia-po-vostoku-polshi",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/cf43d6359b5f440f9e65d26a6f53e698.webp",
+          "sha256": "713f1bd507c6f6b2189a719a0b6f0bcb1b2edd3e4924523eee5de3ca829d1197",
+          "bytes": 817086,
+          "widthPx": 1406,
+          "heightPx": 2500,
+          "depiction": "target",
+          "caption": "Руины замка Крупе.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 12.372800000000002,
+              "heightMm": 22,
+              "effectivePpi": 2886.363636363636
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 29.8072,
+              "heightMm": 53,
+              "effectivePpi": 1198.1132075471696
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-04",
+      "title": "Замок Липовец",
+      "localName": "Rezerwat Lipowiec",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 13117,
+        "sourceTravelId": 280,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/zamok-lipovets-ruiny-i-skansen-pod-krakovom",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Rezerwat Lipowiec; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 13117,
+          "lat": 50.0768142,
+          "lng": 19.4448416,
+          "sourceUrl": "https://metravel.by/travels/zamok-lipovets-ruiny-i-skansen-pod-krakovom",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/2077/conversions/j7F3suaeYKaCJoE0Tj7jpQeMElGi5qCtvapjRR8Q-detail_hd.jpg",
+          "sha256": "2fa5c253cfdb1c0e7dd1560106d92d85d6c65e945505f75a2afc04ed826d390d",
+          "bytes": 198699,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Замок Липовец с высоты.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-05",
+      "title": "Замок в Бендзине",
+      "localName": "Zamek Będzin",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 13334,
+        "sourceTravelId": 282,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/bendzinskii-zamok-dvorets-meroshevskikh-i-podzemele",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek Będzin; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 13334,
+          "lat": 50.3271023,
+          "lng": 19.1291156,
+          "sourceUrl": "https://metravel.by/travels/bendzinskii-zamok-dvorets-meroshevskikh-i-podzemele",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/ff919c824b994735b10df6f8514aeaf9.JPG.webp",
+          "sha256": "8124a4889ea7bc8d60cc4083ed0f332eefa97398872e413d96b5d91b0258f350",
+          "bytes": 124700,
+          "widthPx": 1000,
+          "heightPx": 563,
+          "depiction": "target",
+          "caption": "Замок в Бендзине.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 39.07637655417407,
+              "heightMm": 22.000000000000004,
+              "effectivePpi": 650.0090909090908
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 94.1385435168739,
+              "heightMm": 53,
+              "effectivePpi": 269.8150943396226
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-06",
+      "title": "Жупный замок, Величка",
+      "localName": "Zamek Żupny",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 13471,
+        "sourceTravelId": 297,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/chto-posmotret-riadom-s-krakovom-za-odin-den",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek Żupny; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 13471,
+          "lat": 49.9839259,
+          "lng": 20.0593926,
+          "sourceUrl": "https://metravel.by/travels/chto-posmotret-riadom-s-krakovom-za-odin-den",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/13471/conversions/50ce4781eb1244e5b36fba10596a7de2.JPG",
+          "sha256": "3ccb249a3aef5694a7c96d4f97bef6edb1bf77f535078cd7c5942a72eb74c75e",
+          "bytes": 368259,
+          "widthPx": 768,
+          "heightPx": 1024,
+          "depiction": "target",
+          "caption": "Жупный замок, Величка.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 1182.2545454545455
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 490.7471698113207
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-07",
+      "title": "Королевский замок в Хенцинах",
+      "localName": "Zamek w Chęcinach",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 13516,
+        "sourceTravelId": 303,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek w Chęcinach; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 13516,
+          "lat": 50.7973124,
+          "lng": 20.4603088,
+          "sourceUrl": "https://metravel.by/travels/khentsinskii-zamok-i-dvorets-dembinskikh-marshrut",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/13516/conversions/a61fd3daee1d45818671dc98e876924e.JPG",
+          "sha256": "3ef440a1a05cb6e659f2d2c709b5b4bc9dca8f5b6cfeb4d0e4dd7182dbe19b2c",
+          "bytes": 176749,
+          "widthPx": 1024,
+          "heightPx": 576,
+          "depiction": "target",
+          "caption": "Королевский замок в Хенцинах.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 39.111111111111114,
+              "heightMm": 22,
+              "effectivePpi": 665.0181818181817
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 94.22222222222223,
+              "heightMm": 53,
+              "effectivePpi": 276.0452830188679
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-08",
+      "title": "Замок в Пилице",
+      "localName": "Zamek w Pilicy",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 13531,
+        "sourceTravelId": 308,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/zamok-v-pilice",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek w Pilicy; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 13531,
+          "lat": 50.4677726,
+          "lng": 19.6489009,
+          "sourceUrl": "https://metravel.by/travels/zamok-v-pilice",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/13531/conversions/847f6203f6db4801bc156ea7a7ee21d6.JPG",
+          "sha256": "16639d9a3563eccff279f956f41525a7313b7e393cd7b305f4844bbcade50f75",
+          "bytes": 370867,
+          "widthPx": 1024,
+          "heightPx": 576,
+          "depiction": "target",
+          "caption": "Замок в Пилице.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 39.111111111111114,
+              "heightMm": 22,
+              "effectivePpi": 665.0181818181817
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 94.22222222222223,
+              "heightMm": 53,
+              "effectivePpi": 276.0452830188679
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-09",
+      "title": "Замок Чорштын",
+      "localName": "Zamek Czorsztyn",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 13716,
+        "sourceTravelId": 320,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/peninskiy-narodnyy-park-sokolica",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek Czorsztyn; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 13716,
+          "lat": 49.4349049,
+          "lng": 20.3130727,
+          "sourceUrl": "https://metravel.by/travels/peninskiy-narodnyy-park-sokolica",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/a906b3a23eaa432ab0f24160b9e0e3ee.JPG.webp",
+          "sha256": "746ce8840dc461099944857aac233b6ada0aef7ee92897893be0cf7e6fd0f85f",
+          "bytes": 78340,
+          "widthPx": 800,
+          "heightPx": 453,
+          "depiction": "target",
+          "caption": "Замок Чорштын.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 38.852097130242825,
+              "heightMm": 22,
+              "effectivePpi": 523.0090909090909
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 93.59823399558499,
+              "heightMm": 53,
+              "effectivePpi": 217.09811320754716
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-10",
+      "title": "Замок в Гостишуве",
+      "localName": "Zamek w Gościszowie",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 13728,
+        "sourceTravelId": 321,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/zamki-nizhnei-silezii-chokha-grodzets-i-kostelniki",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek w Gościszowie; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 13728,
+          "lat": 51.1608919,
+          "lng": 15.4555224,
+          "sourceUrl": "https://metravel.by/travels/zamki-nizhnei-silezii-chokha-grodzets-i-kostelniki",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/3194/conversions/SgMHxvdQStqwb2nvvlPOd3aBcfIgjOCJGYSWRJU0-detail_hd.jpg",
+          "sha256": "90553bf69e2e262f2222209a0d95fc3cffad46ca864977f3938e2d170f322e3f",
+          "bytes": 779379,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Замок в Gościszów / Zamek w Gościszowie — Польша.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-11",
+      "title": "Замок Поморских князей, Слупск",
+      "localName": "Zamek Książąt Pomorskich w Słupsku",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 13787,
+        "sourceTravelId": 330,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/slovinskiy-nacionalnyy-park-slupsk",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek Książąt Pomorskich w Słupsku; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 13787,
+          "lat": 54.4643211,
+          "lng": 17.0350485,
+          "sourceUrl": "https://metravel.by/travels/slovinskiy-nacionalnyy-park-slupsk",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/546dd8621e5f4509b8b61b69fe89d7d8.JPG.webp",
+          "sha256": "cf6540882dd2a844d4ea0029ce2274657d88e2f13f6c094574f1f223ddc317ae",
+          "bytes": 39054,
+          "widthPx": 600,
+          "heightPx": 800,
+          "depiction": "target",
+          "caption": "Замок Поморских князей, Слупск.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 923.6363636363636
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 383.3962264150943
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-12",
+      "title": "Замок в Освенциме",
+      "localName": "Zamek w Oświęcimiu",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 13877,
+        "sourceTravelId": 360,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/osvencim-koncentracionnyy-lager-i-lager-smerti-aushvic",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek w Oświęcimiu; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 13877,
+          "lat": 50.0398705,
+          "lng": 19.219373,
+          "sourceUrl": "https://metravel.by/travels/osvencim-koncentracionnyy-lager-i-lager-smerti-aushvic",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/321bb8987aa8405da75edc8388a4dcd7.JPG.webp",
+          "sha256": "523da139ce8e42e1fa9cbeabbeaa9f30ff84cf22341b6aaea1edea6ca50cf251",
+          "bytes": 57750,
+          "widthPx": 800,
+          "heightPx": 453,
+          "depiction": "target",
+          "caption": "Главный корпус замка в Освенциме.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 38.852097130242825,
+              "heightMm": 22,
+              "effectivePpi": 523.0090909090909
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 93.59823399558499,
+              "heightMm": 53,
+              "effectivePpi": 217.09811320754716
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-13",
+      "title": "Руины замка Тевтонского ордена, Торунь",
+      "localName": "Zamek Krzyżacki w Toruniu",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 13900,
+        "sourceTravelId": 369,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/torun-staryi-gorod-i-muzei-prianika-polsha",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek Krzyżacki w Toruniu; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 13900,
+          "lat": 53.0092578,
+          "lng": 18.6107669,
+          "sourceUrl": "https://metravel.by/travels/torun-staryi-gorod-i-muzei-prianika-polsha",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/fdbc31eec13c4e7d9e14abb371f5f51d.JPG.webp",
+          "sha256": "8a4e19aef9943c90663e1ea9a67d490049710a60b5966822db433f6c8eb96859",
+          "bytes": 87800,
+          "widthPx": 453,
+          "heightPx": 800,
+          "depiction": "target",
+          "caption": "Гданиско — уцелевшая башня Тевтонского замка в Торуни.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 12.4575,
+              "heightMm": 22,
+              "effectivePpi": 923.6363636363636
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 30.01125,
+              "heightMm": 53,
+              "effectivePpi": 383.3962264150943
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-14",
+      "title": "Королевский замок в Сандомире",
+      "localName": "Muzeum Okręgowe w Sandomierzu",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14098,
+        "sourceTravelId": 413,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/sandomir-chto-posmotret-za-den-zamok-i-podzemelia",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Muzeum Okręgowe w Sandomierzu; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14098,
+          "lat": 50.6758165,
+          "lng": 21.7475674,
+          "sourceUrl": "https://metravel.by/travels/sandomir-chto-posmotret-za-den-zamok-i-podzemelia",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/ae2da132ed334d2bbc21f425f6f835a8.JPG.webp",
+          "sha256": "0277a75ba2679f3d8de35b07f87b6bff1e08a19ba4854b24c18026329cfbfa93",
+          "bytes": 87418,
+          "widthPx": 800,
+          "heightPx": 600,
+          "depiction": "target",
+          "caption": "Сандомирский замок на зелёном холме, вид снизу.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 29.333333333333332,
+              "heightMm": 22,
+              "effectivePpi": 692.7272727272727
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 70.66666666666667,
+              "heightMm": 53,
+              "effectivePpi": 287.5471698113207
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-15",
+      "title": "Замок Болькув",
+      "localName": "Zamek Bolków",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14151,
+        "sourceTravelId": 421,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek Bolków; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14151,
+          "lat": 50.9217593,
+          "lng": 16.0979458,
+          "sourceUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/5615/conversions/fPOfEoIOxIww4Fsuw7FsbWDmaiXaVcPPOoXcqDsr-detail_hd.jpg",
+          "sha256": "b5add60660c8df6617122a92f6ebc3567a83551a45057416f6d2dce3463ac47a",
+          "bytes": 754919,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Болькувский замок (Zamek Bolków).",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-16",
+      "title": "Замок Свины",
+      "localName": "Zamek Świny",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14152,
+        "sourceTravelId": 421,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek Świny; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14152,
+          "lat": 50.9387164,
+          "lng": 16.1122484,
+          "sourceUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/5613/conversions/tzD7AvEcRwL1ovHxtvkAyzKGXpZjYpcWcAXcZvIV-detail_hd.jpg",
+          "sha256": "ee8a0cfbd4a355ecf7816c91489eb7dad9426646042bf76bd72886a52de71830",
+          "bytes": 975788,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Замок Швины / Zamek Świny — Польша.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-17",
+      "title": "Замок в Роздоке",
+      "localName": "Zamek w Roztoce",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14153,
+        "sourceTravelId": 421,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek w Roztoce; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14153,
+          "lat": 50.9579753,
+          "lng": 16.2261672,
+          "sourceUrl": "https://metravel.by/travels/shkliarska-poremba-za-3-dnia-zamki-i-snezhka",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/5612/conversions/0aI5P4RqAZa5sEbjmaSquik9X4SksdJGiWjNLErA-detail_hd.jpg",
+          "sha256": "63a4f5a5e636e41784ec8b2a1cd5cda0d837c89178d67ea80fb1bb209b42092e",
+          "bytes": 622940,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Замок в Розтоке / Zamek w Roztoce — Польша.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-18",
+      "title": "Королевский замок в Добчице",
+      "localName": "Zamek Królewski w Dobczycach",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14179,
+        "sourceTravelId": 422,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek Królewski w Dobczycach; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14179,
+          "lat": 49.8767968,
+          "lng": 20.0849776,
+          "sourceUrl": "https://metravel.by/travels/dvorets-v-pekarakh-i-zamok-v-dobchitse-marshrut",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/5639/conversions/7eBQfnXncVzeevQdsEJajAZCwiYxqcMcqZ6M5KwZ-detail_hd.jpg",
+          "sha256": "2f16f4af40b140ad3545e61cbd7b3bf6d34915a92bc81046e2bfcbfd1fcb6f57",
+          "bytes": 591102,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Замок в Добчице / Zamek Królewski w Dobczycach — Польша.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-19",
+      "title": "Замок Тропштын",
+      "localName": "Zamek Tropsztyn",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14207,
+        "sourceTravelId": 434,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek Tropsztyn; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14207,
+          "lat": 49.7962565,
+          "lng": 20.6450981,
+          "sourceUrl": "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/5800/conversions/6f8yxifOzwtxz94DHHp4ajQsxYqIsLZPIwZXHD0Z-detail_hd.jpg",
+          "sha256": "cae14651a8effce44d8fdcd917815a365f6a6c117580c5efaa0e21ad731054db",
+          "bytes": 788852,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Замок Тропштын / Zamek Tropsztyn — Польша.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-20",
+      "title": "Замок в Чхуве",
+      "localName": "Zamek w Czchowie",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14208,
+        "sourceTravelId": 434,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek w Czchowie; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14208,
+          "lat": 49.833196,
+          "lng": 20.6774169,
+          "sourceUrl": "https://metravel.by/travels/zamki-malopolshi-chkhuv-tropshtyn-i-novy-sonch",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/5794/conversions/5LRKdslvIuL3YCBiYX1u9U0fa3dCuagn5V2oil7C-detail_hd.jpg",
+          "sha256": "9fa3a0c2df6aa1eba76c362a7397d0956e6806f6ac1a19b1f51876478e6fd032",
+          "bytes": 969824,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Замок в Чхуве с высоты.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-21",
+      "title": "Замок Лесьна Скала",
+      "localName": "Leśna Skała",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14246,
+        "sourceTravelId": 438,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Leśna Skała; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14246,
+          "lat": 50.412248,
+          "lng": 16.457758,
+          "sourceUrl": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/5905/conversions/BjwdUgB48IHIwK4Gm99oOqIJWxkMrzTAmYnjI684-detail_hd.jpg",
+          "sha256": "c652ded13bbf4491056dafe3c62956788a29846c3404d611f2f2df4333a40736",
+          "bytes": 612415,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Замок «Лесная Скала» (Leśna Skała) над лесом.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-22",
+      "title": "Крепость Сребрна-Гура",
+      "localName": "Twierdza Srebrna Góra",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14255,
+        "sourceTravelId": 438,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Twierdza Srebrna Góra; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14255,
+          "lat": 50.5740451,
+          "lng": 16.642251,
+          "sourceUrl": "https://metravel.by/travels/nizhniaia-sileziia-za-nedeliu-stolovye-gory-vrotslav-klodzko",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/c5ace9ce8e424b5bb5f16f47809b3af4.jpg.webp",
+          "sha256": "e1d3713ccb927cecd3133f16d55d3109c38a67a80104aec5054893bc2462bbf4",
+          "bytes": 44920,
+          "widthPx": 800,
+          "heightPx": 450,
+          "depiction": "target",
+          "caption": "Крепость Сребна-Гура на горе среди лесов, вид с дрона.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 39.111111111111114,
+              "heightMm": 22,
+              "effectivePpi": 519.5454545454545
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 94.22222222222221,
+              "heightMm": 53,
+              "effectivePpi": 215.66037735849056
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-23",
+      "title": "Замок Каменец, Одрживонь",
+      "localName": "Zamek Kamieniec",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14365,
+        "sourceTravelId": 450,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/podkarpatskoe-voevodstvo-beshchady-zamki-i-marshrut",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek Kamieniec; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14365,
+          "lat": 49.7424403,
+          "lng": 21.7869272,
+          "sourceUrl": "https://metravel.by/travels/podkarpatskoe-voevodstvo-beshchady-zamki-i-marshrut",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/6087/conversions/puUEbL98Zek4u2PjYK1olSLspUMsXPw4lQKmGzX6-detail_hd.jpg",
+          "sha256": "46a16e2f64776900c5781419bbf154c219cc222d8292aba15a4455df91f5fdce",
+          "bytes": 562829,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Руины замка Каменец зимой.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-24",
+      "title": "Замок в Красичине",
+      "localName": "Zamek w Krasiczynie",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14367,
+        "sourceTravelId": 450,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/podkarpatskoe-voevodstvo-beshchady-zamki-i-marshrut",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek w Krasiczynie; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14367,
+          "lat": 49.7762232,
+          "lng": 22.6494012,
+          "sourceUrl": "https://metravel.by/travels/podkarpatskoe-voevodstvo-beshchady-zamki-i-marshrut",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/6eff77f3e98f4160b2bf2d11048922a7.JPG.webp",
+          "sha256": "b187b61d889ca690bd0fe829793f154b8cb6de9ad03cf094522541b048d0cc14",
+          "bytes": 100920,
+          "widthPx": 800,
+          "heightPx": 600,
+          "depiction": "target",
+          "caption": "Замок в Красичине.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 29.333333333333332,
+              "heightMm": 22,
+              "effectivePpi": 692.7272727272727
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 70.66666666666667,
+              "heightMm": 53,
+              "effectivePpi": 287.5471698113207
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-25",
+      "title": "Руины замка в Яновце",
+      "localName": "Ruiny zamku w Janowcu",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14526,
+        "sourceTravelId": 478,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/kazimezh-dolnyy",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Ruiny zamku w Janowcu; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14526,
+          "lat": 51.3243929,
+          "lng": 21.8935504,
+          "sourceUrl": "https://metravel.by/travels/kazimezh-dolnyy",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/6536/conversions/Eop0CUZwh1bIBsSlVTdzJWWVE9hKKdWiuHHrfA2r-detail_hd.jpg",
+          "sha256": "7bd4ba4e0947744ec4dda37c4b17231890ef189a5887a37a3411a1a7b2e2fea0",
+          "bytes": 582676,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Замок в Яновце / Ruiny zamku w Janowcu — Польша.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-26",
+      "title": "Замок Гродно, Загуже-Слёнске",
+      "localName": "Zamek Grodno",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14639,
+        "sourceTravelId": 494,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/zamok-grodno",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek Grodno; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14639,
+          "lat": 50.7493163,
+          "lng": 16.4105594,
+          "sourceUrl": "https://metravel.by/travels/zamok-grodno",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/6812/conversions/1LRTooj4kELxzc90bQIVVABI0NbrfcfDb5qTZjS0-detail_hd.jpg",
+          "sha256": "3d0ace1d7dc419a33e329be619b50031cfa67536bea1c670b5fb15448df03d9b",
+          "bytes": 603894,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Замок Гродно на склоне над долиной, вид сверху.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-27",
+      "title": "Руины замка в Рытро",
+      "localName": "Ruiny Zamku w Rytrze",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14699,
+        "sourceTravelId": 511,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/ot-zamka-rytro-do-schronisko-cyrla-marshrut",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Ruiny Zamku w Rytrze; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14699,
+          "lat": 49.4889391,
+          "lng": 20.6866765,
+          "sourceUrl": "https://metravel.by/travels/ot-zamka-rytro-do-schronisko-cyrla-marshrut",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/address-image/14699/conversions/9ad46f9863e14a398f840bda79e59791.JPG",
+          "sha256": "5155aa89afa3def2d900a7ca09b3c8023a33778c4350e6a9369d780eee8058f3",
+          "bytes": 170966,
+          "widthPx": 1024,
+          "heightPx": 576,
+          "depiction": "target",
+          "caption": "Руины замка в Рытро.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 39.111111111111114,
+              "heightMm": 22,
+              "effectivePpi": 665.0181818181817
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 94.22222222222223,
+              "heightMm": 53,
+              "effectivePpi": 276.0452830188679
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-28",
+      "title": "Руины замка Волек",
+      "localName": "Zamek Wołek",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14348,
+        "sourceTravelId": 446,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/ruiny-zamka-volek",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamek Wołek; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14348,
+          "lat": 49.8312216,
+          "lng": 19.2031242,
+          "sourceUrl": "https://metravel.by/travels/ruiny-zamka-volek",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/6023/conversions/a8tBqTPkB3psaPih5DZrH0mod5NKyPGvCNqJfCSb-detail_hd.jpg",
+          "sha256": "08f2eb46e670d3f2dc322c557fddafc060279e58a6d4a8a7b21c7355cf9c2876",
+          "bytes": 871515,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Заснеженный контур фундаментов замка Волек, вид сверху; кладка читается частично.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-29",
+      "title": "Руины замка в Казимеже-Дольном (точка «Zamkowa»)",
+      "localName": "Zamkowa",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 14533,
+        "sourceTravelId": 478,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/kazimezh-dolnyy",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamkowa; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 14533,
+          "lat": 51.3235589,
+          "lng": 21.9503478,
+          "sourceUrl": "https://metravel.by/travels/kazimezh-dolnyy",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/6542/conversions/V5FC8WwMUpEcU6MPUiXPtuxVTXLyX7dNHEKJio0H-detail_hd.jpg",
+          "sha256": "5d255c0810e9ed412290528b6895b39528a8e49e548ac16271e25ddb3a2f91a7",
+          "bytes": 671537,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Руины замка в Казимеже-Дольном.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 22,
+              "heightMm": 22,
+              "effectivePpi": 1246.909090909091
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 53,
+              "heightMm": 53,
+              "effectivePpi": 517.5849056603773
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "castles-pl-30",
+      "title": "Люблинский замок (точка «Zamkowa 9»)",
+      "localName": "Zamkowa 9",
+      "country": "PL",
+      "thematic": {
+        "sourcePointId": 15997,
+        "sourceTravelId": 577,
+        "authorId": 1,
+        "articleUrl": "https://metravel.by/travels/liublin-zamosts-i-zamok-v-krupe-marshrut-na-3-dnia-po-vostoku-polshi",
+        "publicationStatus": "published",
+        "verifiedOn": "2026-11-01",
+        "sourceRelation": "exact-place",
+        "sourceEvidence": "Точка источника: Zamkowa 9; физическая цель и роль фотографии проверены отдельно по статье и указанному источнику карты.",
+        "mapTarget": {
+          "kind": "published-point",
+          "pointId": 15997,
+          "lat": 51.2474861,
+          "lng": 22.5653611,
+          "sourceUrl": "https://metravel.by/travels/liublin-zamosts-i-zamok-v-krupe-marshrut-na-3-dnia-po-vostoku-polshi",
+          "checkedOn": "2026-11-01",
+          "evidence": "physical destination / natural-area anchor, not asserted entrance; Verified published place coordinate"
+        },
+        "media": {
+          "kind": "published-variant",
+          "uri": "https://metravel.by/travel-description-image/70383b79ec774afd92e462c397f7d258.jpg.webp?w=1600&q=85&fit=contain",
+          "sha256": "6ec8f1ae473d86ea8e7b04c0e74b57e17f676248085470d85a95906afada3075",
+          "bytes": 346136,
+          "widthPx": 1440,
+          "heightPx": 1920,
+          "depiction": "target",
+          "caption": "Неоготический фасад и главный вход Люблинского замка.",
+          "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
+          "placements": [
+            {
+              "profileId": "pocket-150x100",
+              "widthMm": 16.5,
+              "heightMm": 22,
+              "effectivePpi": 2216.7272727272725
+            },
+            {
+              "profileId": "album-a5",
+              "widthMm": 39.75,
+              "heightMm": 53,
+              "effectivePpi": 920.1509433962264
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "reserve": []
+}

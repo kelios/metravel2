@@ -10,6 +10,7 @@ import {build} from 'esbuild';
 import sharp from 'sharp';
 import {stageBookMetadata,relatedBookIndex} from './catalog-metadata.mjs';
 import {coverResources, coverPersonalizationDescriptor, readCoverResource} from './cover-resources.mjs';
+import {assertProductionEditionSet, assertProductionEditorialIdentity, assertAcceptedThematicEditorial} from './production-contract.mjs';
 
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 const readJson=async file=>JSON.parse(await readFile(file,'utf8'));
@@ -40,7 +41,7 @@ export async function preparePublication({input,output,baseUrl}){
   const base=new URL(baseUrl);
   if(base.href!=='https://metravel.by/travel-books/') throw new Error('The same-origin immutable /travel-books/ media base is required');
   const index=await readJson(path.join(root,'production-index.json'));
-  if(index.schemaVersion!==1||index.books?.length!==2) throw new Error('Expected both production books');
+  assertProductionEditionSet(index);
   const acceptance=await readJson(path.join(root,'validation/report.json'));
   if(acceptance.schemaVersion!==1||acceptance.digitalIntegrityPass!==true||!Array.isArray(acceptance.reports)) throw new Error('Production digital acceptance is required');
   if(acceptance.coverPersonalizationPass!==true||acceptance.coverPersonalizationReports?.length!==2)throw new Error('Clean cover-template and full-font acceptance is required');
@@ -68,10 +69,14 @@ export async function preparePublication({input,output,baseUrl}){
   const {publicationSchema,coverPersonalizationSchemaForStyle,buildReadyBookPagePlan,buildQuestBookPagePlan}=createRequire(import.meta.url)(validation);
   const books=[];
   for(const source of index.books){
-    const editorial=await readJson(source.editorialPath);
+    const editorialPath=await realpath(source.editorialPath);
+    if(source.sourceContract==='thematic-v1'&&!editorialPath.startsWith(root+path.sep))throw new Error('Thematic editorial source escapes production root');
+    const editorialBytes=await readFile(editorialPath);
+    const editorial=JSON.parse(editorialBytes.toString('utf8'));
+    assertAcceptedThematicEditorial(source,editorialBytes,acceptance);
     const isQuest=source.kind==='quests';
     if(isQuest!==(editorial.kind==='quests'))throw new Error('Production kind differs from editorial source');
-    if(editorial.id!==source.bookId||editorial.revision!==source.revision||editorial.country!==source.country) throw new Error('Editorial snapshot mismatch');
+    assertProductionEditorialIdentity(source, editorial);
     if(!identifier.test(source.bookId)||!identifier.test(source.revision)||source.profiles.some(p=>!['pocket-150x100','album-a5'].includes(p.profile.id)))throw new Error('Invalid production identity');
     for(const profile of source.profiles)for(const control of profile.controls){
       const planPath=await realpath(control.planPath);
@@ -135,10 +140,10 @@ export async function preparePublication({input,output,baseUrl}){
     const destinationPages=isQuest?buildQuestBookPagePlan(editorial,{endMatterPages:editorial.endMatterPages}).filter(page=>page.kind==='quest-story'):buildReadyBookPagePlan(editorial).filter(page=>page.kind==='destination');
     const quality=source.profiles.map(profile=>{const reports=acceptance.reports.filter(report=>report.bookId===source.bookId&&report.profileId===profile.profile.id&&report.purpose==='read');const minIllustrationPpi=Math.min(...reports.map(report=>report.minIllustrationPpi));return {profileId:profile.profile.id,printReady:false,minIllustrationPpi,physicalChecks:[...(minIllustrationPpi<300?['image-resolution']:[]),'provider-acceptance','paper-check']};});
     // The watercolor series keeps its historical JSON shape; other visual editions carry their style explicitly.
-    books.push({...(isQuest?{kind:'quests',seriesId:editorial.seriesId,volume:editorial.volume,endMatterPages:editorial.endMatterPages}:{}),id:editorial.id,slug:editorial.slug,title:editorial.title,country:editorial.country,...(editorial.visualStyle&&editorial.visualStyle!=='watercolor'?{visualStyle:editorial.visualStyle}:{}),revision,contentLocale:'ru',status:'partial',layoutVersion:isQuest?3:2,coverPersonalization,bodyPageCount:source.bodyPageCount,coverPageCount:4,stopCount:isQuest?editorial.quests.length:editorial.stops.length,quality,
+    books.push({...(isQuest?{kind:'quests',seriesId:editorial.seriesId,volume:editorial.volume,endMatterPages:editorial.endMatterPages}:editorial.sourceContract==='thematic-v1'?{kind:'places',sourceContract:'thematic-v1',seriesId:editorial.seriesId,theme:editorial.theme}:{}),id:editorial.id,slug:editorial.slug,title:editorial.title,country:editorial.country,...(editorial.visualStyle&&editorial.visualStyle!=='watercolor'?{visualStyle:editorial.visualStyle}:{}),revision,contentLocale:'ru',status:'partial',layoutVersion:isQuest?3:2,coverPersonalization,bodyPageCount:source.bodyPageCount,coverPageCount:4,stopCount:isQuest?editorial.quests.length:editorial.stops.length,quality,
       coverUri:preview.find(p=>p.profileId==='pocket-150x100'&&p.component==='cover').pages[0].uri,
       missing:['stickers','instructions','print-passport','provider-acceptance','paper-check'],
-      stops:isQuest?editorial.quests.map((quest,i)=>({id:quest.questId,title:quest.title,page:destinationPages[i].number,sourceUrl:quest.questUrl,questId:quest.id,questSlug:quest.questId})):editorial.stops.map((stop,i)=>({id:stop.id,title:stop.title,page:destinationPages[i].number,sourceUrl:stop.navigation.articleUrl,pointId:stop.navigation.pointId,sourceTravelId:stop.navigation.sourceTravelId,authorId:1,...(stop.navigation.quest?{questId:stop.navigation.quest.id}:{})})),
+      stops:isQuest?editorial.quests.map((quest,i)=>({id:quest.questId,title:quest.title,page:destinationPages[i].number,sourceUrl:quest.questUrl,questId:quest.id,questSlug:quest.questId})):editorial.stops.map((stop,i)=>({id:stop.id,title:stop.title,page:destinationPages[i].number,sourceUrl:stop.navigation.articleUrl,...(stop.thematic?{thematic:stop.thematic,...(stop.thematic.sourceRelation==='exact-place'&&stop.thematic.mapTarget.kind==='published-point'?{pointId:stop.thematic.mapTarget.pointId}:{})}:{pointId:stop.navigation.pointId}),sourceTravelId:stop.navigation.sourceTravelId,authorId:1,...(stop.navigation.quest?{questId:stop.navigation.quest.id}:{})})),
       profiles:source.profiles.map(p=>p.profile),artifacts,preview});
   }
   const {staged:manifest}=planPublicationMerge(await readJson('data/travelBooks/manifest.json'),await stageBookMetadata({schemaVersion:1,releaseId:'travel-books-v1',books},output),value=>publicationSchema.parse(value));

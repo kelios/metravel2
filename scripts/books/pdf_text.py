@@ -1,5 +1,7 @@
 """Verify all requested prose on its logical destination folio, including imposed output."""
 import re
+from decimal import Decimal, ROUND_HALF_UP
+from urllib.parse import urlsplit
 
 
 def normalized(text):
@@ -8,6 +10,63 @@ def normalized(text):
 
 def story_present(story, destination, continuation=''):
     return normalized(story) in normalized(destination)
+
+
+def printed_metric(value):
+    if isinstance(value, dict):
+        return printed_metric(value['min']) + '–' + printed_metric(value['max'])
+    number = Decimal(str(value)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    return format(number, 'f').rstrip('0').rstrip('.').replace('.', ',') if number % 1 else str(int(number))
+
+
+def thematic_fragments(stop):
+    evidence = stop.get('thematic')
+    if not evidence:
+        return []
+    required = [evidence['media']['caption']]
+    route = evidence.get('route')
+    if route:
+        required.extend([
+            ' → '.join([route['start'], *route['via'], route['finish']]), route['scope'],
+            f"{printed_metric(route['distanceKm'])} км · ↑ {printed_metric(route['elevationGainM'])} м · {printed_metric(route['durationMinutes'])} мин.",
+            route['metricNote'], route['difficulty'], route['seasonality'],
+            route['availability']['checkedOn'], route['availability']['note'],
+        ])
+        if route.get('routeDate'):
+            required.append(route['routeDate'])
+        roles = {'author-estimate': 'Оценка автора', 'official': 'Официальные данные',
+                 'provider-estimate': 'Оценка провайдера', 'gpx-measurement': 'Расчёт по GPX',
+                 'historical-provider': 'Исторический источник', 'mixed': 'Смешанные источники'}
+        required.append(roles[route['sourceType']])
+        required.extend(urlsplit(url).hostname.removeprefix('www.') for url in route['sourceUrls'])
+        if route['availability'].get('authorityUrl'):
+            required.append(urlsplit(route['availability']['authorityUrl']).hostname.removeprefix('www.'))
+    return required
+
+
+def folio_indices(page_count, plan=None):
+    if plan is None:
+        return {index + 1: index for index in range(page_count)}
+    return {placement['folio']: index * 2 + side_index
+            for index, sheet in enumerate(plan['sheets']) for side_index, side in enumerate(('front', 'back'))
+            for placement in sheet[side] if placement['folio'] is not None}
+
+
+def missing_thematic_links(book, page_links, page_map, plan=None):
+    if book.get('sourceContract') != 'thematic-v1':
+        return []
+    indices = folio_indices(len(page_links), plan)
+    destinations = {page['stopId']: page['folio'] for page in page_map if page.get('kind') == 'destination'}
+    missing = []
+    for stop in book['stops']:
+        route = stop['thematic'].get('route')
+        if not route:
+            continue
+        expected = [*route['sourceUrls'], route['availability'].get('authorityUrl')]
+        index = indices.get(destinations[stop['id']])
+        actual = page_links[index] if index is not None and index < len(page_links) else set()
+        missing.extend(f"{stop['id']}: missing PDF link {url}" for url in expected if url and url not in actual)
+    return missing
 
 
 def missing_book_text(book, pages, profile_id, page_map, plan=None):
@@ -21,9 +80,7 @@ def missing_book_text(book, pages, profile_id, page_map, plan=None):
             or len({page['folio'] for page in destinations}) != len(destinations)):
         raise ValueError('Page map must identify every selected destination exactly once')
     destination_folios = {page['stopId']: page['folio'] for page in destinations}
-    folios = {index + 1: index for index in range(len(pages))}
-    if plan is not None:
-        folios = {placement['folio']: index * 2 + side_index for index, sheet in enumerate(plan['sheets']) for side_index, side in enumerate(('front', 'back')) for placement in sheet[side] if placement['folio'] is not None}
+    folios = folio_indices(len(pages), plan)
     missing = []
     for stop in book['stops']:
         folio = destination_folios[stop['id']]
@@ -33,6 +90,7 @@ def missing_book_text(book, pages, profile_id, page_map, plan=None):
         story = stop['text']['compact' if profile_id == 'pocket-150x100' else 'album']
         if not story_present(story, destination):
             missing.append(story)
+        missing.extend(fragment for fragment in thematic_fragments(stop) if normalized(fragment) not in normalized(destination))
     return missing
 
 
@@ -46,9 +104,7 @@ def missing_quest_book_text(book, pages, profile_id, page_map, plan=None):
     selected = {quest['questId'] for quest in book['quests']}
     if len(destinations) != len(selected) or {page.get('questId') for page in destinations} != selected or len({page['folio'] for page in destinations}) != len(selected):
         raise ValueError('Page map must identify every selected quest once')
-    folios = {index + 1: index for index in range(len(pages))}
-    if plan is not None:
-        folios = {placement['folio']: index * 2 + side_index for index, sheet in enumerate(plan['sheets']) for side_index, side in enumerate(('front', 'back')) for placement in sheet[side] if placement['folio'] is not None}
+    folios = folio_indices(len(pages), plan)
     destinations = {page['questId']: page['folio'] for page in destinations}
     missing = []
     for quest in book['quests']:

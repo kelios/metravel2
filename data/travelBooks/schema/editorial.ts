@@ -1,17 +1,7 @@
 import { z } from 'zod';
-
-export const identifier = z.string().regex(/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/);
-export const nonempty = z.string().trim().min(1);
-export const httpsUrl = z.string().refine((value) => {
-  try {
-    const url = new URL(value);
-    return url.protocol === 'https:' && !!url.hostname && !url.username && !url.password;
-  } catch { return false; }
-}, 'Expected an HTTPS URL without credentials');
-export const checkedDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
-  const date = new Date(`${value}T00:00:00Z`);
-  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
-}, 'Expected a real calendar date');
+import {checkedDate, httpsUrl, identifier, nonempty} from './primitives.ts';
+import {thematicEvidenceSchema, thematicTheme, checkThematicNavigation, hasDuplicateThematicTargets} from './thematic.ts';
+export {checkedDate, httpsUrl, identifier, nonempty} from './primitives.ts';
 
 const reference = z.strictObject({
   url: httpsUrl, checkedAt: checkedDate, claims: z.array(nonempty).min(1),
@@ -98,3 +88,34 @@ export function checkEditorialComposition(book: EditorialComposition, ctx: z.Ref
 export const editorialBookDraftSchema = z.strictObject({
   ...editorialShape, status: z.literal('editorial-draft'),
 }).superRefine(checkEditorialComposition);
+
+/** A distinct strict branch prevents contextual thematic sources from weakening legacy point identity. */
+export const thematicEditorialStop = editorialStop.omit({navigation: true}).extend({
+  navigation: editorialStop.shape.navigation.unwrap().extend({pointId: z.number().int().positive().optional()}),
+  thematic: thematicEvidenceSchema,
+}).superRefine((stop, ctx) => {
+  checkThematicNavigation(stop, ctx);
+});
+
+export const thematicEditorialShape = {
+  ...editorialShape, sourceContract: z.literal('thematic-v1'), seriesId: identifier, theme: thematicTheme,
+  stops: z.array(thematicEditorialStop).min(1),
+};
+
+export function checkThematicComposition(book: z.infer<z.ZodObject<typeof thematicEditorialShape>>, ctx: z.RefinementCtx) {
+  checkEditorialComposition(book, ctx);
+  if (hasDuplicateThematicTargets(book.stops.map(stop => stop.thematic.mapTarget))) {
+    ctx.addIssue({code: 'custom', path: ['stops'], message: 'A physical target occurs more than once in the book'});
+  }
+  book.stops.forEach((stop, index) => {
+    if ((book.theme === 'mountains' && !stop.thematic.route) || (book.theme === 'castles' && stop.thematic.route)) {
+      ctx.addIssue({code: 'custom', path: ['stops', index, 'thematic', 'route'], message: 'Mountain entries require routes and castle entries cannot carry them'});
+    }
+  });
+}
+
+export const thematicEditorialBookDraftSchema = z.strictObject({
+  ...thematicEditorialShape, status: z.literal('editorial-draft'),
+}).superRefine(checkThematicComposition);
+
+export const placeBookDraftSchema = z.union([editorialBookDraftSchema, thematicEditorialBookDraftSchema]);

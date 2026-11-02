@@ -33,7 +33,7 @@ export function relatedBookForSource(source: BookSource) {
   const questEdition=questId!==undefined?editions.find(book=>book.kind==='quests'&&book.questIds?.includes(questId)):undefined;
   return questEdition??editions.find(book =>
     (pointId !== undefined && book.pointIds.includes(pointId)) ||
-    (travelId !== undefined && book.sourceTravelIds.includes(travelId)) ||
+    (source.pointId == null && travelId !== undefined && book.sourceTravelIds.includes(travelId)) ||
     (questId !== undefined && book.questIds?.includes(questId)),
   );
 }

@@ -60,6 +60,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   relatedTravelUrl,
   relatedTravelTitle,
   relatedTravelId,
+  sourcePointId,
   relatedTravelCountry,
   relatedTravelCity,
   isFavorite = false,
@@ -286,7 +287,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
           />
 
           {ratingSlot ? <View style={styles.ratingSlot}>{ratingSlot}</View> : null}
-          <ReadyBookRelatedLink sourceTravelId={relatedTravelId} />
+          {sourcePointId != null && <ReadyBookRelatedLink pointId={sourcePointId} sourceTravelId={relatedTravelId} iconOnly />}
 
           {showInlineRelatedTravelActions && relatedTravelUrl ? (
             <View style={styles.inlineRelatedTravelActions}>
