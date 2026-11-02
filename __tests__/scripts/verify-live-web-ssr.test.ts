@@ -53,6 +53,27 @@ describe('paired renderer publication readiness', () => {
     expect(fetchImpl.mock.calls[2][0]).toBe(canonical)
   })
 
+  it('retries the catalog control within the deadline instead of refusing on one slow or 5xx answer', async () => {
+    const sleep = jest.fn().mockResolvedValue(undefined)
+    const fetchImpl = jest.fn()
+      .mockRejectedValueOnce(new DOMException('The operation was aborted due to timeout', 'TimeoutError'))
+      .mockResolvedValueOnce(new Response('', { status: 502 }))
+      .mockResolvedValueOnce(Response.json({ results: [{ slug: 'example' }] }))
+      .mockResolvedValueOnce(response({ 'X-Cache-Status': 'MISS' }))
+      .mockResolvedValueOnce(response())
+    await expect(verifyLiveWebSsr({ sha, fetchImpl, sleep })).resolves.toEqual({ sha, canonical })
+    expect(fetchImpl).toHaveBeenCalledTimes(5)
+    expect(sleep).toHaveBeenCalledTimes(2)
+    expect(String(fetchImpl.mock.calls[2][0])).toContain('/api/travels/')
+  })
+
+  it('refuses with the last catalog failure once the deadline passes', async () => {
+    const fetchImpl = jest.fn().mockResolvedValue(new Response('', { status: 503 }))
+    await expect(verifyLiveWebSsr({ sha, fetchImpl, timeoutMs: 30, sleep: () => new Promise((resolve) => setTimeout(resolve, 5)) }))
+      .rejects.toThrow('Renderer readiness failed: Public travel control is unavailable: HTTP 503')
+    expect(fetchImpl.mock.calls.every(([url]) => String(url).includes('/api/travels/'))).toBe(true)
+  })
+
   it('can select a public article whose slug contains Unicode', async () => {
     const unicodeCanonical = `https://metravel.by/travels/${encodeURIComponent('паездка')}`
     const unicodeHtml = html.replaceAll(canonical, unicodeCanonical)

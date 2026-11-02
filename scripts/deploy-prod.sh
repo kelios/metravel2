@@ -85,7 +85,14 @@ on_exit() {
   trap - EXIT
   trap '' INT TERM HUP
   remove_worktree || true
-  echo "⏱  Выкат целиком: $((SECONDS - STARTED_AT)) с${LOG:+ (полный лог: ${LOG#"$MT/"})}"
+  # Итог — и в консоль, и последней строкой лога: падение до сборки, после неё
+  # или по сигналу (130/143/129) иначе по логам не отличить (#2942). Лог без
+  # этой строки значит SIGKILL.
+  local summary="⏱  Выкат целиком: $((SECONDS - STARTED_AT)) с, код выхода $status"
+  echo "$summary${LOG:+ (полный лог: ${LOG#"$MT/"})}"
+  if [[ -n "$LOG" ]]; then
+    echo "$summary" >>"$LOG" || true
+  fi
   exit "$status"
 }
 trap on_exit EXIT
@@ -111,24 +118,27 @@ for env_file in .env.prod .env.deploy; do
   ln -sfn "$MT/$env_file" "$WT/$env_file"
 done
 
-echo "🚀 Прод-выкат $SHORT из ${WT} (DEPLOY=$DEPLOY)"
+# Проверки до сборки и финальная сверка пишутся в тот же лог, что и сборка:
+# раньше отказ грязного чекаута или capability оставлял только консоль (#2942).
+echo "🚀 Прод-выкат $SHORT из ${WT} (DEPLOY=$DEPLOY)" | tee "$LOG"
 if [[ "$DEPLOY" == "1" ]]; then
-  check_prod_checkout_clean
+  check_prod_checkout_clean 2>&1 | tee -a "$LOG"
   # Production publishes only the SSR release pair (#2766). The installed
   # backend capability must report the quest SSR runtime: a missing, malformed
   # or disabled capability refuses the deploy (scripts/lib/webOutput.js) instead
   # of downgrading a live SSR release to a static build.
-  SSR_CAPABILITY="$(bash "$WT/scripts/web-ssr-publication.sh" capability)"
-  node -e 'require(process.argv[1]).resolveDeployWebOutput(JSON.parse(process.argv[2]))' "$WT/scripts/lib/webOutput.js" "$SSR_CAPABILITY"
+  SSR_CAPABILITY="$(bash "$WT/scripts/web-ssr-publication.sh" capability 2> >(tee -a "$LOG" >&2))"
+  echo "SSR capability: $SSR_CAPABILITY" >>"$LOG"
+  node -e 'require(process.argv[1]).resolveDeployWebOutput(JSON.parse(process.argv[2]))' "$WT/scripts/lib/webOutput.js" "$SSR_CAPABILITY" 2>&1 | tee -a "$LOG"
   export METRAVEL_WEB_OUTPUT=server EXPO_PUBLIC_WEB_RUNTIME_SSR=true EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR=true
-  echo '✅ Backend SSR готов: один серверный экспорт и связанная публикация'
+  echo '✅ Backend SSR готов: один серверный экспорт и связанная публикация' | tee -a "$LOG"
 fi
 set +e
 if [[ "${DEPLOY_QUIET:-0}" == "1" ]]; then
-  (cd "$WT" && DEPLOY="$DEPLOY" ./build-prod.sh prod) 2>&1 | tee "$LOG" | grep --line-buffered -E "$QUIET_PATTERN"
+  (cd "$WT" && DEPLOY="$DEPLOY" ./build-prod.sh prod) 2>&1 | tee -a "$LOG" | grep --line-buffered -E "$QUIET_PATTERN"
   status=${PIPESTATUS[0]}
 else
-  (cd "$WT" && DEPLOY="$DEPLOY" ./build-prod.sh prod) 2>&1 | tee "$LOG"
+  (cd "$WT" && DEPLOY="$DEPLOY" ./build-prod.sh prod) 2>&1 | tee -a "$LOG"
   status=${PIPESTATUS[0]}
 fi
 set -e
@@ -141,7 +151,9 @@ fi
 if [[ "$status" == "0" && "$DEPLOY" == "1" ]]; then
   # Ограниченный повтор и раздельный диагноз «не опубликован» / «хост не
   # ответил» — scripts/verify-live-release.sh (#2448).
-  bash "$SCRIPT_DIR/verify-live-release.sh" "$SHA" || status=1
+  if ! bash "$SCRIPT_DIR/verify-live-release.sh" "$SHA" 2>&1 | tee -a "$LOG"; then
+    status=1
+  fi
 fi
 
 exit "$status"

@@ -191,14 +191,17 @@ describe('scripts/deploy-prod.sh', () => {
       })
       expect(result.stdout).toContain(`🚀 Прод-выкат ${first.slice(0, 9)}`)
       expect(result.stdout).toContain('noise line')
-      expect(result.stdout).toMatch(/⏱ {2}Выкат целиком: \d+ с \(полный лог: \.codex-temp\/deploy\/prod-/)
+      expect(result.stdout).toMatch(/⏱ {2}Выкат целиком: \d+ с, код выхода 0 \(полный лог: \.codex-temp\/deploy\/prod-/)
       expect(fs.existsSync(fixture.worktree)).toBe(false)
       expect(worktreeCount(fixture)).toBe(1)
 
       const logs = fs.readdirSync(path.join(fixture.repo, '.codex-temp/deploy'))
       expect(logs).toHaveLength(1)
-      expect(fs.readFileSync(path.join(fixture.repo, '.codex-temp/deploy', logs[0]), 'utf8'))
-        .toContain('noise line')
+      const log = fs.readFileSync(path.join(fixture.repo, '.codex-temp/deploy', logs[0]), 'utf8')
+      expect(log).toContain('noise line')
+      // The log holds the whole rollout, not only build-prod.sh (#2942).
+      expect(log.startsWith(`🚀 Прод-выкат ${first.slice(0, 9)}`)).toBe(true)
+      expect(log.trimEnd().split('\n').at(-1)).toMatch(/^⏱ {2}Выкат целиком: \d+ с, код выхода 0$/)
     } finally {
       removeDir(fixture.root)
     }
@@ -238,8 +241,49 @@ describe('scripts/deploy-prod.sh', () => {
       expect(result.stdout.slice(0, tailStart)).toContain('⚠️ На диске прода свободно')
       expect(result.stdout.slice(0, tailStart)).not.toContain('noise line')
       expect(result.stdout.slice(tailStart)).toContain('noise line')
+      const [log] = fs.readdirSync(path.join(fixture.repo, '.codex-temp/deploy'))
+      expect(fs.readFileSync(path.join(fixture.repo, '.codex-temp/deploy', log), 'utf8').trimEnd().split('\n').at(-1))
+        .toMatch(/^⏱ {2}Выкат целиком: \d+ с, код выхода 3$/)
       expect(fs.existsSync(fixture.worktree)).toBe(false)
       expect(worktreeCount(fixture)).toBe(1)
+    } finally {
+      removeDir(fixture.root)
+    }
+  })
+
+  // The pre-build guards now run inside `| tee -a "$LOG"` pipelines (#2942):
+  // pipefail, not the guard's own exit, is what still stops the rollout.
+  it.each([
+    { guard: 'dirty prod checkout', sshStatus: ' M app/models.py', capability: '{"schema_version":2,"available":true,"enabled":true,"quest_web":{"schema_version":2,"builder_schema":2,"refresh_max_age_seconds":10}}', reason: '❌ Прод-чекаут бэкенда грязный' },
+    { guard: 'capability without quest SSR', sshStatus: '', capability: '{"schema_version":1,"available":true,"enabled":true}', reason: 'Production deploy publishes only SSR' },
+  ])('refuses a $guard before the build and keeps the refusal in the log', ({ sshStatus, capability, reason }) => {
+    const fixture = makeFixture()
+    try {
+      const bin = path.join(fixture.root, 'bin')
+      writeFile(path.join(bin, 'ssh'), '#!/bin/bash\nprintf \'%s\' "$STUB_SSH_STATUS"', 0o755)
+      writeFile(path.join(fixture.repo, 'scripts/deploy-target.sh'),
+        'PROD_SSH_TARGET=stub@host\nPROD_REMOTE_DIR=/srv/stub\nrequire_deploy_target() { :; }')
+      writeFile(path.join(fixture.repo, 'scripts/web-ssr-publication.sh'), 'printf \'%s\\n\' "$STUB_CAPABILITY"')
+      fs.copyFileSync(path.join(process.cwd(), 'scripts/lib/webOutput.js'), path.join(fixture.repo, 'scripts/lib/webOutput.js'))
+      git(fixture.repo, ['add', 'scripts'])
+      git(fixture.repo, ['commit', '-q', '-m', 'deploy guards'])
+      git(fixture.repo, ['push', '-q', 'origin', 'main'])
+
+      const result = runDeploy(fixture, [], {
+        DEPLOY: '1',
+        PATH: `${bin}:${process.env.PATH}`,
+        STUB_SSH_STATUS: sshStatus,
+        STUB_CAPABILITY: capability,
+      })
+
+      expect(result.status).toBe(1)
+      expect(fs.existsSync(fixture.stubOut)).toBe(false)
+      const [log] = fs.readdirSync(path.join(fixture.repo, '.codex-temp/deploy'))
+      const content = fs.readFileSync(path.join(fixture.repo, '.codex-temp/deploy', log), 'utf8')
+      expect(content).toContain(reason)
+      expect(content).not.toContain('✅ Backend SSR готов')
+      expect(content.trimEnd().split('\n').at(-1)).toMatch(/^⏱ {2}Выкат целиком: \d+ с, код выхода 1$/)
+      expect(fs.existsSync(fixture.worktree)).toBe(false)
     } finally {
       removeDir(fixture.root)
     }

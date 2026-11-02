@@ -36,6 +36,17 @@ function verifyRuntimeResponse(response, html, { sha, canonical, requireHit = fa
   return null
 }
 
+async function selectControlSlugs(request, origin) {
+  const catalog = await request(new URL(`/api/travels/?page=1&perPage=5&where=${encodeURIComponent(JSON.stringify({ publish: 1, moderation: 1 }))}`, origin))
+  if (!catalog.ok) throw new Error(`Public travel control is unavailable: HTTP ${catalog.status}`)
+  const data = await catalog.json()
+  const items = Array.isArray(data) ? data : data.results || data.data || data.items || []
+  const slugs = [...new Set(items.map((item) => item?.slug).filter((slug) => typeof slug === 'string'
+    && slug.length > 0 && slug.length <= 250))].slice(0, 3)
+  if (!slugs.length) throw new Error('Public catalog has no usable article control')
+  return slugs
+}
+
 async function verifyLiveWebSsr({ sha, origin = 'https://metravel.by', timeoutMs = 45_000, fetchImpl = fetch, sleep = wait,
   mode = 'strict', codeHealth = verifyCodeHealth }) {
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error('A full renderer source SHA is required')
@@ -49,16 +60,18 @@ async function verifyLiveWebSsr({ sha, origin = 'https://metravel.by', timeoutMs
     if (remaining <= 0) throw new Error('Renderer readiness deadline exceeded')
     return fetchImpl(url, { signal: AbortSignal.timeout(Math.min(5000, remaining)), redirect: 'error', credentials: 'omit' })
   }
-  const catalog = await request(new URL(`/api/travels/?page=1&perPage=5&where=${encodeURIComponent(JSON.stringify({ publish: 1, moderation: 1 }))}`, origin))
-  if (!catalog.ok) throw new Error(`Public travel control is unavailable: HTTP ${catalog.status}`)
-  const data = await catalog.json()
-  const items = Array.isArray(data) ? data : data.results || data.data || data.items || []
-  const slugs = [...new Set(items.map((item) => item?.slug).filter((slug) => typeof slug === 'string'
-    && slug.length > 0 && slug.length <= 250))].slice(0, 3)
-  if (!slugs.length) throw new Error('Public catalog has no usable article control')
+  // The catalog control shares the renderer's retry deadline, as the quest API
+  // does in verify-live-quest-ssr.js: one slow or 5xx answer right after the
+  // paired restart is a transient, not a refused release (42f5681f2, 9bde01ff6).
+  let slugs = null
   let failure = new Error('Renderer readiness has no successful request')
   while (Date.now() < deadline) {
-    for (const slug of slugs) {
+    try {
+      slugs ??= await selectControlSlugs(request, origin)
+    } catch (error) {
+      failure = error
+    }
+    for (const slug of slugs || []) {
       try {
         const canonical = new URL(`/travels/${encodeURIComponent(slug)}`, origin).href
         const first = await request(canonical)
