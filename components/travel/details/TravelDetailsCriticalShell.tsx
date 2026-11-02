@@ -30,10 +30,16 @@ import TravelDetailsHeroDeferredColumn, {
 } from './TravelDetailsHeroDeferredColumn';
 import TravelHeroStickyNavNative from './TravelHeroStickyNavNative';
 import { useTravelLoaderPayload } from './travelLoaderData';
+import {
+  TRAVEL_FIRST_SCREEN_STYLES,
+  buildTravelFirstScreenMeta,
+} from './travelFirstScreenLayout';
 
-// The travel name is the page's single semantic <h1>. It follows the hero and
-// its metadata, matching the SSG article order without inserting a new block
-// above the gallery.
+// The travel name is the page's single semantic <h1>. In the DOM it follows the
+// hero and its metadata (desktop order, unchanged). #2904: below 768 px the
+// first-screen stylesheet lifts the h1 and its one-line meta to the top of the
+// content column via CSS `order`, so mobile reads h1 → meta → gallery without a
+// JS breakpoint branch (width is 0 on SSR/hydration on every viewport).
 // The current SSG shell starts with a visible `.ssg-travel-h1`; on hydration it
 // is demoted to a same-class div until shell teardown. Legacy cached pages may
 // also carry `<h1 data-ssg-travel-h1>`, which the same effect removes.
@@ -257,18 +263,31 @@ export default function TravelDetailsCriticalShell({
   const useNativeStickyNav =
     !!travel && isMobile && Platform.OS !== 'web' && !showDesktopSidebar;
 
+  // Not memoized on `travel`: the days label is locale-dependent.
+  const firstScreenMeta = Platform.OS === 'web' && travel ? buildTravelFirstScreenMeta(travel) : '';
+
   const pageTitle = Platform.OS === 'web' && travel ? (
-    <h1
-      data-testid="travel-details-title"
-      data-router-travel-h1={isRouterSsrTravel ? 'true' : undefined}
-      style={{
-        ...WEB_VISIBLE_HEADING_STYLE,
-        color: colors.text,
-        fontSize: isMobile ? 28 : 34,
-      } as any}
-    >
-      {travel.name}
-    </h1>
+    <>
+      <h1
+        data-testid="travel-details-title"
+        data-travel-first-screen="title"
+        data-router-travel-h1={isRouterSsrTravel ? 'true' : undefined}
+        style={{
+          ...WEB_VISIBLE_HEADING_STYLE,
+          color: colors.text,
+          fontSize: isMobile ? 28 : 34,
+        } as any}
+      >
+        {travel.name}
+      </h1>
+      {/* Mobile-only meta line; `display` is owned by the first-screen stylesheet
+          (hidden ≥768 px), so desktop geometry stays exactly as before. */}
+      {firstScreenMeta ? (
+        <p data-testid="travel-details-first-screen-meta" data-travel-first-screen="meta">
+          {firstScreenMeta}
+        </p>
+      ) : null}
+    </>
   ) : null;
 
   const contentColumn = travel ? (
@@ -354,6 +373,7 @@ export default function TravelDetailsCriticalShell({
       style={wrapperStyle}
       {...(isRouterSsrTravel ? { dataSet: { routerSsr: 'travel' } } : {})}
     >
+      {Platform.OS === 'web' && travel ? <style>{TRAVEL_FIRST_SCREEN_STYLES}</style> : null}
       <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
         <View style={mainContainerStyle}>
           {showSkeletonOverlay && (

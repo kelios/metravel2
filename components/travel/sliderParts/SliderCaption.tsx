@@ -4,6 +4,14 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { formatInteger, formatNumber } from '@/i18n/format';
 import { useTranslation } from '@/i18n/LocaleProvider';
 
+// #2904: markers for the travel first-screen stylesheet
+// (`components/travel/details/travelFirstScreenLayout.ts`), which makes the
+// caption small and muted below 768 px. A CSS media rule, not an `isMobile`
+// prop: width is 0 on SSR/hydration, so a JS branch would resize the caption on
+// desktop after the first paint.
+const part = (name: 'root' | 'counter' | 'position' | 'total' | 'text') =>
+  Platform.OS === 'web' ? ({ dataSet: { travelSliderCaptionPart: name } } as object) : null;
+
 type SliderCaptionProps = {
   caption?: string;
   currentIndex: number;
@@ -17,9 +25,10 @@ export default function SliderCaption({ caption, currentIndex, total }: SliderCa
   if (!text) return null;
 
   return (
-    <View style={styles.container} testID="slider-caption">
-      <View style={[styles.counter, { borderRightColor: colors.borderLight }]}>
+    <View style={styles.container} testID="slider-caption" {...part('root')}>
+      <View style={[styles.counter, { borderRightColor: colors.borderLight }]} {...part('counter')}>
         <Text
+          {...part('position')}
           style={[styles.position, { color: colors.text }]}
           accessibilityLabel={t('travel:components.travel.sliderParts.Slide.fotografiya_puteshestviya_value1_iz_value2_821e6a83', {
             value1: formatInteger(currentIndex + 1), value2: formatInteger(total),
@@ -27,11 +36,11 @@ export default function SliderCaption({ caption, currentIndex, total }: SliderCa
         >
           {formatNumber(currentIndex + 1, { minimumIntegerDigits: 2, useGrouping: false })}
         </Text>
-        <Text style={[styles.total, { color: colors.textMuted }]} aria-hidden>
+        <Text style={[styles.total, { color: colors.textMuted }]} aria-hidden {...part('total')}>
           {t('shared:components.ui.PaginationComponent.iz_f4230cda', { value1: formatInteger(total) })}
         </Text>
       </View>
-      <Text style={[styles.text, { color: colors.text }]}>{text}</Text>
+      <Text style={[styles.text, { color: colors.text }]} {...part('text')}>{text}</Text>
     </View>
   );
 }

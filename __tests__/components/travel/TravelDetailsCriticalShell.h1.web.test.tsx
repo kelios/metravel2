@@ -28,12 +28,16 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
     consoleErrorSpy.mockRestore()
   })
 
-  function renderShell({ isMobile = false, screenWidth = 1280 } = {}) {
+  function renderShell({
+    isMobile = false,
+    screenWidth = 1280,
+    travel = { id: 1, name: 'Тропа ведьм' },
+  }: { isMobile?: boolean; screenWidth?: number; travel?: Record<string, unknown> } = {}) {
     const Shell = require('@/components/travel/details/TravelDetailsCriticalShell').default
     const { Animated } = require('react-native')
     return render(
       <Shell
-        travel={{ id: 1, name: 'Тропа ведьм' } as any}
+        travel={travel as any}
         isMobile={isMobile}
         screenWidth={screenWidth}
         wrapperStyle={{}}
@@ -91,6 +95,75 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
       expect(h1s[0].nextElementSibling).toBe(content)
     },
   )
+
+  // #2904: mobile opens with h1 → meta → gallery. The DOM keeps the desktop
+  // order (hero → h1 → content) and a CSS rule scoped to < 768 px lifts the h1
+  // and meta with `order:-1`, so neither SSR nor hydration flips the layout.
+  describe('mobile first screen (#2904)', () => {
+    const fullTravel = {
+      id: 1,
+      name: 'Гродно за 1 день: что посмотреть и как доехать',
+      userName: 'Юля',
+      monthName: 'Октябрь',
+      year: '2019',
+      number_days: 1,
+      countryName: 'Беларусь',
+    }
+
+    const firstScreenCss = (container: HTMLElement) => {
+      const { TRAVEL_FIRST_SCREEN_STYLES } = require('@/components/travel/details/travelFirstScreenLayout')
+      const style = Array.from(container.ownerDocument.querySelectorAll('style'))
+        .find((node) => node.textContent === TRAVEL_FIRST_SCREEN_STYLES)
+      expect(style).toBeDefined()
+      const css = String(style?.textContent)
+      const mediaStart = css.indexOf('@media(max-width:767.98px){')
+      expect(mediaStart).toBeGreaterThan(-1)
+      return { outside: css.slice(0, mediaStart), mobile: css.slice(mediaStart) }
+    }
+
+    it.each([
+      ['desktop web', false, 1280],
+      ['mobile web', true, 390],
+    ])('renders the meta line right after the h1, before the article (%s)', (_label, isMobile, screenWidth) => {
+      const { container } = renderShell({ isMobile, screenWidth, travel: fullTravel })
+      const h1 = container.querySelector('h1') as HTMLElement
+      const meta = container.querySelector('[data-travel-first-screen="meta"]') as HTMLElement
+      const hero = container.querySelector('[data-testid="hero-block"]')
+      const content = container.querySelector('[data-testid="content-block"]')
+
+      expect(h1.getAttribute('data-travel-first-screen')).toBe('title')
+      expect(meta.textContent).toBe('Юля · Октябрь 2019 · 1 день · Беларусь')
+      // Desktop DOM order is preserved: the flex order lives only in CSS.
+      expect(hero?.nextElementSibling).toBe(h1)
+      expect(h1.nextElementSibling).toBe(meta)
+      expect(meta.nextElementSibling).toBe(content)
+      // Visibility of the meta line is owned by the stylesheet, not inline style.
+      expect(meta.getAttribute('style')).toBeNull()
+      expect(container.querySelectorAll('h1')).toHaveLength(1)
+    })
+
+    it('lifts the h1 and meta above the gallery only below 768 px', () => {
+      const { container } = renderShell({ isMobile: true, screenWidth: 390, travel: fullTravel })
+      const { outside, mobile } = firstScreenCss(container)
+
+      expect(mobile).toMatch(/\[data-travel-first-screen="title"\]\{order:-1;/)
+      expect(mobile).toMatch(/\[data-travel-first-screen="meta"\]\{order:-1;display:block;height:20px;/)
+      // Never clipped: post-deploy SEO check rejects a clamped travel H1.
+      const titleRule = mobile.match(/\[data-travel-first-screen="title"\]\{([^}]*)\}/)?.[1] ?? ''
+      expect(titleRule).not.toBe('')
+      expect(titleRule).not.toMatch(/line-clamp|overflow/)
+      // Outside the mobile media query nothing touches the h1 (desktop layout
+      // unchanged); the meta line is simply not displayed there.
+      expect(outside).not.toContain('"title"')
+      expect(outside).not.toContain('order')
+      expect(outside.trim()).toBe('[data-travel-first-screen="meta"]{display:none}')
+    })
+
+    it('omits the meta line when the travel has no author, date, days or country', () => {
+      const { container } = renderShell({ isMobile: true, screenWidth: 390 })
+      expect(container.querySelector('[data-travel-first-screen="meta"]')).toBeNull()
+    })
+  })
 
   it('removes the SSG-injected sr-only <h1 data-ssg-travel-h1> on mount', () => {
     const ssg = document.createElement('h1')

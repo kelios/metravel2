@@ -582,4 +582,5 @@ export const travelGenerated4 = {
   "components.travel.note.checklist.placeDetail": "Punkt z krajem",
   "components.travel.note.checklist.photos": "Zdjęcia",
   "components.travel.note.checklist.photosDetail": "Zdjęcia w galerii: od 1 do {{value1}}",
+  "components.travel.details.sections.TravelDetailsContentSection.contentsHeading": "Spis treści",
 } as const

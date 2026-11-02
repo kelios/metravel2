@@ -60,6 +60,35 @@ test.describe('Travel details — deterministic product contracts', () => {
     expect(overflow, 'travel details must not create horizontal mobile overflow').toBeLessThanOrEqual(1);
   });
 
+  // #2904: mobile first screen reads h1 → meta → gallery; desktop keeps
+  // hero → h1. The order is a CSS media rule, so both viewports share one DOM.
+  test('mobile opens with the h1 and meta above the gallery, desktop order unchanged', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await openStableTravel(page);
+
+    const title = page.getByTestId('travel-details-title');
+    const meta = page.getByTestId('travel-details-first-screen-meta');
+    const hero = page.getByTestId('travel-details-hero');
+    await expect(title).toBeVisible();
+    await expect(meta).toBeVisible();
+    await expect(hero).toBeVisible();
+
+    const [titleBox, metaBox, heroBox] = await Promise.all([
+      title.boundingBox(),
+      meta.boundingBox(),
+      hero.boundingBox(),
+    ]);
+    expect(titleBox && metaBox && heroBox, 'first-screen nodes must be laid out').toBeTruthy();
+    expect(titleBox!.y, 'h1 must be on the mobile first screen').toBeLessThan(600);
+    expect(titleBox!.y).toBeLessThan(metaBox!.y);
+    expect(metaBox!.y + metaBox!.height).toBeLessThanOrEqual(heroBox!.y);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(meta).toBeHidden();
+    const [desktopTitle, desktopHero] = await Promise.all([title.boundingBox(), hero.boundingBox()]);
+    expect(desktopHero!.y, 'desktop keeps the gallery above the h1').toBeLessThan(desktopTitle!.y);
+  });
+
   test('publishes canonical metadata and valid Schema.org JSON-LD', async ({ page }) => {
     await openStableTravel(page);
 

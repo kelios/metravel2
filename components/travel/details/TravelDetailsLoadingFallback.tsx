@@ -1,4 +1,4 @@
-import { View } from 'react-native'
+import { Platform, View } from 'react-native'
 
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -6,8 +6,14 @@ import { METRICS } from '@/constants/layout'
 import { useResponsive } from '@/hooks/useResponsive'
 import { translate as i18nT } from '@/i18n'
 
+import { TRAVEL_FIRST_SCREEN } from './travelFirstScreenLayout'
+
 
 const ROOT_TEST_ID = 'travel-details-loading'
+const MOBILE_TITLE_LINE_PX = Math.round(
+  TRAVEL_FIRST_SCREEN.titleFontSizePx * TRAVEL_FIRST_SCREEN.titleLineHeight,
+)
+const MOBILE_TITLE_BAR_PX = TRAVEL_FIRST_SCREEN.titleFontSizePx
 
 export default function TravelDetailsLoadingFallback() {
   // useResponsive is hydration-safe (width=0 during SSR/first client render, matching
@@ -17,6 +23,8 @@ export default function TravelDetailsLoadingFallback() {
   const isMobile = width < METRICS.breakpoints.tablet
   const isTablet = width >= METRICS.breakpoints.tablet && width < METRICS.breakpoints.desktop
   const isDesktop = width >= METRICS.breakpoints.desktop
+  // Web only: native renders no in-content h1 above the gallery.
+  const titleAboveHero = isMobile && Platform.OS === 'web'
   const desktopSidebarWidth = Math.max(320, Math.min(Math.round(width * 0.24), 360))
   const heroHeight = isMobile
     ? Math.max(260, Math.min(Math.round(height * 0.56), 420))
@@ -113,6 +121,31 @@ export default function TravelDetailsLoadingFallback() {
         </View>
       ) : (
         <>
+          {titleAboveHero ? (
+            // #2904: mobile first screen opens with the h1 (typically 2 lines) and the meta
+            // line above the gallery — the loading state keeps that geometry.
+            <View
+              testID="travel-details-loading-first-screen"
+              style={{
+                paddingHorizontal: DESIGN_TOKENS.spacing.md,
+                paddingTop: TRAVEL_FIRST_SCREEN.titleMarginTopPx,
+              }}
+            >
+              <View
+                style={{
+                  height: MOBILE_TITLE_LINE_PX * TRAVEL_FIRST_SCREEN.titleReserveLines,
+                  justifyContent: 'space-around',
+                  marginBottom: TRAVEL_FIRST_SCREEN.titleMarginBottomPx,
+                }}
+              >
+                <SkeletonLoader width="92%" height={MOBILE_TITLE_BAR_PX} borderRadius={8} />
+                <SkeletonLoader width="64%" height={MOBILE_TITLE_BAR_PX} borderRadius={8} />
+              </View>
+              <View style={{ marginBottom: TRAVEL_FIRST_SCREEN.metaMarginBottomPx }}>
+                <SkeletonLoader width="62%" height={TRAVEL_FIRST_SCREEN.metaLineHeightPx} borderRadius={6} />
+              </View>
+            </View>
+          ) : null}
           <SkeletonLoader width="100%" height={heroHeight} borderRadius={0} />
 
           <View
@@ -127,7 +160,9 @@ export default function TravelDetailsLoadingFallback() {
             }}
           >
             <View style={{ gap: DESIGN_TOKENS.spacing.md }}>
-              <SkeletonLoader width={isMobile ? '82%' : '68%'} height={isMobile ? 30 : 36} borderRadius={10} />
+              {titleAboveHero ? null : (
+                <SkeletonLoader width={isMobile ? '82%' : '68%'} height={isMobile ? 30 : 36} borderRadius={10} />
+              )}
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.sm }}>
                 <SkeletonLoader width={100} height={20} borderRadius={12} />
                 <SkeletonLoader width={88} height={20} borderRadius={12} />

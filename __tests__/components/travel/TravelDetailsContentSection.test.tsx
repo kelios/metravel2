@@ -94,8 +94,8 @@ jest.mock('@/components/travel/details/sections/CollapsibleSection', () => {
   const { View, Text, Pressable } = require('react-native')
 
   return {
-    CollapsibleSection: ({ title, open, onToggle, children }: any) => (
-      <View testID={`collapsible-${title}`} data-open={open}>
+    CollapsibleSection: ({ title, open, onToggle, children, coverImageUrl }: any) => (
+      <View testID={`collapsible-${title}`} data-open={open} data-cover={coverImageUrl ?? null}>
         <Text>{title}</Text>
         {onToggle ? <Pressable testID={`toggle-${title}`} onPress={onToggle} /> : null}
         {children}
@@ -149,6 +149,24 @@ describe('TravelDetailsContentSection', () => {
   beforeEach(() => {
     jest.mocked(TravelDetailsDeferredTransition).mockClear()
     mockProgressiveShouldLoad = true
+  })
+
+  // #2904: the article card sits right under the h1 and the hero, so it must not
+  // repeat the travel name or the cover image — its heading is «Содержание».
+  it('titles the article card «Содержание» without repeating the h1 or the cover', async () => {
+    await render(
+      <TravelDetailsContentSection
+        travel={createTravel({ travel_image_thumb_url: 'https://cdn.example/cover.jpg' })}
+        isMobile
+        forceOpenKey={null}
+        anchors={createAnchors()}
+      />,
+      { wrapper: withQueryClient() },
+    )
+
+    const card = screen.getByTestId('collapsible-Содержание')
+    expect(card.props['data-cover']).toBeNull()
+    expect(screen.queryByTestId('collapsible-Тестовый маршрут')).toBeNull()
   })
 
   // #2774: the article body comes first; the save CTA with its adjacent share

@@ -368,6 +368,17 @@ ${buildCatalogSkeletonCSS()}
 .ssg-travel-line.w90{width:90%}.ssg-travel-line.w75{width:75%}.ssg-travel-line.w60{width:60%}
 .ssg-travel-h1{margin:0 0 14px;font:700 28px/1.25 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};letter-spacing:-0.02em;max-width:760px}
 @media(min-width:768px){.ssg-travel-h1{font-size:34px}}
+/* #2904: mobile first screen = h1 + строка меты над галереей. H1 без
+   line-clamp/overflow:hidden — post-deploy SEO check считает это клиппингом.
+   DOM держит desktop-порядок (first-screen → h1 → статья); ниже 768px
+   order:-1 поднимает h1 и резерв меты над hero — тот же механизм и те же
+   числа, что TRAVEL_FIRST_SCREEN_STYLES в React
+   (components/travel/details/travelFirstScreenLayout.ts, паритет — Jest).
+   Значений меты (автор, месяц, дни, страна) в контексте шелла нет, поэтому
+   её высоту резервирует плашка. */
+.ssg-travel-first-meta{display:none}
+@media(min-width:1280px){.ssg-travel-wrap>.ssg-travel-h1{width:calc(100% - 323px);margin-left:323px}}
+@media(max-width:767.98px){.ssg-travel-wrap{display:flex;flex-direction:column}.ssg-travel-wrap>.ssg-travel-h1,.ssg-travel-first-meta{order:-1}.ssg-travel-wrap>.ssg-travel-h1{margin:12px 0 4px}.ssg-travel-first-meta{display:block;width:62%;height:20px;margin:0 0 12px;border-radius:6px}}
 .ssg-travel-article{max-width:760px;font:400 16px/1.65 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text}}
 .ssg-travel-article p{margin:0 0 16px}
 .ssg-travel-article h2{margin:28px 0 12px;font:700 22px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;letter-spacing:-0.01em;color:${COLORS.light.text}}
@@ -980,8 +991,9 @@ ${heroBlock}
 <div class="ssg-travel-meta-row" aria-hidden="true"><div class="ssg-travel-meta-chip ssg-pulse"></div><div class="ssg-travel-meta-chip ssg-pulse"></div><div class="ssg-travel-meta-chip ssg-pulse"></div></div>
 </div>
 </div>
-<div class="ssg-travel-crawlable">
 ${titleBlock}
+${titleBlock ? '<div class="ssg-travel-first-meta ssg-pulse" aria-hidden="true"></div>' : ''}
+<div class="ssg-travel-crawlable">
 ${crawlableContentBlock}
 ${buildRelatedBlock(related)}
 </div>

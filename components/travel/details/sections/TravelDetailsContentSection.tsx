@@ -123,12 +123,13 @@ export const TravelDetailsContentSection: React.FC<{
           accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.opisanie_marshruta_98e0c78f')}
           {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'description' } } : {})}
         >
+          {/* #2904: the card heading is «Содержание» — it must not repeat the page
+              h1 or the hero cover right below the first screen. */}
           <CollapsibleSection
-            title={travel.name}
+            title={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.contentsHeading')}
             initiallyOpen
             forceOpen={forceOpenKey === 'description'}
             iconName="menu-book"
-            coverImageUrl={travel.travel_image_thumb_url || travel.travel_image_thumb_small_url || null}
             highlight="info"
           >
             <View style={styles.descriptionContainer}>
