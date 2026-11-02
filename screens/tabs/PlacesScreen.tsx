@@ -48,7 +48,9 @@ export default function PlacesScreen() {
   const hasMeasuredWidth = width > 0
   const isCompact = hasMeasuredWidth && width < 760
   const isWide = !hasMeasuredWidth || width >= 1100
-  const styles = useMemo(() => createStyles(colors, isCompact, isWide), [colors, isCompact, isWide])
+  // Full-width web catalog: add columns as the viewport grows so cards keep ~300px.
+  const wideColumns = Platform.OS !== 'web' ? 3 : width >= 2200 ? 5 : width >= 1700 ? 4 : 3
+  const styles = useMemo(() => createStyles(colors, isCompact, isWide, wideColumns), [colors, isCompact, isWide, wideColumns])
   const {
     activeCategoryTitle,
     appliedQuery,

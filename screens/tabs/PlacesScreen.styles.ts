@@ -4,7 +4,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { type ThemedColors } from '@/hooks/useTheme'
 import { webStyle, webViewStyle } from '@/utils/webProps'
 
-export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean) => {
+export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean, wideColumns = 3) => {
   // Compact "app" layout applies to every mobile width (web + native) so /places
   // looks identical across platforms.
   const mobileCompact = isCompact
@@ -30,10 +30,12 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
   scroll: {
     flex: 1,
   },
+  // Desktop web uses the whole viewport width; wide screens get more grid columns
+  // (see `wideColumns`) instead of a centred max-width column. Native tablets keep
+  // the centred 1280 column.
   content: {
     width: '100%',
-    maxWidth: 1280,
-    alignSelf: 'center',
+    ...(Platform.OS === 'web' ? null : { maxWidth: 1280, alignSelf: 'center' as const }),
     // Reserve whichever is taller: the base bottom spacing or the floating cookie
     // consent banner (published by ConsentBanner via --mt-consent-h). Without this the
     // empty-state "Обновить" CTA and the last cards sit hidden behind the banner on
@@ -744,9 +746,9 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     : {
         flexGrow: 1,
         flexShrink: 1,
-        flexBasis: isWide ? '30%' : '46%',
+        flexBasis: isWide ? `${100 / wideColumns - 3.333}%` : '46%',
         minWidth: isWide ? 280 : 260,
-        maxWidth: isWide ? '33.333%' : '50%',
+        maxWidth: isWide ? `${100 / wideColumns}%` : '50%',
       },
   // The card fills its grid-item wrapper (`card`); the wrapper owns the column
   // sizing so the card itself must not re-declare a basis/max-width.

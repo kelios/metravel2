@@ -37,11 +37,10 @@ export const createShellStyles = (colors: QuestColors, isMobile: boolean, _scree
         flex: 1,
         flexDirection: 'row',
         backgroundColor: colors.background,
+        // Desktop web uses the whole viewport: no centred max-width column.
         ...Platform.select({
             web: {
-                maxWidth: 1400,
                 width: '100%',
-                alignSelf: 'center',
             } as any,
         }),
     },
@@ -113,7 +112,19 @@ export const createShellStyles = (colors: QuestColors, isMobile: boolean, _scree
     },
     contentInner: { maxWidth: 1160, alignSelf: 'center', width: '100%' },
     desktopRow: { flexDirection: 'row', gap: SPACING.lg },
-    desktopMain: { flex: 1, minWidth: 0 },
-    desktopSide: { width: 400, flexShrink: 0 },
-    compactDesktopSide: { width: 340, flexShrink: 0 },
+    // Web: text and map share the free width; the text column stops at a readable
+    // line length and the map takes the rest of a wide screen. Native tablets keep
+    // the fixed map column.
+    desktopMain: Platform.select({
+        web: { flexGrow: 1, flexShrink: 1, flexBasis: 560, minWidth: 0, maxWidth: 760 },
+        default: { flex: 1, minWidth: 0 },
+    }),
+    desktopSide: Platform.select({
+        web: { flexGrow: 1, flexShrink: 0, flexBasis: 400, minWidth: 400 },
+        default: { width: 400, flexShrink: 0 },
+    }),
+    compactDesktopSide: Platform.select({
+        web: { flexGrow: 1, flexShrink: 0, flexBasis: 340, minWidth: 340 },
+        default: { width: 340, flexShrink: 0 },
+    }),
 } as const);
