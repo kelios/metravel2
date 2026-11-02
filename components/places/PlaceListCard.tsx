@@ -4,7 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
-import { ReadyBookRelatedLink } from '@/components/books/ReadyBookRelatedLink'
+import { ReadyBookRelatedLink, useReadyBookAction } from '@/components/books/ReadyBookRelatedLink'
 
 import { useThemedColors } from '@/hooks/useTheme';
 import { SEMANTIC_ACTION_ICON } from '@/components/navigation/navigationActionMeta';
@@ -15,7 +15,7 @@ import {
   PlaceCardOverflowControl,
 } from './PlaceListCard.parts';
 import PlaceRatingBadge from './PlaceRatingBadge';
-import type { PlaceListCardProps } from './PlaceListCard.types';
+import type { ActionChip, PlaceListCardProps } from './PlaceListCard.types';
 import { buildPlaceListCardActionModel } from './placeListCardActionModel';
 import { translate as i18nT } from '@/i18n'
 
@@ -77,6 +77,13 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   );
 
   const hasCoord = !!coord;
+  // Книга карточки — только по точке-источнику (как и раньше), не по статье.
+  const readyBook = useReadyBookAction(
+    sourcePointId != null ? { pointId: sourcePointId, sourceTravelId: relatedTravelId } : {},
+  );
+  const relatedBookAction: ActionChip | null = readyBook
+    ? { key: 'ready-book', icon: 'book', ...readyBook }
+    : null;
   const isCompactActionCard = compact;
   const {
     hasActionRow,
@@ -96,6 +103,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
     showSaveTile,
     showShareChip,
     showTitleShare,
+    showStandaloneRelatedBook,
     visibleInlineActions,
     visibleMapActions,
   } = buildPlaceListCardActionModel({
@@ -115,6 +123,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
     onShare,
     popupAligned,
     quickActions,
+    relatedBookAction,
     relatedTravelUrl,
     showActionRow,
     showAddButton,
@@ -289,8 +298,8 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
           />
 
           {ratingSlot ? <View style={styles.ratingSlot}>{ratingSlot}</View> : null}
-          {/* Без ряда действий ссылка на книгу остаётся отдельной иконкой; иначе она — плитка ряда. */}
-          {sourcePointId != null && !hasActionRow && (
+          {/* Без ряда действий ссылка на книгу — отдельная иконка; иначе она действие ряда/листа. */}
+          {showStandaloneRelatedBook && (
             <ReadyBookRelatedLink pointId={sourcePointId} sourceTravelId={relatedTravelId} iconOnly />
           )}
 
@@ -371,24 +380,6 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
                   title={action.title ?? action.label}
                 />
               ))}
-
-              {sourcePointId != null && (
-                <ReadyBookRelatedLink
-                  pointId={sourcePointId}
-                  sourceTravelId={relatedTravelId}
-                  tileStyle={styles.mapActionChip}
-                  renderTile={(label) => (
-                    <>
-                      <View style={styles.mapActionIconBubble}>
-                        <Feather name="book" size={16} color={colors.textMuted} />
-                      </View>
-                      <Text style={styles.mapActionLabel} numberOfLines={1}>
-                        {label}
-                      </Text>
-                    </>
-                  )}
-                />
-              )}
 
               {showSaveTile && onAddPoint && (
                 <LabeledActionChip

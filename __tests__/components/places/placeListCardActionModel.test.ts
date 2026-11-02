@@ -94,6 +94,24 @@ describe('placeListCardActionModel actionBudget', () => {
     expect(model.overflowActions.map((a) => a.key)).toEqual(['route', 'google', 'copy-coord', 'share'])
   })
 
+  // Книга места — действие под тем же бюджетом: на /places она уходит в лист после
+  // «На карте», а не четвёртой плиткой ряда (ревью: 4 плитки резали подписи на 320).
+  it('/places with a ready book: still three tiles, the book is in the sheet', () => {
+    const book: ActionChip = { key: 'ready-book', label: 'Книга', icon: 'book', onPress: noop }
+    const model = build({ ...placesCard, relatedBookAction: book })
+    expect(rowTiles(model)).toBe(3)
+    expect(model.visibleInlineActions.map((a) => a.key)).toEqual(['article'])
+    expect(model.overflowActions.map((a) => a.key)).toEqual(['open-map', 'ready-book', 'google', 'copy-coord', 'share'])
+    expect(model.showStandaloneRelatedBook).toBe(false)
+  })
+
+  it('a card without an action row keeps the book as a standalone icon', () => {
+    const book: ActionChip = { key: 'ready-book', label: 'Книга', icon: 'book', onPress: noop }
+    const model = build({ relatedBookAction: book, hasCoord: false })
+    expect(model.hasActionRow).toBe(false)
+    expect(model.showStandaloneRelatedBook).toBe(true)
+  })
+
   it('without the budget the existing cards keep their row (travel points, «Мои точки»)', () => {
     const model = build({ ...placesCard, actionBudget: false })
     expect(model.showCopyChip).toBe(true)

@@ -24,6 +24,11 @@ type ActionModelInput = {
   menuActions: ActionChip[]
   popupAligned: boolean
   quickActions: ActionChip[]
+  /**
+   * Ссылка на готовую книгу места. Идёт в ряд/лист вместе с остальными действиями,
+   * то есть под тем же бюджетом плиток; карточке без ряда действий — отдельной иконкой.
+   */
+  relatedBookAction?: ActionChip | null
   relatedTravelUrl?: string | null
   showActionRow: boolean
   showAddButton: boolean
@@ -37,6 +42,21 @@ type ActionModelInput = {
 export const PLACE_CARD_ROW_TILE_BUDGET = 3
 
 export function buildPlaceListCardActionModel({
+  relatedBookAction = null,
+  ...input
+}: ActionModelInput) {
+  const base = buildRowModel(input)
+  // Книга не заводит ряд действий там, где его не было (карточка остаётся компактной).
+  if (!relatedBookAction || !base.hasActionRow) {
+    return { ...base, showStandaloneRelatedBook: Boolean(relatedBookAction) }
+  }
+  return {
+    ...buildRowModel({ ...input, inlineActions: [...input.inlineActions, relatedBookAction] }),
+    showStandaloneRelatedBook: false,
+  }
+}
+
+function buildRowModel({
   actionBudget = false,
   addButtonPlacement,
   addLabel,
@@ -57,7 +77,7 @@ export function buildPlaceListCardActionModel({
   showActionRow,
   showAddButton,
   showTitleInContent,
-}: ActionModelInput) {
+}: Omit<ActionModelInput, 'relatedBookAction'>) {
   const overlayAddInline = isCompactActionCard && addButtonPlacement === 'row'
   // #2778 (PLACE-CARD-ACTION-OVERLOAD): бюджет действует на компактной
   // popup-aligned карточке (`/places`, «Места рядом»). В ряду — главное действие

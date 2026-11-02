@@ -17,7 +17,8 @@ jest.mock('@/components/places/PlaceListCard.parts',()=>({CardMeta:()=>null,Labe
 jest.mock('@/components/places/PlaceRatingBadge',()=>({__esModule:true,default:()=>null}));
 jest.mock('expo-router',()=>{
   const React=jest.requireActual<typeof import('react')>('react');
-  return {Link:React.forwardRef<HTMLAnchorElement,any>(function MockLink({href,onPress,children,dataSet,accessibilityLabel},ref){return <a ref={ref} href={href} onClick={onPress} aria-label={accessibilityLabel} data-card-action={dataSet?.cardAction}>{children}</a>;})};
+  const router={push:jest.fn()};
+  return {useRouter:()=>router,Link:React.forwardRef<HTMLAnchorElement,any>(function MockLink({href,onPress,children,dataSet,accessibilityLabel},ref){return <a ref={ref} href={href} onClick={onPress} aria-label={accessibilityLabel} data-card-action={dataSet?.cardAction}>{children}</a>;})};
 });
 jest.mock('@/data/travelBooks/related.json',()=>[{country:'BY',slug:'belarus',title:'Беларусь',sourceTravelIds:[169],pointIds:[2039],questIds:[42]}]);
 jest.mock('@/components/books/bookCopy',()=>({useBookCopy:()=>((key:string)=>key)}));
