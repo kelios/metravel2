@@ -371,7 +371,14 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
     minWidth: 0,
     gap: 1,
   },
+  featuredLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: DESIGN_TOKENS.spacing.xs,
+  },
   featuredLabel: {
+    flex: 1,
+    minWidth: 0,
     color: colors.primaryText,
     fontSize: isCompact ? DESIGN_TOKENS.typography.sizes.sm : 11,
     fontWeight: '700',
@@ -752,14 +759,13 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
       },
   // The card fills its grid-item wrapper (`card`); the wrapper owns the column
   // sizing so the card itself must not re-declare a basis/max-width.
-  // Desktop grid cells get a definite height from the row's `alignItems: 'stretch'`,
-  // so the card fills it with `height: '100%'`. In the compact single column the
-  // wrapper is content-height, and on native Yoga a `height: '100%'` there resolves
-  // against the unbounded ScrollView height — inflating the first card to thousands
-  // of px and pushing the rest off-screen. Compact cards must size to their content.
+  // Desktop grid cells get a definite height from the row's `alignItems: 'stretch'`;
+  // the card fills it via PlaceListCard `fillHeight` (flexGrow through the
+  // UnifiedTravelCard wrapper). `height: '100%'` here never worked: it resolved
+  // against that wrapper's auto height. Compact cards size to their content — on
+  // native Yoga a percentage height in the ScrollView column inflates the first card.
   cardFill: {
     width: '100%',
-    height: isCompact ? undefined : '100%',
   },
   cardInner: {
     backgroundColor: colors.surface,

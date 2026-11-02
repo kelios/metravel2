@@ -107,6 +107,7 @@ export const books = {
   "notFound": "Nie znaleziono wydania",
   "preparing": "Wydania w przygotowaniu",
   "related": "Książka wspomnień",
+  "relatedShort": "Książka",
   "kilobytes": "KB",
   "guideGeneric": "Pobierz plik «Do czytania» lub «Plik do punktu ksero», wydrukuj go w skali 100% i złóż książkę na kółkach lub sprężynie.",
   "megabytes": "MB",

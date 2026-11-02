@@ -1,11 +1,15 @@
-import React, { useMemo, useState } from 'react';
+import React, { Suspense, useMemo, useState } from 'react';
 import { Text, StyleSheet, TouchableOpacity, Image, Platform, View } from 'react-native';
 import { router } from 'expo-router';
-import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { webDataSetProps } from '@/utils/webProps';
 import { HEADER_LOGO_WEB_SRC } from '@/components/layout/headerLayoutContract';
 import { translate as i18nT } from '@/i18n'
-import ChristmasLogoDecoration from './ChristmasLogoDecoration';
+import { lazyWithRetry } from '@/utils/chunkReload';
+
+const ChristmasLogoDecoration = lazyWithRetry(() => import('./ChristmasLogoDecoration'), {
+    name: 'ChristmasLogoDecoration',
+});
 
 
 type LogoProps = {
@@ -26,6 +30,7 @@ export default React.memo(function Logo({
     variant: _variant = 'default',
 }: LogoProps) {
     const colors = useThemedColors();
+    const { activeSeasonalTheme } = useTheme();
     const styles = useMemo(() => getStyles(colors), [colors]);
     const [logoLoadFailed, setLogoLoadFailed] = useState(false);
     const primarySource =
@@ -58,9 +63,13 @@ export default React.memo(function Logo({
                     alt={i18nT('navigation:components.layout.Logo.metravel_logotip_14780610')}
                     {...webLogoDataSet('headerLogoImage')}
                 />
-                <ChristmasLogoDecoration variant="hat" />
+                {activeSeasonalTheme === 'christmas' && (
+                    <Suspense fallback={null}><ChristmasLogoDecoration variant="hat" /></Suspense>
+                )}
             </View>
-            <ChristmasLogoDecoration variant="tree" />
+            {activeSeasonalTheme === 'christmas' && (
+                <Suspense fallback={null}><ChristmasLogoDecoration variant="tree" /></Suspense>
+            )}
             {showWordmark && (
                 <Text style={styles.logoTextRow} {...webLogoDataSet('headerLogoWordmark')}>
                     <Text style={styles.logoTextMe}>{i18nT('navigation:components.layout.Logo.me_7e450b64')}</Text><Text style={styles.logoTextTravel} {...webLogoDataSet('headerLogoTravel')}>{i18nT('navigation:components.layout.Logo.travel_6006be95')}</Text>

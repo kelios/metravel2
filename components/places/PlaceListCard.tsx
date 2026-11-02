@@ -48,6 +48,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   eagerImage = false,
   testID,
   style,
+  fillHeight = false,
   showActionRow = true,
   showAddButton = true,
   addButtonPlacement = 'button',
@@ -230,7 +231,8 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
       imageHeight={imageHeight}
       width={width}
       testID={testID}
-      style={style as React.ComponentProps<typeof UnifiedTravelCard>['style']}
+      style={[fillHeight && styles.fillHeight, style] as React.ComponentProps<typeof UnifiedTravelCard>['style']}
+      wrapperStyle={fillHeight ? styles.fillHeight : undefined}
       heroTitleOverlay={!showTitleInContent}
       webHoverScale={false}
       webTouchAction={webTouchAction}
@@ -239,7 +241,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
       rightTopSlotScrim={!popupAligned}
       mediaPlaceholderSlot={<View style={styles.mediaPlaceholder} />}
       contentSlot={
-        <View style={styles.content}>
+        <View style={[styles.content, fillHeight && styles.fillHeight]}>
           {showTitleInContent && (
             <View style={styles.titleBlock}>
               {!!categoryLabel && (
@@ -287,7 +289,10 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
           />
 
           {ratingSlot ? <View style={styles.ratingSlot}>{ratingSlot}</View> : null}
-          {sourcePointId != null && <ReadyBookRelatedLink pointId={sourcePointId} sourceTravelId={relatedTravelId} iconOnly />}
+          {/* Без ряда действий ссылка на книгу остаётся отдельной иконкой; иначе она — плитка ряда. */}
+          {sourcePointId != null && !hasActionRow && (
+            <ReadyBookRelatedLink pointId={sourcePointId} sourceTravelId={relatedTravelId} iconOnly />
+          )}
 
           {showInlineRelatedTravelActions && relatedTravelUrl ? (
             <View style={styles.inlineRelatedTravelActions}>
@@ -306,7 +311,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
           ) : null}
 
           {hasActionRow && (
-            <View style={styles.actionsRow}>
+            <View style={[styles.actionsRow, fillHeight && styles.actionsRowPinned]}>
               {showRowQuickActions &&
                 quickActions.map((action) => (
                   <LabeledActionChip
@@ -366,6 +371,24 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
                   title={action.title ?? action.label}
                 />
               ))}
+
+              {sourcePointId != null && (
+                <ReadyBookRelatedLink
+                  pointId={sourcePointId}
+                  sourceTravelId={relatedTravelId}
+                  tileStyle={styles.mapActionChip}
+                  renderTile={(label) => (
+                    <>
+                      <View style={styles.mapActionIconBubble}>
+                        <Feather name="book" size={16} color={colors.textMuted} />
+                      </View>
+                      <Text style={styles.mapActionLabel} numberOfLines={1}>
+                        {label}
+                      </Text>
+                    </>
+                  )}
+                />
+              )}
 
               {showSaveTile && onAddPoint && (
                 <LabeledActionChip
@@ -465,7 +488,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
         // при слоте 299×280 CSS — `address-image/355/…webp` приезжал 1024×768.
         // Ширину теперь считает `UnifiedTravelCard` от своего `width`.
       }}
-      contentContainerStyle={styles.contentContainer}
+      contentContainerStyle={[styles.contentContainer, fillHeight && styles.fillHeight]}
     />
   );
 };
@@ -499,6 +522,14 @@ const createStyles = (
     },
     content: {
       gap: stackGap,
+    },
+    // fillHeight: каждый уровень (обёртка → карточка → контент) растёт до высоты
+    // родителя; `height: '100%'` от обёртки с auto-высотой не разрешается.
+    fillHeight: {
+      flexGrow: 1,
+    },
+    actionsRowPinned: {
+      marginTop: 'auto',
     },
     titleBlock: {
       gap: compact ? 6 : 8,

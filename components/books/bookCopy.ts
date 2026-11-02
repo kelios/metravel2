@@ -65,6 +65,7 @@ const copy = {
   notFound: () => translate('books:notFound'),
   preparing: () => translate('books:preparing'),
   related: () => translate('books:related'),
+  relatedShort: () => translate('books:relatedShort'),
   kilobytes: () => translate('books:kilobytes'),
   megabytes: () => translate('books:megabytes'),
   loadingPage: () => translate('books:loadingPage'),

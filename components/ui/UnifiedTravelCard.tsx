@@ -114,6 +114,11 @@ type Props = {
   contentContainerStyle?: StyleProp<ViewStyle>;
   insetMedia?: boolean;
   style?: StyleProp<ViewStyle>;
+  /**
+   * Стиль внешней обёртки. `style` ложится на контейнер внутри неё, поэтому
+   * растяжение по родителю (`flexGrow`) без этого стиля до контейнера не доходит.
+   */
+  wrapperStyle?: StyleProp<ViewStyle>;
   testID?: string;
   webAsView?: boolean;
   webPressableProps?: any;
@@ -161,6 +166,7 @@ function UnifiedTravelCard({
   contentContainerStyle,
   insetMedia = false,
   style,
+  wrapperStyle: wrapperStyleProp,
   testID,
   webPressableProps,
   webAsView = false,
@@ -602,8 +608,8 @@ function UnifiedTravelCard({
   // Animated.View и View в RN 0.88 (JSX требует единую конструктор-сигнатуру).
   const CardWrapper = (shouldUseNativePressScale ? Animated.View : View) as React.ComponentType<ViewProps>;
   const wrapperStyle = shouldUseNativePressScale
-    ? [animatedCardStyle, typeof width === 'number' ? { width } : undefined]
-    : (typeof width === 'number' ? { width } : undefined);
+    ? [animatedCardStyle, typeof width === 'number' ? { width } : undefined, wrapperStyleProp]
+    : [typeof width === 'number' ? { width } : undefined, wrapperStyleProp];
   // #1487: `imageHeight === 0` остаётся способом скрыть медиа-бокс целиком,
   // пропорции его не воскрешают.
   const hasMediaAspectRatio =

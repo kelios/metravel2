@@ -107,6 +107,7 @@ export const books = {
   "notFound": "Edition not found",
   "preparing": "Editions in preparation",
   "related": "Memory book",
+  "relatedShort": "Book",
   "kilobytes": "KB",
   "guideGeneric": "Download the «Reading» file or the «File for a copy shop», print it at 100% scale and bind the book with rings or a spiral.",
   "megabytes": "MB",

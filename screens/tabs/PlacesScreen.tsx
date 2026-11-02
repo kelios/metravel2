@@ -444,18 +444,24 @@ export default function PlacesScreen() {
                               <Feather name={collection.icon} size={14} color={colors.primaryText} />
                             </View>
                             <View style={styles.featuredTextBlock}>
-                              <Text style={styles.featuredLabel}>{collection.hint}</Text>
+                              {/* The count shares the hint line, so the title keeps the
+                                  full text width (in the narrow sidebar a side column
+                                  for the count squeezed both lines into word-per-line
+                                  wrapping). The slot is reserved from first paint so the
+                                  count appearing after load causes no CLS. */}
+                              <View style={styles.featuredLabelRow}>
+                                <Text style={styles.featuredLabel} numberOfLines={1}>
+                                  {collection.hint}
+                                </Text>
+                                <View style={styles.featuredCountSlot}>
+                                  {collection.countReady ? (
+                                    <Text style={styles.featuredCount}>{collection.count}</Text>
+                                  ) : null}
+                                </View>
+                              </View>
                               <Text style={styles.featuredName} numberOfLines={2}>
                                 {collection.title}
                               </Text>
-                            </View>
-                            {/* Reserve the count slot from first paint so the count
-                                appearing after load does not narrow the text block and
-                                re-wrap featuredName, which caused cascading CLS on /places. */}
-                            <View style={styles.featuredCountSlot}>
-                              {collection.countReady ? (
-                                <Text style={styles.featuredCount}>{collection.count}</Text>
-                              ) : null}
                             </View>
                           </Pressable>
                           {selected ? (

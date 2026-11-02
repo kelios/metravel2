@@ -55,6 +55,12 @@ export type PlaceListCardProps = {
   eagerImage?: boolean
   testID?: string
   style?: StyleProp<WebCardStyle>
+  /**
+   * Карточка заполняет высоту родительской ячейки (ряд сетки растянут по самой
+   * высокой карточке), ряд действий прижат к низу — плитки соседних карточек на
+   * одной линии. Родитель обязан иметь определённую высоту.
+   */
+  fillHeight?: boolean
   showActionRow?: boolean
   showAddButton?: boolean
   addButtonPlacement?: 'button' | 'row'

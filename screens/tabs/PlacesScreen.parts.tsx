@@ -344,6 +344,9 @@ export const PlaceCard = React.memo(function PlaceCard({
         titleLayout="content"
         titleNumberOfLines={2}
         style={styles.cardFill}
+        // Desktop: ряд сетки растянут по самой высокой карточке — каждая карточка
+        // заполняет ячейку, ряд действий прижат к низу. Mobile — по контенту.
+        fillHeight={!isMobileCard}
         testID={`places-card-${place.id}`}
       />
     </View>
