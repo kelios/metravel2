@@ -25,7 +25,7 @@ import QuestsMobileToolbar from './QuestsMobileToolbar';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
 import { QuestPageColumns } from '@/components/quests/QuestPageColumns';
 import { pluralizeCities, pluralizeCompletions, pluralizeCountries, pluralizePlayers, pluralizeQuest, type QuestMeta, type QuestSortOrder, type QuestThemeEntry } from './questsShared';
-import { countQuestCatalogScale, isCatalogCompletionsPublic, isCatalogStatsPublic } from '@/utils/questPublicStatsPolicy';
+import { countQuestCatalogScale, isCatalogCompletionsPublic, isCatalogPlayersPublic } from '@/utils/questPublicStatsPolicy';
 import QuestsSortChips, { EMPTY_SORT_ORDERS } from './QuestsSortChips';
 
 import { translate as i18nT } from '@/i18n'
@@ -302,19 +302,15 @@ function QuestsContentPanel({
     // этого города. Запрос идёт после каталога и не спорит с ним за сеть.
     const isFullCatalog = selectedCityId === ALL_QUESTS_ID && !searchActive && !isMapAreaActive;
     const playersCount = useQuestPlayersCount(dataLoaded && isFullCatalog);
-    // Ниже порогов (#2906) маленькие числа работают против доверия: вместо них
-    // полный каталог показывает масштаб — города и страны; пороги —
-    // `utils/questPublicStatsPolicy.ts`, и при их достижении формат возвращается сам.
-    // Полный каталог решает по одному флагу — оба порога сразу (#2914); у среза
-    // числа игроков нет, и он смотрит только на прохождения.
-    const statsPublic = isFullCatalog
-        ? isCatalogStatsPublic(completionsTotal, playersCount)
-        : isCatalogCompletionsPublic(completionsTotal);
-    const showCompletions = statsPublic;
-    const showPlayers = isFullCatalog && statsPublic;
+    // Пороги — `utils/questPublicStatsPolicy.ts` (#2906): прохождения и игроки
+    // показываются, как только они есть; без числа игроков (ошибка, офлайн)
+    // прохождения всё равно видны. Масштаб — города и страны — только в полном
+    // каталоге, где прохождений ещё нет.
+    const showCompletions = isCatalogCompletionsPublic(completionsTotal);
+    const showPlayers = isFullCatalog && isCatalogPlayersPublic(playersCount);
     const catalogScale = useMemo(
-        () => (isFullCatalog && !statsPublic ? countQuestCatalogScale(questsAll) : null),
-        [isFullCatalog, questsAll, statsPublic],
+        () => (isFullCatalog && !showCompletions ? countQuestCatalogScale(questsAll) : null),
+        [isFullCatalog, questsAll, showCompletions],
     );
     const countText = [
         pluralizeQuest(questsAll.length),

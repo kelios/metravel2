@@ -7,7 +7,6 @@ import {
   countQuestCatalogScale,
   isCatalogCompletionsPublic,
   isCatalogPlayersPublic,
-  isCatalogStatsPublic,
   isQuestCompletionsPublic,
 } from '@/utils/questPublicStatsPolicy'
 
@@ -33,14 +32,6 @@ describe('questPublicStatsPolicy (#2906)', () => {
     expect(isQuestCompletionsPublic(1)).toBe(false)
     expect(isQuestCompletionsPublic(2)).toBe(true)
     expect(isQuestCompletionsPublic(undefined)).toBe(false)
-  })
-
-  it('статистика каталога публична только при обоих порогах сразу (#2914)', () => {
-    const { catalogCompletions, catalogPlayers } = QUEST_PUBLIC_STATS_THRESHOLDS
-    expect(isCatalogStatsPublic(catalogCompletions, catalogPlayers)).toBe(true)
-    expect(isCatalogStatsPublic(300, 30)).toBe(false)
-    expect(isCatalogStatsPublic(44, 300)).toBe(false)
-    expect(isCatalogStatsPublic(300, null)).toBe(false)
   })
 
   it('масштаб каталога считает разные города и страны без учёта регистра и пустых', () => {

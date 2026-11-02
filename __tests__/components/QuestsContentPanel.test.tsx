@@ -1077,7 +1077,6 @@ describe('QuestsContentPanel', () => {
 
     it('adds the catalog-wide player count only to the full catalog header (#2761)', async () => {
         (Platform as { OS: string }).OS = 'web';
-        // Пороги показа (#2906): прохождения — от 100, игроки — от 50.
         mockPlayersCount = 260;
         const baseProps = {
             styles,
@@ -1117,41 +1116,39 @@ describe('QuestsContentPanel', () => {
         expect(queryByText(/игрок/)).toBeNull();
         expect(mockUseQuestPlayersCount).toHaveBeenLastCalledWith(false);
 
-        // Нет числа игроков (ошибка, офлайн, старый бэкенд) — порог игроков не
-        // подтверждён, и полный каталог показывает масштаб (#2914).
+        // Нет числа игроков (ошибка, офлайн, старый бэкенд) — прохождения всё равно видны.
         mockPlayersCount = null;
         await rerender(<QuestsContentPanel {...baseProps} selectedCityId="__all__" filtersActive={false} />);
-        expect(getByText('2 квеста · 1 город')).toBeTruthy();
-        expect(queryByText(/прохожден/)).toBeNull();
+        expect(getByText('2 квеста · 300 прохождений')).toBeTruthy();
+        expect(queryByText(/игрок/)).toBeNull();
     });
 
-    it('decides the full catalog header by both thresholds at once: 300 completions and 30 players show scale (#2914)', async () => {
+    it('shows small completion and player counts in the full catalog header (#2906)', async () => {
         (Platform as { OS: string }).OS = 'web';
         mockPlayersCount = 30;
         const { getByText, queryByText } = await render(
             <QuestsContentPanel
                 {...makeBaseProps()}
-                questsAll={[{ ...makeQuest(0), completionsCount: 300, countryCode: 'PL' }, makeQuest(1)]}
+                questsAll={[{ ...makeQuest(0), completionsCount: 44, countryCode: 'PL' }, makeQuest(1)]}
                 selectedCityId="__all__"
                 selectedCityName={null}
                 isMobile={false}
                 filtersActive={false}
             />,
         );
-        expect(getByText('2 квеста · 1 город · 1 страна')).toBeTruthy();
-        expect(queryByText(/прохожден/)).toBeNull();
-        expect(queryByText(/игрок/)).toBeNull();
+        expect(getByText('2 квеста · 44 прохождения · 30 игроков')).toBeTruthy();
+        expect(queryByText(/страна/)).toBeNull();
     });
 
-    it('hides small completion and player counts below the trust threshold and shows catalog scale instead (#2906)', async () => {
+    it('shows catalog scale instead of counts while nobody has completed a quest (#2906)', async () => {
         (Platform as { OS: string }).OS = 'web';
-        mockPlayersCount = 30;
+        mockPlayersCount = 0;
         const baseProps = {
             ...makeBaseProps(),
             dataLoaded: true,
             // Города считаются группами лендингов (#2914): alias — из API, как на проде.
             questsAll: [
-                { ...makeQuest(0), cityAlias: 'warsaw', completionsCount: 44 },
+                { ...makeQuest(0), cityAlias: 'warsaw' },
                 { ...makeQuest(1), cityId: 'krakow', cityAlias: 'krakow', cityName: 'Kraków', countryCode: 'PL' },
                 { ...makeQuest(2), cityAlias: 'warsaw', countryCode: 'PL' },
             ],
