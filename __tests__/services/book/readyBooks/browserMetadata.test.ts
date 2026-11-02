@@ -2,16 +2,30 @@ import {execFileSync} from 'node:child_process';
 import providerData from '@/data/travelBooks/providers.json';
 import {BOOK_PROFILES} from '@/data/travelBooks/profiles';
 import {BOOK_PROFILES as schemaProfiles,printProfileSchema} from '@/data/travelBooks/schema/profiles';
-import {printDirectorySchema} from '@/data/travelBooks/schema/providers';
+import {printCityIds,printDirectorySchema,publishedPrintDirectorySchema} from '@/data/travelBooks/schema/providers';
+import legacyDirectory from './legacyPrintDirectory.v1.json';
 
 it('validates the exact provider registry consumed by the browser before publication',()=>{
-  expect(printDirectorySchema.parse(providerData).providers).toHaveLength(10);
+  const directory=printDirectorySchema.parse(providerData);
+  // Every regional centre of Belarus and each listed Polish city keeps at least two dated points.
+  for(const city of [...printCityIds.BY,...printCityIds.PL]){
+    expect(directory.providers.filter(provider=>provider.city===city).length).toBeGreaterThanOrEqual(2);
+  }
   const invalid=JSON.parse(JSON.stringify(providerData));
-  invalid.providers[0].minimumCopies=0;
+  invalid.providers[0].printing.pdf='no';
   expect(printDirectorySchema.safeParse(invalid).success).toBe(false);
-  invalid.providers[0].minimumCopies=null;
-  invalid.providers[0].acceptsRuPdf='assumed';
+  invalid.providers[0].printing.pdf='yes';
+  invalid.providers[0].city='gdansk';
   expect(printDirectorySchema.safeParse(invalid).success).toBe(false);
+  invalid.providers[0].city=providerData.providers[0].city;
+  invalid.providers[0].acceptsRuPdf='unknown';
+  expect(printDirectorySchema.safeParse(invalid).success).toBe(false);
+});
+
+it('keeps legacy provider snapshots of published revisions valid without letting them back into the current directory',()=>{
+  expect(publishedPrintDirectorySchema.safeParse(legacyDirectory).success).toBe(true);
+  expect(publishedPrintDirectorySchema.safeParse(providerData).success).toBe(true);
+  expect(printDirectorySchema.safeParse(legacyDirectory).success).toBe(false);
 });
 
 it('keeps one set of physical dimensions for the browser and authoring schemas',()=>{

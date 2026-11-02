@@ -5,77 +5,83 @@ import providerData from '@/data/travelBooks/providers.json';
 import {publishedFixture} from '../../services/book/readyBooks/publicationFixtures';
 import {fetchVerifiedBookAsset} from '@/services/book/readyBooks/download';
 import {loadCurrentPrintDirectory} from '@/services/book/readyBooks/printResources';
-import {listPrintLocations} from '@/services/book/readyBooks/providers';
+import {listPrintCities,listPrintLocations} from '@/services/book/readyBooks/providers';
 import {printDirectorySchema} from '@/data/travelBooks/schema/providers';
 import {openExternalUrlInNewTab} from '@/utils/externalLinks';
 
 jest.mock('@/components/ui/Button',()=>({__esModule:true,default:({label,onPress}:{label:string;onPress:()=>void})=><button onClick={onPress}>{label}</button>}));
+jest.mock('@/components/ui/Chip',()=>({__esModule:true,default:({label,selected,onPress}:{label:string;selected:boolean;onPress:()=>void})=><button aria-pressed={selected} onClick={onPress}>{label}</button>}));
 jest.mock('@/utils/externalLinks',()=>({openExternalUrlInNewTab:jest.fn().mockResolvedValue(true)}));
 jest.mock('@/services/book/readyBooks/download',()=>({fetchVerifiedBookAsset:jest.fn()}));
 jest.mock('@/services/book/readyBooks/printResources',()=>({...jest.requireActual('@/services/book/readyBooks/printResources'),loadCurrentPrintDirectory:jest.fn()}));
-jest.mock('@/components/books/printProviders/providerCopy',()=>({useProviderCopy:()=>{
-  const {translate}=jest.requireActual('@/i18n');
-  return (key:string,params?:Record<string,unknown>)=>translate(`books:${key}`,params);
-}}));
 const directory=printDirectorySchema.parse(providerData);
+const citySelect=()=>screen.getByLabelText('Город') as HTMLSelectElement;
+const selectedCountry=()=>within(screen.getByRole('group',{name:'Страна печати'})).getByRole('button',{pressed:true}).textContent;
+const chooseCountry=(name:'Беларусь'|'Польша')=>fireEvent.click(screen.getByRole('button',{name}));
+const row=(name:string)=>screen.getByText(name).closest('li')!;
 beforeEach(()=>{
   jest.mocked(loadCurrentPrintDirectory).mockReset().mockResolvedValue(directory);
   jest.mocked(openExternalUrlInNewTab).mockReset().mockResolvedValue(true);
   jest.mocked(fetchVerifiedBookAsset).mockClear();
 });
 
-it('keeps one source of dated walk-in locations and technical evidence without claiming exact PDF acceptance',()=>{
-  expect(listPrintLocations('BY',directory).map(p=>p.id)).toEqual(['karandash-documents']);
-  expect(listPrintLocations('PL',directory).map(p=>p.id)).toEqual(['copy-general-documents','cyfrus-spiral']);
-  for(const provider of [...listPrintLocations('BY',directory),...listPrintLocations('PL',directory)]){
-    expect(provider.checkedAt).toBe('2026-11-01');
-    expect(provider.printHelp.address).toBeTruthy();
-    expect(provider.acceptsRuPdf).toBe('unknown');
-    expect(provider.supportedProfiles).toEqual([]);
-    expect(provider.acceptedFiles).toEqual([]);
-  }
-  const invalid={...providerData,providers:providerData.providers.map(provider=>({...provider,sourceUrls:[...provider.sourceUrls]}))};
-  invalid.providers[0].sourceUrls=[];
-  expect(printDirectorySchema.safeParse(invalid).success).toBe(false);
+it('lists cities in directory order with the capital first and points per city',()=>{
+  expect(listPrintCities('BY',directory)).toEqual(['minsk','brest','vitebsk','gomel','grodno','mogilev']);
+  expect(listPrintCities('PL',directory)[0]).toBe('warszawa');
+  expect(listPrintLocations('minsk',directory).map(provider=>provider.id)).toEqual(['kopirych-minsk','reut-print-minsk','sprinter-nemiga-minsk']);
 });
 
-it('shows addresses and honest Cyrillic inference without quantity, city or exact-file gates',()=>{
-  const view=render(<PrintProvidersView directory={directory} profileId="album-a5" bodyPageCount={108} artifactSha256="unknown"/>);
-  expect(screen.getByText('Карандаш')).toBeTruthy();
-  expect(screen.getByText(/ул. Гикало, 3/)).toBeTruthy();
-  expect(screen.getByText(/общие правила просят текст в кривых/)).toBeTruthy();
-  expect(screen.queryByLabelText('Город')).toBeNull();
-  expect(screen.queryByRole('spinbutton')).toBeNull();
-  fireEvent.change(screen.getByLabelText('Страна печати'),{target:{value:'PL'}});
+it('shows only capabilities stated by the point and asks to confirm embedded fonts otherwise',()=>{
+  render(<PrintProvidersView directory={directory} profileId="album-a5" bodyPageCount={108}/>);
+  expect(citySelect().value).toBe('minsk');
+  const kopirych=within(row('Копирыч'));
+  expect(kopirych.getByText('г. Минск, пр-т Независимости, 58')).toBeTruthy();
+  expect(kopirych.getByText(/^Печать: цветная.*A4$/)).toBeTruthy();
+  expect(kopirych.getByText('Печатают с вашего файла PDF.')).toBeTruthy();
+  expect(kopirych.getByText(/^Переплёт: пружина.*твёрдая обложка$/)).toBeTruthy();
+  expect(kopirych.getByText(/PDF со встроенными шрифтами принимают/)).toBeTruthy();
+  expect(within(row('Реут Принт')).queryByText('Печатают с вашего файла PDF.')).toBeNull();
+  expect(within(row('Реут Принт')).getByText('Уточните у точки, примут ли PDF со встроенными шрифтами.')).toBeTruthy();
+  expect(within(row('Печатный центр СПРИНТЕР (метро Немига)')).getByText(/текст должен быть в кривых/)).toBeTruthy();
+  // The verification date stays in the data, not on the page.
+  expect(screen.queryByText(/проверены/)).toBeNull();
+  fireEvent.change(citySelect(),{target:{value:'vitebsk'}});
+  expect(screen.queryByText('Копирыч')).toBeNull();
+  expect(within(row('Копицентр РУП «Витебский ЦСМС»')).queryByText(/^Переплёт/)).toBeNull();
+  expect(within(row('ОАО «Витебский картонажно-полиграфический комбинат «Покровский»')).queryByText(/^Печать:/)).toBeNull();
+});
+
+it('resets the city to the capital when the country changes',()=>{
+  render(<PrintProvidersView directory={directory} profileId="album-a5" bodyPageCount={108}/>);
+  fireEvent.change(citySelect(),{target:{value:'brest'}});
+  expect(screen.getByText('CopyStar')).toBeTruthy();
+  chooseCountry('Польша');
+  expect(citySelect().value).toBe('warszawa');
   expect(screen.getByText('Copy General')).toBeTruthy();
-  expect(screen.getByText(/Jerozolimskie 93/)).toBeTruthy();
-  expect(screen.getAllByText(/Возможность печати кириллицы — технический вывод/)).toHaveLength(2);
-  view.rerender(<PrintProvidersView directory={directory} profileId="pocket-150x100" bodyPageCount={104}/>);
-  expect((screen.getByLabelText('Страна печати') as HTMLSelectElement).value).toBe('PL');
-  expect(screen.getByText('CYFRUS.PL')).toBeTruthy();
+  expect(Array.from(citySelect().options).map(option=>option.textContent)).toEqual(['Варшава','Краков','Вроцлав','Гданьск','Познань','Лодзь','Катовице','Люблин','Щецин','Белосток']);
 });
 
 it('opens only a user-selected website/source with the central helper and retains selection on failure',async()=>{
   const opened=jest.fn();
   render(<PrintProvidersView directory={directory} profileId="album-a5" bodyPageCount={108} onProviderOpened={opened}/>);
   expect(openExternalUrlInNewTab).not.toHaveBeenCalled();
-  const row=screen.getByText('Карандаш').closest('li')!;
+  const kopirych=row('Копирыч');
   jest.mocked(openExternalUrlInNewTab).mockResolvedValueOnce(false);
-  await act(async()=>fireEvent.click(within(row).getByRole('button',{name:'Сайт пункта печати'})));
+  await act(async()=>fireEvent.click(within(kopirych).getByRole('button',{name:'Сайт пункта печати'})));
   expect(screen.getByRole('alert')).toBeTruthy();
   expect(opened).not.toHaveBeenCalled();
-  await act(async()=>fireEvent.click(within(row).getByRole('button',{name:'Источник 2'})));
-  expect(openExternalUrlInNewTab).toHaveBeenLastCalledWith('https://www.karandash.by/files/rules_karandash.pdf');
-  expect(opened).toHaveBeenCalledWith('karandash-documents');
+  await act(async()=>fireEvent.click(within(kopirych).getByRole('button',{name:'Источник 2'})));
+  expect(openExternalUrlInNewTab).toHaveBeenLastCalledWith('https://kopirych.by/kontakty.html');
+  expect(opened).toHaveBeenCalledWith('kopirych-minsk');
 });
 
 it('shows current information for legacy editions and never requests their immutable provider snapshot',async()=>{
   const book=publishedFixture();
   const view=render(<PrintProviders book={book} profileId="album-a5" bodyPageCount={108}/>);
-  await waitFor(()=>expect(screen.getByText('Карандаш')).toBeTruthy());
-  fireEvent.change(screen.getByLabelText('Страна печати'),{target:{value:'PL'}});
+  await waitFor(()=>expect(screen.getByText('Копирыч')).toBeTruthy());
+  chooseCountry('Польша');
   view.rerender(<PrintProviders book={{...book,printDirectory:{uri:'https://example.com/old.json',sha256:'a'.repeat(64),bytes:1,mime:'application/json'}}} profileId="pocket-150x100" bodyPageCount={108}/>);
-  expect((screen.getByLabelText('Страна печати') as HTMLSelectElement).value).toBe('PL');
+  expect(selectedCountry()).toBe('Польша');
   expect(loadCurrentPrintDirectory).toHaveBeenCalledTimes(1);
   expect(fetchVerifiedBookAsset).not.toHaveBeenCalled();
 });
@@ -84,24 +90,26 @@ it('starts with the book country, preserves a manual choice across profiles, and
   const book={...publishedFixture(),country:'PL' as const};
   const view=render(<PrintProviders book={book} profileId="album-a5" bodyPageCount={108}/>);
   await waitFor(()=>expect(screen.getByText('Copy General')).toBeTruthy());
-  expect((screen.getByLabelText('Страна печати') as HTMLSelectElement).value).toBe('PL');
-  expect(screen.queryByText('Карандаш')).toBeNull();
-  fireEvent.change(screen.getByLabelText('Страна печати'),{target:{value:'BY'}});
+  expect(selectedCountry()).toBe('Польша');
+  expect(screen.queryByText('Копирыч')).toBeNull();
+  chooseCountry('Беларусь');
+  fireEvent.change(citySelect(),{target:{value:'gomel'}});
   view.rerender(<PrintProviders book={book} profileId="pocket-150x100" bodyPageCount={108}/>);
-  expect((screen.getByLabelText('Страна печати') as HTMLSelectElement).value).toBe('BY');
-  expect(screen.getByText('Карандаш')).toBeTruthy();
+  expect(selectedCountry()).toBe('Беларусь');
+  expect(citySelect().value).toBe('gomel');
   view.rerender(<PrintProviders book={{...book,country:'BY'}} profileId="pocket-150x100" bodyPageCount={108}/>);
   view.rerender(<PrintProviders book={book} profileId="pocket-150x100" bodyPageCount={108}/>);
-  expect((screen.getByLabelText('Страна печати') as HTMLSelectElement).value).toBe('PL');
+  expect(selectedCountry()).toBe('Польша');
+  expect(citySelect().value).toBe('warszawa');
   expect(loadCurrentPrintDirectory).toHaveBeenCalledTimes(1);
 });
 
-it('retries a failed current-directory chunk without changing the selected book profile',async()=>{
+it('retries a failed current-directory chunk with a directory-specific message',async()=>{
   jest.mocked(loadCurrentPrintDirectory).mockRejectedValueOnce(new Error('CHUNK_LOAD'));
   render(<PrintProviders book={publishedFixture()} profileId="pocket-150x100" bodyPageCount={108}/>);
-  await waitFor(()=>expect(screen.getByRole('alert')).toBeTruthy());
+  await waitFor(()=>expect(screen.getByRole('alert').textContent).toBe('Не удалось загрузить список точек печати.'));
   fireEvent.click(screen.getByRole('button',{name:'Повторить'}));
-  await waitFor(()=>expect(screen.getByText('Карандаш')).toBeTruthy());
+  await waitFor(()=>expect(screen.getByText('Копирыч')).toBeTruthy());
   expect(screen.getAllByText(/150 × 100 мм/).length).toBeGreaterThan(0);
   expect(loadCurrentPrintDirectory).toHaveBeenCalledTimes(2);
   expect(fetchVerifiedBookAsset).not.toHaveBeenCalled();

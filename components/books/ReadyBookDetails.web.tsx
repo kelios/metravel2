@@ -95,6 +95,6 @@ function LoadedBookDetails({book,initialProfileId}:{book:PublishedBook;initialPr
       {failed===file.id&&<p role="alert">{bookT('downloadError')}</p>}
     </li>)}</ul><p>{bookT('revision')}: {book.revision}</p>
     <PrintingGuide book={book} profileId={profileId}/>
-    <PrintProviders book={book} profileId={profileId} bodyPageCount={book.bodyPageCount} artifactSha256={book.artifacts.find(file=>file.profileId===profileId&&file.purpose==='print-shop'&&file.component==='body')?.sha256}/>
+    <PrintProviders book={book} profileId={profileId} bodyPageCount={book.bodyPageCount}/>
   </BooksFrame>;
 }

@@ -95,7 +95,7 @@ function checkContent(asset, bytes) {
     const data=JSON.parse(bytes.toString('utf8'));
     if(asset.kind==='book-metadata'){
       if(data.id!==asset.bookId||data.revision!==asset.revision||!['places','quests'].includes(data.kind??'places')||!Array.isArray(data.artifacts)||!data.artifacts.length||!Array.isArray(data.preview)||data.preview.length!==4)throw new Error('Invalid book metadata JSON');
-    }else if(asset.kind!=='print-directory'||data.schemaVersion!==1||!Array.isArray(data.providers)||!data.providers.length||!Array.isArray(data.cities)||!data.cities.length)throw new Error('Invalid provider directory JSON');
+    }else if(asset.kind!=='print-directory'||![1,2].includes(data.schemaVersion)||!Array.isArray(data.providers)||!data.providers.length||!Array.isArray(data.cities)||!data.cities.length)throw new Error('Invalid provider directory JSON');
   }
   if(extension==='txt'&&!bytes.toString('utf8').includes('SIL OPEN FONT LICENSE Version 1.1'))throw new Error('Invalid font license publication resource');
 }

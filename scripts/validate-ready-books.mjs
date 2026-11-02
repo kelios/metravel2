@@ -29,7 +29,7 @@ if (args[0] === '--publication') {
   await build({entryPoints:{publication:'services/book/readyBooks/publication.ts',providers:'data/travelBooks/schema/providers.ts'},outdir:output,outExtension:{'.js':'.cjs'},bundle:true,platform:'node',format:'cjs',logLevel:'silent'});
   const require=createRequire(import.meta.url);
   const {publicationSchema}=require(bundle);
-  const {printDirectorySchema}=require(providersBundle);
+  const {publishedPrintDirectorySchema}=require(providersBundle);
   const manifest=JSON.parse(await readFile(file,'utf8'));
   // Defaults validate legacy records but must not rewrite their pinned book.json bytes.
   publicationSchema.parse(manifest);
@@ -45,9 +45,9 @@ if (args[0] === '--publication') {
     // Published companions keep their own schema-checked, hash-pinned snapshot.
     // The current UI directory and current guide generator may evolve independently.
     if(asset.kind==='print-directory'){
-      const directory=printDirectorySchema.parse(JSON.parse(bytes.toString('utf8')));
+      const directory=publishedPrintDirectorySchema.parse(JSON.parse(bytes.toString('utf8')));
       for(const provider of directory.providers)providerIds.add(provider.country+':'+provider.id);
-      for(const city of directory.cities)printCities.add(city.country+':'+city.name);
+      for(const city of directory.cities)printCities.add(city.country+':'+('name' in city?city.name:city.id));
     }
   }
   console.log(JSON.stringify({publication:'partial',books:manifest.books.length,resources:assets.length,providers:providerIds.size,printCities:printCities.size,hashesVerified:true,printReady:false}));

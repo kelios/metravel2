@@ -1,8 +1,11 @@
-import type {PrintDirectory, PrintCountry, PrintProvider} from '../../../data/travelBooks/schema/providers';
+import type {PrintCityId, PrintDirectory, PrintCountry, PrintProvider} from '../../../data/travelBooks/schema/providers';
 
-export type PrintLocation = PrintProvider & {printHelp: NonNullable<PrintProvider['printHelp']>};
+/** Cities of a country in directory order; the first one is the default choice. */
+export function listPrintCities(country: PrintCountry, directory: PrintDirectory): PrintCityId[] {
+  return directory.cities.filter(city => city.country === country).map(city => city.id);
+}
 
 /** A public directory, not a quote or acceptance of a particular PDF. */
-export function listPrintLocations(country: PrintCountry, directory: PrintDirectory): PrintLocation[] {
-  return directory.providers.filter((provider): provider is PrintLocation => provider.country === country && Boolean(provider.printHelp));
+export function listPrintLocations(city: PrintCityId, directory: PrintDirectory): PrintProvider[] {
+  return directory.providers.filter(provider => provider.city === city);
 }

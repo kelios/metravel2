@@ -1,5 +1,5 @@
 import type {PublishedBook,PublishedArtifact} from './publication';
-import type {PrintDirectory} from '../../../data/travelBooks/schema/providers';
+import type {PrintDirectory,PublishedPrintDirectory} from '../../../data/travelBooks/schema/providers';
 import {fetchVerifiedBookAsset, type VerifiedBookAsset} from './download';
 
 /** Published print documents belong to one immutable book revision. */
@@ -25,15 +25,15 @@ export async function loadCurrentPrintDirectory():Promise<PrintDirectory>{
   return directory as PrintDirectory;
 }
 
-export async function loadPrintDirectory(book:Pick<PublishedBook,'id'|'revision'|'printDirectory'>,signal?:AbortSignal):Promise<PrintDirectory>{
+export async function loadPrintDirectory(book:Pick<PublishedBook,'id'|'revision'|'printDirectory'>,signal?:AbortSignal):Promise<PublishedPrintDirectory>{
   const asset=book.printDirectory;
   if(!asset)throw new Error('BOOK_PRINT_DIRECTORY_UNAVAILABLE');
   assertBookPrintResource(book,asset);
   const bytes=await fetchVerifiedBookAsset(asset,signal);
-  const directory=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)) as PrintDirectory;
+  const directory=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)) as PublishedPrintDirectory;
   // The publisher validates the full schema; the browser authenticates the exact
   // published bytes and rejects an incompatible document rather than substituting data.
-  if(directory.schemaVersion!==1||!Array.isArray(directory.cities)||!directory.cities.length||
+  if(![1,2].includes(directory.schemaVersion)||!Array.isArray(directory.cities)||!directory.cities.length||
     !Array.isArray(directory.providers)||!directory.providers.length||
     !directory.cities.some(city=>city.country==='BY')||!directory.cities.some(city=>city.country==='PL')){
     throw new Error('BOOK_PRINT_DIRECTORY_INVALID');

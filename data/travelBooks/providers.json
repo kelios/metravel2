@@ -1,462 +1,1376 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "cities": [
     {
-      "country": "BY",
-      "name": "Минск"
+      "id": "minsk",
+      "country": "BY"
     },
     {
-      "country": "BY",
-      "name": "Брест"
+      "id": "brest",
+      "country": "BY"
     },
     {
-      "country": "BY",
-      "name": "Витебск"
+      "id": "vitebsk",
+      "country": "BY"
     },
     {
-      "country": "BY",
-      "name": "Гомель"
+      "id": "gomel",
+      "country": "BY"
     },
     {
-      "country": "BY",
-      "name": "Гродно"
+      "id": "grodno",
+      "country": "BY"
     },
     {
-      "country": "BY",
-      "name": "Могилёв"
+      "id": "mogilev",
+      "country": "BY"
     },
     {
-      "country": "PL",
-      "name": "Warszawa"
+      "id": "warszawa",
+      "country": "PL"
     },
     {
-      "country": "PL",
-      "name": "Kraków"
+      "id": "krakow",
+      "country": "PL"
     },
     {
-      "country": "PL",
-      "name": "Łódź"
+      "id": "wroclaw",
+      "country": "PL"
     },
     {
-      "country": "PL",
-      "name": "Wrocław"
+      "id": "gdansk",
+      "country": "PL"
     },
     {
-      "country": "PL",
-      "name": "Poznań"
+      "id": "poznan",
+      "country": "PL"
     },
     {
-      "country": "PL",
-      "name": "Gdańsk"
+      "id": "lodz",
+      "country": "PL"
     },
     {
-      "country": "PL",
-      "name": "Szczecin"
+      "id": "katowice",
+      "country": "PL"
     },
     {
-      "country": "PL",
-      "name": "Bydgoszcz"
+      "id": "lublin",
+      "country": "PL"
     },
     {
-      "country": "PL",
-      "name": "Toruń"
+      "id": "szczecin",
+      "country": "PL"
     },
     {
-      "country": "PL",
-      "name": "Lublin"
-    },
-    {
-      "country": "PL",
-      "name": "Białystok"
-    },
-    {
-      "country": "PL",
-      "name": "Kielce"
-    },
-    {
-      "country": "PL",
-      "name": "Olsztyn"
-    },
-    {
-      "country": "PL",
-      "name": "Rzeszów"
-    },
-    {
-      "country": "PL",
-      "name": "Opole"
-    },
-    {
-      "country": "PL",
-      "name": "Katowice"
-    },
-    {
-      "country": "PL",
-      "name": "Gorzów Wielkopolski"
-    },
-    {
-      "country": "PL",
-      "name": "Zielona Góra"
+      "id": "bialystok",
+      "country": "PL"
     }
   ],
   "providers": [
     {
-      "id": "karandash-documents",
-      "name": "Карандаш",
+      "id": "kopirych-minsk",
+      "name": "Копирыч",
       "country": "BY",
-      "city": "Минск",
-      "url": "https://www.karandash.by/ru/polygraphy/print",
-      "fulfillment": "local",
-      "deliveryCoverage": [],
-      "minimumCopies": 1,
-      "publishedProfiles": [
-        "album-a5"
+      "city": "minsk",
+      "address": "г. Минск, пр-т Независимости, 58",
+      "url": "https://kopirych.by/pechat-i-kserokopiya/lazernaya-tsvetnaya-pechat.html",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "spiral",
+        "hard"
       ],
-      "customFormat": true,
-      "formatsComplete": false,
+      "fontPolicy": "embedded-ok",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://kopirych.by/pechat-i-kserokopiya/lazernaya-tsvetnaya-pechat.html",
+        "https://kopirych.by/kontakty.html",
+        "https://kopirych.by/dopechatnye-i-poslepechatnye-uslugi/perepljot.html"
+      ]
+    },
+    {
+      "id": "reut-print-minsk",
+      "name": "Реут Принт",
+      "country": "BY",
+      "city": "minsk",
+      "address": "ул. Я. Коласа, 26-101а",
+      "url": "https://reutprint.by/pechat-kopiya/tsvetnaya-pechat-kopiya",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "spiral",
+        "stapled",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://reutprint.by/pechat-kopiya/tsvetnaya-pechat-kopiya",
+        "https://reutprint.by/kontakty",
+        "https://reutprint.by/pechat-kopiya/perepljot"
+      ]
+    },
+    {
+      "id": "sprinter-nemiga-minsk",
+      "name": "Печатный центр СПРИНТЕР (метро Немига)",
+      "country": "BY",
+      "city": "minsk",
+      "address": "ТЦ Немига 3, пом. 46 (цок. этаж)",
+      "url": "https://s-printer.by/pechatnyij-czentr/raspechatka",
+      "printing": {
+        "a4": "yes",
+        "a5": "yes",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "spiral",
+        "stapled",
+        "hard"
+      ],
+      "fontPolicy": "outlines-required",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://s-printer.by/pechatnyij-czentr/raspechatka",
+        "https://s-printer.by/kontaktyi/cprinter-metro-nemiga-tri",
+        "https://s-printer.by/poslepechatnyie-uslugi/broshurovka",
+        "https://s-printer.by/poslepechatnyie-uslugi/tverdyij-pereplet",
+        "https://s-printer.by/klientam/trebovaniya-k-maketam"
+      ]
+    },
+    {
+      "id": "copystar-brest",
+      "name": "CopyStar",
+      "country": "BY",
+      "city": "brest",
+      "address": "г. Брест, ул. Куйбышева 9, офис 107",
+      "url": "https://www.copystar.by/pechat-dokumentov-brest",
+      "printing": {
+        "a4": "yes",
+        "a5": "yes",
+        "colour": "yes",
+        "pdf": "yes"
+      },
       "bindings": [
         "spiral"
       ],
-      "minimumBodyPages": null,
-      "maximumBodyPages": null,
-      "bodyPageMultiple": null,
-      "genericPdfAcceptance": "yes",
-      "acceptsRuPdf": "unknown",
-      "contactLanguages": [],
-      "supportedProfiles": [],
-      "checkedAt": "2026-11-01",
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
       "sourceUrls": [
-        "https://www.karandash.by/ru/polygraphy/print",
-        "https://www.karandash.by/files/rules_karandash.pdf",
-        "https://www.karandash.by/ru/about/contact",
-        "https://www.karandash.by/ru/polygraphy/brochures"
-      ],
-      "verification": "published",
-      "acceptedFiles": [],
-      "printHelp": {
-        "address": "ул. Гикало, 3",
-        "fontPolicy": "confirm-embedded",
-        "a4Printing": "published",
-        "binding": "published",
-        "technicalSourceUrl": "https://www.karandash.by/files/rules_karandash.pdf",
-        "serviceSourceUrl": "https://www.karandash.by/ru/polygraphy/print",
-        "addressSourceUrl": "https://www.karandash.by/ru/about/contact"
-      }
+        "https://www.copystar.by/pechat-dokumentov-brest",
+        "https://www.copystar.by/contacts",
+        "https://www.copystar.by/broshyurovka-na-plastikovuyu-pruzhinu"
+      ]
     },
     {
-      "id": "copy-general-documents",
-      "name": "Copy General",
-      "country": "PL",
-      "city": "Warszawa",
-      "url": "https://www.copygeneral.pl/prace-dyplomowe/",
-      "fulfillment": "local",
-      "deliveryCoverage": [],
-      "minimumCopies": null,
-      "publishedProfiles": [],
-      "customFormat": false,
-      "formatsComplete": false,
+      "id": "perograf-brest",
+      "name": "Перограф (Копицентр)",
+      "country": "BY",
+      "city": "brest",
+      "address": "г. Брест, ул. Суворова, 96 \"Б\" (вход через магазин \"Копеечка\")",
+      "url": "https://www.perograf.by/",
+      "printing": {
+        "a4": "yes",
+        "a5": "yes",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "rings",
+        "spiral",
+        "stapled",
+        "glued",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://www.perograf.by/"
+      ]
+    },
+    {
+      "id": "pc-leo-brest",
+      "name": "Полиграфический центр ЛЕО",
+      "country": "BY",
+      "city": "brest",
+      "address": "г. Брест, ул. Московская, 275 (здание ДК профсоюзов), каб. 58",
+      "url": "https://pc-leo.by/ceny/raspechatka-a4-a3-na-meste",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
       "bindings": [
         "spiral"
       ],
-      "minimumBodyPages": null,
-      "maximumBodyPages": null,
-      "bodyPageMultiple": null,
-      "genericPdfAcceptance": "yes",
-      "acceptsRuPdf": "unknown",
-      "contactLanguages": [],
-      "supportedProfiles": [],
-      "checkedAt": "2026-11-01",
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
       "sourceUrls": [
-        "https://www.copygeneral.pl/prace-dyplomowe/",
-        "https://www.copygeneral.pl/druk-a4-a3/",
-        "https://www.copygeneral.pl/druk-techniczny-CAD/",
-        "https://www.copygeneral.pl/kontakt/"
-      ],
-      "verification": "published",
-      "acceptedFiles": [],
-      "printHelp": {
-        "address": "Al. Jerozolimskie 93, Nowogrodzka Square",
-        "fontPolicy": "embedded",
-        "a4Printing": "published",
-        "binding": "published",
-        "technicalSourceUrl": "https://www.copygeneral.pl/druk-techniczny-CAD/",
-        "serviceSourceUrl": "https://www.copygeneral.pl/druk-a4-a3/",
-        "addressSourceUrl": "https://www.copygeneral.pl/kontakt/"
-      }
+        "https://pc-leo.by/ceny/raspechatka-a4-a3-na-meste",
+        "https://pc-leo.by/page/kontakty",
+        "https://pc-leo.by/ceny/pereplet-na-pruzhinu"
+      ]
     },
     {
-      "id": "salamandra-brochures",
-      "name": "Salamandra",
+      "id": "loro-color-brest",
+      "name": "LORO-COLOR",
       "country": "BY",
-      "city": "Минск",
-      "url": "https://salamandra.by/products/reklamnoinformacionnaya-poligrafiya-listovaya/broshyury",
-      "fulfillment": "local",
-      "deliveryCoverage": [],
-      "minimumCopies": null,
-      "publishedProfiles": [
-        "album-a5"
-      ],
-      "customFormat": false,
-      "formatsComplete": false,
-      "bindings": [
-        "stapled"
-      ],
-      "minimumBodyPages": null,
-      "maximumBodyPages": null,
-      "bodyPageMultiple": null,
-      "genericPdfAcceptance": "unknown",
-      "acceptsRuPdf": "unknown",
-      "contactLanguages": [],
-      "supportedProfiles": [],
-      "checkedAt": "2026-10-30",
-      "sourceUrls": [
-        "https://salamandra.by/products/reklamnoinformacionnaya-poligrafiya-listovaya/broshyury"
-      ],
-      "verification": "published",
-      "acceptedFiles": []
-    },
-    {
-      "id": "beleksprint-spiral",
-      "name": "Beleksprint",
-      "country": "BY",
-      "city": "Минск",
-      "url": "https://beleksprint.by/broshyury-na-pruzhine/",
-      "fulfillment": "local",
-      "deliveryCoverage": [
-        "BY"
-      ],
-      "minimumCopies": 10,
-      "publishedProfiles": [
-        "album-a5"
-      ],
-      "customFormat": true,
-      "formatsComplete": false,
+      "city": "brest",
+      "address": "г. Брест, ул. Советская 73, оф. 317",
+      "url": "https://loro-color.by/poligrafiya/raspechatka-dokumentov/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
       "bindings": [
         "spiral"
       ],
-      "minimumBodyPages": null,
-      "maximumBodyPages": null,
-      "bodyPageMultiple": null,
-      "genericPdfAcceptance": "unknown",
-      "acceptsRuPdf": "unknown",
-      "contactLanguages": [],
-      "supportedProfiles": [],
-      "checkedAt": "2026-10-30",
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
       "sourceUrls": [
-        "https://beleksprint.by/broshyury-na-pruzhine/"
-      ],
-      "verification": "published",
-      "acceptedFiles": []
+        "https://loro-color.by/poligrafiya/raspechatka-dokumentov/",
+        "https://loro-color.by/kontakty/",
+        "https://loro-color.by/poligrafiya/pereplyot-na-metallicheskuyu-pruzhinu/"
+      ]
     },
     {
-      "id": "print-co-book-binding",
-      "name": "Печатная компания",
+      "id": "vcsms-kopicentr-vitebsk",
+      "name": "Копицентр РУП «Витебский ЦСМС»",
       "country": "BY",
-      "city": "Минск",
-      "url": "https://www.print-co.by/index.php/requirements",
-      "fulfillment": "local",
-      "deliveryCoverage": [
-        "Минск"
+      "city": "vitebsk",
+      "address": "г. Витебск, ул. Б. Хмельницкого, д. 20, корп. 2, каб. 209",
+      "url": "https://vcsms.by/copycentr/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://vcsms.by/copycentr/",
+        "https://vcsms.by/contacts/"
+      ]
+    },
+    {
+      "id": "kopiya-bel-vitebsk",
+      "name": "Копицентр в Витебске (копия.бел)",
+      "country": "BY",
+      "city": "vitebsk",
+      "address": "г. Витебск, ул. М.Горького, 145A",
+      "url": "https://xn--h1adme5f.xn--90ais/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://xn--h1adme5f.xn--90ais/"
+      ]
+    },
+    {
+      "id": "vitkpk-pokrovsky-vitebsk",
+      "name": "ОАО «Витебский картонажно-полиграфический комбинат «Покровский»",
+      "country": "BY",
+      "city": "vitebsk",
+      "address": "210001, г. Витебск, ул. Покровская, 5",
+      "url": "https://vitkpk.by/uslugi/cifrovaya-pechat",
+      "printing": {
+        "a4": "unknown",
+        "a5": "unknown",
+        "colour": "unknown",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "spiral",
+        "stapled",
+        "glued"
       ],
-      "minimumCopies": null,
-      "publishedProfiles": [],
-      "customFormat": false,
-      "formatsComplete": false,
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://vitkpk.by/uslugi/cifrovaya-pechat",
+        "https://vitkpk.by/kontakty",
+        "https://vitkpk.by/uslugi/ofsetnaya-pechat"
+      ]
+    },
+    {
+      "id": "agis-gomel",
+      "name": "Типография «АГИС»",
+      "country": "BY",
+      "city": "gomel",
+      "address": "г. Гомель, ул. Советская, д. 123а",
+      "url": "https://agis.by/uslugi/cifrovaya-pechat/",
+      "printing": {
+        "a4": "yes",
+        "a5": "yes",
+        "colour": "yes",
+        "pdf": "yes"
+      },
       "bindings": [
         "spiral",
         "stapled"
       ],
-      "minimumBodyPages": null,
-      "maximumBodyPages": null,
-      "bodyPageMultiple": null,
-      "genericPdfAcceptance": "yes",
-      "acceptsRuPdf": "unknown",
-      "contactLanguages": [],
-      "supportedProfiles": [],
-      "checkedAt": "2026-10-30",
+      "fontPolicy": "embedded-ok",
+      "checkedAt": "2026-11-02",
       "sourceUrls": [
-        "https://www.print-co.by/index.php/requirements",
-        "https://www.print-co.by/index.php/contacts",
-        "https://www.print-co.by/index.php/services/delivery"
-      ],
-      "verification": "published",
-      "acceptedFiles": []
+        "https://agis.by/uslugi/cifrovaya-pechat/",
+        "https://agis.by/kontakty/",
+        "https://agis.by/uslugi/sshivka-dokumentov-na-pruzhinu-pereplet/",
+        "https://agis.by/trebovaniya/",
+        "https://agis.by/files/cifro.pdf"
+      ]
     },
     {
-      "id": "slavprint-small-run",
-      "name": "SlavPrint",
+      "id": "eurocard-gomel",
+      "name": "Типография EuroCard",
       "country": "BY",
-      "city": "Минск",
-      "url": "https://slavprint.by/pechat-knig-minsk/",
-      "fulfillment": "delivery",
-      "deliveryCoverage": [
-        "Минск"
+      "city": "gomel",
+      "address": "246022, г. Гомель, проспект Победы, 2",
+      "url": "https://eurocard.by/products/brochures",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "spiral",
+        "stapled",
+        "glued"
       ],
-      "minimumCopies": 1,
-      "publishedProfiles": [
-        "album-a5"
+      "fontPolicy": "outlines-required",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://eurocard.by/products/brochures",
+        "https://eurocard.by/contact",
+        "https://eurocard.by/products/booklets",
+        "https://eurocard.by/download/requirements.pdf"
+      ]
+    },
+    {
+      "id": "gomel-print-diamond-print-gomel",
+      "name": "Онлайн центр печати gomel-print.by (ООО «Даймонд Принт»)",
+      "country": "BY",
+      "city": "gomel",
+      "address": "г. Гомель, ул. Карповича 45, ТЦ «ЕВРОПА»",
+      "url": "https://gomel-print.by/czif-pechat/lazernaya-pechat-a4/a3.html",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://gomel-print.by/czif-pechat/lazernaya-pechat-a4/a3.html",
+        "https://gomel-print.by/",
+        "https://gomel-print.by/fotopechat/fotoknigi.html"
+      ]
+    },
+    {
+      "id": "fotokopir-grodno",
+      "name": "Печатный центр \"ФотоКопир\"",
+      "country": "BY",
+      "city": "grodno",
+      "address": "г. Гродно, ул. Захарова, д.24, офис 218, первый этаж (БЦ \"Лира\", второй подъезд)",
+      "url": "https://photocopir.by/print-kopi.htm",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "spiral",
+        "soft"
       ],
-      "customFormat": true,
-      "formatsComplete": false,
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://photocopir.by/print-kopi.htm",
+        "https://photocopir.by/contacts.php",
+        "https://photocopir.by/broshur.htm"
+      ]
+    },
+    {
+      "id": "mega-fotocentr-grodno",
+      "name": "МЕГА ФОТОЦЕНТР",
+      "country": "BY",
+      "city": "grodno",
+      "address": "230003, г. Гродно, ул. Захарова 26",
+      "url": "https://megafoto.by/prints/documents",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "spiral"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://megafoto.by/prints/documents",
+        "https://megafoto.by/contact-us",
+        "https://megafoto.by/prints/binding"
+      ]
+    },
+    {
+      "id": "iceprint-grodno",
+      "name": "Типография АйсПринт",
+      "country": "BY",
+      "city": "grodno",
+      "address": "Республика Беларусь, 230025, г. Гродно, ул. Городничанская, 36",
+      "url": "https://iceprint.by/services/digital/brochures/",
+      "printing": {
+        "a4": "yes",
+        "a5": "yes",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "spiral",
+        "stapled"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://iceprint.by/services/digital/brochures/",
+        "https://iceprint.by/contact/",
+        "https://iceprint.by/services/postpress/stitching/",
+        "https://iceprint.by/helpful/printtypes/",
+        "https://iceprint.by/helpful/requirements/"
+      ]
+    },
+    {
+      "id": "copi-by-mogilev",
+      "name": "Копи-Центр — цифровая типография",
+      "country": "BY",
+      "city": "mogilev",
+      "address": "212030, г. Могилёв, пр. Мира, 18А",
+      "url": "https://copi.by/uslugi/tsifrovaya-pechat/",
+      "printing": {
+        "a4": "yes",
+        "a5": "yes",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "spiral",
+        "stapled",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://copi.by/uslugi/tsifrovaya-pechat/",
+        "https://copi.by/kontakty/",
+        "https://copi.by/uslugi/pereplet/",
+        "https://copi.by/uslugi/kserokopiya/",
+        "https://copi.by/trebovaniya-k-maketam/"
+      ]
+    },
+    {
+      "id": "printmir-mogilev",
+      "name": "Печатный мир (printmir.by)",
+      "country": "BY",
+      "city": "mogilev",
+      "address": "г. Могилёв, ул. Б.-Бирули, 11, оф. 47",
+      "url": "https://printmir.by/services/tsifrovaya-pechat/",
+      "printing": {
+        "a4": "unknown",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "spiral",
+        "stapled",
+        "glued",
+        "hard"
+      ],
+      "fontPolicy": "embedded-ok",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://printmir.by/services/tsifrovaya-pechat/",
+        "https://printmir.by/contacts/",
+        "https://printmir.by/offers/katalogi/",
+        "https://printmir.by/press/news/kak-podgotovit-maket-dlya-pechati-trebovaniya-i-rekomendatsii-dlya-idealnogo-rezultata/"
+      ]
+    },
+    {
+      "id": "neoprint-mogilev",
+      "name": "Печатный центр Неопринт",
+      "country": "BY",
+      "city": "mogilev",
+      "address": "г. Могилёв, ул. Первомайская, 34а, ТЦ «Магнит», место 253",
+      "url": "https://neoprint.by/cvetnaya-pechat-i-kserokopiya",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "spiral",
+        "stapled",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://neoprint.by/cvetnaya-pechat-i-kserokopiya",
+        "https://neoprint.by/",
+        "https://neoprint.by/broshyurovka"
+      ]
+    },
+    {
+      "id": "copy-planet-warszawa",
+      "name": "Copy Planet",
+      "country": "PL",
+      "city": "warszawa",
+      "address": "ul. 1 Sierpnia 29, 02-134 Warszawa",
+      "url": "https://copyplanet.pl/druk-cyfrowy-warszawa-wlochy/",
+      "printing": {
+        "a4": "yes",
+        "a5": "yes",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "rings",
+        "spiral",
+        "glued",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://copyplanet.pl/druk-cyfrowy-warszawa-wlochy/",
+        "https://copyplanet.pl/kontakt/",
+        "https://copyplanet.pl/bindowanie-warszawa-wlochy/",
+        "https://copyplanet.pl/druk-prac-dyplomowych-warszawa-wlochy/",
+        "https://copyplanet.pl/uslugi/"
+      ]
+    },
+    {
+      "id": "copy-general-warszawa",
+      "name": "Copy General",
+      "country": "PL",
+      "city": "warszawa",
+      "address": "Aleje Jerozolimskie 93, 02-001 Warszawa",
+      "url": "https://www.copygeneral.pl/druk-a4-a3/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "spiral",
+        "stapled",
+        "glued",
+        "hard"
+      ],
+      "fontPolicy": "embedded-ok",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://www.copygeneral.pl/druk-a4-a3/",
+        "https://www.copygeneral.pl/kontakt/",
+        "https://www.copygeneral.pl/oprawa-dokumentow/",
+        "https://www.copygeneral.pl/pomoc/"
+      ]
+    },
+    {
+      "id": "xerografia-warszawa-ochota",
+      "name": "Xerografia",
+      "country": "PL",
+      "city": "warszawa",
+      "address": "ul. Grójecka 122, 02-367 Warszawa",
+      "url": "https://xerografia.pl/druk_i_kopiowanie_dokumentow/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "rings",
+        "spiral",
+        "glued",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "embedded-ok",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://xerografia.pl/druk_i_kopiowanie_dokumentow/",
+        "https://xerografia.pl/kontakt/",
+        "https://xerografia.pl/oprawa_dokumentow/",
+        "https://xerografia.pl/oprawa_prac_dyplomowych/"
+      ]
+    },
+    {
+      "id": "kseropak-krakow",
+      "name": "Kseropak",
+      "country": "PL",
+      "city": "krakow",
+      "address": "Marii Skłodowskiej-Curie 9, Kraków",
+      "url": "https://kseropak.pl/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "rings",
+        "stapled",
+        "glued",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://kseropak.pl/",
+        "https://kseropak.pl/prace-dyplomowe/"
+      ]
+    },
+    {
+      "id": "krakowksero-krakow",
+      "name": "Ksero Kraków (krakowksero.pl, FHU Sezam)",
+      "country": "PL",
+      "city": "krakow",
+      "address": "ul. Gronostajowa 7, 30-387 Kraków",
+      "url": "https://krakowksero.pl/wydruki_laserowe_cyfrowe.html",
+      "printing": {
+        "a4": "yes",
+        "a5": "yes",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "glued",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://krakowksero.pl/wydruki_laserowe_cyfrowe.html",
+        "https://krakowksero.pl/kontakt.html",
+        "https://krakowksero.pl/cennik.html",
+        "https://krakowksero.pl/"
+      ]
+    },
+    {
+      "id": "copy-landia-krakow",
+      "name": "COPY Landia",
+      "country": "PL",
+      "city": "krakow",
+      "address": "ul. Mogilska 20, 31-516 Kraków",
+      "url": "https://copylandia.pl/ksero-i-druk/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "unknown",
+        "pdf": "unknown"
+      },
       "bindings": [
         "soft",
         "hard"
       ],
-      "minimumBodyPages": null,
-      "maximumBodyPages": null,
-      "bodyPageMultiple": null,
-      "genericPdfAcceptance": "yes",
-      "acceptsRuPdf": "unknown",
-      "contactLanguages": [],
-      "supportedProfiles": [],
-      "checkedAt": "2026-10-30",
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
       "sourceUrls": [
-        "https://slavprint.by/pechat-knig-minsk/"
-      ],
-      "verification": "published",
-      "acceptedFiles": []
+        "https://copylandia.pl/ksero-i-druk/",
+        "https://copylandia.pl/kontakt/",
+        "https://copylandia.pl/uslugi-introligatorskie/",
+        "https://copylandia.pl/oprawa-prac/"
+      ]
     },
     {
-      "id": "cyfrus-spiral",
-      "name": "CYFRUS.PL",
+      "id": "xserownia-wroclaw",
+      "name": "Xserownia",
       "country": "PL",
-      "city": "Wrocław",
-      "url": "https://cyfrus.pl/druk_ksiazek_spiralowanych",
-      "fulfillment": "local",
-      "deliveryCoverage": [
-        "PL"
-      ],
-      "minimumCopies": null,
-      "publishedProfiles": [],
-      "customFormat": false,
-      "formatsComplete": false,
+      "city": "wroclaw",
+      "address": "plac Grunwaldzki 4, 50-384 Wrocław",
+      "url": "https://xserownia.pl/drukowanie/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
       "bindings": [
-        "spiral"
-      ],
-      "minimumBodyPages": null,
-      "maximumBodyPages": null,
-      "bodyPageMultiple": null,
-      "genericPdfAcceptance": "yes",
-      "acceptsRuPdf": "unknown",
-      "contactLanguages": [],
-      "supportedProfiles": [],
-      "checkedAt": "2026-11-01",
-      "sourceUrls": [
-        "https://cyfrus.pl/druk_ksiazek_spiralowanych",
-        "https://cyfrus.pl/faq",
-        "https://cyfrus.pl/kontakt"
-      ],
-      "verification": "published",
-      "acceptedFiles": [],
-      "printHelp": {
-        "address": "ul. Kościuszki 29 G, 50-011 Wrocław",
-        "fontPolicy": "embedded",
-        "a4Printing": "published",
-        "binding": "published",
-        "technicalSourceUrl": "https://cyfrus.pl/faq",
-        "serviceSourceUrl": "https://cyfrus.pl/druk_ksiazek_spiralowanych",
-        "addressSourceUrl": "https://cyfrus.pl/kontakt"
-      }
-    },
-    {
-      "id": "versoprint-glued",
-      "name": "Versoprint",
-      "country": "PL",
-      "city": "Szczecin",
-      "url": "https://versoprint.pl/ksiazki-katalogi-klejone",
-      "fulfillment": "local",
-      "deliveryCoverage": [
-        "PL"
-      ],
-      "minimumCopies": 1,
-      "publishedProfiles": [
-        "album-a5"
-      ],
-      "customFormat": true,
-      "formatsComplete": false,
-      "bindings": [
-        "glued"
-      ],
-      "minimumBodyPages": null,
-      "maximumBodyPages": null,
-      "bodyPageMultiple": null,
-      "genericPdfAcceptance": "yes",
-      "acceptsRuPdf": "unknown",
-      "contactLanguages": [],
-      "supportedProfiles": [],
-      "checkedAt": "2026-10-30",
-      "sourceUrls": [
-        "https://versoprint.pl/ksiazki-katalogi-klejone",
-        "https://www.sklep.versoprint.pl/regulamin1/regulamin/",
-        "https://versoprint.pl/kontakt"
-      ],
-      "verification": "published",
-      "acceptedFiles": []
-    },
-    {
-      "id": "openprint-spiral",
-      "name": "Openprint — spiral catalogue",
-      "country": "PL",
-      "city": "Poznań",
-      "url": "https://www.openprint.pl/katalog-spiralowany",
-      "fulfillment": "delivery",
-      "deliveryCoverage": [
-        "PL"
-      ],
-      "minimumCopies": 50,
-      "publishedProfiles": [
-        "album-a5"
-      ],
-      "customFormat": false,
-      "formatsComplete": true,
-      "bindings": [
-        "spiral"
-      ],
-      "minimumBodyPages": null,
-      "maximumBodyPages": 56,
-      "bodyPageMultiple": null,
-      "genericPdfAcceptance": "yes",
-      "acceptsRuPdf": "unknown",
-      "contactLanguages": [],
-      "supportedProfiles": [],
-      "checkedAt": "2026-10-30",
-      "sourceUrls": [
-        "https://www.openprint.pl/katalog-spiralowany",
-        "https://www.openprint.pl/kategoria/katalogi",
-        "https://www.openprint.pl/kontakt"
-      ],
-      "verification": "published",
-      "acceptedFiles": []
-    },
-    {
-      "id": "openprint-hardcover-one",
-      "name": "Openprint — hardcover from one",
-      "country": "PL",
-      "city": "Poznań",
-      "url": "https://www.openprint.pl/ksiazki-od-1-sztuki",
-      "fulfillment": "delivery",
-      "deliveryCoverage": [
-        "PL"
-      ],
-      "minimumCopies": 1,
-      "publishedProfiles": [],
-      "customFormat": false,
-      "formatsComplete": true,
-      "bindings": [
+        "rings",
+        "glued",
+        "soft",
         "hard"
       ],
-      "minimumBodyPages": 24,
-      "maximumBodyPages": 96,
-      "bodyPageMultiple": 8,
-      "genericPdfAcceptance": "yes",
-      "acceptsRuPdf": "unknown",
-      "contactLanguages": [],
-      "supportedProfiles": [],
-      "checkedAt": "2026-10-30",
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
       "sourceUrls": [
-        "https://www.openprint.pl/ksiazki-od-1-sztuki"
+        "https://xserownia.pl/drukowanie/",
+        "https://xserownia.pl/kontakt/",
+        "https://xserownia.pl/druk-i-oprawa-prac-dyplomowych/",
+        "https://xserownia.pl/"
+      ]
+    },
+    {
+      "id": "c-13-wroclaw",
+      "name": "Wydruki C-13",
+      "country": "PL",
+      "city": "wroclaw",
+      "address": "ul. Hoene-Wrońskiego 20A, 50-376 Wrocław",
+      "url": "https://www.c-13.pl/wydruk-ksero-a4---a3.html",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "glued",
+        "soft",
+        "hard"
       ],
-      "verification": "published",
-      "acceptedFiles": []
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://www.c-13.pl/wydruk-ksero-a4---a3.html",
+        "https://www.c-13.pl/kontakt.html",
+        "https://www.c-13.pl/oprawa-dokumentow.html",
+        "https://www.c-13.pl/"
+      ]
+    },
+    {
+      "id": "foto-as-wroclaw",
+      "name": "Foto As",
+      "country": "PL",
+      "city": "wroclaw",
+      "address": "ul. Drukarska 38, 53-312 Wrocław",
+      "url": "https://drukarska.pl/strona,25,druk-ksero-oprawa-skan-wroclaw.html",
+      "printing": {
+        "a4": "yes",
+        "a5": "yes",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "glued",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://drukarska.pl/strona,25,druk-ksero-oprawa-skan-wroclaw.html",
+        "https://drukarska.pl/kontakt.html",
+        "https://drukarska.pl/"
+      ]
+    },
+    {
+      "id": "gryf-centrum-graficzne-gdansk",
+      "name": "Centrum Graficzne GRYF (Gdańsk Sobieskiego)",
+      "country": "PL",
+      "city": "gdansk",
+      "address": "ul. Sobieskiego 7, 80-216 Gdańsk (Wrzeszcz, campus Politechniki Gdańskiej)",
+      "url": "https://gryfcentrum.pl/drukujzdomu.html",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "spiral",
+        "glued",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://gryfcentrum.pl/drukujzdomu.html",
+        "https://gryfcentrum.pl/gdansk-kwadratowa.html",
+        "https://gryfcentrum.pl/oferta/druk.html",
+        "https://gryfcentrum.pl/oferta/oprawy.html",
+        "https://gryfcentrum.pl/wyslij-plik.html",
+        "https://gryfcentrum.pl/oferta/jak-przygotowac/marginesy.html"
+      ]
+    },
+    {
+      "id": "kordes-gdansk",
+      "name": "Kordes (Gdańsk Przymorze)",
+      "country": "PL",
+      "city": "gdansk",
+      "address": "ul. Kołobrzeska 59e, 80-396 Gdańsk",
+      "url": "https://kordes.pl/prace-dyplomowe/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "rings",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://kordes.pl/prace-dyplomowe/",
+        "https://kordes.pl/kopia-wydruk-skan/",
+        "https://kordes.pl/",
+        "https://kordes.pl/oprawy-laminowanie/"
+      ]
+    },
+    {
+      "id": "printpeace-gdansk",
+      "name": "Printpeace",
+      "country": "PL",
+      "city": "gdansk",
+      "address": "ul. Kartuska 149/15, Gdańsk, 80-138",
+      "url": "https://printpeace.pl/ksero-wydruk",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "rings",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://printpeace.pl/ksero-wydruk"
+      ]
+    },
+    {
+      "id": "multiksero-poznan",
+      "name": "Multiksero",
+      "country": "PL",
+      "city": "poznan",
+      "address": "ul. Kościuszki 80, 61-715 Poznań",
+      "url": "https://multiksero.pl/druk-kolorowy/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "spiral",
+        "glued",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://multiksero.pl/druk-kolorowy/",
+        "https://multiksero.pl/kontakt/",
+        "https://multiksero.pl/wydruki-z-maila/",
+        "https://multiksero.pl/ksero-oprawy-spiralne/",
+        "https://multiksero.pl/ksero-oprawy-termiczne/"
+      ]
+    },
+    {
+      "id": "intro-ksero-centrum-poznan",
+      "name": "Intro-Ksero-Centrum",
+      "country": "PL",
+      "city": "poznan",
+      "address": "ul. Zielona 1, 61-851 Poznań",
+      "url": "https://www.introkserocentrum.pl/usluga/ksero-i-wydruk",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "spiral",
+        "glued",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://www.introkserocentrum.pl/usluga/ksero-i-wydruk",
+        "https://www.introkserocentrum.pl/kontakt",
+        "https://www.introkserocentrum.pl/usluga/oprawy",
+        "https://www.introkserocentrum.pl/"
+      ]
+    },
+    {
+      "id": "copy-point-poznan",
+      "name": "Copy Point Centrum Druku Cyfrowego",
+      "country": "PL",
+      "city": "poznan",
+      "address": "ul. Polska 13, 60-595 Poznań",
+      "url": "https://www.copy24h.pl/uslugi_druka4a3kol.php",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "glued",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://www.copy24h.pl/uslugi_druka4a3kol.php",
+        "https://www.copy24h.pl/index-6.html",
+        "https://www.copy24h.pl/uslugi_oprawy.php",
+        "https://www.copy24h.pl/wysylka.php"
+      ]
+    },
+    {
+      "id": "ksero-hydra-lodz",
+      "name": "Ksero Hydra",
+      "country": "PL",
+      "city": "lodz",
+      "address": "ul. Piotrkowska 26, 90-269 Łódź",
+      "url": "https://ksero-hydra.pl/",
+      "printing": {
+        "a4": "unknown",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "glued",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://ksero-hydra.pl/",
+        "https://ksero-hydra.pl/contact",
+        "https://ksero-hydra.pl/cennik",
+        "https://ksero-hydra.pl/oprawy-dokumentow",
+        "https://ksero-hydra.pl/instrukcja-obslugi",
+        "https://ksero-hydra.pl/wgraj_pliki"
+      ]
+    },
+    {
+      "id": "cyfrodruk-lodz",
+      "name": "CyfroDruk (dawniej Drukarnia Studencka)",
+      "country": "PL",
+      "city": "lodz",
+      "address": "ul. Żwirki 16 / A4, 90-430 Łódź",
+      "url": "https://www.cyfrodruk.com/druk-laserowy",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "rings",
+        "glued",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://www.cyfrodruk.com/druk-laserowy",
+        "https://www.cyfrodruk.com/kontakt",
+        "https://www.cyfrodruk.com/",
+        "https://www.cyfrodruk.com/prace-dyplomowe"
+      ]
+    },
+    {
+      "id": "graph-poligrafia-lodz",
+      "name": "Firma Poligraficzna Graph s.c.",
+      "country": "PL",
+      "city": "lodz",
+      "address": "ul. Rewolucji 1905r. 36, 90-213 Łódź",
+      "url": "https://www.graph.net.pl/oferta.html",
+      "printing": {
+        "a4": "unknown",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "rings"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://www.graph.net.pl/oferta.html",
+        "https://www.graph.net.pl/kontakt.html",
+        "https://www.graph.net.pl/"
+      ]
+    },
+    {
+      "id": "drukorz-katowice",
+      "name": "Drukorz",
+      "country": "PL",
+      "city": "katowice",
+      "address": "ul. Stawowa 8, 40-095 Katowice",
+      "url": "https://drukorz.pl/druk-i-ksero-katowice/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "rings",
+        "glued",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://drukorz.pl/druk-i-ksero-katowice/",
+        "https://drukorz.pl/kontakt/",
+        "https://drukorz.pl/bindowanie-katowice/",
+        "https://drukorz.pl/jak-przygotowac-plik-do-druku/"
+      ]
+    },
+    {
+      "id": "ksero-centrum-katowice",
+      "name": "Ksero Centrum - Poligrafia i Elektronika",
+      "country": "PL",
+      "city": "katowice",
+      "address": "ul. Stawowa 3/4, 40-095 Katowice",
+      "url": "https://www.ksero-druk.slask.pl/cennik",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "spiral",
+        "glued",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://www.ksero-druk.slask.pl/cennik",
+        "https://www.ksero-druk.slask.pl/kontakt"
+      ]
+    },
+    {
+      "id": "catom-ksero-katowice",
+      "name": "FHU Catom - Ksero Katowice (Galeria Skarbek)",
+      "country": "PL",
+      "city": "katowice",
+      "address": "ul. Mickiewicza 4, 40-092 Katowice (Galeria Skarbek, II piętro)",
+      "url": "https://catom.pl/ksero-druk-katowice",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "rings"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://catom.pl/ksero-druk-katowice"
+      ]
+    },
+    {
+      "id": "strefa-ksero-lublin",
+      "name": "Strefa Ksero",
+      "country": "PL",
+      "city": "lublin",
+      "address": "Akademicka 1-3, Lublin",
+      "url": "https://www.strefaksero.pl/tanieksero.php",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "rings",
+        "spiral",
+        "glued",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://www.strefaksero.pl/tanieksero.php",
+        "https://www.strefaksero.pl/kseromiasteczkoakademickie.php",
+        "https://www.strefaksero.pl/"
+      ]
+    },
+    {
+      "id": "xerogalant-lublin",
+      "name": "Xerogalant",
+      "country": "PL",
+      "city": "lublin",
+      "address": "ul. 3-go Maja 16, Lublin",
+      "url": "https://xerogalant.pl/cennik.html",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "spiral",
+        "glued",
+        "soft"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://xerogalant.pl/cennik.html",
+        "https://xerogalant.pl/"
+      ]
+    },
+    {
+      "id": "pixelpress-lublin",
+      "name": "Drukarnia PIXELpress",
+      "country": "PL",
+      "city": "lublin",
+      "address": "ul. Nadbystrzycka 20, 20-618 Lublin",
+      "url": "https://pixelpress.pl/oprawa-dokumentow-lublin/",
+      "printing": {
+        "a4": "unknown",
+        "a5": "unknown",
+        "colour": "unknown",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "spiral",
+        "glued",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://pixelpress.pl/oprawa-dokumentow-lublin/",
+        "https://pixelpress.pl/"
+      ]
+    },
+    {
+      "id": "lublin-easyprint",
+      "name": "EasyPrint Lublin",
+      "country": "PL",
+      "city": "lublin",
+      "address": "ul. M. Skłodowskiej 56, 20-029 Lublin",
+      "url": "https://easyprint.lublin.pl/oferta/ksiazki/",
+      "printing": {
+        "a4": "yes",
+        "a5": "yes",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "spiral",
+        "stapled",
+        "glued",
+        "soft"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://easyprint.lublin.pl/oferta/ksiazki/",
+        "https://easyprint.lublin.pl/kontakt/",
+        "https://easyprint.lublin.pl/oferta/oprawa-w-spirale/",
+        "https://easyprint.lublin.pl/oferta/broszury/",
+        "https://easyprint.lublin.pl/przygotowanie-plikow/"
+      ]
+    },
+    {
+      "id": "druk24-szczecin",
+      "name": "Druk24 Szczecin",
+      "country": "PL",
+      "city": "szczecin",
+      "address": "al. Wojska Polskiego 39a, 70-473 Szczecin",
+      "url": "https://druk24.szczecin.pl/oferta/druk-cyfrowy-i-ksero/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "spiral",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://druk24.szczecin.pl/oferta/druk-cyfrowy-i-ksero/",
+        "https://druk24.szczecin.pl/dojazd-i-kontakt/",
+        "https://druk24.szczecin.pl/oferta/",
+        "https://druk24.szczecin.pl/oferta/oprawa-prac-i-laminowanie/"
+      ]
+    },
+    {
+      "id": "plikdruk-szczecin",
+      "name": "Plikdruk.pl",
+      "country": "PL",
+      "city": "szczecin",
+      "address": "Al. Wyzwolenia 18, 70-554 Szczecin (CHR Galaxy, parter)",
+      "url": "https://plikdruk.pl/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "rings",
+        "glued",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://plikdruk.pl/"
+      ]
+    },
+    {
+      "id": "ksero24h-szczecin",
+      "name": "Ksero 24h Szczecin (Volumina.pl)",
+      "country": "PL",
+      "city": "szczecin",
+      "address": "ul. Księcia Witolda 7-9, 71-063 Szczecin",
+      "url": "https://www.ksero24h.pl/cennik/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "rings",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://www.ksero24h.pl/cennik/",
+        "https://www.ksero24h.pl/kontakt/",
+        "https://www.ksero24h.pl/faq/"
+      ]
+    },
+    {
+      "id": "futura-centrum-druku-bialystok",
+      "name": "Centrum Druku Futura",
+      "country": "PL",
+      "city": "bialystok",
+      "address": "ul. Legionowa 28 lok. 008, 15-281 Białystok",
+      "url": "https://www.futura.pl/oprawa-prac-dyplomowych",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "yes"
+      },
+      "bindings": [
+        "rings",
+        "hard"
+      ],
+      "fontPolicy": "embedded-ok",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://www.futura.pl/oprawa-prac-dyplomowych",
+        "https://www.futura.pl/kontakt/",
+        "https://www.futura.pl/uslugi-ksero,cd28.html",
+        "https://www.futura.pl/przygotowanie-pliku/"
+      ]
+    },
+    {
+      "id": "druker-bialystok",
+      "name": "DRUKER Jacek Pajdowski",
+      "country": "PL",
+      "city": "bialystok",
+      "address": "ul. Marii Skłodowskiej-Curie 3 lok. 12, 15-094 Białystok",
+      "url": "https://www.druker.com.pl/zakres-uslug/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "rings",
+        "glued"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://www.druker.com.pl/zakres-uslug/",
+        "https://www.druker.com.pl/kontakt/",
+        "https://www.druker.com.pl/"
+      ]
+    },
+    {
+      "id": "e-printmania-bialystok",
+      "name": "E-printmania",
+      "country": "PL",
+      "city": "bialystok",
+      "address": "ul. Gen. J. Hallera 6 lok. U2A, 15-814 Białystok",
+      "url": "https://www.e-printmania.pl/oprawa-prac-dyplomowych/",
+      "printing": {
+        "a4": "yes",
+        "a5": "unknown",
+        "colour": "yes",
+        "pdf": "unknown"
+      },
+      "bindings": [
+        "rings",
+        "glued",
+        "soft",
+        "hard"
+      ],
+      "fontPolicy": "unknown",
+      "checkedAt": "2026-11-02",
+      "sourceUrls": [
+        "https://www.e-printmania.pl/oprawa-prac-dyplomowych/",
+        "https://www.e-printmania.pl/ksero/"
+      ]
     }
   ]
 }
