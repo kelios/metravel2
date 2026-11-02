@@ -1,12 +1,16 @@
 import React from 'react';
 import {act,render,screen} from '@testing-library/react';
 import {i18n,getFixedTranslator} from '@/i18n';
-import {useBookCopy} from '@/components/books/bookCopy';
+import {formatReadyBookCounts,useBookCopy} from '@/components/books/bookCopy';
 
 function Copy(){const t=useBookCopy();return <span>{t('download')}</span>;}
 function EditionCopy(){
   const t=useBookCopy();
   return <><span data-testid="metadata-loading">{t('metadataLoading')}</span><span data-testid="metadata-error">{t('metadataError')}</span><span data-testid="quest-counts">{t('questCounts',{volume:'1',quests:'41',pages:'174'})}</span><span data-testid="quest-photo-space">{t('questPhotoSpace')}</span></>;
+}
+function CountCopy(){
+  const t=useBookCopy();
+  return <><span data-testid="place-counts">{formatReadyBookCounts({kind:'places',stopCount:12345,bodyPageCount:67890},t)}</span><span data-testid="volume-counts">{formatReadyBookCounts({kind:'quests',stopCount:37,bodyPageCount:156,volume:2},t)}</span></>;
 }
 describe('book controls follow the active interface language',()=>{
   afterEach(async()=>{await act(async()=>{await i18n.changeLanguage('ru');});});
@@ -28,6 +32,16 @@ describe('book controls follow the active interface language',()=>{
       expect(screen.getByTestId('quest-counts').textContent).toBe(t('books:questCounts',{volume:'1',quests:'41',pages:'174'}));
       expect(screen.getByTestId('quest-counts').textContent).toContain('41');
       expect(screen.getByTestId('quest-photo-space').textContent).toBe(t('books:questPhotoSpace'));
+    }
+  });
+  it('keeps place and quest-volume counts distinct and reformats an already mounted summary on locale changes',async()=>{
+    await i18n.changeLanguage('ru');
+    render(<CountCopy/>);
+    for(const locale of ['ru','be','uk','pl','en'] as const){
+      await act(async()=>{await i18n.changeLanguage(locale);});
+      const t=getFixedTranslator(locale),numbers=new Intl.NumberFormat(locale);
+      expect(screen.getByTestId('place-counts').textContent).toBe(t('books:counts',{places:numbers.format(12345),pages:numbers.format(67890)}));
+      expect(screen.getByTestId('volume-counts').textContent).toBe(t('books:questCounts',{quests:'37',pages:'156',volume:'2'}));
     }
   });
 });

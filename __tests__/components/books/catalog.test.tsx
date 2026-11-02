@@ -3,7 +3,7 @@ import {render,screen} from '@testing-library/react';
 import Catalog from '@/components/books/catalog/ReadyBooksCatalog.web';
 import type {ReadyBookSummary} from '@/services/book/readyBooks/bookMetadata';
 import {publishedFixture} from '../../services/book/readyBooks/publicationFixtures';
-jest.mock('@/components/books/bookCopy',()=>({useBookCopy:()=>((key:string,params?:Record<string,unknown>)=>params?key+':'+JSON.stringify(params):key)}));
+jest.mock('@/components/books/bookCopy',()=>({...jest.requireActual('@/components/books/bookCopy'),useBookCopy:()=>((key:string,params?:Record<string,unknown>)=>params?key+':'+JSON.stringify(params):key)}));
 jest.mock('@/components/ui/ImageCardMedia',()=>({__esModule:true,default:({src,alt}:any)=><img src={src} alt={alt}/>}));
 jest.mock('@/components/books/BooksFrame',()=>({BooksFrame:({children,title}:any)=><main><h1>{title}</h1>{children}</main>}));
 jest.mock('expo-router',()=>({Link:({children,href}:any)=><a href={href}>{children}</a>}));

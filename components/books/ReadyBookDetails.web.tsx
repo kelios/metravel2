@@ -10,7 +10,7 @@ import {fetchBookArtifact} from '@/services/book/readyBooks/download';
 import {formatNumber,getActiveLocale} from '@/i18n';
 import {trackReadyBookEvent} from '@/utils/growthFunnelAnalytics';
 import {BooksFrame} from './BooksFrame';
-import {useBookCopy} from './bookCopy';
+import {formatReadyBookCounts,useBookCopy} from './bookCopy';
 import ReadyBookPreview from './preview/ReadyBookPreview';
 import PrintingGuide from './printingGuide/PrintingGuide.web';
 import PrintProviders from './printProviders/PrintProviders.web';
@@ -75,7 +75,7 @@ function LoadedBookDetails({book,initialProfileId}:{book:PublishedBook;initialPr
     finally{if(active.current===controller)setBusy(null);}
   };
   return <BooksFrame title={book.title} path={`/books/${book.slug}`} headingLang={book.contentLocale}>
-    <Link href="/books">{bookT('back')}</Link><p>{bookT('language')}</p><p>{book.kind==='quests'?bookT('questCounts',{quests:formatNumber(book.stopCount),pages:formatNumber(book.bodyPageCount),volume:formatNumber(book.volume)}):bookT('counts',{places:formatNumber(book.stopCount),pages:formatNumber(book.bodyPageCount)})}</p><p className="ready-books-note">{bookT(hasPrintSupplements(book)?'digitalKit':'partial')}</p>
+    <Link href="/books">{bookT('back')}</Link><p>{bookT('language')}</p><p>{formatReadyBookCounts(book,bookT)}</p><p className="ready-books-note">{bookT(hasPrintSupplements(book)?'digitalKit':'partial')}</p>
     <h2>{bookT('size')}</h2><div className="ready-books-controls">{book.profiles.map(profile=><label key={profile.id}><input type="radio" name="book-format" checked={profileId===profile.id} onChange={()=>{setProfile(profile.id);setFailed(null);trackReadyBookEvent('ReadyBookProfileSelected',book,getActiveLocale(),{profileId:profile.id});}}/>{bookT(profile.id==='album-a5'?'album':'pocket')}</label>)}</div>
     <p>{bookT(book.kind==='quests'?'questPhotoSpace':'photoSpace')}</p>
     {book.kind!=='quests'&&<><h2>{bookT('style')}</h2><p>{bookT(bookStyleKey(book.visualStyle))}</p></>}

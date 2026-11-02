@@ -1,5 +1,6 @@
-import {translate, type TranslationParams} from '@/i18n';
+import {formatNumber,translate, type TranslationParams} from '@/i18n';
 import {useLocaleRevision} from '@/i18n/useLocaleRevision';
+import type {ReadyBookSummary} from '@/services/book/readyBooks/bookMetadata';
 
 // Literal keys let the web compiler extract the exact locale catalog.
 const copy = {
@@ -72,6 +73,15 @@ const copy = {
   loadingPage: () => translate('books:loadingPage'),
 };
 export const bookT=(key:keyof typeof copy,params?:TranslationParams)=>copy[key](params);
+type BookCountSummary = Pick<ReadyBookSummary,'stopCount'|'bodyPageCount'> & (
+  {kind:'places'} |
+  Pick<Extract<ReadyBookSummary,{kind:'quests'}>,'kind'|'volume'>
+);
+export function formatReadyBookCounts(book:BookCountSummary,t:typeof bookT){
+  return book.kind==='quests'
+    ? t('questCounts',{quests:formatNumber(book.stopCount),pages:formatNumber(book.bodyPageCount),volume:formatNumber(book.volume)})
+    : t('counts',{places:formatNumber(book.stopCount),pages:formatNumber(book.bodyPageCount)});
+}
 export function useBookCopy(){
   useLocaleRevision();
   return bookT;

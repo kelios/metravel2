@@ -11,7 +11,7 @@ import {publishedFixture} from '../../services/book/readyBooks/publicationFixtur
 
 jest.mock('@/components/books/ReadyBookDetails',()=>jest.requireActual('@/components/books/ReadyBookDetails.web'));
 jest.mock('@/services/book/readyBooks/catalog',()=>({findReadyBook:jest.fn(),readyBooks:[]}));
-jest.mock('@/components/books/bookCopy',()=>({useBookCopy:()=>((key:string,params?:Record<string,unknown>)=>params?key+':'+JSON.stringify(params):key)}));
+jest.mock('@/components/books/bookCopy',()=>({...jest.requireActual('@/components/books/bookCopy'),useBookCopy:()=>((key:string,params?:Record<string,unknown>)=>params?key+':'+JSON.stringify(params):key)}));
 jest.mock('@/i18n/LocaleProvider',()=>({useTranslation:()=>({t:jest.requireActual('@/i18n').translate,ready:true})}));
 jest.mock('@/components/books/BooksFrame',()=>({BooksFrame:({children,title,headingLang}:any)=><main><h1 lang={headingLang}>{title}</h1>{children}</main>}));
 // The production resolver selects .web; Jest's native preset needs an explicit
