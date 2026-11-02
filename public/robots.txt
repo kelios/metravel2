@@ -48,4 +48,11 @@ Disallow: /
 User-agent: SemrushBot
 Disallow: /
 
+# Yandex-only and intersectional: applies to every group wherever it stands,
+# so it sits next to Sitemap instead of inside one group (#2933). Both
+# parameters keep the page the same: "/?param=<slug>" is the pre-SPA article
+# address that only a client-side script in app/+html.tsx forwards, and
+# "returnTo" is a back-link hint. The rendered HTML is "/" or the clean page.
+Clean-param: param&returnTo /
+
 Sitemap: https://metravel.by/sitemap.xml

@@ -43,6 +43,11 @@ function parseGroups(source: string): RobotsGroup[] {
 
 const groups = parseGroups(robotsSource)
 
+const cleanParamLines = robotsSource
+  .split(/\r?\n/)
+  .map((line) => line.replace(/#.*$/, '').trim())
+  .filter((line) => /^clean-param\s*:/i.test(line))
+
 function groupFor(userAgent: string): RobotsGroup {
   const token = userAgent.toLowerCase()
   const named = groups.find((group) => group.agents.includes(token))
@@ -104,5 +109,12 @@ describe('public/robots.txt crawler policy', () => {
   it('declares exactly one "*" group and the sitemap', () => {
     expect(groups.filter((group) => group.agents.includes('*'))).toHaveLength(1)
     expect(robotsSource).toMatch(/^Sitemap: https:\/\/metravel\.by\/sitemap\.xml$/m)
+  })
+
+  // #2933: Yandex reads Clean-param across groups; "param" (the pre-SPA
+  // /?param=<slug> address) and "returnTo" (back-link hint) never change the
+  // served page, so those URLs are glued to the clean one.
+  it('declares a single Clean-param for param and returnTo on every path', () => {
+    expect(cleanParamLines).toEqual(['Clean-param: param&returnTo /'])
   })
 })
