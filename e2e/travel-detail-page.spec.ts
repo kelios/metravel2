@@ -60,6 +60,13 @@ test.describe('Travel details — deterministic product contracts', () => {
     expect(overflow, 'travel details must not create horizontal mobile overflow').toBeLessThanOrEqual(1);
   });
 
+  // #2902: a route with ≥ 2 points offers «Открыть в навигаторе» and GPX to a guest.
+  test('route with two points shows the navigator and GPX actions', async ({ page }) => {
+    await openStableTravel(page);
+    await expect(page.getByTestId('travel-navigator-trigger')).toBeVisible();
+    await expect(page.getByTestId('travel-gpx-download')).toBeVisible();
+  });
+
   // #2904: mobile first screen reads h1 → meta → gallery; desktop keeps
   // hero → h1. The order is a CSS media rule, so both viewports share one DOM.
   test('mobile opens with the h1 and meta above the gallery, desktop order unchanged', async ({ page }) => {

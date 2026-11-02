@@ -12,6 +12,7 @@ import { loadTravelOfflineAdapter } from '@/services/offline/loadTravelOfflineAd
 
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import TravelHeroQuickJumps from './TravelHeroQuickJumps'
+import TravelRouteActions from './TravelRouteActions'
 import { useTravelHeroExtrasModel } from './hooks/useTravelHeroExtrasModel'
 import { translate as i18nT } from '@/i18n'
 import { buildTravelPath } from '@/utils/travelSeo'
@@ -80,6 +81,8 @@ export const TravelHeroExtras: React.FC<{
               style={[actionStyles.offline, isMobile && actionStyles.offlineMobile]}
             />
           ) : null}
+          {/* #2902: навигатор и GPX — тот же уровень действий; без ≥2 точек не рисуются. */}
+          <TravelRouteActions travel={travel} isMobile={isMobile} style={actionStyles.routeActions} />
         </View>
       </View>
 
@@ -128,6 +131,9 @@ const actionStyles = StyleSheet.create({
   offline: {
     alignSelf: 'center',
     marginBottom: 0,
+  },
+  routeActions: {
+    flexShrink: 0,
   },
   offlineMobile: {
     // Иконка сохраняет тач-таргет и не сжимается, когда статус занимает остаток.

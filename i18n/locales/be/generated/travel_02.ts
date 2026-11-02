@@ -303,4 +303,13 @@ export const travelGenerated2 = {
   "components.travel.ImageGalleryComponent.batchDeleteTitle": "Выдаленне выяў",
   "components.travel.ImageGalleryComponent.batchDeleteMessage": "Выдаліць выбраныя выявы ({{value1}})? Дзеянне незваротнае.",
   "components.travel.ImageGalleryComponent.selectPhoto": "Выбраць фота",
+  "components.travel.details.TravelRouteActions.openInNavigator": "Адкрыць у навігатары",
+  "components.travel.details.TravelRouteActions.openInProvider": "Адкрыць маршрут у {{value1}}",
+  "components.travel.details.TravelRouteActions.navigatorOpenFailed": "Не атрымалася адкрыць навігатар",
+  "components.travel.details.TravelRouteActions.downloadGpx": "Спампаваць GPX",
+  "components.travel.details.TravelRouteActions.gpxLabel": "GPX",
+  "components.travel.details.TravelRouteActions.gpxHint": "Файл з кропкамі маршруту для навігатара",
+  "components.travel.details.TravelRouteActions.gpxShareTitle": "Захаваць маршрут GPX",
+  "components.travel.details.TravelRouteActions.gpxSaved": "Файл GPX захаваны",
+  "components.travel.details.TravelRouteActions.gpxFailed": "Не атрымалася падрыхтаваць GPX",
 } as const

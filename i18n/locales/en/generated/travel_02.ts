@@ -303,4 +303,13 @@ export const travelGenerated2 = {
   "components.travel.ImageGalleryComponent.batchDeleteTitle": "Delete images",
   "components.travel.ImageGalleryComponent.batchDeleteMessage": "Delete the selected images ({{value1}})? This action cannot be undone.",
   "components.travel.ImageGalleryComponent.selectPhoto": "Select photo",
+  "components.travel.details.TravelRouteActions.openInNavigator": "Open in navigator",
+  "components.travel.details.TravelRouteActions.openInProvider": "Open the route in {{value1}}",
+  "components.travel.details.TravelRouteActions.navigatorOpenFailed": "Couldn't open the navigator",
+  "components.travel.details.TravelRouteActions.downloadGpx": "Download GPX",
+  "components.travel.details.TravelRouteActions.gpxLabel": "GPX",
+  "components.travel.details.TravelRouteActions.gpxHint": "Route points file for your navigator",
+  "components.travel.details.TravelRouteActions.gpxShareTitle": "Save GPX route",
+  "components.travel.details.TravelRouteActions.gpxSaved": "GPX file saved",
+  "components.travel.details.TravelRouteActions.gpxFailed": "Couldn't prepare the GPX file",
 } as const

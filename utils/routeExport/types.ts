@@ -11,6 +11,13 @@ export interface RouteExportInput {
   description?: string;
   sourceName?: string;
   sourceUrl?: string;
+  /** GPX `<metadata><author><name>` — автор маршрута. */
+  author?: string;
+  /**
+   * GPX: дополнительно повторить waypoints в том же порядке как `<rte>/<rtept>`,
+   * чтобы навигатор импортировал их как маршрут, а не как разрозненные точки.
+   */
+  includeRoute?: boolean;
   /** Route track coordinates in legacy Metravel format: [lng, lat] */
   track?: LngLat[];
   /** Optional waypoints (start/end or standalone points) */

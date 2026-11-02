@@ -303,4 +303,13 @@ export const travelGenerated2 = {
   "components.travel.ImageGalleryComponent.batchDeleteTitle": "Видалення зображень",
   "components.travel.ImageGalleryComponent.batchDeleteMessage": "Видалити вибрані зображення ({{value1}})? Дію не можна скасувати.",
   "components.travel.ImageGalleryComponent.selectPhoto": "Вибрати фото",
+  "components.travel.details.TravelRouteActions.openInNavigator": "Відкрити в навігаторі",
+  "components.travel.details.TravelRouteActions.openInProvider": "Відкрити маршрут у {{value1}}",
+  "components.travel.details.TravelRouteActions.navigatorOpenFailed": "Не вдалося відкрити навігатор",
+  "components.travel.details.TravelRouteActions.downloadGpx": "Завантажити GPX",
+  "components.travel.details.TravelRouteActions.gpxLabel": "GPX",
+  "components.travel.details.TravelRouteActions.gpxHint": "Файл із точками маршруту для навігатора",
+  "components.travel.details.TravelRouteActions.gpxShareTitle": "Зберегти маршрут GPX",
+  "components.travel.details.TravelRouteActions.gpxSaved": "Файл GPX збережено",
+  "components.travel.details.TravelRouteActions.gpxFailed": "Не вдалося підготувати GPX",
 } as const

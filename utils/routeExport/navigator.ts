@@ -1,7 +1,11 @@
 import type { LngLat, RouteExportInput } from './types';
 import { normalizeTrack, normalizeWaypoints, roundCoord } from './normalize';
 
-export type NavigatorProvider = 'google' | 'apple' | 'garmin' | 'komoot';
+/**
+ * `yandex` и `osmand` — только deeplink-провайдеры страницы маршрута (#2902);
+ * в `ROUTE_NAVIGATORS` (меню экспорта поездки) их нет, чтобы не менять тот экран.
+ */
+export type NavigatorProvider = 'google' | 'apple' | 'yandex' | 'osmand' | 'garmin' | 'komoot';
 
 export type TravelMode = 'driving' | 'walking' | 'cycling';
 
@@ -81,6 +85,47 @@ const buildAppleUrl = (stops: LngLat[], mode: TravelMode): string => {
   return `https://maps.apple.com/?${params.toString()}`;
 };
 
+const YANDEX_MODE: Record<TravelMode, string> = {
+  driving: 'auto',
+  walking: 'pd',
+  cycling: 'bc',
+};
+
+// Yandex Maps `rtext`: точки `lat,lon` через `~`, первая — старт, последняя —
+// финиш (https://yandex.ru/dev/yandex-apps-launch-maps/doc/ru/concepts/yandexmaps-web).
+const buildYandexUrl = (stops: LngLat[], mode: TravelMode): string => {
+  const rtext = stops.length === 1 ? `~${latLng(stops[0])}` : stops.map(latLng).join('~');
+  return `https://yandex.ru/maps/?rtext=${rtext}&rtt=${YANDEX_MODE[mode]}`;
+};
+
+const OSMAND_PROFILE: Record<TravelMode, string> = {
+  driving: 'car',
+  walking: 'pedestrian',
+  cycling: 'bicycle',
+};
+
+const OSMAND_ZOOM = 10;
+
+/**
+ * OsmAnd route link — тот же формат, что генерирует и разбирает само приложение
+ * (`IntentHelper.generateRouteUrl` / parse в osmandapp/OsmAnd):
+ * `https://osmand.net/map/navigate/?start=lat,lon&end=lat,lon&via=lat,lon;lat,lon&profile=car#zoom/lat/lon`.
+ * Приложение перехватывает ссылку osmand.net и строит маршрут; без приложения
+ * она открывает веб-карту OsmAnd с тем же маршрутом.
+ */
+const buildOsmandUrl = (stops: LngLat[], mode: TravelMode): string => {
+  const [startLng, startLat] = stops[0];
+  const end = stops[stops.length - 1];
+  const parts = [] as string[];
+  if (stops.length > 1) parts.push(`start=${latLng(stops[0])}`);
+  parts.push(`end=${latLng(end)}`);
+  const via = stops.slice(1, -1);
+  if (via.length) parts.push(`via=${via.map(latLng).join(';')}`);
+  parts.push(`profile=${OSMAND_PROFILE[mode]}`);
+  const fragment = `${OSMAND_ZOOM}/${roundCoord(startLat)}/${roundCoord(startLng)}`;
+  return `https://osmand.net/map/navigate/?${parts.join('&')}#${fragment}`;
+};
+
 /**
  * Build a navigator deep link from a route. Returns `null` for providers that
  * import GPX instead of accepting a coordinate URL (Garmin, Komoot) or when the
@@ -100,6 +145,10 @@ export const buildNavigatorUrl = (
       return buildGoogleUrl(stops, mode);
     case 'apple':
       return buildAppleUrl(stops, mode);
+    case 'yandex':
+      return buildYandexUrl(stops, mode);
+    case 'osmand':
+      return buildOsmandUrl(stops, mode);
     default:
       return null;
   }

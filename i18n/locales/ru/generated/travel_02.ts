@@ -303,4 +303,13 @@ export const travelGenerated2 = {
   "components.travel.ImageGalleryComponent.batchDeleteTitle": "Удаление изображений",
   "components.travel.ImageGalleryComponent.batchDeleteMessage": "Удалить выбранные изображения ({{value1}})? Действие необратимо.",
   "components.travel.ImageGalleryComponent.selectPhoto": "Выбрать фото",
+  "components.travel.details.TravelRouteActions.openInNavigator": "Открыть в навигаторе",
+  "components.travel.details.TravelRouteActions.openInProvider": "Открыть маршрут в {{value1}}",
+  "components.travel.details.TravelRouteActions.navigatorOpenFailed": "Не удалось открыть навигатор",
+  "components.travel.details.TravelRouteActions.downloadGpx": "Скачать GPX",
+  "components.travel.details.TravelRouteActions.gpxLabel": "GPX",
+  "components.travel.details.TravelRouteActions.gpxHint": "Файл с точками маршрута для навигатора",
+  "components.travel.details.TravelRouteActions.gpxShareTitle": "Сохранить маршрут GPX",
+  "components.travel.details.TravelRouteActions.gpxSaved": "Файл GPX сохранён",
+  "components.travel.details.TravelRouteActions.gpxFailed": "Не удалось подготовить GPX",
 } as const

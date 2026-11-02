@@ -22,6 +22,20 @@ export const buildGpx = (input: RouteExportInput): RouteExportResult => {
     })
     .join('\n');
 
+  // rtept — тот же тип, что wpt (GPX 1.1 wptType), порядок точек сохраняется.
+  const rteXml = input.includeRoute && waypoints.length >= 2
+    ? `  <rte>
+    <name>${escapeXml(name)}</name>
+${waypoints
+    .map((w) => {
+      const [lng, lat] = w.coordinates;
+      const wName = w.name ? `<name>${escapeXml(w.name)}</name>` : '';
+      return `    <rtept lat="${lat}" lon="${lng}">${wName}</rtept>`;
+    })
+    .join('\n')}
+  </rte>`
+    : '';
+
   const trkptsXml = track
     .map(([lng, lat]) => `        <trkpt lat="${lat}" lon="${lng}"></trkpt>`)
     .join('\n');
@@ -40,9 +54,9 @@ ${trkptsXml}
 <gpx version="1.1" creator="metravel" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
   <metadata>
     <name>${escapeXml(name)}</name>
-${descXml}${input.sourceUrl ? `    <link href="${escapeXml(input.sourceUrl)}"><text>${escapeXml(input.sourceName || 'Metravel')}</text></link>\n` : ''}    <time>${escapeXml(time)}</time>
+${descXml}${input.author?.trim() ? `    <author><name>${escapeXml(input.author.trim())}</name></author>\n` : ''}${input.sourceUrl ? `    <link href="${escapeXml(input.sourceUrl)}"><text>${escapeXml(input.sourceName || 'Metravel')}</text></link>\n` : ''}    <time>${escapeXml(time)}</time>
   </metadata>
-${wptXml ? wptXml + '\n' : ''}${trackXml ? trackXml + '\n' : ''}
+${wptXml ? wptXml + '\n' : ''}${rteXml ? rteXml + '\n' : ''}${trackXml ? trackXml + '\n' : ''}
 </gpx>
 `;
 

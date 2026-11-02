@@ -86,8 +86,17 @@ export const safeFileBaseName = (name: string) => {
 
 export const isoNow = () => new Date().toISOString();
 
+// XML 1.0 запрещает управляющие символы кроме \t \n \r: одна такая буква в
+// названии точки делает весь GPX/KML нечитаемым для парсера навигатора.
+const isAllowedXmlChar = (char: string) => {
+  const code = char.charCodeAt(0);
+  return code >= 0x20 || code === 0x09 || code === 0x0a || code === 0x0d;
+};
+
+const stripInvalidXmlChars = (s: string) => Array.from(s).filter(isAllowedXmlChar).join('');
+
 export const escapeXml = (s: string) =>
-  s
+  stripInvalidXmlChars(s)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

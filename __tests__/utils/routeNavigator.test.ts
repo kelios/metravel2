@@ -84,6 +84,30 @@ describe('routeExport navigator', () => {
     });
   });
 
+  describe('buildNavigatorUrl (yandex / osmand, #2902)', () => {
+    it('joins all stops into a Yandex rtext route with the mode flag', () => {
+      expect(buildNavigatorUrl('yandex', { waypoints }, { mode: 'walking' })).toBe(
+        'https://yandex.ru/maps/?rtext=53.9,27.56~53.95,27.6~54,27.7&rtt=pd',
+      );
+      expect(buildNavigatorUrl('yandex', { waypoints: [waypoints[0]] })).toBe(
+        'https://yandex.ru/maps/?rtext=~53.9,27.56&rtt=auto',
+      );
+    });
+
+    it('builds the OsmAnd navigate URL the app itself generates', () => {
+      expect(buildNavigatorUrl('osmand', { waypoints }, { mode: 'cycling' })).toBe(
+        'https://osmand.net/map/navigate/?start=53.9,27.56&end=54,27.7&via=53.95,27.6&profile=bicycle#10/53.9/27.56',
+      );
+      expect(buildNavigatorUrl('osmand', { waypoints: [waypoints[0]] })).toBe(
+        'https://osmand.net/map/navigate/?end=53.9,27.56&profile=car#10/53.9/27.56',
+      );
+    });
+
+    it('keeps the trip export menu providers unchanged', () => {
+      expect(ROUTE_NAVIGATORS.map((n) => n.id)).toEqual(['google', 'apple', 'garmin', 'komoot']);
+    });
+  });
+
   it('returns null for GPX-import providers and empty routes', () => {
     expect(buildNavigatorUrl('garmin', { waypoints })).toBeNull();
     expect(buildNavigatorUrl('komoot', { waypoints })).toBeNull();

@@ -303,4 +303,13 @@ export const travelGenerated2 = {
   "components.travel.ImageGalleryComponent.batchDeleteTitle": "Usuwanie zdjęć",
   "components.travel.ImageGalleryComponent.batchDeleteMessage": "Usunąć zaznaczone zdjęcia ({{value1}})? Tej operacji nie można cofnąć.",
   "components.travel.ImageGalleryComponent.selectPhoto": "Zaznacz zdjęcie",
+  "components.travel.details.TravelRouteActions.openInNavigator": "Otwórz w nawigatorze",
+  "components.travel.details.TravelRouteActions.openInProvider": "Otwórz trasę w {{value1}}",
+  "components.travel.details.TravelRouteActions.navigatorOpenFailed": "Nie udało się otworzyć nawigacji",
+  "components.travel.details.TravelRouteActions.downloadGpx": "Pobierz GPX",
+  "components.travel.details.TravelRouteActions.gpxLabel": "GPX",
+  "components.travel.details.TravelRouteActions.gpxHint": "Plik z punktami trasy do nawigacji",
+  "components.travel.details.TravelRouteActions.gpxShareTitle": "Zapisz trasę GPX",
+  "components.travel.details.TravelRouteActions.gpxSaved": "Plik GPX został zapisany",
+  "components.travel.details.TravelRouteActions.gpxFailed": "Nie udało się przygotować pliku GPX",
 } as const

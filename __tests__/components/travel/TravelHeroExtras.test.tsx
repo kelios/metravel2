@@ -172,6 +172,34 @@ describe('TravelHeroExtras', () => {
     expect(mockSaveTravelOffline).toHaveBeenCalledWith(travel, { pinned: true, includePhotos: true })
   })
 
+  // #2902: «Открыть в навигаторе» и «GPX» живут в том же ряду действий и
+  // появляются только при ≥ 2 точках с координатами — без этой проводки прод
+  // снова остаётся без GPX, хотя главная обещает GPS-треки.
+  it('рендерит навигатор и GPX в ряду действий только при ≥ 2 точках', async () => {
+    const withPoints: any = {
+      id: 7,
+      slug: 'grodno',
+      name: 'Гродно за 1 день',
+      travelAddress: [
+        { id: 1, address: 'Коложа', coord: '53.6772,23.8139' },
+        { id: 2, address: 'Старый замок', coord: '53.6774,23.8237' },
+      ],
+    }
+    const view = await render(
+      <TravelHeroExtras travel={withPoints} isMobile sectionLinks={[]} onQuickJump={jest.fn()} />
+    )
+    expect(view.getByTestId('travel-navigator-trigger')).toBeTruthy()
+    expect(view.getByTestId('travel-gpx-download')).toBeTruthy()
+    await view.unmount()
+
+    const onePoint: any = { ...withPoints, travelAddress: withPoints.travelAddress.slice(0, 1) }
+    const single = await render(
+      <TravelHeroExtras travel={onePoint} isMobile sectionLinks={[]} onQuickJump={jest.fn()} />
+    )
+    expect(single.queryByTestId('travel-navigator-trigger')).toBeNull()
+    expect(single.queryByTestId('travel-gpx-download')).toBeNull()
+  })
+
   // #1673: на узком экране ряд действий переносился, и офлайн читался второй
   // главной кнопкой во всю ширину. Компактный чип оставляет оба действия в одной строке.
   it('сжимает офлайн-чип до иконки только на узком экране', async () => {

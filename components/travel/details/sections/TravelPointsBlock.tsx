@@ -8,8 +8,9 @@ import Button from '@/components/ui/Button'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
 import { openExternalUrlInNewTab } from '@/utils/externalLinks'
-import { buildGpx, buildKml, saveRouteExportFile } from '@/utils/routeExport'
+import { buildKml, saveRouteExportFile } from '@/utils/routeExport'
 import { showToast } from '@/utils/toast'
+import { buildTravelRouteGpx } from '@/utils/travelRouteGpx'
 import {
   buildGoogleMapsDirectionsUrl,
   buildTravelPointsExportInput,
@@ -52,8 +53,11 @@ export const TravelPointsBlock: React.FC<{
     if (exportingFormat) return
     setExportingFormat(format)
     try {
-      const input = buildTravelPointsExportInput(travel)
-      const result = format === 'gpx' ? buildGpx(input) : buildKml(input)
+      // #2902: one GPX builder per page — the points block and «Скачать GPX»
+      // must hand the navigator the same file.
+      const result = format === 'gpx'
+        ? buildTravelRouteGpx(travel)
+        : buildKml(buildTravelPointsExportInput(travel))
       const saved = await saveRouteExportFile(
         result,
         format === 'kml' ? i18nT('travel:components.travel.details.sections.TravelPointsBlock.sohranit_tochki_dlya_oflayn_kart_8c53aa7a') : i18nT('travel:components.travel.details.sections.TravelPointsBlock.sohranit_tochki_marshruta_e800918a'),
