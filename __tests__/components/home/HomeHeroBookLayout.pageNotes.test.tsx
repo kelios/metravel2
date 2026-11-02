@@ -44,6 +44,7 @@ const renderBook = async (overrides: Partial<React.ComponentProps<typeof HomeHer
     topWaveAnimatedStyle: {},
     bottomWaveAnimatedStyle: {},
     onQuickFilterPress: jest.fn(),
+    onHighlightPress: jest.fn(),
     onOpenArticle: jest.fn(),
     onOpenSearch: jest.fn(),
     onSearchSubmit: jest.fn(),

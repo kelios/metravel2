@@ -1,6 +1,7 @@
 import React, {
   createContext,
   Suspense,
+  startTransition,
   use,
   useCallback,
   useEffect,
@@ -209,10 +210,15 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       if (failed) return
       if (cancelled) return
       const activeLocale = normalizeActiveLocale(i18n.resolvedLanguage)
-      setPreference(storedPreference)
-      setLocaleState(activeLocale)
       syncDocumentLocale(routeLocale ?? activeLocale)
-      setIsHydrated(true)
+      // #2899: обновление контекста над ещё не гидратированными Suspense-границами
+      // с обычным приоритетом поднимает гидратацию всего дерева до sync-лейна —
+      // одна задача 520–600 мс на mobile. В transition React гидратирует нарезкой.
+      startTransition(() => {
+        setPreference(storedPreference)
+        setLocaleState(activeLocale)
+        setIsHydrated(true)
+      })
     })
     return () => {
       cancelled = true

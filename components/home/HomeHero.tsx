@@ -1,10 +1,11 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Platform, View } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, type Href } from 'expo-router'
 
 import { useThemedColors } from '@/hooks/useTheme'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { ResponsiveContainer } from '@/components/layout'
+import { useAuthStore } from '@/stores/authStore'
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { openExternalUrl, openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { getSiteBaseUrl } from '@/utils/seo'
@@ -20,6 +21,9 @@ import {
   HERO_HIGHLIGHTS,
   HOME_HERO_BOOK_LAYOUT_MIN_WIDTH,
   MOOD_CARDS,
+  resolveHeroHighlightGuestHref,
+  type HeroHighlight,
+  type HeroHighlightPressEvent,
 } from './homeHeroContent'
 import {
   shouldDisableHomeHeroSliderBlur,
@@ -246,6 +250,20 @@ const HomeHero = memo(function HomeHero({
     [router, showNavigationFeedback],
   )
 
+  // #2901: href ссылки — адрес для вошедшего (одинаков в SSR и после гидратации),
+  // гостя на клике уводим на вход по намерению с возвратом туда же. Состояние
+  // входа читается в момент клика: подписка перерисовывала бы весь hero.
+  const handleHighlightPress = useCallback(
+    (item: HeroHighlight, event: HeroHighlightPressEvent) => {
+      queueAnalyticsEvent('home_highlight_click', { id: item.id })
+      const guestHref = resolveHeroHighlightGuestHref(item, useAuthStore.getState().isAuthenticated)
+      if (!guestHref) return
+      event.preventDefault()
+      router.push(guestHref as Href)
+    },
+    [router],
+  )
+
   const handleOpenArticle = useCallback(
     (href?: string | null) => {
       if (!href) {
@@ -352,6 +370,7 @@ const HomeHero = memo(function HomeHero({
             bottomWaveAnimatedStyle={bottomWaveAnimatedStyle}
             onBookWrapperLayout={handleBookWrapperLayout}
             onQuickFilterPress={handleQuickFilterPress}
+            onHighlightPress={handleHighlightPress}
             onOpenArticle={handleOpenArticle}
             onOpenSearch={handleOpenSearch}
             onSearchSubmit={handleSearchSubmit}

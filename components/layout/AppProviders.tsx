@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { TransitionPersistQueryClientProvider } from '@/components/layout/TransitionPersistQueryClientProvider';
 import { AuthProvider } from '@/context/AuthContext';
 import { AuthContext, createAuthFallbackValue } from '@/context/authContextBase';
 import { FavoritesContext, createFavoritesFallbackValue } from '@/context/FavoritesContext';
@@ -133,7 +133,7 @@ export default function AppProviders({
   }, [authDeferMode, favoritesDeferMode, shouldLoadDeferredRuntime]);
 
   const content = (
-    <PersistQueryClientProvider
+    <TransitionPersistQueryClientProvider
       client={queryClient}
       persistOptions={queryPersistenceOptions}
     >
@@ -151,7 +151,7 @@ export default function AppProviders({
         </React.Suspense>
       )}
       {children}
-    </PersistQueryClientProvider>
+    </TransitionPersistQueryClientProvider>
   );
 
   const favoritesContent = favoritesReady ? (

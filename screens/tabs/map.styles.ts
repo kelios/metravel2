@@ -10,6 +10,7 @@ import type { ThemedColors } from '@/hooks/useTheme';
 import * as corner from '@/screens/tabs/mapDesktopCorner';
 import { getDesktopBranchInsets, NO_DESKTOP_INSETS } from '@/screens/tabs/mapDesktopInsets';
 import { getDesktopOverlayStyles } from '@/screens/tabs/mapDesktopOverlay.styles';
+import { getOpaqueTintSurfaceStyle } from '@/utils/opaqueTintSurface';
 import { webTextStyle } from '@/utils/webProps';
 
 // ✅ Токенизация: базируемся на 8pt-системе METRICS
@@ -663,7 +664,9 @@ export const getStyles = (
         gap: 7,
         paddingHorizontal: 12,
         paddingVertical: 8,
-        backgroundColor: themedColors.warningSoft,
+        // #2900 — плашка лежит над картой: warningSoft (альфа 0.08) один давал
+        // почти прозрачный фон, сквозь который на native просвечивали кластеры.
+        ...getOpaqueTintSurfaceStyle(themedColors.warningSoft, themedColors.surface),
         borderRadius: 12,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.warning,
@@ -711,7 +714,10 @@ export const getStyles = (
         gap: 6,
         paddingHorizontal: isMobile ? 10 : 14,
         paddingVertical: isMobile ? GEO_BANNER_PADDING_VERTICAL_MOBILE : 9,
-        backgroundColor: themedColors.warningSoft,
+        // #2900 — баннер лежит над картой: непрозрачная подкрашенная поверхность
+        // на всех платформах. Раньше native брал голый warningSoft (альфа 0.08),
+        // и на iPhone сквозь баннер были видны тайлы и пузыри кластеров.
+        ...getOpaqueTintSurfaceStyle(themedColors.warningSoft, themedColors.surface),
         borderRadius: isMobile ? 12 : 14,
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: themedColors.warning,
@@ -720,8 +726,8 @@ export const getStyles = (
         ...(Platform.OS !== 'web'
           ? themedColors.shadows.medium
           : isMobile
-            ? ({ backgroundColor: themedColors.surface, backgroundImage: `linear-gradient(${themedColors.warningSoft}, ${themedColors.warningSoft})`, boxShadow: '0 2px 8px rgba(0,0,0,0.10)' } as any)
-            : ({ backgroundColor: themedColors.warningSoft, boxShadow: '0 8px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.05)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)' } as any)),
+            ? ({ boxShadow: '0 2px 8px rgba(0,0,0,0.10)' } as any)
+            : ({ backgroundColor: themedColors.warningSoft, backgroundImage: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.05)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)' } as any)),
       },
       /**
        * Строка статуса: иконка + текст. На мобиле в ней же прячется место под

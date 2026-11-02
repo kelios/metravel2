@@ -1,5 +1,5 @@
 import { Platform } from 'react-native'
-import { useEffect, useState } from 'react'
+import { startTransition, useEffect, useState } from 'react'
 
 export type HydrationReadyOptions = {
   /**
@@ -27,7 +27,9 @@ export function useHydrationReady({ clientOnly = false }: HydrationReadyOptions 
 
   useEffect(() => {
     if (hydrationReady) return
-    setHydrationReady(true)
+    // #2899: transition, иначе флаг (десятки потребителей) форсирует синхронную
+    // гидратацию ещё не гидратированных границ одной длинной задачей.
+    startTransition(() => setHydrationReady(true))
   }, [hydrationReady])
 
   return hydrationReady

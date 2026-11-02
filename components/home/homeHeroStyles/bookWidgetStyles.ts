@@ -106,6 +106,16 @@ export const createBookWidgetStyles = (ctx: HeroStyleContext) => {
         } as any,
       }),
     },
+    // #2901: плашка стала ссылкой — тот же отклик, что у чипов (`moodChipHover`).
+    tabletFeatureCardHover: {
+      borderColor: colors.brand,
+      ...Platform.select({
+        web: {
+          transform: 'translateY(-1px)',
+          boxShadow: '0 4px 12px rgba(120,96,62,0.12)',
+        } as any,
+      }),
+    },
     tabletFeatureIconWrap: {
       width: 36,
       height: 36,

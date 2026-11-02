@@ -3,6 +3,7 @@ import { Platform, StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
 import { MAP_FILTER_CHIPS_STACK_OFFSET } from '@/components/MapPage/mapFilterChips'
+import { getOpaqueTintSurfaceStyle } from '@/utils/opaqueTintSurface'
 
 /** Диаметр видимого круга кнопки. */
 const BUTTON_SIZE = 38
@@ -376,9 +377,10 @@ export const getMapMobileTopOverlayStyles = (colors: ThemedColors) =>
     iconButtonPressed: {
       opacity: 0.85,
     },
-    iconButtonActive: {
-      backgroundColor: colors.primarySoft,
-    },
+    // #2900 — кнопка лежит прямо над картой. Голый primarySoft (альфа 0.06)
+    // делал активную кнопку («Слои»/«Радиус» с открытым поповером, «Маршрут»)
+    // прозрачной: на iPhone сквозь неё были видны тайлы и пузыри кластеров.
+    iconButtonActive: getOpaqueTintSurfaceStyle(colors.primarySoft, colors.surface),
     badge: {
       position: 'absolute' as const,
       top: -3,

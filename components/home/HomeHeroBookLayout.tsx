@@ -7,6 +7,8 @@ import Button from '@/components/ui/Button'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import type { ThemedColors } from '@/hooks/useTheme'
 import HomeHeroSearchBar from './HomeHeroSearchBar'
+import HomeHeroFeatureGrid from './HomeHeroFeatureGrid'
+import type { HeroHighlight, HeroHighlightPressEvent } from './homeHeroContent'
 import type { QuickFilterParams } from './homeHeroShared'
 import { translate as i18nT } from '@/i18n'
 import { webDataSetProps } from '@/utils/webProps'
@@ -18,12 +20,6 @@ type MoodCard = {
   filters: QuickFilterParams
   route: string
   meta?: string
-}
-
-type HeroHighlight = {
-  icon: string
-  title: string
-  subtitle: string
 }
 
 type BookImage = {
@@ -66,6 +62,7 @@ type HomeHeroBookLayoutProps = {
   bottomWaveAnimatedStyle: any
   onBookWrapperLayout?: (e: { nativeEvent: { layout: { width: number } } }) => void
   onQuickFilterPress: (label: string, filters?: QuickFilterParams, route?: string) => void
+  onHighlightPress: (item: HeroHighlight, event: HeroHighlightPressEvent) => void
   onOpenArticle: (href?: string | null) => void
   onOpenSearch: () => void
   onSearchSubmit: (query: string) => void
@@ -241,32 +238,6 @@ function HeroPageNote({
         )}
       </View>
     </Pressable>
-  )
-}
-
-function TabletFeatureGrid({
-  colors,
-  heroHighlights,
-  styles,
-}: {
-  colors: ThemedColors
-  heroHighlights: readonly HeroHighlight[]
-  styles: Styles
-}) {
-  return (
-    <View style={styles.tabletFeatureGrid}>
-      {heroHighlights.map((item) => (
-        <View key={item.title} style={styles.tabletFeatureCard} accessibilityRole="text">
-          <View style={styles.tabletFeatureIconWrap}>
-            <Feather name={item.icon as any} size={16} color={colors.textOnPrimary} />
-          </View>
-          <View style={styles.tabletFeatureTextWrap}>
-            <Text style={styles.tabletFeatureTitle}>{item.title}</Text>
-            <Text style={styles.tabletFeatureSubtitle}>{item.subtitle}</Text>
-          </View>
-        </View>
-      ))}
-    </View>
   )
 }
 
@@ -566,6 +537,7 @@ export default function HomeHeroBookLayout({
   bottomWaveAnimatedStyle,
   onBookWrapperLayout,
   onQuickFilterPress,
+  onHighlightPress,
   onOpenArticle,
   onOpenSearch,
   onSearchSubmit,
@@ -661,9 +633,10 @@ export default function HomeHeroBookLayout({
                 </View>
 
                 {(responsiveWeb || isTabletLayout) && (
-                  <ResponsiveBookPart enabled={responsiveWeb} name="homeBookTablet"><TabletFeatureGrid
+                  <ResponsiveBookPart enabled={responsiveWeb} name="homeBookTablet"><HomeHeroFeatureGrid
                     colors={colors}
                     heroHighlights={heroHighlights}
+                    onHighlightPress={onHighlightPress}
                     styles={styles}
                   /></ResponsiveBookPart>
                 )}

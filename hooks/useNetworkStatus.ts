@@ -1,7 +1,7 @@
 // src/hooks/useNetworkStatus.ts
 // ✅ FIX-005: Хук для отслеживания статуса сети
 
-import { useState, useEffect } from 'react';
+import { startTransition, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import { subscribeWebNetworkStatus } from '@/utils/webNetworkStatus';
 
@@ -38,11 +38,16 @@ export function useNetworkStatus(): NetworkStatus {
 
     // Queries, offline UI and write queues must agree on web reachability.
     if (Platform.OS === 'web') {
+      // #2899: подписка сразу сообщает текущий статус; совпадающий не меняет
+      // состояние, а смена идёт в transition — иначе обновление во время
+      // гидратации делает её синхронной одной длинной задачей.
       return subscribeWebNetworkStatus((isOnline) => {
-        setNetworkStatus({
-          isConnected: isOnline,
-          isInternetReachable: isOnline,
-          type: 'unknown',
+        startTransition(() => {
+          setNetworkStatus((prev) =>
+            prev.isConnected === isOnline && prev.isInternetReachable === isOnline
+              ? prev
+              : { isConnected: isOnline, isInternetReachable: isOnline, type: 'unknown' },
+          );
         });
       });
     }

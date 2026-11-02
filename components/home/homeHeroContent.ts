@@ -3,6 +3,7 @@ import type Feather from '@expo/vector-icons/Feather'
 
 import type { QuickFilterParams, QuickFilterValue } from './homeHeroShared'
 import { translate as i18nT } from '@/i18n'
+import { buildLoginHref } from '@/utils/authNavigation'
 
 
 export type BookImage = {
@@ -38,11 +39,23 @@ export type MoodCard = {
   meta?: string
 }
 
+/**
+ * #2901: плашка преимущества в hero — ссылка, а не декорация: у каждой есть
+ * `route`, иначе она выглядит кликабельной и ничего не делает. `authIntent`
+ * означает, что гостю нужен вход: клик ведёт на экран входа по намерению,
+ * а `route` остаётся адресом после входа (и `href` ссылки).
+ */
 export type HeroHighlight = {
-  icon: string
+  id: string
+  icon: FeatherIconName
   title: string
   subtitle: string
+  route: string
+  authIntent?: string
 }
+
+/** Событие клика по плашке: и RN-нажатие, и DOM-клик ссылки на web. */
+export type HeroHighlightPressEvent = { preventDefault: () => void }
 
 const normalizeQuickFilterValue = (
   value: QuickFilterValue | undefined,
@@ -174,17 +187,40 @@ export const MOOD_CARDS: readonly MoodCard[] = [
   },
 ] as const
 
+// Макет `docs/features/ux-audit-2026-11-mocks.md` §2. «GPS-треки» вернутся вместе
+// с GPX на странице маршрута (#2902): до неё карточке некуда вести.
 export const HERO_HIGHLIGHTS: readonly HeroHighlight[] = [
-  { icon: 'pen-tool', get title() { return i18nT('homeStatic:components.home.homeHeroContent.za_2_minuty_5ec01639') }, get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.podborka_pod_vash_ritm_d6d4d06a') } },
-  { icon: 'book-open', get title() { return i18nT('homeStatic:components.home.homeHeroContent.lichnaya_kniga_b2f6da42') }, get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.foto_zametki_i_pdf_f208ab13') } },
   {
+    id: 'quick-pick',
+    icon: 'pen-tool',
+    get title() { return i18nT('homeStatic:components.home.homeHeroContent.za_2_minuty_5ec01639') },
+    get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.podborka_pod_vash_ritm_d6d4d06a') },
+    route: '/search',
+  },
+  {
+    id: 'book',
+    icon: 'book-open',
+    get title() { return i18nT('homeStatic:components.home.homeHeroContent.lichnaya_kniga_b2f6da42') },
+    get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.foto_zametki_i_pdf_f208ab13') },
+    route: '/export',
+    // `build-pdf`, а не `create-book`: тот же экран входа «книга», но после входа
+    // `resolvePostAuthPath` ведёт на `/export`, а `create-book` — на `/travel/new`.
+    authIntent: 'build-pdf',
+  },
+  {
+    id: 'nearby',
     icon: 'compass',
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.marshruty_ryadom_bc58acf0') },
     get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.filtry_po_distantsii_i_formatu_640c3871') },
-  },
-  {
-    icon: 'download',
-    get title() { return i18nT('homeStatic:components.home.homeHeroContent.gps_treki_e462133c') },
-    get subtitle() { return i18nT('homeStatic:components.home.homeHeroContent.skachay_i_sleduy_marshrutu_aeb392ff') },
+    route: buildFilterPath('/map', { radius: 60 }),
   },
 ] as const
+
+/** #2901: куда увести гостя с плашки, требующей входа; `null` — работает обычная ссылка. */
+export const resolveHeroHighlightGuestHref = (
+  item: HeroHighlight,
+  isAuthenticated: boolean,
+): string | null =>
+  item.authIntent && !isAuthenticated
+    ? buildLoginHref({ redirect: item.route, intent: item.authIntent })
+    : null
