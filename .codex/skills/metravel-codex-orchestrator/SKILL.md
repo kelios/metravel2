@@ -47,6 +47,12 @@ already authorizes necessary proposal → apply; planning-only stays planning.
 
 ## Authority and handoff
 
+When another live session owns the active/next frontend release, use
+`docs/RULES.md` → «Delivery-owner handoff across sessions»: transfer finished
+source and every remaining check, receive acceptance, and close the sending
+session without waiting for delivery. The receiver completes the pipeline and
+reports the actual release/QA outcome; a handoff is not task completion.
+
 Inherited repository ownership, frontend/backend boundaries, operation locks,
 review/testing separation and exact store-stage gates remain binding. Honor
 existing authorization; do not introduce a second approval for an already

@@ -14,6 +14,18 @@ the matching deploy/server-safety section from `docs/RELEASE.md` and
 `docs/WORKFLOW_OPERATIONS.md`; add the relevant production-checklist or testing
 section when that stage requires it.
 
+## Receiving work from another session
+
+Apply `docs/RULES.md` → «Delivery-owner handoff across sessions». A delivery
+session accepts frozen task paths/commits, acceptance criteria and raw check
+states, including uncommitted implementation and unfinished checks. Acknowledge
+ownership so the development session can close; do not send it back to wait for
+your queue. Complete or delegate the remaining source checks/review and formal
+gate, explicit-path commit/push, testing transition, canonical deploy, runtime
+acceptance and board outcome. Reuse compatible evidence and consolidate ready
+commits into one release. Never build a sender's dirty tree or label transferred,
+interrupted or skipped work PASS. Keep source review separate from runtime QA.
+
 ## Environment Gate
 
 Before running deploy commands, report:
@@ -48,7 +60,7 @@ Rules:
   a second deploy confirmation for that stage. Outside that pipeline, require
   an explicit target and authorization for the operation. Dev is owner-selected.
 - Mobile store work belongs to the Android/iOS release operator for the explicitly authorized stage. Android EAS/cloud builds and submits remain prohibited.
-- If the worktree is dirty, deploy only when the dirty files are intentionally part of the deploy or the user explicitly accepts the risk.
+- If the shared worktree is dirty, publish only the reviewed, pushed SHA through the canonical isolated deploy script; a received source diff must first complete review/commit/push.
 - Before deploy, build, Android install, server rebuild, or server restart, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`; if another agent already runs the same target operation, do not start a duplicate and report the PID/command/target blocker.
 - Never edit server shell dotfiles such as `~/.bashrc`, `~/.profile`, `~/.zshrc`, `~/.ssh/config`, or `~/.ssh/environment`. Use inline env vars or project env files instead.
 

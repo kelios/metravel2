@@ -37,6 +37,11 @@ sources. Return one concise artifact; acknowledgements do not need a new turn.
 
 ## Coordinate without changing the goal
 
+- For multiple live sessions, use `docs/RULES.md` → «Delivery-owner handoff
+  across sessions»: development transfers its frozen diff and remaining checks
+  to the next delivery owner, receives acceptance, and closes without waiting
+  for validation/deploy/QA. The receiver completes the mandatory pipeline;
+  transferring ownership is neither a PASS nor task completion.
 - Separate supporting checks and release blockers from product acceptance.
   Board status/test counts never prove a different reported metric.
 - Use the canonical hypothesis/effort checkpoint before adding another branch.

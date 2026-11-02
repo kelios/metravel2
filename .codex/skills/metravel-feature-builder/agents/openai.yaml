@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Feature Builder"
   short_description: "Build metravel features with docs-first workflow."
-  default_prompt: "Use $metravel-feature-builder to implement the smallest safe change only in our project repositories after recording affected targets and locales, with upstream kept read-only."
+  default_prompt: "Use $metravel-feature-builder to implement the scoped change and, when another session owns the next release, hand it the frozen diff and remaining checks so the development session can close."

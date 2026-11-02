@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Release Checks"
   short_description: "Pick the right metravel validation flow."
-  default_prompt: "Use $metravel-release-checks to select meaningful checks and a narrow deploy smoke, reuse compatible evidence, and preserve explicit release gates."
+  default_prompt: "Use $metravel-release-checks in the receiving delivery session to complete transferred checks, reuse compatible evidence, and preserve release gates through production acceptance."

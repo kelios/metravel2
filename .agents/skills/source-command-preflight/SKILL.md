@@ -12,6 +12,11 @@ Use this skill when the user asks to run the migrated source command `preflight`
 Выбери code-level или полный preflight по стадии задачи и
 `docs/WORKFLOW_OPERATIONS.md` → «3.4 Координация долгих операций».
 
+Если разработка готова и ближайший выкат ведёт другая сессия, передай ей
+недостающие проверки по `docs/RULES.md` → «Delivery-owner handoff across sessions».
+Отправитель после принятия закрывается; следующий preflight и приёмку ведёт
+получатель. Не держи сессию разработки в ожидании чужого quality/deploy lock.
+
 1. Проверь `main`, `git status --short` и task-owned paths; сохрани чужие изменения.
    Выбери минимальный meaningful scope и reused evidence по `docs/TESTING.md` →
    «Risk-based validation and evidence reuse», а не полный gate по умолчанию.

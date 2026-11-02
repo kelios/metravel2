@@ -18,6 +18,12 @@ diff. Без ticket работай по diff, но не записывай verdi
 
 ## Scope и evidence
 
+При передаче готовой разработки другой живой сессией гейт выполняется в
+принимающей сессии по `docs/RULES.md` → «Delivery-owner handoff across sessions».
+Недостающие проверки организует её владелец перед вердиктом; исходной сессии
+не нужно оставаться открытой ради очереди. Передача сама по себе не PASS и не
+разрешает `testing` до обычных review/commit/push gates.
+
 1. Получи ticket, Done gate, assignee, platform/localization impact и состояние
    gate: `node .claude/hooks/review-gate.mjs show --task <id>`.
 2. Проверь task-owned scope и untracked files:

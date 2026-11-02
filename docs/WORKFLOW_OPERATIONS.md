@@ -613,6 +613,11 @@ const {
 
 ### 3.4 Координация долгих операций
 
+- Если готовую разработку можно передать живой сессии ближайшего выката,
+  используй `docs/RULES.md` → «Delivery-owner handoff across sessions»: она
+  забирает все оставшиеся проверки и выпуск, отправитель после принятия
+  закрывается. Не держи сессию разработки в ожидании quality/deploy lock;
+  общий лок и обязательные гейты принимающая сессия соблюдает без обходов.
 - Деплой, release/build, production web build, Android local build/install,
   iOS simulator/archive/EAS/upload/submit, server rebuild/restart,
   full/preflight проверки, Playwright/e2e, Lighthouse и другие долгие операции

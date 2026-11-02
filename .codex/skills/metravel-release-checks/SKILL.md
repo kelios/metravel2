@@ -15,12 +15,13 @@ checks and report the separate owner/runtime gate.
 
 Select checks by change scope instead of defaulting to the heaviest run every time:
 
-- Before starting release/build/test commands, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. When a test/quality gate is already active, stop your duplicate launch without waiting, polling, bypassing, or retrying. `validation delegated/skipped: active gate pid/name` is coordination only. Request the owner result and resume acceptance; never close or park from delegation, and never substitute it for deploy/build/browser/API/device evidence.
+- With multiple live sessions, transfer a finished implementation and all remaining checks to the active/next delivery owner under `docs/RULES.md` → «Delivery-owner handoff across sessions»; the sender closes after acceptance instead of waiting for a quality slot. The receiving session owns this validation run and subsequent release/QA.
+- Before starting release/build/test commands, apply the operation coordination rule from `AGENTS.md`/`docs/RULES.md`. When a test/quality gate is already active, stop your duplicate launch without waiting, polling, bypassing, or retrying. `validation delegated/skipped: active gate pid/name` is coordination only. The delivery owner obtains the actual result and resumes acceptance; an accepted handoff lets only the sending session close, never substitutes for evidence or marks the task done.
 - Small finished logical block: prefer `npm run check:fast`.
 - Need to inspect the selective plan first: use `npm run check:fast:dry`, `npm run check:changed:dry`, or `npm run check:e2e:changed:dry`.
 - Medium change touching a bounded area: run the relevant targeted tests plus the matching selective checks.
 - Large, cross-cutting, or infrastructure-heavy change: run `npm run lint` and `npm run test:run`.
-- Any failed check that points to the touched scope must be fixed before handoff and then rerun.
+- Any failed check that points to the touched scope must be fixed and rerun before release; declare it explicitly if transferring unfinished work to the delivery owner.
 - If a failed check exposes an unrelated existing issue, record the failing command, concrete failure, risk, and reason it was not fixed in this task.
 
 Use the project-specific command map:

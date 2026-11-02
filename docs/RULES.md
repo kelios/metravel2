@@ -168,7 +168,8 @@
   `https://metravel.by`) → `done`; a confirmed defect returns the task to `in_progress` and
   the cycle repeats. Store releases, the dev host, `area=back` and `needs_human` stay outside
   this chain. Protocol: `docs/TASK_BOARD_MCP.md` → «Выкат и приёмка на проде — часть перехода
-  `testing → done`».
+  `testing → done`». With multiple live sessions, apply the delivery-owner handoff
+  below: the pipeline remains mandatory, but one receiving session completes it.
 - Protected project/release files (`eas.json`, `app.json`, `.github/workflows/`, `nginx/`, `plugins/`, `public/robots.txt`, `public/sitemap.xml`, `entry.js`) require an explicit user request that puts the file or its behavior in scope. Do not change them as incidental cleanup.
 - Changes to `scripts/` within an assigned task do not require separate owner approval (owner instruction, 07.10.2026). Apply the same mandatory review, validation and operation gates as for other task-owned source files; authorization to edit a script does not authorize an otherwise gated external operation.
 - Before deploying to production, validate the local code in production-like conditions:
@@ -209,7 +210,7 @@ npm run test:run
   - QA that creates complaints or moderation requests must complete the cleanup
     and notification checks in [«Уборка тестовых жалоб и модерационных заявок»](./WORKFLOW_OPERATIONS.md#уборка-тестовых-жалоб-и-модерационных-заявок)
     before reporting completion;
-  - implementation and code-review agents verify source and automated code-level checks, then hand the reviewed/pushed diff to `testing`; the testing/acceptance agent verifies observable behavior end-to-end and never reports the task `done` while required QA is pending;
+  - implementation and code-review agents verify source and automated code-level checks, then hand the reviewed/pushed diff to `testing`; a delivery-owner handoff may transfer unfinished checks and publication to the receiving session without advancing status; the testing/acceptance agent verifies observable behavior end-to-end and never reports the task `done` while required QA is pending;
   - code review never opens a browser, simulator, or physical device and never uses runtime evidence as its verdict; it records the exact testing scenario in the handoff instead;
   - **never offload browser verification to the user.** Asking the user to scroll, hard-refresh, open devtools, run a console snippet, take a screenshot, or "tell me what you see" is NOT verification — it is offloading, and it is forbidden as a substitute for doing it yourself. The user reporting a bug is the input; confirming the fix in a browser is your job, not theirs;
   - if the preview/dev server is flaky (crashes, slow bundling, route redirects, transient API timeouts), restart it, wait, re-navigate, or retry until verification actually completes — instability is not an acceptable reason to skip verification;
@@ -645,6 +646,45 @@ npx serve dist/prod -l 3000 -s
 - During `testing`, if a bug is visible only on web, verify it in a real browser flow.
   - Prefer Playwright or a headed browser capture over reasoning from code alone.
   - For visual loading bugs, inspect both DOM state and network state before changing timing logic.
+
+### Delivery-owner handoff across sessions
+
+Owner rule, 2026-11-02: when several sessions are active, finished development
+goes to the session preparing the active or next frontend release. The developer
+does not wait for its quality/deploy slot or for publication and acceptance.
+The receiving delivery session owns **all remaining checks and release work**.
+This changes ownership, not the required quality gates or their order.
+
+1. Freeze the finished task-owned source and name the receiving live session.
+   An uncommitted diff is a valid transfer: do not wait for full tests, a review
+   gate, commit hooks or push merely to make the handoff possible. Known in-scope
+   implementation defects must be fixed or explicitly declared unfinished.
+2. Save a compact handoff in ignored `.codex-temp/handoff/`: task IDs and original
+   acceptance criteria; exact owned paths and content hashes or pushed commits;
+   platform/localization impact; actual check commands/results/logs; interrupted,
+   failed, skipped and unrun checks; review findings and every remaining gate;
+   target and precise QA/Done scenarios. Preserve unrelated dirty work.
+3. Send that artifact to the delivery session and register it in the shared
+   release queue. The receiver acknowledges ownership, accepts the pending
+   checks and records the next action; update board ownership/claims together.
+   Status stays honest: unfinished review/publication is not `testing`, and
+   `done` still requires actual acceptance. A handoff is never a PASS.
+4. After acceptance, the sender releases its claim and closes. It does not
+   remain open waiting for checks, deploy, screenshots, QA or Done. No second
+   owner permission is needed for this normal frontend handoff. If no session
+   accepts, report the exact missing owner; do not silently drop the work.
+5. The receiver completes or delegates remaining static/unit/full checks and
+   independent review, formal gate, explicit-path commit/push, testing, canonical
+   deployment, required runtime QA and final board outcome. Reuse compatible
+   evidence; keep source review and runtime testing at their existing stages.
+   It may deliver several accepted trains in one release while keeping their
+   ownership, source manifests and acceptance evidence distinct.
+6. Consolidate ready commits into one release. Publish only a reviewed, pushed
+   SHA containing every accepted change, through the isolated canonical deploy.
+   An already-running build cannot acquire later dirty files or commits; put
+   those in the next ready release rather than claiming they were included or
+   starting a competing build. Never bypass locks/guards or infer store/backend
+   mutation authority from this frontend handoff.
 
 ### Outcome-bound scope and effort
 

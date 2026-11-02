@@ -76,8 +76,16 @@ Follow these repo-specific rules while building features:
   and use `i18n/format.ts` instead of hardcoded locale formatting. Do not
   client-translate API/editorial content without a separate data contract.
 
-Choose code-level validation by scope after each finished logical block and
-before code review:
+With multiple live sessions, finish implementation and transfer the frozen
+task diff to the active or next delivery owner under `docs/RULES.md` →
+«Delivery-owner handoff across sessions». Pass completed evidence and every
+remaining check/gate; do not wait for another session's quality/deploy queue or
+keep the development chat alive until publication. The receiving session owns
+remaining validation, review gates, explicit-path publication and acceptance.
+Uncommitted source is a valid handoff, never a deployable release or a PASS.
+
+When retaining delivery ownership, choose code-level validation by scope after
+each finished logical block and before code review:
 
 - Pick the tier from the `AGENTS.md` check ladder (targeted / `npm run check:fast` → selective lint+tests → `npm run lint` and `npm run test:run`).
 - Need to inspect the scope before running checks: use `npm run check:fast:dry` or `npm run check:changed:dry` — these two are not in `AGENTS.md`.
@@ -98,6 +106,8 @@ patch confirmed findings, re-read the complete resulting diff, and rerun only
 code-level checks. After pass/push/status=`testing`, route observable browser,
 API, simulator, and device scenarios to QA. Do not include or rewrite unrelated
 dirty worktree changes.
+Under an accepted delivery-owner handoff these remaining duties belong to the
+receiving session; they do not require the development session to stay open.
 
 Avoid dev-environment false positives:
 
