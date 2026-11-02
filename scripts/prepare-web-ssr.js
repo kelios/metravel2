@@ -134,7 +134,13 @@ async function prepareWebSsr({ exportDir, staticDir, runtimeDir, envFile, sha, d
   const criticalCss = sharedCriticalCss(fs.readFileSync(path.join(staticDir, 'index.html'), 'utf8'))
   writeSharedCss(staticDir, criticalCss)
   fs.mkdirSync(runtimeDir, { recursive: true })
-  fs.cpSync(serverDir, path.join(runtimeDir, 'server'), { recursive: true })
+  // Expo emits private server source maps even when client source maps are
+  // disabled. Keep them in the local export for debugging; the production
+  // runtime needs only the executable bundles and route manifest.
+  fs.cpSync(serverDir, path.join(runtimeDir, 'server'), {
+    recursive: true,
+    filter: (file) => !file.endsWith('.js.map'),
+  })
   fs.cpSync(clientDir, path.join(runtimeDir, 'client'), { recursive: true })
   writeSharedCss(path.join(runtimeDir, 'client'), criticalCss)
   const runtime = path.join(runtimeDir, 'runtime')
