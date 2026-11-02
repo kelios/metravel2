@@ -371,13 +371,23 @@ export const setNewPasswordApi = async (
     }
 };
 
+/**
+ * Ключи снимков гостевого прогресса, принятых сервером до регистрации:
+ * подтверждение по письму перенесёт их в аккаунт в любом браузере.
+ */
+export type RegistrationHandoffKeys = {
+    /** Квест (#2739/#2749) → `quest_handoff_session_key`. */
+    questHandoffSessionKey?: string | null;
+    /** Адвент-календарь (#2939) → `advent_handoff_session_key`. */
+    adventHandoffSessionKey?: string | null;
+};
+
 export const registration = async (
     values: FormValues,
     termsVersion?: string,
-    // Снимок гостевого прогресса квеста, принятый сервером (#2739/#2749):
-    // подтверждение по письму перенесёт его в аккаунт в любом браузере.
-    questHandoffSessionKey?: string | null,
+    handoffKeys: RegistrationHandoffKeys = {},
 ): Promise<{ ok: boolean; message: string }> => {
+    const { questHandoffSessionKey, adventHandoffSessionKey } = handoffKeys;
     try {
         if (values.password) {
             const passwordValidation = validatePassword(values.password);
@@ -397,6 +407,7 @@ export const registration = async (
                     body: JSON.stringify({
                         ...withTermsVersion(values, termsVersion),
                         ...(questHandoffSessionKey ? { quest_handoff_session_key: questHandoffSessionKey } : {}),
+                        ...(adventHandoffSessionKey ? { advent_handoff_session_key: adventHandoffSessionKey } : {}),
                     }),
                 }, DEFAULT_TIMEOUT);
             },

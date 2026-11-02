@@ -16,6 +16,7 @@ import { sendAnalyticsEvent } from '@/utils/analytics'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { buildCanonicalUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import { webTouchScrollStyle } from '@/utils'
+import { selectServerCreditedDays } from '@/utils/advent/adventCalendar'
 import AdventHeader from './AdventHeader'
 import AdventGrid from './AdventGrid'
 import AdventDoorSheet from './AdventDoorSheet'
@@ -33,10 +34,12 @@ export default function AdventScreen() {
   const serverCampaign = useAdventCampaignQuery()
   const campaign = useAdventCampaign({ serverCampaign })
   const { doors, ready, isAuthenticated, openDoor, completeTask } = campaign
+  const serverCreditedDays = useMemo(() => selectServerCreditedDays(campaign.campaign.doors), [campaign.campaign])
   const sync = useAdventServerSync({
     ownerKey: campaign.ownerKey,
     localProgress: campaign.progress,
     enabled: campaign.hydrated,
+    serverCreditedDays,
   })
   // Серия считается сервером по датам открытия (#2864); до синхронизации — локальная.
   const streak = sync.serverStreak ?? campaign.streak

@@ -80,3 +80,7 @@ export const isCampaignDay = (config: Pick<AdventCampaignConfig, 'start' | 'end'
   todayIso >= config.start && todayIso <= config.end
 
 export const todayIsoOf = (now: Date): string => toLocalIsoDate(now)
+
+/** Дверцы, задания которых засчитывает только сервер по действию на сайте (`task.serverCredited`, #2940). */
+export const selectServerCreditedDays = (doors: readonly Pick<AdventDoor, 'day' | 'task'>[]): ReadonlySet<number> =>
+  new Set(doors.filter((door) => door.task.serverCredited === true).map((door) => door.day))

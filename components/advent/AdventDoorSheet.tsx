@@ -116,7 +116,8 @@ function AdventDoorSheet({ door, isAuthenticated, creditedDays, campaignYear, on
     }
     if (door.state === 'done' && door.doneAt) {
       const doneDate = formatDate(isoDateToLocalMidnight(door.doneAt), { day: 'numeric', month: 'long' })
-      if (door.task.type !== 'open' && creditedDays?.has(door.day)) {
+      // Задание с серверным зачётом (#2940) отмечает только сервер — это всегда автозачёт.
+      if (door.task.type !== 'open' && (door.task.serverCredited || creditedDays?.has(door.day))) {
         return (
           <Text style={styles.done} testID="advent-task-credited">
             {i18nT('adventStatic:sheet.taskCredited', { value1: doneDate })}
@@ -137,6 +138,17 @@ function AdventDoorSheet({ door, isAuthenticated, creditedDays, campaignYear, on
       case 'geo':
         return door.task.geo ? <AdventGeoTask target={door.task.geo} onComplete={handleDone} /> : null
       case 'route':
+        if (door.task.serverCredited) {
+          // Ручной отметки нет: сервер засчитает само действие на сайте (#2940).
+          return (
+            <View style={styles.ctaRow}>
+              <Button label={door.task.ctaLabel ?? i18nT('adventStatic:sheet.openLink')} onPress={handleCta} testID="advent-task-cta" />
+              <Text style={styles.hint} testID="advent-task-server-credit-hint">
+                {i18nT('adventStatic:sheet.serverCreditHint')}
+              </Text>
+            </View>
+          )
+        }
         return (
           <View style={styles.buttonRow}>
             <Button label={door.task.ctaLabel ?? i18nT('adventStatic:sheet.openLink')} onPress={handleCta} testID="advent-task-cta" />
@@ -201,6 +213,8 @@ const createStyles = (colors: ThemedColors) =>
     giftTitle: { fontSize: 18, fontWeight: '700', color: colors.text, lineHeight: 24 },
     body: { fontSize: 15, lineHeight: 22, color: colors.textSecondary },
     buttonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.xs },
+    ctaRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
+    hint: { flexShrink: 1, fontSize: 14, lineHeight: 20, color: colors.textMuted },
     done: { fontSize: 15, lineHeight: 22, color: colors.success, fontWeight: '600' },
     guest: {
       gap: DESIGN_TOKENS.spacing.xs,

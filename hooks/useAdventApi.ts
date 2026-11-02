@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   fetchAdventCampaign,
   fetchAdventProgress,
-  isValidAdventCampaign,
+  normalizeAdventCampaign,
   syncAdventProgress,
 } from '@/api/advent'
 import { queryKeys } from '@/api/queryKeys'
@@ -19,7 +19,7 @@ import { useQueryOwner } from '@/hooks/useQueryOwner'
 import { ADVENT_GUEST_OWNER, useAdventProgressStore } from '@/stores/adventProgressStore'
 import type { AdventCampaignConfig, AdventProgressSnapshot } from '@/types/advent'
 import type { AdventProgressMaps } from '@/utils/advent/adventCalendar'
-import { hasUnsyncedAdventProgress } from '@/utils/advent/adventProgressMerge'
+import { alignServerOwnedTasks, hasUnsyncedAdventProgress } from '@/utils/advent/adventProgressMerge'
 
 /**
  * Серверный конфиг кампании, если бэкенд его отдаёт и он проходит проверку;
@@ -34,7 +34,7 @@ export function useAdventCampaignQuery(enabled = true): AdventCampaignConfig | n
     staleTime: 10 * 60 * 1000,
     retry: readRetryTwice,
   })
-  return useMemo(() => (isValidAdventCampaign(data, ADVENT_CAMPAIGN_YEAR) ? data : null), [data])
+  return useMemo(() => normalizeAdventCampaign(data, ADVENT_CAMPAIGN_YEAR), [data])
 }
 
 export function useAdventProgressQuery(enabled: boolean) {
@@ -88,8 +88,10 @@ export function useAdventServerSync(params: {
   ownerKey: string | null
   localProgress: AdventProgressMaps
   enabled: boolean
+  /** Дверцы с серверным зачётом: их ручная отметка не отправляется и не считается несинхронизированной. */
+  serverCreditedDays?: ReadonlySet<number>
 }): AdventServerSync {
-  const { ownerKey, localProgress, enabled } = params
+  const { ownerKey, localProgress: rawLocalProgress, enabled, serverCreditedDays = EMPTY_DAYS } = params
   const queryClient = useQueryClient()
   const owner = useQueryOwner()
   const isAccount = enabled && !!ownerKey && ownerKey !== ADVENT_GUEST_OWNER
@@ -97,8 +99,8 @@ export function useAdventServerSync(params: {
   const mergeOwner = useAdventProgressStore((state) => state.mergeOwner)
   const [creditedDays, setCreditedDays] = useState<ReadonlySet<number>>(EMPTY_DAYS)
   const attemptedSignature = useRef<string | null>(null)
-  const localRef = useRef(localProgress)
-  localRef.current = localProgress
+  const localRef = useRef(rawLocalProgress)
+  localRef.current = rawLocalProgress
 
   const mutation = useMutation({
     // Владелец едет в переменных: ответ пишется в кэш того, чей снимок ушёл, даже если сессия сменилась.
@@ -142,7 +144,13 @@ export function useAdventServerSync(params: {
     mergeOwner(ownerKey, serverData)
   }, [serverData, ownerKey, mergeOwner])
 
-  // Локальный → сервер.
+  // Локальный → сервер. Задания с серверным зачётом сверяются по ответу сервера.
+  const localProgress = useMemo(
+    () => alignServerOwnedTasks(rawLocalProgress, serverData, serverCreditedDays),
+    [rawLocalProgress, serverData, serverCreditedDays],
+  )
+  const syncRef = useRef(localProgress)
+  syncRef.current = localProgress
   const signature = signatureOf(localProgress)
   // Отправляем только после того, как серверное уже влито в локальное, —
   // иначе первым уйдёт неполный снимок и сразу за ним второй.
@@ -154,7 +162,7 @@ export function useAdventServerSync(params: {
   useEffect(() => {
     if (!needsPush || isPushing || attemptedSignature.current === signature) return
     attemptedSignature.current = signature
-    mutate({ maps: localRef.current, owner })
+    mutate({ maps: syncRef.current, owner })
   }, [needsPush, isPushing, signature, mutate, owner])
 
   let state: AdventSyncState

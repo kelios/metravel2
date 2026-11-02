@@ -52,6 +52,7 @@ export const adventStaticResources = {
   "sync.syncing": "Сохраняем прогресс в аккаунте…",
   "sync.local": "Прогресс пока сохранён только на этом устройстве",
   "sheet.taskCredited": "Засчитано автоматически {{value1}}",
+  "sheet.serverCreditHint": "Засчитаем, когда вы это сделаете",
   "share.title": "Мой адвент {{value1}}/{{value2}}",
   "share.heading": "Мой адвент",
   "share.text": "Открыто {{value1}} из {{value2}} дверец моего адвент-календаря путешественника на MeTravel",

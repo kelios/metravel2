@@ -3,11 +3,13 @@ import {
   isAdventBackendMissing,
   isValidAdventCampaign,
   isYearInReviewEmpty,
+  normalizeAdventCampaign,
   normalizeAdventProgress,
   normalizeYearInReview,
 } from '@/api/advent'
 import campaign from '@/data/advent/2026.json'
-import { hasUnsyncedAdventProgress, mergeAdventProgress } from '@/utils/advent/adventProgressMerge'
+import { alignServerOwnedTasks, hasUnsyncedAdventProgress, mergeAdventProgress } from '@/utils/advent/adventProgressMerge'
+import { selectServerCreditedDays } from '@/utils/advent/adventCalendar'
 import { buildAdventShareUrl } from '@/utils/advent/adventShare'
 import { useAdventProgressStore } from '@/stores/adventProgressStore'
 
@@ -28,6 +30,34 @@ describe('advent server contract (#2867, #2868)', () => {
     expect(isValidAdventCampaign(campaign, 2027)).toBe(false)
     expect(isValidAdventCampaign({ ...campaign, doors: [{ day: 1 }] }, 2026)).toBe(false)
     expect(isValidAdventCampaign('nope', 2026)).toBe(false)
+  })
+
+  it('bundled config flags the 10 site-action doors the server credits itself (#2940)', () => {
+    expect([...selectServerCreditedDays(campaign.doors as never)]).toEqual([2, 4, 5, 7, 8, 10, 14, 20, 23, 26])
+  })
+
+  it('normalizes serverCredited to a strict boolean and keeps doors without it unchanged (#2940)', () => {
+    const raw = JSON.parse(JSON.stringify(campaign))
+    raw.doors[1].task.serverCredited = true
+    raw.doors[3].task.serverCredited = 'yes'
+    delete raw.doors[4].task.serverCredited
+    const normalized = normalizeAdventCampaign(raw, 2026)
+    expect(normalized?.doors[1].task.serverCredited).toBe(true)
+    expect(normalized?.doors[3].task).not.toHaveProperty('serverCredited')
+    expect(normalized?.doors[4].task).not.toHaveProperty('serverCredited')
+    expect(normalized?.doors[4].task.text).toBe(raw.doors[4].task.text)
+    expect(normalizeAdventCampaign(raw, 2027)).toBeNull()
+  })
+
+  it('server-credited tasks follow the server, not a dropped manual mark (#2940)', () => {
+    const local = { opened: { '2': '2026-12-02', '3': '2026-12-03' }, tasksDone: { '2': '2026-12-02', '3': '2026-12-03' } }
+    const days = new Set([2])
+    expect(alignServerOwnedTasks(local, undefined, days).tasksDone).toEqual({ '3': '2026-12-03' })
+    expect(alignServerOwnedTasks(local, { opened: {}, tasksDone: { '2': '2026-12-04' } }, days).tasksDone).toEqual({
+      '2': '2026-12-04',
+      '3': '2026-12-03',
+    })
+    expect(alignServerOwnedTasks(local, undefined, new Set())).toBe(local)
   })
 
   it('treats 404/501 as "backend not deployed" and other errors as real failures', () => {

@@ -51,6 +51,7 @@ import { buildExplicitLoginHref, resolvePostAuthPath } from '@/utils/authNavigat
 import { translate as i18nT } from '@/i18n'
 import { authFailureText } from '@/utils/authFailure';
 import { prepareQuestGuestHandoff } from '@/utils/questGuestHandoff';
+import { prepareAdventGuestHandoff } from '@/utils/advent/adventGuestHandoff';
 
 // INV2-07: streamlined form collects only email + password. Username is derived
 // from the email at submit time and the confirm-password field is removed.
@@ -131,10 +132,14 @@ export default function RegisterForm() {
                 password: values.password,
                 confirmPassword: values.password,
             };
-            // #2739: снимок гостевого квеста уходит до регистрации — ссылку из
-            // письма часто открывает другой браузер, где локальной копии нет.
-            const questHandoffSessionKey = intent === 'quest' ? await prepareQuestGuestHandoff(redirect) : null;
-            const res = await registration(payload, terms.termsVersion, questHandoffSessionKey);
+            // #2739/#2939: снимки гостевого квеста и адвента уходят до регистрации —
+            // ссылку из письма часто открывает другой браузер, где локальной копии
+            // нет. Сбой снимка регистрацию не блокирует: помощники отдают `null`.
+            const [questHandoffSessionKey, adventHandoffSessionKey] = await Promise.all([
+                intent === 'quest' ? prepareQuestGuestHandoff(redirect) : Promise.resolve(null),
+                prepareAdventGuestHandoff(),
+            ]);
+            const res = await registration(payload, terms.termsVersion, { questHandoffSessionKey, adventHandoffSessionKey });
             const ok = typeof res === 'object' && 'ok' in res ? res.ok : false;
             const message = typeof res === 'object' && 'message' in res ? res.message : String(res ?? '');
 

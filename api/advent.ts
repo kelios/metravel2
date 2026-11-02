@@ -69,6 +69,22 @@ export const isValidAdventCampaign = (raw: unknown, expectedYear: number): raw i
   )
 }
 
+/**
+ * Серверный конфиг, прошедший проверку, или `null` — тогда экран остаётся на
+ * бандловом. `task.serverCredited` (#2940) — только строгое `true`: любое другое
+ * значение означает прежнюю ручную отметку «Сделано».
+ */
+export const normalizeAdventCampaign = (raw: unknown, expectedYear: number): AdventCampaignConfig | null => {
+  if (!isValidAdventCampaign(raw, expectedYear)) return null
+  return {
+    ...raw,
+    doors: raw.doors.map((door) => {
+      const { serverCredited, ...task } = door.task
+      return { ...door, task: serverCredited === true ? { ...task, serverCredited: true } : task }
+    }),
+  }
+}
+
 /** `GET /api/advent/campaigns/current/` — публичный конфиг в форме `AdventCampaignConfig`. */
 export async function fetchAdventCampaign(signal?: AbortSignal): Promise<unknown> {
   return apiClient.get<unknown>('/advent/campaigns/current/', ADVENT_TIMEOUT_MS, { skipAuth: true, signal })
@@ -91,6 +107,30 @@ export async function syncAdventProgress(maps: AdventProgressMaps): Promise<Adve
     ADVENT_TIMEOUT_MS,
   )
   return normalizeAdventProgress(dto)
+}
+
+export type AdventGuestHandoffPayload = {
+  /** Ключ сессии устройства — тот же, что у снимка гостевого квеста (#2739). */
+  session_key: string
+  /** Та же форма, что у тела `POST /api/advent/progress/`. */
+  progress: { opened: Record<string, string>; tasks_done: Record<string, string> }
+}
+
+/** Снимок стоит перед отправкой формы регистрации и не должен её тормозить. */
+const ADVENT_GUEST_HANDOFF_TIMEOUT_MS = 5000
+
+/**
+ * `POST /api/advent/progress/guest-handoff/` (#2939) — гостевой прогресс адвента
+ * перед регистрацией по письму; подтверждение переносит его в аккаунт в любом
+ * браузере. Анонимный, ответ 204. `skipAuth` — как у квестового снимка: шлёт
+ * гость, и 401 до выката бэка не должен запускать auth-invalidation.
+ */
+export async function sendAdventGuestHandoff(payload: AdventGuestHandoffPayload): Promise<void> {
+  await apiClient.request<null>(
+    '/advent/progress/guest-handoff/',
+    { method: 'POST', body: JSON.stringify(payload), skipAuth: true },
+    ADVENT_GUEST_HANDOFF_TIMEOUT_MS,
+  )
 }
 
 // ── «Итоги года путешественника» (#2865) ────────────────────────────────────

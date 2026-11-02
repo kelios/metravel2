@@ -70,17 +70,29 @@ describe('AdventScreen (#2861)', () => {
   })
 
   it('opens a door into the sheet, marks the task done and updates progress', async () => {
-    const screen = await renderAt(new Date(2026, 11, 3, 12))
-    await fireEvent.press(screen.getByTestId('advent-door-2'))
-    expect(screen.getByTestId('advent-door-sheet-2')).toBeTruthy()
-    expect(screen.getByText('Скрытые места Беларуси')).toBeTruthy()
+    const screen = await renderAt(new Date(2026, 11, 11, 12))
+    await fireEvent.press(screen.getByTestId('advent-door-11'))
+    expect(screen.getByTestId('advent-door-sheet-11')).toBeTruthy()
     expect(screen.getByText('Открыто 1 из 24 дверец')).toBeTruthy()
+    expect(screen.queryByTestId('advent-task-server-credit-hint')).toBeNull()
     await fireEvent.press(screen.getByTestId('advent-task-done-button'))
     expect(screen.getByTestId('advent-task-done')).toBeTruthy()
     const progress = useAdventProgressStore.getState().byOwner.u7
-    expect(progress.opened['2']).toBe('2026-12-03')
-    expect(progress.tasksDone['2']).toBe('2026-12-03')
+    expect(progress.opened['11']).toBe('2026-12-11')
+    expect(progress.tasksDone['11']).toBe('2026-12-11')
     expect(screen.getByText('Заданий выполнено: 1')).toBeTruthy()
+  })
+
+  // #2940: статусы «Хочу/Планирую/Был», подписку, оценку, peer-значок и шаг
+  // квеста засчитывает сервер — ручной отметки нет, вместо неё подсказка.
+  it('shows the action link and a server-credit hint instead of the manual "done" button', async () => {
+    const screen = await renderAt(new Date(2026, 11, 3, 12))
+    await fireEvent.press(screen.getByTestId('advent-door-2'))
+    expect(screen.getByText('Скрытые места Беларуси')).toBeTruthy()
+    expect(screen.getByTestId('advent-task-cta')).toBeTruthy()
+    expect(screen.getByText('Засчитаем, когда вы это сделаете')).toBeTruthy()
+    expect(screen.queryByTestId('advent-task-done-button')).toBeNull()
+    expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['2']).toBeUndefined()
   })
 
   it('checks a riddle answer in place: wrong shows a hint, right completes the task', async () => {
@@ -176,6 +188,39 @@ describe('AdventScreen (#2861)', () => {
       await fireEvent.press(screen.getByTestId('advent-door-2'))
       expect(screen.getByTestId('advent-task-credited')).toBeTruthy()
       expect(screen.queryByTestId('advent-task-done-button')).toBeNull()
+    })
+
+    it('after the server credits a site action the status reads "saved to account" (#2940)', async () => {
+      useAdventProgressStore.setState({ byOwner: { u7: { opened: { '2': '2026-12-02' }, tasksDone: {} } } })
+      mockFetchAdventProgress.mockResolvedValue({ opened: { '2': '2026-12-02' }, tasksDone: { '2': '2026-12-02' }, streak: 1 })
+      const screen = await renderAt(new Date(2026, 11, 2, 12))
+      expect(await screen.findByTestId('advent-sync-synced')).toBeTruthy()
+      expect(screen.getByText('Прогресс сохранён в аккаунте')).toBeTruthy()
+      expect(mockSyncAdventProgress).not.toHaveBeenCalled()
+      await fireEvent.press(screen.getByTestId('advent-door-2'))
+      expect(screen.getByTestId('advent-task-credited')).toBeTruthy()
+      expect(screen.queryByTestId('advent-task-server-credit-hint')).toBeNull()
+    })
+
+    it('a manual mark on a server-credited door is not pushed and does not stick at "this device only" (#2940)', async () => {
+      // Отметка «Сделано» с другого устройства или до флага: сервер её отбрасывает.
+      useAdventProgressStore.setState({
+        byOwner: { u7: { opened: { '2': '2026-12-02', '3': '2026-12-03' }, tasksDone: { '2': '2026-12-02' } } },
+      })
+      mockFetchAdventProgress.mockResolvedValue({ opened: { '2': '2026-12-02' }, tasksDone: {}, streak: 1 })
+      mockSyncAdventProgress.mockImplementation(async (maps: { opened: Record<string, string>; tasksDone: Record<string, string> }) => ({
+        opened: maps.opened,
+        tasksDone: {},
+        streak: 2,
+      }))
+      const screen = await renderAt(new Date(2026, 11, 3, 12))
+      expect(await screen.findByTestId('advent-sync-synced')).toBeTruthy()
+      expect(mockSyncAdventProgress).toHaveBeenCalledTimes(1)
+      expect(mockSyncAdventProgress.mock.calls[0][0]).toEqual({
+        opened: { '2': '2026-12-02', '3': '2026-12-03' },
+        tasksDone: {},
+      })
+      expect(screen.queryByTestId('advent-sync-local')).toBeNull()
     })
 
     it('does not claim "saved to account" when the server response drops a local door', async () => {

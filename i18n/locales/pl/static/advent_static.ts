@@ -52,6 +52,7 @@ export const adventStaticResources = {
   "sync.syncing": "Zapisujemy postęp na koncie…",
   "sync.local": "Postęp jest na razie zapisany tylko na tym urządzeniu",
   "sheet.taskCredited": "Zaliczono automatycznie {{value1}}",
+  "sheet.serverCreditHint": "Zaliczymy, gdy to zrobisz",
   "share.title": "Mój adwent {{value1}}/{{value2}}",
   "share.heading": "Mój adwent",
   "share.text": "Otwarto {{value1}} z {{value2}} okienek mojego kalendarza adwentowego podróżnika na MeTravel",

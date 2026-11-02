@@ -45,3 +45,28 @@ export const isAdventProgressEmpty = (maps: AdventProgressMaps): boolean =>
 
 export const sameAdventProgress = (a: AdventProgressMaps, b: AdventProgressMaps): boolean =>
   !hasUnsyncedAdventProgress(a, b) && !hasUnsyncedAdventProgress(b, a)
+
+/**
+ * Задания, которые засчитывает только сервер (#2940): их отметка в сравнении и
+ * в `POST` берётся из ответа сервера, а не из локальной. Ручная локальная
+ * отметка такой дверцы (с другого устройства или до флага) сервером
+ * отбрасывается и не должна держать статус «только на этом устройстве».
+ */
+export const alignServerOwnedTasks = (
+  local: AdventProgressMaps,
+  server: AdventProgressMaps | undefined,
+  days: ReadonlySet<number>,
+): AdventProgressMaps => {
+  if (days.size === 0) return local
+  let changed = false
+  const tasksDone = { ...local.tasksDone }
+  days.forEach((day) => {
+    const key = String(day)
+    const serverDate = server?.tasksDone[key]
+    if (tasksDone[key] === serverDate) return
+    changed = true
+    if (serverDate) tasksDone[key] = serverDate
+    else delete tasksDone[key]
+  })
+  return changed ? { opened: local.opened, tasksDone } : local
+}

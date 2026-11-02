@@ -19,6 +19,10 @@ const mockPrepareQuestGuestHandoff = jest.fn();
 jest.mock('@/utils/questGuestHandoff', () => ({
   prepareQuestGuestHandoff: (...args: unknown[]) => mockPrepareQuestGuestHandoff(...args),
 }));
+const mockPrepareAdventGuestHandoff = jest.fn().mockResolvedValue(null);
+jest.mock('@/utils/advent/adventGuestHandoff', () => ({
+  prepareAdventGuestHandoff: (...args: unknown[]) => mockPrepareAdventGuestHandoff(...args),
+}));
 jest.mock('expo-router', () => ({
   Link: ({ children }: any) => {
     const React = require('react')
@@ -119,9 +123,30 @@ it('RegistrationForm: регистрация по email уходит с terms_ve
   await fireEvent.press(screen.getByRole('button', { name: 'Зарегистрироваться' }));
 
   await waitFor(() =>
-    expect(registration).toHaveBeenCalledWith(expect.objectContaining({ email: 'new@example.com' }), '1', null),
+    expect(registration).toHaveBeenCalledWith(expect.objectContaining({ email: 'new@example.com' }), '1', {
+      questHandoffSessionKey: null,
+      adventHandoffSessionKey: null,
+    }),
   );
   expect(mockPrepareQuestGuestHandoff).not.toHaveBeenCalled();
+});
+
+// #2939: гостевой прогресс адвента уходит снимком до регистрации при любом
+// намерении; его ключ едет в теле регистрации рядом с квестовым.
+it('RegistrationForm: регистрация гостя с прогрессом адвента несёт ключ снимка адвента', async () => {
+  mockPrepareAdventGuestHandoff.mockResolvedValueOnce('6a2955c0-0000-4000-8000-000000000002');
+  const screen = await render(<RegistrationForm />);
+  await fireEvent.press(await screen.findByTestId('auth-terms-gate-checkbox'));
+  await fireEvent.changeText(screen.getByPlaceholderText('Email'), 'new@example.com');
+  await fireEvent.changeText(screen.getAllByPlaceholderText(/Пароль|пароль/)[0], 'Str0ngPass!word');
+  await fireEvent.press(screen.getByRole('button', { name: 'Зарегистрироваться' }));
+
+  await waitFor(() =>
+    expect(registration).toHaveBeenCalledWith(expect.objectContaining({ email: 'new@example.com' }), '1', {
+      questHandoffSessionKey: null,
+      adventHandoffSessionKey: '6a2955c0-0000-4000-8000-000000000002',
+    }),
+  );
 });
 
 // #2739: регистрация из гейта квеста несёт ключ серверного снимка гостевых
@@ -140,7 +165,7 @@ it('RegistrationForm: из гейта квеста регистрация ухо
       expect(registration).toHaveBeenCalledWith(
         expect.objectContaining({ email: 'new@example.com' }),
         '1',
-        '6a2955c0-0000-4000-8000-000000000001',
+        { questHandoffSessionKey: '6a2955c0-0000-4000-8000-000000000001', adventHandoffSessionKey: null },
       ),
     );
     expect(mockPrepareQuestGuestHandoff).toHaveBeenCalledWith('/quests/grodno/grodno-royal');

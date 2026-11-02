@@ -21,7 +21,7 @@
         "text": "В каталоге мест есть точки, до которых не доезжают туристические автобусы: усадьбы, маяки на озёрах, заброшенные костёлы. Начните с подборки мест на карте.",
         "link": "/places", "linkLabel": "Открыть места"
       },
-      "task": { "type": "route", "text": "Добавьте три маршрута в «Хочу поехать» — это ваш зимний список желаний.", "ctaRoute": "/travelsby", "ctaLabel": "Выбрать маршруты" },
+      "task": { "type": "route", "serverCredited": true, "text": "Добавьте три маршрута в «Хочу поехать» — это ваш зимний список желаний.", "ctaRoute": "/travelsby", "ctaLabel": "Выбрать маршруты" },
       "reward": { "xp": 10 }
     },
     {
@@ -48,7 +48,7 @@
         "text": "Авторы MeTravel рассказывают, как они ездят зимой: короткий день, мороз, пустые замки без очередей. Читайте статьи сообщества и выбирайте своих авторов.",
         "link": "/articles", "linkLabel": "Читать статьи"
       },
-      "task": { "type": "route", "text": "Подпишитесь на автора, чей маршрут вам понравился — новые поездки придут в ленту.", "ctaRoute": "/travelsby", "ctaLabel": "Найти автора" },
+      "task": { "type": "route", "serverCredited": true, "text": "Подпишитесь на автора, чей маршрут вам понравился — новые поездки придут в ленту.", "ctaRoute": "/travelsby", "ctaLabel": "Найти автора" },
       "reward": { "xp": 10 }
     },
     {
@@ -58,7 +58,7 @@
         "text": "Когда не знаете, куда ехать в выходные, пусть решит случай: рулетка выбирает маршрут из каталога.",
         "link": "/roulette", "linkLabel": "Крутить рулетку"
       },
-      "task": { "type": "route", "text": "Крутаните рулетку и сохраните понравившийся маршрут в «Хочу поехать».", "ctaRoute": "/roulette", "ctaLabel": "К рулетке" },
+      "task": { "type": "route", "serverCredited": true, "text": "Крутаните рулетку и сохраните понравившийся маршрут в «Хочу поехать».", "ctaRoute": "/roulette", "ctaLabel": "К рулетке" },
       "reward": { "xp": 10 }
     },
     {
@@ -85,7 +85,7 @@
         "link": "/travels/rozhdestvenskie-iarmarki-polshi-2026-krakov-vrotslav-katovitse-gdansk-poznan-varshava-daty-adresa-i-sovety",
         "linkLabel": "Читать подборку"
       },
-      "task": { "type": "route", "text": "Выберите ярмарку и отметьте поездку статусом «Планирую» с датой.", "ctaRoute": "/travels/rozhdestvenskie-iarmarki-polshi-2026-krakov-vrotslav-katovitse-gdansk-poznan-varshava-daty-adresa-i-sovety", "ctaLabel": "Запланировать" },
+      "task": { "type": "route", "serverCredited": true, "text": "Выберите ярмарку и отметьте поездку статусом «Планирую» с датой.", "ctaRoute": "/travels/rozhdestvenskie-iarmarki-polshi-2026-krakov-vrotslav-katovitse-gdansk-poznan-varshava-daty-adresa-i-sovety", "ctaLabel": "Запланировать" },
       "reward": { "xp": 10, "badgeSlug": "advent_7", "label": "Значок «7 дверец»" }
     },
     {
@@ -95,7 +95,7 @@
         "text": "Квест «Рождество и Новый год» по Гродно: старый город, замки над Неманом и ёлка на площади. Проходится пешком за два часа, подсказки — в телефоне.",
         "link": "/quests/grodno", "linkLabel": "Открыть квест"
       },
-      "task": { "type": "route", "text": "Пройдите первый шаг зимнего квеста в своём городе.", "ctaRoute": "/quests", "ctaLabel": "Выбрать город" },
+      "task": { "type": "route", "serverCredited": true, "text": "Пройдите первый шаг зимнего квеста в своём городе.", "ctaRoute": "/quests", "ctaLabel": "Выбрать город" },
       "reward": { "xp": 10 }
     },
     {
@@ -117,7 +117,7 @@
         "text": "Как одеваться на зимний маршрут, где греться в старом городе и какие замки открыты в январе — подборка статей сообщества.",
         "link": "/articles", "linkLabel": "К статьям"
       },
-      "task": { "type": "route", "text": "Прочитайте статью и поставьте ей оценку — авторы видят каждую.", "ctaRoute": "/articles", "ctaLabel": "Оценить статью" },
+      "task": { "type": "route", "serverCredited": true, "text": "Прочитайте статью и поставьте ей оценку — авторы видят каждую.", "ctaRoute": "/articles", "ctaLabel": "Оценить статью" },
       "reward": { "xp": 10 }
     },
     {
@@ -154,7 +154,7 @@
         "title": "Как благодарить авторов",
         "text": "Peer-награда — значок, который один путешественник дарит другому за полезный маршрут. Автор видит, кто и за что поблагодарил."
       },
-      "task": { "type": "route", "text": "Подарите значок автору маршрута, который вам помог.", "ctaRoute": "/travelsby", "ctaLabel": "Найти маршрут" },
+      "task": { "type": "route", "serverCredited": true, "text": "Подарите значок автору маршрута, который вам помог.", "ctaRoute": "/travelsby", "ctaLabel": "Найти маршрут" },
       "reward": { "xp": 10, "badgeSlug": "advent_14", "label": "Значок «14 дверец»" }
     },
     {
@@ -219,7 +219,7 @@
         "text": "Зимой в Беларуси работают все замки и музеи, а дороги к ним чистят в первую очередь. Мир, Несвиж, Лида, Новогрудок — классический зимний круг на два дня.",
         "link": "/travelsby", "linkLabel": "Маршруты по Беларуси"
       },
-      "task": { "type": "route", "text": "Отметьте пять поездок статусом «Был» — они попадут в ваш календарь путешествий.", "ctaRoute": "/calendar", "ctaLabel": "Открыть календарь" },
+      "task": { "type": "route", "serverCredited": true, "text": "Отметьте пять поездок статусом «Был» — они попадут в ваш календарь путешествий.", "ctaRoute": "/calendar", "ctaLabel": "Открыть календарь" },
       "reward": { "xp": 10 }
     },
     {
@@ -253,7 +253,7 @@
         "title": "Планы на 2027",
         "text": "Путешествие, у которого есть дата, случается чаще. Выберите маршрут на 2027 год и поставьте ему дату — календарь напомнит."
       },
-      "task": { "type": "route", "text": "Запланируйте поездку 2027 года с датой в календаре.", "ctaRoute": "/calendar", "ctaLabel": "Открыть календарь" },
+      "task": { "type": "route", "serverCredited": true, "text": "Запланируйте поездку 2027 года с датой в календаре.", "ctaRoute": "/calendar", "ctaLabel": "Открыть календарь" },
       "reward": { "xp": 10 }
     },
     {
@@ -281,7 +281,7 @@
         "title": "Новый год: пожелание",
         "text": "Пусть в 2027-м будет больше дорог, чем планов, и больше планов, чем отговорок. Соберите список желаний на год — хотя бы три места."
       },
-      "task": { "type": "route", "text": "Добавьте три маршрута в «Хочу поехать» на 2027 год.", "ctaRoute": "/favorites", "ctaLabel": "Мой список" },
+      "task": { "type": "route", "serverCredited": true, "text": "Добавьте три маршрута в «Хочу поехать» на 2027 год.", "ctaRoute": "/favorites", "ctaLabel": "Мой список" },
       "reward": { "xp": 10, "badgeSlug": "advent_bonus", "label": "Бонусный значок" }
     },
     {

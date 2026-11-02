@@ -750,6 +750,25 @@ describe('src/api/auth.ts auth/password API', () => {
       });
       expect(setSecureItem).toHaveBeenCalledWith('userToken', 't');
     });
+
+    // #2739/#2939: ключи снимков гостевого прогресса едут в теле регистрации.
+    it('кладёт ключи снимков квеста и адвента в тело, только когда они есть', async () => {
+      mockedValidatePassword.mockReturnValue({ valid: true } as any);
+      mockedFetchWithTimeout.mockResolvedValue({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValue({} as any);
+      const bodyOf = (call: number) => JSON.parse(mockedFetchWithTimeout.mock.calls[call][1]!.body as string);
+      const before = mockedFetchWithTimeout.mock.calls.length;
+
+      await registration({ email: 'e', password: 'p' } as any, undefined, {
+        questHandoffSessionKey: 'q-key',
+        adventHandoffSessionKey: 'a-key',
+      });
+      await registration({ email: 'e', password: 'p' } as any, undefined, { adventHandoffSessionKey: null });
+
+      expect(bodyOf(before)).toMatchObject({ quest_handoff_session_key: 'q-key', advent_handoff_session_key: 'a-key' });
+      expect(bodyOf(before + 1)).not.toHaveProperty('advent_handoff_session_key');
+      expect(bodyOf(before + 1)).not.toHaveProperty('quest_handoff_session_key');
+    });
   });
 
   // #2042: бэкенд #1993 отвечает на любой корректный email одинаково — 200
