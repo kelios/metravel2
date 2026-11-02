@@ -1,4 +1,5 @@
 import { test, expect, devices, type Page, type CDPSession } from '@playwright/test';
+import { deviceScreen, mobileProfile } from './helpers/mobileProfile';
 
 import {
   FALLBACK_TRAVEL_SLUG,
@@ -12,13 +13,12 @@ import {
 // ломался ровно на touch-последовательности pointerup → lostpointercapture →
 // touchend (implicit pointer capture), которую mouse-эмуляция не воспроизводит.
 const iphone = devices['iPhone 13'];
-test.use({
+test.use(mobileProfile({
   viewport: iphone.viewport,
+  screen: deviceScreen(iphone),
   userAgent: iphone.userAgent,
-  hasTouch: true,
-  isMobile: true,
   deviceScaleFactor: iphone.deviceScaleFactor,
-});
+}));
 
 async function touchSwipe(
   page: Page,

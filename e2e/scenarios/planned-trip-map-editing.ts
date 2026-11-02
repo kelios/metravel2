@@ -1,4 +1,5 @@
 import { test as base, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test'
+import { mobileProfile } from '../helpers/mobileProfile'
 import { apiContextFromEnv, apiRequestContext } from '../helpers/e2eApi'
 import { seedNecessaryConsent } from '../helpers/storage'
 
@@ -128,12 +129,11 @@ async function expectCoordinates(page: Page, prefix: string, point: { lat: numbe
 }
 
 for (const viewport of [
-  { name: 'desktop', width: 1440, height: 900, isMobile: false, hasTouch: false },
-  { name: 'mobile', width: 390, height: 844, isMobile: true, hasTouch: true },
+  { name: 'desktop', contextOptions: { viewport: { width: 1440, height: 900 }, isMobile: false, hasTouch: false } },
+  { name: 'mobile', contextOptions: mobileProfile({ deviceScaleFactor: 1 }) },
 ]) {
   test.describe(`Local planner map editing — ${viewport.name}`, () => {
-    test.use({ viewport: { width: viewport.width, height: viewport.height },
-      isMobile: viewport.isMobile, hasTouch: viewport.hasTouch })
+    test.use(viewport.contextOptions)
     test.setTimeout(120_000)
 
     test('manual point addition survives save and reload', async ({ page, planner }, testInfo) => {
@@ -240,8 +240,7 @@ for (const viewport of [
 
     test('guest markers remain read-only and expose no map actions', async ({ browser, baseURL, planner }, testInfo) => {
       const guest = await browser.newContext({ baseURL, storageState: { cookies: [], origins: [] },
-        viewport: { width: viewport.width, height: viewport.height },
-        isMobile: viewport.isMobile, hasTouch: viewport.hasTouch })
+        ...viewport.contextOptions })
       try {
         const page = await guest.newPage()
         const mutations: string[] = []

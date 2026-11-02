@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Request, type Route } from '@playwright/test'
+import { mobileProfile } from './helpers/mobileProfile'
 
 import {
   FALLBACK_TRAVEL_SLUG,
@@ -70,7 +71,7 @@ function isForbiddenBackgroundRequest(request: Request): boolean {
 }
 
 test.describe('Travel details network isolation #1105', () => {
-  test.use({ viewport: MOBILE_VIEWPORT, hasTouch: true, isMobile: true })
+  test.use(mobileProfile({ viewport: MOBILE_VIEWPORT, deviceScaleFactor: 1 }))
 
   test('a small article scroll does not wake catalogs from the previous screen', async ({ page }) => {
     await preacceptCookies(page)

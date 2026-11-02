@@ -1,4 +1,5 @@
 import { test as base, expect, type BrowserContext, type Page } from '@playwright/test';
+import { mobileProfile } from './helpers/mobileProfile';
 import { preacceptCookies, gotoWithRetry } from './helpers/navigation';
 import { simpleEncrypt, mockFakeAuthApis } from './helpers/auth';
 
@@ -110,9 +111,7 @@ base.describe('Messages — composer vs mobile web keyboard', () => {
     base.beforeEach(async ({ browser }) => {
         context = await browser.newContext({
             storageState: undefined,
-            viewport: { width: 390, height: 844 },
-            isMobile: true,
-            hasTouch: true,
+            ...mobileProfile({ deviceScaleFactor: 1 }),
         });
         page = await context.newPage();
         await seedAuth(page);

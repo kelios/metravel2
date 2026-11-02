@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures'
+import { IPHONE_SAFARI_USER_AGENT, mobileProfile } from './helpers/mobileProfile'
 import { preacceptCookies } from './helpers/navigation'
 
 /**
@@ -283,13 +284,7 @@ test.describe('#1568 map place sources — one marker, paged sources', () => {
 })
 
 test.describe('#1568 map place sources — mobile web surface', () => {
-  test.use({
-    viewport: { width: 390, height: 844 },
-    hasTouch: true,
-    isMobile: true,
-    userAgent:
-      'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1',
-  })
+  test.use(mobileProfile({ deviceScaleFactor: 1, userAgent: IPHONE_SAFARI_USER_AGENT }))
 
   test('bottom card pages both sources of one place and keeps sources cached', async ({ page }) => {
     await preacceptCookies(page)

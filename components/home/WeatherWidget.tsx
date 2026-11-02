@@ -21,13 +21,13 @@ function WeatherWidget({ points, countryName, onSettled }: Props) {
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
     const { isMobile } = useResponsive();
     const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile]);
-    const { forecast, locationLabel, status } = useWeatherWidgetModel({
+    const { forecast, isDisabled, locationLabel, status } = useWeatherWidgetModel({
         points,
         countryName,
         onSettled,
     });
 
-    if (!points?.length || !locationLabel) return null;
+    if (isDisabled || !points?.length || !locationLabel) return null;
 
     const hasForecast = forecast.length > 0;
     const fallbackIcon = status === 'error' ? 'alert-circle' : 'cloud';

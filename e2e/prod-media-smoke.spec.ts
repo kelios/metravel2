@@ -1,4 +1,5 @@
 import { test, expect, devices } from '@playwright/test';
+import { mobileProfile } from './helpers/mobileProfile';
 import type { Page } from '@playwright/test';
 import { gotoWithRetry, preacceptCookies, tid } from './helpers/navigation';
 
@@ -847,13 +848,7 @@ test.describe('#1263 search list scroll reveal', () => {
     // UA, а не просто узкий viewport (DPR выбирает другую ступень `?w=`).
     // Целиком device descriptor в describe-группе применить нельзя: он тянет
     // `defaultBrowserType` и требует нового воркера.
-    test.use({
-      viewport: { width: 390, height: 844 },
-      deviceScaleFactor: 3,
-      isMobile: true,
-      hasTouch: true,
-      userAgent: devices['Pixel 7'].userAgent,
-    });
+    test.use(mobileProfile({ userAgent: devices['Pixel 7'].userAgent }));
 
     test('обложки готовы при въезде в кадр и не грузятся заново', async ({ page }) => {
       const profile: TraceProfile = {

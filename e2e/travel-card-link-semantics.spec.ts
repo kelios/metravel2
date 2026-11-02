@@ -1,4 +1,5 @@
 import { devices, type Page } from '@playwright/test';
+import { mobileProfile } from './helpers/mobileProfile';
 
 import { test, expect } from './fixtures';
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation';
@@ -139,13 +140,7 @@ test.describe('Travel card link semantics', () => {
   });
 
   test.describe('mobile web', () => {
-    test.use({
-      viewport: { width: 390, height: 844 },
-      deviceScaleFactor: 3,
-      isMobile: true,
-      hasTouch: true,
-      userAgent: devices['Pixel 7'].userAgent,
-    });
+    test.use(mobileProfile({ userAgent: devices['Pixel 7'].userAgent }));
 
     test('has the same single-link contract', async ({ page }, testInfo) => {
       await verifyTravelCardLinkSemantics(page, testInfo.outputPath('mobile.png'));

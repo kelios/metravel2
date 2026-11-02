@@ -9,6 +9,7 @@ import { acceptAuthTerms, ensureAuthedStorageFallback, mockFakeAuthApis } from '
 import { seedNecessaryConsent } from './helpers/storage';
 import { dismissConsentBanner } from './helpers/consentBanner';
 import { runtimeViewport } from './helpers/runtimeViewport';
+import { mobileProfile } from './helpers/mobileProfile';
 import { mockTravelWizardUpsert } from './helpers/travelWizardFixture';
 
 const tinyPngBuffer = Buffer.from(
@@ -20,13 +21,11 @@ const e2eEmail = process.env.E2E_EMAIL;
 const e2ePassword = process.env.E2E_PASSWORD;
 
 const USE_REAL_API = process.env.E2E_USE_REAL_API === '1';
-const pixel7MobileWeb = {
+const pixel7MobileWeb = mobileProfile({
   userAgent: devices['Pixel 7'].userAgent,
   viewport: runtimeViewport(devices['Pixel 7'].viewport),
   deviceScaleFactor: devices['Pixel 7'].deviceScaleFactor,
-  isMobile: devices['Pixel 7'].isMobile,
-  hasTouch: devices['Pixel 7'].hasTouch,
-};
+});
 
 /** Сколько раз страница сходила за каждым словарём (см. тест про дубли ниже). */
 type DictionaryRequestCounts = { filters: number; countries: number };

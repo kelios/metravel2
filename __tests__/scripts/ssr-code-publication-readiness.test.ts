@@ -21,6 +21,7 @@ describe('actual code publisher and verifier protocol during a concurrent conten
     const fakeBash = `#!/bin/sh
 printf '%s\\n' "$2" >> "$SSR_PIPELINE_ACTIONS"
 case "$2" in
+stage) if [ "$SSR_PIPELINE_STAGE_REFUSED" = 1 ]; then echo 'web-ssr release refused: ValueError: immutable release already exists with different content' >&2; exit 1; fi;;
 capability) printf '%s\\n' '{"schema_version":2,"available":true,"enabled":true,"quest_web":{"schema_version":2,"builder_schema":2,"refresh_max_age_seconds":30,"control_path":"/quests/7/fixture-city-walk"}}';;
 verify-code) if [ "$SSR_PIPELINE_BAD_PROOF" = 1 ]; then renderer=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb; else renderer=${sha}; fi
 printf '{"schema_version":1,"status":"ok","sha":"${sha}","client_sha":"${sha}","renderer_sha":"%s","dirty":false}\\n' "$renderer";;
@@ -91,6 +92,23 @@ deploy_prod prod
       expect(calls).toContain('finalize-code');
       expect(calls).not.toContain('rollback-code');
     }
+  });
+
+  it('stops with a non-zero code and a reason line when the server refuses the stage (#2930)', () => {
+    const runner = path.join(fixture, 'stage-refused.sh');
+    fs.writeFileSync(runner, `set -euo pipefail
+${shellFunction('verify_quest_runtime')}
+${shellFunction('deploy_prod')}
+deploy_prod prod
+`);
+    const actions = path.join(fixture, 'actions');
+    const result = runCli('/bin/bash', [runner], { cwd: process.cwd(), timeoutMs: 10000, env: {
+      PATH: `${fixture}${path.delimiter}${process.env.PATH}`, SSR_PIPELINE_ACTIONS: actions,
+      SSR_PIPELINE_STAGE_REFUSED: '1', SSR_CODE_RELEASE: '1', BUILD_SOURCE_SHA: sha, SSR_RELEASE_DIR: fixture,
+    } });
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toContain(`Сервер отклонил релиз ${sha.slice(0, 9)} на stage`);
+    expect(fs.readFileSync(actions, 'utf8').trim().split('\n')).toEqual(['stage']);
   });
 
   it('refuses any publication that is not the prod SSR release (#2766)', () => {

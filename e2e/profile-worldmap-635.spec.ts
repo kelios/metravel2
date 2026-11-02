@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures'
+import { deviceScreen, mobileProfile } from './helpers/mobileProfile'
 import { devices } from '@playwright/test'
 import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
@@ -434,13 +435,12 @@ test('fullscreen mobile map pans with a one-finger touch drag', async ({ page })
 
 test.describe('fullscreen map on a touch phone', () => {
   const iphone = devices['iPhone 13']
-  test.use({
+  test.use(mobileProfile({
     viewport: iphone.viewport,
+    screen: deviceScreen(iphone),
     userAgent: iphone.userAgent,
-    hasTouch: true,
-    isMobile: true,
     deviceScaleFactor: iphone.deviceScaleFactor,
-  })
+  }))
 
   test('trusted finger swipe pans the map instead of being cancelled by the browser', async ({ page, context }) => {
     await openMapTab(page)

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Feather from '@expo/vector-icons/Feather';
 
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
+import { isWebAutomation } from '@/utils/isWebAutomation';
+import { useWebAutomation } from '@/hooks/useWebAutomation';
 import { translate as i18nT } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider'
 import { isChainNoiseSegment, splitGeocodeChain } from '@/utils/geocodeHelpers';
@@ -33,6 +35,9 @@ export function useWeatherWidgetModel({
     onSettled?: () => void;
 }) {
     const { t } = useTranslation();
+    // Рендер решает хук (#2912: SSR и первый кадр гидрации видят false), запрос
+    // в эффекте — модульная константа: разметки там нет.
+    const isDisabled = useWebAutomation();
     const [forecast, setForecast] = useState<RawDailyForecast[]>([]);
     const [status, setStatus] = useState<WeatherWidgetStatus>('idle');
     const settledRef = useRef(false);
@@ -71,10 +76,19 @@ export function useWeatherWidgetModel({
     useEffect(() => {
         settledRef.current = false;
         setForecast([]);
-        setStatus(primaryCoord ? 'loading' : 'idle');
+        setStatus(primaryCoord && !isWebAutomation ? 'loading' : 'idle');
     }, [primaryCoord]);
 
     useEffect(() => {
+        // #2922: под web-автоматизацией сторонний погодный API не вызывается —
+        // 503 open-meteo красил приёмочные smoke. Гейт стоит здесь, в единственной
+        // точке запроса, чтобы его получили все потребители виджета.
+        if (isWebAutomation) {
+            setStatus('idle');
+            settle();
+            return;
+        }
+
         if (!primaryCoord) {
             setStatus('error');
             settle();
@@ -143,6 +157,7 @@ export function useWeatherWidgetModel({
 
     return {
         forecast: localizedForecast,
+        isDisabled,
         locationLabel,
         status,
     };

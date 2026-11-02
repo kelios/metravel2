@@ -90,8 +90,11 @@ function observeReadOnly(context, reg, expected404 = []) {
   }
 }
 async function openRoleContext(browser, batch, role, width) {
-  const options = { baseURL: batch.reg.origin, viewport: { width, height: width === 390 ? 844 : 900 }, hasTouch: width === 390, isMobile: width === 390, deviceScaleFactor: width === 390 ? 3 : 1,
-    ...(width === 390 ? { userAgent: devices['Pixel 7'].userAgent } : {}),
+  const viewport = { width, height: width === 390 ? 844 : 900 }
+  // #2928: модуль грузит и обычный node (e2e/prod-probe), он не читает
+  // helpers/mobileProfile.ts — профиль тот же, `screen` = viewport задан явно.
+  const options = { baseURL: batch.reg.origin, viewport, hasTouch: width === 390, isMobile: width === 390, deviceScaleFactor: width === 390 ? 3 : 1,
+    ...(width === 390 ? { screen: viewport, userAgent: devices['Pixel 7'].userAgent } : {}),
     locale: 'ru-RU', storageState: role === 'guest' ? { cookies: [], origins: [] } : role === 'admin' ? await batch.admin.context.storageState() : batch.stateFile(role) }
   const context = await browser.newContext(options)
   if (role !== 'guest') await identity(context.request, role === 'admin' ? 104 : batch.reg.accounts[role].id, role === 'admin')

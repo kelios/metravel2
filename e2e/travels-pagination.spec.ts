@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { mobileProfile } from './helpers/mobileProfile';
 import { devices, type Page } from '@playwright/test';
 import { gotoWithRetry, preacceptCookies, tid } from './helpers/navigation';
 import { getTravelsListPath } from './helpers/routes';
@@ -234,13 +235,7 @@ test.describe('Travels list — infinite scroll', () => {
   });
 
   test.describe('mobile web', () => {
-    test.use({
-      viewport: { width: 390, height: 844 },
-      deviceScaleFactor: 3,
-      isMobile: true,
-      hasTouch: true,
-      userAgent: devices['Pixel 7'].userAgent,
-    });
+    test.use(mobileProfile({ userAgent: devices['Pixel 7'].userAgent }));
 
     test('uses the same catalog media loading policy', async ({ page }, testInfo) => {
       await verifyCatalogMediaLoadingPolicy(page, testInfo.outputPath('search-loading-mobile.png'));

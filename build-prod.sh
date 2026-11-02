@@ -331,7 +331,13 @@ deploy_prod() {
     echo "❌ Выкат публикует только SSR-релиз prod (EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR=true)"
     return 1
   fi
-  bash scripts/web-ssr-publication.sh stage "$BUILD_SOURCE_SHA" "$SSR_RELEASE_DIR"
+  if ! bash scripts/web-ssr-publication.sh stage "$BUILD_SOURCE_SHA" "$SSR_RELEASE_DIR"; then
+    # #2930: без этой строки отказ виден только как общий «web-ssr release
+    # refused» хелпера бэкенда, а выкат — как обычное падение сборки.
+    echo "❌ Сервер отклонил релиз ${BUILD_SOURCE_SHA:0:9} на stage — прод не менялся."
+    echo "   Причина хелпера — строка «web-ssr release refused» выше; для sha, выкатанного и откатанного раньше, это неизменяемый releases/<sha> с другим digest (#2858)."
+    return 1
+  fi
   if ! { bash scripts/web-ssr-publication.sh publish-code "$BUILD_SOURCE_SHA" &&
          node scripts/verify-live-web-ssr.js "$BUILD_SOURCE_SHA" --readiness-mode deployment &&
          verify_quest_runtime deployment; }; then

@@ -10,6 +10,7 @@
 const fs = require('node:fs')
 const path = require('node:path')
 const { execFileSync } = require('node:child_process')
+const { resolveBuildTimeMs } = require('./lib/buildStamp')
 
 const repoRoot = path.resolve(__dirname, '..')
 const ARTIFACT_MARKER_NAME = '.build-source.json'
@@ -222,7 +223,11 @@ function main() {
     dirty: Boolean(result.dirty),
     deploy: Boolean(result.deploy),
     ok: result.ok,
-    recordedAt: new Date().toISOString(),
+    // #2930: чистый источник — время коммита (детерминированный digest релиза),
+    // грязный — момент сборки: его содержимое коммитом не описывается.
+    recordedAt: new Date(
+      result.sha && !result.dirty ? resolveBuildTimeMs({ rev: result.sha, cwd }) : Date.now(),
+    ).toISOString(),
   }
   writeMarker(lastMarker, payload)
   if (writeMarkerPath) writeMarker(path.resolve(cwd, writeMarkerPath), payload)

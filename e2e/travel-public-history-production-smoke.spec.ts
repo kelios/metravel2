@@ -1,4 +1,5 @@
 import { test, expect, type BrowserContext, type CDPSession, type Locator, type Page, type Request, type TestInfo } from '@playwright/test'
+import { mobileProfile } from './helpers/mobileProfile'
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation'
 
 test.use({ screenshot: 'only-on-failure' })
@@ -11,18 +12,11 @@ const PROFILES = [
   { name: 'desktop 1440x900', options: { viewport: { width: 1440, height: 900 } }, mobile: false },
   {
     name: 'mobile 390x844',
-    options: {
-      viewport: { width: 390, height: 844 },
-      // #2923: the `chromium` project inherits `Desktop Chrome` with a 1920×1080
-      // `screen`; a phone with a desktop screen made the HTML parser fetch the
-      // hero's desktop `<img src>` (1280) before selecting the mobile `<source>`
-      // and cancel it (ERR_ABORTED). A real iPhone's screen is its viewport.
-      screen: { width: 390, height: 844 },
-      isMobile: true,
-      hasTouch: true,
-      deviceScaleFactor: 3,
+    // #2923: a phone with the desktop `screen` made the HTML parser fetch the
+    // hero's desktop `<img src>` and cancel it (ERR_ABORTED) — see mobileProfile.
+    options: mobileProfile({
       userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Mobile/15E148 Safari/604.1',
-    },
+    }),
     mobile: true,
   },
 ]

@@ -203,6 +203,15 @@ object alternates и происхождение HEAD. Источник долж�
 `npm run worktree:bootstrap -- --force`. Symlink-компоненты, tracked или
 не ignored пути отклоняются до копирования. Основной checkout не изменяется.
 
+`node_modules` bootstrap не копирует. Harness-worktree (`.claude/worktrees/*`)
+бывает создан с копией `node_modules` старше `yarn.lock` — тогда jest идёт на
+других версиях тестового стека и красит чужие тесты (#2915: RNTL 13.3.3 вместо
+14.1.0). Перед первым jest в таком worktree выполни `yarn install
+--frozen-lockfile`. `check:fast` и pre-commit сверяют версии
+`@testing-library/react-native`, `test-renderer`, `react-dom` и `jest` с
+`yarn.lock` (`scripts/check-installed-test-deps.js`) и при расхождении падают до
+запуска проверок с этой подсказкой.
+
 Для разрешённой локальной Android-операции опция `--android-secrets` добавляет
 только пять потребляемых файлов в `.secrets/`: `metravel-android-prod.env`,
 `google-services.json`, `metravel-android-release.json`,

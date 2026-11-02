@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+import { mobileProfile } from './helpers/mobileProfile';
 
 import { test, expect } from './fixtures';
 import { preacceptCookies } from './helpers/navigation';
@@ -263,7 +264,7 @@ test.describe('Web scroll: единый владелец прокрутки эк
     });
 
     test.describe('mobile web 390x844', () => {
-        test.use({ viewport: MOBILE, hasTouch: true, isMobile: true });
+        test.use(mobileProfile({ viewport: MOBILE, deviceScaleFactor: 1 }));
         for (const route of ROUTES) assertRouteScrollsEverywhere(route, MOBILE);
 
         test('/quests: вертикальный свайп по шапке двигает каталог', async ({ page }) => {

@@ -3,6 +3,7 @@ const path = require('path')
 const { spawnSync } = require('child_process')
 const minimatchModule = require('minimatch')
 const { resolveChangedFilesInput, runSelectiveChecks } = require('./run-local-selective-checks')
+const { findTestStackDrift, formatDriftMessage } = require('./check-installed-test-deps')
 
 const parseArgs = (argv) => {
   const out = {
@@ -240,6 +241,14 @@ const main = () => {
     if (args.output === 'json' && !args.dryRun) {
       console.error('fast-scope-checks: --json is supported only with --dry-run.')
       process.exit(2)
+    }
+
+    if (!args.dryRun) {
+      const drift = findTestStackDrift()
+      if (drift.length > 0) {
+        console.error(`fast-scope-checks: ${formatDriftMessage(drift)}`)
+        process.exit(1)
+      }
     }
 
     const input = resolveChangedFilesInput(args)

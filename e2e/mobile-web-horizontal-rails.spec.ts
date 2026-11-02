@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures'
+import { mobileProfile } from './helpers/mobileProfile'
 import { gotoWithRetry, tid } from './helpers/navigation'
 import { seedNecessaryConsent } from './helpers/storage'
 
@@ -94,13 +95,11 @@ async function getWeeklyHighlightsStackState(
 }
 
 test.describe('Mobile web recommendation card stacks', () => {
-  test.use({
-    viewport: { width: 390, height: 844 },
+  test.use(mobileProfile({
+    deviceScaleFactor: 1,
     userAgent:
       'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-    hasTouch: true,
-    isMobile: true,
-  })
+  }))
 
   test('weekly highlights renders cards vertically without a horizontal rail', async ({ page }) => {
     await page.addInitScript(seedNecessaryConsent)

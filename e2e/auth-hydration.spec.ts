@@ -2,6 +2,7 @@ import { devices, type Page } from '@playwright/test';
 
 import { expect, test } from './fixtures';
 import { gotoWithRetry, mockUnavailableApi, preacceptCookies } from './helpers/navigation';
+import { mobileProfile } from './helpers/mobileProfile';
 
 const HYDRATION_ERROR = /Minified React error #418\b|Hydration failed because the server rendered/i;
 const DESKTOP_VIEWPORTS = [
@@ -10,13 +11,11 @@ const DESKTOP_VIEWPORTS = [
 ] as const;
 const MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
 const PIXEL_7 = devices['Pixel 7'];
-const MOBILE_DEVICE = {
-  userAgent: PIXEL_7.userAgent,
-  deviceScaleFactor: PIXEL_7.deviceScaleFactor,
-  isMobile: PIXEL_7.isMobile,
-  hasTouch: PIXEL_7.hasTouch,
+const MOBILE_DEVICE = mobileProfile({
   viewport: MOBILE_VIEWPORT,
-};
+  deviceScaleFactor: PIXEL_7.deviceScaleFactor,
+  userAgent: PIXEL_7.userAgent,
+});
 const AUTH_ROUTES = ['/login', '/registration'] as const;
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
 const FACEBOOK_LOGIN_ENABLED =

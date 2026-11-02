@@ -7,7 +7,8 @@
  * 
  * The script adds:
  * 1. <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
- * 2. <meta name="build-version" content="v{timestamp}">
+ * 2. <meta name="build-version" content="v{commit time, ms}"> — одинаковый для
+ *    всех сборок одного sha (#2930, scripts/lib/buildStamp.js)
  * 
  * Usage:
  *   node scripts/add-cache-bust-meta.js [buildDir]
@@ -19,12 +20,13 @@ const fs = require('fs');
 const path = require('path');
 const { normalizeHeadCharset } = require('./lib/htmlCharset');
 const { normalizeMetaDescription } = require('./lib/htmlMetaDescription');
+const { resolveBuildTimeMs } = require('./lib/buildStamp');
 
 const DEFAULT_BUILD_DIR = path.join(__dirname, '..', 'dist', 'prod');
 const buildDirArg = process.argv[2] ? String(process.argv[2]).trim() : '';
 const buildDir = buildDirArg ? path.resolve(buildDirArg) : DEFAULT_BUILD_DIR;
 
-const BUILD_VERSION = `v${Date.now()}`;
+const BUILD_VERSION = `v${resolveBuildTimeMs()}`;
 
 function processHtmlFile(filePath) {
   try {

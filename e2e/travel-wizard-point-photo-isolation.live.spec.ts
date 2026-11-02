@@ -13,18 +13,17 @@ import {
 
 import { expect, test } from './fixtures'
 import { seedNecessaryConsent } from './helpers/storage'
+import { mobileProfile } from './helpers/mobileProfile'
 
 const EVIDENCE_DIR = resolve('.codex-temp/task-1603/live')
 const GPS_LAT = 50.06143
 const GPS_LNG = 19.93658
 const GPS_JPEG_NAME = 'task-1603-real-exif-gps.jpg'
-const PIXEL_7_MOBILE_WEB = {
+const PIXEL_7_MOBILE_WEB = mobileProfile({
   userAgent: devices['Pixel 7'].userAgent,
   viewport: devices['Pixel 7'].viewport,
   deviceScaleFactor: devices['Pixel 7'].deviceScaleFactor,
-  isMobile: devices['Pixel 7'].isMobile,
-  hasTouch: devices['Pixel 7'].hasTouch,
-}
+})
 
 // Valid 10x10 JPEG with real EXIF GPS tags (50.06143 N, 19.93658 E).
 // The live contract deliberately does not set __METRAVEL_E2E_EXIF_GPS__.
