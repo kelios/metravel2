@@ -4,6 +4,7 @@ import {ReadyBookRelatedLink} from '@/components/books/ReadyBookRelatedLink';
 import {relatedBookForSource} from '@/services/book/readyBooks/related';
 import {Platform} from 'react-native';
 import PlaceListCard from '@/components/places/PlaceListCard';
+import {trackReadyBookRelatedOpened} from '@/utils/growthFunnelAnalytics';
 
 jest.mock('react-native',()=>({Platform:{OS:'web',select:(values:any)=>values.web??values.default},StyleSheet:{create:(styles:any)=>styles},
   Text:({children}:any)=><span>{children}</span>,View:({children}:any)=><div>{children}</div>,ActivityIndicator:()=>null}));
@@ -20,6 +21,7 @@ jest.mock('expo-router',()=>{
 });
 jest.mock('@/data/travelBooks/related.json',()=>[{country:'BY',slug:'belarus',title:'Беларусь',sourceTravelIds:[169],pointIds:[2039],questIds:[42]}]);
 jest.mock('@/components/books/bookCopy',()=>({useBookCopy:()=>((key:string)=>key)}));
+jest.mock('@/utils/growthFunnelAnalytics',()=>({trackReadyBookRelatedOpened:jest.fn()}));
 
 beforeEach(()=>{Object.defineProperty(Platform,'OS',{configurable:true,value:'web'});});
 it('opens a selected-source book without activating the enclosing place card',()=>{
@@ -67,4 +69,15 @@ it('lets the enclosing card ignore keyboard activation on the secondary action',
   fireEvent.keyDown(action,{key:'Enter'});
   expect(action.getAttribute('data-card-action')).toBe('true');
   expect(openPlace).not.toHaveBeenCalled();
+});
+
+it('measures the contextual entry with its source and no personal data',()=>{
+  const track=jest.mocked(trackReadyBookRelatedOpened);
+  for(const [props,source] of [[{questId:42},'quest'],[{pointId:2039,sourceTravelId:169},'place'],[{sourceTravelId:169},'travel']] as const){
+    track.mockClear();
+    const view=render(<ReadyBookRelatedLink {...props}/>);
+    fireEvent.click(screen.getByRole('link'));
+    expect(track).toHaveBeenCalledWith(expect.objectContaining({slug:'belarus',country:'BY'}),source,expect.any(String));
+    view.unmount();
+  }
 });

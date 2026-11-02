@@ -4,7 +4,7 @@
 
 import React from 'react'
 import { Platform } from 'react-native'
-import { render } from '@testing-library/react-native'
+import { fireEvent, render } from '@testing-library/react-native'
 
 const mockReplace = jest.fn()
 const mockSeoProps = jest.fn()
@@ -69,5 +69,22 @@ describe('not-found SEO guard', () => {
   it('does not canonicalize the error page to another page', async () => {
     await render(<NotFoundScreen />)
     expect(mockSeoProps.mock.calls[0][0].canonical).toBeUndefined()
+  })
+
+  // #2950: один `+not-found.html` на любой адрес, поэтому для неизвестной книги
+  // ссылка в каталог появляется после гидратации, а у прочих адресов её нет.
+  it('offers the books catalogue only on an unknown book address', async () => {
+    const { translate } = jest.requireActual('@/i18n')
+    window.history.replaceState(null, '', '/books/no-such-edition')
+    try {
+      const screen = await render(<NotFoundScreen />)
+      const catalogue = screen.getByLabelText(translate('books:back'))
+      fireEvent.press(catalogue)
+      expect(mockReplace).toHaveBeenCalledWith('/books')
+    } finally {
+      window.history.replaceState(null, '', '/')
+    }
+    const screen = await render(<NotFoundScreen />)
+    expect(screen.queryByText(translate('books:back'))).toBeNull()
   })
 })

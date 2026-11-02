@@ -42,13 +42,18 @@ export type AppDownloadSource = 'home_promo' | 'install_bar' | 'app_page' | 'abo
 
 type EventParams = Record<string, unknown>;
 
-export type ReadyBookEvent = 'ReadyBookViewed' | 'ReadyBookPreviewOpened' | 'ReadyBookProfileSelected' | 'ReadyBookDownloadStarted' | 'ReadyBookDownloadFailed' | 'ReadyBookInstructionsViewed' | 'ReadyBookProviderOpened';
-/** DownloadStarted means verified bytes delivered to the browser, never an order. */
-export function trackReadyBookEvent(event:ReadyBookEvent,book:{id:string,revision:string,country:'BY'|'PL'},uiLocale:string,extra:{profileId?:string,artifactPurpose?:string,providerId?:string}={}){
+export type ReadyBookEvent = 'ReadyBookViewed' | 'ReadyBookPreviewOpened' | 'ReadyBookProfileSelected' | 'ReadyBookDownloadRequested' | 'ReadyBookCoverDownloaded' | 'ReadyBookInstructionsViewed' | 'ReadyBookProviderOpened';
+/** DownloadRequested is the click on a published file link (the browser then fetches it itself), never an order. */
+export function trackReadyBookEvent(event:ReadyBookEvent,book:{id:string,revision:string,country:'BY'|'PL'},uiLocale:string,extra:{profileId?:string,artifactPurpose?:string,providerId?:string,profileSource?:'default'|'selected'}={}){
   queueAnalyticsEvent(event,{
     book_id:book.id,revision:book.revision,country:book.country,ui_locale:uiLocale,content_locale:'ru',
     ...(extra.profileId?{profile_id:extra.profileId}:{}),...(extra.artifactPurpose?{artifact_purpose:extra.artifactPurpose}:{}),...(extra.providerId?{provider_id:extra.providerId}:{}),
+    ...(extra.profileSource?{profile_source:extra.profileSource}:{})
   });
+}
+/** The related index carries no book id/revision, so a contextual entry is identified by slug and its source (#2951). */
+export function trackReadyBookRelatedOpened(book:{slug:string,country:'BY'|'PL'},entrySource:'quest'|'place'|'travel',uiLocale:string){
+  queueAnalyticsEvent('ReadyBookRelatedOpened',{book_slug:book.slug,country:book.country,entry_source:entrySource,ui_locale:uiLocale});
 }
 
 type RegistrationParams = {

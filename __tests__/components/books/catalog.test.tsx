@@ -22,7 +22,7 @@ describe('book catalogue',()=>{
   it('shows the editorial language, both physical formats and exact edition URL',()=>{
     books.push(publishedFixture());render(<Catalog/>);
     expect(screen.getByText('language')).toBeTruthy();expect(screen.getByText(/pocket/)).toBeTruthy();expect(screen.getByText(/album/)).toBeTruthy();
-    expect(screen.getByRole('link').getAttribute('href')).toBe('/books/belarus');expect(screen.getByText('partial')).toBeTruthy();
+    expect(screen.getByRole('link').getAttribute('href')).toBe('/books/belarus');expect(screen.queryByText('partial')).toBeNull();
     expect(screen.queryByText('order')).toBeNull();
   });
 });
@@ -86,11 +86,11 @@ it('names the visual style of every edition and keeps the watercolor default for
   expect(screen.getByText('style: styleWatercolor')).toBeTruthy();
   expect(screen.getByText('style: stylePhoto')).toBeTruthy();
   first.unmount();
-  // The readiness note is per edition: the watercolor kit is complete, the photo edition still misses supplements.
   books[0].missing=['provider-acceptance','paper-check'];
   render(<Catalog/>);
-  expect(screen.getAllByText('digitalKit')).toHaveLength(1);
-  expect(screen.getAllByText('partial')).toHaveLength(1);
+  // Release-audit notes stay in data, never on the public catalogue (#2944).
+  expect(screen.queryByText('digitalKit')).toBeNull();
+  expect(screen.queryByText('partial')).toBeNull();
   expect(screen.getAllByRole('link').map(link=>link.getAttribute('href'))).toEqual(['/books/belarus','/books/belarus-photo']);
 });
 

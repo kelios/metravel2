@@ -2,7 +2,7 @@ import {publishedFixture} from './publicationFixtures';
 import {publishedBookSchema,publicationSchema} from '@/services/book/readyBooks/publication';
 import currentPublication from '@/data/travelBooks/manifest.json';
 import {bookPreview,previewWindow} from '@/services/book/readyBooks/preview';
-import {fetchBookArtifact} from '@/services/book/readyBooks/download';
+import {fetchVerifiedBookAsset} from '@/services/book/readyBooks/download';
 import {fixturePdf,fixtureHash} from './fixtures';
 
 describe('partial publication integrity',()=>{
@@ -63,11 +63,11 @@ describe('partial publication integrity',()=>{
     Object.defineProperty(global.crypto,'subtle',{configurable:true,value:{digest:jest.fn()}});
     const digest=jest.spyOn(crypto.subtle,'digest').mockResolvedValue(Uint8Array.from(Buffer.from(fixtureHash,'hex')).buffer);
     try{
-      global.fetch=jest.fn().mockResolvedValue({ok:false,status:404});await expect(fetchBookArtifact(file)).rejects.toThrow('404');
+      global.fetch=jest.fn().mockResolvedValue({ok:false,status:404});await expect(fetchVerifiedBookAsset(file)).rejects.toThrow('404');
       global.fetch=jest.fn().mockResolvedValue({ok:true,arrayBuffer:async()=>data});
-      await expect(fetchBookArtifact({...file,bytes:file.bytes+1})).rejects.toThrow('SIZE');
-      await expect(fetchBookArtifact({...file,sha256:'0'.repeat(64)})).rejects.toThrow('HASH');
-      await expect(fetchBookArtifact(file)).resolves.toBeInstanceOf(Blob);
+      await expect(fetchVerifiedBookAsset({...file,bytes:file.bytes+1})).rejects.toThrow('SIZE');
+      await expect(fetchVerifiedBookAsset({...file,sha256:'0'.repeat(64)})).rejects.toThrow('HASH');
+      await expect(fetchVerifiedBookAsset(file)).resolves.toBe(data);
       expect(global.fetch).toHaveBeenLastCalledWith(file.uri,{credentials:'omit',signal:undefined});
     }finally{global.fetch=original;digest.mockRestore();}
   });

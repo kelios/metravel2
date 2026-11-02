@@ -5,6 +5,7 @@ import {createPersonalizedCoverBlob} from '@/services/book/readyBooks/coverPerso
 import {CoverTextError} from '@/services/book/readyBooks/coverText';
 import {downloadBlobOnWeb} from '@/utils/downloadUrlOnWeb';
 import {dispatchWebWindow} from '@/utils/externalLinks';
+import {trackReadyBookEvent} from '@/utils/growthFunnelAnalytics';
 import {publishedFixture} from '../../services/book/readyBooks/publicationFixtures';
 import {coverClientFixture} from '../../services/book/readyBooks/coverClientFixtures';
 
@@ -23,6 +24,7 @@ jest.mock('@/i18n/LocaleProvider',()=>({useTranslation:()=>({t:(key:string)=>key
 jest.mock('@/services/book/readyBooks/coverPersonalization',()=>({...jest.requireActual('@/services/book/readyBooks/coverPersonalization'),createPersonalizedCoverBlob:jest.fn()}));
 jest.mock('@/utils/downloadUrlOnWeb',()=>({downloadBlobOnWeb:jest.fn()}));
 jest.mock('@/utils/externalLinks',()=>({dispatchWebWindow:jest.fn()}));
+jest.mock('@/utils/growthFunnelAnalytics',()=>({trackReadyBookEvent:jest.fn()}));
 
 const originalCreate=Object.getOwnPropertyDescriptor(URL,'createObjectURL');
 const originalRevoke=Object.getOwnPropertyDescriptor(URL,'revokeObjectURL');
@@ -91,6 +93,8 @@ it('previews and downloads the same generated Blob and revokes it when text chan
     expect(screen.queryByText('coverPreviewHelp')).toBeNull();
     fireEvent.click(screen.getByRole('button',{name:'coverDownloadPdf'}));
     expect(downloadBlobOnWeb).toHaveBeenCalledWith(blob,`${book.slug}-${book.revision}-album-a5-read-personal-cover.pdf`);
+    // The saved cover is measured by edition, size and file kind only, never by its inscription (#2951).
+    expect(trackReadyBookEvent).toHaveBeenCalledWith('ReadyBookCoverDownloaded',book,expect.any(String),{profileId:'album-a5',artifactPurpose:'read'});
     expect(storage).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalled();
     fireEvent.change(screen.getByRole('textbox'),{target:{value:'Другой заголовок'}});

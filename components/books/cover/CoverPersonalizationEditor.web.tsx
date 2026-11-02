@@ -3,13 +3,14 @@ import Feather from '@expo/vector-icons/Feather';
 import {useFocusEffect} from 'expo-router';
 import Button from '@/components/ui/Button';
 import {DESIGN_TOKENS} from '@/constants/designSystem';
-import {formatNumber} from '@/i18n';
+import {formatNumber,getActiveLocale} from '@/i18n';
 import {useTranslation} from '@/i18n/LocaleProvider';
 import type {PublishedBook} from '@/services/book/readyBooks/publication';
 import {createPersonalizedCoverBlob,CoverPersonalizationError,type CoverOutputMode} from '@/services/book/readyBooks/coverPersonalization';
 import {CoverTextError} from '@/services/book/readyBooks/coverText';
 import {downloadBlobOnWeb} from '@/utils/downloadUrlOnWeb';
 import {dispatchWebWindow} from '@/utils/externalLinks';
+import {trackReadyBookEvent} from '@/utils/growthFunnelAnalytics';
 
 type Result = {blob:Blob;url:string;identity:string};
 type Request = {controller:AbortController;identity:string};
@@ -107,7 +108,10 @@ export default function CoverPersonalizationEditor({book,profileId}:{book:Publis
           if(currentIdentity.current===available.identity&&currentResult.current===available)setPreviewNotice(!dispatchWebWindow(available.url,{windowFeatures:'noopener,noreferrer'}));
         }}/>
         <Button label={t('books:coverDownloadPdf')} icon={<Feather name="download" size={18} color={colors.bookPageAccent}/>} onPress={()=>{
-          if(currentIdentity.current===available.identity&&currentResult.current===available&&!downloadBlobOnWeb(available.blob,`${book.slug}-${book.revision}-${profileId}-${mode}-personal-cover.pdf`))setError({identity,code:'COVER_GENERATE'});
+          if(currentIdentity.current!==available.identity||currentResult.current!==available)return;
+          // The cover text is never sent: the event names only the edition, size and file kind (#2951).
+          if(downloadBlobOnWeb(available.blob,`${book.slug}-${book.revision}-${profileId}-${mode}-personal-cover.pdf`))trackReadyBookEvent('ReadyBookCoverDownloaded',book,getActiveLocale(),{profileId,artifactPurpose:mode});
+          else setError({identity,code:'COVER_GENERATE'});
         }}/>
       </>}
     </div>

@@ -6,7 +6,9 @@ import BookRoute,{generateMetadata} from '@/app/(tabs)/books/[slug]';
 import {findReadyBook} from '@/services/book/readyBooks/catalog';
 import {loadReadyBookMetadata} from '@/services/book/readyBooks/bookMetadata';
 import type {PublishedBook} from '@/services/book/readyBooks/publication';
-import {fetchBookArtifact} from '@/services/book/readyBooks/download';
+import {trackReadyBookEvent} from '@/utils/growthFunnelAnalytics';
+import {bookArtifactFilename} from '@/services/book/readyBooks/artifactFilename';
+import {describeArtifact,formatArtifactSize,visibleArtifacts} from '@/components/books/bookArtifacts';
 import {publishedFixture} from '../../services/book/readyBooks/publicationFixtures';
 import {thematicPublished} from '../../services/book/readyBooks/thematicFixtures';
 
@@ -22,7 +24,6 @@ jest.mock('@/components/ui/Button',()=>({__esModule:true,default:({label,onPress
 jest.mock('expo-router',()=>({Link:({children,href}:any)=><a href={href}>{children}</a>,useLocalSearchParams:()=>({slug:'belarus'}),useFocusEffect:(callback:()=>void|(()=>void))=>require('react').useEffect(callback,[callback])}));
 jest.mock('@/utils/growthFunnelAnalytics',()=>({trackReadyBookEvent:jest.fn()}));
 jest.mock('@/services/book/readyBooks/bookMetadata',()=>({loadReadyBookMetadata:jest.fn()}));
-jest.mock('@/services/book/readyBooks/download',()=>({fetchBookArtifact:jest.fn()}));
 
 function givenBook(book:PublishedBook){
   jest.mocked(findReadyBook).mockReturnValue({...book,metadata:{kind:'book-metadata',bookId:book.id,revision:book.revision,uri:`https://metravel.by/travel-books/${book.id}/${book.revision}/book.json`,mime:'application/json',bytes:100,sha256:'a'.repeat(64)}});
@@ -32,13 +33,19 @@ async function renderDetails(){await act(async()=>{render(<BookRoute/>);});}
 beforeEach(()=>{
   jest.mocked(loadReadyBookMetadata).mockReset();
   givenBook(publishedFixture());
-  jest.mocked(fetchBookArtifact).mockReset().mockRejectedValue(new Error('offline'));
 });
 it('renders actual published book details in server markup and gives the route its own canonical',()=>{
   const book=publishedFixture();
   const html=renderToStaticMarkup(<BookRoute/>);
   expect(html).toContain(book.title);
   expect(html).toContain('metadataLoading');
+  // The first HTML already names the edition facts and carries Book JSON-LD (#2950).
+  expect(html).toContain('counts:'+JSON.stringify({places:formatNumber(book.stopCount),pages:formatNumber(book.bodyPageCount)}).replace(/"/g,'&quot;'));
+  expect(html).toContain('style: styleWatercolor');
+  expect(html).toContain('size: pocket; album');
+  expect(html).toContain('application/ld+json');
+  expect(html).toContain('"@type":"Book"');
+  expect(html).toContain('"numberOfPages":'+book.bodyPageCount);
   expect(html).not.toContain(book.stops[book.stops.length-1].title);
   expect(html).toContain('lang="ru"');
   expect(loadReadyBookMetadata).not.toHaveBeenCalled();
@@ -46,74 +53,89 @@ it('renders actual published book details in server markup and gives the route i
   expect(metadata.alternates?.canonical).toBe('https://metravel.by/books/'+book.slug);
   expect(metadata.title).toBe(book.title);
   expect(metadata.robots).toBeUndefined();
+  // Every edition gets its own search snippet from its title, style and counts.
+  expect(metadata.description).toContain(book.title);
+  expect(metadata.description).toContain(formatNumber(book.stopCount));
+  givenBook(publishedFixture(30,{country:'PL',id:'poland-memory',slug:'poland',title:'Польша. Книга воспоминаний'}));
+  expect(generateMetadata(undefined,{slug:'poland'}).description).not.toBe(metadata.description);
+});
+it('keeps an absolute published cover URI as the Book JSON-LD image',()=>{
+  const coverUri='https://metravel.by/travel-books/belarus-photo-memory/r1/pocket-150x100/preview-cover-1.webp';
+  givenBook({...publishedFixture(),coverUri});
+  const html=renderToStaticMarkup(<BookRoute/>);
+  expect(html).toContain(`"image":"${coverUri}"`);
+  expect(html).not.toContain('metravel.by/https');
 });
 it('keeps unknown editions out of the search index',()=>{
   jest.mocked(findReadyBook).mockReturnValue(undefined);
   expect(generateMetadata(undefined,{slug:'missing'}).robots).toBe('noindex, nofollow');
 });
-it('shows measured print quality for the selected profile and returns focus after preview closes',async()=>{
+it('shows no release-audit notes and returns focus after preview closes',async()=>{
   const book=publishedFixture();
   const pocket=book.quality.find(item=>item.profileId==='pocket-150x100')!;
   pocket.minIllustrationPpi=318;
   pocket.physicalChecks=['provider-acceptance','paper-check'];
   givenBook(book);
   await renderDetails();
-  const quality=book.quality.find(item=>item.profileId===book.profiles[0].id)!;
-  expect(screen.getByText('illustrationPpi:'+JSON.stringify({ppi:formatNumber(quality.minIllustrationPpi,{maximumFractionDigits:1})}))).toBeTruthy();
-  expect(screen.getByText('proofOnly')).toBeTruthy();
-  expect(screen.queryByText('resolutionPending')).toBeNull();
+  // Quality, physical checks and the revision stay in book.json; the public page is a final edition (#2944).
+  const visible=document.body.cloneNode(true) as HTMLElement;visible.querySelectorAll('script').forEach(node=>node.remove());
+  const text=visible.textContent??'';
+  for(const fragment of ['quality','proofOnly','illustrationPpi','physicalChecks','providerPending','revision','digitalKit','partial','318',book.revision])expect(text).not.toContain(fragment);
   const opener=screen.getByRole('button',{name:'preview'});
   fireEvent.click(opener);
   fireEvent.click(screen.getByRole('button',{name:'close'}));
   expect(document.activeElement).toBe(opener);
-  fireEvent.click(screen.getByRole('radio',{name:'album'}));
-  expect((screen.getByRole('radio',{name:'album'}) as HTMLInputElement).checked).toBe(true);
-  expect(screen.getByText('proofOnly')).toBeTruthy();
-  const album=book.quality.find(item=>item.profileId==='album-a5')!;
-  expect(screen.getByText('illustrationPpi:'+JSON.stringify({ppi:formatNumber(album.minIllustrationPpi,{maximumFractionDigits:1})}))).toBeTruthy();
-  expect(screen.getByText('resolutionPending')).toBeTruthy();
 });
-it('preserves the selected format and retries the same file after a failed guest download',async()=>{
+it('downloads through plain file links and reports the click with the size source',async()=>{
   const book=publishedFixture();
   givenBook(book);
   await renderDetails();
+  const track=jest.mocked(trackReadyBookEvent);
+  track.mockClear();
+  // jsdom cannot navigate; the browser's own download is out of scope here, only the link and the event are.
+  const stayOnPage=(event:Event)=>{if((event.target as Element).closest('a[download]'))event.preventDefault();};document.addEventListener('click',stayOnPage);
+  const [first]=visibleArtifacts(book,book.profiles[0].id);
+  const link=screen.getAllByRole('link',{name:/^download: /})[0];
+  // A real link keeps the browser's own progress and the iOS user gesture; nothing is fetched by the page (#2951).
+  expect(link.getAttribute('href')).toBe(first.uri);
+  expect(link.getAttribute('download')).toBe(bookArtifactFilename(book,first));
+  expect(link.getAttribute('aria-label')).toBe('download: '+describeArtifact(first,(key:string,params?:Record<string,unknown>)=>params?key+':'+JSON.stringify(params):key));
+  fireEvent.click(link);
+  expect(track).toHaveBeenLastCalledWith('ReadyBookDownloadRequested',book,expect.any(String),{profileId:first.profileId,artifactPurpose:first.purpose,profileSource:'default'});
   fireEvent.click(screen.getByRole('radio',{name:'album'}));
-  const file=book.artifacts.find(item=>item.profileId==='album-a5')!;
-  await act(async()=>{fireEvent.click(screen.getAllByRole('button',{name:'download'})[0]);});
-  expect(screen.getByRole('alert').textContent).toBe('downloadError');
+  fireEvent.click(screen.getAllByRole('link',{name:/^download: /})[0]);
+  expect(track).toHaveBeenLastCalledWith('ReadyBookDownloadRequested',book,expect.any(String),expect.objectContaining({profileId:'album-a5',profileSource:'selected'}));
   expect((screen.getByRole('radio',{name:'album'}) as HTMLInputElement).checked).toBe(true);
-  expect(fetchBookArtifact).toHaveBeenNthCalledWith(1,file,expect.any(AbortSignal));
-  await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'retry'}));});
-  expect(fetchBookArtifact).toHaveBeenNthCalledWith(2,file,expect.any(AbortSignal));
-  expect((screen.getByRole('radio',{name:'album'}) as HTMLInputElement).checked).toBe(true);
+  document.removeEventListener('click',stayOnPage);
 });
-it('distinguishes ring-body, ring-cover and sewn-body controls and downloads unique filenames',async()=>{
-  const book=publishedFixture(),names:string[]=[];
+it('distinguishes ring-body, ring-cover and sewn-body controls with unique filenames',async()=>{
+  const book=publishedFixture();
   givenBook(book);
-  jest.mocked(fetchBookArtifact).mockResolvedValue(new Blob(['verified-control'],{type:'application/pdf'}));
-  const create=URL.createObjectURL,revoke=URL.revokeObjectURL;
-  Object.defineProperty(URL,'createObjectURL',{configurable:true,writable:true,value:jest.fn(()=>'blob:verified-control')});
-  Object.defineProperty(URL,'revokeObjectURL',{configurable:true,writable:true,value:jest.fn()});
-  const click=jest.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(function(this:HTMLAnchorElement){names.push(this.download);});
-  jest.useFakeTimers();
-  try{
-    await renderDetails();fireEvent.click(screen.getByRole('radio',{name:'album'}));
-    const controls=book.artifacts.filter(file=>file.profileId==='album-a5'&&file.purpose==='control');
-    expect(controls).toHaveLength(3);
-    for(const file of controls){
-      const assembly=file.controlFor==='home-sewn'?'sewn':'rings';
-      const caption=screen.getByText(new RegExp('^control · '+assembly+' · '+file.component+' · PDF'));
-      const button=caption.closest('li')!.querySelector('button')!;
-      await act(async()=>{fireEvent.click(button);});
-      expect(fetchBookArtifact).toHaveBeenLastCalledWith(file,expect.any(AbortSignal));
-    }
-    expect(new Set(names).size).toBe(3);
-    expect(names).toEqual(controls.map(file=>`${book.slug}-${book.revision}-${file.id}.pdf`));
-  }finally{
-    jest.clearAllTimers();jest.useRealTimers();click.mockRestore();
-    Object.defineProperty(URL,'createObjectURL',{configurable:true,writable:true,value:create});
-    Object.defineProperty(URL,'revokeObjectURL',{configurable:true,writable:true,value:revoke});
-  }
+  await renderDetails();fireEvent.click(screen.getByRole('radio',{name:'album'}));
+  const controls=book.artifacts.filter(file=>file.profileId==='album-a5'&&file.purpose==='control');
+  expect(controls).toHaveLength(3);
+  const names=controls.map(file=>{
+    const assembly=file.controlFor==='home-sewn'?'sewn':'rings';
+    const caption=screen.getByText(new RegExp('^control · '+assembly+' · '+file.component+' · PDF'));
+    const link=caption.closest('li')!.querySelector('a')!;
+    expect(link.getAttribute('href')).toBe(file.uri);
+    return link.getAttribute('download');
+  });
+  expect(new Set(names).size).toBe(3);
+  expect(names).toEqual(controls.map(file=>`${book.slug}-${book.revision}-${file.id}.pdf`));
+});
+it('shows one file when the copy-shop PDF is byte-identical to the reading PDF and sizes small files in kilobytes',()=>{
+  const book=publishedFixture();
+  const read=book.artifacts.find(file=>file.profileId==='pocket-150x100'&&file.purpose==='read'&&file.component==='body')!;
+  const shop=book.artifacts.find(file=>file.profileId==='pocket-150x100'&&file.purpose==='print-shop'&&file.component==='body')!;
+  shop.sha256='b'.repeat(64);
+  expect(visibleArtifacts(book,'pocket-150x100')).toContain(shop);
+  shop.sha256=read.sha256;
+  expect(visibleArtifacts(book,'pocket-150x100')).not.toContain(shop);
+  expect(visibleArtifacts(book,'pocket-150x100')).toContain(read);
+  const t=(key:string)=>key;
+  expect(formatArtifactSize(24682,t as never)).toBe(formatNumber(24)+' kilobytes');
+  expect(formatArtifactSize(1572864,t as never)).toBe(formatNumber(1.5,{maximumFractionDigits:1})+' megabytes');
 });
 
 it('links the other visual edition of the same country and keeps the selected size through the profile query',async()=>{

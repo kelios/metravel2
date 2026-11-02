@@ -34,7 +34,7 @@ export default function ReadyBookPreview({book,profileId,onClose}:{book:Publishe
     if(event.target instanceof HTMLInputElement||event.target instanceof HTMLSelectElement) return;
     if(event.key==='ArrowRight'){event.preventDefault();move(spread?2:1);}if(event.key==='ArrowLeft'){event.preventDefault();move(spread?-2:-1);}
   }}><h2 tabIndex={-1} ref={title}>{bookT('preview')}</h2>
-    <p>{bookT('revision')}: {book.revision} · {formatNumber(profile.widthMm)} × {formatNumber(profile.heightMm)} {bookT('millimeters')} · {bookT('language')}</p>
+    <p>{formatNumber(profile.widthMm)} × {formatNumber(profile.heightMm)} {bookT('millimeters')} · {bookT('language')}</p>
     <Button label={bookT('close')} onPress={onClose}/>
     <div className="ready-books-controls">
       <label>{bookT('contents')}<select value={component} onChange={event=>setComponent(event.target.value as 'body'|'cover')}><option value="body">{bookT('bodyTab')}</option><option value="cover">{bookT('coverTab')}</option></select></label>

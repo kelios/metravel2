@@ -2,7 +2,7 @@ import { goBackOrReplace } from '@/utils/backNavigation'
 import { Stack, router } from 'expo-router'
 import type { Href } from 'expo-router'
 import { Platform, StyleSheet } from 'react-native'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import Button from '@/components/ui/Button'
@@ -24,12 +24,16 @@ export function NotFoundContent() {
   const styles = useMemo(() => createStyles(colors), [colors])
   const screenTitle = i18nT('shared:app.missing.oops_a237d9cd')
   const screenOptions = useMemo(() => ({ title: screenTitle }), [screenTitle])
+  // nginx отдаёт один `+not-found.html` на любой адрес, поэтому ссылка в каталог
+  // книг для `/books/<неизвестный slug>` появляется только после гидратации (#2950).
+  const [booksPath, setBooksPath] = useState(false)
 
   // Кадр гидратации уже совпал с +not-found.html. Дальше возвращаем настоящий
   // URL города: это клиентский переход, не вторая гидратация, и редирект
   // неизвестного алиаса на /quests остаётся в лендинге (#2090 / #2107).
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return
+    if (window.location.pathname.startsWith('/books/')) setBooksPath(true)
     const deferred = takeUnknownCityHydrationPath(window as unknown as Record<string, unknown>)
     if (!deferred) return
     router.replace(deferred as Href)
@@ -64,8 +68,17 @@ export function NotFoundContent() {
           <Text style={styles.subtitle}>
             {i18nT('shared:app.missing.pohozhe_vy_pereshli_po_nevernoy_ssylke_ili_s_3d66babf')}</Text>
 
+          {booksPath && (
+            <Button
+              variant="primary"
+              label={i18nT('books:back')}
+              style={styles.ctaButton}
+              onPress={() => router.replace('/books')}
+            />
+          )}
+
           <Button
-            variant="primary"
+            variant={booksPath ? 'outline' : 'primary'}
             label={i18nT('shared:app.missing.na_glavnuyu_58d8ad67')}
             style={styles.ctaButton}
             onPress={() => router.replace('/')}

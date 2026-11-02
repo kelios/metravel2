@@ -46,12 +46,16 @@ describe('book controls follow the active interface language',()=>{
   });
 });
 
-it.each(['ru','be','uk','pl','en'])('interpolates dynamic book counts and honest proof status in %s',locale=>{
+it.each(['ru','be','uk','pl','en'])('interpolates dynamic book counts and names files without release-audit wording in %s',locale=>{
   const t=getFixedTranslator(locale);
   const counts=t('books:counts',{places:'31',pages:'108'});
   expect(counts).toContain('31');
   expect(counts).toContain('108');
   expect(t('books:language')).not.toContain('12');
-  expect(t('books:proofOnly')).not.toBe('books:proofOnly');
-  expect(t('books:illustrationPpi',{ppi:'181'})).toContain('181');
+  // The books are final editions: public file names carry no trial/test wording (#2944).
+  for(const key of ['books:shop','books:control','books:body','books:rings','books:sewn','books:guideGeneric']){
+    expect(t(key)).not.toBe(key);
+    expect(t(key)).not.toMatch(/пробн|тэст|тест|test|trial|próbn|ppi/i);
+  }
+  expect(t('books:kilobytes')).not.toBe('books:kilobytes');
 });

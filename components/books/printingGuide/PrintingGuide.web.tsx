@@ -24,7 +24,7 @@ export default function PrintingGuide({book,profileId}:{book:PublishedBook;profi
   };
   return <section aria-label={translate('books:guideTitle')}>
     <h2>{translate('books:guideTitle')}</h2><p>{translate('books:guideLanguage')}</p>
-    {file?<Button label={failed?translate('books:retry'):page?translate('books:guideOpen'):`${translate('books:instructions')} · PDF`} onPress={()=>void open()}/>:<p>{translate('books:pending')}</p>}
+    {file?<Button label={failed?translate('books:retry'):page?translate('books:guideOpen'):`${translate('books:instructions')} · PDF`} onPress={()=>void open()}/>:<p>{translate('books:guideGeneric')}</p>}
     {failed&&<p role="alert">{translate('books:pageError')}</p>}
   </section>;
 }

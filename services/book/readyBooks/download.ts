@@ -1,5 +1,3 @@
-import type {PublishedArtifact} from './publication';
-
 export type VerifiedBookAsset = {uri:string;bytes:number;sha256:string;mime:string};
 
 export async function fetchVerifiedBookAsset(file:VerifiedBookAsset,signal?:AbortSignal):Promise<ArrayBuffer>{
@@ -11,8 +9,4 @@ export async function fetchVerifiedBookAsset(file:VerifiedBookAsset,signal?:Abor
   if(hash!==file.sha256) throw new Error('DOWNLOAD_HASH');
   if(signal?.aborted)throw new DOMException('Aborted','AbortError');
   return bytes;
-}
-
-export async function fetchBookArtifact(file:PublishedArtifact,signal?:AbortSignal):Promise<Blob>{
-  return new Blob([await fetchVerifiedBookAsset(file,signal)],{type:file.mime});
 }
