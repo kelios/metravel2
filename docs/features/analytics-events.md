@@ -73,6 +73,7 @@
 | `search_submit` | `source=travel_catalog`, `query_len`, `has_filters`, `search_term?` | устоявшийся запрос + фильтры |
 | `view_search_results` | + `results_count`, `relaxed_filters` | выдача непустая |
 | `search_zero_results` | как у `search_submit` | выдача пустая |
+| `search_sort_change` | `sort` (`distance`, `relevance`, `newest`, …), `source=travel_catalog` | явный выбор сортировки каталога: тулбар, шторка фильтров, снятие чипа (#2903); координаты точки отсчёта не передаются |
 
 `search_term` уходит только через PII-фильтр `utils/analyticsSearchTerm.ts`.
 Имя `view_search_results` совпадает с автособытием GA4 Enhanced measurement

@@ -1,12 +1,13 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import { ActivityIndicator, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from 'react-native'
 import type { ViewStyle } from 'react-native'
-import { Link, useIsFocused, useRouter } from 'expo-router'
+import { useIsFocused, useRouter } from 'expo-router'
 import type { Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import { jsonLdScript } from '@/components/seo/jsonLdScript'
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
+import LinkPressable from '@/components/ui/LinkPressable'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useQuestGridCardWidth } from '@/hooks/useQuestCatalogResponsiveModel'
 import {
@@ -270,18 +271,16 @@ export function QuestLandingHeader({
 }) {
   return (
     <>
-      <Link href={QUEST_LIST_ROUTE} asChild>
-        <Pressable
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 6 }}
-          accessibilityRole="link"
-          accessibilityLabel={backLabel}
-        >
-          <Feather name="arrow-left" size={16} color={colors.primary} />
-          <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14 }}>
-            {backLabel}
-          </Text>
-        </Pressable>
-      </Link>
+      <LinkPressable
+        href={QUEST_LIST_ROUTE}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 6 }}
+        accessibilityLabel={backLabel}
+      >
+        <Feather name="arrow-left" size={16} color={colors.primary} />
+        <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14 }}>
+          {backLabel}
+        </Text>
+      </LinkPressable>
 
       <View style={blockStyle}>
         <View
@@ -503,26 +502,19 @@ export function QuestLandingCityLinks({
   return (
     <View style={styles.linkList}>
       {links.map((link) => (
-        // Прямому ребёнку `Link asChild` отдаётся ОДИН плоский объект стиля: Slot сливает
-        // стили спредом, поэтому функция `({ pressed }) => [...]` превращается в `{}` и
-        // карточка теряет всю вёрстку. Состояние нажатия живёт на внутренней строке.
-        <Link key={link.key} href={link.href} asChild>
-          <Pressable
-            style={styles.link}
-            accessibilityRole="link"
-            accessibilityLabel={link.a11yLabel}
-          >
-            {({ pressed }) => (
-              <View style={[styles.linkRow, pressed && styles.linkRowPressed]}>
-                <View style={styles.linkText}>
-                  <QuestEditorialText style={styles.linkName}>{link.name}</QuestEditorialText>
-                  <Text style={styles.linkMeta}>{link.meta}</Text>
-                </View>
-                <Feather name="arrow-right" size={17} color={colors.primary} aria-hidden />
+        // Стиль ссылки не может зависеть от `({ pressed })` (Slot сливает его спредом,
+        // функция превращается в `{}`), поэтому состояние нажатия живёт на внутренней строке.
+        <LinkPressable key={link.key} href={link.href} style={styles.link} accessibilityLabel={link.a11yLabel}>
+          {({ pressed }) => (
+            <View style={[styles.linkRow, pressed && styles.linkRowPressed]}>
+              <View style={styles.linkText}>
+                <QuestEditorialText style={styles.linkName}>{link.name}</QuestEditorialText>
+                <Text style={styles.linkMeta}>{link.meta}</Text>
               </View>
-            )}
-          </Pressable>
-        </Link>
+              <Feather name="arrow-right" size={17} color={colors.primary} aria-hidden />
+            </View>
+          )}
+        </LinkPressable>
       ))}
     </View>
   )

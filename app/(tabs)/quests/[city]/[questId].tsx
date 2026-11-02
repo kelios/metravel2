@@ -1,9 +1,10 @@
 import React, { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Link, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useIsFocused } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 import { ReadyBookRelatedLink } from '@/components/books/ReadyBookRelatedLink';
+import LinkPressable from '@/components/ui/LinkPressable';
 
 import { QuestWizard as QuestWizardDirect } from '@/components/quests/QuestWizard';
 import QuestConsentGate from '@/components/quests/QuestConsentGate';
@@ -321,12 +322,10 @@ const PrimaryQuestLink = ({
   styles: ReturnType<typeof createStyles>;
   colors: Colors;
 }) => (
-  <Link href={QUEST_LIST_ROUTE} asChild>
-    <Pressable style={styles.primaryButton}>
-      {icon ? <Icon name={icon} color={colors.textOnPrimary} size={16} /> : null}
-      <Text style={styles.primaryButtonText}>{children}</Text>
-    </Pressable>
-  </Link>
+  <LinkPressable href={QUEST_LIST_ROUTE} style={styles.primaryButton}>
+    {icon ? <Icon name={icon} color={colors.textOnPrimary} size={16} /> : null}
+    <Text style={styles.primaryButtonText}>{children}</Text>
+  </LinkPressable>
 );
 
 const LoadingState = ({
@@ -391,12 +390,10 @@ const ErrorState = ({
             {i18nT('quests:app.tabs.quests.city.questId.povtorit_35493473')}</PrimaryAction>
         ) : null}
         {isLoadError ? (
-          <Link href={QUEST_LIST_ROUTE} asChild>
-            <Pressable style={styles.secondaryButton}>
-              <Icon name="arrow-left" color={colors.text} size={16} />
-              <Text style={styles.secondaryButtonText}>{i18nT('quests:app.tabs.quests.city.questId.k_spisku_kvestov_27c3b0f7')}</Text>
-            </Pressable>
-          </Link>
+          <LinkPressable href={QUEST_LIST_ROUTE} style={styles.secondaryButton}>
+            <Icon name="arrow-left" color={colors.text} size={16} />
+            <Text style={styles.secondaryButtonText}>{i18nT('quests:app.tabs.quests.city.questId.k_spisku_kvestov_27c3b0f7')}</Text>
+          </LinkPressable>
         ) : (
           <PrimaryQuestLink icon="arrow-left" styles={styles} colors={colors}>
             {i18nT('quests:app.tabs.quests.city.questId.k_spisku_kvestov_27c3b0f7')}</PrimaryQuestLink>

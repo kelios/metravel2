@@ -44,6 +44,7 @@ export const navigationStaticResources = {
   "breadcrumb.plan": "Planowanie",
   "breadcrumb.create": "Nowa podróż",
   "breadcrumb.app": "Aplikacja",
+  "breadcrumb.becomeAuthor": "Zostań autorem",
   "components.layout.AccountMenu.dobavit_puteshestvie_bebd3820": "Dodaj wycieczkę",
   "components.layout.AccountMenu.hochu_poehat_fa6b46d5": "Chcę pojechać",
   "components.layout.AccountMenu.moi_puteshestviya_a530e844": "Moje podróże",

@@ -101,13 +101,41 @@ describe('BecomeAuthorScreen', () => {
     })
   })
 
-  it('waits for auth restoration before deciding registration versus creation', async () => {
+  // #2910: гость не видит серую кнопку «нужен аккаунт» на время чтения сессии.
+  it('keeps the guest CTA active before auth restoration and opens registration right away', async () => {
+    const originalPlatform = Platform.OS
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
+    window.localStorage.removeItem('metravel:has-signed-in')
+    mockAuthStore.mockImplementation((select) => select({ authReady: false, isAuthenticated: false }))
+    try {
+      const screen = await render(<BecomeAuthorScreen />)
+      const [button] = screen.getAllByRole('button', { name: label })
+      expect(button.props.accessibilityState).toEqual(expect.objectContaining({ disabled: false, busy: false }))
+      await fireEvent.press(button)
+      const url = new URL(mockPush.mock.calls[0][0], 'https://metravel.by')
+      expect(url.pathname).toBe('/registration')
+      expect(url.searchParams.get('redirect')).toBe('/travel/new')
+      expect(url.searchParams.get('intent')).toBe('create-travel')
+    } finally {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform })
+    }
+  })
+
+  it('lets a possibly signed-in device wait for auth restoration and then go straight to creation', async () => {
     mockAuthStore.mockImplementation((select) => select({ authReady: false, isAuthenticated: false }))
     const screen = await render(<BecomeAuthorScreen />)
     await fireEvent.press(screen.getAllByRole('button', { name: label })[0])
     expect(mockPush).not.toHaveBeenCalled()
     expect(mockQueue).not.toHaveBeenCalled()
-    expect(screen.getByText('Ваши поездки на карте')).toBeTruthy()
+    expect(screen.getAllByRole('button', { name: label })[0].props.accessibilityState).toEqual(
+      expect.objectContaining({ busy: true }),
+    )
+
+    mockAuthStore.mockImplementation((select) => select({ authReady: true, isAuthenticated: true }))
+    await screen.rerender(<BecomeAuthorScreen />)
+    expect(mockPush).toHaveBeenCalledTimes(1)
+    expect(mockPush).toHaveBeenCalledWith('/travel/new')
+    expect(mockQueue).toHaveBeenCalledWith('content_create_cta_click', expect.objectContaining({ auth_state: 'authenticated', action: 'create' }))
   })
 
   it('updates the page and action when the language changes', async () => {

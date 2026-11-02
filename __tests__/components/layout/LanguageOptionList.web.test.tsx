@@ -85,13 +85,16 @@ describe('served version anchor activation', () => {
     const choose = jest.fn(async () => { throw new Error('storage unavailable') })
     const onChosen = jest.fn()
     const screen = await render(<ActualVersionLinks projection={projection} currentLocale="pl" onSelectLocale={choose} onChosen={onChosen} />)
-    const preventDefault = jest.fn()
+    // Как у браузерного события: `preventDefault` ставит `defaultPrevented`, и
+    // LinkPressable (#2901) не делает второй переход поверх отложенного.
+    const preventDefault = jest.fn(function (this: { defaultPrevented: boolean }) { this.defaultPrevented = true })
     await act(async () => {
-      await fireEvent.press(screen.getByTestId('quest-version-ru'), { nativeEvent: {}, preventDefault })
+      await fireEvent.press(screen.getByTestId('quest-version-ru'), { nativeEvent: {}, defaultPrevented: false, preventDefault })
     })
     expect(preventDefault).toHaveBeenCalledTimes(1)
     expect(choose).toHaveBeenCalledWith('ru')
     expect(onChosen).toHaveBeenCalledTimes(1)
+    expect(mockPush).toHaveBeenCalledTimes(1)
     expect(mockPush).toHaveBeenCalledWith('/quests/4/minsk-cmok')
   })
 })

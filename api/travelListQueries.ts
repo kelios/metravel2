@@ -32,6 +32,7 @@ import {
     normalizeNumericFilterArray,
     extractSortQueryParams,
     buildWhereQueryParams,
+    TRAVEL_SORT_QUERY_KEYS,
     unwrapTravelsList,
     isInvalidPagePayload,
     hasKnownListArrays,
@@ -100,7 +101,7 @@ export const fetchTravelFacets = async (
         }
 
         const handledKeys = new Set<string>([
-            ...arrayFields, 'year', 'moderation', 'publish', 'publication_status', 'includeDrafts', 'sort', 'sortBy', 'sortOrder', 'ordering',
+            ...arrayFields, 'year', 'moderation', 'publish', 'publication_status', 'includeDrafts', ...TRAVEL_SORT_QUERY_KEYS,
         ]);
         Object.entries(urlParams || {}).forEach(([key, value]) => {
             if (handledKeys.has(key)) return;
@@ -229,7 +230,7 @@ export const fetchTravels = async (
         }
 
         const handledKeys = new Set<string>([
-            ...arrayFields, 'year', 'moderation', 'publish', 'publication_status', 'includeDrafts', 'sort', 'sortBy', 'sortOrder', 'ordering',
+            ...arrayFields, 'year', 'moderation', 'publish', 'publication_status', 'includeDrafts', ...TRAVEL_SORT_QUERY_KEYS,
         ]);
         Object.entries(urlParams || {}).forEach(([key, value]) => {
             if (handledKeys.has(key)) return;

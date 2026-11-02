@@ -84,6 +84,22 @@ export type TravelSortQueryParams = {
     sort?: string;
     sortBy?: string;
     sortOrder?: 'asc' | 'desc';
+    /** #2903: точка отсчёта `sort=distance` (бэкенд #2929) — query-параметры, не `where`. */
+    lat?: string;
+    lng?: string;
+};
+
+/** Ключи порядка выдачи: идут отдельными query-параметрами и не попадают в `where`. */
+export const TRAVEL_SORT_QUERY_KEYS: readonly string[] = ['sort', 'sortBy', 'sortOrder', 'ordering', 'lat', 'lng'];
+
+/** Параметры без ключей порядка: для запросов, которым порядок выдачи не важен (фасеты). */
+export const omitTravelSortQueryParams = (params: Record<string, unknown> | null | undefined): Record<string, unknown> =>
+    Object.fromEntries(Object.entries(params || {}).filter(([key]) => !TRAVEL_SORT_QUERY_KEYS.includes(key)));
+
+const normalizeCoordParam = (value: unknown, limit: number): string | undefined => {
+    const numeric = typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : NaN;
+    if (!Number.isFinite(numeric) || Math.abs(numeric) > limit) return undefined;
+    return String(numeric);
 };
 
 const normalizeStringParam = (value: unknown): string | undefined => {
@@ -100,6 +116,9 @@ export const extractSortQueryParams = (source: Record<string, unknown>): TravelS
         sort: normalizeStringParam(source.sort),
         sortBy: normalizeStringParam(source.sortBy),
         sortOrder,
+        ...(normalizeStringParam(source.sort) === 'distance'
+            ? { lat: normalizeCoordParam(source.lat, 90), lng: normalizeCoordParam(source.lng, 180) }
+            : {}),
     };
 };
 
@@ -133,6 +152,10 @@ export const buildWhereQueryParams = (params: {
     }
     if (params.sortQuery?.sortOrder) {
         searchParams.sortOrder = params.sortQuery.sortOrder;
+    }
+    if (params.sortQuery?.lat && params.sortQuery?.lng) {
+        searchParams.lat = params.sortQuery.lat;
+        searchParams.lng = params.sortQuery.lng;
     }
     return new URLSearchParams(searchParams).toString();
 };

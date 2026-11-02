@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { ScrollView, StyleSheet, View } from 'react-native'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Platform, ScrollView, StyleSheet, View } from 'react-native'
 import { useRouter, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -12,7 +12,7 @@ import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useTranslation } from '@/i18n/LocaleProvider'
 import { useAuthStore } from '@/stores/authStore'
-import { buildRegistrationHref } from '@/utils/authNavigation'
+import { buildLoginHref, hasSignedInBefore } from '@/utils/authNavigation'
 import { trackContentCreateCtaClicked, trackRegisterCtaClicked } from '@/utils/growthFunnelAnalytics'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
@@ -35,21 +35,45 @@ export default function BecomeAuthorScreen() {
     { icon: 'users' as const, title: t('homeStatic:becomeAuthor.readers.title'), description: t('homeStatic:becomeAuthor.readers.description') },
   ]
 
-  const handleCreate = () => {
-    if (!authReady) return
-    const authState = isAuthenticated ? 'authenticated' : 'guest'
+  // #2910: гость не ждёт auth-стор — его маршрут (регистрация с намерением
+  // автора) известен сразу, и кнопка активна с первого кадра. Ждёт только
+  // устройство, где сессия возможна (web-признак входа, native без признака):
+  // нажатие до `authReady` ставит кнопку в `loading` и решает после него.
+  const [pendingCreate, setPendingCreate] = useState(false)
+
+  const openCreate = useCallback((signedIn: boolean) => {
+    const authState = signedIn ? 'authenticated' : 'guest'
     const source = 'become_author_page'
     trackContentCreateCtaClicked({
       contentType: 'route', source, authState, intent: 'create-travel',
-      action: isAuthenticated ? 'create' : 'register',
+      action: signedIn ? 'create' : 'register',
       mode: 'full',
     })
-    if (!isAuthenticated) {
+    if (!signedIn) {
       trackRegisterCtaClicked({ source, intent: 'create-travel', authState })
     }
-    router.push((isAuthenticated
+    router.push((signedIn
       ? '/travel/new'
-      : buildRegistrationHref({ redirect: '/travel/new', intent: 'create-travel' })) as Href)
+      : buildLoginHref({ redirect: '/travel/new', intent: 'create-travel' })) as Href)
+  }, [router])
+
+  useEffect(() => {
+    if (!pendingCreate || !authReady) return
+    setPendingCreate(false)
+    openCreate(isAuthenticated)
+  }, [authReady, isAuthenticated, openCreate, pendingCreate])
+
+  const handleCreate = () => {
+    if (authReady) {
+      openCreate(isAuthenticated)
+      return
+    }
+    const mayHaveSession = Platform.OS !== 'web' || hasSignedInBefore()
+    if (mayHaveSession) {
+      setPendingCreate(true)
+      return
+    }
+    openCreate(false)
   }
 
   const createAction = (
@@ -57,7 +81,7 @@ export default function BecomeAuthorScreen() {
       label={t('homeStatic:becomeAuthor.cta')}
       onPress={handleCreate}
       labelNumberOfLines={0}
-      disabled={!authReady}
+      loading={pendingCreate}
       icon={<Feather name="edit-3" size={18} color={colors.textOnPrimary} />}
       iconPosition="left"
     />

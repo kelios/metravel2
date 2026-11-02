@@ -11,22 +11,24 @@ import { resolvePostAuthPath } from '@/utils/authNavigation'
 
 // #2901: плашки hero выглядят как чипы, поэтому каждая обязана быть ссылкой.
 // Локальный Link пробрасывает `href` в ребёнка, как Slot у настоящего сливает стиль
-// ребёнка спредом (функция стиля становится `{}`) и не переходит, если обработчик
-// сделал `preventDefault`.
+// ребёнка спредом (функция стиля становится `{}`), зовёт `onPress` ребёнка раньше
+// своей навигации и не переходит, если обработчик сделал `preventDefault`.
 const mockPush = jest.fn()
 jest.mock('expo-router', () => {
   const React = require('react')
   return {
     useRouter: () => ({ push: mockPush }),
-    Link: ({ children, href, onPress }: any) =>
-      React.cloneElement(React.Children.only(children), {
+    Link: ({ children, href }: any) => {
+      const child = React.Children.only(children)
+      return React.cloneElement(child, {
         href,
-        style: { ...React.Children.only(children).props.style },
+        style: { ...child.props.style },
         onPress: (event: any) => {
-          onPress?.(event)
+          child.props.onPress?.(event)
           if (!event.defaultPrevented) mockPush(href)
         },
-      }),
+      })
+    },
   }
 })
 jest.mock('@/components/ui/ImageCardMedia', () => ({
@@ -125,8 +127,13 @@ describe('HERO_HIGHLIGHTS (#2901)', () => {
       expect(card.props.href).toBe(item.route)
       // Slot теряет функцию стиля — карточка обязана сохранить вёрстку (#2830).
       expect(StyleSheet.flatten(card.props.style)).toMatchObject({ borderWidth: 1 })
+      onHighlightPress.mockClear()
+      mockPush.mockClear()
       await fireEvent.press(card, { defaultPrevented: false, preventDefault: jest.fn() })
+      // Ровно один `home_highlight_click` и один переход на клик.
+      expect(onHighlightPress).toHaveBeenCalledTimes(1)
       expect(onHighlightPress).toHaveBeenLastCalledWith(item, expect.anything())
+      expect(mockPush).toHaveBeenCalledTimes(1)
       expect(mockPush).toHaveBeenLastCalledWith(item.route)
     }
   })

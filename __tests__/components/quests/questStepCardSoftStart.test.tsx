@@ -145,3 +145,16 @@ it('шаг-пауза («Далее») тоже пишет попытку отв
   expect(props.onAnswerAttempt).toHaveBeenCalledWith({ isCorrect: true, attemptNo: 1 })
   expect(props.onSubmit).toHaveBeenCalledWith('ok')
 })
+
+// #2910: «✓ Правильно!» — бейдж флипа после верного ответа. До проверки его нет
+// в дереве: невидимый узел читался скринридером и попадал в текст страницы.
+it('не рендерит «✓ Правильно!» до проверки ответа, а после верного ответа показывает', async () => {
+  const CORRECT = i18nT('quests:components.quests.questWizardStepCard.pravilno_2f264674')
+  const { screen } = await renderCard()
+  expect(screen.queryByText(CORRECT)).toBeNull()
+  expect(screen.queryByTestId('quest-step-correct-flip')).toBeNull()
+
+  await fireEvent.changeText(screen.getByPlaceholderText(/Ваш ответ/), 'камень')
+  await fireEvent.press(screen.getByTestId('quest-step-check'))
+  expect(screen.queryByText(CORRECT)).toBeTruthy()
+})

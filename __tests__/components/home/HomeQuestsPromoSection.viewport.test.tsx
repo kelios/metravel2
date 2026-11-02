@@ -20,9 +20,11 @@ jest.mock('expo-router', () => {
   const React = require('react')
   return {
     useRouter: () => ({ push: mockPush }),
-    // asChild Link: the child keeps its press, then the router follows href.
-    Link: ({ children, href, onPress }: { children: React.ReactElement; href: string; onPress?: () => void }) =>
-      React.cloneElement(React.Children.only(children), { onPress: () => { onPress?.(); mockPush(href) } }),
+    // asChild Link (Slot): the child's own press runs first, then the router follows href.
+    Link: ({ children, href }: { children: React.ReactElement<{ onPress?: () => void }>; href: string }) => {
+      const child = React.Children.only(children)
+      return React.cloneElement(child, { onPress: () => { child.props.onPress?.(); mockPush(href) } })
+    },
   }
 })
 jest.mock('@/utils/analytics', () => ({

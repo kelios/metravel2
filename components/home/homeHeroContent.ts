@@ -1,9 +1,11 @@
 import type { ComponentProps } from 'react'
 import type Feather from '@expo/vector-icons/Feather'
+import type { LinkPressEvent } from '@/components/ui/LinkPressable'
 
 import type { QuickFilterParams, QuickFilterValue } from './homeHeroShared'
 import { translate as i18nT } from '@/i18n'
 import { buildLoginHref } from '@/utils/authNavigation'
+import { DISTANCE_SORT_ID } from '@/components/listTravel/utils/catalogSort'
 
 
 export type BookImage = {
@@ -55,7 +57,7 @@ export type HeroHighlight = {
 }
 
 /** Событие клика по плашке: и RN-нажатие, и DOM-клик ссылки на web. */
-export type HeroHighlightPressEvent = { preventDefault: () => void }
+export type HeroHighlightPressEvent = LinkPressEvent
 
 const normalizeQuickFilterValue = (
   value: QuickFilterValue | undefined,
@@ -153,29 +155,32 @@ export const BOOK_IMAGES: readonly BookImage[] = [
   },
 ] as const
 
+// #2903: «Куда поехать в эти выходные?» — ближние маршруты первыми. Порядок
+// считает сервер (`sort=distance`, точка — геопозиция с уже выданным доступом,
+// иначе Минск): далёкие маршруты остаются в выдаче, но ниже.
 export const MOOD_CARDS: readonly MoodCard[] = [
   {
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.u_vody_7c603574') },
     icon: 'droplet',
-    filters: { categoryTravelAddress: [84, 110, 113, 193] },
+    filters: { categoryTravelAddress: [84, 110, 113, 193], sort: DISTANCE_SORT_ID },
     route: '/search',
   },
   {
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.zamki_aec014c6') },
     icon: 'flag',
-    filters: { categoryTravelAddress: [33, 43] },
+    filters: { categoryTravelAddress: [33, 43], sort: DISTANCE_SORT_ID },
     route: '/search',
   },
   {
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.ruiny_f6673a79') },
     icon: 'layers',
-    filters: { categoryTravelAddress: [114, 115, 116, 117, 118, 119, 120] },
+    filters: { categoryTravelAddress: [114, 115, 116, 117, 118, 119, 120], sort: DISTANCE_SORT_ID },
     route: '/search',
   },
   {
     get title() { return i18nT('homeStatic:components.home.homeHeroContent.hayking_3faa621d') },
     icon: 'trending-up',
-    filters: { categories: [21, 22, 2] },
+    filters: { categories: [21, 22, 2], sort: DISTANCE_SORT_ID },
     route: '/search',
   },
   {

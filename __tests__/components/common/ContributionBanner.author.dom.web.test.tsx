@@ -73,10 +73,11 @@ beforeAll(() => {
   }))
   // `__tests__/setup.ts` replaces `expo-router` with a TouchableOpacity stub; this test is about
   // the production `Link` and router. The package index also loads the native stack (glass
-  // effect, screens), so only the two members the banner imports come from the real modules.
+  // effect, screens), so only the members the banner (and LinkPressable) import come from the real modules.
   jest.doMock('expo-router', () => ({
     Link: jest.requireActual('expo-router/build/link/Link').Link,
     useRouter: jest.requireActual('expo-router/build/hooks/index').useRouter,
+    router: jest.requireActual('expo-router/build/imperative-api').router,
   }))
   jest.doMock('@/stores/authStore', () => ({
     useAuthStore: (select: (state: { isAuthenticated: boolean }) => unknown) => select({ isAuthenticated: false }),

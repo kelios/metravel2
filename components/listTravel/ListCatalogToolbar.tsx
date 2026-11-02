@@ -9,6 +9,7 @@ import type { ListDensity } from '@/stores/listViewStore'
 import { translate as i18nT } from '@/i18n'
 import { DialogMenu } from '@/ui/paper'
 import { webAccessibilityProps, webTitleRef, webViewStyle } from '@/utils/webProps'
+import { resolveActiveSortId } from './utils/catalogSort'
 
 
 export type ListSortOption = { id: string; name: string }
@@ -73,7 +74,7 @@ function ListCatalogToolbar({
   const styles = useMemo(() => getStyles(colors), [colors])
   const [sortMenuVisible, setSortMenuVisible] = useState(false)
 
-  const activeSort = (sortValue || '').trim() || DEFAULT_SORT_ID
+  const activeSort = resolveActiveSortId(sortValue, sortOptions.map((option) => option.id), DEFAULT_SORT_ID)
   const countVisible = showResultsCount && typeof resultsCount === 'number'
   const isNative = Platform.OS !== 'web'
   // ListTravelBase owns the responsive breakpoint and passes a value that is

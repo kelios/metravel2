@@ -1,10 +1,11 @@
 import React, { useCallback, useMemo, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
-import { Link, useRouter, type Href } from 'expo-router'
+import { useRouter, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import QuestEditorialText from './QuestEditorialText'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
+import LinkPressable from '@/components/ui/LinkPressable'
 import { useRichMediaVisibility } from '@/components/ui/richMediaViewport'
 import NavigationIcon from '@/components/layout/NavigationIcon'
 import type { NavigationIconName } from '@/constants/navigationIcons'
@@ -182,20 +183,21 @@ export function QuestForCityCard({
       }
     : undefined
 
-  const card = (
-    <Pressable
-      ref={impression.ref}
-      onLayout={impression.onLayout}
-      onPress={handlePress}
-      onHoverIn={() => setHovered(true)}
-      onHoverOut={() => setHovered(false)}
-      onPressIn={() => setPressed(true)}
-      onPressOut={() => setPressed(false)}
-      style={cardStyle}
-      accessibilityRole={href ? 'link' : undefined}
-      accessibilityState={href ? undefined : { disabled: true }}
-      accessibilityLabel={i18nT('quests:components.quests.QuestForCityCard.proyti_kvest_value1_value2_54986608', { value1: cityLabel, value2: quest.title })}
-    >
+  const cardProps = {
+    ref: impression.ref,
+    onLayout: impression.onLayout,
+    onPress: handlePress,
+    onHoverIn: () => setHovered(true),
+    onHoverOut: () => setHovered(false),
+    onPressIn: () => setPressed(true),
+    onPressOut: () => setPressed(false),
+    style: cardStyle,
+    accessibilityRole: href ? ('link' as const) : undefined,
+    accessibilityState: href ? undefined : { disabled: true },
+    accessibilityLabel: i18nT('quests:components.quests.QuestForCityCard.proyti_kvest_value1_value2_54986608', { value1: cityLabel, value2: quest.title }),
+  }
+  const cardContent = (
+    <>
       <View
         ref={mediaVisibility.ref}
         onLayout={mediaVisibility.onLayout}
@@ -272,9 +274,11 @@ export function QuestForCityCard({
           <Feather name="arrow-right" size={18} color={colors.primary} />
         </View>
       )}
-    </Pressable>
+    </>
   )
-  return responsiveWeb && href ? <Link href={href as Href} asChild>{card}</Link> : card
+  return responsiveWeb && href
+    ? <LinkPressable href={href as Href} {...cardProps}>{cardContent}</LinkPressable>
+    : <Pressable {...cardProps}>{cardContent}</Pressable>
 }
 
 function createStyles(colors: ThemedColors) {

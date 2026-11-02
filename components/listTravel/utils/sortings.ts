@@ -1,6 +1,10 @@
 import { createCollator, translate as i18nT } from '@/i18n'
+import { CATALOG_PROXIMITY_SORT_IDS } from './catalogSort'
 
 const SORTING_NAME_MAP: Record<string, string> = {
+  // #2903: клиентские варианты публичного каталога (см. ./catalogSort).
+  get distance() { return i18nT('travel:components.listTravel.sortings.distance') },
+  get relevance() { return i18nT('travel:components.listTravel.sortings.relevance') },
   get newest() { return i18nT('travel:components.listTravel.sortings.newest') },
   get oldest() { return i18nT('travel:components.listTravel.sortings.oldest') },
   get popular_desc() { return i18nT('travel:components.listTravel.sortings.popularDesc') },
@@ -34,6 +38,8 @@ const HIDDEN_SORTINGS = new Set([
 ]);
 
 const SORTING_ORDER: string[] = [
+  'distance',
+  'relevance',
   'newest',
   'oldest',
   'popular_desc',
@@ -109,8 +115,8 @@ const CATALOG_HEADER_REQUIRED_SORTING_IDS = new Set([
   'popular_desc',
 ]);
 
-export const getCatalogHeaderSortingOptions = (
-  sortings: Array<{ id?: unknown; name?: unknown }> = [],
+const mergeCatalogHeaderSortingOptions = (
+  sortings: Array<{ id?: unknown; name?: unknown }>,
 ) => {
   const fromApi = buildSortingOptions(sortings);
   if (!fromApi.length) return getDefaultSortingOptions();
@@ -124,3 +130,29 @@ export const getCatalogHeaderSortingOptions = (
 
   return buildSortingOptions(Array.from(byId.values()));
 };
+
+/**
+ * `includeProximity` (#2903, публичный каталог) добавляет «Ближе ко мне» и
+ * «По релевантности» поверх готового списка: пока опции фильтров не пришли,
+ * под ними остаётся полный клиентский список по умолчанию.
+ */
+export const getCatalogHeaderSortingOptions = (
+  sortings: Array<{ id?: unknown; name?: unknown }> = [],
+  { includeProximity = false }: { includeProximity?: boolean } = {},
+) => {
+  const options = mergeCatalogHeaderSortingOptions(sortings);
+  return includeProximity ? buildSortingOptions(withCatalogProximitySortings(options)) : options;
+};
+
+/**
+ * #2903: публичный каталог (поиск, «Беларусь») дополняет серверный список
+ * сортировок вариантами «Ближе ко мне» и «По релевантности». Своих поездок и
+ * экспорта это не касается — там расстояние от человека ничего не значит.
+ */
+export const withCatalogProximitySortings = <T extends { id?: unknown; name?: unknown }>(
+  sortings: readonly T[] = [],
+): Array<T | { id: string }> => {
+  const known = new Set(sortings.map((sorting) => String(sorting?.id ?? '').trim()))
+  const extra = CATALOG_PROXIMITY_SORT_IDS.filter((id) => !known.has(id)).map((id) => ({ id }))
+  return [...extra, ...sortings]
+}

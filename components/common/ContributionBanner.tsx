@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
-import { Link, useRouter } from 'expo-router'
+import { Platform, StyleSheet, Text, View } from 'react-native'
+import { useRouter } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -9,6 +9,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useAuthStore } from '@/stores/authStore'
 import { ResponsiveContainer } from '@/components/layout'
 import Button from '@/components/ui/Button'
+import LinkPressable from '@/components/ui/LinkPressable'
 import { buildExplicitLoginHref } from '@/utils/authNavigation'
 import {
   trackContentCreateCtaClicked,
@@ -198,12 +199,10 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
 
           <View style={[styles.buttons, isMobile ? styles.buttonsMobile : styles.buttonsDesktop]}>
             {isAuthorVariant ? (
-              <Link href="/become-author" asChild>
-                <Pressable accessibilityRole="link" onPress={handleAuthorLink} style={styles.authorLink}>
-                  <Text style={styles.authorLinkText}>{t('homeStatic:becomeAuthor.banner.link')}</Text>
-                  <Feather name="arrow-right" size={16} color={colors.primaryText} />
-                </Pressable>
-              </Link>
+              <LinkPressable href="/become-author" onPress={handleAuthorLink} style={styles.authorLink}>
+                <Text style={styles.authorLinkText}>{t('homeStatic:becomeAuthor.banner.link')}</Text>
+                <Feather name="arrow-right" size={16} color={colors.primaryText} />
+              </LinkPressable>
             ) : (
             <>
             {!isAuthenticated && (

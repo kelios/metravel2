@@ -252,6 +252,8 @@ export const travelGenerated4 = {
   "components.travel.WeeklyHighlights.samye_populyarnye_marshruty_etogo_mesyatsa_c2e48432": "Самые популярные маршруты этого месяца",
   "components.travel.ZoomableGalleryImage.value1_uvelichenie_dvumya_paltsami_1ef063e7": "{{value1}}. Увеличение двумя пальцами",
   "components.listTravel.sortings.newest": "Сначала новые",
+  "components.listTravel.sortings.distance": "Ближе ко мне",
+  "components.listTravel.sortings.relevance": "По релевантности",
   "components.listTravel.sortings.oldest": "Сначала старые",
   "components.listTravel.sortings.popularDesc": "Популярные ↓",
   "components.listTravel.sortings.popularAsc": "Популярные ↑",

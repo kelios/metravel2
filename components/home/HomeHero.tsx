@@ -35,6 +35,7 @@ import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { getHomeBookWidth, HOME_BOOK_GEOMETRY, resolveHomeBookGeometry } from './homeBookGeometry'
 import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext'
 import { webDataSetProps } from '@/utils/webProps'
+import { shouldHandleLinkClick } from '@/components/ui/LinkPressable'
 
 
 const IS_WEB = Platform.OS === 'web'
@@ -257,7 +258,8 @@ const HomeHero = memo(function HomeHero({
     (item: HeroHighlight, event: HeroHighlightPressEvent) => {
       queueAnalyticsEvent('home_highlight_click', { id: item.id })
       const guestHref = resolveHeroHighlightGuestHref(item, useAuthStore.getState().isAuthenticated)
-      if (!guestHref) return
+      // Ctrl/Cmd/Shift-клик гостя — браузеру (новая вкладка по href), как у вошедшего.
+      if (!guestHref || !shouldHandleLinkClick(event)) return
       event.preventDefault()
       router.push(guestHref as Href)
     },

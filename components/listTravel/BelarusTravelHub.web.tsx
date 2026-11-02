@@ -1,8 +1,8 @@
 import Feather from '@expo/vector-icons/Feather'
-import { Link } from 'expo-router'
 import { createElement, useMemo, type ReactNode } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 
+import LinkPressable from '@/components/ui/LinkPressable'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useTranslation } from '@/i18n/LocaleProvider'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -37,18 +37,13 @@ export default function BelarusTravelHub() {
     const description = item.descriptionKey ? t(item.descriptionKey) : null
 
     return (
-      <Link key={item.href} href={item.href} asChild style={styles.themeCard}>
-        <Pressable
-          accessibilityRole="link"
-          accessibilityLabel={title}
-        >
-          <View style={styles.linkTitleRow}>
-            <Text style={styles.themeCardTitle}>{title}</Text>
-            <Feather name="arrow-right" size={18} color={colors.primaryText} />
-          </View>
-          {description ? <Text style={styles.themeCardDescription}>{description}</Text> : null}
-        </Pressable>
-      </Link>
+      <LinkPressable key={item.href} href={item.href} style={styles.themeCard} accessibilityLabel={title}>
+        <View style={styles.linkTitleRow}>
+          <Text style={styles.themeCardTitle}>{title}</Text>
+          <Feather name="arrow-right" size={18} color={colors.primaryText} />
+        </View>
+        {description ? <Text style={styles.themeCardDescription}>{description}</Text> : null}
+      </LinkPressable>
     )
   }
 
@@ -56,15 +51,10 @@ export default function BelarusTravelHub() {
     const title = t(item.titleKey)
 
     return (
-      <Link key={item.href} href={item.href} asChild style={styles.cityLink}>
-        <Pressable
-          accessibilityRole="link"
-          accessibilityLabel={title}
-        >
-          <Text style={styles.cityLinkText}>{title}</Text>
-          <Feather name="chevron-right" size={16} color={colors.primaryText} />
-        </Pressable>
-      </Link>
+      <LinkPressable key={item.href} href={item.href} style={styles.cityLink} accessibilityLabel={title}>
+        <Text style={styles.cityLinkText}>{title}</Text>
+        <Feather name="chevron-right" size={16} color={colors.primaryText} />
+      </LinkPressable>
     )
   }
 

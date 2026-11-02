@@ -5,6 +5,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { FilterGroup, FilterState } from './types';
 import SortOptionItem from './SortOptionItem';
 import { translate as i18nT } from '@/i18n'
+import { resolveActiveSortId } from '../utils/catalogSort';
 
 
 interface SortDropdownProps {
@@ -24,10 +25,15 @@ const SortDropdown = memo(({
 }: SortDropdownProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const selectedOption = useMemo(() => {
-    const selectedId = String(selectedFilters.sort ?? '');
-    return sortGroup.options.find(opt => String(opt.id) === selectedId) || sortGroup.options[0];
-  }, [sortGroup.options, selectedFilters.sort]);
+  // #2903: пустой `sort` в публичном каталоге — «По релевантности», а не первый пункт.
+  const selectedId = useMemo(
+    () => resolveActiveSortId(selectedFilters.sort, sortGroup.options.map((opt) => String(opt.id)), ''),
+    [sortGroup.options, selectedFilters.sort],
+  );
+  const selectedOption = useMemo(
+    () => sortGroup.options.find(opt => String(opt.id) === selectedId) || sortGroup.options[0],
+    [sortGroup.options, selectedId],
+  );
 
   const handleSelect = useCallback((optionId: string) => {
     onFilterChange(sortGroup.key, optionId);
@@ -73,7 +79,7 @@ const SortDropdown = memo(({
         <View style={styles.sortDropdownContent}>
           {sortGroup.options.map((option) => {
             const optionId = String(option.id);
-            const isSelected = String(selectedFilters.sort ?? '') === optionId;
+            const isSelected = selectedId === optionId;
 
             return (
               <SortOptionItem

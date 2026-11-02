@@ -1,9 +1,10 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
-import { Link, useRouter, type Href } from 'expo-router'
+import { useRouter, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import { ResponsiveContainer } from '@/components/layout'
+import LinkPressable from '@/components/ui/LinkPressable'
 import QuestForCityCard from '@/components/quests/QuestForCityCard'
 import { useQuestsPreview } from '@/hooks/useQuestsApi'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -112,12 +113,12 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
 
         {/* Подарочный сценарий-вход: отдельный CTA под подбор «квест в подарок».
             Настоящая ссылка, а не только onPress: краулер видит её в HTML (#2817). */}
-        <Link href={SCENARIO_ROUTE as Href} asChild onPress={handleScenario}>
-        <Pressable
-          accessibilityRole={IS_WEB ? ('link' as any) : 'button'}
+        <LinkPressable
+          href={SCENARIO_ROUTE as Href}
+          onPress={handleScenario}
+          accessibilityRole={IS_WEB ? 'link' : 'button'}
           accessibilityLabel={i18nT('quests:components.home.HomeQuestsPromoSection.scenarioAria')}
-          // Link asChild сливает стиль спредом: только плоский объект, не массив.
-          style={StyleSheet.flatten([styles.scenarioCard, scenarioHovered && styles.scenarioCardHover])}
+          style={[styles.scenarioCard, scenarioHovered && styles.scenarioCardHover]}
           {...(responsiveWeb ? webDataSetProps({ homeQuestScenario: true }) : {})}
           {...(IS_WEB
             ? ({
@@ -151,8 +152,7 @@ function HomeQuestsPromoSection({ enabled = true }: { enabled?: boolean }) {
               <Feather name="arrow-right" size={16} color={colors.primaryDark} />
             </View>
           )}
-        </Pressable>
-        </Link>
+        </LinkPressable>
 
         <View style={styles.ctaRow}>
           <Pressable

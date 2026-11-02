@@ -45,6 +45,17 @@ export const pageTranslations: Record<string, string> = {
   get create() { return i18nT('navigationStatic:breadcrumb.create') },
   get app() { return i18nT('navigationStatic:breadcrumb.app') },
   get offline() { return i18nT('offline:title') },
+  // #2910: сегменты без записи здесь титулизировались в английские «Become
+  // Author» / «More». Подписи переиспользуют уже переведённые заголовки экранов;
+  // полноту таблицы по статическим роутам `app/` держит
+  // `__tests__/hooks/breadcrumbRouteLiterals.test.ts`.
+  get 'become-author'() { return i18nT('navigationStatic:breadcrumb.becomeAuthor') },
+  get more() { return i18nT('navigationStatic:components.layout.bottomDockModel.esche_6ad6f662') },
+  get advent() { return i18nT('adventStatic:profile.title') },
+  get 'app-stats'() { return i18nT('appStatsStatic:screen.title') },
+  get assistant() { return i18nT('aiAssistStatic:nav.assistant') },
+  get books() { return i18nT('books:title') },
+  get community() { return i18nT('tripsStatic:seo.communityTitle') },
 };
 
 // Страницы, вложенные по файлу роута, но самостоятельные (ссылки из писем

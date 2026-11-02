@@ -269,16 +269,37 @@ describe('HomeHero Component', () => {
       }
       expect(MOOD_CARDS_FOR_TEST[0].filters).toEqual({
         categoryTravelAddress: [84, 110, 113, 193],
+        sort: 'distance',
       })
       expect(MOOD_CARDS_FOR_TEST[1].filters).toEqual({
         categoryTravelAddress: [33, 43],
+        sort: 'distance',
       })
       expect(MOOD_CARDS_FOR_TEST[2].filters).toEqual({
         categoryTravelAddress: [114, 115, 116, 117, 118, 119, 120],
+        sort: 'distance',
       })
       expect(MOOD_CARDS_FOR_TEST[3].filters).toEqual({
         categories: [21, 22, 2],
+        sort: 'distance',
       })
+    })
+
+    // #2903: «в эти выходные» — ближние маршруты первыми, порядок считает сервер.
+    it('weekend mood chips open search with the server distance sort', () => {
+      const { MOOD_CARDS_FOR_TEST } = require('@/components/home/HomeHero')
+      const { buildFilterPath } = require('@/components/home/homeHeroContent')
+      const searchCards = MOOD_CARDS_FOR_TEST.filter((card: { route: string }) => card.route === '/search')
+      expect(searchCards).toHaveLength(4)
+      for (const card of searchCards) {
+        const url = new URL(buildFilterPath(card.route, card.filters), 'https://metravel.by')
+        expect(url.pathname).toBe('/search')
+        expect(url.searchParams.get('sort')).toBe('distance')
+      }
+      expect(buildFilterPath(MOOD_CARDS_FOR_TEST[3].route, MOOD_CARDS_FOR_TEST[3].filters))
+        .toBe('/search?categories=21,22,2&sort=distance')
+      const mapCard = MOOD_CARDS_FOR_TEST.find((card: { route: string }) => card.route === '/map')
+      expect(mapCard.filters).not.toHaveProperty('sort')
     })
   })
 

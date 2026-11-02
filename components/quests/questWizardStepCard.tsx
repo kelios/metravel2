@@ -930,25 +930,31 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
 
       {step.id === 'intro' && introSlot ? <View style={styles.section}>{introSlot}</View> : null}
 
-      <Animated.View
-        style={[
-          {
-            position: 'absolute',
-            top: 0,
-            right: 0,
-            bottom: 0,
-            left: 0,
-          },
-          {
-            alignItems: 'center',
-            justifyContent: 'center',
-            opacity: flip.interpolate({ inputRange: [0.35, 0.5, 0.65], outputRange: [0, 1, 0] }),
-          },
-          { pointerEvents: 'none' } as any,
-        ]}
-      >
-        <View style={styles.flipBadge}><Text style={styles.flipText}>{i18nT('quests:components.quests.questWizardStepCard.pravilno_2f264674')}</Text></View>
-      </Animated.View>
+      {/* #2910: бейдж «✓ Правильно!» живёт только на время флипа после верного
+          ответа; невидимый (opacity 0) узел попадал в текст страницы и в дерево
+          скринридера ещё до старта квеста. */}
+      {isFlipping ? (
+        <Animated.View
+          testID="quest-step-correct-flip"
+          style={[
+            {
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              bottom: 0,
+              left: 0,
+            },
+            {
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: flip.interpolate({ inputRange: [0.35, 0.5, 0.65], outputRange: [0, 1, 0] }),
+            },
+            { pointerEvents: 'none' } as any,
+          ]}
+        >
+          <View style={styles.flipBadge}><Text style={styles.flipText}>{i18nT('quests:components.quests.questWizardStepCard.pravilno_2f264674')}</Text></View>
+        </Animated.View>
+      ) : null}
     </Animated.View>
   )
 })

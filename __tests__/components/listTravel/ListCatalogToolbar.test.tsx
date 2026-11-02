@@ -99,4 +99,30 @@ describe('ListCatalogToolbar', () => {
     expect(onSortChange).toHaveBeenCalledWith('oldest')
     expect(queryByTestId('sort-option-oldest')).toBeNull()
   })
+
+  // #2903: пустой `sort` публичного каталога — «По релевантности», а не «Новые».
+  it('shows relevance as the active sort of the public catalog when no sort is set', async () => {
+    const onSortChange = jest.fn()
+    const { getByTestId } = await render(
+      <ListCatalogToolbar
+        sortOptions={[
+          { id: 'distance', name: 'Ближе ко мне' },
+          { id: 'relevance', name: 'По релевантности' },
+          { id: 'newest', name: 'Сначала новые' },
+        ]}
+        sortValue=""
+        onSortChange={onSortChange}
+        density="comfortable"
+        onDensityChange={jest.fn()}
+        compactLayout={false}
+        inline
+      />,
+    )
+
+    expect(getByTestId('catalog-sort-trigger')).toHaveTextContent(/По релевантности/)
+    await fireEvent.press(getByTestId('catalog-sort-trigger'))
+    expect(getByTestId('sort-option-relevance').props.accessibilityState).toEqual({ checked: true })
+    await fireEvent.press(getByTestId('sort-option-distance'))
+    expect(onSortChange).toHaveBeenCalledWith('distance')
+  })
 })

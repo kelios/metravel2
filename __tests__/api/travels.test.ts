@@ -479,6 +479,54 @@ describe('src/api/travelsApi.ts', () => {
       expect(where.categories).toEqual([4]);
     });
 
+    // #2903: порядок «ближе ко мне» считает сервер (#2929) — точка отсчёта идёт
+    // отдельными query-параметрами рядом с `sort`, а не внутрь `where`.
+    it('передаёт sort=distance с lat/lng как query-параметры, не как фильтр', async () => {
+      const { fetchTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse.mockResolvedValueOnce({ data: [], total: 0 } as any);
+
+      await fetchTravels(0, 10, '', { categories: [21, 22], sort: 'distance', lat: 53.9, lng: 27.56 } as any, {} as any);
+
+      const urlObj = new URL(mockedFetchWithTimeout.mock.calls[0][0] as string);
+      const where = JSON.parse(urlObj.searchParams.get('where') || '{}');
+      expect(urlObj.searchParams.get('sort')).toBe('distance');
+      expect(urlObj.searchParams.get('lat')).toBe('53.9');
+      expect(urlObj.searchParams.get('lng')).toBe('27.56');
+      expect(where).toEqual(expect.objectContaining({ categories: [21, 22] }));
+      expect(where).not.toHaveProperty('lat');
+      expect(where).not.toHaveProperty('lng');
+      expect(where).not.toHaveProperty('sort');
+    });
+
+    it('фасеты получают параметры без ключей порядка (#2903)', () => {
+      const { omitTravelSortQueryParams } = jest.requireActual('@/api/travelQueryShared');
+      expect(omitTravelSortQueryParams({
+        categories: [21], publish: 1, sort: 'distance', lat: 53.9, lng: 27.56, sortBy: 'id', sortOrder: 'asc', ordering: '-id',
+      })).toEqual({ categories: [21], publish: 1 });
+    });
+
+    it('не шлёт точку без sort=distance и отбрасывает невалидные координаты', async () => {
+      const { fetchTravels } = loadTravelsApi();
+      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any).mockResolvedValueOnce({ ok: true } as any);
+      mockedSafeJsonParse
+        .mockResolvedValueOnce({ data: [], total: 0 } as any)
+        .mockResolvedValueOnce({ data: [], total: 0 } as any);
+
+      await fetchTravels(0, 10, '', { sort: 'newest', lat: 53.9, lng: 27.56 } as any, {} as any);
+      await fetchTravels(0, 10, '', { sort: 'distance', lat: 'abc', lng: 500 } as any, {} as any);
+
+      const newest = new URL(mockedFetchWithTimeout.mock.calls[0][0] as string);
+      expect(newest.searchParams.get('sort')).toBe('newest');
+      expect(newest.searchParams.has('lat')).toBe(false);
+      expect(JSON.parse(newest.searchParams.get('where') || '{}')).not.toHaveProperty('lat');
+
+      const invalid = new URL(mockedFetchWithTimeout.mock.calls[1][0] as string);
+      expect(invalid.searchParams.get('sort')).toBe('distance');
+      expect(invalid.searchParams.has('lat')).toBe(false);
+      expect(invalid.searchParams.has('lng')).toBe(false);
+    });
+
     it('пробрасывает AbortError без логирования', async () => {
       const { fetchTravels } = loadTravelsApi();
       const abortError: any = new Error('aborted');

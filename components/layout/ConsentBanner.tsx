@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useSyncExternalStore } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Link, usePathname } from 'expo-router';
+import { Platform, StyleSheet, Text, View } from 'react-native';
+import { usePathname } from 'expo-router';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { asBottomDimension, useFloatingAnchorPx, webFloatingAnchor } from '@/components/layout/bottomChromeInset';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
+import LinkPressable from '@/components/ui/LinkPressable';
 import { readConsent, writeConsent, ConsentState } from '@/utils/consent';
 import { clearAnalyticsIdentity } from '@/utils/analyticsContext';
 import { clearQuestFunnelRuns } from '@/utils/questFunnelAnalytics';
@@ -171,28 +172,24 @@ function ConsentBanner() {
             isNarrowMobile && styles.buttonsRowNarrow,
           ]}
         >
-          {/* Прямому ребёнку `Link asChild` отдаётся ОДИН плоский объект стиля: Slot сливает
-              стили спредом, поэтому функция/массив схлопываются в `{}` и кнопка теряет рамку. */}
-          <Link href="/cookies" asChild>
-            <Pressable
-              accessibilityRole="link"
-              accessibilityLabel={i18nT('navigation:components.layout.ConsentBanner.podrobnee_o_cookies_caf7ecdc')}
-              style={styles.detailsLink}
-            >
-              {({ pressed }) => (
-                <View
-                  style={[
-                    styles.detailsLinkPill,
-                    { borderColor: colors.border },
-                    pressed && styles.detailsLinkPressed,
-                  ]}
-                >
-                  <Text style={[styles.detailsLinkText, { color: colors.primaryText }]}>
-                    {i18nT('navigation:components.layout.ConsentBanner.podrobnee_1db70e5c')}</Text>
-                </View>
-              )}
-            </Pressable>
-          </Link>
+          <LinkPressable
+            href="/cookies"
+            accessibilityLabel={i18nT('navigation:components.layout.ConsentBanner.podrobnee_o_cookies_caf7ecdc')}
+            style={styles.detailsLink}
+          >
+            {({ pressed }) => (
+              <View
+                style={[
+                  styles.detailsLinkPill,
+                  { borderColor: colors.border },
+                  pressed && styles.detailsLinkPressed,
+                ]}
+              >
+                <Text style={[styles.detailsLinkText, { color: colors.primaryText }]}>
+                  {i18nT('navigation:components.layout.ConsentBanner.podrobnee_1db70e5c')}</Text>
+              </View>
+            )}
+          </LinkPressable>
           <Button
             label={i18nT('navigation:components.layout.ConsentBanner.otklonit_054e0823')}
             onPress={handleNecessaryOnly}

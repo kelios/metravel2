@@ -293,4 +293,23 @@ describe('useListTravelFilters', () => {
       expect(result.current.filter).toEqual({});
     });
   });
+
+  // #2903: «Ближе ко мне» — серверная сортировка с точкой отсчёта; «По
+  // релевантности» — отсутствие `sort` в запросе.
+  it('sends the distance origin only with the distance sort and drops the relevance id', async () => {
+    const { result } = await setup({ distanceOrigin: { lat: 53.68321, lng: 23.83456 } });
+
+    await act(() => result.current.onSelect('sort', 'distance'));
+    expect(result.current.filter.sort).toBe('distance');
+    expect(result.current.queryParams).toEqual(expect.objectContaining({ sort: 'distance', lat: 53.68, lng: 23.83 }));
+
+    await act(() => result.current.onSelect('sort', 'relevance'));
+    expect(result.current.filter.sort).toBeUndefined();
+    expect(result.current.queryParams).not.toHaveProperty('sort');
+    expect(result.current.queryParams).not.toHaveProperty('lat');
+
+    await act(() => result.current.onSelect('sort', 'newest'));
+    expect(result.current.queryParams.sort).toBe('newest');
+    expect(result.current.queryParams).not.toHaveProperty('lng');
+  });
 });

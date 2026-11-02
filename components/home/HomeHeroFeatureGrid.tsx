@@ -1,17 +1,17 @@
 import { useState } from 'react'
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Platform, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
-import { Link, type Href } from 'expo-router'
+import type { Href } from 'expo-router'
 
+import LinkPressable from '@/components/ui/LinkPressable'
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { HeroHighlight, HeroHighlightPressEvent } from './homeHeroContent'
 
 type Styles = any
 
 // #2901: плашка — ссылка (`<a href>` на web), hover/focus как у чипов настроения.
-// Прямой ребёнок `Link asChild` получает ОДИН плоский объект стиля: Slot сливает
-// стили спредом, и функция `({ pressed, hovered }) => [...]` схлопнулась бы в `{}` —
-// плашка потеряла бы рамку, фон и раскладку (тот же приём, что в #2830).
+// Стиль не может зависеть от `({ pressed, hovered })` (Slot сливает спредом, #2830),
+// поэтому наведение и нажатие живут в state.
 function TabletFeatureLink({
   colors,
   item,
@@ -26,7 +26,7 @@ function TabletFeatureLink({
   const [hovered, setHovered] = useState(false)
   const [pressed, setPressed] = useState(false)
   const [focused, setFocused] = useState(false)
-  const cardStyle = StyleSheet.flatten([
+  const cardStyle = [
     styles.tabletFeatureCard,
     (pressed || hovered) && styles.tabletFeatureCardHover,
     Platform.OS === 'web' && focused && {
@@ -35,31 +35,30 @@ function TabletFeatureLink({
       outlineColor: colors.primary,
       outlineOffset: 2,
     },
-  ])
+  ]
 
   return (
-    <Link href={item.route as Href} onPress={(event) => onHighlightPress(item, event)} asChild>
-      <Pressable
-        testID={`home-hero-highlight-${item.id}`}
-        accessibilityRole="link"
-        accessibilityLabel={`${item.title}: ${item.subtitle}`}
-        style={cardStyle}
-        onHoverIn={() => setHovered(true)}
-        onHoverOut={() => setHovered(false)}
-        onPressIn={() => setPressed(true)}
-        onPressOut={() => setPressed(false)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-      >
-        <View style={styles.tabletFeatureIconWrap}>
-          <Feather name={item.icon} size={16} color={colors.textOnPrimary} />
-        </View>
-        <View style={styles.tabletFeatureTextWrap}>
-          <Text style={styles.tabletFeatureTitle}>{item.title}</Text>
-          <Text style={styles.tabletFeatureSubtitle}>{item.subtitle}</Text>
-        </View>
-      </Pressable>
-    </Link>
+    <LinkPressable
+      href={item.route as Href}
+      onPress={(event) => onHighlightPress(item, event)}
+      testID={`home-hero-highlight-${item.id}`}
+      accessibilityLabel={`${item.title}: ${item.subtitle}`}
+      style={cardStyle}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
+      onPressIn={() => setPressed(true)}
+      onPressOut={() => setPressed(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+    >
+      <View style={styles.tabletFeatureIconWrap}>
+        <Feather name={item.icon} size={16} color={colors.textOnPrimary} />
+      </View>
+      <View style={styles.tabletFeatureTextWrap}>
+        <Text style={styles.tabletFeatureTitle}>{item.title}</Text>
+        <Text style={styles.tabletFeatureSubtitle}>{item.subtitle}</Text>
+      </View>
+    </LinkPressable>
   )
 }
 

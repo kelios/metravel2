@@ -510,7 +510,8 @@ export const buildSearchAnalyticsFilters = (
   queryParams: Record<string, unknown>,
   filter: FilterState,
 ): { filtersKey: string; hasFilters: boolean } => {
-  const { sort: _sort, ...params } = queryParams
+  // Порядок выдачи и его точка отсчёта (#2903) — не фильтр: смена сортировки не новый поиск.
+  const { sort: _sort, lat: _lat, lng: _lng, ...params } = queryParams
   return {
     filtersKey: JSON.stringify(params),
     hasFilters: getListTravelActiveFiltersCount({ ...filter, sort: undefined }, '') > 0,

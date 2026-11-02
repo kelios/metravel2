@@ -80,6 +80,8 @@ const INTERACTIVE_ELEMENTS = new Set([
   // Обёртки проекта: имя — как его пишут потребители в JSX (для default-экспорта
   // это имя импорта, а не внутреннее имя компонента).
   'CardActionPressable',
+  // #2901: `<a href>`-ссылка c SPA-переходом вместо `Link asChild` + `Pressable`.
+  'LinkPressable',
   'Chip',
   'ColorChip',
   'Toggle',

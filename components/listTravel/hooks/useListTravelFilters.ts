@@ -7,6 +7,7 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import type { FilterState, FilterOptions } from '../utils/listTravelTypes';
 import { INITIAL_FILTER, BELARUS_ID } from '../utils/listTravelConstants';
 import { buildTravelQueryParams, mapCategoryNamesToIds } from '@/utils/filterQuery';
+import { normalizeCatalogSortValue, withDistanceSortOrigin, type DistanceSortOrigin } from '../utils/catalogSort';
 
 export interface UseListTravelFiltersProps {
   options?: FilterOptions;
@@ -17,6 +18,11 @@ export interface UseListTravelFiltersProps {
   userId: string | null;
   user_id?: string;
   initialFilter?: FilterState;
+  /**
+   * #2903: точка отсчёта для `sort=distance` (позиция с уже выданным доступом,
+   * иначе Минск). Без неё сервер сам считает от Минска.
+   */
+  distanceOrigin?: DistanceSortOrigin | null;
 }
 
 export interface UseListTravelFiltersReturn {
@@ -101,6 +107,7 @@ export function useListTravelFilters({
   userId,
   user_id,
   initialFilter,
+  distanceOrigin,
 }: UseListTravelFiltersProps): UseListTravelFiltersReturn {
   const [filter, setFilter] = useState<FilterState>(initialFilter ?? INITIAL_FILTER);
   const appliedInitialRef = useRef<string>(serializeFilterState(initialFilter));
@@ -194,14 +201,16 @@ export function useListTravelFilters({
         cleaned[key] = value;
       });
     
-    return cleaned;
-  }, [filterForQuery, isMeTravel, isSuperuser, isExport, isTravelBy, userId, user_id]);
+    return withDistanceSortOrigin(cleaned, distanceOrigin);
+  }, [filterForQuery, isMeTravel, isSuperuser, isExport, isTravelBy, userId, user_id, distanceOrigin]);
 
   const resetFilters = useCallback(() => {
     setFilter(INITIAL_FILTER);
   }, []);
 
-  const onSelect = useCallback((field: string, value: any) => {
+  const onSelect = useCallback((field: string, rawValue: any) => {
+    // #2903: «По релевантности» — клиентский вариант без `sort` в запросе.
+    const value = field === 'sort' ? normalizeCatalogSortValue(rawValue) : rawValue;
     setFilter((prev) => {
       // Если значение пустое, удаляем ключ из фильтра
       if (value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0)) {

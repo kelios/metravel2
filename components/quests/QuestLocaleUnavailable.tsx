@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
-import { Link, type Href } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { Href } from 'expo-router';
+import { StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import type { SupportedLocale } from '@/i18n/config';
 import { useThemedColors } from '@/hooks/useTheme';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import Button from '@/components/ui/Button';
+import LinkPressable from '@/components/ui/LinkPressable';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import type { QuestServingProjection } from '@/utils/questLocaleRouting';
 
@@ -35,18 +36,14 @@ export default function QuestLocaleUnavailable({ projection, temporary, onRetry 
       </Text>
       <Button label={t('quests:localeServing.retry')} onPress={onRetry} />
       {projection?.ru_source_path && (
-        <Link href={projection.ru_source_path as Href} asChild>
-          <Pressable accessibilityRole="link" style={styles.link}>
-            <Text style={styles.linkText}>{t('quests:localeServing.ruSource')}</Text>
-          </Pressable>
-        </Link>
+        <LinkPressable href={projection.ru_source_path as Href} style={styles.link}>
+          <Text style={styles.linkText}>{t('quests:localeServing.ruSource')}</Text>
+        </LinkPressable>
       )}
       {!projection?.ru_source_path && (
-        <Link href="/quests" asChild>
-          <Pressable accessibilityRole="link" style={styles.link}>
-            <Text style={styles.linkText}>{t('quests:app.tabs.quests.city.questId.k_spisku_kvestov_27c3b0f7')}</Text>
-          </Pressable>
-        </Link>
+        <LinkPressable href="/quests" style={styles.link}>
+          <Text style={styles.linkText}>{t('quests:app.tabs.quests.city.questId.k_spisku_kvestov_27c3b0f7')}</Text>
+        </LinkPressable>
       )}
     </View>
   );

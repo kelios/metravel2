@@ -252,6 +252,8 @@ export const travelGenerated4 = {
   "components.travel.WeeklyHighlights.samye_populyarnye_marshruty_etogo_mesyatsa_c2e48432": "The most popular routes this month",
   "components.travel.ZoomableGalleryImage.value1_uvelichenie_dvumya_paltsami_1ef063e7": "{{value1}}. Two finger zoom",
   "components.listTravel.sortings.newest": "New ones first",
+  "components.listTravel.sortings.distance": "Closest to me",
+  "components.listTravel.sortings.relevance": "Most relevant",
   "components.listTravel.sortings.oldest": "Old ones first",
   "components.listTravel.sortings.popularDesc": "Popular ↓",
   "components.listTravel.sortings.popularAsc": "Popular ↑",

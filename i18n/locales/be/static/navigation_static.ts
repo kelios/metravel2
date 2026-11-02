@@ -44,6 +44,7 @@ export const navigationStaticResources = {
   "breadcrumb.plan": "Планаванне",
   "breadcrumb.create": "Новая паездка",
   "breadcrumb.app": "Дадатак",
+  "breadcrumb.becomeAuthor": "Стаць аўтарам",
   "components.layout.AccountMenu.dobavit_puteshestvie_bebd3820": "Дадаць падарожжа",
   "components.layout.AccountMenu.hochu_poehat_fa6b46d5": "Хачу паехаць",
   "components.layout.AccountMenu.moi_puteshestviya_a530e844": "Мае вандроўкі",

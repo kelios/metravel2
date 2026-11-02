@@ -18,6 +18,7 @@ import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { readViewportWidth } from '@/utils/viewportMetrics';
 import { resolveQuestHeaderPresentation } from '@/components/layout/questHeaderPresentation';
 import { useDocumentRouteRegistration } from '@/components/layout/documentView';
+import { inactiveScreenWebAttributes, renderInactiveScreenBoundary } from '@/components/layout/InactiveScreenBoundary';
 
 const getHeaderHeightCacheKey = (variant: HeaderVariant) => `mt:header-height:${variant}`;
 
@@ -215,6 +216,9 @@ const Header = React.memo(function Header() {
                 'data-header-slot': '',
                 'data-map-header-slot': isMapRoute(pathname) ? 'true' : undefined,
                 style: headerSlotStyle,
+                // #2910: шапка прежнего экрана рендерится навигатором вне его
+                // `screenLayout` — её прячем тем же правилом, что и сам экран.
+                ...inactiveScreenWebAttributes(isNavigationTarget),
             },
             <CustomHeader
                 onHeightChange={handleHeaderHeight}
@@ -255,6 +259,10 @@ export default function TabLayout() {
             <Tabs
                 layout={registrationOnly ? registrationOnlyLayout : undefined}
                 tabBar={() => null}
+                // #2910: посещённые экраны на web остаются смонтированными (Back
+                // возвращает их с состоянием), но неактивный экран — `inert` +
+                // `aria-hidden`: его кнопки не попадают в фокус и скринридер.
+                screenLayout={Platform.OS === 'web' ? renderInactiveScreenBoundary : undefined}
                 // Android hardware Back и router.back() должны возвращать на
                 // предыдущий активный таб (напр. Профиль → Настройки → Back → Профиль),
                 // а не сбрасывать на первый таб (index). Выход с главной всё ещё

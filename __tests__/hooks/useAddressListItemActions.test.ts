@@ -105,15 +105,16 @@ describe('useAddressListItemActions guest save (#2778)', () => {
     mockCreatePoint.mockClear()
   })
 
-  it('sends a guest to login with the save intent and creates nothing', async () => {
+  it('sends a guest to registration with the save intent and creates nothing', async () => {
     mockIsAuthenticated = false
     await savePoint(baseTravel)
     expect(mockCreatePoint).not.toHaveBeenCalled()
-    // На native возврат — на карту (`fallbackRedirect`), на web — текущий адрес.
+    // #2898: `save-point` — намерение-действие, на устройстве без прошлого входа
+    // сначала регистрация. На native возврат — на карту (`fallbackRedirect`), на web — текущий адрес.
     expect(mockRouterPush).toHaveBeenCalledWith(
       Platform.OS === 'web'
-        ? expect.stringMatching(/^\/login\?redirect=.*&intent=save-point$/)
-        : '/login?redirect=%2Fmap&intent=save-point',
+        ? expect.stringMatching(/^\/registration\?redirect=.*&intent=save-point$/)
+        : '/registration?redirect=%2Fmap&intent=save-point',
     )
   })
 })

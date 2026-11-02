@@ -1,5 +1,5 @@
 import type { FilterOptions, FilterState } from './listTravelTypes';
-import { buildSortingOptions } from './sortings';
+import { buildSortingOptions, withCatalogProximitySortings } from './sortings';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -24,6 +24,8 @@ type BuildTravelFilterGroupsParams = {
   facetCounts?: FacetCounts;
   selectedFilters?: FilterState | Record<string, unknown>;
   includeSort?: boolean;
+  /** #2903: «Ближе ко мне» / «По релевантности» — только публичный каталог. */
+  includeProximitySort?: boolean;
   hideCountries?: boolean;
 };
 
@@ -95,6 +97,7 @@ export const buildTravelFilterGroups = ({
   facetCounts = {},
   selectedFilters,
   includeSort = false,
+  includeProximitySort = false,
   hideCountries = false,
 }: BuildTravelFilterGroupsParams): TravelFilterGroup[] => {
   const groups: TravelFilterGroup[] = [];
@@ -122,7 +125,9 @@ export const buildTravelFilterGroups = ({
     groups.push({
       key: 'sort',
       title: i18nT('travel:components.listTravel.utils.filterGroups.sortirovka_0d5f977f'),
-      options: buildSortingOptions(options?.sortings || []),
+      options: buildSortingOptions(
+        includeProximitySort ? withCatalogProximitySortings(options?.sortings || []) : options?.sortings || [],
+      ),
       multiSelect: false,
       icon: 'sliders',
     });

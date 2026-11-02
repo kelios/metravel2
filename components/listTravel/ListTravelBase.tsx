@@ -16,6 +16,7 @@ import { resolveListFeedbackSlots } from '@/components/travel/TravelModerationFe
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { markSsgFirstScreenReady, useHydrationReady } from '@/hooks/useHydrationReady'
 import type { Travel } from '@/types/types'
+import { omitTravelSortQueryParams } from '@/api/travelQueryShared'
 import { SEARCH_DEBOUNCE } from './utils/listTravelConstants'
 import { useListTravelFilters } from './hooks/useListTravelFilters'
 import { useListTravelData } from './hooks/useListTravelData'
@@ -33,7 +34,8 @@ import type { ActiveConditionChip } from './ListTravelBase.helpers'
 import { useRecommendationsVisibility } from './hooks/useRecommendationsVisibility'
 import { createListTravelBaseStyles } from './ListTravelBase.styles'
 import { useListViewStore } from '@/stores/listViewStore'
-import { getCatalogHeaderSortingOptions } from './utils/sortings'
+import { useCatalogSort } from './hooks/useCatalogSort'
+import { useTravelCardDistanceOrigin } from './useTravelCardDistanceOrigin'
 import type { ListStatusMode } from './ListCatalogToolbar'
 import {
   applyListDensity,
@@ -78,6 +80,11 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     const isMeTravel = (route as any).name === "metravel" || pathname?.includes('/metravel');
     const isTravelBy = (route as any).name === "travelsby";
     const isExport = (route as any).name === "export" || pathname?.includes('/export');
+    // #2903: «Ближе ко мне» — только публичный каталог; точка — та же, от которой
+    // карточки пишут «N км» (позиция с уже выданным доступом, иначе Минск).
+    const isPublicCatalog = !isMeTravel && !isExport && !user_id;
+    const cardDistanceOrigin = useTravelCardDistanceOrigin();
+    const distanceOrigin = isPublicCatalog ? cardDistanceOrigin : null;
 
     // На планшетах в портретной ориентации ведем себя как на мобильном: скрываем сайдбар и даем больше ширины сетке
     const isMobileDevice = viewportState.isMobileDevice;
@@ -180,6 +187,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         userId,
         user_id,
         initialFilter,
+        distanceOrigin,
     });
 
     useEffect(() => {
@@ -222,7 +230,8 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     const facetCounts = useListTravelFacets({
       enabled: shouldFetchFilterOptions,
       search: debSearch,
-      queryParams,
+      // Счётчики от порядка не зависят: смена сортировки/точки (#2903) их не перезапрашивает.
+      queryParams: omitTravelSortQueryParams(queryParams),
     });
 
     const isQueryEnabled = useMemo(
@@ -339,19 +348,17 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     const handleCloseFilters = useCallback(() => setShowFilters(false), []);
     const handleOpenFilters = useCallback(() => setShowFilters(true), []);
 
-    /* SORT: header control reuses the backend-provided sortings list and the
-       existing filter.sort query path (no extra request). */
-    const sortOptions = useMemo(
-      () => getCatalogHeaderSortingOptions(options?.sortings ?? []),
-      [options?.sortings]
-    );
-    const sortValue = typeof filter.sort === 'string' ? filter.sort : '';
-    const handleSortChange = useCallback(
-      (id: string) => {
-        onSelect('sort', sortValue === id ? '' : id);
-      },
-      [onSelect, sortValue]
-    );
+    // #2903: переключатель в шапке, память сессии и `search_sort_change`.
+    const { handleFilterSelect, handleSortChange, sortOptions, sortValue } = useCatalogSort({
+      enabled: isPublicCatalog,
+      hydrationReady,
+      urlSort: typeof initialFilter?.sort === 'string' ? initialFilter.sort : '',
+      search: normalizedSearchParam,
+      entry: initialFilter,
+      sortings: options?.sortings,
+      sortValue: filter.sort,
+      onSelect,
+    });
 
     const travelStatusMode = useMemo<ListStatusMode>(() => {
       if (filter.draftsOnly === true) return 'drafts';
@@ -382,7 +389,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         debSearch,
         filter,
         options,
-        onSelect,
+        onSelect: handleFilterSelect,
         setSearch,
       })
     // Intentional granular deps (filter.* sub-keys) to avoid recompute on filter object-identity change
@@ -402,7 +409,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
       filter.sort,
       filter.transports,
       filter.year,
-      onSelect,
+      handleFilterSelect,
       options?.categories,
       options?.categoryTravelAddress,
       options?.companions,
@@ -470,9 +477,10 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         facetCounts,
         selectedFilters: filter,
         includeSort: shouldSidebarIncludeSort({ usesOverlaySidebar, isExport }),
+        includeProximitySort: isPublicCatalog,
         hideCountries: isTravelBy,
       }),
-      [options, filter, isTravelBy, facetCounts, usesOverlaySidebar, isExport]
+      [options, filter, isTravelBy, facetCounts, usesOverlaySidebar, isExport, isPublicCatalog]
     );
 
     const fallbackMatch = useMemo(() => selectListTravelFallbackMatch({
@@ -718,7 +726,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         isMobile: usesOverlaySidebar,
         filterGroups,
         filter,
-        onSelect,
+        onSelect: handleFilterSelect,
         total: displayedTotal,
         isSuper,
         isMeTravel,
