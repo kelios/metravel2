@@ -562,7 +562,12 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       };
 
       const runFit = () => {
-        if (cancelled || hasUserAdjustedMapView()) return;
+        if (cancelled) return;
+        if (hasUserAdjustedMapView()) {
+          hasInitializedRef.current = true;
+          signalInitialViewReady();
+          return;
+        }
         try {
           map.invalidateSize?.({ animate: false } as any);
         } catch {

@@ -5,6 +5,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { webDataSetProps } from '@/utils/webProps';
 import { HEADER_LOGO_WEB_SRC } from '@/components/layout/headerLayoutContract';
 import { translate as i18nT } from '@/i18n'
+import ChristmasLogoDecoration from './ChristmasLogoDecoration';
 
 
 type LogoProps = {
@@ -57,7 +58,9 @@ export default React.memo(function Logo({
                     alt={i18nT('navigation:components.layout.Logo.metravel_logotip_14780610')}
                     {...webLogoDataSet('headerLogoImage')}
                 />
+                <ChristmasLogoDecoration variant="hat" />
             </View>
+            <ChristmasLogoDecoration variant="tree" />
             {showWordmark && (
                 <Text style={styles.logoTextRow} {...webLogoDataSet('headerLogoWordmark')}>
                     <Text style={styles.logoTextMe}>{i18nT('navigation:components.layout.Logo.me_7e450b64')}</Text><Text style={styles.logoTextTravel} {...webLogoDataSet('headerLogoTravel')}>{i18nT('navigation:components.layout.Logo.travel_6006be95')}</Text>

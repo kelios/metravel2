@@ -9,7 +9,7 @@ import Map from '@/components/MapPage/Map';
 import MapRouteEngine from '@/components/MapPage/MapRouteEngine';
 import type { MapUiApi } from '@/types/mapUi';
 import type { MapClustersFilters } from '@/api/map';
-import type { MapMovePayload } from './Map/types';
+import type { MapMovePayload, Point } from './Map/types';
 import type { ComponentType } from 'react';
 import { translate as i18nT } from '@/i18n'
 
@@ -32,6 +32,8 @@ interface MapPanelProps {
     travelsTotal?: number | null;
     /** First map result set is no longer loading; used only by the web tile startup gate. */
     initialResultsSettled?: boolean;
+    /** Explicit URL target; web renders it even when absent from server results. */
+    urlSelectedPlace?: Point | null;
     coordinates: LatLng | null;
     /** Trusted current user fix, independent from the viewport/query center. */
     userLocation?: LatLng | null;
@@ -94,6 +96,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                travelsData,
                                                travelsTotal = null,
                                                initialResultsSettled = true,
+                                               urlSelectedPlace,
                                                coordinates,
                                                userLocation,
                                                coordinatesAreFallback,
@@ -226,6 +229,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                       key={`map-${mapKeyVersion}`}
                       travel={travelProp}
                       initialResultsSettled={initialResultsSettled}
+                      urlSelectedPlace={urlSelectedPlace}
                       coordinates={safeCoordinates}
                       coordinatesAreFallback={coordinatesAreFallback}
                       userLocation={resolvedUserLocation}

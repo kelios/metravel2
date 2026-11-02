@@ -122,6 +122,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const {
     travel = { data: [] },
     initialResultsSettled = true,
+    urlSelectedPlace,
     coordinates,
     // Intentionally NOT defaulted: trust is explicit and undefined fails closed.
     coordinatesAreFallback,
@@ -876,6 +877,7 @@ const MapPageComponent: React.FC<Props> = (props) => {
         travelData={filteredTravelData}
         travelsTotal={travelsTotal}
         initialResultsSettled={initialResultsSettled}
+        urlSelectedPlace={urlSelectedPlace}
         onInitialViewReady={handleInitialViewReady}
         fitBoundsPadding={fitBoundsPadding}
         setMapZoom={setMapZoom}
@@ -1002,6 +1004,7 @@ export const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
   if (prevProps.mapClusterFilters !== nextProps.mapClusterFilters) return false
   if (prevProps.categoryFilterUnresolved !== nextProps.categoryFilterUnresolved) return false
   if (prevProps.initialResultsSettled !== nextProps.initialResultsSettled) return false
+  if (prevProps.urlSelectedPlace !== nextProps.urlSelectedPlace) return false
 
   // #207 host-stability (#217): the map is a stable host that never remounts, so a
   // desktop↔mobile resize flips isMobile at the caller, toggling these props (mobile

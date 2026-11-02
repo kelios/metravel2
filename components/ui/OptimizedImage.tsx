@@ -135,6 +135,8 @@ interface OptimizedImageProps {
   showLoadingIndicator?: boolean;
   onLoad?: () => void;
   onError?: () => void;
+  /** Opt-in final failure notification; onError still reports every attempt. */
+  onTerminalError?: () => void;
   style?: any;
   // ✅ НОВОЕ: Expo Image v3 features
   recyclingKey?: string; // Для переиспользования в списках
@@ -195,6 +197,7 @@ function OptimizedImage({
   showLoadingIndicator = true,
   onLoad,
   onError,
+  onTerminalError,
   style,
   recyclingKey,
 }: OptimizedImageProps) {
@@ -395,6 +398,7 @@ function OptimizedImage({
     setIsLoading(false);
     setHasError(true);
     onError?.();
+    onTerminalError?.();
   };
 
   // Определяем приоритет загрузки

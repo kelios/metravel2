@@ -4,12 +4,12 @@ import { useLocalSearchParams } from 'expo-router'
 
 import InstantSEO from '@/components/seo/LazyInstantSEO'
 import { ResponsiveContainer } from '@/components/layout'
+import Button from '@/components/ui/Button'
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { ADVENT_ROUTE } from '@/constants/advent'
 import { useAdventCampaign, type AdventDoorView } from '@/hooks/useAdventCampaign'
 import { useAdventCampaignQuery, useAdventServerSync } from '@/hooks/useAdventApi'
-import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
 import { sendAnalyticsEvent } from '@/utils/analytics'
@@ -21,6 +21,8 @@ import AdventHeader from './AdventHeader'
 import AdventGrid from './AdventGrid'
 import AdventDoorSheet from './AdventDoorSheet'
 import AdventShareCard from './AdventShareCard'
+import { formatDoorDate } from './AdventDoorTile'
+import { ADVENT_HOUSE_MAX_WIDTH } from './adventHouseLayout'
 
 // Отдельным чанком: тост тянет весь контур значков, а статический импорт
 // перекраивал общие чанки сайта (бюджет начальных запросов `/search`).
@@ -30,7 +32,6 @@ const BadgeUnlockToast = lazy(() => import('@/components/achievements/BadgeUnloc
 export default function AdventScreen() {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
-  const { width } = useResponsive()
   const serverCampaign = useAdventCampaignQuery()
   const campaign = useAdventCampaign({ serverCampaign })
   const { doors, ready, isAuthenticated, openDoor, completeTask } = campaign
@@ -55,7 +56,7 @@ export default function AdventScreen() {
 
   const handlePressDoor = useCallback(
     (door: AdventDoorView) => {
-      if (door.state === 'locked' || !ready) return
+      if (door.state === 'locked' || !ready || !campaign.hydrated) return
       if (door.state === 'available') {
         sendAnalyticsEvent('Advent_DoorOpen', { day: door.day, kind: door.kind, guest: !isAuthenticated })
         openDoor(door.day, campaign.now)
@@ -64,7 +65,7 @@ export default function AdventScreen() {
       }
       setSelectedDay(door.day)
     },
-    [ready, isAuthenticated, openDoor, completeTask, campaign.now],
+    [ready, isAuthenticated, openDoor, completeTask, campaign.now, campaign.hydrated],
   )
 
   // Возврат после входа гостя (`/advent?day=N`): один раз открываем ту же дверцу.
@@ -98,6 +99,27 @@ export default function AdventScreen() {
         <ResponsiveContainer maxWidth="xl" padding>
           <View style={styles.stack}>
             <Text style={styles.intro}>{i18nT('adventStatic:page.intro')}</Text>
+            {campaign.todayDoor ? (
+              <View style={styles.todayCard} testID="advent-today-action">
+                <Text style={styles.todayDate}>{formatDoorDate(campaign.todayDoor.date)}</Text>
+                <Text style={styles.todayTitle}>
+                  {i18nT('adventStatic:home.today', {
+                    value1: campaign.todayDoor.day,
+                    value2: campaign.todayDoor.secret && campaign.todayDoor.state !== 'opened' && campaign.todayDoor.state !== 'done'
+                      ? i18nT('adventStatic:tile.secret')
+                      : campaign.todayDoor.gift.title,
+                  })}
+                </Text>
+                <Button
+                  label={campaign.todayDoor.state === 'available' ? i18nT('adventStatic:home.cta') : i18nT('adventStatic:profile.cta')}
+                  disabled={!ready || !campaign.hydrated || campaign.todayDoor.state === 'locked'}
+                  onPress={() => { if (campaign.todayDoor) handlePressDoor(campaign.todayDoor) }}
+                  testID="advent-today-open"
+                  labelNumberOfLines={2}
+                  fullWidth
+                />
+              </View>
+            ) : null}
             <AdventHeader
               openedCount={campaign.openedCount}
               doneCount={campaign.doneCount}
@@ -107,10 +129,10 @@ export default function AdventScreen() {
               hydrated={campaign.hydrated}
               syncState={sync.state}
             />
+            <AdventGrid doors={doors} todayDay={campaign.todayDoor?.day} disabled={!ready || !campaign.hydrated} onPressDoor={handlePressDoor} />
             {campaign.hydrated && campaign.openedCount > 0 ? (
               <AdventShareCard openedCount={campaign.openedCount} streak={streak} year={campaign.campaign.year} />
             ) : null}
-            <AdventGrid doors={doors} width={width} disabled={!ready || !campaign.hydrated} onPressDoor={handlePressDoor} />
             <Text style={styles.rules}>{i18nT('adventStatic:page.rules')}</Text>
           </View>
         </ResponsiveContainer>
@@ -137,7 +159,10 @@ const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: colors.background },
     scroll: { paddingVertical: DESIGN_TOKENS.spacing.md, paddingBottom: DESIGN_TOKENS.spacing.xl },
-    stack: { gap: DESIGN_TOKENS.spacing.md },
+    stack: { gap: DESIGN_TOKENS.spacing.md, maxWidth: ADVENT_HOUSE_MAX_WIDTH, width: '100%', alignSelf: 'center' },
     intro: { fontSize: 15, lineHeight: 22, color: colors.textSecondary },
+    todayCard: { padding: DESIGN_TOKENS.spacing.md, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primarySoft, borderRadius: DESIGN_TOKENS.radii.lg, gap: DESIGN_TOKENS.spacing.xs },
+    todayDate: { fontSize: 13, lineHeight: 18, color: colors.primaryDark, fontWeight: '600' },
+    todayTitle: { fontSize: 18, lineHeight: 25, color: colors.text, fontWeight: '700' },
     rules: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
   })

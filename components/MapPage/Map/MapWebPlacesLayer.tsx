@@ -27,6 +27,7 @@ export type MapWebPlacesLayerProps = {
   pointsOnly: boolean
   canRenderMap: boolean
   travelData: Point[]
+  urlSelectedPlace?: Point | null
   radiusCenter: { lat: number; lng: number } | null
   radiusInMeters: number | null
   mapClusterFilters?: MapClustersFilters
@@ -55,6 +56,7 @@ const MapWebPlacesLayer: React.FC<MapWebPlacesLayerProps> = ({
   pointsOnly,
   canRenderMap,
   travelData,
+  urlSelectedPlace,
   radiusCenter,
   radiusInMeters,
   mapClusterFilters,
@@ -78,6 +80,7 @@ const MapWebPlacesLayer: React.FC<MapWebPlacesLayerProps> = ({
     pointsOnly,
     canRenderMap,
     travelData,
+    urlSelectedPlace,
     radiusCenter,
     radiusInMeters,
     mapClusterFilters,

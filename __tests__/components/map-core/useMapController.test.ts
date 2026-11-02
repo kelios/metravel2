@@ -253,6 +253,17 @@ describe('useMapController (#991 smoke)', () => {
     expect(result.current.mapPanelProps.coordinatesAreFallback).toBe(true)
   })
 
+  it.each([false, true])('keeps the explicit URL point separate from fetched results (mobile=%s)', async isMobile => {
+    const urlSelectedPlace = { id: 'url-49.261877,19.930121', coord: '49.261877,19.930121', address: 'Тропа над Реглями, Закопане' }
+    const { result } = await renderHook(() => useMapController({ ...baseParams, isMobile,
+      urlCoordinates: { latitude: 49.261877, longitude: 19.930121 }, urlSelectedPlace }))
+
+    expect(result.current.mapPanelProps.urlSelectedPlace).toBe(urlSelectedPlace)
+    expect(result.current.mapPanelProps.travelsData).toEqual([])
+    expect(result.current.mapPanelProps.travelsTotal).toBe(0)
+    expect(result.current.selectedPlace).toBe(urlSelectedPlace)
+  })
+
   it('без якорей запрос идёт от resolved-координат', async () => {
     const { result } = await renderHook(() => useMapController(baseParams))
     expect(result.current.mapPanelProps.coordinates).toEqual({

@@ -403,6 +403,10 @@ describe('buildCriticalCSS: первый экран travel-detail не проп�
 })
 
 describe('buildCriticalCSS: шрифт иконок (#2170)', () => {
+  it('does not register the obsolete 3/6-column advent tile grid', () => {
+    expect(buildCriticalCSS()).not.toContain('[data-bp-layout="advent-grid-tile"]')
+  })
+
   it('прячет иконку до загрузки её шрифта — иначе запасной шрифт рисует код иконки «квадратом»', () => {
     const { getIconFontGuardCss } = require('@/utils/iconFontShell')
     const css = require('@/utils/criticalCSSBuilder').buildCriticalCSS()

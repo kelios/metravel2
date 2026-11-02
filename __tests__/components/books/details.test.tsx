@@ -17,6 +17,8 @@ jest.mock('@/services/book/readyBooks/catalog',()=>({findReadyBook:jest.fn(),rea
 jest.mock('@/components/books/bookCopy',()=>({...jest.requireActual('@/components/books/bookCopy'),useBookCopy:()=>((key:string,params?:Record<string,unknown>)=>params?key+':'+JSON.stringify(params):key)}));
 jest.mock('@/i18n/LocaleProvider',()=>({useTranslation:()=>({t:jest.requireActual('@/i18n').translate,ready:true})}));
 jest.mock('@/components/books/BooksFrame',()=>({BooksFrame:({children,title,headingLang}:any)=><main><h1 lang={headingLang}>{title}</h1>{children}</main>}));
+// Real streaming/contents identity is covered by contents.test.tsx; these fixtures use synthetic revisions.
+jest.mock('@/components/books/ReadyBookContents.web',()=>({__esModule:true,default:()=>null}));
 // The production resolver selects .web; Jest's native preset needs an explicit
 // virtual module for this extensionless relative import.
 jest.mock('../../../components/books/preview/ReadyBookPreview',()=>({__esModule:true,default:({onClose}:any)=><button onClick={onClose}>close</button>}),{virtual:true});

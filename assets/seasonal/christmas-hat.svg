@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 44">
+  <defs><linearGradient id="cap" x1="0" x2="1"><stop stop-color="#d57860"/><stop offset="1" stop-color="#a9433b"/></linearGradient></defs>
+  <path d="M3 36 12 12 25 4 38 2 49 7 60 23 53 28 44 16 39 13 43 36Z" fill="url(#cap)"/>
+  <path d="M1 35Q17 31 43 34L44 41Q18 43 1 41Z" fill="#fff5e4"/>
+  <circle cx="57" cy="27" r="6" fill="#fff5e4"/>
+</svg>

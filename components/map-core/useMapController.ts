@@ -496,6 +496,7 @@ export function useMapController({
   const mapPanelProps = useMemo(
     () => ({
       travelsData,
+      urlSelectedPlace,
       // #2450 — total of the active radius query: the radius auto-fit may tighten
       // the view to the loaded points only when they are the whole result set.
       travelsTotal: travelsTotalForFit,
@@ -532,6 +533,7 @@ export function useMapController({
     }),
     [
       travelsData,
+      urlSelectedPlace,
       travelsTotalForFit,
       initialResultsSettled,
       mapPanelCoordinates,

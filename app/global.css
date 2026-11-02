@@ -1606,7 +1606,7 @@ html[data-season="christmas"] [data-testid="home-hero"] {
   background-repeat: no-repeat;
 }
 html[data-season="christmas"] [data-header-logo-frame]::before {
-  border-top: 2px solid var(--christmas-snow);
+  border-top: 0;
 }
 @media (min-width: 1920px) {
   html[data-season="christmas"] [data-testid="home-hero"] {
@@ -1696,8 +1696,15 @@ html[data-season="halloween"] [data-header-logo-frame]::after {
   box-shadow: -3px 2px 0 0 var(--season-logo-jewel);
 }
 html[data-season="christmas"] [data-header-logo-frame]::after {
-  background: var(--season-logo-jewel);
-  clip-path: polygon(50% 0%, 62% 35%, 100% 38%, 72% 62%, 82% 100%, 50% 78%, 18% 100%, 28% 62%, 0% 38%, 38% 35%);
+  content: none;
+}
+
+/* Boot-time season CSS also controls the compact marks before React restores preferences. */
+[data-christmas-logo-decoration] {
+  display: none !important;
+}
+html[data-season="christmas"] [data-christmas-logo-decoration] {
+  display: flex !important;
 }
 html[data-season] [data-header-logo-travel] {
   color: var(--season-logo-wordmark) !important;
@@ -1712,6 +1719,9 @@ html[data-season] [data-header-logo-travel] {
   }
 }
 @media print {
+  html[data-season="christmas"] [data-christmas-logo-decoration] {
+    display: none !important;
+  }
   html[data-season] [data-testid="main-header-row"],
   html[data-season="christmas"] [data-testid="home-hero"] {
     background-image: none;

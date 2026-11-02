@@ -19,6 +19,7 @@ import { KIND_ICONS } from './adventDoorVisuals'
 import { formatDoorDate } from './AdventDoorTile'
 import AdventRiddleTask from './AdventRiddleTask'
 import AdventGeoTask from './AdventGeoTask'
+import AdventGiftMedia from './AdventGiftMedia'
 
 // Только для дверцы 24 — отдельным чанком, вместе с контуром шеринга.
 const AdventYearInReviewCard = lazy(() => import('./AdventYearInReviewCard'))
@@ -99,6 +100,7 @@ function AdventDoorSheet({ door, isAuthenticated, creditedDays, campaignYear, on
   }, [door, router])
 
   const title = door ? `${i18nT('adventStatic:tile.day', { value1: door.day })} · ${formatDoorDate(door.date)}` : ''
+  const giftImage = door?.gift.image?.trim()
 
   const renderTask = () => {
     if (!door) return null
@@ -166,6 +168,7 @@ function AdventDoorSheet({ door, isAuthenticated, creditedDays, campaignYear, on
     <BottomSheet visible={!!door} onClose={onClose} title={title} panelStyle={styles.panel}>
       {door ? (
         <View style={styles.content} testID={`advent-door-sheet-${door.day}`}>
+          {giftImage ? <AdventGiftMedia key={`${campaignYear}:${door.day}:${door.date}:${giftImage}`} src={giftImage} alt={door.gift.title} /> : null}
           <Section icon={KIND_ICONS[door.kind]} title={i18nT('adventStatic:sheet.gift')} styles={styles} colors={colors}>
             <Text style={styles.giftTitle}>{door.gift.title}</Text>
             <Text style={styles.body}>{door.gift.text}</Text>

@@ -158,6 +158,7 @@ type MapWebLeafletCanvasProps = {
   coordinatesLatLng: { lat: number; lng: number }
   disableFitBounds: boolean
   travelData: Point[]
+  urlSelectedPlace?: Point | null
   /** #2450 — server total of the radius result set (see MapLogicComponent.travelsTotal). */
   travelsTotal?: number | null
   initialResultsSettled: boolean
@@ -231,6 +232,7 @@ const MapWebLeafletCanvasComponent: React.FC<MapWebLeafletCanvasProps> = ({
   coordinatesLatLng,
   disableFitBounds,
   travelData,
+  urlSelectedPlace,
   travelsTotal = null,
   initialResultsSettled,
   onInitialViewReady,
@@ -442,6 +444,7 @@ const MapWebLeafletCanvasComponent: React.FC<MapWebLeafletCanvasProps> = ({
           pointsOnly={pointsOnly}
           canRenderMap={canRenderMap}
           travelData={travelData}
+          urlSelectedPlace={urlSelectedPlace}
           radiusCenter={radiusCenter}
           radiusInMeters={radiusInMeters}
           mapClusterFilters={mapClusterFilters}

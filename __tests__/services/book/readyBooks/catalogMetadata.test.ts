@@ -1,5 +1,18 @@
 import {runNodeCli} from '../../../scripts/cli-test-utils';
 
+it('pins deferred contents to every exact immutable metadata record without eager artifact data',()=>{
+ const {bookContentsIndex}=require('@/scripts/books/copy-publication.cjs');
+ const manifest=require('@/data/travelBooks/manifest.json');
+ const contents=require('@/data/travelBooks/contents.json');
+ expect(contents).toEqual(bookContentsIndex(manifest));
+ expect(contents.books.reduce((count:number,book:{stops:unknown[]})=>count+book.stops.length,0)).toBe(manifest.books.reduce((count:number,book:{stops:unknown[]})=>count+book.stops.length,0));
+ expect(contents.books[0]).not.toHaveProperty('artifacts');
+ expect(contents.books[0].stops[0]).not.toHaveProperty('image');
+ const changed=JSON.parse(JSON.stringify(manifest));
+ changed.books[0].stops[0].title='Different contents';
+ expect(()=>bookContentsIndex(changed)).toThrow('metadata differs');
+});
+
 it('keeps thematic families in thin metadata and indexes only verified exact target points',()=>{
  const result=runNodeCli(['--input-type=module','-e',`
   import assert from 'node:assert/strict';

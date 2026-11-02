@@ -453,6 +453,19 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     })
   })
 
+  it.each([
+    { id: '14117', coord: '49.2502602,19.9347267', address: 'Гевонт (крест на вершине)' },
+    { id: 'url-49.261877,19.930121', coord: '49.261877,19.930121', address: 'Тропа над Реглями, Закопане' },
+  ])('passes explicit URL target $address through the web canvas to the real place layer', async urlSelectedPlace => {
+    await renderWithProviders(<MapPageComponent {...defaultProps}
+      coordinates={{ latitude: 49.261877, longitude: 19.930121 }} urlSelectedPlace={urlSelectedPlace} />)
+    await waitFor(() => {
+      const calls = mockMarkerClusterGroupProps.mock.calls
+      const points = calls[calls.length - 1]?.[0]?.points
+      expect(points).toEqual(expect.arrayContaining([urlSelectedPlace]))
+    })
+  })
+
   it('provides explicit maxZoom to the web map container', async () => {
     const { getByTestId } = await renderWithProviders(<MapPageComponent {...defaultProps} />)
     await act(async () => {})

@@ -15,6 +15,7 @@ export const adventStaticResources = {
   "tile.done": "Виконано",
   "tile.secret": "Секрет",
   "tile.a11y": "Дверцята {{value1}}, {{value2}}",
+  "tile.windowA11y": "Дверцята {{value1}}, {{value2}}, {{value3}}",
   "sheet.gift": "Подарунок",
   "sheet.task": "Завдання",
   "sheet.reward": "Нагорода",

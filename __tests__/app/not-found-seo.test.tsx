@@ -4,7 +4,7 @@
 
 import React from 'react'
 import { Platform } from 'react-native'
-import { fireEvent, render } from '@testing-library/react-native'
+import { render } from '@testing-library/react-native'
 
 const mockReplace = jest.fn()
 const mockSeoProps = jest.fn()
@@ -12,6 +12,7 @@ const mockSeoProps = jest.fn()
 // Глобальный мок `expo-router` в `__tests__/setup.ts` не отдаёт `Stack` —
 // экрану он нужен только ради заголовка вкладки, к SEO-разметке отношения не имеет.
 jest.mock('expo-router', () => ({
+  Link: ({ children, href }: { children: React.ReactNode; href: string }) => require('react').createElement('Text', { href, accessibilityRole: 'link' }, children),
   Stack: { Screen: () => null },
   router: { push: jest.fn(), replace: (...args: unknown[]) => mockReplace(...args), back: jest.fn() },
 }))
@@ -71,20 +72,22 @@ describe('not-found SEO guard', () => {
     expect(mockSeoProps.mock.calls[0][0].canonical).toBeUndefined()
   })
 
-  // #2950: один `+not-found.html` на любой адрес, поэтому для неизвестной книги
-  // ссылка в каталог появляется после гидратации, а у прочих адресов её нет.
-  it('offers the books catalogue only on an unknown book address', async () => {
+  // One static404 serves all missing paths: its catalogue link must not wait for effects.
+  it('offers the books catalogue on the shared web404 and leaves native navigation unchanged', async () => {
     const { translate } = jest.requireActual('@/i18n')
     window.history.replaceState(null, '', '/books/no-such-edition')
     try {
       const screen = await render(<NotFoundScreen />)
-      const catalogue = screen.getByLabelText(translate('books:back'))
-      fireEvent.press(catalogue)
-      expect(mockReplace).toHaveBeenCalledWith('/books')
+      const catalogue = screen.getByText(translate('books:back'))
+      expect(catalogue.props.href).toBe('/books')
+      expect(mockReplace).not.toHaveBeenCalled()
     } finally {
       window.history.replaceState(null, '', '/')
     }
-    const screen = await render(<NotFoundScreen />)
-    expect(screen.queryByText(translate('books:back'))).toBeNull()
+    const shared = await render(<NotFoundScreen />)
+    expect(shared.getByText(translate('books:back')).props.href).toBe('/books')
+    Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true })
+    const native = await render(<NotFoundScreen />)
+    expect(native.queryByText(translate('books:back'))).toBeNull()
   })
 })

@@ -6,6 +6,7 @@ import { ApiError } from '@/api/clientErrors'
 import { useAdventProgressStore } from '@/stores/adventProgressStore'
 import { useAuthStore } from '@/stores/authStore'
 import { i18n } from '@/i18n'
+import { getAdventCampaign } from '@/services/advent/loadCampaign'
 import { createTestQueryClient } from '../helpers/testQueryClient'
 import { fakeToday } from './fakeToday'
 
@@ -66,7 +67,45 @@ describe('AdventScreen (#2861)', () => {
     expect(screen.getByTestId('advent-door-3').props.accessibilityState.disabled).toBe(false)
     expect(screen.getByTestId('advent-door-4').props.accessibilityState.disabled).toBe(true)
     expect(screen.getByText('Открыто 0 из 24 дверец')).toBeTruthy()
+    expect(screen.getByTestId('advent-house-facade')).toBeTruthy()
+    expect(screen.getByTestId('advent-bonus-doors')).toBeTruthy()
+    expect(screen.getByText('25 декабря')).toBeTruthy()
+    expect(screen.getByText('31 декабря')).toBeTruthy()
+    expect(screen.getByText('7 января')).toBeTruthy()
+    expect(screen.queryByText('26')).toBeNull()
+    expect(screen.queryByText('27')).toBeNull()
     expect(screen.getByTestId('advent-countdown').props.children).toMatch(/Дверца 4 откроется/)
+  })
+
+  it('uses the existing open flow for today’s primary action and keeps prelaunch doors locked', async () => {
+    const screen = await renderAt(new Date(2026, 11, 1, 12))
+    expect(screen.getByTestId('advent-today-action')).toBeTruthy()
+    await fireEvent.press(screen.getByTestId('advent-today-open'))
+    expect(screen.getByTestId('advent-door-sheet-1')).toBeTruthy()
+    expect(useAdventProgressStore.getState().byOwner.u7.tasksDone['1']).toBe('2026-12-01')
+  })
+
+  it('shows an honest countdown before launch, without a current-day action or fake progress', async () => {
+    const screen = await renderAt(new Date(2026, 10, 2, 12))
+    expect(screen.queryByTestId('advent-today-action')).toBeNull()
+    expect(screen.getByTestId('advent-countdown').props.children).toMatch(/Дверца 1 откроется/)
+    await fireEvent.press(screen.getByTestId('advent-door-1'))
+    expect(screen.queryByTestId('advent-door-sheet-1')).toBeNull()
+    expect(screen.getByText('Открыто 0 из 24 дверец')).toBeTruthy()
+    expect(useAdventProgressStore.getState().byOwner.u7).toBeUndefined()
+  })
+
+  it.each([true, false])('keeps the secret bonus title hidden until opened (authenticated=%s)', async (isAuthenticated) => {
+    mockAuth = { isAuthenticated, userId: isAuthenticated ? '7' : null as unknown as string, authReady: true }
+    const secret = getAdventCampaign().doors.find((door) => door.secret)!
+    const screen = await renderAt(new Date(2027, 0, 7, 12))
+    expect(screen.getByText(`Дверца ${secret.day}: Секрет`)).toBeTruthy()
+    expect(screen.queryByText(secret.gift.title, { exact: false })).toBeNull()
+
+    await fireEvent.press(screen.getByTestId('advent-today-open'))
+    expect(screen.getByTestId(`advent-door-sheet-${secret.day}`)).toBeTruthy()
+    expect(screen.getByText(secret.gift.title)).toBeTruthy()
+    expect(screen.getByText(`Дверца ${secret.day}: ${secret.gift.title}`)).toBeTruthy()
   })
 
   it('opens a door into the sheet, marks the task done and updates progress', async () => {

@@ -1,4 +1,4 @@
-import React,{useEffect,useRef,useState} from 'react';
+import React,{Suspense,useEffect,useRef,useState} from 'react';
 import {Link} from 'expo-router';
 import Button from '@/components/ui/Button';
 import {jsonLdScript} from '@/components/seo/jsonLdScript';
@@ -7,7 +7,7 @@ import {findReadyBook,readyBooks} from '@/services/book/readyBooks/catalog';
 import {loadReadyBookMetadata,type ReadyBookSummary} from '@/services/book/readyBooks/bookMetadata';
 import {editionFamily} from '@/services/book/readyBooks/editionFamily';
 import type {PublishedBook,PublishedArtifact} from '@/services/book/readyBooks/publication';
-import {formatNumber,getActiveLocale} from '@/i18n';
+import {getActiveLocale} from '@/i18n';
 import {buildCanonicalUrl,normalizeOgImageUrl} from '@/utils/seo';
 import {trackReadyBookEvent} from '@/utils/growthFunnelAnalytics';
 import {BooksFrame} from './BooksFrame';
@@ -17,9 +17,12 @@ import ReadyBookPreview from './preview/ReadyBookPreview';
 import PrintingGuide from './printingGuide/PrintingGuide.web';
 import PrintProviders from './printProviders/PrintProviders.web';
 import {bookArtifactFilename} from '@/services/book/readyBooks/artifactFilename';
+import {lazyWithRetry} from '@/utils/chunkReload';
+import BookContents from './BookContents.web';
 import CoverPersonalizationEditor from './cover/CoverPersonalizationEditor.web';
 
 const profileLabel=(id:string,t:typeof BookT)=>t(id==='album-a5'?'album':'pocket');
+const ReadyBookContents=lazyWithRetry(()=>import('./ReadyBookContents.web'),{name:'ReadyBookContents'});
 
 /** Schema.org Book from the catalog summary, so the static HTML already names the edition (#2950). */
 function BookJsonLd({book,description}:{book:ReadyBookSummary;description:string}){
@@ -56,6 +59,7 @@ export default function ReadyBookDetails({slug,initialProfileId}:{slug:unknown;i
     {summary.kind!=='quests'&&<p>{bookT('style')}: {bookStyleLabel(summary,bookT)}</p>}
     <p>{bookT('size')}: {summary.profiles.map(profile=>profileLabel(profile.id,bookT)).join('; ')}</p>
     <p>{bookT(summary.kind==='quests'?'questPhotoSpace':'photoSpace')}</p>
+    <Suspense fallback={null}><ReadyBookContents book={summary}/></Suspense>
     {loaded?.key===key&&loaded.failed?<div role="alert"><p>{bookT('metadataError')}</p><Button label={bookT('retry')} onPress={()=>setAttempt(value=>value+1)}/></div>:<p role="status">{bookT('metadataLoading')}</p>}
   </BooksFrame>;
 }
@@ -90,7 +94,7 @@ function LoadedBookDetails({book,summary,description,initialProfileId}:{book:Pub
     <div ref={opener}><Button label={bookT('preview')} onPress={()=>{setPreview(true);trackReadyBookEvent('ReadyBookPreviewOpened',book,getActiveLocale(),{profileId});}}/></div>
     {preview&&<ReadyBookPreview key={book.id} book={book} profileId={profileId} onClose={close}/>}
     {book.coverPersonalization&&<CoverPersonalizationEditor key={`${book.id}:${book.revision}`} book={book} profileId={profileId}/>}
-    <h2>{bookT('inside')}</h2><details><summary>{bookT('contents')}</summary><ol lang={book.contentLocale}>{book.stops.map(stop=><li key={stop.id}>{stop.title} · {formatNumber(stop.page)}</li>)}</ol></details>
+    <BookContents stops={book.stops} contentLocale={book.contentLocale}/>
     <h2>{bookT('downloads')}</h2><ul className="ready-books-files">{visibleArtifacts(book,profileId).map(file=>{const label=describeArtifact(file,bookT);return <li key={file.id}>
       <span>{label}</span>
       <a className="ready-books-download" href={file.uri} download={bookArtifactFilename(book,file)} aria-label={`${bookT('download')}: ${label}`} onClick={()=>requested(file)}>{bookT('download')}</a>

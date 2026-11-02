@@ -91,6 +91,30 @@ describe('OptimizedImage', () => {
     })
   })
 
+  it.each(['android', 'ios'])('reports terminal failure after retries without changing onError on %s', async (platform) => {
+    const previousPlatform = Platform.OS
+    ;(Platform as any).OS = platform
+    const onError = jest.fn()
+    const onTerminalError = jest.fn()
+    try {
+      const screen = await render(
+        <OptimizedImage source={{ uri: 'https://example.com/api/gift.jpg' }} onError={onError} onTerminalError={onTerminalError} />
+      )
+      for (let attempt = 1; attempt <= 6; attempt += 1) {
+        await fireEvent(screen.getByTestId('expo-image'), 'onError')
+        expect(onError).toHaveBeenCalledTimes(attempt)
+        expect(onTerminalError).not.toHaveBeenCalled()
+        expect(screen.queryByTestId('optimized-image-error')).toBeNull()
+      }
+      await fireEvent(screen.getByTestId('expo-image'), 'onError')
+      expect(onError).toHaveBeenCalledTimes(7)
+      expect(onTerminalError).toHaveBeenCalledTimes(1)
+      expect(screen.getByTestId('optimized-image-error')).toBeTruthy()
+    } finally {
+      ;(Platform as any).OS = previousPlatform
+    }
+  })
+
   it('resets error state when uri changes (regression: should recover without page reload)', async () => {
     const { getByTestId, queryByTestId, rerender } = await render(
       <OptimizedImage source={{ uri: 'https://example.com/photo.jpg' }} />

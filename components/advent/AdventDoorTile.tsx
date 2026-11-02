@@ -5,7 +5,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { formatDate } from '@/i18n/format'
-import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 import { isoDateToLocalMidnight } from '@/constants/advent'
 import type { AdventDoorView } from '@/hooks/useAdventCampaign'
 import { KIND_ICONS, STATE_ICONS, stateLabel } from './adventDoorVisuals'
@@ -21,11 +21,12 @@ export const formatDoorDate = (iso: string): string =>
   formatDate(isoDateToLocalMidnight(iso), { day: 'numeric', month: 'long' })
 
 function AdventDoorTile({ door, disabled = false, onPress }: Props) {
+  const { t } = useTranslation()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const locked = door.state === 'locked'
   const caption = locked
-    ? i18nT('adventStatic:tile.locked', { value1: formatDoorDate(door.date) })
+    ? t('adventStatic:tile.locked', { value1: formatDoorDate(door.date) })
     : stateLabel(door.state)
   const icon = door.state === 'available' || door.state === 'opened' ? KIND_ICONS[door.kind] : STATE_ICONS[door.state]
   const iconColor =
@@ -35,7 +36,7 @@ function AdventDoorTile({ door, disabled = false, onPress }: Props) {
     <Pressable
       testID={`advent-door-${door.day}`}
       accessibilityRole="button"
-      accessibilityLabel={i18nT('adventStatic:tile.a11y', { value1: door.day, value2: caption })}
+      accessibilityLabel={t('adventStatic:tile.windowA11y', { value1: door.day, value2: formatDoorDate(door.date), value3: stateLabel(door.state) })}
       accessibilityState={{ disabled: locked || disabled }}
       disabled={locked || disabled}
       onPress={() => onPress(door)}
@@ -46,10 +47,10 @@ function AdventDoorTile({ door, disabled = false, onPress }: Props) {
       ]}
     >
       <View style={styles.topRow}>
-        <Text style={[styles.day, locked && styles.dayLocked]}>{door.day}</Text>
+        <Text style={[styles.day, door.bonus && styles.bonusDate, locked && styles.dayLocked]}>{door.bonus ? formatDoorDate(door.date) : door.day}</Text>
         {door.bonus ? (
           <View style={styles.bonus}>
-            <Text style={styles.bonusText}>{i18nT('adventStatic:tile.bonus')}</Text>
+            <Text style={styles.bonusText}>{t('adventStatic:tile.bonus')}</Text>
           </View>
         ) : null}
       </View>
@@ -78,8 +79,9 @@ const createStyles = (colors: ThemedColors) =>
     opened: { backgroundColor: colors.surface, borderColor: colors.border },
     done: { backgroundColor: colors.successSoft, borderColor: colors.success },
     pressed: { opacity: 0.85 },
-    topRow: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+    topRow: { width: '100%', alignItems: 'flex-start', gap: DESIGN_TOKENS.spacing.xxs },
     day: { fontSize: 22, fontWeight: '700', color: colors.text, lineHeight: 26 },
+    bonusDate: { fontSize: 17, lineHeight: 22 },
     dayLocked: { color: colors.textMuted },
     bonus: {
       borderRadius: DESIGN_TOKENS.radii.pill,

@@ -152,6 +152,8 @@ type Props = {
   style?: any;
   onLoad?: () => void;
   onError?: () => void;
+  /** Runs only after the active renderer exhausts its existing retry policy. */
+  onTerminalError?: () => void;
   recyclingKey?: string;
   /** Show image immediately without waiting for load (for cached images). */
   showImmediately?: boolean;
@@ -210,6 +212,7 @@ function ImageCardMedia({
   style,
   onLoad,
   onError,
+  onTerminalError,
   recyclingKey,
   showImmediately = false,
   allowCriticalWebBlur = false,
@@ -795,7 +798,8 @@ function ImageCardMedia({
     if (reportedFailureRef.current === activeWebFailure.identity) return;
     reportedFailureRef.current = activeWebFailure.identity;
     onError?.();
-  }, [activeWebFailure, onError]);
+    onTerminalError?.();
+  }, [activeWebFailure, onError, onTerminalError]);
 
   // Пауза перед единственным ретраем. Разброс не даёт всем карточкам страницы
   // повторить запрос синхронно и собрать новую пачку (см. замер выше).
@@ -985,6 +989,7 @@ function ImageCardMedia({
             // `errorContainer`. Собственное состояние ошибки сняло бы его с
             // экрана раньше ретрая — ровно тот исход, который закрывал #802.
             onError={onError}
+            onTerminalError={onTerminalError}
           />
           )}
           {!!overlayColor && (

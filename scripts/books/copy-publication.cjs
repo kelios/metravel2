@@ -14,6 +14,17 @@ const ROOT_BASE = '/travel-books/';
 const PUBLICATION_MTIME = new Date('2024-01-01T00:00:00Z');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
+/** The detail's deferred contents never carry photos, preview arrays or file metadata. */
+function bookContentsIndex(manifest) {
+  if (!Array.isArray(manifest.bookMetadata) || manifest.bookMetadata.length !== manifest.books.length) throw new Error('Book contents require pinned edition metadata');
+  return {schemaVersion: 1, books: manifest.books.map(book => {
+    const metadata = manifest.bookMetadata.filter(asset => asset.bookId === book.id && asset.revision === book.revision);
+    if (metadata.length !== 1 || metadata[0].sha256 !== hash(Buffer.from(JSON.stringify(book) + '\n'))) throw new Error('Book contents metadata differs from the published record');
+    return {id: book.id, revision: book.revision, metadataSha256: metadata[0].sha256,
+      stops: book.stops.map(({id, title, page}) => ({id, title, page}))};
+  })};
+}
+
 // Only preview images (including their cover alias) may omit our origin.
 function publicationAssetLocation(uri, previewBook) {
   if (typeof uri !== 'string' || /[%\\?#\s]/.test(uri)) throw new Error('Invalid publication asset URI');
@@ -131,6 +142,10 @@ async function copyPublication({root, buildDir, cacheDir, download = fetchAsset}
   let current;
   try { current = await readJson(manifestPath); }
   catch (error) { if (error.code === 'ENOENT') return {files: 0, bytes: 0}; throw error; }
+  if (current.bookMetadata) {
+    const contents = await readJson(path.join(root, 'data/travelBooks/contents.json'));
+    if (JSON.stringify(contents) !== JSON.stringify(bookContentsIndex(current))) throw new Error('Book contents index differs from the current publication');
+  }
   const manifests = [current];
   const releases = path.join(root, 'data/travelBooks/releases');
   let snapshots = [];
@@ -199,4 +214,4 @@ if (require.main === module) {
     .then(result => console.log(`Ready books: ${result.files} verified files, ${result.bytes} bytes`))
     .catch(error => { console.error(error.message); process.exitCode = 1; });
 }
-module.exports = {collectAssets, copyPublication, ensureDirectory, checkContent, writePublicationStagingMetadata, publicationAssetLocation, PUBLICATION_MTIME};
+module.exports = {collectAssets, copyPublication, ensureDirectory, checkContent, writePublicationStagingMetadata, publicationAssetLocation, PUBLICATION_MTIME, bookContentsIndex};

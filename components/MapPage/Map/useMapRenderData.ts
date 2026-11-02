@@ -5,6 +5,7 @@ import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
 import { useMapClusters } from '@/hooks/map/useMapClusters';
 import { useMapViewportSnapshot } from '@/hooks/map/useMapViewportSnapshot';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
+import { mergeMapUrlPoint } from '@/components/map-core/mergeMapUrlPoint';
 import type { ClusterData, Coordinates, MapMode, Point } from './types';
 import { getMapPointContentKey, strToLatLng } from './utils';
 import { useMapUserLocation } from './useMapUserLocation';
@@ -183,6 +184,7 @@ type UseServerPlaceLayerDataArgs = {
   canRenderMap: boolean;
   /** Client points (already radius-filtered) — the fallback when the backend has nothing. */
   travelData: Point[];
+  urlSelectedPlace?: Point | null;
   /** Radius filter anchor (rounded `filterCenter`, or the raw center). */
   radiusCenter: { lat: number; lng: number } | null;
   radiusInMeters: number | null;
@@ -218,6 +220,7 @@ export function useServerPlaceLayerData({
   pointsOnly,
   canRenderMap,
   travelData,
+  urlSelectedPlace,
   radiusCenter,
   radiusInMeters,
   mapClusterFilters,
@@ -256,17 +259,17 @@ export function useServerPlaceLayerData({
 
   const { nextMarkers, nextClusters } = useMemo(() => {
     if (!shouldUseServerClusterData) {
-      return { nextMarkers: travelData, nextClusters: EMPTY_CLUSTERS };
+      return { nextMarkers: mergeMapUrlPoint(travelData, urlSelectedPlace), nextClusters: EMPTY_CLUSTERS };
     }
     const { clusters, singletons } = splitSingletonClusters(
       radiusFilteredServerClusterRenderData.clusters,
     );
     const serverMarkers = radiusFilteredServerClusterRenderData.markers;
     return {
-      nextMarkers: singletons.length ? [...serverMarkers, ...singletons] : serverMarkers,
+      nextMarkers: mergeMapUrlPoint(singletons.length ? [...serverMarkers, ...singletons] : serverMarkers, urlSelectedPlace),
       nextClusters: clusters.length ? clusters : EMPTY_CLUSTERS,
     };
-  }, [radiusFilteredServerClusterRenderData, shouldUseServerClusterData, travelData]);
+  }, [radiusFilteredServerClusterRenderData, shouldUseServerClusterData, travelData, urlSelectedPlace]);
 
   // Signatures are O(n) string building — key them on array identity, the only
   // thing that can change what the signature says.

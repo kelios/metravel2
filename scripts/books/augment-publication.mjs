@@ -7,7 +7,7 @@ import {createRequire} from 'node:module';
 import {spawnSync} from 'node:child_process';
 import {build} from 'esbuild';
 import {fileURLToPath} from 'node:url';
-import {thinBookCatalogue,relatedBookIndex} from './catalog-metadata.mjs';
+import {thinBookCatalogue,relatedBookIndex,bookContentsIndex} from './catalog-metadata.mjs';
 import {loadSelectedBook} from './source-ready-book.mjs';
 import {buildStickerArtifacts} from './build-stickers.mjs';
 import {renderPrintGuideHtml} from './render-print-guide-html.mjs';
@@ -147,6 +147,7 @@ export async function activatePublication({result,outputPath,cacheRoot,root=proc
   if(!cacheRoot.startsWith(scratch+path.sep))throw new Error('Activation cache must remain in .codex-temp');
   const entries=collectAssets([result]);
   const catalogPayload=result.bookMetadata?Buffer.from(JSON.stringify(thinBookCatalogue(result),null,2)+'\n'):null;
+  const contentsPayload=result.bookMetadata?Buffer.from(JSON.stringify(bookContentsIndex(result),null,2)+'\n'):null;
   const relatedPayload=Buffer.from(JSON.stringify(relatedBookIndex(result),null,2)+'\n');
   const prior=JSON.parse(await readFile(path.join(root,'data/travelBooks/manifest.json'),'utf8'));
   const accepted=new Map(collectAssets([prior]).map(asset=>[asset.relative,asset]));
@@ -176,9 +177,9 @@ export async function activatePublication({result,outputPath,cacheRoot,root=proc
   await ensureDirectory(root,'data/travelBooks/releases');
   const snapshot=path.join(snapshots,hash(payload)+'.json');
   try{await writeFile(snapshot,payload,{flag:'wx'});}catch(error){if(error.code!=='EEXIST')throw error;if(!(await lstat(snapshot)).isFile())throw new Error('Snapshot leaf is not a regular file');if(!(await readFile(snapshot)).equals(payload))throw new Error('Immutable snapshot differs');}
-  for(const [name,bytes] of [['related.json',relatedPayload],['manifest.json',payload],...(catalogPayload?[['catalog.json',catalogPayload]]:[])]){
+  for(const [name,bytes] of [['related.json',relatedPayload],['manifest.json',payload],...(catalogPayload?[['catalog.json',catalogPayload],['contents.json',contentsPayload]]:[])]){
     const target=path.resolve(root,'data/travelBooks',name),temporary=target+'.tmp-'+process.pid;
-    try{if(!(await lstat(target)).isFile())throw new Error('Publication pointer must be a regular file');}catch(error){if(error.code!=='ENOENT'||name!=='catalog.json')throw error;}
+    try{if(!(await lstat(target)).isFile())throw new Error('Publication pointer must be a regular file');}catch(error){if(error.code!=='ENOENT'||!['catalog.json','contents.json'].includes(name))throw error;}
     await writeFile(temporary,bytes,{flag:'wx'});await rename(temporary,target);
   }
 }

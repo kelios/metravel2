@@ -222,13 +222,16 @@ describe('ImageCardMedia: сбой загрузки на web (#1212)', () => {
 
   it('вызывает onError вызывающего один раз — на терминальном сбое', async () => {
     const onError = jest.fn();
-    const tree = await renderMedia({ onError });
+    const onTerminalError = jest.fn();
+    const tree = await renderMedia({ onError, onTerminalError });
 
     await fireImageError(tree);
     await runRetryDelay();
+    expect(onTerminalError).not.toHaveBeenCalled();
     await fireImageError(tree);
 
     expect(onError).toHaveBeenCalledTimes(1);
+    expect(onTerminalError).toHaveBeenCalledTimes(1);
   });
 
   /**
@@ -308,6 +311,7 @@ describe('ImageCardMedia: native отдаёт сбой владельцу рет
 
   it('не перехватывает ошибку OptimizedImage: он остаётся на экране и ретраит сам', async () => {
     const onError = jest.fn();
+    const onTerminalError = jest.fn();
     let tree: any;
     await act(() => {
       tree = renderer.createRoot();
@@ -320,6 +324,8 @@ describe('ImageCardMedia: native отдаёт сбой владельцу рет
           height={SIZE}
           fit="contain"
           onError={onError}
+          onTerminalError={onTerminalError}
+          placeholderColor="#00000000"
         />)
     });
 
@@ -331,8 +337,12 @@ describe('ImageCardMedia: native отдаёт сбой владельцу рет
 
     // Ошибка ушла вызывающему...
     expect(onError).toHaveBeenCalledTimes(1);
+    expect(onTerminalError).not.toHaveBeenCalled();
     // ...а сам `OptimizedImage` остался смонтированным: иначе его собственные
     // попытки (`MAX_RETRY_ATTEMPTS`) оборвутся вместе с ним.
     expect(optimizedImages()).toHaveLength(1);
+    expect(optimizedImages()[0].style).toMatchObject({ backgroundColor: 'transparent' });
+    await act(() => { optimizedImages()[0].onTerminalError(); });
+    expect(onTerminalError).toHaveBeenCalledTimes(1);
   });
 });

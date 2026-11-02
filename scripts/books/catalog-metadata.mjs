@@ -6,7 +6,8 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const require=createRequire(import.meta.url);
-const {ensureDirectory}=require('./copy-publication.cjs');
+const {ensureDirectory,bookContentsIndex}=require('./copy-publication.cjs');
+export {bookContentsIndex};
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
 
 /** Only exact sources from the complete published composition establish a related-book link. */
@@ -69,6 +70,7 @@ async function main(){
     const manifest=await stageBookMetadata(source,options['--assets-root']);
     publicationSchema.parse(manifest);
     await writeFile(options['--catalog'],JSON.stringify(thinBookCatalogue(manifest),null,2)+'\n');
+    await writeFile(path.join(path.dirname(options['--catalog']),'contents.json'),JSON.stringify(bookContentsIndex(manifest),null,2)+'\n');
     await writeFile(options['--output-manifest'],JSON.stringify(manifest,null,2)+'\n');
     console.log(JSON.stringify({books:manifest.books.length,metadataResources:manifest.bookMetadata.length}));
   }catch(error){console.error(error.message);process.exitCode=1;}

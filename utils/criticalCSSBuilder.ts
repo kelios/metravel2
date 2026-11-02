@@ -13,7 +13,6 @@ import { WEB_DESKTOP_FOOTER_LAYOUT, WEB_MOBILE_DOCK_LAYOUT, WEB_MOBILE_DOCK_LABE
 import { APP_DOWNLOAD_LAYOUT } from '@/components/appDownload/appDownloadLayout';
 import { MY_CREATED_TRIPS_LAYOUT } from '@/components/trips/myCreatedTripsLayout';
 import { QUEST_PAGE_COLUMNS_LAYOUT, QUEST_PUBLIC_NAV_LAYOUT } from '@/components/quests/questPageColumnsLayout';
-import { ADVENT_GRID_LAYOUT } from '@/components/advent/adventGridLayout';
 import { buildBreakpointLayoutCss } from '@/utils/breakpointLayout';
 import { getIconFontGuardCss } from '@/utils/iconFontShell';
 import { QUEST_HEADER_PRESENTATION } from '@/components/layout/questHeaderPresentation';
@@ -272,7 +271,6 @@ export function buildCriticalCSS(): string {
     // уже в статическом кадре; гидратация не перекладывает список.
     buildBreakpointLayoutCss(MY_CREATED_TRIPS_LAYOUT),
     buildBreakpointLayoutCss(QUEST_PAGE_COLUMNS_LAYOUT),
-    buildBreakpointLayoutCss(ADVENT_GRID_LAYOUT),
     buildBreakpointLayoutCss(QUEST_PUBLIC_NAV_LAYOUT),
     buildBreakpointLayoutCss(WEB_MOBILE_DOCK_LAYOUT),
     WEB_MOBILE_DOCK_RESERVE_CSS,

@@ -15,6 +15,8 @@ export interface MapProps {
    * Native adapters ignore this optional prop.
    */
   initialResultsSettled?: boolean;
+  /** Explicit URL target of the main web map, independent from search results. */
+  urlSelectedPlace?: Point | null;
   coordinates: Coordinates;
   /**
    * True when `coordinates` is a non-user viewport/search anchor. Only explicit

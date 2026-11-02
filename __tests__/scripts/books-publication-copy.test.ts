@@ -70,6 +70,18 @@ describe('ready-book publication build boundary', () => {
     expect(download).not.toHaveBeenCalled();
   });
 
+  it('refuses a stale contents index before copying any current resource',async()=>{
+    const publication=require('@/data/travelBooks/manifest.json');
+    const contents=JSON.parse(JSON.stringify(require('@/data/travelBooks/contents.json')));
+    contents.books[0].stops[0].page+=1;
+    await fs.writeFile(path.join(root,'data/travelBooks/manifest.json'),JSON.stringify(publication));
+    await fs.writeFile(path.join(root,'data/travelBooks/contents.json'),JSON.stringify(contents));
+    const download=jest.fn(async()=>pdf);
+    await expect(copyPublication({root,buildDir,cacheDir,download})).rejects.toThrow('contents index differs');
+    expect(download).not.toHaveBeenCalled();
+    expect(await fs.readdir(buildDir)).toEqual([]);
+  });
+
   // The SSR publisher hard-links unchanged books from the shared store on prod
   // by size and mtime (#2857): a build-time mtime would re-upload every file.
   it('stamps immutable publication files with the fixed publication mtime', async () => {

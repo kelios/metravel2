@@ -262,6 +262,9 @@ export function useMapApi({
             // noop
           }
 
+          // An explicit place inspection owns the view just like a zoom button;
+          // late startup/results fits must not replace it with the radius view.
+          noteUserMapGesture();
           beginProgrammaticMapMove();
           if (typeof map.flyTo === 'function') {
             map.flyTo(CoordinateConverter.toLeaflet(parsed), targetZoom, { animate: true, duration: 0.35 } as any);

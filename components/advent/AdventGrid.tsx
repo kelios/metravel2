@@ -2,38 +2,37 @@ import { memo } from 'react'
 import { StyleSheet, View } from 'react-native'
 
 import type { AdventDoorView } from '@/hooks/useAdventCampaign'
-import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import AdventDoorTile from './AdventDoorTile'
-import { ADVENT_GRID_GUTTER, ADVENT_GRID_LAYOUT, ADVENT_GRID_MIN_WIDTH } from './adventGridLayout'
+import AdventHouseFacade from './AdventHouseFacade'
 
 type Props = {
   doors: AdventDoorView[]
-  width: number
+  todayDay?: number | null
   disabled?: boolean
   onPressDoor: (door: AdventDoorView) => void
 }
 
-/** Одна flex-wrap сетка; ширина плитки — из брейкпоинт-раскладки, чтобы статический HTML и клиент совпали. */
-function AdventGrid({ doors, width, disabled, onPressDoor }: Props) {
-  const isWide = width >= ADVENT_GRID_MIN_WIDTH
+/** One invariant facade and a separate wrapping row of real calendar-date bonuses. */
+function AdventGrid({ doors, todayDay, disabled, onPressDoor }: Props) {
   return (
     <View style={styles.grid} testID="advent-grid">
-      {doors.map((door) => (
-        <View
-          key={door.day}
-          style={[styles.cell, breakpointStyle(ADVENT_GRID_LAYOUT, 'tile', isWide)]}
-          {...breakpointLayoutProps(ADVENT_GRID_LAYOUT, 'tile')}
-        >
-          <AdventDoorTile door={door} disabled={disabled} onPress={onPressDoor} />
-        </View>
-      ))}
+      <AdventHouseFacade doors={doors} todayDay={todayDay} disabled={disabled} onPressDoor={onPressDoor} />
+      <View style={styles.bonuses} testID="advent-bonus-doors">
+        {doors.filter((door) => door.bonus).map((door) => (
+          <View key={door.day} style={styles.cell}>
+            <AdventDoorTile door={door} disabled={disabled} onPress={onPressDoor} />
+          </View>
+        ))}
+      </View>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -ADVENT_GRID_GUTTER },
-  cell: { flexGrow: 0, flexShrink: 0, padding: ADVENT_GRID_GUTTER },
+  grid: { gap: DESIGN_TOKENS.spacing.md },
+  bonuses: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.xs },
+  cell: { flexBasis: '30%', flexGrow: 1, flexShrink: 1, minWidth: 84 },
 })
 
 export default memo(AdventGrid)
