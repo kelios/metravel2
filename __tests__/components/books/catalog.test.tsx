@@ -1,6 +1,7 @@
 import React from 'react';
 import {render,screen,fireEvent} from '@testing-library/react';
-import Catalog from '@/components/books/catalog/ReadyBooksCatalog.web';
+import Catalog from '@/components/books/catalog/ReadyBooksCatalogContent.web';
+import CatalogPage from '@/components/books/catalog/ReadyBooksCatalog.web';
 import type {ReadyBookSummary} from '@/services/book/readyBooks/bookMetadata';
 import {publishedFixture} from '../../services/book/readyBooks/publicationFixtures';
 import {thematicPublished} from '../../services/book/readyBooks/thematicFixtures';
@@ -90,4 +91,12 @@ it('names the visual style of every edition and keeps the watercolor default for
   expect(screen.getAllByText('digitalKit')).toHaveLength(1);
   expect(screen.getAllByText('partial')).toHaveLength(1);
   expect(screen.getAllByRole('link').map(link=>link.getAttribute('href'))).toEqual(['/books/belarus','/books/belarus-photo']);
+});
+
+it('loads the catalogue inside the route frame rather than leaving the loading fallback',async()=>{
+  books.push(publishedFixture());
+  render(<CatalogPage/>);
+  expect(screen.getByRole('heading',{level:1,name:'title'})).toBeTruthy();
+  expect((await screen.findByRole('link')).getAttribute('href')).toBe('/books/belarus');
+  expect(screen.queryByRole('status')).toBeNull();
 });
