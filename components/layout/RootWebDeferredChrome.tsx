@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useSyncExternalStore } from 'react'
 
 import { safeLazy } from '@/components/layout/safeLazy'
 import { getPhoneStorePlatform } from '@/utils/appInstallHint'
+import { getAppInstallSignal, subscribeAppInstallSignal } from '@/utils/appInstallSignal'
 
 const NetworkStatusLazy = safeLazy(
   () =>
@@ -51,6 +52,7 @@ export default function RootWebDeferredChrome({
   const [showRuntimeEffects, setShowRuntimeEffects] = useState(true)
   const [showConsentBanner, setShowConsentBanner] = useState(false)
   const [showIdleChrome, setShowIdleChrome] = useState(false)
+  const appInstallSignal = useSyncExternalStore(subscribeAppInstallSignal, getAppInstallSignal, () => null)
 
   useEffect(() => {
     setShowRuntimeEffects(true)
@@ -140,10 +142,12 @@ export default function RootWebDeferredChrome({
   // Чанк подсказки про приложение подтягиваем только там, где она в принципе
   // может показаться: iPhone или Android-телефон в мобильном вьюпорте и уже
   // после idle — тот же детект, что у самой плашки (`getPhoneStorePlatform`).
-  // Остальные посетители его вообще не скачивают.
+  // Остальные посетители его вообще не скачивают. #2907: и телефону чанк нужен
+  // только после сигнала намерения (квест, офлайн, второй маршрут, 50 % статьи).
   const showAppInstallBar =
     isMobile &&
     showIdleChrome &&
+    appInstallSignal !== null &&
     typeof navigator !== 'undefined' &&
     getPhoneStorePlatform(navigator.userAgent) !== null
 

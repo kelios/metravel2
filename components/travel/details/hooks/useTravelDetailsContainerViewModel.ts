@@ -3,6 +3,7 @@ import { Animated, DeviceEventEmitter, Platform } from 'react-native'
 
 import { buildTravelSectionLinks } from '@/components/travel/sectionLinks'
 import { useContentScrollAnalytics } from '@/hooks/useContentScrollAnalytics'
+import { noteTravelViewForAppInstall } from '@/utils/appInstallSignal'
 import { rIC } from '@/utils/rIC'
 import {
   getTravelDetailsChromeReadyState,
@@ -125,6 +126,11 @@ export function useTravelDetailsContainerViewModel({
     contentId: travel?.id ?? slug,
   })
   const [nativeSettledScrollOffsetY, setNativeSettledScrollOffsetY] = useState(0)
+
+  // #2907: второй разный маршрут за сессию — сигнал для плашки приложения.
+  useEffect(() => {
+    noteTravelViewForAppInstall(travel?.id)
+  }, [travel?.id])
 
   const headKey = useMemo(
     () => getTravelDetailsHeadKey(slug, travel?.id),

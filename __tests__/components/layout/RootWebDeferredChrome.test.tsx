@@ -1,6 +1,8 @@
-import { render, waitFor } from '@testing-library/react-native'
+import { act, render, waitFor } from '@testing-library/react-native'
+import { Platform } from 'react-native'
 
 import RootWebDeferredChrome from '@/components/layout/RootWebDeferredChrome'
+import { emitAppInstallSignal, resetAppInstallSignalForTests } from '@/utils/appInstallSignal'
 
 jest.mock('@/components/ui/NetworkStatus', () => ({
   __esModule: true,
@@ -120,6 +122,7 @@ describe('RootWebDeferredChrome', () => {
 
   // #2655: плашка установки адресована и iPhone — гейт монтирования чанка
   // обязан пропускать тот же набор телефонов, что и сама плашка.
+  // #2907: и только после сигнала намерения — до него чанк не скачивается.
   it.each([
     ['iPhone', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1', true],
     ['Android phone', 'Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36', true],
@@ -141,6 +144,14 @@ describe('RootWebDeferredChrome', () => {
       await waitFor(() => {
         expect(getByTestId('sw-cleanup')).toBeTruthy()
       }, { timeout: 3000 })
+      expect(queryByTestId('app-install-bar-chunk')).toBeNull()
+      const originalOS = Platform.OS
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' })
+      try {
+        await act(() => emitAppInstallSignal('quest_start'))
+      } finally {
+        Object.defineProperty(Platform, 'OS', { configurable: true, value: originalOS })
+      }
       if (expected) {
         await waitFor(() => {
           expect(getByTestId('app-install-bar-chunk')).toBeTruthy()
@@ -150,6 +161,7 @@ describe('RootWebDeferredChrome', () => {
       }
     } finally {
       uaSpy.mockRestore()
+      resetAppInstallSignalForTests()
     }
   })
 })

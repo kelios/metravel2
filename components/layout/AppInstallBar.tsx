@@ -13,6 +13,7 @@ import { useWebKeyboardInset } from '@/hooks/useWebKeyboardInset'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useTranslation } from '@/i18n/LocaleProvider'
+import type { TranslationKey } from '@/i18n/resources'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import {
   getPhoneStorePlatform,
@@ -28,9 +29,9 @@ import {
   setBottomChromeReserve,
   subscribeBottomChromeReserve,
 } from '@/utils/bottomChromeReserve'
+import { getAppInstallSignal, subscribeAppInstallSignal, type AppInstallSignal } from '@/utils/appInstallSignal'
 import { readConsent } from '@/utils/consent'
-import { openExternalUrl } from '@/utils/externalLinks'
-import { getMobileAppOpenUrl, getSmartAppBannerContent } from '@/utils/mobileAppHandoff'
+import { getSmartAppBannerContent } from '@/utils/mobileAppHandoff'
 import { openAppStoreListing } from '@/utils/openAppStoreListing'
 import { webViewStyle } from '@/utils/webProps'
 
@@ -39,8 +40,34 @@ const RESERVE_OWNER = 'app-install-bar'
 const APP_ICON = require('@/assets/images/app-icon.webp')
 const getLowerReserve = () => getLowerBottomChromeReserve(RESERVE_OWNER)
 const getServerReserve = () => 0
+const getServerSignal = () => null
 
-/** One phone-only offer; the OS handles app availability after an explicit tap. */
+// Literal keys only: the web inliner compiles string literals, while a template
+// key reaches the runtime as a raw string and renders «Перевод недоступен».
+const SIGNAL_COPY_KEYS = {
+  quest_start: {
+    title: 'sharedStatic:appHandoff.signal.quest_start.title',
+    description: 'sharedStatic:appHandoff.signal.quest_start.description',
+  },
+  offline_save: {
+    title: 'sharedStatic:appHandoff.signal.offline_save.title',
+    description: 'sharedStatic:appHandoff.signal.offline_save.description',
+  },
+  second_travel: {
+    title: 'sharedStatic:appHandoff.signal.second_travel.title',
+    description: 'sharedStatic:appHandoff.signal.second_travel.description',
+  },
+  article_scroll_50: {
+    title: 'sharedStatic:appHandoff.signal.article_scroll_50.title',
+    description: 'sharedStatic:appHandoff.signal.article_scroll_50.description',
+  },
+} satisfies Record<AppInstallSignal, { title: TranslationKey; description: TranslationKey }>
+
+/**
+ * One phone-only offer after an intent signal (#2907): the text names why the
+ * app helps right now, and a single store button leads to the platform store
+ * (the store itself offers «Open» when the app is already installed).
+ */
 function AppInstallBar() {
   const colors = useThemedColors()
   const { t } = useTranslation()
@@ -50,6 +77,7 @@ function AppInstallBar() {
   const footerOverlayOpen = useFooterOverlayOpen()
   const keyboardInset = useWebKeyboardInset()
   const criticalOwner = useSyncExternalStore(subscribeBottomChromeReserve, getCriticalBottomChromeOwner, () => null)
+  const signal = useSyncExternalStore(subscribeAppInstallSignal, getAppInstallSignal, getServerSignal)
   const [storePlatform, setStorePlatform] = useState<AppStorePlatform | null>(null)
   const [closed, setClosed] = useState(false)
   const shownRecorded = useRef(false)
@@ -59,11 +87,12 @@ function AppInstallBar() {
   const lowerReserve = useSyncExternalStore(subscribeBottomChromeReserve, getLowerReserve, getServerReserve)
   const bottomOffset = Math.max(anchorPx, lowerReserve) + DESIGN_TOKENS.spacing.xs
   const bottomPosition = webFloatingAnchor(DESIGN_TOKENS.spacing.xs, lowerReserve)
-  const shown = IS_WEB && isMobile && storePlatform !== null && !closed && !footerOverlayOpen &&
-    keyboardInset === 0 && !criticalOwner && pathname !== '/app'
+  // The home first screen stays clean even after a signal elsewhere (#2907).
+  const shown = IS_WEB && isMobile && signal !== null && storePlatform !== null && !closed && !footerOverlayOpen &&
+    keyboardInset === 0 && !criticalOwner && pathname !== '/app' && pathname !== '/'
 
   useEffect(() => {
-    if (!IS_WEB || typeof window === 'undefined') return
+    if (!IS_WEB || typeof window === 'undefined' || !signal) return
     // #2782: an undecided visitor already sees the consent banner at the bottom.
     // Two stacked offers covered ~40% of a phone map, so the app offer waits for
     // a later page once the consent answer exists.
@@ -78,7 +107,7 @@ function AppInstallBar() {
       now: Date.now(),
     })) return
     setStorePlatform(getPhoneStorePlatform(userAgent))
-  }, [isMobile, pathname])
+  }, [isMobile, pathname, signal])
 
   useEffect(() => {
     if (!IS_WEB || typeof document === 'undefined') return
@@ -95,31 +124,23 @@ function AppInstallBar() {
   useEffect(() => {
     if (!shown || shownRecorded.current) return
     shownRecorded.current = true
-    void sendAnalyticsEvent('AppInstallBar_Shown', { platform: storePlatform })
-  }, [shown, storePlatform])
-
-  const handleOpen = useCallback(() => {
-    if (!storePlatform) return
-    void sendAnalyticsEvent('AppInstallBar_Open', { platform: storePlatform })
-    void openExternalUrl(getMobileAppOpenUrl(storePlatform, window.location.href), {
-      allowedProtocols: ['metravel:', 'intent:'],
-    })
-  }, [storePlatform])
+    void sendAnalyticsEvent('AppInstallBar_Shown', { platform: storePlatform, signal })
+  }, [shown, signal, storePlatform])
 
   const handleInstall = useCallback(() => {
     if (!storePlatform) return
-    void sendAnalyticsEvent('AppInstallBar_Click', { platform: storePlatform })
+    void sendAnalyticsEvent('AppInstallBar_Click', { platform: storePlatform, signal })
     void openAppStoreListing({ platform: storePlatform, source: 'install_bar' })
-  }, [storePlatform])
+  }, [signal, storePlatform])
 
   const handleDismiss = useCallback(() => {
     if (!storePlatform) return
     markAppInstallHintDismissed()
-    void sendAnalyticsEvent('AppInstallBar_Dismiss', { platform: storePlatform })
+    void sendAnalyticsEvent('AppInstallBar_Dismiss', { platform: storePlatform, signal })
     setClosed(true)
-  }, [storePlatform])
+  }, [signal, storePlatform])
 
-  if (!shown) return null
+  if (!shown || !signal) return null
 
   return (
     <View
@@ -130,8 +151,8 @@ function AppInstallBar() {
       <View style={styles.heading}>
         {width >= 360 && <Image source={APP_ICON} style={styles.icon} resizeMode="contain" accessible={false} />}
         <View style={styles.texts}>
-          <Text style={styles.title}>{t('sharedStatic:appHandoff.title')}</Text>
-          <Text style={styles.subtitle}>{t('sharedStatic:appHandoff.description')}</Text>
+          <Text style={styles.title}>{t(SIGNAL_COPY_KEYS[signal].title)}</Text>
+          <Text style={styles.subtitle}>{t(SIGNAL_COPY_KEYS[signal].description)}</Text>
         </View>
         <IconButton
           icon={<Feather name="x" size={18} color={colors.textMuted} />}
@@ -144,19 +165,11 @@ function AppInstallBar() {
       </View>
       <View style={styles.actions}>
         <Button
-          label={t('sharedStatic:appHandoff.open')}
-          accessibilityLabel={t('sharedStatic:appHandoff.openA11y')}
-          onPress={handleOpen}
-          style={styles.cta}
-          testID="app-install-bar-open"
-        />
-        <Button
           label={t('sharedStatic:appHandoff.install')}
           accessibilityLabel={storePlatform === 'ios'
             ? t('sharedStatic:appDownload.appStore.a11y')
             : t('sharedStatic:appDownload.googlePlay.a11y')}
           onPress={handleInstall}
-          variant="outline"
           style={styles.cta}
           testID="app-install-bar-cta"
         />

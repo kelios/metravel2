@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 
 import { queueAnalyticsEvent } from '@/utils/analytics'
+import { emitAppInstallSignal } from '@/utils/appInstallSignal'
 import { flushQuestAnswerAttempts } from '@/utils/questAnswerTelemetry'
 import {
   resetQuestFunnelRun,
@@ -74,6 +75,12 @@ export function useQuestWizardAnalytics({
     // прохождение не заводится, и следующая попытка должна пройти заново.
     startTrackedRef.current = trackQuestStart({ questId, cityId, passedCount, stepsCount })
   }, [cityId, onRealStep, passedCount, questId, stepsCount])
+
+  // #2907: старт квеста — сигнал намерения для плашки приложения на mobile web.
+  // Не зависит от согласия на аналитику: это показ подсказки, а не событие.
+  useEffect(() => {
+    if (onRealStep) emitAppInstallSignal('quest_start')
+  }, [onRealStep])
 
   // Шаги 3–6 воронки: первая точка и пороги 25/50/75. Дедуп и отсев
   // восстановленного прогресса живут в модуле воронки — он переживает

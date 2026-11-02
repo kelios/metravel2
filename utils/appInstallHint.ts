@@ -12,8 +12,8 @@ import type { AppStorePlatform } from '@/constants/appStore'
 
 const STORAGE_KEY = 'metravel_app_install_hint_v1'
 
-/** Сколько молчим после того, как пользователь закрыл подсказку. */
-export const DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000
+/** Сколько молчим после того, как пользователь закрыл подсказку (#2907: 14 дней). */
+export const DISMISS_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000
 
 export type AppInstallHintState = {
   /** Время последнего закрытия крестиком, ms. */

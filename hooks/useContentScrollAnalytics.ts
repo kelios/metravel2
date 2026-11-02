@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native'
 
+import { emitAppInstallSignal } from '@/utils/appInstallSignal'
 import { trackContentScrollDepth } from '@/utils/growthFunnelAnalytics'
 
 const SCROLL_DEPTH_THRESHOLDS = [25, 50, 75] as const
@@ -34,6 +35,8 @@ export function useContentScrollAnalytics({
       if (progress < depth || reachedRef.current.has(depth)) continue
       reachedRef.current.add(depth)
       trackContentScrollDepth({ source, contentType, contentId: normalizedContentId, depth })
+      // #2907: половина прочитанной статьи — сигнал намерения для плашки приложения.
+      if (depth === 50) emitAppInstallSignal('article_scroll_50')
     }
   }, [contentType, normalizedContentId, source])
 }

@@ -18,6 +18,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { useTranslation } from '@/i18n/LocaleProvider';
 import type { OfflineContentType } from '@/services/offline/types';
 import { globalFocusStyles } from '@/styles/globalFocus';
+import { emitAppInstallSignal } from '@/utils/appInstallSignal';
 import { confirmAction } from '@/utils/confirmAction';
 import { showToast } from '@/utils/toast';
 import { webViewStyle } from '@/utils/webProps';
@@ -100,6 +101,7 @@ export default function OfflineSaveControl({
     setSaving(true);
     try {
       await onSave(includePhotos);
+      emitAppInstallSignal('offline_save');
     } catch (error) {
       if ((error as { name?: string } | null)?.name !== 'AbortError') {
         showToast({ type: 'error', text1: t('offline:saveFailed') });

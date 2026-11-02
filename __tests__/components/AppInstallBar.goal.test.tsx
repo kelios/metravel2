@@ -5,7 +5,7 @@ import { sendAnalyticsEvent } from '@/utils/analytics'
 import { openExternalUrl } from '@/utils/externalLinks'
 import { markAppInstallHintDismissed } from '@/utils/appInstallHint'
 import { APP_STORE_APP_URL, GOOGLE_PLAY_APP_URL } from '@/constants/appStore'
-import { getMobileAppOpenUrl } from '@/utils/mobileAppHandoff'
+import { emitAppInstallSignal, resetAppInstallSignalForTests } from '@/utils/appInstallSignal'
 import { writeConsent } from '@/utils/consent'
 import { getBottomChromeReserve, getCriticalBottomChromeOwner, resetBottomChromeReserve, setBottomChromeReserve } from '@/utils/bottomChromeReserve'
 
@@ -20,7 +20,8 @@ const setKeyboardInset = async (inset: number) => act(() => {
 
 jest.mock('expo-router', () => {
   const react = jest.requireActual<typeof import('react')>('react')
-  const context = react.createContext({ pathname: '/', searchParams: {} })
+  // #2907: the home first screen never shows the bar, so default to a content page.
+  const context = react.createContext({ pathname: '/travels/route', searchParams: {} })
   return {
     __MockRouterContext: context,
     usePathname: () => react.useContext(context).pathname,
@@ -83,6 +84,8 @@ describe('AppInstallBar', () => {
     mockIsConnected = false
     mockKeyboardInset = 0
     mockConsent = DECIDED_CONSENT
+    resetAppInstallSignalForTests()
+    emitAppInstallSignal('quest_start')
   })
   afterEach(() => {
     resetBottomChromeReserve()
@@ -91,28 +94,49 @@ describe('AppInstallBar', () => {
 
   it.each([
     ['ios', APP_STORE_APP_URL], ['android', GOOGLE_PLAY_APP_URL],
-  ] as const)('offers the %s store without claiming installation or closing Open', async (platform, url) => {
+  ] as const)('offers one %s store button with the signal context', async (platform, url) => {
     mockPhoneStorePlatform = platform
     const AppInstallBar = require('@/components/layout/AppInstallBar').default
-    const { getByTestId } = await render(<AppInstallBar />)
+    const { getByTestId, getByText, queryByTestId } = await render(<AppInstallBar />)
     expect(getByTestId('app-install-bar')).toBeTruthy()
+    expect(getByText('sharedStatic:appHandoff.signal.quest_start.title')).toBeTruthy()
+    expect(queryByTestId('app-install-bar-open')).toBeNull()
+    expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('AppInstallBar_Shown', { platform, signal: 'quest_start' })
     expect(mockedOpenExternalUrl).not.toHaveBeenCalled()
     await fireEvent.press(getByTestId('app-install-bar-cta'))
+    expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('AppInstallBar_Click', { platform, signal: 'quest_start' })
     expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('app_download_click', { source: 'install_bar', platform })
     expect(mockedOpenExternalUrl).toHaveBeenCalledWith(url, expect.anything())
-    expect(getByTestId('app-install-bar-open')).toBeTruthy()
     expect(markAppInstallHintDismissed).not.toHaveBeenCalled()
   })
 
-  it.each(['ios', 'android'] as const)('opens the current page explicitly on %s without an install goal', async (platform) => {
-    mockPhoneStorePlatform = platform
-    const AppInstallBar = require('@/components/layout/AppInstallBar').default
-    const { getByTestId } = await render(<AppInstallBar />)
-    await fireEvent.press(getByTestId('app-install-bar-open'))
-    expect(mockedOpenExternalUrl).toHaveBeenCalledWith(getMobileAppOpenUrl(platform, window.location.href), {
-      allowedProtocols: ['metravel:', 'intent:'],
+  // The web runtime resolves only keys the Babel inliner compiled; a template
+  // key would render «Перевод недоступен» on the one platform with this bar.
+  it('keeps every signal copy key inlinable on web', () => {
+    const fs = jest.requireActual<typeof import('node:fs')>('node:fs')
+    const path = jest.requireActual<typeof import('node:path')>('node:path')
+    const { transformSync } = jest.requireActual<typeof import('@babel/core')>('@babel/core')
+    const filename = path.resolve(process.cwd(), 'components/layout/AppInstallBar.tsx')
+    const result = transformSync(fs.readFileSync(filename, 'utf8'), {
+      caller: { name: 'metro', platform: 'web' },
+      filename,
     })
-    expect(mockedSendAnalyticsEvent).not.toHaveBeenCalledWith('app_download_click', expect.anything())
+    expect(result?.code).not.toContain('sharedStatic:appHandoff.')
+  })
+
+  // #2907: shown on entry the bar got 2.7% CTR and 36% dismissals.
+  it('waits for an intent signal and names it in the text and dismiss event', async () => {
+    resetAppInstallSignalForTests()
+    const AppInstallBar = require('@/components/layout/AppInstallBar').default
+    const view = await render(<AppInstallBar />)
+    expect(view.queryByTestId('app-install-bar')).toBeNull()
+    expect(mockedSendAnalyticsEvent).not.toHaveBeenCalled()
+    await act(() => emitAppInstallSignal('offline_save'))
+    await act(() => emitAppInstallSignal('second_travel'))
+    expect(view.getByText('sharedStatic:appHandoff.signal.offline_save.title')).toBeTruthy()
+    await fireEvent.press(view.getByTestId('app-install-bar-dismiss'))
+    expect(markAppInstallHintDismissed).toHaveBeenCalled()
+    expect(mockedSendAnalyticsEvent).toHaveBeenCalledWith('AppInstallBar_Dismiss', { platform: 'android', signal: 'offline_save' })
   })
 
   it('stacks above existing consent and releases its measured reserve on dismissal', async () => {
@@ -275,10 +299,10 @@ describe('AppInstallBar', () => {
     }
   })
 
-  it('suspends the offer for the app landing and More overlay', async () => {
+  it('suspends the offer for the home first screen, the app landing and More overlay', async () => {
     const AppInstallBar = require('@/components/layout/AppInstallBar').default
     const { queryByTestId, rerender } = await render(
-      <MockRouterContext.Provider value={{ pathname: '/', searchParams: {} }}>
+      <MockRouterContext.Provider value={{ pathname: '/places', searchParams: {} }}>
         <AppInstallBar />
       </MockRouterContext.Provider>
     )
@@ -287,11 +311,13 @@ describe('AppInstallBar', () => {
     expect(getBottomChromeReserve()).toBe(0)
     await act(() => window.dispatchEvent(new CustomEvent('metravel:footer-more', { detail: { open: false } })))
     expect(queryByTestId('app-install-bar')).not.toBeNull()
-    await rerender(
-      <MockRouterContext.Provider value={{ pathname: '/app', searchParams: {} }}>
-        <AppInstallBar />
-      </MockRouterContext.Provider>
-    )
-    expect(queryByTestId('app-install-bar')).toBeNull()
+    for (const pathname of ['/app', '/']) {
+      await rerender(
+        <MockRouterContext.Provider value={{ pathname, searchParams: {} }}>
+          <AppInstallBar />
+        </MockRouterContext.Provider>
+      )
+      expect(queryByTestId('app-install-bar')).toBeNull()
+    }
   })
 })
