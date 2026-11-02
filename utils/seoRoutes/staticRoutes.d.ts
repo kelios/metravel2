@@ -12,6 +12,7 @@ export type StaticRouteSeoEntry = {
   breadcrumb?: string;
   breadcrumbKey?: string;
   h1?: string;
+  h1FromTitle?: boolean;
 };
 
 export type ResolvedStaticRouteSeo = {
@@ -38,3 +39,4 @@ export const STATIC_ROUTE_SEO: readonly StaticRouteSeoEntry[];
 export function resolveStaticRouteSeo(route: string, t: RouteTranslator): ResolvedStaticRouteSeo | null;
 export function listStaticRouteSeo(t: RouteTranslator): ResolvedStaticRouteSeo[];
 export function listStaticRoutes(): string[];
+export function stripSiteNameSuffix(title: string): string;

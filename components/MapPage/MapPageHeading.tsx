@@ -3,6 +3,7 @@ import { Platform } from 'react-native'
 
 import { Heading } from '@/components/ui/Typography'
 import { getMapSeoTitle } from '@/constants/mapSeo'
+import { stripSiteNameSuffix } from '@/utils/seoRoutes/staticRoutes'
 import { webDataSetProps } from '@/utils/webProps'
 
 /**
@@ -17,7 +18,6 @@ import { webDataSetProps } from '@/utils/webProps'
 export type MapPageHeadingAnchor = 'panel-head' | 'map-corner'
 
 const SSG_HEADING_SELECTOR = 'h1[data-ssg-travel-h1="true"]'
-const SITE_NAME_SUFFIX = /\s*\|\s*MeTravel\s*$/i
 
 const IS_WEB = Platform.OS === 'web'
 
@@ -77,7 +77,7 @@ function MapPageHeadingImpl({ anchor, styles }: MapPageHeadingProps) {
 
   if (!IS_WEB) return null
 
-  const text = getMapSeoTitle().replace(SITE_NAME_SUFFIX, '')
+  const text = stripSiteNameSuffix(getMapSeoTitle())
 
   if (anchor === 'panel-head') {
     return (

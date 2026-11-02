@@ -1,5 +1,6 @@
 import { i18n } from '@/i18n'
 import { getMapSeoDescription, getMapSeoTitle } from '@/constants/mapSeo'
+import { SEO_TITLE_MAX_LENGTH } from '@/utils/seoText'
 import { formatMapPoints, getMapPointLabel, qualifyMapPointCount } from '@/utils/mapPointCount'
 import { getPlacesLabel, buildTravelListSummaryHint } from '@/components/MapPage/TravelListPanel/helpers'
 
@@ -23,9 +24,13 @@ describe('map point identity and loaded scope in every production locale', () =>
     }
     expect(qualifyMapPointCount(formatMapPoints(5), 'loaded')).toBe(loaded)
     expect(qualifyMapPointCount(formatMapPoints(5), 'radius')).toBe(`5 ${forms[2]}`)
-    expect(getMapSeoTitle()).not.toMatch(/Беларус|Belarus|Białoru/i)
-    expect(getMapSeoDescription()).not.toMatch(/Беларус|Belarus|Białoru/i)
-    expect(getMapSeoTitle()).toContain('MeTravel')
+    // #2938: owner decision 2026-11-02 brings the country back (reverses
+    // #2382); the brand is spelled "Metravel" like on every other page.
+    expect(getMapSeoTitle()).toMatch(/Беларус|Білорус|Belarus|Białoru/)
+    expect(getMapSeoDescription()).toMatch(/Беларус|Білорус|Belarus|Białoru/)
+    expect(getMapSeoTitle()).toMatch(/ \| Metravel$/)
+    expect(getMapSeoTitle().length).toBeLessThanOrEqual(SEO_TITLE_MAX_LENGTH)
+    expect(getMapSeoDescription().length).toBeLessThanOrEqual(160)
   })
 
   it('describes multiple point records at the same coordinate without inferring unique places', () => {

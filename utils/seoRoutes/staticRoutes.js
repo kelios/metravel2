@@ -62,14 +62,17 @@ const STATIC_ROUTE_SEO = Object.freeze([
   },
   {
     route: '/map',
-    title: 'Карта маршрутов и достопримечательностей | MeTravel',
-    description:
-      'Изучайте интерактивную карту путешествий: находите маршруты, достопримечательности и точки интереса, включайте фильтры и стройте путь под свои планы.',
+    // #2938: the same keys as the runtime head (constants/mapSeo.ts). A literal
+    // copy here had drifted from them, so the static and hydrated /map heads
+    // disagreed; one source makes that impossible.
+    titleKey: 'map:constants.mapSeo.title',
+    descriptionKey: 'map:constants.mapSeo.description',
     imagePath: MAP_OG_IMAGE_PATH,
     imageWidth: SOCIAL_IMAGE_WIDTH,
     imageHeight: SOCIAL_IMAGE_HEIGHT,
     breadcrumb: 'Карта маршрутов',
-    h1: 'Карта маршрутов и достопримечательностей',
+    // The runtime MapPageHeading shows the title without the brand suffix.
+    h1FromTitle: true,
   },
   {
     route: '/articles',
@@ -263,6 +266,13 @@ const STATIC_ROUTE_SEO = Object.freeze([
   },
 ]);
 
+const SITE_NAME_SUFFIX = /\s*\|\s*Metravel\s*$/i;
+
+/** Title without the trailing « | Metravel» brand: the visible page heading. */
+function stripSiteNameSuffix(title) {
+  return title.replace(SITE_NAME_SUFFIX, '');
+}
+
 function requireText(value, what) {
   if (typeof value !== 'string' || value.trim() === '') {
     throw new Error(`Static route SEO: missing ${what}`);
@@ -280,17 +290,18 @@ function resolveStaticRouteSeo(route, t) {
   const entry = STATIC_ROUTE_SEO.find((item) => item.route === route);
   if (!entry) return null;
   const read = (literal, key, what) => (key ? requireText(t(key), `${what} (${key})`) : requireText(literal, what));
+  const title = read(entry.title, entry.titleKey, `${route} title`);
   return {
     route: entry.route,
     canonicalRoute: entry.canonicalRoute || entry.route,
-    title: read(entry.title, entry.titleKey, `${route} title`),
+    title,
     description: read(entry.description, entry.descriptionKey, `${route} description`),
     robots: entry.robots,
     imagePath: entry.imagePath || DEFAULT_OG_IMAGE_PATH,
     imageWidth: entry.imageWidth,
     imageHeight: entry.imageHeight,
     breadcrumb: entry.breadcrumbKey ? requireText(t(entry.breadcrumbKey), `${route} breadcrumb`) : entry.breadcrumb,
-    h1: entry.h1,
+    h1: entry.h1FromTitle ? stripSiteNameSuffix(title) : entry.h1,
   };
 }
 
@@ -312,4 +323,5 @@ module.exports = {
   resolveStaticRouteSeo,
   listStaticRouteSeo,
   listStaticRoutes,
+  stripSiteNameSuffix,
 };

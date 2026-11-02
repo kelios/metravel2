@@ -681,7 +681,8 @@ describe('static landing H1 coverage', () => {
 
   it('declares an H1 for the home and map landings', () => {
     expect(tableSource).toMatch(/route: '\/',[\s\S]{0,900}?h1: '[^']+'/);
-    expect(tableSource).toMatch(/route: '\/map',[\s\S]{0,600}?h1: '[^']+'/);
+    // #2938: /map derives its H1 from the localized title instead of a literal.
+    expect(tableSource).toMatch(/route: '\/map',[\s\S]{0,800}?h1FromTitle: true/);
   });
 
   it('injects the declared H1 into the generated page', () => {

@@ -1,3 +1,5 @@
+import { getMapSeoDescription, getMapSeoTitle } from '@/constants/mapSeo';
+import { translate } from '@/i18n';
 import { listStaticRouteSeo, listStaticRoutes, resolveStaticRouteSeo, STATIC_ROUTE_SEO } from '@/utils/seoRoutes/staticRoutes';
 
 const t = (key: string) => `[${key}]`;
@@ -52,6 +54,16 @@ describe('utils/seoRoutes/staticRoutes (#2740)', () => {
       '/settings=noindex, nofollow', '/subscriptions=noindex, nofollow', '/quests/map=noindex, nofollow',
       '/userpoints=noindex, nofollow', '/app-stats=noindex, nofollow',
     ]);
+  });
+
+  // #2938: the static /map head and the runtime head read one pair of keys,
+  // and the static H1 is the runtime MapPageHeading text.
+  it('serves /map from the runtime map SEO keys', () => {
+    const map = resolveStaticRouteSeo('/map', translate);
+    expect(map).toMatchObject({ title: getMapSeoTitle(), description: getMapSeoDescription() });
+    expect(map?.title).toContain('Беларуси');
+    expect(map?.title).toMatch(/ \| Metravel$/);
+    expect(map?.h1).toBe(map?.title.replace(/ \| Metravel$/, ''));
   });
 
   it('returns null for unknown routes', () => {
