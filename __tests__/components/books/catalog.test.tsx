@@ -5,6 +5,7 @@ import CatalogPage from '@/components/books/catalog/ReadyBooksCatalog.web';
 import type {ReadyBookSummary} from '@/services/book/readyBooks/bookMetadata';
 import {publishedFixture} from '../../services/book/readyBooks/publicationFixtures';
 import {thematicPublished} from '../../services/book/readyBooks/thematicFixtures';
+jest.mock('@/i18n',()=>({...jest.requireActual('@/i18n'),translate:(key:string)=>key.replace(/^books:/,'')}));
 jest.mock('@/components/books/bookCopy',()=>({...jest.requireActual('@/components/books/bookCopy'),useBookCopy:()=>((key:string,params?:Record<string,unknown>)=>params?key+':'+JSON.stringify(params):key)}));
 jest.mock('@/components/ui/ImageCardMedia',()=>({__esModule:true,default:({src,alt}:any)=><img src={src} alt={alt}/>}));
 jest.mock('@/components/books/BooksFrame',()=>({BooksFrame:({children,title}:any)=><main><h1>{title}</h1>{children}</main>}));
