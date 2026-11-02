@@ -450,7 +450,7 @@ export default function PlacesScreen() {
                                   wrapping). The slot is reserved from first paint so the
                                   count appearing after load causes no CLS. */}
                               <View style={styles.featuredLabelRow}>
-                                <Text style={styles.featuredLabel} numberOfLines={1}>
+                                <Text style={styles.featuredLabel} numberOfLines={2}>
                                   {collection.hint}
                                 </Text>
                                 <View style={styles.featuredCountSlot}>
