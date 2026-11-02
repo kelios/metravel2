@@ -32,10 +32,10 @@ describe('useGuestPlanIntentCompletion (#2898)', () => {
     await rerender({ auth: true })
     await waitFor(() => expect(setTravelStatus).toHaveBeenCalledTimes(1))
     expect(setTravelStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ id: '42', type: 'travel', status: 'planned', title: 'Гродно за 1 день' }),
+      expect.objectContaining({ id: '42', type: 'travel', status: 'wishlist', title: 'Гродно за 1 день' }),
       'u1',
     )
-    await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ text1: '«Гродно за 1 день» — в вашем плане' })))
+    await waitFor(() => expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ text1: '«Гродно за 1 день» — в плане, в «Хочу поехать»' })))
     expect(await AsyncStorage.getItem(GUEST_PLAN_INTENT_KEY)).toBeNull()
   })
 

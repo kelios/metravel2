@@ -587,6 +587,14 @@ const {
   не отдаются, ключи `*token*`/`*refresh*`/`*password*` в JSON маскируются.
 - Ошибки печатать только через `formatProbeError(error)`: `error.message`
   Playwright несёт «Call log» со всеми заголовками, включая `cookie: authToken=…`.
+- **Гость → вход посреди сценария** (намерение гостя, которое должно завершиться
+  после входа, #2898): начать в контексте без сессии, выполнить гостевое
+  действие, затем в ТОТ ЖЕ контекст добавить cookie из
+  `storageState.metravel.by.json` (`context.addCookies(state.cookies)`) и ключи
+  `userId`/`userName`/`isSuperuser` из его `origins[].localStorage`, перейти на
+  страницу возврата. Форма входа и пароль не нужны — это та же живая сессия
+  аккаунта 104. Перед прогоном проверить, что у 104 нет состояния, которое
+  проверка перезапишет; после — удалить созданное (код ответа в evidence).
 - Смоук и образец: `node e2e/prod-probe/smoke.js [--fresh] [--viewport=mobile]
   [--trip=<id>]` — одна JSON-строка (sha, user id, кэш сессии, баннер,
   localStorage, запросы `/api/trips/`), exit 1 при провале.

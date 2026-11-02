@@ -27,7 +27,7 @@ export const authStaticResources = {
   "authScreen.guest.createAccount": "Создать аккаунт",
   "authScreen.guest.signIn": "Войти",
   "authScreen.dividerEmail": "или по email",
-  "authScreen.intentDone.calendar": "«{{title}}» — в вашем плане",
+  "authScreen.intentDone.calendar": "«{{title}}» — в плане, в «Хочу поехать»",
   "authScreen.progressSaved": "Сохранили ваш прогресс",
   "google.unavailable.text": "Google Sign-In не настроен",
   "google.unavailable.a11y": "Google Sign-In не настроен для мобильного приложения",

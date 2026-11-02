@@ -27,7 +27,7 @@ export const authStaticResources = {
   "authScreen.guest.createAccount": "Załóż konto",
   "authScreen.guest.signIn": "Zaloguj się",
   "authScreen.dividerEmail": "lub przez e-mail",
-  "authScreen.intentDone.calendar": "„{{title}}” — w Twoim planie",
+  "authScreen.intentDone.calendar": "„{{title}}” — w planie, w „Chcę pojechać”",
   "authScreen.progressSaved": "Zapisaliśmy Twój postęp",
   "google.unavailable.text": "Logowanie Google nie jest skonfigurowane",
   "google.unavailable.a11y": "Logowanie Google nie jest skonfigurowane dla aplikacji mobilnej",

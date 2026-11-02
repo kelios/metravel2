@@ -31,7 +31,7 @@ export type TravelStatusEntry = {
   country?: string
   city?: string
   status: TravelStatus
-  plannedDate?: string  // ISO "YYYY-MM-DD", опционально для status === 'planned'
+  plannedDate?: string  // ISO "YYYY-MM-DD"; для status === 'planned' сервер требует дату (400 без неё)
   visitedDate?: string  // ISO "YYYY-MM-DD", опционально для status === 'visited'
   wishlistDate?: string // ISO "YYYY-MM-DD", опционально для status === 'wishlist'
   travelYear?: string

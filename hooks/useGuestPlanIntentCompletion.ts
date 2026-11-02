@@ -7,7 +7,7 @@ import { showToast } from '@/utils/toast'
 
 /**
  * #2898: завершает отложенное «Добавить в план» гостя после входа или
- * регистрации — маршрут попадает в план (`planned` без даты) и человек видит
+ * регистрации — маршрут попадает в план со статусом «Хочу поехать» (`wishlist`: «Планирую» требует даты) и человек видит
  * тост. Если маршрут уже есть в календаре с любым статусом, ничего не трогаем:
  * выбор пользователя важнее отложенного намерения. Сразу после входа кэш
  * статусов этого пользователя ещё пуст (его грузят только календарь и профиль),
@@ -38,7 +38,10 @@ export function useGuestPlanIntentCompletion(isAuthenticated: boolean, userId: s
           travelYear: intent.travelYear,
           travelMonth: intent.travelMonth,
           travelMonthName: intent.travelMonthName,
-          status: 'planned',
+          // «Планирую» сервер принимает только с датой (`planned_date is required for
+          // planned status`, проверено на проде 02.11.2026) — гость дату не выбирал.
+          // Без даты в плане живёт «Хочу поехать»; дату человек добавит в календаре.
+          status: 'wishlist',
         },
         userId,
       )
