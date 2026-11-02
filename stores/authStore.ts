@@ -30,6 +30,7 @@ import { normalizeAvatarUrl } from '@/utils/mediaUrl';
 import { normalizeProfileName, resolveProfileFullName } from '@/utils/profileName';
 import { translate as i18nT } from '@/i18n'
 import { showToast } from '@/utils/toast'
+import { markSignedInBefore } from '@/utils/authNavigation'
 
 
 const getAuthApi = async () => import('@/api/auth');
@@ -692,6 +693,9 @@ useAuthStore.subscribe((state, previous) => {
     const identity = state.isAuthenticated ? state.userId : null;
     const previousIdentity = previous.isAuthenticated ? previous.userId : null;
     if (identity === previousIdentity) return;
+    // #2898: на этом устройстве уже входили — гостевое намерение дальше ведёт
+    // на «Войти», а не на регистрацию. Восстановленная сессия тоже считается.
+    if (identity !== null) markSignedInBefore();
     // PUSH-2: владелец сессии уходит (выход, инвалидация, смена аккаунта) —
     // его локальные квестовые напоминания не должны всплыть у следующего
     // пользователя общего устройства. Best-effort и не зависит от кэша.

@@ -102,6 +102,11 @@
 | `registration_view` / `_submit` / `_complete` / `_error` | `RegistrationForm` | `source`, `intent`, `redirect`, `method`, `reason` | воронка регистрации |
 | `AuthSuccess` | `LoginForm`, `RegistrationForm` → `trackAuthGateSucceeded` | `source = intent`, `intent`, `flow` (`login` / `registration`), `method` | цель гейта: вход или регистрация, начатые с намерением. Без намерения не отправляется. Пара к `AuthViewed` — только `flow=login`: форма регистрации `AuthViewed` не шлёт, её показ — `registration_view` |
 
+Карточка #2898 просила `auth_intent_view{intent}` / `auth_intent_success{intent, method}`:
+новых имён не заводим — это уже `AuthViewed{intent}` (вход) + `registration_view{intent}`
+(регистрация) и `AuthSuccess{intent, flow, method}`. Гостевые `/profile` и `/favorites`
+шлют `register_cta_impression` / `cta_register_click` с `source=guest_profile|guest_favorites`.
+
 `AuthSuccess` и `login_success` — не дубли: первое шире (включает регистрации)
 и уже (только с намерением). Оба имени остаются, потому что на них настроены
 цели Метрики и исторические ряды. До 01.11.2026 `AuthSuccess.source` был то

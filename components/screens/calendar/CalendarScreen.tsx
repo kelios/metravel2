@@ -26,7 +26,7 @@ import ProfileCollectionHeader, {
 } from '@/components/profile/ProfileCollectionHeader'
 import MiniCalendar from '@/components/calendar/MiniCalendar'
 import { useThemedColors } from '@/hooks/useTheme'
-import { buildLoginHref } from '@/utils/authNavigation'
+import { buildExplicitLoginHref } from '@/utils/authNavigation'
 import { confirmAction } from '@/utils/confirmAction'
 import { webTouchScrollStyle } from '@/utils'
 import { buildCanonicalUrl } from '@/utils/seo'
@@ -364,7 +364,8 @@ export default function CalendarScreen() {
   )
 
   const handleLogin = useCallback(() => {
-    router.push(buildLoginHref({ redirect: '/calendar', intent: 'calendar' }) as any)
+    // #2898: кнопка «Войти» — именно вход, без перенаправления на регистрацию.
+    router.push(buildExplicitLoginHref({ redirect: '/calendar', intent: 'calendar' }) as any)
   }, [router])
 
   const handleSearch = useCallback(() => {

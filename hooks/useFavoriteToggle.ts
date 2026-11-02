@@ -37,7 +37,7 @@ export const favoriteKey = (id: string | number, type: FavoriteItem['type']) => 
 export function useFavoriteToggle() {
   const { isAuthenticated, authReady } = useAuth()
   const { isFavorite, addFavorite, removeFavorite } = useFavorites()
-  const { requireAuth } = useRequireAuth({ intent: 'favorite' })
+  const { requireAuthFor } = useRequireAuth({ intent: 'favorite' })
   const feedback = useActionFeedback()
   const { run } = feedback
 
@@ -77,7 +77,7 @@ export function useFavoriteToggle() {
           position: 'bottom',
           visibilityTime: 3000,
         })
-        requireAuth()
+        requireAuthFor(target.title)
         return 'auth'
       }
 
@@ -121,7 +121,7 @@ export function useFavoriteToggle() {
       })
       return result.status
     },
-    [addFavorite, authReady, isAuthenticated, isFavorite, removeFavorite, requireAuth, run],
+    [addFavorite, authReady, isAuthenticated, isFavorite, removeFavorite, requireAuthFor, run],
   )
 
   toggleRef.current = toggle

@@ -14,7 +14,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelsApi';
 import { queryKeys } from '@/api/queryKeys';
 import { sendAnalyticsEvent } from '@/utils/analytics';
-import { buildLoginHref } from '@/utils/authNavigation';
+import { buildExplicitLoginHref } from '@/utils/authNavigation';
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo';
 import { translate as i18nT } from '@/i18n'
 import { staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
@@ -115,7 +115,8 @@ export default function ExportScreen() {
                     description={i18nT('export:app.tabs.export.eksport_v_pdf_dostupen_posle_avtorizatsii_4948aa62')}
                     action={{
                         label: i18nT('export:app.tabs.export.voyti_70e887f8'),
-                        onPress: () => router.push(buildLoginHref({ redirect: '/export', intent: 'build-pdf' }) as any),
+                        // #2898: кнопка «Войти» — именно вход, без перенаправления на регистрацию.
+                        onPress: () => router.push(buildExplicitLoginHref({ redirect: '/export', intent: 'build-pdf' }) as any),
                     }}
                     secondaryAction={{
                         label: i18nT('export:app.tabs.export.otkryt_poisk_45548088'),

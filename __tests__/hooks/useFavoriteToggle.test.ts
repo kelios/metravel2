@@ -11,7 +11,7 @@ const mockRemove = jest.fn()
 const mockIsFavorite = jest.fn()
 
 jest.mock('@/context/AuthContext', () => ({ useAuth: () => mockUseAuth() }))
-jest.mock('@/hooks/useRequireAuth', () => ({ useRequireAuth: () => ({ requireAuth: mockRequireAuth }) }))
+jest.mock('@/hooks/useRequireAuth', () => ({ useRequireAuth: () => ({ requireAuth: mockRequireAuth, requireAuthFor: mockRequireAuth }) }))
 jest.mock('@/context/FavoritesContext', () => ({
   useFavorites: () => ({ addFavorite: mockAdd, removeFavorite: mockRemove, isFavorite: mockIsFavorite }),
 }))

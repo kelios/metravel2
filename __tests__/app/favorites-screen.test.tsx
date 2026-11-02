@@ -128,12 +128,16 @@ describe('FavoritesScreen', () => {
     resetScreenHeaderForTests();
   });
 
-  it('shows login prompt when not authenticated', async () => {
+  // #2898: гость видит, зачем аккаунт, и две кнопки — регистрация первичная.
+  it('shows the guest account prompt with create-account and sign-in when not authenticated', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false, authReady: true });
 
-    const { getByText } = await render(<FavoritesScreen />);
+    const { getByTestId, getByText } = await render(<FavoritesScreen />);
 
-    expect(getByText('Войдите в аккаунт')).toBeTruthy();
+    expect(getByTestId('guest-account-prompt')).toBeTruthy();
+    expect(getByText('Аккаунт бесплатный. С ним у вас будет:')).toBeTruthy();
+    expect(getByText('Создать аккаунт')).toBeTruthy();
+    expect(getByText('Войти')).toBeTruthy();
   });
 
   it('shows empty state when favorites are empty', async () => {

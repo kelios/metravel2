@@ -43,8 +43,11 @@ import AppleSignInButton from '@/components/auth/AppleSignInButton';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import FacebookAuthFlow from '@/components/auth/FacebookAuthFlow';
 import AuthTermsGate, { useAuthTermsAcceptance } from '@/components/auth/AuthTermsGate';
+import { resolveAuthIntentCopy } from '@/utils/authIntentCopy';
+import { usePreferAppleSignIn } from '@/hooks/usePreferAppleSignIn';
+import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { webTouchScrollStyle } from '@/utils';
-import { buildLoginHref, resolvePostAuthPath } from '@/utils/authNavigation';
+import { buildExplicitLoginHref, resolvePostAuthPath } from '@/utils/authNavigation';
 import { translate as i18nT } from '@/i18n'
 import { authFailureText } from '@/utils/authFailure';
 import { prepareQuestGuestHandoff } from '@/utils/questGuestHandoff';
@@ -75,11 +78,20 @@ export default function RegisterForm() {
             }
         };
     }, []);
-    const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
+    const { redirect, intent, subject } = useLocalSearchParams<{ redirect?: string; intent?: string; subject?: string }>();
+    // Статический HTML /login и /registration собран без query: заголовок по намерению —
+    // только после гидратации, иначе текст h1 расходится с SSR (#418).
+    const hydrationReady = useHydrationReady();
+    const intentCopy = useMemo(
+        () => (hydrationReady ? resolveAuthIntentCopy(intent, subject) : null),
+        [hydrationReady, intent, subject],
+    );
+    const preferApple = usePreferAppleSignIn();
     const isFocused = useIsFocused();
     const router = useRouter();
     const { loginWithGoogle, loginWithApple } = useAuth();
-    const terms = useAuthTermsAcceptance();
+    // #2898: на web согласие даётся действием (уведомление под кнопками), native — галка #2132.
+    const terms = useAuthTermsAcceptance({ consentByAction: Platform.OS === 'web' });
     const colors = useThemedColors();
     const { isMobile } = useResponsive();
     const styles = useMemo(() => createStyles(colors), [colors]);
@@ -362,15 +374,15 @@ export default function RegisterForm() {
                                     React.createElement(
                                         'h1',
                                         { style: { margin: 0, marginBottom: 6, fontSize: 24, lineHeight: '30px', fontWeight: 800, color: colors.text } as any },
-                                        i18nT('authStatic:authScreen.register.title'),
+                                        intentCopy?.title ?? i18nT('authStatic:authScreen.register.title'),
                                     )
                                 ) : (
                                     <Text style={styles.heading}>
-                                        {i18nT('authStatic:authScreen.register.title')}
+                                        {intentCopy?.title ?? i18nT('authStatic:authScreen.register.title')}
                                     </Text>
                                 )}
-                                <Text style={styles.subtitle}>
-                                    {i18nT('authStatic:authScreen.register.subtitle')}
+                                <Text style={styles.subtitle} testID="registration-subtitle">
+                                    {intentCopy?.subtitle ?? i18nT('authStatic:authScreen.register.subtitle')}
                                 </Text>
 
                                 {/* ---------- value proposition ---------- */}
@@ -388,23 +400,36 @@ export default function RegisterForm() {
                                     </Text>
                                 )}
 
-                                <AuthTermsGate accepted={terms.accepted} onChange={terms.setAccepted} />
+                                {terms.consentByAction ? null : (
+                                    <AuthTermsGate accepted={terms.accepted} onChange={terms.setAccepted} />
+                                )}
 
                                 {/* ---------- social first ---------- */}
                                 <View style={styles.socialActions}>
-                                    {/* Apple первым: HIG требует показывать Sign in with Apple
-                                        не менее заметно, чем прочие провайдеры. */}
-                                    <AppleSignInButton
-                                        onSuccess={handleAppleSignIn}
-                                        onError={handleAppleError}
-                                        disabled={authLocked}
-                                        mode="sign_up"
-                                    />
+                                    {/* #2898: первичная кнопка по платформе — Apple на iOS/Safari
+                                        (там HIG требует её не менее заметной), Google на Android и
+                                        в остальных браузерах. */}
+                                    {preferApple ? (
+                                        <AppleSignInButton
+                                            onSuccess={handleAppleSignIn}
+                                            onError={handleAppleError}
+                                            disabled={authLocked}
+                                            mode="sign_up"
+                                        />
+                                    ) : null}
                                     <GoogleSignInButton
                                         onSuccess={handleGoogleSignIn}
                                         onError={handleGoogleError}
                                         disabled={authLocked}
                                     />
+                                    {preferApple ? null : (
+                                        <AppleSignInButton
+                                            onSuccess={handleAppleSignIn}
+                                            onError={handleAppleError}
+                                            disabled={authLocked}
+                                            mode="sign_up"
+                                        />
+                                    )}
                                     <FacebookAuthFlow
                                         onAttempt={handleFacebookAttempt}
                                         onAuthenticated={handleFacebookAuthenticated}
@@ -414,6 +439,9 @@ export default function RegisterForm() {
                                         disabled={isSubmitting || submitted || googleBusy || appleBusy || !terms.accepted}
                                     />
                                 </View>
+                                {terms.consentByAction ? (
+                                    <AuthTermsGate accepted consentByAction onChange={terms.setAccepted} />
+                                ) : null}
 
                                 <View style={styles.dividerContainer}>
                                     <View style={styles.dividerLine} />
@@ -553,7 +581,8 @@ export default function RegisterForm() {
                                         onPress={() =>
                                             router.push(
                                                 (redirect && typeof redirect === 'string')
-                                                    ? (buildLoginHref({ redirect, intent }) as any)
+                                                    // #2898: явный вход — без перенаправления обратно на регистрацию.
+                                                    ? (buildExplicitLoginHref({ redirect, intent, subject }) as any)
                                                     : (`/login${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
                                             )
                                         }

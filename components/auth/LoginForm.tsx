@@ -38,6 +38,9 @@ import AppleSignInButton from '@/components/auth/AppleSignInButton';
 import GoogleSignInButton from '@/components/auth/GoogleSignInButton';
 import FacebookAuthFlow from '@/components/auth/FacebookAuthFlow';
 import AuthTermsGate, { useAuthTermsAcceptance } from '@/components/auth/AuthTermsGate';
+import { resolveAuthIntentCopy } from '@/utils/authIntentCopy';
+import { usePreferAppleSignIn } from '@/hooks/usePreferAppleSignIn';
+import { useHydrationReady } from '@/hooks/useHydrationReady';
 import { webTouchScrollStyle } from '@/utils';
 import { buildRegistrationHref, resolvePostAuthPath } from '@/utils/authNavigation';
 import { translate as i18nT } from '@/i18n'
@@ -88,8 +91,18 @@ export default function Login() {
     /* ---------- helpers ---------- */
     const router = useRouter();
     const { login, loginWithGoogle, loginWithApple, sendPassword, isAuthenticated } = useAuth();
-    const terms = useAuthTermsAcceptance();
-    const { redirect, intent } = useLocalSearchParams<{ redirect?: string; intent?: string }>();
+    // #2898: на web согласие даётся действием входа (уведомление рядом с кнопками),
+    // native оставляет явную галку #2132 до решения по App Review.
+    const terms = useAuthTermsAcceptance({ consentByAction: Platform.OS === 'web' });
+    const { redirect, intent, subject } = useLocalSearchParams<{ redirect?: string; intent?: string; subject?: string }>();
+    // Статический HTML /login и /registration собран без query: заголовок по намерению —
+    // только после гидратации, иначе текст h1 расходится с SSR (#418).
+    const hydrationReady = useHydrationReady();
+    const intentCopy = useMemo(
+        () => (hydrationReady ? resolveAuthIntentCopy(intent, subject) : null),
+        [hydrationReady, intent, subject],
+    );
+    const preferApple = usePreferAppleSignIn();
 
     const isFocused = useIsFocused();
     const pathname = usePathname();
@@ -325,15 +338,15 @@ export default function Login() {
                                     React.createElement(
                                         'h1',
                                         { style: { margin: 0, marginBottom: 6, fontSize: 24, lineHeight: '30px', fontWeight: 800, color: colors.text } as any },
-                                        i18nT('authStatic:authScreen.login.title'),
+                                        intentCopy?.title ?? i18nT('authStatic:authScreen.login.title'),
                                     )
                                 ) : (
                                     <Text style={styles.heading}>
-                                        {i18nT('authStatic:authScreen.login.title')}
+                                        {intentCopy?.title ?? i18nT('authStatic:authScreen.login.title')}
                                     </Text>
                                 )}
-                                <Text style={styles.subtitle}>
-                                    {i18nT('authStatic:authScreen.login.subtitle')}
+                                <Text style={styles.subtitle} testID="login-subtitle">
+                                    {intentCopy?.subtitle ?? i18nT('authStatic:authScreen.login.subtitle')}
                                 </Text>
 
                                 {msg.text !== '' && (
@@ -348,22 +361,34 @@ export default function Login() {
                                     </Text>
                                 )}
 
-                                <AuthTermsGate accepted={terms.accepted} onChange={terms.setAccepted} />
+                                {terms.consentByAction ? null : (
+                                    <AuthTermsGate accepted={terms.accepted} onChange={terms.setAccepted} />
+                                )}
 
                                 {/* ---------- social first ---------- */}
                                 <View style={styles.socialActions}>
-                                    {/* Apple первым: HIG требует показывать Sign in with Apple
-                                        не менее заметно, чем прочие провайдеры. */}
-                                    <AppleSignInButton
-                                        onSuccess={handleAppleSignIn}
-                                        onError={handleAppleError}
-                                        disabled={authLocked}
-                                    />
+                                    {/* #2898: первичная кнопка по платформе — Apple на iOS/Safari
+                                        (там HIG требует её не менее заметной), Google на Android и
+                                        в остальных браузерах. */}
+                                    {preferApple ? (
+                                        <AppleSignInButton
+                                            onSuccess={handleAppleSignIn}
+                                            onError={handleAppleError}
+                                            disabled={authLocked}
+                                        />
+                                    ) : null}
                                     <GoogleSignInButton
                                         onSuccess={handleGoogleSignIn}
                                         onError={handleGoogleError}
                                         disabled={authLocked}
                                     />
+                                    {preferApple ? null : (
+                                        <AppleSignInButton
+                                            onSuccess={handleAppleSignIn}
+                                            onError={handleAppleError}
+                                            disabled={authLocked}
+                                        />
+                                    )}
                                     <FacebookAuthFlow
                                         onAuthenticated={handleFacebookAuthenticated}
                                         onBusyChange={setFacebookBusy}
@@ -371,6 +396,9 @@ export default function Login() {
                                         disabled={isSubmitting || submitted || googleBusy || appleBusy || !terms.accepted}
                                     />
                                 </View>
+                                {terms.consentByAction ? (
+                                    <AuthTermsGate accepted consentByAction onChange={terms.setAccepted} />
+                                ) : null}
 
                                 <View style={styles.dividerContainer}>
                                     <View style={styles.dividerLine} />
@@ -476,7 +504,7 @@ export default function Login() {
                                     <Link
                                         href={
                                             (redirect && typeof redirect === 'string')
-                                                ? (buildRegistrationHref({ redirect, intent }) as any)
+                                                ? (buildRegistrationHref({ redirect, intent, subject }) as any)
                                                 : (`/registration${intent ? `?intent=${encodeURIComponent(intent)}` : ''}` as any)
                                         }
                                         style={styles.registerLink}

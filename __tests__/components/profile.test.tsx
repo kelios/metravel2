@@ -330,14 +330,16 @@ describe('ProfileScreen', () => {
     );
   };
 
-  it('shows EmptyState when user is not authenticated', async () => {
+  // #2898: гость видит выгоды аккаунта и две кнопки вместо «Войдите» + «Войти».
+  it('shows the guest account prompt when user is not authenticated', async () => {
     setupAuth({ isAuthenticated: false });
     setupFavorites(0, 0);
 
-    const { findByText } = await renderProfile();
+    const { findByText, findByTestId } = await renderProfile();
 
-    expect(await findByText('Войдите в аккаунт')).toBeTruthy();
-    expect(await findByText('Войдите, чтобы открыть профиль и управлять своими данными.')).toBeTruthy();
+    expect(await findByText('Ваш профиль')).toBeTruthy();
+    expect(await findByTestId('guest-account-prompt-register')).toBeTruthy();
+    expect(await findByTestId('guest-account-prompt-login')).toBeTruthy();
   });
 
   it('shows profile info, quick actions and stats', async () => {

@@ -4,6 +4,69 @@ type BuildLoginHrefParams = {
   redirect?: string | null
   intent?: string | null
   fallbackRedirect?: string
+  /**
+   * #2898: что именно гость пытался сделать — название маршрута/статьи для
+   * заголовка экрана («Сохраните «Гродно за 1 день» в план»). Только текст для
+   * показа, в логику не идёт; чистится `sanitizeAuthSubject`.
+   */
+  subject?: string | null
+}
+
+const AUTH_SUBJECT_MAX_LENGTH = 80
+
+/** Текст заголовка из query: без кавычек-ёлочек и переводов строк, не длиннее 80 символов. */
+export const sanitizeAuthSubject = (value: unknown): string | undefined => {
+  const raw = Array.isArray(value) ? value[0] : value
+  if (typeof raw !== 'string') return undefined
+  const cleaned = raw.replace(/[«»"\u201c\u201d]/g, '').replace(/\s+/g, ' ').trim()
+  if (!cleaned) return undefined
+  return cleaned.length > AUTH_SUBJECT_MAX_LENGTH
+    ? `${cleaned.slice(0, AUTH_SUBJECT_MAX_LENGTH - 1).trimEnd()}…`
+    : cleaned
+}
+
+/**
+ * #2898: намерения-действия гостя («в план», «в избранное», «рассказать о
+ * поездке», «книга»…). Для них по умолчанию открывается регистрация, а не
+ * «С возвращением»: человек ещё не знает, что у него будет аккаунт. Вход —
+ * только если на этом устройстве уже входили (`hasSignedInBefore`).
+ * Страничные намерения (`profile`, `favorites`, `menu`, `settings`…) ведут на
+ * вход как раньше.
+ */
+export const REGISTER_FIRST_INTENTS: ReadonlySet<string> = new Set([
+  'calendar',
+  'favorite',
+  'offline',
+  'share-trip',
+  'create-travel',
+  'add-place',
+  'create-book',
+  'build-pdf',
+  'plan-trip',
+  'save-point',
+  'subscribe',
+  'author',
+])
+
+const SIGNED_IN_BEFORE_KEY = 'metravel:has-signed-in'
+
+/** Локальный признак «на этом устройстве уже входили» (web). Без хранилища — false. */
+export const hasSignedInBefore = (): boolean => {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return false
+  try {
+    return window.localStorage.getItem(SIGNED_IN_BEFORE_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+export const markSignedInBefore = (): void => {
+  if (Platform.OS !== 'web' || typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(SIGNED_IN_BEFORE_KEY, '1')
+  } catch {
+    // Признак — удобство, не контракт: без хранилища гость просто увидит регистрацию.
+  }
 }
 
 const RAW_WHITESPACE_PATTERN = /\s/
@@ -92,11 +155,12 @@ export const getWebRedirectPath = (fallbackRedirect: string = '/') => {
   }
 }
 
-export const buildLoginHref = ({
+const buildAuthQuery = ({
   redirect,
   intent,
   fallbackRedirect = '/',
-}: BuildLoginHrefParams = {}) => {
+  subject,
+}: BuildLoginHrefParams) => {
   const resolvedRedirect =
     redirect && redirect.length > 0
       ? normalizeInternalAuthRedirect(redirect, fallbackRedirect)
@@ -105,21 +169,26 @@ export const buildLoginHref = ({
   const params = new URLSearchParams()
   params.set('redirect', resolvedRedirect)
   if (intent) params.set('intent', String(intent))
-  return `/login?${params.toString()}`
+  const safeSubject = sanitizeAuthSubject(subject)
+  if (safeSubject) params.set('subject', safeSubject)
+  return params.toString()
 }
 
-export const buildRegistrationHref = ({
-  redirect,
-  intent,
-  fallbackRedirect = '/',
-}: BuildLoginHrefParams = {}) => {
-  const resolvedRedirect =
-    redirect && redirect.length > 0
-      ? normalizeInternalAuthRedirect(redirect, fallbackRedirect)
-      : getWebRedirectPath(fallbackRedirect)
-
-  const params = new URLSearchParams()
-  params.set('redirect', resolvedRedirect)
-  if (intent) params.set('intent', String(intent))
-  return `/registration?${params.toString()}`
+/**
+ * Вход для гостя. Для намерения-действия (`REGISTER_FIRST_INTENTS`) на
+ * устройстве, где ещё не входили, ведёт на регистрацию (#2898): у той же формы
+ * есть «Уже есть аккаунт? Войти» с теми же `redirect`/`intent`.
+ */
+export const buildLoginHref = (params: BuildLoginHrefParams = {}) => {
+  const query = buildAuthQuery(params)
+  const registerFirst = Boolean(params.intent && REGISTER_FIRST_INTENTS.has(String(params.intent)))
+    && !hasSignedInBefore()
+  return `${registerFirst ? '/registration' : '/login'}?${query}`
 }
+
+export const buildRegistrationHref = (params: BuildLoginHrefParams = {}) =>
+  `/registration?${buildAuthQuery(params)}`
+
+/** Явный переход на вход (ссылка «Уже есть аккаунт? Войти»): без перенаправления на регистрацию. */
+export const buildExplicitLoginHref = (params: BuildLoginHrefParams = {}) =>
+  `/login?${buildAuthQuery(params)}`

@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
+import GuestAccountPrompt from '@/components/auth/GuestAccountPrompt';
 import { View, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -17,7 +18,6 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { calculateColumns } from '@/components/listTravel/utils/listTravelHelpers';
 import { BREAKPOINTS } from '@/components/listTravel/utils/listTravelConstants';
 import { useThemedColors } from '@/hooks/useTheme';
-import { buildLoginHref } from '@/utils/authNavigation';
 import { webTouchScrollStyle } from '@/utils';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
@@ -221,15 +221,11 @@ export default function FavoritesScreen() {
             <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
                 {seoBlock}
                 <ProfileCollectionHeader title={i18nT('shared:app.tabs.favorites.hochu_poehat_d89b6117')} onBackPress={handleBackToProfile} />
-                <EmptyState
-                    density="full"
-                    icon="heart"
-                    title={i18nT('shared:app.tabs.favorites.voydite_v_akkaunt_b6b6d6dd')}
-                    description={i18nT('shared:app.tabs.favorites.voydite_chtoby_sohranyat_marshruty_v_hochu_p_003156c7')}
-                    action={{
-                        label: i18nT('shared:app.tabs.favorites.voyti_4b517055'),
-                        onPress: () => router.push(buildLoginHref({ redirect: '/favorites', intent: 'favorites' }) as any),
-                    }}
+                {/* #2898: выгоды аккаунта и две кнопки вместо «Войдите» + «Войти». */}
+                <GuestAccountPrompt
+                    redirect="/favorites"
+                    intent="favorites"
+                    title={i18nT('authStatic:authScreen.guest.favorites.title')}
                 />
             </SafeAreaView>
         );

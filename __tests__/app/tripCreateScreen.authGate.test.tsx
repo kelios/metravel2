@@ -50,7 +50,8 @@ describe('CreateTripScreen auth gate', () => {
     expect(queryByTestId('trip-create-form')).toBeNull();
 
     await fireEvent.press(getByTestId('trip-create-login-link'));
-    expect(mockPush).toHaveBeenCalledWith('/login?redirect=%2Ftrips%2Fplan%2Fcreate&intent=plan-trip');
+    // #2898: на устройстве без входа гостевое действие открывает регистрацию.
+    expect(mockPush).toHaveBeenCalledWith('/registration?redirect=%2Ftrips%2Fplan%2Fcreate&intent=plan-trip');
   });
 
   it('renders trip creation form for authenticated users', async () => {

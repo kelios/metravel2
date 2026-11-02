@@ -20,6 +20,7 @@ import {
   ensureViewHistoryServerData,
 } from '@/hooks/useViewHistory';
 import { consumeGuestFavoriteIntent } from '@/utils/guestFavoriteIntent';
+import { useGuestPlanIntentCompletion } from '@/hooks/useGuestPlanIntentCompletion';
 import { showToast } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n';
 
@@ -42,6 +43,9 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
     },
     [auth]
   );
+
+  // #2898: отложенное «Добавить в план» гостя — тот же момент, что избранное ниже.
+  useGuestPlanIntentCompletion(isAuthenticated, userId);
 
   // Deferred first value action: a guest tapped "save" before the auth wall
   // (utils/guestFavoriteIntent). Complete it once after login/registration so

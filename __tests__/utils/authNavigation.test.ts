@@ -1,4 +1,8 @@
 import {
+  buildExplicitLoginHref,
+  hasSignedInBefore,
+  markSignedInBefore,
+  sanitizeAuthSubject,
   buildLoginHref,
   buildRegistrationHref,
   normalizeInternalAuthRedirect,
@@ -56,8 +60,8 @@ describe('authNavigation redirect security', () => {
   })
 
   it('sanitizes redirects embedded in login and registration hrefs', () => {
-    expect(buildLoginHref({ redirect: '//attacker.example', intent: 'favorite' })).toBe(
-      '/login?redirect=%2F&intent=favorite',
+    expect(buildLoginHref({ redirect: '//attacker.example', intent: 'profile' })).toBe(
+      '/login?redirect=%2F&intent=profile',
     )
     expect(buildRegistrationHref({ redirect: '/%252f%252fattacker.example' })).toBe(
       '/registration?redirect=%2F',
@@ -65,5 +69,48 @@ describe('authNavigation redirect security', () => {
     expect(buildRegistrationHref({ redirect: '/article/test?draft=1#comments' })).toBe(
       '/registration?redirect=%2Farticle%2Ftest%3Fdraft%3D1%23comments',
     )
+  })
+})
+
+describe('authNavigation intent entry (#2898)', () => {
+  const { Platform } = require('react-native')
+  const originalOS = Platform.OS
+
+  beforeEach(() => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, get: () => 'web' })
+    window.localStorage.clear()
+  })
+  afterAll(() => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, get: () => originalOS })
+  })
+
+  it('sends a guest action to registration on a device that never signed in, with the item title', () => {
+    expect(buildLoginHref({ redirect: '/travels/grodno', intent: 'calendar', subject: '  «Гродно\nза 1 день»  ' })).toBe(
+      '/registration?redirect=%2Ftravels%2Fgrodno&intent=calendar&subject=%D0%93%D1%80%D0%BE%D0%B4%D0%BD%D0%BE+%D0%B7%D0%B0+1+%D0%B4%D0%B5%D0%BD%D1%8C',
+    )
+  })
+
+  it('keeps sign-in for returning devices and for page-level intents', () => {
+    expect(buildLoginHref({ redirect: '/profile', intent: 'profile' })).toBe('/login?redirect=%2Fprofile&intent=profile')
+    markSignedInBefore()
+    expect(hasSignedInBefore()).toBe(true)
+    expect(buildLoginHref({ redirect: '/travels/grodno', intent: 'calendar' })).toBe(
+      '/login?redirect=%2Ftravels%2Fgrodno&intent=calendar',
+    )
+  })
+
+  it('never bounces the explicit «Sign in» link back to registration', () => {
+    expect(buildExplicitLoginHref({ redirect: '/travels/grodno', intent: 'favorite' })).toBe(
+      '/login?redirect=%2Ftravels%2Fgrodno&intent=favorite',
+    )
+  })
+
+  it('sanitizes the subject: no quotes or line breaks, at most 80 characters', () => {
+    expect(sanitizeAuthSubject(['  "Минск"  ', 'x'])).toBe('Минск')
+    expect(sanitizeAuthSubject('   ')).toBeUndefined()
+    expect(sanitizeAuthSubject(42)).toBeUndefined()
+    const long = sanitizeAuthSubject('а'.repeat(200))
+    expect(long).toHaveLength(80)
+    expect(long?.endsWith('…')).toBe(true)
   })
 })

@@ -465,18 +465,25 @@ export async function removeTravelStatus(
  * Идентичность изолирована ключом: смена пользователя во время фетча пишет в
  * старый ключ и не затирает актуальные записи нового.
  */
-export async function loadTravelStatus(userId: string | null): Promise<void> {
-  if (!userId) return
-  if (!getActiveQueryClient()) return
+/**
+ * Возвращает `true`, когда явные статусы пришли с сервера; `false` — остался
+ * кэш (нет пользователя/клиента или запрос упал). #2898: отложенное «в план»
+ * пишет только при `true`, чтобы не перетереть неизвестный серверный статус.
+ */
+export async function loadTravelStatus(userId: string | null): Promise<boolean> {
+  if (!userId) return false
+  if (!getActiveQueryClient()) return false
 
   // Фолбэк явных статусов — текущий кэш (как локальные в старом loadLocal).
   const cachedEntries = readEntries(userId)
   let explicitEntries: TravelStatusEntry[] = cachedEntries
+  let explicitFromServer = false
   try {
     const { fetchUserTravelStatuses } = await getUserApi()
     explicitEntries = (await fetchUserTravelStatuses(userId, { perPage: 9999 }))
       .map(normalizeServerStatusEntry)
       .filter((item): item is TravelStatusEntry => item !== null)
+    explicitFromServer = true
   } catch (error) {
     devWarn('Не удалось синхронизировать явные статусы путешествий с сервером:', error)
   }
@@ -494,4 +501,5 @@ export async function loadTravelStatus(userId: string | null): Promise<void> {
   }
 
   writeEntries(userId, mergeStatusAndAuthoredEntries(explicitEntries, authoredEntries))
+  return explicitFromServer
 }

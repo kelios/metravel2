@@ -224,7 +224,7 @@ describe('PlacesScreen category search', () => {
 
   // #2778: у гостя «Сохранить» активна и ведёт на вход; на native после входа —
   // обратно в каталог `/places`, а не на главную.
-  it('sends a guest from «Сохранить» to login and back to /places', async () => {
+  it('sends a guest from «Сохранить» to sign-up (#2898) and back to /places', async () => {
     ;(Platform as any).OS = 'ios'
     const prev = useAuthStore.getState()
     useAuthStore.setState({ isAuthenticated: false, authReady: true } as any)
@@ -234,7 +234,8 @@ describe('PlacesScreen category search', () => {
       })
       const placeCard = await findByTestId('places-card-place-1')
       await fireEvent.press(within(placeCard).getByLabelText('Сохранить'))
-      expect(mockPush).toHaveBeenCalledWith('/login?redirect=%2Fplaces&intent=save-point')
+      // #2898: на устройстве без входа гостевое действие открывает регистрацию.
+      expect(mockPush).toHaveBeenCalledWith('/registration?redirect=%2Fplaces&intent=save-point')
     } finally {
       useAuthStore.setState({ isAuthenticated: prev.isAuthenticated, authReady: prev.authReady } as any)
     }

@@ -24,6 +24,7 @@ import { useActionFeedback } from '@/hooks/useActionFeedback'
 import { translate as i18nT } from '@/i18n'
 import { formatDate } from '@/i18n/format'
 import { webTitleRef } from '@/utils/webProps'
+import { saveGuestPlanIntent } from '@/utils/guestPlanIntent'
 
 
 const STATUS_OPTIONS: Array<{
@@ -121,7 +122,7 @@ export default function TravelStatusButton({
   const isWeb = Platform.OS === 'web'
   const { isMobile } = useBreakpoints()
   const { isAuthenticated, userId } = useAuth()
-  const { requireAuth } = useRequireAuth({ intent: 'calendar' })
+  const { requireAuth, authReady } = useRequireAuth({ intent: 'calendar', subject: travelTitle })
 
   const travelStatusEntries = useTravelStatus()
   const current = travelStatusEntries.find((e) => String(e.id) === String(travelId))
@@ -136,6 +137,22 @@ export default function TravelStatusButton({
   const handleMainPress = useCallback((e?: any) => {
     stopWebCardEvent(e)
     if (!isAuthenticated) {
+      // #2898: намерение «в план» переживает вход — после него маршрут
+      // добавится в план автоматически (useGuestPlanIntentCompletion). Пока
+      // сессия восстанавливается, это может быть не гость: тогда не сохраняем.
+      if (authReady) {
+        void saveGuestPlanIntent({
+          id: String(travelId),
+          title: travelTitle ?? '',
+          url: travelUrl,
+          imageUrl: travelImageUrl,
+          country: travelCountry,
+          city: travelCity,
+          travelYear,
+          travelMonth,
+          travelMonthName,
+        })
+      }
       requireAuth()
       return
     }
@@ -143,7 +160,7 @@ export default function TravelStatusButton({
     setDateInput(current?.plannedDate ?? '')
     setDateError('')
     setModalOpen(true)
-  }, [isAuthenticated, requireAuth, current?.plannedDate])
+  }, [isAuthenticated, authReady, requireAuth, current?.plannedDate, travelId, travelTitle, travelUrl, travelImageUrl, travelCountry, travelCity, travelYear, travelMonth, travelMonthName])
 
   const handleSelectStatus = useCallback(async (status: TravelStatus) => {
     if (status === 'planned') {

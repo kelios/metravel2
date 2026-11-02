@@ -148,3 +148,13 @@ it('RegistrationForm: из гейта квеста регистрация ухо
     mockSearchParams = {};
   }
 });
+
+it('#2898: заголовок и выгода экрана — по намерению и названию маршрута', async () => {
+  mockSearchParams = { intent: 'calendar', subject: 'Гродно за 1 день', redirect: '/travels/grodno' };
+  const screen = await render(<RegistrationForm />);
+  expect(await screen.findByText('Сохраните «Гродно за 1 день» в план')).toBeTruthy();
+  expect(screen.getByTestId('registration-subtitle').props.children).toBe(
+    'Аккаунт бесплатный: маршрут попадёт в ваш план и будет доступен на телефоне.',
+  );
+  mockSearchParams = {};
+});

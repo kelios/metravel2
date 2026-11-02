@@ -36,7 +36,7 @@ jest.mock('@/context/FavoritesContext', () => ({
 }))
 
 jest.mock('@/hooks/useRequireAuth', () => ({
-  useRequireAuth: () => ({ requireAuth: mockRequireAuth }),
+  useRequireAuth: () => ({ requireAuth: mockRequireAuth, requireAuthFor: mockRequireAuth }),
 }))
 
 jest.mock('@/utils/toast', () => ({

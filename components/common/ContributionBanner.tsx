@@ -9,7 +9,7 @@ import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
 import { useAuthStore } from '@/stores/authStore'
 import { ResponsiveContainer } from '@/components/layout'
 import Button from '@/components/ui/Button'
-import { buildLoginHref } from '@/utils/authNavigation'
+import { buildExplicitLoginHref } from '@/utils/authNavigation'
 import {
   trackContentCreateCtaClicked,
   trackContentCreateCtaImpression,
@@ -153,7 +153,8 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
     if (isAuthenticated) {
       router.push(ADD_PLACE_PATH as any)
     } else {
-      router.push(buildLoginHref({ redirect: ADD_PLACE_PATH, intent: 'add-place' }) as any)
+      // #2898: рядом уже есть отдельная кнопка регистрации — эта ведёт именно на вход.
+      router.push(buildExplicitLoginHref({ redirect: ADD_PLACE_PATH, intent: 'add-place' }) as any)
     }
   }
 

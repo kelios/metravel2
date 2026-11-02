@@ -1,13 +1,12 @@
 // Страница профиля пользователя
 import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import GuestAccountPrompt from '@/components/auth/GuestAccountPrompt';
 import {
   View,
   ActivityIndicator,
-  Platform,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   type LayoutChangeEvent,
-  type ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,7 +19,6 @@ import {
 import { ProfileEngagementDetailList } from '@/components/profile/ProfileEngagementDetailList';
 import { resolveAuthorEngagementMetric } from '@/api/authorEngagement';
 import { useAuthorEngagementDetails } from '@/hooks/useAuthorEngagementDetails';
-import EmptyState from '@/components/ui/EmptyState';
 import { useMyTravels } from '@/hooks/useMyTravels';
 import type { Travel } from '@/types/types';
 import RenderTravelItem from '@/components/listTravel/RenderTravelItem';
@@ -42,7 +40,6 @@ import { useSubscriptionsData } from '@/hooks/useSubscriptionsData';
 import BadgeUnlockToast from '@/components/achievements/BadgeUnlockToast';
 import PlaceFirstBadgeToast from '@/components/achievements/PlaceFirstBadgeToast';
 import { useResponsive } from '@/hooks/useResponsive';
-import { buildLoginHref } from '@/utils/authNavigation';
 import { confirmAction } from '@/utils/confirmAction';
 import { rIC } from '@/utils/rIC';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
@@ -454,18 +451,6 @@ export default function ProfileScreen() {
     () => createProfileScreenStyles({ colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth }),
     [colors, contentPadding, gapSize, isDesktopWeb, maxContentWidth],
   );
-  const profileLoginActionStyle = useMemo(
-    () => ({
-      backgroundColor: colors.brand,
-      ...(Platform.OS === 'web'
-        ? {
-            backgroundImage: 'none',
-            boxShadow: `0 4px 16px ${colors.brandAlpha40}`,
-          }
-        : null),
-    }) as ViewStyle,
-    [colors.brand, colors.brandAlpha40],
-  );
 
   const tabCounts = useMemo(() => ({
     overview: badgesCount,
@@ -802,16 +787,11 @@ export default function ProfileScreen() {
   if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
-        <EmptyState
-          density="full"
-          icon="user"
-          title={i18nT('profile:app.tabs.profile.voydite_v_akkaunt_eba2a87d')}
-          description={i18nT('profile:app.tabs.profile.voydite_chtoby_otkryt_profil_i_upravlyat_svo_d7506777')}
-          action={{
-            label: i18nT('profile:app.tabs.profile.voyti_bf809d29'),
-            onPress: () => router.push(buildLoginHref({ redirect: '/profile', intent: 'profile' }) as any),
-            style: profileLoginActionStyle,
-          }}
+        {/* #2898: выгоды аккаунта и две кнопки вместо «Войдите» + «Войти». */}
+        <GuestAccountPrompt
+          redirect="/profile"
+          intent="profile"
+          title={i18nT('authStatic:authScreen.guest.profile.title')}
         />
       </SafeAreaView>
     );
