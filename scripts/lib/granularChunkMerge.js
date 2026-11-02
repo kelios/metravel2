@@ -20,6 +20,8 @@ const path = require('path')
 // Raising it to 0.3 cut requests 28 -> 20 but added ~600 KB raw on the worst
 // route; 0.35 gave 31 requests, worse than 0.4 (#1721, measured 2026-08).
 const MIN_ROUTE_SIMILARITY = 0.4
+const TINY_SHARED_MAX_BYTES = 2 * 1024
+const MAX_EXTRA_FACTORY_BYTES_PER_ENTRY = 4 * 1024
 const LAYOUT_FILE = /^_layout(\.[^/]+)?\.[jt]sx?$/
 const webFallbackPath = (entryPath) => entryPath.replace(/\.web(\.[jt]sx?)$/, '$1')
 
@@ -234,20 +236,76 @@ function mergeGranularChunkPlan(plan, context, { minRouteSimilarity = MIN_ROUTE_
     const modules = group.atoms.flatMap((atom) => [...atom.modules]).sort(byPath)
     chunks.push({ ownerEntries: group.ownerEntries, modules: new Set(modules) })
   }
-  chunks.sort(byOwners)
+  const packedChunks = packTinySharedChunks(chunks, dependentEntriesByModule, initialOwners, entryPathSet)
+  packedChunks.sort(byOwners)
 
   // Same rule as upstream's getRequiredChunksByEntryPath: an entry requires every
   // chunk holding a module it reaches synchronously, so each import() set and
   // each HTML route stays closed whatever was merged.
   const requiredByEntry = entryPoints.map(() => [])
-  for (const chunk of chunks) {
+  for (const chunk of packedChunks) {
     let requiredBy = 0n
     for (const module of chunk.modules) requiredBy |= dependentEntriesByModule.get(module) ?? 0n
     for (const index of ownerIndices(requiredBy)) requiredByEntry[index].push(chunk)
   }
   const requiredChunksByEntryPath = new Map(entryPaths.map((entryPath, index) => [entryPath, requiredByEntry[index]]))
 
-  return { ...plan, chunks, requiredChunksByEntryPath }
+  return { ...plan, chunks: packedChunks, requiredChunksByEntryPath }
+}
+
+/** Measure only registered module factories, never scripts or raw source files. */
+function sharedFactoryInfo(chunk, dependentEntriesByModule, initialOwners, entryPathSet) {
+  if ((chunk.ownerEntries & initialOwners) !== 0n || [...ownerIndices(chunk.ownerEntries)].length < 2) return null
+  let bytes = 0
+  let consumers = 0n
+  for (const module of chunk.modules) {
+    if (!path.isAbsolute(module.path) || module.path.includes('\0') || module.isVirtual || entryPathSet.has(module.path)) return null
+    const requiredBy = dependentEntriesByModule.get(module)
+    if (typeof requiredBy !== 'bigint' || requiredBy === 0n || !module.output?.length) return null
+    for (const output of module.output) {
+      if (!/^js\/module(?:\/|$)/.test(output.type) || typeof output.data?.code !== 'string') return null
+      bytes += Buffer.byteLength(output.data.code, 'utf8')
+    }
+    consumers |= requiredBy
+  }
+  return { chunk, bytes, consumers, key: [...chunk.modules].sort(byPath).map((module) => module.path).join('\0'), active: true }
+}
+
+/**
+ * Tiny shared files can survive route-set merging when lazy entries have different
+ * owners. Move their factories only to a file every actual consumer already needs.
+ * Other consumers may receive definitions, not execution; bound that extra payload.
+ */
+function packTinySharedChunks(chunks, dependentEntriesByModule, initialOwners, entryPathSet) {
+  const groups = chunks.map((chunk) => sharedFactoryInfo(chunk, dependentEntriesByModule, initialOwners, entryPathSet)).filter(Boolean)
+  const bySizeThenPath = (left, right) => left.bytes - right.bytes || (left.key < right.key ? -1 : left.key > right.key ? 1 : 0)
+  const extraBytesByEntry = new Map()
+  const removed = new Set()
+  for (const source of groups.slice().sort(bySizeThenPath)) {
+    if (!source.active || source.bytes > TINY_SHARED_MAX_BYTES) continue
+    let best = null
+    let bestExtraEntries = null
+    for (const target of groups) {
+      if (!target.active || target === source || (source.consumers & target.consumers) !== source.consumers) continue
+      const extraEntries = [...ownerIndices(target.consumers & ~source.consumers)]
+      if (extraEntries.some((index) => (extraBytesByEntry.get(index) ?? 0) + source.bytes > MAX_EXTRA_FACTORY_BYTES_PER_ENTRY)) continue
+      if (!best || extraEntries.length < bestExtraEntries.length ||
+          (extraEntries.length === bestExtraEntries.length && bySizeThenPath(target, best) < 0)) {
+        best = target
+        bestExtraEntries = extraEntries
+      }
+    }
+    if (!best) continue
+    best.chunk.modules = new Set([...best.chunk.modules, ...source.chunk.modules].sort(byPath))
+    best.bytes += source.bytes
+    best.key = [...best.chunk.modules].map((module) => module.path).join('\0')
+    // Keep the destination's unique placement/name key. Required files below use
+    // actual consumers, not that key, including owners normalized for web aliases.
+    for (const index of bestExtraEntries) extraBytesByEntry.set(index, (extraBytesByEntry.get(index) ?? 0) + source.bytes)
+    source.active = false
+    removed.add(source.chunk)
+  }
+  return chunks.filter((chunk) => !removed.has(chunk))
 }
 
 function mergeGroups(left, right) {
