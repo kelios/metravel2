@@ -12,7 +12,7 @@ function validInspection(): PdfInspection {
   return {
     sha256: 'a'.repeat(64), bytes: 100000, pageCount: 104,
     boxes: Array.from({length: 104}, () => ({media: [0, 0, 154, 216], trim: [3, 3, 151, 213], bleed: [0, 0, 154, 216]})),
-    fonts: [{embedded: true, unicode: true}], hasCyrillic: true,
+    fonts: [{name: 'NotoSans-Regular', type3: false, embedded: true, unicode: true}, {name: 'MarckScript-Regular-2000', type3: false, embedded: true, unicode: true}], hasCyrillic: true,
     missingText: [], imagePpis: Array(30).fill(318), externalResources: false,
   };
 }
@@ -36,6 +36,9 @@ it.each([
   ['physical-boxes', (i: PdfInspection) => {i.boxes.pop();}],
   ['fonts', (i: PdfInspection) => {i.fonts[0].embedded = false;}],
   ['fonts', (i: PdfInspection) => {i.fonts[0].unicode = false;}],
+  ['font-allowlist', (i: PdfInspection) => {i.fonts.push({name: 'LucidaGrande', type3: true, embedded: true, unicode: true});}],
+  ['font-allowlist', (i: PdfInspection) => {i.fonts.push({name: 'Helvetica', type3: false, embedded: true, unicode: true});}],
+  ['font-allowlist', (i: PdfInspection) => {i.fonts[0].type3 = true;}],
   ['cyrillic', (i: PdfInspection) => {i.hasCyrillic = false;}],
   ['complete-text', (i: PdfInspection) => {i.missingText.push('Потерянный текст');}],
   ['image-resolution', (i: PdfInspection) => {i.imagePpis[29] = 299;}],

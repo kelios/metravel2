@@ -1,6 +1,10 @@
 import {buildReadyBookHtml, embeddedImage, type ReadyBookRenderInput} from '../../../../services/book/readyBooks/render';
 import {makeEditorialDraft} from './fixtures';
 import {buildReadyBookPagePlan} from '../../../../services/book/readyBooks/composition';
+import {buildCountryQuestBookHtml} from '../../../../services/book/readyBooks/questBooks/volume';
+import {buildCanvasMapViewport} from '../../../../utils/mapSnapshot/viewport';
+import {countryQuestBookSchema} from '../../../../data/travelBooks/schema/questBooks';
+import byQuests from '../../../../data/travelBooks/quests/by-volume-1.json';
 
 const image = {dataUri: 'data:image/png;base64,aGVsbG8=', credit: 'Test author', sourceUrl: 'https://example.org/photo', rights: 'Owner commissioned artwork', illustrated: true};
 function input(profileId: 'pocket-150x100' | 'album-a5' = 'pocket-150x100', count=30): ReadyBookRenderInput {
@@ -9,7 +13,25 @@ function input(profileId: 'pocket-150x100' | 'album-a5' = 'pocket-150x100', coun
     qr:Object.fromEntries(book.stops.map(stop=>[stop.id,{map:image.dataUri,article:image.dataUri,sizeMm:22}])),fonts:{regular:'data:font/ttf;base64,aGVsbG8=',bold:'data:font/ttf;base64,aGVsbG8=',serif:'data:font/ttf;base64,aGVsbG8='}};
 }
 
+it('prints quest volumes with declined counts and the edition month, without revision or proof notes (#2949)',()=>{
+  const book={...countryQuestBookSchema.parse(byQuests),endMatterPages:['country-map' as const]};
+  const profile={id:'album-a5' as const,widthMm:148,heightMm:210,bleedMm:0,safeMm:5,bindingMm:15,binding:'rings' as const};
+  const assets=Object.fromEntries(book.quests.map(quest=>[quest.questId,{coverDataUri:image.dataUri,mapDataUri:image.dataUri,mapViewport:buildCanvasMapViewport(quest.points,[],128*5,161*5,17,1.3),qrDataUri:image.dataUri,qrSizeMm:22}]));
+  const result=buildCountryQuestBookHtml({book,profile,purpose:'read',fonts:input().fonts,assets,cover:{dataUri:image.dataUri,widthPx:100,heightPx:100}});
+  const printed=[...result.bodyPages,...result.coverPages].join('');
+  expect(printed).toContain(`${book.quests.length} квест`);
+  expect(printed).toContain('Издание: ноябрь 2026');
+  for(const service of [book.revision,'Квестов:','не подтвержд','пробной печати'])expect(printed).not.toContain(service);
+});
 describe('approved photo-diary physical rendering',()=>{
+  it('prints only reader-facing service text: edition month, declined counts, no revision, ppi or proof notes (#2949)',()=>{
+    const source={...input('album-a5',31),estimatedMinIllustrationPpi:379},result=buildReadyBookHtml(source);
+    const printed=[...result.bodyPages,...result.coverPages].join('');
+    expect(result.bodyPages[0]).toContain('31 место · фотодневник');
+    expect(result.bodyPages[0]).toContain('Издание: ноябрь 2026');
+    expect(result.coverPages[0]).toContain('31 место · фотодневник');
+    for(const service of [source.book.revision,'ppi','не провер','реестр','pocket-150x100','album-a5'])expect(printed).not.toContain(service);
+  });
   it.each(['pocket-150x100','album-a5'] as const)('renders all three roles at native %s size',profile=>{
     const source=input(profile,31),result=buildReadyBookHtml(source);
     expect(result.bodyPages).toHaveLength(108);expect(result.coverPages).toHaveLength(4);
@@ -47,8 +69,12 @@ describe('approved photo-diary physical rendering',()=>{
     expect(legend.flatMap(page => page.stopIds)).toEqual(source.book.stops.map(stop => stop.id));
     for (const [index, stop] of source.book.stops.entries()) {
       const destination = plan.find(page => page.kind === 'destination' && page.stopId === stop.id)!;
-      expect(legendHtml).toContain(`<li><span>□ ${index + 1}. ${stop.title}</span><span>${destination.number}</span></li>`);
+      expect(legendHtml).toContain(`</svg> ${index + 1}. ${stop.title}</span><span>${destination.number}</span></li>`);
     }
+    expect(legendHtml).not.toContain('□');
+    // The graphic-only `.checklist-box` rule does not reach other styles: the vector box carries its own 3 mm size.
+    expect(legendHtml).toContain('class="checklist-box" viewBox="0 0 12 12" width="3mm" height="3mm"');
+    expect(result.stylesCss).not.toContain('.checklist-box');
     expect(legend.at(-1)!.number).toBeLessThan(map.number);
   });
   it('omits a repeated local name that differs only by case',()=>{

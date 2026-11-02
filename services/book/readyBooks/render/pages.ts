@@ -6,11 +6,14 @@ import {embeddedImage, type ReadyBookRenderInput} from './index';
 import {renderReadyBookEndMap} from './endMap';
 import {bookStyleCopy} from './styleCopy';
 import {renderThematicFacts, thematicPhotoPlacement} from './thematic';
+import {countRu, editionLabel, editionMonth, PLACES} from './counts';
+import edition from '../../../../data/travelBooks/edition.json';
 export {renderCoverPage} from './cover';
 
 const text = (value: string, className = '') => `<p class="${className}">${e(value)}</p>`;
 const content = (value: string, className = '') => `<main class="content ${className}">${value}</main>`;
-const graphicCheckbox = '<svg class="checklist-box" viewBox="0 0 12 12" aria-hidden="true"><rect x="1" y="1" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1"/></svg>';
+// Every style uses this vector box (#2949); its 3 mm size is inline because `.checklist-box` CSS exists only in the graphic style sheet.
+const graphicCheckbox = '<svg class="checklist-box" viewBox="0 0 12 12" width="3mm" height="3mm" style="vertical-align:-.35mm" aria-hidden="true"><rect x="1" y="1" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1"/></svg>';
 const flow = (value: string) => content(`<div class="flow">${value}</div>`);
 
 function qrLinks(input: ReadyBookRenderInput, stop: PlaceBookStop) {
@@ -30,7 +33,7 @@ export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage
   const thematic = 'sourceContract' in book && book.sourceContract === 'thematic-v1';
   const copy = thematic ? {...styleCopy,
     usage: 'У каждого места три страницы: фотография с подписью и рассказом, свободное место для вашего снимка и чистая страница для записей. Маршруты служат справкой; перед выходом проверьте официальные сообщения.',
-    creditsSource: 'Использованы фотографии из опубликованных путешествий автора MeTravel (user_id=1) и предоставленных владельцем архивов. Разрешение на этот фотодневник, байты, размеры и привязки сохранены в реестре. Контекстные виды подписаны отдельно; имя фотографа не установлено.',
+    creditsSource: 'Использованы фотографии из опубликованных путешествий автора MeTravel и предоставленных владельцем архивов. Контекстные виды подписаны отдельно.',
   } : styleCopy;
   const {kind} = entry;
   if (stop) {
@@ -57,7 +60,7 @@ export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage
     return content('', kind === 'photo-memory' ? 'personal-photo-space' : 'blank-diary-space');
   }
   if (kind === 'padding' || kind === 'extra-memory') return content('', 'blank-diary-space');
-  if (kind === 'title') return flow(`<h1>${e(country)}</h1>${thematic ? '' : text(book.title, 'subtitle')}${text(`${book.stops.length} мест · фотодневник`)}${text('Для самостоятельных поездок, любимых кадров и своих историй.')}<p class="small">Русский язык · ${profile.widthMm}×${profile.heightMm} мм · ${e(book.revision)}</p>${text(`${input.estimatedMinIllustrationPpi ? `Иллюстрации: около ${input.estimatedMinIllustrationPpi} ppi. ` : ''}Цифровое чтение и пробная печать; бумажный образец и профиль типографии не проверены.`, 'small')}`);
+  if (kind === 'title') return flow(`<h1>${e(country)}</h1>${thematic ? '' : text(book.title, 'subtitle')}${text(`${countRu(book.stops.length, PLACES)} · фотодневник`)}${text('Для самостоятельных поездок, любимых кадров и своих историй.')}<p class="small">Русский язык · ${profile.widthMm}×${profile.heightMm} мм · ${editionLabel(edition.editionDate)}</p>`);
   if (kind === 'preparation') return flow(`<h2>Перед поездкой</h2>${text('Выберите место и откройте статью автора по QR. Точки в книге описывают разные самостоятельные поездки.')} ${text(thematic ? 'Проверьте официальные сообщения и погоду перед выходом. На карте отмечена физическая цель; фотография и исходная точка статьи могут показывать её окрестности. Подпись объясняет различие.' : 'Проверьте актуальные условия посещения. Координаты показывают место из авторского маршрута; отдельный вход может находиться в стороне.')} ${text('Сохраните свободную полосу у переплёта для колец или пружины.', 'small')}`);
   if (kind === 'usage') return flow(`<h2>Место для вашей истории</h2>${text(copy.usage)} ${text(pocket ? 'Сюда помещается фотография до 100×70 мм.' : 'Свободная область вмещает вертикальную фотографию до 102×152 мм. Горизонтальный кадр можно повернуть.')} ${text('«Место на карте» открывает выбранную точку, «Статья на сайте» — опубликованное путешествие автора. «Квест» появляется только при проверенной связи с этим местом.', 'small')}`);
   const selected = new Set(entry.stopIds);
@@ -68,8 +71,8 @@ export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage
   if (kind === 'map') return flow(`<h2>Места этой книги на карте</h2>${renderReadyBookEndMap(book, profile)}${text('Номера соответствуют списку мест на предыдущих страницах. Для точной навигации откройте QR выбранного места.', 'small')}`);
   if (kind === 'checklist') {
     const destinations = new Map(buildReadyBookPagePlan(book).filter(page => page.kind === 'destination').map(page => [page.stopId, page.number]));
-    return flow(`<h2>Места на карте</h2>${text('Номер · место · страница', 'small')}<ol class="contents-list">${book.stops.filter(item => selected.has(item.id)).map(item => `<li><span>${book.visualStyle === 'graphic' ? graphicCheckbox : '□'} ${book.stops.findIndex(stop => stop.id === item.id) + 1}. ${e(item.title)}</span><span>${destinations.get(item.id)}</span></li>`).join('')}</ol>`);
+    return flow(`<h2>Места на карте</h2>${text('Номер · место · страница', 'small')}<ol class="contents-list">${book.stops.filter(item => selected.has(item.id)).map(item => `<li><span>${graphicCheckbox} ${book.stops.findIndex(stop => stop.id === item.id) + 1}. ${e(item.title)}</span><span>${destinations.get(item.id)}</span></li>`).join('')}</ol>`);
   }
-  return flow(`<h2>Об этой книге</h2>${text(`MeTravel · ${book.title} · редакция ${book.revision}.`)}${text(copy.creditsSource)} ${text(copy.creditsFont)} ${text('Файлы подготовлены для цифрового чтения и пробной печати. Профиль типографии и бумажный образец проверяются отдельно.', 'small')}`);
+  return flow(`<h2>Об этой книге</h2>${text(`MeTravel · ${book.title} · издание: ${editionMonth(edition.editionDate)}.`)}${text(copy.creditsSource)} ${text(copy.creditsFont)}`);
 }
 

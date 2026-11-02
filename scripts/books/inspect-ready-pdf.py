@@ -29,7 +29,9 @@ def inspect(pdf_path, book, component, profile_id, purpose, plan=None, page_map=
         match = re.search(r'\s+(yes|no)\s+(yes|no)\s+(yes|no)\s+\d+\s+\d+\s*$', row)
         if not match:
             raise ValueError(f'Unrecognised pdffonts row: {row}')
-        fonts.append({'embedded': match[1] == 'yes', 'unicode': match[3] == 'yes'})
+        # Subset prefix «ABCDEF+» is dropped; the family is checked against the OFL allowlist (#2949).
+        name = re.sub(r'^[A-Z]{6}\+', '', row.split()[0])
+        fonts.append({'name': name, 'type3': ' Type 3 ' in row, 'embedded': match[1] == 'yes', 'unicode': match[3] == 'yes'})
     image_ppis = []
     for row in command(['pdfimages', '-list', str(pdf)]).splitlines()[2:]:
         fields = row.split()

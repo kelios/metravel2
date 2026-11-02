@@ -21,7 +21,7 @@ export const getIsHeaderMobile = (width: number, effectiveWebWidth: number) => {
   return isCompactHeaderWidth(width)
 }
 
-const ACTIVE_PATH_PREFIXES = ['/search', '/travelsby', '/export', '/map', '/places', '/trips', '/quests', '/roulette']
+const ACTIVE_PATH_PREFIXES = ['/search', '/travelsby', '/export', '/map', '/places', '/trips', '/quests', '/roulette', '/books']
 
 export { isQuestDetailHeaderPath } from './questHeaderPresentation'
 

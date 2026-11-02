@@ -85,6 +85,10 @@ export function checkEditorialComposition(book: EditorialComposition, ctx: z.Ref
   if ([...stopIds].some(id => !covered.has(id))) issue(['miniTrips'], 'Mini-trips must cover every selected stop');
 }
 
+// Legacy note (#2952): data/travelBooks/{by,pl}/editorial.json are the archived 12-place
+// A2–B1 prototype (revision 2026-10-27.1). They still validate as drafts, but no published
+// edition is built from them; current editions come from selection/source-records/
+// artwork-provenance via scripts/books/source-ready-book.mjs. See data/travelBooks/README.md.
 export const editorialBookDraftSchema = z.strictObject({
   ...editorialShape, status: z.literal('editorial-draft'),
 }).superRefine(checkEditorialComposition);

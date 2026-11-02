@@ -37,9 +37,19 @@ def impose(source, plan, output):
                 if item['rotation'] != 0 or x < 0 or top < 0 or x + page_width > width or top + page_height > height:
                     raise ValueError('Placement is rotated or outside the physical sheet')
                 canvas.merge_transformed_page(page, Transformation().translate(x * mm, (height - top - page_height) * mm))
-    writer.add_metadata({'/Title': f"MeTravel / {plan['profileId']} / {plan['mode']} / {plan['component']}", '/Author': 'MeTravel'})
+    writer.add_metadata({'/Title': f"MeTravel · {human_label(plan)}", '/Author': 'MeTravel'})
     with open(output, 'wb') as stream:
         writer.write(stream)
+
+
+# Printed sheets name the package in reader terms, never profile/mode ids (#2949).
+PROFILE_LABELS = {'pocket-150x100': 'Формат 150 × 100 мм', 'album-a5': 'Формат A5'}
+MODE_LABELS = {'home-rings': 'сборка на кольцах', 'home-sewn': 'прошивка'}
+COMPONENT_LABELS = {'body': 'страницы книги', 'cover': 'обложка'}
+
+
+def human_label(plan):
+    return f"{PROFILE_LABELS[plan['profileId']]} · {MODE_LABELS[plan['mode']]} · {COMPONENT_LABELS[plan['component']]}"
 
 
 def control_document(plan, output, root):
@@ -54,9 +64,16 @@ def control_document(plan, output, root):
     canvas.setTitle('MeTravel / контроль 100% и карта сборки')
     for is_back in (False, True):
         canvas.setFont('Noto', 12)
-        canvas.drawString(15 * mm, (279 + shift) * mm, 'ОБОРОТ ↑ ВЕРХ' if is_back else 'ЛИЦО ↑ ВЕРХ')
+        side, baseline = ('ОБОРОТ' if is_back else 'ЛИЦО'), (279 + shift) * mm
+        canvas.drawString(15 * mm, baseline, side)
+        # Noto Sans has no «↑» glyph (it printed blank): the orientation arrow is vector (#2949).
+        arrow_x = 15 * mm + pdfmetrics.stringWidth(side, 'Noto', 12) + 3 * mm
+        canvas.line(arrow_x, baseline, arrow_x, baseline + 3.6 * mm)
+        canvas.line(arrow_x - 1.2 * mm, baseline + 2.4 * mm, arrow_x, baseline + 3.6 * mm)
+        canvas.line(arrow_x + 1.2 * mm, baseline + 2.4 * mm, arrow_x, baseline + 3.6 * mm)
+        canvas.drawString(arrow_x + 3 * mm, baseline, 'ВЕРХ')
         canvas.setFont('Noto', 9)
-        label = f"{plan['profileId']} / {plan['mode']} / {plan['component']}"
+        label = human_label(plan)
         canvas.drawString(15 * mm, (269 + shift) * mm, label)
         canvas.drawString(15 * mm, (260 + shift) * mm, 'Печатать 100%. Без подгонки, без режима «Брошюра».')
         canvas.drawString(15 * mm, (251 + shift) * mm, 'Линейка 50 мм: допустимый результат 49–51 мм.')
@@ -109,7 +126,7 @@ def control_document(plan, output, root):
             canvas.setFont('Noto', 8)
             y = height - 20
         for side in ('front', 'back'):
-            placements = '; '.join(f"{('стр. ' + str(p['folio'])) if p['folio'] is not None else 'пустая позиция'} → x={p['xMm']}, y={p['yMm']} мм" for p in sheet[side])
+            placements = '; '.join(f"{('стр. ' + str(p['folio'])) if p['folio'] is not None else 'пустая позиция'}: x={p['xMm']}, y={p['yMm']} мм" for p in sheet[side])
             canvas.drawString(15 * mm, y * mm, f"Лист {index + 1}, {'лицо' if side == 'front' else 'оборот'}: {placements}")
             y -= 6
         y -= 2

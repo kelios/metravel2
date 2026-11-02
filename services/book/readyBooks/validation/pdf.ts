@@ -1,10 +1,14 @@
 import type {PrintProfile} from '../../../../types/readyBook.ts';
 
 type Box = [number, number, number, number];
+/** Only the free fonts shipped with the books; system faces (LucidaGrande, Helvetica) and Type 3 glyphs fail (#2949). */
+export const ALLOWED_BOOK_FONT_FAMILIES = ['MarckScript', 'NotoSans', 'NotoSerif', 'Lora', 'LoraItalic', 'CormorantGaramond'] as const;
+export const isAllowedBookFont = (font: {name: string; type3: boolean}) =>
+  !font.type3 && ALLOWED_BOOK_FONT_FAMILIES.includes(font.name.split('-')[0] as typeof ALLOWED_BOOK_FONT_FAMILIES[number]);
 export type PdfInspection = {
   sha256: string; bytes: number; pageCount: number;
   boxes: {media: Box; trim: Box; bleed: Box}[];
-  fonts: {embedded: boolean; unicode: boolean}[];
+  fonts: {name: string; type3: boolean; embedded: boolean; unicode: boolean}[];
   hasCyrillic: boolean; missingText: string[]; imagePpis: number[]; externalResources: boolean;
 };
 export type PdfValidationReport = {
@@ -36,6 +40,8 @@ export function validatePdfInspection({bookId, revision, profile, component, pur
   check('physical-boxes', inspection.boxes.length === inspection.pageCount && inspection.boxes.every(box => close(box.media, expectedMedia) && close(box.trim, expectedTrim) && close(box.bleed, expectedMedia)), 'MediaBox/TrimBox/BleedBox каждой страницы; допуск 0,1 мм');
   check('bleed-profile', purpose === 'print-shop' ? bleed === 2 || bleed === 3 : profile.bleedMm === 0, 'Печатный профиль и назначение файла согласованы');
   check('fonts', inspection.fonts.length > 0 && inspection.fonts.every(font => font.embedded && font.unicode), 'Все шрифты встроены и имеют Unicode mapping');
+  const foreignFonts = inspection.fonts.filter(font => !isAllowedBookFont(font)).map(font => font.name);
+  check('font-allowlist', inspection.fonts.length > 0 && foreignFonts.length === 0, foreignFonts.length ? `Недопустимые шрифты: ${[...new Set(foreignFonts)].join(', ')}` : 'Только встроенные свободные шрифты книги, без Type 3');
   check('cyrillic', inspection.hasCyrillic, 'Poppler извлекает кириллицу');
   check('complete-text', inspection.missingText.length === 0, `${inspection.missingText.length} отсутствующих текстовых фрагментов`);
   check('image-integrity', validPpis, `Размещённые иллюстрации: минимум ${minIllustrationPpi} ppi; нативные пиксели без увеличения`);

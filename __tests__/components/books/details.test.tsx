@@ -124,7 +124,7 @@ it('distinguishes ring-body, ring-cover and sewn-body controls with unique filen
     return link.getAttribute('download');
   });
   expect(new Set(names).size).toBe(3);
-  expect(names).toEqual(controls.map(file=>`${book.slug}-${book.revision}-${file.id}.pdf`));
+  expect(names).toEqual(['Беларусь — акварель — A5 — проверочный лист, на кольцах, страницы.pdf','Беларусь — акварель — A5 — проверочный лист, на кольцах, обложка.pdf','Беларусь — акварель — A5 — проверочный лист, прошивка, страницы.pdf']);
 });
 it('shows one file when the copy-shop PDF is byte-identical to the reading PDF and sizes small files in kilobytes',()=>{
   const book=publishedFixture();

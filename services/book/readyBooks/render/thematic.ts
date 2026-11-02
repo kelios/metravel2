@@ -23,10 +23,11 @@ export function renderThematicFacts(evidence: ThematicEvidence): string {
   const route = evidence.route;
   if (!route) return '';
   const reference = route.routeUse === 'itinerary-reference' ? 'Маршрут-справка' : 'Маршрут';
-  const path = [route.start, ...route.via, route.finish].join(' → ');
+  // Lora has no «→»/«↑»: Chromium fell back to system LucidaGrande Type 3 (#2949).
+  const path = [route.start, ...route.via, route.finish].join(' — ');
   const parts = [
     `${reference}${route.routeDate ? ` (${route.routeDate})` : ''}: ${path}. ${route.scope}.`,
-    `${metric(route.distanceKm)} км · ↑ ${metric(route.elevationGainM)} м · ${metric(route.durationMinutes)} мин.`,
+    `${metric(route.distanceKm)} км · набор высоты ${metric(route.elevationGainM)} м · ${metric(route.durationMinutes)} мин.`,
     route.metricNote,
     `Сложность: ${route.difficulty}. Сезон: ${route.seasonality}.`,
     `Доступ (${route.availability.checkedOn}): ${route.availability.note}`,
@@ -49,7 +50,7 @@ export const thematicPrintStyles = `
 .thematic-story{position:absolute;left:15mm;right:15mm;top:57mm;height:38mm;font-size:9pt;line-height:1.1;text-align:left}
 .thematic-story p+p{margin-top:.5mm}
 .thematic-story p{display:inline;margin:0}
-.thematic-metrics{font-weight:bold}
+.thematic-metrics{font-family:BookHeading,BookHand,serif}
 .thematic-sources a{text-decoration:underline}
 .thematic .qr-row{left:auto;right:15mm;width:60mm;top:21mm;bottom:auto;gap:2mm;justify-content:space-between}
 .thematic .qr-link{font-size:8.5pt}

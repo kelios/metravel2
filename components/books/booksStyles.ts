@@ -5,7 +5,7 @@ export const booksCss=`
 .ready-books a{color:inherit;text-decoration:underline;min-height:44px;display:inline-flex;align-items:center}
 .ready-books button,.ready-books select,.ready-books input{font:inherit;min-height:44px;max-width:100%}
 .ready-books button{cursor:pointer}.ready-books :focus-visible{outline:3px solid currentColor;outline-offset:3px}
-.ready-books-grid{display:grid;grid-template-columns:1fr;gap:24px}.ready-books-card{border:1px solid currentColor;border-radius:${DESIGN_TOKENS.radii.lg}px;overflow:hidden}
+.ready-books-grid{display:grid;grid-template-columns:1fr;gap:24px}.ready-books-card{border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:${DESIGN_TOKENS.radii.lg}px;overflow:hidden}
 .ready-books-card>div{padding:20px}.ready-books-card img{display:block;width:100%;aspect-ratio:1.5;object-fit:contain}
 .ready-books-note{border:1px solid currentColor;padding:16px;border-radius:${DESIGN_TOKENS.radii.md}px}.ready-books-note h2{margin-top:0}.ready-books summary{cursor:pointer;min-height:44px}
 .ready-books-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:16px 0}.ready-books-controls label{display:flex;gap:8px;align-items:center;min-height:44px}.ready-books fieldset.ready-books-controls{padding:12px 16px;border:1px solid currentColor;border-radius:${DESIGN_TOKENS.radii.md}px;min-width:0}

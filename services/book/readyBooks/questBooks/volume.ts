@@ -7,6 +7,8 @@ import {buildQuestBookPagePlan} from './composition';
 import {buildQuestBookBlockHtml,questBookStyles,type QuestBookBlockAssets,type QuestBookBlockRenderInput} from './render';
 import {printQuestLabel} from './labels';
 import type {CountryQuestBook} from '../../../../types/questBook';
+import {countRu,editionLabel,QUESTS} from '../render/counts';
+import edition from '../../../../data/travelBooks/edition.json';
 import type {PrintProfile} from '../../../../types/readyBook';
 
 export interface CountryQuestBookRenderInput{
@@ -37,8 +39,8 @@ export function buildCountryQuestBookHtml(input:CountryQuestBookRenderInput){
   const bodyPages=plan.map(entry=>{
     if(entry.questId){const offset=['quest-story','quest-map','photo-memory','notes'].indexOf(entry.kind);return blocks.get(entry.questId)![offset];}
     if(entry.kind==='padding')return page(entry.number,'padding','');
-    if(entry.kind==='title')return page(entry.number,'quest-title-page',flow(`<h1>${e(book.title)}</h1><p>Квестов: ${book.quests.length} · фотодневник</p><p>Для самостоятельных поездок, любимых кадров и своих историй.</p><p class="small">Русский язык · ${profile.widthMm}×${profile.heightMm} мм</p><p class="small">${e(book.revision)}</p>`));
-    if(entry.kind==='usage')return page(entry.number,'quest-usage',flow('<h2>Ваша история путешествия</h2><p>Выберите квест в содержании. На первом развороте — его история, все точки и карта. QR открывает прохождение на сайте.</p><p>После карты оставлены свободная страница для ваших фотографий и чистая страница для заметок. Сохраните полосу крепления у переплёта.</p><p class="small">Сложность, возрастные и сезонные метки принадлежат отдельным маршрутам. Перед поездкой проверьте условия посещения в онлайн-квесте.</p><p class="small">Для чтения и пробной печати. Бумажный образец и приём файлов типографией не подтверждены.</p>'));
+    if(entry.kind==='title')return page(entry.number,'quest-title-page',flow(`<h1>${e(book.title)}</h1><p>${countRu(book.quests.length,QUESTS)} · фотодневник</p><p>Для самостоятельных поездок, любимых кадров и своих историй.</p><p class="small">Русский язык · ${profile.widthMm}×${profile.heightMm} мм</p><p class="small">${editionLabel(edition.editionDate)}</p>`));
+    if(entry.kind==='usage')return page(entry.number,'quest-usage',flow('<h2>Ваша история путешествия</h2><p>Выберите квест в содержании. На первом развороте — его история, все точки и карта. QR открывает прохождение на сайте.</p><p>После карты оставлены свободная страница для ваших фотографий и чистая страница для заметок. Сохраните полосу крепления у переплёта.</p><p class="small">Сложность, возрастные и сезонные метки принадлежат отдельным маршрутам. Перед поездкой проверьте условия посещения в онлайн-квесте.</p>'));
     if(entry.kind==='contents'){
       const rows=book.quests.filter(quest=>entry.questIds?.includes(quest.questId));
       return page(entry.number,'quest-contents',flow(`<h2>Квесты этой части</h2><ol class="contents-list">${rows.map(quest=>`<li><span>${book.quests.indexOf(quest)+1}. ${e(printQuestLabel(quest.title))}</span><span>${plan.find(page=>page.kind==='quest-story'&&page.questId===quest.questId)!.number}</span></li>`).join('')}</ol>`));

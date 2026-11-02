@@ -28,38 +28,37 @@ small=ParagraphStyle('Small',parent=normal,fontSize=7.2,leading=10)
 story=[]
 def p(text,style=normal): return Paragraph(escape(str(text)),style)
 def add(text,style=normal): story.append(p(text,style))
-add(g['title'] if a.kind=='instructions' else 'Паспорт пробной печати',heading)
-add(g['bookTitle']+' / '+g['bookProfileId'])
-add('Редакция: '+g['revision'],small)
+PROFILE_NAMES={'pocket-150x100':'компактный формат 150 × 100 мм','album-a5':'формат A5'}
+add(g['title'] if a.kind=='instructions' else 'Паспорт печати',heading)
+add(g['bookTitle']+' · '+PROFILE_NAMES[g['bookProfileId']])
 add(g['summary']);add(g['assembly']);add(g['sewnNote'])
 if a.kind=='instructions':
-    for section in g['sections']:
-        add(section['title'],heading)
+    for number,section in enumerate(g['sections'],1):
+        add(f"{number}. {section['title']}",heading)
         for text in section['paragraphs']: add(text)
-    add('Файлы этой редакции',heading)
+    add('Файлы книги',heading)
     for f in g['entries']:
         add(f['name'],small)
         add(f"{f['pageCount']} стр.; {f['bytes']} байт",small)
 else:
     ps=g['passport']
     add('Параметры файла',heading)
-    for text in [f"Обрезной формат: {ps['widthMm']} × {ps['heightMm']} мм. Вылеты: {ps['bleedMm']} мм с каждой стороны.",f"Безопасное поле: {ps['safeMm']} мм; полоса крепления: {ps['bindingMm']} мм. Базовый переплёт: {ps['binding']}.",f"Цвет: {ps['colorSpace']}; ICC: {ps['iccStatus']}; PDF/X: {ps['pdfXStatus']}.",f"Минимальное измеренное разрешение иллюстраций: {ps['minIllustrationPpi']} ppi. "+('Порог 300 ppi не достигнут.' if ps['minIllustrationPpi'] < 300 else 'Измеренное разрешение выше порога 300 ppi; остальные условия печати требуют подтверждения.'),'Приём точных файлов типографией, конструкция переплёта с вклейками и бумажный пробник не подтверждены. Этот паспорт не является разрешением чистовой печати.']:
+    for text in [f"Обрезной формат: {ps['widthMm']} × {ps['heightMm']} мм. Вылеты: {ps['bleedMm']} мм с каждой стороны.",f"Безопасное поле: {ps['safeMm']} мм; полоса крепления: {ps['bindingMm']} мм. Базовый переплёт: {ps['binding']}.",f"Цвет: {ps['colorSpace']}."]:
         add(text)
     for f in ps['files']:
         add(f['name'],heading)
-        add(f"{f['pageCount']} страниц; {f['bytes']} байт. SHA-256:")
-        add(f['sha256'],small)
+        add(f"{f['pageCount']} стр.; {f['bytes']} байт")
     add('Попросите типографию проверить точные файлы, формат, вылеты, поля, цвет, разрешение, бумагу, тираж, переплёт, доставку и стоимость до заказа.')
 add('Польская сопроводительная записка',heading);add(g['polishNote'])
-add('Источники и дата проверки',heading)
-add('Проверено '+g['checkedAt']+'. Параметры раскладки получены из файлов этой редакции. Допуски принтера проверяются по руководству вашей модели.',small)
+add('Источники',heading)
+add('Параметры раскладки получены из файлов этой книги. Допуски принтера проверяйте по руководству вашей модели.',small)
 for source in g['sources']:
     add(source['title'],small); add(source['url'],small)
 class DeterministicCanvas(Canvas):
     def __init__(self,*args,**kwargs): kwargs['invariant']=1;kwargs['initialFontName']='Guide';super().__init__(*args,**kwargs)
 def footer(c,doc):
     c.saveState();c.setFont('Guide',8);c.setFillColor(colors.black)
-    c.drawString(16*mm,12*mm,'MeTravel / RU / '+str(doc.page))
+    c.drawString(16*mm,12*mm,'MeTravel · '+str(doc.page))
     if doc.page==1:
         c.line(140*mm,12*mm,190*mm,12*mm)
         c.drawString(140*mm,16*mm,'50 мм · 100%')
@@ -70,8 +69,9 @@ r=PdfReader(a.output)
 assert all(abs(float(page.mediabox.width)/mm-210)<.1 and abs(float(page.mediabox.height)/mm-297)<.1 for page in r.pages)
 text='\n'.join(page.extract_text() for page in r.pages)
 compact=''.join(text.split())
-assert g['revision'] in compact and '100%' in compact
-for f in g['passport']['files']: assert f['name'] in compact
+# Reader-facing guide (#2949): the revision hash is never printed; download names contain spaces.
+assert g['revision'] not in compact and '100%' in compact
+for f in g['passport']['files']: assert ''.join(f['name'].split()) in compact
 for section in g['sections'] if a.kind=='instructions' else []: assert ''.join(section['title'].split()) in compact
 fonts=subprocess.run(['pdffonts',a.output],capture_output=True,text=True,check=True).stdout.splitlines()[2:]
 assert fonts, 'Embedded Cyrillic font required'

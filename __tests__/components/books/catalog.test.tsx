@@ -43,12 +43,14 @@ it('shows planned series without links and filters them by declared theme',()=>{
 
 it('offers only published editions from a ready series and never substitutes a country book',()=>{
   series.push(...require('@/data/travelBooks/series/catalog.json').series.map((item:any)=>({...item,status:'ready'})));
-  const mountain={...thematicPublished(),id:'poland-mountains-memory',slug:'poland-mountains',title:'Горы Польши'};
+  const mountain={...thematicPublished(),id:'poland-mountains-memory',slug:'poland-mountains',title:'Горы Польши',visualStyle:'photo' as const};
   books.push(publishedFixture(),mountain);
   render(<Catalog/>);
   fireEvent.click(screen.getByRole('radio',{name:'themeMountains'}));
   expect(screen.getByRole('link').getAttribute('href')).toBe('/books/poland-mountains');
   expect(screen.queryByText('seriesPlanned')).toBeNull();
+  expect(screen.getByRole('heading',{name:'Горы Польши'}).getAttribute('lang')).toBe('ru');
+  expect(screen.getByText('styleBenefitPhotoSources')).toBeTruthy();
   fireEvent.click(screen.getByRole('radio',{name:'themeCastles'}));
   expect(screen.getByText('seriesPlanned')).toBeTruthy();
   expect(screen.queryByRole('link')).toBeNull();
@@ -78,13 +80,17 @@ it('shows quest count and volume without presenting quests as places',()=>{
   expect(screen.getByText('questCounts:'+JSON.stringify({quests:'37',pages:'156',volume:'2'}))).toBeTruthy();
   expect(screen.queryByText(/^counts:/)).toBeNull();
   expect(screen.queryByText(/^style:/)).toBeNull();
+  expect(screen.getByRole('heading',{name:'Польша. Квесты, часть 2'})).toBeTruthy();
+  expect(screen.queryByText(/^styleBenefit/)).toBeNull();
+  // Only the first part announces the reserved second part.
+  expect(screen.queryByText('questNextPart')).toBeNull();
 });
 
 it('names the visual style of every edition and keeps the watercolor default for legacy metadata',()=>{
   books.push(publishedFixture(31),publishedFixture(31,{id:'belarus-photo-memory',slug:'belarus-photo',title:'Беларусь. Фотокнига воспоминаний',visualStyle:'photo'}));
   const first=render(<Catalog/>);
-  expect(screen.getByText('style: styleWatercolor')).toBeTruthy();
-  expect(screen.getByText('style: stylePhoto')).toBeTruthy();
+  expect(screen.getByRole('heading',{name:/styleWatercolor/})).toBeTruthy();
+  expect(screen.getByRole('heading',{name:/stylePhoto/})).toBeTruthy();
   first.unmount();
   books[0].missing=['provider-acceptance','paper-check'];
   render(<Catalog/>);
@@ -100,4 +106,15 @@ it('loads the catalogue inside the route frame rather than leaving the loading f
   expect(screen.getByRole('heading',{level:1,name:'title'})).toBeTruthy();
   expect((await screen.findByRole('link')).getAttribute('href')).toBe('/books/belarus');
   expect(screen.queryByRole('status')).toBeNull();
+});
+
+it('names every edition card and cover distinctly by country and style (#2953)',()=>{
+  for(const visualStyle of [undefined,'fantasy','graphic'] as const){const book=publishedFixture();books.push({...book,id:book.id+(visualStyle??''),slug:book.slug+(visualStyle??''),...(visualStyle?{visualStyle}:{})});}
+  render(<Catalog/>);
+  const headings=screen.getAllByRole('heading',{level:2}).map(heading=>heading.textContent);
+  expect(new Set(headings).size).toBe(3);
+  expect(headings[0]).toContain('cardTitle');expect(headings[0]).toContain('styleWatercolor');
+  const alts=screen.getAllByRole('img').map(image=>image.getAttribute('alt'));
+  expect(new Set(alts).size).toBe(3);
+  expect(screen.getByText('styleBenefitGraphic')).toBeTruthy();
 });

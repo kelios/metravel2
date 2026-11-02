@@ -7,6 +7,10 @@ export const profileId = z.enum(['pocket-150x100', 'album-a5']);
 export const printProfileSchema = z.strictObject({
   id: profileId, widthMm: z.number().positive(), heightMm: z.number().positive(),
   bleedMm: z.union([z.literal(0), z.literal(2), z.literal(3)]),
+  // Published book-level profiles describe the trim format (bleedMm 0) shared by
+  // reading/home files. Revisions published after 02.11.2026 (#2952) also record
+  // the actual bleed of their print-shop PDFs here; older revisions omit it.
+  printShopBleedMm: z.union([z.literal(2), z.literal(3)]).optional(),
   safeMm: z.number().min(5), bindingMm: z.number().min(15),
   binding: z.enum(['rings', 'spiral', 'sewn']),
 }).superRefine((profile, ctx) => {
@@ -19,6 +23,9 @@ export const printProfileSchema = z.strictObject({
   }
   if (profile.heightMm - 2 * profile.safeMm < expected.photoMm.height) {
     ctx.addIssue({code: 'custom', path: ['safeMm'], message: 'Margins must preserve the supported photo-frame height'});
+  }
+  if (profile.printShopBleedMm !== undefined && profile.bleedMm !== 0) {
+    ctx.addIssue({code: 'custom', path: ['printShopBleedMm'], message: 'Print-shop bleed is recorded only on the trim-size book profile'});
   }
   if (profile.id === 'pocket-150x100' && profile.binding === 'sewn') {
     ctx.addIssue({code: 'custom', path: ['binding'], message: 'Pocket has no sewn profile'});

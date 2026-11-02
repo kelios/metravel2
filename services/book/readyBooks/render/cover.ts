@@ -2,13 +2,14 @@ import {escapeHtml as e} from '../../../pdf-export/utils/htmlUtils';
 import {embeddedImage, type ReadyBookRenderInput} from './index';
 import type {CountryQuestBook} from '../../../../types/questBook';
 import {bookStyleCopy} from './styleCopy';
+import {countRu, PLACES, QUESTS} from './counts';
 
 /** CLEAN templates: the shared PDF text engine adds the chosen quote afterwards. */
 export function renderCoverPage(input: Pick<ReadyBookRenderInput,'profile'> & {cover:Pick<ReadyBookRenderInput['cover'],'dataUri'|'widthPx'|'heightPx'|'artworkBounds'>;book:ReadyBookRenderInput['book']|CountryQuestBook}, number: number) {
   const {book, cover} = input;
   const questBook='quests'in book?book:null;
   const copy=questBook?{coverAlt:'Обложка опубликованного квеста из книги'}:'sourceContract' in book&&book.sourceContract==='thematic-v1'?{coverAlt:'Фотография из источников тематической книги'}:bookStyleCopy('visualStyle'in book?book.visualStyle:undefined);
-  const countLabel=questBook?`Квестов: ${questBook.quests.length} · часть ${questBook.volume}`:`${'stops'in book?book.stops.length:0} мест · фотодневник`;
+  const countLabel=questBook?`${countRu(questBook.quests.length,QUESTS)} · часть ${questBook.volume}`:`${countRu('stops'in book?book.stops.length:0,PLACES)} · фотодневник`;
   const text = (value: string, className = '') => `<p class="${className}">${e(value)}</p>`;
   const content = (value: string) => `<main class="content">${value}</main>`;
   const flow = (value: string) => content(`<div class="flow">${value}</div>`);
@@ -24,5 +25,5 @@ export function renderCoverPage(input: Pick<ReadyBookRenderInput,'profile'> & {c
   }
   if (number === 2) return flow(`<h2>Эта книга принадлежит</h2><div class="owner-space"></div>${text('Если найдёте, пожалуйста, свяжитесь со мной:')}`);
   if (number === 3) return flow(`<h2>Сохраните воспоминание</h2>${text('Оставьте свой кадр, билет, небольшой рисунок или несколько слов о поездке.')} ${text('Не закрывайте полосу крепления. Печатайте книгу в масштабе 100%. Для домашней печати используйте готовую раскладку A4.')}`);
-  return flow(`<h2>Путешествие продолжается</h2>${text('MeTravel · metravel.by')}${text(book.revision, 'small')}`);
+  return flow(`<h2>Путешествие продолжается</h2>${text('MeTravel · metravel.by')}`);
 }

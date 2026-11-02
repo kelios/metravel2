@@ -27,8 +27,8 @@ def thematic_fragments(stop):
     route = evidence.get('route')
     if route:
         required.extend([
-            ' → '.join([route['start'], *route['via'], route['finish']]), route['scope'],
-            f"{printed_metric(route['distanceKm'])} км · ↑ {printed_metric(route['elevationGainM'])} м · {printed_metric(route['durationMinutes'])} мин.",
+            ' — '.join([route['start'], *route['via'], route['finish']]), route['scope'],
+            f"{printed_metric(route['distanceKm'])} км · набор высоты {printed_metric(route['elevationGainM'])} м · {printed_metric(route['durationMinutes'])} мин.",
             route['metricNote'], route['difficulty'], route['seasonality'],
             route['availability']['checkedOn'], route['availability']['note'],
         ])

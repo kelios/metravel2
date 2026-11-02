@@ -40,7 +40,8 @@ it.each(['pocket-150x100', 'album-a5'] as const)('keeps the place/blank-page con
   const checklist = graphic.bodyPages.filter((_, index) => graphic.pageMap[index].kind === 'checklist').join('');
   expect((checklist.match(/class="checklist-box"/g) ?? [])).toHaveLength(31);
   expect(checklist).not.toContain('□');
-  expect(old.bodyHtml).toContain('□');
+  // Every style draws the vector box: the «□» glyph fell back to system LucidaGrande Type 3 (#2949).
+  expect(old.bodyHtml).not.toContain('□');
   expect(graphic.stylesCss).toContain('body,h1,h2,.qr-link{color:#111}');
   expect(graphic.stylesCss).toContain('.book-page,.cover-quote-space{background:#fff}');
   if (id === 'album-a5') expect(graphic.stylesCss).toContain('left:9mm;top:43mm;width:130mm;height:86.66666666666667mm');

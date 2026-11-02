@@ -19,7 +19,8 @@ it('prints scoped ranges, current warnings and context caption without replacing
   expect(result.bodyPages).toHaveLength(136);
   expect(result.coverPages[0]).toContain('<h1>Горы Польши</h1>');
   expect(result.bodyPages[first]).toContain('Зимний массив; вершина и крест не видны.');
-  expect(result.bodyPages[first]).toContain('5–6 км · ↑ 965 м · 195 мин.');
+  expect(result.bodyPages[first]).toContain('5–6 км · набор высоты 965 м · 195 мин.');
+  expect(result.bodyPages[first]).not.toMatch(/[→↑]/);
   expect(result.bodyPages[first]).toContain('Не заходите за ограждение повреждённой плотины.');
   expect(result.bodyPages[first]).toContain('Доступ (2026-11-02)');
   expect(result.bodyPages[first]).toContain('Оценка провайдера:');

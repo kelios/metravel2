@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // Prepares an immutable media package. Upload/remote verification precede activating
-// the generated manifest in data/travelBooks/manifest.json; Git revert is rollback.
+// the generated manifest in data/travelBooks/manifest.json. Rollback restores the previous
+// releases/<sha>.json snapshot and re-derives related/catalog/contents (not a whole-commit
+// git revert): docs/features/travel-memory-books.md, «Откат публикации» (trial 02.11.2026, #2952).
 import {createHash} from 'node:crypto';
 import {readFile,writeFile,mkdir,rename,realpath,stat,copyFile,readdir,rm} from 'node:fs/promises';
 import path from 'node:path';
@@ -26,6 +28,15 @@ export function planPublicationMerge(current, staged, validate) {
   // accepted edition metadata or introduce another feature's fields into staging.
   validate(combined);
   return {combined, staged};
+}
+
+/** Book-level profile: trim geometry plus the actual bleed of this revision's print-shop PDFs (#2952). */
+export function publishedProfile(group){
+  const shop=group.artifacts.filter(artifact=>artifact.purpose==='print-shop');
+  const bleeds=[...new Set(shop.map(artifact=>artifact.printProfile?.bleedMm))];
+  if(shop.length!==2||bleeds.length!==1||![2,3].includes(bleeds[0]))throw new Error('Print-shop body and cover must share a 2 or 3 mm bleed: '+group.profile?.id);
+  if(group.profile.bleedMm!==0||shop.some(artifact=>artifact.printProfile.id!==group.profile.id||artifact.printProfile.widthMm!==group.profile.widthMm||artifact.printProfile.heightMm!==group.profile.heightMm))throw new Error('Print-shop files differ from the trim-size profile: '+group.profile.id);
+  return {...group.profile,printShopBleedMm:bleeds[0]};
 }
 
 export function publicationRevision(source,{editorial,publisherHash,rasterizerVersion,encoderVersions}){
@@ -144,7 +155,7 @@ export async function preparePublication({input,output,baseUrl}){
       coverUri:preview.find(p=>p.profileId==='pocket-150x100'&&p.component==='cover').pages[0].uri,
       missing:['stickers','instructions','print-passport','provider-acceptance','paper-check'],
       stops:isQuest?editorial.quests.map((quest,i)=>({id:quest.questId,title:quest.title,page:destinationPages[i].number,sourceUrl:quest.questUrl,questId:quest.id,questSlug:quest.questId})):editorial.stops.map((stop,i)=>({id:stop.id,title:stop.title,page:destinationPages[i].number,sourceUrl:stop.navigation.articleUrl,...(stop.thematic?{thematic:stop.thematic,...(stop.thematic.sourceRelation==='exact-place'&&stop.thematic.mapTarget.kind==='published-point'?{pointId:stop.thematic.mapTarget.pointId}:{})}:{pointId:stop.navigation.pointId}),sourceTravelId:stop.navigation.sourceTravelId,authorId:1,...(stop.navigation.quest?{questId:stop.navigation.quest.id}:{})})),
-      profiles:source.profiles.map(p=>p.profile),artifacts,preview});
+      profiles:source.profiles.map(publishedProfile),artifacts,preview});
   }
   const {staged:manifest}=planPublicationMerge(await readJson('data/travelBooks/manifest.json'),await stageBookMetadata({schemaVersion:1,releaseId:'travel-books-v1',books},output),value=>publicationSchema.parse(value));
   const temporary=path.join(output,'manifest.json.tmp');

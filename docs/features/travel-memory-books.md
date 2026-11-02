@@ -138,8 +138,13 @@ PDF-инспектор и раскладка используют тот же п
 
 ## Раздел сайта и предпросмотр
 
-1. Desktop-навигация и мобильное «Ещё» → «Книги путешественника», без шестой кнопки дока.
-2. `/books`: две карточки с реальными обложкой, языком RU, числом мест и размерами.
+1. Пункт «Книги» (`books:navLabel`) — в строке desktop-шапки (решение владельца
+   02.11.2026, #2953), в меню аккаунта и мобильном «Ещё», без шестой кнопки дока.
+   На native раздел web-only: пункт отсекает `isNavRouteAvailable`, в том числе в
+   строке шапки планшета.
+2. `/books`: карточки изданий с реальными обложкой, языком RU, числом мест и размерами.
+   Заголовок и alt обложки страновых изданий — «страна · стиль» плюс строка о пользе
+   стиля; квестовые и тематические книги сохраняют своё уникальное название (#2953).
 3. `/books/[slug]`: состав, полное превью, compact/A5, размеры личных фото,
    файлы по назначению, готовность и ограничения, инструкции/наклейки/типографии.
 4. Mobile показывает фактическую страницу; desktop — разворот. Доступны номер,
@@ -275,7 +280,80 @@ QR из точных reading PDF в цвете и оттенках серого.
 Неизменяемые снимки — `data/travelBooks/releases/<sha256-байтов-json>.json`.
 Ревизия учитывает исходные PDF, контрольные листы, редакционные данные и версии
 публикационного генератора/кодировщика. Preview хранит SHA точного reading PDF.
-Откат возвращает предыдущий manifest и его related index; старые URL сохраняются.
+Откат — переключение активных метаданных на предыдущий снимок; старые URL
+сохраняются. Порядок и результат пробного отката описаны ниже, в «Откат публикации».
+
+Профиль книги в `book.json`/manifest описывает обрезной формат: у него `bleedMm: 0`,
+как у файлов read/home. Начиная с 02.11.2026 (#2952) `publish.mjs` дописывает
+`printShopBleedMm` — фактический вылет print-shop body и cover этой ревизии (сейчас
+3 мм). Значение берётся из `printProfile` артефактов production-index и проверяется
+на согласованность. Ранее опубликованные ревизии не переписываются, в них поля нет.
+Их вылет 3 мм подтверждают BleedBox/TrimBox самих PDF.
+
+### Откат публикации
+
+Откатываются только метаданные активации: `data/travelBooks/manifest.json` и три
+производных файла `related.json`, `catalog.json`, `contents.json`. `git revert`
+целого коммита публикации для этого не подходит. Коммит публикации обычно несёт и
+код или схемы (например, `97d019d8a` менял `schema/*.ts` и `series/**`). Кроме
+того, `contents.json` появился позже (`7b0fbe9b2`), и при revert он остался бы
+от новой публикации. Тогда `copy-publication.cjs` остановит сборку ошибкой «Book
+contents index differs from the current publication».
+
+Порядок:
+
+1. Найти предыдущий снимок: `git show <коммит-публикации>^:data/travelBooks/manifest.json | shasum -a 256`.
+   Получится имя файла `releases/<sha>.json`.
+2. Скопировать `releases/<sha>.json` в `manifest.json` байт в байт.
+3. Пересоздать `related.json`, `catalog.json` и `contents.json` из этого manifest
+   через `relatedBookIndex`, `thinBookCatalogue` и `bookContentsIndex` из
+   `scripts/books/catalog-metadata.mjs` (формат `JSON.stringify(value, null, 2) + '\n'`).
+4. Проверить: `node scripts/validate-ready-books.mjs --publication data/travelBooks/manifest.json --assets-root .codex-temp/books-publication`,
+   совпадение `contents.json` с `bookContentsIndex(manifest)` (гейт copy-publication)
+   и SHA всех `releases/*.json`.
+5. Снимки `releases/**` не удалять: по ним `copy-publication.cjs` продолжает
+   отдавать неизменяемые файлы и откатываемой ревизии, и всех прежних.
+6. Дальше обычная цепочка: коммит явных путей → штатный deploy. После отката
+   `prepare-web-ssr.js` перестаёт генерировать страницы изданий, которых нет в
+   откатанном manifest. Их `/books/<slug>` отдают 404 со ссылкой в каталог, а
+   PDF по прямым URL остаются доступными.
+
+`validate-ready-books.mjs --metadata-only` проверяет один строгий `ReadyBook`, а
+не опубликованный manifest. На `manifest.json` он штатно выдаёт ошибки схемы. Для
+публикации нужен режим `--publication`.
+
+Проверка отката 02.11.2026 (#2952), только локальные файлы, без деплоя.
+Откатывалась последняя публикация `97d019d8a` (#2809, 12 изданий, снимок `e24ec5cd…`)
+на предыдущий снимок `46330b95…` (10 изданий). Результат:
+
+- manifest побайтно совпал с `97d019d8a^`;
+- пересозданные `related.json` и `catalog.json` побайтно совпали с `97d019d8a^`;
+- `--publication`: 10 книг, 2728 ресурсов, `hashesVerified: true`;
+- `contents.json` прошёл гейт copy-publication, 10/10 снимков `releases/*.json`
+  совпали по SHA, все `book.json` откатанной ревизии найдены в кеше.
+
+Затем четыре файла восстановлены из резервной копии. SHA-256 совпали, `git diff` и
+`git status` по `data/travelBooks` идентичны состоянию до пробы, активный manifest
+снова `e24ec5cd…`. Скрипт пробы не входит в репозиторий: его шаги перечислены выше.
+
+### Реестр прав и происхождения изображений
+
+Единого файла прав нет. Для каждого класса ресурсов канонический ровно один реестр:
+
+| Ресурсы | Канонический реестр | Кто проверяет |
+| --- | --- | --- |
+| 61 акварель BY 31 / PL 30, исходные фото автора 1, акварельная обложка, шрифт обложки | `data/travelBooks/{by,pl}/artwork-provenance.json` | `scripts/books/source-ready-book.mjs` (права `owner-commissioned-photo-diary`, `ownerUserId: 1`, SHA) |
+| Фотостиль (#2854) | `data/travelBooks/{by,pl}/photo-evidence.json` | `source-ready-book.mjs` / `source-ready-book-photos.mjs` |
+| Графика и фэнтези (#2855/#2856) | `data/travelBooks/{by,pl}/{graphic,fantasy}-evidence.json`, `styles/{graphic,fantasy}/approval.json`; шрифт графики — `styles/graphic/font-provenance.json` | `scripts/books/load-illustrated-edition.mjs` (дополнительно сверяет снимок `artwork-provenance.json`) |
+| Тематические серии (#2809) | `data/travelBooks/series/*-sources.json` | `scripts/books/source-series-book.mjs` |
+| Квестовые тома (#2808) | `data/travelBooks/quests/cover-provenance.json`, `quests/*-volume-1-provenance.json` | `scripts/books/build-quest-books.mjs` |
+| Шрифты рендера | `data/travelBooks/assets/fonts/**` (OFL, `cormorant-garamond/provenance.json`); Noto — `docs/design/travel-memory-books-v1/assets/provenance.json` | хеши в сборщиках |
+| Прототип A2–B1: 26 изображений (24 места + 2 обложки) | `data/travelBooks/rights.json`, **legacy** | только `media-check.mjs --legacy` и `media.test.ts` |
+
+`rights.json` не описывает ни одно текущее изображение, и новые записи туда не
+добавляются. Объединять его с `artwork-provenance.json` не стали: у них разные схемы,
+непересекающиеся ресурсы, и прототипный реестр закреплён SHA в эталоне A2. Это
+не тривиальное слияние. Подробности о legacy-данных — в `data/travelBooks/README.md`.
 
 `build-prod.sh` и `scripts/build-web-prod.js` вызывают
 `scripts/books/copy-publication.cjs`: проверенные bytes/SHA из текущего manifest и
