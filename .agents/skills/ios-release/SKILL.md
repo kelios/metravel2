@@ -92,7 +92,7 @@ Read-only проверки (`ios:environment:check`, `ios:release:guard`, инс
        выдумывать остаток.
 2. **Версия.** Решить marketing version и поднять `expo.ios.buildNumber` (строго
    больше последнего использованного в App Store Connect).
-3. **Гейт.** `npm run ios:release:guard` — до зелёного. Красное чинит
+3. **Гейт.** `npm run ios:release:check` — до зелёного. Он включает `ios:release:guard`. Красное чинит
    `ios-expert`, а не ослабление гейта.
 4. **Контент релиза.** `ios-analyst` подтверждает метаданные и privacy-ответы,
    `ios-designer` — иконку, splash и скриншоты. Открытые блокеры комплаенса

@@ -119,6 +119,9 @@ For QA coverage, pair this launch flow with `docs/MANUAL_TEST_CASES.md` `AND-USB
 npx jest __tests__/config/native-compat-governance.test.ts --runInBand
 ```
 
+After Android prebuild, run the generated-project governance test at
+`__tests__/config/android-native-compat-governance.test.ts`.
+
 - For code changes, run the relevant targeted tests plus `npm run check:fast` when the logical block is finished.
 - For locale or UI-copy changes, run `npm run test:i18n` and hand language
   persistence plus the changed cold-restart flow to device testing.

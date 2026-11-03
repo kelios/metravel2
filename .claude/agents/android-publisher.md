@@ -48,7 +48,7 @@ Publisher API** через штатные npm-обёртки. Ниже — пр�
 - Локальные `.env` / `.env.local` не перекрывают прод-API: authoritative — `.env.prod`.
 - Lock сборки: живой чужой `.codex-temp/ops/android-local-build.lock` = сборка уже идёт,
   вторую не запускать и чужую не убивать.
-- Зелёный `npm run release:check` на текущий release-scope (условия повторного прогона —
+- Зелёный `npm run android:release:check` на текущий release-scope (условия повторного прогона —
   в разделе «Порядок прогона» ниже).
 
 **Ход операции и точки безопасной остановки**
@@ -191,7 +191,7 @@ Android app с этим package, либо завести app на GCP-проек
 npm run android:play:status          # read-only треки; создаёт временный edit и удаляет
 npm run android:release:doctor       # среда, подпись, ключ Play
 npm run android:prebuild             # expo prebuild -p android: R8/shrink-контракт в android/
-npm run release:check                # обязательный gate перед store build
+npm run android:release:check        # обязательный gate перед store build
 npm run android:build:prod           # локальный подписанный AAB
 npm run android:build:dev            # debug APK для устройства
 npm run android:submit:testing:latest # DRY-RUN alpha+internal
@@ -211,7 +211,7 @@ npm run android:submit:production     # COMMIT production
 
 1. **Pre-flight:** ветка `main`, `npm run android:play:status`, `npm run android:release:doctor`.
 2. **Версия:** bump `versionCode` (max по трекам + 1) и при необходимости `version` в `app.json`.
-3. **Gate:** получить один зелёный `npm run release:check` на текущий
+3. **Gate:** получить один зелёный `npm run android:release:check` на текущий
    release-scope и сохранить evidence: commit, команда, результат, перечень
    runtime-inputs. Не гонять gate повторно после каждого перехода фазы,
    Gradle/Play failure, dry-run/status или изменения только docs/SEO/tests/

@@ -1,9 +1,10 @@
 # Правила active-platform совместимости (web ↔ Android ↔ iPhone/iPad)
 
 Load-bearing правила для текущего Expo SDK 57 / React Native 0.86 приложения.
-Механические нарушения ловит
-`__tests__/config/native-compat-governance.test.ts`, а семантическую/device
-проверку ведут Android и iOS developer/tester skills. Первый App Store release
+Общие механические нарушения ловит
+`__tests__/config/native-compat-governance.test.ts`. Сгенерированный проект
+Android проверяет `__tests__/config/android-native-compat-governance.test.ts`,
+а семантическую/device проверку ведут Android и iOS developer/tester skills. Первый App Store release
 использует universal iPhone/iPad target; iPadOS проверяется в full-screen,
 resizable-window, portrait и landscape режимах.
 
@@ -120,7 +121,7 @@ resizable-window, portrait и landscape режимах.
   (config plugin, тема, `MainActivity`). Прежний патч WindowUtil (Android 15+
   без `setStatusBarColor`/`setNavigationBarColor`) снят: на API 35+ эти сеттеры
   — no-op, а их вызовы, которые перечисляет Play, всё равно остаются в androidx,
-  material и expo-navigation-bar. `native-compat-governance` запрещает
+  material и expo-navigation-bar. `android-native-compat-governance` запрещает
   `patches/react-native+*.patch` и `includeBuild` RN.
 
 ## 6. Web-API только под guard (классика)
@@ -211,7 +212,8 @@ resizable-window, portrait и landscape режимах.
 
 | Слой | Файл |
 |---|---|
-| Автостраж (CI) | `__tests__/config/native-compat-governance.test.ts` |
+| Общий автостраж | `__tests__/config/native-compat-governance.test.ts` |
+| Автостраж сгенерированного проекта Android | `__tests__/config/android-native-compat-governance.test.ts` |
 | Codex Android developer | `.codex/skills/metravel-android-developer/SKILL.md` |
 | Codex mobile tester | `.codex/skills/metravel-mobile-tester/SKILL.md` |
 | Codex iOS developer/test/release | `.codex/skills/metravel-ios-developer/SKILL.md`, `.codex/skills/metravel-ios-tester/SKILL.md`, `.codex/skills/metravel-ios-release-operator/SKILL.md` |

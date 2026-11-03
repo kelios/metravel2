@@ -35,8 +35,9 @@ Use the project-specific command map:
   allowed.
 - Changes in travel/search/map/account/messages flows that need browser smoke
   coverage use `npm run check:e2e:changed` only in `testing`.
-- Full release confidence: run `npm run release:check` only after code review in
-  `testing` or an explicitly authorized release-validation stage.
+- After code review in `testing` or an authorized release-validation stage,
+  select `npm run android:release:check` or `npm run ios:release:check` for native.
+  Use `npm run release:check` for the full web and repository gate.
 
 Keep release and performance validation aligned with repo policy:
 

@@ -155,7 +155,7 @@ cases. Перед Gradle/adb/Play operation проверяются активн�
 чужой процесс не прерывается и параллельный запуск не создаётся.
 
 ```bash
-npm run release:check
+npm run android:release:check
 ```
 
 ## 5. Local production AAB

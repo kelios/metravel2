@@ -16,7 +16,7 @@ const QUALITY_PROCESS_PATTERNS = [
   /scripts[\\/]e2e-run\.js(?:\s|$)/i,
   /scripts[\\/]run-preflight-checks\.js(?:\s|$)/i,
   /scripts[\\/]run-fast-scope-checks\.js(?:\s|$)/i,
-  /(?:npm|yarn)\s+(?:run\s+)?(?:release:check|test:run|e2e|check:preflight)(?:\s|$)/i,
+  /(?:npm|yarn)\s+(?:run\s+)?(?:(?:android:|ios:)?release:check|test:run|e2e|check:preflight)(?:\s|$)/i,
 ]
 
 let ownedLockPath = null

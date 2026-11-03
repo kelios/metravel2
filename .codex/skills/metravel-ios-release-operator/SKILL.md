@@ -71,8 +71,8 @@ Local read-only preflight and source/archive inspection do not mutate store stat
   does not. Do not describe the build command as unattended or answer
   credential/access prompts automatically. Inspect each prompt and apply the
   existing authorization gates and credential-map rules before responding.
-- Run the read-only checks before any gated command: `npm run ios:release:guard`
-  (identity, version/build parity across Expo/plist/Xcode, entitlements, purpose
+- Run `npm run ios:release:check` before any gated command. It includes the
+  read-only `ios:release:guard` (identity, version/build parity across Expo/plist/Xcode, entitlements, purpose
   strings, privacy manifest, production origins, placeholder and tracked-secret
   detection, EAS pinning) and `npm run ios:environment:check` (Xcode/SDK,
   eligible iPhone and iPad simulator destinations, Pods state) when the local toolchain is

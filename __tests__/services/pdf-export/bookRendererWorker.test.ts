@@ -261,8 +261,7 @@ describe('isolated book renderer worker protocol', () => {
     const { indexSnapshot } = nativeRequire(path.join(scratch, 'artifact', 'workers/book-renderer/snapshot.js')) as typeof import('@/workers/book-renderer/snapshot')
     const { planBody } = nativeRequire(path.join(scratch, 'artifact', 'workers/book-renderer/planner.js')) as typeof import('@/workers/book-renderer/planner')
     const { DEFAULT_RENDERER_RESOURCE_PROFILE } = nativeRequire(path.join(scratch, 'artifact', 'workers/book-renderer/measurement.js')) as typeof import('@/workers/book-renderer/measurement')
-    const readBytes = 257
-    const summary = await indexSnapshot(fixture.jobDir, out, fixture.document, readBytes)
+    const summary = await indexSnapshot(fixture.jobDir, out, fixture.document, 17)
     let measured = 0
     // Protocol only: real PDF visibility is checked after independent review.
     const measure = async (html: string) => {
@@ -271,7 +270,7 @@ describe('isolated book renderer worker protocol', () => {
       return { pages: 1, fits: true }
     }
     const prepare = async (html: string) => ({ html, resource_bindings: [], resource_bindings_hash: 'a'.repeat(64), resource_policy_hash: 'b'.repeat(64), encoder_identity_hash: 'c'.repeat(64) })
-    await planBody(fixture.jobDir, out, fixture.document, summary, measure, readBytes, DEFAULT_RENDERER_RESOURCE_PROFILE, prepare, () => undefined)
+    await planBody(fixture.jobDir, out, fixture.document, summary, measure, 17, DEFAULT_RENDERER_RESOURCE_PROFILE, prepare, () => undefined)
     expect(measured).toBeGreaterThan(4)
     const rows = await readRows<{ ref: string }>(path.join(out, 'body.ndjson'))
     const sources = await Promise.all(rows.map(async row => JSON.parse(await readFile(path.join(out, row.ref), 'utf8')) as import('@/services/pdf-export/segments/renderSegment').BookSegmentSource))
@@ -316,9 +315,7 @@ describe('isolated book renderer worker protocol', () => {
     const results: WorkerCertificate[] = []
     const plans: Array<Array<Record<string, unknown>>> = []
     const measurements: number[] = []
-    // Use a small streaming window without turning the large fixture into
-    // thousands of extra filesystem reads. Tiny 17-byte reads are covered below.
-    for (const readBytes of [257, 65_536]) {
+    for (const readBytes of [17, 65_536]) {
       let measured = 0
       const outDir = path.join(scratch, `large-output-${readBytes}`)
       const result = await runWorker(fixture.jobDir, outDir, {
@@ -425,7 +422,7 @@ describe('isolated book renderer worker protocol', () => {
       settings: { includeToc: false, includeMap: true, galleryPhotosPerPage: 0 },
     })
     const out = path.join(scratch, 'adaptive-output')
-    const result = await runWorker(fixture.jobDir, out, { read_bytes: 4096,
+    const result = await runWorker(fixture.jobDir, out, { read_bytes: 257,
       measure: async html => ({ pages: 1, fits: [...html.matchAll(/ADAPTIVE_SOURCE/g)].length <= 10 }) })
     expect(result.expected).toEqual(result.completed)
     const rows = await readRows<{ ref: string }>(path.join(out, 'body.ndjson'))

@@ -44,7 +44,7 @@ build/signing/Play sections of `docs/RELEASE.md`,
 ## Workflow
 
 1. Preflight: confirm `main`, inspect `git status --short`, check the exclusive operation gate, run `npm run android:release:doctor`, verify local signing/service-account presence without exposing values, and record target `production`.
-2. Before a release build, require the documented release checks and successful local USB Android smoke for the changed native scope.
+2. Before a release build, require `npm run android:release:check` and successful local USB Android smoke for the changed native scope.
 3. For an authorized build, run `npm run android:prebuild` before `npm run android:build:prod` as required by `docs/RELEASE.md` → `Android`; verify the local AAB metadata/upload certificate.
 4. If upload is authorized, dry-run the authorized family: `npm run android:submit:latest` for production, `npm run android:submit:testing:latest` for alpha+internal. Each loads the AAB into a temporary edit, validates, and deletes it. A build-only request stops with the verified local artifact.
 5. If publication is explicitly authorized and the matching dry-run is green, commit with `npm run android:submit:production` and/or `npm run android:submit:testing`. Production is `completed` at 100% with no staged rollout.

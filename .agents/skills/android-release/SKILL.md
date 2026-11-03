@@ -81,8 +81,9 @@ description: "Регламент релиза Android: bump → гейт → л�
 
 7. `npm run android:release:doctor` — Node 22.13.1+, JDK 17–21, Android SDK,
    keystore, `.env.prod`, ключ Play.
-8. `npm run release:check` — зелёный целиком (lint, typecheck, security, audit,
-   jest, e2e, прод-сборка веба, guard'ы).
+8. `npm run android:release:check` — Android doctor, общие проверки типов и
+   безопасности, Jest-контракты Android и native. Список тестов доступен через
+   `npm run android:release:check -- --list`. USB и проверка AAB остаются отдельными гейтами.
 9. `npm run android:build:prod` → подписанный
    `android/app/build/outputs/bundle/release/app-release.aab`. Проверить package,
    `versionCode`/`versionName` против `app.json` и подпись upload key.

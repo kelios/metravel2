@@ -28,7 +28,16 @@
   `dump.sql`. Do not inspect or mutate those paths; any other status entry or warning still
   stops the deploy. See the canonical rule in `docs/RULES.md`.
 
-## One-command pre-release check
+## Native source release checks
+
+- Android uses `npm run android:release:check` after `npm run android:prebuild`.
+- iOS uses `npm run ios:release:check` for the source and App Store listing checks.
+- Both use the shared quality lock, type and security checks, and native and target-specific Jest suites. Pass `-- --list` to inspect the Jest selection.
+- Browser E2E, web export and the server PDF worker belong to the web/general gate below. Native app contracts such as print and export remain covered.
+- A contended check reports `SKIPPED`. A successful run prints `[native-release-check] <platform>: PASS`.
+- Device checks, signed artifact verification and authorized store operations are separate steps.
+
+## Web and repository pre-release check
 
 ```bash
 npm run release:check

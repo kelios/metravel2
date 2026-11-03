@@ -17,6 +17,8 @@ native Android. Цель — закрыть краши **до** local build, а 
    прямые `.then/.catch/.finally` на `import()`, react-native-web в babel без
    платформенного гейта, `role="listitem"` без Platform-гейта) — просто прогнать
    `npx jest __tests__/config/native-compat-governance.test.ts`.
+   После Android prebuild сгенерированные manifest и Gradle проверяет
+   `npx jest __tests__/config/android-native-compat-governance.test.ts`.
 0a. **Postinstall-патчи node_modules** (`package.json → postinstall`): прочитать
    каждый патч-скрипт — для какой версии писался, что делает с native. История:
    no-op codegen-плагина валил New Architecture на старте.
