@@ -137,7 +137,12 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     } = useRecommendationsVisibility();
 
     /* Auth flags: используем AuthContext, который уже учитывает наличие токена */
-    const { userId, isSuperuser: isSuper, isAuthenticated, authReady } = useAuth();
+    const { userId, isSuperuser: isSuper, isAuthenticated, authReady } = useAuth((auth) => ({
+      userId: auth.userId,
+      isSuperuser: auth.isSuperuser,
+      isAuthenticated: auth.isAuthenticated,
+      authReady: auth.authReady,
+    }));
 
     /* Top-bar state */
     const [search, setSearch] = useState<string>(normalizedSearchParam);

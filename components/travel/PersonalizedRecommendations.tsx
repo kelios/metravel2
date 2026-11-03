@@ -30,7 +30,7 @@ interface PersonalizedRecommendationsProps {
 function PersonalizedRecommendations({ forceVisible, onVisibilityChange, showHeader = true, onlyRecommendations = false }: PersonalizedRecommendationsProps) {
     const { favorites, viewHistory } = useFavorites();
     const recommended = useRecommendedTravels();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth((auth) => ({ isAuthenticated: auth.isAuthenticated }));
     const router = useRouter();
     const { width } = useWindowDimensions();
     const isMobile = width < METRICS.breakpoints.tablet;

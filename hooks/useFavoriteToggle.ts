@@ -36,7 +36,11 @@ export type FavoriteToggleOutcome = 'success' | 'error' | 'busy' | 'auth' | 'def
 export const favoriteKey = (id: string | number, type: FavoriteItem['type']) => `favorite:${type}:${id}`
 
 export function useFavoriteToggle(watchedTarget?: FavoriteIdentity) {
-  const { isAuthenticated, authReady, userId } = useAuth()
+  const { isAuthenticated, authReady, userId } = useAuth((auth) => ({
+    isAuthenticated: auth.isAuthenticated,
+    authReady: auth.authReady,
+    userId: auth.userId,
+  }))
   const { isFavorite, addFavorite, removeFavorite } = useFavorites({ mode: 'lookup', target: watchedTarget })
   const watchedId = watchedTarget?.id
   const watchedType = watchedTarget?.type

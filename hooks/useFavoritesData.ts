@@ -103,7 +103,7 @@ export function useFavoritesData<T = FavoriteItem[]>(
   select?: (items: FavoriteItem[]) => T,
   subscribed = true,
 ): T | FavoriteItem[] {
-  const { userId } = useAuth();
+  const { userId } = useAuth((auth) => ({ userId: auth.userId }));
   const { data } = useQuery({
     queryKey: queryKeys.favorites(userId ?? null),
     queryFn: favoritesQueryFn(userId ?? null),

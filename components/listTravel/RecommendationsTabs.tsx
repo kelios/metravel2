@@ -253,7 +253,7 @@ const RecommendationsTabs = memo(
 
     const router = useRouter();
     const { favorites = [], viewHistory = [], clearFavorites, clearHistory, ensureServerData } = useFavorites() as any;
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth((auth) => ({ isAuthenticated: auth.isAuthenticated }));
 
     const isTabsVisible = forceVisible || !collapsed;
 

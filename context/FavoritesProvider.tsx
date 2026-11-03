@@ -25,7 +25,10 @@ import { showToast } from '@/utils/toast';
 import { translate as i18nT } from '@/i18n';
 
 export function FavoritesProvider({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, userId } = useAuth();
+  const { isAuthenticated, userId } = useAuth((auth) => ({
+    isAuthenticated: auth.isAuthenticated,
+    userId: auth.userId,
+  }));
   const auth = useMemo(() => ({ isAuthenticated, userId }), [isAuthenticated, userId]);
 
   // Boot-загрузка favorites/history/recommendations удалена: серверный стейт

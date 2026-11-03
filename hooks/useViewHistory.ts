@@ -92,7 +92,7 @@ export const viewHistoryQueryFn =
  * каждой карточке с сердечком).
  */
 export function useViewHistory(subscribed = true): ViewHistoryItem[] {
-  const { userId } = useAuth();
+  const { userId } = useAuth((auth) => ({ userId: auth.userId }));
   const scopedUserId = userId ?? null;
   const { data } = useQuery({
     queryKey: queryKeys.viewHistory(scopedUserId),

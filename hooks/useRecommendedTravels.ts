@@ -33,7 +33,10 @@ const toFavoriteItems = (dto: unknown): FavoriteItem[] =>
  * не бьёт по сети на страницах, где рекомендаций нет.
  */
 export function useRecommendedTravels(): FavoriteItem[] {
-  const { isAuthenticated, userId } = useAuth();
+  const { isAuthenticated, userId } = useAuth((auth) => ({
+    isAuthenticated: auth.isAuthenticated,
+    userId: auth.userId,
+  }));
   const scopedUserId = userId ?? null;
 
   const { data } = useQuery({

@@ -121,7 +121,10 @@ export default function TravelStatusButton({
   const colors = useThemedColors()
   const isWeb = Platform.OS === 'web'
   const { isMobile } = useBreakpoints()
-  const { isAuthenticated, userId } = useAuth()
+  const { isAuthenticated, userId } = useAuth((auth) => ({
+    isAuthenticated: auth.isAuthenticated,
+    userId: auth.userId,
+  }))
   const { requireAuth, authReady } = useRequireAuth({ intent: 'calendar', subject: travelTitle })
 
   const travelStatusEntries = useTravelStatus()

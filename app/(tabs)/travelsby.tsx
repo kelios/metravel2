@@ -21,7 +21,7 @@ export default function TravelsByScreen() {
     const isFocused = useIsFocused();
     const colors = useThemedColors();
     const { t } = useTranslation();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated } = useAuth((auth) => ({ isAuthenticated: auth.isAuthenticated }));
     const styles = useMemo(() => createStyles(colors), [colors]);
     const [canRenderList, setCanRenderList] = useState(Platform.OS !== 'web');
 

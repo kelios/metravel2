@@ -26,7 +26,7 @@ function SearchScreen() {
   const router = useRouter()
   const isFocused = useIsFocused()
   const colors = useThemedColors()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated } = useAuth((auth) => ({ isAuthenticated: auth.isAuthenticated }))
   const viewportWidth = useResponsiveWidth()
   const pageHeading = i18nT('seoStatic:search.heading')
   const canRenderList = Platform.OS !== 'web' || viewportWidth > 0

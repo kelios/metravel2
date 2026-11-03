@@ -14,7 +14,10 @@ type Params = {
 
 export function useRequireAuth(params: Params = {}) {
   const router = useRouter()
-  const { isAuthenticated, authReady } = useAuth()
+  const { isAuthenticated, authReady } = useAuth((auth) => ({
+    isAuthenticated: auth.isAuthenticated,
+    authReady: auth.authReady,
+  }))
 
   const loginHref = useMemo(() => {
     const fallbackRedirect = params.fallbackRedirect ?? '/'

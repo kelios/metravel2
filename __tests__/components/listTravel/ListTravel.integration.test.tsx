@@ -1,6 +1,8 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react-native';
 import { ThemeProvider } from '@/hooks/useTheme';
+import { AuthContext, createAuthFallbackValue } from '@/context/authContextBase';
+import { useAuthStore } from '@/stores/authStore';
 import ListTravel from '@/components/listTravel/ListTravelBase';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform } from 'react-native';
@@ -37,15 +39,6 @@ jest.mock('@/hooks/useResponsive', () => ({
 jest.mock('@/hooks/useHydrationReady', () => ({
   useHydrationReady: () => true,
   markSsgFirstScreenReady: jest.fn(),
-}));
-
-jest.mock('@/context/AuthContext', () => ({
-  useAuth: () => ({
-    userId: 'test-user',
-    isSuperuser: false,
-    isAuthenticated: true,
-    authReady: true,
-  }),
 }));
 
 jest.mock('@/context/FavoritesContext', () => ({
@@ -155,6 +148,8 @@ jest.mock('@/components/listTravel/hooks/useListTravelExport', () => ({
   useListTravelExport: (...args: any[]) => mockUseListTravelExport(...args),
 }));
 
+const authContext = createAuthFallbackValue();
+
 const renderWithProviders = async (component: React.ReactElement) => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -165,9 +160,9 @@ const renderWithProviders = async (component: React.ReactElement) => {
 
   return await render(
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        {component}
-      </ThemeProvider>
+      <AuthContext.Provider value={authContext}>
+        <ThemeProvider>{component}</ThemeProvider>
+      </AuthContext.Provider>
     </QueryClientProvider>
   );
 };
@@ -230,6 +225,13 @@ describe('ListTravel Integration Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    useAuthStore.setState({
+      userId: 'test-user',
+      isSuperuser: false,
+      isAuthenticated: true,
+      authReady: true,
+      userAvatar: null,
+    });
 
     (global as any).__mockRouteName = 'travels';
     (global as any).__mockPathname = '/travels';
@@ -693,6 +695,39 @@ describe('ListTravel Integration Tests', () => {
     expect((searchInput as any).props.value).toBe('mountain');
   });
 
+  it('does not render the catalog for profile-only auth changes', async () => {
+    const view = await renderWithProviders(<ListTravel />);
+    await waitFor(() => expect(mockUseListTravelFilters).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({ categories: expect.any(Array) }),
+      }),
+    ));
+    mockUseListTravelFilters.mockClear();
+
+    await act(async () => {
+      useAuthStore.getState().setUserAvatar('https://example.test/avatar.png');
+      useAuthStore.getState().triggerProfileRefresh();
+    });
+    expect(mockUseListTravelFilters).not.toHaveBeenCalled();
+
+    await act(async () => {
+      useAuthStore.setState({ userId: 'another-user', isSuperuser: true });
+    });
+    expect(mockUseListTravelFilters).toHaveBeenLastCalledWith(expect.objectContaining({
+      userId: 'another-user',
+      isSuperuser: true,
+    }));
+
+    await act(async () => {
+      useAuthStore.setState({ isAuthenticated: false, userId: null });
+    });
+    expect(mockUseListTravelFilters).toHaveBeenLastCalledWith(expect.objectContaining({
+      userId: null,
+      isSuperuser: false,
+    }));
+    await view.unmount();
+  });
+
   it('syncs search input with updated URL search params without remount', async () => {
     (global as any).__mockLocalSearchParams = { search: 'mountain' };
 
@@ -718,9 +753,9 @@ describe('ListTravel Integration Tests', () => {
           mutations: { retry: false },
         },
       })}>
-        <ThemeProvider>
-          <ListTravel />
-        </ThemeProvider>
+        <AuthContext.Provider value={authContext}>
+          <ThemeProvider><ListTravel /></ThemeProvider>
+        </AuthContext.Provider>
       </QueryClientProvider>
     );
 
@@ -881,9 +916,9 @@ describe('ListTravel Integration Tests', () => {
     // Re-render component
     await rerender(
       <QueryClientProvider client={new QueryClient()}>
-        <ThemeProvider>
-          <ListTravel />
-        </ThemeProvider>
+        <AuthContext.Provider value={authContext}>
+          <ThemeProvider><ListTravel /></ThemeProvider>
+        </AuthContext.Provider>
       </QueryClientProvider>
     );
 

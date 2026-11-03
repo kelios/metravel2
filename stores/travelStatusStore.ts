@@ -400,7 +400,7 @@ const writeEntries = (userId: string | null, entries: TravelStatusEntry[]): void
 
 /** Реактивное чтение статусов текущего пользователя (гость = null отдельный ключ). */
 export function useTravelStatus(): TravelStatusEntry[] {
-  const { userId } = useAuth()
+  const { userId } = useAuth((auth) => ({ userId: auth.userId }))
   const scopedUserId = userId ?? null
   const { data } = useQuery({
     queryKey: queryKeys.travelStatus(scopedUserId),

@@ -106,15 +106,18 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     );
 };
 
-// Кастомный хук для удобного доступа к контексту.
-// Reads directly from Zustand with useShallow — only re-renders when
-// the selected slice actually changes (shallow equality).
-export const useAuth = (): AuthContextType => {
+const selectAuthStore = (state: AuthContextType) => state;
+
+// Callers can select only the fields they need while retaining the provider guard.
+export const useAuth: {
+    <T>(selector: (state: AuthContextType) => T): T;
+    (): AuthContextType;
+} = <T = AuthContextType,>(
+    selector = selectAuthStore as (state: AuthContextType) => T,
+): T => {
     const context = useContext(AuthContext);
     if (!context) {
         throw new Error('useAuth must be used within an AuthProvider');
     }
-    return useAuthStore(
-        useShallow((s) => s)
-    );
+    return useAuthStore(useShallow(selector));
 };
