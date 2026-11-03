@@ -27,9 +27,6 @@ import { translate as i18nT } from '@/i18n'
 import { resolveDevMockFlag } from '@/utils/devMockFlags'
 
 
-// Глобальный кеш успешно/аварийно обработанных routeKey, чтобы избегать повторных запросов в сессию
-const resolvedRouteKeys = new Set<string>()
-
 const ROUTE_DEBOUNCE_MS = 80
 const ORS_RETRY_ATTEMPTS = 3
 const ORS_RETRY_BASE_DELAY_MS = 1000
@@ -52,9 +49,6 @@ async function throwForRoutingStatus(
     res.status,
   )
 }
-
-// Helper for tests to reset memoized route keys
-export const clearResolvedRouteKeys = () => resolvedRouteKeys.clear()
 
 interface RoutingState {
     loading: boolean
@@ -305,7 +299,6 @@ export const useRouting = (
             }
             // Кэшируем мок, чтобы повторные вызовы не давали новые ссылки массива
             routeCache.set(points, transportMode, coords, distance, estimateDurationSeconds(distance, mode))
-            if (routeKey) resolvedRouteKeys.add(routeKey)
             return {
                 coords,
                 distance,
@@ -354,7 +347,7 @@ export const useRouting = (
             duration: route.duration || 0,
             isOptimal: true,
         }
-    }, [isTestEnv, routeKey, transportMode])
+    }, [isTestEnv, transportMode])
 
     // Бесплатный routing через Valhalla (Mapzen/Mapbox альтернатива)
     // Используем публичный инстанс valhalla.openstreetmap.de
@@ -433,7 +426,6 @@ export const useRouting = (
             isProcessingRef.current = false
         }
 
-        // Проверяем кэш - но только routeCache, не resolvedRouteKeys (для возможности перестроения).
         // routeCache.get ключуется по координатам+transportMode, что эквивалентно routeKey,
         // поэтому используем его как ПЕРВИЧНЫЙ источник независимо от lastRouteKeyRef.
         // (lastRouteKeyRef присваивается только внутри отложенного fetchRoute, и завязка на него
@@ -444,7 +436,6 @@ export const useRouting = (
             // fetchRoute из этого же прохода считался stale и не дублировал запрос.
             lastRouteKeyRef.current = routeKey
             isProcessingRef.current = false
-            resolvedRouteKeys.add(routeKey)
             setState({
                 loading: false,
                 error: false,
@@ -593,7 +584,6 @@ export const useRouting = (
                 if (isStale()) return
 
                 routeCache.set(currentPoints, transportMode, result.coords, result.distance, duration)
-                resolvedRouteKeys.add(routeKey)
 
                 commitIfCurrent(() => {
                     setState({

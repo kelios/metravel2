@@ -5,7 +5,6 @@ import { useRouteStore } from '@/stores/routeStore'
 import { useRouteStoreAdapter } from '@/hooks/useRouteStoreAdapter'
 import MapRouteEngine from '@/components/MapPage/MapRouteEngine'
 import RoutingMachine from '@/components/MapPage/RoutingMachine'
-import { clearResolvedRouteKeys } from '@/components/MapPage/useRouting'
 import { routeCache } from '@/utils/routeCache'
 
 const start: [number, number] = [27.56, 53.9]
@@ -32,7 +31,6 @@ function RealRouteController({ native = false }: { native?: boolean }) {
 describe('real store → adapter → routing rebuild (#2311)', () => {
   beforeEach(() => {
     routeCache.clear()
-    clearResolvedRouteKeys()
     useRouteStore.setState({ points: [], route: null, routeKey: null, rebuildRevision: 0, error: null, isBuilding: false, transportMode: 'car' })
     useRouteStore.getState().addPoint({ lng: start[0], lat: start[1] }, 'start')
     useRouteStore.getState().addPoint({ lng: end[0], lat: end[1] }, 'end')

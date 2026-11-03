@@ -12,12 +12,17 @@ interface RateLimitState {
 }
 
 const CACHE_DURATION = 1000 * 60 * 60; // 1 hour
+const MAX_CACHE_ENTRIES = 64;
+const MAX_CACHE_COORDINATES = 50_000;
+const MAX_CACHE_KEY_CHARS = 64_000;
 const RATE_LIMIT_WINDOW = 1000 * 60; // 1 minute
 const MAX_REQUESTS_PER_MINUTE = 30; // Conservative limit for free tier
 const MIN_REQUEST_INTERVAL = 500; // Minimum 500ms between requests
 
 class RouteCache {
   private cache: Map<string, CacheEntry> = new Map();
+  private cachedCoordinates = 0;
+  private cachedKeyChars = 0;
   private rateLimitState: RateLimitState = {
     lastRequestTime: 0,
     requestCount: 0,
@@ -32,6 +37,12 @@ class RouteCache {
     return `${transportMode}:${pointsStr}`;
   }
 
+  private evict(key: string, entry: CacheEntry): void {
+    this.cache.delete(key);
+    this.cachedCoordinates -= entry.coords.length;
+    this.cachedKeyChars -= key.length;
+  }
+
   get(
     points: [number, number][],
     transportMode: string
@@ -43,10 +54,12 @@ class RouteCache {
 
     // Check if cache is still valid
     if (Date.now() - entry.timestamp > CACHE_DURATION) {
-      this.cache.delete(key);
+      this.evict(key, entry);
       return null;
     }
 
+    this.cache.delete(key);
+    this.cache.set(key, entry);
     return entry;
   }
 
@@ -58,12 +71,30 @@ class RouteCache {
     duration: number = 0
   ): void {
     const key = this.generateKey(points, transportMode);
+    const now = Date.now();
+    for (const [cachedKey, entry] of this.cache) {
+      if (cachedKey === key || now - entry.timestamp > CACHE_DURATION) {
+        this.evict(cachedKey, entry);
+      }
+    }
+    if (coords.length > MAX_CACHE_COORDINATES || key.length > MAX_CACHE_KEY_CHARS) return;
+
     this.cache.set(key, {
       coords,
       distance,
       duration,
-      timestamp: Date.now(),
+      timestamp: now,
     });
+    this.cachedCoordinates += coords.length;
+    this.cachedKeyChars += key.length;
+    for (const [oldestKey, entry] of this.cache) {
+      if (
+        this.cache.size <= MAX_CACHE_ENTRIES &&
+        this.cachedCoordinates <= MAX_CACHE_COORDINATES &&
+        this.cachedKeyChars <= MAX_CACHE_KEY_CHARS
+      ) break;
+      this.evict(oldestKey, entry);
+    }
   }
 
   canMakeRequest(): boolean {
@@ -111,6 +142,8 @@ class RouteCache {
 
   clear(): void {
     this.cache.clear();
+    this.cachedCoordinates = 0;
+    this.cachedKeyChars = 0;
     this.rateLimitState = {
       lastRequestTime: 0,
       requestCount: 0,

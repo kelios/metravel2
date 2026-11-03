@@ -57,6 +57,44 @@ describe('routeCache', () => {
       expect(cached2?.distance).toEqual(6000);
     });
 
+    it('caps distinct routes and retains the recently read entry', () => {
+      const points = (id: number): [number, number][] => [[id, 1]];
+      for (let id = 0; id < 64; id++) {
+        routeCache.set(points(id), 'car', points(id), 1);
+      }
+      expect(routeCache.get(points(0), 'car')).not.toBeNull();
+      for (let id = 64; id < 500; id++) {
+        routeCache.set(points(id), 'car', points(id), 1);
+        expect(routeCache.get(points(0), 'car')).not.toBeNull();
+      }
+      expect(routeCache.getStats().cacheSize).toBe(64);
+      expect(routeCache.get(points(1), 'car')).toBeNull();
+    });
+
+    it('evicts expired keys on insertion without reading them', () => {
+      const clock = jest.spyOn(Date, 'now').mockReturnValue(10_000);
+      try {
+        routeCache.set([[1, 1]], 'car', [[1, 1]], 1);
+        routeCache.set([[2, 2]], 'car', [[2, 2]], 1);
+        clock.mockReturnValue(10_000 + 3_600_001);
+        routeCache.set([[3, 3]], 'car', [[3, 3]], 1);
+        expect(routeCache.getStats().cacheSize).toBe(1);
+      } finally {
+        clock.mockRestore();
+      }
+    });
+
+    it('caps total geometry and skips individually oversized routes and keys', () => {
+      const coords: [number, number][] = Array.from({ length: 30_000 }, () => [1, 1]);
+      routeCache.set([[1, 1]], 'car', coords, 1);
+      routeCache.set([[2, 2]], 'car', coords, 1);
+      expect(routeCache.getStats().cacheSize).toBe(1);
+      expect(routeCache.get([[1, 1]], 'car')).toBeNull();
+      routeCache.set([[3, 3]], 'car', [...coords, ...coords], 1);
+      routeCache.set(Array.from({ length: 20_000 }, () => [1, 1]), 'car', [[1, 1]], 1);
+      expect(routeCache.getStats().cacheSize).toBe(1);
+    });
+
     it('should expire cache after duration', () => {
       jest.useFakeTimers();
       const points: [number, number][] = [[27.5590, 53.9006], [27.5700, 53.9100]];

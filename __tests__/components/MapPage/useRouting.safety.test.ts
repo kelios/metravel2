@@ -4,7 +4,7 @@
  */
 
 import { act, renderHook, waitFor } from '@testing-library/react-native';
-import { useRouting, clearResolvedRouteKeys } from '@/components/MapPage/useRouting';
+import { useRouting } from '@/components/MapPage/useRouting';
 import { routeCache } from '@/utils/routeCache';
 
 // Mock fetch globally
@@ -13,7 +13,6 @@ global.fetch = jest.fn();
 describe('useRouting - Safety Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    clearResolvedRouteKeys();
     routeCache.clear();
     (global.fetch as jest.Mock).mockReset();
   });
@@ -463,25 +462,27 @@ describe('useRouting - Safety Tests', () => {
     });
 
     it('handles malformed JSON response', async () => {
+      jest.useFakeTimers();
+      const points: [number, number][] = [[27.56, 53.9], [27.6, 53.95]];
       (global.fetch as jest.Mock).mockResolvedValue({
         ok: true,
         json: jest.fn().mockRejectedValue(new Error('Invalid JSON')),
       });
 
-      const { result } = await renderHook(() =>
-        useRouting(
-          [
-            [27.56, 53.9],
-            [27.6, 53.95],
-          ],
-          'car',
-          'test-api-key-long-enough'
-        )
-      );
-
-      await waitFor(() => {
-        expect(result.current.loading).toBe(false);
-      });
+      try {
+        const hook = await renderHook(() => useRouting(points, 'car', 'test-api-key-long-enough'));
+        try {
+          await act(async () => { await jest.runAllTimersAsync(); });
+          expect(hook.result.current.loading).toBe(false);
+          expect(hook.result.current.error).toEqual(expect.any(String));
+          expect(hook.result.current.isOptimal).toBe(false);
+          expect(routeCache.get(points, 'car')).toBeNull();
+        } finally {
+          await hook.unmount();
+        }
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
     it('handles response with missing coordinates', async () => {
@@ -741,7 +742,6 @@ describe('useRouting - shared bounded Valhalla fallback', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    clearResolvedRouteKeys();
     routeCache.clear();
     jest.mocked(global.fetch).mockReset();
   });

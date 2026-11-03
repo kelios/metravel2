@@ -1,6 +1,5 @@
 import { render, waitFor } from '@testing-library/react-native';
 import RoutingMachine from '../../components/MapPage/RoutingMachine';
-import { clearResolvedRouteKeys } from '../../components/MapPage/useRouting';
 
 global.fetch = jest.fn();
 
@@ -15,7 +14,6 @@ describe('RoutingMachine integration', () => {
     (global.fetch as jest.Mock).mockClear();
     const { routeCache } = require('@/utils/routeCache');
     routeCache.clear();
-    clearResolvedRouteKeys();
   });
 
   it('should build route from start to end point with OSRM', async () => {

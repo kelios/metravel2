@@ -1,6 +1,5 @@
 import { render, waitFor } from '@testing-library/react-native';
 import RoutingMachine from '../../components/MapPage/RoutingMachine';
-import { clearResolvedRouteKeys } from '../../components/MapPage/useRouting';
 
 // Mock fetch
 global.fetch = jest.fn();
@@ -27,7 +26,6 @@ describe('RoutingMachine', () => {
     // Clear route cache to prevent rate limiting in tests
     const { routeCache } = require('@/utils/routeCache');
     routeCache.clear();
-    clearResolvedRouteKeys();
   });
 
   it('should render without crashing', async () => {
