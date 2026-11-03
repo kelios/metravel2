@@ -54,6 +54,9 @@ const BUILD_STUB = [
   '} > "$STUB_OUT"',
   'echo "▶ stub stage"',
   'echo "noise line"',
+  'echo "🧊 Metro: холодный экспорт (-c)"',
+  'echo "🧹 Metro: lockfile сменился — чищу кэш выката"',
+  'echo "♨️  Metro: тёплый кэш выката (32 МБ)"',
   'echo "📊 Диск прода после выката: занято 84 %, свободно 2300 МБ; static/dist — 655 МБ"',
   'echo "⚠️ На диске прода свободно 1400 МБ — меньше 1536 МБ"',
   'echo "⏱  stub stage: 0 с"',
@@ -242,6 +245,9 @@ describe('scripts/deploy-prod.sh', () => {
       // mode (#2186): the filter must let both the line and the warning through.
       expect(result.stdout.slice(0, tailStart)).toContain('📊 Диск прода после выката')
       expect(result.stdout.slice(0, tailStart)).toContain('⚠️ На диске прода свободно')
+      expect(result.stdout.slice(0, tailStart)).toContain('🧊 Metro: холодный экспорт')
+      expect(result.stdout.slice(0, tailStart)).toContain('🧹 Metro: lockfile сменился')
+      expect(result.stdout.slice(0, tailStart)).toContain('♨️  Metro: тёплый кэш выката (32 МБ)')
       expect(result.stdout.slice(0, tailStart)).not.toContain('noise line')
       expect(result.stdout.slice(tailStart)).toContain('noise line')
       const [log] = fs.readdirSync(path.join(fixture.repo, '.codex-temp/deploy'))

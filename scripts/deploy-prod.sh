@@ -41,7 +41,7 @@ LOG_DIR="$MT/.codex-temp/deploy"
 export BUNDLE_BUDGET_REPORT_DIR="$LOG_DIR"
 # Строки сводки этапов build-prod.sh (`   65 с  экспорт Metro`) начинаются с
 # пробелов — без своей ветки тихий режим оставил бы от таблицы один заголовок.
-QUIET_PATTERN='^(▶|⏱|🎉|❌|⚠️|✅|📊|🔖)|^ +[0-9]+ с  |Error|ERROR|^(Number of regular files transferred|Total transferred file size|Literal data|Matched data):'
+QUIET_PATTERN='^(▶|⏱|🎉|❌|⚠️|✅|📊|🔖)|^(🧊|🧹|♨️) +Metro:|^ +[0-9]+ с  |Error|ERROR|^(Number of regular files transferred|Total transferred file size|Literal data|Matched data):'
 LOG=''
 STARTED_AT=$SECONDS
 
