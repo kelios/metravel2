@@ -1,7 +1,7 @@
 import type { SupportedLocale } from '@/i18n/config'
 import type { LoadedTranslation } from '@/i18n/catalogCompiler'
 
-export type RequestLocaleContext = Readonly<{ locale: SupportedLocale }>
+export type RequestLocaleContext = Readonly<{ locale: SupportedLocale; pathname?: string }>
 export type RequestLocaleStore = {
   getStore(): RequestLocaleContext | undefined
   run<T>(context: RequestLocaleContext, callback: () => T): T
@@ -16,4 +16,5 @@ export function resolveRequestLocale(url: string | undefined): SupportedLocale
 export function getRequestLocaleStore(): RequestLocaleStore | undefined
 export function installRequestLocaleStore(store: RequestLocaleStore): RequestLocaleStore
 export function readRequestLocale(): SupportedLocale | null
+export function readRequestPathname(): string | null
 export function getServerLocaleCatalogState(): ServerLocaleCatalogState | null

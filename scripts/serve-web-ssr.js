@@ -156,7 +156,7 @@ function createSsrServer({ buildDir = process.env.SSR_BUILD_DIR || path.join(rep
         return
       }
       if (sha) res.setHeader('X-Metravel-Ssr-Source', sha)
-      await requestLocales.run(Object.freeze({ locale: resolveRequestLocale(req.url) }), () =>
+      await requestLocales.run(Object.freeze({ locale: resolveRequestLocale(req.url), pathname }), () =>
         handleExpo(req, res, (error) => {
           res.statusCode = error ? 500 : 404
           res.setHeader('Cache-Control', 'no-store')

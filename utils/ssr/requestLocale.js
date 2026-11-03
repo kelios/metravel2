@@ -37,6 +37,11 @@ function readRequestLocale() {
   return QUEST_LOCALES.includes(locale) ? locale : null
 }
 
+function readRequestPathname() {
+  if (!isServerSsrRuntime()) return null
+  return getRequestLocaleStore()?.getStore()?.pathname ?? null
+}
+
 // Only immutable locale catalogues and their finite loading resources belong
 // here. Request data stays in ALS and is never retained by this registry.
 function getServerLocaleCatalogState() {
@@ -48,5 +53,5 @@ function getServerLocaleCatalogState() {
 
 module.exports = {
   isServerSsrRuntime, resolveRequestLocale, getRequestLocaleStore,
-  installRequestLocaleStore, readRequestLocale, getServerLocaleCatalogState,
+  installRequestLocaleStore, readRequestLocale, readRequestPathname, getServerLocaleCatalogState,
 }

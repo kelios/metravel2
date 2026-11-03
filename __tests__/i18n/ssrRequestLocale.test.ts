@@ -57,6 +57,19 @@ describe('request-local web locale', () => {
     expect(source).not.toMatch(/https?:\/\/(?:localhost(?![\w.-])|127\.)/)
   })
 
+  it('isolates the document pathname across concurrent SSR requests', async () => {
+    const paths = ['/', '/search']
+    const readPaths = await Promise.all(paths.map((pathname) =>
+      store.run({ locale: 'ru', pathname }, async () => {
+        await Promise.resolve()
+        return bridge.readRequestPathname()
+      }),
+    ))
+
+    expect(readPaths).toEqual(paths)
+    expect(bridge.readRequestPathname()).toBeNull()
+  })
+
   it('keeps translations, locale metadata and date formatting isolated across interleaved requests', async () => {
     const locales: SupportedLocale[] = ['en', 'ru', 'be', 'uk', 'pl']
     const expected = { ru: 'Русский', be: 'Руская', uk: 'Російська', pl: 'Rosyjski', en: 'Russian' }
