@@ -40,33 +40,17 @@ case "$action" in
     incoming="$PROD_REMOTE_DIR/web-ssr/incoming/$sha"
     release_client="$PROD_REMOTE_DIR/web-ssr/releases/$sha/client"
     payload_kib="$(du -sk "$candidate" | awk '{ print $1 }')"
-    # Ready books are immutable by revision (#2857): an unchanged book is
-    # uploaded once and then hard-linked from the shared store on the host, so
-    # neither the transfer nor the release pays its 226 MB again. The store
-    # lives outside releases/<sha> and is refreshed and pruned after the stage
-    # by web-ssr-release-audit.sh. The dry run tells how much the upload will
-    # actually bring, so the disk preflight counts the shared books as free.
-    books="$candidate/client/travel-books"
+    # Ready-book files live in S3 (#2971): the release carries only
+    # client/travel-books/manifest.json, so it travels with the rest of the
+    # candidate. The books audit below refuses anything else there and drains
+    # the former shared store (#2857) as old releases leave the retention.
     books_store="$PROD_REMOTE_DIR/web-ssr/shared/travel-books"
-    books_rsync=(rsync -aH --delete --mkpath --protect-args --link-dest="$books_store")
-    if [[ -d "$books" ]]; then
-      books_kib="$(du -sk "$books" | awk '{ print $1 }')"
-      ssh "${ssh_args[@]}" "$PROD_SSH_TARGET" "mkdir -p $(quote "$books_store")"
-      books_transfer="$("${books_rsync[@]}" --dry-run --stats "$books/" "$PROD_SSH_TARGET:$incoming/client/travel-books/" \
-        | awk -F': ' '/^Total transferred file size/ { gsub(/[^0-9]/, "", $2); print $2 }')"
-      [[ "$books_transfer" =~ ^[0-9]+$ ]] || { echo 'Cannot size the book transfer' >&2; exit 1; }
-      payload_kib=$(( payload_kib - books_kib + (books_transfer + 1023) / 1024 ))
-    fi
     # The same pre-transfer reserve contract as the static publisher; private
     # server generations also consume the production filesystem.
     ssh "${ssh_args[@]}" "$PROD_SSH_TARGET" bash -s -- preflight \
       "$PROD_REMOTE_DIR" "$payload_kib" "${DEPLOY_DISK_RESERVE_MB:-720}" "${DEPLOY_BACKEND_BUILD_MB:-1536}" \
       < "$SCRIPT_DIR/deploy-disk-guard.sh"
-    if [[ -d "$books" ]]; then
-      "${books_rsync[@]}" -zhe ssh "$books/" "$PROD_SSH_TARGET:$incoming/client/travel-books/"
-    fi
-    # The excluded books are also protected from `--delete` on the receiver.
-    rsync -azHhe ssh --delete --mkpath --protect-args --exclude=/client/travel-books/ "$candidate/" \
+    rsync -azHhe ssh --delete --mkpath --protect-args "$candidate/" \
       "$PROD_SSH_TARGET:$incoming/"
     if [[ "${EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR:-false}" == "true" ]]; then
       remote stage --sha "$sha" --overlay-retention-days "$EXPO_OVERLAY_RETENTION_DAYS" --overlay-max-mb "$EXPO_OVERLAY_MAX_MB"
@@ -74,7 +58,7 @@ case "$action" in
       remote stage --sha "$sha"
     fi
     remote preflight --sha "$sha"
-    # What was sealed: book sharing and the chunk overlay the backend ran with
+    # What was sealed: release books and the chunk overlay the backend ran with
     # its output captured. The chunk limit stops the deploy before the swap.
     ssh "${ssh_args[@]}" "$PROD_SSH_TARGET" bash -s -- books "$release_client" "$books_store" \
       < "$SCRIPT_DIR/web-ssr-release-audit.sh"

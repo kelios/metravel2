@@ -23,98 +23,77 @@ describe('web-ssr-release-audit books', () => {
   beforeEach(() => { root = makeTempDir('ssr-audit-') })
   afterEach(() => removeDir(root))
 
-  // The first release after #2857 brings every book; the store is built from
-  // it by hard links, so the release and the store share one copy on disk.
-  it('links the books of a fresh release into the store and skips the pointer', () => {
-    const client = path.join(root, 'releases/first/client')
-    const store = path.join(root, 'shared/travel-books')
-    const read = write(path.join(client, 'travel-books/book/r1/read.pdf'), '%PDF-first')
-    write(path.join(client, 'travel-books/book/r1/cover.webp'), 'RIFF0000WEBP')
-    write(path.join(client, 'travel-books/manifest.json'), '{}', new Date())
-
-    const result = run(['books', client, store])
+  // Book files live in S3 (#2971): a release holds only the pointer.
+  it('accepts a release that carries only the publication pointer', () => {
+    const client = path.join(root, 'releases/s3/client')
+    write(path.join(client, 'travel-books/manifest.json'), '{}')
+    const result = run(['books', client, path.join(root, 'shared/travel-books')])
     expect(result.status).toBe(0)
-    expect(result.stdout).toContain('📊 Книги релиза: 3 файлов')
-    expect(result.stdout).toContain('загружено заново 2 (')
-    expect(fs.statSync(path.join(store, 'book/r1/read.pdf')).ino).toBe(fs.statSync(read).ino)
-    expect(fs.statSync(read).nlink).toBe(2)
-    expect(fs.existsSync(path.join(store, 'manifest.json'))).toBe(false)
-    expect(fs.existsSync(path.join(store, 'book/r1/cover.webp'))).toBe(true)
+    expect(result.stdout).toContain('📊 Книги релиза: только manifest.json, файлы — в S3; прежнего хранилища web-ssr/shared/travel-books нет')
   })
 
-  // The next release arrives with its unchanged books already linked from
-  // the store (rsync --link-dest); only a new revision is new to the store.
-  // Once finalize removes the old release, the files nobody references leave.
-  it('adds new revisions, keeps shared files and prunes unreferenced ones', () => {
-    const store = path.join(root, 'shared/travel-books')
-    const first = path.join(root, 'releases/first/client')
-    write(path.join(first, 'travel-books/book/r1/read.pdf'), '%PDF-first')
-    write(path.join(first, 'travel-books/book/r1/only-first.pdf'), '%PDF-only')
-    expect(run(['books', first, store]).status).toBe(0)
-
-    const second = path.join(root, 'releases/second/client')
-    fs.mkdirSync(path.join(second, 'travel-books/book/r1'), { recursive: true })
-    fs.linkSync(path.join(store, 'book/r1/read.pdf'), path.join(second, 'travel-books/book/r1/read.pdf'))
-    write(path.join(second, 'travel-books/book/r2/read.pdf'), '%PDF-second')
-    const result = run(['books', second, store])
-    expect(result.status).toBe(0)
-    expect(result.stdout).toContain('📊 Книги релиза: 2 файлов')
-    expect(result.stdout).toContain('загружено заново 1 (')
-    expect(fs.existsSync(path.join(store, 'book/r1/only-first.pdf'))).toBe(true)
-    expect(fs.statSync(path.join(store, 'book/r2/read.pdf')).ino).toBe(fs.statSync(path.join(second, 'travel-books/book/r2/read.pdf')).ino)
-
-    fs.rmSync(path.join(root, 'releases/first'), { recursive: true })
-    expect(run(['books', second, store]).status).toBe(0)
-    expect(fs.existsSync(path.join(store, 'book/r1/only-first.pdf'))).toBe(false)
-    expect(fs.existsSync(path.join(store, 'book/r1/read.pdf'))).toBe(true)
-    expect(fs.existsSync(path.join(store, 'book/r2/read.pdf'))).toBe(true)
-    expect(fs.statSync(path.join(store, 'book/r1/read.pdf')).nlink).toBe(2)
+  it.each([
+    ['a book file', 'travel-books/book/r1/read.pdf'],
+    ['an empty revision directory', 'travel-books/book/r1/'],
+  ])('stops the deploy when the release carries %s', (_label, relative) => {
+    const client = path.join(root, 'releases/bad/client')
+    write(path.join(client, 'travel-books/manifest.json'), '{}')
+    if (relative.endsWith('/')) fs.mkdirSync(path.join(client, relative), { recursive: true })
+    else write(path.join(client, relative), '%PDF-x')
+    const result = run(['books', client, path.join(root, 'shared/travel-books')])
+    expect(result.status).toBe(1)
+    expect(result.stderr).toContain('❌ Релиз запечатан, но не опубликован')
+    expect(result.stderr).toContain('travel-books/book')
   })
 
-  // copy-publication.cjs hard-links equal content inside one build, so a
-  // book file is often one inode under several paths. The link count then
-  // says neither what was uploaded nor what only the store still holds.
-  it('counts and prunes hard-linked duplicates per inode', () => {
+  // Releases staged before #2971 hold their books as hard links into the store.
+  // The store drains as finalize removes them, per inode: equal content is one
+  // inode under several paths, so a link count alone would keep or drop it wrongly.
+  it('drains the former store as releases with books leave, then removes it', () => {
     const store = path.join(root, 'shared/travel-books')
-    const first = path.join(root, 'releases/first/client')
-    const font = write(path.join(first, 'travel-books/book/r1/font.ttf'), 'font')
-    fs.mkdirSync(path.join(first, 'travel-books/book/r2'), { recursive: true })
-    fs.linkSync(font, path.join(first, 'travel-books/book/r2/font.ttf'))
-    const firstRun = run(['books', first, store])
-    expect(firstRun.status).toBe(0)
-    expect(firstRun.stdout).toContain('📊 Книги релиза: 2 файлов')
-    expect(firstRun.stdout).toContain('загружено заново 1 (')
+    const old = path.join(root, 'releases/old/client/travel-books')
+    const font = write(path.join(old, 'book/r1/font.ttf'), 'font')
+    fs.mkdirSync(path.join(old, 'book/r2'), { recursive: true })
+    fs.linkSync(font, path.join(old, 'book/r2/font.ttf'))
+    const read = write(path.join(old, 'book/r1/read.pdf'), '%PDF-old')
+    fs.mkdirSync(path.join(store, 'book/r1'), { recursive: true })
+    fs.mkdirSync(path.join(store, 'book/r2'), { recursive: true })
+    fs.linkSync(font, path.join(store, 'book/r1/font.ttf'))
+    fs.linkSync(font, path.join(store, 'book/r2/font.ttf'))
+    fs.linkSync(read, path.join(store, 'book/r1/read.pdf'))
+    write(path.join(store, 'book/r0/orphan.pdf'), '%PDF-orphan')
 
-    const second = path.join(root, 'releases/second/client')
-    write(path.join(second, 'travel-books/book/r3/read.pdf'), '%PDF-third')
-    expect(run(['books', second, store]).status).toBe(0)
-    expect(fs.existsSync(path.join(store, 'book/r1/font.ttf'))).toBe(true)
+    const client = path.join(root, 'releases/new/client')
+    write(path.join(client, 'travel-books/manifest.json'), '{}')
+    const kept = run(['books', client, store])
+    expect(kept.status).toBe(0)
+    expect(kept.stdout).toContain('прежнее хранилище web-ssr/shared/travel-books: 3 файлов')
+    expect(fs.existsSync(path.join(store, 'book/r0'))).toBe(false)
+    expect(fs.existsSync(path.join(store, 'book/r2/font.ttf'))).toBe(true)
 
-    fs.rmSync(path.join(root, 'releases/first'), { recursive: true })
-    expect(run(['books', second, store]).status).toBe(0)
-    expect(fs.existsSync(path.join(store, 'book/r1'))).toBe(false)
-    expect(fs.existsSync(path.join(store, 'book/r2'))).toBe(false)
-    expect(fs.existsSync(path.join(store, 'book/r3/read.pdf'))).toBe(true)
+    fs.rmSync(path.join(root, 'releases/old'), { recursive: true })
+    const drained = run(['books', client, store])
+    expect(drained.status).toBe(0)
+    expect(drained.stdout).toContain('прежнего хранилища web-ssr/shared/travel-books нет')
+    expect(fs.existsSync(store)).toBe(false)
   })
 
   // The host receives the helper over `bash -s`: no command may read the rest
   // of the script from the inherited stdin.
   it('runs to its report when the script itself arrives on stdin', () => {
     const client = path.join(root, 'releases/piped/client')
-    write(path.join(client, 'travel-books/book/r1/read.pdf'), '%PDF-piped')
+    write(path.join(client, 'travel-books/manifest.json'), '{}')
+    write(path.join(root, 'shared/travel-books/book/r1/orphan.pdf'), '%PDF-piped')
     const result = runCli('bash', ['-c', `bash -s -- books "$0" "$1" < "${helper}"`, client, path.join(root, 'shared/travel-books')])
     expect(result.status).toBe(0)
-    expect(result.stdout).toContain('📊 Книги релиза: 1 файлов')
+    expect(result.stdout).toContain('прежнего хранилища web-ssr/shared/travel-books нет')
   })
 
   it('reports a release without books and refuses a symlinked store', () => {
     const client = path.join(root, 'releases/none/client')
     fs.mkdirSync(client, { recursive: true })
-    const none = run(['books', client, path.join(root, 'shared/travel-books')])
-    expect(none.status).toBe(0)
-    expect(none.stdout).toContain('в релизе нет каталога travel-books')
+    expect(run(['books', client, path.join(root, 'shared/travel-books')]).status).toBe(0)
 
-    write(path.join(client, 'travel-books/book/r1/read.pdf'), '%PDF-x')
     fs.mkdirSync(path.join(root, 'elsewhere'))
     fs.symlinkSync(path.join(root, 'elsewhere'), path.join(root, 'linked-store'))
     const linked = run(['books', client, path.join(root, 'linked-store')])

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// Materialize only manifest-listed, integrity-checked files into the atomic web release.
+// Check every published ready-book file in storage and carry only the publication
+// pointer into the atomic web release. The files themselves live in S3 (#2971,
+// scripts/books/storage.cjs); the release and the VPS disk never hold them.
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const {createHash} = require('node:crypto');
@@ -7,11 +9,6 @@ const {execFileSync} = require('node:child_process');
 
 const BASE = 'https://metravel.by/travel-books/';
 const ROOT_BASE = '/travel-books/';
-// Publication assets are immutable by revision, so their mtime carries no
-// information. One fixed stamp lets the SSR publisher recognise them by size and
-// mtime and hard-link them from the shared store on prod instead of uploading
-// and storing 226 MB with every release (#2857, scripts/web-ssr-publication.sh).
-const PUBLICATION_MTIME = new Date('2024-01-01T00:00:00Z');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 
 /** The detail's deferred contents never carry photos, preview arrays or file metadata. */
@@ -78,21 +75,6 @@ function collectAssets(manifests) {
   return [...assets.values()];
 }
 
-async function fetchAsset(asset) {
-  const response = await fetch(asset.uri, {redirect: 'error', signal: AbortSignal.timeout(30000)});
-  if (!response.ok) throw new Error(`Publication asset unavailable: HTTP ${response.status}`);
-  const chunks = [];
-  let length = 0;
-  for await (const chunk of response.body) {
-    length += chunk.length;
-    if (length > asset.bytes) {
-      throw new Error('Publication asset exceeds declared size');
-    }
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks);
-}
-
 function checkContent(asset, bytes) {
   const extension=asset.relative.split('.').pop();
   if(extension==='pdf'&&bytes.subarray(0,5).toString()!=='%PDF-')throw new Error('Invalid PDF publication resource');
@@ -137,12 +119,13 @@ async function writePublicationStagingMetadata(root, {manifest, related, accepta
   for (const [name, bytes] of entries) await fs.writeFile(path.join(root, name), bytes, {flag: 'wx'});
 }
 
-async function copyPublication({root, buildDir, cacheDir, download = fetchAsset}) {
+/** The current manifest first, then every immutable snapshot, each checked against its file name. */
+async function publicationManifests(root) {
   const manifestPath = path.join(root, 'data/travelBooks/manifest.json');
   // Historical releases before C1 do not contain a publication manifest.
   let current;
   try { current = await readJson(manifestPath); }
-  catch (error) { if (error.code === 'ENOENT') return {files: 0, bytes: 0}; throw error; }
+  catch (error) { if (error.code === 'ENOENT') return []; throw error; }
   if (current.bookMetadata) {
     const contents = await readJson(path.join(root, 'data/travelBooks/contents.json'));
     if (JSON.stringify(contents) !== JSON.stringify(bookContentsIndex(current))) throw new Error('Book contents index differs from the current publication');
@@ -157,62 +140,42 @@ async function copyPublication({root, buildDir, cacheDir, download = fetchAsset}
     if (hash(bytes) + '.json' !== file) throw new Error('Publication snapshot checksum mismatch');
     manifests.push(JSON.parse(bytes));
   }
-  const assets = collectAssets(manifests);
-  await fs.mkdir(cacheDir, {recursive: true});
-  const cacheRoot = await fs.realpath(cacheDir);
+  return manifests;
+}
+
+/**
+ * Every file of the current editions must be confirmed in storage before the
+ * release is built; the release itself receives only `travel-books/manifest.json`.
+ * Snapshots stay checked metadata for rollback but hold no files (#2971).
+ */
+async function copyPublication({root, buildDir, verify}) {
+  const manifests = await publicationManifests(root);
+  if (!manifests.length) return {files: 0, bytes: 0};
+  const assets = collectAssets(manifests.slice(0, 1));
+  await verify(assets);
   const outputRoot = await fs.realpath(buildDir);
-  const verifiedCopies = new Map();
-  let total = 0;
-  for (const asset of assets) {
-    const cached = path.join(cacheRoot, asset.relative);
-    let bytes;
-    try {
-      let current=cacheRoot;
-      for(const part of asset.relative.split('/')){current=path.join(current,part);if((await fs.lstat(current)).isSymbolicLink())throw new Error('Publication cache escapes root through a symlink');}
-      const actual = await fs.realpath(cached);
-      if (!actual.startsWith(cacheRoot + path.sep)) throw new Error('Publication cache escapes root');
-      bytes = await fs.readFile(actual);
-    } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
-      bytes = await download(asset);
-      if (bytes.length !== asset.bytes || hash(bytes) !== asset.sha256) throw new Error('Publication download checksum mismatch');
-      checkContent(asset,bytes);
-      await ensureDirectory(cacheRoot, path.dirname(asset.relative));
-      const temporary = cached + `.tmp-${process.pid}`;
-      await fs.writeFile(temporary, bytes, {flag: 'wx'});
-      await fs.rename(temporary, cached);
-    }
-    if (bytes.length !== asset.bytes || hash(bytes) !== asset.sha256) throw new Error('Publication cache checksum mismatch');
-    checkContent(asset,bytes);
-    const destination = path.join(outputRoot, 'travel-books', asset.relative);
-    await ensureDirectory(outputRoot, path.join('travel-books', path.dirname(asset.relative)));
-    // Do not follow a pre-existing destination symlink.
-    await fs.rm(destination, {force: true});
-    const contentKey = asset.sha256 + ':' + asset.bytes;
-    const firstCopy = verifiedCopies.get(contentKey);
-    // Link only build-owned copies, after checking this source independently.
-    // A failed link must refuse publication rather than inflate the disk payload.
-    if (firstCopy) await fs.link(firstCopy, destination);
-    else {
-      await fs.writeFile(destination, bytes, {flag: 'wx'});
-      await fs.utimes(destination, PUBLICATION_MTIME, PUBLICATION_MTIME);
-      verifiedCopies.set(contentKey, destination);
-    }
-    total += bytes.length;
-  }
-  await ensureDirectory(outputRoot, 'travel-books');
-  const pointer = path.join(outputRoot, 'travel-books/manifest.json');
+  const books = await ensureDirectory(outputRoot, 'travel-books');
+  const pointer = path.join(books, 'manifest.json');
   await fs.rm(pointer, {force: true});
-  await fs.writeFile(pointer, JSON.stringify(current, null, 2) + '\n', {flag: 'wx'});
-  return {files: assets.length, bytes: total};
+  await fs.writeFile(pointer, JSON.stringify(manifests[0], null, 2) + '\n', {flag: 'wx'});
+  // Build gate: nothing else may reach the release under /travel-books/ (e.g. via public/).
+  const entries = await fs.readdir(books);
+  if (entries.length !== 1) throw new Error('The release must carry only travel-books/manifest.json; book files belong in storage: ' + entries.filter(name => name !== 'manifest.json').join(', '));
+  return {files: assets.length, bytes: assets.reduce((total, asset) => total + asset.bytes, 0)};
+}
+
+/** `.codex-temp` of the canonical checkout, shared by its worktrees (deploys build in one). */
+function canonicalTemp(root) {
+  const common = execFileSync('git', ['rev-parse', '--git-common-dir'], {cwd: root, encoding: 'utf8'}).trim();
+  return path.join(path.resolve(root, common, '..'), '.codex-temp');
 }
 
 if (require.main === module) {
   const root = path.resolve(__dirname, '../..');
-  const common = execFileSync('git', ['rev-parse', '--git-common-dir'], {cwd: root, encoding: 'utf8'}).trim();
-  const canonical = path.resolve(root, common, '..');
-  copyPublication({root, buildDir: path.resolve(process.argv[2] || 'dist/prod'), cacheDir: path.join(canonical, '.codex-temp/books-publication')})
-    .then(result => console.log(`Ready books: ${result.files} verified files, ${result.bytes} bytes`))
+  const {verifyAssets} = require('./storage.cjs');
+  const cacheFile = path.join(canonicalTemp(root), 'books-storage-verified.json');
+  copyPublication({root, buildDir: path.resolve(process.argv[2] || 'dist/prod'), verify: assets => verifyAssets(assets, {cacheFile})})
+    .then(result => console.log(`Ready books: ${result.files} files of the current editions confirmed in storage (${result.bytes} bytes), release carries only the manifest`))
     .catch(error => { console.error(error.message); process.exitCode = 1; });
 }
-module.exports = {collectAssets, copyPublication, ensureDirectory, checkContent, writePublicationStagingMetadata, publicationAssetLocation, PUBLICATION_MTIME, bookContentsIndex};
+module.exports = {collectAssets, copyPublication, publicationManifests, canonicalTemp, ensureDirectory, checkContent, writePublicationStagingMetadata, publicationAssetLocation, bookContentsIndex};

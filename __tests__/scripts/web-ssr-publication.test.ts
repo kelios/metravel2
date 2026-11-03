@@ -14,7 +14,7 @@ describe('SSR publication pre-transfer checkout gate', () => {
     fs.mkdirSync(path.join(fixture, 'candidate', 'runtime'), { recursive: true })
     fs.writeFileSync(path.join(fixture, 'candidate', '.ssr-build.json'), '{}')
     fs.writeFileSync(path.join(fixture, 'ssh'), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$SSR_TEST_CALLS"\nif [ "$SSR_TEST_CAPABILITY" = error ]; then exit 1; fi\nprintf "%s\\n" "$SSR_TEST_CAPABILITY"\n', { mode: 0o755 })
-    fs.writeFileSync(path.join(fixture, 'rsync'), '#!/bin/sh\nprintf "rsync %s\\n" "$*" >> "$SSR_TEST_CALLS"\ncase " $* " in *" --dry-run "*) printf "Total transferred file size: %s bytes\\n" "${SSR_TEST_BOOK_TRANSFER:-0}";; esac\n', { mode: 0o755 })
+    fs.writeFileSync(path.join(fixture, 'rsync'), '#!/bin/sh\nprintf "rsync %s\\n" "$*" >> "$SSR_TEST_CALLS"\n', { mode: 0o755 })
   })
 
   afterEach(() => fs.rmSync(fixture, { recursive: true, force: true }))
@@ -78,9 +78,9 @@ describe('SSR publication pre-transfer checkout gate', () => {
     expect(transfer).toBeGreaterThan(preflight)
     expect(commands[preflight]).toContain('720 1536')
     expect(commands[transfer]).toContain('rsync -azHhe ssh --delete --mkpath --protect-args ')
-    expect(commands[transfer]).toContain('--exclude=/client/travel-books/ ')
+    expect(commands[transfer]).not.toContain('--exclude')
     expect(commands[transfer]).toContain('/web-ssr/incoming/'+'a'.repeat(40)+'/')
-    // Without books there is one transfer; the sealed release is audited afterwards.
+    // One transfer (book files live in S3, #2971); the sealed release is audited afterwards.
     expect(commands.filter(command => command.startsWith('rsync '))).toHaveLength(1)
     const audits = commands.filter(command => command.includes('bash -s -- books ') || command.includes('bash -s -- chunks '))
     expect(audits).toHaveLength(2)
@@ -89,25 +89,23 @@ describe('SSR publication pre-transfer checkout gate', () => {
     expect(commands.indexOf(audits[0])).toBeGreaterThan(commands.findIndex(command => command.includes('stage --sha')))
   })
 
-  // Ready books are immutable by revision (#2857): they go up once, by
-  // `--link-dest` against the shared store, and the disk preflight counts
-  // only what the dry run says the upload will actually bring.
-  it('uploads books against the shared store and sizes the preflight by the dry run', () => {
+  // Ready-book files live in S3 (#2971): the release carries only the
+  // pointer `client/travel-books/manifest.json`, which travels with the rest of
+  // the candidate in the one transfer the disk preflight sizes.
+  it('carries the book pointer with the candidate and sizes the preflight by the whole candidate', () => {
     const calls = path.join(fixture, 'calls.txt')
-    const books = path.join(fixture, 'candidate/client/travel-books/book/r1')
-    fs.mkdirSync(books, { recursive: true })
-    fs.writeFileSync(path.join(books, 'read.pdf'), '%PDF-'.padEnd(64 * 1024, 'x'))
+    fs.mkdirSync(path.join(fixture, 'candidate/client/travel-books'), { recursive: true })
+    fs.writeFileSync(path.join(fixture, 'candidate/client/travel-books/manifest.json'), '{}'.padEnd(8 * 1024, ' '))
     fs.mkdirSync(path.join(fixture, 'candidate/client/_expo/static/js/web'), { recursive: true })
     fs.writeFileSync(path.join(fixture, 'candidate/client/_expo/static/js/web/entry-a.js'), 'x'.repeat(4096))
     const candidateKib = Number(runCli('du', ['-sk', path.join(fixture, 'candidate')]).stdout.split(/\s+/)[0])
-    const booksKib = Number(runCli('du', ['-sk', path.join(fixture, 'candidate/client/travel-books')]).stdout.split(/\s+/)[0])
     const result = runCli('bash', ['scripts/web-ssr-publication.sh', 'stage', 'b'.repeat(40), path.join(fixture, 'candidate')], {
       cwd: process.cwd(), env: {
         ...process.env, PATH: `${fixture}${path.delimiter}${process.env.PATH}`,
         DEPLOY_ENV_FILE: path.join(fixture, 'missing-env'),
         PROD_SSH_USER: 'test', PROD_SSH_HOST: 'invalid.example', PROD_REMOTE_DIR: '/owned/repository',
         EXPO_PUBLIC_QUEST_WEB_RUNTIME_SSR: 'true', SSR_RELEASE_JS_MAX_MB: '700',
-        SSR_TEST_CALLS: calls, SSR_TEST_BOOK_TRANSFER: '2,048',
+        SSR_TEST_CALLS: calls,
         SSR_TEST_CAPABILITY: '{"schema_version":2,"available":true,"enabled":true,"quest_web":{"schema_version":2,"refresh_max_age_seconds":30,"builder_schema":2}}',
       },
     })
@@ -115,23 +113,19 @@ describe('SSR publication pre-transfer checkout gate', () => {
     const commands = fs.readFileSync(calls, 'utf8').trim().split('\n')
     const incoming = '/owned/repository/web-ssr/incoming/'+'b'.repeat(40)
     const store = '/owned/repository/web-ssr/shared/travel-books'
-    const mkdir = commands.findIndex(command => command.includes(`mkdir -p '${store}'`))
-    const dryRun = commands.findIndex(command => command.startsWith('rsync ') && command.includes(' --dry-run '))
+    expect(commands.some(command => command.includes(`mkdir -p '${store}'`) || command.includes('--link-dest') || command.includes(' --dry-run '))).toBe(false)
     const preflight = commands.findIndex(command => command.includes('bash -s -- preflight'))
-    const transfers = commands.map((command, index) => ({ command, index })).filter(({ command }) => command.startsWith('rsync ') && !command.includes(' --dry-run '))
-    expect(mkdir).toBeGreaterThan(-1)
-    expect(dryRun).toBeGreaterThan(mkdir)
-    expect(commands[dryRun]).toContain(`--link-dest=${store} --dry-run --stats ${path.join(fixture, 'candidate/client/travel-books')}/ test@invalid.example:${incoming}/client/travel-books/`)
-    expect(preflight).toBeGreaterThan(dryRun)
-    expect(commands[preflight]).toContain(`/owned/repository ${candidateKib - booksKib + 2} 720 1536`)
-    expect(transfers).toHaveLength(2)
+    expect(commands[preflight]).toContain(`/owned/repository ${candidateKib} 720 1536`)
+    const transfers = commands.map((command, index) => ({ command, index })).filter(({ command }) => command.startsWith('rsync '))
+    expect(transfers).toHaveLength(1)
     expect(transfers[0].index).toBeGreaterThan(preflight)
-    expect(transfers[0].command).toBe(`rsync -aH --delete --mkpath --protect-args --link-dest=${store} -zhe ssh ${path.join(fixture, 'candidate/client/travel-books')}/ test@invalid.example:${incoming}/client/travel-books/`)
-    expect(transfers[1].command).toBe(`rsync -azHhe ssh --delete --mkpath --protect-args --exclude=/client/travel-books/ ${path.join(fixture, 'candidate')}/ test@invalid.example:${incoming}/`)
+    expect(transfers[0].command).toBe(`rsync -azHhe ssh --delete --mkpath --protect-args ${path.join(fixture, 'candidate')}/ test@invalid.example:${incoming}/`)
     const stage = commands.findIndex(command => command.includes('stage --sha '+'b'.repeat(40)+' --overlay-retention-days 14 --overlay-max-mb 256'))
-    expect(stage).toBeGreaterThan(transfers[1].index)
+    expect(stage).toBeGreaterThan(transfers[0].index)
+    const books = commands.findIndex(command => command.includes(`bash -s -- books /owned/repository/web-ssr/releases/${'b'.repeat(40)}/client ${store}`))
+    expect(books).toBeGreaterThan(stage)
     const chunks = commands.findIndex(command => command.includes('bash -s -- chunks '))
-    expect(chunks).toBeGreaterThan(stage)
+    expect(chunks).toBeGreaterThan(books)
     expect(commands[chunks]).toContain(`bash -s -- chunks /owned/repository/web-ssr/releases/${'b'.repeat(40)}/client 4 256 700`)
   })
 

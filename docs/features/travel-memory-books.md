@@ -277,6 +277,7 @@ node scripts/build-ready-books.mjs --output .codex-temp/books-next/production
 node scripts/books/validate-qr.mjs .codex-temp/books-next/production/production-index.json --python <python-with-zxingcpp-and-pillow>
 node scripts/validate-ready-books.mjs --production .codex-temp/books-next/production/production-index.json --digital-only
 node scripts/books/publish.mjs --input .codex-temp/books-next/production --output .codex-temp/books-publication --base-url https://metravel.by/travel-books/
+node scripts/books/storage.cjs upload --manifest .codex-temp/books-publication/manifest.json
 ```
 
 QR-интерпретатор должен содержать `zxingcpp` и Pillow; отчёт проверяет каждый
@@ -286,6 +287,11 @@ QR из точных reading PDF в цвете и оттенках серого.
 300 ppi, готовность провайдера или физическую приёмку. Полный `ReadyBook` по-прежнему
 проверяется `validate-ready-books.mjs --metadata-only <manifest>` и с
 `--assets-root <root> <manifest>`; структура сама по себе не доказывает реальных файлов.
+
+Последняя команда загружает файлы новой ревизии в S3 и подтверждает их там
+(раздел «Хранилище файлов» ниже); manifest активируется только после неё. Это
+отдельный шаг, а не флаг `publish.mjs`: SHA самого `publish.mjs` входит в ревизию
+(`publisherHash`), и любая правка генератора поменяла бы ID будущих ревизий.
 
 Только небольшие метаданные активируются в `data/travelBooks/{manifest,related}.json`.
 Неизменяемые снимки — `data/travelBooks/releases/<sha256-байтов-json>.json`.
@@ -300,6 +306,58 @@ QR из точных reading PDF в цвете и оттенках серого.
 3 мм). Значение берётся из `printProfile` артефактов production-index и проверяется
 на согласованность. Ранее опубликованные ревизии не переписываются, в них поля нет.
 Их вылет 3 мм подтверждают BleedBox/TrimBox самих PDF.
+
+### Хранилище файлов
+
+С #2971 (решения владельца 03.11.2026) неизменяемые файлы изданий текущего
+manifest — PDF, предпросмотры webp, шрифт и лицензия, `book.json`, инструкции и
+справочник типографий — хранятся в S3, а не в релизе фронта на диске VPS: бакет
+`metravelprod` (eu-north-1, публичное чтение, как у фото статей), ключ
+`travel-books/<книга>/<ревизия>/<файл>` совпадает с путём URL. Объект несёт
+`Content-Type`, `Cache-Control: public, max-age=31536000, immutable` и
+контрольную сумму S3 `x-amz-checksum-sha256`, равную SHA из manifest.
+
+- Состав: в S3 только файлы текущего manifest — то, что сайт предлагает скачать
+  или показывает. Прежних ревизий и рабочих материалов там нет; URL ревизии,
+  которой нет в живом manifest, после `prune` отвечает 404 (ни QR, ни заказы на
+  URL ревизий не ссылаются). Откат — раздел «Откат публикации».
+- Отдача: nginx бэка, `location ^~ /travel-books/` — сначала файл релиза (релизы до
+  #2971), иначе прокси в бакет (#2957, отдельная `area=back` карточка). Адрес
+  `https://metravel.by/travel-books/…` и тело те же, ответ 200/206, без редиректа.
+  `travel-books/manifest.json` всегда из релиза.
+- Загрузка и проверка: `scripts/books/storage.cjs`. `upload [--manifest <file>]
+  [--source <dir>]` загружает недостающие файлы manifest (по умолчанию
+  `data/travelBooks/manifest.json` и кеш `.codex-temp/books-publication`
+  канонического чекаута). Перед отправкой байты сверяются с manifest и
+  `checkContent`; запись с `If-None-Match: *`, поэтому объект существующего пути
+  не перезаписывается, а другой SHA под тем же ключом — ошибка. `verify
+  [--manifest <file>]` — анонимный HEAD каждого файла (`x-amz-checksum-mode`),
+  тело не скачивается. Подтверждённые пары «ключ + SHA» запоминаются в
+  `.codex-temp/books-storage-verified.json` канонического чекаута.
+- Чистка: `prune [--keep-manifest <staged>]` — сначала отчёт: список объектов под
+  `travel-books/`, на которые не ссылается ни manifest чекаута, ни живой
+  `https://metravel.by/travel-books/manifest.json`, ни подготовленный
+  `--keep-manifest`, пишется в `.codex-temp/books-storage-prune-<время>.txt`.
+  Удаляет только `prune --apply`. Без доступного живого manifest чистка
+  отказывает, поэтому файлы, которые сайт отдаёт сейчас, не удаляются. Между
+  `upload --manifest <staged>` и активацией публикации `prune` запускать только с
+  `--keep-manifest <staged>`.
+- Креды загрузки (решение владельца 03.11.2026): тот же медиа-ключ, которым сайт
+  грузит фото (`metravel-app-media`, права на `metravelprod`). Берётся из
+  `../metravel-backend/local_env.sh` (`AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`),
+  либо из окружения `METRAVEL_BOOKS_S3_ACCESS_KEY_ID`/`METRAVEL_BOOKS_S3_SECRET_ACCESS_KEY`,
+  либо из файла `METRAVEL_BOOKS_S3_ENV`. В лог и чат не выводится. Загрузку и
+  `prune --apply` в прод-бакете запускает владелец из своего терминала:
+  автоматический режим агента запись в production S3 не пропускает.
+- Сборка (`build-prod.sh`, `scripts/build-web-prod.js` → `copy-publication.cjs`):
+  все проверки manifest и снимков, затем подтверждение в S3 каждого файла
+  текущего manifest; в `dist/.../travel-books/` пишется только `manifest.json`.
+  Любой другой файл там или неподтверждённый файл в S3 останавливает сборку. На
+  хосте `web-ssr-release-audit.sh books` повторяет гейт для запечатанного релиза и
+  опустошает прежнее общее хранилище `web-ssr/shared/travel-books` (#2857) по
+  мере выхода из ретеншена релизов, ещё державших файлы.
+- Стоимость и пределы — gate `docs/WORKFLOW_OPERATIONS.md` §3.4.1, оценка в
+  `openspec/changes/move-ready-book-files-to-s3/design.md`.
 
 ### Откат публикации
 
@@ -322,12 +380,19 @@ contents index differs from the current publication».
 4. Проверить: `node scripts/validate-ready-books.mjs --publication data/travelBooks/manifest.json --assets-root .codex-temp/books-publication`,
    совпадение `contents.json` с `bookContentsIndex(manifest)` (гейт copy-publication)
    и SHA всех `releases/*.json`.
-5. Снимки `releases/**` не удалять: по ним `copy-publication.cjs` продолжает
-   отдавать неизменяемые файлы и откатываемой ревизии, и всех прежних.
-6. Дальше обычная цепочка: коммит явных путей → штатный deploy. После отката
+5. Вернуть файлы откатываемой ревизии в S3: `node scripts/books/storage.cjs upload`
+   (по умолчанию — `data/travelBooks/manifest.json` и байты из кеша
+   `.codex-temp/books-publication`). S3 хранит только текущий manifest (раздел
+   «Хранилище файлов»), поэтому файлов прежней ревизии там уже может не быть.
+   Кеш — единственный источник этих байтов: прежние ревизии из него не удалять.
+   Без этого шага `copy-publication.cjs` остановит сборку «Book storage lacks …».
+6. Снимки `releases/**` не удалять: по ним проверяется SHA-имя снимка и
+   находится manifest для отката.
+7. Дальше обычная цепочка: коммит явных путей → штатный deploy. После отката
    `prepare-web-ssr.js` перестаёт генерировать страницы изданий, которых нет в
-   откатанном manifest. Их `/books/<slug>` отдают 404 со ссылкой в каталог, а
-   PDF по прямым URL остаются доступными.
+   откатанном manifest. Их `/books/<slug>` отдают 404 со ссылкой в каталог; PDF
+   по прямым URL ревизий, которых нет в живом manifest, отвечают 404 после
+   ближайшего `storage.cjs prune` (ни QR, ни заказы на URL ревизий не ссылаются).
 
 `validate-ready-books.mjs --metadata-only` проверяет один строгий `ReadyBook`, а
 не опубликованный manifest. На `manifest.json` он штатно выдаёт ошибки схемы. Для
@@ -367,11 +432,10 @@ contents index differs from the current publication».
 не тривиальное слияние. Подробности о legacy-данных — в `data/travelBooks/README.md`.
 
 `build-prod.sh` и `scripts/build-web-prod.js` вызывают
-`scripts/books/copy-publication.cjs`: проверенные bytes/SHA из текущего manifest и
-снимков копируются из общего кеша `.codex-temp/books-publication/` в соответствующий
-`dist/.../travel-books/`. При отсутствии кеша восстановление разрешено только по
-собственным `https://metravel.by/travel-books/` URL с той же проверкой целостности.
-Крупные PDF не хранятся в Git/`public/`; новых S3/cloud-операций для публикации нет.
+`scripts/books/copy-publication.cjs`: файлы текущего manifest
+подтверждаются в S3 по размеру и SHA, в `dist/.../travel-books/` попадает только
+`manifest.json` (раздел «Хранилище файлов»). Крупные PDF не хранятся в Git,
+`public/` и релизе фронта.
 
 Expo server-export не создаёт конкретные страницы из `generateStaticParams`.
 Поэтому `scripts/prepare-web-ssr.js` тем же экспортированным renderer создаёт
@@ -574,7 +638,9 @@ node scripts/validate-ready-books.mjs --publication data/travelBooks/manifest.js
 Сборщик дополнений с `--activate` сначала проверяет все ресурсы локальной
 папки, безопасно заполняет `.codex-temp/books-publication`, затем атомарно
 обновляет tracked manifest/related и сохраняет неизменяемый snapshot. Это
-локальная активация метаданных и кеша, а не загрузка в типографию или на сервер.
+локальная активация метаданных и кеша, а не загрузка в типографию или на сервер:
+после неё обязателен `node scripts/books/storage.cjs upload`, иначе сборка
+фронта остановится на неподтверждённых в S3 файлах.
 `copy-publication` допускает HTML только для `printGuidePages`, JSON — только
 для `printDirectory` или типизированного `bookMetadata`; случайный файл с таким
 расширением не становится публичным ресурсом. Исторические снимки без этих

@@ -744,10 +744,9 @@ SSR runtime выкат отказывает (`scripts/lib/webOutput.js`), ина
 server output и запускает `./build-prod.sh prod`. Тот делает один серверный
 экспорт, постобработку статических оболочек (`scripts/postprocess-route-shells.js`)
 и публикует пару `web-ssr-publication.sh stage → publish-code → finalize-code`
-(stage заливает книги `--link-dest`'ом в общее хранилище
-`web-ssr/shared/travel-books`, а после запечатывания релиза проверяет его книги и
-чанки — `scripts/web-ssr-release-audit.sh`, предел чанков роняет выкат до
-переключения, #2857);
+(файлы книг лежат в S3, релиз несёт только `travel-books/manifest.json`, #2971;
+после запечатывания релиза `scripts/web-ssr-release-audit.sh` проверяет это и
+чанки — лишнее в `travel-books` и предел чанков роняют выкат до переключения, #2857);
 не прошедшая живую проверку пара откатывается `rollback-code` к предыдущей
 SSR-паре. `build-prod.sh` с `DEPLOY=1` без SSR-релиза отказывает до сборки.
 Статический конвейер сущностей (v1-пакет квестов, режимы `ru-only`/`translations`,
