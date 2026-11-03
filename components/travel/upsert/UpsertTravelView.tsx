@@ -19,7 +19,7 @@ import WizardStepRouter, {
 } from '@/components/travel/upsert/WizardStepRouter';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useTravelPreview } from '@/hooks/useTravelPreview';
-import { buildLoginHref, buildRegistrationHref } from '@/utils/authNavigation';
+import { buildExplicitLoginHref, buildRegistrationHref } from '@/utils/authNavigation';
 import { openWebWindow } from '@/utils/externalLinks';
 import {
   trackContentCreateAuthGateViewed,
@@ -248,7 +248,7 @@ const LoadErrorState = ({
         {
           label: i18nT('travel:components.travel.upsert.UpsertTravelView.voyti_c3df4ff8'),
           accessibilityLabel: i18nT('travel:components.travel.upsert.UpsertTravelView.voyti_v_akkaunt_3949bf3b'),
-          onPress: () => router.push(buildLoginHref({ redirect: '/metravel' }) as any),
+          onPress: () => router.push(buildExplicitLoginHref({ redirect: '/metravel' }) as any),
         },
         homeAction,
       ];
@@ -360,7 +360,7 @@ const AuthRequiredState = ({ colors, styles, router, createHref, shareTripContex
       sourceTravelId: shareTripContext?.sourceTravelId,
       mode,
     });
-    router.push(buildLoginHref({ redirect: createHref, intent }) as any);
+    router.push(buildExplicitLoginHref({ redirect: createHref, intent }) as any);
   }, [createHref, intent, mode, router, shareTripContext?.sourceTravelId]);
 
   const handleRegister = useCallback(() => {
@@ -502,7 +502,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     const id = controller.formData?.id;
     const redirect = id ? `/travel/${encodeURIComponent(String(id))}` : controller.createHref;
     const intent = !id && controller.shareTripContext ? 'share-trip' : 'edit-travel';
-    router.push(buildLoginHref({ redirect, intent }) as any);
+    router.push(buildExplicitLoginHref({ redirect, intent }) as any);
   }, [controller.createHref, controller.draftRecovery, controller.formData?.id,
     controller.shareTripContext, router]);
 

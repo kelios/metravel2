@@ -429,6 +429,22 @@ it('NODE_ENV=production local CLI uses only its explicit token and public reads 
   } finally { server.stop() }
 }, 10000)
 
+it('revalidates a cache file atomically replaced between lstat and open', () => {
+  const file = path.join(fs.realpathSync(homeDir), 'cache')
+  const replacement = file + '.new'
+  fs.writeFileSync(file, 'old')
+  fs.writeFileSync(replacement, 'new')
+  const open = fs.openSync.bind(fs)
+  const spy = jest.spyOn(fs, 'openSync').mockImplementationOnce((target, flags, mode) => {
+    expect(target).toBe(file)
+    fs.renameSync(replacement, file)
+    return open(target, flags, mode)
+  })
+  try {
+    expect(readRegular(file).bytes.toString('utf8')).toBe('new')
+  } finally { spy.mockRestore() }
+})
+
 // TC3: external generations and self-aliasing cannot be silently rolled back.
 it.each([false, true])('second rename failure preserves the correct owned/foreign generation (foreign=%s)', (foreign) => {
   const canonicalHome = fs.realpathSync(homeDir)

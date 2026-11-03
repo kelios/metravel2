@@ -152,11 +152,12 @@ function scanFile(file: string): Scan {
   return scanSource(fs.readFileSync(file, 'utf8'), relative);
 }
 
-const scans = SRC_DIRS.flatMap((dir) => walkSourceFiles(path.join(ROOT, dir))).map(scanFile);
+const scans = new Map(SRC_DIRS.flatMap((dir) => walkSourceFiles(path.join(ROOT, dir)))
+  .map((file) => [file, scanFile(file)]));
 
 describe('Link asChild — стиль прямого ребёнка', () => {
   it('ни один ребёнок не отдаёт стиль функцией или массивом', () => {
-    expect(scans.flatMap((scan) => scan.offenders)).toEqual([]);
+    expect([...scans.values()].flatMap((scan) => scan.offenders)).toEqual([]);
   });
 
   it('видит стиль, спрятанный за именем переменной', () => {
@@ -201,6 +202,6 @@ describe('Link asChild — стиль прямого ребёнка', () => {
   it('страж действительно читает разметку ссылок', () => {
     // Пустая область молча красит страж зелёным: если обход перестанет находить
     // `asChild`, тест обязан упасть здесь, а не притвориться пройденным.
-    expect(scans.reduce((total, scan) => total + scan.links, 0)).toBeGreaterThanOrEqual(10);
+    expect(scans.get(path.join(ROOT, 'components/ui/LinkPressable.tsx'))?.links).toBe(1);
   });
 });

@@ -46,22 +46,28 @@ function assertContained(file, homeDir) {
 }
 
 function readRegular(file, { optional = true } = {}) {
-  let fd
-  try {
-    const requested = path.resolve(file)
-    const before = fs.lstatSync(requested)
-    file = canonicalPath(requested)
-    if (!before.isFile() || before.isSymbolicLink() || before.size > MAX_CACHE_BYTES) throw new TokenError('cache', { operation: 'read' })
-    fd = fs.openSync(file, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW)
-    const actual = fs.fstatSync(fd)
-    if (actual.ino !== before.ino || actual.dev !== before.dev || actual.size > MAX_CACHE_BYTES) throw new TokenError('cache', { operation: 'read' })
-    return { bytes: fs.readFileSync(fd), stat: actual }
-  } catch (error) {
-    if (optional && error.code === 'ENOENT') return null
-    throw error instanceof TokenError ? error : new TokenError('cache', { operation: 'read' })
-  } finally {
-    if (fd !== undefined) fs.closeSync(fd)
+  const requested = path.resolve(file)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let fd
+    try {
+      const before = fs.lstatSync(requested)
+      const canonical = canonicalPath(requested)
+      if (!before.isFile() || before.isSymbolicLink() || before.size > MAX_CACHE_BYTES) throw new TokenError('cache', { operation: 'read' })
+      fd = fs.openSync(canonical, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW)
+      const actual = fs.fstatSync(fd)
+      if (!actual.isFile() || actual.size > MAX_CACHE_BYTES) throw new TokenError('cache', { operation: 'read' })
+      // Cache and election writers publish with rename. Recheck the whole path
+      // once if the descriptor belongs to a newer generation.
+      if (actual.ino !== before.ino || actual.dev !== before.dev) continue
+      return { bytes: fs.readFileSync(fd), stat: actual }
+    } catch (error) {
+      if (optional && error.code === 'ENOENT') return null
+      throw error instanceof TokenError ? error : new TokenError('cache', { operation: 'read' })
+    } finally {
+      if (fd !== undefined) fs.closeSync(fd)
+    }
   }
+  throw new TokenError('cache', { operation: 'read' })
 }
 
 function parseSource(source) {
