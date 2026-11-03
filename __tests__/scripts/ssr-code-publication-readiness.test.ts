@@ -31,16 +31,29 @@ esac
     server = await startStubServer(`
 const http = require('node:http');
 const sha = ${JSON.stringify(sha)};
+let catalogResponse, questResponse;
+const releaseBoth = () => {
+  if (!catalogResponse || !questResponse) return;
+  catalogResponse.setHeader('Content-Type', 'application/json');
+  catalogResponse.end(JSON.stringify({results:[{slug:'example'}]}));
+  questResponse.writeHead(503, {'Content-Type':'application/json','Retry-After':'5'});
+  questResponse.end(JSON.stringify({schema_version:2,state:'temporary_failure',kind:'detail',locale:'ru',page:null,versions:[],error_code:'refresh_pending',source_checked_at:1000,source_age_seconds:2}));
+  catalogResponse = questResponse = null;
+};
 const server = http.createServer((req, res) => {
   const origin = 'http://' + req.headers.host;
   const pathname = new URL(req.url, origin).pathname;
   res.setHeader('Cache-Control', 'no-store');
   if (pathname === '/api/travels/') {
-    res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({results:[{slug:'example'}]})); return;
+    // Neither probe can complete before the other has started.
+    catalogResponse = res;
+    releaseBoth();
+    return;
   }
   if (pathname.startsWith('/api/quests/web/')) {
-    res.writeHead(503, {'Content-Type':'application/json','Retry-After':'5'});
-    res.end(JSON.stringify({schema_version:2,state:'temporary_failure',kind:'detail',locale:'ru',page:null,versions:[],error_code:'refresh_pending',source_checked_at:1000,source_age_seconds:2})); return;
+    questResponse = res;
+    releaseBoth();
+    return;
   }
   const canonical = origin + '/travels/example';
   const {state, reason} = JSON.parse(require('node:fs').readFileSync(${JSON.stringify(path.join(fixture, 'state'))}, 'utf8'));
@@ -67,7 +80,8 @@ node() {
     *) "$SSR_PIPELINE_NODE" "$@";;
   esac
 }
-${shellFunction('verify_quest_runtime')}
+${shellFunction('verify_deployment_runtime')}
+stage() { :; }
 ${shellFunction('deploy_prod')}
 deploy_prod prod
 `);
@@ -79,25 +93,25 @@ deploy_prod prod
     } });
     if (!fs.existsSync(actions)) throw new Error(result.stderr || result.stdout || 'Publisher did not invoke its transport');
     const calls = fs.readFileSync(actions, 'utf8').trim().split('\n');
-    expect(calls).toContain('publish-code');
-    expect(calls).toContain('verify-code');
+    expect(calls).toEqual(['stage', 'publish-code', 'capability', 'verify-code', rollback ? 'rollback-code' : 'finalize-code']);
+    expect(result.stdout).toContain('⏱ SSR capability:');
+    expect(result.stdout).toContain('⏱ SSR release: verify-code=');
     if (rollback) {
       expect(result.status).not.toBe(0);
-      expect(calls).toContain('rollback-code');
-      expect(calls).not.toContain('finalize-code');
     } else {
       expect(result.stderr).toBe('');
       expect(result.status).toBe(0);
       expect(result.stdout).toContain('content=pending');
-      expect(calls).toContain('finalize-code');
-      expect(calls).not.toContain('rollback-code');
+      expect(result.stdout).toMatch(/⏱ SSR article: catalog=.*document=.*attempts=1, HTTP 502\/503=0/);
+      expect(result.stdout).toMatch(/⏱ SSR quest: publication=.*attempts=1, HTTP 502\/503=1/);
     }
   });
 
   it('stops with a non-zero code and a reason line when the server refuses the stage (#2930)', () => {
     const runner = path.join(fixture, 'stage-refused.sh');
     fs.writeFileSync(runner, `set -euo pipefail
-${shellFunction('verify_quest_runtime')}
+${shellFunction('verify_deployment_runtime')}
+stage() { :; }
 ${shellFunction('deploy_prod')}
 deploy_prod prod
 `);
@@ -114,7 +128,8 @@ deploy_prod prod
   it('refuses any publication that is not the prod SSR release (#2766)', () => {
     const runner = path.join(fixture, 'refuse.sh');
     fs.writeFileSync(runner, `set -euo pipefail
-${shellFunction('verify_quest_runtime')}
+${shellFunction('verify_deployment_runtime')}
+stage() { :; }
 ${shellFunction('deploy_prod')}
 deploy_prod "$1"
 `);

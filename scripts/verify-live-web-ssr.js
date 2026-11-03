@@ -4,7 +4,7 @@
 const { setTimeout: wait } = require('node:timers/promises')
 const { DomUtils } = require('htmlparser2')
 const { assertSsrDocument } = require('./lib/ssrDocument')
-const { assertReadinessMode, assertCodeHealth, verifyCodeHealth, documentContentState } = require('./lib/ssrDeploymentReadiness')
+const { assertReadinessMode, assertCodeHealth, verifyCodeHealth, createReadinessTiming, documentContentState } = require('./lib/ssrDeploymentReadiness')
 const { parseCliArgs, runCli, UsageError } = require('./lib/cli-contract')
 
 function verifyRuntimeResponse(response, html, { sha, canonical, requireHit = false, mode = 'strict', codeProof }) {
@@ -48,7 +48,7 @@ async function selectControlSlugs(request, origin) {
 }
 
 async function verifyLiveWebSsr({ sha, origin = 'https://metravel.by', timeoutMs = 45_000, fetchImpl = fetch, sleep = wait,
-  mode = 'strict', codeHealth = verifyCodeHealth }) {
+  mode = 'strict', codeHealth = verifyCodeHealth, timing = createReadinessTiming() }) {
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error('A full renderer source SHA is required')
   assertReadinessMode(mode)
   const base = new URL(origin)
@@ -58,7 +58,7 @@ async function verifyLiveWebSsr({ sha, origin = 'https://metravel.by', timeoutMs
   const request = async (url) => {
     const remaining = deadline - Date.now()
     if (remaining <= 0) throw new Error('Renderer readiness deadline exceeded')
-    return fetchImpl(url, { signal: AbortSignal.timeout(Math.min(5000, remaining)), redirect: 'error', credentials: 'omit' })
+    return timing.response(await fetchImpl(url, { signal: AbortSignal.timeout(Math.min(5000, remaining)), redirect: 'error', credentials: 'omit' }))
   }
   // The catalog control shares the renderer's retry deadline, as the quest API
   // does in verify-live-quest-ssr.js: one slow or 5xx answer right after the
@@ -66,19 +66,24 @@ async function verifyLiveWebSsr({ sha, origin = 'https://metravel.by', timeoutMs
   let slugs = null
   let failure = new Error('Renderer readiness has no successful request')
   while (Date.now() < deadline) {
+    timing.attempt()
     try {
-      slugs ??= await selectControlSlugs(request, origin)
+      slugs ??= await timing.measure('catalog', () => selectControlSlugs(request, origin))
     } catch (error) {
       failure = error
     }
     for (const slug of slugs || []) {
       try {
         const canonical = new URL(`/travels/${encodeURIComponent(slug)}`, origin).href
-        const first = await request(canonical)
-        const firstContent = verifyRuntimeResponse(first, await first.text(), { sha, canonical, mode, codeProof })
+        const firstContent = await timing.measure('document', async () => {
+          const response = await request(canonical)
+          return verifyRuntimeResponse(response, await response.text(), { sha, canonical, mode, codeProof })
+        })
         if (firstContent) return { sha, canonical, ...firstContent }
-        const cached = await request(canonical)
-        const cachedContent = verifyRuntimeResponse(cached, await cached.text(), { sha, canonical, requireHit: true, mode, codeProof })
+        const cachedContent = await timing.measure('guest-HIT', async () => {
+          const response = await request(canonical)
+          return verifyRuntimeResponse(response, await response.text(), { sha, canonical, requireHit: true, mode, codeProof })
+        })
         if (cachedContent) return { sha, canonical, ...cachedContent }
         console.log(`[web-ssr-readiness] Rendered article and guest cache match ${sha}: ${canonical}`)
         return { sha, canonical }

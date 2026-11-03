@@ -28,6 +28,34 @@ async function verifyCodeHealth(sha) {
   return assertCodeHealth(JSON.parse(output), sha);
 }
 
+// Keep cumulative phase times and transient gateway errors visible on both
+// success and rollback, without logging response bodies or request URLs.
+function createReadinessTiming() {
+  const phases = new Map();
+  let attempts = 0;
+  let gatewayErrors = 0;
+  return {
+    attempt() { attempts += 1; },
+    response(response) {
+      if (response.status === 502 || response.status === 503) gatewayErrors += 1;
+      return response;
+    },
+    async measure(label, run) {
+      const started = performance.now();
+      const phase = phases.get(label) || { calls: 0, elapsed: 0 };
+      phases.set(label, phase);
+      phase.calls += 1;
+      try { return await run(); }
+      finally { phase.elapsed += performance.now() - started; }
+    },
+    report(label) {
+      const details = [...phases].map(([name, phase]) =>
+        `${name}=${(phase.elapsed / 1000).toFixed(2)}s/${phase.calls}`);
+      console.log(`⏱ SSR ${label}: ${[...details, `attempts=${attempts}`, `HTTP 502/503=${gatewayErrors}`].join(', ')}`);
+    },
+  };
+}
+
 function retryAfter(response) {
   const value = response.headers.get('retry-after');
   if (!value || !/^\d+$/.test(value) || Number(value) < 1 || Number(value) > 30) {
@@ -99,4 +127,4 @@ function documentContentState(response, find) {
     error_code: code, retry_after_seconds: retryAfter(response) };
 }
 
-module.exports = { assertReadinessMode, assertCodeHealth, verifyCodeHealth, classifySelectedContent, documentContentState };
+module.exports = { assertReadinessMode, assertCodeHealth, verifyCodeHealth, createReadinessTiming, classifySelectedContent, documentContentState };

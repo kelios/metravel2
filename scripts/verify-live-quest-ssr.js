@@ -6,7 +6,7 @@ const { DomUtils } = require('htmlparser2');
 const { assertSsrDocument } = require('./lib/ssrDocument');
 const { parseQuestPublicRoute, validateQuestPublicProjection } = require('../utils/questPublicPage');
 const { parseCliArgs, runCli } = require('./lib/cli-contract');
-const { assertReadinessMode, assertCodeHealth, verifyCodeHealth, classifySelectedContent } = require('./lib/ssrDeploymentReadiness');
+const { assertReadinessMode, assertCodeHealth, verifyCodeHealth, createReadinessTiming, classifySelectedContent } = require('./lib/ssrDeploymentReadiness');
 
 const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 
@@ -53,7 +53,7 @@ function verifyQuestRuntimeResponse(response, html, { sha, projection, requireHi
 }
 
 async function verifyLiveQuestSsr({ sha, controlPath, origin = 'https://metravel.by', timeoutMs = 45000, fetchImpl = fetch, sleep = wait,
-  mode = 'strict', codeHealth = verifyCodeHealth }) {
+  mode = 'strict', codeHealth = verifyCodeHealth, timing = createReadinessTiming() }) {
   const route = parseQuestPublicRoute(controlPath);
   if (!/^[a-f0-9]{40}$/.test(sha)) throw new Error('Full source SHA is required');
   assertReadinessMode(mode);
@@ -66,26 +66,34 @@ async function verifyLiveQuestSsr({ sha, controlPath, origin = 'https://metravel
   const request = async (path) => {
     const remaining = deadline - Date.now();
     if (remaining <= 0) throw new Error('Quest renderer readiness deadline exceeded');
-    return fetchImpl(new URL(path, base), { signal: AbortSignal.timeout(Math.min(5000, remaining)), credentials: 'omit', redirect: 'error' });
+    return timing.response(await fetchImpl(new URL(path, base), { signal: AbortSignal.timeout(Math.min(5000, remaining)), credentials: 'omit', redirect: 'error' }));
   };
   const selection = route.kind === 'detail' ? `detail/${route.city}/${route.slug}` : route.kind === 'city' ? `city/${route.city}` : `country/${route.country}`;
   let failure = new Error('Quest renderer readiness has no successful request');
   while (Date.now() < deadline) {
+    timing.attempt();
     try {
-      const api = await request(`/api/quests/web/${selection}/?lang=${route.locale}`);
-      if (!api.ok) {
+      const api = await timing.measure('publication', async () => {
+        const response = await request(`/api/quests/web/${selection}/?lang=${route.locale}`);
+        return { response, payload: response.ok || mode === 'deployment' ? await response.json() : null };
+      });
+      if (!api.response.ok) {
         if (mode === 'deployment') {
-          const content = classifySelectedContent(api, await api.json(), { kind: route.kind, locale: route.locale });
+          const content = classifySelectedContent(api.response, api.payload, { kind: route.kind, locale: route.locale });
           return { sha, canonical: new URL(controlPath, base).href, locale: route.locale, ...content };
         }
-        throw new Error(`Quest selected publication is unavailable: HTTP ${api.status}`);
+        throw new Error(`Quest selected publication is unavailable: HTTP ${api.response.status}`);
       }
-      const projection = validateQuestPublicProjection(await api.json(), route);
+      const projection = validateQuestPublicProjection(api.payload, route);
       if (!projection) throw new Error('Quest selected publication does not match its route');
-      const first = await request(controlPath);
-      verifyQuestRuntimeResponse(first, await first.text(), { sha, projection });
-      const cached = await request(controlPath);
-      verifyQuestRuntimeResponse(cached, await cached.text(), { sha, projection, requireHit: true });
+      await timing.measure('document', async () => {
+        const response = await request(controlPath);
+        verifyQuestRuntimeResponse(response, await response.text(), { sha, projection });
+      });
+      await timing.measure('guest-HIT', async () => {
+        const response = await request(controlPath);
+        verifyQuestRuntimeResponse(response, await response.text(), { sha, projection, requireHit: true });
+      });
       return { sha, canonical: projection.page.meta.canonical, locale: projection.locale, publication_id: projection.publication_id };
     } catch (error) { failure = error; }
     if (Date.now() < deadline) await sleep(Math.min(1000, deadline - Date.now()));
@@ -95,11 +103,13 @@ async function verifyLiveQuestSsr({ sha, controlPath, origin = 'https://metravel
 
 const CLI_SPEC = { name: 'verify-live-quest-ssr', usage: 'node scripts/verify-live-quest-ssr.js --sha <full-sha> --control-path /quests/<city>/<slug> [--readiness-mode strict|deployment] [--origin https://metravel.by]',
   selection: 'none', flags: { sha: { type: 'string', required: true }, 'control-path': { type: 'string' }, origin: { type: 'string', default: 'https://metravel.by' }, 'readiness-mode': { type: 'string', default: 'strict' } } };
-module.exports = { verifyQuestRuntimeResponse, verifyLiveQuestSsr };
-if (require.main === module) runCli(async () => {
-  const args = parseCliArgs(process.argv, CLI_SPEC);
-  const result = await verifyLiveQuestSsr({ ...args, mode: args.readinessMode });
+function printQuestReadiness(result) {
   console.log(result.content_status
     ? `[quest-ssr-readiness] Code SHA ${result.sha} is ready; content=${result.content_status}; strict content acceptance remains required`
     : `[quest-ssr-readiness] Published ${result.locale} quest and guest cache match ${result.sha}: ${result.canonical}`);
+}
+module.exports = { verifyQuestRuntimeResponse, verifyLiveQuestSsr, printQuestReadiness };
+if (require.main === module) runCli(async () => {
+  const args = parseCliArgs(process.argv, CLI_SPEC);
+  printQuestReadiness(await verifyLiveQuestSsr({ ...args, mode: args.readinessMode }));
 }, CLI_SPEC);

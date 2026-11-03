@@ -349,14 +349,17 @@ build_env() {
   fi
 }
 
-verify_quest_runtime() {
-  local mode="${1:-strict}"
-  local capability control_path
-  capability="$(bash scripts/web-ssr-publication.sh capability)"
-  control_path="$(node -e 'process.stdout.write(require("./scripts/lib/webOutput").getQuestControlPath(JSON.parse(process.argv[1]), {allowUnavailable: process.argv[2] === "deployment"}) || "")' "$capability" "$mode")"
-  local args=(--sha "$BUILD_SOURCE_SHA" --readiness-mode "$mode")
+verify_deployment_runtime() {
+  local capability control_path capability_started=$SECONDS
+  if ! capability="$(bash scripts/web-ssr-publication.sh capability)"; then
+    echo "⏱ SSR capability: $((SECONDS - capability_started))s (failed)"
+    return 1
+  fi
+  echo "⏱ SSR capability: $((SECONDS - capability_started))s"
+  control_path="$(node -e 'process.stdout.write(require("./scripts/lib/webOutput").getQuestControlPath(JSON.parse(process.argv[1]), {allowUnavailable: true}) || "")' "$capability")" || return 1
+  local args=(--sha "$BUILD_SOURCE_SHA")
   if [[ -n "$control_path" ]]; then args+=(--control-path "$control_path"); fi
-  node scripts/verify-live-quest-ssr.js "${args[@]}"
+  node scripts/verify-live-deployment-ssr.js "${args[@]}"
 }
 
 # Прод-выкат публикует только связанную пару SSR-релиза (#2766): серверный
@@ -381,8 +384,7 @@ deploy_prod() {
   # swap with the live checks, and the finalize with the disk report.
   stage "выкат: переключение и живые проверки"
   if ! { bash scripts/web-ssr-publication.sh publish-code "$BUILD_SOURCE_SHA" &&
-         node scripts/verify-live-web-ssr.js "$BUILD_SOURCE_SHA" --readiness-mode deployment &&
-         verify_quest_runtime deployment; }; then
+         verify_deployment_runtime; }; then
     echo "❌ Рендер не прошёл проверку — возвращаю связанную серверную и клиентскую версию"
     bash scripts/web-ssr-publication.sh rollback-code "$BUILD_SOURCE_SHA" || echo "❌ Возврат требует восстановления владельцем"
     return 1
