@@ -801,6 +801,13 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       computed.push({ label, path });
     });
 
+    // #2948: название книги не угадывается из слага («Poland Castles») — как у квестов (#2466).
+    // Оно стоит в h1 страницы; каталог в шапку не тянем ради стартового бюджета JS, поэтому
+    // последняя крошка — нейтральная «Книга»: «Книги» остаются ссылкой, «назад» ведёт в каталог.
+    if (p.startsWith('/books/') && computed.length > 1) {
+      computed.splice(1, computed.length - 1, { label: i18nT('sharedStatic:breadcrumb.bookFallback'), path: p });
+    }
+
     // Заголовок статьи в шапке — только реальное название. Пока данных нет
     // (загрузка) или путешествие не найдено, слаг-сегмент показывать нельзя:
     // на 404-ветке в шапке оставалась транслитерация вида «Gde Kupatsia Pod...».

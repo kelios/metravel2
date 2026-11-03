@@ -73,6 +73,22 @@ describe('useBreadcrumbModel', () => {
     });
   });
 
+  it('never guesses a book title from its slug on an edition page (#2948)', async () => {
+    usePathname.mockReturnValue('/books/poland-castles');
+    useLocalSearchParams.mockReturnValue({});
+
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.items.length).toBeGreaterThan(0);
+    });
+    expect(result.current.items).toHaveLength(2);
+    expect(result.current.items[0].path).toBe('/books');
+    expect(result.current.items[1].path).toBe('/books/poland-castles');
+    expect(result.current.backToPath).toBe('/books');
+    expect(JSON.stringify(result.current)).not.toContain('Poland Castles');
+  });
+
   it('should build breadcrumbs and backToPath from returnTo on travel details', async () => {
     usePathname.mockReturnValue('/travels/test-slug');
     useLocalSearchParams.mockReturnValue({ returnTo: '/metravel' });

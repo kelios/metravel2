@@ -227,6 +227,7 @@ export const sharedStaticResources = {
   "breadcrumb.articleFallback": "Стаття",
   "breadcrumb.tripFallback": "Поїздка",
   "breadcrumb.travelFallback": "Подорож",
+  "breadcrumb.bookFallback": "Книга",
   "map.pointFallback": "Кропка на карті",
   "map.routeFallback": "Маршрут",
   "map.campingFallback": "Ночівка",
