@@ -79,6 +79,16 @@ case "$action" in
     else
       remote "$action" --receipt "$receipt"
     fi
+    # The disk line of the deploy report (#2186) lived in the static publisher
+    # and was lost with it (#2980). Finalize has already applied the release
+    # retention, so this is the disk the next deploy and the backend start from.
+    # The deploy is done here: a failed report only says so.
+    if [[ "$action" == finalize || "$action" == finalize-code ]]; then
+      ssh "${ssh_args[@]}" "$PROD_SSH_TARGET" bash -s -- report \
+        "$PROD_REMOTE_DIR" "$PROD_REMOTE_DIR/web-ssr/releases" "${DEPLOY_BACKEND_BUILD_MB:-1536}" \
+        < "$SCRIPT_DIR/deploy-disk-guard.sh" \
+        || echo "⚠️ Отчёт о диске прода не получен; релиз уже финализирован — место проверить вручную (docs/ops/prod-disk-growth.md)"
+    fi
     ;;
   *) echo 'Expected capability, stage, activate, rollback, finalize or code publication action' >&2; exit 1 ;;
 esac

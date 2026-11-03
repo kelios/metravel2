@@ -208,7 +208,7 @@ describe('bundle budget release contract', () => {
     const guard = source.indexOf(invocation)
     expect(guard).toBeGreaterThan(source.indexOf('node scripts/postprocess-route-shells.js --dist'))
     expect(guard).toBeLessThan(source.indexOf('node scripts/precompress-static-assets.js "dist/$ENV"'))
-    expect(guard).toBeLessThan(source.indexOf('stage "выкат (загрузка + публикация)"'))
+    expect(guard).toBeLessThan(source.indexOf('stage "выкат: заливка и печать релиза"'))
     const productionBlock = source.lastIndexOf('if [[ "$ENV" == "prod" ]]; then', guard)
     expect(productionBlock).toBeGreaterThan(0)
     expect(source.slice(productionBlock, guard)).not.toMatch(/^fi\s*$/m)

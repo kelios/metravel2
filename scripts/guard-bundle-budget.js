@@ -21,9 +21,9 @@
 
 const fs = require('fs')
 const path = require('path')
-const zlib = require('zlib')
 const { createReportContext, roundedByteLimit } = require('./lib/bundleBudgetReport')
 const { registryFromSources, stripCompactChunkMetadata } = require('./lib/webChunkMetadataArtifact')
+const { compressedSizesSync } = require('./lib/compressedSizes')
 
 const repoRoot = path.join(__dirname, '..')
 const DEFAULT_TOLERANCE_PCT = 5
@@ -362,35 +362,37 @@ const namedFiles = new Map()
 let allRaw = 0
 let allGzip = 0
 let allBrotli = 0
-for (const file of files) {
+// Generated loader metadata is measured by the HTML eager and release-total
+// budgets; named budgets pin feature code. Before #2741 that was our chunk
+// manifest prefix; Expo's granular chunking instead writes each import()'s
+// file array into `paths` and appends a completion marker to async chunks
+// (~0.3 KB, more than some route-stub ceilings).
+const measured = files.map((file) => {
   const buf = fs.readFileSync(path.join(jsDir, file))
+  const source = sources.get(file)
+  let budgetSource
+  try { budgetSource = stripLoaderMetadata(source) } catch (error) { die(`${file}: ${error.message}`) }
+  const budgetBuf = budgetSource.length === source.length ? buf : Buffer.from(budgetSource)
+  return { file, buf, budgetSource, budgetBuf }
+})
+// #2980: one parallel pass instead of ~40 s of sequential Brotli q11.
+let compressed
+try {
+  compressed = compressedSizesSync(measured.flatMap(({ buf, budgetBuf }) => (budgetBuf === buf ? [buf] : [buf, budgetBuf])))
+} catch (error) {
+  die(error.message)
+}
+let compressedIndex = 0
+for (const { file, buf, budgetSource, budgetBuf } of measured) {
   const raw = buf.length
-  const gzip = zlib.gzipSync(buf).length
-  const brotli = zlib.brotliCompressSync(buf, {
-    params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 },
-  }).length
+  const { gzip, brotli } = compressed[compressedIndex++]
   allRaw += raw
   allGzip += gzip
   allBrotli += brotli
   fileSizes.set(file, { raw, gzip, brotli })
   const name = logicalName(file)
-  // Generated loader metadata is measured by the HTML eager and release-total
-  // budgets; named budgets pin feature code. Before #2741 that was our chunk
-  // manifest prefix; Expo's granular chunking instead writes each import()'s
-  // file array into `paths` and appends a completion marker to async chunks
-  // (~0.3 KB, more than some route-stub ceilings).
-  const source = sources.get(file)
-  let budgetSource
-  try { budgetSource = stripLoaderMetadata(source) } catch (error) { die(`${file}: ${error.message}`) }
-  const budgetBuf = budgetSource.length === source.length ? buf : Buffer.from(budgetSource)
   const budgetRaw = budgetBuf.length
-  const budgetGzip = budgetBuf === buf ? gzip : zlib.gzipSync(budgetBuf).length
-  const budgetBrotli =
-    budgetBuf === buf
-      ? brotli
-      : zlib.brotliCompressSync(budgetBuf, {
-          params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 11 },
-        }).length
+  const { gzip: budgetGzip, brotli: budgetBrotli } = budgetBuf === buf ? { gzip, brotli } : compressed[compressedIndex++]
   let budgetKey = name
   const group = ownerGroupName(name)
   const owners = ownerSplits.get(group)

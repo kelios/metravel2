@@ -96,10 +96,10 @@ function preflight(sandbox: Sandbox, env = sandbox.env) {
   )
 }
 
-function report(sandbox: Sandbox) {
+function report(sandbox: Sandbox, distDir = 'static/dist') {
   return runCli(
     'bash',
-    [guardPath, 'report', sandbox.root, 'static/dist', String(BACKEND_BUILD_MB)],
+    [guardPath, 'report', sandbox.root, distDir, String(BACKEND_BUILD_MB)],
     { env: sandbox.env, cwd: sandbox.root },
   )
 }
@@ -329,6 +329,23 @@ describe('frontend deploy disk guard: report after the deploy', () => {
 
       // 84 % is where this disk sits with every class inside its own bound: a
       // percentage threshold would warn on each of twenty deploys a day.
+      expect(result.status).toBe(0)
+      expect(result.stdout).toBe(
+        '📊 Диск прода после выката: занято 84 %, свободно 2340 МБ; static/dist — 656 МБ\n',
+      )
+    } finally {
+      removeDir(sandbox.root)
+    }
+  })
+
+  // Over `ssh … bash -s` the cwd is the home directory, so the SSR publication
+  // passes an absolute path; the report still names the tree by the checkout.
+  it('names an absolute tree relative to the checkout', () => {
+    const sandbox = makeSandbox({ freeMb: 2340, usedPercent: 84, distMb: 656 })
+
+    try {
+      const result = report(sandbox, path.join(sandbox.root, 'static/dist'))
+
       expect(result.status).toBe(0)
       expect(result.stdout).toBe(
         '📊 Диск прода после выката: занято 84 %, свободно 2340 МБ; static/dist — 656 МБ\n',

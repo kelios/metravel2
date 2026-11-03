@@ -338,6 +338,10 @@ deploy_prod() {
     echo "   Причина хелпера — строка «web-ssr release refused» выше; для sha, выкатанного и откатанного раньше, это неизменяемый releases/<sha> с другим digest (#2858)."
     return 1
   fi
+  # #2980: one timer over the whole publication (121 s on 03.11) did not say
+  # what to shorten; the sub-stages split the upload and the seal, the backend
+  # swap with the live checks, and the finalize with the disk report.
+  stage "выкат: переключение и живые проверки"
   if ! { bash scripts/web-ssr-publication.sh publish-code "$BUILD_SOURCE_SHA" &&
          node scripts/verify-live-web-ssr.js "$BUILD_SOURCE_SHA" --readiness-mode deployment &&
          verify_quest_runtime deployment; }; then
@@ -345,6 +349,7 @@ deploy_prod() {
     bash scripts/web-ssr-publication.sh rollback-code "$BUILD_SOURCE_SHA" || echo "❌ Возврат требует восстановления владельцем"
     return 1
   fi
+  stage "выкат: финализация и диск"
   bash scripts/web-ssr-publication.sh finalize-code "$BUILD_SOURCE_SHA"
 }
 
@@ -476,7 +481,7 @@ if [[ "$SSR_CODE_RELEASE" == "1" ]]; then
 fi
 
 if [[ "$DEPLOY" == "1" ]]; then
-  stage "выкат (загрузка + публикация)"
+  stage "выкат: заливка и печать релиза"
   node scripts/precompress-static-assets.js --verify "dist/$ENV"
   echo "старт деплоя ..."
   deploy_prod "$ENV"

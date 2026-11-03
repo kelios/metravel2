@@ -129,6 +129,48 @@ describe('SSR publication pre-transfer checkout gate', () => {
     expect(commands[chunks]).toContain(`bash -s -- chunks /owned/repository/web-ssr/releases/${'b'.repeat(40)}/client 4 256 700`)
   })
 
+  // #2980: the disk line of the deploy report lived in the static publisher and
+  // was lost with it; the SSR publication prints it after finalize, when the
+  // release retention has already freed the previous generation.
+  function publication(action: string, extraEnv: Record<string, string> = {}) {
+    const calls = path.join(fixture, `calls-${action}.txt`)
+    const result = runCli('bash', ['scripts/web-ssr-publication.sh', action, 'c'.repeat(40)], {
+      cwd: process.cwd(), env: {
+        ...process.env, PATH: `${fixture}${path.delimiter}${process.env.PATH}`,
+        DEPLOY_ENV_FILE: path.join(fixture, 'missing-env'),
+        PROD_SSH_USER: 'test', PROD_SSH_HOST: 'invalid.example', PROD_REMOTE_DIR: '/owned/repository',
+        SSR_TEST_CALLS: calls, SSR_TEST_CAPABILITY: '{}', ...extraEnv,
+      },
+    })
+    return { result, commands: fs.readFileSync(calls, 'utf8').trim().split('\n') }
+  }
+
+  it('reports the production disk after finalize, sizing the release store', () => {
+    const { result, commands } = publication('finalize-code', { DEPLOY_BACKEND_BUILD_MB: '1536' })
+    expect(result.status).toBe(0)
+    const final = commands.findIndex(command => command.includes('web_ssr_release.py finalize-code'))
+    const report = commands.findIndex(command => command.includes('bash -s -- report '))
+    expect(final).toBeGreaterThanOrEqual(0)
+    expect(report).toBeGreaterThan(final)
+    expect(commands[report]).toContain('bash -s -- report /owned/repository /owned/repository/web-ssr/releases 1536')
+  })
+
+  it('does not fail a finalized deploy when the disk report cannot be read', () => {
+    fs.writeFileSync(path.join(fixture, 'ssh'), '#!/bin/sh\nprintf "%s\\n" "$*" >> "$SSR_TEST_CALLS"\ncase "$*" in *"-- report "*) exit 255;; esac\nprintf "%s\\n" "$SSR_TEST_CAPABILITY"\n', { mode: 0o755 })
+    const { result, commands } = publication('finalize-code')
+    expect(result.status).toBe(0)
+    expect(commands.some(command => command.includes('bash -s -- report '))).toBe(true)
+    expect(result.stdout).toContain('⚠️ Отчёт о диске прода не получен')
+  })
+
+  it('does not report the disk after the publish or the rollback', () => {
+    for (const action of ['publish-code', 'rollback-code']) {
+      const { result, commands } = publication(action)
+      expect(result.status).toBe(0)
+      expect(commands.some(command => command.includes('-- report '))).toBe(false)
+    }
+  })
+
   it('real final client packaging preserves linked publication inodes in a separate fresh candidate', () => {
     const source = fs.readFileSync(path.resolve('build-prod.sh'), 'utf8')
     const start = source.indexOf('if [[ "$SSR_CODE_RELEASE" == "1" ]]; then\n  # Publish the finished shell metadata')

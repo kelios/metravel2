@@ -93,7 +93,7 @@ function makeFixture(): Fixture {
   git(repo, ['checkout', '-q', '-b', 'main'])
   fs.mkdirSync(path.join(repo, 'scripts'), { recursive: true })
   fs.copyFileSync(DEPLOY_SCRIPT, path.join(repo, 'scripts/deploy-prod.sh'))
-  for (const script of ['guard-bundle-budget.js', 'build-lock.js', 'lib/bundleBudgetReport.js',
+  for (const script of ['guard-bundle-budget.js', 'build-lock.js', 'lib/bundleBudgetReport.js', 'lib/compressedSizes.js',
     'lib/webChunkMetadataArtifact.js', 'lib/webChunkMetadataCodec.js', 'lib/webChunkMetadataRuntime.js']) {
     const target = path.join(repo, 'scripts', script)
     fs.mkdirSync(path.dirname(target), { recursive: true })

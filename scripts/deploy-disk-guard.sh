@@ -13,7 +13,8 @@
 #   deploy-disk-guard.sh report <checkout> <dist-dir> <backend-build-mb>
 #       After the swap and cleanup. One line for the deploy report plus a
 #       warning once the backend can no longer build its image; never fails
-#       the deploy.
+#       the deploy. The tree is named relative to the checkout: over
+#       `ssh … bash -s` the caller has to pass an absolute path (#2980).
 #
 # The 15 GB prod disk has no owner of the total: every class is bounded on its
 # own (image retention, nginx cache max_size, log rotation, overlay window) and
@@ -125,7 +126,7 @@ preflight() {
 
 report() {
   local checkout="$1" dist_dir="$2" backend_build_mb="$3"
-  local free_mb dist_mb='?'
+  local free_mb dist_mb='?' dist_label="${2#"$1"/}"
 
   require_integer backend-build-mb "$backend_build_mb"
   read_disk "$checkout"
@@ -136,7 +137,7 @@ report() {
     dist_mb="${dist_mb:-?}"
   fi
 
-  echo "📊 Диск прода после выката: занято ${DISK_USED_PCT} %, свободно ${free_mb} МБ; $dist_dir — ${dist_mb} МБ"
+  echo "📊 Диск прода после выката: занято ${DISK_USED_PCT} %, свободно ${free_mb} МБ; $dist_label — ${dist_mb} МБ"
   # A percentage would fire on every deploy: the bounds of the other classes
   # alone keep this disk above 80 %. The warning is tied to a consequence
   # instead — below this much free space the backend cannot be rolled out.
