@@ -47,9 +47,8 @@ function TravelStickyActions({
 }: TravelStickyActionsProps) {
   const colors = useThemedColors();
 
-  const { toggle, isFavorite } = useFavoriteToggle();
-
   const travelId = travel?.id;
+  const { toggle, isFavorite } = useFavoriteToggle(travelId ? { id: travelId, type: 'travel' } : undefined);
   const isFav = travelId ? isFavorite(travelId, 'travel') : false;
 
   const [visible, setVisible] = useState(false);

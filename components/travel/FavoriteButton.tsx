@@ -53,7 +53,7 @@ function FavoriteButton({
     const iconSize = size ?? (isOverlay ? 18 : 24);
 
     const colors = useThemedColors();
-    const { isFavorite, toggle, pending: isPending } = useFavoriteToggle();
+    const { isFavorite, toggle, pending: isPending } = useFavoriteToggle({ id, type });
     const isFav = isFavorite(id, type);
 
     const { width } = useWindowDimensions();

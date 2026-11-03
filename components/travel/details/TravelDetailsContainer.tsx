@@ -141,7 +141,7 @@ export default function TravelDetailsContainer() {
   const isFocused = useIsFocused()
   const navigation = useNavigation()
   const router = useRouter()
-  const { addToHistory } = useFavorites()
+  const { addToHistory } = useFavorites({ mode: 'actions' })
   const [, startTransition] = useTransition()
 
   const { announcement, priority: announcementPriority } = useAccessibilityAnnounce()

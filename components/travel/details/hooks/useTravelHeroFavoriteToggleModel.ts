@@ -13,7 +13,7 @@ export function useTravelHeroFavoriteToggleModel({
   isMobile: boolean
   travel: Travel
 }) {
-  const { toggle, isFavorite: checkIsFavorite, pending: isPending } = useFavoriteToggle()
+  const { toggle, isFavorite: checkIsFavorite, pending: isPending } = useFavoriteToggle({ id: travel.id, type: 'travel' })
 
   const isFavorite = checkIsFavorite(travel.id, 'travel')
   const favoriteButtonLabel = isFavorite ? i18nT('travel:components.travel.details.hooks.useTravelHeroFavoriteToggleModel.v_hochu_poehat_6b93d2cd') : i18nT('travel:components.travel.details.hooks.useTravelHeroFavoriteToggleModel.hochu_poehat_18236960')

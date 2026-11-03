@@ -1,5 +1,5 @@
-import { createContext, useContext, useMemo } from 'react';
-import { useFavoritesData, type FavoriteItem } from '@/hooks/useFavoritesData';
+import { createContext, useCallback, useContext, useMemo } from 'react';
+import { useFavoritesData, type FavoriteIdentity, type FavoriteItem } from '@/hooks/useFavoritesData';
 import { useViewHistory, type ViewHistoryItem } from '@/hooks/useViewHistory';
 
 export type { FavoriteItem } from '@/hooks/useFavoritesData';
@@ -54,25 +54,39 @@ export const FavoritesContext: ReturnType<
   createContext<FavoritesActionsContextType | undefined>(undefined);
 globalForFavoritesContext.__metravelFavoritesContext = FavoritesContext;
 
-// Data is read straight from React Query, so consumers reflect live cache updates
-// regardless of provider re-render timing or duplicated-bundle context identity.
-// The provider only supplies auth-bound action callbacks + bootstrap.
-export const useFavorites = (): FavoritesContextType => {
+type FavoritesOptions = { mode: 'lookup'; target?: FavoriteIdentity } | { mode: 'actions' };
+const EMPTY_FAVORITES: FavoriteItem[] = [];
+
+export function useFavorites(options?: FavoritesOptions): FavoritesContextType {
   const actions = useContext(FavoritesContext);
   if (!actions) {
     throw new Error('useFavorites must be used within a FavoritesProvider');
   }
 
-  const favorites = useFavoritesData();
-  const viewHistory = useViewHistory();
+  const target = options?.mode === 'lookup' ? options.target : undefined;
+  const id = target?.id;
+  const type = target?.type;
+  const selectMembership = useCallback(
+    (items: FavoriteItem[]) => items.some((item) => item.id === id && item.type === type),
+    [id, type],
+  );
+  const data = useFavoritesData<FavoriteItem[] | boolean>(
+    target ? selectMembership : undefined,
+    options?.mode !== 'actions',
+  );
+  const favorites = Array.isArray(data) ? data : EMPTY_FAVORITES;
+  const viewHistory = useViewHistory(options === undefined);
 
   return useMemo<FavoritesContextType>(
     () => ({
       favorites,
       viewHistory,
-      isFavorite: (id, type) => favorites.some((f) => f.id === id && f.type === type),
+      isFavorite: (itemId, itemType) =>
+        id === undefined
+          ? favorites.some((item) => item.id === itemId && item.type === itemType)
+          : itemId === id && itemType === type && data === true,
       ...actions,
     }),
-    [favorites, viewHistory, actions]
+    [favorites, viewHistory, actions, id, type, data]
   );
-};
+}

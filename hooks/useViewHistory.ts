@@ -91,13 +91,14 @@ export const viewHistoryQueryFn =
  * прежняя ленивость (сервер дёргается только на History/Recommendations, а не на
  * каждой карточке с сердечком).
  */
-export function useViewHistory(): ViewHistoryItem[] {
+export function useViewHistory(subscribed = true): ViewHistoryItem[] {
   const { userId } = useAuth();
   const scopedUserId = userId ?? null;
   const { data } = useQuery({
     queryKey: queryKeys.viewHistory(scopedUserId),
     queryFn: viewHistoryQueryFn(scopedUserId),
     enabled: false,
+    subscribed,
   });
   return data ?? EMPTY;
 }

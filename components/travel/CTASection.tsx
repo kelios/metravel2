@@ -34,7 +34,7 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
   const isMobile = width < METRICS.breakpoints.tablet;
   const { isAuthenticated } = useAuth();
   const { loginHref, requireAuth } = useRequireAuth({ intent: 'create-book' });
-  const { toggle, isFavorite: checkIsFavorite } = useFavoriteToggle();
+  const { toggle, isFavorite: checkIsFavorite } = useFavoriteToggle({ id: travel.id, type: 'travel' });
 
   // Проверяем, в избранном ли путешествие
   const isFavorite = checkIsFavorite(travel.id, 'travel');

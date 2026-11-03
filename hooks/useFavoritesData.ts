@@ -26,9 +26,11 @@ export type FavoriteItem = {
   city?: string;
 };
 
+export type FavoriteIdentity = Pick<FavoriteItem, 'id' | 'type'>;
+
 type Auth = { isAuthenticated: boolean; userId: string | null };
 
-const EMPTY: FavoriteItem[] = [];
+const EMPTY_FAVORITES: FavoriteItem[] = [];
 
 // Дедуп конкурентных тапов по одному айтему внутри одной auth identity.
 const inFlightKeys = new Set<string>();
@@ -97,14 +99,20 @@ export const refreshFavoritesFromServer = async (userId: string | null): Promise
  * список наполняют мутации + ленивый ensureFavoritesServerData, а не каждый
  * рендер сердечка).
  */
-export function useFavoritesData(): FavoriteItem[] {
+export function useFavoritesData<T = FavoriteItem[]>(
+  select?: (items: FavoriteItem[]) => T,
+  subscribed = true,
+): T | FavoriteItem[] {
   const { userId } = useAuth();
   const { data } = useQuery({
     queryKey: queryKeys.favorites(userId ?? null),
     queryFn: favoritesQueryFn(userId ?? null),
     enabled: false,
+    select,
+    subscribed,
+    placeholderData: select ? EMPTY_FAVORITES : undefined,
   });
-  return data ?? EMPTY;
+  return data ?? EMPTY_FAVORITES;
 }
 
 export const isFavoriteInCache = (

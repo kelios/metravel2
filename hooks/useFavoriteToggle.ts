@@ -3,6 +3,7 @@ import { Platform } from 'react-native'
 
 import { useAuth } from '@/context/AuthContext'
 import { useFavorites, type FavoriteItem } from '@/context/FavoritesContext'
+import { isFavoriteInCache, type FavoriteIdentity } from '@/hooks/useFavoritesData'
 import { translate as i18nT } from '@/i18n'
 import { useActionFeedback } from '@/hooks/useActionFeedback'
 import { useRequireAuth } from '@/hooks/useRequireAuth'
@@ -34,9 +35,11 @@ export type FavoriteToggleOutcome = 'success' | 'error' | 'busy' | 'auth' | 'def
 
 export const favoriteKey = (id: string | number, type: FavoriteItem['type']) => `favorite:${type}:${id}`
 
-export function useFavoriteToggle() {
-  const { isAuthenticated, authReady } = useAuth()
-  const { isFavorite, addFavorite, removeFavorite } = useFavorites()
+export function useFavoriteToggle(watchedTarget?: FavoriteIdentity) {
+  const { isAuthenticated, authReady, userId } = useAuth()
+  const { isFavorite, addFavorite, removeFavorite } = useFavorites({ mode: 'lookup', target: watchedTarget })
+  const watchedId = watchedTarget?.id
+  const watchedType = watchedTarget?.type
   const { requireAuthFor } = useRequireAuth({ intent: 'favorite' })
   const feedback = useActionFeedback()
   const { run } = feedback
@@ -81,7 +84,10 @@ export function useFavoriteToggle() {
         return 'auth'
       }
 
-      const wasFavorite = isFavorite(target.id, target.type)
+      // A deferred tap can outlive the target currently displayed by this hook.
+      const wasFavorite = watchedId !== undefined && (target.id !== watchedId || target.type !== watchedType)
+        ? isFavoriteInCache(userId ?? null, target.id, target.type)
+        : isFavorite(target.id, target.type)
       if (!wasFavorite && !target.url) return 'invalid'
 
       const add = () =>
@@ -121,7 +127,7 @@ export function useFavoriteToggle() {
       })
       return result.status
     },
-    [addFavorite, authReady, isAuthenticated, isFavorite, removeFavorite, requireAuthFor, run],
+    [addFavorite, authReady, isAuthenticated, isFavorite, removeFavorite, requireAuthFor, run, userId, watchedId, watchedType],
   )
 
   toggleRef.current = toggle
