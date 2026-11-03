@@ -13,7 +13,24 @@ import {
 } from './shared'
 import { generateMapImageFromDOM, isImageMostlyBlank } from './domCapture'
 
-const leafletRouteSnapshotCache = new Map<string, Promise<string | null>>()
+const inFlightSnapshots = new Map<string, Promise<string | null>>()
+const completedSnapshots = new Map<string, { image: string; bytes: number }>()
+const SNAPSHOT_CACHE_BYTES = 8 * 1024 * 1024
+const SNAPSHOT_CACHE_ENTRIES = 32
+let completedSnapshotBytes = 0
+
+function rememberSnapshot(key: string, image: string) {
+  const bytes = (key.length + image.length) * 2
+  if (bytes > SNAPSHOT_CACHE_BYTES) return
+
+  completedSnapshots.set(key, { image, bytes })
+  completedSnapshotBytes += bytes
+  for (const [oldestKey, oldest] of completedSnapshots) {
+    if (completedSnapshotBytes <= SNAPSHOT_CACHE_BYTES && completedSnapshots.size <= SNAPSHOT_CACHE_ENTRIES) break
+    completedSnapshots.delete(oldestKey)
+    completedSnapshotBytes -= oldest.bytes
+  }
+}
 
 function buildCacheKey(
   points: { lat: number; lng: number; label?: string }[],
@@ -362,8 +379,14 @@ export async function generateLeafletRouteSnapshot(
   }
 
   const cacheKey = buildCacheKey(points, routeLine, { width, height, zoom, maxFitZoom, showLabels })
-  const cached = leafletRouteSnapshotCache.get(cacheKey)
-  if (cached) return cached
+  const cached = completedSnapshots.get(cacheKey)
+  if (cached) {
+    completedSnapshots.delete(cacheKey)
+    completedSnapshots.set(cacheKey, cached)
+    return cached.image
+  }
+  const inFlight = inFlightSnapshots.get(cacheKey)
+  if (inFlight) return inFlight
 
   const task = (async (): Promise<string | null> => {
     const L: any = await ensureLeaflet()
@@ -567,16 +590,11 @@ export async function generateLeafletRouteSnapshot(
 
   const wrapped = task
     .then((result) => {
-      if (result === null) {
-        leafletRouteSnapshotCache.delete(cacheKey)
-      }
+      if (result) rememberSnapshot(cacheKey, result)
       return result
     })
-    .catch((e) => {
-      leafletRouteSnapshotCache.delete(cacheKey)
-      throw e
-    })
+    .finally(() => inFlightSnapshots.delete(cacheKey))
 
-  leafletRouteSnapshotCache.set(cacheKey, wrapped)
+  inFlightSnapshots.set(cacheKey, wrapped)
   return wrapped
 }

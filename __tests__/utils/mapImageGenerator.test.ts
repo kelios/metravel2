@@ -261,4 +261,72 @@ describe('generateLeafletRouteSnapshot', () => {
     expect(second).toBe('data:image/png;base64,leaflet-2')
     expect((window as any).html2canvas).toHaveBeenCalledTimes(2)
   })
+
+  it('bounds completed snapshot weight and keeps concurrent work deduplicated', async () => {
+    jest.useFakeTimers()
+    ;(window as any).L = mockLeaflet
+    const image = 'data:image/png;base64,' + 'A'.repeat(350_000)
+    const render = jest.fn(async () => ({ toDataURL: () => image }))
+    ;(window as any).html2canvas = render
+    const snapshot = (index: number) =>
+      generateLeafletRouteSnapshot([{ lat: 40, lng: 20 + index / 100 }])
+
+    const first = snapshot(0)
+    const concurrent = snapshot(0)
+    await jest.advanceTimersByTimeAsync(7000)
+    expect(await Promise.all([first, concurrent])).toEqual([image, image])
+    expect(render).toHaveBeenCalledTimes(1)
+
+    for (let index = 1; index < 30; index++) {
+      const result = snapshot(index)
+      await jest.advanceTimersByTimeAsync(7000)
+      expect(await result).toBe(image)
+    }
+    const cached = snapshot(29)
+    await jest.advanceTimersByTimeAsync(7000)
+    expect(await cached).toBe(image)
+    expect(render).toHaveBeenCalledTimes(30)
+
+    const evicted = snapshot(18)
+    await jest.advanceTimersByTimeAsync(7000)
+    expect(await evicted).toBe(image)
+    expect(render).toHaveBeenCalledTimes(31)
+  })
+
+  it('reuses recent small snapshots, skips oversized results and retries a failed capture', async () => {
+    jest.useFakeTimers()
+    ;(window as any).L = mockLeaflet
+    const image = 'data:image/png;base64,small'
+    const oversized = 'data:image/png;base64,' + 'A'.repeat(4 * 1024 * 1024)
+    const render = jest.fn(async () => ({ toDataURL: () => image }))
+    ;(window as any).html2canvas = render
+    const snapshot = async (index: number) => {
+      const result = generateLeafletRouteSnapshot([{ lat: 50, lng: 20 + index / 100 }])
+      await jest.advanceTimersByTimeAsync(7000)
+      return result
+    }
+    for (let index = 0; index < 32; index++) expect(await snapshot(index)).toBe(image)
+    expect(await snapshot(0)).toBe(image)
+    expect(render).toHaveBeenCalledTimes(32)
+    expect(await snapshot(32)).toBe(image)
+    expect(await snapshot(0)).toBe(image)
+    expect(render).toHaveBeenCalledTimes(33)
+    expect(await snapshot(1)).toBe(image)
+    expect(render).toHaveBeenCalledTimes(34)
+
+    render.mockResolvedValueOnce({ toDataURL: () => oversized })
+    expect(await snapshot(40)).toBe(oversized)
+    expect(await snapshot(40)).toBe(image)
+    expect(render).toHaveBeenCalledTimes(36)
+
+    mockLeaflet.map.mockImplementationOnce(() => { throw new Error('map failed') })
+    const consoleError = jest.spyOn(console, 'error').mockImplementation(() => undefined)
+    try {
+      expect(await snapshot(41)).toBeNull()
+      expect(await snapshot(41)).toBe(image)
+      expect(render).toHaveBeenCalledTimes(37)
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
 })
