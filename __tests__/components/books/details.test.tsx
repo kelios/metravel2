@@ -69,6 +69,9 @@ it('renders the catalogue facts of the edition in server markup and gives the ro
   expect(Array.from(host.querySelectorAll('.rbe-cta button')).every(button=>(button as HTMLButtonElement).disabled)).toBe(true);
   expect(host.querySelector('a[download]')).toBeNull();
   expect(host.querySelector('a[href="/books"]')?.textContent).toContain('back');
+  const backIcon=host.querySelector('.rbe-foot > a > .rbe-i > [data-icon-font="feather"]');
+  expect(backIcon?.tagName).toBe('SPAN');
+  expect(backIcon?.textContent).toBe(String.fromCodePoint(0xf110));
   expect(loadReadyBookMetadata).not.toHaveBeenCalled();
   const metadata=generateMetadata(undefined,{slug:book.slug});
   expect(metadata.alternates?.canonical).toBe('https://metravel.by/books/'+book.slug);

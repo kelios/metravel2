@@ -1,12 +1,17 @@
 import React,{useCallback} from 'react';
-import Feather from '@expo/vector-icons/Feather';
+import featherGlyphs from '@expo/vector-icons/build/vendor/react-native-vector-icons/glyphmaps/Feather.json';
 import {useRouter,type Href} from 'expo-router';
+import {ICON_FONT_ATTR,ICON_FONT_FAMILY} from '@/utils/iconFontContract';
 
-type FeatherName = React.ComponentProps<typeof Feather>['name'];
+type FeatherName = keyof typeof featherGlyphs;
 
-/** Decorative Feather glyph: hidden from the accessible name, coloured by the surrounding text. */
+/** Keep the glyph phrasing content so paragraphs survive HTML parsing before hydration. */
 export function EditionIcon({name,size=20}:{name:FeatherName;size?:number}){
-  return <span className="rbe-i" aria-hidden="true"><Feather name={name} size={size} color="currentColor"/></span>;
+  return <span className="rbe-i" aria-hidden="true">
+    <span {...{[ICON_FONT_ATTR]:ICON_FONT_FAMILY}} style={{fontFamily:ICON_FONT_FAMILY,fontSize:size,fontStyle:'normal',fontWeight:'normal',lineHeight:'normal',minWidth:size,minHeight:size,userSelect:'none'}}>
+      {String.fromCodePoint(featherGlyphs[name])}
+    </span>
+  </span>;
 }
 
 /**

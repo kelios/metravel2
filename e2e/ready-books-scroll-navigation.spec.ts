@@ -41,6 +41,22 @@ async function hiddenAncestorScroll(frame:Locator){
 test.use({storageState:{cookies:[],origins:[]}});
 
 for(const viewport of [{width:390,height:844},{width:1440,height:900}]){
+  test(`@smoke ready book HTML hydrates on direct entry at ${viewport.width}px`,async({page})=>{
+    await page.setViewportSize(viewport);
+    await preacceptCookies(page);
+    const errors:string[]=[];
+    page.on('pageerror',error=>errors.push(error.message));
+    page.on('console',message=>{
+      if(message.type()==='error'&&/(React error #418|hydrat)/i.test(message.text()))errors.push(message.text());
+    });
+    for(const slug of ['belarus','poland']){
+      const response=await page.goto(`/books/${slug}`,{waitUntil:'domcontentloaded'});
+      expect(response?.status()).toBe(200);
+      await expect(page.locator('.rbe-dl-main')).toBeVisible();
+    }
+    expect(errors).toEqual([]);
+  });
+
   test(`@smoke ready books own wheel scrolling and SPA visibility at ${viewport.width}px`,async({page})=>{
     await page.setViewportSize(viewport);
     await preacceptCookies(page);
