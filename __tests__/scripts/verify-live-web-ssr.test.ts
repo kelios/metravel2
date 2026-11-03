@@ -17,6 +17,10 @@ const response = (headers: Record<string, string> = {}) => new Response(html, {
   headers: { 'Content-Type': 'text/html', 'X-Metravel-Ssr-Source': sha, 'X-Cache-Status': 'HIT', ...headers },
 })
 const codeProof = { schema_version: 1, status: 'ok', sha, client_sha: sha, renderer_sha: sha, dirty: false }
+const legacyLoader = (slug: string) => Response.json(
+  { travel: { slug, id: 42, description: '<p>Actual article body.</p>' } },
+  { headers: { 'X-Metravel-Ssr-Source': sha } },
+)
 const pendingHtml = html.replace('</body>', '<section data-travel-link-graph="pending" data-travel-graph-error="refresh_pending"></section></body>')
 const pendingResponse = (headers: Record<string, string> = {}) => new Response(pendingHtml, { headers: {
   'Content-Type': 'text/html', 'X-Metravel-Ssr-Source': sha, 'X-Metravel-Travel-Graph-State': 'pending',
@@ -89,13 +93,37 @@ describe('paired renderer publication readiness', () => {
 
   it('separates a typed pending graph from healthy code only in deployment mode', async () => {
     const codeHealth = jest.fn().mockResolvedValue(codeProof)
-    const fetchImpl = jest.fn().mockResolvedValueOnce(Response.json({ results: [{ slug: 'example' }] }))
+    const fetchImpl = jest.fn()
+      .mockResolvedValueOnce(legacyLoader('ozero-sorapis-krugovoi-marshrut-v-dolomitakh'))
+      .mockResolvedValueOnce(legacyLoader('forty-krakova-avstriiskie-ukrepleniia-xix-veka'))
+      .mockResolvedValueOnce(Response.json({ results: [{ slug: 'example' }] }))
       .mockResolvedValueOnce(pendingResponse())
     await expect(verifyLiveWebSsr({ sha, mode: 'deployment', codeHealth, fetchImpl }))
       .resolves.toMatchObject({ sha, canonical, content_status: 'pending', retry_after_seconds: 5 })
     expect(codeHealth).toHaveBeenCalledWith(sha)
-    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    expect(fetchImpl).toHaveBeenCalledTimes(4)
+    expect(String(fetchImpl.mock.calls[1][0])).toBe(
+      'https://metravel.by/_expo/loaders/(tabs)/travels/forty-krakova?returnTo=%2Fsearch',
+    )
+    expect(fetchImpl.mock.calls[1][1]).toMatchObject({ redirect: 'error', credentials: 'omit' })
     expect(() => verifyRuntimeResponse(pendingResponse(), pendingHtml, { sha, canonical })).toThrow('strict acceptance')
+  })
+
+  it('refuses to finalize if the legacy client loader keeps returning 503', async () => {
+    const fetchImpl = jest.fn(async (url: URL) => url.pathname.endsWith('/forty-krakova')
+      ? new Response('', { status: 503 })
+      : legacyLoader('ozero-sorapis-krugovoi-marshrut-v-dolomitakh'))
+    let now = Date.now()
+    const clock = jest.spyOn(Date, 'now').mockImplementation(() => now)
+    try {
+      await expect(verifyLiveWebSsr({ sha, mode: 'deployment', codeHealth: async () => codeProof,
+        fetchImpl, timeoutMs: 2000, sleep: async (delay: number) => { now += delay } }))
+        .rejects.toThrow('Legacy article loader (forty-krakova): HTTP 503')
+      expect(fetchImpl).toHaveBeenCalledTimes(4)
+      expect(fetchImpl.mock.calls.every(([url]) => url.pathname.startsWith('/_expo/loaders/'))).toBe(true)
+    } finally {
+      clock.mockRestore()
+    }
   })
 
   it('never relaxes source, body, schema or no-store checks for pending content', () => {

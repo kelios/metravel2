@@ -6,6 +6,33 @@ const { DomUtils } = require('htmlparser2')
 const { assertSsrDocument } = require('./lib/ssrDocument')
 const { assertReadinessMode, assertCodeHealth, verifyCodeHealth, createReadinessTiming, documentContentState } = require('./lib/ssrDeploymentReadiness')
 const { parseCliArgs, runCli, UsageError } = require('./lib/cli-contract')
+const { redirects } = require('./seo-redirects.json')
+
+const LEGACY_ARTICLE_CONTROLS = [
+  'ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom',
+  'forty-krakova',
+]
+
+async function verifyLegacyArticleLoaders(request, origin, sha) {
+  for (const slug of LEGACY_ARTICLE_CONTROLS) {
+    const canonicalSlug = redirects.find(({ from }) => from === slug)?.to
+    if (!canonicalSlug) throw new Error(`Missing legacy article control in redirect manifest: ${slug}`)
+    const url = new URL(`/_expo/loaders/(tabs)/travels/${encodeURIComponent(slug)}?returnTo=%2Fsearch`, origin)
+    const response = await request(url)
+    const label = `Legacy article loader (${slug})`
+    if (response.status !== 200) throw new Error(`${label}: HTTP ${response.status}`)
+    if (response.headers.get('x-metravel-ssr-source') !== sha
+        || !response.headers.get('content-type')?.includes('application/json')) {
+      throw new Error(`${label}: expected JSON from renderer ${sha}`)
+    }
+    const { travel } = await response.json().catch(() => ({})) ?? {}
+    if (travel?.slug !== canonicalSlug || !Number.isSafeInteger(travel.id) || travel.id <= 0
+        || typeof travel.description !== 'string' || !travel.description.trim()) {
+      throw new Error(`${label}: missing canonical article or description`)
+    }
+  }
+  console.log(`[web-ssr-readiness] ${LEGACY_ARTICLE_CONTROLS.length} legacy article loaders match ${sha}`)
+}
 
 function verifyRuntimeResponse(response, html, { sha, canonical, requireHit = false, mode = 'strict', codeProof }) {
   assertReadinessMode(mode)
@@ -64,10 +91,15 @@ async function verifyLiveWebSsr({ sha, origin = 'https://metravel.by', timeoutMs
   // does in verify-live-quest-ssr.js: one slow or 5xx answer right after the
   // paired restart is a transient, not a refused release (42f5681f2, 9bde01ff6).
   let slugs = null
+  let legacyReady = mode !== 'deployment'
   let failure = new Error('Renderer readiness has no successful request')
   while (Date.now() < deadline) {
     timing.attempt()
     try {
+      if (!legacyReady) {
+        await timing.measure('legacy-loaders', () => verifyLegacyArticleLoaders(request, origin, sha))
+        legacyReady = true
+      }
       slugs ??= await timing.measure('catalog', () => selectControlSlugs(request, origin))
     } catch (error) {
       failure = error
