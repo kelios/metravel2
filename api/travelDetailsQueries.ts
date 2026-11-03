@@ -1,8 +1,6 @@
 import { Travel } from '@/types/types';
 import { apiClient } from '@/api/client';
-import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { devError, devWarn } from '@/utils/logger';
-import { safeJsonParse } from '@/utils/safeJsonParse';
 import { getSecureItem } from '@/utils/secureStorage';
 import { shouldUseStoredAuthToken } from '@/utils/authPlatform';
 import {
@@ -16,9 +14,6 @@ import { normalizeTravelItem } from './travelsNormalize';
 import {
     LONG_TIMEOUT,
     TOKEN_KEY,
-    GET_TRAVELS,
-    filterPublished,
-    unwrapTravelsList,
     isAbortError,
 } from './travelQueryShared';
 import {
@@ -32,10 +27,16 @@ export {
     invalidateTravelDetailMemoryCache,
 } from './travelDetailMemoryCache';
 
-const travelInFlight = new Map<string, Promise<Travel>>();
+type GuestTravelRequest = {
+    controller: AbortController;
+    observers: number;
+    promise: Promise<Travel>;
+};
+
+const travelInFlight = new Map<string, GuestTravelRequest>();
 
 type PublicTravelRequestOptions = { signal?: AbortSignal; skipAuth?: boolean };
-type FetchTravelOptions = { signal?: AbortSignal; forceRefresh?: boolean };
+type FetchTravelOptions = PublicTravelRequestOptions & { forceRefresh?: boolean };
 
 type ResolveTravelSlugResponse = {
     id?: unknown;
@@ -57,16 +58,64 @@ type TravelPreloadWindow = Window & typeof globalThis & {
     __metravelTravelPreloadPromise?: Promise<unknown>;
 };
 
+const createTravelAbortError = (): Error =>
+    Object.assign(new Error('Aborted'), { name: 'AbortError' });
+
+const assertTravelRequestActive = (signal?: AbortSignal): void => {
+    if (signal?.aborted) throw createTravelAbortError();
+};
+
 const runSharedGuestTravelRequest = async (
     key: string,
-    request: () => Promise<Travel>
+    request: (signal: AbortSignal) => Promise<Travel>,
+    signal?: AbortSignal,
 ): Promise<Travel> => {
-    const existing = travelInFlight.get(key);
-    if (existing) return existing;
+    assertTravelRequestActive(signal);
+    const pending = travelInFlight.get(key) ?? startGuestTravelRequest(key, request);
+    pending.observers += 1;
 
-    const pending = request().finally(() => {
-        travelInFlight.delete(key);
+    return new Promise((resolve, reject) => {
+        let observing = true;
+        const release = () => {
+            if (!observing) return false;
+            observing = false;
+            signal?.removeEventListener('abort', onAbort);
+            pending.observers -= 1;
+            return true;
+        };
+        const onAbort = () => {
+            if (!release()) return;
+            if (pending.observers === 0 && travelInFlight.get(key) === pending) {
+                travelInFlight.delete(key);
+                pending.controller.abort();
+            }
+            reject(createTravelAbortError());
+        };
+        signal?.addEventListener('abort', onAbort);
+        pending.promise.then(
+            (travel) => {
+                if (release()) resolve(travel);
+            },
+            (error: unknown) => {
+                if (release()) reject(error);
+            },
+        );
+        if (signal?.aborted) onAbort();
     });
+};
+
+const startGuestTravelRequest = (
+    key: string,
+    request: (signal: AbortSignal) => Promise<Travel>,
+): GuestTravelRequest => {
+    const controller = new AbortController();
+    const pending: GuestTravelRequest = {
+        controller,
+        observers: 0,
+        promise: request(controller.signal).finally(() => {
+            if (travelInFlight.get(key) === pending) travelInFlight.delete(key);
+        }),
+    };
     travelInFlight.set(key, pending);
     return pending;
 };
@@ -159,10 +208,6 @@ const getErrorStatus = (error: unknown): number | null => {
     return Number.isFinite(status) ? status : null;
 };
 
-const shouldUseSlugFallback = (status: number | null): boolean =>
-    status === 404 || (status !== null && status >= 500 && status < 600);
-const SLUG_FALLBACK_TIMEOUT_MS = 4_000;
-
 const readStaleTravelDetail = async (endpoint: string): Promise<Travel | null> => {
     const stale = await readPublicStalePayload<Travel>(endpoint);
     if (!stale) return null;
@@ -175,269 +220,18 @@ const saveStaleTravelDetail = async (endpoint: string, travel: Travel): Promise<
     await savePublicStalePayload(endpoint, travel, { method: 'GET' });
 };
 
-const slugTokenize = (value: string): string[] =>
-    String(value || '')
-        .toLowerCase()
-        .replace(/[^a-z0-9-]+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .split('-')
-        .map((part) => part.trim())
-        .filter(Boolean);
-
-const simplifySlugToken = (token: string): string =>
-    token
-        .replace(/kh/g, 'h')
-        .replace(/ii/g, 'i')
-        .replace(/yi/g, 'i');
-
-const buildAdjacentTranspositionVariants = (token: string): string[] => {
-    if (token.length < 4 || token.length > 32) return [];
-
-    const variants: string[] = [];
-    for (let index = 0; index < token.length - 1; index += 1) {
-        const left = token[index];
-        const right = token[index + 1];
-        if (left === right) continue;
-
-        variants.push(`${token.slice(0, index)}${right}${left}${token.slice(index + 2)}`);
-    }
-    return variants;
-};
-
-const longestCommonSubsequenceLength = (left: string, right: string): number => {
-    if (!left || !right) return 0;
-
-    const previous = new Array(right.length + 1).fill(0);
-    const current = new Array(right.length + 1).fill(0);
-
-    for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
-        for (let rightIndex = 1; rightIndex <= right.length; rightIndex += 1) {
-            current[rightIndex] = left[leftIndex - 1] === right[rightIndex - 1]
-                ? previous[rightIndex - 1] + 1
-                : Math.max(previous[rightIndex], current[rightIndex - 1]);
-        }
-        for (let rightIndex = 0; rightIndex <= right.length; rightIndex += 1) {
-            previous[rightIndex] = current[rightIndex];
-            current[rightIndex] = 0;
-        }
-    }
-
-    return previous[right.length];
-};
-
-const scoreTokenSimilarity = (requestedToken: string, candidateToken: string): number => {
-    if (requestedToken === candidateToken) return 1;
-    if (!requestedToken || !candidateToken) return 0;
-
-    const maxLength = Math.max(requestedToken.length, candidateToken.length);
-    if (maxLength === 0) return 0;
-
-    return longestCommonSubsequenceLength(requestedToken, candidateToken) / maxLength;
-};
-
-const SLUG_FALLBACK_STOPWORDS = new Set([
-    'a', 'i', 'iz', 'k', 'na', 'o', 'odna', 'odin', 'odno',
-    'odnoi', 'odnoy', 'po', 's', 'v', 'vershin',
-]);
-const STRONG_SLUG_FALLBACK_SCORE = 1.0;
-
-const buildSlugFallbackQueries = (slug: string): string[] => {
-    const tokens = slugTokenize(slug).filter((token) => !/^\d+$/.test(token));
-    if (tokens.length === 0) return [];
-
-    const full = tokens.join(' ');
-    const shortened = tokens.slice(0, Math.min(tokens.length, 6)).join(' ');
-    const boundary =
-        tokens.length >= 4
-            ? [tokens[0], tokens[1], tokens[tokens.length - 2], tokens[tokens.length - 1]].join(' ')
-            : '';
-    const simplified = tokens.map(simplifySlugToken).join(' ');
-    const firstToken = tokens[0];
-    const firstTwo = tokens.slice(0, 2).join(' ');
-    const firstThree = tokens.slice(0, 3).join(' ');
-    const compact = tokens.length >= 2 ? [tokens[0], tokens[tokens.length - 1]].join(' ') : '';
-
-    const meaningfulTokens = tokens.filter(
-        (token) => token.length >= 4 && !SLUG_FALLBACK_STOPWORDS.has(token)
-    );
-    const primaryTokens = meaningfulTokens.slice(0, 4);
-    const simplifiedPrimaryTokens = primaryTokens
-        .map(simplifySlugToken)
-        .filter((token) => token.length >= 3);
-    const transposedPrimaryTokens = primaryTokens.flatMap(buildAdjacentTranspositionVariants);
-
-    const orderedQueries = [
-        ...primaryTokens,
-        ...transposedPrimaryTokens,
-        ...simplifiedPrimaryTokens,
-        firstToken,
-        full,
-        shortened,
-        boundary,
-        simplified,
-        firstThree,
-        firstTwo,
-        compact,
-    ];
-
-    return Array.from(new Set(orderedQueries.map((q) => q.trim()).filter(Boolean)));
-};
-
-const buildSlugDirectFallbackSlugs = (slug: string): string[] => {
-    const tokens = slugTokenize(slug).filter((token) => !/^\d+$/.test(token));
-    if (!tokens.length) return [];
-    if (tokens.length !== 1) return [];
-
-    const requestedSlug = tokens.join('-');
-    const variants: string[] = [];
-
-    tokens.forEach((token, tokenIndex) => {
-        if (SLUG_FALLBACK_STOPWORDS.has(token)) return;
-        buildAdjacentTranspositionVariants(token).forEach((variantToken) => {
-            const candidateTokens = [...tokens];
-            candidateTokens[tokenIndex] = variantToken;
-            variants.push(candidateTokens.join('-'));
-        });
-    });
-
-    return Array.from(new Set(variants))
-        .filter((candidate) => candidate !== requestedSlug && candidate.length >= 3)
-        .slice(0, 20);
-};
-
-const scoreSlugSimilarity = (requestedSlug: string, candidateSlug: string): number => {
-    const requested = slugTokenize(requestedSlug)
-        .map(simplifySlugToken)
-        .filter((token) => !/^\d+$/.test(token));
-    const candidate = slugTokenize(candidateSlug)
-        .map(simplifySlugToken)
-        .filter((token) => !/^\d+$/.test(token));
-    if (!requested.length || !candidate.length) return 0;
-
-    const candidateSet = new Set(candidate);
-    const overlap = requested.reduce((acc, token) => (candidateSet.has(token) ? acc + 1 : acc), 0);
-    const overlapRatio = overlap / requested.length;
-    const fuzzyOverlapRatio =
-        requested.reduce((acc, token) => {
-            const bestTokenScore = candidate.reduce(
-                (best, candidateToken) => Math.max(best, scoreTokenSimilarity(token, candidateToken)),
-                0
-            );
-            return acc + (bestTokenScore >= 0.84 ? bestTokenScore : 0);
-        }, 0) / requested.length;
-
-    const firstTokenBonus = requested[0] === candidate[0] ? 0.2 : 0;
-    const lastToken = requested[requested.length - 1];
-    const tailBonus = candidateSet.has(lastToken) ? 0.1 : 0;
-    const lengthPenalty = Math.max(0, candidate.length - requested.length) * 0.03;
-
-    return Math.max(overlapRatio, fuzzyOverlapRatio) + firstTokenBonus + tailBonus - lengthPenalty;
-};
-
-const fetchFallbackTravelCandidates = async (
-    query: string,
-    page: number,
-    options?: { signal?: AbortSignal }
-): Promise<Travel[]> => {
-    const params = new URLSearchParams({
-        page: String(page),
-        perPage: '50',
-    });
-    if (query) {
-        params.set('query', query);
-    }
-
-    const urlTravel = `${GET_TRAVELS}?${params.toString()}`;
-    const res = await fetchWithTimeout(
-        urlTravel,
-        options?.signal ? { signal: options.signal } : {},
-        LONG_TIMEOUT
-    );
-    if (!res.ok) return [];
-
-    const result = await safeJsonParse<{
-        data?: Travel[];
-        total?: unknown;
-        results?: Travel[];
-        count?: unknown;
-    } | Travel[]>(res, []);
-    const { items } = unwrapTravelsList(result);
-    if (!items.length) return [];
-
-    return filterPublished(items.map(normalizeTravelItem));
-};
-
-const findTravelBySlugFallback = async (
-    slug: string,
-    options?: { signal?: AbortSignal }
-): Promise<Travel | null> => {
-    const queries = buildSlugFallbackQueries(slug);
-    const scanQueries = Array.from(new Set([...queries, '']));
-
-    let bestMatch: Travel | null = null;
-    let bestScore = 0;
-
-    for (const query of scanQueries) {
-        const queryWordCount = query.trim() ? query.trim().split(/\s+/).length : 0;
-        const maxPages = queryWordCount <= 1 ? 5 : 3;
-
-        for (let page = 1; page <= maxPages; page += 1) {
-            const candidates = await fetchFallbackTravelCandidates(query, page, options);
-            if (!candidates.length) break;
-
-            for (const item of candidates) {
-                const candidateSlug = typeof item?.slug === 'string' ? item.slug.trim() : '';
-                if (!candidateSlug) continue;
-
-                const score = scoreSlugSimilarity(slug, candidateSlug);
-                if (score < 0.72) continue;
-
-                if (!bestMatch || score > bestScore) {
-                    bestMatch = item;
-                    bestScore = score;
-                }
-            }
-
-            if (bestMatch && bestScore >= STRONG_SLUG_FALLBACK_SCORE) {
-                return bestMatch;
-            }
-        }
-    }
-
-    return bestMatch;
-};
-
-const findTravelBySlugFallbackWithDeadline = async (
-    slug: string,
-    options?: { signal?: AbortSignal }
-): Promise<Travel | null> => {
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-    try {
-        return await Promise.race([
-            findTravelBySlugFallback(slug, options),
-            new Promise<null>((resolve) => {
-                timeoutId = setTimeout(() => resolve(null), SLUG_FALLBACK_TIMEOUT_MS);
-            }),
-        ]);
-    } finally {
-        if (timeoutId) clearTimeout(timeoutId);
-    }
-};
-
 // Canonical backend resolver for exact, redirected, and fuzzy travel slugs.
-// It runs before legacy by-slug/fuzzy compatibility fallbacks and may return the
-// full detail payload in `item`, avoiding a second detail request.
+// A full detail in `item` avoids a second request.
 const fetchTravelByResolvedSlug = async (
     slug: string,
-    options?: { signal?: AbortSignal }
+    options: PublicTravelRequestOptions,
 ): Promise<Travel | null> => {
     const response = await apiClient.get<ResolveTravelSlugResponse>(
         `/travels/resolve-slug/${encodeURIComponent(slug)}/`,
         LONG_TIMEOUT,
-        { ...(options ?? {}), skipAuth: true }
+        { ...options, skipAuth: true }
     );
+    assertTravelRequestActive(options.signal);
 
     let lightResolvedItem: Travel | null = null;
     if (response?.item) {
@@ -476,10 +270,12 @@ export const fetchTravel = async (
     // Native: the stored token is authoritative. Web: the auth store decides
     // (HttpOnly cookie session, see travelDetailMemoryCache). Inlined on purpose:
     // the guest in-flight dedupe depends on exactly this microtask shape.
+    assertTravelRequestActive(options?.signal);
     const session = observeTravelDetailSession();
-    const isAuthenticated = shouldUseStoredAuthToken()
+    const isAuthenticated = !options?.skipAuth && (shouldUseStoredAuthToken()
         ? Boolean(await getSecureItem(TOKEN_KEY))
-        : session.isAuthenticated;
+        : session.isAuthenticated);
+    assertTravelRequestActive(options?.signal);
     const cacheKey = `id:${id}`;
 
     if (!isAuthenticated && !options?.forceRefresh) {
@@ -490,6 +286,7 @@ export const fetchTravel = async (
     if (!isAuthenticated) {
         if (!options?.forceRefresh) {
             const preloaded = await waitForDirectApiWindowPreload(id, true);
+            assertTravelRequestActive(options?.signal);
             if (preloaded) {
                 guestTravelMemoryCache.rememberById(id, preloaded);
                 await saveStaleTravelDetail(`/travels/${id}/`, preloaded);
@@ -497,13 +294,14 @@ export const fetchTravel = async (
             }
         }
 
-        const fetchFreshTravel = async () => {
+        const fetchFreshTravel = async (signal?: AbortSignal) => {
             const endpoint = `/travels/${id}/`;
             try {
                 const travel = await apiClient.get<Travel>(endpoint, LONG_TIMEOUT, {
-                    signal: options?.signal,
-                    ...(options?.forceRefresh ? { skipAuth: true } : {}),
+                    signal,
+                    skipAuth: true,
                 });
+                assertTravelRequestActive(signal);
                 const normalized = normalizeTravelItem(travel);
                 guestTravelMemoryCache.rememberById(id, normalized);
                 if (typeof normalized.slug === 'string' && normalized.slug.trim()) {
@@ -512,6 +310,7 @@ export const fetchTravel = async (
                 await saveStaleTravelDetail(endpoint, normalized);
                 return normalized;
             } catch (e: unknown) {
+                assertTravelRequestActive(signal);
                 if (isAbortError(e)) throw e;
                 if (isRecoverablePublicStaleError(e)) {
                     const stale = await readStaleTravelDetail(endpoint);
@@ -526,9 +325,9 @@ export const fetchTravel = async (
         // A post-hydration refresh must bypass both that preload and the in-memory
         // guest cache, otherwise recently edited captions/content stay invisible
         // until the next frontend deploy.
-        if (options?.forceRefresh) return fetchFreshTravel();
+        if (options?.forceRefresh) return fetchFreshTravel(options.signal);
 
-        return runSharedGuestTravelRequest(cacheKey, fetchFreshTravel);
+        return runSharedGuestTravelRequest(cacheKey, fetchFreshTravel, options?.signal);
     }
 
     const endpoint = `/travels/${id}/`;
@@ -565,10 +364,12 @@ export const fetchTravelBySlug = async (
     // Native: the stored token is authoritative. Web: the auth store decides
     // (HttpOnly cookie session, see travelDetailMemoryCache). Inlined on purpose:
     // the guest in-flight dedupe depends on exactly this microtask shape.
+    assertTravelRequestActive(options?.signal);
     const session = observeTravelDetailSession();
     const isAuthenticated = shouldUseStoredAuthToken()
         ? Boolean(await getSecureItem(TOKEN_KEY))
         : session.isAuthenticated;
+    assertTravelRequestActive(options?.signal);
     const slugCacheKey = getSlugCacheKey(slug);
     const cacheKey = `slug:${slugCacheKey}`;
 
@@ -577,34 +378,30 @@ export const fetchTravelBySlug = async (
         if (cached) return cached;
     }
 
-    const fetchBySlug = async (requestOptions?: PublicTravelRequestOptions) => {
+    const fetchBySlug = async (requestOptions: PublicTravelRequestOptions) => {
         const safeSlug = encodeURIComponent(slugCacheKey);
         const endpoint = `/travels/by-slug/${safeSlug}/`;
-        try {
-            const travel = await apiClient.get<Travel>(endpoint, LONG_TIMEOUT, requestOptions);
+        const fetchExact = async (skipAuth: boolean) => {
+            const travel = await apiClient.get<Travel>(endpoint, LONG_TIMEOUT, { ...requestOptions, skipAuth });
+            assertTravelRequestActive(requestOptions.signal);
             const normalized = normalizeTravelItem(travel);
-            if (!isAuthenticated || requestOptions?.skipAuth) {
+            if (skipAuth && hasAnyTravelIdentity(normalized)) {
                 await saveStaleTravelDetail(endpoint, normalized);
             }
             return normalized;
+        };
+        try {
+            return await fetchExact(Boolean(requestOptions.skipAuth));
         } catch (e: unknown) {
+            assertTravelRequestActive(requestOptions.signal);
             // Travel detail is public. A 401 means the stored token is stale/expired
             // (or invalid for the current API backend). Retry once without auth so the
             // public page still loads instead of showing an error — keep the token intact.
-            if (!isAbortError(e) && getErrorStatus(e) === 401) {
-                const travel = await apiClient.get<Travel>(endpoint, LONG_TIMEOUT, {
-                    ...requestOptions,
-                    skipAuth: true,
-                });
-                const normalized = normalizeTravelItem(travel);
-                await saveStaleTravelDetail(endpoint, normalized);
-                return normalized;
+            if (isAbortError(e)) throw e;
+            if (!requestOptions.skipAuth && getErrorStatus(e) === 401) {
+                return fetchExact(true);
             }
-            if (
-                !isAbortError(e) &&
-                (!isAuthenticated || requestOptions?.skipAuth) &&
-                isRecoverablePublicStaleError(e)
-            ) {
+            if (requestOptions.skipAuth && isRecoverablePublicStaleError(e)) {
                 const stale = await readStaleTravelDetail(endpoint);
                 if (stale) return stale;
             }
@@ -612,131 +409,48 @@ export const fetchTravelBySlug = async (
         }
     };
 
-    const fetchByDirectSlugVariant = async (requestOptions?: PublicTravelRequestOptions) => {
-        const candidates = buildSlugDirectFallbackSlugs(slugCacheKey);
-        for (const candidate of candidates) {
-            try {
-                const endpoint = `/travels/by-slug/${encodeURIComponent(candidate)}/`;
-                const travel = await apiClient.get<Travel>(
-                    endpoint,
-                    LONG_TIMEOUT,
-                    {
-                        ...requestOptions,
-                        skipAuth: true,
-                    }
-                );
-                const normalized = normalizeTravelItem(travel);
-                if (hasMinimumTravelIdentity(normalized)) {
-                    await saveStaleTravelDetail(endpoint, normalized);
-                    return normalized;
-                }
-            } catch (error: unknown) {
-                if (isAbortError(error)) throw error;
-            }
-        }
-        return null;
-    };
-
-    const fetchBySlugWithFallback = async (requestOptions?: PublicTravelRequestOptions) => {
+    const fetchBySlugWithCompatibility = async (signal?: AbortSignal): Promise<Travel> => {
+        let resolverError: unknown;
         try {
-            const resolvedTravel = await fetchTravelByResolvedSlug(slugCacheKey, requestOptions);
+            const resolvedTravel = await fetchTravelByResolvedSlug(slugCacheKey, { signal, skipAuth: !isAuthenticated });
+            assertTravelRequestActive(signal);
             if (resolvedTravel) return resolvedTravel;
-        } catch (e: unknown) {
-            if (isAbortError(e)) throw e;
+            resolverError = Object.assign(new Error('Incomplete travel resolver response'), { status: 502 });
+        } catch (error: unknown) {
+            assertTravelRequestActive(signal);
+            if (isAbortError(error)) throw error;
+            resolverError = error;
+        }
 
-            const status = getErrorStatus(e);
-            if (status === 404) {
-                try {
-                    const legacyTravel = await fetchBySlug(requestOptions);
-                    if (hasAnyTravelIdentity(legacyTravel)) return legacyTravel;
-                } catch (legacyError: unknown) {
-                    if (isAbortError(legacyError)) throw legacyError;
-                    // The resolver can legitimately answer 404 while the legacy
-                    // exact endpoint is temporarily unavailable. Preserve that
-                    // transient failure so React Query/UI can retry it instead of
-                    // presenting a false permanent "not found" state.
-                    if (getErrorStatus(legacyError) !== 404) throw legacyError;
+        const status = getErrorStatus(resolverError);
+        const isServerFailure = status !== null && status >= 500 && status < 600;
+        // The resolver is public. Only a signed-in viewer can have an exact
+        // unpublished item that the public resolver intentionally cannot see.
+        if (isServerFailure || (isAuthenticated && status === 404)) {
+            try {
+                const legacyTravel = await fetchBySlug({ signal, skipAuth: !isAuthenticated });
+                assertTravelRequestActive(signal);
+                if (hasAnyTravelIdentity(legacyTravel)) return legacyTravel;
+            } catch (error: unknown) {
+                assertTravelRequestActive(signal);
+                if (isAbortError(error)) throw error;
+                if (getErrorStatus(error) !== 404) {
+                    devError('Error fetching Travel by slug:', error);
+                    throw error;
                 }
-                const notFoundError = Object.assign(
-                    new Error(`Travel not found by slug: ${slug}`),
-                    { status: 404 }
-                );
-                devError('Error fetching Travel by slug:', notFoundError);
-                throw notFoundError;
-            }
-
-            if (!shouldUseSlugFallback(status)) {
-                devError('Error fetching Travel by slug:', e);
-                throw e;
             }
         }
 
-        let bySlugError: unknown = null;
-        try {
-            const travel = await fetchBySlug(requestOptions);
-            // Legacy compatibility path after a resolver API failure: if /by-slug/
-            // returns a sparse/HTML-followed payload, treat it as a miss and continue
-            // to the old fuzzy compatibility fallback.
-            if (hasAnyTravelIdentity(travel)) {
-                return travel;
-            }
-        } catch (e: unknown) {
-            if (isAbortError(e)) throw e;
-
-            const status = getErrorStatus(e);
-            if (!shouldUseSlugFallback(status)) {
-                devError('Error fetching Travel by slug:', e);
-                throw e;
-            }
-            bySlugError = e;
-        }
-
-        const directVariantTravel = await fetchByDirectSlugVariant(requestOptions);
-        if (directVariantTravel) {
-            if (__DEV__) {
-                devWarn('Resolved travel by direct slug variant fallback', {
-                    requestedSlug: slug,
-                    resolvedSlug: directVariantTravel.slug,
-                    id: directVariantTravel.id,
-                });
-            }
-            return directVariantTravel;
-        }
-
-        const fallbackTravel = await findTravelBySlugFallbackWithDeadline(slug, requestOptions);
-        if (fallbackTravel) {
-            const fallbackTravelId = Number(fallbackTravel.id);
-            if (Number.isFinite(fallbackTravelId) && fallbackTravelId > 0) {
-                const detailedTravel = await fetchTravel(fallbackTravelId, requestOptions);
-                if (__DEV__) {
-                    devWarn('Resolved travel by slug fallback via detail fetch', {
-                        requestedSlug: slug,
-                        resolvedSlug: fallbackTravel.slug,
-                        id: fallbackTravelId,
-                    });
-                }
-                return normalizeTravelItem(detailedTravel);
-            }
-            if (__DEV__) {
-                devWarn('Resolved travel by slug fallback', {
-                    requestedSlug: slug,
-                    resolvedSlug: fallbackTravel.slug,
-                    id: fallbackTravel.id,
-                });
-            }
-            return normalizeTravelItem(fallbackTravel);
-        }
-
-        const finalError = bySlugError ?? Object.assign(
-            new Error(`Travel not found by slug: ${slug}`),
-            { status: 404 }
-        );
+        const finalError = status === 404
+            ? Object.assign(new Error(`Travel not found by slug: ${slug}`), { status: 404 })
+            : resolverError;
         devError('Error fetching Travel by slug:', finalError);
         throw finalError;
     };
 
     if (!isAuthenticated) {
         const preloaded = await waitForDirectApiWindowPreload(slugCacheKey, false);
+        assertTravelRequestActive(options?.signal);
         if (preloaded) {
             guestTravelMemoryCache.rememberBySlugKey(slugCacheKey, preloaded);
             if (typeof preloaded.id === 'number' && Number.isFinite(preloaded.id) && preloaded.id > 0) {
@@ -746,15 +460,16 @@ export const fetchTravelBySlug = async (
             return preloaded;
         }
 
-        return runSharedGuestTravelRequest(cacheKey, async () => {
-            const normalized = await fetchBySlugWithFallback();
+        return runSharedGuestTravelRequest(cacheKey, async (signal) => {
+            const normalized = await fetchBySlugWithCompatibility(signal);
+            assertTravelRequestActive(signal);
             guestTravelMemoryCache.rememberBySlugKey(slugCacheKey, normalized);
             if (typeof normalized.id === 'number' && Number.isFinite(normalized.id) && normalized.id > 0) {
                 guestTravelMemoryCache.rememberById(normalized.id, normalized);
             }
             return normalized;
-        });
+        }, options?.signal);
     }
 
-    return fetchBySlugWithFallback({ signal: options?.signal });
+    return fetchBySlugWithCompatibility(options?.signal);
 };

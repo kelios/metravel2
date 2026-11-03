@@ -13,8 +13,9 @@ jest.mock('@/utils/publicStaleCache', () => ({
 }));
 
 import { apiClient } from '@/api/client';
-import { fetchTravel } from '@/api/travelDetailsQueries';
+import { fetchTravel, fetchTravelBySlug } from '@/api/travelDetailsQueries';
 import { resetAuthStoreForTests, useAuthStore } from '@/stores/authStore';
+import { savePublicStalePayload } from '@/utils/publicStaleCache';
 
 const mockGet = apiClient.get as jest.Mock;
 
@@ -78,4 +79,97 @@ describe('travelDetailsQueries guest memory cache (API-3)', () => {
     await fetchTravel(202);
     expect(mockGet).toHaveBeenCalledTimes(3);
   });
+
+  it('keeps the shared slug transport alive for remaining observers', async () => {
+    const first = new AbortController();
+    const second = new AbortController();
+    let resolveRequest!: (travel: ReturnType<typeof travelPayload>) => void;
+    mockGet.mockReturnValueOnce(new Promise((resolve) => { resolveRequest = resolve; }));
+
+    const canceled = expect(fetchTravelBySlug('shared-slug', { signal: first.signal }))
+      .rejects.toMatchObject({ name: 'AbortError' });
+    const remaining = fetchTravelBySlug('shared-slug', { signal: second.signal });
+    await Promise.resolve();
+    expect(mockGet).toHaveBeenCalledTimes(1);
+    const transport = mockGet.mock.calls[0][2].signal as AbortSignal;
+    first.abort();
+    await canceled;
+    expect(transport.aborted).toBe(false);
+
+    resolveRequest(travelPayload(303));
+    await expect(remaining).resolves.toMatchObject({ id: 303 });
+  });
+
+  it('aborts the last observer and ignores late failure while a new request proceeds', async () => {
+    const first = new AbortController();
+    let rejectOld!: (error: unknown) => void;
+    mockGet.mockReturnValueOnce(new Promise((_resolve, reject) => { rejectOld = reject; }));
+
+    const canceled = expect(fetchTravelBySlug('replaced-slug', { signal: first.signal }))
+      .rejects.toMatchObject({ name: 'AbortError' });
+    await Promise.resolve();
+    const transport = mockGet.mock.calls[0][2].signal as AbortSignal;
+    first.abort();
+    await canceled;
+    expect(transport.aborted).toBe(true);
+
+    mockGet.mockResolvedValueOnce(travelPayload(404));
+    const replacement = fetchTravelBySlug('replaced-slug');
+    rejectOld(Object.assign(new Error('late 502'), { status: 502 }));
+    await expect(replacement).resolves.toMatchObject({ id: 404 });
+    expect(mockGet).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps a guest resolver detail follow-up public across sign-in', async () => {
+    let resolveLookup!: (result: { id: number; slug: string }) => void;
+    mockGet.mockReturnValueOnce(new Promise((resolve) => { resolveLookup = resolve; }));
+    const request = fetchTravelBySlug('session-switch-slug');
+    await Promise.resolve();
+    useAuthStore.setState({ authReady: true, isAuthenticated: true, userId: 'signed-in' });
+
+    resolveLookup({ id: 707, slug: 'session-switch-slug' });
+
+    await expect(request).resolves.toMatchObject({ id: 707 });
+    expect(mockGet.mock.calls.map(([path, , options]) => [path, options.skipAuth])).toEqual([
+      ['/travels/resolve-slug/session-switch-slug/', true],
+      ['/travels/707/', true],
+    ]);
+  });
+
+  it('detaches when the observer aborts during synchronous transport setup', async () => {
+    const caller = new AbortController();
+    let transportSignal: AbortSignal | undefined;
+    mockGet.mockImplementationOnce((_path, _timeout, options) => {
+      transportSignal = options.signal;
+      caller.abort();
+      return new Promise(() => {});
+    });
+
+    await expect(fetchTravelBySlug('cancel-during-setup', { signal: caller.signal }))
+      .rejects.toMatchObject({ name: 'AbortError' });
+    expect(transportSignal?.aborted).toBe(true);
+  });
+
+  it('does not persist an exact fallback that finishes after the observer canceled', async () => {
+    const caller = new AbortController();
+    let finishExact!: (result: ReturnType<typeof travelPayload>) => void;
+    let exactStarted!: () => void;
+    const exactReady = new Promise<void>((resolve) => { exactStarted = resolve; });
+    mockGet.mockRejectedValueOnce(Object.assign(new Error('502'), { status: 502 }));
+    mockGet.mockImplementationOnce(() => {
+      exactStarted();
+      return new Promise((resolve) => { finishExact = resolve; });
+    });
+    jest.mocked(savePublicStalePayload).mockClear();
+    const canceled = expect(fetchTravelBySlug('canceled-exact', { signal: caller.signal }))
+      .rejects.toMatchObject({ name: 'AbortError' });
+    await exactReady;
+    caller.abort();
+    await canceled;
+    finishExact(travelPayload(808));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(savePublicStalePayload).not.toHaveBeenCalled();
+  });
+
 });

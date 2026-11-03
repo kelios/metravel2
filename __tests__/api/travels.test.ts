@@ -1173,27 +1173,38 @@ describe('src/api/travelsApi.ts', () => {
       const { fetchTravelBySlug } = loadTravelsApi();
       const notFoundError = Object.assign(new Error('not found'), { status: 404 });
       mockedApiClientGet.mockRejectedValueOnce(notFoundError); // resolve-slug
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // legacy exact by-slug compat
 
       await expect(fetchTravelBySlug('missing-travel')).rejects.toThrow('Travel not found by slug: missing-travel');
 
-      expect(mockedApiClientGet).toHaveBeenCalledTimes(2);
+      expect(mockedApiClientGet).toHaveBeenCalledTimes(1);
       expect(mockedApiClientGet.mock.calls[0][0]).toBe('/travels/resolve-slug/missing-travel/');
-      expect(mockedApiClientGet.mock.calls[1][0]).toBe('/travels/by-slug/missing-travel/');
       expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
     });
 
-    it('fetchTravelBySlug не превращает transient legacy 503 в canonical not-found', async () => {
+    it('fetchTravelBySlug проверяет точный slug черновика в сессии автора', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
-      const notFoundError = Object.assign(new Error('not found'), { status: 404 });
-      const unavailableError = Object.assign(new Error('service unavailable'), { status: 503 });
-      mockedApiClientGet.mockRejectedValueOnce(notFoundError); // resolve-slug
-      mockedApiClientGet.mockRejectedValueOnce(unavailableError); // legacy exact by-slug
+      mockedGetSecureItem.mockResolvedValueOnce('author-token');
+      const draft = { id: 22, slug: 'draft-route', name: 'Draft route', publish: false };
+      mockedApiClientGet.mockRejectedValueOnce(Object.assign(new Error('not found'), { status: 404 }));
+      mockedApiClientGet.mockResolvedValueOnce(draft as any);
 
-      await expect(fetchTravelBySlug('temporarily-unavailable')).rejects.toMatchObject({
-        status: 503,
-      });
+      await expect(fetchTravelBySlug(draft.slug)).resolves.toMatchObject(draft);
 
+      expect(mockedApiClientGet.mock.calls.map(([url]) => url)).toEqual([
+        '/travels/resolve-slug/draft-route/',
+        '/travels/by-slug/draft-route/',
+      ]);
+      expect(mockedApiClientGet.mock.calls[1][2]).toEqual(expect.objectContaining({ skipAuth: false }));
+    });
+
+    it('fetchTravelBySlug сохраняет временную ошибку точного запроса автора', async () => {
+      const { fetchTravelBySlug } = loadTravelsApi();
+      mockedGetSecureItem.mockResolvedValueOnce('author-token');
+      mockedApiClientGet
+        .mockRejectedValueOnce(Object.assign(new Error('not found'), { status: 404 }))
+        .mockRejectedValueOnce(Object.assign(new Error('service unavailable'), { status: 503 }));
+
+      await expect(fetchTravelBySlug('temporarily-unavailable')).rejects.toMatchObject({ status: 503 });
       expect(mockedApiClientGet).toHaveBeenCalledTimes(2);
       expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
     });
@@ -1257,41 +1268,20 @@ describe('src/api/travelsApi.ts', () => {
       expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
     });
 
-    it('fetchTravelBySlug использует fallback-поиск по похожему slug при 502', async () => {
+    it('fetchTravelBySlug ограничивает 502 одним точным запросом и сохраняет временную ошибку', async () => {
       const { fetchTravelBySlug } = loadTravelsApi();
-      const badGatewayError = Object.assign(new Error('bad gateway'), { status: 502 });
-      mockedApiClientGet.mockRejectedValueOnce(badGatewayError); // resolve-slug
-      mockedApiClientGet.mockRejectedValueOnce(badGatewayError); // legacy by-slug
-      mockedApiClientGet.mockResolvedValueOnce({
-        id: 2677,
-        name: 'Модынь  - одна из самых высоких вершин Бескидов',
-        slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
-        description: '<p>detail payload</p>',
-        gallery: [],
-        travelAddress: [{ id: 1, coord: '53.9,27.56' }],
-      } as any);
-      mockedFetchWithTimeout.mockResolvedValueOnce({ ok: true } as any);
-      mockedSafeJsonParse.mockResolvedValueOnce({
-        data: [
-          {
-            id: 2677,
-            name: 'Модынь  - одна из самых высоких вершин Бескидов',
-            slug: 'modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
-            url: '/travels/modyn-odna-iz-samykh-vysokikh-vershin-beskidov',
-            publish: true,
-            moderation: true,
-          },
-        ],
-        total: 1,
-      } as any);
+      const badGateway = Object.assign(new Error('bad gateway'), { status: 502 });
+      mockedApiClientGet
+        .mockRejectedValueOnce(badGateway)
+        .mockRejectedValueOnce(Object.assign(new Error('not found'), { status: 404 }));
 
-      const result = await fetchTravelBySlug('modyn-odna-iz-samykh-vershin-beskidov');
+      await expect(fetchTravelBySlug('legacy-slug')).rejects.toBe(badGateway);
 
-      expect(result.slug).toBe('modyn-odna-iz-samykh-vysokikh-vershin-beskidov');
-      expect(result.id).toBe(2677);
-      expect(result.description).toBe('<p>detail payload</p>');
-      expect(mockedApiClientGet).toHaveBeenCalledTimes(3);
-      expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
+      expect(mockedApiClientGet.mock.calls.map(([url]) => url)).toEqual([
+        '/travels/resolve-slug/legacy-slug/',
+        '/travels/by-slug/legacy-slug/',
+      ]);
+      expect(mockedFetchWithTimeout).not.toHaveBeenCalled();
     });
 
     it('fetchTravel пробрасывает AbortError без логирования', async () => {
