@@ -25,7 +25,9 @@ function AdventDoorTile({ door, disabled = false, onPress }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const locked = door.state === 'locked'
-  const caption = locked
+  // У бонуса дата уже стоит заголовком плитки: в подписи только состояние, без повтора даты
+  // (в узкой док-панели «Откроется 25 декабря» обрезалось до «Откроется 25 …»).
+  const caption = locked && !door.bonus
     ? t('adventStatic:tile.locked', { value1: formatDoorDate(door.date) })
     : stateLabel(door.state)
   const icon = door.state === 'available' || door.state === 'opened' ? KIND_ICONS[door.kind] : STATE_ICONS[door.state]

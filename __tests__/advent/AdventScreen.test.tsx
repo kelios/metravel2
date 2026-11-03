@@ -119,6 +119,9 @@ describe('AdventScreen (#2861)', () => {
     expect(screen.getByText('25 декабря')).toBeTruthy()
     expect(screen.getByText('31 декабря')).toBeTruthy()
     expect(screen.getByText('7 января')).toBeTruthy()
+    // Дата бонуса — заголовок плитки; подпись закрытого бонуса её не повторяет.
+    expect(screen.queryByText('Откроется 25 декабря')).toBeNull()
+    expect(screen.getAllByText('Откроется')).toHaveLength(3)
     expect(screen.queryByText('26')).toBeNull()
     expect(screen.queryByText('27')).toBeNull()
     expect(screen.getByTestId('advent-countdown').props.children).toMatch(/Дверца 4 откроется/)
