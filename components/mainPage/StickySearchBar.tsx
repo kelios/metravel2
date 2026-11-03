@@ -225,7 +225,8 @@ function StickySearchBar({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      accessibilityState={selected === undefined ? undefined : label ? { expanded: selected } : { selected }}
+      aria-expanded={label ? selected : undefined}
+      accessibilityState={!label && selected !== undefined ? { selected } : undefined}
     >
       <View style={styles.actionIconSlot}>
         <Feather name={iconName} size={iconSize} color={iconColor} />

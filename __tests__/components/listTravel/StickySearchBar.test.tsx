@@ -101,7 +101,7 @@ describe('StickySearchBar Component', () => {
     );
 
     expect(screen.getByPlaceholderText('Найти маршрут…')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Подборки', expanded: false })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Подборки', expanded: false }).props['aria-expanded']).toBe(false);
     expect(screen.getByText('Подборки')).toBeTruthy();
     const results = screen.getByTestId('results-count-text');
     expect(String((results.props as any).children)).toContain('10');
