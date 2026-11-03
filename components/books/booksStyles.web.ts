@@ -148,8 +148,7 @@ export const editionCss=`
 .rbe .rbe-path summary::-webkit-details-marker{display:none}
 .rbe .rbe-path ol{list-style:decimal;padding-left:20px;font-size:14px;line-height:20px;color:${c.textMuted}}
 .rbe .rbe-guide-open{margin:${sp.md}px 0 ${sp.lg}px}
-.rbe .ready-books-note p,.rbe .ready-books-preview p,.rbe .rbe-providers .rbe-acc-inner p{margin:0 0 ${sp.sm}px}
-.rbe .rbe-providers .rbe-acc-inner li{padding:${sp.sm}px 0;border-top:1px solid ${c.borderStrong}}
+.rbe .ready-books-note p,.rbe .ready-books-preview p{margin:0 0 ${sp.sm}px}
 .rbe .rbe-faq .rbe-acc>summary{min-height:56px}
 .rbe .rbe-faq .rbe-acc-inner p{color:${c.textMuted}}
 .rbe .rbe-more{display:flex;overflow-x:auto;gap:${sp.md}px;margin:0 -${sp.md}px;padding:4px ${sp.md}px ${sp.sm}px;scroll-snap-type:x mandatory}

@@ -1,5 +1,4 @@
-import React, {useEffect,useState} from 'react';
-import Feather from '@expo/vector-icons/Feather';
+import React, {useEffect,useId,useState} from 'react';
 import Button from '@/components/ui/Button';
 import Chip from '@/components/ui/Chip';
 import {formatList,formatNumber,getActiveLocale} from '@/i18n';
@@ -10,7 +9,9 @@ import {loadCurrentPrintDirectory} from '@/services/book/readyBooks/printResourc
 import type {PublishedBook} from '@/services/book/readyBooks/publication';
 import type {PrintCityId,PrintCountry,PrintDirectory,PrintProvider} from '@/data/travelBooks/schema/providers';
 import type {PrintProfile} from '@/types/readyBook';
+import {EditionAccordion,EditionIcon} from '../edition/EditionParts.web';
 import {cityKey,useProviderCopy,type ProviderCopy} from './providerCopy';
+import {printProvidersCss} from './printProvidersStyles.web';
 
 type Props = {profileId: PrintProfile['id']; bodyPageCount: number};
 
@@ -31,8 +32,13 @@ function capabilityLines(provider:PrintProvider,t:ProviderCopy){
   ].filter((line):line is string=>Boolean(line));
 }
 
+/**
+ * Directory of print points: country + city controls, then one card per point. Styles are the
+ * `rbe-pp-*` rules of `printProvidersCss` (mounted by the wrapper below); the host supplies the `.rbe` scope.
+ */
 export function PrintProvidersView({directory,profileId,bodyPageCount,initialCountry='BY',onProviderOpened,titleHidden=false}: Props & {directory:PrintDirectory;initialCountry?:PrintCountry;onProviderOpened?:(providerId:string)=>void;titleHidden?:boolean}) {
   const t=useProviderCopy();
+  const cityId=useId();
   const [country,setCountry]=useState<PrintCountry>(initialCountry);
   const cities=listPrintCities(country,directory);
   const [selectedCity,setCity]=useState<PrintCityId|undefined>(cities[0]);
@@ -45,25 +51,37 @@ export function PrintProvidersView({directory,profileId,bodyPageCount,initialCou
     else onProviderOpened?.(providerId);
   };
   const changeCountry=(next:PrintCountry)=>{setCountry(next);setCity(listPrintCities(next,directory)[0]);};
-  return <section aria-label={t('providerTitle')}>
-    {!titleHidden&&<h2>{t('providerTitle')}</h2>}<p>{t('providerIntro')}</p>
-    <p>{t('providerFormat',{format:t(profileId==='album-a5'?'providerAlbum':'providerPocket'),pages:formatNumber(bodyPageCount)})}</p>
-    <p>{t('providerPreparation')}</p>
-    <div role="group" aria-label={t('providerCountry')}>{COUNTRIES.map(id=><Chip key={id} label={t(id==='BY'?'providerBY':'providerPL')} selected={country===id} onPress={()=>changeCountry(id)}/>)}</div>
-    {city&&<label>{t('providerCity')}<select value={city} onChange={event=>setCity(event.target.value as PrintCityId)}>
-      {cities.map(id=><option key={id} value={id}>{t(cityKey(id))}</option>)}
-    </select></label>}
-    {locations.length?<ul>{locations.map(provider=><li key={provider.id}>
-      <h3>{provider.name}</h3><p>{provider.address}</p>
-      {capabilityLines(provider,t).map(line=><p key={line}>{line}</p>)}
-      <p>{t(FONT_KEYS[provider.fontPolicy])}</p>
-      <Button label={t('providerWebsite')} onPress={()=>void open(provider.url,provider.id)}/>
-      <details><summary>{t('providerDetails')}</summary><ul>{provider.sourceUrls.map((url,index)=><li key={url}>
-        <Button label={t('providerSource',{number:formatNumber(index+1)})} onPress={()=>void open(url,provider.id)}/>
-      </li>)}</ul></details>
-    </li>)}</ul>:<p>{t('providerEmpty')}</p>}
-    {openError&&<p role="alert">{t('providerOpenError')}</p>}
-    <p>{t('providerNoTransfer')}</p>
+  return <section className="rbe-pp" aria-label={t('providerTitle')}>
+    {!titleHidden&&<h2>{t('providerTitle')}</h2>}
+    <p className="rbe-pp-lead">{t('providerIntro')}</p>
+    <div className="rbe-pp-note"><EditionIcon name="info" size={18}/><div>
+      <p className="rbe-pp-format">{t('providerFormat',{format:t(profileId==='album-a5'?'providerAlbum':'providerPocket'),pages:formatNumber(bodyPageCount)})}</p>
+      <p>{t('providerPreparation')}</p>
+    </div></div>
+    <div className="rbe-pp-controls">
+      <div className="rbe-pp-seg" role="group" aria-label={t('providerCountry')}>{COUNTRIES.map(id=><Chip key={id} label={t(id==='BY'?'providerBY':'providerPL')} selected={country===id} onPress={()=>changeCountry(id)}/>)}</div>
+      {city&&<div className="rbe-pp-city"><label htmlFor={cityId}>{t('providerCity')}</label><span className="rbe-pp-select">
+        <select id={cityId} value={city} onChange={event=>setCity(event.target.value as PrintCityId)}>
+          {cities.map(id=><option key={id} value={id}>{t(cityKey(id))}</option>)}
+        </select><EditionIcon name="chevron-down" size={16}/>
+      </span></div>}
+    </div>
+    {locations.length?<ul className="rbe-pp-list">{locations.map(provider=><li key={provider.id} className="rbe-pp-card">
+      <h3>{provider.name}</h3>
+      <p className="rbe-pp-addr"><EditionIcon name="map-pin" size={16}/><span>{provider.address}</span></p>
+      <ul className="rbe-pp-facts">
+        {capabilityLines(provider,t).map(line=><li key={line}><EditionIcon name="check" size={16}/><span>{line}</span></li>)}
+        <li className={provider.fontPolicy==='embedded-ok'?undefined:'is-ask'}><EditionIcon name={provider.fontPolicy==='embedded-ok'?'check':'alert-circle'} size={16}/><span>{t(FONT_KEYS[provider.fontPolicy])}</span></li>
+      </ul>
+      <div className="rbe-pp-actions">
+        <Button variant="outline" size="sm" icon=<EditionIcon name="external-link" size={16}/> label={t('providerWebsite')} accessibilityLabel={`${t('providerWebsite')}: ${provider.name}`} onPress={()=>void open(provider.url,provider.id)}/>
+        <details className="rbe-pp-src"><summary>{t('providerDetails')}<span className="rbe-sr">: {provider.name}</span><EditionIcon name="chevron-down" size={16}/></summary><ul>{provider.sourceUrls.map((url,index)=><li key={url}>
+          <Button variant="ghost" size="sm" label={t('providerSource',{number:formatNumber(index+1)})} onPress={()=>void open(url,provider.id)}/>
+        </li>)}</ul></details>
+      </div>
+    </li>)}</ul>:<p className="rbe-pp-empty">{t('providerEmpty')}</p>}
+    {openError&&<p className="rbe-pp-error" role="alert">{t('providerOpenError')}</p>}
+    <p className="rbe-pp-foot"><EditionIcon name="shield" size={16}/><span>{t('providerNoTransfer')}</span></p>
   </section>;
 }
 
@@ -95,13 +113,10 @@ export default function PrintProviders({book,embedded=false,...props}:Props & {b
       {!embedded&&<h2>{t('providerTitle')}</h2>}
       {state.failed?<><p role="alert">{t('providerLoadError')}</p><Button label={t('retry')} onPress={()=>setAttempt(value=>value+1)}/></>:<p role="status">{t('loadingPage')}</p>}
     </section>;
-  if(!embedded)return view;
-  return <details className="rbe-acc rbe-providers">
-    <summary>
-      <span className="rbe-acc-ic"><span className="rbe-i" aria-hidden="true"><Feather name="map-pin" size={20} color="currentColor"/></span></span>
-      <span className="rbe-acc-txt"><span className="rbe-acc-title">{t('providerTitle')}</span>{state.directory&&<span className="rbe-acc-hint">{providerSummary(state.directory,t)}</span>}</span>
-      <span className="rbe-acc-chev"><span className="rbe-i" aria-hidden="true"><Feather name="chevron-down" size={20} color="currentColor"/></span></span>
-    </summary>
-    <div className="rbe-acc-inner">{view}</div>
-  </details>;
+  const styles=<style>{printProvidersCss}</style>;
+  if(!embedded)return <>{styles}{view}</>;
+  return <EditionAccordion className="rbe-providers" icon="map-pin" title={t('providerTitle')}
+    hint={state.directory?providerSummary(state.directory,t):undefined}>
+    {styles}{view}
+  </EditionAccordion>;
 }
