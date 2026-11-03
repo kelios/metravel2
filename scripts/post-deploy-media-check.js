@@ -571,7 +571,7 @@ function auditArticleBodyLadder(responses) {
  * семейство. Вынесено из сетевой части, чтобы тесты гоняли реальный разбор
  * контракта, а не мок примитива (правило evidence №4 в docs/TASK_BOARD_MCP.md).
  */
-function extractTargetsFromPayloads(site, { travels, travelDetail, travelDetails, quests } = {}) {
+function extractTargetsFromPayloads(site, { travels, catalogDetails, travelDetails, quests } = {}) {
   const targets = []
   const seenFamilies = new Set()
 
@@ -581,9 +581,15 @@ function extractTargetsFromPayloads(site, { travels, travelDetail, travelDetails
     targets.push({ family, url, source })
   }
 
-  // Первая деталь даёт цели галереи и точки; остальные нужны только для поиска
-  // legacy-ключа `uploads/**`, которого у конкретной статьи может не быть вовсе.
-  const details = [travelDetail, ...(Array.isArray(travelDetails) ? travelDetails : [])]
+  // Порядок деталей — порядок поиска цели: сначала свежий край каталога, потом
+  // опорные и сечения из поиска `uploads/**`. Галерея и фото точки есть не у
+  // каждой статьи: с 25.10.2026 первая в каталоге (940) — без галереи и без фото
+  // точек, и пока цель бралась из одной первой детали, гейт на каждом выкате
+  // терял оба семейства с `media.target_absent` (#2981).
+  const details = [
+    ...(Array.isArray(catalogDetails) ? catalogDetails : []),
+    ...(Array.isArray(travelDetails) ? travelDetails : []),
+  ]
     .map(unwrapItem)
     .filter(Boolean)
 
@@ -594,13 +600,14 @@ function extractTargetsFromPayloads(site, { travels, travelDetail, travelDetails
     firstTravel?.travel_image_thumb_url
   push('travel-image', toTargetUrl(site, travelCover), '/api/travels/')
 
-  const detail = details[0] || null
-  const galleryItem = (detail?.gallery || []).find((item) => item?.url || item?.thumb_url)
+  const galleryItem = details
+    .flatMap((detail) => detail.gallery || [])
+    .find((item) => item?.url || item?.thumb_url)
   push('gallery', toTargetUrl(site, galleryItem?.url || galleryItem?.thumb_url), '/api/travels/<id>/')
 
-  const addressItem = (detail?.travelAddress || []).find(
-    (item) => item?.travelImageThumbUrl || item?.travelImageUrl
-  )
+  const addressItem = details
+    .flatMap((detail) => detail.travelAddress || [])
+    .find((item) => item?.travelImageThumbUrl || item?.travelImageUrl)
   push(
     'address-image',
     toTargetUrl(site, addressItem?.travelImageThumbUrl || addressItem?.travelImageUrl),
@@ -995,9 +1002,9 @@ function hasUploadsTarget(detail) {
  * покрытия неотличима от честного отсутствия класса (#1758).
  *
  * Этот же набор деталей питает цель `travel-description-image`, поэтому ранний
- * выход его сужает: в удачной ветке остаются первая статья каталога и опорная.
- * Обе — опубликованные travel с манифестом, и прогон против прода 2026-09-04 даёт
- * все 7 семейств; если манифест опустеет у обеих, семейство выпадет из набора с
+ * выход его сужает: в удачной ветке остаются первая страница каталога и опорная.
+ * Это опубликованные travel с манифестом, и прогон против прода 2026-09-04 даёт
+ * все 7 семейств; если манифест опустеет у всех, семейство выпадет из набора с
  * предупреждением `media.target_absent` (`missingTargetNotices`, #1955).
  */
 async function collectUploadsScanDetails(softFetch, travels) {
@@ -1206,17 +1213,19 @@ async function collectTargets() {
     softFetch(`${SITE}/api/quests/?limit=5`),
   ])
 
-  const firstTravel = unwrapList(travels).find((item) => item?.id)
-  const travelDetail = firstTravel?.id
-    ? await softFetch(`${SITE}/api/travels/${firstTravel.id}/`)
-    : null
+  // Детали всей первой страницы, а не одной первой статьи: галерея и фото точек
+  // есть не у каждой, и цель семейства ищется по ним по порядку (#2981).
+  const catalogIds = unwrapList(travels).map((item) => item?.id).filter(Boolean)
+  const catalogDetails = (
+    await Promise.all(catalogIds.map((id) => softFetch(`${SITE}/api/travels/${id}/`)))
+  ).filter(Boolean)
 
   const { details: travelDetails, anchorsReachable } = await collectUploadsScanDetails(
     softFetch,
     travels,
   )
 
-  const targets = extractTargetsFromPayloads(SITE, { travels, travelDetail, travelDetails, quests })
+  const targets = extractTargetsFromPayloads(SITE, { travels, catalogDetails, travelDetails, quests })
 
   const notices = missingTargetNotices(targets, { anchorsReachable })
   for (const notice of notices) {

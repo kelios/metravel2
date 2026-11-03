@@ -82,15 +82,17 @@ describe('post-deploy media check: разбор контракта', () => {
           },
         ],
       },
-      travelDetail: {
-        data: {
-          gallery: [{ url: `${SITE}/gallery/photo.webp` }],
-          travelAddress: [
-            { travelImageThumbUrl: null, travelImageUrl: null },
-            { travelImageThumbUrl: `${SITE}/address-image/15850/conversions/point.webp` },
-          ],
+      catalogDetails: [
+        {
+          data: {
+            gallery: [{ url: `${SITE}/gallery/photo.webp` }],
+            travelAddress: [
+              { travelImageThumbUrl: null, travelImageUrl: null },
+              { travelImageThumbUrl: `${SITE}/address-image/15850/conversions/point.webp` },
+            ],
+          },
         },
-      },
+      ],
       quests: { data: [{ cover_url: `${SITE}/quest-cover/quests/1/main/cover.webp` }] },
     })
 
@@ -107,6 +109,25 @@ describe('post-deploy media check: разбор контракта', () => {
     ])
     expect(targets[0].url).toBe(`${SITE}/travel-image/682/conversions/cover.webp`)
     expect(targets[2].url).toBe(`${SITE}/address-image/15850/conversions/point.webp`)
+  })
+
+  it('ищет галерею и фото точки по деталям каталога, а не только в первой статье (#2981)', () => {
+    // Состояние прода с 25.10.2026: первая статья каталога (940) без галереи и без
+    // фото точек — цели обоих семейств даёт следующая деталь страницы.
+    const targets = extractTargetsFromPayloads(SITE, {
+      catalogDetails: [
+        { gallery: [], travelAddress: [{ travelImageThumbUrl: null, travelImageUrl: null }] },
+        {
+          gallery: [{ url: `${SITE}/gallery/second.webp` }],
+          travelAddress: [{ travelImageThumbUrl: `${SITE}/address-image/16441/conversions/p.webp` }],
+        },
+      ],
+      travelDetails: [{ gallery: [{ url: `${SITE}/gallery/anchor.webp` }] }],
+    })
+
+    const urlOf = (family: string) => targets.find((item: { family: string }) => item.family === family)?.url
+    expect(urlOf('gallery')).toBe(`${SITE}/gallery/second.webp`)
+    expect(urlOf('address-image')).toBe(`${SITE}/address-image/16441/conversions/p.webp`)
   })
 
   it('не хардкодит id: цели меняются вместе с ответом API', () => {
@@ -140,16 +161,18 @@ describe('post-deploy media check: разбор контракта', () => {
       // Обложка, которую фронт не переписывает, для legacy не годится — цель должна
       // прийти из следующего кандидата, а не пропасть вместе с первым.
       travels: { data: [{ id: 1, travel_image_thumb_url: `${SITE}/travel-image/plain.webp` }] },
-      travelDetail: {
-        data: {
-          travelAddress: [
-            {
-              travelImageThumbUrl:
-                'https://metravelprod.s3.eu-north-1.amazonaws.com/9/conversions/p.webp',
-            },
-          ],
+      catalogDetails: [
+        {
+          data: {
+            travelAddress: [
+              {
+                travelImageThumbUrl:
+                  'https://metravelprod.s3.eu-north-1.amazonaws.com/9/conversions/p.webp',
+              },
+            ],
+          },
         },
-      },
+      ],
     })
 
     expect(targets.find((item: { family: string }) => item.family === 'media-resize-legacy')?.url).toBe(
@@ -171,17 +194,16 @@ describe('post-deploy media check: семейство без цели не пр�
   const noticeFor = (notices: Notice[], family: string) => notices.find((item) => item.family === family)
 
   /** Форма ответа прода после #1204: conversion-ключи приходят family-роутами. */
+  const firstDetailData = {
+    gallery: [{ url: `${SITE}/gallery/frame.webp` }],
+    travelAddress: [{ travelImageThumbUrl: `${SITE}/address-image/16150/conversions/point.webp` }],
+    media: { article_body: { cover: { src: `${SITE}/travel-description-image/body.jpg.webp` } } },
+  }
   const firstPartyPayloads = {
     travels: {
       data: [{ id: 759, media: { cover: { variants: { original: `${SITE}/travel-image/759/conversions/cover.webp` } } } }],
     },
-    travelDetail: {
-      data: {
-        gallery: [{ url: `${SITE}/gallery/frame.webp` }],
-        travelAddress: [{ travelImageThumbUrl: `${SITE}/address-image/16150/conversions/point.webp` }],
-        media: { article_body: { cover: { src: `${SITE}/travel-description-image/body.jpg.webp` } } },
-      },
-    },
+    catalogDetails: [{ data: firstDetailData }],
     quests: { data: [{ cover_url: `${SITE}/quest-cover/quests/1/main/cover.webp` }] },
   }
 
@@ -210,14 +232,16 @@ describe('post-deploy media check: семейство без цели не пр�
   it('legacy-цель построена из прямой ссылки в бакет — уведомления про legacy нет', () => {
     const targets = extractTargetsFromPayloads(SITE, {
       ...firstPartyPayloads,
-      travelDetail: {
-        data: {
-          ...firstPartyPayloads.travelDetail.data,
-          travelAddress: [
-            { travelImageThumbUrl: 'https://metravelprod.s3.eu-north-1.amazonaws.com/9/conversions/p.webp' },
-          ],
+      catalogDetails: [
+        {
+          data: {
+            ...firstDetailData,
+            travelAddress: [
+              { travelImageThumbUrl: 'https://metravelprod.s3.eu-north-1.amazonaws.com/9/conversions/p.webp' },
+            ],
+          },
         },
-      },
+      ],
     })
 
     expect(families(targets)).toContain('media-resize-legacy')
@@ -229,7 +253,7 @@ describe('post-deploy media check: семейство без цели не пр�
     // из набора так же молча, как legacy.
     const targets = extractTargetsFromPayloads(SITE, {
       ...firstPartyPayloads,
-      travelDetail: { data: { ...firstPartyPayloads.travelDetail.data, media: {} } },
+      catalogDetails: [{ data: { ...firstDetailData, media: {} } }],
     })
 
     expect(noticeFor(missingTargetNotices(targets, { anchorsReachable: true }), 'travel-description-image')).toMatchObject({
@@ -326,7 +350,7 @@ describe('post-deploy media check: цель uploads/** (фото тела ста
     // статьи каталога, где legacy-фото действительно есть (#1222).
     const targets = extractTargetsFromPayloads(SITE, {
       travels: { results: [{ id: 682, travel_image_thumb_url: `${SITE}/travel-image/682/conversions/c.webp` }] },
-      travelDetail: { data: { media: { article_body: { gallery: [{ src: `${SITE}/travel-description-image/9/x.webp` }] } } } },
+      catalogDetails: [{ data: { media: { article_body: { gallery: [{ src: `${SITE}/travel-description-image/9/x.webp` }] } } } }],
       travelDetails: [
         { data: { media: { article_body: { gallery: [] } } } },
         { data: { media: { article_body: { gallery: [{ src: `${S3}/uploads/1591977314DSC_0375.JPG` }] } } } },
