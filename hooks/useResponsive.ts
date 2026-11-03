@@ -191,10 +191,8 @@ const subscribe = (onStoreChange: () => void) => {
   };
 };
 
-// React calls getServerSnapshot for SSR and the hydration render, then compares
-// it with getSnapshot after that consumer commits. Keeping this transition local
-// to useSyncExternalStore prevents one early subscriber from forcing live viewport
-// dimensions into sibling route trees that are still hydrating.
+// Keep React's post-commit store check on the same snapshot as the component
+// until that consumer's hydration transition enables live dimensions.
 const getSnapshot = () => currentSnapshot;
 
 // Width-only snapshot. Returns a primitive number so useSyncExternalStore
@@ -212,8 +210,11 @@ const getServerWidthSnapshot = () => 0;
  */
 export function useResponsiveWidth(options?: HydrationReadyOptions): number {
   const hydrationReady = useHydrationReady(options);
-  const liveWidth = useSyncExternalStore(subscribe, getWidthSnapshot, getServerWidthSnapshot);
-  return hydrationReady ? liveWidth : getServerWidthSnapshot();
+  return useSyncExternalStore(
+    subscribe,
+    hydrationReady ? getWidthSnapshot : getServerWidthSnapshot,
+    getServerWidthSnapshot,
+  );
 }
 
 /**
@@ -271,12 +272,15 @@ export function useBreakpoints(options?: HydrationReadyOptions) {
  */
 export function useResponsive(options?: HydrationReadyOptions): ResponsiveState {
   const hydrationReady = useHydrationReady(options);
-  const liveSnapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   // Expo Router hydrates lazy route boundaries after the root shell has already
   // committed. A global external store may be live by then, so getServerSnapshot
   // alone cannot protect those late boundaries. Keep each consumer on the SSR
   // dimensions until that consumer itself commits, then reveal the live viewport.
-  const snapshot = hydrationReady ? liveSnapshot : getServerSnapshot();
+  const snapshot = useSyncExternalStore(
+    subscribe,
+    hydrationReady ? getSnapshot : getServerSnapshot,
+    getServerSnapshot,
+  );
   const width = snapshot.width;
   const height = snapshot.height;
   const isHydrated = hydrationReady;

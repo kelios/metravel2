@@ -2,16 +2,21 @@
  * @jest-environment jsdom
  */
 
-import React, { act } from 'react'
+import React, { act, useLayoutEffect } from 'react'
 import { hydrateRoot, type Root } from 'react-dom/client'
 import { renderToString } from 'react-dom/server.node'
 import { Platform } from 'react-native'
 
-import { useResponsive } from '@/hooks/useResponsive'
+import { useResponsive, useResponsiveWidth } from '@/hooks/useResponsive'
 
-function ResponsiveProbe() {
+function ResponsiveProbe({ onCommit }: { onCommit?: (snapshot: string) => void }) {
   const { width, height, isHydrated } = useResponsive()
-  return <span>{`${width}x${height}:${isHydrated ? 'live' : 'server'}`}</span>
+  const widthOnly = useResponsiveWidth()
+  const snapshot = `${width}x${height}:${isHydrated ? 'live' : 'server'}`
+  useLayoutEffect(() => {
+    onCommit?.(`${snapshot}:${widthOnly}`)
+  })
+  return <span>{snapshot}</span>
 }
 
 describe('useResponsive hydration contract', () => {
@@ -59,6 +64,7 @@ describe('useResponsive hydration contract', () => {
     secondContainer.innerHTML = serverHtml
     const firstErrors: unknown[] = []
     const secondErrors: unknown[] = []
+    const secondCommits: string[] = []
     let firstRoot: Root | null = null
     let secondRoot: Root | null = null
 
@@ -71,7 +77,9 @@ describe('useResponsive hydration contract', () => {
     expect(firstContainer.textContent).toBe('1440x900:live')
 
     await act(async () => {
-      secondRoot = hydrateRoot(secondContainer, <ResponsiveProbe />, {
+      secondRoot = hydrateRoot(secondContainer, (
+        <ResponsiveProbe onCommit={(snapshot) => secondCommits.push(snapshot)} />
+      ), {
         onRecoverableError: (error) => secondErrors.push(error),
       })
       await Promise.resolve()
@@ -80,6 +88,7 @@ describe('useResponsive hydration contract', () => {
     expect(firstErrors).toEqual([])
     expect(secondErrors).toEqual([])
     expect(secondContainer.textContent).toBe('1440x900:live')
+    expect(secondCommits).toEqual(['0x0:server:0', '1440x900:live:1440'])
 
     await act(async () => {
       firstRoot?.unmount()
