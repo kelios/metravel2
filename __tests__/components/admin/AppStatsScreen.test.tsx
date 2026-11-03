@@ -136,6 +136,7 @@ describe('экран статистики приложения (#2843)', () => {
       ...initial,
       platform: '',
       appVersion: '',
+      includeTest: false,
     }))
 
     await fireEvent.press(view.getByTestId('app-stats-period-7'))
@@ -157,6 +158,15 @@ describe('экран статистики приложения (#2843)', () => {
       platform: 'ios',
       appVersion: '1.2.3',
     })))
+
+    // Тестовые устройства (#2978): включаются только переключателем, версия сохраняется.
+    await fireEvent.press(view.getByTestId('app-stats-source-all'))
+    await waitFor(() => expect(mockFetchStats).toHaveBeenCalledWith(expect.objectContaining({
+      platform: 'ios',
+      appVersion: '1.2.3',
+      includeTest: true,
+    })))
+    expect(view.getByTestId('app-stats-source-all').props.accessibilityState).toMatchObject({ selected: true })
   })
 
   it('пустой период показывает пустое состояние, ошибка — повтор', async () => {

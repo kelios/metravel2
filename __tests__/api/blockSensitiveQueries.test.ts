@@ -226,7 +226,7 @@ const rootOf = (factory: (...args: any[]) => readonly unknown[]): string => {
         publicationStatus: ['draft', 'pending_review'],
       })
     : factory === queryKeys.appTelemetryStats
-      ? queryKeys.appTelemetryStats({ from: '2026-01-01', to: '2026-01-02', platform: 'web', appVersion: '1' })
+      ? queryKeys.appTelemetryStats({ from: '2026-01-01', to: '2026-01-02', platform: 'web', appVersion: '1', includeTest: false })
       : factory(...new Array(Math.max(factory.length, 1)).fill(undefined))
   return String(key[0])
 }

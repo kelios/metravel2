@@ -16,7 +16,7 @@ jest.mock('expo-constants', () => ({
   },
 }))
 jest.mock('@/i18n/format', () => ({ getActiveLocale: () => 'pl' }))
-jest.mock('expo-device', () => ({ modelName: 'iPhone 15', modelId: 'iPhone15,4' }))
+jest.mock('expo-device', () => ({ __esModule: true, modelName: 'iPhone 15', modelId: 'iPhone15,4', isDevice: true }))
 
 jest.mock('@/api/client', () => {
   const { ApiError } = jest.requireActual('@/api/clientErrors')
@@ -24,6 +24,7 @@ jest.mock('@/api/client', () => {
 })
 
 import { ApiError } from '@/api/clientErrors'
+import * as Device from 'expo-device'
 import {
   APP_CRASH_QUEUE_KEY,
   APP_INSTALL_ID_KEY,
@@ -43,6 +44,10 @@ import {
   installCrashReporting,
 } from '@/utils/crashReporting'
 import { getMonitoringService } from '@/utils/logger'
+
+const setIsDevice = (value: boolean) => {
+  ;(Device as { isDevice: boolean }).isDevice = value
+}
 
 const readQueue = async (): Promise<any[]> => {
   const raw = await AsyncStorage.getItem(APP_CRASH_QUEUE_KEY)
@@ -258,6 +263,50 @@ describe('crash reporting', () => {
     })
   })
 
+  it('flags simulators, emulators and dev builds as test sources', () => {
+    const originalDev = (globalThis as any).__DEV__
+    try {
+      ;(globalThis as any).__DEV__ = false
+      setIsDevice(true)
+      expect(getAppTelemetryEnvironment().test_source).toBe(false)
+      setIsDevice(false)
+      expect(getAppTelemetryEnvironment().test_source).toBe(true)
+      setIsDevice(true)
+      ;(globalThis as any).__DEV__ = true
+      expect(getAppTelemetryEnvironment().test_source).toBe(true)
+    } finally {
+      ;(globalThis as any).__DEV__ = originalDev
+      setIsDevice(true)
+    }
+  })
+
+  it('keeps the test source of the session that died and fills it for older markers', async () => {
+    const originalDev = (globalThis as any).__DEV__
+    ;(globalThis as any).__DEV__ = false
+    try {
+      for (const [stored, expected] of [[false, false], [undefined, true]] as const) {
+        setIsDevice(false)
+        mockPost.mockClear()
+        __resetCrashReporting()
+        __resetAppTelemetry()
+        await AsyncStorage.clear()
+        await AsyncStorage.setItem(APP_SESSION_MARKER_KEY, JSON.stringify({
+          session_id: `prev-${String(stored)}`, started_at: '2026-10-27T10:00:00.000Z', clean: false,
+          crash_reported: false, platform: 'android', app_version: '1.0.5', build_number: '24',
+          os_version: '34', device_model: 'Pixel', ...(stored === undefined ? {} : { test_source: stored }),
+        }))
+        installWithErrorUtils()
+        await flushPromises()
+        await flushPromises()
+        const reports = mockPost.mock.calls.map(([, body]) => body)
+        expect(reports).toEqual([expect.objectContaining({ kind: 'abnormal_exit', test_source: expected })])
+      }
+    } finally {
+      ;(globalThis as any).__DEV__ = originalDev
+      setIsDevice(true)
+    }
+  })
+
   it('keeps the same report id through network failure and a process restart', async () => {
     mockPost.mockRejectedValue(new Error('offline'))
     await captureAppCrash({ kind: 'js_exception', fatal: false, error: new Error('offline crash') })
@@ -462,6 +511,7 @@ describe('crash reporting', () => {
       os_version: '34',
       device_model: 'Pixel',
       locale: 'pl',
+      test_source: false,
       ts: '2026-10-28T00:00:00.000Z',
       kind: 'js_exception',
       fatal: false,

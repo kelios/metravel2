@@ -28,6 +28,8 @@ export type AppTelemetryEnvironment = {
   os_version: string
   device_model: string
   locale: string
+  /** Симулятор, эмулятор или dev-сборка: сервер не считает их в статистике (#2977). */
+  test_source: boolean
 }
 
 export type AppCrashKind = 'js_exception' | 'unhandled_rejection' | 'render_error' | 'abnormal_exit'
@@ -175,6 +177,7 @@ export function getAppTelemetryEnvironment(): AppTelemetryEnvironment {
     os_version: String(Platform.Version ?? 'unknown'),
     device_model: readDeviceModel(),
     locale: getActiveLocale(),
+    test_source: Device.isDevice === false || __DEV__,
   }
 }
 

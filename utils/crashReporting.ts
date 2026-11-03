@@ -177,6 +177,8 @@ const reportPreviousAbnormalExit = async (previous: SessionMarker | null) => {
     os_version: previous.os_version,
     device_model: previous.device_model,
     locale: previous.locale ?? 'ru',
+    // Маркер прежней версии без признака: устройство то же, берём текущее значение.
+    test_source: previous.test_source ?? getAppTelemetryEnvironment().test_source,
     // Один abnormal_exit на сессию даже если процесс погиб после записи
     // очереди, но до замены старого маркера новым.
     id: previous.session_id,

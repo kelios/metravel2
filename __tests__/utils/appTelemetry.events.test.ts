@@ -13,7 +13,7 @@ jest.mock('expo-constants', () => ({
   },
 }))
 jest.mock('@/i18n/format', () => ({ getActiveLocale: () => 'ru' }))
-jest.mock('expo-device', () => ({ modelName: 'iPhone 15', modelId: 'iPhone15,4' }))
+jest.mock('expo-device', () => ({ modelName: 'iPhone 15', modelId: 'iPhone15,4', isDevice: true }))
 jest.mock('@/api/client', () => {
   const { ApiError } = jest.requireActual('@/api/clientErrors')
   return { apiClient: { post: (...args: unknown[]) => mockPost(...args) }, ApiError }
@@ -109,6 +109,8 @@ describe('native app events', () => {
     expect(sizes).toEqual([50, 10])
     const payload = mockPost.mock.calls[0][1] as { install_id: string; platform: string; events: Array<{ session_id: string }> }
     expect(payload.platform).toBe('android')
+    // Release-сборка на реальном устройстве — не тестовый источник (#2977).
+    expect(payload).toHaveProperty('test_source', false)
     expect(payload.install_id).toMatch(/^[0-9a-f-]{36}$/)
     expect(payload.events[0].session_id).toMatch(/^[0-9a-f-]{36}$/)
     expect(payload).not.toHaveProperty('user_id')

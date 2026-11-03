@@ -14,6 +14,8 @@ export type AppTelemetryStatsQuery = {
   to: string
   platform: AppTelemetryStatsPlatform
   appVersion: string
+  /** Симуляторы, эмуляторы и QA-фикстуры; по умолчанию сервер их не считает (#2977). */
+  includeTest: boolean
 }
 
 export type AppTelemetryStatsDay = {
@@ -190,6 +192,7 @@ export function buildAppTelemetryStatsPath(query: AppTelemetryStatsQuery): strin
   params.set('to', query.to)
   if (query.platform) params.set('platform', query.platform)
   if (query.appVersion) params.set('app_version', query.appVersion)
+  if (query.includeTest) params.set('include_test', '1')
   return `/app-telemetry/stats/?${params.toString()}`
 }
 

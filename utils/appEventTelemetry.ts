@@ -115,6 +115,7 @@ const eventEnvironment = async (): Promise<EventEnvelope> => {
     os_version: publicLabel(environment.os_version, 128),
     device_model: publicLabel(environment.device_model, 255),
     locale,
+    test_source: environment.test_source,
   }
 }
 

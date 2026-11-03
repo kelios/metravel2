@@ -20,20 +20,24 @@ type Props = {
   period: AppStatsPeriod
   platform: AppTelemetryStatsPlatform
   appVersion: string
+  includeTest: boolean
   versions: readonly string[]
   onPeriod: (period: AppStatsPeriod) => void
   onPlatform: (platform: AppTelemetryStatsPlatform) => void
   onVersion: (appVersion: string) => void
+  onIncludeTest: (includeTest: boolean) => void
 }
 
 export default function AppStatsFilters({
   period,
   platform,
   appVersion,
+  includeTest,
   versions,
   onPeriod,
   onPlatform,
   onVersion,
+  onIncludeTest,
 }: Props) {
   const colors = useThemedColors()
   const labelStyle = [styles.label, { color: colors.textMuted }]
@@ -94,6 +98,23 @@ export default function AppStatsFilters({
               onPress={() => onVersion(version)}
             />
           ))}
+        </View>
+      </View>
+      <View accessibilityRole="radiogroup" accessibilityLabel={i18nT('appStatsStatic:filters.source')} style={styles.group}>
+        <Text style={labelStyle}>{i18nT('appStatsStatic:filters.source')}</Text>
+        <View style={styles.row}>
+          <Chip
+            testID="app-stats-source-real"
+            label={i18nT('appStatsStatic:filters.sourceReal')}
+            selected={!includeTest}
+            onPress={() => onIncludeTest(false)}
+          />
+          <Chip
+            testID="app-stats-source-all"
+            label={i18nT('appStatsStatic:filters.sourceWithTest')}
+            selected={includeTest}
+            onPress={() => onIncludeTest(true)}
+          />
         </View>
       </View>
     </View>

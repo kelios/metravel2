@@ -80,6 +80,26 @@ test.describe('статистика приложения для админист
     await expectNoHorizontalScroll(page)
   })
 
+  test('тестовые устройства (#2978) запрашиваются только по переключателю', async ({ page }) => {
+    const statsUrls: string[] = []
+    await ensureAuthedStorageFallback(page, { isSuperuser: true })
+    await mockFakeAuthApis(page)
+    await page.route('**/api/app-telemetry/stats/**', (route) => {
+      statsUrls.push(route.request().url())
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(STATS) })
+    })
+    await page.setViewportSize({ width: 390, height: 844 })
+    await preacceptCookies(page)
+    await gotoWithRetry(page, '/app-stats', { waitUntil: 'domcontentloaded', timeout: 60_000, attempts: 4 })
+
+    await expect(page.getByTestId('app-stats-days')).toBeVisible()
+    expect(statsUrls.length).toBeGreaterThan(0)
+    expect(statsUrls.every((url) => !url.includes('include_test'))).toBe(true)
+    await page.getByTestId('app-stats-source-all').click()
+    await expect.poll(() => statsUrls.some((url) => url.includes('include_test=1'))).toBe(true)
+    await expectNoHorizontalScroll(page)
+  })
+
   test('на ширине 390 пункт есть в листе «Ещё» только у суперпользователя', async ({ page }) => {
     await ensureAuthedStorageFallback(page, { isSuperuser: true })
     await mockFakeAuthApis(page)

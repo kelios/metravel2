@@ -52,13 +52,15 @@ describe('app telemetry stats (#2843)', () => {
       to: '2026-10-28',
       platform: '',
       appVersion: '',
+      includeTest: false,
     })).toBe('/app-telemetry/stats/?from=2026-10-01&to=2026-10-28')
     expect(buildAppTelemetryStatsPath({
       from: '2026-10-01',
       to: '2026-10-28',
       platform: 'ios',
       appVersion: '1.2.3',
-    })).toBe('/app-telemetry/stats/?from=2026-10-01&to=2026-10-28&platform=ios&app_version=1.2.3')
+      includeTest: true,
+    })).toBe('/app-telemetry/stats/?from=2026-10-01&to=2026-10-28&platform=ios&app_version=1.2.3&include_test=1')
   })
 
   it('считает включительное UTC-окно 7, 30 и 90 дней', () => {
@@ -92,7 +94,7 @@ describe('app telemetry stats (#2843)', () => {
 
   it('запрашивает статистику и разбирает тело', async () => {
     ;(apiClient.get as jest.Mock).mockResolvedValue(payload)
-    const query = { from: '2026-10-22', to: '2026-10-28', platform: 'android' as const, appVersion: '' }
+    const query = { from: '2026-10-22', to: '2026-10-28', platform: 'android' as const, appVersion: '', includeTest: false }
     await expect(fetchAppTelemetryStats(query)).resolves.toMatchObject({
       days: [{ new_installs: 2 }],
     })

@@ -45,12 +45,13 @@ export default function AppStatsScreen() {
   const [period, setPeriod] = useState<AppStatsPeriod>(30)
   const [platform, setPlatform] = useState<AppTelemetryStatsPlatform>('')
   const [appVersion, setAppVersion] = useState('')
+  const [includeTest, setIncludeTest] = useState(false)
 
   const canLoad = authReady && isSuperuser
   const range = appStatsRange(period)
   const catalogQuery = useMemo(
-    () => ({ from: range.from, to: range.to, platform, appVersion: '' }),
-    [platform, range.from, range.to],
+    () => ({ from: range.from, to: range.to, platform, appVersion: '', includeTest }),
+    [includeTest, platform, range.from, range.to],
   )
   const selectedQuery = useMemo(
     () => ({ ...catalogQuery, appVersion }),
@@ -98,10 +99,12 @@ export default function AppStatsScreen() {
           period={period}
           platform={platform}
           appVersion={appVersion}
+          includeTest={includeTest}
           versions={versions}
           onPeriod={setPeriod}
           onPlatform={setPlatform}
           onVersion={setAppVersion}
+          onIncludeTest={setIncludeTest}
         />
         {active.isPending ? <Loading colorsText={colors.textMuted} /> : null}
         {active.isError ? (
