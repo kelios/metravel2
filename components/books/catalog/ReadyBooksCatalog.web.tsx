@@ -1,7 +1,7 @@
 import React, {Suspense} from 'react';
 import {lazyWithRetry} from '@/utils/chunkReload';
 import {BooksFrame} from '../BooksFrame';
-import {catalogCss,editionCss} from '../booksStyles';
+import {catalogCss,editionCss} from '../booksStyles.web';
 import {translate} from '@/i18n';
 import {useLocaleRevision} from '@/i18n/useLocaleRevision';
 

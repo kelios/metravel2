@@ -4,7 +4,7 @@ import {useThemedColors} from '@/hooks/useTheme';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import {buildCanonicalUrl} from '@/utils/seo';
 import {webTouchScrollStyle} from '@/utils';
-import {booksCss} from './booksStyles';
+import {booksCss} from './booksStyles.web';
 import {translate} from '@/i18n';
 import {useLocaleRevision} from '@/i18n/useLocaleRevision';
 /** `heading={false}`: the page renders its own `h1` (the edition hero, #2948). */

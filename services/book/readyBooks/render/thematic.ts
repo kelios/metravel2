@@ -1,6 +1,6 @@
 import {escapeHtml as e} from '../../../pdf-export/utils/htmlUtils';
 import type {ThematicEvidence} from '../../../../data/travelBooks/schema/thematic';
-import {formatNumber} from '../../../../i18n/format';
+import {formatInteger, formatNumber} from '../../../../i18n/format';
 
 type Metric = number | {min: number; max: number};
 const metric = (value: Metric): string => typeof value === 'number'
@@ -21,7 +21,7 @@ export function thematicPhotoPlacement(widthPx: number, heightPx: number, profil
 const duration = (minutes: number): string => {
   // Whole minutes first: 59.6 must read «1 ч», not «60 мин»; the schema keeps durations above zero.
   const total = Math.max(1, Math.round(minutes)), hours = Math.floor(total / 60), rest = total % 60;
-  return [hours ? `${hours} ч` : '', rest ? `${rest} мин` : ''].filter(Boolean).join(' ');
+  return [hours ? `${formatInteger(hours, 'ru')} ч` : '', rest ? `${formatInteger(rest, 'ru')} мин` : ''].filter(Boolean).join(' ');
 };
 const time = (value: Metric): string => typeof value === 'number' ? duration(value) : `${duration(value.min)} – ${duration(value.max)}`;
 

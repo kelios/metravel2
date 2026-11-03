@@ -244,7 +244,7 @@ const createStyles = (colors: ThemedColors) =>
         web: { boxShadow: DESIGN_TOKENS.shadows.modal },
       }),
     },
-    dialogBackdrop: { backgroundColor: DESIGN_TOKENS.colors.overlay },
+    dialogBackdrop: { backgroundColor: colors.overlay },
     dialogTitle: { fontSize: 18, lineHeight: 24 },
     dialogBody: { flexGrow: 0, flexShrink: 1 },
     header: {

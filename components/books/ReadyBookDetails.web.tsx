@@ -13,7 +13,7 @@ import {trackReadyBookEvent} from '@/utils/growthFunnelAnalytics';
 import {BooksFrame} from './BooksFrame';
 import {useBookCopy,type bookT as BookT} from './bookCopy';
 import {bookStyleLabel,formatArtifactSize,readyBookDescription,visibleArtifacts} from './bookArtifacts';
-import {editionCss} from './booksStyles';
+import {editionCss} from './booksStyles.web';
 import ReadyBookPreview from './preview/ReadyBookPreview';
 import PrintingGuide from './printingGuide/PrintingGuide.web';
 import PrintProviders from './printProviders/PrintProviders.web';

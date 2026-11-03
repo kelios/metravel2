@@ -8,7 +8,7 @@
 
 Реализация: [`components/books/ReadyBookDetails.web.tsx`](../../../components/books/ReadyBookDetails.web.tsx)
 и блоки в [`components/books/edition/`](../../../components/books/edition/), стили —
-`editionCss` в [`components/books/booksStyles.ts`](../../../components/books/booksStyles.ts).
+`editionCss` в [`components/books/booksStyles.web.ts`](../../../components/books/booksStyles.web.ts).
 Номера строк в таблицах ниже относятся к коду до редизайна.
 
 Артефакты согласования лежат в игнорируемой рабочей папке `.codex-temp/FE-BOOKS-G1/`
@@ -27,7 +27,7 @@
 
 ## Порядок секций
 
-Desktop 1440: контейнер 1120 px (`booksStyles.ts:3`), секции разделены линией
+Desktop 1440: контейнер 1120 px (`booksStyles.web.ts:3`), секции разделены линией
 `borderStrong`, вертикальный ритм `spacing.xxl` (48). Mobile 390: тот же порядок,
 одна колонка, поля 16 px, без горизонтальной прокрутки страницы (проверено в
 `shoot.mjs`: overflow 0 на 1440 и 390).
@@ -91,7 +91,7 @@ Mobile: в герое обложка идёт над текстом, CTA дел�
 `primaryText` #547769, плашки `primaryLight`. Радиусы: карточки `lg` 20, главная
 карточка загрузки `xl` 28, кнопки `md` 16, чипы `pill`. Шкала `typography.scale`:
 `display` для `h1` на mobile, `h1` для `h2`, `h3`, `body`, `bodySmall`, `label`.
-`booksCss` (`booksStyles.ts`) сейчас рисует рамки `currentColor`; его заменяют
+`booksCss` (`booksStyles.web.ts`) сейчас рисует рамки `currentColor`; его заменяют
 классы на токенах (CSS-переменные тех же `colorVar`, тёмная тема — та же).
 
 ## Тексты RU и ключи i18n
