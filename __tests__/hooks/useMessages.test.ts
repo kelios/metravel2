@@ -232,7 +232,70 @@ describe('useThreadMessages', () => {
 
     expect(result.current.messages).toHaveLength(2);
     expect(result.current.hasMore).toBe(false);
-    expect(mockFetchMessages).toHaveBeenCalledWith(1, 1, 50);
+    expect(mockFetchMessages).toHaveBeenCalledWith(1, 1, 50, expect.any(AbortSignal));
+  });
+
+  it.each(['thread', 'owner'])('ignores late messages after changing %s', async (change) => {
+    const first = createDeferred<typeof PAGINATED_MESSAGES>();
+    const nextId = change === 'thread' ? 2 : 1;
+    const currentMessage = { ...MSG_2, id: 99, thread: nextId };
+    mockFetchMessages.mockReturnValueOnce(first.promise).mockResolvedValueOnce({
+      ...PAGINATED_MESSAGES,
+      results: [currentMessage],
+      next: 'http://api/messages/?page=2',
+    });
+
+    const { result, rerender } = await renderHook(
+      ({ id, owner }) => useThreadMessages(id, false, owner),
+      { initialProps: { id: 1, owner: 'A' } },
+    );
+    const oldSignal = mockFetchMessages.mock.calls[0][3] as AbortSignal;
+    await rerender({ id: nextId, owner: change === 'owner' ? 'B' : 'A' });
+    await waitFor(() => expect(result.current.messages).toEqual([currentMessage]));
+    expect(oldSignal.aborted).toBe(true);
+
+    await act(async () => first.resolve(PAGINATED_MESSAGES));
+    expect(result.current.messages).toEqual([currentMessage]);
+    expect(result.current.hasMore).toBe(true);
+    expect(result.current.loading).toBe(false);
+
+    mockFetchMessages.mockResolvedValueOnce({ ...PAGINATED_MESSAGES, results: [] });
+    await act(async () => result.current.loadMore());
+    expect(mockFetchMessages).toHaveBeenLastCalledWith(nextId, 2, 50, expect.any(AbortSignal));
+  });
+
+  it('lets explicit pagination preempt a pending poll', async () => {
+    const setInterval = global.setInterval;
+    let tickPoll: (() => void) | undefined;
+    const interval = jest.spyOn(global, 'setInterval').mockImplementation((callback, delay, ...args) => {
+      if (delay === 10_000) {
+        tickPoll = () => callback(...args);
+        return setInterval(() => {}, delay);
+      }
+      return setInterval(callback, delay, ...args);
+    });
+    const poll = createDeferred<typeof PAGINATED_MESSAGES>();
+    const olderMessage = { ...MSG_1, id: 42 };
+    mockFetchMessages
+      .mockResolvedValueOnce({ ...PAGINATED_MESSAGES, next: 'http://api/messages/?page=2' })
+      .mockReturnValueOnce(poll.promise)
+      .mockResolvedValueOnce({ ...PAGINATED_MESSAGES, results: [olderMessage] });
+
+    try {
+      const { result, unmount } = await renderHook(() => useThreadMessages(1));
+      await waitFor(() => expect(result.current.messages).toEqual(PAGINATED_MESSAGES.results));
+      expect(tickPoll).toBeDefined();
+      await act(async () => { tickPoll?.(); });
+      const pollSignal = mockFetchMessages.mock.calls[1][3] as AbortSignal;
+      await act(async () => result.current.loadMore());
+      expect(pollSignal.aborted).toBe(true);
+      expect(mockFetchMessages).toHaveBeenLastCalledWith(1, 2, 50, expect.any(AbortSignal));
+      await act(async () => poll.resolve({ ...PAGINATED_MESSAGES, results: [{ ...MSG_1, id: 43 }] }));
+      expect(result.current.messages).toEqual([...PAGINATED_MESSAGES.results, olderMessage]);
+      await unmount();
+    } finally {
+      interval.mockRestore();
+    }
   });
 
   it('does not load for null threadId', async () => {

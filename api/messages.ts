@@ -273,10 +273,12 @@ export const fetchThreadByUser = async (userId: number): Promise<ThreadByUserRes
 export const fetchMessages = async (
     threadId: number,
     page: number = 1,
-    perPage: number = 50
+    perPage: number = 50,
+    signal?: AbortSignal,
 ): Promise<PaginatedMessages> => {
     const raw = await messagingFetch<RawPaginatedMessages>(
         `/messages/?thread_id=${threadId}&page=${page}&perPage=${perPage}`,
+        { signal },
     );
     // Normalize: backend may use 'data' instead of 'results', 'next_page_url' instead of 'next'
     return {

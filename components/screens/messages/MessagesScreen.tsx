@@ -43,13 +43,29 @@ export default function MessagesScreen() {
         return <MessagesHydrationFallback />;
     }
 
-    return <MessagesScreenContent />;
+    return <MessagesSession />;
 }
 
-function MessagesScreenContent() {
+function MessagesSession() {
+    const { isAuthenticated, authReady, userId } = useAuth();
+    const ownerId = isAuthenticated ? userId : null;
+    return (
+        <MessagesScreenContent
+            key={ownerId ?? 'guest'}
+            isAuthenticated={isAuthenticated}
+            authReady={authReady}
+            userId={ownerId}
+        />
+    );
+}
+
+function MessagesScreenContent({ isAuthenticated, authReady, userId }: {
+    isAuthenticated: boolean;
+    authReady: boolean;
+    userId: string | null;
+}) {
     const router = useRouter();
     const isFocused = useIsFocused();
-    const { isAuthenticated, authReady, userId } = useAuth();
     const colors = useThemedColors();
     // `clientOnly`: это поддерево монтируется только после `useWebHydrationGate`
     // (см. `MessagesScreen`), в статическом HTML его нет. Без флага первый коммит
@@ -92,7 +108,7 @@ function MessagesScreenContent() {
         optimisticRemove: optimisticRemoveThread,
     } = useThreads(canFetch, isFocused);
     const { messages, loading: messagesLoading, refresh: refreshMessages, hasMore, loadMore, optimisticRemove } = useThreadMessages(
-        selectedThread?.id ?? null, isFocused
+        canFetch ? selectedThread?.id ?? null : null, isFocused, userId
     );
     const { send, sending, error: sendError } = useSendMessage();
     const { remove: removeMessage } = useDeleteMessage();

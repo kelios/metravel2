@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ApiError } from '@/api/client';
 import {
     fetchMessageThreads,
@@ -12,7 +12,6 @@ import {
     type MessageThread,
     type Message,
     type MessagingUser,
-    type PaginatedMessages,
 } from '@/api/messages';
 import { devError } from '@/utils/logger';
 import { getBlockedAuthorIds, subscribeAuthorBlock } from '@/api/blockSensitiveQueries';
@@ -150,108 +149,129 @@ export function useThreads(enabled: boolean = true, pollEnabled: boolean = true)
 
 // ---- useThreadMessages ----
 
-export function useThreadMessages(threadId: number | null, pollEnabled: boolean = true) {
+type ThreadMessageLoadMode = 'reset' | 'more' | 'poll';
+
+interface ThreadMessageSession {
+    threadId: number | null;
+    ownerId: string | null;
+    page: number;
+    hasMore: boolean;
+    failures: number;
+    request: { controller: AbortController; mode: ThreadMessageLoadMode } | null;
+}
+
+export function useThreadMessages(
+    threadId: number | null,
+    pollEnabled: boolean = true,
+    ownerId: string | null = null,
+) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [hasMore, setHasMore] = useState(true);
-    const pageRef = useRef(1);
-    const mountedRef = useRef(true);
+    const sessionRef = useRef<ThreadMessageSession | null>(null);
 
-    useEffect(() => {
-        mountedRef.current = true;
-        return () => { mountedRef.current = false; };
-    }, []);
+    const getSession = useCallback(() => {
+        const session = sessionRef.current;
+        return session?.threadId === threadId && session.ownerId === ownerId ? session : null;
+    }, [threadId, ownerId]);
 
-    const load = useCallback(async (reset = false) => {
-        if (threadId == null || threadId < 0) return;
-        const requestThreadId = threadId;
-        if (reset) {
-            pageRef.current = 1;
-            setHasMore(true);
+    const load = useCallback(async (mode: ThreadMessageLoadMode) => {
+        const session = getSession();
+        if (!session || session.threadId == null || session.threadId < 0) return;
+        if (mode === 'more' && (!session.hasMore || session.page === 1)) return;
+        if (mode === 'poll' && session.failures >= MAX_CONSECUTIVE_FAILURES) return;
+        const pending = session.request;
+        if (pending && mode !== 'reset' && (mode !== 'more' || pending.mode !== 'poll')) return;
+
+        pending?.controller.abort();
+        const request = { controller: new AbortController(), mode };
+        session.request = request;
+        const isCurrent = () => getSession() === session && session.request === request;
+        const page = mode === 'more' ? session.page : 1;
+        const initialPoll = mode === 'poll' && session.page === 1;
+
+        if (mode !== 'poll') {
+            setLoading(true);
+            setError(null);
         }
-        setLoading(true);
-        setError(null);
+
         try {
-            const data: PaginatedMessages = await fetchMessages(requestThreadId, pageRef.current, 50);
-            if (!mountedRef.current || requestThreadId !== threadId) return;
+            const data = await fetchMessages(session.threadId, page, 50, request.controller.signal);
+            if (!isCurrent()) return;
 
+            session.failures = 0;
             const results = withoutBlockedMessages(data.results || []);
-
-            if (reset) {
+            if (mode === 'reset' || initialPoll) {
+                if (initialPoll) setError(null);
                 setMessages(results);
             } else {
-                setMessages((prev) => {
-                    const ids = new Set(prev.map((m) => m.id));
-                    const newOnes = results.filter((m) => !ids.has(m.id));
-                    return [...prev, ...newOnes];
+                setMessages((previous) => {
+                    const ids = new Set(previous.map((message) => message.id));
+                    const added = results.filter((message) => !ids.has(message.id));
+                    if (added.length === 0) return previous;
+                    if (mode === 'more') return [...previous, ...added];
+                    return [...added, ...previous].sort((a, b) => {
+                        const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+                        const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+                        return ta - tb || a.id - b.id;
+                    });
                 });
             }
 
-            setHasMore(!!data.next);
-            pageRef.current += 1;
+            if (mode !== 'poll' || initialPoll) {
+                session.hasMore = Boolean(data.next);
+                session.page = page + 1;
+                setHasMore(session.hasMore);
+            }
         } catch (e: unknown) {
-            devError('useThreadMessages load error:', e);
-            if (mountedRef.current && requestThreadId === threadId) {
+            if (!isCurrent()) return;
+            if (mode === 'poll') {
+                session.failures += 1;
+            } else {
+                devError('useThreadMessages load error:', e);
                 setError(getErrorMessage(e, i18nT('messages:hooks.useMessages.oshibka_zagruzki_soobscheniy_b3faeb10')));
             }
         } finally {
-            if (mountedRef.current && requestThreadId === threadId) setLoading(false);
+            if (isCurrent()) {
+                session.request = null;
+                if (mode !== 'poll') setLoading(false);
+            }
         }
-    }, [threadId]);
+    }, [getSession]);
 
-    const consecutiveFailuresRef = useRef(0);
+    useLayoutEffect(() => {
+        const session: ThreadMessageSession = {
+            threadId, ownerId, page: 1, hasMore: true, failures: 0, request: null,
+        };
+        sessionRef.current = session;
+        setMessages([]);
+        setError(null);
+        setHasMore(true);
+        setLoading(threadId != null && threadId >= 0);
+        return () => {
+            sessionRef.current = null;
+            session.request?.controller.abort();
+        };
+    }, [threadId, ownerId]);
 
-    const silentRefresh = useCallback(async () => {
-        if (threadId == null || threadId < 0) return;
-        if (consecutiveFailuresRef.current >= MAX_CONSECUTIVE_FAILURES) return;
-        const requestThreadId = threadId;
-        try {
-            const data: PaginatedMessages = await fetchMessages(requestThreadId, 1, 50);
-            if (!mountedRef.current || requestThreadId !== threadId) return;
-            consecutiveFailuresRef.current = 0;
-            const results = withoutBlockedMessages(data.results || []);
-            setMessages((prev) => {
-                const ids = new Set(prev.map((m) => m.id));
-                const newOnes = results.filter((m) => !ids.has(m.id));
-                if (newOnes.length === 0) return prev;
-                const merged = [...newOnes, ...prev];
-                merged.sort((a, b) => {
-                    const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
-                    const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
-                    if (ta !== tb) return ta - tb;
-                    return a.id - b.id;
-                });
-                return merged;
-            });
-        } catch {
-            consecutiveFailuresRef.current += 1;
-        }
-    }, [threadId]);
-
-    useEffect(() => {
-        if (threadId != null && threadId >= 0) {
-            setMessages([]);
-            setHasMore(true);
-            load(true);
-        } else {
-            setMessages([]);
-        }
-    }, [threadId, load]);
+    useEffect(() => { void load('reset'); }, [load]);
 
     useEffect(() => subscribeAuthorBlock((_authorId, blocked) => {
-        if (!mountedRef.current) return;
-        if (blocked) setMessages((prev) => withoutBlockedMessages(prev));
-        else void load(true);
-    }), [load]);
+        if (!getSession()) return;
+        if (blocked) setMessages((previous) => withoutBlockedMessages(previous));
+        else void load('reset');
+    }), [getSession, load]);
 
     useEffect(() => {
         if (threadId == null || threadId < 0 || !pollEnabled) return;
-        const id = setInterval(silentRefresh, MESSAGES_POLL_INTERVAL);
+        const id = setInterval(() => void load('poll'), MESSAGES_POLL_INTERVAL);
         return () => clearInterval(id);
-    }, [threadId, pollEnabled, silentRefresh]);
+    }, [threadId, pollEnabled, load]);
 
     const optimisticRemove = useCallback((messageId: number) => {
+        const session = getSession();
+        if (!session) return () => {};
         const snapshot: { removed: Message | null; index: number } = { removed: null, index: -1 };
         setMessages((prev) => {
             const index = prev.findIndex((m) => m.id === messageId);
@@ -266,7 +286,7 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
         // объект snapshot изолирует конкурентные вызовы (нет общей мутируемой переменной).
         return () => {
             const { removed, index } = snapshot;
-            if (removed) {
+            if (getSession() === session && removed) {
                 setMessages((prev) => {
                     if (prev.some((m) => m.id === removed.id)) return prev;
                     const copy = [...prev];
@@ -275,9 +295,9 @@ export function useThreadMessages(threadId: number | null, pollEnabled: boolean 
                 });
             }
         };
-    }, []);
+    }, [getSession]);
 
-    return { messages, loading, error, hasMore, loadMore: () => load(false), refresh: () => load(true), optimisticRemove };
+    return { messages, loading, error, hasMore, loadMore: () => load('more'), refresh: () => load('reset'), optimisticRemove };
 }
 
 // ---- useSendMessage ----
