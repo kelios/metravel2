@@ -61,6 +61,19 @@ describe('ready-book storage (#2971)', () => {
     expect(headers.authorization).toContain('Signature=34b48302e7b5fa45bde8084f4b7868a86f0a534bc59db6670ed5711ef69dc6f7');
   });
 
+  it('retries network drops and S3 500/503, never other answers', async () => {
+    const answers = [new TypeError('fetch failed'), new Response(null, {status: 503}), new Response(null, {status: 200})];
+    const request = jest.fn(async () => { const next = answers.shift()!; if (next instanceof Error) throw next; return next; });
+    expect((await storage.withRetry(request, {delayMs: 0})).status).toBe(200);
+    expect(request).toHaveBeenCalledTimes(3);
+    const forbidden = jest.fn(async () => new Response(null, {status: 403}));
+    expect((await storage.withRetry(forbidden, {delayMs: 0})).status).toBe(403);
+    expect(forbidden).toHaveBeenCalledTimes(1);
+    const down = jest.fn(async () => new Response(null, {status: 500}));
+    expect((await storage.withRetry(down, {attempts: 2, delayMs: 0})).status).toBe(500);
+    await expect(storage.withRetry(async () => { throw new Error('bug'); }, {delayMs: 0})).rejects.toThrow('bug');
+  });
+
   it('keys an object by its public URL path and types it by extension', () => {
     expect(storage.objectUrl(asset('book/r1/album-a5/read-body.pdf', pdf))).toBe('https://metravelprod.s3.eu-north-1.amazonaws.com/travel-books/book/r1/album-a5/read-body.pdf');
     expect(storage.contentType('book/r1/fonts/OFL.txt')).toBe('text/plain; charset=utf-8');
@@ -74,7 +87,7 @@ describe('ready-book storage (#2971)', () => {
     expect(await storage.headObject(stored, {fetchImpl})).toBe('present');
     expect(await storage.headObject(asset('book/r1/absent.pdf', pdf), {fetchImpl})).toBe('missing');
     expect(await storage.headObject({...stored, relative: 'book/r1/other.pdf'}, {fetchImpl})).toBe('conflict');
-    await expect(storage.headObject(stored, {fetchImpl: jest.fn(async () => new Response(null, {status: 500}))})).rejects.toThrow('HTTP 500');
+    await expect(storage.headObject(stored, {fetchImpl: jest.fn(async () => new Response(null, {status: 502}))})).rejects.toThrow('HTTP 502');
   });
 
   it('uploads only what storage lacks, never overwrites and confirms each object', async () => {

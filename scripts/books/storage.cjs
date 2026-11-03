@@ -26,15 +26,18 @@ const base64Checksum = hex => Buffer.from(hex, 'hex').toString('base64');
 // RFC 3986, as SigV4 canonical requests require.
 const encode = value => encodeURIComponent(value).replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 
-/** Thousands of requests from a home connection meet transient network drops; retry those, never HTTP answers. */
+/** Thousands of requests from a home connection meet network drops and S3 500/503 (SlowDown); retry those, never other answers. */
 async function withRetry(request, {attempts = 4, delayMs = 1000} = {}) {
   for (let attempt = 1; ; attempt += 1) {
-    try { return await request(); }
-    catch (error) {
-      const transient = error instanceof TypeError || error?.name === 'TimeoutError' || error?.name === 'AbortError';
-      if (!transient || attempt >= attempts) throw error;
-      await new Promise(resolve => setTimeout(resolve, delayMs * 2 ** (attempt - 1)));
+    let response, error;
+    try { response = await request(); }
+    catch (caught) {
+      if (!(caught instanceof TypeError || caught?.name === 'TimeoutError' || caught?.name === 'AbortError')) throw caught;
+      error = caught;
     }
+    if (response && response.status !== 500 && response.status !== 503) return response;
+    if (attempt >= attempts) { if (error) throw error; return response; }
+    await new Promise(resolve => setTimeout(resolve, delayMs * 2 ** (attempt - 1)));
   }
 }
 
@@ -205,7 +208,9 @@ function planPrune(listed, assets) {
 async function loadCredentials(env = process.env) {
   let values = env;
   if (!env.METRAVEL_BOOKS_S3_ACCESS_KEY_ID) {
-    const file = env.METRAVEL_BOOKS_S3_ENV || path.resolve(__dirname, '../../../metravel-backend/local_env.sh');
+    // Next to the canonical checkout, also when run from a worktree (`canonicalTemp` → `<checkout>/.codex-temp`).
+    const checkout = path.dirname(require('./copy-publication.cjs').canonicalTemp(path.resolve(__dirname, '../..')));
+    const file = env.METRAVEL_BOOKS_S3_ENV || path.resolve(checkout, '../metravel-backend/local_env.sh');
     values = Object.fromEntries((await fs.readFile(file, 'utf8')).split('\n')
       .map(line => line.trim().replace(/^export\s+/, '').match(/^([A-Z0-9_]+)=(.*)$/)).filter(Boolean)
       .map(([, name, value]) => [name, value.replace(/^(['"])(.*)\1$/, '$2')]));
