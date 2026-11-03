@@ -14,32 +14,32 @@ const WATERCOLOR: BookStyleCopy = {
   style: 'watercolor',
   artAlt: 'Акварель',
   coverAlt: 'Акварель места из книги',
-  creditsSource: 'Иллюстрации созданы с помощью ИИ на основе фотографий автора опубликованных путешествий MeTravel.',
-  creditsFont: 'Marck Script — Denis Masharov, SIL Open Font License 1.1. Русский язык.',
+  creditsSource: 'Иллюстрации созданы с помощью ИИ по фотографиям автора из путешествий, опубликованных на MeTravel.by.',
+  creditsFont: 'Marck Script — Denis Masharov, SIL Open Font License 1.1.',
 };
 
 const PHOTO: BookStyleCopy = {
   style: 'photo',
   artAlt: 'Фотография',
   coverAlt: 'Фотографии места из книги',
-  creditsSource: 'Фотографии сделаны автором опубликованных путешествий MeTravel в описанных местах и напечатаны без изменения содержания.',
-  creditsFont: 'Lora — The Lora Project Authors, SIL Open Font License 1.1. Эпиграф обложки — Marck Script, Denis Masharov, SIL OFL 1.1. Русский язык.',
+  creditsSource: 'Фотографии сделаны автором путешествий, опубликованных на MeTravel.by, в описанных местах и напечатаны без изменения содержания.',
+  creditsFont: 'Lora — The Lora Project Authors, SIL Open Font License 1.1. Эпиграф обложки — Marck Script, Denis Masharov, SIL OFL 1.1.',
 };
 
 const FANTASY: BookStyleCopy = {
   style: 'fantasy',
   artAlt: 'Фэнтези-иллюстрация',
   coverAlt: 'Фэнтези-иллюстрация места из книги',
-  creditsSource: 'Иллюстрации созданы с помощью ИИ на основе фотографий автора опубликованных путешествий MeTravel. Художественная атмосфера не меняет фактические рассказы о местах.',
-  creditsFont: 'Cormorant Garamond — The Cormorant Project Authors, SIL Open Font License 1.1. Эпиграф обложки — Marck Script, Denis Masharov, SIL OFL 1.1. Русский язык.',
+  creditsSource: 'Иллюстрации созданы с помощью ИИ по фотографиям автора из путешествий, опубликованных на MeTravel.by. Художественная атмосфера не меняет фактические рассказы о местах.',
+  creditsFont: 'Cormorant Garamond — The Cormorant Project Authors, SIL Open Font License 1.1. Эпиграф обложки — Marck Script, Denis Masharov, SIL OFL 1.1.',
 };
 
 const GRAPHIC: BookStyleCopy = {
   style: 'graphic',
   artAlt: 'Графическая иллюстрация',
   coverAlt: 'Графическая иллюстрация места из книги',
-  creditsSource: 'Графические иллюстрации созданы с помощью ИИ на основе фотографий автора опубликованных путешествий MeTravel.',
-  creditsFont: 'Noto Serif и Noto Sans — The Noto Project Authors, SIL Open Font License 1.1. Эпиграф обложки — Marck Script, Denis Masharov, SIL OFL 1.1. Русский язык.',
+  creditsSource: 'Графические иллюстрации созданы с помощью ИИ по фотографиям автора из путешествий, опубликованных на MeTravel.by.',
+  creditsFont: 'Noto Serif и Noto Sans — The Noto Project Authors, SIL Open Font License 1.1. Эпиграф обложки — Marck Script, Denis Masharov, SIL OFL 1.1.',
 };
 
 export function bookStyleCopy(style: BookVisualStyle | undefined): BookStyleCopy {

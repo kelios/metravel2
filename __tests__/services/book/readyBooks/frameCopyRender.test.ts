@@ -29,11 +29,13 @@ describe('edition frame copy comes from data, keyed by book id (#2947)', () => {
     expect(page('preparation')).toContain(copy.intro.text);
     expect(page('usage')).toContain(copy.usage.text);
     expect(page('credits')).toContain(copy.outro.heading);
-    expect(page('credits')).toContain('издание: ноябрь 2026');
+    expect(page('credits')).toContain('MeTravel.by, ноябрь 2026.');
     expect(printed([result.coverPages[2]])).toContain(copy.endpaper.text);
     expect(printed([result.coverPages[3]])).toContain(copy.backCover.heading);
     const all = printed([...result.bodyPages, ...result.coverPages]);
     for (const retired of ['Для самостоятельных поездок, любимых кадров и своих историй', 'Путешествие продолжается', 'Место для вашей истории', 'Об этой книге', 'Перед поездкой']) expect(all).not.toContain(retired);
+    // #2968: production notes never reach the reader.
+    for (const note of ['полос', 'Сюда помещается', 'проверенной связи', 'физическая цель', 'авторского маршрута', 'Русский язык', 'масштабе 100%']) expect(all).not.toContain(note);
   });
 
   it('gives two editions with the same places different frame pages', () => {
@@ -74,6 +76,8 @@ describe('edition frame copy comes from data, keyed by book id (#2947)', () => {
     const all = printed([...result.bodyPages, ...result.coverPages]);
     for (const text of [copy.subtitle, copy.epigraph, copy.intro.text, copy.usage.text, copy.outro.text, copy.endpaper.text, copy.backCover.heading]) expect(all).toContain(text);
     expect(all).not.toContain('Ваша история путешествия');
+    // #2968: a quest volume has no last page, so its endpaper carries the edition line with the format.
+    expect(printed([result.coverPages[2]])).toMatch(/MeTravel\.by, ноябрь 2026\. Формат \d+×\d+ мм\./);
   });
 });
 

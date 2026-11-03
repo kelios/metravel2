@@ -4,6 +4,7 @@ import type {ReadyBookPage} from '../composition';
 import {buildReadyBookPagePlan} from '../composition';
 import {embeddedImage, type ReadyBookRenderInput} from './index';
 import {renderReadyBookEndMap} from './endMap';
+import {mapSymbolBadge, mapSymbolFor} from './mapSymbols';
 import {bookStyleCopy} from './styleCopy';
 import {bookFrameCopy} from './frameCopy';
 import {renderThematicFacts, thematicPhotoPlacement} from './thematic';
@@ -23,7 +24,7 @@ function qrLinks(input: ReadyBookRenderInput, stop: PlaceBookStop) {
   if (!targets) throw new Error(`Missing verified navigation: ${stop.id}`);
   const links = [{image: codes.map, url: targets.mapUrl, label: 'Место на карте'}, {image: codes.article, url: targets.articleUrl, label: 'Статья на сайте'}];
   if (targets.quest && codes.quest) links.push({image: codes.quest, url: targets.quest.url, label: 'Квест'});
-  return `<nav class="qr-row" aria-label="Проверенные ссылки места">${links.map(link => `<a class="qr-link" href="${e(link.url)}"><img class="qr" src="${embeddedImage(link.image)}" alt="QR: ${e(link.label)}" style="width:${codes.sizeMm}mm;height:${codes.sizeMm}mm"><span>${e(link.label)}</span></a>`).join('')}</nav>`;
+  return `<nav class="qr-row" aria-label="Ссылки места">${links.map(link => `<a class="qr-link" href="${e(link.url)}"><img class="qr" src="${embeddedImage(link.image)}" alt="QR: ${e(link.label)}" style="width:${codes.sizeMm}mm;height:${codes.sizeMm}mm"><span>${e(link.label)}</span></a>`).join('')}</nav>`;
 }
 
 export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage, stop?: PlaceBookStop): string {
@@ -33,7 +34,7 @@ export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage
   const styleCopy = bookStyleCopy(book.visualStyle);
   const thematic = 'sourceContract' in book && book.sourceContract === 'thematic-v1';
   const copy = thematic ? {...styleCopy,
-    creditsSource: 'Использованы фотографии из опубликованных путешествий автора MeTravel и предоставленных владельцем архивов. Контекстные виды подписаны отдельно.',
+    creditsSource: 'Фотографии сделаны авторами MeTravel.by в путешествиях по описанным местам.',
   } : styleCopy;
   // Edition voice lives in data (#2947); only service lines and imprint stay in code.
   const frame = bookFrameCopy(book.id);
@@ -64,19 +65,22 @@ export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage
     return content('', kind === 'photo-memory' ? 'personal-photo-space' : 'blank-diary-space');
   }
   if (kind === 'padding' || kind === 'extra-memory') return content('', 'blank-diary-space');
-  if (kind === 'title') return flow(`<h1>${e(country)}</h1>${thematic ? '' : text(book.title, 'subtitle')}${text(`${countRu(book.stops.length, PLACES)} · фотодневник`)}${text(frame.subtitle)}${text(frame.epigraph, 'epigraph')}<p class="small">Русский язык · ${profile.widthMm}×${profile.heightMm} мм · ${editionLabel(edition.editionDate)}</p>`);
-  if (kind === 'preparation') return flow(`<h2>${e(frame.intro.heading)}</h2>${text(frame.intro.text)} ${text(thematic ? 'Проверьте официальные сообщения и погоду перед выходом. На карте отмечена физическая цель; фотография и исходная точка статьи могут показывать её окрестности. Подпись объясняет различие.' : 'Проверьте актуальные условия посещения. Координаты показывают место из авторского маршрута; отдельный вход может находиться в стороне.')} ${text('Сохраните свободную полосу у переплёта для колец или пружины.', 'small')}`);
-  if (kind === 'usage') return flow(`<h2>${e(frame.usage.heading)}</h2>${text(frame.usage.text)} ${text(pocket ? 'Сюда помещается фотография до 100×70 мм.' : 'Свободная область вмещает вертикальную фотографию до 102×152 мм. Горизонтальный кадр можно повернуть.')} ${text('«Место на карте» открывает выбранную точку, «Статья на сайте» — опубликованное путешествие автора. «Квест» появляется только при проверенной связи с этим местом.', 'small')}`);
+  if (kind === 'title') return flow(`<h1>${e(country)}</h1>${thematic ? '' : text(book.title, 'subtitle')}${text(`${countRu(book.stops.length, PLACES)} · фотодневник`)}${text(frame.subtitle)}${text(frame.epigraph, 'epigraph')}<p class="small">MeTravel.by · ${editionLabel(edition.editionDate)}</p>`);
+  // Reader-facing frame only (#2968): production notes (binding strip, coordinate caveats, QR rules) stay in the print guide and source records.
+  if (kind === 'preparation') return flow(`<h2>${e(frame.intro.heading)}</h2>${text(frame.intro.text)}`);
+  if (kind === 'usage') return flow(`<h2>${e(frame.usage.heading)}</h2>${text(frame.usage.text)} ${text(pocket ? 'На свободную страницу помещается отпечаток 10×7 см.' : 'На свободную страницу помещается обычный отпечаток 10×15 см.')} ${text('QR-коды открывают место на карте и подробную статью на сайте; у мест с городским квестом есть и третий код.', 'small')}`);
   const selected = new Set(entry.stopIds);
   if (kind === 'contents') {
     const plan = buildReadyBookPagePlan(book);
     return flow(`<h2>Выбранные места</h2><ol class="contents-list">${book.stops.filter(item => selected.has(item.id)).map(item => `<li><span>${book.stops.findIndex(stop => stop.id === item.id) + 1}. ${e(item.title)}</span><span>${plan.find(page => page.kind === 'destination' && page.stopId === item.id)!.number}</span></li>`).join('')}</ol>`);
   }
-  if (kind === 'map') return flow(`<h2>Места этой книги на карте</h2>${renderReadyBookEndMap(book, profile)}${text('Номера соответствуют списку мест на предыдущих страницах. Для точной навигации откройте QR выбранного места.', 'small')}`);
+  // The numbered legend is the checklist right before this page; the map gets the whole page (#2968).
+  if (kind === 'map') return flow(`<h2>Места этой книги на карте</h2>${renderReadyBookEndMap(book, profile)}`);
   if (kind === 'checklist') {
     const destinations = new Map(buildReadyBookPagePlan(book).filter(page => page.kind === 'destination').map(page => [page.stopId, page.number]));
-    return flow(`<h2>Места на карте</h2>${text('Номер · место · страница', 'small')}<ol class="contents-list">${book.stops.filter(item => selected.has(item.id)).map(item => `<li><span>${graphicCheckbox} ${book.stops.findIndex(stop => stop.id === item.id) + 1}. ${e(item.title)}</span><span>${destinations.get(item.id)}</span></li>`).join('')}</ol>`);
+    // The list doubles as the map legend: the same badge as the medallion on the map (#2968).
+    return flow(`<h2>Места на карте</h2>${text('Номер · место · страница', 'small')}<ol class="contents-list">${book.stops.filter(item => selected.has(item.id)).map(item => `<li><span>${graphicCheckbox} ${mapSymbolBadge(mapSymbolFor(item.id), pocket ? 3.6 : 4.4, book.visualStyle === 'graphic')} ${book.stops.findIndex(stop => stop.id === item.id) + 1}. ${e(item.title)}</span><span>${destinations.get(item.id)}</span></li>`).join('')}</ol>`);
   }
-  return flow(`<h2>${e(frame.outro.heading)}</h2>${text(frame.outro.text)}${text(`MeTravel · ${book.title} · издание: ${editionMonth(edition.editionDate)}.`)}${text(copy.creditsSource)} ${text(copy.creditsFont)}`);
+  return flow(`<h2>${e(frame.outro.heading)}</h2>${text(frame.outro.text)}${text(`${book.title}. MeTravel.by, ${editionMonth(edition.editionDate)}. Формат ${profile.widthMm}×${profile.heightMm} мм.`, 'small')}${text(copy.creditsSource, 'small')} ${text(copy.creditsFont, 'small')}`);
 }
 

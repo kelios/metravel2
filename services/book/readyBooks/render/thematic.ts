@@ -18,26 +18,23 @@ export function thematicPhotoPlacement(widthPx: number, heightPx: number, profil
     effectivePpi: Math.min(widthPx / width, heightPx / height) * 25.4};
 }
 
-/** Full source URLs/provenance stay in the verified source record. */
+const duration = (minutes: number): string => {
+  // Whole minutes first: 59.6 must read «1 ч», not «60 мин»; the schema keeps durations above zero.
+  const total = Math.max(1, Math.round(minutes)), hours = Math.floor(total / 60), rest = total % 60;
+  return [hours ? `${hours} ч` : '', rest ? `${rest} мин` : ''].filter(Boolean).join(' ');
+};
+const time = (value: Metric): string => typeof value === 'number' ? duration(value) : `${duration(value.min)} – ${duration(value.max)}`;
+
+/**
+ * One guidebook line per route (#2968). Sources, metric caveats, unverified difficulty and dated
+ * access notices stay in the verified source record: a printed page outlives any notice.
+ */
 export function renderThematicFacts(evidence: ThematicEvidence): string {
   const route = evidence.route;
   if (!route) return '';
-  const reference = route.routeUse === 'itinerary-reference' ? 'Маршрут-справка' : 'Маршрут';
   // Lora has no «→»/«↑»: Chromium fell back to system LucidaGrande Type 3 (#2949).
   const path = [route.start, ...route.via, route.finish].join(' — ');
-  const parts = [
-    `${reference}${route.routeDate ? ` (${route.routeDate})` : ''}: ${path}. ${route.scope}.`,
-    `${metric(route.distanceKm)} км · набор высоты ${metric(route.elevationGainM)} м · ${metric(route.durationMinutes)} мин.`,
-    route.metricNote,
-    `Сложность: ${route.difficulty}. Сезон: ${route.seasonality}.`,
-    `Доступ (${route.availability.checkedOn}): ${route.availability.note}`,
-  ];
-  const link = (url: string, label: string) => `<a href="${e(url)}">${e(label)}</a>`;
-  const sources = route.sourceUrls.map((url,index) => link(url, new URL(url).hostname.replace(/^www\./,'') + (route.sourceUrls.length>1 ? ` ${index+1}` : ''))).join(', ');
-  const authority = route.availability.authorityUrl;
-  const role = {"author-estimate":"Оценка автора","official":"Официальные данные","provider-estimate":"Оценка провайдера","gpx-measurement":"Расчёт по GPX","historical-provider":"Исторический источник","mixed":"Смешанные источники"}[route.sourceType];
-  const links = `<p class="thematic-sources">${role}: ${sources}.${authority ? ` Доступ: ${link(authority,new URL(authority).hostname.replace(/^www\./,''))}.` : ''}</p>`;
-  return parts.map((value,index) => `<p${index===1 ? ' class="thematic-metrics"' : ''}>${e(value)}</p>`).join(' ') + ' ' + links;
+  return `<p>${e(`Маршрут: ${path}.`)}</p> <p class="thematic-metrics">${e(`${route.scope}: ${metric(route.distanceKm)} км, набор высоты ${metric(route.elevationGainM)} м, около ${time(route.durationMinutes)}.`)}</p> <p>${e(`Сезон: ${route.seasonality}.`)}</p>`;
 }
 
 // Story box fits the approved 100–280 character copy plus route facts (#2947, designer check 02.11.2026).
@@ -46,13 +43,11 @@ export const thematicPrintStyles = `
 .thematic .place-heading h2{font-size:18pt}
 .thematic-photo-wrap{position:absolute}
 .thematic-photo{display:block;width:100%;height:100%;max-width:none}
-.thematic-photo-wrap::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,#fffefa,transparent 5%,transparent 95%,#fffefa),linear-gradient(#fffefa,transparent 5%,transparent 95%,#fffefa)}
 .thematic-caption{position:absolute;left:15mm;top:44mm;width:58mm;height:12mm;font-size:9pt;line-height:1.1;text-align:left}
 .thematic-story{position:absolute;left:15mm;right:15mm;top:57mm;height:38mm;font-size:8.5pt;line-height:1.1;text-align:left}
 .thematic-story p+p{margin-top:.5mm}
 .thematic-story p{display:inline;margin:0}
 .thematic-metrics{font-family:BookHeading,BookHand,serif}
-.thematic-sources a{text-decoration:underline}
 .thematic .qr-row{left:auto;right:15mm;width:60mm;top:21mm;bottom:auto;gap:2mm;justify-content:space-between}
 .thematic .qr-link{font-size:8.5pt}
 .album-layout.thematic .place-heading{top:10mm;height:21mm}

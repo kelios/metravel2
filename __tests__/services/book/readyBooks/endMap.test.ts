@@ -2,10 +2,13 @@ import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import countries from '../../../../data/travelBooks/maps/countries.json';
 import source from '../../../../data/travelBooks/maps/source.json';
+import symbols from '../../../../data/travelBooks/maps/symbols.json';
+import manifest from '../../../../data/travelBooks/manifest.json';
 import by from '../../../../data/travelBooks/by/source-records.json';
 import pl from '../../../../data/travelBooks/pl/source-records.json';
 import {buildReadyBookPagePlan, readyBookBodyPageCount} from '../../../../services/book/readyBooks/composition';
 import {buildReadyBookEndMapModel, projectReadyBookMapCoordinate, renderReadyBookEndMap} from '../../../../services/book/readyBooks/render/endMap';
+import {mapSymbolBadge, SYMBOL_INK} from '../../../../services/book/readyBooks/render/mapSymbols';
 
 const book = (country: 'BY' | 'PL') => ({
   country,
@@ -122,5 +125,36 @@ describe('the selected-place map at the end of a ready photo diary', () => {
     expect(source.coordinateReferenceSystem).toContain('4326');
     const bytes = readFileSync('data/travelBooks/maps/countries.json');
     expect(createHash('sha256').update(bytes).digest('hex')).toBe(source.extractedSha256);
+    expect(createHash('sha256').update(readFileSync('data/travelBooks/maps/basemap.json')).digest('hex')).toBe(source.basemapSha256);
+  });
+
+  it('marks every place of every place edition with its kind and keeps the number at the readable size (#2968)', () => {
+    const table: Record<string, string> = symbols.symbols;
+    for (const edition of manifest.books.filter(item => 'stops' in item && !item.id.includes('quests'))) {
+      expect((edition as {stops: {id: string}[]}).stops.filter(stop => !table[stop.id]).map(stop => `${edition.id}:${stop.id}`)).toEqual([]);
+    }
+    const input = book('BY'), svg = renderReadyBookEndMap(input, {id: 'pocket-150x100'});
+    expect(svg.match(/data-symbol="(castle|ruins|palace|park|nature|trail|lake|spring|waterfall|peak|tower|cave|shelter)"/g)).toHaveLength(input.stops.length);
+    expect(svg).toContain('font-size="3.175"');
+    for (const name of ['Минск', 'Брест', 'Гродно', 'Витебск', 'Могилёв', 'Гомель']) expect(svg).toContain(`data-city="${name}"`);
+    expect(svg).toContain('aria-label="Масштаб"');
+    expect(renderReadyBookEndMap({...input, kind: 'quests'}, {id: 'pocket-150x100'}, 'compact')).toContain('data-symbol="quest"');
+  });
+
+  it('prints the graphic map and its legend badges in two inks, without translucent grey', () => {
+    const svg = renderReadyBookEndMap({...book('PL'), visualStyle: 'graphic'}, {id: 'album-a5'});
+    expect(svg).not.toContain('fill-opacity');
+    expect(renderReadyBookEndMap(book('PL'), {id: 'album-a5'})).toContain('fill-opacity=".85"');
+    const inks = (html: string) => new Set([...html.matchAll(/(?:fill|stroke)="(#[a-f\d]+)"/g)].map(match => match[1]));
+    expect(inks(mapSymbolBadge('castle', 4, true))).toEqual(new Set(['#111', '#fff']));
+    expect(inks(mapSymbolBadge('castle', 4))).toEqual(new Set([SYMBOL_INK.heritage, '#fffefa']));
+  });
+
+  it('draws a regional map when every place lies in one part of the country', () => {
+    const south = Array.from({length: 12}, (_, index) => ({id: `south-${index}`, lat: 49.2 + (index % 4) * .2, lng: 19 + index * .3}));
+    const regional = buildReadyBookEndMapModel({country: 'PL', stops: south}, {id: 'pocket-150x100'});
+    const country = buildReadyBookEndMapModel({country: 'PL', stops: [...south, {id: 'north', lat: 54.4, lng: 18.6}]}, {id: 'pocket-150x100'});
+    const spread = (model: typeof regional) => Math.max(...model.markers.slice(0, 12).map(marker => marker.x)) - Math.min(...model.markers.slice(0, 12).map(marker => marker.x));
+    expect(spread(regional)).toBeGreaterThan(spread(country) * 1.5);
   });
 });

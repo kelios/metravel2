@@ -1,7 +1,6 @@
 """Verify all requested prose on its logical destination folio, including imposed output."""
 import re
 from decimal import Decimal, ROUND_HALF_UP
-from urllib.parse import urlsplit
 
 
 def normalized(text):
@@ -19,7 +18,16 @@ def printed_metric(value):
     return format(number, 'f').rstrip('0').rstrip('.').replace('.', ',') if number % 1 else str(int(number))
 
 
+def printed_duration(value):
+    if isinstance(value, dict):
+        return printed_duration(value['min']) + ' – ' + printed_duration(value['max'])
+    total = max(1, int(Decimal(str(value)).quantize(Decimal('1'), rounding=ROUND_HALF_UP)))
+    hours, minutes = divmod(total, 60)
+    return ' '.join(part for part in (f'{hours} ч' if hours else '', f'{minutes} мин' if minutes else '') if part)
+
+
 def thematic_fragments(stop):
+    """The caption and the one guidebook route line printed since #2968 (no notices, sources or caveats)."""
     evidence = stop.get('thematic')
     if not evidence:
         return []
@@ -27,20 +35,11 @@ def thematic_fragments(stop):
     route = evidence.get('route')
     if route:
         required.extend([
-            ' — '.join([route['start'], *route['via'], route['finish']]), route['scope'],
-            f"{printed_metric(route['distanceKm'])} км · набор высоты {printed_metric(route['elevationGainM'])} м · {printed_metric(route['durationMinutes'])} мин.",
-            route['metricNote'], route['difficulty'], route['seasonality'],
-            route['availability']['checkedOn'], route['availability']['note'],
+            'Маршрут: ' + ' — '.join([route['start'], *route['via'], route['finish']]) + '.',
+            f"{route['scope']}: {printed_metric(route['distanceKm'])} км, набор высоты {printed_metric(route['elevationGainM'])} м, "
+            f"около {printed_duration(route['durationMinutes'])}.",
+            f"Сезон: {route['seasonality']}.",
         ])
-        if route.get('routeDate'):
-            required.append(route['routeDate'])
-        roles = {'author-estimate': 'Оценка автора', 'official': 'Официальные данные',
-                 'provider-estimate': 'Оценка провайдера', 'gpx-measurement': 'Расчёт по GPX',
-                 'historical-provider': 'Исторический источник', 'mixed': 'Смешанные источники'}
-        required.append(roles[route['sourceType']])
-        required.extend(urlsplit(url).hostname.removeprefix('www.') for url in route['sourceUrls'])
-        if route['availability'].get('authorityUrl'):
-            required.append(urlsplit(route['availability']['authorityUrl']).hostname.removeprefix('www.'))
     return required
 
 
@@ -50,23 +49,6 @@ def folio_indices(page_count, plan=None):
     return {placement['folio']: index * 2 + side_index
             for index, sheet in enumerate(plan['sheets']) for side_index, side in enumerate(('front', 'back'))
             for placement in sheet[side] if placement['folio'] is not None}
-
-
-def missing_thematic_links(book, page_links, page_map, plan=None):
-    if book.get('sourceContract') != 'thematic-v1':
-        return []
-    indices = folio_indices(len(page_links), plan)
-    destinations = {page['stopId']: page['folio'] for page in page_map if page.get('kind') == 'destination'}
-    missing = []
-    for stop in book['stops']:
-        route = stop['thematic'].get('route')
-        if not route:
-            continue
-        expected = [*route['sourceUrls'], route['availability'].get('authorityUrl')]
-        index = indices.get(destinations[stop['id']])
-        actual = page_links[index] if index is not None and index < len(page_links) else set()
-        missing.extend(f"{stop['id']}: missing PDF link {url}" for url in expected if url and url not in actual)
-    return missing
 
 
 def missing_book_text(book, pages, profile_id, page_map, plan=None):

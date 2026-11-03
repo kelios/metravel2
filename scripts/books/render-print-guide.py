@@ -58,13 +58,13 @@ class DeterministicCanvas(Canvas):
     def __init__(self,*args,**kwargs): kwargs['invariant']=1;kwargs['initialFontName']='Guide';super().__init__(*args,**kwargs)
 def footer(c,doc):
     c.saveState();c.setFont('Guide',8);c.setFillColor(colors.black)
-    c.drawString(16*mm,12*mm,'MeTravel · '+str(doc.page))
+    c.drawString(16*mm,12*mm,'MeTravel.by · '+str(doc.page))
     if doc.page==1:
         c.line(140*mm,12*mm,190*mm,12*mm)
         c.drawString(140*mm,16*mm,'50 мм · 100%')
     c.restoreState()
 Path(a.output).parent.mkdir(parents=True,exist_ok=True)
-SimpleDocTemplate(a.output,pagesize=(210*mm,297*mm),rightMargin=16*mm,leftMargin=16*mm,topMargin=16*mm,bottomMargin=25*mm,title=g['title'],author='MeTravel').build(story,onFirstPage=footer,onLaterPages=footer,canvasmaker=DeterministicCanvas)
+SimpleDocTemplate(a.output,pagesize=(210*mm,297*mm),rightMargin=16*mm,leftMargin=16*mm,topMargin=16*mm,bottomMargin=25*mm,title=g['title'],author='MeTravel.by').build(story,onFirstPage=footer,onLaterPages=footer,canvasmaker=DeterministicCanvas)
 r=PdfReader(a.output)
 assert all(abs(float(page.mediabox.width)/mm-210)<.1 and abs(float(page.mediabox.height)/mm-297)<.1 for page in r.pages)
 text='\n'.join(page.extract_text() for page in r.pages)

@@ -3,7 +3,8 @@ import {embeddedImage, type ReadyBookRenderInput} from './index';
 import type {CountryQuestBook} from '../../../../types/questBook';
 import {bookStyleCopy} from './styleCopy';
 import {bookFrameCopy} from './frameCopy';
-import {countRu, PLACES, QUESTS} from './counts';
+import {countRu, editionMonth, PLACES, QUESTS} from './counts';
+import edition from '../../../../data/travelBooks/edition.json';
 
 /** CLEAN templates: the shared PDF text engine adds the chosen quote afterwards. */
 export function renderCoverPage(input: Pick<ReadyBookRenderInput,'profile'> & {cover:Pick<ReadyBookRenderInput['cover'],'dataUri'|'widthPx'|'heightPx'|'artworkBounds'>;book:ReadyBookRenderInput['book']|CountryQuestBook}, number: number) {
@@ -26,6 +27,9 @@ export function renderCoverPage(input: Pick<ReadyBookRenderInput,'profile'> & {c
   }
   if (number === 2) return flow(`<h2>Эта книга принадлежит</h2><div class="owner-space"></div>${text('Если найдёте, пожалуйста, свяжитесь со мной:')}`);
   const frame = bookFrameCopy(book.id);
-  if (number === 3) return flow(`<h2>${e(frame.endpaper.heading)}</h2>${text(frame.endpaper.text)} ${text('Не закрывайте полосу крепления. Печатайте книгу в масштабе 100%. Для домашней печати используйте готовую раскладку A4.')}`);
+  // Printing instructions live in the print guide, not inside the book (#2968). A quest volume has no
+  // last-page imprint, so its endpaper carries the edition line.
+  const imprint = questBook ? text(`${questBook.title}. MeTravel.by, ${editionMonth(edition.editionDate)}. Формат ${input.profile.widthMm}×${input.profile.heightMm} мм.`, 'small') : '';
+  if (number === 3) return flow(`<h2>${e(frame.endpaper.heading)}</h2>${text(frame.endpaper.text)}${imprint}`);
   return flow(`<h2>${e(frame.backCover.heading)}</h2>${text(frame.backCover.line)}`);
 }

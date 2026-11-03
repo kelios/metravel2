@@ -41,14 +41,14 @@ export function buildCountryQuestBookHtml(input:CountryQuestBookRenderInput){
   const bodyPages=plan.map(entry=>{
     if(entry.questId){const offset=['quest-story','quest-map','photo-memory','notes'].indexOf(entry.kind);return blocks.get(entry.questId)![offset];}
     if(entry.kind==='padding')return page(entry.number,'padding','');
-    if(entry.kind==='title')return page(entry.number,'quest-title-page',flow(`<h1>${e(book.title)}</h1><p>${countRu(book.quests.length,QUESTS)} · фотодневник</p><p>${e(frame.subtitle)}</p><p class="epigraph">${e(frame.epigraph)}</p><p class="small">Русский язык · ${profile.widthMm}×${profile.heightMm} мм</p><p class="small">${editionLabel(edition.editionDate)}</p>`));
-    if(entry.kind==='usage')return page(entry.number,'quest-usage',flow(`<h2>${e(frame.intro.heading)}</h2><p>${e(frame.intro.text)}</p><h2>${e(frame.usage.heading)}</h2><p>${e(frame.usage.text)}</p><p class="small">Сохраните полосу крепления у переплёта.</p>`));
+    if(entry.kind==='title')return page(entry.number,'quest-title-page',flow(`<h1>${e(book.title)}</h1><p>${countRu(book.quests.length,QUESTS)} · фотодневник</p><p>${e(frame.subtitle)}</p><p class="epigraph">${e(frame.epigraph)}</p><p class="small">MeTravel.by · ${editionLabel(edition.editionDate)}</p>`));
+    if(entry.kind==='usage')return page(entry.number,'quest-usage',flow(`<h2>${e(frame.intro.heading)}</h2><p>${e(frame.intro.text)}</p><h2>${e(frame.usage.heading)}</h2><p>${e(frame.usage.text)}</p>`));
     if(entry.kind==='contents'){
       const rows=book.quests.filter(quest=>entry.questIds?.includes(quest.questId));
       return page(entry.number,'quest-contents',flow(`<h2>Квесты этой части</h2><ol class="contents-list">${rows.map(quest=>`<li><span>${book.quests.indexOf(quest)+1}. ${e(printQuestLabel(quest.title))}</span><span>${plan.find(page=>page.kind==='quest-story'&&page.questId===quest.questId)!.number}</span></li>`).join('')}</ol>`));
     }
     const geography={kind:'quests' as const,country:book.country,stops:book.quests.map(quest=>({id:quest.questId,title:quest.title,lat:quest.points[0].lat,lng:quest.points[0].lng}))};
-    return page(entry.number,'quest-country-map',flow(`<h2>Квесты на карте страны</h2>${renderReadyBookEndMap(geography,profile)}<p class="small">Номера соответствуют порядку квестов в содержании. Показана первая точка каждого маршрута; для прохождения откройте его QR.</p><p><span class="outro-heading">${e(frame.outro.heading)}.</span> ${e(frame.outro.text)}</p>`));
+    return page(entry.number,'quest-country-map',flow(`<h2>Квесты на карте страны</h2>${renderReadyBookEndMap(geography,profile,'compact')}<p class="small">Номера — как в содержании; отмечено начало каждого квеста.</p><p><span class="outro-heading">${e(frame.outro.heading)}.</span> ${e(frame.outro.text)}</p>`));
   });
   const coverPages=[1,2,3,4].map(number=>page(number,`cover-${number}`,renderCoverPage(input,number),'cover'));
   const document=(pages:string[])=>`<!doctype html><html lang="${e(book.contentLocale)}"><head><meta charset="utf-8"><title>${e(book.title)}</title><style>${stylesCss}</style></head><body>${pages.join('')}</body></html>`;

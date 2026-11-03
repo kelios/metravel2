@@ -2,7 +2,7 @@ import {buildReadyBookHtml, type ReadyBookRenderInput} from '@/services/book/rea
 import {renderThematicFacts, thematicPhotoPlacement} from '@/services/book/readyBooks/render/thematic';
 import {thematicDraft, thematicEvidence} from './thematicFixtures';
 
-it('prints scoped ranges, current warnings and context caption without replacing blank personal pages',()=>{
+it('prints a scoped guidebook route line and context caption without replacing blank personal pages',()=>{
   const book=thematicDraft(40);
   book.title='Горы Польши';
   book.visualStyle='photo';
@@ -19,13 +19,12 @@ it('prints scoped ranges, current warnings and context caption without replacing
   expect(result.bodyPages).toHaveLength(136);
   expect(result.coverPages[0]).toContain('<h1>Горы Польши</h1>');
   expect(result.bodyPages[first]).toContain('Зимний массив; вершина и крест не видны.');
-  expect(result.bodyPages[first]).toContain('5–6 км · набор высоты 965 м · 195 мин.');
+  expect(result.bodyPages[first]).toContain('5–6 км, набор высоты 965 м, около 3 ч 15 мин.');
+  expect(result.bodyPages[first]).toContain(`Сезон: ${stop.thematic.route!.seasonality}.`);
   expect(result.bodyPages[first]).not.toMatch(/[→↑]/);
-  expect(result.bodyPages[first]).toContain('Не заходите за ограждение повреждённой плотины.');
-  expect(result.bodyPages[first]).toContain('Доступ (2026-11-02)');
-  expect(result.bodyPages[first]).toContain('Оценка провайдера:');
-  expect(result.bodyPages[first]).toContain('href="https://park.example/trail"');
-  expect(result.bodyPages[first]).toContain('href="https://park.example/notices"');
+  // #2968: a printed page carries no dated notices, metric caveats or source citations.
+  expect(result.bodyPages[first]).not.toContain('Не заходите за ограждение повреждённой плотины.');
+  expect(result.bodyPages[first]).not.toMatch(/Доступ \(|Оценка провайдера|Сложность:|park\.example/);
   expect(result.bodyPages[first]).toContain('data-thematic-photo="stop-0"');
   expect(result.bodyPages[first+1]).toContain('personal-photo-space');
   expect(result.bodyPages[first+1]).not.toContain('Маршрут-справка');
@@ -42,6 +41,10 @@ it('keeps actual native photo placement within the measured profile box',()=>{
     expect(placed.effectivePpi).toBeCloseTo(4240*25.4/placed.width);
   }
   const evidence=thematicEvidence();
-  evidence.route!.metricNote='<script>unsafe</script>';
+  evidence.route!.start='<script>unsafe</script>';
   expect(renderThematicFacts(evidence)).toContain('&lt;script&gt;unsafe&lt;/script&gt;');
+  evidence.route!.durationMinutes=59.6;
+  expect(renderThematicFacts(evidence)).toContain('около 1 ч.');
+  evidence.route!.durationMinutes={min:45,max:90};
+  expect(renderThematicFacts(evidence)).toContain('около 45 мин – 1 ч 30 мин.');
 });

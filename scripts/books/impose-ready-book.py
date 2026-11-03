@@ -37,7 +37,7 @@ def impose(source, plan, output):
                 if item['rotation'] != 0 or x < 0 or top < 0 or x + page_width > width or top + page_height > height:
                     raise ValueError('Placement is rotated or outside the physical sheet')
                 canvas.merge_transformed_page(page, Transformation().translate(x * mm, (height - top - page_height) * mm))
-    writer.add_metadata({'/Title': f"MeTravel · {human_label(plan)}", '/Author': 'MeTravel'})
+    writer.add_metadata({'/Title': f"MeTravel.by · {human_label(plan)}", '/Author': 'MeTravel.by'})
     with open(output, 'wb') as stream:
         writer.write(stream)
 
@@ -61,7 +61,7 @@ def control_document(plan, output, root):
     # The feed test must share the imposed file's orientation and duplex edge.
     # A portrait test printed short-edge cannot prove landscape short-edge feed.
     shift = height - 297
-    canvas.setTitle('MeTravel / контроль 100% и карта сборки')
+    canvas.setTitle('MeTravel.by / контроль 100% и карта сборки')
     for is_back in (False, True):
         canvas.setFont('Noto', 12)
         side, baseline = ('ОБОРОТ' if is_back else 'ЛИЦО'), (279 + shift) * mm
