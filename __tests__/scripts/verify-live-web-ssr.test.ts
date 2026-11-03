@@ -96,16 +96,22 @@ describe('paired renderer publication readiness', () => {
     const fetchImpl = jest.fn()
       .mockResolvedValueOnce(legacyLoader('ozero-sorapis-krugovoi-marshrut-v-dolomitakh'))
       .mockResolvedValueOnce(legacyLoader('forty-krakova-avstriiskie-ukrepleniia-xix-veka'))
+      .mockResolvedValueOnce(legacyLoader('ozera-lepelshchiny-za-den-vechele-dolzhina-barkovshchina'))
+      .mockResolvedValueOnce(legacyLoader('plitvitskie-ozera-v-khorvatii-kak-dobratsia'))
       .mockResolvedValueOnce(Response.json({ results: [{ slug: 'example' }] }))
       .mockResolvedValueOnce(pendingResponse())
     await expect(verifyLiveWebSsr({ sha, mode: 'deployment', codeHealth, fetchImpl }))
       .resolves.toMatchObject({ sha, canonical, content_status: 'pending', retry_after_seconds: 5 })
     expect(codeHealth).toHaveBeenCalledWith(sha)
-    expect(fetchImpl).toHaveBeenCalledTimes(4)
+    expect(fetchImpl).toHaveBeenCalledTimes(6)
     expect(String(fetchImpl.mock.calls[1][0])).toBe(
       'https://metravel.by/_expo/loaders/(tabs)/travels/forty-krakova?returnTo=%2Fsearch',
     )
     expect(fetchImpl.mock.calls[1][1]).toMatchObject({ redirect: 'error', credentials: 'omit' })
+    expect(fetchImpl.mock.calls.slice(2, 4).map(([url]) => String(url))).toEqual([
+      'https://metravel.by/_expo/loaders/(tabs)/travels/marshrut-odin-den-poseshchenie-ozer-i-istochnikov-barkovshchina-dolzhina-vechele-lepelskoe?returnTo=%2Fsearch',
+      'https://metravel.by/_expo/loaders/(tabs)/travels/plitvitskie-ozera-v-khorvatii-kak-dobratsia-chto-posmotret-i-poleznye-sovety?returnTo=%2Fsearch',
+    ])
     expect(() => verifyRuntimeResponse(pendingResponse(), pendingHtml, { sha, canonical })).toThrow('strict acceptance')
   })
 

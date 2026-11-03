@@ -11,6 +11,8 @@ const { redirects } = require('./seo-redirects.json')
 const LEGACY_ARTICLE_CONTROLS = [
   'ozero-sorapis-krugovoi-marshrut-215-217-kak-doiti-chto-zhdat-po-puti-i-chto-posmotret-riadom',
   'forty-krakova',
+  'marshrut-odin-den-poseshchenie-ozer-i-istochnikov-barkovshchina-dolzhina-vechele-lepelskoe',
+  'plitvitskie-ozera-v-khorvatii-kak-dobratsia-chto-posmotret-i-poleznye-sovety',
 ]
 
 async function verifyLegacyArticleLoaders(request, origin, sha) {
