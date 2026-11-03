@@ -41,6 +41,18 @@ type ListTravelTopContentProps = {
   setLastSettings: ExportControlsProps['setLastSettings']
 }
 
+// The web compiler can inline only literal translation keys.
+function getRelaxedStageLabel(stage: NonNullable<ListTravelTopContentProps['relaxedStage']>) {
+  switch (stage) {
+    case 'light':
+      return i18nT('travel:components.listTravel.listTravelBaseModel.fallback.light')
+    case 'medium':
+      return i18nT('travel:components.listTravel.listTravelBaseModel.fallback.medium')
+    case 'broad':
+      return i18nT('travel:components.listTravel.listTravelBaseModel.fallback.broad')
+  }
+}
+
 export default function ListTravelTopContent({
   isExport,
   relaxedStage,
@@ -91,7 +103,7 @@ export default function ListTravelTopContent({
         </Text>
       )}
       <Text style={styles.fallbackNoticeText}>
-        {i18nT(`travel:components.listTravel.listTravelBaseModel.fallback.${relaxedStage}`)}
+        {getRelaxedStageLabel(relaxedStage)}
         {removedFilterLabels.length > 0 ? ` — ${removedFilterLabels.join(', ')}` : ''}
       </Text>
       <Pressable
