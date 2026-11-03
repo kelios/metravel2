@@ -27,7 +27,7 @@ import { useResponsive } from '@/hooks/useResponsive'
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
 import { useTheme, useThemedColors } from '@/hooks/useTheme'
 import { useVisitedCountries } from '@/hooks/useVisitedCountries'
-import type { TravelStatusEntry } from '@/stores/travelStatusStore'
+import type { CountryProgressStats } from '@/hooks/useCountryProgressStats'
 import type { Travel } from '@/types/types'
 
 import { buildTravelsByCountryCode } from './profileCountries'
@@ -44,9 +44,8 @@ import { translatePlural, translate as i18nT } from '@/i18n'
 
 
 interface ProfileWorldMapTabProps {
-  userId: string | number | null | undefined
+  progress: CountryProgressStats
   travels: Travel[]
-  personalTravelStatusEntries: TravelStatusEntry[]
   onBackToOverview: () => void
   onMapGestureActiveChange?: (active: boolean) => void
 }
@@ -63,9 +62,8 @@ const formatRoutesLabel = (count: number) => {
 }
 
 export function ProfileWorldMapTab({
-  userId,
+  progress,
   travels,
-  personalTravelStatusEntries,
   onBackToOverview,
   onMapGestureActiveChange,
 }: ProfileWorldMapTabProps) {
@@ -82,7 +80,7 @@ export function ProfileWorldMapTab({
     : undefined
 
   const { visitedCodes, byCode, visitedCount, remainingCount, totalCount, isLoading } =
-    useVisitedCountries({ userId, travels, personalTravelStatusEntries })
+    useVisitedCountries(progress)
 
   const zoom = useMapZoomPan({ contentWidth: WORLD_MAP_WIDTH, contentHeight: WORLD_MAP_HEIGHT })
   const { reset } = zoom

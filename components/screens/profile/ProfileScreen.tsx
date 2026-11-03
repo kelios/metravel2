@@ -27,6 +27,7 @@ import { useProfileGrid } from '@/components/screens/profile/useProfileGrid';
 import { ProfileHeaderSection } from '@/components/screens/profile/ProfileHeaderSection';
 import { ProfileOverviewTab } from '@/components/screens/profile/ProfileOverviewTab';
 import { ProfileStatsTab } from '@/components/screens/profile/ProfileStatsTab';
+import { useCountryProgressStats } from '@/hooks/useCountryProgressStats';
 import { ProfileCountriesTab } from '@/components/screens/profile/ProfileCountriesTab';
 import { ProfileWorldMapTab } from '@/components/screens/profile/ProfileWorldMapTab';
 import { ProfileTravelListView } from '@/components/screens/profile/ProfileTravelListView';
@@ -179,8 +180,17 @@ export default function ProfileScreen() {
   } = allTravels;
   // Контент обеих вкладок использует только подтверждённый счётчик.
   const confirmedTravelsCount = initialTabCounts?.travels ?? (travelsLoading ? null : stats.travelsCount);
+  const personalTravelStatusEntries = useTravelStatus();
+  const showsCountryProgress = activeTab === 'countries' || activeTab === 'worldmap';
+  const countryProgress = useCountryProgressStats({
+    userId: owner,
+    enabled: showsCountryProgress,
+    travels: myTravels,
+    personalTravelStatusEntries,
+  });
+  const { refetch: refetchCountryProgress, shouldLoadFallbackCatalog } = countryProgress;
   const needsAllTravels = activeTab === 'travels' || activeTab === 'stats' ||
-    activeTab === 'countries' || activeTab === 'worldmap' || activeTravelMetric !== null;
+    shouldLoadFallbackCatalog || activeTravelMetric !== null;
   const refreshVisitedTravels = useCallback(() => {
     if (needsLegacyCounts || travelsRequestedRef.current === owner) void loadTravels();
   }, [needsLegacyCounts, loadTravels, owner]);
@@ -193,7 +203,6 @@ export default function ProfileScreen() {
     allTravels,
     onAfterRemove: refreshVisitedTravels,
   });
-  const personalTravelStatusEntries = useTravelStatus()
 
   const ensureTravelsLoaded = useCallback(() => {
     if (travelsRequestedRef.current === owner) return;
@@ -287,13 +296,14 @@ export default function ProfileScreen() {
       await Promise.all([
         loadProfile(),
         loadUserInfo(),
+        ...(showsCountryProgress && owner ? [refetchCountryProgress()] : []),
         ...(isProfileTravelTab(activeTab) ? [reloadActiveTravelList()] : []),
         ...((needsAllTravels || needsLegacyCounts) && activeTab !== 'travels' ? [loadTravels()] : []),
       ]);
     } finally {
       setRefreshing(false);
     }
-  }, [activeTab, loadProfile, loadTravels, loadUserInfo, needsAllTravels, needsLegacyCounts, owner, reloadActiveTravelList]);
+  }, [activeTab, loadProfile, loadTravels, loadUserInfo, needsAllTravels, needsLegacyCounts, owner, refetchCountryProgress, reloadActiveTravelList, showsCountryProgress]);
 
   const handleDeleteMyTravel = travelList.remove;
 
@@ -314,10 +324,11 @@ export default function ProfileScreen() {
     }
   }, [ensureTravelsLoaded, needsAllTravels, needsLegacyCounts, profileLoading]);
 
+  const showsTravelStats = activeTab === 'stats';
   useEffect(() => {
-    if (!isAuthenticated || (activeTab !== 'stats' && activeTab !== 'countries' && activeTab !== 'worldmap')) return
-    void loadTravelStatus(userId ?? null)
-  }, [activeTab, isAuthenticated, userId])
+    if (!owner || (!showsTravelStats && !shouldLoadFallbackCatalog)) return;
+    void loadTravelStatus(owner);
+  }, [owner, shouldLoadFallbackCatalog, showsTravelStats]);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -358,6 +369,7 @@ export default function ProfileScreen() {
     travelCountsError: initialTabCounts ? null : allTravelsError,
     onRetryTravels: handleRetryTravels,
     loadMoreTravels: loadMoreTravelsHook,
+    requiresCompleteTravelList: shouldLoadFallbackCatalog,
     personalTravelStatusEntries,
   });
 
@@ -644,9 +656,7 @@ export default function ProfileScreen() {
   const countriesContent = useMemo(
     () => (
       <ProfileCountriesTab
-        userId={userId}
-        travels={profileTravels}
-        personalTravelStatusEntries={personalTravelStatusEntries}
+        progress={countryProgress}
         travelsSyncing={travelsLoading || travelsLoadingMore || travelsHasMore}
         loadedTravelsCount={profileTravels.length}
         totalTravelsCount={stats.travelsCount}
@@ -654,9 +664,8 @@ export default function ProfileScreen() {
       />
     ),
     [
-      profileTravels,
-      personalTravelStatusEntries,
-      userId,
+      countryProgress,
+      profileTravels.length,
       travelsLoading,
       travelsLoadingMore,
       travelsHasMore,
@@ -668,17 +677,17 @@ export default function ProfileScreen() {
   const worldmapContent = useMemo(
     () => (
       <ProfileWorldMapTab
-        userId={userId}
+        key={owner}
+        progress={countryProgress}
         travels={profileTravels}
-        personalTravelStatusEntries={personalTravelStatusEntries}
         onBackToOverview={() => handleProfileTabChange('overview')}
         onMapGestureActiveChange={handleWorldMapGestureActiveChange}
       />
     ),
     [
-      userId,
+      countryProgress,
+      owner,
       profileTravels,
-      personalTravelStatusEntries,
       handleProfileTabChange,
       handleWorldMapGestureActiveChange,
     ]

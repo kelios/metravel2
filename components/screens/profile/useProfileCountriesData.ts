@@ -1,15 +1,11 @@
 import { useMemo } from 'react'
 
-import { useCountryProgressStats } from '@/hooks/useCountryProgressStats'
-import type { TravelStatusEntry } from '@/stores/travelStatusStore'
-import type { Travel } from '@/types/types'
+import type { CountryProgressStats } from '@/hooks/useCountryProgressStats'
 
 import { buildCountryApplicationRows } from './profileCountries'
 
 type ProfileCountriesDataInput = {
-  userId: string | number | null | undefined
-  travels: Travel[]
-  personalTravelStatusEntries: TravelStatusEntry[]
+  progress: CountryProgressStats
   travelsSyncing: boolean
   loadedTravelsCount: number
   /** `null` — счётчик маршрутов недоступен из-за сбоя, а не равен нулю (#1871). */
@@ -17,9 +13,7 @@ type ProfileCountriesDataInput = {
 }
 
 export function useProfileCountriesData({
-  userId,
-  travels,
-  personalTravelStatusEntries,
+  progress,
   travelsSyncing,
   loadedTravelsCount,
   totalTravelsCount,
@@ -27,13 +21,11 @@ export function useProfileCountriesData({
   const {
     stats,
     backendStats,
-    countryProgressQuery,
     shouldLoadFallbackCatalog,
     countriesLoading,
-    countriesError,
     isInitialLoading,
     hasCatalogError,
-  } = useCountryProgressStats({ userId, travels, personalTravelStatusEntries })
+  } = progress
 
   const applicationRows = useMemo(() => buildCountryApplicationRows(stats.rows), [stats.rows])
   const progressPercent = stats.totalCount > 0
@@ -48,7 +40,7 @@ export function useProfileCountriesData({
     showCatalogError: hasCatalogError,
     showFallbackCatalogLoading: shouldLoadFallbackCatalog && countriesLoading,
     showPartialCatalogWarning:
-      !backendStats && (countryProgressQuery.isError || countriesError) && stats.rows.length > 0,
+      shouldLoadFallbackCatalog && stats.rows.length > 0,
     showTravelsSyncing:
       !backendStats && travelsSyncing && totalTravelsCount != null && totalTravelsCount > 0 && loadedTravelsCount < totalTravelsCount,
   }

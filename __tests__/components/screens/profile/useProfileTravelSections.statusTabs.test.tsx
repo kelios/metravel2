@@ -1,6 +1,6 @@
 // #1833: вкладки «Опубл.» и «Черновики» фильтровали на клиенте общий список и
 // ради полноты фильтра догружали весь каталог автора. Список им теперь отдаёт
-// сервер, а принудительная догрузка остаётся только «Странам» и «Карте».
+// сервер. Полный каталог нужен только при деградации country-progress.
 
 import { renderHook } from '@testing-library/react-native';
 
@@ -77,10 +77,13 @@ describe('useProfileTravelSections — вкладки-срезы по стату
     expect(loadMoreTravels).not.toHaveBeenCalled();
   });
 
-  it('«Страны» по-прежнему догружают весь список автора — им нужен полный каталог', async () => {
+  it.each(['countries', 'worldmap'])('%s догружает каталог только при деградации', async (activeTab) => {
     const loadMoreTravels = jest.fn();
 
-    await renderSections({ activeTab: 'countries', loadMoreTravels });
+    await renderSections({ activeTab, loadMoreTravels });
+    expect(loadMoreTravels).not.toHaveBeenCalled();
+
+    await renderSections({ activeTab, loadMoreTravels, requiresCompleteTravelList: true });
 
     expect(loadMoreTravels).toHaveBeenCalled();
   });

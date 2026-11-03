@@ -606,6 +606,8 @@ describe('ProfileScreen', () => {
 
     const { findByLabelText, findByText, findAllByText, getAllByText } = await renderProfile();
 
+    const requestsBeforeCountryTabs = mockFetchMyTravels.mock.calls.length;
+    expect(mockFetchUserCountryProgress).not.toHaveBeenCalled();
     await fireEvent.press(await findByLabelText('Страны профиля'));
 
     expect((await findAllByText('Посетили')).length).toBeGreaterThan(0);
@@ -619,7 +621,14 @@ describe('ProfileScreen', () => {
     expect(await findByLabelText('Литва: посещена')).toBeTruthy();
     expect(await findByLabelText('Беларусь: посещена')).toBeTruthy();
     expect(await findByLabelText('Германия: не посещена')).toBeTruthy();
+    await fireEvent.press(await findByLabelText('Карта мира'));
+    expect(await findByText('Карта мира')).toBeTruthy();
+    await fireEvent.press(await findByLabelText('Страны профиля'));
+
+    expect(mockFetchUserCountryProgress).toHaveBeenCalledTimes(1);
     expect(mockFetchUserCountryProgress).toHaveBeenCalledWith('123');
+    expect(mockFetchMyTravels).toHaveBeenCalledTimes(requestsBeforeCountryTabs);
+    expect(mockLoadTravelStatuses).not.toHaveBeenCalled();
     expect(mockFetchAllCountries).not.toHaveBeenCalled();
   });
 

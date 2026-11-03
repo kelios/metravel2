@@ -48,6 +48,7 @@ type UseProfileTravelSectionsInput = {
   travelCountsError: string | null
   onRetryTravels: () => void
   loadMoreTravels: () => Promise<void>
+  requiresCompleteTravelList?: boolean
   personalTravelStatusEntries: TravelStatusEntry[]
 }
 
@@ -81,6 +82,7 @@ export function useProfileTravelSections({
   travelCountsError,
   onRetryTravels,
   loadMoreTravels,
+  requiresCompleteTravelList = false,
   personalTravelStatusEntries,
 }: UseProfileTravelSectionsInput) {
   const router = useRouter()
@@ -151,15 +153,11 @@ export function useProfileTravelSections({
   const hasDraftTravels = (draftTravelsCount ?? draftTravels.length) > 0
 
   useEffect(() => {
-    // «Страны» и «Карта» строятся по всему каталогу автора, поэтому им список
-    // догружается страницами. Вкладки-срезы сюда больше не входят: у них свой
-    // серверный фильтр, и догрузка всего каталога ради них была лишней (#1833).
-    const requiresCompleteTravelList = activeTab === 'countries' || activeTab === 'worldmap'
     if (!requiresCompleteTravelList || travelsLoading || travelsLoadingMore || !travelsHasMore) return
     if (profileTravels.length === 0) return
     void loadMoreTravels()
   }, [
-    activeTab,
+    requiresCompleteTravelList,
     loadMoreTravels,
     profileTravels.length,
     travelsHasMore,

@@ -7,8 +7,7 @@ import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
-import type { TravelStatusEntry } from '@/stores/travelStatusStore'
-import type { Travel } from '@/types/types'
+import type { CountryProgressStats } from '@/hooks/useCountryProgressStats'
 import {
   type ProfileCountryApplicationRow,
   type ProfileCountryRegionGroup,
@@ -20,9 +19,7 @@ import { formatVisitCount } from './profileCountryApplication'
 
 
 interface ProfileCountriesTabProps {
-  userId: string | number | null | undefined
-  travels: Travel[]
-  personalTravelStatusEntries: TravelStatusEntry[]
+  progress: CountryProgressStats
   travelsSyncing: boolean
   loadedTravelsCount: number
   /** `null` — счётчик маршрутов недоступен из-за сбоя, а не равен нулю (#1871). */
@@ -43,9 +40,7 @@ const getCountryFlagLabel = (country: Pick<ProfileCountryRow, 'code' | 'name'>) 
 }
 
 export function ProfileCountriesTab({
-  userId,
-  travels,
-  personalTravelStatusEntries,
+  progress,
   travelsSyncing,
   loadedTravelsCount,
   totalTravelsCount,
@@ -66,9 +61,7 @@ export function ProfileCountriesTab({
     showTravelsSyncing,
     stats,
   } = useProfileCountriesData({
-    userId,
-    travels,
-    personalTravelStatusEntries,
+    progress,
     travelsSyncing,
     loadedTravelsCount,
     totalTravelsCount,

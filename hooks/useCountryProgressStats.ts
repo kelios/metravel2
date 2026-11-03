@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { fetchAllCountriesOptimized } from '@/api/miscOptimized'
 import { queryKeys } from '@/api/queryKeys'
@@ -14,66 +14,56 @@ import { queryConfigs } from '@/utils/reactQueryConfig'
 
 export type UseCountryProgressStatsParams = {
   userId: string | number | null | undefined
+  enabled: boolean
   travels: Travel[]
   personalTravelStatusEntries: TravelStatusEntry[]
 }
 
-/**
- * Shared core of the profile «Страны» tab and the world map: the server-side
- * country-progress query with a fallback to the local catalog + travels/«Был
- * здесь» computation. Two line-for-line copies of this logic used to live in
- * `useVisitedCountries` and `useProfileCountriesData` (HK-10); both now derive
- * their view models from this hook.
- */
+const EMPTY_COUNTRIES: unknown[] = []
+const EMPTY_STATS = buildProfileCountryStatsFromProgress({ countries: [] })
+
+/** Owns country progress for both profile tabs and computes local data only on degradation. */
 export function useCountryProgressStats({
   userId,
+  enabled,
   travels,
   personalTravelStatusEntries,
 }: UseCountryProgressStatsParams) {
+  const queryClient = useQueryClient()
+  const queryKey = useMemo(() => queryKeys.userCountryProgress(userId), [userId])
+  const isEnabled = enabled && Boolean(userId)
   const countryProgressQuery = useQuery({
-    queryKey: queryKeys.userCountryProgress(userId),
-    queryFn: () => fetchUserCountryProgress(userId as string | number),
-    enabled: Boolean(userId),
+    queryKey,
+    queryFn: async () => {
+      if (!userId) throw new Error('Country progress requires a profile owner')
+      const progress = await fetchUserCountryProgress(userId)
+      if (!Array.isArray(progress?.countries)) throw new Error('Missing country progress catalog')
+      return progress
+    },
+    enabled: isEnabled,
     ...queryConfigs.dynamic,
   })
 
-  const shouldLoadFallbackCatalog = !userId || countryProgressQuery.isError
+  const shouldLoadFallbackCatalog = isEnabled &&
+    countryProgressQuery.isError && !countryProgressQuery.data
 
-  const [countries, setCountries] = useState<unknown[]>([])
-  const [countriesLoading, setCountriesLoading] = useState(false)
-  const [countriesError, setCountriesError] = useState(false)
+  const [countries, setCountries] = useState<unknown[] | null>(null)
 
   useEffect(() => {
     if (!shouldLoadFallbackCatalog) {
-      setCountries([])
-      setCountriesLoading(false)
-      setCountriesError(false)
+      setCountries(null)
       return
     }
 
     const controller = new AbortController()
-    let mounted = true
-
-    setCountriesLoading(true)
-    setCountriesError(false)
-
     fetchAllCountriesOptimized({ signal: controller.signal })
       .then((nextCountries) => {
-        if (mounted) setCountries(nextCountries)
+        if (!controller.signal.aborted) setCountries(nextCountries)
       })
-      .catch((error: unknown) => {
-        if (!mounted || (error instanceof Error && error.name === 'AbortError')) return
-        setCountriesError(true)
-        setCountries([])
+      .catch(() => {
+        if (!controller.signal.aborted) setCountries([])
       })
-      .finally(() => {
-        if (mounted) setCountriesLoading(false)
-      })
-
-    return () => {
-      mounted = false
-      controller.abort()
-    }
+    return () => controller.abort()
   }, [shouldLoadFallbackCatalog])
 
   const backendStats = useMemo(
@@ -84,28 +74,36 @@ export function useCountryProgressStats({
     [countryProgressQuery.data],
   )
 
-  const fallbackStats = useMemo(
-    () => buildProfileCountryStats({ countries, travels, personalTravelStatusEntries }),
-    [countries, personalTravelStatusEntries, travels],
+  const stats = useMemo(() => {
+    if (backendStats) return backendStats
+    if (!shouldLoadFallbackCatalog) return EMPTY_STATS
+    return buildProfileCountryStats({ countries: countries ?? EMPTY_COUNTRIES, travels, personalTravelStatusEntries })
+  }, [backendStats, countries, personalTravelStatusEntries, shouldLoadFallbackCatalog, travels])
+
+  const countriesLoading = shouldLoadFallbackCatalog && countries === null
+  const isInitialLoading = !backendStats && (
+    (isEnabled && countryProgressQuery.isPending) ||
+    (countriesLoading && stats.rows.length === 0)
   )
+  const hasCatalogError = shouldLoadFallbackCatalog && !isInitialLoading && stats.rows.length === 0
 
-  const stats = backendStats ?? fallbackStats
+  const { refetch: refetchQuery } = countryProgressQuery
+  const refetch = useCallback(async () => {
+    const pending = refetchQuery({ cancelRefetch: false })
+    // A paused request will resume with connectivity. Keep the refresh control usable.
+    if (queryClient.getQueryState(queryKey)?.fetchStatus === 'paused') return
+    await pending
+  }, [queryClient, queryKey, refetchQuery])
 
-  const isInitialLoading =
-    (countryProgressQuery.isLoading && !backendStats && stats.rows.length === 0) ||
-    (shouldLoadFallbackCatalog && countriesLoading && stats.rows.length === 0)
-
-  const hasCatalogError =
-    (countryProgressQuery.isError || countriesError) && stats.rows.length === 0
-
-  return {
+  return useMemo(() => ({
     stats,
     backendStats,
-    countryProgressQuery,
+    refetch,
     shouldLoadFallbackCatalog,
     countriesLoading,
-    countriesError,
     isInitialLoading,
     hasCatalogError,
-  }
+  }), [stats, backendStats, refetch, shouldLoadFallbackCatalog, countriesLoading, isInitialLoading, hasCatalogError])
 }
+
+export type CountryProgressStats = ReturnType<typeof useCountryProgressStats>
