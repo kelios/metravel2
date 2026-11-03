@@ -22,6 +22,9 @@ import type { SupportedLocale } from '@/i18n/config'
 /** Язык, на котором авторы пишут квесты; его правило действует всегда. */
 export const QUEST_ANSWER_SOURCE_LOCALE = 'ru'
 
+// Дефис в одном слове сохраняет слитное сравнение («тёмно-синий»).
+// В фразе он может обозначать границу слов, как тире.
+
 /**
  * Нормализация ответа (дублирует логику из data файлов).
  * Косметика обеих сторон сравнения: регистр, пробелы, пунктуация, «ё»→«е»,
@@ -33,8 +36,10 @@ export const QUEST_ANSWER_SOURCE_LOCALE = 'ru'
 export function normalize(s: string): string {
     return s
         .toLowerCase()
+        .replace(/[–—]/g, ' ')
+        .replace(/-/g, /\S\s+\S/.test(s) ? ' ' : '')
+        .replace(/[.,;:!?'„""]/g, '')
         .replace(/\s+/g, ' ')
-        .replace(/[.,;:!?'„""–—-]/g, '')
         .replace(/ё/g, 'е')
         .replace(/і/g, 'и')
         .replace(/э/g, 'е')
@@ -69,7 +74,7 @@ export type QuestAnswerNormalizer = {
 
 // Пунктуация для нерусских правил шире: кавычки-ёлочки, типографские
 // апострофы (украинское «м’ята», английское «king’s»), скобки и многоточие.
-const LATIN_PUNCTUATION = /[.,;:!?'"„“”«»‘’ʼ`´–—\-()[\]/…]/g;
+const LATIN_PUNCTUATION = /[.,;:!?'"„“”«»‘’ʼ`´()[\]/…]/g;
 const COMBINING_MARKS = /[̀-ͯ]/g;
 
 // Буквы, которые NFKD не раскладывает на «база + знак».
@@ -85,7 +90,13 @@ const UNDECOMPOSABLE_LETTERS: Readonly<Record<string, string>> = {
 const UNDECOMPOSABLE_PATTERN = new RegExp(`[${Object.keys(UNDECOMPOSABLE_LETTERS).join('')}]`, 'g');
 
 const collapse = (value: string): string =>
-    value.toLowerCase().replace(LATIN_PUNCTUATION, '').replace(/\s+/g, ' ').trim();
+    value
+        .toLowerCase()
+        .replace(/[–—]/g, ' ')
+        .replace(/-/g, /\S\s+\S/.test(value) ? ' ' : '')
+        .replace(LATIN_PUNCTUATION, '')
+        .replace(/\s+/g, ' ')
+        .trim();
 
 const stripDiacritics = (value: string): string => {
     const folded = value.replace(UNDECOMPOSABLE_PATTERN, (letter) => UNDECOMPOSABLE_LETTERS[letter] ?? letter);
@@ -137,13 +148,19 @@ export function resolveQuestAnswerNormalizer(locale?: string | null): QuestAnswe
         : UNIVERSAL_QUEST_ANSWER_NORMALIZER;
 }
 
-/**
- * Правила, под которыми сверяется ответ шага: локали контента и источника.
- * Для русского квеста — одно правило, поведение до #2196 не меняется.
- */
+// Сохраняем старое совпадение составных слов: «северо-запад» и «северозапад».
+const COMPOUND_WORD_RULES = new Map(
+    [UNIVERSAL_QUEST_ANSWER_NORMALIZER, ...Object.values(QUEST_ANSWER_NORMALIZERS)].map((rule) => [
+        rule,
+        { ...rule, normalize: (value: string) => rule.normalize(value.replace(/[–—-]/g, '')) },
+    ] as const),
+);
+
+/** Правила локали и источника, включая прежнее сравнение составных слов. */
 export function questAnswerNormalizers(contentLocale?: string | null): readonly QuestAnswerNormalizer[] {
     const content = resolveQuestAnswerNormalizer(contentLocale);
-    return content === SOURCE_NORMALIZER ? [SOURCE_NORMALIZER] : [content, SOURCE_NORMALIZER];
+    const rules = content === SOURCE_NORMALIZER ? [SOURCE_NORMALIZER] : [content, SOURCE_NORMALIZER];
+    return [...rules, ...rules.map((rule) => COMPOUND_WORD_RULES.get(rule)!)];
 }
 
 /** Нормализация ответа под правилом локали. */

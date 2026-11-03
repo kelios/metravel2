@@ -23,8 +23,10 @@
 function normalizeRuntime(s) {
   return s
     .toLowerCase()
+    .replace(/[–—]/g, ' ')
+    .replace(/-/g, /\S\s+\S/.test(s) ? ' ' : '')
+    .replace(/[.,;:!?'„""]/g, '')
     .replace(/\s+/g, ' ')
-    .replace(/[.,;:!?'„""–—-]/g, '')
     .replace(/ё/g, 'е')
     .replace(/і/g, 'и')
     .replace(/э/g, 'е')
