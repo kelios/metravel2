@@ -785,6 +785,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                 onAnswerFocus={handleAnswerFocus}
                                 onAnswerBlur={handleAnswerBlur}
                                 onAnswerFeedback={handleAnswerFeedback}
+                                guestFreeSteps={guestMode ? guestFreeSteps : undefined}
                                 introSlot={introTrustBar}
                             />
                         </View>

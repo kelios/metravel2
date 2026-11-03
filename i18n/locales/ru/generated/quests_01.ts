@@ -1,4 +1,7 @@
 export const questsGenerated1 = {
+  "components.quests.questWizardStepCard.guestLimit": "Пробных заданий без аккаунта: {{count}}. Чтобы продолжить, войдите или зарегистрируйтесь.",
+  "components.quests.QuestConsentGate.resumeQuest": "Продолжить квест",
+  "components.quests.QuestConsentGate.resumeConsent": "Чтобы продолжить квест, подтвердите согласие с условиями.",
   "localeServing.versions": "Языковые версии квеста",
   "localeServing.unavailableTitle": "Эта версия квеста недоступна",
   "localeServing.unavailableDescription": "Перевод снят с публикации или ещё не готов. Откройте русскую версию либо повторите проверку позже.",

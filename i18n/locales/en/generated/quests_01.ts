@@ -1,4 +1,7 @@
 export const questsGenerated1 = {
+  "components.quests.questWizardStepCard.guestLimit": "Trial tasks without an account: {{count}}. To continue, sign in or create an account.",
+  "components.quests.QuestConsentGate.resumeQuest": "Continue the quest",
+  "components.quests.QuestConsentGate.resumeConsent": "Accept the terms to continue the quest.",
   "localeServing.versions": "Quest language versions",
   "localeServing.unavailableTitle": "This quest version is unavailable",
   "localeServing.unavailableDescription": "The translation was withdrawn or is not ready yet. Open the Russian version or check again later.",

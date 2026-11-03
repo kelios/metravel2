@@ -603,7 +603,7 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
   const isLoading =
     Boolean(route && serving.pending && !serving.projection) ||
     isQuestLoading ||
-    (isAuthenticated ? progressLoading : Boolean(questId) && !guestFlow.guestReady);
+    (isAuthenticated ? progressLoading || guestFlow.migrationPending : Boolean(questId) && !guestFlow.guestReady);
   // #1938: canonical принадлежит квесту, а не сегменту из адресной строки.
   // Один квест открывается по числовому city_id и по alias'ам города, а
   // серверный рендер отдаёт во все варианты один адрес `/quests/<city_id>/<quest_id>`
@@ -873,6 +873,7 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
           title={bundle.title}
           coverUrl={bundle.coverUrl}
           onAccept={questConsent.grant}
+          resuming={Boolean(initialProgress && initialProgress.currentIndex > 0)}
           ratingSlot={ratingSlot}
           completionSlot={completionSlot}
         />

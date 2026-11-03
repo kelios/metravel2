@@ -17,6 +17,7 @@ interface QuestConsentGateProps {
   title: string
   coverUrl?: string
   onAccept: () => void
+  resuming?: boolean
   testID?: string
   /** Readonly-рейтинг под заголовком */
   ratingSlot?: React.ReactNode
@@ -28,7 +29,7 @@ interface QuestConsentGateProps {
  * Экран обязательного согласия перед первым стартом квеста.
  * Кнопка «Начать квест» заблокирована, пока чекбокс не отмечен.
  */
-export default function QuestConsentGate({ title, coverUrl, onAccept, testID, ratingSlot, completionSlot }: QuestConsentGateProps) {
+export default function QuestConsentGate({ title, coverUrl, onAccept, resuming = false, testID, ratingSlot, completionSlot }: QuestConsentGateProps) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const [checked, setChecked] = useState(false)
@@ -68,7 +69,9 @@ export default function QuestConsentGate({ title, coverUrl, onAccept, testID, ra
       {completionSlot}
 
       <View style={styles.card}>
-        <Text style={styles.lead}>{i18nT('quests:components.quests.QuestConsentGate.pered_nachalom_kvesta_podtverdite_soglasie_s_38fb802c')}</Text>
+        <Text style={styles.lead}>{i18nT(resuming
+          ? 'quests:components.quests.QuestConsentGate.resumeConsent'
+          : 'quests:components.quests.QuestConsentGate.pered_nachalom_kvesta_podtverdite_soglasie_s_38fb802c')}</Text>
 
         <ConsentCheckbox
           checked={checked}
@@ -89,7 +92,9 @@ export default function QuestConsentGate({ title, coverUrl, onAccept, testID, ra
         <Button
           variant="primary"
           fullWidth
-          label={i18nT('quests:components.quests.QuestConsentGate.nachat_kvest_d3b974ac')}
+          label={i18nT(resuming
+            ? 'quests:components.quests.QuestConsentGate.resumeQuest'
+            : 'quests:components.quests.QuestConsentGate.nachat_kvest_d3b974ac')}
           onPress={handleStart}
           disabled={!checked}
           testID="quest-consent-start"

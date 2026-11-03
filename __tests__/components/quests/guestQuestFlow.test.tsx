@@ -96,6 +96,7 @@ describe('useGuestQuestFlow migration after login', () => {
     await saveGuestQuestProgress('krakow-dragon', {
       currentIndex: 2,
       unlockedIndex: 2,
+      updatedAt: Date.parse('2026-11-03T12:00:00Z'),
       answers: { 'step-1': 'дракон', 'step-2': '7' },
       attempts: { 'step-1': 1 },
       hints: {},
@@ -104,13 +105,19 @@ describe('useGuestQuestFlow migration after login', () => {
       earlyFinish: true,
     })
 
-    mockReadOrCreateProgress.mockResolvedValue({
-      id: 42,
-      answers: {},
-    } as never)
+    let finishRead!: () => void
+    mockReadOrCreateProgress.mockReturnValue(new Promise((resolve) => {
+      finishRead = () => resolve({
+        id: 42,
+        current_index: 0,
+        unlocked_index: 0,
+        updated_at: '2026-11-03T12:00:01Z',
+        answers: {},
+      })
+    }))
     mockedApi.updateProgress.mockResolvedValue({ id: 42 } as never)
 
-    await renderHook(() =>
+    const { result } = await renderHook(() =>
       useGuestQuestFlow({
         questId: 'krakow-dragon',
         cityId: 'krakow',
@@ -118,6 +125,9 @@ describe('useGuestQuestFlow migration after login', () => {
         enabled: true,
       }),
     )
+
+    expect(result.current.migrationPending).toBe(true)
+    await act(async () => finishRead())
 
     await waitFor(() => {
       expect(mockReadOrCreateProgress).toHaveBeenCalledWith('krakow-dragon')
@@ -135,6 +145,7 @@ describe('useGuestQuestFlow migration after login', () => {
     await waitFor(async () => {
       const leftover = await loadGuestQuestProgress('krakow-dragon')
       expect(leftover).toBeNull()
+      expect(result.current.migrationPending).toBe(false)
     })
   })
 

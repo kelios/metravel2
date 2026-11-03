@@ -1,4 +1,7 @@
 export const questsGenerated1 = {
+  "components.quests.questWizardStepCard.guestLimit": "Пробних завдань без облікового запису: {{count}}. Щоб продовжити, увійдіть або зареєструйтеся.",
+  "components.quests.QuestConsentGate.resumeQuest": "Продовжити квест",
+  "components.quests.QuestConsentGate.resumeConsent": "Щоб продовжити квест, підтвердьте згоду з умовами.",
   "localeServing.versions": "Мовні версії квесту",
   "localeServing.unavailableTitle": "Ця версія квесту недоступна",
   "localeServing.unavailableDescription": "Переклад знято з публікації або він ще не готовий. Відкрийте російську версію або повторіть перевірку пізніше.",

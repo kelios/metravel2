@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'expo-router'
 
 import { buildLoginHref } from '@/utils/authNavigation'
@@ -59,7 +59,11 @@ type UseGuestQuestFlowParams = {
 export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }: UseGuestQuestFlowParams) {
   const router = useRouter()
   const [guestInitial, setGuestInitial] = useState<GuestQuestProgress | null | undefined>(undefined)
-  const migratedRef = useRef(false)
+  const accountId = useAuthStore((state) => state.userId)
+  const migrationKey = isAuthenticated && enabled && questId
+    ? JSON.stringify([accountId, questId])
+    : null
+  const [settledMigrationKey, setSettledMigrationKey] = useState<string | null>(null)
 
   const redirectPath = questId && cityId ? `/quests/${cityId}/${questId}` : '/quests'
 
@@ -124,28 +128,34 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
 
   // Миграция локального прогресса в аккаунт после логина.
   useEffect(() => {
-    if (!isAuthenticated || !enabled || !questId || migratedRef.current) return
-    migratedRef.current = true
+    if (!isAuthenticated) {
+      setSettledMigrationKey(null)
+      return
+    }
+    if (!migrationKey || migrationKey === settledMigrationKey) return
+    let active = true
+    const isSameAccount = () => useAuthStore.getState().userId === accountId
     // До первого await: «Сбросить» посреди миграции видит, что она началась раньше (#2098).
     const writeEpoch = beginQuestProgressWrite()
 
     void (async () => {
       const guestProgress = await loadGuestQuestProgress(questId)
-      if (!guestProgress || countAnsweredSteps(guestProgress.answers) === 0) return
+      if (!active || !isSameAccount() || !guestProgress || countAnsweredSteps(guestProgress.answers) === 0) return
       // Аккаунт, в который переносим: строка, записанная уже после выхода из
       // него, открытому экрану следующего вошедшего не показывается.
-      const accountId = useAuthStore.getState().userId
       try {
         // Сброс этого квеста в аккаунте ещё не дошёл до сервера: гостевые ответы
         // слились бы в строку стёртого прохождения. Копия ждёт следующей попытки (#2043).
-        if (!(await settleQuestProgressDeletions(questId))) {
+        if (!(await settleQuestProgressDeletions(questId, accountId))) {
           throw new Error(`Reset of quest progress ${questId} is not confirmed by the server yet`)
         }
         // Чтение, слияние и запись — в очереди писателей квеста: флаш отложенной
         // очереди стартует тем же переходом в авторизованное состояние, а
         // `answers` уходит на сервер полным словарём. Два писателя от одной базы
         // затёрли бы ответы друг друга (#1905).
+        if (!active || !isSameAccount()) return
         const migrated = await withQuestProgress(questId, async (serverProgress) => {
+          if (!active || !isSameAccount()) return null
           // Тот же путь слияния, что и у авторизованной синхронизации: аккаунт мог
           // уже пройти часть квеста на другом устройстве — ни гостевые, ни
           // серверные ответы не теряем.
@@ -172,6 +182,7 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
         // а `quest_progress` несёт unique_together (quest, user) — проигравший
         // POST получал 400/500, пока #1905 не свёл обоих писателей в одну
         // очередь `withQuestProgress`.
+        if (!migrated || !isSameAccount()) return
         await clearGuestQuestProgress(questId)
         // Экран квеста прочитал прохождение ещё до переноса (#2092).
         syncQuestProgressReaders(questId, accountId, migrated, writeEpoch)
@@ -183,22 +194,26 @@ export function useGuestQuestFlow({ questId, cityId, isAuthenticated, enabled }:
         // бэкофф; слияние с сервером у неё то же. Гостевая копия после передачи
         // стирается, чтобы у ответов был один владелец: иначе следующее открытие
         // квеста залило бы их в прохождение, сброшенное уже после доставки (#2048).
-        const ownerId = useAuthStore.getState().userId
-        if (ownerId) {
-          await enqueueQuestProgress(questId, normalizeQuestProgressSnapshot(guestProgress), ownerId)
-          await clearGuestQuestProgress(questId)
+        if (active && accountId && isSameAccount()) {
+          await enqueueQuestProgress(questId, normalizeQuestProgressSnapshot(guestProgress), accountId)
+          if (isSameAccount()) await clearGuestQuestProgress(questId)
           devError('Guest quest progress migration failed, handed over to the progress queue:', error)
           void flushQuestProgressQueue()
           return
         }
         devError('Guest quest progress migration failed, local copy kept:', error)
-        migratedRef.current = false
       }
-    })()
-  }, [enabled, isAuthenticated, questId])
+    })().finally(() => {
+      if (active) setSettledMigrationKey(migrationKey)
+    })
+    return () => {
+      active = false
+    }
+  }, [accountId, isAuthenticated, migrationKey, questId, settledMigrationKey])
 
   return {
     guestInitial,
+    migrationPending: migrationKey !== null && settledMigrationKey !== migrationKey,
     guestReady: guestInitial !== undefined,
     guestFreeSteps: GUEST_QUEST_FREE_STEPS,
     persistGuestProgress,

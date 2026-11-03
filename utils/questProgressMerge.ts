@@ -236,6 +236,8 @@ const answeredTime = (snapshot: QuestProgressSnapshot, stepId: string): number =
  * бы на нулевой шаг.
  */
 const localOwnsCursor = (local: QuestProgressSnapshot, server: QuestProgressSnapshot): boolean => {
+    // У свежей пустой записи есть время создания, но нет позиции игрока.
+    if (local.currentIndex > 0 && !hasQuestProgressStarted(server)) return true
     if (local.updatedAt > 0 && server.updatedAt > 0) return local.updatedAt >= server.updatedAt
     const localAnswered = countAnsweredSteps(local.answers)
     const serverAnswered = countAnsweredSteps(server.answers)

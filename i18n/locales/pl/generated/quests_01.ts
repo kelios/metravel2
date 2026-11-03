@@ -1,4 +1,7 @@
 export const questsGenerated1 = {
+  "components.quests.questWizardStepCard.guestLimit": "Zadania próbne bez konta: {{count}}. Aby kontynuować, zaloguj się lub zarejestruj.",
+  "components.quests.QuestConsentGate.resumeQuest": "Kontynuuj grę",
+  "components.quests.QuestConsentGate.resumeConsent": "Aby kontynuować grę, zaakceptuj warunki.",
   "localeServing.versions": "Wersje językowe questu",
   "localeServing.unavailableTitle": "Ta wersja questu jest niedostępna",
   "localeServing.unavailableDescription": "Tłumaczenie wycofano lub nie jest jeszcze gotowe. Otwórz wersję rosyjską albo sprawdź ponownie później.",

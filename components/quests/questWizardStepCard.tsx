@@ -147,6 +147,7 @@ type StepCardProps = {
   showLocationControls?: boolean
   /** Метаданные маршрута и раскрытие об ИИ в футере стартовой карточки (#1480). */
   introSlot?: React.ReactNode
+  guestFreeSteps?: number
   /** Числовой PK квеста — адрес батча попыток ответа (#1276). */
   questNumericId?: number
   /** Попытка ответа для продуктовой воронки: одна на каждое «Проверить» (#1498). */
@@ -256,6 +257,7 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     onToggleMap,
     showLocationControls = true,
     introSlot,
+    guestFreeSteps,
     questNumericId,
     onAnswerAttempt,
     onAnswerFocus,
@@ -561,6 +563,12 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         </View>
         {isPassed && (<View style={styles.completedBadge}><Text style={styles.completedText}>✓</Text></View>)}
       </View>
+
+      {step.id === 'intro' && guestFreeSteps !== undefined && (
+        <Text style={[styles.section, styles.legNote]} testID="quest-intro-guest-limit">
+          {i18nT('quests:components.quests.questWizardStepCard.guestLimit', { count: guestFreeSteps })}
+        </Text>
+      )}
 
       {step.id === 'intro' && (
         <Pressable

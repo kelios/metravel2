@@ -122,6 +122,22 @@ describe('mergeQuestProgress', () => {
     expect(mergeQuestProgress(local, server).merged.answers['step-1']).toBe('ответ')
   })
 
+  it('новая пустая запись не возвращает игрока на старт при переносе из очереди', () => {
+    const local = snapshot({
+      currentIndex: 2,
+      unlockedIndex: 2,
+      answers: { 'step-1': 'скамейка', 'step-2': '1747' },
+      updatedAt: T0,
+    })
+    const server = snapshot({ serverId: 42, updatedAt: T0 + 1000 })
+
+    const { merged, serverNeedsPush } = mergeQuestProgress(local, server)
+
+    expect(merged.currentIndex).toBe(2)
+    expect(merged.serverId).toBe(42)
+    expect(serverNeedsPush).toBe(true)
+  })
+
   it('пустой сервер + полный локальный: локальные ответы сохранены и уходят на сервер', () => {
     // Ровно баг sasino-stilo: на сервере остался только intro.
     const local = snapshot({
