@@ -90,6 +90,7 @@ function scanExtraArgs() {
     'scan-quest-point-roles.js': [`--baseline=${require('./scan-quest-point-roles').BASELINE_PATH}`],
     'scan-quest-anytext-minlen.js': [`--allow-file=${require('./scan-quest-anytext-minlen').ALLOW_PATH}`],
     'scan-quest-city-walk.js': [`--baseline=${require('./scan-quest-city-walk').BASELINE_PATH}`],
+    'scan-quest-story-thread.js': [`--baseline=${require('./scan-quest-story-thread').BASELINE_PATH}`],
   }
 }
 

@@ -1,0 +1,47 @@
+{
+  "contractVersion": 1,
+  "note": "Находки скана сквозной нити (дубль объекта подряд, story без нити, шаблонная «вода»), лежавшие в репозитории до появления гейта #2963. Их исправление — редакционная работа своих карточек; новая находка baseline не покрыта. Ключ quest_id|step_id|kind. Снимается по файлам данных в РАБОЧЕМ ДЕРЕВЕ. Обновлять: npm run quest:scan-story-thread:baseline",
+  "known": {
+    "scripts/baku-quest-data.js": [
+      "baku-icheri-sheher|1a-gate-guardians|filler",
+      "baku-icheri-sheher|1a-gate-guardians|same-object"
+    ],
+    "scripts/barkovshchina-spirits-quest-data.js": [
+      "barkovshchina-spirits|point-1-2|same-object",
+      "barkovshchina-spirits|point-2-2|same-object",
+      "barkovshchina-spirits|point-3-2|same-object"
+    ],
+    "scripts/braslav-quest-data.js": [
+      "braslav-mezh-ozyor|city-foundation-sign|filler"
+    ],
+    "scripts/gniezno-quest-data.js": [
+      "gniezno-white-eagle|8-rynek-herb|filler"
+    ],
+    "scripts/grodno-teens-time-capsule-quest-data.js": [
+      "grodno-teens-time-capsule|6a-bust-rank|same-object"
+    ],
+    "scripts/krakow-podgorze-quest-data.js": [
+      "krakow-podgorze|7-liban|same-object"
+    ],
+    "scripts/kutaisi-quest-data.js": [
+      "kutaisi-golden-age|2-teatr-meskhishvili|filler"
+    ],
+    "scripts/mogilev-kids-quest-data.js": [
+      "mogilev-kids-mogislav|2-smotrovaya|same-object"
+    ],
+    "scripts/ogulin-quest-data.js": [
+      "ogulin-grad-bajki|5-dulin-ponor|filler"
+    ],
+    "scripts/pinsk-quest-data.js": [
+      "pinsk-polesie|2b-poleskaya-biografiya|filler",
+      "pinsk-polesie|2b-poleskaya-biografiya|same-object"
+    ],
+    "scripts/sasino-quest-data.js": [
+      "sasino-stilo|7-latarnicy|same-object"
+    ],
+    "scripts/slunj-quest-data.js": [
+      "slunj-rastoke-selo-na-slapovima|1-neralic|same-object",
+      "slunj-rastoke-selo-na-slapovima|7-vilina-kosa|same-object"
+    ]
+  }
+}
