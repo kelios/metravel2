@@ -10,6 +10,7 @@ export function publicRouteError(httpStatus: 404 | 410 | 503): Error & { httpSta
 export async function fetchPublicRouteJsonResponse(
   request: Pick<ImmutableRequest, 'signal'>,
   endpoint: string,
+  redirect: 'error' | 'manual' = 'error',
 ): Promise<{ status: number; ok: boolean; data: unknown }> {
   const apiBase = String(process.env.SSR_API_ORIGIN || process.env.EXPO_PUBLIC_API_URL || '').trim().replace(/\/+$/, '')
   const headers: Record<string, string> = { Accept: 'application/json' }
@@ -43,7 +44,7 @@ export async function fetchPublicRouteJsonResponse(
     // node:http transport that keeps it (scripts/lib/ssrApiTransport.js).
     const send = headers.Host ? (globalThis as Record<symbol, unknown>)[SSR_API_TRANSPORT] as typeof fetch | undefined : fetch
     if (typeof send !== 'function') throw publicRouteError(503)
-    const response = await send(`${apiRoot}/${endpoint}`, { headers, credentials: 'omit', redirect: 'error', signal: controller.signal })
+    const response = await send(`${apiRoot}/${endpoint}`, { headers, credentials: 'omit', redirect, signal: controller.signal })
     let data: unknown = null
     try { data = await response.json() } catch { if (response.ok) throw publicRouteError(503) }
     return { status: response.status, ok: response.ok, data }

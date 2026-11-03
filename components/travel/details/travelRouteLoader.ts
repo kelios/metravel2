@@ -4,7 +4,7 @@ import type { Travel } from '@/types/types'
 import { normalizeTravelRouteSegment } from '@/utils/travelRouteSegment'
 import { memoizePublicRouteData } from '@/utils/ssr/publicRouteData'
 import { sanitizeRichText } from '@/utils/sanitizeRichText'
-import { fetchPublicRouteJson, publicRouteError } from '@/utils/ssr/fetchPublicRouteJson'
+import { fetchPublicRouteJson, fetchPublicRouteJsonResponse, publicRouteError } from '@/utils/ssr/fetchPublicRouteJson'
 import { buildTravelSeoDescription } from '@/utils/travelSeoDescription'
 import { buildTravelFaqJsonLd } from '@/utils/travelFaq'
 import type { TravelLoaderPayload } from './travelLoaderData'
@@ -29,6 +29,26 @@ export function resolveTravelLoaderSegment(value: string | string[] | undefined)
   if (/^(?:null|undefined)$/i.test(segment)) return null
   if (/^\d+$/.test(segment) && (!Number.isSafeInteger(Number(segment)) || Number(segment) <= 0)) return null
   return segment
+}
+
+async function fetchPublicTravel(request: ImmutableRequest, segment: string): Promise<unknown> {
+  const encoded = encodeURIComponent(segment)
+  const response = await fetchPublicRouteJsonResponse(request, `travels/by-slug/${encoded}/`, 'manual')
+  if (response.ok) return response.data
+  if (response.status === 404 || response.status === 410) throw publicRouteError(response.status)
+  if (response.status !== 301 && response.status !== 308) throw publicRouteError(503)
+
+  // The legacy endpoint redirects to an HTML document. Resolve the alias
+  // through the API and keep the detail fetch on the configured API origin.
+  const resolved = await fetchPublicRouteJson(request, `travels/resolve-slug/${encoded}/`)
+  const alias = resolved as { status?: unknown; slug?: unknown } | null
+  // A concurrent withdrawal can leave only a fuzzy match for the old slug.
+  if (alias?.status === 'fuzzy') throw publicRouteError(404)
+  if (alias?.status !== 'redirect' || typeof alias.slug !== 'string') throw publicRouteError(503)
+  const canonical = resolveTravelLoaderSegment(alias.slug)
+  if (!canonical || canonical === segment || /^\d+$/.test(canonical)) throw publicRouteError(503)
+  // Resolver items can omit fields that the article projection needs.
+  return fetchPublicRouteJson(request, `travels/by-slug/${encodeURIComponent(canonical)}/`)
 }
 
 /** Keep the cover manifest and one canonical copy of the article body in loader JSON. */
@@ -73,7 +93,7 @@ export async function loadTravelRoute(
   // resolves document requests; SPA previews keep their credential-aware query.
   if (/^\d+$/.test(segment)) return null
   return memoizePublicRouteData(request, `travel:${segment}`, async () => {
-    const raw = await fetchPublicRouteJson(request, `travels/by-slug/${encodeURIComponent(segment)}/`)
+    const raw = await fetchPublicTravel(request, segment)
     try {
       if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw publicRouteError(503)
       const record = raw as Record<string, unknown>

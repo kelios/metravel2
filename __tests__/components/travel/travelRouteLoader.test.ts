@@ -70,6 +70,31 @@ describe('travel route loader', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('loads a legacy slug through the canonical API without following its HTML redirect', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 301, json: async () => { throw new SyntaxError() } })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({
+        status: 'redirect', slug: 'demo', item: { id: article.id, slug: article.slug },
+      }) })
+    await expect(loadTravelRoute(request(), { param: 'old-demo' })).resolves.toMatchObject({
+      routeKey: 'old-demo',
+      travel: { id: 42, slug: 'demo', description: '<p>Canonical body</p>' },
+    })
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      'http://localhost:8000/api/travels/by-slug/old-demo/',
+      'http://localhost:8000/api/travels/resolve-slug/old-demo/',
+      'http://localhost:8000/api/travels/by-slug/demo/',
+      'http://localhost:8000/api/quests/web/discovery/?lang=ru&view=travel&travel_id=42',
+    ])
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ redirect: 'manual' })
+  })
+
+  it('does not serve a fuzzy match when an alias stops resolving during the request', async () => {
+    fetchMock.mockResolvedValueOnce({ ok: false, status: 301 })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ status: 'fuzzy', item: article }) })
+    await expect(loadTravelRoute(request(), { param: 'old-demo' })).rejects.toMatchObject({ httpStatus: 404 })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
   it('preserves an explicit /api base for canonical public slugs', async () => {
     process.env.EXPO_PUBLIC_API_URL = 'http://localhost:8000/api/'
     await loadTravelRoute(request(), { param: 'demo' })
