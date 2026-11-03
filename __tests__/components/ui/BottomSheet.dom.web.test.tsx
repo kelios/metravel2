@@ -13,6 +13,7 @@ let createElement: typeof import('react').createElement
 let createRoot: typeof import('react-dom/client').createRoot
 let RN: typeof import('react-native')
 let ActionListSheet: React.ComponentType<any>
+let BottomSheet: React.ComponentType<any>
 
 beforeAll(() => {
   jest.resetModules()
@@ -28,6 +29,7 @@ beforeAll(() => {
   ;({ createRoot } = require('react-dom/client'))
   RN = require('react-native')
   ActionListSheet = require('@/components/ui/ActionListSheet').default
+  BottomSheet = require('@/components/ui/BottomSheet').default
 })
 
 describe('нижний лист в настоящем DOM react-native-web (#2231, #2153)', () => {
@@ -113,5 +115,26 @@ describe('нижний лист в настоящем DOM react-native-web (#223
   it('на web границы касаний нет — это native-механизм переговоров за касание', async () => {
     await renderCardWithSheet(jest.fn(), jest.fn())
     expect(inPage('bottom-sheet-touch-boundary')).toBeNull()
+  })
+
+  it('announces the centered dialog by title and keeps the backdrop pointer-only', async () => {
+    const onClose = jest.fn()
+    await act(async () => {
+      root.render(createElement(BottomSheet, {
+        visible: true, title: 'Дверца 1', placement: 'center', onClose,
+      }))
+    })
+    const modalContent = document.body.querySelector('[aria-modal="true"]')
+    // jsdom does not run the fade animation. Tell RNW that the modal is visible.
+    await act(async () => {
+      modalContent?.parentElement?.parentElement?.dispatchEvent(new Event('animationend', { bubbles: true }))
+    })
+    const dialog = document.body.querySelector('[role="dialog"]')
+    const backdrop = inPage('bottom-sheet-backdrop')
+    expect(dialog?.getAttribute('aria-label')).toBe('Дверца 1')
+    expect(backdrop?.getAttribute('aria-hidden')).toBe('true')
+    expect(backdrop?.hasAttribute('tabindex')).toBe(false)
+    await click(backdrop)
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

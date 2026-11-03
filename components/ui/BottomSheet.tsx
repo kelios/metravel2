@@ -1,7 +1,8 @@
 import React, { useMemo, useRef } from 'react'
-import { KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native'
+import { KeyboardAvoidingView, Modal, PanResponder, Platform, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { asBottomDimension, useBottomChromeInset } from '@/components/layout/bottomChromeInset'
 import CardActionPressable from '@/components/ui/CardActionPressable'
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
@@ -15,6 +16,7 @@ type Props = {
   visible: boolean
   onClose: () => void
   title: string
+  placement?: 'bottom' | 'center'
   children?: React.ReactNode
   /** Retain a body's height limit without letting consumers replace panel layout/insets. */
   panelStyle?: StyleProp<Pick<ViewStyle, 'maxHeight'>>
@@ -60,10 +62,11 @@ const WEB_ROOT_PROPS = { dataSet: { cardAction: 'true' } }
  *    Modal лежит поверх дока, поэтому отступа от края нет, а низ панели
  *    резервирует home indicator / навигационную панель.
  */
-const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, onDismiss, panelStyle, keyboardAware = false, modalContent }) => {
+const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, placement = 'bottom', onDismiss, panelStyle, keyboardAware = false, modalContent }) => {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const isWeb = Platform.OS === 'web'
+  const centered = placement === 'center'
   const { width: viewportWidth } = useWindowDimensions()
   const { bottom: chromeBottom } = useBottomChromeInset()
   const insets = useSafeAreaInsetsSafe()
@@ -73,7 +76,7 @@ const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, onDis
   onCloseRef.current = onClose
 
   const swipeHandlers = useMemo(() => {
-    if (isWeb) return null
+    if (isWeb || centered) return null
     const closeIfFarEnough = (dy: number) => {
       if (dy > SWIPE_CLOSE_DISTANCE) onCloseRef.current()
     }
@@ -85,20 +88,27 @@ const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, onDis
       onPanResponderRelease: (_evt, g) => closeIfFarEnough(g.dy),
       onPanResponderTerminate: (_evt, g) => closeIfFarEnough(g.dy),
     }).panHandlers
-  }, [isWeb])
+  }, [centered, isWeb])
 
   const panelBottom = isWeb
     ? { marginBottom: asBottomDimension(chromeBottom) }
     : { paddingBottom: Math.max(insets.bottom || 0, PANEL_PADDING_BOTTOM) }
 
+  const centeredInsets = {
+    paddingTop: Math.max(insets.top, DESIGN_TOKENS.spacing.md),
+    paddingBottom: Math.max(insets.bottom, DESIGN_TOKENS.spacing.md),
+    paddingLeft: Math.max(insets.left, DESIGN_TOKENS.spacing.md),
+    paddingRight: Math.max(insets.right, DESIGN_TOKENS.spacing.md),
+  }
+
   const closeLabel = i18nT('common:action.close')
 
   const panel = (
-    <View style={[styles.panel, panelStyle, panelBottom]} testID="bottom-sheet-panel">
+    <View style={[styles.panel, centered ? styles.centeredPanel : panelBottom, panelStyle]} testID="bottom-sheet-panel">
       <View style={styles.header} {...(swipeHandlers ?? {})}>
-        <View style={styles.handle} />
+        {!centered && <View style={styles.handle} />}
         <View style={styles.headerRow}>
-          <Text style={styles.title} accessibilityRole="header">{title}</Text>
+          <Text style={[styles.title, centered && styles.dialogTitle]} accessibilityRole="header">{title}</Text>
           <CardActionPressable
             accessibilityRole="button"
             accessibilityLabel={closeLabel}
@@ -111,7 +121,11 @@ const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, onDis
           </CardActionPressable>
         </View>
       </View>
-      {children}
+      {centered ? (
+        <ScrollView style={styles.dialogBody} keyboardShouldPersistTaps="handled">
+          {children}
+        </ScrollView>
+      ) : children}
     </View>
   )
 
@@ -122,21 +136,33 @@ const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, onDis
       animationType="fade"
       onRequestClose={onClose}
       onDismiss={onDismiss}
+      {...(isWeb && centered ? { accessibilityLabel: title } : null)}
     >
       {/* Preserve quest-share's viewport compensation (e7794e549): a classic
           scrollbar can narrow the RNW Modal container and offset its contents. */}
-      <View style={[styles.root, isWeb && viewportWidth > 0 && { width: viewportWidth }]} testID="bottom-sheet-root" {...(isWeb ? WEB_ROOT_PROPS : null)}>
-        <Pressable
-          accessibilityLabel={i18nT('shared:components.ui.ActionListSheet.zakryt_menyu_deystviy_85947952')}
-          accessibilityRole="button"
-          onPress={onClose}
-          style={styles.backdrop}
-          testID="bottom-sheet-backdrop"
-        />
+      <View style={[styles.root, isWeb && viewportWidth > 0 && { width: viewportWidth }, centered && styles.centered, centered && centeredInsets]} testID="bottom-sheet-root" {...(isWeb ? WEB_ROOT_PROPS : null)}>
+        {centered && isWeb ? (
+          <View
+            aria-hidden
+            style={[styles.backdrop, styles.dialogBackdrop]}
+            testID="bottom-sheet-backdrop"
+            {...{ onClick: onClose }}
+          />
+        ) : (
+          <Pressable
+            accessibilityLabel={centered ? undefined : i18nT('shared:components.ui.ActionListSheet.zakryt_menyu_deystviy_85947952')}
+            accessibilityRole={centered ? undefined : 'button'}
+            accessible={!centered}
+            importantForAccessibility={centered ? 'no' : undefined}
+            onPress={onClose}
+            style={[styles.backdrop, centered && styles.dialogBackdrop]}
+            testID="bottom-sheet-backdrop"
+          />
+        )}
         {keyboardAware && Platform.OS === 'ios' ? (
           <KeyboardAvoidingView
             behavior="padding"
-            style={styles.keyboardContainer}
+            style={[styles.keyboardContainer, centered && styles.centeredKeyboardContainer]}
             pointerEvents="box-none"
             testID="bottom-sheet-keyboard-container"
           >
@@ -198,6 +224,29 @@ const createStyles = (colors: ThemedColors) =>
         web: { boxShadow: '0 -12px 34px rgba(15,23,42,0.16)' },
       }),
     },
+    centered: {
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    centeredKeyboardContainer: {
+      alignSelf: 'stretch',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    centeredPanel: {
+      width: '100%',
+      maxWidth: 600,
+      maxHeight: '100%',
+      padding: DESIGN_TOKENS.spacing.md,
+      paddingTop: DESIGN_TOKENS.spacing.md,
+      borderRadius: DESIGN_TOKENS.radii.xl,
+      ...Platform.select({
+        web: { boxShadow: DESIGN_TOKENS.shadows.modal },
+      }),
+    },
+    dialogBackdrop: { backgroundColor: DESIGN_TOKENS.colors.overlay },
+    dialogTitle: { fontSize: 18, lineHeight: 24 },
+    dialogBody: { flexGrow: 0, flexShrink: 1 },
     header: {
       flexShrink: 0,
       paddingBottom: 4,

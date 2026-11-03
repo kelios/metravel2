@@ -166,7 +166,7 @@ function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaig
   }
 
   return (
-    <BottomSheet visible={!!door} onClose={onClose} title={title} panelStyle={styles.panel}>
+    <BottomSheet visible={!!door} onClose={onClose} title={title} placement="center" keyboardAware>
       {door ? (
         <View style={styles.content} testID={`advent-door-sheet-${door.day}`}>
           {giftImage ? <AdventGiftMedia key={`${campaignYear}:${door.day}:${door.date}:${giftImage}`} src={giftImage} alt={door.gift.title} /> : null}
@@ -209,9 +209,15 @@ function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaig
 
 const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
-    panel: { maxHeight: '90%' },
-    content: { gap: DESIGN_TOKENS.spacing.md, paddingBottom: DESIGN_TOKENS.spacing.md },
-    section: { gap: DESIGN_TOKENS.spacing.xs },
+    content: { gap: DESIGN_TOKENS.spacing.sm },
+    section: {
+      gap: DESIGN_TOKENS.spacing.xs,
+      padding: DESIGN_TOKENS.spacing.md,
+      borderRadius: DESIGN_TOKENS.radii.lg,
+      backgroundColor: colors.backgroundSecondary,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.borderLight,
+    },
     sectionTitleRow: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xxs },
     sectionTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.6, color: colors.textMuted },
     giftTitle: { fontSize: 18, fontWeight: '700', color: colors.text, lineHeight: 24 },
