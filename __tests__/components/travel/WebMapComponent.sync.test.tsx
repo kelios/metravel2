@@ -15,6 +15,7 @@ afterAll(() => {
 });
 
 jest.mock('@/utils/pendingImageFiles', () => ({
+  ...jest.requireActual('@/utils/pendingImageFiles'),
   registerPendingImageFile: jest.fn(),
   removePendingImageFile: jest.fn(),
   getPendingImageFile: jest.fn(),
@@ -759,5 +760,26 @@ describe('WebMapComponent marker sync', () => {
     // иначе миниатюра серая (мёртвый objectURL).
     expect(revokeObjectURL).not.toHaveBeenCalledWith(previewBlob);
     expect(removePendingImageFile).not.toHaveBeenCalledWith(previewBlob);
+  });
+
+  it('revokes a prepared preview when addMarker rejects the coordinates', async () => {
+    const previewUrl = 'blob:https://example.com/rejected-coordinates';
+    URL.createObjectURL = jest.fn(() => previewUrl);
+    URL.revokeObjectURL = jest.fn();
+    (extractGpsFromImageFile as jest.Mock).mockResolvedValueOnce({ lat: 91, lng: 20 });
+    const onPhotoMarkerReady = jest.fn();
+    const { container } = render(
+      <WebMapComponent {...baseProps} onPhotoMarkerReady={onPhotoMarkerReady} />,
+    );
+    const fileInput = await waitFor(() => {
+      const input = container.querySelector('input[type="file"]');
+      expect(input).not.toBeNull();
+      return input!;
+    });
+    await act(async () => {
+      fireEvent.change(fileInput, { target: { files: [new File(['photo'], 'photo.jpg')] } });
+    });
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith(previewUrl);
+    expect(onPhotoMarkerReady).not.toHaveBeenCalled();
   });
 });

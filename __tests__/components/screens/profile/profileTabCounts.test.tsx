@@ -27,6 +27,7 @@ describe('profile tab counters', () => {
     expect(ownerProfileTabCounters({ user: 104, tab_counters: null }, '104')).toBeUndefined();
     expect(ownerProfileTabCounters({ user: 104, tab_counters: counters }, '105')).toBeUndefined();
     expect(ownerProfileTabCounters({ user: 104, tab_counters: counters }, null)).toBeUndefined();
+    expect(ownerProfileTabCounters({ user: 104, tab_counters: { ...counters, drafts: -1 } }, '104')).toBeUndefined();
     expect(resolveProfileTabCounts({ ...pending, initial: undefined })).toEqual({
       travels: undefined, publishedTravels: undefined, draftTravels: undefined, subscribers: undefined, subscriptions: undefined,
     });

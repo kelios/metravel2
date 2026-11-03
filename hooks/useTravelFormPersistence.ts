@@ -51,10 +51,12 @@ import {
   invalidateTravelDetails,
 } from '@/utils/travelQueryInvalidation';
 import { useAutosaveErrorToast } from '@/hooks/useAutosaveErrorToast';
+import { hasPendingPointPhotos } from '@/utils/pendingImageFiles';
 import { translate as i18nT } from '@/i18n'
 
 
 type ToastAwareError = Error & { toastShown?: boolean };
+type ManualSaveOptions = SaveFormDataOptions & { awaitPointPhotos?: boolean };
 const getLocalizedSaveErrorDetails = (
   error: unknown,
   rawDetails: string,
@@ -340,8 +342,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   // The confirmed form response is applied immediately. Only navigation-facing
   // manual saves wait for this write's collection reads to settle.
   const collectionRefreshRef = useRef<Promise<void>>(Promise.resolve());
-  const refreshConfirmedCollections = useCallback(() => {
-    const refresh = invalidateTravelCollections(queryClient, userId).catch(() => undefined);
+  const pointUploadsRef = useRef<Promise<void> | undefined>(undefined);
+  const refreshConfirmedCollections = useCallback((refreshProfile = true) => {
+    const refresh = invalidateTravelCollections(queryClient, userId, { refreshProfile }).catch(() => undefined);
     collectionRefreshRef.current = refresh;
   }, [queryClient, userId]);
 
@@ -367,9 +370,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
   // Coalesce ordinary route-save overrides while a manual write is in flight.
   const queuedManualSaveRef = useRef<{
     dataOverride?: TravelFormData;
-    options?: SaveFormDataOptions;
+    options?: ManualSaveOptions;
   } | null>(null);
-  const handleManualSaveRef = useRef<((dataOverride?: TravelFormData, options?: SaveFormDataOptions) => Promise<TravelFormData | void>) | null>(null);
+  const handleManualSaveRef = useRef<((dataOverride?: TravelFormData, options?: ManualSaveOptions) => Promise<TravelFormData | void>) | null>(null);
 
   const captureTextBaseline = useCallback((data: TravelFormData) => {
     serverTextBaselineRef.current = {
@@ -494,7 +497,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         previousSlug,
       );
 
-      refreshConfirmedCollections();
+      refreshConfirmedCollections(false);
       return response;
     });
   }, [queryClient, mountedRef, saveAbortControllerRef, refreshConfirmedCollections]);
@@ -635,7 +638,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       }
 
       const travelIdForRefresh = normalizeTravelId(finalData.id) ?? stableTravelId;
-      void (async () => {
+      const pointUploads = (async () => {
         let markersForUpload = effectiveMarkers as MarkerData[];
         const refreshedMarkers = await rehydrateMarkerIdsFromServer(travelIdForRefresh, effectiveMarkers as MarkerData[]);
         // Пользователь мог уйти со страницы во время долгого rehydrate-запроса —
@@ -679,6 +682,8 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         }
         await uploadPendingMarkerImages(markersForUpload);
       })();
+      pointUploadsRef.current = pointUploads;
+      return pointUploads;
 
     },
     [
@@ -744,7 +749,7 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       }
 
       // После первого автосейва создаётся id — остаёмся в мастере и просто подставляем новые данные.
-      applySavedData(
+      void applySavedData(
         savedData,
         lastAutosaveSourceRef.current ?? formDataRef.current,
         { preserveEditingState: true },
@@ -866,10 +871,11 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
 
   const handleManualSave = useCallback(async (
     dataOverride?: TravelFormData,
-    options?: SaveFormDataOptions,
+    options?: ManualSaveOptions,
   ) => {
+    const { awaitPointPhotos, ...writeOptions } = options ?? {};
     const isCommand = options?.intent === 'submit' || options?.intent === 'approve' || options?.intent === 'reject';
-    if (isCommand) {
+    if (isCommand || awaitPointPhotos) {
       while (manualSavePromiseRef.current) await manualSavePromiseRef.current.catch(() => undefined);
       if (!mountedRef.current) throw new Error('Component unmounted');
     }
@@ -891,6 +897,9 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         // proving that the server stopped processing it.
         if (activeAutosaveRef.current) {
           await activeAutosaveRef.current.catch(() => undefined);
+        }
+        if (awaitPointPhotos && hasPendingPointPhotos(formDataRef.current.coordsMeTravel)) {
+          await pointUploadsRef.current?.catch(() => undefined);
         }
         setIsManualSaveInFlight(true);
         const isPublishIntent = options?.intent === 'submit';
@@ -948,13 +957,19 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         // Content saves preserve state; only explicit commands request a transition.
         const intent = options?.intent ?? 'save';
         // Если пришли извне готовые данные — сохраняем напрямую, минуя отложенный стейт.
-        const savedData = await cleanAndSave(toSave, { ...options, intent });
+        const savedData = await cleanAndSave(toSave, { ...writeOptions, intent });
         const confirmedCollectionsRefresh = collectionRefreshRef.current;
         const normalizedSavedData = normalizeDraftPlaceholders(savedData);
-        applySavedData(normalizedSavedData, toSave as TravelFormData, {
+        const pointUploads = applySavedData(normalizedSavedData, toSave as TravelFormData, {
           preserveEditingState: true,
         });
         autosaveCancelPendingRef.current?.();
+        if (awaitPointPhotos) {
+          await pointUploads;
+          if (hasPendingPointPhotos(formDataRef.current.coordsMeTravel)) {
+            throw new Error(i18nT('travel:components.travel.ImageGalleryComponent.uploadFailed'));
+          }
+        }
         await confirmedCollectionsRefresh;
         if (!dataOverride) {
           showToast(i18nT('shared:hooks.useTravelFormPersistence.sohraneno_6f40d98d'));

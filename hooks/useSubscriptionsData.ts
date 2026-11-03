@@ -26,6 +26,8 @@ export type AuthorWithTravels = {
 
 const SUBSCRIPTION_TRAVELS_PREVIEW_LIMIT = 10;
 const AUTHOR_TRAVELS_FETCH_CONCURRENCY = 4;
+type AuthorTravels = Record<number, { travels: TravelPreview[]; total: number; loading: boolean }>;
+const EMPTY_AUTHOR_TRAVELS: AuthorTravels = {};
 
 async function runWithConcurrency<T>(
   items: T[],
@@ -54,10 +56,12 @@ interface UseSubscriptionsDataOptions {
   includeAuthorTravels?: boolean;
   /** Полностью отключить запросы, когда раздел подписок недоступен в текущем профиле. */
   enabled?: boolean;
+  readSubscriptions?: boolean;
+  readSubscribers?: boolean;
 }
 
 export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) {
-  const { includeAuthorTravels = false, enabled = true } = options;
+  const { includeAuthorTravels = false, enabled = true, readSubscriptions = true, readSubscribers = true } = options;
   const { isAuthenticated, authReady } = useAuth();
   const owner = useQueryOwner();
   const queryClient = useQueryClient();
@@ -67,7 +71,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
   const subscriptionsQuery = useQuery<UserProfileDto[]>({
     queryKey: queryKeys.mySubscriptions(owner),
     queryFn: fetchMySubscriptions,
-    enabled: isAuthenticated && enabled,
+    enabled: isAuthenticated && enabled && readSubscriptions,
     staleTime: 5 * 60 * 1000,
     retry: readRetryTwice,
   });
@@ -75,7 +79,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
   const subscribersQuery = useQuery<UserProfileDto[]>({
     queryKey: queryKeys.mySubscribers(owner),
     queryFn: fetchMySubscribers,
-    enabled: isAuthenticated && enabled,
+    enabled: isAuthenticated && enabled && readSubscribers,
     staleTime: 5 * 60 * 1000,
     retry: readRetryTwice,
   });
@@ -83,10 +87,10 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
   const subscriptions = useMemo(() => subscriptionsQuery.data ?? [], [subscriptionsQuery.data]);
   const subscribers = useMemo(() => subscribersQuery.data ?? [], [subscribersQuery.data]);
 
-  // Author travels loading
-  const [authorTravels, setAuthorTravels] = useState<
-    Record<number, { travels: TravelPreview[]; total: number; loading: boolean }>
-  >({});
+  const [authorTravelsState, setAuthorTravels] = useState<{ owner: string | null; entries: AuthorTravels }>(
+    { owner, entries: EMPTY_AUTHOR_TRAVELS },
+  );
+  const authorTravels = authorTravelsState.owner === owner ? authorTravelsState.entries : EMPTY_AUTHOR_TRAVELS;
   const authorTravelsRef = useRef(authorTravels);
   authorTravelsRef.current = authorTravels;
 
@@ -99,7 +103,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
   }, []);
 
   useEffect(() => {
-    if (!enabled || !includeAuthorTravels) return;
+    if (!isAuthenticated || !enabled || !readSubscriptions || !includeAuthorTravels) return;
     if (!subscriptions.length) return;
 
     let cancelled = false;
@@ -107,17 +111,18 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
     const pending = subscriptions.filter((profile) => {
       const userId = profile.user ?? profile.id;
       const entry = authorTravelsRef.current[userId];
-      return !entry || (!entry.loading && entry.travels.length === 0 && entry.total === 0);
+      // A loading entry is from an earlier, cancelled effect run.
+      return !entry || entry.loading || (entry.travels.length === 0 && entry.total === 0);
     });
     if (!pending.length) return;
 
-    const commit = (
-      updater: (
-        prev: Record<number, { travels: TravelPreview[]; total: number; loading: boolean }>
-      ) => Record<number, { travels: TravelPreview[]; total: number; loading: boolean }>
-    ) => {
+    const controller = new AbortController();
+    const commit = (updater: (prev: AuthorTravels) => AuthorTravels) => {
       if (cancelled || !mountedRef.current) return;
-      setAuthorTravels(updater);
+      setAuthorTravels((prev) => ({
+        owner,
+        entries: updater(prev.owner === owner ? prev.entries : EMPTY_AUTHOR_TRAVELS),
+      }));
     };
 
     commit((prev) => {
@@ -140,6 +145,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
         const result = await fetchMyTravels({
           user_id: userId,
           perPage: SUBSCRIPTION_TRAVELS_PREVIEW_LIMIT,
+          signal: controller.signal,
         });
         const { items: list, total } = unwrapMyTravelsPayload(result);
         const normalizedTravels = list.map(normalizeTravelPreview);
@@ -161,8 +167,9 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, [subscriptions, includeAuthorTravels, enabled]);
+  }, [subscriptions, includeAuthorTravels, enabled, readSubscriptions, isAuthenticated, owner]);
 
   const authors: AuthorWithTravels[] = useMemo(
     () =>
@@ -196,6 +203,7 @@ export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) 
       try {
         await unsubscribeFromUser(userId);
         queryClient.invalidateQueries({ queryKey: queryKeys.mySubscriptions(owner) });
+        if (owner) void queryClient.invalidateQueries({ queryKey: queryKeys.userProfile(owner), exact: true });
       } catch {
         // silent
       }

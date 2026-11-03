@@ -25,6 +25,7 @@ interface UseMyTravelsArgs {
    * экземпляр не считает, она принадлежит общему списку автора.
    */
   publicationStatus?: readonly string[];
+  probeDraftsCount?: boolean;
   /**
    * Общее число маршрутов автора. `null` — счётчик потерян сбоем запроса: это
    * не ноль, и потребитель обязан отличать его от «маршрутов нет» (#1871).
@@ -229,7 +230,7 @@ const authorTotal = (pages: AuthorTravelsPage[]) => {
     : Math.max(visibleCount, servedAuthorTotal(pages) - hiddenCount);
 };
 
-export function useMyTravels({ userId, perPage, includeDrafts = false, publicationStatus, onTotalChange }: UseMyTravelsArgs): UseMyTravelsResult {
+export function useMyTravels({ userId, perPage, includeDrafts = false, publicationStatus, probeDraftsCount = true, onTotalChange }: UseMyTravelsArgs): UseMyTravelsResult {
   const queryClient = useQueryClient();
   const owner = useQueryOwner();
   const targetUser = userId?.trim() || null;
@@ -277,7 +278,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
           user_id: targetUser!, page: pageParam, perPage, includeDrafts,
           publicationStatus: publicationFilter, throwOnError: true, signal,
         }),
-        pageParam === 1 && includeDrafts && !publicationFilter
+        pageParam === 1 && includeDrafts && !publicationFilter && probeDraftsCount
           ? fetchDraftTravelsCount(targetUser!, signal)
           : Promise.resolve<DraftsCountProbe | null>(null),
       ]);
@@ -458,6 +459,9 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
       }
       await deleteTravel(travelId);
       if (isCurrentScope(originQuery)) {
+        if (owner === targetUser) {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.userProfile(owner), exact: true });
+        }
         void showToastMessage({
           type: 'success',
           text1: i18nT('shared:hooks.useMyTravels.marshrut_udalen_d9a3c536'),
@@ -470,6 +474,9 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
       const copy = getDeleteErrorCopy(deleteError);
       if (isCurrentScope(originQuery)) {
         if (copy.isAlreadyDeleted) {
+          if (owner === targetUser) {
+            void queryClient.invalidateQueries({ queryKey: queryKeys.userProfile(owner), exact: true });
+          }
           void showToastMessage({ type: 'info', text1: copy.title, text2: copy.description });
           await load();
         } else {
@@ -489,7 +496,7 @@ export function useMyTravels({ userId, perPage, includeDrafts = false, publicati
       if (deleteInFlightRef.current?.operation === operation) deleteInFlightRef.current = null;
       if (mountedRef.current) setRemoving((current) => current?.operation === operation ? null : current);
     }
-  }, [queryClient, queryKey, targetUser, isCurrentScope, scope, load]);
+  }, [queryClient, queryKey, targetUser, isCurrentScope, scope, load, owner]);
 
   return {
     myTravels, engagementSummary, publicationCounts, publicationCountsUnavailable,

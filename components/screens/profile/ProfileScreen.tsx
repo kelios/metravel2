@@ -41,7 +41,6 @@ import BadgeUnlockToast from '@/components/achievements/BadgeUnlockToast';
 import PlaceFirstBadgeToast from '@/components/achievements/PlaceFirstBadgeToast';
 import { useResponsive } from '@/hooks/useResponsive';
 import { confirmAction } from '@/utils/confirmAction';
-import { rIC } from '@/utils/rIC';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { useIsFocused } from 'expo-router';
@@ -99,7 +98,7 @@ export default function ProfileScreen() {
     maxContentWidth,
   });
 
-  const { profile, profileDataUpdatedAt, setProfile, isLoading: profileLoading, fullName } = useUserProfile();
+  const { profile, profileDataUpdatedAt, setProfile, isLoading: profileLoading, loadProfile, fullName } = useUserProfile();
   const { pickAndUpload, isUploading: avatarUploading } = useAvatarUpload({
     onSuccess: (updated) => setProfile(updated, ['avatar']),
   });
@@ -107,6 +106,7 @@ export default function ProfileScreen() {
   const [userInfo, setUserInfo] = useState<{ name: string; email: string }>({ name: '', email: '' });
   const owner = isAuthenticated ? userId ?? null : null;
   const initialTabCounts = ownerProfileTabCounters(profile, owner);
+  const needsLegacyCounts = Boolean(owner && !profileLoading && !initialTabCounts);
   const { liveTravelsCount, onTotalChange: handleTotalChange } = useProfileTravelCountState(owner);
   const [collectionStats, setCollectionStats] = useState<Omit<UserStats, 'travelsCount'>>({
     favoritesCount: 0,
@@ -114,7 +114,7 @@ export default function ProfileScreen() {
   });
   const stats = useMemo<UserStats>(() => ({
     ...collectionStats,
-    travelsCount: liveTravelsCount === undefined ? initialTabCounts?.travels ?? 0 : liveTravelsCount,
+    travelsCount: initialTabCounts?.travels ?? liveTravelsCount ?? null,
   }), [collectionStats, initialTabCounts?.travels, liveTravelsCount]);
   const [activeTab, setActiveTab] = useState<ProfileTabKey>('travels');
   const [worldMapGestureActive, setWorldMapGestureActive] = useState(false);
@@ -144,7 +144,11 @@ export default function ProfileScreen() {
     subscribersDataUpdatedAt,
     getFullName,
     handleUnsubscribe,
-  } = useSubscriptionsData({ includeAuthorTravels: activeTab === 'subscriptions' });
+  } = useSubscriptionsData({
+    includeAuthorTravels: activeTab === 'subscriptions',
+    readSubscriptions: activeTab === 'subscriptions' || needsLegacyCounts,
+    readSubscribers: activeTab === 'subscribers' || needsLegacyCounts,
+  });
   const [activeTravelMetric, setActiveTravelMetric] = useState<ProfileTravelEngagementMetricKey | null>(null);
   const lastEndReachedAtRef = useRef(0);
   const travelsRequestedRef = useRef<string | null>(null);
@@ -158,6 +162,7 @@ export default function ProfileScreen() {
     userId,
     perPage: PROFILE_TRAVELS_PER_PAGE,
     includeDrafts: true,
+    probeDraftsCount: !initialTabCounts,
     onTotalChange: handleTotalChange,
   });
   const {
@@ -173,7 +178,12 @@ export default function ProfileScreen() {
     loadMore: loadMoreTravelsHook,
   } = allTravels;
   // Контент обеих вкладок использует только подтверждённый счётчик.
-  const confirmedTravelsCount = travelsLoading ? null : stats.travelsCount;
+  const confirmedTravelsCount = initialTabCounts?.travels ?? (travelsLoading ? null : stats.travelsCount);
+  const needsAllTravels = activeTab === 'travels' || activeTab === 'stats' ||
+    activeTab === 'countries' || activeTab === 'worldmap' || activeTravelMetric !== null;
+  const refreshVisitedTravels = useCallback(() => {
+    if (needsLegacyCounts || travelsRequestedRef.current === owner) void loadTravels();
+  }, [needsLegacyCounts, loadTravels, owner]);
   // Вкладки «Опубл.» и «Черновики» читают свой срез с сервера (#1833), остальные —
   // общий список автора. Дальше экран работает с уже выбранным источником.
   const travelList = useProfileTravelTabList({
@@ -181,7 +191,7 @@ export default function ProfileScreen() {
     userId,
     perPage: PROFILE_TRAVELS_PER_PAGE,
     allTravels,
-    onAfterRemove: loadTravels,
+    onAfterRemove: refreshVisitedTravels,
   });
   const personalTravelStatusEntries = useTravelStatus()
 
@@ -205,8 +215,8 @@ export default function ProfileScreen() {
     // Счётчики профиля считает общий список, а не срез вкладки: без этого
     // «Повторить» возвращало бы маршруты, оставляя цифры недоступными до
     // pull-to-refresh (#1865).
-    if (isFilteredTravelList && allTravelsError) void loadTravels();
-  }, [allTravelsError, isFilteredTravelList, loadTravels, reloadActiveTravelList]);
+    if (needsLegacyCounts && isFilteredTravelList && allTravelsError) void loadTravels();
+  }, [allTravelsError, isFilteredTravelList, loadTravels, needsLegacyCounts, reloadActiveTravelList]);
 
   const loadMoreActiveTravelList = travelList.loadMore;
   const loadMoreTravels = useCallback(async () => {
@@ -272,19 +282,18 @@ export default function ProfileScreen() {
   const onRefresh = useCallback(async () => {
     hapticImpact('light');
     setRefreshing(true);
-    travelsRequestedRef.current = owner;
     try {
-      // Активный список перечитывает reload; на вкладке-срезе он не тот же
-      // запрос, что общий список, а счётчики профиля считает именно общий.
+      if (needsAllTravels || needsLegacyCounts) travelsRequestedRef.current = owner;
       await Promise.all([
-        reloadActiveTravelList(),
+        loadProfile(),
         loadUserInfo(),
-        ...(travelList.isFiltered ? [loadTravels()] : []),
+        ...(isProfileTravelTab(activeTab) ? [reloadActiveTravelList()] : []),
+        ...((needsAllTravels || needsLegacyCounts) && activeTab !== 'travels' ? [loadTravels()] : []),
       ]);
     } finally {
       setRefreshing(false);
     }
-  }, [loadTravels, loadUserInfo, owner, reloadActiveTravelList, travelList.isFiltered]);
+  }, [activeTab, loadProfile, loadTravels, loadUserInfo, needsAllTravels, needsLegacyCounts, owner, reloadActiveTravelList]);
 
   const handleDeleteMyTravel = travelList.remove;
 
@@ -299,26 +308,16 @@ export default function ProfileScreen() {
     loadUserInfo();
   }, [loadUserInfo]);
 
-  // Список путешествий не нужен для первого рендера (шапка + вкладка «Уровень»
-  // строятся из профиля/кэша). Дёргаем его отложенно — после первого кадра —
-  // чтобы счётчик «Маршруты» в шапке заполнился без блокировки экрана.
   useEffect(() => {
-    const cancel = rIC(ensureTravelsLoaded, 400);
-    return cancel;
-  }, [ensureTravelsLoaded]);
-
-  // Если пользователь открыл вкладку, которой реально нужен список/метрики,
-  // загружаем немедленно (не ждём idle).
-  useEffect(() => {
-    if (isProfileTravelTab(activeTab) || activeTab === 'stats' || activeTab === 'countries' || activeTab === 'worldmap' || activeTravelMetric) {
+    if (!profileLoading && (needsAllTravels || needsLegacyCounts)) {
       ensureTravelsLoaded();
     }
-  }, [activeTab, activeTravelMetric, ensureTravelsLoaded]);
+  }, [ensureTravelsLoaded, needsAllTravels, needsLegacyCounts, profileLoading]);
 
   useEffect(() => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated || (activeTab !== 'stats' && activeTab !== 'countries' && activeTab !== 'worldmap')) return
     void loadTravelStatus(userId ?? null)
-  }, [isAuthenticated, userId])
+  }, [activeTab, isAuthenticated, userId])
 
   const handleLogout = useCallback(async () => {
     try {
@@ -349,14 +348,14 @@ export default function ProfileScreen() {
     myTravels,
     statusTabTravels: travelList.isFiltered ? travelList.travels : undefined,
     engagementSummary,
-    publicationCounts,
+    publicationCounts: initialTabCounts ?? publicationCounts,
     publicationCountsUnavailable,
     travelsCount: stats.travelsCount,
     travelsLoading,
     travelsLoadingMore,
     travelsHasMore,
     travelsError: travelList.error,
-    travelCountsError: allTravelsError,
+    travelCountsError: initialTabCounts ? null : allTravelsError,
     onRetryTravels: handleRetryTravels,
     loadMoreTravels: loadMoreTravelsHook,
     personalTravelStatusEntries,
@@ -456,7 +455,7 @@ export default function ProfileScreen() {
     overview: badgesCount,
     ...resolveProfileTabCounts({
       initial: initialTabCounts,
-      travels: liveTravelsCount,
+      travels: initialTabCounts?.travels ?? liveTravelsCount,
       published: publishedTravelsCount,
       drafts: draftTravelsCount,
       subscribers: subscribersCount,

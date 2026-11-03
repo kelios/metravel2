@@ -63,14 +63,40 @@ describe('useSubscriptionsData', () => {
 
   it('distinguishes pending lists from a confirmed empty list', async () => {
     let resolveSubscriptions!: (profiles: unknown[]) => void;
+    let resolveSubscribers!: (profiles: unknown[]) => void;
     mockedFetchMySubscriptions.mockImplementation(() => new Promise((resolve) => { resolveSubscriptions = resolve; }));
+    mockedFetchMySubscribers.mockImplementationOnce(() => new Promise((resolve) => { resolveSubscribers = resolve; }));
     const { result } = await renderHook(() => useSubscriptionsData(), { wrapper: createQueryWrapper().Wrapper });
 
     expect(result.current.subscriptionsCount).toBeUndefined();
     expect(result.current.subscribersCount).toBeUndefined();
+    await act(async () => resolveSubscribers([]));
     await waitFor(() => expect(result.current.subscribersCount).toBe(0));
     await act(async () => resolveSubscriptions([]));
     await waitFor(() => expect(result.current.subscriptionsCount).toBe(0));
+  });
+
+  it('reads only the social list requested by the active profile tab', async () => {
+    mockedFetchMySubscriptions.mockResolvedValue([]);
+    const { rerender, result } = await renderHook(
+      (tab: 'overview' | 'subscribers' | 'subscriptions') => useSubscriptionsData({
+        readSubscribers: tab === 'subscribers',
+        readSubscriptions: tab === 'subscriptions',
+      }),
+      { initialProps: 'overview', wrapper: createQueryWrapper().Wrapper },
+    );
+    expect(mockedFetchMySubscribers).not.toHaveBeenCalled();
+    expect(mockedFetchMySubscriptions).not.toHaveBeenCalled();
+
+    await rerender('subscribers');
+    await waitFor(() => expect(result.current.subscribersCount).toBe(0));
+    expect(mockedFetchMySubscribers).toHaveBeenCalledTimes(1);
+    expect(mockedFetchMySubscriptions).not.toHaveBeenCalled();
+
+    await rerender('subscriptions');
+    await waitFor(() => expect(result.current.subscriptionsCount).toBe(0));
+    expect(mockedFetchMySubscribers).toHaveBeenCalledTimes(1);
+    expect(mockedFetchMySubscriptions).toHaveBeenCalledTimes(1);
   });
 
   it('preserves cached counts when a background refetch fails', async () => {
@@ -121,6 +147,26 @@ describe('useSubscriptionsData', () => {
     });
 
     expect(maxConcurrentFetches).toBeLessThanOrEqual(4);
-    expect(mockedFetchMyTravels).toHaveBeenCalledWith({ user_id: 1, perPage: 10 });
+    expect(mockedFetchMyTravels).toHaveBeenCalledWith({ user_id: 1, perPage: 10, signal: expect.any(AbortSignal) });
+  });
+
+  it('cancels abandoned author previews and restarts them on return', async () => {
+    mockedFetchMySubscriptions.mockResolvedValue([makeAuthor(2)]);
+    mockedFetchMyTravels
+      .mockImplementationOnce(() => new Promise(() => {}))
+      .mockResolvedValueOnce([]);
+    const { rerender, result } = await renderHook(
+      (active: boolean) => useSubscriptionsData({ readSubscriptions: active, includeAuthorTravels: active }),
+      { initialProps: true, wrapper: createQueryWrapper().Wrapper },
+    );
+
+    await waitFor(() => expect(mockedFetchMyTravels).toHaveBeenCalledTimes(1));
+    const firstSignal: AbortSignal = mockedFetchMyTravels.mock.calls[0][0].signal;
+    await rerender(false);
+    expect(firstSignal.aborted).toBe(true);
+
+    await rerender(true);
+    await waitFor(() => expect(mockedFetchMyTravels).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.authors[0]?.isLoadingTravels).toBe(false));
   });
 });

@@ -342,22 +342,27 @@ describe('useTravelWizard origin-aware exit', () => {
 
   it('repeats the removal blocked while a confirmed exit is navigating away', async () => {
     mockLocalSearchParams = { returnTo: '/search' };
+    const onLeave = jest.fn();
     const { result } = await renderHook(() =>
       useTravelWizard({
         totalSteps: 6,
         hasUnsavedChanges: true,
         canSave: true,
         onSave: jest.fn(async () => ({ publish: false, moderation: false })),
+        onLeave,
       }),
     );
 
     await act(() => {
       result.current.handleExit();
     });
+    expect(onLeave).not.toHaveBeenCalled();
     await act(() => {
       result.current.handleExitDiscard();
     });
     expect(mockRouter.replace).toHaveBeenCalledWith('/search');
+    expect(onLeave).toHaveBeenCalledTimes(1);
+    expect(onLeave.mock.invocationCallOrder[0]).toBeLessThan(mockRouter.replace.mock.invocationCallOrder[0]);
 
     // Prop hasUnsavedChanges is still true, so the router blocks the replace it just got.
     const repeat = jest.fn();
@@ -386,6 +391,27 @@ describe('useTravelWizard origin-aware exit', () => {
 
     expect(mockRouter.replace).toHaveBeenCalledWith('/search');
     expect(mockRouter.back).not.toHaveBeenCalled();
+  });
+
+  it('keeps the editor and pending resources when the save was declined', async () => {
+    mockLocalSearchParams = { returnTo: '/search' };
+    const onLeave = jest.fn();
+    const { result } = await renderHook(() =>
+      useTravelWizard({
+        totalSteps: 6,
+        hasUnsavedChanges: true,
+        canSave: true,
+        onSave: jest.fn().mockResolvedValue(null),
+        onLeave,
+      }),
+    );
+
+    await act(() => result.current.handleExit());
+    await act(async () => result.current.handleExitSaveAndLeave());
+    expect(result.current.exitPrompt).not.toBeNull();
+    expect(result.current.isExitSaving).toBe(false);
+    expect(onLeave).not.toHaveBeenCalled();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
   });
 
   it('uses legacy from param as the return target', async () => {

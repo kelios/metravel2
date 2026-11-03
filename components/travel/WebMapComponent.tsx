@@ -6,7 +6,8 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { ensureLeafletCss } from '@/utils/ensureLeafletCss';
 import { extractGpsFromImageFile } from '@/utils/exifGps';
 import { showToastMessage } from '@/utils/toast';
-import { registerPendingImageFile, removePendingImageFile, getPendingImageFile } from '@/utils/pendingImageFiles';
+import { registerPendingImageFile, releasePendingImageFile, getPendingImageFile } from '@/utils/pendingImageFiles';
+import { usePendingPointPhotoSession } from '@/components/travel/upsert/PendingPointPhotoSession';
 import { prepareWebImageFileForUpload } from '@/utils/webImageUpload';
 import { matchCountryId, buildAddressFromGeocode, buildPointTitleFromGeocode } from '@/utils/geocodeHelpers';
 import { reverseGeocodeRoutePoint } from '@/api/geoQueries';
@@ -66,12 +67,15 @@ const WebMapComponent = ({
 }: WebMapComponentProps) => {
     // ✅ УЛУЧШЕНИЕ: поддержка тем через useThemedColors
     const colors = useThemedColors();
+    const photoSession = usePendingPointPhotoSession();
+    const mountedRef = useRef(false);
 
     const [L, setL] = useState<LeafletNS | null>(null);
     const [rl, setRl] = useState<ReactLeafletNS | null>(null);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
+        mountedRef.current = true;
         let cancelled = false;
 
         ;(async () => {
@@ -93,6 +97,7 @@ const WebMapComponent = ({
 
         return () => {
             cancelled = true;
+            mountedRef.current = false;
         };
     }, []);
 
@@ -375,11 +380,12 @@ const WebMapComponent = ({
 
     const addMarker = async (
         latlng: any,
-        options?: { image?: string | null; notifyAdded?: boolean },
+        options?: { image?: string; canCommit?: () => boolean },
     ) => {
         if (!isValidCoordinates(latlng)) return null;
 
         const geocodeData = await reverseGeocode(latlng);
+        if (options?.canCommit && !options.canCommit()) return null;
         const country =
             geocodeData?.address?.country ||
             geocodeData?.countryName ||
@@ -427,11 +433,8 @@ const WebMapComponent = ({
         debouncedMarkersChange(nextMarkers);
         setActiveIndex(Math.max(0, nextMarkers.length - 1));
 
-        // Клик по карте добавляет точку без категории/фото и не открывает явный save —
-        // триггерим немедленное сохранение, чтобы перезагрузка страницы не теряла точку
-        // (тикет #505). Для точки из фото save идёт отдельно через onPhotoMarkerReady,
-        // поэтому там notifyAdded=false (не дублируем сохранение).
-        if (options?.notifyAdded !== false) {
+        // Для фото сохранение идёт отдельно через onPhotoMarkerReady.
+        if (!options?.image) {
             try {
                 await onMarkerAdded?.({ markers: nextMarkers, derivedCountryId });
             } catch {
@@ -447,7 +450,10 @@ const WebMapComponent = ({
         if (typeof window === 'undefined') return;
         if (typeof File === 'undefined' || !(file instanceof File)) return;
 
+        const signal = photoSession?.startWork();
+        const canCommit = () => mountedRef.current && !signal?.aborted;
         const coords = await extractGpsFromImageFile(file);
+        if (!canCommit()) return;
         if (!coords) {
             void showToastMessage({
                 type: 'info',
@@ -458,12 +464,14 @@ const WebMapComponent = ({
             return;
         }
 
-        let previewUrl: string | null = null;
+        let previewUrl: string;
         try {
             const uploadableFile = await prepareWebImageFileForUpload(file);
+            if (!canCommit()) return;
             previewUrl = URL.createObjectURL(uploadableFile);
-            registerPendingImageFile(previewUrl, uploadableFile);
+            registerPendingImageFile(previewUrl, uploadableFile, photoSession?.urls);
         } catch {
+            if (!canCommit()) return;
             void showToastMessage({
                 type: 'error',
                 text1: i18nT('travel:components.travel.WebMapComponent.ne_udalos_obrabotat_foto_598d7bae'),
@@ -472,11 +480,12 @@ const WebMapComponent = ({
             return;
         }
 
-        const markerResult = await addMarker(
-            { lat: coords.lat, lng: coords.lng },
-            { image: previewUrl, notifyAdded: false },
-        );
-        if (!markerResult) return;
+        const markerResult = await addMarker(coords, { image: previewUrl, canCommit }).catch(() => null);
+        if (!markerResult) {
+            if (!signal?.aborted) releasePendingImageFile(previewUrl);
+            return;
+        }
+        if (!canCommit()) return;
 
         try {
             await onPhotoMarkerReady?.({
@@ -484,11 +493,8 @@ const WebMapComponent = ({
                 derivedCountryId: markerResult.derivedCountryId,
             });
         } catch {
-            // Сейв маршрута мог упасть (напр. модерационная валидация categories у только что
-            // добавленной точки). Точка уже в локальном стейте — НЕ ревокаем preview-blob и НЕ
-            // удаляем pending-файл: иначе objectURL становится мёртвым (naturalWidth:0) и миниатюра
-            // серая. Blob безопасно ревокать только после успешной загрузки (useMarkerImageUpload)
-            // или при явном удалении точки. Пользователь добавит категории — следующий сейв пройдёт.
+            // Точка уже приняла превью. При сбое сохраняем файл для повторной попытки.
+            if (!canCommit()) return;
             void showToastMessage({
                 type: 'error',
                 text1: i18nT('travel:components.travel.WebMapComponent.tochka_dobavlena_no_ne_sohranena_fa36d5a3'),
@@ -497,6 +503,7 @@ const WebMapComponent = ({
             return;
         }
 
+        if (!canCommit()) return;
         void showToastMessage({
             type: 'success',
             text1: i18nT('travel:components.travel.WebMapComponent.tochka_dobavlena_09df6a33'),
@@ -596,15 +603,10 @@ const WebMapComponent = ({
         const removed = localMarkers[index];
         if (!removed) return;
         const removedImage = typeof removed?.image === 'string' ? removed.image.trim() : '';
-        if (removedImage && /^(blob:)/i.test(removedImage)) {
-            removePendingImageFile(removedImage);
-            try {
-                URL.revokeObjectURL(removedImage);
-            } catch {
-                // noop
-            }
-        }
         const updated = localMarkers.filter((_: any, i: any) => i !== index);
+        if (/^blob:/i.test(removedImage) && !updated.some((marker) => marker.image === removedImage)) {
+            releasePendingImageFile(removedImage);
+        }
         debouncedMarkersChange(updated);
 
         if (removed?.country) {

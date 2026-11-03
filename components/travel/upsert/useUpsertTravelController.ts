@@ -8,6 +8,8 @@ import { useTravelFormData } from '@/hooks/useTravelFormData';
 import { useTravelWizard } from '@/hooks/useTravelWizard';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useDraftRecovery } from '@/hooks/useDraftRecovery';
+import { usePendingPointPhotoSession } from '@/components/travel/upsert/PendingPointPhotoSession';
+import { hasPendingPointPhotos, releasePendingImageFile } from '@/utils/pendingImageFiles';
 import { checkTravelEditAccess, normalizeTravelId } from '@/utils/travelFormUtils';
 import { readTravelModerationMetadata, resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
 import { formatRelativeTime, translate as i18nT } from '@/i18n'
@@ -213,10 +215,26 @@ export function useUpsertTravelController(): UpsertTravelController {
 
   const { saveDraft, clearDraft, recoverDraft, flushDraft } = draft;
   const { setFormData, setMarkers, handleManualSave, getFormData } = form;
+  const photoSession = usePendingPointPhotoSession();
+  const previousMarkers = useRef(form.markers);
+  useEffect(() => {
+    const previous = previousMarkers.current;
+    previousMarkers.current = form.markers;
+    if (!photoSession?.urls.size) return;
+    const images = new Set(form.markers.map((marker) => marker.image));
+    for (const marker of previous) {
+      const url = marker.image;
+      if (typeof url === 'string' && photoSession.urls.has(url) && !images.has(url)) {
+        releasePendingImageFile(url);
+      }
+    }
+  }, [form.markers, photoSession]);
 
   const saveAndClearDraft = useCallback<ManualSave>(
     async (dataOverride, options) => {
-      const result = await handleManualSave(dataOverride, options);
+      const result = await handleManualSave(dataOverride, !dataOverride || options?.intent === 'submit'
+        ? { ...options, awaitPointPhotos: true }
+        : options);
 
       // `undefined` means no save happened - the author declined the rich-text
       // loss confirmation, which is a clean no-op that leaves the form untouched.
@@ -258,9 +276,10 @@ export function useUpsertTravelController(): UpsertTravelController {
     (requestedPublicationMode === 'note' || !isSuperuser) ? 'note' : 'full';
   const wizard = useTravelWizard({
     totalSteps: publicationMode === 'note' ? NOTE_TOTAL_STEPS : FULL_TOTAL_STEPS,
-    hasUnsavedChanges: form.autosave.hasUnsavedChanges,
+    hasUnsavedChanges: form.autosave.hasUnsavedChanges || hasPendingPointPhotos(form.markers),
     canSave: form.autosave.canSave,
     onSave: handleWizardSave,
+    onLeave: photoSession?.dispose,
     getFormData,
     stepStorageKey,
   });

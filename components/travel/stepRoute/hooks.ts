@@ -118,22 +118,18 @@ export function useManualPointForm() {
   const [isPanelVisible, setPanelVisible] = useState(false)
   const [state, setState] = useState<ManualPointState>(EMPTY_MANUAL_POINT)
   const fileInputRef = useRef<any>(null)
-  const latestPreviewRef = useLatestRef(state.photoPreviewUrl)
+  const latestPreviewRef = useRef<string | null>(null)
 
   const clearPhoto = useCallback(() => {
-    setState((current) => {
-      revokeManualPreview(current.photoPreviewUrl)
-      return { ...current, photoPreviewUrl: null }
-    })
+    revokeManualPreview(latestPreviewRef.current)
+    latestPreviewRef.current = null
+    setState((current) => ({ ...current, photoPreviewUrl: null }))
   }, [])
 
   const reset = useCallback((options?: { preservePendingPhoto?: boolean }) => {
-    setState((current) => {
-      if (!options?.preservePendingPhoto) {
-        revokeManualPreview(current.photoPreviewUrl)
-      }
-      return EMPTY_MANUAL_POINT
-    })
+    if (!options?.preservePendingPhoto) revokeManualPreview(latestPreviewRef.current)
+    latestPreviewRef.current = null
+    setState(EMPTY_MANUAL_POINT)
   }, [])
 
   const hidePanel = useCallback(() => {
@@ -175,10 +171,9 @@ export function useManualPointForm() {
   }, [])
 
   const setPhotoPreview = useCallback((photoPreviewUrl: string | null) => {
-    setState((current) => {
-      revokeManualPreview(current.photoPreviewUrl)
-      return { ...current, photoPreviewUrl }
-    })
+    revokeManualPreview(latestPreviewRef.current)
+    latestPreviewRef.current = photoPreviewUrl
+    setState((current) => ({ ...current, photoPreviewUrl }))
   }, [])
 
   const setPhotoCoordinates = useCallback((lat: number, lng: number) => {
@@ -192,7 +187,8 @@ export function useManualPointForm() {
 
   useEffect(() => () => {
     revokeManualPreview(latestPreviewRef.current)
-  }, [latestPreviewRef])
+    latestPreviewRef.current = null
+  }, [])
 
   return {
     fileInputRef,

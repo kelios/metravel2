@@ -8,8 +8,14 @@ import { invalidateTravelDetailMemoryCache } from '@/api/travelDetailsQueries';
 export async function invalidateTravelCollections(
   queryClient: QueryClient | null | undefined,
   userId: string | null,
+  { refreshProfile = true }: { refreshProfile?: boolean } = {},
 ) {
   if (!queryClient?.invalidateQueries) return;
+
+  // The owner-profile counters refresh independently of the editor's save gate.
+  if (userId && refreshProfile) {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.userProfile(userId), exact: true }, { throwOnError: false });
+  }
 
   // Start every affected read together. A failed GET belongs to that query's
   // retry state; it must not turn an already-confirmed write into a failed PUT.

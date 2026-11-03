@@ -60,6 +60,10 @@ export function useSubscription(targetUserId: string | number | null | undefined
         queryClient.invalidateQueries({ queryKey: queryKeys.mySubscribers(owner) });
     }, [owner, queryClient]);
 
+    const refreshOwnCounters = useCallback(() => {
+        if (owner) void queryClient.invalidateQueries({ queryKey: queryKeys.userProfile(owner), exact: true });
+    }, [owner, queryClient]);
+
     const subscribeMutation = useMutation({
         mutationFn: () => subscribeToUser(normalizedTargetId!),
         onMutate: async () => {
@@ -91,7 +95,8 @@ export function useSubscription(targetUserId: string | number | null | undefined
                 queryClient.setQueryData(queryKeys.mySubscriptions(owner), context.previous);
             }
         },
-        onSettled: () => invalidate(),
+        onSuccess: refreshOwnCounters,
+        onSettled: invalidate,
     });
 
     const unsubscribeMutation = useMutation({
@@ -116,7 +121,8 @@ export function useSubscription(targetUserId: string | number | null | undefined
                 queryClient.setQueryData(queryKeys.mySubscriptions(owner), context.previous);
             }
         },
-        onSettled: () => invalidate(),
+        onSuccess: refreshOwnCounters,
+        onSettled: invalidate,
     });
 
     const subscribeAction = useCallback(() => {

@@ -25,7 +25,8 @@ import type { MarkerData, TravelFormData } from '@/types/types'
 import { extractGpsFromImageFile } from '@/utils/exifGps'
 import { hasToastBeenShown } from '@/utils/errorHelpers'
 import { buildPointTitleFromGeocode, matchCountryId } from '@/utils/geocodeHelpers'
-import { registerPendingImageFile } from '@/utils/pendingImageFiles'
+import { getPendingImageFile, registerPendingImageFile } from '@/utils/pendingImageFiles'
+import { usePendingPointPhotoSession } from '@/components/travel/upsert/PendingPointPhotoSession'
 import { showToastMessage } from '@/utils/toast'
 import { buildQuickDraftRoute } from '@/utils/travelQuickDraftNavigation'
 import { validateStep } from '@/utils/travelWizardValidation'
@@ -90,6 +91,8 @@ function TravelWizardStepRoute({
   const router = useRouter()
   const { isHydrated, isMobile } = useResponsive()
   const markersRef = useLatestRef(markers)
+  const photoSession = usePendingPointPhotoSession()
+  const manualPhotoPickRef = useRef<symbol | null>(null)
   const isMountedRef = useRef(true)
   const quickDraftTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const addPointSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -356,7 +359,7 @@ function TravelWizardStepRoute({
   // маршрут → автосохранение. Используется и ручным вводом координат, и тапом по
   // native-карте (#1040), чтобы результат был идентичным на всех поверхностях.
   const addPointAtCoords = useCallback(
-    async (lat: number, lng: number, image: string | null = null) => {
+    async (lat: number, lng: number, image: string | null = null, signal?: AbortSignal) => {
       let derivedCountryId: string | null = null
       let address = ''
 
@@ -376,6 +379,7 @@ function TravelWizardStepRoute({
       } catch {
         address = `${lat}, ${lng}`
       }
+      if (!isMountedRef.current || signal?.aborted || (image && !getPendingImageFile(image))) return false
 
       const updatedMarkers = [
         ...(markersRef.current || []),
@@ -398,6 +402,7 @@ function TravelWizardStepRoute({
 
       updateMarkers(updatedMarkers)
       scheduleAddPointSave(updatedMarkers, nextCountryIds)
+      return true
     },
     [countries, markersRef, onCountrySelect, scheduleAddPointSave, selectedCountryIds, updateMarkers],
   )
@@ -416,7 +421,9 @@ function TravelWizardStepRoute({
       return
     }
 
-    await addPointAtCoords(lat, lng, manualPointState.photoPreviewUrl)
+    const signal = photoSession?.startWork()
+    if (!await addPointAtCoords(lat, lng, manualPointState.photoPreviewUrl, signal)) return
+    manualPhotoPickRef.current = null
     resetManualPoint({ preservePendingPhoto: Boolean(manualPointState.photoPreviewUrl) })
     setManualPointVisible(false)
   }, [
@@ -425,6 +432,7 @@ function TravelWizardStepRoute({
     manualPointState.lat,
     manualPointState.lng,
     manualPointState.photoPreviewUrl,
+    photoSession,
     resetManualPoint,
     setManualPointVisible,
   ])
@@ -457,8 +465,19 @@ function TravelWizardStepRoute({
   }, [manualPhotoInputRef])
 
   const handleManualPointToggle = useCallback(() => {
+    if (isManualPointVisible) manualPhotoPickRef.current = null
     setManualPointVisible(!isManualPointVisible)
   }, [isManualPointVisible, setManualPointVisible])
+
+  const handleManualPhotoClear = useCallback(() => {
+    manualPhotoPickRef.current = null
+    clearManualPhoto()
+  }, [clearManualPhoto])
+
+  const handleManualPointCancel = useCallback(() => {
+    manualPhotoPickRef.current = null
+    hideManualPointPanel()
+  }, [hideManualPointPanel])
 
   const handleManualPhotoSelected = useCallback(async (event: any) => {
     if (Platform.OS !== 'web') return
@@ -471,8 +490,12 @@ function TravelWizardStepRoute({
     }
     if (!file) return
 
+    const signal = photoSession?.startWork()
+    const pick = Symbol()
+    manualPhotoPickRef.current = pick
+    const canCommit = () => isMountedRef.current && !signal?.aborted && manualPhotoPickRef.current === pick
     const coords = await extractGpsFromImageFile(file)
-    if (!isMountedRef.current) return
+    if (!canCommit()) return
     if (!coords) {
       void showToastMessage({
         type: 'error',
@@ -482,20 +505,15 @@ function TravelWizardStepRoute({
       return
     }
 
-    setManualPhotoCoordinates(coords.lat, coords.lng)
-
     try {
       const uploadableFile = await prepareWebImageFileForUpload(file)
-      if (!isMountedRef.current) return
+      if (!canCommit()) return
       const previewUrl = URL.createObjectURL(uploadableFile)
-      if (!isMountedRef.current) {
-        URL.revokeObjectURL(previewUrl)
-        return
-      }
-      registerPendingImageFile(previewUrl, uploadableFile)
+      registerPendingImageFile(previewUrl, uploadableFile, photoSession?.urls)
+      setManualPhotoCoordinates(coords.lat, coords.lng)
       setManualPhotoPreview(previewUrl)
     } catch {
-      if (!isMountedRef.current) return
+      if (!canCommit()) return
       void showToastMessage({
         type: 'error',
         text1: i18nT('travel:components.travel.TravelWizardStepRoute.ne_udalos_obrabotat_foto_57ec3f9c'),
@@ -504,13 +522,13 @@ function TravelWizardStepRoute({
       return
     }
 
-    if (!isMountedRef.current) return
+    if (!canCommit()) return
     void showToastMessage({
       type: 'success',
       text1: i18nT('travel:components.travel.TravelWizardStepRoute.koordinaty_zapolneny_d9650afe'),
       text2: i18nT('travel:components.travel.TravelWizardStepRoute.vzyali_gps_iz_exif_fotografii_81abe770'),
     })
-  }, [setManualPhotoCoordinates, setManualPhotoPreview])
+  }, [photoSession, setManualPhotoCoordinates, setManualPhotoPreview])
 
   return (
     <SafeAreaView style={styles.safeContainer} edges={['left', 'right', 'bottom']}>
@@ -608,14 +626,14 @@ function TravelWizardStepRoute({
                 onToggle={handleManualPointToggle}
                 onPhotoPick={handleManualPhotoPick}
                 onPhotoSelected={handleManualPhotoSelected}
-                onClearPhoto={clearManualPhoto}
+                onClearPhoto={handleManualPhotoClear}
                 onCoordsChange={setManualCoords}
                 onLatChange={setManualLat}
                 onLngChange={setManualLng}
                 onLatSignToggle={toggleManualLatSign}
                 onLngSignToggle={toggleManualLngSign}
                 onAdd={handleAddManualPoint}
-                onCancel={hideManualPointPanel}
+                onCancel={handleManualPointCancel}
               />
 
               <View style={styles.filtersRow}>

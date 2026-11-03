@@ -25,9 +25,14 @@ export function ownerProfileTabCounters(
   profile: Pick<UserProfileDto, 'user' | 'tab_counters'> | null,
   owner: string | null,
 ): ProfileTabCountersDto | undefined {
-  return owner !== null && profile && String(profile.user) === owner
-    ? profile.tab_counters ?? undefined
-    : undefined;
+  if (owner === null || !profile || String(profile.user) !== owner) return undefined;
+  const counters = profile.tab_counters;
+  if (!counters) return undefined;
+
+  const { travels, published, drafts, subscribers, subscriptions } = counters;
+  return [travels, published, drafts, subscribers, subscriptions].every(
+    (value) => Number.isSafeInteger(value) && value >= 0,
+  ) ? counters : undefined;
 }
 
 export function resolveProfileTabCounts({

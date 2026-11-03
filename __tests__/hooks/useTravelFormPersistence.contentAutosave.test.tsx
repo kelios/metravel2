@@ -28,8 +28,10 @@ jest.mock('@/utils/toast', () => ({
 }));
 
 import { saveFormData, saveTravelContent } from '@/api/misc';
+import { queryKeys } from '@/api/queryKeys';
 import { useImprovedAutoSave } from '@/hooks/useImprovedAutoSave';
 import { useTravelFormPersistence } from '@/hooks/useTravelFormPersistence';
+import { registerPendingImageFile, removePendingImageFile } from '@/utils/pendingImageFiles';
 
 const mockSaveFormData = saveFormData as jest.MockedFunction<typeof saveFormData>;
 const mockSaveTravelContent = saveTravelContent as jest.MockedFunction<typeof saveTravelContent>;
@@ -123,10 +125,48 @@ beforeEach(() => {
   mockUseImprovedAutoSave.mockClear();
 });
 
+it('waits for a pending point photo before confirming a save that can leave the editor', async () => {
+  const url = 'blob:point-photo-before-exit';
+  const marker = { ...POINT, image: url };
+  const baseline = travelSnapshot({ coordsMeTravel: [marker] });
+  registerPendingImageFile(url, new File(['point'], 'point.jpg'));
+
+  let finishUpload!: () => void;
+  const uploadPendingMarkerImages = jest.fn(() => new Promise<void>((resolve) => {
+    finishUpload = () => {
+      removePendingImageFile(url);
+      resolve();
+    };
+  }));
+  try {
+    const { result } = await setupPersistence(baseline, { uploadPendingMarkerImages });
+    mockSaveFormData.mockResolvedValue(travelSnapshot() as unknown as TravelFormData);
+    const didSave = jest.fn();
+    let saving!: Promise<unknown>;
+    await act(async () => {
+      saving = result.current.handleManualSave(undefined, { awaitPointPhotos: true }).then(didSave);
+    });
+
+    await waitFor(() => expect(uploadPendingMarkerImages).toHaveBeenCalledWith([
+      expect.objectContaining({ image: url }),
+    ]));
+    expect(didSave).not.toHaveBeenCalled();
+
+    await act(async () => {
+      finishUpload();
+      await saving;
+    });
+    expect(didSave).toHaveBeenCalledWith(expect.objectContaining({ id: 619 }));
+  } finally {
+    removePendingImageFile(url);
+  }
+});
+
 describe('#1516 — узкое фоновое сохранение текста', () => {
   it('шлёт только изменившееся текстовое поле и не трогает полный upsert', async () => {
     const baseline = travelSnapshot();
-    const { autosaveOptions } = await setupPersistence(baseline);
+    const invalidateQueries = jest.fn().mockResolvedValue(undefined);
+    const { autosaveOptions } = await setupPersistence(baseline, { queryClient: { invalidateQueries } });
     mockSaveTravelContent.mockResolvedValue(contentResponse() as any);
 
     const next = travelSnapshot({ description: '<p>Дописанный абзац.</p>' });
@@ -137,6 +177,8 @@ describe('#1516 — узкое фоновое сохранение текста'
     const [travelId, fields] = mockSaveTravelContent.mock.calls[0];
     expect(travelId).toBe(619);
     expect(fields).toEqual({ description: '<p>Дописанный абзац.</p>' });
+    expect(invalidateQueries.mock.calls.map(([filters]) => filters.queryKey)).toContainEqual(queryKeys.travels());
+    expect(invalidateQueries.mock.calls.map(([filters]) => filters.queryKey)).not.toContainEqual(queryKeys.userProfile('1'));
   });
 
   it('не пересобирает форму по ответу узкого пути: точки, галерея и обложка остаются', async () => {

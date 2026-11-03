@@ -85,6 +85,7 @@ interface UseTravelWizardOptions {
   hasUnsavedChanges: boolean;
   canSave: boolean;
   onSave: () => Promise<WizardSaveResult>;
+  onLeave?: () => void;
   getFormData?: () => TravelFormData | null | undefined;
   stepStorageKey?: string;
   stepStorageTtlMs?: number;
@@ -155,6 +156,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     hasUnsavedChanges,
     canSave,
     onSave,
+    onLeave,
     stepStorageKey,
     stepStorageTtlMs = 7 * 24 * 60 * 60 * 1000,
   } = options;
@@ -387,7 +389,11 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
     if (!pending) return;
     setIsExitSaving(true);
     try {
-      await onSave();
+      const saved = await onSave();
+      if (!saved) {
+        setIsExitSaving(false);
+        return;
+      }
       closeExitPrompt();
       pending.onSavedAndLeave?.();
     } catch (e: unknown) {
@@ -406,6 +412,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
   const handleExit = useCallback(() => {
     const leave = () => {
       isLeavingRef.current = true;
+      onLeave?.();
       if (exitReturnTo) {
         router.replace(exitReturnTo as Parameters<typeof router.replace>[0]);
       } else {
@@ -413,7 +420,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
       }
     };
     void confirmLeaveWizard(leave, leave);
-  }, [confirmLeaveWizard, exitReturnTo, router]);
+  }, [confirmLeaveWizard, exitReturnTo, onLeave, router]);
 
   // ✅ REFACTORED: Use safe beforeunload hook to prevent Permissions Policy violations
   useBeforeUnload(
@@ -438,6 +445,7 @@ export function useTravelWizard(options: UseTravelWizardOptions) {
 
     const leave = () => {
       isLeavingRef.current = true;
+      onLeave?.();
       repeat();
     };
 

@@ -50,6 +50,20 @@ beforeEach(() => {
 });
 
 describe('useMyTravels — разбивка опубликованных и черновиков', () => {
+  it('loads one page without the drafts probe when the profile supplies counts', async () => {
+    mockFetchMyTravels.mockResolvedValue(page([1, 2], 365) as Awaited<ReturnType<typeof fetchMyTravels>>);
+    const { result } = await renderHook(() =>
+      useMyTravels({ userId: 'u-1', perPage: 20, includeDrafts: true, probeDraftsCount: false })
+    );
+    await act(async () => {
+      await result.current.load();
+    });
+
+    expect(mockFetchMyTravels).toHaveBeenCalledTimes(1);
+    expect(result.current.myTravels).toHaveLength(2);
+    expect(result.current.publicationCountsUnavailable).toBe(false);
+  });
+
   it('берёт черновики из ответа сервера, а не из загруженной страницы', async () => {
     mockFetchMyTravels.mockImplementation(async (params: any) =>
       (isDraftCountRequest(params) ? page([1], 120, 'draft') : page([1, 2], 365)) as any

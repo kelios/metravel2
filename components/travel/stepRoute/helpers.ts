@@ -1,5 +1,5 @@
 import type { TravelFilters } from '@/hooks/useTravelFilters'
-import { removePendingImageFile } from '@/utils/pendingImageFiles'
+import { releasePendingImageFile } from '@/utils/pendingImageFiles'
 import { reverseGeocodeRoutePoint } from '@/api/geoQueries'
 import { translate as i18nT } from '@/i18n'
 
@@ -83,16 +83,7 @@ export const getReverseGeocodeCountry = (data: any) => ({
 })
 
 export function revokeManualPreview(previewUrl: string | null) {
-  if (!previewUrl) return
-
-  removePendingImageFile(previewUrl)
-  try {
-    if (typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
-      URL.revokeObjectURL(previewUrl)
-    }
-  } catch {
-    // noop
-  }
+  if (previewUrl) releasePendingImageFile(previewUrl)
 }
 
 /**

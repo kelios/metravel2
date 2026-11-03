@@ -9,6 +9,7 @@ import {
 
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import UpsertTravelView from '@/components/travel/upsert/UpsertTravelView';
+import { PendingPointPhotoSession } from '@/components/travel/upsert/PendingPointPhotoSession';
 import { useUpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { UPSERT_TRAVEL_NEW_PATH, buildUpsertTravelSeoText } from '@/components/travel/upsert/upsertTravelSeo';
@@ -17,6 +18,10 @@ import { UPSERT_TRAVEL_NEW_PATH, buildUpsertTravelSeoText } from '@/components/t
 export { initFilters, normalizeCategoryTravelAddress, normalizeTravelCategories };
 
 export default function UpsertTravel() {
+  return <PendingPointPhotoSession><TravelEditor /></PendingPointPhotoSession>;
+}
+
+function TravelEditor() {
   const controller = useUpsertTravelController();
   const pathname = usePathname();
 

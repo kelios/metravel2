@@ -224,6 +224,10 @@ export function useMarkerImageUpload({
 
           const normalizedMarkerId = String(markerId)
           const finishPreview = (uploadedUrl: string): void => {
+            if (!getPendingImageFile(imageUrl)) {
+              resolvedUploadsRef.current.delete(imageUrl)
+              return
+            }
             const swap = applyUploadedMarkerImage(
               normalizedMarkerId,
               imageUrl,
