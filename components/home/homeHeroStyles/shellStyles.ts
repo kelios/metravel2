@@ -178,8 +178,10 @@ export const createHeroShellStyles = (ctx: HeroStyleContext) => {
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'flex-start',
+              // Keep overflow scrollable without letting a scrollbar narrow the book page.
               overflowY: 'auto',
               overflowX: 'hidden',
+              scrollbarWidth: 'none',
               maxHeight: '100%',
             } as any)
           : {},

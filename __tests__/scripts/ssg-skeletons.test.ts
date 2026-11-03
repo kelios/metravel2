@@ -730,7 +730,8 @@ describe('ssg-skeletons', () => {
       expect(css).toContain('--home-week-width:min(calc(var(--home-book-width) * 0.312),calc(var(--home-book-usable-height) * 1.5))');
       // The cut-out artwork carries no backdrop of its own around the book.
       expect(css).toMatch(/\.ssg-home-book\{display:grid;[^}]*background-color:transparent;background-image:var\(--image-homeHeroBook/);
-      expect(css).toContain('.ssg-home-page-content{display:flex;flex-direction:column;min-height:0;overflow-y:auto;overflow-x:hidden}');
+      expect(css).toContain('.ssg-home-page-content{display:flex;flex-direction:column;min-height:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:none}');
+      expect(css).toContain('.ssg-home-page-content::-webkit-scrollbar{display:none}');
       expect(css).toContain(
         '.ssg-home-week{top:29.2%;align-self:start;width:61.2%;aspect-ratio:3/2;margin:0 0 0 5.1%',
       );
