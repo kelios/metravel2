@@ -5,6 +5,7 @@ import {buildImpositionPlan} from '@/services/book/readyBooks/imposition';
 import {publishedBookSchema} from '@/services/book/readyBooks/publication';
 import {publishedFixture} from './publicationFixtures';
 import coverCopy from '../../../../data/travelBooks/cover-copy.json';
+import {legacyCoverPresets} from './coverCopyFixture';
 import {renderCoverPage} from '@/services/book/readyBooks/render/cover';
 import type {ReadyBookRenderInput} from '@/services/book/readyBooks/render';
 
@@ -36,8 +37,11 @@ describe('cover producer physical contract',()=>{
     ]){const invalid=publishedFixture();mutate(invalid);expect(publishedBookSchema.safeParse(invalid).success).toBe(false);}
   });
 
-  it('retains both exact owner presets, the full licensed Marck font and no discarded cover phrase',()=>{
-    expect(coverCopy).toEqual({schemaVersion:1,maxCharacters:120,defaultPresetId:'home-memories',presets:[{id:'home-memories',text:'Хорошо, когда есть куда вернуться. Прекрасно, когда есть что вспомнить'},{id:'world-memories',text:'Однажды мы выйдем за порог — и принесём домой целый мир воспоминаний'}]});
+  it('gives every edition its own approved inscriptions, keeps the full licensed Marck font and retires the shared phrases (#2946)',()=>{
+    expect(coverCopy.schemaVersion).toBe(2);
+    const printed=Object.values(coverCopy.editions).flatMap(edition=>edition.presets.map(preset=>preset.text.ru));
+    for(const retired of legacyCoverPresets.presets)expect(printed).not.toContain(retired.text);
+    expect(printed.join(' ')).not.toContain('целый мир');
     const font=fs.readFileSync('data/travelBooks/assets/fonts/marckscript/MarckScript-Regular.ttf');
     expect(createHash('sha256').update(font).digest('hex')).toBe('504de8cc6f919163bc9afb67b9bc208d258230c5e8d00cb82ec52474f9fafc3b');
     expect(fs.readFileSync('data/travelBooks/assets/fonts/marckscript/OFL.txt','utf8')).toContain('SIL OPEN FONT LICENSE Version 1.1');
@@ -48,7 +52,7 @@ describe('cover producer physical contract',()=>{
     const input={book,profile:book.profiles[0],cover:{dataUri:'data:image/png;base64,aGVsbG8=',widthPx:1054,heightPx:1492}} as unknown as ReadyBookRenderInput;
     const front=renderCoverPage(input,1);
     expect(front).toContain('Беларусь');expect(front).toContain('31 мест');
-    for(const preset of coverCopy.presets)expect(front).not.toContain(preset.text);
+    for(const edition of Object.values(coverCopy.editions))for(const preset of edition.presets)expect(front).not.toContain(preset.text.ru);
     expect(front).not.toContain('Уютная норка');expect(front).not.toContain(book.title);
     expect(front).toContain('cover-quote-space');expect(front).not.toContain('<script');
   });

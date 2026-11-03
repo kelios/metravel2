@@ -6,7 +6,7 @@ import {DESIGN_TOKENS} from '@/constants/designSystem';
 import {formatNumber,getActiveLocale} from '@/i18n';
 import {useTranslation} from '@/i18n/LocaleProvider';
 import type {PublishedBook} from '@/services/book/readyBooks/publication';
-import {createPersonalizedCoverBlob,CoverPersonalizationError,type CoverOutputMode} from '@/services/book/readyBooks/coverPersonalization';
+import {coverPresetLabel,createPersonalizedCoverBlob,CoverPersonalizationError,type CoverOutputMode} from '@/services/book/readyBooks/coverPersonalization';
 import {CoverTextError} from '@/services/book/readyBooks/coverText';
 import {downloadBlobOnWeb} from '@/utils/downloadUrlOnWeb';
 import {dispatchWebWindow} from '@/utils/externalLinks';
@@ -20,7 +20,9 @@ export default function CoverPersonalizationEditor({book,profileId}:{book:Publis
   const {t}=useTranslation();
   const descriptor=book.coverPersonalization;
   const id=useId();
-  const [selection,setSelection]=useState<string>(descriptor?.defaultPresetId??'home-memories');
+  const [chosen,setSelection]=useState<string|null>(null);
+  // Each edition has its own default inscription (#2946); an unknown choice falls back to it.
+  const selection=chosen==='custom'||descriptor?.presets.some(preset=>preset.id===chosen)?chosen as string:descriptor?.defaultPresetId??'';
   const [customText,setCustomText]=useState('');
   const [mode,setMode]=useState<CoverOutputMode>('read');
   const [result,setResult]=useState<Result|null>(null);
@@ -81,16 +83,24 @@ export default function CoverPersonalizationEditor({book,profileId}:{book:Publis
     }
   };
   const colors=DESIGN_TOKENS.colors;
+  const locale=getActiveLocale();
   const fieldStyle={boxSizing:'border-box',width:'100%',minHeight:44,color:colors.bookPageText,background:colors.bookPageSurfaceMuted,border:`1px solid ${colors.bookPageBorder}`,borderRadius:DESIGN_TOKENS.radii.sm,padding:DESIGN_TOKENS.spacing.sm} as const;
   return <section className="ready-books-note" aria-labelledby={`${id}-title`} style={{background:colors.bookPageSurface,color:colors.bookPageText,borderColor:colors.bookPageBorder}}>
     <h2 id={`${id}-title`}>{t('books:coverEditorTitle')}</h2>
     <p id={`${id}-privacy`}>{t('books:coverPrivate')}</p>
     <fieldset style={{border:0,padding:0,margin:0}}>
       <legend>{t('books:coverTextChoice')}</legend>
-      {descriptor.presets.map(preset=><label key={preset.id} style={{display:'flex',gap:DESIGN_TOKENS.spacing.sm,alignItems:'flex-start',paddingBlock:DESIGN_TOKENS.spacing.sm,minHeight:44}}>
-        <input type="radio" name={`${id}-text`} checked={selection===preset.id} onChange={()=>{invalidate();setSelection(preset.id);}}/>
-        <span lang="ru">{preset.text}</span>
-      </label>)}
+      {descriptor.presets.map(preset=>{
+        // The label follows the UI locale; the cover itself prints the book-locale text shown beneath it (#2946).
+        const label=coverPresetLabel(preset,locale);
+        return <label key={preset.id} style={{display:'flex',gap:DESIGN_TOKENS.spacing.sm,alignItems:'flex-start',paddingBlock:DESIGN_TOKENS.spacing.sm,minHeight:44}}>
+          <input type="radio" name={`${id}-text`} checked={selection===preset.id} onChange={()=>{invalidate();setSelection(preset.id);}}/>
+          <span>
+            <span lang={label.lang}>{label.text}</span>
+            {label.lang!=='ru'&&<span lang="ru" style={{display:'block',color:colors.bookPageTextMuted,fontSize:DESIGN_TOKENS.typography.sizes.sm}}>{preset.text}</span>}
+          </span>
+        </label>;
+      })}
       <label style={{display:'flex',gap:DESIGN_TOKENS.spacing.sm,alignItems:'center',minHeight:44}}><input type="radio" name={`${id}-text`} checked={selection==='custom'} onChange={()=>{invalidate();setSelection('custom');}}/>{t('books:coverOwnText')}</label>
     </fieldset>
     {selection==='custom'&&<label style={{display:'block'}}>{t('books:coverCustomLabel')}

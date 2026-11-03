@@ -40,6 +40,7 @@ export function renderThematicFacts(evidence: ThematicEvidence): string {
   return parts.map((value,index) => `<p${index===1 ? ' class="thematic-metrics"' : ''}>${e(value)}</p>`).join(' ') + ' ' + links;
 }
 
+// Story box fits the approved 100–280 character copy plus route facts (#2947, designer check 02.11.2026).
 export const thematicPrintStyles = `
 .thematic .place-heading{top:5mm;height:15mm}
 .thematic .place-heading h2{font-size:18pt}
@@ -47,7 +48,7 @@ export const thematicPrintStyles = `
 .thematic-photo{display:block;width:100%;height:100%;max-width:none}
 .thematic-photo-wrap::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,#fffefa,transparent 5%,transparent 95%,#fffefa),linear-gradient(#fffefa,transparent 5%,transparent 95%,#fffefa)}
 .thematic-caption{position:absolute;left:15mm;top:44mm;width:58mm;height:12mm;font-size:9pt;line-height:1.1;text-align:left}
-.thematic-story{position:absolute;left:15mm;right:15mm;top:57mm;height:38mm;font-size:9pt;line-height:1.1;text-align:left}
+.thematic-story{position:absolute;left:15mm;right:15mm;top:57mm;height:38mm;font-size:8.5pt;line-height:1.1;text-align:left}
 .thematic-story p+p{margin-top:.5mm}
 .thematic-story p{display:inline;margin:0}
 .thematic-metrics{font-family:BookHeading,BookHand,serif}
@@ -57,7 +58,7 @@ export const thematicPrintStyles = `
 .album-layout.thematic .place-heading{top:10mm;height:21mm}
 .album-layout.thematic .place-heading h2{font-size:24pt}
 .album-layout.thematic .thematic-caption{left:15mm;top:89mm;width:118mm;height:12mm;font-size:10pt;line-height:1.15;text-align:center}
-.album-layout.thematic .thematic-story{left:15mm;right:15mm;top:105mm;height:59mm;font-size:10.5pt;line-height:1.15}
+.album-layout.thematic .thematic-story{left:15mm;right:15mm;top:105mm;height:61mm;font-size:10.5pt;line-height:1.15}
 .album-layout.thematic .qr-row{left:15mm;right:15mm;width:auto;top:auto;bottom:9mm;justify-content:space-around}
 .album-layout.thematic .qr-link{font-size:10pt}
 `;

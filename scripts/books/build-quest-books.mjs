@@ -6,7 +6,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import QRCode from 'qrcode';
 import {loadCountryQuestBookSources} from './source-quest-books.mjs';
-import {loadCoverPersonalizationSource} from './source-ready-book.mjs';
+import {editionCopySha256, loadCoverPersonalizationSource} from './source-ready-book.mjs';
 import {loadReadyBookCompiler,renderPhysicalEdition} from './render-ready-book.mjs';
 import {buildQuestBookMaps} from './quest-maps.mjs';
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -41,7 +41,6 @@ export async function buildCountryQuestBooks({output='.codex-temp/books-quests/p
   const notoLicense=await readFile('docs/design/travel-memory-books-v1/assets/fonts/LICENSE.txt');
   if(!notoLicense.toString('utf8').includes('SIL OPEN FONT LICENSE Version 1.1'))throw new Error('Noto font license unavailable');
   const fontLicenses={noto:hash(notoLicense),marck:hash(await readFile('data/travelBooks/assets/fonts/marckscript/OFL.txt'))};
-  const coverPersonalization=await loadCoverPersonalizationSource();
   const maps=await buildQuestBookMaps({books:sources.books,output:path.join(output,'maps')});
   const books=[];let browser;
   const {chromium}=await import('playwright');browser=await chromium.launch({headless:true});
@@ -56,7 +55,8 @@ export async function buildCountryQuestBooks({output='.codex-temp/books-quests/p
         qr[quest.questId]={qrSizeMm,qrDataUri:'data:image/svg+xml;base64,'+Buffer.from(await QRCode.toString(quest.questUrl,{type:'svg',errorCorrectionLevel:'M',margin:4,color:{dark:'#31443dff',light:'#fffefaff'}})).toString('base64')};
       }
       const mapDescriptors=Object.values(maps.maps).filter(map=>selected.quests.some(quest=>quest.questId===map.questId));
-      const revision=selected.revision+'.'+hash(JSON.stringify({ending,adapterHash,compiledHash,fontHashes,fontLicenses,encoderVersions:sharp.versions,covers:Object.values(covers).map(hash),maps:mapDescriptors.map(({questId,profileId,sha256})=>({questId,profileId,sha256}))})).slice(0,12);
+      const coverPersonalization=await loadCoverPersonalizationSource(selected.id),editionCopy=await editionCopySha256(selected.id,coverPersonalization);
+      const revision=selected.revision+'.'+hash(JSON.stringify({ending,adapterHash,compiledHash,fontHashes,fontLicenses,editionCopy,encoderVersions:sharp.versions,covers:Object.values(covers).map(hash),maps:mapDescriptors.map(({questId,profileId,sha256})=>({questId,profileId,sha256}))})).slice(0,12);
       const book={...selected,revision,endMatterPages:ending.pages};
       const first=book.quests[0],cover={dataUri:covers[first.questId],widthPx:first.cover.widthPx,heightPx:first.cover.heightPx,artworkBounds:{left:0,top:0,width:1,height:1}};
       const provenance={kind:'quests',sourceRevision:selected.revision,ending,adapterHash,compiledHash,fontHashes,fontLicenses,coverReuseBasis:sources.rights.permissionBasis,covers:sources.rights.assets.filter(asset=>book.quests.some(quest=>quest.questId===asset.questId)),maps:mapDescriptors.map(map=>{const record={...map};delete record.path;return record;})};

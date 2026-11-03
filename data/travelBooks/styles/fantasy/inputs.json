@@ -11,7 +11,7 @@
       "placeCount": 31,
       "evidence": {
         "path": "data/travelBooks/by/fantasy-evidence.json",
-        "sha256": "29b8dca20f677ad6c790ea104b28d29383ad22a9201db00872ed2962096aa7da",
+        "sha256": "3a3e977a6aef9a3abb9be68ee3e739310c56035b82a989307257c77f330e0f9f",
         "bytes": 190344
       }
     },
@@ -20,7 +20,7 @@
       "placeCount": 30,
       "evidence": {
         "path": "data/travelBooks/pl/fantasy-evidence.json",
-        "sha256": "119476a7ac90b0fd0ee13208ada42be405219bdcc63d06f7f8253495b1060b5b",
+        "sha256": "4e391abf199e126a86cf82aa9ca58164093be85288f3725cba4a4bc8414e0640",
         "bytes": 175541
       }
     }

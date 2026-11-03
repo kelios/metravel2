@@ -256,6 +256,11 @@ describe('ready-book publication build boundary', () => {
     const descriptor={schemaVersion:1,font:{...asset(),uri:'https://metravel.by/travel-books/book/r1/fonts/MarckScript-Regular.ttf',mime:'font/ttf',license:{...asset(),uri:'https://metravel.by/travel-books/book/r1/fonts/OFL.txt',mime:'text/plain'}},templates:['pocket-150x100','album-a5'].flatMap(profileId=>['read','print-shop','home-rings'].map(mode=>({...asset(),uri:`https://metravel.by/travel-books/book/r1/${profileId}/template-${mode}-cover.pdf`,profileId,mode,mime:'application/pdf'})))};
     const input={schemaVersion:1,releaseId:'travel-books-v1',books:[{...manifest().books[0],id:'book',revision:'r1',coverPersonalization:descriptor}]};
     expect(collectAssets([input])).toHaveLength(9);
+    // Per-edition inscriptions (#2946) publish the same resources; unknown descriptor versions stay rejected.
+    const edition=structuredClone(input);(edition.books[0].coverPersonalization as {schemaVersion:number}).schemaVersion=2;
+    expect(collectAssets([edition])).toHaveLength(9);
+    const unknown=structuredClone(input);(unknown.books[0].coverPersonalization as {schemaVersion:number}).schemaVersion=3;
+    expect(()=>collectAssets([unknown])).toThrow('Invalid cover personalization resources');
     for(const change of [(cover:typeof descriptor)=>{cover.font.uri='https://metravel.by/travel-books/book/other/font.ttf';},(cover:typeof descriptor)=>{cover.font.bytes=3*1024*1024;},(cover:typeof descriptor)=>{cover.font.license.uri=cover.font.license.uri.replace('OFL.txt','run.js');},(cover:typeof descriptor)=>{cover.templates.pop();}]){const invalid=structuredClone(input);change(invalid.books[0].coverPersonalization);expect(()=>collectAssets([invalid])).toThrow();}
   });
 

@@ -1,9 +1,428 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "maxCharacters": 120,
-  "defaultPresetId": "home-memories",
-  "presets": [
-    {"id": "home-memories", "text": "Хорошо, когда есть куда вернуться. Прекрасно, когда есть что вспомнить"},
-    {"id": "world-memories", "text": "Однажды мы выйдем за порог — и принесём домой целый мир воспоминаний"}
-  ]
+  "bookLocale": "ru",
+  "approvedOn": "2026-11-02",
+  "editions": {
+    "belarus-memory": {
+      "defaultPresetId": "by-watercolor-lakes-and-lanes",
+      "presets": [
+        {
+          "id": "by-watercolor-lakes-and-lanes",
+          "text": {
+            "ru": "Наша Беларусь в самых тёплых красках: озёра, просёлки и мы",
+            "be": "Наша Беларусь у самых цёплых фарбах: азёры, прасёлкі і мы",
+            "uk": "Наша Білорусь у найтепліших барвах: озера, путівці й ми",
+            "pl": "Nasza Białoruś w najcieplejszych barwach: jeziora, polne drogi i my",
+            "en": "Our Belarus in the warmest colors: lakes, country lanes and us"
+          }
+        },
+        {
+          "id": "by-watercolor-unhurried",
+          "text": {
+            "ru": "Беларусь, где мы никуда не спешили",
+            "be": "Беларусь, дзе мы нікуды не спяшаліся",
+            "uk": "Білорусь, де ми нікуди не поспішали",
+            "pl": "Białoruś, w której nigdzie się nie spieszyliśmy",
+            "en": "Belarus, where we were never in a hurry"
+          }
+        },
+        {
+          "id": "by-watercolor-storks-and-mist",
+          "text": {
+            "ru": "Аисты на гнёздах, туман над лугами. Наши дни в Беларуси",
+            "be": "Буслы на гнёздах, туман над лугамі. Нашы дні ў Беларусі",
+            "uk": "Лелеки в гніздах, туман над луками. Наші дні в Білорусі",
+            "pl": "Bociany w gniazdach, mgła nad łąkami. Nasze dni na Białorusi",
+            "en": "Storks on their nests, mist over the meadows. Our days in Belarus"
+          }
+        }
+      ]
+    },
+    "poland-memory": {
+      "defaultPresetId": "pl-watercolor-cobblestones",
+      "presets": [
+        {
+          "id": "pl-watercolor-cobblestones",
+          "text": {
+            "ru": "Брусчатка старых городов помнит наши шаги — а мы помним её",
+            "be": "Брук старых гарадоў памятае нашы крокі — а мы памятаем яго",
+            "uk": "Бруківка старих міст пам’ятає наші кроки — а ми пам’ятаємо її",
+            "pl": "Bruk starych miast pamięta nasze kroki, a my — jego",
+            "en": "The cobbles of old towns remember our steps, and we remember them"
+          }
+        },
+        {
+          "id": "pl-watercolor-roofs-and-coffee",
+          "text": {
+            "ru": "Польша, написанная не спеша: черепица, кофе и мы",
+            "be": "Польшча, напісаная без паспеху: чарапіца, кава і мы",
+            "uk": "Польща, написана без поспіху: черепиця, кава і ми",
+            "pl": "Polska malowana bez pośpiechu: dachówki, kawa i my",
+            "en": "Poland, painted slowly: tiled roofs, coffee and us"
+          }
+        },
+        {
+          "id": "pl-watercolor-steps-then-photos",
+          "text": {
+            "ru": "Эту Польшу мы рисовали шагами, а дорисуем снимками",
+            "be": "Гэтую Польшчу мы малявалі крокамі, а дамалюем здымкамі",
+            "uk": "Цю Польщу ми малювали кроками, а домалюємо світлинами",
+            "pl": "Tę Polskę malowaliśmy krokami, a dokończymy zdjęciami",
+            "en": "We sketched this Poland with our feet and will finish it with photos"
+          }
+        }
+      ]
+    },
+    "belarus-photo-memory": {
+      "defaultPresetId": "by-photo-as-we-saw-it",
+      "presets": [
+        {
+          "id": "by-photo-as-we-saw-it",
+          "text": {
+            "ru": "Беларусь — такая, какой мы её увидели",
+            "be": "Беларусь — такая, якой яе ўбачылі мы",
+            "uk": "Білорусь — така, якою її побачили ми",
+            "pl": "Białoruś taka, jaką sami zobaczyliśmy",
+            "en": "Belarus, just as we saw it"
+          }
+        },
+        {
+          "id": "by-photo-frame-by-frame",
+          "text": {
+            "ru": "Кадр за кадром — наши дороги по Беларуси",
+            "be": "Кадр за кадрам — нашы дарогі па Беларусі",
+            "uk": "Кадр за кадром — наші дороги Білоруссю",
+            "pl": "Kadr po kadrze — nasze drogi przez Białoruś",
+            "en": "Frame by frame: our roads across Belarus"
+          }
+        },
+        {
+          "id": "by-photo-unretouched",
+          "text": {
+            "ru": "Беларусь без ретуши: место, день, свет и мы в кадре",
+            "be": "Беларусь без рэтушы: месца, дзень, святло і мы ў кадры",
+            "uk": "Білорусь без ретуші: місце, день, світло і ми в кадрі",
+            "pl": "Białoruś bez retuszu: miejsce, dzień, światło i my w kadrze",
+            "en": "Belarus, unretouched: the place, the day, the light, and us in the frame"
+          }
+        }
+      ]
+    },
+    "poland-photo-memory": {
+      "defaultPresetId": "pl-photo-through-our-lens",
+      "presets": [
+        {
+          "id": "pl-photo-through-our-lens",
+          "text": {
+            "ru": "Польша через наш объектив",
+            "be": "Польшча праз наш аб’ектыў",
+            "uk": "Польща крізь наш об’єктив",
+            "pl": "Polska w naszym obiektywie",
+            "en": "Poland through our lens"
+          }
+        },
+        {
+          "id": "pl-photo-shot-and-walked",
+          "text": {
+            "ru": "Польша: снято на память, проверено ногами",
+            "be": "Польшча: знятая на памяць, правераная нагамі",
+            "uk": "Польща: знято на згадку, перевірено ногами",
+            "pl": "Polska: uwieczniona na zdjęciach, przemierzona na piechotę",
+            "en": "Poland: shot on camera, tested on foot"
+          }
+        },
+        {
+          "id": "pl-photo-polish-light",
+          "text": {
+            "ru": "Польский свет, пойманный в нужную секунду",
+            "be": "Польскае святло, злоўленае ў патрэбную секунду",
+            "uk": "Польське світло, спіймане саме вчасно",
+            "pl": "Polskie światło złapane we właściwej chwili",
+            "en": "Polish light, caught at just the right second"
+          }
+        }
+      ]
+    },
+    "belarus-fantasy-memory": {
+      "defaultPresetId": "by-fantasy-tsmok-tracks",
+      "presets": [
+        {
+          "id": "by-fantasy-tsmok-tracks",
+          "text": {
+            "ru": "Цмока мы так и не встретили, но следы его, кажется, видели",
+            "be": "Цмока мы так і не сустрэлі, але ягоныя сляды, здаецца, бачылі",
+            "uk": "Цмока ми так і не зустріли, але його сліди, здається, бачили",
+            "pl": "Smoka nie spotkaliśmy, ale jego ślady chyba widzieliśmy",
+            "en": "We never met the dragon, but we're fairly sure we saw its tracks"
+          }
+        },
+        {
+          "id": "by-fantasy-chronicle",
+          "text": {
+            "ru": "Летопись нашего похода по краю замков, озёр и сказок",
+            "be": "Летапіс нашага паходу па краі замкаў, азёр і казак",
+            "uk": "Літопис нашого походу краєм замків, озер і казок",
+            "pl": "Kronika naszej wyprawy przez krainę zamków, jezior i baśni",
+            "en": "The chronicle of our quest through a land of castles, lakes and tales"
+          }
+        },
+        {
+          "id": "by-fantasy-fern-flower",
+          "text": {
+            "ru": "Цветок папоротника мы не нашли. Зато нашли всё остальное",
+            "be": "Папараць-кветку мы не знайшлі. Затое знайшлі ўсё астатняе",
+            "uk": "Цвіт папороті ми не знайшли. Зате знайшли все інше",
+            "pl": "Kwiatu paproci nie znaleźliśmy. Za to znaleźliśmy całą resztę",
+            "en": "We never found the fern flower. We found everything else"
+          }
+        }
+      ]
+    },
+    "poland-fantasy-memory": {
+      "defaultPresetId": "pl-fantasy-here-be-dragons",
+      "presets": [
+        {
+          "id": "pl-fantasy-here-be-dragons",
+          "text": {
+            "ru": "Здесь водятся драконы. Проверено нами лично",
+            "be": "Тут водзяцца драконы. Праверана намі асабіста",
+            "uk": "Тут водяться дракони. Перевірено нами особисто",
+            "pl": "Tu żyją smoki. Sprawdziliśmy osobiście",
+            "en": "Here be dragons. We checked in person"
+          }
+        },
+        {
+          "id": "pl-fantasy-sleeping-knights",
+          "text": {
+            "ru": "Пока рыцари спят в горах, мы обошли их королевство",
+            "be": "Пакуль рыцары спяць у гарах, мы абышлі іх каралеўства",
+            "uk": "Поки лицарі сплять у горах, ми обійшли їхнє королівство",
+            "pl": "Gdy rycerze śpią pod górami, my obeszliśmy ich królestwo",
+            "en": "While the knights sleep in the mountains, we've walked their kingdom"
+          }
+        },
+        {
+          "id": "pl-fantasy-brave-company",
+          "text": {
+            "ru": "Польская баллада о замках, дорогах и одном очень храбром отряде",
+            "be": "Польская балада пра замкі, дарогі і адзін вельмі смелы атрад",
+            "uk": "Польська балада про замки, дороги й один дуже хоробрий загін",
+            "pl": "Polska ballada o zamkach, drogach i pewnej bardzo dzielnej drużynie",
+            "en": "A Polish ballad of castles, roads and one very brave company"
+          }
+        }
+      ]
+    },
+    "belarus-graphic-memory": {
+      "defaultPresetId": "by-graphic-lines-and-shadows",
+      "presets": [
+        {
+          "id": "by-graphic-lines-and-shadows",
+          "text": {
+            "ru": "Беларусь. Линии, тени, наши шаги",
+            "be": "Беларусь. Лініі, цені, нашы крокі",
+            "uk": "Білорусь. Лінії, тіні, наші кроки",
+            "pl": "Białoruś. Linie, cienie, nasze kroki",
+            "en": "Belarus. Lines, shadows, our footsteps"
+          }
+        },
+        {
+          "id": "by-graphic-black-on-white",
+          "text": {
+            "ru": "Чёрным по белому: мы были в Беларуси",
+            "be": "Чорным па белым: мы былі ў Беларусі",
+            "uk": "Чорним по білому: ми були в Білорусі",
+            "pl": "Czarno na białym: byliśmy na Białorusi",
+            "en": "In black and white: we were in Belarus"
+          }
+        },
+        {
+          "id": "by-graphic-few-words",
+          "text": {
+            "ru": "Мало слов. Много дорог. Беларусь",
+            "be": "Мала слоў. Шмат дарог. Беларусь",
+            "uk": "Мало слів. Багато доріг. Білорусь",
+            "pl": "Mało słów. Dużo dróg. Białoruś",
+            "en": "Few words. Many roads. Belarus"
+          }
+        }
+      ]
+    },
+    "poland-graphic-memory": {
+      "defaultPresetId": "pl-graphic-in-outline",
+      "presets": [
+        {
+          "id": "pl-graphic-in-outline",
+          "text": {
+            "ru": "Польша в контурах — остальное помним сами",
+            "be": "Польшча ў контурах — астатняе памятаем самі",
+            "uk": "Польща в контурах — решту пам’ятаємо самі",
+            "pl": "Polska w zarysie. Resztę dopowie pamięć",
+            "en": "Poland in outline — we remember the rest ourselves"
+          }
+        },
+        {
+          "id": "pl-graphic-in-ink",
+          "text": {
+            "ru": "Записано тушью: Польша, дорога и мы",
+            "be": "Запісана тушшу: Польшча, дарога і мы",
+            "uk": "Записано тушшю: Польща, дорога і ми",
+            "pl": "Zapisane tuszem: Polska, droga i my",
+            "en": "Written in ink: Poland, the road and us"
+          }
+        },
+        {
+          "id": "pl-graphic-dot-by-dot",
+          "text": {
+            "ru": "Точка на карте. Ещё одна. Так сложилась наша Польша",
+            "be": "Кропка на мапе. Яшчэ адна. Так склалася наша Польшча",
+            "uk": "Точка на мапі. Ще одна. Так склалася наша Польща",
+            "pl": "Punkt na mapie. I jeszcze jeden. Tak powstała nasza Polska",
+            "en": "A dot on the map. Then another. That's how our Poland took shape"
+          }
+        }
+      ]
+    },
+    "belarus-quests-1": {
+      "defaultPresetId": "by-quests-point-by-point",
+      "presets": [
+        {
+          "id": "by-quests-point-by-point",
+          "text": {
+            "ru": "Беларусь, разгаданная по точкам",
+            "be": "Беларусь, разгаданая па кропках",
+            "uk": "Білорусь, розгадана точка за точкою",
+            "pl": "Białoruś rozwiązana punkt po punkcie",
+            "en": "Belarus, solved point by point"
+          }
+        },
+        {
+          "id": "by-quests-team-ready",
+          "text": {
+            "ru": "Команда в сборе. Карта у нас. Беларусь, загадывай!",
+            "be": "Каманда ў зборы. Мапа ў нас. Беларусь, загадвай!",
+            "uk": "Команда в зборі. Мапа в нас. Білорусе, загадуй!",
+            "pl": "Drużyna w komplecie. Mapa w ręku. Białorusi, zadawaj zagadki!",
+            "en": "Team assembled. Map in hand. Belarus, give us your riddles!"
+          }
+        },
+        {
+          "id": "by-quests-first-clue-to-last",
+          "text": {
+            "ru": "Наша Беларусь — от первой подсказки до последней отгадки",
+            "be": "Наша Беларусь — ад першай падказкі да апошняй адгадкі",
+            "uk": "Наша Білорусь — від першої підказки до останньої відгадки",
+            "pl": "Nasza Białoruś — od pierwszej wskazówki do ostatniego rozwiązania",
+            "en": "Our Belarus, from the first clue to the final answer"
+          }
+        }
+      ]
+    },
+    "poland-quests-1": {
+      "defaultPresetId": "pl-quests-step-riddle-answer",
+      "presets": [
+        {
+          "id": "pl-quests-step-riddle-answer",
+          "text": {
+            "ru": "Польша по подсказкам: шаг, загадка, ответ",
+            "be": "Польшча па падказках: крок, загадка, адказ",
+            "uk": "Польща за підказками: крок, загадка, відповідь",
+            "pl": "Polska według wskazówek: krok, zagadka, odpowiedź",
+            "en": "Poland by clues: a step, a riddle, an answer"
+          }
+        },
+        {
+          "id": "pl-quests-case-closed",
+          "text": {
+            "ru": "Польское дело раскрыто нашей командой",
+            "be": "Польская справа раскрыта нашай камандай",
+            "uk": "Польську справу розкрила наша команда",
+            "pl": "Polskie śledztwo zamknięte. Rozwiązała je nasza drużyna",
+            "en": "The Poland case: cracked by our team"
+          }
+        },
+        {
+          "id": "pl-quests-not-lost",
+          "text": {
+            "ru": "В Польше мы не заблудились — мы искали следующую точку",
+            "be": "У Польшчы мы не заблукалі — мы шукалі наступную кропку",
+            "uk": "У Польщі ми не заблукали — ми шукали наступну точку",
+            "pl": "W Polsce wcale nie zabłądziliśmy — szukaliśmy kolejnego punktu",
+            "en": "We weren't lost in Poland. We were looking for the next point"
+          }
+        }
+      ]
+    },
+    "poland-mountains-memory": {
+      "defaultPresetId": "pl-mountains-earned-on-the-climb",
+      "presets": [
+        {
+          "id": "pl-mountains-earned-on-the-climb",
+          "text": {
+            "ru": "Горы Польши: каждый кадр здесь заработан подъёмом",
+            "be": "Горы Польшчы: кожны кадр тут зароблены пад’ёмам",
+            "uk": "Гори Польщі: кожен кадр тут здобутий підйомом",
+            "pl": "Polskie góry: każde zdjęcie okupione podejściem",
+            "en": "The mountains of Poland: every shot here was earned on the climb"
+          }
+        },
+        {
+          "id": "pl-mountains-in-the-clouds",
+          "text": {
+            "ru": "Иногда над облаками, иногда — в них. Горы Польши",
+            "be": "Часам над аблокамі, часам — у іх. Горы Польшчы",
+            "uk": "Часом над хмарами, часом — у них. Гори Польщі",
+            "pl": "Polskie góry: czasem nad chmurami, czasem w nich",
+            "en": "Sometimes above the clouds, sometimes inside them. Poland's mountains"
+          }
+        },
+        {
+          "id": "pl-mountains-dusty-boots",
+          "text": {
+            "ru": "Пыльные ботинки, рюкзак за спиной и польские вершины впереди",
+            "be": "Запыленыя чаравікі, заплечнік за спіной і польскія вяршыні наперадзе",
+            "uk": "Запилені черевики, наплічник за спиною й польські вершини попереду",
+            "pl": "Zakurzone buty, plecak na ramionach i polskie szczyty przed nami",
+            "en": "Dusty boots, a pack on our backs and Polish peaks ahead"
+          }
+        }
+      ]
+    },
+    "poland-castles-memory": {
+      "defaultPresetId": "pl-castles-one-day",
+      "presets": [
+        {
+          "id": "pl-castles-one-day",
+          "text": {
+            "ru": "Стены стоят веками, а мы — всего один день. Но какой!",
+            "be": "Сцены стаяць вякамі, а мы — толькі адзін дзень. Затое які!",
+            "uk": "Мури стоять століттями, а ми — лише один день. Зате який!",
+            "pl": "Mury stoją od wieków, a my — tylko jeden dzień. Ale jaki!",
+            "en": "The walls have stood for centuries; we stayed a single day. And what a day!"
+          }
+        },
+        {
+          "id": "pl-castles-no-keys",
+          "text": {
+            "ru": "Ключей от этих замков у нас нет — зато есть снимки",
+            "be": "Ключоў ад гэтых замкаў у нас няма, затое ёсць здымкі",
+            "uk": "Ключів від цих замків у нас немає — зате є світлини",
+            "pl": "Kluczy do tych zamków nie mamy — mamy za to zdjęcia",
+            "en": "We never got the keys to these castles, but we got the photos"
+          }
+        },
+        {
+          "id": "pl-castles-castle-to-castle",
+          "text": {
+            "ru": "Башни, ворота, руины — наш путь от замка к замку",
+            "be": "Вежы, брамы, руіны — наш шлях ад замка да замка",
+            "uk": "Вежі, брами, руїни — наш шлях від замку до замку",
+            "pl": "Wieże, bramy, ruiny — nasza droga od zamku do zamku",
+            "en": "Towers, gates, ruins: our way from castle to castle"
+          }
+        }
+      ]
+    }
+  }
 }

@@ -23,13 +23,33 @@ export const BOOK_IDENTITY = {
   fantasy: {by: {id: 'belarus-fantasy-memory', slug: 'belarus-fantasy', title: 'Беларусь. Книга воспоминаний'}, pl: {id: 'poland-fantasy-memory', slug: 'poland-fantasy', title: 'Польша. Книга воспоминаний'}},
 };
 
-export async function loadCoverPersonalizationSource() {
+export const COVER_TRANSLATION_LOCALES = ['be', 'uk', 'pl', 'en'];
+const coverText = (value, max) => typeof value === 'string' && value.length > 0 && value === value.normalize('NFC').trim() && Array.from(value).length <= max;
+/** The approved inscriptions of one edition (#2946): printed in Russian, labelled in every UI locale. */
+export function editionCoverPresets(copy, bookId) {
+  if (copy?.schemaVersion !== 2 || copy.maxCharacters !== 120 || copy.bookLocale !== 'ru' || !copy.editions || typeof copy.editions !== 'object') throw new Error('Invalid canonical cover copy');
+  const edition = Object.hasOwn(copy.editions, bookId) ? copy.editions[bookId] : undefined;
+  if (!edition) throw new Error('No approved cover inscriptions for edition: ' + bookId);
+  const presets = edition.presets;
+  const allIds = Object.values(copy.editions).flatMap(item => item.presets?.map(preset => preset.id) ?? []);
+  if (!Array.isArray(presets) || presets.length < 2 || presets.length > 5 || new Set(presets.map(preset => preset.id)).size !== presets.length || !presets.some(preset => preset.id === edition.defaultPresetId) || new Set(allIds).size !== allIds.length ||
+      presets.some(preset => !/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(preset.id ?? '') || !['ru', ...COVER_TRANSLATION_LOCALES].every(locale => coverText(preset.text?.[locale], copy.maxCharacters)) || Object.keys(preset.text).length !== 5)) throw new Error('Invalid cover inscriptions for edition: ' + bookId);
+  return {schemaVersion: 2, maxCharacters: copy.maxCharacters, defaultPresetId: edition.defaultPresetId,
+    presets: presets.map(preset => ({id: preset.id, text: preset.text.ru, translations: Object.fromEntries(COVER_TRANSLATION_LOCALES.map(locale => [locale, preset.text[locale]]))}))};
+}
+/** The edition's printed voice is part of its revision identity (#2947); the renderer reads the same file. */
+export async function editionCopySha256(bookId, coverPersonalization) {
+  const frame = await json('data/travelBooks/frame-copy.json');
+  if (frame.schemaVersion !== 1 || !Object.hasOwn(frame.editions ?? {}, bookId)) throw new Error('No approved frame copy for edition: ' + bookId);
+  return sha256(JSON.stringify({frame: frame.editions[bookId], cover: coverPersonalization.copySha256}));
+}
+export async function loadCoverPersonalizationSource(bookId) {
   const copy = await json('data/travelBooks/cover-copy.json');
-  if (copy.schemaVersion !== 1 || copy.maxCharacters !== 120 || copy.defaultPresetId !== 'home-memories' || copy.presets?.length !== 2 || new Set(copy.presets.map(p => p.id)).size !== 2 || !copy.presets.some(p => p.id === copy.defaultPresetId) || copy.presets.some(p => !['home-memories','world-memories'].includes(p.id) || p.text !== p.text.normalize('NFC').trim() || !p.text || Array.from(p.text).length > copy.maxCharacters)) throw new Error('Invalid canonical cover copy');
+  const presets = editionCoverPresets(copy, bookId);
   const font = await projectFile(COVER_FONT_PATH, COVER_FONT_SHA);
   const license = await projectFile(COVER_LICENSE_PATH);
   if (!license.toString('utf8').includes('SIL OPEN FONT LICENSE Version 1.1')) throw new Error('The full Marck Script OFL license is required');
-  return {...copy, copySha256: sha256(JSON.stringify(copy)), font: {path: path.resolve(COVER_FONT_PATH), sha256: sha256(font), bytes: font.length, mime: 'font/ttf', license: {path: path.resolve(COVER_LICENSE_PATH), sha256: sha256(license), bytes: license.length, mime: 'text/plain'}}};
+  return {...presets, copySha256: sha256(JSON.stringify(presets)), font: {path: path.resolve(COVER_FONT_PATH), sha256: sha256(font), bytes: font.length, mime: 'font/ttf', license: {path: path.resolve(COVER_LICENSE_PATH), sha256: sha256(license), bytes: license.length, mime: 'text/plain'}}};
 }
 export async function projectFile(file, expectedSha) {
   const resolved = await realpath(path.resolve(file));
@@ -68,20 +88,22 @@ export async function loadSelectedBook(country, {sourcesRoot = 'data/travelBooks
     const map = new URL(record.qr.map);
     if (map.pathname !== '/map' || map.searchParams.get('focusPlace') !== '1' || map.searchParams.get('placeId') !== String(row.pointId) || !map.searchParams.get('placeTitle') || Math.abs(Number(map.searchParams.get('lat')) - row.lat) > 0.000001 || Math.abs(Number(map.searchParams.get('lng')) - row.lng) > 0.000001) throw new Error('Map QR does not identify selected point: ' + id);
     if (typeof record.copyRu !== 'string' || record.copyRu.trim().length < 160 || record.copyRu.length > 280) throw new Error('Missing physically sized sourced copy: ' + id);
+    // The memory-page prompt is kept with the place but never printed: those pages stay blank (#2947).
+    if (typeof record.prompt !== 'string' || !record.prompt.trim()) throw new Error('Missing memory prompt: ' + id);
     sources.set(id, {row, record, article, photo});
     const quest = record.quest?.status === 'associated' || record.quest?.status === 'verified-associated' ? record.quest : undefined;
     if (quest && (!ownUrl(quest.url) || !quest.id || !quest.evidence)) throw new Error('Quest needs exact-place association: ' + id);
     stops.push({id, title: record.printTitle, localName: record.localName || record.printTitle, lat: row.lat, lng: row.lng,
       entrance: 'Точка из авторского маршрута; отдельный вход не проверен.', coordinateAccuracy: 'site-center', coordinateSource: article.url,
       source: {kind: 'travel-address', id: String(row.pointId), url: article.url}, text: {compact: record.copyRu.trim(), album: record.copyRu.trim()},
-      fact: record.sourceEvidence.excerpt || record.copyRu.trim(), observation: 'Сохраните своё впечатление об этом месте.',
+      fact: record.sourceEvidence.excerpt || record.copyRu.trim(), observation: record.prompt.trim(),
       references: [{url: article.url, checkedAt: article.verifiedOn, claims: [record.sourceEvidence.excerpt || record.copyRu.trim()]}],
       imageBrief: style === 'photo' ? 'Коллаж из фотографий автора этого места из той же авторской статьи.' : style === 'graphic' ? 'Утверждённая чёрно-белая графика по фотографии этого места из той же авторской статьи.' : style === 'fantasy' ? 'Утверждённая фэнтези-иллюстрация по фотографии этого места из той же авторской статьи.' : 'Утверждённая акварель по фотографии этого места из той же авторской статьи.',
       navigation: {authorId: 1, pointId: row.pointId, sourceTravelId: article.id, mapUrl: record.qr.map, articleUrl: article.url, verifiedAt: article.verifiedOn, ...(quest ? {quest: {url: quest.url, id: quest.id, evidence: typeof quest.evidence === 'string' ? quest.evidence : JSON.stringify(quest.evidence)}} : {})}});
   }
   const countryCode = selection.country;
   const identity = BOOK_IDENTITY[style][country];
-  const coverPersonalization = await loadCoverPersonalizationSource();
+  const coverPersonalization = await loadCoverPersonalizationSource(identity.id);
   const edition = style === 'photo'
     ? await loadPhotoEdition({country, countryCode, profileId, stops, sources, sourcesRoot, collageRegistryPath, originalsIndexPath, assets, provenance})
     : style === 'fantasy' || style === 'graphic'
@@ -93,7 +115,8 @@ export async function loadSelectedBook(country, {sourcesRoot = 'data/travelBooks
   }
   // The photographic edition hashes both physical profiles at once so that pocket and A5 share one revision.
   // The watercolor seed keeps its historical shape (`font`) so the accepted revisions stay reproducible.
-  const revision = `${edition.revisionDate}.${style === 'photo' ? 'photo' : style === 'fantasy' ? 'fantasy' : style === 'graphic' ? 'graphic' : 'collage'}.` + sha256(JSON.stringify(style === 'photo' || style === 'fantasy' || style === 'graphic' ? {selection, source, ...edition.revisionSeed, fonts: edition.fontHashes} : {selection, source, provenance, cover: edition.cover.encodedSha256, font: edition.fontHashes})).slice(0, 12);
+  const editionCopy = await editionCopySha256(identity.id, coverPersonalization);
+  const revision = `${edition.revisionDate}.${style === 'photo' ? 'photo' : style === 'fantasy' ? 'fantasy' : style === 'graphic' ? 'graphic' : 'collage'}.` + sha256(JSON.stringify(style === 'photo' || style === 'fantasy' || style === 'graphic' ? {selection, source, ...edition.revisionSeed, fonts: edition.fontHashes, editionCopy} : {selection, source, provenance, cover: edition.cover.encodedSha256, font: edition.fontHashes, editionCopy})).slice(0, 12);
   const book = {schemaVersion: 1, status: 'editorial-draft', id: identity.id, slug: identity.slug, revision, country: countryCode, contentLocale: 'ru', title: identity.title, ...(style !== 'watercolor' ? {visualStyle: style} : {}), stops,
     miniTrips: [{id: 'selected-places', title: 'Самостоятельные поездки', stopIds: stops.map(stop => stop.id), note: 'Выбранные места не образуют один непрерывный маршрут.'}]};
   return {book, assets, cover: edition.cover.asset, coverPersonalization, fonts: edition.fonts, provenance: {style, selectionPath, recordsPath, ...edition.provenancePaths, assets: provenance, font: edition.fontProvenance, cover: edition.cover.provenance}, assetsHash: sha256(JSON.stringify(provenance))};

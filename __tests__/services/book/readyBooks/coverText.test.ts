@@ -5,7 +5,9 @@ import {webcrypto} from 'node:crypto';
 import ts from 'typescript';
 import {PDFArray,PDFDict,PDFDocument,PDFName,PDFRawStream,StandardFonts,decodePDFRawStream,rgb} from '@cantoo/pdf-lib';
 import {createPersonalizedCoverPdf,normalizeCoverText,type CoverTextRegion} from '@/services/book/readyBooks/coverText';
-import coverCopy from '@/data/travelBooks/cover-copy.json';
+import {editionCoverPresets} from './coverCopyFixture';
+
+const coverCopy=editionCoverPresets('belarus-memory');
 
 const fontBytes=new Uint8Array(readFileSync(path.resolve('data/travelBooks/assets/fonts/marckscript/MarckScript-Regular.ttf')));
 const cryptoDescriptor=Object.getOwnPropertyDescriptor(globalThis,'crypto');

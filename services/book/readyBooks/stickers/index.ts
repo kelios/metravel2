@@ -22,7 +22,7 @@ export function buildStickerSheets(book: Book, variant: StickerVariant): Sticker
   const memories: Sticker[] = Array.from({length: 30}, (_, index) => {
     const kinds = ['date', 'visit', 'mood', 'frame', 'visit'] as const;
     const kind = kinds[index % kinds.length];
-    const labels = {date: 'Дата', visit: index % 2 ? 'Был здесь' : 'Вернусь', mood: ['Радость', 'Спокойствие', 'Открытие', 'Приключение', 'Вдохновение', 'Восторг'][Math.floor(index / 5)], frame: 'Кадр дня'};
+    const labels = {date: 'Дата', visit: index % 2 ? 'Я здесь!' : 'Вернусь', mood: ['Радость', 'Спокойствие', 'Открытие', 'Приключение', 'Вдохновение', 'Восторг'][Math.floor(index / 5)], frame: 'Кадр дня'};
     return {id: `memory-${index + 1}`, label: labels[kind], kind, ...cell(index)};
   });
   const sheets = [{...common, page: 1, stickers: place}, {...common, page: 2, stickers: memories}];

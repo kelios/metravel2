@@ -243,7 +243,7 @@
     {
       "id": "mountains-pl-04",
       "title": "Морское Око",
-      "localName": "Schronisko PTTK Morskie Oko",
+      "localName": "Morskie Oko",
       "country": "PL",
       "thematic": {
         "sourcePointId": 13886,
@@ -318,7 +318,7 @@
     {
       "id": "mountains-pl-05",
       "title": "Долина Пяти Польских Ставов",
-      "localName": "Schronisko PTTK w Dolinie Pięciu Stawów Polskich",
+      "localName": "Dolina Pięciu Stawów Polskich",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14042,
@@ -393,7 +393,7 @@
     {
       "id": "mountains-pl-06",
       "title": "Смречиньский Став, долина Косцелиска",
-      "localName": "Smreczyński Staw w Dolinie Kościeliskiej",
+      "localName": "Smreczyński Staw",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14444,
@@ -468,7 +468,7 @@
     {
       "id": "mountains-pl-07",
       "title": "Пещеры Раптавицка и Мыльна",
-      "localName": "Jaskinia Raptawicka",
+      "localName": "Jaskinia Raptawicka i Jaskinia Mylna",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14442,
@@ -543,7 +543,7 @@
     {
       "id": "mountains-pl-08",
       "title": "Хохоловская долина (поляна с крокусами)",
-      "localName": "Ścieżka nad Reglami",
+      "localName": "Polana Chochołowska",
       "country": "PL",
       "thematic": {
         "sourcePointId": 15039,
@@ -693,7 +693,7 @@
     {
       "id": "mountains-pl-10",
       "title": "Три Короны",
-      "localName": "Three Crowns",
+      "localName": "Trzy Korony",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14411,
@@ -774,7 +774,7 @@
     {
       "id": "mountains-pl-11",
       "title": "Соколица",
-      "localName": "Sosna na Sokolicy",
+      "localName": "Sokolica",
       "country": "PL",
       "thematic": {
         "sourcePointId": 13720,
@@ -927,7 +927,7 @@
     {
       "id": "mountains-pl-13",
       "title": "Турбач",
-      "localName": "Konfederacji Tatrzańskiej",
+      "localName": "Turbacz",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14380,
@@ -1168,7 +1168,7 @@
     {
       "id": "mountains-pl-16",
       "title": "Любань, смотровая башня",
-      "localName": "Luban mountain lookout tower",
+      "localName": "Wieża widokowa na Lubaniu",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14190,
@@ -1246,7 +1246,7 @@
     {
       "id": "mountains-pl-17",
       "title": "Могелица, смотровая башня",
-      "localName": "Rezerwat Mogielica",
+      "localName": "Mogielica",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14347,
@@ -1399,7 +1399,7 @@
     {
       "id": "mountains-pl-19",
       "title": "Любонь Вельки",
-      "localName": "Schronisko PTTK na Luboniu Wielkim",
+      "localName": "Luboń Wielki",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14385,
@@ -1474,7 +1474,7 @@
     {
       "id": "mountains-pl-20",
       "title": "Любомир, обсерватория",
-      "localName": "Obserwatorium astronomiczne im. Tadeusza Banachiewicza",
+      "localName": "Obserwatorium astronomiczne na Lubomirze",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14395,
@@ -1624,7 +1624,7 @@
     {
       "id": "mountains-pl-22",
       "title": "Яворжина Крыницка",
-      "localName": "Schronisko PTTK Jaworzyna Krynicka",
+      "localName": "Jaworzyna Krynicka",
       "country": "PL",
       "thematic": {
         "sourcePointId": 16133,
@@ -1699,7 +1699,7 @@
     {
       "id": "mountains-pl-23",
       "title": "Рысянка (приют PTTK)",
-      "localName": "Schronisko PTTK na Rysiance",
+      "localName": "Rysianka",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14572,
@@ -1780,7 +1780,7 @@
     {
       "id": "mountains-pl-24",
       "title": "Перевал Пшегибек (к Вельке Рыцежовой)",
-      "localName": "Перевал Пшегибек (Przegibek)",
+      "localName": "Przełęcz Przegibek",
       "country": "PL",
       "thematic": {
         "sourcePointId": 15174,
@@ -1939,8 +1939,8 @@
     },
     {
       "id": "mountains-pl-26",
-      "title": "Маркове Шчавины, Музей горного туризма PTTK",
-      "localName": "Muzeum Turystyki Górskiej, Markowe Szczawiny",
+      "title": "Маркове-Щавины, Музей горного туризма ПТТК",
+      "localName": "Muzeum Turystyki Górskiej PTTK, Markowe Szczawiny",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14646,
@@ -2023,7 +2023,7 @@
     {
       "id": "mountains-pl-27",
       "title": "Велька Рача, смотровая башня",
-      "localName": "wieża widokowa na Wielkiej Raczy",
+      "localName": "Wieża widokowa na Wielkiej Raczy",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14415,
@@ -2101,7 +2101,7 @@
     {
       "id": "mountains-pl-28",
       "title": "Бяла Виселка — исток Вислы под Бараньей Гурой",
-      "localName": "Biała Wisełka — долина и каскад",
+      "localName": "Biała Wisełka",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14226,
@@ -2259,7 +2259,7 @@
     {
       "id": "mountains-pl-30",
       "title": "Шиндзельня, смотровая башня",
-      "localName": "Wieża widokowa przy Kolei Linowej Szyndzielnia",
+      "localName": "Wieża widokowa na Szyndzielni",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14230,
@@ -2334,7 +2334,7 @@
     {
       "id": "mountains-pl-31",
       "title": "Лесковец (922 м)",
-      "localName": "Leskowiec 922 m npm",
+      "localName": "Leskowiec",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14630,
@@ -2411,8 +2411,8 @@
     },
     {
       "id": "mountains-pl-32",
-      "title": "Тронка и хатка «Лимба»",
-      "localName": "Смотровая беседка на вершине Trzonka (около 727–729 м)",
+      "title": "Тшонка и хатка «Лимба»",
+      "localName": "Trzonka",
       "country": "PL",
       "thematic": {
         "sourcePointId": 16249,
@@ -2460,7 +2460,7 @@
         "route": {
           "start": "Wielka Puszcza",
           "via": [
-            "Tronka"
+            "Trzonka"
           ],
           "finish": "Район хатки Limba",
           "scope": "Подход в одну сторону",
@@ -2566,7 +2566,7 @@
     {
       "id": "mountains-pl-34",
       "title": "Снежные Котлы",
-      "localName": "Снежные Котлы (обсерватория)",
+      "localName": "Śnieżne Kotły",
       "country": "PL",
       "thematic": {
         "sourcePointId": 15652,
@@ -2886,7 +2886,7 @@
     {
       "id": "mountains-pl-38",
       "title": "Смотровая скала у Щитны (Столовые горы)",
-      "localName": "Skała Widokowa koło Szczytnej (Góry Stołowe)",
+      "localName": "Skała Widokowa koło Szczytnej",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14247,

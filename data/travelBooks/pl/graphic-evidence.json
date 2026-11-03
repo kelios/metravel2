@@ -21,8 +21,8 @@
     },
     {
       "path": "data/travelBooks/pl/source-records.json",
-      "sha256": "5351b1eb660042ef1a30e6e369afa43f69c065a68fc298f7060defe3143d7d90",
-      "bytes": 160907
+      "sha256": "20c50f5403f0ff1580f0ca326a862d8aac6a14879a0e5cd6ba28b89ee96f3adc",
+      "bytes": 165660
     },
     {
       "path": "data/travelBooks/pl/artwork-provenance.json",

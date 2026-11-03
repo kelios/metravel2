@@ -1,8 +1,19 @@
-import type {PublishedBook} from './publication';
+import type {CoverPreset, PublishedBook} from './publication';
 import {fetchVerifiedBookAsset, type VerifiedBookAsset} from './download';
 import {createPersonalizedCoverPdf, normalizeCoverText} from './coverText';
 
 export type CoverOutputMode = 'read' | 'print-shop' | 'home-rings';
+
+/**
+ * Inscriptions are printed in the book locale; the editor labels each with its
+ * approved translation for the UI locale (#2946). Historical presets have none
+ * and keep their Russian text with lang="ru".
+ */
+export function coverPresetLabel(preset: CoverPreset, locale: string): {text: string; lang: string} {
+  const translations: Partial<Record<string, string>> = 'translations' in preset ? preset.translations : {};
+  const translated = locale === 'ru' ? undefined : translations[locale];
+  return translated ? {text: translated, lang: locale} : {text: preset.text, lang: 'ru'};
+}
 type CoverBook = Pick<PublishedBook,'id'|'slug'|'revision'|'coverPersonalization'>;
 const assets = new Map<string, ArrayBuffer>();
 

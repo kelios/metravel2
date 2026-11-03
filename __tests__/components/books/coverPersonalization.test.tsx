@@ -8,6 +8,8 @@ import {dispatchWebWindow} from '@/utils/externalLinks';
 import {trackReadyBookEvent} from '@/utils/growthFunnelAnalytics';
 import {publishedFixture} from '../../services/book/readyBooks/publicationFixtures';
 import {coverClientFixture} from '../../services/book/readyBooks/coverClientFixtures';
+import {legacyCoverPresets} from '../../services/book/readyBooks/coverCopyFixture';
+import {coverPersonalizationSchema} from '@/services/book/readyBooks/publication';
 
 let mockBookFocused=true;
 jest.mock('expo-router',()=>({
@@ -21,6 +23,8 @@ jest.mock('expo-router',()=>({
 jest.mock('@expo/vector-icons/Feather',()=>({__esModule:true,default:()=>null}));
 jest.mock('@/components/ui/Button',()=>({__esModule:true,default:({label,onPress,disabled}:any)=><button disabled={disabled} onClick={onPress}>{label}</button>}));
 jest.mock('@/i18n/LocaleProvider',()=>({useTranslation:()=>({t:(key:string)=>key.replace(/^books:/,''),ready:true})}));
+let mockLocale='ru';
+jest.mock('@/i18n',()=>({...jest.requireActual('@/i18n'),getActiveLocale:()=>mockLocale}));
 jest.mock('@/services/book/readyBooks/coverPersonalization',()=>({...jest.requireActual('@/services/book/readyBooks/coverPersonalization'),createPersonalizedCoverBlob:jest.fn()}));
 jest.mock('@/utils/downloadUrlOnWeb',()=>({downloadBlobOnWeb:jest.fn()}));
 jest.mock('@/utils/externalLinks',()=>({dispatchWebWindow:jest.fn()}));
@@ -32,6 +36,7 @@ const originalFetch=global.fetch;
 let urlCounter=0;
 beforeEach(()=>{
   mockBookFocused=true;
+  mockLocale='ru';
   jest.clearAllMocks();
   jest.mocked(createPersonalizedCoverBlob).mockReset().mockResolvedValue(new Blob(['my-pdf'],{type:'application/pdf'}));
   jest.mocked(downloadBlobOnWeb).mockReturnValue(true);
@@ -61,7 +66,7 @@ it('leaves historical editions unchanged and never generates on mount or typing'
   expect(screen.queryByRole('heading')).toBeNull();
   const {book}=coverClientFixture();
   rerender(<Editor book={book} profileId="pocket-150x100"/>);
-  expect(screen.getAllByRole('radio')).toHaveLength(3);
+  expect(screen.getAllByRole('radio')).toHaveLength(book.coverPersonalization!.presets.length+1);
   expect((screen.getByRole('radio',{name:book.coverPersonalization!.presets[0].text}) as HTMLInputElement).checked).toBe(true);
   expect(screen.getAllByRole('option').map(option=>(option as HTMLOptionElement).value)).toEqual(['read','print-shop','home-rings']);
   expect(screen.getByText('coverNoSewn')).toBeTruthy();
@@ -208,4 +213,28 @@ it('keeps the draft during focused edits, profile changes and retries without re
   expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('Черновик остаётся на текущей странице');
   await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'retry'}));});
   expect(jest.mocked(createPersonalizedCoverBlob).mock.calls[1][0]).toMatchObject({text:'Черновик остаётся на текущей странице',profileId:'album-a5'});
+});
+it('labels the edition inscriptions in the UI language but prints the book-language text (#2946)',async()=>{
+  mockLocale='pl';
+  const {book}=coverClientFixture();
+  render(<Editor book={book} profileId="pocket-150x100"/>);
+  const presets=book.coverPersonalization!.presets as {id:string;text:string;translations:{pl:string}}[];
+  expect(screen.getAllByRole('radio')).toHaveLength(presets.length+1);
+  for(const preset of presets){
+    expect(screen.getByText(preset.translations.pl).getAttribute('lang')).toBe('pl');
+    expect(screen.getByText(preset.text).getAttribute('lang')).toBe('ru');
+  }
+  await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'coverGenerate'}));});
+  expect(createPersonalizedCoverBlob).toHaveBeenCalledWith(expect.objectContaining({book,text:presets[0].text}));
+});
+it('keeps the shared Russian presets of earlier revisions with lang="ru" in any UI language (#2946)',async()=>{
+  mockLocale='en';
+  const {book}=coverClientFixture();
+  book.coverPersonalization=coverPersonalizationSchema.parse({...book.coverPersonalization,...legacyCoverPresets});
+  render(<Editor book={book} profileId="pocket-150x100"/>);
+  expect(screen.getAllByRole('radio')).toHaveLength(legacyCoverPresets.presets.length+1);
+  for(const preset of legacyCoverPresets.presets)expect(screen.getAllByText(preset.text).map(node=>node.getAttribute('lang'))).toEqual(['ru']);
+  expect((screen.getByRole('radio',{name:legacyCoverPresets.presets[0].text}) as HTMLInputElement).checked).toBe(true);
+  await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'coverGenerate'}));});
+  expect(createPersonalizedCoverBlob).toHaveBeenCalledWith(expect.objectContaining({book,text:legacyCoverPresets.presets[0].text}));
 });

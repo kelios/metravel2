@@ -11,7 +11,7 @@
     {
       "id": "castles-pl-01",
       "title": "Замок Морско",
-      "localName": "Zamek Morsko",
+      "localName": "Zamek Morsko (Bąkowiec)",
       "country": "PL",
       "thematic": {
         "sourcePointId": 12626,
@@ -60,8 +60,8 @@
     },
     {
       "id": "castles-pl-02",
-      "title": "Руины замка Смолень (резерват)",
-      "localName": "Rezerwat Smoleń",
+      "title": "Руины замка Смолень",
+      "localName": "Ruiny zamku Smoleń",
       "country": "PL",
       "thematic": {
         "sourcePointId": 12523,
@@ -111,7 +111,7 @@
     {
       "id": "castles-pl-03",
       "title": "Руины замка в Крупе",
-      "localName": "Krupe",
+      "localName": "Zamek w Krupem",
       "country": "PL",
       "thematic": {
         "sourcePointId": 15995,
@@ -161,7 +161,7 @@
     {
       "id": "castles-pl-04",
       "title": "Замок Липовец",
-      "localName": "Rezerwat Lipowiec",
+      "localName": "Zamek Lipowiec",
       "country": "PL",
       "thematic": {
         "sourcePointId": 13117,
@@ -211,7 +211,7 @@
     {
       "id": "castles-pl-05",
       "title": "Замок в Бендзине",
-      "localName": "Zamek Będzin",
+      "localName": "Zamek w Będzinie",
       "country": "PL",
       "thematic": {
         "sourcePointId": 13334,
@@ -261,7 +261,7 @@
     {
       "id": "castles-pl-06",
       "title": "Жупный замок, Величка",
-      "localName": "Zamek Żupny",
+      "localName": "Zamek Żupny w Wieliczce",
       "country": "PL",
       "thematic": {
         "sourcePointId": 13471,
@@ -311,7 +311,7 @@
     {
       "id": "castles-pl-07",
       "title": "Королевский замок в Хенцинах",
-      "localName": "Zamek w Chęcinach",
+      "localName": "Zamek Królewski w Chęcinach",
       "country": "PL",
       "thematic": {
         "sourcePointId": 13516,
@@ -661,7 +661,7 @@
     {
       "id": "castles-pl-14",
       "title": "Королевский замок в Сандомире",
-      "localName": "Muzeum Okręgowe w Sandomierzu",
+      "localName": "Zamek Królewski w Sandomierzu",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14098,
@@ -789,7 +789,7 @@
           "widthPx": 1080,
           "heightPx": 1080,
           "depiction": "target",
-          "caption": "Замок Швины / Zamek Świny — Польша.",
+          "caption": "Замок Свины / Zamek Świny — Польша.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
@@ -810,7 +810,7 @@
     },
     {
       "id": "castles-pl-17",
-      "title": "Замок в Роздоке",
+      "title": "Замок в Розтоке",
       "localName": "Zamek w Roztoce",
       "country": "PL",
       "thematic": {
@@ -1011,7 +1011,7 @@
     {
       "id": "castles-pl-21",
       "title": "Замок Лесьна Скала",
-      "localName": "Leśna Skała",
+      "localName": "Zamek Leśna Skała",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14246,
@@ -1089,7 +1089,7 @@
           "widthPx": 800,
           "heightPx": 450,
           "depiction": "target",
-          "caption": "Крепость Сребна-Гура на горе среди лесов, вид с дрона.",
+          "caption": "Крепость Сребрна-Гура на горе среди лесов, вид с дрона.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
@@ -1110,8 +1110,8 @@
     },
     {
       "id": "castles-pl-23",
-      "title": "Замок Каменец, Одрживонь",
-      "localName": "Zamek Kamieniec",
+      "title": "Замок Каменец, Одрыконь",
+      "localName": "Zamek Kamieniec w Odrzykoniu",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14365,
@@ -1261,7 +1261,7 @@
     {
       "id": "castles-pl-26",
       "title": "Замок Гродно, Загуже-Слёнске",
-      "localName": "Zamek Grodno",
+      "localName": "Zamek Grodno, Zagórze Śląskie",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14639,
@@ -1311,7 +1311,7 @@
     {
       "id": "castles-pl-27",
       "title": "Руины замка в Рытро",
-      "localName": "Ruiny Zamku w Rytrze",
+      "localName": "Ruiny zamku w Rytrze",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14699,
@@ -1361,7 +1361,7 @@
     {
       "id": "castles-pl-28",
       "title": "Руины замка Волек",
-      "localName": "Zamek Wołek",
+      "localName": "Ruiny zamku Wołek",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14348,
@@ -1410,8 +1410,8 @@
     },
     {
       "id": "castles-pl-29",
-      "title": "Руины замка в Казимеже-Дольном (точка «Zamkowa»)",
-      "localName": "Zamkowa",
+      "title": "Руины замка в Казимеже-Дольном",
+      "localName": "Ruiny zamku w Kazimierzu Dolnym",
       "country": "PL",
       "thematic": {
         "sourcePointId": 14533,
@@ -1460,8 +1460,8 @@
     },
     {
       "id": "castles-pl-30",
-      "title": "Люблинский замок (точка «Zamkowa 9»)",
-      "localName": "Zamkowa 9",
+      "title": "Люблинский замок",
+      "localName": "Zamek Lubelski",
       "country": "PL",
       "thematic": {
         "sourcePointId": 15997,

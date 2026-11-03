@@ -2,6 +2,7 @@ import {escapeHtml as e} from '../../../pdf-export/utils/htmlUtils';
 import {embeddedImage, type ReadyBookRenderInput} from './index';
 import type {CountryQuestBook} from '../../../../types/questBook';
 import {bookStyleCopy} from './styleCopy';
+import {bookFrameCopy} from './frameCopy';
 import {countRu, PLACES, QUESTS} from './counts';
 
 /** CLEAN templates: the shared PDF text engine adds the chosen quote afterwards. */
@@ -24,6 +25,7 @@ export function renderCoverPage(input: Pick<ReadyBookRenderInput,'profile'> & {c
     return content(`<div class="cover-illustration"><img class="cover-native-art" src="${embeddedImage(cover.dataUri)}" alt="${e(copy.coverAlt)}" style="${css}"></div><div class="cover-country" data-check-overflow><h1>${e(country)}</h1>${text(countLabel)}</div><div class="cover-quote-space" aria-hidden="true"></div>`);
   }
   if (number === 2) return flow(`<h2>Эта книга принадлежит</h2><div class="owner-space"></div>${text('Если найдёте, пожалуйста, свяжитесь со мной:')}`);
-  if (number === 3) return flow(`<h2>Сохраните воспоминание</h2>${text('Оставьте свой кадр, билет, небольшой рисунок или несколько слов о поездке.')} ${text('Не закрывайте полосу крепления. Печатайте книгу в масштабе 100%. Для домашней печати используйте готовую раскладку A4.')}`);
-  return flow(`<h2>Путешествие продолжается</h2>${text('MeTravel · metravel.by')}`);
+  const frame = bookFrameCopy(book.id);
+  if (number === 3) return flow(`<h2>${e(frame.endpaper.heading)}</h2>${text(frame.endpaper.text)} ${text('Не закрывайте полосу крепления. Печатайте книгу в масштабе 100%. Для домашней печати используйте готовую раскладку A4.')}`);
+  return flow(`<h2>${e(frame.backCover.heading)}</h2>${text(frame.backCover.line)}`);
 }

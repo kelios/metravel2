@@ -66,7 +66,9 @@ def inspect(pdf_path, book, component, profile_id, purpose, plan=None, page_map=
     default_cover_text = None
     if component == 'cover' and purpose != 'control':
         copy = json.loads((Path(__file__).resolve().parents[2] / 'data/travelBooks/cover-copy.json').read_text())
-        default = next(item['text'] for item in copy['presets'] if item['id'] == copy['defaultPresetId'])
+        # Each edition prints its own default inscription in the book locale (#2946).
+        edition = copy['editions'][book['id']]
+        default = next(item['text']['ru'] for item in edition['presets'] if item['id'] == edition['defaultPresetId'])
         default_cover_text = re.sub(r'\s+', '', default) in re.sub(r'\s+', '', text)
     return {
         'sha256': hashlib.sha256(contents).hexdigest(), 'bytes': len(contents),

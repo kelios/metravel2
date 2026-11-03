@@ -7,5 +7,5 @@ import BookContents from './BookContents.web';
 export default function ReadyBookContents({book}:{book:ReadyBookSummary}){
   const edition=contents.books.find(item=>item.id===book.id&&item.revision===book.revision&&item.metadataSha256===book.metadata.sha256);
   if(!edition)throw new Error('BOOK_CONTENTS_IDENTITY');
-  return <BookContents stops={edition.stops} contentLocale={book.contentLocale}/>;
+  return <BookContents stops={edition.stops} contentLocale={book.contentLocale} kind={book.kind}/>;
 }

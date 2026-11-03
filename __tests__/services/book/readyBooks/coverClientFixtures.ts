@@ -3,8 +3,8 @@ import {readFileSync} from 'node:fs';
 import {coverPersonalizationSchema} from '@/services/book/readyBooks/publication';
 import {coverTextGeometry,imposedCoverTextGeometry} from '@/services/book/readyBooks/render/coverGeometry';
 import {buildImpositionPlan} from '@/services/book/readyBooks/imposition';
-import coverCopy from '@/data/travelBooks/cover-copy.json';
 import {publishedFixture} from './publicationFixtures';
+import {editionCoverPresets} from './coverCopyFixture';
 
 // Isolated client-contract fixtures. Fake template bytes never claim print readiness;
 // the separate core suite parses real PDFs with the same full Marck source font.
@@ -23,6 +23,6 @@ export function coverClientFixture() {
     const geometry=mode==='home-rings'?imposedCoverTextGeometry(prepared,buildImpositionPlan({profileId:profile.id,mode:'home-rings',component:'cover',pageCount:4})):coverTextGeometry(prepared);
     return {...resource(`${profile.id}/template-${mode}-cover.pdf`,new Uint8Array(Buffer.from('%PDF-isolated-client-fixture-'+profile.id+'-'+mode)),'application/pdf'),profileId:profile.id,mode,pageCount:mode==='home-rings'?2:4,...geometry};
   }));
-  book.coverPersonalization=coverPersonalizationSchema.parse({...coverCopy,font:{...font,license},templates});
+  book.coverPersonalization=coverPersonalizationSchema.parse({...editionCoverPresets(book.id),font:{...font,license},templates});
   return {book,contents};
 }

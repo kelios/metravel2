@@ -11,7 +11,7 @@
       "placeCount": 31,
       "evidence": {
         "path": "data/travelBooks/by/graphic-evidence.json",
-        "sha256": "9f410d1cd4220c05a9555e9e85ab35f98a65c9208d4b0a4056db88fd428c7d5b",
+        "sha256": "ea425754453149e6ab7e7c3ec1f86ea331a4aacfa2d35303196addb604e3bfd1",
         "bytes": 230806
       }
     },
@@ -20,7 +20,7 @@
       "placeCount": 30,
       "evidence": {
         "path": "data/travelBooks/pl/graphic-evidence.json",
-        "sha256": "75431b329469309d94ec53b01e4b9d6e2e866e7db533b0a4c11e50b07b93f7e3",
+        "sha256": "33251adf86d4a31e5beb5180846bcfc0f5f80bfc19feb0e41acd6a3887e20bad",
         "bytes": 213051
       }
     }

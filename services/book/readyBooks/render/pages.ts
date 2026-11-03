@@ -5,6 +5,7 @@ import {buildReadyBookPagePlan} from '../composition';
 import {embeddedImage, type ReadyBookRenderInput} from './index';
 import {renderReadyBookEndMap} from './endMap';
 import {bookStyleCopy} from './styleCopy';
+import {bookFrameCopy} from './frameCopy';
 import {renderThematicFacts, thematicPhotoPlacement} from './thematic';
 import {countRu, editionLabel, editionMonth, PLACES} from './counts';
 import edition from '../../../../data/travelBooks/edition.json';
@@ -32,13 +33,16 @@ export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage
   const styleCopy = bookStyleCopy(book.visualStyle);
   const thematic = 'sourceContract' in book && book.sourceContract === 'thematic-v1';
   const copy = thematic ? {...styleCopy,
-    usage: 'У каждого места три страницы: фотография с подписью и рассказом, свободное место для вашего снимка и чистая страница для записей. Маршруты служат справкой; перед выходом проверьте официальные сообщения.',
     creditsSource: 'Использованы фотографии из опубликованных путешествий автора MeTravel и предоставленных владельцем архивов. Контекстные виды подписаны отдельно.',
   } : styleCopy;
+  // Edition voice lives in data (#2947); only service lines and imprint stay in code.
+  const frame = bookFrameCopy(book.id);
   const {kind} = entry;
   if (stop) {
     if (kind === 'destination') {
-      const nativeName = (stop.localName.trim().match(/\(([^()]+)\)$/)?.[1] ?? stop.localName).trim();
+      // A Cyrillic label may carry the native name in parentheses; a fully Latin local name is printed whole (#2947).
+      const localName = stop.localName.trim();
+      const nativeName = (/\p{Script=Cyrillic}/u.test(localName) ? localName.match(/\(([^()]+)\)$/)?.[1] ?? localName : localName).trim();
       const subtitle = /\p{Script=Latin}/u.test(nativeName) && !/\p{Script=Cyrillic}/u.test(nativeName) && !stop.title.toLocaleLowerCase('pl').includes(nativeName.toLocaleLowerCase('pl')) ? nativeName : '';
       const asset = input.assets[stop.id];
       const image = asset.dataUri;
@@ -60,9 +64,9 @@ export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage
     return content('', kind === 'photo-memory' ? 'personal-photo-space' : 'blank-diary-space');
   }
   if (kind === 'padding' || kind === 'extra-memory') return content('', 'blank-diary-space');
-  if (kind === 'title') return flow(`<h1>${e(country)}</h1>${thematic ? '' : text(book.title, 'subtitle')}${text(`${countRu(book.stops.length, PLACES)} · фотодневник`)}${text('Для самостоятельных поездок, любимых кадров и своих историй.')}<p class="small">Русский язык · ${profile.widthMm}×${profile.heightMm} мм · ${editionLabel(edition.editionDate)}</p>`);
-  if (kind === 'preparation') return flow(`<h2>Перед поездкой</h2>${text('Выберите место и откройте статью автора по QR. Точки в книге описывают разные самостоятельные поездки.')} ${text(thematic ? 'Проверьте официальные сообщения и погоду перед выходом. На карте отмечена физическая цель; фотография и исходная точка статьи могут показывать её окрестности. Подпись объясняет различие.' : 'Проверьте актуальные условия посещения. Координаты показывают место из авторского маршрута; отдельный вход может находиться в стороне.')} ${text('Сохраните свободную полосу у переплёта для колец или пружины.', 'small')}`);
-  if (kind === 'usage') return flow(`<h2>Место для вашей истории</h2>${text(copy.usage)} ${text(pocket ? 'Сюда помещается фотография до 100×70 мм.' : 'Свободная область вмещает вертикальную фотографию до 102×152 мм. Горизонтальный кадр можно повернуть.')} ${text('«Место на карте» открывает выбранную точку, «Статья на сайте» — опубликованное путешествие автора. «Квест» появляется только при проверенной связи с этим местом.', 'small')}`);
+  if (kind === 'title') return flow(`<h1>${e(country)}</h1>${thematic ? '' : text(book.title, 'subtitle')}${text(`${countRu(book.stops.length, PLACES)} · фотодневник`)}${text(frame.subtitle)}${text(frame.epigraph, 'epigraph')}<p class="small">Русский язык · ${profile.widthMm}×${profile.heightMm} мм · ${editionLabel(edition.editionDate)}</p>`);
+  if (kind === 'preparation') return flow(`<h2>${e(frame.intro.heading)}</h2>${text(frame.intro.text)} ${text(thematic ? 'Проверьте официальные сообщения и погоду перед выходом. На карте отмечена физическая цель; фотография и исходная точка статьи могут показывать её окрестности. Подпись объясняет различие.' : 'Проверьте актуальные условия посещения. Координаты показывают место из авторского маршрута; отдельный вход может находиться в стороне.')} ${text('Сохраните свободную полосу у переплёта для колец или пружины.', 'small')}`);
+  if (kind === 'usage') return flow(`<h2>${e(frame.usage.heading)}</h2>${text(frame.usage.text)} ${text(pocket ? 'Сюда помещается фотография до 100×70 мм.' : 'Свободная область вмещает вертикальную фотографию до 102×152 мм. Горизонтальный кадр можно повернуть.')} ${text('«Место на карте» открывает выбранную точку, «Статья на сайте» — опубликованное путешествие автора. «Квест» появляется только при проверенной связи с этим местом.', 'small')}`);
   const selected = new Set(entry.stopIds);
   if (kind === 'contents') {
     const plan = buildReadyBookPagePlan(book);
@@ -73,6 +77,6 @@ export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage
     const destinations = new Map(buildReadyBookPagePlan(book).filter(page => page.kind === 'destination').map(page => [page.stopId, page.number]));
     return flow(`<h2>Места на карте</h2>${text('Номер · место · страница', 'small')}<ol class="contents-list">${book.stops.filter(item => selected.has(item.id)).map(item => `<li><span>${graphicCheckbox} ${book.stops.findIndex(stop => stop.id === item.id) + 1}. ${e(item.title)}</span><span>${destinations.get(item.id)}</span></li>`).join('')}</ol>`);
   }
-  return flow(`<h2>Об этой книге</h2>${text(`MeTravel · ${book.title} · издание: ${editionMonth(edition.editionDate)}.`)}${text(copy.creditsSource)} ${text(copy.creditsFont)}`);
+  return flow(`<h2>${e(frame.outro.heading)}</h2>${text(frame.outro.text)}${text(`MeTravel · ${book.title} · издание: ${editionMonth(edition.editionDate)}.`)}${text(copy.creditsSource)} ${text(copy.creditsFont)}`);
 }
 

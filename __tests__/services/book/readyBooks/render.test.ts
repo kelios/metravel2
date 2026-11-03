@@ -1,4 +1,5 @@
 import {buildReadyBookHtml, embeddedImage, type ReadyBookRenderInput} from '../../../../services/book/readyBooks/render';
+import {bookFrameCopy} from '../../../../services/book/readyBooks/render/frameCopy';
 import {makeEditorialDraft} from './fixtures';
 import {buildReadyBookPagePlan} from '../../../../services/book/readyBooks/composition';
 import {buildCountryQuestBookHtml} from '../../../../services/book/readyBooks/questBooks/volume';
@@ -99,6 +100,7 @@ describe('approved photo-diary physical rendering',()=>{
   });
   it.each(['pocket-150x100','album-a5'] as const)('renders the photographic edition with its own type and wording on %s',profile=>{
     const source=input(profile,31);
+    source.book.id='belarus-photo-memory';
     source.book.visualStyle='photo';
     source.fonts.heading='data:font/ttf;base64,aGVhZGluZw==';
     const result=buildReadyBookHtml(source);
@@ -108,7 +110,7 @@ describe('approved photo-diary physical rendering',()=>{
     expect(result.bodyPages[first]).not.toContain('Акварель');
     expect(result.bodyPages[first]).toContain('Место на карте');
     expect(result.coverPages[0]).toContain('alt="Фотографии места из книги"');
-    expect(result.bodyPages[plan.find(page=>page.kind==='usage')!.number-1]).toContain('фотографии автора и короткий рассказ');
+    expect(result.bodyPages[plan.find(page=>page.kind==='usage')!.number-1]).toContain(bookFrameCopy('belarus-photo-memory').usage.text);
     const credits=result.bodyPages[plan.find(page=>page.kind==='credits')!.number-1];
     expect(credits).toContain('Lora — The Lora Project Authors, SIL Open Font License 1.1');
     expect(credits).toContain('Фотографии сделаны автором');
@@ -127,8 +129,8 @@ describe('approved photo-diary physical rendering',()=>{
     expect(result.stylesCss).toContain('h1,h2{font-family:BookHand,cursive');
     const plan=buildReadyBookPagePlan(makeEditorialDraft(31));
     expect(result.bodyPages[plan.find(page=>page.kind==='credits')!.number-1]).toContain('Marck Script — Denis Masharov');
-    expect(result.stylesCss).toContain('left:18mm;right:18mm;top:138mm;height:28mm;text-align:center;font-size:12.5pt;line-height:1.2}');
-    expect(buildReadyBookHtml(input('pocket-150x100',31)).stylesCss).toContain('left:82mm;right:15mm;top:23mm;height:38mm;text-align:left;font-size:10pt;line-height:1.2}');
+    expect(result.stylesCss).toContain('left:18mm;right:18mm;top:138mm;height:32mm;text-align:center;font-size:12.5pt;line-height:1.2}');
+    expect(buildReadyBookHtml(input('pocket-150x100',31)).stylesCss).toContain('left:82mm;right:15mm;top:23mm;height:42.5mm;text-align:left;font-size:10pt;line-height:1.2}');
     const invalid=input('album-a5',31);invalid.fonts.heading='https://example.org/heading.ttf';
     expect(()=>buildReadyBookHtml(invalid)).toThrow('Embedded TTF');
   });

@@ -11,7 +11,7 @@ import contents from '@/data/travelBooks/contents.json';
 
 jest.mock('@/components/books/BooksFrame',()=>({BooksFrame:({children,title}:any)=><main><h1>{title}</h1>{children}</main>}));
 jest.mock('../../../components/books/preview/ReadyBookPreview',()=>({__esModule:true,default:()=>null}),{virtual:true});
-jest.mock('expo-router',()=>({Link:({children,href}:any)=><a href={href}>{children}</a>,useFocusEffect:()=>{}}));
+jest.mock('expo-router',()=>({Link:({children,href}:any)=><a href={href}>{children}</a>,useRouter:()=>({push:jest.fn()}),useFocusEffect:()=>{}}));
 jest.mock('@/services/book/readyBooks/bookMetadata',()=>({loadReadyBookMetadata:jest.fn()}));
 
 function streamHtml(element:React.ReactElement){
@@ -30,10 +30,12 @@ it('streams the exact complete selected-edition contents before effects or the m
     const published=publication.books.find(book=>book.id===summary.id)!;
     const html=await streamHtml(<ReadyBookDetails slug={summary.slug}/>);
     const host=document.createElement('div');host.innerHTML=html;
-    const rows=host.querySelectorAll('details ol li');
+    // «Маршрут книги» shows eight places, but the first HTML carries all of them (#2948).
+    const rows=host.querySelectorAll('.rbe-route li');
     expect(rows).toHaveLength(published.stops.length);
-    expect(Array.from(rows).map(row=>row.textContent?.split(' · ')[0])).toEqual(published.stops.map(stop=>stop.title));
-    expect(host.querySelector('ol')?.lang).toBe('ru');
+    expect(Array.from(rows).map(row=>row.querySelector('.rbe-route-t')?.textContent)).toEqual(published.stops.map(stop=>stop.title));
+    expect(Array.from(rows).every(row=>row.querySelector('.rbe-route-t')?.getAttribute('lang')==='ru')).toBe(true);
+    expect(Array.from(rows).filter(row=>!row.hasAttribute('hidden'))).toHaveLength(Math.min(8,published.stops.length));
     expect(html).toContain('application/ld+json');
     expect(loadReadyBookMetadata).not.toHaveBeenCalled();
   }

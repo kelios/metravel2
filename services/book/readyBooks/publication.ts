@@ -15,14 +15,24 @@ const identifier=z.string().regex(/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/);
 const immutableCoverUri=assetUri.refine(uri=>uri.startsWith('https://metravel.by/travel-books/')&&!/[%\\?#\s]/.test(uri)&&uri.slice('https://metravel.by/travel-books/'.length).split('/').every(part=>part&&part!=='.'&&part!=='..'),'Immutable same-origin cover asset required');
 const coverTextRegionSchema=z.strictObject({pageIndex:z.literal(0),xMm:z.number().nonnegative(),yMm:z.number().nonnegative(),widthMm:z.number().positive(),heightMm:z.number().positive(),maxFontSizePt:z.number().positive(),minFontSizePt:z.number().positive(),lineHeight:z.number().min(1).max(2),colorHex:z.string().regex(/^#[a-f0-9]{6}$/)});
 const coverResource={uri:immutableCoverUri,bytes:z.number().int().positive(),sha256};
-export const coverPersonalizationSchema=z.strictObject({
-  schemaVersion:z.literal(1),maxCharacters:z.literal(120),defaultPresetId:z.literal('home-memories'),
-  presets:z.array(z.strictObject({id:z.enum(['home-memories','world-memories']),text:z.string().min(1).refine(value=>value===value.normalize('NFC').trim()&&Array.from(value).length<=120)})).length(2),
+const coverText=z.string().min(1).refine(value=>value===value.normalize('NFC').trim()&&Array.from(value).length<=120);
+// Revisions up to 02.11.2026 share two fixed inscriptions; they stay readable as published (#2946).
+const legacyCoverPresets={schemaVersion:z.literal(1),maxCharacters:z.literal(120),defaultPresetId:z.literal('home-memories'),
+  presets:z.array(z.strictObject({id:z.enum(['home-memories','world-memories']),text:coverText})).length(2)};
+// Each later edition carries its own 2–5 inscriptions: `text` is printed in the book locale, translations label the UI.
+const editionCoverPresets={schemaVersion:z.literal(2),maxCharacters:z.literal(120),defaultPresetId:identifier,
+  presets:z.array(z.strictObject({id:identifier,text:coverText,translations:z.strictObject({be:coverText,uk:coverText,pl:coverText,en:coverText})})).min(2).max(5)};
+const coverPersonalizationResources={
   font:z.strictObject({...coverResource,bytes:z.number().int().positive().max(2*1024*1024),mime:z.literal('font/ttf'),license:z.strictObject({...coverResource,bytes:z.number().int().positive().max(64*1024),mime:z.literal('text/plain')})}),
   templates:z.array(z.strictObject({...coverResource,bytes:z.number().int().positive().max(20*1024*1024),mime:z.literal('application/pdf'),profileId,mode:z.enum(['read','print-shop','home-rings']),pageCount:z.number().int().positive(),widthMm:z.number().positive(),heightMm:z.number().positive(),textRegion:coverTextRegionSchema})).length(6),
-}).superRefine((descriptor,ctx)=>{
+};
+export const coverPersonalizationSchema=z.union([
+  z.strictObject({...legacyCoverPresets,...coverPersonalizationResources}),
+  z.strictObject({...editionCoverPresets,...coverPersonalizationResources}),
+]).superRefine((descriptor,ctx)=>{
   const fail=(message:string)=>ctx.addIssue({code:'custom',message});
-  if(new Set(descriptor.presets.map(p=>p.id)).size!==2)fail('Both distinct approved cover presets are required');
+  if(new Set(descriptor.presets.map(p=>p.id)).size!==descriptor.presets.length)fail('Cover presets must be distinct');
+  if(!descriptor.presets.some(p=>p.id===descriptor.defaultPresetId))fail('The default cover preset must belong to the edition');
   if(!descriptor.font.uri.endsWith('.ttf')||!descriptor.font.license.uri.endsWith('.txt'))fail('Full TTF font and plain-text license required');
   if(new Set(descriptor.templates.map(t=>t.profileId+':'+t.mode)).size!==6)fail('Exactly six distinct cover templates required');
   for(const template of descriptor.templates){
@@ -205,6 +215,7 @@ export type PublishedBook=z.infer<typeof publishedBookSchema>;
 export type PublishedArtifact=PublishedBook['artifacts'][number];
 export type BookMetadataDescriptor=z.infer<typeof bookMetadataSchema>;
 export type CoverPersonalization=z.infer<typeof coverPersonalizationSchema>;
+export type CoverPreset=CoverPersonalization['presets'][number];
 export type CoverTemplate=CoverPersonalization['templates'][number];
 export type CoverTextRegion=CoverTemplate['textRegion'];
 

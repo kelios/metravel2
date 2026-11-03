@@ -1,4 +1,5 @@
 import React, {useEffect,useState} from 'react';
+import Feather from '@expo/vector-icons/Feather';
 import Button from '@/components/ui/Button';
 import Chip from '@/components/ui/Chip';
 import {formatList,formatNumber,getActiveLocale} from '@/i18n';
@@ -30,7 +31,7 @@ function capabilityLines(provider:PrintProvider,t:ProviderCopy){
   ].filter((line):line is string=>Boolean(line));
 }
 
-export function PrintProvidersView({directory,profileId,bodyPageCount,initialCountry='BY',onProviderOpened}: Props & {directory:PrintDirectory;initialCountry?:PrintCountry;onProviderOpened?:(providerId:string)=>void}) {
+export function PrintProvidersView({directory,profileId,bodyPageCount,initialCountry='BY',onProviderOpened,titleHidden=false}: Props & {directory:PrintDirectory;initialCountry?:PrintCountry;onProviderOpened?:(providerId:string)=>void;titleHidden?:boolean}) {
   const t=useProviderCopy();
   const [country,setCountry]=useState<PrintCountry>(initialCountry);
   const cities=listPrintCities(country,directory);
@@ -45,7 +46,7 @@ export function PrintProvidersView({directory,profileId,bodyPageCount,initialCou
   };
   const changeCountry=(next:PrintCountry)=>{setCountry(next);setCity(listPrintCities(next,directory)[0]);};
   return <section aria-label={t('providerTitle')}>
-    <h2>{t('providerTitle')}</h2><p>{t('providerIntro')}</p>
+    {!titleHidden&&<h2>{t('providerTitle')}</h2>}<p>{t('providerIntro')}</p>
     <p>{t('providerFormat',{format:t(profileId==='album-a5'?'providerAlbum':'providerPocket'),pages:formatNumber(bodyPageCount)})}</p>
     <p>{t('providerPreparation')}</p>
     <div role="group" aria-label={t('providerCountry')}>{COUNTRIES.map(id=><Chip key={id} label={t(id==='BY'?'providerBY':'providerPL')} selected={country===id} onPress={()=>changeCountry(id)}/>)}</div>
@@ -66,7 +67,18 @@ export function PrintProvidersView({directory,profileId,bodyPageCount,initialCou
   </section>;
 }
 
-export default function PrintProviders({book,...props}:Props & {book:PublishedBook}){
+/** «Копицентры и типографии: 6 городов Беларуси и 10 городов Польши» from the current directory. */
+export function providerSummary(directory:PrintDirectory,t:ProviderCopy){
+  const count=(country:PrintCountry)=>listPrintCities(country,directory).length;
+  const by=count('BY'),pl=count('PL');
+  return t('providerSummary',{by:t('providerCitiesBY',{count:by,value:formatNumber(by)}),pl:t('providerCitiesPL',{count:pl,value:formatNumber(pl)})});
+}
+
+/**
+ * `embedded` (edition page, #2948) puts the whole block inside a native `<details>` whose
+ * summary names the coverage; the directory still loads once, on mount.
+ */
+export default function PrintProviders({book,embedded=false,...props}:Props & {book:PublishedBook;embedded?:boolean}){
   const t=useProviderCopy();
   const [attempt,setAttempt]=useState(0);
   const [state,setState]=useState<{directory?:PrintDirectory;failed?:boolean}>({});
@@ -77,9 +89,19 @@ export default function PrintProviders({book,...props}:Props & {book:PublishedBo
       .catch(()=>{if(active)setState({failed:true});});
     return()=>{active=false;};
   },[attempt]);
-  if(state.directory)return <PrintProvidersView key={book.country} {...props} initialCountry={book.country} directory={state.directory} onProviderOpened={providerId=>trackReadyBookEvent('ReadyBookProviderOpened',book,getActiveLocale(),{profileId:props.profileId,providerId})}/>;
-  return <section aria-label={t('providerTitle')}>
-    <h2>{t('providerTitle')}</h2>
-    {state.failed?<><p role="alert">{t('providerLoadError')}</p><Button label={t('retry')} onPress={()=>setAttempt(value=>value+1)}/></>:<p role="status">{t('loadingPage')}</p>}
-  </section>;
+  const view=state.directory
+    ?<PrintProvidersView key={book.country} {...props} titleHidden={embedded} initialCountry={book.country} directory={state.directory} onProviderOpened={providerId=>trackReadyBookEvent('ReadyBookProviderOpened',book,getActiveLocale(),{profileId:props.profileId,providerId})}/>
+    :<section aria-label={t('providerTitle')}>
+      {!embedded&&<h2>{t('providerTitle')}</h2>}
+      {state.failed?<><p role="alert">{t('providerLoadError')}</p><Button label={t('retry')} onPress={()=>setAttempt(value=>value+1)}/></>:<p role="status">{t('loadingPage')}</p>}
+    </section>;
+  if(!embedded)return view;
+  return <details className="rbe-acc rbe-providers">
+    <summary>
+      <span className="rbe-acc-ic"><span className="rbe-i" aria-hidden="true"><Feather name="map-pin" size={20} color="currentColor"/></span></span>
+      <span className="rbe-acc-txt"><span className="rbe-acc-title">{t('providerTitle')}</span>{state.directory&&<span className="rbe-acc-hint">{providerSummary(state.directory,t)}</span>}</span>
+      <span className="rbe-acc-chev"><span className="rbe-i" aria-hidden="true"><Feather name="chevron-down" size={20} color="currentColor"/></span></span>
+    </summary>
+    <div className="rbe-acc-inner">{view}</div>
+  </details>;
 }

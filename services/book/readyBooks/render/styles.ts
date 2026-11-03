@@ -3,7 +3,8 @@ import type {BookVisualStyle} from '../../../../data/travelBooks/schema/editoria
 
 /** Static print typography uses a measured story band; prose is never truncated or shrunk at runtime. */
 type StoryMetrics = {albumTopMm: number; albumHeightMm: number; albumSideMm: number; albumPt: number; albumLineHeight: number; pocketTopMm: number; pocketHeightMm: number; pocketLeftMm: number; pocketPt: number; pocketLineHeight: number};
-const HANDWRITTEN_STORY: StoryMetrics = {albumTopMm: 138, albumHeightMm: 28, albumSideMm: 18, albumPt: 12.5, albumLineHeight: 1.2, pocketTopMm: 23, pocketHeightMm: 38, pocketLeftMm: 82, pocketPt: 10, pocketLineHeight: 1.2};
+// Bands hold the approved 160–280 character copy (#2947): one more line than the 2026-10 copy, same type and QR clearance.
+const HANDWRITTEN_STORY: StoryMetrics = {albumTopMm: 138, albumHeightMm: 32, albumSideMm: 18, albumPt: 12.5, albumLineHeight: 1.2, pocketTopMm: 23, pocketHeightMm: 42.5, pocketLeftMm: 82, pocketPt: 10, pocketLineHeight: 1.2};
 const TYPESET_STORY: StoryMetrics = {albumTopMm: 137, albumHeightMm: 34, albumSideMm: 15, albumPt: 11.2, albumLineHeight: 1.2, pocketTopMm: 22, pocketHeightMm: 42, pocketLeftMm: 80, pocketPt: 9, pocketLineHeight: 1.15};
 // Measured on the real BY/PL copy; both font systems retain the shared QR positions.
 const STORY_METRICS: Record<BookVisualStyle, StoryMetrics> = {

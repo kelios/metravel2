@@ -48,7 +48,8 @@ function collectAssets(manifests) {
       if(bookMetadata&&(bookMetadata.kind!=='book-metadata'||bookMetadata.mime!=='application/json'||bookMetadata.uri!==`${BASE}${book.id}/${book.revision}/book.json`))throw new Error('Invalid book metadata identity');
       if(bookMetadata){const canonical=Buffer.from(JSON.stringify(book)+'\n');if(bookMetadata.bytes!==canonical.length||bookMetadata.sha256!==hash(canonical))throw new Error('Book metadata must match the exact raw published record');}
       const cover=book.coverPersonalization;
-      if(cover&&(cover.schemaVersion!==1||!Array.isArray(cover.templates)||cover.templates.length!==6||new Set(cover.templates.map(t=>t.profileId+':'+t.mode)).size!==6))throw new Error('Invalid cover personalization resources');
+      // v1: the two shared inscriptions of revisions up to 02.11.2026; v2: per-edition inscriptions (#2946).
+      if(cover&&(![1,2].includes(cover.schemaVersion)||!Array.isArray(cover.templates)||cover.templates.length!==6||new Set(cover.templates.map(t=>t.profileId+':'+t.mode)).size!==6))throw new Error('Invalid cover personalization resources');
       const guidePages=book.printGuidePages??[];
       const directory=book.printDirectory;
       if(Boolean(book.printGuidePages)!==Boolean(directory)||book.printGuidePages&&(guidePages.length!==2||new Set(guidePages.map(p=>p.profileId)).size!==2||guidePages.some(p=>!['pocket-150x100','album-a5'].includes(p.profileId))))throw new Error('Invalid print document resources');

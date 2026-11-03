@@ -1,4 +1,4 @@
-import {translate, type TranslationParams} from '@/i18n';
+import {translate,translatePlural, type TranslationParams} from '@/i18n';
 import {useLocaleRevision} from '@/i18n/useLocaleRevision';
 import type {PrintCityId} from '@/data/travelBooks/schema/providers';
 
@@ -52,6 +52,9 @@ const copy = {
   providerCityBialystok: (params?: TranslationParams) => translate('books:providerCityBialystok', params),
   retry: (params?: TranslationParams) => translate('books:retry', params),
   loadingPage: (params?: TranslationParams) => translate('books:loadingPage', params),
+  providerSummary: (params?: TranslationParams) => translate('books:providerSummary', params),
+  providerCitiesBY: (params?: TranslationParams) => translatePlural('books:providerCitiesBY', Number(params?.count), params),
+  providerCitiesPL: (params?: TranslationParams) => translatePlural('books:providerCitiesPL', Number(params?.count), params),
 };
 export type ProviderCopyKey = keyof typeof copy;
 export type ProviderCopy = (key: ProviderCopyKey, params?: TranslationParams) => string;

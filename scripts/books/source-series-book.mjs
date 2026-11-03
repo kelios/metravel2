@@ -3,7 +3,7 @@ import {createRequire} from 'node:module';
 import path from 'node:path';
 import {build} from 'esbuild';
 import sharp from 'sharp';
-import {PHOTO_FONTS, loadCoverPersonalizationSource, projectFile, sha256} from './source-ready-book.mjs';
+import {PHOTO_FONTS, editionCopySha256, loadCoverPersonalizationSource, projectFile, sha256} from './source-ready-book.mjs';
 import {loadReadyBookCompiler} from './render-ready-book.mjs';
 
 const json = async file => JSON.parse(await readFile(file, 'utf8'));
@@ -57,6 +57,8 @@ export async function loadSeriesBook(seriesId, {sourcesRoot='data/travelBooks/se
     const thematic = structuredClone(place.thematic);
     const record = copy.records.find(row=>row.id===place.id);
     if (!record || record.sourceUrl!==thematic.articleUrl || typeof record.copyRu!=='string' || record.copyRu.trim().length<100 || record.copyRu.length>280) throw new Error('Thematic prose is missing or sourced to another article: '+place.id);
+    // Kept with the place for the memory page, which stays blank in print (#2947).
+    if (typeof record.prompt!=='string' || !record.prompt.trim()) throw new Error('Thematic place has no memory prompt: '+place.id);
     const photo = await loadSeriesPhoto(thematic.media,registry);
     const placements = ['pocket-150x100','album-a5'].map(profileId=>{
       const p=tools.thematicPhotoPlacement(photo.widthPx,photo.heightPx,profileId);
@@ -73,17 +75,18 @@ export async function loadSeriesBook(seriesId, {sourcesRoot='data/travelBooks/se
     stops.push({id:place.id,title:place.title,localName:place.localName,lat:target.lat,lng:target.lng,
       entrance:'Привязка физического места; отдельный вход не заявлен.',coordinateAccuracy:'site-center',coordinateSource:target.sourceUrl,
       source:{kind:'travel-address',id:String(thematic.sourcePointId),url:thematic.articleUrl},text:{compact:record.copyRu.trim(),album:record.copyRu.trim()},navigation,
-      fact:record.copyRu.trim(),observation:'Сохраните собственное впечатление от поездки.',references:[{url:thematic.articleUrl,checkedAt:thematic.verifiedOn,claims:[record.copyRu.trim()]}],
+      fact:record.copyRu.trim(),observation:record.prompt.trim(),references:[{url:thematic.articleUrl,checkedAt:thematic.verifiedOn,claims:[record.copyRu.trim()]}],
       imageBrief:thematic.media.caption,thematic});
   }
   const coverId = seriesId==='mountains-pl'?'mountains-pl-38':'castles-pl-03';
   const cover = assets[coverId];
   if (!cover) throw new Error('Thematic cover must reuse a verified selected place');
-  const coverPersonalization = await loadCoverPersonalizationSource();
+  const coverPersonalization = await loadCoverPersonalizationSource(series.bookIds[0]);
   const [textBytes,headingBytes,license] = await Promise.all([projectFile(PHOTO_FONTS.text.path,PHOTO_FONTS.text.sha256),projectFile(PHOTO_FONTS.heading.path,PHOTO_FONTS.heading.sha256),projectFile(PHOTO_FONTS.license.path)]);
   if (!license.toString('utf8').includes('SIL OPEN FONT LICENSE Version 1.1')) throw new Error('Thematic photographic books require the full licensed Lora font');
   const font = bytes=>'data:font/ttf;base64,'+bytes.toString('base64');
-  const revision='2026-11-02.series.'+sha256(JSON.stringify({kit,copy,provenance,coverId,fonts:PHOTO_FONTS})).slice(0,12);
+  const editionCopy = await editionCopySha256(series.bookIds[0], coverPersonalization);
+  const revision='2026-11-02.series.'+sha256(JSON.stringify({kit,copy,provenance,coverId,fonts:PHOTO_FONTS,editionCopy})).slice(0,12);
   const book={schemaVersion:1,status:'editorial-draft',sourceContract:'thematic-v1',seriesId:series.id,theme:series.theme,id:series.bookIds[0],slug:series.bookIds[0].replace(/-memory$/,''),revision,country:'PL',contentLocale:'ru',title:series.title,visualStyle:'photo',stops,
     miniTrips:[{id:'selected-places',title:'Самостоятельные поездки',stopIds:stops.map(stop=>stop.id),note:'Выбранные места не образуют один непрерывный маршрут.'}]};
   return {book,assets,cover,coverPersonalization,fonts:{regular:font(textBytes),bold:font(textBytes),serif:font(textBytes),heading:font(headingBytes)},provenance:{sourceContract:'thematic-v1',seriesId,kitSha256:sha256(JSON.stringify(kit)),copySha256:sha256(JSON.stringify(copy)),assets:provenance,coverStopId:coverId,font:{textSha256:PHOTO_FONTS.text.sha256,headingSha256:PHOTO_FONTS.heading.sha256,licenseSha256:sha256(license)}},assetsHash:sha256(JSON.stringify(provenance))};
