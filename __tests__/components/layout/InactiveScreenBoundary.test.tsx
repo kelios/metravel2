@@ -45,11 +45,12 @@ describe('InactiveScreenBoundary (#2910)', () => {
     expect(out).not.toContain('aria-hidden')
   })
 
-  it('makes a blurred web screen inert and hidden from assistive tech without unmounting it', () => {
+  it('hides a blurred web screen without unmounting it', () => {
     Platform.OS = 'web'
     mockFocused = false
     const out = html(<InactiveScreenBoundary><button>Добавить в план</button></InactiveScreenBoundary>)
     expect(out).toContain('data-screen-boundary="inactive"')
+    expect(out).toContain('display:none')
     expect(out).toContain('inert=""')
     expect(out).toContain('aria-hidden="true"')
     expect(out).toContain('Добавить в план')

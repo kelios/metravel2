@@ -15,9 +15,9 @@ import { useIsFocused } from 'expo-router'
  * Размонтировать прежний экран нельзя: «Назад» из статьи обязан вернуть поиск
  * с его состоянием и прокруткой (`backBehavior: 'fullHistory'`). Поэтому экран
  * остаётся в DOM, но становится `inert` + `aria-hidden`: браузер исключает его
- * из фокуса, кликов и дерева скринридера. `display: contents` у обёртки не
- * меняет раскладку экрана, а обёртка рендерится всегда (и на сервере), чтобы
- * смена фокуса не пересоздавала дерево экрана и не ломала гидрацию.
+ * из фокуса, кликов и дерева скринридера. `display: none` также исключает
+ * отрисовку прежнего экрана. В фокусе `display: contents` сохраняет раскладку.
+ * Одна и та же обёртка сохраняет дерево экрана при смене фокуса и гидрации.
  */
 export function inactiveScreenWebAttributes(isFocused: boolean) {
   if (Platform.OS !== 'web' || isFocused) return null
@@ -31,7 +31,7 @@ export function InactiveScreenBoundary({ children }: { children: ReactNode }) {
     'div',
     {
       'data-screen-boundary': isFocused ? 'active' : 'inactive',
-      style: { display: 'contents' },
+      style: { display: isFocused ? 'contents' : 'none' },
       ...inactiveScreenWebAttributes(isFocused),
     },
     children,
