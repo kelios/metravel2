@@ -24,6 +24,21 @@ export function EditionAccordion({icon,title,hint,titleId,children,className}:{i
   </details>;
 }
 
+/**
+ * In-page `#anchor` link: scrolls the books scroll container (not the window) and moves focus
+ * to the target section; motion follows `prefers-reduced-motion`.
+ */
+export function scrollToAnchor(href:string){
+  return (event:React.MouseEvent<HTMLAnchorElement>)=>{
+    const target=document.getElementById(href.slice(1));
+    if(!target)return;
+    event.preventDefault();
+    const reduce=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+    target.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
+    target.focus({preventScroll:true});
+  };
+}
+
 /** Plain `<a href>` that keeps client-side routing for an unmodified primary click. */
 export function useEditionLink(){
   const router=useRouter();

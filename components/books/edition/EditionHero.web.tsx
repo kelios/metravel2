@@ -1,6 +1,6 @@
 import React,{useId} from 'react';
 import {useBookCopy} from '../bookCopy';
-import {EditionIcon} from './EditionParts.web';
+import {EditionIcon,scrollToAnchor} from './EditionParts.web';
 
 type Chip = {icon:React.ComponentProps<typeof EditionIcon>['name'];label:string;accent?:boolean};
 export type EditionHeroProps = {
@@ -19,14 +19,6 @@ export default function EditionHero({title,contentLocale,promise,chips,coverUri,
   const titleId=useId();
   // Two spread slots are always reserved so the verified pages do not shift the hero.
   const slots=[spreads[0]??[],spreads[1]??[]];
-  const goToChoose=(event:React.MouseEvent<HTMLAnchorElement>)=>{
-    const target=chooseHref&&document.getElementById(chooseHref.slice(1));
-    if(!target)return;
-    event.preventDefault();
-    const reduce=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
-    target.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});
-    target.focus({preventScroll:true});
-  };
   return <section className="rbe-hero" aria-labelledby={titleId}>
     <div>
       <div className="rbe-stage" data-size={album?'a5':'pocket'}>
@@ -52,7 +44,7 @@ export default function EditionHero({title,contentLocale,promise,chips,coverUri,
       </div>
       <div className="rbe-cta-meta rbe-small">
         <span>{meta}</span>
-        {chooseHref&&<a className="rbe-link" href={chooseHref} onClick={goToChoose}>{t('ctaOtherOptions')}<EditionIcon name="chevron-down" size={16}/></a>}
+        {chooseHref&&<a className="rbe-link" href={chooseHref} onClick={scrollToAnchor(chooseHref)}>{t('ctaOtherOptions')}<EditionIcon name="chevron-down" size={16}/></a>}
       </div>
     </div>
   </section>;

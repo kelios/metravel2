@@ -7,9 +7,8 @@ import {publishedFixture} from '../../services/book/readyBooks/publicationFixtur
 import {thematicPublished} from '../../services/book/readyBooks/thematicFixtures';
 jest.mock('@/i18n',()=>({...jest.requireActual('@/i18n'),translate:(key:string)=>key.replace(/^books:/,'')}));
 jest.mock('@/components/books/bookCopy',()=>({...jest.requireActual('@/components/books/bookCopy'),useBookCopy:()=>((key:string,params?:Record<string,unknown>)=>params?key+':'+JSON.stringify(params):key)}));
-jest.mock('@/components/ui/ImageCardMedia',()=>({__esModule:true,default:({src,alt}:any)=><img src={src} alt={alt}/>}));
-jest.mock('@/components/books/BooksFrame',()=>({BooksFrame:({children,title}:any)=><main><h1>{title}</h1>{children}</main>}));
-jest.mock('expo-router',()=>({Link:({children,href}:any)=><a href={href}>{children}</a>}));
+jest.mock('@/components/books/BooksFrame',()=>({BooksFrame:({children,title,description,heading=true}:any)=><main data-description={description}>{heading&&<h1>{title}</h1>}{children}</main>}));
+jest.mock('expo-router',()=>({useRouter:()=>({push:jest.fn()})}));
 jest.mock('@/services/book/readyBooks/catalog',()=>({readyBooks:[]}));
 jest.mock('@/services/book/readyBooks/seriesCatalog',()=>({...jest.requireActual('@/services/book/readyBooks/seriesCatalog'),bookSeries:[]}));
 const books=require('@/services/book/readyBooks/catalog').readyBooks;
@@ -21,7 +20,7 @@ describe('book catalogue',()=>{
   });
   it('shows the editorial language, both physical formats and exact edition URL',()=>{
     books.push(publishedFixture());render(<Catalog/>);
-    expect(screen.getByText('language')).toBeTruthy();expect(screen.getByText(/pocket/)).toBeTruthy();expect(screen.getByText(/album/)).toBeTruthy();
+    expect(screen.getByText('language')).toBeTruthy();expect(screen.getByText(/catalogSizes.*sizePocketShort · sizeAlbumShort/)).toBeTruthy();
     expect(screen.getByRole('link').getAttribute('href')).toBe('/books/belarus');expect(screen.queryByText('partial')).toBeNull();
     expect(screen.queryByText('order')).toBeNull();
   });
@@ -60,7 +59,8 @@ it.each([31,37])('shows data-driven counts for a valid %i-place edition',count=>
   const book=publishedFixture(count);
   books.push(book);
   render(<Catalog/>);
-  expect(screen.getByText('counts:'+JSON.stringify({places:String(book.stopCount),pages:String(book.bodyPageCount)}))).toBeTruthy();
+  expect(screen.getByText('chipPlaces:'+JSON.stringify({count:book.stopCount,value:String(book.stopCount)}))).toBeTruthy();
+  expect(screen.getByText('chipPages:'+JSON.stringify({count:book.bodyPageCount,value:String(book.bodyPageCount)}))).toBeTruthy();
   expect(book.stopCount).toBe(count);
   expect(book.bodyPageCount).toBeGreaterThan(56);
 });
@@ -77,8 +77,8 @@ it('shows quest count and volume without presenting quests as places',()=>{
   };
   books.push(summary);
   render(<Catalog/>);
-  expect(screen.getByText('questCounts:'+JSON.stringify({quests:'37',pages:'156',volume:'2'}))).toBeTruthy();
-  expect(screen.queryByText(/^counts:/)).toBeNull();
+  expect(screen.getByText('chipQuests:'+JSON.stringify({count:37,value:'37'}))).toBeTruthy();
+  expect(screen.queryByText(/^chipPlaces:/)).toBeNull();
   expect(screen.queryByText(/^style:/)).toBeNull();
   expect(screen.getByRole('heading',{name:'Польша. Квесты, часть 2'})).toBeTruthy();
   expect(screen.queryByText(/^styleBenefit/)).toBeNull();
@@ -100,18 +100,27 @@ it('names the visual style of every edition and keeps the watercolor default for
   expect(screen.getAllByRole('link').map(link=>link.getAttribute('href'))).toEqual(['/books/belarus','/books/belarus-photo']);
 });
 
-it('loads the catalogue inside the route frame rather than leaving the loading fallback',async()=>{
+it('loads the landing inside the route frame: one hero h1, steps, edition choice and questions (#2970)',async()=>{
   books.push(publishedFixture());
   render(<CatalogPage/>);
-  expect(screen.getByRole('heading',{level:1,name:'title'})).toBeTruthy();
-  expect((await screen.findByRole('link')).getAttribute('href')).toBe('/books/belarus');
+  // The landing is a lazy chunk; a cold transform under a loaded machine exceeds the 1 s default.
+  expect(await screen.findByRole('heading',{level:1,name:'catalogTitle'},{timeout:10000})).toBeTruthy();
+  expect(screen.getAllByRole('heading',{level:1})).toHaveLength(1);
+  // `/books` has its own snippet; the shared `intro` stays the short tail of every edition description.
+  expect(document.querySelector('main')?.getAttribute('data-description')).toBe('catalogDescription');
   expect(screen.queryByRole('status')).toBeNull();
+  const hrefs=screen.getAllByRole('link').map(link=>link.getAttribute('href'));
+  expect(hrefs).toEqual(expect.arrayContaining(['#books-choose','#books-steps','/books/belarus']));
+  for(const id of ['books-choose','books-steps'])expect(document.getElementById(id)?.getAttribute('tabindex')).toBe('-1');
+  expect(screen.getByRole('heading',{level:2,name:'catalogStepsTitle'})).toBeTruthy();
+  expect(screen.getByRole('heading',{level:2,name:'catalogChooseTitle'})).toBeTruthy();
+  expect(screen.getByRole('heading',{level:2,name:'faqTitle'})).toBeTruthy();
 });
 
 it('names every edition card and cover distinctly by country and style (#2953)',()=>{
   for(const visualStyle of [undefined,'fantasy','graphic'] as const){const book=publishedFixture();books.push({...book,id:book.id+(visualStyle??''),slug:book.slug+(visualStyle??''),...(visualStyle?{visualStyle}:{})});}
   render(<Catalog/>);
-  const headings=screen.getAllByRole('heading',{level:2}).map(heading=>heading.textContent);
+  const headings=screen.getAllByRole('heading',{level:3}).map(heading=>heading.textContent);
   expect(new Set(headings).size).toBe(3);
   expect(headings[0]).toContain('cardTitle');expect(headings[0]).toContain('styleWatercolor');
   const alts=screen.getAllByRole('img').map(image=>image.getAttribute('alt'));

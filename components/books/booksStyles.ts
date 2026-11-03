@@ -5,14 +5,12 @@ export const booksCss=`
 .ready-books a{color:inherit;text-decoration:underline;min-height:44px;display:inline-flex;align-items:center}
 .ready-books button,.ready-books select,.ready-books input{font:inherit;min-height:44px;max-width:100%}
 .ready-books button{cursor:pointer}.ready-books :focus-visible{outline:3px solid currentColor;outline-offset:3px}
-.ready-books-grid{display:grid;grid-template-columns:1fr;gap:24px}.ready-books-card{border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:${DESIGN_TOKENS.radii.lg}px;overflow:hidden}
-.ready-books-card>div{padding:20px}.ready-books-card img{display:block;width:100%;aspect-ratio:1.5;object-fit:contain}
 .ready-books-note{border:1px solid currentColor;padding:16px;border-radius:${DESIGN_TOKENS.radii.md}px}.ready-books-note h2{margin-top:0}.ready-books summary{cursor:pointer;min-height:44px}
 .ready-books-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:16px 0}.ready-books-controls label{display:flex;gap:8px;align-items:center;min-height:44px}.ready-books fieldset.ready-books-controls{padding:12px 16px;border:1px solid currentColor;border-radius:${DESIGN_TOKENS.radii.md}px;min-width:0}
 .ready-books-pages{display:flex;gap:12px;align-items:flex-start;overflow:auto;min-height:280px}.ready-books-paper{position:relative;flex:1;min-width:0;display:flex;align-items:center;justify-content:center;border:1px solid currentColor}.ready-books-paper img{width:100%;display:block}
 .ready-books-preview{padding:20px;border:1px solid currentColor;border-radius:${DESIGN_TOKENS.radii.lg}px;margin-top:20px}
 .ready-books-files{list-style:none;padding:0}.ready-books-files li{padding:16px 0;border-bottom:1px solid currentColor;display:flex;flex-wrap:wrap;gap:12px;align-items:center}.ready-books-files li>span{flex:1;min-width:180px}.ready-books a.ready-books-download{text-decoration:none;justify-content:center;padding:0 20px;border:1px solid currentColor;border-radius:${DESIGN_TOKENS.radii.md}px;font-weight:600}
-@media(min-width:800px){.ready-books{padding:48px 32px 80px}.ready-books-grid{grid-template-columns:1fr 1fr}.ready-books h1{font-size:40px}}
+@media(min-width:800px){.ready-books{padding:48px 32px 80px}.ready-books h1{font-size:40px}}
 `;
 
 const c=DESIGN_TOKENS.colors,r=DESIGN_TOKENS.radii,sp=DESIGN_TOKENS.spacing,sh=DESIGN_TOKENS.shadows,ty=DESIGN_TOKENS.typography.scale;
@@ -185,5 +183,49 @@ export const editionCss=`
   .rbe-hero{grid-template-columns:minmax(0,1.08fr) minmax(0,1fr);gap:${sp.xxl}px}
   .rbe .rbe-styles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible;margin:0;padding:0;gap:${sp.md}px}
   .rbe .rbe-more{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible;margin:0;padding:0}
+}
+`;
+
+/**
+ * Catalogue landing (#2970): composes the edition classes (`rbe-hero`, `rbe-block`, chips,
+ * buttons, `rbe-path` step cards) and adds only the catalogue parts — step grid, place pages,
+ * theme chips, edition cards.
+ */
+export const catalogCss=`
+.rbe.rbc{padding-bottom:0}
+.rbe .rbc-steps{display:grid;gap:${sp.md}px;grid-template-columns:1fr}
+.rbe .rbc-places{display:flex;overflow-x:auto;gap:${sp.md}px;margin:0 -${sp.md}px;padding:4px ${sp.md}px ${sp.sm}px;scroll-snap-type:x mandatory}
+.rbe .rbc-places>li{flex:0 0 84%;scroll-snap-align:start}
+.rbe .rbc-places a{display:block;height:100%;text-decoration:none;color:inherit;background:${c.surface};border-radius:${r.lg}px;box-shadow:${sh.card};overflow:hidden}
+.rbe .rbc-places a:hover,.rbe .rbc-card:not(.rbc-card-planned):hover{box-shadow:${sh.hover}}
+.rbe .rbc-place-page{display:block;background:${c.backgroundTertiary};padding:${sp.sm}px}
+.rbe .rbc-place-page img{width:100%;aspect-ratio:1.5;object-fit:contain;background:${c.surface};box-shadow:${sh.card};border-radius:2px}
+.rbe .rbc-place-body{display:block;padding:${sp.sm}px ${sp.md}px ${sp.md}px}
+.rbe .rbc-place-meta{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:4px}
+.rbe .rbc-themes{border:0;padding:0;margin:0 0 ${sp.lg}px;min-width:0;display:flex;flex-wrap:wrap;gap:${sp.xs}px}
+.rbe .rbc-themes legend{float:left;width:100%;margin:0 0 ${sp.xs}px;padding:0}
+.rbe .rbc-theme{position:relative;display:inline-flex;align-items:center;min-height:44px;padding:0 ${sp.md}px;border-radius:${r.pill}px;background:${c.surface};border:1px solid ${c.borderStrong};${type(ty.bodySmall)};font-weight:600;cursor:pointer}
+.rbe .rbc-theme input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.rbe .rbc-theme:has(input:checked){background:${c.primary};border-color:${c.primary};color:${c.textOnPrimary}}
+.rbe .rbc-theme:has(input:focus-visible){outline:3px solid ${c.primaryText};outline-offset:3px}
+.rbe .rbc-grid{display:grid;gap:${sp.md}px;grid-template-columns:1fr}
+.rbe .rbc-card{position:relative;display:flex;flex-direction:column;height:100%;background:${c.surface};border-radius:${r.lg}px;box-shadow:${sh.card};overflow:hidden}
+.rbe .rbc-card:has(.rbc-card-link:focus-visible){outline:3px solid ${c.primaryText};outline-offset:3px}
+.rbe .rbc-card-planned{box-shadow:none;border:1px dashed ${c.borderStrong};background:transparent}
+.rbe .rbc-card-thumb{background:${c.backgroundTertiary};aspect-ratio:1.5;display:flex;align-items:center;justify-content:center;padding:${sp.md}px}
+.rbe .rbc-card-thumb img{max-width:100%;max-height:100%;box-shadow:${sh.hover};border-radius:2px}
+.rbe .rbc-card-body{flex:1;display:flex;flex-direction:column;gap:${sp.xs}px;padding:${sp.md}px ${sp.lg}px ${sp.lg}px}
+.rbe .rbc-card-body .rbe-chips{margin:${sp.xxs}px 0 0}
+.rbe .rbc-card-link{margin-top:auto;align-self:flex-start;display:inline-flex;align-items:center;gap:6px;min-height:44px;color:${c.primaryText};font-weight:700;text-decoration:none}
+.rbe .rbc-card-link:focus-visible{outline:none}
+.rbe .rbc-card-link::after{content:"";position:absolute;inset:0}
+@media(min-width:560px){.rbe .rbc-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:720px){
+  .rbe .rbc-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .rbe .rbc-places{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;margin:0;padding:0}
+}
+@media(min-width:960px){
+  .rbe .rbc-steps{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .rbe .rbc-grid,.rbe .rbc-places{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
 `;

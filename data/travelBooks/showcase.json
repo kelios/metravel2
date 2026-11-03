@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "hero": [
+    {
+      "bookId": "belarus-memory",
+      "stopId": "point-5246",
+      "title": "Несвижский замок",
+      "page": 62
+    },
+    {
+      "bookId": "poland-memory",
+      "stopId": "point-15434",
+      "title": "Замок Мальборк",
+      "page": 8
+    },
+    {
+      "bookId": "belarus-memory",
+      "stopId": "point-4805",
+      "title": "Гольшанский замок",
+      "page": 50
+    },
+    {
+      "bookId": "poland-memory",
+      "stopId": "point-14045",
+      "title": "Водопад Сиклава",
+      "page": 86
+    }
+  ],
+  "how": {
+    "bookId": "belarus-memory",
+    "stopId": "point-5247",
+    "title": "Мирский замок",
+    "page": 65
+  },
+  "places": [
+    {
+      "bookId": "belarus-memory",
+      "stopId": "point-5247",
+      "title": "Мирский замок",
+      "page": 65
+    },
+    {
+      "bookId": "poland-memory",
+      "stopId": "point-13224",
+      "title": "Замок Огродзенец",
+      "page": 23
+    },
+    {
+      "bookId": "belarus-memory",
+      "stopId": "point-2633",
+      "title": "Озеро Глубокое",
+      "page": 20
+    },
+    {
+      "bookId": "poland-memory",
+      "stopId": "point-15457",
+      "title": "Голубые источники",
+      "page": 83
+    },
+    {
+      "bookId": "belarus-memory",
+      "stopId": "point-5485",
+      "title": "Заказник «Ельня»",
+      "page": 68
+    },
+    {
+      "bookId": "poland-memory",
+      "stopId": "point-14656",
+      "title": "Дворец на острове, Лазенки",
+      "page": 59
+    }
+  ]
+}

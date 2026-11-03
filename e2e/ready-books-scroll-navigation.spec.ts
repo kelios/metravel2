@@ -47,24 +47,25 @@ for(const viewport of [{width:390,height:844},{width:1440,height:900}]){
     const errors:string[]=[];
     page.on('pageerror',error=>errors.push(error.message));
     await page.goto('/books',{waitUntil:'domcontentloaded'});
-    const catalog=page.locator('main.ready-books').filter({has:page.locator('.ready-books-grid')});
-    const catalogFrame=page.getByTestId('ready-books-scroll').filter({has:page.locator('.ready-books-grid')});
+    // The edition grid sits below the landing hero, steps and showcase (#2970).
+    const catalog=page.locator('main.ready-books').filter({has:page.locator('.rbc-grid')});
+    const catalogFrame=page.getByTestId('ready-books-scroll').filter({has:page.locator('.rbc-grid')});
     await expect(catalog).toBeVisible();
 
     // Wheel input must reach the real links; scrollIntoView can move a hidden
     // navigation ancestor and conceal the missing user-scroll surface.
     for(const slug of ['belarus-graphic','poland-quests-1']){
-      const link=catalog.locator(`a[href="/books/${slug}"]`);
+      const link=catalog.locator(`.rbc-grid a[href="/books/${slug}"]`);
       await revealByWheel(page,catalogFrame,link);
-      const title=(await link.locator('xpath=ancestor::article').getByRole('heading',{level:2}).innerText()).trim();
       const previous=await catalogFrame.evaluate(element=>element.scrollTop);
       expect(previous).toBeGreaterThan(0);
       expect(await hiddenAncestorScroll(catalogFrame)).toBeLessThanOrEqual(1);
       await link.click();
       await expect(page).toHaveURL(new RegExp(`/books/${slug}(?:[?#]|$)`));
-      const heading=page.getByRole('heading',{level:1,name:title,exact:true});
+      // Card titles name «country · style» (#2953); the edition h1 keeps the book title.
+      const heading=page.locator('.rbe-hero h1');
       const detail=page.locator('main.ready-books').filter({has:heading});
-      await expect(detail.locator('input[name="book-format"]').first()).toBeVisible();
+      await expect(detail.locator('.rbe-size input').first()).toBeAttached();
       await expect.poll(()=>isPainted(heading)).toBe(true);
       const detailFrame=page.getByTestId('ready-books-scroll').filter({has:heading});
       expect(await detailFrame.evaluate(element=>element.scrollTop)).toBeLessThanOrEqual(1);

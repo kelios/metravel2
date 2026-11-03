@@ -1,13 +1,14 @@
-import React, {useState} from 'react';
-import {Link} from 'expo-router';
+import React,{useState} from 'react';
 import {bookStyleKey} from '@/services/book/readyBooks/publicationState';
 import {readyBooks} from '@/services/book/readyBooks/catalog';
 import {bookSeries,selectCatalogue,type CatalogueTheme} from '@/services/book/readyBooks/seriesCatalog';
 import {formatNumber} from '@/i18n';
-import ImageCardMedia from '@/components/ui/ImageCardMedia';
-import {formatReadyBookCounts,useBookCopy} from '../bookCopy';
+import {useBookCopy} from '../bookCopy';
+import {EditionIcon,useEditionLink} from '../edition/EditionParts.web';
+import {pageCountPhrase,stopCountPhrase} from '../edition/editionModel';
 type CatalogBook=(typeof readyBooks)[number];
 const STYLE_BENEFIT={styleWatercolor:'styleBenefitWatercolor',stylePhoto:'styleBenefitPhoto',stylePhotoSources:'styleBenefitPhotoSources',styleGraphic:'styleBenefitGraphic',styleFantasy:'styleBenefitFantasy'} as const;
+const THEMES={all:'themeAll',mixed:'themeMixed',castles:'themeCastles',mountains:'themeMountains',quests:'themeQuests'} as const;
 
 /**
  * Editions of one country share a title; the card names country and style so three
@@ -22,17 +23,43 @@ export function catalogCard(book:CatalogBook,t:ReturnType<typeof useBookCopy>){
   return {title:t('cardTitle',{country:t(book.country==='BY'?'countryBY':'countryPL'),style:t(styleKey)}),titleLang:undefined,benefit};
 }
 
+/** «Выберите свою книгу»: theme chips and one card per published edition or planned series (#2970). */
 export default function ReadyBooksCatalogContent(){
   const bookT=useBookCopy();
+  const link=useEditionLink();
   const [theme,setTheme]=useState<CatalogueTheme>('all');
   const {available,planned}=selectCatalogue(readyBooks,bookSeries,theme);
-  const themes={all:'themeAll',mixed:'themeMixed',castles:'themeCastles',mountains:'themeMountains',quests:'themeQuests'} as const;
   return <>
-    <fieldset className="ready-books-controls"><legend>{bookT('theme')}</legend>{(Object.keys(themes) as CatalogueTheme[]).map(value=><label key={value}><input type="radio" name="book-theme" value={value} checked={theme===value} onChange={()=>setTheme(value)}/>{bookT(themes[value])}</label>)}</fieldset>
-    {available.length===0&&planned.length===0?<section><h2>{bookT(readyBooks.length===0?'preparing':'noBooks')}</h2></section>:<div className="ready-books-grid">{available.map(book=>{
+    <fieldset className="rbc-themes"><legend className="rbe-small">{bookT('theme')}</legend>
+      {(Object.keys(THEMES) as CatalogueTheme[]).map(value=><label key={value} className="rbc-theme"><input type="radio" name="book-theme" value={value} checked={theme===value} onChange={()=>setTheme(value)}/><span>{bookT(THEMES[value])}</span></label>)}
+    </fieldset>
+    {available.length===0&&planned.length===0?<p className="rbe-h3">{bookT(readyBooks.length===0?'preparing':'noBooks')}</p>:<ul className="rbc-grid">{available.map(book=>{
       const card=catalogCard(book,bookT);
-      return <article className="ready-books-card" key={book.id}>
-        <ImageCardMedia src={book.coverUri} alt={bookT('coverAlt',{title:card.title})} height={280} fit="contain" webResponsiveSource={{src:book.coverUri}}/><div><h2 lang={card.titleLang}>{card.title}</h2>{card.benefit&&<p>{bookT(card.benefit)}</p>}<p>{bookT('language')}</p><p>{formatReadyBookCounts(book,bookT)}</p>{book.kind==='quests'&&book.volume===1&&<p>{bookT('questNextPart')}</p>}<p>{book.profiles.map(profile=><React.Fragment key={profile.id}>{bookT(profile.id==='album-a5'?'album':'pocket')}<br/></React.Fragment>)}</p><Link href={`/books/${book.slug}`}>{bookT('explore')}</Link></div>
-      </article>;})}{planned.map(series=><article className="ready-books-card" key={series.id}><div><h2 lang="ru">{series.title}</h2><p className="ready-books-note">{bookT('seriesPlanned')}</p><p>{bookT('seriesPlaces',{count:formatNumber(series.targetPlaces)})}</p><p>{bookT('language')}</p></div></article>)}</div>}
+      const href=`/books/${book.slug}`;
+      const sizes=book.profiles.map(profile=>bookT(profile.id==='album-a5'?'sizeAlbumShort':'sizePocketShort')).join(' · ');
+      return <li key={book.id}><article className="rbc-card">
+        <div className="rbc-card-thumb"><img src={book.coverUri} alt={bookT('coverAlt',{title:card.title})} loading="lazy" decoding="async"/></div>
+        <div className="rbc-card-body">
+          <h3 lang={card.titleLang}>{card.title}</h3>
+          {card.benefit&&<p className="rbe-small">{bookT(card.benefit)}</p>}
+          <ul className="rbe-chips">
+            <li><EditionIcon name="map-pin" size={16}/>{stopCountPhrase(book,bookT)}</li>
+            <li><EditionIcon name="file-text" size={16}/>{pageCountPhrase(book.bodyPageCount,bookT)}</li>
+            <li className="is-accent"><EditionIcon name="gift" size={16}/>{bookT('language')}</li>
+          </ul>
+          {book.kind==='quests'&&book.volume===1&&<p className="rbe-small">{bookT('questNextPart')}</p>}
+          <p className="rbe-small">{bookT('catalogSizes',{sizes})}</p>
+          <a className="rbc-card-link" href={href} onClick={link(href)}>{bookT('explore')}<EditionIcon name="arrow-right" size={16}/></a>
+        </div>
+      </article></li>;})}
+      {planned.map(series=><li key={series.id}><article className="rbc-card rbc-card-planned">
+        <div className="rbc-card-body">
+          <h3 lang="ru">{series.title}</h3>
+          <p className="rbe-small">{bookT('seriesPlanned')}</p>
+          <p className="rbe-small">{bookT('seriesPlaces',{count:formatNumber(series.targetPlaces)})}</p>
+          <p className="rbe-small">{bookT('language')}</p>
+        </div>
+      </article></li>)}
+    </ul>}
   </>;
 }
