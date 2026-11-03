@@ -29,6 +29,7 @@ import TravelDetailsHeroDeferredColumn, {
   TravelDetailsHeroBlock,
 } from './TravelDetailsHeroDeferredColumn';
 import TravelHeroStickyNavNative from './TravelHeroStickyNavNative';
+import { TravelHeroFavoriteToggleSlot } from './TravelHeroSlots';
 import { useTravelLoaderPayload } from './travelLoaderData';
 import {
   TRAVEL_FIRST_SCREEN_STYLES,
@@ -287,6 +288,11 @@ export default function TravelDetailsCriticalShell({
           {firstScreenMeta}
         </p>
       ) : null}
+      <div data-travel-first-screen="favorite">
+        <Suspense fallback={null}>
+          <TravelHeroFavoriteToggleSlot travel={travel} isMobile={isMobile} />
+        </Suspense>
+      </div>
     </>
   ) : null;
 

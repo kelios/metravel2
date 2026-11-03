@@ -5,6 +5,13 @@ import { render } from '@testing-library/react'
 // between the hero and article, and cleanup of the SSG-injected sr-only H1.
 jest.mock('@/components/travel/CompactSideBarTravel', () => () => null)
 jest.mock('@/components/travel/details/TravelDetailsSkeletonOverlay', () => () => null)
+jest.mock('@/components/travel/details/TravelHeroSlots', () => {
+  const React = require('react')
+  return {
+    TravelHeroFavoriteToggleSlot: () =>
+      React.createElement('button', { 'data-testid': 'favorite-action' }, 'Хочу поехать'),
+  }
+})
 jest.mock('@/components/travel/details/TravelDetailsHeroDeferredColumn', () => {
   const React = require('react')
   return {
@@ -92,13 +99,15 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
       const hero = container.querySelector('[data-testid="hero-block"]')
       const content = container.querySelector('[data-testid="content-block"]')
       expect(hero?.nextElementSibling).toBe(h1s[0])
-      expect(h1s[0].nextElementSibling).toBe(content)
+      const favorite = container.querySelector('[data-travel-first-screen="favorite"]')
+      expect(h1s[0].nextElementSibling).toBe(favorite)
+      expect(favorite?.querySelector('[data-testid="favorite-action"]')).not.toBeNull()
+      expect(favorite?.nextElementSibling).toBe(content)
     },
   )
 
-  // #2904: mobile opens with h1 → meta → gallery. The DOM keeps the desktop
-  // order (hero → h1 → content) and a CSS rule scoped to < 768 px lifts the h1
-  // and meta with `order:-1`, so neither SSR nor hydration flips the layout.
+  // Mobile opens with h1 → meta → favorite → gallery. The mobile CSS
+  // lifts those blocks before the gallery while preserving the desktop DOM order.
   describe('mobile first screen (#2904)', () => {
     const fullTravel = {
       id: 1,
@@ -136,7 +145,9 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
       // Desktop DOM order is preserved: the flex order lives only in CSS.
       expect(hero?.nextElementSibling).toBe(h1)
       expect(h1.nextElementSibling).toBe(meta)
-      expect(meta.nextElementSibling).toBe(content)
+      const favorite = container.querySelector('[data-travel-first-screen="favorite"]')
+      expect(meta.nextElementSibling).toBe(favorite)
+      expect(favorite?.nextElementSibling).toBe(content)
       // Visibility of the meta line is owned by the stylesheet, not inline style.
       expect(meta.getAttribute('style')).toBeNull()
       expect(container.querySelectorAll('h1')).toHaveLength(1)
@@ -156,7 +167,8 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
       // unchanged); the meta line is simply not displayed there.
       expect(outside).not.toContain('"title"')
       expect(outside).not.toContain('order')
-      expect(outside.trim()).toBe('[data-travel-first-screen="meta"]{display:none}')
+      expect(outside.trim()).toContain('[data-travel-first-screen="meta"]{display:none}')
+      expect(mobile).toContain('[data-travel-first-screen="favorite"]{order:-1}')
     })
 
     it('omits the meta line when the travel has no author, date, days or country', () => {

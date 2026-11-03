@@ -1,4 +1,5 @@
 export const travelGenerated4 = {
+  "components.travel.details.TravelHeroFavoriteToggle.guestSaveHint": "Войдите или зарегистрируйтесь, чтобы сохранить маршрут.",
   "components.travel.TravelWizardStepPublish.approved": "Одобрено",
   "components.travel.TravelWizardStepPublish.save": "Сохранить",
   "components.travel.PublishStatusSummaryPanel.saveChanges": "Сохранить изменения",

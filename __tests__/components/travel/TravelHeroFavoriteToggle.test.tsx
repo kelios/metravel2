@@ -64,7 +64,7 @@ describe('TravelHeroFavoriteToggle', () => {
     Platform.OS = originalPlatformOS as any
   })
 
-  it('uses desktop a11y label and hides text on web desktop', async () => {
+  it('shows the web action label and keeps the desktop a11y label', async () => {
     Platform.OS = 'web' as any
     mockIsFavorite.mockReturnValue(false)
 
@@ -76,7 +76,7 @@ describe('TravelHeroFavoriteToggle', () => {
     )
 
     expect(getByLabelText('Добавить в «Хочу поехать»')).toBeTruthy()
-    expect(queryByText('Хочу поехать')).toBeNull()
+    expect(queryByText('Хочу поехать')).toBeTruthy()
   })
 
   it('uses mobile label text as a11y label and hides visible text', async () => {
@@ -99,13 +99,14 @@ describe('TravelHeroFavoriteToggle', () => {
     useAuth.mockReturnValue({ isAuthenticated: false, authReady: true })
     mockIsFavorite.mockReturnValue(false)
 
-    const { getByLabelText } = await render(
+    const { getByLabelText, getByText } = await render(
       <TravelHeroFavoriteToggle
         travel={{ id: 3, slug: 'auth', name: 'Auth travel' } as any}
         isMobile={false}
       />
     )
 
+    expect(getByText('Войдите или зарегистрируйтесь, чтобы сохранить маршрут.')).toBeTruthy()
     await fireEvent.press(getByLabelText('Добавить в «Хочу поехать»'))
 
     await waitFor(() => {

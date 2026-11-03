@@ -49,8 +49,10 @@ const CAPTION = `[${TRAVEL_SLIDER_CAPTION_ATTR}`
 
 export const TRAVEL_FIRST_SCREEN_STYLES = `
 [${TRAVEL_FIRST_SCREEN_ATTR}="meta"]{display:none}
+[${TRAVEL_FIRST_SCREEN_ATTR}="favorite"]{min-height:76px;margin-bottom:12px}
 @media(max-width:${F.mobileMaxWidth}){
 [data-testid="travel-details-stale-content-banner"]{order:-2}
+[${TRAVEL_FIRST_SCREEN_ATTR}="favorite"]{order:-1}
 [${TRAVEL_FIRST_SCREEN_ATTR}="title"]{order:-1;margin:${F.titleMarginTopPx}px 0 ${F.titleMarginBottomPx}px!important}
 [${TRAVEL_FIRST_SCREEN_ATTR}="meta"]{order:-1;display:block;height:${F.metaLineHeightPx}px;margin:0 0 ${F.metaMarginBottomPx}px;font:400 ${F.metaFontSizePx}px/${F.metaLineHeightPx}px ${MOBILE_SANS_FONT};color:var(--color-textMuted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 ${CAPTION}="root"]{padding:6px 4px 8px!important;gap:8px!important;align-items:baseline!important}

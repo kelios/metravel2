@@ -9,7 +9,8 @@ import {
 } from './helpers/navigation'
 import {
   HERO_FAVORITE_VIEWPORTS,
-  expectHeroFavoriteOnTop,
+  expectGuestFavoriteSignIn,
+  expectTravelFavoriteAction,
   expectHeroSwipeAdvances,
   expectSsgHandoffActive,
   heroFavoriteButton,
@@ -17,14 +18,13 @@ import {
 } from './helpers/travelHeroFavorite'
 
 /**
- * #2116: hero-сердечко детали путешествия кликабельно поверх слайдера в
- * SSG-handoff. Детерминированно: мок статьи + вставка SSG-hero в документ.
- * Реальная статья и реальный аккаунт — `travel-hero-favorite-production-smoke.spec.ts`.
+ * #3022: подписанное сохранение независимо от слоёв SSG-галереи.
+ * Детерминированно: мок статьи и вставка SSG-hero в документ.
  */
 const TRAVEL_PATH = `/travels/${FALLBACK_TRAVEL_SLUG}`
 const ANON_STATE = { cookies: [], origins: [] }
 
-test.describe('Travel details hero favorite (#2116)', () => {
+test.describe('Travel details hero favorite (#3022)', () => {
   test.use({ storageState: ANON_STATE })
 
   for (const viewport of HERO_FAVORITE_VIEWPORTS) {
@@ -36,16 +36,15 @@ test.describe('Travel details hero favorite (#2116)', () => {
         await injectSsgTravelHero(page, TRAVEL_PATH)
       })
 
-      test('guest: heart is on top of the SSG-handoff slider and leads to sign-in', async ({ page }) => {
+      test('guest: labeled favorite action leads to auth with the travel intent', async ({ page }) => {
         await gotoWithRetry(page, TRAVEL_PATH)
         await expectSsgHandoffActive(page)
-        await expectHeroFavoriteOnTop(page)
+        await expectTravelFavoriteAction(page, { initialViewport: viewport.isMobile })
 
-        await heroFavoriteButton(page).click()
-        await expect(page).toHaveURL(/\/login/, { timeout: 15_000 })
+        await expectGuestFavoriteSignIn(page, TRAVEL_PATH)
       })
 
-      test('signed in: heart marks favorite, toast undo unmarks it', async ({ page }) => {
+      test('signed in: action marks favorite, toast undo unmarks it', async ({ page }) => {
         const calls: string[] = []
         await ensureAuthedStorageFallback(page)
         await mockFakeAuthApis(page)
@@ -66,7 +65,7 @@ test.describe('Travel details hero favorite (#2116)', () => {
 
         await gotoWithRetry(page, TRAVEL_PATH)
         await expectSsgHandoffActive(page)
-        await expectHeroFavoriteOnTop(page)
+        await expectTravelFavoriteAction(page)
 
         await heroFavoriteButton(page).click()
         await expect.poll(() => calls).toContain(`PATCH /api/travels/${FALLBACK_TRAVEL_ID}/mark-as-favorite/`)
@@ -78,11 +77,11 @@ test.describe('Travel details hero favorite (#2116)', () => {
       })
 
       if (viewport.isMobile) {
-        test('swipe on the hero still pages the gallery, heart stays on top', async ({ page }) => {
+        test('swipe still pages the gallery and favorite remains accessible', async ({ page }) => {
           await gotoWithRetry(page, TRAVEL_PATH)
           await expectSsgHandoffActive(page)
           await expectHeroSwipeAdvances(page)
-          await expectHeroFavoriteOnTop(page)
+          await expectTravelFavoriteAction(page)
         })
       }
     })

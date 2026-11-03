@@ -130,7 +130,7 @@ function TravelHeroSectionInner({
 
   const { quickJumpLinks, showQuickJumps } = useTravelHeroExtrasModel(sectionLinks)
   const willRenderQuickJumps = !suppressQuickJumps && showQuickJumps && quickJumpLinks.length > 0
-  const showFavoriteToggle = !deferExtras && (!(Platform.OS === 'web') || extrasReady)
+  const showFavoriteToggle = !deferExtras && Platform.OS !== 'web'
 
   const loaderPayload = useTravelLoaderPayload()
   const isRouterSsrTravel = Platform.OS === 'web' && Boolean(loaderPayload?.travel)

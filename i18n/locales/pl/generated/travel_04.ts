@@ -1,4 +1,5 @@
 export const travelGenerated4 = {
+  "components.travel.details.TravelHeroFavoriteToggle.guestSaveHint": "Zaloguj się lub zarejestruj, aby zapisać trasę.",
   "components.travel.TravelWizardStepPublish.approved": "Zatwierdzono",
   "components.travel.TravelWizardStepPublish.save": "Zapisz",
   "components.travel.PublishStatusSummaryPanel.saveChanges": "Zapisz zmiany",

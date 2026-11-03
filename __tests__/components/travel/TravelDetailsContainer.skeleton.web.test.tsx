@@ -139,6 +139,10 @@ jest.mock('@/components/travel/details/TravelDetailsScrollRuntime', () => ({
   default: (props: any) => mockScrollRuntime(props),
 }))
 
+jest.mock('@/components/travel/details/TravelHeroSlots', () => ({
+  TravelHeroFavoriteToggleSlot: () => null,
+}))
+
 jest.mock('@/components/travel/details/TravelDetailsHero', () => ({
   __esModule: true,
   TravelHeroSection: (props: any) => mockTravelHeroSection(props),

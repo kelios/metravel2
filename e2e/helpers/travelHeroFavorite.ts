@@ -1,12 +1,5 @@
 import { expect, type CDPSession, type Page } from '@playwright/test'
 
-/**
- * #2116: сердечко «Хочу поехать» в углу hero детали путешествия. Пока страница
- * держит усыновлённый SSG-hero (`useTravelSsgHeroHandoff`), слайдер поднят на
- * `TRAVEL_HERO_LAYERS.sliderDuringSsgHandoff`; сердечко обязано лежать выше —
- * иначе центр кнопки отдаёт `slider-slide-0` и клик уходит в галерею.
- */
-
 export const HERO_FAVORITE_VIEWPORTS = [
   { name: 'mobile-390', width: 390, height: 844, isMobile: true },
   { name: 'desktop-1440', width: 1440, height: 900, isMobile: false },
@@ -16,12 +9,12 @@ const HERO_CONTAINER = '[data-testid="travel-details-hero-slider-container"]'
 const SLIDER_UNDER = '[data-travel-hero-slider-under="true"]'
 
 export const heroFavoriteButton = (page: Page) =>
-  page.locator(HERO_CONTAINER).getByRole('button', { name: /«?Хочу поехать»?/ })
+  page.getByTestId('travel-first-screen-favorite')
 
 /**
  * Generic `[param].html` локального стенда не несёт SSG-hero. Вставка той же
  * разметки, что пишет `scripts/ssg-skeletons.js`, переводит страницу в
- * SSG-handoff — состояние, в котором сердечко и перекрывалось.
+ * SSG-handoff, чтобы проверить независимость кнопки от слоёв галереи.
  */
 export async function injectSsgTravelHero(page: Page, pathname: string): Promise<void> {
   const image =
@@ -55,10 +48,19 @@ export async function expectSsgHandoffActive(page: Page): Promise<void> {
     .toBe('6')
 }
 
-/** `elementFromPoint` в центре сердечка — сама кнопка или её потомок, зона ≥ 44×44. */
-export async function expectHeroFavoriteOnTop(page: Page): Promise<void> {
+/** The labeled action stays separate from the gallery and has a usable touch target. */
+export async function expectTravelFavoriteAction(
+  page: Page,
+  { initialViewport = false }: { initialViewport?: boolean } = {},
+): Promise<void> {
   const button = heroFavoriteButton(page)
   await expect(button).toBeVisible({ timeout: 30_000 })
+  await expect(button).toHaveText('Хочу поехать')
+  await expect(page.locator(HERO_CONTAINER).getByTestId('travel-first-screen-favorite')).toHaveCount(0)
+  if (initialViewport) {
+    await expect(button).toBeInViewport({ ratio: 1 })
+  }
+  await button.scrollIntoViewIfNeeded()
   const probe = await button.evaluate((el) => {
     const rect = el.getBoundingClientRect()
     const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2)
@@ -69,7 +71,7 @@ export async function expectHeroFavoriteOnTop(page: Page): Promise<void> {
       hit: hit ? `${hit.tagName.toLowerCase()}#${hit.getAttribute('data-testid') ?? ''}` : null,
     }
   })
-  expect(probe.onTop, `hero favorite center is covered by ${probe.hit}`).toBe(true)
+  expect(probe.onTop, `favorite action center is covered by ${probe.hit}`).toBe(true)
   expect(probe.width).toBeGreaterThanOrEqual(44)
   expect(probe.height).toBeGreaterThanOrEqual(44)
 }
@@ -94,12 +96,30 @@ async function touchSwipe(
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
 }
 
+export async function expectGuestFavoriteSignIn(page: Page, pathname: string): Promise<void> {
+  const description = page.getByTestId('travel-details-description')
+  await expect(description).toBeAttached()
+  const descriptionFollowsAction = await description.evaluate((el) => {
+    const favorite = document.querySelector('[data-travel-first-screen="favorite"]')
+    return favorite !== null && Boolean(favorite.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)
+  })
+  expect(descriptionFollowsAction).toBe(true)
+  await expect(page.getByText('Войдите или зарегистрируйтесь, чтобы сохранить маршрут.', { exact: true })).toBeVisible()
+  await heroFavoriteButton(page).click()
+  await expect(page).toHaveURL((url) =>
+    (url.pathname === '/login' || url.pathname === '/registration') &&
+    url.searchParams.get('intent') === 'favorite' &&
+    url.searchParams.get('redirect') === pathname,
+  )
+}
+
 /** Свайп влево по hero (CDP-touch) меняет счётчик «1/N» на «2/N». */
 export async function expectHeroSwipeAdvances(page: Page): Promise<void> {
   const counter = page.locator(HERO_CONTAINER).getByText(/^1\/\d+$/).first()
   await expect(counter).toBeVisible({ timeout: 30_000 })
   const total = ((await counter.textContent()) ?? '').split('/')[1]
   const slider = page.locator(`${HERO_CONTAINER} [data-testid="slider-scroll"]`).first()
+  await slider.scrollIntoViewIfNeeded()
   const box = await slider.boundingBox()
   expect(box).toBeTruthy()
   const midY = box!.y + box!.height / 2
