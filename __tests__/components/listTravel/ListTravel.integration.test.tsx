@@ -330,7 +330,7 @@ describe('ListTravel Integration Tests', () => {
       expect(screen.getByTestId('toggle-recommendations-button')).toBeTruthy();
     });
 
-    expect(screen.getByLabelText(/Показать идеи путешествий/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Подборки', expanded: false })).toBeTruthy();
   });
 
   it('keeps recommendations hidden on web when stored preference is false', async () => {
@@ -342,7 +342,7 @@ describe('ListTravel Integration Tests', () => {
       expect(screen.getByTestId('toggle-recommendations-button')).toBeTruthy();
     });
 
-    expect(screen.getByLabelText(/Показать идеи путешествий/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Подборки', expanded: false })).toBeTruthy();
   });
 
   it('renders export mode UI and allows selecting all items', async () => {

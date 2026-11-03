@@ -1,6 +1,7 @@
 import React from 'react'
 import { render, fireEvent } from '@testing-library/react-native'
 import WeeklyHighlights from '@/components/travel/WeeklyHighlights'
+import { fetchTravelsOfMonth } from '@/api/map'
 
 // Mock React Query
 const mockUseQuery = jest.fn()
@@ -50,6 +51,26 @@ describe('WeeklyHighlights', () => {
 
     const { toJSON } = await render(<WeeklyHighlights />)
     expect(toJSON()).toBeNull()
+  })
+
+  it.each([
+    [{ isPending: true }, 'Загружаем подборку…'],
+    [{ isError: true }, 'Не удалось загрузить подборку'],
+    [{ data: {} }, 'В подборке пока нет маршрутов'],
+  ])('announces the status of the public collection', async (query, message) => {
+    mockUseQuery.mockReturnValue(query)
+    const { getByText } = await render(<WeeklyHighlights forceVisible showStatus />)
+
+    expect(getByText(message)).toBeTruthy()
+  })
+
+  it('keeps a request failure distinct from an empty collection', async () => {
+    mockUseQuery.mockReturnValue({ isPending: true })
+    await render(<WeeklyHighlights forceVisible showStatus />)
+
+    const signal = new AbortController().signal
+    await mockUseQuery.mock.calls[0][0].queryFn({ signal })
+    expect(fetchTravelsOfMonth).toHaveBeenCalledWith({ signal, throwOnError: true })
   })
 
   it('renders highlights when data is available', async () => {

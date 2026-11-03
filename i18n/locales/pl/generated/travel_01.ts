@@ -1,4 +1,7 @@
 export const travelGenerated1 = {
+  "components.travel.WeeklyHighlights.collectionLoading": "Wczytujemy zestawienie…",
+  "components.travel.WeeklyHighlights.collectionUnavailable": "Nie udało się wczytać zestawienia",
+  "components.travel.WeeklyHighlights.collectionEmpty": "W zestawieniu nie ma jeszcze tras",
   "components.listTravel.filters.GroupClearButton.ochistit_value1_vybrannyh_72bd2495": "Wyczyść wybrane {{value1}}",
   "components.listTravel.filters.SortDropdown.sortirovka_9e428456": "Sortowanie:",
   "components.listTravel.filters.SortDropdown.sortirovka_value1_3ed247b0": "Sortuj: {{value1}}",

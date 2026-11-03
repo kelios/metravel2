@@ -10,6 +10,7 @@ export interface MapMobileLayoutProps {
   isRefreshing?: boolean
   /** Центр радиус-запроса: от него «Места рядом» считают расстояние без GPS (#2776). */
   coordinates: { latitude: number; longitude: number } | null
+  radiusSummary?: string
   transportMode: 'car' | 'bike' | 'foot'
   buildRouteTo: (item: any) => void
   focusPlace?: (item: any) => void

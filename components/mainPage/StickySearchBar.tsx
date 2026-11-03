@@ -26,6 +26,7 @@ import {
   type QuickFilterChip,
 } from '@/components/mainPage/stickySearchBarModel';
 import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 import { useStickySearchBarStyles as useStyles } from './StickySearchBar.styles';
 import { webTitleRef } from '@/utils/webProps';
 
@@ -178,6 +179,8 @@ function StickySearchBar({
 
 
   const styles = useStyles(colors);
+  const { t } = useTranslation();
+  const collectionsLabel = Platform.OS === 'web' ? t('home:components.mainPage.StickySearchBar.collections') : undefined;
   const clearSearch = () => onSearchChange('');
   const renderActionButton = ({
     accessibilityHint,
@@ -187,6 +190,7 @@ function StickySearchBar({
     iconColor,
     iconName,
     iconSize,
+    label,
     onPress,
     selected,
     testID,
@@ -199,6 +203,7 @@ function StickySearchBar({
     iconColor: string;
     iconName: ComponentProps<typeof Feather>['name'];
     iconSize: number;
+    label?: string;
     onPress: () => void;
     selected?: boolean;
     testID: string;
@@ -212,6 +217,7 @@ function StickySearchBar({
         styles.actionButton,
         isMobile && Platform.OS === 'web' ? styles.actionButtonMobileWeb : null,
         isMobile ? styles.actionButtonMobile : null,
+        label && styles.actionButtonWithLabel,
         active && styles.actionButtonActive,
         !active && hovered && Platform.OS === 'web' && styles.actionButtonHovered,
         globalFocusStyles.focusable,
@@ -219,11 +225,12 @@ function StickySearchBar({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      accessibilityState={selected === undefined ? undefined : { selected }}
+      accessibilityState={selected === undefined ? undefined : label ? { expanded: selected } : { selected }}
     >
       <View style={styles.actionIconSlot}>
         <Feather name={iconName} size={iconSize} color={iconColor} />
       </View>
+      {label ? <Text style={styles.actionButtonLabel}>{label}</Text> : null}
       {badgeCount != null && badgeCount > 0 ? (
         <View style={styles.badge} testID="filters-badge">
           <Text style={styles.badgeCount}>{badgeCount > 99 ? '99+' : badgeCount}</Text>
@@ -357,8 +364,9 @@ function StickySearchBar({
           {/* Рекомендации */}
           {onToggleRecommendations && (
             renderActionButton({
-              accessibilityLabel: isRecommendationsVisible ? i18nT('home:components.mainPage.StickySearchBar.skryt_idei_puteshestviy_7fd2b644') : i18nT('home:components.mainPage.StickySearchBar.pokazat_idei_puteshestviy_16cd9af1'),
-              accessibilityHint: i18nT('home:components.mainPage.StickySearchBar.personalnye_rekomendatsii_marshrutov_d0292367'),
+              accessibilityLabel: collectionsLabel ?? (isRecommendationsVisible ? i18nT('home:components.mainPage.StickySearchBar.skryt_idei_puteshestviy_7fd2b644') : i18nT('home:components.mainPage.StickySearchBar.pokazat_idei_puteshestviy_16cd9af1')),
+              label: collectionsLabel,
+              accessibilityHint: collectionsLabel ? undefined : i18nT('home:components.mainPage.StickySearchBar.personalnye_rekomendatsii_marshrutov_d0292367'),
               active: !!isRecommendationsVisible,
               iconColor: isRecommendationsVisible ? colors.primary : colors.textMuted,
               iconName: 'compass',

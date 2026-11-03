@@ -11,7 +11,7 @@
 import React, { useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
-import { DEFAULT_RADIUS_KM, formatRadiusLabel } from '@/constants/mapConfig'
+import { formatRadiusLabel, resolveMapRadiusKm } from '@/constants/mapConfig'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 import { MapMobilePopover } from './MapMobilePopover'
@@ -30,6 +30,7 @@ interface MapMobileRadiusPopoverProps {
   maxWidth?: number
   options: ReadonlyArray<RadiusOption>
   currentValue: string
+  summary?: string
   onSelect: (id: string) => void
   onRequestClose: () => void
   /** Card height cap down to the dock (desktop branch, #2243-III); the list scrolls. */
@@ -44,26 +45,25 @@ const MapMobileRadiusPopoverInner: React.FC<MapMobileRadiusPopoverProps> = ({
   maxWidth = 240,
   options,
   currentValue,
+  summary,
   onSelect,
   onRequestClose,
   maxHeight,
 }) => {
-  const resolvedValue = String(currentValue || DEFAULT_RADIUS_KM)
+  const resolvedRadius = resolveMapRadiusKm(currentValue)
 
   // Mirror FiltersPanelRadiusSection: ensure the active value is present even if
   // it is not part of the preset list, and keep options numerically sorted.
   const radiusOptions = useMemo(() => {
     const base = (Array.isArray(options) ? options : []).filter((option) => option?.id)
-    const current = resolvedValue.trim()
-    if (current && !base.some((option) => String(option.id) === current)) {
-      base.push({ id: current, name: formatRadiusLabel(current) })
+    if (!base.some((option) => resolveMapRadiusKm(option.id) === resolvedRadius)) {
+      // A positive sub-kilometre input queries 0 km. Selecting "0" itself
+      // would instead restore the default, so retain the original input then.
+      const id = resolvedRadius === 0 ? currentValue.trim() : String(resolvedRadius)
+      base.push({ id, name: id })
     }
-    return [...base].sort((a, b) => {
-      const aValue = Number(String(a.id).replace(/\D/g, '')) || 0
-      const bValue = Number(String(b.id).replace(/\D/g, '')) || 0
-      return aValue - bValue
-    })
-  }, [options, resolvedValue])
+    return base.sort((a, b) => resolveMapRadiusKm(a.id) - resolveMapRadiusKm(b.id))
+  }, [options, currentValue, resolvedRadius])
 
   return (
     <MapMobilePopover
@@ -82,10 +82,14 @@ const MapMobileRadiusPopoverInner: React.FC<MapMobileRadiusPopoverProps> = ({
         showsVerticalScrollIndicator={false}
         nestedScrollEnabled
       >
+        {summary && (
+          <Text style={[styles.summary, { color: colors.text }]}>{summary}</Text>
+        )}
         <View accessibilityRole="radiogroup" testID="map-mobile-radius-options">
           {radiusOptions.map((option) => {
-            const selected = String(option.id) === resolvedValue
-            const label = formatRadiusLabel(option.name || option.id)
+            const radius = resolveMapRadiusKm(option.id)
+            const selected = radius === resolvedRadius
+            const label = formatRadiusLabel(radius)
             return (
               <Pressable
                 key={String(option.id)}
@@ -128,6 +132,12 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 0,
     flexShrink: 1,
+  },
+  summary: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    fontWeight: '600',
   },
   row: {
     minHeight: 44,

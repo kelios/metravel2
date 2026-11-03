@@ -100,6 +100,7 @@ export function useMapScreenController() {
     mapUiApi,
     coordinates,
     coordinatesSource,
+    radiusQuery,
     locationState,
     geoError,
     refreshLocation,
@@ -367,6 +368,7 @@ export function useMapScreenController() {
     // Additional data for mobile layout
     coordinates,
     coordinatesSource,
+    radiusQuery,
     transportMode,
 
     // #207 — selected single marker for the mobile bottom card.
@@ -426,6 +428,7 @@ export function useMapScreenController() {
     userLocation,
     coordinates,
     coordinatesSource,
+    radiusQuery,
     transportMode,
     selectedPlace,
     clearSelectedPlace,

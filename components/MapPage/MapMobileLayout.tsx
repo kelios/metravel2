@@ -52,6 +52,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
   isLoading,
   isRefreshing,
   coordinates,
+  radiusSummary,
   transportMode,
   buildRouteTo,
   focusPlace,
@@ -689,6 +690,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             colors={colors}
             topInset={insets.top}
             radiusBadge={radiusBadge}
+            radiusSummary={radiusSummary}
             activePopover={activePopover}
             onToggleRadius={toggleRadiusPopover}
             onToggleLayers={toggleLayersPopover}

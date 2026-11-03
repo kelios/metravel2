@@ -1,4 +1,7 @@
 export const travelGenerated1 = {
+  "components.travel.WeeklyHighlights.collectionLoading": "Завантажуємо добірку…",
+  "components.travel.WeeklyHighlights.collectionUnavailable": "Не вдалося завантажити добірку",
+  "components.travel.WeeklyHighlights.collectionEmpty": "У добірці поки немає маршрутів",
   "components.listTravel.filters.GroupClearButton.ochistit_value1_vybrannyh_72bd2495": "Очистити {{value1}} вибраних",
   "components.listTravel.filters.SortDropdown.sortirovka_9e428456": "Сортування:",
   "components.listTravel.filters.SortDropdown.sortirovka_value1_3ed247b0": "Сортування: {{value1}}",

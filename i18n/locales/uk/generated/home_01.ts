@@ -1,4 +1,5 @@
 export const homeGenerated1 = {
+  "components.mainPage.StickySearchBar.collections": "Добірки",
   "app.tabs.about.o_proekte_metravel_soobschestvo_puteshestven_64997f50": "Про проект MeTravel — співтовариство мандрівників | Metravel",
   "app.tabs.about.oshibka_otpravki_f0b980aa": "Помилка відправки",
   "app.tabs.about.proekt_metravel_soobschestvo_puteshestvennik_f1e95ae3": "Проект MeTravel — співтовариство мандрівників Білорусією і не тільки. Діліться маршрутами, пишіть статті, зберігайте враження та надихайтеся ідеями.",

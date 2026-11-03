@@ -16,6 +16,7 @@ type MapScreenMobileProps = {
   isFetching: boolean
   isPlaceholderData: boolean
   coordinates: any
+  radiusSummary?: string
   transportMode: any
   buildRouteTo: (item: any) => void
   focusPlace?: (item: any) => void
@@ -58,6 +59,7 @@ export function MapScreenMobile({
   isFetching,
   isPlaceholderData,
   coordinates,
+  radiusSummary,
   transportMode,
   buildRouteTo,
   focusPlace,
@@ -115,6 +117,7 @@ export function MapScreenMobile({
           isLoading={loading || isFetching}
           isRefreshing={isFetching && isPlaceholderData}
           coordinates={coordinates}
+          radiusSummary={radiusSummary}
           transportMode={transportMode}
           buildRouteTo={buildRouteTo}
           focusPlace={focusPlace}

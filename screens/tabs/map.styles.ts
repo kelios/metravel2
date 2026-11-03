@@ -479,6 +479,12 @@ export const getStyles = (
         top: desktopMapFab.top + desktopMapFabRowOffset(1),
         right: DESKTOP_LAYERS_FAB_RIGHT + desktopInsets.right,
       },
+      desktopRadiusSummary: {
+        position: 'absolute',
+        top: desktopMapFab.top + desktopMapFabRowOffset(1),
+        right: DESKTOP_RADIUS_FAB_RIGHT + desktopInsets.right,
+        zIndex: desktopMapFab.zIndex,
+      },
       desktopRadiusFabActive: {
         backgroundColor: themedColors.surface,
         borderColor: themedColors.primary,

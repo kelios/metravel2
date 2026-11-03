@@ -2,6 +2,7 @@ import { Platform, StyleSheet } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
+import { MAP_RADIUS_SUMMARY_HEIGHT } from '@/components/MapPage/MapRadiusSummary'
 import { MAP_FILTER_CHIPS_STACK_OFFSET } from '@/components/MapPage/mapFilterChips'
 import { getOpaqueTintSurfaceStyle } from '@/utils/opaqueTintSurface'
 
@@ -54,6 +55,7 @@ const ROUTE_SUMMARY_CLOSE_TOUCH_INSET =
 const ROUTE_CONTROL_TOUCH_TARGET_SIZE = 44
 /** Зазор между ярусами правого стека (`toolbarStack`). */
 const TOOLBAR_STACK_GAP = 6
+export const MAP_RADIUS_SUMMARY_STACK_OFFSET = MAP_RADIUS_SUMMARY_HEIGHT + TOOLBAR_STACK_GAP
 
 /**
  * Пол отступа под статус-бар/нотч там, где safe-area == 0 (web, старые
@@ -155,13 +157,16 @@ export function getMapTopStackOffsets(params: {
    * формула не должна держаться на этом совпадении.
    */
   routeRowVisible: boolean
+  radiusSummaryVisible?: boolean
 }): {
   offlineIndicatorTop: number
   geoBannerStackOffset: number
   locationQualityStackOffset: number
 } {
-  const { topInset, filterChipsVisible, offlineIndicatorVisible, routeRowVisible } = params
+  const { topInset, filterChipsVisible, offlineIndicatorVisible, routeRowVisible, radiusSummaryVisible } = params
+  const radiusSummaryOffset = radiusSummaryVisible ? MAP_RADIUS_SUMMARY_STACK_OFFSET : 0
   const rowsOffset =
+    radiusSummaryOffset +
     (filterChipsVisible ? MAP_FILTER_CHIPS_STACK_OFFSET : 0) +
     (routeRowVisible ? MAP_ROUTE_ROW_STACK_OFFSET : 0)
   const offlineIndicatorTop = getMapToolbarBottom(topInset) + MAP_TOOLBAR_STACK_GAP + rowsOffset
@@ -181,12 +186,12 @@ export function getMapTopStackOffsets(params: {
     // чипы» и «офлайн + маршрут» тёмная плашка (zIndex 1015) легла бы на неё.
     locationQualityStackOffset: offlineIndicatorVisible
       ? Math.max(
-          0,
+          radiusSummaryOffset,
           offlineIndicatorBottom +
             MAP_TOOLBAR_STACK_GAP -
             (getMapToolbarBottom(topInset) + MAP_LOCATION_QUALITY_PILL_STACK_OFFSET),
         )
-      : 0,
+      : radiusSummaryOffset,
   }
 }
 

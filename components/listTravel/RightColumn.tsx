@@ -457,8 +457,8 @@ const RightColumn: React.FC<RightColumnProps> = (
           {listIntroContent ? (
             <View style={paddingHorizontalStyle}>{listIntroContent}</View>
           ) : null}
-          {/* До результатов на месте рекомендаций — их плейсхолдер в состоянии списка. */}
-          {hasLoadedResults ? (
+          {/* Публичные подборки веб-каталога доступны при любом результате поиска. */}
+          {hasLoadedResults || (isWeb && showRecommendations) ? (
           <View
             testID="recommendations-list-header"
             onLayout={showRecommendations ? handleRecommendationsLayout : undefined}
@@ -535,7 +535,7 @@ const RightColumn: React.FC<RightColumnProps> = (
     const listStatus = useMemo(() => hasLoadedResults ? null : (
       <RightColumnListStatus
         shouldShowSkeleton={shouldShowSkeleton}
-        isRecommendationsVisible={isRecommendationsVisible}
+        isRecommendationsVisible={!isWeb && isRecommendationsVisible}
         showInitialLoading={showInitialLoading}
         isError={isError}
         isOffline={isOffline}

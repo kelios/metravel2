@@ -7,7 +7,7 @@ import { useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { TravelCoords } from '@/types/types';
 import { useDebouncedValueWithPending } from '@/hooks/useDebouncedValue';
-import type { Coordinates } from './useMapCoordinates';
+import type { Coordinates, CoordinatesSource } from './useMapCoordinates';
 import type { FiltersData } from './useMapFilters';
 import type { MapFilterValues } from '@/utils/mapFiltersStorage';
 import { useMapTravels } from './useMapTravels';
@@ -18,7 +18,7 @@ interface UseMapDataControllerOptions {
   /**
    * Current map coordinates
    */
-  coordinates: Coordinates | null;
+  anchor: { coordinates: Coordinates | null; source: CoordinatesSource };
 
   /**
    * Current filter values
@@ -113,6 +113,7 @@ interface UseMapDataControllerResult {
    * before `isFetching` flips to true.
    */
   isDebouncingFilters: boolean;
+  radiusQuery: { radius: MapFilterValues['radius']; source: CoordinatesSource };
 }
 
 /**
@@ -132,7 +133,7 @@ interface UseMapDataControllerResult {
  *   mapError,
  *   refetchMapData,
  * } = useMapDataController({
- *   coordinates,
+ *   anchor,
  *   filterValues,
  *   filters,
  *   mode: 'radius',
@@ -146,7 +147,7 @@ export function useMapDataController(
   options: UseMapDataControllerOptions
 ): UseMapDataControllerResult {
   const {
-    coordinates,
+    anchor,
     filterValues,
     filters,
     mode,
@@ -157,8 +158,8 @@ export function useMapDataController(
 
   // Debounced values for stable queries
   const debounceTime = isMobile ? 300 : 500;
-  const [debouncedCoordinates, coordsPending] = useDebouncedValueWithPending(
-    coordinates,
+  const [debouncedAnchor, coordsPending] = useDebouncedValueWithPending(
+    anchor,
     debounceTime,
   );
   const [debouncedFilterValues, filtersPending] = useDebouncedValueWithPending(
@@ -183,7 +184,7 @@ export function useMapDataController(
     loadMore,
     isFetchingNextPage,
   } = useMapTravels({
-    coordinates: debouncedCoordinates,
+    coordinates: debouncedAnchor.coordinates,
     filterValues: debouncedFilterValues,
     filters,
     mode,
@@ -214,6 +215,7 @@ export function useMapDataController(
     onLoadMore: loadMore,
     isFetchingNextPage,
     isDebouncingFilters,
+    radiusQuery: { radius: debouncedFilterValues.radius, source: debouncedAnchor.source },
   }), [
     allTravelsData,
     travelsData,
@@ -230,5 +232,7 @@ export function useMapDataController(
     loadMore,
     isFetchingNextPage,
     isDebouncingFilters,
+    debouncedFilterValues.radius,
+    debouncedAnchor.source,
   ]);
 }

@@ -269,6 +269,18 @@ export const useStickySearchBarStyles = (colors: ReturnType<typeof useThemedColo
     height: DESIGN_TOKENS.touchTarget.minHeight,
     borderRadius: 12,
   },
+  actionButtonWithLabel: {
+    width: 'auto',
+    flexDirection: 'row',
+    flexShrink: 0,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  actionButtonLabel: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '600',
+  },
   actionButtonActive: {
     backgroundColor: colors.primarySoft,
     borderColor: colors.primaryAlpha40,

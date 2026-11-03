@@ -1,4 +1,5 @@
 export const homeGenerated1 = {
+  "components.mainPage.StickySearchBar.collections": "Collections",
   "app.tabs.about.o_proekte_metravel_soobschestvo_puteshestven_64997f50": "About the MeTravel project - a community of travelers | Metravel",
   "app.tabs.about.oshibka_otpravki_f0b980aa": "Send error",
   "app.tabs.about.proekt_metravel_soobschestvo_puteshestvennik_f1e95ae3": "The MeTravel project is a community of travelers around Belarus and beyond. Share routes, write articles, save impressions and get inspired by ideas.",

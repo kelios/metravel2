@@ -257,4 +257,8 @@ export const mapGenerated3 = {
   "components.MapPage.MapMobile.MapMobileTopOverlay.resetShort": "Скінуць",
   "components.MapPage.MapMobile.MapMobileTopOverlay.resetA11y": "Скінуць фільтры і паказаць усе месцы",
   "components.MapPage.MapMobile.MapMobileTopOverlay.routeShort": "Маршрут",
+  "radiusSummary.currentLocation": "{{distance}} ад вас",
+  "radiusSummary.lastLocation": "{{distance}} ад апошняга месцазнаходжання",
+  "radiusSummary.selectedPoint": "{{distance}} ад абранай кропкі",
+  "radiusSummary.minsk": "{{distance}} ад Мінска",
 } as const

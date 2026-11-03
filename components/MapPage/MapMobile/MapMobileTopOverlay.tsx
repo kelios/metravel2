@@ -42,8 +42,10 @@ import {
   MAP_ROUTE_ROW_MIN_WIDTH,
   MAP_ROUTE_ROW_RESERVED,
   MAP_ROUTE_ROW_STACK_OFFSET,
+  MAP_RADIUS_SUMMARY_STACK_OFFSET,
   MAP_TOOLBAR_TOUCH_TARGET_SIZE,
 } from './MapMobileTopOverlay.styles'
+import { MapRadiusSummary } from '@/components/MapPage/MapRadiusSummary'
 import { MapMobileRadiusPopover } from './MapMobileRadiusPopover'
 import { MapMobileLayersPopover } from './MapMobileLayersPopover'
 import { MapMobileTransportPopover } from './MapMobileTransportPopover'
@@ -90,6 +92,7 @@ interface MapMobileTopOverlayProps {
   topInset: number
   /** Short radius value shown as a badge on the radius button (e.g. "50"). */
   radiusBadge: string
+  radiusSummary?: string
   /** Which inline popover is currently open (radius/layers/transport) — or null. */
   activePopover: ActivePopover
   onToggleRadius: () => void
@@ -164,6 +167,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   colors,
   topInset,
   radiusBadge,
+  radiusSummary,
   activePopover,
   onToggleRadius,
   onToggleLayers,
@@ -321,7 +325,9 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   // Ряд чипов стоит сразу под тулбаром, поэтому ВСЕ поповеры (включая радиус)
   // открываются ниже него — иначе поповер лёг бы прямо на чипы.
   const activeFiltersOffset = showActiveFiltersRow ? MAP_FILTER_CHIPS_STACK_OFFSET : 0
-  const basePopoverTop = getMapToolbarBottom(topInset) + 6 + activeFiltersOffset
+  const visibleRadiusSummary = !isRouteMode ? radiusSummary : undefined
+  const radiusSummaryOffset = visibleRadiusSummary ? MAP_RADIUS_SUMMARY_STACK_OFFSET : 0
+  const basePopoverTop = getMapToolbarBottom(topInset) + 6 + activeFiltersOffset + radiusSummaryOffset
   // Селектор старта и сводка взаимоисключают друг друга и занимают один и тот
   // же ярус, поэтому смещение считается один раз, а не складывается (#1699).
   const routeRowOffset = showRouteStartSelector || showRouteSummary ? MAP_ROUTE_ROW_STACK_OFFSET : 0
@@ -413,7 +419,9 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
               onPress={onToggleRadius}
               accessibilityRole="button"
               accessibilityState={{ expanded: activePopover === 'radius' }}
-              accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.radius_value1_760a1afd', { value1: radiusBadge ? ` ${radiusBadge}` : '' })}
+              accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.radius_value1_760a1afd', {
+                value1: visibleRadiusSummary ? ` ${visibleRadiusSummary}` : radiusBadge ? ` ${radiusBadge}` : '',
+              })}
               style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
             >
               <View
@@ -424,7 +432,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
                 pointerEvents="none"
               >
                 <Feather name={MAP_ACTION_ICON.radius} size={ICON_SIZE} color={colors.text} />
-                {!!radiusBadge && (
+                {!!radiusBadge && !visibleRadiusSummary && (
                   <View style={styles.badge} pointerEvents="none">
                     <RNText style={styles.badgeText} numberOfLines={1}>
                       {radiusBadge}
@@ -565,6 +573,14 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
         {/* Вход в режим маршрута — FAB справа снизу (MapMobileLayout), а не
             пилюля в шапке: она была третьим ярусом поверх карты и уводила
             основное действие под большой палец только на широких экранах. */}
+
+        {visibleRadiusSummary && (
+          <MapRadiusSummary
+            label={visibleRadiusSummary}
+            colors={colors}
+            style={[styles.activeFiltersRow, { maxWidth: routeRowWidth }]}
+          />
+        )}
 
         {/* Чипы активных фильтров: снять поштучно (✕) или «Сбросить всё».
             Один ряд, горизонтальный скролл при большом количестве фильтров. */}
@@ -722,6 +738,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
           minWidth={RADIUS_POPOVER_WIDTH}
           options={radiusOptions}
           currentValue={radiusValue}
+          summary={visibleRadiusSummary}
           onSelect={onRadiusSelect}
           onRequestClose={onClosePopover}
         />

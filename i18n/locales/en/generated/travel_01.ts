@@ -1,4 +1,7 @@
 export const travelGenerated1 = {
+  "components.travel.WeeklyHighlights.collectionLoading": "Loading the collection…",
+  "components.travel.WeeklyHighlights.collectionUnavailable": "Could not load the collection",
+  "components.travel.WeeklyHighlights.collectionEmpty": "There are no routes in this collection yet",
   "components.listTravel.filters.GroupClearButton.ochistit_value1_vybrannyh_72bd2495": "Clear {{value1}} selected",
   "components.listTravel.filters.SortDropdown.sortirovka_9e428456": "Sorting:",
   "components.listTravel.filters.SortDropdown.sortirovka_value1_3ed247b0": "Sort: {{value1}}",

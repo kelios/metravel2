@@ -84,6 +84,8 @@ describe('StickySearchBar Component', () => {
   });
 
   it('renders search input and desktop actions', async () => {
+    (global as any).__mockResponsive.width = 1536;
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
     await renderWithProviders(
       <StickySearchBar
         search=""
@@ -99,7 +101,8 @@ describe('StickySearchBar Component', () => {
     );
 
     expect(screen.getByPlaceholderText('Найти маршрут…')).toBeTruthy();
-    expect(screen.getByTestId('toggle-recommendations-button')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Подборки', expanded: false })).toBeTruthy();
+    expect(screen.getByText('Подборки')).toBeTruthy();
     const results = screen.getByTestId('results-count-text');
     expect(String((results.props as any).children)).toContain('10');
   });
@@ -292,7 +295,8 @@ describe('StickySearchBar Component', () => {
     expect(mockOnClearAll).toHaveBeenCalled();
   });
 
-  it('shows recommendations as active when isRecommendationsVisible is true', async () => {
+  it('announces collections as expanded when opened on web', async () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web', configurable: true });
     await renderWithProviders(
       <StickySearchBar
         search=""
@@ -307,8 +311,7 @@ describe('StickySearchBar Component', () => {
       />
     );
 
-    const recommendationsButton = screen.getByTestId('toggle-recommendations-button');
-    expect(recommendationsButton.props.accessibilityState?.selected).toBe(true);
+    expect(screen.getByRole('button', { name: 'Подборки', expanded: true })).toBeTruthy();
   });
 
   it('displays results count correctly on desktop', async () => {

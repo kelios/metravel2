@@ -46,12 +46,16 @@ const makeWrapper = () => {
   )
 }
 
-const renderTravels = async (mode: 'radius' | 'route', fullRouteCoords: [number, number][]) =>
+const renderTravels = async (
+  mode: 'radius' | 'route',
+  fullRouteCoords: [number, number][],
+  radius = '50',
+) =>
   await renderHook(
     () =>
       useMapTravels({
         coordinates: COORDINATES,
-        filterValues: FILTER_VALUES,
+        filterValues: { ...FILTER_VALUES, radius },
         filters: FILTERS,
         mode,
         fullRouteCoords,
@@ -122,6 +126,21 @@ describe('useMapTravels — data source while a route is being built', () => {
     await waitFor(() => expect(result.current.allTravelsData).toHaveLength(1))
     const [, corridorKm] = mockFetchTravelsNearRoute.mock.calls[0]
     expect(corridorKm).toBe(3)
+  })
+
+  it.each([
+    ['60.9', '60'],
+    ['0.5', '0'],
+    ['invalid', '50'],
+  ])('uses the effective integer radius for URL radius %s', async (radius, effectiveRadius) => {
+    await renderTravels('radius', [], radius)
+
+    await waitFor(() => expect(mockFetchTravelsForMap).toHaveBeenCalledWith(
+      0,
+      expect.any(Number),
+      expect.objectContaining({ radius: effectiveRadius }),
+      expect.any(Object),
+    ))
   })
 
   it('still uses the radius query in plain radius mode', async () => {

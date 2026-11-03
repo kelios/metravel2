@@ -28,6 +28,7 @@ let mockMapLoading = false
 let mockMapFetching = false
 let mockMapPlaceholder = false
 let mockMapDebouncing = false
+let mockSearchAreaCenter: { latitude: number; longitude: number } | null = null
 
 jest.mock('@/stores/routeStore', () => ({
   useRouteStore: {
@@ -80,7 +81,7 @@ jest.mock('@/hooks/map/useRouteController', () => ({
 
 jest.mock('@/hooks/map/useSearchThisArea', () => ({
   useSearchThisArea: () => ({
-    searchAreaCenter: null,
+    searchAreaCenter: mockSearchAreaCenter,
     setSearchAreaCenter: mockSetSearchAreaCenter,
     canSearchThisArea: false,
     handleMapMove: jest.fn(),
@@ -89,8 +90,8 @@ jest.mock('@/hooks/map/useSearchThisArea', () => ({
 }))
 
 jest.mock('@/hooks/map/useMapDataController', () => ({
-  useMapDataController: (opts: { coordinates: unknown }) => ({
-    __receivedCoordinates: opts.coordinates,
+  useMapDataController: (opts: { anchor: { source: string }; filterValues: { radius: string } }) => ({
+    radiusQuery: { radius: opts.filterValues.radius, source: opts.anchor.source },
     allTravelsData: [],
     travelsData: [],
     total: 0,
@@ -162,6 +163,7 @@ describe('useMapController (#991 smoke)', () => {
     expect(props.onMapBackgroundTap).toBeUndefined()
     expect(props.suppressLeafletPopupOnSelect).toBe(false)
     expect(props.initialResultsSettled).toBe(true)
+    expect(result.current.radiusQuery.source).toBe('default')
   })
 
   it('#1291 — opens the web startup gate only for the active settled result set', async () => {
@@ -249,8 +251,25 @@ describe('useMapController (#991 smoke)', () => {
       useMapController({ ...baseParams, urlCoordinates: url }),
     )
     expect(result.current.mapPanelProps.coordinates).toEqual(url)
+    expect(result.current.radiusQuery.source).toBe('manual')
     // URL-якорь — viewport-позиция, не доверенный fix пользователя
     expect(result.current.mapPanelProps.coordinatesAreFallback).toBe(true)
+  })
+
+  it('uses the explicit search area as the manual radius anchor even with a GPS fix and URL anchor', async () => {
+    const area = { latitude: 52.1, longitude: 23.7 }
+    mockSearchAreaCenter = area
+    mockMapCoordinatesResult.coordinatesSource = 'geolocation'
+
+    try {
+      const { result } = await renderHook(() =>
+        useMapController({ ...baseParams, urlCoordinates: { latitude: 50.06, longitude: 19.94 } }),
+      )
+      expect(result.current.mapPanelProps.coordinates).toEqual(area)
+      expect(result.current.radiusQuery.source).toBe('manual')
+    } finally {
+      mockSearchAreaCenter = null
+    }
   })
 
   it.each([false, true])('keeps the explicit URL point separate from fetched results (mobile=%s)', async isMobile => {

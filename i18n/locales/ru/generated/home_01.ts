@@ -1,4 +1,5 @@
 export const homeGenerated1 = {
+  "components.mainPage.StickySearchBar.collections": "Подборки",
   "app.tabs.about.o_proekte_metravel_soobschestvo_puteshestven_64997f50": "О проекте MeTravel — сообщество путешественников | Metravel",
   "app.tabs.about.oshibka_otpravki_f0b980aa": "Ошибка отправки",
   "app.tabs.about.proekt_metravel_soobschestvo_puteshestvennik_f1e95ae3": "Проект MeTravel — сообщество путешественников по Беларуси и не только. Делитесь маршрутами, пишите статьи, сохраняйте впечатления и вдохновляйтесь идеями.",

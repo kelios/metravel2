@@ -10,6 +10,14 @@ import { formatInteger } from '@/i18n/format'
 // (входит в набор, поэтому сегмент всегда подсвечен).
 export const DEFAULT_RADIUS_KM = 50;
 
+/** Match the integer radius sent by fetchTravelsForMap. */
+export function resolveMapRadiusKm(value: string | number): number {
+  const radius = Number(value)
+  return Number.isFinite(radius) && radius > 0
+    ? Number.parseInt(String(radius), 10)
+    : DEFAULT_RADIUS_KM
+}
+
 export const RADIUS_OPTIONS = [
   { id: '10', name: '10' },
   { id: '25', name: '25' },

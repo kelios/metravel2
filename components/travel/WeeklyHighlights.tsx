@@ -14,6 +14,7 @@ import { queryConfigs } from '@/utils/reactQueryConfig';
 import { queryKeys } from '@/api/queryKeys';
 import { resolveTravelUrl } from '@/utils/subscriptionsHelpers';
 import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 
 
 const COLLAPSED_KEY = 'weekly_highlights_collapsed';
@@ -26,10 +27,12 @@ interface WeeklyHighlightsProps {
     onVisibilityChange?: (visible: boolean) => void;
     showHeader?: boolean;
     enabled?: boolean;
+    showStatus?: boolean;
 }
 
-function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true, enabled = true }: WeeklyHighlightsProps) {
+function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true, enabled = true, showStatus = false }: WeeklyHighlightsProps) {
     const router = useRouter();
+    const { t } = useTranslation();
     const { viewHistory } = useFavorites();
     const colors = useThemedColors();
     const { isMobile } = useResponsive();
@@ -85,9 +88,9 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
     }, [onVisibilityChange]);
 
     // Получаем популярные путешествия месяца
-    const { data: popularTravels } = useQuery({
+    const { data: popularTravels, isPending, isError } = useQuery({
         queryKey: queryKeys.travelsOfMonth(),
-        queryFn: ({ signal }) => fetchTravelsOfMonth({ signal }),
+        queryFn: ({ signal }) => fetchTravelsOfMonth({ signal, throwOnError: true }),
         ...queryConfigs.static,
         enabled,
     });
@@ -134,7 +137,19 @@ function WeeklyHighlights({ forceVisible, onVisibilityChange, showHeader = true,
     }, [router]);
 
     // Условный возврат после всех хуков
-    if (highlights.length === 0) return null;
+    if (highlights.length === 0) {
+        if (!showStatus || !enabled || forceVisible === false) return null;
+        const statusKey = isPending
+            ? 'travel:components.travel.WeeklyHighlights.collectionLoading'
+            : isError
+                ? 'travel:components.travel.WeeklyHighlights.collectionUnavailable'
+                : 'travel:components.travel.WeeklyHighlights.collectionEmpty';
+        return (
+            <Text accessibilityLiveRegion="polite" style={[styles.subtitle, { color: colors.textMuted }]}>
+                {t(statusKey)}
+            </Text>
+        );
+    }
     
     // Если forceVisible установлен, используем его напрямую
     if (forceVisible !== undefined) {

@@ -6,7 +6,7 @@ import { filterMapPointsByCategory, resolveMapCategorySelection } from '@/utils/
 import type { MapPointCountScope } from '@/utils/mapPointCount';
 import type { TravelCoords } from '@/types/types';
 import { logError } from '@/utils/logger';
-import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
+import { resolveMapRadiusKm } from '@/constants/mapConfig';
 import { queryKeys } from '@/api/queryKeys';
 import type { Coordinates } from './useMapCoordinates';
 import type { FiltersData } from './useMapFilters';
@@ -299,16 +299,12 @@ export function useMapTravels({
   // Параметры запроса
   const queryParams = useMemo(
     () => {
-      const radiusNum = Number(filterValues.radius);
       const params = {
         // #2450 — 4 знака (~11 м): дрожание GPS между возвратами на экран не
         // должно менять queryKey и перезапрашивать первую страницу.
         lat: roundAnchorCoordinate(coordinates?.latitude),
         lng: roundAnchorCoordinate(coordinates?.longitude),
-        // Санитизируем: "0"/"abc"/пусто → дефолт, иначе radius=0/NaN даёт пустую выдачу.
-        radius: Number.isFinite(radiusNum) && radiusNum > 0
-          ? String(radiusNum)
-          : String(DEFAULT_RADIUS_KM),
+        radius: String(resolveMapRadiusKm(filterValues.radius)),
         mode: dataMode,
         ...(dataMode === 'route' ? { routeKey: routeSignature } : {}),
         filtersKey: JSON.stringify(backendFilters),

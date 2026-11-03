@@ -257,4 +257,8 @@ export const mapGenerated3 = {
   "components.MapPage.MapMobile.MapMobileTopOverlay.resetShort": "Reset",
   "components.MapPage.MapMobile.MapMobileTopOverlay.resetA11y": "Reset filters and show all places",
   "components.MapPage.MapMobile.MapMobileTopOverlay.routeShort": "Route",
+  "radiusSummary.currentLocation": "{{distance}} from you",
+  "radiusSummary.lastLocation": "{{distance}} from your last location",
+  "radiusSummary.selectedPoint": "{{distance}} from the selected point",
+  "radiusSummary.minsk": "{{distance}} from Minsk",
 } as const

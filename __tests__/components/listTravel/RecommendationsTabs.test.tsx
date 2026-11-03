@@ -113,6 +113,7 @@ describe('RecommendationsTabs', () => {
   it.each(['web', 'ios', 'android'] as const)('the expanded consumer row owns its tabs and selection on %s', async os => {
     Object.defineProperty(Platform, 'OS', { configurable: true, value: os });
     mockUseResponsive.mockReturnValue({ isMobile: false });
+    mockUseAuth.mockReturnValue({ isAuthenticated: true });
     const view = await render(<RecommendationsTabs forceVisible={true} />);
     await screen.findByText('WeeklyHighlights');
     const roles = getTabRoles();
@@ -125,7 +126,18 @@ describe('RecommendationsTabs', () => {
     expect(within(getRow()).getAllByRole(roles.tab).filter(tab => tab.props.accessibilityState?.selected).map(tab => tab.props.accessibilityLabel)).toEqual(['Хочу поехать']);
   });
 
+  it.each([true, false])('shows only public highlights to a web guest (mobile=%s)', async isMobile => {
+    Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+    mockUseResponsive.mockReturnValue({ isMobile });
+    await render(<RecommendationsTabs />);
+
+    await screen.findByText('WeeklyHighlights');
+    expect(screen.queryByText('PersonalizedRecommendations')).toBeNull();
+    expect(screen.queryByTestId('recommendations-tabpanel-highlights')).toBeNull();
+  });
+
   it('renders default tab (highlights) content', async () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true });
     const { getByTestId } = await render(<RecommendationsTabs forceVisible={true} />);
 
     expect(await screen.findByText('WeeklyHighlights')).toBeTruthy();
@@ -133,7 +145,7 @@ describe('RecommendationsTabs', () => {
   });
 
   it('shows auth gate for favorites when user is not authenticated and navigates to login', async () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: false });
+    Object.defineProperty(Platform, 'OS', { value: 'ios', configurable: true });
 
     await render(<RecommendationsTabs forceVisible={true} />);
 
@@ -312,6 +324,7 @@ describe('RecommendationsTabs', () => {
   });
 
   it('collapses and expands and calls onVisibilityChange', async () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true });
     const onVisibilityChange = jest.fn();
 
     const { getByTestId } = await render(

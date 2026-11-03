@@ -270,12 +270,17 @@ export function useMapController({
   // viewport anchor owned by useMapCoordinates. Live watch ticks update only the
   // trusted user marker; feeding them back into the radius/search anchor would
   // retrigger fitBounds and reset a manual zoom while the user is moving.
-  const queryCoordinates = useMemo(() => {
-    return searchAreaCenter ?? urlCoordinates ?? coordinates;
-  }, [searchAreaCenter, urlCoordinates, coordinates]);
+  const queryAnchor = useMemo(() => {
+    const manualCenter = searchAreaCenter ?? urlCoordinates;
+    return {
+      coordinates: manualCenter ?? coordinates,
+      source: manualCenter ? 'manual' as const : coordinatesSource,
+    };
+  }, [searchAreaCenter, urlCoordinates, coordinates, coordinatesSource]);
+  const queryCoordinates = queryAnchor.coordinates;
 
   const dataController = useMapDataController({
-    coordinates: queryCoordinates,
+    anchor: queryAnchor,
     filterValues,
     filters,
     mode,
@@ -299,6 +304,7 @@ export function useMapController({
     onLoadMore,
     isFetchingNextPage,
     isDebouncingFilters,
+    radiusQuery,
   } = dataController;
 
   const categorySelection = useMemo(
@@ -609,6 +615,7 @@ export function useMapController({
     handleSearchThisArea,
 
     // Travels data
+    radiusQuery,
     allTravelsData,
     travelsData,
     total,

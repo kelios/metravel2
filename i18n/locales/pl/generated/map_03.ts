@@ -257,4 +257,8 @@ export const mapGenerated3 = {
   "components.MapPage.MapMobile.MapMobileTopOverlay.resetShort": "Resetuj",
   "components.MapPage.MapMobile.MapMobileTopOverlay.resetA11y": "Resetuj filtry i pokaż wszystkie miejsca",
   "components.MapPage.MapMobile.MapMobileTopOverlay.routeShort": "Trasa",
+  "radiusSummary.currentLocation": "{{distance}} od Ciebie",
+  "radiusSummary.lastLocation": "{{distance}} od ostatniej lokalizacji",
+  "radiusSummary.selectedPoint": "{{distance}} od wybranego punktu",
+  "radiusSummary.minsk": "{{distance}} od Mińska",
 } as const

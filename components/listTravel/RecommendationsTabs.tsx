@@ -474,6 +474,14 @@ const RecommendationsTabs = memo(
       </ScrollView>
     );
 
+    if (Platform.OS === 'web' && !isAuthenticated) {
+      return (
+        <Suspense fallback={<RecommendationsPlaceholder isMobileWeb={isMobileWeb} styles={styles} template={tabCardTemplate} />}>
+          <WeeklyHighlights forceVisible showStatus />
+        </Suspense>
+      );
+    }
+
     // Task A: mobile uses vertically stacked horizontal "shelves" instead of the
     // collapsible chip-tabs panel. Each shelf is auto-height (no fixed-height +
     // overflow:hidden clipping). Empty sections are not rendered.

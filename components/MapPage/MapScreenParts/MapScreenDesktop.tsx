@@ -8,6 +8,7 @@ import { MAP_OFFLINE_INDICATOR_TOP, MapOfflineIndicator } from '@/components/Map
 import { restartMapOnboarding } from '@/components/MapPage/MapOnboarding'
 import MapPanelHeader from '@/components/MapPage/MapPanelHeader'
 import { MapMobileLayersPopover } from '@/components/MapPage/MapMobile/MapMobileLayersPopover'
+import { MapRadiusSummary } from '@/components/MapPage/MapRadiusSummary'
 import { MapMobileRadiusPopover } from '@/components/MapPage/MapMobile/MapMobileRadiusPopover'
 import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import type { ThemedColors } from '@/hooks/useTheme'
@@ -389,6 +390,7 @@ type MapScreenDesktopOverlaysProps = {
   // (filterValue.radius + onFilterChange('radius', id)). No duplicated logic.
   radiusOptions?: ReadonlyArray<{ id: string; name: string }>
   radiusValue?: string | number
+  radiusSummary?: string
   onRadiusSelect?: (id: string) => void
   /**
    * #2263 — «Подсказки» live on the map, outside the panel, so they are
@@ -421,6 +423,7 @@ export function MapScreenDesktopOverlays({
   onResetOverlays,
   radiusOptions,
   radiusValue,
+  radiusSummary,
   onRadiusSelect,
   isDesktopCollapsed = false,
   toggleDesktopCollapse,
@@ -487,7 +490,9 @@ export function MapScreenDesktopOverlays({
             onPress={toggleRadius}
             accessibilityRole="button"
             accessibilityState={{ expanded: radiusOpen }}
-            accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.radius_value1_934e2db6', { value1: radiusBadge ? ` ${radiusBadge}` : '' })}
+            accessibilityLabel={i18nT('map:components.MapPage.MapScreenParts.MapScreenDesktop.radius_value1_934e2db6', {
+              value1: radiusSummary ? ` ${radiusSummary}` : radiusBadge ? ` ${radiusBadge}` : '',
+            })}
             style={({ pressed }) => [
               styles.desktopRadiusFab,
               radiusOpen && styles.desktopRadiusFabActive,
@@ -495,7 +500,7 @@ export function MapScreenDesktopOverlays({
             ]}
           >
             <Feather name="target" size={20} color={themedColors.text} />
-            {!!radiusBadge && (
+            {!!radiusBadge && !radiusSummary && (
               <View style={styles.desktopRadiusFabBadge} pointerEvents="none">
                 <Text style={styles.desktopRadiusFabBadgeText} numberOfLines={1}>
                   {radiusBadge}
@@ -503,6 +508,10 @@ export function MapScreenDesktopOverlays({
               </View>
             )}
           </Pressable>
+
+          {radiusSummary && !popoverOpen && (
+            <MapRadiusSummary label={radiusSummary} colors={themedColors} style={styles.desktopRadiusSummary} />
+          )}
 
           {radiusOpen && (
             <MapMobileRadiusPopover
@@ -514,6 +523,7 @@ export function MapScreenDesktopOverlays({
               maxWidth={200}
               options={radiusOptions ?? []}
               currentValue={resolvedRadiusValue}
+              summary={radiusSummary}
               onSelect={(id) => onRadiusSelect?.(id)}
               onRequestClose={closeRadius}
             />

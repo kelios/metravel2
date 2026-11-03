@@ -1,4 +1,5 @@
 export const homeGenerated1 = {
+  "components.mainPage.StickySearchBar.collections": "Zestawienia",
   "app.tabs.about.o_proekte_metravel_soobschestvo_puteshestven_64997f50": "O projekcie MeTravel - społeczność podróżników | Metravel",
   "app.tabs.about.oshibka_otpravki_f0b980aa": "Wyślij błąd",
   "app.tabs.about.proekt_metravel_soobschestvo_puteshestvennik_f1e95ae3": "Projekt MeTravel to społeczność podróżników po Białorusi i poza nią. Dziel się trasami, pisz artykuły, zapisuj wrażenia i inspiruj się pomysłami.",

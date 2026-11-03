@@ -30,6 +30,7 @@ import {
   MapScreenDesktopOverlays,
 } from '@/components/MapPage/MapScreenParts/MapScreenDesktop'
 import { MapScreenShell } from '@/components/MapPage/MapScreenParts/MapScreenShell'
+import { formatMapRadiusSummary } from '@/components/MapPage/MapRadiusSummary'
 import { MapPageHeading } from '@/components/MapPage/MapPageHeading'
 import { isMapFilterChipsRowVisible } from '@/components/MapPage/mapFilterChips'
 import { getMapTopStackOffsets } from '@/components/MapPage/MapMobile/MapMobileTopOverlay.styles'
@@ -132,6 +133,7 @@ export default function MapScreen() {
     locationState,
     coordinates,
     coordinatesSource,
+    radiusQuery,
     transportMode,
     selectedPlace,
     clearSelectedPlace,
@@ -346,6 +348,10 @@ export default function MapScreen() {
 
   const currentTransport = transportMode ?? 'car'
   const currentMode = routingSlice?.mode
+  const radiusSummary = isWeb && currentMode !== 'route' && radiusQuery
+    ? formatMapRadiusSummary(radiusQuery.radius, radiusQuery.source)
+    : undefined
+  const mobileRadiusSummaryVisible = isMobile && Boolean(radiusSummary)
   const activeFilterItems = useMemo(
     () => buildActiveFilterItems(quickFilters.selected, currentRadius, currentMode, currentTransport),
     [quickFilters.selected, currentRadius, currentMode, currentTransport],
@@ -378,8 +384,9 @@ export default function MapScreen() {
         filterChipsVisible: mobileFilterChipsVisible,
         offlineIndicatorVisible: isMobile && !isConnected,
         routeRowVisible: isMobileRouteMode,
+        radiusSummaryVisible: mobileRadiusSummaryVisible,
       }),
-    [insets.top, mobileFilterChipsVisible, isMobile, isConnected, isMobileRouteMode],
+    [insets.top, mobileFilterChipsVisible, isMobile, isConnected, isMobileRouteMode, mobileRadiusSummaryVisible],
   )
 
   // Radius всегда имеет непустое дефолтное значение, поэтому активность считаем
@@ -560,6 +567,7 @@ export default function MapScreen() {
       isFetching={isFetching}
       isPlaceholderData={isPlaceholderData}
       coordinates={listSearchCenter}
+      radiusSummary={radiusSummary}
       transportMode={transportMode}
       buildRouteTo={buildRouteTo}
       focusPlace={focusPlace}
@@ -647,6 +655,7 @@ export default function MapScreen() {
       onResetOverlays={filtersPanelProps?.contextValue?.onResetOverlays}
       radiusOptions={quickFilters.radiusOptions}
       radiusValue={currentRadius}
+      radiusSummary={radiusSummary}
       onRadiusSelect={handleDesktopRadiusSelect}
       isDesktopCollapsed={isDesktopCollapsed}
       toggleDesktopCollapse={toggleDesktopCollapse}

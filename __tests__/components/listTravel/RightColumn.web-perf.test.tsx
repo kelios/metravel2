@@ -173,6 +173,18 @@ describe('RightColumn web row paint optimization', () => {
     })
   })
 
+  it('keeps an open collection available when search has no matches', async () => {
+    await renderWithProviders(createRightColumn({
+      search: 'нет совпадений',
+      isRecommendationsVisible: true,
+      travels: [],
+      total: 0,
+      showEmptyState: true,
+    }))
+
+    expect(await screen.findByTestId('recommendations-tabs-mock')).toBeTruthy()
+  })
+
   it('drops deferred paint hints when export mode is enabled', async () => {
     const { rerenderWithProviders } = await renderWithProviders(createRightColumn())
 
