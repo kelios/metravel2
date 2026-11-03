@@ -120,7 +120,7 @@ describe('FavoriteButton', () => {
     })
   })
 
-  it('redirects to login when unauthenticated and does not call backend', async () => {
+  it('opens registration for a new guest and preserves the favorite intent without mutating favorites', async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false, authReady: true })
     mockIsFavorite.mockReturnValue(false)
 
@@ -137,9 +137,8 @@ describe('FavoriteButton', () => {
     await fireEvent.press(button)
 
     await waitFor(() => {
-      expect(mockRouterPush).toHaveBeenCalledWith(expect.stringContaining('/login'))
+      expect(mockRouterPush).toHaveBeenCalledWith('/registration?redirect=%2F&intent=favorite&subject=Test+Travel')
     })
-    expect(mockRouterPush).toHaveBeenCalledWith(expect.stringContaining('intent=favorite'))
 
     expect(mockAddFavorite).not.toHaveBeenCalled()
     expect(mockRemoveFavorite).not.toHaveBeenCalled()

@@ -2,9 +2,8 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
-import { execFileSync } from 'node:child_process'
 
-import { makeTempDir, removeDir, writeTextFile } from './cli-test-utils'
+import { makeTempDir, removeDir, runCli, writeTextFile } from './cli-test-utils'
 
 const { commitTimeMs, resolveBuildTimeMs } = require('@/scripts/lib/buildStamp')
 
@@ -15,8 +14,11 @@ describe('build stamps (#2930)', () => {
 
   beforeEach(() => {
     repo = makeTempDir('build-stamp-')
-    const env = { ...process.env, GIT_COMMITTER_DATE: '2026-11-01T19:05:20Z', GIT_AUTHOR_DATE: '2026-11-01T19:05:20Z' }
-    const git = (args: string[]) => execFileSync('git', args, { cwd: repo, env, stdio: 'ignore' })
+    const env = { GIT_COMMITTER_DATE: '2026-11-01T19:05:20Z', GIT_AUTHOR_DATE: '2026-11-01T19:05:20Z' }
+    const git = (args: string[]) => {
+      const result = runCli('git', args, { cwd: repo, env })
+      if (result.status !== 0) throw new Error(result.stderr)
+    }
     git(['init', '-q'])
     writeTextFile(path.join(repo, 'a.txt'), 'a')
     git(['add', 'a.txt'])

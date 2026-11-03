@@ -3,7 +3,7 @@
 // шагов («Та же табличка») и заменили рассказ точки фразами о самом задании.
 const fs = require('node:fs')
 const path = require('node:path')
-const { spawnSync } = require('node:child_process')
+const { runNodeCli } = require('./cli-test-utils')
 
 const {
   BASELINE_CONTRACT_VERSION,
@@ -167,7 +167,7 @@ describe('scan-quest-story-thread — правки-источники и baselin
   })
 
   it('CLI: --quest-id без --source — неверный вызов, а не молчаливый скан корпуса', () => {
-    const run = spawnSync(process.execPath, ['scripts/scan-quest-story-thread.js', '--quest-id=x'], { encoding: 'utf8' })
+    const run = runNodeCli(['scripts/scan-quest-story-thread.js', '--quest-id=x'])
     expect(run.status).toBe(2)
     expect(run.stderr).toContain('--quest-id работает только с --source')
   })

@@ -8,6 +8,7 @@
  */
 import fs from 'fs'
 import path from 'path'
+import { makeTempDir, removeDir } from './cli-test-utils'
 
 const ROOT = path.resolve(__dirname, '..', '..')
 const inputs = require('@/scripts/lib/metroCacheInputs') as {
@@ -25,9 +26,8 @@ const write = (root: string, relative: string, content: string) => {
 }
 
 const makeFixture = (): string => {
-  fs.mkdirSync(path.join(ROOT, '.codex-temp'), { recursive: true })
   // Inside the repository so the copied plugins resolve typescript and Babel.
-  const root = fs.mkdtempSync(path.join(ROOT, '.codex-temp/metro-cache-inputs-'))
+  const root = makeTempDir('metro-cache-inputs-', { root: path.join(ROOT, '.codex-temp') })
   fs.mkdirSync(path.join(root, 'i18n'))
   for (const file of ['babel-inline-plugin.js', 'catalogCompiler.js', 'babel-reactive-locale-plugin.js']) {
     fs.copyFileSync(path.join(ROOT, 'i18n', file), path.join(root, 'i18n', file))
@@ -84,7 +84,7 @@ describe('Metro transform cache inputs', () => {
   })
   afterEach(() => {
     delete process.env.EXPO_PUBLIC_METRO_CACHE_INPUTS_TEST
-    fs.rmSync(root, { recursive: true, force: true })
+    removeDir(root)
   })
 
   it('has an edit for every declared input', () => {
