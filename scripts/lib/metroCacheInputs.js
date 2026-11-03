@@ -186,8 +186,7 @@ const readImports = (parser, source) => {
 
 const getReactiveLocaleRevision = (projectRoot, { platform = 'web', memoFile = defaultMemoFile(projectRoot) } = {}) => {
   const parser = require('@babel/parser')
-  const pluginFile = path.join(projectRoot, 'i18n/babel-reactive-locale-plugin.js')
-  const plugin = require(pluginFile)
+  const plugin = require('../../i18n/babel-reactive-locale-plugin.js')
   const pluginRevision = fileDigest(projectRoot, ['i18n/babel-reactive-locale-plugin.js'])
   const salt = digestEntries([pluginRevision, getToolchainRevision(projectRoot), platform])
   const memo = memoFile ? readMemo(memoFile, salt) : { imports: {}, facts: {} }
@@ -277,7 +276,7 @@ const getScaledAssetsRevision = (projectRoot) => {
 
 // Порядок фиксирован: тест сверяет, что каждый вход меняет cacheVersion.
 const TRANSFORM_CACHE_INPUTS = [
-  ['locale-catalog', (projectRoot) => require(path.join(projectRoot, 'i18n/babel-inline-plugin.js')).getCatalogRevision(projectRoot)],
+  ['locale-catalog', (projectRoot) => require('../../i18n/babel-inline-plugin.js').getCatalogRevision(projectRoot)],
   ['reactive-locale', (projectRoot) => getReactiveLocaleRevision(projectRoot)],
   ['public-env', () => getPublicEnvRevision()],
   ['expo-public-config', (projectRoot) => getExpoPublicConfigRevision(projectRoot)],
