@@ -112,6 +112,7 @@ describe('SubscriptionsScreen', () => {
         expect(mockedFetchMyTravels).toHaveBeenCalledWith({
             user_id: 42,
             perPage: 10,
+            signal: expect.any(AbortSignal),
         });
     });
 
