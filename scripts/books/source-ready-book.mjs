@@ -179,6 +179,22 @@ async function loadWatercolorEdition({country, countryCode, registryPath, stops,
 }
 
 /** Photographic edition: real author originals of the same article, composed without upscaling. */
+/** One clean frame per place (#2968): a second, near-identical frame or a person in the picture never reaches a reader's book. */
+export function checkPrintedPlace(id, used, sameArticle) {
+  if (used.length !== 1 || used[0].role !== 'main' || used[0].peopleFree !== true || !sameArticle) throw new Error('A place prints exactly one verified people-free photograph: ' + id);
+}
+
+/** A photographic plate carries exactly one crisp, verified, never upscaled photograph. */
+export function checkPhotoPlate(id, asset, box, usedShas) {
+  if (asset.box !== box || !isSha(asset.sha256) || asset.photos?.length !== 1 || asset.featherMm !== 0) throw new Error('A photographic plate carries exactly one crisp photograph: ' + id);
+  if (asset.photos.some(photo => !usedShas.has(photo.sha256) || photo.upscaled !== false || !(photo.embeddedPpi > 0) || !(photo.nativePpiAtPlacedSize >= photo.embeddedPpi - .05))) throw new Error('Collage uses a photo outside the verified evidence or upscales it: ' + id);
+}
+
+/** The plate must be composed from the retouch state the evidence records, so the imprint never misreports it. */
+export function checkRetouchState(id, asset, photo) {
+  if ((asset.photos[0].retouchedSha256 ?? null) !== (photo.retouch?.sha256 ?? null)) throw new Error('The plate was composed from another retouch state: ' + id);
+}
+
 async function loadPhotoEdition({country, countryCode, profileId, stops, sources, sourcesRoot, collageRegistryPath, originalsIndexPath, assets, provenance}) {
   const evidencePath = path.join(sourcesRoot, country, 'photo-evidence.json');
   const [evidence, registry, originals] = await Promise.all([json(evidencePath), json(collageRegistryPath), json(originalsIndexPath)]);
@@ -195,11 +211,15 @@ async function loadPhotoEdition({country, countryCode, profileId, stops, sources
     const original = originals[photo.originalUri];
     if (!original || original.uri !== photo.originalUri || original.sha256 !== photo.sha256 || original.widthPx !== photo.widthPx || original.heightPx !== photo.heightPx) throw new Error('Photo evidence differs from the downloaded original: ' + id);
     await projectFile(original.localPath, photo.sha256);
+    if (photo.retouch) {
+      const r = photo.retouch;
+      if (!isSha(r.sha256) || r.widthPx !== photo.widthPx || r.heightPx !== photo.heightPx || typeof r.removed !== 'string' || !r.removed.trim() || typeof r.decision !== 'string' || !r.decision.trim()) throw new Error('Incomplete retouch record: ' + id);
+      await projectFile(r.path, r.sha256);
+    }
     return original;
   };
   const embed = async (id, asset, usedShas, box) => {
-    if (asset.box !== box || !isSha(asset.sha256) || !asset.photos?.length || asset.photos.length > 3) throw new Error('Invalid collage asset: ' + id);
-    if (asset.photos.some(photo => !usedShas.has(photo.sha256) || photo.upscaled !== false || !(photo.embeddedPpi > 0) || !(photo.nativePpiAtPlacedSize >= photo.embeddedPpi - .05))) throw new Error('Collage uses a photo outside the verified evidence or upscales it: ' + id);
+    checkPhotoPlate(id, asset, box, usedShas);
     const png = await projectFile(asset.path, asset.sha256);
     const metadata = await sharp(png).metadata();
     if (metadata.format !== 'png' || metadata.width !== asset.widthPx || metadata.height !== asset.heightPx) throw new Error('Collage dimensions differ from the registry: ' + id);
@@ -215,7 +235,7 @@ async function loadPhotoEdition({country, countryCode, profileId, stops, sources
     if (places.length !== 1) throw new Error('Missing or duplicate photo evidence: ' + id);
     const place = places[0];
     const used = (place.photos ?? []).filter(photo => photo.status === 'used');
-    if (used.length < 1 || used.length > 3 || used[0].role !== 'main' || place.articleId !== article.id) throw new Error('A place needs one main and up to two supporting verified photos: ' + id);
+    checkPrintedPlace(id, used, place.articleId === article.id);
     if (used[0].originalUri !== recordPhoto.originalUri && !(typeof place.mainReplacementReason === 'string' && place.mainReplacementReason.trim())) throw new Error('The main photograph must be the verified article original unless a replacement reason is recorded: ' + id);
     const usedShas = new Set();
     const photoProvenance = [];
@@ -229,18 +249,24 @@ async function loadPhotoEdition({country, countryCode, profileId, stops, sources
     if (entries.length !== 1 || !entries[0].assets?.[box]) throw new Error('Missing or duplicate collage: ' + id);
     const asset = entries[0].assets[box];
     const {png, metadata} = await embed(id, asset, usedShas, box);
-    assets[id] = {dataUri: 'data:image/png;base64,' + png.toString('base64'), credit: 'MeTravel / автор 1', sourceUrl: article.url, rights: 'Авторские фотографии из той же статьи (user_id=1); без увеличения, стоков и AI', illustrated: false, artworkBounds: {left: 0, top: 0, width: 1, height: 1}, widthPx: metadata.width, heightPx: metadata.height};
+    checkRetouchState(id, asset, used[0]);
+    assets[id] = {dataUri: 'data:image/png;base64,' + png.toString('base64'), credit: 'MeTravel / автор 1', sourceUrl: article.url, rights: 'Авторская фотография из той же статьи (user_id=1); без увеличения, стоков и AI', illustrated: false, ...(used[0].retouch ? {retouched: true, changes: 'Ретушь: ' + used[0].retouch.removed} : {}), artworkBounds: {left: 0, top: 0, width: 1, height: 1}, widthPx: metadata.width, heightPx: metadata.height};
     provenance.push({stopId: id, pointId: row.pointId, sourceTravelId: article.id, articleUrl: article.url, box, collagePath: asset.path, collageSha256: asset.sha256, nativeWidthPx: asset.widthPx, nativeHeightPx: asset.heightPx, canvasPpi: asset.canvasPpi, featherMm: asset.featherMm, encodedFormat: 'png', encodedSha256: asset.sha256, photos: photoProvenance, placements: asset.photos, ...(place.mainReplacementReason ? {mainReplacementReason: place.mainReplacementReason} : {})});
   }
   const coverEntry = countryRegistry.cover;
   const coverStop = stops.find(stop => stop.id === evidence.cover?.stopId && stop.id === coverEntry?.stopId);
   if (!coverStop) throw new Error('Cover must reuse the verified photographs of one place from this book: ' + country);
-  const coverPlace = evidence.places.find(place => place.stopId === coverStop.id);
-  const coverShas = new Set(coverPlace.photos.filter(photo => photo.status === 'used').map(photo => photo.sha256));
+  // The cover may use another frame of its place (owner decision 03.11: Несвиж 201:35), under the same rights and people check.
+  const coverPhoto = evidence.cover.photo;
+  const coverSource = sources.get(coverStop.id);
+  if (coverPhoto?.peopleFree !== true || coverPhoto.role !== 'cover') throw new Error('The cover photograph must be a verified people-free frame: ' + country);
+  await checkPhoto(coverStop.id, coverSource.article, coverPhoto, coverSource.record);
+  const coverShas = new Set([coverPhoto.sha256]);
   const coverAsset = coverEntry.assets?.[`cover-${profileId}`];
   if (!coverAsset) throw new Error('Missing cover collage for ' + profileId);
   const {png: coverPng, metadata: coverMetadata} = await embed(coverStop.id, coverAsset, coverShas, `cover-${profileId}`);
-  const cover = {dataUri: 'data:image/png;base64,' + coverPng.toString('base64'), credit: 'MeTravel / автор 1', sourceUrl: coverStop.source.url, rights: 'Авторские фотографии места из книги (user_id=1); без увеличения, стоков и AI', illustrated: false, artworkBounds: {left: 0, top: 0, width: 1, height: 1}, widthPx: coverMetadata.width, heightPx: coverMetadata.height};
+  checkRetouchState(coverStop.id, coverAsset, coverPhoto);
+  const cover = {dataUri: 'data:image/png;base64,' + coverPng.toString('base64'), credit: 'MeTravel / автор 1', sourceUrl: coverStop.source.url, rights: 'Авторская фотография места из книги (user_id=1); без увеличения, стоков и AI', illustrated: false, ...(coverPhoto.retouch ? {retouched: true, changes: 'Ретушь: ' + coverPhoto.retouch.removed} : {}), artworkBounds: {left: 0, top: 0, width: 1, height: 1}, widthPx: coverMetadata.width, heightPx: coverMetadata.height};
   const textBytes = await projectFile(PHOTO_FONTS.text.path, PHOTO_FONTS.text.sha256), headingBytes = await projectFile(PHOTO_FONTS.heading.path, PHOTO_FONTS.heading.sha256), license = await projectFile(PHOTO_FONTS.license.path);
   if (!license.toString('utf8').includes('SIL OPEN FONT LICENSE Version 1.1') || !license.toString('utf8').includes('Lora')) throw new Error('The full Lora OFL license is required');
   const text = fontData(textBytes);
@@ -248,5 +274,5 @@ async function loadPhotoEdition({country, countryCode, profileId, stops, sources
     fontProvenance: {text: {path: PHOTO_FONTS.text.path, sha256: PHOTO_FONTS.text.sha256}, heading: {path: PHOTO_FONTS.heading.path, sha256: PHOTO_FONTS.heading.sha256}, licensePath: PHOTO_FONTS.license.path, licenseSha256: sha256(license), license: 'SIL Open Font License 1.1', family: 'Lora', coverEpigraph: 'Marck Script (coverPersonalization)'},
     provenancePaths: {evidencePath, collageRegistryPath, originalsIndexPath, composerSha256: composerSha, composerVersion: registry.composer.version},
     revisionSeed: {evidenceSha256: countryRegistry.evidenceSha256, composerSha256: composerSha, collages: countryRegistry},
-    cover: {asset: cover, encodedSha256: coverAsset.sha256, provenance: {stopId: coverStop.id, sourceTravelId: coverStop.navigation.sourceTravelId, articleUrl: coverStop.navigation.articleUrl, box: `cover-${profileId}`, path: coverAsset.path, sha256: coverAsset.sha256, canvasPpi: coverAsset.canvasPpi, placements: coverAsset.photos, photos: coverPlace.photos.filter(photo => photo.status === 'used')}}};
+    cover: {asset: cover, encodedSha256: coverAsset.sha256, provenance: {stopId: coverStop.id, sourceTravelId: coverStop.navigation.sourceTravelId, articleUrl: coverStop.navigation.articleUrl, box: `cover-${profileId}`, path: coverAsset.path, sha256: coverAsset.sha256, canvasPpi: coverAsset.canvasPpi, placements: coverAsset.photos, photos: [coverPhoto]}}};
 }

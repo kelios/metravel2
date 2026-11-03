@@ -15,6 +15,8 @@ export interface EmbeddedBookAsset {
   rights: string;
   illustrated: boolean;
   changes?: string;
+  /** Passers-by removed by an owner-approved retouch (#2968); the imprint then says so. */
+  retouched?: boolean;
   compactDataUri?: string;
   artworkBounds?: {left: number; top: number; width: number; height: number};
   widthPx?: number; heightPx?: number;

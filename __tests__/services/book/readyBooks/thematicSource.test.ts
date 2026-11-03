@@ -20,7 +20,15 @@ it('keeps original bytes separate, strips private metadata and rejects altered o
       const published={...media,kind:'published-variant',uri:'https://metravel.by/photo-exact.jpg'};
       const publicRegistry={publicSources:{[media.sha256]:'test-original'},sources:{'test-original':{path:file,sha256:media.sha256,uri:'https://metravel.by/another-photo.jpg'}}};
       await assert.rejects(()=>loadSeriesPhoto(published,publicRegistry),/public URI/);
-      await assert.rejects(()=>loadSeriesPhoto({...media,widthPx:72},registry),/dimensions or privacy/);
+      await assert.rejects(()=>loadSeriesPhoto({...media,widthPx:72},registry),/dimensions differ/);
+      const cropped=await loadSeriesPhoto({...media,crop:{leftPx:0,topPx:0,widthPx:36,heightPx:12,reason:'people below'}},registry);
+      assert.deepEqual([cropped.widthPx,cropped.heightPx],[36,12]);
+      await assert.rejects(()=>loadSeriesPhoto({...media,crop:{leftPx:10,topPx:0,widthPx:36,heightPx:12,reason:'x'}},registry),/crop leaves/);
+      const retouchBytes=await sharp({create:{width:36,height:24,channels:3,background:'#ffffff'}}).png().toBuffer(),retouchFile=path.join(directory,'retouched.png');await writeFile(retouchFile,retouchBytes);
+      const retouch={sha256:sha256(retouchBytes),widthPx:36,heightPx:24,removed:'passer-by',decision:'owner'};
+      const retouched=await loadSeriesPhoto({...media,retouch},{...registry,retouched:{[retouch.sha256]:{path:retouchFile}}});
+      assert.equal((await sharp(retouched.bytes).stats()).channels[0].mean>250,true);
+      await assert.rejects(()=>loadSeriesPhoto({...media,retouch},registry),/Missing retouched/);
       await assert.rejects(()=>loadSeriesPhoto({...media,bytes:1},registry),/source bytes differ/);
       await writeFile(file,Buffer.from('tampered'));
       await assert.rejects(()=>loadSeriesPhoto(media,registry),/source bytes differ/);

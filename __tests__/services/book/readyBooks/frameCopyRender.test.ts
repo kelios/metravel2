@@ -38,6 +38,25 @@ describe('edition frame copy comes from data, keyed by book id (#2947)', () => {
     for (const note of ['полос', 'Сюда помещается', 'проверенной связи', 'физическая цель', 'авторского маршрута', 'Русский язык', 'масштабе 100%']) expect(all).not.toContain(note);
   });
 
+  it('admits a retouch in the imprint only when the edition prints a retouched photo (#2968)', () => {
+    const credits = (source: ReadyBookRenderInput) => {
+      const result = buildReadyBookHtml(source);
+      return printed([result.bodyPages[result.pageMap.findIndex(entry => entry.kind === 'credits')]]);
+    };
+    const note = 'Отдельные снимки отретушированы: убраны случайные прохожие.';
+    const photo = {...makeEditorialDraft(31), visualStyle: 'photo' as const};
+    const clean = input(photo);
+    expect(credits(clean)).toContain('напечатаны без изменения содержания');
+    expect(credits(clean)).not.toContain(note);
+    const withRetouch = {...clean, assets: {...clean.assets, [photo.stops[0].id]: {...image, illustrated: false, retouched: true}}};
+    expect(credits(withRetouch)).toContain(note);
+    expect(credits(withRetouch)).not.toContain('без изменения содержания');
+    const series = input(thematicDraft());
+    expect(credits(series)).not.toContain(note);
+    const seriesRetouched = {...series, assets: {...series.assets, [series.book.stops[0].id]: {...image, illustrated: false, retouched: true}}};
+    expect(credits(seriesRetouched)).toContain(`Фотографии сделаны авторами MeTravel.by в путешествиях по описанным местам. ${note}`);
+  });
+
   it('gives two editions with the same places different frame pages', () => {
     const belarus = buildReadyBookHtml(input(makeEditorialDraft(31)));
     const graphic = buildReadyBookHtml(input({...makeEditorialDraft(31), id: 'belarus-graphic-memory', visualStyle: 'graphic'}));

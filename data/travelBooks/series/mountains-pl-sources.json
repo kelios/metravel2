@@ -54,7 +54,8 @@
               "heightMm": 53,
               "effectivePpi": 383.3962264150943
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Kuźnice",
@@ -113,28 +114,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/travel-description-image/3abc26f16c26484f8a85b13ce49dc75e.JPG.webp",
-          "sha256": "4f681603e3ff685d3006e78c6580babadb9e47fe4f9ccb2558cca8c650493d12",
-          "bytes": 139512,
-          "widthPx": 600,
-          "heightPx": 800,
+          "uri": "https://metravel.by/gallery/6530/conversions/nnqzEf2sTRHMJCxi48Xo2c7mzoi26Eqbgg7LBIMh-detail_hd.jpg",
+          "sha256": "102715e6adde21cd8eabf687fb8e49b6c08009898f896cfd32e722f07ef66980",
+          "bytes": 412528,
+          "widthPx": 1080,
+          "heightPx": 1080,
           "depiction": "target",
-          "caption": "Здание на вершине Каспровы Верх.",
+          "caption": "Метеостанция на вершине Каспрова Верха в тумане.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
-              "widthMm": 16.5,
-              "heightMm": 22,
-              "effectivePpi": 923.6363636363636
+              "widthMm": 22.0,
+              "heightMm": 22.0,
+              "effectivePpi": 1246.909090909091
             },
             {
               "profileId": "album-a5",
-              "widthMm": 39.75,
-              "heightMm": 53,
-              "effectivePpi": 383.3962264150943
+              "widthMm": 53.0,
+              "heightMm": 53.0,
+              "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Kuźnice",
@@ -211,7 +213,8 @@
               "heightMm": 53,
               "effectivePpi": 287.5471698113207
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Приют Murowaniec",
@@ -286,7 +289,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Приют / северный берег Morskie Oko",
@@ -361,7 +365,8 @@
               "heightMm": 53,
               "effectivePpi": 511.354716981132
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Развилка чёрной тропы в Dolina Roztoki",
@@ -436,7 +441,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Развилка Hala Ornak",
@@ -490,28 +496,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/gallery/6235/conversions/b5WmEGh4rG4NVx9wvagqCpwJhwegj4rDTg2U1ElR-detail_hd.jpg",
-          "sha256": "8b7498b7b0c89a365eb042dd7f60008881b56ba4b4e21649d67b8e060e3bf9ab",
-          "bytes": 688248,
+          "uri": "https://metravel.by/gallery/6232/conversions/9wsWo6SL0pRAYnoScOHEtUzLtUuWT29qSGWMKWD5-detail_hd.jpg",
+          "sha256": "927892901bb7f59c582f9b00e9b118b0d2884ea4b84707e58bd7a2130d0664b5",
+          "bytes": 770891,
           "widthPx": 1080,
           "heightPx": 1080,
           "depiction": "target",
-          "caption": "Вход в пещеру Раптавицка; пещера Мыльна этим кадром не иллюстрируется.",
+          "caption": "Каменная арка у входа в пещеру.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
-              "widthMm": 22,
-              "heightMm": 22,
+              "widthMm": 22.0,
+              "heightMm": 22.0,
               "effectivePpi": 1246.909090909091
             },
             {
               "profileId": "album-a5",
-              "widthMm": 53,
-              "heightMm": 53,
+              "widthMm": 53.0,
+              "heightMm": 53.0,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Развилка в Dolina Kościeliska",
@@ -565,28 +572,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/address-image/15039/conversions/d41f56af4049468f9cb2cb5467399a6d.webp",
-          "sha256": "01b3e149bc7215bf63a7f4de4e0301c48d8d2f231a30730fded3f64cbe9d7d7a",
-          "bytes": 275622,
+          "uri": "https://metravel.by/gallery/563/gallery/841f66e4584b4d2f8c4e2d38310aaf63.webp",
+          "sha256": "fca228a8e1b7da00b6d9f3e4eb16c09b2637b1e58760d822d01b6999195c97f3",
+          "bytes": 291026,
           "widthPx": 1024,
           "heightPx": 768,
           "depiction": "target",
-          "caption": "Крокусы на поляне Хохоловской долины.",
+          "caption": "Крокусы и пастушьи шалаши на Хохоловской поляне.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
               "widthMm": 29.333333333333332,
-              "heightMm": 22,
+              "heightMm": 22.0,
               "effectivePpi": 886.690909090909
             },
             {
               "profileId": "album-a5",
               "widthMm": 70.66666666666667,
-              "heightMm": 53,
+              "heightMm": 53.0,
               "effectivePpi": 368.0603773584905
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Приют Chochołowska",
@@ -661,7 +669,8 @@
               "heightMm": 53,
               "effectivePpi": 490.7471698113207
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Wyżnia Kira Miętusia",
@@ -715,28 +724,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/gallery/6495/conversions/7uzU940muOANk0x6Sc4on2dFwbzOq7LyccfsEBAE-detail_hd.jpg",
-          "sha256": "a70afb0586d4fbc8763b8ac958da3e57318216d981874007b0da81224c7d15f1",
-          "bytes": 819064,
+          "uri": "https://metravel.by/gallery/6491/conversions/OqLMEaRjaxUJBpdAHOG9UQwEJ46RHyDGWTWmjp5e-detail_hd.jpg",
+          "sha256": "daa8152d00362b46de95feafa69fd59131566112e48c4681fc24d1f6a6f9e700",
+          "bytes": 679554,
           "widthPx": 1080,
           "heightPx": 1080,
           "depiction": "target",
-          "caption": "Вершина Три Короны, подход со стороны перевала Шопка.",
+          "caption": "Известняковые вершины Трёх Корон над лесом.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
-              "widthMm": 22,
-              "heightMm": 22,
+              "widthMm": 22.0,
+              "heightMm": 22.0,
               "effectivePpi": 1246.909090909091
             },
             {
               "profileId": "album-a5",
-              "widthMm": 53,
-              "heightMm": 53,
+              "widthMm": 53.0,
+              "heightMm": 53.0,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Sromowce Niżne",
@@ -796,28 +806,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/gallery/3174/conversions/lXQmmpCAhLwPzPXDpL5VkVR8Bb7xqMSWppbnyGTG-detail_hd.jpg",
-          "sha256": "ceedd199e3d6382560cfa9fb777c70ccddf5d623f4d88e6d0a3aca3f8d7c10b4",
-          "bytes": 701916,
+          "uri": "https://metravel.by/gallery/3171/conversions/djV5dgXN1k8sEZn2ChrEHnFRAT1g2M6quWUJ5U7Q-detail_hd.jpg",
+          "sha256": "b07f49afbfe260361315b56c69745950e6fa09e5839c8ff1852c9554f0619110",
+          "bytes": 262370,
           "widthPx": 1080,
           "heightPx": 1080,
           "depiction": "context",
-          "caption": "Панорама со смотровой площадки Соколицы.",
+          "caption": "Облака над долиной — вид с Соколицы.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
-              "widthMm": 22,
-              "heightMm": 22,
+              "widthMm": 22.0,
+              "heightMm": 22.0,
               "effectivePpi": 1246.909090909091
             },
             {
               "profileId": "album-a5",
-              "widthMm": 53,
-              "heightMm": 53,
+              "widthMm": 53.0,
+              "heightMm": 53.0,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Krościenko",
@@ -892,7 +903,8 @@
               "heightMm": 53,
               "effectivePpi": 575.0943396226414
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Szczawnica",
@@ -978,7 +990,8 @@
             "widthPx": 400,
             "heightPx": 400,
             "relationship": "exact-visual-match"
-          }
+          },
+          "peopleFree": true
         },
         "route": {
           "start": "Obidowa",
@@ -1056,7 +1069,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Lubomierz-Rzeki",
@@ -1131,7 +1145,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Kosarzyska",
@@ -1190,28 +1205,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/travel-description-image/b4d479e900304de8838762a074c8e1b3.JPG.webp",
-          "sha256": "5d6257c52ee0cf90a5de1aba498042ff6ec9aeab67c8594fed7a6c542f1e8335",
-          "bytes": 42178,
+          "uri": "https://metravel.by/travel-description-image/345a99954e41400db8bbde852041c71e.JPG.webp",
+          "sha256": "6f8f89b077561b24a793e0345544dd11d584e8eb4d8438e09824b57514ab8adb",
+          "bytes": 21476,
           "widthPx": 800,
-          "heightPx": 453,
+          "heightPx": 450,
           "depiction": "target",
-          "caption": "Смотровая башня на Любани.",
+          "caption": "Смотровая башня на Любани на закате.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
-              "widthMm": 38.852097130242825,
-              "heightMm": 22,
-              "effectivePpi": 523.0090909090909
+              "widthMm": 39.111111111111114,
+              "heightMm": 22.0,
+              "effectivePpi": 519.5454545454545
             },
             {
               "profileId": "album-a5",
-              "widthMm": 93.59823399558499,
-              "heightMm": 53,
-              "effectivePpi": 217.09811320754716
+              "widthMm": 94.22222222222221,
+              "heightMm": 53.0,
+              "effectivePpi": 215.66037735849056
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Костёл Ochotnica Dolna",
@@ -1289,7 +1305,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Парковка Chyszówki",
@@ -1343,28 +1360,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/travel-description-image/3621b88fe55847b582aeed7ac91fefe6.webp",
-          "sha256": "3926b70ce14e66fb4343956a61e4f0d11e2897c7351d70fdbd9f8b1bd75bd7ec",
-          "bytes": 224186,
-          "widthPx": 768,
-          "heightPx": 1024,
+          "uri": "https://metravel.by/travel-image/6880/conversions/p9edKtQrl2wM0xC1yRrkzVJEi4B4qxkxWqSADDLM-webpTravelMainImage_400.webp",
+          "sha256": "a10ba107e35659044c022bb950ea4ab8c3d719a3d815649400cfab8cd84f7b97",
+          "bytes": 122358,
+          "widthPx": 800,
+          "heightPx": 800,
           "depiction": "target",
-          "caption": "Смотровая башня на Модыни зимой.",
+          "caption": "Деревянная смотровая башня на Модыни.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
-              "widthMm": 16.5,
-              "heightMm": 22,
-              "effectivePpi": 1182.2545454545455
+              "widthMm": 22.0,
+              "heightMm": 22.0,
+              "effectivePpi": 923.6363636363636
             },
             {
               "profileId": "album-a5",
-              "widthMm": 39.75,
-              "heightMm": 53,
-              "effectivePpi": 490.7471698113207
+              "widthMm": 53.0,
+              "heightMm": 53.0,
+              "effectivePpi": 383.3962264150943
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Парковка под Modyń",
@@ -1442,7 +1460,8 @@
               "heightMm": 53,
               "effectivePpi": 287.5471698113207
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Парковка Bęnkowa",
@@ -1517,7 +1536,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Парковка Kobielnik",
@@ -1592,7 +1612,8 @@
               "heightMm": 53,
               "effectivePpi": 276.0452830188679
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Долина Piwniczna-Zdrój",
@@ -1646,28 +1667,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/address-image/16133/conversions/f256fe3a08204b42b82cebf1a132f938.webp",
-          "sha256": "8ad6b7ae32e9cc103db1b76f12b68eb74a3787d7b4cba187c4ead9df6073bb7f",
-          "bytes": 162354,
-          "widthPx": 900,
-          "heightPx": 1200,
-          "depiction": "target",
-          "caption": "Приют PTTK Jaworzyna Krynicka.",
+          "uri": "https://metravel.by/gallery/586/gallery/e998dac056e6446c86b858a8e13dcec8.webp",
+          "sha256": "4d5bcaaf4ff2ce7ad1c3e1a49fe88cd0bae7142c3dbbcc125e4adc6c6d7f0d36",
+          "bytes": 161788,
+          "widthPx": 1024,
+          "heightPx": 768,
+          "depiction": "context",
+          "caption": "Лесистые хребты Бескида Сондецкого с Яворжины Крыницкой.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
-              "widthMm": 16.5,
-              "heightMm": 22,
-              "effectivePpi": 1385.4545454545455
+              "widthMm": 29.333333333333332,
+              "heightMm": 22.0,
+              "effectivePpi": 886.690909090909
             },
             {
               "profileId": "album-a5",
-              "widthMm": 39.75,
-              "heightMm": 53,
-              "effectivePpi": 575.0943396226414
+              "widthMm": 70.66666666666667,
+              "heightMm": 53.0,
+              "effectivePpi": 368.0603773584905
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Нижняя станция Jaworzyna",
@@ -1742,7 +1764,8 @@
               "heightMm": 53,
               "effectivePpi": 368.0603773584905
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Sopotnia Wielka / Kolonia",
@@ -1802,28 +1825,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/address-image/15174/conversions/335d825bf198495fb7c7e016475711a4.webp",
-          "sha256": "e4f27b75c7f3d2b83bb1d9e60cea9d876d2e3eecd17b8dece728592c45609254",
-          "bytes": 343672,
-          "widthPx": 768,
-          "heightPx": 1024,
-          "depiction": "context",
-          "caption": "Лесная тропа на авторском переходе к Пшегибеку.",
+          "uri": "https://metravel.by/address-image/16065/conversions/e8afb9862ad340f0abcf8fb8a79e4edd.webp",
+          "sha256": "09856f4d16d4e911f949dbb8de23c92eca734296c7a35d25cdf0c500b5a7a572",
+          "bytes": 341322,
+          "widthPx": 1013,
+          "heightPx": 1200,
+          "depiction": "target",
+          "caption": "Приют PTTK на перевале Пшегибек.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
-              "widthMm": 16.5,
-              "heightMm": 22,
-              "effectivePpi": 1182.2545454545455
+              "widthMm": 18.571666666666665,
+              "heightMm": 22.0,
+              "effectivePpi": 1385.4545454545455
             },
             {
               "profileId": "album-a5",
-              "widthMm": 39.75,
-              "heightMm": 53,
-              "effectivePpi": 490.7471698113207
+              "widthMm": 44.740833333333335,
+              "heightMm": 53.0,
+              "effectivePpi": 575.0943396226414
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Morgi / Soblówka",
@@ -1908,7 +1932,8 @@
               "heightMm": 53,
               "effectivePpi": 490.7471698113207
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Mosorne",
@@ -1961,37 +1986,30 @@
           "evidence": "Official PTTK museum marker for separate former GOPR building; not exact door; official catalog marker; sourceAPIpoint~81.6m away"
         },
         "media": {
-          "kind": "owner-original",
-          "sourceId": "owner-20261101-14646-shelter-context",
-          "sha256": "4ae5c428e55dc5b9874f99e402eef337bd973f836d20c51b7e6f2e5a3aeb23af",
-          "bytes": 3290223,
-          "widthPx": 4032,
-          "heightPx": 3024,
+          "kind": "published-variant",
+          "uri": "https://metravel.by/gallery/6862/conversions/CSL2sIuRFCckvubb6ptiw3Y3QlFd8AWhlwwTsPhC-detail_hd.jpg",
+          "sha256": "658e9333e5365e266bce2c6c6432136670197d5c5d47fddd695b528b8423b410",
+          "bytes": 777875,
+          "widthPx": 1080,
+          "heightPx": 1080,
           "depiction": "context",
-          "caption": "Главный приют Markowe Szczawiny рядом с музеем; здание действующей экспозиции на снимке не показано.",
+          "caption": "Склон Бабьей Горы в снегу и горной сосне.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
-              "widthMm": 29.333333333333332,
-              "heightMm": 22,
-              "effectivePpi": 3491.3454545454547
+              "widthMm": 22.0,
+              "heightMm": 22.0,
+              "effectivePpi": 1246.909090909091
             },
             {
               "profileId": "album-a5",
-              "widthMm": 70.66666666666666,
-              "heightMm": 53,
-              "effectivePpi": 1449.2377358490564
+              "widthMm": 53.0,
+              "heightMm": 53.0,
+              "effectivePpi": 517.5849056603773
             }
           ],
-          "publishedAssociation": {
-            "uri": "https://metravel.by/address-image/6857/conversions/inz101XMv3r98HQwpQoUFaqcB0QF1JhEV3o4FDLn-thumb_400_wp.webp",
-            "sha256": "66b653af173c96b797a34649f08d0a8710bbcba1ed442952bdae765313167e32",
-            "bytes": 24964,
-            "widthPx": 400,
-            "heightPx": 400,
-            "relationship": "exact-visual-match"
-          }
+          "peopleFree": true
         },
         "route": {
           "start": "Zawoja Markowa",
@@ -2045,28 +2063,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/gallery/782d8efae4024dbba9a14ac893419bd2.webp",
-          "sha256": "1202d3d93e3ca96213bc234b29570226ebe276106b53775537539a1bc2d6879e",
-          "bytes": 104158,
+          "uri": "https://metravel.by/gallery/234c60cd70094f68981ce1c898010073.webp",
+          "sha256": "acef13719773dae3fe24c9c2c4bd2f4d60d47136ae32b1581db92dc0abb12b94",
+          "bytes": 88030,
           "widthPx": 1024,
           "heightPx": 768,
-          "depiction": "target",
-          "caption": "Смотровая беседка и крест на Вельке Раче.",
+          "depiction": "context",
+          "caption": "Бескидская панорама с Велькой Рачи.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
               "widthMm": 29.333333333333332,
-              "heightMm": 22,
+              "heightMm": 22.0,
               "effectivePpi": 886.690909090909
             },
             {
               "profileId": "album-a5",
               "widthMm": 70.66666666666667,
-              "heightMm": 53,
+              "heightMm": 53.0,
               "effectivePpi": 368.0603773584905
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Парковка Pogwarka",
@@ -2152,7 +2171,8 @@
             "widthPx": 400,
             "heightPx": 400,
             "relationship": "exact-visual-match"
-          }
+          },
+          "peopleFree": true
         },
         "route": {
           "start": "Начало долины Biała Wisełka",
@@ -2227,7 +2247,8 @@
               "heightMm": 53,
               "effectivePpi": 431.3207547169811
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Wapienica, конец Tartaczna",
@@ -2302,7 +2323,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Dolina Wapienicy",
@@ -2356,28 +2378,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/travel-description-image/8a8165f0c5f1405b90dc0bcb208db6ef.webp",
-          "sha256": "6ed9cdcef9200baf8891bb7465e7a00ca8c12ca2cf6e2019a87cb5c49d9e3ffc",
-          "bytes": 200862,
+          "uri": "https://metravel.by/travel-description-image/5e1a417d3f8243398dbafdf471c12f7a.webp",
+          "sha256": "af9e5188a11305803d9fe33f0e710cdb931c8c3d70535916165cb653abfea30c",
+          "bytes": 130978,
           "widthPx": 768,
           "heightPx": 1024,
           "depiction": "target",
-          "caption": "Заснеженный подход к вершине Лесковца и кресту.",
+          "caption": "Крест на вершине Лесковца.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
               "widthMm": 16.5,
-              "heightMm": 22,
+              "heightMm": 22.0,
               "effectivePpi": 1182.2545454545455
             },
             {
               "profileId": "album-a5",
               "widthMm": 39.75,
-              "heightMm": 53,
+              "heightMm": 53.0,
               "effectivePpi": 490.7471698113207
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Rzyki / Mydlarze",
@@ -2434,28 +2457,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/address-image/16249/conversions/7902180cf50a4245904ac1e9ea63bfb3.webp",
-          "sha256": "d5c2a20c67c1a2c453ea26d25e28e6af1b12c0e9d5a345aab412be734c92de55",
-          "bytes": 156778,
-          "widthPx": 900,
-          "heightPx": 1200,
+          "uri": "https://metravel.by/travel-description-image/f2673393a4254ff2a41879d388e2112d.jpg.webp",
+          "sha256": "33d9c2d313707350b7ac92c78e81c20a103d0db9255b547d730edaaf97035520",
+          "bytes": 1020076,
+          "widthPx": 1920,
+          "heightPx": 1440,
           "depiction": "target",
-          "caption": "Смотровая беседка на Тронке; хатка «Лимба» в кадре не показана.",
+          "caption": "Деревянная хатка «Лимба» среди деревьев.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
-              "widthMm": 16.5,
-              "heightMm": 22,
-              "effectivePpi": 1385.4545454545455
+              "widthMm": 29.333333333333332,
+              "heightMm": 22.0,
+              "effectivePpi": 1662.5454545454545
             },
             {
               "profileId": "album-a5",
-              "widthMm": 39.75,
-              "heightMm": 53,
-              "effectivePpi": 575.0943396226414
+              "widthMm": 70.66666666666667,
+              "heightMm": 53.0,
+              "effectivePpi": 690.1132075471697
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Wielka Puszcza",
@@ -2511,28 +2535,36 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/travel-description-image/5aab07c140f7415595927842f05a9a8e.JPG.webp",
-          "sha256": "b0623a201c8b2ef338d2c28fee66135057308a3916709d70e6ca609248a4c149",
-          "bytes": 97130,
+          "uri": "https://metravel.by/travel-description-image/4f59cafff412482698e27cee249b7eec.JPG.webp",
+          "sha256": "d3998d770b992885cbd22bdda557470926f55e3a61979396e5a4b42ec048fbbb",
+          "bytes": 54098,
           "widthPx": 800,
-          "heightPx": 600,
+          "heightPx": 453,
           "depiction": "target",
-          "caption": "Вершина Снежки.",
+          "caption": "Конус Снежки с обсерваторией на вершине.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
-              "widthMm": 29.333333333333332,
-              "heightMm": 22,
-              "effectivePpi": 692.7272727272727
+              "widthMm": 38.852097130242825,
+              "heightMm": 22.0,
+              "effectivePpi": 523.0090909090909
             },
             {
               "profileId": "album-a5",
-              "widthMm": 70.66666666666667,
-              "heightMm": 53,
-              "effectivePpi": 287.5471698113207
+              "widthMm": 93.59823399558499,
+              "heightMm": 53.0,
+              "effectivePpi": 217.09811320754716
             }
-          ]
+          ],
+          "peopleFree": true,
+          "retouch": {
+            "sha256": "e81ad0a046c7ffd2bfc4687483768d750fbdaefad9315e080c0c869b22026765",
+            "widthPx": 800,
+            "heightPx": 453,
+            "removed": "группа туристов в конце тропы у подножия",
+            "decision": "Решение владельца 03.11.2026: «убираем прохожих на лучших кадрах»"
+          }
         },
         "route": {
           "start": "Pec pod Sněžkou",
@@ -2609,7 +2641,8 @@
               "heightMm": 53,
               "effectivePpi": 490.7471698113207
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Szklarska Poręba",
@@ -2680,7 +2713,7 @@
           "widthPx": 1600,
           "heightPx": 1200,
           "depiction": "context",
-          "caption": "Вид с хребта в сторону приюта под Лабским Щитом; вершина Violík не подтверждена в кадре.",
+          "caption": "Вид с хребта в сторону приюта под Лабским Щитом.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
@@ -2695,7 +2728,8 @@
               "heightMm": 53,
               "effectivePpi": 575.0943396226414
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Верхняя станция Szrenica",
@@ -2773,7 +2807,8 @@
               "heightMm": 53,
               "effectivePpi": 287.5471698113207
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Karpacz, Olimpijska",
@@ -2851,7 +2886,8 @@
               "heightMm": 53,
               "effectivePpi": 215.66037735849056
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Парковка у Kolorowe Jeziorka",
@@ -2929,7 +2965,8 @@
               "heightMm": 53,
               "effectivePpi": 1932.3169811320754
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Начало жёлтой тропы у Щитны",
@@ -2985,28 +3022,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/travel-description-image/4296205d8e514a4c886c719b0a2534d9.webp",
-          "sha256": "e009c376bfd2ee8bee36bed138416a756e61bf2a6c11d007fbbc993b46a2c048",
-          "bytes": 107208,
-          "widthPx": 1024,
-          "heightPx": 576,
-          "depiction": "context",
-          "caption": "Панорама со смотровой башни Велька Сова.",
+          "uri": "https://metravel.by/gallery/6831/conversions/4ciaW2Ca5efMsE8ldyRgI5cAnrtrfoB4Plk5KyT0-detail_hd.jpg",
+          "sha256": "157e66889fb58a49ee1105e76e31cb5b56c5bfe9d542628bc772b8881096f552",
+          "bytes": 884119,
+          "widthPx": 1080,
+          "heightPx": 1080,
+          "depiction": "target",
+          "caption": "Каменная башня на Велькой Сове в строительных лесах, вид сверху.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
-              "widthMm": 39.111111111111114,
-              "heightMm": 22,
-              "effectivePpi": 665.0181818181817
+              "widthMm": 22.0,
+              "heightMm": 22.0,
+              "effectivePpi": 1246.909090909091
             },
             {
               "profileId": "album-a5",
-              "widthMm": 94.22222222222223,
-              "heightMm": 53,
-              "effectivePpi": 276.0452830188679
+              "widthMm": 53.0,
+              "heightMm": 53.0,
+              "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         },
         "route": {
           "start": "Kamionki, Lipowa 5",
@@ -3066,7 +3104,7 @@
           "widthPx": 4032,
           "heightPx": 3024,
           "depiction": "context",
-          "caption": "Зимний поход в массиве Тарницы, январь 2022; вершина и крест не показаны.",
+          "caption": "Зимний лес в массиве Тарницы.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
@@ -3089,7 +3127,8 @@
             "widthPx": 800,
             "heightPx": 600,
             "relationship": "exact-visual-match"
-          }
+          },
+          "peopleFree": true
         },
         "route": {
           "start": "Wołosate, старое бойковское кладбище",

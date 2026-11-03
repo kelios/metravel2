@@ -7,6 +7,8 @@ export type BookStyleCopy = {
   artAlt: string;
   coverAlt: string;
   creditsSource: string;
+  /** Imprint for an edition that prints at least one retouched photo; only photographic styles have one. */
+  creditsRetouched?: string;
   creditsFont: string;
 };
 
@@ -23,6 +25,7 @@ const PHOTO: BookStyleCopy = {
   artAlt: 'Фотография',
   coverAlt: 'Фотографии места из книги',
   creditsSource: 'Фотографии сделаны автором путешествий, опубликованных на MeTravel.by, в описанных местах и напечатаны без изменения содержания.',
+  creditsRetouched: 'Фотографии сделаны автором путешествий, опубликованных на MeTravel.by, в описанных местах. Отдельные снимки отретушированы: убраны случайные прохожие.',
   creditsFont: 'Lora — The Lora Project Authors, SIL Open Font License 1.1. Эпиграф обложки — Marck Script, Denis Masharov, SIL OFL 1.1.',
 };
 

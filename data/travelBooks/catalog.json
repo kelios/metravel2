@@ -7,10 +7,10 @@
       "kind": "places",
       "title": "Беларусь. Книга воспоминаний",
       "country": "BY",
-      "revision": "7a7f22a529343ba4ea6356a30107d610",
+      "revision": "4222fa0b68c1f9e06383544eecd39ebc",
       "contentLocale": "ru",
       "status": "partial",
-      "coverUri": "/travel-books/belarus-memory/7a7f22a529343ba4ea6356a30107d610/pocket-150x100/preview-cover-1.webp",
+      "coverUri": "/travel-books/belarus-memory/4222fa0b68c1f9e06383544eecd39ebc/pocket-150x100/preview-cover-1.webp",
       "stopCount": 31,
       "bodyPageCount": 108,
       "profiles": [
@@ -19,6 +19,7 @@
           "widthMm": 150,
           "heightMm": 100,
           "bleedMm": 0,
+          "printShopBleedMm": 3,
           "safeMm": 5,
           "bindingMm": 15,
           "binding": "rings"
@@ -28,6 +29,7 @@
           "widthMm": 148,
           "heightMm": 210,
           "bleedMm": 0,
+          "printShopBleedMm": 3,
           "safeMm": 5,
           "bindingMm": 15,
           "binding": "rings"
@@ -40,11 +42,11 @@
       "metadata": {
         "kind": "book-metadata",
         "bookId": "belarus-memory",
-        "revision": "7a7f22a529343ba4ea6356a30107d610",
-        "uri": "https://metravel.by/travel-books/belarus-memory/7a7f22a529343ba4ea6356a30107d610/book.json",
+        "revision": "4222fa0b68c1f9e06383544eecd39ebc",
+        "uri": "https://metravel.by/travel-books/belarus-memory/4222fa0b68c1f9e06383544eecd39ebc/book.json",
         "mime": "application/json",
-        "bytes": 89960,
-        "sha256": "4ce024533518827406f6ce26d3b48aa4df98ece6ee251c6a9da4d8bfc2419648"
+        "bytes": 91136,
+        "sha256": "b2da5c87d4b43e55d32522d8cb5dbd6d2c7d610956dd7f6917d6b6cf22c0d960"
       }
     },
     {
@@ -53,10 +55,10 @@
       "kind": "places",
       "title": "Польша. Книга воспоминаний",
       "country": "PL",
-      "revision": "fb705e626b9f350f0fc0baa08513fd24",
+      "revision": "ee34f411e165dc93a0d113cdf2f8f695",
       "contentLocale": "ru",
       "status": "partial",
-      "coverUri": "/travel-books/poland-memory/fb705e626b9f350f0fc0baa08513fd24/pocket-150x100/preview-cover-1.webp",
+      "coverUri": "/travel-books/poland-memory/ee34f411e165dc93a0d113cdf2f8f695/pocket-150x100/preview-cover-1.webp",
       "stopCount": 30,
       "bodyPageCount": 104,
       "profiles": [
@@ -65,6 +67,7 @@
           "widthMm": 150,
           "heightMm": 100,
           "bleedMm": 0,
+          "printShopBleedMm": 3,
           "safeMm": 5,
           "bindingMm": 15,
           "binding": "rings"
@@ -74,6 +77,7 @@
           "widthMm": 148,
           "heightMm": 210,
           "bleedMm": 0,
+          "printShopBleedMm": 3,
           "safeMm": 5,
           "bindingMm": 15,
           "binding": "rings"
@@ -86,11 +90,11 @@
       "metadata": {
         "kind": "book-metadata",
         "bookId": "poland-memory",
-        "revision": "fb705e626b9f350f0fc0baa08513fd24",
-        "uri": "https://metravel.by/travel-books/poland-memory/fb705e626b9f350f0fc0baa08513fd24/book.json",
+        "revision": "ee34f411e165dc93a0d113cdf2f8f695",
+        "uri": "https://metravel.by/travel-books/poland-memory/ee34f411e165dc93a0d113cdf2f8f695/book.json",
         "mime": "application/json",
-        "bytes": 85853,
-        "sha256": "62fea6f2347ecd0ac9d3f75748a406a13031b1540d87afab39ce69bd3df34a12"
+        "bytes": 87203,
+        "sha256": "2aa1acb7a18c398e50b97b9fe2e6473882a1ad84e98bdcd3481f8e5bb35c100e"
       }
     },
     {
@@ -100,10 +104,10 @@
       "visualStyle": "photo",
       "title": "Беларусь. Фотокнига воспоминаний",
       "country": "BY",
-      "revision": "2026-11-01.photo.f556fd3ffcf3.07603515604d",
+      "revision": "2026-11-01.photo.ed62d9ffc9f0.64b25ae01d71",
       "contentLocale": "ru",
       "status": "partial",
-      "coverUri": "https://metravel.by/travel-books/belarus-photo-memory/2026-11-01.photo.f556fd3ffcf3.07603515604d/pocket-150x100/preview-cover-1.webp",
+      "coverUri": "https://metravel.by/travel-books/belarus-photo-memory/2026-11-01.photo.ed62d9ffc9f0.64b25ae01d71/pocket-150x100/preview-cover-1.webp",
       "stopCount": 31,
       "bodyPageCount": 108,
       "profiles": [
@@ -114,7 +118,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         },
         {
           "id": "album-a5",
@@ -123,7 +128,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         }
       ],
       "missing": [
@@ -136,11 +142,11 @@
       "metadata": {
         "kind": "book-metadata",
         "bookId": "belarus-photo-memory",
-        "revision": "2026-11-01.photo.f556fd3ffcf3.07603515604d",
-        "uri": "https://metravel.by/travel-books/belarus-photo-memory/2026-11-01.photo.f556fd3ffcf3.07603515604d/book.json",
+        "revision": "2026-11-01.photo.ed62d9ffc9f0.64b25ae01d71",
+        "uri": "https://metravel.by/travel-books/belarus-photo-memory/2026-11-01.photo.ed62d9ffc9f0.64b25ae01d71/book.json",
         "mime": "application/json",
-        "bytes": 95756,
-        "sha256": "4247643706a364053f986367b689eda21336c70a801c4f628fb12dfc2303ade3"
+        "bytes": 96731,
+        "sha256": "e625f37746ba4501b6c0370f0a79c714c4030c092c8fcad8c58bf10211373145"
       }
     },
     {
@@ -150,10 +156,10 @@
       "visualStyle": "photo",
       "title": "Польша. Фотокнига воспоминаний",
       "country": "PL",
-      "revision": "2026-11-01.photo.002d395ce546.700ca00708e0",
+      "revision": "2026-11-01.photo.54f025fb1cf4.9c08c938edb2",
       "contentLocale": "ru",
       "status": "partial",
-      "coverUri": "https://metravel.by/travel-books/poland-photo-memory/2026-11-01.photo.002d395ce546.700ca00708e0/pocket-150x100/preview-cover-1.webp",
+      "coverUri": "https://metravel.by/travel-books/poland-photo-memory/2026-11-01.photo.54f025fb1cf4.9c08c938edb2/pocket-150x100/preview-cover-1.webp",
       "stopCount": 30,
       "bodyPageCount": 104,
       "profiles": [
@@ -164,7 +170,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         },
         {
           "id": "album-a5",
@@ -173,7 +180,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         }
       ],
       "missing": [
@@ -186,11 +194,11 @@
       "metadata": {
         "kind": "book-metadata",
         "bookId": "poland-photo-memory",
-        "revision": "2026-11-01.photo.002d395ce546.700ca00708e0",
-        "uri": "https://metravel.by/travel-books/poland-photo-memory/2026-11-01.photo.002d395ce546.700ca00708e0/book.json",
+        "revision": "2026-11-01.photo.54f025fb1cf4.9c08c938edb2",
+        "uri": "https://metravel.by/travel-books/poland-photo-memory/2026-11-01.photo.54f025fb1cf4.9c08c938edb2/book.json",
         "mime": "application/json",
-        "bytes": 91319,
-        "sha256": "14fb22aea176cf877ec8d492aecb07b7e8e0060e1ffbfacb428649adeed6b283"
+        "bytes": 92251,
+        "sha256": "691d6d5ce85af098ed2d27e0196366ad92ad4a8938a8758827c43f6062d5bcdd"
       }
     },
     {
@@ -200,10 +208,10 @@
       "visualStyle": "fantasy",
       "title": "Беларусь. Книга воспоминаний",
       "country": "BY",
-      "revision": "2026-11-01.fantasy.daa0240da909.4380f26c74fe",
+      "revision": "2026-11-01.fantasy.faaa17fd4164.ca3cf20787e8",
       "contentLocale": "ru",
       "status": "partial",
-      "coverUri": "https://metravel.by/travel-books/belarus-fantasy-memory/2026-11-01.fantasy.daa0240da909.4380f26c74fe/pocket-150x100/preview-cover-1.webp",
+      "coverUri": "https://metravel.by/travel-books/belarus-fantasy-memory/2026-11-01.fantasy.faaa17fd4164.ca3cf20787e8/pocket-150x100/preview-cover-1.webp",
       "stopCount": 31,
       "bodyPageCount": 108,
       "profiles": [
@@ -214,7 +222,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         },
         {
           "id": "album-a5",
@@ -223,7 +232,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         }
       ],
       "missing": [
@@ -236,11 +246,11 @@
       "metadata": {
         "kind": "book-metadata",
         "bookId": "belarus-fantasy-memory",
-        "revision": "2026-11-01.fantasy.daa0240da909.4380f26c74fe",
-        "uri": "https://metravel.by/travel-books/belarus-fantasy-memory/2026-11-01.fantasy.daa0240da909.4380f26c74fe/book.json",
+        "revision": "2026-11-01.fantasy.faaa17fd4164.ca3cf20787e8",
+        "uri": "https://metravel.by/travel-books/belarus-fantasy-memory/2026-11-01.fantasy.faaa17fd4164.ca3cf20787e8/book.json",
         "mime": "application/json",
-        "bytes": 94968,
-        "sha256": "2c69c76aaa34af1e05f55340f9a2db08092510c543a6399307d4ccf930d6afb5"
+        "bytes": 96229,
+        "sha256": "a6cebe68e57e2b34695b49f2249764e5fe47bb5bbd34db6de8c47df1044da714"
       }
     },
     {
@@ -250,10 +260,10 @@
       "visualStyle": "fantasy",
       "title": "Польша. Книга воспоминаний",
       "country": "PL",
-      "revision": "2026-11-01.fantasy.154fe03a2389.069156deb479",
+      "revision": "2026-11-01.fantasy.961ceaaa8018.8766391925ef",
       "contentLocale": "ru",
       "status": "partial",
-      "coverUri": "https://metravel.by/travel-books/poland-fantasy-memory/2026-11-01.fantasy.154fe03a2389.069156deb479/pocket-150x100/preview-cover-1.webp",
+      "coverUri": "https://metravel.by/travel-books/poland-fantasy-memory/2026-11-01.fantasy.961ceaaa8018.8766391925ef/pocket-150x100/preview-cover-1.webp",
       "stopCount": 30,
       "bodyPageCount": 104,
       "profiles": [
@@ -264,7 +274,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         },
         {
           "id": "album-a5",
@@ -273,7 +284,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         }
       ],
       "missing": [
@@ -286,11 +298,11 @@
       "metadata": {
         "kind": "book-metadata",
         "bookId": "poland-fantasy-memory",
-        "revision": "2026-11-01.fantasy.154fe03a2389.069156deb479",
-        "uri": "https://metravel.by/travel-books/poland-fantasy-memory/2026-11-01.fantasy.154fe03a2389.069156deb479/book.json",
+        "revision": "2026-11-01.fantasy.961ceaaa8018.8766391925ef",
+        "uri": "https://metravel.by/travel-books/poland-fantasy-memory/2026-11-01.fantasy.961ceaaa8018.8766391925ef/book.json",
         "mime": "application/json",
-        "bytes": 90566,
-        "sha256": "df7e40142eb920b2ae87b570c721bc8afaf9ceaf0e22c4bd03b0e88add431a25"
+        "bytes": 91870,
+        "sha256": "c37bfbdc5effef0d55016b434d13d5bc96ee59a03155a791cf884376f913ae6b"
       }
     },
     {
@@ -300,10 +312,10 @@
       "visualStyle": "graphic",
       "title": "Беларусь. Книга воспоминаний",
       "country": "BY",
-      "revision": "2026-11-01.graphic.e5434d02447e.1227125e9d5d",
+      "revision": "2026-11-01.graphic.43ffcc8ae083.58ea38e52d72",
       "contentLocale": "ru",
       "status": "partial",
-      "coverUri": "https://metravel.by/travel-books/belarus-graphic-memory/2026-11-01.graphic.e5434d02447e.1227125e9d5d/pocket-150x100/preview-cover-1.webp",
+      "coverUri": "https://metravel.by/travel-books/belarus-graphic-memory/2026-11-01.graphic.43ffcc8ae083.58ea38e52d72/pocket-150x100/preview-cover-1.webp",
       "stopCount": 31,
       "bodyPageCount": 108,
       "profiles": [
@@ -314,7 +326,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         },
         {
           "id": "album-a5",
@@ -323,7 +336,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         }
       ],
       "missing": [
@@ -336,11 +350,11 @@
       "metadata": {
         "kind": "book-metadata",
         "bookId": "belarus-graphic-memory",
-        "revision": "2026-11-01.graphic.e5434d02447e.1227125e9d5d",
-        "uri": "https://metravel.by/travel-books/belarus-graphic-memory/2026-11-01.graphic.e5434d02447e.1227125e9d5d/book.json",
+        "revision": "2026-11-01.graphic.43ffcc8ae083.58ea38e52d72",
+        "uri": "https://metravel.by/travel-books/belarus-graphic-memory/2026-11-01.graphic.43ffcc8ae083.58ea38e52d72/book.json",
         "mime": "application/json",
-        "bytes": 94995,
-        "sha256": "a52e3521b57280f67be838f78f74fb7ad7b51117c678c82450e3425468cf83e0"
+        "bytes": 95759,
+        "sha256": "db8f4eec6668f16aea824b37b801581bf2da6f09cf0fd3ebe95ea77216d17c0f"
       }
     },
     {
@@ -350,10 +364,10 @@
       "visualStyle": "graphic",
       "title": "Польша. Книга воспоминаний",
       "country": "PL",
-      "revision": "2026-11-01.graphic.31464daff96c.b0ad2adc3958",
+      "revision": "2026-11-01.graphic.1454137fdaec.945d6fde36c1",
       "contentLocale": "ru",
       "status": "partial",
-      "coverUri": "https://metravel.by/travel-books/poland-graphic-memory/2026-11-01.graphic.31464daff96c.b0ad2adc3958/pocket-150x100/preview-cover-1.webp",
+      "coverUri": "https://metravel.by/travel-books/poland-graphic-memory/2026-11-01.graphic.1454137fdaec.945d6fde36c1/pocket-150x100/preview-cover-1.webp",
       "stopCount": 30,
       "bodyPageCount": 104,
       "profiles": [
@@ -364,7 +378,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         },
         {
           "id": "album-a5",
@@ -373,7 +388,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         }
       ],
       "missing": [
@@ -386,11 +402,11 @@
       "metadata": {
         "kind": "book-metadata",
         "bookId": "poland-graphic-memory",
-        "revision": "2026-11-01.graphic.31464daff96c.b0ad2adc3958",
-        "uri": "https://metravel.by/travel-books/poland-graphic-memory/2026-11-01.graphic.31464daff96c.b0ad2adc3958/book.json",
+        "revision": "2026-11-01.graphic.1454137fdaec.945d6fde36c1",
+        "uri": "https://metravel.by/travel-books/poland-graphic-memory/2026-11-01.graphic.1454137fdaec.945d6fde36c1/book.json",
         "mime": "application/json",
-        "bytes": 90593,
-        "sha256": "4ad9988505b5aa4742bf1f7ce2c44406db4123647464d1eed7c985c50e82d178"
+        "bytes": 91650,
+        "sha256": "366d22f56bd49d899993cb517d8d0a717ea9e96738fa5746d040ba50694829ef"
       }
     },
     {
@@ -399,10 +415,10 @@
       "kind": "quests",
       "title": "Беларусь. Книга квестов. Часть 1",
       "country": "BY",
-      "revision": "q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.7edef4f428c6.1068ed96d547",
+      "revision": "q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.67cc1dd1f7c1.86975fa74989",
       "contentLocale": "ru",
       "status": "partial",
-      "coverUri": "https://metravel.by/travel-books/belarus-quests-1/q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.7edef4f428c6.1068ed96d547/pocket-150x100/preview-cover-1.webp",
+      "coverUri": "https://metravel.by/travel-books/belarus-quests-1/q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.67cc1dd1f7c1.86975fa74989/pocket-150x100/preview-cover-1.webp",
       "stopCount": 41,
       "bodyPageCount": 174,
       "profiles": [
@@ -413,7 +429,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         },
         {
           "id": "album-a5",
@@ -422,7 +439,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         }
       ],
       "missing": [
@@ -437,11 +455,11 @@
       "metadata": {
         "kind": "book-metadata",
         "bookId": "belarus-quests-1",
-        "revision": "q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.7edef4f428c6.1068ed96d547",
-        "uri": "https://metravel.by/travel-books/belarus-quests-1/q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.7edef4f428c6.1068ed96d547/book.json",
+        "revision": "q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.67cc1dd1f7c1.86975fa74989",
+        "uri": "https://metravel.by/travel-books/belarus-quests-1/q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.67cc1dd1f7c1.86975fa74989/book.json",
         "mime": "application/json",
-        "bytes": 160903,
-        "sha256": "79f8167c714c15ca7d6e7c39c40a54a3d407713122f39943f64dffe4ac538819"
+        "bytes": 161978,
+        "sha256": "498142941e60912929833861fb0f612d4f9273a868990b7b803b980646ab81fc"
       }
     },
     {
@@ -450,10 +468,10 @@
       "kind": "quests",
       "title": "Польша. Книга квестов. Часть 1",
       "country": "PL",
-      "revision": "q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.73485f7633fb.faf009a5a3f8",
+      "revision": "q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.2996bc556590.8747b0241f39",
       "contentLocale": "ru",
       "status": "partial",
-      "coverUri": "https://metravel.by/travel-books/poland-quests-1/q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.73485f7633fb.faf009a5a3f8/pocket-150x100/preview-cover-1.webp",
+      "coverUri": "https://metravel.by/travel-books/poland-quests-1/q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.2996bc556590.8747b0241f39/pocket-150x100/preview-cover-1.webp",
       "stopCount": 37,
       "bodyPageCount": 156,
       "profiles": [
@@ -464,7 +482,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         },
         {
           "id": "album-a5",
@@ -473,7 +492,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         }
       ],
       "missing": [
@@ -488,11 +508,11 @@
       "metadata": {
         "kind": "book-metadata",
         "bookId": "poland-quests-1",
-        "revision": "q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.73485f7633fb.faf009a5a3f8",
-        "uri": "https://metravel.by/travel-books/poland-quests-1/q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.73485f7633fb.faf009a5a3f8/book.json",
+        "revision": "q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.2996bc556590.8747b0241f39",
+        "uri": "https://metravel.by/travel-books/poland-quests-1/q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.2996bc556590.8747b0241f39/book.json",
         "mime": "application/json",
-        "bytes": 144558,
-        "sha256": "578845556eb9991e86d3970e8f975cdfc61e14fb587f06a375bd7ae25636b691"
+        "bytes": 145632,
+        "sha256": "761299d4637085dde33f9f5f428933b8e2aa8370ed9acf315b533c874d8d441b"
       }
     },
     {
@@ -502,10 +522,10 @@
       "visualStyle": "photo",
       "title": "Горы Польши",
       "country": "PL",
-      "revision": "2026-11-02.series.7845a9ee6e61.0ebca98b07f1",
+      "revision": "2026-11-02.series.01a7298b7bb4.1a5d32e94a7d",
       "contentLocale": "ru",
       "status": "partial",
-      "coverUri": "https://metravel.by/travel-books/poland-mountains-memory/2026-11-02.series.7845a9ee6e61.0ebca98b07f1/pocket-150x100/preview-cover-1.webp",
+      "coverUri": "https://metravel.by/travel-books/poland-mountains-memory/2026-11-02.series.01a7298b7bb4.1a5d32e94a7d/pocket-150x100/preview-cover-1.webp",
       "stopCount": 40,
       "bodyPageCount": 136,
       "profiles": [
@@ -516,7 +536,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         },
         {
           "id": "album-a5",
@@ -525,7 +546,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         }
       ],
       "missing": [
@@ -541,11 +563,11 @@
       "metadata": {
         "kind": "book-metadata",
         "bookId": "poland-mountains-memory",
-        "revision": "2026-11-02.series.7845a9ee6e61.0ebca98b07f1",
-        "uri": "https://metravel.by/travel-books/poland-mountains-memory/2026-11-02.series.7845a9ee6e61.0ebca98b07f1/book.json",
+        "revision": "2026-11-02.series.01a7298b7bb4.1a5d32e94a7d",
+        "uri": "https://metravel.by/travel-books/poland-mountains-memory/2026-11-02.series.01a7298b7bb4.1a5d32e94a7d/book.json",
         "mime": "application/json",
-        "bytes": 223739,
-        "sha256": "3a99b55a7cf055038c84fa1a8d6b49bb21dfc18d5de60f3f2a23aab10a4862bc"
+        "bytes": 223406,
+        "sha256": "b2da5194650b7fb11a59f11fbc4e0c8754451a46a511e91657433bae7081a1dc"
       }
     },
     {
@@ -555,10 +577,10 @@
       "visualStyle": "photo",
       "title": "Замки Польши",
       "country": "PL",
-      "revision": "2026-11-02.series.7fd00e00a0bb.54e36adcca11",
+      "revision": "2026-11-02.series.cf73b9e437a4.de70624ab571",
       "contentLocale": "ru",
       "status": "partial",
-      "coverUri": "https://metravel.by/travel-books/poland-castles-memory/2026-11-02.series.7fd00e00a0bb.54e36adcca11/pocket-150x100/preview-cover-1.webp",
+      "coverUri": "https://metravel.by/travel-books/poland-castles-memory/2026-11-02.series.cf73b9e437a4.de70624ab571/pocket-150x100/preview-cover-1.webp",
       "stopCount": 30,
       "bodyPageCount": 104,
       "profiles": [
@@ -569,7 +591,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         },
         {
           "id": "album-a5",
@@ -578,7 +601,8 @@
           "bleedMm": 0,
           "safeMm": 5,
           "bindingMm": 15,
-          "binding": "rings"
+          "binding": "rings",
+          "printShopBleedMm": 3
         }
       ],
       "missing": [
@@ -594,11 +618,11 @@
       "metadata": {
         "kind": "book-metadata",
         "bookId": "poland-castles-memory",
-        "revision": "2026-11-02.series.7fd00e00a0bb.54e36adcca11",
-        "uri": "https://metravel.by/travel-books/poland-castles-memory/2026-11-02.series.7fd00e00a0bb.54e36adcca11/book.json",
+        "revision": "2026-11-02.series.cf73b9e437a4.de70624ab571",
+        "uri": "https://metravel.by/travel-books/poland-castles-memory/2026-11-02.series.cf73b9e437a4.de70624ab571/book.json",
         "mime": "application/json",
-        "bytes": 136925,
-        "sha256": "d500077ccb6c983f2747c3dde9e0e3466ae5541924bdcaa7b58701cf7ca3bca7"
+        "bytes": 139016,
+        "sha256": "73e3b7e8f7bb2767dc804c9344987bca8a550f5870bd3c18d7f38aefa207eafd"
       }
     }
   ]

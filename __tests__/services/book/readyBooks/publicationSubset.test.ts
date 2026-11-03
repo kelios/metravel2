@@ -2,6 +2,7 @@
 import currentPublication from '../../../../data/travelBooks/manifest.json';
 import acceptedCountryPublication from '../../../../data/travelBooks/releases/f6071d0f8b0d428c7aa6dd3de04fee8e5a2a25c491d8a9f2602d99bb4d7b5480.json';
 import acceptedPriorPublication from '../../../../data/travelBooks/releases/46330b9545ed5326d7f277d27dc659d01efc47e4b26b738b225c4ee040a537b0.json';
+import acceptedTwelvePublication from '../../../../data/travelBooks/releases/e24ec5cd775eb92d47172ee2a596f1829284c1e6f3af05027610cfec4b979bb2.json';
 import {publicationSchema, type PublishedBook} from '../../../../services/book/readyBooks/publication';
 import {runNodeCli} from '../../../scripts/cli-test-utils';
 
@@ -34,12 +35,19 @@ const subset = (prior: Catalog, style: 'photo' | 'fantasy'): Catalog => ({
   }),
 });
 
-it('validates the current twelve editions while preserving the ten accepted raw books and their metadata', () => {
+it('validates the current twelve editions while their earlier immutable snapshots stay readable', () => {
   const parsed = publicationSchema.parse(currentPublication);
-  const priorIds = new Set(acceptedPriorPublication.books.map(book => book.id));
   expect(parsed.books).toHaveLength(12);
-  expect(currentPublication.books.filter(book => priorIds.has(book.id))).toEqual(acceptedPriorPublication.books);
-  expect(currentPublication.bookMetadata.filter(asset => priorIds.has(asset.bookId))).toEqual(acceptedPriorPublication.bookMetadata);
+  // 03.11.2026 re-release (#2968, supersedes the unreleased 02.11 one for #2946 #2947 #2949): every edition has a new revision; prior snapshots keep the shared presets.
+  for (const prior of [acceptedPriorPublication, acceptedTwelvePublication]) {
+    const snapshot = publicationSchema.parse(prior);
+    for (const book of snapshot.books) {
+      expect(book.coverPersonalization?.schemaVersion).toBe(1);
+      expect(parsed.books.find(current => current.id === book.id)?.revision).not.toBe(book.revision);
+    }
+  }
+  expect(parsed.books.map(book => book.id)).toEqual(acceptedTwelvePublication.books.map(book => book.id));
+  expect(parsed.books.every(book => book.coverPersonalization?.schemaVersion === 2)).toBe(true);
   expect(parsed.books.filter(book => 'sourceContract' in book && book.sourceContract === 'thematic-v1')
     .map(book => [book.id, book.stopCount, book.bodyPageCount])).toEqual([
     ['poland-mountains-memory', 40, 136], ['poland-castles-memory', 30, 104],

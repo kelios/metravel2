@@ -3,12 +3,44 @@
  "country": "BY",
  "authorId": 1,
  "style": "photo",
- "task": "#2854 FE-BOOKS-E1",
+ "task": "#2854 FE-BOOKS-E1; #2968 FE-BOOKS-G11 одна фотография без людей",
  "verifiedOn": "2026-11-01",
  "reviewer": "Claude session «Задача 2854» — визуальная проверка контактных листов статей автора 1",
  "method": "Все оригиналы (variants.original) тела статьи, галереи путешествия и фото точек каждой выбранной статьи автора1 скачаны с SHA-256 и реальными размерами; снимки места выбраны по контактным листам, апскейла/стоков/AI нет.",
  "cover": {
-  "stopId": "point-5247"
+  "stopId": "point-5246",
+  "focusY": {
+   "cover-album-a5": 0.2,
+   "cover-pocket-150x100": 0.45
+  },
+  "photo": {
+   "role": "cover",
+   "pointId": 5246,
+   "articleId": 201,
+   "authorId": 1,
+   "articleUrl": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+   "mediaGroup": "gallery",
+   "mediaIndex": 8,
+   "publishedAlt": null,
+   "observedContent": "Башня и крыло Несвижского дворца над земляным бастионом и рвом",
+   "originalUri": "https://metravel.by/gallery/3448/conversions/S3H0kLrM2diTfxeSy07XbhWCyeb4DP9DxsAsslMW-detail_hd.jpg",
+   "sha256": "1dd0939e38981f1cc5790219473e6e46679092ee5e3ac6184ef2222287197d1d",
+   "bytes": 704629,
+   "widthPx": 1080,
+   "heightPx": 1080,
+   "rights": {
+    "basis": "owner-author-photo",
+    "ownerUserId": 1,
+    "sourceTravelId": 201,
+    "permission": "owner-commissioned-photo-diary"
+   },
+   "verifiedOn": "2026-11-03",
+   "verifiedVia": "GET https://metravel.by/api/travels/201/ + визуальная проверка контактного листа",
+   "isWatercolorSourcePhoto": false,
+   "peopleFree": true,
+   "peopleCheckedOn": "2026-11-03"
+  },
+  "decision": "Решение владельца 03.11.2026: обложка фотоиздания Беларуси — Несвиж (у всех широких кадров Мира в кадре посетители)."
  },
  "placeCount": 31,
  "places": [
@@ -22,32 +54,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 356,
-     "articleId": 133,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/reka-isloch-gde-guliat-i-otdykhat-s-sobakoi",
-     "mediaGroup": "body",
-     "mediaIndex": 1,
-     "publishedAlt": "Песчаный обрыв над излучиной Ислочи: сосновый бор на одном берегу и зелёная пойма на другом",
-     "observedContent": "Песчаный обрыв над излучиной Ислочи, сосновый бор и пойма",
-     "originalUri": "https://metravel.by/travel-description-image/0164614223c74af281706241ce101fb3.jpg.webp",
-     "sha256": "49baacd96596c13a3c6ddd34bd39fa04a4b2d1400b11f43acdc3321bcdbbc451",
-     "bytes": 279584,
-     "widthPx": 1000,
-     "heightPx": 1333,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 133,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/133/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 356,
      "articleId": 133,
@@ -70,11 +76,40 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/133/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
+     "pointId": 356,
+     "articleId": 133,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/reka-isloch-gde-guliat-i-otdykhat-s-sobakoi",
+     "mediaGroup": "body",
+     "mediaIndex": 1,
+     "publishedAlt": "Песчаный обрыв над излучиной Ислочи: сосновый бор на одном берегу и зелёная пойма на другом",
+     "observedContent": "Песчаный обрыв над излучиной Ислочи, сосновый бор и пойма",
+     "originalUri": "https://metravel.by/travel-description-image/0164614223c74af281706241ce101fb3.jpg.webp",
+     "sha256": "49baacd96596c13a3c6ddd34bd39fa04a4b2d1400b11f43acdc3321bcdbbc451",
+     "bytes": 279584,
+     "widthPx": 1000,
+     "heightPx": 1333,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 133,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/133/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "weak"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
      "pointId": 356,
      "articleId": 133,
      "authorId": 1,
@@ -96,9 +131,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/133/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — слабый кадр.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-421",
@@ -110,32 +148,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 421,
-     "articleId": 138,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/smoliany-belarus-ruiny-legendy-i-starinnye-khramy",
-     "mediaGroup": "body",
-     "mediaIndex": 2,
-     "publishedAlt": "Руины башни замка Белый Ковель",
-     "observedContent": "Кирпичная руина башни «Белый Ковель» снизу",
-     "originalUri": "https://metravel.by/travel-description-image/39db96486ba944d7b1ad2658f4a92600.JPG.webp",
-     "sha256": "0b22ffea3453356b63bee69ac65755e47dc40f69761db392a9d1622bc8826da5",
-     "bytes": 309722,
-     "widthPx": 1000,
-     "heightPx": 1510,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 138,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/138/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 421,
      "articleId": 138,
@@ -158,11 +170,40 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/138/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
+     "pointId": 421,
+     "articleId": 138,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/smoliany-belarus-ruiny-legendy-i-starinnye-khramy",
+     "mediaGroup": "body",
+     "mediaIndex": 2,
+     "publishedAlt": "Руины башни замка Белый Ковель",
+     "observedContent": "Кирпичная руина башни «Белый Ковель» снизу",
+     "originalUri": "https://metravel.by/travel-description-image/39db96486ba944d7b1ad2658f4a92600.JPG.webp",
+     "sha256": "0b22ffea3453356b63bee69ac65755e47dc40f69761db392a9d1622bc8826da5",
+     "bytes": 309722,
+     "widthPx": 1000,
+     "heightPx": 1510,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 138,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/138/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "duplicate"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
      "pointId": 421,
      "articleId": 138,
      "authorId": 1,
@@ -184,9 +225,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/138/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — повтор того же вида.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-587",
@@ -220,11 +264,13 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/148/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
+     "isWatercolorSourcePhoto": true,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 587,
      "articleId": 148,
      "authorId": 1,
@@ -246,11 +292,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/148/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 587,
      "articleId": 148,
      "authorId": 1,
@@ -272,9 +319,11 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/148/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-2624",
@@ -286,32 +335,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 2624,
-     "articleId": 176,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/logoisk-dvorets-tyshkevichei-i-rodnik-sviatogo-iuriia",
-     "mediaGroup": "body",
-     "mediaIndex": 4,
-     "publishedAlt": null,
-     "observedContent": "Кирпичный пилон руин дворца Тышкевичей среди деревьев",
-     "originalUri": "https://metravel.by/travel-description-image/679f07d5599d49c18f89ae616f4f355f.JPG.webp",
-     "sha256": "c2705996445cb53bb96546e46360da3b795f5d7e8765845ec7b04de5bf8c64cb",
-     "bytes": 263868,
-     "widthPx": 750,
-     "heightPx": 1000,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 176,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/176/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 2624,
      "articleId": 176,
@@ -334,11 +357,40 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/176/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
+     "pointId": 2624,
+     "articleId": 176,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/logoisk-dvorets-tyshkevichei-i-rodnik-sviatogo-iuriia",
+     "mediaGroup": "body",
+     "mediaIndex": 4,
+     "publishedAlt": null,
+     "observedContent": "Кирпичный пилон руин дворца Тышкевичей среди деревьев",
+     "originalUri": "https://metravel.by/travel-description-image/679f07d5599d49c18f89ae616f4f355f.JPG.webp",
+     "sha256": "c2705996445cb53bb96546e46360da3b795f5d7e8765845ec7b04de5bf8c64cb",
+     "bytes": 263868,
+     "widthPx": 750,
+     "heightPx": 1000,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 176,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/176/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "duplicate"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
      "pointId": 2624,
      "articleId": 176,
      "authorId": 1,
@@ -360,9 +412,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/176/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — повтор того же вида.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-2633",
@@ -396,11 +451,13 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/169/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 2633,
      "articleId": 169,
      "authorId": 1,
@@ -422,10 +479,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/169/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
    ],
-   "mainReplacementReason": "Проверенный кадр статьи (body3) снят с людьми в воде; для страницы места взят вид берега того же озера из галереи той же статьи автора1."
+   "mainReplacementReason": "Проверенный кадр статьи (body3) снят с людьми в воде; для страницы места взят вид берега того же озера из галереи той же статьи автора1.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-2758",
@@ -437,58 +496,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 2758,
-     "articleId": 143,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
-     "mediaGroup": "body",
-     "mediaIndex": 1,
-     "publishedAlt": null,
-     "observedContent": "Руины дворца Горваттов, главный фасад",
-     "originalUri": "https://metravel.by/travel-description-image/f9c6f96f840d4d51b781775f3405e848.JPG.webp",
-     "sha256": "55917115986dab8d4cc46c12ad1d445fa2b661762575b95bbcd352477ac6878a",
-     "bytes": 137726,
-     "widthPx": 1000,
-     "heightPx": 662,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 143,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/143/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
-    },
-    {
-     "role": "support",
-     "status": "used",
-     "pointId": 2758,
-     "articleId": 143,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
-     "mediaGroup": "gallery",
-     "mediaIndex": 0,
-     "publishedAlt": null,
-     "observedContent": "Фасад дворца Горваттов целиком",
-     "originalUri": "https://metravel.by/gallery/2896/conversions/CvKP62nYv34y1e3YgMcwuUNguaeaxnNy3dWuSGTx-detail_hd.jpg",
-     "sha256": "dbd2eb9557963b2a104b42ddd2cd4e6d7a9df8e98f6d7ef88cd6b6ed49c59047",
-     "bytes": 237538,
-     "widthPx": 1080,
-     "heightPx": 1080,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 143,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/143/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 2758,
      "articleId": 143,
@@ -511,9 +518,67 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/143/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
+     "pointId": 2758,
+     "articleId": 143,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
+     "mediaGroup": "body",
+     "mediaIndex": 1,
+     "publishedAlt": null,
+     "observedContent": "Руины дворца Горваттов, главный фасад",
+     "originalUri": "https://metravel.by/travel-description-image/f9c6f96f840d4d51b781775f3405e848.JPG.webp",
+     "sha256": "55917115986dab8d4cc46c12ad1d445fa2b661762575b95bbcd352477ac6878a",
+     "bytes": 137726,
+     "widthPx": 1000,
+     "heightPx": 662,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 143,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/143/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "people"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
+     "pointId": 2758,
+     "articleId": 143,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/usadba-gorvattov-v-narovle-kak-doekhat",
+     "mediaGroup": "gallery",
+     "mediaIndex": 0,
+     "publishedAlt": null,
+     "observedContent": "Фасад дворца Горваттов целиком",
+     "originalUri": "https://metravel.by/gallery/2896/conversions/CvKP62nYv34y1e3YgMcwuUNguaeaxnNy3dWuSGTx-detail_hd.jpg",
+     "sha256": "dbd2eb9557963b2a104b42ddd2cd4e6d7a9df8e98f6d7ef88cd6b6ed49c59047",
+     "bytes": 237538,
+     "widthPx": 1080,
+     "heightPx": 1080,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 143,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/143/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "people"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — в кадре люди.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-2913",
@@ -526,6 +591,34 @@
     {
      "role": "main",
      "status": "used",
+     "pointId": 2913,
+     "articleId": 179,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/rodniki-sviatye-krinitsy-ekotropa-v-37-km-ot-minska",
+     "mediaGroup": "gallery",
+     "mediaIndex": 4,
+     "publishedAlt": null,
+     "observedContent": "Вода родника бежит по рыжим камням",
+     "originalUri": "https://metravel.by/gallery/2649/conversions/MekLL2yM7RxE02CJxVkuaSXpew5mhIqS9KBzLthl-detail_hd.jpg",
+     "sha256": "b5a8223308c1d8ce1903d8e33220bed59f7fe870c169073715664e8264b399de",
+     "bytes": 422508,
+     "widthPx": 1080,
+     "heightPx": 1080,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 179,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-03",
+     "verifiedVia": "GET https://metravel.by/api/travels/179/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
      "pointId": 2913,
      "articleId": 179,
      "authorId": 1,
@@ -547,11 +640,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/179/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "low-res"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 2913,
      "articleId": 179,
      "authorId": 1,
@@ -573,11 +667,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/179/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "weak"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 2913,
      "articleId": 179,
      "authorId": 1,
@@ -599,9 +694,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/179/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "weak"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — низкое разрешение.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-3011",
@@ -635,37 +733,22 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/147/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
+     "isWatercolorSourcePhoto": true,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03",
+     "retouch": {
+      "path": ".codex-temp/books-photo/retouched/e84cc4270a830980f9b9ad6f2d1afce4b3a5451b97ca63adea15cf3093842199.png",
+      "sha256": "e84cc4270a830980f9b9ad6f2d1afce4b3a5451b97ca63adea15cf3093842199",
+      "widthPx": 1000,
+      "heightPx": 564,
+      "removed": "рабочий на строительных лесах башни",
+      "method": "Ручная ретушь без ИИ: перенос соседней фактуры и заполнение OpenCV; скрипты в .codex-temp/books-photo/retouch-2026-11-03/",
+      "decision": "Решение владельца 03.11.2026: «убираем прохожих на лучших кадрах»"
+     }
     },
     {
      "role": "support",
-     "status": "used",
-     "pointId": 3011,
-     "articleId": 147,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
-     "mediaGroup": "gallery",
-     "mediaIndex": 3,
-     "publishedAlt": null,
-     "observedContent": "Белые башни дворца Пусловских над полем",
-     "originalUri": "https://metravel.by/gallery/3730/conversions/fTiZ5jv9xA7tN2jxrikSGI1uiCChaU5OTPPJmc5r-detail_hd.jpg",
-     "sha256": "aff97217e1248835891deb6891c6c88ddcac737934001bb6d7bf29971124a622",
-     "bytes": 551968,
-     "widthPx": 1080,
-     "heightPx": 1080,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 147,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/147/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
-    },
-    {
-     "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 3011,
      "articleId": 147,
      "authorId": 1,
@@ -687,9 +770,39 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/147/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "weak"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
+     "pointId": 3011,
+     "articleId": 147,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+     "mediaGroup": "gallery",
+     "mediaIndex": 3,
+     "publishedAlt": null,
+     "observedContent": "Белые башни дворца Пусловских над полем",
+     "originalUri": "https://metravel.by/gallery/3730/conversions/fTiZ5jv9xA7tN2jxrikSGI1uiCChaU5OTPPJmc5r-detail_hd.jpg",
+     "sha256": "aff97217e1248835891deb6891c6c88ddcac737934001bb6d7bf29971124a622",
+     "bytes": 551968,
+     "widthPx": 1080,
+     "heightPx": 1080,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 147,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/147/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "people"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): печатается лучший кадр места; случайные прохожие убраны ретушью по решению владельца.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-3014",
@@ -701,58 +814,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 3014,
-     "articleId": 147,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
-     "mediaGroup": "body",
-     "mediaIndex": 4,
-     "publishedAlt": "Руины Ружанского дворца Сапег: длинная аркада слева и главный корпус с фронтоном над зелёным двором",
-     "observedContent": "Руины Ружанского дворца Сапег: аркада и главный корпус",
-     "originalUri": "https://metravel.by/travel-description-image/49b53e4b9a9948978221a4e1e5612fb9.jpg.webp",
-     "sha256": "cd43e694cf1f8c2f095b898a17b6a06da973c960624db868646b393da8bf29c8",
-     "bytes": 92752,
-     "widthPx": 1000,
-     "heightPx": 564,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 147,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/147/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
-    },
-    {
-     "role": "support",
-     "status": "used",
-     "pointId": 3014,
-     "articleId": 147,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
-     "mediaGroup": "gallery",
-     "mediaIndex": 0,
-     "publishedAlt": null,
-     "observedContent": "Главный корпус руин Ружанского дворца на фоне неба",
-     "originalUri": "https://metravel.by/gallery/3726/conversions/7zhguO9NDHlYJd4W2B9eDXwyHIJIqmBMDjmT04mg-detail_hd.jpg",
-     "sha256": "5f0880efbb99d25f7f970432fa6bc9f5a3220c3ccfb56f118d22a3f7774d33ba",
-     "bytes": 583546,
-     "widthPx": 1080,
-     "heightPx": 1080,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 147,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/147/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 3014,
      "articleId": 147,
@@ -775,9 +836,67 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/147/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
+     "pointId": 3014,
+     "articleId": 147,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+     "mediaGroup": "body",
+     "mediaIndex": 4,
+     "publishedAlt": "Руины Ружанского дворца Сапег: длинная аркада слева и главный корпус с фронтоном над зелёным двором",
+     "observedContent": "Руины Ружанского дворца Сапег: аркада и главный корпус",
+     "originalUri": "https://metravel.by/travel-description-image/49b53e4b9a9948978221a4e1e5612fb9.jpg.webp",
+     "sha256": "cd43e694cf1f8c2f095b898a17b6a06da973c960624db868646b393da8bf29c8",
+     "bytes": 92752,
+     "widthPx": 1000,
+     "heightPx": 564,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 147,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/147/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "people"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
+     "pointId": 3014,
+     "articleId": 147,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/baranovichi-kossovo-i-ruzhany-marshrut-na-2-dnia",
+     "mediaGroup": "gallery",
+     "mediaIndex": 0,
+     "publishedAlt": null,
+     "observedContent": "Главный корпус руин Ружанского дворца на фоне неба",
+     "originalUri": "https://metravel.by/gallery/3726/conversions/7zhguO9NDHlYJd4W2B9eDXwyHIJIqmBMDjmT04mg-detail_hd.jpg",
+     "sha256": "5f0880efbb99d25f7f970432fa6bc9f5a3220c3ccfb56f118d22a3f7774d33ba",
+     "bytes": 583546,
+     "widthPx": 1080,
+     "heightPx": 1080,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 147,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/147/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — в кадре люди.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-3251",
@@ -811,11 +930,13 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/187/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 3251,
      "articleId": 187,
      "authorId": 1,
@@ -837,11 +958,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/187/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 3251,
      "articleId": 187,
      "authorId": 1,
@@ -863,10 +985,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/187/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
    ],
-   "mainReplacementReason": "Проверенный кадр статьи — превью точки 400×400; взят полноразмерный оригинал того же фасада Быховского замка из галереи той же статьи автора1."
+   "mainReplacementReason": "Проверенный кадр статьи — превью точки 400×400; взят полноразмерный оригинал того же фасада Быховского замка из галереи той же статьи автора1.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-3836",
@@ -878,32 +1002,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 3836,
-     "articleId": 189,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
-     "mediaGroup": "body",
-     "mediaIndex": 51,
-     "publishedAlt": null,
-     "observedContent": "Жёлтый фасад дворца Бохвицей со ступенчатым щипцом",
-     "originalUri": "https://metravel.by/travel-description-image/45a8513ae52f46f59cda9207d0ca4e61.JPG.webp",
-     "sha256": "071beaa892a57caecf25bed2d2069ad9d3c2a22e0f39ce61c9681290253659ef",
-     "bytes": 148922,
-     "widthPx": 750,
-     "heightPx": 1000,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 189,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/189/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 3836,
      "articleId": 189,
@@ -926,11 +1024,40 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/189/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
+     "pointId": 3836,
+     "articleId": 189,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+     "mediaGroup": "body",
+     "mediaIndex": 51,
+     "publishedAlt": null,
+     "observedContent": "Жёлтый фасад дворца Бохвицей со ступенчатым щипцом",
+     "originalUri": "https://metravel.by/travel-description-image/45a8513ae52f46f59cda9207d0ca4e61.JPG.webp",
+     "sha256": "071beaa892a57caecf25bed2d2069ad9d3c2a22e0f39ce61c9681290253659ef",
+     "bytes": 148922,
+     "widthPx": 750,
+     "heightPx": 1000,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 189,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/189/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "duplicate"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
      "pointId": 3836,
      "articleId": 189,
      "authorId": 1,
@@ -952,9 +1079,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/189/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — повтор того же вида.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-3841",
@@ -966,32 +1096,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 3841,
-     "articleId": 189,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
-     "mediaGroup": "body",
-     "mediaIndex": 44,
-     "publishedAlt": null,
-     "observedContent": "Дворец Котлубаев с башней сквозь деревья",
-     "originalUri": "https://metravel.by/travel-description-image/70bcfcf8317d4bb9bdfde17ec98ec749.JPG.webp",
-     "sha256": "d1925cfb36565dbfadc8a7e39016826e02c92ba35c149eb0aae1c9ed72fc6e21",
-     "bytes": 208138,
-     "widthPx": 750,
-     "heightPx": 1000,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 189,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/189/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 3841,
      "articleId": 189,
@@ -1014,11 +1118,40 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/189/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
+     "pointId": 3841,
+     "articleId": 189,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+     "mediaGroup": "body",
+     "mediaIndex": 44,
+     "publishedAlt": null,
+     "observedContent": "Дворец Котлубаев с башней сквозь деревья",
+     "originalUri": "https://metravel.by/travel-description-image/70bcfcf8317d4bb9bdfde17ec98ec749.JPG.webp",
+     "sha256": "d1925cfb36565dbfadc8a7e39016826e02c92ba35c149eb0aae1c9ed72fc6e21",
+     "bytes": 208138,
+     "widthPx": 750,
+     "heightPx": 1000,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 189,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/189/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "duplicate"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
      "pointId": 3841,
      "articleId": 189,
      "authorId": 1,
@@ -1040,9 +1173,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/189/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — повтор того же вида.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-4530",
@@ -1076,9 +1212,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/153/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
+     "isWatercolorSourcePhoto": true,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     }
-   ]
+   ],
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-4801",
@@ -1112,11 +1251,13 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/196/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
+     "isWatercolorSourcePhoto": true,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 4801,
      "articleId": 196,
      "authorId": 1,
@@ -1138,11 +1279,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/196/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 4801,
      "articleId": 196,
      "authorId": 1,
@@ -1164,9 +1306,11 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/196/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-4805",
@@ -1178,32 +1322,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 4805,
-     "articleId": 196,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
-     "mediaGroup": "body",
-     "mediaIndex": 28,
-     "publishedAlt": "Руины стен Гольшанского замка",
-     "observedContent": "Руины стен Гольшанского замка",
-     "originalUri": "https://metravel.by/travel-description-image/b34b406d796e4e11961b56796fac280c.JPG.webp",
-     "sha256": "680511e9d95dec5a8919c1b10990250b580a99b143d69349b89631cf9c0f6cb7",
-     "bytes": 127644,
-     "widthPx": 750,
-     "heightPx": 1000,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 196,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/196/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 4805,
      "articleId": 196,
@@ -1226,11 +1344,40 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/196/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
+     "pointId": 4805,
+     "articleId": 196,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/velomarshrut-za-den-krevskii-zamok-i-golshany",
+     "mediaGroup": "body",
+     "mediaIndex": 28,
+     "publishedAlt": "Руины стен Гольшанского замка",
+     "observedContent": "Руины стен Гольшанского замка",
+     "originalUri": "https://metravel.by/travel-description-image/b34b406d796e4e11961b56796fac280c.JPG.webp",
+     "sha256": "680511e9d95dec5a8919c1b10990250b580a99b143d69349b89631cf9c0f6cb7",
+     "bytes": 127644,
+     "widthPx": 750,
+     "heightPx": 1000,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 196,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/196/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "duplicate"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
      "pointId": 4805,
      "articleId": 196,
      "authorId": 1,
@@ -1252,9 +1399,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/196/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — повтор того же вида.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-4810",
@@ -1288,11 +1438,13 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/196/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
+     "isWatercolorSourcePhoto": true,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 4810,
      "articleId": 196,
      "authorId": 1,
@@ -1314,11 +1466,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/196/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "weak"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 4810,
      "articleId": 196,
      "authorId": 1,
@@ -1340,9 +1493,11 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/196/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-4843",
@@ -1354,32 +1509,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 4843,
-     "articleId": 197,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/velomarshrut-15-km-na-lesnoe-ozero-dikoe",
-     "mediaGroup": "gallery",
-     "mediaIndex": 8,
-     "publishedAlt": null,
-     "observedContent": "Озеро Дикое с тростником и сосновым берегом",
-     "originalUri": "https://metravel.by/gallery/3651/conversions/bXrETMbarSIWsIbCeDlgJB5YlbNNJ8KO8xKiATPB-detail_hd.jpg",
-     "sha256": "44aff8af5289fd1d304ba32ffeef597e62c5775274e2255272c8bff1b55e12b2",
-     "bytes": 598171,
-     "widthPx": 1080,
-     "heightPx": 1080,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 197,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/197/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 4843,
      "articleId": 197,
@@ -1402,11 +1531,40 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/197/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
+     "pointId": 4843,
+     "articleId": 197,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/velomarshrut-15-km-na-lesnoe-ozero-dikoe",
+     "mediaGroup": "gallery",
+     "mediaIndex": 8,
+     "publishedAlt": null,
+     "observedContent": "Озеро Дикое с тростником и сосновым берегом",
+     "originalUri": "https://metravel.by/gallery/3651/conversions/bXrETMbarSIWsIbCeDlgJB5YlbNNJ8KO8xKiATPB-detail_hd.jpg",
+     "sha256": "44aff8af5289fd1d304ba32ffeef597e62c5775274e2255272c8bff1b55e12b2",
+     "bytes": 598171,
+     "widthPx": 1080,
+     "heightPx": 1080,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 197,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/197/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "people"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
      "pointId": 4843,
      "articleId": 197,
      "authorId": 1,
@@ -1428,10 +1586,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/197/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "weak"
     }
    ],
-   "mainReplacementReason": "Проверенный кадр статьи — превью точки 400×400; взят полноразмерный кадр того же вида озера Дикое из галереи той же статьи автора1."
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — в кадре люди.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-5116",
@@ -1465,11 +1625,13 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/200/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
+     "isWatercolorSourcePhoto": true,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 5116,
      "articleId": 200,
      "authorId": 1,
@@ -1491,11 +1653,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/200/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 5116,
      "articleId": 200,
      "authorId": 1,
@@ -1517,9 +1680,11 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/200/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-5246",
@@ -1553,11 +1718,13 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/201/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
+     "isWatercolorSourcePhoto": true,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 5246,
      "articleId": 201,
      "authorId": 1,
@@ -1579,11 +1746,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/201/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 5246,
      "articleId": 201,
      "authorId": 1,
@@ -1605,9 +1773,11 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/201/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-5247",
@@ -1619,58 +1789,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 5247,
-     "articleId": 201,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
-     "mediaGroup": "body",
-     "mediaIndex": 18,
-     "publishedAlt": "Мирский замок, общий вид",
-     "observedContent": "Мирский замок, общий вид с юга",
-     "originalUri": "https://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp",
-     "sha256": "03ddc105802698b2ad7f136cf4a292b2bc9b923ca8e7355ff87874e1a001b9c9",
-     "bytes": 76782,
-     "widthPx": 1000,
-     "heightPx": 662,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 201,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/201/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
-    },
-    {
-     "role": "support",
-     "status": "used",
-     "pointId": 5247,
-     "articleId": 201,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
-     "mediaGroup": "gallery",
-     "mediaIndex": 4,
-     "publishedAlt": null,
-     "observedContent": "Мирский замок с прудом",
-     "originalUri": "https://metravel.by/gallery/3444/conversions/2pc1gSCXhBRZTLCEFDBdCJTHW24ADuidhEY1BTH0-detail_hd.jpg",
-     "sha256": "6eef00ae382c9deeb9c7eeb2f8c56ad9da608c85db5483a8362316edb2906de5",
-     "bytes": 497167,
-     "widthPx": 1080,
-     "heightPx": 1080,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 201,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/201/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 5247,
      "articleId": 201,
@@ -1693,9 +1811,103 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/201/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03",
+     "retouch": {
+      "path": ".codex-temp/books-photo/retouched/f5ba455d916bfb2ac37dfbe6dacc520a67801793a3a12adacfe2a266791d5d0a.png",
+      "sha256": "f5ba455d916bfb2ac37dfbe6dacc520a67801793a3a12adacfe2a266791d5d0a",
+      "widthPx": 1000,
+      "heightPx": 750,
+      "removed": "прохожие на дорожке у стен и их отражения в пруду",
+      "method": "Ручная ретушь без ИИ: перенос соседней фактуры и заполнение OpenCV; скрипты в .codex-temp/books-photo/retouch-2026-11-03/",
+      "decision": "Решение владельца 03.11.2026: «убираем прохожих на лучших кадрах»"
+     }
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
+     "pointId": 5247,
+     "articleId": 201,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+     "mediaGroup": "body",
+     "mediaIndex": 19,
+     "publishedAlt": "Башни Мирского замка",
+     "observedContent": "Колодец во дворе Мирского замка у белого крыла",
+     "originalUri": "https://metravel.by/travel-description-image/1ed896a33e664ab8a33712eeed56df72.JPG.webp",
+     "sha256": "df9a99713b49f47bdf03ffc27a3e82afeeed0d0b68dd1c09a40c7e6a470b6a34",
+     "bytes": 171886,
+     "widthPx": 1000,
+     "heightPx": 1510,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 201,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-03",
+     "verifiedVia": "GET https://metravel.by/api/travels/201/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "weak"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
+     "pointId": 5247,
+     "articleId": 201,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+     "mediaGroup": "body",
+     "mediaIndex": 18,
+     "publishedAlt": "Мирский замок, общий вид",
+     "observedContent": "Мирский замок, общий вид с юга",
+     "originalUri": "https://metravel.by/travel-description-image/5e0095f16a85455fa175cba903f0f78c.JPG.webp",
+     "sha256": "03ddc105802698b2ad7f136cf4a292b2bc9b923ca8e7355ff87874e1a001b9c9",
+     "bytes": 76782,
+     "widthPx": 1000,
+     "heightPx": 662,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 201,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/201/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "people"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
+     "pointId": 5247,
+     "articleId": 201,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+     "mediaGroup": "gallery",
+     "mediaIndex": 4,
+     "publishedAlt": null,
+     "observedContent": "Мирский замок с прудом",
+     "originalUri": "https://metravel.by/gallery/3444/conversions/2pc1gSCXhBRZTLCEFDBdCJTHW24ADuidhEY1BTH0-detail_hd.jpg",
+     "sha256": "6eef00ae382c9deeb9c7eeb2f8c56ad9da608c85db5483a8362316edb2906de5",
+     "bytes": 497167,
+     "widthPx": 1080,
+     "heightPx": 1080,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 201,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/201/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "people"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): печатается лучший кадр места; случайные прохожие убраны ретушью по решению владельца.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-5485",
@@ -1707,32 +1919,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 5485,
-     "articleId": 203,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
-     "mediaGroup": "body",
-     "mediaIndex": 19,
-     "publishedAlt": "Болотное озерко и одинокая сосна на верховом болоте Ельня",
-     "observedContent": "Болотное озерко и одинокая сосна на верховом болоте Ельня",
-     "originalUri": "https://metravel.by/travel-description-image/c4c12a8726b444818f391b7b6cdafe12.JPG.webp",
-     "sha256": "cec0b69d0680e2b414d957f54576a735adaff3ca98f30c46827405b25dc0c4de",
-     "bytes": 140220,
-     "widthPx": 1000,
-     "heightPx": 750,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 203,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/203/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 5485,
      "articleId": 203,
@@ -1755,11 +1941,40 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/203/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
+     "pointId": 5485,
+     "articleId": 203,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+     "mediaGroup": "body",
+     "mediaIndex": 19,
+     "publishedAlt": "Болотное озерко и одинокая сосна на верховом болоте Ельня",
+     "observedContent": "Болотное озерко и одинокая сосна на верховом болоте Ельня",
+     "originalUri": "https://metravel.by/travel-description-image/c4c12a8726b444818f391b7b6cdafe12.JPG.webp",
+     "sha256": "cec0b69d0680e2b414d957f54576a735adaff3ca98f30c46827405b25dc0c4de",
+     "bytes": 140220,
+     "widthPx": 1000,
+     "heightPx": 750,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 203,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/203/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "duplicate"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
      "pointId": 5485,
      "articleId": 203,
      "authorId": 1,
@@ -1781,9 +1996,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/203/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — повтор того же вида.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-5486",
@@ -1795,58 +2013,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 5486,
-     "articleId": 203,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
-     "mediaGroup": "body",
-     "mediaIndex": 12,
-     "publishedAlt": "Деревянный настил с перилами уходит в болото на экотропе «Озёравки»",
-     "observedContent": "Деревянный настил экотропы «Озеравки» уходит в болото",
-     "originalUri": "https://metravel.by/travel-description-image/1dcfcf273cb24ba8a385ebd9bcb33e24.JPG.webp",
-     "sha256": "d4efc57fb3ca5d5d3a6d5cb25adbf061f2f3fbf1ec811d1e409d6a754dadf442",
-     "bytes": 139796,
-     "widthPx": 750,
-     "heightPx": 1000,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 203,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/203/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
-    },
-    {
-     "role": "support",
-     "status": "used",
-     "pointId": 5486,
-     "articleId": 203,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
-     "mediaGroup": "gallery",
-     "mediaIndex": 0,
-     "publishedAlt": null,
-     "observedContent": "Настил экотропы крупным планом",
-     "originalUri": "https://metravel.by/gallery/2609/conversions/c3CFcYd4SNeJhOa4pqOPv6FKtrPQVARbuiLRhOaM-detail_hd.jpg",
-     "sha256": "d309d78c913f7b7a15e968ebff4ac411b9388a163021d3cdcba7f390ac90a6df",
-     "bytes": 327613,
-     "widthPx": 1080,
-     "heightPx": 1080,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 203,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/203/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 5486,
      "articleId": 203,
@@ -1869,9 +2035,67 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/203/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
+     "pointId": 5486,
+     "articleId": 203,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+     "mediaGroup": "body",
+     "mediaIndex": 12,
+     "publishedAlt": "Деревянный настил с перилами уходит в болото на экотропе «Озёравки»",
+     "observedContent": "Деревянный настил экотропы «Озеравки» уходит в болото",
+     "originalUri": "https://metravel.by/travel-description-image/1dcfcf273cb24ba8a385ebd9bcb33e24.JPG.webp",
+     "sha256": "d4efc57fb3ca5d5d3a6d5cb25adbf061f2f3fbf1ec811d1e409d6a754dadf442",
+     "bytes": 139796,
+     "widthPx": 750,
+     "heightPx": 1000,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 203,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/203/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "duplicate"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
+     "pointId": 5486,
+     "articleId": 203,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+     "mediaGroup": "gallery",
+     "mediaIndex": 0,
+     "publishedAlt": null,
+     "observedContent": "Настил экотропы крупным планом",
+     "originalUri": "https://metravel.by/gallery/2609/conversions/c3CFcYd4SNeJhOa4pqOPv6FKtrPQVARbuiLRhOaM-detail_hd.jpg",
+     "sha256": "d309d78c913f7b7a15e968ebff4ac411b9388a163021d3cdcba7f390ac90a6df",
+     "bytes": 327613,
+     "widthPx": 1080,
+     "heightPx": 1080,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 203,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/203/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — повтор того же вида.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-5487",
@@ -1883,32 +2107,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 5487,
-     "articleId": 203,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
-     "mediaGroup": "body",
-     "mediaIndex": 26,
-     "publishedAlt": "Руины дворца Нитославских: фасад с пустыми окнами в деревне Опытная",
-     "observedContent": "Руины дворца Нитославских: фасад с пустыми окнами",
-     "originalUri": "https://metravel.by/travel-description-image/d88347c3654d436e8ce496d542ff24b6.JPG.webp",
-     "sha256": "138e88955f233192386b6ed40b61d2613ce167e06b4682c5180050a2fa209bd3",
-     "bytes": 267994,
-     "widthPx": 750,
-     "heightPx": 1000,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 203,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/203/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 5487,
      "articleId": 203,
@@ -1931,11 +2129,40 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/203/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
+     "pointId": 5487,
+     "articleId": 203,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+     "mediaGroup": "body",
+     "mediaIndex": 26,
+     "publishedAlt": "Руины дворца Нитославских: фасад с пустыми окнами в деревне Опытная",
+     "observedContent": "Руины дворца Нитославских: фасад с пустыми окнами",
+     "originalUri": "https://metravel.by/travel-description-image/d88347c3654d436e8ce496d542ff24b6.JPG.webp",
+     "sha256": "138e88955f233192386b6ed40b61d2613ce167e06b4682c5180050a2fa209bd3",
+     "bytes": 267994,
+     "widthPx": 750,
+     "heightPx": 1000,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 203,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/203/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "duplicate"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
      "pointId": 5487,
      "articleId": 203,
      "authorId": 1,
@@ -1957,9 +2184,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/203/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — повтор того же вида.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-6479",
@@ -1971,32 +2201,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 6479,
-     "articleId": 222,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/ektropa-v-gidrologicheskom-zakaznike-korytenskiy-moh",
-     "mediaGroup": "address",
-     "mediaIndex": 6479,
-     "publishedAlt": "экто тропа",
-     "observedContent": "Деревянный настил экотропы в сосновом лесу",
-     "originalUri": "https://metravel.by/address-image/6479/conversions/d27aeb7fb0634ff99ab5a1cd15c01756.webp",
-     "sha256": "ee1de004b5a7161ea560301a2e6bb4a3eba40e8601002dbca8455eb15d7e67da",
-     "bytes": 252164,
-     "widthPx": 768,
-     "heightPx": 1024,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 222,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/222/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 6479,
      "articleId": 222,
@@ -2019,11 +2223,40 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/222/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
+     "pointId": 6479,
+     "articleId": 222,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/ektropa-v-gidrologicheskom-zakaznike-korytenskiy-moh",
+     "mediaGroup": "address",
+     "mediaIndex": 6479,
+     "publishedAlt": "экто тропа",
+     "observedContent": "Деревянный настил экотропы в сосновом лесу",
+     "originalUri": "https://metravel.by/address-image/6479/conversions/d27aeb7fb0634ff99ab5a1cd15c01756.webp",
+     "sha256": "ee1de004b5a7161ea560301a2e6bb4a3eba40e8601002dbca8455eb15d7e67da",
+     "bytes": 252164,
+     "widthPx": 768,
+     "heightPx": 1024,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 222,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/222/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "duplicate"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
      "pointId": 6479,
      "articleId": 222,
      "authorId": 1,
@@ -2045,9 +2278,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/222/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — повтор того же вида.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-8562",
@@ -2081,11 +2317,13 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/243/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 8562,
      "articleId": 243,
      "authorId": 1,
@@ -2107,11 +2345,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/243/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 8562,
      "articleId": 243,
      "authorId": 1,
@@ -2133,10 +2372,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/243/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
    ],
-   "mainReplacementReason": "Проверенный кадр статьи — превью точки 400×400 (аэросъёмка); взят полноразмерный фасад того же дворца Слотвинских из той же статьи автора1."
+   "mainReplacementReason": "Проверенный кадр статьи — превью точки 400×400 (аэросъёмка); взят полноразмерный фасад того же дворца Слотвинских из той же статьи автора1.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-13504",
@@ -2170,11 +2411,13 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/135/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
+     "isWatercolorSourcePhoto": true,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 13504,
      "articleId": 135,
      "authorId": 1,
@@ -2196,11 +2439,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/135/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 13504,
      "articleId": 135,
      "authorId": 1,
@@ -2222,9 +2466,11 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/135/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-3468",
@@ -2236,32 +2482,6 @@
    "photos": [
     {
      "role": "main",
-     "status": "used",
-     "pointId": 3468,
-     "articleId": 188,
-     "authorId": 1,
-     "articleUrl": "https://metravel.by/travels/zheludok-i-usadby-grodnenshchiny-kak-dobratsia",
-     "mediaGroup": "address",
-     "mediaIndex": 3468,
-     "publishedAlt": "Усадьба Святополк-Четвертинских в Желудке",
-     "observedContent": "Усадьба Святополк-Четвертинских в Желудке, главный фасад",
-     "originalUri": "https://metravel.by/address-image/3468/conversions/5e83d2e881db4853a6ea19019ed25070.JPG",
-     "sha256": "83cf5b00b19353342df009010ce75b9e7184dfbf3a80c99ffecdc6a83adef311",
-     "bytes": 247575,
-     "widthPx": 768,
-     "heightPx": 1024,
-     "rights": {
-      "basis": "owner-author-photo",
-      "ownerUserId": 1,
-      "sourceTravelId": 188,
-      "permission": "owner-commissioned-photo-diary"
-     },
-     "verifiedOn": "2026-11-01",
-     "verifiedVia": "GET https://metravel.by/api/travels/188/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
-    },
-    {
-     "role": "support",
      "status": "used",
      "pointId": 3468,
      "articleId": 188,
@@ -2284,11 +2504,40 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/188/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
+     "pointId": 3468,
+     "articleId": 188,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/zheludok-i-usadby-grodnenshchiny-kak-dobratsia",
+     "mediaGroup": "address",
+     "mediaIndex": 3468,
+     "publishedAlt": "Усадьба Святополк-Четвертинских в Желудке",
+     "observedContent": "Усадьба Святополк-Четвертинских в Желудке, главный фасад",
+     "originalUri": "https://metravel.by/address-image/3468/conversions/5e83d2e881db4853a6ea19019ed25070.JPG",
+     "sha256": "83cf5b00b19353342df009010ce75b9e7184dfbf3a80c99ffecdc6a83adef311",
+     "bytes": 247575,
+     "widthPx": 768,
+     "heightPx": 1024,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 188,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-01",
+     "verifiedVia": "GET https://metravel.by/api/travels/188/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "duplicate"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
      "pointId": 3468,
      "articleId": 188,
      "authorId": 1,
@@ -2310,9 +2559,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/188/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — повтор того же вида.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-15049",
@@ -2346,11 +2598,13 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/566/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
+     "isWatercolorSourcePhoto": true,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 15049,
      "articleId": 566,
      "authorId": 1,
@@ -2372,9 +2626,11 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/566/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-15057",
@@ -2408,11 +2664,13 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/566/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
+     "isWatercolorSourcePhoto": true,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 15057,
      "articleId": 566,
      "authorId": 1,
@@ -2434,11 +2692,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/566/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 15057,
      "articleId": 566,
      "authorId": 1,
@@ -2460,9 +2719,11 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/566/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "duplicate"
     }
-   ]
+   ],
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-15827",
@@ -2496,11 +2757,13 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/672/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 15827,
      "articleId": 672,
      "authorId": 1,
@@ -2522,10 +2785,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/672/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "low-res"
     }
    ],
-   "mainReplacementReason": "Проверенный кадр статьи — превью точки 400×400; взят полноразмерный кадр того же родника из тела той же статьи автора1."
+   "mainReplacementReason": "Проверенный кадр статьи — превью точки 400×400; взят полноразмерный кадр того же родника из тела той же статьи автора1.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   },
   {
    "stopId": "point-3843",
@@ -2538,6 +2803,34 @@
     {
      "role": "main",
      "status": "used",
+     "pointId": 3843,
+     "articleId": 189,
+     "authorId": 1,
+     "articleUrl": "https://metravel.by/travels/velomarshrut-na-2-dnia-doty-repikhovo-i-dvorets-bokhvitsei",
+     "mediaGroup": "body",
+     "mediaIndex": 11,
+     "publishedAlt": null,
+     "observedContent": "Пруд парка Репихово с деревянным мостиком",
+     "originalUri": "https://metravel.by/travel-description-image/93f1dc32815843f49225236760781c8c.JPG.webp",
+     "sha256": "b7636347c5253198f043b64510169206fdf909d822345c0ba0cfc6079a0a62b7",
+     "bytes": 160742,
+     "widthPx": 1000,
+     "heightPx": 750,
+     "rights": {
+      "basis": "owner-author-photo",
+      "ownerUserId": 1,
+      "sourceTravelId": 189,
+      "permission": "owner-commissioned-photo-diary"
+     },
+     "verifiedOn": "2026-11-03",
+     "verifiedVia": "GET https://metravel.by/api/travels/189/ + визуальная проверка контактного листа",
+     "isWatercolorSourcePhoto": false,
+     "peopleFree": true,
+     "peopleCheckedOn": "2026-11-03"
+    },
+    {
+     "role": "support",
+     "status": "not-printed",
      "pointId": 3843,
      "articleId": 189,
      "authorId": 1,
@@ -2559,11 +2852,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/189/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": true
+     "isWatercolorSourcePhoto": true,
+     "notPrintedReason": "weak"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 3843,
      "articleId": 189,
      "authorId": 1,
@@ -2585,11 +2879,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/189/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "weak"
     },
     {
      "role": "support",
-     "status": "used",
+     "status": "not-printed",
      "pointId": 3843,
      "articleId": 189,
      "authorId": 1,
@@ -2611,9 +2906,12 @@
      },
      "verifiedOn": "2026-11-01",
      "verifiedVia": "GET https://metravel.by/api/travels/189/ + визуальная проверка контактного листа",
-     "isWatercolorSourcePhoto": false
+     "isWatercolorSourcePhoto": false,
+     "notPrintedReason": "weak"
     }
-   ]
+   ],
+   "mainReplacementReason": "Ревью 03.11.2026 (#2968): на странице места одна фотография без людей; прежний главный кадр не печатается — слабый кадр.",
+   "peopleCheck": "Просмотр в полном размере и увеличенные фрагменты на исходном разрешении (#2968): людей в кадре нет."
   }
  ]
 }

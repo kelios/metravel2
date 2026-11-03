@@ -21,8 +21,14 @@ export const thematicMapTargetSchema = z.discriminatedUnion('kind', [
 
 const photoBytes = {sha256, bytes: positiveId, widthPx: positiveId, heightPx: positiveId};
 const placement = z.strictObject({profileId: z.enum(['pocket-150x100', 'album-a5']), widthMm: z.number().positive(), heightMm: z.number().positive(), effectivePpi: z.number().positive()});
+const retouch = z.strictObject({sha256, widthPx: positiveId, heightPx: positiveId, removed: nonempty, decision: nonempty});
+const crop = z.strictObject({leftPx: z.number().int().min(0), topPx: z.number().int().min(0), widthPx: positiveId, heightPx: positiveId, reason: nonempty});
 const mediaCommon = {...photoBytes, depiction: z.enum(['target', 'context']), caption: nonempty, permissionEvidence: nonempty,
-  placements: z.array(placement).length(2).optional()};
+  placements: z.array(placement).length(2).optional(),
+  // #2968: the printed frame was checked at native resolution and shows no people; crop keeps them out when no clean frame exists.
+  peopleFree: z.literal(true).optional(), crop: crop.optional(),
+  // Owner-approved retouch of the same frame (passers-by removed); the imprint then says so.
+  retouch: retouch.optional()};
 export const thematicMediaSchema = z.discriminatedUnion('kind', [
   z.strictObject({kind: z.literal('published-variant'), uri: httpsUrl, ...mediaCommon}),
   z.strictObject({kind: z.literal('owner-original'), sourceId: identifier, ...mediaCommon,

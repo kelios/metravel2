@@ -35,7 +35,11 @@ export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage
   const thematic = 'sourceContract' in book && book.sourceContract === 'thematic-v1';
   const copy = thematic ? {...styleCopy,
     creditsSource: 'Фотографии сделаны авторами MeTravel.by в путешествиях по описанным местам.',
+    creditsRetouched: 'Фотографии сделаны авторами MeTravel.by в путешествиях по описанным местам. Отдельные снимки отретушированы: убраны случайные прохожие.',
   } : styleCopy;
+  // The imprint admits a retouch only in an edition that actually prints one (#2968).
+  const retouched = Object.values(input.assets).some(asset => asset.retouched) || input.cover.retouched === true;
+  const creditsSource = retouched && copy.creditsRetouched ? copy.creditsRetouched : copy.creditsSource;
   // Edition voice lives in data (#2947); only service lines and imprint stay in code.
   const frame = bookFrameCopy(book.id);
   const {kind} = entry;
@@ -81,6 +85,6 @@ export function renderBodyPage(input: ReadyBookRenderInput, entry: ReadyBookPage
     // The list doubles as the map legend: the same badge as the medallion on the map (#2968).
     return flow(`<h2>Места на карте</h2>${text('Номер · место · страница', 'small')}<ol class="contents-list">${book.stops.filter(item => selected.has(item.id)).map(item => `<li><span>${graphicCheckbox} ${mapSymbolBadge(mapSymbolFor(item.id), pocket ? 3.6 : 4.4, book.visualStyle === 'graphic')} ${book.stops.findIndex(stop => stop.id === item.id) + 1}. ${e(item.title)}</span><span>${destinations.get(item.id)}</span></li>`).join('')}</ol>`);
   }
-  return flow(`<h2>${e(frame.outro.heading)}</h2>${text(frame.outro.text)}${text(`${book.title}. MeTravel.by, ${editionMonth(edition.editionDate)}. Формат ${profile.widthMm}×${profile.heightMm} мм.`, 'small')}${text(copy.creditsSource, 'small')} ${text(copy.creditsFont, 'small')}`);
+  return flow(`<h2>${e(frame.outro.heading)}</h2>${text(frame.outro.text)}${text(`${book.title}. MeTravel.by, ${editionMonth(edition.editionDate)}. Формат ${profile.widthMm}×${profile.heightMm} мм.`, 'small')}${text(creditsSource, 'small')} ${text(copy.creditsFont, 'small')}`);
 }
 

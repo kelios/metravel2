@@ -32,10 +32,25 @@ export async function loadSeriesPhoto(media, registry) {
   if (!resolved.startsWith(path.resolve('.codex-temp') + path.sep)) throw new Error('Thematic media must resolve to an ignored source copy');
   const bytes = await readFile(resolved);
   if (sha256(bytes) !== media.sha256 || bytes.length !== media.bytes) throw new Error('Thematic source bytes differ from the verified photo');
+  // An owner-approved retouch replaces the pixels of the same frame; it is pinned by SHA in the ignored registry.
+  let pixels = bytes;
+  if (media.retouch) {
+    const retouched = registry.retouched?.[media.retouch.sha256];
+    const file = retouched && await realpath(path.resolve(retouched.path));
+    if (!file || !file.startsWith(path.resolve('.codex-temp') + path.sep)) throw new Error('Missing retouched thematic media: ' + media.retouch.sha256);
+    pixels = await readFile(file);
+    if (sha256(pixels) !== media.retouch.sha256) throw new Error('Retouched thematic bytes differ from the record');
+  }
   // rotate applies EXIF orientation, then encoding without withMetadata strips private EXIF/GPS.
-  const derivative = await sharp(bytes).rotate().jpeg({quality:94,mozjpeg:true}).toBuffer();
+  const oriented = await sharp(pixels).rotate().toBuffer({resolveWithObject: true});
+  if (oriented.info.width !== media.widthPx || oriented.info.height !== media.heightPx) throw new Error('Thematic source dimensions differ from the source record');
+  // An approved editorial crop keeps people out of the printed frame (#2968); the record keeps the full source size.
+  const crop = media.crop;
+  if (crop && (crop.leftPx + crop.widthPx > media.widthPx || crop.topPx + crop.heightPx > media.heightPx)) throw new Error('Thematic crop leaves the source frame');
+  const framed = crop ? sharp(oriented.data).extract({left: crop.leftPx, top: crop.topPx, width: crop.widthPx, height: crop.heightPx}) : sharp(oriented.data);
+  const derivative = await framed.jpeg({quality:94,mozjpeg:true}).toBuffer();
   const metadata = await sharp(derivative).metadata();
-  if (metadata.width !== media.widthPx || metadata.height !== media.heightPx || metadata.exif || metadata.xmp || metadata.iptc) throw new Error('Thematic derivative dimensions or privacy differ from the source record');
+  if (metadata.width !== (crop?.widthPx ?? media.widthPx) || metadata.height !== (crop?.heightPx ?? media.heightPx) || metadata.exif || metadata.xmp || metadata.iptc) throw new Error('Thematic derivative dimensions or privacy differ from the source record');
   return {bytes: derivative, sha256: sha256(derivative), widthPx: metadata.width, heightPx: metadata.height};
 }
 
@@ -59,6 +74,7 @@ export async function loadSeriesBook(seriesId, {sourcesRoot='data/travelBooks/se
     if (!record || record.sourceUrl!==thematic.articleUrl || typeof record.copyRu!=='string' || record.copyRu.trim().length<100 || record.copyRu.length>280) throw new Error('Thematic prose is missing or sourced to another article: '+place.id);
     // Kept with the place for the memory page, which stays blank in print (#2947).
     if (typeof record.prompt!=='string' || !record.prompt.trim()) throw new Error('Thematic place has no memory prompt: '+place.id);
+    if (thematic.media.peopleFree !== true) throw new Error('A printed series photograph must be checked free of people: '+place.id);
     const photo = await loadSeriesPhoto(thematic.media,registry);
     const placements = ['pocket-150x100','album-a5'].map(profileId=>{
       const p=tools.thematicPhotoPlacement(photo.widthPx,photo.heightPx,profileId);
@@ -70,7 +86,7 @@ export async function loadSeriesBook(seriesId, {sourcesRoot='data/travelBooks/se
     }))throw new Error('Thematic native placement evidence must be refreshed for the current layout: '+place.id);
     const target=thematic.mapTarget;
     const navigation={authorId:1,sourceTravelId:thematic.sourceTravelId,mapUrl:tools.thematicMapUrl(target,place.title),articleUrl:thematic.articleUrl,verifiedAt:thematic.verifiedOn};
-    assets[place.id]={dataUri:'data:image/jpeg;base64,'+photo.bytes.toString('base64'),credit:'MeTravel / автор статьи 1',sourceUrl:thematic.articleUrl,rights:thematic.media.permissionEvidence,illustrated:false,artworkBounds:{left:0,top:0,width:1,height:1},widthPx:photo.widthPx,heightPx:photo.heightPx};
+    assets[place.id]={dataUri:'data:image/jpeg;base64,'+photo.bytes.toString('base64'),credit:'MeTravel / автор статьи 1',sourceUrl:thematic.articleUrl,rights:thematic.media.permissionEvidence,illustrated:false,...(thematic.media.retouch?{retouched:true,changes:'Ретушь: '+thematic.media.retouch.removed}:{}),artworkBounds:{left:0,top:0,width:1,height:1},widthPx:photo.widthPx,heightPx:photo.heightPx};
     provenance.push({stopId:place.id,source:thematic.media,derivative:{sha256:photo.sha256,bytes:photo.bytes.length,widthPx:photo.widthPx,heightPx:photo.heightPx,exifRemoved:true,upscaled:false}});
     stops.push({id:place.id,title:place.title,localName:place.localName,lat:target.lat,lng:target.lng,
       entrance:'Привязка физического места; отдельный вход не заявлен.',coordinateAccuracy:'site-center',coordinateSource:target.sourceUrl,

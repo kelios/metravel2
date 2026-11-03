@@ -23,7 +23,8 @@ for(const book of index.books)for(const group of book.profiles){
   const bytes=await readFile(artifact.path);
   if(createHash('sha256').update(bytes).digest('hex')!==artifact.sha256)throw new Error('Reading PDF hash differs from index');
   const output=path.join(root,'validation','qr',book.bookId,group.profile.id);
-  const result=spawnSync(python,['scripts/books/inspect-ready-qr.py','--pdf',artifact.path,'--book',book.editorialPath,'--page-map',artifact.pageMapPath,'--output',output],{encoding:'utf8',timeout:300000,maxBuffer:8*1024*1024});
+  // An A5 reading PDF decodes every QR at 300 dpi in colour and grey: ~5 min alone (03.11.2026), more under load.
+  const result=spawnSync(python,['scripts/books/inspect-ready-qr.py','--pdf',artifact.path,'--book',book.editorialPath,'--page-map',artifact.pageMapPath,'--output',output],{encoding:'utf8',timeout:900000,maxBuffer:8*1024*1024});
   if(result.error||result.status!==0)throw new Error('QR decoding failed: '+(result.error?.message||result.stderr));
   const report=JSON.parse(result.stdout);
   if(report.sha256!==artifact.sha256||report.stopCount!==book.stopCount)throw new Error('QR report differs from exact reading edition');

@@ -54,7 +54,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -104,7 +105,8 @@
               "heightMm": 53,
               "effectivePpi": 269.8150943396226
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -154,7 +156,8 @@
               "heightMm": 53,
               "effectivePpi": 1198.1132075471696
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -204,7 +207,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -254,7 +258,8 @@
               "heightMm": 53,
               "effectivePpi": 269.8150943396226
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -304,7 +309,8 @@
               "heightMm": 53,
               "effectivePpi": 490.7471698113207
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -354,7 +360,8 @@
               "heightMm": 53,
               "effectivePpi": 276.0452830188679
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -383,28 +390,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/address-image/13531/conversions/847f6203f6db4801bc156ea7a7ee21d6.JPG",
-          "sha256": "16639d9a3563eccff279f956f41525a7313b7e393cd7b305f4844bbcade50f75",
-          "bytes": 370867,
-          "widthPx": 1024,
-          "heightPx": 576,
+          "uri": "https://metravel.by/gallery/2810/conversions/o0DcXA4GLv3BAiBkrxQoJDl6UIjcvi4h3wB9zd2j-detail_hd.jpg",
+          "sha256": "7d92d6f69de912340531911fbc3c63ed7216157a2664ed73827ab82323dc67e7",
+          "bytes": 347130,
+          "widthPx": 1080,
+          "heightPx": 1080,
           "depiction": "target",
-          "caption": "Замок в Пилице.",
+          "caption": "Аркадный фасад дворца в Пилице и каменные скульптуры.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
-              "widthMm": 39.111111111111114,
-              "heightMm": 22,
-              "effectivePpi": 665.0181818181817
+              "widthMm": 22.0,
+              "heightMm": 22.0,
+              "effectivePpi": 1246.909090909091
             },
             {
               "profileId": "album-a5",
-              "widthMm": 94.22222222222223,
-              "heightMm": 53,
-              "effectivePpi": 276.0452830188679
+              "widthMm": 53.0,
+              "heightMm": 53.0,
+              "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -454,7 +462,8 @@
               "heightMm": 53,
               "effectivePpi": 217.09811320754716
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -504,7 +513,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -533,28 +543,29 @@
         },
         "media": {
           "kind": "published-variant",
-          "uri": "https://metravel.by/travel-description-image/546dd8621e5f4509b8b61b69fe89d7d8.JPG.webp",
-          "sha256": "cf6540882dd2a844d4ea0029ce2274657d88e2f13f6c094574f1f223ddc317ae",
-          "bytes": 39054,
-          "widthPx": 600,
-          "heightPx": 800,
-          "depiction": "target",
-          "caption": "Замок Поморских князей, Слупск.",
+          "uri": "https://metravel.by/travel-description-image/29d4ac1127274425beaf4f51866fac83.JPG.webp",
+          "sha256": "9649ba65915258173fb89f3e3555f2d29eccc0268ec8482ecb3f9452ac2e2d8f",
+          "bytes": 129576,
+          "widthPx": 800,
+          "heightPx": 453,
+          "depiction": "context",
+          "caption": "Замковая мельница у замка Поморских князей в Слупске.",
           "permissionEvidence": "Владелец разрешил использование опубликованных фотографий автора 1 и предоставил оригиналы для заказанных фотодневников, 01.11.2026. Поимённый фотограф не установлен; новой лицензии не заявлено.",
           "placements": [
             {
               "profileId": "pocket-150x100",
-              "widthMm": 16.5,
-              "heightMm": 22,
-              "effectivePpi": 923.6363636363636
+              "widthMm": 38.852097130242825,
+              "heightMm": 22.0,
+              "effectivePpi": 523.0090909090909
             },
             {
               "profileId": "album-a5",
-              "widthMm": 39.75,
-              "heightMm": 53,
-              "effectivePpi": 383.3962264150943
+              "widthMm": 93.59823399558499,
+              "heightMm": 53.0,
+              "effectivePpi": 217.09811320754716
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -604,7 +615,8 @@
               "heightMm": 53,
               "effectivePpi": 217.09811320754716
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -654,7 +666,8 @@
               "heightMm": 53,
               "effectivePpi": 383.3962264150943
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -704,7 +717,8 @@
               "heightMm": 53,
               "effectivePpi": 287.5471698113207
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -754,7 +768,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -804,7 +819,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -854,7 +870,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -904,7 +921,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -954,7 +972,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -1004,7 +1023,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -1054,7 +1074,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -1104,7 +1125,8 @@
               "heightMm": 53,
               "effectivePpi": 215.66037735849056
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -1154,7 +1176,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -1204,7 +1227,8 @@
               "heightMm": 53,
               "effectivePpi": 287.5471698113207
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -1254,7 +1278,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -1304,7 +1329,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -1354,7 +1380,8 @@
               "heightMm": 53,
               "effectivePpi": 276.0452830188679
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -1404,7 +1431,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -1454,7 +1482,8 @@
               "heightMm": 53,
               "effectivePpi": 517.5849056603773
             }
-          ]
+          ],
+          "peopleFree": true
         }
       }
     },
@@ -1495,16 +1524,24 @@
             {
               "profileId": "pocket-150x100",
               "widthMm": 16.5,
-              "heightMm": 22,
+              "heightMm": 22.0,
               "effectivePpi": 2216.7272727272725
             },
             {
               "profileId": "album-a5",
               "widthMm": 39.75,
-              "heightMm": 53,
+              "heightMm": 53.0,
               "effectivePpi": 920.1509433962264
             }
-          ]
+          ],
+          "peopleFree": true,
+          "retouch": {
+            "sha256": "e8e2b52dbab23014d8acc1d246304fe4cec7a8ec74ac0481ae5153a4551e0668",
+            "widthPx": 1440,
+            "heightPx": 1920,
+            "removed": "посетители на ступенях и у входа",
+            "decision": "Решение владельца 03.11.2026: «убираем прохожих на лучших кадрах»"
+          }
         }
       }
     }
