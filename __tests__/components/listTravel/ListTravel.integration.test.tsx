@@ -6,6 +6,8 @@ import { useAuthStore } from '@/stores/authStore';
 import ListTravel from '@/components/listTravel/ListTravelBase';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Platform } from 'react-native';
+import { fetchAllFiltersOptimized } from '@/api/miscOptimized';
+import * as travelListQueries from '@/api/travelListQueries';
 import { RECOMMENDATIONS_VISIBLE_KEY } from '@/components/listTravel/utils/listTravelConstants';
 
 // Mock all necessary dependencies
@@ -546,72 +548,75 @@ describe('ListTravel Integration Tests', () => {
     expect(screen.queryByText('Beach Vacation')).toBeNull();
   });
 
-  it('prefers exact results over fallback matches when both are available', async () => {
-    const exactTravel = {
-      ...mockTravels[0],
-      id: 20,
-      slug: 'waterfall-trip',
-      name: 'Waterfall Trip',
-    };
-    const fallbackTravel = {
-      ...mockTravels[1],
-      id: 379,
-      slug: 'fallback-trip',
-      name: 'Fallback Trip',
-    };
+  it('waits for named deep-link filters and requests the resolved catalog once', async () => {
+    (global as any).__mockPathname = '/search';
+    (global as any).__mockLocalSearchParams = { categoryTravelAddress: 'Озеро' };
+    const filterOptions = jest.mocked(fetchAllFiltersOptimized);
+    const defaultOptions = await fetchAllFiltersOptimized();
+    let resolveOptions!: (options: typeof defaultOptions) => void;
+    filterOptions.mockReturnValueOnce(new Promise((resolve) => { resolveOptions = resolve; }));
+    const fetchCatalog = jest.spyOn(travelListQueries, 'fetchTravels').mockResolvedValue({
+      data: [], total: 0, relaxation: { stage: 'none', strictCount: 0, removedFilterKeys: [] },
+    });
 
-    // Match the query contract, not the number of React render passes.
-    mockUseListTravelData.mockImplementation(({ isQueryEnabled }) => {
-      if (isQueryEnabled) {
-        return {
-          data: [exactTravel],
-          total: 20,
-          hasMore: true,
-          isLoading: false,
-          isFetching: false,
-          isError: false,
-          status: 'success',
-          isInitialLoading: false,
-          isNextPageLoading: false,
-          isEmpty: false,
-          refetch: jest.fn(),
-          handleEndReached: jest.fn(),
-          handleRefresh: jest.fn(),
-          isRefreshing: false,
-        };
-      }
+    mockUseListTravelFilters.mockImplementation(
+      jest.requireActual('@/components/listTravel/hooks/useListTravelFilters').useListTravelFilters,
+    );
+    mockUseListTravelData.mockImplementation(
+      jest.requireActual('@/components/listTravel/hooks/useListTravelData').useListTravelData,
+    );
 
-      // Disabled fallback queries may retain cached matches, but exact results win.
-      return {
-          data: [fallbackTravel],
-          total: 379,
-          hasMore: true,
-          isLoading: false,
-          isFetching: false,
-          isError: false,
-          status: 'success',
-          isInitialLoading: false,
-          isNextPageLoading: false,
-          isEmpty: false,
-          refetch: jest.fn(),
-          handleEndReached: jest.fn(),
-          handleRefresh: jest.fn(),
-          isRefreshing: false,
-        };
+    try {
+      await renderWithProviders(<ListTravel />);
+      expect(fetchCatalog).not.toHaveBeenCalled();
+
+      await act(async () => resolveOptions({
+        ...defaultOptions,
+        categoryTravelAddress: [{ id: 84, name: 'Озеро' }],
+      }));
+      await screen.findByText('Ничего не найдено');
+
+      expect(fetchCatalog).toHaveBeenCalledTimes(1);
+      expect(fetchCatalog).toHaveBeenCalledWith(
+        0, expect.any(Number), '',
+        { publish: 1, moderation: 1, categoryTravelAddress: [84] },
+        expect.objectContaining({ relaxCatalog: true }),
+      );
+    } finally {
+      fetchCatalog.mockRestore();
+    }
+  });
+
+  it('shows the server stage and the removed conditions while keeping the original query', async () => {
+    (global as any).__mockPathname = '/search';
+    (global as any).__mockLocalSearchParams = { search: 'Брест', month: '6' };
+    window.history.replaceState(null, '', '/search?search=Брест&month=6');
+    mockUseListTravelFilters.mockReturnValue({
+      filter: { month: [6] },
+      queryParams: { month: [6] },
+      resetFilters: jest.fn(),
+      onSelect: jest.fn(),
+    });
+    mockUseListTravelData.mockReturnValue({
+      data: [mockTravels[0]], total: 20, hasMore: true, isLoading: false, isFetching: false,
+      isError: false, status: 'success', isInitialLoading: false, isNextPageLoading: false,
+      isEmpty: false, refetch: jest.fn(), handleEndReached: jest.fn(), handleRefresh: jest.fn(),
+      isRefreshing: false, relaxation: { stage: 'light', strictCount: 0, removedFilterKeys: ['month'] },
     });
 
     await renderWithProviders(<ListTravel />);
 
-    await waitFor(() => {
-      expect(within(screen.getByTestId('results-count-wrapper')).getByText('20 маршрутов')).toBeTruthy();
-    });
-
-    expect(screen.getByText('Waterfall Trip')).toBeTruthy();
-    expect(screen.queryByText('Fallback Trip')).toBeNull();
-    expect(screen.queryByTestId('travel-results-fallback-notice')).toBeNull();
+    const notice = await screen.findByTestId('travel-results-fallback-notice');
+    expect(within(notice).getByText(/Ослабили часть уточняющих фильтров.*Месяц/i)).toBeTruthy();
+    expect(within(screen.getByTestId('results-count-wrapper')).getByText('20 маршрутов')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Найти маршрут…').props.value).toBe('Брест');
+    expect(new URLSearchParams(window.location.search).get('month')).toBe('6');
+    expect(mockUseListTravelData.mock.calls.every(([props]) =>
+      props.relaxCatalog && props.search === 'Брест' && props.queryParams.month?.[0] === 6,
+    )).toBe(true);
   });
 
-  it('sizes /metravel moderation footers from the fallback list actually shown (#2815)', async () => {
+  it('keeps the /metravel scope and sizes moderation footers from the displayed list (#2815)', async () => {
     (global as any).__mockRouteName = 'metravel';
     (global as any).__mockPathname = '/metravel';
     mockUseListTravelFilters.mockReturnValue({
@@ -625,7 +630,7 @@ describe('ListTravel Integration Tests', () => {
     const rejectedTravel = {
       ...mockTravels[0],
       id: 515,
-      name: 'Rejected Fallback Trip',
+      name: 'Rejected Owner Trip',
       publication_status: 'draft',
       moderation_decision: 'rejected',
       moderation_decision_reason: 'Fix photos.',
@@ -636,15 +641,13 @@ describe('ListTravel Integration Tests', () => {
       status: 'success', isInitialLoading: false, isNextPageLoading: false, isEmpty: data.length === 0,
       refetch: jest.fn(), handleEndReached: jest.fn(), handleRefresh: jest.fn(), isRefreshing: false,
     });
-    mockUseListTravelData.mockImplementation(({ queryParams, isQueryEnabled }) => {
-      // The main query keeps the year; the active relaxed query drops it.
-      return isQueryEnabled && queryParams.year === undefined ? result([rejectedTravel]) : result([]);
-    });
+    mockUseListTravelData.mockImplementation(({ queryParams, isQueryEnabled, relaxCatalog }) =>
+      isQueryEnabled && !relaxCatalog && queryParams.year === '2026' ? result([rejectedTravel]) : result([]),
+    );
 
     await renderWithProviders(<ListTravel />);
 
-    await waitFor(() => expect(screen.getByText('Rejected Fallback Trip')).toBeTruthy());
-    // reason | date | correction slots of the shown fallback card, not of the empty main list.
+    await waitFor(() => expect(screen.getByText('Rejected Owner Trip')).toBeTruthy());
     expect(screen.getByTestId('mock-feedback-slots-515').props.children).toBe('7');
   });
 

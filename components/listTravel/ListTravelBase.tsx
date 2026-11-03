@@ -40,12 +40,8 @@ import type { ListStatusMode } from './ListCatalogToolbar'
 import {
   applyListDensity,
   buildCardsGridDynamicStyle,
-  buildListTravelFallbackSteps,
   buildListTravelSearchPendingState,
   getListTravelActiveFiltersCount,
-  isListTravelAnyFallbackLoading,
-  isListTravelFallbackStageExhausted,
-  selectListTravelFallbackMatch,
   getCatalogCardMediaLoading,
   getSearchCardImageHeight,
   getSearchCardWidth,
@@ -60,12 +56,11 @@ import ListTravelOwnUserGate, {
 import type { ListTravelBaseProps } from './ListTravelBase.types'
 import AiSearchPanel from '@/components/aiPicks/AiSearchPanel';
 import { isAiPicksEnabled } from '@/utils/aiPicksConfig';
+import { translate as i18nT } from '@/i18n';
 
 const isSearchPathname = (value: string | null | undefined): boolean =>
   /(^|\/)search\/?$/.test(String(value ?? ''));
 
-
-const EMPTY_FALLBACK_STEPS: ReturnType<typeof buildListTravelFallbackSteps> = [];
 
 function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, primaryAction }: ListTravelBaseProps = {}) {
     const colors = useThemedColors();
@@ -181,6 +176,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     const {
         filter,
         queryParams,
+        hasNamedCategoryFilters,
         resetFilters,
         onSelect,
     } = useListTravelFilters({
@@ -239,10 +235,9 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
       queryParams: omitTravelSortQueryParams(queryParams),
     });
 
-    const isQueryEnabled = useMemo(
-      () => enabled && (isMeTravel || isExport ? !!userId : true),
-      [enabled, isMeTravel, isExport, userId]
-    );
+    const isWaitingForNamedFilters = hasNamedCategoryFilters && filterOptionsLoading;
+    const isQueryEnabled = enabled && !isWaitingForNamedFilters &&
+      (isMeTravel || isExport ? !!userId : true);
 
     // Если для страницы требуется конкретный пользователь ("Мои путешествия" или экспорт),
     // то до загрузки userId блокируем основной запрос.
@@ -251,9 +246,10 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     const {
         data: travels,
         total,
+        relaxation,
         isFetching,
         isError,
-        isInitialLoading,
+        isInitialLoading: isCatalogLoading,
         isNextPageLoading,
         isEmpty,
         staleContentMeta,
@@ -263,50 +259,10 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         queryParams,
         search: debSearch,
         isQueryEnabled,
+        relaxCatalog: isPublicCatalog,
     });
+    const isInitialLoading = isCatalogLoading || isWaitingForNamedFilters;
 
-    // Запасные шаги нужны только когда основная выдача пуста. В обычном случае
-    // отдаём стабильный пустой массив, чтобы 3 fallback-хука ниже не делали
-    // никакой работы (пустые params + disabled query).
-    const fallbackSteps = useMemo(
-      () =>
-        isEmpty
-          ? buildListTravelFallbackSteps({
-              queryParams,
-              search: debSearch,
-            })
-          : EMPTY_FALLBACK_STEPS,
-      [isEmpty, debSearch, queryParams],
-    );
-
-    const fallbackStepLight = fallbackSteps[0];
-    const fallbackStepMedium = fallbackSteps[1];
-    const fallbackStepBroad = fallbackSteps[2];
-
-    const fallbackQueryLight = useListTravelData({
-      queryParams: fallbackStepLight?.params ?? {},
-      search: fallbackStepLight?.search ?? '',
-      isQueryEnabled: isQueryEnabled && isEmpty && !!fallbackStepLight,
-    });
-    const fallbackQueryMedium = useListTravelData({
-      queryParams: fallbackStepMedium?.params ?? {},
-      search: fallbackStepMedium?.search ?? '',
-      isQueryEnabled:
-        isQueryEnabled &&
-        isEmpty &&
-        isListTravelFallbackStageExhausted(fallbackQueryLight) &&
-        !!fallbackStepMedium,
-    });
-    const fallbackQueryBroad = useListTravelData({
-      queryParams: fallbackStepBroad?.params ?? {},
-      search: fallbackStepBroad?.search ?? '',
-      isQueryEnabled:
-        isQueryEnabled &&
-        isEmpty &&
-        isListTravelFallbackStageExhausted(fallbackQueryLight) &&
-        isListTravelFallbackStageExhausted(fallbackQueryMedium) &&
-        !!fallbackStepBroad,
-    });
     /* Delete flow (state + race-guarded mutation + native confirm) lives in the hook. */
     const {
       deleteId,
@@ -488,40 +444,21 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
       [options, filter, isTravelBy, facetCounts, usesOverlaySidebar, isExport, isPublicCatalog]
     );
 
-    const fallbackMatch = useMemo(() => selectListTravelFallbackMatch({
-      isEmpty,
-      fallbackStepLight,
-      fallbackStepMedium,
-      fallbackStepBroad,
-      fallbackQueryLight,
-      fallbackQueryMedium,
-      fallbackQueryBroad,
-    }), [
-      isEmpty,
-      fallbackQueryBroad,
-      fallbackQueryLight,
-      fallbackQueryMedium,
-      fallbackStepBroad,
-      fallbackStepLight,
-      fallbackStepMedium,
-    ]);
-    const activeFallbackMatch = fallbackMatch;
+    const relaxedStage = relaxation && relaxation.stage !== 'strict' && relaxation.stage !== 'none'
+      ? relaxation.stage
+      : undefined;
+    const hasDisplayedItems = travels.length > 0;
+    const showRelaxationNotice = !!relaxedStage && hasDisplayedItems;
+    const removedFilterLabels = useMemo(() => (relaxation?.removedFilterKeys ?? []).flatMap((key) => {
+      const label = activeConditionChips.find((chip) => chip.key === key)?.label
+        ?? filterGroups.find((group) => group.key === key)?.title
+        ?? (key === 'countries' ? i18nT('travel:components.listTravel.utils.filterGroups.strany_a1b4317d') : undefined);
+      return label ? [label] : [];
+    }), [activeConditionChips, filterGroups, relaxation]);
 
-    const isFallbackLoading = isEmpty && !activeFallbackMatch && isListTravelAnyFallbackLoading([fallbackQueryLight, fallbackQueryMedium, fallbackQueryBroad]);
-
-    const displayedTravels = activeFallbackMatch?.query.data ?? travels;
-    const displayedTotal = activeFallbackMatch?.query.total ?? total;
-    const displayedRefetch = activeFallbackMatch?.query.refetch ?? refetch;
-    const displayedHandleEndReached = activeFallbackMatch?.query.handleEndReached ?? handleEndReached;
-    const displayedShowNextPageLoading = activeFallbackMatch?.query.isNextPageLoading ?? isNextPageLoading;
-    const displayedStaleContentMeta = activeFallbackMatch?.query.staleContentMeta ?? staleContentMeta;
-    const hasDisplayedItems = displayedTravels.length > 0;
-    const displayedShowEmptyState = !activeFallbackMatch && !isFallbackLoading && showEmptyState;
-
-    // Footer floor follows the list actually shown, fallback picks included (#2815).
     const authorFeedbackSlots = useMemo(
-      () => (isMeTravel ? resolveListFeedbackSlots(displayedTravels) : undefined),
-      [isMeTravel, displayedTravels]
+      () => (isMeTravel ? resolveListFeedbackSlots(travels) : undefined),
+      [isMeTravel, travels]
     );
 
     const renderTravelListItem = useCallback(
@@ -568,7 +505,6 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         width,
       ]
     );
-    const displayedShowInitialLoading = isInitialLoading || isFallbackLoading;
 
     // #1406: SSG-шелл каталога снимается по готовности ДАННЫХ, а не кода
     // приложения (`app-hydrated` приходит на ~1 с раньше первых карточек, и
@@ -580,8 +516,8 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     // снимается: шелл одноразовый, а повторное «не готово» относится уже не к
     // первому экрану.
     const firstScreenReady =
-      !displayedShowInitialLoading &&
-      (hasDisplayedItems || displayedShowEmptyState || isError);
+      !isInitialLoading &&
+      (hasDisplayedItems || showEmptyState || isError);
     const firstScreenCleanupRef = useRef<(() => void) | null>(null);
     useEffect(() => {
         if (!firstScreenReady || firstScreenCleanupRef.current) return;
@@ -599,18 +535,15 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
       filtersKey: searchAnalyticsFilters?.filtersKey ?? '',
       hasFilters: searchAnalyticsFilters?.hasFilters ?? false,
       settled: firstScreenReady && !isSearchPending,
-      isZeroResults: displayedShowEmptyState,
+      isZeroResults: showEmptyState,
       isError,
-      resultsCount: displayedTotal,
-      relaxedFilters: !!activeFallbackMatch,
+      resultsCount: total,
+      relaxedFilters: showRelaxationNotice,
     });
 
-    // Троттл lastEndReachedAtRef общий для всех источников. При переключении основной
-    // выдачи ↔ fallback сбрасываем его, иначе первый onEndReached нового списка будет
-    // проглочен таймстампом от предыдущего источника (залипание подгрузки).
     useEffect(() => {
         lastEndReachedAtRef.current = 0;
-    }, [activeFallbackMatch?.step]);
+    }, [debSearch, queryParams, relaxedStage]);
 
     const handleListEndReached = useCallback(() => {
         if (!hasDisplayedItems) return;
@@ -622,8 +555,8 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         }
         lastEndReachedAtRef.current = now;
 
-        displayedHandleEndReached();
-    }, [displayedHandleEndReached, hasDisplayedItems]);
+        handleEndReached();
+    }, [handleEndReached, hasDisplayedItems]);
 
     // #2459: строка смыслового подбора только на /search (не «мои», не экспорт) и под флагом.
     const showAiSearchPanel = isAiPicksEnabled() && isSiteSearch;
@@ -645,18 +578,20 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     );
 
     const topContent = useMemo(() => {
-      if (!displayedStaleContentMeta && !isExport && !activeFallbackMatch?.step) return null;
+      if (!staleContentMeta && !isExport && !showRelaxationNotice) return null;
       return (
         <>
-          <StaleContentBanner meta={displayedStaleContentMeta} />
-          {(isExport || activeFallbackMatch?.step) ? (
+          <StaleContentBanner meta={staleContentMeta} />
+          {(isExport || showRelaxationNotice) ? (
             <ListTravelTopContent
               isExport={isExport}
-              showFallbackNotice={!!activeFallbackMatch?.step}
+              relaxedStage={showRelaxationNotice ? relaxedStage : undefined}
+              strictCount={relaxation?.strictCount}
+              removedFilterLabels={removedFilterLabels}
               onClearAll={handleClearAll}
               styles={styles}
               isMobile={isMobileDevice}
-              travels={displayedTravels}
+              travels={travels}
               selected={exportState.selected}
               ownerName={userId}
               toggleSelectAll={toggleSelectAll}
@@ -678,10 +613,13 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     }, [
       baseSettings,
       clearSelection,
-      displayedStaleContentMeta,
-      displayedTravels,
+      staleContentMeta,
+      travels,
       exportState.selected,
-      activeFallbackMatch?.step,
+      relaxedStage,
+      relaxation?.strictCount,
+      removedFilterLabels,
+      showRelaxationNotice,
       handleClearAll,
       hasSelection,
       isExport,
@@ -732,7 +670,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         filterGroups,
         filter,
         onSelect: handleFilterSelect,
-        total: displayedTotal,
+        total,
         isSuper,
         isMeTravel,
         setSearch,
@@ -759,20 +697,20 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
         isRecommendationsVisible,
         handleRecommendationsVisibilityChange,
         activeFiltersCount,
-        total: displayedTotal,
+        total,
         contentPadding,
-        showInitialLoading: displayedShowInitialLoading,
+        showInitialLoading: isInitialLoading,
         isSearchPending,
         isError,
-        showEmptyState: displayedShowEmptyState,
+        showEmptyState,
         getEmptyStateMessage,
-        travels: displayedTravels,
+        travels,
         gridColumns,
         isMobileViewport: viewportState.isCardsSingleColumn,
         isCompactToolbar: usesOverlaySidebar,
         isMobile: isCardsSingleColumn,
-        showNextPageLoading: displayedShowNextPageLoading,
-        refetch: displayedRefetch,
+        showNextPageLoading: isNextPageLoading,
+        refetch,
         onEndReached: handleListEndReached,
         onEndReachedThreshold: 0.5,
         onFiltersPress: usesOverlaySidebar ? handleOpenFilters : undefined,

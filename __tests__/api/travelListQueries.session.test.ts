@@ -98,3 +98,69 @@ it('can still read a guest public stale snapshot offline without persisting a si
   expect(result).toEqual({ data: [], total: 0 });
   expect(savePublicStalePayload).not.toHaveBeenCalled();
 });
+
+it.each([
+  ['strict', 12, 12, []],
+  ['light', 0, 12, ['month']],
+  ['none', 0, 0, []],
+] as const)('loads a %s catalog result in one request', async (stage, strictCount, total, removedFilterKeys) => {
+  const signal = new AbortController().signal;
+  parseMock.mockResolvedValueOnce({
+    results: total ? [{ id: 2, publish: true, moderation: true }] : [],
+    count: total, stage, strict_count: strictCount, removed_filter_keys: removedFilterKeys,
+  });
+
+  const response = await fetchTravels(0, 10, 'Минск', { month: [6] }, { signal, relaxCatalog: true });
+
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  const [url, init] = fetchMock.mock.calls[0];
+  const params = new URL(String(url)).searchParams;
+  expect(init?.signal).toBe(signal);
+  expect(params.get('query')).toBe('Минск');
+  expect(params.get('relaxation')).toBe('auto');
+  expect(params.has('relaxation_stage')).toBe(false);
+  expect(JSON.parse(params.get('where')!)).toEqual({ publish: 1, moderation: 1, month: [6] });
+  expect(response).toMatchObject({ total, relaxation: { stage, strictCount, removedFilterKeys } });
+});
+
+it('pins the selected stage on page two without changing the text or filters', async () => {
+  parseMock.mockResolvedValueOnce({
+    results: [{ id: 3 }], count: 12, stage: 'light', strict_count: 0, removed_filter_keys: ['month'],
+  });
+  await fetchTravels(1, 10, 'Минск', { month: [6] }, { relaxCatalog: true, catalogStage: 'light' });
+
+  const params = new URL(String(fetchMock.mock.calls[0][0])).searchParams;
+  expect(params.get('page')).toBe('2');
+  expect(params.get('relaxation')).toBe('auto');
+  expect(params.get('relaxation_stage')).toBe('light');
+  expect(params.get('query')).toBe('Минск');
+  expect(JSON.parse(params.get('where')!)).toMatchObject({ month: [6] });
+});
+
+it('rejects incomplete relaxation metadata on the first page', async () => {
+  parseMock.mockResolvedValueOnce({ results: [], count: 0, stage: 'light' });
+
+  await expect(fetchTravels(0, 10, '', {}, { relaxCatalog: true })).rejects.toThrow();
+  expect(savePublicStalePayload).not.toHaveBeenCalled();
+});
+
+it('rejects a response that changes the pinned stage', async () => {
+  parseMock.mockResolvedValueOnce({
+    results: [{ id: 3 }], count: 12, stage: 'strict', strict_count: 12, removed_filter_keys: [],
+  });
+
+  await expect(
+    fetchTravels(1, 10, '', { month: [6] }, { relaxCatalog: true, catalogStage: 'light' }),
+  ).rejects.toThrow();
+  expect(savePublicStalePayload).not.toHaveBeenCalled();
+});
+
+it.each([{ user_id: 7 }, { publication_status: 'pending_review' }, { publish: 1, moderation: 0 }])(
+  'keeps scoped list %j out of relaxation',
+  async (filters) => {
+    await fetchTravels(0, 10, '', filters, { relaxCatalog: true });
+    const params = new URL(String(fetchMock.mock.calls[0][0])).searchParams;
+    expect(params.has('relaxation')).toBe(false);
+    expect(JSON.parse(params.get('where')!)).toMatchObject(filters);
+  },
+);

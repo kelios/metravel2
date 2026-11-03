@@ -20,7 +20,9 @@ type ExportControlsProps = React.ComponentProps<typeof ListTravelExportControls>
 
 type ListTravelTopContentProps = {
   isExport: boolean
-  showFallbackNotice: boolean
+  relaxedStage?: 'light' | 'medium' | 'broad'
+  strictCount?: number
+  removedFilterLabels: string[]
   onClearAll: () => void
   styles: TopContentStyles
   isMobile: boolean
@@ -41,7 +43,9 @@ type ListTravelTopContentProps = {
 
 export default function ListTravelTopContent({
   isExport,
-  showFallbackNotice,
+  relaxedStage,
+  strictCount,
+  removedFilterLabels,
   onClearAll,
   styles,
   isMobile,
@@ -78,11 +82,18 @@ export default function ListTravelTopContent({
     />
   ) : null
 
-  const fallbackNotice = showFallbackNotice ? (
+  const fallbackNotice = relaxedStage ? (
     <View style={styles.fallbackNotice} testID="travel-results-fallback-notice">
       <Text style={styles.fallbackNoticeTitle}>{i18nT('travel:components.listTravel.parts.ListTravelTopContent.pohozhie_marshruty_f6f509b4')}</Text>
+      {strictCount === 0 && (
+        <Text style={styles.fallbackNoticeText}>
+          {i18nT('travel:components.listTravel.parts.ListTravelTopContent.po_vashemu_zaprosu_tochnyh_sovpadeniy_ne_nas_4d890260')}
+        </Text>
+      )}
       <Text style={styles.fallbackNoticeText}>
-        {i18nT('travel:components.listTravel.parts.ListTravelTopContent.po_vashemu_zaprosu_tochnyh_sovpadeniy_ne_nas_4d890260')}</Text>
+        {i18nT(`travel:components.listTravel.listTravelBaseModel.fallback.${relaxedStage}`)}
+        {removedFilterLabels.length > 0 ? ` — ${removedFilterLabels.join(', ')}` : ''}
+      </Text>
       <Pressable
         onPress={onClearAll}
         style={styles.fallbackNoticeAction}

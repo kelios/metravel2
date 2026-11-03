@@ -84,11 +84,11 @@ test.describe('@smoke Search', () => {
     await installAnalyticsIntentRecorder(page);
 
     const noMatchQuery = 'metravel-e2e-no-match-1582';
-    const observedQueries: string[] = [];
+    const observedCatalogRequests: URLSearchParams[] = [];
     page.on('request', (request) => {
       const url = new URL(request.url());
       if (url.pathname.endsWith('/travels/')) {
-        observedQueries.push(url.searchParams.get('query') ?? '');
+        observedCatalogRequests.push(url.searchParams);
       }
     });
     await page.route('**/travels/?**', async (route) => {
@@ -100,7 +100,7 @@ test.describe('@smoke Search', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ data: [], total: 0 }),
+        body: JSON.stringify({ results: [], count: 0, next: null, stage: 'none', strict_count: 0, removed_filter_keys: [] }),
       });
     });
     await page.route('**/travels/popular/**', (route) =>
@@ -126,8 +126,9 @@ test.describe('@smoke Search', () => {
     await expect(page.getByText('Популярный маршрут e2e 1', { exact: true }).first()).toBeVisible();
     await page.waitForTimeout(SEARCH_DEBOUNCE_MS);
 
-    expect(observedQueries.length).toBeGreaterThan(0);
-    expect(observedQueries.every((query) => query === noMatchQuery)).toBe(true);
+    expect(observedCatalogRequests).toHaveLength(1);
+    expect(observedCatalogRequests[0].get('query')).toBe(noMatchQuery);
+    expect(observedCatalogRequests[0].get('relaxation')).toBe('auto');
     // #2908: the zero-result outcome reaches analytics with the query.
     await expect.poll(async () => (await readAnalyticsIntents(page, 'search_zero_results')).length, {
       timeout: SEARCH_TIMEOUT_MS,

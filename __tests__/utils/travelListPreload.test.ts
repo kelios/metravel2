@@ -42,7 +42,7 @@ const { fetchTravels } = require('@/api/travelListQueries') as {
     perPage: number,
     search: string,
     params: Record<string, unknown>,
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal; relaxCatalog?: boolean },
   ) => Promise<{ data: unknown[]; total: number }>;
 };
 
@@ -76,7 +76,7 @@ describe('travelListPreload', () => {
   });
 
   it('строит тот же URL, что и fetchTravels для первой страницы /search', async () => {
-    await fetchTravels(0, PER_PAGE, '', SEARCH_DEFAULT_PARAMS, {} as any);
+    await fetchTravels(0, PER_PAGE, '', SEARCH_DEFAULT_PARAMS, { relaxCatalog: true });
 
     expect(fetchWithTimeout).toHaveBeenCalledTimes(1);
     const requestedUrl = fetchWithTimeout.mock.calls[0][0] as string;
@@ -86,7 +86,7 @@ describe('travelListPreload', () => {
   });
 
   it('прогревает публичный запрос без учётных данных — тот же init, что у fetchTravels', async () => {
-    await fetchTravels(0, PER_PAGE, '', SEARCH_DEFAULT_PARAMS, {} as any);
+    await fetchTravels(0, PER_PAGE, '', SEARCH_DEFAULT_PARAMS, { relaxCatalog: true });
 
     const init = fetchWithTimeout.mock.calls[0][1] as RequestInit;
     expect(init.credentials).toBe('omit');
@@ -97,7 +97,7 @@ describe('travelListPreload', () => {
     const url = buildTravelListPreloadUrl(TEST_API_BASE_URL, PER_PAGE);
     setPreload({ url, startedAt: Date.now(), response: Promise.resolve(preloadedResponse) });
 
-    const result = await fetchTravels(0, PER_PAGE, '', SEARCH_DEFAULT_PARAMS, {} as any);
+    const result = await fetchTravels(0, PER_PAGE, '', SEARCH_DEFAULT_PARAMS, { relaxCatalog: true });
 
     expect(result).toEqual({ data: [], total: 0 });
     expect(fetchWithTimeout).not.toHaveBeenCalled();
@@ -111,7 +111,7 @@ describe('travelListPreload', () => {
     response.catch(() => {});
     setPreload({ url, startedAt: Date.now(), response });
 
-    const result = await fetchTravels(0, PER_PAGE, '', SEARCH_DEFAULT_PARAMS, {} as any);
+    const result = await fetchTravels(0, PER_PAGE, '', SEARCH_DEFAULT_PARAMS, { relaxCatalog: true });
 
     expect(result).toEqual({ data: [], total: 0 });
     expect(fetchWithTimeout).toHaveBeenCalledTimes(1);
@@ -126,7 +126,7 @@ describe('travelListPreload', () => {
     controller.abort();
 
     await expect(
-      fetchTravels(0, PER_PAGE, '', SEARCH_DEFAULT_PARAMS, { signal: controller.signal }),
+      fetchTravels(0, PER_PAGE, '', SEARCH_DEFAULT_PARAMS, { signal: controller.signal, relaxCatalog: true }),
     ).rejects.toMatchObject({ name: 'AbortError' });
     expect(fetchWithTimeout).not.toHaveBeenCalled();
   });
@@ -137,7 +137,7 @@ describe('travelListPreload', () => {
     setPreload(entry);
 
     // Вторая страница — другой URL.
-    await fetchTravels(1, PER_PAGE, '', SEARCH_DEFAULT_PARAMS, {} as any);
+    await fetchTravels(1, PER_PAGE, '', SEARCH_DEFAULT_PARAMS, { relaxCatalog: true });
 
     expect(fetchWithTimeout).toHaveBeenCalledTimes(1);
     expect(readPreload()).toBe(entry);
@@ -185,7 +185,7 @@ describe('travelListPreload', () => {
 
     expect(takeTravelListPreload(url)).toBeNull();
 
-    await fetchTravels(0, PER_PAGE, '', SEARCH_DEFAULT_PARAMS, {} as any);
+    await fetchTravels(0, PER_PAGE, '', SEARCH_DEFAULT_PARAMS, { relaxCatalog: true });
     expect(fetchWithTimeout).toHaveBeenCalledTimes(1);
   });
 });

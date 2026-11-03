@@ -80,7 +80,7 @@ export type TravelListPreloadEntry = {
  * Query-string первой страницы каталога `/search` без фильтров и поиска.
  *
  * Должен побайтово совпадать с `buildWhereQueryParams({ page: 0, perPage,
- * query: '', where: { publish: 1, moderation: 1 } })` — обе стороны используют
+ * query: '', where: { publish: 1, moderation: 1 } })` с `relaxation=auto` — обе стороны используют
  * `URLSearchParams` с одинаковым порядком вставки ключей.
  */
 export function buildTravelListPreloadQuery(perPage: number): string {
@@ -89,6 +89,7 @@ export function buildTravelListPreloadQuery(perPage: number): string {
     page: '1',
     perPage: String(perPage),
     query: '',
+    relaxation: 'auto',
   }).toString()
 }
 

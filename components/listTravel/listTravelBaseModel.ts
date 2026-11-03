@@ -2,7 +2,6 @@ import { Platform } from 'react-native'
 import { getCatalogViewportGeometry } from '@/components/listTravel/travelCatalogGeometry'
 import type { ViewStyle } from 'react-native'
 import { BREAKPOINTS } from './utils/listTravelConstants'
-import { translate as i18nT } from '@/i18n'
 
 export function buildCardsGridDynamicStyle(cardsGridStyle: ViewStyle, gapSize: number): ViewStyle[] {
   const styleArray: ViewStyle[] = [cardsGridStyle]
@@ -146,131 +145,9 @@ type SearchParams = {
   sort?: string | string[]
 }
 
-export type TravelFallbackStep = {
-  id: 'light' | 'medium' | 'broad'
-  label: string
-  params: Record<string, any>
-  removedKeys: string[]
-  search: string
-}
-
-const FALLBACK_RELAXATION_PRESETS: Array<{
-  id: TravelFallbackStep['id']
-  label: string
-  removedKeys: string[]
-}> = [
-  {
-    id: 'light',
-    get label() { return i18nT('travel:components.listTravel.listTravelBaseModel.fallback.light') },
-    removedKeys: ['year', 'month', 'over_nights_stay', 'companions', 'complexity'],
-  },
-  {
-    id: 'medium',
-    get label() { return i18nT('travel:components.listTravel.listTravelBaseModel.fallback.medium') },
-    removedKeys: ['year', 'month', 'over_nights_stay', 'companions', 'complexity', 'transports', 'categoryTravelAddress'],
-  },
-  {
-    id: 'broad',
-    get label() { return i18nT('travel:components.listTravel.listTravelBaseModel.fallback.broad') },
-    removedKeys: [
-      'year',
-      'month',
-      'over_nights_stay',
-      'companions',
-      'complexity',
-      'transports',
-      'categoryTravelAddress',
-      'categories',
-      'countries',
-    ],
-  },
-]
-
-const sortObjectKeys = (obj: Record<string, any>) => {
-  return Object.keys(obj)
-    .sort()
-    .reduce<Record<string, any>>((acc, key) => {
-      acc[key] = obj[key]
-      return acc
-    }, {})
-}
-
-const removeKeysFromParams = (params: Record<string, any>, keysToRemove: string[]) => {
-  const blockedKeys = new Set(keysToRemove)
-  return sortObjectKeys(
-    Object.entries(params).reduce<Record<string, any>>((acc, [key, value]) => {
-      if (blockedKeys.has(key)) return acc
-      acc[key] = value
-      return acc
-    }, {}),
-  )
-}
-
-const areFallbackInputsEqual = ({
-  baseParams,
-  nextParams,
-  baseSearch,
-  nextSearch,
-}: {
-  baseParams: Record<string, any>
-  nextParams: Record<string, any>
-  baseSearch: string
-  nextSearch: string
-}) => JSON.stringify(baseParams) === JSON.stringify(nextParams) && baseSearch === nextSearch
-
 export function normalizeListTravelParam(value?: string | string[]) {
   if (Array.isArray(value)) return value.filter(Boolean).join(',')
   return value
-}
-
-export function buildListTravelFallbackSteps({
-  queryParams,
-  search,
-}: {
-  queryParams: Record<string, any>
-  search: string
-}): TravelFallbackStep[] {
-  const normalizedParams = sortObjectKeys(queryParams || {})
-  if (normalizedParams.publication_status === 'pending_review') {
-    return []
-  }
-  const normalizedSearch = String(search || '').trim()
-  const steps: TravelFallbackStep[] = []
-
-  FALLBACK_RELAXATION_PRESETS.forEach((preset) => {
-    const params = removeKeysFromParams(normalizedParams, preset.removedKeys)
-
-    if (
-      areFallbackInputsEqual({
-        baseParams: normalizedParams,
-        nextParams: params,
-        baseSearch: normalizedSearch,
-        nextSearch: normalizedSearch,
-      })
-    ) {
-      return
-    }
-
-    const duplicate = steps.some((step) =>
-      areFallbackInputsEqual({
-        baseParams: step.params,
-        nextParams: params,
-        baseSearch: step.search,
-        nextSearch: normalizedSearch,
-      }),
-    )
-    if (duplicate) return
-
-    steps.push({
-      id: preset.id,
-      label: preset.label,
-      params,
-      removedKeys: preset.removedKeys,
-      search: normalizedSearch,
-    })
-  })
-
-  return steps
 }
 
 const parseIdOrNameList = (raw: string): Array<number | string> =>
@@ -403,53 +280,6 @@ export function buildListTravelSearchPendingState({
   const showEmptyState = !isUserIdLoading && !isSearchPending && isEmpty
 
   return { showInitialLoading, showNextPageLoading, isSearchPending, showEmptyState }
-}
-
-type ListTravelFallbackCandidate<S, Q extends { data: any[] }> = {
-  step: S
-  query: Q
-}
-
-type ListTravelFallbackStageQuery = {
-  isInitialLoading: boolean
-  isFetching: boolean
-  data: any[]
-}
-
-export function isListTravelFallbackStageExhausted(query: ListTravelFallbackStageQuery): boolean {
-  return !query.isInitialLoading && !query.isFetching && !query.data.length
-}
-
-export function isListTravelAnyFallbackLoading(queries: Array<{ isInitialLoading: boolean }>): boolean {
-  return queries.some((query) => query.isInitialLoading)
-}
-
-export function selectListTravelFallbackMatch<S, Q extends { data: any[] }>({
-  isEmpty,
-  fallbackStepLight,
-  fallbackStepMedium,
-  fallbackStepBroad,
-  fallbackQueryLight,
-  fallbackQueryMedium,
-  fallbackQueryBroad,
-}: {
-  isEmpty: boolean
-  fallbackStepLight: S
-  fallbackStepMedium: S
-  fallbackStepBroad: S
-  fallbackQueryLight: Q
-  fallbackQueryMedium: Q
-  fallbackQueryBroad: Q
-}): ListTravelFallbackCandidate<S, Q> | null {
-  if (!isEmpty) return null
-
-  const candidates: Array<ListTravelFallbackCandidate<S, Q>> = [
-    { step: fallbackStepLight, query: fallbackQueryLight },
-    { step: fallbackStepMedium, query: fallbackQueryMedium },
-    { step: fallbackStepBroad, query: fallbackQueryBroad },
-  ]
-
-  return candidates.find((candidate) => candidate.step && candidate.query.data.length > 0) ?? null
 }
 
 export function getListTravelActiveFiltersCount(filter: Record<string, any>, debSearch: string) {

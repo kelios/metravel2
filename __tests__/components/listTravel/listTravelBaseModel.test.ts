@@ -1,6 +1,5 @@
 import {
   applyListDensity,
-  buildListTravelFallbackSteps,
   getCatalogCardMediaLoading,
   getListTravelActiveFiltersCount,
   resolveListTravelRawWidth,
@@ -125,81 +124,6 @@ describe('search result virtualization budget', () => {
     expect(drawDistance * BUFFER_BEHIND_RATIO).toBeGreaterThanOrEqual(CARD_HEIGHT_DP)
     expect(drawDistance * BUFFER_AHEAD_RATIO).toBeGreaterThanOrEqual(CARD_HEIGHT_DP * 2)
     expect(getRightColumnVirtualizationConfig(false, false).drawDistance).toBe(drawDistance)
-  })
-})
-
-describe('buildListTravelFallbackSteps', () => {
-  it('builds progressively broader fallback steps for narrow filters', () => {
-    const steps = buildListTravelFallbackSteps({
-      queryParams: {
-        publish: 1,
-        moderation: 1,
-        categories: [4],
-        categoryTravelAddress: [12],
-        transports: [2],
-        month: [6],
-        complexity: [3],
-      },
-      search: 'озёра',
-    })
-
-    expect(steps.map((step) => step.id)).toEqual(['light', 'medium', 'broad'])
-    expect(steps[0]?.params).toEqual({
-      categories: [4],
-      categoryTravelAddress: [12],
-      moderation: 1,
-      publish: 1,
-      transports: [2],
-    })
-    expect(steps[1]?.params).toEqual({
-      categories: [4],
-      moderation: 1,
-      publish: 1,
-    })
-    expect(steps[2]?.params).toEqual({
-      moderation: 1,
-      publish: 1,
-    })
-    expect(steps.every((step) => step.search === 'озёра')).toBe(true)
-  })
-
-  it('does not remove a non-empty text search when no filters can be relaxed', () => {
-    const steps = buildListTravelFallbackSteps({
-      queryParams: {
-        moderation: 1,
-        publish: 1,
-      },
-      search: 'минск',
-    })
-
-    expect(steps).toEqual([])
-  })
-
-  it('keeps the text in every fallback request while relaxing extra filters', () => {
-    const steps = buildListTravelFallbackSteps({
-      queryParams: {
-        moderation: 1,
-        publish: 1,
-        categories: [4],
-        month: [7],
-      },
-      search: '  минск  ',
-    })
-
-    expect(steps.map((step) => step.id)).toEqual(['light', 'broad'])
-    expect(steps.every((step) => step.search === 'минск')).toBe(true)
-  })
-
-  it('does not relax pending-review moderation queue filters', () => {
-    const steps = buildListTravelFallbackSteps({
-      queryParams: {
-        publication_status: 'pending_review',
-        categories: [4],
-      },
-      search: 'минск',
-    })
-
-    expect(steps).toEqual([])
   })
 })
 

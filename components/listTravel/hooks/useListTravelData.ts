@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useInfiniteQuery, useQueryClient, type InfiniteData, type QueryObserverResult } from '@tanstack/react-query';
-import { fetchTravels, fetchRandomTravels } from '@/api/travelListQueries';
+import { fetchTravels, fetchRandomTravels, type CatalogPageStage } from '@/api/travelListQueries';
 import { queryKeys } from '@/api/queryKeys';
 import { blockHiddenCount, isLastPageEmptiedByBlock, servedPageLength } from '@/api/blockSensitiveShapes';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
@@ -22,6 +22,7 @@ export interface UseListTravelDataProps {
   queryParams: Record<string, any>;
   search: string;
   isQueryEnabled: boolean;
+  relaxCatalog?: boolean;
 }
 
 type TravelListPage = Awaited<ReturnType<typeof fetchTravels>>;
@@ -29,6 +30,7 @@ type TravelListPage = Awaited<ReturnType<typeof fetchTravels>>;
 export interface UseListTravelDataReturn {
   data: Travel[];
   total: number;
+  relaxation?: TravelListPage['relaxation'];
   hasMore: boolean;
   isLoading: boolean;
   isFetching: boolean;
@@ -55,7 +57,9 @@ const resolveStableTotal = (pages: unknown[]): number => {
   return 0;
 };
 
-const getNextTravelPage = (lastPage: unknown, allPages: unknown[]): number | undefined => {
+type TravelPageParam = number | { page: number; catalogStage: CatalogPageStage };
+
+const getNextTravelPage = (lastPage: TravelListPage, allPages: TravelListPage[]): TravelPageParam | undefined => {
   const total = resolveStableTotal(allPages);
   if (!total) return undefined;
   const loaded = allPages.reduce<number>((sum, page) => sum + servedPageLength(page), 0);
@@ -63,7 +67,8 @@ const getNextTravelPage = (lastPage: unknown, allPages: unknown[]): number | und
   // Пустой ответ сервера — конец выдачи; пустая после блокировки автора
   // страница — нет (`servedPageLength` считает и вырезанное).
   if (servedPageLength(lastPage) === 0) return undefined;
-  return allPages.length;
+  const stage = allPages[0]?.relaxation?.stage;
+  return stage && stage !== 'none' ? { page: allPages.length, catalogStage: stage } : allPages.length;
 };
 
 type FetchFn = (
@@ -71,7 +76,7 @@ type FetchFn = (
   perPage: number,
   search: string,
   params: Record<string, any>,
-  options: { signal?: AbortSignal },
+  options: NonNullable<Parameters<typeof fetchTravels>[4]>,
 ) => Promise<TravelListPage>;
 
 interface BaseTravelDataConfig {
@@ -80,7 +85,7 @@ interface BaseTravelDataConfig {
 }
 
 function useBaseTravelData(
-  { queryParams, search, isQueryEnabled }: UseListTravelDataProps,
+  { queryParams, search, isQueryEnabled, relaxCatalog = false }: UseListTravelDataProps,
   { queryKeyPrefix, fetchFn }: BaseTravelDataConfig,
 ): UseListTravelDataReturn {
   const queryClient = useQueryClient();
@@ -105,9 +110,10 @@ function useBaseTravelData(
         search: search.trim(),
         params: queryParamsStringified,
         owner,
+        ...(relaxCatalog ? { relaxation: 'auto' } : {}),
       },
     ],
-    [queryKeyPrefix, search, queryParamsStringified, owner],
+    [queryKeyPrefix, search, queryParamsStringified, owner, relaxCatalog],
   );
 
   const queryParamsForFetch = useMemo(
@@ -127,10 +133,13 @@ function useBaseTravelData(
     isFetchingNextPage,
   } = useInfiniteQuery({
     queryKey,
-    queryFn: ({ pageParam = 0, signal }) =>
-      fetchFn(pageParam, PER_PAGE, search.trim(), queryParamsForFetch, { signal }),
+    queryFn: ({ pageParam, signal }) => {
+      const page = typeof pageParam === 'number' ? pageParam : pageParam.page;
+      const catalogStage = typeof pageParam === 'number' ? undefined : pageParam.catalogStage;
+      return fetchFn(page, PER_PAGE, search.trim(), queryParamsForFetch, { signal, relaxCatalog, catalogStage });
+    },
     enabled: isQueryEnabled,
-    initialPageParam: 0,
+    initialPageParam: 0 as TravelPageParam,
     getNextPageParam: getNextTravelPage,
     staleTime: STALE_TIME.TRAVELS,
     gcTime: GC_TIME.TRAVELS,
@@ -212,7 +221,7 @@ function useBaseTravelData(
   const refetchVisiblePages = useCallback(async () => {
     let result = await refetch();
     while (result.isSuccess && isLastPageEmptiedByBlock(result.data) &&
-      getNextTravelPage(result.data.pages.at(-1), result.data.pages) !== undefined) {
+      getNextTravelPage(result.data.pages[result.data.pages.length - 1], result.data.pages) !== undefined) {
       result = await fetchNextPage({ cancelRefetch: false });
     }
     return result;
@@ -231,6 +240,7 @@ function useBaseTravelData(
   return {
     data: combinedTravels,
     total,
+    relaxation: data?.pages[0]?.relaxation,
     hasMore,
     isLoading,
     isFetching,

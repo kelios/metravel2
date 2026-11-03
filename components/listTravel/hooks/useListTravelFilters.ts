@@ -28,6 +28,7 @@ export interface UseListTravelFiltersProps {
 export interface UseListTravelFiltersReturn {
   filter: FilterState;
   queryParams: Record<string, any>;
+  hasNamedCategoryFilters: boolean;
   setFilter: (filter: FilterState) => void;
   resetFilters: () => void;
   onSelect: (field: string, value: any) => void;
@@ -121,62 +122,36 @@ export function useListTravelFilters({
     setFilter(initialFilter ?? INITIAL_FILTER);
   }, [initialFilter]);
 
-  // Когда категория приходит как имя (deep-link по чипу категории со страницы
-  // путешествия ведёт на /travelsby?categoryTravelAddress=Озеро), после загрузки опций
-  // фильтров переписываем имя→числовой id прямо в состоянии: тогда корректно работает
-  // и API-запрос, и активный чип фильтра (getOptionName ищет по id), и его удаление.
+  // Имена в deep link преобразуем в ID сразу при получении справочников.
+  // Один и тот же patch нужен запросу в текущем рендере и состоянию чипов.
   const filterCategories = filter.categories;
   const filterCategoryAddress = filter.categoryTravelAddress;
-  useEffect(() => {
-    const patch: Partial<FilterState> = {};
-
-    ([
+  const { categoryPatch, hasNamedCategoryFilters } = useMemo(() => {
+    const categoryPatch: Partial<FilterState> = {};
+    let hasNamedCategoryFilters = false;
+    for (const [key, values, optionList] of [
       ['categories', filterCategories, options?.categories],
       ['categoryTravelAddress', filterCategoryAddress, options?.categoryTravelAddress],
-    ] as const).forEach(([key, values, optionList]) => {
-      const textual = extractCategoryNames(values as Array<string | number> | undefined);
-      if (!textual.length || !optionList?.length) return;
-
-      const mappedIds = mapCategoryNamesToIds(textual, optionList);
-      if (!mappedIds.length) return;
-
-      const numericIds = extractNumericCategoryIds(values as Array<string | number> | undefined);
-      (patch as any)[key] = Array.from(new Set<number>([...numericIds, ...mappedIds]));
-    });
-
-    if (Object.keys(patch).length) {
-      setFilter((prev) => ({ ...prev, ...patch }));
+    ] as const) {
+      const names = extractCategoryNames(values);
+      if (!names.length) continue;
+      hasNamedCategoryFilters = true;
+      const mappedIds = mapCategoryNamesToIds(names, optionList);
+      if (mappedIds.length) {
+        categoryPatch[key] = Array.from(new Set([...extractNumericCategoryIds(values), ...mappedIds]));
+      }
     }
+    return { categoryPatch, hasNamedCategoryFilters };
   }, [filterCategories, filterCategoryAddress, options?.categories, options?.categoryTravelAddress]);
 
-  const filterForQuery = useMemo(() => {
-    const textualCategories = extractCategoryNames(filter.categories);
-    if (!textualCategories.length) {
-      return filter;
+  useEffect(() => {
+    if (Object.keys(categoryPatch).length) {
+      setFilter((prev) => prev === filter ? { ...prev, ...categoryPatch } : prev);
     }
-
-    if (!options?.categories?.length) {
-      return filter;
-    }
-
-    const mappedCategoryIds = mapCategoryNamesToIds(textualCategories, options.categories);
-    if (!mappedCategoryIds.length) {
-      return filter;
-    }
-
-    const currentNumericIds = extractNumericCategoryIds(filter.categories);
-    const normalizedCategories = Array.from(
-      new Set<number>([...currentNumericIds, ...mappedCategoryIds])
-    );
-
-    return {
-      ...filter,
-      categories: normalizedCategories,
-    };
-  }, [filter, options?.categories]);
+  }, [categoryPatch, filter]);
 
   const queryParams = useMemo(() => {
-    const params = buildTravelQueryParams(filterForQuery, {
+    const params = buildTravelQueryParams({ ...filter, ...categoryPatch }, {
       isMeTravel,
       isSuperuser,
       isExport,
@@ -202,7 +177,7 @@ export function useListTravelFilters({
       });
     
     return withDistanceSortOrigin(cleaned, distanceOrigin);
-  }, [filterForQuery, isMeTravel, isSuperuser, isExport, isTravelBy, userId, user_id, distanceOrigin]);
+  }, [filter, categoryPatch, isMeTravel, isSuperuser, isExport, isTravelBy, userId, user_id, distanceOrigin]);
 
   const resetFilters = useCallback(() => {
     setFilter(INITIAL_FILTER);
@@ -288,6 +263,7 @@ export function useListTravelFilters({
   return {
     filter,
     queryParams,
+    hasNamedCategoryFilters,
     setFilter,
     resetFilters,
     onSelect,

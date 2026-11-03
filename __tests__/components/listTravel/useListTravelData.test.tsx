@@ -21,14 +21,16 @@ type HarnessProps = {
   queryParams: Record<string, any>;
   search?: string;
   isQueryEnabled?: boolean;
+  relaxCatalog?: boolean;
 };
 
 const TestHarness = forwardRef<any, HarnessProps>(
-  ({ queryParams, search = '', isQueryEnabled = true }, ref) => {
+  ({ queryParams, search = '', isQueryEnabled = true, relaxCatalog }, ref) => {
     const hook = useListTravelData({
       queryParams,
       search,
       isQueryEnabled,
+      relaxCatalog,
     });
 
     useImperativeHandle(ref, () => hook);
@@ -103,6 +105,44 @@ describe('useListTravelData with infinite query', () => {
     await waitFor(() => expect(ref.current?.isInitialLoading).toBe(false));
     expect(ref.current?.data).toHaveLength(12);
     expect(fetchTravels).toHaveBeenCalledTimes(1);
+
+    await unmount();
+    queryClient.clear();
+  });
+
+  it('pins the first page stage and starts a new decision when the search changes', async () => {
+    const filters = { month: [6] };
+    const relaxation = { stage: 'light', strictCount: 0, removedFilterKeys: ['month'] };
+    let resolveOldPage!: (result: Awaited<ReturnType<typeof fetchTravels>>) => void;
+    const oldPage = new Promise<Awaited<ReturnType<typeof fetchTravels>>>((resolve) => {
+      resolveOldPage = resolve;
+    });
+    const fetchCatalog = jest.mocked(fetchTravels);
+    fetchCatalog
+      .mockResolvedValueOnce({ data: createTravels('first', 12), total: 24, relaxation })
+      .mockReturnValueOnce(oldPage)
+      .mockResolvedValueOnce({ data: [], total: 0, relaxation: { stage: 'none', strictCount: 0, removedFilterKeys: [] } });
+    const props = { queryParams: filters, search: 'Минск', relaxCatalog: true };
+    const { ref, rerender, queryClient, unmount } = await renderWithClient(props);
+
+    await waitFor(() => expect(ref.current?.relaxation).toEqual(relaxation));
+    expect(fetchTravels).toHaveBeenCalledTimes(1);
+    await act(async () => ref.current?.handleEndReached());
+    await waitFor(() => expect(fetchTravels).toHaveBeenNthCalledWith(
+      2, 1, expect.any(Number), 'Минск', filters, expect.objectContaining({ catalogStage: 'light' }),
+    ));
+
+    const oldSignal = fetchCatalog.mock.calls[1][4]?.signal;
+    expect(oldSignal?.aborted).toBe(false);
+
+    await rerender({ ...props, search: 'Брест' });
+    await waitFor(() => expect(ref.current?.isEmpty).toBe(true));
+    expect(fetchTravels).toHaveBeenNthCalledWith(
+      3, 0, expect.any(Number), 'Брест', filters, expect.objectContaining({ catalogStage: undefined }),
+    );
+    expect(oldSignal?.aborted).toBe(true);
+    await act(async () => resolveOldPage({ data: [], total: 24, relaxation }));
+    expect(ref.current?.relaxation?.stage).toBe('none');
 
     await unmount();
     queryClient.clear();
@@ -286,10 +326,8 @@ describe('useListTravelData with infinite query', () => {
     queryClient.clear();
   });
 
-  // #2895: на пустой выдаче ListTravelBase держит скелетон, пока любой запасной шаг
-  // `isInitialLoading`. Выключенный шаг (запрос без фильтров — шагов нет) не должен
-  // загружаться ни на кадр, иначе пустое состояние недостижимо.
-  it('a disabled fallback query never reports isInitialLoading', async () => {
+  // A disabled query can still be triggered manually, for example in roulette.
+  it('a disabled query never reports isInitialLoading', async () => {
     const { ref, queryClient, unmount } = await renderWithClient({ queryParams: {}, isQueryEnabled: false });
 
     expect(ref.current?.isInitialLoading).toBe(false);

@@ -183,13 +183,43 @@ export const fetchTravelFacets = async (
     }
 };
 
+const CATALOG_STAGES = ['strict', 'light', 'medium', 'broad', 'none'] as const;
+type CatalogStage = typeof CATALOG_STAGES[number];
+export type CatalogPageStage = Exclude<CatalogStage, 'none'>;
+
+type CatalogRelaxation = {
+    stage: CatalogStage;
+    strictCount: number;
+    removedFilterKeys: string[];
+};
+
+type TravelListPage = {
+    data: Travel[];
+    total: number;
+    relaxation?: CatalogRelaxation;
+};
+
+function readCatalogRelaxation(payload: {
+    stage?: unknown;
+    strict_count?: unknown;
+    removed_filter_keys?: unknown;
+}): CatalogRelaxation | undefined {
+    const stage = CATALOG_STAGES.find((value) => value === payload.stage);
+    const { strict_count: strictCount, removed_filter_keys: removedFilterKeys } = payload;
+    if (!stage || typeof strictCount !== 'number' || !Number.isInteger(strictCount) || strictCount < 0 ||
+        !Array.isArray(removedFilterKeys) || !removedFilterKeys.every((key) => typeof key === 'string')) {
+        return undefined;
+    }
+    return { stage, strictCount, removedFilterKeys };
+}
+
 export const fetchTravels = async (
     page: number,
     itemsPerPage: number,
     search: string,
     urlParams: Record<string, unknown>,
-    options?: { signal?: AbortSignal }
-) => {
+    options?: { signal?: AbortSignal; relaxCatalog?: boolean; catalogStage?: CatalogPageStage }
+): Promise<TravelListPage> => {
     let publicStaleEndpoint = '';
     try {
         const whereObject: Record<string, unknown> = {};
@@ -240,7 +270,15 @@ export const fetchTravels = async (
         });
 
         const params = buildWhereQueryParams({ page, perPage: itemsPerPage, query: search, where: whereObject, sortQuery });
-        const urlTravel = `${GET_TRAVELS}?${params}`;
+        const relaxCatalog = options?.relaxCatalog && !isUserScoped && !isPendingReview && !isUnpublished &&
+            !includeDraftsRequested &&
+            (urlParams.publication_status == null || urlParams.publication_status === 'published') &&
+            (whereObject.moderation === 1 || whereObject.moderation === true || whereObject.moderation === '1');
+        const pinnedStage = options?.catalogStage;
+        const relaxationParams = relaxCatalog
+            ? `&relaxation=auto${pinnedStage ? `&relaxation_stage=${pinnedStage}` : ''}`
+            : '';
+        const urlTravel = `${GET_TRAVELS}?${params}${relaxationParams}`;
         publicStaleEndpoint = !isUserScoped && !isPendingReview && !isUnpublished ? urlTravel : '';
 
         const needsAuth = allowDrafts || isPendingReview || isUnpublished;
@@ -292,6 +330,9 @@ export const fetchTravels = async (
             results?: Travel[];
             count?: unknown;
             detail?: string;
+            stage?: unknown;
+            strict_count?: unknown;
+            removed_filter_keys?: unknown;
         } | Travel[]>(res, parseFallback as Travel[]);
 
         if (!res.ok) {
@@ -323,10 +364,21 @@ export const fetchTravels = async (
             throw createTravelQueryError(i18nT('errorsStatic:api.travelList.invalidShape'));
         }
 
+        const hasRelaxationMetadata = !Array.isArray(result) &&
+            ('stage' in result || 'strict_count' in result || 'removed_filter_keys' in result);
+        const relaxation = relaxCatalog && hasRelaxationMetadata ? readCatalogRelaxation(result) : undefined;
+        // A legacy response may omit all metadata. An incomplete decision or a
+        // different pinned stage would mislabel the results or mix result sets.
+        if (relaxCatalog && ((hasRelaxationMetadata && !relaxation) ||
+            (pinnedStage && pinnedStage !== relaxation?.stage))) {
+            throw createTravelQueryError(i18nT('errorsStatic:api.travelList.invalidShape'));
+        }
+
         const normalized = items.map(normalizeTravelItem);
         const freshPayload = {
             data: canIncludeDrafts || canIncludePendingReview ? normalized : filterPublished(normalized),
             total: coerceTotal(total, 0),
+            ...(relaxation ? { relaxation } : {}),
         };
 
         if (publicStaleEndpoint && !needsAuth && !usePublicSession) {
@@ -337,10 +389,7 @@ export const fetchTravels = async (
     } catch (e) {
         if (isAbortError(e)) throw e;
         if (publicStaleEndpoint && isRecoverablePublicStaleError(e)) {
-            const stalePayload = await readPublicStalePayload<{
-                data: Travel[];
-                total: number;
-            }>(publicStaleEndpoint);
+            const stalePayload = await readPublicStalePayload<TravelListPage>(publicStaleEndpoint);
             if (stalePayload) return stalePayload;
         }
         devError('Error fetching Travels:', e);
