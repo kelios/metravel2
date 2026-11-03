@@ -579,6 +579,79 @@ describe('useMapCoordinates live location updates', () => {
     expect(removeWatch).toHaveBeenCalledTimes(1)
   })
 
+  it.each(['resolve first', 'resolve last', 'reject last'])(
+    'keeps the current native watch when a stale registration will %s',
+    async (completion) => {
+      ;(Platform as any).OS = 'android'
+      let changeAppState: ((state: 'background' | 'active') => void) | undefined
+      jest.spyOn(AppState, 'addEventListener').mockImplementation((_event, handler) => {
+        changeAppState = handler
+        return { remove: jest.fn() }
+      })
+      const removeOld = jest.fn()
+      const removeCurrent = jest.fn()
+      let resolveOld!: (value: { remove: () => void }) => void
+      let rejectOld!: (reason: Error) => void
+      let resolveCurrent!: (value: { remove: () => void }) => void
+      const watchPositionAsync = jest.fn()
+        .mockReturnValueOnce(new Promise((resolve, reject) => {
+          resolveOld = resolve
+          rejectOld = reject
+        }))
+        .mockReturnValueOnce(new Promise((resolve) => { resolveCurrent = resolve }))
+      ;(loadExpoLocation as jest.Mock).mockResolvedValue({
+        requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted', granted: true, canAskAgain: true }),
+        getLastKnownPositionAsync: jest.fn().mockResolvedValue(null),
+        getCurrentPositionAsync: jest.fn().mockResolvedValue({
+          coords: { latitude: 52.2, longitude: 21.01, accuracy: 10 }, timestamp: Date.now(),
+        }),
+        watchPositionAsync,
+        Accuracy: { Balanced: 3, High: 4 },
+      })
+      const { result, rerender, unmount } = await renderHook(
+        ({ focused }) => useMapCoordinates({ isFocused: focused }),
+        { initialProps: { focused: true } },
+      )
+      await waitFor(() => expect(watchPositionAsync).toHaveBeenCalledTimes(1))
+      await waitFor(() => expect(result.current.locationState.status).toBe('current'))
+
+      await act(() => { changeAppState?.('background') })
+      if (completion === 'resolve last') {
+        await rerender({ focused: false })
+        await act(() => { changeAppState?.('active') })
+        expect(watchPositionAsync).toHaveBeenCalledTimes(1)
+        await rerender({ focused: true })
+      } else {
+        await act(() => { changeAppState?.('active') })
+      }
+      await waitFor(() => expect(watchPositionAsync).toHaveBeenCalledTimes(2))
+
+      const staleTick = watchPositionAsync.mock.calls[0][1]
+      await act(() => {
+        staleTick({ coords: { latitude: 54, longitude: 22, accuracy: 10 }, timestamp: Date.now() + 1000 })
+      })
+      expect(getLiveUserPosition()).toEqual(expect.objectContaining({ latitude: 52.2 }))
+
+      if (completion === 'resolve first') {
+        await act(() => resolveOld({ remove: removeOld }))
+      }
+      await act(() => resolveCurrent({ remove: removeCurrent }))
+      if (completion === 'resolve last') {
+        await act(() => resolveOld({ remove: removeOld }))
+      }
+      if (completion === 'reject last') {
+        await act(() => rejectOld(new Error('stale registration failed')))
+      }
+
+      expect(removeOld).toHaveBeenCalledTimes(completion === 'reject last' ? 0 : 1)
+      expect(removeCurrent).not.toHaveBeenCalled()
+      await act(() => { changeAppState?.('background') })
+      expect(removeCurrent).toHaveBeenCalledTimes(1)
+      await unmount()
+      expect(removeCurrent).toHaveBeenCalledTimes(1)
+    },
+  )
+
   it('rechecks native permission after returning from device settings', async () => {
     ;(Platform as any).OS = 'android'
     let handleAppStateChange: ((state: string) => void) | null = null

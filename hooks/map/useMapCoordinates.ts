@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { AppState, Linking, Platform } from 'react-native';
 import { haversineMeters } from '@/utils/geoDistance';
 import { useIsFocused } from 'expo-router';
@@ -121,6 +121,11 @@ export const LOCATION_REFOCUS_TTL_MS = 5 * 60 * 1000;
 export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
   const routeIsFocused = useIsFocused();
   const isFocused = options.isFocused ?? routeIsFocused;
+  const focusedRef = useRef(false);
+  useLayoutEffect(() => {
+    focusedRef.current = isFocused;
+    return () => { focusedRef.current = false; };
+  }, [isFocused]);
   const lastTrustedLocationRef = useRef<LocationSnapshot | null>(null);
   // Last point actually pushed to the live channel / localStorage — the reference the
   // 12 m movement filter compares against (see applyTrustedLocation).
@@ -128,7 +133,8 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
   const liveWatchCleanupRef = useRef<(() => void) | null>(null);
   const liveWatchActiveRef = useRef(false);
   const liveWatchStartingRef = useRef(false);
-  const appWentInactiveRef = useRef(false);
+  const liveWatchGenerationRef = useRef(0);
+  const appWentInactiveRef = useRef(AppState.currentState === 'background' || AppState.currentState === 'inactive');
   const settingsReturnPendingRef = useRef(false);
 
   const [initialCachedLocation] = useState<LocationSnapshot | null>(() => readWebCachedLocation());
@@ -306,6 +312,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
   }, []);
 
   const clearLocationWatch = useCallback(() => {
+    liveWatchGenerationRef.current += 1;
     const cleanup = liveWatchCleanupRef.current;
     liveWatchCleanupRef.current = null;
     liveWatchActiveRef.current = false;
@@ -367,18 +374,20 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
   }, [applyTrustedLocation, markLiveLocationRefreshing]);
 
   const startNativeLocationWatch = useCallback(async () => {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web' || appWentInactiveRef.current) return;
     if (liveWatchActiveRef.current) return;
     if (liveWatchStartingRef.current) return;
 
     liveWatchStartingRef.current = true;
+    const generation = ++liveWatchGenerationRef.current;
+    const isCurrentWatch = () => focusedRef.current && generation === liveWatchGenerationRef.current;
     try {
       const Location = await loadExpoLocation();
+      if (!isCurrentWatch()) return;
       if (typeof Location.watchPositionAsync !== 'function') {
         liveWatchStartingRef.current = false;
         return;
       }
-      if (!liveWatchStartingRef.current) return;
 
       const subscription = await Location.watchPositionAsync(
         {
@@ -393,6 +402,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
           distanceInterval: 0,
         },
         (location) => {
+          if (!isCurrentWatch()) return;
           const { latitude, longitude, accuracy } = location.coords;
           applyTrustedLocation({
             latitude,
@@ -403,7 +413,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
         },
       );
 
-      if (!liveWatchStartingRef.current) {
+      if (!isCurrentWatch()) {
         subscription.remove();
         return;
       }
@@ -413,6 +423,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
         subscription.remove();
       };
     } catch {
+      if (!isCurrentWatch()) return;
       liveWatchStartingRef.current = false;
       liveWatchActiveRef.current = false;
       liveWatchCleanupRef.current = null;
@@ -421,13 +432,13 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
   }, [applyTrustedLocation, markLiveLocationRefreshing]);
 
   const startLocationWatch = useCallback(() => {
-    if (!isFocused) return;
+    if (!focusedRef.current) return;
     if (Platform.OS === 'web') {
       startWebLocationWatch();
       return;
     }
     void startNativeLocationWatch();
-  }, [isFocused, startNativeLocationWatch, startWebLocationWatch]);
+  }, [startNativeLocationWatch, startWebLocationWatch]);
 
   const requestWebLocation = useCallback(async (signal?: AbortSignal) => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
@@ -766,12 +777,8 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
   }, [clearLocationWatch, isFocused, requestLocation, startLocationWatch]);
 
   useEffect(() => {
-    if (!isFocused) {
-      clearLocationWatch();
-      return;
-    }
     if (Platform.OS === 'web') {
-      if (locationState.status !== 'current') return;
+      if (!isFocused || locationState.status !== 'current') return;
       if (typeof document === 'undefined') return;
       const handleVisibilityChange = () => {
         if (document.visibilityState === 'hidden') {
@@ -788,14 +795,16 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
 
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') {
+        const wasInactive = appWentInactiveRef.current;
+        appWentInactiveRef.current = false;
+        if (!focusedRef.current) return;
         if (locationState.status === 'current') {
           settingsReturnPendingRef.current = false;
           startLocationWatch();
-        } else if (appWentInactiveRef.current && settingsReturnPendingRef.current) {
+        } else if (wasInactive && settingsReturnPendingRef.current) {
           settingsReturnPendingRef.current = false;
           void requestLocation();
         }
-        appWentInactiveRef.current = false;
         return;
       }
       appWentInactiveRef.current = true;
