@@ -407,6 +407,13 @@ describe('buildCriticalCSS: шрифт иконок (#2170)', () => {
     expect(buildCriticalCSS()).not.toContain('[data-bp-layout="advent-grid-tile"]')
   })
 
+  it('emits the /advent dock column for the wide first frame', () => {
+    const css = buildCriticalCSS()
+    expect(css).toContain('[data-bp-layout="advent-screen-body"]{flex-direction:row !important}')
+    expect(css).toContain('[data-bp-layout="advent-screen-dock"]{display:flex !important}')
+    expect(css).toContain('[data-bp-layout="advent-screen-dockBar"]{display:none !important}')
+  })
+
   it('прячет иконку до загрузки её шрифта — иначе запасной шрифт рисует код иконки «квадратом»', () => {
     const { getIconFontGuardCss } = require('@/utils/iconFontShell')
     const css = require('@/utils/criticalCSSBuilder').buildCriticalCSS()

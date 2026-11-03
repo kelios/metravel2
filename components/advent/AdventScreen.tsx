@@ -2,35 +2,38 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 
-import InstantSEO from '@/components/seo/LazyInstantSEO'
-import { ResponsiveContainer } from '@/components/layout'
 import Button from '@/components/ui/Button'
+import { useAdventAdminPreview } from '@/hooks/useAdventAdminPreview'
+import InstantSEO from '@/components/seo/LazyInstantSEO'
+import { asBottomDimension, useBottomChromeInset } from '@/components/layout/bottomChromeInset'
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { ADVENT_ROUTE } from '@/constants/advent'
-import { useAdventAdminPreview } from '@/hooks/useAdventAdminPreview'
 import { useAdventCampaign, type AdventDoorView } from '@/hooks/useAdventCampaign'
 import { useAdventCampaignQuery, useAdventServerSync } from '@/hooks/useAdventApi'
+import { useBreakpoints } from '@/hooks/useResponsive'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
-import { useTranslation } from '@/i18n/LocaleProvider'
 import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
 import { sendAnalyticsEvent } from '@/utils/analytics'
+import { breakpointLayoutProps, breakpointStyle } from '@/utils/breakpointLayout'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
+import { headingLevel1Props } from '@/utils/webProps'
 import { buildCanonicalUrl, DEFAULT_OG_IMAGE_PATH } from '@/utils/seo'
 import { webTouchScrollStyle } from '@/utils'
 import { selectServerCreditedDays } from '@/utils/advent/adventCalendar'
-import AdventHeader from './AdventHeader'
-import AdventGrid from './AdventGrid'
+import AdventDockBar from './AdventDockBar'
+import AdventDockContent from './AdventDockContent'
 import AdventDoorSheet from './AdventDoorSheet'
-import AdventShareCard from './AdventShareCard'
-import { formatDoorDate } from './AdventDoorTile'
-import { ADVENT_HOUSE_MAX_WIDTH } from './adventHouseLayout'
+import AdventHouseFacade from './AdventHouseFacade'
+import AdventStage from './AdventStage'
+import { ADVENT_DOCK_MIN_WIDTH, ADVENT_DOCK_WIDTH, ADVENT_SCREEN_LAYOUT } from './adventScreenLayout'
 
 // Отдельным чанком: тост тянет весь контур значков, а статический импорт
 // перекраивал общие чанки сайта (бюджет начальных запросов `/search`).
 const BadgeUnlockToast = lazy(() => import('@/components/achievements/BadgeUnlockToast'))
 
-/** Экран `/advent`: 27 дверец, прогресс и серия, лист дверцы (#2861). */
+/** Экран `/advent`: дом с 24 дверцами на весь экран, прогресс, бонусы и правила — в док-панели (#2861). */
 export default function AdventScreen() {
   const { t } = useTranslation()
   const colors = useThemedColors()
@@ -48,13 +51,18 @@ export default function AdventScreen() {
   })
   // Серия считается сервером по датам открытия (#2864); до синхронизации — локальная.
   const streak = sync.serverStreak ?? campaign.streak
+  const { width } = useBreakpoints()
+  const isWide = width >= ADVENT_DOCK_MIN_WIDTH
+  // Ширина 0 — статический HTML web до гидратации: там нужны оба узла, лишний прячет critical CSS.
+  // После замера панель живёт в одном месте, иначе на телефоне её содержимое (таймер, шеринг)
+  // монтировалось бы дважды — в скрытой колонке и в листе.
+  const widthKnown = width > 0
+  const bottomInset = useBottomChromeInset().bottom
   const params = useLocalSearchParams<{ day?: string }>()
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
 
-  useScreenHeader({
-    title: i18nT('adventStatic:page.title'),
-    info: [i18nT('adventStatic:page.intro'), i18nT('adventStatic:page.rules')],
-  })
+  // Вступление и правила живут в док-панели (на телефоне — в её листе), не в ⓘ шапки.
+  useScreenHeader({ title: i18nT('adventStatic:page.title') })
 
   const selectedDoor = useMemo(() => doors.find((door) => door.day === selectedDay) ?? null, [doors, selectedDay])
 
@@ -90,10 +98,21 @@ export default function AdventScreen() {
     [completeTask, campaign.now],
   )
 
+  const disabled = !ready || !campaign.hydrated
   const pressDoor = preview.active ? (door: AdventDoorView) => preview.selectDay(door.day) : handlePressDoor
+  const renderDockContent = (onPressDoor: (door: AdventDoorView) => void) => (
+    <AdventDockContent
+      campaign={preview.active ? { ...campaign, doors: preview.doors } : campaign}
+      streak={streak}
+      syncState={sync.state}
+      preview={preview.active}
+      disabled={disabled}
+      onPressDoor={onPressDoor}
+    />
+  )
 
   return (
-    <View style={styles.root} {...SCREEN_CONTENT_FIRST_PROPS}>
+    <View style={[styles.root, { paddingBottom: asBottomDimension(bottomInset) }]} {...SCREEN_CONTENT_FIRST_PROPS}>
       <InstantSEO
         headKey="advent"
         title={i18nT('seoStatic:root.advent.title')}
@@ -115,48 +134,43 @@ export default function AdventScreen() {
           {preview.active ? <Text style={styles.previewDescription}>{t('adventStatic:preview.description')}</Text> : null}
         </View>
       ) : null}
-      <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.scroll} testID="advent-screen">
-        <ResponsiveContainer maxWidth="xl" padding>
-          <View style={styles.stack}>
-            <Text style={styles.intro}>{i18nT('adventStatic:page.intro')}</Text>
-            {campaign.todayDoor ? (
-              <View style={styles.todayCard} testID="advent-today-action">
-                <Text style={styles.todayDate}>{formatDoorDate(campaign.todayDoor.date)}</Text>
-                <Text style={styles.todayTitle}>
-                  {i18nT('adventStatic:home.today', {
-                    value1: campaign.todayDoor.day,
-                    value2: campaign.todayDoor.secret && campaign.todayDoor.state !== 'opened' && campaign.todayDoor.state !== 'done'
-                      ? i18nT('adventStatic:tile.secret')
-                      : campaign.todayDoor.gift.title,
-                  })}
-                </Text>
-                <Button
-                  label={campaign.todayDoor.state === 'available' ? i18nT('adventStatic:home.cta') : i18nT('adventStatic:profile.cta')}
-                  disabled={!ready || !campaign.hydrated || campaign.todayDoor.state === 'locked'}
-                  onPress={() => { if (campaign.todayDoor) pressDoor(campaign.todayDoor) }}
-                  testID="advent-today-open"
-                  labelNumberOfLines={2}
-                  fullWidth
-                />
-              </View>
-            ) : null}
-            <AdventHeader
+      <View
+        style={[styles.body, breakpointStyle(ADVENT_SCREEN_LAYOUT, 'body', isWide)]}
+        testID="advent-screen"
+        {...breakpointLayoutProps(ADVENT_SCREEN_LAYOUT, 'body')}
+      >
+        <AdventStage>
+          <AdventHouseFacade doors={preview.doors} todayDay={campaign.todayDoor?.day} disabled={disabled} onPressDoor={pressDoor} />
+        </AdventStage>
+        {isWide || !widthKnown ? (
+          <View
+            style={[styles.dock, breakpointStyle(ADVENT_SCREEN_LAYOUT, 'dock', isWide)]}
+            testID="advent-dock"
+            {...breakpointLayoutProps(ADVENT_SCREEN_LAYOUT, 'dock')}
+          >
+            <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.dockScroll}>
+              {/* На телефоне h1 — заголовок шапки; на desktop шапка без заголовка, h1 — здесь. */}
+              <Text style={styles.dockTitle} {...(isWide ? headingLevel1Props() : null)}>
+                {i18nT('adventStatic:page.title')}
+              </Text>
+              {renderDockContent(pressDoor)}
+            </ScrollView>
+          </View>
+        ) : null}
+        {/* Широкий экран после гидратации — только колонка; до неё полосу прячет critical CSS. */}
+        {isWide ? null : (
+          <View style={breakpointStyle(ADVENT_SCREEN_LAYOUT, 'dockBar', isWide)} {...breakpointLayoutProps(ADVENT_SCREEN_LAYOUT, 'dockBar')}>
+            <AdventDockBar
               openedCount={campaign.openedCount}
-              doneCount={campaign.doneCount}
-              streak={streak}
               nextDoor={campaign.nextDoor}
               now={campaign.now}
               hydrated={campaign.hydrated}
-              syncState={sync.state}
+              streak={streak}
+              renderContent={(runAfterClose) => renderDockContent((door) => runAfterClose(() => pressDoor(door)))}
             />
-            <AdventGrid doors={preview.doors} todayDay={campaign.todayDoor?.day} disabled={!ready || !campaign.hydrated} onPressDoor={pressDoor} />
-            {!preview.active && campaign.hydrated && campaign.openedCount > 0 ? (
-              <AdventShareCard openedCount={campaign.openedCount} streak={streak} year={campaign.campaign.year} />
-            ) : null}
-            <Text style={styles.rules}>{i18nT('adventStatic:page.rules')}</Text>
           </View>
-        </ResponsiveContainer>
-      </ScrollView>
+        )}
+      </View>
       <AdventDoorSheet
         door={preview.active ? preview.selectedDoor : selectedDoor}
         preview={preview.active}
@@ -185,11 +199,14 @@ const createStyles = (colors: ThemedColors) =>
       padding: DESIGN_TOKENS.spacing.sm,
     },
     previewDescription: { color: colors.textSecondary, textAlign: 'center' },
-    scroll: { paddingVertical: DESIGN_TOKENS.spacing.md, paddingBottom: DESIGN_TOKENS.spacing.xl },
-    stack: { gap: DESIGN_TOKENS.spacing.md, maxWidth: ADVENT_HOUSE_MAX_WIDTH, width: '100%', alignSelf: 'center' },
-    intro: { fontSize: 15, lineHeight: 22, color: colors.textSecondary },
-    todayCard: { padding: DESIGN_TOKENS.spacing.md, borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.primarySoft, borderRadius: DESIGN_TOKENS.radii.lg, gap: DESIGN_TOKENS.spacing.xs },
-    todayDate: { fontSize: 13, lineHeight: 18, color: colors.primaryDark, fontWeight: '600' },
-    todayTitle: { fontSize: 18, lineHeight: 25, color: colors.text, fontWeight: '700' },
-    rules: { fontSize: 13, lineHeight: 18, color: colors.textMuted },
+    body: { flex: 1, minHeight: 0 },
+    dock: {
+      width: ADVENT_DOCK_WIDTH,
+      flexShrink: 0,
+      borderLeftWidth: 1,
+      borderLeftColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    dockScroll: { padding: DESIGN_TOKENS.spacing.md, paddingBottom: DESIGN_TOKENS.spacing.xl, gap: DESIGN_TOKENS.spacing.md },
+    dockTitle: { fontSize: 22, lineHeight: 28, fontWeight: '700', color: colors.text },
   })

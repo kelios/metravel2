@@ -34,7 +34,11 @@ jest.mock('@/components/ui/BottomSheet', () => {
   return ({ visible, children }: { visible: boolean; children: React.ReactNode }) =>
     visible ? React.createElement(View, { testID: 'advent-sheet-mock' }, children) : null
 })
-jest.mock('@/hooks/useResponsive', () => ({ useResponsive: () => ({ isPhone: false, isLargePhone: false, width: 1280, height: 800 }) }))
+let mockWidth = 1280
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsive: () => ({ isPhone: false, isLargePhone: false, width: 1280, height: 800 }),
+  useBreakpoints: () => ({ width: mockWidth }),
+}))
 
 const renderAt = async (date: Date) => {
   fakeToday(date)
@@ -57,9 +61,52 @@ describe('AdventScreen (#2861)', () => {
     mockFetchAdventProgress.mockImplementation(missing)
     mockSyncAdventProgress.mockImplementation(missing)
     mockFetchYearInReview.mockImplementation(missing)
+    mockWidth = 1280
     await i18n.changeLanguage('ru')
   })
   afterEach(() => jest.useRealTimers())
+
+  it('keeps the dock as a single column on wide screens', async () => {
+    const wide = await renderAt(new Date(2026, 11, 3, 12))
+    expect(wide.getByTestId('advent-dock')).toBeTruthy()
+    expect(wide.queryByTestId('advent-dock-bar')).toBeNull()
+  })
+
+  it('collapses the dock into a bar with a sheet on phones', async () => {
+    mockWidth = 390
+    const phone = await renderAt(new Date(2026, 11, 3, 12))
+    // Содержимое панели живёт в одном месте: в скрытой колонке его нет, только в листе.
+    expect(phone.queryByTestId('advent-dock', { includeHiddenElements: true })).toBeNull()
+    expect(phone.getByTestId('advent-dock-bar')).toBeTruthy()
+    expect(phone.queryByTestId('advent-today-action', { includeHiddenElements: true })).toBeNull()
+    await fireEvent.press(phone.getByTestId('advent-dock-open'))
+    expect(phone.getAllByTestId('advent-today-action', { includeHiddenElements: true })).toHaveLength(1)
+    expect(phone.getAllByTestId('advent-bonus-doors', { includeHiddenElements: true })).toHaveLength(1)
+  })
+
+  it('closes the phone dock sheet before opening the door sheet (no stacked Modals on iOS)', async () => {
+    mockWidth = 390
+    const phone = await renderAt(new Date(2026, 11, 3, 12))
+    await fireEvent.press(phone.getByTestId('advent-dock-open'))
+    await fireEvent.press(phone.getByTestId('advent-today-open'))
+    expect(phone.queryByTestId('advent-dock-sheet')).toBeNull()
+    expect(await phone.findByTestId('advent-door-sheet-3', {}, { timeout: 2000 })).toBeTruthy()
+  })
+
+  it('renders both dock variants before the width is known, for the static first frame', async () => {
+    mockWidth = 0
+    const screen = await renderAt(new Date(2026, 11, 3, 12))
+    // Узкая сторона реестра прячет колонку (display:none), широкую на web включает critical CSS.
+    expect(screen.getByTestId('advent-dock', { includeHiddenElements: true })).toBeTruthy()
+    expect(screen.getByTestId('advent-dock-bar')).toBeTruthy()
+  })
+
+  it('shows only the countdown in the phone bar before launch', async () => {
+    mockWidth = 390
+    const screen = await renderAt(new Date(2026, 10, 2, 12))
+    expect(screen.getByTestId('advent-countdown').props.children).toMatch(/Дверца 1 откроется/)
+    expect(screen.queryByText('Открыто 0 из 24')).toBeNull()
+  })
 
   it('renders 27 doors with 1–3 available on 03.12 and the rest locked', async () => {
     const screen = await renderAt(new Date(2026, 11, 3, 12))
@@ -91,7 +138,9 @@ describe('AdventScreen (#2861)', () => {
     expect(screen.getByTestId('advent-countdown').props.children).toMatch(/Дверца 1 откроется/)
     await fireEvent.press(screen.getByTestId('advent-door-1'))
     expect(screen.queryByTestId('advent-door-sheet-1')).toBeNull()
-    expect(screen.getByText('Открыто 0 из 24 дверец')).toBeTruthy()
+    // До старта — только отсчёт, без нулевых счётчиков прогресса и серии.
+    expect(screen.queryByText('Открыто 0 из 24 дверец')).toBeNull()
+    expect(screen.queryByText('Серия день в день: 0')).toBeNull()
     expect(useAdventProgressStore.getState().byOwner.u7).toBeUndefined()
   })
 

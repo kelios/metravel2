@@ -2,6 +2,8 @@ export const adventStaticResources = {
   "page.title": "Kalendarz adwentowy podróżnika",
   "page.intro": "Od 1 do 24 grudnia każdego dnia otwiera się nowe okienko: prezent, zadanie i nagroda. Pominięte okienka można otworzyć później, ale seria liczy się tylko dzień w dzień. Trzy okienka bonusowe — 25 grudnia, 31 grudnia i 7 stycznia.",
   "page.rules": "Okienko otwiera się o północy czasu lokalnego. Zadania i nagrody są dostępne po zalogowaniu; gość widzi prezenty z otwartych okienek.",
+  "panel.bonusTitle": "Okienka bonusowe",
+  "panel.more": "Więcej",
   "preview.enter": "Podgląd dla administratora",
   "preview.exit": "Zakończ podgląd",
   "preview.description": "Możesz otworzyć dowolne okienko. Postępy i nagrody nie są zapisywane.",

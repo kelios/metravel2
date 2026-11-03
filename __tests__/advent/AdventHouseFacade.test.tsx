@@ -36,7 +36,7 @@ describe('approved advent house facade', () => {
       expect(button.props.dataSet?.tooltip).toBeUndefined()
     }
     const facade = screen.getByTestId('advent-house-facade')
-    expect(StyleSheet.flatten(facade.props.style)).toMatchObject({ aspectRatio: 2 / 3, width: '100%', maxWidth: 680 })
+    expect(StyleSheet.flatten(facade.props.style)).toMatchObject({ aspectRatio: 2 / 3, width: '100%', maxWidth: 900 })
     expect(facade.props.onLayout).toBeUndefined()
     expect(screen.getByTestId('advent-house-artwork', { includeHiddenElements: true }).props.source).toBe(ADVENT_VISUAL_ASSETS.facade)
     expect(screen.getByTestId('advent-door-1').props.accessibilityLabel).toMatch(/Дверца 1, 1 декабря, Откроется/)
@@ -81,7 +81,7 @@ describe('approved advent house facade', () => {
 })
 
 describe('facade geometry at phone and desktop sizes', () => {
-  it.each([288, 358, 680])('keeps 44px targets separated at house width %d', (width) => {
+  it.each([288, 358, 680, 900])('keeps 44px targets separated at house width %d', (width) => {
     const height = width / ADVENT_HOUSE_ASPECT_RATIO
     const boxes = ADVENT_HOUSE_WINDOWS.map(({ style }) => ({
       left: parseFloat(String(style.left)) / 100 * width,

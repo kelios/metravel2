@@ -2,6 +2,8 @@ export const adventStaticResources = {
   "page.title": "Traveller's Advent Calendar",
   "page.intro": "From 1 to 24 December a new door opens every day: a gift, a task and a reward. Missed doors can be opened later, but the streak only counts same-day opens. Three bonus doors: 25 December, 31 December and 7 January.",
   "page.rules": "A door opens at midnight in your local time. Tasks and rewards need an account; guests see the gifts behind open doors.",
+  "panel.bonusTitle": "Bonus doors",
+  "panel.more": "Details",
   "preview.enter": "Admin preview",
   "preview.exit": "Exit preview",
   "preview.description": "You can open any door. Progress and rewards are not saved.",

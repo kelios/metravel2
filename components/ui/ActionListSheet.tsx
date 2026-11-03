@@ -1,13 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useRef } from 'react'
+import React, { useMemo } from 'react'
 import { Platform, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import BottomSheet from '@/components/ui/BottomSheet'
 import CardActionPressable from '@/components/ui/CardActionPressable'
+import { useRunAfterSheetClose } from '@/components/ui/useRunAfterSheetClose'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
-
-// Анимация fade закрытия ~300 мс; если `onDismiss` не пришёл — действие всё равно выполнится.
-const IOS_DISMISS_FALLBACK_MS = 450
 
 export type ActionListSheetItem = {
   key: string
@@ -57,37 +55,11 @@ const ActionListSheet: React.FC<Props> = ({
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
 
-  // #2115: пункт часто открывает следующий Modal (`ConfirmDialog` удаления). На iOS
-  // UIKit не покажет его, пока этот лист ещё закрывается (Fabric
-  // `RCTModalHostViewComponentView` не ждёт dismiss), поэтому действие ждёт
-  // `onDismiss` листа; страховка — таймер. Ровно один вызов. Web/Android — сразу.
-  const pendingActionRef = useRef<(() => void) | null>(null)
-  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const flushPendingAction = useCallback(() => {
-    if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current)
-    pendingTimerRef.current = null
-    const run = pendingActionRef.current
-    pendingActionRef.current = null
-    run?.()
-  }, [])
-  useEffect(() => () => {
-    if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current)
-  }, [])
-  const runAfterClose = useCallback(
-    (run: () => void) => {
-      onClose()
-      if (Platform.OS !== 'ios') {
-        run()
-        return
-      }
-      pendingActionRef.current = run
-      pendingTimerRef.current = setTimeout(flushPendingAction, IOS_DISMISS_FALLBACK_MS)
-    },
-    [flushPendingAction, onClose],
-  )
+  // #2115: пункт часто открывает следующий Modal (`ConfirmDialog` удаления) — ждём закрытия листа.
+  const { runAfterClose, onDismiss } = useRunAfterSheetClose(onClose)
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} title={title} onDismiss={flushPendingAction}>
+    <BottomSheet visible={visible} onClose={onClose} title={title} onDismiss={onDismiss}>
       {children}
       <View style={styles.list}>
         {actions.map((action, index) => (

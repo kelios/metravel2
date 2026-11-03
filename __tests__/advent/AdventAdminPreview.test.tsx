@@ -15,6 +15,11 @@ jest.mock('@/hooks/useAdventApi', () => ({
   useAdventCampaignQuery: () => null,
   useAdventServerSync: (params: unknown) => mockSync(params),
 }))
+jest.mock('@/hooks/useResponsive', () => ({
+  ...jest.requireActual('@/hooks/useResponsive'),
+  useBreakpoints: () => ({ width: 1280 }),
+}))
+jest.mock('@/components/advent/AdventStage', () => ({ children }: { children: React.ReactNode }) => children)
 jest.mock('@/components/achievements/BadgeUnlockToast', () => () => null)
 jest.mock('@/components/ui/BottomSheet', () => ({ visible, children, onClose }: {
   visible: boolean

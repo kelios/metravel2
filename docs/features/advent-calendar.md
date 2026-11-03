@@ -131,13 +131,14 @@
 
 ```
 AdventScreen
- ├─ AdventHeader            — заголовок, серия, прогресс N/24, ссылка на правила
- ├─ AdventGrid              — фасад и отдельные 3 бонусные даты
- │   ├─ AdventHouseFacade   — 24 окна, реальные состояния и callbacks
- │   │   └─ AdventHouseWindow
- │   └─ AdventDoorTile      — бонусы с фактической датой вместо ID 25/26/27
+ ├─ AdventStage             — свободная область экрана; дом вписан целиком (min(ширина, высота × 2/3))
+ │   └─ AdventHouseFacade   — 24 окна, реальные состояния и callbacks
+ │       └─ AdventHouseWindow
+ ├─ AdventDockContent       — док-панель: дверца дня, прогресс, бонусы, шеринг, правила
+ │   ├─ AdventHeader + AdventCountdown — прогресс N/24, серия, до следующей дверцы
+ │   └─ AdventBonusDoors    — 3 бонуса (AdventDoorTile) с фактической датой вместо ID 25/26/27
+ ├─ AdventDockBar           — узкий экран: свёрнутая панель под домом, всё остальное — в листе
  ├─ AdventDoorSheet         — подарок, задание, кнопка действия, поле ответа (для загадок)
- ├─ AdventCountdown         — до следующей дверцы (местная полночь)
  └─ AdventYearInReviewCard  — финал 24.12, шеринг
 ```
 
@@ -152,6 +153,18 @@ AdventScreen
 градиент и все декоративные слои не перехватывают ввод. Три бонуса используют
 прежние ID и правила, но показывают 25 декабря, 31 декабря и 7 января.
 
+### Раскладка экрана: дом на весь экран, остальное — в док-панели
+
+Страница не прокручивается: дом занимает всю свободную высоту между шапкой и подвалом/доком,
+его ширина — min(ширина области, высота × 2/3), не больше 900 px (родной размер иллюстрации).
+На web размер считает CSS (`container-type: size` + `cqw/cqh` в `AdventStage`) — статический HTML
+сразу верный, без замера; на native — `onLayout` той же области. Всё служебное (дверца дня,
+прогресс и серия, синхронизация, бонусы, шеринг, вступление и правила) — в `AdventDockContent`:
+с брейкпоинта шапки (768 px, `HEADER_LAYOUT_BREAKPOINTS.mobileContext`) это колонка 320 px справа со своей прокруткой и h1 страницы (шапка там заголовок не показывает), уже — `AdventDockBar` под домом
+(прогресс и серия одной строкой, «Подробнее» открывает `BottomSheet`). Переключение — реестр
+`ADVENT_SCREEN_LAYOUT` (`adventScreenLayout.ts`), его широкую сторону critical CSS выпускает
+для первого кадра.
+
 Источники и фиксированные пигменты иллюстрации — `constants/adventVisuals.ts`,
 ассеты и provenance — `assets/advent/2026/`. Это AI-иллюстрация вымышленного дома,
 не документальное фото места. Пакет импортируется только адвентом. Сегодняшнее
@@ -164,7 +177,7 @@ AdventScreen
 изображения нет пустой декоративной плашки. Редакционные фотографии и тексты
 не подменяются иллюстрацией фасада.
 
-`components/advent/**` (`AdventScreen`, `AdventHeader` + `AdventCountdown`, `AdventGrid` + `AdventDoorTile`,
+`components/advent/**` (`AdventScreen`, `AdventHeader` + `AdventCountdown`, `AdventStage`, `AdventDockContent` / `AdventDockBar`, `AdventBonusDoors` + `AdventDoorTile`,
 `AdventDoorSheet` на `components/ui/BottomSheet`, задания `AdventRiddleTask` и `AdventGeoTask` — карта
 `UserPointsMap` грузится лениво при открытии гео-дверцы). Хуки: `hooks/useAdventCampaign.ts`
 (`useLocalCalendarDate` с пересчётом по местной полуночи, focus/visibility/pageshow и AppState — как

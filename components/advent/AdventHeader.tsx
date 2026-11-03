@@ -23,29 +23,39 @@ const SYNC_VISUALS: Record<Exclude<AdventSyncState, 'guest'>, { icon: keyof type
   local: { icon: 'smartphone', label: () => i18nT('adventStatic:sync.local') },
 }
 
+/** Кампания ещё не началась: не открыто ни одной дверцы, следующая — первая. */
+export const isAdventPrelaunch = (openedCount: number, nextDoor: AdventCampaignView['nextDoor']): boolean =>
+  openedCount === 0 && nextDoor?.day === 1
+
 function AdventHeader({ openedCount, doneCount, streak, nextDoor, now, hydrated, syncState = 'guest' }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const ratio = Math.min(1, openedCount / ADVENT_MAIN_DOORS)
+  // До 1 декабря счётчики — одни нули: честнее показать только отсчёт до первой дверцы.
+  const prelaunch = isAdventPrelaunch(openedCount, nextDoor)
 
   return (
     <View style={styles.card} testID="advent-header">
-      <Text style={styles.progress}>
-        {i18nT('adventStatic:header.progress', { value1: formatInteger(openedCount), value2: formatInteger(ADVENT_MAIN_DOORS) })}
-      </Text>
-      <View style={styles.bar} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: ADVENT_MAIN_DOORS, now: openedCount }}>
-        <View style={[styles.barFill, { width: `${Math.round(ratio * 100)}%` }]} />
-      </View>
-      <View style={styles.statsRow}>
-        <View style={styles.stat}>
-          <Feather name="check-circle" size={16} color={colors.success} />
-          <Text style={styles.statText}>{i18nT('adventStatic:header.done', { value1: formatInteger(doneCount) })}</Text>
-        </View>
-        <View style={styles.stat}>
-          <Feather name="zap" size={16} color={colors.warning} />
-          <Text style={styles.statText}>{i18nT('adventStatic:header.streak', { value1: formatInteger(streak) })}</Text>
-        </View>
-      </View>
+      {prelaunch ? null : (
+        <>
+          <Text style={styles.progress}>
+            {i18nT('adventStatic:header.progress', { value1: formatInteger(openedCount), value2: formatInteger(ADVENT_MAIN_DOORS) })}
+          </Text>
+          <View style={styles.bar} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: ADVENT_MAIN_DOORS, now: openedCount }}>
+            <View style={[styles.barFill, { width: `${Math.round(ratio * 100)}%` }]} />
+          </View>
+          <View style={styles.statsRow}>
+            <View style={styles.stat}>
+              <Feather name="check-circle" size={16} color={colors.success} />
+              <Text style={styles.statText}>{i18nT('adventStatic:header.done', { value1: formatInteger(doneCount) })}</Text>
+            </View>
+            <View style={styles.stat}>
+              <Feather name="zap" size={16} color={colors.warning} />
+              <Text style={styles.statText}>{i18nT('adventStatic:header.streak', { value1: formatInteger(streak) })}</Text>
+            </View>
+          </View>
+        </>
+      )}
       <AdventCountdown nextDoor={nextDoor} now={now} hydrated={hydrated} />
       {hydrated && syncState !== 'guest' ? (
         <View style={styles.stat} testID={`advent-sync-${syncState}`}>
