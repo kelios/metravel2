@@ -19,28 +19,29 @@ describe('fetchNearbyTravelMapPoints', () => {
     mockedFetchWithTimeout.mockReset()
   })
 
-  it('queries the light catalog by slug and keeps only exact nearby travel points', async () => {
-    mockedFetchWithTimeout.mockResolvedValueOnce(responseWithJson([
+  it('requests six routes in one batch and keeps only their points', async () => {
+    mockedFetchWithTimeout.mockResolvedValueOnce(responseWithJson({ results: [
       {
         id: 11,
-        coord: '50.061,19.938',
+        lat: 50.061,
+        lng: 19.938,
         title: 'Nearby route',
         countryName: 'Poland',
         travelImageThumbUrl: '/address-image/11/',
-        travel: { id: 301, slug: 'nearby-route' },
+        travel_id: 301,
         urlTravel: '/travels/nearby-route',
       },
       {
         id: 12,
         coord: '51.1,20.2',
         title: 'Different route',
-        travel: { id: 999, slug: 'different-route' },
+        travel_id: 999,
       },
-    ]))
+    ] }))
 
     const points = await fetchNearbyTravelMapPoints(
       { lat: 50.05, lng: 19.94 },
-      [{ id: 301, slug: 'nearby-route' }],
+      [301, 302, 303, 304, 305, 306],
     )
 
     expect(points).toEqual([
@@ -51,79 +52,45 @@ describe('fetchNearbyTravelMapPoints', () => {
         travelImageThumbUrl: 'https://metravel.by/address-image/11/',
         categoryName: 'Poland',
         urlTravel: '/travels/nearby-route',
-        // #1960: id статьи из `travel.id` — попап карты «Рядом» не запрашивает её по slug.
+        // #1960: id статьи из `travel_id` — попап карты «Рядом» не запрашивает её по slug.
         travelId: 301,
       },
     ])
     expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1)
 
     const requestedUrl = new URL(String(mockedFetchWithTimeout.mock.calls[0]?.[0]))
-    expect(requestedUrl.pathname).toContain('/travels/search_travels_for_map_lite/')
-    expect(JSON.parse(requestedUrl.searchParams.get('where') ?? '{}')).toEqual({
-      lat: 50.05,
-      lng: 19.94,
-      radius: 60,
-      publish: true,
-      moderation: true,
-      query: 'nearby-route',
+    expect(requestedUrl.pathname).toBe('/api/travels/nearby-map-points/')
+    expect(Object.fromEntries(requestedUrl.searchParams)).toEqual({
+      travel_ids: '301,302,303,304,305,306',
+      lat: '50.05',
+      lng: '19.94',
     })
   })
 
-  it('does not request the map catalog without a valid origin or travel slug', async () => {
-    await expect(fetchNearbyTravelMapPoints(
-      { lat: Number.NaN, lng: 19.94 },
-      [{ id: 301, slug: 'nearby-route' }],
-    )).resolves.toEqual([])
-    await expect(fetchNearbyTravelMapPoints(
-      { lat: 50.05, lng: 19.94 },
-      [{ id: 301, slug: '' }],
-    )).resolves.toEqual([])
+  it('skips the request without valid coordinates or route ids', async () => {
+    await expect(fetchNearbyTravelMapPoints({ lat: Number.NaN, lng: 19.94 }, [301]))
+      .resolves.toEqual([])
+    await expect(fetchNearbyTravelMapPoints({ lat: 50.05, lng: 19.94 }, [0, -1]))
+      .resolves.toEqual([])
     expect(mockedFetchWithTimeout).not.toHaveBeenCalled()
   })
 
-  it('rejects when every target request fails but preserves partial success', async () => {
-    mockedFetchWithTimeout.mockRejectedValueOnce(new TypeError('Network request failed'))
-
-    await expect(fetchNearbyTravelMapPoints(
-      { lat: 50.05, lng: 19.94 },
-      [{ id: 301, slug: 'nearby-route' }],
-    )).rejects.toThrow('Network request failed')
-
-    mockedFetchWithTimeout
-      .mockResolvedValueOnce(responseWithJson([
-        {
-          id: 11,
-          coord: '50.061,19.938',
-          title: 'Nearby route',
-          travel: { id: 301, slug: 'nearby-route' },
-        },
-      ]))
-      .mockRejectedValueOnce(new TypeError('Second request failed'))
-
-    await expect(fetchNearbyTravelMapPoints(
-      { lat: 50.05, lng: 19.94 },
-      [
-        { id: 301, slug: 'nearby-route' },
-        { id: 302, slug: 'other-nearby-route' },
-      ],
-    )).resolves.toEqual([
-      expect.objectContaining({ id: '11', coord: '50.061,19.938' }),
-    ])
+  it('distinguishes an empty result from an invalid response', async () => {
+    const origin = { lat: 50.05, lng: 19.94 }
+    mockedFetchWithTimeout.mockResolvedValueOnce(responseWithJson({ results: [] }))
+    await expect(fetchNearbyTravelMapPoints(origin, [301])).resolves.toEqual([])
+    mockedFetchWithTimeout.mockResolvedValueOnce(responseWithJson({ results: null }))
+    await expect(fetchNearbyTravelMapPoints(origin, [301])).rejects.toMatchObject({
+      data: { code: 'INVALID_NEARBY_MAP_RESPONSE' },
+    })
   })
 
-  it('propagates cancellation instead of treating it as a partial failure', async () => {
+  it('propagates cancellation', async () => {
     const abortError = new Error('Aborted')
     abortError.name = 'AbortError'
-    mockedFetchWithTimeout
-      .mockRejectedValueOnce(abortError)
-      .mockResolvedValueOnce(responseWithJson([]))
-
-    await expect(fetchNearbyTravelMapPoints(
-      { lat: 50.05, lng: 19.94 },
-      [
-        { id: 301, slug: 'nearby-route' },
-        { id: 302, slug: 'other-nearby-route' },
-      ],
-    )).rejects.toBe(abortError)
+    mockedFetchWithTimeout.mockRejectedValueOnce(abortError)
+    await expect(fetchNearbyTravelMapPoints({ lat: 50.05, lng: 19.94 }, [301, 302]))
+      .rejects.toBe(abortError)
+    expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1)
   })
 })

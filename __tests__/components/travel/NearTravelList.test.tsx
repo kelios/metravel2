@@ -171,7 +171,7 @@ describe('NearTravelList', () => {
 
     await waitFor(() => expect(fetchNearbyTravelMapPoints).toHaveBeenCalledWith(
       { lat: 50.05, lng: 19.94 },
-      expect.arrayContaining([expect.objectContaining({ id: 301, slug: 'compact-nearby-route' })]),
+      [301],
       expect.any(Object),
     ));
     await waitFor(() => expect(mockTravelMap).toHaveBeenCalled());
@@ -227,7 +227,7 @@ describe('NearTravelList', () => {
 
     await waitFor(() => expect(fetchNearbyTravelMapPoints).toHaveBeenCalledWith(
       { lat: 50.05, lng: 19.94 },
-      [expect.objectContaining({ id: 301, slug: 'compact-nearby-route' })],
+      [301],
       expect.any(Object),
     ));
     await waitFor(() => {
@@ -250,7 +250,9 @@ describe('NearTravelList', () => {
         { id: 301, name: 'First nearby route', slug: 'first-nearby-route' },
       ])
       .mockReturnValueOnce(nextTravels);
-    fetchNearbyTravelMapPoints.mockResolvedValue([]);
+    fetchNearbyTravelMapPoints
+      .mockReturnValueOnce(new Promise(() => {}))
+      .mockResolvedValue([]);
 
     const renderList = (travel: React.ComponentProps<typeof NearTravelList>['travel']) => (
       <QueryClientProvider client={queryClient}>
@@ -268,9 +270,10 @@ describe('NearTravelList', () => {
     await fireEvent.press(screen.getByText('Карта'));
     await waitFor(() => expect(fetchNearbyTravelMapPoints).toHaveBeenCalledWith(
       { lat: 50.05, lng: 19.94 },
-      [expect.objectContaining({ id: 301, slug: 'first-nearby-route' })],
+      [301],
       expect.any(Object),
     ));
+    const firstMapSignal = fetchNearbyTravelMapPoints.mock.calls[0][2];
 
     await rerender(renderList({
       id: 2,
@@ -282,6 +285,7 @@ describe('NearTravelList', () => {
       await Promise.resolve();
     });
     expect(fetchNearbyTravelMapPoints).toHaveBeenCalledTimes(1);
+    expect(firstMapSignal.aborted).toBe(true);
 
     await act(async () => {
       resolveNextTravels([
@@ -292,7 +296,7 @@ describe('NearTravelList', () => {
     await waitFor(() => expect(fetchNearbyTravelMapPoints).toHaveBeenCalledTimes(2));
     expect(fetchNearbyTravelMapPoints).toHaveBeenLastCalledWith(
       { lat: 51.05, lng: 20.94 },
-      [expect.objectContaining({ id: 302, slug: 'second-nearby-route' })],
+      [302],
       expect.any(Object),
     );
   });

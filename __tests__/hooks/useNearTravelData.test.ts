@@ -1,5 +1,5 @@
 import React from 'react';
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { useNearTravelData } from '@/hooks/useNearTravelData';
@@ -129,7 +129,7 @@ describe('useNearTravelData canonical /near/ adapter path', () => {
     ]);
   });
 
-  it('keeps the travel id on lite-catalog fallback map points for the popup stack (#1960)', async () => {
+  it('keeps the travel id on batch map points for the popup stack (#1960)', async () => {
     mockedFetchWithTimeout
       .mockResolvedValueOnce(responseWithJson({
         count: 1,
@@ -137,15 +137,15 @@ describe('useNearTravelData canonical /near/ adapter path', () => {
         previous: null,
         results: [travelCard(301)],
       }))
-      .mockResolvedValueOnce(responseWithJson([
+      .mockResolvedValueOnce(responseWithJson({ results: [
         {
           id: 11,
           coord: '50.061,19.938',
           title: 'Nearby route',
-          travel: { id: 301, slug: 'travel-301' },
+          travel_id: 301,
           urlTravel: 'https://metravel.by/travels/travel-301',
         },
-      ]));
+      ] }));
 
     const { result } = await renderHook(
       () => useNearTravelData(384, undefined, true, {
@@ -162,6 +162,43 @@ describe('useNearTravelData canonical /near/ adapter path', () => {
         travelId: 301,
       }),
     );
+  });
+
+  it('fetches no points in cards mode and aborts the single map request on close', async () => {
+    const origin = { lat: 50.05, lng: 19.94 };
+    let finishRequest!: (response: Response) => void;
+    const pending = new Promise<Response>((resolve) => { finishRequest = resolve; });
+    mockedFetchWithTimeout
+      .mockResolvedValueOnce(responseWithJson({
+        count: 6,
+        next: null,
+        previous: null,
+        results: Array.from({ length: 6 }, (_, index) => travelCard(index + 1)),
+      }))
+      .mockReturnValueOnce(pending);
+
+    const { result, rerender } = await renderHook(
+      ({ open }) => useNearTravelData(384, undefined, true, { enabled: open, origin }),
+      { wrapper: makeWrapper(), initialProps: { open: false } },
+    );
+    await waitFor(() => expect(result.current.travelsNear).toHaveLength(6));
+    expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(1);
+
+    await rerender({ open: true });
+    await waitFor(() => expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2));
+    const [url, options] = mockedFetchWithTimeout.mock.calls[1];
+    expect(new URL(String(url)).searchParams.get('travel_ids')).toBe('1,2,3,4,5,6');
+    expect(String(url)).toContain('/nearby-map-points/');
+    expect(options?.signal?.aborted).toBe(false);
+
+    await rerender({ open: false });
+    expect(options?.signal?.aborted).toBe(true);
+    await act(async () => {
+      finishRequest(responseWithJson({ results: [{ id: 11, travel_id: 1, lat: 50, lng: 19 }] }));
+      await pending;
+    });
+    expect(result.current.mapPoints).toEqual([]);
+    expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2);
   });
 
   it.each([

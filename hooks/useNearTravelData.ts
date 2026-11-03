@@ -4,11 +4,11 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { fetchNearbyTravelMapPoints, fetchTravelsNear } from '@/api/map';
+import { NEAR_TRAVELS_LIMIT } from '@/api/map/nearbyMapPoints';
 import { queryConfigs } from '@/utils/reactQueryConfig';
 import { queryKeys } from '@/api/queryKeys';
 import type { Travel } from '@/types/types';
 
-const NEAR_TRAVELS_LIMIT = 6;
 const EMPTY_TRAVELS: Travel[] = [];
 
 export function useNearTravelData(
@@ -111,45 +111,30 @@ export function useNearTravelData(
     return { points, travelIds };
   }, [mapSourceTravels]);
 
-  const fallbackTravels = useMemo(
+  const fallbackTravelIds = useMemo(
     () => directMapData.points.length >= 50
       ? []
-      : mapSourceTravels.filter((travel) => {
-        const id = Number(travel.id);
-        return Number.isFinite(id) && id > 0 && !directMapData.travelIds.has(id);
-      }),
+      : [...new Set(mapSourceTravels.map((travel) => Number(travel.id)))].filter(
+        (id) => Number.isSafeInteger(id) && id > 0 && !directMapData.travelIds.has(id),
+      ),
     [directMapData, mapSourceTravels],
   );
-  const fallbackTravelKey = useMemo(
-    () => fallbackTravels.map((travel) => ({
-      id: Number(travel.id),
-      slug: typeof travel.slug === 'string' ? travel.slug.trim() : '',
-    })),
-    [fallbackTravels],
-  );
-  const fallbackMapEnabled = Boolean(
-    travelId != null &&
-    mapOptions?.enabled &&
-    mapOptions.origin &&
-    fallbackTravelKey.some((travel) => travel.slug),
-  );
+  // Detach from the active query on close so React Query aborts unused work.
+  const mapOrigin = enabled && travelId != null && mapOptions?.enabled
+    ? mapOptions.origin
+    : null;
+  const fallbackMapEnabled = mapOrigin != null && fallbackTravelIds.length > 0;
   const {
     data: fallbackMapPoints = [],
     isLoading: isFallbackMapLoading,
     isError: isFallbackMapError,
     refetch: refetchMapPoints,
   } = useQuery({
-    queryKey: queryKeys.travelsNearMap(
-      travelId as number,
-      mapOptions?.origin ?? { lat: 0, lng: 0 },
-      fallbackTravelKey,
-    ),
+    queryKey: queryKeys.travelsNearMap(travelId, mapOrigin, fallbackTravelIds),
     enabled: fallbackMapEnabled,
-    queryFn: ({ signal }) => fetchNearbyTravelMapPoints(
-      mapOptions?.origin as { lat: number; lng: number },
-      fallbackTravels,
-      signal,
-    ),
+    queryFn: ({ signal }) => mapOrigin
+      ? fetchNearbyTravelMapPoints(mapOrigin, fallbackTravelIds, signal)
+      : Promise.resolve([]),
     ...queryConfigs.paginated,
     retry: false,
     refetchOnMount: false,
