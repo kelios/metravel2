@@ -8,9 +8,11 @@ import Button from '@/components/ui/Button'
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { ADVENT_ROUTE } from '@/constants/advent'
+import { useAdventAdminPreview } from '@/hooks/useAdventAdminPreview'
 import { useAdventCampaign, type AdventDoorView } from '@/hooks/useAdventCampaign'
 import { useAdventCampaignQuery, useAdventServerSync } from '@/hooks/useAdventApi'
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme'
+import { useTranslation } from '@/i18n/LocaleProvider'
 import { translate as i18nT } from '@/i18n'
 import { sendAnalyticsEvent } from '@/utils/analytics'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
@@ -30,16 +32,18 @@ const BadgeUnlockToast = lazy(() => import('@/components/achievements/BadgeUnloc
 
 /** Экран `/advent`: 27 дверец, прогресс и серия, лист дверцы (#2861). */
 export default function AdventScreen() {
+  const { t } = useTranslation()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const serverCampaign = useAdventCampaignQuery()
   const campaign = useAdventCampaign({ serverCampaign })
   const { doors, ready, isAuthenticated, openDoor, completeTask } = campaign
+  const preview = useAdventAdminPreview(doors, campaign.hydrated, campaign.now)
   const serverCreditedDays = useMemo(() => selectServerCreditedDays(campaign.campaign.doors), [campaign.campaign])
   const sync = useAdventServerSync({
     ownerKey: campaign.ownerKey,
     localProgress: campaign.progress,
-    enabled: campaign.hydrated,
+    enabled: campaign.hydrated && !preview.active,
     serverCreditedDays,
   })
   // Серия считается сервером по датам открытия (#2864); до синхронизации — локальная.
@@ -72,12 +76,12 @@ export default function AdventScreen() {
   const handledDayParam = useRef<string | null>(null)
   useEffect(() => {
     const raw = typeof params.day === 'string' ? params.day : null
-    if (!ready || !campaign.hydrated || !raw || handledDayParam.current === raw) return
+    if (preview.active || !ready || !campaign.hydrated || !raw || handledDayParam.current === raw) return
     handledDayParam.current = raw
     const door = doors.find((item) => item.day === Number(raw))
     // Тот же путь, что и тап по плитке: дверца открывается и зачитывается новому владельцу.
     if (door) handlePressDoor(door)
-  }, [ready, campaign.hydrated, params.day, doors, handlePressDoor])
+  }, [ready, campaign.hydrated, params.day, doors, handlePressDoor, preview.active])
 
   const handleCompleteTask = useCallback(
     (day: number) => {
@@ -85,6 +89,8 @@ export default function AdventScreen() {
     },
     [completeTask, campaign.now],
   )
+
+  const pressDoor = preview.active ? (door: AdventDoorView) => preview.selectDay(door.day) : handlePressDoor
 
   return (
     <View style={styles.root} {...SCREEN_CONTENT_FIRST_PROPS}>
@@ -95,6 +101,20 @@ export default function AdventScreen() {
         canonical={buildCanonicalUrl(ADVENT_ROUTE)}
         image={DEFAULT_OG_IMAGE_PATH}
       />
+      {preview.allowed ? (
+        <View style={styles.previewControls}>
+          <Button
+            label={t(preview.active ? 'adventStatic:preview.exit' : 'adventStatic:preview.enter')}
+            onPress={() => {
+              setSelectedDay(null)
+              preview.toggle()
+            }}
+            variant="outline"
+            testID="advent-preview-toggle"
+          />
+          {preview.active ? <Text style={styles.previewDescription}>{t('adventStatic:preview.description')}</Text> : null}
+        </View>
+      ) : null}
       <ScrollView style={webTouchScrollStyle} contentContainerStyle={styles.scroll} testID="advent-screen">
         <ResponsiveContainer maxWidth="xl" padding>
           <View style={styles.stack}>
@@ -113,7 +133,7 @@ export default function AdventScreen() {
                 <Button
                   label={campaign.todayDoor.state === 'available' ? i18nT('adventStatic:home.cta') : i18nT('adventStatic:profile.cta')}
                   disabled={!ready || !campaign.hydrated || campaign.todayDoor.state === 'locked'}
-                  onPress={() => { if (campaign.todayDoor) handlePressDoor(campaign.todayDoor) }}
+                  onPress={() => { if (campaign.todayDoor) pressDoor(campaign.todayDoor) }}
                   testID="advent-today-open"
                   labelNumberOfLines={2}
                   fullWidth
@@ -129,8 +149,8 @@ export default function AdventScreen() {
               hydrated={campaign.hydrated}
               syncState={sync.state}
             />
-            <AdventGrid doors={doors} todayDay={campaign.todayDoor?.day} disabled={!ready || !campaign.hydrated} onPressDoor={handlePressDoor} />
-            {campaign.hydrated && campaign.openedCount > 0 ? (
+            <AdventGrid doors={preview.doors} todayDay={campaign.todayDoor?.day} disabled={!ready || !campaign.hydrated} onPressDoor={pressDoor} />
+            {!preview.active && campaign.hydrated && campaign.openedCount > 0 ? (
               <AdventShareCard openedCount={campaign.openedCount} streak={streak} year={campaign.campaign.year} />
             ) : null}
             <Text style={styles.rules}>{i18nT('adventStatic:page.rules')}</Text>
@@ -138,15 +158,16 @@ export default function AdventScreen() {
         </ResponsiveContainer>
       </ScrollView>
       <AdventDoorSheet
-        door={selectedDoor}
+        door={preview.active ? preview.selectedDoor : selectedDoor}
+        preview={preview.active}
         isAuthenticated={isAuthenticated}
-        creditedDays={sync.creditedDays}
+        creditedDays={preview.active ? undefined : sync.creditedDays}
         campaignYear={campaign.campaign.year}
-        onClose={() => setSelectedDay(null)}
-        onCompleteTask={handleCompleteTask}
+        onClose={() => preview.active ? preview.selectDay(null) : setSelectedDay(null)}
+        onCompleteTask={preview.active ? preview.completeTask : handleCompleteTask}
       />
       {/* Значки адвента выдаёт сервер после синхронизации (#2864) — тост как в квестах. */}
-      {isAuthenticated ? (
+      {isAuthenticated && !preview.active ? (
         <Suspense fallback={null}>
           <BadgeUnlockToast enabled />
         </Suspense>
@@ -158,6 +179,12 @@ export default function AdventScreen() {
 const createStyles = (colors: ThemedColors) =>
   StyleSheet.create({
     root: { flex: 1, backgroundColor: colors.background },
+    previewControls: {
+      alignItems: 'center',
+      gap: DESIGN_TOKENS.spacing.xs,
+      padding: DESIGN_TOKENS.spacing.sm,
+    },
+    previewDescription: { color: colors.textSecondary, textAlign: 'center' },
     scroll: { paddingVertical: DESIGN_TOKENS.spacing.md, paddingBottom: DESIGN_TOKENS.spacing.xl },
     stack: { gap: DESIGN_TOKENS.spacing.md, maxWidth: ADVENT_HOUSE_MAX_WIDTH, width: '100%', alignSelf: 'center' },
     intro: { fontSize: 15, lineHeight: 22, color: colors.textSecondary },

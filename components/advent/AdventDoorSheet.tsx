@@ -27,6 +27,7 @@ const AdventYearInReviewCard = lazy(() => import('./AdventYearInReviewCard'))
 type Props = {
   door: AdventDoorView | null
   isAuthenticated: boolean
+  preview?: boolean
   /** Дверцы, задания которых засчитал сервер по действию на сайте (#2867). */
   creditedDays?: ReadonlySet<number>
   campaignYear: number
@@ -53,7 +54,7 @@ const Section = memo(function Section({ icon, title, children, styles, colors }:
 })
 
 /** Подарок, задание и награда одной дверцы; гостю вместо задания — вход с возвратом на `/advent` (#2861). */
-function AdventDoorSheet({ door, isAuthenticated, creditedDays, campaignYear, onClose, onCompleteTask }: Props) {
+function AdventDoorSheet({ door, isAuthenticated, preview, creditedDays, campaignYear, onClose, onCompleteTask }: Props) {
   const router = useRouter()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -71,23 +72,23 @@ function AdventDoorSheet({ door, isAuthenticated, creditedDays, campaignYear, on
 
   const handleGiftLink = useCallback(() => {
     if (!door?.gift.link) return
-    sendAnalyticsEvent('Advent_GiftLink', { day: door.day })
+    if (!preview) sendAnalyticsEvent('Advent_GiftLink', { day: door.day })
     openInternalOrExternal(door.gift.link)
-  }, [door, openInternalOrExternal])
+  }, [door, openInternalOrExternal, preview])
 
   const handleCta = useCallback(() => {
     if (!door) return
-    const href = buildAdventDoorCtaHref(door)
+    const href = preview ? door.task.ctaRoute?.trim() : buildAdventDoorCtaHref(door)
     if (!href) return
-    sendAnalyticsEvent('Advent_TaskCta', { day: door.day, type: door.task.type })
+    if (!preview) sendAnalyticsEvent('Advent_TaskCta', { day: door.day, type: door.task.type })
     router.push(href as never)
-  }, [door, router])
+  }, [door, router, preview])
 
   const handleDone = useCallback(() => {
     if (!door) return
-    sendAnalyticsEvent('Advent_TaskDone', { day: door.day, type: door.task.type })
+    if (!preview) sendAnalyticsEvent('Advent_TaskDone', { day: door.day, type: door.task.type })
     onCompleteTask(door.day)
-  }, [door, onCompleteTask])
+  }, [door, onCompleteTask, preview])
 
   const handleLogin = useCallback(() => {
     if (!door) return
@@ -187,7 +188,7 @@ function AdventDoorSheet({ door, isAuthenticated, creditedDays, campaignYear, on
           {/* Финал основной серии — личные «Итоги года» (#2868); нужен аккаунт. */}
           {door.day === ADVENT_MAIN_DOORS && !door.bonus && isAuthenticated ? (
             <Suspense fallback={null}>
-              <AdventYearInReviewCard year={campaignYear} />
+              <AdventYearInReviewCard year={campaignYear} preview={preview} />
             </Suspense>
           ) : null}
           <Section icon="target" title={i18nT('adventStatic:sheet.task')} styles={styles} colors={colors}>

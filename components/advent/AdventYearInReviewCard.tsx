@@ -15,7 +15,7 @@ import type { AdventCardSpec, AdventCardStat } from '@/utils/advent/adventShareI
 import AdventShareActions from './AdventShareActions'
 import { useAdventCardShare } from './useAdventCardShare'
 
-type Props = { year: number }
+type Props = { year: number; preview?: boolean }
 
 const MAX_COUNTRY_CHIPS = 8
 const PLAN_ROUTE = '/trips'
@@ -57,7 +57,7 @@ export const buildYearInReviewStats = (data: YearInReview): StatTile[] => {
  * запланировать следующий; сервер недоступен (в т.ч. бэкенд #2865 ещё не
  * выкачен) — открытка без итогов и честное сообщение.
  */
-function AdventYearInReviewCard({ year }: Props) {
+function AdventYearInReviewCard({ year, preview }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const router = useRouter()
@@ -80,6 +80,7 @@ function AdventYearInReviewCard({ year }: Props) {
 
   const { status, share, download, canDownload } = useAdventCardShare({
     kind: 'year',
+    preview,
     year,
     filename: `metravel-itogi-${year}.png`,
     buildSpec,

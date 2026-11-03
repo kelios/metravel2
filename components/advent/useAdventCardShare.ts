@@ -26,6 +26,7 @@ export type AdventCardShareStatus = 'idle' | 'busy' | 'copied' | 'failed'
  * на web; native делится ссылкой через системный share sheet.
  */
 export function useAdventCardShare(params: {
+  preview?: boolean
   kind: AdventShareKind
   year: number
   filename: string
@@ -33,7 +34,7 @@ export function useAdventCardShare(params: {
   shareTitle: string
   shareText: string
 }) {
-  const { kind, year, filename, buildSpec, shareTitle, shareText } = params
+  const { preview, kind, year, filename, buildSpec, shareTitle, shareText } = params
   const [status, setStatus] = useState<AdventCardShareStatus>('idle')
   const busyRef = useRef(false)
   const kitRef = useRef<AdventShareKit | null>(null)
@@ -76,12 +77,12 @@ export function useAdventCardShare(params: {
         const kit = kitRef.current ?? (await loadAdventShareKit())
         const image = Platform.OS === 'web' ? kit.renderAdventCardPng(buildSpec()) : null
         const result = await kit.shareAdventCard({ title: shareTitle, text: shareText, year, kind, image, filename })
-        sendAnalyticsEvent('Advent_Share', { kind, result, withImage: !!image })
+        if (!preview) sendAnalyticsEvent('Advent_Share', { kind, result, withImage: !!image })
         if (result === 'copied') return 'copied'
         if (result === 'failed') return 'failed'
         return 'idle'
       }),
-    [run, buildSpec, shareTitle, shareText, year, kind, filename],
+    [run, buildSpec, shareTitle, shareText, year, kind, filename, preview],
   )
 
   const download = useCallback(
@@ -90,10 +91,10 @@ export function useAdventCardShare(params: {
         const kit = kitRef.current ?? (await loadAdventShareKit())
         const image = kit.renderAdventCardPng(buildSpec())
         const ok = !!image && kit.downloadAdventCard(image, filename)
-        sendAnalyticsEvent('Advent_Download', { kind, ok })
+        if (!preview) sendAnalyticsEvent('Advent_Download', { kind, ok })
         return ok ? 'idle' : 'failed'
       }),
-    [run, buildSpec, filename, kind],
+    [run, buildSpec, filename, kind, preview],
   )
 
   return { status, share, download, canDownload }
