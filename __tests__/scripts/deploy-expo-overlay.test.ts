@@ -232,14 +232,24 @@ describe('normal deploy Expo overlay retention', () => {
     }
   })
 
-  // Web builds inline RU catalog text into the calling modules at transform
-  // time (i18n/babel-inline-plugin.js), while Metro keys a transform on the
-  // module itself and babel.config.js only: a warm cache would ship stale text
-  // after a catalog-only commit (#2013). The prod export stays cold.
-  it('keeps the prod export on a cold Metro cache', () => {
-    expect(readCanonicalDeploy()).toContain(
-      'node scripts/build-web-safe.js -p web -c 2>&1 | tee "$EXPORT_LOG"',
-    )
+  // A warm Metro cache is safe only because every transform input outside
+  // Metro's own key is in `cacheVersion` (scripts/lib/metroCacheInputs.js,
+  // #2982). The warm cache is opt-in: only deploy-prod.sh, with its fixed
+  // worktree path, names a persistent directory; any other prod build and the
+  // fallback stay cold (#2013), and both exports share one flag source.
+  it('exports cold unless the deploy names a persistent Metro cache', () => {
+    const source = readCanonicalDeploy()
+    const flags = '${METRO_CACHE_ARGS[@]+"${METRO_CACHE_ARGS[@]}"}'
+    expect(source).toContain(`node scripts/build-web-safe.js -p web ${flags} 2>&1 | tee "$EXPORT_LOG"`)
+    expect(source).toContain(`node scripts/build-web-safe.js -p web ${flags} --output-dir "$SSR_EXPORT_DIR"`)
+    expect(source).not.toMatch(/build-web-safe\.js -p web -c/)
+    const prepare = source.slice(source.indexOf('prepare_metro_cache() {'), source.indexOf('\nbuild_env() {'))
+    expect(prepare).toMatch(/METRO_CACHE_ARGS=\(-c\)\n {2}if \[\[ -z "\$\{METRAVEL_METRO_CACHE_DIR:-\}" \]\]/)
+    expect(prepare).toContain('export EXPO_METRO_CACHE_OUTPUT_DIR="$transform_dir"')
+    expect(prepare).toContain('getToolchainRevision(process.cwd())')
+    expect(source.indexOf('\n  prepare_metro_cache\n')).toBeLessThan(source.indexOf('METRO_CACHE_ARGS[@]+'))
+    expect(fs.readFileSync(path.join(process.cwd(), 'scripts/deploy-prod.sh'), 'utf8'))
+      .toContain('export METRAVEL_METRO_CACHE_DIR="$(dirname "$MT")/worktrees/deploy-prod-metro-cache"')
   })
 
   // The canonical deploy publishes only the SSR release pair (#2766); the

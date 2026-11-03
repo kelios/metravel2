@@ -30,12 +30,14 @@ const exclusionList = require(path.join(
 
 /** @type {import('expo/metro-config').MetroConfig} */
 const config = getDefaultConfig(__dirname)
-// A production locale root is synthesized from external TS/JSON resources.
-// Babel's config-files key alone cannot invalidate a warm Metro transform hit
-// when only those inputs change. Preserve Expo's existing cache-version prefix.
+// Production transforms read inputs outside Metro's own key: locale catalogs,
+// cross-module locale facts, the inlined Expo config, Babel toolchain versions.
+// Every one of them is listed in scripts/lib/metroCacheInputs.js, so the warm
+// deploy cache (#2982) never serves a module built from a stale input.
+// Preserve Expo's existing cache-version prefix.
 if (process.env.NODE_ENV === 'production') {
-  const { getCatalogRevision } = require('./i18n/babel-inline-plugin')
-  config.cacheVersion = `${config.cacheVersion || ''}:locale-catalog:${getCatalogRevision(__dirname)}`
+  const { getTransformCacheRevision } = require('./scripts/lib/metroCacheInputs')
+  config.cacheVersion = `${config.cacheVersion || ''}:${getTransformCacheRevision(__dirname)}`
 }
 const previousEnhanceMiddleware = config.server && config.server.enhanceMiddleware
 // Фолбэк CORS-прокси, когда EXPO_PUBLIC_API_URL не задан: локальный бэкенд.
@@ -622,8 +624,16 @@ if (process.env.ANALYZE_BUNDLE === '1') {
 // never granular (withExpoSerializers gates it on a non-lazy web client export).
 const { mergeGranularChunkPlan } = require('./scripts/lib/granularChunkMerge')
 const { prepareWebChunkMetadata } = require('./scripts/lib/webChunkMetadataCodec')
+// #2982: each platform's client gets its own id counter instead of sharing one
+// with the concurrently serialized server bundles — otherwise ids follow
+// serializer timing and a warm or cold transform cache yields different chunks
+// for one sha. Server bundles keep one shared counter.
+// EXPO_USE_METRO_REQUIRE keeps Expo's path-based factory.
+const { createScopedNumericModuleIdFactory } = require('./scripts/lib/scopedModuleIdFactory')
+const { env: expoMetroEnv } = require('@expo/metro-config/build/env')
 config.serializer = {
   ...config.serializer,
+  ...(expoMetroEnv.EXPO_USE_METRO_REQUIRE ? {} : { createModuleIdFactory: createScopedNumericModuleIdFactory }),
   unstable_granularWebExport: true,
   unstable_mergeGranularChunkPlan: mergeGranularChunkPlan,
   unstable_prepareWebChunkMetadata: prepareWebChunkMetadata,

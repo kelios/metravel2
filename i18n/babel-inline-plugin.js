@@ -122,7 +122,12 @@ const getCatalogRevision = (projectRoot) => {
       }
     }
   }
-  for (const [locale] of graphs) collect(path.join(projectRoot, 'i18n', 'locales', locale))
+  // readCatalogs inlines every locale directory it finds, not only the five
+  // runtime graphs: a new locale must move the warm-cache revision too (#2982).
+  const localesRoot = path.join(projectRoot, 'i18n', 'locales')
+  for (const entry of fs.readdirSync(localesRoot, { withFileTypes: true })) {
+    if (entry.isDirectory()) collect(path.join(localesRoot, entry.name))
+  }
   for (const file of [__filename, require.resolve('./catalogCompiler')]) inputs.set(file, fs.readFileSync(file, 'utf8'))
   const digest = crypto.createHash('sha256')
   for (const [file, source] of [...inputs].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)) {

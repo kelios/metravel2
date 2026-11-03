@@ -423,5 +423,8 @@ module.exports = reactiveLocalePlugin
 module.exports.isOwner = isOwner
 module.exports.ROOTS = ROOTS
 module.exports.resetLocaleModuleCache = () => { presentationExportCache.clear(); sourceProgramCache.clear() }
+// Parsed programs stay valid by file signature; only export decisions are reset
+// when a caller must observe every file one decision reads (metroCacheInputs).
+module.exports.resetPresentationExportCache = () => { presentationExportCache.clear() }
 module.exports.localeReturningExport = localeReturningExport
 module.exports.resolveImport = resolveImport

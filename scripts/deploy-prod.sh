@@ -31,6 +31,11 @@ DEPLOY="${DEPLOY:-1}"
 # Фиксированный путь: worktree, брошенный прерванным выкатом, находится и
 # снимается следующим, а не копится рядом под новым именем.
 WT="$(dirname "$MT")/worktrees/deploy-prod"
+# Кэш трансформов Metro переживает worktree (#2982): путь проекта у выката
+# всегда один и тот же, ключ кэша покрывает каждый вход трансформа
+# (scripts/lib/metroCacheInputs.js), а build-prod.sh сам чистит каталог при
+# смене lockfile. Холодный экспорт под нагрузкой стоил 100–800 с.
+export METRAVEL_METRO_CACHE_DIR="$(dirname "$MT")/worktrees/deploy-prod-metro-cache"
 LOG_DIR="$MT/.codex-temp/deploy"
 # Reports must outlive the isolated worktree, on both green and red guards.
 export BUNDLE_BUDGET_REPORT_DIR="$LOG_DIR"

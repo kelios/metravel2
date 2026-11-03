@@ -50,6 +50,7 @@ const BUILD_STUB = [
   '  [[ -L .env.prod ]] && echo "env_prod=symlink"',
   '  echo "head=$(git rev-parse HEAD)"',
   '  echo "web_output=${METRAVEL_WEB_OUTPUT:-unset}"',
+  '  echo "metro_cache=${METRAVEL_METRO_CACHE_DIR:-unset}"',
   '} > "$STUB_OUT"',
   'echo "▶ stub stage"',
   'echo "noise line"',
@@ -188,6 +189,8 @@ describe('scripts/deploy-prod.sh', () => {
         head: first,
         // A build-only preview never asks the backend capability (#2766).
         web_output: 'unset',
+        // The Metro transform cache outlives the removed worktree (#2982).
+        metro_cache: path.join(fixture.root, 'worktrees', 'deploy-prod-metro-cache'),
       })
       expect(result.stdout).toContain(`🚀 Прод-выкат ${first.slice(0, 9)}`)
       expect(result.stdout).toContain('noise line')

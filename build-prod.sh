@@ -250,6 +250,48 @@ create_export_log() {
   mktemp -t "expo-export-${ENV}" 2>/dev/null || mktemp "/tmp/expo-export-${ENV}.XXXXXX"
 }
 
+# Кэш трансформов Metro (#2982). По умолчанию экспорт холодный (`-c`, свежий
+# изолированный TMPDIR). Выкат (scripts/deploy-prod.sh) задаёт постоянный
+# METRAVEL_METRO_CACHE_DIR своего фиксированного worktree: холодный экспорт
+# под нагрузкой машины стоил 100–800 с при неизменных ~3860 модулях. Тёплый
+# кэш безопасен, потому что каждый вход трансформа вне собственного ключа
+# Metro — каталоги `i18n/locales`, межмодульные решения плагина локали,
+# вшитый Expo-конфиг, EXPO_PUBLIC_*, инструментарий Babel — входит в
+# `config.cacheVersion` (scripts/lib/metroCacheInputs.js). Смена lockfile,
+# патчей или postinstall чистит каталог явно: старые записи всё равно
+# недостижимы и только занимали бы диск; переполненный кэш тоже сносится.
+METRO_CACHE_ARGS=(-c)
+METRO_CACHE_MAX_KB=$((8 * 1024 * 1024))
+
+prepare_metro_cache() {
+  METRO_CACHE_ARGS=(-c)
+  if [[ -z "${METRAVEL_METRO_CACHE_DIR:-}" ]]; then
+    echo "🧊 Metro: холодный экспорт (-c)"
+    return 0
+  fi
+  local transform_dir="$METRAVEL_METRO_CACHE_DIR/transform"
+  local stamp_file="$METRAVEL_METRO_CACHE_DIR/toolchain.sha"
+  local toolchain size_kb
+  toolchain="$(node -e 'process.stdout.write(require("./scripts/lib/metroCacheInputs").getToolchainRevision(process.cwd()))')"
+  if [[ "$(cat "$stamp_file" 2>/dev/null || true)" != "$toolchain" ]]; then
+    if [[ -f "$stamp_file" ]]; then
+      echo "🧹 Metro: lockfile, патчи или postinstall сменились — чищу кэш выката"
+    fi
+    rm -rf "$transform_dir"
+  fi
+  size_kb="$(du -sk "$transform_dir" 2>/dev/null | cut -f1 || true)"
+  if [[ "${size_kb:-0}" -gt "$METRO_CACHE_MAX_KB" ]]; then
+    echo "🧹 Metro: кэш выката $((size_kb / 1024)) МБ больше $((METRO_CACHE_MAX_KB / 1024)) МБ — чищу"
+    rm -rf "$transform_dir"
+  fi
+  if [[ ! -d "$transform_dir" ]]; then size_kb=0; fi
+  mkdir -p "$transform_dir"
+  printf '%s' "$toolchain" >"$stamp_file"
+  export EXPO_METRO_CACHE_OUTPUT_DIR="$transform_dir"
+  METRO_CACHE_ARGS=()
+  echo "♨️  Metro: тёплый кэш выката $transform_dir ($(( ${size_kb:-0} / 1024 )) МБ)"
+}
+
 build_env() {
   local ENV="$1"
   local DIR="dist/$ENV"
@@ -258,13 +300,14 @@ build_env() {
   echo "🚀 Сборка для $ENV → $DIR"
   apply_env "$ENV"
   node scripts/generate-home-responsive-css.js --check
+  prepare_metro_cache
 
   if [[ "${METRAVEL_WEB_OUTPUT:-static}" == "server" ]]; then
     rm -rf "$DIR" "$SSR_EXPORT_DIR" "$SSR_RELEASE_DIR"
     CI=1 EXPO_NO_INTERACTIVE=1 NODE_ENV=production EXPO_ENV="$ENV" \
       EXPO_NO_METRO_LAZY=true EXPO_PUBLIC_RNW_SLIM=1 \
       EXPO_WEB_BUILD_MINIFY=true EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false \
-      node scripts/build-web-safe.js -p web -c --output-dir "$SSR_EXPORT_DIR" 2>&1 | tee "$EXPORT_LOG"
+      node scripts/build-web-safe.js -p web ${METRO_CACHE_ARGS[@]+"${METRO_CACHE_ARGS[@]}"} --output-dir "$SSR_EXPORT_DIR" 2>&1 | tee "$EXPORT_LOG"
     node scripts/prepare-web-ssr.js --export-dir "$SSR_EXPORT_DIR" --static-dir "$DIR" \
       --runtime-dir "$SSR_RELEASE_DIR" --env-file ".env.$ENV"
     rm -f "$EXPORT_LOG"
@@ -278,11 +321,6 @@ build_env() {
   # (dist/.prod-staging, dist/.prod-build.lock) — иначе bash-флоу сметает их.
   find dist -mindepth 1 -maxdepth 1 ! -name "$ENV" ! -name '.*' -exec rm -rf {} + 2>/dev/null || true
 
-  # `-c` — холодный Metro в свежем изолированном TMPDIR, и это осознанно (#2013):
-  # web-сборка вшивает RU-тексты каталогов `i18n/locales` в вызывающие модули
-  # (i18n/babel-inline-plugin.js), а ключ кэша Metro эти каталоги не видит —
-  # тёплый кэш выкатил бы старый текст после правки одного каталога. Время
-  # холодного экспорта в выкате скрыто фоновыми медиа-проверками прода.
   CI=1 \
   EXPO_NO_INTERACTIVE=1 \
   NODE_ENV=production \
@@ -291,7 +329,7 @@ build_env() {
   EXPO_PUBLIC_RNW_SLIM=1 \
   EXPO_WEB_BUILD_MINIFY=true \
   EXPO_WEB_BUILD_GENERATE_SOURCE_MAP=false \
-    node scripts/build-web-safe.js -p web -c 2>&1 | tee "$EXPORT_LOG"
+    node scripts/build-web-safe.js -p web ${METRO_CACHE_ARGS[@]+"${METRO_CACHE_ARGS[@]}"} 2>&1 | tee "$EXPORT_LOG"
 
   if [[ ! -f "dist/index.html" ]]; then
     echo "❌ Сборка не завершилась: не найден dist/index.html"

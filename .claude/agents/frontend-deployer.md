@@ -90,9 +90,12 @@ model: sonnet
 3. В фоне стартуют медиа-проверки прода: `post-deploy-media-check.js` (вес, кэш, ресайз по URL из
    API, #1195) и `audit-article-body-media.js` (картинки тел статей, #1834/#1088). Выкатываемый
    HTML они не читают; вердикт сборку не валит.
-4. Экспорт Metro: `scripts/build-web-safe.js -p web -c --output-dir .codex-temp/deploy/ssr-export` —
-   всегда холодный, в свежем изолированном TMPDIR. Тёплый кэш запрещён: web-сборка вшивает
-   RU-тексты `i18n/locales` в вызывающие модули, а ключ кэша Metro каталоги не видит (#2013).
+4. Экспорт Metro: `scripts/build-web-safe.js -p web --output-dir .codex-temp/deploy/ssr-export` на
+   тёплом кэше `../worktrees/deploy-prod-metro-cache` (#2982; строка «♨️ Metro: тёплый кэш»).
+   Безопасен он только потому, что каждый вход трансформа вне ключа Metro — каталоги
+   `i18n/locales`, межмодульные решения плагина локали, Expo-конфиг, EXPO_PUBLIC_*, lockfile и
+   патчи — входит в `cacheVersion` (`scripts/lib/metroCacheInputs.js`). Новый вход трансформа
+   без строки там — устаревший бандл на проде. Без `METRAVEL_METRO_CACHE_DIR` экспорт холодный (`-c`).
    `scripts/prepare-web-ssr.js` раскладывает экспорт на клиент `dist/prod` и приватный runtime.
 5. `guard-chunk-closure.js`, ожидание фоновых медиа-проверок, `postprocess-route-shells.js`
    (оболочки статических маршрутов, `/article/<id>`, fallback-шаблоны, chunk guard; тела
