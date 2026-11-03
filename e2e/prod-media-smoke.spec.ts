@@ -564,12 +564,26 @@ const runSearchScrollTrace = async (page: Page, profile: TraceProfile) => {
   }
 
   const byRequestId = new Map<string, string>();
-  const transfers: { url: string; bytes: number; at: number }[] = [];
+  // Отдача из memory/disk-кэша приходит тем же `loadingFinished`, что и сеть.
+  // Флаг нужен, чтобы бюджет запросов считал трафик, а не ре-маунты (#2965).
+  const servedFromCache = new Set<string>();
+  const transfers: { url: string; bytes: number; at: number; cached: boolean }[] = [];
   const cancelledCoverRequests: string[] = [];
   cdp.on('Network.requestWillBeSent', (e: any) => byRequestId.set(e.requestId, e.request.url));
+  cdp.on('Network.requestServedFromCache', (e: any) => servedFromCache.add(e.requestId));
+  cdp.on('Network.responseReceived', (e: any) => {
+    if (e.response?.fromDiskCache) servedFromCache.add(e.requestId);
+  });
   cdp.on('Network.loadingFinished', (e: any) => {
     const url = byRequestId.get(e.requestId);
-    if (url) transfers.push({ url, bytes: e.encodedDataLength, at: Date.now() });
+    if (url) {
+      transfers.push({
+        url,
+        bytes: e.encodedDataLength,
+        at: Date.now(),
+        cached: servedFromCache.has(e.requestId),
+      });
+    }
   });
   cdp.on('Network.loadingFailed', (e: any) => {
     const url = byRequestId.get(e.requestId);
@@ -664,7 +678,14 @@ const runSearchScrollTrace = async (page: Page, profile: TraceProfile) => {
   const covers = transfers.filter((t) => isTravelCoverRequest(t.url));
   const bytesUntil = (ts: number) =>
     covers.filter((c) => c.at <= ts).reduce((sum, c) => sum + c.bytes, 0);
-  const requestsUntil = (ts: number) => covers.filter((c) => c.at <= ts).length;
+  // Бюджет запросов — это сетевые запросы. Строка, выброшенная из окна на пути
+  // вниз, при возврате монтируется заново и перезапрашивает обложку из кэша:
+  // 0 байт, без сети. Прод 4e12c16ac (03.11.2026): первый ряд (3 обложки)
+  // возвращается из disk-кэша, и счёт «всех loadingFinished» давал 21 при 18
+  // сетевых — гейт краснел на трафике, которого не было. Ре-маунты печатаем
+  // отдельно (`cached`), сетевой повтор ловят `redownloaded` и сам бюджет.
+  const requestsUntil = (ts: number) => covers.filter((c) => c.at <= ts && !c.cached).length;
+  const cachedUntil = (ts: number) => covers.filter((c) => c.at <= ts && c.cached).length;
 
   // Повторная загрузка уже скачанной обложки = строка была выброшена из окна
   // и переехала заново. Ре-маунт из кэша (0 байт) дефектом не является.
@@ -698,7 +719,11 @@ const runSearchScrollTrace = async (page: Page, profile: TraceProfile) => {
     afterReturnMediaPolicy,
     initial: { requests: requestsUntil(afterInitial), bytes: bytesUntil(afterInitial) },
     afterDown: { requests: requestsUntil(afterDown), bytes: bytesUntil(afterDown) },
-    afterReturn: { requests: requestsUntil(afterReturn), bytes: bytesUntil(afterReturn) },
+    afterReturn: {
+      requests: requestsUntil(afterReturn),
+      bytes: bytesUntil(afterReturn),
+      cached: cachedUntil(afterReturn),
+    },
   };
 };
 
