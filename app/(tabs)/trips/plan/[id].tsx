@@ -27,6 +27,7 @@ import {
   TripGearChecklist,
   TripInvitePanel,
   TripParticipantsList,
+  TripPlanDescriptionEditor,
   TripRatingPanel,
   TripReportForm,
   TripRouteExportMenu,
@@ -42,7 +43,6 @@ import TripPlanCollapsibleText, {
   tripPlanTextCharsPerWidth,
 } from '@/components/trips/planning/TripPlanCollapsibleText';
 import TripPlanLinksBlock from '@/components/trips/planning/TripPlanLinksBlock';
-import TripPlanDescriptionEditor from '@/components/trips/planning/TripPlanDescriptionEditor';
 import {
   hasUsableRouteGeometry,
   routablePreviewPoints,
@@ -577,13 +577,15 @@ export default function PlannedTripScreen() {
                   testID="trip-plan-edit-title"
                 />
 
-                <TripPlanDescriptionEditor
-                  value={editValues.description}
-                  onChangeText={(description) => setEditValues((prev) => prev ? { ...prev, description } : prev)}
-                  label={i18nT('trips:app.tabs.trips.plan.id.opisanie_c32c01de')}
-                  placeholder={i18nT('trips:app.tabs.trips.plan.id.opisanie_poezdki_ssylki_detali_dlya_uchastni_e1269600')}
-                  editable={!updateTrip.isPending}
-                />
+                <Suspense fallback={<ActivityIndicator style={styles.loader} testID="trip-plan-edit-description-loading" />}>
+                  <TripPlanDescriptionEditor
+                    value={editValues.description}
+                    onChangeText={(description) => setEditValues((prev) => prev ? { ...prev, description } : prev)}
+                    label={i18nT('trips:app.tabs.trips.plan.id.opisanie_c32c01de')}
+                    placeholder={i18nT('trips:app.tabs.trips.plan.id.opisanie_poezdki_ssylki_detali_dlya_uchastni_e1269600')}
+                    editable={!updateTrip.isPending}
+                  />
+                </Suspense>
 
                 <Text style={styles.label}>{i18nT('trips:app.tabs.trips.plan.id.oblozhka_6b408e05')}</Text>
                 <View style={styles.coverUpload} testID="trip-plan-edit-cover">

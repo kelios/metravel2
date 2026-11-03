@@ -11,6 +11,7 @@ import TripTelegramGroupCardDefault from '@/components/trips/communication/TripT
 import TripGearChecklistDefault from '@/components/trips/planning/TripGearChecklist'
 import TripInvitePanelDefault from '@/components/trips/planning/TripInvitePanel'
 import TripParticipantsListDefault from '@/components/trips/planning/TripParticipantsList'
+import TripPlanDescriptionEditorDefault from '@/components/trips/planning/TripPlanDescriptionEditor'
 import TripRatingPanelDefault from '@/components/trips/planning/TripRatingPanel'
 import TripReportFormDefault from '@/components/trips/planning/TripReportForm'
 import TripRouteExportMenuDefault from '@/components/trips/planning/TripRouteExportMenu'
@@ -23,6 +24,7 @@ export const TripChatPanel = TripChatPanelDefault
 export const TripGearChecklist = TripGearChecklistDefault
 export const TripInvitePanel = TripInvitePanelDefault
 export const TripParticipantsList = TripParticipantsListDefault
+export const TripPlanDescriptionEditor = TripPlanDescriptionEditorDefault
 export const TripRatingPanel = TripRatingPanelDefault
 export const TripReportForm = TripReportFormDefault
 export const TripRouteExportMenu = TripRouteExportMenuDefault

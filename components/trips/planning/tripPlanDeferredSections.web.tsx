@@ -39,6 +39,11 @@ export const TripRatingPanel = safeLazy(
   'TripRatingPanel',
   { retries: 1 },
 )
+export const TripPlanDescriptionEditor = safeLazy(
+  () => import('@/components/trips/planning/TripPlanDescriptionEditor'),
+  'TripPlanDescriptionEditor',
+  { retries: 1 },
+)
 export const TripReportForm = safeLazy(
   () => import('@/components/trips/planning/TripReportForm'),
   'TripReportForm',

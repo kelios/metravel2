@@ -236,6 +236,7 @@ const ROUTE_DEFERRED_SECTIONS: Array<{
       'components/trips/communication/TripTelegramGroupCard.tsx',
       'components/trips/planning/TripInvitePanel.tsx',
       'components/trips/planning/TripParticipantsList.tsx',
+      'components/trips/planning/TripPlanDescriptionEditor.tsx',
       'components/trips/planning/TripRatingPanel.tsx',
       'components/trips/planning/TripReportForm.tsx',
       'components/trips/planning/TripRouteExportMenu.tsx',
