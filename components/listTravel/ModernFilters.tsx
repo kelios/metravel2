@@ -1,4 +1,5 @@
 // Подкомпоненты вынесены в ./filters/
+import { CATALOG_FILTER_PANEL } from '@/components/layout/catalogFilterPanelGeometry'
 import React, { memo, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import {
   View,
@@ -16,6 +17,7 @@ import { getRouteLabel } from '@/utils/pluralize';
 import { BREAKPOINTS } from './utils/listTravelConstants';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
 import { resolveListTravelRawWidth } from './listTravelBaseModel';
+import Button from '@/components/ui/Button';
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 
 // Подкомпоненты из filters/
@@ -57,12 +59,11 @@ function getModernFiltersReserveState(params: {
   };
 }
 
-function getModernFiltersViewportState(width: number) {
-  // Must match usesOverlaySidebar threshold in listTravelBaseModel (BREAKPOINTS.DESKTOP = 1440).
+function getModernFiltersViewportState(width: number, useSharedWebFilters: boolean) {
   // On compact web widths the sidebar is a fullscreen overlay, so it needs the sticky footer.
   const isNarrowWeb =
     Platform.OS === 'web'
-      && width < BREAKPOINTS.DESKTOP;
+      && width < (useSharedWebFilters ? CATALOG_FILTER_PANEL.embeddedMinWidth : BREAKPOINTS.DESKTOP);
 
   return {
     isNarrowWeb,
@@ -122,6 +123,7 @@ function getOrderedModernFilterOptions(group: FilterGroup, selectedFilters: Filt
 
 interface ModernFiltersProps {
   initialViewportWidth?: number;
+  useSharedWebFilters?: boolean;
   filterGroups: FilterGroup[];
   selectedFilters: FilterState;
   /** Выбор по умолчанию экрана: совпадающие с ним группы не считаются активными. */
@@ -156,6 +158,7 @@ interface ModernFiltersProps {
 
 const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   initialViewportWidth,
+  useSharedWebFilters = false,
   filterGroups,
   selectedFilters,
   defaultSelectedFilters,
@@ -193,7 +196,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   // The sidebar mounts after the catalog knows its width; do not replay a narrow frame.
   const viewportWidth = resolveListTravelRawWidth(responsiveWidth, initialViewportWidth);
 
-  const { isNarrowWeb, showsStickyFooter } = getModernFiltersViewportState(viewportWidth);
+  const { isNarrowWeb, showsStickyFooter } = getModernFiltersViewportState(viewportWidth, useSharedWebFilters);
   const useOverlayChrome = !embeddedSidebar && isNarrowWeb;
   const shouldShowStickyFooter = !embeddedSidebar && showsStickyFooter;
   const { reserveMinHeight, shouldReserveSpace } = getModernFiltersReserveState({
@@ -205,8 +208,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(() => {
     // На десктопе раскрываем первые 2 группы фильтров по умолчанию для улучшения обнаруживаемости.
     // На мобильном и в overlay-режиме все свёрнуты — экономим место.
-    const { isNarrowWeb: narrow } = getModernFiltersViewportState(viewportWidth);
-    if (Platform.OS !== 'web' || narrow) return new Set<string>();
+    if (Platform.OS !== 'web' || isNarrowWeb) return new Set<string>();
     const nonSortGroups = filterGroups.filter(g => g.key !== 'sort');
     return new Set(nonSortGroups.slice(0, 2).map(g => g.key));
   });
@@ -221,14 +223,14 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
   useEffect(() => {
     if (Platform.OS !== 'web' || appliedDesktopDefaultsRef.current || viewportWidth <= 0) return;
     appliedDesktopDefaultsRef.current = true;
-    if (viewportWidth < BREAKPOINTS.DESKTOP) return;
+    if (isNarrowWeb) return;
 
     setExpandedGroups((current) => {
       if (current.size > 0) return current;
       const nonSortGroups = filterGroups.filter((group) => group.key !== 'sort');
       return new Set(nonSortGroups.slice(0, 2).map((group) => group.key));
     });
-  }, [filterGroups, viewportWidth]);
+  }, [filterGroups, isNarrowWeb, viewportWidth]);
 
   const toggleGroup = useCallback((groupKey: string) => {
     setExpandedGroups(prev => {
@@ -302,6 +304,18 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
     onClose?.();
   }, [onClose]);
 
+  const handleApplyFilters = () => {
+    blurActiveWebElement();
+    if (onClose) onClose();
+    else onApply?.();
+  };
+  const applyLabel = activeFiltersCount > 0
+    ? i18nT('travel:components.listTravel.ModernFilters.pokazat_rezultaty_value1_46ec1ee2', { value1: activeFiltersCount })
+    : i18nT('travel:components.listTravel.ModernFilters.pokazat_rezultaty_0c2ce1f0');
+  const applyAccessibilityLabel = activeFiltersCount > 0
+    ? i18nT('travel:components.listTravel.ModernFilters.pokazat_rezultaty_filtrov_value1_7e4c6fc1', { value1: activeFiltersCount })
+    : applyLabel;
+
   return (
     <View
       style={[
@@ -310,6 +324,8 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
         Platform.OS !== 'web' && styles.containerMobile,
         Platform.OS === 'web' && useOverlayChrome && styles.containerWebFull,
         shouldReserveSpace && { minHeight: reserveMinHeight },
+        useSharedWebFilters && styles.containerInSharedWebPanel,
+        useSharedWebFilters && useOverlayChrome && { height: 'auto', maxHeight: '100%', minHeight: 0 },
       ]}
     >
       <View
@@ -353,7 +369,15 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             )}
           </View>
           <View style={[styles.headerRight, useStackedHeader && styles.headerRightStacked]}>
-            {activeFiltersCount > 0 && (
+            {activeFiltersCount > 0 && (useSharedWebFilters ? (
+              <Button
+                label={i18nT('travel:components.listTravel.ModernFilters.sbrosit_2f0ddae1')}
+                accessibilityLabel={i18nT('travel:components.listTravel.ModernFilters.ochistit_vse_filtry_value1_0badfc04', { value1: activeFiltersCount })}
+                variant="ghost"
+                size="sm"
+                onPress={onClearAll}
+              />
+            ) : (
               <Pressable
                 onPress={onClearAll}
                 style={({ hovered, pressed }) => [
@@ -368,7 +392,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                   <Text style={styles.clearButtonCountText}>{activeFiltersCount}</Text>
                 </View>
               </Pressable>
-            )}
+            ))}
             <Pressable
               testID="toggle-all-groups"
               onPress={() => {
@@ -420,7 +444,7 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
                 )}
               </View>
             </Pressable>
-            {onClose && (
+            {onClose && !useSharedWebFilters && (
               <Pressable
                 onPress={handleDismissFilters}
                 style={({ hovered, pressed }) => [
@@ -668,8 +692,15 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
 
       {/* Apply / Reset Buttons (Mobile: native + web-narrow) — sticky footer вне ScrollView */}
       {shouldShowStickyFooter && (
-        <View style={styles.applyButtonContainer} testID="filters-apply-footer">
-          {activeFiltersCount > 0 && (
+        <View style={[styles.applyButtonContainer, useSharedWebFilters && styles.applyButtonContainerInSharedWebPanel]} testID="filters-apply-footer">
+          {activeFiltersCount > 0 && (useSharedWebFilters ? (
+            <Button
+              label={i18nT('travel:components.listTravel.ModernFilters.sbrosit_vse_325adc51')}
+              accessibilityLabel={i18nT('travel:components.listTravel.ModernFilters.sbrosit_vse_filtry_value1_7c7447fa', { value1: activeFiltersCount })}
+              variant="ghost"
+              onPress={onClearAll}
+            />
+          ) : (
             <Pressable
               style={({ hovered, pressed }) => [
                 styles.resetMobileButton,
@@ -681,28 +712,28 @@ const ModernFilters: React.FC<ModernFiltersProps> = memo(({
             >
               <Text style={styles.resetMobileButtonText}>{i18nT('travel:components.listTravel.ModernFilters.sbrosit_vse_325adc51')}</Text>
             </Pressable>
+          ))}
+          {useSharedWebFilters ? (
+            <Button
+              testID="filters-apply-button"
+              label={applyLabel}
+              accessibilityLabel={applyAccessibilityLabel}
+              onPress={handleApplyFilters}
+            />
+          ) : (
+            <Pressable
+              testID="filters-apply-button"
+              style={({ hovered, pressed }) => [
+                styles.applyButton,
+                (hovered || pressed) && styles.applyButtonPressed,
+              ]}
+              onPress={handleApplyFilters}
+              accessibilityRole="button"
+              accessibilityLabel={applyAccessibilityLabel}
+            >
+              <Text style={styles.applyButtonText}>{applyLabel}</Text>
+            </Pressable>
           )}
-          <Pressable
-            testID="filters-apply-button"
-            style={({ hovered, pressed }) => [
-              styles.applyButton,
-              (hovered || pressed) && styles.applyButtonPressed,
-            ]}
-            onPress={() => {
-              blurActiveWebElement();
-              if (onClose) {
-                onClose();
-                return;
-              }
-              onApply?.();
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={activeFiltersCount > 0 ? i18nT('travel:components.listTravel.ModernFilters.pokazat_rezultaty_filtrov_value1_7e4c6fc1', { value1: activeFiltersCount }) : i18nT('travel:components.listTravel.ModernFilters.pokazat_rezultaty_0c2ce1f0')}
-          >
-            <Text style={styles.applyButtonText}>
-              {activeFiltersCount > 0 ? i18nT('travel:components.listTravel.ModernFilters.pokazat_rezultaty_value1_46ec1ee2', { value1: activeFiltersCount }) : i18nT('travel:components.listTravel.ModernFilters.pokazat_rezultaty_0c2ce1f0')}
-            </Text>
-          </Pressable>
         </View>
       )}
     </View>

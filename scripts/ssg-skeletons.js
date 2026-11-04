@@ -9,6 +9,8 @@
  * to avoid importing TS modules at build time).
  */
 
+const { CATALOG_FILTER_PANEL } = require('../components/layout/catalogFilterPanelGeometry');
+
 const { buildHomeBookSkeletonGeometryCSS } = require('./ssg-home-book-css');
 
 const { BREAKPOINTS, CARD_GEOMETRY, CARD_MEDIA_SLOT_RATIO, CATALOG_CHROME_GEOMETRY, getCatalogViewportGeometry } = require('../components/listTravel/travelCatalogGeometry');
@@ -18,7 +20,7 @@ function buildCatalogSkeletonCSS() {
   const g = CARD_GEOMETRY;
   const c = CATALOG_CHROME_GEOMETRY;
   let css = `.ssg-search-brand{height:${c.brandCompactHeight}px}.ssg-search-shell{width:100%;margin:0;padding:0}.ssg-search-layout{display:flex;min-width:0}.ssg-search-aside{display:none;flex-shrink:0}.ssg-search-main{flex:1;min-width:0}.ssg-search-header{padding-top:0}.ssg-search-controls{min-height:${c.headerMinMobile}px}.ssg-search-bar{height:${c.compactSearchHeight}px}.ssg-search-toolbar{height:${c.toolbarHeight}px;display:flex;align-items:center;justify-content:flex-end;gap:8px;padding-top:4px}.ssg-search-grid{display:grid;margin-top:${c.listPaddingTop}px}.ssg-search-card{min-width:0;border:${g.borderWidth}px solid;border-radius:20px}.ssg-search-card-media{width:100%;aspect-ratio:${CARD_MEDIA_SLOT_RATIO}}.ssg-search-card-body{padding:${g.contentPaddingTop}px ${g.contentPaddingHorizontal}px ${g.contentPaddingBottom}px;border-top:${g.borderWidth}px solid transparent;display:flex;flex-direction:column;gap:${g.contentGap}px}.ssg-search-card-title{height:${g.titleLineHeight*g.titleLines}px;display:flex;flex-direction:column;justify-content:space-evenly}.ssg-search-card-meta{min-height:${g.metaMinHeight}px;height:${g.metaLineHeight+g.metaPaddingTop+g.metaBadgePaddingTop}px;display:flex;align-items:center;padding-top:${g.metaPaddingTop+g.metaBadgePaddingTop}px}`;
-  // From DESKTOP the catalog toolbar lives inside the search row (#2755), so the first frame
+  // From the embedded panel breakpoint the catalog toolbar lives inside the search row (#2755), so the first frame
   // keeps no separate toolbar band there; below it the toolbar row is still its own band.
   // Emit ranges from the actual producer; a change in column/gap/padding rules
   // updates first paint without introducing another breakpoint table.
@@ -32,7 +34,7 @@ function buildCatalogSkeletonCSS() {
       css += `@media(min-width:${width}px) and (orientation:${isPortrait?'portrait':'landscape'}){.ssg-search-grid{grid-template-columns:repeat(${v.gridColumns},minmax(0,1fr));gap:${v.gapSize}px;padding-left:${v.contentPadding}px;padding-right:${v.contentPadding}px}.ssg-search-header{padding-left:${v.contentPadding}px;padding-right:${v.contentPadding}px}}`;
     }
   }
-  css += `@media(max-width:${BREAKPOINTS.MOBILE-1}px){.ssg-search-card{border-radius:16px}}@media(min-width:${BREAKPOINTS.MOBILE}px){.ssg-search-main{overflow-y:auto;scrollbar-gutter:stable}.ssg-search-controls{min-height:${c.headerMinDesktop}px}}@media(min-width:${BREAKPOINTS.TABLET}px){.ssg-search-header{padding-top:${c.rightColumnPaddingTop}px}}@media(min-width:${c.brandWideBreakpoint}px){.ssg-search-brand{height:${c.brandWideHeight}px}}@media(min-width:${BREAKPOINTS.DESKTOP}px){.ssg-search-aside{display:block;width:clamp(260px,20vw,340px);min-height:520px;padding:16px;border-right:1px solid}.ssg-search-bar{height:${c.wideSearchHeight}px}.ssg-search-toolbar{display:none}}`;
+  css += `@media(max-width:${BREAKPOINTS.MOBILE-1}px){.ssg-search-card{border-radius:16px}}@media(min-width:${BREAKPOINTS.MOBILE}px){.ssg-search-main{overflow-y:auto;scrollbar-gutter:stable}.ssg-search-controls{min-height:${c.headerMinDesktop}px}}@media(min-width:${BREAKPOINTS.TABLET}px){.ssg-search-header{padding-top:${c.rightColumnPaddingTop}px}}@media(min-width:${c.brandWideBreakpoint}px){.ssg-search-brand{height:${c.brandWideHeight}px}}@media(min-width:${CATALOG_FILTER_PANEL.embeddedMinWidth}px){.ssg-search-layout{gap:${CATALOG_FILTER_PANEL.regularGap}px}.ssg-search-aside{display:block;width:${CATALOG_FILTER_PANEL.regularWidth}px;min-height:520px;padding:${CATALOG_FILTER_PANEL.padding}px;border-right:1px solid}.ssg-search-bar{height:${c.wideSearchHeight}px}.ssg-search-toolbar{display:none}}@media(min-width:${CATALOG_FILTER_PANEL.wideMinWidth}px){.ssg-search-layout{gap:${CATALOG_FILTER_PANEL.wideGap}px}.ssg-search-aside{width:${CATALOG_FILTER_PANEL.wideWidth}px}}`;
 
   return css;
 }

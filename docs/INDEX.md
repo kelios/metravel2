@@ -29,7 +29,7 @@
 - `docs/DEVELOPMENT.md` — local development workflow;
 - `docs/TESTING.md` — test/governance/quality-gate commands;
 - `docs/MANUAL_TEST_CASES.md` — повторяемая risk-based QA/device матрица;
-- `docs/DESIGN_SYSTEM.md` — design tokens и palette roles;
+- `docs/DESIGN_SYSTEM.md` — токены, справочник компонентов и ссылка на веб-эталон;
 - `docs/RELEASE.md` — release/deploy flow;
 - `docs/PRODUCTION_CHECKLIST.md` — production checklist;
 - `docs/DB_BACKUP.md` — бэкап production-базы: где лежат копии, как снять дамп

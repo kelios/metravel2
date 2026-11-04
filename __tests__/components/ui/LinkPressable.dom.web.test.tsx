@@ -14,6 +14,7 @@ let Pressable: typeof import('react-native').Pressable
 let Text: typeof import('react-native').Text
 let LinkMock: React.ComponentType<any>
 let LinkPressable: React.ComponentType<any>
+let NavigationLink: typeof import('@/components/ui/NavigationLink').default
 let shouldHandleLinkClick: (event: unknown) => boolean
 
 const mockPush = jest.fn()
@@ -53,6 +54,7 @@ beforeAll(() => {
   const linkPressableModule = require('@/components/ui/LinkPressable')
   LinkPressable = linkPressableModule.default
   shouldHandleLinkClick = linkPressableModule.shouldHandleLinkClick
+  NavigationLink = require('@/components/ui/NavigationLink').default
 })
 
 describe('LinkPressable in the real React Native Web DOM (#2901)', () => {
@@ -153,6 +155,27 @@ describe('LinkPressable in the real React Native Web DOM (#2901)', () => {
     },
   )
 
+  it('runs custom navigation only for an unmodified link activation', async () => {
+    const onNavigate = jest.fn()
+    await render(createElement(NavigationLink, {
+      href: '/search',
+      onNavigate,
+      selected: true,
+      dataSet: { travelNavActive: 'true' },
+    }, 'Маршруты'))
+
+    expect(anchor().getAttribute('href')).toBe('/search')
+    expect(anchor().getAttribute('aria-current')).toBe('page')
+    expect(anchor().dataset.navigationLink).toBe('true')
+    expect(anchor().dataset.travelNavActive).toBe('true')
+    expect(await click({ ctrlKey: true })).toBe(true)
+    expect(onNavigate).not.toHaveBeenCalled()
+    expect(await click()).toBe(false)
+    expect(onNavigate).toHaveBeenCalledTimes(1)
+    expect(mockPush).not.toHaveBeenCalled()
+    expect(mockLinkTo).not.toHaveBeenCalled()
+  })
+
   it('does not navigate when the caller prevented default', async () => {
     const onPress = jest.fn((event: { preventDefault: () => void }) => event.preventDefault())
     await renderLink(onPress)
@@ -160,6 +183,29 @@ describe('LinkPressable in the real React Native Web DOM (#2901)', () => {
     expect(onPress).toHaveBeenCalledTimes(1)
     expect(mockPush).not.toHaveBeenCalled()
     expect(mockLinkTo).not.toHaveBeenCalled()
+  })
+
+  it('keeps the governed external destination available for modified clicks', async () => {
+    const onNavigate = jest.fn()
+    await render(createElement(NavigationLink, {
+      external: true,
+      href: 'https://example.org/route',
+      onNavigate,
+    }, 'Маршрут'))
+
+    expect(anchor().getAttribute('href')).toBe('https://example.org/route')
+    expect(anchor().target).toBe('_blank')
+    expect(anchor().rel).toBe('noopener')
+    expect(await click({ metaKey: true })).toBe(true)
+    expect(onNavigate).not.toHaveBeenCalled()
+    expect(await click()).toBe(false)
+    expect(onNavigate).toHaveBeenCalledTimes(1)
+    expect(mockPush).not.toHaveBeenCalled()
+  })
+
+  it('does not render an unsafe external destination', async () => {
+    await render(createElement(NavigationLink, { external: true, href: 'javascript:alert(1)' }, 'Маршрут'))
+    expect(container.querySelector('a')).toBeNull()
   })
 
   it('treats target=_blank and nativeEvent modifiers as browser navigation', () => {

@@ -18,6 +18,7 @@ type ListTravelLayoutProps = {
     SidebarFiltersProps,
     | 'isMobile'
     | 'initialViewportWidth'
+    | 'useSharedWebFilters'
     | 'filterGroups'
     | 'filter'
     | 'onSelect'

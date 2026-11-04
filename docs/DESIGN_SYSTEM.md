@@ -3,6 +3,43 @@
 This document records product-level design-token decisions that are too broad for
 one component but too specific for `docs/RULES.md`.
 
+## Быстрый выбор токенов и компонентов
+
+| Что нужно | Источник | Как применять |
+| --- | --- | --- |
+| Цвет текста, фона, границы и состояния | `hooks/useTheme.ts` → `useThemedColors()` | Выбирать семантическую роль. Палитра живёт в `constants/modernMattePalette.ts`, токены — в `constants/designSystem.ts`, веб-переменные — в `app/global.css`. |
+| Раскладка, отступы, ширина контейнеров | `constants/layout.ts` → `METRICS` | Для новых правил раскладки опираться на эту шкалу. Ключи `METRICS.spacing` и `DESIGN_TOKENS.spacing` имеют разные значения, например `xs` равен 4 и 8 соответственно. При миграции сверять роль и значение. |
+| Радиусы и тени | `METRICS.borderRadius`, `DESIGN_TOKENS.radii`, `shadows` и `shadowsNative` | Переиспользовать оформление выбранного компонента. Для нового паттерна определить одну семантическую роль и проверить светлую и тёмную темы. |
+| Заголовок и подпись | `components/ui/Typography.tsx` | `Heading` задаёт уровень, `Body`, `Caption`, `Label` и `Eyebrow` задают роль текста. Для адаптивного первого кадра следовать реестру `headingLayout.ts`. |
+| Точки переключения режима | `METRICS.breakpoints` и `utils/breakpointLayout.ts` | Проверять первый кадр до гидратации и тот же режим после неё. |
+
+### Действующие компоненты
+
+| Назначение | Компонент | Основной контракт |
+| --- | --- | --- |
+| Действие с подписью | `ui/Button` | `label`, `variant`, `size`, `loading`, `disabled`. Подпись переносится. |
+| Действие с иконкой | `ui/IconButton` | Иконка из Feather и доступное название. Размеры целей `sm` и `md` — 44 и 48. |
+| Внутренний переход | `ui/LinkPressable`, `ui/NavigationLink` для строки меню | `href` сохраняет адрес на вебе. Обычный клик — переход приложения, модифицированный клик — штатное поведение браузера. |
+| Внешний переход | `utils/externalLinks.ts`, для отдельной карточки `ui/ExternalContentLinkCard` | Проверка назначения и политика открытия в общем слое. Оформление карточки выбирается по контексту. |
+| Фильтр или выбор | `ui/Chip`, `ui/SelectionGroup` | Видимое состояние выбора и доступная семантика группы. |
+| Группа инструментов | `ui/ToolActionsRow` | Текстовые кнопки или компактные иконки по ширине. Подробности ниже. |
+| Карточка путешествия и фото | `ui/UnifiedTravelCard`, `ui/ImageCardMedia` | Фото сохраняет пропорции. Свободная область заполняется цветом из манифеста на вебе и слоем Expo Image на native. |
+| Пустота, загрузка, ошибка | `ui/EmptyState`, `ui/SectionSkeleton`, `ui/SkeletonLoader`, `ui/ErrorDisplay` | Для пустоты задать `density`. Каркас сохраняет ожидаемые размеры, ошибка предлагает повтор там, где он возможен. |
+| Меню действий и подтверждение | `ui/ActionListSheet`, `ui/ConfirmDialog` | У опасного действия своя семантика. Переход между листом и диалогом учитывает закрытие первого. |
+| Панель фильтров веб-каталога | `layout/CatalogFilterPanel` | Общие отступы, заголовок и адаптивная геометрия. Узкий режим открывается как модальное окно, контроллеры разделов ведут выбор и сброс. |
+| Контейнер и общая навигация | `layout/ResponsiveContainer`, `layout/ResponsiveStack`, `layout/CustomHeader`, `layout/BottomDock` | Раскладка экрана и навигация сайта с учётом мобильных резервов. |
+
+Веб-панели разделов, оформление ссылок и порядок их миграции описаны в
+[предлагаемом веб-эталоне](design/web-ui-foundations.md).
+
+### Интерактивный каталог
+
+Запуск из корня проекта: `npm run design:catalog`. Откройте
+`http://localhost:8084` и переключите тему или ширину колонки.
+Для проверки мобильных брейкпоинтов меняйте ширину окна браузера.
+Примеры используют общие компоненты, отдельный Expo Router и локальные данные.
+Вход в каталог находится в `tools/ui-catalog`, отдельно от маршрутов сайта.
+
 ## Orange accents
 
 Status: accepted, 2026-07-02.
@@ -243,11 +280,9 @@ Status: accepted, 2026-07-19.
 
 `components/ui/Button.tsx` is the canonical button primitive. It exposes only
 **semantic** variant colors (`primary`, `secondary`, `ghost`, `danger`,
-`outline`, `soft`, `danger-outline`) and a single icon slot (`icon` +
-`iconPosition`). This is by design: the primitive intentionally does not carry
-per-brand colors outside the semantic palette, and does not carry transient
-self-toggling states. New buttons should use the primitive unless they are
-listed below as a documented exception.
+`outline`, `soft`, `danger-outline`, `tonal`), the `icon` slot with
+`iconPosition`, and an optional `trailingIcon`. Use the primitive for new
+buttons and document each context-specific exception below.
 
 ### `components/travel/ShareButtons.tsx`
 
@@ -274,7 +309,7 @@ Status: accepted exception, task #1013 (FE-BTN-1).
   the share affordance and is not something the single-shape primitive models.
 
 Because these requirements sit outside the canonical `Button`'s semantic,
-single-icon, stateless contract, `ShareButtons` is kept as a deliberate
+stateless contract, `ShareButtons` is kept as a deliberate
 exception rather than forced onto the primitive. If the primitive later grows a
 brand-color or transient-state contract, revisit this entry.
 

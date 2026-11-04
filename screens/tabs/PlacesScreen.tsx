@@ -11,6 +11,10 @@ import {
 import Feather from '@expo/vector-icons/Feather'
 import { useIsFocused } from 'expo-router'
 
+import CatalogFilterPanel from '@/components/layout/CatalogFilterPanel'
+import { CATALOG_FILTER_PANEL, getCatalogFilterPanelGeometry } from '@/components/layout/catalogFilterPanelGeometry'
+import { CATALOG_FILTER_PANEL_LAYOUT } from '@/components/layout/catalogFilterPanelLayout'
+import { breakpointLayoutProps } from '@/utils/breakpointLayout'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import InstantSEO from '@/components/seo/LazyInstantSEO'
@@ -20,7 +24,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useResponsiveWidth } from '@/hooks/useResponsive'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH, getSiteBaseUrl } from '@/utils/seo'
 import { toCanonicalTravelPath } from '@/utils/relatedTravel'
-import { webDataSetProps } from '@/utils/webProps'
+import { webDataSetProps, webViewStyle } from '@/utils/webProps'
 import ContributionBanner from '@/components/common/ContributionBanner'
 
 import {
@@ -46,11 +50,17 @@ export default function PlacesScreen() {
   // like the app shell/header does. Otherwise static HTML is rendered as mobile
   // and the entire catalog jumps into the desktop layout after hydration.
   const hasMeasuredWidth = width > 0
-  const isCompact = hasMeasuredWidth && width < 760
+  const isWeb = Platform.OS === 'web'
+  const panel = getCatalogFilterPanelGeometry(width || CATALOG_FILTER_PANEL.embeddedMinWidth)
+  const isCompact = hasMeasuredWidth && width < (isWeb ? CATALOG_FILTER_PANEL.embeddedMinWidth : 760)
+  const isSingleColumn = hasMeasuredWidth && width < 760
   const isWide = !hasMeasuredWidth || width >= 1100
   // Full-width web catalog: add columns as the viewport grows so cards keep ~300px.
   const wideColumns = Platform.OS !== 'web' ? 3 : width >= 2200 ? 5 : width >= 1700 ? 4 : 3
-  const styles = useMemo(() => createStyles(colors, isCompact, isWide, wideColumns), [colors, isCompact, isWide, wideColumns])
+  const styles = useMemo(
+    () => createStyles(colors, isCompact, isWide, wideColumns, panel.width, panel.gap, isSingleColumn),
+    [colors, isCompact, isWide, wideColumns, panel.width, panel.gap, isSingleColumn],
+  )
   const {
     activeCategoryTitle,
     appliedQuery,
@@ -102,7 +112,7 @@ export default function PlacesScreen() {
     topBarHeight,
     totalCount,
     visiblePlaces,
-  } = usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth })
+  } = usePlacesCatalogController({ isCompact: isSingleColumn, isWide, hasMeasuredWidth })
 
   // Sort control shared by the desktop results header and the compact sticky bar.
   const sortOptions = useMemo(
@@ -207,9 +217,8 @@ export default function PlacesScreen() {
 
   // Compact "app" chrome — a sticky compact filter bar (search + Категории + страна
   // + Сбросить) pinned above a single scrolling column of cards. Used on every mobile
-  // width, web and native alike, so /places renders identically across platforms; the
-  // full stacked topBar/sidebar is desktop-only. Both platforms share one ScrollView
-  // path (no native FlatList) to guarantee the same layout and scroll behaviour.
+  // width, with the desktop breakpoint deciding when web docks the filters.
+  // Both platforms share one results ScrollView.
   const mobileCompact = isCompact
   // #1334: до измерения ширины (статический HTML и первый кадр гидратации) на web
   // отдаём ОБЕ шапки каталога — desktop `topBar` внутри скролла и компактную
@@ -231,7 +240,7 @@ export default function PlacesScreen() {
 
   let resultsContent: React.ReactNode
   if (resultsStatus === 'loading') {
-    resultsContent = <SkeletonGrid styles={styles} isCompact={isCompact} isWide={isWide} />
+    resultsContent = <SkeletonGrid styles={styles} isCompact={isSingleColumn} isWide={isWide} />
   } else if (resultsStatus === 'error') {
     resultsContent = (
       <StateBlock
@@ -292,6 +301,14 @@ export default function PlacesScreen() {
       </View>
     )
   }
+
+  const FilterPanel = isWeb ? CatalogFilterPanel : View
+  const filterTitle = i18nT('map:screens.tabs.PlacesScreen.kategorii_7e54cc5b')
+  const selectedCountBadge = selectedCategories.length > 0 ? (
+    <View style={styles.selectedBadge}>
+      <Text style={styles.selectedBadgeText}>{selectedCategories.length}</Text>
+    </View>
+  ) : null
 
   const pageChrome = (
     <>
@@ -359,31 +376,36 @@ export default function PlacesScreen() {
         <View
           style={styles.layout}
           testID="places-layout"
-          {...(Platform.OS === 'web' && !hasMeasuredWidth
-            ? webDataSetProps({ placesPrehydration: 'true' })
-            : {})}
+          {...breakpointLayoutProps(
+            CATALOG_FILTER_PANEL_LAYOUT,
+            'content',
+            isWeb && !hasMeasuredWidth ? webDataSetProps({ placesPrehydration: 'true' }) : null,
+          )}
         >
-          {/* Sidebar / collapsible filter. On mobile (compact) the search + category
-              toggle live in the sticky compact bar above the scroll area, so the
-              category list only expands here when the user opens the filter. */}
           {(!isCompact || filtersOpen) ? (
-            <View
+            <FilterPanel
               testID="places-sidebar"
-              style={[
+              {...(isWeb ? {
+                title: filterTitle,
+                titleAccessory: selectedCountBadge,
+                overlay: isCompact,
+                onClose: () => setFiltersOpen(false),
+                scrollContentStyle: isCompact ? styles.filterOverlayContent : undefined,
+                ...(!isCompact ? breakpointLayoutProps(CATALOG_FILTER_PANEL_LAYOUT, 'aside') : null),
+              } : null)}
+              style={isWeb && isCompact ? undefined : [
                 styles.sidebar,
-                Platform.OS === 'web' && !isCompact && topBarHeight > 0
-                  ? ({ top: topBarHeight, maxHeight: `calc(100vh - ${topBarHeight}px)` } as any)
+                isWeb && topBarHeight > 0
+                  ? webViewStyle({ top: topBarHeight, maxHeight: `calc(100vh - ${topBarHeight}px)` })
                   : null,
               ]}
             >
-              <View style={styles.sidebarHeader}>
-                <Text style={styles.sectionTitle}>{i18nT('map:screens.tabs.PlacesScreen.kategorii_7e54cc5b')}</Text>
-                {selectedCategories.length > 0 ? (
-                  <View style={styles.selectedBadge}>
-                    <Text style={styles.selectedBadgeText}>{selectedCategories.length}</Text>
-                  </View>
-                ) : null}
-              </View>
+              {!isWeb ? (
+                <View style={styles.sidebarHeader}>
+                  <Text style={styles.sectionTitle}>{filterTitle}</Text>
+                  {selectedCountBadge}
+                </View>
+              ) : null}
               <View style={styles.categorySearchBox}>
                 <View style={styles.categorySearchIconSlot}>
                   <Feather
@@ -517,7 +539,14 @@ export default function PlacesScreen() {
                   </View>
                 ) : null}
               </View>
-              {!isCompact && hasActiveFilters ? (
+              {isWeb && hasActiveFilters ? (
+                <Button
+                  label={i18nT('map:screens.tabs.PlacesScreen.sbrosit_filtry_f13dc45b')}
+                  variant="ghost"
+                  onPress={resetAll}
+                />
+              ) : null}
+              {!isWeb && !isCompact && hasActiveFilters ? (
                 <Pressable
                   onPress={resetAll}
                   accessibilityRole="button"
@@ -527,7 +556,7 @@ export default function PlacesScreen() {
                   <Text style={styles.sidebarResetBtnText}>{i18nT('map:screens.tabs.PlacesScreen.sbrosit_filtry_f13dc45b')}</Text>
                 </Pressable>
               ) : null}
-            </View>
+            </FilterPanel>
           ) : null}
 
           {/* Results */}
@@ -630,6 +659,7 @@ export default function PlacesScreen() {
         </View>
 
         <Pressable
+          testID="places-filters-button"
           onPress={() => setFiltersOpen((v) => !v)}
           accessibilityRole="button"
           accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.kategorii_7e54cc5b')}

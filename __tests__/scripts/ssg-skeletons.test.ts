@@ -891,7 +891,7 @@ describe('ssg-skeletons', () => {
       const html = buildSearchSkeletonHtml();
       expect(html.match(/class="ssg-search-card-title"/g)).toHaveLength(6);
       expect(html.match(/class="ssg-search-card-meta"/g)).toHaveLength(6);
-      expect(css).toContain('@media(min-width:1440px){.ssg-search-aside');
+      expect(css).toContain('@media(min-width:1024px){.ssg-search-layout{gap:16px}.ssg-search-aside');
     });
 
     it('does not invent a mock, cover, or invisible LCP image', () => {

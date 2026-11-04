@@ -35,6 +35,7 @@ interface StickySearchBarProps {
   search: string;
   onSearchChange: (value: string) => void;
   onFiltersPress?: () => void;
+  compactMode?: boolean;
   hasActiveFilters: boolean;
   isSearchPending?: boolean;
   flush?: boolean;
@@ -62,6 +63,7 @@ function StickySearchBar({
   search,
   onSearchChange,
   onFiltersPress,
+  compactMode,
   hasActiveFilters,
   isSearchPending = false,
   flush = false,
@@ -78,11 +80,12 @@ function StickySearchBar({
 }: StickySearchBarProps) {
   const colors = useThemedColors();
   const { isPhone, isLargePhone, width } = useResponsive();
-  const { isMac, isMobile } = getStickySearchViewportState({
+  const { isMac, isMobile: responsiveCompact } = getStickySearchViewportState({
     isLargePhone,
     isPhone,
     width,
   });
+  const isMobile = compactMode ?? responsiveCompact;
   const inputRef = useRef<TextInputInstance>(null);
   const [isFocused, setIsFocused] = useState(false);
   const suppressNextHistoryPressRef = useRef(false);

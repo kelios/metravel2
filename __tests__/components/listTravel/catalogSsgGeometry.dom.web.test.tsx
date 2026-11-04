@@ -46,7 +46,7 @@ it('Node SSG card consumes the actual RN card body styles and real skeleton medi
   expect(ssg.querySelector('.ssg-search-card-meta')!.children).toHaveLength(1)
 })
 
-it.each([320, 390, 767, 768, 1023, 1024, 1180, 1280, 1439, 1440, 1920, 2560])('preserves runtime grid rules and emits them for both orientations at %s', width => {
+it.each([320, 390, 767, 768, 1023, 1024, 1180, 1279, 1280, 1439, 1440, 1920, 2560])('preserves runtime grid rules and emits them for both orientations at %s', width => {
   for (const isPortrait of [true, false]) {
     const runtime = viewport({rawWidth:width, isPortrait, isPhone:width < 768, isLargePhone:false, isTabletSize:width >= 768 && width < 1280, isDesktopSize:width >= 1280})
     const model = geometry.getCatalogViewportGeometry({width, isPortrait})
@@ -62,10 +62,14 @@ it.each([320, 390, 767, 768, 1023, 1024, 1180, 1280, 1439, 1440, 1920, 2560])('p
 })
 
 it.each([
-  [390, 1, 8, 10, 0], [768, 2, 12, 12, 0], [1024, 3, 14, 14, 0],
-  [1280, 3, 14, 14, 0], [1440, 3, 14, 14, 288], [2560, 4, 16, 20, 340],
-])('keeps the pre-extraction landscape catalog at %s', (width, columns, gap, padding, sidebar) => {
-  expect(geometry.getCatalogViewportGeometry({width})).toMatchObject({gridColumns:columns, gapSize:gap, contentPadding:padding, sidebarWidth:sidebar})
+  [390, 1, 8, 10, 0, 0], [768, 2, 12, 12, 0, 0], [1023, 2, 12, 12, 0, 0],
+  [1024, 2, 10, 12, 280, 16], [1279, 2, 12, 12, 280, 16],
+  [1280, 2, 12, 12, 320, 24], [1440, 3, 14, 14, 320, 24], [2560, 4, 16, 20, 320, 24],
+])('reserves the correct panel track and cards at %s', (width, columns, gap, padding, sidebar, sidebarGap) => {
+  expect(geometry.getCatalogViewportGeometry({width})).toMatchObject({
+    gridColumns: columns, gapSize: gap, contentPadding: padding, sidebarWidth: sidebar, sidebarGap,
+    effectiveWidth: width - sidebar - sidebarGap,
+  })
 })
 
 it('first-frame chrome matches canonical header bands and actual search/list producers', () => {
@@ -92,8 +96,9 @@ it('first-frame chrome matches canonical header bands and actual search/list pro
 
 it('first frame drops the separate toolbar band where the runtime puts the toolbar into the search row (#2755)', () => {
   const css: string = buildCatalogSkeletonCSS()
-  expect(css).toContain(`@media(min-width:${geometry.BREAKPOINTS.DESKTOP}px){`)
-  const desktopBlock = css.slice(css.indexOf(`@media(min-width:${geometry.BREAKPOINTS.DESKTOP}px){`))
+  expect(css).toContain('@media(min-width:1024px){.ssg-search-layout{gap:16px}.ssg-search-aside{display:block;width:280px;')
+  expect(css).toContain('@media(min-width:1280px){.ssg-search-layout{gap:24px}.ssg-search-aside{width:320px}}')
+  const desktopBlock = css.slice(css.indexOf('@media(min-width:1024px){.ssg-search-layout'))
   expect(desktopBlock).toContain('.ssg-search-toolbar{display:none}')
   expect(css).toContain(`.ssg-search-toolbar{height:${geometry.CATALOG_CHROME_GEOMETRY.toolbarHeight}px`)
 })

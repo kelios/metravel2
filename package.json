@@ -284,6 +284,7 @@
     "design:migrate": "node scripts/migrate-design-imports.js",
     "design:migrate:dry": "node scripts/migrate-design-imports.js --dry-run",
     "design:verify": "node scripts/verify-design-system.js",
+    "design:catalog": "EXPO_OFFLINE=1 EXPO_NO_DOTENV=1 expo start tools/ui-catalog --web --localhost --port 8084",
     "test:seo:prod": "node scripts/test-seo-prod.js",
     "test:seo:prod:verbose": "node scripts/test-seo-prod.js --verbose",
     "test:seo:postdeploy": "node scripts/post-deploy-seo-check.js",

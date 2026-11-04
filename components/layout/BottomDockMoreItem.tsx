@@ -1,9 +1,10 @@
 import React from 'react'
 import { Platform, Pressable, Text, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native'
-import { usePathname, useRouter } from 'expo-router'
+import { usePathname, useRouter, type Href } from 'expo-router'
 
 import { useAuth } from '@/context/AuthContext'
 import { useThemedColors } from '@/hooks/useTheme'
+import NavigationLink from '@/components/ui/NavigationLink'
 import { globalFocusStyles } from '@/styles/globalFocus'
 import { buildArticlesHrefFromSource } from '@/utils/articleNavigation'
 import { runAccountMenuTarget } from './accountMenuModel'
@@ -86,19 +87,9 @@ function BottomDockMoreItem({ item, styles, onClose, onOpenView }: Props) {
     if (route) router.push(route)
   }
 
-  return (
-    <Pressable
-      onPress={handlePress}
-      style={({ hovered, pressed }) => [
-        styles.moreItem,
-        (hovered || pressed) && styles.moreItemPressed,
-        globalFocusStyles.focusable,
-      ]}
-      android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
-      accessibilityRole={item.action ? 'button' : 'link'}
-      accessibilityLabel={item.accessibilityLabel}
-      testID={`footer-more-item-${item.key}`}
-    >
+  const testID = `footer-more-item-${item.key}`
+  const children = (
+    <>
       <View style={styles.moreItemIconSlot}>
         <NavigationIcon
           name={item.iconName}
@@ -121,6 +112,43 @@ function BottomDockMoreItem({ item, styles, onClose, onOpenView }: Props) {
           {item.label}
         </Text>
       )}
+    </>
+  )
+  const target = item.accountTarget
+  const externalHref = target?.kind === 'external' ? target.url : item.external ? String(item.route) : undefined
+  const href = target?.kind === 'route' || target?.kind === 'register'
+    ? target.path as Href
+    : item.route
+  const destination = externalHref ? { external: true as const, href: externalHref } : href ? { href } : undefined
+
+  if (Platform.OS === 'web' && destination && !item.action) {
+    return (
+      <NavigationLink
+        {...destination}
+        onNavigate={handlePress}
+        style={styles.moreItem}
+        accessibilityLabel={item.accessibilityLabel}
+        testID={testID}
+      >
+        {children}
+      </NavigationLink>
+    )
+  }
+
+  return (
+    <Pressable
+      onPress={handlePress}
+      style={({ hovered, pressed }) => [
+        styles.moreItem,
+        (hovered || pressed) && styles.moreItemPressed,
+        globalFocusStyles.focusable,
+      ]}
+      android_ripple={{ color: 'rgba(0,0,0,0.08)' }}
+      accessibilityRole={item.action || target?.kind === 'logout' ? 'button' : 'link'}
+      accessibilityLabel={item.accessibilityLabel}
+      testID={testID}
+    >
+      {children}
     </Pressable>
   )
 }

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useResponsive } from '@/hooks/useResponsive';
 import { getListTravelViewportState, resolveListTravelRawWidth } from '../listTravelBaseModel';
 
-export const useListTravelViewportState = (initialViewportWidth?: number) => {
+export const useListTravelViewportState = (initialViewportWidth?: number, useSharedWebFilters?: boolean) => {
   const {
     width: responsiveWidth,
     isPhone,
@@ -20,6 +20,7 @@ export const useListTravelViewportState = (initialViewportWidth?: number) => {
     isPortrait,
     isTabletSize,
     rawWidth,
+    useSharedWebFilters,
   });
 
   // Mobile browser chrome can change the viewport by a few pixels. Preserve the

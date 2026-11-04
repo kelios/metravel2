@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react'
 import { Platform, ScrollView, StyleSheet, View } from 'react-native'
 
+import { CATALOG_FILTER_PANEL } from '@/components/layout/catalogFilterPanelGeometry'
 import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
 import TravelListItemSkeleton from '@/components/listTravel/TravelListItemSkeleton'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -40,8 +41,8 @@ const SearchSidebarSkeleton = memo(({ sidebarWidth }: { sidebarWidth: number }) 
           backgroundColor: colors.surface,
           borderRightWidth: 1,
           borderRightColor: colors.borderLight,
-          paddingHorizontal: 16,
-          paddingTop: 16,
+          paddingHorizontal: CATALOG_FILTER_PANEL.padding,
+          paddingTop: CATALOG_FILTER_PANEL.padding,
           paddingBottom: 24,
           gap: 14,
         },
@@ -189,13 +190,14 @@ export const SearchPageSkeleton = memo(({ initialViewportWidth }: SearchPageSkel
           flex: 1,
           backgroundColor: colors.background,
           flexDirection: isDesktop ? 'row' : 'column',
+          gap: viewport.sidebarGap,
         },
         main: {
           flex: 1,
           minWidth: 0,
         },
       }),
-    [colors, isDesktop],
+    [colors, isDesktop, viewport.sidebarGap],
   )
 
   return (

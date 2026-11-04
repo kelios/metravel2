@@ -1,4 +1,5 @@
 import { Platform } from 'react-native'
+import { CATALOG_FILTER_PANEL } from '@/components/layout/catalogFilterPanelGeometry'
 import { getCatalogViewportGeometry } from '@/components/listTravel/travelCatalogGeometry'
 import type { ViewStyle } from 'react-native'
 import { BREAKPOINTS } from './utils/listTravelConstants'
@@ -114,6 +115,7 @@ type ResponsiveParams = {
   isPortrait: boolean
   isTabletSize: boolean
   rawWidth: number
+  useSharedWebFilters?: boolean
 }
 
 type ViewportState = {
@@ -127,6 +129,7 @@ type ViewportState = {
   isTablet: boolean
   resolvedIsPortrait: boolean
   sidebarWidth: number
+  sidebarGap: number
   usesOverlaySidebar: boolean
   width: number
 }
@@ -206,9 +209,11 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
     Platform.OS === 'web'
       ? effectiveResponsiveWidth < BREAKPOINTS.TABLET
       : params.isPhone || params.isLargePhone || (params.isTabletSize && resolvedIsPortrait)
+  const useSharedWebFilters = Platform.OS === 'web' && (params.useSharedWebFilters ?? true)
+  const filterBreakpoint = useSharedWebFilters ? CATALOG_FILTER_PANEL.embeddedMinWidth : BREAKPOINTS.DESKTOP
   const usesOverlaySidebar =
     Platform.OS === 'web'
-      ? effectiveResponsiveWidth < BREAKPOINTS.DESKTOP
+      ? effectiveResponsiveWidth < filterBreakpoint
       : isMobileDevice
   const isTablet =
     Platform.OS === 'web'
@@ -219,8 +224,8 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
       ? effectiveResponsiveWidth >= BREAKPOINTS.DESKTOP
       : params.isDesktopSize
 
-  const { width, isCardsSingleColumn, sidebarWidth, effectiveWidth, gapSize, contentPadding, gridColumns } = getCatalogViewportGeometry({
-    width: effectiveResponsiveWidth, usesOverlaySidebar, isTablet, isPortrait: resolvedIsPortrait,
+  const { width, isCardsSingleColumn, sidebarWidth, sidebarGap, effectiveWidth, gapSize, contentPadding, gridColumns } = getCatalogViewportGeometry({
+    width: effectiveResponsiveWidth, useSharedWebFilters, usesOverlaySidebar, isTablet, isPortrait: resolvedIsPortrait,
   })
 
   return {
@@ -234,6 +239,7 @@ export function getListTravelViewportState(params: ResponsiveParams): ViewportSt
     isTablet,
     resolvedIsPortrait,
     sidebarWidth,
+    sidebarGap,
     usesOverlaySidebar,
     width,
   }

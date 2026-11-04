@@ -1,10 +1,19 @@
 import { Platform, StyleSheet } from 'react-native'
 
+import { CATALOG_FILTER_PANEL } from '@/components/layout/catalogFilterPanelGeometry'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { type ThemedColors } from '@/hooks/useTheme'
 import { webStyle, webViewStyle } from '@/utils/webProps'
 
-export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: boolean, wideColumns = 3) => {
+export const createStyles = (
+  colors: ThemedColors,
+  isCompact: boolean,
+  isWide: boolean,
+  wideColumns = 3,
+  panelWidth: number = CATALOG_FILTER_PANEL.regularWidth,
+  panelGap: number = CATALOG_FILTER_PANEL.regularGap,
+  isSingleColumn = isCompact,
+) => {
   // Compact "app" layout applies to every mobile width (web + native) so /places
   // looks identical across platforms.
   const mobileCompact = isCompact
@@ -416,7 +425,7 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
   layout: {
     flexDirection: isCompact ? 'column' : 'row',
     alignItems: 'flex-start',
-    gap: 0,
+    gap: Platform.OS === 'web' && !isCompact ? panelGap : 0,
     marginTop: mobileCompact ? 0 : DESIGN_TOKENS.spacing.md,
     // Keep the contribution banner below the viewport while the catalog swaps
     // its SSR/loading shell for real cards. It used to enter at y=621 mobile /
@@ -596,10 +605,10 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
 
   // ─── Sidebar ───
   sidebar: {
-    width: isCompact ? '100%' : 280,
-    gap: DESIGN_TOKENS.spacing.sm,
-    paddingHorizontal: isCompact ? DESIGN_TOKENS.spacing.lg : DESIGN_TOKENS.spacing.lg,
-    paddingVertical: DESIGN_TOKENS.spacing.lg,
+    width: isCompact ? '100%' : Platform.OS === 'web' ? panelWidth : 280,
+    gap: Platform.OS === 'web' ? CATALOG_FILTER_PANEL.padding : DESIGN_TOKENS.spacing.sm,
+    paddingHorizontal: Platform.OS === 'web' ? CATALOG_FILTER_PANEL.padding : DESIGN_TOKENS.spacing.lg,
+    paddingVertical: Platform.OS === 'web' ? CATALOG_FILTER_PANEL.padding : DESIGN_TOKENS.spacing.lg,
     borderRightWidth: isCompact ? 0 : StyleSheet.hairlineWidth,
     borderRightColor: colors.borderLight,
     borderBottomWidth: isCompact ? StyleSheet.hairlineWidth : 0,
@@ -613,6 +622,7 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
       scrollbarColor: `${colors.borderLight} transparent`,
     } as any) : null),
   },
+  filterOverlayContent: { gap: CATALOG_FILTER_PANEL.padding },
   sidebarHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -732,8 +742,8 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
   // mislays out (only the first card is visible above a tall empty gap), so compact
   // must be `flexDirection: 'column'`.
   cardsGrid: {
-    flexDirection: isCompact ? 'column' : 'row',
-    flexWrap: isCompact ? 'nowrap' : 'wrap',
+    flexDirection: isSingleColumn ? 'column' : 'row',
+    flexWrap: isSingleColumn ? 'nowrap' : 'wrap',
     gap: DESIGN_TOKENS.spacing.md,
     alignItems: 'stretch',
   },
@@ -743,7 +753,7 @@ export const createStyles = (colors: ThemedColors, isCompact: boolean, isWide: b
   // here would resolve against the column main axis (height) and collapse the card,
   // so compact uses an explicit width with no flex basis. Desktop keeps the grid
   // column sizing (basis/min/max) for the row-wrap layout.
-  card: isCompact
+  card: isSingleColumn
     ? {
         width: '100%',
         flexGrow: 0,

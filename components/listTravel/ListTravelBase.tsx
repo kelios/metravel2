@@ -65,12 +65,13 @@ const isSearchPathname = (value: string | null | undefined): boolean =>
 function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, primaryAction }: ListTravelBaseProps = {}) {
     const colors = useThemedColors();
     const hydrationReady = useHydrationReady();
-    const { viewportState, width } = useListTravelViewportState(initialViewportWidth);
     const route = useRoute();
     const pathname = usePathname();
     const router = useRouter();
 
     const { user_id, normalizedSearchParam, initialFilter } = useListTravelInitialFilter();
+    const useSharedWebFilters = Platform.OS === 'web' && (pathname === '/search' || pathname === '/travelsby');
+    const { viewportState, width } = useListTravelViewportState(initialViewportWidth, useSharedWebFilters);
 
     const isMeTravel = (route as any).name === "metravel" || pathname?.includes('/metravel');
     const isTravelBy = (route as any).name === "travelsby";
@@ -660,13 +661,14 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
 
   return (
     <ListTravelLayout
-      rootStyle={[styles.root, usesOverlaySidebar ? styles.rootMobile : undefined]}
+      rootStyle={[styles.root, usesOverlaySidebar ? styles.rootMobile : { gap: viewportState.sidebarGap }]}
       deleteId={deleteId}
       deleteError={deleteError}
       onConfirmDelete={confirmDelete}
       onCloseDelete={cancelDelete}
       sidebar={{
         initialViewportWidth: viewportState.width,
+        useSharedWebFilters,
         isMobile: usesOverlaySidebar,
         filterGroups,
         filter,

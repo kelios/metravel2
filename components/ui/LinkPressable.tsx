@@ -32,7 +32,7 @@ const isModifiedClick = (click: ClickLike | null | undefined) =>
 
 // Семантика expo-router `shouldHandleMouseEvent` (из пакета не экспортируется):
 // SPA-переход только для обычного левого клика без модификаторов и без target=_blank.
-export function shouldHandleLinkClick(event: LinkPressEvent): boolean {
+export function shouldHandleLinkClick(event: LinkPressEvent, allowBlankTarget = false): boolean {
   const click = event as unknown as ClickLike & {
     defaultPrevented?: boolean
     nativeEvent?: ClickLike
@@ -42,6 +42,7 @@ export function shouldHandleLinkClick(event: LinkPressEvent): boolean {
   if (isModifiedClick(click) || isModifiedClick(click.nativeEvent)) return false
   const target = click.currentTarget?.target
   return target == null || target === '' || target === 'self' || target === '_self'
+    || (allowBlankTarget && target === '_blank')
 }
 
 // Pressable-ссылка: `<a href role=link>` из `Link asChild` и переход внутри приложения.

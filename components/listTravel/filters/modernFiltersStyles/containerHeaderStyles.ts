@@ -1,5 +1,6 @@
 import { Platform } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { webViewStyle } from '@/utils/webProps'
 import type { StylesCtx } from './tokens'
 
 export const createContainerHeaderStyles = (ctx: StylesCtx) => {
@@ -77,6 +78,18 @@ export const createContainerHeaderStyles = (ctx: StylesCtx) => {
       paddingTop: 10,
       paddingBottom: 0,
     },
+    containerInSharedWebPanel: webViewStyle({
+      backgroundColor: 'transparent',
+      backgroundImage: 'none',
+      backdropFilter: 'none',
+      boxShadow: 'none',
+      borderWidth: 0,
+      paddingHorizontal: 0,
+      paddingTop: 0,
+      paddingBottom: 0,
+      position: 'relative',
+      top: 0,
+    }),
     containerCompact: {
       padding: spacing.md,
       ...Platform.select({

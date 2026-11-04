@@ -676,6 +676,7 @@ const RightColumn: React.FC<RightColumnProps> = (
             search={search}
             onSearchChange={setSearch}
             flush={Platform.OS === 'web'}
+            compactMode={isWeb ? isCompactToolbar : undefined}
             onFiltersPress={onFiltersPress}
             onToggleRecommendations={handleRecommendationsToggle}
             isRecommendationsVisible={showRecommendations}

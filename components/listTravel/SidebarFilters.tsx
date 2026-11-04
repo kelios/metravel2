@@ -1,5 +1,6 @@
 import React, { memo, useCallback } from 'react'
 import { Modal, Platform, Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native'
+import CatalogFilterPanel from '@/components/layout/CatalogFilterPanel'
 import ModernFilters from './ModernFilters'
 import ErrorDisplay from '@/components/ui/ErrorDisplay'
 import type { FilterState as ModernFilterState } from './ModernFilters'
@@ -10,6 +11,7 @@ import { translate as i18nT } from '@/i18n'
 
 interface SidebarFiltersProps {
   initialViewportWidth?: number
+  useSharedWebFilters?: boolean
   isMobile: boolean
   filterGroups: TravelFilterGroup[]
   filter: FilterState
@@ -36,6 +38,7 @@ interface SidebarFiltersProps {
 const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
   ({
     initialViewportWidth,
+    useSharedWebFilters = false,
     isMobile,
     filterGroups,
     filter,
@@ -112,12 +115,13 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
         // The mobile/web overlay replaces the whole catalog. Without an
         // explicit dismiss action a failed filter-options request trapped the
         // user in the error sheet with no route back to the results.
-        onDismiss={isMobile ? onClose : undefined}
+        onDismiss={isMobile && !useSharedWebFilters ? onClose : undefined}
         showContact={false}
       />
     ) : (
       <ModernFilters
         initialViewportWidth={initialViewportWidth}
+        useSharedWebFilters={useSharedWebFilters}
         filterGroups={filterGroups}
         selectedFilters={filter as unknown as ModernFilterState}
         onFilterChange={handleFilterChange}
@@ -172,6 +176,20 @@ const SidebarFilters: React.FC<SidebarFiltersProps> = memo(
       return null
     }
 
+    if (useSharedWebFilters && Platform.OS === 'web') {
+      return (
+        <CatalogFilterPanel
+          title={i18nT('travel:components.listTravel.ModernFilters.filtry_11f4ea40')}
+          testID="search-sidebar"
+          overlay={isMobile}
+          onClose={onClose}
+          closeLabel={i18nT('travel:components.listTravel.ModernFilters.zakryt_filtry_65ea723a')}
+          style={isMobile ? undefined : containerStyle}
+        >
+          {filtersElement}
+        </CatalogFilterPanel>
+      )
+    }
     return <View style={containerStyle}>{filtersElement}</View>
   }
 )

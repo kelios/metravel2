@@ -14,7 +14,7 @@ import { buildCriticalCSS } from '@/utils/criticalCSSBuilder'
 import type { PlacesCatalogPage } from '@/utils/placesCatalog'
 
 // Порог берём из самого критического CSS, а не из литерала в тесте: только так
-// расхождение `isCompact = width < 760` с media-query падает в CI. Разъезд даёт
+// расхождение React-раскладки с media-query падает в CI. Разъезд даёт
 // кадр, где видны обе шапки каталога или ни одной.
 const COMPACT_BREAKPOINT = Number(
   buildCriticalCSS().match(
@@ -134,7 +134,7 @@ describe('PlacesScreen pre-hydration chrome', () => {
     expect(queryByTestId('places-topbar')).toBeNull()
     expect(queryByTestId('places-sidebar')).toBeNull()
     const layout = getByTestId('places-layout')
-    expect(layout.props.dataSet).toBeUndefined()
+    expect(layout.props.dataSet).not.toHaveProperty('placesPrehydration')
     expect(StyleSheet.flatten(layout.props.style)).toMatchObject({
       minHeight: 'calc(100vh - 179px)',
     })
@@ -149,12 +149,11 @@ describe('PlacesScreen pre-hydration chrome', () => {
     expect(queryByTestId('places-compact-bar')).toBeNull()
   })
 
-  // Критический CSS показывает компактную панель до `min-width:760px`, а React
-  // переключается по `width < 760`. Пока обе стороны читают одно число, кадр до
+  // Критический CSS и React переключают шапку на одном пороге. Тогда кадр до
   // и после гидратации совпадает; иначе возвращается прыжок каталога на 115 px.
   it('switches headers exactly at the breakpoint declared in the critical CSS', async () => {
     expect(Number.isFinite(COMPACT_BREAKPOINT)).toBe(true)
-    expect(buildCriticalCSS()).toContain(`@media (max-width:${COMPACT_BREAKPOINT - 0.02}px){`)
+    expect(buildCriticalCSS()).toContain(`@media (width < ${COMPACT_BREAKPOINT}px){`)
 
     mockWidth = COMPACT_BREAKPOINT - 1
     const compactRoot = await renderWebScreen()

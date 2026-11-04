@@ -200,13 +200,13 @@ describe('buildCriticalCSS: quest detail compact row matches first-frame ownersh
 // появлялась после гидратации и опускала каталог на 115 px (CLS 0,537).
 describe('buildCriticalCSS: до-гидрационная раскладка /places', () => {
   const css = buildCriticalCSS()
-  const mobileBlockStart = css.indexOf('@media (max-width:759.98px){')
+  const mobileBlockStart = css.indexOf('@media (width < 1024px){')
   const mobileBlockTail = css.slice(mobileBlockStart)
-  const mobileBlock = mobileBlockTail.slice(0, mobileBlockTail.indexOf('\n}') + 2)
+  const mobileBlock = mobileBlockTail.slice(0, mobileBlockTail.indexOf('@media (760px <= width < 1100px){'))
 
   it.each([
-    ['@media (max-width:759.98px){', '[data-testid="places-topbar"]{display:none !important}'],
-    ['@media (min-width:760px){', '[data-testid="places-compact-bar"]{display:none !important}'],
+    ['@media (width < 1024px){', '[data-testid="places-topbar"]{display:none !important}'],
+    ['@media (min-width:1024px){', '[data-testid="places-compact-bar"]{display:none !important}'],
   ])('в %s прячет вторую шапку (%s)', (media, rule) => {
     const block = css.slice(css.indexOf(media))
     const mediaBlock = block.slice(0, block.indexOf('\n}') + 2)
@@ -215,11 +215,11 @@ describe('buildCriticalCSS: до-гидрационная раскладка /pl
     expect(mediaBlock).toContain(rule)
   })
 
-  // Порог обязан совпадать с `isCompact = width < 760` в PlacesScreen: разъезд
+  // Порог обязан совпадать с общим порогом панели в PlacesScreen: разъезд
   // вернёт кадр, где видны обе шапки или ни одной.
-  it('держит порог 760 px в обеих ветках', () => {
-    expect(css).toContain('@media (max-width:759.98px){')
-    expect(css).toContain('@media (min-width:760px){')
+  it('держит порог 1024 px в обеих ветках', () => {
+    expect(css).toContain('@media (width < 1024px){')
+    expect(css).toContain('@media (min-width:1024px){')
   })
 
   it.each([
@@ -257,8 +257,8 @@ describe('buildCriticalCSS: до-гидрационная раскладка /pl
 // иначе правка `PlacesScreen.styles` проходит CI молча.
 describe('buildCriticalCSS: до-гидрационные размеры /places равны мобильным стилям экрана', () => {
   const css = buildCriticalCSS()
-  const mobileBlockTail = css.slice(css.indexOf('@media (max-width:759.98px){'))
-  const mobileBlock = mobileBlockTail.slice(0, mobileBlockTail.indexOf('\n}') + 2)
+  const mobileBlockTail = css.slice(css.indexOf('@media (width < 1024px){'))
+  const mobileBlock = mobileBlockTail.slice(0, mobileBlockTail.indexOf('@media (760px <= width < 1100px){'))
 
   const originalOS = Platform.OS
   beforeAll(() => {

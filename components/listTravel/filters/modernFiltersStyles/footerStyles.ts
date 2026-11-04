@@ -23,6 +23,7 @@ export const createFooterStyles = (ctx: StylesCtx) => {
         } as any,
       }),
     },
+    applyButtonContainerInSharedWebPanel: { paddingBottom: 0 },
     resetMobileButton: {
       paddingVertical: spacing.sm,
       borderRadius: PILL_RADIUS,

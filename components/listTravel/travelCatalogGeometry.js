@@ -1,5 +1,7 @@
-/* global module */
+/* global module, require */
 /** Pure geometry shared by Metro runtime and the Node first-frame builder. */
+const { CATALOG_FILTER_PANEL, getCatalogFilterPanelGeometry } = require('../layout/catalogFilterPanelGeometry');
+
 const BREAKPOINTS = Object.freeze({ XS:360, SM:480, MOBILE:768, MD:900, TABLET:1024, TABLET_LANDSCAPE:1024, DESKTOP:1440, DESKTOP_LARGE:1920, XXL:2560 });
 const GRID_COLUMNS = Object.freeze({ MOBILE:1, TABLET:2, TABLET_LANDSCAPE:3, DESKTOP:4, DESKTOP_LARGE:4 });
 const CARD_MEDIA_SLOT_RATIO = 1;
@@ -14,16 +16,18 @@ function calculateColumns(width, orientation = 'landscape') {
   if (orientation === 'portrait' && width >= BREAKPOINTS.SM && width < BREAKPOINTS.DESKTOP) columns = Math.min(columns, 2);
   return Math.max(columns, 1);
 }
-function getCatalogViewportGeometry({width, usesOverlaySidebar = width < BREAKPOINTS.DESKTOP, isTablet = width >= BREAKPOINTS.TABLET && width < BREAKPOINTS.DESKTOP, isPortrait = false}) {
+function getCatalogViewportGeometry({width, useSharedWebFilters = true, usesOverlaySidebar = width < (useSharedWebFilters ? CATALOG_FILTER_PANEL.embeddedMinWidth : BREAKPOINTS.DESKTOP), isTablet = width >= BREAKPOINTS.TABLET && width < BREAKPOINTS.DESKTOP, isPortrait = false}) {
   const isCardsSingleColumn = width < BREAKPOINTS.MOBILE;
-  const sidebarWidth = usesOverlaySidebar ? 0 : Math.round(Math.min(340, Math.max(260, width * .2)));
-  const effectiveWidth = width - sidebarWidth;
+  const panel = getCatalogFilterPanelGeometry(width);
+  const sidebarWidth = usesOverlaySidebar ? 0 : useSharedWebFilters ? panel.width : Math.round(Math.min(340, Math.max(260, width * .2)));
+  const sidebarGap = usesOverlaySidebar || !useSharedWebFilters ? 0 : panel.gap;
+  const effectiveWidth = width - sidebarWidth - sidebarGap;
   const gapSize = effectiveWidth < BREAKPOINTS.XS ? 6 : effectiveWidth < BREAKPOINTS.SM ? 8 : effectiveWidth < BREAKPOINTS.MOBILE ? 10 : effectiveWidth < BREAKPOINTS.TABLET ? 12 : effectiveWidth < BREAKPOINTS.DESKTOP ? 14 : 16;
   const contentPadding = effectiveWidth < BREAKPOINTS.XS ? 8 : effectiveWidth < BREAKPOINTS.SM ? 10 : effectiveWidth < BREAKPOINTS.TABLET ? 12 : effectiveWidth < BREAKPOINTS.DESKTOP ? 14 : effectiveWidth < BREAKPOINTS.DESKTOP_LARGE ? 16 : 20;
   let gridColumns = isCardsSingleColumn ? 1 : calculateColumns(usesOverlaySidebar ? width : effectiveWidth, (usesOverlaySidebar || isTablet) && isPortrait ? 'portrait' : 'landscape');
   if (!usesOverlaySidebar && effectiveWidth >= BREAKPOINTS.DESKTOP_LARGE) gridColumns = Math.min(gridColumns, 4);
   else if (!usesOverlaySidebar && effectiveWidth >= BREAKPOINTS.DESKTOP) gridColumns = Math.min(gridColumns, 3);
-  return {width, isCardsSingleColumn, sidebarWidth, effectiveWidth, gapSize, contentPadding, gridColumns};
+  return {width, isCardsSingleColumn, sidebarWidth, sidebarGap, effectiveWidth, gapSize, contentPadding, gridColumns};
 }
 
 module.exports = { BREAKPOINTS, GRID_COLUMNS, CARD_MEDIA_SLOT_RATIO, CARD_GEOMETRY, CATALOG_CHROME_GEOMETRY, calculateColumns, getCatalogViewportGeometry };

@@ -1,7 +1,8 @@
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 
 import { DESKTOP_BAR_NAV_ITEMS, type HeaderNavItem } from '@/constants/headerNavigation';
+import NavigationLink from '@/components/ui/NavigationLink';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
 import { handleHeaderNavPress } from './customHeaderNavModel';
@@ -23,21 +24,9 @@ export default function CustomHeaderNavSection({
   const books = Platform.OS === 'web' ? DESKTOP_BAR_NAV_ITEMS.find(item => item.path === '/books') : undefined;
   const renderItem = (item: HeaderNavItem) => {
     const isActive = !item.external && activePath === item.path;
-    return (
-      <Pressable
-        key={item.path}
-        onPress={() => handleHeaderNavPress(router, item.path, item.external)}
-        style={({ hovered, pressed }) => [
-          styles.navItem,
-          (hovered || pressed) && !isActive && styles.navItemHover,
-          isActive && styles.navItemActive,
-          globalFocusStyles.focusable,
-        ]}
-        {...(Platform.OS === 'web' ? webDataSetProps({ travelNavActive: String(isActive) }) : {})}
-        accessibilityRole="link"
-        accessibilityLabel={item.label}
-        accessibilityState={{ selected: isActive }}
-      >
+    const navigate = () => handleHeaderNavPress(router, item.path, item.external);
+    const children = (
+      <>
         <View style={styles.iconSlot18} {...(Platform.OS === 'web' ? webDataSetProps({ travelNavIcon: item.icon }) : {})}>
           <NavigationIcon
             name={item.icon}
@@ -48,6 +37,41 @@ export default function CustomHeaderNavSection({
         <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
           {item.label}
         </Text>
+      </>
+    );
+    if (Platform.OS === 'web') {
+      const destination = item.external
+        ? { external: true as const, href: item.path }
+        : { href: item.path as Href }
+      return (
+        <NavigationLink
+          key={item.path}
+          {...destination}
+          style={[styles.navItem, isActive && styles.navItemActive]}
+          selected={isActive}
+          accessibilityLabel={item.label}
+          dataSet={{ travelNavActive: String(isActive) }}
+          onNavigate={navigate}
+        >
+          {children}
+        </NavigationLink>
+      );
+    }
+    return (
+      <Pressable
+        key={item.path}
+        onPress={navigate}
+        style={({ hovered, pressed }) => [
+          styles.navItem,
+          (hovered || pressed) && !isActive && styles.navItemHover,
+          isActive && styles.navItemActive,
+          globalFocusStyles.focusable,
+        ]}
+        accessibilityRole="link"
+        accessibilityLabel={item.label}
+        accessibilityState={{ selected: isActive }}
+      >
+        {children}
       </Pressable>
     );
   };
