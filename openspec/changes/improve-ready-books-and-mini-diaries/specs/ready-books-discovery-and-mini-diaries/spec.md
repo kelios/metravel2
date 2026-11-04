@@ -42,6 +42,12 @@ A compact diary SHALL be a distinct six-page A5 PDF with three separately usable
 #### Scenario: Valid pilot
 - **WHEN** an approved pilot has matching rights, preview and downloadable assets in the published storage
 - **THEN** the catalogue links to the pilot page and a guest can download its PDF without signing in
+- **AND** the cover thumbnail keeps the proportions of the A5 cover on mobile and desktop
+
+#### Scenario: Visual acceptance of a revised pilot
+- **WHEN** a compact diary is prepared for publication
+- **THEN** the exact six-page PDF is reviewed page by page for readable hierarchy, legible navigation and usable space for a personal memory
+- **AND** its cover and sample are rendered from the reviewed PDF
 
 #### Scenario: Pilot awaits publication
 - **WHEN** the pilot resources are staged but absent from the verified public manifest

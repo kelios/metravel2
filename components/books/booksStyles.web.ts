@@ -214,6 +214,9 @@ export const catalogCss=`
 .rbe .rbc-card-planned{box-shadow:none;border:1px dashed ${c.borderStrong};background:transparent}
 .rbe .rbc-card-thumb{background:${c.backgroundTertiary};aspect-ratio:1.5;display:flex;align-items:center;justify-content:center;padding:${sp.md}px}
 .rbe .rbc-card-thumb img{max-width:100%;max-height:100%;box-shadow:${sh.hover};border-radius:2px}
+.rbe .rbc-card-mini{height:auto}
+.rbe .rbc-card-mini .rbc-card-thumb{position:relative}
+.rbe .rbc-card-mini .rbc-card-thumb img{position:absolute;inset:${sp.md}px 0;margin:auto;width:auto;height:calc(100% - ${2*sp.md}px);object-fit:contain}
 .rbe .rbc-card-body{flex:1;display:flex;flex-direction:column;gap:${sp.xs}px;padding:${sp.md}px ${sp.lg}px ${sp.lg}px}
 .rbe .rbc-card-body .rbe-chips{margin:${sp.xxs}px 0 0}
 .rbe .rbc-card-link{margin-top:auto;align-self:flex-start;display:inline-flex;align-items:center;gap:6px;min-height:44px;color:${c.primaryText};font-weight:700;text-decoration:none}

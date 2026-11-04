@@ -41,7 +41,7 @@ export default function ReadyBooksCatalogContent(){
     {available.length===0&&planned.length===0&&compact.length===0?<p className="rbe-h3" role="status">{bookT(readyBooks.length===0?'preparing':'noBooks')}</p>:<ul className="rbc-grid">
       {compact.map(diary=>{
         const href=`/books/${diary.slug}`;
-        return <li key={diary.id}><article className="rbc-card">
+        return <li key={diary.id}><article className="rbc-card rbc-card-mini">
           <div className="rbc-card-thumb"><img src={diary.cover.uri} alt="" loading="lazy" decoding="async"/></div>
           <div className="rbc-card-body">
             <p className="rbe-eyebrow">{bookT('miniDiary')}</p>

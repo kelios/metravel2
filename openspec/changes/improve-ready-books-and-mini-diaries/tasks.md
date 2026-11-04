@@ -9,9 +9,11 @@
 - [x] 2.1 Audit the 12 exact releases and require revision-bound rights at publication (#3036).
 - [x] 2.2 Build both six-page A5 PDFs, verify their sources and stage their matching previews (#3040 and #3041).
 - [x] 2.3 Wire compact metadata into catalogue and immutable storage verification.
-- [ ] 2.4 Verify the six objects after owner upload and activate both mini diaries.
+- [x] 2.4 Publish the first two mini-diary editions and verify their catalogue entries and downloads.
+- [x] 2.5 Redesign all six pages of each mini diary with rights-verified imagery and keep the A5 cover proportions in the catalogue (#3040 and #3041).
 
 ## 3. Validation
 
 - [x] 3.1 Complete targeted source checks, independent review, and web acceptance after deployment.
-- [ ] 3.2 Verify both activated editions and record the post-publication 30-day measurement window.
+- [ ] 3.2 Visually accept all 12 pages of the exact revised PDFs, then verify the live covers, previews and guest downloads on mobile and desktop.
+- [ ] 3.3 Record the post-publication 30-day measurement window.

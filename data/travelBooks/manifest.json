@@ -34810,7 +34810,7 @@
     {
       "id": "belarus-by-the-water-mini",
       "slug": "belarus-by-the-water",
-      "revision": "2026-11-04.mini.a959d8804b444396",
+      "revision": "2026-11-04.mini.bf6581883505b926",
       "title": "Беларусь у воды",
       "summary": "Ельня, Юцковские родники и озеро Глубокое. Выберите одну прогулку, выполните маленькое задание и сохраните кадр или заметку.",
       "country": "BY",
@@ -34834,28 +34834,28 @@
         }
       ],
       "pdf": {
-        "uri": "https://metravel.by/travel-books/belarus-by-the-water-mini/2026-11-04.mini.a959d8804b444396/read.pdf",
+        "uri": "https://metravel.by/travel-books/belarus-by-the-water-mini/2026-11-04.mini.bf6581883505b926/read.pdf",
         "mime": "application/pdf",
-        "bytes": 88111,
-        "sha256": "f6f76a7b12b237732a7c40307beac82ecaacd489b4fe7629c6d7d335cabfd54e"
+        "bytes": 2020703,
+        "sha256": "ead4e62c2bac62d09731ff2ca2e79faf900bc7492ec6f2290026f278fa205626"
       },
       "cover": {
-        "uri": "https://metravel.by/travel-books/belarus-by-the-water-mini/2026-11-04.mini.a959d8804b444396/cover.webp",
+        "uri": "https://metravel.by/travel-books/belarus-by-the-water-mini/2026-11-04.mini.bf6581883505b926/cover.webp",
         "mime": "image/webp",
-        "bytes": 28348,
-        "sha256": "e958fc4ee1c7f05c4592870629bbcf8d5345eed95b20628891e8fc7e6b158125"
+        "bytes": 104362,
+        "sha256": "f87177b474b6013d1df7c55b25b9aa6f3f06c8a44b5f7f9d42bccb4892dade01"
       },
       "preview": {
-        "uri": "https://metravel.by/travel-books/belarus-by-the-water-mini/2026-11-04.mini.a959d8804b444396/preview.webp",
+        "uri": "https://metravel.by/travel-books/belarus-by-the-water-mini/2026-11-04.mini.bf6581883505b926/preview.webp",
         "mime": "image/webp",
-        "bytes": 79340,
-        "sha256": "3bf6b51654c97fa07793d446f9766c408afae89afad3095c1b8eb7fd2eae8b32"
+        "bytes": 111266,
+        "sha256": "858b842c4c03c7afae733c69be124145c91573c786411f0b30d963b1e133b869"
       }
     },
     {
       "id": "belarus-follow-the-towers-mini",
       "slug": "belarus-follow-the-towers",
-      "revision": "2026-11-04.mini.b6722d4236288a82",
+      "revision": "2026-11-04.mini.0e8aa57cd85afe9a",
       "title": "По следам башен",
       "summary": "Три отдельные поездки по замкам Беларуси. Рассмотрите силуэт, ворота и дворцовый фасад, а затем зарисуйте одну деталь.",
       "country": "BY",
@@ -34879,22 +34879,22 @@
         }
       ],
       "pdf": {
-        "uri": "https://metravel.by/travel-books/belarus-follow-the-towers-mini/2026-11-04.mini.b6722d4236288a82/read.pdf",
+        "uri": "https://metravel.by/travel-books/belarus-follow-the-towers-mini/2026-11-04.mini.0e8aa57cd85afe9a/read.pdf",
         "mime": "application/pdf",
-        "bytes": 84231,
-        "sha256": "b7c75dc8b707210835b74ca8a12f8a0187e4e4e210a209bf271879440b1b0fed"
+        "bytes": 1327855,
+        "sha256": "3329855d7f5793bed593820a223c2e371a780b7b53f7a4da7a4c70453fb58f9f"
       },
       "cover": {
-        "uri": "https://metravel.by/travel-books/belarus-follow-the-towers-mini/2026-11-04.mini.b6722d4236288a82/cover.webp",
+        "uri": "https://metravel.by/travel-books/belarus-follow-the-towers-mini/2026-11-04.mini.0e8aa57cd85afe9a/cover.webp",
         "mime": "image/webp",
-        "bytes": 22504,
-        "sha256": "3e6b7d53b35c31260c5de8713e961b09eac2d42c87bc05728cb6dce7fa944306"
+        "bytes": 77532,
+        "sha256": "14fe8753694a7ff0dcdea877429ff2757c797647c74f04a28c5a98fa88bd1b0b"
       },
       "preview": {
-        "uri": "https://metravel.by/travel-books/belarus-follow-the-towers-mini/2026-11-04.mini.b6722d4236288a82/preview.webp",
+        "uri": "https://metravel.by/travel-books/belarus-follow-the-towers-mini/2026-11-04.mini.0e8aa57cd85afe9a/preview.webp",
         "mime": "image/webp",
-        "bytes": 74224,
-        "sha256": "9a08bec75e3ce6330cb76c2445c1f4a7d7d4757c171930fc569525874732713f"
+        "bytes": 102440,
+        "sha256": "79f361da4203275e33d2245057617e09969a2f5acad8150dc3892a123eea39f9"
       }
     }
   ]
