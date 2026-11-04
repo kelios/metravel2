@@ -9,3 +9,9 @@ Use existing layout, typography, lazy image rendering and download patterns. See
 ## Validation and rollback
 
 Verify publication integrity, PDF and source provenance, article mapping, game state transitions, accessibility and downloads. Test mobile web first, then desktop after review. Restore the previous manifest for rollback while its referenced files are retained.
+
+## Walk deck media
+
+The manifest keeps schema version 1 and adds `decks`, with `{ id, dataUrl, pdfUrl }` for each published deck. The two current IDs are `kids` and `adults`. Each immutable deck JSON contains `{ schemaVersion: 1, id, cards: [{ title, body }] }`. Eleven ordinary cards precede one finale. The current pointer and a failed deck load cannot prevent access to a valid coloring collection.
+
+Stage and checksum-verify all objects for the new revision before replacing the pointer with a conditional write against the reviewed previous ETag. Keep the previous immutable files available for cached clients and rollback. Verify both PDFs against the online card text, the new catalog revision, and the preserved article coloring index.

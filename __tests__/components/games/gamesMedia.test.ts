@@ -1,4 +1,5 @@
-import { parseColoringSheets, parseGamesMediaManifest } from '@/components/games/gamesMedia'
+import { queryKeys } from '@/api/queryKeys'
+import { parseColoringSheets, parseGamesMediaManifest, parseWalkCards } from '@/components/games/gamesMedia'
 
 const revision = 'belarus-poland-01-059f92c4b3de'
 const root = `/travel-games-media/${revision}`
@@ -14,11 +15,14 @@ const sheet = {
   id: 'nesvizh', travelId: 201, placeTitle: 'Несвижский замок',
   previewUrl: `${root}/nesvizh.webp`, pdfUrl: `${root}/nesvizh-a4.pdf`,
 }
+const kids = { id: 'kids', dataUrl: `${root}/kids.json`, pdfUrl: `${root}/kids.pdf` }
+const adults = { id: 'adults', dataUrl: `${root}/adults.json`, pdfUrl: `${root}/adults.pdf` }
+const cards = Array.from({ length: 12 }, (_, i) => ({ title: `Card ${i + 1}`, body: `Task ${i + 1}` }))
 
 describe('games media publication contract', () => {
   it('reads the published revision and associates a sheet with its stable travel ID', () => {
     expect(parseGamesMediaManifest(manifest)).toEqual({
-      revision, coloringIndexUrl: manifest.coloringIndexUrl, collections: manifest.collections,
+      revision, coloringIndexUrl: manifest.coloringIndexUrl, collections: manifest.collections, decks: [],
     })
     expect(parseColoringSheets({ schemaVersion: 1, sheets: [sheet] }, revision)).toEqual([sheet])
   })
@@ -40,5 +44,32 @@ describe('games media publication contract', () => {
     expect(() => parseColoringSheets({ schemaVersion: 1, sheets: [sheet, sheet] }, revision)).toThrow()
     expect(() => parseColoringSheets({ schemaVersion: 1, sheets: [{ ...sheet, travelId: '201' }] }, revision)).toThrow()
     expect(() => parseGamesMediaManifest({ ...manifest, schemaVersion: 2 })).toThrow()
+  })
+
+  it('keeps the coloring-only manifest compatible and exposes both published decks', () => {
+    expect(parseGamesMediaManifest({ ...manifest, decks: undefined }).decks).toEqual([])
+    expect(parseGamesMediaManifest({ ...manifest, decks: [kids, adults] }).decks).toEqual([kids, adults])
+  })
+
+  it('drops invalid deck entries without breaking the coloring catalog', () => {
+    const parsed = parseGamesMediaManifest({
+      ...manifest,
+      decks: [kids, { ...kids, pdfUrl: `${root}/duplicate.pdf` }, { ...adults, dataUrl: '/travel-games-media/old/adults.json' }],
+    })
+    expect(parsed.decks).toEqual([kids])
+    expect(parsed.collections).toEqual(manifest.collections)
+    expect(parsed.coloringIndexUrl).toBe(manifest.coloringIndexUrl)
+  })
+
+  it('requires exactly twelve nonempty cards for the requested deck and preserves the finale position', () => {
+    const deck = { schemaVersion: 1, id: 'kids', cards }
+    expect(parseWalkCards(deck, 'kids')).toEqual(cards)
+    expect(() => parseWalkCards(deck, 'adults')).toThrow()
+    expect(() => parseWalkCards({ ...deck, cards: cards.slice(1) }, 'kids')).toThrow()
+    expect(() => parseWalkCards({ ...deck, cards: [...cards.slice(1), { title: 'Final', body: '  ' }] }, 'kids')).toThrow()
+  })
+
+  it('does not share validated cards when two deck IDs point to the same URL', () => {
+    expect(queryKeys.walkDeck(kids.dataUrl, 'kids')).not.toEqual(queryKeys.walkDeck(kids.dataUrl, 'adults'))
   })
 })

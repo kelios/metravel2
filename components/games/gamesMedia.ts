@@ -9,7 +9,10 @@ const SLUG = /^[a-z0-9][a-z0-9_-]*$/
 
 type ColoringCollection = { id: string; title: string; pdfUrl: string; sheetCount: number }
 export type ColoringSheet = { id: string; travelId: number; placeTitle: string; previewUrl: string; pdfUrl: string }
-type GamesMediaManifest = { revision: string; coloringIndexUrl: string; collections: ColoringCollection[] }
+export type WalkDeckId = 'kids' | 'adults'
+export type WalkDeck = { id: WalkDeckId; dataUrl: string; pdfUrl: string }
+export type WalkCard = { title: string; body: string }
+type GamesMediaManifest = { revision: string; coloringIndexUrl: string; collections: ColoringCollection[]; decks: WalkDeck[] }
 
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null
@@ -33,6 +36,27 @@ function mediaPath(value: unknown, revision: string, extension: 'json' | 'pdf' |
     SLUG.test(value.slice(prefix.length, -extension.length - 1))
 }
 
+function isWalkDeckId(value: unknown): value is WalkDeckId {
+  return value === 'kids' || value === 'adults'
+}
+
+function parseWalkDecks(payload: unknown, revision: string): WalkDeck[] {
+  if (!Array.isArray(payload)) return []
+  const seen = new Set<WalkDeckId>()
+  const decks: WalkDeck[] = []
+  // Walk publications are optional. A broken deck entry must not hide coloring assets.
+  for (const entry of payload) {
+    const deck = record(entry)
+    if (!deck || !isWalkDeckId(deck.id) || seen.has(deck.id) ||
+        !mediaPath(deck.dataUrl, revision, 'json') || !mediaPath(deck.pdfUrl, revision, 'pdf')) {
+      continue
+    }
+    seen.add(deck.id)
+    decks.push({ id: deck.id, dataUrl: deck.dataUrl, pdfUrl: deck.pdfUrl })
+  }
+  return decks
+}
+
 export function parseGamesMediaManifest(payload: unknown): GamesMediaManifest {
   const manifest = record(payload)
   if (!manifest || manifest.schemaVersion !== 1 || !id(manifest.revision) ||
@@ -50,7 +74,19 @@ export function parseGamesMediaManifest(payload: unknown): GamesMediaManifest {
     seen.add(collection.id)
     return { id: collection.id, title: collection.title, pdfUrl: collection.pdfUrl, sheetCount: collection.sheetCount }
   })
-  return { revision, coloringIndexUrl, collections }
+  return { revision, coloringIndexUrl, collections, decks: parseWalkDecks(manifest.decks, revision) }
+}
+
+export function parseWalkCards(payload: unknown, id: WalkDeckId): WalkCard[] {
+  const deck = record(payload)
+  if (!deck || deck.schemaVersion !== 1 || deck.id !== id || !Array.isArray(deck.cards) || deck.cards.length !== 12) {
+    throw new Error('Invalid walk card list')
+  }
+  return deck.cards.map((entry: unknown) => {
+    const card = record(entry)
+    if (!card || !label(card.title) || !label(card.body)) throw new Error('Invalid walk card')
+    return { title: card.title, body: card.body }
+  })
 }
 
 export function parseColoringSheets(payload: unknown, revision: string): ColoringSheet[] {
@@ -98,6 +134,15 @@ export function useColoringSheets() {
       ? parseColoringSheets(await loadJson(manifest.coloringIndexUrl, signal), manifest.revision)
       : [],
     enabled: Boolean(manifest),
+    staleTime: Infinity,
+    retry: false,
+  })
+}
+
+export function useWalkCards(deck: WalkDeck) {
+  return useQuery({
+    queryKey: queryKeys.walkDeck(deck.dataUrl, deck.id),
+    queryFn: async ({ signal }) => parseWalkCards(await loadJson(deck.dataUrl, signal), deck.id),
     staleTime: Infinity,
     retry: false,
   })

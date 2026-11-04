@@ -1,6 +1,6 @@
 ## 1. Storage and catalog
 
-- [ ] #3033 — Verify and deliver the S3-backed publication contract.
+- [x] #3033 — Verify and deliver the S3-backed publication contract.
 - [ ] #3028 — Ship the localized catalog with road, walk and print entry points.
 
 ## 2. Play
@@ -12,8 +12,8 @@
 
 ## 3. Coloring
 
-- [ ] #3031 — Prepare an expandable pilot with architecture and nature, no people, individual sheets and a themed book.
-- [ ] #3032 — Show the main-place sheets on the source articles and themed books in the catalog.
+- [x] #3031 — Prepare an expandable pilot with architecture and nature, no people, individual sheets and a themed book.
+- [x] #3032 — Show the main-place sheets on the source articles and themed books in the catalog.
 
 ## 4. Acceptance
 

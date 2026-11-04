@@ -5,7 +5,7 @@ import { Heading } from '@/components/ui/Typography'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useTranslation } from '@/i18n/LocaleProvider'
-import ColoringPdfButton from './ColoringPdfButton'
+import GamesPdfButton from './GamesPdfButton'
 import { useColoringSheets } from './gamesMedia'
 
 const { radii, spacing } = DESIGN_TOKENS
@@ -28,7 +28,7 @@ export default function TravelColoringSheets({ travelId }: { travelId: number })
           <View style={styles.info}>
             <Heading level={4} lang="ru">{sheet.placeTitle}</Heading>
             <View style={styles.action}>
-              <ColoringPdfButton url={sheet.pdfUrl} />
+              <GamesPdfButton url={sheet.pdfUrl} label={t('gamesStatic:downloadSheet')} />
             </View>
           </View>
         </View>

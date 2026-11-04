@@ -8,6 +8,7 @@ export const pageTranslations: Record<string, string> = {
   get map() { return i18nT('navigationStatic:breadcrumb.map') },
   get quests() { return i18nT('navigationStatic:breadcrumb.quests') },
   get roulette() { return i18nT('navigationStatic:breadcrumb.roulette') },
+  get games() { return i18nT('gamesStatic:title') },
   get article() { return i18nT('navigationStatic:breadcrumb.article') },
   get travel() { return i18nT('navigationStatic:breadcrumb.travel') },
   get profile() { return i18nT('navigationStatic:breadcrumb.profile') },
