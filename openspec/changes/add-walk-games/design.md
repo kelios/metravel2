@@ -15,3 +15,9 @@ Verify publication integrity, PDF and source provenance, article mapping, game s
 The manifest keeps schema version 1 and adds `decks`, with `{ id, dataUrl, pdfUrl }` for each published deck. The two current IDs are `kids` and `adults`. Each immutable deck JSON contains `{ schemaVersion: 1, id, cards: [{ title, body }] }`. Eleven ordinary cards precede one finale. The current pointer and a failed deck load cannot prevent access to a valid coloring collection.
 
 Stage and checksum-verify all objects for the new revision before replacing the pointer with a conditional write against the reviewed previous ETag. Keep the previous immutable files available for cached clients and rollback. Verify both PDFs against the online card text, the new catalog revision, and the preserved article coloring index.
+
+## Road quiz media
+
+The version-1 manifest optionally lists quiz descriptors `{ id, dataUrl }` for `belarus`, `poland`, and `world`. Each immutable Russian pack has `{ schemaVersion, id, title, locale, questions }`. Each of its ten questions has three or four unique choices, one correct choice, a short explanation and an editorial source URL. Invalid quiz descriptors cannot suppress published walks or coloring.
+
+Fetch only the selected pack and keep its loaded data in the active page. Lock the first answer before showing the explanation, advance explicitly, then show the score. Replay uses the already loaded pack. The active text round requires no further network, including replay. An initial network failure offers retry or return to the catalog.

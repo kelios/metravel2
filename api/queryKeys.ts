@@ -41,6 +41,7 @@ export const queryKeys = {
   gamesMediaManifest: () => ['games-media-manifest'] as const,
   coloringSheetIndex: (url: string | undefined) => ['coloring-sheet-index', url] as const,
   walkDeck: (url: string, deckId: string) => ['walk-deck', url, deckId] as const,
+  roadQuiz: (url: string, quizId: string) => ['road-quiz', url, quizId] as const,
   travelsOfMonth: () => ['travelsOfMonth'] as const,
   // Справочники живут в общем кэше api/miscOptimized, у React Query остались
   // только ключи, которые кто-то реально читает: filters() — PointList визарда,

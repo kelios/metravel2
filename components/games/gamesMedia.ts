@@ -12,7 +12,27 @@ export type ColoringSheet = { id: string; travelId: number; placeTitle: string; 
 export type WalkDeckId = 'kids' | 'adults'
 export type WalkDeck = { id: WalkDeckId; dataUrl: string; pdfUrl: string }
 export type WalkCard = { title: string; body: string }
-type GamesMediaManifest = { revision: string; coloringIndexUrl: string; collections: ColoringCollection[]; decks: WalkDeck[] }
+export type RoadQuizId = 'belarus' | 'poland' | 'world'
+export type RoadQuiz = { id: RoadQuizId; dataUrl: string }
+type QuizChoice = { id: string; label: string }
+export type QuizQuestion = {
+  id: string
+  prompt: string
+  choices: QuizChoice[]
+  correctChoiceId: string
+  explanation: string
+  sourceUrl: string
+}
+type QuizEdition = { title: string; locale: 'ru'; questions: QuizQuestion[] }
+type GamesMediaManifest = {
+  revision: string
+  coloringIndexUrl: string
+  collections: ColoringCollection[]
+  decks: WalkDeck[]
+  quizzes: RoadQuiz[]
+}
+
+const QUIZ_QUESTION_COUNT = 10
 
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null
@@ -57,6 +77,23 @@ function parseWalkDecks(payload: unknown, revision: string): WalkDeck[] {
   return decks
 }
 
+function isRoadQuizId(value: unknown): value is RoadQuizId {
+  return value === 'belarus' || value === 'poland' || value === 'world'
+}
+
+function parseRoadQuizzes(payload: unknown, revision: string): RoadQuiz[] {
+  if (!Array.isArray(payload)) return []
+  const quizzes: RoadQuiz[] = []
+  const seen = new Set<RoadQuizId>()
+  for (const entry of payload) {
+    const quiz = record(entry)
+    if (!quiz || !isRoadQuizId(quiz.id) || seen.has(quiz.id) || !mediaPath(quiz.dataUrl, revision, 'json')) continue
+    seen.add(quiz.id)
+    quizzes.push({ id: quiz.id, dataUrl: quiz.dataUrl })
+  }
+  return quizzes
+}
+
 export function parseGamesMediaManifest(payload: unknown): GamesMediaManifest {
   const manifest = record(payload)
   if (!manifest || manifest.schemaVersion !== 1 || !id(manifest.revision) ||
@@ -74,7 +111,66 @@ export function parseGamesMediaManifest(payload: unknown): GamesMediaManifest {
     seen.add(collection.id)
     return { id: collection.id, title: collection.title, pdfUrl: collection.pdfUrl, sheetCount: collection.sheetCount }
   })
-  return { revision, coloringIndexUrl, collections, decks: parseWalkDecks(manifest.decks, revision) }
+  return {
+    revision, coloringIndexUrl, collections,
+    decks: parseWalkDecks(manifest.decks, revision),
+    quizzes: parseRoadQuizzes(manifest.quizzes, revision),
+  }
+}
+
+function isSourceUrl(value: unknown): value is string {
+  if (typeof value !== 'string') return false
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' && !url.username && !url.password
+  } catch {
+    return false
+  }
+}
+
+function parseQuizChoices(payload: unknown): QuizChoice[] {
+  if (!Array.isArray(payload) || payload.length < 3 || payload.length > 4) {
+    throw new Error('Invalid quiz choice list')
+  }
+  const ids = new Set<string>()
+  const labels = new Set<string>()
+  return payload.map((entry: unknown) => {
+    const choice = record(entry)
+    if (!choice || !id(choice.id) || ids.has(choice.id) || !label(choice.label)) {
+      throw new Error('Invalid quiz choice')
+    }
+    const displayLabel = choice.label.trim()
+    if (labels.has(displayLabel)) throw new Error('Duplicate quiz choice label')
+    ids.add(choice.id)
+    labels.add(displayLabel)
+    return { id: choice.id, label: choice.label }
+  })
+}
+
+export function parseRoadQuiz(payload: unknown, quizId: RoadQuizId): QuizEdition {
+  const quiz = record(payload)
+  if (!quiz || quiz.schemaVersion !== 1 || quiz.id !== quizId || quiz.locale !== 'ru' || !label(quiz.title) ||
+      !Array.isArray(quiz.questions) || quiz.questions.length !== QUIZ_QUESTION_COUNT) {
+    throw new Error('Invalid road quiz')
+  }
+  const seen = new Set<string>()
+  const questions = quiz.questions.map((entry: unknown) => {
+    const question = record(entry)
+    if (!question || !id(question.id) || seen.has(question.id) || !label(question.prompt) ||
+        !id(question.correctChoiceId) || !label(question.explanation) || !isSourceUrl(question.sourceUrl)) {
+      throw new Error('Invalid quiz question')
+    }
+    const choices = parseQuizChoices(question.choices)
+    if (!choices.some(choice => choice.id === question.correctChoiceId)) {
+      throw new Error('Correct quiz choice is missing')
+    }
+    seen.add(question.id)
+    return {
+      id: question.id, prompt: question.prompt, choices, correctChoiceId: question.correctChoiceId,
+      explanation: question.explanation, sourceUrl: question.sourceUrl,
+    }
+  })
+  return { title: quiz.title, locale: quiz.locale, questions }
 }
 
 export function parseWalkCards(payload: unknown, id: WalkDeckId): WalkCard[] {
@@ -145,5 +241,15 @@ export function useWalkCards(deck: WalkDeck) {
     queryFn: async ({ signal }) => parseWalkCards(await loadJson(deck.dataUrl, signal), deck.id),
     staleTime: Infinity,
     retry: false,
+  })
+}
+
+export function useRoadQuiz(quiz: RoadQuiz) {
+  return useQuery({
+    queryKey: queryKeys.roadQuiz(quiz.dataUrl, quiz.id),
+    queryFn: async ({ signal }) => parseRoadQuiz(await loadJson(quiz.dataUrl, signal), quiz.id),
+    staleTime: Infinity,
+    retry: false,
+    networkMode: 'always',
   })
 }

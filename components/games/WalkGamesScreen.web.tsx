@@ -10,6 +10,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { formatInteger } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider'
 import GamesPdfButton from './GamesPdfButton'
+import RoadQuizSection from './RoadQuizSection'
 import WalkDeckPanel from './WalkDeckPanel'
 import { useGamesMediaManifest } from './gamesMedia'
 
@@ -72,10 +73,7 @@ export default function WalkGamesScreen() {
             </View>
           </>
         )}
-        <View style={styles.group}>
-          <Heading level={2}>{t('gamesStatic:roadTitle')}</Heading>
-          <Body muted>{t('gamesStatic:roadEmpty')}</Body>
-        </View>
+        {data && <RoadQuizSection quizzes={data.quizzes} />}
       </ResponsiveContainer>
     </ScrollView>
   )
