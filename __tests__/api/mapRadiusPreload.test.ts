@@ -81,7 +81,7 @@ describe('early map radius request', () => {
     ['compact, prompt denied', true, 'prompt', '', true, 'denied', false],
     ['compact, prompt granted', true, 'prompt', '', false, 'granted', false],
     ['compact, prompt timed out', true, 'prompt', '', false, 'timeout', false],
-    ['compact, granted', true, 'granted', '', false, null, false],
+    ['compact, granted', true, 'granted', '', false, 'granted', false],
     ['desktop', false, 'denied', '', false, null, false],
     ['coordinate link', true, 'denied', '?lat=54&lng=25', false, null, false],
   ] as const)('paints only a confirmed compact tile (%s)', async (_, matches, state, search, expected, promptOutcome, shellPending) => {
@@ -116,15 +116,16 @@ describe('early map radius request', () => {
         expect(options).toEqual(MAP_PRECISE_WEB_LOCATION_OPTIONS)
         const pending = consumeMapStartupLocation()
         expect(pending).toBeDefined()
+        await expect(pending?.permission).resolves.toBe(state)
         expect(consumeMapStartupLocation()).toBeUndefined()
         if (promptOutcome === 'granted') {
           const position = { coords: { latitude: 52.2, longitude: 20.98 }, timestamp: Date.now() } as GeolocationPosition
           success(position)
-          await expect(pending).resolves.toEqual({ position })
+          await expect(pending?.result).resolves.toEqual({ position })
         } else {
           const error = { code: promptOutcome === 'denied' ? 1 : 3 } as GeolocationPositionError
           failure?.(error)
-          await expect(pending).resolves.toEqual({ error })
+          await expect(pending?.result).resolves.toEqual({ error })
         }
         await jest.advanceTimersByTimeAsync(0)
       } else {

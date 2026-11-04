@@ -13,3 +13,8 @@ The web map SHALL start and display the confirmed cold compact fallback tile bef
 
 - **WHEN** coordinates, location, persisted filters or route can change the initial viewport
 - **THEN** startup waits for the normal settled Leaflet view without issuing a speculative tile request.
+
+#### Scenario: An authorized initial location is pending
+
+- **WHEN** a web radius visit has no explicit or cached anchor and the browser has already authorized geolocation
+- **THEN** Leaflet waits for the resolved first anchor and the corresponding settled data before requesting tiles. An unanswered permission prompt does not hold the map indefinitely.

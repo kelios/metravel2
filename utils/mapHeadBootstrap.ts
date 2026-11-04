@@ -10,7 +10,9 @@ import {
 import { buildMapRadiusQuery, MAP_RADIUS_QUERY_PATH, roundMapRadiusAnchorCoordinate } from '@/utils/mapRadiusQuery'
 import { MAP_RADIUS_PRELOAD_GLOBAL, MAP_RADIUS_PRELOAD_TTL_MS } from '@/utils/mapRadiusPreload'
 import { MAP_FILTERS_STORAGE_KEY, MAP_LOCATION_STORAGE_KEY, MAP_ROUTE_STORAGE_KEY } from '@/utils/mapStartupStorage'
-import { MAP_PRECISE_WEB_LOCATION_OPTIONS, MAP_STARTUP_LOCATION_KEY } from '@/utils/mapStartupLocation'
+import {
+  MAP_PRECISE_WEB_LOCATION_OPTIONS, MAP_STARTUP_LOCATION_KEY, MAP_WEB_LOCATION_PERMISSION_TIMEOUT_MS,
+} from '@/utils/mapStartupLocation'
 import { safeJsonString } from '@/utils/htmlUtils'
 import { isLikelySelfProxyApiUrl, resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl'
 
@@ -19,7 +21,6 @@ export const MAP_TILE_PRECONNECT_ID = 'metravel-tile-preconnect'
 
 const LEAFLET_CSS_ID = 'metravel-leaflet-css'
 const MARKERCLUSTER_CSS_ID = 'metravel-markercluster-css'
-const LOCATION_PERMISSION_PROBE_MS = 250
 
 type TilePreconnectParams = {
   hostname?: string | null
@@ -185,7 +186,7 @@ export function buildMapHeadBootstrapScript(
         compact.matches && !hasStoredState();
     }
     var locationPermission = new Promise(function(resolve) {
-      var deadline = setTimeout(function() { resolve(null); }, ${LOCATION_PERMISSION_PROBE_MS});
+      var deadline = setTimeout(function() { resolve(null); }, ${MAP_WEB_LOCATION_PERMISSION_TIMEOUT_MS});
       function settle(permission) {
         clearTimeout(deadline);
         resolve(permission);
@@ -195,7 +196,7 @@ export function buildMapHeadBootstrapScript(
       }).then(settle, function() { settle(null); });
     });
     var locationResult = locationPermission.then(function(permission) {
-      if (!permission || permission.state !== 'prompt' || !window.navigator.geolocation ||
+      if (!permission || permission.state === 'denied' || !window.navigator.geolocation ||
           !isCleanCompactMap()) return null;
       return new Promise(function(resolve) {
         window.navigator.geolocation.getCurrentPosition(
@@ -206,7 +207,10 @@ export function buildMapHeadBootstrapScript(
       });
     }).catch(function() { return null; });
     var locationKey = ${JSON.stringify(MAP_STARTUP_LOCATION_KEY)};
-    var locationEntry = { result: locationResult };
+    var locationEntry = {
+      permission: locationPermission.then(function(permission) { return permission ? permission.state : null; }),
+      result: locationResult
+    };
     window[locationKey] = locationEntry;
     locationResult.then(function() {
       if (window[locationKey] !== locationEntry) return;

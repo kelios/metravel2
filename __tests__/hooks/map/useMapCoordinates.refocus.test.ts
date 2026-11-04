@@ -5,7 +5,7 @@ import { Platform } from 'react-native'
 
 import { useMapCoordinates } from '@/hooks/map/useMapCoordinates'
 import { publishLiveUserPosition } from '@/hooks/map/liveUserPosition'
-import { MAP_STARTUP_LOCATION_KEY } from '@/utils/mapStartupLocation'
+import { MAP_STARTUP_LOCATION_KEY, MAP_WEB_LOCATION_PERMISSION_TIMEOUT_MS } from '@/utils/mapStartupLocation'
 
 jest.mock('@/utils/logger', () => ({ logError: jest.fn(), logMessage: jest.fn() }))
 jest.mock('@/hooks/map/expoLocationLoader', () => ({ loadExpoLocation: jest.fn() }))
@@ -18,6 +18,7 @@ describe('useMapCoordinates re-focus with a fresh trusted fix', () => {
 
   afterEach(() => {
     publishLiveUserPosition(null)
+    window.localStorage.clear?.()
     ;(Platform as any).OS = originalPlatform
     Object.defineProperty(global, 'navigator', { configurable: true, value: originalNavigator })
     Reflect.deleteProperty(window, MAP_STARTUP_LOCATION_KEY)
@@ -34,7 +35,7 @@ describe('useMapCoordinates re-focus with a fresh trusted fix', () => {
     })
     let settle: (result: { error: GeolocationPositionError }) => void = () => {}
     const pending = new Promise<{ error: GeolocationPositionError }>(resolve => { settle = resolve })
-    Reflect.set(window, MAP_STARTUP_LOCATION_KEY, { result: pending })
+    Reflect.set(window, MAP_STARTUP_LOCATION_KEY, { permission: Promise.resolve('prompt'), result: pending })
 
     const { result, rerender } = await renderHook(
       ({ isFocused }) => useMapCoordinates({ isFocused }),
@@ -51,6 +52,98 @@ describe('useMapCoordinates re-focus with a fresh trusted fix', () => {
 
     await act(() => result.current.refreshLocation())
     expect(getCurrentPosition).toHaveBeenCalledTimes(1)
+  })
+
+  it('discards a head fix settled while blurred and reclassifies permission on refocus', async () => {
+    ;(Platform as any).OS = 'web'
+    const query = jest.fn(async () => ({ state: 'prompt' }))
+    const getCurrentPosition = jest.fn()
+    Object.defineProperty(global, 'navigator', {
+      configurable: true,
+      value: { permissions: { query }, geolocation: { getCurrentPosition } },
+    })
+    let settle: (value: { position: GeolocationPosition }) => void = () => {}
+    const pending = new Promise<{ position: GeolocationPosition }>(resolve => { settle = resolve })
+    Reflect.set(window, MAP_STARTUP_LOCATION_KEY, { permission: Promise.resolve('granted'), result: pending })
+    const { result, rerender } = await renderHook(
+      ({ isFocused }) => useMapCoordinates({ isFocused }),
+      { initialProps: { isFocused: true } },
+    )
+    expect(result.current.webStartupLocationPending).toBe(true)
+    expect(query).not.toHaveBeenCalled()
+    expect(getCurrentPosition).not.toHaveBeenCalled()
+
+    await rerender({ isFocused: false })
+    await act(async () => {
+      settle({ position: { coords: { latitude: 52.2, longitude: 20.98 }, timestamp: 1000 } as GeolocationPosition })
+    })
+    await rerender({ isFocused: true })
+    await waitFor(() => expect(result.current.webStartupLocationPending).toBe(false))
+    expect(query).toHaveBeenCalledTimes(1)
+    expect(getCurrentPosition).toHaveBeenCalledTimes(1)
+    expect(result.current.currentLocation).toBeNull()
+  })
+
+  it('shares the pending permission probe across focus replay and opens when it times out', async () => {
+    jest.useFakeTimers()
+    try {
+      ;(Platform as any).OS = 'web'
+      const query = jest.fn(() => new Promise(() => {}))
+      Object.defineProperty(global, 'navigator', {
+        configurable: true,
+        value: { permissions: { query }, geolocation: { getCurrentPosition: jest.fn() } },
+      })
+      const { result, rerender } = await renderHook(
+        ({ isFocused }) => useMapCoordinates({ isFocused }),
+        { initialProps: { isFocused: true } },
+      )
+      await rerender({ isFocused: false })
+      await rerender({ isFocused: true })
+      expect(query).toHaveBeenCalledTimes(1)
+      expect(result.current.webStartupLocationPending).toBe(true)
+
+      await act(async () => { await jest.advanceTimersByTimeAsync(MAP_WEB_LOCATION_PERMISSION_TIMEOUT_MS) })
+      expect(result.current.webStartupLocationPending).toBe(false)
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it.each([
+    ['granted', true, 'current'],
+    ['prompt', false, 'current'],
+    ['granted', true, 'error'],
+  ] as const)('settles the startup viewport while geolocation permission is %s (%s, %s)', async (state, waitsForFix, outcome) => {
+    ;(Platform as any).OS = 'web'
+    const query = jest.fn(async () => ({ state }))
+    const getCurrentPosition = jest.fn<void, Parameters<Geolocation['getCurrentPosition']>>()
+    Object.defineProperty(global, 'navigator', {
+      configurable: true,
+      value: { permissions: { query }, geolocation: { getCurrentPosition } },
+    })
+    const { result } = await renderHook(() => useMapCoordinates({ isFocused: true }))
+    await act(async () => {})
+
+    expect(query).toHaveBeenCalledTimes(1)
+    expect(result.current.webStartupLocationPending).toBe(waitsForFix)
+    expect(result.current.locationState.status).toBe('loading')
+
+    await act(async () => {
+      const [success, failure] = getCurrentPosition.mock.calls[0]
+      if (outcome === 'current') {
+        success({
+          coords: { latitude: 52.2, longitude: 20.98, accuracy: 9 },
+          timestamp: Date.now(),
+        } as GeolocationPosition)
+      } else {
+        const timeout = { code: 3, TIMEOUT: 3 } as GeolocationPositionError
+        failure?.(timeout)
+        expect(result.current.webStartupLocationPending).toBe(true)
+        getCurrentPosition.mock.calls[1][1]?.(timeout)
+      }
+    })
+    expect(result.current.locationState.status).toBe(outcome)
+    expect(result.current.webStartupLocationPending).toBe(false)
   })
 
   it('does not call getCurrentPosition again and keeps the coordinates object identity', async () => {

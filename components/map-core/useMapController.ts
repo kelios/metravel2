@@ -107,6 +107,7 @@ export function useMapController({
     coordinatesAreFallback,
     locationState,
     currentLocation,
+    webStartupLocationPending,
     error: geoError,
     refreshLocation,
     openLocationSettings,
@@ -483,8 +484,13 @@ export function useMapController({
   // in `mapPanelProps` deps, otherwise every radius/filter change rebuilt the
   // renderer props ~5 times (pending → debounced → fetching → data → settled) and
   // re-rendered the whole map tree each time.
+  // A fresh authorized fix can replace Minsk before the map has an anchor.
+  // The controller still lets a URL, cached center or route render immediately.
+  const waitingForInitialWebAnchor =
+    mode === 'radius' && queryAnchor.source === 'default' && webStartupLocationPending;
   const resultsSettledNow =
-    isFocused && !loading && !isFetching && !isPlaceholderData && !isDebouncingFilters;
+    isFocused && !waitingForInitialWebAnchor && !loading && !isFetching &&
+    !isPlaceholderData && !isDebouncingFilters;
   const [initialResultsSettled, setInitialResultsSettled] = useState(false);
   useEffect(() => {
     if (resultsSettledNow) setInitialResultsSettled(true);

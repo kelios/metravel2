@@ -1,4 +1,5 @@
 export const MAP_STARTUP_LOCATION_KEY = '__metravelMapStartupLocation'
+export const MAP_WEB_LOCATION_PERMISSION_TIMEOUT_MS = 250
 
 // The first web fix chooses the viewport. Both the document and the mounted
 // map use the same precise request before falling back to a cheaper fix.
@@ -13,6 +14,7 @@ type MapStartupLocationResult =
   | { error: GeolocationPositionError }
 
 type MapStartupLocationEntry = {
+  permission: Promise<PermissionState | null>
   result: Promise<MapStartupLocationResult | null>
 }
 
@@ -23,5 +25,5 @@ export function consumeMapStartupLocation() {
   if (!entry) return undefined
   delete scope[MAP_STARTUP_LOCATION_KEY]
   if (!/^\/map\/?$/.test(scope.location.pathname) || scope.location.search) return undefined
-  return entry.result
+  return entry
 }

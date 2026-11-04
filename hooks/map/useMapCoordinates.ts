@@ -6,7 +6,9 @@ import { logError, logMessage } from '@/utils/logger';
 import { loadExpoLocation } from '@/hooks/map/expoLocationLoader';
 import { markLiveUserPositionFix, publishLiveUserPosition } from '@/hooks/map/liveUserPosition';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
-import { consumeMapStartupLocation, MAP_PRECISE_WEB_LOCATION_OPTIONS } from '@/utils/mapStartupLocation';
+import {
+  consumeMapStartupLocation, MAP_PRECISE_WEB_LOCATION_OPTIONS, MAP_WEB_LOCATION_PERMISSION_TIMEOUT_MS,
+} from '@/utils/mapStartupLocation';
 import { MAP_LOCATION_STORAGE_KEY } from '@/utils/mapStartupStorage';
 import { translate as i18nT } from '@/i18n'
 
@@ -127,6 +129,17 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
   }, [isFocused]);
   const lastTrustedLocationRef = useRef<LocationSnapshot | null>(null);
   const startupWebLocationRef = useRef<ReturnType<typeof consumeMapStartupLocation>>(undefined);
+  // undefined starts a new probe; null retires the gate once startup opens.
+  const startupWebPermissionRef = useRef<Promise<PermissionState | null> | null | undefined>(undefined);
+  const [webStartupLocationPending, setWebStartupLocationPending] = useState(() =>
+    Platform.OS === 'web' && typeof navigator !== 'undefined' &&
+    Boolean(navigator.geolocation && navigator.permissions?.query),
+  );
+  const finishWebStartupLocation = useCallback(() => {
+    if (startupWebPermissionRef.current === null) return;
+    startupWebPermissionRef.current = null;
+    setWebStartupLocationPending(false);
+  }, []);
   // Last point actually pushed to the live channel / localStorage — the reference the
   // 12 m movement filter compares against (see applyTrustedLocation).
   const lastPublishedLocationRef = useRef<LocationSnapshot | null>(null);
@@ -553,20 +566,38 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
         navigator.geolocation.getCurrentPosition(handleSuccess, handlePreciseError, MAP_PRECISE_WEB_LOCATION_OPTIONS);
       };
       const startupLocation = startupWebLocationRef.current ?? consumeMapStartupLocation();
+      if (startupWebPermissionRef.current !== null && navigator.permissions?.query) {
+        const permissionProbe = startupWebPermissionRef.current ?? startupLocation?.permission ?? withTimeout(
+          Promise.resolve().then(() => navigator.permissions.query({ name: 'geolocation' })),
+          MAP_WEB_LOCATION_PERMISSION_TIMEOUT_MS,
+        ).then((permission) => permission?.state ?? null, () => null);
+        startupWebPermissionRef.current = permissionProbe;
+        void permissionProbe.then((permission) => {
+          if (startupWebPermissionRef.current === permissionProbe) startupWebPermissionRef.current = undefined;
+          // An unanswered prompt must not hold the map. A later focus can
+          // classify again if this request was abandoned before startup opened.
+          if (!signal?.aborted && permission !== 'granted') finishWebStartupLocation();
+        });
+      }
       if (!startupLocation) {
         requestPreciseLocation();
         return;
       }
       startupWebLocationRef.current = startupLocation;
-      void startupLocation.then((result) => {
-        startupWebLocationRef.current = undefined;
-        if (signal?.aborted) resolve();
-        else if (result && 'position' in result) handleSuccess(result.position);
+      void startupLocation.result.then((result) => {
+        // A canceled focus may share the pending result, but no future focus
+        // should inherit a result that settled while the map was closed.
+        if (startupWebLocationRef.current === startupLocation) startupWebLocationRef.current = undefined;
+        if (signal?.aborted) {
+          resolve();
+          return;
+        }
+        if (result && 'position' in result) handleSuccess(result.position);
         else if (result) handlePreciseError(result.error);
         else requestPreciseLocation();
       }).catch(reject);
     });
-  }, [applyTrustedLocation, clearLocationWatch, readWebCachedCoordinates, setCoordinates, startLocationWatch]);
+  }, [applyTrustedLocation, clearLocationWatch, finishWebStartupLocation, readWebCachedCoordinates, setCoordinates, startLocationWatch]);
 
   const requestLocation = useCallback(async (signal?: AbortSignal) => {
     let nativePermissionGranted = false;
@@ -749,6 +780,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
       if (!nativePermissionGranted) clearLocationWatch();
     } finally {
       if (!signal?.aborted) {
+        if (Platform.OS === 'web') finishWebStartupLocation();
         setIsLoading(false);
       }
     }
@@ -757,6 +789,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
     applyCachedViewportLocation,
     applyTrustedLocation,
     clearLocationWatch,
+    finishWebStartupLocation,
     requestWebLocation,
     startLocationWatch,
   ]);
@@ -867,6 +900,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
     coordinatesAreFallback,
     locationState,
     currentLocation,
+    webStartupLocationPending,
     isLoading,
     error,
     updateCoordinates,
@@ -878,6 +912,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
     coordinatesAreFallback,
     locationState,
     currentLocation,
+    webStartupLocationPending,
     isLoading,
     error,
     updateCoordinates,

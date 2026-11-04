@@ -142,6 +142,7 @@ describe('useMapController (#991 smoke)', () => {
       coordinatesAreFallback: true,
       locationState: { status: 'unavailable' },
       currentLocation: null,
+      webStartupLocationPending: false,
     })
   })
 
@@ -208,6 +209,37 @@ describe('useMapController (#991 smoke)', () => {
     mockMapPlaceholder = false
     await rerender()
     expect(result.current.mapPanelProps.travelsTotal).toBe(0)
+  })
+
+  it('keeps the first viewport closed until an authorized location and its radius data settle', async () => {
+    mockMapCoordinatesResult.webStartupLocationPending = true
+    const { result, rerender } = await renderHook(() => useMapController(baseParams))
+    expect(result.current.mapPanelProps.initialResultsSettled).toBe(false)
+
+    const actualLocation = { latitude: 53.6833, longitude: 23.8333 }
+    Object.assign(mockMapCoordinatesResult, {
+      webStartupLocationPending: false,
+      coordinates: actualLocation,
+      coordinatesSource: 'geolocation',
+      coordinatesAreFallback: false,
+      currentLocation: actualLocation,
+    })
+    mockMapDebouncing = true
+    await rerender()
+    expect(result.current.mapPanelProps.initialResultsSettled).toBe(false)
+
+    mockMapDebouncing = false
+    await rerender()
+    expect(result.current.mapPanelProps.initialResultsSettled).toBe(true)
+    expect(result.current.mapPanelProps.coordinates).toEqual(actualLocation)
+  })
+
+  it.each(['url', 'cache'])('lets a %s anchor render while the initial fix is pending', async (source) => {
+    mockMapCoordinatesResult.webStartupLocationPending = true
+    if (source === 'cache') mockMapCoordinatesResult.coordinatesSource = 'cache'
+    const urlCoordinates = source === 'url' ? { latitude: 53.6833, longitude: 23.8333 } : null
+    const { result } = await renderHook(() => useMapController({ ...baseParams, urlCoordinates }))
+    expect(result.current.mapPanelProps.initialResultsSettled).toBe(true)
   })
 
   it('#2450 — a background refetch of the same key (next page) keeps the total for the auto-fit', async () => {
