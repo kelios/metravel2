@@ -63,7 +63,8 @@ describe('MarkerClusterGroup', () => {
     ;(global as any).document = originalDocument
   })
 
-  it('forwards popup shell props and popupopen handler to imperative Leaflet markers', async () => {
+  it('forwards popup options and binds untrusted addresses as text nodes', async () => {
+    const address = '<svg/onload=alert(1)>'
     const popupOpen = jest.fn()
     const markerHandlers = new Map<string, (event: any) => void>()
     const marker = {} as TestMarker
@@ -100,7 +101,7 @@ describe('MarkerClusterGroup', () => {
           {
             id: 1,
             coord: '53.9,27.56',
-            address: 'Минск',
+            address,
           } as any,
         ]}
         markerIcon={{}}
@@ -127,6 +128,11 @@ describe('MarkerClusterGroup', () => {
         autoPanPaddingBottomRight: [24, 140],
       })
     )
+
+    const [tooltip] = marker.bindTooltip.mock.calls[0]
+    expect(tooltip).toBeInstanceOf(HTMLElement)
+    expect(tooltip.textContent).toBe(address)
+    expect(tooltip.childElementCount).toBe(0)
 
     const popupEvent = { popup: { getElement: jest.fn() } }
     markerHandlers.get('popupopen')?.(popupEvent)

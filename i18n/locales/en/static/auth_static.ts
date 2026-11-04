@@ -33,6 +33,8 @@ export const authStaticResources = {
   "google.unavailable.a11y": "Google Sign-In is not configured for the mobile app",
   "accountConfirmation.failed": "Failed to verify account. {{details}}",
   "accountConfirmation.error": "An error occurred while confirming your account. {{details}}",
+  "accountConfirmation.signInNotice": "Continuing confirms the email address and signs you in to the account linked here. If you are signed in to another account, this will switch accounts.",
+  "accountConfirmation.confirmAndSignIn": "Confirm email and sign in",
   "registration.failed": "Failed to register.",
   "google.signInFailed": "Error logging in via Google.",
   "apple.signInFailed": "Could not sign in with Apple.",

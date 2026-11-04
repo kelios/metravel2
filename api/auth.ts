@@ -28,7 +28,7 @@ import { fetchStatusWithTimeout, fetchWithTimeout } from '@/utils/fetchWithTimeo
 import { getUserFriendlyError } from '@/utils/userFriendlyErrors';
 import { retry, isRetryableError } from '@/utils/retry';
 import { getSecureItem } from '@/utils/secureStorage';
-import { persistSessionTokens, clearSessionTokens } from '@/utils/authTokenStore';
+import { persistSessionTokens } from '@/utils/authTokenStore';
 import { getCsrfHeader } from '@/utils/csrf';
 import { setStorageBatch, removeStorageBatch } from '@/utils/storageBatch';
 import {
@@ -250,34 +250,18 @@ export const loginApi = async (
 };
 
 export const logoutApi = async () => {
-    try {
-        const token = await getStoredAuthToken();
-        const response = await fetchWithTimeout(LOGOUT, {
-            method: 'POST',
-            ...getApiRequestCredentials(),
-            headers: {
-                ...(token ? { Authorization: `Token ${token}` } : {}),
-                'Content-Type': 'application/json',
-                ...getCsrfHeader(),
-            },
-        }, DEFAULT_TIMEOUT);
-
-        if (!response.ok) {
-            throw new Error('Network response was not ok.');
-        }
-
-        await safeJsonParse(response, {}).catch(() => undefined);
-    } catch (error) {
-        if (__DEV__) {
-            console.error(error);
-        }
-    } finally {
-        // Чистим креды БЕЗУСЛОВНО — даже если серверный logout упал/таймаут,
-        // иначе на устройстве остаётся валидный токен и запросы шлют старый Authorization.
-        await Promise.allSettled([
-            clearSessionTokens(),
-            AsyncStorage.multiRemove(['userName', 'userId']),
-        ]);
+    const token = await getStoredAuthToken();
+    const response = await fetchWithTimeout(LOGOUT, {
+        method: 'POST',
+        ...getApiRequestCredentials(),
+        headers: {
+            ...(token ? { Authorization: `Token ${token}` } : {}),
+            'Content-Type': 'application/json',
+            ...getCsrfHeader(),
+        },
+    }, DEFAULT_TIMEOUT);
+    if (!response.ok) {
+        throw new Error(`Logout failed with HTTP ${response.status}`);
     }
 };
 

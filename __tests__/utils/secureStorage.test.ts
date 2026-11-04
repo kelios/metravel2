@@ -220,4 +220,68 @@ describe('secureStorage (native)', () => {
     expect(mockSecureStore.isAvailableAsync).toHaveBeenCalled()
     expect(available).toBe(true)
   })
+
+  it('honors a persisted token revocation before reading Keychain after restart', async () => {
+    jest.mocked(AsyncStorage.getItem).mockResolvedValueOnce('1')
+
+    await expect(readSecureItem('refreshToken')).resolves.toEqual({
+      value: null,
+      unavailable: false,
+    })
+    expect(AsyncStorage.getItem).toHaveBeenCalledWith('secure_revoked:refreshToken')
+    expect(mockSecureStore.getItemAsync).not.toHaveBeenCalled()
+  })
+
+  it('revokes the old token despite a failed delete until Keychain accepts a replacement', async () => {
+    mockSecureStore.deleteItemAsync.mockRejectedValueOnce(new Error('keychain busy'))
+    await removeSecureItem('userToken')
+
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith('secure_revoked:userToken', '1')
+    await expect(getSecureItem('userToken')).resolves.toBeNull()
+    expect(mockSecureStore.getItemAsync).not.toHaveBeenCalled()
+
+    mockSecureStore.setItemAsync.mockRejectedValueOnce(new Error('keychain busy'))
+    await expect(setSecureItem('userToken', 'replacement')).rejects.toThrow()
+    expect(AsyncStorage.removeItem).not.toHaveBeenCalledWith('secure_revoked:userToken')
+    await expect(getSecureItem('userToken')).resolves.toBeNull()
+
+    await setSecureItem('userToken', 'replacement')
+    expect(AsyncStorage.removeItem).toHaveBeenCalledWith('secure_revoked:userToken')
+    mockSecureStore.getItemAsync.mockResolvedValueOnce('replacement')
+    await expect(getSecureItem('userToken')).resolves.toBe('replacement')
+  })
+
+  it('reports a failed revocation when neither native store can persist it', async () => {
+    jest.mocked(AsyncStorage.setItem).mockRejectedValueOnce(new Error('storage busy'))
+    mockSecureStore.deleteItemAsync.mockRejectedValueOnce(new Error('keychain busy'))
+
+    await expect(removeSecureItem('userToken')).rejects.toThrow('keychain busy')
+    await expect(getSecureItem('userToken')).resolves.toBeNull()
+    await setSecureItem('userToken', 'replacement')
+  })
+
+  it('fails closed when the revocation store cannot be read', async () => {
+    jest.mocked(AsyncStorage.getItem).mockRejectedValueOnce(new Error('storage unavailable'))
+
+    await expect(readSecureItem('userToken')).resolves.toEqual({
+      value: null,
+      unavailable: true,
+    })
+    expect(mockSecureStore.getItemAsync).not.toHaveBeenCalled()
+  })
+
+  it('does not return an in-flight read of the old token after logout and another login', async () => {
+    let finishRead!: (token: string) => void
+    const pendingRead = new Promise<string>((resolve) => { finishRead = resolve })
+    mockSecureStore.getItemAsync.mockReturnValueOnce(pendingRead)
+
+    const read = getSecureItem('userToken')
+    await Promise.resolve()
+    expect(mockSecureStore.getItemAsync).toHaveBeenCalledWith('userToken')
+
+    await removeSecureItem('userToken')
+    await setSecureItem('userToken', 'replacement')
+    finishRead('old-token')
+    await expect(read).resolves.toBeNull()
+  })
 })

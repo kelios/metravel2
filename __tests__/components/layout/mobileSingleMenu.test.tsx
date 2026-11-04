@@ -19,7 +19,7 @@ const mockAuth = {
   isSuperuser: false,
   userId: null as number | null,
   username: '',
-  logout: jest.fn(async () => undefined),
+  logout: jest.fn(async () => true),
 }
 jest.mock('@/context/AuthContext', () => ({ useAuth: () => mockAuth }))
 const mockRouter = { push: jest.fn(), navigate: jest.fn() }

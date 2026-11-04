@@ -89,81 +89,43 @@ describe('yarn audit high wrapper', () => {
 
     expect(outcome).toMatchObject({ exitCode: 0, stderr: '' })
     expect(outcome.stdout).toContain('high/critical: 0, moderate: 0, low: 0')
-    expect(outcome.stdout).toContain('allowed ignored modules: node-forge')
   })
 
-  it('preserves advisory counts and reports the explicit ignored-module policy', () => {
+  it('keeps node-forge high advisories release-blocking', () => {
     const outcome = evaluateAuditResult({
       status: 14,
       stdout: fixture('valid-advisory-stream.jsonl'),
       stderr: '',
     })
 
-    expect(outcome).toMatchObject({ exitCode: 0, stderr: '' })
-    expect(outcome.stdout).toContain('high/critical: 0, moderate: 1, low: 1, ignored: 1')
-    expect(outcome.stdout).toContain('allowed ignored modules: node-forge')
+    expect(outcome.exitCode).toBe(1)
+    expect(outcome.stderr).toContain('high/critical: 1, moderate: 1, low: 1')
   })
 
-  it('keeps non-ignored high advisories release-blocking', () => {
-    const highAudit = fixture('valid-advisory-stream.jsonl')
-      .replace('"module_name":"node-forge"', '"module_name":"unignored-package"')
-
-    const outcome = evaluateAuditResult({ status: 14, stdout: highAudit, stderr: '' })
+  it('blocks the previously excepted zod advisory on the Expo CLI path', () => {
+    const advisory = {
+      type: 'auditAdvisory',
+      data: {
+        resolution: { id: 2000, path: 'expo>@expo/cli>zod', dev: false },
+        advisory: { module_name: 'zod', severity: 'high', github_advisory_id: 'GHSA-MRHX-C7XC-M3W5' },
+      },
+    }
+    const summary = {
+      type: 'auditSummary',
+      data: {
+        vulnerabilities: { info: 0, low: 0, moderate: 0, high: 1, critical: 0 },
+        totalDependencies: 505,
+      },
+    }
+    const outcome = evaluateAuditResult({
+      status: 8,
+      stdout: [advisory, summary].map((record) => JSON.stringify(record)).join('\n'),
+      stderr: '',
+    })
 
     expect(outcome.exitCode).toBe(1)
     expect(outcome.stdout).toBe('')
-    expect(outcome.stderr).toContain('high/critical vulnerabilities')
     expect(outcome.stderr).toContain('high/critical: 1')
-  })
-
-  describe('GHSA-scoped advisory exceptions', () => {
-    const highAdvisoryStream = (advisories: Array<{ module: string; ghsa: string; path: string }>) => [
-      ...advisories.map(({ module, ghsa, path: resolutionPath }, index) => JSON.stringify({
-        type: 'auditAdvisory',
-        data: {
-          resolution: { id: 2000 + index, path: resolutionPath, dev: false },
-          advisory: { module_name: module, severity: 'high', github_advisory_id: ghsa.toLowerCase() },
-        },
-      })),
-      JSON.stringify({
-        type: 'auditSummary',
-        data: {
-          vulnerabilities: { info: 0, low: 0, moderate: 0, high: advisories.length, critical: 0 },
-          totalDependencies: 505,
-        },
-      }),
-    ].join('\n')
-
-    it('ignores the zod advisory only on the pinned @expo/cli path', () => {
-      const outcome = evaluateAuditResult({
-        status: 8,
-        stdout: highAdvisoryStream([
-          { module: 'zod', ghsa: 'GHSA-MRHX-C7XC-M3W5', path: 'expo>@expo/cli>zod' },
-          { module: 'node-forge', ghsa: 'GHSA-86W9-CPQP-85RV', path: 'expo>@expo/cli>node-forge' },
-        ]),
-        stderr: '',
-      })
-
-      expect(outcome).toMatchObject({ exitCode: 0, stderr: '' })
-      expect(outcome.stdout).toContain('high/critical: 0')
-      expect(outcome.stdout).toContain('ignored: 2')
-      expect(outcome.stdout).toContain('zod/GHSA-MRHX-C7XC-M3W5')
-    })
-
-    it.each([
-      ['the same zod advisory on another dependency path', 'GHSA-MRHX-C7XC-M3W5', 'zod'],
-      ['an unlisted zod advisory on the pinned path', 'GHSA-0000-0000-0000', 'expo>@expo/cli>zod'],
-    ])('keeps %s release-blocking', (_label, ghsa, resolutionPath) => {
-      const outcome = evaluateAuditResult({
-        status: 8,
-        stdout: highAdvisoryStream([{ module: 'zod', ghsa, path: resolutionPath }]),
-        stderr: '',
-      })
-
-      expect(outcome.exitCode).toBe(1)
-      expect(outcome.stdout).toBe('')
-      expect(outcome.stderr).toContain('high/critical: 1')
-    })
   })
 
   it('rejects a child status that does not match the trustworthy summary bitmask', () => {

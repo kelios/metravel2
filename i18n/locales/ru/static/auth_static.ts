@@ -33,6 +33,8 @@ export const authStaticResources = {
   "google.unavailable.a11y": "Google Sign-In не настроен для мобильного приложения",
   "accountConfirmation.failed": "Не удалось подтвердить учетную запись. {{details}}",
   "accountConfirmation.error": "Произошла ошибка при подтверждении учетной записи. {{details}}",
+  "accountConfirmation.signInNotice": "Продолжая, вы подтвердите email и войдёте в аккаунт, к которому относится эта ссылка. Если вы уже вошли в другой аккаунт, он сменится.",
+  "accountConfirmation.confirmAndSignIn": "Подтвердить email и войти",
   "registration.failed": "Не удалось зарегистрироваться.",
   "google.signInFailed": "Ошибка при входе через Google.",
   "apple.signInFailed": "Не удалось войти через Apple.",

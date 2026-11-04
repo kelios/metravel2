@@ -381,7 +381,13 @@ describe('buildQuestNativeMapHtml — engine regression invariants', () => {
       [27.57, 53.91],
     ],
     routeIsRouted: true,
-    groupedPoints: [{ lat: 53.9, lng: 27.56, indexes: [1], titles: ['A'] }] as any,
+    groupedPoints: [{
+      lat: 53.9,
+      lng: 27.56,
+      indexes: [1, 2],
+      titles: ['A & B', '<img src=x onerror="alert(1)">'],
+      zIndexOffset: 0,
+    }],
     colors: themeColorsStub,
     interactive: false,
     questNavProviders: [{ app: 'google' as any, label: 'Google' }],
@@ -398,6 +404,26 @@ describe('buildQuestNativeMapHtml — engine regression invariants', () => {
     expect(html).toContain("type: 'quest-map-status'");
     expect(html).toContain("type: 'quest-map-nav'");
     expect(html).toContain("type: 'quest-map-png'");
+  });
+
+  it('passes quest titles to Leaflet as text inside the popup markup', () => {
+    const bindPopup = jest.fn();
+    const addTo = jest.fn(() => ({ bindPopup }));
+    const L = {
+      map: () => ({ setView: jest.fn() }),
+      tileLayer: () => ({ addTo: jest.fn() }),
+      polyline: () => ({ addTo: jest.fn() }),
+      divIcon: jest.fn(),
+      marker: () => ({ addTo }),
+    };
+    const start = html.indexOf('function isValidLatLng(point)');
+    const end = html.indexOf("document.addEventListener('click'", start);
+    new Function('L', html.slice(start, end))(L);
+
+    expect(bindPopup).toHaveBeenCalledWith(expect.stringContaining(
+      'A &amp; B, &lt;img src=x onerror=&quot;alert(1)&quot;&gt;',
+    ));
+    expect(bindPopup.mock.calls[0][0]).not.toContain('<img');
   });
 
   it('preserves the interactive gate for ScrollView-preview maps', () => {

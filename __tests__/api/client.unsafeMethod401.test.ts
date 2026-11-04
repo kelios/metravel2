@@ -4,7 +4,7 @@
 // трафик — вместо этого вызывающий получает исходный 401. GET-путь с
 // fallback по-прежнему покрыт `__tests__/api/client.test.ts`.
 
-import { apiClient, ApiError } from '@/api/client';
+import { apiClient, ApiError, setAuthInvalidationHandler } from '@/api/client';
 import { fetchStatusWithTimeout, fetchWithTimeout } from '@/utils/fetchWithTimeout';
 import { getSecureItem, readSecureItem, removeSecureItems } from '@/utils/secureStorage';
 import { Platform } from 'react-native';
@@ -66,6 +66,7 @@ describe('api/client: anonymous 401 retry is limited to safe methods (API-2)', (
   });
 
   afterEach(() => {
+    setAuthInvalidationHandler(null);
     Platform.OS = originalPlatformOS;
   });
 
@@ -103,6 +104,19 @@ describe('api/client: anonymous 401 retry is limited to safe methods (API-2)', (
     await expect(apiClient.post('/quests/42/result', { answer: 'x' })).rejects.toBeInstanceOf(ApiError);
 
     expect(mockedRemoveSecureItems).toHaveBeenCalledWith(['userToken', 'refreshToken']);
+    expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2);
+  });
+
+  it('preserves confirmed session invalidation and the 401 when native token removal fails', async () => {
+    const invalidate = jest.fn();
+    setAuthInvalidationHandler(invalidate);
+    mockedGetSecureItem.mockResolvedValueOnce('deadToken').mockResolvedValueOnce('deadToken');
+    mockedFetchWithTimeout.mockResolvedValueOnce(unauthorized()).mockResolvedValueOnce(unauthorized());
+    mockedRemoveSecureItems.mockRejectedValueOnce(new Error('storage unavailable'));
+
+    await expect(apiClient.post('/quests/42/result', { answer: 'x' })).rejects.toMatchObject({ status: 401 });
+
+    expect(invalidate).toHaveBeenCalledTimes(1);
     expect(mockedFetchWithTimeout).toHaveBeenCalledTimes(2);
   });
 

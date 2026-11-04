@@ -9,11 +9,13 @@
 // одну запись.
 
 import React from 'react'
-import { render, waitFor } from '@testing-library/react-native'
+import { fireEvent, render, waitFor } from '@testing-library/react-native'
 
 const mockReplace = jest.fn()
 const mockConfirmAccount = jest.fn()
 const mockQueueAnalyticsEvent = jest.fn()
+let mockRouteHash = 'confirm-hash'
+let mockIsFocused = true
 
 jest.mock('@/utils/analytics', () => ({
   queueAnalyticsEvent: (...args: unknown[]) => mockQueueAnalyticsEvent(...args),
@@ -21,8 +23,8 @@ jest.mock('@/utils/analytics', () => ({
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: mockReplace }),
-  useLocalSearchParams: () => ({ hash: 'confirm-hash' }),
-  useIsFocused: () => false,
+  useLocalSearchParams: () => ({ hash: mockRouteHash }),
+  useIsFocused: () => mockIsFocused,
 }))
 
 jest.mock('@/api/auth', () => ({
@@ -42,6 +44,7 @@ jest.mock('@/hooks/useTheme', () => ({
   useThemedColors: () => ({
     background: '#fff',
     surface: '#fff',
+    text: '#111',
     primary: '#f60',
     primaryDark: '#c50',
     dangerDark: '#c00',
@@ -82,13 +85,35 @@ import AccountConfirmation from '@/app/(tabs)/accountconfirmation'
 import { useAuthStore } from '@/stores/authStore'
 import { INITIAL_AUTH_STATE } from '@/stores/authState'
 import { buildQuestProgressStorageKey } from '@/utils/questProgressStorage'
+import { translate } from '@/i18n'
 
 beforeEach(() => {
   jest.clearAllMocks()
+  mockRouteHash = 'confirm-hash'
+  mockIsFocused = true
   useAuthStore.setState({ ...INITIAL_AUTH_STATE })
 })
 
+async function renderAndApproveConfirmation() {
+  const screen = await render(<AccountConfirmation />)
+  await fireEvent.press(await screen.findByText(translate('authStatic:accountConfirmation.confirmAndSignIn')))
+}
+
 describe('accountconfirmation → auth state', () => {
+  it.each([false, true])('does not activate or replace an existing session on link navigation (signed in: %s)', async (isAuthenticated) => {
+    if (isAuthenticated) {
+      useAuthStore.setState({ isAuthenticated: true, authReady: true, userId: '42' })
+    }
+    mockConfirmAccount.mockResolvedValue({ userToken: 'tok', userId: 77 })
+
+    const screen = await render(<AccountConfirmation />)
+    expect(await screen.findByText(translate('authStatic:accountConfirmation.signInNotice'))).toBeTruthy()
+    expect(mockConfirmAccount).not.toHaveBeenCalled()
+    expect(mockReplace).not.toHaveBeenCalled()
+    expect(useAuthStore.getState().isAuthenticated).toBe(isAuthenticated)
+    if (isAuthenticated) expect(useAuthStore.getState().userId).toBe('42')
+  })
+
   it('кладёт id и имя подтверждённого аккаунта в стор', async () => {
     mockConfirmAccount.mockResolvedValue({
       userToken: 'tok',
@@ -96,7 +121,7 @@ describe('accountconfirmation → auth state', () => {
       userName: 'Ирина',
     })
 
-    await render(<AccountConfirmation />)
+    await renderAndApproveConfirmation()
 
     await waitFor(() => expect(useAuthStore.getState().isAuthenticated).toBe(true))
     const state = useAuthStore.getState()
@@ -105,10 +130,43 @@ describe('accountconfirmation → auth state', () => {
     expect(mockReplace).toHaveBeenCalledWith('/')
   })
 
+  it('finishes the approved session without activating a new link that arrives in flight', async () => {
+    let finish!: (response: { userToken: string; userId: number }) => void
+    mockConfirmAccount.mockReturnValueOnce(new Promise((resolve) => { finish = resolve }))
+    const screen = await render(<AccountConfirmation />)
+    const buttonText = translate('authStatic:accountConfirmation.confirmAndSignIn')
+
+    await fireEvent.press(await screen.findByText(buttonText))
+    expect(mockConfirmAccount).toHaveBeenCalledWith('confirm-hash')
+    mockRouteHash = 'other-hash'
+    await screen.rerender(<AccountConfirmation />)
+    expect(screen.queryByText(buttonText)).toBeNull()
+
+    finish({ userToken: 'tok', userId: 77 })
+    expect(await screen.findByText(buttonText)).toBeTruthy()
+    expect(useAuthStore.getState().userId).toBe('77')
+    expect(mockConfirmAccount).toHaveBeenCalledTimes(1)
+    expect(mockReplace).not.toHaveBeenCalled()
+  })
+
+  it('does not navigate away from the current screen when confirmation finishes after blur', async () => {
+    let finish!: (response: { userToken: string; userId: number }) => void
+    mockConfirmAccount.mockReturnValueOnce(new Promise((resolve) => { finish = resolve }))
+    const screen = await render(<AccountConfirmation />)
+
+    await fireEvent.press(await screen.findByText(translate('authStatic:accountConfirmation.confirmAndSignIn')))
+    mockIsFocused = false
+    await screen.rerender(<AccountConfirmation />)
+    finish({ userToken: 'tok', userId: 77 })
+
+    await waitFor(() => expect(useAuthStore.getState().userId).toBe('77'))
+    expect(mockReplace).not.toHaveBeenCalled()
+  })
+
   it('ключ прогресса квеста сразу после подтверждения содержит id, а не pending', async () => {
     mockConfirmAccount.mockResolvedValue({ userToken: 'tok', userId: 77, userName: '' })
 
-    await render(<AccountConfirmation />)
+    await renderAndApproveConfirmation()
 
     await waitFor(() => expect(useAuthStore.getState().isAuthenticated).toBe(true))
     const { isAuthenticated, userId } = useAuthStore.getState()
@@ -127,7 +185,7 @@ describe('accountconfirmation → auth state', () => {
       quest_handoff: { quest_id: 'grodno-royal', redirect_path: '/quests/grodno/grodno-royal', answered: 2 },
     })
 
-    await render(<AccountConfirmation />)
+    await renderAndApproveConfirmation()
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/quests/grodno/grodno-royal'))
     expect(mockQueueAnalyticsEvent).toHaveBeenCalledWith('quest_guest_progress_migrated', {
@@ -145,7 +203,7 @@ describe('accountconfirmation → auth state', () => {
       quest_handoff: { quest_id: 'x', redirect_path: '//evil.example/quests/a/b', answered: 2 },
     })
 
-    await render(<AccountConfirmation />)
+    await renderAndApproveConfirmation()
 
     await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/'))
     expect(mockQueueAnalyticsEvent).not.toHaveBeenCalled()
@@ -154,9 +212,10 @@ describe('accountconfirmation → auth state', () => {
   it('не объявляет сессию, если сервер не вернул id', async () => {
     mockConfirmAccount.mockResolvedValue({ userToken: 'tok', userName: 'Ирина' })
 
-    await render(<AccountConfirmation />)
+    await renderAndApproveConfirmation()
 
-    await waitFor(() => expect(mockConfirmAccount).toHaveBeenCalled())
+    await waitFor(() => expect(mockConfirmAccount).toHaveBeenCalledTimes(1))
+    expect(mockConfirmAccount).toHaveBeenCalledWith('confirm-hash')
     await waitFor(() => expect(useAuthStore.getState().authReady).toBe(false))
     expect(useAuthStore.getState().isAuthenticated).toBe(false)
     expect(mockReplace).not.toHaveBeenCalled()

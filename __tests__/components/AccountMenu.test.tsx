@@ -287,7 +287,8 @@ describe('AccountMenu', () => {
     expect(getLastImageSourceUri()).toBe(plain);
   });
 
-  it('calls logout and navigates when logout is pressed', async () => {
+  it.each([true, false])('navigates only when logout succeeds (%s)', async (completed) => {
+    mockLogout.mockResolvedValueOnce(completed);
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       username: 'testuser',
@@ -306,7 +307,8 @@ describe('AccountMenu', () => {
 
     await waitFor(() => {
       expect(mockLogout).toHaveBeenCalledTimes(1);
-      expect(router.push).toHaveBeenCalledWith('/');
+      if (completed) expect(router.push).toHaveBeenCalledWith('/');
+      else expect(router.push).not.toHaveBeenCalled();
     });
   });
 

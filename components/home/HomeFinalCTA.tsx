@@ -275,7 +275,9 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       flexDirection: isMobile ? 'column' : 'row',
       alignItems: 'center',
       gap: isMobile ? 10 : 14,
-      width: isMobile ? '100%' : undefined,
+      width: '100%',
+      justifyContent: 'center',
+      flexWrap: isMobile ? 'nowrap' : 'wrap',
       marginTop: 4,
     },
     primaryButton: {
@@ -283,8 +285,7 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       paddingVertical: isMobile ? 12 : 14,
       minHeight: isMobile ? 46 : 48,
       borderRadius: DESIGN_TOKENS.radii.md,
-      width: isMobile ? '100%' : undefined,
-      flex: isMobile ? undefined : 1.4,
+      maxWidth: '100%',
       ...Platform.select({
         web: {
           boxShadow: colors.boxShadows.light,
@@ -315,8 +316,7 @@ const createStyles = (colors: ThemedColors, isMobile: boolean) =>
       backgroundColor: colors.surface,
       borderWidth: 1.5,
       borderColor: colors.border,
-      width: isMobile ? '100%' : undefined,
-      flex: isMobile ? undefined : 1,
+      maxWidth: '100%',
       ...Platform.select({ web: { transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)' } }),
     },
     secondaryButtonHover: {

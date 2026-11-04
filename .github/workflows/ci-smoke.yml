@@ -7,6 +7,18 @@ on:
       - main
 
 jobs:
+  agent-tooling:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.node-version'
+      - run: npm run audit:prompts
+      - run: npm run test:agent-tooling
+
   app-targeted-tests:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest

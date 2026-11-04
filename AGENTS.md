@@ -84,7 +84,9 @@ Validation:
   `METRAVEL_ROLLOUT_COMPOSE_BIN="docker compose"` (#2015), приёмка, `done`.
 - На production Git-tracked backend paths неизменяемы. Перед явно разрешённой
   server write прочитай профильный раздел `docs/RULES.md`, проверь status и
-  `git ls-files`; dirty checkout означает stop и backend/ops task, не cleanup.
+  `git ls-files`; учитывай точные исключения deploy gate из `docs/RULES.md`.
+  Для разрешённого backend-выката допускается только `?? dump.sql`;
+  остальной dirty checkout означает stop и backend/ops task.
 - Nginx принадлежит backend: источник —
   `../metravel-backend:deploy/prod/nginx/nginx.conf`. Локальный
   `nginx/nginx.conf` не править; нужное изменение оформлять как `area=back` task

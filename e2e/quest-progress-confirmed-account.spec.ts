@@ -121,10 +121,12 @@ const fulfillJson = (route: Route, value: unknown) =>
   route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(value) })
 
 const mockApis = async (page: Page) => {
+  let confirmationRequests = 0
   await page.route('**/api/**', (route) => {
     const pathname = new URL(route.request().url()).pathname
 
     if (pathname.includes('/user/confirm-registration/')) {
+      confirmationRequests += 1
       return fulfillJson(route, {
         userToken: 'e2e-confirm-token',
         userName: 'E2E Confirmed',
@@ -155,6 +157,7 @@ const mockApis = async (page: Page) => {
     }
     return fulfillJson(route, {})
   })
+  return () => confirmationRequests
 }
 
 const seedDevice = async (page: Page) => {
@@ -178,15 +181,27 @@ test.describe('Quest progress after email confirmation (#1462)', () => {
   test('свежеподтверждённый аккаунт не подхватывает запись предыдущего из окна подтверждения', async ({ page }) => {
     await preacceptCookies(page)
     await page.setViewportSize({ width: 1280, height: 900 })
-    await mockApis(page)
+    const countConfirmationRequests = await mockApis(page)
     await seedDevice(page)
 
     await page.goto('/accountconfirmation?hash=e2e-confirm-hash', { waitUntil: 'domcontentloaded' })
+    const confirmButton = page.getByRole('button', { name: 'Подтвердить email и войти', exact: true })
+    await expect(confirmButton).toBeVisible()
+    await expect(page).toHaveURL((url) => url.pathname === '/accountconfirmation' && !url.searchParams.has('hash'))
+    expect(countConfirmationRequests()).toBe(0)
+    const [confirmationRequest] = await Promise.all([
+      page.waitForRequest((request) =>
+        request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/user/confirm-registration/'),
+      ),
+      confirmButton.click(),
+    ])
+    expect(confirmationRequest.postDataJSON()).toEqual({ hash: 'e2e-confirm-hash' })
 
     // Экран подтверждения уводит на главную SPA-переходом: страница не
     // перезагружается, поэтому стор остаётся ровно в том состоянии, которое
     // выставило подтверждение.
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 60_000 }).toBe('/')
+    expect(countConfirmationRequests()).toBe(1)
 
     await page.getByRole('link', { name: 'Квесты', exact: true }).first().click()
     await expect.poll(() => new URL(page.url()).pathname, { timeout: 60_000 }).toBe('/quests')

@@ -63,7 +63,7 @@ export interface AuthActions {
         code: string,
         termsVersion?: string,
     ) => Promise<FacebookAuthResult>;
-    logout: () => Promise<void>;
+    logout: (options?: { serverAlreadyRevoked?: boolean }) => Promise<boolean>;
     // #2042: успех/отказ сброса решает статус ответа, а не текст сообщения.
     sendPassword: (email: string) => Promise<PasswordResetOutcome>;
     // #2127: причина отказа и текст успеха — из слоя api, экран показывает их сам.

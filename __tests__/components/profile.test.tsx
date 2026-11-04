@@ -505,8 +505,8 @@ describe('ProfileScreen', () => {
     expect(mockPush).toHaveBeenCalledWith('/trips/my');
   });
 
-  it('logout works', async () => {
-    const logoutMock = jest.fn().mockResolvedValue(undefined);
+  it.each([true, false])('redirects after logout only when it succeeds (%s)', async (completed) => {
+    const logoutMock = jest.fn().mockResolvedValue(completed);
     setupAuth({ isAuthenticated: true, logout: logoutMock });
     setupFavorites(0, 0);
 
@@ -523,7 +523,8 @@ describe('ProfileScreen', () => {
 
     await waitFor(() => {
       expect(logoutMock).toHaveBeenCalled();
-      expect(mockReplace).toHaveBeenCalledWith('/login');
+      if (completed) expect(mockReplace).toHaveBeenCalledWith('/login');
+      else expect(mockReplace).not.toHaveBeenCalledWith('/login');
       expect(queryByTestId('native-menu-overlay')).toBeNull();
     });
   });

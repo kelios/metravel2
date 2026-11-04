@@ -102,6 +102,18 @@ describe('Slider (web) blur background', () => {
     expect(firstImage.props.allowCriticalWebBlur).toBe(true)
   })
 
+  it('mounts the first slide with the exact cover selected by the browser', async () => {
+    const cover = 'https://example.com/cover-720.webp'
+    const tree = await renderTree(
+      <SliderWeb images={images} autoPlay={false} firstImagePreloaded firstImageSrc={cover} />,
+    )
+    await measureSliderLayout(tree, 981)
+
+    const first = within(tree.container).getByTestId('slider-image-0', { includeHiddenElements: true })
+    expect(first.props.src).toBe(cover)
+    expect(first.props.webResponsiveSource).toEqual({ src: cover })
+  })
+
   it('renders slider without blur when blurBackground is disabled', async () => {
     let tree: RenderResult
     await act(async () => {

@@ -1,5 +1,6 @@
 import type { BBox } from '@/utils/overpass';
 import { bboxAreaKm2, fetchOsmCamping, overpassToPoints, type OSMPointFeature } from '@/utils/overpass';
+import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -106,7 +107,8 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
       const typeLabel = kindLabelRu(p.tags);
       const operator = p.tags.operator || p.tags['operator:ru'] || p.tags['operator:en'] || '';
       const capacity = p.tags.capacity || '';
-      const website = p.tags.website || p.tags.url || '';
+      const website = getSafeExternalUrl(p.tags.website || p.tags.url, { allowRelative: false });
+      const osmUrl = getSafeExternalUrl(p.osmUrl, { allowRelative: false });
 
       const metaLines: string[] = [];
       if (operator) metaLines.push(i18nT('shared:utils.mapWebOverlays.osmCampingOverlay.operator_value1_3714d55f', { value1: escapeHtml(operator) }));
@@ -118,7 +120,7 @@ export const attachOsmCampingOverlay = (L: any, map: LeafletMap, opts?: OsmCampi
           <div style="font-size:12px;opacity:0.8">${escapeHtml(typeLabel)}</div>
           ${metaLines.length ? `<div style="margin-top:6px;font-size:12px;opacity:0.85">${metaLines.map((l) => `<div>${l}</div>`).join('')}</div>` : ''}
           ${website ? `<div style="margin-top:6px"><a href="${escapeAttr(website)}" target="_blank" rel="noopener noreferrer">${i18nT("shared:utils.mapWebOverlays.osmCampingOverlay.div_style_margin_top_6px_a_href_value1_targe_bbf8da6a.text01")}</a></div>` : ''}
-          ${p.osmUrl ? `<div style="margin-top:6px"><a href="${p.osmUrl}" target="_blank" rel="noopener noreferrer">${i18nT("shared:utils.mapWebOverlays.osmCampingOverlay.div_style_margin_top_6px_a_href_value1_targe_256a0746.text01")}</a></div>` : ''}
+          ${osmUrl ? `<div style="margin-top:6px"><a href="${escapeAttr(osmUrl)}" target="_blank" rel="noopener noreferrer">${i18nT("shared:utils.mapWebOverlays.osmCampingOverlay.div_style_margin_top_6px_a_href_value1_targe_256a0746.text01")}</a></div>` : ''}
         </div>
       `;
 

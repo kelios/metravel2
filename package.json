@@ -6,7 +6,9 @@
   "scripts": {
     "preinstall": "node scripts/ensure-node-version.js",
     "check:node": "node scripts/ensure-node-version.js",
-    "audit:prompts": "node .codex/skills/metravel-prompt-maintainer/scripts/validate-project-prompts.js",
+    "audit:prompts": "node .codex/skills/metravel-prompt-maintainer/scripts/validate-project-prompts.js && node .grok/scripts/sync-agents.mjs --check && node .codex/skills/metravel-prompt-maintainer/scripts/audit-content-prompts.js",
+    "audit:prompts:local": "node .codex/skills/metravel-prompt-maintainer/scripts/audit-content-prompts.js --local",
+    "test:agent-tooling": "node --test .codex/skills/metravel-prompt-maintainer/scripts/*.test.js scripts/launch-task-board-mcp.test.cjs",
     "check-deps": "node scripts/check-dependencies.js",
     "check:image-architecture": "node scripts/check-image-architecture.js",
     "test:cors": "node scripts/test-cors-proxy.js",

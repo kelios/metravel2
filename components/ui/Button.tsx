@@ -40,6 +40,7 @@ export interface ButtonProps {
   testID?: string;
   style?: StyleProp<ViewStyle>;
   labelStyle?: StyleProp<TextStyle>;
+  /** Explicit line limit for compact controls. Action labels wrap by default. */
   labelNumberOfLines?: number;
   hoverStyle?: StyleProp<ViewStyle>;
   pressedStyle?: StyleProp<ViewStyle>;
@@ -70,7 +71,7 @@ const ButtonComponent = forwardRef<ViewInstance, ButtonProps>(({
   testID,
   style,
   labelStyle,
-  labelNumberOfLines = 1,
+  labelNumberOfLines,
   hoverStyle,
   pressedStyle,
 }, ref) => {
@@ -175,10 +176,7 @@ const staticStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    // Когда caller ограничил ширину кнопки (maxWidth/width/stretch), ряд с
-    // иконкой и подписью обязан ужиматься: без этого он остаётся шириной по
-    // содержимому и текст вылезает за рамку вместо многоточия. Кнопку,
-    // которая шире содержимого, флаг не трогает — ужимать там нечего.
+    // Let the label wrap inside a width-constrained button.
     flexShrink: 1,
     minWidth: 0,
   },
@@ -191,7 +189,9 @@ const staticStyles = StyleSheet.create({
   label: {
     fontSize: DESIGN_TOKENS.typography.sizes.md,
     fontWeight: '600',
+    textAlign: 'center',
     flexShrink: 1,
+    minWidth: 0,
   },
   iconOnly: {
     paddingHorizontal: spacing.sm,

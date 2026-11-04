@@ -489,7 +489,9 @@ const MarkerClusterGroup: React.FC<MarkerClusterGroupProps> = ({
           point.address.length > TOOLTIP_MAX_LEN
             ? point.address.slice(0, TOOLTIP_MAX_LEN) + '…'
             : point.address
-        marker.bindTooltip(tooltipText, {
+        const tooltip = document.createElement('span')
+        tooltip.textContent = tooltipText
+        marker.bindTooltip(tooltip, {
           direction: 'top',
           offset: [0, -10],
           opacity: 0.95,

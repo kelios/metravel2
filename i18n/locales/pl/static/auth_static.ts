@@ -33,6 +33,8 @@ export const authStaticResources = {
   "google.unavailable.a11y": "Logowanie Google nie jest skonfigurowane dla aplikacji mobilnej",
   "accountConfirmation.failed": "Nie udało się zweryfikować konta. {{details}}",
   "accountConfirmation.error": "Wystąpił błąd podczas potwierdzania konta. {{details}}",
+  "accountConfirmation.signInNotice": "Jeśli przejdziesz dalej, potwierdzisz adres e-mail i zalogujesz się na konto powiązane z tym linkiem. Jeśli korzystasz już z innego konta, zostanie ono przełączone.",
+  "accountConfirmation.confirmAndSignIn": "Potwierdź e-mail i zaloguj się",
   "registration.failed": "Nie udało się zarejestrować.",
   "google.signInFailed": "Błąd logowania przez Google.",
   "apple.signInFailed": "Nie udało się zalogować przez Apple.",

@@ -229,6 +229,62 @@ export const useAuthStore = create<AuthStore>((set, get) => {
             i18nT('errorsStatic:api.auth.facebookSignInFailed'),
         );
 
+    let logoutInFlight: Promise<boolean> | undefined;
+    const performLogout = async (serverAlreadyRevoked: boolean): Promise<boolean> => {
+        const native = shouldUseStoredAuthToken();
+        try {
+            // Push-token DELETE must run while the native auth credential still
+            // exists. The adapter is best-effort: a failed unregister never
+            // blocks local logout, and it never reports fake success.
+            if (native && !serverAlreadyRevoked) {
+                const { unregisterPushBeforeLogout } = await getPushRegistration();
+                await unregisterPushBeforeLogout();
+            }
+        } catch {
+            // Logout must still clear the local session.
+        }
+
+        let releaseCatalogRefresh!: () => void;
+        const credentialsReady = new Promise<void>((resolve) => { releaseCatalogRefresh = resolve; });
+        logoutCredentialsReady = credentialsReady;
+        if (native) get().invalidateAuthState();
+
+        try {
+            try {
+                if (!serverAlreadyRevoked) {
+                    const { logoutApi } = await getAuthApi();
+                    await logoutApi();
+                }
+            } catch (error) {
+                if (!native) {
+                    void showToast({
+                        type: 'error',
+                        text1: i18nT('errorsStatic:api.auth.serviceUnavailable'),
+                        position: 'bottom',
+                    });
+                    return false;
+                }
+                if (__DEV__) console.warn('Ошибка при логауте с сервера:', error);
+            }
+            if (!native) get().invalidateAuthState();
+            await Promise.all([
+                clearSessionTokens(),
+                removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar']),
+            ]);
+            return true;
+        } catch {
+            void showToast({
+                type: 'error',
+                text1: i18nT('errorsStatic:unexpectedError'),
+                position: 'bottom',
+            });
+            return false;
+        } finally {
+            if (logoutCredentialsReady === credentialsReady) logoutCredentialsReady = undefined;
+            releaseCatalogRefresh();
+        }
+    };
+
     return {
     // --- state ---
     ...INITIAL_AUTH_STATE,
@@ -632,40 +688,18 @@ export const useAuthStore = create<AuthStore>((set, get) => {
     },
 
     // --- logout ---
-    logout: async () => {
-        try {
-            // Push-token DELETE must run while the native auth credential still
-            // exists. The adapter is best-effort: a failed unregister never
-            // blocks local logout, and it never reports fake success.
-            const { unregisterPushBeforeLogout } = await getPushRegistration();
-            await unregisterPushBeforeLogout();
-        } catch {
-            // Logout must still clear the local session.
+    logout: ({ serverAlreadyRevoked = false } = {}) => {
+        if (logoutInFlight) {
+            if (!serverAlreadyRevoked) return logoutInFlight;
+            // Account deletion already revoked the session. Finish local cleanup
+            // even if a regular logout request failed while deletion was pending.
+            return logoutInFlight.then((completed) =>
+                completed || get().logout({ serverAlreadyRevoked: true }));
         }
-
-        let releaseCatalogRefresh!: () => void;
-        const credentialsReady = new Promise<void>((resolve) => { releaseCatalogRefresh = resolve; });
-        logoutCredentialsReady = credentialsReady;
-        get().invalidateAuthState();
-
-        try {
-            const { logoutApi } = await getAuthApi();
-            await logoutApi();
-        } catch (e) {
-            if (__DEV__) {
-                console.warn('Ошибка при логауте с сервера:', e);
-            }
-        } finally {
-            try {
-                await Promise.all([
-                    clearSessionTokens(),
-                    removeStorageBatch(['userName', 'isSuperuser', 'userId', 'userAvatar']),
-                ]);
-            } finally {
-                if (logoutCredentialsReady === credentialsReady) logoutCredentialsReady = undefined;
-                releaseCatalogRefresh();
-            }
-        }
+        logoutInFlight = performLogout(serverAlreadyRevoked).finally(() => {
+            logoutInFlight = undefined;
+        });
+        return logoutInFlight;
     },
 
     // --- password reset ---

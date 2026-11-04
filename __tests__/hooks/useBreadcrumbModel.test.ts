@@ -111,6 +111,30 @@ describe('useBreadcrumbModel', () => {
     expect(fetchTravelBySlug).not.toHaveBeenCalled();
   });
 
+  it.each(['//evil.example/login', '/\\evil.example/login', '/\t/evil.example/login'])(
+    'does not use the external return path %j in travel breadcrumbs',
+    async (returnTo) => {
+      usePathname.mockReturnValue('/travels/test-slug');
+      useLocalSearchParams.mockReturnValue({ returnTo });
+      queryClient.setQueryData(queryKeys.travel('test-slug'), { name: 'Маршрут' });
+
+      const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
+
+      expect(result.current.backToPath).toBe('/');
+      expect(result.current.items.map((item) => item.path)).not.toContain(returnTo);
+    },
+  );
+
+  it('uses text for a return path that matches an inherited object key', async () => {
+    usePathname.mockReturnValue('/travels/test-slug');
+    useLocalSearchParams.mockReturnValue({ returnTo: '/__proto__' });
+    queryClient.setQueryData(queryKeys.travel('test-slug'), { name: 'Маршрут' });
+
+    const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
+
+    expect(result.current.items[0]).toEqual({ path: '/__proto__', label: '__proto__' });
+  });
+
   it('uses static travel preload for travel breadcrumbs without fetching by slug', async () => {
     (Platform.OS as any) = 'web';
     stubWindowProperty('__metravelTravelPreload', {

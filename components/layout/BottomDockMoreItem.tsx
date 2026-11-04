@@ -64,8 +64,7 @@ function BottomDockMoreItem({ item, styles, onClose, onOpenView }: Props) {
         // Как на desktop (`AccountMenu`): после выхода — на главную.
         logout: async () => {
           onClose()
-          await logout()
-          router.push('/')
+          if (await logout()) router.push('/')
         },
       })
       return

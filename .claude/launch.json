@@ -1018,6 +1018,15 @@
       ],
       "port": 8094,
       "autoPort": false
+    },
+    {
+      "name": "Books Catalog 2970 Web 8171",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "mkdir -p \"$PWD/.codex-temp/metro-tmp-8171\" && TMPDIR=\"$PWD/.codex-temp/metro-tmp-8171\" NODE_OPTIONS=--max-old-space-size=12288 npx expo start --web --clear --port 8171"
+      ],
+      "port": 8171
     }
   ]
 }

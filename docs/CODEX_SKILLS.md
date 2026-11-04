@@ -99,7 +99,8 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
 - `.claude/agents` — источник ролей; `.codex/agents/*.toml` — короткие adapters
   к matching `.claude/agents/<name>.md`, без отдельной копии role policy.
   `audit:prompts` проверяет delegation, metadata и существование источника.
-  `.grok/agents` генерируется через `node .grok/scripts/sync-agents.mjs`.
+  `.grok/agents` генерируется через `node .grok/scripts/sync-agents.mjs` и
+  сверяется без записи в `npm run audit:prompts`.
   Команды служат короткими входами в skills.
 - Metadata-аудит не доказывает согласованность полномочий, окружений и стадий:
   эти контракты проверяются по каноническим документам при ревью промптов.
@@ -108,3 +109,9 @@ triggers и ограничения принадлежат frontmatter/`SKILL.md`
   источниках; он не доказывает правильный выбор модели на произвольной задаче.
 - После изменений: `npm run audit:prompts` и validator `skill-creator` для
   каждого затронутого skill.
+
+`npm run audit:prompts` проверяет каталог, Grok-обёртки и контентные промпты
+из индекса Git по их текущему содержимому. Новый prompt попадёт в эту проверку
+после добавления в индекс. `npm run audit:prompts:local` отдельно проверяет
+неотслеживаемые промпты из `docs/` и `assets/`, включая игнорируемые.
+CI Smoke запускает Git-аудит и `npm run test:agent-tooling` без локальных материалов.

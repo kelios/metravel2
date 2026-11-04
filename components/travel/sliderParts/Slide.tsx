@@ -73,6 +73,7 @@ interface SlideProps {
   item: SliderImage;
   index: number;
   uri: string;
+  loadedCoverSrc?: string;
   containerW: number | string;
   slideHeight: number | string;
   slideHeightPx?: number;
@@ -103,6 +104,7 @@ const Slide = memo(function Slide({
   item,
   index,
   uri,
+  loadedCoverSrc,
   containerW,
   slideHeight,
   slideHeightPx,
@@ -130,7 +132,8 @@ const Slide = memo(function Slide({
         ? navigator.maxTouchPoints
         : 0,
     );
-  const [resolvedUri, setResolvedUri] = useState(uri);
+  const [fallbackSource, setFallbackSource] = useState<{ original: string; fallback: string }>();
+  const resolvedUri = fallbackSource?.original === uri ? fallbackSource.fallback : uri;
   const [hasError, setHasError] = useState(false);
   const isFirstSlide = index === 0;
   // If firstImagePreloaded is true for the first slide, treat it as already loaded
@@ -212,7 +215,7 @@ const Slide = memo(function Slide({
   const shouldMountImage = Platform.OS === 'web' || shouldEagerLoad;
 
   useEffect(() => {
-    setResolvedUri(uri);
+    setFallbackSource(undefined);
     fallbackTriedRef.current = false;
   }, [uri]);
 
@@ -295,7 +298,7 @@ const Slide = memo(function Slide({
       const fallback = buildFallbackMediaUrl(resolvedUri);
       if (fallback && fallback !== resolvedUri) {
         fallbackTriedRef.current = true;
-        setResolvedUri(fallback);
+        setFallbackSource({ original: uri, fallback });
         setHasError(false);
         setIsLoaded(loadedSlideUriCache.has(fallback) || isBaseUriLoaded(fallback));
         return;
@@ -310,7 +313,7 @@ const Slide = memo(function Slide({
       firstLoadReportedRef.current = true;
       onFirstImageLoad?.();
     }
-  }, [resolvedUri, isFirstSlide, onFirstImageLoad]);
+  }, [resolvedUri, uri, isFirstSlide, onFirstImageLoad]);
 
   const handlePress = useCallback(() => {
     onImagePress?.(index);
@@ -388,6 +391,7 @@ const Slide = memo(function Slide({
           )}
           <ImageCardMedia
             src={resolvedUri}
+            webResponsiveSource={loadedCoverSrc === resolvedUri ? { src: loadedCoverSrc } : undefined}
             recyclingKey={`slider-slide-${index}-${resolvedUri}`}
             width={containerW}
             height={slideHeightPx}
@@ -479,6 +483,7 @@ const Slide = memo(function Slide({
     prev.contentAspectRatio === next.contentAspectRatio &&
     prev.onSlideLoad === next.onSlideLoad &&
     prev.prepareBlur === next.prepareBlur &&
+    prev.loadedCoverSrc === next.loadedCoverSrc &&
     prev.skipImage === next.skipImage
   );
 });

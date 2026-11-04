@@ -22,6 +22,7 @@ export default function TravelHeroInteractiveSlider({
   preloadCount,
   controlsVisible = true,
   firstImagePreloaded,
+  firstImageSrc,
   onFirstImageLoad,
   onImagePress,
   onIndexChanged,
@@ -40,6 +41,7 @@ export default function TravelHeroInteractiveSlider({
   preloadCount: number;
   controlsVisible?: boolean;
   firstImagePreloaded: boolean;
+  firstImageSrc?: string;
   onFirstImageLoad: () => void;
   onImagePress: (index: number) => void;
   onIndexChanged?: (index: number) => void;
@@ -74,6 +76,7 @@ export default function TravelHeroInteractiveSlider({
         fit="contain"
         onFirstImageLoad={onFirstImageLoad}
         firstImagePreloaded={firstImagePreloaded}
+        firstImageSrc={firstImageSrc}
         onImagePress={onImagePress}
         onIndexChanged={onIndexChanged}
         showCaption={false}

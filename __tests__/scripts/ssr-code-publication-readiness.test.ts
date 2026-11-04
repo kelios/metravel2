@@ -6,6 +6,10 @@ import { makeTempDir, removeDir, runCli, startStubServer, type StubServer } from
 
 const sha = 'a'.repeat(40);
 const source = fs.readFileSync(path.resolve('build-prod.sh'), 'utf8');
+const { redirects } = JSON.parse(fs.readFileSync(path.resolve('scripts/seo-redirects.json'), 'utf8')) as {
+  redirects: { from: string; to: string }[];
+};
+const legacyRedirects = redirects.map(({ from, to }) => [from, to]);
 const shellFunction = (name: string) => {
   const start = source.indexOf(`${name}() {`);
   const end = source.indexOf('\n}\n', start);
@@ -31,7 +35,10 @@ esac
     server = await startStubServer(`
 const http = require('node:http');
 const sha = ${JSON.stringify(sha)};
+const legacyRedirects = new Map(${JSON.stringify(legacyRedirects)});
+const articleLoaderPrefix = '/_expo/loaders/(tabs)/travels/';
 let catalogResponse, questResponse;
+let articleReads = 0;
 const releaseBoth = () => {
   if (!catalogResponse || !questResponse) return;
   catalogResponse.setHeader('Content-Type', 'application/json');
@@ -42,8 +49,19 @@ const releaseBoth = () => {
 };
 const server = http.createServer((req, res) => {
   const origin = 'http://' + req.headers.host;
-  const pathname = new URL(req.url, origin).pathname;
+  const { pathname, searchParams } = new URL(req.url, origin);
   res.setHeader('Cache-Control', 'no-store');
+  if (pathname.startsWith(articleLoaderPrefix)) {
+    const slug = decodeURIComponent(pathname.slice(articleLoaderPrefix.length));
+    const canonicalSlug = legacyRedirects.get(slug);
+    if (!canonicalSlug || searchParams.get('returnTo') !== '/search') {
+      res.writeHead(404).end();
+      return;
+    }
+    res.writeHead(200, {'Content-Type':'application/json','X-Metravel-Ssr-Source':sha});
+    res.end(JSON.stringify({travel:{id:1,slug:canonicalSlug,description:'Published article.'}}));
+    return;
+  }
   if (pathname === '/api/travels/') {
     // Neither probe can complete before the other has started.
     catalogResponse = res;
@@ -55,9 +73,17 @@ const server = http.createServer((req, res) => {
     releaseBoth();
     return;
   }
+  if (pathname !== '/travels/example') {
+    res.writeHead(404).end();
+    return;
+  }
   const canonical = origin + '/travels/example';
   const {state, reason} = JSON.parse(require('node:fs').readFileSync(${JSON.stringify(path.join(fixture, 'state'))}, 'utf8'));
   const graph = {'@graph':[{'@type':'Article',headline:'Article',url:canonical,mainEntityOfPage:canonical},{'@type':'BreadcrumbList',itemListElement:[{item:canonical}]}]};
+  if (state === 'available') {
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.setHeader('X-Cache-Status', ++articleReads === 1 ? 'MISS' : 'HIT');
+  }
   res.writeHead(200, {'Content-Type':'text/html','X-Metravel-Ssr-Source':sha,'X-Metravel-Travel-Graph-State':state,'Retry-After':'5'});
   res.end('<html><head><link rel="canonical" href="'+canonical+'"></head><body><h1>Article</h1><div data-ssr-html-island="description"><p>Published body remains available.</p></div><section data-travel-link-graph="'+state+'" data-travel-graph-error="'+reason+'"></section><script type="application/ld+json" data-seo-jsonld="travel-article">'+JSON.stringify(graph)+'</script></body></html>');
 }); server.listen(0,'127.0.0.1',()=>console.log('PORT='+server.address().port));
@@ -98,11 +124,20 @@ deploy_prod prod
     expect(result.stdout).toContain('⏱ SSR release: verify-code=');
     if (rollback) {
       expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain(bad
+        ? 'The active client and healthy renderer must independently match the clean source SHA'
+        : 'Article discovery has a code/schema contract failure');
     } else {
       expect(result.stderr).toBe('');
       expect(result.status).toBe(0);
-      expect(result.stdout).toContain('content=pending');
-      expect(result.stdout).toMatch(/⏱ SSR article: catalog=.*document=.*attempts=1, HTTP 502\/503=0/);
+      expect(result.stdout).toMatch(/⏱ SSR article: legacy-loaders=.*catalog=.*document=.*attempts=1, HTTP 502\/503=0/);
+      if (state === 'available') {
+        expect(result.stdout).toContain('Rendered article and guest cache match');
+        expect(result.stdout).toMatch(/⏱ SSR article: .*guest-HIT=.*\/1, attempts=1/);
+      } else {
+        expect(result.stdout).toMatch(/\[web-ssr-readiness\].*content=pending/);
+      }
+      expect(result.stdout).toMatch(/\[quest-ssr-readiness\].*content=pending/);
       expect(result.stdout).toMatch(/⏱ SSR quest: publication=.*attempts=1, HTTP 502\/503=1/);
     }
   });

@@ -5,7 +5,15 @@
 - Current project is `metravel2`.
 - The app codebase root is `metravel2/` (the folder that contains `package.json`).
 - Treat `docs/` (this folder) as the source of truth for development rules.
-- Implementation ownership in this workspace is frontend/app/docs only. Backend/Django/API/server work in `../metravel-backend` (including `~/Sites/metravel/metravel`) or `area=back` is analysis-only: read source, run safe read-only probes, and create/update board tasks with evidence, but do not edit backend files, migrations, tests, settings, or server code from this repository. Do not run Git-changing operations in a backend checkout locally or on a server, including `add`, `commit`, `push`, `pull`, `merge`, `rebase`, `tag`, `checkout`, `reset`, `restore`, `stash`, or `clean`. Do not spawn agents, open worktrees, or set cwd into a backend checkout in order to write. A request to do all todos, take the board, or finish a mixed sprint does not authorize `area=back` implementation — skip those cards and leave them for the backend owner. Single exception, and only against the local checkout: the mandatory pre-testing sync `git -C ../metravel-backend fetch origin master && git -C ../metravel-backend reset --hard origin/master`, plus applying the pulled migrations to the local database and restarting the local server. It is required before every local verification run (`docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек»); local edits in the backend checkout are disposable and `origin/master` is always the source of truth. Never run it against a server checkout, and it never authorizes editing backend files or writing back to the remote.
+- Default implementation ownership is frontend/app/docs. For backend code and
+  server operations, follow the authorization boundary in `AGENTS.md` §3.
+  Bulk board or sprint work skips `area=back`. Backend diagnosis may use source,
+  safe read-only probes and board evidence. A directly assigned backend card
+  follows the exception and deployment contract in `AGENTS.md` §3.
+- Local backend sync runs before the first runtime probe of the testing session.
+  Use `docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек и обновление бэкенда
+  перед тестированием» for commands, migrations and restart. This sync applies
+  to the local checkout only.
 - If a frontend task depends on missing or broken backend behavior, leave a concrete blocker and link/create the `area=back` task instead of shipping a mock-only or silently failing frontend path.
 
 ### Owned repositories only (mandatory)
@@ -468,7 +476,8 @@ git ls-files --error-unmatch -- path/relative/to/checkout
   patching, overwriting, copying, moving, deleting, or changing its mode. Do not
   place backup copies inside the tracked checkout; use the documented external
   runtime/backup location when that write is explicitly authorized.
-- If the production checkout is already dirty, do not clean, stash, reset,
+- If the production checkout has entries outside the deploy exceptions below,
+  do not clean, stash, reset,
   restore, checkout, pull, or deploy over it. Capture the exact path and a
   secret-safe diff summary, create/update an `area=back` or ops board task, and
   hand the canonical source change and normal deploy to the backend owner.
@@ -479,12 +488,16 @@ git ls-files --error-unmatch -- path/relative/to/checkout
   former third item, the permission warning for `deploy/prod/postgis_1/data/`,
   ended on 2026-10-05: the owner removed that stale database copy, #2186.) Agents must not inspect their
   contents or read, copy, patch, overwrite, move, delete, chmod, back up, or
-  otherwise mutate them. Any other status entry, tracked change, or warning is
-  still a dirty-checkout stop condition. Intended frontend deploy targets must
-  still be classified independently with `git ls-files` before the write.
+  otherwise mutate them. Intended frontend deploy targets must still be
+  classified independently with `git ls-files` before the write.
+- For an authorized backend rollout, the owner permits exactly the untracked
+  root entry `?? dump.sql` (2026-11-03). Apply the same file handling restrictions.
+  The SSL directory exception applies only to frontend deploys. Any other
+  status entry, tracked change, or warning stops the corresponding rollout.
 - Tracked backend source/config changes must originate in the backend owner's
   canonical repository workflow and arrive through its normal reviewed deploy.
-  This frontend workspace does not commit, push, merge, or deploy backend source.
+  The direct backend task exception in `AGENTS.md` governs who may run that
+  workflow from this workspace.
 - Project-owned frontend deploy scripts may mutate only their documented
   untracked runtime/static targets such as `static/dist`. Secret stores, runtime
   state, or external backup paths may be written only when explicitly authorized

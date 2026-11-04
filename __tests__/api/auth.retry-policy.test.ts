@@ -1,4 +1,4 @@
-import { loginApi } from '@/api/auth';
+import { loginApi, logoutApi } from '@/api/auth';
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout';
 
 jest.mock('@/utils/fetchWithTimeout', () => ({ fetchWithTimeout: jest.fn() }));
@@ -40,4 +40,15 @@ it('an unstructured status-bearing Error cannot cause a retry', async () => {
   await jest.runAllTimersAsync();
   await expect(attempt).resolves.toMatchObject({ ok: false });
   expect(transport).toHaveBeenCalledTimes(1);
+});
+
+it('reports a rejected logout request to the session store', async () => {
+  transport.mockResolvedValue(response(503, {}));
+
+  await expect(logoutApi()).rejects.toThrow('HTTP 503');
+  expect(transport).toHaveBeenCalledWith(
+    expect.stringContaining('/user/logout/'),
+    expect.objectContaining({ method: 'POST' }),
+    expect.any(Number),
+  );
 });

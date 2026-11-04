@@ -45,8 +45,9 @@ Rules:
 - Before an authorized server write, apply `docs/RULES.md` →
   `Production Git-tracked file immutability (mandatory)`: inspect status and
   classify intended paths with `git ls-files`. A dirty production checkout
-  stops deployment except for the exact documented frontend-gate exclusions.
-  Leave tracked backend files and cleanup to the backend owner.
+  stops deployment except for the exact exclusions for that deploy type.
+  An authorized backend rollout can ignore the exact untracked root entry
+  `?? dump.sql`. Apply the file handling restrictions in that same section.
 - Project-owned frontend release scripts may write only their documented
   untracked runtime/static targets such as `static/dist`.
 - Nginx is backend-owned without exception: the source of truth is

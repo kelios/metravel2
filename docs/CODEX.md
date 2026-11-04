@@ -26,29 +26,40 @@
 | Обычная разработка/bugfix/refactor | domain skill или `$metravel-feature-builder` | UI/i18n/hook/test skills только по diff |
 | Travel/map/profile/achievements/quests | соответствующий `$metravel-*-expert` | `$metravel-domain-router` только при смешанном ownership |
 | Видимый web UI | domain/feature skill | `$metravel-ui-guardrails`; browser QA только после code review в `testing` |
-| Tests/e2e/quality | `$metravel-test-runner`, `$metravel-test-writer` или `$metravel-e2e-runner` | `$metravel-quality-fixer` только для полного цикла |
+| Разовый code-level check | `$metravel-test-runner` | ближайшая проверка, без runtime в `review` |
+| Ревью diff | `$metravel-code-reviewer` | `review`, только code-level |
+| Поиск и воспроизведение дефекта | `$metravel-qa-agent` | исследовательский QA, read-only по умолчанию |
+| Приёмка конкретного web-изменения | `$metravel-browser-reviewer` | `testing`, проверенный SHA и browser evidence |
+| Запуск или диагностика Playwright | `$metravel-e2e-runner` | для приёмки изменения только `testing`; operation gate |
+| Написание теста / полный цикл качества | `$metravel-test-writer` / `$metravel-quality-fixer` | второй только при запросе полного цикла |
 | Docs/skills/prompts | `$metravel-docs-maintainer` | `$metravel-prompt-maintainer` только для prompt/metadata |
 | Готовые книги-фотодневники | `$metravel-travel-book-designer` / `travel-book-designer` для стиля и макета; `$metravel-travel-book-builder` / `travel-book-builder` для сборки PDF | `imagegen` для иллюстраций, `pdf` для авторского контроля макета; текущий состав и формат — `docs/features/travel-memory-books.md` |
 | Наборы/обучение/GGUF metravel-llm | `$metravel-llm-training` / `llm-trainer` | независимая оценка — `$metravel-llm-evaluation` / `llm-judge`; app/retrieval changes — feature owner |
 | Task board | `$metravel-problem-memory` → `$metravel-task-contract` → `$metravel-ticket-board` | sprint reviewer только для acceptance |
+| Неясная работа с несколькими зонами или высоким риском | `$metravel-codex-orchestrator` | triage, выбрать владельца и evidence layer |
+| Согласованный scope с независимыми стадиями | `$metravel-agent-workflow` | handoff, отдельно `review` и `testing` |
 | Backend/API diagnosis | `$metravel-backend-diagnostician` | read-only; board route для owner handoff |
-
-Новые роли книг выбираются по фактическому списку Agent tool. Если
-`travel-book-designer` или `travel-book-builder` ещё не доступны как `agent_type`,
-передай соответствующий `.claude/agents/travel-book-*.md` доступному `default`
-агенту; наличие файла адаптера само по себе не доказывает загрузку роли в runtime.
 | Android-specific | `$metravel-android-developer` | mobile tester/local builder/operator по точному stage |
 | iPhone-specific | соответствующий iOS analyst/architect/developer/tester | release operator только по exact authorization |
 | Performance/security/growth/SEO | соответствующий analyst/reviewer/operator | implementation skill только если правки разрешены |
 | Запись/монтаж UI evidence | `$metravel-scenario-recorder` или `$metravel-evidence-editor` | tester задаёт сценарий и evidence layer; recorder и editor не выносят QA verdict |
 | Сценарии и запись видео для App Review | `$metravel-app-review-director` | один кандидат, один батч сцен; аккаунты и приватный ввод по `docs/WORKFLOW_OPERATIONS.md` 3.1 |
 | Пакет для Apple App Review | `$metravel-app-review-evidence` | покрытие сцен, manifest, вложение и Reply/Notes; запись/монтаж — recorder/editor, внешние шаги — release operator |
+| iOS build, upload, submit или release | `$metravel-ios-release-operator` | отдельное точное разрешение на каждую стадию |
 | Deploy/release/prod smoke | devops/release operator или production smoke | operation gate и exact target обязательны |
 | Новая функция/contract/recurring complex bug | OpenSpec explore/propose | прямое «сделай/исправь» разрешает proposal → apply; planning-only остаётся планом |
+
+При делегировании сверяй имя роли с текущим списком Agent tool. Если нужной
+роли там нет, передай доступному агенту путь к соответствующему контракту
+`.claude/agents/<name>.md` и компактный brief.
 
 Полный grouped index нужен только при обслуживании каталога:
 `docs/CODEX_SKILLS.md`. Runtime catalog и frontmatter `description` — источник
 triggering; не дублируй полный список skills в этом документе.
+
+Изменение маршрута проверь через `npm run test:agent-tooling`. Регрессия
+проверяет документированный выбор и ограничения на конкретных запросах.
+Фактический auto-invoke зависит от рантайма.
 
 ## Когда нужен orchestrator или несколько агентов
 
@@ -97,10 +108,10 @@ Output/validation: <artifact and checks>.
 - Передавай fresh agent только один готовый сценарий или bounded batch: scene
   ids, exact build/artifact, target/evidence layer, steps/expected result,
   output directory и checkpoint `completed | artifacts | build | next_step`.
-- Для Codex готовые механические записи и экспорты запускай на
-  `gpt-5.6-luna` с `medium`; repair или новый workflow — на `gpt-5.6-sol` с
-  `medium`. Более сильную модель выбирает только root для узкого вопроса.
-  Claude role files сохраняют поддерживаемое значение `model: sonnet`.
+- В Codex наследуй модель по умолчанию. Если для сценария нужен override,
+  выбирай из текущего списка Agent tool по сложности задачи: готовая запись
+  или экспорт требуют меньше ресурсов, чем диагностика и разработка нового
+  workflow. Настройки Claude хранятся в его role files.
 - Native test/rehearsal/recording contract: `docs/TESTING.md` →
   `Native scenario automation and recording readiness`. Physical Apple capture
   принимает exact-candidate rehearsal через `npm run recording:ready`;

@@ -102,6 +102,14 @@ function TravelHeroSectionInner({
     sliderUpgradeAllowed,
   } = useTravelHeroState(travel, isMobile, onFirstImageLoad, deferExtras)
 
+  const heroKey = JSON.stringify([travel.id, firstImg?.id, firstImg?.url, firstImg?.updated_at])
+  const [loadedCover, setLoadedCover] = useState<{ key: string; src: string }>()
+  const firstImageSrc = loadedCover?.key === heroKey ? loadedCover.src : undefined
+  const handleCoverLoad = React.useCallback((src?: string) => {
+    if (src) setLoadedCover({ key: heroKey, src })
+    handleWebHeroLoad()
+  }, [heroKey, handleWebHeroLoad])
+
   const {
     active: ssgHeroHandoffActive,
     hostRef: ssgHeroHostRef,
@@ -246,6 +254,7 @@ function TravelHeroSectionInner({
                       firstImagePreloaded={webHeroLoaded || ssgHeroHandoffActive}
                       onImagePress={handleImagePress}
                       onIndexChanged={handleIndexChanged}
+                      firstImageSrc={firstImageSrc}
                       onInteractionStart={releaseSsgHero}
                       skipFirstSlideImage={ssgHeroHandoffActive}
                       fullscreenVisible={fullscreenVisible}
@@ -273,7 +282,7 @@ function TravelHeroSectionInner({
                     viewportHeight={isRouterSsrTravel}
                     isMobile={isMobile}
                     media={findGalleryMediaImage(travel.media, firstImg.id)}
-                    onLoad={handleWebHeroLoad}
+                    onLoad={handleCoverLoad}
                   />
                 </View>
               ) : null}

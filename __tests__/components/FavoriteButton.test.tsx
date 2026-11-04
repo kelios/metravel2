@@ -177,7 +177,7 @@ describe('FavoriteButton', () => {
   it('applies custom size and color', async () => {
     mockIsFavorite.mockReturnValue(false)
     
-    const { getByLabelText } = await render(
+    const { getByTestId } = await render(
       <FavoriteButton
         id="1"
         type="travel"
@@ -188,6 +188,6 @@ describe('FavoriteButton', () => {
       />
     )
     
-    expect(getByLabelText(/Добавить "Test" в «Хочу поехать»/)).toBeTruthy()
+    expect(getByTestId('feather-heart').props).toMatchObject({ size: 32, color: '#ff0000' })
   })
 })

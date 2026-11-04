@@ -15,7 +15,6 @@ const copilotSkillsRoot = path.join(repoRoot, '.github', 'skills')
 const errors = []
 let skillCount = 0
 let claudeAgentCount = 0
-let promptCount = 0
 
 const read = (file) => fs.readFileSync(file, 'utf8')
 const relative = (file) => path.relative(repoRoot, file)
@@ -117,34 +116,10 @@ for (const { file, message } of codexAgents.errors) fail(file, message)
 const validationSelection = auditValidationSelectionPolicy(repoRoot)
 for (const { file, message } of validationSelection.errors) fail(file, message)
 
-const promptFiles = [
-  ...walk(path.join(repoRoot, 'docs'), (file) => /PROMPTS\.md$/i.test(file)),
-  ...walk(path.join(repoRoot, 'assets'), (file) => path.basename(file).toUpperCase() === 'PROMPT.MD'),
-]
-
-for (const file of promptFiles) {
-  promptCount += 1
-  const prompt = read(file)
-  if (/\[(?:TODO|FIXME|TBD)\b|\b(?:TODO|FIXME|TBD):|Complete and informative explanation/i.test(prompt)) {
-    fail(file, 'contains unfinished prompt scaffolding')
-  }
-  if (/CLAUDE\.md|\.claude\/skills/i.test(prompt)) {
-    fail(file, 'references a model-specific legacy instruction instead of a canonical project source')
-  }
-  if (path.basename(file).toUpperCase() === 'PROMPT.MD') {
-    const linksCanonicalSpec = /docs\/[^\s`]*PROMPTS\.md/i.test(prompt)
-    const hasSelfContainedContract = /Use case:/i.test(prompt) && /Asset type:/i.test(prompt) && /Constraints:/i.test(prompt)
-    if (!linksCanonicalSpec && !hasSelfContainedContract) {
-      fail(file, 'missing canonical docs/*PROMPTS.md reference or self-contained prompt contract')
-    }
-    if (!/```[\s\S]+```/.test(prompt)) fail(file, 'missing fenced exact prompt')
-  }
-}
-
 if (errors.length > 0) {
   console.error(`prompt-audit: failed with ${errors.length} issue(s)`)
   for (const error of errors) console.error(`- ${error}`)
   process.exitCode = 1
 } else {
-  console.info(`prompt-audit: passed (${skillCount} .codex skills; ${sharedSkills.count} .agents skills (${sharedSkills.vendorCount} vendor, ${sharedSkills.mirrorCount} mirrors checked); ${claudeSkills.count} .claude skills (${claudeSkills.vendorCount} vendor); ${copilotSkills.count} .github skills (${copilotSkills.vendorCount} vendor, ${copilotSkills.mirrorCount} mirrors checked); ${claudeAgentCount} Claude agents; ${codexAgents.count} Codex adapters; ${validationSelection.count} validation-selection sources; ${promptCount} prompt artifacts)`)
+  console.info(`prompt-audit: passed (${skillCount} .codex skills; ${sharedSkills.count} .agents skills (${sharedSkills.vendorCount} vendor, ${sharedSkills.mirrorCount} mirrors checked); ${claudeSkills.count} .claude skills (${claudeSkills.vendorCount} vendor); ${copilotSkills.count} .github skills (${copilotSkills.vendorCount} vendor, ${copilotSkills.mirrorCount} mirrors checked); ${claudeAgentCount} Claude agents; ${codexAgents.count} Codex adapters; ${validationSelection.count} validation-selection sources)`)
 }

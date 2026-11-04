@@ -33,6 +33,8 @@ export const authStaticResources = {
   "google.unavailable.a11y": "Google Sign-In не налаштований для мобільної програми",
   "accountConfirmation.failed": "Не вдалося підтвердити обліковий запис. {{details}}",
   "accountConfirmation.error": "Відбулася помилка під час підтвердження облікового запису. {{details}}",
+  "accountConfirmation.signInNotice": "Якщо ви продовжите, то підтвердите електронну пошту й увійдете в обліковий запис, якого стосується це посилання. Якщо ви вже ввійшли в інший обліковий запис, його буде змінено.",
+  "accountConfirmation.confirmAndSignIn": "Підтвердити пошту й увійти",
   "registration.failed": "Неможливо зареєструватися.",
   "google.signInFailed": "Помилка при вході через Google.",
   "apple.signInFailed": "Не вдалося увійти через Apple.",

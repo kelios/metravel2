@@ -46,17 +46,20 @@ export function resolveSitePath(href?: string | null): string | null {
   // (нет baseUrl) — разворачиваем обратно в относительный путь
   const aboutMatch = /^about:\/\/(\/.*)$/i.exec(trimmed)
   if (aboutMatch) trimmed = aboutMatch[1]
+  // Browsers treat backslashes as separators and strip tabs/newlines in HTTP URLs.
+  if (/[\\\t\r\n]/.test(trimmed) || trimmed.startsWith('//')) return null
   // спец-схемы (почта/телефон/и т.п.) — это не навигация по сайту
   if (/^(mailto:|tel:|sms:|geo:|tg:|whatsapp:|javascript:|data:)/i.test(trimmed)) return null
 
   // относительная ссылка на свой сайт (но не protocol-relative `//host`)
-  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) return trimmed
+  if (trimmed.startsWith('/')) return trimmed
 
   const match = /^https?:\/\/([^/?#]+)(.*)$/i.exec(trimmed)
   if (!match) return null
   const host = match[1].toLowerCase()
   if (!getSiteHosts().has(host)) return null
   const rest = match[2] || '/'
+  if (rest.startsWith('//')) return null
   return rest.startsWith('/') ? rest : `/${rest}`
 }
 

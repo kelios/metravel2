@@ -1,101 +1,91 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Image } from 'react-native';
 import { Button, Card } from '@/ui/paper';
-import { useRouter } from 'expo-router';
+import { useIsFocused, useRouter } from 'expo-router';
 import { confirmAccount } from '@/api/auth';
 import { useAuth } from '@/context/AuthContext';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useSecretLinkParam } from '@/hooks/useSecretLinkParam';
-import { useIsFocused } from 'expo-router';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { buildCanonicalUrl } from '@/utils/seo';
-import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider';
 import { queueAnalyticsEvent } from '@/utils/analytics'
 import { parseQuestHandoff } from '@/utils/questGuestHandoff'
 import { staticRouteMetadata } from '@/utils/seoRoutes/routeMetadata'
 
 
 export default function AccountConfirmation() {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const { t } = useTranslation();
+    const [loading, setLoading] = useState(false);
+    const [result, setResult] = useState<{ hash: string; error: string | null } | null>(null);
     const isFocused = useIsFocused();
     const colors = useThemedColors();
     const styles = useMemo(() => createStyles(colors), [colors]);
 
     // Секрет уходит из адресной строки сразу после посадки (#2145).
     const hash = useSecretLinkParam('/accountconfirmation', 'hash');
-    const router = useRouter();              // ✅ заменили useNavigation
+    const router = useRouter();
     const { applyConfirmedAccountSession } = useAuth();
-    const confirmedHashRef = useRef<string | null>(null);
+    const requestInFlight = useRef(false);
+    const activeHash = useRef<string | null>(null);
 
     useEffect(() => {
-        // `null` — hash ещё не прочитан (до гидратации, #2178): спиннер остаётся.
-        if (hash === null) return;
-        if (!hash) {
-            // Нет/невалидный hash — не оставляем бесконечный спиннер.
-            setError(i18nT('auth:app.tabs.accountconfirmation.ssylka_podtverzhdeniya_nedeystvitelna_ili_us_529ee053'));
-            setLoading(false);
-            return;
-        }
-        // Токен подтверждения одноразовый: не вызываем confirmAccount повторно
-        // (StrictMode double-invoke / нестабильный router в deps).
-        if (confirmedHashRef.current === hash) return;
-        confirmedHashRef.current = hash;
+        activeHash.current = isFocused ? hash : null;
+        return () => { activeHash.current = null; };
+    }, [hash, isFocused]);
 
-        let active = true;
-        const confirm = async () => {
-            try {
-                const response = await confirmAccount(hash);
-                if (!active) return;
-                const confirmedUserId = response.userId;
-                // Личность ставим сразу: до #1462 экран поднимал только флаг
-                // авторизации, и до следующего `checkAuthentication` приложение знало
-                // «кто-то вошёл», но не знало кто — привязанное к пользователю
-                // состояние (ключ прогресса квеста) уходило в общую ячейку.
-                if (response.userToken && String(confirmedUserId ?? '').trim() !== '') {
-                    applyConfirmedAccountSession({
-                        userId: confirmedUserId as string | number,
-                        userName: response.userName,
-                    });
-                    // Гостевые ответы квеста сервер уже перенёс в аккаунт (#2739):
-                    // возвращаем игрока на маршрут, а не на главную — письмо часто
-                    // открывается в другом браузере, где квеста в истории нет.
-                    const questHandoff = parseQuestHandoff(response.quest_handoff);
-                    if (questHandoff) {
-                        queueAnalyticsEvent('quest_guest_progress_migrated', {
-                            quest_id: questHandoff.questId,
-                            answered: questHandoff.answered,
-                            source: 'server_handoff',
-                        });
-                        router.replace(questHandoff.redirectPath as never);
-                    } else {
-                        router.replace('/'); // ✅ переходим на главную
-                    }
-                } else {
-                    setError(i18nT('authStatic:accountConfirmation.failed', { details: (response as any)?.non_field_errors?.[0] ?? '' }));
-                }
-            } catch (err: any) {
-                if (!active) return;
-                setError(i18nT('authStatic:accountConfirmation.error', { details: err?.message ?? '' }));
-            } finally {
-                if (active) setLoading(false);
+    const confirm = async (approvedHash: string) => {
+        if (requestInFlight.current || result?.hash === approvedHash) return;
+        requestInFlight.current = true;
+        setLoading(true);
+        try {
+            const response = await confirmAccount(approvedHash);
+            const confirmedUserId = response.userId;
+            if (!response.userToken || confirmedUserId == null || String(confirmedUserId).trim() === '') {
+                setResult({
+                    hash: approvedHash,
+                    error: t('authStatic:accountConfirmation.failed', { details: (response as any)?.non_field_errors?.[0] ?? '' }),
+                });
+                return;
             }
-        };
 
-        confirm();
-        return () => { active = false; };
-        // router/applyConfirmedAccountSession намеренно вне deps: эффект должен выполниться
-        // один раз на hash, иначе одноразовый токен будет израсходован повторно.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hash]);
+            // The approved request can install credentials even if the route
+            // changes while it runs. Keep the app identity in sync either way.
+            applyConfirmedAccountSession({ userId: confirmedUserId, userName: response.userName });
+            setResult({ hash: approvedHash, error: null });
+            const questHandoff = parseQuestHandoff(response.quest_handoff);
+            if (questHandoff) {
+                queueAnalyticsEvent('quest_guest_progress_migrated', {
+                    quest_id: questHandoff.questId,
+                    answered: questHandoff.answered,
+                    source: 'server_handoff',
+                });
+            }
+            if (activeHash.current === approvedHash) {
+                router.replace((questHandoff?.redirectPath ?? '/') as never);
+            }
+        } catch (error) {
+            setResult({
+                hash: approvedHash,
+                error: t('authStatic:accountConfirmation.error', { details: error instanceof Error ? error.message : '' }),
+            });
+        } finally {
+            requestInFlight.current = false;
+            setLoading(false);
+        }
+    };
+
+    const currentError = hash === ''
+        ? t('auth:app.tabs.accountconfirmation.ssylka_podtverzhdeniya_nedeystvitelna_ili_us_529ee053')
+        : hash === result?.hash ? result.error : null;
 
     return (
         <View style={styles.container}>
             {isFocused && (
                 <InstantSEO
                     headKey="account-confirmation"
-                    title={i18nT('auth:app.tabs.accountconfirmation.podtverzhdenie_akkaunta_metravel_61934574')}
-                    description={i18nT('auth:app.tabs.accountconfirmation.podtverzhdenie_uchetnoy_zapisi_0b22626c')}
+                    title={t('auth:app.tabs.accountconfirmation.podtverzhdenie_akkaunta_metravel_61934574')}
+                    description={t('auth:app.tabs.accountconfirmation.podtverzhdenie_uchetnoy_zapisi_0b22626c')}
                     canonical={buildCanonicalUrl('/accountconfirmation')}
                     robots="noindex, nofollow"
                 />
@@ -108,21 +98,33 @@ export default function AccountConfirmation() {
             <View style={styles.backgroundScrim} />
             <View style={styles.contentContainer}>
                 <Card style={styles.card}>
-                    {loading ? (
+                    {hash === null || loading ? (
                         <ActivityIndicator size="large" color={colors.primaryDark} />
-                    ) : error ? (
+                    ) : currentError ? (
                         <View>
-                            <Text style={styles.errorText}>{error}</Text>
+                            <Text style={styles.errorText}>{currentError}</Text>
                             <Button
                                 mode="contained"
                                 onPress={() => router.replace('/')}
                                 style={styles.button}
                                 contentStyle={styles.buttonContent}
                             >
-                                {i18nT('auth:app.tabs.accountconfirmation.na_glavnuyu_80e75d20')}</Button>
+                                {t('auth:app.tabs.accountconfirmation.na_glavnuyu_80e75d20')}</Button>
+                        </View>
+                    ) : hash && hash !== result?.hash ? (
+                        <View>
+                            <Text style={styles.confirmationText}>{t('authStatic:accountConfirmation.signInNotice')}</Text>
+                            <Button
+                                mode="contained"
+                                onPress={() => void confirm(hash)}
+                                style={styles.button}
+                                contentStyle={styles.buttonContent}
+                            >
+                                {t('authStatic:accountConfirmation.confirmAndSignIn')}
+                            </Button>
                         </View>
                     ) : (
-                        <Text style={styles.successText}>{i18nT('auth:app.tabs.accountconfirmation.uchetnaya_zapis_uspeshno_podtverzhdena_cf1db801')}</Text>
+                        <Text style={styles.successText}>{t('auth:app.tabs.accountconfirmation.uchetnaya_zapis_uspeshno_podtverzhdena_cf1db801')}</Text>
                     )}
                 </Card>
             </View>
@@ -161,6 +163,11 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.
         borderRadius: 8,
         backgroundColor: colors.surface,
         ...colors.shadows.medium,
+    },
+    confirmationText: {
+        color: colors.text,
+        marginBottom: 20,
+        textAlign: 'center',
     },
     errorText: {
         color: colors.dangerDark,

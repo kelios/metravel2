@@ -86,7 +86,7 @@ function OptimizedLCPHeroInner({
 }: {
   img: ImgLike;
   alt?: string;
-  onLoad?: () => void;
+  onLoad?: (loadedSrc?: string) => void;
   height?: number;
   isMobile?: boolean;
   media?: TravelMediaImage | null;
@@ -187,10 +187,12 @@ function OptimizedLCPHeroInner({
   const notifyReady = useCallback(async () => {
     if (didNotifyLoadRef.current) return;
 
+    let loadedSrc: string | undefined;
     if (Platform.OS === 'web') {
       const el = imgRef.current;
       if (!el || !el.complete || el.naturalWidth <= 0) return;
 
+      loadedSrc = el.currentSrc || srcWithRetry;
       if (typeof el.decode === 'function') {
         try {
           // iOS Safari can hang on decode() indefinitely for certain images
@@ -206,14 +208,15 @@ function OptimizedLCPHeroInner({
         }
       }
 
-      if (!el.complete || el.naturalWidth <= 0 || didNotifyLoadRef.current) return;
+      if (el !== imgRef.current || (el.currentSrc || srcWithRetry) !== loadedSrc ||
+        !el.complete || el.naturalWidth <= 0 || didNotifyLoadRef.current) return;
 
       // Mark URI as loaded so Slider knows this image is already cached
-      markUriLoaded(el.currentSrc || srcWithRetry);
+      markUriLoaded(loadedSrc);
     }
 
     didNotifyLoadRef.current = true;
-    onLoad?.();
+    onLoad?.(loadedSrc);
   }, [onLoad, srcWithRetry]);
 
   // On client-side (SPA) navigation between travels the same hero instance is

@@ -28,10 +28,10 @@ Travel/map/profile/achievements/quests — соответствующий `$metr
 
 ## Субагенты
 
-Разрешение постоянное (AGENTS.md §4). Сразу `spawn_subagent`:
+Выбирай независимые роли через `spawn_subagent` по `AGENTS.md` §4:
 
-- после code changes → `review-auditor` (review-and-fix полного task diff)
-- тикет `review` → `code-review-gate`
+- code review → `code-review-gate` для малого diff, `review-auditor` перед
+  `code-review-gate` для остальных изменений
 - тикет `testing` → `board-reviewer`
 - операции борда → `ticket-board`
 - доменный expert, если роль независима
@@ -58,17 +58,8 @@ PreToolUse-хуки в `.grok/hooks/` держат контракт карточ
 
 Секреты не печатать.
 
-## Бэкенд только читается
+## Границы бэкенда
 
-Канон: `docs/RULES.md` → «Project scope» и `AGENTS.md` §3. Здесь — дыра, из-за
-которой Grok брал `area=back` по «сделай все todo».
-
-- Реализуй только `area=front` / frontend/app/docs.
-- `../metravel-backend` и `~/Sites/metravel/metravel` — read-only: читать,
-  `git show origin/master`, безопасные GET/HEAD. Не edit/write/commit/push/merge.
-- Не `spawn_subagent` с `cwd` в бэк-checkout и не isolation-worktree бэк-репо.
-- «Сделай все todo / весь борд / спринт» = только фронт. Карточки `area=back`
-  пропустить; если нужен фикс бэка — завести/дописать тикет владельцу, не код.
-- Единственное git-исключение: `git -C ../metravel-backend fetch origin master &&
-  git -C ../metravel-backend reset --hard origin/master` перед локальным
-  тестированием фронта. Это sync к `origin/master`, не реализация бэка.
+Применяй `AGENTS.md` §3, включая условия прямого назначения `area=back`.
+Массовая работа по todo, борду или спринту охватывает только фронтенд.
+Для локальной проверки применяй sync из `docs/WORKFLOW_OPERATIONS.md` §3.0.

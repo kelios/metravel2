@@ -925,6 +925,62 @@ describe('authStore', () => {
       await act(() => useAuthStore.getState().logout());
       expect(useAuthStore.getState().isAuthenticated).toBe(false);
     });
+
+    it('reports incomplete native logout if token revocation cannot be persisted', async () => {
+      useAuthStore.setState({ isAuthenticated: true, userId: '1' });
+      logoutApi.mockResolvedValueOnce(undefined);
+      removeSecureItems.mockRejectedValueOnce(new Error('storage unavailable'));
+
+      await act(async () => {
+        expect(await useAuthStore.getState().logout()).toBe(false);
+      });
+
+      expect(useAuthStore.getState()).toMatchObject({ isAuthenticated: false, userId: null });
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
+    });
+
+    it('keeps the web session visible until the cookie logout succeeds', async () => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      useAuthStore.setState({ isAuthenticated: true, userId: '1' });
+      logoutApi.mockRejectedValueOnce(new Error('server down')).mockResolvedValueOnce(undefined);
+
+      await act(async () => {
+        expect(await useAuthStore.getState().logout()).toBe(false);
+      });
+      expect(useAuthStore.getState()).toMatchObject({ isAuthenticated: true, userId: '1' });
+      expect(removeStorageBatch).not.toHaveBeenCalled();
+      expect(showToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
+
+      await act(async () => {
+        expect(await useAuthStore.getState().logout()).toBe(true);
+      });
+      expect(useAuthStore.getState()).toMatchObject({ isAuthenticated: false, userId: null });
+    });
+
+    it('clears web state after confirmed account deletion without another logout request', async () => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      useAuthStore.setState({ isAuthenticated: true, userId: '1' });
+
+      await act(async () => {
+        expect(await useAuthStore.getState().logout({ serverAlreadyRevoked: true })).toBe(true);
+      });
+      expect(logoutApi).not.toHaveBeenCalled();
+      expect(useAuthStore.getState()).toMatchObject({ isAuthenticated: false, userId: null });
+    });
+
+    it('shares a single web logout request across overlapping actions', async () => {
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      useAuthStore.setState({ isAuthenticated: true, userId: '1' });
+      logoutApi.mockResolvedValueOnce(undefined);
+
+      await act(async () => {
+        const first = useAuthStore.getState().logout();
+        const second = useAuthStore.getState().logout();
+        expect(second).toBe(first);
+        await expect(Promise.all([first, second])).resolves.toEqual([true, true]);
+      });
+      expect(logoutApi).toHaveBeenCalledTimes(1);
+    });
   });
 
   // #2042: стор отдаёт форме результат слоя api как есть — успех/отказ решает

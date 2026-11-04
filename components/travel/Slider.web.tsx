@@ -271,6 +271,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     onImagePress,
     onInteractionStart,
     firstImagePreloaded,
+    firstImageSrc,
     fillContainer = false,
     skipFirstSlideImage = false,
   } = props
@@ -327,6 +328,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
     deferWebPrefetchUntilInteraction: effectivePreloadCount < 1,
     handleAppState: false,
     includeUriMap: false,
+    firstImageSrc,
   })
 
   const [firstImageLoaded, setFirstImageLoaded] = useState(!!firstImagePreloaded)
@@ -548,6 +550,7 @@ const SliderWebComponent = (props: SliderProps, ref: React.Ref<SliderRef>) => {
                       item={item}
                       index={index}
                       uri={slideUri}
+                      loadedCoverSrc={index === 0 ? firstImageSrc : undefined}
                       containerW={slideMediaWidth}
                       slideHeight={containerHeight}
                       slideHeightPx={containerHeightPx}

@@ -10,6 +10,7 @@ import { serializeForInlineScript } from '@/utils/webViewBridge';
 import {
   buildInvalidateSchedulerScript,
   buildLeafletWebViewHtml,
+  ESCAPE_HTML_FN_SCRIPT,
 } from '@/components/map-core/leafletWebViewHtml';
 import { QUEST_MAP_PNG_RENDERER_SCRIPT } from './questNativeMapPng';
 import {
@@ -145,6 +146,8 @@ export const buildQuestNativeMapHtml = ({
           return L.divIcon({ className: 'qmark', html: html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
         }
 
+        ${ESCAPE_HTML_FN_SCRIPT}
+
         function navButtonsHtml(gp) {
           var buttons = navProviders.map(function (provider) {
             return '<button type="button" class="qnav-btn" data-app="' + provider.app +
@@ -165,7 +168,7 @@ export const buildQuestNativeMapHtml = ({
             zIndexOffset: gp.zIndexOffset
           }).addTo(map);
           marker.bindPopup(
-            '<b>' + gp.indexes.join(', ') + '.</b><br/>' + gp.titles.join(', ') + navButtonsHtml(gp)
+            '<b>' + gp.indexes.join(', ') + '.</b><br/>' + gp.titles.map(escapeHtml).join(', ') + navButtonsHtml(gp)
           );
           return marker;
         });

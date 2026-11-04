@@ -3,11 +3,15 @@
  * Generate thin Grok agent wrappers from `.claude/agents/*.md`.
  * Claude files remain the role contract; this only adapts spawn_subagent types.
  *
- *   node .grok/scripts/sync-agents.mjs
+ *   node .grok/scripts/sync-agents.mjs [--check]
  */
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { lstatSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import skillMirror from '../../scripts/lib/skillMirror.js';
+
+const { applyMirrorPlan, parseMirrorArgs } = skillMirror;
+const { check } = parseMirrorArgs(process.argv.slice(2));
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const srcDir = path.join(repoRoot, '.claude', 'agents');
@@ -36,14 +40,13 @@ const parseFrontmatter = (text) => {
   return match ? match[1] : '';
 };
 
-mkdirSync(destDir, { recursive: true });
-
 const files = readdirSync(srcDir).filter((name) => name.endsWith('.md')).sort();
 if (!files.length) {
   process.stderr.write(`no Claude agents in ${srcDir}\n`);
   process.exit(1);
 }
 
+const expected = new Map();
 for (const file of files) {
   const source = readFileSync(path.join(srcDir, file), 'utf8');
   const fm = parseFrontmatter(source);
@@ -63,11 +66,41 @@ Load \`.claude/agents/${file}\` with \`read_file\` and follow it as the full
 role contract. Grok tool/MCP mapping is in \`.grok/rules/00-grok.md\`; read
 that file only if it is not already in context.
 
-Do not invent a second workflow. Do not copy project rules. Frontend/app/docs
-only; \`../metravel-backend\` is read-only. Do not print secrets.
+Apply AGENTS.md for project scope, backend authority, and secret handling.
+Keep project policy in its canonical source.
 `;
 
-  writeFileSync(path.join(destDir, `${name}.md`), body, 'utf8');
+  const target = `${name}.md`;
+  if (!/^[a-z0-9-]+$/.test(name) || expected.has(target)) {
+    throw new Error(`Invalid or duplicate Grok role name "${name}" in ${file}`);
+  }
+  expected.set(target, body);
 }
 
-process.stdout.write(`synced ${files.length} Grok agents from .claude/agents → .grok/agents\n`);
+const destInfo = lstatSync(destDir, { throwIfNoEntry: false });
+if (destInfo && !destInfo.isDirectory()) {
+  throw new Error('Expected a directory at .grok/agents');
+}
+
+const actual = new Map();
+const entries = destInfo ? readdirSync(destDir, { withFileTypes: true }) : [];
+for (const entry of entries) {
+  if (!/\.md$/i.test(entry.name)) continue;
+  if (!entry.isFile()) {
+    throw new Error(`Expected a regular file at .grok/agents/${entry.name}`);
+  }
+  actual.set(entry.name, readFileSync(path.join(destDir, entry.name), 'utf8'));
+}
+const writes = [...expected]
+  .filter(([file, content]) => actual.get(file) !== content)
+  .map(([file, content]) => ({ path: file, content }));
+const unexpected = [...actual.keys()].filter((file) => !expected.has(file));
+
+if (unexpected.length || (check && writes.length)) {
+  for (const file of unexpected) console.error(`grok-agent-sync: unexpected .grok/agents/${file}`);
+  for (const file of writes) console.error(`grok-agent-sync: missing or outdated .grok/agents/${file.path}`);
+  process.exitCode = 1;
+} else {
+  if (!check) applyMirrorPlan(destDir, { writes, deletes: [] });
+  console.log(`grok-agent-sync: ${check ? 'checked' : 'synced'} ${expected.size} Grok agents`);
+}

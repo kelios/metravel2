@@ -7,6 +7,7 @@ import {
   type OSMPointFeature,
 } from '@/utils/overpass';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
+import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { fetchBackendOverlay } from './backendOverlaysAdapter';
 import { translate as i18nT } from '@/i18n'
 
@@ -218,7 +219,8 @@ export const attachOsmPoiOverlay = (L: any, map: LeafletMap, opts?: OsmPoiOverla
         continue;
       }
 
-      const website = p.tags.website || p.tags.url || '';
+      const website = getSafeExternalUrl(p.tags.website || p.tags.url, { allowRelative: false });
+      const osmUrl = getSafeExternalUrl(p.osmUrl, { allowRelative: false });
       const wikidata = p.tags.wikidata || '';
       const wikipedia = p.tags.wikipedia || '';
 
@@ -250,9 +252,9 @@ export const attachOsmPoiOverlay = (L: any, map: LeafletMap, opts?: OsmPoiOverla
           `<a href="${escapeAttr(wikidataUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:6px 10px;border-radius:10px;border:1px solid ${escapeAttr(DESIGN_TOKENS.colors.border)};color:${escapeAttr(DESIGN_TOKENS.colors.text)};background:${escapeAttr(DESIGN_TOKENS.colors.surface)};text-decoration:none;font-weight:600">Wikidata</a>`,
         );
       }
-      if (p.osmUrl) {
+      if (osmUrl) {
         buttons.push(
-          `<a href="${escapeAttr(p.osmUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:6px 10px;border-radius:10px;border:1px solid ${escapeAttr(DESIGN_TOKENS.colors.border)};color:${escapeAttr(DESIGN_TOKENS.colors.text)};background:${escapeAttr(DESIGN_TOKENS.colors.surface)};text-decoration:none;font-weight:600">OpenStreetMap</a>`,
+          `<a href="${escapeAttr(osmUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:6px 10px;border-radius:10px;border:1px solid ${escapeAttr(DESIGN_TOKENS.colors.border)};color:${escapeAttr(DESIGN_TOKENS.colors.text)};background:${escapeAttr(DESIGN_TOKENS.colors.surface)};text-decoration:none;font-weight:600">OpenStreetMap</a>`,
         );
       }
 

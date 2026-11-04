@@ -332,8 +332,7 @@ export default function ProfileScreen() {
 
   const handleLogout = useCallback(async () => {
     try {
-      await logout();
-      router.replace('/login');
+      if (await logout()) router.replace('/login');
     } catch (error) {
       console.error('Error logging out:', error);
     }

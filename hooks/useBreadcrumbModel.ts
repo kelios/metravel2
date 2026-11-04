@@ -23,6 +23,7 @@ import type { PlannedTrip } from '@/api/plannedTrips';
 import type { PublicTrip } from '@/api/publicTrips';
 import { queryKeys } from '@/api/queryKeys';
 import { normalizeTravelRouteSegment } from '@/utils/travelRouteSegment';
+import { getFirstSearchParamValue, normalizeInternalReturnPath } from '@/utils/navigationReturnPath';
 import { parseQuestLocaleRoute } from '@/utils/questLocaleRouting';
 import { getActiveLocale, translate as i18nT } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider';
@@ -152,7 +153,7 @@ function resolveQuestDetailRoute(pathname: string | null | undefined): QuestDeta
 function toTitleFromSegment(segment: string) {
   const cleanedSegment = String(segment ?? '').split('?')[0].split('#')[0];
   const translated = pageTranslations[cleanedSegment];
-  const base = translated
+  const base = typeof translated === 'string'
     ? translated
     : cleanedSegment
         .split('-')
@@ -252,11 +253,10 @@ export function useBreadcrumbModel(): BreadcrumbModel {
   const hasFilterQuery = hasListFilterQuery(globalParams as Record<string, unknown>)
     || hasListFilterQuery(localParams as Record<string, unknown>);
 
-  const normalizedReturnToParam = useMemo(() => {
-    if (typeof returnTo === 'string') return returnTo;
-    if (Array.isArray(returnTo)) return String(returnTo[0] ?? '');
-    return '';
-  }, [returnTo]);
+  const returnPath = getFirstSearchParamValue(returnTo).trim();
+  const normalizedReturnToParam = returnPath
+    ? normalizeInternalReturnPath(returnPath.startsWith('/') ? returnPath : `/${returnPath}`)
+    : null;
 
   const travelSlug = useMemo(() => {
     const p = resolvedPathname;
@@ -583,13 +583,8 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       };
     }
 
-    const isTravelDetailsWithReturn =
-      p.startsWith('/travels/') && typeof normalizedReturnToParam === 'string' && !!normalizedReturnToParam.trim();
-    if (isTravelDetailsWithReturn) {
-      const normalizedReturnTo = normalizedReturnToParam.startsWith('/')
-        ? normalizedReturnToParam
-        : `/${normalizedReturnToParam}`;
-      const returnContext = getTravelReturnContext(normalizedReturnTo, travelData);
+    if (p.startsWith('/travels/') && normalizedReturnToParam) {
+      const returnContext = getTravelReturnContext(normalizedReturnToParam, travelData);
 
       if (travelSlug && !travelData?.name) {
         return {

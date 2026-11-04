@@ -178,7 +178,7 @@ export default function SettingsScreen() {
             if (!confirmed) return;
 
             await deleteCurrentUserAccount();
-            await logout();
+            await logout({ serverAlreadyRevoked: true });
             showToast({ type: 'success', text1: i18nT('profile:app.tabs.settings.akkaunt_udalen_faef461b'), visibilityTime: 3000 });
             router.replace('/login');
         } catch (error) {
@@ -197,8 +197,7 @@ export default function SettingsScreen() {
             });
             if (!confirmed) return;
 
-            await logout();
-            router.replace('/login');
+            if (await logout()) router.replace('/login');
         } catch (error) {
             console.error('Error logging out:', error);
         }

@@ -37,6 +37,21 @@ describe('OptimizedLCPHero SPA image swap (web)', () => {
     expect(container.querySelector('picture')).toBeNull()
   })
 
+  it('hands off the loaded currentSrc instead of the fallback src', () => {
+    const img = { url: 'https://example.com/cover.jpg' }
+    const selected = 'https://example.com/cover-720.webp'
+    const onLoad = jest.fn()
+    const { container } = render(<OptimizedLCPHero img={img} viewportHeight onLoad={onLoad} />)
+    const image = container.querySelector('img[data-lcp]') as HTMLImageElement
+    Object.defineProperties(image, {
+      complete: { value: true },
+      currentSrc: { value: selected },
+      naturalWidth: { value: 720 },
+    })
+    fireEvent.load(image)
+    expect(onLoad).toHaveBeenCalledWith(selected)
+  })
+
   it('removes stale source candidates when retrying an image through the API prefix', () => {
     const previous = process.env.EXPO_PUBLIC_API_URL
     process.env.EXPO_PUBLIC_API_URL = 'https://metravel.by/api'

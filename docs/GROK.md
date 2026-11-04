@@ -22,7 +22,11 @@ Grok уже подхватывает `AGENTS.md`, `CLAUDE.md`, `.agents/skills/`
 
 ```bash
 node .grok/scripts/sync-agents.mjs
+node .grok/scripts/sync-agents.mjs --check
 ```
+
+`npm run audit:prompts` запускает read-only проверку. Если роль удалили или
+переименовали, удали устаревший wrapper, который назвал гейт, и повтори sync.
 
 После изменения `.claude/skills/**` или `.claude/commands/{auto-dev,changed-summary,check-fast,guard-all,preflight}.md` зеркало для Codex/Grok собирается из `.claude` как единственного источника правды:
 

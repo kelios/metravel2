@@ -178,8 +178,6 @@ ${declarationClose}`;
 
 /**
  * Общий escapeHtml для inline-попапов (защита от XSS в WebView, #113).
- * Используется nativeMapHtml. Quest-движок намеренно НЕ эскейпит попап
- * (существующее поведение, не трогается в #990).
  */
 export const ESCAPE_HTML_FN_SCRIPT = `        function escapeHtml(value) {
           return String(value == null ? '' : value)

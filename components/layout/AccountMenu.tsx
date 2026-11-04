@@ -269,8 +269,7 @@ function AccountMenu({ initialOpenKey = 0 }: AccountMenuProps) {
     // ре-рендерит/размонтирует это меню — пост-await closeMenu() был бы setState на
     // размонтированном, а навигация гонилась бы с авто-редиректом смены auth.
     closeMenu()
-    await logout()
-    router.push('/' as any)
+    if (await logout()) router.push('/' as any)
   }, [logout, closeMenu])
 
   const handleLogin = useCallback(

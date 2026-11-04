@@ -121,18 +121,19 @@ describe('ui/Button', () => {
     expect(ref.current).not.toBeNull()
   })
 
-  it('ужимает свою начинку: подпись сокращается внутри рамки, а не выходит за неё (#1853)', async () => {
-    // Ряд «иконка + подпись» идёт с дефолтом View flexShrink: 0, поэтому
-    // кнопка, ограниченная по ширине снаружи (maxWidth/width/stretch),
-    // держала подпись шириной по содержимому и выносила её за рамку вместо
-    // многоточия, которое даёт numberOfLines={1}.
-    const { getByText } = await render(<Button label="Вернуться: 1. Печать высокого берега" />)
+  it('wraps the full label inside a width-constrained button by default', async () => {
+    const { getByText } = await render(<Button label="Вернуться к сохранённому маршруту" />)
 
-    const label = getByText('Вернуться: 1. Печать высокого берега')
-    expect(StyleSheet.flatten(label.props.style)).toMatchObject({ flexShrink: 1 })
-    // TestInstance contains host nodes only: the direct parent is the content row.
-    const contentRow = label.parent
-    expect(StyleSheet.flatten(contentRow?.props.style)).toMatchObject({ flexShrink: 1, minWidth: 0 })
+    const label = getByText('Вернуться к сохранённому маршруту')
+    expect(label.props.numberOfLines).toBeUndefined()
+    expect(StyleSheet.flatten(label.props.style)).toMatchObject({ flexShrink: 1, minWidth: 0 })
+    expect(StyleSheet.flatten(label.parent?.props.style)).toMatchObject({ flexShrink: 1, minWidth: 0 })
+  })
+
+  it('preserves the explicit line limit for compact controls', async () => {
+    const { getByText } = await render(<Button label="Смотреть маршруты" labelNumberOfLines={2} />)
+
+    expect(getByText('Смотреть маршруты').props.numberOfLines).toBe(2)
   })
 
   it('forwards accessibilityHint', async () => {

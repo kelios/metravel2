@@ -236,7 +236,9 @@ class ApiClient {
      * ✅ FIX-001: Использует безопасное хранилище
      */
     private async clearTokens(): Promise<void> {
-        await clearSessionTokens();
+        await clearSessionTokens().catch(() => {
+            devWarn('Could not persist auth token removal');
+        });
         notifyAuthInvalidation();
     }
 

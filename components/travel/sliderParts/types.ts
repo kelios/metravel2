@@ -36,6 +36,8 @@ export interface SliderProps {
   onInteractionStart?: () => void;
   /** When true, the first slide is treated as already loaded (for cached hero handoff). */
   firstImagePreloaded?: boolean;
+  /** Web: the exact loaded URL selected by the browser for the cover. */
+  firstImageSrc?: string;
   /** When true, slider fills parent container height instead of computing from aspect ratio */
   fillContainer?: boolean;
   /** When true, skip rendering the first slide image (LCP Hero overlay covers it). */

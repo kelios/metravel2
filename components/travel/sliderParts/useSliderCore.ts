@@ -39,6 +39,7 @@ export interface UseSliderCoreOptions {
   deferWebPrefetchUntilInteraction?: boolean;
   handleAppState?: boolean;
   includeUriMap?: boolean;
+  firstImageSrc?: string;
 }
 
 export interface UseSliderCoreResult {
@@ -87,6 +88,7 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
     deferWebPrefetchUntilInteraction = Platform.OS === 'web',
     handleAppState = Platform.OS !== 'web',
     includeUriMap = true,
+    firstImageSrc,
   } = options;
 
   const insets = useSafeAreaInsets();
@@ -151,6 +153,7 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
 
   const getUri = useCallback(
     (idx: number) => {
+      if (idx === 0 && firstImageSrc) return firstImageSrc;
       const cached = uriCacheRef.current.get(idx);
       if (cached) return cached;
       const img = images[idx];
@@ -159,7 +162,7 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
       uriCacheRef.current.set(idx, nextUri);
       return nextUri;
     },
-    [images, containerW, containerH, buildUri]
+    [images, containerW, containerH, buildUri, firstImageSrc]
   );
 
   const uriMap = useMemo(() => (includeUriMap ? images.map((_, idx) => getUri(idx)) : []), [images, getUri, includeUriMap]);
@@ -232,7 +235,7 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
         // access-логе прода). Греем только то, что ещё не смонтировано.
         if (!isWeb && Math.abs(d) < 2) continue;
         const t = idx + d;
-        if (t < 0 || t >= images.length) continue;
+        if (t < 0 || t >= images.length || (t === 0 && firstImageSrc)) continue;
         const u = getUri(t);
         if (!u) continue;
         // #1119: `buildUri*` отдаёт URL БЕЗ прокси-параметров, когда ширина
@@ -248,7 +251,7 @@ export function useSliderCore(options: UseSliderCoreOptions): UseSliderCoreResul
         prefetchImage(u).catch(() => undefined);
       }
     },
-    [preloadCount, isWeb, prefetchEnabled, images.length, getUri]
+    [preloadCount, isWeb, prefetchEnabled, images.length, getUri, firstImageSrc]
   );
 
   useEffect(() => {

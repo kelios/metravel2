@@ -14,6 +14,8 @@ import { translate as i18nT } from '@/i18n'
 
 const STORAGE_PREFIX = 'secure_';
 const ENCRYPTION_KEY = 'metravel_encryption_key_v1'; // В production должен быть уникальным для каждого пользователя
+const nativeAuthRevocationKey = (key: string) => `secure_revoked:${key}`;
+const nativeAuthRevocations = new Map<string, { revoked: boolean }>();
 
 // Prefix marker to distinguish encrypted values from legacy plaintext.
 // Without this, simpleDecrypt could accidentally XOR-decode a plaintext
@@ -126,16 +128,28 @@ export async function setSecureItem(key: string, value: string): Promise<void> {
       }
       webMemoryStore.set(fullKey, encrypted);
     } else {
+      const isAuthKey = isAuthTokenStorageKey(key);
+      const revocationKey = nativeAuthRevocationKey(key);
+      const wasRevoked = isAuthKey &&
+        (nativeAuthRevocations.get(key)?.revoked || (await AsyncStorage.getItem(revocationKey)) !== null);
       // Для native используем SecureStore
+      let secureStoreLoaded = false;
       try {
         const SecureStore = require('expo-secure-store');
+        secureStoreLoaded = true;
         await SecureStore.setItemAsync(key, value);
       } catch {
-        if (!__DEV__) {
+        if (!__DEV__ || (isAuthKey && secureStoreLoaded)) {
           throw new Error('SecureStore unavailable for production credential storage');
         }
         console.warn('expo-secure-store не установлен. Используется dev-only AsyncStorage fallback');
         await AsyncStorage.setItem(`${STORAGE_PREFIX}${key}`, value);
+      }
+      // Только успешно записанные новые креды могут снять отзыв старых.
+      if (wasRevoked) {
+        await AsyncStorage.removeItem(revocationKey);
+        const revocation = nativeAuthRevocations.get(key);
+        if (revocation) revocation.revoked = false;
       }
     }
   } catch {
@@ -208,6 +222,17 @@ export async function readSecureItem(key: string): Promise<SecureItemRead> {
       }
       return { value: decrypted, unavailable: false };
     } else {
+      const isAuthKey = isAuthTokenStorageKey(key);
+      const revocationAtStart = nativeAuthRevocations.get(key);
+      if (isAuthKey && (
+        revocationAtStart?.revoked ||
+        (await AsyncStorage.getItem(nativeAuthRevocationKey(key))) !== null
+      )) {
+        return { value: null, unavailable: false };
+      }
+      // Не выдаём токен, прочитанный одновременно с отзывом, даже если
+      // после отзыва успели сохранить новый токен и снять маркер.
+      const wasRevokedDuringRead = () => revocationAtStart !== nativeAuthRevocations.get(key);
       // Для native используем SecureStore. Отсутствие МОДУЛЯ и отказ САМОГО
       // хранилища — разные вещи: первое в проде фатально (dev-фолбэк только для
       // разработки), второе транзиентно и лечится повтором (#1921).
@@ -217,16 +242,15 @@ export async function readSecureItem(key: string): Promise<SecureItemRead> {
       } catch {
         if (!__DEV__) return { value: null, unavailable: true };
         console.warn('expo-secure-store не установлен. Используется dev-only AsyncStorage fallback');
-        return {
-          value: await AsyncStorage.getItem(`${STORAGE_PREFIX}${key}`),
-          unavailable: false,
-        };
+        const value = await AsyncStorage.getItem(`${STORAGE_PREFIX}${key}`);
+        return { value: wasRevokedDuringRead() ? null : value, unavailable: false };
       }
 
       let lastError: unknown = null;
       for (let attempt = 0; attempt < SECURE_READ_ATTEMPTS; attempt += 1) {
         try {
-          return { value: await SecureStore.getItemAsync(key), unavailable: false };
+          const value = await SecureStore.getItemAsync(key);
+          return { value: wasRevokedDuringRead() ? null : value, unavailable: false };
         } catch (error) {
           lastError = error;
         }
@@ -248,6 +272,21 @@ export async function readSecureItem(key: string): Promise<SecureItemRead> {
  * Удаление значения из безопасного хранилища
  */
 export async function removeSecureItem(key: string): Promise<void> {
+  if (Platform.OS !== 'web' && isAuthTokenStorageKey(key)) {
+    // Временно заблокированный Keychain может отказать в удалении. Маркер без
+    // секрета закрывает чтение и после перезапуска, пока не записан новый токен.
+    nativeAuthRevocations.set(key, { revoked: true });
+    const persisted = await AsyncStorage.setItem(nativeAuthRevocationKey(key), '1')
+      .then(() => true, () => false);
+    try {
+      const SecureStore = require('expo-secure-store');
+      await SecureStore.deleteItemAsync(key);
+    } catch (error) {
+      if (!persisted) throw error;
+    }
+    if (__DEV__) await AsyncStorage.removeItem(`${STORAGE_PREFIX}${key}`).catch(() => undefined);
+    return;
+  }
   try {
     if (Platform.OS === 'web') {
       const fullKey = `${STORAGE_PREFIX}${key}`;
@@ -277,7 +316,10 @@ export async function removeSecureItem(key: string): Promise<void> {
  * Удаление нескольких значений
  */
 export async function removeSecureItems(keys: string[]): Promise<void> {
-  await Promise.all(keys.map(key => removeSecureItem(key)));
+  const results = await Promise.allSettled(keys.map(key => removeSecureItem(key)));
+  for (const result of results) {
+    if (result.status === 'rejected') throw result.reason;
+  }
 }
 
 /**

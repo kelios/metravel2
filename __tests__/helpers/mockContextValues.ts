@@ -18,7 +18,7 @@ export const createAuthValue = (overrides: Partial<AuthStore> = {}): AuthStore =
   invalidateAuthState: jest.fn(),
   checkAuthentication: jest.fn().mockResolvedValue(undefined),
   login: jest.fn().mockResolvedValue(true),
-  logout: jest.fn().mockResolvedValue(undefined),
+  logout: jest.fn().mockResolvedValue(true),
   sendPassword: jest.fn<ReturnType<AuthStore['sendPassword']>, Parameters<AuthStore['sendPassword']>>().mockImplementation(async () => ({
     ok: true,
     message: i18nT('errorsStatic:api.auth.passwordResetRequested'),
