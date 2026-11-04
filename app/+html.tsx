@@ -395,7 +395,8 @@ const getCriticalHeadScript = () => {
   ${getSeasonalThemeBootScript()}
   window.__EXPO_ROUTER_INSPECTOR=false;
   try {
-    var p2=window.location.pathname||'';
+    var initialPath=window.location.pathname||'';
+    var p2=initialPath;
     if(/^\/quests\/[^/]+\/[^/]+\/?$/.test(p2))return;
     if(p2.length>1)p2=p2.replace(/\/+$/,'');
     var o='https://metravel.by';
@@ -422,15 +423,20 @@ const getCriticalHeadScript = () => {
     }
     try {
       if(typeof MutationObserver!=='undefined'){
-        var _canUrl=correctUrl;
         var _canObs=new MutationObserver(function(){
           var all=document.querySelectorAll('link[rel="canonical"]');
-          if(all.length>1){
-            for(var i=all.length-1;i>=1;i--){try{all[i].parentNode&&all[i].parentNode.removeChild(all[i])}catch(e){}}
+          // The client route can claim the head before the router writes history.
+          if((window.location.pathname||'')!==initialPath||all[0]!==cl){
+            _canObs.disconnect();
+            return;
           }
-          if(all[0]&&all[0].getAttribute('href')!==_canUrl){all[0].setAttribute('href',_canUrl)}
+          for(var i=0;i<all.length;i++){
+            if(all[i].getAttribute('href')!==correctUrl){_canObs.disconnect();return}
+          }
+          for(var i=all.length-1;i>=1;i--){all[i].parentNode.removeChild(all[i])}
         });
         _canObs.observe(document.head,{childList:true});
+        _canObs.observe(cl,{attributes:true,attributeFilter:['href']});
         setTimeout(function(){try{_canObs.disconnect()}catch(e){}},1000);
       }
     } catch(_2){}

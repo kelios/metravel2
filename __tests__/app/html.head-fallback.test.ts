@@ -54,6 +54,36 @@ describe('critical head fallback', () => {
     expect(doc.querySelector('meta[name="robots"]')?.getAttribute('content') ?? '').not.toMatch(/noindex/)
   })
 
+  it('deduplicates the boot canonical and yields to the next route before history changes', () => {
+    const doc = document.implementation.createHTMLDocument('MeTravel')
+    const win = { location: { pathname: '/books' }, localStorage: { getItem: () => 'light' }, matchMedia: () => ({ matches: false }) }
+    const disconnect = jest.fn()
+    let notify!: () => void
+    class FakeObserver {
+      constructor(callback: () => void) { notify = callback }
+      observe = jest.fn()
+      disconnect = disconnect
+    }
+    const canonical = doc.createElement('link')
+    canonical.rel = 'canonical'
+    canonical.href = 'https://metravel.by/books/[slug]'
+    doc.head.append(canonical)
+    new Function('window', 'document', 'MutationObserver', 'setTimeout', loadCriticalHeadScript())(win, doc, FakeObserver, jest.fn())
+
+    expect(canonical.href).toBe('https://metravel.by/books')
+    doc.head.append(canonical.cloneNode())
+    notify()
+    expect(doc.head.querySelectorAll('link[rel="canonical"]')).toHaveLength(1)
+    expect(disconnect).not.toHaveBeenCalled()
+
+    const nextCanonical = 'https://metravel.by/books/belarus-follow-the-towers'
+    canonical.href = nextCanonical
+    notify()
+    expect(win.location.pathname).toBe('/books')
+    expect(canonical.href).toBe(nextCanonical)
+    expect(disconnect).toHaveBeenCalledTimes(1)
+  })
+
   it.each(['ordinary', 'generic-prefix'])('preserves one SSG description per owner before the app loads (%s), with charset first and descriptions before the script', kind => {
     const stored = kind === 'ordinary'
       ? 'Прогулка по старому городу: замок, набережная и тихие улицы. Советы для самостоятельной поездки.'
