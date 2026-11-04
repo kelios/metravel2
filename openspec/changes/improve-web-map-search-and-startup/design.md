@@ -6,7 +6,7 @@ The map already knows its effective search anchor and active request status. The
 
 - Show scope and status in the existing filters panel. A zero-result action expands to the next radius while keeping the query. Retry uses the existing request refetch and counts as a new attempt.
 - Reuse the existing mobile toolbar action slot and focus signal.
-- Select an early tile only when the clean compact startup viewport is established by the same radius/coordinate contract as the runtime. For a pending geolocation prompt, use the same initial location request in the head and runtime and wait for an actual denial before painting the fallback tile. Keep the settled Leaflet handoff for custom starts.
+- For a clean compact visit with denied geolocation, the initial viewport is the default 50 km circle at the compact zoom floor. The shell starts its tile before the catalog responds, and Leaflet adopts that first fit regardless of the first result set. Later fits follow the usual radius and result rules. For a pending prompt, reuse the initial location request and wait for an actual denial. Custom starts retain their settled Leaflet fit.
 
 ## Risks and rollback
 

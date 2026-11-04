@@ -28,9 +28,8 @@ type TilePreconnectParams = {
 
 /**
  * Resolve only an external tile-proxy origin that can be safely preconnected.
- * A concrete tile URL must not be guessed before the map's settled initial fit:
- * its zoom/coordinates may differ from the final viewport and every initiated
- * OSM request is part of the strict startup cardinality contract (#1291).
+ * A concrete tile URL requires a confirmed viewport. Every initiated OSM
+ * request is part of the strict startup cardinality contract (#1291).
  */
 export function resolveMapTilePreconnectOrigin({
   hostname,
@@ -52,9 +51,8 @@ type MapBootstrapApiOptions = {
   isLocalApi?: boolean
 }
 
-// A complete point set can tighten the Leaflet fit. For the default wide
-// radius with more points than the first page, the compact fit is the circle
-// centre at the compact zoom floor, shifted by half the collapsed padding.
+// The clean compact fallback starts at the circle centre at the compact zoom
+// floor, shifted by half the collapsed padding. Leaflet adopts that fit.
 function compactStartupTile() {
   const tileSize = 256
   const zoom = MAP_COMPACT_MIN_FIT_ZOOM
@@ -217,37 +215,48 @@ export function buildMapHeadBootstrapScript(
       }, ${MAP_RADIUS_PRELOAD_TTL_MS});
     });
 
-    Promise.all([
-      locationPermission,
-      locationResult,
-      response.then(function(result) { return result.ok ? result.clone().json() : null; })
-    ]).then(function(values) {
+    Promise.all([locationPermission, locationResult]).then(function(values) {
       var permission = values[0];
       var location = values[1];
-      var payload = values[2];
-      if (!payload || !permission || permission.state === 'granted' ||
+      if (!permission || !isCleanCompactMap() || permission.state === 'granted' ||
           (permission.state !== 'denied' && !(location && location.error && location.error.code === 1))) return;
-      var list = Array.isArray(payload.results) ? payload.results : payload.data;
-      var count = payload.count == null ? payload.total : payload.count;
-      if (!Array.isArray(list) || list.length === 0 || !Number.isFinite(Number(count)) ||
-          Number(count) <= list.length) return;
       var shellTileSelector = '#ssg-skeleton img[data-ssg-map-tile]';
-      function paintConfirmedTile() {
-        var tile = document.querySelector(shellTileSelector);
-        if (!tile || !isCleanCompactMap() || permission.state === 'granted' || tile.hasAttribute('src') ||
+      var request = ${JSON.stringify(compactStartupTile())};
+      function paintConfirmedTile(tile) {
+        if (!isCleanCompactMap() || permission.state === 'granted' || tile.hasAttribute('src') ||
             document.querySelector('#root .leaflet-tile')) return;
-        var request = ${JSON.stringify(compactStartupTile())};
         tile.parentElement.style.setProperty('--metravel-map-shell-tile-offset-x', request.offsetX);
         tile.parentElement.style.setProperty('--metravel-map-shell-tile-offset-y', request.offsetY);
         tile.setAttribute('fetchpriority', 'high');
         if (request.crossOrigin) tile.crossOrigin = request.crossOrigin;
+        tile.setAttribute('data-ssg-map-startup-circle', 'true');
         tile.src = request.href;
       }
-      if (document.readyState === 'loading' && !document.querySelector(shellTileSelector)) {
-        document.addEventListener('DOMContentLoaded', paintConfirmedTile, { once: true });
-      } else {
-        paintConfirmedTile();
+      var tile = document.querySelector(shellTileSelector);
+      if (tile) return paintConfirmedTile(tile);
+      if (document.readyState !== 'loading' || !window.MutationObserver) return;
+
+      // Permission may resolve before the shell arrives in the HTML stream.
+      // Discover the image now, then paint it as soon as the parser adds it.
+      var preload = document.createElement('link');
+      preload.rel = 'preload';
+      preload.setAttribute('as', 'image');
+      preload.setAttribute('fetchpriority', 'high');
+      if (request.crossOrigin) preload.crossOrigin = request.crossOrigin;
+      preload.href = request.href;
+      document.head.appendChild(preload);
+      function paintParsedTile() {
+        var parsedTile = document.querySelector(shellTileSelector);
+        if (!parsedTile) return;
+        observer.disconnect();
+        paintConfirmedTile(parsedTile);
       }
+      var observer = new MutationObserver(paintParsedTile);
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+      document.addEventListener('DOMContentLoaded', function() {
+        observer.disconnect();
+        paintParsedTile();
+      }, { once: true });
     }).catch(function(){});
   } catch (_e) {}
 })();

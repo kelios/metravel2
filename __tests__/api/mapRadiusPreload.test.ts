@@ -76,15 +76,15 @@ describe('early map radius request', () => {
   })
 
   it.each([
-    ['compact, denied, incomplete', true, 'denied', 123, '', true, null],
-    ['compact, prompt denied, incomplete', true, 'prompt', 123, '', true, 'denied'],
-    ['compact, prompt granted', true, 'prompt', 123, '', false, 'granted'],
-    ['compact, prompt timed out', true, 'prompt', 123, '', false, 'timeout'],
-    ['compact, granted', true, 'granted', 123, '', false, null],
-    ['compact, complete', true, 'denied', 1, '', false, null],
-    ['desktop', false, 'denied', 123, '', false, null],
-    ['coordinate link', true, 'denied', 123, '?lat=54&lng=25', false, null],
-  ] as const)('paints only a confirmed compact tile (%s)', async (_, matches, state, total, search, expected, promptOutcome) => {
+    ['compact, denied', true, 'denied', '', true, null, false],
+    ['compact, denied before shell', true, 'denied', '', true, null, true],
+    ['compact, prompt denied', true, 'prompt', '', true, 'denied', false],
+    ['compact, prompt granted', true, 'prompt', '', false, 'granted', false],
+    ['compact, prompt timed out', true, 'prompt', '', false, 'timeout', false],
+    ['compact, granted', true, 'granted', '', false, null, false],
+    ['desktop', false, 'denied', '', false, null, false],
+    ['coordinate link', true, 'denied', '?lat=54&lng=25', false, null, false],
+  ] as const)('paints only a confirmed compact tile (%s)', async (_, matches, state, search, expected, promptOutcome, shellPending) => {
     const matchMedia = window.matchMedia
     const permissions = Object.getOwnPropertyDescriptor(navigator, 'permissions')
     const geolocation = Object.getOwnPropertyDescriptor(navigator, 'geolocation')
@@ -92,16 +92,22 @@ describe('early map radius request', () => {
     Object.defineProperty(window, 'matchMedia', { configurable: true, writable: true, value: () => ({ matches }) })
     Object.defineProperty(navigator, 'permissions', { configurable: true, value: { query: async () => ({ state }) } })
     Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { getCurrentPosition } })
-    document.body.innerHTML = '<div id="ssg-skeleton"><img data-ssg-map-tile></div>'
+    const shell = '<div id="ssg-skeleton"><img data-ssg-map-tile></div>'
+    document.body.innerHTML = shellPending ? '' : shell
+    if (shellPending) Object.defineProperty(document, 'readyState', { configurable: true, value: 'loading' })
     window.history.replaceState(null, '', '/map' + search)
-    const payload = { count: total, results: [{ id: 1, coord: '53.9,27.56' }] }
-    fetchMock.mockResolvedValue({
-      ...response(200, JSON.stringify(payload)),
-      clone: () => ({ json: async () => payload }),
-    })
+    let settleRadiusResponse!: (value: ReturnType<typeof response>) => void
+    fetchMock.mockReturnValue(new Promise((resolve) => { settleRadiusResponse = resolve }))
     try {
       startBootstrap()
       await jest.advanceTimersByTimeAsync(0)
+      if (shellPending) {
+        const preload = document.querySelector('link[rel="preload"][as="image"]')
+        expect(preload?.getAttribute('href')).toBe('/proxy/tiles/osm/11/1180/658.png')
+        expect(preload?.getAttribute('crossorigin')).toBe('anonymous')
+        document.body.innerHTML = shell
+        await jest.advanceTimersByTimeAsync(0)
+      }
       const tile = document.querySelector('img[data-ssg-map-tile]')
       if (promptOutcome) {
         expect(tile?.getAttribute('src')).toBeNull()
@@ -125,14 +131,17 @@ describe('early map radius request', () => {
         expect(getCurrentPosition).not.toHaveBeenCalled()
       }
       expect(tile?.getAttribute('src')).toBe(expected ? '/proxy/tiles/osm/11/1180/658.png' : null)
+      expect(tile?.hasAttribute('data-ssg-map-startup-circle')).toBe(expected)
       if (expected) {
         expect(tile?.getAttribute('crossorigin')).toBe('anonymous')
         expect(tile?.parentElement?.style.getPropertyValue('--metravel-map-shell-tile-offset-y')).toMatch(/px$/)
         expect(fetchMock).toHaveBeenCalledTimes(1)
+        settleRadiusResponse(response())
         await fetchTravelsForMap(0, MAP_TRAVELS_PER_PAGE, filter, { throwOnError: true })
         expect(fetchMock).toHaveBeenCalledTimes(1)
       }
     } finally {
+      if (shellPending) Reflect.deleteProperty(document, 'readyState')
       window.matchMedia = matchMedia
       if (permissions) Object.defineProperty(navigator, 'permissions', permissions)
       else Reflect.deleteProperty(navigator, 'permissions')

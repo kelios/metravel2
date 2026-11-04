@@ -1,7 +1,13 @@
 // MapLogicComponent.tsx - Internal component for map event handling and initialization
 import React, { useCallback, useEffect, useRef } from 'react';
 import type { LatLng } from '@/types/coordinates';
-import { MAP_COMPACT_MIN_FIT_ZOOM } from '@/constants/mapDefaults';
+import {
+  DEFAULT_MAP_CENTER,
+  DEFAULT_RADIUS_KM,
+  MAP_COLLAPSED_SHEET_OFFSET,
+  MAP_COMPACT_MIN_FIT_ZOOM,
+  MAP_RADIUS_FIT_AIR,
+} from '@/constants/mapDefaults';
 import { EARTH_RADIUS_M } from '@/utils/geoDistance';
 import type { LeafletControlRef } from './leafletBridgeTypes';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
@@ -401,6 +407,15 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
     // Avoid auto-fit while radius results are not ready yet.
     if (!canAutoFitRadiusView) return;
 
+    // Adopt the shell circle for the first settled fit only. Later searches
+    // and recovery from a failed first response keep the ordinary fit rules.
+    const usesStartupCircle = !hasSignaledInitialViewReadyRef.current && compactPane && !userLocation &&
+      circleCenter?.lat === DEFAULT_MAP_CENTER.latitude && circleCenter.lng === DEFAULT_MAP_CENTER.longitude &&
+      radiusInMeters === DEFAULT_RADIUS_KM * 1000 &&
+      fitBoundsPadding?.paddingBottomRight?.[1] === MAP_COLLAPSED_SHEET_OFFSET + MAP_RADIUS_FIT_AIR &&
+      typeof document !== 'undefined' && /^\/map\/?$/.test(document.location.pathname) && !document.location.search &&
+      !!document.querySelector('#ssg-skeleton img[data-ssg-map-startup-circle="true"][src]');
+
     // #1350 — the key deliberately does NOT include the point composition. It used
     // to be `travelData.map(id|coord).join('|')`, and because the radius query is an
     // infinite list (the mobile places sheet calls onLoadMore) EVERY extra page and
@@ -473,7 +488,7 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
       targetBounds = circleBounds;
 
       // Tighten only when the loaded points are the WHOLE result set (#2450).
-      if (inRadiusPointCoords.length > 0 && radiusResultsComplete) {
+      if (inRadiusPointCoords.length > 0 && radiusResultsComplete && !usesStartupCircle) {
         try {
           const pointBounds = (L as any).latLngBounds(
             inRadiusPointCoords.map(([lng, lat]) => (L as any).latLng(lat, lng)),

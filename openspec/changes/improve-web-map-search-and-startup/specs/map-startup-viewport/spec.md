@@ -6,10 +6,10 @@ The web map SHALL start and display the confirmed cold compact fallback tile bef
 
 #### Scenario: Compact default viewport is confirmed
 
-- **WHEN** a clean compact visit has no usable live location and the default radius response proves the circle cannot tighten
-- **THEN** the shell paints a tile that the settled Leaflet viewport will use.
+- **WHEN** a clean compact visit has a denied geolocation permission or request
+- **THEN** the shell starts the default-circle tile before the catalog responds and the settled Leaflet viewport uses that circle, including for small, empty or failed responses.
 
 #### Scenario: Startup view depends on visitor state
 
-- **WHEN** coordinates, location, persisted filters, route or a small result set can change the initial viewport
+- **WHEN** coordinates, location, persisted filters or route can change the initial viewport
 - **THEN** startup waits for the normal settled Leaflet view without issuing a speculative tile request.
