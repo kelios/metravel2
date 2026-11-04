@@ -22,6 +22,12 @@ it('prints quest volumes with declined counts and the edition month, without rev
   const printed=[...result.bodyPages,...result.coverPages].join('');
   expect(printed).toContain(`${book.quests.length} квест`);
   expect(printed).toContain('Издание: ноябрь 2026');
+  const mapFolios = result.pageMap.filter(page => page.kind === 'quest-map' || page.kind === 'country-map');
+  expect(mapFolios).toHaveLength(book.quests.length + 1);
+  for (const {folio} of mapFolios) {
+    expect(result.bodyPages[folio - 1]).toContain('>openstreetmap.org/copyright</a>');
+  }
+  expect(result.bodyPages[mapFolios.at(-1)!.folio - 1]).toContain('Natural Earth');
   for(const service of [book.revision,'Квестов:','не подтвержд','пробной печати'])expect(printed).not.toContain(service);
 });
 describe('approved photo-diary physical rendering',()=>{

@@ -415,10 +415,10 @@
       "kind": "quests",
       "title": "Беларусь. Книга квестов. Часть 1",
       "country": "BY",
-      "revision": "q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.67cc1dd1f7c1.86975fa74989",
+      "revision": "q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.0593b56bb052.4e13412e463e",
       "contentLocale": "ru",
       "status": "partial",
-      "coverUri": "https://metravel.by/travel-books/belarus-quests-1/q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.67cc1dd1f7c1.86975fa74989/pocket-150x100/preview-cover-1.webp",
+      "coverUri": "https://metravel.by/travel-books/belarus-quests-1/q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.0593b56bb052.4e13412e463e/pocket-150x100/preview-cover-1.webp",
       "stopCount": 41,
       "bodyPageCount": 174,
       "profiles": [
@@ -455,11 +455,11 @@
       "metadata": {
         "kind": "book-metadata",
         "bookId": "belarus-quests-1",
-        "revision": "q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.67cc1dd1f7c1.86975fa74989",
-        "uri": "https://metravel.by/travel-books/belarus-quests-1/q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.67cc1dd1f7c1.86975fa74989/book.json",
+        "revision": "q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.0593b56bb052.4e13412e463e",
+        "uri": "https://metravel.by/travel-books/belarus-quests-1/q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.0593b56bb052.4e13412e463e/book.json",
         "mime": "application/json",
-        "bytes": 161978,
-        "sha256": "498142941e60912929833861fb0f612d4f9273a868990b7b803b980646ab81fc"
+        "bytes": 161982,
+        "sha256": "20f5666c4c53e69a3e893c3320becafeee75fb2fe1439454d8bf33b48e614d18"
       }
     },
     {
@@ -468,10 +468,10 @@
       "kind": "quests",
       "title": "Польша. Книга квестов. Часть 1",
       "country": "PL",
-      "revision": "q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.2996bc556590.8747b0241f39",
+      "revision": "q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.d73f7d4b5630.5d568347d528",
       "contentLocale": "ru",
       "status": "partial",
-      "coverUri": "https://metravel.by/travel-books/poland-quests-1/q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.2996bc556590.8747b0241f39/pocket-150x100/preview-cover-1.webp",
+      "coverUri": "https://metravel.by/travel-books/poland-quests-1/q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.d73f7d4b5630.5d568347d528/pocket-150x100/preview-cover-1.webp",
       "stopCount": 37,
       "bodyPageCount": 156,
       "profiles": [
@@ -508,11 +508,11 @@
       "metadata": {
         "kind": "book-metadata",
         "bookId": "poland-quests-1",
-        "revision": "q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.2996bc556590.8747b0241f39",
-        "uri": "https://metravel.by/travel-books/poland-quests-1/q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.2996bc556590.8747b0241f39/book.json",
+        "revision": "q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.d73f7d4b5630.5d568347d528",
+        "uri": "https://metravel.by/travel-books/poland-quests-1/q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.d73f7d4b5630.5d568347d528/book.json",
         "mime": "application/json",
-        "bytes": 145632,
-        "sha256": "761299d4637085dde33f9f5f428933b8e2aa8370ed9acf315b533c874d8d441b"
+        "bytes": 145634,
+        "sha256": "d66a7dfc8b5d83c3fe7293e48d75ee1ac986c8501bbf9368dc3673e400adcb25"
       }
     },
     {

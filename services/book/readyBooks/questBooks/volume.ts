@@ -5,7 +5,7 @@ import {bookFrameCopy} from '../render/frameCopy';
 import {renderReadyBookEndMap} from '../render/endMap';
 import type {EmbeddedBookAsset} from '../render';
 import {buildQuestBookPagePlan} from './composition';
-import {buildQuestBookBlockHtml,questBookStyles,type QuestBookBlockAssets,type QuestBookBlockRenderInput} from './render';
+import {buildQuestBookBlockHtml,questBookStyles,questOsmCredit,type QuestBookBlockAssets,type QuestBookBlockRenderInput} from './render';
 import {printQuestLabel} from './labels';
 import type {CountryQuestBook} from '../../../../types/questBook';
 import {countRu,editionLabel,QUESTS} from '../render/counts';
@@ -28,7 +28,7 @@ export function buildCountryQuestBookHtml(input:CountryQuestBookRenderInput){
   if(!book.endMatterPages?.length)throw new Error('The country volume needs its recorded ending before assembly');
   if(new Set(book.endMatterPages).size!==book.endMatterPages.length||book.endMatterPages.some(kind=>kind!=='country-map'))throw new Error('This ending has no content adapter');
   const plan=buildQuestBookPagePlan(book,{endMatterPages:book.endMatterPages});
-  const stylesCss=questBookStyles(profile,input.fonts)+'\n.quest-title-page .small,.cover-4 .small{overflow-wrap:anywhere}.quest-title-page h1,.quest-country-map h2,.quest-contents h2{font-family:QuestHand,cursive}';
+  const stylesCss=questBookStyles(profile,input.fonts)+'\n.pocket-layout.quest-country-map .flow{gap:2mm}.quest-title-page .small,.cover-4 .small{overflow-wrap:anywhere}.quest-title-page h1,.quest-country-map h2,.quest-contents h2{font-family:QuestHand,cursive}';
   const page=(number:number,kind:string,body:string,component='body')=>`<section class="book-page ${profile.id==='album-a5'?'album-layout':'pocket-layout'} ${number%2===0?'left':'right'} ${component} ${kind}" data-folio="${number}" data-kind="${kind}" style="--inner:${profile.bindingMm}mm;--outer:${profile.safeMm}mm"><div class="trim">${body}</div></section>`;
   const flow=(body:string)=>`<main class="content" data-check-overflow><div class="flow">${body}</div></main>`;
   const frame=bookFrameCopy(book.id);
@@ -48,7 +48,7 @@ export function buildCountryQuestBookHtml(input:CountryQuestBookRenderInput){
       return page(entry.number,'quest-contents',flow(`<h2>Квесты этой части</h2><ol class="contents-list">${rows.map(quest=>`<li><span>${book.quests.indexOf(quest)+1}. ${e(printQuestLabel(quest.title))}</span><span>${plan.find(page=>page.kind==='quest-story'&&page.questId===quest.questId)!.number}</span></li>`).join('')}</ol>`));
     }
     const geography={kind:'quests' as const,country:book.country,stops:book.quests.map(quest=>({id:quest.questId,title:quest.title,lat:quest.points[0].lat,lng:quest.points[0].lng}))};
-    return page(entry.number,'quest-country-map',flow(`<h2>Квесты на карте страны</h2>${renderReadyBookEndMap(geography,profile,'compact')}<p class="small">Номера — как в содержании; отмечено начало каждого квеста.</p><p><span class="outro-heading">${e(frame.outro.heading)}.</span> ${e(frame.outro.text)}</p>`));
+    return page(entry.number,'quest-country-map',flow(`<h2>Квесты на карте страны</h2>${renderReadyBookEndMap(geography,profile,'compact')}<p class="small">Номера — как в содержании; отмечено начало каждого квеста.</p><p><span class="outro-heading">${e(frame.outro.heading)}.</span> ${e(frame.outro.text)}</p><p class="small">Natural Earth · ${questOsmCredit}</p>`));
   });
   const coverPages=[1,2,3,4].map(number=>page(number,`cover-${number}`,renderCoverPage(input,number),'cover'));
   const document=(pages:string[])=>`<!doctype html><html lang="${e(book.contentLocale)}"><head><meta charset="utf-8"><title>${e(book.title)}</title><style>${stylesCss}</style></head><body>${pages.join('')}</body></html>`;

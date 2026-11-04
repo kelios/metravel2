@@ -1279,8 +1279,8 @@
     },
     {
       "id": "belarus-quests-1",
-      "revision": "q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.67cc1dd1f7c1.86975fa74989",
-      "metadataSha256": "498142941e60912929833861fb0f612d4f9273a868990b7b803b980646ab81fc",
+      "revision": "q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.0593b56bb052.4e13412e463e",
+      "metadataSha256": "20f5666c4c53e69a3e893c3320becafeee75fb2fe1439454d8bf33b48e614d18",
       "stops": [
         {
           "id": "barkovshchina-spirits",
@@ -1491,8 +1491,8 @@
     },
     {
       "id": "poland-quests-1",
-      "revision": "q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.2996bc556590.8747b0241f39",
-      "metadataSha256": "761299d4637085dde33f9f5f428933b8e2aa8370ed9acf315b533c874d8d441b",
+      "revision": "q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.d73f7d4b5630.5d568347d528",
+      "metadataSha256": "d66a7dfc8b5d83c3fe7293e48d75ee1ac986c8501bbf9368dc3673e400adcb25",
       "stops": [
         {
           "id": "krakow-dragon",

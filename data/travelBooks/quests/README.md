@@ -86,6 +86,27 @@ renderer/адаптера и полный набор URI/SHA/bytes тайлов,
 Печатная подпись убирает только ведущую декоративную пиктограмму; raw title
 остаётся в источнике, все точки/их имена и optional-статус сохраняются.
 
+### Подтверждение использования иллюстраций (#3036)
+
+4 ноября 2026 года владелица подтвердила в задаче #3036 происхождение
+книжных иллюстраций и разрешение на их использование в книгах. Иллюстрации
+созданы с помощью ИИ на основе её собственных фотографий и статей. В обоих
+томах используются исходные иллюстрации из `cover-provenance.json`: 41 для
+Беларуси и 37 для Польши. SHA-256 снимка реестра, к которому относится
+подтверждение — `4288d55104b99e71457461cecf71000e36215db07010ae16c03181adabe59de1`.
+Реестр связывает каждый квест с точным URI и SHA файла. Подтверждение
+относится к существующим файлам в этом снимке. Для новой иллюстрации нужно
+своё основание в реестре прав.
+
+На маршрутных и обзорных картах печатается
+`openstreetmap.org/copyright`. Картографические данные подложки и координаты региональных центров
+взяты из OpenStreetMap (ODbL 1.0). Растровые изображения подложки —
+стандартные тайлы OpenStreetMap Foundation (ODbL 1.0 Produced Work).
+Границы и гидрография на обзорной карте взяты из Natural Earth 5.1.1.
+[Атрибуция OSM](https://osmfoundation.org/wiki/Attribution_Guidelines#Books,_magazines,_and_printed_maps)
+· [Лицензия стандартных тайлов](https://osmfoundation.org/wiki/Licence_and_Legal_FAQ)
+· [Условия Natural Earth](https://www.naturalearthdata.com/about/terms-of-use/).
+
 ```sh
 node scripts/books/source-quest-books.mjs --write
 node scripts/books/build-quest-books.mjs --output .codex-temp/books-quests/production
