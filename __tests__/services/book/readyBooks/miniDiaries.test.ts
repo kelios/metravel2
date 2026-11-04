@@ -11,13 +11,16 @@ const diary={
   stops:[1,2,3].map(id=>({title:`Место ${id}`,mapUrl:`https://metravel.by/map?placeId=${id}`,articleUrl:`https://metravel.by/travels/place-${id}`})),
   pdf:file('read.pdf','application/pdf'),cover:file('cover.webp','image/webp'),preview:file('preview.webp','image/webp'),
 };
+const publishedDiaries='miniDiaries' in manifest&&Array.isArray(manifest.miniDiaries)?manifest.miniDiaries:[];
+const withDiary=(entry:typeof diary)=>({...manifest,miniDiaries:[...publishedDiaries,entry]});
 
-it('adds a compact diary to storage without changing any full edition asset',()=>{
-  const updated={...manifest,miniDiaries:[diary]};
+it('adds a compact diary to storage without changing any existing edition asset',()=>{
+  const updated=withDiary(diary);
   expect(publicationSchema.safeParse(updated).success).toBe(true);
   const assets=collectAssets([updated]);
-  expect(assets.filter((asset:{kind:string})=>asset.kind!=='mini-diary')).toEqual(collectAssets([manifest]));
-  expect(assets.filter((asset:{kind:string})=>asset.kind==='mini-diary').map((asset:{relative:string})=>asset.relative)).toEqual([
+  const isNewDiary=(asset:{kind?:string;bookId?:string})=>asset.kind==='mini-diary'&&asset.bookId===diary.id;
+  expect(assets.filter((asset:Parameters<typeof isNewDiary>[0])=>!isNewDiary(asset))).toEqual(collectAssets([manifest]));
+  expect(assets.filter(isNewDiary).map((asset:{relative:string})=>asset.relative)).toEqual([
     'a5-diary/2026.1/read.pdf','a5-diary/2026.1/cover.webp','a5-diary/2026.1/preview.webp',
   ]);
 });
@@ -25,6 +28,6 @@ it('adds a compact diary to storage without changing any full edition asset',()=
 it('rejects a preview from another revision and an overlapping book slug',()=>{
   const mixed={...diary,preview:{...diary.preview,uri:diary.preview.uri.replace('2026.1','2026.2')}};
   expect(miniDiarySchema.safeParse(mixed).success).toBe(false);
-  expect(()=>collectAssets([{...manifest,miniDiaries:[mixed]}])).toThrow('Invalid mini diary resource');
-  expect(publicationSchema.safeParse({...manifest,miniDiaries:[{...diary,slug:manifest.books[0].slug}]}).success).toBe(false);
+  expect(()=>collectAssets([withDiary(mixed)])).toThrow('Invalid mini diary resource');
+  expect(publicationSchema.safeParse(withDiary({...diary,slug:manifest.books[0].slug})).success).toBe(false);
 });

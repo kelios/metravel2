@@ -625,5 +625,97 @@
         "sha256": "73e3b7e8f7bb2767dc804c9344987bca8a550f5870bd3c18d7f38aefa207eafd"
       }
     }
+  ],
+  "miniDiaries": [
+    {
+      "id": "belarus-by-the-water-mini",
+      "slug": "belarus-by-the-water",
+      "revision": "2026-11-04.mini.a959d8804b444396",
+      "title": "Беларусь у воды",
+      "summary": "Ельня, Юцковские родники и озеро Глубокое. Выберите одну прогулку, выполните маленькое задание и сохраните кадр или заметку.",
+      "country": "BY",
+      "contentLocale": "ru",
+      "pageCount": 6,
+      "stops": [
+        {
+          "title": "Ельня",
+          "mapUrl": "https://metravel.by/map?lat=55.5594982&lng=27.7583098&placeId=5486&focusPlace=1&placeTitle=%D0%AD%D0%BA%D0%BE%D1%82%D1%80%D0%BE%D0%BF%D0%B0+%C2%AB%D0%9E%D0%B7%D0%B5%D1%80%D0%B0%D0%B2%D0%BA%D0%B8%C2%BB%2C+%D0%95%D0%BB%D1%8C%D0%BD%D1%8F",
+          "articleUrl": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus"
+        },
+        {
+          "title": "Юцковские родники",
+          "mapUrl": "https://metravel.by/map?lat=53.7973976&lng=27.16799&placeId=15827&focusPlace=1&placeTitle=%D0%AE%D1%86%D0%BA%D0%BE%D0%B2%D1%81%D0%BA%D0%B8%D0%B5+%D1%80%D0%BE%D0%B4%D0%BD%D0%B8%D0%BA%D0%B8",
+          "articleUrl": "https://metravel.by/travels/marshruty-vykhodnogo-dnia-iz-minska-13-poezdok"
+        },
+        {
+          "title": "Озеро Глубокое",
+          "mapUrl": "https://metravel.by/map?lat=55.6949836&lng=29.4528694&placeId=2633&focusPlace=1&placeTitle=%D0%9E%D0%B7%D0%B5%D1%80%D0%BE+%D0%93%D0%BB%D1%83%D0%B1%D0%BE%D0%BA%D0%BE%D0%B5",
+          "articleUrl": "https://metravel.by/travels/ozero-glubokoe-samoe-prozrachnoe-ozero-v-belarusi"
+        }
+      ],
+      "pdf": {
+        "uri": "https://metravel.by/travel-books/belarus-by-the-water-mini/2026-11-04.mini.a959d8804b444396/read.pdf",
+        "mime": "application/pdf",
+        "bytes": 88111,
+        "sha256": "f6f76a7b12b237732a7c40307beac82ecaacd489b4fe7629c6d7d335cabfd54e"
+      },
+      "cover": {
+        "uri": "https://metravel.by/travel-books/belarus-by-the-water-mini/2026-11-04.mini.a959d8804b444396/cover.webp",
+        "mime": "image/webp",
+        "bytes": 28348,
+        "sha256": "e958fc4ee1c7f05c4592870629bbcf8d5345eed95b20628891e8fc7e6b158125"
+      },
+      "preview": {
+        "uri": "https://metravel.by/travel-books/belarus-by-the-water-mini/2026-11-04.mini.a959d8804b444396/preview.webp",
+        "mime": "image/webp",
+        "bytes": 79340,
+        "sha256": "3bf6b51654c97fa07793d446f9766c408afae89afad3095c1b8eb7fd2eae8b32"
+      }
+    },
+    {
+      "id": "belarus-follow-the-towers-mini",
+      "slug": "belarus-follow-the-towers",
+      "revision": "2026-11-04.mini.b6722d4236288a82",
+      "title": "По следам башен",
+      "summary": "Три отдельные поездки по замкам Беларуси. Рассмотрите силуэт, ворота и дворцовый фасад, а затем зарисуйте одну деталь.",
+      "country": "BY",
+      "contentLocale": "ru",
+      "pageCount": 6,
+      "stops": [
+        {
+          "title": "Любча",
+          "mapUrl": "https://metravel.by/map?lat=53.751788&lng=26.068725&focusPlace=1&placeTitle=%D0%9B%D1%8E%D0%B1%D1%87%D0%B0",
+          "articleUrl": "https://metravel.by/quests/60/lubcha-castle-revival"
+        },
+        {
+          "title": "Мир",
+          "mapUrl": "https://metravel.by/map?lat=53.4511815&lng=26.4729416&placeId=5247&focusPlace=1&placeTitle=%D0%9C%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+          "articleUrl": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia"
+        },
+        {
+          "title": "Несвиж",
+          "mapUrl": "https://metravel.by/map?lat=53.2228373&lng=26.6917241&placeId=5246&focusPlace=1&placeTitle=%D0%9D%D0%B5%D1%81%D0%B2%D0%B8%D0%B6%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+          "articleUrl": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia"
+        }
+      ],
+      "pdf": {
+        "uri": "https://metravel.by/travel-books/belarus-follow-the-towers-mini/2026-11-04.mini.b6722d4236288a82/read.pdf",
+        "mime": "application/pdf",
+        "bytes": 84231,
+        "sha256": "b7c75dc8b707210835b74ca8a12f8a0187e4e4e210a209bf271879440b1b0fed"
+      },
+      "cover": {
+        "uri": "https://metravel.by/travel-books/belarus-follow-the-towers-mini/2026-11-04.mini.b6722d4236288a82/cover.webp",
+        "mime": "image/webp",
+        "bytes": 22504,
+        "sha256": "3e6b7d53b35c31260c5de8713e961b09eac2d42c87bc05728cb6dce7fa944306"
+      },
+      "preview": {
+        "uri": "https://metravel.by/travel-books/belarus-follow-the-towers-mini/2026-11-04.mini.b6722d4236288a82/preview.webp",
+        "mime": "image/webp",
+        "bytes": 74224,
+        "sha256": "9a08bec75e3ce6330cb76c2445c1f4a7d7d4757c171930fc569525874732713f"
+      }
+    }
   ]
 }
