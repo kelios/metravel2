@@ -16,7 +16,7 @@ const {
   escapeAttr,
   stripHtml,
   injectHomeHeroPreload,
-  injectMapLeafletVendorPreload,
+  injectMapStartupPreloads,
   resolveHomeHeroAssetHref,
   injectHiddenH1,
   injectBreadcrumbJsonLd,
@@ -994,7 +994,7 @@ describe('home hero LCP preload', () => {
     });
   });
 
-  describe('injectMapLeafletVendorPreload', () => {
+  describe('injectMapStartupPreloads', () => {
     const prefix = '/_expo/static/js/web/';
     const runtime = `${prefix}__expo-metro-runtime-123abc.js`;
     const vendor = `${prefix}leafletVendor-123abc.js`;
@@ -1015,25 +1015,50 @@ describe('home hero LCP preload', () => {
       fs.writeFileSync(path.join(dist, vendor.slice(1)), '');
       fs.writeFileSync(path.join(dist, `${prefix.slice(1)}leafletVendor-deadbeef.js`), '');
 
-      const html = injectMapLeafletVendorPreload(mapHtml, dist);
+      const html = injectMapStartupPreloads(mapHtml, dist);
 
-      expect(html.match(/data-map-leaflet-preload/g)).toHaveLength(1);
-      expect(injectMapLeafletVendorPreload(html, dist)).toBe(html);
+      expect(html.match(/data-map-startup-preload/g)).toHaveLength(1);
+      expect(injectMapStartupPreloads(html, dist)).toBe(html);
       expect(html).toContain(`rel="preload" as="script" href="${vendor}" fetchpriority="low"`);
-      expect(html.indexOf('data-map-leaflet-preload')).toBeLessThan(html.indexOf('<title>'));
+      expect(html.indexOf('data-map-startup-preload')).toBeLessThan(html.indexOf('<title>'));
       expect(html).not.toContain('crossorigin');
       expect(html).not.toContain('deadbeef');
+    });
+
+    it('preloads the one MapScreen import closure and the Leaflet runtime chain', () => {
+      const dist = makeTempDir('seo-map-startup-');
+      const route = `${prefix}map-123abc.js`;
+      const eager = `${prefix}__shared-eager-123abc.js`;
+      const asyncScreen = `${prefix}__shared-screen-123abc.js`;
+      const load = `${prefix}loadLeafletRuntime-123abc.js`;
+      const fix = `${prefix}leafletFix-123abc.js`;
+      const unrelated = `${prefix}MapMobileLayout-123abc.js`;
+      const missing = `${prefix}__shared-missing-123abc.js`;
+      writeRuntime(dist, [vendor, route, eager, asyncScreen, load, fix, unrelated, missing]);
+      for (const file of [vendor, eager, asyncScreen, load, fix, unrelated]) {
+        fs.writeFileSync(path.join(dist, file.slice(1)), '');
+      }
+      fs.writeFileSync(
+        path.join(dist, route.slice(1)),
+        `__d(function(){},1,${JSON.stringify({ 0: 2, paths: { 2: [asyncScreen, eager, missing] } })});`,
+      );
+      const routeHtml = mapHtml.replace('</body>', `<script defer src="${eager}"></script><script defer src="${route}"></script></body>`);
+      const output = injectMapStartupPreloads(routeHtml, dist);
+
+      expect([...output.matchAll(/data-map-startup-preload="true"[^>]*href="([^"]+)"/g)].map((match) => match[1]))
+        .toEqual([vendor, load, fix, asyncScreen]);
+      expect(injectMapStartupPreloads(output, dist)).toBe(output);
     });
 
     it('clears the hint when the registered vendor file is absent or ambiguous', () => {
       const dist = makeTempDir('seo-map-vendor-missing-');
       const stale = mapHtml.replace('</head>', '<link data-map-leaflet-preload="true" href="/stale.js"></head>');
       writeRuntime(dist, [vendor]);
-      expect(injectMapLeafletVendorPreload(stale, dist)).toBe(mapHtml);
+      expect(injectMapStartupPreloads(stale, dist)).toBe(mapHtml);
 
       fs.writeFileSync(path.join(dist, vendor.slice(1)), '');
       writeRuntime(dist, [vendor, `${prefix}leafletVendor-deadbeef.js`]);
-      expect(injectMapLeafletVendorPreload(stale, dist)).toBe(mapHtml);
+      expect(injectMapStartupPreloads(stale, dist)).toBe(mapHtml);
     });
   });
 });

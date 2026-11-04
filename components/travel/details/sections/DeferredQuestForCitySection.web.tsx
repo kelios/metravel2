@@ -12,14 +12,10 @@ import type { DeferredQuestForCitySectionProps } from '@/components/travel/detai
 // файле: во втором случае синхронный импорт остаётся ребром графа и в web-бандле,
 // то есть модуль остаётся eager, сколько ни оборачивай его в `React.lazy`.
 //
-// `Promise.resolve(import(...))` на верхнем уровне — тот же приём, что и в
-// `DeferredStableContent.web.tsx`: загрузка чанка стартует вместе с маршрутом,
-// но его код не входит в стартовый граф.
-const questForCitySectionImport = Promise.resolve(
-  import('@/components/travel/details/sections/QuestForCitySection'),
-)
+// The SSR link graph already supplies the selected cards. Request the legacy
+// data path only when the route actually renders this fallback.
 const QuestForCitySection = React.lazy(() =>
-  questForCitySectionImport.then((module) => ({ default: module.default })),
+  import('@/components/travel/details/sections/QuestForCitySection'),
 )
 
 export default function DeferredQuestForCitySection(props: DeferredQuestForCitySectionProps) {

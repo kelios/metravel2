@@ -1,5 +1,6 @@
 import { fetchPublicWithSession } from '@/api/publicFetchWithSession';
 import { resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl';
+import { MAP_RADIUS_QUERY_PATH } from '@/utils/mapRadiusQuery';
 import { Platform } from 'react-native';
 
 const isLocalApi = String(process.env.EXPO_PUBLIC_IS_LOCAL_API || '').toLowerCase() === 'true';
@@ -50,7 +51,7 @@ export const fetchWithTransientRetry = async (
 };
 
 // Для запросов с query (?...) оставляем базу без завершающего слеша, для остальных — со слешем.
-export const SEARCH_TRAVELS_FOR_MAP = `${URLAPI}/travels/search_travels_for_map/`; // далее добавляется ?...
+export const SEARCH_TRAVELS_FOR_MAP = `${URLAPI}${MAP_RADIUS_QUERY_PATH}`; // далее добавляется ?...
 export const SEARCH_TRAVELS_FOR_MAP_LITE = `${URLAPI}/travels/search_travels_for_map_lite/`;
 export const GET_MAP_CLUSTERS = `${URLAPI}/map/clusters/`; // серверная кластеризация, BE #719: ?bbox=south,west,north,east&zoom=
 // Ленивая коллекция материалов места (#1567): короткие summary с cursor-пагинацией.

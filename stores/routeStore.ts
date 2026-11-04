@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import type { RoutePoint, RouteData, TransportMode, RouteCalculationResult } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
 import { RouteValidator } from '@/utils/routeValidator';
+import { MAP_ROUTE_STORAGE_KEY } from '@/utils/mapStartupStorage';
 
 interface RouteState {
   // Mode
@@ -254,7 +255,7 @@ export const useRouteStore = create<RouteState>()(
       },
     }),
     {
-      name: 'route-storage',
+      name: MAP_ROUTE_STORAGE_KEY,
       storage: createJSONStorage(() => {
         if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
           return localStorage;

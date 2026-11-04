@@ -42,6 +42,7 @@ const {
 } = require('../utils/seoText');
 const { prepareNotFoundDocumentBoot } = require('./lib/expoStaticShell');
 const { readChunkMetadataRegistry } = require('./lib/webChunkMetadataArtifact');
+const { parseChunk } = require('./lib/webChunkGraph');
 
 // ---------------------------------------------------------------------------
 // CLI args
@@ -540,31 +541,53 @@ function injectHomeHeroPreload(baseHtml, href) {
   return replaceOrInsert(baseHtml, /<link[^>]*data-home-hero-preload="true"[^>]*\/?>/i, tag);
 }
 
-function injectMapLeafletVendorPreload(baseHtml, distDir) {
-  const html = baseHtml.replace(/<link\b[^>]*\bdata-map-leaflet-preload="true"[^>]*>\r?\n?/gi, '');
-  const runtimes = [...html.matchAll(
-    /<script\b[^>]*\ssrc=["'](\/_expo\/static\/js\/web\/__expo-metro-runtime-[a-f0-9]+\.js)["'][^>]*>/gi,
-  )];
+function injectMapStartupPreloads(baseHtml, distDir) {
+  const html = baseHtml.replace(/<link\b[^>]*\bdata-map-(?:leaflet-preload|startup-preload)="true"[^>]*>\r?\n?/gi, '');
+  const scripts = [...html.matchAll(
+    /<script\b[^>]*\ssrc=["'](\/_expo\/static\/js\/web\/[a-z0-9_.-]+\.js)["'][^>]*>/gi,
+  )].map((match) => match[1]);
+  const runtimes = scripts.filter((href) => /\/__expo-metro-runtime-[a-f0-9]+\.js$/i.test(href));
   if (runtimes.length !== 1) return html;
 
-  let vendorHref;
+  const readScript = (href) => fs.readFileSync(path.join(distDir, href.slice(1)), 'utf8');
+  let registry;
   try {
-    // The runtime loaded by this document owns the import URLs. Other files in
-    // the export directory can belong to an older build.
-    const runtime = fs.readFileSync(path.join(distDir, runtimes[0][1].slice(1)), 'utf8');
-    const vendors = readChunkMetadataRegistry(runtime)?.f.filter((href) =>
-      /^\/_expo\/static\/js\/web\/leafletVendor-[a-f0-9]+\.js$/i.test(href),
-    );
-    if (vendors?.length !== 1 || !fs.existsSync(path.join(distDir, vendors[0].slice(1)))) return html;
-    vendorHref = vendors[0];
+    // Only this document's Metro runtime can identify its hashed imports.
+    registry = readChunkMetadataRegistry(readScript(runtimes[0]));
   } catch {
     return html;
   }
+  if (!registry) return html;
 
-  // Same request mode as Metro's same-origin classic script loader. Keep CSS
-  // ahead of the speculative download and leave execution to the map runtime.
-  const tag = `<link data-map-leaflet-preload="true" rel="preload" as="script" href="${vendorHref}" fetchpriority="low"/>`;
-  return applyHtmlFragment(html, /<head\b[^>]*>/i, `${tag}\n`, 'after');
+  const findRuntimeChunk = (pattern) => {
+    const matches = registry.f.filter((href) => pattern.test(href));
+    return matches.length === 1 ? matches[0] : null;
+  };
+  const chunks = [
+    findRuntimeChunk(/^\/_expo\/static\/js\/web\/leafletVendor-[a-f0-9]+\.js$/i),
+    findRuntimeChunk(/^\/_expo\/static\/js\/web\/loadLeafletRuntime-[a-f0-9]+\.js$/i),
+    findRuntimeChunk(/^\/_expo\/static\/js\/web\/leafletFix-[a-f0-9]+\.js$/i),
+  ];
+
+  const routeScripts = scripts.filter((href) => /\/map-[a-f0-9]+\.js$/i.test(href));
+  if (routeScripts.length === 1) {
+    try {
+      // The route has one async import, MapScreen. Leave nested UI imports
+      // under Metro's normal demand-driven scheduling.
+      const defs = parseChunk(readScript(routeScripts[0]), registry);
+      const closures = [...defs.values()].flatMap((def) => [...def.paths.values()]);
+      if (closures.length === 1) chunks.push(...closures[0]);
+    } catch {
+      // If the route artifact cannot be inspected, retain the known runtime hints.
+    }
+  }
+
+  const hints = [...new Set(chunks)]
+    .filter((href) => href && /^\/_expo\/static\/js\/web\/[a-z0-9_.-]+\.js$/i.test(href) &&
+      registry.f.includes(href) && !scripts.includes(href) && fs.existsSync(path.join(distDir, href.slice(1))))
+    // Match Metro's classic same-origin requests. CSS keeps its normal priority.
+    .map((href) => `<link data-map-startup-preload="true" rel="preload" as="script" href="${href}" fetchpriority="low"/>`);
+  return hints.length ? applyHtmlFragment(html, /<head\b[^>]*>/i, hints.join('\n') + '\n', 'after') : html;
 }
 
 function injectHiddenH1(baseHtml, headingText) {
@@ -799,7 +822,7 @@ async function main() {
     if (page.route === '/') {
       html = injectHomeHeroPreload(html, homeHeroHref);
     } else if (page.route === '/map') {
-      html = injectMapLeafletVendorPreload(html, DIST_DIR);
+      html = injectMapStartupPreloads(html, DIST_DIR);
     }
 
     // Out-of-flow semantic H1 for routes whose static HTML has none (`/`, `/map`).
@@ -969,7 +992,7 @@ module.exports = {
   clampDescriptionForAttr,
   toSocialPreviewUrl,
   injectHomeHeroPreload,
-  injectMapLeafletVendorPreload,
+  injectMapStartupPreloads,
   resolveHomeHeroAssetHref,
   injectHiddenH1,
   injectBreadcrumbJsonLd,

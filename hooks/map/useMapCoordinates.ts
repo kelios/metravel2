@@ -6,6 +6,7 @@ import { logError, logMessage } from '@/utils/logger';
 import { loadExpoLocation } from '@/hooks/map/expoLocationLoader';
 import { markLiveUserPositionFix, publishLiveUserPosition } from '@/hooks/map/liveUserPosition';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
+import { MAP_LOCATION_STORAGE_KEY } from '@/utils/mapStartupStorage';
 import { translate as i18nT } from '@/i18n'
 
 
@@ -26,7 +27,6 @@ export const DEFAULT_COORDINATES: Coordinates = {
   latitude: DEFAULT_MAP_CENTER.latitude,
   longitude: DEFAULT_MAP_CENTER.longitude,
 };
-const WEB_LAST_COORDS_KEY = 'metravel:lastKnownCoords';
 const NATIVE_LOCATION_TIMEOUT_MS = 12000;
 const NATIVE_LAST_KNOWN_TIMEOUT_MS = 1500;
 const NATIVE_LAST_KNOWN_MAX_AGE_MS = 10 * 60 * 1000;
@@ -89,7 +89,7 @@ function isValidCoordinate(lat: number, lng: number): boolean {
 function readWebCachedLocation(): LocationSnapshot | null {
   if (Platform.OS !== 'web' || typeof window === 'undefined') return null;
   try {
-    const raw = window.localStorage.getItem(WEB_LAST_COORDS_KEY);
+    const raw = window.localStorage.getItem(MAP_LOCATION_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<LocationSnapshot>;
     const latitude = Number(parsed?.latitude);
@@ -192,7 +192,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
   const cacheWebCoordinates = useCallback((next: LocationSnapshot) => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     try {
-      window.localStorage.setItem(WEB_LAST_COORDS_KEY, JSON.stringify(next));
+      window.localStorage.setItem(MAP_LOCATION_STORAGE_KEY, JSON.stringify(next));
     } catch {
       // noop
     }

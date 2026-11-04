@@ -1,0 +1,181 @@
+/** @jest-environment-options {"url":"https://example.test/map"} */
+
+import { Platform } from 'react-native'
+import { fetchTravelsForMap } from '@/api/map/radiusQueries'
+import { DEFAULT_MAP_CENTER, DEFAULT_RADIUS_KM, MAP_TRAVELS_PER_PAGE } from '@/constants/mapDefaults'
+import { buildMapHeadBootstrapScript } from '@/utils/mapHeadBootstrap'
+import { MAP_RADIUS_PRELOAD_GLOBAL, MAP_RADIUS_PRELOAD_TTL_MS } from '@/utils/mapRadiusPreload'
+import { MAP_FILTERS_STORAGE_KEY, MAP_LOCATION_STORAGE_KEY, MAP_ROUTE_STORAGE_KEY } from '@/utils/mapStartupStorage'
+
+const filter = {
+  lat: String(DEFAULT_MAP_CENTER.latitude),
+  lng: String(DEFAULT_MAP_CENTER.longitude),
+  radius: String(DEFAULT_RADIUS_KM),
+}
+
+const response = (status = 200, body = '{"data":[{"id":1,"coord":"53.9,27.56"}],"total":1}') => ({
+  ok: status === 200,
+  status,
+  bodyUsed: false,
+  text: async () => body,
+})
+
+function startBootstrap(
+  apiUrl = window.location.origin,
+  options: Parameters<typeof buildMapHeadBootstrapScript>[1] = { nodeEnv: 'production' },
+) {
+  new Function(buildMapHeadBootstrapScript(apiUrl, options))()
+}
+
+describe('early map radius request', () => {
+  const nativePlatform = Platform.OS
+  const originalFetch = global.fetch
+  const fetchMock = jest.fn()
+
+  beforeEach(() => {
+    jest.useFakeTimers()
+    ;(Platform as { OS: string }).OS = 'web'
+    global.fetch = fetchMock
+    fetchMock.mockReset()
+    fetchMock.mockResolvedValue(response())
+    window.history.replaceState(null, '', '/map')
+  })
+
+  afterEach(() => {
+    jest.runOnlyPendingTimers()
+    jest.useRealTimers()
+    ;(Platform as { OS: string }).OS = nativePlatform
+    global.fetch = originalFetch
+    document.head.innerHTML = ''
+    window.localStorage.clear()
+  })
+
+  it('hands the actual initial GET off once with the same URL, session and normalized result', async () => {
+    const baseline = await fetchTravelsForMap(0, MAP_TRAVELS_PER_PAGE, filter, { throwOnError: true })
+    const ordinaryUrl = fetchMock.mock.calls[0][0]
+    expect(fetchMock.mock.calls[0][1].credentials).toBe('include')
+    fetchMock.mockClear()
+
+    startBootstrap()
+    startBootstrap()
+    const warmed = await fetchTravelsForMap(0, MAP_TRAVELS_PER_PAGE, filter, { throwOnError: true })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith(ordinaryUrl, expect.objectContaining({
+      method: 'GET',
+      credentials: 'include',
+    }))
+    expect(warmed).toEqual(baseline)
+    expect(warmed[0]).toMatchObject({ coord: '53.9,27.56' })
+    expect(warmed).toHaveProperty('__total', 1)
+    expect((window as unknown as Record<string, unknown>)[MAP_RADIUS_PRELOAD_GLOBAL]).toBeUndefined()
+
+    await fetchTravelsForMap(0, MAP_TRAVELS_PER_PAGE, filter)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([MAP_FILTERS_STORAGE_KEY, MAP_LOCATION_STORAGE_KEY, MAP_ROUTE_STORAGE_KEY, 'userId'])(
+    'skips the early request when %s is present',
+    (key) => {
+      window.localStorage.setItem(key, '')
+      startBootstrap()
+      expect(fetchMock).not.toHaveBeenCalled()
+      expect(document.getElementById('metravel-leaflet-css')).not.toBeNull()
+    },
+  )
+
+  it.each(['/map?lat=54&lng=25', '/map?radius=100', '/search'])('does not warm %s', (path) => {
+    window.history.replaceState(null, '', path)
+    startBootstrap()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('skips a different API origin and uses a page-origin proxy for explicit E2E', () => {
+    startBootstrap('https://different.test/api')
+    expect(fetchMock).not.toHaveBeenCalled()
+    startBootstrap('http://127.0.0.1:8085', { nodeEnv: 'production', isE2E: true })
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringMatching(/^https:\/\/example\.test\/api\/travels\/search_travels_for_map\//),
+      expect.objectContaining({ credentials: 'include' }),
+    )
+  })
+
+  it('escapes configured API data embedded into the head script', () => {
+    const script = buildMapHeadBootstrapScript('https://example.test/</script><script>', { nodeEnv: 'production' })
+    expect(script).not.toContain('</script>')
+    new Function(script)()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('falls back when the active URL differs and cancels the unused prefetch', async () => {
+    startBootstrap()
+    const preloadSignal = fetchMock.mock.calls[0][1].signal as AbortSignal
+    await fetchTravelsForMap(0, MAP_TRAVELS_PER_PAGE, { ...filter, radius: '100' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[1][0]).not.toBe(fetchMock.mock.calls[0][0])
+    expect(preloadSignal.aborted).toBe(true)
+  })
+
+  it('falls back through the ordinary session transport for an unauthorized preload', async () => {
+    fetchMock.mockResolvedValueOnce(response(401))
+    startBootstrap()
+    await fetchTravelsForMap(0, MAP_TRAVELS_PER_PAGE, filter)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[1][1].credentials).toBe('include')
+  })
+
+  it('falls back through the ordinary query when a preloaded body cannot be read', async () => {
+    fetchMock.mockResolvedValueOnce({ ...response(), text: async () => { throw new TypeError('Broken body') } })
+    startBootstrap()
+    const result = await fetchTravelsForMap(0, MAP_TRAVELS_PER_PAGE, filter)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(result[0]).toMatchObject({ coord: '53.9,27.56' })
+  })
+
+  it.each([
+    ['session', () => window.localStorage.setItem('userId', '42')],
+    ['route', () => window.history.replaceState(null, '', '/map?radius=100')],
+  ] as const)('falls back when the %s changes while reading the preloaded body', async (_kind, change) => {
+    fetchMock.mockResolvedValueOnce({
+      ...response(),
+      text: async () => {
+        change()
+        return '{"data":[{"id":2,"coord":"53,27"}],"total":1}'
+      },
+    })
+    startBootstrap()
+
+    const result = await fetchTravelsForMap(0, MAP_TRAVELS_PER_PAGE, filter)
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(result[0]).toMatchObject({ id: 1, coord: '53.9,27.56' })
+  })
+
+  it('expires a prefetched result that has no consumer', async () => {
+    startBootstrap()
+    const preloadSignal = fetchMock.mock.calls[0][1].signal as AbortSignal
+    jest.advanceTimersByTime(MAP_RADIUS_PRELOAD_TTL_MS)
+    expect(preloadSignal.aborted).toBe(true)
+    await fetchTravelsForMap(0, MAP_TRAVELS_PER_PAGE, filter)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('honors cancellation while consuming the initial response body', async () => {
+    const bodyStarted = jest.fn()
+    fetchMock.mockImplementationOnce((_url, { signal }: { signal: AbortSignal }) => Promise.resolve({
+      ...response(),
+      text: () => new Promise<string>((_resolve, reject) => {
+        bodyStarted()
+        signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+      }),
+    }))
+    const controller = new AbortController()
+    startBootstrap()
+    const pending = fetchTravelsForMap(0, MAP_TRAVELS_PER_PAGE, filter, { signal: controller.signal })
+    await Promise.resolve()
+    expect(bodyStarted).toHaveBeenCalledTimes(1)
+    controller.abort()
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+})

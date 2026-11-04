@@ -7,6 +7,8 @@ import type { MapPointCountScope } from '@/utils/mapPointCount';
 import type { TravelCoords } from '@/types/types';
 import { logError } from '@/utils/logger';
 import { resolveMapRadiusKm } from '@/constants/mapConfig';
+import { MAP_TRAVELS_PER_PAGE } from '@/constants/mapDefaults';
+import { roundMapRadiusAnchorCoordinate } from '@/utils/mapRadiusQuery';
 import { queryKeys } from '@/api/queryKeys';
 import type { Coordinates } from './useMapCoordinates';
 import type { FiltersData } from './useMapFilters';
@@ -14,11 +16,6 @@ import type { MapFilterValues } from '@/utils/mapFiltersStorage';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { offlineCatalog } from '@/services/offline/offlineCatalog';
 import { readAllMapPointsOffline } from '@/services/offline/mapOfflineAdapter';
-
-const MAP_TRAVELS_PER_PAGE = 30;
-
-const roundAnchorCoordinate = (value: number | undefined): number | undefined =>
-  typeof value === 'number' && Number.isFinite(value) ? Math.round(value * 1e4) / 1e4 : value;
 
 /**
  * Ширина коридора вдоль построенного маршрута (км в каждую сторону).
@@ -302,8 +299,8 @@ export function useMapTravels({
       const params = {
         // #2450 — 4 знака (~11 м): дрожание GPS между возвратами на экран не
         // должно менять queryKey и перезапрашивать первую страницу.
-        lat: roundAnchorCoordinate(coordinates?.latitude),
-        lng: roundAnchorCoordinate(coordinates?.longitude),
+        lat: roundMapRadiusAnchorCoordinate(coordinates?.latitude),
+        lng: roundMapRadiusAnchorCoordinate(coordinates?.longitude),
         radius: String(resolveMapRadiusKm(filterValues.radius)),
         mode: dataMode,
         ...(dataMode === 'route' ? { routeKey: routeSignature } : {}),

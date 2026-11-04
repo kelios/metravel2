@@ -24,7 +24,9 @@ beforeAll(() => {
   jest.doMock('@/hooks/useTrackedImpression', () => ({ useTrackedImpression: () => ({}) }))
   jest.doMock('@/utils/analytics', () => ({ queueAnalyticsEvent: () => {}, sendAnalyticsEvent: () => {} }))
   jest.doMock('@/components/ui/richMediaViewport', () => ({ useRichMediaVisibility: () => ({ visible: true }) }))
-  jest.doMock('@/hooks/useQuestForLocation', () => ({ useQuestsForLocation: () => { throw new Error('Selected graph must not request the full catalogue') } }))
+  jest.doMock('@/components/travel/details/sections/QuestForCitySection', () => {
+    throw new Error('Selected graph must not load the legacy catalogue section')
+  })
   jest.doMock('@/components/ui/ImageCardMedia', () => ({ source, loading, alt }: { source: { uri: string }; loading: string; alt: string }) =>
     require('react').createElement('img', { src: source?.uri, loading, alt }))
   ;({ createElement, act } = require('react'))

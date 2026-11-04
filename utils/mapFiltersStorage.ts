@@ -1,4 +1,5 @@
 import { DEFAULT_RADIUS_KM } from '@/constants/mapConfig';
+import { MAP_FILTERS_STORAGE_KEY } from '@/utils/mapStartupStorage';
 
 export interface MapFilterValues {
   categories: string[];
@@ -16,7 +17,6 @@ export interface StorageLike {
   removeItem(key: string): void;
 }
 
-const STORAGE_KEY = 'map-filters';
 const MAX_JSON_LENGTH = 10_000;
 const MAX_CATEGORY_LENGTH = 100;
 const MAX_CATEGORIES = 50;
@@ -77,11 +77,11 @@ export function sanitizeMapFilterValues(input: unknown): MapFilterValues {
 
 export function loadMapFilterValues(storage: StorageLike): MapFilterValues {
   try {
-    const saved = storage.getItem(STORAGE_KEY);
+    const saved = storage.getItem(MAP_FILTERS_STORAGE_KEY);
     if (!saved || saved.length === 0 || saved.length >= MAX_JSON_LENGTH) {
       if (saved && saved.length >= MAX_JSON_LENGTH) {
         try {
-          storage.removeItem(STORAGE_KEY);
+          storage.removeItem(MAP_FILTERS_STORAGE_KEY);
         } catch {
           // noop
         }
@@ -100,7 +100,7 @@ export function loadMapFilterValues(storage: StorageLike): MapFilterValues {
     return sanitizeMapFilterValues(parsed);
   } catch {
     try {
-      storage.removeItem(STORAGE_KEY);
+      storage.removeItem(MAP_FILTERS_STORAGE_KEY);
     } catch {
       // noop
     }
@@ -120,7 +120,7 @@ export function saveMapFilterValues(storage: StorageLike, values: MapFilterValue
   const jsonString = JSON.stringify(sanitized);
   if (jsonString.length >= MAX_JSON_LENGTH) return;
   try {
-    storage.setItem(STORAGE_KEY, jsonString);
+    storage.setItem(MAP_FILTERS_STORAGE_KEY, jsonString);
   } catch {
     // noop
   }

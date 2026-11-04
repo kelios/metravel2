@@ -4,7 +4,7 @@ import type { Travel } from '@/types/types'
 import type { TravelLinkGraph } from '@/utils/travelLinkGraph'
 import { adaptMeta } from '@/utils/questAdapters'
 import { translate as i18nT } from '@/i18n'
-import { QuestForCityMatches } from './QuestForCitySection'
+import { QuestForCityMatches } from './QuestForCityMatches'
 import { QUEST_TILE_MEDIA_SIZE, QUEST_TILE_MEDIA_SIZE_COMPACT } from '@/components/quests/questCoverTileGeometry'
 
 const RESPONSIVE_CARDS_CSS = `
