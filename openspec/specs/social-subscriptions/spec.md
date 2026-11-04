@@ -1,4 +1,10 @@
-## ADDED Requirements
+# Social Subscriptions Specification
+
+## Purpose
+
+Load social profile lists and subscription status with a bounded number of requests while keeping viewer data separate.
+
+## Requirements
 
 ### Requirement: Bounded social pages and exact subscription state
 
@@ -20,3 +26,4 @@ The signed-in client SHALL request only the active compact social list page and 
 
 - **WHEN** the account changes while a social read is pending
 - **THEN** the previous account's rows and status are excluded from the new viewer's UI
+- **AND** an undispatched relationship mutation for the previous viewer is cancelled
