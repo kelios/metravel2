@@ -81,11 +81,20 @@ export const imageGridStyles = (
   transform: none;
 }
 
+/* Desktop cells own the image height. Mobile stacks follow the image's
+   declared ratio, so they reserve space before the file arrives. */
+@media (min-width: 769px) {
+  .${cls} .img-row-2-portrait img,
+  .${cls} .img-row-2-mixed img,
+  .${cls} .img-grid img {
+    aspect-ratio: auto !important;
+  }
+}
+
 /* Portrait pair - taller images */
 .${cls} .img-row-2-portrait img {
   height: 100% !important;
   max-height: none !important;
-  aspect-ratio: auto !important;
 }
 
 .${cls} .img-pair-portraits {
@@ -120,7 +129,6 @@ export const imageGridStyles = (
 .${cls} .img-row-2-mixed img {
   height: 240px !important;
   max-height: 260px !important;
-  aspect-ratio: auto !important;
   object-fit: contain;
 }
 
@@ -166,7 +174,6 @@ export const imageGridStyles = (
   height: 100% !important;
   min-height: 180px !important;
   max-height: none !important;
-  aspect-ratio: auto !important;
   object-fit: contain;
   object-position: center;
   margin: 0;

@@ -84,9 +84,10 @@ function loadWithReactNativeWebPlatform<T>(load: () => T): T {
   }
 }
 
-const { baseStyles, floatStyles, typographyStyles, responsiveStyles } = loadWithReactNativeWebPlatform(() => ({
+const { baseStyles, floatStyles, imageGridStyles, typographyStyles, responsiveStyles } = loadWithReactNativeWebPlatform(() => ({
   ...(require('../components/travel/stableContent/webStyles/base') as typeof import('../components/travel/stableContent/webStyles/base')),
   ...(require('../components/travel/stableContent/webStyles/floats') as typeof import('../components/travel/stableContent/webStyles/floats')),
+  ...(require('../components/travel/stableContent/webStyles/imageGrids') as typeof import('../components/travel/stableContent/webStyles/imageGrids')),
   ...(require('../components/travel/stableContent/webStyles/typography') as typeof import('../components/travel/stableContent/webStyles/typography')),
   ...(require('../components/travel/stableContent/webStyles/responsive') as typeof import('../components/travel/stableContent/webStyles/responsive')),
 }))
@@ -109,6 +110,7 @@ function buildFixtureHtml(description: string): string {
   const richTextStyles =
     baseStyles(COLORS, WEB_RICH_TEXT_CLASS, WEB_RICH_TEXT_FULL_WIDTH_CLASS) +
     floatStyles(COLORS, WEB_RICH_TEXT_CLASS) +
+    imageGridStyles(COLORS, WEB_RICH_TEXT_CLASS) +
     typographyStyles(COLORS, WEB_RICH_TEXT_CLASS) +
     responsiveStyles(COLORS, WEB_RICH_TEXT_CLASS)
   // #1623/#2411: two-step pipeline matching production — the persisted
@@ -311,4 +313,54 @@ test.describe('#1623 backward float wrap (text -> single portrait -> heading)', 
     expect(problems.consoleErrors).toEqual([])
     expect(problems.pageErrors).toEqual([])
   })
+})
+
+test('@perf mobile article photo groups reserve their declared dimensions before image decode', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const portrait = { width: 1200, height: 1600 }
+  const landscape = { width: 1600, height: 1200 }
+  const groups = [[portrait, landscape], [portrait, portrait, landscape]]
+  const dimensions = groups.flat()
+  const origin = 'https://article-photo-fixture.test'
+  let releaseImages!: () => void
+  const waitForRelease = new Promise<void>((resolve) => { releaseImages = resolve })
+  await page.route(`${origin}/*`, async (route) => {
+    const index = Number(new URL(route.request().url()).pathname.slice(1))
+    const { width, height } = dimensions[index]
+    await waitForRelease
+    await route.fulfill({
+      contentType: 'image/svg+xml',
+      body: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"/>`,
+    })
+  })
+  const photos = dimensions.map(({ width, height }, index) => `
+    <p class="rich-image-frame" style="--travel-rich-image-aspect:${width}/${height}">
+      <img src="${origin}/${index}" width="${width}" height="${height}" style="aspect-ratio:${width}/${height}" alt="Fixture ${index}">
+    </p>`)
+  const images = page.locator('.travel-rich-text img')
+  const readGeometry = () => images.evaluateAll((nodes: HTMLImageElement[]) =>
+    nodes.map((node) => {
+      const { top, width, height } = node.getBoundingClientRect()
+      return { top, width, height }
+    }),
+  )
+  try {
+    await page.setContent(
+      buildFixtureHtml(photos.slice(0, 2).join('') + '<h2>Next group</h2>' + photos.slice(2).join('')),
+      { waitUntil: 'domcontentloaded' },
+    )
+    await expect(page.locator('.img-row-2-mixed img')).toHaveCount(2)
+    await expect(page.locator('.img-grid img')).toHaveCount(3)
+    expect(await images.evaluateAll((nodes: HTMLImageElement[]) => nodes.every((node) => !node.complete))).toBe(true)
+    const before = await readGeometry()
+    for (const [index, geometry] of before.entries()) {
+      const { width, height } = dimensions[index]
+      expect(geometry.height).toBeCloseTo(geometry.width * height / width, 1)
+    }
+    releaseImages()
+    await images.evaluateAll((nodes: HTMLImageElement[]) => Promise.all(nodes.map((node) => node.decode())))
+    expect(await readGeometry()).toEqual(before)
+  } finally {
+    releaseImages()
+  }
 })
