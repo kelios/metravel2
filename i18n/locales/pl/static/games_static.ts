@@ -1,0 +1,16 @@
+export const gamesStaticResources = {
+  title: "Gry i quizy",
+  seoTitle: "Gry i kolorowanki na podróż | MeTravel",
+  description: "Materiały na podróże i spacery. Pobierz kolorowankę na podstawie zdjęć MeTravel i zabierz ją w drogę.",
+  note: "Podpisy w kolorowankach są w języku rosyjskim.",
+  coloringTitle: "Kolorowanki na podróż",
+  articleTitle: "Kolorowanka na podstawie zdjęcia z podróży",
+  bookFormat: "A4 · Liczba stron: {{count}}",
+  downloadBook: "Pobierz całą książeczkę · PDF",
+  downloadSheet: "Pobierz arkusz A4 · PDF",
+  loading: "Wczytujemy kolorowanki…",
+  loadError: "Nie udało się wczytać kolorowanek.",
+  retry: "Spróbuj ponownie",
+  empty: "Kolorowanki nie zostały jeszcze opublikowane.",
+  pdfError: "Nie udało się rozpocząć pobierania. Spróbuj ponownie.",
+} as const

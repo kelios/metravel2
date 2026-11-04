@@ -5,6 +5,7 @@ import { appStatsStaticResources } from './app_stats_static'
 import { authStaticResources } from './auth_static'
 import { calendarStaticResources } from './calendar_static'
 import { errorsStaticResources } from './errors_static'
+import { gamesStaticResources } from './games_static'
 import { homeStaticResources } from './home_static'
 import { legalStaticResources } from './legal_static'
 import { navigationStaticResources } from './navigation_static'
@@ -21,6 +22,7 @@ export const staticResources = {
   authStatic: authStaticResources,
   calendarStatic: calendarStaticResources,
   errorsStatic: errorsStaticResources,
+  gamesStatic: gamesStaticResources,
   homeStatic: homeStaticResources,
   legalStatic: legalStaticResources,
   navigationStatic: navigationStaticResources,

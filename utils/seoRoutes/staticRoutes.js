@@ -118,6 +118,12 @@ const STATIC_ROUTE_SEO = Object.freeze([
     breadcrumbKey: 'adventStatic:nav.label',
   },
   {
+    route: '/games',
+    titleKey: 'gamesStatic:seoTitle',
+    descriptionKey: 'gamesStatic:description',
+    breadcrumbKey: 'gamesStatic:title',
+  },
+  {
     route: '/favorites',
     title: 'Избранные маршруты и места | Metravel',
     description: 'Твои сохранённые путешествия и маршруты.',

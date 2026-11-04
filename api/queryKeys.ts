@@ -38,6 +38,8 @@ export const queryKeys = {
   ) => ['travels-near-map', travelId, origin, travelIds] as const,
   travelsPopular: () => ['travels-popular'] as const,
   travelRouteFiles: (travelId: string | number) => ['travel-route-files', travelId] as const,
+  gamesMediaManifest: () => ['games-media-manifest'] as const,
+  coloringSheetIndex: (url: string | undefined) => ['coloring-sheet-index', url] as const,
   travelsOfMonth: () => ['travelsOfMonth'] as const,
   // Справочники живут в общем кэше api/miscOptimized, у React Query остались
   // только ключи, которые кто-то реально читает: filters() — PointList визарда,

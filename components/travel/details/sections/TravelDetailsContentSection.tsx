@@ -16,6 +16,7 @@ import { useTravelDetailsContentSectionModel } from '../hooks/useTravelDetailsCo
 import YouTubeSectionSlot from './YouTubeSectionSlot'
 import DeferredQuestForCitySection from './DeferredQuestForCitySection'
 import TravelLinkGraphSection from './TravelLinkGraphSection'
+import TravelColoringSlot from './TravelColoringSlot'
 import { useTravelLoaderPayload } from '../travelLoaderData'
 import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 import TravelRegisterCtaSection from './TravelRegisterCtaSection'
@@ -143,6 +144,7 @@ export const TravelDetailsContentSection: React.FC<{
               {Platform.OS === 'web' && <h2 style={WEB_SR_ONLY_HEADING_STYLE as any}>{i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.soderzhanie_marshruta_4fdeae71')}</h2>}
 
               <TravelDescription title={travel.name} htmlContent={descriptionContent.html} serverSanitized={descriptionContent.serverSanitized} articleBodyMedia={articleBodyMedia} noBox />
+              <TravelColoringSlot key={travel.id} travelId={travel.id} />
 
               <TravelRegisterCtaSection
                 redirect={travel.slug ? `/travels/${travel.slug}` : undefined}

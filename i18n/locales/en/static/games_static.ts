@@ -1,0 +1,16 @@
+export const gamesStaticResources = {
+  title: "Games and quizzes",
+  seoTitle: "Travel games and coloring pages | MeTravel",
+  description: "Activities for trips and walks. Download a coloring book based on MeTravel photos and take it on your trip.",
+  note: "The coloring pages have captions in Russian.",
+  coloringTitle: "Travel coloring books",
+  articleTitle: "Coloring page from a trip photo",
+  bookFormat: "A4 · Pages: {{count}}",
+  downloadBook: "Download the full book · PDF",
+  downloadSheet: "Download A4 sheet · PDF",
+  loading: "Loading coloring books…",
+  loadError: "Could not load coloring books.",
+  retry: "Try again",
+  empty: "No coloring books have been published yet.",
+  pdfError: "The download could not start. Please try again.",
+} as const

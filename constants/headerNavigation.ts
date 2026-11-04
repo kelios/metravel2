@@ -48,6 +48,7 @@ export const HEADER_NAV_ITEMS: HeaderNavItem[] = [
  * навигации (`TOP_LEVEL_SECTION_PATHS`) и потерял бы строку «Назад».
  */
 export const SUPPLEMENTARY_NAV_ITEMS: HeaderNavItem[] = [
+  { path: '/games', get label() { return i18nT('gamesStatic:title') }, icon: 'compass', priority: 'secondary' },
   // #2866: виден только в окне кампании — отсекает общая политика `isNavRouteAvailable`.
   { path: '/advent', get label() { return i18nT('adventStatic:nav.label') }, get hint() { return i18nT('adventStatic:nav.hint') }, icon: 'gift', priority: 'secondary' },
   { path: '/articles', get label() { return i18nT('navigationStatic:components.layout.bottomDockModel.stati_ad8e46b8') }, get hint() { return i18nT('navigationStatic:constants.headerNavigation.hint.articles') }, icon: 'file-text', priority: 'secondary' },

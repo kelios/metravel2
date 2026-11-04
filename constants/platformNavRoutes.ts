@@ -20,7 +20,7 @@ export const BOOK_EXPORT_ROUTE = '/export'
  *   (отказ 5.1.2(i) от 25.09.2026, #2135). Сам экран по прямой ссылке на native
  *   говорит, что приложение не использует cookies и не отслеживает пользователя.
  */
-export const WEB_ONLY_NAV_ROUTES: readonly string[] = [COOKIE_SETTINGS_ROUTE, '/books']
+export const WEB_ONLY_NAV_ROUTES: readonly string[] = [COOKIE_SETTINGS_ROUTE, '/books', '/games']
 
 /**
  * Маршруты, которым в приложении нужен системный диалог печати. PDF-книга
