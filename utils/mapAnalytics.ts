@@ -9,6 +9,7 @@ import { queueAnalyticsEvent } from '@/utils/analytics';
 export const MAP_ANALYTICS_EVENTS = {
   open: 'map_open',
   filterChange: 'map_filter_change',
+  placeSearch: 'map_place_search',
   markerOpen: 'map_marker_open',
   routeBuild: 'map_route_build',
 } as const;
@@ -16,6 +17,7 @@ export const MAP_ANALYTICS_EVENTS = {
 export type MapOpenEntry = 'direct' | 'place_link' | 'coords_link';
 export type MapFilterName = 'categories' | 'categoryTravelAddress' | 'radius' | 'reset';
 export type MapMarkerKind = 'place' | 'travel_point' | 'point';
+export type MapPlaceSearchOutcome = 'found' | 'empty' | 'error';
 
 type MarkerLike = {
   placeId?: unknown;
@@ -44,6 +46,18 @@ export const resolveMapMarkerKind = (point: MarkerLike | null | undefined): MapM
 
 export const trackMapOpened = ({ entry, isMobile }: { entry: MapOpenEntry; isMobile: boolean }) => {
   emit(MAP_ANALYTICS_EVENTS.open, { entry, layout: isMobile ? 'mobile' : 'desktop' });
+};
+
+export const trackMapPlaceSearch = (
+  outcome: MapPlaceSearchOutcome,
+  isMobile: boolean,
+  radiusKm: number,
+) => {
+  emit(MAP_ANALYTICS_EVENTS.placeSearch, {
+    outcome,
+    layout: isMobile ? 'mobile' : 'desktop',
+    radius_km: radiusKm,
+  });
 };
 
 export const trackMapFilterChanged = ({

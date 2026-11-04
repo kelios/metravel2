@@ -30,7 +30,7 @@ export const fetchTravelsForMap = async (
       if (options?.throwOnError) throw err;
       return [] as unknown as TravelsForMap;
     }
-    const payload = await safeJsonParse<unknown>(res, []);
+    const payload = await safeJsonParse<unknown>(res, options?.throwOnError ? undefined : []);
     return normalizeTravelsForMapPayload(payload);
   } catch (e: unknown) {
     if (e instanceof Error && e.name === 'AbortError') {

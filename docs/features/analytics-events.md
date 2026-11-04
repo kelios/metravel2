@@ -84,13 +84,14 @@
 
 ### Карта (`/map`, #2908)
 
-Только web, отправка — `utils/mapAnalytics.ts`; координаты, адреса и текст
-поиска не передаются.
+Только web, отправка — `utils/mapAnalytics.ts`. Параметры этих событий не
+содержат координат, адресов и текста поиска.
 
 | Событие | Где | Параметры | Смысл |
 |---|---|---|---|
 | `map_open` | `useMapAnalytics` | `entry` (`direct` / `place_link` / `coords_link`), `layout` (`mobile` / `desktop`) | экран получил фокус: вкладка карты после первого визита остаётся смонтированной, поэтому событие — на каждый переход в фокус, а не на монтирование |
 | `map_filter_change` | `useMapAnalytics` → `onFilterChange` фильтров (панель и мобильные поповеры) | `filter` (`categories` / `categoryTravelAddress` / `radius` / `reset`), `value_count?`, `radius_km?` | выбор категории, радиуса или сброс; ввод текста (`searchQuery`, `address`) событием не считается |
+| `map_place_search` | `useMapDataController` и результат запроса из `useMapTravels` | `outcome` (`found` / `empty` / `error`), `layout`, `radius_km` | завершившийся поиск места по названию в режиме радиуса. Повторный запрос данных с тем же текстом и радиусом в открытом экране не считается. Для разреза по исходу в GA4 нужен параметр события `outcome`, в Метрике — отдельная JavaScript-цель `map_place_search` |
 | `map_marker_open` | `Map.web.tsx` → `handleMarkerZoom` → проп `onMarkerOpened`, который передаёт только экран /map (`useMapScreenController`) | `kind` (`place` / `travel_point` / `point`), `surface` (`popup` / `card`) | тап по маркеру на /map; общий `Map.web` карты квестов, планировщика и точек пользователя событие не шлёт |
 | `map_route_build` | `useMapAnalytics` | `transport_mode`, `points_count`, `distance_km` (округлено) | маршрут построен; повторный расчёт той же геометрии и восстановленный после перезагрузки маршрут событие не дают |
 
@@ -118,6 +119,7 @@
 
 - Unit: `__tests__/utils/growthFunnelAnalytics.test.ts`,
   `__tests__/utils/mapAnalytics.test.ts`, `__tests__/hooks/map/useMapAnalytics.test.ts`,
+  `__tests__/hooks/map/useMapPlaceSearchAnalytics.test.tsx`,
   `__tests__/components/common/ContributionBanner.author.test.tsx`.
 - Прод: изолированный браузер, слушатель `metravel:analytics-intent`
   (`e2e/helpers/analytics.ts`) — события видны и под автоматизацией, хотя в

@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { fetchTravelsForMap, fetchTravelsNearRoute } from '@/api/map';
 import { buildTravelQueryParams } from '@/utils/filterQuery';
 import { filterMapPointsByCategory, resolveMapCategorySelection } from '@/utils/mapCategorySelection';
 import type { MapPointCountScope } from '@/utils/mapPointCount';
+import type { MapPlaceSearchOutcome } from '@/utils/mapAnalytics';
 import type { TravelCoords } from '@/types/types';
 import { logError } from '@/utils/logger';
 import { resolveMapRadiusKm } from '@/constants/mapConfig';
@@ -335,7 +337,7 @@ export function useMapTravels({
    // Страница — обычный объект {items,total}. Раньше total хранился как non-enumerable
    // свойство на массиве, но structural-sharing TanStack Query его не копирует →
    // в getNextPageParam total терялся и пагинация падала на длину-fallback.
-   type TravelCoordsPage = { items: TravelCoords[]; total?: number };
+   type TravelCoordsPage = { items: TravelCoords[]; total?: number; searchFailed?: true };
    const getTotalFromResult = (value: unknown): number | undefined => {
      if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
      const total = (value as { __total?: unknown }).__total;
@@ -348,6 +350,7 @@ export function useMapTravels({
     initialPageParam: 0,
     queryFn: async ({ pageParam, signal }) => {
       const page = typeof pageParam === 'number' ? pageParam : 0;
+      const isPlaceSearch = Platform.OS === 'web' && page === 0 && queryParams.query.length > 0;
       const result = await fetchTravelsForMap(
         page,
         MAP_TRAVELS_PER_PAGE,
@@ -358,8 +361,16 @@ export function useMapTravels({
           categoryTravelAddress: parsedFilters.categoryTravelAddress,
           query: queryParams.query,
         },
-        { signal }
-      );
+        isPlaceSearch ? { signal, throwOnError: true } : { signal },
+      ).catch((error: unknown) => {
+        if (!isPlaceSearch || signal.aborted || (error instanceof Error && error.name === 'AbortError')) {
+          throw error;
+        }
+        return null;
+      });
+
+      // Keep the existing UI fallback, but don't report an HTTP failure as a zero-result search.
+      if (result === null) return { items: [], searchFailed: true };
 
       const total = getTotalFromResult(result);
       const values = Array.isArray(result)
@@ -538,11 +549,19 @@ export function useMapTravels({
   const totalScope: MapPointCountScope = usesOfflineIndex || isClientCategoryFilter || queryParams.mode !== 'radius' ||
     typeof radiusQuery.data?.pages?.[0]?.total !== 'number' ? 'loaded' : 'radius';
 
+  let radiusSearchOutcome: MapPlaceSearchOutcome | null = null;
+  if (Platform.OS === 'web' && mode === 'radius' && enabledRadius && searchQuery && isConnected &&
+      radiusQuery.fetchStatus === 'idle' && !radiusQuery.isPlaceholderData) {
+    if (radiusQuery.isError || radiusQuery.data?.pages[0]?.searchFailed) radiusSearchOutcome = 'error';
+    else if (radiusQuery.isSuccess) radiusSearchOutcome = total > 0 ? 'found' : 'empty';
+  }
+
   return useMemo(() => ({
     allTravelsData,
     filteredTravelsData,
     total,
     totalScope,
+    radiusSearchOutcome,
     isLoading: usesOfflineIndex ? false : isLoading,
     isFetching: usesOfflineIndex ? false : isFetching,
     isPlaceholderData: usesOfflineIndex ? false : isPlaceholderData,
@@ -557,6 +576,7 @@ export function useMapTravels({
     filteredTravelsData,
     total,
     totalScope,
+    radiusSearchOutcome,
     isLoading,
     isFetching,
     isPlaceholderData,

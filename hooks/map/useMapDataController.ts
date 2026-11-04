@@ -3,7 +3,7 @@
  * @module hooks/map/useMapDataController
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { TravelCoords } from '@/types/types';
 import { useDebouncedValueWithPending } from '@/hooks/useDebouncedValue';
@@ -13,6 +13,8 @@ import type { MapFilterValues } from '@/utils/mapFiltersStorage';
 import { useMapTravels } from './useMapTravels';
 import { queryKeys } from '@/api/queryKeys';
 import type { MapPointCountScope } from '@/utils/mapPointCount';
+import { resolveMapRadiusKm } from '@/constants/mapConfig';
+import { trackMapPlaceSearch } from '@/utils/mapAnalytics';
 
 interface UseMapDataControllerOptions {
   /**
@@ -174,6 +176,7 @@ export function useMapDataController(
     filteredTravelsData: travelsData,
     total,
     totalScope,
+    radiusSearchOutcome,
     isLoading: loading,
     isFetching,
     isPlaceholderData,
@@ -191,6 +194,23 @@ export function useMapDataController(
     fullRouteCoords,
     isFocused,
   });
+
+  const searchTerm = String(filterValues.searchQuery ?? '').trim();
+  const debouncedSearchTerm = String(debouncedFilterValues.searchQuery ?? '').trim();
+  const searchRadius = resolveMapRadiusKm(debouncedFilterValues.radius);
+  const lastReportedSearch = useRef<{ term: string; radius: number } | null>(null);
+  useEffect(() => {
+    if (!searchTerm) {
+      lastReportedSearch.current = null;
+      return;
+    }
+    if (isDebouncingFilters || searchTerm !== debouncedSearchTerm || !radiusSearchOutcome) return;
+    const last = lastReportedSearch.current;
+    if (last?.term === searchTerm && last.radius === searchRadius) return;
+
+    lastReportedSearch.current = { term: searchTerm, radius: searchRadius };
+    trackMapPlaceSearch(radiusSearchOutcome, isMobile, searchRadius);
+  }, [debouncedSearchTerm, isDebouncingFilters, isMobile, radiusSearchOutcome, searchRadius, searchTerm]);
 
   // Invalidate query cache and refetch
   const queryClient = useQueryClient();
