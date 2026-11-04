@@ -51,6 +51,18 @@ describe('api/user subscriptions', () => {
         });
     });
 
+    it('forwards the owner check to both transports', async () => {
+        const beforeFetch = jest.fn();
+        mockedPost.mockResolvedValueOnce(null);
+        mockedDelete.mockResolvedValueOnce(null);
+
+        await subscribeToUser(42, beforeFetch);
+        await unsubscribeFromUser(42, beforeFetch);
+
+        expect(mockedPost).toHaveBeenCalledWith('/user/42/subscribe/', undefined, undefined, { beforeFetch });
+        expect(mockedDelete).toHaveBeenCalledWith('/user/42/unsubscribe/', undefined, { beforeFetch });
+    });
+
     describe('fetchMySubscriptions', () => {
         it('returns unwrapped array from API', async () => {
             const profiles = [

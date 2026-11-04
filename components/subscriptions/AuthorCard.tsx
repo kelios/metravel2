@@ -5,12 +5,10 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, Platform, Image, ScrollView, StyleSheet } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
-import type { AuthorWithTravels } from '@/hooks/useSubscriptionsData';
-import { resolveProfileFullName } from '@/api/user';
+import type { AuthorWithTravels } from '@/api/user';
 import TabTravelCard from '@/components/listTravel/TabTravelCard';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
-import { SkeletonLoader } from '@/components/ui/SkeletonLoader';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -43,11 +41,11 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
   const { isMobile, width } = useResponsive();
   const isCompact = isMobile || width < 640;
   const styles = useMemo(() => createStyles(colors, isCompact), [colors, isCompact]);
-  const { profile, travels, travelsTotal, isLoadingTravels } = author;
+  const { profile, travels, travelsTotal } = author;
   const [avatarError, setAvatarError] = useState(false);
 
   const fullName = useMemo(() => {
-    return resolveProfileFullName(profile) || i18nT('sharedStatic:user.fallbackName');
+    return profile.display_name || i18nT('sharedStatic:user.fallbackName');
   }, [profile]);
 
   const initials = useMemo(() => {
@@ -59,7 +57,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
       .toUpperCase() || null;
   }, [fullName]);
 
-  const authorUserId = profile.user ?? profile.id;
+  const authorUserId = profile.user;
 
   const travelCountText = useMemo(() => {
     const n = travelsTotal;
@@ -79,9 +77,9 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
           {...Platform.select({ web: { cursor: 'pointer' } })}
         >
           <View style={styles.avatar}>
-            {profile.avatar && !avatarError ? (
+            {profile.avatar_url && !avatarError ? (
               <Image
-                source={{ uri: optimizeImageUrl(profile.avatar, { width: 96, quality: 70, fit: 'cover' }) ?? profile.avatar }}
+                source={{ uri: optimizeImageUrl(profile.avatar_url, { width: 96, quality: 70, fit: 'cover' }) ?? profile.avatar_url }}
                 style={styles.avatarImage}
                 onError={() => setAvatarError(true)}
               />
@@ -94,7 +92,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
           <View style={styles.authorTextBlock}>
             <Text style={styles.authorName} numberOfLines={1}>{fullName}</Text>
             <Text style={styles.authorSub}>
-              {isLoadingTravels ? i18nT('shared:components.subscriptions.AuthorCard.zagruzka_88497bbc') : travelCountText}
+              {travelCountText}
             </Text>
           </View>
         </Pressable>
@@ -121,11 +119,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
         </View>
       </View>
 
-      {isLoadingTravels ? (
-        <View style={styles.travelsLoading}>
-          <SkeletonLoader width="100%" height={180} borderRadius={12} />
-        </View>
-      ) : travels.length === 0 ? (
+      {travels.length === 0 ? (
         <Text style={styles.noTravels}>{i18nT('shared:components.subscriptions.AuthorCard.net_opublikovannyh_puteshestviy_e2f9c564')}</Text>
       ) : (
         <ScrollView
@@ -137,7 +131,7 @@ function AuthorCard({ author, onUnsubscribe, onMessage, onOpenTravel, onOpenProf
           contentContainerStyle={styles.travelsScroll}
           {...Platform.select({ web: { style: WEB_HORIZONTAL_SCROLL_STYLE } })}
         >
-          {travels.slice(0, 10).map((travel) => {
+          {travels.map((travel) => {
             const travelUrl = resolveTravelUrl(travel);
             return (
               <View key={travel.id} style={styles.travelCardWrap}>
@@ -233,7 +227,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isCompact: boo
       alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.danger,
       ...(Platform.OS === 'web' ? WEB_CURSOR_POINTER_STYLE : {}),
     },
-    travelsLoading: { paddingHorizontal: 14, paddingBottom: 14 },
     noTravels: { paddingHorizontal: 14, paddingBottom: 14, fontSize: 13, color: colors.textMuted, fontStyle: 'italic' },
     travelsScroll: {
       paddingHorizontal: isCompact ? 12 : 14,

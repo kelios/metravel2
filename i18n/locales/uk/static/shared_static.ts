@@ -118,6 +118,8 @@ export const sharedStaticResources = {
   "contact.sendFailed": "Не вдалося надіслати повідомлення.",
   "errors.tryLater": "Спробуйте пізніше",
   "errors.retry": "Повторити",
+  "subscription.statusAction": "Перевірити статус підписки",
+  "subscription.listLoadFailed": "Не вдалося завантажити список",
   "myTravels.loadFailedTitle": "Не вдалося завантажити маршрути",
   "profileTabs.countUnavailable": "кількість недоступна",
   "article.loadFailed": "Неможливо завантажити статтю",

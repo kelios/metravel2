@@ -7,12 +7,9 @@ import { useQuestContentLocale } from '@/hooks/useQuestContentLocale'
 import { translate as i18nT, translatePlural } from '@/i18n'
 import { formatInteger } from '@/i18n/format'
 import { readRetryOnce } from '@/utils/queryRetryPolicy'
-import { findQuestCityForQuery, isSiteSearchQueryLongEnough } from '@/utils/siteSearchQuestCity'
+import { normalizeSiteSearchText, SITE_SEARCH_MIN_QUERY_LENGTH } from '@/utils/siteSearchQuestCity'
 import SearchAlsoFoundSummary, { type SearchAlsoFoundStatus } from '../SearchAlsoFoundSummary'
 
-// Справочник городов меняется редко: сутки свежести, чтобы повторные запросы
-// поиска не ходили за ним снова.
-const QUEST_CITIES_STALE_TIME = 24 * 60 * 60 * 1000
 const PLACES_STALE_TIME = 5 * 60 * 1000
 
 // Раскрытый список (карточка квеста с медиа) — отдельный чанк. Он догружается,
@@ -35,8 +32,9 @@ const NO_PLACES: never[] = []
 type Input = {
   /** Уже дебаунснутый запрос каталога (`debSearch`). */
   query: string
-  /** Экран `/search`: справочник городов прогревается сразу, до ввода запроса. */
+  /** Только для экрана `/search`. */
   enabled: boolean
+  authReady: boolean
   userId: string | null
 }
 
@@ -62,32 +60,21 @@ function buildSummaryLabel(status: SearchAlsoFoundStatus, questsTotal: number, p
  * «N квестов · M мест» или «ничего не нашлось». Ответ источников меняет только
  * текст строки; список раскрывается по тапу, то есть действием пользователя.
  */
-export function useSearchAlsoFound({ query, enabled, userId }: Input): ReactNode {
+export function useSearchAlsoFound({ query, enabled, authReady, userId }: Input): ReactNode {
   const locale = useQuestContentLocale()
   const trimmedQuery = query.trim()
-  const active = enabled && isSiteSearchQueryLongEnough(trimmedQuery)
-
-  const citiesQuery = useQuery({
-    queryKey: queryKeys.questCitiesDirectory(locale),
-    queryFn: async ({ signal }) => (await loadExtras()).fetchQuestCitiesDirectory(locale, signal),
-    enabled,
-    staleTime: QUEST_CITIES_STALE_TIME,
-    gcTime: QUEST_CITIES_STALE_TIME,
-    retry: readRetryOnce,
-  })
-
-  const city = useMemo(
-    () => (active && citiesQuery.data ? findQuestCityForQuery(citiesQuery.data, trimmedQuery) : null),
-    [active, citiesQuery.data, trimmedQuery],
-  )
+  const normalizedQuery = normalizeSiteSearchText(trimmedQuery)
+  const active = enabled && normalizedQuery.length >= SITE_SEARCH_MIN_QUERY_LENGTH
+  // Не сохраняем персональный ответ cookie-сессии под гостевым ключом до восстановления аккаунта.
+  const previewQuery = active && authReady ? normalizedQuery : ''
 
   const cityQuestsQuery = useQuery({
-    queryKey: queryKeys.siteSearchCityQuests(city?.id, userId, locale),
-    queryFn: async () => (await loadExtras()).fetchSiteSearchCityQuests(city!.id, locale),
-    enabled: active && city != null,
+    queryKey: queryKeys.siteSearchQuestPreview(previewQuery, userId, locale),
+    queryFn: async ({ signal }) => (await loadExtras()).fetchSiteSearchQuestPreview(previewQuery, locale, signal),
+    enabled: Boolean(previewQuery),
     staleTime: QUESTS_LIST_STALE_TIME,
     gcTime: QUESTS_LIST_GC_TIME,
-    retry: readRetryOnce,
+    retry: false,
   })
 
   const placesQuery = useQuery({
@@ -100,12 +87,10 @@ export function useSearchAlsoFound({ query, enabled, userId }: Input): ReactNode
 
   // Ошибка источника — «по нему ничего»: строка не ждёт повторов и не
   // показывает ошибку поверх выдачи статей.
-  const questsSettled =
-    citiesQuery.isError ||
-    (citiesQuery.isSuccess && (city == null || cityQuestsQuery.isSuccess || cityQuestsQuery.isError))
+  const questsSettled = cityQuestsQuery.isSuccess || cityQuestsQuery.isError
   const placesSettled = placesQuery.isSuccess || placesQuery.isError
 
-  const cityQuests = city ? cityQuestsQuery.data : undefined
+  const cityQuests = cityQuestsQuery.data
   const places = placesQuery.data
   const quests = cityQuests?.quests ?? NO_QUESTS
   const placeItems = places?.places ?? NO_PLACES
@@ -142,7 +127,7 @@ export function useSearchAlsoFound({ query, enabled, userId }: Input): ReactNode
             query={trimmedQuery}
             quests={quests}
             questsTotal={questsTotal}
-            questCityName={cityQuests?.cityName || city?.name || ''}
+            questCityName={cityQuests?.cityName ?? ''}
             questCitySegment={cityQuests?.citySegment ?? null}
             places={placeItems}
             placesTotal={placesTotal}
@@ -150,5 +135,5 @@ export function useSearchAlsoFound({ query, enabled, userId }: Input): ReactNode
         </Suspense>
       </SearchAlsoFoundSummary>
     )
-  }, [active, city?.name, cityQuests, expanded, handleToggle, label, placeItems, placesTotal, quests, questsTotal, status, trimmedQuery])
+  }, [active, cityQuests, expanded, handleToggle, label, placeItems, placesTotal, quests, questsTotal, status, trimmedQuery])
 }

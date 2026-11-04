@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, Platform, ScrollView } from 'react-native';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useIsFocused, useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSubscriptionsData, type SubscriptionTab } from '@/hooks/useSubscriptionsData';
@@ -25,6 +25,7 @@ export default function SubscriptionsScreen() {
   // сбрасывает Tab-навигатор на главную. Хук гейтит по Platform.OS === 'android'.
   useAndroidBackHandler();
   const router = useRouter();
+  const isFocused = useIsFocused();
   const params = useLocalSearchParams<{ tab?: string }>();
   const pushRoute = useCallback((href: string) => { router.push(href as Href); }, [router]);
   useResponsive();
@@ -39,10 +40,14 @@ export default function SubscriptionsScreen() {
 
   const {
     isAuthenticated, authReady,
-    subscriptions, subscribers, authors,
+    subscribers, authors,
     subscriptionsLoading, subscribersLoading,
-    getFullName, handleUnsubscribe,
-  } = useSubscriptionsData({ includeAuthorTravels: true });
+    subscriptionsCount, subscribersCount, subscriptionsPage, subscribersPage, handleUnsubscribe,
+  } = useSubscriptionsData({
+    enabled: isFocused,
+    readSubscriptions: activeTab === 'subscriptions',
+    readSubscribers: activeTab === 'subscribers',
+  });
 
   const handleMessage = useCallback((userId: number) => { pushRoute(`/messages?userId=${encodeURIComponent(userId)}`); }, [pushRoute]);
   const handleOpenTravel = useCallback((url: string) => { pushRoute(url); }, [pushRoute]);
@@ -107,12 +112,14 @@ export default function SubscriptionsScreen() {
         <SubscriptionsTabContent
           activeTab={activeTab}
           onChangeTab={setActiveTab}
-          subscriptions={subscriptions}
+          subscriptionsCount={subscriptionsCount}
+          subscribersCount={subscribersCount}
+          subscriptionsPage={subscriptionsPage}
+          subscribersPage={subscribersPage}
           subscribers={subscribers}
           authors={authors}
           subscriptionsLoading={subscriptionsLoading}
           subscribersLoading={subscribersLoading}
-          getFullName={getFullName}
           handleUnsubscribe={handleUnsubscribe}
           onMessage={handleMessage}
           onOpenTravel={handleOpenTravel}

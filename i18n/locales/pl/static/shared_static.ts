@@ -118,6 +118,8 @@ export const sharedStaticResources = {
   "contact.sendFailed": "Nie udało się wysłać wiadomości.",
   "errors.tryLater": "Spróbuj ponownie później",
   "errors.retry": "Spróbuj ponownie",
+  "subscription.statusAction": "Sprawdź status obserwowania",
+  "subscription.listLoadFailed": "Nie udało się wczytać listy",
   "myTravels.loadFailedTitle": "Nie udało się załadować tras",
   "profileTabs.countUnavailable": "liczba niedostępna",
   "article.loadFailed": "Nie udało się załadować artykułu",

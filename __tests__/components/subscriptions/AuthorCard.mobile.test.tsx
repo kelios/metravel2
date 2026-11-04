@@ -22,14 +22,11 @@ jest.mock('@/hooks/useResponsive', () => ({
 
 const author = {
   profile: {
-    id: 42,
     user: 42,
-    first_name: 'Siarhey',
-    last_name: '',
-    avatar: null,
+    display_name: 'Siarhey',
+    avatar_url: null,
   },
   travelsTotal: 2,
-  isLoadingTravels: false,
   travels: [
     {
       id: 101,

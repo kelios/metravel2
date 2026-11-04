@@ -96,21 +96,25 @@ export default function PublicUserProfileScreen() {
   // #2134: заблокированный вами — путешествия не запрашиваются и не показываются.
   const isBlockedByMe = !isOwnProfile && profile?.is_blocked_by_me === true;
 
+  const needsSocialCounts = Boolean(profile && !profile.tab_counters);
   const {
-    subscriptions,
     subscribers,
     authors,
     subscriptionsLoading,
     subscribersLoading,
-    getFullName,
+    subscriptionsCount: subscriptionsListCount,
+    subscribersCount: subscribersListCount,
+    subscriptionsPage,
+    subscribersPage,
     handleUnsubscribe,
   } = useSubscriptionsData({
-    enabled: isOwnProfile,
-    includeAuthorTravels: isOwnProfile && activeTab === 'subscriptions',
+    enabled: isOwnProfile && isFocused,
+    readSubscriptions: activeTab === 'subscriptions' || needsSocialCounts,
+    readSubscribers: activeTab === 'subscribers' || needsSocialCounts,
   });
 
-  const subscribersCount = subscribers.length;
-  const subscriptionsCount = subscriptions.length;
+  const subscribersCount = subscribersListCount ?? profile?.tab_counters?.subscribers;
+  const subscriptionsCount = subscriptionsListCount ?? profile?.tab_counters?.subscriptions;
 
   const userAchievementsQuery = useUserAchievements(userId);
   const peerReceived = userAchievementsQuery.data?.peerReceived ?? [];
@@ -308,12 +312,14 @@ export default function PublicUserProfileScreen() {
           <SubscriptionsTabContent
             activeTab={activeTab}
             showTabBar={false}
-            subscriptions={subscriptions}
+            subscriptionsCount={subscriptionsCount}
+            subscribersCount={subscribersCount}
+            subscriptionsPage={subscriptionsPage}
+            subscribersPage={subscribersPage}
             subscribers={subscribers}
             authors={authors}
             subscriptionsLoading={subscriptionsLoading}
             subscribersLoading={subscribersLoading}
-            getFullName={getFullName}
             handleUnsubscribe={handleUnsubscribe}
             onMessage={handleMessageUser}
             onOpenTravel={handleOpenSubscribedTravel}

@@ -118,6 +118,8 @@ export const sharedStaticResources = {
   "contact.sendFailed": "Failed to send message.",
   "errors.tryLater": "Try again later",
   "errors.retry": "Retry",
+  "subscription.statusAction": "Check follow status",
+  "subscription.listLoadFailed": "Could not load the list",
   "myTravels.loadFailedTitle": "Couldn't load your routes",
   "profileTabs.countUnavailable": "count unavailable",
   "article.loadFailed": "Failed to load article",

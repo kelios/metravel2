@@ -1,172 +1,112 @@
-import React from 'react';
-import { Text } from 'react-native';
-import { act, render, renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook, waitFor } from '@testing-library/react-native';
 
-import { useSubscriptionsData } from '@/hooks/useSubscriptionsData';
+import { apiClient } from '@/api/client';
+import { queryKeys } from '@/api/queryKeys';
 import { useAuth } from '@/context/AuthContext';
-import { fetchMySubscriptions, fetchMySubscribers } from '@/api/user';
-import { fetchMyTravels } from '@/api/travelUserQueries';
+import { useInviteSubscribers, useSubscriptionsData } from '@/hooks/useSubscriptionsData';
 import { createAuthValue } from '../helpers/mockContextValues';
 import { createQueryWrapper } from '../helpers/testQueryClient';
-import { queryKeys } from '@/api/queryKeys';
 
-jest.mock('@/hooks/useQueryOwner', () => ({ useQueryOwner: () => '1' }));
-
-jest.mock('@/context/AuthContext', () => ({
-  useAuth: jest.fn(),
+jest.mock('@/api/client', () => ({ apiClient: { get: jest.fn() } }));
+jest.mock('@/context/AuthContext', () => ({ useAuth: jest.fn() }));
+jest.mock('@/hooks/useQueryOwner', () => ({
+  useQueryOwner: () => require('@/context/AuthContext').useAuth().userId,
 }));
 
-jest.mock('@/api/user', () => ({
-  fetchMySubscriptions: jest.fn(),
-  fetchMySubscribers: jest.fn(),
-  unsubscribeFromUser: jest.fn(),
-}));
+const mockedGet = jest.mocked(apiClient.get);
+const mockedUseAuth = jest.mocked(useAuth);
 
-jest.mock('@/api/travelUserQueries', () => ({
-  fetchMyTravels: jest.fn(),
-  unwrapMyTravelsPayload: jest.fn(() => ({ items: [], total: 0 })),
-}));
-
-jest.mock('@/utils/confirmAction', () => ({
-  confirmAction: jest.fn(() => Promise.resolve(true)),
-}));
-
-const mockedUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
-const mockedFetchMySubscriptions = fetchMySubscriptions as jest.Mock;
-const mockedFetchMySubscribers = fetchMySubscribers as jest.Mock;
-const mockedFetchMyTravels = fetchMyTravels as jest.Mock;
-
-const makeAuthor = (id: number) => ({
-  id,
-  user: id,
-  first_name: `Author ${id}`,
-  last_name: 'Tester',
+const auth = (id: string) => mockedUseAuth.mockReturnValue(
+  createAuthValue({ isAuthenticated: true, authReady: true, userId: id }),
+);
+const page = (ids: number[], count = ids.length, next: string | null = null) => ({
+  count,
+  next,
+  previous: null,
+  results: ids.map((id) => ({
+    user: id,
+    display_name: `Author ${id}`,
+    avatar_url: null,
+    travels_total: 8,
+    travels_preview: [{ id: 10, name: 'Published route', slug: 'published-route' }],
+  })),
 });
 
-function SubscriptionsProbe() {
-  const { authors } = useSubscriptionsData({ includeAuthorTravels: true });
-  return <Text testID="authors-count">{authors.length}</Text>;
-}
-
-describe('useSubscriptionsData', () => {
+describe('compact social reads', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockedUseAuth.mockReturnValue(
-      createAuthValue({
-        isAuthenticated: true,
-        authReady: true,
-        userId: '1',
-      })
-    );
-    mockedFetchMySubscribers.mockResolvedValue([]);
+    auth('1');
   });
 
-  it('distinguishes pending lists from a confirmed empty list', async () => {
-    let resolveSubscriptions!: (profiles: unknown[]) => void;
-    let resolveSubscribers!: (profiles: unknown[]) => void;
-    mockedFetchMySubscriptions.mockImplementation(() => new Promise((resolve) => { resolveSubscriptions = resolve; }));
-    mockedFetchMySubscribers.mockImplementationOnce(() => new Promise((resolve) => { resolveSubscribers = resolve; }));
-    const { result } = await renderHook(() => useSubscriptionsData(), { wrapper: createQueryWrapper().Wrapper });
-
-    expect(result.current.subscriptionsCount).toBeUndefined();
-    expect(result.current.subscribersCount).toBeUndefined();
-    await act(async () => resolveSubscribers([]));
-    await waitFor(() => expect(result.current.subscribersCount).toBe(0));
-    await act(async () => resolveSubscriptions([]));
-    await waitFor(() => expect(result.current.subscriptionsCount).toBe(0));
-  });
-
-  it('reads only the social list requested by the active profile tab', async () => {
-    mockedFetchMySubscriptions.mockResolvedValue([]);
-    const { rerender, result } = await renderHook(
-      (tab: 'overview' | 'subscribers' | 'subscriptions') => useSubscriptionsData({
-        readSubscribers: tab === 'subscribers',
-        readSubscriptions: tab === 'subscriptions',
-      }),
-      { initialProps: 'overview', wrapper: createQueryWrapper().Wrapper },
-    );
-    expect(mockedFetchMySubscribers).not.toHaveBeenCalled();
-    expect(mockedFetchMySubscriptions).not.toHaveBeenCalled();
-
-    await rerender('subscribers');
-    await waitFor(() => expect(result.current.subscribersCount).toBe(0));
-    expect(mockedFetchMySubscribers).toHaveBeenCalledTimes(1);
-    expect(mockedFetchMySubscriptions).not.toHaveBeenCalled();
-
-    await rerender('subscriptions');
-    await waitFor(() => expect(result.current.subscriptionsCount).toBe(0));
-    expect(mockedFetchMySubscribers).toHaveBeenCalledTimes(1);
-    expect(mockedFetchMySubscriptions).toHaveBeenCalledTimes(1);
-  });
-
-  it('preserves cached counts when a background refetch fails', async () => {
-    const { Wrapper, queryClient } = createQueryWrapper();
-    queryClient.setQueryData(queryKeys.mySubscriptions('1'), [makeAuthor(2)]);
-    mockedFetchMySubscriptions.mockRejectedValue(new Error('Network unavailable'));
-    const { result } = await renderHook(() => useSubscriptionsData(), { wrapper: Wrapper });
-
-    expect(result.current.subscriptionsCount).toBe(1);
-    const dataUpdatedAt = result.current.subscriptionsDataUpdatedAt;
-    await act(async () => {
-      await queryClient.refetchQueries({ queryKey: queryKeys.mySubscriptions('1') });
-    });
-    expect(queryClient.getQueryState(queryKeys.mySubscriptions('1'))?.status).toBe('error');
-    expect(result.current.subscriptionsCount).toBe(1);
-    expect(result.current.subscriptionsDataUpdatedAt).toBe(dataUpdatedAt);
-    await act(() => {
-      queryClient.setQueryData(queryKeys.mySubscriptions('1'), [], { updatedAt: dataUpdatedAt + 1 });
-    });
-    await waitFor(() => expect(result.current.subscriptionsCount).toBe(0));
-    expect(result.current.subscriptionsDataUpdatedAt).toBe(dataUpdatedAt + 1);
-  });
-
-  it('limits author travel preview requests to four concurrent fetches', async () => {
-    const authors = Array.from({ length: 8 }, (_, index) => makeAuthor(index + 1));
-    let activeFetches = 0;
-    let maxConcurrentFetches = 0;
-
-    mockedFetchMySubscriptions.mockResolvedValue(authors);
-    mockedFetchMyTravels.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          activeFetches += 1;
-          maxConcurrentFetches = Math.max(maxConcurrentFetches, activeFetches);
-          setTimeout(() => {
-            activeFetches -= 1;
-            resolve([]);
-          }, 20);
-        })
-    );
-
-    await render(<SubscriptionsProbe />, {
+  it('loads two explicit pages for 21 authors without any per-author reads', async () => {
+    mockedGet.mockResolvedValueOnce(page(Array.from({ length: 20 }, (_, i) => i + 2), 21, '/api/user/subscriptions/?page=2'))
+      .mockResolvedValueOnce(page([22], 21));
+    const { result } = await renderHook(() => useSubscriptionsData({ readSubscribers: false }), {
       wrapper: createQueryWrapper().Wrapper,
     });
 
-    await waitFor(() => {
-      expect(mockedFetchMyTravels).toHaveBeenCalledTimes(authors.length);
-    });
+    await waitFor(() => expect(result.current.authors).toHaveLength(20));
+    const first = result.current.authors[0];
+    expect(first).toMatchObject({ profile: { user: 2 }, travels: [{ id: 10, slug: 'published-route' }], travelsTotal: 8 });
+    expect(result.current.subscriptionsCount).toBe(21);
+    expect(result.current.subscriptionsPage.canLoadMore).toBe(true);
+    expect(mockedGet).toHaveBeenCalledTimes(1);
 
-    expect(maxConcurrentFetches).toBeLessThanOrEqual(4);
-    expect(mockedFetchMyTravels).toHaveBeenCalledWith({ user_id: 1, perPage: 10, signal: expect.any(AbortSignal) });
+    await act(async () => result.current.subscriptionsPage.loadMore());
+    await waitFor(() => expect(result.current.authors).toHaveLength(21));
+    expect(result.current.authors[0]).toBe(first);
+    expect(result.current.subscriptionsCount).toBe(21);
+    expect(result.current.subscriptionsPage.canLoadMore).toBe(false);
+    expect(mockedGet.mock.calls).toEqual([
+      ['/user/subscriptions/?view=compact&page=1&page_size=20', undefined, { signal: expect.any(AbortSignal) }],
+      ['/user/subscriptions/?view=compact&page=2&page_size=20', undefined, { signal: expect.any(AbortSignal) }],
+    ]);
   });
 
-  it('cancels abandoned author previews and restarts them on return', async () => {
-    mockedFetchMySubscriptions.mockResolvedValue([makeAuthor(2)]);
-    mockedFetchMyTravels
-      .mockImplementationOnce(() => new Promise(() => {}))
-      .mockResolvedValueOnce([]);
-    const { rerender, result } = await renderHook(
-      (active: boolean) => useSubscriptionsData({ readSubscriptions: active, includeAuthorTravels: active }),
-      { initialProps: true, wrapper: createQueryWrapper().Wrapper },
-    );
+  it('cancels the inactive tab and never publishes another viewer’s late result', async () => {
+    let resolveOld!: (value: ReturnType<typeof page>) => void;
+    mockedGet.mockImplementationOnce(() => new Promise((resolve) => { resolveOld = resolve; }))
+      .mockResolvedValueOnce(page([5]))
+      .mockResolvedValueOnce(page([17]));
+    const { rerender, result } = await renderHook((tab: 'subscriptions' | 'subscribers') => useSubscriptionsData({
+      readSubscriptions: tab === 'subscriptions',
+      readSubscribers: tab === 'subscribers',
+    }), { initialProps: 'subscriptions', wrapper: createQueryWrapper().Wrapper });
 
-    await waitFor(() => expect(mockedFetchMyTravels).toHaveBeenCalledTimes(1));
-    const firstSignal: AbortSignal = mockedFetchMyTravels.mock.calls[0][0].signal;
-    await rerender(false);
-    expect(firstSignal.aborted).toBe(true);
+    await waitFor(() => expect(mockedGet).toHaveBeenCalledTimes(1));
+    const originalSignal = mockedGet.mock.calls[0][2]?.signal;
+    await rerender('subscribers');
+    await waitFor(() => expect(result.current.subscribers[0]?.profile.user).toBe(5));
+    expect(originalSignal?.aborted).toBe(true);
 
-    await rerender(true);
-    await waitFor(() => expect(mockedFetchMyTravels).toHaveBeenCalledTimes(2));
-    await waitFor(() => expect(result.current.authors[0]?.isLoadingTravels).toBe(false));
+    auth('4');
+    await rerender('subscribers');
+    await act(async () => resolveOld(page([99])));
+    await waitFor(() => expect(result.current.subscribers[0]?.profile.user).toBe(17));
+    expect(result.current.authors).toHaveLength(0);
+    expect(mockedGet.mock.calls.map(([url]) => url)).toEqual([
+      '/user/subscriptions/?view=compact&page=1&page_size=20',
+      '/user/subscribers/?view=compact&page=1&page_size=20',
+      '/user/subscribers/?view=compact&page=1&page_size=20',
+    ]);
+  });
+
+  it('keeps a genuine server zero through a background failure', async () => {
+    mockedGet.mockResolvedValueOnce(page([])).mockRejectedValueOnce(new Error('bad response'));
+    const { Wrapper, queryClient } = createQueryWrapper();
+    const { result } = await renderHook(() => useSubscriptionsData({ readSubscribers: false }), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.subscriptionsCount).toBe(0));
+    const updatedAt = result.current.subscriptionsDataUpdatedAt;
+
+    await act(async () => queryClient.refetchQueries({ queryKey: queryKeys.compactSocialPage('1', 'subscriptions') }));
+    expect(result.current.subscriptionsCount).toBe(0);
+    expect(result.current.subscriptionsDataUpdatedAt).toBe(updatedAt);
+  });
+
+  it('leaves the invitation picker on the legacy subscribers directory', async () => {
+    mockedGet.mockResolvedValueOnce([{ id: 2, user: 2 }]);
+    const { result } = await renderHook(() => useInviteSubscribers(true), { wrapper: createQueryWrapper().Wrapper });
+    await waitFor(() => expect(result.current.subscribers).toEqual([{ id: 2, user: 2 }]));
+    expect(mockedGet.mock.calls).toEqual([['/user/subscribers/']]);
   });
 });

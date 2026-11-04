@@ -1,14 +1,9 @@
-// #2775: источники блока «Ещё по запросу» на /search.
+// #3015: источники блока «Ещё по запросу» на /search.
 const mockGet = jest.fn()
-const mockFetchQuestsByCity = jest.fn()
 const mockFetchPlacesCatalog = jest.fn()
 
 jest.mock('@/api/client', () => ({
   apiClient: { get: (...args: unknown[]) => mockGet(...args) },
-}))
-
-jest.mock('@/api/quests', () => ({
-  fetchQuestsByCity: (...args: unknown[]) => mockFetchQuestsByCity(...args),
 }))
 
 jest.mock('@/api/places', () => ({
@@ -16,12 +11,10 @@ jest.mock('@/api/places', () => ({
 }))
 
 import {
-  fetchQuestCitiesDirectory,
-  fetchSiteSearchCityQuests,
+  fetchSiteSearchQuestPreview,
   fetchSiteSearchPlaces,
 } from '@/api/siteSearchExtras'
-
-const city = (id: number, name: string) => ({ id, name, name_canonical: name, lat: 0, lng: 0, legacy_ids: [] })
+import { lookupMediaPlaceholder } from '@/utils/mediaPlaceholderIndex'
 
 const questMeta = (id: number, questId: string, completions: number) => ({
   id,
@@ -42,39 +35,49 @@ const questMeta = (id: number, questId: string, completions: number) => ({
   completions_count: completions,
 })
 
-describe('siteSearchExtras (#2775)', () => {
+describe('siteSearchExtras (#3015)', () => {
   beforeEach(() => jest.clearAllMocks())
 
-  it('reads the whole quest city directory in pages of 100 with the content locale', async () => {
-    mockGet.mockImplementation(async (url: string) =>
-      url.includes('page=2')
-        ? { count: 101, results: [city(200, 'Ялта')] }
-        : { count: 101, results: Array.from({ length: 100 }, (_, i) => city(i + 1, `Город ${i}`)) },
-    )
+  it('fetches one localized preview and keeps its city, total and server order', async () => {
+    const signal = new AbortController().signal
+    const coverUrl = '/quest-cover/site-search-preview/braslav.webp'
+    const coveredQuest = {
+      ...questMeta(1, 'a', 9),
+      cover_url: coverUrl,
+      media: { cover: { src: coverUrl, dominant_color: '#334455' } },
+    }
+    mockGet.mockResolvedValue({
+      city: { slug: 'braslav', name: 'Braslaw' },
+      count: 11,
+      results: [coveredQuest, questMeta(2, 'b', 4), questMeta(3, 'c', 1)],
+    })
 
-    const list = await fetchQuestCitiesDirectory('pl')
+    const result = await fetchSiteSearchQuestPreview('браслав озера', 'en', signal)
 
-    expect(list).toHaveLength(101)
-    expect(mockGet).toHaveBeenCalledTimes(2)
-    expect(mockGet.mock.calls[0][0]).toBe('/quest-cities/?page_size=100&lang=pl')
-    expect(mockGet.mock.calls[1][0]).toBe('/quest-cities/?page_size=100&page=2&lang=pl')
-  })
-
-  it('returns up to three popular city quests, the total and the city landing segment', async () => {
-    mockFetchQuestsByCity.mockResolvedValue([
-      questMeta(1, 'a', 0),
-      questMeta(2, 'b', 9),
-      questMeta(3, 'c', 4),
-      questMeta(4, 'd', 1),
-    ])
-
-    const result = await fetchSiteSearchCityQuests(65, 'en')
-
-    expect(mockFetchQuestsByCity).toHaveBeenCalledWith(65, 'en')
-    expect(result.total).toBe(4)
-    expect(result.quests.map((quest) => quest.id)).toEqual(['b', 'c', 'd'])
+    expect(mockGet).toHaveBeenCalledTimes(1)
+    const [requestPath, timeout, requestOptions] = mockGet.mock.calls[0]
+    const url = new URL(requestPath, 'https://metravel.by')
+    expect(url.pathname).toBe('/quests/search-city-preview/')
+    expect(Object.fromEntries(url.searchParams)).toEqual({ q: 'браслав озера', locale: 'en' })
+    expect(timeout).toBeUndefined()
+    expect(requestOptions).toEqual({ signal })
+    expect(result.total).toBe(11)
+    expect(result.quests.map((quest) => quest.id)).toEqual(['a', 'b', 'c'])
     expect(result.citySegment).toBe('braslav')
     expect(result.cityName).toBe('Braslaw')
+    expect(lookupMediaPlaceholder(coverUrl)?.dominantColor).toBe('#334455')
+  })
+
+  it('maps an unknown city to empty quests with no city landing segment', async () => {
+    mockGet.mockResolvedValue({ city: null, count: 0, results: [] })
+
+    await expect(fetchSiteSearchQuestPreview('зюзюкино', 'ru', new AbortController().signal)).resolves.toEqual({
+      quests: [],
+      total: 0,
+      citySegment: null,
+      cityName: '',
+    })
+    expect(mockGet).toHaveBeenCalledTimes(1)
   })
 
   it('asks the places catalog for the first three places by query', async () => {

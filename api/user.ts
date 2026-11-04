@@ -4,6 +4,7 @@ import { unwrapList as unwrapEnvelopeList } from '@/api/clientResponse';
 import { mapRank, type RankSummaryDto, type UserRank } from '@/api/achievements';
 import { normalizeAvatarUrl } from '@/utils/mediaUrl';
 import type { SupportedLocale } from '@/i18n/config';
+import { normalizeTravelPreview, type TravelPreview } from '@/utils/subscriptionsHelpers';
 
 export { normalizeProfileName, resolveProfileFullName } from '@/utils/profileName';
 
@@ -364,12 +365,14 @@ export const deleteUserTravelStatus = async (
 
 // ---- Subscriptions ----
 
-export const subscribeToUser = async (userId: string | number): Promise<null> => {
-    return apiClient.post<null>(`/user/${userId}/subscribe/`);
+export const subscribeToUser = async (userId: string | number, beforeFetch?: () => void): Promise<null> => {
+    const path = `/user/${userId}/subscribe/`;
+    return beforeFetch ? apiClient.post<null>(path, undefined, undefined, { beforeFetch }) : apiClient.post<null>(path);
 };
 
-export const unsubscribeFromUser = async (userId: string | number): Promise<null> => {
-    return apiClient.delete<null>(`/user/${userId}/unsubscribe/`);
+export const unsubscribeFromUser = async (userId: string | number, beforeFetch?: () => void): Promise<null> => {
+    const path = `/user/${userId}/unsubscribe/`;
+    return beforeFetch ? apiClient.delete<null>(path, undefined, { beforeFetch }) : apiClient.delete<null>(path);
 };
 
 export const fetchMySubscriptions = async (): Promise<UserProfileDto[]> => {
@@ -380,4 +383,63 @@ export const fetchMySubscriptions = async (): Promise<UserProfileDto[]> => {
 export const fetchMySubscribers = async (): Promise<UserProfileDto[]> => {
     const res = await apiClient.get<MaybePaginated<UserProfileDto>>('/user/subscribers/');
     return unwrapList(res);
+};
+
+export type SocialListKind = 'subscriptions' | 'subscribers';
+
+export type CompactSocialProfile = {
+    user: number;
+    display_name: string;
+    avatar_url: string | null;
+};
+
+export type AuthorWithTravels = {
+    profile: CompactSocialProfile;
+    travels: TravelPreview[];
+    travelsTotal: number;
+};
+
+type CompactSocialRow = CompactSocialProfile & {
+    travels_total?: number;
+    travels_preview?: unknown[];
+};
+
+export type CompactSocialPage = {
+    count: number;
+    hasNext: boolean;
+    results: AuthorWithTravels[];
+};
+
+export const fetchCompactSocialPage = async (
+    kind: SocialListKind,
+    page: number,
+    signal: AbortSignal,
+): Promise<CompactSocialPage> => {
+    const response = await apiClient.get<{ count: number; next: string | null; results: CompactSocialRow[] }>(
+        `/user/${kind}/?view=compact&page=${page}&page_size=20`,
+        undefined,
+        { signal },
+    );
+    if (!response || typeof response.count !== 'number' || !Array.isArray(response.results)) {
+        throw new Error('Invalid compact social page');
+    }
+    return {
+        count: response.count,
+        hasNext: typeof response.next === 'string' && response.next.length > 0,
+        results: response.results.map(({ user, display_name, avatar_url, travels_preview, travels_total }) => ({
+            profile: { user, display_name, avatar_url },
+            travels: travels_preview?.map(normalizeTravelPreview) ?? [],
+            travelsTotal: travels_total ?? 0,
+        })),
+    };
+};
+
+export const fetchSubscriptionStatus = async (userId: number, signal: AbortSignal): Promise<boolean> => {
+    const response = await apiClient.get<{ is_subscribed: boolean }>(
+        `/user/subscriptions/status/?user_id=${userId}`,
+        undefined,
+        { signal },
+    );
+    if (typeof response?.is_subscribed !== 'boolean') throw new Error('Invalid subscription status');
+    return response.is_subscribed;
 };

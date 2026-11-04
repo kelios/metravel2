@@ -395,17 +395,18 @@ class ApiClient {
 
         const headers = this.authHeaders(token, { includeDefaults: true, extra: options.headers });
 
-        const runBeforeFetch = async () => {
-            if (beforeFetch) await beforeFetch();
+        const sendRequest = (requestHeaders: HeadersInit, anonymous = skipAuth) => {
+            const send = () => fetchWithTimeout(
+                `${this.baseURL}${endpoint}`,
+                { ...fetchOptions, ...getApiRequestCredentials(anonymous), headers: requestHeaders },
+                timeout
+            );
+            const readiness = beforeFetch?.();
+            return readiness ? readiness.then(send) : send();
         };
 
         try {
-            await runBeforeFetch();
-            const response = await fetchWithTimeout(
-                `${this.baseURL}${endpoint}`,
-                { ...fetchOptions, ...getApiRequestCredentials(skipAuth), headers },
-                timeout
-            );
+            const response = await sendRequest(headers);
 
             // Если токена нет, но сервер вернул 401 — состояние аутентификации, вероятно, устарело
             // (например, токен был удалён в другой вкладке). Сбрасываем состояние, чтобы UI обновился.
@@ -454,12 +455,7 @@ class ApiClient {
                             ...options.headers,
                         };
 
-                        await runBeforeFetch();
-                        const retryResponse = await fetchWithTimeout(
-                            `${this.baseURL}${endpoint}`,
-                            { ...fetchOptions, ...getApiRequestCredentials(), headers: retryHeaders },
-                            timeout
-                        );
+                        const retryResponse = await sendRequest(retryHeaders, false);
 
                         if (!retryResponse.ok) {
                             throw new ApiError(
@@ -471,7 +467,9 @@ class ApiClient {
 
                         successfulRetry = retryResponse;
                     } catch (error) {
-                        if (error instanceof Error && error.name === 'DeliveryPausedError') throw error;
+                        if (error instanceof Error && (error.name === 'DeliveryPausedError' || error.name === 'AbortError')) {
+                            throw error;
+                        }
                         // Refresh не сработал — падаем в общий путь пробы+fallback ниже.
                         rotationSuperseded = isSessionSupersededError(error);
                     }
@@ -507,12 +505,7 @@ class ApiClient {
                     includeDefaults: true,
                     extra: options.headers,
                 });
-                await runBeforeFetch();
-                const fallbackResponse = await fetchWithTimeout(
-                    `${this.baseURL}${endpoint}`,
-                    { ...fetchOptions, ...getApiRequestCredentials(true), headers: fallbackHeaders },
-                    timeout
-                );
+                const fallbackResponse = await sendRequest(fallbackHeaders, true);
 
                 if (!fallbackResponse.ok) {
                     await throwDetailedError(fallbackResponse);
@@ -765,8 +758,12 @@ class ApiClient {
         );
     }
 
-    async delete<T>(endpoint: string, timeout?: number): Promise<T> {
-        return this.request<T>(endpoint, { method: 'DELETE' }, timeout);
+    async delete<T>(
+        endpoint: string,
+        timeout?: number,
+        options?: Pick<ApiRequestOptions, 'beforeFetch'>
+    ): Promise<T> {
+        return this.request<T>(endpoint, { method: 'DELETE', ...options }, timeout);
     }
 
     /**

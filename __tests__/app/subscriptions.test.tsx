@@ -13,8 +13,7 @@ import {
 } from '../fixtures/travelFixtures';
 
 jest.mock('@/api/user', () => ({
-    fetchMySubscriptions: jest.fn(),
-    fetchMySubscribers: jest.fn(),
+    fetchCompactSocialPage: jest.fn(),
     unsubscribeFromUser: jest.fn(),
     resolveProfileFullName: (profile: { first_name?: string | null; last_name?: string | null }) =>
         [profile.first_name, profile.last_name].filter(Boolean).join(' ').trim(),
@@ -24,6 +23,8 @@ jest.mock('@/api/travelUserQueries', () => ({
     fetchMyTravels: mockFetchMyTravels,
     unwrapMyTravelsPayload: mockUnwrapMyTravelsPayload,
 }));
+
+jest.mock('@/hooks/useQueryOwner', () => ({ useQueryOwner: () => '1' }));
 
 jest.mock('@/context/AuthContext', () => ({
     useAuth: jest.fn(),
@@ -42,6 +43,7 @@ jest.mock('@/utils/toast', () => ({
 }));
 
 jest.mock('expo-router', () => ({
+    useIsFocused: () => true,
     useRouter: mockUseRouter,
     usePathname: mockUsePathname,
     useLocalSearchParams: jest.fn(() => ({})),
@@ -52,11 +54,20 @@ import { Text } from 'react-native';
 import { useActiveScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import SubscriptionsScreen from '@/app/(tabs)/subscriptions';
 import { useAuth } from '@/context/AuthContext';
-import { fetchMySubscriptions, fetchMySubscribers } from '@/api/user';
+import { fetchCompactSocialPage } from '@/api/user';
 
 const mockedUseAuth = useAuth as jest.MockedFunction<typeof useAuth>;
-const mockedFetchMySubscriptions = fetchMySubscriptions as jest.Mock;
-const mockedFetchMySubscribers = fetchMySubscribers as jest.Mock;
+const mockedFetchCompactSocialPage = jest.mocked(fetchCompactSocialPage);
+const compactRow = (fixture: typeof SUBSCRIPTION_AUTHOR_FIXTURE | typeof SUBSCRIBER_FIXTURE) => ({
+    profile: { user: fixture.user, display_name: `${fixture.first_name} ${fixture.last_name}`, avatar_url: null },
+    travels: [] as import('@/utils/subscriptionsHelpers').TravelPreview[],
+    travelsTotal: 0,
+});
+const setupPages = (subscriptions: ReturnType<typeof compactRow>[] = [], subscribers: ReturnType<typeof compactRow>[] = []) =>
+    mockedFetchCompactSocialPage.mockImplementation(async (kind) => {
+        const results = kind === 'subscriptions' ? subscriptions : subscribers;
+        return { count: results.length, hasNext: false, results };
+    });
 const mockedFetchMyTravels = mockFetchMyTravels as jest.Mock;
 
 describe('SubscriptionsScreen', () => {
@@ -69,8 +80,7 @@ describe('SubscriptionsScreen', () => {
             authReady: true,
             userId: '1',
         }));
-        mockedFetchMySubscriptions.mockResolvedValue([]);
-        mockedFetchMySubscribers.mockResolvedValue([]);
+        setupPages();
         mockedFetchMyTravels.mockResolvedValue([]);
     });
 
@@ -89,7 +99,7 @@ describe('SubscriptionsScreen', () => {
     });
 
     it('shows empty state when no subscriptions', async () => {
-        mockedFetchMySubscriptions.mockResolvedValue([]);
+        setupPages();
 
         const { findByText } = await render(<SubscriptionsScreen />, {
             wrapper: createQueryWrapper().Wrapper,
@@ -100,7 +110,7 @@ describe('SubscriptionsScreen', () => {
     });
 
     it('shows subscribed authors with their names', async () => {
-        mockedFetchMySubscriptions.mockResolvedValue([SUBSCRIPTION_AUTHOR_FIXTURE]);
+        setupPages([compactRow(SUBSCRIPTION_AUTHOR_FIXTURE)]);
         mockedFetchMyTravels.mockResolvedValue([]);
 
         const { findByText } = await render(<SubscriptionsScreen />, {
@@ -109,15 +119,12 @@ describe('SubscriptionsScreen', () => {
 
         const authorName = await findByText('Иван Петров');
         expect(authorName).toBeTruthy();
-        expect(mockedFetchMyTravels).toHaveBeenCalledWith({
-            user_id: 42,
-            perPage: 10,
-            signal: expect.any(AbortSignal),
-        });
+        expect(mockedFetchCompactSocialPage).toHaveBeenCalledWith('subscriptions', 1, expect.any(AbortSignal));
+        expect(mockedFetchMyTravels).not.toHaveBeenCalled();
     });
 
     it('shows header with author count', async () => {
-        mockedFetchMySubscriptions.mockResolvedValue([SUBSCRIPTION_AUTHOR_FIXTURE]);
+        setupPages([compactRow(SUBSCRIPTION_AUTHOR_FIXTURE)]);
         mockedFetchMyTravels.mockResolvedValue([]);
 
         const { findByText } = await render(<SubscriptionsScreen />, {
@@ -144,8 +151,7 @@ describe('SubscriptionsScreen', () => {
     });
 
     it('shows tab bar with Подписки and Подписчики tabs', async () => {
-        mockedFetchMySubscriptions.mockResolvedValue([SUBSCRIPTION_AUTHOR_FIXTURE]);
-        mockedFetchMySubscribers.mockResolvedValue([]);
+        setupPages([compactRow(SUBSCRIPTION_AUTHOR_FIXTURE)]);
         mockedFetchMyTravels.mockResolvedValue([]);
 
         const { findByText } = await render(<SubscriptionsScreen />, {
@@ -160,8 +166,7 @@ describe('SubscriptionsScreen', () => {
     });
 
     it('shows subscribers list when Подписчики tab is pressed', async () => {
-        mockedFetchMySubscriptions.mockResolvedValue([]);
-        mockedFetchMySubscribers.mockResolvedValue([SUBSCRIBER_FIXTURE]);
+        setupPages([], [compactRow(SUBSCRIBER_FIXTURE)]);
         mockedFetchMyTravels.mockResolvedValue([]);
 
         const { findByText, findByLabelText } = await render(<SubscriptionsScreen />, {
@@ -176,8 +181,7 @@ describe('SubscriptionsScreen', () => {
     });
 
     it('shows empty state for subscribers tab when no subscribers', async () => {
-        mockedFetchMySubscriptions.mockResolvedValue([]);
-        mockedFetchMySubscribers.mockResolvedValue([]);
+        setupPages();
         mockedFetchMyTravels.mockResolvedValue([]);
 
         const { findByText, findByLabelText } = await render(<SubscriptionsScreen />, {
@@ -192,12 +196,15 @@ describe('SubscriptionsScreen', () => {
     });
 
     it('opens travel by explicit url, then falls back to slug and id routes', async () => {
-        mockedFetchMySubscriptions.mockResolvedValue([SUBSCRIPTION_AUTHOR_FIXTURE]);
-        mockedFetchMyTravels.mockResolvedValue([
-            { id: 100, title: 'Travel With Url', url: '/custom/travel-url' },
-            { id: 101, title: 'Travel With Slug', slug: 'slug-trip' },
-            { id: 102, title: 'Travel With Id Only' },
-        ]);
+        setupPages([{
+            ...compactRow(SUBSCRIPTION_AUTHOR_FIXTURE),
+            travelsTotal: 3,
+            travels: [
+                { id: 100, title: 'Travel With Url', url: '/custom/travel-url' },
+                { id: 101, title: 'Travel With Slug', slug: 'slug-trip' },
+                { id: 102, title: 'Travel With Id Only' },
+            ],
+        }]);
 
         const { findByLabelText } = await render(<SubscriptionsScreen />, {
             wrapper: createQueryWrapper().Wrapper,

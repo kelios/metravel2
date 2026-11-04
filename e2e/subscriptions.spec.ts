@@ -2,69 +2,56 @@ import { expect, test } from './fixtures';
 import { ensureAuthedStorageFallback, mockFakeAuthApis } from './helpers/auth';
 import { gotoWithRetry, preacceptCookies } from './helpers/navigation';
 
-async function setupFakeSubscriptionsPage(page: import('@playwright/test').Page) {
+async function setupFakeSubscriptionsPage(page: import('@playwright/test').Page, paginate = false) {
   await ensureAuthedStorageFallback(page, { userId: '1', userName: 'E2E User' });
   await mockFakeAuthApis(page);
 
-  await page.route('**/api/user/subscriptions/**', (route) => {
-    if (route.request().method() !== 'GET') return route.continue();
+  const results = [
+    {
+      user: 42,
+      display_name: 'Siarhey',
+      avatar_url: null,
+      travels_total: 3,
+      travels_preview: [
+        { id: 101, slug: 'plane-trip', name: 'Краков. Полёт на планере' },
+        { id: 102, slug: 'exam-trip', name: 'Экзамен по маршруту' },
+        { id: 103, slug: 'third-trip', name: 'Третий маршрут' },
+      ],
+    },
+    { user: 43, display_name: 'Anna Nowak', avatar_url: null, travels_total: 0, travels_preview: [] },
+    { user: 44, display_name: 'Ivan Test', avatar_url: null, travels_total: 0, travels_preview: [] },
+  ];
+  const requestedPages: number[] = [];
+  let perAuthorTravelReads = 0;
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (request.method() === 'GET' && url.pathname === '/api/travels/' && url.searchParams.has('user_id')) {
+      perAuthorTravelReads += 1;
+    }
+  });
+  await page.route('**/api/user/subscriptions/?*', (route) => {
+    const params = new URL(route.request().url()).searchParams;
+    if (route.request().method() !== 'GET' || params.get('view') !== 'compact') return route.continue();
+    const pageNumber = Number(params.get('page'));
+    requestedPages.push(pageNumber);
     return route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        results: [
-          { id: 42, user: 42, first_name: 'Siarhey', last_name: '', avatar: null },
-          { id: 43, user: 43, first_name: 'Anna', last_name: 'Nowak', avatar: null },
-          { id: 44, user: 44, first_name: 'Ivan', last_name: 'Test', avatar: null },
-        ],
-      }),
+      json: {
+        count: paginate ? 4 : 3,
+        next: paginate && pageNumber === 1 ? '/api/user/subscriptions/?view=compact&page=2&page_size=20' : null,
+        previous: null,
+        results: pageNumber === 1
+          ? results
+          : [{ user: 45, display_name: 'Second page', avatar_url: null, travels_total: 0, travels_preview: [] }],
+      },
     });
   });
 
-  await page.route('**/api/user/subscribers/**', (route) => {
+  await page.route('**/api/user/subscribers/?*', (route) => {
     if (route.request().method() !== 'GET') return route.continue();
-    return route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ results: [] }),
-    });
+    return route.fulfill({ json: { count: 0, next: null, previous: null, results: [] } });
   });
-
-  await page.route('**/api/travels/**', (route) => {
-    if (route.request().method() !== 'GET') return route.continue();
-    return route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        count: 3,
-        results: [
-          {
-            id: 101,
-            slug: 'plane-trip',
-            name: 'Краков. Полёт на планере',
-            countryName: 'Польша',
-            travel_image_thumb_url: '',
-          },
-          {
-            id: 102,
-            slug: 'exam-trip',
-            name: 'Экзамен по маршруту',
-            countryName: 'Литва',
-            travel_image_thumb_url: '',
-          },
-          {
-            id: 103,
-            slug: 'third-trip',
-            name: 'Третий маршрут',
-            countryName: 'Беларусь',
-            travel_image_thumb_url: '',
-          },
-        ],
-      }),
-    });
-  });
-
   await preacceptCookies(page);
+  return { requestedPages, perAuthorTravelReads: () => perAuthorTravelReads };
 }
 
 test.describe('Subscriptions @smoke', () => {
@@ -105,6 +92,20 @@ test.describe('Subscriptions @smoke', () => {
     await subscribersTab.click();
     await expect(page.getByText('У вас пока нет подписчиков', { exact: true })).toBeVisible();
     await expect(page.getByText('Anna Nowak', { exact: true })).toBeHidden();
+  });
+
+  test('can find an author on an explicitly loaded second page', async ({ page }) => {
+    const { requestedPages, perAuthorTravelReads } = await setupFakeSubscriptionsPage(page, true);
+    await gotoWithRetry(page, '/subscriptions');
+    await expect(page.getByText('Siarhey', { exact: true })).toBeVisible();
+    expect(requestedPages).toEqual([1]);
+
+    await page.getByLabel('Поиск по подпискам').fill('Second page');
+    await expect(page.getByText('Ничего не найдено', { exact: true })).toBeHidden();
+    await page.getByRole('button', { name: 'Показать ещё' }).click();
+    await expect(page.getByText('Second page', { exact: true })).toBeVisible();
+    expect(requestedPages).toEqual([1, 2]);
+    expect(perAuthorTravelReads()).toBe(0);
   });
 
   test('keeps the mobile travel rail horizontally scrollable without blocking vertical scroll', async ({ page }) => {

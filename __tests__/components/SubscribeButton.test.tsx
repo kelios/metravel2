@@ -1,9 +1,10 @@
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { act, render, fireEvent, waitFor } from '@testing-library/react-native';
+import { useAuthStore } from '@/stores/authStore';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 jest.mock('@/api/user', () => ({
-    fetchMySubscriptions: jest.fn(),
+    fetchSubscriptionStatus: jest.fn(),
     subscribeToUser: jest.fn(),
     unsubscribeFromUser: jest.fn(),
 }));
@@ -14,6 +15,7 @@ jest.mock('@/context/AuthContext', () => ({
 
 jest.mock('@/utils/authNavigation', () => ({
     buildLoginHref: jest.fn(() => '/login'),
+    markSignedInBefore: jest.fn(),
 }));
 
 jest.mock('@/utils/toast', () => ({
@@ -23,13 +25,13 @@ jest.mock('@/utils/toast', () => ({
 import SubscribeButton from '@/components/ui/SubscribeButton';
 import { useAuth } from '@/context/AuthContext';
 import {
-    fetchMySubscriptions,
+    fetchSubscriptionStatus,
     subscribeToUser,
     unsubscribeFromUser,
 } from '@/api/user';
 
 const mockedUseAuth = useAuth as jest.Mock;
-const mockedFetchMySubscriptions = fetchMySubscriptions as jest.Mock;
+const mockedFetchSubscriptionStatus = fetchSubscriptionStatus as jest.Mock;
 const mockedSubscribeToUser = subscribeToUser as jest.Mock;
 const mockedUnsubscribeFromUser = unsubscribeFromUser as jest.Mock;
 
@@ -48,11 +50,12 @@ function createWrapper() {
 describe('SubscribeButton', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        useAuthStore.setState({ isAuthenticated: true, userId: '1' });
         mockedUseAuth.mockReturnValue({
             isAuthenticated: true,
             userId: '1',
         });
-        mockedFetchMySubscriptions.mockResolvedValue([]);
+        mockedFetchSubscriptionStatus.mockResolvedValue(false);
         mockedSubscribeToUser.mockResolvedValue(null);
         mockedUnsubscribeFromUser.mockResolvedValue(null);
     });
@@ -72,7 +75,7 @@ describe('SubscribeButton', () => {
     });
 
     it('renders "Подписаться" when not subscribed', async () => {
-        mockedFetchMySubscriptions.mockResolvedValue([]);
+        mockedFetchSubscriptionStatus.mockResolvedValue(false);
 
         const { findByText } = await render(
             <SubscribeButton targetUserId="99" />,
@@ -84,9 +87,7 @@ describe('SubscribeButton', () => {
     });
 
     it('renders "Вы подписаны" when already subscribed', async () => {
-        mockedFetchMySubscriptions.mockResolvedValue([
-            { id: 5, first_name: 'Test', last_name: 'User', user: 99 },
-        ]);
+        mockedFetchSubscriptionStatus.mockResolvedValue(true);
 
         const { findByText } = await render(
             <SubscribeButton targetUserId="99" />,
@@ -98,7 +99,7 @@ describe('SubscribeButton', () => {
     });
 
     it('calls subscribeToUser on press when not subscribed', async () => {
-        mockedFetchMySubscriptions.mockResolvedValue([]);
+        mockedFetchSubscriptionStatus.mockResolvedValue(false);
 
         const { findByText } = await render(
             <SubscribeButton targetUserId="99" />,
@@ -109,14 +110,12 @@ describe('SubscribeButton', () => {
         await fireEvent.press(button);
 
         await waitFor(() => {
-            expect(mockedSubscribeToUser).toHaveBeenCalledWith('99');
+            expect(mockedSubscribeToUser).toHaveBeenCalledWith(99, expect.any(Function));
         });
     });
 
     it('calls unsubscribeFromUser on press when subscribed', async () => {
-        mockedFetchMySubscriptions.mockResolvedValue([
-            { id: 5, first_name: 'Test', last_name: 'User', user: 99 },
-        ]);
+        mockedFetchSubscriptionStatus.mockResolvedValue(true);
 
         const { findByText } = await render(
             <SubscribeButton targetUserId="99" />,
@@ -127,8 +126,37 @@ describe('SubscribeButton', () => {
         await fireEvent.press(button);
 
         await waitFor(() => {
-            expect(mockedUnsubscribeFromUser).toHaveBeenCalledWith('99');
+            expect(mockedUnsubscribeFromUser).toHaveBeenCalledWith(99, expect.any(Function));
         });
+    });
+
+    it.each([false, true])('cancels a prepared mutation after the account changes (subscribed=%s)', async (subscribed) => {
+        mockedFetchSubscriptionStatus.mockResolvedValue(subscribed);
+        const mutation = subscribed ? mockedUnsubscribeFromUser : mockedSubscribeToUser;
+        const dispatch = jest.fn();
+        let credentialsRead!: () => void;
+        let mutationResult: Promise<unknown> | undefined;
+        mutation.mockImplementation((_target, beforeFetch) => {
+            mutationResult = new Promise<void>((resolve) => { credentialsRead = resolve; })
+                .then(() => {
+                    beforeFetch();
+                    dispatch();
+                });
+            return mutationResult;
+        });
+
+        const { findByText } = await render(<SubscribeButton targetUserId="99" />, {
+            wrapper: createWrapper(),
+        });
+        await fireEvent.press(await findByText(subscribed ? 'Вы подписаны' : 'Подписаться'));
+        await waitFor(() => expect(mutation).toHaveBeenCalledTimes(1));
+
+        await act(async () => {
+            useAuthStore.setState({ userId: '2' });
+            credentialsRead();
+            await expect(mutationResult).rejects.toMatchObject({ name: 'AbortError' });
+        });
+        expect(dispatch).not.toHaveBeenCalled();
     });
 
     it('renders subscribe button for unauthenticated users (redirects to login)', async () => {
@@ -156,7 +184,7 @@ describe('SubscribeButton', () => {
     });
 
     it('shows loading state while subscriptions are being fetched', async () => {
-        mockedFetchMySubscriptions.mockReturnValue(new Promise(() => {}));
+        mockedFetchSubscriptionStatus.mockReturnValue(new Promise(() => {}));
 
         const { getByLabelText } = await render(
             <SubscribeButton targetUserId="99" />,
@@ -169,7 +197,7 @@ describe('SubscribeButton', () => {
 
     it('shows success toast after subscribe', async () => {
         const { showToast } = require('@/utils/toast');
-        mockedFetchMySubscriptions.mockResolvedValue([]);
+        mockedFetchSubscriptionStatus.mockResolvedValue(false);
         const { findByText } = await render(
             <SubscribeButton targetUserId="99" />,
             { wrapper: createWrapper() }
@@ -184,7 +212,7 @@ describe('SubscribeButton', () => {
 
     it('shows toast on subscribe error', async () => {
         const { showToast } = require('@/utils/toast');
-        mockedFetchMySubscriptions.mockResolvedValue([]);
+        mockedFetchSubscriptionStatus.mockResolvedValue(false);
         mockedSubscribeToUser.mockRejectedValue(new Error('Network error'));
 
         const { findByText } = await render(
@@ -204,10 +232,11 @@ describe('SubscribeButton', () => {
 
     it('shows toast on unsubscribe error', async () => {
         const { showToast } = require('@/utils/toast');
-        mockedFetchMySubscriptions.mockResolvedValue([
-            { id: 5, first_name: 'Test', last_name: 'User', user: 99 },
-        ]);
-        mockedUnsubscribeFromUser.mockRejectedValue(new Error('Network error'));
+        mockedFetchSubscriptionStatus.mockResolvedValue(true);
+        let rejectMutation!: (error: Error) => void;
+        mockedUnsubscribeFromUser.mockImplementation(() => new Promise((_resolve, reject) => {
+            rejectMutation = reject;
+        }));
 
         const { findByText } = await render(
             <SubscribeButton targetUserId="99" />,
@@ -216,11 +245,29 @@ describe('SubscribeButton', () => {
 
         const button = await findByText('Вы подписаны');
         await fireEvent.press(button);
+        expect(await findByText('Подписаться')).toBeTruthy();
+        await act(async () => rejectMutation(new Error('Network error')));
 
         await waitFor(() => {
             expect(showToast).toHaveBeenCalledWith(
                 expect.objectContaining({ type: 'error', text2: expect.stringContaining('отписаться') })
             );
         });
+        expect(await findByText('Вы подписаны')).toBeTruthy();
+    });
+
+    it('loads exact status only after row disclosure and mutates on a separate tap', async () => {
+        mockedFetchSubscriptionStatus.mockResolvedValue(true);
+        const { findByLabelText } = await render(
+            <SubscribeButton targetUserId="99" iconOnly deferStatus />,
+            { wrapper: createWrapper() }
+        );
+        expect(mockedFetchSubscriptionStatus).not.toHaveBeenCalled();
+        await fireEvent.press(await findByLabelText('Проверить статус подписки'));
+        const unsubscribe = await findByLabelText('Отписаться от пользователя');
+        expect(mockedFetchSubscriptionStatus).toHaveBeenCalledWith(99, expect.any(AbortSignal));
+        expect(mockedUnsubscribeFromUser).not.toHaveBeenCalled();
+        await fireEvent.press(unsubscribe);
+        await waitFor(() => expect(mockedUnsubscribeFromUser).toHaveBeenCalledWith(99, expect.any(Function)));
     });
 });

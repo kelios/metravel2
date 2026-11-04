@@ -1,229 +1,107 @@
-import { readRetryTwice } from '@/utils/queryRetryPolicy';
-// hooks/useSubscriptionsData.ts
-// D1: Data-fetching hook extracted from subscriptions.tsx
+import { useCallback, useMemo } from 'react';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-
-import { useAuth } from '@/context/AuthContext';
-import { fetchMySubscriptions, fetchMySubscribers, resolveProfileFullName, unsubscribeFromUser, type UserProfileDto } from '@/api/user';
-import { fetchMyTravels, unwrapMyTravelsPayload } from '@/api/travelUserQueries';
-
+import { fetchCompactSocialPage, fetchMySubscribers, type AuthorWithTravels, type SocialListKind } from '@/api/user';
 import { queryKeys } from '@/api/queryKeys';
+import { useAuth } from '@/context/AuthContext';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
+import { useSubscriptionMutation } from '@/hooks/useSubscription';
+import { translate as i18nT } from '@/i18n';
 import { confirmAction } from '@/utils/confirmAction';
-import { normalizeTravelPreview, type TravelPreview } from '@/utils/subscriptionsHelpers';
-import { translate as i18nT } from '@/i18n'
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 
-export type SubscriptionTab = 'subscriptions' | 'subscribers';
+export type SubscriptionTab = SocialListKind;
 
-export type AuthorWithTravels = {
-  profile: UserProfileDto;
-  travels: TravelPreview[];
-  travelsTotal: number;
-  isLoadingTravels: boolean;
-};
-
-const SUBSCRIPTION_TRAVELS_PREVIEW_LIMIT = 10;
-const AUTHOR_TRAVELS_FETCH_CONCURRENCY = 4;
-type AuthorTravels = Record<number, { travels: TravelPreview[]; total: number; loading: boolean }>;
-const EMPTY_AUTHOR_TRAVELS: AuthorTravels = {};
-
-async function runWithConcurrency<T>(
-  items: T[],
-  limit: number,
-  worker: (item: T) => Promise<void>
-): Promise<void> {
-  let cursor = 0;
-  const pump = async (): Promise<void> => {
-    while (cursor < items.length) {
-      const index = cursor;
-      cursor += 1;
-      await worker(items[index]);
-    }
-  };
-  const runners = Array.from({ length: Math.min(limit, items.length) }, () => pump());
-  await Promise.all(runners);
-}
-
-interface UseSubscriptionsDataOptions {
-  /**
-   * Подгружать превью путешествий по каждому автору подписки (N запросов).
-   * Нужно только экрану подписок, который рендерит карточки авторов. Шапке профиля
-   * и пикеру приглашений нужны лишь счётчики/списки — для них держим false,
-   * чтобы не плодить N+1 фетчей при заходе в профиль (тикет #473 — дешёвый BE-счётчик).
-   */
-  includeAuthorTravels?: boolean;
-  /** Полностью отключить запросы, когда раздел подписок недоступен в текущем профиле. */
+type UseSubscriptionsDataOptions = {
   enabled?: boolean;
   readSubscriptions?: boolean;
   readSubscribers?: boolean;
-}
+};
 
-export function useSubscriptionsData(options: UseSubscriptionsDataOptions = {}) {
-  const { includeAuthorTravels = false, enabled = true, readSubscriptions = true, readSubscribers = true } = options;
-  const { isAuthenticated, authReady } = useAuth();
+const EMPTY_ROWS: AuthorWithTravels[] = [];
+const EMPTY_INVITE_SUBSCRIBERS: Awaited<ReturnType<typeof fetchMySubscribers>> = [];
+
+export function useInviteSubscribers(enabled: boolean) {
   const owner = useQueryOwner();
-  const queryClient = useQueryClient();
-
-
-
-  const subscriptionsQuery = useQuery<UserProfileDto[]>({
-    queryKey: queryKeys.mySubscriptions(owner),
-    queryFn: fetchMySubscriptions,
-    enabled: isAuthenticated && enabled && readSubscriptions,
-    staleTime: 5 * 60 * 1000,
-    retry: readRetryTwice,
-  });
-
-  const subscribersQuery = useQuery<UserProfileDto[]>({
+  const query = useQuery({
     queryKey: queryKeys.mySubscribers(owner),
     queryFn: fetchMySubscribers,
-    enabled: isAuthenticated && enabled && readSubscribers,
+    enabled: enabled && owner !== null,
     staleTime: 5 * 60 * 1000,
     retry: readRetryTwice,
   });
+  return { subscribers: query.data ?? EMPTY_INVITE_SUBSCRIBERS, subscribersLoading: query.isLoading };
+}
 
-  const subscriptions = useMemo(() => subscriptionsQuery.data ?? [], [subscriptionsQuery.data]);
-  const subscribers = useMemo(() => subscribersQuery.data ?? [], [subscribersQuery.data]);
+function useSocialPage(kind: SocialListKind, owner: string | null, enabled: boolean) {
+  const query = useInfiniteQuery({
+    queryKey: queryKeys.compactSocialPage(owner, kind),
+    queryFn: ({ pageParam, signal }) => fetchCompactSocialPage(kind, pageParam, signal),
+    initialPageParam: 1,
+    getNextPageParam: (page, _pages, pageNumber) => page.hasNext ? pageNumber + 1 : undefined,
+    enabled,
+    subscribed: enabled,
+    staleTime: 5 * 60 * 1000,
+    retry: readRetryTwice,
+  });
+  const pages = query.data?.pages;
+  const rows = useMemo(() => pages?.flatMap((page) => page.results) ?? EMPTY_ROWS, [pages]);
+  const count = pages?.at(-1)?.count ?? (query.isError ? null : undefined);
+  const { fetchNextPage, hasNextPage, isFetching, isFetchNextPageError, isLoading, refetch } = query;
+  const pageControls = useMemo(() => ({
+    canLoadMore: hasNextPage,
+    isFetching,
+    hasError: (!pages?.length && (query.isError || query.isPaused)) || isFetchNextPageError,
+    loadMore: () => { if (hasNextPage && !isFetching) void fetchNextPage({ cancelRefetch: false }); },
+    retry: () => { if (isFetchNextPageError) void fetchNextPage({ cancelRefetch: false }); else void refetch(); },
+  }), [fetchNextPage, hasNextPage, isFetching, isFetchNextPageError, pages, query.isError, query.isPaused, refetch]);
 
-  const [authorTravelsState, setAuthorTravels] = useState<{ owner: string | null; entries: AuthorTravels }>(
-    { owner, entries: EMPTY_AUTHOR_TRAVELS },
-  );
-  const authorTravels = authorTravelsState.owner === owner ? authorTravelsState.entries : EMPTY_AUTHOR_TRAVELS;
-  const authorTravelsRef = useRef(authorTravels);
-  authorTravelsRef.current = authorTravels;
+  return { rows, count, isLoading, dataUpdatedAt: query.dataUpdatedAt, pageControls };
+}
 
-  const mountedRef = useRef(true);
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+export type SubscriptionPageControls = ReturnType<typeof useSocialPage>['pageControls'];
 
-  useEffect(() => {
-    if (!isAuthenticated || !enabled || !readSubscriptions || !includeAuthorTravels) return;
-    if (!subscriptions.length) return;
+export function useSubscriptionsData({
+  enabled = true,
+  readSubscriptions = true,
+  readSubscribers = true,
+}: UseSubscriptionsDataOptions = {}) {
+  const { isAuthenticated, authReady } = useAuth();
+  const owner = useQueryOwner();
+  const canRead = authReady && isAuthenticated && owner !== null && enabled;
+  const subscriptions = useSocialPage('subscriptions', owner, canRead && readSubscriptions);
+  const subscribers = useSocialPage('subscribers', owner, canRead && readSubscribers);
+  const { mutateAsync, isPending } = useSubscriptionMutation();
 
-    let cancelled = false;
-
-    const pending = subscriptions.filter((profile) => {
-      const userId = profile.user ?? profile.id;
-      const entry = authorTravelsRef.current[userId];
-      // A loading entry is from an earlier, cancelled effect run.
-      return !entry || entry.loading || (entry.travels.length === 0 && entry.total === 0);
+  const handleUnsubscribe = useCallback(async (target: number) => {
+    if (!owner || isPending) return;
+    const confirmed = await confirmAction({
+      title: i18nT('shared:hooks.useSubscriptionsData.otpisatsya_b4c7f63a'),
+      message: i18nT('shared:hooks.useSubscriptionsData.vy_uvereny_chto_hotite_otpisatsya_ot_etogo_a_68da60cc'),
+      confirmText: i18nT('shared:hooks.useSubscriptionsData.otpisatsya_b4c7f63a'),
+      cancelText: i18nT('common:action.cancel'),
     });
-    if (!pending.length) return;
-
-    const controller = new AbortController();
-    const commit = (updater: (prev: AuthorTravels) => AuthorTravels) => {
-      if (cancelled || !mountedRef.current) return;
-      setAuthorTravels((prev) => ({
-        owner,
-        entries: updater(prev.owner === owner ? prev.entries : EMPTY_AUTHOR_TRAVELS),
-      }));
-    };
-
-    commit((prev) => {
-      const next = { ...prev };
-      pending.forEach((profile) => {
-        const userId = profile.user ?? profile.id;
-        next[userId] = {
-          travels: prev[userId]?.travels ?? [],
-          total: prev[userId]?.total ?? 0,
-          loading: true,
-        };
-      });
-      return next;
-    });
-
-    void runWithConcurrency(pending, AUTHOR_TRAVELS_FETCH_CONCURRENCY, async (profile) => {
-      if (cancelled || !mountedRef.current) return;
-      const userId = profile.user ?? profile.id;
-      try {
-        const result = await fetchMyTravels({
-          user_id: userId,
-          perPage: SUBSCRIPTION_TRAVELS_PREVIEW_LIMIT,
-          signal: controller.signal,
-        });
-        const { items: list, total } = unwrapMyTravelsPayload(result);
-        const normalizedTravels = list.map(normalizeTravelPreview);
-        commit((prev) => ({
-          ...prev,
-          [userId]: {
-            travels: normalizedTravels,
-            total: total || normalizedTravels.length,
-            loading: false,
-          },
-        }));
-      } catch {
-        commit((prev) => ({
-          ...prev,
-          [userId]: { travels: [], total: 0, loading: false },
-        }));
-      }
-    });
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [subscriptions, includeAuthorTravels, enabled, readSubscriptions, isAuthenticated, owner]);
-
-  const authors: AuthorWithTravels[] = useMemo(
-    () =>
-      subscriptions.map((profile) => {
-        const userId = profile.user ?? profile.id;
-        const entry = authorTravels[userId];
-        return {
-          profile,
-          travels: entry?.travels ?? [],
-          travelsTotal: entry?.total ?? 0,
-          isLoadingTravels: entry?.loading ?? true,
-        };
-      }),
-    [subscriptions, authorTravels]
-  );
-
-  const getFullName = useCallback((p: UserProfileDto) => {
-    return resolveProfileFullName(p).toLowerCase();
-  }, []);
-
-  const handleUnsubscribe = useCallback(
-    async (userId: number) => {
-      const confirmed = await confirmAction({
-        title: i18nT('shared:hooks.useSubscriptionsData.otpisatsya_b4c7f63a'),
-        message: i18nT('shared:hooks.useSubscriptionsData.vy_uvereny_chto_hotite_otpisatsya_ot_etogo_a_68da60cc'),
-        confirmText: i18nT('shared:hooks.useSubscriptionsData.otpisatsya_b4c7f63a'),
-        cancelText: i18nT('common:action.cancel'),
-      });
-      if (!confirmed) return;
-
-      try {
-        await unsubscribeFromUser(userId);
-        queryClient.invalidateQueries({ queryKey: queryKeys.mySubscriptions(owner) });
-        if (owner) void queryClient.invalidateQueries({ queryKey: queryKeys.userProfile(owner), exact: true });
-      } catch {
-        // silent
-      }
-    },
-    [owner, queryClient]
-  );
+    if (!confirmed) return;
+    try {
+      await mutateAsync({ owner, target, subscribe: false });
+    } catch {
+      // Keep the current list when the server rejects the mutation.
+    }
+  }, [isPending, mutateAsync, owner]);
 
   return {
     isAuthenticated,
     authReady,
-    subscriptions,
-    subscribers,
-    subscriptionsCount: subscriptionsQuery.data?.length ?? (subscriptionsQuery.isError ? null : undefined),
-    subscribersCount: subscribersQuery.data?.length ?? (subscribersQuery.isError ? null : undefined),
-    subscriptionsDataUpdatedAt: subscriptionsQuery.dataUpdatedAt,
-    subscribersDataUpdatedAt: subscribersQuery.dataUpdatedAt,
-    authors,
-    subscriptionsLoading: subscriptionsQuery.isLoading,
-    subscribersLoading: subscribersQuery.isLoading,
-    getFullName,
+    authors: subscriptions.rows,
+    subscribers: subscribers.rows,
+    subscriptionsCount: subscriptions.count,
+    subscribersCount: subscribers.count,
+    subscriptionsDataUpdatedAt: subscriptions.dataUpdatedAt,
+    subscribersDataUpdatedAt: subscribers.dataUpdatedAt,
+    subscriptionsLoading: subscriptions.isLoading,
+    subscribersLoading: subscribers.isLoading,
+    subscriptionsPage: subscriptions.pageControls,
+    subscribersPage: subscribers.pageControls,
     handleUnsubscribe,
   };
 }

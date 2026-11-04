@@ -13,14 +13,15 @@ import {
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
-import type { UserProfileDto } from '@/api/user';
+import type { AuthorWithTravels } from '@/api/user';
 import AuthorCard from '@/components/subscriptions/AuthorCard';
 import SubscriberCard from '@/components/subscriptions/SubscriberCard';
+import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker';
-import type { AuthorWithTravels, SubscriptionTab } from '@/hooks/useSubscriptionsData';
+import type { SubscriptionPageControls, SubscriptionTab } from '@/hooks/useSubscriptionsData';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { translatePlural, translate as i18nT } from '@/i18n'
 import { getTabA11yProps, getTabListA11yProps } from '@/utils/a11yTabRoles';
@@ -42,12 +43,14 @@ interface SubscriptionsTabContentProps {
   activeTab: SubscriptionTab;
   onChangeTab?: (tab: SubscriptionTab) => void;
   showTabBar?: boolean;
-  subscriptions: UserProfileDto[];
-  subscribers: UserProfileDto[];
+  subscriptionsCount?: number | null;
+  subscribersCount?: number | null;
+  subscriptionsPage: SubscriptionPageControls;
+  subscribersPage: SubscriptionPageControls;
+  subscribers: AuthorWithTravels[];
   authors: AuthorWithTravels[];
   subscriptionsLoading: boolean;
   subscribersLoading: boolean;
-  getFullName: (profile: UserProfileDto) => string;
   handleUnsubscribe: (userId: number) => void;
   onMessage: (userId: number) => void;
   onOpenTravel: (url: string) => void;
@@ -59,12 +62,14 @@ export default function SubscriptionsTabContent({
   activeTab,
   onChangeTab,
   showTabBar = true,
-  subscriptions,
+  subscriptionsCount,
+  subscribersCount,
+  subscriptionsPage,
+  subscribersPage,
   subscribers,
   authors,
   subscriptionsLoading,
   subscribersLoading,
-  getFullName,
   handleUnsubscribe,
   onMessage,
   onOpenTravel,
@@ -78,16 +83,20 @@ export default function SubscriptionsTabContent({
   const filteredAuthors = useMemo(() => {
     if (!search.trim()) return authors;
     const q = search.trim().toLowerCase();
-    return authors.filter((author) => getFullName(author.profile).toLowerCase().includes(q));
-  }, [authors, search, getFullName]);
+    return authors.filter((author) => author.profile.display_name.toLowerCase().includes(q));
+  }, [authors, search]);
 
   const filteredSubscribers = useMemo(() => {
     if (!search.trim()) return subscribers;
     const q = search.trim().toLowerCase();
-    return subscribers.filter((profile) => getFullName(profile).toLowerCase().includes(q));
-  }, [subscribers, search, getFullName]);
+    return subscribers.filter(({ profile }) => profile.display_name.toLowerCase().includes(q));
+  }, [subscribers, search]);
 
-  const isActiveLoading = activeTab === 'subscriptions' ? subscriptionsLoading : subscribersLoading;
+  const isSubscriptions = activeTab === 'subscriptions';
+  const isActiveLoading = isSubscriptions ? subscriptionsLoading : subscribersLoading;
+  const activePage = isSubscriptions ? subscriptionsPage : subscribersPage;
+  const hasRows = (isSubscriptions ? authors : subscribers).length > 0;
+  const retryLabel = i18nT('sharedStatic:errors.retry');
 
   const renderTabBar = () => {
     if (!showTabBar || !onChangeTab) return null;
@@ -96,7 +105,7 @@ export default function SubscriptionsTabContent({
       <View style={styles.tabBar} {...getTabListA11yProps()}>
         {(['subscriptions', 'subscribers'] as const).map((tab) => {
           const isActive = activeTab === tab;
-          const count = tab === 'subscriptions' ? subscriptions.length : subscribers.length;
+          const count = tab === 'subscriptions' ? subscriptionsCount : subscribersCount;
           const label = tab === 'subscriptions' ? i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpiski_d6c645a6') : i18nT('shared:components.subscriptions.SubscriptionsTabContent.podpischiki_fc40a23e');
           return (
             <Pressable
@@ -108,7 +117,7 @@ export default function SubscriptionsTabContent({
               {...Platform.select({ web: { cursor: 'pointer' } })}
             >
               <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
-                {label}{count > 0 ? ` (${count})` : ''}
+                {label}{(count ?? 0) > 0 ? ` (${count})` : ''}
               </Text>
             </Pressable>
           );
@@ -143,7 +152,7 @@ export default function SubscriptionsTabContent({
   );
 
   const renderSubscriptionsTab = () => {
-    if (subscriptions.length === 0) {
+    if (authors.length === 0) {
       return (
         <View {...SCREEN_CONTENT_FIRST_PROPS}>
           <EmptyState
@@ -163,13 +172,13 @@ export default function SubscriptionsTabContent({
         {renderSearchBar()}
         <View style={styles.header}>
           <Text style={styles.subtitle}>
-            {formatAuthorsCount(subscriptions.length)}
+            {formatAuthorsCount(subscriptionsCount ?? authors.length)}
           </Text>
         </View>
         <View {...SCREEN_CONTENT_FIRST_PROPS}>
           {filteredAuthors.map((author) => (
             <AuthorCard
-              key={author.profile.user ?? author.profile.id}
+              key={author.profile.user}
               author={author}
               onUnsubscribe={handleUnsubscribe}
               onMessage={onMessage}
@@ -178,7 +187,7 @@ export default function SubscriptionsTabContent({
             />
           ))}
         </View>
-        {filteredAuthors.length === 0 && search.trim() ? (
+        {filteredAuthors.length === 0 && search.trim() && !activePage.canLoadMore ? (
           <View style={styles.noResults}>
             <Text style={[styles.noResultsText, { color: colors.textMuted }]}>{i18nT('shared:components.subscriptions.SubscriptionsTabContent.nichego_ne_naydeno_bf51f155')}</Text>
           </View>
@@ -205,18 +214,18 @@ export default function SubscriptionsTabContent({
         {renderSearchBar()}
         <View style={styles.header}>
           <Text style={styles.subtitle}>
-            {formatSubscribersCount(subscribers.length)}
+            {formatSubscribersCount(subscribersCount ?? subscribers.length)}
           </Text>
         </View>
-        {filteredSubscribers.map((profile) => (
+        {filteredSubscribers.map(({ profile }) => (
           <SubscriberCard
-            key={profile.user ?? profile.id}
+            key={profile.user}
             profile={profile}
             onMessage={onMessage}
             onOpenProfile={onOpenProfile}
           />
         ))}
-        {filteredSubscribers.length === 0 && search.trim() ? (
+        {filteredSubscribers.length === 0 && search.trim() && !activePage.canLoadMore ? (
           <View style={styles.noResults}>
             <Text style={[styles.noResultsText, { color: colors.textMuted }]}>{i18nT('shared:components.subscriptions.SubscriptionsTabContent.nichego_ne_naydeno_bf51f155')}</Text>
           </View>
@@ -232,11 +241,24 @@ export default function SubscriptionsTabContent({
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={colors.primaryDark} />
         </View>
-      ) : activeTab === 'subscriptions' ? (
-        renderSubscriptionsTab()
-      ) : (
-        renderSubscribersTab()
-      )}
+      ) : activePage.hasError && !hasRows ? (
+        <EmptyState
+          density="compact"
+          icon="alert-circle"
+          title={i18nT('sharedStatic:subscription.listLoadFailed')}
+          action={{ label: retryLabel, onPress: activePage.retry }}
+        />
+      ) : isSubscriptions ? renderSubscriptionsTab() : renderSubscribersTab()}
+      {hasRows && (activePage.canLoadMore || activePage.hasError) ? (
+        <Button
+          label={activePage.hasError ? retryLabel : i18nT('profile:components.profile.ProfileEngagementDetailList.loadMore')}
+          onPress={activePage.hasError ? activePage.retry : activePage.loadMore}
+          loading={activePage.isFetching}
+          disabled={activePage.isFetching}
+          variant="outline"
+          style={styles.pageAction}
+        />
+      ) : null}
     </View>
   );
 }
@@ -246,6 +268,7 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     wrapper: {
       width: '100%',
     },
+    pageAction: { alignSelf: 'center', marginVertical: DESIGN_TOKENS.spacing.sm },
     header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 6 },
     subtitle: { marginTop: 4, fontSize: 13, color: colors.textMuted },
     loadingWrap: { padding: 16, alignItems: 'center', justifyContent: 'center', minHeight: 180 },

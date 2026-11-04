@@ -1,191 +1,105 @@
-import { readRetryTwice } from '@/utils/queryRetryPolicy';
-import { useMemo, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/context/AuthContext';
-import {
-    fetchMySubscriptions,
-    subscribeToUser,
-    unsubscribeFromUser,
-    type UserProfileDto,
-} from '@/api/user';
+import { useCallback } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { fetchSubscriptionStatus, subscribeToUser, unsubscribeFromUser } from '@/api/user';
 import { queryKeys } from '@/api/queryKeys';
-import { useQueryOwner } from '@/hooks/useQueryOwner';
+import { useAuth } from '@/context/AuthContext';
 import { useActionFeedback } from '@/hooks/useActionFeedback';
-import { translate as i18nT } from '@/i18n'
+import { useQueryOwner } from '@/hooks/useQueryOwner';
+import { translate as i18nT } from '@/i18n';
+import { useAuthStore } from '@/stores/authStore';
+import { readRetryTwice } from '@/utils/queryRetryPolicy';
 
-/**
- * Hook to manage subscription state for a target user.
- * Fetches the current user's subscriptions list and provides
- * subscribe/unsubscribe mutations with optimistic updates.
- */
-export function useSubscription(targetUserId: string | number | null | undefined) {
+type SubscriptionChange = { owner: string; target: number; subscribe: boolean };
+
+const isCurrentOwner = (owner: string) => {
+    const state = useAuthStore.getState();
+    return state.isAuthenticated && state.userId === owner;
+};
+
+export function useSubscriptionMutation() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ owner, target, subscribe }: SubscriptionChange) => {
+            const ensureCurrentOwner = () => {
+                if (isCurrentOwner(owner)) return;
+                const error = new Error('Subscription viewer changed');
+                error.name = 'AbortError';
+                throw error;
+            };
+            ensureCurrentOwner();
+            return subscribe ? subscribeToUser(target, ensureCurrentOwner) : unsubscribeFromUser(target, ensureCurrentOwner);
+        },
+        onMutate: async ({ owner, target, subscribe }) => {
+            const key = queryKeys.subscriptionStatus(owner, target);
+            await queryClient.cancelQueries({ queryKey: key, exact: true });
+            const previous = queryClient.getQueryData<boolean>(key);
+            if (isCurrentOwner(owner) && previous !== undefined) queryClient.setQueryData(key, subscribe);
+            return previous;
+        },
+        onError: (_error, { owner, target }, previous) => {
+            if (isCurrentOwner(owner) && previous !== undefined) {
+                queryClient.setQueryData(queryKeys.subscriptionStatus(owner, target), previous);
+            }
+        },
+        onSuccess: (_result, { owner, target, subscribe }) => {
+            if (!isCurrentOwner(owner)) return;
+            const statusKey = queryKeys.subscriptionStatus(owner, target);
+            queryClient.setQueryData(statusKey, subscribe);
+            void queryClient.invalidateQueries({ queryKey: statusKey, exact: true });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.compactSocialPage(owner, 'subscriptions'), exact: true });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.mySubscriptions(owner), exact: true });
+            void queryClient.invalidateQueries({ queryKey: queryKeys.userProfile(owner), exact: true });
+        },
+    });
+}
+
+export function useSubscription(targetUserId: string | number | null | undefined, readStatus = true) {
     const { isAuthenticated, userId: currentUserId } = useAuth();
     const owner = useQueryOwner();
-    const queryClient = useQueryClient();
     const { run } = useActionFeedback();
+    const { mutateAsync, isPending } = useSubscriptionMutation();
 
-    const normalizedTargetId = useMemo(() => {
-        if (targetUserId == null) return null;
-        const v = String(targetUserId).trim();
-        return v || null;
-    }, [targetUserId]);
-
-    const isOwnProfile =
-        currentUserId != null &&
-        normalizedTargetId != null &&
-        String(currentUserId) === normalizedTargetId;
-
-    const enabled = isAuthenticated && !!normalizedTargetId && !isOwnProfile;
-
-    const subscriptionsQuery = useQuery<UserProfileDto[]>({
-        queryKey: queryKeys.mySubscriptions(owner),
-        queryFn: fetchMySubscriptions,
-        enabled,
+    const numericTarget = Number(targetUserId);
+    const target = Number.isSafeInteger(numericTarget) && numericTarget > 0 ? numericTarget : null;
+    const canSubscribe = isAuthenticated && owner !== null && target !== null && Number(currentUserId) !== target;
+    const statusQuery = useQuery({
+        queryKey: queryKeys.subscriptionStatus(owner, target),
+        queryFn: ({ signal }) => fetchSubscriptionStatus(target!, signal),
+        enabled: canSubscribe && readStatus,
         staleTime: 5 * 60 * 1000,
         retry: readRetryTwice,
     });
 
-    const isSubscribed = useMemo(() => {
-        if (!normalizedTargetId || !subscriptionsQuery.data) return false;
-        return subscriptionsQuery.data.some(
-            (p) =>
-                String(p.user ?? p.id) === normalizedTargetId ||
-                String(p.id) === normalizedTargetId
-        );
-    }, [normalizedTargetId, subscriptionsQuery.data]);
-
-    const invalidate = useCallback(() => {
-        queryClient.invalidateQueries({ queryKey: queryKeys.mySubscriptions(owner) });
-        queryClient.invalidateQueries({ queryKey: queryKeys.mySubscribers(owner) });
-    }, [owner, queryClient]);
-
-    const refreshOwnCounters = useCallback(() => {
-        if (owner) void queryClient.invalidateQueries({ queryKey: queryKeys.userProfile(owner), exact: true });
-    }, [owner, queryClient]);
-
-    const subscribeMutation = useMutation({
-        mutationFn: () => subscribeToUser(normalizedTargetId!),
-        onMutate: async () => {
-            await queryClient.cancelQueries({ queryKey: queryKeys.mySubscriptions(owner) });
-            const previous = queryClient.getQueryData<UserProfileDto[]>(queryKeys.mySubscriptions(owner));
-            if (previous && normalizedTargetId) {
-                const placeholder: UserProfileDto = {
-                    id: Number(normalizedTargetId) || 0,
-                    first_name: '',
-                    last_name: '',
-                    youtube: '',
-                    instagram: '',
-                    twitter: '',
-                    vk: '',
-                    email_notify_comments: false,
-                    email_notify_messages: false,
-                    avatar: '',
-                    user: Number(normalizedTargetId) || 0,
-                };
-                queryClient.setQueryData<UserProfileDto[]>(
-                    queryKeys.mySubscriptions(owner),
-                    [...previous, placeholder]
-                );
-            }
-            return { previous };
-        },
-        onError: (_err, _vars, context) => {
-            if (context?.previous) {
-                queryClient.setQueryData(queryKeys.mySubscriptions(owner), context.previous);
-            }
-        },
-        onSuccess: refreshOwnCounters,
-        onSettled: invalidate,
-    });
-
-    const unsubscribeMutation = useMutation({
-        mutationFn: () => unsubscribeFromUser(normalizedTargetId!),
-        onMutate: async () => {
-            await queryClient.cancelQueries({ queryKey: queryKeys.mySubscriptions(owner) });
-            const previous = queryClient.getQueryData<UserProfileDto[]>(queryKeys.mySubscriptions(owner));
-            if (previous && normalizedTargetId) {
-                queryClient.setQueryData<UserProfileDto[]>(
-                    queryKeys.mySubscriptions(owner),
-                    previous.filter(
-                        (p) =>
-                            String(p.user ?? p.id) !== normalizedTargetId &&
-                            String(p.id) !== normalizedTargetId
-                    )
-                );
-            }
-            return { previous };
-        },
-        onError: (_err, _vars, context) => {
-            if (context?.previous) {
-                queryClient.setQueryData(queryKeys.mySubscriptions(owner), context.previous);
-            }
-        },
-        onSuccess: refreshOwnCounters,
-        onSettled: invalidate,
-    });
-
-    const subscribeAction = useCallback(() => {
-        if (!normalizedTargetId) return Promise.resolve();
+    const changeSubscription = useCallback((subscribe: boolean) => {
+        if (!canSubscribe || !owner || target === null || statusQuery.data === undefined) return;
+        const change = { owner, target, subscribe };
         return run({
-            key: `subscription:${normalizedTargetId}`,
-            commit: () => subscribeMutation.mutateAsync(),
+            key: `subscription:${owner}:${target}`,
+            commit: () => mutateAsync(change),
             success: {
-                message: i18nT('common:feedback.subscribed'),
-                undo: { commit: () => unsubscribeMutation.mutateAsync() },
+                message: i18nT(subscribe ? 'common:feedback.subscribed' : 'common:feedback.unsubscribed'),
+                ...(subscribe ? {} : { type: 'info' as const }),
+                undo: { commit: () => mutateAsync({ ...change, subscribe: !subscribe }) },
             },
             error: {
                 message: i18nT('shared:hooks.useSubscription.oshibka_282b48f5'),
-                description: i18nT('shared:hooks.useSubscription.ne_udalos_podpisatsya_poprobuyte_pozzhe_0dfb8d0c'),
+                description: i18nT(subscribe
+                    ? 'shared:hooks.useSubscription.ne_udalos_podpisatsya_poprobuyte_pozzhe_0dfb8d0c'
+                    : 'shared:hooks.useSubscription.ne_udalos_otpisatsya_poprobuyte_pozzhe_a1ce39c4'),
             },
         });
-    }, [normalizedTargetId, run, subscribeMutation, unsubscribeMutation]);
+    }, [canSubscribe, mutateAsync, owner, run, statusQuery.data, target]);
 
-    const unsubscribeAction = useCallback(() => {
-        if (!normalizedTargetId) return Promise.resolve();
-        return run({
-            key: `subscription:${normalizedTargetId}`,
-            commit: () => unsubscribeMutation.mutateAsync(),
-            success: {
-                message: i18nT('common:feedback.unsubscribed'),
-                type: 'info',
-                undo: { commit: () => subscribeMutation.mutateAsync() },
-            },
-            error: {
-                message: i18nT('shared:hooks.useSubscription.oshibka_282b48f5'),
-                description: i18nT('shared:hooks.useSubscription.ne_udalos_otpisatsya_poprobuyte_pozzhe_a1ce39c4'),
-            },
-        });
-    }, [normalizedTargetId, run, subscribeMutation, unsubscribeMutation]);
-
-    const toggleSubscription = useCallback(() => {
-        if (!normalizedTargetId || !isAuthenticated) return;
-        if (isSubscribed) {
-            void unsubscribeAction();
-        } else {
-            void subscribeAction();
-        }
-    }, [normalizedTargetId, isAuthenticated, isSubscribed, subscribeAction, unsubscribeAction]);
-
-    return useMemo(
-        () => ({
-            isSubscribed,
-            isLoading: subscriptionsQuery.isLoading,
-            isMutating: subscribeMutation.isPending || unsubscribeMutation.isPending,
-            toggleSubscription,
-            subscribe: () => void subscribeAction(),
-            unsubscribe: () => void unsubscribeAction(),
-            canSubscribe: enabled,
-        }),
-        [
-            isSubscribed,
-            subscriptionsQuery.isLoading,
-            toggleSubscription,
-            subscribeAction,
-            unsubscribeAction,
-            subscribeMutation.isPending,
-            unsubscribeMutation.isPending,
-            enabled,
-        ]
-    );
+    return {
+        isSubscribed: statusQuery.data === true,
+        isLoading: canSubscribe && readStatus && statusQuery.isPending && !statusQuery.isPaused,
+        isStatusUnavailable: canSubscribe && readStatus && statusQuery.data === undefined && (statusQuery.isError || statusQuery.isPaused),
+        isMutating: isPending,
+        canSubscribe,
+        retryStatus: statusQuery.refetch,
+        toggleSubscription: () => { void changeSubscription(!statusQuery.data); },
+        subscribe: () => { void changeSubscription(true); },
+        unsubscribe: () => { void changeSubscription(false); },
+    };
 }

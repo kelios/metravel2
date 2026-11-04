@@ -107,6 +107,10 @@ export const queryKeys = {
   // #2132: `terms_accepted_current` из `/user/me/` для экрана повторного согласия.
   termsAcceptedCurrent: (userId: string | null) => ['terms-accepted-current', userId] as const,
   mySubscriptions: (userId: string | null) => ['my-subscriptions', userId] as const,
+  compactSocialPage: (userId: string | null, kind: 'subscriptions' | 'subscribers') =>
+    ['compact-social-page', userId, kind] as const,
+  subscriptionStatus: (viewerId: string | null, targetUserId: number | null) =>
+    ['subscription-status', viewerId, targetUserId] as const,
   // Подписка email аккаунта на рассылку (#2318): «Прислать на почту» вместо формы.
   emailSubscriptionStatus: (userId: string | null) => ['email-subscription-status', userId] as const,
   mySubscribers: (userId: string | null) => ['my-subscribers', userId] as const,
@@ -162,12 +166,9 @@ export const queryKeys = {
   questReviews: (questId: string | undefined) => ['quest', questId, 'reviews'] as const,
   travelsForQuest: (searchTerm: string) => ['travels-for-quest', searchTerm] as const,
   questsNearLocation: (loc: string, locale: string) => ['quests-near-location', loc, locale] as const,
-  // #2775: поиск по сайту. Справочник городов квестов — сотни записей и редко
-  // меняется; квесты города привязаны к пользователю, как компактный каталог:
-  // карточка показывает личное «пройден».
-  questCitiesDirectory: (locale: string) => ['quest-cities', locale] as const,
-  siteSearchCityQuests: (cityId: number | undefined, userId: string | null, locale: string) =>
-    ['quests', 'site-search-city', cityId, userId, locale] as const,
+  // Карточки превью показывают личный статус прохождения.
+  siteSearchQuestPreview: (query: string, userId: string | null, locale: string) =>
+    ['quests', 'site-search-preview', query, userId, locale] as const,
   // Под корнем каталога мест: его инвалидация чистит и эту выборку.
   siteSearchPlaces: (query: string) => ['places-catalog', 'site-search', query] as const,
   // #1484: компактный каталог для коллекции города и блока «следующий квест».

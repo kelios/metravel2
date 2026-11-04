@@ -564,6 +564,7 @@ function ListTravelBase({ catalogIntro, enabled = true, initialViewportWidth, pr
     const searchAlsoFoundHeader = useSearchAlsoFound({
       query: debSearch,
       enabled: isSiteSearch,
+      authReady,
       userId: userId ?? null,
     });
 

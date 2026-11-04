@@ -10,7 +10,7 @@ const mockOpenExternalUrl = jest.fn((_url?: unknown) => Promise.resolve(true));
 const mockShareTripPlan = jest.fn((_trip?: unknown) => Promise.resolve('shared'));
 
 jest.mock('@/hooks/useSubscriptionsData', () => ({
-  useSubscriptionsData: () => ({
+  useInviteSubscribers: () => ({
     subscribers: mockSubscribers,
     subscribersLoading: false,
   }),

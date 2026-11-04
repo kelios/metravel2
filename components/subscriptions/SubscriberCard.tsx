@@ -5,31 +5,21 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, Pressable, Platform, Image, StyleSheet } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
-import { resolveProfileFullName, type UserProfileDto } from '@/api/user';
+import type { CompactSocialProfile } from '@/api/user';
 import SubscribeButton from '@/components/ui/SubscribeButton';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useBreakpoints } from '@/hooks/useResponsive';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
-import { openExternalUrl } from '@/utils/externalLinks';
 import { translate as i18nT } from '@/i18n'
 
 
 const WEB_CARD_SHADOW_STYLE = { boxShadow: DESIGN_TOKENS.shadows.card };
 const WEB_CURSOR_POINTER_STYLE = { cursor: 'pointer' as const };
 
-type SocialKey = 'youtube' | 'instagram' | 'twitter' | 'vk';
-
-const SOCIAL_ICONS: Record<SocialKey, React.ComponentProps<typeof Feather>['name']> = {
-  youtube: 'youtube',
-  instagram: 'instagram',
-  twitter: 'twitter',
-  vk: 'external-link',
-};
-
 interface SubscriberCardProps {
-  profile: UserProfileDto;
+  profile: CompactSocialProfile;
   onMessage: (userId: number) => void;
   onOpenProfile: (userId: number) => void;
 }
@@ -42,7 +32,7 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
   const [avatarError, setAvatarError] = useState(false);
 
   const fullName = useMemo(() => {
-    return resolveProfileFullName(profile) || i18nT('sharedStatic:user.fallbackName');
+    return profile.display_name || i18nT('sharedStatic:user.fallbackName');
   }, [profile]);
 
   const initials = useMemo(() => {
@@ -54,19 +44,7 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
       .toUpperCase() || null;
   }, [fullName]);
 
-  const userId = profile.user ?? profile.id;
-  const socialLinks = useMemo(() => {
-    if (profile.contacts_hidden === true && profile.contact_access !== 'granted') return [];
-
-    return [
-      { key: 'youtube' as const, label: i18nT('profile:components.profile.ProfileHeader.youtube_3c5324c5'), url: profile.youtube },
-      { key: 'instagram' as const, label: i18nT('profile:components.profile.ProfileHeader.instagram_dbd24d26'), url: profile.instagram },
-      { key: 'twitter' as const, label: i18nT('profile:components.profile.ProfileHeader.twitter_6c382a7e'), url: profile.twitter },
-      { key: 'vk' as const, label: i18nT('profile:components.profile.ProfileHeader.vk_4e6034d6'), url: profile.vk },
-    ]
-      .map((social) => ({ ...social, url: String(social.url ?? '').trim() }))
-      .filter((social) => social.url);
-  }, [profile]);
+  const userId = profile.user;
 
   return (
     <View style={styles.section}>
@@ -79,9 +57,9 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
           {...Platform.select({ web: { cursor: 'pointer' } })}
         >
           <View style={styles.avatar}>
-            {profile.avatar && !avatarError ? (
+            {profile.avatar_url && !avatarError ? (
               <Image
-                source={{ uri: optimizeImageUrl(profile.avatar, { width: 80, quality: 70, fit: 'cover' }) ?? profile.avatar }}
+                source={{ uri: optimizeImageUrl(profile.avatar_url, { width: 80, quality: 70, fit: 'cover' }) ?? profile.avatar_url }}
                 style={styles.avatarImage}
                 onError={() => setAvatarError(true)}
               />
@@ -95,21 +73,7 @@ function SubscriberCard({ profile, onMessage, onOpenProfile }: SubscriberCardPro
         </Pressable>
 
         <View testID="subscriber-actions" style={styles.actions}>
-          {socialLinks.map((social) => (
-            <Pressable
-              key={social.key}
-              testID={`subscriber-social-${social.key}`}
-              style={[styles.actionButton, globalFocusStyles.focusable]}
-              onPress={() => void openExternalUrl(social.url)}
-              accessibilityRole="link"
-              accessibilityLabel={i18nT('profile:components.profile.ProfileHeader.otkryt_value1_8f445d13', { value1: social.label })}
-              accessibilityHint={i18nT('profile:components.profile.ProfileHeader.otkroetsya_vneshnyaya_ssylka_na_value1_1821b787', { value1: social.label })}
-              {...Platform.select({ web: { cursor: 'pointer' } })}
-            >
-              <Feather name={SOCIAL_ICONS[social.key]} size={18} color={colors.primaryDark} />
-            </Pressable>
-          ))}
-          <SubscribeButton targetUserId={userId} size="sm" iconOnly style={styles.actionButton} />
+          <SubscribeButton targetUserId={userId} size="sm" iconOnly deferStatus style={styles.actionButton} />
           <Pressable
             style={[styles.actionButton, globalFocusStyles.focusable]}
             onPress={() => onMessage(userId)}

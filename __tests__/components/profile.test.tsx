@@ -74,6 +74,7 @@ jest.mock('@/api/user', () => ({
   fetchUserCountryProgress: mockFetchUserCountryProgress,
   fetchMySubscriptions: jest.fn().mockResolvedValue([]),
   fetchMySubscribers: jest.fn().mockResolvedValue([]),
+  fetchSubscriptionStatus: jest.fn().mockResolvedValue(false),
   subscribeToUser: jest.fn().mockResolvedValue(null),
   unsubscribeFromUser: jest.fn().mockResolvedValue(null),
   normalizeAvatar: (raw: unknown) => {
@@ -259,7 +260,8 @@ describe('ProfileScreen', () => {
       authors: [],
       subscriptionsLoading: false,
       subscribersLoading: false,
-      getFullName: jest.fn(() => ''),
+      subscriptionsPage: { canLoadMore: false, hasError: false },
+      subscribersPage: { canLoadMore: false, hasError: false },
       handleUnsubscribe: jest.fn(),
     });
     mockFetchAllCountries.mockResolvedValue([
@@ -546,26 +548,24 @@ describe('ProfileScreen', () => {
   it('opens subscriptions and subscribers inside the profile tab area', async () => {
     setupAuth({ isAuthenticated: true });
     setupFavorites(0, 0);
-    mockUseSubscriptionsData.mockImplementation((options?: { includeAuthorTravels?: boolean }) => ({
+    mockUseSubscriptionsData.mockImplementation((options?: { readSubscriptions?: boolean }) => ({
       subscriptions: [SUBSCRIPTION_AUTHOR_FIXTURE],
-      subscribers: [SUBSCRIBER_FIXTURE],
+      subscribers: [{ profile: { user: SUBSCRIBER_FIXTURE.user, display_name: 'Мария Сидорова', avatar_url: null }, travels: [], travelsTotal: 0 }],
       subscriptionsCount: 1,
       subscribersCount: 1,
       subscriptionsDataUpdatedAt: 0,
       subscribersDataUpdatedAt: 0,
-      authors: options?.includeAuthorTravels
+      authors: options?.readSubscriptions
         ? [{
-            profile: SUBSCRIPTION_AUTHOR_FIXTURE,
+            profile: { user: SUBSCRIPTION_AUTHOR_FIXTURE.user, display_name: 'Иван Петров', avatar_url: null },
             travels: [],
             travelsTotal: 0,
-            isLoadingTravels: false,
           }]
         : [],
       subscriptionsLoading: false,
       subscribersLoading: false,
-      getFullName: (profile: typeof SUBSCRIPTION_AUTHOR_FIXTURE) => (
-        `${profile.first_name ?? ''} ${profile.last_name ?? ''}`.trim().toLowerCase()
-      ),
+      subscriptionsPage: { canLoadMore: false, hasError: false },
+      subscribersPage: { canLoadMore: false, hasError: false },
       handleUnsubscribe: jest.fn(),
     }));
 

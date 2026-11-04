@@ -9,7 +9,7 @@ import Button from '@/components/ui/Button';
 import type { PlannedTrip } from '@/api/plannedTrips';
 import { normalizeProfileName, resolveProfileFullName, type UserProfileDto } from '@/api/user';
 import { useInviteParticipants } from '@/hooks/usePlannedTripsApi';
-import { useSubscriptionsData } from '@/hooks/useSubscriptionsData';
+import { useInviteSubscribers } from '@/hooks/useSubscriptionsData';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { buildTripPlanUrl, buildTripTelegramShareUrl } from '@/utils/tripPlanLinks';
 import { shareTripPlan } from '@/utils/shareTripPlan';
@@ -52,7 +52,7 @@ export const getTripInviteSubscriberName = (profile: InviteSubscriberProfile): s
 function TripInvitePanel({ trip }: Props) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { subscribers, subscribersLoading } = useSubscriptionsData();
+  const { subscribers, subscribersLoading } = useInviteSubscribers(trip.isOwner);
   const invite = useInviteParticipants();
 
   const [selected, setSelected] = useState<number[]>([]);

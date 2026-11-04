@@ -68,6 +68,11 @@ export const organizerIds: AuthorIdsOf = (item) => {
   return id === null ? [] : [id]
 }
 
+export const socialProfileIds: AuthorIdsOf = (item) => {
+  const id = toAuthorId(asRecord(asRecord(item)?.profile)?.user)
+  return id === null ? [] : [id]
+}
+
 const isBlockedBy = (authorIdsOf: AuthorIdsOf, blocked: BlockedIds) =>
   (item: unknown): boolean => authorIdsOf(item).some((id) => blocked.has(id))
 

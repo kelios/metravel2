@@ -134,7 +134,6 @@ export default function ProfileScreen() {
   // 30 с на любой другой странице. Поллим только пока профиль на экране.
   const { count: unreadMessagesCount } = useUnreadCount(isAuthenticated, isFocused);
   const {
-    subscriptions,
     subscribers,
     authors,
     subscriptionsLoading,
@@ -143,10 +142,11 @@ export default function ProfileScreen() {
     subscribersCount,
     subscriptionsDataUpdatedAt,
     subscribersDataUpdatedAt,
-    getFullName,
+    subscriptionsPage,
+    subscribersPage,
     handleUnsubscribe,
   } = useSubscriptionsData({
-    includeAuthorTravels: activeTab === 'subscriptions',
+    enabled: isFocused,
     readSubscriptions: activeTab === 'subscriptions' || needsLegacyCounts,
     readSubscribers: activeTab === 'subscribers' || needsLegacyCounts,
   });
@@ -700,12 +700,14 @@ export default function ProfileScreen() {
       <SubscriptionsTabContent
         activeTab={activeTab}
         showTabBar={false}
-        subscriptions={subscriptions}
+        subscriptionsCount={subscriptionsCount}
+        subscribersCount={subscribersCount}
+        subscriptionsPage={subscriptionsPage}
+        subscribersPage={subscribersPage}
         subscribers={subscribers}
         authors={authors}
         subscriptionsLoading={subscriptionsLoading}
         subscribersLoading={subscribersLoading}
-        getFullName={getFullName}
         handleUnsubscribe={handleUnsubscribe}
         onMessage={handleMessageUser}
         onOpenTravel={handleOpenSubscribedTravel}
@@ -716,7 +718,6 @@ export default function ProfileScreen() {
   }, [
     activeTab,
     authors,
-    getFullName,
     handleFindTravels,
     handleMessageUser,
     handleOpenSubscribedProfile,
@@ -724,7 +725,10 @@ export default function ProfileScreen() {
     handleUnsubscribe,
     subscribers,
     subscribersLoading,
-    subscriptions,
+    subscriptionsCount,
+    subscribersCount,
+    subscriptionsPage,
+    subscribersPage,
     subscriptionsLoading,
   ]);
 

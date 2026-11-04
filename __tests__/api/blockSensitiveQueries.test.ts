@@ -124,6 +124,21 @@ describe('stripCommentTree', () => {
 })
 
 describe('applyAuthorBlock', () => {
+  it('strips blocked profiles immediately from compact social pages', () => {
+    const qc = newClient()
+    const blocked = { profile: { user: BLOCKED }, travels: [{ id: 3 }] }
+    const kept = { profile: { user: 9 }, travels: [] }
+    const key = queryKeys.compactSocialPage('1', 'subscriptions')
+    qc.setQueryData(key, { pages: [{ results: [blocked, kept], count: 2, hasNext: false }], pageParams: [1] })
+
+    applyAuthorBlock(qc, BLOCKED)
+
+    expect(qc.getQueryData(key)).toEqual({
+      pages: [{ results: [kept], count: 1, hasNext: false, blockHiddenCount: 1 }],
+      pageParams: [1],
+    })
+  })
+
   it('strips every registry list, patches the profile and notifies subscribers', () => {
     const qc = newClient()
     const untouched = { data: [travel(9, '1')], total: 1 }

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Pressable, Platform, type StyleProp, type ViewStyle } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter } from 'expo-router';
@@ -18,19 +18,24 @@ interface SubscribeButtonProps {
     /** Вид под курсором мыши (web, #2036); на native и на касание `hovered` не приходит. */
     hoverStyle?: StyleProp<ViewStyle>;
     iconOnly?: boolean;
+    deferStatus?: boolean;
 }
 
-function SubscribeButtonComponent({ targetUserId, size = 'sm', style, hoverStyle, iconOnly }: SubscribeButtonProps) {
-    const { isAuthenticated } = useAuth();
+function SubscribeButtonComponent({ targetUserId, size = 'sm', style, hoverStyle, iconOnly, deferStatus = false }: SubscribeButtonProps) {
+    const { isAuthenticated, userId } = useAuth();
+    const [disclosure, setDisclosure] = useState<{ viewer: typeof userId; target: typeof targetUserId }>();
+    const statusRequested = !deferStatus || (disclosure?.viewer === userId && disclosure?.target === targetUserId);
     const router = useRouter();
     const colors = useThemedColors();
     const {
         isSubscribed,
         isLoading,
         isMutating,
+        isStatusUnavailable,
+        retryStatus,
         toggleSubscription,
         canSubscribe,
-    } = useSubscription(targetUserId);
+    } = useSubscription(targetUserId, statusRequested);
 
     const handlePress = useCallback(() => {
         if (!isAuthenticated) {
@@ -38,8 +43,16 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, hoverStyle
             router.push(href as any);
             return;
         }
+        if (!statusRequested) {
+            setDisclosure({ viewer: userId, target: targetUserId });
+            return;
+        }
+        if (isStatusUnavailable) {
+            void retryStatus();
+            return;
+        }
         toggleSubscription();
-    }, [isAuthenticated, toggleSubscription, router]);
+    }, [isAuthenticated, isStatusUnavailable, retryStatus, router, statusRequested, targetUserId, toggleSubscription, userId]);
 
     const icon = useMemo(
         () =>
@@ -55,7 +68,9 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, hoverStyle
 
     const scaleAnim = useRef(new Animated.Value(1)).current;
     const btnRef = useRef<any>(null);
-    const titleText = isSubscribed ? i18nT('shared:components.ui.SubscribeButton.otpisatsya_0e2e1ea7') : i18nT('shared:components.ui.SubscribeButton.podpisatsya_e3acc977');
+    const statusAction = isAuthenticated && !statusRequested ? i18nT('sharedStatic:subscription.statusAction') : null;
+    const retryAction = isStatusUnavailable ? i18nT('sharedStatic:errors.retry') : null;
+    const titleText = statusAction ?? retryAction ?? (isSubscribed ? i18nT('shared:components.ui.SubscribeButton.otpisatsya_0e2e1ea7') : i18nT('shared:components.ui.SubscribeButton.podpisatsya_e3acc977'));
 
     const originalHandlePress = handlePress;
     const animatedHandlePress = useCallback(() => {
@@ -72,11 +87,11 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, hoverStyle
 
     if (!canSubscribe && isAuthenticated) return null;
 
-    const a11yLabel = isLoading
+    const a11yLabel = statusAction ?? retryAction ?? (isLoading
         ? i18nT('shared:components.ui.SubscribeButton.zagruzka_sostoyaniya_podpiski_7423c0ef')
         : isSubscribed
             ? i18nT('shared:components.ui.SubscribeButton.otpisatsya_ot_polzovatelya_577975ed')
-            : i18nT('shared:components.ui.SubscribeButton.podpisatsya_na_polzovatelya_f873c74c');
+            : i18nT('shared:components.ui.SubscribeButton.podpisatsya_na_polzovatelya_f873c74c'));
 
     if (iconOnly) {
         return (
@@ -84,7 +99,7 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, hoverStyle
                 <Pressable
                     ref={btnRef}
                     onPress={animatedHandlePress}
-                    disabled={isLoading}
+                    disabled={isLoading || isMutating}
                     accessibilityRole="button"
                     accessibilityLabel={a11yLabel}
                     style={({ hovered }) => [style, hovered && hoverStyle]}
@@ -96,7 +111,7 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, hoverStyle
                         : {})}
                 >
                     <Feather
-                        name={isSubscribed ? 'user-check' : 'user-plus'}
+                        name={statusAction ? 'users' : retryAction ? 'refresh-cw' : isLoading ? 'clock' : isSubscribed ? 'user-check' : 'user-plus'}
                         size={18}
                         color={isSubscribed ? colors.primary : colors.text}
                     />
@@ -105,11 +120,11 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, hoverStyle
         );
     }
 
-    const label = isLoading
+    const label = statusAction ?? retryAction ?? (isLoading
         ? '...'
         : isSubscribed
             ? i18nT('shared:components.ui.SubscribeButton.vy_podpisany_aa09a5d6')
-            : i18nT('shared:components.ui.SubscribeButton.podpisatsya_e3acc977');
+            : i18nT('shared:components.ui.SubscribeButton.podpisatsya_e3acc977'));
 
     return (
         <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
@@ -120,7 +135,7 @@ function SubscribeButtonComponent({ targetUserId, size = 'sm', style, hoverStyle
                 size={size}
                 icon={icon}
                 loading={isLoading || isMutating}
-                disabled={isLoading}
+                disabled={isLoading || isMutating}
                 accessibilityLabel={a11yLabel}
                 style={style}
                 hoverStyle={hoverStyle}

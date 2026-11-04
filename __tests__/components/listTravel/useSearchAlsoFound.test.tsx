@@ -11,18 +11,24 @@ import { useSearchAlsoFound } from '@/components/listTravel/hooks/useSearchAlsoF
 import { SEARCH_ALSO_FOUND_ROW_HEIGHT } from '@/components/listTravel/SearchAlsoFoundSummary'
 
 const mockPush = jest.fn()
-const mockFetchQuestCitiesDirectory = jest.fn()
-const mockFetchSiteSearchCityQuests = jest.fn()
-const mockFetchSiteSearchPlaces = jest.fn()
+const mockGet = jest.fn()
+const mockFetchPlacesCatalog = jest.fn()
+let mockLocale = 'ru'
 
 jest.mock('expo-router', () => ({
   useRouter: () => ({ push: mockPush }),
 }))
 
-jest.mock('@/api/siteSearchExtras', () => ({
-  fetchQuestCitiesDirectory: (...args: unknown[]) => mockFetchQuestCitiesDirectory(...args),
-  fetchSiteSearchCityQuests: (...args: unknown[]) => mockFetchSiteSearchCityQuests(...args),
-  fetchSiteSearchPlaces: (...args: unknown[]) => mockFetchSiteSearchPlaces(...args),
+jest.mock('@/api/client', () => ({
+  apiClient: { get: (...args: unknown[]) => mockGet(...args) },
+}))
+
+jest.mock('@/api/places', () => ({
+  fetchPlacesCatalog: (...args: unknown[]) => mockFetchPlacesCatalog(...args),
+}))
+
+jest.mock('@/hooks/useQuestContentLocale', () => ({
+  useQuestContentLocale: () => mockLocale,
 }))
 
 jest.mock('@/components/quests/QuestForCityCard', () => {
@@ -35,29 +41,20 @@ jest.mock('@/components/quests/QuestForCityCard', () => {
   }
 })
 
-const cities = [
-  { id: 65, name: 'Браслав', name_canonical: 'Браслав', lat: 55.6, lng: 27.0, legacy_ids: [] },
-  { id: 9, name: 'Минск', name_canonical: 'Минск', lat: 53.9, lng: 27.5, legacy_ids: [] },
-]
-
 const braslavQuest = {
-  id: 'braslav-ozera',
-  numericId: 501,
+  id: 501,
+  quest_id: 'braslav-ozera',
   title: 'Квест по Браславу: город между двух озёр',
   points: 8,
-  cityId: '65',
-  cityName: 'Браслав',
-  contentLocale: 'ru',
-  availableLocales: ['ru'],
+  city_id: '65',
+  city_name: 'Браслав',
+  content_locale: 'ru',
+  available_locales: ['ru'],
   lat: 55.6,
   lng: 27.0,
-  ratingAvg: null,
-  ratingCount: 0,
-  completionsCount: 0,
-  viewsCount: 0,
-  isCompletedByMe: false,
-  firstCompleter: null,
 }
+
+const emptyQuestPreview = { city: null, count: 0, results: [] }
 
 const braslavPlace = {
   id: 'place-1',
@@ -69,10 +66,12 @@ const braslavPlace = {
 type HarnessProps = {
   query: string
   enabled?: boolean
+  authReady?: boolean
+  userId?: string | null
 }
 
-function Harness({ query, enabled = true }: HarnessProps) {
-  const header = useSearchAlsoFound({ query, enabled, userId: null })
+function Harness({ query, enabled = true, authReady = true, userId = null }: HarnessProps) {
+  const header = useSearchAlsoFound({ query, enabled, authReady, userId })
   return (
     <View>
       {header}
@@ -85,11 +84,9 @@ async function renderHarness(props: HarnessProps) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
-  return await render(
-    <QueryClientProvider client={client}>
-      <Harness {...props} />
-    </QueryClientProvider>,
-  )
+  return await render(<Harness {...props} />, {
+    wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+  })
 }
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -98,18 +95,17 @@ const rowHeight = (testID: string) => StyleSheet.flatten(screen.getByTestId(test
 describe('useSearchAlsoFound (#2775)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockFetchQuestCitiesDirectory.mockResolvedValue(cities)
-    mockFetchSiteSearchCityQuests.mockResolvedValue({
-      quests: [braslavQuest],
-      total: 1,
-      citySegment: 'braslav',
-      cityName: 'Браслав',
+    mockLocale = 'ru'
+    mockGet.mockResolvedValue({
+      city: { slug: 'braslav', name: 'Браслав' },
+      count: 1,
+      results: [braslavQuest],
     })
-    mockFetchSiteSearchPlaces.mockResolvedValue({ places: [braslavPlace], total: 12 })
+    mockFetchPlacesCatalog.mockResolvedValue({ places: [braslavPlace], count: 12 })
   })
 
   it('reserves the fixed-height row before the sources answer', async () => {
-    mockFetchSiteSearchPlaces.mockReturnValue(new Promise(() => undefined))
+    mockFetchPlacesCatalog.mockReturnValue(new Promise(() => undefined))
     await renderHarness({ query: 'Браслав' })
 
     expect(screen.getByTestId('search-also-found-loading')).toBeTruthy()
@@ -123,8 +119,16 @@ describe('useSearchAlsoFound (#2775)', () => {
     expect(await screen.findByText('Ещё по запросу: 1 квест · 12 мест')).toBeTruthy()
     expect(rowHeight('search-also-found-toggle')).toBe(SEARCH_ALSO_FOUND_ROW_HEIGHT)
     expect(screen.queryByTestId('search-also-found-list')).toBeNull()
-    expect(mockFetchSiteSearchCityQuests).toHaveBeenCalledWith(65, expect.any(String))
-    expect(mockFetchSiteSearchPlaces).toHaveBeenCalledWith('Браслав', expect.anything())
+    expect(mockGet).toHaveBeenCalledTimes(1)
+    expect(mockGet).toHaveBeenCalledWith(
+      `/quests/search-city-preview/?q=${encodeURIComponent('браслав')}&locale=ru`,
+      undefined,
+      { signal: expect.anything() },
+    )
+    expect(mockFetchPlacesCatalog).toHaveBeenCalledWith(
+      { page: 1, perPage: 3, q: 'Браслав' },
+      expect.anything(),
+    )
   })
 
   it('expands the ready list on tap and links to the city quests and places', async () => {
@@ -144,36 +148,91 @@ describe('useSearchAlsoFound (#2775)', () => {
   })
 
   it('keeps the row with a muted "nothing found" text when no quest city or place matches', async () => {
-    mockFetchSiteSearchPlaces.mockResolvedValue({ places: [], total: 0 })
+    mockGet.mockResolvedValue(emptyQuestPreview)
+    mockFetchPlacesCatalog.mockResolvedValue({ places: [], count: 0 })
     await renderHarness({ query: 'Зюзюкино' })
 
     expect(await screen.findByTestId('search-also-found-empty')).toBeTruthy()
     expect(screen.getByText('Квестов и мест по запросу не нашлось')).toBeTruthy()
     expect(rowHeight('search-also-found-empty')).toBe(SEARCH_ALSO_FOUND_ROW_HEIGHT)
     expect(screen.queryByTestId('search-also-found-toggle')).toBeNull()
-    expect(mockFetchSiteSearchCityQuests).not.toHaveBeenCalled()
+    expect(mockGet).toHaveBeenCalledTimes(1)
   })
 
-  it.each(['', '   ', 'Бр'])('does not request quests or places and shows no row for query %p', async (query) => {
+  it.each(['', '   ', 'Бр', ' — (  ) '])('does not request quests or places and shows no row for query %p', async (query) => {
     await renderHarness({ query })
     await flush()
 
-    expect(mockFetchSiteSearchCityQuests).not.toHaveBeenCalled()
-    expect(mockFetchSiteSearchPlaces).not.toHaveBeenCalled()
+    expect(mockGet).not.toHaveBeenCalled()
+    expect(mockFetchPlacesCatalog).not.toHaveBeenCalled()
     expect(screen.queryByTestId('search-also-found')).toBeNull()
   })
 
-  it('prefetches the quest city directory on /search before a query is typed', async () => {
-    await renderHarness({ query: '' })
-    await waitFor(() => expect(mockFetchQuestCitiesDirectory).toHaveBeenCalledTimes(1))
+  it('uses the server total and keeps a normalized cache entry per locale', async () => {
+    mockGet.mockResolvedValue({
+      city: { slug: 'braslav', name: 'Браслав' },
+      count: 11,
+      results: [braslavQuest, { ...braslavQuest, id: 502 }, { ...braslavQuest, id: 503 }],
+    })
+    const view = await renderHarness({ query: 'Браслав' })
+    expect(await screen.findByText('Ещё по запросу: 11 квестов · 12 мест')).toBeTruthy()
+
+    await view.rerender(<Harness query="  БРАСЛАВ  " />)
+    await flush()
+    expect(mockGet).toHaveBeenCalledTimes(1)
+
+    mockLocale = 'en'
+    await view.rerender(<Harness query="Браслав" />)
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(2))
+    expect(mockGet.mock.calls[1][0]).toMatch(/&locale=en$/)
+  })
+
+  it('waits for the restored account before loading a personal quest preview', async () => {
+    const view = await renderHarness({ query: 'Браслав', authReady: false })
+
+    await waitFor(() => expect(mockFetchPlacesCatalog).toHaveBeenCalledTimes(1))
+    expect(mockGet).not.toHaveBeenCalled()
+
+    await view.rerender(<Harness query="Браслав" userId="7" />)
+    expect(await screen.findByTestId('search-also-found-toggle')).toBeTruthy()
+    expect(mockGet).toHaveBeenCalledTimes(1)
+    expect(mockFetchPlacesCatalog).toHaveBeenCalledTimes(1)
+  })
+
+  it('aborts an obsolete quest preview when the query changes or /search is disabled', async () => {
+    mockGet.mockImplementation(() => new Promise(() => undefined))
+    const view = await renderHarness({ query: 'Браслав' })
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(1))
+    const firstSignal = mockGet.mock.calls[0][2].signal as AbortSignal
+    expect(firstSignal.aborted).toBe(false)
+
+    await view.rerender(<Harness query="Минск" />)
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(2))
+    expect(firstSignal.aborted).toBe(true)
+
+    const secondSignal = mockGet.mock.calls[1][2].signal as AbortSignal
+    await view.rerender(<Harness query="Минск" enabled={false} />)
+    expect(secondSignal.aborted).toBe(true)
+    expect(mockGet).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps places and articles available on a preview error without retrying', async () => {
+    mockGet.mockRejectedValue(new Error('Preview unavailable'))
+    await renderHarness({ query: 'Браслав' })
+    await fireEvent.press(await screen.findByTestId('search-also-found-toggle'))
+
+    expect(await screen.findByText('Гора Маяк')).toBeTruthy()
+    expect(screen.getByText('cards')).toBeTruthy()
+    expect(screen.queryByTestId('quest-card-braslav-ozera')).toBeNull()
+    expect(mockGet).toHaveBeenCalledTimes(1)
   })
 
   it('does nothing outside /search', async () => {
     await renderHarness({ query: 'Браслав', enabled: false })
     await flush()
 
-    expect(mockFetchQuestCitiesDirectory).not.toHaveBeenCalled()
-    expect(mockFetchSiteSearchPlaces).not.toHaveBeenCalled()
+    expect(mockGet).not.toHaveBeenCalled()
+    expect(mockFetchPlacesCatalog).not.toHaveBeenCalled()
     expect(screen.queryByTestId('search-also-found')).toBeNull()
   })
 })

@@ -65,6 +65,21 @@ it.each([200, 204])('rejects HTTP %s when the caller requires 202', async (statu
   expect(fetchMock.mock.calls[0][1]).not.toHaveProperty('expectedStatus')
 })
 
+it('dispatches immediately after a synchronous mutation guard', async () => {
+  const steps: string[] = []
+  fetchMock.mockImplementationOnce(async () => {
+    steps.push('fetch')
+    return response(204)
+  })
+  const beforeFetch = () => {
+    steps.push('guard')
+    void Promise.resolve().then(() => steps.push('later microtask'))
+  }
+
+  await expect(apiClient.delete('/guarded-write', undefined, { beforeFetch })).resolves.toBeNull()
+  expect(steps).toEqual(['guard', 'fetch', 'later microtask'])
+})
+
 it('preserves ordinary successful responses when no status is required', async () => {
   fetchMock.mockResolvedValue(response(200))
   await expect(apiClient.post('/ordinary-status', {})).resolves.toEqual(acknowledgement)
