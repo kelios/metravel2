@@ -51,7 +51,7 @@ function resolveWebElement(node: unknown): Element | null {
  * - На web монтаж тяжёлого HTML ждёт приближения плейсхолдера к viewport + idle:
  *   синхронный mount большого описания (десятки KB + Instagram-фасады) во время
  *   гидратации RN Web блокирует первый интерактив.
- *   Прероллится только скелет (в #root описания нет) → mismatch'а гидратации не будет.
+ *   До готовности рендера остаётся исходный серверный HTML или скелет.
  * - На native парсинг откладывается до простоя JS-потока (runAfterInteractions + 2s форсаж).
  */
 
@@ -116,6 +116,7 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
             : null,
         [hasLoaderTravel, htmlContent, serverSanitized],
     );
+    const hasInitialDescription = initialDescriptionHtml !== null;
 
     useEffect(() => {
         let cancelled = false;
@@ -182,7 +183,11 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
                         // A server-rendered article can exceed 100 viewports.
                         // Reveal on contact; a percentage of its full height may
                         // never fit inside the viewport, even while reading it.
-                        { rootMargin: HEAVY_HTML_REVEAL_ROOT_MARGIN, threshold: 0 },
+                        {
+                            // A readable server body does not need skeleton lookahead.
+                            rootMargin: hasInitialDescription ? '0px' : HEAVY_HTML_REVEAL_ROOT_MARGIN,
+                            threshold: 0,
+                        },
                     )
                 } catch {
                     observer = null;
@@ -231,7 +236,7 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
             task.cancel();
             clearTimeout(timeoutId);
         };
-    }, [htmlContent, isHeavyHtml]);
+    }, [hasInitialDescription, htmlContent, isHeavyHtml]);
 
     const styles = useMemo(() => StyleSheet.create({
         // ✅ РЕДИЗАЙН: Улучшенный контейнер с современными стилями
@@ -319,6 +324,9 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
         <Text style={styles.placeholder}>{i18nT('travel:components.travel.TravelDescription.zagruzhaem_opisanie_4a65d6c3')}</Text>
       </View>
     );
+    const initialContent = initialDescriptionHtml === null ? null : (
+        <TravelDescriptionHtml html={initialDescriptionHtml} fullWidth={noBox} />
+    );
 
     const inner = (
       <View
@@ -339,13 +347,9 @@ const TravelDescriptionContent: React.FC<TravelDescriptionContentProps> = ({
               fullWidth={noBox}
               serverSanitized={serverSanitized}
               articleBodyMedia={articleBodyMedia}
-              fallback={contentFallback}
+              fallback={initialContent ?? contentFallback}
             />
-          ) : initialDescriptionHtml !== null ? (
-            <TravelDescriptionHtml html={initialDescriptionHtml} fullWidth={noBox} />
-          ) : (
-            contentFallback
-          )}
+          ) : initialContent ?? contentFallback}
       </View>
     );
 

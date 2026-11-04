@@ -271,6 +271,10 @@ ${buildCatalogSkeletonCSS()}
 .ssg-search-tool{width:88px;height:32px;border-radius:999px;background:${COLORS.light.bgSecondary};border:1px solid ${COLORS.light.border}}
 .ssg-search-aside{background:${COLORS.light.surface};border-color:${COLORS.light.border}}
 .ssg-search-card{overflow:hidden;background:${COLORS.light.surface};border-color:${COLORS.light.border}}
+.ssg-search-card-result{display:block;color:inherit;text-decoration:none}
+.ssg-search-card-result .ssg-search-card-media img{display:block;width:100%;height:100%;object-fit:contain}
+.ssg-search-card-result .ssg-search-card-title{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:${CARD_GEOMETRY.titleLines};overflow:hidden;font-weight:700;line-height:${CARD_GEOMETRY.titleLineHeight}px}
+
 .ssg-search-card-line{height:14px;border-radius:4px}
 .ssg-search-card-line.w70{width:78%}.ssg-search-card-line.w50{width:52%}.ssg-search-card-line.w30{width:96px;height:12px}
 .ssg-search-seo{position:relative;width:100%;margin:32px 0 0;padding:0}
@@ -674,7 +678,7 @@ ${buildRemovalScript()}
  * The visible text mirrors that heading, so pre-hydration copy and the crawlable
  * H1 agree. Same contract as the home and map skeletons.
  */
-function buildSearchSkeletonHtml() {
+function buildSearchSkeletonHtml(previewScript = '') {
   const leadText =
     'Ищите маршруты по странам, категориям и уровню сложности. ' +
     'Подбирайте идеи для поездок на выходные, сохраняйте путешествия ' +
@@ -709,6 +713,7 @@ function buildSearchSkeletonHtml() {
 </div>
 </div>
 ${buildRemovalScript()}
+${previewScript ? `<script>${previewScript}</script>` : ''}
 </div>`;
 }
 
@@ -1016,7 +1021,7 @@ function injectSkeletonShell(html, route, ctx) {
   if (route === '/') {
     skeleton = buildHomeSkeletonHtml(ctx || {});
   } else if (route === '/search') {
-    skeleton = buildSearchSkeletonHtml();
+    skeleton = buildSearchSkeletonHtml(ctx?.searchPreviewScript);
   } else if (route === '/map') {
     skeleton = buildMapSkeletonHtml();
   } else if (typeof route === 'string' && route.startsWith('/travels/')) {

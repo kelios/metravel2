@@ -45,6 +45,23 @@ describe('useTravelDetailsSeoViewModel (#1643)', () => {
     expect(mockRIC).not.toHaveBeenCalled()
   })
 
+  it.each([false, true])('does not build the legacy JSON-LD when the loader owns it (deferred: %s)', async (deferred) => {
+    const createStructuredData = jest.spyOn(require('@/utils/travelSeo'), 'createTravelStructuredData')
+    try {
+      const { result } = await renderHook(() =>
+        useTravelDetailsSeoViewModel(travel, travel.slug, deferred, true),
+      )
+
+      if (deferred) await act(() => { mockIdleCallbacks[0]() })
+
+      expect(result.current.readyTitle).toContain('Energylandia')
+      expect(result.current.jsonLd).toBeNull()
+      expect(createStructuredData).not.toHaveBeenCalled()
+    } finally {
+      createStructuredData.mockRestore()
+    }
+  })
+
   it('defers only a direct preloaded article and cancels the idle job on cleanup', async () => {
     const { result, unmount } = await renderHook(() =>
       useTravelDetailsSeoViewModel(travel, travel.slug, true),

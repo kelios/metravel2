@@ -516,6 +516,7 @@ export function TravelDetailsDeferredTransition({
       if (revealCorrectionRef.current === 'clamped') setReserveReleaseState('clamped')
       else if (corrected) setReserveReleaseState(corrected)
     }
+    return undefined
   }, [releaseAttempt, reserveHeight, reserveReleaseState, runtimeFrameReady, runtimeMeasured, wantsRuntimeVisible])
 
   if (Platform.OS !== 'web') {

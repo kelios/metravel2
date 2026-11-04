@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type ViewInstance, Platform, StyleSheet, View } from 'react-native'
+import { usePathname } from 'expo-router'
 
 import { CoordinateConverter } from '@/utils/coordinateConverter'
 import { useTheme, useThemedColors, type ThemedColors } from '@/hooks/useTheme'
@@ -158,19 +159,15 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const onMarkerOpenedRef = useRef(onMarkerOpened)
   onMarkerOpenedRef.current = onMarkerOpened
 
+  const pathname = usePathname()
+  const isPrimaryMap = IS_WEB && /^\/map\/?$/.test(pathname)
   const { L, RL: rl, loading: leafletLoading, error: leafletError, ready: leafletReady } =
     useLeafletLoader({
       enabled: IS_WEB,
-      // Defer the ~70KB Leaflet runtime off the critical interactivity path:
-      // schedule it via requestIdleCallback (the loader's default deadline, which
-      // «Timeout policy» caps at 1000 ms, #2020) and fall back to a short 300ms
-      // delay on browsers without rIC. The map frame +
-      // skeleton (MapWebBackground / MapLoadingOverlay) render immediately, and
-      // MapScreen already idle-prefetches loadLeafletRuntime, so the dynamic
-      // import is typically warm by the time loading is enabled — tiles/points
-      // still appear quickly without blocking first paint.
-      useIdleCallback: true,
-      fallbackDelay: 300,
+      // The primary map needs its engine for the first real view. The loader
+      // still waits for CSS, and the base layer waits for the settled fit.
+      useIdleCallback: !isPrimaryMap,
+      fallbackDelay: isPrimaryMap ? 0 : 300,
     })
 
   const [showInitialLoader, setShowInitialLoader] = useState(!IS_WEB)

@@ -17,7 +17,6 @@ import { getMapSeoDescription, getMapSeoTitle } from '@/constants/mapSeo'
 import { buildOgImageUrl, MAP_OG_IMAGE_PATH } from '@/utils/seo'
 import { createMapStructuredData } from '@/utils/discoverySeo'
 import { toCanonicalTravelPath } from '@/utils/relatedTravel'
-import { devWarn } from '@/utils/logger'
 import {
   buildQuickFiltersData,
   buildActiveFilterItems,
@@ -36,36 +35,11 @@ import { isMapFilterChipsRowVisible } from '@/components/MapPage/mapFilterChips'
 import { getMapTopStackOffsets } from '@/components/MapPage/MapMobile/MapMobileTopOverlay.styles'
 import { useSafeAreaInsetsSafe } from '@/hooks/useSafeAreaInsetsSafe'
 
-const IS_WEB = Platform.OS === 'web'
-const CAN_PRELOAD_LEAFLET = IS_WEB && typeof window !== 'undefined'
 const MAP_STRUCTURED_DATA_ENTRY_LIMIT = 12
 const RADIUS_EXPAND_MAX_KM = 500
 const RADIUS_EXPAND_DEFAULT = 30
 const ONBOARDING_DEFER_MS = 600
 const ONBOARDING_IDLE_TIMEOUT = 1000
-
-function preloadLeafletRuntime() {
-  Promise.resolve(import('@/utils/loadLeafletRuntime'))
-    .then((m) => m.loadLeafletRuntime())
-    .catch((error) => {
-      devWarn('[MapScreen] Failed to preload Leaflet runtime', error)
-    })
-}
-
-// Defer the Leaflet runtime prefetch off the critical hydration/LCP path.
-// The map container loads Leaflet on its own once mapReady resolves; this is
-// purely a warm-up prefetch, so yield the main thread to first paint first.
-// Its idle deadline matches the loader's: «Timeout policy» caps both at 1000 ms (#2020).
-if (CAN_PRELOAD_LEAFLET) {
-  const requestIdle = (window as any).requestIdleCallback as
-    | ((cb: () => void, opts?: { timeout: number }) => number)
-    | undefined
-  if (typeof requestIdle === 'function') {
-    requestIdle(preloadLeafletRuntime, { timeout: 1000 })
-  } else {
-    setTimeout(preloadLeafletRuntime, 300)
-  }
-}
 
 export default function MapScreen() {
   const filtersTarget = useRef<ViewInstance>(null)

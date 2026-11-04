@@ -19,7 +19,6 @@ import { useMapPanelState, useMapResponsive } from '@/hooks/map/useMapPanelState
 import { useMapOverlays } from '@/hooks/map/useMapOverlays';
 import { useMapUrlAnchors } from '@/hooks/map/useMapUrlAnchors';
 import { useMapFiltersPanelProps } from '@/hooks/map/useMapFiltersPanelProps';
-import { preloadMapFiltersPanel } from '@/hooks/map/mapFiltersPanelLoader';
 import { useMapAnalytics } from '@/hooks/map/useMapAnalytics';
 import { reportMapScreenMarkerOpened } from '@/utils/mapAnalytics';
 
@@ -87,12 +86,6 @@ export function useMapScreenController() {
       }),
     [isMobile, insets.top, insets.left, insets.right, dockReserve, themedColors, usesWebBottomDock]
   );
-
-  useEffect(() => {
-    if (!isMobile) return;
-
-    void preloadMapFiltersPanel();
-  }, [isMobile]);
 
   // Поведенческое ядро (#991): данные/режимы/роутинг/user-location/search-here
   // + собранный mapPanelProps — единый контракт обоих рендер-адаптеров.

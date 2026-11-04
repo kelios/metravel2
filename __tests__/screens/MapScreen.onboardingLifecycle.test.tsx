@@ -46,7 +46,6 @@ jest.mock('@/components/MapPage/MapScreenParts/MapScreenShell', () => ({
   MapScreenShell: ({ mapComponent, chrome }: { mapComponent: import('react').ReactNode; chrome: import('react').ReactNode }) => <>{mapComponent}{chrome}</>,
 }))
 jest.mock('@/components/MapPage/MapPageHeading', () => ({ MapPageHeading: () => null }))
-jest.mock('@/utils/loadLeafletRuntime', () => ({ loadLeafletRuntime: async () => undefined }))
 
 beforeEach(() => {
   expect(cachedRN.Platform.OS).toBe('web')

@@ -6,10 +6,12 @@ import type { QuickFilterParams, QuickFilterValue } from './homeHeroShared'
 import { translate as i18nT } from '@/i18n'
 import { buildLoginHref } from '@/utils/authNavigation'
 import { DISTANCE_SORT_ID } from '@/components/listTravel/utils/catalogSort'
+import { HOME_POPULAR_COMPACT_COVERS } from './homePopularCompactCovers'
 
 
 export type BookImage = {
-  source: { uri?: string } | number
+  source: { uri: string } | number
+  compactSource?: BookImage['source']
   alt: string
   title: string
   subtitle: string
@@ -110,6 +112,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
   },
   {
     source: require('../../assets/images/cover_trecime.webp'),
+    compactSource: HOME_POPULAR_COMPACT_COVERS.treCime,
     dominantColor: '#989ea5',
     aspectRatio: 3 / 2,
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.tre_cime_di_lavaredo_dolomity_0341abf3') },
@@ -119,6 +122,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
   },
   {
     source: require('../../assets/images/cover_bled.webp'),
+    compactSource: HOME_POPULAR_COMPACT_COVERS.bled,
     dominantColor: '#516571',
     aspectRatio: 3 / 2,
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.ozero_bled_sloveniya_a6de1598') },
@@ -146,6 +150,7 @@ export const BOOK_IMAGES: readonly BookImage[] = [
     // стал локальным ассетом: 3:2 из галерейного кадра 1947. Побочно это
     // ещё и легче — 76 КБ против 257 КБ у прежней удалённой обложки.
     source: require('../../assets/images/cover_morskoe_oko.webp'),
+    compactSource: HOME_POPULAR_COMPACT_COVERS.morskoeOko,
     dominantColor: '#5e676a',
     aspectRatio: 3 / 2,
     get alt() { return i18nT('homeStatic:components.home.homeHeroContent.morskoe_oko_v_mae_polsha_e9d180a7') },

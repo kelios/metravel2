@@ -4,7 +4,7 @@ import { render } from '@testing-library/react-native'
 jest.mock('@/components/travel/details/TravelDetailsContainer', () => () => null)
 jest.mock('@/components/travel/details/TravelLoaderScreen.web', () => ({ __esModule: true, default: jest.fn(() => null) }))
 jest.mock('@/components/travel/details/travelRouteLoader', () => { throw new Error('Server-only loader was evaluated in the client route') })
-jest.mock('@/components/travel/details/hooks/travelDetailsContainerViewModel', () => ({ getTravelDetailsSeoViewModel: jest.fn() }))
+jest.mock('@/components/travel/details/hooks/travelDetailsContainerViewModel', () => ({ getTravelDetailsSeoMetadata: jest.fn() }))
 jest.mock('@/utils/seoRoutes/routeMetadata', () => ({ routeMetadata: jest.fn(), shellRouteMetadata: jest.fn() }))
 
 import TravelDetailsScreen from '../../app/(tabs)/travels/[param].web'

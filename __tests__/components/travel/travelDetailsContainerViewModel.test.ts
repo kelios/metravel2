@@ -1,5 +1,22 @@
-import { getTravelDetailsSeoViewModel } from '@/components/travel/details/hooks/travelDetailsContainerViewModel';
+import { getTravelDetailsSeoMetadata, getTravelDetailsSeoViewModel } from '@/components/travel/details/hooks/travelDetailsContainerViewModel';
 import { normalizeTravelItem } from '@/api/travelsNormalize';
+
+it('builds loader metadata without constructing the legacy JSON-LD graph', () => {
+  const createStructuredData = jest.spyOn(require('@/utils/travelSeo'), 'createTravelStructuredData');
+  const travel = { id: 116, name: 'Минск', slug: 'minsk-fixture', description: '<p>Маршрут по Минску</p>' };
+
+  try {
+    const metadata = getTravelDetailsSeoMetadata(travel, travel.slug);
+    expect(createStructuredData).not.toHaveBeenCalled();
+
+    const { jsonLd, ...legacyMetadata } = getTravelDetailsSeoViewModel(travel, travel.slug);
+    expect(legacyMetadata).toEqual(metadata);
+    expect(jsonLd).not.toBeNull();
+    expect(createStructuredData).toHaveBeenCalledTimes(1);
+  } finally {
+    createStructuredData.mockRestore();
+  }
+});
 
 describe('getTravelDetailsSeoViewModel', () => {
   it.each([

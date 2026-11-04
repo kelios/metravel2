@@ -422,8 +422,14 @@ describe('MapPageComponent (Map.web.tsx)', () => {
     }
   })
 
-  it('loads Leaflet on idle within the 1000 ms «Timeout policy» cap (#2020)', async () => {
+  it.each([
+    ['/map', false, 0],
+    ['/map/', false, 0],
+    ['/quests/map', true, 300],
+  ])('uses the Leaflet startup schedule for %s', async (pathname, useIdleCallback, fallbackDelay) => {
+    const router = require('expo-router')
     const leafletLoaderModule = require('@/hooks/useLeafletLoader')
+    const pathnameSpy = jest.spyOn(router, 'usePathname').mockReturnValue(pathname)
     const loaderSpy = jest.spyOn(leafletLoaderModule, 'useLeafletLoader')
 
     try {
@@ -431,10 +437,9 @@ describe('MapPageComponent (Map.web.tsx)', () => {
       await act(async () => {})
 
       const [options] = loaderSpy.mock.calls[0] ?? []
-      expect(options).toEqual(expect.objectContaining({ useIdleCallback: true }))
-      // No override means the loader default, which its own test caps at 1000 ms.
-      expect((options as { idleTimeout?: number }).idleTimeout ?? 0).toBeLessThanOrEqual(1000)
+      expect(options).toEqual(expect.objectContaining({ useIdleCallback, fallbackDelay }))
     } finally {
+      pathnameSpy.mockRestore()
       loaderSpy.mockRestore()
     }
   })

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
@@ -6,17 +7,9 @@ import { useVisibleCardCount } from '@/hooks/useVisibleCardCount'
 import type { ThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
 import { webDataSetProps } from '@/utils/webProps'
+import type { BookImage } from './homeHeroContent'
 
-
-type BookImage = {
-  source: any
-  alt: string
-  title: string
-  subtitle: string
-  href?: string
-  /** Заливка полей letterbox под `contain`-кадром (#1208). */
-  dominantColor?: string
-}
+type RouteImage = Pick<BookImage, 'source' | 'compactSource' | 'alt' | 'title' | 'subtitle' | 'href' | 'dominantColor'>
 
 type HomeHeroPopularSectionProps = {
   responsiveWeb?: boolean
@@ -28,13 +21,13 @@ type HomeHeroPopularSectionProps = {
   featuredCardWidth?: number
   popularCardWidth: number
   popularCardHeight: number
-  bookImages: readonly BookImage[]
+  bookImages: readonly RouteImage[]
   onOpenArticle: (href?: string | null) => void
 }
 
 type PopularCardProps = {
   responsiveWeb?: boolean
-  image: BookImage
+  image: RouteImage
   styles: any
   colors: ThemedColors
   width?: number | string
@@ -56,6 +49,10 @@ const webHorizontalScrollStyle =
 
 const POPULAR_CARD_GAP = 16
 
+function getBundledWebAssetUri(source: BookImage['source'] | undefined) {
+  return source && typeof source === 'object' ? source.uri : undefined
+}
+
 function FeaturedRouteCard({
   colors,
   featuredCardWidth,
@@ -65,7 +62,7 @@ function FeaturedRouteCard({
 }: {
   colors: ThemedColors
   featuredCardWidth?: number
-  image: BookImage
+  image: RouteImage
   onOpenArticle: (href?: string | null) => void
   styles: any
 }) {
@@ -130,6 +127,18 @@ function PopularRouteCard({
   onOpenArticle,
   useGridLayout = false,
 }: PopularCardProps) {
+  const responsiveSource = useMemo(() => {
+    if (!responsiveWeb || !image.compactSource) return undefined
+    const compact = getBundledWebAssetUri(image.compactSource)
+    const full = getBundledWebAssetUri(image.source)
+    if (!compact || !full) return undefined
+    return {
+      src: full,
+      srcSet: `${compact} 384w, ${full} 720w`,
+      sizes: '(max-width: 767px) calc(50vw - 23px), 720px',
+    }
+  }, [image.compactSource, image.source, responsiveWeb])
+
   return (
     <Pressable
       {...(responsiveWeb ? webDataSetProps({ homePopularCard: true }) : {})}
@@ -152,6 +161,7 @@ function PopularRouteCard({
     >
       <ImageCardMedia
         source={image.source}
+        webResponsiveSource={responsiveSource}
         placeholderColor={image.dominantColor}
         width={responsiveWeb ? '100%' : width}
         height={responsiveWeb ? undefined : height}

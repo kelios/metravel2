@@ -18,8 +18,8 @@ export async function generateMetadata(request: ImmutableRequest | undefined, pa
   const { routeMetadata, shellRouteMetadata } = await import('@/utils/seoRoutes/routeMetadata')
   const payload = await loadTravelRoute(request, params)
   if (!payload) return shellRouteMetadata()
-  const { getTravelDetailsSeoViewModel } = await import('@/components/travel/details/hooks/travelDetailsContainerViewModel')
-  const seo = getTravelDetailsSeoViewModel(payload.travel, payload.routeKey)
+  const { getTravelDetailsSeoMetadata } = await import('@/components/travel/details/hooks/travelDetailsContainerViewModel')
+  const seo = getTravelDetailsSeoMetadata(payload.travel, payload.routeKey)
   return routeMetadata({
     title: seo.readyTitle ?? payload.travel.name,
     description: seo.readyDesc ?? '',

@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 import { useLoaderData } from 'expo-router'
 import TravelDetailsContainer from './TravelDetailsContainer'
 import { TravelLoaderDataContext, type TravelLoaderPayload } from './travelLoaderData'
-import { getTravelDetailsSeoViewModel } from './hooks/travelDetailsContainerViewModel'
+import { getTravelDetailsSeoMetadata } from './hooks/travelDetailsContainerViewModel'
 import { jsonLdScript } from '@/components/seo/jsonLdScript'
 import { TRAVEL_ROUTER_SSR_STYLES } from './travelRouterSsrStyles'
 import { buildTravelArticleStructuredData, buildTravelBreadcrumbStructuredData } from '@/utils/travelArticleJsonLd'
@@ -25,7 +25,7 @@ export default function TravelLoaderScreen() {
   }, [loaded])
   const structuredData = useMemo(() => {
     if (!payload?.travel) return null
-    const seo = getTravelDetailsSeoViewModel(payload.travel, payload.routeKey)
+    const seo = getTravelDetailsSeoMetadata(payload.travel, payload.routeKey)
     const faq = payload.faqJsonLd ?? null
     const article = buildTravelArticleStructuredData({
       headline: payload.travel.name,

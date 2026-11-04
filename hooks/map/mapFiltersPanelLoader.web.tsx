@@ -1,14 +1,17 @@
 import { lazy } from 'react';
 
-const loadFiltersPanelModule = () => Promise.resolve(import('@/components/MapPage/FiltersPanel'));
-const loadFiltersProviderModule = () =>
-  Promise.resolve(import('@/context/MapFiltersContext')).then((m) => ({ default: m.FiltersProvider }));
-
-export const FiltersPanelComponent = lazy(loadFiltersPanelModule);
-export const FiltersProviderComponent = lazy(loadFiltersProviderModule);
-
-export function preloadMapFiltersPanel() {
-  void loadFiltersPanelModule();
-  void loadFiltersProviderModule();
-  return Promise.resolve();
+function importFilterModules() {
+  return Promise.all([
+    import('@/context/MapFiltersContext'),
+    import('@/components/MapPage/FiltersPanel'),
+  ]);
 }
+
+let modules: ReturnType<typeof importFilterModules> | undefined;
+
+export const FiltersProviderComponent = lazy(() =>
+  (modules ??= importFilterModules()).then(([provider]) => ({ default: provider.FiltersProvider }))
+);
+export const FiltersPanelComponent = lazy(() =>
+  (modules ??= importFilterModules()).then(([, panel]) => panel)
+);

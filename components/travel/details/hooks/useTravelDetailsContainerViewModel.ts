@@ -20,6 +20,7 @@ type UseTravelDetailsContainerViewModelArgs = {
   isMobile: boolean
   isWebAutomation: boolean
   lcpLoaded: boolean
+  loaderOwnsJsonLd: boolean
   navigationSetOptions: (options: { title: string }) => void
   openSection: (key: string) => void
   postLcpRuntimeReady: boolean
@@ -48,6 +49,7 @@ const EMPTY_WEB_SEO_VIEW_MODEL: TravelDetailsSeoViewModel = Object.freeze({
 })
 
 type DeferredWebSeoState = {
+  loaderOwnsJsonLd: boolean
   slug: string
   travel: any
   value: TravelDetailsSeoViewModel
@@ -68,12 +70,13 @@ export function useTravelDetailsSeoViewModel(
   travel: any,
   slug: string,
   deferSeoOnWeb: boolean,
+  loaderOwnsJsonLd = false,
 ): TravelDetailsSeoViewModel {
   const immediateValue = useMemo(
     () => Platform.OS === 'web' && deferSeoOnWeb
       ? EMPTY_WEB_SEO_VIEW_MODEL
-      : getTravelDetailsSeoViewModel(travel, slug),
-    [deferSeoOnWeb, travel, slug],
+      : getTravelDetailsSeoViewModel(travel, slug, !loaderOwnsJsonLd),
+    [deferSeoOnWeb, loaderOwnsJsonLd, travel, slug],
   )
   const [webState, setWebState] = useState<DeferredWebSeoState | null>(null)
 
@@ -82,15 +85,16 @@ export function useTravelDetailsSeoViewModel(
 
     return rIC(() => {
       setWebState({
+        loaderOwnsJsonLd,
         slug,
         travel,
-        value: getTravelDetailsSeoViewModel(travel, slug),
+        value: getTravelDetailsSeoViewModel(travel, slug, !loaderOwnsJsonLd),
       })
     }, 200)
-  }, [deferSeoOnWeb, travel, slug])
+  }, [deferSeoOnWeb, loaderOwnsJsonLd, travel, slug])
 
   if (Platform.OS !== 'web' || !deferSeoOnWeb) return immediateValue
-  if (!webState || webState.travel !== travel || webState.slug !== slug) {
+  if (!webState || webState.travel !== travel || webState.slug !== slug || webState.loaderOwnsJsonLd !== loaderOwnsJsonLd) {
     return EMPTY_WEB_SEO_VIEW_MODEL
   }
   return webState.value
@@ -103,6 +107,7 @@ export function useTravelDetailsContainerViewModel({
   isMobile,
   isWebAutomation,
   lcpLoaded,
+  loaderOwnsJsonLd,
   navigationSetOptions,
   openSection,
   postLcpRuntimeReady,
@@ -137,7 +142,7 @@ export function useTravelDetailsContainerViewModel({
     [slug, travel?.id]
   )
 
-  const seo = useTravelDetailsSeoViewModel(travel, slug, deferSeoOnWeb)
+  const seo = useTravelDetailsSeoViewModel(travel, slug, deferSeoOnWeb, loaderOwnsJsonLd)
 
   const { criticalChromeReady, deferredChromeReady } = getTravelDetailsChromeReadyState({
     forceOpenKey,

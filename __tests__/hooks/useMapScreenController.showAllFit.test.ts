@@ -153,7 +153,6 @@ jest.mock('@/utils/mapFiltersStorage', () => ({
 jest.mock('@/hooks/map/mapFiltersPanelLoader', () => ({
   FiltersPanelComponent: null,
   FiltersProviderComponent: null,
-  preloadMapFiltersPanel: jest.fn(),
 }))
 
 jest.mock('@/stores/routeStore', () => ({

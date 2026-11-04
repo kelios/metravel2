@@ -13,7 +13,7 @@ export function getTravelDetailsHeadKey(slug: string, travelId?: number | string
   return `travel-${slug ?? travelId ?? 'unknown'}`
 }
 
-export function getTravelDetailsSeoViewModel(travel: any, slug: string) {
+export function getTravelDetailsSeoMetadata(travel: any, slug: string) {
   const displayTitle =
     typeof travel?.name === 'string' && travel.name.trim()
       ? travel.name
@@ -52,11 +52,17 @@ export function getTravelDetailsSeoViewModel(travel: any, slug: string) {
 
   return {
     canonicalUrl: canonical,
-    // Голова и структурированные данные обязаны объявлять один адрес.
-    jsonLd: createTravelStructuredData(travel, { canonicalUrl: canonical }),
     readyDesc: desc,
     readyImage: absImage,
     readyTitle: title,
+  }
+}
+
+export function getTravelDetailsSeoViewModel(travel: any, slug: string, includeJsonLd = true) {
+  const metadata = getTravelDetailsSeoMetadata(travel, slug)
+  return {
+    ...metadata,
+    jsonLd: includeJsonLd ? createTravelStructuredData(travel, { canonicalUrl: metadata.canonicalUrl }) : null,
   }
 }
 

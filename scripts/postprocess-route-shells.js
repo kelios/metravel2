@@ -41,6 +41,7 @@ const {
   clampDescriptionForAttr,
 } = require('../utils/seoText');
 const { prepareNotFoundDocumentBoot } = require('./lib/expoStaticShell');
+const { readChunkMetadataRegistry } = require('./lib/webChunkMetadataArtifact');
 
 // ---------------------------------------------------------------------------
 // CLI args
@@ -539,6 +540,33 @@ function injectHomeHeroPreload(baseHtml, href) {
   return replaceOrInsert(baseHtml, /<link[^>]*data-home-hero-preload="true"[^>]*\/?>/i, tag);
 }
 
+function injectMapLeafletVendorPreload(baseHtml, distDir) {
+  const html = baseHtml.replace(/<link\b[^>]*\bdata-map-leaflet-preload="true"[^>]*>\r?\n?/gi, '');
+  const runtimes = [...html.matchAll(
+    /<script\b[^>]*\ssrc=["'](\/_expo\/static\/js\/web\/__expo-metro-runtime-[a-f0-9]+\.js)["'][^>]*>/gi,
+  )];
+  if (runtimes.length !== 1) return html;
+
+  let vendorHref;
+  try {
+    // The runtime loaded by this document owns the import URLs. Other files in
+    // the export directory can belong to an older build.
+    const runtime = fs.readFileSync(path.join(distDir, runtimes[0][1].slice(1)), 'utf8');
+    const vendors = readChunkMetadataRegistry(runtime)?.f.filter((href) =>
+      /^\/_expo\/static\/js\/web\/leafletVendor-[a-f0-9]+\.js$/i.test(href),
+    );
+    if (vendors?.length !== 1 || !fs.existsSync(path.join(distDir, vendors[0].slice(1)))) return html;
+    vendorHref = vendors[0];
+  } catch {
+    return html;
+  }
+
+  // Same request mode as Metro's same-origin classic script loader. Keep CSS
+  // ahead of the speculative download and leave execution to the map runtime.
+  const tag = `<link data-map-leaflet-preload="true" rel="preload" as="script" href="${vendorHref}" fetchpriority="low"/>`;
+  return applyHtmlFragment(html, /<head\b[^>]*>/i, `${tag}\n`, 'after');
+}
+
 function injectHiddenH1(baseHtml, headingText) {
   const text = String(headingText || '').trim();
   if (!text) return baseHtml;
@@ -761,14 +789,17 @@ async function main() {
     // P3.5: Inject SSG skeleton shell for key pages (improves FCP/LCP)
     // #1281: главной шелл отдаёт тот же href, что уходит в rel=preload, — иначе
     // картинка скачана, но нарисовать её до гидрации некому и LCP уезжает.
-    html = injectSkeletonShell(
-      html,
-      page.route,
-      page.route === '/' ? { heroHref: homeHeroHref } : undefined
-    );
+    const skeletonContext = page.route === '/'
+      ? { heroHref: homeHeroHref }
+      : page.route === '/search'
+        ? { searchPreviewScript: require('./ssg-search-first-result').buildSearchFirstResultScript() }
+        : undefined;
+    html = injectSkeletonShell(html, page.route, skeletonContext);
 
     if (page.route === '/') {
       html = injectHomeHeroPreload(html, homeHeroHref);
+    } else if (page.route === '/map') {
+      html = injectMapLeafletVendorPreload(html, DIST_DIR);
     }
 
     // Out-of-flow semantic H1 for routes whose static HTML has none (`/`, `/map`).
@@ -938,6 +969,7 @@ module.exports = {
   clampDescriptionForAttr,
   toSocialPreviewUrl,
   injectHomeHeroPreload,
+  injectMapLeafletVendorPreload,
   resolveHomeHeroAssetHref,
   injectHiddenH1,
   injectBreadcrumbJsonLd,

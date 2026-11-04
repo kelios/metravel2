@@ -16,6 +16,7 @@ const {
   escapeAttr,
   stripHtml,
   injectHomeHeroPreload,
+  injectMapLeafletVendorPreload,
   resolveHomeHeroAssetHref,
   injectHiddenH1,
   injectBreadcrumbJsonLd,
@@ -990,6 +991,49 @@ describe('home hero LCP preload', () => {
     it('экранирует href в атрибуте', () => {
       const html = injectHomeHeroPreload(HEAD_HTML, '/a"onload="alert(1)');
       expect(html).not.toContain('"onload="');
+    });
+  });
+
+  describe('injectMapLeafletVendorPreload', () => {
+    const prefix = '/_expo/static/js/web/';
+    const runtime = `${prefix}__expo-metro-runtime-123abc.js`;
+    const vendor = `${prefix}leafletVendor-123abc.js`;
+    const mapHtml = HEAD_HTML.replace('</body>', `<script defer src="${runtime}"></script></body>`);
+
+    function writeRuntime(dist, files) {
+      const table = { v: 'mc1', p: '', f: files, c: [], m: [] };
+      fs.mkdirSync(path.join(dist, prefix.slice(1)), { recursive: true });
+      fs.writeFileSync(
+        path.join(dist, runtime.slice(1)),
+        `globalThis["__METRAVEL_CHUNK_METADATA__"]=/*__METRAVEL_CHUNK_TABLE__*/${JSON.stringify(table)};`,
+      );
+    }
+
+    it('preloads the exact vendor registered by the document runtime once', () => {
+      const dist = makeTempDir('seo-map-vendor-');
+      writeRuntime(dist, [vendor]);
+      fs.writeFileSync(path.join(dist, vendor.slice(1)), '');
+      fs.writeFileSync(path.join(dist, `${prefix.slice(1)}leafletVendor-deadbeef.js`), '');
+
+      const html = injectMapLeafletVendorPreload(mapHtml, dist);
+
+      expect(html.match(/data-map-leaflet-preload/g)).toHaveLength(1);
+      expect(injectMapLeafletVendorPreload(html, dist)).toBe(html);
+      expect(html).toContain(`rel="preload" as="script" href="${vendor}" fetchpriority="low"`);
+      expect(html.indexOf('data-map-leaflet-preload')).toBeLessThan(html.indexOf('<title>'));
+      expect(html).not.toContain('crossorigin');
+      expect(html).not.toContain('deadbeef');
+    });
+
+    it('clears the hint when the registered vendor file is absent or ambiguous', () => {
+      const dist = makeTempDir('seo-map-vendor-missing-');
+      const stale = mapHtml.replace('</head>', '<link data-map-leaflet-preload="true" href="/stale.js"></head>');
+      writeRuntime(dist, [vendor]);
+      expect(injectMapLeafletVendorPreload(stale, dist)).toBe(mapHtml);
+
+      fs.writeFileSync(path.join(dist, vendor.slice(1)), '');
+      writeRuntime(dist, [vendor, `${prefix}leafletVendor-deadbeef.js`]);
+      expect(injectMapLeafletVendorPreload(stale, dist)).toBe(mapHtml);
     });
   });
 });

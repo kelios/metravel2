@@ -27,11 +27,7 @@ import { useTravelCardDistanceOrigin } from '@/components/listTravel/useTravelCa
 import { hasAnyTravelEngagementStats } from '@/utils/travelEngagementStats'
 import { appendReturnToParam } from '@/utils/navigationReturnPath'
 import { isTravelDraft, resolveTravelModerationFeedback } from '@/utils/travelPublicationStatus'
-import {
-  buildResponsiveImagePropsFromMedia,
-  getMediaPlaceholderData,
-  resolveMediaAspectRatio,
-} from '@/utils/travelMediaVariants'
+import { getMediaPlaceholderData } from '@/utils/travelMediaVariants'
 
 import { getResponsiveCardValues } from './enhancedCardResponsiveValues'
 import { TRAVEL_CARD_IMAGE_HEIGHT } from './utils/listTravelConstants'
@@ -40,14 +36,13 @@ import TravelListItemEngagementMetrics from './TravelListItemEngagementMetrics'
 import TravelListItemSelectableOverlay from './TravelListItemSelectableOverlay'
 import { createTravelListItemStyles } from './travelListItemStyles'
 import {
-  buildCoverWidths,
   isLikelyWatermarked,
   extractOwnerIds,
   CARD_MEDIA_SLOT_RATIO,
-  resolveCoverSlotGeometry,
   resolveTravelAuthorDisplayName,
   resolveTravelAuthorName,
 } from './travelListItemHelpers'
+import { getTravelCardWebCover } from './travelCardCover'
 import { useTravelListItemNavigation } from './useTravelListItemNavigation'
 import { translate as i18nT } from '@/i18n'
 import { formatRatingValue } from '@/utils/ratingHelpers'
@@ -68,15 +63,6 @@ const ANDROID_LIST_IMAGE_PROPS =
         placeholderContentFit: 'contain' as const,
       }
     : undefined
-
-/**
- * Явное качество обложки карточки (#1285).
- *
- * URL готовых `srcset*` манифеста идут w-only, поэтому прокси применял к ним свой
- * дефолт q80. Замер прода 2026-08-06 на обложках главной: `?w=320` 29 590 B против
- * `?w=320&q=70` 23 308 B (−21 %), `?w=640` 95 130 B против 73 350 B (−23 %).
- */
-const COVER_QUALITY = 70
 
 const POINTER_EVENTS_BOX_NONE = { pointerEvents: 'box-none' } as any
 /**
@@ -283,10 +269,6 @@ function TravelListItem({
     () => getMediaPlaceholderData(coverMedia),
     [coverMedia],
   )
-  const coverAspectRatio = useMemo(
-    () => resolveMediaAspectRatio(coverMedia),
-    [coverMedia],
-  )
   const baseCoverSlotHeight =
     typeof imageHeight === 'number' ? imageHeight : TRAVEL_CARD_IMAGE_HEIGHT
 
@@ -322,53 +304,12 @@ function TravelListItem({
       ? coverSlotWidth / coverSlotRatio
       : baseCoverSlotHeight
 
-  const coverMediaResponsiveSource = useMemo(() => {
-    if (!IS_WEB || !coverMedia) return null
-    const slotWidth = coverSlotWidth
-
-    // #1285: слот кадрируется `contain`, поэтому ширину отрисовки задаёт не бокс,
-    // а высота бокса на пропорциях кадра. Ступень выбирает браузер по `sizes` ×
-    // собственный DPR; лестнице достаточно покрыть потолок DPR 2. Прежний пол
-    // (640, а для первой карточки 720) держал в наборе кандидатов, которые слоту
-    // не нужны ни на одном DPR.
-    const { renderedWidth, maxCoverWidth } = resolveCoverSlotGeometry({
-      slotWidth,
-      slotHeight: coverSlotHeight,
-      aspectRatio: coverAspectRatio,
-    })
-
-    return buildResponsiveImagePropsFromMedia(coverMedia, {
-      // `maxWidth` задаёт только `src` — фолбэк для случая, когда `srcSet` не
-      // применился. Считать его от потолка DPR 2 значит класть туда 960w на слот
-      // 408 px: кандидат в лестнице есть, но как запасной вариант он вчетверо
-      // тяжелее нужного. Берём ступень слота при DPR 1 — она всегда входит в
-      // `widths`, поэтому фолбэк не может увести на неанонсированный файл (#1213).
-      maxWidth: renderedWidth ?? maxCoverWidth,
-      // Хвост 720/960 оставался в лестнице независимо от `maxWidth`, поэтому на
-      // DPR 2 браузер тянул в бокс ~390 px кандидата 960w — 2.95 МБ обложек на
-      // страницу выдачи. Столько байт на низкоприоритетных картинках душат
-      // fetch следующей страницы, и «Загружаем ещё» висит секундами.
-      widths: buildCoverWidths(maxCoverWidth),
-      // Пропорции неизвестны — считать ширину отрисовки нечем, поэтому остаётся
-      // ровно прежняя подсказка.
-      sizes:
-        renderedWidth != null
-          ? `${renderedWidth}px`
-          : typeof cardWidth === 'number'
-            ? `${Math.round(cardWidth)}px`
-            : isMobile
-              ? '100vw'
-              : '(min-width: 1024px) 320px, (min-width: 768px) 33vw, 50vw',
-      quality: COVER_QUALITY,
-    })
-  }, [
-    cardWidth,
-    coverAspectRatio,
-    coverMedia,
-    coverSlotHeight,
-    coverSlotWidth,
-    isMobile,
-  ])
+  const coverMediaResponsiveSource = useMemo(
+    () => IS_WEB
+      ? getTravelCardWebCover(coverMedia, coverSlotWidth, coverSlotHeight, cardWidth, isMobile)
+      : null,
+    [cardWidth, coverMedia, coverSlotHeight, coverSlotWidth, isMobile],
+  )
 
   const lastSelectableTouchAtRef = useRef(0)
 
