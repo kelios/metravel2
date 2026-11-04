@@ -46,6 +46,12 @@ The website SHALL offer an A4 coloring collection derived from verified author p
 
 The catalog SHALL offer quizzes about Belarus, Poland and the world, one question at a time, with feedback and a final result.
 
+#### Scenario: A visitor selects a quiz topic
+
+- **WHEN** a visitor activates a topic card on `/games`
+- **THEN** the chosen quiz opens in a new browser tab at `/games?quiz=<topic>` and the original catalog stays open
+- **AND** opening that address directly starts the same quiz
+
 #### Scenario: Players answer a road-trip question
 
 - **WHEN** players choose an answer

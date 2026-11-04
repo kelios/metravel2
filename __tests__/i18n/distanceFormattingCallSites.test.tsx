@@ -140,7 +140,7 @@ describe('#1449 расстояние на экранах идёт через к�
       'components/quests/QuestFullMap.native.tsx',
       'components/quests/QuestPointNavigator.native.tsx',
       'components/settings/StravaSettingsSection.tsx',
-      'components/travel/details/sections/QuestForCitySection.tsx',
+      'components/travel/details/sections/QuestForCityMatches.tsx',
       'screens/tabs/QuestCard.tsx',
     ]
 

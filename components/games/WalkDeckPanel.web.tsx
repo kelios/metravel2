@@ -4,6 +4,7 @@ import { StyleSheet, View, type ViewInstance } from 'react-native'
 import Button from '@/components/ui/Button'
 import { Body, Heading } from '@/components/ui/Typography'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { WALK_DECK_TITLES } from '@/data/walkGames/deckTitles'
 import { useThemedColors } from '@/hooks/useTheme'
 import { formatInteger } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider'
@@ -12,11 +13,6 @@ import { useWalkCards, type WalkCard, type WalkDeck } from './gamesMedia'
 import { advanceWalkRound, startWalkRound } from './walkRound'
 
 const { radii, spacing } = DESIGN_TOKENS
-
-const deckTitles = {
-  kids: 'Городские следопыты',
-  adults: 'Город на двоих',
-}
 
 function WalkRoundPanel({ cards, goal, onBack }: { cards: WalkCard[]; goal: number; onBack: () => void }) {
   const { t } = useTranslation()
@@ -100,7 +96,7 @@ export default function WalkDeckPanel({ deck }: { deck: WalkDeck }) {
   return (
     <View ref={deckRef} tabIndex={-1} style={[styles.deck, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <Body variant="small" muted>{kids ? t('gamesStatic:kids') : t('gamesStatic:adults')}</Body>
-      <Heading level={3} lang="ru">{deckTitles[deck.id]}</Heading>
+      <Heading level={3} lang="ru">{WALK_DECK_TITLES[deck.id]}</Heading>
       {sessionDeck ? (
         <WalkSession deck={sessionDeck} onBack={() => changeSession(null)} />
       ) : (

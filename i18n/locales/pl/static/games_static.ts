@@ -1,4 +1,6 @@
 export const gamesStaticResources = {
+  quizTitle: "Quizy podróżnicze",
+  quizNewTab: "Quiz otworzy się w nowej karcie.",
   title: "Gry i quizy",
   seoTitle: "Gry na spacer, talie i kolorowanki | MeTravel",
   description: "Odpowiadajcie na pytania w podróży, grajcie we dwoje na spacerze z jednego telefonu lub wydrukujcie talię. Tutaj możecie też pobrać kolorowanki na podstawie zdjęć MeTravel.",

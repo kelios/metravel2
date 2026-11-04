@@ -1,4 +1,6 @@
 export const gamesStaticResources = {
+  quizTitle: "Road trip quizzes",
+  quizNewTab: "The quiz opens in a new tab.",
   title: "Games and quizzes",
   seoTitle: "Walk games, printable decks and coloring pages | MeTravel",
   description: "Answer questions on the road, play together on a walk with one phone or print a deck. You can also download coloring pages based on MeTravel photos.",

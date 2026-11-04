@@ -1,3 +1,5 @@
+import Feather from '@expo/vector-icons/Feather'
+import { useLocalSearchParams } from 'expo-router'
 import { ScrollView, StyleSheet, View } from 'react-native'
 
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
@@ -6,10 +8,12 @@ import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 import Button from '@/components/ui/Button'
 import { Body, Heading } from '@/components/ui/Typography'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useHydrationReady } from '@/hooks/useHydrationReady'
 import { useThemedColors } from '@/hooks/useTheme'
 import { formatInteger } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider'
 import GamesPdfButton from './GamesPdfButton'
+import RoadQuizScreen from './RoadQuizScreen'
 import RoadQuizSection from './RoadQuizSection'
 import WalkDeckPanel from './WalkDeckPanel'
 import { useGamesMediaManifest } from './gamesMedia'
@@ -19,20 +23,32 @@ const { radii, spacing } = DESIGN_TOKENS
 export default function WalkGamesScreen() {
   const { t } = useTranslation()
   const colors = useThemedColors()
+  const { quiz } = useLocalSearchParams<{ quiz?: string }>()
+  const hydrationReady = useHydrationReady()
+  const isQuiz = hydrationReady && typeof quiz === 'string' && quiz.length > 0
   const title = t('gamesStatic:title')
-  useScreenHeader({ title })
+  useScreenHeader({ title: isQuiz ? t('gamesStatic:quizTitle') : title })
   const bottom = useScrollBottomPadding(spacing.lg)
   const { data, isError, isPending, refetch } = useGamesMediaManifest()
 
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={{ paddingBottom: asBottomDimension(bottom) }}>
-      <ResponsiveContainer maxWidth="lg" style={styles.content}>
-        <View style={styles.group}>
-          <Heading level={1}>{title}</Heading>
-          <Body variant="large">{t('gamesStatic:description')}</Body>
-        </View>
+      <ResponsiveContainer maxWidth={isQuiz ? 800 : 'lg'} style={styles.content}>
+        {!isQuiz && (
+          <View style={[styles.hero, { backgroundColor: colors.primarySoft, borderColor: colors.border }]}>
+            <View aria-hidden style={[styles.compassOuter, { borderColor: colors.primary }]}>
+              <View style={[styles.compassInner, { borderColor: colors.primary }]}>
+                <Feather name="compass" size={76} color={colors.primaryDark} />
+              </View>
+            </View>
+            <View style={styles.heroText}>
+              <Heading level={1}>{title}</Heading>
+              <Body>{t('gamesStatic:description')}</Body>
+            </View>
+          </View>
+        )}
 
-        {isPending && <Body aria-live="polite">{t('gamesStatic:loading')}</Body>}
+        {isPending && <Body aria-live="polite">{isQuiz ? t('gamesStatic:quizLoading') : t('gamesStatic:loading')}</Body>}
         {!data && isError && (
           <View style={styles.group}>
             <Body accessibilityRole="alert">{t('gamesStatic:loadError')}</Body>
@@ -42,9 +58,10 @@ export default function WalkGamesScreen() {
           </View>
         )}
 
-        {data && (
+        {data && (isQuiz ? <RoadQuizScreen quiz={data.quizzes.find(topic => topic.id === quiz)} /> : (
           <>
-            <View style={styles.group}>
+            <RoadQuizSection quizzes={data.quizzes} />
+            <View style={[styles.group, styles.divided, { borderColor: colors.border }]}>
               <Heading level={2}>{t('gamesStatic:walkTitle')}</Heading>
               {data.decks.length === 0 ? <Body muted>{t('gamesStatic:walkEmpty')}</Body> : (
                 <>
@@ -56,7 +73,7 @@ export default function WalkGamesScreen() {
               )}
             </View>
 
-            <View style={styles.group}>
+            <View style={[styles.group, styles.divided, { borderColor: colors.border }]}>
               <Heading level={2}>{t('gamesStatic:printTitle')}</Heading>
               <Heading level={3}>{t('gamesStatic:coloringTitle')}</Heading>
               <Body muted>{t('gamesStatic:note')}</Body>
@@ -72,16 +89,43 @@ export default function WalkGamesScreen() {
               ))}
             </View>
           </>
-        )}
-        {data && <RoadQuizSection quizzes={data.quizzes} />}
+        ))}
       </ResponsiveContainer>
     </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
-  content: { gap: spacing.lg },
+  content: { gap: spacing.xl, paddingTop: spacing.md },
+  hero: {
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    padding: spacing.lg,
+    overflow: 'hidden',
+  },
+  heroText: { maxWidth: 540, gap: spacing.xs },
+  compassOuter: {
+    position: 'absolute',
+    right: -28,
+    top: -48,
+    width: 224,
+    height: 224,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.3,
+  },
+  compassInner: {
+    width: 168,
+    height: 168,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   group: { gap: spacing.sm },
+  divided: { borderTopWidth: 1, paddingTop: spacing.lg },
   decks: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: spacing.md },
   book: { gap: spacing.sm, padding: spacing.md, borderWidth: 1, borderRadius: radii.lg },
   action: { alignSelf: 'flex-start' },
