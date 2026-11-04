@@ -40,7 +40,7 @@ export function buildCriticalCSS(): string {
 
   return [
     '*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}',
-    'html{scroll-behavior:smooth;height:100%;scrollbar-gutter:stable;-webkit-text-size-adjust:100%;-moz-text-size-adjust:100%;text-size-adjust:100%;background-color:var(--color-background,' + BL + ')}',
+    'html{scroll-behavior:smooth;height:100%;-webkit-text-size-adjust:100%;-moz-text-size-adjust:100%;text-size-adjust:100%;background-color:var(--color-background,' + BL + ')}',
     'body{',
     '  margin:0;',
     '  min-height:100vh;',
@@ -54,7 +54,7 @@ export function buildCriticalCSS(): string {
     '  color:var(--color-text,' + TL + ');',
     '  background:linear-gradient(180deg,var(--color-background,' + BL + ') 0%,var(--color-backgroundSecondary,' + BSL + ') 40%,var(--color-surface,' + SL + ') 100%);',
     '  padding-bottom:env(safe-area-inset-bottom);',
-    '  overflow-y:scroll;',
+    '  overflow-y:auto;',
     '  overflow-x:hidden;',
     '}',
     'img,picture,video,canvas,svg{display:block;max-width:100%;height:auto}',
