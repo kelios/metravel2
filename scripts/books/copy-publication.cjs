@@ -38,6 +38,21 @@ function collectAssets(manifests) {
   const assets = new Map();
   for (const manifest of manifests) {
     if (manifest.schemaVersion !== 1 || manifest.releaseId !== 'travel-books-v1' || !Array.isArray(manifest.books)) throw new Error('Invalid publication manifest');
+    if (manifest.miniDiaries !== undefined && !Array.isArray(manifest.miniDiaries)) throw new Error('Invalid mini diary catalogue');
+    const identities = [...manifest.books, ...(manifest.miniDiaries ?? [])];
+    if (manifest.miniDiaries && ['id','slug'].some(field => new Set(identities.map(edition => edition[field])).size !== identities.length)) throw new Error('Mini diary catalogue identity overlaps');
+    for (const diary of manifest.miniDiaries ?? []) {
+      if (typeof diary.id !== 'string' || typeof diary.revision !== 'string' || typeof diary.slug !== 'string' ||
+          !/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(diary.id) || !/^[a-z0-9]+(?:[.-][a-z0-9]+)*$/.test(diary.revision) ||
+          !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(diary.slug)) throw new Error('Invalid mini diary identity');
+      for (const [file, name, mime] of [[diary.pdf,'read.pdf','application/pdf'],[diary.cover,'cover.webp','image/webp'],[diary.preview,'preview.webp','image/webp']]) {
+        const relative = `${diary.id}/${diary.revision}/${name}`;
+        if (!file || file.uri !== BASE + relative || file.mime !== mime || !Number.isSafeInteger(file.bytes) || file.bytes < 1 || file.bytes > 2*1024*1024 || !/^[a-f0-9]{64}$/.test(file.sha256)) throw new Error('Invalid mini diary resource: ' + relative);
+        const prior = assets.get(relative);
+        if (prior && (prior.bytes !== file.bytes || prior.sha256 !== file.sha256)) throw new Error('Immutable mini diary asset changed: ' + relative);
+        assets.set(relative,{uri:file.uri,relative,bytes:file.bytes,sha256:file.sha256,kind:'mini-diary',bookId:diary.id,revision:diary.revision});
+      }
+    }
     const metadata=manifest.bookMetadata;
     if(metadata!==undefined&&(!Array.isArray(metadata)||metadata.length!==manifest.books.length||new Set(metadata.map(asset=>asset.bookId)).size!==manifest.books.length||metadata.some(asset=>!manifest.books.some(book=>book.id===asset.bookId&&book.revision===asset.revision))))throw new Error('Book metadata must cover every exact current edition');
     for (const book of manifest.books) {
@@ -129,6 +144,12 @@ async function publicationManifests(root) {
   if (current.bookMetadata) {
     const contents = await readJson(path.join(root, 'data/travelBooks/contents.json'));
     if (JSON.stringify(contents) !== JSON.stringify(bookContentsIndex(current))) throw new Error('Book contents index differs from the current publication');
+  }
+  if (current.bookMetadata || current.miniDiaries?.length) {
+    const catalogue = await readJson(path.join(root, 'data/travelBooks/catalog.json'));
+    if (JSON.stringify(catalogue.miniDiaries ?? []) !== JSON.stringify(current.miniDiaries ?? [])) {
+      throw new Error('Mini diary catalogue differs from the current publication');
+    }
   }
   const manifests = [current];
   const releases = path.join(root, 'data/travelBooks/releases');

@@ -63,10 +63,13 @@ for(const viewport of [{width:390,height:844},{width:1440,height:900}]){
     const errors:string[]=[];
     page.on('pageerror',error=>errors.push(error.message));
     await page.goto('/books',{waitUntil:'domcontentloaded'});
-    // The edition grid sits below the landing hero, steps and showcase (#2970).
+    // The chooser follows the hero, and the mobile shortcut fits before scrolling (#3037).
     const catalog=page.locator('main.ready-books').filter({has:page.locator('.rbc-grid')});
     const catalogFrame=page.getByTestId('ready-books-scroll').filter({has:page.locator('.rbc-grid')});
     await expect(catalog).toBeVisible();
+    if(viewport.width===390){
+      await expect.poll(()=>isPainted(catalog.locator('a[href="#books-choose"]'))).toBe(true);
+    }
 
     // Wheel input must reach the real links; scrollIntoView can move a hidden
     // navigation ancestor and conceal the missing user-scroll surface.

@@ -192,6 +192,7 @@ export const editionCss=`
  */
 export const catalogCss=`
 .rbe.rbc{padding-bottom:0}
+.rbe .rbc-hero-copy{min-width:0}
 .rbe .rbc-steps{display:grid;gap:${sp.md}px;grid-template-columns:1fr}
 .rbe .rbc-places{display:flex;overflow-x:auto;gap:${sp.md}px;margin:0 -${sp.md}px;padding:4px ${sp.md}px ${sp.sm}px;scroll-snap-type:x mandatory}
 .rbe .rbc-places>li{flex:0 0 84%;scroll-snap-align:start}
@@ -218,6 +219,16 @@ export const catalogCss=`
 .rbe .rbc-card-link{margin-top:auto;align-self:flex-start;display:inline-flex;align-items:center;gap:6px;min-height:44px;color:${c.primaryText};font-weight:700;text-decoration:none}
 .rbe .rbc-card-link:focus-visible{outline:none}
 .rbe .rbc-card-link::after{content:"";position:absolute;inset:0}
+.rbe .rbc-style-list{display:grid;gap:${sp.xs}px;margin-top:${sp.xs}px}
+.rbe .rbc-style-list li{border-top:1px solid ${c.borderStrong}}
+.rbe .rbc-style-list a{min-height:44px;gap:${sp.xs}px}
+.rbe .rbc-style-list p{margin:0 0 ${sp.xs}px}
+.rbe .rbc-mini-preview img{display:block;max-width:100%;height:auto;box-shadow:${sh.card};border:1px solid ${c.borderStrong};border-radius:${r.sm}px}
+@media(max-width:799px){
+  .rbe .rbc-hero{gap:${sp.md}px;padding-bottom:${sp.lg}px}
+  .rbe .rbc-hero-copy{order:-1}
+  .rbe .rbc-hero-art .rbe-stage{max-width:250px}
+}
 @media(min-width:560px){.rbe .rbc-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(min-width:720px){
   .rbe .rbc-grid{grid-template-columns:repeat(2,minmax(0,1fr))}

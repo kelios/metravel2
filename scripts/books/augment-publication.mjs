@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Add D2/D3 to an accepted publication without re-rendering its unchanged book PDFs.
-import {readFile,writeFile,mkdir,realpath,stat,rm,lstat,rename} from 'node:fs/promises';
+import {readFile,writeFile,mkdir,realpath,stat,rm,lstat,rename,open} from 'node:fs/promises';
 import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
@@ -12,6 +12,7 @@ import {loadSelectedBook} from './source-ready-book.mjs';
 import {buildStickerArtifacts} from './build-stickers.mjs';
 import {renderPrintGuideHtml} from './render-print-guide-html.mjs';
 import publicationFiles from './copy-publication.cjs';
+import publicationRights from './publication-rights.cjs';
 const {ensureDirectory,collectAssets,checkContent,writePublicationStagingMetadata,publicationAssetLocation}=publicationFiles;
 
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -35,6 +36,7 @@ async function verifiedResource(root,entry,previewBook){
   return bytes;
 }
 export async function augmentPublication({manifest='data/travelBooks/manifest.json',production='.codex-temp/books-next/production',cache='.codex-temp/books-publication',output='.codex-temp/books-d/publication',python='.codex-temp/books-production/venv/bin/python',activate=false}={}){
+  const expectedManifestSha256=activate?hash(await readFile('data/travelBooks/manifest.json')):undefined;
   const outputPath=path.resolve(output),scratch=await realpath('.codex-temp');
   if(!outputPath.startsWith(scratch+path.sep))throw new Error('Output must remain in .codex-temp');
   await ensureDirectory(scratch,path.relative(scratch,outputPath));
@@ -136,20 +138,38 @@ export async function augmentPublication({manifest='data/travelBooks/manifest.js
     related:await readFile('data/travelBooks/related.json'),
     acceptance:JSON.stringify({schemaVersion:1,baseManifestSha256:hash(await readFile(manifest)),generatorHash,coreBytesUnchanged:true,resources:entries.length,supplements:books.flatMap(b=>b.artifacts.filter(a=>['stickers','instructions','print-passport'].includes(a.purpose))),physicalAcceptance:false},null,2)+'\n',
   });
-  if(activate)await activatePublication({result,outputPath,cacheRoot});
+  if(activate)await activatePublication({result,outputPath,cacheRoot,expectedManifestSha256});
   return {activated:activate,manifest:path.join(outputPath,'manifest.json'),books:books.map(b=>({id:b.id,revision:b.revision,artifacts:b.artifacts.length}))};
 }
 /** Cache all verified bytes before replacing the tracked publication pointer. */
-export async function activatePublication({result,outputPath,cacheRoot,root=process.cwd()}){
+export async function activatePublication({result,outputPath,cacheRoot,root=process.cwd(),expectedManifestSha256}){
   root=await realpath(root);
   cacheRoot=await realpath(cacheRoot);
   const scratch=await realpath(path.join(root,'.codex-temp'));
   if(!cacheRoot.startsWith(scratch+path.sep))throw new Error('Activation cache must remain in .codex-temp');
+  const lockPath=path.join(scratch,'books-publication-activation.lock');
+  let lock;
+  try{lock=await open(lockPath,'wx');}catch(error){
+    if(error.code==='EEXIST')throw new Error('Book publication activation is locked: '+lockPath,{cause:error});
+    throw error;
+  }
+  try{
+    await lock.writeFile(String(process.pid)+'\n');
+    await activateLockedPublication({result,outputPath,cacheRoot,root,expectedManifestSha256});
+  }finally{
+    try{await lock.close();}finally{await rm(lockPath);}
+  }
+}
+
+async function activateLockedPublication({result,outputPath,cacheRoot,root,expectedManifestSha256}){
+  const manifestPath=path.join(root,'data/travelBooks/manifest.json');
+  const priorBytes=await readFile(manifestPath);
+  if(expectedManifestSha256!==undefined&&hash(priorBytes)!==expectedManifestSha256)throw new Error('Active book manifest changed since staging; stage again');
+  const prior=JSON.parse(priorBytes);
   const entries=collectAssets([result]);
   const catalogPayload=result.bookMetadata?Buffer.from(JSON.stringify(thinBookCatalogue(result),null,2)+'\n'):null;
   const contentsPayload=result.bookMetadata?Buffer.from(JSON.stringify(bookContentsIndex(result),null,2)+'\n'):null;
   const relatedPayload=Buffer.from(JSON.stringify(relatedBookIndex(result),null,2)+'\n');
-  const prior=JSON.parse(await readFile(path.join(root,'data/travelBooks/manifest.json'),'utf8'));
   const accepted=new Map(collectAssets([prior]).map(asset=>[asset.relative,asset]));
   const resource=async entry=>{
     try{return await verifiedResource(outputPath,entry);}
@@ -162,6 +182,7 @@ export async function activatePublication({result,outputPath,cacheRoot,root=proc
   };
   // First inspect the complete staging set; no pointer/cache writes on bad input.
   for(const entry of entries)checkContent(entry,await resource(entry));
+  const rights=await publicationRights.assertFullPublicationRights({root,manifest:result,assets:entries,source:outputPath,prior,priorAssets:[...accepted.values()]});
   for(const entry of entries){
     const bytes=await resource(entry);
     await ensureDirectory(cacheRoot,path.dirname(entry.relative));
@@ -172,6 +193,15 @@ export async function activatePublication({result,outputPath,cacheRoot,root=proc
       if(existing.length!==entry.bytes||hash(existing)!==entry.sha256)throw new Error('Immutable cache entry differs');
     }catch(error){if(error.code!=='ENOENT')throw error;await writeFile(target,bytes,{flag:'wx'});}
   }
+  for(const proof of rights){
+    const directory=await ensureDirectory(cacheRoot,`${proof.bookId}/${proof.revision}`);
+    const target=path.join(directory,'rights.json'), bytes=Buffer.from(JSON.stringify(proof,null,2)+'\n');
+    try{await writeFile(target,bytes,{flag:'wx'});}catch(error){
+      if(error.code!=='EEXIST')throw error;
+      if(!(await lstat(target)).isFile()||!(await readFile(target)).equals(bytes))throw new Error('Cached revision rights proof differs');
+    }
+  }
+  if(!(await readFile(manifestPath)).equals(priorBytes))throw new Error('Active book manifest changed during activation; stage again');
   const payload=Buffer.from(JSON.stringify(result,null,2)+'\n');
   const snapshots=path.resolve(root,'data/travelBooks/releases');
   await ensureDirectory(root,'data/travelBooks/releases');

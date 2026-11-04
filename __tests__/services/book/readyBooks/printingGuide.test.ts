@@ -47,7 +47,7 @@ describe('guide and supplemental publication',()=>{
       expect(name).not.toContain(book.revision);
       expect(name).not.toMatch(/pocket-150x100|album-a5|home-rings|home-sewn|print-shop|\bread\b/);
     }
-    expect(bookArtifactFilename(book,book.artifacts.find(file=>file.profileId==='album-a5'&&file.purpose==='read'&&file.component==='body')!)).toBe('Беларусь — акварель — A5 — книга.pdf');
+    expect(bookArtifactFilename(book,book.artifacts.find(file=>file.profileId==='album-a5'&&file.purpose==='read'&&file.component==='body')!)).toBe('Беларусь — акварель — A5 — страницы.pdf');
     expect(bookArtifactFilename({...book,visualStyle:'graphic'},book.artifacts[0])).toContain('Беларусь — графика — ');
     expect(bookArtifactFilename({...book,kind:'quests',volume:1},book.artifacts[0])).toContain('Беларусь — квесты, часть 1 — ');
   });

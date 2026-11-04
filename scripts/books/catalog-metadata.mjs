@@ -28,7 +28,7 @@ export function thinBookCatalogue(manifest){
     const {id,slug,title,country,revision,contentLocale,status,coverUri,stopCount,bodyPageCount,profiles,missing,visualStyle}=book;
     return {id,slug,kind:book.kind??'places',...(visualStyle?{visualStyle}:{}),title,country,revision,contentLocale,status,coverUri,stopCount,bodyPageCount,profiles,missing,
       ...(book.kind==='quests'?{seriesId:book.seriesId,volume:book.volume}:book.sourceContract==='thematic-v1'?{sourceContract:book.sourceContract,seriesId:book.seriesId,theme:book.theme}:{}),metadata:matches[0]};
-  })};
+  }),...(manifest.miniDiaries?.length?{miniDiaries:manifest.miniDiaries}:{})};
 }
 
 /** Add immutable metadata resources without altering an existing resource or following symlinks. */

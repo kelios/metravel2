@@ -1,0 +1,813 @@
+{
+  "schemaVersion": 1,
+  "checkedOn": "2026-11-04",
+  "activeManifest": {
+    "file": "data/travelBooks/manifest.json",
+    "sha256": "d27b26926e496901036bc04e5fc4198f762803137823e995394ab05c91d568ed"
+  },
+  "evidenceLimit": "Локальные файлы активного manifest сверены по SHA-256, размеру и сигнатуре. Шрифты и печатные кредиты проверены в точных PDF для чтения и листах наклеек. Реестры подтверждают документированное происхождение, а не подлинность первичных договоров или права каждой производной во всех юрисдикциях.",
+  "fontLicenses": {
+    "Marck Script": {
+      "license": "SIL OFL 1.1",
+      "file": "data/travelBooks/assets/fonts/marckscript/OFL.txt",
+      "sha256": "f22a2beea88d631a620b15683fd03e79f13ad3297ad97fa5e42283c0b1a3a038"
+    },
+    "Lora": {
+      "license": "SIL OFL 1.1",
+      "file": "data/travelBooks/assets/fonts/lora/OFL.txt",
+      "sha256": "1d9a970809ac804b582a6ce7f0ebc4e7fefcbfd7ff6299cad35ee656a21be716"
+    },
+    "Cormorant Garamond": {
+      "license": "SIL OFL 1.1",
+      "file": "data/travelBooks/assets/fonts/cormorant-garamond/OFL.txt",
+      "sha256": "60700d351cac4650c51f3f9db318d2a420f8b45052dba2715eb5fec41f0f6956"
+    },
+    "Noto Sans / Noto Serif": {
+      "license": "SIL OFL 1.1",
+      "file": "docs/design/travel-memory-books-v1/assets/fonts/LICENSE.txt",
+      "sha256": "0dab92d0544f7b233403f14b84a663bdbfa746982eda629e7f4f9ffe1b036feb"
+    }
+  },
+  "knownGaps": [
+    {
+      "code": "quest-cover-rightsholder",
+      "scope": [
+        "belarus-quests-1",
+        "poland-quests-1"
+      ],
+      "assets": 78,
+      "evidence": "В реестре cover-provenance.json 78 из 78 записей имеют creator=null и license=null. Решение владельца разрешает повторное использование обложек в проекте. Разрешение правообладателя каждой обложки не подтверждено.",
+      "correctiveAction": "Для каждой точной обложки подтвердить создателя и основание бесплатного распространения, печати и переработки, либо заменить её собственной иллюстрацией и выпустить новую ревизию."
+    },
+    {
+      "code": "quest-map-printed-url",
+      "scope": [
+        "belarus-quests-1",
+        "poland-quests-1"
+      ],
+      "affectedReadingPdfs": 4,
+      "evidence": "Обе физические версии содержат кредит © OpenStreetMap contributors на страницах карты, но ни одного напечатанного адреса openstreetmap.org/copyright.",
+      "terms": "https://osmfoundation.org/wiki/Attribution_Guidelines#Books,_magazines,_and_printed_maps",
+      "correctiveAction": "Напечатать адрес лицензии в будущей редакции и повторно проверить чтение, импозиции и превью по SHA. Сверить условия конкретного источника растровых тайлов."
+    }
+  ],
+  "editions": [
+    {
+      "bookId": "belarus-memory",
+      "revision": "4222fa0b68c1f9e06383544eecd39ebc",
+      "assetSetSha256": "6049c512617d0c4e4798bf2a0b0f99967cbada10e12481c5331decafd7d249a6",
+      "profiles": [
+        "pocket-150x100",
+        "album-a5"
+      ],
+      "publicResources": {
+        "files": 262,
+        "bytes": 135686199
+      },
+      "checkedReadingAndStickerPdfs": [
+        {
+          "artifactId": "pocket-150x100.read.body",
+          "sha256": "1e44d8953fc80412f809e6834644884c224b89d87d422536775bf298e3be32e7"
+        },
+        {
+          "artifactId": "pocket-150x100.read.cover",
+          "sha256": "9a8abad01756e6e8f0cec78b6e436cbb8262bbaadb22110b449f6bfecc0601fd"
+        },
+        {
+          "artifactId": "album-a5.read.body",
+          "sha256": "7f0515f7c58fcd5c447c0259ae412a91bfdd60e310e8f39e17732768b645ab84"
+        },
+        {
+          "artifactId": "album-a5.read.cover",
+          "sha256": "d6a30f5b5f73fbe478174bf9843b204fb3673d9fca7c759d305514b39cbeb1d6"
+        },
+        {
+          "artifactId": "pocket-150x100.stickers.stickers.color",
+          "sha256": "c2057da3e1cbc5e3effd39095196c5f6bd4c2fd18e503b8e1807d4465043784a"
+        },
+        {
+          "artifactId": "pocket-150x100.stickers.stickers.no-background",
+          "sha256": "e756f552f46c40debe5dbf24863c703b205f17f7b4fcbefd74fe47dde380a4d5"
+        },
+        {
+          "artifactId": "album-a5.stickers.stickers.color",
+          "sha256": "c2057da3e1cbc5e3effd39095196c5f6bd4c2fd18e503b8e1807d4465043784a"
+        },
+        {
+          "artifactId": "album-a5.stickers.stickers.no-background",
+          "sha256": "e756f552f46c40debe5dbf24863c703b205f17f7b4fcbefd74fe47dde380a4d5"
+        }
+      ],
+      "fonts": [
+        "MarckScript-Regular",
+        "MarckScript-Regular-2000",
+        "MarckScript-Regular-9750"
+      ],
+      "families": [
+        "Marck Script"
+      ],
+      "sourceRecords": [
+        {
+          "file": "data/travelBooks/by/source-records.json",
+          "sha256": "2695231ca1b094a86ee9b7ad2b2a094c16afe124b5c66c18d7543280518ee3fe"
+        },
+        {
+          "file": "data/travelBooks/by/artwork-provenance.json",
+          "sha256": "a4b9537dc912ff6a9200abf5ea42f5869e73bafef7069fe99a734a750b7ee2f9"
+        },
+        {
+          "file": "data/travelBooks/maps/source.json",
+          "sha256": "c6d2c18ad732c2b979cde78f8036b759fd6c6dbeb4ab24098485b7254d9abc29"
+        }
+      ],
+      "materialsStatus": "project-provenance-recorded"
+    },
+    {
+      "bookId": "poland-memory",
+      "revision": "ee34f411e165dc93a0d113cdf2f8f695",
+      "assetSetSha256": "abc9150325ad33375eba00a64cdaecec1b83796450e864ecc409d1507abdc5b1",
+      "profiles": [
+        "pocket-150x100",
+        "album-a5"
+      ],
+      "publicResources": {
+        "files": 254,
+        "bytes": 124387842
+      },
+      "checkedReadingAndStickerPdfs": [
+        {
+          "artifactId": "pocket-150x100.read.body",
+          "sha256": "d93df8c6337d638ac54a82f376d51cdc4f958b3ece65171ec36668d82927e7f8"
+        },
+        {
+          "artifactId": "pocket-150x100.read.cover",
+          "sha256": "2453036b2514fe445f811e8b5547decdd3fb0ae1d89af8468e9530dfc9d07ae0"
+        },
+        {
+          "artifactId": "album-a5.read.body",
+          "sha256": "139bd2df46c28ea0f2f10d492bfd4a925e31a0e60447e51d3508c1fbd3c3f3c6"
+        },
+        {
+          "artifactId": "album-a5.read.cover",
+          "sha256": "66194714ffee6d5be9df95c1394dd63bfbe5f4aa848db791d502713f5536bb89"
+        },
+        {
+          "artifactId": "pocket-150x100.stickers.stickers.color",
+          "sha256": "551a92285e637ce829773cbfffe28a2e985ab33956cc488d36ec847172f2341e"
+        },
+        {
+          "artifactId": "pocket-150x100.stickers.stickers.no-background",
+          "sha256": "1b7b2bf92487821e4d82c00f2f6cd3dad0f17103cc9e5e3a9ff7cbd85f97a3b2"
+        },
+        {
+          "artifactId": "album-a5.stickers.stickers.color",
+          "sha256": "551a92285e637ce829773cbfffe28a2e985ab33956cc488d36ec847172f2341e"
+        },
+        {
+          "artifactId": "album-a5.stickers.stickers.no-background",
+          "sha256": "1b7b2bf92487821e4d82c00f2f6cd3dad0f17103cc9e5e3a9ff7cbd85f97a3b2"
+        }
+      ],
+      "fonts": [
+        "MarckScript-Regular",
+        "MarckScript-Regular-2000",
+        "MarckScript-Regular-9750"
+      ],
+      "families": [
+        "Marck Script"
+      ],
+      "sourceRecords": [
+        {
+          "file": "data/travelBooks/pl/source-records.json",
+          "sha256": "20c50f5403f0ff1580f0ca326a862d8aac6a14879a0e5cd6ba28b89ee96f3adc"
+        },
+        {
+          "file": "data/travelBooks/pl/artwork-provenance.json",
+          "sha256": "f35b663862f31117227b02185e62672b67019ec3dcb5f1b901914253ab36386e"
+        },
+        {
+          "file": "data/travelBooks/maps/source.json",
+          "sha256": "c6d2c18ad732c2b979cde78f8036b759fd6c6dbeb4ab24098485b7254d9abc29"
+        }
+      ],
+      "materialsStatus": "project-provenance-recorded"
+    },
+    {
+      "bookId": "belarus-photo-memory",
+      "revision": "2026-11-01.photo.ed62d9ffc9f0.64b25ae01d71",
+      "assetSetSha256": "c137a8831756e4cd25fddfc792fb251f1b574cc0bd34d532b4cd463d3aad62ed",
+      "profiles": [
+        "pocket-150x100",
+        "album-a5"
+      ],
+      "publicResources": {
+        "files": 251,
+        "bytes": 326071494
+      },
+      "checkedReadingAndStickerPdfs": [
+        {
+          "artifactId": "pocket-150x100.read.body",
+          "sha256": "fb9e524bb968a5bfe478a26b00173d6d5a3ef0b47e6ab8eb19ea95e7f3364819"
+        },
+        {
+          "artifactId": "pocket-150x100.read.cover",
+          "sha256": "37180d73c4935fe1489beaded2ccc2f683cb02b39ebfd2f0aaaee7aeddd2e380"
+        },
+        {
+          "artifactId": "album-a5.read.body",
+          "sha256": "66d6c6f8ffd933a9bf9ec06838f3f5abb3992661fbe57630faa914cc0a19dd6f"
+        },
+        {
+          "artifactId": "album-a5.read.cover",
+          "sha256": "c47e34ec68e622e8963b3332bd8c2be875920d202a4d02ac218b987686d32987"
+        }
+      ],
+      "fonts": [
+        "Lora-Medium",
+        "LoraItalic-Italic",
+        "MarckScript-Regular-2000"
+      ],
+      "families": [
+        "Marck Script",
+        "Lora"
+      ],
+      "sourceRecords": [
+        {
+          "file": "data/travelBooks/by/source-records.json",
+          "sha256": "2695231ca1b094a86ee9b7ad2b2a094c16afe124b5c66c18d7543280518ee3fe"
+        },
+        {
+          "file": "data/travelBooks/by/photo-evidence.json",
+          "sha256": "ba8fc106fee0d6fbba11213c138ca1f987da7e3e40ca1539585fa3c425c6509e"
+        },
+        {
+          "file": "data/travelBooks/maps/source.json",
+          "sha256": "c6d2c18ad732c2b979cde78f8036b759fd6c6dbeb4ab24098485b7254d9abc29"
+        }
+      ],
+      "materialsStatus": "project-provenance-recorded"
+    },
+    {
+      "bookId": "poland-photo-memory",
+      "revision": "2026-11-01.photo.54f025fb1cf4.9c08c938edb2",
+      "assetSetSha256": "deab457ecd545c995fd9139dbe4f77f63a2de9b3061525852cec3b330a9fb8f2",
+      "profiles": [
+        "pocket-150x100",
+        "album-a5"
+      ],
+      "publicResources": {
+        "files": 243,
+        "bytes": 315325866
+      },
+      "checkedReadingAndStickerPdfs": [
+        {
+          "artifactId": "pocket-150x100.read.body",
+          "sha256": "4798768b1948b75fc6b977ad5dea6c1a54ab2477acb0a33088662a41a81180bc"
+        },
+        {
+          "artifactId": "pocket-150x100.read.cover",
+          "sha256": "11dc9d9ded54634cd0fbc222a3d9856a101bb7f426efc983e4eb31b9c5029104"
+        },
+        {
+          "artifactId": "album-a5.read.body",
+          "sha256": "afea7d938dc7f641b91943090889573377ef34da9c12d82c77776d26dd9d7b46"
+        },
+        {
+          "artifactId": "album-a5.read.cover",
+          "sha256": "21061aadf053914669df44206db241a67e0961e88281a58728cf7c3cafaf0e1a"
+        }
+      ],
+      "fonts": [
+        "Lora-Medium",
+        "LoraItalic-Italic",
+        "MarckScript-Regular-9742",
+        "MarckScript-Regular-2000"
+      ],
+      "families": [
+        "Marck Script",
+        "Lora"
+      ],
+      "sourceRecords": [
+        {
+          "file": "data/travelBooks/pl/source-records.json",
+          "sha256": "20c50f5403f0ff1580f0ca326a862d8aac6a14879a0e5cd6ba28b89ee96f3adc"
+        },
+        {
+          "file": "data/travelBooks/pl/photo-evidence.json",
+          "sha256": "bcff949e8b325d50667b98743fe7fedb8ecadcd31aba75f80afa0fd2e02a59f9"
+        },
+        {
+          "file": "data/travelBooks/maps/source.json",
+          "sha256": "c6d2c18ad732c2b979cde78f8036b759fd6c6dbeb4ab24098485b7254d9abc29"
+        }
+      ],
+      "materialsStatus": "project-provenance-recorded"
+    },
+    {
+      "bookId": "belarus-fantasy-memory",
+      "revision": "2026-11-01.fantasy.faaa17fd4164.ca3cf20787e8",
+      "assetSetSha256": "91d9f8e27ed6f14dbccaf7fc729d8bf5353bc1e48114b6a1859db86d1667cc56",
+      "profiles": [
+        "pocket-150x100",
+        "album-a5"
+      ],
+      "publicResources": {
+        "files": 251,
+        "bytes": 84615945
+      },
+      "checkedReadingAndStickerPdfs": [
+        {
+          "artifactId": "pocket-150x100.read.body",
+          "sha256": "0765cb526989502ce9d0902d0f51fa0360ee8e984dc38d9202dd25a84cc716a5"
+        },
+        {
+          "artifactId": "pocket-150x100.read.cover",
+          "sha256": "fdee5c5560037a322d59973ce652896c739676a6ab7f9c9c62a86c39b7ecfab7"
+        },
+        {
+          "artifactId": "album-a5.read.body",
+          "sha256": "2eef5a447e25a7dd50eec24b68ae4b2231fda3194712708385e0634d77a32c66"
+        },
+        {
+          "artifactId": "album-a5.read.cover",
+          "sha256": "78ac4d1fd01df25a84122a05fafdaf0b6fd10f5fdf6bc14640db53c9119bb2fc"
+        }
+      ],
+      "fonts": [
+        "CormorantGaramond-Regular",
+        "MarckScript-Regular-2000",
+        "MarckScript-Regular-9750"
+      ],
+      "families": [
+        "Marck Script",
+        "Cormorant Garamond"
+      ],
+      "sourceRecords": [
+        {
+          "file": "data/travelBooks/by/source-records.json",
+          "sha256": "2695231ca1b094a86ee9b7ad2b2a094c16afe124b5c66c18d7543280518ee3fe"
+        },
+        {
+          "file": "data/travelBooks/by/fantasy-evidence.json",
+          "sha256": "3a3e977a6aef9a3abb9be68ee3e739310c56035b82a989307257c77f330e0f9f"
+        },
+        {
+          "file": "data/travelBooks/maps/source.json",
+          "sha256": "c6d2c18ad732c2b979cde78f8036b759fd6c6dbeb4ab24098485b7254d9abc29"
+        }
+      ],
+      "materialsStatus": "project-provenance-recorded"
+    },
+    {
+      "bookId": "poland-fantasy-memory",
+      "revision": "2026-11-01.fantasy.961ceaaa8018.8766391925ef",
+      "assetSetSha256": "bb7fe8c5056d1bbe9b1da79dd2986dfbc3740e87a285b3eb060cc304fbdce40a",
+      "profiles": [
+        "pocket-150x100",
+        "album-a5"
+      ],
+      "publicResources": {
+        "files": 243,
+        "bytes": 83998210
+      },
+      "checkedReadingAndStickerPdfs": [
+        {
+          "artifactId": "pocket-150x100.read.body",
+          "sha256": "34a0a8ed16d48e568b00d0b421435a63b39d40573c7c31804b722698e71de58b"
+        },
+        {
+          "artifactId": "pocket-150x100.read.cover",
+          "sha256": "cbb213d8930b0c3236c4d83dbf74d71b84805efcf03793a575bca7c08b360ac9"
+        },
+        {
+          "artifactId": "album-a5.read.body",
+          "sha256": "914fb9cfc3f8a4b69642635143e6e76a1cead6601c4fb2c8d36937d83976467c"
+        },
+        {
+          "artifactId": "album-a5.read.cover",
+          "sha256": "1f4c881d63ad9c6018be8e7d059ee9b7c5644c608598be12acfd4fd074286a54"
+        }
+      ],
+      "fonts": [
+        "CormorantGaramond-Regular",
+        "MarckScript-Regular-2000"
+      ],
+      "families": [
+        "Marck Script",
+        "Cormorant Garamond"
+      ],
+      "sourceRecords": [
+        {
+          "file": "data/travelBooks/pl/source-records.json",
+          "sha256": "20c50f5403f0ff1580f0ca326a862d8aac6a14879a0e5cd6ba28b89ee96f3adc"
+        },
+        {
+          "file": "data/travelBooks/pl/fantasy-evidence.json",
+          "sha256": "4e391abf199e126a86cf82aa9ca58164093be85288f3725cba4a4bc8414e0640"
+        },
+        {
+          "file": "data/travelBooks/maps/source.json",
+          "sha256": "c6d2c18ad732c2b979cde78f8036b759fd6c6dbeb4ab24098485b7254d9abc29"
+        }
+      ],
+      "materialsStatus": "project-provenance-recorded"
+    },
+    {
+      "bookId": "belarus-graphic-memory",
+      "revision": "2026-11-01.graphic.43ffcc8ae083.58ea38e52d72",
+      "assetSetSha256": "651893dd4e4bc40fd003e713931fb7eb1f7ffe0f9fec4ced69f0dc79efdd2627",
+      "profiles": [
+        "pocket-150x100",
+        "album-a5"
+      ],
+      "publicResources": {
+        "files": 251,
+        "bytes": 144373593
+      },
+      "checkedReadingAndStickerPdfs": [
+        {
+          "artifactId": "pocket-150x100.read.body",
+          "sha256": "8aca4bded01c7b2fef8ccce1b0e0f4113132225e0ef895e3eaf6622ba1a7c8a9"
+        },
+        {
+          "artifactId": "pocket-150x100.read.cover",
+          "sha256": "d6b2d91a30ab2c0b4e3b552170ad860e9d5c917975ad34c01f545ee33d1634b9"
+        },
+        {
+          "artifactId": "album-a5.read.body",
+          "sha256": "2571cc80c5f89c0c81b7a40af5162523518254f3bb3b2e5ef4bfbda42b94fed8"
+        },
+        {
+          "artifactId": "album-a5.read.cover",
+          "sha256": "681327b8cc5bc402cdda62dcfc2551fee40d2f4b3c74ca886e041d9cba640a4f"
+        }
+      ],
+      "fonts": [
+        "NotoSerif-Bold",
+        "NotoSans-Regular",
+        "MarckScript-Regular-9742",
+        "MarckScript-Regular-2000"
+      ],
+      "families": [
+        "Marck Script",
+        "Noto Sans / Noto Serif"
+      ],
+      "sourceRecords": [
+        {
+          "file": "data/travelBooks/by/source-records.json",
+          "sha256": "2695231ca1b094a86ee9b7ad2b2a094c16afe124b5c66c18d7543280518ee3fe"
+        },
+        {
+          "file": "data/travelBooks/by/graphic-evidence.json",
+          "sha256": "ea425754453149e6ab7e7c3ec1f86ea331a4aacfa2d35303196addb604e3bfd1"
+        },
+        {
+          "file": "data/travelBooks/maps/source.json",
+          "sha256": "c6d2c18ad732c2b979cde78f8036b759fd6c6dbeb4ab24098485b7254d9abc29"
+        },
+        {
+          "file": "data/travelBooks/styles/graphic/font-provenance.json",
+          "sha256": "6180b1dcac696cec1618599af37c8fb300a3c64067200aa01976e278f5829aff"
+        }
+      ],
+      "materialsStatus": "project-provenance-recorded"
+    },
+    {
+      "bookId": "poland-graphic-memory",
+      "revision": "2026-11-01.graphic.1454137fdaec.945d6fde36c1",
+      "assetSetSha256": "ca13ff842bd161089782a8c6128b194a37d341614ce30726321a9dc7cc55082e",
+      "profiles": [
+        "pocket-150x100",
+        "album-a5"
+      ],
+      "publicResources": {
+        "files": 243,
+        "bytes": 138567849
+      },
+      "checkedReadingAndStickerPdfs": [
+        {
+          "artifactId": "pocket-150x100.read.body",
+          "sha256": "3c33dee88b8e57d6574ef48dd17be73fe308e97dd26e2d967c38ee31e2e0a119"
+        },
+        {
+          "artifactId": "pocket-150x100.read.cover",
+          "sha256": "325a507b6f246399ef3811ffdc777f8b743d6996c25d5b486de7622e4fda86a0"
+        },
+        {
+          "artifactId": "album-a5.read.body",
+          "sha256": "af00c6a49d2d5cd4fb58fc0cddbdbc95a5a09a5f3cb9b3782e0b24fee75f77e6"
+        },
+        {
+          "artifactId": "album-a5.read.cover",
+          "sha256": "96f07b22a417ed7d60f2a41e31b9b7d9189b0c36a366009e11c2403f70346ff1"
+        }
+      ],
+      "fonts": [
+        "NotoSerif-Bold",
+        "NotoSans-Regular",
+        "MarckScript-Regular-2000"
+      ],
+      "families": [
+        "Marck Script",
+        "Noto Sans / Noto Serif"
+      ],
+      "sourceRecords": [
+        {
+          "file": "data/travelBooks/pl/source-records.json",
+          "sha256": "20c50f5403f0ff1580f0ca326a862d8aac6a14879a0e5cd6ba28b89ee96f3adc"
+        },
+        {
+          "file": "data/travelBooks/pl/graphic-evidence.json",
+          "sha256": "33251adf86d4a31e5beb5180846bcfc0f5f80bfc19feb0e41acd6a3887e20bad"
+        },
+        {
+          "file": "data/travelBooks/maps/source.json",
+          "sha256": "c6d2c18ad732c2b979cde78f8036b759fd6c6dbeb4ab24098485b7254d9abc29"
+        },
+        {
+          "file": "data/travelBooks/styles/graphic/font-provenance.json",
+          "sha256": "6180b1dcac696cec1618599af37c8fb300a3c64067200aa01976e278f5829aff"
+        }
+      ],
+      "materialsStatus": "project-provenance-recorded"
+    },
+    {
+      "bookId": "belarus-quests-1",
+      "revision": "q1-951efb636b9a88374d3b1614093f7ab9a12a3dcde801c79a8d363cd3b2a3bb45.67cc1dd1f7c1.86975fa74989",
+      "assetSetSha256": "0b010e05ff023e53290ec953c42ac955bad5f102f4beff752dbd0cb732bfa0d6",
+      "profiles": [
+        "pocket-150x100",
+        "album-a5"
+      ],
+      "publicResources": {
+        "files": 383,
+        "bytes": 265518876
+      },
+      "checkedReadingAndStickerPdfs": [
+        {
+          "artifactId": "pocket-150x100.read.body",
+          "sha256": "2d93160b2ac1e3c949ef408345c375f4766f55781290a65783e5bfa342a76046",
+          "osmBrandCredits": 41,
+          "printedOsmCopyrightUrls": 0
+        },
+        {
+          "artifactId": "pocket-150x100.read.cover",
+          "sha256": "e7c7d53e981779a62f5efc1e7a77744219c1565608533f060659686dcbbb1759"
+        },
+        {
+          "artifactId": "album-a5.read.body",
+          "sha256": "63d32737d511a2db2b4acb177f090366054422f67919c189ae4b17fad9e002bf",
+          "osmBrandCredits": 41,
+          "printedOsmCopyrightUrls": 0
+        },
+        {
+          "artifactId": "album-a5.read.cover",
+          "sha256": "453e122577affcae3ec6cb0c08bec883917376f8ac32cce818ea6e3c72c04550"
+        }
+      ],
+      "fonts": [
+        "MarckScript-Regular",
+        "NotoSans-Regular",
+        "MarckScript-Regular-9742",
+        "NotoSans-Bold",
+        "MarckScript-Regular-2000"
+      ],
+      "families": [
+        "Marck Script",
+        "Noto Sans / Noto Serif"
+      ],
+      "sourceRecords": [
+        {
+          "file": "data/travelBooks/quests/selection.json",
+          "sha256": "e6bf96828790f18d2bf92ace37895234582f5d1f86dc7d215d6d055e759f32d9"
+        },
+        {
+          "file": "data/travelBooks/quests/cover-provenance.json",
+          "sha256": "4288d55104b99e71457461cecf71000e36215db07010ae16c03181adabe59de1"
+        },
+        {
+          "file": "data/travelBooks/quests/by-volume-1-provenance.json",
+          "sha256": "8595fea2fba7c35c0bc3091cfbdef6ea7695ed8c227581f398d772a35cc5132a"
+        }
+      ],
+      "materialsStatus": "cover-permission-and-printed-attribution-unresolved",
+      "unresolvedCovers": 41
+    },
+    {
+      "bookId": "poland-quests-1",
+      "revision": "q1-27fce10f29c096b2c945f56726df7c6fe071ecfd58f5e7d03a8c3ccc5d9dc678.2996bc556590.8747b0241f39",
+      "assetSetSha256": "bfc4caf1a39e56ea9a6c91773757a7fbd797da30855f3eedbfcbb9fc4c88330b",
+      "profiles": [
+        "pocket-150x100",
+        "album-a5"
+      ],
+      "publicResources": {
+        "files": 347,
+        "bytes": 288663822
+      },
+      "checkedReadingAndStickerPdfs": [
+        {
+          "artifactId": "pocket-150x100.read.body",
+          "sha256": "6bd421d9a6d81c14f91fb8a7ea5d1e7541ae337bec5ab0b83e510d7c5f6d4adc",
+          "osmBrandCredits": 37,
+          "printedOsmCopyrightUrls": 0
+        },
+        {
+          "artifactId": "pocket-150x100.read.cover",
+          "sha256": "3bf238ce5839562049e3f51aa0bf704955207ddb09483c441e5a8867ee0ae269"
+        },
+        {
+          "artifactId": "album-a5.read.body",
+          "sha256": "c922eec7b7b19a93e6d25c10c8fbdee6e242477727af465cd4c343981ef33193",
+          "osmBrandCredits": 37,
+          "printedOsmCopyrightUrls": 0
+        },
+        {
+          "artifactId": "album-a5.read.cover",
+          "sha256": "41e94daf495a7d5d92373ee4a94a675db7e76b62a133ccf9580af9f667743c55"
+        }
+      ],
+      "fonts": [
+        "MarckScript-Regular",
+        "NotoSans-Regular",
+        "MarckScript-Regular-2000",
+        "NotoSans-Bold"
+      ],
+      "families": [
+        "Marck Script",
+        "Noto Sans / Noto Serif"
+      ],
+      "sourceRecords": [
+        {
+          "file": "data/travelBooks/quests/selection.json",
+          "sha256": "e6bf96828790f18d2bf92ace37895234582f5d1f86dc7d215d6d055e759f32d9"
+        },
+        {
+          "file": "data/travelBooks/quests/cover-provenance.json",
+          "sha256": "4288d55104b99e71457461cecf71000e36215db07010ae16c03181adabe59de1"
+        },
+        {
+          "file": "data/travelBooks/quests/pl-volume-1-provenance.json",
+          "sha256": "0767f028e4fef8c28cf07db3371bce25c54076428d2d49b0223048e77a83a9fd"
+        }
+      ],
+      "materialsStatus": "cover-permission-and-printed-attribution-unresolved",
+      "unresolvedCovers": 37
+    },
+    {
+      "bookId": "poland-mountains-memory",
+      "revision": "2026-11-02.series.01a7298b7bb4.1a5d32e94a7d",
+      "assetSetSha256": "975947d4c38696feecd0eb49d82eb9b5a6ffd2f9f90a927293cd783bb38bb9da",
+      "profiles": [
+        "pocket-150x100",
+        "album-a5"
+      ],
+      "publicResources": {
+        "files": 307,
+        "bytes": 209310273
+      },
+      "checkedReadingAndStickerPdfs": [
+        {
+          "artifactId": "pocket-150x100.read.body",
+          "sha256": "7214e4fdc837c05630289124f13143136a0e972553dcf46bb21b7298fc43c5d4"
+        },
+        {
+          "artifactId": "pocket-150x100.read.cover",
+          "sha256": "e4684eb75060d32eb668fcff7dcdcd37b171e1d33c9911757fff8cdc81727e01"
+        },
+        {
+          "artifactId": "album-a5.read.body",
+          "sha256": "286d03be2cc762947cd783f78fcc4fe15620f2fb226bc81ca11cfcd66ddbbfe4"
+        },
+        {
+          "artifactId": "album-a5.read.cover",
+          "sha256": "abaf52d0db0ca70ae52eea50541b37fc109ea9ef02419037d0539bf9e63d1f60"
+        }
+      ],
+      "fonts": [
+        "Lora-Medium",
+        "LoraItalic-Italic",
+        "MarckScript-Regular-2000",
+        "MarckScript-Regular-9750"
+      ],
+      "families": [
+        "Marck Script",
+        "Lora"
+      ],
+      "sourceRecords": [
+        {
+          "file": "data/travelBooks/series/mountains-pl-sources.json",
+          "sha256": "75f17569f133fa8e2ad506c3931af803f409b5084dba2e2e678ca9dfc0d7fa72"
+        },
+        {
+          "file": "data/travelBooks/maps/source.json",
+          "sha256": "c6d2c18ad732c2b979cde78f8036b759fd6c6dbeb4ab24098485b7254d9abc29"
+        }
+      ],
+      "materialsStatus": "project-provenance-recorded"
+    },
+    {
+      "bookId": "poland-castles-memory",
+      "revision": "2026-11-02.series.cf73b9e437a4.de70624ab571",
+      "assetSetSha256": "bc75a57627284ece7885ad1a5dc1ecbeddb04fc86d6c1643f4375fe886d944e1",
+      "profiles": [
+        "pocket-150x100",
+        "album-a5"
+      ],
+      "publicResources": {
+        "files": 243,
+        "bytes": 89729840
+      },
+      "checkedReadingAndStickerPdfs": [
+        {
+          "artifactId": "pocket-150x100.read.body",
+          "sha256": "0b99227433364e1e72bf8139d9cfb98f293d34dfbf7e9b0624eff0cf80caaa84"
+        },
+        {
+          "artifactId": "pocket-150x100.read.cover",
+          "sha256": "32a1d7f3b19ce22e18fb40247d2d372aa229b989f3867da67a0a2340e90f3733"
+        },
+        {
+          "artifactId": "album-a5.read.body",
+          "sha256": "e19d8c8d7039491c8c2283972619d077bbbe12215986af46baa95d00683bcc9f"
+        },
+        {
+          "artifactId": "album-a5.read.cover",
+          "sha256": "ca091a4c4bf3b39f8261d7e75022c24629691c0c760fb5e58195b5f1fcfb65bb"
+        }
+      ],
+      "fonts": [
+        "Lora-Medium",
+        "LoraItalic-Italic",
+        "MarckScript-Regular-2000",
+        "MarckScript-Regular-9750"
+      ],
+      "families": [
+        "Marck Script",
+        "Lora"
+      ],
+      "sourceRecords": [
+        {
+          "file": "data/travelBooks/series/castles-pl-sources.json",
+          "sha256": "3f18eea2a51ac41f1ee4426c23fcb6c1098bee7f3da95f4fdcd4e2f35a76c891"
+        },
+        {
+          "file": "data/travelBooks/maps/source.json",
+          "sha256": "c6d2c18ad732c2b979cde78f8036b759fd6c6dbeb4ab24098485b7254d9abc29"
+        }
+      ],
+      "materialsStatus": "project-provenance-recorded"
+    }
+  ],
+  "legacySnapshotSha256": [
+    "02e7aef97f0d01f9658b3145156e66d0f4e7bd79581c39eb9cbcb747e4e1d6eb",
+    "067b1f2a37021b88da2ecffea83fac966d022ade5b86cb07eb2fb459dfe4e514",
+    "2b943814997fc9a703bef611242e088fe69926db669b6cbcf90f4a8673007c75",
+    "3fdfbf90e235f16073b2b42d480acb596efba09b192d1643b8ce8cb5f2a9b124",
+    "46330b9545ed5326d7f277d27dc659d01efc47e4b26b738b225c4ee040a537b0",
+    "b356fc6cad239e0073732ce3c1bbd672c54d0edd3f2153181ac5e72c8a32df0f",
+    "b6ea70ae278bd99b026179f9b8979c60c02da2b2f70d0c6eceaa5017632d1c85",
+    "d27b26926e496901036bc04e5fc4198f762803137823e995394ab05c91d568ed",
+    "de0c9016e7038a599baaa7d71d862829cbc1ac4267f39e8813312ef2e2da9b82",
+    "e24ec5cd775eb92d47172ee2a596f1829284c1e6f3af05027610cfec4b979bb2",
+    "f6071d0f8b0d428c7aa6dd3de04fee8e5a2a25c491d8a9f2602d99bb4d7b5480"
+  ],
+  "legacyTargetSha256": [
+    "09209a23c91ea4de5f8ef727bb80fd4e719f63b8ace383f7f876344ecd309a40",
+    "0b010e05ff023e53290ec953c42ac955bad5f102f4beff752dbd0cb732bfa0d6",
+    "0b4a7d3eb69231d18d6376806db810e86a369acf4e371661849fa6e03ecfbbfd",
+    "0eda71d1d28b1ef503d72dd26ae2411752b79129b96f5ea038a4b2a11e972bba",
+    "16f59ca67296db135c57d83fbb4cfd916c488c4e0c85323ba1fbbca4d5071ddf",
+    "3c3239d6a69fd82d72e8db5fa4613d5e953a46104e0a140cc59831c1cbcee201",
+    "4a3cc8da23dba0923e712d5261ea97f65f6ca04f9d4dfd86f8be079b112acb27",
+    "56adb2470e5f1912874f32ef3e403fc6318797f729b5e81ae2694bd5def6694a",
+    "5a3edad3aa7f90d067531ae83a863d26c6ee5fdb849d9e419803b3c536187c34",
+    "6049c512617d0c4e4798bf2a0b0f99967cbada10e12481c5331decafd7d249a6",
+    "60cec601189ec93b6e33613231bfdac4defd161a2280abe89d68e4ab79d52a8b",
+    "63ca2cb048ed747de4332b336bac1a599551230c34148a9527fb1b4cf63520b5",
+    "64113ccf3d7f0bf51120f6d610bb2c12aff2b2365ca48a764c7ed191126d6971",
+    "651893dd4e4bc40fd003e713931fb7eb1f7ffe0f9fec4ced69f0dc79efdd2627",
+    "703c891ab68a765d402ce277d1d293f5c95dad3bacd1e4e3ff12eeebbd6245d8",
+    "7a9e5026c0badd9755a30fd014e9c9f1ba7ec2b277433ecfa41202efe2697bf2",
+    "7ef6109fa454fc4de5205d0340417513d9e104ddeb2963eccae982036627d513",
+    "91d9f8e27ed6f14dbccaf7fc729d8bf5353bc1e48114b6a1859db86d1667cc56",
+    "975947d4c38696feecd0eb49d82eb9b5a6ffd2f9f90a927293cd783bb38bb9da",
+    "abc9150325ad33375eba00a64cdaecec1b83796450e864ecc409d1507abdc5b1",
+    "bb343be02ec3ceac816dcf93e6e47bab4858777a4f88beb9ddbb827c298f9004",
+    "bb7fe8c5056d1bbe9b1da79dd2986dfbc3740e87a285b3eb060cc304fbdce40a",
+    "bc75a57627284ece7885ad1a5dc1ecbeddb04fc86d6c1643f4375fe886d944e1",
+    "bfc4caf1a39e56ea9a6c91773757a7fbd797da30855f3eedbfcbb9fc4c88330b",
+    "c137a8831756e4cd25fddfc792fb251f1b574cc0bd34d532b4cd463d3aad62ed",
+    "ca13ff842bd161089782a8c6128b194a37d341614ce30726321a9dc7cc55082e",
+    "cac3b5f27ca2b6badfcd27a92104b9f6757c384533bbecc3edcc7ebe296a0d8c",
+    "d87c99d8d75223824a6beb595a9fd502441e03926daab44de7b3f39677a276dd",
+    "db602821eebab2e7901a05403f4b34a360cff6cf2fdd8fe9b2413c2a1e73ca63",
+    "deab457ecd545c995fd9139dbe4f77f63a2de9b3061525852cec3b330a9fb8f2",
+    "e5bcfb48e13f5ef8c8077cc9d8fd02c27e92f0966db80d5a7304252ebf128e0f",
+    "e835537981c31f9a933f032a75122d10c05a4dd8dacf303907a12007f0ae7bdb",
+    "ef906427133cedb7e29bf567c0c3d08d26e26958c48b854dd8c33b5ebbf5eb2d",
+    "f05699f5602dd678381fd1b451204e0b610a4ca405483ad4613bef4c7c083905",
+    "f73d3103fd6aa918d992fec44e6e72335df702312381f6572845da957c59205e",
+    "fc12d998b3c32b97fa51c7322d94f757c4605f14ac2aa18b471dff29077e8190"
+  ]
+}

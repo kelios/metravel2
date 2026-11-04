@@ -80,6 +80,18 @@ describe('ready-book publication build boundary', () => {
     expect(await fs.readdir(buildDir)).toEqual([]);
   });
 
+  it('refuses a stale pilot catalogue before asking storage', async () => {
+    const publication=require('@/data/travelBooks/manifest.json');
+    const catalogue=require('@/data/travelBooks/catalog.json');
+    const contents=require('@/data/travelBooks/contents.json');
+    await fs.writeFile(path.join(root,'data/travelBooks/manifest.json'),JSON.stringify(publication));
+    await fs.writeFile(path.join(root,'data/travelBooks/contents.json'),JSON.stringify(contents));
+    await fs.writeFile(path.join(root,'data/travelBooks/catalog.json'),JSON.stringify({...catalogue,miniDiaries:[{slug:'unpublished'}]}));
+    const verify=jest.fn();
+    await expect(copyPublication({root,buildDir,verify})).rejects.toThrow('Mini diary catalogue differs');
+    expect(verify).not.toHaveBeenCalled();
+  });
+
   it('refuses a snapshot whose bytes differ from its name', async () => {
     await fs.writeFile(path.join(root, 'data/travelBooks/releases', 'a'.repeat(64) + '.json'), JSON.stringify(manifest('old')));
     await expect(copyPublication({root, buildDir, verify: jest.fn()})).rejects.toThrow('snapshot checksum mismatch');

@@ -26,10 +26,10 @@ export default function ReadyBooksLanding(){
   const showcase=selectShowcase(readyBooks);
   return <>
     <CatalogHero pages={showcase.hero}/>
+    <CatalogSection id={CHOOSE.slice(1)} title={t('catalogChooseTitle')} lead={t('catalogChooseLead')}><ReadyBooksCatalogContent/></CatalogSection>
     <CatalogSteps/>
     {showcase.how.length===3&&<EditionHow pages={showcase.how} quests={false} album={false}/>}
     <CatalogPlaces places={showcase.places}/>
-    <CatalogSection id={CHOOSE.slice(1)} title={t('catalogChooseTitle')} lead={t('catalogChooseLead')}><ReadyBooksCatalogContent/></CatalogSection>
     <EditionFaq/>
   </>;
 }
@@ -49,8 +49,8 @@ function CatalogHero({pages}:{pages:ShowcasePage[]}){
   const cover=pages[0]?.book;
   // Two spread slots stay reserved so a late image never shifts the hero (edition hero contract).
   const spreads=[pages.slice(0,2),pages.slice(2,4)];
-  return <section className="rbe-hero" aria-labelledby={titleId}>
-    <div>
+  return <section className="rbe-hero rbc-hero" aria-labelledby={titleId}>
+    <div className="rbc-hero-art">
       <div className="rbe-stage" data-size="pocket">
         {spreads.map((spread,index)=><div key={index} className={`rbe-spread rbe-spread-${index+1}`} aria-hidden="true">
           {spread.map(page=><img key={page.uri} src={page.uri} alt="" decoding="async"/>)}
@@ -59,7 +59,7 @@ function CatalogHero({pages}:{pages:ShowcasePage[]}){
       </div>
       <p className="rbe-small rbe-stage-caption">{t('catalogStageCaption')}</p>
     </div>
-    <div>
+    <div className="rbc-hero-copy">
       <p className="rbe-eyebrow">{t('catalogEyebrow')}</p>
       <h1 id={titleId}>{t('catalogTitle')}</h1>
       <p className="rbe-promise">{t('catalogPromise')}</p>

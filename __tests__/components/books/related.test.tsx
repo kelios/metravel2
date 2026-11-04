@@ -30,7 +30,7 @@ it('opens a selected-source book without activating the enclosing place card',()
   render(<div onClick={openPlace}><ReadyBookRelatedLink sourceTravelId={169}/></div>);
   fireEvent.click(screen.getByRole('link'));
   expect(openPlace).not.toHaveBeenCalled();
-  expect(screen.getByRole('link').getAttribute('href')).toBe('/books/belarus');
+  expect(screen.getByRole('link').getAttribute('href')).toBe('/books/belarus?from=travel');
 });
 it('matches exact selected IDs and rejects unrelated sources and invalid IDs',()=>{
   for(const source of [{sourceTravelId:'169'},{pointId:2039},{questId:'42'}]){
@@ -49,7 +49,7 @@ it('keeps a contextual place card from matching a thematic book through its sour
   expect(screen.queryByRole('link')).toBeNull();
   view.rerender(<PlaceListCard title="Выбранное место" relatedTravelId={169} sourcePointId={2039}/>);
   const bookAction=screen.getByRole('link',{name:'explore: Беларусь'});
-  expect(bookAction.getAttribute('href')).toBe('/books/belarus');
+  expect(bookAction.getAttribute('href')).toBe('/books/belarus?from=place');
   expect(bookAction.getAttribute('title')).toBe('explore: Беларусь');
   expect(bookAction.textContent).toBe('');
   view.rerender(<PlaceListCard title="Точка без источника" relatedTravelId={169}/>);

@@ -13,7 +13,7 @@ import {publishedFixture} from '../../services/book/readyBooks/publicationFixtur
 import {thematicPublished} from '../../services/book/readyBooks/thematicFixtures';
 
 jest.mock('@/components/books/ReadyBookDetails',()=>jest.requireActual('@/components/books/ReadyBookDetails.web'));
-jest.mock('@/services/book/readyBooks/catalog',()=>({findReadyBook:jest.fn(),readyBooks:[]}));
+jest.mock('@/services/book/readyBooks/catalog',()=>({findReadyBook:jest.fn(),findMiniDiary:jest.fn(),readyBooks:[],miniDiaries:[]}));
 jest.mock('@/components/books/bookCopy',()=>({...jest.requireActual('@/components/books/bookCopy'),useBookCopy:()=>((key:string,params?:Record<string,unknown>)=>params?key+':'+JSON.stringify(params):key)}));
 jest.mock('@/i18n/LocaleProvider',()=>({useTranslation:()=>({t:jest.requireActual('@/i18n').translate,ready:true})}));
 jest.mock('@/components/books/BooksFrame',()=>({BooksFrame:({children,title,headingLang,heading=true}:any)=><main>{heading&&<h1 lang={headingLang}>{title}</h1>}{children}</main>}));
@@ -109,7 +109,7 @@ it('orders the approved sections, collapses the optional ones and names every se
     // Hero → how → choose → route → cover → downloads → print → FAQ → more books.
     const order=['heroEyebrow','howTitle','chooseTitle','routeTitle','coverSectionTitle','downloads','printFiles',translate('books:guideTitle'),translate('books:providerTitle'),'faqTitle','moreTitle'];
     const text=document.body.textContent??'';
-    const positions=order.map(key=>text.indexOf(key));
+    const positions=order.map(key=>key==='printFiles'?text.lastIndexOf(key):text.indexOf(key));
     expect(positions.every(position=>position>=0)).toBe(true);
     expect([...positions].sort((a,b)=>a-b)).toEqual(positions);
     // Cover editor, print files, print points and every answer start closed (native <details>).
@@ -117,7 +117,8 @@ it('orders the approved sections, collapses the optional ones and names every se
     expect(disclosures.length).toBeGreaterThanOrEqual(3+3+5);
     expect(disclosures.every(details=>!details.open)).toBe(true);
     expect(screen.getByText('coverSectionTitle').closest('details')).toBeTruthy();
-    expect(screen.getByText('printFiles').closest('details')).toBeTruthy();
+    expect(screen.getByText('groupShop').closest('details')).toBeTruthy();
+    expect(screen.getByText('printNotCertified')).toBeTruthy();
     expect(screen.getByText(translate('books:providerTitle')).closest('details')).toBeTruthy();
     expect(screen.getByText('faqFreeQ').closest('details')).toBeTruthy();
     // Owner decision 02.11.2026: five questions, no gifting/selling answer.
@@ -188,13 +189,17 @@ it('lists every file of the size once as a plain download link with a unique nam
       expect(link.getAttribute('href')).toBe(file.uri);
       expect(link.getAttribute('download')).toBe(bookArtifactFilename(book,file));
     }
-    // The hero CTA is the same reading file, with the visible name «Скачать книгу».
+    // The hero names the actual reading PDF and exposes a distinct cover download.
     const whole=files.find(file=>file.purpose==='read'&&file.component==='body')!;
     const hero=screen.getByRole('link',{name:'ctaDownload'});
     expect(hero.getAttribute('href')).toBe(whole.uri);
     expect(hero.getAttribute('download')).toBe(bookArtifactFilename(book,whole));
+    expect(hero.getAttribute('download')).toContain('страницы.pdf');
+    expect(screen.getByRole('link',{name:'downloadCover'}).getAttribute('href')).toBe(files.find(file=>file.purpose==='read'&&file.component==='cover')?.uri);
     fireEvent.click(hero);
-    expect(track).toHaveBeenLastCalledWith('ReadyBookDownloadRequested',book,expect.any(String),{profileId:'pocket-150x100',artifactPurpose:'read',profileSource:'default'});
+    expect(track).toHaveBeenLastCalledWith('ReadyBookDownloadRequested',book,expect.any(String),{profileId:'pocket-150x100',artifactPurpose:'read',artifactComponent:'body',profileSource:'default'});
+    fireEvent.click(screen.getByRole('link',{name:'downloadCover'}));
+    expect(track).toHaveBeenLastCalledWith('ReadyBookDownloadRequested',book,expect.any(String),expect.objectContaining({artifactComponent:'cover'}));
     expect(sizeRadio('sizePocketTitle').checked).toBe(true);
     fireEvent.click(sizeRadio('sizeAlbumTitle'));
     expect(track).toHaveBeenLastCalledWith('ReadyBookProfileSelected',book,expect.any(String),{profileId:'album-a5'});
@@ -213,8 +218,10 @@ it('groups the A5 print packages and distinguishes ring-body, ring-cover and sew
   const book=publishedFixture();
   givenBook(book);
   await renderDetails();fireEvent.click(sizeRadio('sizeAlbumTitle'));
-  const print=screen.getByText('printFiles').closest('details')!;
-  expect(within(print).getAllByRole('heading',{level:3}).map(heading=>heading.textContent)).toEqual(['groupShop','groupRings','groupSewn','groupControl']);
+  const print=screen.getByRole('heading',{level:3,name:'printFiles'}).parentElement!;
+  expect(screen.getByRole('link',{name:'printFiles'}).getAttribute('href')).toBe(`#${print.id}`);
+  expect(print.tabIndex).toBe(-1);
+  expect(Array.from(print.querySelectorAll('details summary .rbe-acc-title')).map(title=>title.textContent)).toEqual(['groupShop','groupRings','groupSewn','groupControl']);
   const controls=book.artifacts.filter(file=>file.profileId==='album-a5'&&file.purpose==='control');
   expect(controls).toHaveLength(3);
   const names=controls.map(file=>{

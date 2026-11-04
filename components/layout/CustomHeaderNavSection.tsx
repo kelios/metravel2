@@ -1,7 +1,7 @@
 import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 
-import { DESKTOP_BAR_NAV_ITEMS } from '@/constants/headerNavigation';
+import { DESKTOP_BAR_NAV_ITEMS, type HeaderNavItem } from '@/constants/headerNavigation';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { useThemedColors } from '@/hooks/useTheme';
 import { handleHeaderNavPress } from './customHeaderNavModel';
@@ -20,44 +20,47 @@ export default function CustomHeaderNavSection({
   const router = useRouter();
   const colors = useThemedColors();
 
-  return (
+  const books = Platform.OS === 'web' ? DESKTOP_BAR_NAV_ITEMS.find(item => item.path === '/books') : undefined;
+  const renderItem = (item: HeaderNavItem) => {
+    const isActive = !item.external && activePath === item.path;
+    return (
+      <Pressable
+        key={item.path}
+        onPress={() => handleHeaderNavPress(router, item.path, item.external)}
+        style={({ hovered, pressed }) => [
+          styles.navItem,
+          (hovered || pressed) && !isActive && styles.navItemHover,
+          isActive && styles.navItemActive,
+          globalFocusStyles.focusable,
+        ]}
+        {...(Platform.OS === 'web' ? webDataSetProps({ travelNavActive: String(isActive) }) : {})}
+        accessibilityRole="link"
+        accessibilityLabel={item.label}
+        accessibilityState={{ selected: isActive }}
+      >
+        <View style={styles.iconSlot18} {...(Platform.OS === 'web' ? webDataSetProps({ travelNavIcon: item.icon }) : {})}>
+          <NavigationIcon
+            name={item.icon}
+            size={18}
+            color={isActive ? colors.brandText : colors.textMuted}
+          />
+        </View>
+        <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
+          {item.label}
+        </Text>
+      </Pressable>
+    );
+  };
+  const scroll = (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.navContainer}
-      style={styles.navScroll}
+      style={books ? styles.navRowScroll : styles.navScroll}
       alwaysBounceHorizontal={false}
     >
-      {(DESKTOP_BAR_NAV_ITEMS ?? []).map((item) => {
-        const isActive = !item.external && activePath === item.path;
-        return (
-          <Pressable
-            key={item.path}
-            onPress={() => handleHeaderNavPress(router, item.path, item.external)}
-            style={({ hovered, pressed }) => [
-              styles.navItem,
-              (hovered || pressed) && !isActive && styles.navItemHover,
-              isActive && styles.navItemActive,
-              globalFocusStyles.focusable,
-            ]}
-            {...(Platform.OS === 'web' ? webDataSetProps({ travelNavActive: String(isActive) }) : {})}
-            accessibilityRole="link"
-            accessibilityLabel={item.label}
-            accessibilityState={{ selected: isActive }}
-          >
-            <View style={styles.iconSlot18} {...(Platform.OS === 'web' ? webDataSetProps({ travelNavIcon: item.icon }) : {})}>
-              <NavigationIcon
-                name={item.icon}
-                size={18}
-                color={isActive ? colors.brandText : colors.textMuted}
-              />
-            </View>
-            <Text style={[styles.navLabel, isActive && styles.navLabelActive]}>
-              {item.label}
-            </Text>
-          </Pressable>
-        );
-      })}
+      {DESKTOP_BAR_NAV_ITEMS.filter(item => item !== books).map(renderItem)}
     </ScrollView>
   );
+  return books ? <View style={[styles.navScroll, styles.navRow]}>{scroll}{renderItem(books)}</View> : scroll;
 }

@@ -5,11 +5,12 @@ import Feather from '@expo/vector-icons/Feather';
 import {useThemedColors} from '@/hooks/useTheme';
 import {DESIGN_TOKENS} from '@/constants/designSystem';
 import {webTitleRef} from '@/utils/webProps';
-import {relatedBookForSource,type BookSource} from '@/services/book/readyBooks/related';
+import {relatedBookForSource,type BookSource,type ReadyBookEntrySource} from '@/services/book/readyBooks/related';
 import {getActiveLocale} from '@/i18n';
 import {trackReadyBookRelatedOpened} from '@/utils/growthFunnelAnalytics';
 import {useBookCopy} from './bookCopy';
-const entrySourceOf=(source:BookSource)=>source.questId!=null?'quest':source.pointId!=null?'place':'travel';
+const entrySourceOf=(source:BookSource):ReadyBookEntrySource=>source.questId!=null?'quest':source.pointId!=null?'place':'travel';
+const editionHref=(slug:string,source:ReadyBookEntrySource)=>`/books/${slug}?from=${source}` as Href;
 export function ReadyBookRelatedLink({iconOnly=false,...source}:BookSource&{iconOnly?:boolean}){
   const bookT=useBookCopy();
   const colors=useThemedColors();
@@ -19,7 +20,7 @@ export function ReadyBookRelatedLink({iconOnly=false,...source}:BookSource&{icon
   const label=`${bookT('explore')}: ${book.title}`;
   return (
     <Link
-      href={`/books/${book.slug}`}
+      href={editionHref(book.slug,entrySourceOf(source))}
       ref={iconOnly?webTitleRef(label):undefined}
       accessibilityLabel={iconOnly?label:undefined}
       {...{dataSet:{cardAction:'true'}}}
@@ -47,8 +48,9 @@ export function useReadyBookAction(source:BookSource):{label:string;title:string
   );
   const onPress=React.useCallback(()=>{
     if(!book)return;
-    trackReadyBookRelatedOpened(book,entrySourceOf({pointId,questId,sourceTravelId}),getActiveLocale());
-    router.push(`/books/${book.slug}` as Href);
+    const entrySource=entrySourceOf({pointId,questId,sourceTravelId});
+    trackReadyBookRelatedOpened(book,entrySource,getActiveLocale());
+    router.push(editionHref(book.slug,entrySource));
   },[book,router,pointId,questId,sourceTravelId]);
   if(!book)return null;
   return {label:bookT('relatedShort'),title:`${bookT('explore')}: ${book.title}`,onPress};

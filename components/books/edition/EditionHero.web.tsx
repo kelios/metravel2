@@ -7,14 +7,18 @@ export type EditionHeroProps = {
   title:string;contentLocale:string;promise:string;chips:Chip[];
   coverUri?:string;coverAlt:string;spreads:{uri:string}[][];album:boolean;caption:string;meta:string;
   /** Absent until book.json is verified: the buttons stay visible but disabled (design doc, states). */
-  download?:{href:string;filename:string;onClick:()=>void};
+  download?:EditionDownload;
+  coverDownload?:EditionDownload;
+  printHref?:string;
   onRead?:()=>void;
   readRef?:React.Ref<HTMLButtonElement>;
   ctaRef?:React.Ref<HTMLDivElement>;
   chooseHref?:string;
 };
 
-export default function EditionHero({title,contentLocale,promise,chips,coverUri,coverAlt,spreads,album,caption,meta,download,onRead,readRef,ctaRef,chooseHref}:EditionHeroProps){
+type EditionDownload={href:string;filename:string;onClick:()=>void};
+
+export default function EditionHero({title,contentLocale,promise,chips,coverUri,coverAlt,spreads,album,caption,meta,download,coverDownload,printHref,onRead,readRef,ctaRef,chooseHref}:EditionHeroProps){
   const t=useBookCopy();
   const titleId=useId();
   // Two spread slots are always reserved so the verified pages do not shift the hero.
@@ -44,6 +48,8 @@ export default function EditionHero({title,contentLocale,promise,chips,coverUri,
       </div>
       <div className="rbe-cta-meta rbe-small">
         <span>{meta}</span>
+        {coverDownload&&<a className="rbe-link" href={coverDownload.href} download={coverDownload.filename} onClick={coverDownload.onClick}>{t('downloadCover')}</a>}
+        {printHref&&<a className="rbe-link" href={printHref} onClick={scrollToAnchor(printHref)}>{t('printFiles')}</a>}
         {chooseHref&&<a className="rbe-link" href={chooseHref} onClick={scrollToAnchor(chooseHref)}>{t('ctaOtherOptions')}<EditionIcon name="chevron-down" size={16}/></a>}
       </div>
     </div>

@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-11-04",
+  "diaries": [
+    {
+      "id": "belarus-by-the-water-mini",
+      "slug": "belarus-by-the-water",
+      "art": "water",
+      "title": "Беларусь у воды",
+      "subtitle": "Три прогулки выходного дня",
+      "summary": "Ельня, Юцковские родники и озеро Глубокое. Выберите одну прогулку, выполните маленькое задание и сохраните кадр или заметку.",
+      "coverLine": "БОЛОТО  /  РОДНИК  /  ОЗЕРО",
+      "intro": "Выберите одну поездку на свободный день. У каждой страницы есть задание: оно помогает заметить то, мимо чего легко пройти с телефоном в руке. Дома вклейте кадр или нарисуйте то, что запомнили.",
+      "choice": "Ельня — ради открытого горизонта. Юцки — ради звука воды. Озеро Глубокое в Полоцком районе — ради спокойной прогулки у берега.",
+      "stops": [
+        {
+          "title": "Ельня",
+          "subtitle": "Экотропа «Озеравки» · Миорский район",
+          "observation": "На открытом болоте ветер меняет поверхность воды. На площадке остановитесь на минуту. Подберите одно слово для ветра и одно для цвета неба.",
+          "access": "У визит-центра заказника в Миорах уточните условия прохода и подъезд к началу тропы у Озеравок. Идите по настилу и возвращайтесь тем же путём.",
+          "framePrompt": "Линия настила и горизонт",
+          "accessLabel": "ГПУ «Ельня»",
+          "accessUrl": "https://yelnyareserve.tilda.ws/",
+          "mapUrl": "https://metravel.by/map?lat=55.5594982&lng=27.7583098&placeId=5486&focusPlace=1&placeTitle=%D0%AD%D0%BA%D0%BE%D1%82%D1%80%D0%BE%D0%BF%D0%B0+%C2%AB%D0%9E%D0%B7%D0%B5%D1%80%D0%B0%D0%B2%D0%BA%D0%B8%C2%BB%2C+%D0%95%D0%BB%D1%8C%D0%BD%D1%8F",
+          "articleUrl": "https://metravel.by/travels/ekotropa-elnia-i-usadby-za-den-belarus",
+          "evidence": {
+            "kind": "author-1-travel",
+            "pointId": 5486,
+            "travelId": 203
+          }
+        },
+        {
+          "title": "Юцковские родники",
+          "subtitle": "У деревни Юцки · Дзержинский район",
+          "observation": "Послушайте, как меняется звук воды, когда вы отходите от источника. Запишите два сравнения: «звучит как…» и «движется как…».",
+          "access": "Подходите со стороны Юцков по видимой тропе. После дождя и в гололёд оцените спуск заранее. Для питья возьмите воду с собой.",
+          "framePrompt": "Вода и неподвижная деталь рядом",
+          "accessLabel": "Справочник «Родники Беларуси»",
+          "accessUrl": "https://rodnikbel.by/",
+          "mapUrl": "https://metravel.by/map?lat=53.7973976&lng=27.16799&placeId=15827&focusPlace=1&placeTitle=%D0%AE%D1%86%D0%BA%D0%BE%D0%B2%D1%81%D0%BA%D0%B8%D0%B5+%D1%80%D0%BE%D0%B4%D0%BD%D0%B8%D0%BA%D0%B8",
+          "articleUrl": "https://metravel.by/travels/marshruty-vykhodnogo-dnia-iz-minska-13-poezdok",
+          "evidence": {
+            "kind": "author-1-travel",
+            "pointId": 15827,
+            "travelId": 672
+          }
+        },
+        {
+          "title": "Озеро Глубокое",
+          "subtitle": "У деревни Малое Ситно · Полоцкий район",
+          "observation": "С разрешённого берега сравните цвет воды у ног и вдали. Если ветер поднимет рябь, заметьте, в какой момент исчезнет отражение.",
+          "access": "У Полоцкого лесхоза уточните ограничения на день поездки и допустимый подход к берегу. Следуйте знакам заказника, оставьте машину на разрешённой площадке.",
+          "framePrompt": "Отражение или полоса света",
+          "accessLabel": "Полоцкий лесхоз",
+          "accessUrl": "https://t.me/Polotskles",
+          "mapUrl": "https://metravel.by/map?lat=55.6949836&lng=29.4528694&placeId=2633&focusPlace=1&placeTitle=%D0%9E%D0%B7%D0%B5%D1%80%D0%BE+%D0%93%D0%BB%D1%83%D0%B1%D0%BE%D0%BA%D0%BE%D0%B5",
+          "articleUrl": "https://metravel.by/travels/ozero-glubokoe-samoe-prozrachnoe-ozero-v-belarusi",
+          "evidence": {
+            "kind": "author-1-travel",
+            "pointId": 2633,
+            "travelId": 169
+          }
+        }
+      ],
+      "prompts": [
+        "Какое место захотелось увидеть ещё раз?",
+        "Что было слышно, когда мы остановились?",
+        "Что я возьму с собой в следующий раз?"
+      ]
+    },
+    {
+      "id": "belarus-follow-the-towers-mini",
+      "slug": "belarus-follow-the-towers",
+      "art": "towers",
+      "title": "По следам башен",
+      "subtitle": "Любча, Мир и Несвиж",
+      "summary": "Три отдельные поездки по замкам Беларуси. Рассмотрите силуэт, ворота и дворцовый фасад, а затем зарисуйте одну деталь.",
+      "coverLine": "ТРИ ПОЕЗДКИ  /  ТРИ НАБЛЮДЕНИЯ",
+      "intro": "Попробуйте смотреть на замок как архитектор. Откуда сюда входят? Какое окно сразу бросается в глаза? С чего вы начали бы восстановление? На каждую поездку хватит страницы, рисунка и вопроса.",
+      "choice": "В Любче начните с силуэта над рекой. В Мире рассмотрите ворота и башни. В Несвиже сравните дворцовый фасад с его отражением, если подойдёте к воде.",
+      "stops": [
+        {
+          "title": "Любча",
+          "subtitle": "Любчанский замок · Новогрудский район",
+          "observation": "Посмотрите на надвратную башню с общедоступного подхода. Повторите линию крыши в блокноте. Как меняется её силуэт, если сделать несколько шагов в сторону?",
+          "access": "Начните у входной башни. Сверьте режим перед выездом с Любчанским сельисполкомом. Если ворота закрыты, останьтесь снаружи и соблюдайте ограждения.",
+          "framePrompt": "Башня в пять линий",
+          "mapUrl": "https://metravel.by/map?lat=53.751788&lng=26.068725&focusPlace=1&placeTitle=%D0%9B%D1%8E%D0%B1%D1%87%D0%B0",
+          "articleUrl": "https://metravel.by/quests/60/lubcha-castle-revival",
+          "accessLabel": "Справка о Любчанском замке",
+          "accessUrl": "https://my-places.by/places/lyubchanskij-zamok",
+          "evidence": {
+            "kind": "published-quest-stop",
+            "questId": "lubcha-castle-revival",
+            "stepId": "5-gate-tower",
+            "coordinates": [
+              53.751788,
+              26.068725
+            ]
+          }
+        },
+        {
+          "title": "Мир",
+          "subtitle": "Мирский замок · Красноармейская, 2",
+          "observation": "На подходе проследите одну башню от основания до крыши. Затем сравните с соседней. По какой детали вы различите их издалека?",
+          "access": "Откройте раздел для посетителей на сайте музея. Сверьте часы кассы, доступ в выбранные зоны и правила съёмки.",
+          "framePrompt": "Окно или узор кладки",
+          "accessLabel": "Музей «Замковый комплекс „Мир“»",
+          "accessUrl": "https://mirzamak.by/",
+          "mapUrl": "https://metravel.by/map?lat=53.4511815&lng=26.4729416&placeId=5247&focusPlace=1&placeTitle=%D0%9C%D0%B8%D1%80%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+          "articleUrl": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+          "evidence": {
+            "kind": "author-1-travel",
+            "pointId": 5247,
+            "travelId": 201
+          }
+        },
+        {
+          "title": "Несвиж",
+          "subtitle": "Дворцовый ансамбль · Замковая, 2",
+          "observation": "Найдите повторяющуюся деталь на фасаде. Где этот ряд заканчивается? Если открыт парк, взгляните на дворец ещё раз с другой стороны.",
+          "access": "У музея-заповедника проверьте время входа во дворец и доступ к выбранной части парка. Уточните правила съёмки для экспозиции.",
+          "framePrompt": "Три повторяющиеся формы",
+          "accessLabel": "Музей-заповедник «Несвиж»",
+          "accessUrl": "https://t.me/niasvizh_museum",
+          "mapUrl": "https://metravel.by/map?lat=53.2228373&lng=26.6917241&placeId=5246&focusPlace=1&placeTitle=%D0%9D%D0%B5%D1%81%D0%B2%D0%B8%D0%B6%D1%81%D0%BA%D0%B8%D0%B9+%D0%B7%D0%B0%D0%BC%D0%BE%D0%BA",
+          "articleUrl": "https://metravel.by/travels/nesvizh-i-mir-rasstoianie-i-marshrut-na-dva-dnia",
+          "evidence": {
+            "kind": "author-1-travel",
+            "pointId": 5246,
+            "travelId": 201
+          }
+        }
+      ],
+      "prompts": [
+        "По какой детали я узнаю каждое место?",
+        "Какой вид я бы показал другу?",
+        "Что я спрошу у экскурсовода в следующий раз?"
+      ]
+    }
+  ]
+}

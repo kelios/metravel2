@@ -17,6 +17,7 @@ import { translate as i18nT } from '@/i18n'
 import { useTravelDeferredSectionsModel } from './hooks/useTravelDeferredSectionsModel'
 import TravelDeferredAuthorSection from './TravelDeferredAuthorSection'
 import TravelDeferredRatingSection from './TravelDeferredRatingSection'
+import { ReadyBookRelatedLink } from '@/components/books/ReadyBookRelatedLink'
 import {
   TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT,
   TravelDetailsDeferredTransition,
@@ -200,6 +201,7 @@ export const TravelDeferredSections: React.FC<{
 
   return (
     <>
+      <ReadyBookRelatedLink sourceTravelId={travel.id} />
       {/* Author details: on mobile — full card + share; on desktop — peer badges only (author lives in sidebar). */}
       {isMobile ? (
         <View

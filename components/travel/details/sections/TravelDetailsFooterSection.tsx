@@ -9,7 +9,6 @@ import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useThemedColors } from '@/hooks/useTheme'
 import type { Travel } from '@/types/types'
 import { getTravelCanonicalUrl } from '@/utils/travelSeo'
-import { ReadyBookRelatedLink } from '@/components/books/ReadyBookRelatedLink'
 
 import { useTravelDetailsStyles } from '../TravelDetailsStyles'
 import { translate as i18nT } from '@/i18n'
@@ -71,7 +70,6 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
 
   return (
     <>
-      <ReadyBookRelatedLink sourceTravelId={travel.id} />
       <View
         testID="travel-details-telegram"
         accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsFooterSection.obsuzhdenie_v_telegram_63bdc570')}

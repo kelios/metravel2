@@ -142,6 +142,15 @@ export const createCustomHeaderStyles = (
       marginHorizontal: 12,
       minHeight: 44,
     },
+    navRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      minWidth: 0,
+    },
+    navRowScroll: {
+      flex: 1,
+      minWidth: 0,
+    },
     iconSlot18: {
       width: 18,
       height: 18,
@@ -249,10 +258,10 @@ export const createCustomHeaderStyles = (
     navItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 9,
+      paddingHorizontal: Platform.OS === 'web' ? 5 : 9,
       paddingVertical: 8,
       borderRadius: 999,
-      gap: 6,
+      gap: Platform.OS === 'web' ? 4 : 6,
       backgroundColor: 'transparent',
       justifyContent: 'center',
       minHeight: 44,

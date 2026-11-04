@@ -16,6 +16,12 @@ export type BookSource = {
   questId?: unknown;
 };
 
+export type ReadyBookEntrySource = 'quest' | 'place' | 'travel';
+
+export function readyBookEntrySource(value: unknown): ReadyBookEntrySource | undefined {
+  return value === 'quest' || value === 'place' || value === 'travel' ? value : undefined;
+}
+
 const positiveId = (value: unknown): number | undefined => {
   if (typeof value !== 'string' && typeof value !== 'number') return undefined;
   if (typeof value === 'string' && !/^\d+$/.test(value)) return undefined;

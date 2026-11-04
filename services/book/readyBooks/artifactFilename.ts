@@ -12,7 +12,7 @@ const PART={body:'страницы',cover:'обложка'} as const;
 function partName(file:FilenameFile){
   const part=file.component==='body'||file.component==='cover'?PART[file.component]:'';
   switch(file.purpose){
-    case 'read':return file.component==='body'?'книга':'обложка';
+    case 'read':return part;
     case 'print-shop':return `копицентр, ${part}`;
     case 'home-rings':case 'home-sewn':return `${ASSEMBLY[file.purpose]}, ${part} A4`;
     case 'control':return `проверочный лист, ${file.controlFor?ASSEMBLY[file.controlFor]:''}, ${part}`;
@@ -24,7 +24,7 @@ function partName(file:FilenameFile){
 
 /**
  * The browser and the printed guide use exactly the same download names (#2949):
- * «Беларусь — акварель — A5 — книга.pdf», without revision hashes or profile ids.
+ * «Беларусь — акварель — A5 — страницы.pdf», without revision hashes or profile ids.
  */
 export function bookArtifactFilename(book:FilenameBook,file:FilenameFile){
   const name=book.kind==='quests'

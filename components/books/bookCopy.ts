@@ -4,6 +4,14 @@ import type {ReadyBookSummary} from '@/services/book/readyBooks/bookMetadata';
 
 // Literal keys let the web compiler extract the exact locale catalog.
 const copy = {
+  catalogCountry: () => translate('books:catalogCountry'),
+  countryAll: () => translate('books:countryAll'),
+  catalogStyles: () => translate('books:catalogStyles'),
+  downloadCover: () => translate('books:downloadCover'),
+  printNotCertified: () => translate('books:printNotCertified'),
+  miniDiary: () => translate('books:miniDiary'),
+  miniPreview: () => translate('books:miniPreview'),
+  miniDownload: () => translate('books:miniDownload'),
   theme: () => translate('books:theme'),
   themeAll: () => translate('books:themeAll'),
   themeMixed: () => translate('books:themeMixed'),

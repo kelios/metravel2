@@ -25,19 +25,19 @@ function fileLabel(file:PublishedArtifact,t:T,bothAssemblies:boolean){
 
 /**
  * «Скачать». Every published file of the selected size appears exactly once (after the #2944
- * de-duplication) as a plain `<a download>` (#2951): the whole book and its cover up front,
+ * de-duplication) as a plain `<a download>` (#2951): reading pages and their cover up front,
  * stickers beside them, and the print packages inside «Файлы для печати».
  */
-export default function EditionDownloads({book,profileId,details,coverUri,version,onRequested,sectionId}:{
+export default function EditionDownloads({book,profileId,details,coverUri,version,onRequested,sectionId,printSectionId}:{
   book:PublishedBook;profileId:PublishedArtifact['profileId'];details:string;coverUri?:string;version?:string;
-  onRequested:(file:PublishedArtifact)=>void;sectionId:string;
+  onRequested:(file:PublishedArtifact)=>void;sectionId:string;printSectionId:string;
 }){
   const t=useBookCopy();
   const id=useId();
   const files=visibleArtifacts(book,profileId);
   const all=book.artifacts.filter(file=>file.profileId===profileId);
   const find=(purpose:PublishedArtifact['purpose'],component:PublishedArtifact['component'])=>files.find(file=>file.purpose===purpose&&file.component===component);
-  const whole=find('read','body');
+  const body=find('read','body');
   const cover=find('read','cover');
   const stickers=files.filter(file=>file.purpose==='stickers');
   const deduplicated=(component:'body'|'cover')=>all.some(file=>file.purpose==='print-shop'&&file.component===component)&&!find('print-shop',component);
@@ -55,16 +55,16 @@ export default function EditionDownloads({book,profileId,details,coverUri,versio
   return <section className="rbe-block" id={sectionId} aria-labelledby={`${id}-title`}>
     <h2 id={`${id}-title`}>{t('downloads')}</h2>
     <p className="rbe-lead">{t('downloadLead',{details})}</p>
-    {whole&&<div className="rbe-dl-main">
+    {body&&<div className="rbe-dl-main">
       <div className="rbe-dl-thumb">{coverUri&&<img src={coverUri} alt="" loading="lazy" decoding="async"/>}</div>
-      <div><h3>{t('fileWhole')}</h3><p className="rbe-small">{fileFacts(whole,t)} — {t('fileWholeHint')}</p></div>
-      {link(whole,t('ctaDownload'),'rbe-btn rbe-btn-primary')}
+      <div><h3>{t('fileWhole')}</h3><p className="rbe-small">{fileFacts(body,t)} · {t('fileWholeHint')}</p></div>
+      {link(body,t('ctaDownload'),'rbe-btn rbe-btn-primary')}
     </div>}
     {(cover||stickers.length>0)&&<div className="rbe-dl-row">
       {cover&&<div className="rbe-dl-card">
         <div className="rbe-dl-thumb rbe-dl-thumb-sm">{coverUri&&<img src={coverUri} alt="" loading="lazy" decoding="async"/>}</div>
         <div className="rbe-grow"><h3>{t('cover')}</h3><p className="rbe-small">{fileFacts(cover,t)}</p></div>
-        <div className="rbe-dl-acts">{link(cover,t('download'),'rbe-btn rbe-btn-secondary rbe-btn-sm')}</div>
+        <div className="rbe-dl-acts">{link(cover,t('downloadCover'),'rbe-btn rbe-btn-secondary rbe-btn-sm')}</div>
       </div>}
       {stickers.length>0&&<div className="rbe-dl-card">
         <div className="rbe-dl-thumb rbe-dl-thumb-sm rbe-dl-thumb-icon"><EditionIcon name="tag" size={28}/></div>
@@ -72,16 +72,19 @@ export default function EditionDownloads({book,profileId,details,coverUri,versio
         <div className="rbe-dl-acts">{stickers.map(file=>link(file,t(file.variant==='no-background'?'noBackground':'color'),'rbe-btn rbe-btn-secondary rbe-btn-sm',false))}</div>
       </div>}
     </div>}
-    {groups.length>0&&<EditionAccordion className="rbe-dl-print" icon="layers" title={t('printFiles')} hint={t('printFilesHint')}>
-      {groups.map(group=><div key={group.key} className="rbe-files-group">
-        <h3>{t(group.title)}</h3><p className="rbe-small">{t(group.hint)}</p>
+    {groups.length>0&&<section className="rbe-dl-print" id={printSectionId} tabIndex={-1} aria-labelledby={`${id}-print-title`}>
+      <h3 id={`${id}-print-title`}>{t('printFiles')}</h3>
+      <p className="rbe-small">{t('printNotCertified')}</p>
+      {groups.map(group=><EditionAccordion key={group.key} icon="printer" title={t(group.title)} hint={t(group.hint)}>
+        <div className="rbe-files-group">
         {group.notes.map(note=><p key={note} className="rbe-small">{note}</p>)}
         {group.files.length>0&&<ul className="rbe-files">{group.files.map(file=><li key={file.id}>
           <span><b>{fileLabel(file,t,bothAssemblies)}</b> · {fileFacts(file,t)}</span>
           {link(file,t('download'),'rbe-btn rbe-btn-secondary rbe-btn-sm',false)}
         </li>)}</ul>}
-      </div>)}
-    </EditionAccordion>}
+        </div>
+      </EditionAccordion>)}
+    </section>}
     {version&&<p className="rbe-small rbe-version">{version}</p>}
   </section>;
 }

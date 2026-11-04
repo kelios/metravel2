@@ -30,8 +30,8 @@ function publicationShells(route) {
   if (route.page !== '/(tabs)/books/[slug]') return shells
   // Server export does not prerender generateStaticParams. Books are a finite,
   // local publication: render their documents from the same catalogue pointer.
-  const { books } = require('../data/travelBooks/manifest.json')
-  for (const { slug } of books) {
+  const { books, miniDiaries = [] } = require('../data/travelBooks/manifest.json')
+  for (const { slug } of [...books, ...miniDiaries]) {
     if (typeof slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) throw new Error('Invalid published book slug')
     shells.push({ file: `books/${slug}.html`, pathname: `/books/${slug}`, params: { slug } })
   }

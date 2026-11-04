@@ -245,6 +245,8 @@ async function main(argv, {fetchImpl = fetch} = {}) {
   if (action === 'upload') {
     // Sources: the publication output of publish.mjs, which is also the build cache.
     const source = path.resolve(option('--source') ?? path.join(temp, 'books-publication'));
+    const {assertFullPublicationRights} = require('./publication-rights.cjs');
+    await assertFullPublicationRights({root, manifest, assets, source});
     console.error(`Book storage: ${assets.length} files of the current editions, s3://${BUCKET}/${PREFIX}`);
     const result = await uploadAssets(assets, {readBytes: asset => readPublicationFile(source, asset), credentials: await loadCredentials(), checkContent,
       log: ({uploaded, bytes}) => { if (uploaded % 200 === 0) console.error(`uploaded ${uploaded} new files (${Math.round(bytes / 2 ** 20)} MB)`); }});

@@ -53,7 +53,8 @@ test.each(['pocket-150x100','album-a5'] as const)('renders every longest-case po
     expect(render.pages[1]).toContain(`data-point-id="${point.stepId}"`);
   }
   expect(render.pages[0]).toContain(quest.questUrl);
-  expect(render.pages[1]).toContain('OpenStreetMap');
+  expect(render.pages[1]).toContain('© OpenStreetMap contributors');
+  expect(render.pages[1]).toContain('>openstreetmap.org/copyright</a>');
   expect(render.pages[1]).not.toContain('<polyline');
   expect(render.pages[2]).toMatch(/<div class="trim"><\/div>/);
   expect(render.pages[3]).toMatch(/<div class="trim"><\/div>/);

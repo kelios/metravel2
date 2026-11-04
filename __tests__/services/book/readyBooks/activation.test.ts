@@ -26,6 +26,13 @@ it('validates staged bytes first and preserves exact source associations across 
       await mkdir('data/travelBooks/releases',{recursive:true});
       await mkdir(outputPath,{recursive:true});await mkdir(cacheRoot,{recursive:true});
       await writeFile('package.json','{}');
+      const rightsEvidence='Test authorship and release permission';
+      await writeFile('rights-source.txt',rightsEvidence);
+      const writeProof=async b=>writeFile(path.join(outputPath,b.id,b.revision,'rights.json'),JSON.stringify({
+        schemaVersion:1,bookId:b.id,revision:b.revision,
+        artifacts:[{id:'read-body.pdf',sha256:digest(pdf),materialIds:['manuscript']}],
+        materials:[{id:'manuscript',kind:'text',basis:'original',rightsHolder:'Fixture author',source:'rights-source.txt',evidencePath:'rights-source.txt',evidenceSha256:digest(rightsEvidence),permissions:['digital-distribution','print'],royaltyStatus:'none',attribution:{required:false}}],
+      }));
       const before=JSON.stringify(prior),oldRelated=JSON.stringify(oldRelatedEntries);
       const manifestPath=path.resolve('data/travelBooks/manifest.json'),relatedPath=path.resolve('data/travelBooks/related.json'),snapshots=path.resolve('data/travelBooks/releases');
       await writeFile('data/travelBooks/manifest.json',before);await writeFile('data/travelBooks/related.json',oldRelated);
@@ -46,13 +53,28 @@ it('validates staged bytes first and preserves exact source associations across 
       assert.deepEqual(await readdir(outsideCache),[],'A symlink cache root must not write outside staging');
       assert.equal(await readFile(manifestPath,'utf8'),before);
       assert.equal(await readFile(relatedPath,'utf8'),oldRelated);
+      const lock=path.join(fixture,'.codex-temp/books-publication-activation.lock');
+      await writeFile(lock,'another activation');
+      await assert.rejects(()=>activatePublication({result:merged,outputPath,cacheRoot,root:fixture}),/activation is locked/);
+      assert.equal(await readFile(lock,'utf8'),'another activation');
+      await rm(lock);
+      await assert.rejects(()=>activatePublication({result:merged,outputPath,cacheRoot,root:fixture,expectedManifestSha256:digest('stale stage')}),/Active book manifest changed since staging/);
+      assert.equal(await readFile(manifestPath,'utf8'),before);
+      await assert.rejects(()=>readFile(lock),{code:'ENOENT'});
       const broken=path.join(outputPath,additions[1].id,'r1/read-body.pdf');await writeFile(broken,'corrupt staging bytes');
       await assert.rejects(()=>activatePublication({result:merged,outputPath,cacheRoot,root:fixture}),/differs from accepted manifest/);
       assert.equal(await readFile(manifestPath,'utf8'),before);
       assert.equal(await readFile(relatedPath,'utf8'),oldRelated);
       assert.deepEqual(await readdir(snapshots),[]);
       assert.deepEqual((await readdir(cacheRoot)).sort(),oldBooks.map(b=>b.id).sort(),'A later invalid asset must not partially populate cache');
-      await writeFile(broken,pdf);await activatePublication({result:merged,outputPath,cacheRoot,root:fixture});
+      await writeFile(broken,pdf);
+      await writeProof(additions[0]);
+      await assert.rejects(()=>activatePublication({result:merged,outputPath,cacheRoot,root:fixture}),/Missing rights proof for new-pl-quests/);
+      assert.equal(await readFile(manifestPath,'utf8'),before,'Missing rights cannot advance the active manifest');
+      assert.deepEqual((await readdir(cacheRoot)).sort(),oldBooks.map(b=>b.id).sort(),'Missing rights cannot partially populate cache');
+      await writeProof(additions[1]);
+      await activatePublication({result:merged,outputPath,cacheRoot,root:fixture,expectedManifestSha256:digest(before)});
+      assert.equal(JSON.parse(await readFile(path.join(cacheRoot,additions[1].id,'r1/rights.json'),'utf8')).bookId,additions[1].id);
       const current=JSON.parse(await readFile(manifestPath,'utf8'));
       assert.deepEqual(current.books.slice(0,6),oldBooks);
       const relatedEight=JSON.parse(await readFile(relatedPath,'utf8'));
@@ -62,6 +84,7 @@ it('validates staged bytes first and preserves exact source associations across 
       for(const b of oldBooks)assert.deepEqual(await readFile(path.join(cacheRoot,b.id,'r1/read-body.pdf')),pdf);
       const eightPayload=await readFile(manifestPath);
       await writeFile(path.join(outputPath,'related.json'),JSON.stringify(graphic.map(b=>({country:b.country,slug:b.slug,title:b.title,sourceTravelIds:[b.stops[0].sourceTravelId],pointIds:[b.stops[0].pointId]}))));
+      for(const b of graphic)await writeProof(b);
       await activatePublication({result:complete,outputPath,cacheRoot,root:fixture});
       const final=JSON.parse(await readFile(manifestPath,'utf8')),relatedTen=JSON.parse(await readFile(relatedPath,'utf8'));
       assert.deepEqual(final.books.slice(0,6),oldBooks);

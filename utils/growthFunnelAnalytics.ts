@@ -1,6 +1,8 @@
 import { queueAnalyticsEvent, sendAnalyticsEvent } from '@/utils/analytics';
 import type { AppStorePlatform } from '@/constants/appStore';
 import type { TravelPublicationFormat } from '@/types/types';
+import type { ReadyBookEntrySource } from '@/services/book/readyBooks/related';
+import type { PublishedArtifact } from '@/services/book/readyBooks/publication';
 
 export const GROWTH_FUNNEL_EVENTS = {
   registerCtaClick: 'cta_register_click',
@@ -44,15 +46,16 @@ type EventParams = Record<string, unknown>;
 
 export type ReadyBookEvent = 'ReadyBookViewed' | 'ReadyBookPreviewOpened' | 'ReadyBookProfileSelected' | 'ReadyBookDownloadRequested' | 'ReadyBookCoverDownloaded' | 'ReadyBookInstructionsViewed' | 'ReadyBookProviderOpened';
 /** DownloadRequested is the click on a published file link (the browser then fetches it itself), never an order. */
-export function trackReadyBookEvent(event:ReadyBookEvent,book:{id:string,revision:string,country:'BY'|'PL'},uiLocale:string,extra:{profileId?:string,artifactPurpose?:string,providerId?:string,profileSource?:'default'|'selected'}={}){
+export function trackReadyBookEvent(event:ReadyBookEvent,book:{id:string,revision:string,country:'BY'|'PL',slug?:string},uiLocale:string,extra:{profileId?:string,artifactPurpose?:string,artifactComponent?:PublishedArtifact['component'],providerId?:string,profileSource?:'default'|'selected',entrySource?:ReadyBookEntrySource}={}){
   queueAnalyticsEvent(event,{
     book_id:book.id,revision:book.revision,country:book.country,ui_locale:uiLocale,content_locale:'ru',
     ...(extra.profileId?{profile_id:extra.profileId}:{}),...(extra.artifactPurpose?{artifact_purpose:extra.artifactPurpose}:{}),...(extra.providerId?{provider_id:extra.providerId}:{}),
-    ...(extra.profileSource?{profile_source:extra.profileSource}:{})
+    ...(extra.profileSource?{profile_source:extra.profileSource}:{}),...(extra.artifactComponent?{artifact_component:extra.artifactComponent}:{}),
+    ...(book.slug?{book_slug:book.slug}:{}),...(extra.entrySource?{entry_source:extra.entrySource}:{})
   });
 }
 /** The related index carries no book id/revision, so a contextual entry is identified by slug and its source (#2951). */
-export function trackReadyBookRelatedOpened(book:{slug:string,country:'BY'|'PL'},entrySource:'quest'|'place'|'travel',uiLocale:string){
+export function trackReadyBookRelatedOpened(book:{slug:string,country:'BY'|'PL'},entrySource:ReadyBookEntrySource,uiLocale:string){
   queueAnalyticsEvent('ReadyBookRelatedOpened',{book_slug:book.slug,country:book.country,entry_source:entrySource,ui_locale:uiLocale});
 }
 
