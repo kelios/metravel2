@@ -7,6 +7,8 @@ let useLayoutEffect: typeof import('react').useLayoutEffect
 let useRuntimeSettle: typeof import('@/components/travel/details/TravelDetailsDeferredTransition').useDeferredSectionRuntimeSettle
 let createRoot: typeof import('react-dom/client').createRoot
 let Transition: typeof import('@/components/travel/details/TravelDetailsDeferredTransition').TravelDetailsDeferredTransition
+let ShareTripCta: typeof import('@/components/travel/details/sections/TravelArticleShareTripCta').default
+let mockCtaAuth = { authReady: false, isAuthenticated: false, userId: null as string | null }
 let mockNonDOMViewRef: object | null = null
 let Platform: typeof import('react-native').Platform
 
@@ -33,11 +35,14 @@ beforeAll(() => {
     })
     return { ...actual, View }
   })
+  jest.doMock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }))
+  jest.doMock('@/context/AuthContext', () => ({ useAuth: () => mockCtaAuth }))
   ;({ createElement, act, useLayoutEffect } = require('react'))
   ;({ createRoot } = require('react-dom/client'))
   ;({ Platform } = require('react-native'))
   Transition = require('@/components/travel/details/TravelDetailsDeferredTransition').TravelDetailsDeferredTransition
   useRuntimeSettle = require('@/components/travel/details/TravelDetailsDeferredTransition').useDeferredSectionRuntimeSettle
+  ShareTripCta = require('@/components/travel/details/sections/TravelArticleShareTripCta').default
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: 390 })
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: 844 })
 })
@@ -61,6 +66,8 @@ type FixtureOptions = {
   precedingOffscreenFlow?: boolean
   runtimeGrowth?: number
   optional?: boolean
+  transitionTestId?: string
+  measureRuntimeChild?: (leaf: HTMLElement | null) => number
 }
 
 function fixture(options: FixtureOptions = {}) {
@@ -93,25 +100,28 @@ function fixture(options: FixtureOptions = {}) {
   let top = initialTop
   let root: Root
   const writes: number[] = []
-  const transition = () => mount.querySelector<HTMLElement>('[data-testid="measured-transition"]')!
+  const testId = options.transitionTestId ?? 'measured-transition'
+  const runtimeTestId = `${testId}-runtime`
+  const transition = () => mount.querySelector<HTMLElement>(`[data-testid="${testId}"]`)!
   const released = () => !!transition() && transition().style.minHeight !== '100vh'
-  const runtimeLayer = () => mount.querySelector<HTMLElement>('[data-testid="measured-transition-runtime"]')
+  const runtimeLayer = () => mount.querySelector<HTMLElement>(`[data-testid="${runtimeTestId}"]`)
+  const measureRuntimeChild = options.measureRuntimeChild ?? ((leaf: HTMLElement | null) =>
+    Number.parseFloat(leaf?.style.height || '0') + Number.parseFloat(leaf?.style.marginBottom || '0'))
   const baselineHeight = options.optional ? 0 : options.runtimeGrowth == null ? 844 : 873
   // Browser flow model follows the actual committed container height and CSS.
   // Absolute child's intrinsic height does not affect its parent's flow height.
   const layoutDelta = () => {
     const declaredHeight = Number.parseFloat(transition()?.style.height || '0')
     const runtime = runtimeLayer()
-    const intrinsicHeight = Number.parseFloat((runtime?.firstElementChild as HTMLElement | null)?.style.height || '0')
+    const intrinsicHeight = measureRuntimeChild(runtime?.firstElementChild as HTMLElement | null)
     const uncontrolledIntrinsic = runtime && getComputedStyle(runtime).position !== 'absolute' ? intrinsicHeight : 0
     const flowHeight = Math.max(declaredHeight, uncontrolledIntrinsic, released() ? 0 : baselineHeight)
     return flowHeight - baselineHeight
   }
   const originalRect = HTMLElement.prototype.getBoundingClientRect
   HTMLElement.prototype.getBoundingClientRect = function () {
-    if (this.dataset.testid === 'measured-transition-runtime') {
-      const leaf = this.firstElementChild as HTMLElement | null
-      return rect(0, Number.parseFloat(leaf?.style.height || '0') + Number.parseFloat(leaf?.style.marginBottom || '0'), runtimeWidth)
+    if (this.dataset.testid === runtimeTestId) {
+      return rect(0, measureRuntimeChild(this.firstElementChild as HTMLElement | null), runtimeWidth)
     }
     return originalRect.call(this)
   }
@@ -139,7 +149,7 @@ function fixture(options: FixtureOptions = {}) {
   const render = (ready: boolean, pending = false, child: ReactNode = options.optional ? null : createElement('div', { 'data-testid': 'actual-runtime-leaf', style: { height: options.runtimeGrowth == null ? 702 : ready ? 873 + options.runtimeGrowth : 873 } }), runtimeVisibilityReady?: boolean) => {
     act(() => {
       root ??= createRoot(mount)
-      root.render(createElement(Transition, { isMobile: true, pending, placeholder: createElement('div', { 'data-testid': 'actual-placeholder-leaf' }), reserveHeight: options.optional ? undefined : '100vh', runtimeFrameReady: options.optional || ready, runtimeVisibilityReady, allowEmptyRuntime: options.optional, testID: 'measured-transition', children: child }))
+      root.render(createElement(Transition, { isMobile: true, pending, placeholder: createElement('div', { 'data-testid': 'actual-placeholder-leaf' }), reserveHeight: options.optional ? undefined : '100vh', runtimeFrameReady: options.optional || ready, runtimeVisibilityReady, allowEmptyRuntime: options.optional, testID: testId, children: child }))
     })
   }
   render(false)
@@ -176,6 +186,35 @@ it.each([
   expect(f.transition().style.minHeight).toBe('')
   expect(f.transition().querySelector('[data-testid="actual-placeholder-leaf"]')).toBeNull()
   f.cleanup()
+})
+
+it('releases a visible reserve after the wheel and scroll batch has finished', () => {
+  jest.useFakeTimers()
+  const f = fixture()
+  try {
+    f.transition().getBoundingClientRect = () => rect(0, f.transition().style.minHeight === '100vh' ? 844 : 702)
+    f.owner.dispatchEvent(new Event('wheel'))
+    f.render(true)
+    expect(f.transition().dataset.deferredTransitionState).toBe('runtime')
+    expect(f.transition().style.minHeight).toBe('100vh')
+    expect(f.writes).toEqual([])
+
+    act(() => { jest.advanceTimersByTime(60) })
+    f.owner.scrollTop = 26600
+    f.writes.length = 0
+    f.owner.dispatchEvent(new Event('scroll'))
+    const afterWheel = f.anchor.getBoundingClientRect().top
+    act(() => { jest.advanceTimersByTime(60) })
+    expect(f.transition().style.minHeight).toBe('100vh')
+
+    act(() => { jest.advanceTimersByTime(60) })
+    expect(f.transition().style.minHeight).toBe('')
+    expect(f.anchor.getBoundingClientRect().top).toBe(afterWheel)
+    expect(f.writes).toEqual([26458])
+  } finally {
+    f.cleanup()
+    jest.useRealTimers()
+  }
 })
 
 it.each(['fixed', 'absolute', 'sticky'] as const)('skips a pinned %s overlay and preserves the actual following flow frame', precedingOverlay => {
@@ -610,6 +649,37 @@ it.each([
   expect(f.anchor.getBoundingClientRect().top).toBe(before)
   expect(f.writes).toEqual([650 + height + 32, 650])
   f.cleanup()
+})
+
+it('releases the hidden share invitation for a late owner without moving the visible following frame', () => {
+  const pendingHeight = 68
+  const f = fixture({
+    optional: true,
+    initialTop: 600,
+    transitionTestId: 'travel-article-share-trip-transition',
+    measureRuntimeChild: (leaf) => leaf ? pendingHeight : 0,
+  })
+  const article = { id: 42, name: 'Travel fixture', userIds: '7' } as import('@/types/types').Travel
+  try {
+    f.renderTree(createElement(ShareTripCta, { travel: article, isMobile: false }))
+    expect(f.transition().style.height).toBe(`${pendingHeight}px`)
+    expect(f.transition().querySelector('[aria-hidden="true"] [aria-disabled="true"]')).not.toBeNull()
+
+    f.owner.scrollTop = 650
+    f.writes.length = 0
+    const before = f.anchor.getBoundingClientRect().top
+
+    mockCtaAuth = { authReady: true, isAuthenticated: true, userId: '7' }
+    f.renderTree(createElement(ShareTripCta, { travel: { ...article }, isMobile: false }))
+
+    expect(f.transition().style.height).toBe('0px')
+    expect(f.transition().querySelector('[role="button"]')).toBeNull()
+    expect(f.anchor.getBoundingClientRect().top).toBe(before)
+    expect(f.writes).toEqual([650 - pendingHeight])
+  } finally {
+    mockCtaAuth = { authReady: false, isAuthenticated: false, userId: null }
+    f.cleanup()
+  }
 })
 
 it.each([false, true])('uses the existing real owner correction for optional growth/shrink (natural anchoring=%s)', naturalAnchor => {

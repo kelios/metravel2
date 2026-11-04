@@ -120,10 +120,19 @@ test.describe('@perf pages-perf-budget — negative probe', () => {
 
     await injectPerfObservers(page)
     await page.goto(FIXTURE_PATH, { waitUntil: 'load', timeout: 60_000 })
+    // Chromium treats the initial mobile viewport resize as recent input.
+    // Wait out that 500 ms exclusion window after the first painted frame.
+    await page.waitForFunction(() => {
+      const firstPaint = performance.getEntriesByName('first-contentful-paint', 'paint')[0]
+      return firstPaint && performance.now() - firstPaint.startTime > 500
+    })
     // Порядок как в боевом прогоне: DOM первого экрана считается на готовности,
     // до сдвига, иначе уехавший вниз контент занизил бы счёт.
     const domCounts = await collectFirstScreenElements(page)
-    await page.waitForTimeout(1500)
+    await page.locator('#pusher').evaluate((element) => {
+      element.style.height = '40vh'
+    })
+    await page.waitForFunction(() => (window as any).__perfBudget?.cls > 0)
     const metrics = await collectMetrics(page)
 
     const violations = evaluatePageBudget(

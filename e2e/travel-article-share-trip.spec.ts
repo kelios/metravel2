@@ -176,11 +176,10 @@ async function expectAuthContext(page: Page, pathname: '/registration' | '/login
   expectCreateContext(authUrl.searchParams.get('redirect') ?? '', authUrl.origin, mode);
 }
 
-function activeAuthForm(page: Page, route: '/registration' | '/login'): Locator {
+function activeAuthForm(page: Page): Locator {
   // Expo retains earlier screens in the DOM. Their inputs and terms gates
   // must not compete with the currently accessible screen's form card.
-  const title = route === '/registration' ? 'Создайте аккаунт MeTravel' : 'С возвращением';
-  return page.getByRole('heading', { level: 1, name: title, exact: true }).locator('..');
+  return page.getByRole('heading', { level: 1, name: 'Расскажите о своей поездке', exact: true }).locator('..');
 }
 
 async function openSourceArticle(page: Page): Promise<void> {
@@ -215,9 +214,8 @@ async function fillAuthForm(form: Locator): Promise<void> {
   await expect(form).toBeVisible();
   await form.locator('input[type="email"]').fill(READER_EMAIL);
   await form.locator('input[type="password"]').fill(READER_PASSWORD);
-  const terms = form.getByTestId('auth-terms-gate-checkbox');
-  if (await terms.getAttribute('aria-checked') !== 'true') await terms.click();
-  await expect(terms).toBeChecked();
+  const terms = form.getByTestId('auth-terms-gate-notice');
+  await expect(terms.getByRole('link', { name: 'Пользовательское соглашение' })).toHaveAttribute('href', '/terms');
 }
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
@@ -231,10 +229,10 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       await expect(invite).toHaveAccessibleName('Были здесь? Расскажите о своей поездке');
       await invite.click();
       await expectAuthContext(page, '/registration', 'note');
-      await activeAuthForm(page, '/registration')
+      await activeAuthForm(page)
         .getByRole('button', { name: 'Войти в аккаунт', exact: true }).click();
       await expectAuthContext(page, '/login', 'note');
-      const form = activeAuthForm(page, '/login');
+      const form = activeAuthForm(page);
       await fillAuthForm(form);
       await form.getByRole('button', { name: 'Войти', exact: true }).click();
 
@@ -287,12 +285,12 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       expect(clicks[0].params.source_travel_id).toBe(String(FALLBACK_TRAVEL_ID));
 
       // Both auth forms must preserve the nested query before any account exists.
-      await activeAuthForm(page, '/registration')
+      await activeAuthForm(page)
         .getByRole('button', { name: 'Войти в аккаунт', exact: true }).click();
       await expectAuthContext(page, '/login');
-      await activeAuthForm(page, '/login').getByText('Зарегистрируйтесь', { exact: true }).click();
+      await activeAuthForm(page).getByText('Зарегистрируйтесь', { exact: true }).click();
       await expectAuthContext(page, '/registration');
-      const registrationForm = activeAuthForm(page, '/registration');
+      const registrationForm = activeAuthForm(page);
       await fillAuthForm(registrationForm);
       await registrationForm.getByRole('button', { name: 'Зарегистрироваться', exact: true }).click();
 
@@ -303,7 +301,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       expect((await page.context().cookies()).some((cookie) => cookie.name === WEB_AUTH_COOKIE_NAME)).toBe(false);
       await authGate.getByRole('button', { name: /^Войти.*вернуться/ }).click();
       await expectAuthContext(page, '/login');
-      const loginForm = activeAuthForm(page, '/login');
+      const loginForm = activeAuthForm(page);
       await fillAuthForm(loginForm);
       await loginForm.getByRole('button', { name: 'Войти', exact: true }).click();
 

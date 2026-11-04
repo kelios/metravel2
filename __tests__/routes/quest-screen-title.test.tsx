@@ -215,10 +215,13 @@ beforeAll(() => { HelmetProvider.canUseDOM = false })
 afterAll(() => { HelmetProvider.canUseDOM = originalCanUseDOM })
 
 describe('Quest screen title sync', () => {
+  let QuestScreen: typeof import('@/app/(tabs)/quests/[city]/[questId]').default
+
   beforeAll(() => {
     const RN = require('react-native')
     RN.Platform.OS = 'web'
     RN.Platform.select = (obj: Record<string, unknown>) => obj.web || obj.default
+    QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
   })
 
   beforeEach(() => {
@@ -299,7 +302,6 @@ describe('Quest screen title sync', () => {
   }
 
   it('the RU detail is a revalidation-only serving caller (#2364)', async () => {
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     await render(<QuestScreen />)
     const ruCalls = mockUseQuestServing.mock.calls
       .map(([options]) => options as { locale: string; enabled: boolean; requireBootstrap?: boolean; cityId?: number })
@@ -310,7 +312,6 @@ describe('Quest screen title sync', () => {
 
   it('gates the exact prefixed bundle query while E is pending and preserves the static head', async () => {
     mockUseQuestServing.mockReturnValue({ projection: null, pending: true, offline: false, refetch: jest.fn() })
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     await render(<QuestScreen route={plRoute} />)
     expect(mockUseQuestBundle).toHaveBeenLastCalledWith(undefined, 'pl')
     expect(activeHelmetHeads.size).toBe(0)
@@ -326,7 +327,6 @@ describe('Quest screen title sync', () => {
     const original = mockUseQuestBundle()
     mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'pl', city: { ...original.bundle.city, id: 4 } } } as any)
     mockUseQuestServing.mockReturnValue({ projection, pending: false, offline: false, refetch: jest.fn() } as any)
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = await render(<QuestScreen route={plRoute} />)
     await act(async () => { jest.advanceTimersByTime(0); await Promise.resolve() })
     expect(mockUseQuestBundle).toHaveBeenLastCalledWith('minsk-cmok', 'pl')
@@ -346,7 +346,6 @@ describe('Quest screen title sync', () => {
     const original = mockUseQuestBundle()
     mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'pl' } } as any)
     mockUseQuestServing.mockReturnValue({ projection, pending: false, offline: false, refetch: jest.fn() } as any)
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = await render(<QuestScreen route={plRoute} />)
     await act(async () => { jest.advanceTimersByTime(500); await Promise.resolve() })
     expect(screen.getByTestId('quest-consent-checkbox')).toBeTruthy()
@@ -359,7 +358,6 @@ describe('Quest screen title sync', () => {
     const original = mockUseQuestBundle()
     mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'pl' } } as any)
     mockUseQuestServing.mockReturnValue({ projection, pending: false, offline: false, refetch: jest.fn() } as any)
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = await render(<QuestScreen route={plRoute} />)
     await act(async () => { jest.advanceTimersByTime(0) })
     mockUseQuestServing.mockReturnValue({ projection: { ...projection, state: 'unavailable', canonical_path: null, versions: [] }, pending: false, offline: false, refetch: jest.fn() } as any)
@@ -373,7 +371,6 @@ describe('Quest screen title sync', () => {
 
   it('blocks a Russian gameplay fallback under an online PL URL', async () => {
     mockUseQuestServing.mockReturnValue({ projection, pending: false, offline: false, refetch: jest.fn() } as any)
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = await render(<QuestScreen route={plRoute} />)
     await act(async () => { jest.advanceTimersByTime(500); await Promise.resolve() })
     expect(screen.getByTestId('quest-locale-unavailable')).toBeTruthy()
@@ -386,7 +383,6 @@ describe('Quest screen title sync', () => {
     const original = mockUseQuestBundle()
     mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'pl', ...drift } } as any)
     mockUseQuestServing.mockReturnValue({ projection, pending: false, offline: false, refetch: jest.fn() } as any)
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = await render(<QuestScreen route={plRoute} />)
     await act(async () => { jest.advanceTimersByTime(500); await Promise.resolve() })
     expect(screen.getByTestId('quest-locale-unavailable')).toBeTruthy()
@@ -403,7 +399,6 @@ describe('Quest screen title sync', () => {
     const original = mockUseQuestBundle()
     mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'ru' } } as any)
     mockUseQuestServing.mockReturnValue({ projection: null, pending: false, offline: true, refetch: jest.fn() })
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     await render(<QuestScreen route={plRoute} />)
     await act(async () => { jest.advanceTimersByTime(500); await Promise.resolve() })
     expect(mockUseQuestBundle).toHaveBeenLastCalledWith('minsk-cmok', 'pl')
@@ -419,7 +414,6 @@ describe('Quest screen title sync', () => {
     mockUseQuestBundle.mockReturnValue({ ...original, bundle: { ...original.bundle, contentLocale: 'pl', tags: [] } } as any)
     mockUseQuestServing.mockReturnValue({ projection, pending: false, offline: false, refetch: jest.fn() } as any)
     const generate = jest.spyOn(QuestPrintable, 'generatePrintableQuest').mockResolvedValue('unavailable')
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     await render(<QuestScreen route={plRoute} />)
     await act(async () => { await Promise.resolve() })
     expect(mockUseQuestBundle).toHaveBeenLastCalledWith('minsk-cmok', 'pl')
@@ -428,7 +422,6 @@ describe('Quest screen title sync', () => {
   })
 
   it('an actual in-place print document survives already scheduled route patches after 3 seconds', async () => {
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     await render(<QuestScreen />)
     await act(async () => { jest.advanceTimersByTime(0) })
     expect(document.title).toContain('Цмока')
@@ -442,7 +435,6 @@ describe('Quest screen title sync', () => {
   })
 
   it('print bundle error recovers through the ordinary Retry consumer and writes exactly one print document', async () => {
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     mockUseLocalSearchParams.mockReturnValue({ city: '4', questId: 'minsk-cmok', print: '1' } as any)
     const loaded = mockUseQuestBundle()
     const printTitle = `${loaded.bundle.title} — ${i18nT('quests:components.quests.QuestPrintable.bookTitle')}`
@@ -473,7 +465,6 @@ describe('Quest screen title sync', () => {
   })
 
   it('updates document title and canonical when quest screen becomes active', async () => {
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
 
     await render(<QuestScreen />)
 
@@ -513,7 +504,6 @@ describe('Quest screen title sync', () => {
         ...current,
         bundle: { ...current.bundle, city: { ...current.bundle.city, id: 4 } },
       })
-      const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
       const screen = await render(<QuestScreen />)
 
       await act(async () => {
@@ -546,7 +536,6 @@ describe('Quest screen title sync', () => {
   ])('keeps one normalized cover in declarative SEO, JSON-LD and every delayed head write: %s', async (coverUrl, expected) => {
     const current = mockUseQuestBundle()
     mockUseQuestBundle.mockReturnValue({ ...current, bundle: { ...current.bundle, coverUrl } })
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = await render(<QuestScreen />)
 
     await expectRenderedImage(screen, expected)
@@ -573,7 +562,6 @@ describe('Quest screen title sync', () => {
       ...current,
       bundle: { ...current.bundle, coverUrl: '/quest-cover/quests/77/main/cover.webp' },
     })
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = await render(<QuestScreen />)
     const initialHelmetHtml = (await readHelmetStructuredData(screen)).html
     await act(async () => {
@@ -622,7 +610,6 @@ describe('Quest screen title sync', () => {
     unrelated.setAttribute('data-seo-jsonld', 'website')
     unrelated.textContent = JSON.stringify({ '@type': 'WebSite', name: 'MeTravel' })
     document.head.appendChild(unrelated)
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = await render(<QuestScreen />)
     const { html } = await readHelmetStructuredData(screen)
 
@@ -662,7 +649,6 @@ describe('Quest screen title sync', () => {
     ssgCrumbs.type = 'application/ld+json'
     ssgCrumbs.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [] })
     document.head.appendChild(ssgCrumbs)
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = await render(<QuestScreen route={plRoute} />)
     const { html } = await readHelmetStructuredData(screen)
     await act(async () => {
@@ -683,7 +669,6 @@ describe('Quest screen title sync', () => {
   })
 
   it('passes real auth into progress sync after blur (#1973)', async () => {
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = await render(<QuestScreen />)
     expect(mockUseQuestProgressSync).toHaveBeenCalledWith('minsk-cmok', true)
 
@@ -695,7 +680,6 @@ describe('Quest screen title sync', () => {
 
   it.each(['blur', 'unmount'])('stops bootstrap JSON-LD handover after quest %s', async (transition) => {
     const bootstrap = appendBootstrapQuestJsonLd()
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = await render(<QuestScreen />)
     const { html } = await readHelmetStructuredData(screen)
     if (transition === 'blur') {
@@ -717,7 +701,6 @@ describe('Quest screen title sync', () => {
     const coverUrl = 'https://example.com/cover.webp?label=</script><script>bad</script>&caption=\u2028\u2029#photo'
     const current = mockUseQuestBundle()
     mockUseQuestBundle.mockReturnValue({ ...current, bundle: { ...current.bundle, coverUrl } })
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = await render(<QuestScreen />)
 
     const { html, jsonLd } = await readHelmetStructuredData(screen)
@@ -731,7 +714,6 @@ describe('Quest screen title sync', () => {
   })
 
   it.each(['blur', 'unmount'])('leaves the destination image alone after quest %s', async (transition) => {
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
     const screen = await render(<QuestScreen />)
     await act(async () => {
       jest.advanceTimersByTime(100)
@@ -756,7 +738,6 @@ describe('Quest screen title sync', () => {
 
   it('does not load quest data or progress while the quest screen is not focused', async () => {
     mockUseIsFocused.mockReturnValue(false)
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
 
     await render(<QuestScreen />)
 
@@ -793,7 +774,6 @@ describe('Quest screen title sync', () => {
       error: null,
       refetch: jest.fn(),
     })
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
 
     await render(<QuestScreen />)
 
@@ -830,7 +810,6 @@ describe('Quest screen title sync', () => {
       'beforeend',
       '<style data-ssg-quest-intro-style="true">[data-ssg-quest-intro]{display:none}</style>',
     )
-    const QuestScreen = require('@/app/(tabs)/quests/[city]/[questId]').default
 
     const { container } = await render(<QuestScreen />)
 

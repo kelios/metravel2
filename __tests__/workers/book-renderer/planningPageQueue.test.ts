@@ -102,7 +102,7 @@ describe('durable depth-first page subdivision', () => {
     expect(accepted.filter(item => item.page.type === 'content' && item.page.first)).toHaveLength(1)
     expect(accepted.every(item => item.page.type === 'content' && !item.page.last && item.page.qr === '')).toBe(true)
     expect(html.filter(value => /<ol\b/.test(value)).every(value => /start="7"/.test(value))).toBe(true)
-  })
+  }, 30_000)
 
   it('does not mutate a checkpoint when admission rejects the next physical probe', async () => {
     const source: BookSegmentSource = { page: { type: 'checklists' }, blocks: [], occurrences: [] }

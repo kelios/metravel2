@@ -26,8 +26,12 @@ export default function TravelDetailsLoadingFallback() {
   // Web only: native renders no in-content h1 above the gallery.
   const titleAboveHero = isMobile && Platform.OS === 'web'
   const desktopSidebarWidth = Math.max(320, Math.min(Math.round(width * 0.24), 360))
+  // CSS knows the viewport on the first frame, before useResponsive leaves its SSR snapshot.
+  const mobileHeroHeight = titleAboveHero
+    ? 'clamp(260px, 56vh, 420px)'
+    : Math.max(260, Math.min(Math.round(height * 0.56), 420))
   const heroHeight = isMobile
-    ? Math.max(260, Math.min(Math.round(height * 0.56), 420))
+    ? mobileHeroHeight
     : Math.max(360, Math.min(Math.round(height * 0.7), 750))
 
   return (

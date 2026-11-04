@@ -236,6 +236,16 @@ export const createTravelListItemStyles = (colors: ReturnType<typeof useThemedCo
       gap: Platform.OS === 'web' ? CARD_GEOMETRY.contentGap : 3,
     },
 
+    // Detail rails swap a single row of skeletons for cards with optional
+    // decision metadata. Reserve the full stack in both states so the next
+    // section stays in place even when the payload has only one card.
+    reservedMetadataStack: {
+      minHeight: TRAVEL_CARD_TITLE_MIN_HEIGHT + TRAVEL_CARD_META_LINE_HEIGHT +
+        Math.max(CARD_GEOMETRY.metaMinHeight,
+          TRAVEL_CARD_META_LINE_HEIGHT + CARD_GEOMETRY.metaPaddingTop + CARD_GEOMETRY.metaBadgePaddingTop) +
+        2 * CARD_GEOMETRY.contentGap,
+    },
+
     titleInline: {
       fontSize: Platform.OS === 'web'
         ? DESIGN_TOKENS.typography.sizes.md

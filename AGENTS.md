@@ -147,6 +147,8 @@ Validation:
 5. После логического блока запусти самый узкий надёжный check. Full/preflight,
    build, deploy, e2e, Lighthouse и device install сначала проходят operation
    gate из `docs/WORKFLOW_OPERATIONS.md`; не дублируй живой процесс/lock.
+   Для отдельной задачи «прогнать и починить весь набор» используй изолированный
+   клон по разделу «Полный цикл качества в отдельном клоне» того же документа.
 6. После code changes обязательный `$metravel-code-reviewer` review-and-fix по
    полному task diff. Предпочтителен независимый `review-auditor`; reviewer
    исправляет подтверждённые findings, перечитывает итоговый diff и повторяет

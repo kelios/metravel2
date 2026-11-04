@@ -1,8 +1,9 @@
 import React, { memo, useCallback } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Platform, StyleSheet, View } from 'react-native'
 import { useRouter } from 'expo-router'
 
 import Button from '@/components/ui/Button'
+import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 import { resolveOwnerId } from '@/components/travel/compactSideBar/helpers'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useAuth } from '@/context/AuthContext'
@@ -22,11 +23,12 @@ type TravelArticleShareTripCtaProps = {
   isMobile: boolean
 }
 
-function VisibleTravelArticleShareTripCta({
+function TravelArticleShareTripActions({
   travel,
   isMobile,
   authState,
-}: TravelArticleShareTripCtaProps & { authState: GrowthAuthState }) {
+}: TravelArticleShareTripCtaProps & { authState: GrowthAuthState | null }) {
+  const hidden = authState === null
   const router = useRouter()
   const { t } = useTranslation()
   const label = t('travel:articleShareTrip.action')
@@ -34,6 +36,7 @@ function VisibleTravelArticleShareTripCta({
   const impression = useTrackedImpression(
     `article-share-trip:${travel.id}:${authState}`,
     useCallback(() => {
+      if (!authState) return
       trackContentCreateCtaImpression({
         contentType: 'route',
         source: 'travel_article',
@@ -47,6 +50,7 @@ function VisibleTravelArticleShareTripCta({
   // #2829: основной вход — короткая заметка (#2666), полный мастер — второй выбор;
   // контекст статьи (страна, место) едет в обоих.
   const openCreate = useCallback((mode: TravelPublicationFormat) => {
+    if (!authState) return
     const createHref = buildTravelArticleCreateHref(travel, mode)
     trackContentCreateCtaClicked({
       contentType: 'route',
@@ -66,12 +70,15 @@ function VisibleTravelArticleShareTripCta({
 
   return (
     <View
-      ref={impression.ref}
-      onLayout={impression.onLayout}
-      style={[styles.container, !isMobile && styles.containerRow]}
-      testID="travel-article-share-trip"
+      ref={hidden ? undefined : impression.ref}
+      onLayout={hidden ? undefined : impression.onLayout}
+      style={[styles.container, !isMobile && styles.containerRow, hidden && styles.hidden]}
+      pointerEvents={hidden ? 'none' : undefined}
+      aria-hidden={hidden || undefined}
+      testID={hidden ? undefined : 'travel-article-share-trip'}
     >
       <Button
+        disabled={hidden}
         label={label}
         accessibilityLabel={label}
         onPress={handleNotePress}
@@ -79,9 +86,10 @@ function VisibleTravelArticleShareTripCta({
         fullWidth={isMobile}
         labelNumberOfLines={0}
         style={styles.button}
-        testID="travel-article-share-trip-button"
+        testID={hidden ? undefined : 'travel-article-share-trip-button'}
       />
       <Button
+        disabled={hidden}
         label={fullLabel}
         accessibilityLabel={fullLabel}
         onPress={handleFullPress}
@@ -89,7 +97,7 @@ function VisibleTravelArticleShareTripCta({
         fullWidth={isMobile}
         labelNumberOfLines={0}
         style={styles.button}
-        testID="travel-article-share-trip-full-button"
+        testID={hidden ? undefined : 'travel-article-share-trip-full-button'}
       />
     </View>
   )
@@ -104,16 +112,29 @@ export const TravelArticleShareTripCta = memo(function TravelArticleShareTripCta
   const isOwner = isAuthenticated && userId != null && ownerId != null
     && String(userId).trim() === String(ownerId).trim()
 
-  if (!authReady || (isAuthenticated && !userId?.trim()) || isOwner) return null
-
+  const showActions = authReady && (!isAuthenticated || Boolean(userId?.trim())) && !isOwner
   const authState = isAuthenticated ? 'authenticated' : 'guest'
+  const actions = showActions ? (
+    <TravelArticleShareTripActions key={`${travel.id}:${authState}`} travel={travel} isMobile={isMobile} authState={authState} />
+  ) : null
+  if (Platform.OS !== 'web') return actions
+
+  // Keep the reader's position when a late owner check releases the reserved row.
+  const reserve = isOwner ? null : (
+    <TravelArticleShareTripActions travel={travel} isMobile={isMobile} authState={null} />
+  )
   return (
-    <VisibleTravelArticleShareTripCta
-      key={`${travel.id}:${authState}`}
-      travel={travel}
+    <TravelDetailsDeferredTransition
+      key={travel.id}
+      testID="travel-article-share-trip-transition"
       isMobile={isMobile}
-      authState={authState}
-    />
+      pending={false}
+      placeholder={reserve}
+      runtimeFrameReady
+      allowEmptyRuntime
+    >
+      {actions ?? reserve}
+    </TravelDetailsDeferredTransition>
   )
 })
 
@@ -129,6 +150,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     alignItems: 'center',
   },
+  hidden: { opacity: 0 },
   button: {
     alignSelf: 'flex-start',
     maxWidth: '100%',

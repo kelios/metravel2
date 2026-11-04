@@ -10,7 +10,7 @@ import { isBareMediaEndpointUrl } from '@/utils/mediaUrl';
 import { getMediaPlaceholderData } from '@/utils/travelMediaVariants';
 import type { TravelMediaImage } from '@/types/types';
 import { globalFocusStyles } from '@/styles/globalFocus'; // ✅ ИСПРАВЛЕНИЕ: Импорт focus-стилей
-import { useResponsive } from '@/hooks/useResponsive';
+import { useBreakpoints } from '@/hooks/useResponsive';
 import {
   PointListExpandedContent,
   PointListPreview,
@@ -183,7 +183,9 @@ const openExternal = async (url: string) => {
 const PointList: React.FC<PointListProps> = ({ points, baseUrl, baseTravelId, travelName, onPointCardPress, addressImages }) => {
   const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
   const safePoints = useMemo(() => (Array.isArray(points) ? points : []), [points]);
-  const { width, isPhone, isLargePhone, isTablet } = useResponsive();
+  // The deferred map section mounts after hydration. A zero-width first render
+  // would briefly mount the desktop grid instead of the phone's card rail.
+  const { width, isPhone, isLargePhone, isTablet } = useBreakpoints({ clientOnly: true });
   const isMobile = isPhoneLayout({ width, isPhone, isLargePhone });
   const isLargeDesktop = width >= 1440;
   const isWebGrid = Platform.OS === 'web' && !isMobile;

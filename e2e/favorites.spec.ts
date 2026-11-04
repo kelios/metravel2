@@ -109,9 +109,7 @@ async function seedAuthAndFavorites(
 }
 
 test.describe('@smoke Favorites', () => {
-  // global-setup seeds a fake auth token into the default storageState even
-  // without creds, so every test in this suite starts from an explicit anonymous
-  // state and seeds its own auth when needed.
+  // Each scenario starts anonymously and installs its own session when needed.
   test.use({ storageState: ANON_STATE });
 
   test('guest is prompted to log in on /favorites', async ({ page }) => {
@@ -119,10 +117,14 @@ test.describe('@smoke Favorites', () => {
 
     await page.goto('/favorites', { waitUntil: 'domcontentloaded', timeout: 120_000 });
 
-    await expect(page.getByText('Войдите в аккаунт', { exact: true })).toBeVisible({
-      timeout: 30_000,
-    });
-    await expect(page.getByText('Войти', { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('heading', { name: '«Хочу поехать»' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Создать аккаунт', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Войти', exact: true }).click();
+    await expect(page).toHaveURL((url) =>
+      url.pathname === '/login'
+      && url.searchParams.get('redirect') === '/favorites'
+      && url.searchParams.get('intent') === 'favorites'
+    );
   });
 
   test.describe(() => {

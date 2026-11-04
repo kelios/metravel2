@@ -376,6 +376,7 @@ const NearTravelList: React.FC<NearTravelListProps> = memo(
               : undefined
           }
           webTouchAction={RAIL_CARD_TOUCH_ACTION}
+          reserveMetadata={Platform.OS === 'web'}
         />
       </View>
     ), [keyExtractor, numColumns, width]);

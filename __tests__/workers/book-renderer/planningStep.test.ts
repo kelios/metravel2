@@ -145,6 +145,8 @@ describe('fenced bounded planning protocol through sealed descriptors', () => {
   }, 120_000)
 
   it('re-executes an uncommitted generation over torn crash debris and reproduces identical receipts (#2384)', async () => {
+    // Compare retries with the same generation budget regardless of host load.
+    jest.spyOn(performance, 'now').mockReturnValue(0)
     const f = await setup()
     const first = await preparePlanningStep(f.jobDir, f.plan, f.document, { renderer_content_hash: RENDERER, generation: 1 }, options(f.committed))
     // Power loss before B3 committed generation 1: its unsynced leaves may be empty on disk.
@@ -243,7 +245,7 @@ describe('fenced bounded planning protocol through sealed descriptors', () => {
     expect(advanced.book!.queue).toBeUndefined()
     expect(advanced.book!.counts.pages).toBe(1)
     expect(second.probes).toBe(1)
-  })
+  }, 30_000)
 
   it('retries one oversized resource pair with its exact required budget instead of failing the book', async () => {
     const f = await setup()

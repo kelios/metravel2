@@ -144,6 +144,7 @@ type Props = {
   hideAuthor?: boolean
   visualVariant?: 'default' | 'home-featured'
   webTouchAction?: string
+  reserveMetadata?: boolean
   isDeleting?: boolean
   /**
    * Web cover loading policy. The `eager` default assumes a VIRTUALIZED list
@@ -177,6 +178,7 @@ function TravelListItem({
   hideAuthor = false,
   visualVariant = 'default',
   webTouchAction,
+  reserveMetadata = false,
   isDeleting = false,
   mediaLoading = 'eager',
 }: Props) {
@@ -706,7 +708,7 @@ function TravelListItem({
   ) : null
 
   const contentSlot = (
-    <View style={styles.contentStack}>
+    <View style={[styles.contentStack, reserveMetadata && styles.reservedMetadataStack]}>
       <Text style={styles.titleInline} numberOfLines={2} ellipsizeMode="tail">
         {title}
       </Text>
@@ -875,6 +877,7 @@ function areEqual(prev: Props, next: Props) {
     prev.gridColumns === next.gridColumns &&
     prev.mediaLoading === next.mediaLoading &&
     prev.webTouchAction === next.webTouchAction &&
+    prev.reserveMetadata === next.reserveMetadata &&
     prev.isDeleting === next.isDeleting
   )
 }

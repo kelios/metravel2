@@ -193,13 +193,13 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
     useEffect(() => (Platform.OS === 'web' ? rIC(() => { void loadQuestsSidebar(); }, 2000) : undefined), []);
 
     // ── Persistent city selection ──
-    // #2320: восстановленный выбор отрисован — класс первого кадра больше не нужен.
-    // Эффект идёт после коммита, в котором вводка уже снята React-ом (срез
-    // сужает каталог) или уже стоит (срез «Все квесты») — снятие класса ничего
-    // не двигает.
+    // Keep the first-frame geometry until the focused catalogue has committed
+    // both the restored selection and its loaded header.
     useEffect(() => {
-        if (selectionRestored && Platform.OS === 'web') releaseQuestCatalogRestoredClass();
-    }, [selectionRestored]);
+        if (isFocused && selectionRestored && dataLoaded && Platform.OS === 'web') {
+            releaseQuestCatalogRestoredClass();
+        }
+    }, [isFocused, selectionRestored, dataLoaded]);
 
     const handleSelectCity = useCallback(async (id: string) => {
         if (id === NEARBY_ID && geoRequesting) return;

@@ -105,7 +105,9 @@ export const nearTravelSkeletonSlots = (layout: NearTravelRailLayout): ReactElem
   Array.from({ length: layout.numColumns }, (_, i) => (
     layout.isMobile
       ? <TravelTmlRoundSkeleton key={`skeleton-${i}`} />
-      : <View key={`skeleton-${i}`} style={nearTravelRailStyles.railCard}><TravelListItemSkeleton /></View>
+      : <View key={`skeleton-${i}`} style={nearTravelRailStyles.railCard}>
+          <TravelListItemSkeleton reserveMetadata={Platform.OS === 'web'} />
+        </View>
   ))
 
 // Коробка `SegmentedControl` в NearTravelList: телефон — compact, иначе обычный
@@ -181,7 +183,7 @@ export const PopularTravelListSkeleton = memo(function PopularTravelListSkeleton
         <View style={[skeletonStyles.railContent, { gap: layout.gap }, layout.contentStyle]}>
           {Array.from({ length: layout.numColumns }, (_, i) => (
             <View key={i} style={slotStyle} testID="popular-travel-rail-slot">
-              <TravelListItemSkeleton />
+              <TravelListItemSkeleton reserveMetadata={Platform.OS === 'web'} />
             </View>
           ))}
         </View>

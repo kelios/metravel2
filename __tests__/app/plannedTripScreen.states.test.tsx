@@ -220,12 +220,15 @@ const LONG_DESKTOP_DESCRIPTION = Array.from(
   (_, index) => `Абзац ${index + 1} с логистикой маршрута и деталями стоянок.`,
 ).join('\n');
 
-const renderScreen = async () => {
-  const PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default;
-  return await render(<PlannedTripScreen />);
-};
-
 describe('PlannedTripScreen — planner states', () => {
+  let PlannedTripScreen: typeof import('@/app/(tabs)/trips/plan/[id]').default;
+
+  beforeAll(() => {
+    PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default;
+  });
+
+  const renderScreen = () => render(<PlannedTripScreen />);
+
   beforeEach(() => {
     Object.defineProperty(Platform, 'OS', { configurable: true, get: () => originalOS });
     mockSearchParams = { id: '8001' };
@@ -486,7 +489,6 @@ describe('PlannedTripScreen — planner states', () => {
 
   it('keeps an untouched metadata transport aligned with a route-builder update', async () => {
     mockTrip(makeTrip({ isOwner: true, transport: 'car' }));
-    const PlannedTripScreen = require('@/app/(tabs)/trips/plan/[id]').default;
     const { getByTestId, rerender } = await render(<PlannedTripScreen />);
 
     await fireEvent.press(getByTestId('trip-plan-edit'));

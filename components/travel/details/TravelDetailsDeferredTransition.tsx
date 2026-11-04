@@ -15,6 +15,7 @@ export const TRAVEL_DETAILS_FOOTER_RESERVE_HEIGHT = '100vh' as const
 const RUNTIME_SETTLE_QUIET_MS = 320
 const RUNTIME_SETTLE_TIMEOUT_MS = 6000
 const RUNTIME_SETTLE_HEIGHT_EPSILON_PX = 1
+const RESERVE_RELEASE_SCROLL_QUIET_MS = 100
 
 /**
  * Latches "the real frame stopped moving" for a deferred section. The caller
@@ -302,6 +303,8 @@ export function TravelDetailsDeferredTransition({
   const [reserveReleaseState, setReserveReleaseState] = useState<ReserveReleaseState>('reserved')
   const transitionRef = useRef<ViewInstance>(null)
   const releaseAnchorRef = useRef<ReserveReleaseAnchor | null>(null)
+  const scrollActivityRef = useRef<{ owner: HTMLElement; lastActivity: number } | null>(null)
+  const [releaseAttempt, setReleaseAttempt] = useState(0)
 
   useEffect(() => {
     if (pending) setInternalRuntimeFrameReady(false)
@@ -460,6 +463,26 @@ export function TravelDetailsDeferredTransition({
     }
   }, [allowEmptyRuntime, children, reserveHeight, reserveReleaseState, runtimeFrameReady, runtimeMeasured, supportsResizeObservation, wantsRuntimeVisible])
 
+  // Wheel/touch input can precede the browser's actual scrolling by a frame.
+  // Record both ends of that interval on the same owner used for anchoring.
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'web' || reserveHeight == null || reserveReleaseState !== 'reserved') return
+    const node = connectedDOMView(transitionRef.current)
+    const owner = node && findMeasuredScrollOwner(node)
+    if (!owner) return
+    const activity = { owner, lastActivity: -Infinity }
+    scrollActivityRef.current = activity
+    const markActivity = (event: Event) => {
+      if (event.type !== 'scroll' || event.target === owner) activity.lastActivity = Date.now()
+    }
+    const events = ['wheel', 'touchmove', 'scroll'] as const
+    for (const event of events) owner.addEventListener(event, markActivity, { capture: true, passive: true })
+    return () => {
+      for (const event of events) owner.removeEventListener(event, markActivity, true)
+      scrollActivityRef.current = null
+    }
+  }, [reserveHeight, reserveReleaseState])
+
   // Releasing the original reserve is separate from early visibility and every
   // measured growth update. Capture prior to the React style change; correct in
   // the subsequent synchronous layout commit, before the browser can paint it.
@@ -467,8 +490,21 @@ export function TravelDetailsDeferredTransition({
     if (Platform.OS !== 'web' || !wantsRuntimeVisible || !runtimeMeasured || !runtimeFrameReady || reserveHeight == null) return
     const node = connectedDOMView(transitionRef.current)
     if (reserveReleaseState === 'reserved') {
-      releaseAnchorRef.current = node ? findMeasuredTransactionAnchor(node) ??
-        (reserveSlackRef.current ? findRuntimeReadingAnchor(node, connectedDOMView(runtimeRef.current)) : null) : null
+      const runtime = connectedDOMView(runtimeRef.current)
+      const capture = node ? findMeasuredTransactionAnchor(node) ??
+        (reserveSlackRef.current ? findRuntimeReadingAnchor(node, runtime) : null) : null
+      const activity = scrollActivityRef.current
+      if (node && runtime && capture && activity?.owner === capture.owner &&
+          node.getBoundingClientRect().height - runtime.getBoundingClientRect().height > RUNTIME_SETTLE_HEIGHT_EPSILON_PX) {
+        const wait = activity.lastActivity + RESERVE_RELEASE_SCROLL_QUIET_MS - Date.now()
+        if (wait > 0) {
+          // Keep the runtime interactive while holding the reserve. Try from a
+          // fresh layout commit so the anchor is read after the scroll batch.
+          const retry = setTimeout(() => setReleaseAttempt((attempt) => attempt + 1), wait)
+          return () => clearTimeout(retry)
+        }
+      }
+      releaseAnchorRef.current = capture
       setReserveReleaseState('released')
       return
     }
@@ -480,7 +516,7 @@ export function TravelDetailsDeferredTransition({
       if (revealCorrectionRef.current === 'clamped') setReserveReleaseState('clamped')
       else if (corrected) setReserveReleaseState(corrected)
     }
-  }, [reserveHeight, reserveReleaseState, runtimeFrameReady, runtimeMeasured, wantsRuntimeVisible])
+  }, [releaseAttempt, reserveHeight, reserveReleaseState, runtimeFrameReady, runtimeMeasured, wantsRuntimeVisible])
 
   if (Platform.OS !== 'web') {
     return <>{pending ? placeholder : children}</>

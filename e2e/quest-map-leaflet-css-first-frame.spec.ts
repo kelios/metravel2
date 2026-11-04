@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Page, Request } from '@playwright/test'
 
 import { test, expect } from './fixtures'
 import { createQuestFixture } from './helpers/questWizardFixture'
@@ -152,21 +152,41 @@ test.describe('@perf quest map: Leaflet CSS before the first map frame (#2324, #
   for (const width of [390, 1280]) {
     for (const cssMode of ['immediate', 'late', 'failed'] as const) {
       test(`${width}px ${cssMode} CSS: first tiles and complete controls keep their geometry`, async ({ page }, testInfo) => {
+        const firstPoint = { id: 'css-step-1', lat: 53.9023, lng: 27.5619 }
         const quest = createQuestFixture({
           questId: 'e2e-quest-map-css-first-frame', questTitle: 'E2E-квест карты: первый кадр',
           questNumericId: 91_724, progressId: 90_724, viewport: { width, height: 900 },
-          points: [{ id: 'css-step-1', lat: 53.9023, lng: 27.5619 },
+          points: [firstPoint,
             { id: 'css-step-2', lat: 53.9041, lng: 27.5652 },
             { id: 'css-step-3', lat: 53.9062, lng: 27.5598 }],
         })
         const raw = {
-          requestFailures: [] as Array<{ url: string; error: string | null }>,
+          requestFailures: [] as Array<{ url: string; error: string | null; canceledFixtureRecommendation: boolean }>,
+          finishedFixtureRecommendations: [] as string[],
           consoleErrors: [] as Array<{ text: string; url: string }>, pageErrors: [] as string[],
           badResponses: [] as Array<{ url: string; status: number }>,
           controlledCssFailures: [] as string[],
           observations: [] as unknown[],
         }
-        page.on('requestfailed', (request) => raw.requestFailures.push({ url: request.url(), error: request.failure()?.errorText ?? null }))
+        const isFixtureRecommendation = (request: Request) => {
+          const url = new URL(request.url())
+          return request.method() === 'GET' && url.origin === new URL(page.url()).origin &&
+            url.pathname === '/api/travels/near-location/' && url.searchParams.size === 4 &&
+            url.searchParams.get('city') === quest.city.name &&
+            url.searchParams.get('lat') === String(firstPoint.lat) &&
+            url.searchParams.get('lng') === String(firstPoint.lng) &&
+            url.searchParams.get('limit') === '4'
+        }
+        page.on('requestfailed', (request) => {
+          const error = request.failure()?.errorText ?? null
+          raw.requestFailures.push({
+            url: request.url(), error,
+            canceledFixtureRecommendation: error === 'net::ERR_ABORTED' && isFixtureRecommendation(request),
+          })
+        })
+        page.on('requestfinished', (request) => {
+          if (isFixtureRecommendation(request)) raw.finishedFixtureRecommendations.push(request.url())
+        })
         page.on('console', (message) => {
           if (message.type() === 'error') raw.consoleErrors.push({ text: message.text(), url: message.location().url })
         })
@@ -356,14 +376,20 @@ test.describe('@perf quest map: Leaflet CSS before the first map frame (#2324, #
           }
           await check('quest start')
           await page.waitForLoadState('networkidle')
+          const recommendationsBeforeReload = raw.finishedFixtureRecommendations.length
+          expect(recommendationsBeforeReload, 'quest start: mocked recommendations completed').toBeGreaterThan(0)
           cssGate = resetCssGate()
           await page.reload({ waitUntil: 'domcontentloaded' })
           await check('cold reload')
           await page.waitForLoadState('networkidle')
+          expect(raw.finishedFixtureRecommendations.length, 'cold reload: mocked recommendations completed')
+            .toBeGreaterThan(recommendationsBeforeReload)
           const isControlled = (url: string) => raw.controlledCssFailures.includes(url)
-          // Preserve every raw failure; only the exact two deliberately aborted
-          // CSS URLs in this fail scenario are controlled infrastructure evidence.
-          expect(raw.requestFailures.filter((entry) => !(isControlled(entry.url) && entry.error === 'net::ERR_FAILED'))).toEqual([])
+          // The recommendations query consumes an AbortSignal. A canceled
+          // attempt is harmless when the same mocked query completes in that
+          // document. Keep those attempts and the injected CSS failures in raw evidence.
+          expect(raw.requestFailures.filter((entry) => !entry.canceledFixtureRecommendation &&
+            !(isControlled(entry.url) && entry.error === 'net::ERR_FAILED'))).toEqual([])
           expect(raw.consoleErrors.filter((entry) => !(isControlled(entry.url) && entry.text === 'Failed to load resource: net::ERR_FAILED'))).toEqual([])
           expect(raw.pageErrors).toEqual([])
           expect(raw.badResponses).toEqual([])

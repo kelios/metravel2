@@ -131,8 +131,34 @@ describe('Android release safety contract', () => {
     ).toBe(11);
   });
 
-  it('never configures the release build with the debug signing key', () => {
-    const gradle = fs.readFileSync(path.join(ROOT, 'android/app/build.gradle'), 'utf8');
+  it('configures release signing through the Expo Gradle mod', async () => {
+    const withAndroidReleaseSafety = require('../../plugins/withAndroidReleaseSafety');
+    const { mods } = withAndroidReleaseSafety({});
+    const contents = `android {
+    signingConfigs {
+        debug {
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            signingConfig signingConfigs.debug
+        }
+    }
+    packagingOptions {
+    }
+}
+dependencies {
+    implementation("com.facebook.react:react-android")
+}
+`;
+    const { modResults } = await mods.android.appBuildGradle({
+      modRequest: {},
+      modResults: { language: 'groovy', contents },
+    });
+    const gradle = modResults.contents;
     const buildTypesStart = gradle.indexOf('buildTypes {');
     const packagingOptionsStart = gradle.indexOf('packagingOptions {', buildTypesStart);
     expect(buildTypesStart).toBeGreaterThan(-1);
@@ -142,6 +168,7 @@ describe('Android release safety contract', () => {
     const releaseBlock = buildTypesBlock.slice(buildTypesBlock.indexOf('release {'));
 
     expect(releaseBlock).not.toMatch(/signingConfig\s+signingConfigs\.debug/);
+    expect(releaseBlock).toMatch(/signingConfig\s+signingConfigs\.release/);
     expect(gradle).toContain('METRAVEL_ANDROID_KEYSTORE_PATH');
 
     const buildScript = fs.readFileSync(path.join(ROOT, 'scripts/android-build.sh'), 'utf8');

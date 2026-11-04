@@ -8,6 +8,8 @@ const allowListedModules =
 /** @type {import('jest').Config} */
 module.exports = {
   ...expoPreset,
+  // Prune ignored directories during discovery instead of filtering find output.
+  haste: { ...expoPreset.haste, forceNodeFilesystemAPI: true },
   testEnvironment: 'jsdom',
   // reanimated 4.7 / worklets 0.13 требуют свой резолвер (web-варианты модулей под Jest);
   // scripts/jest-resolver.js цепляет его к резолверу RN-пресета.

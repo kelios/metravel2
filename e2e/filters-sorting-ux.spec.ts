@@ -131,16 +131,15 @@ test.describe('@smoke Filters and sorting — deterministic catalog integration'
     const sortTrigger = page.getByRole('button', { name: /Сортировка:/i }).first();
 
     await sortTrigger.click();
-    const options = page.getByRole('radio');
-    await expect(options).toHaveCount(filterDictionaries.sortings.length, {
-      timeout: FILTER_TIMEOUT_MS,
-    });
-
-    await page.getByRole('radio', { name: 'Популярные ↓', exact: true }).click();
+    const sortMenu = page.getByRole('dialog', { name: 'Сортировка списка', exact: true });
+    for (const { id } of filterDictionaries.sortings) {
+      await expect(sortMenu.getByTestId(`sort-option-${id}`)).toBeVisible();
+    }
+    await sortMenu.getByRole('radio', { name: 'Популярные ↓', exact: true }).click();
     await expect(
       page.getByRole('button', { name: 'Сортировка: Популярные ↓', exact: true }),
     ).toBeVisible();
-    await expect(page.getByRole('radio', { name: 'Сначала старые', exact: true })).toHaveCount(0);
+    await expect(sortMenu).toBeHidden();
 
     await expect
       .poll(

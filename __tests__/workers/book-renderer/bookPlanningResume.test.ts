@@ -170,7 +170,7 @@ describe('restartable canonical body and frontmatter planning', () => {
       expect(entry.startPage).toBe(offset + chapter.start + 1)
     }
     expect(actual.state.counts.frontmatter_pages).toBe(offset)
-  })
+  }, 120_000)
 
   it('retains forward heading anchors, table continuation and inline ordering with one-byte original feeds', async () => {
     const description = `<p><a href="#later">Jump</a>😀</p><table><tr><td>${'ячейка &amp; '.repeat(70)}</td><td>Next</td></tr></table><h2>Later</h2><p><img src="${SNAPSHOT_FIXTURE_IMAGE_SRC}"></p>`

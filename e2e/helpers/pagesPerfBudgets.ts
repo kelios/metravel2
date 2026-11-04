@@ -57,11 +57,10 @@ export type PageBudget = {
    */
   skipHeaderPositiveControl?: string
   /**
-   * #2100: вложенный экран телефона — бренд-строки (лого, язык) нет, сверху одна
-   * строка «←». Узлы бренд-строки здесь не проверяются на присутствие, вместо них
-   * обязана найтись строка экрана `header-context-bar`. Значение — причина.
+   * Профиль, где компактная строка `header-context-bar` заменяет бренд-строку.
+   * Позитивный контроль проверяет строку возврата вместо логотипа и языка.
    */
-  phoneNestedScreen?: string
+  compactContextBar?: string
 }
 
 export type PageMeasurement = {
@@ -97,7 +96,7 @@ export const FORBIDDEN_SHIFT_SOURCES: ReadonlyArray<{
    * и требовать её на мобильном — значит ронять гейт на здоровой странице.
    */
   presentOn: readonly PerfProfile[]
-  /** Узел живёт только в бренд-строке: на вложенном экране телефона его нет (#2100). */
+  /** Узел живёт только в бренд-строке и отсутствует в компактной строке возврата. */
   brandRowOnly?: boolean
 }> = [
   {
@@ -304,7 +303,7 @@ export const PAGE_BUDGETS: BudgetTable = {
       ...TIMING,
     },
     mobile: {
-      phoneNestedScreen: '#2100: вложенный экран телефона — одна строка «←», без бренд-строки',
+      compactContextBar: '#2100: вложенный экран телефона — одна строка «←», без бренд-строки',
       // #1334 убрал 115px-сдвиг каталога, #1298/#1340 сняли сдвиг шапки и
       // стирание статического shell. Прод-замер 2026-08-10 (build
       // v1786308063481, 412x823, CPU 4x, холодный контекст): 0.002501 в 5/5.
@@ -337,11 +336,12 @@ export const PAGE_BUDGETS: BudgetTable = {
     },
     'desktop-narrow': {
       ...QUESTS_CATALOG_BUDGETS['desktop-narrow'],
+      compactContextBar: 'Детали квеста до 1280 px показывают компактную строку «←»',
       firstScreenElementsMax: 240, // measured 213 (199 before #2151); kept
       requestsMax: 76, // measured 63; +20% rounded up
     },
     mobile: {
-      phoneNestedScreen: '#2100: вложенный экран телефона — одна строка «←», без бренд-строки',
+      compactContextBar: '#2100: вложенный экран телефона — одна строка «←», без бренд-строки',
       ...QUESTS_CATALOG_BUDGETS.mobile,
       firstScreenElementsMax: 195, // measured 162; +20% rounded up
       requestsMax: 78, // measured 65; +20% rounded up
@@ -370,7 +370,7 @@ export const PAGE_BUDGETS: BudgetTable = {
       ...TIMING,
     },
     mobile: {
-      phoneNestedScreen: '#2100: вложенный экран телефона — одна строка «←», без бренд-строки',
+      compactContextBar: '#2100: вложенный экран телефона — одна строка «←», без бренд-строки',
       clsMax: HEALTHY_CLS_MAX,
       firstScreenElementsMax: 150, // measured 124
       lcpMaxMs: LCP_MEDIUM,

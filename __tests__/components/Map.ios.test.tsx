@@ -3,6 +3,7 @@ import { getAllHosts } from '@/__tests__/helpers/hostQueries'
 import React from 'react';
 import { act, render } from '@testing-library/react-native';
 import { Platform } from 'react-native';
+import { UserPointsMap } from '@/components/UserPoints/UserPointsMap';
 import { padViewportBBox } from '@/hooks/map/mapViewportCoverage';
 
 const mockInjectJavaScript = jest.fn();
@@ -887,7 +888,6 @@ describe('Map.ios Component', () => {
       const originalPlatform = Platform.OS;
       Platform.OS = platform;
       try {
-        const { UserPointsMap } = require('@/components/UserPoints/UserPointsMap');
         const rendered = await render(<UserPointsMap points={[]} />);
         await act(() => {
           getWebView(rendered).props.onMessage({

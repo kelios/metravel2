@@ -19,6 +19,10 @@ const render = async (
 const ORIGINAL_PLATFORM_OS = Platform.OS;
 
 // Mock dependencies
+jest.mock('@/hooks/useDebouncedValue', () => ({
+    useDebouncedValue: <T,>(value: T) => value,
+}));
+
 jest.mock('@/hooks/useTheme', () => ({
     useThemedColors: () => ({
         primary: '#7a9d8f',

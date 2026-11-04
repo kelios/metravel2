@@ -171,11 +171,17 @@ test.describe('Messages — deterministic user flows', () => {
       pageBackground.boundingBox(),
       desktopShell.boundingBox(),
       card.boundingBox(),
-      pageBackground.evaluate((element) => ({
-        page: getComputedStyle(element).backgroundColor,
-        html: getComputedStyle(document.documentElement).backgroundColor,
-        parent: element.parentElement?.getBoundingClientRect().toJSON(),
-      })),
+      pageBackground.evaluate((element) => {
+        let parent = element.parentElement;
+        while (parent && getComputedStyle(parent).display === 'contents') {
+          parent = parent.parentElement;
+        }
+        return {
+          page: getComputedStyle(element).backgroundColor,
+          html: getComputedStyle(document.documentElement).backgroundColor,
+          parent: parent?.getBoundingClientRect().toJSON(),
+        };
+      }),
     ]);
 
     expect(pageBackgroundBox).not.toBeNull();

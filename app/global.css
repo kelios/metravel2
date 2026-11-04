@@ -872,8 +872,16 @@ select:focus-visible {
     min-height: 28px !important;
   }
 
-  /* Hydration replaces the SSR mobile-title node before restoring selection.
-     Keep the same inner title height throughout that intermediate commit. */
+  /* The saved slice uses two rows before and after the desktop header mounts. */
+  html.quests-slice-restored :is(
+    [data-testid="quests-mobile-title"],
+    [data-testid="quests-content-header"]:not(:has([data-testid="quests-mobile-chips"])) > :first-child
+  ) {
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    align-items: flex-start !important;
+  }
+
   html.quests-slice-restored [data-testid="quests-content-header"]:not(:has([data-testid="quests-mobile-chips"])) > :first-child {
     min-height: 60px;
   }
@@ -946,7 +954,12 @@ select:focus-visible {
   }
 
   html.quests-slice-restored [data-testid="quests-mobile-title"] {
+    flex: 1 1 0 !important;
     min-height: 88px;
+  }
+
+  html.quests-slice-restored [data-testid="quests-content-header"]:not(:has([data-testid="quests-mobile-chips"])) > :first-child {
+    flex: 1 1 0;
   }
 
   [data-testid="quests-content-header"]:has([data-testid="quests-mobile-chips"]) {

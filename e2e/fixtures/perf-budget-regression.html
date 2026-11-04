@@ -2,6 +2,7 @@
 <html lang="ru">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>perf budget negative fixture</title>
     <style>
       body { margin: 0; font: 14px/1.4 system-ui, sans-serif; }
@@ -10,7 +11,7 @@
       .chip { display: inline-block; width: 10px; height: 10px; margin: 1px; background: #ccd; }
       .row { height: 18px; padding: 0 8px; }
       #pusher { height: 0; background: #eee; transition: none; }
-      #switcher { display: inline-block; height: 44px; padding: 0 12px; background: #ddd; }
+      #switcher { height: 44px; padding: 0 12px; background: #ddd; }
     </style>
   </head>
   <body>
@@ -42,11 +43,6 @@
         row.textContent = 'row ' + index
         filler.appendChild(row)
       }
-
-      // Сдвиг после первой отрисовки: контент уезжает вниз на пол-экрана.
-      setTimeout(() => {
-        document.getElementById('pusher').style.height = '400px'
-      }, 400)
     </script>
   </body>
 </html>

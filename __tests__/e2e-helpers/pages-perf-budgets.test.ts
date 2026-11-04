@@ -135,14 +135,15 @@ describe('budget table rules', () => {
     ])
   })
 
-  // #2100: вложенные экраны телефона без бренд-строки — контроль её узлов заменён строкой «←».
-  it('marks phone-nested routes so brand-row positive controls do not run vacuously', () => {
-    expect(PAGE_BUDGETS.PLACES?.mobile?.phoneNestedScreen).toMatch(/#2100/)
-    expect(PAGE_BUDGETS.QUEST_DETAIL?.mobile?.phoneNestedScreen).toMatch(/#2100/)
-    expect(PAGE_BUDGETS.ABOUT?.mobile?.phoneNestedScreen).toMatch(/#2100/)
-    expect(PAGE_BUDGETS.HOME?.mobile?.phoneNestedScreen).toBeUndefined()
-    expect(PAGE_BUDGETS.SEARCH?.mobile?.phoneNestedScreen).toBeUndefined()
-    expect(PAGE_BUDGETS.QUESTS?.mobile?.phoneNestedScreen).toBeUndefined()
+  it('marks profiles where the context bar replaces the brand row', () => {
+    expect(PAGE_BUDGETS.PLACES?.mobile?.compactContextBar).toMatch(/#2100/)
+    expect(PAGE_BUDGETS.QUEST_DETAIL?.mobile?.compactContextBar).toMatch(/#2100/)
+    expect(PAGE_BUDGETS.QUEST_DETAIL?.['desktop-narrow']?.compactContextBar).toMatch(/1280/)
+    expect(PAGE_BUDGETS.QUEST_DETAIL?.desktop?.compactContextBar).toBeUndefined()
+    expect(PAGE_BUDGETS.ABOUT?.mobile?.compactContextBar).toMatch(/#2100/)
+    expect(PAGE_BUDGETS.HOME?.mobile?.compactContextBar).toBeUndefined()
+    expect(PAGE_BUDGETS.SEARCH?.mobile?.compactContextBar).toBeUndefined()
+    expect(PAGE_BUDGETS.QUESTS?.mobile?.compactContextBar).toBeUndefined()
   })
 
   // #2112: /about держит здоровый CLS на всех раскладках — гидратация больше не перекладывает hero.

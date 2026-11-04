@@ -35,6 +35,7 @@ export function PopularTravelRail({ travels }: { travels: readonly Travel[] }) {
               viewportWidth={layout.width}
               cardWidth={layout.slotWidth ?? getTravelDetailsListColumnWidth(layout.width, layout.numColumns)}
               webTouchAction="pan-x pan-y"
+              reserveMetadata={Platform.OS === 'web'}
             />
           </View>
         ))}

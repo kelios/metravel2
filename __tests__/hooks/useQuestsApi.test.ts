@@ -153,13 +153,17 @@ describe('useQuestsApi hooks', () => {
     });
 
     it('loads quests from API and adapts them', async () => {
-      mockFetchQuestsList.mockResolvedValueOnce([API_META]);
+      let complete!: (quests: (typeof API_META)[]) => void;
+      const pendingQuests = new Promise<(typeof API_META)[]>((resolve) => {
+        complete = resolve;
+      });
+      mockFetchQuestsList.mockReturnValueOnce(pendingQuests);
 
       const { result } = await renderHook(() => useQuestsList(), { wrapper });
 
-      // Initially loading
       expect(result.current.loading).toBe(true);
 
+      await act(async () => complete([API_META]));
       await waitFor(() => expect(result.current.loading).toBe(false));
 
       expect(result.current.quests).toHaveLength(1);

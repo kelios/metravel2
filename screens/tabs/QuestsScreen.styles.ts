@@ -208,9 +208,14 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             minWidth: 0,
         },
         filteredContentTitleBlock: {
-            // A saved slice gains reset/sort chips after loading. Reserve its
-            // two 28px rows plus the gap from the first frame (global.css).
-            minHeight: Platform.OS === 'web' ? 2 * 28 + spacing.xxs : undefined,
+            ...(Platform.OS === 'web' && {
+                // Match the restored slice's first frame in app/global.css.
+                flexDirection: 'column',
+                alignItems: 'flex-start',
+                flexWrap: 'nowrap',
+                minHeight: 2 * 28 + spacing.xxs,
+                ...(isWideDesktop && { flexGrow: 1, flexBasis: 0 }),
+            }),
         },
         mobileTitleRow: {
             paddingHorizontal: headerPadding,

@@ -6,6 +6,8 @@ import { useThemedColors } from '@/hooks/useTheme'
 
 import { MapSkeleton } from '@/components/travel/TravelDetailSkeletons'
 import ToggleableMap from '@/components/travel/ToggleableMapSection'
+import { SkeletonLoader } from '@/components/ui/SkeletonLoader'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { RouteFilePointItem } from '@/hooks/useRouteFilePreviews'
 import type { Travel } from '@/types/types'
 
@@ -26,9 +28,13 @@ const RouteElevationProfile = React.lazy(
 )
 
 const SECTION_CONTENT_MARGIN_STYLE = { marginTop: 12 } as const
+const MAP_HEIGHT = 560
 
 const MapFallback = () => {
   const styles = useTravelDetailsStyles()
+  if (Platform.OS === 'web') {
+    return <SkeletonLoader width="100%" height={MAP_HEIGHT} borderRadius={DESIGN_TOKENS.radii.md} />
+  }
   return (
     <View style={styles.fallback}>
       <MapSkeleton />
@@ -143,7 +149,7 @@ export const TravelRouteMapBlock: React.FC<{
                     highlightedPoint={highlightedPoint ?? undefined}
                     resizeTrigger={mapResizeTrigger}
                     compact
-                    height={560}
+                    height={MAP_HEIGHT}
                     showRouteLine={shouldShowRouteLine}
                     routeLines={routeLines}
                   />

@@ -13,6 +13,7 @@ import {
 
 type Props = {
   testID?: string
+  reserveMetadata?: boolean
 }
 
 /**
@@ -23,7 +24,7 @@ type Props = {
  * собранный из своих чисел, расходился с карточкой, и список под шапкой прыгал
  * в момент ответа API (профиль, прод 05.10.2026: 16 px, CLS 0,029 на 390).
  */
-function TravelListItemSkeleton({ testID = 'travel-list-item-skeleton' }: Props) {
+function TravelListItemSkeleton({ testID = 'travel-list-item-skeleton', reserveMetadata = false }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => createTravelListItemStyles(colors), [colors])
 
@@ -36,7 +37,7 @@ function TravelListItemSkeleton({ testID = 'travel-list-item-skeleton' }: Props)
         <SkeletonLoader width="100%" height="100%" borderRadius={0} style={StyleSheet.absoluteFill} />
       </View>
       <View style={styles.cardContentContainer}>
-        <View style={styles.contentStack}>
+        <View style={[styles.contentStack, reserveMetadata && styles.reservedMetadataStack]}>
           <View style={skeletonStyles.title}>
             <SkeletonLoader width="78%" height={14} borderRadius={4} />
             <SkeletonLoader width="52%" height={14} borderRadius={4} />

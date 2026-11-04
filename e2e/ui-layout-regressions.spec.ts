@@ -339,10 +339,9 @@ test.describe('@perf UI layout regression guards (overlap/cutoff/viewport)', () 
       // Opening menu must not introduce horizontal scroll.
       await expectNoHorizontalScroll(page);
 
-      // We expect a close button to appear when the menu opens.
-      await expect(close).toBeVisible({ timeout: 10_000 });
-
-      // Menu controls should be within viewport (no off-screen/cutoff issues).
+      // A transformed sheet is visible to Playwright while it is still sliding in.
+      // Wait for the open position before taking the viewport and hit-test snapshots.
+      await expect(panel).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
       await expectFullyInViewport(close, page, { label: 'menu close button', margin: 2 });
 
       // At least one nav item should be present and in viewport.
