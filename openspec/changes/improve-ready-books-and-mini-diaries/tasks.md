@@ -13,5 +13,5 @@
 
 ## 3. Validation
 
-- [ ] 3.1 Complete targeted source checks, independent review, and web acceptance after deployment.
+- [x] 3.1 Complete targeted source checks, independent review, and web acceptance after deployment.
 - [ ] 3.2 Verify both activated editions and record the post-publication 30-day measurement window.

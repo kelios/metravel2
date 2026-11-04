@@ -2,15 +2,19 @@ import {test,expect} from './fixtures';
 import type {Locator,Page} from '@playwright/test';
 import {preacceptCookies} from './helpers/navigation';
 
-async function isPainted(locator:Locator){
-  return locator.evaluate(element=>{
+async function isPainted(locator:Locator,{rounded=false}:{rounded?:boolean}={}){
+  return locator.evaluate((element,rounded)=>{
     const rect=element.getBoundingClientRect();
     if(rect.width<2||rect.height<2||rect.left<0||rect.top<0||rect.right>innerWidth||rect.bottom>innerHeight)return false;
-    return [[rect.left+1,rect.top+1],[rect.right-1,rect.bottom-1],[rect.left+rect.width/2,rect.top+rect.height/2]].every(([x,y])=>{
+    const centerY=rect.top+rect.height/2;
+    const points=rounded
+      ? [0.25,0.5,0.75].map(fraction=>[rect.left+rect.width*fraction,centerY])
+      : [[rect.left+1,rect.top+1],[rect.right-1,rect.bottom-1],[rect.left+rect.width/2,centerY]];
+    return points.every(([x,y])=>{
       const painted=document.elementFromPoint(x,y);
       return !!painted&&(painted===element||element.contains(painted));
     });
-  });
+  },rounded);
 }
 
 async function revealByWheel(page:Page,frame:Locator,target:Locator){
@@ -68,7 +72,7 @@ for(const viewport of [{width:390,height:844},{width:1440,height:900}]){
     const catalogFrame=page.getByTestId('ready-books-scroll').filter({has:page.locator('.rbc-grid')});
     await expect(catalog).toBeVisible();
     if(viewport.width===390){
-      await expect.poll(()=>isPainted(catalog.locator('a[href="#books-choose"]'))).toBe(true);
+      await expect.poll(()=>isPainted(catalog.locator('a[href="#books-choose"]'),{rounded:true})).toBe(true);
     }
 
     // Wheel input must reach the real links; scrollIntoView can move a hidden
