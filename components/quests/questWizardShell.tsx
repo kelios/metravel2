@@ -52,11 +52,9 @@ type NavigationSharedProps = {
   styles: any
   allSteps: QuestNavigationStep[]
   answers: Record<string, string>
-  /** Точки, отложенные ссылкой «Пропустить»: долг маршрута, а не «ещё впереди» (#1633). */
+  /** Обязательные точки без ответа, оставленные позади. */
   postponedStepIds: ReadonlySet<string>
   currentIndex: number
-  unlockedIndex: number
-  questFinished: boolean
   showFinaleOnly: boolean
   goToStep: (index: number) => void
   onShowFinale: () => void
@@ -343,8 +341,6 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
     answers,
     postponedStepIds,
     currentIndex,
-    unlockedIndex,
-    questFinished,
     showFinaleOnly,
     goToStep,
     onShowFinale,
@@ -461,8 +457,8 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
         contentContainerStyle={styles.compactStepsListContent}
       >
         {allSteps.map((step, index) => {
-          const { active: isActive, done: isDone, pending: isPostponed, unlocked: isUnlocked } = resolveQuestStepNavFlags({
-            stepId: step.id, index, currentIndex, unlockedIndex, answers, postponedStepIds, questFinished, showFinaleOnly,
+          const { active: isActive, done: isDone, pending: isPostponed } = resolveQuestStepNavFlags({
+            stepId: step.id, index, currentIndex, answers, postponedStepIds, showFinaleOnly,
           })
 
           return (
@@ -475,10 +471,7 @@ export function QuestCompactSidebar(props: QuestCompactSidebarProps) {
               active={isActive}
               done={isDone}
               pending={isPostponed}
-              unlocked={isUnlocked}
-              onPress={() => {
-                if (isUnlocked) goToStep(index)
-              }}
+              onPress={() => goToStep(index)}
               indexLabel={String(index)}
               isIntro={step.id === 'intro'}
               position={index}
@@ -560,8 +553,6 @@ function QuestStepsNavigation({
   answers,
   postponedStepIds,
   currentIndex,
-  unlockedIndex,
-  questFinished,
   showFinaleOnly,
   goToStep,
   onShowFinale,
@@ -571,8 +562,8 @@ function QuestStepsNavigation({
 }: NavigationSharedProps & { wideDesktop: boolean; isMobile: boolean; routeTriggerRef?: React.Ref<ViewInstance> }) {
   const pointsTotal = countRoutePoints(allSteps)
   const pills = allSteps.map((step, index) => {
-    const { active: isActive, done: isDone, pending: isPostponed, unlocked: isUnlocked } = resolveQuestStepNavFlags({
-      stepId: step.id, index, currentIndex, unlockedIndex, answers, postponedStepIds, questFinished, showFinaleOnly,
+    const { active: isActive, done: isDone, pending: isPostponed } = resolveQuestStepNavFlags({
+      stepId: step.id, index, currentIndex, answers, postponedStepIds, showFinaleOnly,
     })
 
     return (
@@ -585,10 +576,7 @@ function QuestStepsNavigation({
         active={isActive}
         done={isDone}
         pending={isPostponed}
-        unlocked={isUnlocked}
-        onPress={() => {
-          if (isUnlocked) goToStep(index)
-        }}
+        onPress={() => goToStep(index)}
         indexLabel={step.id === 'intro' ? '' : String(index)}
         isIntro={step.id === 'intro'}
         position={index}
@@ -642,8 +630,6 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     answers,
     postponedStepIds,
     currentIndex,
-    unlockedIndex,
-    questFinished,
     showFinaleOnly,
     goToStep,
     onShowFinale,
@@ -674,8 +660,6 @@ export function QuestHeaderPanel(props: QuestHeaderPanelProps) {
     answers,
     postponedStepIds,
     currentIndex,
-    unlockedIndex,
-    questFinished,
     showFinaleOnly,
     countModel,
     completedCount,

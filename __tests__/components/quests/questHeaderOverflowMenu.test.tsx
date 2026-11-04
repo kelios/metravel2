@@ -91,8 +91,6 @@ const renderHeader = async (overrides: HeaderOverrides) => {
       answers={{}}
       postponedStepIds={new Set<string>()}
       currentIndex={overrides.currentIndex ?? 1}
-      unlockedIndex={1}
-      questFinished={false}
       showFinaleOnly={overrides.showFinaleOnly ?? false}
       headerInScreenRow={isMobile}
       screenW={screenW}

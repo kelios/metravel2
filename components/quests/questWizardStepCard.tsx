@@ -140,7 +140,7 @@ type StepCardProps = {
    * приходит непустым только на последней точке маршрута — там тупик.
    */
   pendingBehind?: { id: string; title: string; index: number }[]
-  /** Возврат к отложенной точке; индекс уже открыт, гейт `goToStep` его пустит. */
+  /** Возврат к отложенной точке. */
   onGoToStep?: (index: number) => void
   showMap: boolean
   onToggleMap: () => void

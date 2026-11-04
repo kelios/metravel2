@@ -32,8 +32,6 @@ const build = (overrides: Partial<Parameters<typeof buildQuestRouteModel>[0]> = 
     answers: answered(['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p8', 'p9', 'p10', 'p11']),
     postponedStepIds: new Set(),
     currentIndex: 12,
-    unlockedIndex: 12,
-    questFinished: false,
     showFinaleOnly: false,
     countModel: buildQuestCountModel(points, intro),
     completedCount: 10,
@@ -87,22 +85,18 @@ describe('buildQuestRouteModel (#2149)', () => {
     expect(model.segments[13].role).toBe('final')
     expect(model.segments[0].visual.state).toBe('done')
     expect(model.segments[11].visual.state).toBe('current')
-    expect(model.segments[12].visual.state).toBe('locked')
+    expect(model.segments[12].visual.state).toBe('available')
   })
 
-  it('строка на старт, каждую точку и финал; роль и состояние в подписи, у закрытой — причина', () => {
+  it('строка на старт, каждую точку и финал; роль и состояние в подписи', () => {
     const model = build()
     expect(model.rows.map((row) => row.kind)).toEqual(['intro', ...points.map(() => 'point'), 'finale'])
     const seventh = model.rows[7]
     expect(seventh.numberLabel).toBe('7')
     expect(seventh.detail).toBe('Точка по желанию · доступна')
     expect(seventh.accessibilityLabel).toBe('Точка-7: Точка 7 из 14, доступна; Точка по желанию')
-    const locked = model.rows[13]
-    expect(locked.disabled).toBe(true)
-    expect(locked.accessibilityLabel).toBe(
-      'Точка-13: Точка 13 из 14, закрыта; Обязательная точка. Сначала пройдите предыдущие точки',
-    )
-    expect(model.rows[15]).toMatchObject({ kind: 'finale', title: 'Финал', disabled: false })
+    expect(model.rows[13].accessibilityLabel).toBe('Точка-13: Точка 13 из 14, доступна; Обязательная точка')
+    expect(model.rows[15]).toMatchObject({ kind: 'finale', title: 'Финал' })
   })
 })
 
@@ -122,7 +116,7 @@ describe('QuestRouteStrip (#2149)', () => {
     expect((StyleSheet.flatten(strip.props.style) as any).minHeight).toBeGreaterThanOrEqual(QUEST_ROUTE_ROW_MIN_HEIGHT)
   })
 
-  it('лист «Маршрут»: доступная точка открывается, закрытая — нет, финал — через свою строку', async () => {
+  it('лист «Маршрут»: можно выбрать точку впереди, пройденную точку и финал', async () => {
     const { view, onGoToStep, onShowFinale } = await renderStrip()
     await fireEvent.press(view.getByTestId('quest-route-strip'))
 
@@ -133,8 +127,10 @@ describe('QuestRouteStrip (#2149)', () => {
 
     await fireEvent.press(view.getByTestId('quest-route-strip'))
     await fireEvent.press(view.getByTestId('quest-route-row-p13'))
-    expect(onGoToStep).toHaveBeenCalledTimes(1)
+    expect(onGoToStep).toHaveBeenNthCalledWith(2, 13)
+    expect(view.queryByTestId('quest-route-sheet')).toBeNull()
 
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
     await fireEvent.press(view.getByTestId('quest-nav-finale'))
     expect(onShowFinale).toHaveBeenCalledTimes(1)
   })

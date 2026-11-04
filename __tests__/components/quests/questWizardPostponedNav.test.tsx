@@ -10,10 +10,10 @@
  *     отложенной точки контур `warning` и значок «вернуться» — оба из модели
  *     `resolveQuestStepVisualState` (#2146), одной и для пилюли, и для кружка.
  */
-import { act, cleanup, fireEvent, render } from '@testing-library/react-native'
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react-native'
 
 const mockQueueAnalyticsEvent = jest.fn()
-let mockQuestWizardResponsiveModel = {
+const desktopResponsiveModel = {
   screenW: 1280,
   screenH: 900,
   isMobile: false,
@@ -23,6 +23,7 @@ let mockQuestWizardResponsiveModel = {
   useWideInlineLayout: false,
   useWideExcursionsSidebar: false,
 }
+let mockQuestWizardResponsiveModel = desktopResponsiveModel
 
 jest.mock('@/utils/analytics', () => ({
   queueAnalyticsEvent: (...args: any[]) => mockQueueAnalyticsEvent(...args),
@@ -99,7 +100,10 @@ const pillProps = {
   total: 3,
 } as const
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  mockQuestWizardResponsiveModel = desktopResponsiveModel
+})
 
 describe('QuestWizard — граница состояния «отложена» в навигации (#1633)', () => {
   it('actual sidebar keeps an authored optional marker once in text and accessible label', async () => {
@@ -148,6 +152,60 @@ describe('QuestWizard — граница состояния «отложена»
     // Точка 2 — текущая, точка 3 ещё впереди: долгом их метить нельзя.
     expect(view.queryByLabelText(postponedLabel(2))).toBeNull()
     expect(view.queryByLabelText(postponedLabel(3))).toBeNull()
+  })
+
+  it.each(['sidebar', 'mobile'] as const)('opens a future point from %s and restores the unanswered route', async (surface) => {
+    const mobile = surface === 'mobile'
+    mockQuestWizardResponsiveModel = {
+      ...desktopResponsiveModel,
+      screenW: mobile ? 390 : 1280,
+      isMobile: mobile,
+      headerInScreenRow: mobile,
+      compactNav: mobile,
+      compactDesktopLayout: !mobile,
+    }
+    const onProgressChange = jest.fn()
+    const wizard = (
+      <QuestWizard
+        title="Тест-квест"
+        steps={steps}
+        finale={{ text: 'Финал' }}
+        intro={intro}
+        storageKey={`step-selection-${surface}`}
+        onProgressChange={onProgressChange}
+      />
+    )
+    let view = await render(wizard)
+    await fireEvent.press(view.getByRole('button', { name: 'Начать квест' }))
+    if (mobile) await fireEvent.press(view.getByTestId('quest-route-strip'))
+    await fireEvent.press(view.getByRole('button', { name: /Точка 3 из 3, доступна/ }))
+
+    expect(view.getByText('Task s3')).toBeTruthy()
+    expect(view.queryByTestId('quest-route-sheet')).toBeNull()
+    expect(onProgressChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      currentIndex: 3,
+      unlockedIndex: 3,
+      answers: { intro: 'start' },
+      skipped: {},
+      completed: false,
+    }))
+
+    await view.unmount()
+    view = await render(wizard)
+    await waitFor(() => expect(view.getByText('Task s3')).toBeTruthy())
+    if (mobile) await fireEvent.press(view.getByTestId('quest-route-strip'))
+    expect(view.getByRole('button', { name: postponedLabel(1) })).toBeTruthy()
+    await fireEvent.press(view.getByRole('button', { name: postponedLabel(2) }))
+
+    expect(view.getByText('Task s2')).toBeTruthy()
+    expect(view.queryByText('Task s3')).toBeNull()
+    expect(onProgressChange).toHaveBeenLastCalledWith(expect.objectContaining({
+      currentIndex: 2,
+      unlockedIndex: 3,
+      answers: { intro: 'start' },
+      skipped: {},
+      completed: false,
+    }))
   })
 })
 

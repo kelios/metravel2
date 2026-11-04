@@ -21,9 +21,7 @@ const THEMES = [
   ['dark', getThemedColors(true)],
 ] as const
 
-const STATES: QuestStepNavState[] = ['done', 'current', 'available', 'locked', 'pending']
-// «Закрыта» — неактивный элемент: WCAG 1.4.3/1.4.11 порог к нему не применяют.
-const ENABLED = STATES.filter((state) => state !== 'locked')
+const STATES: QuestStepNavState[] = ['done', 'current', 'available', 'pending']
 
 // Соседи — состояния, которые встречаются рядом в одном ряду маршрута.
 const NEIGHBOURS: Array<[QuestStepNavState, QuestStepNavState]> = [
@@ -32,9 +30,7 @@ const NEIGHBOURS: Array<[QuestStepNavState, QuestStepNavState]> = [
   ['done', 'pending'],
   ['current', 'available'],
   ['current', 'pending'],
-  ['available', 'locked'],
   ['available', 'pending'],
-  ['locked', 'pending'],
 ]
 
 const boundary = (visual: QuestStepVisual) => (visual.borderWidth > 0 ? visual.borderColor : visual.backgroundColor)
@@ -51,7 +47,7 @@ describe('resolveQuestStepVisualState — пороги контраста (#2146
   })
 
   it.each(THEMES)('%s: значок или номер на своей заливке ≥ 4,5:1 у активных состояний', (_theme, colors) => {
-    for (const state of ENABLED) {
+    for (const state of STATES) {
       const visual = resolveQuestStepVisualState({ state, colors })
       expect({ state, ratio: checkContrast(visual.glyphColor, visual.backgroundColor) >= 4.5 }).toEqual({
         state,
@@ -61,7 +57,7 @@ describe('resolveQuestStepVisualState — пороги контраста (#2146
   })
 
   it.each(THEMES)('%s: граница точки против панели ≥ 3:1 у активных состояний', (_theme, colors) => {
-    for (const state of ENABLED) {
+    for (const state of STATES) {
       const visual = resolveQuestStepVisualState({ state, colors })
       expect({ state, ratio: checkContrast(boundary(visual), colors.surface) >= 3 }).toEqual({ state, ratio: true })
     }
@@ -100,7 +96,6 @@ describe('resolveQuestStepVisualState — подпись для диктора (
     expect(label('done')).toBe('Точка 3 из 14, пройдена')
     expect(label('current')).toBe('Точка 3 из 14, текущая')
     expect(label('available')).toBe('Точка 3 из 14, доступна')
-    expect(label('locked')).toBe('Точка 3 из 14, закрыта')
     expect(label('pending')).toBe('Точка 3 из 14, отложена, ждёт ответа')
     expect(label('done', 'optional')).toBe('Точка 3 из 14, пройдена; необязательная')
   })
@@ -118,11 +113,10 @@ describe('resolveQuestStepVisualState — подпись для диктора (
 })
 
 describe('resolveQuestStepNavState', () => {
-  it('текущая сильнее пройденной, пройденная — отложенной, закрытая — доступной', () => {
+  it('текущая сильнее пройденной, пройденная — отложенной, отложенная — доступной', () => {
     expect(resolveQuestStepNavState({ active: true, done: true })).toBe('current')
     expect(resolveQuestStepNavState({ done: true, pending: true })).toBe('done')
-    expect(resolveQuestStepNavState({ pending: true, unlocked: false })).toBe('pending')
-    expect(resolveQuestStepNavState({ unlocked: false })).toBe('locked')
+    expect(resolveQuestStepNavState({ pending: true })).toBe('pending')
     expect(resolveQuestStepNavState({})).toBe('available')
   })
 })

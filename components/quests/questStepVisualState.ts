@@ -10,12 +10,12 @@ import type { QuestPointRole } from '@/utils/questCountModel'
  * `__tests__/components/quests/questStepVisualState.test.ts`.
  *
  * Состояние никогда не передаётся одним цветом: пройденная несёт галочку,
- * отложенная — значок «вернуться», доступная и закрытая — контур, текущая и
+ * отложенная — значок «вернуться», доступная — контур, текущая и
  * пройденная — сплошную заливку. «Пройдена» и «текущая» по яркости близки
  * (`success` и `brandDark`), поэтому галочка обязательна.
  */
 
-export type QuestStepNavState = 'current' | 'done' | 'pending' | 'locked' | 'available'
+export type QuestStepNavState = 'current' | 'done' | 'pending' | 'available'
 
 export type QuestStepNavKind = 'point' | 'intro' | 'finale'
 
@@ -30,8 +30,6 @@ export type QuestStepVisualColors = Pick<
   | 'text'
   | 'textInverse'
   | 'textOnPrimary'
-  | 'disabled'
-  | 'disabledText'
   | 'warning'
 >
 
@@ -52,50 +50,41 @@ export function resolveQuestStepNavState({
   active = false,
   done = false,
   pending = false,
-  unlocked = true,
 }: {
   active?: boolean
   done?: boolean
   pending?: boolean
-  unlocked?: boolean
 }): QuestStepNavState {
   if (active) return 'current'
   if (done) return 'done'
   if (pending) return 'pending'
-  if (!unlocked) return 'locked'
   return 'available'
 }
 
 /**
  * #2149: флаги точки маршрута из прогресса визарда — одно правило для пилюль,
- * полосы маршрута и листа «Маршрут». Раньше выражение стояло копией в каждом
- * месте отрисовки, и смена правила разблокировки в одном из них развела бы вид.
+ * полосы маршрута и листа «Маршрут».
  */
 export function resolveQuestStepNavFlags({
   stepId,
   index,
   currentIndex,
-  unlockedIndex,
   answers,
   postponedStepIds,
-  questFinished,
   showFinaleOnly,
 }: {
   stepId: string
   index: number
   currentIndex: number
-  unlockedIndex: number
   answers: Record<string, unknown>
   postponedStepIds: ReadonlySet<string>
-  questFinished: boolean
   showFinaleOnly: boolean
-}): { active: boolean; done: boolean; pending: boolean; unlocked: boolean } {
+}): { active: boolean; done: boolean; pending: boolean } {
   const done = stepId !== 'intro' && !!answers[stepId]
   return {
     active: index === currentIndex && !showFinaleOnly,
     done,
     pending: !done && postponedStepIds.has(stepId),
-    unlocked: index <= unlockedIndex || !!answers[stepId] || questFinished,
   }
 }
 
@@ -103,7 +92,6 @@ const STATE_LABEL_KEY: Record<QuestStepNavState, string> = {
   done: 'quests:components.quests.questStepState.state.done',
   current: 'quests:components.quests.questStepState.state.current',
   available: 'quests:components.quests.questStepState.state.available',
-  locked: 'quests:components.quests.questStepState.state.locked',
   pending: 'quests:components.quests.questStepState.state.pending',
 }
 
@@ -113,7 +101,6 @@ const STATE_LABEL_KEY_M: Record<QuestStepNavState, string> = {
   ...STATE_LABEL_KEY,
   current: 'quests:components.quests.questStepState.stateM.current',
   available: 'quests:components.quests.questStepState.stateM.available',
-  locked: 'quests:components.quests.questStepState.stateM.locked',
 }
 
 /** Слово состояния в роде места: «пройдена» у точки, «текущий» у старта и финала. */
@@ -205,18 +192,6 @@ export function resolveQuestStepVisualState({
         borderStyle: outlineStyle,
         glyph: 'return',
         glyphColor: colors.warning,
-        accessibilityLabel,
-      }
-    case 'locked':
-      return {
-        state,
-        fill: 'outline',
-        backgroundColor: colors.surface,
-        borderColor: colors.disabled,
-        borderWidth: 1.5,
-        borderStyle: outlineStyle,
-        glyph: kindGlyph(kind),
-        glyphColor: colors.disabledText,
         accessibilityLabel,
       }
     case 'available':

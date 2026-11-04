@@ -43,7 +43,6 @@ export type QuestRouteRow = {
   /** «Обязательная точка · пройдена» — вторая строка строки листа. */
   detail: string
   visual: QuestStepVisual
-  disabled: boolean
   accessibilityLabel: string
 }
 
@@ -62,8 +61,6 @@ export type BuildQuestRouteModelInput = {
   answers: Record<string, unknown>
   postponedStepIds: ReadonlySet<string>
   currentIndex: number
-  unlockedIndex: number
-  questFinished: boolean
   showFinaleOnly: boolean
   countModel: QuestCountModel
   completedCount: number
@@ -74,7 +71,7 @@ export type BuildQuestRouteModelInput = {
 const isIntroStep = (step: QuestRouteStep) => step.id === 'intro'
 
 export function buildQuestRouteModel(input: BuildQuestRouteModelInput): QuestRouteModel {
-  const { allSteps, answers, postponedStepIds, currentIndex, unlockedIndex, questFinished, showFinaleOnly, colors } =
+  const { allSteps, answers, postponedStepIds, currentIndex, showFinaleOnly, colors } =
     input
   const hasIntro = allSteps.length > 0 && isIntroStep(allSteps[0])
   const total = allSteps.filter((step) => !isIntroStep(step)).length
@@ -116,10 +113,8 @@ export function buildQuestRouteModel(input: BuildQuestRouteModelInput): QuestRou
         stepId: step.id,
         index: stepIndex,
         currentIndex,
-        unlockedIndex,
         answers,
         postponedStepIds,
-        questFinished,
         showFinaleOnly,
       }),
     )
@@ -187,13 +182,11 @@ function buildRow({
   baseLabel: string
   visual: QuestStepVisual
 }): QuestRouteRow {
-  const disabled = visual.state === 'locked'
   const detail = roleLabel
     ? i18nT('quests:components.quests.questRoute.rowDetail', { role: roleLabel, state: stateWord })
     : stateWord
   // Строка старта и финала уже называется «Старт квеста»/«Финал» — без повтора.
   let label = kind === 'point' ? i18nT('quests:components.quests.questStepState.withTitle', { title, label: baseLabel }) : baseLabel
   if (roleLabel) label = i18nT('quests:components.quests.questRoute.withRole', { label, role: roleLabel })
-  if (disabled) label = i18nT('quests:components.quests.questRoute.lockedReason', { label })
-  return { key, kind, stepIndex, numberLabel, title, detail, visual, disabled, accessibilityLabel: label }
+  return { key, kind, stepIndex, numberLabel, title, detail, visual, accessibilityLabel: label }
 }

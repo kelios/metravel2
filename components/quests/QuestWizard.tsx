@@ -222,19 +222,19 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
     });
     const [showFinaleOnly, setShowFinaleOnly] = useState(false);
     const [desktopNavExpanded, setDesktopNavExpanded] = useState(false);
+    const currentStep = allSteps[currentIndex];
+    const onRealStep = !!currentStep && currentStep.id !== intro?.id;
 
     // Гость прошёл лимит бесплатных точек. Гейт показываем каждый раз, когда игрок
     // упирается в очередную ещё не отвеченную точку сверх лимита: пройденные точки
-    // и карта остаются доступны (мягкий гейт, не форсит выход), но новые ответы —
+    // и старт остаются доступны (мягкий гейт, не форсит выход), но новые ответы —
     // только после логина. Одноразовый флаг `guestGateDismissed` снимал гейт до
     // конца сессии, и гость проходил весь квест целиком без регистрации —
     // отсюда завершения квестов в аналитике без пользователя и прогресса.
     const guestAnsweredCount = completedSteps.length;
     const guestReachedLimit = guestMode && guestAnsweredCount >= guestFreeSteps;
-    const currentStepAnswered = !!(allSteps[currentIndex] && answers[allSteps[currentIndex].id]);
-    const guestGateActive = guestReachedLimit && !showFinaleOnly && !currentStepAnswered;
+    const guestGateActive = guestReachedLimit && !showFinaleOnly && onRealStep && !answers[currentStep.id];
 
-    const currentStep = allSteps[currentIndex];
     // Индекс точки среди настоящих: intro в `steps` нет, поэтому на нём -1.
     const currentRealIndex = intro ? currentIndex - 1 : currentIndex;
     // Карточка шага реально на экране: гостевой гейт и режим «только финал»
@@ -245,7 +245,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
     const { trackAnswerSubmitted, trackHintOpened, resetFunnelSession } = useQuestWizardAnalytics({
         questId,
         cityId,
-        onRealStep: !!currentStep && currentStep.id !== intro?.id,
+        onRealStep,
         stepIndex: currentRealIndex,
         stepVisible: stepCardVisible,
         questFinished,
@@ -350,15 +350,21 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         void copyQuestCoords(currentStep);
     }, [currentStep]);
 
+    const goToStep = useCallback((index: number) => {
+        if (!allSteps[index]) return;
+        setShowFinaleOnly(false);
+        setCurrentIndex(index);
+        // Points left behind stay unanswered and count towards the finale.
+        setUnlockedIndex(prev => Math.max(prev, index));
+    }, [allSteps, setCurrentIndex, setUnlockedIndex]);
+
     const continueFromCurrentStep = useCallback(() => {
         if (currentIndex >= allSteps.length - 1) {
             setShowFinaleOnly(true);
             return;
         }
-        const nextIndex = Math.min(currentIndex + 1, allSteps.length - 1);
-        setCurrentIndex(nextIndex);
-        setUnlockedIndex(prev => Math.max(prev, nextIndex));
-    }, [allSteps.length, currentIndex, setCurrentIndex, setUnlockedIndex]);
+        goToStep(currentIndex + 1);
+    }, [allSteps.length, currentIndex, goToStep]);
 
     const handleCurrentStepAnswer = useCallback((answer: string) => {
         if (!currentStep) return;
@@ -384,7 +390,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
     // и шага без `answerDisplay` ни авто-подсказки, ни событий `quest_point_1_*`,
     // иначе воронка мягкого старта считала бы точки, где его не было.
     const softStartStepId = requiredSteps[0]?.id ?? null;
-    const softStartActive = !!currentStep && currentStep.id === softStartStepId && !!currentStep.answerDisplay && !answers[currentStep.id];
+    const softStartActive = stepCardVisible && !!currentStep && currentStep.id === softStartStepId && !!currentStep.answerDisplay && !answers[currentStep.id];
     const softStartHintUntouched = softStartActive && !!currentStep?.hint && hints[currentStep.id] === undefined;
     useEffect(() => {
         if (!softStartHintUntouched || !currentStep) return;
@@ -523,15 +529,6 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
     // маршрута, впереди ничего нет, а гейт держат точки за спиной. До #1633 у
     // него в этом месте не было ни объяснения, ни выхода на финал.
     const isLastStep = currentIndex >= allSteps.length - 1;
-
-    const goToStep = useCallback((index: number) => {
-        const step = allSteps[index];
-        const isAnswered = !!(step && answers[step.id]);
-        if (index <= unlockedIndex || isAnswered || questFinished) {
-            setShowFinaleOnly(false);
-            setCurrentIndex(index);
-        }
-    }, [allSteps, answers, questFinished, setCurrentIndex, unlockedIndex]);
 
     const showFinale = useCallback(() => {
         setShowFinaleOnly(true);
@@ -879,8 +876,6 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
             answers={answers}
             postponedStepIds={postponedStepIds}
             currentIndex={currentIndex}
-            unlockedIndex={unlockedIndex}
-            questFinished={questFinished}
             showFinaleOnly={showFinaleOnly}
             goToStep={goToStep}
             onShowFinale={showFinale}
@@ -932,8 +927,6 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                     answers={answers}
                                     postponedStepIds={postponedStepIds}
                                     currentIndex={currentIndex}
-                                    unlockedIndex={unlockedIndex}
-                                    questFinished={questFinished}
                                     showFinaleOnly={showFinaleOnly}
                                     goToStep={goToStep}
                                     onShowFinale={showFinale}

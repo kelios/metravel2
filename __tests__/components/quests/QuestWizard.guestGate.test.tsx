@@ -291,6 +291,52 @@ describe('QuestWizard guest gate', () => {
     expect(queryByLabelText('Далее')).toBeNull()
   })
 
+  it('keeps future unanswered points behind the guest gate when selected from the route', async () => {
+    const guestSteps = [
+      { ...steps[0], hint: 'Подсказка', answerDisplay: 'ответ', answer: (value: string) => value === 'ответ' },
+      ...steps.slice(1),
+    ]
+    const view = await render(
+      <QuestWizard
+        title="Тест-квест"
+        steps={guestSteps}
+        finale={finale}
+        intro={intro}
+        storageKey="guest_route_selection"
+        guestMode
+        guestFreeSteps={1}
+        initialProgress={{
+          currentIndex: 2,
+          unlockedIndex: 2,
+          answers: { s2: 'ответ' },
+          attempts: {},
+          hints: {},
+          showMap: false,
+        }}
+      />,
+    )
+
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
+    await fireEvent.press(view.getByTestId('quest-route-row-s3'))
+    expect(view.getByTestId('quest-guest-gate')).toBeTruthy()
+    expect(view.queryByText('Task s3')).toBeNull()
+
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
+    await fireEvent.press(view.getByTestId('quest-route-row-s1'))
+    expect(view.getByTestId('quest-guest-gate')).toBeTruthy()
+    expect(mockQueueAnalyticsEvent).not.toHaveBeenCalledWith('quest_point_1_hint_open', expect.anything())
+
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
+    await fireEvent.press(view.getByTestId('quest-route-row-intro'))
+    expect(view.queryByTestId('quest-guest-gate')).toBeNull()
+    expect(view.getByTestId('quest-intro-start')).toBeTruthy()
+
+    await fireEvent.press(view.getByTestId('quest-route-strip'))
+    await fireEvent.press(view.getByTestId('quest-route-row-s2'))
+    expect(view.queryByTestId('quest-guest-gate')).toBeNull()
+    expect(view.getByText('Точка 2')).toBeTruthy()
+  })
+
   it('returns from the last completed point to the finale with an explicit action', async () => {
     const { getByLabelText, getByRole, getByText, getByTestId } = await render(
       <QuestWizard

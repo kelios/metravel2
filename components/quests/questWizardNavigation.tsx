@@ -22,12 +22,11 @@ type NavigationProps = {
   active?: boolean
   done?: boolean
   /**
-   * Точка отложена ссылкой «Пропустить»: игрок ушёл дальше, ответа нет, с гейта
+   * Точка отложена: игрок ушёл дальше, ответа нет, с гейта
    * финала она не снята (#1633). Состояние обязано отличаться и от «пройдена»,
    * и от «ещё впереди» — иначе долг маршрута в списке не виден вовсе.
    */
   pending?: boolean
-  unlocked?: boolean
   /** #2146: позиция точки в маршруте и число точек без старта — для подписи диктора. */
   position?: number
   total?: number
@@ -79,7 +78,6 @@ export function QuestStepPill(props: StepPillProps) {
     focusRef,
     onPress,
     active = false,
-    unlocked = true,
     compact = false,
     narrow = false,
     isIntro = false,
@@ -107,16 +105,15 @@ export function QuestStepPill(props: StepPillProps) {
       ref={focusRef}
       testID={testID}
       onPress={onPress}
-      disabled={!unlocked}
       // Роль нужна именно здесь: без неё RNW рисует голый div, и `aria-label`
       // с состоянием точки скринридер не озвучивает.
       accessibilityRole="button"
-      accessibilityState={{ disabled: !unlocked, selected: active }}
+      accessibilityState={{ selected: active }}
       accessibilityLabel={accessibilityLabel}
       style={({ hovered }) => [
         styles.stepPill,
         compact && styles.compactStepPill,
-        hovered && unlocked && styles.stepPillHovered,
+        hovered && styles.stepPillHovered,
         narrow && styles.stepPillNarrow,
         visualStyle(visual),
         active && styles.stepPillActive,

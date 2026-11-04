@@ -48,8 +48,6 @@ export default function QuestRouteStrip({ model, onGoToStep, onShowFinale, conte
   }, [])
   const openRow = useCallback(
     (row: QuestRouteRow) => {
-      // Закрытая точка не открывается, даже если платформа доставила нажатие.
-      if (row.disabled) return
       changeSheetOpen(false)
       if (row.kind === 'finale') onShowFinale()
       else onGoToStep(row.stepIndex)
@@ -139,18 +137,17 @@ export default function QuestRouteStrip({ model, onGoToStep, onShowFinale, conte
               testID={row.kind === 'finale' ? QUEST_NAV_FINALE_TEST_ID : `quest-route-row-${row.key}`}
               accessibilityRole="button"
               accessibilityLabel={row.accessibilityLabel}
-              accessibilityState={{ disabled: row.disabled, selected: row.visual.state === 'current' }}
-              disabled={row.disabled}
+              accessibilityState={{ selected: row.visual.state === 'current' }}
               onPress={() => openRow(row)}
               onLayout={
                 row.visual.state === 'current' ? (e) => onCurrentRowLayout(e.nativeEvent.layout.y) : undefined
               }
-              style={({ pressed }) => [styles.row, pressed && !row.disabled && styles.pressed]}
+              style={({ pressed }) => [styles.row, pressed && styles.pressed]}
             >
               <QuestStepMarker visual={row.visual} text={row.numberLabel} />
               <View style={styles.rowText}>
                 <QuestContentText
-                  style={[styles.rowTitle, row.disabled && { color: colors.textMuted }]}
+                  style={styles.rowTitle}
                   numberOfLines={1}
                 >
                   {row.title}
