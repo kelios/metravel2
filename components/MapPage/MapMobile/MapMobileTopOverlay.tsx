@@ -99,6 +99,7 @@ interface MapMobileTopOverlayProps {
   onToggleLayers: () => void
   onClosePopover: () => void
   onOpenFilters: () => void
+  onOpenPlaceSearch?: () => void
   /** True when category/search filters are active — highlights the «Показать всё» button. */
   hasActiveFilters?: boolean
   /** Recenter the map on the user's location. */
@@ -173,6 +174,7 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
   onToggleLayers,
   onClosePopover,
   onOpenFilters,
+  onOpenPlaceSearch,
   hasActiveFilters,
   onShowAllPlaces,
   onCenterOnUser,
@@ -400,18 +402,32 @@ const MapMobileTopOverlayInner: React.FC<MapMobileTopOverlayProps> = ({
           style={[styles.toolbar, toolbarMaxWidth ? { maxWidth: toolbarMaxWidth } : null]}
           pointerEvents="auto"
         >
-          <Pressable
-            testID="map-mobile-filters-button"
-            ref={targetRegistry?.['map-mobile-filters-button']}
-            onPress={onOpenFilters}
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.otkryt_filtry_2e8bb063')}
-            style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
-          >
-            <View style={styles.iconButton} pointerEvents="none">
-              <Feather name={MAP_ACTION_ICON.filters} size={ICON_SIZE} color={colors.text} />
-            </View>
-          </Pressable>
+          {onOpenPlaceSearch && !isRouteMode ? (
+            <MapToolbarLabeledButton
+              testID="map-mobile-filters-button"
+              targetRef={targetRegistry?.['map-mobile-filters-button']}
+              onPress={onOpenPlaceSearch}
+              icon="search"
+              compact
+              label={i18nT('map:placeSearch.short')}
+              accessibilityLabel={i18nT('map:placeSearch.open')}
+              colors={colors}
+              styles={styles}
+            />
+          ) : (
+            <Pressable
+              testID="map-mobile-filters-button"
+              ref={targetRegistry?.['map-mobile-filters-button']}
+              onPress={onOpenFilters}
+              accessibilityRole="button"
+              accessibilityLabel={i18nT('map:components.MapPage.MapMobile.MapMobileTopOverlay.otkryt_filtry_2e8bb063')}
+              style={({ pressed }) => [styles.iconButtonTouch, pressed && styles.iconButtonPressed]}
+            >
+              <View style={styles.iconButton} pointerEvents="none">
+                <Feather name={MAP_ACTION_ICON.filters} size={ICON_SIZE} color={colors.text} />
+              </View>
+            </Pressable>
+          )}
 
           {!isRouteMode && (
             <Pressable

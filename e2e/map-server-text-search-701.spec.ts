@@ -190,24 +190,10 @@ test.describe('@smoke #701 map text search is server-side', () => {
     });
     await gotoMap(page);
 
-    // Open the mobile list panel, then the filters view.
-    const entry = page
-      .locator('[data-testid="map-open-list"], [data-testid="map-peek-expand"], button[aria-label^="Показать список"]')
-      .first();
-    await expect(entry).toBeVisible({ timeout: 60_000 });
-    await entry.click();
-    await expect(page.getByRole('dialog', { name: 'Панель карты' })).toBeVisible({ timeout: 30_000 });
-
-    // Reach the filters body (search input lives there).
-    const openFilters = page
-      .locator('[data-testid="travel-list-open-filters"], [data-testid="empty-open-filters"]')
-      .first();
-    await expect(openFilters).toBeVisible({ timeout: 30_000 });
-    await openFilters.click();
-    await expect(page.getByTestId('filters-block-main')).toBeVisible({ timeout: 30_000 });
-
+    await page.getByRole('button', { name: 'Поиск места', exact: true }).click();
     const search = page.getByTestId('map-search-input');
-    await expect(search).toBeVisible({ timeout: 20_000 });
+    await expect(search).toBeFocused({ timeout: 20000 });
+    await expect(page.getByTestId('map-place-search-scope')).toContainText('50 км');
     const queryRequestPromise = page.waitForRequest((req: any) => {
       const url = req.url();
       if (!/\/api\/travels\/search_travels_for_map\//.test(url)) return false;
@@ -220,4 +206,31 @@ test.describe('@smoke #701 map text search is server-side', () => {
     const queryReq = await queryRequestPromise;
     expect(parseWhere(queryReq.url())?.query).toBe('озеро');
   });
+  test('desktop: a settled empty search can expand without losing its text', async ({ page }) => {
+    let releaseWider: () => void = () => {};
+    const holdWider = new Promise<void>(resolve => { releaseWider = resolve; });
+    await page.route('**/api/travels/search_travels_for_map/**', async route => {
+      const where = parseWhere(route.request().url());
+      if (where?.query !== 'замок за городом') return route.fallback();
+      const wider = Number(where.radius) === 100;
+      if (wider) await holdWider;
+      return route.fulfill({
+        json: { results: wider ? [mockPoint(1, 'Замок')] : [], total: wider ? 1 : 0 },
+      });
+    });
+    await gotoMap(page);
+    const search = page.getByTestId('map-search-input');
+    await search.fill('замок за городом');
+    await expect(page.getByTestId('map-place-search-status')).toHaveText('В этой области совпадений нет.');
+    await page.getByTestId('map-place-search-expand-radius').click();
+    try {
+      await expect(page.getByTestId('map-place-search-status')).toHaveText('Ищем места…');
+      await expect(search).toHaveValue('замок за городом');
+    } finally {
+      releaseWider();
+    }
+    await expect(page.getByTestId('map-place-search-scope')).toContainText('100 км');
+    await expect(page.getByText('На карте подходит: 1')).toBeVisible();
+  });
+
 });

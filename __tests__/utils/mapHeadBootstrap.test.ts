@@ -48,7 +48,7 @@ describe('mapHeadBootstrap', () => {
     expect(script).toContain('^192\\\\.168\\\\.')
     expect(script).toContain('/vendor/leaflet.css')
     expect(script).toContain('/vendor/MarkerCluster.css')
-    expect(script).not.toContain('/proxy/tiles/osm/')
+    expect(script).toContain('/proxy/tiles/osm/11/1180/658.png')
     expect(script).not.toContain("preload.as = 'image'")
     expect(script).not.toContain('__metravelMapTileWarmupHref')
     expect(script).not.toContain('__metravelMountMapShellTile =')

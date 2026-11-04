@@ -99,6 +99,36 @@ describe('settled map place search analytics', () => {
     expect(queue).not.toHaveBeenCalled();
   });
 
+  it('reports an explicit retry at the same radius after the initial request fails', async () => {
+    fetchMap.mockRejectedValueOnce(new Error('HTTP 503')).mockResolvedValueOnce(points);
+    const { result } = await setup('Место');
+    await waitFor(() => expect(result.current.placeSearchStatus).toBe('error'));
+    await act(() => result.current.retryPlaceSearch());
+    await waitFor(() => expect(result.current.placeSearchStatus).toBe('found'));
+    expect(queue.mock.calls).toEqual([
+      ['map_place_search', { outcome: 'error', layout: 'mobile', radius_km: 50 }],
+      ['map_place_search', { outcome: 'found', layout: 'mobile', radius_km: 50 }],
+    ]);
+  });
+
+  it('keeps the settled search feedback while the next page loads', async () => {
+    let finishNextPage: (value: Awaited<ReturnType<typeof fetchTravelsForMap>>) => void = () => {};
+    fetchMap
+      .mockResolvedValueOnce(Object.defineProperty({ 0: points[0] }, '__total', { value: 2 }))
+      .mockImplementationOnce(() => new Promise(resolve => { finishNextPage = resolve; }));
+    const { result } = await setup('Место');
+    await waitFor(() => expect(result.current.placeSearchStatus).toBe('found'));
+
+    await act(() => result.current.onLoadMore());
+    await waitFor(() => expect(result.current.isFetchingNextPage).toBe(true));
+    expect(result.current.placeSearchStatus).toBe('found');
+
+    await act(async () => { finishNextPage([]); });
+    await waitFor(() => expect(result.current.isFetchingNextPage).toBe(false));
+    expect(result.current.placeSearchStatus).toBe('found');
+    expect(queue).toHaveBeenCalledTimes(1);
+  });
+
   it('ignores a superseded result and distinguishes failure from an empty result', async () => {
     let finishFirst: (value: Awaited<ReturnType<typeof fetchTravelsForMap>>) => void = () => {};
     fetchMap

@@ -6,6 +6,7 @@ import { DEFAULT_MAP_CENTER, DEFAULT_RADIUS_KM, MAP_TRAVELS_PER_PAGE } from '@/c
 import { buildMapHeadBootstrapScript } from '@/utils/mapHeadBootstrap'
 import { MAP_RADIUS_PRELOAD_GLOBAL, MAP_RADIUS_PRELOAD_TTL_MS } from '@/utils/mapRadiusPreload'
 import { MAP_FILTERS_STORAGE_KEY, MAP_LOCATION_STORAGE_KEY, MAP_ROUTE_STORAGE_KEY } from '@/utils/mapStartupStorage'
+import { consumeMapStartupLocation, MAP_PRECISE_WEB_LOCATION_OPTIONS } from '@/utils/mapStartupLocation'
 
 const filter = {
   lat: String(DEFAULT_MAP_CENTER.latitude),
@@ -72,6 +73,73 @@ describe('early map radius request', () => {
 
     await fetchTravelsForMap(0, MAP_TRAVELS_PER_PAGE, filter)
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it.each([
+    ['compact, denied, incomplete', true, 'denied', 123, '', true, null],
+    ['compact, prompt denied, incomplete', true, 'prompt', 123, '', true, 'denied'],
+    ['compact, prompt granted', true, 'prompt', 123, '', false, 'granted'],
+    ['compact, prompt timed out', true, 'prompt', 123, '', false, 'timeout'],
+    ['compact, granted', true, 'granted', 123, '', false, null],
+    ['compact, complete', true, 'denied', 1, '', false, null],
+    ['desktop', false, 'denied', 123, '', false, null],
+    ['coordinate link', true, 'denied', 123, '?lat=54&lng=25', false, null],
+  ] as const)('paints only a confirmed compact tile (%s)', async (_, matches, state, total, search, expected, promptOutcome) => {
+    const matchMedia = window.matchMedia
+    const permissions = Object.getOwnPropertyDescriptor(navigator, 'permissions')
+    const geolocation = Object.getOwnPropertyDescriptor(navigator, 'geolocation')
+    const getCurrentPosition = jest.fn<void, Parameters<Geolocation['getCurrentPosition']>>()
+    Object.defineProperty(window, 'matchMedia', { configurable: true, writable: true, value: () => ({ matches }) })
+    Object.defineProperty(navigator, 'permissions', { configurable: true, value: { query: async () => ({ state }) } })
+    Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { getCurrentPosition } })
+    document.body.innerHTML = '<div id="ssg-skeleton"><img data-ssg-map-tile></div>'
+    window.history.replaceState(null, '', '/map' + search)
+    const payload = { count: total, results: [{ id: 1, coord: '53.9,27.56' }] }
+    fetchMock.mockResolvedValue({
+      ...response(200, JSON.stringify(payload)),
+      clone: () => ({ json: async () => payload }),
+    })
+    try {
+      startBootstrap()
+      await jest.advanceTimersByTimeAsync(0)
+      const tile = document.querySelector('img[data-ssg-map-tile]')
+      if (promptOutcome) {
+        expect(tile?.getAttribute('src')).toBeNull()
+        expect(getCurrentPosition).toHaveBeenCalledTimes(1)
+        const [success, failure, options] = getCurrentPosition.mock.calls[0]
+        expect(options).toEqual(MAP_PRECISE_WEB_LOCATION_OPTIONS)
+        const pending = consumeMapStartupLocation()
+        expect(pending).toBeDefined()
+        expect(consumeMapStartupLocation()).toBeUndefined()
+        if (promptOutcome === 'granted') {
+          const position = { coords: { latitude: 52.2, longitude: 20.98 }, timestamp: Date.now() } as GeolocationPosition
+          success(position)
+          await expect(pending).resolves.toEqual({ position })
+        } else {
+          const error = { code: promptOutcome === 'denied' ? 1 : 3 } as GeolocationPositionError
+          failure?.(error)
+          await expect(pending).resolves.toEqual({ error })
+        }
+        await jest.advanceTimersByTimeAsync(0)
+      } else {
+        expect(getCurrentPosition).not.toHaveBeenCalled()
+      }
+      expect(tile?.getAttribute('src')).toBe(expected ? '/proxy/tiles/osm/11/1180/658.png' : null)
+      if (expected) {
+        expect(tile?.getAttribute('crossorigin')).toBe('anonymous')
+        expect(tile?.parentElement?.style.getPropertyValue('--metravel-map-shell-tile-offset-y')).toMatch(/px$/)
+        expect(fetchMock).toHaveBeenCalledTimes(1)
+        await fetchTravelsForMap(0, MAP_TRAVELS_PER_PAGE, filter, { throwOnError: true })
+        expect(fetchMock).toHaveBeenCalledTimes(1)
+      }
+    } finally {
+      window.matchMedia = matchMedia
+      if (permissions) Object.defineProperty(navigator, 'permissions', permissions)
+      else Reflect.deleteProperty(navigator, 'permissions')
+      if (geolocation) Object.defineProperty(navigator, 'geolocation', geolocation)
+      else Reflect.deleteProperty(navigator, 'geolocation')
+      document.body.innerHTML = ''
+    }
   })
 
   it.each([MAP_FILTERS_STORAGE_KEY, MAP_LOCATION_STORAGE_KEY, MAP_ROUTE_STORAGE_KEY, 'userId'])(

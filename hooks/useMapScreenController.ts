@@ -9,6 +9,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { getStyles } from '@/screens/tabs/map.styles';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { METRICS } from '@/constants/layout';
+import { formatMapRadiusSummary } from '@/components/MapPage/MapRadiusSummary';
 
 // Platform-agnostic поведенческое ядро карты (#991) — единый контракт web/native.
 import { useMapController } from '@/components/map-core/useMapController';
@@ -94,6 +95,8 @@ export function useMapScreenController() {
     coordinates,
     coordinatesSource,
     radiusQuery,
+    placeSearchStatus,
+    retryPlaceSearch,
     locationState,
     geoError,
     refreshLocation,
@@ -237,6 +240,13 @@ export function useMapScreenController() {
   // Filters panel props (FiltersProvider pattern) — assembled from independent
   // memoized slices in useMapFiltersPanelProps. The controller re-exposes the
   // stable slices for narrow subscriptions in the screen.
+  const placeSearchScope = Platform.OS === 'web' && mode === 'radius' && radiusQuery
+    ? formatMapRadiusSummary(radiusQuery.radius, radiusQuery.source)
+    : undefined;
+  const placeSearch = useMemo(
+    () => placeSearchScope ? { scope: placeSearchScope, status: placeSearchStatus, retry: retryPlaceSearch } : undefined,
+    [placeSearchScope, placeSearchStatus, retryPlaceSearch],
+  );
   const {
     filtersValuesSlice,
     overlaySlice,
@@ -273,6 +283,7 @@ export function useMapScreenController() {
     travelsData,
     travelsCount,
     resultsTotalScope: totalScope,
+    placeSearch,
     isMobile,
     mapUiApi,
     closeRightPanel,

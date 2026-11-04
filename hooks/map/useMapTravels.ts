@@ -5,7 +5,7 @@ import { fetchTravelsForMap, fetchTravelsNearRoute } from '@/api/map';
 import { buildTravelQueryParams } from '@/utils/filterQuery';
 import { filterMapPointsByCategory, resolveMapCategorySelection } from '@/utils/mapCategorySelection';
 import type { MapPointCountScope } from '@/utils/mapPointCount';
-import type { MapPlaceSearchOutcome } from '@/utils/mapAnalytics';
+import type { MapPlaceSearchStatus } from '@/types/mapUi';
 import type { TravelCoords } from '@/types/types';
 import { logError } from '@/utils/logger';
 import { resolveMapRadiusKm } from '@/constants/mapConfig';
@@ -549,11 +549,14 @@ export function useMapTravels({
   const totalScope: MapPointCountScope = usesOfflineIndex || isClientCategoryFilter || queryParams.mode !== 'radius' ||
     typeof radiusQuery.data?.pages?.[0]?.total !== 'number' ? 'loaded' : 'radius';
 
-  let radiusSearchOutcome: MapPlaceSearchOutcome | null = null;
-  if (Platform.OS === 'web' && mode === 'radius' && enabledRadius && searchQuery && isConnected &&
-      radiusQuery.fetchStatus === 'idle' && !radiusQuery.isPlaceholderData) {
-    if (radiusQuery.isError || radiusQuery.data?.pages[0]?.searchFailed) radiusSearchOutcome = 'error';
-    else if (radiusQuery.isSuccess) radiusSearchOutcome = total > 0 ? 'found' : 'empty';
+  let radiusSearchStatus: MapPlaceSearchStatus | null = null;
+  if (Platform.OS === 'web' && mode === 'radius' && enabledRadius && searchQuery) {
+    if (!isConnected) radiusSearchStatus = 'offline';
+    else if (radiusQuery.isPlaceholderData ||
+      (radiusQuery.fetchStatus !== 'idle' && !radiusQuery.isFetchingNextPage)) radiusSearchStatus = 'pending';
+    else if (radiusQuery.data?.pages[0]?.searchFailed ||
+      (radiusQuery.isError && !radiusQuery.isFetchNextPageError)) radiusSearchStatus = 'error';
+    else if (radiusQuery.isSuccess || radiusQuery.isFetchNextPageError) radiusSearchStatus = total > 0 ? 'found' : 'empty';
   }
 
   return useMemo(() => ({
@@ -561,7 +564,7 @@ export function useMapTravels({
     filteredTravelsData,
     total,
     totalScope,
-    radiusSearchOutcome,
+    radiusSearchStatus,
     isLoading: usesOfflineIndex ? false : isLoading,
     isFetching: usesOfflineIndex ? false : isFetching,
     isPlaceholderData: usesOfflineIndex ? false : isPlaceholderData,
@@ -576,7 +579,7 @@ export function useMapTravels({
     filteredTravelsData,
     total,
     totalScope,
-    radiusSearchOutcome,
+    radiusSearchStatus,
     isLoading,
     isFetching,
     isPlaceholderData,

@@ -285,6 +285,8 @@ ${buildCatalogSkeletonCSS()}
 .ssg-map-canvas{position:relative;flex:1;min-height:calc(${MAP_VIEWPORT_HEIGHT} - ${MAP_WEB_MOBILE_VIEWPORT_RESERVE_PX}px);overflow:hidden;background:linear-gradient(135deg,${COLORS.light.bgSecondary} 0%,${COLORS.light.bg} 50%,${COLORS.light.bgSecondary} 100%)}
 .ssg-map-canvas::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.24) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.24) 1px,transparent 1px);background-size:48px 48px;opacity:.45}
 .ssg-map-canvas img.ssg-map-tile{position:absolute;left:50%;top:50%;width:256px;height:256px;min-width:256px;min-height:256px;max-width:none;max-height:none;aspect-ratio:1/1;display:block;transform:translate(var(--metravel-map-shell-tile-offset-x,-50%),var(--metravel-map-shell-tile-offset-y,-50%));z-index:1;pointer-events:none;user-select:none}
+.ssg-map-tile-credit{display:none}
+.ssg-map-tile[src]+.ssg-map-tile-credit{position:absolute;display:block;top:calc(50% + var(--metravel-map-shell-tile-offset-y) + 239px);left:max(0px,calc(50% + var(--metravel-map-shell-tile-offset-x)));z-index:2;padding:2px 4px;background:${COLORS.light.surface};color:${COLORS.light.text};font:400 10px/13px ${SANS}}
 .ssg-map-toolbar{position:absolute;top:12px;left:12px;right:84px;display:flex;gap:8px;z-index:3}
 .ssg-map-toolbar-pill{height:32px;border-radius:999px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};padding:0 14px;display:inline-flex;align-items:center;font:600 13px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};white-space:nowrap}
 .ssg-map-controls{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:8px;z-index:3}
@@ -729,7 +731,7 @@ function buildMapSkeletonHtml() {
 <div class="ssg-map-layout">
   <div class="ssg-map-canvas" role="region" aria-label="Карта маршрутов и достопримечательностей">
     <img class="ssg-map-tile" data-ssg-map-tile="true" width="256" height="256" alt="" aria-hidden="true" decoding="async">
-    <script>(function(){try{if(typeof window.__metravelMountMapShellTile==='function')window.__metravelMountMapShellTile()}catch(e){}})();</script>
+    <span class="ssg-map-tile-credit">© OpenStreetMap · openstreetmap.org/copyright</span>
     <div class="ssg-map-toolbar">
       <div class="ssg-map-toolbar-pill">Карта маршрутов</div>
       <div class="ssg-map-toolbar-pill">50 км</div>

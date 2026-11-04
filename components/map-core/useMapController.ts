@@ -305,6 +305,8 @@ export function useMapController({
     isFetchingNextPage,
     isDebouncingFilters,
     radiusQuery,
+    placeSearchStatus,
+    retryPlaceSearch,
   } = dataController;
 
   const categorySelection = useMemo(
@@ -616,6 +618,8 @@ export function useMapController({
 
     // Travels data
     radiusQuery,
+    placeSearchStatus,
+    retryPlaceSearch,
     allTravelsData,
     travelsData,
     total,

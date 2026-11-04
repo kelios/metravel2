@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, ReactNode } from 'react';
 import type { RoutePoint } from '@/types/route';
 import type { LatLng } from '@/types/coordinates';
-import type { MapUiApi } from '@/types/mapUi';
+import type { MapPlaceSearchFeedback, MapUiApi } from '@/types/mapUi';
 import type { MapPointCountScope } from '@/utils/mapPointCount';
 
 type CategoryOption = string | { id?: string | number; name?: string; value?: string };
@@ -39,6 +39,7 @@ export interface FiltersContextValue {
   // «На карте подходит»; фолбэк — длина filteredTravelsData.
   resultsTotal?: number;
   resultsTotalScope?: MapPointCountScope;
+  placeSearch?: MapPlaceSearchFeedback;
   // #211 — карта/список грузятся или фильтры дебаунсятся (для гейта empty-state).
   isBusy?: boolean;
 
@@ -138,6 +139,7 @@ const FILTERS_CONTEXT_KEYS = [
   'filteredTravelsData',
   'resultsTotal',
   'resultsTotalScope',
+  'placeSearch',
   'isBusy',
   'isMobile',
   'closeMenu',

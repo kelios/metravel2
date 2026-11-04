@@ -115,6 +115,39 @@ describe('FiltersPanel', () => {
     expect(getByText('Маршрут')).toBeTruthy()
   })
 
+  it('shows the search scope and expands a settled empty search without clearing its text', async () => {
+    const { getByText, getByTestId } = await renderWithTheme(<FiltersPanel />, {
+      ...defaultProps,
+      filterValue: { ...mockFilterValue, searchQuery: 'Мирский замок' },
+      placeSearch: { scope: '60 км от Минска', status: 'empty', retry: jest.fn() },
+    })
+    expect(getByText('Область поиска · 60 км от Минска')).toBeTruthy()
+    expect(getByText('В этой области совпадений нет.')).toBeTruthy()
+    await fireEvent.press(getByTestId('map-place-search-expand-radius'))
+    expect(defaultProps.onFilterChange).toHaveBeenCalledTimes(1)
+    expect(defaultProps.onFilterChange).toHaveBeenCalledWith('radius', '100')
+    expect(getByTestId('map-search-input').props.value).toBe('Мирский замок')
+  })
+
+  it.each([
+    ['pending', 'Ищем места…'],
+    ['error', 'Не удалось загрузить результаты.'],
+  ])('does not show a zero-result message during %s', async (status, message) => {
+    const retry = jest.fn()
+    const { getByText, queryByText } = await renderWithTheme(<FiltersPanel />, {
+      ...defaultProps,
+      filterValue: { ...mockFilterValue, searchQuery: 'Мирский замок' },
+      placeSearch: { scope: '60 км от Минска', status, retry },
+    })
+    expect(getByText(message)).toBeTruthy()
+    expect(queryByText('В этой области совпадений нет.')).toBeNull()
+    expect(queryByText('Ничего не нашлось')).toBeNull()
+    if (status === 'error') {
+      await fireEvent.press(getByText('Повторить поиск'))
+      expect(retry).toHaveBeenCalledTimes(1)
+    }
+  })
+
   it('shows reset button when filters are active', async () => {
     const propsWithFilters = {
       ...defaultProps,

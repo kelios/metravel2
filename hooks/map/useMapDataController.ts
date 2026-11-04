@@ -12,6 +12,7 @@ import type { FiltersData } from './useMapFilters';
 import type { MapFilterValues } from '@/utils/mapFiltersStorage';
 import { useMapTravels } from './useMapTravels';
 import { queryKeys } from '@/api/queryKeys';
+import type { MapPlaceSearchStatus } from '@/types/mapUi';
 import type { MapPointCountScope } from '@/utils/mapPointCount';
 import { resolveMapRadiusKm } from '@/constants/mapConfig';
 import { trackMapPlaceSearch } from '@/utils/mapAnalytics';
@@ -115,6 +116,8 @@ interface UseMapDataControllerResult {
    * before `isFetching` flips to true.
    */
   isDebouncingFilters: boolean;
+  placeSearchStatus: MapPlaceSearchStatus | null;
+  retryPlaceSearch: () => void;
   radiusQuery: { radius: MapFilterValues['radius']; source: CoordinatesSource };
 }
 
@@ -176,7 +179,7 @@ export function useMapDataController(
     filteredTravelsData: travelsData,
     total,
     totalScope,
-    radiusSearchOutcome,
+    radiusSearchStatus,
     isLoading: loading,
     isFetching,
     isPlaceholderData,
@@ -198,19 +201,28 @@ export function useMapDataController(
   const searchTerm = String(filterValues.searchQuery ?? '').trim();
   const debouncedSearchTerm = String(debouncedFilterValues.searchQuery ?? '').trim();
   const searchRadius = resolveMapRadiusKm(debouncedFilterValues.radius);
+  const searchIsCurrent = searchTerm === debouncedSearchTerm &&
+    filterValues.radius === debouncedFilterValues.radius && !isDebouncingFilters;
+  const placeSearchStatus = !searchTerm || mode !== 'radius'
+    ? null
+    : searchIsCurrent && radiusSearchStatus ? radiusSearchStatus : 'pending';
   const lastReportedSearch = useRef<{ term: string; radius: number } | null>(null);
+  const retryPlaceSearch = useCallback(() => {
+    lastReportedSearch.current = null;
+    void refetchMapData();
+  }, [refetchMapData]);
   useEffect(() => {
     if (!searchTerm) {
       lastReportedSearch.current = null;
       return;
     }
-    if (isDebouncingFilters || searchTerm !== debouncedSearchTerm || !radiusSearchOutcome) return;
+    if (!placeSearchStatus || placeSearchStatus === 'pending' || placeSearchStatus === 'offline') return;
     const last = lastReportedSearch.current;
     if (last?.term === searchTerm && last.radius === searchRadius) return;
 
     lastReportedSearch.current = { term: searchTerm, radius: searchRadius };
-    trackMapPlaceSearch(radiusSearchOutcome, isMobile, searchRadius);
-  }, [debouncedSearchTerm, isDebouncingFilters, isMobile, radiusSearchOutcome, searchRadius, searchTerm]);
+    trackMapPlaceSearch(placeSearchStatus, isMobile, searchRadius);
+  }, [isMobile, placeSearchStatus, searchRadius, searchTerm]);
 
   // Invalidate query cache and refetch
   const queryClient = useQueryClient();
@@ -235,6 +247,8 @@ export function useMapDataController(
     onLoadMore: loadMore,
     isFetchingNextPage,
     isDebouncingFilters,
+    placeSearchStatus,
+    retryPlaceSearch,
     radiusQuery: { radius: debouncedFilterValues.radius, source: debouncedAnchor.source },
   }), [
     allTravelsData,
@@ -252,6 +266,8 @@ export function useMapDataController(
     loadMore,
     isFetchingNextPage,
     isDebouncingFilters,
+    placeSearchStatus,
+    retryPlaceSearch,
     debouncedFilterValues.radius,
     debouncedAnchor.source,
   ]);

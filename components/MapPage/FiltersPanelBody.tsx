@@ -1,3 +1,4 @@
+import type { MapPlaceSearchFeedback } from '@/types/mapUi'
 import React, { useMemo } from 'react'
 import { Platform, ScrollView, Text, View } from 'react-native'
 
@@ -39,6 +40,7 @@ interface FiltersPanelBodyProps {
   travelsData: { categoryName?: string; name?: string; address?: string }[]
   filteredTravelsData?: { categoryName?: string; name?: string; address?: string }[]
   resultsTotal?: number
+  placeSearch?: MapPlaceSearchFeedback
   overlayOptions?: { id: string; title: string }[]
   enabledOverlays?: Record<string, boolean>
   onOverlayToggle?: (id: string, enabled: boolean) => void
@@ -83,6 +85,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   travelsData,
   filteredTravelsData = [],
   resultsTotal,
+  placeSearch,
   isMobile,
   totalPoints,
   isBusy,
@@ -125,7 +128,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   )
 
   const noPointsInRadius = mode === 'radius' && totalPoints === 0
-  const showEmptyState = shouldShowMapEmptyState({ mode, totalPoints, isBusy })
+  const showEmptyState = !placeSearch?.status && shouldShowMapEmptyState({ mode, totalPoints, isBusy })
 
   const mobileQuickChips = useMemo(() => {
     if (!isMobile || mode !== 'radius') return []
@@ -182,6 +185,7 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
             travelsData={travelsData}
             filteredTravelsData={filteredTravelsData}
             resultsTotal={resultsTotal}
+            placeSearch={placeSearch}
             onFilterChange={onFilterChange}
           />
         ) : (

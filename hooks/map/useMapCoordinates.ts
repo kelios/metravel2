@@ -6,6 +6,7 @@ import { logError, logMessage } from '@/utils/logger';
 import { loadExpoLocation } from '@/hooks/map/expoLocationLoader';
 import { markLiveUserPositionFix, publishLiveUserPosition } from '@/hooks/map/liveUserPosition';
 import { DEFAULT_MAP_CENTER } from '@/constants/mapConfig';
+import { consumeMapStartupLocation, MAP_PRECISE_WEB_LOCATION_OPTIONS } from '@/utils/mapStartupLocation';
 import { MAP_LOCATION_STORAGE_KEY } from '@/utils/mapStartupStorage';
 import { translate as i18nT } from '@/i18n'
 
@@ -39,8 +40,6 @@ const LIVE_LOCATION_MAXIMUM_AGE_MS = 15000;
 // answer. Precision belongs here; the background watch (marker only) can stay cheap.
 // Both phases share the old 12 s budget: one tap must not be able to keep the locate
 // spinner up for 8 s + 12 s.
-const PRECISE_LOCATION_TIMEOUT_MS = 8000;
-const PRECISE_LOCATION_MAXIMUM_AGE_MS = 10000;
 const FALLBACK_LOCATION_TIMEOUT_MS = 4000;
 const FALLBACK_LOCATION_MAXIMUM_AGE_MS = 60000;
 
@@ -127,6 +126,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
     return () => { focusedRef.current = false; };
   }, [isFocused]);
   const lastTrustedLocationRef = useRef<LocationSnapshot | null>(null);
+  const startupWebLocationRef = useRef<ReturnType<typeof consumeMapStartupLocation>>(undefined);
   // Last point actually pushed to the live channel / localStorage — the reference the
   // 12 m movement filter compares against (see applyTrustedLocation).
   const lastPublishedLocationRef = useRef<LocationSnapshot | null>(null);
@@ -467,7 +467,7 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
       return;
     }
 
-    await new Promise<void>((resolve) => {
+    await new Promise<void>((resolve, reject) => {
       if (signal?.aborted) {
         resolve();
         return;
@@ -549,11 +549,22 @@ export function useMapCoordinates(options: { isFocused?: boolean } = {}) {
         });
       };
 
-      navigator.geolocation.getCurrentPosition(handleSuccess, handlePreciseError, {
-        enableHighAccuracy: true,
-        timeout: PRECISE_LOCATION_TIMEOUT_MS,
-        maximumAge: PRECISE_LOCATION_MAXIMUM_AGE_MS,
-      });
+      const requestPreciseLocation = () => {
+        navigator.geolocation.getCurrentPosition(handleSuccess, handlePreciseError, MAP_PRECISE_WEB_LOCATION_OPTIONS);
+      };
+      const startupLocation = startupWebLocationRef.current ?? consumeMapStartupLocation();
+      if (!startupLocation) {
+        requestPreciseLocation();
+        return;
+      }
+      startupWebLocationRef.current = startupLocation;
+      void startupLocation.then((result) => {
+        startupWebLocationRef.current = undefined;
+        if (signal?.aborted) resolve();
+        else if (result && 'position' in result) handleSuccess(result.position);
+        else if (result) handlePreciseError(result.error);
+        else requestPreciseLocation();
+      }).catch(reject);
     });
   }, [applyTrustedLocation, clearLocationWatch, readWebCachedCoordinates, setCoordinates, startLocationWatch]);
 

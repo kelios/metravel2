@@ -160,11 +160,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     bottomSheetRef.current?.snapToSeventy()
   }, [clearSelectedPlace, handleSheetStateChange])
 
-  // Иконки верхнего overlay (радиус/слои/фильтры) открывают шит фильтров на ~70%
-  // высоты экрана — единый предсказуемый размер окна; пользователь тянет вверх до
-  // full. Автофокус поля поиска по тапу НЕ запрашиваем: поиск теперь внутри
-  // «Фильтров», клавиатура поднимается только при ручном тапе по полю
-  // (keyboard-avoidance сохранён в самом шите).
+  // Обычный вход в фильтры оставляет клавиатуру закрытой. Поиск запрашивает фокус отдельно.
   const openFiltersSheet = useCallback(() => {
     setActivePopover(null)
     clearSelectedPlace?.()
@@ -177,6 +173,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
     bottomSheetRef.current?.snapToSeventy()
     onOpenFilters()
   }, [clearSelectedPlace, handleSheetStateChange, onOpenFilters, setFiltersMode])
+
+  const openPlaceSearch = useCallback(() => {
+    openFiltersSheet()
+    useMapPanelStore.getState().requestSearchFocus()
+  }, [openFiltersSheet])
 
   const closePopover = useCallback(() => setActivePopover(null), [])
 
@@ -696,6 +697,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
             onToggleLayers={toggleLayersPopover}
             onClosePopover={closePopover}
             onOpenFilters={openFiltersSheet}
+            onOpenPlaceSearch={IS_WEB ? openPlaceSearch : undefined}
             hasActiveFilters={hasActiveFilters}
             onShowAllPlaces={showAllPlacesButton}
             activeFilters={activeFilterItems}
@@ -754,7 +756,7 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
 
         {/* Плашка «В этой области ничего не нашлось» — над «Искать в этой
             области» / FAB «Маршрут», чтобы не перекрывать ни их, ни нижний док. */}
-        {showEmptyStateToast && (
+        {showEmptyStateToast && (!filtersContextProps?.placeSearch?.status || filtersContextProps.placeSearch.status === 'empty') && (
           <MapEmptyStateToast
             colors={colors}
             nextRadiusOption={nextRadiusOption}

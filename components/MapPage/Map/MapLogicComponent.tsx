@@ -1,6 +1,7 @@
 // MapLogicComponent.tsx - Internal component for map event handling and initialization
 import React, { useCallback, useEffect, useRef } from 'react';
 import type { LatLng } from '@/types/coordinates';
+import { MAP_COMPACT_MIN_FIT_ZOOM } from '@/constants/mapDefaults';
 import { EARTH_RADIUS_M } from '@/utils/geoDistance';
 import type { LeafletControlRef } from './leafletBridgeTypes';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
@@ -18,17 +19,6 @@ const isTestEnv =
     (globalThis as any)?.jest != null);
 
 const AUTO_FIT_COORD_PRECISION = 3;
-
-/**
- * #1348 — below this zoom a phone-width pane shows a whole region rather than "places
- * near me". z11 on a 390 px pane is ~17 km across: a city and its outskirts.
- *
- * It is a THRESHOLD, not a blanket floor: radii whose circle already fits above it
- * (≈10 km and below on a phone) keep the exact circle fit. Measured on the default
- * r=50 km: the fitted view is z8 and the first cluster request weighs 323 KB; z11
- * brings the same request down to ~118 KB, z10 only to ~243 KB.
- */
-const COMPACT_MIN_FIT_ZOOM = 11;
 
 /**
  * The first radius fit must run before the parent mounts the base tile layer.
@@ -607,13 +597,13 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
           // #1348 — a narrow pane cannot show a wide radius circle at a useful scale:
           // r=50 km in 390 px fits at z8, i.e. half a region, and the user reads that
           // as "the map has no idea where I am". Rescue ONLY the genuinely regional
-          // case (below COMPACT_MIN_FIT_ZOOM); small radii still get their exact
+          // case (below MAP_COMPACT_MIN_FIT_ZOOM); small radii still get their exact
           // circle fit, which is what the fit contract is for.
           if (mode === 'radius' && compactPane && typeof map.getBoundsZoom === 'function') {
             const fittedZoom = Number(map.getBoundsZoom(paddedBounds, false));
             const center =
               typeof paddedBounds.getCenter === 'function' ? paddedBounds.getCenter() : null;
-            if (Number.isFinite(fittedZoom) && fittedZoom < COMPACT_MIN_FIT_ZOOM && center) {
+            if (Number.isFinite(fittedZoom) && fittedZoom < MAP_COMPACT_MIN_FIT_ZOOM && center) {
               // fitBounds honours the asymmetric padding that keeps the circle clear of
               // the bottom sheet; setView does not, so shift the centre up by half the
               // reserved strip ourselves.
@@ -626,14 +616,14 @@ export const MapLogicComponent: React.FC<MapLogicProps> = ({
                 typeof map.unproject === 'function'
               ) {
                 try {
-                  const projected = map.project(center, COMPACT_MIN_FIT_ZOOM);
+                  const projected = map.project(center, MAP_COMPACT_MIN_FIT_ZOOM);
                   projected.y += bottomReserve / 2;
-                  target = map.unproject(projected, COMPACT_MIN_FIT_ZOOM);
+                  target = map.unproject(projected, MAP_COMPACT_MIN_FIT_ZOOM);
                 } catch {
                   target = center;
                 }
               }
-              map.setView(target, COMPACT_MIN_FIT_ZOOM, {
+              map.setView(target, MAP_COMPACT_MIN_FIT_ZOOM, {
                 animate,
                 duration: animate ? 0.35 : undefined,
               } as any);

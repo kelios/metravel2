@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import { MAP_COLLAPSED_SHEET_OFFSET } from '@/constants/mapDefaults';
 
 export type BottomSheetState =
   | 'collapsed'
@@ -36,7 +37,7 @@ export const getBottomSheetControlsOffset = (
   const safeHeight = Number.isFinite(heightPx) ? Math.max(0, heightPx) : 0;
 
   if (state === 'collapsed') {
-    return 120;
+    return MAP_COLLAPSED_SHEET_OFFSET;
   }
 
   if (state === 'quarter') {
@@ -55,7 +56,7 @@ export const getBottomSheetControlsOffset = (
     return Math.max(safeHeight + 16, 400);
   }
 
-  return 120;
+  return MAP_COLLAPSED_SHEET_OFFSET;
 };
 
 export const useBottomSheetStore = create<BottomSheetStore>((set, get) => ({

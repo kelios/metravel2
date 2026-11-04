@@ -3,10 +3,14 @@ import {
   OSM_PRIVATE_WEB_HOST_PATTERNS,
   resolveOsmTileRequest,
 } from '@/config/mapWebTileContract'
-import { DEFAULT_MAP_CENTER, DEFAULT_RADIUS_KM, MAP_TRAVELS_PER_PAGE } from '@/constants/mapDefaults'
+import {
+  DEFAULT_MAP_CENTER, DEFAULT_RADIUS_KM, MAP_COLLAPSED_SHEET_OFFSET, MAP_COMPACT_MIN_FIT_ZOOM,
+  MAP_COMPACT_PANE_MAX_WIDTH, MAP_RADIUS_FIT_AIR, MAP_TRAVELS_PER_PAGE,
+} from '@/constants/mapDefaults'
 import { buildMapRadiusQuery, MAP_RADIUS_QUERY_PATH, roundMapRadiusAnchorCoordinate } from '@/utils/mapRadiusQuery'
 import { MAP_RADIUS_PRELOAD_GLOBAL, MAP_RADIUS_PRELOAD_TTL_MS } from '@/utils/mapRadiusPreload'
 import { MAP_FILTERS_STORAGE_KEY, MAP_LOCATION_STORAGE_KEY, MAP_ROUTE_STORAGE_KEY } from '@/utils/mapStartupStorage'
+import { MAP_PRECISE_WEB_LOCATION_OPTIONS, MAP_STARTUP_LOCATION_KEY } from '@/utils/mapStartupLocation'
 import { safeJsonString } from '@/utils/htmlUtils'
 import { isLikelySelfProxyApiUrl, resolveApiBaseUrl } from '@/utils/resolveApiBaseUrl'
 
@@ -15,6 +19,7 @@ export const MAP_TILE_PRECONNECT_ID = 'metravel-tile-preconnect'
 
 const LEAFLET_CSS_ID = 'metravel-leaflet-css'
 const MARKERCLUSTER_CSS_ID = 'metravel-markercluster-css'
+const LOCATION_PERMISSION_PROBE_MS = 250
 
 type TilePreconnectParams = {
   hostname?: string | null
@@ -45,6 +50,28 @@ type MapBootstrapApiOptions = {
   nodeEnv?: string
   isE2E?: boolean
   isLocalApi?: boolean
+}
+
+// A complete point set can tighten the Leaflet fit. For the default wide
+// radius with more points than the first page, the compact fit is the circle
+// centre at the compact zoom floor, shifted by half the collapsed padding.
+function compactStartupTile() {
+  const tileSize = 256
+  const zoom = MAP_COMPACT_MIN_FIT_ZOOM
+  const scale = 2 ** zoom
+  const latitude = DEFAULT_MAP_CENTER.latitude * Math.PI / 180
+  const worldX = (DEFAULT_MAP_CENTER.longitude + 180) / 360 * scale
+  const worldY = (1 - Math.asinh(Math.tan(latitude)) / Math.PI) / 2 * scale +
+    (MAP_COLLAPSED_SHEET_OFFSET + MAP_RADIUS_FIT_AIR) / (2 * tileSize)
+  const x = Math.floor(worldX)
+  const y = Math.floor(worldY)
+  const { url, crossOrigin } = resolveOsmTileRequest()
+  return {
+    href: url.replace('{z}', String(zoom)).replace('{x}', String(x)).replace('{y}', String(y)),
+    crossOrigin,
+    offsetX: `${(x - worldX) * tileSize}px`,
+    offsetY: `${(y - worldY) * tileSize}px`,
+  }
 }
 
 export function buildMapHeadBootstrapScript(
@@ -130,9 +157,10 @@ export function buildMapHeadBootstrapScript(
     if (!endpoint || window[preloadKey] || window.location.search || window.navigator.onLine === false ||
         !window.AbortController || !window.Storage || !(window.localStorage instanceof window.Storage)) return;
     var storedStateKeys = ${JSON.stringify(storedStateKeys)};
-    for (var i = 0; i < storedStateKeys.length; i++) {
-      if (window.localStorage.getItem(storedStateKeys[i]) !== null) return;
+    function hasStoredState() {
+      return storedStateKeys.some(function(key) { return window.localStorage.getItem(key) !== null; });
     }
+    if (hasStoredState()) return;
     var absoluteEndpoint = endpoint.charAt(0) === '/' ? pageOrigin + endpoint : endpoint;
     var requestUrl = new URL(absoluteEndpoint);
     if (requestUrl.origin !== pageOrigin || requestUrl.href !== absoluteEndpoint ||
@@ -149,6 +177,78 @@ export function buildMapHeadBootstrapScript(
       controller.abort();
     }, ${MAP_RADIUS_PRELOAD_TTL_MS});
     window[preloadKey] = entry;
+
+    var compact = window.matchMedia && window.matchMedia(
+      '(max-width: ${MAP_COMPACT_PANE_MAX_WIDTH}px) and (orientation: portrait)'
+    );
+    if (isLocal || !compact || !compact.matches || !window.navigator.permissions) return;
+    function isCleanCompactMap() {
+      return /^\/map\/?$/.test(window.location.pathname) && !window.location.search &&
+        compact.matches && !hasStoredState();
+    }
+    var locationPermission = new Promise(function(resolve) {
+      var deadline = setTimeout(function() { resolve(null); }, ${LOCATION_PERMISSION_PROBE_MS});
+      function settle(permission) {
+        clearTimeout(deadline);
+        resolve(permission);
+      }
+      Promise.resolve().then(function() {
+        return window.navigator.permissions.query({ name: 'geolocation' });
+      }).then(settle, function() { settle(null); });
+    });
+    var locationResult = locationPermission.then(function(permission) {
+      if (!permission || permission.state !== 'prompt' || !window.navigator.geolocation ||
+          !isCleanCompactMap()) return null;
+      return new Promise(function(resolve) {
+        window.navigator.geolocation.getCurrentPosition(
+          function(position) { resolve({ position: position }); },
+          function(error) { resolve({ error: error }); },
+          ${JSON.stringify(MAP_PRECISE_WEB_LOCATION_OPTIONS)}
+        );
+      });
+    }).catch(function() { return null; });
+    var locationKey = ${JSON.stringify(MAP_STARTUP_LOCATION_KEY)};
+    var locationEntry = { result: locationResult };
+    window[locationKey] = locationEntry;
+    locationResult.then(function() {
+      if (window[locationKey] !== locationEntry) return;
+      setTimeout(function() {
+        if (window[locationKey] === locationEntry) delete window[locationKey];
+      }, ${MAP_RADIUS_PRELOAD_TTL_MS});
+    });
+
+    Promise.all([
+      locationPermission,
+      locationResult,
+      response.then(function(result) { return result.ok ? result.clone().json() : null; })
+    ]).then(function(values) {
+      var permission = values[0];
+      var location = values[1];
+      var payload = values[2];
+      if (!payload || !permission || permission.state === 'granted' ||
+          (permission.state !== 'denied' && !(location && location.error && location.error.code === 1))) return;
+      var list = Array.isArray(payload.results) ? payload.results : payload.data;
+      var count = payload.count == null ? payload.total : payload.count;
+      if (!Array.isArray(list) || list.length === 0 || !Number.isFinite(Number(count)) ||
+          Number(count) <= list.length) return;
+      var shellTileSelector = '#ssg-skeleton img[data-ssg-map-tile]';
+      function paintConfirmedTile() {
+        var tile = document.querySelector(shellTileSelector);
+        if (!tile || !isCleanCompactMap() || permission.state === 'granted' || tile.hasAttribute('src') ||
+            document.querySelector('#root .leaflet-tile')) return;
+        var request = ${JSON.stringify(compactStartupTile())};
+        tile.parentElement.style.setProperty('--metravel-map-shell-tile-offset-x', request.offsetX);
+        tile.parentElement.style.setProperty('--metravel-map-shell-tile-offset-y', request.offsetY);
+        tile.setAttribute('fetchpriority', 'high');
+        if (request.crossOrigin) tile.crossOrigin = request.crossOrigin;
+        tile.src = request.href;
+      }
+      if (document.readyState === 'loading' && !document.querySelector(shellTileSelector)) {
+        document.addEventListener('DOMContentLoaded', paintConfirmedTile, { once: true });
+      } else {
+        paintConfirmedTile();
+      }
+    }).catch(function(){});
   } catch (_e) {}
 })();
 `;

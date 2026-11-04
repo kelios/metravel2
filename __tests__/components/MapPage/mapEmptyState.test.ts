@@ -22,8 +22,9 @@ describe('mapEmptyState.getNextRadiusOption', () => {
     expect(getNextRadiusOption(RADIUS_OPTIONS, '100')).toBeNull()
   })
 
-  it('falls back to the first preset when the current radius is unknown', () => {
-    expect(getNextRadiusOption(RADIUS_OPTIONS, '77')).toEqual({ id: '30', name: '30' })
+  it('expands a non-preset radius from a link and never proposes a smaller one', () => {
+    expect(getNextRadiusOption(RADIUS_OPTIONS, '77')).toEqual({ id: '100', name: '100' })
+    expect(getNextRadiusOption(RADIUS_OPTIONS, '150')).toBeNull()
   })
 
   it('survives missing/empty option lists', () => {

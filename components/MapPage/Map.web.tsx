@@ -1,3 +1,4 @@
+import { MAP_COMPACT_PANE_MAX_WIDTH } from '@/constants/mapDefaults'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { type ViewInstance, Platform, StyleSheet, View } from 'react-native'
 import { usePathname } from 'expo-router'
@@ -50,7 +51,6 @@ type ReactLeafletNS = typeof import('react-leaflet')
 
 const ORS_API_KEY = resolveRoutingApiKey()
 const IS_WEB = Platform.OS === 'web'
-const COMPACT_POPUP_MAX_WIDTH = 560
 const DEFAULT_ZOOM = 11
 const DEFAULT_MAX_ZOOM = 18
 const MARKER_ZOOM_TARGET = 14
@@ -738,8 +738,8 @@ const MapPageComponent: React.FC<Props> = (props) => {
   // the numbers are unchanged, so MapLogicComponent effects do not re-run.
   const isCompactPane =
     mapPaneWidth > 0
-      ? mapPaneWidth <= COMPACT_POPUP_MAX_WIDTH
-      : (getViewportWidth() ?? 0) <= COMPACT_POPUP_MAX_WIDTH
+      ? mapPaneWidth <= MAP_COMPACT_PANE_MAX_WIDTH
+      : (getViewportWidth() ?? 0) <= MAP_COMPACT_PANE_MAX_WIDTH
   const fitBoundsPadding = useStablePadding(
     getMapFitBoundsPadding(mode, isCompactPane, readSheetBottomOffset()),
   )
@@ -787,9 +787,9 @@ const MapPageComponent: React.FC<Props> = (props) => {
   )
 
   const useCompactPopupLayout = useMemo(() => {
-    if (mapPaneWidth > 0) return mapPaneWidth <= COMPACT_POPUP_MAX_WIDTH
+    if (mapPaneWidth > 0) return mapPaneWidth <= MAP_COMPACT_PANE_MAX_WIDTH
     const viewport = getViewportWidth()
-    return viewport !== null && viewport <= COMPACT_POPUP_MAX_WIDTH
+    return viewport !== null && viewport <= MAP_COMPACT_PANE_MAX_WIDTH
   }, [mapPaneWidth])
 
   // Zoom/locate floating controls. Раньше скрывались на широком десктопе, т.к.

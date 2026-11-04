@@ -3,7 +3,7 @@ import { useCallback, useMemo } from 'react';
 import { useRouteStore } from '@/stores/routeStore';
 import { createCollator } from '@/i18n';
 import type { TravelCoords } from '@/types/types';
-import type { MapUiApi } from '@/types/mapUi';
+import type { MapPlaceSearchFeedback, MapUiApi } from '@/types/mapUi';
 import type { MapPointCountScope } from '@/utils/mapPointCount';
 import type { useMapFilters } from '@/hooks/map/useMapFilters';
 import type { useMapOverlays } from '@/hooks/map/useMapOverlays';
@@ -52,6 +52,7 @@ interface UseMapFiltersPanelPropsParams extends FiltersPick, OverlaysPick, Route
   travelsData: TravelCoords[];
   travelsCount: number;
   resultsTotalScope?: MapPointCountScope;
+  placeSearch?: MapPlaceSearchFeedback;
   isMobile: boolean;
   mapUiApi: MapUiApi | null;
   closeRightPanel: () => void;
@@ -96,6 +97,7 @@ export function useMapFiltersPanelProps(params: UseMapFiltersPanelPropsParams) {
     travelsData,
     travelsCount,
     resultsTotalScope,
+    placeSearch,
     isMobile,
     mapUiApi,
     closeRightPanel,
@@ -249,6 +251,7 @@ export function useMapFiltersPanelProps(params: UseMapFiltersPanelPropsParams) {
       // страницы (≤30).
       resultsTotal: travelsCount,
       resultsTotalScope,
+      placeSearch,
       isMobile,
       mapUiApi,
       closeMenu: closeRightPanel,
@@ -266,6 +269,7 @@ export function useMapFiltersPanelProps(params: UseMapFiltersPanelPropsParams) {
       travelsData,
       travelsCount,
       resultsTotalScope,
+      placeSearch,
       isMobile,
       mapUiApi,
       closeRightPanel,

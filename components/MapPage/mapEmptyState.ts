@@ -13,9 +13,8 @@
 export type MapRadiusOption = { id: string; name: string }
 
 /**
- * Следующий (более широкий) пресет радиуса относительно текущего значения.
- * Возвращает null, когда текущий радиус уже последний в списке.
- * Если текущее значение не найдено среди опций — предлагаем первую опцию.
+ * Наименьший пресет шире текущего радиуса, в том числе для нестандартного
+ * значения из ссылки. Если более широкого пресета нет, возвращает null.
  */
 export function getNextRadiusOption(
   radiusOptions: ReadonlyArray<MapRadiusOption> | undefined | null,
@@ -24,9 +23,17 @@ export function getNextRadiusOption(
   const options = Array.isArray(radiusOptions) ? radiusOptions : []
   if (options.length === 0) return null
 
-  const index = options.findIndex((option) => String(option.id) === String(currentRadius))
-  if (index < 0) return options[0] ?? null
-  return options[index + 1] ?? null
+  const current = Number(currentRadius)
+  if (!Number.isFinite(current) || current <= 0) return options[0] ?? null
+
+  let next: MapRadiusOption | null = null
+  for (const option of options) {
+    const radius = Number(option.id)
+    if (Number.isFinite(radius) && radius > current && (!next || radius < Number(next.id))) {
+      next = option
+    }
+  }
+  return next
 }
 
 /**

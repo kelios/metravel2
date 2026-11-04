@@ -16,3 +16,8 @@ export const DEFAULT_MAP_CENTER = {
 } as const
 
 export const MAP_TRAVELS_PER_PAGE = 30;
+
+export const MAP_COMPACT_PANE_MAX_WIDTH = 560;
+export const MAP_COMPACT_MIN_FIT_ZOOM = 11;
+export const MAP_COLLAPSED_SHEET_OFFSET = 120;
+export const MAP_RADIUS_FIT_AIR = 24;

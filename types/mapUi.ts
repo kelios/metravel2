@@ -39,3 +39,11 @@ export type MapUiApi = {
     canExportRoute: boolean;
   };
 };
+
+export type MapPlaceSearchStatus = 'pending' | 'found' | 'empty' | 'error' | 'offline';
+
+export type MapPlaceSearchFeedback = {
+  scope: string;
+  status: MapPlaceSearchStatus | null;
+  retry: () => void;
+};

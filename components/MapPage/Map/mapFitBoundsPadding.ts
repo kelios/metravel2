@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { MAP_RADIUS_FIT_AIR } from '@/constants/mapDefaults'
 
 import type { MapMode } from './types'
 
@@ -17,7 +18,7 @@ export const getMapFitBoundsPadding = (
   sheetBottomOffset: number,
 ): FitPadding => {
   if (mode !== 'radius') return { paddingTopLeft: [24, 140], paddingBottomRight: [360, 220] }
-  const AIR = 24
+  const AIR = MAP_RADIUS_FIT_AIR
   if (isCompact) {
     // The lower arc of the circle clears the sheet; top leaves room for the
     // floating controls row.

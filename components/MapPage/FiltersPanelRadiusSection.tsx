@@ -1,18 +1,27 @@
+import type { MapPlaceSearchFeedback } from '@/types/mapUi'
 import React, { useCallback, useMemo, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
 import MapSearchInput from '@/components/MapPage/MapSearchInput'
 import Chip from '@/components/ui/Chip'
+import { formatRadiusLabel } from '@/constants/mapConfig'
 import type { ThemedColors } from '@/hooks/useTheme'
 
 import { CATEGORY_ICONS } from './mapCategoryIcons'
+import { getNextRadiusOption } from './mapEmptyState'
 import { getCategoryName, type CategoryOption } from '@/components/MapPage/categoryName'
 import { createCollator, translate as i18nT, translatePlural } from '@/i18n'
 import { resolveMapCategorySelection } from '@/utils/mapCategorySelection'
 
 
 const COLLAPSED_UNSELECTED_LIMIT = 8
+const PLACE_SEARCH_STATUS_LABEL = {
+  pending: () => i18nT('map:placeSearch.pending'),
+  empty: () => i18nT('map:placeSearch.empty'),
+  error: () => i18nT('map:placeSearch.error'),
+  offline: () => i18nT('map:placeSearch.offline'),
+}
 
 interface FiltersPanelRadiusSectionProps {
   colors: ThemedColors
@@ -34,6 +43,7 @@ interface FiltersPanelRadiusSectionProps {
   travelsData: { categoryName?: string; name?: string; address?: string }[]
   filteredTravelsData?: { categoryName?: string; name?: string; address?: string }[]
   resultsTotal?: number
+  placeSearch?: MapPlaceSearchFeedback
   onFilterChange: (field: string, value: any) => void
 }
 
@@ -46,6 +56,7 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
   travelsData,
   filteredTravelsData = [],
   resultsTotal,
+  placeSearch,
   onFilterChange,
 }) => {
   const categoryCollator = useMemo(() => createCollator(), [])
@@ -159,6 +170,8 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
   const showNoTagMatches = isCategorySearchActive && matchedUnselected.length === 0
 
   const searchQueryValue = String(filterValue.searchQuery || '')
+  const searchStatus = placeSearch?.status
+  const widerRadius = searchStatus === 'empty' ? getNextRadiusOption(filters.radius, filterValue.radius) : null
 
   const handleSearchChange = useCallback(
     (value: string) => safeOnFilterChange('searchQuery', value),
@@ -183,12 +196,34 @@ const FiltersPanelRadiusSection: React.FC<FiltersPanelRadiusSectionProps> = ({
           onChange={handleSearchChange}
           placeholder={i18nT('map:components.MapPage.FiltersPanelRadiusSection.nayti_mesto_po_nazvaniyu_0071d123')}
           resultsCount={
-            searchQueryValue
+            searchQueryValue && (!placeSearch || searchStatus === 'found')
               ? (typeof resultsTotal === 'number' ? resultsTotal : filteredTravelsData.length)
               : undefined
           }
           autoFocusOnSignal={isMobile}
         />
+        {placeSearch && (
+          <Text style={styles.sectionHint} testID="map-place-search-scope">
+            {i18nT('map:placeSearch.scope', { scope: placeSearch.scope })}
+          </Text>
+        )}
+        {searchStatus && searchStatus !== 'found' && (
+          <View>
+            <Text accessibilityLiveRegion="polite" style={styles.sectionHint} testID="map-place-search-status">
+              {PLACE_SEARCH_STATUS_LABEL[searchStatus]()}
+            </Text>
+            {searchStatus === 'error' && placeSearch && (
+              <Chip label={i18nT('map:placeSearch.retry')} onPress={placeSearch.retry} />
+            )}
+            {searchStatus === 'empty' && widerRadius && (
+              <Chip
+                testID="map-place-search-expand-radius"
+                label={i18nT('map:placeSearch.expand', { distance: formatRadiusLabel(widerRadius.id) })}
+                onPress={() => safeOnFilterChange('radius', widerRadius.id)}
+              />
+            )}
+          </View>
+        )}
       </View>
 
       {/* Радиус вынесен в плавающую иконку на карте (десктоп) и в верхний тулбар

@@ -929,7 +929,6 @@ describe('ssg-skeletons', () => {
       expect(tileTags[0]).toContain('alt=""');
       expect(tileTags[0]).toContain('aria-hidden="true"');
       expect(tileTags[0]).not.toMatch(/\ssrc=/);
-      expect(html).toContain('window.__metravelMountMapShellTile');
       expect(html).toContain(
         'class="ssg-map-canvas" role="region" aria-label="Карта маршрутов и достопримечательностей"',
       );

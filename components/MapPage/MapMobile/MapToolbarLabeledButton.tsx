@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import type { ThemedColors } from '@/hooks/useTheme'
 import type { getMapMobileTopOverlayStyles } from './MapMobileTopOverlay.styles'
+import { MAP_TOOLBAR_TOUCH_TARGET_SIZE } from './MapMobileTopOverlay.styles'
 
 type Props = {
   testID: string
@@ -15,6 +16,7 @@ type Props = {
   /** Полное имя для скринридера; начинается с видимой подписи или содержит её. */
   accessibilityLabel: string
   active?: boolean
+  compact?: boolean
   colors: ThemedColors
   styles: ReturnType<typeof getMapMobileTopOverlayStyles>
 }
@@ -34,6 +36,7 @@ export function MapToolbarLabeledButton({
   label,
   accessibilityLabel,
   active = false,
+  compact = false,
   colors,
   styles,
 }: Props) {
@@ -44,7 +47,11 @@ export function MapToolbarLabeledButton({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      style={({ pressed }) => [styles.labeledButtonTouch, pressed && styles.iconButtonPressed]}
+      style={({ pressed }) => [
+        styles.labeledButtonTouch,
+        compact && { minWidth: MAP_TOOLBAR_TOUCH_TARGET_SIZE },
+        pressed && styles.iconButtonPressed,
+      ]}
     >
       <View style={[styles.labeledButton, active && styles.iconButtonActive]} pointerEvents="none">
         <Feather name={icon} size={16} color={colors.text} />
