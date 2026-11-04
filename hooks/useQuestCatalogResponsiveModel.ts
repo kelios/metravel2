@@ -3,6 +3,7 @@ import { Platform, type LayoutChangeEvent, type ViewInstance } from 'react-nativ
 import { useBreakpoints } from './useResponsive'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { QUESTS_GRID_MIN_COLUMN_WIDTH, QUESTS_GRID_WEB_GAP, QUESTS_LANDING_PADDING } from '@/constants/questLayout'
+import { getCatalogFilterPanelGeometry } from '@/components/layout/catalogFilterPanelGeometry'
 
 const { spacing } = DESIGN_TOKENS
 const useWebLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
@@ -45,7 +46,8 @@ export function useQuestCatalogResponsiveModel(
   const { width, isMobile, isTablet, isLargeTablet } = useBreakpoints()
 
   return useMemo<QuestCatalogResponsiveModel>(() => {
-    const sidebarWidth = hasSidebar ? (isTablet ? 280 : isLargeTablet ? 300 : 340) : 0
+    const webPanel = Platform.OS === 'web' ? getCatalogFilterPanelGeometry(width) : null
+    const sidebarWidth = hasSidebar ? (webPanel ? webPanel.width + webPanel.gap : isTablet ? 280 : isLargeTablet ? 300 : 340) : 0
     const available = hasSidebar
       ? (isMobile ? width : Math.max(320, width - sidebarWidth - spacing.xl * 2))
       : Math.max(0, width - QUESTS_LANDING_PADDING * 2)

@@ -2,7 +2,7 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import SegmentedControl from '@/components/MapPage/SegmentedControl';
-import IconButton from '@/components/ui/IconButton';
+import CatalogFilterCloseButton from '@/components/layout/CatalogFilterCloseButton';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { formatMapPoints, qualifyMapPointCount, type MapPointCountScope } from '@/utils/mapPointCount';
 import { DEFAULT_RADIUS_KM, formatRadiusLabel } from '@/constants/mapConfig';
@@ -61,11 +61,9 @@ const FiltersPanelHeader: React.FC<FiltersPanelHeaderProps> = ({
               {compactSummary}
             </Text>
           </View>
-          <IconButton
-            icon={<Feather name="x" size={16} color={colors.textMuted} />}
-            label={i18nT('common:action.close')}
+          <CatalogFilterCloseButton
             onPress={onClose}
-            size="sm"
+            compact
             style={styles.compactMetaCloseButton}
           />
         </View>

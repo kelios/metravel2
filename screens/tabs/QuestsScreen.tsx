@@ -6,11 +6,11 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useDockReservePx } from '@/components/layout/bottomChromeInset';
+import { CATALOG_FILTER_PANEL } from '@/components/layout/catalogFilterPanelGeometry';
 import safeLazy from '@/components/layout/safeLazy';
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import { jsonLdScript } from '@/components/seo/jsonLdScript';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
-import { METRICS } from '@/constants/layout';
 import { buildCanonicalUrl, buildOgImageUrl, QUESTS_OG_IMAGE_PATH } from '@/utils/seo';
 import { createQuestCatalogSearch } from '@/utils/questCatalogSearch';
 import { rIC } from '@/utils/rIC';
@@ -31,6 +31,7 @@ import { createQuestCatalogStructuredData } from '@/utils/discoverySeo';
 import { useQuestDiscovery } from '@/components/quests/runtime/QuestDiscoveryContext';
 import { QuestSectionFrame } from '@/components/quests/QuestSectionFrame';
 import { getStyles } from './QuestsScreen.styles';
+import { getQuestCatalogSidebarGeometry } from './QuestsStyleMetrics';
 import {
     STORAGE_SELECTED_CITY,
     DEFAULT_NEARBY_RADIUS_KM,
@@ -79,7 +80,7 @@ const QuestsMapSection = React.lazy(() => import('./QuestsMapSection'));
 // chunk evaluates, in parallel with hydration.
 const loadQuestsSidebar = () => import('./QuestsSidebar');
 const QuestsSidebar = React.lazy(loadQuestsSidebar);
-if (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth >= METRICS.breakpoints.tablet) {
+if (Platform.OS === 'web' && typeof window !== 'undefined' && window.innerWidth >= CATALOG_FILTER_PANEL.embeddedMinWidth) {
     void loadQuestsSidebar();
 }
 // #2360: optional banner stays out of the catalog chunk; safeLazy renders
@@ -174,6 +175,7 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
     const { width: bpWidth, isMobile: bpIsMobile } = useBreakpoints();
     const width = bpWidth;
     const isMobile = bpIsMobile;
+    const { overlay: usesFilterDrawer } = getQuestCatalogSidebarGeometry(width);
     // Высота нужна только для размеров карты на native/desktop и берётся
     // НЕреактивным снапшотом: в стилях мобильного веба она не используется
     // (карта = 100dvh через CSS), поэтому отсутствие подписки на высоту ничего
@@ -211,9 +213,9 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
         setGeoMessage(null);
         setPendingMapAreaCenter(null);
         setActiveMapAreaCenter(null);
-        if (isMobile) setFilterDrawerOpen(false);
+        if (usesFilterDrawer) setFilterDrawerOpen(false);
         await savingSelection;
-    }, [geoRequesting, isMobile, select]);
+    }, [geoRequesting, usesFilterDrawer, select]);
 
     // Срез, переданный из профиля (#1794): применяем как обычный выбор.
     useQuestCatalogHandoff({ enabled: isFocused && !route, onApply: handleSelectCity, getGeneration, canApply: canApplyHandoff });
@@ -241,15 +243,15 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
 
     const handleSetViewMode = useCallback((mode: 'list' | 'map') => {
         setViewMode(mode);
-        if (isMobile) setFilterDrawerOpen(false);
-    }, [isMobile]);
+        if (usesFilterDrawer) setFilterDrawerOpen(false);
+    }, [usesFilterDrawer]);
 
     // Функциональный тогл: не зависит от замкнутого viewMode, поэтому не залипает
     // на устаревшем значении при повторных тапах на Android (F-10).
     const handleToggleViewMode = useCallback(() => {
         setViewMode((current) => (current === 'map' ? 'list' : 'map'));
-        if (isMobile) setFilterDrawerOpen(false);
-    }, [isMobile]);
+        if (usesFilterDrawer) setFilterDrawerOpen(false);
+    }, [usesFilterDrawer]);
 
     // Без сохранённого/валидного выбора показываем явное состояние «Все
     // квесты». Оно не должно визуально маскироваться под геофильтр «Рядом».
@@ -696,7 +698,7 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
 
     return (
         <QuestSectionFrame drawerOpen={filterDrawerOpen} onCloseDrawer={closeFilterDrawer}
-            sidebar={!isMobile ? <Suspense fallback={null}><QuestsSidebar {...sidebarProps} testID="quests-desktop-sidebar" /></Suspense> : null}
+            sidebar={!usesFilterDrawer ? <Suspense fallback={null}><QuestsSidebar {...sidebarProps} testID="quests-desktop-sidebar" /></Suspense> : null}
             drawerSidebar={<Suspense fallback={null}><QuestsSidebar {...sidebarProps} onCloseDrawer={closeFilterDrawer} /></Suspense>}>
             {isFocused && route ? route.seo : null}
             {isFocused && !route && (
@@ -738,6 +740,7 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
                 geoRequesting={geoRequesting}
                 radiiLg={radii.lg}
                 isMobile={isMobile}
+                usesFilterDrawer={usesFilterDrawer}
                 filtersActive={filtersActive}
                 onResetFilters={handleResetFilters}
                 onShowKids={handleShowKidsQuests}

@@ -5,6 +5,16 @@ import { createStyles } from '@/screens/tabs/PlacesScreen.styles'
 import { WEB_DESKTOP_FOOTER_LAYOUT, WEB_MOBILE_DOCK_LAYOUT } from '@/components/layout/webMobileDockLayout'
 import { buildCriticalCSS } from '@/utils/criticalCSSBuilder'
 
+it('reserves the quest filter panel in the static frame at the shared boundaries', () => {
+  const css = buildCriticalCSS()
+  const regular = css.match(/@media \(min-width:1024px\)\{\n\s*\[data-bp-layout="quest-filter-frame-root"\][^}]+}\n[^}]+}/)?.[0]
+  const wide = css.match(/@media \(min-width:1280px\)\{\n\s*\[data-bp-layout="quest-filter-frame-root"\][^}]+}\n[^}]+}/)?.[0]
+  expect(regular).toContain('flex-direction:row !important;gap:16px !important')
+  expect(regular).toContain('flex-basis:280px !important;width:280px !important')
+  expect(wide).toContain('gap:24px !important')
+  expect(wide).toContain('flex-basis:320px !important;width:320px !important')
+})
+
 // #2705: native lazy loading controls fetching, not whether an already loaded
 // photo may paint with its visible card. Global render skipping delayed only
 // the photo while its text/buttons were already on screen.

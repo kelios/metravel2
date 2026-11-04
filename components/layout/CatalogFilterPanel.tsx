@@ -1,12 +1,10 @@
 import type { ComponentProps, ReactNode } from 'react'
-import Feather from '@expo/vector-icons/Feather'
 import { Modal, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native'
 
-import IconButton from '@/components/ui/IconButton'
 import { Heading } from '@/components/ui/Typography'
 import { CATALOG_FILTER_PANEL } from '@/components/layout/catalogFilterPanelGeometry'
+import CatalogFilterCloseButton from '@/components/layout/CatalogFilterCloseButton'
 import { useThemedColors } from '@/hooks/useTheme'
-import { translate as i18nT } from '@/i18n'
 import { webDataSetProps } from '@/utils/webProps'
 
 type FilterPanelProps = ComponentProps<typeof View> & {
@@ -41,12 +39,7 @@ export default function CatalogFilterPanel({
           <Heading level={2} style={styles.heading}>{title}</Heading>
           {titleAccessory}
           {overlay && onClose ? (
-            <IconButton
-              icon={<Feather name="x" size={20} color={colors.text} />}
-              label={closeLabel ?? i18nT('common:action.close')}
-              onPress={onClose}
-              size="sm"
-            />
+            <CatalogFilterCloseButton label={closeLabel} onPress={onClose} />
           ) : null}
         </View>
       ) : null}

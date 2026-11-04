@@ -97,7 +97,7 @@ const readSidebarRules = (): SidebarRule[] => {
     for (const rule of Array.from(list)) {
       if ('selectorText' in rule && /data-sidebar-/.test((rule as CSSStyleRule).selectorText)) {
         for (const selector of (rule as CSSStyleRule).selectorText.split(',')) {
-          rules.push({ selector: selector.trim(), media })
+          if (selector.includes('data-sidebar-')) rules.push({ selector: selector.trim(), media })
         }
       } else if ('cssRules' in rule && 'media' in rule) {
         walk((rule as CSSMediaRule).cssRules, (rule as CSSMediaRule).media.mediaText)
@@ -166,7 +166,7 @@ describe('CompactSideBarTravel in the real React Native Web DOM (#2032)', () => 
     // которые правило перекрасит при наведении. Пустое множество — мёртвое правило.
     const deadSelectors = rules
       .map((rule) => rule.selector)
-      .filter((selector) => container.querySelectorAll(selector.replace(/:hover/g, '')).length === 0)
+      .filter((selector) => container.querySelectorAll(selector.replace(/:hover|:active|:focus-visible/g, '')).length === 0)
     expect(deadSelectors).toEqual([])
   })
 

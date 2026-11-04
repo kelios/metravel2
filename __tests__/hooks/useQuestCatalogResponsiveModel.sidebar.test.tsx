@@ -4,10 +4,11 @@
 // раскладывался по полной ширине страницы. На вьюпорте 1024 это давало дыру
 // 118 px между колонками и 216 px справа.
 
-import { Dimensions } from 'react-native'
+import { Dimensions, Platform } from 'react-native'
 import { act, renderHook } from '@testing-library/react-native'
 
 import { useQuestCatalogResponsiveModel, type QuestCatalogResponsiveOptions } from '@/hooks/useQuestCatalogResponsiveModel'
+import * as responsive from '@/hooks/useResponsive'
 import { QUESTS_GRID_WEB_GAP, QUESTS_LANDING_CONTENT_WIDTH } from '@/constants/questLayout'
 
 const setViewport = async (width: number, height = 900) => {
@@ -61,6 +62,24 @@ describe('вычет сайдбара в модели каталога квес�
     const landing = await model(390, { hasSidebar: false })
     expect(landing.cardWidth).toBe(catalog.cardWidth)
     expect(landing.cardColumns).toBe(catalog.cardColumns)
+  })
+
+  it.each([[1023, 420], [1024, 320], [1280, 420]])('учитывает ширину и зазор веб-панели на %i px', async (width, cardWidth) => {
+    const originalPlatform = Platform.OS
+    const breakpoints = jest.spyOn(responsive, 'useBreakpoints').mockReturnValue({
+      width,
+      isMobile: false,
+      isTablet: width < 1024,
+      isLargeTablet: width >= 1024 && width < 1280,
+    } as ReturnType<typeof responsive.useBreakpoints>)
+    try {
+      Platform.OS = 'web'
+      const { result } = await renderHook(() => useQuestCatalogResponsiveModel(69))
+      expect(result.current).toMatchObject({ cardColumns: 2, cardWidth })
+    } finally {
+      Platform.OS = originalPlatform
+      breakpoints.mockRestore()
+    }
   })
 })
 

@@ -21,7 +21,7 @@ import QuestCard from './QuestCard';
 import { QuestsCountPlaceholder, QuestsGridSkeleton } from './QuestsCatalogPlaceholders';
 import { ALL_QUESTS_ID, COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID, countQuestCompletions, parseThemeSelectionId } from './QuestsScreen.helpers';
 import { getQuestThemeById } from '@/utils/questThemes';
-import QuestsMobileToolbar from './QuestsMobileToolbar';
+import QuestsMobileToolbar, { QuestFilterToolbarActions } from './QuestsMobileToolbar';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
 import { QuestPageColumns } from '@/components/quests/QuestPageColumns';
 import { pluralizeCities, pluralizeCompletions, pluralizeCountries, pluralizePlayers, pluralizeQuest, type QuestMeta, type QuestSortOrder, type QuestThemeEntry } from './questsShared';
@@ -64,6 +64,7 @@ type QuestsContentPanelProps = {
     geoRequesting: boolean;
     radiiLg: number;
     isMobile: boolean;
+    usesFilterDrawer?: boolean;
     filtersActive: boolean;
     onResetFilters: () => void;
     onShowKids?: () => void;
@@ -115,6 +116,7 @@ function QuestsContentPanel({
     geoRequesting,
     radiiLg,
     isMobile,
+    usesFilterDrawer = isMobile,
     filtersActive = false,
     onResetFilters,
     onShowKids = () => {},
@@ -380,7 +382,7 @@ function QuestsContentPanel({
     );
 
     const searchField = (
-    <View style={styles.searchRow} testID="quests-search-row">
+    <View style={[styles.searchRow, usesFilterDrawer && !isMobile && styles.tabletFilterSearch]} testID="quests-search-row">
         <Feather name="search" size={16} color={colors.textMuted} />
         <TextInput
             {...searchInputAccessibilityProps()}
@@ -435,7 +437,12 @@ function QuestsContentPanel({
     ) : (
         <View style={styles.contentHeader} testID="quests-content-header">
             {titleBlock}
-            {searchField}
+            {usesFilterDrawer ? (
+                <View style={styles.tabletFilterToolbar}>
+                    <View style={styles.mobileSearchSlot}>{searchField}</View>
+                    <QuestFilterToolbarActions {...{ styles, colors, viewMode, onToggleViewMode, onOpenFilterDrawer }} />
+                </View>
+            ) : searchField}
         </View>
     );
     const mobileTitleBlock = isMobile ? titleBlock : null;

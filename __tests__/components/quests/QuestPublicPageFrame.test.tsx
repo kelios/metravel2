@@ -46,7 +46,8 @@ beforeEach(async () => {
 
 afterEach(() => { Platform.OS = originalPlatform })
 
-it('keeps narrative content and sends a mobile city choice to its catalog', async () => {
+it.each([390, 1023])('keeps narrative content and sends a drawer city choice to its catalog at %i px', async (width) => {
+  mockWidth = width
   const { getByLabelText, getByText, queryByTestId } = await render(
     <QuestPublicPageFrame><Text>Scenario content</Text></QuestPublicPageFrame>,
   )
@@ -101,5 +102,5 @@ it('keeps expanded countries through closing, reopening and changing between mob
   await fireEvent.press(getByLabelText('Выбрать город'))
   expect(getByText('Belarus expanded')).toBeTruthy()
   expect(getByLabelText('Close navigation')).toBeTruthy()
-  expect(getByText('Scenario content')).toBeTruthy()
+  expect(getByText('Scenario content', { includeHiddenElements: true })).toBeTruthy()
 })

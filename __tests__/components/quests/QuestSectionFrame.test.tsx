@@ -40,13 +40,14 @@ const page = (drawerOpen: boolean, onCloseDrawer: () => void) => (
 it('owns the mobile scroll lock, overlay and Escape close, restoring prior body styles', async () => {
   const close = jest.fn()
   const { getByTestId, queryByTestId, rerender } = await render(page(true, close))
-  expect(getByTestId('quests-mobile-sidebar')).toBeTruthy()
+  expect(getByTestId('quests-mobile-sidebar')).toHaveProp('role', 'dialog')
+  expect(getByTestId('quests-mobile-sidebar')).toHaveProp('aria-label', 'Приключения')
   expect(document.documentElement.style.overflow).toBe('hidden')
   expect(document.body.style.overflow).toBe('hidden')
   expect(document.body.style.touchAction).toBe('none')
   await act(async () => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })) })
   expect(close).toHaveBeenCalledTimes(1)
-  await fireEvent.press(getByTestId('quests-sidebar-overlay'))
+  await fireEvent.press(getByTestId('quests-sidebar-overlay', { includeHiddenElements: true }))
   expect(close).toHaveBeenCalledTimes(2)
   await rerender(page(false, close))
   expect(queryByTestId('quests-mobile-sidebar')).toBeNull()
@@ -58,7 +59,7 @@ it('owns the mobile scroll lock, overlay and Escape close, restoring prior body 
 it('releases the mobile lock on a desktop resize without replacing the content host', async () => {
   const close = jest.fn()
   const { getByTestId, queryByTestId, getByText, rerender } = await render(page(true, close))
-  const reading = getByText('Page content')
+  const reading = getByText('Page content', { includeHiddenElements: true })
   mockWidth = 1440
   await rerender(page(true, close))
   expect(getByTestId('quests-desktop-sidebar-slot')).toBeTruthy()
@@ -66,6 +67,26 @@ it('releases the mobile lock on a desktop resize without replacing the content h
   expect(getByText('Page content')).toBe(reading)
   expect(document.body.style.overflow).toBe('auto')
   expect(close).not.toHaveBeenCalled()
+})
+
+it.each([[1024, 280, 16], [1279, 280, 16], [1280, 320, 24]])(
+  'reserves the common filter frame at %i px',
+  async (width, sidebarWidth, gap) => {
+    mockWidth = width
+    const { getByTestId, queryByTestId } = await render(page(true, jest.fn()))
+    expect(getByTestId('quests-root')).toHaveStyle({ flexDirection: 'row', gap })
+    expect(getByTestId('quests-desktop-sidebar-slot')).toHaveStyle({ width: sidebarWidth })
+    expect(queryByTestId('quests-mobile-sidebar')).toBeNull()
+  },
+)
+
+it('uses the drawer at 1023 px without reserving a column', async () => {
+  mockWidth = 1023
+  const close = jest.fn()
+  const { getByTestId, rerender } = await render(page(false, close))
+  expect(getByTestId('quests-desktop-sidebar-slot', { includeHiddenElements: true })).toHaveStyle({ width: 0 })
+  await rerender(page(true, close))
+  expect(getByTestId('quests-mobile-sidebar')).toBeTruthy()
 })
 
 it('preserves one web navigation mount and its state through close/reopen and responsive changes', async () => {

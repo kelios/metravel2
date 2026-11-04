@@ -3,7 +3,9 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import NavigationIcon from '@/components/layout/NavigationIcon';
+import { QUEST_PUBLIC_NAV_LAYOUT } from '@/components/quests/questPageColumnsLayout';
 import { translate as i18nT } from '@/i18n';
+import { breakpointLayoutProps } from '@/utils/breakpointLayout';
 import type { QuestThemeEntry } from './questsShared';
 
 const EMPTY_THEMES: QuestThemeEntry[] = [];
@@ -61,6 +63,33 @@ type ToolbarChipProps = {
     active?: boolean;
     disabled?: boolean;
 };
+
+export function QuestFilterToolbarActions({ styles, colors, viewMode, onToggleViewMode, onOpenFilterDrawer }: Pick<
+    QuestsMobileToolbarProps, 'styles' | 'colors' | 'viewMode' | 'onToggleViewMode' | 'onOpenFilterDrawer'
+>) {
+    return (
+        <View {...breakpointLayoutProps(QUEST_PUBLIC_NAV_LAYOUT, 'catalogToolbar')} style={styles.headerToggleRow} testID="quests-mobile-controls">
+            <Pressable
+                style={[styles.headerIconBtn, viewMode === 'map' && styles.headerIconBtnActive]}
+                onPress={onToggleViewMode}
+                accessibilityRole="button"
+                accessibilityLabel={viewMode === 'map' ? i18nT('quests:screens.tabs.QuestsContentPanel.pokazat_spisok_kvestov_a0806030') : i18nT('quests:screens.tabs.QuestsContentPanel.pokazat_kvesty_na_karte_afca9878')}
+                testID="quests-toggle-view-mode"
+            >
+                <Feather name={viewMode === 'map' ? 'list' : 'map'} size={17} color={viewMode === 'map' ? colors.textOnPrimary : colors.text} />
+            </Pressable>
+            <Pressable
+                style={styles.headerIconBtn}
+                onPress={onOpenFilterDrawer}
+                accessibilityRole="button"
+                accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.vybrat_gorod_0bc4253e')}
+                testID="quests-open-filters"
+            >
+                <Feather name="filter" size={17} color={colors.text} />
+            </Pressable>
+        </View>
+    );
+}
 
 /**
  * Чип ленты: прозрачная зона касания 44px, внутри — пилюля 32px. `hitSlop`
@@ -125,33 +154,7 @@ function QuestsMobileToolbar({
         <View style={styles.contentHeader} testID="quests-content-header">
             <View style={styles.mobileToolbarRow}>
                 <View style={styles.mobileSearchSlot}>{searchField}</View>
-                {/* Серверный кадр всегда узкий: на ≥768px `app/global.css` прячет
-                    этот контейнер и ленту чипов, а поиск остаётся видимым — так
-                    кадр до гидратации совпадает с desktop-шапкой. */}
-                <View style={styles.headerToggleRow} testID="quests-mobile-controls">
-                    <Pressable
-                        style={[styles.headerIconBtn, viewMode === 'map' && styles.headerIconBtnActive]}
-                        onPress={onToggleViewMode}
-                        accessibilityRole="button"
-                        accessibilityLabel={viewMode === 'map' ? i18nT('quests:screens.tabs.QuestsContentPanel.pokazat_spisok_kvestov_a0806030') : i18nT('quests:screens.tabs.QuestsContentPanel.pokazat_kvesty_na_karte_afca9878')}
-                        testID="quests-toggle-view-mode"
-                    >
-                        <Feather
-                            name={viewMode === 'map' ? 'list' : 'map'}
-                            size={17}
-                            color={viewMode === 'map' ? colors.textOnPrimary : colors.text}
-                        />
-                    </Pressable>
-                    <Pressable
-                        style={styles.headerIconBtn}
-                        onPress={onOpenFilterDrawer}
-                        accessibilityRole="button"
-                        accessibilityLabel={i18nT('quests:screens.tabs.QuestsContentPanel.vybrat_gorod_0bc4253e')}
-                        testID="quests-open-filters"
-                    >
-                        <Feather name="filter" size={17} color={colors.text} />
-                    </Pressable>
-                </View>
+                <QuestFilterToolbarActions {...{ styles, colors, viewMode, onToggleViewMode, onOpenFilterDrawer }} />
             </View>
 
             <ScrollView

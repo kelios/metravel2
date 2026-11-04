@@ -7,6 +7,7 @@ import { useBreakpoints } from '@/hooks/useResponsive'
 import { useTheme, useThemedColors } from '@/hooks/useTheme'
 import { useQuestsList } from '@/hooks/useQuestsApi'
 import QuestsSidebar from '@/screens/tabs/QuestsSidebar'
+import { getQuestCatalogSidebarGeometry } from '@/screens/tabs/QuestsStyleMetrics'
 import {
   ALL_QUESTS_ID, BIKE_FILTER_ID, KIDS_FILTER_ID, NEARBY_ID, REVIEWED_FILTER_ID,
   buildQuestCityCatalog, filterBikeQuests,
@@ -30,7 +31,8 @@ export default function QuestPublicNavigationProvider({ selectedCityId, viewMode
   const router = useRouter()
   const colors = useThemedColors()
   const { activeSeasonalTheme } = useTheme()
-  const { width, isMobile } = useBreakpoints()
+  const { width } = useBreakpoints()
+  const { overlay } = getQuestCatalogSidebarGeometry(width)
   const { quests } = useQuestsList()
   const catalog = useMemo(() => buildQuestCityCatalog(quests), [quests])
   const aliases = useMemo(() => buildQuestCityAliasMap(quests), [quests])
@@ -78,6 +80,6 @@ export default function QuestPublicNavigationProvider({ selectedCityId, viewMode
     spacingMd={DESIGN_TOKENS.spacing.md} onSelectCity={navigateToSelection}
     onSetViewMode={showMap} onToggleCountryGroup={countries.toggleCountryGroup}
     onToggleAllCountryGroups={countries.toggleAllCountryGroups}
-    onCloseDrawer={isMobile ? onCloseDrawer : undefined} testID={testID}
+    onCloseDrawer={overlay ? onCloseDrawer : undefined} testID={testID}
   />
 }

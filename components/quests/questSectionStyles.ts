@@ -4,15 +4,14 @@ import { asBottomDimension } from '@/components/layout/bottomChromeInset'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { LAYOUT } from '@/constants/layout'
 import type { ThemedColors } from '@/hooks/useTheme'
-import { getQuestCatalogSidebarWidth } from '@/screens/tabs/QuestsStyleMetrics'
+import { getQuestCatalogSidebarGeometry } from '@/screens/tabs/QuestsStyleMetrics'
 import { webStyle, webViewStyle } from '@/utils/webProps'
 
 const { spacing, radii } = DESIGN_TOKENS
 
 /** Shared geometry for catalogue, landing and map navigation. */
 export function getQuestSectionStyles(colors: ThemedColors, screenWidth: number) {
-  const isMobile = screenWidth < 768
-  const sidebarWidth = getQuestCatalogSidebarWidth(screenWidth)
+  const { overlay, width: sidebarWidth, gap } = getQuestCatalogSidebarGeometry(screenWidth)
   const drawerTop = LAYOUT.headerHeight + spacing.sm
 
   return StyleSheet.create({
@@ -20,14 +19,15 @@ export function getQuestSectionStyles(colors: ThemedColors, screenWidth: number)
       flex: 1,
       minHeight: 0,
       backgroundColor: colors.background,
-      flexDirection: isMobile ? 'column' : 'row',
+      flexDirection: overlay ? 'column' : 'row',
+      gap,
     },
     desktopSidebarSlot: {
-      display: isMobile ? 'none' : 'flex',
+      display: overlay ? 'none' : 'flex',
       flexGrow: 0,
       flexShrink: 0,
-      flexBasis: isMobile ? 0 : sidebarWidth,
-      width: isMobile ? 0 : sidebarWidth,
+      flexBasis: sidebarWidth,
+      width: sidebarWidth,
       minHeight: 0,
       flexDirection: 'row',
     },

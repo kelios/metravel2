@@ -7,6 +7,7 @@ import { DESIGN_TOKENS, getThemedColors } from '@/constants/designSystem';
 import { getStyles } from '@/screens/tabs/QuestsScreen.styles';
 import { getQuestsMapStyles } from '@/screens/tabs/QuestsMapSection.styles';
 import { getQuestsSidebarStyles } from '@/screens/tabs/QuestsSidebar.styles';
+import { getQuestSectionStyles } from '@/components/quests/questSectionStyles';
 
 const ROOT = path.resolve(__dirname, '../../..');
 const originalPlatform = Platform.OS;
@@ -115,8 +116,10 @@ it('keeps only shared loading/layout styles in core and drops the unread actionB
     const sidebarKeys = Object.keys(getQuestsSidebarStyles(colors, 390));
     expect(mapKeys).toHaveLength(5);
     expect(sidebarKeys).toHaveLength(38);
-    for (const key of [...mapKeys, ...sidebarKeys, 'actionBtn']) expect(core).not.toHaveProperty(key);
-    for (const key of ['mapSection', 'mapLoading', 'sidebarOverlay', 'sidebarMobile', 'desktopSidebarSlot']) {
+    for (const key of [...mapKeys, ...sidebarKeys, 'actionBtn', 'sidebarOverlay', 'sidebarMobile', 'desktopSidebarSlot']) {
+        expect(core).not.toHaveProperty(key);
+    }
+    for (const key of ['mapSection', 'mapLoading']) {
         expect(core).toHaveProperty(key);
     }
     expect(core.questCardBadgeText.fontSize).toBe(11);
@@ -139,10 +142,13 @@ describe.each(['web', 'android', 'ios'])('%s geometry and theme parity', (platfo
     it.each(viewports)('preserves width $width / height $height without changing dock reserves', ({ width, height, nativeMapHeight, sidebarWidth }) => {
         (Platform as { OS: string }).OS = platform;
         const mobile = width < 768;
+        const sidebarDrawer = platform === 'web' ? width < 1024 : mobile;
+        const embeddedWidth = platform === 'web' ? width < 1280 ? 280 : 320 : sidebarWidth;
         for (const isDark of [false, true]) {
             const colors = getThemedColors(isDark);
             const map = getQuestsMapStyles(colors, width, height);
             const sidebar = getQuestsSidebarStyles(colors, width);
+            const frame = getQuestSectionStyles(colors, width);
             expect(map.mapContainer.height).toBe(platform === 'web' && mobile ? WEB_MAP_HEIGHT : nativeMapHeight);
             expect(map.mapContainer).toEqual(expect.objectContaining({
                 minHeight: mobile ? 420 : undefined,
@@ -154,9 +160,10 @@ describe.each(['web', 'android', 'ios'])('%s geometry and theme parity', (platfo
             expect(map.geoBanner.backgroundColor).toBe(colors.warningSoft);
             expect(map.geoBannerText.color).toBe(colors.warningDark);
             expect(map.mapSearchAreaBtn.backgroundColor).toBe(colors.brand);
-            expect(sidebar.sidebar.width).toBe(mobile ? '100%' : sidebarWidth);
-            expect(sidebar.sidebarHeader.padding).toBe(mobile ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg);
-            expect(sidebar.cityItemIcon.width).toBe(mobile ? 28 : 32);
+            expect(sidebar.sidebar.width).toBe(sidebarDrawer ? '100%' : embeddedWidth);
+            expect(sidebar.sidebarHeader.padding).toBe(platform === 'web' || mobile ? DESIGN_TOKENS.spacing.md : DESIGN_TOKENS.spacing.lg);
+            expect(sidebar.cityItemIcon.width).toBe(sidebarDrawer ? 28 : 32);
+            expect(frame.desktopSidebarSlot.width).toBe(sidebarDrawer ? 0 : embeddedWidth);
             expect(sidebar.countryHeader.minHeight).toBe(DESIGN_TOKENS.touchTarget.minHeight);
             expect(sidebar.countryLabelActive.color).toBe(colors.brandText);
             expect(sidebar.sidebarActionPillActive.backgroundColor).toBe(colors.brand);
@@ -165,21 +172,20 @@ describe.each(['web', 'android', 'ios'])('%s geometry and theme parity', (platfo
             for (const dockPx of [0, 96]) {
                 const core = getStyles(colors, width, height, dockPx);
                 expect(core.mapLoading.height).toBe(map.mapContainer.height);
-                expect(core.desktopSidebarSlot.width).toBe(mobile ? 0 : sidebarWidth);
                 expect(core.contentBody.paddingBottom).toBe(!mobile ? DESIGN_TOKENS.spacing.lg
                     : platform === 'web'
                         ? `calc(max(var(--mt-dock-h, 0px), var(--mt-consent-h, 0px)) + ${DESIGN_TOKENS.spacing.xl}px)`
                         : dockPx + DESIGN_TOKENS.spacing.xl);
-                if (platform === 'web') expect(core.sidebarOverlay).toEqual(expect.objectContaining({ bottom: 'var(--mt-dock-h, 0px)' }));
             }
             if (platform === 'web') {
+                expect(frame.sidebarOverlay).toEqual(expect.objectContaining({ bottom: 'var(--mt-dock-h, 0px)' }));
                 expect(map.mapSearchAreaBtn).toEqual(expect.objectContaining({
                     top: `calc(${DESIGN_TOKENS.spacing.sm}px + env(safe-area-inset-top, 0px))`,
                     boxShadow: colors.boxShadows.modal,
                 }));
                 expect(sidebar.sidebar).toEqual(expect.objectContaining({
-                    maxHeight: mobile ? '100%' : '100vh',
-                    position: mobile ? 'relative' : 'sticky',
+                    maxHeight: sidebarDrawer ? '100%' : '100vh',
+                    position: sidebarDrawer ? 'relative' : 'sticky',
                     overflowX: 'hidden',
                     overflowY: 'auto',
                     boxShadow: colors.boxShadows.card,

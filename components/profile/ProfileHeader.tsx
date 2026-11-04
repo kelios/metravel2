@@ -15,6 +15,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import { optimizeImageUrl } from '@/utils/imageOptimization';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
+import { Heading } from '@/components/ui/Typography';
 import { UserProfileDto } from '@/api/user';
 import { openExternalUrl } from '@/utils/externalLinks';
 import { ProfileMenu } from './ProfileMenu';
@@ -393,9 +394,9 @@ export function ProfileHeader({
 
         <View style={styles.infoColumn} pointerEvents="box-none" testID="profile-header-info-column">
           <View style={styles.nameRow} testID="profile-header-name-row">
-            <Text style={styles.userName} numberOfLines={2}>
+            <Heading level={1} style={styles.userName} numberOfLines={2}>
               {user.name || i18nT('profile:components.profile.ProfileHeader.defaultUserName')}
-            </Text>
+            </Heading>
           </View>
           {(rankLabel || socialLinks.length > 0) ? (
             <View style={styles.metaRow} testID="profile-header-meta-row">

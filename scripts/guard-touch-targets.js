@@ -74,6 +74,7 @@ const INTERACTIVE_ELEMENTS = new Set([
   'TouchableWithoutFeedback',
   'TouchableNativeFeedback',
   'IconButton',
+  'CatalogFilterCloseButton',
   // Тот же `IconButton` под алиасом импорта (редактор статьи): гард сверяет
   // имя тега, поэтому алиас — отдельная запись.
   'UiIconButton',

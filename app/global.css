@@ -630,10 +630,6 @@ select:focus-visible {
  * Цвет иконки и подписи RN задаёт инлайн-стилем, отсюда `!important`.
  */
 @media (hover: hover) and (pointer: fine) {
-  [data-sidebar-link]:not([aria-current="page"]):not([aria-disabled="true"]):hover {
-    background-color: var(--color-primarySoft);
-  }
-
   [data-sidebar-link]:not([aria-current="page"]):not([aria-disabled="true"]):hover [data-sidebar-link-icon],
   [data-sidebar-link]:not([aria-current="page"]):not([aria-disabled="true"]):hover [data-sidebar-link-label] {
     color: var(--color-primaryText) !important;
@@ -781,31 +777,7 @@ select:focus-visible {
  * and apply the desktop spacing through CSS media queries before first paint;
  * React can then reveal live breakpoint state without moving existing content.
  */
-@media (max-width: 767px) {
-  [data-testid="quests-root"] {
-    flex-direction: column !important;
-  }
-
-  [data-testid="quests-desktop-sidebar-slot"] {
-    display: none !important;
-    flex-basis: 0 !important;
-    width: 0 !important;
-  }
-}
-
 @media (min-width: 768px) {
-  [data-testid="quests-root"] {
-    flex-direction: row !important;
-  }
-
-  [data-testid="quests-desktop-sidebar-slot"] {
-    display: flex !important;
-    flex: 0 0 340px !important;
-    flex-direction: row !important;
-    width: 340px !important;
-    min-height: 0 !important;
-  }
-
   /* Desktop-шапка каталога — один ряд высотой 36px: заголовок со счётчиком и
      чипами слева, поиск фиксированной ширины справа (QuestsScreen.styles.ts). */
   [data-testid="quests-content-header"] {
@@ -825,10 +797,6 @@ select:focus-visible {
 
   [data-testid="quests-search-input"] {
     font-size: 14px !important;
-  }
-
-  [data-testid="quests-mobile-controls"] {
-    display: none !important;
   }
 
   /* Мобильная шапка каталога (#2314): в серверном (всегда узком) кадре заголовок
@@ -960,13 +928,6 @@ select:focus-visible {
     min-width: 260px;
     margin-left: auto;
     padding: 16px 24px 12px 16px !important;
-  }
-}
-
-@media (min-width: 768px) and (max-width: 1023px) {
-  [data-testid="quests-desktop-sidebar-slot"] {
-    flex-basis: 260px !important;
-    width: 260px !important;
   }
 }
 
@@ -1779,16 +1740,19 @@ html[data-season] [data-header-logo-travel] {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  [data-navigation-link="true"]:not([aria-current="page"]):hover {
+  [data-navigation-link="true"]:not([aria-current="page"]):hover,
+  [data-sidebar-link]:not([aria-current="page"]):not([aria-disabled="true"]):hover {
     background-color: var(--color-primarySoft);
   }
 }
 
-[data-navigation-link="true"]:not([aria-current="page"]):active {
+[data-navigation-link="true"]:not([aria-current="page"]):active,
+[data-sidebar-link]:not([aria-current="page"]):not([aria-disabled="true"]):active {
   background-color: var(--color-primaryLight);
 }
 
-[data-navigation-link="true"]:focus-visible {
+[data-navigation-link="true"]:focus-visible,
+[data-sidebar-link]:focus-visible {
   outline: 2px solid var(--color-focusStrong);
   outline-offset: -2px;
 }

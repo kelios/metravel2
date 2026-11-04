@@ -53,6 +53,7 @@ export const createSettingsStyles = (
     },
     sectionTitle: {
       fontSize: 14,
+      lineHeight: 20,
       fontWeight: '700',
       color: colors.text,
     },

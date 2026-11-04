@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { View, Text, Platform, ScrollView } from 'react-native';
+import { View, Platform, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useRouter, type Href } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { buildLoginHref } from '@/utils/authNavigation';
 import { useFavorites } from '@/context/FavoritesContext';
 import EmptyState from '@/components/ui/EmptyState';
 import ScreenHeader from '@/components/ui/ScreenHeader';
+import { Heading } from '@/components/ui/Typography';
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import { confirmAction } from '@/utils/confirmAction';
 import { deleteCurrentUserAccount } from '@/api/user';
@@ -306,7 +307,7 @@ export default function SettingsScreen() {
                     {isWeb ? <ScreenHeader header={header} /> : null}
 
                     <View style={styles.section} {...SCREEN_CONTENT_FIRST_PROPS}>
-                    <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.profil_e0a36973')}</Text>
+                    <Heading level={2} style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.profil_e0a36973')}</Heading>
 
                     <ProfileSection
                         styles={styles}
@@ -358,17 +359,17 @@ export default function SettingsScreen() {
                         webFileInputRef={webFileInputRef}
                     />
 
-                    <Text style={styles.sectionTitle}>{i18nT('common:language.settingTitle')}</Text>
+                    <Heading level={2} style={styles.sectionTitle}>{i18nT('common:language.settingTitle')}</Heading>
 
                     <LanguageSection styles={styles} colors={colors} />
 
-                    <Text style={styles.sectionTitle}>{i18nT('offline:title')}</Text>
+                    <Heading level={2} style={styles.sectionTitle}>{i18nT('offline:title')}</Heading>
 
                     <OfflineSettingsSection styles={styles} colors={colors} userId={userId} />
 
                     <NotificationSettingsSection styles={styles} colors={colors} />
 
-                    <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.tema_920e1112')}</Text>
+                    <Heading level={2} style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.tema_920e1112')}</Heading>
 
                     <ThemeSection
                         styles={styles}
@@ -394,14 +395,14 @@ export default function SettingsScreen() {
                     {/* AND-17: Biometric authentication toggle (native only) */}
                     {showBiometricToggle ? (
                         <>
-                            <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.bezopasnost_e58cbb03')}</Text>
+                            <Heading level={2} style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.bezopasnost_e58cbb03')}</Heading>
                             <BiometricSection styles={styles} colors={colors} biometric={biometric} />
                         </>
                     ) : null}
 
                     {STRAVA_SETTINGS_ENABLED ? <StravaSettingsSection /> : null}
 
-                    <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.soobscheniya_79276690')}</Text>
+                    <Heading level={2} style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.soobscheniya_79276690')}</Heading>
 
                     <NavCardSection
                         styles={styles}
@@ -413,7 +414,7 @@ export default function SettingsScreen() {
                         onPress={() => router.push('/messages' as any)}
                     />
 
-                    <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.privatnost_i_dannye_1e79e641')}</Text>
+                    <Heading level={2} style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.privatnost_i_dannye_1e79e641')}</Heading>
 
                     {isWeb ? null : <AppTelemetrySection styles={styles} colors={colors} />}
 
@@ -449,7 +450,7 @@ export default function SettingsScreen() {
                         onPress={() => router.push('/security-journal' as any)}
                     />
 
-                    <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.akkaunt_72bc7b11')}</Text>
+                    <Heading level={2} style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.akkaunt_72bc7b11')}</Heading>
 
                     <AccountSection
                         styles={styles}
@@ -459,7 +460,7 @@ export default function SettingsScreen() {
                         handleDeleteAccount={handleDeleteAccount}
                     />
 
-                    <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.dannye_f2b03773')}</Text>
+                    <Heading level={2} style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.dannye_f2b03773')}</Heading>
 
                     <DataManagementSection
                         styles={styles}
@@ -470,7 +471,7 @@ export default function SettingsScreen() {
                         handleClearHistory={handleClearHistory}
                     />
 
-                    <Text style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.prilozhenie_853a0313')}</Text>
+                    <Heading level={2} style={styles.sectionTitle}>{i18nT('profile:app.tabs.settings.prilozhenie_853a0313')}</Heading>
 
                     <AppVersionSection
                         styles={styles}

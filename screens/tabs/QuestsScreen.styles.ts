@@ -12,7 +12,6 @@ import {
 import type { ThemedColors } from '@/hooks/useTheme';
 
 import { getQuestCatalogMapHeight } from './QuestsStyleMetrics';
-import { getQuestSectionStyles } from '@/components/quests/questSectionStyles';
 
 const { spacing, radii, typography, touchTarget } = DESIGN_TOKENS;
 const CONTROL_RADIUS = radii.sm;
@@ -74,7 +73,12 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
     };
 
     return StyleSheet.create({
-        ...getQuestSectionStyles(colors, screenWidth),
+        root: {
+            flex: 1,
+            minHeight: 0,
+            backgroundColor: colors.background,
+            flexDirection: isMobileW ? 'column' : 'row',
+        },
 
         /* ---- Right Content (Premium, atmospheric) ---- */
         content: {
@@ -225,6 +229,15 @@ export function getStyles(colors: ThemedColors, screenWidth: number, screenHeigh
             flexDirection: 'row',
             alignItems: 'center',
             gap: spacing.xs,
+        },
+        tabletFilterToolbar: {
+            width: '100%',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.xs,
+        },
+        tabletFilterSearch: {
+            flexBasis: 'auto',
         },
         mobileSearchSlot: {
             flex: 1,

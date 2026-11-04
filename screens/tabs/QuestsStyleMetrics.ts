@@ -1,10 +1,19 @@
 import { Platform } from 'react-native';
 
 import { asBottomDimension } from '@/components/layout/bottomChromeInset';
+import { getCatalogFilterPanelGeometry } from '@/components/layout/catalogFilterPanelGeometry';
+import { METRICS } from '@/constants/layout';
 
 /** Shared by the eager slot and the lazy sidebar. */
-export function getQuestCatalogSidebarWidth(screenWidth: number) {
-    return screenWidth >= 768 && screenWidth < 1024 ? 260 : 340;
+export function getQuestCatalogSidebarGeometry(screenWidth: number) {
+    if (Platform.OS === 'web') {
+        const geometry = getCatalogFilterPanelGeometry(screenWidth);
+        return { ...geometry, overlay: geometry.width === 0 };
+    }
+
+    const { tablet, largeTablet } = METRICS.breakpoints;
+    const overlay = screenWidth < tablet;
+    return { overlay, width: overlay ? 0 : screenWidth < largeTablet ? 260 : 340, gap: 0 };
 }
 
 /** The eager map fallback and the loaded map must occupy the same height. */

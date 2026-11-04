@@ -1,10 +1,10 @@
 import { memo, useMemo, useState } from 'react';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import NavigationIcon from '@/components/layout/NavigationIcon';
+import CatalogFilterCloseButton from '@/components/layout/CatalogFilterCloseButton';
 import type { NavigationIconName } from '@/constants/navigationIcons';
-import { useBreakpoints } from '@/hooks/useResponsive';
 import type { ThemedColors } from '@/hooks/useTheme';
 
 import type { City, NearbyCity, QuestThemeEntry } from './questsShared';
@@ -15,6 +15,7 @@ import { toCountrySelectionId } from '@/utils/questCatalogSelection';
 import { translate as i18nT } from '@/i18n'
 import { webTitleRef } from '@/utils/webProps'
 import { getQuestsSidebarStyles, type QuestsSidebarStyles } from './QuestsSidebar.styles';
+import { getQuestCatalogSidebarGeometry } from './QuestsStyleMetrics';
 
 const EMPTY_THEMES: QuestThemeEntry[] = [];
 
@@ -235,9 +236,7 @@ function QuestsSidebar({
     onCloseDrawer,
 }: QuestsSidebarProps) {
     const styles = useMemo(() => getQuestsSidebarStyles(colors, screenWidth), [colors, screenWidth]);
-    // #1826: только ширина — высоту сайдбар не читает, а подписка на неё
-    // перерисовывала его на каждый кадр изменения вьюпорта.
-    const { isMobile } = useBreakpoints();
+    const { overlay: isMobile } = getQuestCatalogSidebarGeometry(screenWidth);
     const iconSize = isMobile ? 16 : 18;
     const hasCountryGroups = citiesByCountry.length > 0;
     const isNearbySelected = selectedCityId === nearbyId;
@@ -258,23 +257,28 @@ function QuestsSidebar({
     const nearbyAccessibilityLabel = typeof nearbyQuestCount === 'number'
         ? i18nT('quests:screens.tabs.QuestsSidebar.ryadom_so_mnoy_value1_3b987cd8', { value1: pluralizeQuest(nearbyQuestCount) })
         : i18nT('quests:screens.tabs.QuestsSidebar.ryadom_so_mnoy_28d9b150');
+    const title = i18nT('quests:screens.tabs.QuestsSidebar.priklyucheniya_32619ed3');
+    const closeLabel = i18nT('quests:screens.tabs.QuestsSidebar.zakryt_menyu_8f129c26');
+    const isWeb = Platform.OS === 'web';
 
     return (
         <View style={styles.sidebar} testID={testID}>
             <View style={styles.sidebarHeader}>
                 <View style={styles.sidebarTitleRow}>
-                    <Text style={styles.sidebarTitle}>{i18nT('quests:screens.tabs.QuestsSidebar.priklyucheniya_32619ed3')}</Text>
-                    {onCloseDrawer && (
+                    <Text accessibilityRole="header" aria-level={2} style={styles.sidebarTitle}>{title}</Text>
+                    {onCloseDrawer && (isWeb ? (
+                        <CatalogFilterCloseButton label={closeLabel} onPress={onCloseDrawer} />
+                    ) : (
                         <Pressable
                             onPress={onCloseDrawer}
                             style={styles.sidebarCloseBtn}
                             accessibilityRole="button"
-                            accessibilityLabel={i18nT('quests:screens.tabs.QuestsSidebar.zakryt_menyu_8f129c26')}
+                            accessibilityLabel={closeLabel}
                             hitSlop={8}
                         >
                             <Feather name="x" size={20} color={colors.text} />
                         </Pressable>
-                    )}
+                    ))}
                 </View>
                 <Text style={styles.sidebarSubtitle}>
                     {i18nT('quests:screens.tabs.QuestsSidebar.raskroy_tayny_gorodov_cherez_zagadki_i_legen_d6d8c5ad')}</Text>

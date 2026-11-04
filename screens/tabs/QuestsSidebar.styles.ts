@@ -2,21 +2,21 @@ import type { CSSProperties } from 'react';
 import { StyleSheet, Platform } from 'react-native';
 
 import { asBottomDimension } from '@/components/layout/bottomChromeInset';
+import { CATALOG_FILTER_PANEL } from '@/components/layout/catalogFilterPanelGeometry';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { webTextStyle, webViewStyle } from '@/utils/webProps';
 
-import { getQuestCatalogSidebarWidth } from './QuestsStyleMetrics';
+import { getQuestCatalogSidebarGeometry } from './QuestsStyleMetrics';
 
 const { spacing, radii, typography, touchTarget } = DESIGN_TOKENS;
 const CONTROL_RADIUS = radii.sm;
 
 /** Private to the lazy sidebar; the eager catalog reserves only its slot. */
 export function getQuestsSidebarStyles(colors: ThemedColors, screenWidth: number) {
-    const isMobileW = screenWidth < 768;
-    const SIDEBAR_WIDTH = getQuestCatalogSidebarWidth(screenWidth);
-    const headerPadding = isMobileW ? spacing.md : spacing.lg;
-    const headerTopPadding = isMobileW ? spacing.lg : spacing.xl;
+    const { overlay: isMobileW, width: SIDEBAR_WIDTH } = getQuestCatalogSidebarGeometry(screenWidth);
+    const headerPadding = Platform.OS === 'web' ? CATALOG_FILTER_PANEL.padding : isMobileW ? spacing.md : spacing.lg;
+    const headerTopPadding = Platform.OS === 'web' ? CATALOG_FILTER_PANEL.padding : isMobileW ? spacing.lg : spacing.xl;
     const sectionPaddingX = isMobileW ? spacing.sm : spacing.md;
     const cityItemVertical = isMobileW ? spacing.xxs : spacing.xs;
     const cityIconSize = isMobileW ? 28 : 32;
@@ -93,11 +93,13 @@ export function getQuestsSidebarStyles(colors: ThemedColors, screenWidth: number
         },
         sidebarTitle: {
             color: colors.text,
-            fontSize: isMobileW ? 20 : 26,
-            fontWeight: '800',
+            ...(Platform.OS === 'web' ? typography.scale.h2 : {
+                fontSize: isMobileW ? 20 : 26,
+                fontWeight: '800',
+                letterSpacing: -0.6,
+                lineHeight: isMobileW ? 26 : 32,
+            }),
             marginBottom: spacing.xxs,
-            letterSpacing: -0.6,
-            lineHeight: isMobileW ? 26 : 32,
             flexShrink: 1,
         },
         sidebarCloseBtn: {

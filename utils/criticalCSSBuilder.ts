@@ -14,7 +14,12 @@ import { HEADING_LAYOUTS } from '@/components/ui/headingLayout';
 import { WEB_DESKTOP_FOOTER_LAYOUT, WEB_MOBILE_DOCK_LAYOUT, WEB_MOBILE_DOCK_LABEL_LAYOUT, WEB_MOBILE_DOCK_RESERVE_CSS, WEB_MOBILE_DOCK_SIDE_PADDING_CSS } from '@/components/layout/webMobileDockLayout';
 import { APP_DOWNLOAD_LAYOUT } from '@/components/appDownload/appDownloadLayout';
 import { MY_CREATED_TRIPS_LAYOUT } from '@/components/trips/myCreatedTripsLayout';
-import { QUEST_PAGE_COLUMNS_LAYOUT, QUEST_PUBLIC_NAV_LAYOUT } from '@/components/quests/questPageColumnsLayout';
+import {
+  QUEST_FILTER_FRAME_LAYOUT,
+  QUEST_FILTER_FRAME_WIDE_LAYOUT,
+  QUEST_PAGE_COLUMNS_LAYOUT,
+  QUEST_PUBLIC_NAV_LAYOUT,
+} from '@/components/quests/questPageColumnsLayout';
 import { ADVENT_SCREEN_LAYOUT } from '@/components/advent/adventScreenLayout';
 import { buildBreakpointLayoutCss } from '@/utils/breakpointLayout';
 import { getIconFontGuardCss } from '@/utils/iconFontShell';
@@ -281,6 +286,8 @@ export function buildCriticalCSS(): string {
     buildBreakpointLayoutCss(MY_CREATED_TRIPS_LAYOUT),
     buildBreakpointLayoutCss(QUEST_PAGE_COLUMNS_LAYOUT),
     buildBreakpointLayoutCss(QUEST_PUBLIC_NAV_LAYOUT),
+    buildBreakpointLayoutCss(QUEST_FILTER_FRAME_LAYOUT),
+    buildBreakpointLayoutCss(QUEST_FILTER_FRAME_WIDE_LAYOUT),
     // /advent: док-панель справа от дома с брейкпоинта шапки (768 px) уже в статическом кадре.
     buildBreakpointLayoutCss(ADVENT_SCREEN_LAYOUT),
     buildBreakpointLayoutCss(WEB_MOBILE_DOCK_LAYOUT),

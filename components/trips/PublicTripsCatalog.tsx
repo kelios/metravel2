@@ -6,10 +6,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   View,
   useWindowDimensions,
@@ -18,7 +16,9 @@ import { useRouter } from 'expo-router';
 import Feather from '@expo/vector-icons/Feather';
 
 import EmptyState from '@/components/ui/EmptyState';
+import IconButton from '@/components/ui/IconButton';
 import ScreenHeader from '@/components/ui/ScreenHeader';
+import { Body } from '@/components/ui/Typography';
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext';
 import PublicTripCard from '@/components/trips/PublicTripCard';
 import PublicTripFilters from '@/components/trips/PublicTripFilters';
@@ -122,15 +122,15 @@ function PublicTripsCatalog() {
           testID="public-trips-search-input"
         />
         {hasActiveSearch ? (
-          <Pressable
+          <IconButton
             onPress={() => setSearchQuery('')}
             style={styles.searchClear}
-            accessibilityRole="button"
-            accessibilityLabel={i18nT('trips:components.trips.PublicTripsCatalog.ochistit_poisk_3530b329')}
+            label={i18nT('trips:components.trips.PublicTripsCatalog.ochistit_poisk_3530b329')}
+            icon={<Feather name="x" size={16} color={colors.textMuted} />}
+            size="sm"
+            showTooltip={false}
             testID="public-trips-search-clear"
-          >
-            <Feather name="x" size={16} color={colors.textMuted} />
-          </Pressable>
+          />
         ) : null}
       </View>
       <PublicTripFilters
@@ -178,7 +178,9 @@ function PublicTripsCatalog() {
             <ActivityIndicator color={colors.primaryDark} />
           </View>
         ) : isError ? (
-          <Text style={styles.statusText}>{i18nT('trips:components.trips.PublicTripsCatalog.ne_udalos_zagruzit_katalog_poezdok_8ff8ecbf')}</Text>
+          <Body variant="small" muted accessibilityRole="alert" style={styles.statusText}>
+            {i18nT('trips:components.trips.PublicTripsCatalog.ne_udalos_zagruzit_katalog_poezdok_8ff8ecbf')}
+          </Body>
         ) : trips.length === 0 ? (
           <View {...SCREEN_CONTENT_FIRST_PROPS}>
             <EmptyState
@@ -259,15 +261,10 @@ const createStyles = (colors: ThemedColors) =>
       ...Platform.select({ web: { outlineStyle: 'none' } as any }),
     },
     searchClear: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      alignItems: 'center',
-      justifyContent: 'center',
-      ...Platform.select({ web: { cursor: 'pointer' as any } }),
+      backgroundColor: 'transparent',
     },
     center: { paddingVertical: 40, alignItems: 'center' },
-    statusText: { fontSize: 14, color: colors.textMuted, lineHeight: 20, paddingVertical: 16 },
+    statusText: { paddingVertical: 16 },
     grid: { flexDirection: 'row', flexWrap: 'wrap' },
     fullWidth: { width: '100%' },
   });

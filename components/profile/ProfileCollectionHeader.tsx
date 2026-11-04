@@ -7,6 +7,7 @@ import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsive } from '@/hooks/useResponsive';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import Button from '@/components/ui/Button';
+import { Body, Heading } from '@/components/ui/Typography';
 import { useIsScreenHeaderMobile } from '@/components/layout/ScreenHeaderContext';
 import { translate as i18nT } from '@/i18n'
 import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
@@ -142,6 +143,7 @@ export default function ProfileCollectionHeader({
         title: {
           fontSize: 18,
           fontWeight: '700',
+          lineHeight: 24,
           color: colors.text,
         },
         subtitle: {
@@ -217,8 +219,8 @@ export default function ProfileCollectionHeader({
 
       <View style={styles.headerRow}>
         <View style={styles.headerTitleBlock}>
-          <Text style={styles.title}>{title}</Text>
-          {!dense && <Text style={styles.subtitle}>{subtitle}</Text>}
+          <Heading level={2} style={styles.title}>{title}</Heading>
+          {!dense && <Body variant="small" muted style={styles.subtitle}>{subtitle}</Body>}
         </View>
 
         <View style={styles.headerActions}>

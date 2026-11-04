@@ -1,9 +1,14 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Platform, Pressable, View } from 'react-native'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { Platform, Pressable, View, type ViewInstance } from 'react-native'
 
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import { useBreakpoints } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
+import { getQuestCatalogSidebarGeometry } from '@/screens/tabs/QuestsStyleMetrics'
+import { breakpointLayoutProps } from '@/utils/breakpointLayout'
+import { webAccessibilityProps } from '@/utils/webProps'
+import { QUEST_FILTER_FRAME_LAYOUT } from './questPageColumnsLayout'
 import { getQuestSectionStyles } from './questSectionStyles'
 
 export type QuestSectionFrameProps = {
@@ -16,17 +21,20 @@ export type QuestSectionFrameProps = {
 
 /** Navigation chrome only: the page keeps its existing scroll host. */
 export function QuestSectionFrame({ sidebar, drawerSidebar, drawerOpen, onCloseDrawer, children }: QuestSectionFrameProps) {
-  const { width, isMobile } = useBreakpoints()
+  const { width } = useBreakpoints()
+  const { overlay } = getQuestCatalogSidebarGeometry(width)
   const colors = useThemedColors()
   const styles = useMemo(() => getQuestSectionStyles(colors, width), [colors, width])
-  const showDrawer = isMobile && drawerOpen
+  const showDrawer = overlay && drawerOpen
   const isWeb = Platform.OS === 'web'
-  const [sidebarMounted, setSidebarMounted] = useState(!isMobile || drawerOpen)
-  const mountSidebar = sidebarMounted || !isMobile || showDrawer
+  const drawerRef = useRef<(ViewInstance & HTMLElement) | null>(null)
+  useFocusTrap(drawerRef, { enabled: isWeb && showDrawer })
+  const [sidebarMounted, setSidebarMounted] = useState(!overlay || drawerOpen)
+  const mountSidebar = sidebarMounted || !overlay || showDrawer
 
   useEffect(() => {
-    if (isWeb && (!isMobile || showDrawer)) setSidebarMounted(true)
-  }, [isMobile, isWeb, showDrawer])
+    if (isWeb && (!overlay || showDrawer)) setSidebarMounted(true)
+  }, [overlay, isWeb, showDrawer])
 
   useEffect(() => {
     if (Platform.OS !== 'web' || !showDrawer) return undefined
@@ -35,6 +43,11 @@ export function QuestSectionFrame({ sidebar, drawerSidebar, drawerOpen, onCloseD
     const previousHtmlOverflow = html.style.overflow
     const previousBodyOverflow = body.style.overflow
     const previousBodyTouchAction = body.style.touchAction
+    // The lazy navigation may still be suspended when the shared focus trap opens.
+    const drawer = drawerRef.current
+    if (drawer instanceof HTMLElement && !drawer.contains(document.activeElement)) {
+      drawer.focus({ preventScroll: true })
+    }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !event.defaultPrevented) {
         event.preventDefault()
@@ -54,7 +67,7 @@ export function QuestSectionFrame({ sidebar, drawerSidebar, drawerOpen, onCloseD
   }, [onCloseDrawer, showDrawer])
 
   return (
-    <View style={styles.root} testID="quests-root">
+    <View {...breakpointLayoutProps(QUEST_FILTER_FRAME_LAYOUT, 'root')} style={styles.root} testID="quests-root">
       {showDrawer ? (
         <Pressable
           style={styles.sidebarOverlay}
@@ -66,9 +79,17 @@ export function QuestSectionFrame({ sidebar, drawerSidebar, drawerOpen, onCloseD
       ) : null}
       {isWeb ? (
         // One web host preserves navigation state through drawer close and resize.
-        <View style={showDrawer ? styles.sidebarMobile : styles.desktopSidebarSlot}
+        <View ref={drawerRef} style={showDrawer ? styles.sidebarMobile : styles.desktopSidebarSlot}
+          {...(showDrawer
+            ? webAccessibilityProps({
+              role: 'dialog',
+              'aria-modal': true,
+              'aria-label': i18nT('quests:screens.tabs.QuestsSidebar.priklyucheniya_32619ed3'),
+              tabIndex: -1,
+            })
+            : breakpointLayoutProps(QUEST_FILTER_FRAME_LAYOUT, 'aside'))}
           testID={showDrawer ? 'quests-mobile-sidebar' : 'quests-desktop-sidebar-slot'}>
-          {mountSidebar ? (isMobile ? drawerSidebar : sidebar) : null}
+          {mountSidebar ? (overlay ? drawerSidebar : sidebar) : null}
         </View>
       ) : (
         // Native keeps conditional mounts: hidden live Yoga trees are unsafe (#1563).

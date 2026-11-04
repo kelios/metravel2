@@ -1,11 +1,12 @@
 import { searchInputAccessibilityProps } from '@/utils/webProps'
 import { memo, useCallback, useMemo, useState, type ReactElement } from 'react';
-import { View, StyleSheet, Pressable, FlatList, ActivityIndicator, TextInput, Platform } from 'react-native';
+import { View, StyleSheet, FlatList, ActivityIndicator, TextInput, Platform } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
 import EmptyState from '@/components/ui/EmptyState';
+import IconButton from '@/components/ui/IconButton';
 import { isOrphanedMessageThread, type MessageThread } from '@/api/messages';
 import { confirmAction } from '@/utils/confirmAction';
 import ThreadRow from '@/components/messages/ThreadRow';
@@ -183,14 +184,14 @@ function ThreadList({
                         accessibilityLabel={i18nT('messages:components.messages.ThreadList.poisk_dialogov_8088fbb1')}
                     />
                     {search.length > 0 && (
-                        <Pressable
+                        <IconButton
                             onPress={() => setSearch('')}
                             style={styles.searchClear}
-                            accessibilityRole="button"
-                            accessibilityLabel={i18nT('messages:components.messages.ThreadList.ochistit_poisk_4c8b47a5')}
-                        >
-                            <Feather name="x" size={16} color={colors.textMuted} />
-                        </Pressable>
+                            label={i18nT('messages:components.messages.ThreadList.ochistit_poisk_4c8b47a5')}
+                            icon={<Feather name="x" size={16} color={colors.textMuted} />}
+                            size="sm"
+                            showTooltip={false}
+                        />
                     )}
                 </View>
             ) : (
@@ -348,13 +349,9 @@ const createStyles = (_colors: ThemedColors) =>
             paddingRight: DESIGN_TOKENS.spacing.md,
             ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
         },
-        // Крестик 16px в рамке 44×44: вся рамка — тач-цель.
         searchClear: {
-            width: SEARCH_FIELD_HEIGHT,
-            height: SEARCH_FIELD_HEIGHT,
+            backgroundColor: 'transparent',
             marginLeft: -DESIGN_TOKENS.spacing.md,
-            alignItems: 'center',
-            justifyContent: 'center',
         },
     });
 
