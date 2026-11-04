@@ -6,6 +6,7 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { useThemedColors } from '@/hooks/useTheme'
 import { useSafeAreaInsetsSafe as useSafeAreaInsets } from '@/hooks/useSafeAreaInsetsSafe'
+import CatalogFilterCloseButton from '@/components/layout/CatalogFilterCloseButton'
 import { useDockReservePx } from '@/components/layout/bottomChromeInset'
 import { useBottomSheetStore } from '@/stores/bottomSheetStore'
 import { useMapPanelStore } from '@/stores/mapPanelStore'
@@ -612,18 +613,11 @@ export const MapMobileLayout: React.FC<MapMobileLayoutProps> = ({
         ) : (
           <View style={styles.sheetHeaderSpacer} />
         )}
-        <Pressable
+        <CatalogFilterCloseButton
           testID="map-mobile-sheet-close"
           onPress={handleCloseSheet}
-          accessibilityRole="button"
-          accessibilityLabel={i18nT('common:action.close')}
-          style={({ pressed }) => [
-            styles.sheetCloseButton,
-            pressed && { opacity: 0.7 },
-          ]}
-        >
-          <Feather name="x" size={20} color={colors.text} />
-        </Pressable>
+          style={styles.sheetCloseButton}
+        />
       </MapMobileSheetHeader>
 
       <View style={styles.sheetBody}>

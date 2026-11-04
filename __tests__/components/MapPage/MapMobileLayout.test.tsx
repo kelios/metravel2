@@ -187,6 +187,11 @@ describe('MapMobileLayout', () => {
     await waitFor(() => expect(clearSelectedPlace).toHaveBeenCalled())
     expect(screen.getByTestId('filters-block-main')).toBeTruthy()
     expect(mockSnapToCollapsed).not.toHaveBeenCalled()
+
+    const close = screen.getByTestId('map-mobile-sheet-close')
+    expect(close.props.accessibilityRole).toBe('button')
+    await fireEvent.press(close)
+    expect(mockSnapToCollapsed).toHaveBeenCalledTimes(1)
   })
 
   it('passes loading state to the mobile places tab while map results refresh', async () => {

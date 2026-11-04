@@ -10,9 +10,10 @@ type Props = {
   label?: string
   compact?: boolean
   style?: StyleProp<ViewStyle>
+  testID?: string
 }
 
-export default function CatalogFilterCloseButton({ onPress, label, compact = false, style }: Props) {
+export default function CatalogFilterCloseButton({ onPress, label, compact = false, style, testID }: Props) {
   const colors = useThemedColors()
   return (
     <IconButton
@@ -21,6 +22,7 @@ export default function CatalogFilterCloseButton({ onPress, label, compact = fal
       onPress={onPress}
       size="sm"
       style={style}
+      testID={testID}
     />
   )
 }
