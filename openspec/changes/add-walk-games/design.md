@@ -21,3 +21,9 @@ Stage and checksum-verify all objects for the new revision before replacing the 
 The version-1 manifest optionally lists quiz descriptors `{ id, dataUrl }` for `belarus`, `poland`, and `world`. Each immutable Russian pack has `{ schemaVersion, id, title, locale, questions }`. Each of its ten questions has three or four unique choices, one correct choice, a short explanation and an editorial source URL. Invalid quiz descriptors cannot suppress published walks or coloring.
 
 Fetch only the selected pack and keep its loaded data in the active page. Lock the first answer before showing the explanation, advance explicitly, then show the score. Replay uses the already loaded pack. The active text round requires no further network, including replay. An initial network failure offers retry or return to the catalog.
+
+## Route task media
+
+The version-1 manifest optionally lists `routeTasks` descriptors with `{ id, travelId, travelSlug, title, locale, dataUrl }`, one per article. The catalog links to the article's description, where the matched edition appears above the article text. Its immutable JSON is `{ schemaVersion: 1, id, travelId, tasks: [{ id, pointId, title, instruction }] }`. V1 packs contain three to five tasks with unique IDs and point IDs. The article validates the pack identity and reads stop labels from its published route by ID. If a stop was deleted, the other stops remain playable. Articles without a descriptor have no section or pack request.
+
+Each stop opens independently. Marks live in component state for the current article visit, including while the article text is collapsed. The only network operation for the game is a public JSON read. A pack load failure offers retry.

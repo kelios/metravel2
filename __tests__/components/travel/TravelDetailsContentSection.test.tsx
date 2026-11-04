@@ -54,6 +54,13 @@ jest.mock('@/components/travel/TravelDescription', () => {
   }
 })
 
+jest.mock('@/components/travel/details/sections/TravelRouteTasksSlot', () => {
+  const { View } = require('react-native')
+  return function MockTravelRouteTasksSlot() {
+    return <View testID="route-tasks-slot" />
+  }
+})
+
 jest.mock('@/components/travel/details/sections/TravelRegisterCtaSection', () => {
   const { Text } = require('react-native')
   return function MockTravelRegisterCtaSection() {
@@ -167,6 +174,21 @@ describe('TravelDetailsContentSection', () => {
     const card = screen.getByTestId('collapsible-Содержание')
     expect(card.props['data-cover']).toBeNull()
     expect(screen.queryByTestId('collapsible-Тестовый маршрут')).toBeNull()
+  })
+
+  it('keeps the route game in the description jump target outside the collapsible article body', async () => {
+    await render(
+      <TravelDetailsContentSection
+        travel={createTravel()}
+        isMobile
+        forceOpenKey="description"
+        anchors={createAnchors()}
+      />,
+      { wrapper: withQueryClient() },
+    )
+
+    expect(within(screen.getByTestId('travel-details-description')).getByTestId('route-tasks-slot')).toBeTruthy()
+    expect(within(screen.getByTestId('collapsible-Содержание')).queryByTestId('route-tasks-slot')).toBeNull()
   })
 
   // #2774: the article body comes first; the save CTA with its adjacent share

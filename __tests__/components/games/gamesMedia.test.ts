@@ -1,5 +1,6 @@
 import { queryKeys } from '@/api/queryKeys'
-import { parseColoringSheets, parseGamesMediaManifest, parseRoadQuiz, parseWalkCards } from '@/components/games/gamesMedia'
+import { parseColoringSheets, parseGamesMediaManifest, parseRoadQuiz, parseRouteTasks, parseWalkCards } from '@/components/games/gamesMedia'
+import { matchRouteTaskStops } from '@/components/games/routeTaskStops'
 
 const revision = 'belarus-poland-01-059f92c4b3de'
 const root = `/travel-games-media/${revision}`
@@ -31,11 +32,20 @@ const questions = Array.from({ length: 10 }, (_, index) => ({
   explanation: 'Короткое объяснение.', sourceUrl: 'https://example.com/reference',
 }))
 const edition = { schemaVersion: 1, id: 'belarus', locale: 'ru', title: 'Беларусь', questions }
+const route = {
+  id: 'pilot', travelId: 201, travelSlug: 'nesvizh-and-mir', title: 'Несвиж и Мир',
+  locale: 'ru', dataUrl: `${root}/route-pilot.json`,
+} as const
+const routeTasks = [5246, 5247, 5250].map(pointId => ({
+  id: `stop-${pointId}`, pointId, title: 'Осмотритесь', instruction: 'Сравните детали.',
+}))
+const routePack = { schemaVersion: 1, id: route.id, travelId: route.travelId, tasks: routeTasks }
 
 describe('games media publication contract', () => {
   it('reads the published revision and associates a sheet with its stable travel ID', () => {
     expect(parseGamesMediaManifest(manifest)).toEqual({
-      revision, coloringIndexUrl: manifest.coloringIndexUrl, collections: manifest.collections, decks: [], quizzes: [],
+      revision, coloringIndexUrl: manifest.coloringIndexUrl, collections: manifest.collections,
+      decks: [], quizzes: [], routeTasks: [],
     })
     expect(parseColoringSheets({ schemaVersion: 1, sheets: [sheet] }, revision)).toEqual([sheet])
   })
@@ -128,5 +138,60 @@ describe('games media publication contract', () => {
     expect(() => parseRoadQuiz({
       ...edition, questions: [{ ...questions[0], ...change }, ...questions.slice(1)],
     }, 'belarus')).toThrow()
+  })
+
+  it('ignores malformed or duplicate route descriptors without suppressing other formats', () => {
+    const parsed = parseGamesMediaManifest({
+      ...manifest, decks: [kids], quizzes: [belarus],
+      routeTasks: [
+        { ...route, travelId: '201' },
+        { ...route, travelSlug: '../other' },
+        { ...route, travelSlug: 'undefined' },
+        { ...route, travelSlug: '201' },
+        { ...route, dataUrl: '/travel-games-media/old/route-pilot.json' },
+        route,
+        { ...route, id: 'second' },
+        { ...route, travelId: 147 },
+        { ...route, id: 'different-article', travelId: 147 },
+      ],
+    })
+    const { travelSlug, ...descriptor } = route
+    expect(parsed.routeTasks).toEqual([{ ...descriptor, travelPath: `/travels/${travelSlug}` }])
+    expect(parsed.decks).toEqual([kids])
+    expect(parsed.quizzes).toEqual([belarus])
+    expect(parsed.collections).toEqual(manifest.collections)
+  })
+
+  it.each([
+    { schemaVersion: 2 },
+    { travelId: 147 },
+    { id: 'another-edition' },
+    { tasks: routeTasks.slice(1) },
+    { tasks: [...routeTasks.slice(1), routeTasks[1]] },
+    { tasks: [{ ...routeTasks[0], pointId: routeTasks[1].pointId }, ...routeTasks.slice(1)] },
+    { tasks: [{ ...routeTasks[0], pointId: '5246' }, ...routeTasks.slice(1)] },
+    { tasks: [{ ...routeTasks[0], instruction: ' ' }, ...routeTasks.slice(1)] },
+  ])('rejects a malformed or mismatched route pack: %j', change => {
+    expect(() => parseRouteTasks({ ...routePack, ...change }, route)).toThrow()
+  })
+
+  it('matches published IDs in edition order, without coordinates or positional fallback', () => {
+    const tasks = parseRouteTasks(routePack, route)
+    const mir = { id: 5247, name: '', address: ' Мирский замок ' }
+    expect(matchRouteTaskStops(tasks, [
+      mir, 'Old string-only point', { id: 999, name: 'Несвижский замок' },
+      { id: 5246, name: ' Несвижский замок ' },
+    ])).toEqual([
+      { ...routeTasks[0], stopName: 'Несвижский замок' },
+      { ...routeTasks[1], stopName: 'Мирский замок' },
+    ])
+    expect(matchRouteTaskStops(tasks, [])).toEqual([])
+  })
+
+  it('separates route task cache keys by edition URL, ID and article ID', () => {
+    const key = queryKeys.routeTasks(route.dataUrl, route.id, route.travelId)
+    expect(key).not.toEqual(queryKeys.routeTasks(kids.dataUrl, route.id, route.travelId))
+    expect(key).not.toEqual(queryKeys.routeTasks(route.dataUrl, 'other', route.travelId))
+    expect(key).not.toEqual(queryKeys.routeTasks(route.dataUrl, route.id, 147))
   })
 })

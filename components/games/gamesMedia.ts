@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 
 import { queryKeys } from '@/api/queryKeys'
 import { fetchWithTimeout } from '@/utils/fetchWithTimeout'
+import { buildTravelPath } from '@/utils/routePaths'
 
 const MEDIA_ROOT = '/travel-games-media'
 const MANIFEST_URL = `${MEDIA_ROOT}/manifest.json`
@@ -24,12 +25,15 @@ export type QuizQuestion = {
   sourceUrl: string
 }
 type QuizEdition = { title: string; locale: 'ru'; questions: QuizQuestion[] }
+export type RouteTaskEdition = { id: string; travelId: number; travelPath: string; title: string; locale: 'ru'; dataUrl: string }
+export type RouteTask = { id: string; pointId: number; title: string; instruction: string }
 type GamesMediaManifest = {
   revision: string
   coloringIndexUrl: string
   collections: ColoringCollection[]
   decks: WalkDeck[]
   quizzes: RoadQuiz[]
+  routeTasks: RouteTaskEdition[]
 }
 
 const QUIZ_QUESTION_COUNT = 10
@@ -94,6 +98,34 @@ function parseRoadQuizzes(payload: unknown, revision: string): RoadQuiz[] {
   return quizzes
 }
 
+function parseRouteTaskEditions(payload: unknown, revision: string): RouteTaskEdition[] {
+  if (!Array.isArray(payload)) return []
+  const editions: RouteTaskEdition[] = []
+  const ids = new Set<string>()
+  const travelIds = new Set<number>()
+  const travelPaths = new Set<string>()
+  for (const entry of payload) {
+    const edition = record(entry)
+    if (!edition || !id(edition.id) || ids.has(edition.id) ||
+        !positiveInteger(edition.travelId) || travelIds.has(edition.travelId) ||
+        !id(edition.travelSlug) || /^\d+$/.test(edition.travelSlug) ||
+        !label(edition.title) || edition.locale !== 'ru' ||
+        !mediaPath(edition.dataUrl, revision, 'json')) continue
+
+    const travelPath = buildTravelPath(edition.travelSlug)
+    if (!travelPath || travelPaths.has(travelPath)) continue
+
+    ids.add(edition.id)
+    travelIds.add(edition.travelId)
+    travelPaths.add(travelPath)
+    editions.push({
+      id: edition.id, travelId: edition.travelId, travelPath,
+      title: edition.title, locale: edition.locale, dataUrl: edition.dataUrl,
+    })
+  }
+  return editions
+}
+
 export function parseGamesMediaManifest(payload: unknown): GamesMediaManifest {
   const manifest = record(payload)
   if (!manifest || manifest.schemaVersion !== 1 || !id(manifest.revision) ||
@@ -115,7 +147,28 @@ export function parseGamesMediaManifest(payload: unknown): GamesMediaManifest {
     revision, coloringIndexUrl, collections,
     decks: parseWalkDecks(manifest.decks, revision),
     quizzes: parseRoadQuizzes(manifest.quizzes, revision),
+    routeTasks: parseRouteTaskEditions(manifest.routeTasks, revision),
   }
+}
+
+export function parseRouteTasks(payload: unknown, edition: Pick<RouteTaskEdition, 'id' | 'travelId'>): RouteTask[] {
+  const pack = record(payload)
+  if (!pack || pack.schemaVersion !== 1 || pack.id !== edition.id || pack.travelId !== edition.travelId ||
+      !Array.isArray(pack.tasks) || pack.tasks.length < 3 || pack.tasks.length > 5) {
+    throw new Error('Invalid route task edition')
+  }
+  const ids = new Set<string>()
+  const pointIds = new Set<number>()
+  return pack.tasks.map((entry: unknown) => {
+    const task = record(entry)
+    if (!task || !id(task.id) || ids.has(task.id) || !positiveInteger(task.pointId) ||
+        pointIds.has(task.pointId) || !label(task.title) || !label(task.instruction)) {
+      throw new Error('Invalid route task')
+    }
+    ids.add(task.id)
+    pointIds.add(task.pointId)
+    return { id: task.id, pointId: task.pointId, title: task.title, instruction: task.instruction }
+  })
 }
 
 function isSourceUrl(value: unknown): value is string {
@@ -248,6 +301,16 @@ export function useRoadQuiz(quiz: RoadQuiz) {
   return useQuery({
     queryKey: queryKeys.roadQuiz(quiz.dataUrl, quiz.id),
     queryFn: async ({ signal }) => parseRoadQuiz(await loadJson(quiz.dataUrl, signal), quiz.id),
+    staleTime: Infinity,
+    retry: false,
+    networkMode: 'always',
+  })
+}
+
+export function useRouteTasks(edition: RouteTaskEdition) {
+  return useQuery({
+    queryKey: queryKeys.routeTasks(edition.dataUrl, edition.id, edition.travelId),
+    queryFn: async ({ signal }) => parseRouteTasks(await loadJson(edition.dataUrl, signal), edition),
     staleTime: Infinity,
     retry: false,
     networkMode: 'always',

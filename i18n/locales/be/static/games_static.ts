@@ -1,6 +1,12 @@
 export const gamesStaticResources = {
   quizTitle: "Дарожныя віктарыны",
   quizNewTab: "Віктарына адкрыецца ў новай укладцы.",
+  routeTasksTitle: "Заданні на маршруце",
+  routeTasksNote: "Адкрывайце прыпынкі ў любым парадку. Заданні на рускай мове.",
+  routeTaskDone: "Зрабілі",
+  routeTaskDoneStatus: "Зроблена",
+  routeTaskSkippedStatus: "Прапушчана",
+  routeTasksUnavailable: "Прыпынкі гэтага выпуску больш недаступныя.",
   title: "Гульні і віктарыны",
   seoTitle: "Гульні для прагулкі, калоды і размалёўкі | MeTravel",
   description: "Адказвайце на пытанні ў дарозе, гуляйце ўдваіх на прагулцы з аднаго тэлефона або раздрукуйце калоду. Тут таксама можна спампаваць размалёўкі па фотаздымках MeTravel.",

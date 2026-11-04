@@ -1,6 +1,12 @@
 export const gamesStaticResources = {
   quizTitle: "Дорожні вікторини",
   quizNewTab: "Вікторина відкриється в новій вкладці.",
+  routeTasksTitle: "Завдання на маршруті",
+  routeTasksNote: "Відкривайте зупинки в будь-якому порядку. Завдання російською мовою.",
+  routeTaskDone: "Зробили",
+  routeTaskDoneStatus: "Виконано",
+  routeTaskSkippedStatus: "Пропущено",
+  routeTasksUnavailable: "Зупинки цього випуску більше недоступні.",
   title: "Ігри та вікторини",
   seoTitle: "Ігри для прогулянки, колоди й розмальовки | MeTravel",
   description: "Відповідайте на запитання в дорозі, грайте вдвох на прогулянці з одного телефона або роздрукуйте колоду. Тут також можна завантажити розмальовки за фотографіями MeTravel.",

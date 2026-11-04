@@ -1,11 +1,12 @@
 import Feather from '@expo/vector-icons/Feather'
-import { useLocalSearchParams } from 'expo-router'
+import { useLocalSearchParams, type Href } from 'expo-router'
 import { ScrollView, StyleSheet, View } from 'react-native'
 
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import ResponsiveContainer from '@/components/layout/ResponsiveContainer'
 import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 import Button from '@/components/ui/Button'
+import LinkPressable from '@/components/ui/LinkPressable'
 import { Body, Heading } from '@/components/ui/Typography'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useHydrationReady } from '@/hooks/useHydrationReady'
@@ -18,7 +19,7 @@ import RoadQuizSection from './RoadQuizSection'
 import WalkDeckPanel from './WalkDeckPanel'
 import { useGamesMediaManifest } from './gamesMedia'
 
-const { radii, spacing } = DESIGN_TOKENS
+const { radii, spacing, touchTarget } = DESIGN_TOKENS
 
 export default function WalkGamesScreen() {
   const { t } = useTranslation()
@@ -63,12 +64,28 @@ export default function WalkGamesScreen() {
             <RoadQuizSection quizzes={data.quizzes} />
             <View style={[styles.group, styles.divided, { borderColor: colors.border }]}>
               <Heading level={2}>{t('gamesStatic:walkTitle')}</Heading>
-              {data.decks.length === 0 ? <Body muted>{t('gamesStatic:walkEmpty')}</Body> : (
+              {data.decks.length === 0 && data.routeTasks.length === 0 && <Body muted>{t('gamesStatic:walkEmpty')}</Body>}
+              {data.decks.length > 0 && (
                 <>
                   <Body muted>{t('gamesStatic:walkNote')}</Body>
                   <View style={styles.decks}>
                     {data.decks.map(deck => <WalkDeckPanel key={deck.id} deck={deck} />)}
                   </View>
+                </>
+              )}
+              {data.routeTasks.length > 0 && (
+                <>
+                  <Heading level={3}>{t('gamesStatic:routeTasksTitle')}</Heading>
+                  <Body muted>{t('gamesStatic:routeTasksNote')}</Body>
+                  {data.routeTasks.map(edition => (
+                    <LinkPressable
+                      key={edition.id}
+                      href={`${edition.travelPath}#description` as Href}
+                      style={{ ...styles.book, minHeight: touchTarget.minHeight, backgroundColor: colors.surface, borderColor: colors.border }}
+                    >
+                      <Body lang={edition.locale} style={{ color: colors.primaryText }}>{edition.title}</Body>
+                    </LinkPressable>
+                  ))}
                 </>
               )}
             </View>

@@ -17,6 +17,7 @@ import YouTubeSectionSlot from './YouTubeSectionSlot'
 import DeferredQuestForCitySection from './DeferredQuestForCitySection'
 import TravelLinkGraphSection from './TravelLinkGraphSection'
 import TravelColoringSlot from './TravelColoringSlot'
+import TravelRouteTasksSlot from './TravelRouteTasksSlot'
 import { useTravelLoaderPayload } from '../travelLoaderData'
 import { TravelDetailsDeferredTransition } from '@/components/travel/details/TravelDetailsDeferredTransition'
 import TravelRegisterCtaSection from './TravelRegisterCtaSection'
@@ -124,6 +125,7 @@ export const TravelDetailsContentSection: React.FC<{
           accessibilityLabel={i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.opisanie_marshruta_98e0c78f')}
           {...(Platform.OS === 'web' ? { dataSet: { sectionKey: 'description' } } : {})}
         >
+          <TravelRouteTasksSlot key={travel.id} travelId={travel.id} points={travel.travelAddress} />
           {/* #2904: the card heading is «Содержание» — it must not repeat the page
               h1 or the hero cover right below the first screen. */}
           <CollapsibleSection
