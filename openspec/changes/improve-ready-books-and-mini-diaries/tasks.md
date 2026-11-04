@@ -15,5 +15,5 @@
 ## 3. Validation
 
 - [x] 3.1 Complete targeted source checks, independent review, and web acceptance after deployment.
-- [ ] 3.2 Visually accept all 12 pages of the exact revised PDFs, then verify the live covers, previews and guest downloads on mobile and desktop.
+- [x] 3.2 Visually accept all 12 pages of the exact revised PDFs, then verify the live covers, previews and guest downloads on mobile and desktop.
 - [ ] 3.3 Record the post-publication 30-day measurement window.
