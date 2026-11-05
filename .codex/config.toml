@@ -4,3 +4,13 @@ sandbox_mode = "danger-full-access"
 [mcp_servers.metravel-task-board]
 command = "sh"
 args = ["-c", "root=$(git -C \".\" rev-parse --show-toplevel) && exec sh \"$root/scripts/launch-task-board-mcp.sh\" \"$root\""]
+
+[mcp_servers.maestro]
+command = "maestro"
+args = ["mcp", "--no-viewer"]
+required = false
+enabled_tools = ["cheat_sheet", "inspect_screen", "list_devices", "run", "take_screenshot"]
+
+[mcp_servers.maestro.env]
+MAESTRO_CLI_NO_ANALYTICS = "true"
+MAESTRO_DISABLE_UPDATE_CHECK = "true"

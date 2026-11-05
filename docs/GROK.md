@@ -7,6 +7,11 @@ Grok уже подхватывает `AGENTS.md`, `CLAUDE.md`, `.agents/skills/`
 `.claude/skills/`, `.claude/commands/` и `.mcp.json`. Этот адаптер закрывает
 дыры харнесса, не копируя контракты.
 
+Для мультфильма «Наш день» запусти `reel-animator` в Grok Build. Роль откроет
+[скилл сценария и монтажа](../.claude/skills/metravel-animated-reels/SKILL.md)
+и подготовит пакет для отдельных видеоклипов. Доступ к рендеру проверяется
+в Grok Imagine по [инструкции производства](../.claude/skills/metravel-animated-reels/references/production.md).
+
 ## Что добавляет `.grok/`
 
 | Путь | Зачем |
