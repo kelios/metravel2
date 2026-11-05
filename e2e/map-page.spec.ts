@@ -1096,9 +1096,13 @@ test.describe('@smoke Map Page (/map) - smoke e2e', () => {
   test('desktop: SEO title and canonical are set for /map', async ({ page }) => {
     await gotoMapWithRecovery(page);
 
-    // H1 should be present (static export) even if InstantSEO title updates are delayed.
-    const h1 = page.getByRole('heading', { level: 1 });
-    await expect(h1).toBeVisible({ timeout: 60_000 });
+    // Keep one semantic SEO heading without occupying the map panel.
+    const h1 = page.locator('h1[data-map-page-heading]');
+    await expect(page.locator('h1')).toHaveCount(1, { timeout: 60_000 });
+    await expect(h1).toHaveCSS('position', 'absolute', { timeout: 60_000 });
+    await expect(h1).toHaveCSS('width', '1px');
+    await expect(h1).toHaveCSS('height', '1px');
+    await expect(h1).toContainText(/Карта/i);
 
     // Soft-check: title eventually contains map keyword (branding may vary).
     await expect(page).toHaveTitle(/Карта/i, { timeout: 60_000 });

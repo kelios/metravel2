@@ -916,7 +916,12 @@ describe('ssg-skeletons', () => {
       expect(html).toContain('ssg-map-canvas');
       expect(html).toContain('ssg-map-sidebar-shell');
       expect(html).toContain('ssg-map-mobile-card');
-      expect(html).toContain('Маршруты и достопримечательности Беларуси');
+      const dom = new DOMParser().parseFromString(html, 'text/html');
+      const layout = dom.querySelector('.ssg-map-layout')!;
+      expect(layout.textContent?.trim()).toBe('© OpenStreetMap · openstreetmap.org/copyright');
+      expect(layout.querySelector('.ssg-map-marker')).toBeNull();
+      expect(layout.querySelector('.ssg-map-mobile-hero')).toBeNull();
+      expect(layout.querySelector('.ssg-map-sidebar-tabs')).not.toBeNull();
     });
 
     it('contains exactly one bounded tile slot mounted by the shared head bootstrap', () => {
@@ -934,6 +939,7 @@ describe('ssg-skeletons', () => {
       );
 
       const css = buildSkeletonCSS();
+      expect(css).toContain('.ssg-map-canvas img.ssg-map-tile:not([src]){display:none}');
       expect(css).toContain('.ssg-map-canvas img.ssg-map-tile{position:absolute');
       expect(css).toContain('width:256px;height:256px');
       expect(css).toContain('max-width:none;max-height:none');
@@ -944,6 +950,9 @@ describe('ssg-skeletons', () => {
 
     it('uses the measured map viewport contract instead of raw 100vh', () => {
       const css = buildSkeletonCSS();
+      expect(css).toContain('width:max(320px,min(360px,34vw))');
+      expect(css).toContain('border-radius:20px;order:-1');
+      expect(css).not.toContain('.ssg-map-canvas::before');
       expect(css).toContain('var(--metravel-map-vh, 100svh)');
       expect(css).not.toContain('calc(100vh - 56px)');
     });
@@ -960,7 +969,7 @@ describe('ssg-skeletons', () => {
         `@media(min-width:${MAP_WEB_MOBILE_BREAKPOINT_PX}px){.ssg-map-layout,.ssg-map-canvas{min-height:calc(var(--metravel-map-vh, 100svh) - ${WEB_HEADER_RESERVED_HEIGHT}px)}`,
       );
       expect(css).toContain(
-        '.ssg-map-canvas{flex:0 0 calc(100% - 340px);min-width:0}.ssg-map-sidebar-shell{display:flex',
+        '.ssg-map-canvas{min-width:0;min-height:0;border-radius:20px}.ssg-map-sidebar-shell{display:flex',
       );
     });
   });

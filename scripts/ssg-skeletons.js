@@ -159,7 +159,7 @@ const MAP_VIEWPORT_HEIGHT = 'var(--metravel-map-vh, 100svh)';
 const MAP_WEB_MOBILE_BREAKPOINT_PX = 768;
 const MAP_WEB_MOBILE_VIEWPORT_RESERVE_PX = 56;
 const MAP_WEB_DESKTOP_VIEWPORT_RESERVE_PX = 88;
-const MAP_WEB_DESKTOP_SIDEBAR_WIDTH_PX = 340;
+const MAP_WEB_DESKTOP_SIDEBAR_WIDTH = 'max(320px,min(360px,34vw))';
 
 /**
  * Build skeleton CSS (shared by home and search).
@@ -285,24 +285,18 @@ ${buildCatalogSkeletonCSS()}
 @media(min-width:768px){.ssg-search-h1{font-size:36px}}
 .ssg-map-layout{display:flex;min-height:calc(${MAP_VIEWPORT_HEIGHT} - ${MAP_WEB_MOBILE_VIEWPORT_RESERVE_PX}px);background:${COLORS.light.bgSecondary}}
 .ssg-map-canvas{position:relative;flex:1;min-height:calc(${MAP_VIEWPORT_HEIGHT} - ${MAP_WEB_MOBILE_VIEWPORT_RESERVE_PX}px);overflow:hidden;background:linear-gradient(135deg,${COLORS.light.bgSecondary} 0%,${COLORS.light.bg} 50%,${COLORS.light.bgSecondary} 100%)}
-.ssg-map-canvas::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.24) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.24) 1px,transparent 1px);background-size:48px 48px;opacity:.45}
 .ssg-map-canvas img.ssg-map-tile{position:absolute;left:50%;top:50%;width:256px;height:256px;min-width:256px;min-height:256px;max-width:none;max-height:none;aspect-ratio:1/1;display:block;transform:translate(var(--metravel-map-shell-tile-offset-x,-50%),var(--metravel-map-shell-tile-offset-y,-50%));z-index:1;pointer-events:none;user-select:none}
+.ssg-map-canvas img.ssg-map-tile:not([src]){display:none}
 .ssg-map-tile-credit{display:none}
 .ssg-map-tile[src]+.ssg-map-tile-credit{position:absolute;display:block;top:calc(50% + var(--metravel-map-shell-tile-offset-y) + 239px);left:max(0px,calc(50% + var(--metravel-map-shell-tile-offset-x)));z-index:2;padding:2px 4px;background:${COLORS.light.surface};color:${COLORS.light.text};font:400 10px/13px ${SANS}}
 .ssg-map-toolbar{position:absolute;top:12px;left:12px;right:84px;display:flex;gap:8px;z-index:3}
 .ssg-map-toolbar-pill{height:32px;border-radius:999px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};padding:0 14px;display:inline-flex;align-items:center;font:600 13px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};white-space:nowrap}
 .ssg-map-controls{position:absolute;top:12px;right:12px;display:flex;flex-direction:column;gap:8px;z-index:3}
 .ssg-map-control{width:36px;height:36px;border-radius:12px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border}}
-.ssg-map-marker{position:absolute;width:18px;height:18px;border-radius:999px;background:#f5842c;border:3px solid rgba(255,255,255,0.96);box-shadow:0 10px 22px rgba(15,23,42,0.18);z-index:2}
-.ssg-map-marker.m1{top:24%;left:31%}.ssg-map-marker.m2{top:38%;left:56%}.ssg-map-marker.m3{top:34%;left:72%}.ssg-map-marker.m4{top:57%;left:42%}.ssg-map-marker.m5{top:62%;left:64%}
-.ssg-map-sidebar-shell{display:none;width:${MAP_WEB_DESKTOP_SIDEBAR_WIDTH_PX}px;flex-shrink:0;background:${COLORS.light.surface};border-left:1px solid ${COLORS.light.border}}
-@media(min-width:${MAP_WEB_MOBILE_BREAKPOINT_PX}px){.ssg-map-layout,.ssg-map-canvas{min-height:calc(${MAP_VIEWPORT_HEIGHT} - ${MAP_WEB_DESKTOP_VIEWPORT_RESERVE_PX}px)}.ssg-map-canvas{flex:0 0 calc(100% - ${MAP_WEB_DESKTOP_SIDEBAR_WIDTH_PX}px);min-width:0}.ssg-map-sidebar-shell{display:flex;flex-direction:column}}
+.ssg-map-sidebar-shell{display:none;width:${MAP_WEB_DESKTOP_SIDEBAR_WIDTH};flex-shrink:0;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};border-radius:20px;order:-1}
+@media(min-width:${MAP_WEB_MOBILE_BREAKPOINT_PX}px){.ssg-map-layout,.ssg-map-canvas{min-height:calc(${MAP_VIEWPORT_HEIGHT} - ${MAP_WEB_DESKTOP_VIEWPORT_RESERVE_PX}px)}.ssg-map-layout{box-sizing:border-box;height:calc(${MAP_VIEWPORT_HEIGHT} - ${MAP_WEB_DESKTOP_VIEWPORT_RESERVE_PX}px);padding:12px 16px;gap:16px}.ssg-map-canvas{min-width:0;min-height:0;border-radius:20px}.ssg-map-sidebar-shell{display:flex;flex-direction:column}}
 .ssg-map-sidebar-head{padding:16px 16px 12px;border-bottom:1px solid ${COLORS.light.border}}
-.ssg-map-panel-kicker{margin:0 0 8px;font:600 12px/1.35 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.textMuted};text-transform:uppercase;letter-spacing:.08em}
-.ssg-map-panel-title{margin:0 0 8px;font:700 28px/1.15 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text};letter-spacing:-.03em}
-.ssg-map-panel-lead{margin:0;font:400 15px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.textMuted}}
-.ssg-map-chip-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-.ssg-map-chip{height:28px;padding:0 12px;border-radius:999px;background:${COLORS.light.bgSecondary};border:1px solid ${COLORS.light.border};display:inline-flex;align-items:center;font:600 12px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.textMuted}}
+.ssg-map-sidebar-tabs{display:flex;gap:8px}.ssg-map-sidebar-tab{height:28px;flex:1;border-radius:8px}
 .ssg-map-sidebar-list{padding:14px;display:flex;flex-direction:column;gap:10px}
 .ssg-map-sidebar-item{display:flex;gap:10px;align-items:center}
 .ssg-map-sidebar-thumb{width:52px;height:52px;border-radius:14px;background:${COLORS.light.bgSecondary};flex-shrink:0}
@@ -311,11 +305,7 @@ ${buildCatalogSkeletonCSS()}
 .ssg-map-sidebar-line.w80{width:80%}.ssg-map-sidebar-line.w55{width:55%}
 .ssg-map-mobile-card{position:absolute;left:12px;right:12px;bottom:12px;z-index:3;padding:14px;border-radius:24px;background:${COLORS.light.surface};border:1px solid ${COLORS.light.border};box-shadow:0 18px 40px rgba(15,23,42,0.18)}
 @media(min-width:${MAP_WEB_MOBILE_BREAKPOINT_PX}px){.ssg-map-mobile-card{display:none}}
-.ssg-map-mobile-hero{height:164px;border-radius:18px;background:${COLORS.light.bgSecondary};margin-bottom:12px}
-.ssg-map-mobile-title{margin:0 0 6px;font:700 20px/1.2 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.text}}
-.ssg-map-mobile-sub{margin:0 0 12px;font:400 14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:${COLORS.light.textMuted}}
-.ssg-map-mobile-actions{display:flex;gap:8px;flex-wrap:wrap}
-.ssg-map-mobile-action{height:32px;min-width:64px;border-radius:999px;background:${COLORS.light.bgSecondary};border:1px solid ${COLORS.light.border}}
+.ssg-map-mobile-grip{width:36px;height:4px;margin:0 auto 12px;border-radius:2px}.ssg-map-mobile-search{height:36px;border-radius:12px}
 .ssg-travel-spacer{height:61px}
 .ssg-travel-wrap{max-width:1200px;margin:0 auto;padding:0 10px}
 .ssg-travel-first-screen{min-height:calc(100svh - 117px)}
@@ -438,12 +428,8 @@ html[data-theme="dark"] .ssg-search-bar{background:${COLORS.dark.surface};border
 html[data-theme="dark"] .ssg-search-tool{background:${COLORS.dark.bgSecondary};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-map-layout{background:${COLORS.dark.bgSecondary}}
 html[data-theme="dark"] .ssg-map-canvas{background:linear-gradient(135deg,${COLORS.dark.bgSecondary} 0%,${COLORS.dark.bg} 50%,${COLORS.dark.bgSecondary} 100%)}
-html[data-theme="dark"] .ssg-map-canvas::before{background-image:linear-gradient(rgba(255,255,255,0.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.08) 1px,transparent 1px)}
 html[data-theme="dark"] .ssg-map-toolbar-pill,html[data-theme="dark"] .ssg-map-control,html[data-theme="dark"] .ssg-map-sidebar-shell,html[data-theme="dark"] .ssg-map-mobile-card{background:${COLORS.dark.surface};border-color:${COLORS.dark.border}}
-html[data-theme="dark"] .ssg-map-panel-kicker,html[data-theme="dark"] .ssg-map-panel-lead,html[data-theme="dark"] .ssg-map-chip{color:${COLORS.dark.textMuted}}
-html[data-theme="dark"] .ssg-map-panel-title,html[data-theme="dark"] .ssg-map-toolbar-pill,html[data-theme="dark"] .ssg-map-mobile-title{color:${COLORS.dark.text}}
-html[data-theme="dark"] .ssg-map-chip,html[data-theme="dark"] .ssg-map-mobile-action,html[data-theme="dark"] .ssg-map-sidebar-thumb,html[data-theme="dark"] .ssg-map-mobile-hero{background:${COLORS.dark.bgSecondary};border-color:${COLORS.dark.border}}
-html[data-theme="dark"] .ssg-map-mobile-sub{color:${COLORS.dark.textMuted}}
+html[data-theme="dark"] .ssg-map-sidebar-thumb{background:${COLORS.dark.bgSecondary};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-travel-hero{background:${COLORS.dark.bgSecondary};border-color:${COLORS.dark.border}}
 html[data-theme="dark"] .ssg-travel-sidebar-card{background:${COLORS.dark.surface}}
 html[data-theme="dark"] .ssg-travel-h1{color:${COLORS.dark.text}}
@@ -734,41 +720,27 @@ function buildMapSkeletonHtml() {
   <div class="ssg-map-canvas" role="region" aria-label="Карта маршрутов и достопримечательностей">
     <img class="ssg-map-tile" data-ssg-map-tile="true" width="256" height="256" alt="" aria-hidden="true" decoding="async">
     <span class="ssg-map-tile-credit">© OpenStreetMap · openstreetmap.org/copyright</span>
-    <div class="ssg-map-toolbar">
-      <div class="ssg-map-toolbar-pill">Карта маршрутов</div>
-      <div class="ssg-map-toolbar-pill">50 км</div>
-      <div class="ssg-map-toolbar-pill">Фильтры</div>
+    <div class="ssg-map-toolbar" aria-hidden="true">
+      <div class="ssg-map-toolbar-pill ssg-pulse" style="width:100px"></div>
+      <div class="ssg-map-toolbar-pill ssg-pulse" style="width:64px"></div>
+      <div class="ssg-map-toolbar-pill ssg-pulse" style="width:80px"></div>
     </div>
-    <div class="ssg-map-controls">
+    <div class="ssg-map-controls" aria-hidden="true">
       <div class="ssg-map-control ssg-pulse"></div>
       <div class="ssg-map-control ssg-pulse"></div>
       <div class="ssg-map-control ssg-pulse"></div>
     </div>
-    <div class="ssg-map-marker m1"></div>
-    <div class="ssg-map-marker m2"></div>
-    <div class="ssg-map-marker m3"></div>
-    <div class="ssg-map-marker m4"></div>
-    <div class="ssg-map-marker m5"></div>
-    <div class="ssg-map-mobile-card">
-      <div class="ssg-map-mobile-hero ssg-pulse"></div>
-      <div class="ssg-map-mobile-title">Маршруты и места рядом</div>
-      <p class="ssg-map-mobile-sub">Точки интереса, маршруты и фильтры под ваши планы — в одном экране.</p>
-      <div class="ssg-map-mobile-actions">
-        <div class="ssg-map-mobile-action ssg-pulse"></div>
-        <div class="ssg-map-mobile-action ssg-pulse"></div>
-        <div class="ssg-map-mobile-action ssg-pulse"></div>
-      </div>
+    <div class="ssg-map-mobile-card" aria-hidden="true">
+      <div class="ssg-map-mobile-grip ssg-pulse"></div>
+      <div class="ssg-map-mobile-search ssg-pulse"></div>
     </div>
   </div>
-  <div class="ssg-map-sidebar-shell">
+  <div class="ssg-map-sidebar-shell" aria-hidden="true">
     <div class="ssg-map-sidebar-head">
-      <p class="ssg-map-panel-kicker">Интерактивная карта</p>
-      <div class="ssg-map-panel-title">Маршруты и достопримечательности Беларуси</div>
-      <p class="ssg-map-panel-lead">Ищите места поблизости, стройте маршрут и быстро открывайте точки интереса на карте.</p>
-      <div class="ssg-map-chip-row">
-        <div class="ssg-map-chip">Радиус 50 км</div>
-        <div class="ssg-map-chip">Маршруты</div>
-        <div class="ssg-map-chip">Точки</div>
+      <div class="ssg-map-sidebar-tabs" aria-hidden="true">
+        <div class="ssg-map-sidebar-tab ssg-pulse"></div>
+        <div class="ssg-map-sidebar-tab ssg-pulse"></div>
+        <div class="ssg-map-sidebar-tab ssg-pulse"></div>
       </div>
     </div>
     <div class="ssg-map-sidebar-list">

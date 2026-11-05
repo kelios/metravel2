@@ -9,8 +9,8 @@ import { webDataSetProps } from '@/utils/webProps'
 /**
  * Where the map page heading is currently mounted.
  *
- * - `panel-head` — a heading line inside the desktop side panel header, above
- *   the tab row. Only available while the panel is expanded.
+ * - `panel-head` — a visually hidden heading inside the desktop side panel
+ *   header. Only available while the panel is expanded.
  * - `map-corner` — a visually hidden SEO heading used whenever the panel
  *   header does not exist: desktop with a collapsed panel, mobile web and the
  *   desktop data-error screen.
@@ -69,8 +69,7 @@ type MapPageHeadingProps = {
  *
  * `Heading level={1}` is the project chokepoint for heading semantics — it owns
  * the `aria-level` that makes react-native-web emit a real `h1` tag (#1617).
- * The typography below it comes from map tokens, not from the Heading scale,
- * because a 24px heading in a 320-360px panel column costs three lines.
+ * Both anchors stay visually hidden: the page title is SEO metadata, not map chrome.
  */
 function MapPageHeadingImpl({ anchor, styles }: MapPageHeadingProps) {
   useAdoptStaticHeading()
@@ -79,23 +78,11 @@ function MapPageHeadingImpl({ anchor, styles }: MapPageHeadingProps) {
 
   const text = stripSiteNameSuffix(getMapSeoTitle())
 
-  if (anchor === 'panel-head') {
-    return (
-      <Heading
-        level={1}
-        style={styles.pageHeadingInPanel}
-        {...PANEL_HEAD_DATA_SET}
-      >
-        {text}
-      </Heading>
-    )
-  }
-
   return (
     <Heading
       level={1}
       style={styles.pageHeadingVisuallyHidden}
-      {...MAP_CORNER_DATA_SET}
+      {...(anchor === 'panel-head' ? PANEL_HEAD_DATA_SET : MAP_CORNER_DATA_SET)}
     >
       {text}
     </Heading>

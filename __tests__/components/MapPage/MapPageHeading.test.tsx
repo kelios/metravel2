@@ -36,7 +36,6 @@ const getLevelOneHeadings = (view: Awaited<ReturnType<typeof render>>) =>
   view.queryAllByRole('header').filter((node) => node.props['aria-level'] === 1)
 
 const styles = {
-  pageHeadingInPanel: { fontSize: 17, textAlign: 'left' as const },
   pageHeadingVisuallyHidden: {
     position: 'absolute' as const,
     width: 1,
@@ -97,8 +96,8 @@ describe('MapPageHeading (#1640)', () => {
     expect(getLevelOneHeadings(view)).toHaveLength(1)
   })
 
-  it('keeps the map-corner heading semantic but visually hidden', async () => {
-    const view = await render(<MapPageHeading anchor="map-corner" styles={styles} />)
+  it.each(['panel-head', 'map-corner'] as const)('keeps the %s heading semantic but visually hidden', async (anchor) => {
+    const view = await render(<MapPageHeading anchor={anchor} styles={styles} />)
 
     const heading = view.getByRole('header')
     expect(heading.props['aria-level']).toBe(1)
@@ -113,12 +112,9 @@ describe('MapPageHeading (#1640)', () => {
   it('marks both anchors with the dataSet hook react-native-web turns into data-map-page-heading', async () => {
     // The resulting `data-map-page-heading` attribute is react-native-web's
     // output; this unit test guards the input prop and exact anchor value.
-    // #2258: панельный заголовок задаёт свой кегль — CSS-ступени `Heading` к нему
-    // не цепляются, dataSet остаётся ровно якорем. Визуально скрытый угловой
-    // заголовок кегля не задаёт и получает метку ступени `bpLayout`, слитую
-    // с якорем (а не затирающую его).
+    // Both anchors retain heading semantics and the responsive typography marker.
     const panel = await render(<MapPageHeading anchor="panel-head" styles={styles} />)
-    expect(panel.getByRole('header').props.dataSet).toEqual({ mapPageHeading: 'panel-head' })
+    expect(panel.getByRole('header').props.dataSet).toEqual({ mapPageHeading: 'panel-head', bpLayout: 'heading-h1' })
 
     const corner = await render(<MapPageHeading anchor="map-corner" styles={styles} />)
     expect(corner.getByRole('header').props.dataSet).toEqual({

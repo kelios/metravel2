@@ -307,25 +307,7 @@ export const getStyles = (
             } as any)
           : null),
       },
-      // #1640 — the page H1 lives inside the panel header instead of a
-      // full-width band above the map. h3 scale, not h1: at 24px the 49-char
-      // title takes three lines in a 320-360px column, which is the same band
-      // rotated 90°. Left-aligned on purpose — centring is what made the band
-      // read as a banner.
-      pageHeadingInPanel: {
-        fontSize: 17,
-        lineHeight: 22,
-        letterSpacing: -0.2,
-        fontWeight: '700',
-        color: themedColors.text,
-        textAlign: 'left',
-        marginTop: 0,
-        marginBottom: METRICS.spacing.s,
-        marginHorizontal: 0,
-        width: '100%',
-      },
-      // Keep one semantic H1 for SEO and assistive technology when the visible
-      // desktop panel heading is unavailable, without covering the map canvas.
+      // Preserve the semantic SEO H1 without taking space in either map anchor.
       pageHeadingVisuallyHidden: webTextStyle({
         position: 'absolute',
         width: 1,
