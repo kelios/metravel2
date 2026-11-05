@@ -296,26 +296,41 @@ export default function TravelDetailsCriticalShell({
     </>
   ) : null;
 
+  // Completed server boundaries keep the visible HTML while React hydrates the
+  // hero and article independently. Stable elements prevent unrelated container
+  // layout/chrome updates from pulling the pending article into urgent hydration.
+  const webHeroBlock = useMemo(() => travel ? (
+    <Suspense fallback={null}>
+      <TravelDetailsHeroBlock
+        travel={travel}
+        anchors={anchors}
+        isMobile={isMobile}
+        deferHeroExtras={deferHeroExtras}
+        onFirstImageLoad={onFirstImageLoad}
+        onQuickJump={onQuickJump}
+        sectionLinks={sectionLinks}
+        activeKey={activeSection ?? undefined}
+      />
+    </Suspense>
+  ) : null, [travel, anchors, isMobile, deferHeroExtras, onFirstImageLoad, onQuickJump, sectionLinks, activeSection]);
+
+  const webContentBlock = useMemo(() => travel ? (
+    <Suspense fallback={null}>
+      <TravelDetailsContentBlock
+        travel={travel}
+        isMobile={isMobile}
+        anchors={anchors}
+        forceOpenKey={forceOpenKey}
+      />
+    </Suspense>
+  ) : null, [travel, isMobile, anchors, forceOpenKey]);
+
   const contentColumn = travel ? (
     Platform.OS === 'web' ? (
       <>
-        <TravelDetailsHeroBlock
-          travel={travel}
-          anchors={anchors}
-          isMobile={isMobile}
-          deferHeroExtras={deferHeroExtras}
-          onFirstImageLoad={onFirstImageLoad}
-          onQuickJump={onQuickJump}
-          sectionLinks={sectionLinks}
-          activeKey={activeSection ?? undefined}
-        />
+        {webHeroBlock}
         {pageTitle}
-        <TravelDetailsContentBlock
-          travel={travel}
-          isMobile={isMobile}
-          anchors={anchors}
-          forceOpenKey={forceOpenKey}
-        />
+        {webContentBlock}
         {deferredContent}
       </>
     ) : (

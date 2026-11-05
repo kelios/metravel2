@@ -398,6 +398,40 @@ it.each([false, true])('commits actual opt-in visible growth and shrink before p
   f.cleanup()
 })
 
+it.each([false, true])('skips anchor traversal for unchanged observer frames and still preserves later growth (optional=%s)', optional => {
+  const initialHeight = optional ? 0 : 702
+  const f = fixture({ initialTop: 600, optional })
+  f.render(true, false, createElement('div', { style: { height: initialHeight } }))
+  const before = f.anchor.getBoundingClientRect().top
+  const beforeScrollTop = f.owner.scrollTop
+  f.writes.length = 0
+  const computedStyle = jest.spyOn(window, 'getComputedStyle')
+  const ownerRect = jest.spyOn(f.owner, 'getBoundingClientRect')
+  const anchorRect = jest.spyOn(f.anchor, 'getBoundingClientRect')
+  try {
+    expect(f.currentCallbacks().length).toBeGreaterThan(0)
+    for (let notification = 0; notification < 3; notification++) f.resizeRuntime(initialHeight)
+    f.resizeRuntime(initialHeight, 320)
+    expect(f.transition().style.height).toBe(`${initialHeight}px`)
+    expect(computedStyle).not.toHaveBeenCalled()
+    expect(ownerRect).not.toHaveBeenCalled()
+    expect(anchorRect).not.toHaveBeenCalled()
+    expect(f.writes).toEqual([])
+
+    f.resizeRuntime(initialHeight + 200, 320)
+    expect(f.transition().style.height).toBe(`${initialHeight + 200}px`)
+    expect(computedStyle).toHaveBeenCalled()
+    expect(anchorRect).toHaveBeenCalled()
+    expect(f.anchor.getBoundingClientRect().top).toBe(before)
+    expect(f.writes).toEqual([beforeScrollTop + 200])
+  } finally {
+    computedStyle.mockRestore()
+    ownerRect.mockRestore()
+    anchorRect.mockRestore()
+    f.cleanup()
+  }
+})
+
 it('uses the current width frame and rejects nonpositive resize measurements', () => {
   const f = fixture({ initialTop: 22800, runtimeGrowth: 2600 })
   f.render(false, false, createElement('div', { style: { height: 873 } }), true)

@@ -431,9 +431,22 @@ export function TravelDetailsDeferredTransition({
     }
     const commitMeasuredHeight = () => {
       if (!node || generationRef.current !== generation) return
+      const nextFrame = node.isConnected && runtime?.isConnected && node.contains(runtime) ? runtime.getBoundingClientRect() : null
+      // ResizeObserver can repeat the same frame. With no conserved slack and
+      // no height write, there is no anchor transaction to capture or correct.
+      if (!reserveSlackRef.current && nextFrame &&
+          Number.isFinite(nextFrame.width) && Number.isFinite(nextFrame.height) && nextFrame.width > 0 &&
+          nextFrame.height >= 0 && (allowEmptyRuntime || nextFrame.height > 0) &&
+          measuredHeightRef.current != null && Math.abs(measuredHeightRef.current - nextFrame.height) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX &&
+          Math.abs(Number.parseFloat(node.style.height) - nextFrame.height) <= RUNTIME_SETTLE_HEIGHT_EPSILON_PX) {
+        // A width-only reflow still establishes the baseline for subsequent
+        // same-width growth, even though this notification owns no height write.
+        measuredWidthRef.current = nextFrame.width
+        return
+      }
       const obsoleteSlack = !!reserveSlackRef.current && !reserveSlackMatchesFrame(reserveSlackRef.current)
       if (obsoleteSlack) reserveSlackRef.current = null
-      const nextHeight = runtime?.getBoundingClientRect().height
+      const nextHeight = nextFrame?.height
       if (nextHeight != null && Math.abs(nextHeight - (measuredHeightRef.current ?? 0)) > RUNTIME_SETTLE_HEIGHT_EPSILON_PX) {
         if (!obsoleteSlack) currentReserveSlackCaptureRef.current?.()
         captureAncestorReserveSlack(node)
