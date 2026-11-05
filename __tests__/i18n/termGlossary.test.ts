@@ -31,6 +31,8 @@ const RU_THEME_WORD = /(^|[^а-яё])тем(а|у|ы|е|ой|ам|ами|ах)([
 const RU_LIGHT_WORD = /(^|[^а-яё])светл(ая|ый|ое|ые|ую|ой)([^а-яё]|$)/i
 const RU_POINT_WORD = /(^|[^а-яё])точ(к|ек)/i
 const RU_DIFFICULTY_NOUN = /(^|[^а-яё])сложност/i
+// These book controls describe subject matter; their Polish term is «temat», not UI «motyw».
+const BOOK_THEME_KEYS = /^(theme|noBooks|fullCatalogLead)$/
 
 // «Карта» многозначна: географическая, банковская, карта памяти. Глоссарий
 // держит географическую: «карты памяти» отсекает сам шаблон, банковскую
@@ -108,7 +110,7 @@ const TERMS: Term[] = [
     name: '«тема» — тема оформления',
     ru: RU_THEME_WORD,
     // Разговор и тематика книги — другие значения слова, не оформление интерфейса.
-    except: { ru: /не\s+по\s+теме|на\s+другие\s+темы|тема\s+книги|в\s+этой\s+теме\s+пока\s+нет\s+книг/i },
+    except: { ru: /не\s+по\s+теме|на\s+другие\s+темы|тема\s+книги|в\s+этой\s+теме\s+пока\s+нет\s+книг/i, keys: BOOK_THEME_KEYS },
     minEntries: 8,
     locales: {
       en: { required: /\btheme/i, forbidden: /\b(topic|subject)/i },
@@ -117,9 +119,9 @@ const TERMS: Term[] = [
   },
   {
     name: '«тема книги» — предмет подборки, а не оформление (#2809)',
-    ru: /тема\s+книги|в\s+этой\s+теме\s+пока\s+нет\s+книг/i,
-    keys: /^(theme|noBooks)$/,
-    minEntries: 2,
+    ru: RU_THEME_WORD,
+    keys: BOOK_THEME_KEYS,
+    minEntries: 3,
     locales: {
       en: { required: /\b(theme|topic|subject)/i },
       pl: { required: /temat/i, forbidden: /motyw/i },

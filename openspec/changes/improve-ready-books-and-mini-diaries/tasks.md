@@ -12,8 +12,11 @@
 - [x] 2.4 Publish the first two mini-diary editions and verify their catalogue entries and downloads.
 - [x] 2.5 Redesign all six pages of each mini diary with rights-verified imagery and keep the A5 cover proportions in the catalogue (#3040 and #3041).
 
+- [x] 2.6 Complete the website flow for one outing: separate short diaries from full books, filter by the correct theme, expose all page roles and trip links, and explain single-page printing (#3069).
+
 ## 3. Validation
 
 - [x] 3.1 Complete targeted source checks, independent review, and web acceptance after deployment.
 - [x] 3.2 Visually accept all 12 pages of the exact revised PDFs, then verify the live covers, previews and guest downloads on mobile and desktop.
 - [ ] 3.3 Record the post-publication 30-day measurement window.
+- [ ] 3.4 Accept the completed short-diary website flow on production: mobile then desktop, PL layout, filters, trip links and unchanged PDF downloads (#3069).

@@ -1,6 +1,7 @@
 import React,{useState} from 'react';
 import {bookStyleKey} from '@/services/book/readyBooks/publicationState';
 import {miniDiaries,readyBooks} from '@/services/book/readyBooks/catalog';
+import {selectMiniDiaries} from '@/services/book/readyBooks/miniDiaries';
 import {bookSeries,catalogueTheme,groupCatalogue,selectCatalogue,type CatalogueCountry,type CatalogueTheme} from '@/services/book/readyBooks/seriesCatalog';
 import {formatNumber} from '@/i18n';
 import {useBookCopy} from '../bookCopy';
@@ -30,7 +31,7 @@ export default function ReadyBooksCatalogContent(){
   const [theme,setTheme]=useState<CatalogueTheme>('all');
   const [country,setCountry]=useState<CatalogueCountry>('all');
   const {available,planned}=selectCatalogue(readyBooks,bookSeries,theme,country);
-  const compact=(theme==='all'||theme==='mixed')?miniDiaries.filter(diary=>country==='all'||country===diary.country):[];
+  const compact=selectMiniDiaries(miniDiaries,theme,country);
   return <>
     <fieldset className="rbc-themes"><legend className="rbe-small">{bookT('theme')}</legend>
       {(Object.keys(THEMES) as CatalogueTheme[]).map(value=><label key={value} className="rbc-theme"><input type="radio" name="book-theme" value={value} checked={theme===value} onChange={()=>setTheme(value)}/><span>{bookT(THEMES[value])}</span></label>)}
@@ -38,20 +39,30 @@ export default function ReadyBooksCatalogContent(){
     <fieldset className="rbc-themes"><legend className="rbe-small">{bookT('catalogCountry')}</legend>
       {(Object.keys(COUNTRIES) as CatalogueCountry[]).map(value=><label key={value} className="rbc-theme"><input type="radio" name="book-country" value={value} checked={country===value} onChange={()=>setCountry(value)}/><span>{bookT(COUNTRIES[value])}</span></label>)}
     </fieldset>
-    {available.length===0&&planned.length===0&&compact.length===0?<p className="rbe-h3" role="status">{bookT(readyBooks.length===0?'preparing':'noBooks')}</p>:<ul className="rbc-grid">
+    {available.length===0&&planned.length===0&&compact.length===0&&<p className="rbe-h3" role="status">{bookT(readyBooks.length===0&&miniDiaries.length===0?'preparing':'noBooks')}</p>}
+    {compact.length>0&&<section className="rbc-format" aria-labelledby="mini-diaries-title">
+      <h3 id="mini-diaries-title">{bookT('miniCatalogTitle')}</h3>
+      <p className="rbe-lead">{bookT('miniCatalogLead')}</p>
+      <ul className="rbc-grid rbc-mini-grid">
       {compact.map(diary=>{
         const href=`/books/${diary.slug}`;
         return <li key={diary.id}><article className="rbc-card rbc-card-mini">
           <div className="rbc-card-thumb"><img src={diary.cover.uri} alt="" loading="lazy" decoding="async"/></div>
           <div className="rbc-card-body">
             <p className="rbe-eyebrow">{bookT('miniDiary')}</p>
-            <h3 lang={diary.contentLocale}>{diary.title}</h3>
+            <h4 lang={diary.contentLocale}>{diary.title}</h4>
             <p className="rbe-small" lang={diary.contentLocale}>{diary.summary}</p>
             <p className="rbe-small">{pageCountPhrase(diary.pageCount,bookT)} · A5 · {bookT('language')}</p>
-            <a className="rbc-card-link" href={href} onClick={link(href)} aria-label={`${bookT('explore')}: ${diary.title}`}>{bookT('explore')}<EditionIcon name="arrow-right" size={16}/></a>
+            <a className="rbc-card-link" href={href} onClick={link(href)} aria-label={`${bookT('miniChooseTrip')}: ${diary.title}`}>{bookT('miniChooseTrip')}<EditionIcon name="arrow-right" size={16}/></a>
           </div>
         </article></li>;
       })}
+      </ul>
+    </section>}
+    {(available.length>0||planned.length>0)&&<section className="rbc-format" aria-labelledby="full-books-title">
+      <h3 id="full-books-title">{bookT('fullCatalogTitle')}</h3>
+      <p className="rbe-lead">{bookT('fullCatalogLead')}</p>
+      <ul className="rbc-grid">
       {groupCatalogue(available).map(([book,...variants])=>{
       const card=catalogCard(book,bookT);
       const href=`/books/${book.slug}`;
@@ -60,7 +71,7 @@ export default function ReadyBooksCatalogContent(){
       return <li key={book.id}><article className="rbc-card">
         <div className="rbc-card-thumb"><img src={book.coverUri} alt={bookT('coverAlt',{title:card.title})} loading="lazy" decoding="async"/></div>
         <div className="rbc-card-body">
-          <h3 lang={card.titleLang}>{grouped?bookT(COUNTRIES[book.country]):card.title}</h3>
+          <h4 lang={card.titleLang}>{grouped?bookT(COUNTRIES[book.country]):card.title}</h4>
           {catalogueTheme(book)==='mountains'?<p className="rbe-small">{promiseText(book,bookT)}</p>:!grouped&&card.benefit&&<p className="rbe-small">{bookT(card.benefit)}</p>}
           <ul className="rbe-chips">
             <li><EditionIcon name="map-pin" size={16}/>{stopCountPhrase(book,bookT)}</li>
@@ -82,12 +93,13 @@ export default function ReadyBooksCatalogContent(){
       </article></li>;})}
       {planned.map(series=><li key={series.id}><article className="rbc-card rbc-card-planned">
         <div className="rbc-card-body">
-          <h3 lang="ru">{series.title}</h3>
+          <h4 lang="ru">{series.title}</h4>
           <p className="rbe-small">{bookT('seriesPlanned')}</p>
           <p className="rbe-small">{bookT('seriesPlaces',{count:formatNumber(series.targetPlaces)})}</p>
           <p className="rbe-small">{bookT('language')}</p>
         </div>
       </article></li>)}
-    </ul>}
+      </ul>
+    </section>}
   </>;
 }

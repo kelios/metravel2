@@ -52,3 +52,16 @@ A compact diary SHALL be a distinct six-page A5 PDF with three separately usable
 #### Scenario: Pilot awaits publication
 - **WHEN** the pilot resources are staged but absent from the verified public manifest
 - **THEN** the site omits its public download
+
+### Requirement: One-outing diary flow
+The catalogue SHALL distinguish short three-trip diaries from full travel books and filter both groups by country and declared theme. A short diary page SHALL explain the complete six-page composition and how to use a single trip page without binding a booklet.
+
+#### Scenario: Guest chooses a castle outing
+- **WHEN** the guest selects the castle theme
+- **THEN** the published castle diary remains available in the short-diary section
+- **AND** choosing it exposes the three independent trips, their exact maps, article or quest sources and PDF pages 3–5
+
+#### Scenario: Guest prepares one trip
+- **WHEN** the guest opens a short diary
+- **THEN** they can distinguish the sample page from the full PDF and download the existing edition without signing in
+- **AND** the page explains selecting the trip page and printing it on A5 at 100% scale, followed by adding a photo, drawing or note

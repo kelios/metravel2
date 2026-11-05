@@ -13,7 +13,8 @@ jest.mock('@/services/book/readyBooks/catalog',()=>({readyBooks:[],miniDiaries:[
 jest.mock('@/services/book/readyBooks/seriesCatalog',()=>({...jest.requireActual('@/services/book/readyBooks/seriesCatalog'),bookSeries:[]}));
 const books=require('@/services/book/readyBooks/catalog').readyBooks;
 const series=require('@/services/book/readyBooks/seriesCatalog').bookSeries;
-afterEach(()=>{books.splice(0);series.splice(0);});
+const miniDiaries=require('@/services/book/readyBooks/catalog').miniDiaries;
+afterEach(()=>{books.splice(0);series.splice(0);miniDiaries.splice(0);});
 describe('book catalogue',()=>{
   it('never offers fake downloads while publication is not ready',()=>{
     render(<Catalog/>);expect(screen.getByText('preparing')).toBeTruthy();expect(screen.queryByRole('link')).toBeNull();
@@ -124,10 +125,35 @@ it('keeps all style links in one country card and combines the country and topic
     books.push({...book,id:book.id+(visualStyle??''),slug:book.slug+(visualStyle??''),...(visualStyle?{visualStyle}:{})});
   }
   render(<Catalog/>);
-  expect(screen.getAllByRole('heading',{level:3}).map(heading=>heading.textContent)).toEqual(['countryBY']);
+  expect(screen.getAllByRole('heading',{level:4}).map(heading=>heading.textContent)).toEqual(['countryBY']);
   expect(screen.getAllByRole('link').map(link=>link.getAttribute('href'))).toEqual(['/books/belarus','/books/belarusfantasy','/books/belarusgraphic']);
   expect(screen.getByText('styleBenefitGraphic')).toBeTruthy();
   fireEvent.click(screen.getByRole('radio',{name:'countryPL'}));
   expect(screen.getByRole('status').textContent).toBe('noBooks');
   expect(screen.queryByRole('link')).toBeNull();
+});
+
+it('gives short diaries their own purpose and keeps the castle diary in the castle filter',()=>{
+  miniDiaries.push(...require('@/data/travelBooks/catalog.json').miniDiaries);
+  books.push(publishedFixture());
+  render(<Catalog/>);
+  const short=screen.getByRole('region',{name:'miniCatalogTitle'});
+  const full=screen.getByRole('region',{name:'fullCatalogTitle'});
+  expect(short.querySelectorAll('article')).toHaveLength(2);
+  expect(full.querySelectorAll('article')).toHaveLength(1);
+  expect(short.textContent).toContain('miniCatalogLead');
+  fireEvent.click(screen.getByRole('radio',{name:'themeCastles'}));
+  expect(screen.getByRole('heading',{name:'По следам башен'})).toBeTruthy();
+  expect(screen.queryByRole('heading',{name:'Беларусь у воды'})).toBeNull();
+  expect(screen.queryByRole('region',{name:'fullCatalogTitle'})).toBeNull();
+  fireEvent.click(screen.getByRole('radio',{name:'countryPL'}));
+  expect(screen.getByRole('status').textContent).toBe('noBooks');
+  expect(screen.queryByRole('link')).toBeNull();
+});
+
+it('offers a published short diary even when no full book is available',()=>{
+  miniDiaries.push(require('@/data/travelBooks/catalog.json').miniDiaries[0]);
+  render(<Catalog/>);
+  expect(screen.queryByRole('status')).toBeNull();
+  expect(screen.getByRole('link',{name:/miniChooseTrip/}).getAttribute('href')).toBe('/books/belarus-by-the-water');
 });
