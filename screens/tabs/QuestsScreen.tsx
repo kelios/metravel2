@@ -48,11 +48,13 @@ import {
     filterBikeQuests,
     filterKidsQuests,
     filterNearbyQuests,
+    getQuestLocationQuality,
     filterQuestsByMapSearchArea,
     parseThemeSelectionId,
     toThemeSelectionId,
     loadExpoLocation,
     type QuestMapArea,
+    type QuestCatalogLocation,
 } from './QuestsScreen.helpers';
 import { canRankQuestsByPopularity, sortQuestsByPopularity } from '@/utils/questPopularity';
 import { filterQuestsByTheme, getActiveQuestThemes, getQuestThemeById } from '@/utils/questThemes';
@@ -114,7 +116,7 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
     const selectionGeneration = getGeneration();
     const { searchQuery, setSearchQuery, searchTerm } = useQuestCatalogSearchQuery();
     const [nearbyRequestVersion, setNearbyRequestVersion] = useState(0);
-    const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
+    const [userLoc, setUserLoc] = useState<QuestCatalogLocation | null>(null);
     const [geoRequesting, setGeoRequesting] = useState(false);
     const [geoMessage, setGeoMessage] = useState<string | null>(null);
     const nearbyRadiusKm = DEFAULT_NEARBY_RADIUS_KM;
@@ -208,6 +210,7 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
         const savingSelection = select(id, id === NEARBY_ID ? ALL_QUESTS_ID : id);
         setGeoRequesting(false);
         if (id === NEARBY_ID) {
+            setUserLoc(null);
             setNearbyRequestVersion((current) => current + 1);
         }
         setGeoMessage(null);
@@ -495,7 +498,7 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
             if (prev && Math.abs(prev.lat - loc.latitude) < 0.00001 && Math.abs(prev.lng - loc.longitude) < 0.00001) {
                 return prev;
             }
-            return { lat: loc.latitude, lng: loc.longitude };
+            return { lat: loc.latitude, lng: loc.longitude, accuracyMeters: null };
         });
     }, []);
 
@@ -736,7 +739,13 @@ export default function QuestsScreen({ route = null }: { route?: QuestsCatalogRo
                 mapSlot={mapSlot}
                 userLoc={userLoc}
                 isMapAreaActive={Boolean(activeMapAreaCenter)}
-                geoMessage={geoMessage}
+                geoMessage={geoMessage ?? (selectedCityId === NEARBY_ID && userLoc && !geoRequesting && !searchTerm && !activeMapAreaCenter
+                    ? getQuestLocationQuality(userLoc.accuracyMeters) === 'precise'
+                        ? i18nT('quests:screens.tabs.QuestsScreen.locationPrecise')
+                        : getQuestLocationQuality(userLoc.accuracyMeters) === 'approximate'
+                            ? i18nT('quests:screens.tabs.QuestsScreen.locationApproximate')
+                            : i18nT('quests:screens.tabs.QuestsScreen.locationUnknown')
+                    : null)}
                 geoRequesting={geoRequesting}
                 radiiLg={radii.lg}
                 isMobile={isMobile}

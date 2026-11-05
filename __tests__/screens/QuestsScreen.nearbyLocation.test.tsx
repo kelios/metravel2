@@ -81,15 +81,28 @@ afterEach(() => {
 });
 
 it('keeps «nearby» with the player position once it is granted', async () => {
-    mockRequestLocation.mockResolvedValue({ coords: { lat: 53.91, lng: 27.57 } });
+    mockRequestLocation.mockResolvedValue({ coords: { lat: 53.91, lng: 27.57, accuracyMeters: 5 } });
 
     await askNearby();
 
-    await waitFor(() => expect(mockContentProps.userLoc).toEqual({ lat: 53.91, lng: 27.57 }));
+    await waitFor(() => expect(mockContentProps.userLoc).toEqual({ lat: 53.91, lng: 27.57, accuracyMeters: 5 }));
     expect(mockContentProps.selectedCityId).toBe(NEARBY_ID);
-    expect(mockContentProps.geoMessage).toBeNull();
+    expect(mockContentProps.geoMessage).toBe('Высокая точность местоположения.');
     expect(mockContentProps.geoRequesting).toBe(false);
 });
+
+it.each([[1500, 'Местоположение неточное'], [null, 'Точность местоположения неизвестна']] as const)(
+    'explains approximate results for accuracy %s and allows retry', async (accuracyMeters, message) => {
+        mockRequestLocation.mockResolvedValueOnce({ coords: { lat: 53.91, lng: 27.57, accuracyMeters } })
+            .mockResolvedValueOnce({ coords: { lat: 53.91, lng: 27.57, accuracyMeters: 5 } });
+        await askNearby();
+        await waitFor(() => expect(mockContentProps.geoMessage).toContain(message));
+        expect(mockContentProps.questsAll).toHaveLength(1);
+        await act(async () => { mockContentProps.onShowNearby(); });
+        await waitFor(() => expect(mockContentProps.geoMessage).toBe('Высокая точность местоположения.'));
+        expect(mockRequestLocation).toHaveBeenCalledTimes(2);
+    },
+);
 
 it('falls back to the whole catalog with the refusal reason', async () => {
     mockRequestLocation.mockResolvedValue({ failure: DENIED });

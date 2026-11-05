@@ -71,6 +71,7 @@ export function QuestDesktopMapPanel({
   activeStepIndex,
   closeLoopRoute = false,
   routeMode,
+  sharedRoute,
 }: SharedProps & {
   currentStep: PointLike
   steps: PointLike[]
@@ -86,6 +87,7 @@ export function QuestDesktopMapPanel({
   /** Кольцевой квест: карта и экспорт замыкают маршрут «финиш → старт». */
   closeLoopRoute?: boolean
   routeMode?: QuestRouteMode
+  sharedRoute?: import('./useQuestRouteGeometry').QuestRouteGeometryState
 }) {
   return (
     <View
@@ -156,6 +158,7 @@ export function QuestDesktopMapPanel({
             steps={steps}
             closeLoop={closeLoopRoute}
             routeMode={routeMode}
+            sharedRoute={sharedRoute}
             height={useWideInlineLayout ? (compactDesktopLayout ? 460 : 520) : 360}
             title={i18nT('quests:components.quests.questWizardSections.karta_kvesta_159fe057')}
             activeStepIndex={activeStepIndex}

@@ -3,7 +3,7 @@ import { translate as i18nT } from '@/i18n'
 import { loadExpoLocation } from './QuestsScreen.helpers'
 
 export type QuestCatalogLocationResult =
-  | { coords: { lat: number; lng: number } }
+  | { coords: { lat: number; lng: number; accuracyMeters: number | null } }
   | { failure: string }
 
 /**
@@ -23,7 +23,9 @@ export async function requestQuestCatalogLocation(
     const pos = await Location.getCurrentPositionAsync({
       accuracy: Location.LocationAccuracy.Balanced,
     })
-    return { coords: { lat: pos.coords.latitude, lng: pos.coords.longitude } }
+    if (isCancelled()) return null
+    const accuracy = pos.coords.accuracy
+    return { coords: { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracyMeters: typeof accuracy === 'number' && Number.isFinite(accuracy) && accuracy > 0 ? accuracy : null } }
   } catch (error) {
     console.warn('Error requesting nearby location', error)
     return { failure: i18nT('quests:screens.tabs.QuestsScreen.ne_udalos_opredelit_mestopolozhenie_proverte_34451827') }

@@ -35,14 +35,14 @@ const webViewStyle = (style: WebViewStyle): ViewStyle => (IS_WEB ? style : {})
 // inlines every FAQ string into the eager bundle — otherwise the key would leak
 // to the user on web (see __tests__/i18n/webCompileTime.test.ts).
 /** Source of truth for the /quests FAQ (visible copy + FAQPage JSON-LD). */
-export function getQuestFaqItems(): QuestFaqItem[] {
+export function getQuestFaqItems(platform: string = Platform.OS): QuestFaqItem[] {
   return [
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q1'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a1') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q2'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a2') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q3'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a3') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q4'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a4') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q5'), a: translatePlural('quests:screens.tabs.QuestsSeoIntroFaq.a5', GUEST_QUEST_FREE_STEPS, { freeSteps: formatInteger(GUEST_QUEST_FREE_STEPS) }) },
-    { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q6'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a6') },
+    { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q6'), a: platform === 'web' ? i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a6Web') : i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a6') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q7'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a7') },
     { q: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.q8'), a: i18nT('quests:screens.tabs.QuestsSeoIntroFaq.a8') },
   ]

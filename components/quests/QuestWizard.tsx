@@ -8,7 +8,7 @@ import React, {
 } from 'react';
 import {
     type ScrollViewInstance,
-    View,
+    View, Text,
     ScrollView, Platform,
     KeyboardAvoidingView, Keyboard
 } from 'react-native';
@@ -44,6 +44,9 @@ import {
 } from './questWizardHelpers';
 import { exportQuestOfflineMap, getQuestOfflineMapPoints, openQuestOfflineMapInApp } from './questOfflineMapExport';
 import { buildQuestFarStepModel, questMedianLegMeters } from './questStepDistance';
+import QuestIntroSummary from './QuestIntroSummary';
+import { useQuestRouteGeometry } from './useQuestRouteGeometry';
+import { getQuestRoutePoints } from './questRouteGeometry';
 
 import { fetchQuestByQuestId } from '@/api/quests';
 import { saveQuestOffline } from '@/services/offline/questOfflineAdapter';
@@ -70,6 +73,9 @@ import { translate as i18nT } from '@/i18n'
 export type QuestWizardProps = {
     title: string; steps: QuestStep[]; finale: QuestFinale; intro?: QuestStep;
     countModel?: QuestCountModel;
+    durationMin?: number;
+    difficulty?: 'easy' | 'medium' | 'hard';
+    summaryMetaLoading?: boolean;
     storageKey?: string; city?: QuestCity;
     coverUrl?: string;
     /** Теги квеста (meta.tags): `bike` выбирает веломаршрут, `loop` замыкает его к старту. */
@@ -151,7 +157,7 @@ const useQuestWizardTheme = (isMobile: boolean, screenW: number) => {
     return { colors, styles };
 };
 // ===================== ОСНОВНОЙ КОМПОНЕНТ =====================
-export function QuestWizard({ title, steps, finale, intro, countModel, storageKey = 'quest_progress', city, coverUrl, tags, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, subscribeSlot, ratingSlot, completionSlot, screenMeta, statusSlot, contentLocaleSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = GUEST_QUEST_FREE_STEPS, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
+export function QuestWizard({ title, steps, finale, intro, countModel, durationMin, difficulty, summaryMetaLoading, storageKey = 'quest_progress', city, coverUrl, tags, onProgressChange, onProgressReset, initialProgress, onFinaleVideoRetry, relatedTravelsSlot, subscribeSlot, ratingSlot, completionSlot, screenMeta, statusSlot, contentLocaleSlot, questId, cityId, questNumericId, guestMode = false, guestFreeSteps = GUEST_QUEST_FREE_STEPS, onGuestGate, onGuestLogin, onGuestRegister }: QuestWizardProps) {
     const { t } = useTranslation();
     const allSteps = useMemo(() => intro ? [intro, ...steps] : steps, [intro, steps]);
     const resolvedCountModel = useMemo(
@@ -164,6 +170,12 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
     const routeMode = tags ? (isBikeQuest(tags) ? 'bike' : 'foot') : undefined;
     // Кольцевой квест (тег `loop`): карта и все экспорты замыкают маршрут к старту.
     const closeLoopRoute = isLoopQuest(tags);
+    const completeRoute = steps.length >= 2 && getQuestRoutePoints(steps).length === steps.length;
+    const sharedRoute = useQuestRouteGeometry(steps, {
+        closeLoop: closeLoopRoute,
+        routeMode: routeMode ?? 'foot',
+        enabled: Platform.OS === 'web' && !!routeMode && completeRoute,
+    });
 
     const wizardModel = useQuestWizardResponsiveModel();
     const {
@@ -674,6 +686,16 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
         void (async () => {
             setOfflineQuestState('downloading');
             try {
+                if (Platform.OS === 'web') {
+                    const confirmed = await confirmQuestAsync(
+                        i18nT('quests:components.quests.QuestWizard.webOfflineTitle'),
+                        i18nT('quests:components.quests.QuestWizard.webOfflineBeforeSave'),
+                    );
+                    if (!confirmed) {
+                        setOfflineQuestState(questSavedOffline ? 'done' : 'idle');
+                        return;
+                    }
+                }
                 if (!questId) throw new Error('OFFLINE_QUEST_ID_MISSING');
                 const bundle = await fetchQuestByQuestId(questId);
                 const manifest = await saveQuestOffline(bundle, {
@@ -684,7 +706,9 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                 if (!manifest) throw new Error('OFFLINE_QUEST_SAVE_FAILED');
                 setOfflineQuestState('done');
                 notifyQuest(
-                    manifest.assetCount > 0
+                    Platform.OS === 'web'
+                        ? i18nT('quests:components.quests.QuestWizard.webOfflineSaved')
+                        : manifest.assetCount > 0
                         ? i18nT('quests:components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_foto_value1_valu_b0544e7a', { value1: manifest.assetCount, value2: manifest.assetCount })
                         : i18nT('quests:components.quests.QuestWizard.kvest_sohranen_dlya_oflayna_da201f00'),
                 );
@@ -693,7 +717,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                 notifyQuest(i18nT('quests:components.quests.QuestWizard.ne_udalos_sohranit_kvest_dlya_oflayna_21108b88'));
             }
         })();
-    }, [cityId, offlineQuestState, questId]);
+    }, [cityId, offlineQuestState, questId, questSavedOffline]);
 
     // #2148: шапка экрана объявляется один раз; на телефоне её рисует строка
     // экрана, на desktop — панель визарда (декларация там не показывается).
@@ -732,6 +756,11 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
           >
             {/* Левая колонка: шаги + карта + финал */}
             <View>
+                {Platform.OS === 'web' && offlineQuestState === 'done' && (
+                    <Text style={[styles.section, styles.legNote]} testID="quest-offline-web-saved-details">
+                        {t('quests:components.quests.QuestWizard.webOfflineBeforeSave')}
+                    </Text>
+                )}
                 {/* Гостевой мягкий гейт после лимита бесплатных точек */}
                 {guestGateActive && (
                     <QuestGuestGate
@@ -782,6 +811,10 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                 onAnswerFocus={handleAnswerFocus}
                                 onAnswerBlur={handleAnswerBlur}
                                 onAnswerFeedback={handleAnswerFeedback}
+                                introSummarySlot={Platform.OS === 'web' ? (
+                                    <QuestIntroSummary durationMin={durationMin} difficulty={difficulty} metaLoading={summaryMetaLoading} routeLoading={!routeMode} routeComplete={completeRoute} route={sharedRoute} pointsCount={resolvedCountModel.total} />
+                                ) : undefined}
+                                guestFreeSteps={Platform.OS === 'web' && guestMode ? guestFreeSteps : undefined}
                                 introSlot={introTrustBar}
                             />
                         </View>
@@ -803,6 +836,7 @@ export function QuestWizard({ title, steps, finale, intro, countModel, storageKe
                                 activeStepIndex={currentIndex > 0 ? currentIndex - 1 : undefined}
                                 closeLoopRoute={closeLoopRoute}
                                 routeMode={routeMode}
+                                sharedRoute={Platform.OS === 'web' && completeRoute ? sharedRoute : undefined}
                             />
                         )}
                     </View>

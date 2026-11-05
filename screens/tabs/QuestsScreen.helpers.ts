@@ -110,6 +110,11 @@ export {
 // Кракова было видно 6 квестов из 9 городских), поэтому берём радиус
 // агломерации + ближней вылазки на день.
 export const DEFAULT_NEARBY_RADIUS_KM = 30;
+export type QuestCatalogLocation = { lat: number; lng: number; accuracyMeters: number | null };
+export function getQuestLocationQuality(accuracyMeters: number | null | undefined): 'precise' | 'approximate' | 'unknown' {
+    if (typeof accuracyMeters !== 'number' || !Number.isFinite(accuracyMeters) || accuracyMeters <= 0) return 'unknown';
+    return accuracyMeters <= 100 ? 'precise' : 'approximate';
+}
 
 export function filterReviewedQuests<T extends { ratingCount: number }>(quests: T[]): T[] {
     return quests.filter((quest) => quest.ratingCount > 0);

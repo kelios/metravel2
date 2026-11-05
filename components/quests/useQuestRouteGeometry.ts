@@ -32,24 +32,26 @@ export const hasRoutedQuestTrack = (track?: LngLat[], source?: string) =>
 
 export function useQuestRouteGeometry(
   steps: QuestRoutePoint[],
-  options: { closeLoop?: boolean; routeMode?: QuestRouteMode } = {},
+  options: { closeLoop?: boolean; routeMode?: QuestRouteMode; enabled?: boolean } = {},
 ): QuestRouteGeometryState {
-  const { closeLoop = false, routeMode = 'foot' } = options;
+  const { closeLoop = false, routeMode = 'foot', enabled = true } = options;
   // Кольцевой квест (тег `loop`): к точкам добавляется стартовая, чтобы роутер
   // проложил обратный сегмент «финиш → старт» и трек замкнулся.
-  const points = useMemo(() => {
-    const base = getQuestRoutePoints(steps);
-    return closeLoop ? closeQuestRouteLoop(base) : base;
-  }, [steps, closeLoop]);
-  const pointsKey = useMemo(
-    () => points.map((point) => `${point.lat.toFixed(6)},${point.lng.toFixed(6)}`).join('|'),
-    [points],
+  const validPoints = getQuestRoutePoints(steps);
+  const routePoints = closeLoop ? closeQuestRouteLoop(validPoints) : validPoints;
+  // Only coordinates affect routing. A metadata refresh may recreate the
+  // steps array without changing the route; retain the point identity then.
+  const pointsKey = JSON.stringify(routePoints.map(({ lat, lng }) => [lat, lng]));
+  const points = useMemo(
+    () => (JSON.parse(pointsKey) as [number, number][]).map(([lat, lng]) => ({ lat, lng })),
+    [pointsKey],
   );
 
   const directTrack = useMemo(() => getQuestDirectRouteTrack(points), [points]);
+  const routeKey = `${enabled ? 'enabled' : 'disabled'}:${routeMode}:${pointsKey}`;
 
-  const [state, setState] = useState<QuestRouteGeometryState>(() => {
-    if (directTrack.length < 2) return emptyState;
+  const initialState = (): QuestRouteGeometryState => {
+    if (!enabled || directTrack.length < 2) return emptyState;
     const distanceM = calculateQuestTrackDistanceM(directTrack);
     return {
       status: 'loading',
@@ -58,11 +60,15 @@ export function useQuestRouteGeometry(
       distanceM,
       durationS: 0,
     };
-  });
+  };
+  const [state, setState] = useState<{ key: string; route: QuestRouteGeometryState }>(() => ({
+    key: routeKey,
+    route: initialState(),
+  }));
 
   useEffect(() => {
-    if (directTrack.length < 2) {
-      setState(emptyState);
+    if (!enabled || directTrack.length < 2) {
+      setState({ key: routeKey, route: emptyState });
       return;
     }
 
@@ -71,15 +77,15 @@ export function useQuestRouteGeometry(
       ...directFallback,
       status: 'loading',
     };
-    setState(loadingState);
+    setState({ key: routeKey, route: loadingState });
 
     const isTestEnv = typeof process !== 'undefined' && (process.env as any)?.NODE_ENV === 'test';
     if (isTestEnv) {
-      setState({
+      setState({ key: routeKey, route: {
         ...directFallback,
         status: 'fallback',
         error: i18nT('quests:components.quests.useQuestRouteGeometry.marshrutizatsiya_otklyuchena_v_testovoy_sred_8985ac7a'),
-      });
+      } });
       return;
     }
 
@@ -89,24 +95,26 @@ export function useQuestRouteGeometry(
     buildQuestRouteGeometry(points, { signal: controller.signal, routeMode })
       .then((result) => {
         if (cancelled) return;
-        setState({
+        setState({ key: routeKey, route: {
           ...result,
           status: result.source === 'routed' ? 'ready' : 'fallback',
-        });
+        } });
       })
       .catch((error) => {
         if (cancelled || error?.name === 'AbortError') return;
-        setState({
+        setState({ key: routeKey, route: {
           ...buildDirectQuestRouteResult(points, { error, routeMode }),
           status: 'fallback',
-        });
+        } });
       });
 
     return () => {
       cancelled = true;
       controller.abort();
     };
-  }, [directTrack, points, pointsKey, routeMode]);
+  }, [directTrack, points, routeMode, enabled, routeKey]);
 
-  return state;
+  // Effects run after render. Never briefly expose a previous quest/mode's
+  // distance or track while the new route is being calculated.
+  return state.key === routeKey ? state.route : initialState();
 }

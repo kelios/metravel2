@@ -20,6 +20,7 @@ import { useQuestPlayersCount } from '@/hooks/useQuestPlayersCount';
 import QuestCard from './QuestCard';
 import { QuestsCountPlaceholder, QuestsGridSkeleton } from './QuestsCatalogPlaceholders';
 import { ALL_QUESTS_ID, COMPLETED_BY_OTHERS_FILTER_ID, COMPLETED_FILTER_ID, REVIEWED_FILTER_ID, UNCOMPLETED_FILTER_ID, countQuestCompletions, parseThemeSelectionId } from './QuestsScreen.helpers';
+import { getQuestLocationQuality, type QuestCatalogLocation } from './QuestsScreen.helpers';
 import { getQuestThemeById } from '@/utils/questThemes';
 import QuestsMobileToolbar, { QuestFilterToolbarActions } from './QuestsMobileToolbar';
 import QuestsSeoIntroFaq from './QuestsSeoIntroFaq';
@@ -58,7 +59,7 @@ type QuestsContentPanelProps = {
     onSelectSortOrder?: (order: QuestSortOrder) => void;
     /** Режим карты (#2389): ленивый `QuestsMapSection`, рисуется только при `viewMode === 'map'`. */
     mapSlot?: React.ReactNode;
-    userLoc: { lat: number; lng: number } | null;
+    userLoc: (Omit<QuestCatalogLocation, 'accuracyMeters'> & { accuracyMeters?: number | null }) | null;
     isMapAreaActive: boolean;
     geoMessage: string | null;
     geoRequesting: boolean;
@@ -258,6 +259,7 @@ function QuestsContentPanel({
                 cityId={getQuestCityId(quest)}
                 quest={quest}
                 nearby={selectedCityId === nearbyId && !!userLoc && !isMapAreaActive}
+                approximateDistance={getQuestLocationQuality(userLoc?.accuracyMeters) !== 'precise'}
                 cardWidth={questCardWidth}
                 index={index}
             />
@@ -561,6 +563,7 @@ function QuestsContentPanel({
                                         cityId={getQuestCityId(quest)}
                                         quest={quest}
                                         nearby={selectedCityId === nearbyId && !!userLoc && !isMapAreaActive}
+                                        approximateDistance={getQuestLocationQuality(userLoc?.accuracyMeters) !== 'precise'}
                                         cardWidth={gridCardWidth}
                                         index={index}
                                     />

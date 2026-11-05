@@ -65,6 +65,7 @@ type QuestCardProps = {
     cityId: string;
     quest: QuestMeta & { _distanceKm?: number };
     nearby?: boolean;
+    approximateDistance?: boolean;
     /** Позиция карточки в каталоге: первые получают высокий fetch-приоритет обложки. */
     index?: number;
 };
@@ -75,6 +76,7 @@ function QuestCard({
     cityId,
     quest,
     nearby,
+    approximateDistance = false,
     index,
 }: QuestCardProps) {
     const colors = useThemedColors();
@@ -94,7 +96,7 @@ function QuestCard({
     const theme = getPrimaryQuestTheme(quest.tags, new Date(), activeSeasonalTheme);
     const categoryLabel = quest.cityName || quest.countryName || null;
     const distanceText = nearby && typeof quest._distanceKm === 'number'
-        ? formatDistance(quest._distanceKm)
+        ? `${approximateDistance ? '≈ ' : ''}${formatDistance(quest._distanceKm)}`
         : null;
     // Вход в читалку доступен только при наличии отзывов на всех платформах.
     const showReviewsAction = quest.ratingCount > 0;
@@ -302,7 +304,7 @@ function QuestCard({
                 {distanceText && (
                     <View style={styles.questCardBadge}>
                         <Feather name="navigation" size={12} color={colors.textOnDark} />
-                        <Text style={styles.questCardBadgeText}>{distanceText}</Text>
+                        <Text style={styles.questCardBadgeText} accessibilityLabel={approximateDistance ? i18nT('quests:screens.tabs.QuestCard.approximateDistance', { value1: formatDistance(quest._distanceKm!) }) : distanceText}>{distanceText}</Text>
                     </View>
                 )}
 

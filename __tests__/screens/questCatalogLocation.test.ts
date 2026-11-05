@@ -22,12 +22,20 @@ afterEach(() => {
 describe('requestQuestCatalogLocation (#2389)', () => {
     it('returns the player position once permission is granted', async () => {
         mockRequestPermission.mockResolvedValue({ status: 'granted' });
-        mockGetPosition.mockResolvedValue({ coords: { latitude: 53.91, longitude: 27.57 } });
+        mockGetPosition.mockResolvedValue({ coords: { latitude: 53.91, longitude: 27.57, accuracy: 5 } });
 
         await expect(requestQuestCatalogLocation(() => false)).resolves.toEqual({
-            coords: { lat: 53.91, lng: 27.57 },
+            coords: { lat: 53.91, lng: 27.57, accuracyMeters: 5 },
         });
         expect(mockGetPosition).toHaveBeenCalledWith({ accuracy: 3 });
+    });
+
+    it.each([1500, null, -1, 0, Infinity])('preserves or rejects accuracy %s', async (accuracy) => {
+        mockRequestPermission.mockResolvedValue({ status: 'granted' });
+        mockGetPosition.mockResolvedValue({ coords: { latitude: 53.91, longitude: 27.57, accuracy } });
+        await expect(requestQuestCatalogLocation(() => false)).resolves.toEqual({
+            coords: { lat: 53.91, lng: 27.57, accuracyMeters: accuracy === 1500 ? 1500 : null },
+        });
     });
 
     it('explains a refused permission without asking for the position', async () => {

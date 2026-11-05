@@ -213,6 +213,9 @@ export type FrontendQuestBundle = {
     coverUrl?: string;
     /** Теги квеста (meta.tags). В detail-API их нет — хук дообогащает из списка. */
     tags?: string[];
+    durationMin?: number;
+    difficulty?: 'easy' | 'medium' | 'hard';
+    summaryMetaLoading?: boolean;
     ratingAvg: number | null;
     ratingCount: number;
     userRating: number | null;

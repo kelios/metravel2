@@ -31,12 +31,13 @@ jest.mock('@/screens/tabs/QuestCard', () => {
     const React = require('react');
     const { Text } = require('react-native');
 
-    return function MockQuestCard({ cityId, quest, index, nearby, cardWidth }: { cityId: string; quest: { id: string; title: string }; index?: number; nearby?: boolean; cardWidth?: number }) {
+    return function MockQuestCard({ cityId, quest, index, nearby, cardWidth, approximateDistance }: { cityId: string; quest: { id: string; title: string }; index?: number; nearby?: boolean; cardWidth?: number; approximateDistance?: boolean }) {
         return React.createElement(Text, {
             testID: `quest-card-${quest.id}`,
             accessibilityLabel: cityId,
             accessibilityHint: String(index),
             accessibilityState: { selected: Boolean(nearby) },
+            accessibilityValue: { text: approximateDistance ? 'approximate' : 'precise' },
             style: { width: cardWidth },
         }, quest.title);
     };
@@ -137,6 +138,22 @@ describe('QuestsContentPanel', () => {
         onShowNearby: () => {},
         onOpenFilterDrawer: () => {},
         onToggleViewMode: () => {},
+    });
+
+    it.each([1500, null, 5])('passes web location accuracy %s to the visible quest cards', async (accuracyMeters) => {
+        const previousOS = Platform.OS;
+        (Platform as { OS: string }).OS = 'web';
+        try {
+            const { getByTestId } = await render(<QuestsContentPanel
+                {...makeBaseProps()}
+                selectedCityId="__nearby__"
+                userLoc={{ lat: 52.23, lng: 21.01, accuracyMeters }}
+            />);
+            expect(getByTestId('quest-card-quest-0').props.accessibilityValue.text)
+                .toBe(accuracyMeters === 5 ? 'precise' : 'approximate');
+        } finally {
+            (Platform as { OS: string }).OS = previousOS;
+        }
     });
 
     /**

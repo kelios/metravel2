@@ -2,7 +2,7 @@
 // Хуки для работы с квестами через бэкенд API.
 // Чистые адаптеры и типы вынесены в utils/questAdapters.ts.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ApiQuestMeta, ApiQuestProgress, QuestReview } from '@/api/quests';
 import {
@@ -187,9 +187,9 @@ export function useQuestBundle(questId: string | undefined, routeLocale?: string
         queryKey: queryKeys.questCityClassification(cityId, locale),
         queryFn: async () => (await fetchQuestsByCity(cityId!, locale)).map((meta) => {
             const adapted = adaptMeta(meta);
-            return { questId: meta.quest_id, tags: adapted.tags ?? [], cover: adapted.cover };
+            return { questId: meta.quest_id, tags: adapted.tags ?? [], cover: adapted.cover, durationMin: adapted.durationMin, difficulty: adapted.difficulty };
         }),
-        enabled: Boolean(data && cityId && (data.tags === undefined || !data.cover_url)),
+        enabled: Boolean(data && cityId && (Platform.OS === 'web' || data.tags === undefined || !data.cover_url)),
         networkMode: 'always',
         staleTime: QUESTS_LIST_STALE_TIME,
         gcTime: QUESTS_LIST_GC_TIME,
@@ -210,6 +210,9 @@ export function useQuestBundle(questId: string | undefined, routeLocale?: string
             ? questTagNames(data.tags) ?? []
             : meta?.tags ?? ((!classificationPending || classificationFailed || !cityId) ? [] : undefined);
         adapted.coverUrl ||= meta?.cover;
+        adapted.durationMin = meta?.durationMin;
+        adapted.difficulty = meta?.difficulty;
+        adapted.summaryMetaLoading = Boolean(cityId && classificationPending && !classificationFailed);
         return adapted;
     }, [data, questId, classification, classificationPending, classificationFailed, cityId]);
 

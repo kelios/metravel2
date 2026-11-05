@@ -50,6 +50,8 @@ jest.mock('@/utils/questAdapters', () => ({
     lat: parseFloat(String(m.lat)),
     lng: parseFloat(String(m.lng)),
     cover: m.cover_url ?? undefined,
+    durationMin: m.duration_min ?? undefined,
+    difficulty: m.difficulty || undefined,
     tags: m.tags ? Object.keys(m.tags) : undefined,
   }),
   adaptBundle: (b: any) => ({
@@ -283,6 +285,24 @@ describe('useQuestsApi hooks', () => {
       expect(result.current.bundle!.title).toBe('Тайна дракона');
       expect(result.current.error).toBeNull();
       expect(typeof result.current.refetch).toBe('function');
+    });
+
+    it('loads intro metadata for a direct web entry even when cover and tags are already in the bundle', async () => {
+      const originalPlatform = Platform.OS;
+      Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+      try {
+        mockFetchQuestByQuestId.mockResolvedValueOnce({ ...API_BUNDLE, tags: [], cover_url: 'https://img.com/detail.jpg' });
+        let resolveCity!: (value: unknown[]) => void;
+        mockFetchQuestsByCity.mockImplementationOnce(() => new Promise((resolve) => { resolveCity = resolve; }));
+        const { result } = await renderHook(() => useQuestBundle('krakow-dragon'), { wrapper });
+        await waitFor(() => expect(result.current.bundle?.summaryMetaLoading).toBe(true));
+        await act(async () => { resolveCity([API_META]); });
+        await waitFor(() => expect(result.current.bundle?.summaryMetaLoading).toBe(false));
+        expect(result.current.bundle?.durationMin).toBe(60);
+        expect(result.current.bundle?.difficulty).toBe('easy');
+      } finally {
+        Object.defineProperty(Platform, 'OS', { configurable: true, value: originalPlatform });
+      }
     });
 
     // #1562/#418: посадочная города прогревает тот же ключ бандла, и на кадре

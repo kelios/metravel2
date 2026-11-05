@@ -8,6 +8,7 @@
  */
 import React from 'react'
 import { act, fireEvent, render } from '@testing-library/react-native'
+import { Platform } from 'react-native'
 
 import { __resetAppTelemetry, setAppTelemetryEnabled } from '@/utils/appTelemetry'
 
@@ -129,6 +130,21 @@ describe('QuestWizard guest gate', () => {
 
   afterEach(() => {
     __resetAppTelemetry()
+    jest.restoreAllMocks()
+  })
+
+  it.each([2, 3])('shows the actual guest limit %i before the web start action', async (limit) => {
+    jest.replaceProperty(Platform, 'OS', 'web')
+    const view = await render(<QuestWizard title="Тест" steps={steps} finale={finale} intro={intro} questId="guest-intro" guestMode guestFreeSteps={limit} />)
+    expect(view.getByTestId('quest-intro-guest-limit')).toHaveTextContent(`Пробных заданий без аккаунта: ${limit}. Чтобы продолжить, войдите или зарегистрируйтесь.`)
+    const ids = collectRenderedTestIds(view.toJSON())
+    expect(ids.indexOf('quest-intro-guest-limit')).toBeLessThan(ids.indexOf('quest-intro-start'))
+  })
+
+  it('does not show the guest warning to a signed-in player', async () => {
+    jest.replaceProperty(Platform, 'OS', 'web')
+    const view = await render(<QuestWizard title="Тест" steps={steps} finale={finale} intro={intro} questId="signed-in-intro" guestFreeSteps={2} />)
+    expect(view.queryByTestId('quest-intro-guest-limit')).toBeNull()
   })
 
   it('renders the intro start action before story, task and the collapsed trust footer', async () => {

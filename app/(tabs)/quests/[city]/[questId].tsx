@@ -798,6 +798,9 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
               finale={bundle.finale}
               intro={bundle.intro}
               countModel={countModel ?? undefined}
+              durationMin={bundle.durationMin}
+              difficulty={bundle.difficulty}
+              summaryMetaLoading={bundle.summaryMetaLoading}
               storageKey={guestStorageKey}
               city={bundle.city}
               coverUrl={bundle.coverUrl}
@@ -828,6 +831,9 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
             finale={bundle.finale}
             intro={bundle.intro}
             countModel={countModel ?? undefined}
+              durationMin={bundle.durationMin}
+              difficulty={bundle.difficulty}
+              summaryMetaLoading={bundle.summaryMetaLoading}
             storageKey={guestStorageKey}
             city={bundle.city}
             coverUrl={bundle.coverUrl}
@@ -909,6 +915,9 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
             finale={bundle.finale}
             intro={bundle.intro}
             countModel={countModel ?? undefined}
+              durationMin={bundle.durationMin}
+              difficulty={bundle.difficulty}
+              summaryMetaLoading={bundle.summaryMetaLoading}
             storageKey={progressStorageKey}
             city={bundle.city}
             coverUrl={bundle.coverUrl}
@@ -936,6 +945,9 @@ export default function QuestByIdScreen({ route, publicProjection }: { route?: Q
           finale={bundle.finale}
           intro={bundle.intro}
           countModel={countModel ?? undefined}
+              durationMin={bundle.durationMin}
+              difficulty={bundle.difficulty}
+              summaryMetaLoading={bundle.summaryMetaLoading}
           storageKey={progressStorageKey}
           city={bundle.city}
           coverUrl={bundle.coverUrl}

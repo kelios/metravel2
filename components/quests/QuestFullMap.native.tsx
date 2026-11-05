@@ -91,6 +91,7 @@ function QuestFullMap({
     pointerFrozen = false,
     closeLoop = false,
     routeMode = 'foot',
+    sharedRoute,
 }: {
     steps: QuestStepPoint[];
     height?: number;
@@ -103,6 +104,7 @@ function QuestFullMap({
     /** Кольцевой квест (тег `loop`): маршрут замыкается сегментом «финиш → старт». */
     closeLoop?: boolean;
     routeMode?: QuestRouteMode;
+    sharedRoute?: QuestRouteGeometryState;
 }) {
     const [isLoading, setIsLoading] = useState(true);
     const [exportMenuVisible, setExportMenuVisible] = useState(false);
@@ -170,7 +172,8 @@ function QuestFullMap({
         [points],
     );
 
-    const routeGeometry = useQuestRouteGeometry(points, { closeLoop, routeMode });
+    const localRoute = useQuestRouteGeometry(points, { closeLoop, routeMode, enabled: !sharedRoute });
+    const routeGeometry = sharedRoute ?? localRoute;
     const routeIsRouted = hasRoutedQuestTrack(routeGeometry.track, routeGeometry.source);
     const routeStatusText = getRouteStatusText(routeGeometry, routeMode);
     const routeLineTrack = routeGeometry.track.length >= 2

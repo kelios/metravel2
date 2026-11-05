@@ -31,6 +31,7 @@ import { type QuestLegInfo } from './questStepDistance'
 import type { QuestAnswerChecker, QuestPoiInfo } from './types'
 import { formatDistance, formatTravelTime } from '@/utils/distanceCalculator'
 import { translate as i18nT, translatePlural } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 import type { QuestPointRole } from '@/utils/questCountModel'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
@@ -147,6 +148,8 @@ type StepCardProps = {
   showLocationControls?: boolean
   /** Метаданные маршрута и раскрытие об ИИ в футере стартовой карточки (#1480). */
   introSlot?: React.ReactNode
+  introSummarySlot?: React.ReactNode
+  guestFreeSteps?: number
   /** Числовой PK квеста — адрес батча попыток ответа (#1276). */
   questNumericId?: number
   /** Попытка ответа для продуктовой воронки: одна на каждое «Проверить» (#1498). */
@@ -256,6 +259,8 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
     onToggleMap,
     showLocationControls = true,
     introSlot,
+    introSummarySlot,
+    guestFreeSteps,
     questNumericId,
     onAnswerAttempt,
     onAnswerFocus,
@@ -562,6 +567,12 @@ export const QuestStepCard = memo(function QuestStepCard(props: StepCardProps) {
         {isPassed && (<View style={styles.completedBadge}><Text style={styles.completedText}>✓</Text></View>)}
       </View>
 
+      {step.id === 'intro' && introSummarySlot}
+      {step.id === 'intro' && guestFreeSteps !== undefined && (
+        <Text style={[styles.section, styles.legNote]} testID="quest-intro-guest-limit">
+          {i18nT('quests:components.quests.questWizardStepCard.guestLimit', { count: formatInteger(guestFreeSteps) })}
+        </Text>
+      )}
       {step.id === 'intro' && (
         <Pressable
           style={[styles.startButton, styles.section]}
