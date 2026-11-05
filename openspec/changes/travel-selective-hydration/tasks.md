@@ -8,6 +8,7 @@
 - [x] 2.1 Partition web hero/article hydration without changing server content or native composition.
 - [x] 2.2 Avoid unchanged deferred geometry transactions and add a genuine-DOM growth/no-op regression.
 - [x] 2.3 Complete focused code-level validation, independent review-and-fix and code-review-gate.
+- [x] 2.4 After the failed primary probe, transition noncritical web readiness/size updates and inline travel SSR critical CSS; repeat focused checks and independent review, then record the formal gate before publication.
 
 ## 3. Publish and accept
 

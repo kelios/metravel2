@@ -447,7 +447,7 @@ const getCriticalHeadScript = () => {
 
 export default function Root({ children }: { children: React.ReactNode }) {
   const locale = getActiveLocaleDefinition();
-  const ssrCriticalCssHref = readRequestPathname() === '/' ? null : resolveSsrCriticalCssHref();
+  const ssrCriticalCssHref = resolveSsrCriticalCssHref(undefined, readRequestPathname());
   // Expo SDK 58 (#2727): статический рендер больше не дописывает ассеты текстом в
   // конец head и body — RNW-стили, шрифты, preload и `<script defer src>` чанков
   // приходят узлами через контекст документа, и шаблон обязан их отрендерить сам.
@@ -652,7 +652,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
       <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
       <link rel="manifest" href="/manifest.json" />
 
-      {/* Inline on the SSR homepage to keep the stylesheet request off its first-paint path.
+      {/* Inline on SSR home/travel details to keep the stylesheet off the first-paint path.
           Other SSR routes share the generated stylesheet (#2768). */}
       {ssrCriticalCssHref ? (
         <link rel="stylesheet" id="metravel-critical-css" href={ssrCriticalCssHref} />

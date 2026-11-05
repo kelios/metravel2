@@ -19,4 +19,11 @@
 - [x] 3.1 Complete targeted source checks, independent review, and web acceptance after deployment.
 - [x] 3.2 Visually accept all 12 pages of the exact revised PDFs, then verify the live covers, previews and guest downloads on mobile and desktop.
 - [ ] 3.3 Record the post-publication 30-day measurement window.
-- [ ] 3.4 Accept the completed short-diary website flow on production: mobile then desktop, PL layout, filters, trip links and unchanged PDF downloads (#3069).
+- [x] 3.4 Accept the completed short-diary website flow on production: mobile then desktop, PL layout, filters, trip links and unchanged PDF downloads (#3069).
+
+  Accepted 2026-11-05 on production `7ea1a93a305f01a618364306450e6bfca4681ee7`
+  (book source `26a2db4ddeacd60e822bf4e6072d42052316ff91`): 75/75 browser
+  assertions, 390/1440 and 320/820/PL geometry, exact trip links, both guest PDF
+  hashes and actual native PDF reading. No console/page/HTTP errors. Board #3069
+  records the complete evidence and reuse conditions; 3.3 remains a separate
+  measurement follow-up.

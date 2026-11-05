@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { startTransition, useEffect, useMemo, useState } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
 import { Platform } from 'react-native'
 
@@ -90,7 +90,11 @@ export function useTravelDetailsPerformance({
     return Array.isArray(travel.gallery) && travel.gallery.length > 0
   }, [travel])
   const [lcpLoaded, setLcpLoaded] = useState(false)
-  const [sliderReady, setSliderReady] = useState(Platform.OS !== 'web')
+  const [travelVisit, setTravelVisit] = useState(() => ({ travelId }))
+  const [sliderReadyVisit, setSliderReadyVisit] = useState<typeof travelVisit | null>(null)
+  // A transition queued for an older visit can replay after a render-phase
+  // reset. Its identity must not unlock this travel, including an A→B→A visit.
+  const sliderReady = Platform.OS !== 'web' || sliderReadyVisit === travelVisit
   const [deferAllowed, setDeferAllowed] = useState(false)
   const [heroEnhancersReady, setHeroEnhancersReady] = useState(
     Platform.OS !== 'web',
@@ -107,12 +111,10 @@ export function useTravelDetailsPerformance({
   // render when travelId changes (the "adjust state during render" pattern) so the new travel
   // behaves like a fresh mount and the idle effects below re-reveal the chrome progressively.
   // Native is left untouched (gates start `true` there).
-  const [prevTravelId, setPrevTravelId] = useState(travelId)
-  if (travelId !== prevTravelId) {
-    setPrevTravelId(travelId)
+  if (travelId !== travelVisit.travelId) {
+    setTravelVisit({ travelId })
     if (Platform.OS === 'web') {
       setLcpLoaded(false)
-      setSliderReady(false)
       setHeroEnhancersReady(false)
       setPostLcpRuntimeReady(false)
     }
@@ -131,13 +133,13 @@ export function useTravelDetailsPerformance({
         devWarn('[TravelDetailsPerformance] Failed to preload hero slider runtime', error)
       })
       .finally(() => {
-        if (!cancelled) setSliderReady(true)
+        if (!cancelled) startTransition(() => setSliderReadyVisit(travelVisit))
       })
 
     return () => {
       cancelled = true
     }
-  }, [deferAllowed, lcpLoaded, travelId])
+  }, [deferAllowed, lcpLoaded, travelId, travelVisit])
 
   // Safety net: the first-screen gate (`lcpLoaded`) is normally released by the hero
   // image's load/error callback. On client-side (SPA) navigation that callback is
@@ -161,7 +163,8 @@ export function useTravelDetailsPerformance({
 
   useEffect(() => {
     if (!isLoading) {
-      setDeferAllowed(true)
+      if (Platform.OS === 'web') startTransition(() => setDeferAllowed(true))
+      else setDeferAllowed(true)
       return
     }
 
@@ -180,13 +183,18 @@ export function useTravelDetailsPerformance({
       return
     }
     if (travelId == null) {
-      setHeroEnhancersReady(true)
       setPostLcpRuntimeReady(false)
+      startTransition(() => setHeroEnhancersReady(true))
       return
     }
-    if (!hasHeroMedia) {
+    // These gates add noncritical chrome after the hero. Keep them together
+    // and interruptible rather than promoting unfinished hydration to sync work.
+    const revealPostLcpChrome = () => startTransition(() => {
       setHeroEnhancersReady(true)
       setPostLcpRuntimeReady(true)
+    })
+    if (!hasHeroMedia) {
+      revealPostLcpChrome()
       return
     }
     if (!lcpLoaded) {
@@ -200,8 +208,7 @@ export function useTravelDetailsPerformance({
       isWebAutomationNavigator(navigator)
 
     if (isWebAutomation) {
-      setHeroEnhancersReady(true)
-      setPostLcpRuntimeReady(true)
+      revealPostLcpChrome()
       return
     }
 
@@ -213,10 +220,7 @@ export function useTravelDetailsPerformance({
     // staged fallbacks serialised chrome appearance into a visible 0.75–1.5s reflow
     // cascade; flipping both gates in one commit removes the stepping while still keeping
     // the chrome strictly after LCP (this only runs once `lcpLoaded` is true).
-    const cleanupIdle = runWhenBrowserIdle(() => {
-      setHeroEnhancersReady(true)
-      setPostLcpRuntimeReady(true)
-    }, 250)
+    const cleanupIdle = runWhenBrowserIdle(revealPostLcpChrome, 250)
 
     return () => {
       cleanupIdle()

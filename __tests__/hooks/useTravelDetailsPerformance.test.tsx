@@ -1,4 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native'
+import { act as actDOM, createElement, Suspense } from 'react'
+import { createRoot } from 'react-dom/client'
+import { flushSync } from 'react-dom'
 import { Platform } from 'react-native'
 
 import { useTravelDetailsPerformance } from '@/hooks/useTravelDetailsPerformance'
@@ -298,6 +301,99 @@ describe('useTravelDetailsPerformance', () => {
 
     expect(result.current.heroEnhancersReady).toBe(true)
     expect(result.current.postLcpRuntimeReady).toBe(true)
+  })
+
+  it.each(['travel-swap', 'loading'] as const)('cancels an old pending chrome reveal after %s', async boundary => {
+    const { result, rerender } = await renderHook(
+      ({ travel, isLoading }) => useTravelDetailsPerformance({ travel, isMobile: true, isLoading }),
+      { initialProps: { travel: heroTravel, isLoading: false } },
+    )
+    await act(async () => { result.current.setLcpLoaded(true) })
+    await act(() => { jest.advanceTimersByTime(100) })
+    expect(result.current.postLcpRuntimeReady).toBe(false)
+
+    await rerender({
+      travel: boundary === 'travel-swap' ? { ...heroTravel, id: 2 } : heroTravel,
+      isLoading: boundary === 'loading',
+    })
+    await act(async () => {
+      jest.advanceTimersByTime(150)
+      await Promise.resolve()
+    })
+    expect(result.current.heroEnhancersReady).toBe(false)
+    expect(result.current.postLcpRuntimeReady).toBe(false)
+    if (boundary === 'travel-swap') {
+      expect(result.current.lcpLoaded).toBe(false)
+      expect(result.current.sliderReady).toBe(false)
+    } else {
+      expect(result.current.deferAllowed).toBe(false)
+    }
+  })
+
+  it.each(['sliderReady', 'heroEnhancersReady', 'postLcpRuntimeReady'] as const)('does not apply an already suspended %s reveal to the next travel', async gate => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    let latest!: ReturnType<typeof useTravelDetailsPerformance>
+    const pending = new Promise<void>(() => {})
+    function SliderChrome({ travelId, ready }: { travelId: number; ready: boolean }) {
+      if (travelId === 1 && ready) throw pending
+      return createElement('div', null, `${travelId}:${ready}`)
+    }
+    function Probe({ travel }: { travel: typeof heroTravel }) {
+      latest = useTravelDetailsPerformance({ travel, isMobile: true, isLoading: false })
+      return createElement(Suspense, { fallback: 'Loading' }, createElement(SliderChrome, { travelId: travel.id, ready: latest[gate] }))
+    }
+    try {
+      await actDOM(async () => { root.render(createElement(Probe, { travel: heroTravel })) })
+      await actDOM(async () => { latest.setLcpLoaded(true); await Promise.resolve() })
+      await actDOM(async () => { jest.advanceTimersByTime(250); await Promise.resolve() })
+      expect(host.textContent).toBe('1:false')
+      await actDOM(async () => {
+        flushSync(() => root.render(createElement(Probe, { travel: { ...heroTravel, id: 2 } })))
+      })
+      expect(host.textContent).toBe('2:false')
+      expect(latest.lcpLoaded).toBe(false)
+      expect(latest[gate]).toBe(false)
+      await actDOM(async () => {
+        flushSync(() => root.render(createElement(Probe, { travel: heroTravel })))
+      })
+      expect(host.textContent).toBe('1:false')
+      expect(latest[gate]).toBe(false)
+    } finally {
+      await actDOM(async () => { root.unmount() })
+      host.remove()
+    }
+  })
+
+  it.each(['deferAllowed', 'heroEnhancersReady', 'postLcpRuntimeReady'] as const)('keeps an already suspended %s reveal closed while loading', async gate => {
+    const host = document.createElement('div')
+    document.body.append(host)
+    const root = createRoot(host)
+    let latest!: ReturnType<typeof useTravelDetailsPerformance>
+    const pending = new Promise<void>(() => {})
+    function Chrome({ loading, ready }: { loading: boolean; ready: boolean }) {
+      if (!loading && ready) throw pending
+      return createElement('div', null, `${loading}:${ready}`)
+    }
+    function Probe({ loading }: { loading: boolean }) {
+      latest = useTravelDetailsPerformance({ travel: heroTravel, isMobile: true, isLoading: loading })
+      return createElement(Suspense, { fallback: 'Loading' }, createElement(Chrome, { loading, ready: latest[gate] }))
+    }
+    try {
+      await actDOM(async () => { root.render(createElement(Probe, { loading: false })) })
+      await actDOM(async () => { latest.setLcpLoaded(true); await Promise.resolve() })
+      await actDOM(async () => { jest.advanceTimersByTime(250); await Promise.resolve() })
+      expect(host.textContent).toBe('false:false')
+      await actDOM(async () => {
+        flushSync(() => root.render(createElement(Probe, { loading: true })))
+      })
+      expect(host.textContent).toBe('true:false')
+      expect(latest[gate]).toBe(false)
+    } finally {
+      await actDOM(async () => { root.unmount() })
+      host.remove()
+    }
   })
 
   it('keeps post-LCP chrome out of the critical path until LCP, then reveals it in one step', async () => {
