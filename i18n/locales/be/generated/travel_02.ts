@@ -74,7 +74,7 @@ export const travelGenerated2 = {
   "components.travel.details.sections.routeElevationProfile.useRouteElevationModel.vysshaya_tochka_cb6e8fca": "Вышэйшая кропка",
   "components.travel.details.sections.TravelDetailsContentSection.chto_ponravilos_134b7cf3": "Што спадабалася",
   "components.travel.details.sections.TravelDetailsContentSection.chto_smutilo_72420632": "Што збянтэжыла",
-  "components.travel.details.sections.TravelDetailsContentSection.luchshiy_sezon_value1_value2_302b32f3": "лепшы сезон: {{value1}} · {{value2}}",
+  "components.travel.details.sections.TravelDetailsContentSection.tripMonthAndReadingTime": "Месяц паездкі: {{month}} · {{readingTime}}",
   "components.travel.details.sections.TravelDetailsContentSection.minusy_626a3d5e": "Мінусы",
   "components.travel.details.sections.TravelDetailsContentSection.odno_nazhatie_i_rolik_nachnet_proigryvatsya_9afa12cf": "Адно націск - і ролік пачне прайгравацца",
   "components.travel.details.sections.TravelDetailsContentSection.opisanie_marshruta_98e0c78f": "Апісанне маршруту",

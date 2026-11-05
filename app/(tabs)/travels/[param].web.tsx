@@ -2,6 +2,8 @@ import type { ImmutableRequest } from 'expo-server'
 import TravelDetailsContainer from '@/components/travel/details/TravelDetailsContainer'
 import TravelLoaderScreen from '@/components/travel/details/TravelLoaderScreen.web'
 
+export { default as ErrorBoundary } from '@/components/travel/details/TravelLoaderErrorBoundary.web'
+
 export default function TravelDetailsScreen() {
   return process.env.EXPO_PUBLIC_WEB_RUNTIME_SSR === 'true'
     ? <TravelLoaderScreen />

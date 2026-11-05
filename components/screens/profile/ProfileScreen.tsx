@@ -785,9 +785,20 @@ export default function ProfileScreen() {
     />
   ), [isMobileDevice, userId, isSuperuser, activeTab, handleDeleteMyTravel, travelList.removingTravelId, width, authorFeedbackSlots]);
 
+  const seo = isFocused ? (
+    <InstantSEO
+      headKey="profile"
+      title={i18nT('profile:app.tabs.profile.profil_metravel_dd9708d4')}
+      description={i18nT('profile:app.tabs.profile.profil_polzovatelya_6c2e4229')}
+      canonical={buildCanonicalUrl('/profile')}
+      robots="noindex, nofollow"
+    />
+  ) : null;
+
   if (!authReady) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+        {seo}
         <View style={styles.centered}>
           <ActivityIndicator color={colors.primaryDark} />
         </View>
@@ -798,6 +809,7 @@ export default function ProfileScreen() {
   if (!isAuthenticated) {
     return (
       <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+        {seo}
         {/* #2898: выгоды аккаунта и две кнопки вместо «Войдите» + «Войти». */}
         <GuestAccountPrompt
           redirect="/profile"
@@ -812,15 +824,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
-      {isFocused && (
-        <InstantSEO
-          headKey="profile"
-          title={i18nT('profile:app.tabs.profile.profil_metravel_dd9708d4')}
-          description={i18nT('profile:app.tabs.profile.profil_polzovatelya_6c2e4229')}
-          canonical={buildCanonicalUrl('/profile')}
-          robots="noindex, nofollow"
-        />
-      )}
+      {seo}
       <ProfileTravelListView
         styles={styles}
         colors={colors}

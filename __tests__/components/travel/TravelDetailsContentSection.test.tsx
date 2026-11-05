@@ -158,6 +158,21 @@ describe('TravelDetailsContentSection', () => {
     mockProgressiveShouldLoad = true
   })
 
+  it.each(['Июль', null])('shows visit month %s as a date and keeps reading time (#3067)', async (monthName) => {
+    await render(
+      <TravelDetailsContentSection
+        travel={createTravel({ monthName: monthName as Travel['monthName'] })}
+        isMobile
+        forceOpenKey={null}
+        anchors={createAnchors()}
+      />,
+      { wrapper: withQueryClient() },
+    )
+    expect(screen.queryByText(/лучший сезон/i)).toBeNull()
+    expect(screen.getByText(monthName ? /Месяц поездки: Июль · .*мин/ : /\d+ мин/)).toBeTruthy()
+    if (!monthName) expect(screen.queryByText(/Месяц поездки:/)).toBeNull()
+  })
+
   // #2904: the article card sits right under the h1 and the hero, so it must not
   // repeat the travel name or the cover image — its heading is «Содержание».
   it('titles the article card «Содержание» without repeating the h1 or the cover', async () => {

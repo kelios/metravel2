@@ -118,6 +118,18 @@ guard, падающий в CI на попытке обойти этот конт
 
 ## Реестр
 
+### Web-навигация и подпись даты поездки — 05.11.2026
+
+| Problem key | Карточки | Подтверждённый механизм и постоянная проверка |
+| --- | --- | --- |
+| TRAVEL-WEB-OFFLINE-SSR-LOADER-001 | #1124 → #2768 → #3066 | `useLoaderData` отклоняет сетевой loader раньше локального чтения в `useTravelDetails`. Граница travel восстанавливает существующий reader при offline и сохраняет его при reconnect; онлайн-повтор и обработка остальных ошибок остаются. `TravelLoaderErrorBoundary.web.test.tsx`, реальное save → новая библиотека → offline → open в `e2e/travel-offline-production-smoke.spec.ts`. |
+| TRAVEL-VISIT-MONTH-AS-BEST-SEASON-001 | #2046 → #3067 | `monthName` фактической поездки попадал в подпись «лучший сезон». Отдельная подпись месяца на RU/BE/UK/PL/EN; `TravelDetailsContentSection.test.tsx` проверяет месяц и отсутствие месяца с сохранением времени чтения. |
+| PROFILE-GUEST-SPA-TITLE-STALE-001 | #2916 → #3068 | Ранние guest/loading returns обходили `InstantSEO`, поэтому профиль не получал владение head. SEO теперь во всех auth-состояниях с прежним `noindex, nofollow`; `profile.test.tsx` и реальная цепочка map/search → profile → Back в `e2e/travel-offline-production-smoke.spec.ts`. |
+
+При изменении SSR-loader, offline reader или auth-веток профиля повторить
+соответствующий контроль. Это отдельные причины; повторную потерю head из-за
+патчера статьи продолжает учитывать SEO-HEAD-RESTORE-ON-BACK-SEARCH-001.
+
 ### Ревью границ приложения и API — 03.11.2026
 
 Снимки исходников frontend `4a5efbf03` и backend `691c0f3`. Карточки

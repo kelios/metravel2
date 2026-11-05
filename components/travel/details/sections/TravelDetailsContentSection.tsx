@@ -139,7 +139,7 @@ export const TravelDetailsContentSection: React.FC<{
               <View style={styles.descriptionIntroWrapper}>
                 <Text style={styles.descriptionIntroText}>
                   {travel.monthName
-                    ? i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.luchshiy_sezon_value1_value2_302b32f3', { value1: travel.monthName.toLowerCase(), value2: readingTimeLabel })
+                    ? i18nT('travel:components.travel.details.sections.TravelDetailsContentSection.tripMonthAndReadingTime', { month: travel.monthName, readingTime: readingTimeLabel })
                     : readingTimeLabel}
                 </Text>
               </View>

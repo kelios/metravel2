@@ -4,6 +4,7 @@ import { PaperProvider } from 'react-native-paper';
 import { NativeMenuAccessibilityProvider, NativeMenuBackground } from '@/components/ui/NativeMenuAccessibilityScope';
 import { useAuth } from '@/context/AuthContext';
 import { useFavorites } from '@/context/FavoritesContext';
+import InstantSEO from '@/components/seo/LazyInstantSEO';
 import type { MyAchievements, UserRank } from '@/api/achievements';
 import type { MyTravelsPayload } from '@/api/travelsApi';
 import { mockPush, mockReplace, mockUseRouter, resetExpoRouterMocks } from '../helpers/expoRouterMock';
@@ -21,6 +22,7 @@ import {
 } from '../fixtures/travelFixtures';
 
 jest.mock('@/context/AuthContext');
+jest.mock('@/components/seo/LazyInstantSEO', () => ({ __esModule: true, default: jest.fn(() => null) }));
 jest.mock('react-native-paper', () => jest.requireActual('react-native-paper'));
 
 jest.setTimeout(15000);
@@ -342,6 +344,11 @@ describe('ProfileScreen', () => {
     expect(await findByText('Ваш профиль')).toBeTruthy();
     expect(await findByTestId('guest-account-prompt-register')).toBeTruthy();
     expect(await findByTestId('guest-account-prompt-login')).toBeTruthy();
+    expect(jest.mocked(InstantSEO).mock.calls.at(-1)?.[0]).toMatchObject({
+      title: 'Профиль | Metravel',
+      canonical: 'https://metravel.by/profile',
+      robots: 'noindex, nofollow',
+    });
   });
 
   it('shows profile info, quick actions and stats', async () => {

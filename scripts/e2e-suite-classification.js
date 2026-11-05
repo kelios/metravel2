@@ -44,6 +44,8 @@ const PRODUCTION_SMOKE_SPECS = [
   // (that one stays in the default suite with a mocked article + injected SSG hero).
   'travel-hero-favorite-production-smoke.spec.ts',
   'travel-public-history-production-smoke.spec.ts',
+  // #3066/#3068: public guest navigation and browser-local offline packages only.
+  'travel-offline-production-smoke.spec.ts',
   // #2217: every desktop-branch size and language of the `/map` panel header
   // tabs on the production build; the 820 × 1180 check stays in the default
   // suite (`map-page.spec.ts`), both over `e2e/helpers/mapPanelTabs.ts`.
