@@ -23,6 +23,7 @@
 const fs = require('fs')
 const path = require('path')
 const https = require('https')
+const { parseQuestLocaleRoute } = require('../utils/questLocaleRouting')
 const { getAccessToken } = require('./lib/google-token')
 const { readResponseText, withAcceptEncoding } = require('./lib/httpText')
 const {
@@ -64,6 +65,7 @@ const KIND_LABELS = {
 const STATIC_SITEMAP_ROUTES = new Set([
   '/',
   '/about',
+  '/app',
   '/contact',
   '/map',
   '/quests',
@@ -87,7 +89,7 @@ const SITEMAP_ROUTE_FAMILIES = [
   },
   {
     kind: KIND_QUEST_PAGE,
-    matches: (pathname) => /^\/quests\/\d+\/[^/]+$/.test(pathname),
+    matches: (pathname) => /^\/quests\/\d+\/[^/]+$/.test(pathname) || Boolean(parseQuestLocaleRoute(pathname)),
   },
   {
     kind: KIND_QUEST_CITY,

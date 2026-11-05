@@ -248,6 +248,10 @@ describe('classifyUrl', () => {
     expect(classifyUrl('/quests/krakow')).toBe('quest-city')
   })
 
+  it.each(['be', 'uk', 'pl', 'en'])('includes %s quest details in the quest section', (locale) => {
+    expect(classifyUrl(`/${locale}/quests/1/krakow-dragon`)).toBe('quest-page')
+  })
+
   it('classifies country landings separately from quest details and city landings', () => {
     expect(classifyUrl('/quests/country/poland')).toBe('quest-country')
     expect(classifyUrl('/quests/1/krakow-dragon')).toBe('quest-page')
@@ -266,6 +270,7 @@ describe('classifyUrl', () => {
   it('classifies articles and the remaining routes', () => {
     expect(classifyUrl('/travels/staryy-i-novyy-zamki-v-grodno')).toBe('travel')
     expect(classifyUrl('/map')).toBe('static')
+    expect(classifyUrl('/app')).toBe('static')
     expect(classifyUrl('/')).toBe('static')
   })
 })
@@ -311,6 +316,13 @@ describe('parseSitemap', () => {
     expect(parseSitemap('<loc>https://metravel.by/</loc>')[0].pathname).toBe('/')
   })
 
+  it('preserves localized inspection URLs while classifying them as quest details', () => {
+    const url = 'https://metravel.by/en/quests/1/krakow-dragon'
+    const rows = parseSitemap(`<url><loc>${url}</loc></url>`)
+    expect(rows).toEqual([{ url, pathname: '/en/quests/1/krakow-dragon', kind: 'quest-page' }])
+    expect(() => assertKnownSitemapRouteFamilies(rows)).not.toThrow()
+  })
+
   it('returns an empty list for an empty or broken sitemap, never a fake row', () => {
     expect(parseSitemap('')).toEqual([])
     expect(parseSitemap(null)).toEqual([])
@@ -323,6 +335,7 @@ describe('sitemap classifier coverage', () => {
     expect(() =>
       assertKnownSitemapRouteFamilies([
         { pathname: '/about' },
+        { pathname: '/app' },
         { pathname: '/quests' },
         { pathname: '/quests/scenario' },
         { pathname: '/quests/krakow' },
@@ -330,6 +343,9 @@ describe('sitemap classifier coverage', () => {
         { pathname: '/quests/country/poland' },
         { pathname: '/travels/minsk' },
         { pathname: '/travelsby' },
+        ...['be', 'uk', 'pl', 'en'].map((locale) => ({
+          pathname: `/${locale}/quests/1/krakow-dragon`,
+        })),
       ]),
     ).not.toThrow()
   })
@@ -343,6 +359,25 @@ describe('sitemap classifier coverage', () => {
         { pathname: '/stories/new-family' },
       ]),
     ).toThrow(/\/quests\/foo\/bar, \/stories\/new-family, \/travels\/foo\/bar/)
+  })
+
+  it.each([
+    '/de/quests/1/krakow-dragon',
+    '/ru/quests/1/krakow-dragon',
+    '/en/quests',
+    '/en/quests/krakow',
+    '/en/quests/country/poland',
+    '/en/quests/scenario',
+    '/en/travels/minsk',
+    '/en/app',
+    '/en/quests/0/krakow-dragon',
+    '/en/quests/9007199254740992/krakow-dragon',
+    '/en/quests/1/INVALID',
+    '/en/quests/1/krakow-dragon/extra',
+  ])('rejects unsupported localized route %s', (pathname) => {
+    expect(() => assertKnownSitemapRouteFamilies([{ pathname }])).toThrow(
+      'sitemap.xml содержит неизвестные семейства маршрутов:',
+    )
   })
 
   it('keeps the fail-closed check wired into the real sitemap loader before section filtering', () => {
