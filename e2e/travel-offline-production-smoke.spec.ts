@@ -54,9 +54,12 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 
     await page.goto('/offline', { waitUntil: 'domcontentloaded' })
     const card = page.getByTestId('offline-item-travel:765')
     await expect(card).toContainText('Доступно офлайн', { timeout: 30_000 })
+    const open = card.getByRole('button', { name: 'Открыть', exact: true })
+    await expect(open).toBeEnabled()
+    const libraryDocument = await page.evaluate(() => performance.timeOrigin)
     await context.setOffline(true)
     try {
-      await card.getByRole('button', { name: 'Открыть', exact: true }).click()
+      await open.click()
       await expect(page).toHaveURL(new RegExp(`${TRAVEL}$`))
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading, { timeout: 45_000 })
       await description.scrollIntoViewIfNeeded()
@@ -64,6 +67,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 
       const points = page.getByTestId('travel-details-points')
       await points.scrollIntoViewIfNeeded()
       await expect(points).toContainText(pointLabel)
+      expect(await page.evaluate(() => performance.timeOrigin)).toBe(libraryDocument)
       await expect(page.getByText('Не удалось загрузить страницу', { exact: true })).toBeHidden()
       await page.screenshot({ path: testInfo.outputPath(`offline-${viewport.width}.png`) })
     } finally {
@@ -76,17 +80,21 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 1280, height: 800 
     expect(pageErrors).toEqual([])
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(heading)
     await expect(description).toContainText(paragraph)
+    expect(await page.evaluate(() => performance.timeOrigin)).toBe(libraryDocument)
   })
 }
 
 test('guest profile owns its title after map/search navigation and Back (#3068)', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await preacceptCookies(page)
+  // Map onboarding opens 800 ms after mount and can appear during the tab click.
+  await page.addLocatorHandler(page.getByTestId('onboarding-skip'), async (skip) => { await skip.click() })
   for (const source of ['/map', '/search']) {
     await page.goto(source, { waitUntil: 'domcontentloaded' })
-    await expect(page.getByTestId('footer-item-profile')).toBeVisible({ timeout: 60_000 })
+    const profileTab = page.getByRole('tab', { name: 'Профиль', exact: true })
+    await expect(profileTab).toBeVisible({ timeout: 60_000 })
     const title = await page.title()
-    await page.getByTestId('footer-item-profile').click()
+    await profileTab.click()
     await expect(page).toHaveURL(/\/profile$/)
     await expect(page.getByText('Ваш профиль', { exact: true })).toBeVisible()
     await expect(page).toHaveTitle('Профиль | Metravel')

@@ -3,7 +3,8 @@ import { onlineManager } from '@tanstack/react-query'
 import TravelLoaderErrorBoundary from '@/components/travel/details/TravelLoaderErrorBoundary.web'
 
 const mockMounted = jest.fn()
-jest.mock('@/components/travel/details/TravelDetailsContainer', () => {
+jest.mock('@/services/offline/loadTravelOfflineAdapter', () => ({ loadTravelOfflineAdapter: async () => ({}) }))
+jest.mock('@/components/travel/details/TravelOfflineReader.web', () => {
   const { useEffect } = require('react')
   const { Text } = require('react-native')
   return function LocalReader() {

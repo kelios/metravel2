@@ -1,9 +1,12 @@
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { lazy, Suspense, useEffect, useState, useSyncExternalStore } from 'react'
 import { onlineManager } from '@tanstack/react-query'
 import type { ErrorBoundaryProps } from 'expo-router'
 import LoaderScreenErrorBoundary from '@/components/ui/LoaderScreenErrorBoundary'
 import { isExpoLoaderError } from '@/components/ui/ErrorBoundary'
-import TravelDetailsContainer from './TravelDetailsContainer'
+import TravelDetailsLoadingFallback from './TravelDetailsLoadingFallback'
+import { loadTravelOfflineReader } from './loadTravelOfflineReader.web'
+
+const TravelOfflineReader = lazy(loadTravelOfflineReader)
 
 const subscribe = (listener: () => void) => onlineManager.subscribe(listener)
 const getOnline = () => onlineManager.isOnline()
@@ -20,6 +23,6 @@ export default function TravelLoaderErrorBoundary(props: ErrorBoundaryProps) {
   }, [loaderError, online])
 
   // Keep the reader mounted on reconnect: its query refreshes in the background.
-  if (loaderError && (!online || useLocalReader)) return <TravelDetailsContainer />
+  if (loaderError && (!online || useLocalReader)) return <Suspense fallback={<TravelDetailsLoadingFallback />}><TravelOfflineReader /></Suspense>
   return <LoaderScreenErrorBoundary {...props} />
 }

@@ -1,11 +1,16 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 const mockPush = jest.fn();
 const mockCancelOperation = jest.fn();
 const mockRetryOperation = jest.fn(() => Promise.resolve());
 const mockClearOperation = jest.fn();
 const mockUseOfflineCatalog = jest.fn();
+const mockPrepareTravelOfflineOpen = jest.fn();
+jest.mock('@/components/offline/prepareTravelOfflineOpen', () => ({
+  prepareTravelOfflineOpen: () => mockPrepareTravelOfflineOpen(),
+}));
 
 jest.mock('expo-router', () => ({
   Stack: { Screen: () => null },
@@ -23,8 +28,8 @@ jest.mock('@expo/vector-icons/Feather', () => {
 
 jest.mock('@/components/ui/Button', () => {
   const { Pressable, Text } = require('react-native');
-  const MockButton = ({ label, onPress }: { label: string; onPress: () => void }) => (
-    <Pressable accessibilityRole="button" onPress={onPress}>
+  const MockButton = ({ label, onPress, loading }: { label: string; onPress: () => void; loading?: boolean }) => (
+    <Pressable accessibilityRole="button" onPress={onPress} disabled={loading}>
       <Text>{label}</Text>
     </Pressable>
   );
@@ -110,6 +115,44 @@ describe('OfflineLibraryScreen operation states', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseOfflineCatalog.mockReturnValue(baseCatalogState);
+  });
+
+  it('waits for the web content and route modules before opening a saved travel', async () => {
+    const originalOS = Platform.OS;
+    (Platform.OS as string) = 'web';
+    let resolvePreparation!: () => void;
+    mockPrepareTravelOfflineOpen.mockReturnValue(new Promise<void>((resolve) => { resolvePreparation = resolve; }));
+    mockUseOfflineCatalog.mockReturnValue({
+      ...baseCatalogState,
+      items: [{ key: 'travel:42', sourceId: '42', type: 'travel', route: '/travels/saved', title: 'Saved', status: 'ready', pinned: true, bytes: 1, savedAt: 1 }],
+    });
+    try {
+      await render(<OfflineLibraryScreen />);
+      const open = screen.getByRole('button', { name: 'offline:open' });
+      await fireEvent.press(open);
+      expect(mockPush).not.toHaveBeenCalled();
+      await act(async () => { resolvePreparation(); });
+      await fireEvent.press(open);
+      expect(mockPush).toHaveBeenCalledWith('/travels/saved');
+    } finally { (Platform.OS as string) = originalOS; }
+  });
+
+  it('retries failed web preparation before allowing travel navigation', async () => {
+    const originalOS = Platform.OS;
+    (Platform.OS as string) = 'web';
+    mockPrepareTravelOfflineOpen.mockRejectedValueOnce(new Error('chunk unavailable')).mockResolvedValueOnce(undefined);
+    mockUseOfflineCatalog.mockReturnValue({
+      ...baseCatalogState,
+      items: [{ key: 'travel:42', sourceId: '42', type: 'travel', route: '/travels/saved', title: 'Saved', status: 'ready', pinned: true, bytes: 1, savedAt: 1 }],
+    });
+    try {
+      await render(<OfflineLibraryScreen />);
+      await fireEvent.press(await screen.findByRole('button', { name: 'offline:retry' }));
+      expect(mockPush).not.toHaveBeenCalled();
+      await fireEvent.press(await screen.findByRole('button', { name: 'offline:open' }));
+      expect(mockPrepareTravelOfflineOpen).toHaveBeenCalledTimes(2);
+      expect(mockPush).toHaveBeenCalledWith('/travels/saved');
+    } finally { (Platform.OS as string) = originalOS; }
   });
 
   it('renders truthful download progress and cancels the active operation', async () => {

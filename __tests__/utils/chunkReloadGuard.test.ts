@@ -19,6 +19,7 @@ function makeStorage() {
 function makeWindow(storage = makeStorage()) {
   const listeners: Record<string, (event: unknown) => void> = {}
   const win = {
+    navigator: { onLine: true },
     sessionStorage: storage,
     location: {
       href: 'https://metravel.by/search?q=river#results',
@@ -38,6 +39,20 @@ function bootstrap(win: ReturnType<typeof makeWindow>['win']) {
 
 describe('pre-entry stale bundle recovery', () => {
   afterEach(() => jest.restoreAllMocks())
+
+  it('preserves the offline shell and reserves recovery until connectivity returns', () => {
+    const { win, listeners } = makeWindow()
+    bootstrap(win)
+    win.navigator.onLine = false
+    listeners.error({ target: { tagName: 'SCRIPT', src: '/_expo/static/js/web/optional.js' } })
+    expect(reloadOnceForStaleChunk(win as unknown as Window)).toBe(false)
+    expect(win.location.reload).not.toHaveBeenCalled()
+    expect(win.sessionStorage.getItem(KEY)).toBeNull()
+
+    win.navigator.onLine = true
+    expect(reloadOnceForStaleChunk(win as unknown as Window)).toBe(true)
+    expect(win.location.reload).toHaveBeenCalledTimes(1)
+  })
 
   it('captures persistent storage before the HTML shell can install an in-memory shim', () => {
     const htmlSource = fs.readFileSync(path.join(process.cwd(), 'app/+html.tsx'), 'utf8')

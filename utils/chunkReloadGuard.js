@@ -14,6 +14,9 @@ function createChunkReloadGuard(win, key, windowMs) {
   try { storage = win.sessionStorage; } catch (_) { void _; /* Recovery stays disabled without persistent storage. */ }
   return function () {
     if (attempted || !storage) return false;
+    // A missing chunk without connectivity cannot be repaired by navigation;
+    // preserve the loaded shell and leave the one-shot fuse available online.
+    if (win.navigator && win.navigator.onLine === false) return false;
     try {
       var now = Date.now();
       var last = Number(storage.getItem(key));

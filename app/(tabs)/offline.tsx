@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { Stack, type Href, useRouter } from 'expo-router';
@@ -20,6 +20,7 @@ import { confirmAction } from '@/utils/confirmAction';
 import { webTouchScrollStyle } from '@/utils';
 import { translate as i18nT } from '@/i18n';
 import { routeMetadata } from '@/utils/seoRoutes/routeMetadata';
+import { prepareTravelOfflineOpen } from '@/components/offline/prepareTravelOfflineOpen';
 
 type Filter = 'all' | OfflineContentType;
 
@@ -49,6 +50,20 @@ export default function OfflineLibraryScreen() {
     clearOperation,
   } = useOfflineCatalog(userId);
   const [filter, setFilter] = useState<Filter>('all');
+  const [travelReaderState, setTravelReaderState] = useState<'loading' | 'ready' | 'failed'>(Platform.OS === 'web' ? 'loading' : 'ready');
+  const hasSavedTravel = items.some((item) => item.type === 'travel' && item.status === 'ready');
+  const prepareTravelReader = useCallback(async () => {
+    setTravelReaderState('loading');
+    try {
+      await prepareTravelOfflineOpen();
+      setTravelReaderState('ready');
+    } catch {
+      setTravelReaderState('failed');
+    }
+  }, []);
+  useEffect(() => {
+    if (Platform.OS === 'web' && hasSavedTravel) void prepareTravelReader();
+  }, [hasSavedTravel, prepareTravelReader]);
 
   const operationKeys = useMemo(() => new Set(operations.map((item) => item.key)), [operations]);
   const filtered = useMemo(
@@ -120,10 +135,17 @@ export default function OfflineLibraryScreen() {
                 {item.status === 'ready' ? (
                   <>
                     <Button
-                      label={t('offline:open')}
+                      label={item.type === 'travel' && travelReaderState === 'failed' ? t('offline:retry') : t('offline:open')}
                       variant="secondary"
                       size="sm"
-                      onPress={() => router.push(item.route as Href)}
+                      loading={item.type === 'travel' && travelReaderState === 'loading'}
+                      onPress={() => {
+                        if (item.type === 'travel' && travelReaderState !== 'ready') {
+                          if (travelReaderState === 'failed') void prepareTravelReader();
+                          return;
+                        }
+                        router.push(item.route as Href);
+                      }}
                       icon={<Feather name="arrow-right" size={16} color={colors.primaryDark} />}
                     />
                     <Button
