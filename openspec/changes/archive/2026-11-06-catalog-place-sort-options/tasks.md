@@ -7,5 +7,7 @@
 
 ## 2. Testing после ревью
 
-- [ ] 2.1 На опубликованном API проверить каждый порядок и дозагрузку с теми же фильтрами. Снять mobile и desktop browser evidence, проверить сеть, консоль и фокус.
-- [ ] 2.2 Прогнать `openspec validate --all` перед архивированием.
+- [x] 2.1 На опубликованном API проверить каждый порядок и дозагрузку с теми же фильтрами. Снять mobile и desktop browser evidence, проверить сеть, консоль и фокус.
+- [x] 2.2 Прогнать `openspec validate --all` перед архивированием.
+
+Production 26073245307c198c21171871c7a0de5075039c4d: mobile 390 and desktop 1440 passed five sort modes, stable q/country/category, actual page 2 and reset to page 1, and desktop keyboard and focus. The strict full OpenSpec validation passed all 111 items.
