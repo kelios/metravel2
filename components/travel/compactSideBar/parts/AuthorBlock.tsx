@@ -4,7 +4,9 @@ import Feather from '@expo/vector-icons/Feather'
 
 import { Text } from '@/ui/paper'
 import type { Travel } from '@/types/types'
+import { useUserAchievements } from '@/hooks/useAchievementsApi'
 import { useThemedColors } from '@/hooks/useTheme'
+import PublicationMedals from '@/components/achievements/PublicationMedals'
 import ImageCardMedia from '@/components/ui/ImageCardMedia'
 import SubscribeButton from '@/components/ui/SubscribeButton'
 import { globalFocusStyles } from '@/styles/globalFocus'
@@ -25,6 +27,11 @@ import { webTitleRef } from '@/utils/webProps'
 const formatViews = (n: number) =>
   String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 
+function DesktopPublicationMedals({ authorId }: { authorId: string }) {
+  const { data } = useUserAchievements(authorId)
+  return <PublicationMedals earned={data?.earned} />
+}
+
 type AuthorBlockProps = {
   styles: ReturnType<typeof createStyles>
   colors: ReturnType<typeof useThemedColors>
@@ -33,6 +40,7 @@ type AuthorBlockProps = {
   avatarUri: string
   userName: string
   authorUserId: string | null
+  showPublicationMedals: boolean
   canEdit: boolean
   isOwn: boolean
   travel: Travel
@@ -51,6 +59,7 @@ export const AuthorBlock = memo(function AuthorBlock({
   avatarUri,
   userName,
   authorUserId,
+  showPublicationMedals,
   canEdit,
   isOwn,
   travel,
@@ -218,6 +227,10 @@ export const AuthorBlock = memo(function AuthorBlock({
               )}
             </View>
           </View>
+
+          {showPublicationMedals && authorUserId ? (
+            <DesktopPublicationMedals key={authorUserId} authorId={authorUserId} />
+          ) : null}
 
           {(whenLine || views != null) && (
             <View style={styles.metaRow}>

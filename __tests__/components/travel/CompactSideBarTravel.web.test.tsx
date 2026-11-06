@@ -12,9 +12,11 @@ jest.mock('react-native', () => {
 });
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react-native';
 import { Platform, StyleSheet } from 'react-native';
 import CompactSideBarTravel from '@/components/travel/CompactSideBarTravel';
+import type { UserBadge } from '@/api/achievements';
+import { useUserAchievements } from '@/hooks/useAchievementsApi';
 
 const mockDownloadBlobOnWeb: jest.Mock = jest.fn(() => true);
 const mockDownloadTravelRouteFileBlob: jest.Mock = jest.fn(() =>
@@ -51,6 +53,10 @@ jest.mock('@/hooks/useUserProfileCached', () => ({
   __esModule: true,
   useUserProfileCached: (userId: unknown, options?: unknown) =>
     mockUseUserProfileCached(userId, options),
+}));
+
+jest.mock('@/hooks/useAchievementsApi', () => ({
+  useUserAchievements: jest.fn(),
 }));
 
 jest.mock('@/hooks/useTravelRouteFiles', () => ({
@@ -177,6 +183,7 @@ describe('CompactSideBarTravel - Web', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(useUserAchievements).mockReturnValue({} as ReturnType<typeof useUserAchievements>);
     mockDownloadBlobOnWeb.mockReturnValue(true);
     mockAuthState.isSuperuser = false;
     mockAuthState.userId = null;
@@ -198,6 +205,39 @@ describe('CompactSideBarTravel - Web', () => {
   });
 
   describe('Рендеринг компонентов', () => {
+    it('shows the earned medal beside the desktop author name and drops the observer on mobile', async () => {
+      const badge: UserBadge = {
+        id: 1,
+        earnedAt: '2026-11-06T09:00:00Z',
+        badge: {
+          id: 15,
+          slug: 'first-travel',
+          name: 'Автор MeTravel',
+          description: 'Опубликуйте первую статью или заметку.',
+          categorySlug: 'onboarding',
+          categoryName: 'Начало',
+          tier: 'bronze',
+          imageUrl: null,
+          points: 15,
+        },
+      };
+      jest.mocked(useUserAchievements).mockReturnValue({
+        data: { earned: [badge] },
+      } as ReturnType<typeof useUserAchievements>);
+
+      const view = await render(<CompactSideBarTravel {...defaultProps} />);
+      const medalLabel = 'Открыть награду «Автор MeTravel»';
+      const author = within(view.getByTestId('travel-details-author'));
+      expect(author.getByText('Юлия')).toBeTruthy();
+      expect(author.getByRole('button', { name: medalLabel })).toBeTruthy();
+      expect(useUserAchievements).toHaveBeenCalledWith('user-1');
+
+      jest.mocked(useUserAchievements).mockClear();
+      await view.rerender(<CompactSideBarTravel {...defaultProps} isMobile />);
+      expect(view.queryByRole('button', { name: medalLabel })).toBeNull();
+      expect(useUserAchievements).not.toHaveBeenCalled();
+    });
+
     it('сразу запрашивает профиль автора на десктопном web без hover', async () => {
       await render(<CompactSideBarTravel {...defaultProps} />);
 

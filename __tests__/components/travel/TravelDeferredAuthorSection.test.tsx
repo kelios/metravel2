@@ -1,5 +1,10 @@
 import React from 'react'
 import { render } from '@testing-library/react-native'
+import { useResponsiveWidth } from '@/hooks/useResponsive'
+
+jest.mock('@/hooks/useResponsive', () => ({
+  useResponsiveWidth: jest.fn(),
+}))
 
 jest.mock('@/components/travel/AuthorCard', () => ({
   __esModule: true,
@@ -42,8 +47,8 @@ jest.mock('@/components/travel/details/TravelDetailsStyles', () => ({
 import TravelDeferredAuthorSection from '@/components/travel/details/TravelDeferredAuthorSection'
 
 describe('TravelDeferredAuthorSection', () => {
-  afterEach(() => {
-    jest.restoreAllMocks()
+  beforeEach(() => {
+    jest.mocked(useResponsiveWidth).mockReturnValue(390)
   })
 
   it('keeps the mobile author block compact without duplicate explanatory subtitle', async () => {
@@ -59,12 +64,7 @@ describe('TravelDeferredAuthorSection', () => {
   })
 
   it('keeps the author visible on tablet without duplicating the desktop share block', async () => {
-    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
-      width: 820,
-      height: 1180,
-      scale: 1,
-      fontScale: 1,
-    })
+    jest.mocked(useResponsiveWidth).mockReturnValue(820)
 
     const { getByTestId, getByText, queryByText } = await render(
       <TravelDeferredAuthorSection travel={{ id: 1 } as any} isMobile={false} />,
@@ -77,12 +77,7 @@ describe('TravelDeferredAuthorSection', () => {
   })
 
   it('leaves the inline author out when the desktop sidebar owns it', async () => {
-    jest.spyOn(require('react-native'), 'useWindowDimensions').mockReturnValue({
-      width: 1440,
-      height: 900,
-      scale: 1,
-      fontScale: 1,
-    })
+    jest.mocked(useResponsiveWidth).mockReturnValue(1440)
 
     const { getByText, queryByTestId, queryByText } = await render(
       <TravelDeferredAuthorSection travel={{ id: 1 } as any} isMobile={false} />,

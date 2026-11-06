@@ -1,8 +1,9 @@
 import React, { memo } from 'react'
-import { Text, View, useWindowDimensions } from 'react-native'
+import { Text, View } from 'react-native'
 
 import AuthorCard, { hasResolvableAuthor } from '@/components/travel/AuthorCard'
 import ShareButtons from '@/components/travel/ShareButtons'
+import { useResponsiveWidth } from '@/hooks/useResponsive'
 import type { Travel } from '@/types/types'
 
 import TravelPeerBadgesSection from './TravelPeerBadgesSection'
@@ -61,7 +62,8 @@ const InlineAuthorSection: React.FC<{
 
 const TravelDeferredAuthorSection: React.FC<{ travel: Travel; isMobile: boolean }> = memo(
   function TravelDeferredAuthorSection({ travel, isMobile }) {
-    const { width } = useWindowDimensions()
+    // The critical shell reads the same viewport store for its sidebar branch.
+    const width = useResponsiveWidth({ clientOnly: true })
 
     if (isMobile) {
       return (

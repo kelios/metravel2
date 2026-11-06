@@ -278,6 +278,7 @@ function CompactSideBarTravel({
             avatarUri={avatarUri}
             userName={userName}
             authorUserId={authorUserId}
+            showPublicationMedals={shouldLoadAuthorImmediately}
             canEdit={canEdit}
             isOwn={isOwn}
             travel={travel}

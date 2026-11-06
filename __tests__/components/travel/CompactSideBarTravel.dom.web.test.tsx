@@ -49,6 +49,9 @@ jest.mock('@/hooks/useUserProfileCached', () => ({
   __esModule: true,
   useUserProfileCached: () => ({ profile: null, isLoading: false, isFetching: false, error: null, fullName: '' }),
 }))
+jest.mock('@/hooks/useAchievementsApi', () => ({
+  useUserAchievements: () => ({}),
+}))
 jest.mock('@/hooks/useTravelRouteFiles', () => ({
   __esModule: true,
   useTravelRouteFiles: () => ({
