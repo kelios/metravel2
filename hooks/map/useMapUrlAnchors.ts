@@ -2,6 +2,8 @@ import { useMemo } from 'react';
 import { useLocalSearchParams } from 'expo-router';
 
 import type { Point as MapPoint } from '@/components/MapPage/Map/types';
+import { normalizePlaceRequestId } from '@/utils/placeRequestCreateIntent';
+import { isPlaceRequestsPilotEnabled } from '@/utils/placeRequestsConfig';
 import { normalizeRelatedTravelId } from '@/utils/relatedTravel';
 
 // Разбор anchor-координат и первичных значений фильтров из URL-параметров карты.
@@ -26,6 +28,7 @@ export interface MapUrlAnchors {
   /** `focusPlace=1` — the caller (e.g. /places «На карте») wants the map to zoom
    *  onto the deep-linked point and surface it, not just center the area. */
   shouldFocusUrlPlace: boolean;
+  placeRequestId: string | null;
 }
 
 export function useMapUrlAnchors(): MapUrlAnchors {
@@ -43,24 +46,27 @@ export function useMapUrlAnchors(): MapUrlAnchors {
     placeTravelId?: string;
     placeImageUrl?: string;
     focusPlace?: string;
+    place_request_id?: string;
   }>();
+  const placeRequestId = isPlaceRequestsPilotEnabled() ? normalizePlaceRequestId(params.place_request_id) : null;
 
   const initialCategories = useMemo(
-    () => (params.categories ? params.categories.split(',').map((s) => s.trim()).filter(Boolean) : undefined),
+    () => (!placeRequestId && params.categories ? params.categories.split(',').map((s) => s.trim()).filter(Boolean) : undefined),
     // mount-only: captures the initial URL param; later filter changes are owned by useMapFilters
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
   // mount-only: initial radius from URL; subsequent radius is owned by useMapFilters
-  const initialRadius = useMemo(() => params.radius ?? undefined, []);  // eslint-disable-line react-hooks/exhaustive-deps
+  const initialRadius = useMemo(() => placeRequestId ? undefined : params.radius, []);  // eslint-disable-line react-hooks/exhaustive-deps
 
   const urlCoordinates = useMemo(() => {
+    if (placeRequestId) return null;
     const lat = parseUrlCoordinate(params.lat);
     const lng = parseUrlCoordinate(params.lng);
     if (lat == null || lng == null) return null;
     if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
     return { latitude: lat, longitude: lng };
-  }, [params.lat, params.lng]);
+  }, [params.lat, params.lng, placeRequestId]);
 
   const urlSelectedPlace = useMemo<MapPoint | null>(() => {
     if (!urlCoordinates) return null;
@@ -102,5 +108,6 @@ export function useMapUrlAnchors(): MapUrlAnchors {
     urlCoordinates,
     urlSelectedPlace,
     shouldFocusUrlPlace,
+    placeRequestId,
   };
 }

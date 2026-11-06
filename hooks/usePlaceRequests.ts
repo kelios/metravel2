@@ -5,7 +5,7 @@ import { queryKeys } from '@/api/queryKeys'
 import { useLocale } from '@/i18n/LocaleProvider'
 import { readRetryOnce } from '@/utils/queryRetryPolicy'
 
-export function usePlaceRequests(enabled: boolean) {
+export function usePlaceRequests(enabled: boolean, options?: { refreshOnFocus?: boolean }) {
   const { locale } = useLocale()
   return useQuery({
     queryKey: queryKeys.placeRequests(locale),
@@ -13,6 +13,7 @@ export function usePlaceRequests(enabled: boolean) {
     enabled,
     retry: readRetryOnce,
     staleTime: 30_000,
+    refetchOnWindowFocus: options?.refreshOnFocus ? 'always' : undefined,
   })
 }
 

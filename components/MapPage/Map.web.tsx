@@ -31,6 +31,7 @@ import {
 
 import { useLeafletLoader } from '@/hooks/useLeafletLoader'
 import { useMapPopupAutoPan } from './Map/useMapPopupAutoPan'
+import { useMapPlaceRequestMarkers } from './Map/useMapPlaceRequestMarkers.web'
 import { useMapRenderData } from './Map/useMapRenderData'
 import { getMapFitBoundsPadding, useStablePadding } from './Map/mapFitBoundsPadding'
 import { useMapWebLayoutEffects } from './Map/useMapWebLayoutEffects'
@@ -218,6 +219,14 @@ const MapPageComponent: React.FC<Props> = (props) => {
   const lastMarkerTapAtRef = useRef(0)
 
   const colors = useThemedColors()
+  useMapPlaceRequestMarkers({
+    leaflet: L,
+    map: mapInstance,
+    layer: isPrimaryMap ? props.placeRequestsLayer : undefined,
+    ready: initialViewReady,
+    accent: colors.dangerDark,
+    foreground: colors.surface,
+  })
   const themeContextValue = useTheme()
   const styles = useMemo(() => getStyles(colors), [colors])
   // #2451 — no bottom-sheet subscriptions here: a sheet snap used to re-render the
@@ -1002,6 +1011,7 @@ export const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
   if (prevProps.categoryFilterUnresolved !== nextProps.categoryFilterUnresolved) return false
   if (prevProps.initialResultsSettled !== nextProps.initialResultsSettled) return false
   if (prevProps.urlSelectedPlace !== nextProps.urlSelectedPlace) return false
+  if (prevProps.placeRequestsLayer !== nextProps.placeRequestsLayer) return false
 
   // #207 host-stability (#217): the map is a stable host that never remounts, so a
   // desktop↔mobile resize flips isMobile at the caller, toggling these props (mobile

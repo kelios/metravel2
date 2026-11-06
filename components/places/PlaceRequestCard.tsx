@@ -42,7 +42,7 @@ export default function PlaceRequestCard({
     trackPlaceContribution('cta', { source, requestId: id, action: 'map' })
     router.push({
       pathname: '/map',
-      params: { lat: String(request.lat), lng: String(request.lng), radius: '5', place_request_id: id },
+      params: { place_request_id: id },
     })
   }
 
@@ -91,7 +91,9 @@ export default function PlaceRequestCard({
             <>
               <Button label={t('places:contributions.writeNote')} onPress={() => openEditor('note')} fullWidth />
               <Button label={t('places:contributions.writeArticle')} onPress={() => openEditor('full')} variant="ghost" fullWidth />
-              <Button label={t('places:contributions.viewMap')} onPress={openMap} variant="secondary" fullWidth />
+              {source !== 'map' && (
+                <Button label={t('places:contributions.viewMap')} onPress={openMap} variant="secondary" fullWidth />
+              )}
             </>
           ) : status === 'fulfilled' && publicTravelUrl ? (
             <Button label={t('places:contributions.readStory')} onPress={() => router.push(publicTravelUrl as Href)} fullWidth />

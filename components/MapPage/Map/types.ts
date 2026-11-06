@@ -2,6 +2,7 @@ import type { RouteResultPublisher } from '@/types/route';
 // components/MapPage/map/types.ts
 import type { MapUiApi } from '@/types/mapUi';
 import type { MapClusterBBox, MapClustersFilters } from '@/api/map';
+import type { MapPlaceRequestsLayer } from '@/hooks/map/useMapPlaceRequests';
 
 // Re-export shared types from map-core for backward compatibility
 export type { Point, Coordinates, TransportMode, MapMode } from '@/components/map-core/types';
@@ -17,6 +18,7 @@ export interface MapProps {
   initialResultsSettled?: boolean;
   /** Explicit URL target of the main web map, independent from search results. */
   urlSelectedPlace?: Point | null;
+  placeRequestsLayer?: MapPlaceRequestsLayer;
   coordinates: Coordinates;
   /**
    * True when `coordinates` is a non-user viewport/search anchor. Only explicit

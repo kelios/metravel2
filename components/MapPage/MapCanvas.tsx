@@ -5,10 +5,12 @@ import Feather from '@expo/vector-icons/Feather'
 import { MapPageSkeleton } from '@/components/MapPage/MapPageSkeleton'
 import MapPanel from '@/components/MapPage/MapPanel'
 import { MapOverlayLayer } from '@/components/MapPage/MapOverlayLayer'
+import { MapPlaceRequestsControls } from '@/components/MapPage/MapPlaceRequestsControls'
 import { MapLoadingBar } from '@/components/MapPage/MapLoadingBar'
 import WeatherLegend from '@/components/MapPage/WeatherLegend'
 import { translate as i18nT } from '@/i18n'
 import type { CoordinatesSource, MapLocationState } from '@/hooks/map/useMapCoordinates'
+import type { MapPlaceRequestsState } from '@/hooks/map/useMapPlaceRequests'
 import { getLiveUserPositionFixAt } from '@/hooks/map/liveUserPosition'
 import { DESKTOP_MAP_LEFT_COLUMN_TOP } from '@/screens/tabs/mapDesktopCorner'
 import { webTitleRef } from '@/utils/webProps'
@@ -56,6 +58,7 @@ type MapCanvasProps = {
   showProgress: boolean
   mapReady: boolean
   mapPanelProps: any
+  placeRequests?: MapPlaceRequestsState
   enabledOverlays?: Record<string, boolean> | null
   showGeoBanner: boolean
   /**
@@ -97,6 +100,7 @@ export function MapCanvas({
   showProgress,
   mapReady,
   mapPanelProps,
+  placeRequests,
   enabledOverlays,
   showGeoBanner,
   geoBannerStackOffset = 0,
@@ -179,7 +183,7 @@ export function MapCanvas({
     >
       <MapLoadingBar visible={showProgress} />
       {mapReady ? (
-        <MapPanel {...mapPanelProps} hideFloatingControls={isMobile} />
+        <MapPanel {...mapPanelProps} hideFloatingControls={isMobile} placeRequestsLayer={placeRequests?.layer} />
       ) : (
         MAP_PANEL_PLACEHOLDER
       )}
@@ -189,6 +193,7 @@ export function MapCanvas({
       {/* Everything over the map lives in one layer after it (#2219):
           see MapOverlayLayer for the Android touch-order invariant. */}
       <MapOverlayLayer>
+        {isWeb && placeRequests && <MapPlaceRequestsControls state={placeRequests} isMobile={isMobile} />}
         {/* The map's top row on the desktop branch (#2219, #2304): the
             quality pill and «Искать в этой области» share ONE flex row in the
             free band (`desktopSearchAreaBand`) — they cannot overlap; while the

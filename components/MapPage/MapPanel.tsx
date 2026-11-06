@@ -10,6 +10,7 @@ import MapRouteEngine from '@/components/MapPage/MapRouteEngine';
 import type { MapUiApi } from '@/types/mapUi';
 import type { MapClustersFilters } from '@/api/map';
 import type { MapMovePayload, Point } from './Map/types';
+import type { MapPlaceRequestsLayer } from '@/hooks/map/useMapPlaceRequests';
 import type { ComponentType } from 'react';
 import { translate as i18nT } from '@/i18n'
 
@@ -34,6 +35,7 @@ interface MapPanelProps {
     initialResultsSettled?: boolean;
     /** Explicit URL target; web renders it even when absent from server results. */
     urlSelectedPlace?: Point | null;
+    placeRequestsLayer?: MapPlaceRequestsLayer;
     coordinates: LatLng | null;
     /** Trusted current user fix, independent from the viewport/query center. */
     userLocation?: LatLng | null;
@@ -97,6 +99,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                                                travelsTotal = null,
                                                initialResultsSettled = true,
                                                urlSelectedPlace,
+                                               placeRequestsLayer,
                                                coordinates,
                                                userLocation,
                                                coordinatesAreFallback,
@@ -230,6 +233,7 @@ const MapPanel: React.FC<MapPanelProps> = ({
                       travel={travelProp}
                       initialResultsSettled={initialResultsSettled}
                       urlSelectedPlace={urlSelectedPlace}
+                      placeRequestsLayer={placeRequestsLayer}
                       coordinates={safeCoordinates}
                       coordinatesAreFallback={coordinatesAreFallback}
                       userLocation={resolvedUserLocation}

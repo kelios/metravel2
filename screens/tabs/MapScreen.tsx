@@ -69,6 +69,7 @@ export default function MapScreen() {
     styles,
     mapReady,
     mapPanelProps,
+    placeRequests,
     rightPanelTab,
     isDesktopCollapsed,
     desktopPanelWidth,
@@ -458,6 +459,7 @@ export default function MapScreen() {
         showProgress={showMapProgress}
         mapReady={mapReady}
         mapPanelProps={mapPanelProps}
+        placeRequests={placeRequests}
         enabledOverlays={enabledOverlays}
         showGeoBanner={showGeoBanner}
         geoBannerStackOffset={geoBannerStackOffset}
@@ -481,6 +483,7 @@ export default function MapScreen() {
       isMobile,
       isWeb,
       mapPanelProps,
+      placeRequests,
       mapReady,
       showMapProgress,
       enabledOverlays,

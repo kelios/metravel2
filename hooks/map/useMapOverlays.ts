@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 
 import { getActiveOverlayLayers } from '@/config/mapWebLayers';
 import { useMapOverlaysStore } from '@/stores/mapOverlaysStore';
@@ -12,7 +12,16 @@ import type { MapUiApi } from '@/types/mapUi';
  * слоёв (#1306). Хук вызывается каждым экраном со своим `mapUiApi` и приводит
  * его карту к общему состоянию.
  */
-export function useMapOverlays(mapUiApi: MapUiApi | null) {
+type ScreenOverlay = {
+  id: string;
+  title: string;
+  category: string;
+  subtitle: string;
+  enabled: boolean;
+  toggle: (enabled: boolean) => void;
+};
+
+export function useMapOverlays(mapUiApi: MapUiApi | null, screenOverlay?: ScreenOverlay) {
   const activeOverlayLayers = useMemo(() => getActiveOverlayLayers(), []);
   const overlayOptions = useMemo(
     () =>
@@ -53,5 +62,18 @@ export function useMapOverlays(mapUiApi: MapUiApi | null) {
     });
   }, [controlledOverlayIds, enabledOverlays, mapUiApi]);
 
-  return { enabledOverlays, handleOverlayToggle, overlayOptions, resetOverlays };
+  const screenId = screenOverlay?.id;
+  const screenToggle = screenOverlay?.toggle;
+  const toggle = useCallback((id: string, enabled: boolean) => {
+    if (id === screenId && screenToggle) screenToggle(enabled);
+    else handleOverlayToggle(id, enabled);
+  }, [handleOverlayToggle, screenId, screenToggle]);
+  const reset = useCallback(() => {
+    resetOverlays();
+    screenToggle?.(false);
+  }, [resetOverlays, screenToggle]);
+  const options = useMemo(() => screenOverlay ? [...overlayOptions, screenOverlay] : overlayOptions, [overlayOptions, screenOverlay]);
+  const enabled = useMemo(() => screenOverlay ? { ...enabledOverlays, [screenOverlay.id]: screenOverlay.enabled } : enabledOverlays, [enabledOverlays, screenOverlay]);
+
+  return { enabledOverlays: enabled, handleOverlayToggle: toggle, overlayOptions: options, resetOverlays: reset };
 }

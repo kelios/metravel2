@@ -33,4 +33,8 @@ export const places = {
   'contributions.stepPublish': "Send your story for review. Once it’s published, you’ll receive the Heart of the Map badge.",
   'contributions.loading': "Loading invitations",
   'contributions.resetFilter': "Clear filter",
+  'contributions.map.layer': "Looking for stories",
+  'contributions.map.legend': "A heart marks a place we are looking for a story about.",
+  'contributions.map.marker': "{{name}} · looking for a story",
+  'contributions.map.list': "List of invitations",
 } as const

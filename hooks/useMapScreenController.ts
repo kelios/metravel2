@@ -18,6 +18,7 @@ import { useMapController } from '@/components/map-core/useMapController';
 import { useMapFilters } from '@/hooks/map/useMapFilters';
 import { useMapPanelState, useMapResponsive } from '@/hooks/map/useMapPanelState';
 import { useMapOverlays } from '@/hooks/map/useMapOverlays';
+import { useMapPlaceRequests } from '@/hooks/map/useMapPlaceRequests';
 import { useMapUrlAnchors } from '@/hooks/map/useMapUrlAnchors';
 import { useMapFiltersPanelProps } from '@/hooks/map/useMapFiltersPanelProps';
 import { useMapAnalytics } from '@/hooks/map/useMapAnalytics';
@@ -35,7 +36,7 @@ export function useMapScreenController() {
   // URL anchors → initial filter values + deep-linked coordinates/place.
   // Остаётся на экране: initialCategories/initialRadius нужны useMapFilters,
   // а якоря координат/места уходят параметрами в поведенческое ядро.
-  const { initialCategories, initialRadius, urlCoordinates, urlSelectedPlace, shouldFocusUrlPlace } =
+  const { initialCategories, initialRadius, urlCoordinates, urlSelectedPlace, shouldFocusUrlPlace, placeRequestId } =
     useMapUrlAnchors();
 
   // Filters
@@ -186,13 +187,14 @@ export function useMapScreenController() {
   // выдаче радиуса (поиск и чип типа места уже учтены бэкендом), а при клиентском
   // фильтре (нерезолвленный чип, офлайн) — длина отфильтрованного набора (#335, #2374).
   const travelsCount = Math.max(total ?? 0, travelsData.length);
+  const placeRequests = useMapPlaceRequests(isFocused, placeRequestId);
 
   const {
     enabledOverlays,
     handleOverlayToggle,
     overlayOptions,
     resetOverlays,
-  } = useMapOverlays(mapUiApi);
+  } = useMapOverlays(mapUiApi, placeRequests?.overlay);
 
   // Reset filters, route and map overlays.
   // #213 — сброс должен возвращать карту к дефолтным слоям: гасим включённые
@@ -309,6 +311,7 @@ export function useMapScreenController() {
 
     // Map
     mapPanelProps: screenMapPanelProps,
+    placeRequests,
 
     // Panel
     rightPanelTab,
@@ -387,6 +390,7 @@ export function useMapScreenController() {
     styles,
     mapReady,
     screenMapPanelProps,
+    placeRequests,
     rightPanelTab,
     isDesktopCollapsed,
     desktopPanelWidth,

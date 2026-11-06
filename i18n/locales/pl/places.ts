@@ -33,4 +33,8 @@ export const places = {
   'contributions.stepPublish': "Prześlij relację do sprawdzenia. Po publikacji otrzymasz odznakę „Serce mapy”.",
   'contributions.loading': "Wczytujemy zaproszenia",
   'contributions.resetFilter': "Wyczyść filtr",
+  'contributions.map.layer': "Szukamy historii",
+  'contributions.map.legend': "Serce wskazuje miejsce, o którym szukamy historii.",
+  'contributions.map.marker': "{{name}} · szukamy historii",
+  'contributions.map.list': "Lista zaproszeń",
 } as const

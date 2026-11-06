@@ -33,4 +33,8 @@ export const places = {
   'contributions.stepPublish': "Адпраўце гісторыю на праверку. Пасля публікацыі вы атрымаеце значок «Сэрца карты».",
   'contributions.loading': "Загружаем запрашэнні",
   'contributions.resetFilter': "Скінуць фільтр",
+  'contributions.map.layer': "Шукаем гісторыю",
+  'contributions.map.legend': "Сэрца пазначае месца, пра якое мы шукаем гісторыю.",
+  'contributions.map.marker': "{{name}} · шукаем гісторыю",
+  'contributions.map.list': "Спіс запрашэнняў",
 } as const
