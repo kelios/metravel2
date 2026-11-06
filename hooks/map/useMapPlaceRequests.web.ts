@@ -24,6 +24,7 @@ export type MapPlaceRequestsLayer = {
   selectedId: string | null
   focus: PlaceRequest | null
   openRequest: (id: string) => void
+  setLegendHost: (host: HTMLElement | null) => void
 }
 
 function initialState(active: boolean, linkedId: string | null): LayerState {
@@ -38,6 +39,7 @@ export function useMapPlaceRequests(isFocused: boolean, urlId: string | null) {
   const active = available && isFocused
   const linkedId = active ? urlId : null
   const [stored, setState] = useState(() => initialState(active, linkedId))
+  const [legendHost, setLegendHost] = useState<HTMLElement | null>(null)
   // A retained tab starts from the URL of its current visit, not the previous
   // selection. Derive this before enabling either query.
   const changedEntry = stored.active !== active || stored.linkedId !== linkedId
@@ -103,7 +105,7 @@ export function useMapPlaceRequests(isFocused: boolean, urlId: string | null) {
 
   const focus = detailData?.status === 'open' ? detailData : null
   const layer = useMemo<MapPlaceRequestsLayer | undefined>(() =>
-    enabled ? { markers, selectedId, focus, openRequest } : undefined,
+    enabled ? { markers, selectedId, focus, openRequest, setLegendHost } : undefined,
   [enabled, markers, selectedId, focus, openRequest])
   const title = t('places:contributions.map.layer')
   const subtitle = t('places:contributions.map.legend')
@@ -118,7 +120,7 @@ export function useMapPlaceRequests(isFocused: boolean, urlId: string | null) {
   const detailLoading = detail.isPending || detail.isFetching
   const detailError = detail.isError && !missing
   return useMemo(() => ({
-    layer, overlay, panel, openList, close, openRequest,
+    layer, legendHost, overlay, panel, openList, close, openRequest,
     listLoading: list.isPending,
     listError: list.isError,
     retryList: list.refetch,
@@ -127,7 +129,7 @@ export function useMapPlaceRequests(isFocused: boolean, urlId: string | null) {
     detailError,
     retryDetail: detail.refetch,
   }), [
-    close, detail.refetch, detailData, detailError, detailLoading, layer, list.isError, list.isPending,
+    close, detail.refetch, detailData, detailError, detailLoading, layer, legendHost, list.isError, list.isPending,
     list.refetch, openList, openRequest, overlay, panel,
   ])
 }

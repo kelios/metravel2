@@ -16,6 +16,8 @@ export const WEATHER_LEGEND_BOTTOM_OFFSET = 28
 
 interface WeatherLegendProps {
   enabledOverlays?: Record<string, boolean> | null
+  /** Use the surrounding Leaflet control stack for positioning on /map. */
+  inControlStack?: boolean
   /** #2073: карта конструктора маршрута измеряет высоту, чтобы развести легенды. */
   onLayout?: (event: LayoutChangeEvent) => void
 }
@@ -116,7 +118,7 @@ const buildGradient = (stops: ScaleStop[]): string =>
     .map((s) => `${s.color} ${Math.round(s.offset * 100)}%`)
     .join(', ')})`
 
-function WeatherLegend({ enabledOverlays, onLayout }: WeatherLegendProps) {
+function WeatherLegend({ enabledOverlays, inControlStack = false, onLayout }: WeatherLegendProps) {
   const colors = useThemedColors()
   const { width } = useWindowDimensions()
   const isMobile = width <= MOBILE_LAYOUT_MAX_WIDTH
@@ -132,7 +134,7 @@ function WeatherLegend({ enabledOverlays, onLayout }: WeatherLegendProps) {
 
   return (
     <View
-      style={styles.container}
+      style={[styles.container, !inControlStack && styles.corner]}
       onLayout={onLayout}
       accessibilityLabel={i18nT('map:components.MapPage.WeatherLegend.legenda_value1_bfe44549', { value1: scale.title })}
       testID="weather-legend"
@@ -157,11 +159,13 @@ function WeatherLegend({ enabledOverlays, onLayout }: WeatherLegendProps) {
 
 const getStyles = (colors: ThemedColors, isMobile: boolean) =>
   StyleSheet.create({
-    container: {
+    corner: {
       position: 'absolute',
       left: 12,
       bottom: WEATHER_LEGEND_BOTTOM_OFFSET,
       zIndex: 700,
+    },
+    container: {
       maxWidth: 240,
       paddingHorizontal: 12,
       paddingVertical: 10,

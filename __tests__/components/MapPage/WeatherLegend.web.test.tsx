@@ -1,4 +1,5 @@
 import { render } from '@testing-library/react-native'
+import { StyleSheet } from 'react-native'
 
 jest.mock('@/hooks/useTheme', () => ({
   useThemedColors: () => ({
@@ -24,6 +25,16 @@ describe('WeatherLegend.web — выбор шкалы по enabledOverlays', () 
     )
     const legend = getByTestId('weather-legend')
     expect(legend.props.accessibilityLabel).toContain('Температура')
+    expect(StyleSheet.flatten(legend.props.style).position).toBe('absolute')
+  })
+
+  it('uses the Leaflet stack flow when combined with the invitation legend', async () => {
+    const { getByTestId } = await render(
+      <WeatherLegend enabledOverlays={{ [TEMP]: true }} inControlStack />,
+    )
+    const legend = getByTestId('weather-legend')
+    expect(StyleSheet.flatten(legend.props.style).position).toBeUndefined()
+    expect(StyleSheet.flatten(legend.props.style).bottom).toBeUndefined()
   })
 
   it('precip=true → показывает шкалу осадков (мм/ч)', async () => {

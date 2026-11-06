@@ -5,5 +5,6 @@ export const DEFAULT_ROUTE_ZOOM = 13;
 export const DEFAULT_ZOOM = 11;
 export const MOBILE_BREAKPOINT = METRICS.breakpoints.tablet || 768;
 export const LEAFLET_MAP_CONTAINER_ID_PREFIX = 'metravel-leaflet-map';
+export const MAP_BOTTOM_CONTROLS_RESERVE_VAR = '--mt-map-bottom-controls-reserve';
 
 

@@ -175,6 +175,7 @@ export function MapCanvas({
         : null
 
   const showSearchThisArea = !isMobile && !!canSearchThisArea && !!onSearchThisArea
+  const stackWeatherLegend = isMobile && !!placeRequests?.legendHost
 
   return (
     <View
@@ -187,13 +188,19 @@ export function MapCanvas({
       ) : (
         MAP_PANEL_PLACEHOLDER
       )}
-      {isWeb && (
+      {isWeb && !stackWeatherLegend && (
         <WeatherLegend enabledOverlays={enabledOverlays} />
       )}
       {/* Everything over the map lives in one layer after it (#2219):
           see MapOverlayLayer for the Android touch-order invariant. */}
       <MapOverlayLayer>
-        {isWeb && placeRequests && <MapPlaceRequestsControls state={placeRequests} isMobile={isMobile} />}
+        {isWeb && placeRequests && (
+          <MapPlaceRequestsControls
+            state={placeRequests}
+            isMobile={isMobile}
+            weatherOverlays={stackWeatherLegend ? enabledOverlays : undefined}
+          />
+        )}
         {/* The map's top row on the desktop branch (#2219, #2304): the
             quality pill and «Искать в этой области» share ONE flex row in the
             free band (`desktopSearchAreaBand`) — they cannot overlap; while the

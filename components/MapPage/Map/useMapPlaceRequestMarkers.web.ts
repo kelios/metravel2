@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { MapPlaceRequestsLayer } from '@/hooks/map/useMapPlaceRequests'
 import { useTranslation } from '@/i18n/LocaleProvider'
+import { MAP_BOTTOM_CONTROLS_RESERVE_VAR } from './constants'
 import { beginProgrammaticMapMove, noteUserMapGesture } from './programmaticMoveSignal'
 
 const PIN_SIZE = DESIGN_TOKENS.touchTarget.minWidth
@@ -49,12 +50,47 @@ export function useMapPlaceRequestMarkers({ leaflet, map, layer, ready, accent, 
   const { t } = useTranslation()
   const markers = layer?.markers
   const openRequest = layer?.openRequest
+  const setLegendHost = layer?.setLegendHost
   const focused = useRef<{ map: MarkerMap; key: string } | null>(null)
   const groupRef = useRef<PinGroup | null>(null)
   const pinsRef = useRef(new Map<string, Pin>())
   const selectedId = layer?.selectedId
   const focusLat = layer?.focus?.lat
   const focusLng = layer?.focus?.lng
+
+  useEffect(() => {
+    if (!leaflet || !map || !setLegendHost) return
+    // Leaflet stacks bottom controls above attribution, including wrapped
+    // credits and the map corner's shared dock/consent offset.
+    const host = document.createElement('div')
+    host.style.pointerEvents = 'none'
+    leaflet.DomEvent.disableClickPropagation(host)
+    leaflet.DomEvent.disableScrollPropagation(host)
+    const control = leaflet.control({ position: 'bottomright' })
+    control.onAdd = () => host
+    control.addTo(map)
+    const corner = host.parentElement
+    const mapRoot = host.closest<HTMLElement>('[data-testid="map-screen-root"]')
+    const updateReserve = () => {
+      if (!mapRoot || !corner) return
+      mapRoot.style.setProperty(
+        MAP_BOTTOM_CONTROLS_RESERVE_VAR,
+        `calc(var(--mt-map-leaflet-corner-bottom, 8px) + ${corner.offsetHeight}px + ${DESIGN_TOKENS.spacing.sm}px)`,
+      )
+    }
+    updateReserve()
+    const observer = mapRoot && corner && typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(updateReserve)
+      : null
+    if (corner) observer?.observe(corner)
+    setLegendHost(host)
+    return () => {
+      observer?.disconnect()
+      mapRoot?.style.removeProperty(MAP_BOTTOM_CONTROLS_RESERVE_VAR)
+      setLegendHost(null)
+      control.remove()
+    }
+  }, [leaflet, map, setLegendHost])
 
   useEffect(() => {
     if (!leaflet || !map || !openRequest) return

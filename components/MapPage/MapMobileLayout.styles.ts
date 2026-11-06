@@ -2,14 +2,14 @@ import { Platform, StyleSheet } from 'react-native'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import type { ThemedColors } from '@/hooks/useTheme'
+import { MAP_BOTTOM_CONTROLS_RESERVE_VAR } from './Map/constants'
 
 const MOBILE_WEB_BOTTOM_CHROME_GAP = 28
 const CONTROL_RADIUS = 12
 /**
- * Нижняя зона карты держит РОВНО две вещи: подпись Leaflet (прижата к низу
- * карты, `app/global.css` → `.leaflet-bottom`) и «Искать в этой области» прямо
- * над ней. Вход в маршрут уехал иконкой в верхний тулбар, поэтому pill больше
- * не приходится поднимать на высоту FAB.
+ * Обычная нижняя зона карты держит подпись Leaflet и «Искать в этой области»
+ * над ней. Слой приглашений измеряет весь угол Leaflet и публикует резерв
+ * для кнопки поиска и плашки пустой выдачи.
  *
  * CLEARANCE = высота блока подписи (~23px) + воздух: pill по центру (~214px)
  * и подпись справа расходятся по горизонтали не на всех ширинах, поэтому
@@ -37,14 +37,13 @@ type MapMobileLayoutStyleOptions = {
 }
 
 /**
- * «Искать в этой области» — единственная кнопка нижней зоны, прижата к низу
- * карты над подписью Leaflet. Обе поднимаются над плавающей нижней плашкой по
- * одной и той же формуле (`app/global.css` → `.leaflet-bottom`), поэтому зазор
- * между ними держится постоянным при любой её высоте.
+ * «Искать в этой области» остаётся над углом Leaflet и плавающей плашкой.
+ * Когда слой приглашений выключен, измеренный резерв отсутствует.
  */
 export function getSearchAreaButtonBottom(isWeb: boolean, isNarrow: boolean) {
   if (isWeb) {
-    return `calc(${MOBILE_WEB_FLOATING_CHROME_LIFT} + ${MOBILE_WEB_SEARCH_AREA_BOTTOM}px)`
+    const baseline = `calc(${MOBILE_WEB_FLOATING_CHROME_LIFT} + ${MOBILE_WEB_SEARCH_AREA_BOTTOM}px)`
+    return `max(${baseline}, var(${MAP_BOTTOM_CONTROLS_RESERVE_VAR}, 0px))`
   }
   return isNarrow ? 96 : 104
 }

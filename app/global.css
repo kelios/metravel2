@@ -540,6 +540,10 @@ select:focus-visible {
 }
 
 @media (max-width: 1023px) {
+  body:has([data-testid="map-screen-root"]) {
+    --mt-map-leaflet-corner-bottom: calc(max(0px, var(--mt-consent-h, 0px) - 56px) + 8px);
+  }
+
   body:has([data-testid="map-screen-root"]) .leaflet-control-attribution {
     max-width: calc(100vw - 32px);
     border-radius: 12px;
@@ -558,7 +562,7 @@ select:focus-visible {
      в этой области» (MapMobileLayout.styles.ts), поэтому зазор между ними
      постоянный. */
   body:has([data-testid="map-screen-root"]) .leaflet-bottom {
-    bottom: calc(max(0px, var(--mt-consent-h, 0px) - 56px) + 8px);
+    bottom: var(--mt-map-leaflet-corner-bottom);
   }
 }
 

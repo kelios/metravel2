@@ -382,13 +382,9 @@ describe('MapMobileLayout', () => {
     })
   })
 
-  it('pins search-this-area to the map bottom, leaving room for the Leaflet attribution', () => {
-    // Вход в маршрут уехал иконкой в верхний тулбар, поэтому снизу остаётся
-    // только pill: 8px подписи от низа + 36px её высоты с воздухом. Резерв
-    // плавающей плашки меряется от низа вьюпорта, поэтому внутри карты из него
-    // вычитается измеренная высота дока (#2097) — ровно как у .leaflet-bottom в global.css.
+  it('keeps search-this-area above both baseline attribution and the measured control stack', () => {
     expect(getSearchAreaButtonBottom(true, true)).toBe(
-      'calc(max(0px, var(--mt-consent-h, 0px) - var(--mt-dock-h, 0px)) + 44px)',
+      'max(calc(max(0px, var(--mt-consent-h, 0px) - var(--mt-dock-h, 0px)) + 44px), var(--mt-map-bottom-controls-reserve, 0px))',
     )
     expect(getSearchAreaButtonBottom(false, true)).toBe(96)
     expect(getSearchAreaButtonBottom(false, false)).toBe(104)
