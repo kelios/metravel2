@@ -17,4 +17,11 @@ describe('mobile map provider attribution CSS', () => {
     expect(css).toContain('white-space: normal;')
     expect(css).toContain('overflow: visible;')
   })
+
+  it('shares the desktop consent lift between Leaflet and the campaign corner reserve', () => {
+    expect(css).toContain([
+      `body[data-consent-banner-open='true']:has([data-testid="map-screen-root"]) {`,
+      '    --mt-map-leaflet-corner-bottom: var(--mt-consent-h, 0px);',
+    ].join('\n'))
+  })
 })

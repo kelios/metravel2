@@ -1,6 +1,8 @@
 // src/screens/tabs/map.styles.ts
 import { Platform, StyleSheet } from 'react-native';
 import { LAYOUT, METRICS } from '@/constants/layout';
+import { asBottomDimension } from '@/components/layout/bottomChromeInset';
+import { MAP_BOTTOM_CONTROLS_RESERVE_VAR } from '@/components/MapPage/Map/constants';
 import {
   getMapToolbarBottom,
   MAP_LOCATION_QUALITY_PILL_STACK_OFFSET,
@@ -32,6 +34,7 @@ const PANEL_RADIUS = 20;
 const CONTROL_RADIUS = 12;
 // Размер вью иконочных контролов карты и есть их тач-таргет — floor проекта 44dp.
 const CONTROL_SIZE = 44;
+const DESKTOP_GEO_BANNER_BOTTOM = 20;
 // Кластер круглых кнопок desktop-ветки в правом верхнем углу карты: верхний ряд —
 // «Слои» у края, слева «Радиус»; «Подсказки» (#2217) — под «Слоями». Ряд не
 // растёт влево: третий слот на окне 768–925 px заходит под пилюлю «Искать в
@@ -106,6 +109,11 @@ export const getStyles = (
       ? WEB_TABLET_HEADER_AND_DOCK_RESERVED_HEIGHT
       : `${WEB_HEADER_RESERVED_HEIGHT}px`;
   const webPointerCursor = Platform.OS === 'web' ? { cursor: 'pointer' as const } : {};
+  // The expanded desktop panel can leave a map too narrow to fit this
+  // banner alongside the Leaflet control corner.
+  const desktopGeoBannerBottom = Platform.OS === 'web'
+    ? asBottomDimension(`max(${DESKTOP_GEO_BANNER_BOTTOM}px, var(${MAP_BOTTOM_CONTROLS_RESERVE_VAR}, 0px))`)
+    : DESKTOP_GEO_BANNER_BOTTOM;
   // Общее тело трёх круглых кнопок карты desktop-ветки («Подсказки», «Радиус»,
   // «Слои»): ключи отличаются только слотом `right` (Style key ownership).
   const desktopMapFab = {
@@ -679,7 +687,7 @@ export const getStyles = (
         // см. mapFilterChips.ts). Прежний хардкод 54 оставлял до тач-рамки ряда
         // 3 pt, и на iPhone 16 Pro баннер читался как наложение на кнопки.
         top: isMobile ? getMapToolbarBottom(insetTop) + MAP_TOOLBAR_STACK_GAP : undefined,
-        bottom: isMobile ? undefined : 20,
+        bottom: isMobile ? undefined : desktopGeoBannerBottom,
         left: isMobile ? 10 : 16,
         right: isMobile ? 10 : undefined,
         // Desktop: в режиме маршрута рядом с сообщением встают ДВЕ кнопки

@@ -175,7 +175,7 @@ export function MapCanvas({
         : null
 
   const showSearchThisArea = !isMobile && !!canSearchThisArea && !!onSearchThisArea
-  const stackWeatherLegend = isMobile && !!placeRequests?.legendHost
+  const stackWeatherLegend = !!placeRequests?.legendHost
 
   return (
     <View

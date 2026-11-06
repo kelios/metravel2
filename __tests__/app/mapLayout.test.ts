@@ -96,6 +96,15 @@ describe('map layout header offset', () => {
     expect(String(styles.container.height).match(/--mt-dock-h/g)).toHaveLength(1);
     expect(styles.mapContainer.paddingBottom).toBe(getStyles(false, 0, themedColors, false).mapContainer.paddingBottom);
   });
+
+  it('keeps the web desktop geolocation banner above the campaign controls at tablet width', () => {
+    Object.defineProperty(Platform, 'OS', { value: 'web' });
+
+    expect(getStyles(false, 0, themedColors, true).geoBanner.bottom).toBe(
+      'max(20px, var(--mt-map-bottom-controls-reserve, 0px))',
+    );
+    expect(getStyles(true, 0, themedColors).geoBanner.bottom).toBeUndefined();
+  });
 });
 
 // #2155 — native at ≥ 768pt (iPad 820/1180, Android tablets) takes the desktop
@@ -142,6 +151,7 @@ describe('map shell geometry is platform-independent (#2155)', () => {
     expect(styles.rightPanel.flexShrink).toBe(0);
     expect(styles.mapHost.flex).toBe(1);
     expect(styles.mapHost.minWidth).toBe(0);
+    expect(styles.geoBanner.bottom).toBe(20);
     // Shell paddings + gap stay within the 48pt budget of the card.
     const horizontal =
       styles.mapContainer.paddingLeft + styles.mapContainer.paddingRight + styles.mapContainer.columnGap;

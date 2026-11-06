@@ -575,8 +575,12 @@ select:focus-visible {
  * mobile dock rule above doesn't already shift them clear.
  */
 @media (min-width: 1024px) {
+  body[data-consent-banner-open='true']:has([data-testid="map-screen-root"]) {
+    --mt-map-leaflet-corner-bottom: var(--mt-consent-h, 0px);
+  }
+
   body[data-consent-banner-open='true']:has([data-testid="map-screen-root"]) .leaflet-bottom {
-    bottom: var(--mt-consent-h, 0px);
+    bottom: var(--mt-map-leaflet-corner-bottom);
     transition: bottom 0.2s ease;
   }
 }
