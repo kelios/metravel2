@@ -150,9 +150,9 @@ function resolveQuestDetailRoute(pathname: string | null | undefined): QuestDeta
   return { questSlug: parts[2], locale: null, path: pathname };
 }
 
-function toTitleFromSegment(segment: string) {
+function toTitleFromSegment(segment: string, path?: string) {
   const cleanedSegment = String(segment ?? '').split('?')[0].split('#')[0];
-  const translated = pageTranslations[cleanedSegment];
+  const translated = (path ? pageTranslations[path] : undefined) ?? pageTranslations[cleanedSegment];
   const base = typeof translated === 'string'
     ? translated
     : cleanedSegment
@@ -792,7 +792,7 @@ export function useBreadcrumbModel(): BreadcrumbModel {
       if (part === 'travels') return;
 
       const path = part === 'travel' ? '/metravel' : '/' + parts.slice(0, index + 1).join('/');
-      const label = toTitleFromSegment(part);
+      const label = toTitleFromSegment(part, path);
       computed.push({ label, path });
     });
 

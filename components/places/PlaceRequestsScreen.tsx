@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
 import { Body, Heading } from '@/components/ui/Typography'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
+import { useHydrationReady } from '@/hooks/useHydrationReady'
 import { usePlaceRequest, usePlaceRequests } from '@/hooks/usePlaceRequests'
 import { useResponsive } from '@/hooks/useResponsive'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -48,14 +49,18 @@ export default function PlaceRequestsScreen() {
   const router = useRouter()
   const { isMobile, isDesktop } = useResponsive()
   const bottomPadding = useScrollBottomPadding(DESIGN_TOKENS.spacing.xl)
-  const params = useLocalSearchParams()
-  const source = normalizePlaceContributionSource(params.source)
-  const selectedRegion = normalizePlaceRequestRegion(params.region)
-  const requestId = normalizePlaceRequestId(params.request)
-  const isDetail = params.request !== undefined
-  const collection = usePlaceRequests(!isDetail)
+  const searchParams = useLocalSearchParams()
+  const hydrationReady = useHydrationReady()
+  // The static document has no query parameters. Wait for hydration before
+  // selecting a route mode or fetching, so a detail link never loads the list.
+  const params = hydrationReady ? searchParams : undefined
+  const source = normalizePlaceContributionSource(params?.source)
+  const selectedRegion = normalizePlaceRequestRegion(params?.region)
+  const requestId = normalizePlaceRequestId(params?.request)
+  const isDetail = params?.request !== undefined
+  const collection = usePlaceRequests(hydrationReady && !isDetail)
   const detail = usePlaceRequest(requestId)
-  const items = collection.data ?? []
+  const items = hydrationReady ? collection.data ?? [] : []
   const regions = [...new Set([...REGIONS, ...items.map(({ region }) => region)])]
   const visibleItems = selectedRegion ? items.filter(({ region }) => region === selectedRegion) : items
   const isUnavailable = isDetail && (!requestId || detail.error instanceof ApiError && detail.error.status === 404)
@@ -72,8 +77,8 @@ export default function PlaceRequestsScreen() {
   }
 
   const invitationCards = isDetail ? (detail.data ? [detail.data] : []) : visibleItems
-  const showError = !isUnavailable && currentQuery.isError
-  const isPending = !isUnavailable && currentQuery.isPending
+  const showError = hydrationReady && !isUnavailable && currentQuery.isError
+  const isPending = !hydrationReady || (!isUnavailable && currentQuery.isPending)
 
   return (
     <ScrollView

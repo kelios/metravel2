@@ -2,6 +2,7 @@
 // Вынесено из хука (#2121), чтобы таблицы подписей росли отдельно от логики.
 
 import { translate as i18nT } from '@/i18n';
+import { PLACE_REQUESTS_PATH } from '@/utils/placeRequestCreateIntent';
 
 export const pageTranslations: Record<string, string> = {
   get travelsby() { return i18nT('navigationStatic:breadcrumb.travelsby') },
@@ -28,6 +29,7 @@ export const pageTranslations: Record<string, string> = {
   get subscriptions() { return i18nT('navigationStatic:breadcrumb.subscriptions') },
   get contact() { return i18nT('navigationStatic:breadcrumb.contact') },
   get places() { return i18nT('navigationStatic:breadcrumb.places') },
+  get [PLACE_REQUESTS_PATH]() { return i18nT('places:contributions.title') },
   get articles() { return i18nT('navigationStatic:breadcrumb.articles') },
   get calendar() { return i18nT('navigationStatic:breadcrumb.calendar') },
   get search() { return i18nT('navigationStatic:breadcrumb.search') },

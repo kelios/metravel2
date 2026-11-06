@@ -73,6 +73,27 @@ describe('useBreadcrumbModel', () => {
     });
   });
 
+  it('keeps the Places parent and localizes the campaign breadcrumb', async () => {
+    const previousLocale = i18n.language;
+    usePathname.mockReturnValue('/places/help');
+    useLocalSearchParams.mockReturnValue({});
+
+    try {
+      await i18n.changeLanguage('ru');
+      const { result } = await renderHook(() => useBreadcrumbModel(), { wrapper });
+      expect(result.current.items).toEqual([
+        { label: 'Места', path: '/places' },
+        { label: 'Допишем Беларусь вместе', path: '/places/help' },
+      ]);
+      expect(result.current.backToPath).toBe('/places');
+
+      await act(async () => { await i18n.changeLanguage('en'); });
+      expect(result.current.currentTitle).toBe('Help tell Belarus’s story');
+    } finally {
+      await act(async () => { await i18n.changeLanguage(previousLocale); });
+    }
+  });
+
   it('never guesses a book title from its slug on an edition page (#2948)', async () => {
     usePathname.mockReturnValue('/books/poland-castles');
     useLocalSearchParams.mockReturnValue({});
