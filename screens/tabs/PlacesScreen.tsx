@@ -37,6 +37,7 @@ import { LoadMoreFooter, PlaceCard, SkeletonGrid, StateBlock } from './PlacesScr
 import { createStyles } from './PlacesScreen.styles'
 import { usePlacesCatalogController } from './usePlacesCatalogController'
 import { translate as i18nT } from '@/i18n'
+import { formatList } from '@/i18n/format'
 import { useTranslation } from '@/i18n/LocaleProvider'
 import type { PlacesCatalogSort } from '@/api/places'
 import { usePlacesScreenHeader } from './usePlacesScreenHeader'
@@ -78,6 +79,7 @@ export default function PlacesScreen() {
     filtersOpen,
     firstScreenCount,
     handleClearCategories,
+    handleExpandSearch,
     handleQueryChange,
     handleScroll,
     handleSelectCountry,
@@ -110,6 +112,7 @@ export default function PlacesScreen() {
     setFiltersOpen,
     setSortMenuVisible,
     showCollections,
+    showCategoryScope,
     showLoadedCounts,
     sortMenuVisible,
     sortMode,
@@ -117,6 +120,11 @@ export default function PlacesScreen() {
     totalCount,
     visiblePlaces,
   } = usePlacesCatalogController({ isCompact: isSingleColumn, isWide, hasMeasuredWidth })
+  const resultsTitle = showCategoryScope
+    ? selectedCategories.length > 0
+      ? formatList(selectedCategories)
+      : t('map:screens.tabs.PlacesScreen.vse_kategorii_f1b4a07f')
+    : activeCategoryTitle
 
   // Sort control shared by the desktop results header and the compact sticky bar.
   const sortAnchor = useRef<ViewInstance>(null)
@@ -271,6 +279,8 @@ export default function PlacesScreen() {
       />
     )
   } else if (resultsStatus === 'empty') {
+    const canExpand = showCategoryScope && selectedCategories.length > 0
+    const resetLabel = t('map:screens.tabs.PlacesScreen.sbrosit_filtry_f13dc45b')
     resultsContent = catalogTotal === 0 && !hasActiveFilters ? (
       <StateBlock
         icon="inbox"
@@ -296,8 +306,9 @@ export default function PlacesScreen() {
             ? i18nT('map:screens.tabs.PlacesScreen.poprobuyte_drugoe_nazvanie_ili_sbroste_filtr_7cf6a42b')
             : i18nT('map:screens.tabs.PlacesScreen.izmenite_kategoriyu_ili_stranu_5611fa44')
         }
-        actionLabel={i18nT('map:screens.tabs.PlacesScreen.sbrosit_filtry_f13dc45b')}
-        onAction={resetAll}
+        actionLabel={canExpand ? t('map:screens.tabs.PlacesScreen.searchAllCategories') : resetLabel}
+        onAction={canExpand ? handleExpandSearch : resetAll}
+        secondaryAction={canExpand ? { label: resetLabel, onPress: resetAll } : undefined}
       />
     )
   } else {
@@ -579,8 +590,8 @@ export default function PlacesScreen() {
           <View style={styles.main} testID="places-main">
             <View style={styles.resultsHeader}>
               <View style={styles.resultsTitleBlock}>
-                <Text style={styles.resultsTitle} numberOfLines={2} testID="places-results-title">
-                  {activeCategoryTitle}
+                <Text style={styles.resultsTitle} numberOfLines={showCategoryScope ? undefined : 2} testID="places-results-title">
+                  {resultsTitle}
                 </Text>
                 <Text style={styles.resultsMeta} numberOfLines={1} testID="places-results-meta">
                   {isInitialLoading || isResultsRefreshing

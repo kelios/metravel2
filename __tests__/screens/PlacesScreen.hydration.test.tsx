@@ -185,7 +185,7 @@ describe('PlacesScreen pre-hydration chrome', () => {
 describe('Places URL state hydration parity (#2240)', () => {
   it.each<Record<string, string>>([
     { category: 'Замок' }, { category: '' }, { q: 'замок' }, { country: 'by' },
-    { q: 'замок', category: 'Замок', country: 'by' },
+    { q: 'замок', category: 'Замок', country: 'by' }, { q: 'библиотека', category: '', country: 'by' },
   ])('hydrates a neutral SSG frame before committing %j', async (params) => {
     Platform.OS = 'web'
     jest.useFakeTimers()
@@ -195,7 +195,7 @@ describe('Places URL state hydration parity (#2240)', () => {
     const client = new QueryClient()
     function Probe() {
       const state = usePlacesCatalogController({ isCompact: true, isWide: false, hasMeasuredWidth: true })
-      const frame = JSON.stringify([state.query, state.selectedCategories, state.selectedCountry, state.activeCategoryTitle, state.isInitialLoading, state.scopeStatus])
+      const frame = JSON.stringify([state.query, state.selectedCategories, state.selectedCountry, state.activeCategoryTitle, state.showCategoryScope, state.isInitialLoading, state.scopeStatus])
       useLayoutEffect(() => { frames.push(frame) }, [frame])
       return <span>{frame}</span>
     }
@@ -222,6 +222,7 @@ describe('Places URL state hydration parity (#2240)', () => {
         ...(params.country ? { country: params.country } : {}),
       })
       expect(requests.mock.calls[0][0].perPage).toBe(20)
+      if (params.q && !params.category) expect(requests.mock.calls[0][0].categories).toBeUndefined()
       expect(errors).toEqual([])
     } finally {
       await domAct(async () => { root?.unmount() })

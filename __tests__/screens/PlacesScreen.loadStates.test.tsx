@@ -13,9 +13,12 @@ import { fetchPlacesCatalog } from '@/api/places'
 import type { PlacesCatalogPage } from '@/utils/placesCatalog'
 import { i18n } from '@/i18n'
 
+let mockParams: Record<string, string> = {}
+const mockSetParams = jest.fn()
+
 jest.mock('expo-router', () => ({
-  useLocalSearchParams: () => ({ category: '' }),
-  useRouter: () => ({ push: jest.fn(), setParams: jest.fn() }),
+  useLocalSearchParams: () => mockParams,
+  useRouter: () => ({ push: jest.fn(), setParams: mockSetParams }),
   useIsFocused: () => true,
   useFocusEffect: () => undefined,
 }))
@@ -112,6 +115,7 @@ afterEach(async () => {
 describe('PlacesScreen — состояния загрузки каталога (#2184)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    mockParams = { category: '' }
     ;(Platform as any).OS = 'web'
   })
 
@@ -140,6 +144,30 @@ describe('PlacesScreen — состояния загрузки каталога 
     } finally {
       await act(() => i18n.changeLanguage('ru'))
     }
+  })
+
+  it('offers category expansion and general reset only for a settled filtered result', async () => {
+    mockParams = { category: 'Замок,Озеро,Дворец', q: 'Библиотека', country: 'by' }
+    mockedFetch.mockImplementation(async ({ categories }) =>
+      categories ? { ...makePage(1, 0), count: 0 } : makePage(1, 4),
+    )
+    const root = await renderWebScreen()
+    const screen = within(root.container)
+    const expand = { name: 'Искать во всех категориях' }
+    await screen.findByRole('button', expand)
+    expect(screen.getByTestId('places-results-title').props.children).toMatch(/Замок.*Озеро.*Дворец/)
+    expect(screen.getByTestId('empty-state-secondary-action').props.accessibilityLabel).toBe('Сбросить фильтры')
+
+    const search = screen.getAllByLabelText('Найти место')[0]
+    await act(() => search.props.onChangeText('Национальная библиотека'))
+    expect(screen.queryByRole('button', expand)).toBeNull()
+    expect(screen.queryByTestId('empty-state')).toBeNull()
+
+    const expandAction = await screen.findByRole('button', expand)
+    await act(() => expandAction.props.onPress())
+    expect(await screen.findByTestId('places-card-place-1')).toBeTruthy()
+    expect(screen.getByTestId('places-results-title').props.children).toBe('Все категории')
+    expect(mockSetParams.mock.calls).toEqual([[{ q: 'Национальная библиотека' }], [{ category: '' }]])
   })
 
   it('таймаут первой загрузки: блок ошибки с честным текстом и ручным «Повторить»', async () => {

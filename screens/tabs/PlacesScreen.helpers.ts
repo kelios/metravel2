@@ -121,10 +121,10 @@ export const parseCategoryParam = (value: unknown): string[] => {
     .filter(Boolean)
 }
 
-// Presence is part of the route contract: missing means the starter selection,
-// whereas an explicitly empty category means the full catalog.
-export const resolvePlacesCategorySelection = (value: unknown): string[] =>
-  value === undefined ? [...DEFAULT_CATEGORY_SELECTION] : parseCategoryParam(value)
+// An absent category delegates scope to the search; an empty one explicitly
+// selects the full catalog.
+export const resolvePlacesCategorySelection = (value: unknown): string[] | undefined =>
+  value === undefined ? undefined : parseCategoryParam(value)
 
 export const isSameCategorySet = (left: string[], right: readonly string[]): boolean => {
   if (left.length !== right.length) return false

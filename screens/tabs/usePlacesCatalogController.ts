@@ -12,6 +12,7 @@ import { getSiteBaseUrl } from '@/utils/seo'
 
 import {
   type CategoryCollection,
+  DEFAULT_CATEGORY_SELECTION,
   getInterestingCategoryCollections,
   LOAD_MORE_SCROLL_THRESHOLD,
   MAP_FOCUS_RADIUS_KM,
@@ -30,6 +31,8 @@ type PlacesCatalogControllerInput = {
 }
 
 const isBlankQuery = (value: string) => !value.trim()
+const allCategories: string[] = []
+const starterCategories = [...DEFAULT_CATEGORY_SELECTION]
 
 export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth }: PlacesCatalogControllerInput) {
   const router = useRouter()
@@ -43,15 +46,13 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
   const appliedQuery = useDebouncedValue(query, PLACES_SEARCH_DEBOUNCE_MS, isBlankQuery).trim()
   const [categoryQuery, setCategoryQuery] = useState('')
   const deferredCategoryQuery = useDeferredValue(categoryQuery)
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(() =>
-    Platform.OS === 'web' ? [] : resolvePlacesCategorySelection(params.category),
+  // Keep the first web frame neutral. The route effect applies explicit intent
+  // after hydration (#2406), including an explicitly empty category parameter.
+  const [explicitCategories, setExplicitCategories] = useState(() =>
+    Platform.OS === 'web' ? undefined : resolvePlacesCategorySelection(params.category),
   )
-  // Как и выбор категорий, на web происхождение категории читается из URL
-  // эффектом: SSG-кадр не знает `?category=`, а `false` здесь сразу включал
-  // статус «Загружаем» фильтров и ронял гидратацию (React #418, #2406).
-  const [implicitCategorySelection, setImplicitCategorySelection] = useState(() =>
-    Platform.OS === 'web' || params.category === undefined,
-  )
+  const normalizedQuery = query.trim()
+  const selectedCategories = explicitCategories ?? (urlParamsApplied && !normalizedQuery ? starterCategories : allCategories)
   const [scopeRequested, setScopeRequested] = useState(false)
   const [selectedCountry, setSelectedCountry] = useState<string | null>(() =>
     Platform.OS !== 'web' && typeof params.country === 'string' && params.country.trim() ? params.country.trim() : null,
@@ -71,7 +72,7 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
   const showCollections = Platform.OS === 'web' && !isCompact
   // The first web frame matches SSG. Wait for the committed URL state and its
   // debounced search before enabling any list/scope/aggregate request.
-  const queryReady = urlParamsApplied && appliedQuery === query.trim()
+  const queryReady = urlParamsApplied && appliedQuery === normalizedQuery
   const interestingCategoryCollections = useMemo(getInterestingCategoryCollections, [])
   const requestCatalogScope = useCallback(() => setScopeRequested(true), [])
   const setCountryMenuVisible = useCallback((next: boolean) => {
@@ -82,7 +83,7 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     requestCatalogScope()
     setFiltersOpenState(next)
   }, [requestCatalogScope])
-  const { collectionCounts, isScopeLoading, placesQuery, resetListForSort, scope, scopeStatus, retryScope } = usePlacesCatalogQueries({
+  const { collectionCounts, isScopeLoading, placesQuery, resetList, scope, scopeStatus, retryScope } = usePlacesCatalogQueries({
     q: appliedQuery || undefined,
     categories: selectedCategories,
     country: selectedCountry,
@@ -90,7 +91,7 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     collections: interestingCategoryCollections,
     enabled: queryReady,
     showCollections: showCollections && hasMeasuredWidth,
-    scopeRequested: !implicitCategorySelection || scopeRequested,
+    scopeRequested: explicitCategories !== undefined || scopeRequested,
   })
 
   const visiblePlaces = useMemo(
@@ -126,7 +127,7 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
   }, [categoryFacets, deferredCategoryQuery, selectedCategories])
 
   const syncCategoryParams = useCallback((categories: string[]) => {
-    setImplicitCategorySelection(false)
+    setExplicitCategories(categories)
     router.setParams(categories.length > 0 ? { category: categories.join(',') } : { category: '' })
   }, [router])
   const handleQueryChange = useCallback((next: string) => {
@@ -137,9 +138,8 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
 
   useEffect(() => {
     const nextCategories = resolvePlacesCategorySelection(params.category)
-    setImplicitCategorySelection(params.category === undefined)
-    setSelectedCategories((current) =>
-      isSameCategorySet(current, nextCategories) ? current : nextCategories,
+    setExplicitCategories((current) =>
+      current && nextCategories && isSameCategorySet(current, nextCategories) ? current : nextCategories,
     )
     const nextCountry = typeof params.country === 'string' && params.country.trim()
       ? params.country.trim()
@@ -150,14 +150,15 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     setUrlParamsApplied(true)
   }, [params.category, params.country, params.q])
 
+  const canLoadMore = queryReady && !placesQuery.isPlaceholderData && placesQuery.hasNextPage
   const loadMorePlaces = useCallback(() => {
-    if (placesQuery.hasNextPage && !placesQuery.isFetchingNextPage) void placesQuery.fetchNextPage()
-  }, [placesQuery])
+    if (canLoadMore && !placesQuery.isFetchingNextPage) void placesQuery.fetchNextPage()
+  }, [canLoadMore, placesQuery])
   // После сбоя дозагрузки страницу повторяет только кнопка в подвале списка:
   // автодогрузка по скроллу сама слала бы тяжёлый запрос на каждое движение.
   const loadMoreFailed = placesQuery.isFetchNextPageError
   const handleScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    if (!placesQuery.hasNextPage || placesQuery.isFetchingNextPage || loadMoreFailed) return
+    if (!canLoadMore || placesQuery.isFetchingNextPage || loadMoreFailed) return
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent
     const layoutHeight = Number(layoutMeasurement?.height ?? 0)
     const offsetY = Number(contentOffset?.y ?? 0)
@@ -165,24 +166,22 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     if (layoutHeight && contentHeight && contentHeight - (layoutHeight + offsetY) <= LOAD_MORE_SCROLL_THRESHOLD) {
       loadMorePlaces()
     }
-  }, [loadMoreFailed, loadMorePlaces, placesQuery.hasNextPage, placesQuery.isFetchingNextPage])
+  }, [canLoadMore, loadMoreFailed, loadMorePlaces, placesQuery.isFetchingNextPage])
   const handleToggleCategory = useCallback((category: string) => {
-    setSelectedCategories((current) => {
-      const next = current.includes(category)
-        ? current.filter((item) => item !== category)
-        : [...current, category]
-      syncCategoryParams(next)
-      return next
-    })
-  }, [syncCategoryParams])
-  const handleClearCategories = useCallback(() => {
-    setSelectedCategories([])
-    syncCategoryParams([])
-  }, [syncCategoryParams])
-  const selectCategoryCollection = useCallback((collection: CategoryCollection) => {
-    const next = [...collection.categories]
-    setSelectedCategories(next)
+    const next = selectedCategories.includes(category)
+      ? selectedCategories.filter((item) => item !== category)
+      : [...selectedCategories, category]
     syncCategoryParams(next)
+  }, [selectedCategories, syncCategoryParams])
+  const handleClearCategories = useCallback(() => {
+    syncCategoryParams(allCategories)
+  }, [syncCategoryParams])
+  const handleExpandSearch = useCallback(() => {
+    resetList({ categories: undefined })
+    handleClearCategories()
+  }, [handleClearCategories, resetList])
+  const selectCategoryCollection = useCallback((collection: CategoryCollection) => {
+    syncCategoryParams([...collection.categories])
   }, [syncCategoryParams])
   const handleSelectCountry = useCallback((country: string | null) => {
     requestCatalogScope()
@@ -192,11 +191,11 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
   }, [router, requestCatalogScope, setCountryMenuVisible])
   const handleSelectSort = useCallback((next: PlacesCatalogSort) => {
     if (next !== sortMode) {
-      resetListForSort(next, query.trim() || undefined)
+      resetList({ sort: next, q: normalizedQuery || undefined })
       setSortMode(next)
     }
     setSortMenuVisible(false)
-  }, [query, resetListForSort, sortMode])
+  }, [normalizedQuery, resetList, sortMode])
   const openOnMap = useCallback((place: CatalogPlace) => {
     if (!Number.isFinite(place.latNumber) || !Number.isFinite(place.lngNumber)) return
     router.push({
@@ -229,12 +228,11 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     else void openExternalUrlInNewTab(url, { allowRelative: true, baseUrl: getSiteBaseUrl() })
   }, [router])
 
-  const hasActiveFilters = selectedCategories.length > 0 || Boolean(selectedCountry) || Boolean(query)
+  const hasActiveFilters = selectedCategories.length > 0 || Boolean(selectedCountry) || Boolean(normalizedQuery)
   const resetAll = useCallback(() => {
     setQuery('')
     setCategoryQuery('')
-    setSelectedCategories([])
-    setImplicitCategorySelection(false)
+    setExplicitCategories(allCategories)
     setSelectedCountry(null)
     setCountryMenuVisibleState(false)
     router.setParams({ q: '', category: '', country: '' })
@@ -244,7 +242,8 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
   const isInitialLoading = !urlParamsApplied || placesQuery.isLoading || (!queryReady && !placesQuery.data)
   const isResultsRefreshing = !isInitialLoading && (!queryReady || placesQuery.isPlaceholderData || placesQuery.isRefetching)
   const hasResultCount = placesQuery.data !== undefined && !isInitialLoading && !isResultsRefreshing
-  const resultsStatus: 'loading' | 'error' | 'empty' | 'list' = isInitialLoading
+  const resultsStatus: 'loading' | 'error' | 'empty' | 'list' =
+    isInitialLoading || (visiblePlaces.length === 0 && isResultsRefreshing)
     ? 'loading'
     : visiblePlaces.length > 0
       ? 'list'
@@ -265,6 +264,7 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     filtersOpen,
     firstScreenCount: (isWide ? 3 : isCompact ? 1 : 2) * 2,
     handleClearCategories,
+    handleExpandSearch,
     handleQueryChange,
     handleScroll,
     handleSelectCountry,
@@ -273,7 +273,7 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     handleTopBarLayout,
     hasActiveFilters,
     hasCategorySearch: deferredCategoryQuery.trim().length > 0,
-    hasMorePlaces: placesQuery.hasNextPage,
+    hasMorePlaces: canLoadMore,
     isInitialLoading,
     isResultsRefreshing,
     hasResultCount,
@@ -298,6 +298,7 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     setFiltersOpen,
     setSortMenuVisible,
     showCollections,
+    showCategoryScope: explicitCategories !== undefined || Boolean(normalizedQuery),
     sortMenuVisible,
     sortMode,
     showLoadedCounts: scope !== undefined,

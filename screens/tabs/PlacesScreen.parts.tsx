@@ -459,7 +459,7 @@ export function LoadMoreFooter({
 }
 
 // Тонкая обёртка над единым EmptyState (#2104): пустота/ошибка внутри списка мест,
-// одно действие с pending-подписью на время рефетча.
+// основное действие с pending-подписью на время рефетча.
 export function StateBlock({
   icon,
   variant,
@@ -467,6 +467,7 @@ export function StateBlock({
   description,
   actionLabel,
   onAction,
+  secondaryAction,
   pending = false,
   pendingLabel,
 }: {
@@ -476,6 +477,7 @@ export function StateBlock({
   description: string
   actionLabel: string
   onAction: () => void
+  secondaryAction?: EmptyStateProps['secondaryAction']
   pending?: boolean
   pendingLabel?: string
 }) {
@@ -486,6 +488,7 @@ export function StateBlock({
       icon={icon}
       title={title}
       description={description}
+      secondaryAction={secondaryAction}
       action={{
         label: pending ? (pendingLabel ?? actionLabel) : actionLabel,
         accessibilityLabel: actionLabel,

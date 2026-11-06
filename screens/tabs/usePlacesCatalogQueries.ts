@@ -95,8 +95,8 @@ export function usePlacesCatalogQueries({ q, categories, country, sort, collecti
     country: country ?? undefined,
     sort,
   }), [q, categories, country, sort])
-  const resetListForSort = useCallback((nextSort: PlacesCatalogSort, nextQuery: string | undefined) => {
-    const queryKey = queryKeys.placesCatalogList({ ...listParams, q: nextQuery, sort: nextSort })
+  const resetList = useCallback((overrides: Partial<PlacesCatalogListParams>) => {
+    const queryKey = queryKeys.placesCatalogList({ ...listParams, ...overrides })
     void queryClient.resetQueries({ queryKey, exact: true })
   }, [listParams, queryClient])
 
@@ -166,20 +166,27 @@ export function usePlacesCatalogQueries({ q, categories, country, sort, collecti
   const currentRefinement = currentCollection && currentCount !== undefined
     ? { [currentCollection.id]: currentCount }
     : undefined
-  const scope = scopeQuery.data
+  // A disabled observer can still hold data or an error for the previous search.
+  const scope = enabled ? scopeQuery.data : undefined
+  const scopeFailed = enabled && (scopeQuery.isError || (scopeRequested && placesQuery.isError))
+  const scopeStatus = scope !== undefined
+    ? 'ready' as const
+    : scopeFailed
+      ? 'error' as const
+      : scopeRequested ? 'loading' as const : 'idle' as const
   return {
     collectionCounts: collectionCountsQuery.data || selectedCollectionCountsQuery.data || currentRefinement
       ? { ...collectionCountsQuery.data, ...selectedCollectionCountsQuery.data, ...currentRefinement }
       : undefined,
-    // A disabled cache observer is idle, not an indefinitely pending request.
-    isScopeLoading: scope === undefined && scopeRequested && !placesQuery.isError && !scopeQuery.isError,
-    scopeStatus: scope !== undefined ? 'ready' as const : scopeQuery.isError || (scopeRequested && placesQuery.isError) ? 'error' as const : scopeRequested ? 'loading' as const : 'idle' as const,
+    isScopeLoading: scopeStatus === 'loading',
+    scopeStatus,
     retryScope: () => {
+      if (!enabled) return
       if (listReady && !scopeQuery.isFetching) void scopeQuery.refetch()
       else if (placesQuery.isError && !placesQuery.isFetching) void placesQuery.refetch()
     },
     placesQuery,
-    resetListForSort,
+    resetList,
     scope,
   }
 }

@@ -1,4 +1,5 @@
 export const mapGenerated3 = {
+  "screens.tabs.PlacesScreen.searchAllCategories": "Искать во всех категориях",
   "screens.tabs.PlacesScreen.sortByName": "По названию",
   "screens.tabs.PlacesScreen.sortByRatingCount": "По числу оценок",
   "screens.tabs.PlacesScreen.sortBySourceCount": "По числу статей",

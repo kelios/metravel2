@@ -229,6 +229,34 @@ describe('usePlacesCatalogController — бюджет запросов ката�
     expect(result.current.showLoadedCounts).toBe(true)
   })
 
+  it.each(['ready', 'error'] as const)('hides the previous %s facet state during search debounce', async (previousStatus) => {
+    mockParams = { category: 'Замок', q: 'замок' }
+    mockedFetch.mockImplementation(async ({ q, perPage }) => {
+      if (q === 'замок' && perPage === 1) {
+        if (previousStatus === 'error') throw timeoutError()
+        return CATALOG_PAGE
+      }
+      return FILTERED_PAGE
+    })
+    const { result } = await renderController()
+    await settle()
+    expect(result.current.scopeStatus).toBe(previousStatus)
+    expect(mockedFetch).toHaveBeenCalledTimes(2)
+
+    await act(() => result.current.handleQueryChange('библиотека'))
+    expect(result.current.scopeStatus).toBe('loading')
+    expect(result.current.showLoadedCounts).toBe(false)
+    expect(result.current.countryFacets).toEqual([])
+    await tick(399)
+    expect(mockedFetch).toHaveBeenCalledTimes(2)
+
+    await settle()
+    expect(result.current.scopeStatus).toBe('ready')
+    expect(result.current.catalogTotal).toBe(FILTERED_PAGE.count)
+    expect(mockedFetch).toHaveBeenCalledTimes(4)
+    expect(callParams(3)).toEqual({ page: 1, perPage: 1, q: 'библиотека' })
+  })
+
   it('Reset from implicit featured commits explicit All atomically and never reselects featured', async () => {
     mockParams = {}
     const { result, rerender } = await renderController()
@@ -484,6 +512,85 @@ describe('usePlacesCatalogController — бюджет запросов ката�
     expect(callParams(0)).toEqual({ page: 1, perPage: 20, q: 'замок', categories: ['Замок'], country: 'by', sort: 'default' })
     expect(mockedFetch.mock.calls.every(([p]) => p.q === 'замок' && p.country === 'by')).toBe(true)
     expect(mockedGroups).not.toHaveBeenCalled()
+  })
+
+  it('searches the selected country across categories and restores the starter on clear', async () => {
+    mockParams = { country: 'by' }
+    const { result } = await renderController({ isCompact: true, isWide: false, hasMeasuredWidth: true })
+    await settle()
+    expect(result.current.selectedCategories).toEqual(DEFAULT_CATEGORY_SELECTION)
+    expect(result.current.showCategoryScope).toBe(false)
+    expect(mockedFetch).toHaveBeenCalledTimes(1)
+    expect(callParams(0)).toMatchObject({ categories: DEFAULT_CATEGORY_SELECTION, country: 'by' })
+
+    await act(() => result.current.handleQueryChange('Национальная'))
+    await act(() => result.current.handleQueryChange('  Национальная библиотека  '))
+    await act(() => result.current.handleScroll(NEAR_BOTTOM_SCROLL))
+    await tick(399)
+    expect(mockedFetch).toHaveBeenCalledTimes(1)
+    await settle()
+    expect(mockedFetch).toHaveBeenCalledTimes(2)
+    const search = { perPage: 20, q: 'Национальная библиотека', country: 'by', sort: 'default' }
+    expect(callParams(1)).toEqual({ page: 1, ...search })
+    expect(result.current.showCategoryScope).toBe(true)
+    expect(result.current.selectedCategories).toEqual([])
+
+    await act(() => result.current.loadMorePlaces())
+    await settle()
+    expect(callParams(2)).toEqual({ page: 2, ...search })
+    await act(() => result.current.handleQueryChange(''))
+    await settle()
+    expect(result.current.selectedCategories).toEqual(DEFAULT_CATEGORY_SELECTION)
+    expect(result.current.appliedQuery).toBe('')
+    expect(mockSetParams.mock.calls.every(([params]) => !Object.hasOwn(params, 'category'))).toBe(true)
+    expect(mockedFetch.mock.calls.some(([params]) => params.q && params.categories)).toBe(false)
+  })
+
+  it.each([undefined, ''])('first search from a link uses all categories with category=%s', async (category) => {
+    mockParams = { country: 'by', q: ' библиотека ', category }
+    const { result } = await renderController({ isCompact: true, isWide: false, hasMeasuredWidth: true })
+    await tick(399)
+    expect(mockedFetch).not.toHaveBeenCalled()
+    await settle()
+    expect(mockedFetch).toHaveBeenCalledTimes(1)
+    expect(callParams(0)).toEqual({ page: 1, perPage: 20, q: 'библиотека', country: 'by', sort: 'default' })
+    expect(result.current.catalogTotal).toBe(CATALOG_PAGE.count)
+    await act(() => result.current.handleQueryChange('   '))
+    await settle()
+    expect(result.current.selectedCategories).toEqual(category === '' ? [] : DEFAULT_CATEGORY_SELECTION)
+    expect(result.current.showCategoryScope).toBe(category === '')
+    expect(callParams(1)).toEqual({
+      page: 1, perPage: 20, country: 'by', sort: 'default',
+      ...(category === undefined ? { categories: DEFAULT_CATEGORY_SELECTION } : {}),
+    })
+  })
+
+  it('expands an explicit empty result to page one even with later pages cached', async () => {
+    mockParams = { category: '', country: 'by', q: 'библиотека' }
+    mockedFetch.mockImplementation(async ({ categories }) =>
+      categories ? { ...FILTERED_PAGE, places: [], count: 0 } : CATALOG_PAGE,
+    )
+    const { result } = await renderController({ isCompact: true, isWide: false, hasMeasuredWidth: true })
+    await settle()
+    await act(() => result.current.handleSelectSort('name'))
+    await settle()
+    await act(() => result.current.loadMorePlaces())
+    await settle()
+    expect(result.current.visiblePlaces).toHaveLength(40)
+
+    await act(() => result.current.handleToggleCategory('Замок'))
+    await settle()
+    expect(result.current.resultsStatus).toBe('empty')
+    expect(result.current.selectedCategories).toEqual(['Замок'])
+
+    mockedFetch.mockClear()
+    mockSetParams.mockClear()
+    await act(() => result.current.handleExpandSearch())
+    await settle()
+    expect(mockSetParams.mock.calls).toEqual([[{ category: '' }]])
+    expect(mockedFetch).toHaveBeenCalledTimes(1)
+    expect(callParams(0)).toEqual({ page: 1, perPage: 20, q: 'библиотека', country: 'by', sort: 'name' })
+    expect(result.current.visiblePlaces).toHaveLength(20)
   })
 
   it('starts a changed or revisited sort at page one and keeps the exact search filters', async () => {

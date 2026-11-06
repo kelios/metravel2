@@ -1,4 +1,5 @@
 export const mapGenerated3 = {
+  "screens.tabs.PlacesScreen.searchAllCategories": "Шукати в усіх категоріях",
   "screens.tabs.PlacesScreen.sortByName": "За назвою",
   "screens.tabs.PlacesScreen.sortByRatingCount": "За кількістю оцінок",
   "screens.tabs.PlacesScreen.sortBySourceCount": "За кількістю статей",
