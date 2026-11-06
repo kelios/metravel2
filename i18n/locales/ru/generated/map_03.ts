@@ -1,4 +1,8 @@
 export const mapGenerated3 = {
+  "screens.tabs.PlacesScreen.sortByName": "По названию",
+  "screens.tabs.PlacesScreen.sortByRatingCount": "По числу оценок",
+  "screens.tabs.PlacesScreen.sortBySourceCount": "По числу статей",
+  "screens.tabs.PlacesScreen.sortSelection": "Выбрать сортировку · {{sort}}",
   "screens.tabs.PlacesScreen.filterLoadFailed": "Не удалось загрузить фильтры",
   "hooks.map.useMapMobileDerivations.marshrut_c71f4ede": "Маршрут",
   "hooks.map.useMapMobileDerivations.marshrut_gotov_mozhno_otkryt_spisok_mest_cb473cc6": "Маршрут готов, можно открыть список мест",

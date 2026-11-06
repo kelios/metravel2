@@ -1,5 +1,5 @@
-import { searchInputAccessibilityProps } from '@/utils/webProps'
-import React, { useMemo } from 'react'
+import { searchInputAccessibilityProps, webAccessibilityProps } from '@/utils/webProps'
+import React, { useMemo, useRef } from 'react'
 import {
   Platform,
   Pressable,
@@ -7,6 +7,7 @@ import {
   Text,
   TextInput,
   View,
+  type ViewInstance,
 } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { useIsFocused } from 'expo-router'
@@ -36,11 +37,14 @@ import { LoadMoreFooter, PlaceCard, SkeletonGrid, StateBlock } from './PlacesScr
 import { createStyles } from './PlacesScreen.styles'
 import { usePlacesCatalogController } from './usePlacesCatalogController'
 import { translate as i18nT } from '@/i18n'
+import { useTranslation } from '@/i18n/LocaleProvider'
+import type { PlacesCatalogSort } from '@/api/places'
 import { usePlacesScreenHeader } from './usePlacesScreenHeader'
 import PlacesCountryMenu, { PlacesScopeStatus } from './PlacesCountryMenu'
 
 
 export default function PlacesScreen() {
+  const { t } = useTranslation()
   const isFocused = useIsFocused()
   const colors = useThemedColors()
   const width = useResponsiveWidth()
@@ -115,12 +119,16 @@ export default function PlacesScreen() {
   } = usePlacesCatalogController({ isCompact: isSingleColumn, isWide, hasMeasuredWidth })
 
   // Sort control shared by the desktop results header and the compact sticky bar.
-  const sortOptions = useMemo(
+  const sortAnchor = useRef<ViewInstance>(null)
+  const sortOptions = useMemo<{ value: PlacesCatalogSort; label: string }[]>(
     () => [
-      { value: 'default' as const, label: i18nT('map:screens.tabs.PlacesScreen.po_umolchaniyu_bc186f34') },
-      { value: 'rating' as const, label: i18nT('map:screens.tabs.PlacesScreen.po_reytingu_d0b00645') },
+      { value: 'default', label: t('map:screens.tabs.PlacesScreen.po_umolchaniyu_bc186f34') },
+      { value: 'rating', label: t('map:screens.tabs.PlacesScreen.po_reytingu_d0b00645') },
+      { value: 'name', label: t('map:screens.tabs.PlacesScreen.sortByName') },
+      { value: 'rating_count', label: t('map:screens.tabs.PlacesScreen.sortByRatingCount') },
+      { value: 'source_count', label: t('map:screens.tabs.PlacesScreen.sortBySourceCount') },
     ],
-    [],
+    [t],
   )
   const activeSortLabel =
     sortOptions.find((option) => option.value === sortMode)?.label ?? sortOptions[0].label
@@ -129,12 +137,18 @@ export default function PlacesScreen() {
       visible={sortMenuVisible}
       onDismiss={() => setSortMenuVisible(false)}
       contentStyle={styles.countryMenuContent}
+      {...(isWeb ? {
+        accessibilityLabel: t('map:screens.tabs.PlacesScreen.vybrat_sortirovku_c333ebd7'),
+        keyboardAnchorRef: sortAnchor,
+      } : null)}
       anchor={
         <Pressable
+          ref={sortAnchor}
           onPress={() => setSortMenuVisible(true)}
           accessibilityRole="button"
-          accessibilityLabel={i18nT('map:screens.tabs.PlacesScreen.vybrat_sortirovku_c333ebd7')}
+          accessibilityLabel={t('map:screens.tabs.PlacesScreen.sortSelection', { sort: activeSortLabel })}
           accessibilityState={{ expanded: sortMenuVisible }}
+          {...(isWeb ? webAccessibilityProps({ 'aria-haspopup': 'menu', 'aria-expanded': sortMenuVisible }) : null)}
           testID="places-sort-select"
           style={({ pressed }) => [
             styles.sortSelect,
@@ -167,6 +181,8 @@ export default function PlacesScreen() {
           style={styles.countryMenuItem}
           title={option.label}
           onPress={() => handleSelectSort(option.value)}
+          accessibilityState={{ checked: sortMode === option.value }}
+          {...(isWeb ? { role: 'menuitemradio' as const } : null)}
           leadingIcon={({ size }) => (
             <Feather
               name={sortMode === option.value ? 'check-circle' : 'circle'}

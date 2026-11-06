@@ -1,4 +1,8 @@
 export const mapGenerated3 = {
+  "screens.tabs.PlacesScreen.sortByName": "By name",
+  "screens.tabs.PlacesScreen.sortByRatingCount": "By number of ratings",
+  "screens.tabs.PlacesScreen.sortBySourceCount": "By number of articles",
+  "screens.tabs.PlacesScreen.sortSelection": "Choose sort order · {{sort}}",
   "screens.tabs.PlacesScreen.filterLoadFailed": "Failed to load filters",
   "hooks.map.useMapMobileDerivations.marshrut_c71f4ede": "Route",
   "hooks.map.useMapMobileDerivations.marshrut_gotov_mozhno_otkryt_spisok_mest_cb473cc6": "The route is ready, you can open the list of places",

@@ -11,6 +11,7 @@ import { createQueryWrapper } from '../helpers/testQueryClient'
 import PlacesScreen from '@/screens/tabs/PlacesScreen'
 import { fetchPlacesCatalog } from '@/api/places'
 import type { PlacesCatalogPage } from '@/utils/placesCatalog'
+import { i18n } from '@/i18n'
 
 jest.mock('expo-router', () => ({
   useLocalSearchParams: () => ({ category: '' }),
@@ -42,15 +43,15 @@ jest.mock('@/ui/paper', () => {
   const React = require('react')
   const { View, Text, Pressable } = require('react-native')
 
-  const Menu = ({ children, anchor }: any) => (
+  const Menu = ({ children, anchor, visible }: any) => (
     <View>
       {anchor}
-      {children}
+      {visible && children}
     </View>
   )
 
-  Menu.Item = ({ title, onPress }: any) => (
-    <Pressable accessibilityRole="button" onPress={onPress}>
+  Menu.Item = ({ title, onPress, accessibilityState }: any) => (
+    <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={accessibilityState} onPress={onPress}>
       <Text>{title}</Text>
     </Pressable>
   )
@@ -112,6 +113,33 @@ describe('PlacesScreen — состояния загрузки каталога 
   beforeEach(() => {
     jest.clearAllMocks()
     ;(Platform as any).OS = 'web'
+  })
+
+  it('shows all server sort choices and updates the selected label when the locale changes', async () => {
+    mockedFetch.mockResolvedValue(makePage(1, 4))
+    const root = await renderWebScreen()
+    const screen = within(root.container)
+    const trigger = () => screen.getByTestId('places-sort-select')
+    try {
+      await screen.findByTestId('places-card-place-1')
+      expect(trigger().props['aria-haspopup']).toBe('menu')
+      await act(() => trigger().props.onPress())
+      for (const label of ['По умолчанию', 'По рейтингу', 'По названию', 'По числу оценок', 'По числу статей']) {
+        expect(screen.getByRole('button', { name: label })).toBeTruthy()
+      }
+      await act(() => screen.getByRole('button', { name: 'По числу оценок' }).props.onPress())
+      await waitFor(() => expect(mockedFetch).toHaveBeenLastCalledWith(
+        expect.objectContaining({ page: 1, sort: 'rating_count' }), expect.any(AbortSignal),
+      ))
+      expect(trigger().props.accessibilityLabel).toBe('Выбрать сортировку · По числу оценок')
+      expect(trigger().props.accessibilityState.expanded).toBe(false)
+      await act(() => i18n.changeLanguage('en'))
+      expect(trigger().props.accessibilityLabel).toBe('Choose sort order · By number of ratings')
+      await act(() => trigger().props.onPress())
+      expect(screen.getByRole('button', { name: 'By number of ratings' }).props.accessibilityState.checked).toBe(true)
+    } finally {
+      await act(() => i18n.changeLanguage('ru'))
+    }
   })
 
   it('таймаут первой загрузки: блок ошибки с честным текстом и ручным «Повторить»', async () => {

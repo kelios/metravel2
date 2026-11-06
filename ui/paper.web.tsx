@@ -13,6 +13,7 @@
 // теперь честно ругается вместо того, чтобы промолчать.
 import React, { useMemo } from 'react'
 import ReactDOM from 'react-dom'
+import { useFocusTrap } from '@/hooks/useFocusTrap'
 import {
   type ViewInstance,
   ActivityIndicator,
@@ -217,12 +218,13 @@ export const IconButton: React.FC<
   )
 }
 
-type MenuItemProps = Omit<PressableProps, 'children' | 'style' | 'onPress'> & {
+type MenuItemProps = Omit<PressableProps, 'children' | 'style' | 'onPress' | 'role'> & {
   title: string
   onPress?: () => void
   leadingIcon?: IconSource
   style?: StyleProp<ViewStyle>
   titleStyle?: StyleProp<TextStyle>
+  role?: PressableProps['role'] | 'menuitemradio'
 }
 
 type MenuProps = {
@@ -233,14 +235,19 @@ type MenuProps = {
   contentStyle?: StyleProp<ViewStyle>
   accessibilityRole?: 'menu' | 'dialog'
   accessibilityLabel?: string
+  /** Opt in to keyboard navigation and return focus to the actual trigger. */
+  keyboardAnchorRef?: React.RefObject<ViewInstance | null>
 }
 
-const MenuItem: React.FC<MenuItemProps> = ({ title, onPress, leadingIcon, style, titleStyle, ...rest }) => {
+const MenuItem: React.FC<MenuItemProps> = ({ title, onPress, leadingIcon, style, titleStyle, role, accessibilityState, ...rest }) => {
   const iconNode = useMemo(() => resolveIconNode(leadingIcon, 18), [leadingIcon])
 
   return (
     <Pressable
       accessibilityRole="menuitem"
+      role={role as PressableProps['role']}
+      accessibilityState={accessibilityState}
+      aria-checked={role === 'menuitemradio' ? accessibilityState?.checked : undefined}
       {...rest}
       onPress={onPress}
       style={({ pressed }) => [styles.menuItem, style, pressed && styles.pressed]}
@@ -259,9 +266,44 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
   contentStyle,
   accessibilityRole = 'menu',
   accessibilityLabel,
+  keyboardAnchorRef,
 }) => {
-  const [panelPosition, setPanelPosition] = React.useState<{ top: number; left: number; maxHeight: number; width: number } | null>(null)
+  const [panelPosition, setPanelPosition] = React.useState<{
+    top?: number; bottom?: number; left: number; maxHeight: number; width: number
+  } | null>(null)
   const anchorRef = React.useRef<ViewInstance>(null)
+  const keyboardPanelRef = React.useRef<HTMLElement>(null)
+  const keyboardEnabled = visible && panelPosition !== null && keyboardAnchorRef !== undefined
+  useFocusTrap(keyboardPanelRef, {
+    enabled: keyboardEnabled,
+    returnFocus: keyboardAnchorRef as unknown as React.RefObject<HTMLElement | null> | undefined,
+  })
+
+  React.useEffect(() => {
+    const panel = keyboardPanelRef.current
+    if (!keyboardEnabled || !panel?.addEventListener) return
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        onDismiss()
+        return
+      }
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+      const items = Array.from(panel.querySelectorAll<HTMLElement>(
+        '[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]',
+      )).filter((item) => item.tabIndex >= 0 && item.getAttribute('aria-disabled') !== 'true')
+      if (items.length === 0) return
+      event.preventDefault()
+      const current = items.indexOf(panel.ownerDocument.activeElement as HTMLElement)
+      if (event.key === 'Home') items[0].focus()
+      else if (event.key === 'End') items[items.length - 1].focus()
+      else if (event.key === 'ArrowDown') items[(current + 1) % items.length].focus()
+      else items[(current <= 0 ? items.length : current) - 1].focus()
+    }
+    panel.addEventListener('keydown', handleKey)
+    return () => panel.removeEventListener('keydown', handleKey)
+  }, [keyboardEnabled, onDismiss])
 
   React.useEffect(() => {
     if (!visible) {
@@ -300,24 +342,16 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
         const MAX_MENU_HEIGHT = 600
 
         // Вычисляем доступную ширину viewport
-        const availableWidth = window.innerWidth - (VIEWPORT_MARGIN * 2)
+        const availableWidth = Math.max(0, window.innerWidth - (VIEWPORT_MARGIN * 2))
         const menuWidth = Math.min(MAX_MENU_WIDTH, availableWidth)
 
-        // 1. Вычисляем вертикальную позицию (top)
-        let top = anchorRect.bottom + MENU_GAP
-        
+        const top = Math.max(VIEWPORT_MARGIN, anchorRect.bottom + MENU_GAP)
+        const bottom = Math.max(VIEWPORT_MARGIN, window.innerHeight - anchorRect.top + MENU_GAP)
         const availableHeightBelow = window.innerHeight - top - VIEWPORT_MARGIN
-        let maxHeight = Math.max(MIN_MENU_HEIGHT, Math.min(MAX_MENU_HEIGHT, availableHeightBelow))
-        
-        if (maxHeight < MIN_MENU_HEIGHT) {
-          const availableHeightAbove = anchorRect.top - VIEWPORT_MARGIN
-          if (availableHeightAbove > availableHeightBelow) {
-            maxHeight = Math.max(MIN_MENU_HEIGHT, Math.min(MAX_MENU_HEIGHT, availableHeightAbove))
-            top = Math.max(VIEWPORT_MARGIN, anchorRect.top - maxHeight - MENU_GAP)
-          }
-        }
-        
-        top = Math.max(VIEWPORT_MARGIN, top)
+        const availableHeightAbove = window.innerHeight - bottom - VIEWPORT_MARGIN
+        const opensUp = availableHeightBelow < MIN_MENU_HEIGHT && availableHeightAbove > availableHeightBelow
+        const maxHeight = Math.max(0, Math.min(MAX_MENU_HEIGHT, opensUp ? availableHeightAbove : availableHeightBelow))
+        const verticalPosition = opensUp ? { bottom } : { top }
         
         // 2. Вычисляем горизонтальную позицию (left)
         let left = anchorRect.right - menuWidth
@@ -340,7 +374,7 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
           left = Math.max(VIEWPORT_MARGIN, left)
         }
         
-        setPanelPosition({ top, left, maxHeight, width: menuWidth })
+        setPanelPosition({ ...verticalPosition, left, maxHeight, width: menuWidth })
       } catch {
         // noop
       }
@@ -378,13 +412,11 @@ export const Menu: React.FC<MenuProps> & { Item: React.FC<MenuItemProps> } = ({
             <Pressable style={styles.menuBackdrop} onPress={onDismiss} />
             {panelPosition ? (
               <View
+                ref={keyboardPanelRef as unknown as React.Ref<ViewInstance>}
                 style={[
                   styles.menuPanel,
                   {
-                    top: panelPosition.top,
-                    left: panelPosition.left,
-                    width: panelPosition.width,
-                    maxHeight: panelPosition.maxHeight,
+                    ...panelPosition,
                     overflowY: 'auto',
                   } as any,
                   contentStyle,
@@ -619,7 +651,6 @@ const styles = StyleSheet.create({
   },
   menuPanel: {
     position: Platform.OS === 'web' ? ('fixed' as any) : 'absolute',
-    minWidth: 260,
     borderRadius: 12,
     paddingVertical: 8,
     backgroundColor: DESIGN_TOKENS.colors.surfaceElevated,

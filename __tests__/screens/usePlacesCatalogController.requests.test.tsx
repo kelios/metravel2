@@ -486,6 +486,52 @@ describe('usePlacesCatalogController — бюджет запросов ката�
     expect(mockedGroups).not.toHaveBeenCalled()
   })
 
+  it('starts a changed or revisited sort at page one and keeps the exact search filters', async () => {
+    mockParams = { q: 'замок', category: 'Замок', country: 'by' }
+    const secondNamePage = makePlaces(200, 20)
+    const namePageOne = deferred<PlacesCatalogPage>()
+    mockedFetch.mockImplementation(async (params) => {
+      if (params.sort === 'name' && params.page === 1) return namePageOne.promise
+      return {
+        ...CATALOG_PAGE,
+        places: params.sort === 'name' && params.page === 2 ? secondNamePage : CATALOG_PAGE.places,
+      }
+    })
+    const { result } = await renderController({ isCompact: true, isWide: false, hasMeasuredWidth: true })
+    await settle()
+    await act(() => result.current.loadMorePlaces())
+    await settle()
+
+    await act(() => result.current.handleSelectSort('name'))
+    await tick(1)
+    expect(result.current.visiblePlaces).toEqual([])
+    expect(result.current.resultsStatus).toBe('loading')
+    namePageOne.resolve(CATALOG_PAGE)
+    await settle()
+    await act(() => result.current.loadMorePlaces())
+    await settle()
+    expect(result.current.visiblePlaces).toContain(secondNamePage[0])
+
+    await act(() => result.current.handleSelectSort('source_count'))
+    await settle()
+    await act(() => result.current.handleSelectSort('name'))
+    await settle()
+    expect(result.current.visiblePlaces).toEqual(CATALOG_PAGE.places)
+    await act(() => result.current.handleSelectSort('name'))
+    await settle()
+
+    const context = { perPage: 20, q: 'замок', categories: ['Замок'], country: 'by' }
+    expect(mockedFetch.mock.calls.map(([params]) => params).filter(({ perPage }) => perPage === 20)).toEqual([
+      { ...context, page: 1, sort: 'default' },
+      { ...context, page: 2, sort: 'default' },
+      { ...context, page: 1, sort: 'name' },
+      { ...context, page: 2, sort: 'name' },
+      { ...context, page: 1, sort: 'source_count' },
+      { ...context, page: 1, sort: 'name' },
+    ])
+    expect(mockSetParams).not.toHaveBeenCalled()
+  })
+
   it.each([
     ['mobile', { isCompact: true, isWide: false, hasMeasuredWidth: true }, 'web'],
     ['unknown width', { isCompact: false, isWide: true, hasMeasuredWidth: false }, 'web'],

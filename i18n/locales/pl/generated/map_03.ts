@@ -1,4 +1,8 @@
 export const mapGenerated3 = {
+  "screens.tabs.PlacesScreen.sortByName": "Według nazwy",
+  "screens.tabs.PlacesScreen.sortByRatingCount": "Według liczby ocen",
+  "screens.tabs.PlacesScreen.sortBySourceCount": "Według liczby artykułów",
+  "screens.tabs.PlacesScreen.sortSelection": "Wybierz sortowanie · {{sort}}",
   "screens.tabs.PlacesScreen.filterLoadFailed": "Nie udało się wczytać filtrów",
   "hooks.map.useMapMobileDerivations.marshrut_c71f4ede": "Trasa",
   "hooks.map.useMapMobileDerivations.marshrut_gotov_mozhno_otkryt_spisok_mest_cb473cc6": "Trasa jest gotowa, możesz otworzyć listę miejsc",

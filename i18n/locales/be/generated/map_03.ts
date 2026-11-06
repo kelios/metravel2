@@ -1,4 +1,8 @@
 export const mapGenerated3 = {
+  "screens.tabs.PlacesScreen.sortByName": "Па назве",
+  "screens.tabs.PlacesScreen.sortByRatingCount": "Па колькасці ацэнак",
+  "screens.tabs.PlacesScreen.sortBySourceCount": "Па колькасці артыкулаў",
+  "screens.tabs.PlacesScreen.sortSelection": "Выбраць сартаванне · {{sort}}",
   "screens.tabs.PlacesScreen.filterLoadFailed": "Не ўдалося загрузіць фільтры",
   "hooks.map.useMapMobileDerivations.marshrut_c71f4ede": "Маршрут",
   "hooks.map.useMapMobileDerivations.marshrut_gotov_mozhno_otkryt_spisok_mest_cb473cc6": "Маршрут гатовы, можна адкрыць спіс месцаў",

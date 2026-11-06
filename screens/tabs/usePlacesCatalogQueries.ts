@@ -14,9 +14,8 @@
 // mobile/native не запрашивают его. Открытый список уточняет одну подборку
 // отдельно от aggregate-кэша, чтобы поздний агрегат не затёр точный count.
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import {
-  keepPreviousData,
   skipToken,
   useInfiniteQuery,
   useQuery,
@@ -96,6 +95,10 @@ export function usePlacesCatalogQueries({ q, categories, country, sort, collecti
     country: country ?? undefined,
     sort,
   }), [q, categories, country, sort])
+  const resetListForSort = useCallback((nextSort: PlacesCatalogSort, nextQuery: string | undefined) => {
+    const queryKey = queryKeys.placesCatalogList({ ...listParams, q: nextQuery, sort: nextSort })
+    void queryClient.resetQueries({ queryKey, exact: true })
+  }, [listParams, queryClient])
 
   const placesQuery = useInfiniteQuery({
     queryKey: queryKeys.placesCatalogList(listParams),
@@ -110,7 +113,8 @@ export function usePlacesCatalogQueries({ q, categories, country, sort, collecti
       const loaded = allPages.reduce((sum, page) => sum + page.places.length, 0)
       return loaded < lastPage.count ? allPages.length + 1 : undefined
     },
-    placeholderData: keepPreviousData,
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[2].sort === sort ? previousData : undefined,
     staleTime: CATALOG_STALE_MS,
     gcTime: CATALOG_GC_MS,
     ...heavyReadRetry,
@@ -175,6 +179,7 @@ export function usePlacesCatalogQueries({ q, categories, country, sort, collecti
       else if (placesQuery.isError && !placesQuery.isFetching) void placesQuery.refetch()
     },
     placesQuery,
+    resetListForSort,
     scope,
   }
 }

@@ -82,7 +82,7 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     requestCatalogScope()
     setFiltersOpenState(next)
   }, [requestCatalogScope])
-  const { collectionCounts, isScopeLoading, placesQuery, scope, scopeStatus, retryScope } = usePlacesCatalogQueries({
+  const { collectionCounts, isScopeLoading, placesQuery, resetListForSort, scope, scopeStatus, retryScope } = usePlacesCatalogQueries({
     q: appliedQuery || undefined,
     categories: selectedCategories,
     country: selectedCountry,
@@ -191,9 +191,12 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
     router.setParams(country ? { country } : { country: '' })
   }, [router, requestCatalogScope, setCountryMenuVisible])
   const handleSelectSort = useCallback((next: PlacesCatalogSort) => {
-    setSortMode(next)
+    if (next !== sortMode) {
+      resetListForSort(next, query.trim() || undefined)
+      setSortMode(next)
+    }
     setSortMenuVisible(false)
-  }, [])
+  }, [query, resetListForSort, sortMode])
   const openOnMap = useCallback((place: CatalogPlace) => {
     if (!Number.isFinite(place.latNumber) || !Number.isFinite(place.lngNumber)) return
     router.push({

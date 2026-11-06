@@ -29,11 +29,8 @@ if (!rawApiUrl) {
 const PLACES_CATALOG_URL = `${rawApiUrl}/places/catalog/`
 const PLACES_CATALOG_TIMEOUT_MS = 15000
 
-/** Server-side sort modes for the places catalog. `default` keeps the backend's
- * natural order; `rating` orders by aggregate external rating (2GIS/TripAdvisor)
- * descending, placing unrated places last. Unknown/omitted values are ignored by
- * the backend, so the FE control degrades gracefully until the backend ships. */
-export type PlacesCatalogSort = 'default' | 'rating'
+/** The backend orders canonical places before pagination. `default` omits `sort`. */
+export type PlacesCatalogSort = 'default' | 'rating' | 'name' | 'rating_count' | 'source_count'
 
 export type PlacesCatalogParams = {
   page: number

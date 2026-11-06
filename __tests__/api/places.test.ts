@@ -89,14 +89,17 @@ describe('fetchPlacesCatalog', () => {
     expect(url).not.toContain('sort=')
   })
 
-  it('sends sort=rating and omits the default sort', async () => {
+  it.each(['rating', 'name', 'rating_count', 'source_count'] as const)('sends the server sort %s', async (sort) => {
     mockedFetch.mockResolvedValueOnce(okResponse(catalogPayload))
-    await fetchPlacesCatalog({ page: 1, perPage: 20, sort: 'rating' })
-    expect(String(mockedFetch.mock.calls[0][0])).toContain('sort=rating')
+    await fetchPlacesCatalog({ page: 2, perPage: 20, q: 'замок', country: 'by', categories: ['Замок'], sort })
+    const { searchParams } = new URL(String(mockedFetch.mock.calls[0][0]))
+    expect(Object.fromEntries(searchParams)).toEqual({ page: '2', perPage: '20', q: 'замок', country: 'by', category: 'Замок', sort })
+  })
 
+  it('omits the explicit default sort', async () => {
     mockedFetch.mockResolvedValueOnce(okResponse(catalogPayload))
     await fetchPlacesCatalog({ page: 1, perPage: 20, sort: 'default' })
-    expect(String(mockedFetch.mock.calls[1][0])).not.toContain('sort=')
+    expect(String(mockedFetch.mock.calls[0][0])).not.toContain('sort=')
   })
 
   it('throws on non-ok responses so React Query can surface the error state', async () => {
