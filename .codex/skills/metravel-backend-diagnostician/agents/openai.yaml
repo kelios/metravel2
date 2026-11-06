@@ -1,4 +1,4 @@
 interface:
   display_name: "Metravel Backend Diagnostician"
   short_description: "Diagnose backend/API blockers safely."
-  default_prompt: "Use $metravel-backend-diagnostician to diagnose backend/API issues read-only and, only when backend acceptance is explicitly requested, apply the evidence-based status contract."
+  default_prompt: "Use $metravel-backend-diagnostician to diagnose backend/API issues read-only and, route any implementation or acceptance to the owning task workflow."

@@ -30,7 +30,7 @@ require runtime checks on every OS.
 - Reconcile an inherited validation matrix with the whole still-unaccepted
   task change and compatible evidence before preparing targets. Record a
   justified refinement; retain the user's current explicit full-QA/release scope.
-- Do not edit backend/Django/API/server repositories, files, migrations, tests, or settings from this frontend workspace. If FE is blocked by backend behavior, diagnose read-only and create/update an `area=back` board task instead.
+- This skill owns frontend changes. Route backend/Django implementation as a linked `area=back` task to `ticket-flow` and the owned backend workflow; see `docs/RULES.md` → «Frontend and backend task lifecycle».
 - Fix every real issue found in the touched area or code-level validation output
   before review: failing focused tests, invalid external-link usage, dead imports,
   and obvious source regressions. Runtime/UI failures belong to the subsequent

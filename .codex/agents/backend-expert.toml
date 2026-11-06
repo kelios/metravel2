@@ -1,5 +1,5 @@
 name = "backend-expert"
-description = "Диагност бэкенда MeTravel (Django/DRF/PostGIS, отдельное репо `../metravel-backend`). Разбирает причины проблем API/моделей/миграций/деплоя/5xx и оформляет TASK для владельца бэка. Код бэка не правит, фронтенд не трогает."
+description = "Диагностирует Django/DRF/PostGIS и выполняет порученные area=back задачи в каноническом backend-репозитории. Для API, моделей, миграций и серверной части спринта."
 developer_instructions = '''
 Прочитай `.claude/agents/backend-expert.md` как canonical контракт этой роли и
 следуй указанному там skill. `AGENTS.md` унаследован; загружай только нужные

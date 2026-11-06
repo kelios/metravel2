@@ -1,8 +1,8 @@
 ---
-description: Прогнать фронтенд-тикет через общий MCP task board (discovery→implement→review→push→выкат на прод→testing на проде→done). Аргумент — id задачи, `next`, или описание новой.
+description: Прогнать frontend/backend тикет через общий MCP task board (discovery→implement→review→push→выкат на прод→testing на проде→done). Аргумент — id задачи, `next`, или описание новой.
 ---
 
-Запусти скилл **ticket-flow** для обработки фронтенд-тикета через общий таск-борд MeTravel.
+Запусти скилл **ticket-flow** для обработки frontend или backend тикета через общий таск-борд MeTravel.
 
 Сначала проверь repository scope по `docs/RULES.md` → «Owned repositories only
 (mandatory)»: карточка с upstream issue/PR не разрешает сторонние записи;

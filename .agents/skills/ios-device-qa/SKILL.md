@@ -72,10 +72,7 @@ retest; отладка во время capture запрещена. Повтор�
    собираются — это `ios-deployer` по отдельной авторизации владельца.
 4. **API-гейт (load-bearing).** Таргет по умолчанию — локальный бэкенд, и он
    обязан быть обновлён (`docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек»):
-   ```bash
-   git -C ../metravel-backend fetch origin master && git -C ../metravel-backend reset --hard origin/master
-   bash /Users/juliasavran/Sites/metravel/run-backend.sh
-   ```
+   Используй fast-forward только для чистого свободного checkout; порядок запуска и сверки API — в указанном разделе.
    Устройство ходит не на `localhost`, а на LAN-IP мака: в `.env`
    `EXPO_PUBLIC_API_URL=http://$(ipconfig getifaddr en0):8000` и
    `EXPO_PUBLIC_IS_LOCAL_API=true`, копию `.env` вернуть после обхода.

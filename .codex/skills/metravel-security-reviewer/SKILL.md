@@ -21,7 +21,7 @@ the canonical security/link/auth headings implicated by it.
 - Do not report a vulnerability from grep alone. Provide a concrete input or reachable data flow and explain preconditions.
 - Classify findings: P1 remotely exploitable or content-driven; P2 requires meaningful conditions; P3 hardening.
 - Never print a discovered secret. If a secret is tracked or exposed, state the file/location safely and require rotation.
-- Distinguish frontend findings from backend/infra findings. Backend/infra remains read-only and becomes an `area=back` task with evidence.
+- Distinguish frontend findings from backend/infra findings. Route backend/infra findings to `area=back` with evidence; authorized implementation uses the canonical backend workflow.
 
 ## Workflow
 

@@ -23,10 +23,7 @@ task-owned изменением и совместимым evidence; избыто
 должен пройти code-review gate; для него запрещены tests/browser/API/device
 probes. `todo/backlog/in_progress` не принимай.
 
-`area=back` по умолчанию сразу отфильтруй: никаких probes, notes или status
-changes; в отчёте только «пропущено N area=back». Исключение — прямой текущий
-запрос пользователя именно на backend acceptance; тогда используй профильный
-backend route и только relevant source/API/production probes.
+Принимай обе области запрошенного среза `testing`. Для `area=back` используй `origin/master`, evidence выкаченной ревизии и backend source/API/data/health probes по `docs/TASK_BOARD_MCP.md` → «Единый цикл для `area=front` и `area=back`». Шаги про `.build-source.json`, браузер и устройства ниже относятся к frontend.
 
 ## Preflight каждого ticket
 
@@ -34,8 +31,7 @@ backend route и только relevant source/API/production probes.
    target env, platform/localization impact, dependencies и assignee.
 2. Нет обязательного contract/русских семи sections или они расходятся с board
    fields → `in_progress` с конкретным refinement finding; не начинай QA.
-3. Убедись, что код тикета уже в `main`: sha из `description` виден в
-   `git log --oneline -20 origin/main`. Приёмка идёт по запушенному коду — diff,
+3. Убедись, что SHA тикета есть в канонической ветке своей области (`origin/main` или `origin/master`); проверь ancestry через `git merge-base --is-ancestor` в нужном checkout. Приёмка идёт по запушенному коду — diff,
    висящий незакоммиченным в общем рабочем дереве, означает нарушение гейта
    `review → testing` (`docs/TASK_BOARD_MCP.md`): верни тикет в `in_progress` с
    этим finding и не начинай QA.
@@ -56,9 +52,7 @@ backend route и только relevant source/API/production probes.
    команды владельца он не требует. Локальный стек (Expo web против
    `http://localhost:8000`) — для проб, которые на проде невозможны (мутация
    контента, тестовые данные): перед первой такой пробой сессии обнови бэкенд
-   до `origin/master` (`git -C ../metravel-backend fetch origin master && git
-   -C ../metravel-backend reset --hard origin/master`, `migrate` при новых
-   миграциях, рестарт `run-backend.sh`) и убедись, что `showmigrations --plan`
+   до `origin/master` через согласованный fast-forward по §3.0 и убедись, что `showmigrations --plan`
    не содержит неприменённых: отставший бэк отвечает `200` и даёт ложный
    `fail`. Процедура — `docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек».
    Дев-стенд — только по явному запросу владельца.
@@ -123,9 +117,7 @@ ticket-board agents с reproduction evidence.
 ## Sprint close
 
 Закрывай sprint только по явному запросу и только когда все tickets уже `done`.
-Иначе оставь `active` и перечисли remaining ids/statuses. Пропущенные area=back
-могут считаться для close только по их фактическому board status, без твоей
-приёмки.
+Иначе оставь `active` и перечисли оставшиеся id и статусы обеих областей.
 
 ## Output
 

@@ -273,7 +273,7 @@ Registry update:           # нужна ли правка docs/PROBLEM_MEMORY.md
 
 - Борд не мутируешь — отдаёшь вердикт `ticket-board`.
 - Код фичей не правишь — это профильные FE-агенты.
-- Backend в этом workspace read-only; backend-фиксы оформляются как `area=back`.
+- Роль анализирует историю read-only; backend-фиксы ведутся как `area=back` по каноническому backend workflow.
 - Переход в `done` для code/deploy work требует доказать достижимость commit из
   canonical `main`/`origin/main`, а не только наличие hash во временном checkout.
 - Секреты не печатаешь и не просишь вставить в чат.

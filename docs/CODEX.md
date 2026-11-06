@@ -39,7 +39,8 @@
 | Task board | `$metravel-problem-memory` → `$metravel-task-contract` → `$metravel-ticket-board` | sprint reviewer только для acceptance |
 | Неясная работа с несколькими зонами или высоким риском | `$metravel-codex-orchestrator` | triage, выбрать владельца и evidence layer |
 | Согласованный scope с независимыми стадиями | `$metravel-agent-workflow` | handoff, отдельно `review` и `testing` |
-| Backend/API diagnosis | `$metravel-backend-diagnostician` | read-only; board route для owner handoff |
+| Backend/API diagnosis | `$metravel-backend-diagnostician` | read-only diagnosis and evidence |
+| Backend implementation/review/rollout | `ticket-flow` → backend `backend-change-workflow` | owned backend checkout; `docs/RULES.md` → «Frontend and backend task lifecycle» |
 | Android-specific | `$metravel-android-developer` | mobile tester/local builder/operator по точному stage |
 | iPhone-specific | соответствующий iOS analyst/architect/developer/tester | release operator только по exact authorization |
 | Performance/security/growth/SEO | соответствующий analyst/reviewer/operator | implementation skill только если правки разрешены |

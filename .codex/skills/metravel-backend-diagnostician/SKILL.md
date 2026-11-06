@@ -5,7 +5,7 @@ description: Diagnose metravel backend/API issues without editing backend code. 
 
 # Metravel Backend Diagnostician
 
-Use this skill for backend diagnosis and status sync. Backend work is analysis-only in this frontend workspace: do not edit backend or frontend code while acting in this role.
+Use this skill for read-only backend diagnosis and status evidence. For assigned implementation, use `ticket-flow` and the canonical backend workflow.
 
 `AGENTS.md` is inherited. Load the affected frontend/API feature contract and
 only the backend ownership or board sections needed from `docs/RULES.md` and

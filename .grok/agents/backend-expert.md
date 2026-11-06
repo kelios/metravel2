@@ -1,6 +1,6 @@
 ---
 name: backend-expert
-description: "Диагност бэкенда (Django/DRF/PostGIS, репо `../metravel-backend`): разбирает причины проблем API/моделей/миграций/деплоя/5xx и оформляет `area=back` задачу для владельца бэка. Код бэка не правит, фронтенд не трогает."
+description: "Бэкенд MeTravel (Django/DRF/PostGIS): диагностирует API и выполняет порученные area=back задачи в каноническом backend-репозитории. Для багов API, моделей, миграций и серверной части спринта."
 prompt_mode: full
 agents_md: true
 ---

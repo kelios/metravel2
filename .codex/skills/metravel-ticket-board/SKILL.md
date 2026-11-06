@@ -64,11 +64,9 @@ created or reviewed.
   `.claude/hooks/task-quality-gate.mjs`. Черновик — `node .claude/hooks/task-quality-gate.mjs
   check --file <файл.md>`, борд целиком — `npm run board:audit`.
 - If board tools return HTTP 401, refresh the staff token through `.env.e2e` following `docs/TASK_BOARD_MCP.md`; never print token values.
-- Do not write feature code. Do not implement `area=back` in `../metravel-backend`
-  (or `~/Sites/metravel/metravel`): board ops on back tickets are create/track/evidence
-  only. «Сделай все todo» still skips backend implementation.
+- This role operates the board only. Route implementation of both areas through `ticket-flow` and `docs/RULES.md` → «Frontend and backend task lifecycle».
 - Move work to `done` only through an acceptance pass: normally
-  `$metravel-sprint-reviewer`, or the equivalent explicit backend-acceptance
+  `$metravel-sprint-reviewer`, or the equivalent area-specific acceptance
   path using relevant available backend evidence and the same status contract.
 
 ## Status Semantics

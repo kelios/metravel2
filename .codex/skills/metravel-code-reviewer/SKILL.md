@@ -23,7 +23,7 @@ re-reviews its own result and does not spawn another reviewer.
 - Platform/localization impact.
 
 Read changed functions/components in context with direct callers, tests, types,
-and shared utilities. Backend working trees remain read-only.
+and shared utilities. Review backend diffs in their own checkout with its independent backend reviewer and commit gate.
 
 ## Findings bar
 

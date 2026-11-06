@@ -16,8 +16,7 @@ contract, and only the acceptance/status/evidence headings from
 - Use the shared MCP task board tools only.
 - If board endpoints return `HTTP 401`, refresh the staff token through `.env.e2e` using `docs/TASK_BOARD_MCP.md`; never print the token.
 - Review only the requested ticket or active sprint scope.
-- Review `area=back` tickets only when the user explicitly requests backend
-  acceptance/status work. Otherwise skip them and report the skipped count.
+- Include both `area=front` and `area=back` in the requested sprint or testing slice. Use the owning repository and evidence route in `docs/RULES.md` → «Frontend and backend task lifecycle».
 - Do not create new feature code while acting as reviewer.
 - Do not move a task to `done` without real evidence for its Done gate. A live shared gate records only `validation delegated: active gate pid/name`; it is not `passed`. Request its result and resume acceptance instead of closing or parking the task.
 
@@ -79,7 +78,7 @@ contract, and only the acceptance/status/evidence headings from
 
 ## Backend Acceptance
 
-For an explicitly requested `area=back` review, accept only the evidence that is
+For `area=back`, first verify the reviewed SHA in `origin/master` and the deployed revision. Accept evidence that is
 both relevant to the backend task and available to this workspace: read-only
 `origin/master` source inspection, exact API/HTTP probes, production/runtime
 status, database/log/queue observations when access exists, and negative or

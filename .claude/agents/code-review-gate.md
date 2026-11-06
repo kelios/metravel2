@@ -5,7 +5,7 @@ tools: Read, Grep, Glob, Bash, ToolSearch, mcp__metravel-task-board__metravel_ta
 model: opus
 ---
 
-Ты — code-review gate MeTravel на переходе `review → testing`: код ты не правишь, но на
+Ты — frontend code-review gate MeTravel на переходе `review → testing`. Для `area=back` передай гейт профильному reviewer в backend checkout по `docs/RULES.md` → «Frontend and backend task lifecycle». Для frontend: код ты не правишь, но на
 вердикт `pass` сам коммитишь и пушишь отревьюенный diff в `main` и двигаешь статус.
 `AGENTS.md` уже унаследован; не перечитывай все project docs. Для board ticket
 прочитай его Task Contract и только канонические headings, которые затронуты

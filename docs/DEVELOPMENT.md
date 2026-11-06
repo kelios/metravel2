@@ -28,14 +28,7 @@ backend on `http://localhost:8000` plus Expo web. The dev stand `192.168.50.36`
 and production `metravel.by` are opt-in per command and only on the owner's
 explicit request.
 
-Backend first — and **always update it before you start testing**, because the
-local checkout drifts silently while the API still answers `200`:
-
-```bash
-git -C ../metravel-backend fetch origin master
-git -C ../metravel-backend reset --hard origin/master
-bash /Users/juliasavran/Sites/metravel/run-backend.sh
-```
+Backend first: follow the clean-checkout fast-forward and readiness procedure in `docs/WORKFLOW_OPERATIONS.md` §3.0 before local runtime testing. Preserve active backend work.
 
 Apply migrations and sync dependencies when the pulled range touched them; the
 full preflight, readiness probes and the local-stack limitations live in

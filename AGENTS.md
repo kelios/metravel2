@@ -36,10 +36,10 @@ Risk/operation gates:
 Validation:
 ```
 
-- Работай только из корня с `package.json` и только на ветке `main`. Проверь
-  `git branch --show-current` и `git status --short`; чужие изменения не
-  переписывай. В harness worktree перенеси итог на основной `main` по правилам
-  `docs/RULES.md`.
+- Работай в каноническом checkout своей области: frontend — корень с
+  `package.json`, ветка `main`; backend — `../metravel-backend`, ветка `master`,
+  правила и skills этого репозитория. Проверь origin, ветку и статус; сохраняй
+  чужие изменения. Перенос frontend harness worktree — по `docs/RULES.md`.
 - Карточку борда в `in_progress`/`review`/`testing` ведёт ОДНА сессия. Статус «в
   работе» — это «кто-то работает прямо сейчас», а не «брошено, доделывай». Перед
   тем как взять такую карточку (в том числе по прямой ссылке от пользователя):
@@ -70,18 +70,11 @@ Validation:
   «делай» и выбор аккаунта эту границу не расширяют. Перед Git/GitHub-мутацией
   проверь принадлежность целевого репозитория; полный контракт —
   `docs/RULES.md` → «Owned repositories only (mandatory)».
-- Этот workspace владеет только frontend/app/docs. Бэкенд (`../metravel-backend`,
-  `~/Sites/metravel/metravel`, `area=back`) только читается: диагностика, API-пробы,
-  evidence на борде. Нельзя править файлы, коммитить, пушить, merge/rebase, заводить
-  backend worktree или ставить cwd субагента в бэк-репо «чтобы сделать карточку».
-  Просьба «сделай все todo / весь борд / спринт» `area=back` не открывает: такие
-  карточки пропускаются, реализацию пишет владелец бэка. Никогда не меняй backend
-  working tree и не выполняй там mutating Git-команды, кроме sync перед тестированием
-  ниже. Исключение (владелец, 21.09.2026): `area=back` карточку, которую владелец
-  выдал прямо (ссылка или номер + «делай»), агент ведёт сам полным циклом по правилам
-  бэк-репо (`../metravel-backend/AGENTS.md`, `CLAUDE.md`): коммит явными путями, push
-  в `master`, выкат по `deploy/prod/README.md` только с
-  `METRAVEL_ROLLOUT_COMPOSE_BIN="docker compose"` (#2015), приёмка, `done`.
+- С 06.11.2026 `area=front` и `area=back` проходят один полный цикл. Запрос
+  «делай todo / задачи спринта» включает обе области; отдельный номер backend
+  не нужен. Контракт — `docs/RULES.md` → «Frontend and backend task lifecycle».
+  Код, ревью и Git веди в репозитории своей области; для backend сначала прочитай
+  `../metravel-backend/AGENTS.md` и `CLAUDE.md`.
 - На production Git-tracked backend paths неизменяемы. Перед явно разрешённой
   server write прочитай профильный раздел `docs/RULES.md`, проверь status и
   `git ls-files`; учитывай точные исключения deploy gate из `docs/RULES.md`.
@@ -89,8 +82,8 @@ Validation:
   остальной dirty checkout означает stop и backend/ops task.
 - Nginx принадлежит backend: источник —
   `../metravel-backend:deploy/prod/nginx/nginx.conf`. Локальный
-  `nginx/nginx.conf` не править; нужное изменение оформлять как `area=back` task
-  с точным diff и проверкой.
+  `nginx/nginx.conf` не править; нужное изменение вести в backend-репозитории
+  как `area=back` с отдельным регламентом Nginx.
 - Не меняй без прямого запроса `eas.json`, `app.json`, `.github/workflows/`,
   `nginx/`, `plugins/`, `public/robots.txt`, `public/sitemap.xml`,
   `entry.js`.
@@ -114,7 +107,9 @@ Validation:
   значит В ОБОИХ контурах: `.gitignore` и `baseIgnores` в `eslint.config.js` —
   eslint читает свой ручной список, а не `.gitignore`, и строка только в одном
   из двух делает guard зелёным, оставляя общий `npm run lint` красным.
-- Production deploy web-фронтенда — штатный шаг пайплайна задачи после push
+- Production deploy frontend/backend — штатный шаг пайплайна задачи после push.
+  Backend выкатывает уполномоченный оператор по `deploy/prod/README.md` с
+  `METRAVEL_ROLLOUT_COMPOSE_BIN="docker compose"` (#2015). Web-фронтенд после push
   (§5): его выполняет `frontend-deployer` одной командой
   `DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha>` — изолированный worktree, общий лок
   и проверку параллельного деплоя делает сам скрипт, бюджет ≤5 минут
@@ -190,22 +185,17 @@ Validation:
   старых прод-статей картинки не грузятся: это ожидаемо, для медиа-проверок
   создаётся своя тестовая статья. Устройство целится на тот же бэкенд по LAN-IP.
   Полное описание стека — `/Users/juliasavran/Sites/metravel/README-local.md`.
-- Перед ПЕРВОЙ локальной runtime-пробой сессии тестирования бэкенд обновляется до
-  `origin/master`: `git -C ../metravel-backend fetch origin master && git -C
-  ../metravel-backend reset --hard origin/master`, затем `migrate` при новых
-  миграциях, `uv sync` при изменении зависимостей и рестарт `run-backend.sh`.
-  Это единственное разрешённое git-изменяющее действие в бэкенде; локальные
-  правки там — мусор. Шаг не пропускается: checkout отстаёт молча, API при этом
-  отвечает `200`, и устаревший бэк выдаёт ложные дефекты фронта. Команды,
-  проверки готовности и ограничения стека — `docs/WORKFLOW_OPERATIONS.md` →
+- Перед ПЕРВОЙ локальной runtime-пробой сверяй backend с `origin/master`.
+  Обновляй только свободный чистый checkout через fast-forward; активную
+  разработку не сбрасывай. Проверь миграции, зависимости и перезапусти
+  `run-backend.sh` при обновлении. Команды и ограничения — `docs/WORKFLOW_OPERATIONS.md` →
   «3.0 Локальный стек и обновление бэкенда перед тестированием».
 - Board mutation: сначала `$metravel-problem-memory`, затем
   `$metravel-task-contract`/`$metravel-ticket-board`; детали и status semantics —
   `docs/TASK_BOARD_MCP.md`. `testing` — активная QA или точный temporal/retest
   gate, не парковка; missing access/device требует конкретного unblock request.
-- Прямая backend-приёмка выполняется только по прямому запросу про backend и
-  только релевантными source/API/production probes. Общая sprint review
-  пропускает `area=back`.
+- Приёмка спринта включает обе области. Для backend нужны профильные
+  source/API/production probes; UI и устройства проверяются в связанном frontend.
 - UI/layout/interaction: используй существующие `components/ui`, tokens и
   Feather icons; подробные контракты — релевантные разделы `docs/RULES.md` и
   feature docs. Видимый web diff требует browser evidence, screenshots и console
@@ -234,9 +224,9 @@ Validation:
 - Средний diff до/во время review: релевантные static/unit tests, lint,
   typecheck и guards; без e2e/runtime.
 - Крупный diff: `npm run lint` и `npm run test:run`.
-- После review в `testing`: сначала выкат на прод (`frontend-deployer`), затем
-  приёмка на проде — точечный browser/API/device/e2e gate по Task Contract
-  против `https://metravel.by` (выкаченный sha — `.build-source.json`);
+- После review в `testing`: штатный выкат своей области, затем приёмка
+  выкаченной ревизии по Task Contract против `https://metravel.by`
+  (для web sha в `.build-source.json`, для backend — evidence rollout и API);
   зелёный Done gate → `done`, дефект → `in_progress` и цикл заново.
 - Полный `npm run e2e` укладывается в ~10 минут при тёплом `dist` (замер
   08.09.2026: быстрый набор 5,0 мин, перф 4,8 мин). Дефолты рассчитаны на это и
@@ -260,7 +250,8 @@ Validation:
   передать выкат и приёмку ближайшей выкатывающей сессии handoff-файлом с её
   «беру» и закрыться, а не ждать (правило владельца 02.11.2026; там же).
 - Перед переводом задачи борда в `testing` отревьюенный diff коммитится явными
-  путями задачи и пушится в `main`: вердикт `pass` → `git add <пути задачи>` →
+  путями и пушится в каноническую ветку. Для backend — `master` и repo commit
+  gate; для frontend — `main`: вердикт `pass` → `git add <пути задачи>` →
   `git commit` → `PREFLIGHT_SKIP_E2E=1 git push origin main` →
   `status=testing`, sha коммита — в
   тикет → выкат на прод → приёмка на проде → `done`; задача не останавливается

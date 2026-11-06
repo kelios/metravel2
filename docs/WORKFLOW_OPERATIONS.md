@@ -42,19 +42,30 @@ quality-gate lock — в §5 «Validation и handoff».
 это один и тот же checkout: и читаемый агентами исходник, и то, что реально
 запускается локально.
 
+Перед обновлением проверь владельца активной backend-работы и
+`git -C ../metravel-backend status --short --branch`. Если checkout занят или
+есть незакоммиченные файлы, согласуй запуск с владельцем либо используй
+согласованный чистый checkout/стек той же ревизии. Локальный runtime по
+непроверенной ревизии не считается evidence. Не сбрасывай чужие правки.
+
+Для свободного чистого backend checkout на `master`:
+
 ```bash
-BEFORE=$(git -C ../metravel-backend rev-parse HEAD)
-git -C ../metravel-backend fetch origin master
-git -C ../metravel-backend reset --hard origin/master
-git -C ../metravel-backend diff --name-only "$BEFORE"..HEAD \
-  | grep -E 'migrations/|pyproject|uv\.lock|docker-compose-local' || echo 'миграций и зависимостей нет'
+(
+  set -e
+  cd ../metravel-backend
+  test "$(git branch --show-current)" = master
+  test -z "$(git status --porcelain)"
+  BEFORE=$(git rev-parse HEAD)
+  git fetch origin master
+  git merge --ff-only origin/master
+  test "$(git rev-parse HEAD)" = "$(git rev-parse origin/master)"
+  git diff --name-only "$BEFORE"..HEAD -- '*/migrations/*' pyproject.toml uv.lock 'docker-compose-local*'
+)
 ```
 
-`reset --hard` здесь штатный: локальные изменения в бэкенд-checkout — мусор,
-источник правды всегда `origin/master`. Это единственное разрешённое
-git-изменяющее действие в бэкенде (исключение записано в `docs/RULES.md` →
-«Project scope»); `commit`, `push`, `merge`, `rebase`, `tag`, создание веток и
-правка файлов бэкенда остаются запрещены.
+При расхождении ревизий или ошибке останови обновление; не используй
+`reset --hard`, `stash` или `rebase` ради запуска чужого стека.
 
 Дальше по тому, что приехало в диапазоне:
 

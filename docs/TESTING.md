@@ -98,10 +98,7 @@ evidence remain neither `PASS` nor a reason to bypass operation locks.
   2026-08-29: 26 commits behind `origin/master`, six unapplied migrations), and
   a stale backend produces false frontend defects that end up on the board.
 
-  ```bash
-  git -C ../metravel-backend fetch origin master
-  git -C ../metravel-backend reset --hard origin/master
-  ```
+  Use the clean-checkout fast-forward procedure in `docs/WORKFLOW_OPERATIONS.md` §3.0. Coordinate an active backend checkout before starting a local probe.
 
   Then apply migrations if the range touched `migrations/`, run
   `uv sync --frozen --dev --no-install-package gdal` if it touched

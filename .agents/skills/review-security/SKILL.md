@@ -6,7 +6,7 @@ description: "Поиск уязвимостей во фронтенде: XSS и 
 # review-security
 
 Ревью **безопасности фронтенда**. Scope по умолчанию — весь репозиторий.
-Бэкенд не правим: дыры бэка → тикет на общем MCP task board (`area=back`, через
+В этом frontend-ревью серверные находки передавай на общий MCP task board (`area=back`, через
 агент `ticket-board`; см. `docs/TASK_BOARD_MCP.md`).
 
 ## Поверхности атаки (углы поиска — делегируй `review-auditor` параллельно)

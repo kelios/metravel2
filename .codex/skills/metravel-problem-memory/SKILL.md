@@ -117,5 +117,4 @@ Required links:
 Registry update:
 ```
 
-Keep platform and localization impact explicit. Backend remains read-only from
-this workspace; backend fixes are `area=back` tasks with runtime evidence.
+Keep platform and localization impact explicit. This role stays read-only. Route `area=back` fixes and acceptance through the owned backend workflow in `docs/RULES.md` → «Frontend and backend task lifecycle».

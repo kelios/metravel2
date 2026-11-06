@@ -1,16 +1,16 @@
 ---
 name: ticket-flow
-description: "Прогон фронтенд-тикета через MCP task board: discovery → implement → review → test → release силами профильных FE-агентов. Триггеры: «возьми тикет в работу», «прогони задачу N по пайплайну»."
+description: "Ведёт frontend и backend задачи MeTravel от todo до done через MCP task board. Триггеры: «возьми тикет в работу», «делай задачи из todo», «прогони задачу по пайплайну»."
 ---
 
 # ticket-flow
 
-Раннбук обработки одного фронтенд-тикета (`area=front`) через общий таск-борд. Борд —
+Раннбук обработки задач `area=front` и `area=back` через общий таск-борд. Борд —
 единый источник правды (Django `task_board` на metravel.by), операции с ним — только через
 агента **ticket-board** (MCP `metravel-task-board`). Этот скилл оркеструет; он сам код не
 пишет — он раздаёт работу профильным агентам и отражает прогресс на борде.
 
-Аргумент `$ARGUMENTS` — id тикета на борде, либо `next` (взять верхний `area=front status=todo`),
+Аргумент `$ARGUMENTS` — id тикета на борде, либо `next` (взять верхний доступный `status=todo` в запрошенной области или в обеих),
 либо свободное описание новой задачи.
 
 До взятия карточки проверь `docs/RULES.md` → «Owned repositories only
@@ -68,10 +68,26 @@ description: "Прогон фронтенд-тикета через MCP task boa
 | acceptance (приёмка спринта) | агент `board-reviewer` / skill `/sprint-review` — Done gate → `done` |
 | releaser | `frontend-deployer` на прод — штатный шаг после push, одна команда `DEPLOY_QUIET=1 scripts/deploy-prod.sh <sha>` (изолированный worktree и общий лок внутри, ≤5 минут); сторы — `android-publisher` (Google Play) и `ios-deployer` (TestFlight/App Store), каждый по отдельной явной команде владельца |
 
-Бэкенд-тикеты (`area=back`) этот скилл НЕ реализует — только заводит/трекает через
-`ticket-board`. Реализацию пишет владелец бэка в своём репо; фронтовый агент бэкенд
-только читает и не открывает `../metravel-backend` на запись. Батч «все todo» /
-«весь борд» `area=back` пропускает.
+## Маршрут `area=back`
+
+Общий запрос на todo/спринт включает frontend и backend. Применяй
+`docs/RULES.md` → «Frontend and backend task lifecycle» и
+`docs/TASK_BOARD_MCP.md` → «Единый цикл для `area=front` и `area=back`».
+Выбери одну связанную линию, один исполнитель на карточку; зависимости
+выкатываются в порядке контракта.
+
+Для backend делегируй реализацию `backend-expert` в режиме исполнения задачи:
+канонический `../metravel-backend`, его `AGENTS.md`, `CLAUDE.md`,
+`backend-change-workflow` и профильный независимый reviewer. До `testing`:
+проверки, review, явные пути коммита и push в `origin/master`. Затем
+авторизованный оператор выкатывает по backend `deploy/prod/README.md`,
+приёмщик проверяет выкаченную ревизию и API/data/health, фиксирует результат
+в той же карточке. Не запускай frontend commit/review gate для backend diff.
+Если оператор нужен отдельно, передай ему SHA, миграции и проверки; управляй
+handoff до evidence, не создавай deploy-only дубль.
+
+Ниже — подробности общего выбора и frontend-ветки. Для backend после
+`in_progress` используй его репозиторные шаги выше.
 
 ## Шаги
 
@@ -82,7 +98,7 @@ description: "Прогон фронтенд-тикета через MCP task boa
    проверка занятости из «ЖЕЛЕЗНОГО ПРАВИЛА» выше (`ListAgents` → `SendMessage` →
    `git status`), и только потом работа. Без этого не начинай даже чтение кода под правку.
    - id → `metravel_task_get`.
-   - `next` → верхний `area=front`, `status=todo`.
+   - `next` → верхний доступный `status=todo` в запрошенном срезе.
    - свободное описание → дедуп, затем `metravel_task_create` (`area=front`, `reporter=frontend`,
      заголовок `[FE-…] …`, `description` с Goal/Context/AC и обязательным `Task Contract`
      из `docs/TASK_BOARD_MCP.md`). При нехватке проверяемых AC или контракта — ОДИН
@@ -151,7 +167,7 @@ description: "Прогон фронтенд-тикета через MCP task boa
   переведи раздаваемые тикеты в `in_progress` (одним вызовом `ticket-board`), затем дай работу —
   чтобы WIP был виден, даже если агент не успел сам. Создание/структура новых тикетов и
   спринтов — по-прежнему ТОЛЬКО через `ticket-board`.
-- **`review → testing` только через `code-review-gate`.** Ни оркестратор, ни исполнитель, ни
+- **Для frontend `review → testing` только через `code-review-gate`.** Ни оркестратор, ни исполнитель, ни
   `ticket-board` не ставят `testing` руками: хук `.claude/hooks/review-gate.mjs` откажет, и это
   правильно — сначала вердикт ревью. Аварийный обход `REVIEW_GATE_BYPASS=1` применим только по
   явной просьбе пользователя и фиксируется в `description` тикета.

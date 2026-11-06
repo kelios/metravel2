@@ -5,11 +5,8 @@
 - Current project is `metravel2`.
 - The app codebase root is `metravel2/` (the folder that contains `package.json`).
 - Treat `docs/` (this folder) as the source of truth for development rules.
-- Default implementation ownership is frontend/app/docs. For backend code and
-  server operations, follow the authorization boundary in `AGENTS.md` §3.
-  Bulk board or sprint work skips `area=back`. Backend diagnosis may use source,
-  safe read-only probes and board evidence. A directly assigned backend card
-  follows the exception and deployment contract in `AGENTS.md` §3.
+- Route tasks to their owned checkout using «Frontend and backend task lifecycle».
+  A task scoped to one repository does not include unrelated work in the other.
 - Local backend sync runs before the first runtime probe of the testing session.
   Use `docs/WORKFLOW_OPERATIONS.md` → «3.0 Локальный стек и обновление бэкенда
   перед тестированием» for commands, migrations and restart. This sync applies
@@ -44,6 +41,30 @@
   upstream release that would allow a local patch to be removed.
 - This rule grants no additional backend, server, store or release authority.
   Their existing gates continue to apply inside our repositories.
+
+### Frontend and backend task lifecycle
+
+- Owner rule (2026-11-06): a request to implement a board slice or sprint includes
+  eligible `area=front` and `area=back` cards in that scope. Sprint acceptance
+  likewise includes both areas in `testing`. An explicitly scoped area,
+  read-only diagnosis or human-only task keeps its own boundaries. Keep one
+  writer per card and separate cards, repos and evidence for linked work.
+- Shared sequence: claim `in_progress`, plan (OpenSpec by repo rules), implement,
+  run targeted checks, independent `review`, explicit-path commit and push,
+  `testing`, deploy when applicable, verify the live Done gate, then `done`.
+  An implementation request authorizes these ordinary stages without a separate
+  card number or deploy confirmation. The delivery owner drives any specialist
+  handoff. Maintenance windows, destructive data operations, missing access and
+  store stages keep their own gates.
+- Frontend: `kelios/metravel2`, `main`, frontend review gate and
+  `scripts/deploy-prod.sh`; verify `.build-source.json` and required behavior.
+  Backend: `sergey-savran/metravel`, `master`, `../metravel-backend/AGENTS.md`,
+  `CLAUDE.md` and its `backend-change-workflow`. Run review and Git steps there.
+  The authorized operator follows `deploy/prod/README.md` with
+  `METRAVEL_ROLLOUT_COMPOSE_BIN="docker compose"` and verifies the deployed
+  revision and API/data/health as required. Nginx has a separate rollout.
+  Client UI and devices belong to the linked frontend contract. Keep tracked
+  production paths immutable; honor rollout locks and cleanliness gates below.
 
 ## Application architecture and localization
 
@@ -140,7 +161,7 @@
   gates for store build/upload/submit/release and other external operations remain
   unchanged. OpenSpec does not replace the MCP task board, Task Contract, project
   skills, or validation/Done gates.
-- Work only on the `main` branch by default:
+- For frontend work, use the `main` branch:
   - check the current branch before editing;
   - do not create or switch to another branch unless the user gives a new explicit instruction;
   - if the current branch is not `main`, stop before making changes and ask how to proceed;
@@ -149,7 +170,8 @@
     not stay there. When the task is done, port the changes to the primary
     checkout, commit them on `main`, and leave no commits on the worktree
     branch that are absent from `main`.
-- Commit and push the task diff before a board task moves to `testing`. The
+- Commit and push the task diff before a board task moves to `testing`. Backend
+  uses its own commit/review workflow and `master`. The frontend
   `review → testing` gate is a `pass` verdict **plus** the reviewed diff committed and
   pushed to `main`, in this order: record the verdict → `git add <task paths>` →
   `git commit` → `PREFLIGHT_SKIP_E2E=1 git push origin main` → `status=testing`. Full
@@ -174,7 +196,8 @@
   `docs/WORKFLOW_OPERATIONS.md` §3.4–3.5) → acceptance on production (`board-reviewer`:
   `.build-source.json` sha contains the task commit, Done gate probed against
   `https://metravel.by`) → `done`; a confirmed defect returns the task to `in_progress` and
-  the cycle repeats. Store releases, the dev host, `area=back` and `needs_human` stay outside
+  the cycle repeats. Backend follows the same stages with its own operator and
+  API/data acceptance. Store releases, the dev host and `needs_human` stay outside
   this chain. Protocol: `docs/TASK_BOARD_MCP.md` → «Выкат и приёмка на проде — часть перехода
   `testing → done`». With multiple live sessions, apply the delivery-owner handoff
   below: the pipeline remains mandatory, but one receiving session completes it.
@@ -299,8 +322,8 @@ npm run test:run
 - Task board tracking (mandatory). The shared MCP task board is the only permanent
   backlog. Each of these is defined once in `docs/TASK_BOARD_MCP.md` — load the relevant
   section before a board mutation or acceptance instead of working from memory: column
-  semantics («Семантика колонок и владельцы переходов»), the `area=back` acceptance rule
-  («Правило: `area=back` не проверяется без прямого запроса»), the seven description
+  semantics («Семантика колонок и владельцы переходов»), area routing and acceptance
+  («Единый цикл для `area=front` и `area=back`»), the seven description
   sections («Правило: описание задачи — по-русски и человеческим языком»), the contract
   template («Правило: у каждой FE/BE задачи есть контракт») and the enforced card gate
   («Гейт качества карточки»). Binding invariants:
@@ -412,7 +435,7 @@ npm run lighthouse:travel:desktop
 - Источник правды один: `deploy/prod/nginx/nginx.conf` в backend-репозитории
   (`../metravel-backend`, branch `master`). **Любое** изменение nginx — CSP,
   security-заголовки, кэш, редиректы, `location`, rate-limit, proxy, логи —
-  делается только там и только силами backend-владельца, через задачу
+  делается только там профильным backend-исполнителем, через задачу
   `area=back` на борде.
 - `nginx/nginx.conf` в этом репозитории — **read-only локальная копия**, а не
   конфигурация. Её никто не читает и никуда не деплоит: ни `build-prod.sh`, ни
@@ -422,9 +445,8 @@ npm run lighthouse:travel:desktop
   числе когда фронтовая фича без правила nginx не работает. Копия обновляется
   только целиком, снимком из backend `origin/master`, с указанием источника и
   даты в шапке файла.
-- Backend-checkout доступен **только на чтение** (`git -C ../metravel-backend
-  fetch`, `git -C ../metravel-backend show origin/master:<path>`, чтение файлов
-  по SSH на проде). Ничего в нём не менять.
+- Читай канонический конфиг из backend checkout. Изменение веди там как
+  `area=back` по правилам backend и отдельному регламенту Nginx.
 - Порядок, когда фронтовой фиче нужно правило nginx:
   1. снять фактическое состояние прода read-only пробой (заголовки ответа —
      команды ниже);
@@ -480,7 +502,7 @@ git ls-files --error-unmatch -- path/relative/to/checkout
   do not clean, stash, reset,
   restore, checkout, pull, or deploy over it. Capture the exact path and a
   secret-safe diff summary, create/update an `area=back` or ops board task, and
-  hand the canonical source change and normal deploy to the backend owner.
+  route recovery and normal deployment to the authorized operator.
 - The frontend deploy cleanliness gate has one exact, non-expanding exception
   for known production-owned runtime/ops artifacts: untracked
   `deploy/prod/nginx/ssl/` and untracked `dump.sql`. Their presence or
@@ -494,10 +516,9 @@ git ls-files --error-unmatch -- path/relative/to/checkout
   root entry `?? dump.sql` (2026-11-03). Apply the same file handling restrictions.
   The SSL directory exception applies only to frontend deploys. Any other
   status entry, tracked change, or warning stops the corresponding rollout.
-- Tracked backend source/config changes must originate in the backend owner's
-  canonical repository workflow and arrive through its normal reviewed deploy.
-  The direct backend task exception in `AGENTS.md` governs who may run that
-  workflow from this workspace.
+- Tracked backend source/config changes originate in the canonical backend
+  repository workflow and arrive through its normal reviewed deploy.
+  See «Frontend and backend task lifecycle» for routing and authority.
 - Project-owned frontend deploy scripts may mutate only their documented
   untracked runtime/static targets such as `static/dist`. Secret stores, runtime
   state, or external backup paths may be written only when explicitly authorized

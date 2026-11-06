@@ -76,7 +76,7 @@ Done gate:
 - `needs_human=true` и `Task Contract` взаимоисключающи: флаг маркирует карточку, которая целиком
   является ручным действием человека, и такая карточка пишется по
   `.claude/skills/metravel-issue/human-task.md` без контракта. Реализация backend-задачи владельцем
-  бэкенда — не `needs_human` (владельца кодирует `area=back`); ручной шаг внутри инженерной задачи
+  бэкенда — не `needs_human` (`area=back` задаёт рабочий репозиторий); ручной шаг внутри инженерной задачи
   выносится отдельной связанной карточкой.
 - Имя поля — идентификатор: строго `Scope:` с начала строки. `**Scope.**`, `- Scope:` и
   `__Scope__:` равносильны отсутствию поля — по этим строкам ходят гейты, приёмка и
@@ -141,9 +141,7 @@ Done gate:
   probes are green; irrelevant or unavailable out-of-scope evidence does not
   block acceptance.
 - For backend/ops/server tasks, require a tracked-vs-untracked path
-  classification only when the task touches a server checkout/deploy/ops path. The contract must state that this frontend workspace will not
-  edit or run Git mutations in the backend checkout; canonical tracked changes
-  belong to the backend owner. For tasks that actually mutate/deploy that
+  classification only when the task touches a server checkout/deploy/ops path. The contract must route source edits and Git operations to the canonical backend checkout and reserve production rollout for the authorized operator. For tasks that actually mutate/deploy that
   checkout, the Done gate must include a production
   `git status --short` with no entries outside the exact frontend-deploy
   exceptions in `docs/RULES.md`, plus runtime validation after the normal deploy.
