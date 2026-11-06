@@ -14,9 +14,10 @@ import UserSafetyMenu from '@/components/profile/UserSafetyMenu';
 import ProtectedContacts from '@/components/profile/ProtectedContacts';
 import SafetyNotice from '@/components/ui/SafetyNotice';
 import PeerBadgeGiveButton from '@/components/achievements/PeerBadgeGiveButton';
+import PublicationMedals from '@/components/achievements/PublicationMedals';
 import Button from '@/components/ui/Button';
 import type { UserProfileDto } from '@/api/user';
-import type { PeerBadgeReceived, UserRank } from '@/api/achievements';
+import type { PeerBadgeReceived, UserBadge, UserRank } from '@/api/achievements';
 import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import { CoverTopoTexture } from '@/components/profile/CoverTopoTexture';
 import { CoverScrim } from '@/components/profile/CoverScrim';
@@ -44,6 +45,7 @@ interface PublicProfileHeaderProps {
   isOwnProfile: boolean;
   socials: Array<{ key: string; label: string; value: string }>;
   peerReceived: PeerBadgeReceived[];
+  earnedBadges?: readonly UserBadge[];
   rank?: UserRank | null;
   statPills: ProfileStatPill[];
   activeTab: ProfileTabKey;
@@ -61,6 +63,7 @@ export function PublicProfileHeader({
   isOwnProfile,
   socials,
   peerReceived,
+  earnedBadges,
   rank,
   statPills,
   activeTab,
@@ -166,6 +169,9 @@ export function PublicProfileHeader({
         <View style={styles.infoColumn}>
           <View style={styles.nameRow}>
             <Text style={styles.userName} numberOfLines={2}>{displayName}</Text>
+            {Platform.OS === 'web' && !isBlockedView && (
+              <PublicationMedals key={userId} earned={earnedBadges} />
+            )}
           </View>
           {rankChipText ? (
             <View style={styles.rankChip} accessibilityRole="text" accessibilityLabel={i18nT('profile:components.screens.profile.PublicProfileHeader.uroven_value1_value2_509cab7b', { value1: rank?.level, value2: rank?.title })}>
@@ -333,6 +339,7 @@ const createStyles = (
     userName: {
       ...DESIGN_TOKENS.typography.scale.h2,
       color: colors.text,
+      ...(Platform.OS === 'web' && { maxWidth: '100%' }),
     },
     userSub: {
       fontSize: DESIGN_TOKENS.typography.sizes.sm,

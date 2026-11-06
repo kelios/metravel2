@@ -1,11 +1,13 @@
 import React from 'react';
+import { Platform } from 'react-native';
 import { render } from '@testing-library/react-native';
 import { PublicProfileHeader } from '@/components/screens/profile/PublicProfileHeader';
 import type { UserProfileDto } from '@/api/user';
-import type { UserRank } from '@/api/achievements';
+import type { UserBadge, UserRank } from '@/api/achievements';
 
 jest.mock('@/hooks/useTheme', () => ({
   useThemedColors: () => new Proxy({}, { get: () => '#334455' }),
+  useTheme: () => ({ isDark: false }),
 }));
 
 jest.mock('@/components/profile/ProfileStatPills', () => ({ ProfileStatPills: () => null }));
@@ -58,6 +60,39 @@ describe('PublicProfileHeader identity (#847)', () => {
   beforeEach(() => {
     mockProfileTabs.mockClear();
     mockImageCardMedia.mockClear();
+  });
+
+  it('shows earned publication identity on web and hides it for a blocked profile', async () => {
+    const originalPlatform = Platform.OS;
+    Platform.OS = 'web';
+    const earned: UserBadge[] = [{
+      id: 5,
+      earnedAt: '2026-11-06T09:00:00Z',
+      badge: {
+        id: 15,
+        slug: 'first-travel',
+        name: 'Автор MeTravel',
+        description: 'Опубликуйте первую статью или заметку.',
+        categorySlug: 'onboarding',
+        categoryName: 'Начало',
+        tier: 'bronze',
+        imageUrl: null,
+        points: 15,
+      },
+    }];
+    const medal = 'Открыть награду «Автор MeTravel»';
+    try {
+      const view = await render(
+        <PublicProfileHeader {...baseProps} profile={profile} earnedBadges={earned} />,
+      );
+      expect(view.getByRole('button', { name: medal })).toBeTruthy();
+      await view.rerender(
+        <PublicProfileHeader {...baseProps} profile={{ ...profile, is_blocked_by_me: true }} earnedBadges={earned} />,
+      );
+      expect(view.queryByRole('button', { name: medal })).toBeNull();
+    } finally {
+      Platform.OS = originalPlatform;
+    }
   });
 
   it('renders the public profile cover as a sharp image without blur backdrop', async () => {

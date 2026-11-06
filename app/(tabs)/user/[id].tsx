@@ -296,6 +296,7 @@ export default function PublicUserProfileScreen() {
           isOwnProfile={isOwnProfile}
           socials={socials}
           peerReceived={peerReceived}
+          earnedBadges={userAchievementsQuery.data?.earned}
           rank={headerRank}
           statPills={statPills}
           activeTab={activeTab}

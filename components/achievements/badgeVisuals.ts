@@ -99,6 +99,7 @@ export type MotifKey =
   | 'flag'
   | 'route'
   | 'heart'
+  | 'heart-pin'
   | 'globe'
   | 'calendar'
   | 'laurel';
@@ -117,6 +118,8 @@ const CATEGORY_MOTIFS: Record<string, MotifKey> = {
 
 // Порядок важен: первое совпадение выигрывает.
 const SLUG_MOTIF_HINTS: Array<[RegExp, MotifKey]> = [
+  [/^first-travel$/, 'quill'],
+  [/^belarus-map-contributor$/, 'heart-pin'],
   [/profile|профиль/i, 'profile'],
   [/welcome|добро|старт|start/i, 'star'],
   // `pioneer` стоит ВЫШЕ квестового хинта намеренно: первопроходец квеста —

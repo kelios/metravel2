@@ -1,4 +1,6 @@
 export const achievementsGenerated1 = {
+  "contributionIdentity.authorShort": "Autor",
+  "contributionIdentity.detailsLabel": "Otwórz odznakę „{{name}}”",
   "components.achievements.AchievementsGalleryModal.dostizheniya_b8ede63f": "Osiągnięcia",
   "components.achievements.AchievementsGalleryModal.znachki_za_konkretnye_dostizheniya_sgruppiro_b9824e2b": "Odznaki są przyznawane za konkretne osiągnięcia. Pogrupowane według sekcji.",
   "components.achievements.AchievementsSection.dostizheniya_d1c14b18": "Osiągnięcia",

@@ -168,6 +168,13 @@ function Motif({ motif, stroke }: { motif: MotifKey; stroke: string }) {
           <Line x1={74} y1={36} x2={78} y2={34} />
         </G>
       );
+    case 'heart-pin':
+      return (
+        <G {...common} strokeWidth={3}>
+          <Path d="M50 74 C44 66 31 54 31 45 A19 19 0 1 1 69 45 C69 54 56 66 50 74 Z" />
+          <Path d="M50 56 C45 52 39 48 39 43 C39 37 47 37 50 42 C53 37 61 37 61 43 C61 48 55 52 50 56 Z" />
+        </G>
+      );
     case 'globe':
       return (
         <G {...common}>
@@ -372,7 +379,11 @@ function BadgeEmblem({ badge, size = 72 }: Props) {
 
   const data = useMemo(() => {
     const tier = TIER_VISUALS[badgeTier];
-    const pal = categoryPalette(categorySlug);
+    const motif = badgeMotif(categorySlug, badge.slug);
+    const campaign = categoryPalette('social');
+    const pal = motif === 'heart-pin'
+      ? { paper: campaign.line, line: campaign.paper }
+      : categoryPalette(categorySlug);
     return {
       paper: paperFor(pal.paper, isDark),
       line: lineFor(pal.line, isDark),
@@ -380,7 +391,7 @@ function BadgeEmblem({ badge, size = 72 }: Props) {
       highlight: tier.highlight,
       shade: tier.shade,
       frame: tierFrame(badgeTier),
-      motif: badgeMotif(categorySlug, badge.slug),
+      motif,
     };
   }, [categorySlug, badge.slug, badgeTier, isDark]);
 

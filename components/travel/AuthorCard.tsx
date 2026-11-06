@@ -18,9 +18,11 @@ import Button from '@/components/ui/Button'
 import SubscribeButton from '@/components/ui/SubscribeButton'
 import { getTravelLabel } from '@/utils/pluralize'
 import { useUserAchievements } from '@/hooks/useAchievementsApi'
+import type { PublicAchievements } from '@/api/achievements'
 import RankBar from '@/components/achievements/RankBar'
 import BadgeMedal from '@/components/achievements/BadgeMedal'
 import BadgeDetailSheet, { type BadgeDetail } from '@/components/achievements/BadgeDetailSheet'
+import PublicationMedals from '@/components/achievements/PublicationMedals'
 import VerifiedBadge from '@/components/profile/VerifiedBadge'
 import { translate as i18nT } from '@/i18n'
 import { isPhoneLayout } from '@/utils/phoneLayout'
@@ -111,14 +113,13 @@ function getAvatarSize(isMobile: boolean, isTablet: boolean): number {
 }
 
 interface AuthorAchievementsProps {
-  userId: number | string
+  data?: PublicAchievements
   ownerName?: string
   styles: ReturnType<typeof createStyles>
   colors: ReturnType<typeof useThemedColors>
 }
 
-function AuthorAchievements({ userId, ownerName, styles, colors }: AuthorAchievementsProps) {
-  const { data } = useUserAchievements(userId)
+function AuthorAchievements({ data, ownerName, styles, colors }: AuthorAchievementsProps) {
   const [selectedUserBadgeId, setSelectedUserBadgeId] = useState<number | null>(null)
 
   if (!data) return null
@@ -182,6 +183,7 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
 
   const userName = useMemo(() => resolveAuthorName(travel), [travel])
   const userId = useMemo(() => resolveAuthorId(travel), [travel])
+  const { data: achievements } = useUserAchievements(userId)
   const travelsCount =
     typeof (travel as any).userTravelsCount === 'number'
       ? (travel as any).userTravelsCount
@@ -269,7 +271,7 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
                   disabled={!userId}
                   accessibilityRole={userId ? 'button' : undefined}
                   accessibilityLabel={userId ? i18nT('travel:components.travel.AuthorCard.otkryt_profil_avtora_value1_0da4a86a', { value1: userName }) : undefined}
-                  style={({ pressed }) => (pressed && userId ? styles.pressedDim : null)}
+                  style={({ pressed }) => [Platform.OS === 'web' && styles.nameAction, pressed && !!userId && styles.pressedDim]}
                 >
                   <Text style={[styles.authorName, isMobile && styles.authorNameMobile]}>
                     {userName}
@@ -279,6 +281,9 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
                   isVerified={authorProfile?.is_verified}
                   organizerStatus={authorProfile?.organizer_status}
                 />
+                {Platform.OS === 'web' && (
+                  <PublicationMedals key={userId} earned={achievements?.earned} />
+                )}
               </View>
             )}
 
@@ -355,7 +360,8 @@ function AuthorCard({ travel, onViewAuthorTravels }: AuthorCardProps) {
 
             {userId != null && (
               <AuthorAchievements
-                userId={userId}
+                key={userId}
+                data={achievements}
                 ownerName={userName || undefined}
                 styles={styles}
                 colors={colors}
@@ -419,8 +425,9 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    infoSection: { flex: 1, gap: DESIGN_TOKENS.spacing.sm },
+    infoSection: { flex: 1, gap: DESIGN_TOKENS.spacing.sm, ...(Platform.OS === 'web' && { minWidth: 0 }) },
     pressedDim: { opacity: 0.85 },
+    nameAction: { maxWidth: '100%' },
     nameRow: {
       flexDirection: 'row',
       alignItems: 'center',

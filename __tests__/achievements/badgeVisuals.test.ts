@@ -240,6 +240,10 @@ describe('categoryPalette', () => {
 // ── badgeMotif (мотив эмблемы) ─────────────────────────────────────────────────
 
 describe('badgeMotif', () => {
+  it('distinguishes author and campaign medals without a badge image', () => {
+    expect(badgeMotif('onboarding', 'first-travel')).toBe('quill')
+    expect(badgeMotif('author', 'belarus-map-contributor')).toBe('heart-pin')
+  })
   // Slug-хинты приоритетнее категории
   it('hiker → mountain', () => {
     expect(badgeMotif('theme', 'hiker-bronze')).toBe('mountain')

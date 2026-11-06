@@ -1,4 +1,6 @@
 export const achievementsGenerated1 = {
+  "contributionIdentity.authorShort": "Автор",
+  "contributionIdentity.detailsLabel": "Открыть награду «{{name}}»",
   "components.achievements.AchievementsGalleryModal.dostizheniya_b8ede63f": "Достижения",
   "components.achievements.AchievementsGalleryModal.znachki_za_konkretnye_dostizheniya_sgruppiro_b9824e2b": "Значки — за конкретные достижения. Сгруппированы по разделам.",
   "components.achievements.AchievementsSection.dostizheniya_d1c14b18": "Достижения",

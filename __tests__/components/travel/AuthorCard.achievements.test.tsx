@@ -1,6 +1,7 @@
 import React from 'react'
-import { render, fireEvent } from '@testing-library/react-native'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Platform } from 'react-native'
+import { render, fireEvent, waitFor } from '@testing-library/react-native'
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 
 import AuthorCard from '@/components/travel/AuthorCard'
 import type { PublicAchievements } from '@/api/achievements'
@@ -68,11 +69,14 @@ const mockData: PublicAchievements = {
       },
     },
   ],
+  peerReceived: [],
+  activityTypes: [],
 }
 const mockAchievementsRef: { data: PublicAchievements | undefined } = { data: mockData }
+const mockUseUserAchievements = jest.fn((_userId: number | string | null) => ({ data: mockAchievementsRef.data }))
 
 jest.mock('@/hooks/useAchievementsApi', () => ({
-  useUserAchievements: () => ({ data: mockAchievementsRef.data }),
+  useUserAchievements: (userId: number | string | null) => mockUseUserAchievements(userId),
 }))
 
 const baseTravel: any = {
@@ -83,13 +87,44 @@ const baseTravel: any = {
   travel_image_thumb_small_url: null,
 }
 
-const renderWithClient = async (ui: React.ReactElement) => {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+const makeClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } })
+const renderWithClient = async (ui: React.ReactElement, client = makeClient()) => {
   return await render(ui, { wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider> })
 }
 
 describe('AuthorCard achievements block', () => {
-  beforeEach(() => { mockAchievementsRef.data = mockData })
+  beforeEach(() => {
+    mockAchievementsRef.data = mockData
+    mockUseUserAchievements.mockReset().mockImplementation(() => ({ data: mockAchievementsRef.data }))
+  })
+
+  it('shows the identity medal alongside the existing gallery from one public achievement query', async () => {
+    const originalPlatform = Platform.OS
+    Platform.OS = 'web'
+    const data: PublicAchievements = {
+      ...mockData,
+      earned: [
+        ...mockData.earned,
+        { ...mockData.earned[0], id: 102, badge: { ...mockData.earned[0].badge, id: 2, slug: 'first-travel', name: 'Автор MeTravel' } },
+      ],
+    }
+    const fetchAchievements = jest.fn(async () => data)
+    const queryKey = ['public-author-achievements', 42]
+    const client = makeClient()
+    mockUseUserAchievements.mockImplementation(function useTrackedPublicAchievements() {
+      return useQuery({ queryKey, queryFn: fetchAchievements })
+    })
+    try {
+      const view = await renderWithClient(<AuthorCard travel={baseTravel} />, client)
+      await waitFor(() => expect(view.getByRole('button', { name: 'Открыть награду «Автор MeTravel»' })).toBeTruthy())
+      expect(view.getByText('Значки автора')).toBeTruthy()
+      expect(client.getQueryCache().find({ queryKey })?.getObserversCount()).toBe(1)
+      expect(fetchAchievements).toHaveBeenCalledTimes(1)
+    } finally {
+      client.clear()
+      Platform.OS = originalPlatform
+    }
+  })
 
   it('explains the rank with a "Уровень:" prefix', async () => {
     const { getByText } = await renderWithClient(<AuthorCard travel={baseTravel} />)

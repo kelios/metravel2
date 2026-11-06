@@ -1,4 +1,6 @@
 export const achievementsGenerated1 = {
+  "contributionIdentity.authorShort": "Author",
+  "contributionIdentity.detailsLabel": "Open the “{{name}}” badge",
   "components.achievements.AchievementsGalleryModal.dostizheniya_b8ede63f": "Achievements",
   "components.achievements.AchievementsGalleryModal.znachki_za_konkretnye_dostizheniya_sgruppiro_b9824e2b": "Badges are for specific achievements. Grouped by sections.",
   "components.achievements.AchievementsSection.dostizheniya_d1c14b18": "Achievements",
