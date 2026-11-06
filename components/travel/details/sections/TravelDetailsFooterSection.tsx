@@ -111,7 +111,6 @@ export const TravelDetailsFooterSection: React.FC<{ travel: Travel; isMobile: bo
 
       <View
         testID="travel-details-email-subscribe"
-        accessibilityRole={Platform.OS === 'web' ? ('region' as any) : undefined}
         style={footerStyles.compactSection}
       >
         <EmailSubscriptionForm
