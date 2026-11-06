@@ -10,19 +10,21 @@ import {
 import InstantSEO from '@/components/seo/LazyInstantSEO';
 import UpsertTravelView from '@/components/travel/upsert/UpsertTravelView';
 import { PendingPointPhotoSession } from '@/components/travel/upsert/PendingPointPhotoSession';
-import { useUpsertTravelController } from '@/components/travel/upsert/useUpsertTravelController';
+import { useUpsertTravelController, type PlaceRequestEditorContext } from '@/components/travel/upsert/useUpsertTravelController';
 import { buildCanonicalUrl } from '@/utils/seo';
 import { UPSERT_TRAVEL_NEW_PATH, buildUpsertTravelSeoText } from '@/components/travel/upsert/upsertTravelSeo';
 
 
 export { initFilters, normalizeCategoryTravelAddress, normalizeTravelCategories };
 
-export default function UpsertTravel() {
-  return <PendingPointPhotoSession><TravelEditor /></PendingPointPhotoSession>;
+type EditorProps = { placeRequestContext?: PlaceRequestEditorContext };
+
+export default function UpsertTravel({ placeRequestContext }: EditorProps) {
+  return <PendingPointPhotoSession><TravelEditor placeRequestContext={placeRequestContext} /></PendingPointPhotoSession>;
 }
 
-function TravelEditor() {
-  const controller = useUpsertTravelController();
+function TravelEditor({ placeRequestContext }: EditorProps) {
+  const controller = useUpsertTravelController(placeRequestContext);
   const pathname = usePathname();
 
   const seo = useMemo(() => {

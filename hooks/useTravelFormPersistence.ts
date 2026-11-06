@@ -3,6 +3,7 @@ import isEqual from 'fast-deep-equal';
 import { type QueryClient } from '@tanstack/react-query';
 import { saveFormData, saveTravelContent, type SaveFormDataOptions, type TravelContentSaveResponse } from '@/api/misc';
 import { ApiError } from '@/api/client';
+import { queryKeys } from '@/api/queryKeys';
 import { TravelFormData, MarkerData } from '@/types/types';
 import { useFormState } from '@/hooks/useFormState';
 import { useImprovedAutoSave } from '@/hooks/useImprovedAutoSave';
@@ -431,7 +432,11 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       });
 
       // Allowlist несущий: не пускает в upsert эхо `created_at`, которое бэк пишет с #1995 (#2040).
-      const filteredCleanedData = filterAllowedKeys(cleanedData, Object.keys(baseFormData));
+      const allowedKeys = Object.keys(baseFormData);
+      // The first upsert binds the campaign invitation on the server. Later
+      // writes use that durable link, even if the editor URL has no context.
+      if (resolvedId == null && mergedData.place_request_id) allowedKeys.push('place_request_id');
+      const filteredCleanedData = filterAllowedKeys(cleanedData, allowedKeys);
       const payload = ensureRequiredDraftFields(filteredCleanedData as unknown as TravelFormData);
 
       // ✅ FIX: Проверяем, что компонент всё ещё смонтирован перед сохранением
@@ -439,7 +444,15 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
         throw new Error('Component unmounted');
       }
 
-      const result = await saveFormData(payload, saveSignal, options);
+      const result = await saveFormData(payload, saveSignal, options).catch((error: unknown) => {
+        const requestId = payload.place_request_id;
+        if (requestId && error instanceof ApiError && error.status === 400 &&
+            (error.data as { place_request_id?: unknown } | undefined)?.place_request_id) {
+          // The invitation can close between the initial GET and first save.
+          void queryClient?.invalidateQueries({ queryKey: queryKeys.placeRequestDetail(requestId) });
+        }
+        throw error;
+      });
 
       // ✅ FIX: Проверяем, что запрос не был отменён
       if (saveSignal.aborted) {
@@ -865,6 +878,8 @@ export function useTravelFormPersistence(params: UseTravelFormPersistenceParams)
       // Гидратация формы — обязательное условие: до неё formState.data это пустой
       // getEmptyFormData(id), и любой автосейв стёр бы существующую статью.
       isFormHydrated &&
+      // A campaign draft stays local until the author's first explicit save or photo.
+      (!formState.data.place_request_id || stableTravelId != null || normalizeTravelId(formState.data.id) != null) &&
       !isManualSaveInFlight,
     isOnline,
   });

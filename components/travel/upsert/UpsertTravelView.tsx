@@ -27,6 +27,11 @@ import {
   trackRouteCreateStarted,
 } from '@/utils/growthFunnelAnalytics';
 import { translate as i18nT } from '@/i18n'
+import {
+  consumePlaceContributionAuth,
+  rememberPlaceContributionAuth,
+  trackPlaceContribution,
+} from '@/utils/placeContributionAnalytics'
 
 
 type Colors = UpsertTravelController['colors'];
@@ -336,9 +341,10 @@ const AccessDeniedState = ({ colors, styles, router }: WizardStateProps) => {
   );
 };
 
-const AuthRequiredState = ({ colors, styles, router, createHref, shareTripContext, mode }: WizardStateProps & {
+const AuthRequiredState = ({ colors, styles, router, createHref, shareTripContext, placeRequestContext, mode }: WizardStateProps & {
   createHref: string;
   shareTripContext: UpsertTravelController['shareTripContext'];
+  placeRequestContext: UpsertTravelController['placeRequestContext'];
   mode: UpsertTravelController['publicationMode'];
 }) => {
   const intent = shareTripContext ? 'share-trip' : 'create-travel';
@@ -348,7 +354,8 @@ const AuthRequiredState = ({ colors, styles, router, createHref, shareTripContex
       source: 'travel_new_auth_gate',
       intent,
     });
-  }, [intent]);
+    if (placeRequestContext) trackPlaceContribution('auth_gate', { ...placeRequestContext, mode });
+  }, [intent, mode, placeRequestContext]);
 
   const handleLogin = useCallback(() => {
     trackContentCreateCtaClicked({
@@ -360,8 +367,9 @@ const AuthRequiredState = ({ colors, styles, router, createHref, shareTripContex
       sourceTravelId: shareTripContext?.sourceTravelId,
       mode,
     });
+    if (placeRequestContext) rememberPlaceContributionAuth(placeRequestContext, mode);
     router.push(buildExplicitLoginHref({ redirect: createHref, intent }) as any);
-  }, [createHref, intent, mode, router, shareTripContext?.sourceTravelId]);
+  }, [createHref, intent, mode, placeRequestContext, router, shareTripContext?.sourceTravelId]);
 
   const handleRegister = useCallback(() => {
     trackContentCreateCtaClicked({
@@ -373,8 +381,9 @@ const AuthRequiredState = ({ colors, styles, router, createHref, shareTripContex
       sourceTravelId: shareTripContext?.sourceTravelId,
       mode,
     });
+    if (placeRequestContext) rememberPlaceContributionAuth(placeRequestContext, mode);
     router.push(buildRegistrationHref({ redirect: createHref, intent }) as any);
-  }, [createHref, intent, mode, router, shareTripContext?.sourceTravelId]);
+  }, [createHref, intent, mode, placeRequestContext, router, shareTripContext?.sourceTravelId]);
 
   const actions = useMemo<EmptyStateAction[]>(
     () => [
@@ -411,7 +420,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   const router = useRouter();
   const previewState = useTravelPreview();
   const isOffline = !controller.autosave.isOnline;
-  const { colors, wizard } = controller;
+  const { colors, wizard, placeRequestContext } = controller;
   const hasTrackedRouteCreateStartedRef = useRef(false);
 
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -422,6 +431,13 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     if (!controller.isNew || !controller.isAuthenticated) return;
 
     hasTrackedRouteCreateStartedRef.current = true;
+    if (placeRequestContext) {
+      const data = { ...placeRequestContext, mode: controller.publicationMode };
+      if (consumePlaceContributionAuth(placeRequestContext, controller.publicationMode)) {
+        trackPlaceContribution('auth_return', data);
+      }
+      trackPlaceContribution('editor_started', data);
+    }
     trackRouteCreateStarted({
       mode: controller.publicationMode,
       source: controller.shareTripContext ? 'travel_article_cta' : 'travel_new',
@@ -436,6 +452,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
     controller.isNew,
     controller.publicationMode,
     controller.shareTripContext,
+    placeRequestContext,
     wizard.currentStep,
   ]);
 
@@ -564,7 +581,7 @@ export default function UpsertTravelView({ controller }: UpsertTravelViewProps) 
   if (!controller.isAuthenticated && controller.isNew) {
     return <AuthRequiredState colors={colors} styles={styles} router={router}
       createHref={controller.createHref} shareTripContext={controller.shareTripContext}
-      mode={controller.publicationMode} />;
+      placeRequestContext={placeRequestContext} mode={controller.publicationMode} />;
   }
 
   return (

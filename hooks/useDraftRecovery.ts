@@ -224,6 +224,7 @@ interface UseDraftRecoveryOptions {
   enabled?: boolean;
   /** Отдельный ключ черновика нового вида записи (#2666: заметка не подхватывает черновик полной статьи). */
   newDraftKind?: 'note';
+  newDraftScope?: string;
 }
 
 interface UseDraftRecoveryReturn {
@@ -252,7 +253,7 @@ interface UseDraftRecoveryReturn {
  * Automatically saves form data to storage and provides recovery options.
  */
 export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftRecoveryReturn {
-  const { travelId, isNew, currentData, enabled = true, newDraftKind } = options;
+  const { travelId, isNew, currentData, enabled = true, newDraftKind, newDraftScope } = options;
 
   const [state, setState] = useState<DraftRecoveryState>({
     hasPendingDraft: false,
@@ -271,7 +272,7 @@ export function useDraftRecovery(options: UseDraftRecoveryOptions): UseDraftReco
   // For an existing travel the id arrives asynchronously; until it resolves we
   // must not build a `..._null` key (it would orphan the draft under a wrong key).
   const draftKey = isNew
-    ? `${DRAFT_STORAGE_KEY}_new${newDraftKind ? `_${newDraftKind}` : ''}`
+    ? `${DRAFT_STORAGE_KEY}_new${newDraftScope ? `_${newDraftScope}` : newDraftKind ? `_${newDraftKind}` : ''}`
     : travelId != null
       ? `${DRAFT_STORAGE_KEY}_${travelId}`
       : null;

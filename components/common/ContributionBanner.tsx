@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, type Href } from 'expo-router'
 import Feather from '@expo/vector-icons/Feather'
 
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -19,6 +19,9 @@ import {
 import { useTrackedImpression } from '@/hooks/useTrackedImpression'
 import { translate as i18nT } from '@/i18n'
 import { useTranslation } from '@/i18n/LocaleProvider'
+import { trackPlaceContribution } from '@/utils/placeContributionAnalytics'
+import { buildPlaceRequestsHref, type PlaceContributionSource } from '@/utils/placeRequestCreateIntent'
+import { isPlaceRequestsPilotEnabled } from '@/utils/placeRequestsConfig'
 
 
 export type ContributionBannerVariant =
@@ -33,7 +36,10 @@ export type ContributionBannerVariant =
   | 'author-home'
   | 'author-catalog'
 
+type CampaignEntry = { source: PlaceContributionSource; region?: string }
+
 interface ContributionBannerProps {
+  campaign?: CampaignEntry
   variant?: ContributionBannerVariant
   density?: 'regular' | 'compact'
 }
@@ -94,7 +100,7 @@ const COPY: Record<
 
 const ADD_PLACE_PATH = '/travel/new'
 
-function ContributionBanner({ variant = 'default', density = 'regular' }: ContributionBannerProps) {
+function ContributionBanner({ variant = 'default', density = 'regular', campaign }: ContributionBannerProps) {
   const { t } = useTranslation()
   const router = useRouter()
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -107,7 +113,11 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
     [colors, isCompact, isMobile],
   )
 
-  const copy = COPY[variant]
+  const copy = campaign ? {
+    icon: 'heart',
+    title: t('places:contributions.title'),
+    subtitle: t('places:contributions.entryHint'),
+  } : COPY[variant]
   const authState = isAuthenticated ? 'authenticated' : 'guest'
   const source = `contribution_banner_${variant}`
   const isAuthorVariant = variant === 'author-home' || variant === 'author-catalog'
@@ -119,8 +129,13 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
   // До восстановления сессии `isAuthenticated=false`: показ ждёт `authReady`,
   // иначе вошедший пользователь засчитывался бы дважды — как guest и как authenticated.
   const impression = useTrackedImpression(
-    `contribution-banner:${variant}:${authReady ? authState : 'pending'}`,
+    campaign ? `place-contribution-entry:${campaign.source}:${campaign.region ?? 'all'}`
+      : `contribution-banner:${variant}:${authReady ? authState : 'pending'}`,
     useCallback(() => {
+      if (campaign) {
+        trackPlaceContribution('impression', { source: campaign.source, action: 'collection' })
+        return
+      }
       if (!authReady) return
       trackContentCreateCtaImpression({
         contentType: 'route',
@@ -128,7 +143,7 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
         intent: impressionIntent,
         authState,
       })
-    }, [authReady, authState, impressionIntent, impressionSource]),
+    }, [authReady, authState, campaign, impressionIntent, impressionSource]),
   )
 
   const handleAuthorLink = () => {
@@ -174,6 +189,8 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
     )
   }
 
+  if (campaign && !isPlaceRequestsPilotEnabled()) return null
+
   return (
     <View ref={impression.ref} onLayout={impression.onLayout} style={styles.wrapper}>
       <ResponsiveContainer maxWidth="xl" padding>
@@ -198,7 +215,16 @@ function ContributionBanner({ variant = 'default', density = 'regular' }: Contri
           </View>
 
           <View style={[styles.buttons, isMobile ? styles.buttonsMobile : styles.buttonsDesktop]}>
-            {isAuthorVariant ? (
+            {campaign ? (
+              <LinkPressable
+                href={buildPlaceRequestsHref(campaign.source, { region: campaign.region }) as Href}
+                onPress={() => trackPlaceContribution('cta', { source: campaign.source, action: 'collection' })}
+                style={styles.authorLink}
+              >
+                <Text style={styles.authorLinkText}>{t('places:contributions.backToRequests')}</Text>
+                <Feather name="arrow-right" size={16} color={colors.primaryText} />
+              </LinkPressable>
+            ) : isAuthorVariant ? (
               <LinkPressable href="/become-author" onPress={handleAuthorLink} style={styles.authorLink}>
                 <Text style={styles.authorLinkText}>{t('homeStatic:becomeAuthor.banner.link')}</Text>
                 <Feather name="arrow-right" size={16} color={colors.primaryText} />

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1020" height="330" viewBox="0 0 1020 330" role="img" aria-labelledby="title description">
+  <title id="title">Допишем Беларусь вместе</title>
+  <desc id="description">Подборка с действием Поделиться фото и историей, карта со слоем Ищем историю, рядом с именем автора значки Автор и Сердце карты.</desc>
+  <defs>
+    <symbol id="heart" viewBox="0 0 24 24"><path fill="currentColor" d="M12 21S2 14 2 8a5.5 5.5 0 0 1 10-3.2A5.5 5.5 0 0 1 22 8c0 6-10 13-10 13Z"/></symbol>
+    <symbol id="pin" viewBox="0 0 40 44"><path fill="#90394c" d="M20 1A17 17 0 0 0 3 18c0 11 17 25 17 25s17-14 17-25A17 17 0 0 0 20 1Z"/><use href="#heart" x="10" y="9" width="20" height="20" color="#fff"/></symbol>
+    <symbol id="book" viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="#f8e8d3" stroke="#a26436" stroke-width="2"/><path d="M9 12q5-2 9 2 4-4 9-2v12q-5-2-9 2-4-4-9-2Zm9 2v12" fill="none" stroke="#854b29" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="m19 20 8-10" stroke="#854b29" stroke-width="1.6" stroke-linecap="round"/></symbol>
+    <symbol id="medal" viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="#f7e6ea" stroke="#90394c" stroke-width="2"/><use href="#pin" x="8" y="6" width="20" height="24"/></symbol>
+  </defs>
+  <path fill="#f3f5ef" d="M0 0h1020v330H0z"/>
+  <g font-family="system-ui,sans-serif" fill="#273b30">
+    <rect x="18" y="18" width="316" height="294" rx="18" fill="#fff" stroke="#d6e2d5"/>
+    <text x="39" y="50" font-size="13" font-weight="700">МЕСТА / ПОДБОРКА</text>
+    <text x="39" y="86" font-size="23" font-weight="750">Допишем Беларусь</text>
+    <rect x="39" y="103" width="274" height="90" rx="10" fill="#e4ede0"/>
+    <text x="54" y="156" font-size="14">Фото места с атрибуцией</text>
+    <use href="#heart" x="41" y="208" width="15" height="15" color="#90394c"/>
+    <text x="61" y="220" font-size="13">Ищем историю · Жиличи</text>
+    <rect x="39" y="241" width="247" height="44" rx="9" fill="#27523d"/>
+    <text x="53" y="268" fill="#fff" font-size="14" font-weight="650">Поделиться фото и историей</text>
+    <rect x="352" y="18" width="316" height="294" rx="18" fill="#fff" stroke="#d6e2d5"/>
+    <text x="373" y="50" font-size="13" font-weight="700">КАРТА / СЛОИ</text>
+    <rect x="373" y="68" width="274" height="165" rx="10" fill="#e4ede0"/>
+    <path d="M373 179q50 25 95-15t91-4 88-5M454 70q31 24 14 94t20 69" fill="none" stroke="#fff" stroke-width="3"/>
+    <use href="#pin" x="423" y="126" width="36" height="40"/><use href="#pin" x="551" y="112" width="36" height="40"/>
+    <use href="#heart" x="375" y="258" width="17" height="17" color="#90394c"/>
+    <text x="400" y="273" font-size="15">Ищем историю</text>
+    <rect x="686" y="18" width="316" height="294" rx="18" fill="#fff" stroke="#d6e2d5"/>
+    <text x="707" y="50" font-size="13" font-weight="700">КАРТОЧКА АВТОРА И ПРОФИЛЬ</text>
+    <text x="707" y="92" font-size="19" font-weight="750">Имя путешественника</text>
+    <use href="#book" x="707" y="111" width="32" height="32"/>
+    <text x="747" y="132" font-size="15">Автор</text>
+    <use href="#medal" x="817" y="111" width="32" height="32"/>
+    <text x="858" y="132" font-size="15">Сердце карты</text>
+    <path d="M707 167h274" stroke="#d6e2d5"/>
+    <text x="707" y="197" font-size="14">Первая опубликованная история</text>
+    <text x="707" y="224" font-size="14">Опубликованный вклад в акцию</text>
+    <text x="707" y="276" font-size="12" fill="#516357">Тап по медали открывает подробности</text>
+  </g>
+</svg>

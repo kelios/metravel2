@@ -22,6 +22,11 @@ import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import type { TravelArticleInitialPrefill } from '@/utils/travelArticleCreateIntent';
 
 
+type TravelInitialPrefill = TravelArticleInitialPrefill & {
+  point?: MarkerData;
+  placeRequestId?: string;
+};
+
 interface UseTravelFormDataOptions {
   travelId: string | null;
   isNew: boolean;
@@ -30,7 +35,7 @@ interface UseTravelFormDataOptions {
   isAuthenticated: boolean;
   authReady: boolean;
   onAuthRequired?: (context: { redirect: string }) => void | Promise<void>;
-  initialPrefill?: TravelArticleInitialPrefill | null;
+  initialPrefill?: TravelInitialPrefill | null;
   prefillPending?: boolean;
   /** Формат новой записи (#2666: `/travel/new?mode=note`); у существующей его задаёт сервер. */
   initialPublicationFormat?: TravelPublicationFormat;
@@ -101,7 +106,10 @@ export function useTravelFormData(options: UseTravelFormDataOptions) {
         ...initialFormData,
         name: initialPrefill?.name ?? '',
         countries: [...(initialPrefill?.countries ?? [])],
+        ...(initialPrefill?.point ? { coordsMeTravel: [initialPrefill.point] } : {}),
+        ...(initialPrefill?.placeRequestId ? { place_request_id: initialPrefill.placeRequestId } : {}),
       };
+      if (initialPrefill?.point) setMarkers([initialPrefill.point]);
       formDataRef.current = seeded;
       pendingBaselineRef.current = seeded;
       formState.reset(seeded);

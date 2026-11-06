@@ -10,7 +10,7 @@ import { Platform } from 'react-native';
  */
 const TRAVEL_CREATE_PATH = '/travel/new';
 
-const CREATE_QUERY_KEYS = ['mode', 'source_travel_id', 'country', 'place'] as const;
+const CREATE_QUERY_KEYS = ['mode', 'source_travel_id', 'country', 'place', 'place_request_id', 'contribution_source'] as const;
 
 type AppRouter = {
   push: (path: string) => void;

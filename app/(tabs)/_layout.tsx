@@ -287,6 +287,7 @@ export default function TabLayout() {
                 <Tabs.Screen name="travelsby" options={HIDDEN} />
                 <Tabs.Screen name="map" options={HIDDEN} />
                 <Tabs.Screen name="places" options={HIDDEN} />
+                <Tabs.Screen name="places/help" options={HIDDEN} />
                 <Tabs.Screen name="roulette" options={HIDDEN} />
                 <Tabs.Screen name="games" options={HIDDEN} />
                 <Tabs.Screen name="advent" options={HIDDEN} />

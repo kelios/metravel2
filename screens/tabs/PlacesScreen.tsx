@@ -25,6 +25,7 @@ import { useThemedColors } from '@/hooks/useTheme'
 import { useResponsiveWidth } from '@/hooks/useResponsive'
 import { buildCanonicalUrl, buildOgImageUrl, DEFAULT_OG_IMAGE_PATH, getSiteBaseUrl } from '@/utils/seo'
 import { toCanonicalTravelPath } from '@/utils/relatedTravel'
+import { matchesPlaceRequestsCountry } from '@/utils/placeRequestsConfig'
 import { webDataSetProps, webViewStyle } from '@/utils/webProps'
 import ContributionBanner from '@/components/common/ContributionBanner'
 
@@ -614,6 +615,7 @@ export default function PlacesScreen() {
               </View>
             </View>
 
+            {isWeb && matchesPlaceRequestsCountry(selectedCountry) ? <ContributionBanner density="compact" campaign={{ source: 'places' }} /> : null}
             {resultsContent}
           </View>
         </View>

@@ -1,6 +1,9 @@
 import { useMemo, useEffect, useCallback, useRef, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
+import type { PlaceRequest } from '@/api/placeRequests';
+import { trackPlaceContribution } from '@/utils/placeContributionAnalytics';
+import { buildPlaceRequestCreateHref, getPlaceRequestDraftScope, type PlaceRequestCreateIntent } from '@/utils/placeRequestCreateIntent';
 import type { TravelFormData, TravelPublicationFormat } from '@/types/types';
 import { useAuth } from '@/context/AuthContext';
 import { useTravelFilters } from '@/hooks/useTravelFilters';
@@ -27,6 +30,10 @@ import {
   resolveTravelPublicationFormat,
 } from '@/utils/travelNote';
 
+export type PlaceRequestEditorContext = PlaceRequestCreateIntent & {
+  place?: PlaceRequest;
+};
+
 type ManualSave = ReturnType<typeof useTravelFormData>['handleManualSave'];
 
 export interface UpsertTravelController {
@@ -41,6 +48,7 @@ export interface UpsertTravelController {
   isAuthenticated: boolean;
   isSuperAdmin: boolean;
   shareTripContext: TravelArticleCreateIntent | null;
+  placeRequestContext?: PlaceRequestEditorContext;
   createHref: string;
   shareTripCountryField?: {
     countries: ReturnType<typeof useTravelFilters>['filters']['countries'];
@@ -140,7 +148,7 @@ export const getAutosaveBadge = (
   return i18nT('travel:components.travel.upsert.useUpsertTravelController.autosave.idle');
 };
 
-export function useUpsertTravelController(): UpsertTravelController {
+export function useUpsertTravelController(placeRequestContext?: PlaceRequestEditorContext): UpsertTravelController {
   const searchParams = useLocalSearchParams();
   const { id } = searchParams;
   const router = useRouter();
@@ -149,14 +157,34 @@ export function useUpsertTravelController(): UpsertTravelController {
 
   const travelId = (id as string | null) ?? null;
   const isNew = !id;
-  const shareTripContext = useRef(isNew ? parseTravelArticleCreateIntent(searchParams) : null).current;
+  const shareTripContext = useRef(isNew && !placeRequestContext ? parseTravelArticleCreateIntent(searchParams) : null).current;
   // Режим создания читается из URL один раз: после первого сохранения формат
   // записи приходит с сервера и остаётся единственным источником.
   const requestedPublicationMode = useRef(isNew ? parseTravelPublicationMode(searchParams) : 'full').current;
   const createHref = useMemo(
-    () => buildTravelArticleCreateIntentHref(shareTripContext, requestedPublicationMode),
-    [requestedPublicationMode, shareTripContext],
+    () => placeRequestContext
+      ? buildPlaceRequestCreateHref(placeRequestContext, requestedPublicationMode)
+      : buildTravelArticleCreateIntentHref(shareTripContext, requestedPublicationMode),
+    [placeRequestContext, requestedPublicationMode, shareTripContext],
   );
+  const placeRequestPrefill = useMemo(() => {
+    const place = placeRequestContext?.place;
+    if (!place) return null;
+    return {
+      name: place.name,
+      countries: [String(place.countryId)],
+      placeRequestId: place.id,
+      point: {
+        id: null,
+        lat: place.lat,
+        lng: place.lng,
+        country: place.countryId,
+        address: place.address,
+        categories: [place.categoryId],
+        image: null,
+      },
+    };
+  }, [placeRequestContext?.place]);
   const [articlePrefill, setArticlePrefill] = useState<{
     pending: boolean;
     value: TravelArticleInitialPrefill | null;
@@ -165,9 +193,9 @@ export function useUpsertTravelController(): UpsertTravelController {
   // открывал бы свежую заметку сразу на «Месте и рассказе», минуя «Фото».
   const newStepKey = requestedPublicationMode === 'note' ? 'new_note' : 'new';
   const stepStorageKey = useMemo(
-    () => isNew && shareTripContext
+    () => isNew && (shareTripContext || placeRequestContext)
       ? undefined : `metravel_travel_wizard_step_${isNew ? newStepKey : String(id)}`,
-    [id, isNew, newStepKey, shareTripContext]
+    [id, isNew, newStepKey, shareTripContext, placeRequestContext]
   );
 
   const form = useTravelFormData({
@@ -177,7 +205,7 @@ export function useUpsertTravelController(): UpsertTravelController {
     isSuperAdmin: isSuperuser,
     isAuthenticated,
     authReady,
-    initialPrefill: articlePrefill.value,
+    initialPrefill: placeRequestPrefill ?? articlePrefill.value,
     prefillPending: articlePrefill.pending,
     initialPublicationFormat: requestedPublicationMode,
     onAuthRequired: async () => {
@@ -211,6 +239,9 @@ export function useUpsertTravelController(): UpsertTravelController {
     currentData: form.formData,
     enabled: isAuthenticated && !form.isInitialLoading && form.hasAccess && !form.loadError,
     newDraftKind: requestedPublicationMode === 'note' ? 'note' : undefined,
+    ...(placeRequestContext ? {
+      newDraftScope: getPlaceRequestDraftScope(userId, placeRequestContext.requestId, requestedPublicationMode),
+    } : {}),
   });
 
   const { saveDraft, clearDraft, recoverDraft, flushDraft } = draft;
@@ -230,6 +261,7 @@ export function useUpsertTravelController(): UpsertTravelController {
     }
   }, [form.markers, photoSession]);
 
+  const trackedSubmission = useRef(false);
   const saveAndClearDraft = useCallback<ManualSave>(
     async (dataOverride, options) => {
       const result = await handleManualSave(dataOverride, !dataOverride || options?.intent === 'submit'
@@ -240,6 +272,12 @@ export function useUpsertTravelController(): UpsertTravelController {
       // loss confirmation, which is a clean no-op that leaves the form untouched.
       // Clearing there would delete a draft holding still-unconfirmed edits.
       if (result === undefined) return result;
+      if (placeRequestContext && options?.intent === 'submit' && !trackedSubmission.current &&
+          result.place_request_id === placeRequestContext.requestId &&
+          resolveTravelPublicationStatus(result) === 'pending_review') {
+        trackedSubmission.current = true;
+        trackPlaceContribution('submitted', { ...placeRequestContext, mode: resolveTravelPublicationFormat(result) });
+      }
 
       // Settled synchronously, before returning: this flow navigates the moment
       // it resolves (`router.replace` in useTravelPublishModeration, deliberately,
@@ -260,7 +298,7 @@ export function useUpsertTravelController(): UpsertTravelController {
       }
       return result;
     },
-    [handleManualSave, getFormData, flushDraft, clearDraft, form.autosave]
+    [handleManualSave, getFormData, flushDraft, clearDraft, form.autosave, placeRequestContext]
   );
 
   // Adapt the save signature while preserving canonical state for wizard cleanup.
@@ -274,6 +312,19 @@ export function useUpsertTravelController(): UpsertTravelController {
   const publicationMode: TravelPublicationFormat =
     resolveTravelPublicationFormat(form.formData) === 'note' &&
     (requestedPublicationMode === 'note' || !isSuperuser) ? 'note' : 'full';
+  const trackedPhoto = useRef(false);
+  useEffect(() => {
+    if (!placeRequestContext || !isAuthenticated || !placeRequestPrefill || trackedPhoto.current) return;
+    const savedImage = (url: unknown) => typeof url === 'string' && /^(?:https?:\/\/|\/(?!\/))/i.test(url);
+    const hasPhoto = savedImage(form.formData.travel_image_thumb_url) ||
+      form.formData.gallery?.some((item) => savedImage(typeof item === 'string' ? item : item?.url)) ||
+      form.markers.some((marker) => savedImage(marker.image));
+    if (hasPhoto) {
+      trackedPhoto.current = true;
+      trackPlaceContribution('photo_saved', { ...placeRequestContext, mode: publicationMode });
+    }
+  }, [form.formData.gallery, form.formData.travel_image_thumb_url, form.markers, isAuthenticated,
+    placeRequestContext, placeRequestPrefill, publicationMode]);
   const wizard = useTravelWizard({
     totalSteps: publicationMode === 'note' ? NOTE_TOTAL_STEPS : FULL_TOTAL_STEPS,
     hasUnsavedChanges: form.autosave.hasUnsavedChanges || hasPendingPointPhotos(form.markers),
@@ -359,6 +410,7 @@ export function useUpsertTravelController(): UpsertTravelController {
       const dataForCurrentRoute = {
         ...recoveredData,
         ...readTravelModerationMetadata(currentData),
+        ...(placeRequestContext ? { place_request_id: placeRequestContext.requestId } : {}),
         ...(isNew && normalizeTravelId(recoveredData.id) != null ? { id: null } : {}),
         publication_status: currentData.publication_status !== undefined
           ? currentData.publication_status
@@ -371,7 +423,7 @@ export function useUpsertTravelController(): UpsertTravelController {
       setFormData(dataForCurrentRoute);
       setMarkers(recoveredMarkers);
     }
-  }, [isNew, recoverDraft, setFormData, setMarkers, getFormData]);
+  }, [isNew, placeRequestContext, recoverDraft, setFormData, setMarkers, getFormData]);
 
   const draftRecovery = useMemo(
     () => ({
@@ -415,6 +467,7 @@ export function useUpsertTravelController(): UpsertTravelController {
       isAuthenticated,
       isSuperAdmin: isSuperuser,
       shareTripContext,
+      placeRequestContext,
       createHref,
       shareTripCountryField,
 
@@ -449,6 +502,7 @@ export function useUpsertTravelController(): UpsertTravelController {
       isNew,
       publicationMode,
       shareTripContext,
+      placeRequestContext,
       createHref,
       shareTripCountryField,
       form.isInitialLoading,

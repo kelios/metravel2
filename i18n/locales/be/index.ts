@@ -1,3 +1,4 @@
+import { places } from './places'
 import { books } from './books'
 import { common } from './common'
 import { generatedResources } from './generated'
@@ -8,6 +9,7 @@ export const beResources = {
   common,
   books,
   offline,
+  places,
   ...generatedResources,
   ...staticResources,
 } as const

@@ -6,6 +6,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { ResponsiveContainer, ResponsiveStack } from '@/components/layout'
 import { asBottomDimension, useScrollBottomPadding } from '@/components/layout/bottomChromeInset'
 import Button from '@/components/ui/Button'
+import ContributionBanner from '@/components/common/ContributionBanner'
 import { Body, Heading } from '@/components/ui/Typography'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useResponsive } from '@/hooks/useResponsive'
@@ -99,6 +100,8 @@ export default function BecomeAuthorScreen() {
               <Body variant="small" muted>{t('homeStatic:becomeAuthor.startHint')}</Body>
             </View>
           </View>
+          {Platform.OS === 'web' ? <ContributionBanner density="compact" campaign={{ source: 'author_page' }} /> : null}
+
           <View style={styles.benefits} {...SCREEN_CONTENT_FIRST_PROPS}>
             <Heading level={2}>{t('homeStatic:becomeAuthor.benefitsTitle')}</Heading>
             <View style={styles.grid}>

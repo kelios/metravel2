@@ -18,8 +18,20 @@ describe('travelCreateNavigation', () => {
       source_travel_id: undefined,
       country: undefined,
       place: undefined,
+      place_request_id: undefined,
+      contribution_source: undefined,
     })
     expect(travelCreateResetParams('/profile')).toBeNull()
+  })
+
+  it('keeps campaign identity only when it is present in the requested URL', () => {
+    const id = 'c79916ab-35d9-44e5-ad02-c9fb67979c14'
+    expect(travelCreateResetParams(`/travel/new?mode=note&place_request_id=${id}&contribution_source=map`)).toMatchObject({
+      id: undefined,
+      mode: 'note',
+      place_request_id: id,
+      contribution_source: 'map',
+    })
   })
 
   it('clears the saved id when the create screen is opened again', () => {
@@ -36,6 +48,8 @@ describe('travelCreateNavigation', () => {
       source_travel_id: undefined,
       country: undefined,
       place: undefined,
+      place_request_id: undefined,
+      contribution_source: undefined,
     })
   })
 

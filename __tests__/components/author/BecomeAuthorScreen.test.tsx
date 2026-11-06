@@ -11,7 +11,10 @@ import { buildCriticalCSS } from '@/utils/criticalCSSBuilder'
 
 const mockPush = jest.fn()
 let mockIsMobile = true
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }))
+jest.mock('expo-router', () => ({
+  useRouter: () => ({ push: mockPush }),
+  Link: ({ children }: { children: React.ReactNode }) => children,
+}))
 jest.mock('@/hooks/useResponsive', () => ({
   ...jest.requireActual('@/hooks/useResponsive'),
   useResponsive: () => ({ isMobile: mockIsMobile }),

@@ -44,6 +44,44 @@ describe('article wizard initial prefill', () => {
     expect((saveFormData as jest.Mock).mock.calls[0][0]).not.toHaveProperty('source_travel_id');
   });
 
+  it.each(['note', 'full'] as const)('keeps a new %s campaign draft local until the first explicit save', async (mode) => {
+    const placeRequestId = 'c79916ab-35d9-44e5-ad02-c9fb67979c14';
+    const point = {
+      id: null, address: 'Здравнёво', country: 112,
+      lat: 55.281234567, lng: 30.303456789, categories: [44], image: null,
+    };
+    const initialPrefill = { name: 'Музей-усадьба «Здравнёво»', countries: ['112'], placeRequestId, point };
+    const { result } = await renderHook(() => useTravelFormData({
+      ...defaults, initialPrefill, initialPublicationFormat: mode,
+    }));
+
+    expect(result.current.formData).toMatchObject({
+      name: initialPrefill.name, countries: ['112'], place_request_id: placeRequestId,
+      coordsMeTravel: [point], publication_format: mode, gallery: [],
+    });
+    expect(result.current.markers).toEqual([point]);
+    expect(result.current.autosave.hasUnsavedChanges).toBe(false);
+    await tick();
+    expect(saveFormData).not.toHaveBeenCalled();
+
+    await act(() => result.current.setFormData((previous) => ({ ...previous, description: '<p>Были летом.</p>' })));
+    await tick();
+    expect(result.current.autosave.hasUnsavedChanges).toBe(true);
+    expect(saveFormData).not.toHaveBeenCalled();
+
+    await act(async () => { await result.current.handleManualSave(); });
+    expect(saveFormData).toHaveBeenCalledTimes(1);
+    expect((saveFormData as jest.Mock).mock.calls[0][0]).toMatchObject({
+      place_request_id: placeRequestId, coordsMeTravel: [{ ...point, image: '' }], publication_format: mode,
+      description: '<p>Были летом.</p>',
+    });
+
+    await act(() => result.current.setFormData((previous) => ({ ...previous, countries: ['112', '44'] })));
+    await tick();
+    expect(saveFormData).toHaveBeenCalledTimes(2);
+    expect((saveFormData as jest.Mock).mock.calls[1][0]).not.toHaveProperty('place_request_id');
+  });
+
   it('keeps edits and recovered data when later context, catalog or locale changes', async () => {
     const { result, rerender } = await renderHook(
       ({ prefill }) => useTravelFormData({ ...defaults, initialPrefill: prefill }),

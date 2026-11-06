@@ -417,6 +417,7 @@ export interface TravelFormData extends TravelModerationMetadata {
     moderation?: boolean;
     publication_status?: TravelPublicationStatus | (string & {}) | null;
     publication_format?: TravelPublicationFormat;
+    place_request_id?: string;
     travel_image_thumb_url?: string | null;
     travel_image_thumb_small_url?: string | null;
 

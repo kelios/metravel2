@@ -4,6 +4,8 @@ import { DEFAULT_LOCALE, type SupportedLocale } from '@/i18n/config';
 const achievementTargetId = (id: string | number | null | undefined) =>
   id == null ? id : String(id);
 
+const placeRequestDetailKey = (id: string | null) => ['place-requests', 'detail', id] as const;
+
 export const queryKeys = {
   travel: (slugOrId: string | number) => ['travel', slugOrId] as const,
   travelAll: () => ['travel'] as const,
@@ -90,6 +92,9 @@ export const queryKeys = {
   // на cache lifetime, повторное открытие карточки идёт из кэша.
   mapPlaceSources: (placeKey: string) => ['map-place-sources', placeKey] as const,
   mapPlaceSourcesAll: () => ['map-place-sources'] as const,
+  placeRequests: (locale: SupportedLocale) => ['place-requests', 'collection', 'by', locale] as const,
+  placeRequestDetail: placeRequestDetailKey,
+  placeRequest: (id: string | null, locale: SupportedLocale) => [...placeRequestDetailKey(id), locale] as const,
   // Каталог мест (#2184): список и его проекции под одним корнем. Проекции
   // («объём без категорий» — итог и фасеты, счётчики подборок) заполняются из
   // ответа списка, а не отдельными запросами: screens/tabs/usePlacesCatalogQueries.ts.
