@@ -18,6 +18,8 @@ type Props = {
   title: string
   placement?: 'bottom' | 'center'
   children?: React.ReactNode
+  /** Actions or a form kept outside the scrollable body. */
+  footer?: React.ReactNode
   /** Retain a body's height limit without letting consumers replace panel layout/insets. */
   panelStyle?: StyleProp<Pick<ViewStyle, 'maxHeight'>>
   /** Forms opt in on iOS; Android Modal already resizes its window for the keyboard. */
@@ -62,7 +64,7 @@ const WEB_ROOT_PROPS = { dataSet: { cardAction: 'true' } }
  *    Modal лежит поверх дока, поэтому отступа от края нет, а низ панели
  *    резервирует home indicator / навигационную панель.
  */
-const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, placement = 'bottom', onDismiss, panelStyle, keyboardAware = false, modalContent }) => {
+const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, footer, placement = 'bottom', onDismiss, panelStyle, keyboardAware = false, modalContent }) => {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const isWeb = Platform.OS === 'web'
@@ -126,6 +128,7 @@ const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, place
           {children}
         </ScrollView>
       ) : children}
+      {footer}
     </View>
   )
 
@@ -136,7 +139,7 @@ const BottomSheet: React.FC<Props> = ({ visible, onClose, title, children, place
       animationType="fade"
       onRequestClose={onClose}
       onDismiss={onDismiss}
-      {...(isWeb && centered ? { accessibilityLabel: title } : null)}
+      {...(isWeb ? { accessibilityLabel: title } : null)}
     >
       {/* Preserve quest-share's viewport compensation (e7794e549): a classic
           scrollbar can narrow the RNW Modal container and offset its contents. */}

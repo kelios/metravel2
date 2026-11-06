@@ -97,11 +97,13 @@ it('loads the selected place on the first arrow and pages photos and routes with
   const card = () => within(view.getByTestId(`places-card-slot-${place.id}`))
 
   expect(card().getByText('Материал 1 из 2')).toBeTruthy()
+  expect(card().getByTestId(`place-discussion-${place.id}`)).toBeTruthy()
   expect(card().getByTestId('card-photo').props.children).toBe('https://example.com/first.webp')
   expect(mockFetchWithTimeout).not.toHaveBeenCalled()
   await fireEvent.press(card().getByLabelText('Следующий материал'))
   await waitFor(() => expect(card().getByText('Материал 2 из 2')).toBeTruthy())
   expect(card().getByText(second.article_title)).toBeTruthy()
+  expect(card().getByTestId(`place-discussion-${place.id}`)).toBeTruthy()
   expect(card().getByTestId('card-photo').props.children).toBe(second.thumbnail_url)
   expect(card().getByText('Национальная библиотека')).toBeTruthy()
   expect(card().getByText('Минск, проспект Независимости 116')).toBeTruthy()

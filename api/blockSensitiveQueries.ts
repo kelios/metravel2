@@ -24,6 +24,7 @@ import { queryKeys } from '@/api/queryKeys'
 import { shouldPersistQuery } from '@/utils/queryPersist'
 import {
   chatSenderIds,
+  commentAuthorIds,
   isLastPageEmptiedByBlock,
   organizerIds,
   socialProfileIds,
@@ -62,6 +63,7 @@ export const BLOCK_SENSITIVE_ENTRIES: readonly SensitiveEntry[] = [
   { key: ['roulette-travel-facets'] },
   // Комментарии: списки и дерево; ответ уходит вместе с заблокированным родителем.
   { key: commentKeys.all, strip: stripComments },
+  { key: queryKeys.placeCommentsAll(), strip: (data, blocked) => stripCollection(data, commentAuthorIds, blocked) },
   { key: ['trip-chat-messages'], strip: (data, blocked) => stripCollection(data, chatSenderIds, blocked) },
   { key: queryKeys.publicTripsAll(), strip: (data, blocked) => stripCollection(data, organizerIds, blocked) },
   { key: queryKeys.communityTripsAll(), strip: (data, blocked) => stripCollection(data, organizerIds, blocked) },
@@ -98,6 +100,11 @@ export const BLOCK_SENSITIVE_QUERIES: readonly QueryKey[] = BLOCK_SENSITIVE_ENTR
 
 /** Корни кэша без чужого авторского контента — с причиной, почему блок их не касается. */
 export const BLOCK_EXEMPT_ROOTS: Readonly<Record<string, string>> = {
+  'games-media-manifest': 'версионный манифест редакционных игр',
+  'coloring-sheet-index': 'редакционный индекс раскрасок',
+  'walk-deck': 'редакционная колода заданий для прогулки',
+  'road-quiz': 'редакционный дорожный квиз',
+  'route-tasks': 'версионные редакционные задания на маршруте',
   'ai-similar': 'смысловой подбор: опубликованные статьи и квесты из индекса metravel-assist (#2456), без личных данных; блок автора к выдаче службы не применяется — это публичные материалы каталога',
   'ai-search': 'смысловой поиск по описанию из того же индекса; публичные материалы',
   'travel-route-files': 'файлы трека открытого путешествия; сама деталь перезапрашивается',

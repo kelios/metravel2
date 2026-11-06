@@ -1,4 +1,8 @@
 export const sharedStaticResources = {
+  "placeComments.pendingModeration": "Комментарий отправлен на проверку. Он появится после одобрения.",
+  "placeComments.action": "Комментарии",
+  "placeComments.title": "Комментарии · {{place}}",
+  "placeComments.sendError": "Не удалось отправить комментарий. Попробуйте ещё раз.",
   "appHandoff.signal.quest_start.title": "Квест удобнее проходить в приложении",
   "appHandoff.signal.quest_start.description": "Офлайн-карта и подсказки под рукой",
   "appHandoff.signal.offline_save.title": "Офлайн удобнее в приложении",

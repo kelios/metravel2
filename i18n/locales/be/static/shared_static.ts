@@ -1,4 +1,8 @@
 export const sharedStaticResources = {
+  "placeComments.pendingModeration": "Каментарый адпраўлены на праверку. Ён з’явіцца пасля ўхвалення.",
+  "placeComments.action": "Каментарыі",
+  "placeComments.title": "Каментарыі · {{place}}",
+  "placeComments.sendError": "Не ўдалося адправіць каментарый. Паспрабуйце яшчэ раз.",
   "appHandoff.signal.quest_start.title": "Квэст зручней праходзіць у дадатку",
   "appHandoff.signal.quest_start.description": "Афлайн-карта і падказкі пад рукой",
   "appHandoff.signal.offline_save.title": "Афлайн зручней у дадатку",

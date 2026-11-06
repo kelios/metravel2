@@ -673,6 +673,8 @@ const createStyles = (
     ratingSlot: {
       flexDirection: 'row',
       alignItems: 'center',
+      flexWrap: 'wrap',
+      columnGap: 12,
       marginTop: 2,
     },
     inlineRelatedTravelActions: {

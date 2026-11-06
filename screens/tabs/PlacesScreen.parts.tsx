@@ -26,6 +26,7 @@ import {
 } from '@/components/MapPage/Map/PlacePopupCard/usePlaceSourcePagerState'
 import PlaceListCard from '@/components/places/PlaceListCard'
 import PlaceRatingSection from '@/components/places/PlaceRatingSection'
+import PlaceDiscussionButton from '@/components/places/PlaceDiscussionButton'
 import Button from '@/components/ui/Button'
 import EmptyState, { type EmptyStateProps } from '@/components/ui/EmptyState'
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem'
@@ -171,6 +172,8 @@ export const PlaceCard = React.memo(function PlaceCard({
   // только когда у места уже есть оценки (иначе на каждой карточке висели бы
   // пустые звёзды, которые всё равно нельзя нажать).
   const showRating = isAuthenticated || (place.rating?.value ?? 0) > 0
+  const pointId = Number(place.id)
+  const hasDiscussion = Number.isSafeInteger(pointId) && pointId > 0
 
   const normalizedCoord = React.useMemo(() => {
     const parts = String(place.coord ?? '')
@@ -292,16 +295,21 @@ export const PlaceCard = React.memo(function PlaceCard({
           ...(place.country ? [place.country] : []),
         ]}
         ratingSlot={
-          showRating ? (
-            <PlaceRatingSection
-              placeId={place.id}
-              initialRating={place.rating?.value ?? null}
-              initialCount={place.rating?.count ?? 0}
-              compact
-              // Агрегат уже в ответе каталога — не дёргаем GET на каждую карточку.
-              autoFetch={false}
-              testID={`places-rating-${place.id}`}
-            />
+          showRating || hasDiscussion ? (
+            <>
+              {showRating && (
+                <PlaceRatingSection
+                  placeId={place.id}
+                  initialRating={place.rating?.value ?? null}
+                  initialCount={place.rating?.count ?? 0}
+                  compact
+                  // Агрегат уже в ответе каталога — не дёргаем GET на каждую карточку.
+                  autoFetch={false}
+                  testID={`places-rating-${place.id}`}
+                />
+              )}
+              {hasDiscussion && <PlaceDiscussionButton key={pointId} pointId={pointId} placeTitle={cardTitle} />}
+            </>
           ) : null
         }
         relatedTravelUrl={relatedTravelUrl}

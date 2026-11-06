@@ -25,6 +25,7 @@ const UGC_RENDERS = {
   'components/travel/details/TravelAuthorQuickLink.tsx': { surface: 'detail', types: ['travel'] },
   'components/travel/compactSideBar/parts/AuthorBlock.tsx': { surface: 'detail', types: ['travel'] },
   'components/travel/CommentItem.tsx': { surface: 'list', types: ['travel_comment'] },
+  'components/places/PlaceCommentItem.tsx': { surface: 'list', types: ['place_comment'] },
   'components/messages/MessageBubble.tsx': { surface: 'list', types: ['message'] },
   'components/trips/chat/TripChatPanel.tsx': { surface: 'list', types: ['trip_chat_message'] },
   'components/quests/QuestReviewsModal.tsx': { surface: 'list', types: ['quest_review'] },

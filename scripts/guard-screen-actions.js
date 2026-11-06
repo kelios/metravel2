@@ -101,6 +101,7 @@ const DELETE_SURFACES = {
   'components/settings/DataManagementSection.tsx': ['settings', 'массовая очистка избранного/истории в разделе данных, с подтверждением'],
   'components/settings/DataOwnershipSection.tsx': ['settings', 'удаление своих маршрутов/переписки: пояснение и двухшаговое подтверждение'],
   'components/travel/CommentItem.tsx': ['row', 'удалить комментарий в его меню, ConfirmDialog'],
+  'components/places/PlaceCommentItem.tsx': ['row', 'удалить свой комментарий к месту, подписанная кнопка и подтверждение через confirmAction'],
   'components/travel/ImageGalleryComponent.ios.tsx': ['editor', 'удалить фото в редакторе галереи'],
   'components/travel/PhotoUploadWithPreview.tsx': ['editor', 'удалить фото в загрузчике'],
   'components/travel/PublishModerationAdminPanel.tsx': ['dialog', 'админское отклонение публикации'],

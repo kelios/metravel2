@@ -1,4 +1,8 @@
 export const sharedStaticResources = {
+  "placeComments.pendingModeration": "Your comment was sent for review. It will appear after approval.",
+  "placeComments.action": "Comments",
+  "placeComments.title": "Comments · {{place}}",
+  "placeComments.sendError": "Couldn't send your comment. Try again.",
   "appHandoff.signal.quest_start.title": "Quests are easier in the app",
   "appHandoff.signal.quest_start.description": "Offline map and hints at hand",
   "appHandoff.signal.offline_save.title": "Offline works better in the app",

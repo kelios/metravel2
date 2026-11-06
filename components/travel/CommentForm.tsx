@@ -13,6 +13,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import type { TravelComment } from '../../types/comments';
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 
 
 interface CommentFormProps {
@@ -24,6 +25,7 @@ interface CommentFormProps {
   editComment?: TravelComment | null;
   onCancelEdit?: () => void;
   autoFocus?: boolean;
+  maxLength?: number;
 }
 
 export function CommentForm({
@@ -35,6 +37,7 @@ export function CommentForm({
   editComment,
   onCancelEdit,
   autoFocus = false,
+  maxLength = 2000,
 }: CommentFormProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -126,7 +129,7 @@ export function CommentForm({
           placeholder={placeholder}
           placeholderTextColor={colors.textTertiary}
           multiline
-          maxLength={2000}
+          maxLength={maxLength}
           autoFocus={autoFocus}
           editable={!submitting}
           accessibilityLabel={i18nT('travel:components.travel.CommentForm.pole_vvoda_kommentariya_28d820cb')}
@@ -157,9 +160,9 @@ export function CommentForm({
           </Pressable>
         </View>
       </View>
-      {text.length > 1800 && (
+      {text.length > maxLength * 0.9 && (
         <Text style={styles.charCount}>
-          {text.length} / 2000
+          {formatInteger(text.length)} / {formatInteger(maxLength)}
         </Text>
       )}
     </View>

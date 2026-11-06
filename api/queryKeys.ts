@@ -188,6 +188,9 @@ export const queryKeys = {
     ['articleRating', articleId, isAuthenticated] as const,
   placeRating: (placeId: string | number | undefined, isAuthenticated: boolean) =>
     ['placeRating', placeId, isAuthenticated] as const,
+  placeCommentsAll: () => ['place-comments'] as const,
+  placeComments: (owner: string | null, pointId: number) =>
+    [...queryKeys.placeCommentsAll(), owner, pointId] as const,
   article: (articleIdOrSlug: number | string | undefined) => ['article', articleIdOrSlug] as const,
   stravaStatus: (userId: string | null) => ['strava', 'status', userId] as const,
   stravaActivitiesRoot: () => ['strava', 'activities'] as const,
