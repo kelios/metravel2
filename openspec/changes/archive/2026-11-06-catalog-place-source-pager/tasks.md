@@ -7,5 +7,7 @@
 
 ## 2. Testing после ревью
 
-- [ ] 2.1 На опубликованном target проверить карточку с несколькими материалами на mobile web, затем desktop. Записать скриншоты, console и network до первого нажатия и после перелистывания. Проверить обе ссылки, рейтинг и карточку с одной статьёй.
-- [ ] 2.2 После #3075 проверить Гольшанский замок с живыми данными и провести `openspec validate --all` перед архивированием.
+- [x] 2.1 На опубликованном target проверить карточку с несколькими материалами на mobile web, затем desktop. Записать скриншоты, console и network до первого нажатия и после перелистывания. Проверить обе ссылки, рейтинг и карточку с одной статьёй.
+- [x] 2.2 После #3075 проверить Гольшанский замок с живыми данными и провести `openspec validate --all` перед архивированием.
+
+Production browser acceptance passed on `b682cd97a59040ddd08ca5d9161e1b1b8bf12f96`: Holshany one card and two working links; Mir four sources; ratings unchanged. Earlier mobile/desktop canonical, error/retry and single-source checks passed.
