@@ -289,7 +289,7 @@ export default function PlacesScreen() {
       <View style={styles.cardsGrid} testID="places-cards-grid">
         {visiblePlaces.map((place, index) => (
           <PlaceCard
-            key={place.id}
+            key={place.placeId == null ? `point:${place.id}` : `place:${place.placeId}`}
             place={place}
             styles={styles}
             onOpenMap={openOnMap}

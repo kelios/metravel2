@@ -20,6 +20,10 @@ import {
   buildYandexNaviUrl,
 } from '@/components/MapPage/Map/mapLinks'
 import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
+import {
+  resolvePlaceSourceCardFields,
+  usePlaceSourcePagerState,
+} from '@/components/MapPage/Map/PlacePopupCard/usePlaceSourcePagerState'
 import PlaceListCard from '@/components/places/PlaceListCard'
 import PlaceRatingSection from '@/components/places/PlaceRatingSection'
 import Button from '@/components/ui/Button'
@@ -49,7 +53,7 @@ export const PlaceCard = React.memo(function PlaceCard({
   place: CatalogPlace
   styles: PlacesStyles
   onOpenMap: (place: CatalogPlace) => void
-  onOpenTravel: (place: CatalogPlace) => void
+  onOpenTravel: (url: string) => void
   containerStyle?: StyleProp<ViewStyle>
   // Above-the-fold cards (first viewport row(s)) decode eagerly with high
   // priority so the first screen shows sharp photos instead of blur on load.
@@ -61,18 +65,27 @@ export const PlaceCard = React.memo(function PlaceCard({
     isMobileCard
       ? Math.max(0, viewportWidth - DESIGN_TOKENS.spacing.lg * 2)
       : undefined
-  const imageUrl = place.travelImageLandscapeUrl || place.imageUrl || place.travelImageThumbUrl || null
-  const relatedTravelUrl = normalizeRelatedTravelRoute(place.urlTravel)
-  // The card must name the PLACE, not the article it came from: `place.title` is
-  // the travel/article title (identical across every point of one trip, e.g. три
-  // карточки «Наш Вьетнам»). The clean POI name lives in the head segment of the
-  // reverse-geocoded address — same split the map list/popup already uses, so
-  // /places and /map never diverge. The article stays reachable via «Статья».
-  const placeName = React.useMemo(
-    () => buildPlaceTitleParts({ address: place.address }),
-    [place.address],
+  const canPageSources = place.placeId != null && !!place.primarySource && (place.sourceCount ?? 1) > 1
+  const pager = usePlaceSourcePagerState(canPageSources ? place : null, canPageSources, { loadOnInteraction: true })
+  const hasPager = canPageSources && pager.sourceCount > 1
+  const sourceFields = resolvePlaceSourceCardFields(place, pager, hasPager)
+  const primaryImageUrl = place.travelImageLandscapeUrl || place.imageUrl || place.travelImageThumbUrl || null
+  const imageUrl = (pager.isPrimarySourceActive && primaryImageUrl) || sourceFields.imageUrl || null
+  const sourceTravelId = pager.activeSource?.travelId
+  const articleUrl = sourceFields.articleUrl || (
+    sourceTravelId != null && Number.isSafeInteger(sourceTravelId) && sourceTravelId > 0
+      ? `/travels/${sourceTravelId}`
+      : ''
   )
-  const cardTitle = placeName.title || place.title
+  const relatedTravelUrl = normalizeRelatedTravelRoute(place.urlTravel)
+  // Canonical rows have the place's own title. For legacy rows, the title may
+  // be the article's, so use the same address split as the map popup.
+  const canonicalTitle = place.placeId != null ? place.title : undefined
+  const placeName = React.useMemo(
+    () => buildPlaceTitleParts({ name: canonicalTitle, address: place.address }),
+    [canonicalTitle, place.address],
+  )
+  const cardTitle = canonicalTitle || placeName.title || place.title
   const addressBadge =
     placeName.subtitle && placeName.subtitle !== place.country ? placeName.subtitle : null
   const mapActions = React.useMemo(() => {
@@ -230,7 +243,7 @@ export const PlaceCard = React.memo(function PlaceCard({
       category: categoryName,
       categoryName,
     }
-    const photo = place.travelImageThumbUrl || imageUrl
+    const photo = place.travelImageThumbUrl || primaryImageUrl
     if (photo) payload.photo = photo
 
     setIsAdding(true)
@@ -256,7 +269,7 @@ export const PlaceCard = React.memo(function PlaceCard({
     place.title,
     place.category,
     place.travelImageThumbUrl,
-    imageUrl,
+    primaryImageUrl,
   ])
 
   // The grid sizing (flexBasis/min/maxWidth) MUST live on this outer wrapper —
@@ -269,8 +282,8 @@ export const PlaceCard = React.memo(function PlaceCard({
       <PlaceListCard
         title={cardTitle}
         imageUrl={imageUrl}
-        placeholderColor={place.placeholderColor}
-        placeholderBlurhash={place.placeholderBlurhash}
+        placeholderColor={pager.isPrimarySourceActive ? place.placeholderColor : undefined}
+        placeholderBlurhash={pager.isPrimarySourceActive ? place.placeholderBlurhash : undefined}
         categoryLabel={place.category}
         coord={place.coord}
         rating={place.rating}
@@ -292,9 +305,18 @@ export const PlaceCard = React.memo(function PlaceCard({
           ) : null
         }
         relatedTravelUrl={relatedTravelUrl}
+        relatedTravelImageUrl={primaryImageUrl}
         relatedTravelId={place.relatedTravelId}
         sourcePointId={place.sourcePointId}
         relatedTravelCountry={place.country}
+        sourcePager={hasPager ? {
+          total: pager.sourceCount,
+          currentIndex: pager.activeSourceIndex,
+          articleTitle: sourceFields.articleTitle || (pager.isPrimarySourceActive ? place.primarySource?.articleTitle : ''),
+          onPrev: pager.goPrev,
+          onNext: pager.goNext,
+          loadStatus: pager.sourceLoadStatus,
+        } : undefined}
         onCardPress={() => onOpenMap(place)}
         mapActions={mapActions}
         // #2778: в ряду ≤3 плиток — одна основная, «Сохранить», «Навигация». Тап по
@@ -302,13 +324,13 @@ export const PlaceCard = React.memo(function PlaceCard({
         // «Прочитать» (единственный путь к статье), а «На карте» — пункт листа.
         inlineActions={
           [
-            ...(place.urlTravel
+            ...(articleUrl
               ? [
                   {
                     key: 'article',
                     label: i18nT('map:screens.tabs.PlacesScreen_parts.statya_28264f10'),
                     icon: 'file-text' as const,
-                    onPress: () => onOpenTravel(place),
+                    onPress: () => onOpenTravel(articleUrl),
                     title: i18nT('map:screens.tabs.PlacesScreen_parts.otkryt_statyu_6f4d1411'),
                   },
                 ]

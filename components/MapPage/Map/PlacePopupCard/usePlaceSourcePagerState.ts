@@ -6,10 +6,9 @@
  * коллекцию материалов и отдаёт презентационной `PlacePopupCard` уже готовые
  * source-поля.
  *
- * Ленивость: хук живёт внутри карточки, а карточка монтируется только когда
- * место открыто, — запрос не может уйти на рендере маркеров. Кэш React Query
- * по `placeKey` держит «один запрос на place на cache lifetime», поэтому
- * повторное открытие и перелистывание сети не касаются.
+ * Карта включает запрос при открытии карточки, каталог — по первой стрелке.
+ * Кэш React Query по `placeKey` общий: пока ответ свежий, повторное открытие
+ * и перелистывание обходятся без сети.
  */
 import { useCallback, useMemo, useRef, useState } from 'react';
 
@@ -33,6 +32,7 @@ export type PlaceSourcePagerState = {
    * карточка показала бы чужое фото и увела бы по чужой ссылке.
    */
   isPrimarySourceActive: boolean;
+  sourceLoadStatus: 'idle' | 'loading' | 'error';
   goPrev: () => void;
   goNext: () => void;
 };
@@ -45,42 +45,57 @@ type PointLike = {
   primarySource?: MapPlaceSource | null;
 };
 
+const resolveSources = (
+  primarySource: MapPlaceSource | null,
+  fetchedSources: MapPlaceSource[] | undefined,
+): MapPlaceSource[] => {
+  if (!primarySource) return fetchedSources ?? [];
+  if (!fetchedSources?.length) return [primarySource];
+  const isPrimary = (source: MapPlaceSource) => isSameMapPlaceSource(source, primarySource);
+  return [fetchedSources.find(isPrimary) ?? primarySource, ...fetchedSources.filter((source) => !isPrimary(source))];
+};
+
+const getAdjacentSourceId = (sources: MapPlaceSource[], index: number, delta: number): string | null =>
+  sources.length > 1 ? sources[(index + delta + sources.length) % sources.length].sourceId : null;
+
 export const usePlaceSourcePagerState = (
   point: PointLike | null | undefined,
   enabled: boolean,
+  { loadOnInteraction = false }: { loadOnInteraction?: boolean } = {},
 ): PlaceSourcePagerState => {
   const placeId = readMapPlaceId(point);
   const placeKey = point ? getMapPlaceKey(point) : '';
   const primarySource = point?.primarySource ?? null;
   const declaredCount = Number.isFinite(point?.sourceCount) ? Number(point?.sourceCount) : 1;
 
-  const { data: fetchedSources, isError: sourcesFailed } = useMapPlaceSources({
+  const canLoadOnInteraction = enabled && loadOnInteraction && placeId != null && declaredCount > 1;
+  const [requestedPage, setRequestedPage] = useState<{ placeKey: string; delta: number | null } | null>(null);
+  const currentRequest = requestedPage?.placeKey === placeKey ? requestedPage : null;
+  const { data, isError, isStale, fetchStatus, refetch } = useMapPlaceSources({
     placeKey,
     placeId,
     sourceCount: declaredCount,
-    enabled,
+    enabled: enabled && (!loadOnInteraction || currentRequest != null),
   });
+
+  // The shared query is invalidated when a user blocks an author. Once the
+  // catalog starts listening, keep it active and suppress invalidated sources
+  // until the server returns the currently visible articles.
+  const fetchedSources = canLoadOnInteraction && (!currentRequest || isStale) ? undefined : data;
+  const sourcesFailed = isError && (!canLoadOnInteraction || currentRequest != null);
+  const loading = currentRequest != null && (fetchStatus === 'fetching' || fetchStatus === 'paused');
+  const sourceLoadStatus = loading ? 'loading' : canLoadOnInteraction && sourcesFailed ? 'error' : 'idle';
 
   // Primary из маркера остаётся первым и доступным даже при неполном/неверно
   // упорядоченном ответе endpoint. Иначе ответ только со вторым материалом
   // самопроизвольно переключал карточку на него и делал primary недоступным.
-  const sources = useMemo<MapPlaceSource[]>(() => {
-    if (!primarySource) return fetchedSources ?? [];
-    if (!fetchedSources || fetchedSources.length === 0) return [primarySource];
-    const fetchedPrimary = fetchedSources.find((source) =>
-      isSameMapPlaceSource(source, primarySource),
-    );
-    return [
-      fetchedPrimary ?? primarySource,
-      ...fetchedSources.filter((source) => !isSameMapPlaceSource(source, primarySource)),
-    ];
-  }, [fetchedSources, primarySource]);
+  const sources = useMemo(() => resolveSources(primarySource, fetchedSources), [fetchedSources, primarySource]);
 
   // Пока коллекция едет, счётчик берётся из маркера — карточка сразу честно
   // показывает «1 из N». Как только запрос завершился (данными или ошибкой),
   // счётчик равен тому, что реально листается: иначе стрелки остались бы на
   // экране навсегда и не делали бы ничего.
-  const sourcesSettled = fetchedSources != null || sourcesFailed;
+  const sourcesSettled = fetchedSources != null || (sourcesFailed && !canLoadOnInteraction);
   const sourceCount = sourcesSettled
     ? Math.max(sources.length, 1)
     : Math.max(declaredCount, sources.length, 1);
@@ -97,6 +112,7 @@ export const usePlaceSourcePagerState = (
   if (renderedPlaceKeyRef.current !== placeKey) {
     renderedPlaceKeyRef.current = placeKey;
     setActiveSourceId(primarySource?.sourceId ?? null);
+    if (requestedPage) setRequestedPage(null);
   }
 
   const activeSourceIndex = useMemo(() => {
@@ -105,13 +121,26 @@ export const usePlaceSourcePagerState = (
     return index >= 0 ? index : 0;
   }, [activeSourceId, sources]);
 
+  if (currentRequest?.delta != null && !loading && (fetchedSources != null || sourcesFailed)) {
+    setRequestedPage({ placeKey, delta: null });
+    const next = getAdjacentSourceId(sources, activeSourceIndex, currentRequest.delta);
+    if (next) setActiveSourceId(next);
+  }
+
   const step = useCallback(
     (delta: number) => {
-      if (sources.length <= 1) return;
-      const next = (activeSourceIndex + delta + sources.length) % sources.length;
-      setActiveSourceId(sources[next]?.sourceId ?? null);
+      if (canLoadOnInteraction && fetchedSources == null) {
+        if (loading) return;
+        setRequestedPage({ placeKey, delta });
+        // Enabling the observer is sufficient on the first activation. A
+        // subsequent activation after failure retries the same query.
+        if (currentRequest) void refetch({ cancelRefetch: false });
+        return;
+      }
+      const next = getAdjacentSourceId(sources, activeSourceIndex, delta);
+      if (next) setActiveSourceId(next);
     },
-    [activeSourceIndex, sources],
+    [activeSourceIndex, canLoadOnInteraction, currentRequest, fetchedSources, loading, placeKey, refetch, sources],
   );
 
   const goPrev = useCallback(() => step(-1), [step]);
@@ -124,7 +153,8 @@ export const usePlaceSourcePagerState = (
     activeSourceIndex,
     activeSource,
     isPrimarySourceActive:
-      !primarySource || !activeSource || activeSource.sourceId === primarySource.sourceId,
+      !primarySource || !activeSource || isSameMapPlaceSource(activeSource, primarySource),
+    sourceLoadStatus,
     goPrev,
     goNext,
   };

@@ -219,11 +219,11 @@ export function usePlacesCatalogController({ isCompact, isWide, hasMeasuredWidth
       },
     })
   }, [router])
-  const openTravel = useCallback((place: CatalogPlace) => {
-    if (!place.urlTravel) return
-    const internalRoute = normalizeRelatedTravelRoute(place.urlTravel)
+  const openTravel = useCallback((url: string) => {
+    if (!url) return
+    const internalRoute = normalizeRelatedTravelRoute(url)
     if (internalRoute) router.push(internalRoute as Href)
-    else void openExternalUrlInNewTab(place.urlTravel, { allowRelative: true, baseUrl: getSiteBaseUrl() })
+    else void openExternalUrlInNewTab(url, { allowRelative: true, baseUrl: getSiteBaseUrl() })
   }, [router])
 
   const hasActiveFilters = selectedCategories.length > 0 || Boolean(selectedCountry) || Boolean(query)

@@ -2,6 +2,7 @@ import type React from 'react'
 import type { StyleProp, ViewStyle } from 'react-native'
 import type Feather from '@expo/vector-icons/Feather'
 import type { PlaceRating } from '@/utils/placesCatalog'
+import type { PlaceSourcePagerProps } from '@/components/MapPage/Map/PlacePopupCard/PlaceSourcePager'
 
 type WebCardStyle = Omit<ViewStyle, 'width' | 'maxWidth'> & {
   width?: ViewStyle['width'] | string
@@ -75,6 +76,8 @@ export type PlaceListCardProps = {
    */
   actionBudget?: boolean
   relatedTravelUrl?: string | null
+  /** The place's related travel remains the target of the corner controls while paging. */
+  relatedTravelImageUrl?: string | null
   /** Название связанной статьи, если `title` карточки — имя места (#2776). */
   relatedTravelTitle?: string | null
   relatedTravelId?: number | null
@@ -89,4 +92,5 @@ export type PlaceListCardProps = {
   rating?: PlaceRating | null
   /** Interactive rating row rendered in the card body (own MeTravel rating). */
   ratingSlot?: React.ReactNode
+  sourcePager?: Omit<PlaceSourcePagerProps, 'colors' | 'compact' | 'inline'>
 }

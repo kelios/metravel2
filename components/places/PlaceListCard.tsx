@@ -4,6 +4,7 @@ import Feather from '@expo/vector-icons/Feather';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
+import PlaceSourcePager from '@/components/MapPage/Map/PlacePopupCard/PlaceSourcePager';
 import { ReadyBookRelatedLink, useReadyBookAction } from '@/components/books/ReadyBookRelatedLink'
 
 import { useThemedColors } from '@/hooks/useTheme';
@@ -59,6 +60,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   popupAligned = false,
   actionBudget = false,
   relatedTravelUrl,
+  relatedTravelImageUrl = imageUrl,
   relatedTravelTitle,
   relatedTravelId,
   sourcePointId,
@@ -68,6 +70,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   onToggleFavorite,
   rating = null,
   ratingSlot = null,
+  sourcePager,
 }) => {
   const colors = useThemedColors();
   const showTitleInContent = titleLayout === 'content';
@@ -162,7 +165,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
       relatedTravelUrl={relatedTravelUrl}
       relatedTravelId={relatedTravelId}
       fallbackTitle={relatedTravelTitle || title}
-      fallbackImageUrl={imageUrl}
+      fallbackImageUrl={relatedTravelImageUrl}
       fallbackCountry={relatedTravelCountry}
       fallbackCity={relatedTravelCity}
     />
@@ -289,6 +292,8 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
             </View>
           )}
 
+          {sourcePager && <PlaceSourcePager {...sourcePager} colors={colors} compact={compact} inline />}
+
           <CardMeta
             showTitleInContent={showTitleInContent}
             categoryLabel={categoryLabel}
@@ -310,7 +315,7 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
                 relatedTravelUrl={relatedTravelUrl}
                 relatedTravelId={relatedTravelId}
                 fallbackTitle={relatedTravelTitle || title}
-                fallbackImageUrl={imageUrl}
+                fallbackImageUrl={relatedTravelImageUrl}
                 fallbackCountry={relatedTravelCountry}
                 fallbackCity={relatedTravelCity}
                 variant="inline"

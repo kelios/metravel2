@@ -1,4 +1,5 @@
 import type { TravelCoords, TravelMediaImage } from '@/types/types'
+import { normalizeMapPlaceSource, readMapPlaceMarkerFields } from '@/api/mapPlaces'
 import { translate as i18nT } from '@/i18n'
 import { getMediaPlaceholderData } from '@/utils/travelMediaVariants'
 import { indexMediaImage } from '@/utils/mediaPlaceholderIndex'
@@ -67,11 +68,13 @@ export type PlacesCatalogPage = {
 
 type RawCatalogCategory = { id?: unknown; name?: unknown }
 type RawCatalogCountry = { code?: unknown; name?: unknown }
-type RawCatalogTravel = { id?: unknown; url?: unknown; slug?: unknown }
+type RawCatalogTravel = { id?: unknown; url?: unknown; slug?: unknown; title?: unknown }
 type RawCatalogImage = { thumb_url?: unknown; landscape_url?: unknown }
 
 type RawCatalogItem = {
   id?: unknown
+  place_id?: unknown
+  source_count?: unknown
   travel_id?: unknown
   primary_source?: { travel_id?: unknown; point_id?: unknown } | null
   urlTravel?: unknown
@@ -169,9 +172,11 @@ const parseTravelId = (value: unknown): number | null => {
 const buildRelatedTravelUrl = (
   item: RawCatalogItem,
   travelId: number | null,
+  primaryArticleUrl?: string | null,
 ): string => {
   const topLevelUrl = normalizeText(item.urlTravel)
   if (topLevelUrl) return topLevelUrl
+  if (primaryArticleUrl) return primaryArticleUrl
 
   const nestedUrl = normalizeText(item.travel?.url)
   if (nestedUrl) return nestedUrl
@@ -314,9 +319,13 @@ const mapCatalogItem = (raw: unknown): CatalogPlace | null => {
   const country = normalizeText(item.country?.name, i18nT('shared:utils.placesCatalog.strana_ne_ukazana_2418b87a'))
   const countryCode = normalizeText(item.country?.code)
   const travelId = parseTravelId(item.primary_source?.travel_id) ?? parseTravelId(item.travel_id) ?? parseTravelId(item.travel?.id)
-  const urlTravel = buildRelatedTravelUrl(item, travelId)
   const thumbUrl = normalizeImageUrl(item.image?.thumb_url)
   const landscapeUrl = normalizeImageUrl(item.image?.landscape_url)
+  const placeFields = readMapPlaceMarkerFields(item, normalizeImageUrl)
+  const primarySource = placeFields.primarySource ?? (
+    placeFields.placeId != null ? normalizeMapPlaceSource({ pointId: parseTravelId(id) }) : null
+  )
+  const urlTravel = buildRelatedTravelUrl(item, travelId, primarySource?.articleUrl)
   const title = normalizeText(item.title, address || i18nT('map:utils.placesCatalog.mesto_bez_nazvaniya_d8d437b0'))
   const searchText = normalizeText(item.search_text).toLowerCase()
   // Манифест каталога кладёт кадры места в `media.address_images` (ключ — id
@@ -332,10 +341,18 @@ const mapCatalogItem = (raw: unknown): CatalogPlace | null => {
   indexMediaImage(mediaEntry, [thumbUrl, landscapeUrl])
 
   return {
+    ...placeFields,
     id,
     travelId,
     relatedTravelId: travelId,
     sourcePointId: parseTravelId(item.primary_source?.point_id),
+    primarySource: primarySource ? {
+      ...primarySource,
+      travelId: primarySource.travelId ?? travelId,
+      articleTitle: primarySource.articleTitle || normalizeText(item.travel?.title),
+      articleUrl: primarySource.articleUrl || urlTravel || null,
+      thumbnailUrl: primarySource.thumbnailUrl || thumbUrl || null,
+    } : null,
     title,
     category,
     categoryId,

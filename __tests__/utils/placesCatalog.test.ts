@@ -1,4 +1,5 @@
 import { mapPlacesCatalogResponse, type RawPlacesCatalogResponse } from '@/utils/placesCatalog'
+import { LIBRARY_PLACE_UUID } from '@/__tests__/fixtures/mapPlaceFixtures'
 
 const rawItem = (overrides: Record<string, unknown> = {}) => ({
   id: 1039,
@@ -81,6 +82,30 @@ describe('mapPlacesCatalogResponse', () => {
     }), rawItem({ id: 2039 })] }))
     expect(page.places[0]).toMatchObject({ id: '701', sourcePointId: 2039, relatedTravelId: 169 })
     expect(page.places[1].sourcePointId).toBeNull()
+  })
+
+  it('keeps server place identity and enriches the compact primary article without merging legacy rows', () => {
+    const { places } = mapPlacesCatalogResponse(rawResponse({ results: [
+      rawItem({
+        id: 701, place_id: LIBRARY_PLACE_UUID, source_count: 2,
+        primary_source: { point_id: 2039, travel_id: 158 },
+      }),
+      rawItem({ id: 702, place_id: null }),
+      rawItem({ id: 703 }),
+    ] }))
+
+    expect(places.map((place) => place.id)).toEqual(['701', '702', '703'])
+    expect(places[0]).toMatchObject({
+      placeId: LIBRARY_PLACE_UUID,
+      sourceCount: 2,
+      primarySource: {
+        sourceId: 'travel-address:2039', pointId: 2039, travelId: 158,
+        articleTitle: 'Карловы Вары', articleUrl: '/travels/karlovy-vary',
+        thumbnailUrl: expect.stringContaining('thumb_400_wp.webp'),
+      },
+    })
+    expect(places[1].placeId).toBeUndefined()
+    expect(places[2].placeId).toBeUndefined()
   })
 
   it('maps the server catalog payload to CatalogPlace shape', () => {

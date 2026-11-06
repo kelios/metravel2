@@ -11,7 +11,7 @@
  * поэтому боковые края — единственная свободная зона без наложений.
  */
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import { AccessibilityInfo, PanResponder, Platform, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, PanResponder, Platform, StyleSheet, Text, View, type PressableStateCallbackType } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 
 import CardActionPressable from '@/components/ui/CardActionPressable';
@@ -19,6 +19,7 @@ import { DESIGN_TOKENS } from '@/constants/designSystem';
 import type { ThemedColors } from '@/hooks/useTheme';
 import { translate as i18nT } from '@/i18n';
 import { formatInteger } from '@/i18n/format';
+import type { PlaceSourcePagerState } from './usePlaceSourcePagerState';
 
 const IS_WEB = Platform.OS === 'web';
 
@@ -66,7 +67,7 @@ export const getPlaceSourcePagerLabels = (
   };
 };
 
-type Props = {
+export type PlaceSourcePagerProps = {
   /** Число материалов места. `<= 1` — pager не рендерится вовсе. */
   total: number;
   /** Индекс активного материала (0-based). */
@@ -75,6 +76,7 @@ type Props = {
   articleTitle?: string | null;
   onPrev: () => void;
   onNext: () => void;
+  loadStatus?: PlaceSourcePagerState['sourceLoadStatus'];
   colors: ThemedColors;
   compact?: boolean;
   /**
@@ -85,19 +87,28 @@ type Props = {
   inline?: boolean;
 };
 
-const PlaceSourcePager: React.FC<Props> = ({
+const PlaceSourcePager: React.FC<PlaceSourcePagerProps> = ({
   total,
   currentIndex,
   articleTitle,
   onPrev,
   onNext,
+  loadStatus = 'idle',
   colors,
   compact = false,
   inline = false,
 }) => {
+  const loading = loadStatus === 'loading';
+  const loadFailed = loadStatus === 'error';
+  const caption = loading
+    ? i18nT('map:components.MapPage.Map.createMapPopupComponent.zagruzka_80ba0ae0')
+    : loadFailed
+      ? i18nT('errors:app.error.chto_to_poshlo_ne_tak_2bd9c3e0')
+      : String(articleTitle ?? '').trim();
+  const retryHint = loadFailed ? i18nT('errors:app.error.poprobovat_snova_86f28e83') : undefined;
   const labels = useMemo(
-    () => getPlaceSourcePagerLabels(currentIndex, total, articleTitle),
-    [articleTitle, currentIndex, total],
+    () => getPlaceSourcePagerLabels(currentIndex, total, caption),
+    [caption, currentIndex, total],
   );
 
   // Смена материала объявляется ассистивным технологиям. Web и Android получают
@@ -118,30 +129,35 @@ const PlaceSourcePager: React.FC<Props> = ({
   if (total <= 1) return null;
 
   const glyphSize = PAGER_BUTTON_SIZE / 2;
-  const title = String(articleTitle ?? '').trim();
+  const foregroundColor = inline ? colors.text : colors.textOnDark;
+  const buttonStyle = ({ pressed }: PressableStateCallbackType) => [
+    styles.pagerButton,
+    pressed && styles.pagerButtonPressed,
+    inline && { backgroundColor: pressed ? colors.backgroundTertiary : colors.backgroundSecondary },
+  ];
 
   const label = (
     // Live-region на обёртке, а не на счётчике: иначе web и Android объявляли бы
     // только «Материал 2 из 2», тогда как iOS-анонс несёт ещё и заголовок.
     <View
-      style={inline ? styles.inlineLabel : styles.counterPill}
+      style={inline ? [styles.inlineLabel, { backgroundColor: colors.backgroundSecondary }] : styles.counterPill}
       pointerEvents="none"
       accessibilityLiveRegion="polite"
     >
       <Text
-        style={[styles.counterText, { color: colors.textOnDark }]}
+        style={[styles.counterText, { color: foregroundColor }]}
         numberOfLines={1}
         testID="place-source-pager-counter"
       >
         {labels.counter}
       </Text>
-      {title ? (
+      {caption ? (
         <Text
-          style={[styles.sourceTitleText, { color: colors.textOnDark }]}
+          style={[styles.sourceTitleText, { color: foregroundColor }]}
           numberOfLines={1}
           testID="place-source-pager-title"
         >
-          {title}
+          {caption}
         </Text>
       ) : null}
     </View>
@@ -150,28 +166,32 @@ const PlaceSourcePager: React.FC<Props> = ({
   const prevControl = (
     <CardActionPressable
       accessibilityLabel={labels.previous}
+      accessibilityHint={retryHint}
       accessibilityRole="button"
+      accessibilityState={loading ? { busy: true } : undefined}
       onPress={onPrev}
       title={labels.previous}
       testID="place-source-pager-prev"
       enableWebClickFallback
-      style={({ pressed }) => [styles.pagerButton, pressed && styles.pagerButtonPressed]}
+      style={buttonStyle}
     >
-      <Feather name="chevron-left" size={glyphSize} color={colors.textOnDark} />
+      <Feather name="chevron-left" size={glyphSize} color={foregroundColor} />
     </CardActionPressable>
   );
 
   const nextControl = (
     <CardActionPressable
       accessibilityLabel={labels.next}
+      accessibilityHint={retryHint}
       accessibilityRole="button"
+      accessibilityState={loading ? { busy: true } : undefined}
       onPress={onNext}
       title={labels.next}
       testID="place-source-pager-next"
       enableWebClickFallback
-      style={({ pressed }) => [styles.pagerButton, pressed && styles.pagerButtonPressed]}
+      style={buttonStyle}
     >
-      <Feather name="chevron-right" size={glyphSize} color={colors.textOnDark} />
+      <Feather name="chevron-right" size={glyphSize} color={foregroundColor} />
     </CardActionPressable>
   );
 
@@ -274,7 +294,6 @@ const createStyles = (compact: boolean) => {
       paddingHorizontal: 10,
       paddingVertical: 4,
       borderRadius: DESIGN_TOKENS.radii.full,
-      backgroundColor: PILL_BACKGROUND,
     },
     counterText: {
       fontSize: compact ? 11 : 12,
