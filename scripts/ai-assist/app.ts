@@ -1,8 +1,12 @@
 /**
- * HTTP-слой metravel-assist (#2456, #2713) на встроенном `node:http`: четыре эндпоинта, без фреймворка.
+ * HTTP-слой metravel-assist (#2456, #2713) на встроенном `node:http`: восемь эндпоинтов, без фреймворка.
  *
  *   POST /ai/search  {q, locale?, type?, limit?}  → {items, took_ms, index_built_at, degraded, cached}
- *   POST /ai/ask     {q, locale?, history?}        → SSE `sources → text* → done` (ask.ts)
+ *   POST /ai/ask     {q, locale?, history?, source?} → SSE `sources → text* → done` (ask.ts)
+ *   POST /ai/author-draft {text, kind, locale?} → {variants, remaining} (authorDraft.ts, #2885)
+ *   POST /ai/suggest-tags {text, locale?} → {countries, categories, …, confidence, degraded} (suggestTags.ts, #2886)
+ *   POST /ai/near-route {points: [{lat,lng}], limit?, locale?} → {items, took_ms} (nearRoute.ts, #2911)
+ *   POST /ai/intent {q, locale?} → {categories, radius_km, center, constraints} (intent.ts, #2887)
  *   GET  /ai/similar?type=&id=&limit=&locale=&result_type= → {items, took_ms, index_built_at}
  *   GET  /ai/health → {ok, model, dim, count, index_built_at, rss_mb, …}
  *
@@ -12,20 +16,28 @@
 import http from 'node:http'
 
 import type { ChunkType } from '../ai-index/format.ts'
-import { AI_SOURCES_LIMIT } from '../../api/aiAssist/policy.ts'
+import { AI_MAP_INTENT_DAILY_LIMIT, AI_OFFTOPIC_STRIKES_TO_BLOCK, AI_SOURCES_LIMIT } from '../../api/aiAssist/policy.ts'
 import type { AiSource } from '../../api/aiAssist/types.ts'
+import type { AiSourceRef } from '../../api/aiAssist/sourceRef.ts'
 import { type AskDeps, createAskHandler, type RetrievalResult } from './ask.ts'
+import { AUTHOR_DRAFT_MAX_BODY_BYTES, type AuthorDraftDeps, createAuthorDraftHandler } from './authorDraft.ts'
 import type { ResponseCache } from './cache.ts'
 import type { LoadedIndex } from './index.ts'
+import { createIntentHandler, INTENT_LIMITS_PREFIX } from './intent.ts'
 import type { LexicalHit, LexicalSearch } from './lexical.ts'
+import { AskLimits, createDayClock, MemoryCounterStore } from './limits.ts'
+import { nearRouteItems, parseNearRouteLimit, parseNearRoutePoints } from './nearRoute.ts'
 import { HttpError, MAX_LIMIT, MAX_QUERY_CHARS, parseLimit, parseLocale, parseQuery, parseType } from './params.ts'
 import { BusyError, SingleFlight } from './queue.ts'
 import { type Locale, type ResultItem, VECTOR_SOURCES, itemForRow, normalizeQuery, rrfMerge, sourceVector, vectorSources } from './search.ts'
+import { createSuggestTagsHandler, SUGGEST_TAGS_MAX_BODY_BYTES, type TagCatalog } from './suggestTags.ts'
 
 export { MAX_LIMIT, MAX_QUERY_CHARS }
 
 /** Зависимости `/ai/ask`; подбор и очередь к эмбеддингу — общие с `/ai/search`. */
-export type AskAppDeps = Omit<AskDeps, 'retrieve' | 'llmQueue' | 'log'>
+export type AskAppDeps = Omit<AskDeps, 'retrieve' | 'lookupSource' | 'llmQueue' | 'log'>
+/** Зависимости `/ai/author-draft` (#2885): свой счётчик на IP; модель, очередь и прокси — общие с `/ai/ask`. */
+export type AuthorDraftAppDeps = Pick<AuthorDraftDeps, 'limits'>
 
 export interface AppDeps {
   index: LoadedIndex
@@ -35,6 +47,15 @@ export interface AppDeps {
   cache: ResponseCache
   queueTimeoutMs: number
   ask: AskAppDeps
+  authorDraft: AuthorDraftAppDeps
+  /**
+   * `/ai/intent` (#2887): свой счётчик на IP. Необязателен для стендов и тестов других
+   * эндпоинтов — тогда квота живёт в памяти процесса с лимитом политики; `main.ts` передаёт
+   * счётчик на общем хранилище (redis).
+   */
+  mapIntent?: { limits: AskLimits }
+  /** `/ai/suggest-tags` (#2886): каталог словарных значений с часовым кэшем. */
+  suggestTags: { catalog: TagCatalog }
   log?: (line: string) => void
 }
 
@@ -51,7 +72,7 @@ export const MAX_BODY_BYTES = 16 * 1024
 /** Сколько статей просим у лексики: с запасом относительно limit, но без лишней нагрузки на Django. */
 export const LEXICAL_LIMIT = 20
 
-function readJsonBody(request: http.IncomingMessage): Promise<unknown> {
+function readJsonBody(request: http.IncomingMessage, maxBytes: number = MAX_BODY_BYTES): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
     let size = 0
@@ -59,12 +80,12 @@ function readJsonBody(request: http.IncomingMessage): Promise<unknown> {
     request.on('data', (chunk: Buffer) => {
       if (tooLarge) return
       size += chunk.length
-      if (size > MAX_BODY_BYTES) {
+      if (size > maxBytes) {
         // Сокет не рвём: клиент должен получить 413, остаток тела Node отбросит сам
         // (ответ уходит с connection: close).
         tooLarge = true
         chunks.length = 0
-        reject(new HttpError(413, 'payload_too_large', `тело больше ${MAX_BODY_BYTES} байт`))
+        reject(new HttpError(413, 'payload_too_large', `тело больше ${maxBytes} байт`))
         return
       }
       chunks.push(chunk)
@@ -193,7 +214,63 @@ export function createApp(deps: AppDeps): http.Server {
     return { sources: items.map(toSource), degraded }
   }
 
-  const ask = createAskHandler({ ...deps.ask, retrieve, llmQueue, log })
+  /**
+   * Карточка страницы-источника (#2897) по ключу индекса `type:id`: фрагмент запрошенной
+   * локали, если квест на ней есть, иначе первый; балл — `null`, как у лексики (карточка
+   * не из подбора). Нет в индексе — `null`.
+   */
+  function lookupSource(ref: AiSourceRef, locale: Locale): AiSource | null {
+    const rows = index.rowsBySource.get(`${ref.type}:${ref.id}`)
+    if (!rows?.length) return null
+    const row = rows.find((candidate) => index.artifact.chunks[candidate].locale === locale) ?? rows[0]
+    return toSource(itemForRow(index, row, null))
+  }
+
+  const ask = createAskHandler({ ...deps.ask, retrieve, lookupSource, llmQueue, log })
+  const authorDraft = createAuthorDraftHandler({
+    generator: deps.ask.generator,
+    llmQueue,
+    queueTimeoutMs: deps.ask.queueTimeoutMs,
+    limits: deps.authorDraft.limits,
+    trustProxy: deps.ask.trustProxy,
+    now: deps.ask.now,
+    log,
+  })
+  // #2887: фильтр карты по описанию — та же модель и очередь, что у `/ai/ask`, свой счётчик на IP.
+  const mapIntent = createIntentHandler({
+    generator: deps.ask.generator,
+    llmQueue,
+    queueTimeoutMs: deps.ask.queueTimeoutMs,
+    limits:
+      deps.mapIntent?.limits ??
+      new AskLimits({
+        store: new MemoryCounterStore(),
+        clock: createDayClock(),
+        dailyLimit: AI_MAP_INTENT_DAILY_LIMIT,
+        strikesToBlock: AI_OFFTOPIC_STRIKES_TO_BLOCK,
+        prefix: INTENT_LIMITS_PREFIX,
+      }),
+    trustProxy: deps.ask.trustProxy,
+    now: deps.ask.now,
+    log,
+  })
+  // #2886: та же очередь к эмбеддингу, что у `/ai/search`; соседи — только статьи, они в индексе на ru.
+  const suggestTags = createSuggestTagsHandler({
+    catalog: deps.suggestTags.catalog,
+    embed: (text) => queue.run(deps.queueTimeoutMs, () => deps.embedQuery(text)),
+    neighbours: (vector, limit) => vectorSources(index, { vector, locale: 'ru', type: 'travel', limit }).map((hit) => hit.chunk.source_id),
+    log,
+  })
+
+  /** #2911: материалы в коридоре маршрута — геометрия по индексу, без модели (как `similar`). */
+  function nearRoute(body: unknown) {
+    const started = process.hrtime.bigint()
+    const input = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
+    const points = parseNearRoutePoints(input.points)
+    const limit = parseNearRouteLimit(input.limit)
+    const locale = parseLocale(input.locale)
+    return { items: nearRouteItems(index, { points, locale, limit }), took_ms: elapsedMs(started) }
+  }
 
   function similar(params: URLSearchParams) {
     const started = process.hrtime.bigint()
@@ -231,6 +308,28 @@ export function createApp(deps: AppDeps): http.Server {
       if (url.pathname === '/ai/ask') {
         if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed', 'POST /ai/ask')
         await ask(request, response, await readJsonBody(request))
+        return
+      }
+      if (url.pathname === '/ai/author-draft') {
+        if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed', 'POST /ai/author-draft')
+        const result = await authorDraft(request, response, await readJsonBody(request, AUTHOR_DRAFT_MAX_BODY_BYTES))
+        if (result) send(response, 200, result)
+        return
+      }
+      if (url.pathname === '/ai/suggest-tags') {
+        if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed', 'POST /ai/suggest-tags')
+        send(response, 200, await suggestTags(await readJsonBody(request, SUGGEST_TAGS_MAX_BODY_BYTES)))
+        return
+      }
+      if (url.pathname === '/ai/near-route') {
+        if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed', 'POST /ai/near-route')
+        send(response, 200, nearRoute(await readJsonBody(request)))
+        return
+      }
+      if (url.pathname === '/ai/intent') {
+        if (request.method !== 'POST') throw new HttpError(405, 'method_not_allowed', 'POST /ai/intent')
+        const result = await mapIntent(request, response, await readJsonBody(request))
+        if (result) send(response, 200, result)
         return
       }
       if (url.pathname === '/ai/similar') {

@@ -8,6 +8,8 @@ import '@/components/screens/assistant/AssistantScreen'
 
 const mockChatState = {
   turns: [] as Array<Record<string, unknown>>,
+  sourceRef: null as Record<string, unknown> | null,
+  sourceCard: null as Record<string, unknown> | null,
   remaining: 20 as number | null,
   inputError: null as 'tooLong' | 'limit' | null,
   busy: false,
@@ -22,9 +24,23 @@ jest.mock('@/components/screens/NotFoundContent', () => {
   const { Text } = require('react-native')
   return { NotFoundContent: () => <Text testID="not-found">not-found</Text> }
 })
+const mockChatOptions: { last: Record<string, unknown> | null } = { last: null }
 jest.mock('@/components/screens/assistant/useAssistantChat', () => ({
-  useAssistantChat: () => mockChatState,
+  useAssistantChat: (options: Record<string, unknown>) => {
+    mockChatOptions.last = options
+    return mockChatState
+  },
 }))
+// #2897: параметр роута `?source=` — через общий мок expo-router из setup.ts.
+const mockSearchParams: { current: Record<string, unknown> } = { current: {} }
+const expoRouterMock = jest.requireMock('expo-router')
+const originalUseLocalSearchParams = expoRouterMock.useLocalSearchParams
+beforeAll(() => {
+  expoRouterMock.useLocalSearchParams = () => mockSearchParams.current
+})
+afterAll(() => {
+  expoRouterMock.useLocalSearchParams = originalUseLocalSearchParams
+})
 jest.mock('@/components/layout/bottomChromeInset', () => ({
   useScrollBottomPadding: () => 16,
   asBottomDimension: (value: number) => value,
@@ -41,6 +57,10 @@ describe('/assistant route under feature flag (#2460)', () => {
     mockChatState.remaining = 20
     mockChatState.inputError = null
     mockChatState.busy = false
+    mockChatState.sourceRef = null
+    mockChatState.sourceCard = null
+    mockSearchParams.current = {}
+    mockChatOptions.last = null
     jest.clearAllMocks()
   })
 
@@ -138,4 +158,40 @@ describe('/assistant route under feature flag (#2460)', () => {
     await fireEvent.press(screen.getByTestId('assistant-retry'))
     expect(mockChatState.retry).toHaveBeenCalledWith('t3')
   })
+
+  it('#2897: `?source=travel:816` уходит в чат как источник; без флага — та же «страница не найдена»', async () => {
+    delete process.env.EXPO_PUBLIC_AI_ASSISTANT
+    mockSearchParams.current = { source: 'travel:816' }
+    const unflagged = await render(<Route />)
+    expect(unflagged.getByTestId('not-found')).toBeTruthy()
+    expect(mockChatOptions.last).toBeNull()
+    await unflagged.unmount()
+
+    process.env.EXPO_PUBLIC_AI_ASSISTANT = '1'
+    mockChatState.sourceRef = { type: 'travel', id: 816 }
+    mockChatState.sourceCard = { type: 'travel', source_id: '816', title: 'Ярмарки Польши', url: 'https://metravel.by/travels/816', path: '/travels/816', snippet: '', score: 1 }
+    await render(<Route />)
+    expect(await screen.findByTestId('assistant-screen', {}, { timeout: 5000 })).toBeTruthy()
+    expect(mockChatOptions.last).toMatchObject({ locale: expect.any(String), source: { type: 'travel', id: 816 } })
+    // Пустое состояние: заголовок страницы и примеры под контекст вместо общих.
+    expect(screen.getByText(/Ярмарки Польши/)).toBeTruthy()
+    const examples = screen.getAllByTestId('assistant-example')
+    expect(examples).toHaveLength(3)
+    await act(async () => {
+      await fireEvent.press(examples[0])
+    })
+    expect(mockChatState.ask).toHaveBeenCalledWith('Сколько времени займёт?')
+  }, 15000)
+
+  it('#2897: мусорный `?source=` — обычный вход без источника', async () => {
+    process.env.EXPO_PUBLIC_AI_ASSISTANT = '1'
+    mockSearchParams.current = { source: 'book:1' }
+    await render(<Route />)
+    await screen.findByTestId('assistant-screen', {}, { timeout: 5000 })
+    expect(mockChatOptions.last).toMatchObject({ source: null })
+    await act(async () => {
+      await fireEvent.press(screen.getAllByTestId('assistant-example')[1])
+    })
+    expect(mockChatState.ask).toHaveBeenCalledWith('Какие квесты есть в Минске?')
+  }, 15000)
 })

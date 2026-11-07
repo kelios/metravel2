@@ -3,9 +3,13 @@
  * `EXPO_PUBLIC_AI_ASSISTANT` (роут `app/(tabs)/assistant.tsx` без флага отдаёт
  * «страница не найдена»). Один макет для desktop и телефона: лента вопросов
  * и ответов, под ней композер; desktop лишь сужает колонку до 760px.
+ * Контекстный вход (#2897): `sourceParam` — значение `?source=` роута
+ * (`travel:816` / `quest:<id>`); карточка страницы стоит первой в промпте
+ * (`useAssistantChat`), пустое состояние показывает её заголовок и примеры под контекст.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { parseSourceRef } from '@/api/aiAssist/sourceRef'
 import { type ScrollViewInstance, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native'
 import { usePathname, useIsFocused, useRouter } from 'expo-router'
 
@@ -27,8 +31,14 @@ import { createAssistantStyles } from './assistantStyles'
 import { useAssistantChat } from './useAssistantChat'
 
 const EXAMPLE_KEYS = ['aiAssistStatic:ask.example1', 'aiAssistStatic:ask.example2', 'aiAssistStatic:ask.example3'] as const
+const SOURCE_EXAMPLE_KEYS = ['aiAssistStatic:ask.sourceExample1', 'aiAssistStatic:ask.sourceExample2', 'aiAssistStatic:ask.sourceExample3'] as const
 
-export default function AssistantScreen() {
+export type AssistantScreenProps = {
+  /** `?source=` роута; невалидное значение — обычный вход без источника. */
+  sourceParam?: string | string[] | null
+}
+
+export default function AssistantScreen({ sourceParam = null }: AssistantScreenProps = {}) {
   const pathname = usePathname()
   const isFocused = useIsFocused()
   const router = useRouter()
@@ -48,7 +58,9 @@ export default function AssistantScreen() {
   })
 
   const locale = getActiveLocale()
-  const chat = useAssistantChat({ locale })
+  const sourceKey = Array.isArray(sourceParam) ? sourceParam[0] : sourceParam
+  const source = useMemo(() => parseSourceRef(sourceKey), [sourceKey])
+  const chat = useAssistantChat({ locale, source })
   const [draft, setDraft] = useState('')
   const scrollRef = useRef<ScrollViewInstance | null>(null)
 
@@ -87,7 +99,8 @@ export default function AssistantScreen() {
     router.push('/search')
   }, [router])
 
-  const examples = useMemo(() => EXAMPLE_KEYS.map((key) => i18nT(key)), [])
+  const examples = useMemo(() => (source ? SOURCE_EXAMPLE_KEYS : EXAMPLE_KEYS).map((key) => i18nT(key)), [source])
+  const sourceTitle = chat.sourceCard?.title ?? ''
 
   return (
     <View style={styles.screen} testID="assistant-screen">
@@ -117,7 +130,9 @@ export default function AssistantScreen() {
               <EmptyState
                 icon="message-circle"
                 title={i18nT('aiAssistStatic:ask.emptyTitle')}
-                description={i18nT('aiAssistStatic:ask.emptyDescription')}
+                description={
+                  sourceTitle ? i18nT('aiAssistStatic:ask.sourceEmptyDescription', { title: sourceTitle }) : i18nT('aiAssistStatic:ask.emptyDescription')
+                }
                 density="compact"
                 variant="inspire"
                 testID="assistant-empty"

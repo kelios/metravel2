@@ -1,6 +1,7 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef } from 'react';
 import {
     KeyboardAvoidingView,
+    type LayoutChangeEvent,
     ScrollView,
     Text,
     View,
@@ -16,6 +17,7 @@ import { useTravelPublishModeration } from '@/components/travel/useTravelPublish
 import { useInstagramPublishFlow } from '@/components/travel/useInstagramPublishFlow';
 import { useFacebookPublishFlow } from '@/components/travel/useFacebookPublishFlow';
 import PublishChecklistCard from '@/components/travel/PublishChecklistCard';
+import PublishSeoCard from '@/components/travel/PublishSeoCard';
 import InstagramPublishPanel from '@/components/travel/InstagramPublishPanel';
 import FacebookPublishPanel from '@/components/travel/FacebookPublishPanel';
 import PublishModerationAdminPanel from '@/components/travel/PublishModerationAdminPanel';
@@ -32,6 +34,7 @@ import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeybo
 import WizardStepFooter from '@/components/travel/upsert/WizardStepFooter';
 import { translate as i18nT } from '@/i18n';
 import { shareTravel } from '@/utils/shareTravel';
+import type { ModerationIssue } from '@/utils/formValidation';
 import Feather from '@expo/vector-icons/Feather';
 
 const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
@@ -111,6 +114,23 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
         isSuperAdmin,
         defaultMessage: instagram.editableInstagramCaption,
     });
+
+    // #2885: пункт «SEO-описание» чек-листа ведёт к карточке на этом же шаге — прокрутка
+    // по сохранённому смещению, остальные пункты уходят в общий переход по шагам.
+    const seoCardOffsetRef = useRef(0);
+    const handleSeoCardLayout = useCallback((event: LayoutChangeEvent) => {
+        seoCardOffsetRef.current = event.nativeEvent.layout.y;
+    }, []);
+    const handleNavigateToIssue = useCallback(
+        (issue: ModerationIssue) => {
+            if (issue.key === 'meta_description') {
+                scrollRef.current?.scrollTo({ y: Math.max(seoCardOffsetRef.current - 12, 0), animated: true });
+                return;
+            }
+            onNavigateToIssue?.(issue);
+        },
+        [onNavigateToIssue, scrollRef],
+    );
 
     const shareId = formData.slug || formData.id;
     const canShare = Boolean(shareId && publicationStatus === 'published');
@@ -209,7 +229,15 @@ const TravelWizardStepPublish: React.FC<TravelWizardStepPublishProps> = ({
                         requiredChecklist={requiredChecklist}
                         recommendedChecklist={recommendedChecklist}
                         moderationIssuesByKey={moderationIssuesByKey}
-                        onNavigateToIssue={onNavigateToIssue}
+                        onNavigateToIssue={handleNavigateToIssue}
+                    />
+
+                    <PublishSeoCard
+                        colors={colors}
+                        styles={styles}
+                        formData={formData}
+                        setFormData={setFormData}
+                        onLayout={handleSeoCardLayout}
                     />
 
                     {isSuperAdmin && publicationStatus && (publicationStatus !== 'draft' || status === 'moderation') && (

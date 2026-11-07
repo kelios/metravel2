@@ -49,7 +49,38 @@ production-сборке — ошибка), для `ask` явный `EXPO_PUBLIC_
 - `app/(tabs)/assistant.tsx` — роут; зарегистрирован в `app/(tabs)/_layout.tsx`
   (`HIDDEN`) и в `APP_ROUTE_ROOTS` (`utils/siteLinks.ts`);
 - `constants/headerNavigation.ts` — пункт «Ассистент» под флагом;
-- `app/(tabs)/search.tsx` — кнопка «Спросить ассистента» под флагом.
+- `app/(tabs)/search.tsx` — кнопка «Спросить ассистента» под флагом;
+- контекстный вход со страницы статьи и квеста (#2897):
+  `components/assistant/AskAssistantButton.tsx` — «Спросить про этот маршрут /
+  квест» (Feather `message-circle`, `UIButton` soft/sm, 44/48 px) на странице
+  статьи рядом с «Добавить в план» (`components/travel/CTASection.tsx`, обе ветки —
+  гостю тоже) и в футере стартовой карточки квеста (`QuestTrustBar`, проп
+  `questNumericId` из `QuestWizard`). Кнопка живёт только под флагом (без него
+  `null`, страница не делает запросов к `/ai/*`) и ведёт `router.push` на
+  `/assistant?source=travel:816` / `quest:<id>` (`buildAssistantSourceHref` в
+  `utils/aiAssistantConfig.ts` — `api/aiAssist` в сборку без флага не попадает,
+  #2738). Роут читает `?source=` через `useLocalSearchParams` и отдаёт экрану
+  строкой; без флага `/assistant?source=…` — та же «страница не найдена».
+
+### Источник страницы (`source`, #2897)
+
+- Разбор и формат — `api/aiAssist/sourceRef.ts` (`parseSourceRef`,
+  `pinSourceFirst`; модуль общий с сервером, без `@/`-импортов): `type` —
+  `travel|quest`, `id` — числовой PK (как в индексе и `/ai/similar`), мусор → вход
+  без источника.
+- `useAssistantChat({ source })`: карточка страницы грузится из каталога
+  (`loadSourceCard` в `retrieval.ts`: статья — `queryKeys.travel(id)` + `fetchTravel`,
+  квест — компактный каталог по `id`) и отдаётся экрану как `sourceCard`; пустое
+  состояние показывает её заголовок (`ask.sourceEmptyDescription`) и примеры под
+  контекст (`ask.sourceExample1..3`: «Сколько времени займёт?», «Подойдёт ли с
+  детьми?», «Что рядом?»).
+- На КАЖДОМ ходу диалога карточка стоит первой в списке карточек промпта, подбор
+  добавляет остальные без дубля (`pinSourceFirst`, лимит `AI_SOURCES_LIMIT`):
+  провайдер `ask` шлёт `source {type, id}` в теле `/ai/ask`, и первой её ставит
+  сервер по индексу; провайдер `llamacpp` ждёт загрузку карточки и закрепляет её
+  на клиенте. До первого самостоятельного вопроса заголовок карточки — опора
+  уточнений («А что там рядом?» ищется вместе с названием статьи). Материала нет
+  (404 в каталоге, нет в индексе) — ход идёт без закреплённой карточки.
 
 ## Ключевые компоненты
 
@@ -173,16 +204,22 @@ DOM-`click()` через `javascript_tool`, якоря `<a>` кликаются 
 
 ## Тесты
 
-- `__tests__/api/aiAssist/{prompt,linkGuard,generator,retrieval,retrievalQuery,askProvider,limits}.test.ts`
-  (`askProvider` — разбор SSE и коды отказов `/ai/ask`; `retrievalQuery` — опора
-  уточнений, общая с сервером);
+- `__tests__/api/aiAssist/{prompt,linkGuard,generator,retrieval,retrievalQuery,askProvider,limits,sourceRef}.test.ts`
+  (`askProvider` — разбор SSE, коды отказов `/ai/ask` и поле `source` в теле;
+  `retrievalQuery` — опора уточнений, общая с сервером; `sourceRef` — формат
+  `?source=` и закрепление карточки, #2897);
 - `__tests__/screens/assistant/useAssistantChat.test.tsx` — оба провайдера:
-  пайплайн, отказ, недоступность, лимит, retry, блок с сервера;
+  пайплайн, отказ, недоступность, лимит, retry, блок с сервера, источник страницы
+  первой карточкой на всех ходах (#2897);
 - `__tests__/scripts/ai-assist/ask.test.ts` — сервер `/ai/ask`, включая опору
-  уточнений из `history`;
+  уточнений из `history` и `source` (первая карточка, локаль квеста, 400 на мусор);
+- `__tests__/components/assistant/AskAssistantButton.test.tsx`,
+  `__tests__/components/travel/CTASection.askAssistant.test.tsx`,
+  `__tests__/components/quests/QuestTrustBar.test.tsx` — кнопки под флагом/без (#2897);
 - `e2e/ai-assistant-ask.spec.ts` — экран на `dist` с моком `/ai/ask` (поток,
   источники, 503/429), без прямых запросов к модели;
-- `__tests__/routes/assistant-screen.test.tsx` — флаг выкл/вкл, композер, источники;
+- `__tests__/routes/assistant-screen.test.tsx` — флаг выкл/вкл, композер, источники,
+  роут с `?source=` (#2897);
 - `__tests__/constants/headerNavigation.assistantFlag.test.ts`;
 - `__tests__/utils/runtimeConfigDiagnostics*.test.ts` — диагностики флага;
 - guards: `guard-screen-header` (экран в `SCREEN_HEADER_OWNERS`), touch-targets,
@@ -260,6 +297,14 @@ DOM-`click()` через `javascript_tool`, якоря `<a>` кликаются 
 - Опора уточнений (#2719) применяется и здесь: подбор идёт по
   `buildRetrievalQuery(q, resolveRetrievalAnchor(history))` из общего
   `api/aiAssist/retrievalQuery.ts`, модель получает исходный `q`.
+- Источник страницы (#2897): необязательное поле `source {type: travel|quest, id}`
+  (только объект; `id` — положительное целое) — карточка `type:id` из индекса
+  (`lookupSource` в `app.ts`: фрагмент локали запроса, если квест на ней есть,
+  иначе первый; `score: 0`) ставится первой в `sources` и в промпт на каждом ходу,
+  подбор добавляет остальные без дубля (`pinSourceFirst`); без самостоятельного
+  вопроса в `history` заголовок карточки — опора уточнений. Формат ответа и SSE не
+  меняются. Кривой `source` → `400 bad_request` (лимит не списывается); материала
+  нет в индексе (опубликован после сборки) → ход без закреплённой карточки.
 
 ## Контур оценки (#2710)
 

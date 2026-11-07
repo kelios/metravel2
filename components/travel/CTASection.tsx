@@ -15,6 +15,7 @@ import { METRICS } from '@/constants/layout';
 import { DESIGN_TOKENS } from '@/constants/designSystem';
 import { useThemedColors } from '@/hooks/useTheme';
 import Button from '@/components/ui/Button';
+import AskAssistantButton from '@/components/assistant/AskAssistantButton';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { buildTripPlanCreateHref } from '@/utils/tripPlanLinks';
 import { translate as i18nT } from '@/i18n'
@@ -188,6 +189,8 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
             labelStyle={[styles.primaryButtonLabel, isMobile && styles.buttonLabelMobile]}
             accessibilityLabel={i18nT('travel:components.travel.CTASection.voyti_ili_zaregistrirovatsya_otkroetsya_ekra_8e9d3bcd')}
           />
+          {/* #2897: ассистент не требует входа — гостю кнопка тоже нужна (под флагом). */}
+          <AskAssistantButton source={{ type: 'travel', id: Number(travel.id) }} fullWidth style={styles.buttonBase} />
         </View>
       </View>
     );
@@ -249,6 +252,9 @@ function CTASection({ travel, onFavoriteToggle, surface = 'card' }: CTASectionPr
           travelMonthName={travel.monthName}
           style={styles.planButton}
         />
+
+        {/* #2897: «Спросить про этот маршрут» — контекстный вход в ассистента (только под флагом). */}
+        <AskAssistantButton source={{ type: 'travel', id: Number(travel.id) }} fullWidth style={styles.buttonBase} />
 
         <Button
           label={isFavorite ? i18nT('travel:components.travel.CTASection.v_hochu_poehat_dd8f7eaf') : i18nT('travel:components.travel.CTASection.hochu_poehat_8624541b')}

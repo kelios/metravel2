@@ -17,13 +17,20 @@
  *   идёт) · no_sources · unavailable (модель оборвалась посреди ответа) · error.
  * Событие `text` несёт накопленный текст после стража (`{text}`), не дельту:
  * страж может убрать уже показанный чужой адрес.
+ *
+ * Контекстный вход (#2897): необязательное `source {type: travel|quest, id}` — страница,
+ * с которой открыт ассистент; её карточка из индекса ставится первой в контекст на
+ * каждом ходу, подбор добавляет остальные. Кривой `source` — 400 bad_request; материала
+ * нет в индексе (опубликован после сборки) — ход идёт без закреплённой карточки.
  */
 import type http from 'node:http'
 
 import { type Generator, isAiGeneratorError } from '../../api/aiAssist/generator.ts'
 import { countKeptSourceLinks, enforceSourceLinks, guardStreamingText } from '../../api/aiAssist/linkGuard.ts'
+import { AI_SOURCES_LIMIT } from '../../api/aiAssist/policy.ts'
 import { buildAssistantMessages, MAX_HISTORY_ITEMS } from '../../api/aiAssist/prompt.ts'
 import { buildRetrievalQuery, resolveRetrievalAnchor } from '../../api/aiAssist/retrievalQuery.ts'
+import { type AiSourceRef, parseSourceRef, pinSourceFirst } from '../../api/aiAssist/sourceRef.ts'
 import { classifyQuestion, isModelOffTopicReply } from '../../api/aiAssist/topicGate.ts'
 import type { AiHistoryItem, AiSource } from '../../api/aiAssist/types.ts'
 import type { DemandLog } from './demandLog.ts'
@@ -47,6 +54,8 @@ export interface RetrievalResult {
 export interface AskDeps {
   /** Подбор карточек по индексу; бросает `HttpError` (503 busy) при занятой модели эмбеддинга. */
   retrieve: (q: string, locale: Locale) => Promise<RetrievalResult>
+  /** Карточка страницы-источника (#2897) из индекса; `null` — такого материала в индексе нет. */
+  lookupSource: (ref: AiSourceRef, locale: Locale) => AiSource | null
   /** `null` — `AI_LLM_URL` не задан: вопросы по теме получают 503 generator_unavailable. */
   generator: Generator | null
   /** Один ответ модели одновременно; ожидание дольше `queueTimeoutMs` → 429 busy. */
@@ -95,6 +104,15 @@ function parseHistory(value: unknown): AiHistoryItem[] {
   })
 }
 
+/** `source` тела: нет — `undefined`; не `{type: travel|quest, id: положительное целое}` — 400. */
+function parseSource(value: unknown): AiSourceRef | undefined {
+  if (value === undefined || value === null) return undefined
+  // Только объект: строковую форму `travel:816` знает роут экрана, не тело запроса.
+  const ref = typeof value === 'object' && !Array.isArray(value) ? parseSourceRef(value) : null
+  if (!ref) throw new HttpError(400, 'bad_request', 'source: ожидалось {type: travel|quest, id: положительное целое}')
+  return ref
+}
+
 interface Stream {
   event: (name: string, data: unknown) => void
   done: (data: Record<string, unknown>) => void
@@ -138,6 +156,7 @@ export function createAskHandler(deps: AskDeps): AskHandler {
     const question = parseQuery(input.q)
     const locale = parseLocale(input.locale)
     const history = parseHistory(input.history)
+    const sourceRef = parseSource(input.source)
     const ip = clientIp(request, deps.trustProxy)
 
     // Блок держится на сервере: очистка хранилища клиента и прямой запрос его не снимают.
@@ -171,9 +190,12 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       })
     }
 
+    // Карточка страницы-источника (#2897) — первой в контексте; до первого самостоятельного
+    // вопроса её заголовок — опора уточнений («Что рядом?» ищется вместе с названием статьи).
+    const pinned = sourceRef ? deps.lookupSource(sourceRef, locale) : null
     // Опора уточнений (#2719/#2884): «А какой подойдёт детям?» ищется вместе с последним
     // самостоятельным вопросом из истории; модель получает исходный вопрос и историю.
-    const retrievalQuery = buildRetrievalQuery(question, resolveRetrievalAnchor(history))
+    const retrievalQuery = buildRetrievalQuery(question, resolveRetrievalAnchor(history) ?? pinned?.title ?? null)
     let retrieved: RetrievalResult
     try {
       retrieved = await deps.retrieve(retrievalQuery, locale)
@@ -181,7 +203,8 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       await refund()
       throw error
     }
-    const { sources, degraded } = retrieved
+    const { degraded } = retrieved
+    const sources = pinSourceFirst(pinned, retrieved.sources, AI_SOURCES_LIMIT)
     if (!sources.length) {
       await demandLog.append({ q: question, locale, reason: 'no_sources' })
       const stream = openStream(response)

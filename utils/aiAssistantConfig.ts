@@ -49,6 +49,17 @@ export const isAiAssistantEnabled = (): boolean =>
 export const getAiAssistantProvider = (): AiAssistantProvider =>
   String(process.env.EXPO_PUBLIC_AI_ASSISTANT_PROVIDER ?? '').trim().toLowerCase() === 'llamacpp' ? 'llamacpp' : 'ask'
 
+/**
+ * Контекстный вход (#2897): страница статьи или квеста ведёт в ассистента с
+ * параметром `source=<type>:<id>`, и карточка этой страницы стоит первой в промпте.
+ * Формат разбирает `api/aiAssist/sourceRef.ts` (`parseSourceRef`); билдер живёт
+ * здесь, чтобы кнопка на странице не тянула `api/aiAssist` в сборку без флага (#2738).
+ */
+export type AiAssistantSourceRef = { type: 'travel' | 'quest'; id: number }
+
+export const buildAssistantSourceHref = (ref: AiAssistantSourceRef): string =>
+  `/assistant?source=${ref.type}:${ref.id}`
+
 /** Базовый адрес `llama-server` без завершающего слэша; пустая строка — не задан. */
 export const getAiAssistantBaseUrl = (): string =>
   String(process.env.EXPO_PUBLIC_AI_ASSISTANT_URL ?? '')

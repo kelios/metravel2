@@ -100,6 +100,13 @@ describe('aiAssist провайдер ask (#2884)', () => {
     expect(url).toBe('http://127.0.0.1:8787/ai/ask')
     expect(init.method).toBe('POST')
     expect(JSON.parse(String(init.body))).toEqual({ q: 'А какой из них подойдёт детям?', locale: 'ru', history })
+
+    // #2897: источник страницы уходит полем `source {type, id}`; без него поле в теле отсутствует.
+    const withSource = jest.fn(async () => makeResponse({ status: 503, body: { error: 'generator_unavailable' } }))
+    await expect(
+      createAskClient('', { fetchImpl: withSource as unknown as typeof fetch }).ask({ question: 'Что рядом?', locale: 'ru', history: [], source: { type: 'quest', id: 12 } }),
+    ).rejects.toMatchObject({ kind: 'unavailable' })
+    expect(JSON.parse(String((withSource.mock.calls[0] as unknown as [string, RequestInit])[1].body))).toEqual({ q: 'Что рядом?', locale: 'ru', history: [], source: { type: 'quest', id: 12 } })
     expect(onSources).toHaveBeenCalledWith({ sources: [{ ...sourcePayload, source_id: '816' }], degraded: false, remaining: 19 })
     expect(onText.mock.calls.map(([text]) => text)).toEqual(['Загляните в ', 'Загляните в [Ярмарки](https://metravel.by/travels/816)'])
     expect(result).toEqual({

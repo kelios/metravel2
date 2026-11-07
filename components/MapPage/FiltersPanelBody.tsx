@@ -1,5 +1,5 @@
 import type { MapPlaceSearchFeedback } from '@/types/mapUi'
-import React, { useMemo } from 'react'
+import React, { Suspense, useMemo } from 'react'
 import { Platform, ScrollView, Text, View } from 'react-native'
 
 import { QuickRecommendations } from '@/components/MapPage/QuickRecommendations'
@@ -18,6 +18,19 @@ import { formatRadiusValue } from '@/constants/mapConfig'
 
 const MOBILE_QUICK_CHIPS_LIMIT = 2
 const RECOMMENDATIONS_MAX_ITEMS = 3
+
+// #2887: строка «Опишите, что ищете» — отложенный чанк по литеральному флагу (#2738, как
+// `TravelWizardStepExtras` и `RouteBuilder`): без `EXPO_PUBLIC_AI_PICKS` в сборке нет ни
+// строки, ни `api/aiMapIntent`, а панель фильтров не делает запросов к `/ai/*`.
+type MapIntentRowProps = import('@/components/MapPage/MapIntentRow').MapIntentRowProps
+type MapIntentRowModule = { default: React.ComponentType<MapIntentRowProps> }
+const EmptyMapIntentRow: React.ComponentType<MapIntentRowProps> = () => null
+const MapIntentRow = React.lazy<React.ComponentType<MapIntentRowProps>>(
+  () =>
+    (process.env.EXPO_PUBLIC_AI_PICKS
+      ? import('@/components/MapPage/MapIntentRow')
+      : Promise.resolve({ default: EmptyMapIntentRow })) as Promise<MapIntentRowModule>,
+)
 
 interface FiltersPanelBodyProps {
   ScrollComponent?: React.ElementType
@@ -111,6 +124,9 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
   onAddressClear,
   userLocation,
   onPlaceSelect,
+  mapUiApi,
+  enabledOverlays,
+  onOverlayToggle,
 }) => {
   const selectedCategoryNames = useMemo(
     () =>
@@ -175,6 +191,17 @@ const FiltersPanelBody: React.FC<FiltersPanelBodyProps> = ({
       )}
 
       <View style={styles.sectionCard} testID="filters-block-main">
+        {mode === 'radius' ? (
+          <Suspense fallback={null}>
+            <MapIntentRow
+              filterValue={filterValue}
+              onFilterChange={onFilterChange}
+              mapUiApi={mapUiApi}
+              enabledOverlays={enabledOverlays}
+              onOverlayToggle={onOverlayToggle}
+            />
+          </Suspense>
+        ) : null}
         {mode === 'radius' ? (
           <FiltersPanelRadiusSection
             colors={colors}

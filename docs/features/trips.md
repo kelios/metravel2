@@ -187,7 +187,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 
 | Файл | LOC | Зона ответственности |
 | --- | --- | --- |
-| `components/trips/planning/RouteBuilder.tsx` | 797 | контейнер конструктора после распила #1825: владеет черновиком точек, картой, превью и шаблонами; остальное — в модулях ниже. Ниже порога 800, поэтому `guard:file-complexity:changed` для него блокирующий |
+| `components/trips/planning/RouteBuilder.tsx` | 799 | контейнер конструктора после распила #1825: владеет черновиком точек, картой, превью и шаблонами; остальное — в модулях ниже. Ниже порога 800, поэтому `guard:file-complexity:changed` для него блокирующий |
 | `app/(tabs)/trips/plan/[id].tsx` | 688 | экран поездки: шапка, owner-редактор метаданных, табы планировщика, удаление |
 | `components/trips/planning/TripPlanRouteMap.web.tsx` | 661 | Leaflet/React-Leaflet карта конструктора на web, слои, fullscreen |
 | `components/trips/planning/TripCreateForm.tsx` | 653 | форма создания поездки, yup-валидация, prefill из travel |
@@ -219,6 +219,7 @@ web-роутах, рендерится только при `useIsFocused()`, с�
 | `components/trips/planning/plannedTripScreen.styles.ts` | 182 | стили экрана поездки |
 | `components/trips/planning/CommunityRoutesCatalog.tsx` | 176 | каталог маршрутов сообщества |
 | `components/trips/MyTripsDashboard.tsx` | 167 | дашборд «Мои поездки», сегменты и счётчики |
+| `components/trips/planning/RouteNearSuggestionsSlot.tsx` | 56 | #2911: отложенный блок «Рядом с маршрутом» по литеральному флагу и добавление точки из карточки; без `EXPO_PUBLIC_AI_PICKS` — `null` |
 | `components/trips/planning/RouteBuilder.styles.ts` | 165 | стили конструктора |
 | `components/trips/planning/useTripRouteFileBranch.ts` | 167 | файлы маршрута (ноль или несколько, #2069): чтение списка, линии всех оригинальных треков, загрузка с проверкой лимита и удаление по `routeId` плюс синхронные локи (#1824) |
 | `components/trips/planning/RouteBuilderLayout.tsx` | 153 | две раскладки панели: `stack` (две колонки) и `mapFirst` (через RouteBuilderMobile); блок «Файл маршрута» — одна рамка (#1902) и стопка с полными подписями (#2053): импорт во всю ширину, GPX/KML поровну, карточки оригиналов со «Скачать»/«Удалить» (по одной на файл, #2069) |
@@ -1193,6 +1194,34 @@ desktop по-прежнему рендерится целиком без кно�
 `keyboardShouldPersistTaps="handled"`: на Android и iPhone кнопка под полем
 срабатывает с первого касания при открытой клавиатуре.
 
+### Подсказки службы metravel-assist в планировщике (#2911)
+
+Два блока под флагами смыслового подбора и ассистента (`docs/features/ai-picks.md`,
+`docs/features/ai-assistant.md`); без флага сборка не содержит ни блоков, ни
+`api/aiPicks`/`api/aiAssist`, и запросов к `/ai/*` планировщик не делает.
+
+- «Рядом с маршрутом» (`RouteNearSuggestions`, слот `nearRouteSection` в
+  `RouteBuilderLayout` под списком точек в обеих раскладках; `RouteBuilder` грузит его
+  `React.lazy` по литеральному `process.env.EXPO_PUBLIC_AI_PICKS`): точки маршрута с
+  координатами → `useAiNearRoute` (`hooks/useAiPicks.ts`: дебаунс 800 мс, ключ
+  `queryKeys.aiNearRoute(<отпечаток lat/lng до 3 знаков>, locale)`, час в кэше, одна
+  попытка) → `POST /ai/near-route` (статьи и квесты индекса в 30 км от ближайшего
+  сегмента маршрута, ближние первыми). Карточки `AiPickCard` в `CardRail`, под каждой
+  «Добавить в маршрут» → `RouteBuilder.handleAddAiPoint`: статья — точка «Место» с
+  `placeId` (как выбор в поиске по сайту), квест — `custom` с координатами источника,
+  описание — сниппет карточки. Источник, уже стоящий в маршруте (`placeId`) или
+  добавленный отсюда, скрыт; пустой ответ, ошибка, маршрут без координат — блока нет.
+  Сохранение — обычное: точка уходит в `PUT` маршрута только по «Сохранить».
+- «Черновик описания» (`TripDescriptionDraftPanel` под подсказкой синтаксиса в
+  `TripPlanDescriptionEditor`; редактор грузит панель `React.lazy` по литеральному
+  `process.env.EXPO_PUBLIC_AI_ASSISTANT`, экран поездки передаёт `aiDraftPlanText =
+  buildTripDraftText(trip)` — название, сохранённые точки по порядку, даты, транспорт):
+  «Предложить описание» → `POST /ai/author-draft {kind: 'trip'}` (2–3 варианта ≤ 600
+  знаков только по плану) через общий `useAuthorDraft` (#2885). «Вставить» заполняет
+  пустое поле; непустое — кнопка «Заменить» и `confirmAction` перед заменой целиком.
+  Кнопка активна от `AI_AUTHOR_DRAFT_TRIP_MIN_TEXT_CHARS` (40) знаков плана; состояния
+  loading / limit (429) / unavailable (503, сеть) — как у помощника автора.
+
 ### Печатная версия плана (#2068)
 
 Во вкладке «Экспорт» (только web) под навигаторами стоит «Распечатать план»
@@ -1269,6 +1298,11 @@ i18n подставляет только строковые литералы, к
 
 Unit/component (Jest):
 
+- `__tests__/components/trips/routeNearSuggestions.test.tsx`,
+  `routeBuilder.nearRoute.test.tsx`, `tripDescriptionDraftPanel.test.tsx`,
+  `tripPlanDescriptionEditor.aiDraft.test.tsx`, `__tests__/hooks/useAiNearRoute.test.tsx`,
+  `__tests__/api/aiPicksNearRoute.test.ts`, `__tests__/scripts/ai-assist/nearRoute.test.ts`
+  — подсказки службы в планировщике (#2911).
 - `__tests__/trips/api.publicTrips.test.ts`, `plannedTripsAdapter.test.ts`,
   `plannedTripsTransport.test.ts`, `plannedTripsRoutePayload.test.ts`,
   `plannedTripsRouteElevation.test.ts`, `plannedTripsBikeType.test.ts`,

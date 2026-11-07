@@ -699,6 +699,50 @@ type MapPlaceSource = {
 (Playwright, Pixel 5, CPU ×4): запросы `/api/map/clusters/` на жест, DOM-мутации
 панели карты, число маркеров, итоговый зум.
 
+### Строка «Опишите, что ищете» (#2887, флаг `EXPO_PUBLIC_AI_PICKS`)
+
+Панель фильтров в режиме радиуса (`components/MapPage/FiltersPanelBody.tsx`)
+подключает `components/MapPage/MapIntentRow.tsx` отложенным чанком по
+литеральному флагу (как `TravelWizardStepExtras`/`RouteBuilder`, #2738): без
+`EXPO_PUBLIC_AI_PICKS` в сборке нет ни строки, ни `api/aiMapIntent`, и панель не
+делает запросов к `/ai/*`. Ручные фильтры, `mapFiltersStorage` и
+`useMapFilters` не меняются.
+
+- Описание → `POST /ai/intent {q, locale}` службы metravel-assist
+  (`api/aiMapIntent.ts`, `fetchWithTimeout` 8 с) → JSON по схеме
+  `scripts/ai-train/osm_filter_schema.json` (`{categories, radius_km, center,
+  constraints}`; навык набора `osm_intents`, `services/ai-assist/README.md`).
+- Маппинг — чистая `utils/mapIntent.ts`: `categories` схемы — это категории
+  слоя POI (`OsmPoiCategory`, список `OSM_POI_CATEGORY_IDS` в
+  `utils/overpass/buildOverpassQuery.ts`, страж
+  `__tests__/scripts/ai-train-osm-filter-schema.test.ts`), а не словарь типов
+  мест `categoryTravelAddress`, поэтому они уходят в слой `osm-poi`
+  (`onOverlayToggle`/`mapUiApi.setOverlayEnabled` включает слой,
+  `mapUiApi.setOsmPoiCategories` ставит категории); `radius_km` → фильтр
+  `radius` ближайшим значением `RADIUS_OPTIONS`; `center.name` → Nominatim
+  через `useLocationSearchQuery` → `mapUiApi.focusOnCoord` (зум 12 для 10 км,
+  иначе 11 — `minZoom` слоя POI) плюс фильтр `address`. Якорь радиуса
+  (`useMapCoordinates`) при этом не двигается: радиус точек сайта остаётся от
+  позиции посетителя, слой POI следует за вьюпортом.
+- Чипы «Понял так: …» показывают применённые категории, радиус и центр;
+  «Сбросить» возвращает радиус, адрес, категории слоя по умолчанию и прежнее
+  состояние слоя (значения до первого запроса, не промежуточные). Пожелания
+  `constraints` (`dogs/camper/kids/free`) фильтра на карте не имеют — строка
+  называет их подсказкой «фильтра „…“ на карте пока нет», а не теряет.
+- Отказ службы (422 `invalid_intent`, 503, таймаут, сеть) — подсказка
+  «недоступно», 429 `limit` — «лимит исчерпан»; строка и введённый текст
+  остаются, ручные фильтры работают. Тексты — `aiPicksStatic:mapIntent.*`
+  (RU/BE/UK/PL/EN).
+- Известное ограничение: чекбоксы категорий в `FiltersPanelMapSettings` держат
+  своё локальное состояние и не отражают категории, выставленные строкой;
+  при включении слоя панель настроек может перезаписать категории своими
+  дефолтами, поэтому строка повторяет свои следующим тиком.
+- Тесты: `__tests__/components/MapPage/MapIntentRow.test.tsx` (применение,
+  сброс, constraints, отказы), `FiltersPanel.mapIntent*.test.tsx` (флаг
+  вкл/выкл, режим маршрута), `__tests__/utils/mapIntent.test.ts`,
+  `__tests__/api/aiMapIntent.test.ts`; сервер —
+  `__tests__/scripts/ai-assist/{intent,osmFilterSchema}.test.ts`.
+
 ## Point/place mobile contract
 
 - Mobile web, Android и iPhone сохраняют одинаковый порядок данных и действий

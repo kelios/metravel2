@@ -586,4 +586,12 @@ export const travelGenerated4 = {
   "components.travel.note.checklist.photos": "Фото",
   "components.travel.note.checklist.photosDetail": "Фото в галерее: от 1 до {{value1}}",
   "components.travel.details.sections.TravelDetailsContentSection.contentsHeading": "Содержание",
+  "components.travel.PublishSeoCard.title": "SEO-описание",
+  "components.travel.PublishSeoCard.hint": "Одно-два предложения для сниппета в поиске: место, суть поездки, для кого. Без него поисковик возьмёт начало текста.",
+  "components.travel.PublishSeoCard.placeholder": "Например: Два дня в Гродно с детьми — замки, набережная и кафе, куда вернёмся.",
+  "components.travel.PublishSeoCard.counter": "{{value1}}/{{value2}}",
+  "components.travel.PublishSeoCard.counterOver": "Длиннее {{value1}} знаков: поисковик обрежет описание",
+  "components.travel.useTravelPublishChecklist.seoDescription": "SEO-описание",
+  "components.travel.useTravelPublishChecklist.seoDescriptionDetail": "До {{value1}} знаков (шаг {{value2}})",
+  "components.travel.useTravelPublishChecklist.seoDescriptionBenefit": "Свой текст в сниппете поиска вместо случайного отрывка",
 } as const

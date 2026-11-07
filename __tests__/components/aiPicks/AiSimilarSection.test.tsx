@@ -38,6 +38,8 @@ const item = (id: number, title: string): AiPickItem => ({
   score: 0.8,
   city: 'Kraków',
   country: 'Польша',
+  lat: null,
+  lng: null,
   cover: `https://metravel.by/travel-image/${id}.jpg`,
 })
 

@@ -207,3 +207,26 @@ afterEach(() => {
   restoreKeyboardAvoidingView?.()
   restoreKeyboardAvoidingView = null
 })
+
+describe('«Спросить про этот квест» (#2897)', () => {
+  const originalFlag = process.env.EXPO_PUBLIC_AI_ASSISTANT
+  afterEach(() => {
+    process.env.EXPO_PUBLIC_AI_ASSISTANT = originalFlag
+  })
+
+  it('без флага кнопки нет; с флагом ведёт в ассистента с источником квеста', async () => {
+    delete process.env.EXPO_PUBLIC_AI_ASSISTANT
+    const off = await render(<QuestTrustBar pointsCount={7} questTitle="Город на сваях" questId="amsterdam-on-piles" cityId="45" questNumericId={12} />)
+    expect(off.queryByTestId('ask-assistant-source')).toBeNull()
+    await off.unmount()
+
+    process.env.EXPO_PUBLIC_AI_ASSISTANT = '1'
+    const on = await render(<QuestTrustBar pointsCount={7} questTitle="Город на сваях" questId="amsterdam-on-piles" cityId="45" questNumericId={12} />)
+    await fireEvent.press(on.getByTestId('ask-assistant-source'))
+    const { router } = jest.requireMock('expo-router')
+    expect(router.push).toHaveBeenCalledWith('/assistant?source=quest:12')
+    // Без числового id источника нет — кнопка не рисуется даже под флагом.
+    const noId = await render(<QuestTrustBar pointsCount={7} questTitle="Город на сваях" questId="amsterdam-on-piles" cityId="45" />)
+    expect(noId.queryByTestId('ask-assistant-source')).toBeNull()
+  })
+})

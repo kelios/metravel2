@@ -15,8 +15,11 @@ import { loadConfig } from './config.ts'
 import { createDemandLog } from './demandLog.ts'
 import { IndexModelMismatch, loadIndex } from './index.ts'
 import { createLexicalSearch } from './lexical.ts'
+import { AUTHOR_DRAFT_LIMITS_PREFIX } from './authorDraft.ts'
+import { INTENT_LIMITS_PREFIX } from './intent.ts'
 import { AskLimits, createCounterStore, createDayClock } from './limits.ts'
 import { createRedisClient } from './redis.ts'
+import { createTagCatalog } from './suggestTags.ts'
 
 const log = (line: string) => console.error(`[${new Date().toISOString()}] ${line}`)
 
@@ -40,18 +43,39 @@ async function main(): Promise<void> {
   const redis = config.redisUrl ? createRedisClient({ url: config.redisUrl }) : null
   const cache = new ResponseCache({ capacity: config.cacheSize, ttlSeconds: config.cacheTtlSeconds, redis, log })
   const lexical = createLexicalSearch({ backendUrl: config.backendUrl, timeoutMs: config.lexicalTimeoutMs, log })
+  // #2886: словарь и значения статей для `/ai/suggest-tags`, час в памяти.
+  const tagCatalog = createTagCatalog({ backendUrl: config.backendUrl, timeoutMs: config.tagsTimeoutMs, log })
 
+  const counterStore = createCounterStore(redis, log)
+  const dayClock = createDayClock(config.dayTimeZone)
   const limits = new AskLimits({
-    store: createCounterStore(redis, log),
-    clock: createDayClock(config.dayTimeZone),
+    store: counterStore,
+    clock: dayClock,
     dailyLimit: config.askDailyLimit,
     strikesToBlock: AI_OFFTOPIC_STRIKES_TO_BLOCK,
+  })
+  // #2885: помощник автора считает запросы отдельно от вопросов ассистента (из `AskLimits` нужна только квота).
+  const authorDraftLimits = new AskLimits({
+    store: counterStore,
+    clock: dayClock,
+    dailyLimit: config.authorDraftDailyLimit,
+    strikesToBlock: AI_OFFTOPIC_STRIKES_TO_BLOCK,
+    prefix: AUTHOR_DRAFT_LIMITS_PREFIX,
+  })
+  // #2887: фильтр карты по описанию — свой суточный счётчик на IP.
+  const mapIntentLimits = new AskLimits({
+    store: counterStore,
+    clock: dayClock,
+    dailyLimit: config.mapIntentDailyLimit,
+    strikesToBlock: AI_OFFTOPIC_STRIKES_TO_BLOCK,
+    prefix: INTENT_LIMITS_PREFIX,
   })
   const demandLog = createDemandLog({ path: config.demandLogPath, log })
   const generator = config.llmUrl ? createGenerator(config.llmUrl, { timeoutMs: config.llmTimeoutMs }) : null
   log(
     `/ai/ask: модель ${config.llmUrl ?? 'не задана (AI_LLM_URL)'}, лимит ${config.askDailyLimit}/сутки на IP, ` +
-      `блок после ${AI_OFFTOPIC_STRIKES_TO_BLOCK} вопросов не по теме, день по ${config.dayTimeZone}, ` +
+      `блок после ${AI_OFFTOPIC_STRIKES_TO_BLOCK} вопросов не по теме, /ai/author-draft ${config.authorDraftDailyLimit}/сутки на IP, ` +
+      `/ai/intent ${config.mapIntentDailyLimit}/сутки на IP, день по ${config.dayTimeZone}, ` +
       `счётчики ${redis ? 'redis' : 'в памяти'}, журнал ${config.demandLogPath}`,
   )
 
@@ -63,6 +87,9 @@ async function main(): Promise<void> {
     cache,
     queueTimeoutMs: config.queueTimeoutMs,
     ask: { generator, limits, demandLog, queueTimeoutMs: config.askQueueTimeoutMs, trustProxy: config.trustProxy },
+    authorDraft: { limits: authorDraftLimits },
+    mapIntent: { limits: mapIntentLimits },
+    suggestTags: { catalog: tagCatalog },
     log,
   })
   server.keepAliveTimeout = 5000

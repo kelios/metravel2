@@ -62,6 +62,8 @@ function makeServer(overrides: Partial<Parameters<typeof createApp>[0]> = {}) {
       queueTimeoutMs: 200,
       trustProxy: true,
     },
+    authorDraft: { limits: new AskLimits({ store: new MemoryCounterStore(), clock: createDayClock(), dailyLimit: 5, strikesToBlock: 3 }) },
+    suggestTags: { catalog: { dictionary: async () => null, travelTags: async () => null } },
     log: () => {},
     ...overrides,
   })

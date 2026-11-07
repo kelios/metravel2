@@ -1,5 +1,6 @@
 import React, { Suspense } from 'react'
 import { ActivityIndicator, StyleSheet, View } from 'react-native'
+import { useLocalSearchParams } from 'expo-router'
 
 import { NotFoundContent } from '@/components/screens/NotFoundContent'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -27,10 +28,13 @@ function AssistantFallback() {
 }
 
 export default function AssistantRoute() {
+  // #2897: `?source=travel:816` / `quest:<id>` — контекстный вход со страницы
+  // статьи или квеста; разбирает экран (роут не подключает `api/aiAssist`, #2738).
+  const { source } = useLocalSearchParams<{ source?: string | string[] }>()
   if (!isAiAssistantEnabled()) return <NotFoundContent />
   return (
     <Suspense fallback={<AssistantFallback />}>
-      <AssistantScreen />
+      <AssistantScreen sourceParam={source ?? null} />
     </Suspense>
   )
 }

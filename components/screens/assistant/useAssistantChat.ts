@@ -9,6 +9,11 @@
  * - `llamacpp` — прямой `llama-server`: пайплайн «фильтр тем → подбор карточек →
  *   промпт → metravel-llm → страж ссылок» выполняется здесь, дневной лимит, счётчик
  *   вопросов не по теме (#2711) и журнал спроса — в хранилище устройства.
+ *
+ * Контекстный вход (#2897): с `source` (страница статьи или квеста) карточка этой
+ * страницы стоит первой в промпте на каждом ходу — у `ask` её ставит сервер по
+ * `source` в теле запроса, у `llamacpp` — `pinSourceFirst` перед подбором; экран
+ * показывает её заголовок и примеры вопросов под контекст.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -24,9 +29,10 @@ import {
   registerOffTopicStrike,
 } from '@/api/aiAssist/limits'
 import { countKeptSourceLinks, enforceSourceLinks, guardStreamingText } from '@/api/aiAssist/linkGuard'
-import { secondsToDayEnd } from '@/api/aiAssist/policy'
+import { AI_SOURCES_LIMIT, secondsToDayEnd } from '@/api/aiAssist/policy'
 import { MAX_QUESTION_LENGTH, buildAssistantMessages } from '@/api/aiAssist/prompt'
-import { buildRetrievalQuery, searchSiteMaterials } from '@/api/aiAssist/retrieval'
+import { buildRetrievalQuery, loadSourceCard, searchSiteMaterials } from '@/api/aiAssist/retrieval'
+import { pinSourceFirst, type AiSourceRef } from '@/api/aiAssist/sourceRef'
 import { classifyQuestion, isModelOffTopicReply } from '@/api/aiAssist/topicGate'
 import type { AiHistoryItem, AiSource, AiUsage } from '@/api/aiAssist/types'
 import { getAiAssistantBaseUrl, getAiAssistantProvider, type AiAssistantProvider } from '@/utils/aiAssistantConfig'
@@ -65,6 +71,10 @@ export type UseAssistantChatOptions = {
   generator?: Generator | null
   /** Подмена провайдера `ask` в тестах; задан — путь через сервер. */
   askClient?: AskClient
+  /** Страница, с которой открыт ассистент (#2897); `null`/нет — обычный вход. */
+  source?: AiSourceRef | null
+  /** Подмена загрузки карточки источника в тестах. */
+  loadSource?: (ref: AiSourceRef, locale: string, signal?: AbortSignal) => Promise<AiSource | null>
 }
 
 const STREAM_FLUSH_MS = 40
@@ -98,8 +108,13 @@ const resolveProvider = (options: Pick<UseAssistantChatOptions, 'generator' | 'a
 }
 
 export function useAssistantChat(options: UseAssistantChatOptions) {
-  const { locale } = options
+  const { locale, loadSource = loadSourceCard } = options
+  const sourceRef = options.source ?? null
   const [turns, setTurns] = useState<AssistantTurn[]>([])
+  /** Карточка страницы-источника (#2897); `null` — нет источника или материал не нашёлся. */
+  const [sourceCard, setSourceCard] = useState<AiSource | null>(null)
+  /** Загрузка карточки: вопрос, заданный до её прихода, дожидается её (`llamacpp`). */
+  const sourceLoadRef = useRef<Promise<AiSource | null> | null>(null)
   const [remaining, setRemaining] = useState<number | null>(null)
   const [offTopicBlocked, setOffTopicBlocked] = useState(false)
   const [inputError, setInputError] = useState<AssistantInputError>(null)
@@ -161,6 +176,27 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
       if (blockResetRef.current) clearTimeout(blockResetRef.current)
     }
   }, [serverSide, updateOffTopicBlocked, updateRemaining])
+
+  // Ссылка сравнивается по значению: объект `source` экран может собирать на каждый рендер.
+  const sourceType = sourceRef?.type ?? null
+  const sourceId = sourceRef?.id ?? null
+  useEffect(() => {
+    if (!sourceType || sourceId === null) {
+      sourceLoadRef.current = null
+      setSourceCard(null)
+      return
+    }
+    const controller = new AbortController()
+    const load = loadSource({ type: sourceType, id: sourceId }, locale, controller.signal).catch(() => null)
+    sourceLoadRef.current = load
+    void load.then((card) => {
+      if (!controller.signal.aborted && mountedRef.current) setSourceCard(card)
+    })
+    return () => {
+      controller.abort()
+      if (sourceLoadRef.current === load) sourceLoadRef.current = null
+    }
+  }, [loadSource, locale, sourceId, sourceType])
 
   const commitTurns = useCallback((updater: (prev: AssistantTurn[]) => AssistantTurn[]) => {
     turnsRef.current = updater(turnsRef.current)
@@ -251,6 +287,7 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
           question,
           locale,
           history,
+          source: sourceRef,
           signal: controller.signal,
           onSources: (event) => {
             applyServerRemaining(event.remaining)
@@ -323,7 +360,7 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
         patchTurn(id, { status: controller.signal.aborted ? 'aborted' : 'error' })
       }
     },
-    [applyServerRemaining, commitTurns, locale, patchTurn, scheduleBlockReset, scheduleLimitReset, updateOffTopicBlocked, updateRemaining],
+    [applyServerRemaining, commitTurns, locale, patchTurn, scheduleBlockReset, scheduleLimitReset, sourceRef, updateOffTopicBlocked, updateRemaining],
   )
 
   /** Провайдер `llamacpp`: подбор, промпт, модель и страж на клиенте, счётчики в хранилище. */
@@ -336,14 +373,18 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
           return
         }
         let sources: AiSource[] = []
+        // Карточка страницы-источника (#2897) ждётся, если ещё грузится; до первого
+        // самостоятельного вопроса её заголовок — опора уточнений («Что рядом?»).
+        const pinned = sourceLoadRef.current ? await sourceLoadRef.current : null
         const previousAnchor = lastSearchQueryRef.current
-        const searchQuery = buildRetrievalQuery(question, previousAnchor)
+        const searchQuery = buildRetrievalQuery(question, previousAnchor ?? pinned?.title ?? null)
         if (searchQuery === question) lastSearchQueryRef.current = question
         try {
           sources = await searchSiteMaterials({ query: searchQuery, locale, signal: controller.signal })
         } catch {
           sources = []
         }
+        sources = pinSourceFirst(pinned, sources, AI_SOURCES_LIMIT)
         if (controller.signal.aborted) {
           patchTurn(id, { status: 'aborted' })
           return
@@ -488,6 +529,8 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
 
   return {
     turns,
+    sourceRef,
+    sourceCard,
     remaining,
     offTopicBlocked,
     inputError,

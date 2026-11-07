@@ -82,6 +82,8 @@ export const BLOCK_SENSITIVE_ENTRIES: readonly SensitiveEntry[] = [
   // #2165: каталог мест и материалы места несут путешествия авторов; бэк режет их по сессии (#2164).
   { key: queryKeys.placesCatalogAll() },
   { key: queryKeys.mapPlaceSourcesAll() },
+  // #3095–#3098: приглашения кампании мест; `preview`/`publicTravelUrl` исполненной заявки — чужая статья, бэк режет по сессии.
+  { key: ['place-requests'] },
   { key: ['recommendations'] },
   { key: ['favorites'] },
   { key: ['view-history'] },
@@ -107,6 +109,8 @@ export const BLOCK_EXEMPT_ROOTS: Readonly<Record<string, string>> = {
   'route-tasks': 'версионные редакционные задания на маршруте',
   'ai-similar': 'смысловой подбор: опубликованные статьи и квесты из индекса metravel-assist (#2456), без личных данных; блок автора к выдаче службы не применяется — это публичные материалы каталога',
   'ai-search': 'смысловой поиск по описанию из того же индекса; публичные материалы',
+  'ai-near-route': 'материалы в коридоре маршрута планировщика из того же индекса (#2911); публичные статьи и квесты',
+  'ai-tag-suggestions': 'подсказка словарных значений для своей статьи по индексу metravel-assist (#2886): в ответе только id справочника, чужого контента нет',
   'travel-route-files': 'файлы трека открытого путешествия; сама деталь перезапрашивается',
   'email-subscription-status': 'подписка email своего аккаунта на рассылку; чужого контента нет',
   filters: 'справочник',

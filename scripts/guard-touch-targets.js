@@ -106,6 +106,8 @@ const INTERACTIVE_ELEMENTS = new Set([
   'UIButton',
   // Обёртка над `Button`, отдающая `style` дальше (#1748).
   'AdminGrantRareAward',
+  // #2897: «Спросить про этот маршрут/квест» — обёртка над `UIButton` с пробросом `style`.
+  'AskAssistantButton',
 ])
 
 // Дешёвый фильтр «в файле вообще есть интерактивный элемент» перед разбором AST.

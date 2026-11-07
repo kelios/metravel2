@@ -52,6 +52,8 @@ export type GenerateRequest = {
   signal?: AbortSignal
   /** Вызывается на каждый фрагмент: дельта и накопленный текст. */
   onDelta?: (delta: string, full: string) => void
+  /** Потолок ответа вместо `LLAMACPP_MAX_TOKENS`: помощник автора (#2885) просит три лида разом. */
+  maxTokens?: number
 }
 
 export interface Generator {
@@ -229,7 +231,7 @@ export class LlamaCppGenerator implements Generator {
     this.now = options.now ?? (() => Date.now())
   }
 
-  async generate({ messages, signal, onDelta }: GenerateRequest): Promise<AiGenerateResult> {
+  async generate({ messages, signal, onDelta, maxTokens }: GenerateRequest): Promise<AiGenerateResult> {
     if (!this.baseUrl) throw new AiGeneratorError('unavailable', 'assistant url is not configured')
     const controller = new AbortController()
     // Таймаут — не отмена посетителем: иначе экран молча показывал бы «ответ
@@ -285,7 +287,7 @@ export class LlamaCppGenerator implements Generator {
             messages,
             stream: true,
             stream_options: { include_usage: true },
-            max_tokens: LLAMACPP_MAX_TOKENS,
+            max_tokens: maxTokens ?? LLAMACPP_MAX_TOKENS,
             temperature: LLAMACPP_TEMPERATURE,
             presence_penalty: LLAMACPP_PRESENCE_PENALTY,
             chat_template_kwargs: { enable_thinking: false },

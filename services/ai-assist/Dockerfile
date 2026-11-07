@@ -28,6 +28,10 @@ RUN npm init -y >/dev/null \
 COPY scripts/ai-index/ scripts/ai-index/
 COPY scripts/ai-assist/ scripts/ai-assist/
 COPY api/aiAssist/ api/aiAssist/
+# #2887: /ai/intent читает enum'ы схемы фильтра карты из файла обучающего набора (путь от WORKDIR).
+COPY scripts/ai-train/osm_filter_schema.json scripts/ai-train/osm_filter_schema.json
+# #2911: /ai/near-route считает расстояние общим haversine (чистый модуль без RN).
+COPY utils/geoDistance.ts utils/geoDistance.ts
 # Журнал спроса /ai/ask (logs/ai-demand.jsonl): единственная запись сервиса; compose монтирует том.
 RUN mkdir -p logs && chown 1000:1000 logs
 

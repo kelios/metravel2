@@ -42,6 +42,44 @@
   `queryKeys.aiSimilarSource`), `app/(tabs)/quests/[city]/[questId].tsx` (`relatedTravelsSlot`),
   `ListTravelBase` (`listIntroContent` — заголовок прокручиваемого списка, только путь `/search`).
 
+## Подсказка значений в визарде статьи (#2886)
+
+Шаг «Дополнительно» (`components/travel/TravelWizardStepExtras.tsx`) показывает над полями
+блок «Предложено по тексту»: чипы стран, категорий, транспорта, компаньонов и ночёвок, которые
+`POST /ai/suggest-tags` подобрал голосованием ближайших по смыслу статей индекса (служба —
+`scripts/ai-assist/suggestTags.ts`, контракт — `services/ai-assist/README.md`).
+
+- `api/aiTagSuggestions.ts` — клиент: таймаут 4 с, `signal`, id словаря → строки формы.
+- `hooks/useTravelTagSuggestions.ts` — `queryKeys.aiTagSuggestions(отпечаток текста, locale)`,
+  час в кэше, `retry: false`; `enabled` только при флаге `EXPO_PUBLIC_AI_PICKS`, плоском тексте
+  описания от `AI_TAG_SUGGEST_MIN_TEXT_CHARS` (300) знаков и смонтированном блоке шага.
+- `components/travel/upsert/TravelTagSuggestions.tsx` — чипы `components/ui/Chip` по полям с
+  подписями словаря `/getFiltersTravel/` на языке интерфейса; уже выбранные значения не
+  показываются; чип добавляет значение к выбранным (`onFieldChange`), «Принять все» — все поля
+  разом, «Скрыть» убирает блок до следующего монтирования. Пустой ответ, `degraded`, ошибка
+  или короткий текст — блока нет. На 390 чипы переносятся строками.
+- Шаг грузит блок отложенным чанком по литеральному `process.env.EXPO_PUBLIC_AI_PICKS` (#2738,
+  как `PublishSeoCard` грузит помощника автора): без флага в сборке нет ни блока, ни клиента,
+  запросов к `/ai/*` страница не делает.
+- Аналитика (`utils/analytics.ts:trackWizardEvent`): `wizard_tag_suggestion_accepted`
+  `{field, values, count, mode: chip|all, confidence}` и `wizard_tag_suggestion_dismissed`
+  `{remaining, confidence}`.
+- Тесты: `__tests__/scripts/ai-assist/suggestTags.test.ts` (голосование, словарь, кэш, 400,
+  degraded), `__tests__/hooks/useTravelTagSuggestions.test.tsx` (условия `enabled`, ноль
+  запросов без флага), `__tests__/components/travel/upsert/TravelTagSuggestions.test.tsx`.
+
+## Планировщик поездки (#2911)
+
+`/trips/plan/<id>` под тем же флагом показывает «Рядом с маршрутом»: статьи и квесты
+индекса в 30 км от маршрута (`POST /ai/near-route`, гео-коридор по координатам
+источников без модели — как `/ai/similar`), карточки `AiPickCard` с `actionSlot`
+«Добавить в маршрут». Клиент — `fetchNearRoute` (`api/aiPicks.ts`, 4 с, `signal`,
+прореживание до 50 точек), хук — `useAiNearRoute` (`hooks/useAiPicks.ts`, дебаунс
+800 мс, ключ `queryKeys.aiNearRoute(<отпечаток точек до 3 знаков>, locale)`, exempt root
+`ai-near-route`). Блок, добавление точки и черновик описания поездки
+(`POST /ai/author-draft {kind: 'trip'}` под `EXPO_PUBLIC_AI_ASSISTANT`) описаны в
+`docs/features/trips.md` → «Подсказки службы metravel-assist в планировщике».
+
 ## Данные
 
 Служба отдаёт `items[] = {type, source_id, title, url, snippet, score, city, country, lat, lng, cover}`;

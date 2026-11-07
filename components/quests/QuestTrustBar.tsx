@@ -21,6 +21,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 
+import AskAssistantButton from '@/components/assistant/AskAssistantButton'
 import Button from '@/components/ui/Button'
 import QuestInaccuracyReportModal from './QuestInaccuracyReportModal'
 import { notifyQuest } from './questWizardHelpers'
@@ -39,6 +40,8 @@ type Props = {
   questTitle: string
   questId?: string
   cityId?: string
+  /** Числовой PK квеста — источник для «Спросить про этот квест» (#2897). */
+  questNumericId?: number
 }
 
 type FactProps = {
@@ -57,7 +60,7 @@ function QuestTrustFact({ styles, icon, color, text }: FactProps) {
   )
 }
 
-function QuestTrustBar({ pointsCount = 0, countModel, questTitle, questId, cityId }: Props) {
+function QuestTrustBar({ pointsCount = 0, countModel, questTitle, questId, cityId, questNumericId }: Props) {
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
   const [expanded, setExpanded] = useState(false)
@@ -140,6 +143,9 @@ function QuestTrustBar({ pointsCount = 0, countModel, questTitle, questId, cityI
         </View>
       ) : null}
 
+      {/* #2897: контекстный вход в ассистента из стартовой карточки — под флагом ассистента. */}
+      {questNumericId ? <AskAssistantButton source={{ type: 'quest', id: questNumericId }} style={styles.askAssistant} /> : null}
+
       {/* Монтируем только по нажатию: стартовый экран квеста не должен платить
           формой, которую большинство игроков никогда не откроет. */}
       {reportVisible ? (
@@ -186,6 +192,9 @@ const createStyles = (colors: ThemedColors) =>
       fontSize: 12,
       fontWeight: '700',
       color: colors.text,
+    },
+    askAssistant: {
+      alignSelf: 'flex-start',
     },
     disclosureToggle: {
       flexDirection: 'row',

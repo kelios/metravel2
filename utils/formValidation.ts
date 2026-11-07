@@ -43,7 +43,9 @@ export type ModerationIssueKey =
   | 'categories'
   | 'route'
   | 'pointCategories'
-  | 'photos';
+  | 'photos'
+  // #2885: рекомендуемый пункт чек-листа «SEO-описание» ведёт к полю на шаге публикации.
+  | 'meta_description';
 
 export interface ModerationIssue {
   key: ModerationIssueKey;

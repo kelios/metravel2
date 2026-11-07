@@ -389,6 +389,8 @@ export interface TravelFormData extends TravelModerationMetadata {
     plus?: string | null;
     minus?: string | null;
     recommendation?: string | null;
+    /** SEO-описание страницы (#2885): до 160 знаков для сниппета, сервер хранит до 255 (`meta_description`). */
+    meta_description?: string | null;
     youtube_link?: string | null;
     gallery?: GalleryItem[];
     categories: string[];

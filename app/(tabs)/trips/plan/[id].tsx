@@ -38,6 +38,7 @@ import {
 } from '@/components/trips/planning/tripPlanDeferredSections';
 import { shouldRenderTripRouteExportMenu } from '@/components/trips/planning/tripRouteExport';
 import TripPlanScreenHeader from '@/components/trips/planning/TripPlanScreenHeader';
+import { buildTripDraftText } from '@/components/trips/planning/tripDraftText';
 import { useIsScreenHeaderMobile } from '@/components/layout/ScreenHeaderContext';
 import TripPlanCollapsibleText, {
   tripPlanTextCharsPerWidth,
@@ -584,6 +585,8 @@ export default function PlannedTripScreen() {
                     label={i18nT('trips:app.tabs.trips.plan.id.opisanie_c32c01de')}
                     placeholder={i18nT('trips:app.tabs.trips.plan.id.opisanie_poezdki_ssylki_detali_dlya_uchastni_e1269600')}
                     editable={!updateTrip.isPending}
+                    // #2911: черновик по сохранённому маршруту, датам и транспорту поездки.
+                    aiDraftPlanText={buildTripDraftText({ ...trip, title: editValues.title })}
                   />
                 </Suspense>
 

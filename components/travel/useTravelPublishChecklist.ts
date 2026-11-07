@@ -5,6 +5,11 @@ import { getQualityScore } from '@/utils/travelWizardValidation';
 import { translate as i18nT, translatePlural } from '@/i18n'
 import { formatPhotos } from '@/utils/pluralize'
 import {
+  TRAVEL_META_DESCRIPTION_ANCHOR_ID,
+  TRAVEL_META_DESCRIPTION_MAX_LENGTH,
+  TRAVEL_WIZARD_PUBLISH_STEP,
+} from '@/utils/travelFormUtils'
+import {
   FULL_WIZARD_ISSUE_STEPS,
   NOTE_MAX_PHOTOS,
   NOTE_MIN_TEXT_LENGTH,
@@ -98,6 +103,10 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
     uncategorizedPointsCount,
   ]);
 
+  // #2885: SEO-описание есть и помещается в сниппет — пустое или длиннее бюджета считается «нет».
+  const metaDescriptionLength = (formData.meta_description ?? '').trim().length;
+  const hasMetaDescription = metaDescriptionLength > 0 && metaDescriptionLength <= TRAVEL_META_DESCRIPTION_MAX_LENGTH;
+
   const recommendedChecklist = useMemo<ChecklistItem[]>(() => {
     const hasPlus = !!formData.plus && formData.plus.trim().length >= 10;
     const hasMinus = !!formData.minus && formData.minus.trim().length >= 10;
@@ -111,8 +120,9 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
       { key: 'recommendation', label: i18nT('travel:components.travel.useTravelPublishChecklist.rekomendatsii_i_layfhaki_8f5cef9b'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.podelites_sovetami_shag_4_76eecab2'), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.uvelichivaet_tsennost_marshruta_ee350669'), ok: hasRecommendation },
       { key: 'gallery3', label: i18nT('travel:components.travel.useTravelPublishChecklist.minimum_3_foto_v_galeree_7ea4c6df'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.seychas_value1_foto_shag_3_9d2ca97a', { value1: formatPhotos(galleryItems.length) }), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.marshruty_s_foto_poluchayut_bolshe_prosmotro_d11e6185'), ok: hasGallery3 },
       { key: 'video', label: i18nT('travel:components.travel.useTravelPublishChecklist.video_o_puteshestvii_7045907e'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.youtube_ssylka_shag_3_01055795'), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.video_povyshaet_vovlechennost_7ca45a3f'), ok: hasVideo },
+      { key: 'meta_description', label: i18nT('travel:components.travel.useTravelPublishChecklist.seoDescription'), detail: i18nT('travel:components.travel.useTravelPublishChecklist.seoDescriptionDetail', { value1: TRAVEL_META_DESCRIPTION_MAX_LENGTH, value2: TRAVEL_WIZARD_PUBLISH_STEP }), benefit: i18nT('travel:components.travel.useTravelPublishChecklist.seoDescriptionBenefit'), ok: hasMetaDescription },
     ];
-  }, [formData.plus, formData.minus, formData.recommendation, formData.youtube_link, galleryItems.length]);
+  }, [formData.plus, formData.minus, formData.recommendation, formData.youtube_link, galleryItems.length, hasMetaDescription]);
 
   const checklist = useMemo<ChecklistItem[]>(() => {
     if (isNote) return requiredChecklist;
@@ -172,8 +182,18 @@ export const useTravelPublishChecklist = (formData: TravelFormData) => {
   const moderationIssuesByKey = useMemo(() => {
     const map = new Map<string, ModerationIssue>();
     moderationIssues.forEach((issue) => map.set(issue.key, issue));
+    // #2885: пункт «SEO-описание» кликабелен и ведёт к полю на шаге публикации; в
+    // `moderationIssues` он не входит — отправку на модерацию не блокирует.
+    if (!hasMetaDescription) {
+      map.set('meta_description', {
+        key: 'meta_description',
+        label: i18nT('travel:components.travel.useTravelPublishChecklist.seoDescription'),
+        targetStep: TRAVEL_WIZARD_PUBLISH_STEP,
+        anchorId: TRAVEL_META_DESCRIPTION_ANCHOR_ID,
+      });
+    }
     return map;
-  }, [moderationIssues]);
+  }, [hasMetaDescription, moderationIssues]);
 
   const qualityScore = useMemo(() => getQualityScore(formData), [formData]);
 

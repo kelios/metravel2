@@ -586,4 +586,12 @@ export const travelGenerated4 = {
   "components.travel.note.checklist.photos": "Zdjęcia",
   "components.travel.note.checklist.photosDetail": "Zdjęcia w galerii: od 1 do {{value1}}",
   "components.travel.details.sections.TravelDetailsContentSection.contentsHeading": "Spis treści",
+  "components.travel.PublishSeoCard.title": "Opis SEO",
+  "components.travel.PublishSeoCard.hint": "Jedno-dwa zdania do snippetu w wyszukiwarce: miejsce, sedno podróży, dla kogo. Bez niego wyszukiwarka weźmie początek tekstu.",
+  "components.travel.PublishSeoCard.placeholder": "Na przykład: Dwa dni w Grodnie z dziećmi — zamki, bulwar i kawiarnie, do których wrócimy.",
+  "components.travel.PublishSeoCard.counter": "{{value1}}/{{value2}}",
+  "components.travel.PublishSeoCard.counterOver": "Dłużej niż {{value1}} znaków: wyszukiwarka przytnie opis",
+  "components.travel.useTravelPublishChecklist.seoDescription": "Opis SEO",
+  "components.travel.useTravelPublishChecklist.seoDescriptionDetail": "Do {{value1}} znaków (krok {{value2}})",
+  "components.travel.useTravelPublishChecklist.seoDescriptionBenefit": "Własny tekst w snippecie zamiast losowego fragmentu",
 } as const

@@ -23,13 +23,16 @@ export function fakeVector(text: string): Float32Array {
   return vector.map((v) => v / norm)
 }
 
-interface Spec {
+export interface Spec {
   type: ChunkRecord['type']
   sourceId: number
   locale?: string
   title: string
   text: string
   city?: string | null
+  /** Координаты источника (#2911, /ai/near-route); без них — Краков, как у всех. */
+  lat?: number | null
+  lng?: number | null
 }
 
 export const FIXTURE_CHUNKS: Spec[] = [
@@ -42,8 +45,8 @@ export const FIXTURE_CHUNKS: Spec[] = [
   { type: 'quest', sourceId: 2, locale: 'ru', title: 'Квест по Бресту', text: 'квест брест крепость задание дети', city: 'Брест' },
 ]
 
-export function fixtureChunks(): ChunkRecord[] {
-  return FIXTURE_CHUNKS.map((spec) => {
+export function fixtureChunks(specs: Spec[] = FIXTURE_CHUNKS): ChunkRecord[] {
+  return specs.map((spec) => {
     const locale = spec.locale ?? 'ru'
     return {
       id: chunkId(spec.type, spec.sourceId, locale, spec.text),
@@ -53,8 +56,8 @@ export function fixtureChunks(): ChunkRecord[] {
       title: spec.title,
       city: spec.city ?? null,
       country: 'Польша',
-      lat: 50.06,
-      lng: 19.94,
+      lat: spec.lat === undefined ? 50.06 : spec.lat,
+      lng: spec.lng === undefined ? 19.94 : spec.lng,
       month: [],
       tags: [],
       locale,
@@ -63,9 +66,9 @@ export function fixtureChunks(): ChunkRecord[] {
   })
 }
 
-export function writeFixtureIndex(model = MODEL): string {
+export function writeFixtureIndex(model = MODEL, specs: Spec[] = FIXTURE_CHUNKS): string {
   const distDir = makeTempDir('ai-assist-')
-  const chunks = fixtureChunks()
+  const chunks = fixtureChunks(specs)
   writeIndex(distDir, { model, dim: DIM, chunks, vectors: chunks.map((chunk) => fakeVector(chunk.text)), builtAt: '2026-10-18T16:48:48.951Z' })
   return distDir
 }

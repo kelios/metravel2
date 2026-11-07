@@ -33,6 +33,8 @@ interface Props {
   transportSection: React.ReactNode;
   pointsSection: React.ReactNode;
   editPointSection: React.ReactNode;
+  /** #2911: «Рядом с маршрутом» — под списком точек в обеих раскладках; `null` без флага. */
+  nearRouteSection: React.ReactNode;
   templatesSection: React.ReactNode;
   summarySection: React.ReactNode;
   importSection: React.ReactNode;
@@ -57,6 +59,7 @@ export default function RouteBuilderLayout({
   transportSection,
   pointsSection,
   editPointSection,
+  nearRouteSection,
   templatesSection,
   summarySection,
   importSection,
@@ -105,6 +108,7 @@ export default function RouteBuilderLayout({
         {previewStatusSection}
         {/* Список точек уже содержит и добавление, и инлайн-редактор точки. */}
         {pointsSection}
+        {nearRouteSection}
         {/* Главное действие стоит сразу под работой с точками, а не за
             шаблонами, импортом и экспортом в самом низу панели. */}
         {saveSection}
@@ -136,6 +140,8 @@ export default function RouteBuilderLayout({
           {pointsSection}
 
           {editPointSection}
+
+          {nearRouteSection}
 
           {templatesSection}
 

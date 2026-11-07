@@ -633,6 +633,50 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
         color: colors.text,
         marginBottom: DESIGN_TOKENS.spacing.xs,
     },
+    // #2885: карточка SEO-описания и помощника автора на шаге публикации.
+    seoCard: {},
+    seoHint: {
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: colors.textMuted,
+        lineHeight: 20,
+        marginBottom: DESIGN_TOKENS.spacing.sm,
+    },
+    seoInput: {
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: DESIGN_TOKENS.radii.md,
+        paddingHorizontal: DESIGN_TOKENS.spacing.md,
+        paddingVertical: DESIGN_TOKENS.spacing.sm,
+        fontSize: DESIGN_TOKENS.typography.sizes.sm,
+        color: colors.text,
+        backgroundColor: colors.background,
+        minHeight: 80,
+        textAlignVertical: 'top' as const,
+        ...Platform.select({ web: { outlineStyle: 'none' as never } }),
+    },
+    seoInputOver: {
+        borderColor: colors.danger,
+    },
+    seoCounterRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: DESIGN_TOKENS.spacing.sm,
+        marginTop: DESIGN_TOKENS.spacing.xs,
+    },
+    seoCounter: {
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.textMuted,
+    },
+    seoCounterOver: {
+        color: colors.danger,
+        fontWeight: '600',
+    },
+    seoCounterWarning: {
+        flex: 1,
+        fontSize: DESIGN_TOKENS.typography.sizes.xs,
+        color: colors.danger,
+    },
     rejectionCommentInput: {
         borderWidth: 1,
         borderRadius: DESIGN_TOKENS.radii.md,
@@ -641,7 +685,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
         fontSize: DESIGN_TOKENS.typography.sizes.sm,
         minHeight: 80,
         textAlignVertical: 'top' as const,
-        ...(Platform.OS === 'web' ? { outlineStyle: 'none' as any } : {}),
+        ...Platform.select({ web: { outlineStyle: 'none' as never } }),
     },
     adminButtons: {
         marginTop: DESIGN_TOKENS.spacing.md,

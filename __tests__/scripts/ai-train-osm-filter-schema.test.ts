@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 
 import { RADIUS_OPTIONS } from '@/constants/mapConfig';
-import { buildOsmPoiOverpassQL, normalizeBBox, type OsmPoiCategory } from '@/utils/overpass';
+import { buildOsmPoiOverpassQL, normalizeBBox, OSM_POI_CATEGORY_IDS, type OsmPoiCategory } from '@/utils/overpass';
 
 /**
  * scripts/ai-train/osm_filter_schema.json is the one schema of the map-filter
@@ -36,6 +36,10 @@ describe('ai-train osm filter schema ↔ map filters', () => {
     const all = buildOsmPoiOverpassQL(bbox);
     const fromSchema = buildOsmPoiOverpassQL(bbox, schema.properties.categories.items.enum as OsmPoiCategory[]);
     expect(fromSchema).toBe(all);
+  });
+
+  it('categories enum equals the POI category list the map intent row checks against (#2887)', () => {
+    expect([...schema.properties.categories.items.enum].sort()).toEqual([...OSM_POI_CATEGORY_IDS].sort());
   });
 
   it('radius_km enum equals the map radius options', () => {

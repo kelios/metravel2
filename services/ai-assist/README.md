@@ -15,7 +15,11 @@ HTTP-сервис (#2456) поверх артефакта смыслового �
 | --- | --- |
 | `POST /ai/search` `{q, locale?: ru\|be\|uk\|pl\|en, type?: travel\|quest, limit?: 1..20}` | `{items, took_ms, index_built_at, degraded, cached}` |
 | `GET /ai/similar?type=travel&id=816&limit=6&locale=ru&result_type=quest` | `{items, took_ms, index_built_at}` — вектор источника берётся из индекса, модель не нужна |
-| `POST /ai/ask` `{q, locale?, history?: [{role: user\|assistant, text}] ≤ 6}` | SSE `sources → text* → done`; отказы до потока — JSON (ниже) |
+| `POST /ai/ask` `{q, locale?, history?: [{role: user\|assistant, text}] ≤ 6, source?: {type: travel\|quest, id}}` | SSE `sources → text* → done`; отказы до потока — JSON (ниже). `source` (#2897) — страница, с которой открыт ассистент: её карточка из индекса первой в `sources` и промпте на каждом ходу; кривой `source` → `400 bad_request`, нет в индексе → без закрепления |
+| `POST /ai/author-draft` `{text, kind: title\|lead\|meta\|trip, locale?}` (#2885, #2911) | `{variants: string[], remaining}` — помощник автора в визарде статьи: 3 варианта заголовка (≤ 90 знаков), лида (2–3 предложения, ≤ 420) или SEO-описания (≤ 160) по тексту статьи через `metravel-llm` (промпт: только по тексту, ничего не выдумывать, без ссылок; ответ на языке `locale`), страж ссылок с пустым списком карточек режет любой адрес. `kind: 'trip'` (#2911) — черновик описания поездки планировщика: текст — точки по порядку, даты и транспорт (`components/trips/planning/tripDraftText.ts`), 2–3 варианта ≤ 600 знаков, промпт «только по плану, ничего не выдумывать». `400 bad_request` — текст короче порога вида (`AI_AUTHOR_DRAFT_MIN_TEXT_CHARS_BY_KIND`: статья 200 знаков, `trip` 40) или неизвестный `kind`, `429 limit` — `AI_AUTHOR_DRAFT_DAILY_LIMIT` (5) запросов/сутки/IP на эндпоинт, тот же `AskLimits` с префиксом `ai-author-draft:v1`; `429 busy` — очередь к модели; `503 generator_unavailable` — нет `AI_LLM_URL`, модель не ответила или не дала вариантов (запрос в квоту возвращается). Тело до 64 КБ, текст длиннее 8000 знаков обрезается |
+| `POST /ai/suggest-tags` `{text, locale?}` (#2886) | `{countries, categories, transports, companions, over_nights_stay, confidence, degraded, neighbours, took_ms}` — подсказка словарных значений визарда статьи: текст → вектор → `AI_TAG_SUGGEST_NEIGHBOURS` (10) ближайших статей индекса (тот же `vectorSources`, что у `/ai/search`, очередь к эмбеддингу общая) → у каждой `GET /api/travels/<id>/` (id стран, категорий, транспорта, компаньонов, ночёвок) → голосование: значение проходит с `max(2, ⌈0.3·k⌉)` голосов из k ответивших статей и только если есть в словаре `GET /api/getFiltersTravel/` + `GET /api/countriesforsearch/`; `confidence` — средняя доля голосов принятых значений. Словарь и ответы статей — в памяти час (`TagCatalog`), отказы не кэшируются. `400 bad_request` — текст короче 300 знаков или кривая `locale`; `503 busy` — очередь к эмбеддингу; нет словаря или ни одной статьи → `200` с пустыми списками, `confidence: 0`, `degraded: true`. Модель не участвует: бюджет клиента 4 с не вмещает обработку промпта из 4000 знаков на CPU |
+| `POST /ai/near-route` `{points: [{lat, lng}], limit?: 1..12, locale?}` (#2911) | `{items, took_ms}` — материалы в коридоре маршрута планировщика: источники индекса с координатами не дальше 30 км от ближайшего сегмента ломаной (haversine до ближайшей точки сегмента; одна точка — расстояние до неё), ближние первыми, один фрагмент на источник (у квеста — локали `locale`, если есть), `items[]` формы `/ai/search` со `score: null` плюс `distance_km`. Без модели и эмбеддинга, как `/ai/similar`. `400 bad_request` — нет точек, больше 50, кривые координаты или `limit` вне 1..12 |
+| `POST /ai/intent` `{q, locale?}` (#2887) | `{categories, radius_km, center, constraints}` — фильтр карты из описания для строки «Опишите, что ищете» на `/map`: вопрос → `metravel-llm` с промптом набора `osm_intents` (`INTENT_PROMPT` из `scripts/ai-train/sets/osm_intents.py`, система — как у `/ai/ask`) → первый JSON-объект из ответа → TS-валидатор схемы `scripts/ai-train/osm_filter_schema.json` (`scripts/ai-assist/osmFilterSchema.ts`, порт `validate_filter()`/`extract_json()` с тестом эквивалентности Python-валидатору; enum'ы читаются из файла схемы, в образ он копируется). `categories` — `OsmPoiCategory` карты (attractions, culture, viewpoints, entertainment, religion, history), `radius_km` — 10/25/50/100/200, `center` — `{name}` или `null`, `constraints` — `{dogs, camper, kids, free}` (пустой объект, если модель опустила). `400 bad_request` — `q` короче 3 или длиннее 300 знаков, кривая `locale`; `422 {error: 'invalid_intent', detail}` — ответ без JSON или не по схеме (`detail` — ошибки валидатора); `429 limit` — `AI_MAP_INTENT_DAILY_LIMIT` (30) запросов/сутки/IP, тот же `AskLimits` с префиксом `ai-intent:v1`; `429 busy` — очередь к модели; `503 generator_unavailable` — нет `AI_LLM_URL` или модель не ответила. Неудачный запрос (422/429 busy/503) лимит не тратит |
 | `GET /ai/health` | `{ok, model, dim, count, index_built_at, rss_mb, heap_mb, uptime_s, queue, cache, llm, ask_queue}` |
 
 `items[]`: `{type, source_id, title, url, snippet, score, city, country, lat, lng}`;
@@ -116,6 +120,9 @@ IP не пишется) — единственная запись на диск:
 | `AI_LLM_URL` | — | `llama-server` metravel-llm для `/ai/ask`; без него вопросы по теме → `503 generator_unavailable` |
 | `AI_ASSIST_LLM_TIMEOUT_MS` / `AI_ASSIST_ASK_QUEUE_TIMEOUT_MS` | `60000` / `2000` | таймаут ответа модели / ожидание очереди к модели до `429 busy` |
 | `AI_ASK_DAILY_LIMIT` | `20` (`api/aiAssist/policy.ts`) | вопросов в сутки на IP |
+| `AI_AUTHOR_DRAFT_DAILY_LIMIT` | `5` (`api/aiAssist/policy.ts`) | запросов `/ai/author-draft` в сутки на IP (#2885) |
+| `AI_MAP_INTENT_DAILY_LIMIT` | `30` (`api/aiAssist/policy.ts`) | запросов `/ai/intent` в сутки на IP (#2887) |
+| `AI_ASSIST_TAGS_TIMEOUT_MS` | `2500` | таймаут каталога `/ai/suggest-tags` (#2886): словарь и `GET /api/travels/<id>/` к `BACKEND_URL` |
 | `AI_ASSIST_DAY_TZ` | `Europe/Minsk` | календарный день лимитов и блока «не по теме» |
 | `AI_DEMAND_LOG` | `logs/ai-demand.jsonl` (образ: `/app/logs/ai-demand.jsonl`) | журнал спроса |
 | `AI_ASSIST_TRUST_PROXY` | `1` | IP из `X-Real-IP`/последнего адреса `X-Forwarded-For`; `0` — только адрес сокета |
@@ -128,10 +135,16 @@ curl -s localhost:8787/ai/health
 curl -s -X POST localhost:8787/ai/search -H 'content-type: application/json' \
   -d '{"q":"замки под Краковом на день","locale":"ru"}'
 curl -s 'localhost:8787/ai/similar?type=travel&id=816&limit=6'
+curl -s -X POST localhost:8787/ai/near-route -H 'content-type: application/json' \
+  -d '{"points":[{"lat":53.9,"lng":27.56},{"lat":53.68,"lng":23.83}],"limit":8}'   # #2911, без модели
 # /ai/ask с живой моделью: AI_LLM_URL=http://127.0.0.1:8080 (llama-server, см. docs/features/ai-assistant.md)
 curl -sN -X POST localhost:8787/ai/ask -H 'content-type: application/json' \
   -d '{"q":"куда поехать под Гродно с детьми","locale":"ru"}'
 curl -si -X POST localhost:8787/ai/ask -H 'content-type: application/json' -d '{"q":"как готовить кашу"}'  # ×3 → 429
+curl -s -X POST localhost:8787/ai/author-draft -H 'content-type: application/json' \
+  -d '{"text":"<текст статьи от 200 знаков>","kind":"meta","locale":"ru"}'   # {variants: [...], remaining}
+curl -s -X POST localhost:8787/ai/intent -H 'content-type: application/json' \
+  -d '{"q":"где рядом с Несвижем смотровые и парковка для кемпера","locale":"ru"}'   # #2887: {categories, radius_km, center, constraints}
 npm run ai:assist:bench -- --n 1000                 # p50/p95, RSS после 1000 запросов
 npm run ai:assist:bench -- --n 20 --concurrency 20  # очередь: часть ответов 503 busy
 ```

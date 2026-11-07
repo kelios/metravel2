@@ -1,6 +1,7 @@
 import { TravelFormData, Travel, MarkerData } from '@/types/types';
 import { readTravelModerationMetadata, resolveTravelPublicationStatus } from '@/utils/travelPublicationStatus';
 import { CoordinateConverter } from '@/utils/coordinateConverter';
+import { FULL_TOTAL_STEPS } from '@/utils/travelNote';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -207,6 +208,13 @@ const resolveMarkers = (travel: Travel): MarkerData[] => {
   );
 };
 
+/** Бюджет SEO-описания статьи (#2885): сниппет поиска, тот же, что у `utils/seoText.js`. */
+export const TRAVEL_META_DESCRIPTION_MAX_LENGTH = 160;
+/** Шаг «Публикация» полного мастера (последний) — там лежит поле SEO-описания. */
+export const TRAVEL_WIZARD_PUBLISH_STEP = FULL_TOTAL_STEPS;
+/** Якорь поля SEO-описания на шаге публикации (переход из чек-листа). */
+export const TRAVEL_META_DESCRIPTION_ANCHOR_ID = 'travelwizard-publish-meta-description';
+
 /**
  * Создает пустую форму данных путешествия
  */
@@ -231,6 +239,7 @@ export function getEmptyFormData(id: string | null): TravelFormData {
     plus: '',
     recommendation: '',
     description: '',
+    meta_description: '',
     publication_status: 'draft',
     publication_format: 'full',
     publish: false,
@@ -283,6 +292,7 @@ export function transformTravelToFormData(travel: Travel): TravelFormData {
     travelRecord.youtube_link ?? travelRecord.youtubeLink,
     ''
   );
+  const meta_description = coerceString(travelRecord.meta_description, '');
 
   const mergedTravel = {
     ...getEmptyFormData(String(travel.id)),
@@ -304,6 +314,7 @@ export function transformTravelToFormData(travel: Travel): TravelFormData {
     minus,
     recommendation,
     youtube_link,
+    meta_description,
     publication_status: travel.publication_status !== undefined
       ? travel.publication_status
       : resolveTravelPublicationStatus(travel),

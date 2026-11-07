@@ -586,4 +586,12 @@ export const travelGenerated4 = {
   "components.travel.note.checklist.photos": "Фото",
   "components.travel.note.checklist.photosDetail": "Фото в галереї: від 1 до {{value1}}",
   "components.travel.details.sections.TravelDetailsContentSection.contentsHeading": "Зміст",
+  "components.travel.PublishSeoCard.title": "SEO-опис",
+  "components.travel.PublishSeoCard.hint": "Одне-два речення для сніпета в пошуку: місце, суть поїздки, для кого. Без нього пошуковик візьме початок тексту.",
+  "components.travel.PublishSeoCard.placeholder": "Наприклад: Два дні в Гродні з дітьми — замки, набережна та кав'ярні, куди повернемося.",
+  "components.travel.PublishSeoCard.counter": "{{value1}}/{{value2}}",
+  "components.travel.PublishSeoCard.counterOver": "Довше за {{value1}} знаків: пошуковик обріже опис",
+  "components.travel.useTravelPublishChecklist.seoDescription": "SEO-опис",
+  "components.travel.useTravelPublishChecklist.seoDescriptionDetail": "До {{value1}} знаків (крок {{value2}})",
+  "components.travel.useTravelPublishChecklist.seoDescriptionBenefit": "Свій текст у сніпеті пошуку замість випадкового уривка",
 } as const

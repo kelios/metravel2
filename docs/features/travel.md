@@ -105,6 +105,20 @@ raw HTML прода с гидрацией.
 Google может выбрать собственный сниппет; #2700 подтверждает переданную мету,
 а #2658 отдельно ведёт редактуру и 28-дневный замер CTR.
 
+Автор правит `meta_description` сам на шаге «Публикация» мастера (#2885,
+`components/travel/PublishSeoCard.tsx`): многострочное поле со счётчиком до
+`TRAVEL_META_DESCRIPTION_MAX_LENGTH` (160, `utils/travelFormUtils.ts`); длиннее —
+счётчик и рамка красные, ввод ограничен 255 (CharField сервера). Поле входит в
+`TravelFormData` (пустая строка по умолчанию, загрузка — `transformTravelToFormData`)
+и уходит полным `PUT /travels/upsert/` вместе с формой (`saveFormData` режет до 255);
+узкий `PATCH /travels/{id}/content/` его не принимает (сериализатор отклоняет
+неизвестные поля), поэтому автосейв с изменённой метой идёт полным путём
+(`planTravelContentSave`). В рекомендуемом чек-листе — пункт «SEO-описание»
+(`useTravelPublishChecklist`): выполнен при длине 1…160 без пробелов по краям,
+иначе кликабелен и прокручивает к карточке на том же шаге
+(`TravelWizardStepPublish.handleNavigateToIssue`, ключ `meta_description`
+не входит в блокирующие модерацию `moderationIssues`).
+
 ## List/search architecture
 
 | Owner | Ответственность |
@@ -248,6 +262,31 @@ runtime-проверка должна различать свежий backend re
 4. `TravelWizardStepDetails.tsx`;
 5. `TravelWizardStepExtras.tsx`;
 6. `TravelWizardStepPublish.tsx`.
+
+### Помощник автора: заголовок, лид, SEO-описание (#2885)
+
+Под `EXPO_PUBLIC_AI_ASSISTANT` (`utils/aiAssistantConfig.ts:isAiAssistantEnabled`)
+в карточке «SEO-описание» шага публикации живёт панель
+`components/travel/upsert/AuthorAssistantPanel.tsx`: три кнопки — «Предложить
+заголовок / лид / SEO-описание» — просят у службы metravel-assist
+`POST /ai/author-draft {text, kind, locale}` (клиент `api/aiAssist/authorDraft.ts`,
+таймаут 20 с, адрес — `getAiPicksBaseUrl`) варианты по плоскому тексту описания
+статьи (`htmlToPlainText`, хвост длиннее 8000 знаков отбрасывается). Панель
+грузится отложенным чанком по литеральному `process.env.EXPO_PUBLIC_AI_ASSISTANT`
+(#2738): без флага её кода нет в сборке и запросов к `/ai/*` страница не делает.
+Кнопки активны от `AI_AUTHOR_DRAFT_PANEL_MIN_TEXT_CHARS` (1000) знаков текста, иначе
+подсказка с текущей длиной. Состояния: idle → loading → variants | limit
+(`429 limit`, 5 запросов/сутки/IP) | unavailable (`503`, сеть, таймаут).
+«Вставить»: заголовок → `name`; лид → первым абзацем `description` как `<p>` с
+экранированным текстом перед существующим HTML, без разбора остального
+(ARTICLE-FORMAT-PRESERVATION-001; редактор шага 1 подхватит новое значение при
+монтировании); SEO-описание → `meta_description`. Сервер: промпт «только по
+тексту, ничего не выдумывать, без ссылок», ответ на языке `locale`, страж ссылок,
+обрезка по бюджету (`AI_AUTHOR_DRAFT_SHAPES` в `api/aiAssist/policy.ts`) —
+`services/ai-assist/README.md`. `kind: 'trip'` зарезервирован за #2911.
+Регрессии: `__tests__/scripts/ai-assist/authorDraft.test.ts`,
+`__tests__/api/aiAssist/authorDraft.test.ts`,
+`__tests__/components/travel/upsert/{AuthorAssistantPanel,PublishSeoCard,useTravelPublishChecklist.seo}.test.*`.
 
 ### Вход в авторство из статьи (#2677)
 

@@ -33,6 +33,10 @@ export const queryKeys = {
   aiSimilar: (type: 'travel' | 'quest', id: number, locale: string, resultType: string) =>
     ['ai-similar', type, id, locale, resultType] as const,
   aiSearch: (q: string, locale: string) => ['ai-search', q, locale] as const,
+  // #2911: отпечаток точек маршрута (lat/lng до 3 знаков), а не сами точки — ключ короткий и стабильный.
+  aiNearRoute: (pointsKey: string, locale: string) => ['ai-near-route', pointsKey, locale] as const,
+  /** Подсказка словарных значений визарда по тексту описания (#2886): ключ — отпечаток текста, не сам текст. */
+  aiTagSuggestions: (textKey: string, locale: string) => ['ai-tag-suggestions', textKey, locale] as const,
   travelsNearMap: (
     travelId: number | null,
     origin: { lat: number; lng: number } | null,

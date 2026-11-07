@@ -743,8 +743,9 @@ export function QuestWizard({ title, steps, finale, intro, countModel, durationM
             questTitle={title}
             questId={questId}
             cityId={cityId}
+            questNumericId={questNumericId}
         />
-    ), [cityId, questId, resolvedCountModel, title]);
+    ), [cityId, questId, questNumericId, resolvedCountModel, title]);
     const mainContent = (
         <View key="quest-main-content" ref={headerPlacement.mainContentRef} collapsable={false} testID="quest-main-content-anchor">
           <QuestExcursionsColumns

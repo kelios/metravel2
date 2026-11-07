@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { type ViewInstance, type ScrollViewInstance, KeyboardAvoidingView, Platform, View, Text, StyleSheet, ScrollView, findNodeHandle, UIManager } from 'react-native';
 
@@ -14,6 +14,20 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
 import WizardStepFooter from '@/components/travel/upsert/WizardStepFooter';
 import { translate as i18nT } from '@/i18n'
+import type { TravelTagSuggestionsProps } from '@/components/travel/upsert/TravelTagSuggestions';
+import { isAiPicksEnabled } from '@/utils/aiPicksConfig';
+
+// #2886: блок «Предложено по тексту» — отложенный чанк по литеральному флагу (#2738, как
+// `PublishSeoCard` грузит помощника автора): без `EXPO_PUBLIC_AI_PICKS` в сборке нет ни блока,
+// ни `api/aiTagSuggestions`, а запросов к `/ai/*` страница не делает.
+type TagSuggestionsModule = { default: React.ComponentType<TravelTagSuggestionsProps> };
+const EmptyTagSuggestions: React.ComponentType<TravelTagSuggestionsProps> = () => null;
+const TravelTagSuggestions = React.lazy<React.ComponentType<TravelTagSuggestionsProps>>(
+    () =>
+        (process.env.EXPO_PUBLIC_AI_PICKS
+            ? import('@/components/travel/upsert/TravelTagSuggestions')
+            : Promise.resolve({ default: EmptyTagSuggestions })) as Promise<TagSuggestionsModule>,
+);
 
 
 interface TravelWizardStepExtrasProps {
@@ -220,6 +234,17 @@ const TravelWizardStepExtras: React.FC<TravelWizardStepExtrasProps> = ({
                 >
                     <View style={styles.contentInner}>
                         <View ref={categoriesAnchorRef} nativeID="travelwizard-extras-categories" />
+
+                        {isAiPicksEnabled() ? (
+                            <Suspense fallback={null}>
+                                <TravelTagSuggestions
+                                    description={formData.description}
+                                    formData={formData}
+                                    filters={filters}
+                                    onApply={handleFieldChange}
+                                />
+                            </Suspense>
+                        ) : null}
 
                         <View style={styles.requiredCard}>
                             <Text style={styles.requiredTitle}>{i18nT('travel:components.travel.TravelWizardStepExtras.obyazatelno_dlya_publikatsii_be1f0d43')}</Text>

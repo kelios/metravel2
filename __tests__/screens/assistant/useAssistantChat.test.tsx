@@ -595,3 +595,95 @@ describe('useAssistantChat: провайдер ask — серверный /ai/as
     expect(result.current.busy).toBe(false)
   })
 })
+
+describe('useAssistantChat: контекстный вход со страницы статьи/квеста (#2897)', () => {
+  const pinned: AiSource = {
+    type: 'travel',
+    source_id: '816',
+    title: 'Ярмарки Польши',
+    url: 'https://metravel.by/travels/816',
+    path: '/travels/816',
+    snippet: 'Краков. Рождественские ярмарки',
+    score: 1,
+  }
+  const ref = { type: 'travel' as const, id: 816 }
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    mockedRemaining.mockResolvedValue(20)
+    mockedConsume.mockResolvedValue(19)
+    mockedOffTopicState.mockResolvedValue({ strikes: 0, blocked: false })
+  })
+
+  it('llamacpp: карточка источника первой на каждом ходу, подбор без её дубля; уточнение опирается на заголовок', async () => {
+    const loadSource = jest.fn(async () => pinned)
+    // Подбор возвращает ту же статью вторым номером — дубль уходит, остальное следом.
+    mockedSearch.mockResolvedValue([source, { ...pinned, score: 3 }])
+    const generator = streamingGenerator(['Ответ про https://metravel.by/travels/816'])
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator, source: ref, loadSource }))
+
+    await waitFor(() => expect(result.current.sourceCard).toEqual(pinned))
+    expect(loadSource).toHaveBeenCalledWith(ref, 'ru', expect.any(AbortSignal))
+    expect(result.current.sourceRef).toEqual(ref)
+
+    await act(async () => {
+      await result.current.ask('А что там рядом?')
+    })
+    expect(result.current.turns[0].status).toBe('done')
+    expect(result.current.turns[0].sources.map((s) => s.source_id)).toEqual(['816', '1'])
+    // До первого самостоятельного вопроса уточнение ищется вместе с названием страницы.
+    expect(mockedSearch).toHaveBeenLastCalledWith(expect.objectContaining({ query: 'Ярмарки Польши А что там рядом?' }))
+
+    await act(async () => {
+      await result.current.ask('Куда поехать под Гродно?')
+    })
+    expect(result.current.turns[1].sources[0]).toEqual(pinned)
+    expect(mockedSearch).toHaveBeenLastCalledWith(expect.objectContaining({ query: 'Куда поехать под Гродно?' }))
+  })
+
+  it('llamacpp: материал не нашёлся — диалог без закреплённой карточки', async () => {
+    mockedSearch.mockResolvedValue([source])
+    const { result } = await renderHook(() =>
+      useAssistantChat({ locale: 'ru', generator: streamingGenerator(['ок']), source: { type: 'quest', id: 404 }, loadSource: async () => null }),
+    )
+    await act(async () => {
+      await result.current.ask('Что рядом?')
+    })
+    expect(result.current.sourceCard).toBeNull()
+    expect(result.current.turns[0].sources).toEqual([source])
+  })
+
+  it('ask: источник уходит на сервер с каждым запросом, карточку для экрана грузит клиент', async () => {
+    const ask = jest.fn(async (request: Parameters<AskClient['ask']>[0]): Promise<AskResult> => {
+      request.onSources?.({ sources: [pinned, source], degraded: false, remaining: 19 })
+      request.onText?.('Ответ')
+      return { sources: [pinned, source], text: 'Ответ', done: { status: 'done', reason: null, strikes: null, strikesToBlock: null, removedLinks: 0, usage: null, remaining: 19 } }
+    })
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'pl', askClient: { ask }, source: ref, loadSource: async () => pinned }))
+    await waitFor(() => expect(result.current.sourceCard).toEqual(pinned))
+
+    await act(async () => {
+      await result.current.ask('Ile czasu to zajmie?')
+    })
+    await act(async () => {
+      await result.current.ask('A co jest w pobliżu?')
+    })
+    expect(ask).toHaveBeenCalledTimes(2)
+    expect(ask.mock.calls[0][0]).toMatchObject({ question: 'Ile czasu to zajmie?', locale: 'pl', source: ref })
+    expect(ask.mock.calls[1][0]).toMatchObject({ source: ref, history: [{ role: 'user', text: 'Ile czasu to zajmie?' }, { role: 'assistant', text: 'Ответ' }] })
+    expect(result.current.turns[1].sources[0]).toEqual(pinned)
+    expect(mockedSearch).not.toHaveBeenCalled()
+  })
+
+  it('без источника запрос службы не несёт source, карточки нет', async () => {
+    const ask = jest.fn(async (): Promise<AskResult> => ({ sources: [], text: '', done: { status: 'no_sources', reason: null, strikes: null, strikesToBlock: null, removedLinks: 0, usage: null, remaining: null } }))
+    const loadSource = jest.fn()
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', askClient: { ask }, loadSource }))
+    await act(async () => {
+      await result.current.ask('Куда поехать?')
+    })
+    expect(loadSource).not.toHaveBeenCalled()
+    expect(result.current.sourceRef).toBeNull()
+    expect(ask.mock.calls[0][0].source).toBeNull()
+  })
+})

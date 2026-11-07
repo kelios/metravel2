@@ -16,6 +16,7 @@
  */
 
 import { GENERATION_TIMEOUT_MS, consumeSseResponse } from './generator'
+import type { AiSourceRef } from './sourceRef'
 import type { AiHistoryItem, AiSource, AiUsage } from './types'
 
 const DEFAULT_RETRY_AFTER_SEC = 30
@@ -78,6 +79,8 @@ export type AskRequest = {
   question: string
   locale: string
   history: AiHistoryItem[]
+  /** Страница, с которой открыт ассистент (#2897): сервер ставит её карточку первой. */
+  source?: AiSourceRef | null
   signal?: AbortSignal
   onSources?: (event: AskSourcesEvent) => void
   /** Накопленный текст после серверного стража (не дельта). */
@@ -229,7 +232,7 @@ export class HttpAskClient implements AskClient {
     this.timeoutMs = options.timeoutMs ?? GENERATION_TIMEOUT_MS
   }
 
-  async ask({ question, locale, history, signal, onSources, onText }: AskRequest): Promise<AskResult> {
+  async ask({ question, locale, history, source, signal, onSources, onText }: AskRequest): Promise<AskResult> {
     const controller = new AbortController()
     // Таймаут — не отмена посетителем: иначе экран молча показывал бы «ответ
     // остановлен» там, где служба не ответила за две минуты.
@@ -281,6 +284,8 @@ export class HttpAskClient implements AskClient {
             q: question,
             locale,
             history: history.map(({ role, text }) => ({ role, text: text.slice(0, ASK_HISTORY_TEXT_LIMIT) })),
+            // Поле уходит только с источником: тело без него — прежний контракт `/ai/ask`.
+            ...(source ? { source: { type: source.type, id: source.id } } : {}),
           }),
           signal: controller.signal,
         })

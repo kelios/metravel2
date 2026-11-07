@@ -2,6 +2,7 @@
  * Клиент службы metravel-assist для смыслового подбора (#2459, контракт #2456):
  *   GET  /ai/similar?type=&id=&limit=&locale=&result_type= → {items, took_ms, index_built_at}
  *   POST /ai/search  {q, locale, type?, limit?}            → {items, took_ms, degraded, cached}
+ *   POST /ai/near-route {points: [{lat, lng}], limit, locale} → {items, took_ms} (#2911)
  * `items[]` — карточки материалов сайта: `url` абсолютный, `cover` может быть null.
  * Одна попытка без ретраев: при отказе блоки просто не показываются.
  */
@@ -26,7 +27,15 @@ export interface AiPickItem {
   score: number | null
   city: string | null
   country: string | null
+  /** Координаты источника из индекса; null — у источника их нет (#2911: точка маршрута из карточки). */
+  lat: number | null
+  lng: number | null
   cover: string | null
+}
+
+export interface AiNearRoutePoint {
+  lat: number
+  lng: number
 }
 
 export interface AiSearchResult {
@@ -39,6 +48,8 @@ export interface AiSearchResult {
 export const AI_PICKS_TIMEOUT_MS = 4000
 export const AI_SEARCH_MIN_QUERY_LENGTH = 3
 export const AI_SEARCH_MAX_QUERY_LENGTH = 500
+/** Точек маршрута в запросе `/ai/near-route` — потолок службы; длиннее — прореживается равномерно. */
+export const AI_NEAR_ROUTE_MAX_POINTS = 50
 
 type RawItem = Partial<Record<keyof AiPickItem, unknown>>
 
@@ -81,6 +92,8 @@ function normalizeItem(raw: unknown): AiPickItem | null {
     score: typeof item.score === 'number' ? item.score : null,
     city: typeof item.city === 'string' && item.city ? item.city : null,
     country: typeof item.country === 'string' && item.country ? item.country : null,
+    lat: typeof item.lat === 'number' && Number.isFinite(item.lat) ? item.lat : null,
+    lng: typeof item.lng === 'number' && Number.isFinite(item.lng) ? item.lng : null,
     cover: typeof item.cover === 'string' && /^https?:\/\//.test(item.cover) ? item.cover : null,
   }
 }
@@ -141,4 +154,30 @@ export async function fetchAiSearch({ q, locale, limit, type, signal }: FetchAiS
     took_ms: typeof body?.took_ms === 'number' ? body.took_ms : 0,
     degraded: body?.degraded === true,
   }
+}
+
+export interface FetchNearRouteParams {
+  points: AiNearRoutePoint[]
+  locale: string
+  limit: number
+  signal?: AbortSignal
+}
+
+/** Равномерная выборка до `max` точек: сервис принимает не больше 50, концы маршрута сохраняются. */
+export function thinRoutePoints<T>(points: T[], max: number = AI_NEAR_ROUTE_MAX_POINTS): T[] {
+  if (points.length <= max) return points
+  const step = (points.length - 1) / (max - 1)
+  return Array.from({ length: max }, (_, i) => points[Math.round(i * step)])
+}
+
+/** Материалы сайта в коридоре маршрута (#2911); пустой маршрут — пустой список без запроса. */
+export async function fetchNearRoute({ points, locale, limit, signal }: FetchNearRouteParams): Promise<AiPickItem[]> {
+  if (!points.length) return []
+  const body = (await requestJson(buildAiPicksUrl('/near-route'), {
+    method: 'POST',
+    signal,
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ points: thinRoutePoints(points), limit, locale }),
+  })) as { items?: unknown }
+  return normalizeItems(body?.items)
 }

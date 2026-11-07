@@ -5,12 +5,15 @@
  */
 import { useQuery } from '@tanstack/react-query'
 
-import { fetchAiSearch, fetchAiSimilar, AI_SEARCH_MIN_QUERY_LENGTH, type AiPickType } from '@/api/aiPicks'
+import { fetchAiSearch, fetchAiSimilar, fetchNearRoute, AI_SEARCH_MIN_QUERY_LENGTH, type AiNearRoutePoint, type AiPickType } from '@/api/aiPicks'
 import { queryKeys } from '@/api/queryKeys'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { getActiveLocale } from '@/i18n'
 import { isAiPicksEnabled } from '@/utils/aiPicksConfig'
 
 const HOUR_MS = 60 * 60 * 1000
+/** Пауза после правки маршрута (#2911): перетаскивание и серия добавлений — один запрос. */
+export const AI_NEAR_ROUTE_DEBOUNCE_MS = 800
 
 export interface UseAiSimilarOptions {
   type: AiPickType
@@ -46,6 +49,32 @@ export function useAiSearch(rawQuery: string, { limit = 12, enabled = true }: { 
     queryKey: queryKeys.aiSearch(q, locale),
     queryFn: ({ signal }) => fetchAiSearch({ q, locale, limit, signal }),
     enabled: enabled && isAiPicksEnabled() && q.length >= AI_SEARCH_MIN_QUERY_LENGTH,
+    staleTime: HOUR_MS,
+    gcTime: HOUR_MS,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+  })
+}
+
+/** Отпечаток маршрута для ключа запроса: `lat,lng` до 3 знаков (~100 м) через `;` — сдвиг маркера на метры кэш не сбрасывает. */
+export const nearRoutePointsKey = (points: AiNearRoutePoint[]): string =>
+  points.map((point) => `${point.lat.toFixed(3)},${point.lng.toFixed(3)}`).join(';')
+
+const isEmptyRoute = (points: AiNearRoutePoint[]) => points.length === 0
+
+/**
+ * Материалы сайта в коридоре маршрута планировщика (#2911). Точки дебаунсятся
+ * `AI_NEAR_ROUTE_DEBOUNCE_MS`; пустой маршрут применяется сразу и запроса не делает.
+ */
+export function useAiNearRoute(points: AiNearRoutePoint[], { limit = 8, enabled = true }: { limit?: number; enabled?: boolean } = {}) {
+  const locale = getActiveLocale()
+  const settled = useDebouncedValue(points, AI_NEAR_ROUTE_DEBOUNCE_MS, isEmptyRoute)
+  return useQuery({
+    queryKey: queryKeys.aiNearRoute(nearRoutePointsKey(settled), locale),
+    queryFn: ({ signal }) => fetchNearRoute({ points: settled, locale, limit, signal }),
+    enabled: enabled && isAiPicksEnabled() && settled.length > 0,
     staleTime: HOUR_MS,
     gcTime: HOUR_MS,
     retry: false,

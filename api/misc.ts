@@ -244,6 +244,8 @@ export const saveFormData = async (
     const sanitizedData = {
       ...data,
       name: sanitizeStringField(data.name, 200),
+      // #2885: SEO-описание — короткая строка, бэкенд хранит до 255 знаков.
+      meta_description: sanitizeStringField(data.meta_description, 255),
     };
     for (const field of ['description', 'plus', 'minus', 'recommendation'] as const) {
       const value = data[field];

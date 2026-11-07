@@ -1,5 +1,5 @@
 import Feather from '@expo/vector-icons/Feather';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type TextInputInstance,
   KeyboardAvoidingView,
@@ -22,8 +22,10 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
 import { formatInteger } from '@/i18n/format';
 import { useTranslation } from '@/i18n/LocaleProvider';
+import { isAiAssistantEnabled } from '@/utils/aiAssistantConfig';
 import { normalizeHttpOrInternalUrl } from '@/utils/externalLinks';
 import { webTextStyle, webViewStyle } from '@/utils/webProps';
+import type { TripDescriptionDraftPanelProps } from '@/components/trips/planning/TripDescriptionDraftPanel';
 import { WIZARD_KEYBOARD_BEHAVIOR } from '@/components/travel/upsert/wizardKeyboard';
 
 import TripPlanFormatToolbar from './TripPlanFormatToolbar';
@@ -34,6 +36,18 @@ import {
   type TripPlanTextSelection as TextSelection,
 } from './tripPlanFormatActions';
 
+// #2911: «Черновик описания» — отложенный чанк по литеральному флагу (#2738, как
+// `PublishSeoCard` грузит помощника автора): без `EXPO_PUBLIC_AI_ASSISTANT` в сборке нет
+// ни панели, ни `api/aiAssist`, а запросов к `/ai/*` планировщик не делает.
+type DraftPanelModule = { default: React.ComponentType<TripDescriptionDraftPanelProps> };
+const EmptyDraftPanel: React.ComponentType<TripDescriptionDraftPanelProps> = () => null;
+const TripDescriptionDraftPanel = React.lazy<React.ComponentType<TripDescriptionDraftPanelProps>>(
+  () =>
+    (process.env.EXPO_PUBLIC_AI_ASSISTANT
+      ? import('@/components/trips/planning/TripDescriptionDraftPanel')
+      : Promise.resolve({ default: EmptyDraftPanel })) as Promise<DraftPanelModule>,
+);
+
 type EditorTarget = 'inline' | 'fullscreen';
 type SelectionOverride = { target: EditorTarget; selection: TextSelection };
 
@@ -43,6 +57,11 @@ interface TripPlanDescriptionEditorProps {
   label: string;
   placeholder: string;
   editable?: boolean;
+  /**
+   * #2911: плоский текст плана (`buildTripDraftText`) для «Черновика описания»;
+   * без него или без `EXPO_PUBLIC_AI_ASSISTANT` панели нет.
+   */
+  aiDraftPlanText?: string | null;
 }
 
 export default function TripPlanDescriptionEditor({
@@ -51,6 +70,7 @@ export default function TripPlanDescriptionEditor({
   label,
   placeholder,
   editable = true,
+  aiDraftPlanText = null,
 }: TripPlanDescriptionEditorProps) {
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -223,6 +243,14 @@ export default function TripPlanDescriptionEditor({
     'trips:components.trips.planning.TripPlanDescriptionEditor.openFullscreen',
   );
 
+  // Вставка варианта — целиком в поле: пустое заполняется, непустое панель заменяет
+  // только после подтверждения; курсор — в конец нового текста.
+  const handleInsertDraft = useCallback((variant: string) => {
+    onChangeText(variant);
+    selectionRef.current = { start: variant.length, end: variant.length };
+  }, [onChangeText]);
+  const showDraftPanel = aiDraftPlanText != null && isAiAssistantEnabled();
+
   return (
     <View style={styles.container} testID="trip-plan-description-editor">
       <View style={styles.inlineHeader}>
@@ -262,6 +290,11 @@ export default function TripPlanDescriptionEditor({
       <Text style={styles.formatHint} testID="trip-plan-description-format-hint">
         {formatHint}
       </Text>
+      {showDraftPanel ? (
+        <Suspense fallback={null}>
+          <TripDescriptionDraftPanel planText={aiDraftPlanText} currentValue={value} onInsert={handleInsertDraft} disabled={!editable} />
+        </Suspense>
+      ) : null}
 
       <Modal
         visible={fullscreenVisible}

@@ -12,6 +12,7 @@
 import { getActiveQueryClient } from '@/api/activeQueryClient'
 import { queryKeys } from '@/api/queryKeys'
 import { fetchQuestsCompactCatalog, type ApiQuestMeta } from '@/api/quests'
+import { fetchTravel } from '@/api/travelDetailsQueries'
 import { fetchTravels } from '@/api/travelListQueries'
 import { QUESTS_LIST_GC_TIME, QUESTS_LIST_STALE_TIME } from '@/hooks/questsListCachePolicy'
 import { useAuthStore } from '@/stores/authStore'
@@ -20,6 +21,7 @@ import { buildQuestPath, buildTravelPathFromTravel } from '@/utils/routePaths'
 import { buildCanonicalUrl } from '@/utils/seo'
 
 import { AI_SOURCES_LIMIT } from './policy'
+import type { AiSourceRef } from './sourceRef'
 import type { AiSource } from './types'
 
 export { AI_SOURCES_LIMIT }
@@ -326,6 +328,30 @@ const loadQuestCatalog = (locale: string): Promise<ApiQuestMeta[]> => {
     staleTime: QUESTS_LIST_STALE_TIME,
     gcTime: QUESTS_LIST_GC_TIME,
   })
+}
+
+/**
+ * Карточка страницы, с которой открыт ассистент (#2897): статья — из того же кэша
+ * React Query, что у экрана статьи (`queryKeys.travel(id)`, посетитель пришёл
+ * оттуда и повторного запроса обычно нет), квест — из компактного каталога по
+ * числовому `id` (бандл ради заголовка и длительности не нужен). Нет материала
+ * (404, снят с публикации) — `null`: диалог идёт без закреплённой карточки.
+ */
+export async function loadSourceCard(ref: AiSourceRef, locale: string, signal?: AbortSignal): Promise<AiSource | null> {
+  try {
+    if (ref.type === 'travel') {
+      const client = getActiveQueryClient()
+      const travel = client
+        ? await client.fetchQuery<Travel>({ queryKey: queryKeys.travel(ref.id), queryFn: ({ signal: querySignal }) => fetchTravel(ref.id, { signal: querySignal }) })
+        : await fetchTravel(ref.id, signal ? { signal } : undefined)
+      return travel ? travelToSource(travel, []) : null
+    }
+    const quest = (await loadQuestCatalog(locale)).find((item) => Number(item.id) === ref.id)
+    // Балл закреплённой карточке не нужен: бонус намерения лишь проводит её через отсечку.
+    return quest ? questToSource(quest, [], 'quest') : null
+  } catch {
+    return null
+  }
 }
 
 export type SearchSiteMaterialsOptions = {

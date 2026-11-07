@@ -11,6 +11,7 @@ import Button from '@/components/ui/Button';
 import { safeLazy } from '@/components/layout/safeLazy';
 import RouteBuilderLayout from '@/components/trips/planning/RouteBuilderLayout';
 import { type SiteRouteOption } from '@/components/trips/planning/RoutePointAddForm';
+import RouteNearSuggestionsSlot from '@/components/trips/planning/RouteNearSuggestionsSlot';
 import RoutePointEditForm from '@/components/trips/planning/RoutePointEditForm';
 import RoutePointRow from '@/components/trips/planning/RoutePointRow';
 import { RouteDayGroups } from '@/components/trips/planning/RouteDayGroupHeader';
@@ -704,6 +705,8 @@ function RouteBuilder({
     />
   );
 
+  const nearRouteSection = <RouteNearSuggestionsSlot route={route} tripId={trip.id} setRoute={setRoute} />;
+
   const templatesSection = templates.length ? (
       <View style={styles.templates}>
         <Text style={styles.label}>{i18nT('trips:components.trips.planning.RouteBuilder.shablony_marshruta_083d49d2')}</Text>
@@ -782,6 +785,7 @@ function RouteBuilder({
       transportSection={transportSection}
       pointsSection={pointsSection}
       editPointSection={editPointSection}
+      nearRouteSection={nearRouteSection}
       templatesSection={templatesSection}
       summarySection={summarySection}
       importSection={importSection}

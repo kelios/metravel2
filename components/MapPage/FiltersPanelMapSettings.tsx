@@ -17,7 +17,8 @@ import type { OsmPoiCategory } from '@/utils/overpass'
 import { translate as i18nT, type TranslationKey } from '@/i18n'
 
 
-const OSM_POI_CATEGORIES: ReadonlyArray<{ value: OsmPoiCategory; labelKey: TranslationKey }> = [
+/** Подписи категорий слоя POI; их же показывает строка «Опишите, что ищете» (#2887). */
+export const OSM_POI_CATEGORIES: ReadonlyArray<{ value: OsmPoiCategory; labelKey: TranslationKey }> = [
   { value: 'attractions', labelKey: 'map:components.MapPage.FiltersPanelMapSettings.dostoprimechatelnosti_a8a167c8' },
   { value: 'culture', labelKey: 'map:components.MapPage.FiltersPanelMapSettings.kultura_111870cc' },
   { value: 'viewpoints', labelKey: 'map:components.MapPage.FiltersPanelMapSettings.vidovye_mesta_ed29416a' },
@@ -26,7 +27,8 @@ const OSM_POI_CATEGORIES: ReadonlyArray<{ value: OsmPoiCategory; labelKey: Trans
   { value: 'history', labelKey: 'map:components.MapPage.FiltersPanelMapSettings.istoriya_e588d346' },
 ] as const
 
-const OSM_POI_DEFAULT_CATEGORIES = [
+/** Категории слоя при включении; к ним возвращает «Сбросить» строки #2887. */
+export const OSM_POI_DEFAULT_CATEGORIES = [
   'attractions',
   'viewpoints',
   'culture',

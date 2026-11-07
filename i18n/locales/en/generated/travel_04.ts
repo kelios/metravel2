@@ -586,4 +586,12 @@ export const travelGenerated4 = {
   "components.travel.note.checklist.photos": "Photos",
   "components.travel.note.checklist.photosDetail": "Gallery photos: 1 to {{value1}}",
   "components.travel.details.sections.TravelDetailsContentSection.contentsHeading": "Contents",
+  "components.travel.PublishSeoCard.title": "SEO description",
+  "components.travel.PublishSeoCard.hint": "One or two sentences for the search snippet: the place, what the trip is about, who it is for. Without it the search engine takes the opening of the text.",
+  "components.travel.PublishSeoCard.placeholder": "For example: Two days in Grodno with kids — castles, the embankment and cafes we will come back to.",
+  "components.travel.PublishSeoCard.counter": "{{value1}}/{{value2}}",
+  "components.travel.PublishSeoCard.counterOver": "Longer than {{value1}} characters: the search engine will cut it",
+  "components.travel.useTravelPublishChecklist.seoDescription": "SEO description",
+  "components.travel.useTravelPublishChecklist.seoDescriptionDetail": "Up to {{value1}} characters (step {{value2}})",
+  "components.travel.useTravelPublishChecklist.seoDescriptionBenefit": "Your own text in the search snippet instead of a random excerpt",
 } as const

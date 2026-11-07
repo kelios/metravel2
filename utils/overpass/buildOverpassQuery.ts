@@ -13,6 +13,20 @@ export type OsmPoiCategory =
   | 'religion'
   | 'history';
 
+/**
+ * Все категории POI карты одним списком (#2887): по нему строка «Опишите, что ищете»
+ * сверяет ответ модели. Страж `__tests__/scripts/ai-train-osm-filter-schema.test.ts`
+ * держит его равным enum схемы `scripts/ai-train/osm_filter_schema.json`.
+ */
+export const OSM_POI_CATEGORY_IDS: readonly OsmPoiCategory[] = [
+  'attractions',
+  'culture',
+  'viewpoints',
+  'entertainment',
+  'religion',
+  'history',
+];
+
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
 export const normalizeBBox = (bbox: BBox): BBox => {

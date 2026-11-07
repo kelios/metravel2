@@ -197,6 +197,8 @@ function makeServer(overrides: { generator?: Generator | null; dailyLimit?: numb
       trustProxy: true,
       now: overrides.now,
     },
+    authorDraft: { limits: new AskLimits({ store: new MemoryCounterStore(), clock: createDayClock('Europe/Minsk'), dailyLimit: 5, strikesToBlock: 3 }) },
+    suggestTags: { catalog: { dictionary: async () => null, travelTags: async () => null } },
     log: () => {},
   })
   const readLog = () => {
@@ -325,6 +327,58 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
       expect(embedded).toEqual(['ярмарки краков А там есть музеи?', 'А в Бресте что посмотреть?'])
       expect(prompts[0]).toContain('Вопрос посетителя: А там есть музеи?')
       expect(prompts[0]).not.toContain('Вопрос посетителя: ярмарки краков')
+    } finally {
+      await close(server)
+    }
+  })
+
+  it('#2897: source ставит карточку страницы из индекса первой на каждом ходу; локаль квеста; уточнение опирается на её заголовок; нет в индексе — без закрепления', async () => {
+    const embedded: string[] = []
+    const prompts: string[] = []
+    const generator = fakeGenerator((request) => {
+      prompts.push(String(request.messages.at(-1)?.content ?? ''))
+      return 'Загляните в [Ярмарки Польши](https://metravel.by/travels/816)'
+    })
+    const { server } = makeServer({
+      generator,
+      embedQuery: async (q) => {
+        embedded.push(q)
+        return fakeEmbedQuery(q)
+      },
+    })
+    await listen(server)
+    try {
+      // Вопрос про квест Гродно, источник — статья 816: она первая, квест — следом, дубля 816 нет.
+      const first = await post(server, '/ai/ask', { q: 'квест гродно замок', locale: 'ru', source: { type: 'travel', id: 816 } })
+      expect(first.status).toBe(200)
+      const ids = first.events[0].data.sources.map((s: { type: string; source_id: string }) => `${s.type}:${s.source_id}`)
+      expect(ids[0]).toBe('travel:816')
+      expect(ids).toContain('quest:1')
+      expect(ids.filter((id: string) => id === 'travel:816')).toHaveLength(1)
+      expect(ids.length).toBeLessThanOrEqual(8)
+      expect(first.events[0].data.sources[0]).toMatchObject({ title: 'Ярмарки Польши', url: 'https://metravel.by/travels/816', path: '/travels/816', score: 0 })
+      // Карточка — первой и в промпте модели.
+      expect(prompts[0].indexOf('Ярмарки Польши')).toBeLessThan(prompts[0].indexOf('Квест по Гродно'))
+
+      // Второй ход с тем же источником: карточка снова первая; уточнение ищется вместе с её заголовком.
+      const history = [{ role: 'user', text: 'квест гродно замок' }, { role: 'assistant', text: 'Загляните в [Квест по Гродно](https://metravel.by/quests/1)' }]
+      const second = await post(server, '/ai/ask', { q: 'А что там рядом?', locale: 'ru', history, source: { type: 'travel', id: 816 } })
+      expect(second.events[0].data.sources[0].source_id).toBe('816')
+      // В истории есть самостоятельный вопрос — опора из неё, не заголовок.
+      expect(embedded[1]).toBe('квест гродно замок А что там рядом?')
+      const fresh = await post(server, '/ai/ask', { q: 'А что там рядом?', locale: 'ru', source: { type: 'travel', id: 816 } })
+      expect(fresh.status).toBe(200)
+      expect(embedded[2]).toBe('Ярмарки Польши А что там рядом?')
+
+      // Квест на локали запроса: польский фрагмент и URL `/quests/1-pl`.
+      const pl = await post(server, '/ai/ask', { q: 'zamek grodno', locale: 'pl', source: { type: 'quest', id: 1 } })
+      expect(pl.events[0].data.sources[0]).toMatchObject({ type: 'quest', source_id: '1', title: 'Quest po Grodnie', url: 'https://metravel.by/quests/1-pl' })
+
+      // Материала нет в индексе (опубликован после сборки): ход без закреплённой карточки.
+      const missing = await post(server, '/ai/ask', { q: 'ярмарки краков', locale: 'ru', source: { type: 'travel', id: 999 } })
+      expect(missing.status).toBe(200)
+      expect(missing.events[0].data.sources.some((s: { source_id: string }) => s.source_id === '999')).toBe(false)
+      expect(missing.events[0].data.sources.length).toBeGreaterThan(0)
     } finally {
       await close(server)
     }
@@ -502,6 +556,12 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
       expect((await post(server, '/ai/ask', { q: 'ярмарки', history: atLimit })).status).not.toBe(400)
       const overLimit = [{ role: 'assistant', text: 'а'.repeat(ASK_HISTORY_TEXT_LIMIT + 1) }]
       expect((await post(server, '/ai/ask', { q: 'ярмарки', history: overLimit })).json.detail).toMatch(/history/)
+      // #2897: кривой source — 400 (тип, id, строковая форма роута); лимит при этом не списывается.
+      for (const source of [{ type: 'book', id: 1 }, { type: 'travel', id: 0 }, { type: 'travel' }, 'travel:816', [{ type: 'travel', id: 816 }]]) {
+        const reply = await post(server, '/ai/ask', { q: 'ярмарки', source })
+        expect([source, reply.status, reply.json?.error]).toEqual([source, 400, 'bad_request'])
+        expect(reply.json.detail).toMatch(/source/)
+      }
       const { port } = server.address() as AddressInfo
       const status = await new Promise<number>((resolve) => http.get({ host: '127.0.0.1', port, path: '/ai/ask' }, (response) => resolve(response.statusCode ?? 0)))
       expect(status).toBe(405)

@@ -26,10 +26,12 @@ type Props = {
   showSnippet?: boolean
   /** Ширина слота в сетке/ряду — только для сайзинга растра, не для раскладки (#1487). */
   slotWidth: number
+  /** Действие под карточкой (#2911: «Добавить в маршрут»); карточка по-прежнему открывает страницу. */
+  actionSlot?: React.ReactNode
   testID?: string
 }
 
-export function AiPickCard({ item, showSnippet = false, slotWidth, testID }: Props) {
+export function AiPickCard({ item, showSnippet = false, slotWidth, actionSlot, testID }: Props) {
   const router = useRouter()
   const colors = useThemedColors()
   const styles = useMemo(() => createStyles(colors), [colors])
@@ -54,6 +56,7 @@ export function AiPickCard({ item, showSnippet = false, slotWidth, testID }: Pro
           {snippet}
         </Text>
       ) : null}
+      {actionSlot ?? null}
     </View>
   )
 }
