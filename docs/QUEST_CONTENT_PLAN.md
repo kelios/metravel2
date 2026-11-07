@@ -390,11 +390,11 @@ TR/DE/CY/BE 4, GE/ES/MD/DK/UZ 3, остальные 1–2). Открытых к�
 
 | Пакет | Квесты | Карточка | Статус |
 |---|---|---|---|
-| FRONT | коды стран AE, EG, ME, GB, IE, IS, MT, MA, MX, CU, ID в `COUNTRY_NAME_KEYS` + ключи RU/BE/UK/PL/EN | #2869 | todo |
+| FRONT | коды стран AE, EG, ME, GB, IE, IS, MT, MA, MX, CU, ID в `COUNTRY_NAME_KEYS` + ключи RU/BE/UK/PL/EN | #2869 | done 07.11.2026: коммит `a4a6c691c`, на проде; id стран бэка: ОАЭ 145, Египет 76, Черногория 230 |
 | E1 Турция | Алания (`alanya-red-tower`), Измир (`izmir-kemeralti-clock`), Гёреме roadtrip (`goreme-fairy-chimneys`), Бодрум (`bodrum-knights-of-halicarnassus`; заменил Сиде — у Сиде автор насчитал 5 якорей, см. `.codex-temp/quests-plan/side/research.md`) | #2870 | на проде 01.11.2026: квесты 294 `izmir-kemeralti-clock` (город 206), 295 `alanya-red-tower` (207), 296 `goreme-fairy-chimneys` (208), 297 `bodrum-knights-of-halicarnassus` (209); обложки — по PROMPT.md, финале-видео после обложек |
 | E6 Беларусь | Орша (`orsha-korotkevich-collegium`), Слоним (`slonim-oginski-canal`), Кобрин (`kobrin-suvorov-park`), Станьково (`stankovo-czapski-skarbczyk`) | #2871 | на проде 01.11.2026: квесты 299 `stankovo-czapski-skarbczyk` (город 210), 300 `orsha-korotkevich-collegium` (211), 301 `kobrin-suvorov-park` (212), 302 `slonim-oginski-canal` (213); обложки — по PROMPT.md, финале-видео после обложек |
 | E5 Россия | Сочи (`sochi-prometheus-riviera`), Суздаль (`suzdal-kremlin-bells`), Пятигорск (`pyatigorsk-lermontov-proval`), Смоленск (`smolensk-fortress-key`) | #2872 | на проде 01.11.2026: квесты 303 `suzdal-kremlin-bells` (город 214), 304 `smolensk-fortress-key` (215), 305 `pyatigorsk-lermontov-proval` (216), 306 `sochi-prometheus-riviera` (217); обложки — по PROMPT.md, финале-видео после обложек |
-| E4 Кавказ и Ташкент | Мцхета (`mtskheta-svetitskhoveli`), Сигнахи (`sighnaghi-pirosmani-roses`), Гюмри (`gyumri-kumayri-black-fortress`), Ташкент (`tashkent-chorsu-hast-imam`) | #2873 | todo |
+| E4 Кавказ и Ташкент | Мцхета (`mtskheta-svetitskhoveli`), Сигнахи (`sighnaghi-pirosmani-roses`), Гюмри (`gyumri-kumayri-black-fortress`), Ташкент (`tashkent-chorsu-hast-imam`) | #2873 | на проде 07.11.2026: квесты 307 `mtskheta-svetitskhoveli` (город 218), 308 `sighnaghi-pirosmani-roses` (219), 309 `gyumri-kumayri-black-fortress` (220), 310 `tashkent-chorsu-hast-imam` (221); обложки — по PROMPT.md, финале-видео после обложек |
 | E2 новые страны | Дубай (`dubai-al-fahidi-creek`), Каир (`cairo-khan-el-khalili`), Котор (`kotor-cats-and-walls`), Будва (`budva-ballerina-old-town`) | #2874 | blocked_by #2869 |
 | E3 Таиланд/Вьетнам | Пхукет-Таун (`phuket-town-sino-portuguese`), Нячанг (`nha-trang-po-nagar`), Хойан (`hoi-an-lantern-bridge`), Чиангмай (`chiang-mai-three-kings`) | #2875 | todo |
 | E7 соседи для белорусов | Друскининкай (`druskininkai-ciurlionis-springs`), Замосць (`zamosc-ideal-city`), Даугавпилс (`daugavpils-fortress-rothko`), Августов (`augustow-canal-town`) | #2876 | todo |
@@ -487,6 +487,34 @@ QUEST_DEMAND_LOG.md 2026-07-18)
   прохождении: высота маскаронов в лоджии, забор у дома Шахворостова (обещали снять
   осенью 2026), рейтинг «Додо Пицца» на привале. Обложка — только PROMPT.md,
   переводы be/uk/pl/en не делались (как у E1).
+- 2026-11-07 (пакет E4 «Кавказ и Ташкент», #2873): на проде квесты 307
+  `mtskheta-svetitskhoveli` (Мцхета, город 218, 11 точек, 1,1 км, 6 проверяемых), 308
+  `sighnaghi-pirosmani-roses` (Сигнахи, 219, 10 точек, 1,2 км, 6 проверяемых), 309
+  `gyumri-kumayri-black-fortress` (Гюмри, 220, 10 точек, 1,5 км, 7 проверяемых), 310
+  `tashkent-chorsu-hast-imam` (Ташкент, 221, 10 точек, 2,3 км, 6 проверяемых). Бриф
+  `.codex-temp/quests-plan/brief-e4.md` — копия E5 с правилами для грузинского/армянского
+  письма (не читается — только наблюдаемое) и валют GEL/AMD/UZS. Ревью оркестратора:
+  Гюмри 3 (story называла купола «главами» — синоним ответа), Сигнахи 6 (фамилия скульптора
+  на табличке читается плохо — вопрос сужен до имени «George»), Ташкент — автор не нашёл
+  привал из-за consent-стены Google Maps, оркестратор добавил кофейню ZanMakon (Заркайнар,
+  48, 2GIS 4,5) опциональным шагом 5 между парком Кадыри и Центром исламской цивилизации.
+  Коран Усмана с 14.11.2025 — в Центре исламской цивилизации (открыт 17.03.2026), точка
+  квеста — его портал, а не Муйи Муборак. Запасных якорей ни у одного города нет: Мцхета,
+  Сигнахи и Ташкент — ровно 6 проверяемых, Гюмри 7 (автор насчитал 7 якорей при пороге 8;
+  дом Дзитохцянов и рынок — без свежих фото, ушли в финал). Сверить при первом
+  прохождении: рельеф-человечек на стене Самтавро (стена не установлена), рука Арсукидзе
+  высоко на северном щипце Светицховели (леса реабилитации 2026–2027), табличка
+  скульптора у бюста Пиросмани, ограда парка Кадыри при реконструкции, три двери портала
+  Центра исламской цивилизации. Код-ревью (loop 1, 3×P2): Мцхета 7 (рука Арсукидзе с
+  угольником на 15 м у конька северного щипца — тот же класс, что курранты Суздаля) →
+  свободный ответ, взамен автор добавил шаг `6a-west-porch` — число «1813» в каменной
+  полосе под фреской западного портика (фото Commons 2020 и 2022; вариант «Младенец» на
+  коленях Богоматери отклонён как угадываемый), сад Мамулашвили стал опциональным
+  (any_text среди обязательных ≤3); Гюмри 3 (story «пострадал только верх… камни оставили
+  рядом» + hint «на крышу, потом на сад» выдавали купола) — переписаны; Сигнахи 4 (story
+  «скрещённые у груди руки» против книги под левой рукой в задании) — описание рук убрано.
+  Все правки синхронизированы на прод (`apply-quest-patches.js` для новой точки и роли,
+  `sync-quest-to-prod.js` для полей).
 - 2026-11-01 (пакет E5 «Россия», #2872): на проде квесты 303 `suzdal-kremlin-bells`
   (Суздаль, город 214, 9 точек, 3,2 км, 6 проверяемых), 304 `smolensk-fortress-key`
   (Смоленск, 215, 9 точек, 2,2 км, 6 проверяемых), 305 `pyatigorsk-lermontov-proval`

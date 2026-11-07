@@ -283,6 +283,10 @@ const QUESTS = [
     { questId: 'smolensk-fortress-key', dir: 'smolenskFortressKey', finaleId: 301 },
     { questId: 'pyatigorsk-lermontov-proval', dir: 'pyatigorskLermontovProval', finaleId: 302 },
     { questId: 'sochi-prometheus-riviera', dir: 'sochiPrometheusRiviera', finaleId: 303 },
+    { questId: 'mtskheta-svetitskhoveli', dir: 'mtskhetaSvetitskhoveli', finaleId: 304 },
+    { questId: 'sighnaghi-pirosmani-roses', dir: 'sighnaghiPirosmaniRoses', finaleId: 305 },
+    { questId: 'gyumri-kumayri-black-fortress', dir: 'gyumriKumayriBlackFortress', finaleId: 306 },
+    { questId: 'tashkent-chorsu-hast-imam', dir: 'tashkentChorsuHastImam', finaleId: 307 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
