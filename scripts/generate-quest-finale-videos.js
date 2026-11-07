@@ -295,6 +295,10 @@ const QUESTS = [
     { questId: 'nhatrang-po-nagar', dir: 'nhatrangPoNagar', finaleId: 313 },
     { questId: 'hoian-lantern-bridge', dir: 'hoianLanternBridge', finaleId: 314 },
     { questId: 'chiangmai-three-kings', dir: 'chiangmaiThreeKings', finaleId: 315 },
+    { questId: 'druskininkai-ciurlionis-springs', dir: 'druskininkaiCiurlionisSprings', finaleId: 316 },
+    { questId: 'zamosc-ideal-city', dir: 'zamoscIdealCity', finaleId: 317 },
+    { questId: 'daugavpils-fortress-rothko', dir: 'daugavpilsFortressRothko', finaleId: 318 },
+    { questId: 'augustow-canal-town', dir: 'augustowCanalTown', finaleId: 319 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)

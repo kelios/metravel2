@@ -397,7 +397,7 @@ TR/DE/CY/BE 4, GE/ES/MD/DK/UZ 3, остальные 1–2). Открытых к�
 | E4 Кавказ и Ташкент | Мцхета (`mtskheta-svetitskhoveli`), Сигнахи (`sighnaghi-pirosmani-roses`), Гюмри (`gyumri-kumayri-black-fortress`), Ташкент (`tashkent-chorsu-hast-imam`) | #2873 | на проде 07.11.2026: квесты 307 `mtskheta-svetitskhoveli` (город 218), 308 `sighnaghi-pirosmani-roses` (219), 309 `gyumri-kumayri-black-fortress` (220), 310 `tashkent-chorsu-hast-imam` (221); обложки — по PROMPT.md, финале-видео после обложек |
 | E2 новые страны | Дубай (`dubai-al-fahidi-creek`), Каир (`cairo-khan-el-khalili`), Котор (`kotor-cats-and-walls`), Будва (`budva-ballerina-old-town`) | #2874 | на проде 07.11.2026: квесты 311 `dubai-al-fahidi-creek` (город 222), 312 `cairo-khan-el-khalili` (223), 313 `kotor-cats-and-walls` (224), 314 `budva-ballerina-old-town` (225); обложки — по PROMPT.md, финале-видео после обложек |
 | E3 Таиланд/Вьетнам | Пхукет-Таун (`phuket-town-sino-portuguese`), Нячанг (`nhatrang-po-nagar`), Хойан (`hoian-lantern-bridge`), Чиангмай (`chiangmai-three-kings`) | #2875 | на проде 07.11.2026: квесты 315 `phuket-town-sino-portuguese` (город 226), 316 `nhatrang-po-nagar` (227), 317 `hoian-lantern-bridge` (228), 318 `chiangmai-three-kings` (229); quest_id трёх городов сделаны однословными ради alias (#2209); обложки — по PROMPT.md, финале-видео после обложек |
-| E7 соседи для белорусов | Друскининкай (`druskininkai-ciurlionis-springs`), Замосць (`zamosc-ideal-city`), Даугавпилс (`daugavpils-fortress-rothko`), Августов (`augustow-canal-town`) | #2876 | todo |
+| E7 соседи для белорусов | Друскининкай (`druskininkai-ciurlionis-springs`), Замосць (`zamosc-ideal-city`), Даугавпилс (`daugavpils-fortress-rothko`), Августов (`augustow-canal-town`) | #2876 | на проде 07.11.2026: квесты 319 `druskininkai-ciurlionis-springs` (город 230), 320 `zamosc-ideal-city` (231), 321 `daugavpils-fortress-rothko` (232), 322 `augustow-canal-town` (233); обложки — по PROMPT.md, финале-видео после обложек |
 | E9 юг Европы | Ларнака (`larnaca-saint-lazarus`), Несебр (`nessebar-forty-churches`), Верона (`verona-arena-juliet`), Салоники (`thessaloniki-white-tower`) | #2877 | todo |
 | D4 (очередь волны D) | Севилья, Нижний Новгород, Берн, Гётеборг | #2878 | todo |
 | E8 Германия/Австрия | Дрезден (`dresden-fuerstenzug`), Гамбург (`hamburg-speicherstadt-stoertebeker`), Нюрнберг (`nuremberg-schoener-brunnen-ring`), Зальцбург (`salzburg-mozart-getreidegasse`) | #2879 | todo |
@@ -487,6 +487,25 @@ QUEST_DEMAND_LOG.md 2026-07-18)
   прохождении: высота маскаронов в лоджии, забор у дома Шахворостова (обещали снять
   осенью 2026), рейтинг «Додо Пицца» на привале. Обложка — только PROMPT.md,
   переводы be/uk/pl/en не делались (как у E1).
+- 2026-11-07 (пакет E7 «Приграничье», #2876): на проде квесты 319
+  `druskininkai-ciurlionis-springs` (Друскининкай, город 230, 10 точек, 1,6 км, 6 проверяемых),
+  320 `zamosc-ideal-city` (Замосць, 231, 10 точек, 0,9 км, 6 проверяемых), 321
+  `daugavpils-fortress-rothko` (Даугавпилс, 232, 10 точек, 3,2 км, 6 проверяемых), 322
+  `augustow-canal-town` (Августов, 233, 9 точек, 2,0 км, 6 проверяемых). Бриф
+  `.codex-temp/quests-plan/brief-e7.md` — зимний (3,5/1 км, тёплый привал) с уроками E4/E2;
+  самопроверка авторов: Друскининкай убрал «арку/размер ворот» из подсказки про подкову,
+  Замосць заменил «пять» в hint и «роз» в «прозвище». Решения по числам: Даугавпилс —
+  крепость и арт-центр Ротко в 2,6 км от центра не укладываются, маршрут по центру и
+  Церковной горке через вокзал, Ротко — зал краеведческого музея и знак на берегу (финал);
+  Друскининкай — дом-музей Чюрлёниса закрыт на реконструкцию (приказ нацмузея 28.04.2026),
+  только в intro/story; Августов — музей канала стоит в бывшем управлении порта, а не в
+  «Доме Пруса» (постановка карточки неточна), верфи и виллы у озёр вне маршрута. Overpass
+  лежал (429) — координаты из OSM API 0.6. Принято с пометкой: Замосць 2/4/9 и Даугавпилс
+  6/7/9 — каменные надписи и резьба без фото ≥2020 (одно фото или только до 2020);
+  Даугавпилс 9 «какие звери у дверей музея» (львы) — угадывается по умолчанию. Сверить при
+  первом прохождении: таблички над входом синагоги Замосця (счёт 3), медальоны валуна у
+  шлюза Августова (4), колонна с горшками на Ригас, леса на костёле Даугавпилса (реставрация
+  кровли, октябрь 2026).
 - 2026-11-07 (пакет E3 «Таиланд и Вьетнам», #2875): на проде квесты 315
   `phuket-town-sino-portuguese` (Пхукет-Таун, город 226, 9 точек, 1,7 км, 6 проверяемых),
   316 `nhatrang-po-nagar` (Нячанг, 227, 9 точек, 2,1 км, 6 проверяемых), 317
