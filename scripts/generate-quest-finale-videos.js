@@ -291,6 +291,10 @@ const QUESTS = [
     { questId: 'cairo-khan-el-khalili', dir: 'cairoKhanElKhalili', finaleId: 309 },
     { questId: 'kotor-cats-and-walls', dir: 'kotorCatsAndWalls', finaleId: 310 },
     { questId: 'budva-ballerina-old-town', dir: 'budvaBallerinaOldTown', finaleId: 311 },
+    { questId: 'phuket-town-sino-portuguese', dir: 'phuketTownSinoPortuguese', finaleId: 312 },
+    { questId: 'nhatrang-po-nagar', dir: 'nhatrangPoNagar', finaleId: 313 },
+    { questId: 'hoian-lantern-bridge', dir: 'hoianLanternBridge', finaleId: 314 },
+    { questId: 'chiangmai-three-kings', dir: 'chiangmaiThreeKings', finaleId: 315 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)

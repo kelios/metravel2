@@ -396,7 +396,7 @@ TR/DE/CY/BE 4, GE/ES/MD/DK/UZ 3, остальные 1–2). Открытых к�
 | E5 Россия | Сочи (`sochi-prometheus-riviera`), Суздаль (`suzdal-kremlin-bells`), Пятигорск (`pyatigorsk-lermontov-proval`), Смоленск (`smolensk-fortress-key`) | #2872 | на проде 01.11.2026: квесты 303 `suzdal-kremlin-bells` (город 214), 304 `smolensk-fortress-key` (215), 305 `pyatigorsk-lermontov-proval` (216), 306 `sochi-prometheus-riviera` (217); обложки — по PROMPT.md, финале-видео после обложек |
 | E4 Кавказ и Ташкент | Мцхета (`mtskheta-svetitskhoveli`), Сигнахи (`sighnaghi-pirosmani-roses`), Гюмри (`gyumri-kumayri-black-fortress`), Ташкент (`tashkent-chorsu-hast-imam`) | #2873 | на проде 07.11.2026: квесты 307 `mtskheta-svetitskhoveli` (город 218), 308 `sighnaghi-pirosmani-roses` (219), 309 `gyumri-kumayri-black-fortress` (220), 310 `tashkent-chorsu-hast-imam` (221); обложки — по PROMPT.md, финале-видео после обложек |
 | E2 новые страны | Дубай (`dubai-al-fahidi-creek`), Каир (`cairo-khan-el-khalili`), Котор (`kotor-cats-and-walls`), Будва (`budva-ballerina-old-town`) | #2874 | на проде 07.11.2026: квесты 311 `dubai-al-fahidi-creek` (город 222), 312 `cairo-khan-el-khalili` (223), 313 `kotor-cats-and-walls` (224), 314 `budva-ballerina-old-town` (225); обложки — по PROMPT.md, финале-видео после обложек |
-| E3 Таиланд/Вьетнам | Пхукет-Таун (`phuket-town-sino-portuguese`), Нячанг (`nha-trang-po-nagar`), Хойан (`hoi-an-lantern-bridge`), Чиангмай (`chiang-mai-three-kings`) | #2875 | todo |
+| E3 Таиланд/Вьетнам | Пхукет-Таун (`phuket-town-sino-portuguese`), Нячанг (`nhatrang-po-nagar`), Хойан (`hoian-lantern-bridge`), Чиангмай (`chiangmai-three-kings`) | #2875 | на проде 07.11.2026: квесты 315 `phuket-town-sino-portuguese` (город 226), 316 `nhatrang-po-nagar` (227), 317 `hoian-lantern-bridge` (228), 318 `chiangmai-three-kings` (229); quest_id трёх городов сделаны однословными ради alias (#2209); обложки — по PROMPT.md, финале-видео после обложек |
 | E7 соседи для белорусов | Друскининкай (`druskininkai-ciurlionis-springs`), Замосць (`zamosc-ideal-city`), Даугавпилс (`daugavpils-fortress-rothko`), Августов (`augustow-canal-town`) | #2876 | todo |
 | E9 юг Европы | Ларнака (`larnaca-saint-lazarus`), Несебр (`nessebar-forty-churches`), Верона (`verona-arena-juliet`), Салоники (`thessaloniki-white-tower`) | #2877 | todo |
 | D4 (очередь волны D) | Севилья, Нижний Новгород, Берн, Гётеборг | #2878 | todo |
@@ -487,6 +487,26 @@ QUEST_DEMAND_LOG.md 2026-07-18)
   прохождении: высота маскаронов в лоджии, забор у дома Шахворостова (обещали снять
   осенью 2026), рейтинг «Додо Пицца» на привале. Обложка — только PROMPT.md,
   переводы be/uk/pl/en не делались (как у E1).
+- 2026-11-07 (пакет E3 «Таиланд и Вьетнам», #2875): на проде квесты 315
+  `phuket-town-sino-portuguese` (Пхукет-Таун, город 226, 9 точек, 1,7 км, 6 проверяемых),
+  316 `nhatrang-po-nagar` (Нячанг, 227, 9 точек, 2,1 км, 6 проверяемых), 317
+  `hoian-lantern-bridge` (Хойан, 228, 10 точек, 0,9 км, 6 проверяемых), 318
+  `chiangmai-three-kings` (Чиангмай, 229, 10 точек, 2,3 км, 6 проверяемых). Первые квесты в
+  Таиланде и Вьетнаме. **Alias (#2209):** alias посадочной берёт из quest_id столько
+  сегментов, сколько слов в `city.name`; у однословных «Нячанг», «Хойан», «Чиангмай» план
+  давал `/quests/nha`, `/quests/hoi`, `/quests/chiang` — quest_id переименованы до заливки в
+  `nhatrang-…`, `hoian-…`, `chiangmai-…` (alias `nhatrang`, `hoian`, `chiangmai`); «Пхукет-Таун»
+  двусловный, alias `phuket-town`. Нячанг: По Нагар и Лонгшон не укладываются в 3,5 км —
+  маршрут по центру (музей Иерсена → собор → вокзал → Лонгшон), По Нагар в intro/finale.
+  Бриф `.codex-temp/quests-plan/brief-e3.md` впервые несёт блок «Уроки ревью E4/E2»
+  (ответ из кресла, вопрос-определение, утечки story/hint) и самопроверку авторов — все
+  четверо заменили по 1–2 шага до сдачи (глаза на носу лодок, лотос под Буддой, драконы на
+  дверях/крыше, счёт иероглифов). Пограничное, принято с пометкой: Нячанг 6 (мозаичный
+  дракон — одно фото 2022), Пхукет 9 (лютня у стража Джуй Туй — фото 2016/2018), Чиангмай
+  4 (Гаруда на фронтоне — угадывается знатоком), Хойан 9 (собака/обезьяна у концов моста —
+  50 %). Сверить при первом прохождении: римские цифры на часовой башне Пхукета (в 2013
+  были арабские), табличка Квятковского, круглые окна Куан Конга, слоны у чеди Пхра Сингха
+  (счёт по двум углам на фото).
 - 2026-11-07 (пакет E2 «Новые страны», #2874): на проде квесты 311 `dubai-al-fahidi-creek`
   (Дубай, город 222, 10 точек, 1,5 км, 6 проверяемых), 312 `cairo-khan-el-khalili` (Каир,
   223, 10 точек, 1,9 км, 6 проверяемых), 313 `kotor-cats-and-walls` (Котор, 224, 10 точек,
