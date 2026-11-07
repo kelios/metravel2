@@ -224,6 +224,35 @@ export async function openExternalUrlInNewTab(
   return openWithYandexFallback(normalized, options.onError);
 }
 
+/**
+ * #3104: ссылка на наш сайт, которую ОС отдала приложению, а экрана у неё нет
+ * (`/places/help`, `/become-author`). Открываем во встроенном системном браузере
+ * (Custom Tabs / SFSafariViewController) поверх приложения. `Linking.openURL`
+ * здесь не годится: на Android ссылку вернули бы нашему же приложению как
+ * проверенному обработчику App Links, и круг замкнулся бы на главной.
+ * Принимает только https-адрес хоста сайта; web не трогаем — там это и есть сайт.
+ */
+export async function openSiteUrlInSystemBrowser(
+  rawUrl: string,
+  onError?: (error: unknown) => void,
+): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  const normalized = getSafeExternalUrl(rawUrl, {
+    allowRelative: false,
+    allowProtocolRelative: false,
+    allowedProtocols: ['https:'],
+  });
+  if (!normalized || !resolveSitePath(normalized)) return false;
+  try {
+    const { openBrowserAsync } = await import('expo-web-browser');
+    await openBrowserAsync(normalized);
+    return true;
+  } catch (error) {
+    onError?.(error);
+    return false;
+  }
+}
+
 /** Central native chokepoint for permission-denial recovery. */
 export async function openSystemSettings(onError?: (error: unknown) => void): Promise<boolean> {
   if (Platform.OS === 'web') return false;

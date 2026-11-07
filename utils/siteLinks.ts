@@ -88,6 +88,7 @@ export const APP_ROUTE_ROOTS: ReadonlySet<string> = new Set([
   'error',
   'export',
   'favorites',
+  'games',
   'history',
   'login',
   'map',

@@ -164,7 +164,9 @@ allow-list `utils/incomingAppLinks.ts:107-176`. Why: `/accountconfirmation?hash=
 limits paths via the server AASA, so platforms disagree. Fix: generate the
 intent-filter paths, AASA components and the allow-list from one route
 manifest; or restrict the intent filter. Effort: M. RR: medium (device QA).
-Deps: `app.json` change needs owner approval per `AGENTS.md`.
+Deps: `app.json` change needs owner approval per `AGENTS.md`. → **Fixed in #3104**:
+intent filter narrowed to the AASA families, unsupported safe site links open in
+the system browser, parity test `__tests__/utils/incomingAppLinkRouteParity.test.ts`.
 
 **DL-2 — Three-plus route tables.** Sev: medium. `utils/incomingAppLinks.ts`
 (OS links), `utils/siteLinks.ts:69-117` (in-app, tested against `app/`),

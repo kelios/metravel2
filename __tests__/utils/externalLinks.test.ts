@@ -6,8 +6,14 @@ import {
   openExternalUrl,
   openExternalUrlInNewTab,
   dispatchWebWindow,
+  openSiteUrlInSystemBrowser,
   openWebWindow,
 } from '@/utils/externalLinks';
+
+const mockOpenBrowserAsync = jest.fn(() => Promise.resolve({ type: 'dismiss' }));
+jest.mock('expo-web-browser', () => ({
+  openBrowserAsync: (...args: unknown[]) => mockOpenBrowserAsync(...args),
+}));
 
 describe('externalLinks', () => {
   it('normalizes valid URLs and adds https when scheme is missing', () => {
@@ -317,6 +323,61 @@ describe('externalLinks', () => {
       } finally {
         (window as any).open = originalOpen;
       }
+    });
+  });
+
+  // #3104: ОС-ссылка на сайт без экрана приложения — системный браузер поверх
+  // приложения, не Linking.openURL (на Android тот вернул бы ссылку нам же).
+  describe('openSiteUrlInSystemBrowser', () => {
+    const originalPlatform = Platform.OS;
+
+    beforeEach(() => {
+      mockOpenBrowserAsync.mockClear();
+      (Platform.OS as any) = 'android';
+    });
+
+    afterEach(() => {
+      (Platform.OS as any) = originalPlatform;
+    });
+
+    it('opens a safe https site link in the in-app system browser', async () => {
+      const openUrl = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+      try {
+        await expect(
+          openSiteUrlInSystemBrowser('https://metravel.by/places/help?utm_source=instagram'),
+        ).resolves.toBe(true);
+        expect(mockOpenBrowserAsync).toHaveBeenCalledWith(
+          'https://metravel.by/places/help?utm_source=instagram',
+        );
+        expect(openUrl).not.toHaveBeenCalled();
+      } finally {
+        openUrl.mockRestore();
+      }
+    });
+
+    it.each([
+      'https://evil.example/places/help',
+      'http://metravel.by/places/help',
+      'javascript:alert(1)',
+      '/places/help',
+      '',
+    ])('refuses %s', async (url) => {
+      await expect(openSiteUrlInSystemBrowser(url)).resolves.toBe(false);
+      expect(mockOpenBrowserAsync).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op on web where the site is already the page', async () => {
+      (Platform.OS as any) = 'web';
+      await expect(openSiteUrlInSystemBrowser('https://metravel.by/places/help')).resolves.toBe(false);
+      expect(mockOpenBrowserAsync).not.toHaveBeenCalled();
+    });
+
+    it('reports a browser failure through onError', async () => {
+      const failure = new Error('no browser');
+      mockOpenBrowserAsync.mockRejectedValueOnce(failure);
+      const onError = jest.fn();
+      await expect(openSiteUrlInSystemBrowser('https://metravel.by/places/help', onError)).resolves.toBe(false);
+      expect(onError).toHaveBeenCalledWith(failure);
     });
   });
 });

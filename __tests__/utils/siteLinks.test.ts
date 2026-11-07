@@ -16,7 +16,7 @@ const APP_DIR = path.resolve(__dirname, '../../app')
 /**
  * Корневые сегменты экранов expo-router из файловой системы `app/` и `app/(tabs)/`:
  * файлы-экраны (без `_layout`, `+html`, `+native-intent`, catch-all `[...missing]`)
- * и каталоги; каталог без index — экран только с параметром.
+ * и каталоги; каталог без index и без одноимённого файла-экрана — экран только с параметром.
  */
 const readRouteRoots = () => {
   const indexRoots = new Set<string>()
@@ -25,7 +25,12 @@ const readRouteRoots = () => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (entry.isDirectory()) {
         if (entry.name.startsWith('(')) continue
-        const hasIndex = readdirSync(path.join(dir, entry.name)).some((name) => /^index(\.\w+)?\.tsx?$/.test(name))
+        // Каталог с index внутри или с файлом-экраном рядом (`places.tsx` +
+        // `places/help.tsx` = `/places` и `/places/help`, #3095) — экран с index.
+        const siblings = readdirSync(dir)
+        const hasIndex =
+          readdirSync(path.join(dir, entry.name)).some((name) => /^index(\.\w+)?\.tsx?$/.test(name)) ||
+          siblings.some((name) => new RegExp(`^${entry.name}(\\.(web|native|ios|android))?\\.tsx?$`).test(name))
         ;(hasIndex ? indexRoots : paramRoots).add(entry.name)
         continue
       }

@@ -130,6 +130,36 @@ const IN_APP_STATIC_ROUTES = new Set(['search', 'favorites', 'messages']);
  */
 const SLUG_ROUTE_PARENTS = new Set(['travels', 'article', 'user', 'quests']);
 
+/**
+ * Семейства путей, которые Android-приложение забирает у браузера (App Links,
+ * `android.intentFilters` в `app.json`). #3104: фильтр был `pathPrefix: "/"`,
+ * то есть весь домен, а таблица выше знала лишь часть путей — любая другая
+ * страница сайта (`/places/help`, `/become-author`) открывала приложение и
+ * превращалась в главную. Список зеркалит компоненты серверного AASA, как и
+ * `isSupportedRoute`; тест `__tests__/utils/incomingAppLinkRouteParity.test.ts`
+ * сверяет все три. Внутри семейства точный маршрут по-прежнему решает политика,
+ * а неподдерживаемый путь уходит во внешний браузер (`classifyIncomingAppLink`).
+ */
+const ANDROID_APP_LINK_PATHS = Object.freeze([
+  Object.freeze({ path: '/map' }),
+  Object.freeze({ path: '/quests' }),
+  Object.freeze({ pathPrefix: '/quests/' }),
+  Object.freeze({ path: '/trips' }),
+  Object.freeze({ pathPrefix: '/trips/' }),
+  Object.freeze({ pathPrefix: '/travels/' }),
+  Object.freeze({ pathPrefix: '/article/' }),
+  Object.freeze({ pathPrefix: '/user/' }),
+]);
+
+/** Поймает ли Android-фильтр этот путь (семантика `path` / `pathPrefix` манифеста). */
+function isAndroidAppLinkPath(pathname) {
+  return ANDROID_APP_LINK_PATHS.some((entry) =>
+    entry.path !== undefined
+      ? pathname === entry.path
+      : pathname.startsWith(entry.pathPrefix),
+  );
+}
+
 const isPositiveIntegerSegment = (segment) =>
   /^[1-9]\d*$/.test(segment);
 
@@ -188,25 +218,15 @@ function isSupportedRoute(
   return false;
 }
 
-/**
- * Maps an OS-delivered MeTravel URL to the exact native route policy.
- * HTTPS mirrors AASA; the custom scheme keeps explicit tracked native fallbacks.
- *
- * ВНИМАНИЕ (#1724 / #1413): «зеркало AASA» — договорённость, а не автоматика.
- * С 2026-09-04 production AASA отдаёт `appIDs` + `components` и включает
- * семейство `/trips` (листинг, деталь по id, `/trips/plan/<id>`). Таблица ниже
- * должна оставаться согласованной с этими компонентами. Неподдерживаемый вход
- * возвращает null, чтобы warm-ссылка не сбивала текущий экран.
- * Native hash navigation is intentionally excluded; the path and query are preserved.
- */
-function mapIncomingAppLinkToHref(url) {
+function classifyIncomingAppLink(url) {
+  const ignore = Object.freeze({ kind: 'ignore' });
   if (
     typeof url !== 'string' ||
     url.length === 0 ||
     url !== url.trim() ||
     hasAsciiControlCharacter(url)
   ) {
-    return null;
+    return ignore;
   }
 
   try {
@@ -224,7 +244,7 @@ function mapIncomingAppLinkToHref(url) {
         parsed.username !== '' ||
         parsed.password !== ''
       ) {
-        return null;
+        return ignore;
       }
       source = 'https';
       pathname = parsed.pathname;
@@ -235,27 +255,53 @@ function mapIncomingAppLinkToHref(url) {
         parsed.username !== '' ||
         parsed.password !== ''
       ) {
-        return null;
+        return ignore;
       }
       source = 'custom-scheme';
       pathname = getCustomSchemePath(url);
       rawPath = pathname;
     } else {
-      return null;
+      return ignore;
     }
 
-    if (
-      !isSafeRawPath(rawPath) ||
-      !isSafePreservedSearch(parsed.search) ||
-      !isSupportedRoute(pathname, source)
-    ) {
-      return null;
+    if (!isSafeRawPath(rawPath) || !isSafePreservedSearch(parsed.search)) {
+      return ignore;
     }
 
-    return `${pathname}${parsed.search}`;
+    if (isSupportedRoute(pathname, source)) {
+      return { kind: 'route', href: `${pathname}${parsed.search}` };
+    }
+
+    // #3104: безопасная https-ссылка на сайт без экрана в приложении. ОС отдала
+    // её приложению (Android App Links берут семейство целиком, а старые сборки —
+    // весь домен), и единственный честный ответ — открыть сайт во внешнем
+    // браузере, а не молча показать главную. Кастомная схема и уведомления
+    // остаются fail-closed: у них нет «сайта», куда можно вернуть пользователя.
+    if (source === 'https') {
+      return { kind: 'external', url: `https://${TRUSTED_HTTPS_HOST}${pathname}${parsed.search}` };
+    }
+    return ignore;
   } catch {
-    return null;
+    return ignore;
   }
+}
+
+/**
+ * Maps an OS-delivered MeTravel URL to the exact native route policy.
+ * HTTPS mirrors AASA; the custom scheme keeps explicit tracked native fallbacks.
+ *
+ * ВНИМАНИЕ (#1724 / #1413): «зеркало AASA» — договорённость, а не автоматика.
+ * С 2026-09-04 production AASA отдаёт `appIDs` + `components` и включает
+ * семейство `/trips` (листинг, деталь по id, `/trips/plan/<id>`). Таблица выше
+ * должна оставаться согласованной с этими компонентами и с `ANDROID_APP_LINK_PATHS`.
+ * Неподдерживаемый вход возвращает null, чтобы warm-ссылка не сбивала текущий
+ * экран; что с ним делать дальше (внешний браузер или ничего), решает
+ * `classifyIncomingAppLink`.
+ * Native hash navigation is intentionally excluded; the path and query are preserved.
+ */
+function mapIncomingAppLinkToHref(url) {
+  const decision = classifyIncomingAppLink(url);
+  return decision.kind === 'route' ? decision.href : null;
 }
 
 function mapRelativeNotificationRoute(value) {
@@ -343,4 +389,10 @@ function mapNotificationPayloadToHref(
   return null;
 }
 
-module.exports = { mapIncomingAppLinkToHref, mapNotificationPayloadToHref };
+module.exports = {
+  ANDROID_APP_LINK_PATHS,
+  classifyIncomingAppLink,
+  isAndroidAppLinkPath,
+  mapIncomingAppLinkToHref,
+  mapNotificationPayloadToHref,
+};

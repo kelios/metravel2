@@ -54,7 +54,42 @@
             {
               "scheme": "https",
               "host": "metravel.by",
-              "pathPrefix": "/"
+              "path": "/map"
+            },
+            {
+              "scheme": "https",
+              "host": "metravel.by",
+              "path": "/quests"
+            },
+            {
+              "scheme": "https",
+              "host": "metravel.by",
+              "pathPrefix": "/quests/"
+            },
+            {
+              "scheme": "https",
+              "host": "metravel.by",
+              "path": "/trips"
+            },
+            {
+              "scheme": "https",
+              "host": "metravel.by",
+              "pathPrefix": "/trips/"
+            },
+            {
+              "scheme": "https",
+              "host": "metravel.by",
+              "pathPrefix": "/travels/"
+            },
+            {
+              "scheme": "https",
+              "host": "metravel.by",
+              "pathPrefix": "/article/"
+            },
+            {
+              "scheme": "https",
+              "host": "metravel.by",
+              "pathPrefix": "/user/"
             }
           ],
           "category": [

@@ -3,7 +3,7 @@ import { requireNativeModule } from 'expo';
 import { useRootNavigationState, useRouter, type Href } from 'expo-router';
 import { Platform } from 'react-native';
 
-import { mapIncomingAppLinkToHref } from '@/utils/incomingAppLinks';
+import { resolveIncomingAppLink } from '@/utils/incomingAppLinkFallback';
 
 type ExpoLinkingLifecycleModule = {
   addListener: (
@@ -41,7 +41,8 @@ export function useIncomingAppLinks(): void {
   isNavigationReadyRef.current = isNavigationReady;
 
   const routeUrl = useCallback((url: unknown) => {
-    const href = mapIncomingAppLinkToHref(url);
+    // #3104: неподдерживаемая ссылка на сайт уходит во внешний браузер внутри resolve.
+    const href = resolveIncomingAppLink(url);
     if (!href) return;
 
     if (!isNavigationReadyRef.current) {

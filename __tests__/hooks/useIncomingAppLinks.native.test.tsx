@@ -25,6 +25,11 @@ jest.mock('expo-router', () => ({
   useRootNavigationState: () => mockRootNavigationState,
 }));
 
+const mockOpenSiteUrlInSystemBrowser = jest.fn(() => Promise.resolve(true));
+jest.mock('@/utils/externalLinks', () => ({
+  openSiteUrlInSystemBrowser: (...args: unknown[]) => mockOpenSiteUrlInSystemBrowser(...args),
+}));
+
 const expoGlobal = globalThis as typeof globalThis & {
   expo?: { modules?: Record<string, unknown> };
 };
@@ -40,6 +45,14 @@ const { useIncomingAppLinks } =
   require('@/hooks/useIncomingAppLinks.native') as typeof import('@/hooks/useIncomingAppLinks.native');
 
 describe('mapIncomingAppLinkToHref', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it.each([
     ['https://metravel.by/travels/test-slug', '/travels/test-slug'],
     [
@@ -155,6 +168,44 @@ describe('mapIncomingAppLinkToHref', () => {
       expect(redirectSystemPath({ path: url, initial: false })).toBe(expected);
     },
   );
+
+  // #3104: ссылка акции на Android доходит до приложения (App Links), а экрана
+  // у неё нет — её открывает системный браузер, а не главная.
+  it('hands a safe unsupported site link to the system browser and stays put', () => {
+    jest.spyOn(Date, 'now').mockReturnValue(10_000);
+    const url = 'https://metravel.by/places/help?utm_source=instagram&utm_campaign=belarus_place_stories#top';
+
+    expect(redirectSystemPath({ path: url, initial: true })).toBeNull();
+
+    expect(mockOpenSiteUrlInSystemBrowser).toHaveBeenCalledTimes(1);
+    expect(mockOpenSiteUrlInSystemBrowser).toHaveBeenCalledWith(
+      'https://metravel.by/places/help?utm_source=instagram&utm_campaign=belarus_place_stories',
+    );
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it('opens the same cold and warm link once within the duplicate window, again later', () => {
+    const nowSpy = jest.spyOn(Date, 'now').mockReturnValue(20_000);
+    const url = 'https://metravel.by/become-author';
+
+    expect(redirectSystemPath({ path: url, initial: true })).toBeNull();
+    expect(redirectSystemPath({ path: url, initial: false })).toBeNull();
+    expect(mockOpenSiteUrlInSystemBrowser).toHaveBeenCalledTimes(1);
+
+    nowSpy.mockReturnValue(21_001);
+    expect(redirectSystemPath({ path: url, initial: false })).toBeNull();
+    expect(mockOpenSiteUrlInSystemBrowser).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    'metravel:///places/help',
+    'https://example.com/places/help',
+    'https://metravel.by/places/%2e%2e/help',
+    'https://metravel.by/travels/test-slug',
+  ])('never opens the browser for %s', (url) => {
+    redirectSystemPath({ path: url, initial: true });
+    expect(mockOpenSiteUrlInSystemBrowser).not.toHaveBeenCalled();
+  });
 });
 
 describe('mapNotificationPayloadToHref', () => {
@@ -258,6 +309,20 @@ describe('useIncomingAppLinks', () => {
 
     expect(mockPush).toHaveBeenCalledTimes(1);
     expect(mockPush).toHaveBeenCalledWith('/travels/latest');
+  });
+
+  it('opens an unsupported warm site link in the system browser without a router push', async () => {
+    jest.spyOn(Date, 'now').mockReturnValue(30_000);
+    await renderHook(() => useIncomingAppLinks());
+
+    await act(() => {
+      urlListener?.({ url: 'https://metravel.by/places/help?utm_medium=story' });
+    });
+
+    expect(mockOpenSiteUrlInSystemBrowser).toHaveBeenCalledWith(
+      'https://metravel.by/places/help?utm_medium=story',
+    );
+    expect(mockPush).not.toHaveBeenCalled();
   });
 
   it('ignores malformed or external events and removes the native listener', async () => {

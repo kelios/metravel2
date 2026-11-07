@@ -365,6 +365,18 @@ npm run android:submit:production   # commit production edit
 npm run android:play:status         # temporary read-only edit, then delete
 ```
 
+App Links (#3104). The verified `https://metravel.by` intent filter in `app.json`
+lists the same path families as the production AASA components and the
+`utils/incomingAppLinkPolicy.js` tables (`/map`, `/quests`, `/quests/*`,
+`/trips`, `/trips/*`, `/travels/*`, `/article/*`, `/user/*`), never
+`pathPrefix: "/"`: a site page without an app screen (`/places/help`,
+`/become-author`) must stay in the browser. Inside a claimed family the policy
+still decides the exact route, and a safe https link it rejects is opened in the
+system browser by `utils/incomingAppLinkFallback.ts` instead of landing on the
+home tab. `__tests__/utils/incomingAppLinkRouteParity.test.ts` keeps the three
+lists equal; change them together, and remember that only a new store build
+delivers a filter change to installed apps.
+
 `android:prebuild` is not optional. The whole release optimisation contract — R8,
 resource shrinking, `proguard-android-optimize.txt`, `material:material:1.14.0`,
 Gradle metaspace — lives in `plugins/withAndroidReleaseSafety.js` and reaches
