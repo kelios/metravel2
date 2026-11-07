@@ -12,6 +12,7 @@
  */
 
 import type { AiSource, AiSourceType } from './types'
+import { AI_SOURCES_LIMIT, AI_SOURCES_LIMIT_PINNED } from './policy.ts'
 
 /** Ссылка на материал сайта: `id` — числовой PK статьи или квеста (как в индексе и `/ai/similar`). */
 export type AiSourceRef = {
@@ -52,11 +53,17 @@ const sourceKeyOf = (source: Pick<AiSource, 'type' | 'source_id'>): string => `$
 
 /**
  * Карточка источника первой, подбор — следом без дубля той же карточки, всего не
- * больше `limit`. Квест лежит в индексе на нескольких локалях с разными URL, поэтому
+ * больше `limit` (с закреплённой страницей — `AI_SOURCES_LIMIT_PINNED`, иначе `AI_SOURCES_LIMIT`). Квест лежит в индексе на нескольких локалях с разными URL, поэтому
  * дубль ищется по `type:source_id`, а не по адресу.
  */
-export const pinSourceFirst = (pinned: AiSource | null | undefined, sources: readonly AiSource[], limit: number): AiSource[] => {
+export const pinSourceFirst = (
+  pinned: AiSource | null | undefined,
+  sources: readonly AiSource[],
+  limit: number = pinned ? AI_SOURCES_LIMIT_PINNED : AI_SOURCES_LIMIT,
+): AiSource[] => {
   if (!pinned) return sources.slice(0, limit)
   const key = sourceKeyOf(pinned)
-  return [pinned, ...sources.filter((source) => sourceKeyOf(source) !== key)].slice(0, limit)
+  // Подбор нашёл ту же страницу — его фрагмент подобран под вопрос, он и идёт первым.
+  const found = sources.find((source) => sourceKeyOf(source) === key)
+  return [found ?? pinned, ...sources.filter((source) => sourceKeyOf(source) !== key)].slice(0, limit)
 }

@@ -27,7 +27,6 @@ import type http from 'node:http'
 
 import { type Generator, isAiGeneratorError } from '../../api/aiAssist/generator.ts'
 import { countKeptSourceLinks, enforceSourceLinks, guardStreamingText } from '../../api/aiAssist/linkGuard.ts'
-import { AI_SOURCES_LIMIT } from '../../api/aiAssist/policy.ts'
 import { buildAssistantMessages, MAX_HISTORY_ITEMS } from '../../api/aiAssist/prompt.ts'
 import { buildRetrievalQuery, resolveRetrievalAnchor } from '../../api/aiAssist/retrievalQuery.ts'
 import { type AiSourceRef, parseSourceRef, pinSourceFirst } from '../../api/aiAssist/sourceRef.ts'
@@ -204,7 +203,7 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       throw error
     }
     const { degraded } = retrieved
-    const sources = pinSourceFirst(pinned, retrieved.sources, AI_SOURCES_LIMIT)
+    const sources = pinSourceFirst(pinned, retrieved.sources)
     if (!sources.length) {
       await demandLog.append({ q: question, locale, reason: 'no_sources' })
       const stream = openStream(response)

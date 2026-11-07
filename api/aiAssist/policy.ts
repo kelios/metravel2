@@ -13,6 +13,9 @@ export const AI_ASK_DAILY_LIMIT = 20
 export const AI_OFFTOPIC_STRIKES_TO_BLOCK = 3
 /** Карточек подбора в промпте. */
 export const AI_SOURCES_LIMIT = 8
+/** Карточек в промпте при закреплённой странице-источнике (#2897): проба 07.11.2026 на v4 — среди 8 карточек
+ * «Сколько дней занимает поездка?» для статьи 816 модель отвечала по соседней статье; с тремя — по странице. */
+export const AI_SOURCES_LIMIT_PINNED = 3
 /** День лимитов и блока на сервере — календарный по этой зоне (аудитория сайта), `AI_ASSIST_DAY_TZ` переопределяет. */
 export const AI_ASK_DAY_TIME_ZONE = 'Europe/Minsk'
 

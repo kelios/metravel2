@@ -637,7 +637,8 @@ describe('useAssistantChat: контекстный вход со страниц�
     await act(async () => {
       await result.current.ask('Куда поехать под Гродно?')
     })
-    expect(result.current.turns[1].sources[0]).toEqual(pinned)
+    // Подбор вернул ту же статью — первым идёт его фрагмент под вопрос, а не закреплённая карточка.
+    expect(result.current.turns[1].sources[0]).toEqual({ ...pinned, score: 3 })
     expect(mockedSearch).toHaveBeenLastCalledWith(expect.objectContaining({ query: 'Куда поехать под Гродно?' }))
   })
 

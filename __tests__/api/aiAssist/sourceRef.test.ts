@@ -40,6 +40,10 @@ describe('aiAssist sourceRef (#2897)', () => {
     const pinned = card('quest', '1', 'https://metravel.by/quests/1-pl')
     const found = [card('travel', '816'), card('quest', '1'), card('travel', '761')]
     expect(pinSourceFirst(pinned, found, 8).map((s) => `${s.type}:${s.source_id}`)).toEqual(['quest:1', 'travel:816', 'travel:761'])
+    // фрагмент подбора той же страницы подобран под вопрос — он вместо закреплённой карточки
+    expect(pinSourceFirst(pinned, found, 8)[0].url).toBe('https://metravel.by/quests/1')
+    expect(pinSourceFirst(pinned, [card('travel', '816'), card('travel', '761'), card('travel', '790')]).map((s) => s.source_id)).toEqual(['1', '816', '761'])
+    expect(pinSourceFirst(null, [card('travel', '816')]).length).toBe(1)
     expect(pinSourceFirst(pinned, found, 2).map((s) => s.source_id)).toEqual(['1', '816'])
     expect(pinSourceFirst(null, found, 2)).toEqual(found.slice(0, 2))
   })

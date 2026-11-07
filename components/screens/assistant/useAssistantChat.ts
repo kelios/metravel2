@@ -29,7 +29,7 @@ import {
   registerOffTopicStrike,
 } from '@/api/aiAssist/limits'
 import { countKeptSourceLinks, enforceSourceLinks, guardStreamingText } from '@/api/aiAssist/linkGuard'
-import { AI_SOURCES_LIMIT, secondsToDayEnd } from '@/api/aiAssist/policy'
+import { secondsToDayEnd } from '@/api/aiAssist/policy'
 import { MAX_QUESTION_LENGTH, buildAssistantMessages } from '@/api/aiAssist/prompt'
 import { buildRetrievalQuery, loadSourceCard, searchSiteMaterials } from '@/api/aiAssist/retrieval'
 import { pinSourceFirst, type AiSourceRef } from '@/api/aiAssist/sourceRef'
@@ -384,7 +384,7 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
         } catch {
           sources = []
         }
-        sources = pinSourceFirst(pinned, sources, AI_SOURCES_LIMIT)
+        sources = pinSourceFirst(pinned, sources)
         if (controller.signal.aborted) {
           patchTurn(id, { status: 'aborted' })
           return

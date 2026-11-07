@@ -356,7 +356,9 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
       expect(ids).toContain('quest:1')
       expect(ids.filter((id: string) => id === 'travel:816')).toHaveLength(1)
       expect(ids.length).toBeLessThanOrEqual(8)
-      expect(first.events[0].data.sources[0]).toMatchObject({ title: 'Ярмарки Польши', url: 'https://metravel.by/travels/816', path: '/travels/816', score: 0 })
+      // Подбор тоже нашёл 816 — первым идёт его фрагмент (со score подбора, не 0), всего карточек ≤ 3.
+      expect(first.events[0].data.sources[0]).toMatchObject({ title: 'Ярмарки Польши', url: 'https://metravel.by/travels/816', path: '/travels/816' })
+      expect(ids.length).toBeLessThanOrEqual(3)
       // Карточка — первой и в промпте модели.
       expect(prompts[0].indexOf('Ярмарки Польши')).toBeLessThan(prompts[0].indexOf('Квест по Гродно'))
 
