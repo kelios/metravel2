@@ -395,7 +395,7 @@ TR/DE/CY/BE 4, GE/ES/MD/DK/UZ 3, остальные 1–2). Открытых к�
 | E6 Беларусь | Орша (`orsha-korotkevich-collegium`), Слоним (`slonim-oginski-canal`), Кобрин (`kobrin-suvorov-park`), Станьково (`stankovo-czapski-skarbczyk`) | #2871 | на проде 01.11.2026: квесты 299 `stankovo-czapski-skarbczyk` (город 210), 300 `orsha-korotkevich-collegium` (211), 301 `kobrin-suvorov-park` (212), 302 `slonim-oginski-canal` (213); обложки — по PROMPT.md, финале-видео после обложек |
 | E5 Россия | Сочи (`sochi-prometheus-riviera`), Суздаль (`suzdal-kremlin-bells`), Пятигорск (`pyatigorsk-lermontov-proval`), Смоленск (`smolensk-fortress-key`) | #2872 | на проде 01.11.2026: квесты 303 `suzdal-kremlin-bells` (город 214), 304 `smolensk-fortress-key` (215), 305 `pyatigorsk-lermontov-proval` (216), 306 `sochi-prometheus-riviera` (217); обложки — по PROMPT.md, финале-видео после обложек |
 | E4 Кавказ и Ташкент | Мцхета (`mtskheta-svetitskhoveli`), Сигнахи (`sighnaghi-pirosmani-roses`), Гюмри (`gyumri-kumayri-black-fortress`), Ташкент (`tashkent-chorsu-hast-imam`) | #2873 | на проде 07.11.2026: квесты 307 `mtskheta-svetitskhoveli` (город 218), 308 `sighnaghi-pirosmani-roses` (219), 309 `gyumri-kumayri-black-fortress` (220), 310 `tashkent-chorsu-hast-imam` (221); обложки — по PROMPT.md, финале-видео после обложек |
-| E2 новые страны | Дубай (`dubai-al-fahidi-creek`), Каир (`cairo-khan-el-khalili`), Котор (`kotor-cats-and-walls`), Будва (`budva-ballerina-old-town`) | #2874 | blocked_by #2869 |
+| E2 новые страны | Дубай (`dubai-al-fahidi-creek`), Каир (`cairo-khan-el-khalili`), Котор (`kotor-cats-and-walls`), Будва (`budva-ballerina-old-town`) | #2874 | на проде 07.11.2026: квесты 311 `dubai-al-fahidi-creek` (город 222), 312 `cairo-khan-el-khalili` (223), 313 `kotor-cats-and-walls` (224), 314 `budva-ballerina-old-town` (225); обложки — по PROMPT.md, финале-видео после обложек |
 | E3 Таиланд/Вьетнам | Пхукет-Таун (`phuket-town-sino-portuguese`), Нячанг (`nha-trang-po-nagar`), Хойан (`hoi-an-lantern-bridge`), Чиангмай (`chiang-mai-three-kings`) | #2875 | todo |
 | E7 соседи для белорусов | Друскининкай (`druskininkai-ciurlionis-springs`), Замосць (`zamosc-ideal-city`), Даугавпилс (`daugavpils-fortress-rothko`), Августов (`augustow-canal-town`) | #2876 | todo |
 | E9 юг Европы | Ларнака (`larnaca-saint-lazarus`), Несебр (`nessebar-forty-churches`), Верона (`verona-arena-juliet`), Салоники (`thessaloniki-white-tower`) | #2877 | todo |
@@ -487,6 +487,28 @@ QUEST_DEMAND_LOG.md 2026-07-18)
   прохождении: высота маскаронов в лоджии, забор у дома Шахворостова (обещали снять
   осенью 2026), рейтинг «Додо Пицца» на привале. Обложка — только PROMPT.md,
   переводы be/uk/pl/en не делались (как у E1).
+- 2026-11-07 (пакет E2 «Новые страны», #2874): на проде квесты 311 `dubai-al-fahidi-creek`
+  (Дубай, город 222, 10 точек, 1,5 км, 6 проверяемых), 312 `cairo-khan-el-khalili` (Каир,
+  223, 10 точек, 1,9 км, 6 проверяемых), 313 `kotor-cats-and-walls` (Котор, 224, 10 точек,
+  0,6 км, 6 проверяемых), 314 `budva-ballerina-old-town` (Будва, 225, 9 точек, 0,8 км, 6
+  проверяемых). Первые квесты в ОАЭ, Египте и Черногории — коды AE/EG/ME в каталоге
+  пришли с #2869. Бриф `.codex-temp/quests-plan/brief-e2.md`: арабская вязь не читается,
+  абра — только опциональный эпизод, валюты AED/EGP/EUR. Форт Аль-Фахиди (Dubai Museum)
+  закрыт с 2021 — только в story; угадываемых из кресла ответов не брали: Будва 2
+  («кого держит Богородица» → «что вырезано на гербе над воротами»: звёзды, фото 2018 и
+  2023). Привалы: Bayt Al Wakeel (Дубай), «Эль-Фишави» (Каир, рейтинг Google не снят —
+  consent-стена), Cesarica (Котор), Caffe Fiorino (Будва). Сверить при первом прохождении:
+  рельеф щитов на башнях Баб ан-Наср, табличка стены Старого Дубая (2001), маркер гоночной
+  лодки (±50 м), год «1836» над дверью Цитаделы (4–5 м), неглубокие звёзды на гербе ворот
+  Будвы в тени, набережная Бур-Дубая в ремонте.
+  Код-ревью (loop 1, 7×P2 одного класса — вопрос-определение или story/hint выводят
+  ответ): Каир 1 (task описывал щит), 7 (task/hint описывали зонт), 10 («минареты на
+  башнях» в story+hint давали «2»), 3 (P3: материал исключением); Котор 3 («фигурки с
+  крыльями — кто?» → «что они держат»: герб/венок, story без описания герба); Дубай 1
+  («квадратная», «с любой стороны» → ответ 4), 3 («гонки на гребных лодках» → вёсла;
+  переписаны title/story/task, ответ прежний), 5 (P3: «минарет» в ед. ч. у соседа, контраст
+  с металлом); Будва 5 (отсылка к «Троице» Рублёва выдавала чашу — перенесена в финал).
+  Все правки синхронизированы на прод (`sync-quest-to-prod.js` + патчи title).
 - 2026-11-07 (пакет E4 «Кавказ и Ташкент», #2873): на проде квесты 307
   `mtskheta-svetitskhoveli` (Мцхета, город 218, 11 точек, 1,1 км, 6 проверяемых), 308
   `sighnaghi-pirosmani-roses` (Сигнахи, 219, 10 точек, 1,2 км, 6 проверяемых), 309

@@ -287,6 +287,10 @@ const QUESTS = [
     { questId: 'sighnaghi-pirosmani-roses', dir: 'sighnaghiPirosmaniRoses', finaleId: 305 },
     { questId: 'gyumri-kumayri-black-fortress', dir: 'gyumriKumayriBlackFortress', finaleId: 306 },
     { questId: 'tashkent-chorsu-hast-imam', dir: 'tashkentChorsuHastImam', finaleId: 307 },
+    { questId: 'dubai-al-fahidi-creek', dir: 'dubaiAlFahidiCreek', finaleId: 308 },
+    { questId: 'cairo-khan-el-khalili', dir: 'cairoKhanElKhalili', finaleId: 309 },
+    { questId: 'kotor-cats-and-walls', dir: 'kotorCatsAndWalls', finaleId: 310 },
+    { questId: 'budva-ballerina-old-town', dir: 'budvaBallerinaOldTown', finaleId: 311 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
