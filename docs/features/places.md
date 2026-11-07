@@ -222,6 +222,16 @@
 | `utils/placeContributionAnalytics.ts` | события `place_contribution_*` с источником `places \| map \| author_page \| related_travel` |
 | `utils/placeRequestsConfig.ts` | пилот только web (`EXPO_PUBLIC_BELARUS_PLACE_CONTRIBUTIONS !== 'false'`) |
 
+Приглашения — данные production (`place` + `place_request`), не код. Первая волна
+(#3098) — восемь карточек четырёх областей, вторая (#3116) — восемь по измеренному
+спросу (просмотры ru.wikipedia, показы GSC, сверка с каталогом), приоритеты 22…15.
+Новая волна: иллюстрация 960×640 WebP в `public/assets/images/place-contributions/`
+(регистрация в `scripts/guard-public-files.js`), выкат web, затем на развёрнутом
+Django создание `Place` и `PlaceRequest` с `full_clean`, переводами `name_translations`
+и `prompt_translations` (be/uk/pl/en) и полным `preview`; сначала прогон в транзакции
+с откатом и выводом канонических точек в радиусе 1 км. Метод отбора и список —
+`openspec/changes/add-belarus-place-contributions/pilot-research.md`.
+
 Внешние ссылки акции несут `utm_campaign=belarus_place_stories`
 (`utm_source=instagram`, `utm_medium=organic_social|story`, `utm_content` по
 формату) — полный пакет и календарь в `docs/design/belarus-place-contributions.md`
