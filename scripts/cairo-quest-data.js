@@ -187,7 +187,7 @@ module.exports = [
                 mapsUrl: 'https://maps.google.com/?q=30.042794,31.257782',
                 poi_info: {
                     is_museum: true,
-                    opening_hours: 'ежедневно 9:00–17:00 (подъём на башни и минареты)',
+                    opening_hours: 'ежедневно 9:00–17:00 (подъём на ворота)',
                     ticket_price: 'иностранцам 100 EGP, студентам 50 EGP',
                     website: 'https://egymonuments.gov.eg/monuments/bab-zuwayla/',
                 },
