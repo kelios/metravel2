@@ -73,6 +73,19 @@ export const COUNTRY_NAME_KEYS: Record<string, TranslationKey> = {
     CA: 'quests:screens.tabs.QuestsScreen.country.CA',
     BR: 'quests:screens.tabs.QuestsScreen.country.BR',
     AU: 'quests:screens.tabs.QuestsScreen.country.AU',
+    // #2869: блок C плана волны D — первые квесты в ОАЭ/Египте/Черногории (E2),
+    // остальные восемь кодов — резерв следующих волн.
+    AE: 'quests:screens.tabs.QuestsScreen.country.AE',
+    EG: 'quests:screens.tabs.QuestsScreen.country.EG',
+    ME: 'quests:screens.tabs.QuestsScreen.country.ME',
+    GB: 'quests:screens.tabs.QuestsScreen.country.GB',
+    IE: 'quests:screens.tabs.QuestsScreen.country.IE',
+    IS: 'quests:screens.tabs.QuestsScreen.country.IS',
+    MT: 'quests:screens.tabs.QuestsScreen.country.MT',
+    MA: 'quests:screens.tabs.QuestsScreen.country.MA',
+    MX: 'quests:screens.tabs.QuestsScreen.country.MX',
+    CU: 'quests:screens.tabs.QuestsScreen.country.CU',
+    ID: 'quests:screens.tabs.QuestsScreen.country.ID',
 };
 
 export const getQuestCountryName = (code: string): string => {

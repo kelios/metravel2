@@ -29,6 +29,27 @@ describe('QuestsScreen helpers', () => {
     expect(getQuestCountryName('RS')).toBe('Сербия');
   });
 
+  // #2869: блок C плана волны D. Пакет E2 (Дубай, Каир, Котор, Будва) заводит
+  // первые квесты в ОАЭ, Египте и Черногории; без ключей заголовок группы
+  // падал бы на сырой код («AE»). Остальные восемь — резерв следующих волн.
+  it('names the block C countries added for wave E (#2869)', () => {
+    expect(getQuestCountryName('AE')).toBe('ОАЭ');
+    expect(getQuestCountryName('EG')).toBe('Египет');
+    expect(getQuestCountryName('ME')).toBe('Черногория');
+    expect(getQuestCountryName('GB')).toBe('Великобритания');
+    expect(getQuestCountryName('IE')).toBe('Ирландия');
+    expect(getQuestCountryName('IS')).toBe('Исландия');
+    expect(getQuestCountryName('MT')).toBe('Мальта');
+    expect(getQuestCountryName('MA')).toBe('Марокко');
+    expect(getQuestCountryName('MX')).toBe('Мексика');
+    expect(getQuestCountryName('CU')).toBe('Куба');
+    expect(getQuestCountryName('ID')).toBe('Индонезия');
+  });
+
+  it('falls back to the raw code for a country without a name key', () => {
+    expect(getQuestCountryName('ZZ')).toBe('ZZ');
+  });
+
   // #1393: раньше этот гард брал коды из `utils/geoCountry.ts` — таблицы
   // координатного резолвера. Источником страны для квеста он быть перестал:
   // фолбэк `getCountryCodeByCoords` убран из `questAdapters`, и код приходит
