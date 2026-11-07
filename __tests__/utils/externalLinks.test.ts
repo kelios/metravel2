@@ -11,8 +11,17 @@ import {
 } from '@/utils/externalLinks';
 
 const mockOpenBrowserAsync = jest.fn(() => Promise.resolve({ type: 'dismiss' }));
+const mockGetCustomTabsSupportingBrowsersAsync = jest.fn(() =>
+  Promise.resolve({
+    browserPackages: ['com.android.chrome', 'org.mozilla.firefox'],
+    servicePackages: ['com.android.chrome'],
+    preferredBrowserPackage: 'com.android.chrome',
+    defaultBrowserPackage: 'com.android.chrome',
+  }),
+);
 jest.mock('expo-web-browser', () => ({
   openBrowserAsync: (...args: unknown[]) => mockOpenBrowserAsync(...args),
+  getCustomTabsSupportingBrowsersAsync: () => mockGetCustomTabsSupportingBrowsersAsync(),
 }));
 
 describe('externalLinks', () => {
@@ -333,6 +342,7 @@ describe('externalLinks', () => {
 
     beforeEach(() => {
       mockOpenBrowserAsync.mockClear();
+      mockGetCustomTabsSupportingBrowsersAsync.mockClear();
       (Platform.OS as any) = 'android';
     });
 
@@ -340,7 +350,7 @@ describe('externalLinks', () => {
       (Platform.OS as any) = originalPlatform;
     });
 
-    it('opens a safe https site link in the in-app system browser', async () => {
+    it('opens a safe https site link in an explicit Custom Tabs browser, never via Linking', async () => {
       const openUrl = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
       try {
         await expect(
@@ -348,11 +358,45 @@ describe('externalLinks', () => {
         ).resolves.toBe(true);
         expect(mockOpenBrowserAsync).toHaveBeenCalledWith(
           'https://metravel.by/places/help?utm_source=instagram',
+          { browserPackage: 'com.android.chrome' },
         );
         expect(openUrl).not.toHaveBeenCalled();
       } finally {
         openUrl.mockRestore();
       }
+    });
+
+    // Без явного пакета система выбрала бы верифицированный обработчик домена —
+    // само приложение — и ссылка зациклилась бы (эмулятор, 07.11.2026).
+    it('never hands the Custom Tab to the app itself even when it is the default handler', async () => {
+      mockGetCustomTabsSupportingBrowsersAsync.mockResolvedValueOnce({
+        browserPackages: ['by.metravel.app', 'org.mozilla.firefox'],
+        servicePackages: [],
+        preferredBrowserPackage: 'by.metravel.app',
+        defaultBrowserPackage: 'by.metravel.app',
+      });
+      await expect(openSiteUrlInSystemBrowser('https://metravel.by/trips/plan/create')).resolves.toBe(true);
+      expect(mockOpenBrowserAsync).toHaveBeenCalledWith('https://metravel.by/trips/plan/create', {
+        browserPackage: 'org.mozilla.firefox',
+      });
+    });
+
+    it('refuses to open when no other Custom Tabs browser exists', async () => {
+      mockGetCustomTabsSupportingBrowsersAsync.mockResolvedValueOnce({
+        browserPackages: [],
+        servicePackages: [],
+      });
+      const onError = jest.fn();
+      await expect(openSiteUrlInSystemBrowser('https://metravel.by/places/help', onError)).resolves.toBe(false);
+      expect(mockOpenBrowserAsync).not.toHaveBeenCalled();
+      expect(onError).toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    it('opens directly on iOS where the system view controller owns the tab', async () => {
+      (Platform.OS as any) = 'ios';
+      await expect(openSiteUrlInSystemBrowser('https://metravel.by/places/help')).resolves.toBe(true);
+      expect(mockGetCustomTabsSupportingBrowsersAsync).not.toHaveBeenCalled();
+      expect(mockOpenBrowserAsync).toHaveBeenCalledWith('https://metravel.by/places/help');
     });
 
     it.each([

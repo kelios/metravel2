@@ -1,5 +1,6 @@
 import { Linking, Platform } from 'react-native';
 import { router } from 'expo-router';
+import { ANDROID_APP_PACKAGE } from '@/constants/appIdentity';
 import { getSafeExternalUrl } from '@/utils/safeExternalUrl';
 import { resolveAppRouteForSiteUrl, resolveSitePath } from '@/utils/siteLinks';
 
@@ -230,6 +231,10 @@ export async function openExternalUrlInNewTab(
  * (Custom Tabs / SFSafariViewController) поверх приложения. `Linking.openURL`
  * здесь не годится: на Android ссылку вернули бы нашему же приложению как
  * проверенному обработчику App Links, и круг замкнулся бы на главной.
+ * По той же причине на Android пакет браузера задаётся явно: без него
+ * expo-web-browser отдаёт intent системе, а она выбирает верифицированный
+ * обработчик домена — снова нас (замер на эмуляторе 07.11.2026: три запуска
+ * Custom Tab подряд и возврат в MainActivity).
  * Принимает только https-адрес хоста сайта; web не трогаем — там это и есть сайт.
  */
 export async function openSiteUrlInSystemBrowser(
@@ -244,13 +249,38 @@ export async function openSiteUrlInSystemBrowser(
   });
   if (!normalized || !resolveSitePath(normalized)) return false;
   try {
-    const { openBrowserAsync } = await import('expo-web-browser');
-    await openBrowserAsync(normalized);
+    const WebBrowser = await import('expo-web-browser');
+    if (Platform.OS !== 'android') {
+      await WebBrowser.openBrowserAsync(normalized);
+      return true;
+    }
+    const browserPackage = await pickAndroidCustomTabsBrowser(WebBrowser);
+    if (!browserPackage) {
+      onError?.(new Error('No Custom Tabs browser other than the app itself is available'));
+      return false;
+    }
+    await WebBrowser.openBrowserAsync(normalized, { browserPackage });
     return true;
   } catch (error) {
     onError?.(error);
     return false;
   }
+}
+
+type CustomTabsBrowsers = Pick<
+  typeof import('expo-web-browser'),
+  'getCustomTabsSupportingBrowsersAsync'
+>;
+
+/** Браузер для Custom Tabs: предпочтительный, затем системный, затем любой — но никогда наше приложение. */
+async function pickAndroidCustomTabsBrowser(WebBrowser: CustomTabsBrowsers): Promise<string | null> {
+  const {
+    browserPackages = [],
+    preferredBrowserPackage,
+    defaultBrowserPackage,
+  } = await WebBrowser.getCustomTabsSupportingBrowsersAsync();
+  const candidates = [preferredBrowserPackage, defaultBrowserPackage, ...browserPackages];
+  return candidates.find((pkg): pkg is string => Boolean(pkg) && pkg !== ANDROID_APP_PACKAGE) ?? null;
 }
 
 /** Central native chokepoint for permission-denial recovery. */
