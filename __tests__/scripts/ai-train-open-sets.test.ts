@@ -110,4 +110,27 @@ print(json.dumps({
       same_yes: true, same_no: false, info_ok: true, info_link: false, info_short: false, json_ok: true, json_bad_radius: false,
     });
   });
+
+  it('osm descriptions use supplied country and tags without invented access, timing or weather claims', () => {
+    const out = py(`
+import json
+from sets.osm_intents import describe_answer, tags_prompt
+peak = {"country": "BY", "tags": {"name": "Учебная вершина", "natural": "peak", "ele": "250"}}
+castle = {"country": "PL", "tags": {"name": "Zamek", "historic": "castle", "fee": "no", "wheelchair": "yes"}}
+bare = {"country": "BY", "tags": {"name": "Точка", "tourism": "viewpoint"}}
+print(json.dumps({
+    "peak_prompt": tags_prompt(peak["tags"], peak["country"]),
+    "peak": describe_answer(peak),
+    "castle_prompt": tags_prompt(castle["tags"], castle["country"]),
+    "castle": describe_answer(castle),
+    "bare": describe_answer(bare),
+}, ensure_ascii=False))
+`);
+    expect(out.peak_prompt).toContain('Страна по границе выборки: Беларусь.');
+    expect(out.peak).toBe('Учебная вершина — вершина в Беларуси. Высота — 250 м над уровнем моря.');
+    expect(out.castle_prompt).toContain('Страна по границе выборки: Польша.');
+    expect(out.castle).toBe('Zamek — замок в Польше. Вход свободный. Доступно для коляски.');
+    expect(out.bare).toBe('Точка — смотровая площадка в Беларуси.');
+    expect([out.peak, out.castle, out.bare].join(' ')).not.toMatch(/по силам большинству|полчаса|свет для фото|без спешки/);
+  });
 });

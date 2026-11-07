@@ -10,8 +10,11 @@ so the descriptions are about real, notable places.
 Licence: ODbL. The cache is a derived database and never leaves this machine;
 only the skills (question → filter, tags → description) go into the weights.
 
-The two countries' bounding boxes are walked in 2° tiles, one Overpass query
-per tile, cached in tiles/, so a rerun fetches only what is missing.
+The two countries' bounding boxes are walked in 1° tiles, one Overpass query
+per tile, cached in tiles/, so a rerun fetches only what is missing. When the
+public Overpass is down for days (24.10.2026), sources/osm_pbf.py builds the
+same cache from complete, checksummed Geofabrik country extracts; this script
+then refuses to overwrite that complete cache with a partial tile run.
 
 Usage:
     python3 -I scripts/ai-train/sources/osm.py --ai-home ~/metravel-ai
@@ -24,6 +27,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -33,7 +37,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
-from sources.common import cache_dir, write_meta  # noqa: E402
+from sources.common import cache_dir, read_meta, write_meta  # noqa: E402
 
 NAME = "osm"
 LICENSE = "ODbL 1.0 (OpenStreetMap contributors); derived cache kept local, not published"
@@ -53,6 +57,18 @@ KEEP_TAGS = (
     "addr:city", "addr:place", "addr:street", "description", "inscription", "wikidata",
     "dog", "caravans", "tents", "drinking_water", "toilets", "shower", "capacity",
 )
+
+
+def matches_tags(tags: dict) -> bool:
+    """The same POI predicate for Overpass and complete country PBF extracts."""
+    if not tags.get("name"):
+        return False
+    notable = (re.fullmatch(TOURISM, tags.get("tourism", ""))
+               or re.fullmatch(HISTORIC, tags.get("historic", ""))
+               or tags.get("amenity") == "place_of_worship")
+    return bool((notable and tags.get("wikidata"))
+                or (tags.get("natural") == "peak" and tags.get("ele"))
+                or tags.get("tourism") in ("camp_site", "caravan_site"))
 
 
 def tile_query(bbox: tuple[float, float, float, float], country: str) -> str:
@@ -162,6 +178,14 @@ def main() -> int:
             counts[code] = counts.get(code, 0) + n
             print(f"{code} tile {bbox[0]:.1f},{bbox[1]:.1f}: {n} new POIs ({len(rows)} total)", file=sys.stderr)
 
+    previous = read_meta(out)
+    subset = {c for c in args.countries.split(",") if c} != set(BBOX)
+    if previous and previous.get("source_kind") == "geofabrik-pbf" and (missing or subset):
+        # the cache is a complete country scan (sources/osm_pbf.py); an incomplete tile run or a --countries
+        # subset must not shrink it
+        print(f"cache is a complete PBF scan ({previous['counts']}); run covers {args.countries}, "
+              f"{len(missing)} tiles unanswered — kept as is", file=sys.stderr)
+        return 1
     with (out / "pois.jsonl").open("w", encoding="utf-8") as fh:
         for key in sorted(rows):
             fh.write(json.dumps(rows[key], ensure_ascii=False) + "\n")

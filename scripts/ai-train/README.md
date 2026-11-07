@@ -81,6 +81,21 @@ venv/bin/hf download mlx-community/Qwen3.5-4B-MLX-4bit --local-dir models/Qwen3.
      по 30 с на запрос. Недоступный тайл пропускается и попадает в
      `missing_tiles` (`fetched_at.json`), повторный запуск докачивает только
      его; `--offline` собирает `pois.jsonl` из кэша без сети.
+     `sources/osm_pbf.py` — тот же кэш из полных страновых экстрактов
+     Geofabrik, когда публичный Overpass лежит днями (24.10–07.11.2026):
+     `-latest` разрешается в датированный снимок, MD5 издателя и sha256
+     проверяются, границы стран — полигоны OSM через Nominatim
+     (`pbf/*-boundary.geojson`); потоковый проход pyosmium с дисковым индексом
+     узлов, предикат тегов общий с Overpass (`osm.matches_tags`), центр —
+     середина bbox объекта строго внутри полигона страны; relation без члена
+     или с циклом отбрасывается и считается (`rejected_geometry`), объекты
+     соседних стран — `rejected_country`. Публикация атомарная, старая
+     диагностика тайлов остаётся в `overpass-fetched_at.json`, после этого
+     `osm.py` не перезаписывает полный кэш неполным прогоном. Нужны pyosmium и
+     Shapely в отдельном окружении: `python3 -m venv ~/metravel-ai/venv-osm &&
+     ~/metravel-ai/venv-osm/bin/pip install osmium shapely`, запуск
+     `~/metravel-ai/venv-osm/bin/python -I scripts/ai-train/sources/osm_pbf.py
+     --ai-home ~/metravel-ai` (≈2,5 ГБ, ≈20 мин на M5 Pro).
    - `sets/site.py` — набор сайта: карточки и разделы статей, плюсы/минусы/советы,
      подборки по стране/месяцу/дням, карточки/точки/финалы квестов, квесты по
      городу и стране, «название → ссылка», отказы по направлениям без

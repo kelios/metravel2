@@ -48,6 +48,7 @@ DESCRIBE = 2500
 CENTRES = 250
 LANG_SHARE = {"be": 0.1, "pl": 0.1}
 COUNTRY_RU = {"BY": "Беларуси", "PL": "Польше"}
+COUNTRY_NAME = {"BY": "Беларусь", "PL": "Польша"}
 COUNTRY_L = {"be": {"BY": "Беларусі", "PL": "Польшчы"}, "pl": {"BY": "na Białorusi", "PL": "w Polsce"}}
 
 INTENT_PROMPT = (
@@ -106,7 +107,8 @@ OPENERS = {
     "pl": ["Gdzie {where} {cats}{cons}?", "Pokaż {cats} {where}{cons}.", "Jakie {cats} są {where}{cons}?"],
 }
 
-DESCRIBE_PROMPT = "Опиши место по его тегам OpenStreetMap в стиле metravel.by, двумя-тремя фразами, без выдуманных фактов:\n{tags}"
+DESCRIBE_PROMPT = ("Кратко опиши место по данным OpenStreetMap в стиле metravel.by, без выдуманных фактов. "
+                   "Страна по границе выборки: {country}.\nТеги:\n{tags}")
 KIND_RU = {
     ("tourism", "viewpoint"): "смотровая площадка", ("tourism", "museum"): "музей", ("tourism", "attraction"): "достопримечательность",
     ("tourism", "zoo"): "зоопарк", ("tourism", "theme_park"): "парк развлечений", ("tourism", "camp_site"): "кемпинг",
@@ -124,12 +126,6 @@ WORSHIP_RU = {
 FEMININE = {"смотровая площадка", "достопримечательность", "усадьба", "стоянка для автодомов", "вершина", "православная церковь",
             "греко-католическая церковь", "протестантская церковь", "лютеранская кирха", "синагога", "мечеть"}
 PLURAL = {"руины"}
-CLOSERS = {
-    "tourism": ["Удобная точка, чтобы заложить на неё полчаса по пути.", "Хороший повод сделать остановку на маршруте."],
-    "historic": ["Стоит заложить время на неспешную прогулку вокруг.", "Такие места лучше смотреть без спешки."],
-    "amenity": ["Загляните внутрь, если открыто.", "Снаружи тоже есть на что посмотреть."],
-    "natural": ["Подъём по силам большинству, обувь — походная.", "Лучший свет для фото — утро и предзакатный час."],
-}
 URL_RE = re.compile(r"https?://|www\.", re.I)
 
 
@@ -353,13 +349,25 @@ def agree(kind: str, masc: str, fem: str, plural: str) -> str:
     return plural if kind in PLURAL else fem if kind in FEMININE else masc
 
 
-def describe_answer(poi: dict, rng: random.Random) -> str | None:
+def russian_text(text: str) -> bool:
+    """The answer is in the site's Russian voice: a Belarusian/Polish `description` tag (07.11.2026, complete
+    PBF cache: «Пабудаваная ў 1905 г.», «Kościół z XV w.») must not be pasted into it."""
+    letters = re.findall(r"[^\W\d_]", text)
+    if not letters or re.search(r"[ўіїєґ]", text, re.I):
+        return False
+    latin = sum(1 for ch in letters if ch.isascii())
+    return latin <= len(letters) * 0.2
+
+
+def describe_answer(poi: dict) -> str | None:
     tags = poi["tags"]
     kind = kind_of(tags)
     name = tags.get("name:ru") or tags.get("name")
     if not kind or not name or URL_RE.search(json.dumps(tags, ensure_ascii=False)):
         return None
     where = tags.get("addr:city") or tags.get("addr:place")
+    if where and poi["country"] == "BY" and re.search(r"[ўі]", where, re.I):  # Belarusian «Мінск», «Рагачоў» inside a Russian sentence
+        where = None
     head = f"{name} — {kind}" + (f" ({where})" if where else f" в {COUNTRY_RU[poi['country']]}") + "."  # addr:city is nominative
     facts = []
     if tags.get("ele") and re.fullmatch(r"\d{2,4}(\.\d+)?", tags["ele"]):
@@ -393,15 +401,14 @@ def describe_answer(poi: dict, rng: random.Random) -> str | None:
     if names:
         facts.append("Название " + ", ".join(names) + ".")
     desc = tags.get("description")
-    if desc and len(desc) <= 300 and not URL_RE.search(desc) and not has_external(desc):  # "Bilety: zamek.pl" is a link too
+    if desc and len(desc) <= 300 and not URL_RE.search(desc) and not has_external(desc) and russian_text(desc):  # "Bilety: zamek.pl" is a link too
         facts.insert(0, desc.rstrip(".") + ".")
-    group = next((k for k in ("tourism", "historic", "amenity", "natural") if tags.get(k)), "tourism")
-    return " ".join([head] + facts[:4] + [rng.choice(CLOSERS[group])])
+    return " ".join([head] + facts[:4])
 
 
-def tags_prompt(tags: dict) -> str:
+def tags_prompt(tags: dict, country: str) -> str:
     shown = {k: v for k, v in tags.items() if k != "wikidata"}
-    return DESCRIBE_PROMPT.format(tags=json.dumps(shown, ensure_ascii=False, indent=0))
+    return DESCRIBE_PROMPT.format(country=COUNTRY_NAME[country], tags=json.dumps(shown, ensure_ascii=False, indent=0))
 
 
 # ----------------------------------------------------------------------------- build
@@ -431,13 +438,18 @@ def build(ctx: dict, options: dict) -> list[dict]:
         seen.add(q)
         out.append(rec(INTENT_PROMPT.format(q=q), dump_filter(answer), "intent", key, f"i{n}"))
     rng.shuffle(pois)
+    # alternate the countries: the complete cache holds 12× more Polish POIs (25k vs 2k, 07.11.2026), and the
+    # token cap would otherwise leave Belarus with a few dozen descriptions
+    by_country = {code: [p for p in pois if p["country"] == code] for code in COUNTRY_RU}
+    balanced = [p for pair in zip(*by_country.values()) for p in pair]
+    balanced += [p for code in COUNTRY_RU for p in by_country[code][len(balanced) // len(COUNTRY_RU):]]
     described = 0
-    for poi in pois:
+    for poi in balanced:
         if described >= n_describe:
             break
-        answer = describe_answer(poi, rng)
+        answer = describe_answer(poi)
         if answer:
-            out.append(rec(tags_prompt(poi["tags"]), answer, "describe", f"osm:{poi['id']}", f"d:{poi['id']}"))
+            out.append(rec(tags_prompt(poi["tags"], poi["country"]), answer, "describe", f"osm:{poi['id']}", f"d:{poi['id']}"))
             described += 1
     return out
 
