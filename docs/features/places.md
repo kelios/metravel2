@@ -206,6 +206,44 @@
 возврат из статьи и очистка запроса. Изменение не добавляет фильтр расстояния,
 новый экран, новые серверные параметры или дублирующий запрос при открытии.
 
+## Акция «Допишем Беларусь вместе» (спринт 38)
+
+Редакционные приглашения рассказать о месте Беларуси. Серверный контракт — #3093
+(`GET /api/places/requests/?country=by`, `GET /api/places/requests/<uuid>/`,
+`place_request_id` в `PUT /api/travels/upsert/`), страница и редактор — #3095,
+слой карты «Ищем историю» — #3096, медали «Автор MeTravel» и «Сердце карты» —
+#3094/#3097, модерация и письмо автору — #3105/#3106.
+
+| Путь | Назначение |
+| --- | --- |
+| `app/(tabs)/places/help.tsx` | маршрут подборки; `generateMetadata` без `robots` с #3098 (индексируется), один canonical |
+| `components/places/PlaceRequestsScreen.tsx` | экран подборки, фильтр областей, карточки, `InstantSEO` без `robots` |
+| `utils/placeRequestCreateIntent.ts` | интент редактора `/travel/new?mode=note&place_request_id=<uuid>`, параметры `region` и `request` |
+| `utils/placeContributionAnalytics.ts` | события `place_contribution_*` с источником `places \| map \| author_page \| related_travel` |
+| `utils/placeRequestsConfig.ts` | пилот только web (`EXPO_PUBLIC_BELARUS_PLACE_CONTRIBUTIONS !== 'false'`) |
+
+Внешние ссылки акции несут `utm_campaign=belarus_place_stories`
+(`utm_source=instagram`, `utm_medium=organic_social|story`, `utm_content` по
+формату) — полный пакет и календарь в `docs/design/belarus-place-contributions.md`
+→ «Пакет запуска». `robots.txt` закрывает `/*?utm_*`; sitemap остаётся
+backend-owned, подборка в него не входит.
+
+Еженедельная сводка пилота (#3107) считается на сервере по приглашениям,
+привязанным черновикам, публикациям, зачётам, медалям и новым авторам, без
+персональных данных:
+
+```bash
+ssh sx3@178.172.137.129 'bash -ic "cd /home/sx3/metravel && docker compose -f docker-compose-prod.app.yaml exec -T app uv run --frozen --no-dev ./manage.py place_requests_pilot_report --since 2026-11-06 --until <дата> --json"'
+```
+
+Как читать: `requests[]` — по каждому приглашению `status`, `drafts`, `pending`,
+`published`, `qualified`; `totals` — `medals` («Сердце карты»), `first_time_authors`
+(авторы, чья первая публикация пришлась на окно), `decision_hours_median/max`
+(оценка сверху от привязки черновика: момент отправки на проверку сервер не
+хранит), `rejected`. Служебные аккаунты (staff, superuser, id 120) исключены, как в
+воронке квестов (#2182). Верх воронки (показ, клик, вход в редактор, фото,
+отправка) — события `place_contribution_*` в Метрике и GA4 по той же кампании.
+
 ## Проверки
 
 Для изменений только в каталоге мест:

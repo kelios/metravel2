@@ -90,7 +90,6 @@ export default function PlaceRequestsScreen() {
         title={t('places:contributions.seoTitle')}
         description={t('places:contributions.seoDescription')}
         canonical={buildCanonicalUrl(PLACE_REQUESTS_PATH)}
-        robots="noindex, follow"
       />
       <ResponsiveContainer maxWidth="xl" style={styles.page}>
         <View style={styles.hero} {...SCREEN_CONTENT_FIRST_PROPS}>
