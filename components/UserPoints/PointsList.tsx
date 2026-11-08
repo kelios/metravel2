@@ -139,12 +139,11 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const gridColors = useMemo(() => ({ text: colors.text }), [colors.text]);
 
   const {
-    points,
+    totalCount,
     isLoading,
     loadFailed,
     refetch,
-    loadProgress,
-    resumeStream,
+    isSearching,
     categoryIdToName,
     categoryData,
     resolveCategoryIdsByNames,
@@ -153,7 +152,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     manualColorOptions,
     filteredPoints,
   } = usePointsDataModel({
-    defaultPerPage,
     filters,
     // #3132: модель и карта видят запрос после паузы в наборе; поле ввода — сразу.
     searchQuery: appliedSearchQuery,
@@ -260,7 +258,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     activeFilterChips,
     handleOpenRecommendations,
   } = usePointsViewModel({
-    filteredPoints: filteredPoints as Record<string, unknown>[],
+    filteredPoints: filteredPoints as unknown as Record<string, unknown>[],
     showingRecommendations,
     recommendedPointIds,
     activePreset,
@@ -317,7 +315,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     styles,
     colors: headerColors,
     isMobile,
-    total: points.length,
+    total: totalCount,
     found: visibleFilteredPoints.length,
     hasActiveFilters,
     onResetFilters: handleResetFilters,
@@ -434,8 +432,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 	        filteredPoints={visibleFilteredPoints}
 	        listExtraData={{ selectionMode, selectedIds, activePointId, activeDriveInfo }}
 	        activeFilterCount={activeFilterChips.length}
-	        loadProgress={loadProgress}
-	        onRetryStream={resumeStream}
+	        isSearching={isSearching}
 	        listKey={selectionMode ? 'selection' : 'normal'}
 	        panelTab={panelTab}
 	        onPanelTabChange={setPanelTab}

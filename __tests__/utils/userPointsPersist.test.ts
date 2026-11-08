@@ -1,7 +1,7 @@
 /**
- * #3130 — коллекция «Моих точек» персистится отдельным ключом storage: запись
- * только на события самой коллекции, потолок размера, отметка докачки следует
- * за коллекцией; общий снимок `metravel-rq-cache` её не содержит.
+ * #3130/#3161 — коллекция пинов «Моих точек» персистится отдельным ключом storage:
+ * запись только на события самой коллекции, потолок размера; серверный поиск и
+ * общий снимок `metravel-rq-cache` её не содержат.
  */
 import { QueryClient } from '@tanstack/react-query';
 
@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   USER_POINTS_PERSIST_MAX_POINTS,
   USER_POINTS_PERSIST_STORAGE_KEY,
-  makeShouldPersistUserPointsQuery,
+  shouldPersistUserPointsQuery,
   userPointsPersistence,
 } from '@/utils/userPointsPersist';
 
@@ -25,24 +25,21 @@ const readSnapshotKeys = async () => {
   return (JSON.parse(raw).clientState?.queries || []).map((q: any) => q.queryKey);
 };
 
-describe('makeShouldPersistUserPointsQuery', () => {
-  const client = new QueryClient();
-  const should = makeShouldPersistUserPointsQuery(client);
+describe('shouldPersistUserPointsQuery', () => {
   const query = (key: unknown[], data: unknown, status = 'success') =>
     ({ queryKey: key, state: { status, data } }) as any;
 
-  it('персистит коллекцию и отметку, пока коллекция в потолке', () => {
-    client.setQueryData(['userPointsAll', '1'], points(10));
-    expect(should(query(['userPointsAll', '1'], points(10)))).toBe(true);
-    expect(should(query(['userPointsAll', '1', 'pagination'], { complete: true }))).toBe(true);
+  it('персистит коллекцию пинов, пока она в потолке', () => {
+    expect(shouldPersistUserPointsQuery(query(['userPointsAll', '1'], points(10)))).toBe(true);
+    expect(shouldPersistUserPointsQuery(query(['userPointsAll', '1'], points(USER_POINTS_PERSIST_MAX_POINTS)))).toBe(true);
   });
 
-  it('НЕ персистит чужие домены, не-success и коллекцию выше потолка (вместе с отметкой)', () => {
-    expect(should(query(['favorites', '1'], []))).toBe(false);
-    expect(should(query(['userPointsAll', '1'], points(1), 'pending'))).toBe(false);
-    client.setQueryData(['userPointsAll', '2'], points(USER_POINTS_PERSIST_MAX_POINTS + 1));
-    expect(should(query(['userPointsAll', '2'], points(USER_POINTS_PERSIST_MAX_POINTS + 1)))).toBe(false);
-    expect(should(query(['userPointsAll', '2', 'pagination'], { complete: true }))).toBe(false);
+  it('НЕ персистит чужие домены, серверный поиск, не-success и коллекцию выше потолка', () => {
+    expect(shouldPersistUserPointsQuery(query(['favorites', '1'], []))).toBe(false);
+    expect(shouldPersistUserPointsQuery(query(['userPointsSearch', '1', 'озеро'], points(1)))).toBe(false);
+    expect(shouldPersistUserPointsQuery(query(['userPointsAll', '1', 'pagination'], { complete: true }))).toBe(false);
+    expect(shouldPersistUserPointsQuery(query(['userPointsAll', '1'], points(1), 'pending'))).toBe(false);
+    expect(shouldPersistUserPointsQuery(query(['userPointsAll', '2'], points(USER_POINTS_PERSIST_MAX_POINTS + 1)))).toBe(false);
   });
 });
 
@@ -55,13 +52,13 @@ describe('userPointsPersistence (свой ключ, запись на свои �
     const unsubscribe = userPointsPersistence.subscribe(client);
 
     client.setQueryData(['userPointsAll', '1'], points(3));
-    client.setQueryData(['userPointsAll', '1', 'pagination'], { nextPage: 2, complete: true, total: 3 });
+    client.setQueryData(['userPointsSearch', '1', 'озеро'], points(1));
     client.setQueryData(['favorites', '1'], [{ id: 7 }]);
     await wait(1300);
 
     const keys = await readSnapshotKeys();
     expect(keys).toContainEqual(['userPointsAll', '1']);
-    expect(keys).toContainEqual(['userPointsAll', '1', 'pagination']);
+    expect(keys).not.toContainEqual(['userPointsSearch', '1', 'озеро']);
     expect(keys).not.toContainEqual(['favorites', '1']);
     expect(await AsyncStorage.getItem('metravel-rq-cache')).toBeNull();
     unsubscribe();
@@ -69,7 +66,6 @@ describe('userPointsPersistence (свой ключ, запись на свои �
     const fresh = new QueryClient();
     await userPointsPersistence.restore(fresh);
     expect(fresh.getQueryData(['userPointsAll', '1'])).toEqual(points(3));
-    expect(fresh.getQueryData(['userPointsAll', '1', 'pagination'])).toEqual({ nextPage: 2, complete: true, total: 3 });
   });
 
   it('не пишет на события чужих запросов и очищает снимок при удалении коллекции (смена владельца)', async () => {

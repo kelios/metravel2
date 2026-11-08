@@ -1,6 +1,7 @@
 import { apiClient } from './client';
 import type {
   ImportedPoint,
+  UserPointPin,
   ImportPointsResult,
   ImportPreviewResult,
   ImportPreviewPoint,
@@ -15,7 +16,7 @@ import type {
 } from '@/types/userPoints';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 import { translate as i18nT } from '@/i18n';
-import { fetchAllPages, type PaginatedPage } from '@/utils/fetchAllPages';
+import type { PaginatedPage } from '@/utils/fetchAllPages';
 
 type FileInput = File | DocumentPickerAsset;
 
@@ -32,9 +33,9 @@ export interface ImportOptions {
  * #752). Просить больше бессмысленно: ответ всё равно урежется до 200, а клиент,
  * не сверивший длину с `count`, молча потеряет хвост (#1706).
  */
-const USER_POINTS_MAX_PAGE_SIZE = 200;
+/** Потолок `ids=` за один запрос (контракт #3172). */
+export const USER_POINTS_IDS_MAX = 200;
 
-/** Поля сортировки бэкенда (`ordering_fields` в `user_points/views.py`). */
 const ORDERING_BY_SORT_KEY: Record<string, string> = {
   name: 'name',
   date: 'imported_at',
@@ -54,8 +55,17 @@ export const resolveOrderingParam = (
   return sortOrder === 'desc' ? `-${field}` : field;
 };
 
-const buildPointsEndpoint = (filters?: PointFilters): string => {
+type PointsEndpointOptions = {
+  /** `fields=pins` — лёгкие пины вместо полных карточек (#3129). */
+  pins?: boolean;
+  /** `ids=1,2,3` — выборка полных карточек по id (#3172). */
+  ids?: number[];
+};
+
+const buildPointsEndpoint = (filters?: PointFilters, options?: PointsEndpointOptions): string => {
   const params = new URLSearchParams();
+  if (options?.pins) params.append('fields', 'pins');
+  if (options?.ids && options.ids.length > 0) params.append('ids', options.ids.join(','));
 
   // #3130 (2а): имена параметров — как у бэкенда (`user_points/views.py`:
   // `filterset_fields = color, category, status`, `categories=1,2`, `search`,
@@ -333,44 +343,38 @@ export const userPointsApi = {
   },
 
   /**
-   * Полная коллекция точек пользователя без потолка страницы.
-   *
-   * `/api/user-points/` режет страницу серверным `max_page_size = 200` (#752),
-   * поэтому «взять всё одним запросом» через `perPage: 1000` молча отдавало
-   * только первые 200 записей (#1706). Просим ровно серверный потолок и
-   * дочитываем остаток по `count` общим хелпером; если потолок на сервере
-   * изменится, `fetchAllPages` посчитает страницы по фактически отданному
-   * размеру и всё равно дочитает всё.
+   * Лёгкие пины ВСЕХ точек пользователя одним запросом (`fields=pins`, #3129):
+   * 2656 точек владельца — 287 КБ / 34 КБ gzip за ~35 мс против 1,1 МБ
+   * четырнадцатью страницами полных карточек (#3130). Без пагинационных
+   * параметров бэкенд отдаёт конверт `{count, next: null, results}` со всеми
+   * пинами. `search`/`categories` фильтруются на сервере (имена и описания в
+   * пинах не живут), цвет/статус/радиус — на клиенте.
    */
-  async getAllPoints(filters?: Omit<PointFilters, 'page' | 'perPage'>): Promise<ImportedPoint[]> {
-    return fetchAllPages<ImportedPoint>(async (page) => {
-      const raw = await apiClient.get<unknown>(
-        buildPointsEndpoint({ ...filters, page, perPage: USER_POINTS_MAX_PAGE_SIZE }),
-        USER_POINTS_LIST_TIMEOUT_MS,
-      );
-      return readPointsPayload(raw);
-    });
+  async getAllPins(filters?: Pick<PointFilters, 'search' | 'categoryIds'>): Promise<UserPointPin[]> {
+    const raw = await apiClient.get<unknown>(
+      buildPointsEndpoint(filters, { pins: true }),
+      USER_POINTS_LIST_TIMEOUT_MS,
+    );
+    return readPointsPayload(raw).items as unknown as UserPointPin[];
   },
 
   /**
-   * Paginated variant used by the map/list screen to load points incrementally
-   * (first page renders fast, remaining pages stream in the background).
-   * Returns the page items plus a heuristic `hasMore` flag derived from whether
-   * the backend returned a full `perPage` batch.
+   * Полные карточки для набора id (`ids=`, #3172) — видимое окно списка или
+   * открытый попап. Больше `USER_POINTS_IDS_MAX` id — несколько запросов
+   * подряд; чужие и удалённые id сервер молча пропускает.
    */
-  async getPointsPage(
-    page: number,
-    perPage: number,
-  ): Promise<{ items: ImportedPoint[]; hasMore: boolean; total: number }> {
-    const raw = await apiClient.get<unknown>(
-      buildPointsEndpoint({ page, perPage }),
-      USER_POINTS_LIST_TIMEOUT_MS,
-    );
-    const { items, total } = readPointsPayload(raw);
-    // `total` — серверный `count` страницы (#3133): экран показывает «Загружено
-    // N из M», пока фоновая докачка не завершилась. Голый массив без конверта
-    // даёт `total = items.length` — это и есть вся коллекция.
-    return { items, hasMore: items.length >= perPage, total };
+  async getPointsByIds(ids: number[]): Promise<ImportedPoint[]> {
+    const unique = Array.from(new Set(ids.map((id) => Number(id)).filter((id) => Number.isFinite(id) && id > 0)));
+    const result: ImportedPoint[] = [];
+    for (let i = 0; i < unique.length; i += USER_POINTS_IDS_MAX) {
+      const chunk = unique.slice(i, i + USER_POINTS_IDS_MAX);
+      const raw = await apiClient.get<unknown>(
+        buildPointsEndpoint(undefined, { ids: chunk }),
+        USER_POINTS_LIST_TIMEOUT_MS,
+      );
+      result.push(...readPointsPayload(raw).items);
+    }
+    return result;
   },
 
   async getPoint(id: number) {

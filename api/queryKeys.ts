@@ -58,12 +58,15 @@ export const queryKeys = {
   filterOptions: (locale: SupportedLocale = DEFAULT_LOCALE) => ['filter-options', locale] as const,
   travelFacets: (search: string, params: Record<string, unknown>) =>
     ['travel-facets', search, params] as const,
+  // #3161: коллекция «Моих точек» = лёгкие пины всех точек владельца одним
+  // запросом (`fields=pins`); общий ключ с ♥-тогглом карты и мастером travel.
   userPointsAll: (userId: string | null) => ['userPointsAll', userId] as const,
-  // Отметка полноты коллекции живёт ПОД ключом самой коллекции: инвалидация
-  // `userPointsAll(userId)` обязана задевать и её, иначе от снесённых данных
-  // остался бы признак «докачано целиком».
-  userPointsPagination: (userId: string | null) =>
-    ['userPointsAll', userId, 'pagination'] as const,
+  // Серверный поиск по пинам (`search=`): имя/адрес/заметки/категория живут
+  // только на сервере, пины их не несут. Отдельный корень — не персистится.
+  userPointsSearch: (userId: string | null, query: string) =>
+    ['userPointsSearch', userId, query] as const,
+  /** Все результаты поиска владельца — инвалидация после мутаций и импорта. */
+  userPointsSearchAll: (userId: string | null) => ['userPointsSearch', userId] as const,
   myTravelsCount: (userId: string | number | null | undefined) =>
     ['my-travels-count', userId] as const,
   exportMyTravelsCount: (userId: string | number | null | undefined) =>

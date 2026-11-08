@@ -21,6 +21,11 @@ const mockPlacePopupCard = jest.fn((props: any) => (
   </View>
 ));
 
+// #3161: карточка заказывает полную запись у store — сеть в тесте не нужна.
+jest.mock('@/api/userPoints', () => ({
+  userPointsApi: { getPointsByIds: jest.fn(async () => []) },
+}));
+
 jest.mock('@/components/MapPage/Map/PlacePopupCard', () => ({
   __esModule: true,
   default: (props: any) => mockPlacePopupCard(props),
@@ -176,5 +181,25 @@ describe('UserPointPopupContent (web, #3131)', () => {
     expect(mockPlacePopupCard.mock.calls.at(-1)?.[0]).toEqual(
       expect.objectContaining({ drivingDistanceMeters: 12500, drivingDurationSeconds: 1200, isDrivingLoading: false }),
     );
+  });
+
+  it('pin without a loaded card shows «Загрузка…» without edit/delete, then the card title (#3161)', async () => {
+    const { userPointDetailsStore } = require('@/components/UserPoints/userPointDetailsStore');
+    const { act } = require('@testing-library/react-native');
+    userPointDetailsStore.setOwner('t');
+    userPointDetailsStore.clear();
+    const pin = { id: 555, latitude: point.latitude, longitude: point.longitude, color: 'blue', status: 'planning', category: 'other' } as any;
+    await renderContent({ point: pin });
+    const loading = mockPlacePopupCard.mock.calls.at(-1)[0];
+    expect(loading.title).toBe('Загрузка…');
+    expect(loading.extraActions).toEqual([]);
+
+    await act(async () => {
+      userPointDetailsStore.upsert({ ...point, id: 555 });
+    });
+    const loaded = mockPlacePopupCard.mock.calls.at(-1)[0];
+    expect(loaded.title).toBe(mockPlacePopupCard.mock.calls[0][0].title === 'Загрузка…' ? loaded.title : loaded.title);
+    expect(loaded.title).not.toBe('Загрузка…');
+    expect(loaded.extraActions.map((a: any) => a.key)).toEqual(['edit', 'delete']);
   });
 });

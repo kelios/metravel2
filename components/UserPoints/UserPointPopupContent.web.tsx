@@ -29,6 +29,7 @@ import { openExternalUrlInNewTab } from '@/utils/externalLinks'
 import { getSiteBaseUrl } from '@/utils/seo'
 import { showToast } from '@/utils/toast'
 import { translate as i18nT } from '@/i18n'
+import { useUserPointDetail } from './userPointDetailsStore'
 
 import {
   getCategoryLabel,
@@ -79,8 +80,10 @@ const openRelatedPage = async (url: string) => {
 }
 
 export const UserPointPopupContent = React.memo(function UserPointPopupContent(props: UserPointPopupContentProps) {
-  const { point, colors, isCompactPopup, driveInfo, onClose, onEditPoint, onDeletePoint } = props
+  const { point: pointProp, colors, isCompactPopup, driveInfo, onClose, onEditPoint, onDeletePoint } = props
   const dockPx = useDockReservePx()
+  // #3161: маркер несёт пин; название, адрес и фото приходят окном `ids=`.
+  const { point, hydrating } = useUserPointDetail(pointProp)
 
   const lat = Number(point.latitude)
   const lng = Number(point.longitude)
@@ -89,8 +92,11 @@ export const UserPointPopupContent = React.memo(function UserPointPopupContent(p
     [lat, lng]
   )
 
-  const title = React.useMemo(() => getPointTitle(point), [point])
-  const subtitle = React.useMemo(() => getPointSubtitle(point, title), [point, title])
+  const title = React.useMemo(
+    () => (hydrating ? i18nT('map:components.UserPoints.UserPointPopupContent.zagruzka_40e36d59') : getPointTitle(point)),
+    [hydrating, point],
+  )
+  const subtitle = React.useMemo(() => (hydrating ? '' : getPointSubtitle(point, title)), [hydrating, point, title])
   const countryLabel = React.useMemo(() => getCountryLabel(point), [point])
   const categoryLabel = React.useMemo(() => getCategoryLabel(point, countryLabel), [countryLabel, point])
   const imageUrl = React.useMemo(() => getPointPhotoUrl(point), [point])
@@ -162,6 +168,8 @@ export const UserPointPopupContent = React.memo(function UserPointPopupContent(p
 
   const extraActions = React.useMemo<UserPointPopupAction[]>(() => {
     const actions: UserPointPopupAction[] = []
+    // Правка и удаление — по полной карточке: пока она не пришла, кнопок нет.
+    if (hydrating) return actions
     if (onEditPoint) {
       actions.push({
         key: 'edit',
@@ -184,7 +192,7 @@ export const UserPointPopupContent = React.memo(function UserPointPopupContent(p
     }
     // Отдельного «Закрыть» нет — его роль играет ✕ карточки (onClose).
     return actions
-  }, [handleDeletePoint, handleEditPoint, onDeletePoint, onEditPoint])
+  }, [handleDeletePoint, handleEditPoint, hydrating, onDeletePoint, onEditPoint])
 
   const drivingDistanceMeters = driveInfo?.status === 'ok' ? driveInfo.distanceKm * 1000 : null
   const drivingDurationSeconds = driveInfo?.status === 'ok' ? driveInfo.durationMin * 60 : null

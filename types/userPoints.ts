@@ -105,6 +105,28 @@ export interface ImportPreviewResult {
   summary: ImportPreviewSummary;
 }
 
+/**
+ * Лёгкий пин точки — shape `fields=pins` и `points[]` вьюпорта бэкенда (#3129,
+ * #3172): ~110 байт против ~440 у полной карточки. Общая коллекция
+ * `userPointsAll` держит именно пины (#3161); полная карточка подгружается
+ * окном по `ids=` (`components/UserPoints/userPointDetailsStore.ts`).
+ * `category_ids` появляется после #3172; до него фильтр категорий — по имени.
+ */
+export interface UserPointPin {
+  id: number;
+  latitude: number;
+  longitude: number;
+  color: string;
+  status: PointStatus;
+  category?: string | null;
+  category_ids?: number[];
+  /**
+   * Название точки — подпись маркера и native-callout без полной карточки (#3185).
+   * `null`, когда бэкенд считает имя заглушкой (как `name` полной карточки).
+   */
+  name?: string | null;
+}
+
 export interface PointFilters {
   colors?: string[];
   categoryIds?: string[];

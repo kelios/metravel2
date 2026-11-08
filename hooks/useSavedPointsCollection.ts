@@ -1,61 +1,35 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { queryKeys } from '@/api/queryKeys';
 import { userPointsApi } from '@/api/userPoints';
-import {
-  USER_POINTS_COLLECTION_STALE_TIME_MS,
-  isPointsCollectionPartial,
-  markPointsCollectionComplete,
-} from '@/api/userPointsCollectionCache';
+import { USER_POINTS_COLLECTION_STALE_TIME_MS } from '@/components/UserPoints/userPointPin';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
-import type { ImportedPoint } from '@/types/userPoints';
+import type { UserPointPin } from '@/types/userPoints';
 
 /**
- * Полная коллекция «Мои точки» для потребителей, которым нужен ответ «сохранена
- * ли эта точка»: map-попап (`useSavedPointToggle`) и карточка путешествия
- * (`usePointListSavedModel`). Один общий кэш-ключ с экраном «Мои точки», чтобы
- * сохранение/снятие в одном месте отражалось в другом.
+ * Общая коллекция «Моих точек» для ♥-тоггла карты и мастера travel: лёгкие
+ * пины всех точек владельца одним запросом (`fields=pins`, #3161). Тот же
+ * ключ и тот же запрос, что у экрана «Мои точки» (`usePointsDataModel`), —
+ * сохранение в одном месте видно в другом. Координатный матчер
+ * (`findSavedPointByCoord`) работает по `latitude`/`longitude` пина.
  *
- * #1706: только `getAllPoints()` — одиночная страница отдаёт максимум 200 точек
- * (серверный потолок, #752), и всё сохранённое за их пределами показывалось как
- * несохранённое.
- *
- * #1709: тот же ключ пишет `usePointsDataModel` — первую страницу сразу, а
- * остальные докачивает фоном. Прерванная докачка (пользователь ушёл со страницы)
- * оставляла в кэше префикс, свежий ещё staleTime, и потребитель молча выдавал
- * его за полную коллекцию. Частичный кэш считаем протухшим — потребитель с
- * контрактом полноты идёт за своей полной коллекцией вместо чужого префикса.
+ * До #3161 коллекция читалась полными карточками по 200 на страницу (#1706) и
+ * могла лежать в кэше префиксом (#1709) — отсюда была отметка полноты. Пины
+ * приходят целиком за один ответ, отметка больше не нужна.
  */
 export function useSavedPointsCollection({ enabled }: { enabled: boolean }) {
-  const queryClient = useQueryClient();
   const owner = useQueryOwner();
 
-  // Read on every query-driven render: it controls both initial freshness and
-  // whether the currently cached array is complete enough to trust.
-  const partial = isPointsCollectionPartial(queryClient, owner);
-
-  const query = useQuery<ImportedPoint[]>({
+  const query = useQuery<UserPointPin[]>({
     queryKey: queryKeys.userPointsAll(owner),
-    queryFn: async () => {
-      const points = await userPointsApi.getAllPoints();
-      // Кэш заполнен целиком — снимаем признак частичности, иначе прерванный
-      // стрим заставлял бы каждого следующего потребителя перечитывать всё.
-      markPointsCollectionComplete(queryClient, owner);
-      return points;
-    },
+    queryFn: () => userPointsApi.getAllPins(),
     enabled,
-    staleTime: partial ? 0 : USER_POINTS_COLLECTION_STALE_TIME_MS,
+    staleTime: USER_POINTS_COLLECTION_STALE_TIME_MS,
   });
 
   return {
     ...query,
-    // Existing partial data makes React Query report `isLoading=false` while
-    // the completeness consumer is refetching the full collection. During that
-    // window the prefix cannot answer whether an arbitrary coordinate is saved.
-    // Disabled consumers do not need collection readiness (guest actions still
-    // need to remain clickable so they can show the login hint). When enabled,
-    // absence can be trusted only after some complete data exists; an initial
-    // fetch error with `data === undefined` must stay fail-closed.
-    isTrusted: !enabled || (query.data !== undefined && !partial),
+    /** Кэшу можно верить: он либо не нужен (гость), либо уже загружен целиком. */
+    isTrusted: !enabled || query.data !== undefined,
   };
 }

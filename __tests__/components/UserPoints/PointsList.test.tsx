@@ -69,12 +69,13 @@ jest.mock('@/api/userPoints', () => {
   return {
     userPointsApi: {
       getPoints,
-      // Data model loads pages via getPointsPage (delegates to getPoints).
-      getPointsPage: jest.fn(async (page: number, perPage: number) => {
-        const items = await getPoints({ page, perPage });
-        const arr = Array.isArray(items) ? items : [];
-        return { items: arr, hasMore: arr.length >= perPage };
+      // #3161: модель читает пины одним запросом (делегируем в getPoints) и
+      // полные карточки окном по ids.
+      getAllPins: jest.fn(async (filters?: unknown) => {
+        const items = await getPoints(filters);
+        return Array.isArray(items) ? items : [];
       }),
+      getPointsByIds: jest.fn(async () => []),
       createPoint: jest.fn(),
       updatePoint: jest.fn(),
       deletePoint: jest.fn(),

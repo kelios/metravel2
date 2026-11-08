@@ -25,6 +25,8 @@ import type { ImportedPoint } from '@/types/userPoints';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
 import { METRICS } from '@/constants/layout';
+import { PointSkeletonCard } from './PointsListSkeleton';
+import { useUserPointDetail } from './userPointDetailsStore';
 
 /** Высота фото-полосы карточки точки в списке на телефоне (#3133). */
 export const PHONE_LIST_IMAGE_HEIGHT = 96;
@@ -161,7 +163,7 @@ const openShareUrl = async (url: string) => {
 };
 
 export const PointCard: React.FC<PointCardProps> = React.memo(({
-  point,
+  point: pointProp,
   onPress,
   onEdit,
   onDelete,
@@ -174,6 +176,9 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   onToggleSelect,
 }) => {
   const colors = useThemedColors();
+  // #3161: в списке лежат пины; полная карточка (название, адрес, фото)
+  // подгружается окном по `ids=` — до прихода рисуем каркас той же геометрии.
+  const { point, hydrating } = useUserPointDetail(pointProp);
   // #1814 — один источник ширины на всю фичу «Мои точки»: родительский
   // `PointsList` читает `useBreakpoints({ clientOnly: true })`, карточка обязана
   // читать тот же стор с той же семантикой гидратации, иначе на первом web-кадре
@@ -368,6 +373,16 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
     () => (isPhone && !selectionMode ? objectActions : []),
     [isPhone, objectActions, selectionMode],
   );
+
+  if (hydrating) {
+    return (
+      <PointSkeletonCard
+        imageHeight={imageHeight}
+        width={cardWidth}
+        testID={point?.id != null ? `userpoints-point-card-skeleton-${String(point.id)}` : undefined}
+      />
+    );
+  }
 
   return (
     <PlaceListCard

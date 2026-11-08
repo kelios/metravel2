@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { userPointDetailsStore } from './userPointDetailsStore';
 import { Platform, View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
@@ -106,6 +107,9 @@ export const ImportWizard: React.FC<{ onComplete: () => void; onCancel: () => vo
       setStep('complete');
 
       await queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll(owner) });
+      void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsSearchAll(owner) });
+      // Импорт мог обновить существующие точки (merge) — карточки окна перечитываются.
+      userPointDetailsStore.clear();
       if (!isMountedRef.current) return;
 
       const serverHandled =

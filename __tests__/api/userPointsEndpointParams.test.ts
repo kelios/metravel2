@@ -10,7 +10,7 @@ jest.mock('@/api/client', () => ({
 jest.mock('@/i18n', () => ({ translate: (k: string) => k }));
 
 import { apiClient } from '@/api/client';
-import { resolveOrderingParam, userPointsApi } from '@/api/userPoints';
+import { USER_POINTS_IDS_MAX, resolveOrderingParam, userPointsApi } from '@/api/userPoints';
 
 const mockedGet = apiClient.get as jest.Mock;
 
@@ -63,9 +63,27 @@ describe('buildPointsEndpoint (#3130 2а)', () => {
     expect(params.has('ordering')).toBe(false);
   });
 
-  it('getPointsPage шлёт только page/perPage', async () => {
-    await userPointsApi.getPointsPage(3, 200);
-    expect([...lastParams().keys()].sort()).toEqual(['page', 'perPage']);
+  it('getAllPins шлёт fields=pins и серверный search/categories без пагинации (#3161)', async () => {
+    await userPointsApi.getAllPins({ search: 'озеро', categoryIds: ['7'] });
+    const params = lastParams();
+    expect(params.get('fields')).toBe('pins');
+    expect(params.get('search')).toBe('озеро');
+    expect(params.get('categories')).toBe('7');
+    expect(params.has('page')).toBe(false);
+    expect(params.has('perPage')).toBe(false);
+  });
+
+  it('getPointsByIds шлёт ids через запятую, без дублей, пачками по USER_POINTS_IDS_MAX (#3172)', async () => {
+    mockedGet.mockResolvedValue([{ id: 1 }]);
+    await userPointsApi.getPointsByIds([3, 1, 3, 0, Number.NaN]);
+    expect(lastParams().get('ids')).toBe('3,1');
+    expect(mockedGet).toHaveBeenCalledTimes(1);
+
+    mockedGet.mockClear();
+    const many = Array.from({ length: USER_POINTS_IDS_MAX + 5 }, (_, i) => i + 1);
+    const items = await userPointsApi.getPointsByIds(many);
+    expect(mockedGet).toHaveBeenCalledTimes(2);
+    expect(items).toHaveLength(2);
   });
 });
 

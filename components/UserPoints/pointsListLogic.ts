@@ -227,7 +227,8 @@ export const sortPointsByPresetProximity = <T extends Record<string, unknown>>(
       const sa = Number((a as Record<string, unknown>).__presetScore) || 0;
       const sb = Number((b as Record<string, unknown>).__presetScore) || 0;
       if (sb !== sa) return sb - sa;
-      return String(a?.name ?? '').localeCompare(String(b?.name ?? ''));
+      // Пины без имени (#3161): стабильный порядок при равном счёте — по id.
+      return Number(a?.id) - Number(b?.id);
     });
 };
 
@@ -242,18 +243,3 @@ export const normalizePointSearchText = (value: unknown): string =>
     .replace(/ё/g, 'е')
     .replace(/\s+/g, ' ')
     .trim();
-
-/**
- * Поисковый индекс точки: название, адрес, описание, заметки и имена
- * категорий. Раньше поиск шёл только по `name + address`, и точку «водопад»
- * по категории или заметке было не найти.
- */
-export const buildPointSearchText = (
-  point: Record<string, unknown>,
-  categoryNames: readonly string[] = [],
-): string =>
-  normalizePointSearchText(
-    [point.name, point.address, point.description, point.notes, ...categoryNames]
-      .filter((part) => part != null && String(part).trim() !== '')
-      .join(' | '),
-  );

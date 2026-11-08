@@ -5,8 +5,8 @@ import { useSavedPointsCollection } from '@/hooks/useSavedPointsCollection';
 import {
   buildSavedPointCoordIndex,
   findSavedPointInIndex,
+  type SavedPointLike,
 } from '@/hooks/map/useSavedPointToggle';
-import type { ImportedPoint } from '@/types/userPoints';
 
 /**
  * #839 — карточки точек путешествия должны показывать, сохранена ли точка в
@@ -25,17 +25,16 @@ const parseCoord = (coordStr?: string): { lat: number; lon: number } | null => {
   return { lat, lon };
 };
 
-function readPointsFromUnknown(data: unknown): ImportedPoint[] {
-  if (Array.isArray(data)) return data as ImportedPoint[];
+function readPointsFromUnknown(data: unknown): SavedPointLike[] {
+  if (Array.isArray(data)) return data as SavedPointLike[];
   return [];
 }
 
 export function usePointListSavedModel() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  // Контракт полноты коллекции — общий с map-попапом (#1706: одна страница
-  // отдавала максимум 200 точек и отметка «сохранено» терялась на хвосте;
-  // #1709: недокачанный префикс от экрана «Мои точки» — не полная коллекция).
+  // Коллекция пинов — общая с map-попапом и экраном «Мои точки» (#3161):
+  // все точки владельца одним ответом, координатный матчер видит весь хвост.
   const pointsQuery = useSavedPointsCollection({ enabled: isAuthenticated });
 
   const points = useMemo(() => readPointsFromUnknown(pointsQuery.data), [pointsQuery.data]);
@@ -43,7 +42,7 @@ export function usePointListSavedModel() {
 
   // Запись «Моих точек» на координате точки маршрута — её id нужен ♥ для снятия.
   const findSavedPoint = useCallback(
-    (coordStr?: string): ImportedPoint | null => {
+    (coordStr?: string): SavedPointLike | null => {
       if (!isAuthenticated) return null;
       const c = parseCoord(coordStr);
       if (!c) return null;

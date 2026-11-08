@@ -39,6 +39,11 @@ const mockPlaceListCard = jest.fn((props: any) => {
   );
 });
 
+// #3161: карточка заказывает полную запись у store — сеть в тесте не нужна.
+jest.mock('@/api/userPoints', () => ({
+  userPointsApi: { getPointsByIds: jest.fn(async () => []) },
+}));
+
 jest.mock('@/components/places/PlaceListCard', () => ({
   __esModule: true,
   default: (props: any) => mockPlaceListCard(props),
@@ -254,5 +259,23 @@ describe('PointCard', () => {
     await render(<PointCard point={pointWithPhoto} />);
 
     expect(screen.getByTestId('image-url').props.children).toBe('https://example.com/p.jpg');
+  });
+
+  it('pin without a loaded card renders the skeleton card, then the card once details arrive (#3161)', async () => {
+    const { userPointDetailsStore } = require('@/components/UserPoints/userPointDetailsStore');
+    const { act } = require('@testing-library/react-native');
+    userPointDetailsStore.setOwner('t');
+    userPointDetailsStore.clear();
+    const pin = { id: 777, latitude: 50.06, longitude: 19.94, color: 'blue', status: 'planning', category: 'other' } as any;
+    const utils = await render(<PointCard point={pin} />);
+    // Каркас скрыт от a11y-дерева — ищем с includeHiddenElements.
+    expect(utils.getByTestId('userpoints-point-card-skeleton-777', { includeHiddenElements: true })).toBeTruthy();
+    expect(utils.queryByTestId('userpoints-point-card-777')).toBeNull();
+
+    await act(async () => {
+      userPointDetailsStore.upsert({ ...pin, name: 'Рыночная площадь', address: 'Краков' });
+    });
+    expect(utils.queryByTestId('userpoints-point-card-skeleton-777', { includeHiddenElements: true })).toBeNull();
+    expect(utils.getByTestId('userpoints-point-card-777')).toBeTruthy();
   });
 });

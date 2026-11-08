@@ -3,7 +3,8 @@ import * as ReactQuery from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
-import { removeSavedPointFromCollection } from '@/hooks/map/useSavedPointToggle';
+import { removeSavedPointFromCollection, type SavedPointLike } from '@/hooks/map/useSavedPointToggle';
+import { toUserPointPin } from '@/components/UserPoints/userPointPin';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { useAuth } from '@/context/AuthContext';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
@@ -47,7 +48,7 @@ export function usePointListAddPointModel({
   categoryIdToName: Map<string, string>;
   categoryNameToIds: Map<string, string[]>;
   /** Запись «Моих точек» на координате точки: есть — ♥ её снимает (toggle). */
-  findSavedPoint?: (coordStr?: string) => ImportedPoint | null;
+  findSavedPoint?: (coordStr?: string) => SavedPointLike | null;
   travelName?: string;
 }) {
   const [addingPointId, setAddingPointId] = useState<string | null>(null);
@@ -170,11 +171,8 @@ export function usePointListAddPointModel({
           try {
             await queryClient.ensureQueryData({
               queryKey: queryKeys.userPointsAll(owner),
-              queryFn: () => userPointsApi.getAllPoints(),
+              queryFn: () => userPointsApi.getAllPins(),
             });
-            // Полноту здесь НЕ отмечаем: `ensureQueryData` дедуплицируется на
-            // летящее чтение того же ключа, и им может быть первая страница
-            // `usePointsDataModel` — префикс сошёл бы за всю коллекцию (#1709).
             collectionReady = true;
           } catch {
             collectionReady = false;
@@ -186,10 +184,11 @@ export function usePointListAddPointModel({
         const cachedOptimistically =
           collectionReady && !!created && Number.isFinite(Number((created as any).latitude));
         if (cachedOptimistically) {
-          queryClient.setQueryData<ImportedPoint[]>(queryKeys.userPointsAll(owner), (old) => {
+          // #3161: коллекция держит пины — пишем пин, а не полную карточку.
+          queryClient.setQueryData<SavedPointLike[]>(queryKeys.userPointsAll(owner), (old) => {
             const arr = Array.isArray(old) ? old : [];
             if (arr.some((p) => p?.id === created.id)) return arr;
-            return [...arr, created];
+            return [...arr, toUserPointPin(created)];
           });
         }
         queueAnalyticsEvent('Place_Added', {

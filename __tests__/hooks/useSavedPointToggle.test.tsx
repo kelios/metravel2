@@ -4,13 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { useSavedPointToggle, findSavedPointByCoord } from '@/hooks/map/useSavedPointToggle';
 import { userPointsApi } from '@/api/userPoints';
-import { writePointsPaginationState } from '@/api/userPointsCollectionCache';
 import { queryKeys } from '@/api/queryKeys';
 import type { ImportedPoint } from '@/types/userPoints';
 
 jest.mock('@/api/userPoints', () => ({
   userPointsApi: {
-    getAllPoints: jest.fn(),
+    getAllPins: jest.fn(),
     createPoint: jest.fn(),
     deletePoint: jest.fn(),
   },
@@ -82,14 +81,14 @@ describe('useSavedPointToggle — optimistic toggle', () => {
   afterEach(() => queryClient.clear());
 
   it('derives isSaved from the shared userPointsAll cache', async () => {
-    mockedApi.getAllPoints.mockResolvedValue([makePoint()]);
+    mockedApi.getAllPins.mockResolvedValue([makePoint()]);
     const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
     await waitFor(() => expect(result.current.isSaved).toBe(true));
     expect(result.current.savedPointId).toBe(42);
   });
 
   it('does not refetch or POST when createPoint sees an already-saved coordinate', async () => {
-    mockedApi.getAllPoints.mockResolvedValue([makePoint()]);
+    mockedApi.getAllPins.mockResolvedValue([makePoint()]);
     const invalidateSpy = jest.spyOn(queryClient, 'invalidateQueries');
     const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
     await waitFor(() => expect(result.current.isSaved).toBe(true));
@@ -100,12 +99,12 @@ describe('useSavedPointToggle — optimistic toggle', () => {
 
     expect(mockedApi.createPoint).not.toHaveBeenCalled();
     expect(invalidateSpy).not.toHaveBeenCalled();
-    expect(mockedApi.getAllPoints).toHaveBeenCalledTimes(1);
+    expect(mockedApi.getAllPins).toHaveBeenCalledTimes(1);
   });
 
   it('keeps isReady false during the initial full collection read', async () => {
     const fullRead = deferred<ImportedPoint[]>();
-    mockedApi.getAllPoints.mockReturnValue(fullRead.promise as any);
+    mockedApi.getAllPins.mockReturnValue(fullRead.promise as any);
 
     const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
 
@@ -123,87 +122,13 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
 
     expect(result.current.isReady).toBe(true);
-    expect(mockedApi.getAllPoints).not.toHaveBeenCalled();
-  });
-
-  it('keeps isReady false while a partial cache is being replaced by the full collection', async () => {
-    const fullRead = deferred<ImportedPoint[]>();
-    queryClient.setQueryData(queryKeys.userPointsAll(OWNER), [
-      makePoint({ id: 1, latitude: 10, longitude: 20 }),
-    ]);
-    writePointsPaginationState(queryClient, OWNER, { nextPage: 2, complete: false });
-    mockedApi.getAllPoints.mockReturnValue(fullRead.promise as any);
-
-    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
-
-    expect(result.current.isReady).toBe(false);
-    await act(async () => {
-      fullRead.resolve([]);
-      await fullRead.promise;
-    });
-    await waitFor(() => expect(result.current.isReady).toBe(true));
-  });
-
-  it('waits for an untrusted partial cache and skips POST when the full read finds the point', async () => {
-    const fullRead = deferred<ImportedPoint[]>();
-    queryClient.setQueryData(queryKeys.userPointsAll(OWNER), [
-      makePoint({ id: 1, latitude: 10, longitude: 20 }),
-    ]);
-    writePointsPaginationState(queryClient, OWNER, { nextPage: 2, complete: false });
-    mockedApi.getAllPoints.mockReturnValue(fullRead.promise as any);
-
-    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
-    expect(result.current.isReady).toBe(false);
-
-    let pending!: Promise<unknown>;
-    await act(() => {
-      pending = result.current.createPoint({ latitude: COORD.lat, longitude: COORD.lng });
-    });
-    expect(mockedApi.createPoint).not.toHaveBeenCalled();
-    expect(result.current.isSaved).toBe(false);
-
-    await act(async () => {
-      fullRead.resolve([makePoint()]);
-      await pending;
-    });
-
-    expect(mockedApi.createPoint).not.toHaveBeenCalled();
-    await waitFor(() => expect(result.current.isSaved).toBe(true));
-  });
-
-  it('does not mistake a deduplicated first-page producer read for the full collection', async () => {
-    const firstPage = deferred<ImportedPoint[]>();
-    const producerRead = queryClient.fetchQuery({
-      queryKey: queryKeys.userPointsAll(OWNER),
-      queryFn: async () => {
-        const points = await firstPage.promise;
-        writePointsPaginationState(queryClient, OWNER, { nextPage: 2, complete: false });
-        return points;
-      },
-    });
-    mockedApi.getAllPoints.mockResolvedValue([makePoint()]);
-
-    const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
-    let pending!: Promise<unknown>;
-    await act(() => {
-      pending = result.current.createPoint({ latitude: COORD.lat, longitude: COORD.lng });
-    });
-
-    firstPage.resolve([makePoint({ id: 1, latitude: 10, longitude: 20 })]);
-    await producerRead;
-    await act(async () => {
-      await pending;
-    });
-
-    expect(mockedApi.getAllPoints).toHaveBeenCalledTimes(1);
-    expect(mockedApi.createPoint).not.toHaveBeenCalled();
-    await waitFor(() => expect(result.current.isSaved).toBe(true));
+    expect(mockedApi.getAllPins).not.toHaveBeenCalled();
   });
 
   it('createPoint flips isSaved to true immediately, before the server responds', async () => {
     // Сначала ничего не сохранено; сервер отдаёт созданную точку с реальным id,
     // и она ложится в кэш без рефетча коллекции (#1706).
-    mockedApi.getAllPoints.mockResolvedValueOnce([]).mockResolvedValue([makePoint({ id: 777 })]);
+    mockedApi.getAllPins.mockResolvedValueOnce([]).mockResolvedValue([makePoint({ id: 777 })]);
     const created = deferred<ImportedPoint>();
     mockedApi.createPoint.mockReturnValue(created.promise as any);
 
@@ -240,13 +165,13 @@ describe('useSavedPointToggle — optimistic toggle', () => {
    * и серия сохранений на карте упиралась бы в ложное 429.
    */
   it('не перечитывает коллекцию после успешных createPoint и removeSaved', async () => {
-    mockedApi.getAllPoints.mockResolvedValue([]);
+    mockedApi.getAllPins.mockResolvedValue([]);
     mockedApi.createPoint.mockResolvedValue(makePoint({ id: 777 }) as any);
     mockedApi.deletePoint.mockResolvedValue(undefined as any);
 
     const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
     await waitFor(() => expect(result.current.isReady).toBe(true));
-    expect(mockedApi.getAllPoints).toHaveBeenCalledTimes(1);
+    expect(mockedApi.getAllPins).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       await result.current.createPoint({ latitude: COORD.lat, longitude: COORD.lng });
@@ -259,7 +184,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     await waitFor(() => expect(result.current.isSaved).toBe(false));
 
     // Ни одно из двух успешных действий не потянуло коллекцию заново.
-    expect(mockedApi.getAllPoints).toHaveBeenCalledTimes(1);
+    expect(mockedApi.getAllPins).toHaveBeenCalledTimes(1);
   });
 
   /**
@@ -271,7 +196,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
    */
   it('не схлопывает коллекцию, если сохранить во время её первой загрузки', async () => {
     const firstRead = deferred<ImportedPoint[]>();
-    mockedApi.getAllPoints.mockReturnValueOnce(firstRead.promise as any);
+    mockedApi.getAllPins.mockReturnValueOnce(firstRead.promise as any);
     const wholeCollection = Array.from({ length: 300 }, (_, i) =>
       makePoint({ id: 1000 + i, latitude: 10 + i / 1000, longitude: 20 + i / 1000 }),
     );
@@ -306,12 +231,12 @@ describe('useSavedPointToggle — optimistic toggle', () => {
     // Вся коллекция на месте, и созданная точка дописана — без лишнего запроса.
     const cached = client.getQueryData(queryKeys.userPointsAll(OWNER)) as ImportedPoint[];
     expect(cached).toHaveLength(wholeCollection.length + 1);
-    expect(mockedApi.getAllPoints).toHaveBeenCalledTimes(1);
+    expect(mockedApi.getAllPins).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(result.current.isSaved).toBe(true));
   });
 
   it('не делает POST, если полную коллекцию не удалось проверить', async () => {
-    mockedApi.getAllPoints.mockRejectedValue(new Error('page 7 timeout'));
+    mockedApi.getAllPins.mockRejectedValue(new Error('page 7 timeout'));
     mockedApi.createPoint.mockResolvedValue(makePoint({ id: 777 }) as any);
 
     const client = new QueryClient({
@@ -341,7 +266,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
   });
 
   it('deduplicates concurrent create calls for the same trusted-unsaved coordinate', async () => {
-    mockedApi.getAllPoints.mockResolvedValue([]);
+    mockedApi.getAllPins.mockResolvedValue([]);
     const created = deferred<ImportedPoint>();
     mockedApi.createPoint.mockReturnValue(created.promise as any);
 
@@ -369,7 +294,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
 
   it('keeps concurrent optimistic creates for different coordinates isolated', async () => {
     const otherCoord = { lat: 48.8566, lng: 2.3522 };
-    mockedApi.getAllPoints.mockResolvedValue([]);
+    mockedApi.getAllPins.mockResolvedValue([]);
     const firstCreated = deferred<ImportedPoint>();
     const secondCreated = deferred<ImportedPoint>();
     mockedApi.createPoint
@@ -419,7 +344,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
   });
 
   it('rolls back to not-saved when createPoint fails', async () => {
-    mockedApi.getAllPoints.mockResolvedValue([]);
+    mockedApi.getAllPins.mockResolvedValue([]);
     mockedApi.createPoint.mockRejectedValue(new Error('network'));
 
     const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });
@@ -435,7 +360,7 @@ describe('useSavedPointToggle — optimistic toggle', () => {
   });
 
   it('removeSaved flips isSaved to false immediately, before the server responds', async () => {
-    mockedApi.getAllPoints.mockResolvedValue([makePoint()]);
+    mockedApi.getAllPins.mockResolvedValue([makePoint()]);
     const removed = deferred<unknown>();
     mockedApi.deletePoint.mockReturnValue(removed.promise as any);
 
@@ -459,8 +384,8 @@ describe('useSavedPointToggle — optimistic toggle', () => {
   });
 
   it('resyncs (point returns) when removeSaved fails', async () => {
-    // Первый getAllPoints — точка есть; после провала delete инвалидация рефетчит и точка возвращается.
-    mockedApi.getAllPoints.mockResolvedValue([makePoint()]);
+    // Первый getAllPins — точка есть; после провала delete инвалидация рефетчит и точка возвращается.
+    mockedApi.getAllPins.mockResolvedValue([makePoint()]);
     mockedApi.deletePoint.mockRejectedValue(new Error('boom'));
 
     const { result } = await renderHook(() => useSavedPointToggle({ coord: COORD }), { wrapper });

@@ -92,30 +92,6 @@ export const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) =>
   pointsListItem: {
     marginBottom: 12,
   },
-  listProgressText: {
-    marginTop: 4,
-    marginBottom: 12,
-    textAlign: 'center',
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  listProgressRow: {
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 12,
-  },
-  listProgressRetry: {
-    minHeight: 36,
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-    borderRadius: DESIGN_TOKENS.radii.md,
-    backgroundColor: colors.primarySoft,
-  },
-  listProgressRetryText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.primary,
-  },
   recommendationsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

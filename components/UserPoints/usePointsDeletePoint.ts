@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { userPointDetailsStore } from './userPointDetailsStore';
 import type { QueryClient } from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
@@ -34,6 +35,7 @@ export const usePointsDeletePoint = ({ queryClient, setIsBulkWorking }: Params) 
     setIsBulkWorking(true);
     try {
       await userPointsApi.deletePoint(id);
+      userPointDetailsStore.remove([id]);
       queryClient.setQueryData(queryKeys.userPointsAll(owner), (prev: unknown) => {
         const arr = Array.isArray(prev) ? prev : [];
         return arr.filter((p: unknown) => {

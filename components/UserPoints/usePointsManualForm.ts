@@ -1,4 +1,6 @@
 import { useLocaleRevision } from '@/i18n/useLocaleRevision'
+import { userPointDetailsStore } from './userPointDetailsStore';
+import { toUserPointPin } from './userPointPin';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type React from 'react';
 import type { QueryClient } from '@tanstack/react-query';
@@ -266,21 +268,27 @@ export const usePointsManualForm = ({
 
       if (editingPointId != null) {
         const updated = await userPointsApi.updatePoint(editingPointId, payload);
+        // #3161: коллекция держит пины, полная карточка — в store деталей.
+        userPointDetailsStore.upsert(updated);
         queryClient.setQueryData(queryKeys.userPointsAll(owner), (prev: unknown) => {
           const arr = Array.isArray(prev) ? prev : [];
           return arr.map((p: unknown) => {
             const item = (p ?? {}) as Record<string, unknown>;
-            return Number(item.id) === Number(editingPointId) ? updated : item;
+            return Number(item.id) === Number(editingPointId) ? toUserPointPin(updated) : item;
           });
         });
       } else {
         const created = await userPointsApi.createPoint(payload);
+        userPointDetailsStore.upsert(created);
         queryClient.setQueryData(queryKeys.userPointsAll(owner), (prev: unknown) => {
           const arr = Array.isArray(prev) ? prev : [];
-          return [created, ...arr];
+          return [toUserPointPin(created), ...arr];
         });
       }
 
+      // Серверный результат поиска — набор id на 10 минут: новая/изменённая
+      // точка должна попасть в него (или выпасть) без ожидания.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsSearchAll(owner) });
       closeManualAdd();
     } catch (error) {
       setManualError(error instanceof Error ? error.message : i18nT('map:components.UserPoints.usePointsManualForm.ne_udalos_sohranit_tochku_ce20a696'));

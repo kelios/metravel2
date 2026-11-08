@@ -57,34 +57,11 @@ describe('pointsListLogic', () => {
 });
 
 // #3132: индекс поиска и нормализация запроса.
-describe('point search index (#3132)', () => {
-  const { buildPointSearchText, normalizePointSearchText } = require('@/components/UserPoints/pointsListLogic');
+describe('point search normalization (#3132, #3161 — поиск считает сервер)', () => {
+  const { normalizePointSearchText } = require('@/components/UserPoints/pointsListLogic');
 
   it('normalizes case, whitespace and ё', () => {
     expect(normalizePointSearchText('  Ёлка   у ОЗЕРА ')).toBe('елка у озера');
     expect(normalizePointSearchText(null)).toBe('');
-  });
-
-  it('indexes name, address, description, notes and category names', () => {
-    const text = buildPointSearchText(
-      {
-        name: 'Голубые озёра',
-        address: 'Мядельский район',
-        description: 'Экотропа вдоль воды',
-        notes: 'Парковка платная',
-        tags: { articleUrl: '/x' },
-      },
-      ['Водопад', 'Природа'],
-    );
-    expect(text).toContain('голубые озера');
-    expect(text).toContain('мядельский район');
-    expect(text).toContain('экотропа');
-    expect(text).toContain('парковка платная');
-    expect(text).toContain('водопад');
-    expect(text).not.toContain('articleurl');
-  });
-
-  it('skips empty parts', () => {
-    expect(buildPointSearchText({ name: 'A', address: null, description: '  ' })).toBe('a');
   });
 });

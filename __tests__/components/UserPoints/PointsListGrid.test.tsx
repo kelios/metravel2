@@ -100,7 +100,6 @@ describe('PointsListGrid', () => {
     // в jest он замокан и рисует всё переданное, окно рендера — забота FlashList.
     expect(utils.queryAllByTestId('userpoints-rendered-row')).toHaveLength(points.length);
     expect(utils.queryByTestId('userpoints-list-skeleton')).toBeNull();
-    expect(utils.queryByTestId('userpoints-list-progress')).toBeNull();
   });
 
   const baseProps = (overrides: Record<string, unknown>) => ({
@@ -155,67 +154,13 @@ describe('PointsListGrid', () => {
     expect(utils.getByText('Список (0)')).toBeTruthy();
   });
 
-  it('renders the streaming progress footer until the collection is complete', async () => {
-    (require('react-native').Platform as any).OS = 'web';
-    const points = Array.from({ length: 1200 }, (_, index) => ({ id: index + 1, name: `P${index + 1}`, latitude: 53, longitude: 27 }));
-    const utils = await render(
-      <PointsListGrid
-        {...(baseProps({
-          filteredPoints: points,
-          loadProgress: { loaded: 1200, total: 2656, complete: false },
-        }) as any)}
-      />
-    );
-    // Разделитель тысяч у форматтера — неразрывный пробел; сравниваем по смыслу.
-    const plain = (value: unknown) => String(value).replace(/[\u00a0\u202f]/g, ' ');
-    expect(plain(utils.getByTestId('userpoints-list-progress').props.children)).toBe('Загружено 1 200 из 2 656');
-    expect(utils.getByText(/Список \(1[\u00a0\u202f ]200\)/)).toBeTruthy();
-
-    await utils.rerender(
-      <PointsListGrid
-        {...(baseProps({
-          filteredPoints: points,
-          loadProgress: { loaded: 1200, total: 1200, complete: true },
-        }) as any)}
-      />
-    );
-    expect(utils.queryByTestId('userpoints-list-progress')).toBeNull();
-  });
-
-  it('renders «Загружены не все точки» with a retry button when the stream failed (#3130)', async () => {
-    (require('react-native').Platform as any).OS = 'web';
-    const { fireEvent } = require('@testing-library/react-native');
-    const onRetryStream = jest.fn();
-    const points = Array.from({ length: 200 }, (_, index) => ({ id: index + 1, name: `P${index + 1}`, latitude: 53, longitude: 27 }));
-    const utils = await render(
-      <PointsListGrid
-        {...(baseProps({
-          filteredPoints: points,
-          loadProgress: { loaded: 200, total: 2656, complete: false, failed: true },
-          onRetryStream,
-        }) as any)}
-      />
-    );
-    expect(utils.queryByTestId('userpoints-list-progress')).toBeNull();
-    expect(utils.getByTestId('userpoints-list-progress-failed')).toBeTruthy();
-    expect(utils.getByText(/Загружены не все точки — 200 из 2[\u00a0\u202f ]656/)).toBeTruthy();
-    fireEvent.press(utils.getByTestId('userpoints-list-progress-retry'));
-    expect(onRetryStream).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows retry for a failed stream even without a server count (#3130)', async () => {
+  it('shows «…» in the list tab while the server search is answering (#3161)', async () => {
     (require('react-native').Platform as any).OS = 'web';
     const points = [{ id: 1, name: 'P1', latitude: 53, longitude: 27 }];
-    const utils = await render(
-      <PointsListGrid
-        {...(baseProps({
-          filteredPoints: points,
-          loadProgress: { loaded: 200, total: 200, complete: false, failed: true },
-          onRetryStream: jest.fn(),
-        }) as any)}
-      />
-    );
-    expect(utils.getByTestId('userpoints-list-progress-retry')).toBeTruthy();
+    const utils = await render(<PointsListGrid {...(baseProps({ filteredPoints: points, isSearching: true }) as any)} />);
+    expect(utils.getByText('Список (…)')).toBeTruthy();
+    await utils.rerender(<PointsListGrid {...(baseProps({ filteredPoints: points, isSearching: false }) as any)} />);
+    expect(utils.getByText('Список (1)')).toBeTruthy();
   });
 
   it('keeps the panel search input mounted while the query changes (#3133)', async () => {

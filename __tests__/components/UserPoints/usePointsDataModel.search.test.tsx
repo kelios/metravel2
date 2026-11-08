@@ -2,18 +2,12 @@ import React from 'react'
 import { renderHook, waitFor } from '@testing-library/react-native'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
-jest.mock('@/api/userPoints', () => {
-  const getPoints = jest.fn()
-  return {
-    userPointsApi: {
-      getPoints,
-      getPointsPage: jest.fn(async (page: number, perPage: number) => {
-        const items = await getPoints({ page, perPage })
-        return { items, hasMore: items.length >= perPage }
-      }),
-    },
-  }
-})
+jest.mock('@/api/userPoints', () => ({
+  userPointsApi: {
+    getAllPins: jest.fn(),
+    getPointsByIds: jest.fn(async () => []),
+  },
+}))
 
 jest.mock('@/api/miscOptimized', () => ({
   fetchAllFiltersOptimized: jest.fn(async () => ({
@@ -22,23 +16,26 @@ jest.mock('@/api/miscOptimized', () => ({
 }))
 
 const { userPointsApi } = require('@/api/userPoints')
-const mockGetPoints = userPointsApi.getPoints as jest.Mock
+const mockGetAllPins = userPointsApi.getAllPins as jest.Mock
 
 import { usePointsDataModel } from '@/components/UserPoints/usePointsDataModel'
 
-const PER_PAGE = 200
-
-const points = [
-  { id: 1, name: 'Голубые озёра', address: 'Мядельский район', latitude: 54.9, longitude: 26.9, color: 'blue', status: 'planning' },
-  { id: 2, name: 'Безымянная точка', address: 'Лес', description: 'Старая водяная мельница', latitude: 53.9, longitude: 27.5, color: 'red', status: 'planning' },
-  { id: 3, name: 'Точка 3', address: 'Поле', notes: 'заехать за ЁЛКОЙ', latitude: 53.8, longitude: 27.4, color: 'red', status: 'planning' },
-  { id: 4, name: 'Точка 4', address: 'Овраг', categoryIds: ['7'], latitude: 53.7, longitude: 27.3, color: 'green', status: 'planning' },
-  { id: 5, name: 'Курган', address: 'Холм', categoryIds: ['99'], latitude: 53.6, longitude: 27.2, color: 'green', status: 'planning' },
-  // Как на проде: категория — имя строкой, которого нет в словаре.
-  { id: 6, name: 'Стоянка', address: 'Трасса', category: 'Парковка', categories: [], latitude: 53.5, longitude: 27.1, color: 'green', status: 'planning' },
+const pins = [
+  { id: 1, latitude: 54.9, longitude: 26.9, color: 'blue', status: 'planning', category: 'Озеро', category_ids: [] },
+  { id: 2, latitude: 53.9, longitude: 27.5, color: 'red', status: 'planning', category: 'other', category_ids: [] },
+  { id: 3, latitude: 53.8, longitude: 27.4, color: 'red', status: 'visited', category: 'other', category_ids: [7] },
+  { id: 4, latitude: 53.7, longitude: 27.3, color: 'green', status: 'planning', category: 'Водопад', category_ids: [] },
 ]
 
-const renderModel = async (searchQuery: string) => {
+// Сервер ищет по имени, адресу, заметкам и имени категории (#3129): клиент
+// получает подмножество пинов и сужает коллекцию до их id.
+const serverSearch = (query: string) => {
+  if (query === 'озера') return [pins[0]]
+  if (query === 'водопад') return [pins[2], pins[3]]
+  return []
+}
+
+const renderModel = async (searchQuery: string, filters: Record<string, unknown> = {}) => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   const wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
@@ -46,8 +43,7 @@ const renderModel = async (searchQuery: string) => {
   return await renderHook(
     (props: { searchQuery: string }) =>
       usePointsDataModel({
-        defaultPerPage: PER_PAGE,
-        filters: { page: 1, perPage: PER_PAGE, radiusKm: 100 } as any,
+        filters: { page: 1, perPage: 200, radiusKm: 100, ...filters } as any,
         searchQuery: props.searchQuery,
         currentLocation: null,
         defaultPointColors: ['blue'],
@@ -56,45 +52,81 @@ const renderModel = async (searchQuery: string) => {
   )
 }
 
-// #3132: поиск по индексу — название, адрес, описание, заметки, категория; ё/регистр.
-describe('usePointsDataModel search index', () => {
+describe('usePointsDataModel: серверный поиск по пинам (#3161)', () => {
   beforeEach(() => {
     jest.clearAllMocks()
-    mockGetPoints.mockResolvedValue(points)
+    mockGetAllPins.mockImplementation(async (filters?: { search?: string }) =>
+      filters?.search ? serverSearch(filters.search) : pins,
+    )
+  })
+
+  it('без запроса читает коллекцию одним запросом без search', async () => {
+    const { result } = await renderModel('')
+    await waitFor(() => expect(result.current.points).toHaveLength(pins.length))
+    expect(mockGetAllPins).toHaveBeenCalledTimes(1)
+    expect(mockGetAllPins).toHaveBeenCalledWith()
+    expect(result.current.isSearching).toBe(false)
   })
 
   it.each([
-    ['озера', [1]],
-    ['мельниц', [2]],
-    ['елкой', [3]],
-    ['водопад', [4]],
-    ['  ТОЧКА  ', [2, 3, 4]],
-    // Категория без имени в словаре не попадает в индекс голым id.
-    ['99', []],
-    ['парковка', [6]],
-  ])('finds points for %p', async (query, expectedIds) => {
+    ['  Озёра ', [1]],
+    ['водопад', [3, 4]],
+    ['нет такого', []],
+  ])('запрос %p уходит на сервер нормализованным и сужает коллекцию', async (query, expectedIds) => {
     const { result } = await renderModel(query)
+    await waitFor(() => expect(result.current.isSearching).toBe(false))
+    await waitFor(() => expect(result.current.points.length).toBeGreaterThanOrEqual(0))
+    expect(mockGetAllPins).toHaveBeenCalledWith({ search: query.toLowerCase().replace(/ё/g, 'е').trim() })
     await waitFor(() => {
-      expect(result.current.points.length).toBe(points.length)
+      expect(result.current.filteredPoints.map((p) => p.id).sort()).toEqual(expectedIds)
     })
-    await waitFor(() => {
-      expect(result.current.filteredPoints.map((p: any) => p.id).sort()).toEqual(expectedIds)
-    })
+    // Счётчик «Всего» — вся коллекция, не результат поиска.
+    expect(result.current.totalCount).toBe(pins.length)
   })
 
-  it('keeps the precomputed index on the point and does not rebuild it per query', async () => {
-    const { result, rerender } = await renderModel('')
-    await waitFor(() => {
-      expect(result.current.filteredPoints.length).toBe(points.length)
+  it('пока сервер отвечает на новый запрос, держит прежний результат и флаг isSearching', async () => {
+    let release: (() => void) | null = null
+    mockGetAllPins.mockImplementation(async (filters?: { search?: string }) => {
+      if (!filters?.search) return pins
+      if (filters.search === 'водопад') {
+        await new Promise<void>((resolve) => {
+          release = resolve
+        })
+      }
+      return serverSearch(filters.search)
     })
-    const indexed = result.current.filteredPoints[1] as any
-    expect(indexed.searchText).toContain('старая водяная мельница')
+    const { result, rerender } = await renderModel('озера')
+    await waitFor(() => expect(result.current.filteredPoints.map((p) => p.id)).toEqual([1]))
 
-    await rerender({ searchQuery: 'мельниц' })
-    await waitFor(() => {
-      expect(result.current.filteredPoints.map((p: any) => p.id)).toEqual([2])
+    await rerender({ searchQuery: 'водопад' })
+    await waitFor(() => expect(result.current.isSearching).toBe(true))
+    expect(result.current.filteredPoints.map((p) => p.id)).toEqual([1])
+
+    release?.()
+    await waitFor(() => expect(result.current.filteredPoints.map((p) => p.id).sort()).toEqual([3, 4]))
+    expect(result.current.isSearching).toBe(false)
+  })
+
+  it('упавший серверный поиск — ошибка с «Повторить», а не вся коллекция под запросом', async () => {
+    mockGetAllPins.mockImplementation(async (filters?: { search?: string }) => {
+      if (filters?.search) throw new Error('network')
+      return pins
     })
-    // Тот же объект точки: индекс не пересчитывался на ввод.
-    expect(result.current.filteredPoints[0]).toBe(indexed)
+    const { result } = await renderModel('озера')
+    await waitFor(() => expect(result.current.loadFailed).toBe(true))
+    expect(result.current.filteredPoints).toEqual([])
+    expect(result.current.isSearching).toBe(false)
+
+    mockGetAllPins.mockImplementation(async (filters?: { search?: string }) =>
+      filters?.search ? serverSearch(filters.search) : pins,
+    )
+    await result.current.refetch()
+    await waitFor(() => expect(result.current.filteredPoints.map((p) => p.id)).toEqual([1]))
+    expect(result.current.loadFailed).toBe(false)
+  })
+
+  it('клиентские фильтры (цвет, статус, категория) применяются поверх результата поиска', async () => {
+    const { result } = await renderModel('водопад', { statuses: ['visited'] })
+    await waitFor(() => expect(result.current.filteredPoints.map((p) => p.id)).toEqual([3]))
   })
 })

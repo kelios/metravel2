@@ -1,6 +1,6 @@
 import { searchInputAccessibilityProps } from '@/utils/webProps'
 import React, { useMemo } from 'react'
-import { Platform, Pressable, View, ScrollView, TextInput, Text as RNText } from 'react-native'
+import { Platform, View, ScrollView, TextInput, Text as RNText } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { FlashList } from '@shopify/flash-list'
 
@@ -44,10 +44,8 @@ export const PointsListGrid: React.FC<{
   filteredPoints: any[]
   listExtraData?: any
   listKey?: string
-  /** Прогресс фоновой докачки коллекции — строка «Загружено N из M» под списком (#3133). */
-  loadProgress?: { loaded: number; total: number; complete: boolean; failed?: boolean }
-  /** Повторить оборванную фоновую докачку (#3130). */
-  onRetryStream?: () => void
+  /** Серверный поиск ещё отвечает — счётчик вкладки показывает «…» (#3161). */
+  isSearching?: boolean
   /** Число активных фильтров — бейдж вкладки «Фильтры» (#3134). */
   activeFilterCount?: number
   panelTab?: 'filters' | 'list'
@@ -99,8 +97,7 @@ export const PointsListGrid: React.FC<{
   filteredPoints,
   listExtraData,
   listKey,
-  loadProgress,
-  onRetryStream,
+  isSearching = false,
   activeFilterCount = 0,
   panelTab: controlledPanelTab,
   onPanelTabChange,
@@ -174,11 +171,11 @@ export const PointsListGrid: React.FC<{
   const lastGeocodedQueryRef = React.useRef<string>('')
   // #3133: число во вкладке — через форматтер локали («2 656»), а пока первая
   // страница не пришла — многоточие вместо «(0)», которое читалось как «точек нет».
-  const listCountLabel = isLoading ? '…' : formatInteger(filteredPoints.length)
+  const listCountLabel = isLoading || isSearching ? '…' : formatInteger(filteredPoints.length)
   // Сегмент мобильного таб-бара — треть ширины 320–390 px: число в подписи
   // («Список (2655)») там не помещается ни с разрядами, ни без. Счётчик идёт
   // отдельным бейджем сегмента (как у общей карты), подпись — короткое «Список».
-  const mobileListBadge = isLoading ? undefined : filteredPoints.length
+  const mobileListBadge = isLoading || isSearching ? undefined : filteredPoints.length
   // На 320 px сегмент ≈ 97 px: иконка + «Список» + бейдж «2656» не помещаются
   // (прод-проба 08.11: scrollWidth > clientWidth), без иконок — помещаются.
   const showMobileTabIcons = windowWidth >= METRICS.breakpoints.phone
@@ -445,46 +442,6 @@ export const PointsListGrid: React.FC<{
     ]
   )
 
-  // #3130: обрыв докачки — заметка с «Повторить» НАД списком (в шапке), а не в
-  // подвале за 200 карточками: ревью гейта — состояние должно быть видно сразу,
-  // в раскладке с картой и на вкладке «Список» телефона. Без серверного count
-  // (total = loaded) тоже показываем.
-  const failedStreamNotice = React.useMemo(() => {
-    if (isLoading || !loadProgress?.failed) return null
-    return (
-      <View style={localStyles.listProgressRow} testID="userpoints-list-progress-failed">
-        <RNText style={localStyles.listProgressText}>
-          {i18nT('map:components.UserPoints.PointsListGrid.zagruzheny_ne_vse_tochki_value1_iz_value2_d6472252', {
-            value1: formatInteger(loadProgress.loaded),
-            value2: formatInteger(loadProgress.total),
-          })}
-        </RNText>
-        <Pressable
-          accessibilityRole="button"
-          onPress={onRetryStream}
-          style={localStyles.listProgressRetry}
-          testID="userpoints-list-progress-retry"
-        >
-          <RNText style={localStyles.listProgressRetryText}>{i18nT('map:components.UserPoints.PointsListGrid.povtorit_0a5bbc92')}</RNText>
-        </Pressable>
-      </View>
-    )
-  }, [isLoading, loadProgress, localStyles, onRetryStream])
-
-  // #3133: подвал списка — прогресс фоновой докачки. Пока страницы стримятся,
-  // счётчик вкладки растёт скачками по 200; строка объясняет, что это загрузка.
-  const renderListFooter = React.useCallback(() => {
-    if (isLoading || !loadProgress || loadProgress.failed || loadProgress.complete || loadProgress.total <= loadProgress.loaded) return null
-    return (
-      <RNText style={localStyles.listProgressText} testID="userpoints-list-progress">
-        {i18nT('map:components.UserPoints.PointsListGrid.zagruzheno_value1_iz_value2_6c50f47e', {
-          value1: formatInteger(loadProgress.loaded),
-          value2: formatInteger(loadProgress.total),
-        })}
-      </RNText>
-    )
-  }, [isLoading, loadProgress, localStyles.listProgressText])
-
   // Пока первая страница не пришла — каркас карточек, не пустота и не «нет точек».
   // Высота фото каркаса повторяет карточку (#2253: каркас ≠ карточка → прыжок при замене).
   const renderListEmpty = React.useCallback(
@@ -515,26 +472,18 @@ export const PointsListGrid: React.FC<{
         // Элемент, а не ссылка на функцию: FlashList делает createElement(функция),
         // и новая identity колбэка (каждое нажатие в поиске) ремаунтила бы шапку —
         // поле поиска теряло бы фокус после каждого символа.
-        ListHeaderComponent={
-          <>
-            {renderListHeader()}
-            {failedStreamNotice}
-          </>
-        }
+        ListHeaderComponent={renderListHeader()}
         ListEmptyComponent={renderListEmpty}
-        ListFooterComponent={renderListFooter}
         showsVerticalScrollIndicator={true}
         drawDistance={600}
       />
     ),
     [
-      failedStreamNotice,
       filteredPoints,
       listFlashExtraData,
       listKey,
       localStyles,
       renderListEmpty,
-      renderListFooter,
       renderPointListItem,
       renderListHeader,
     ]
@@ -625,6 +574,9 @@ export const PointsListGrid: React.FC<{
     }
 
     if (!mapUiApi?.focusOnCoord) return
+    // #3161: пустой список под прежним ответом сервера (`keepPreviousData`) ещё
+    // не значит «по запросу точек нет» — геокодим только после ответа поиска.
+    if (isSearching) return
     if (lastGeocodedQueryRef.current === q) return
 
     const focusWith = (coords: { lat: number; lng: number; label?: string; zoom?: number }) => {
@@ -679,7 +631,7 @@ export const PointsListGrid: React.FC<{
       }
       geocodeAbortRef.current?.abort()
     }
-  }, [appliedSearchQuery, filteredPoints, mapUiApi])
+  }, [appliedSearchQuery, filteredPoints, isSearching, mapUiApi])
 
   // На узком экране режим показа полностью определяется верхним 3-таб-баром
   // (Карта / Список / Фильтры) ниже, поэтому standalone list-режим (с тяжёлой
@@ -710,14 +662,8 @@ export const PointsListGrid: React.FC<{
         }}
         keyExtractor={(item: { id?: string | number }, index: number) => String(item?.id ?? `idx-${index}`)}
         {...({ estimatedItemSize: 120 } as any)}
-        ListHeaderComponent={
-          <>
-            {renderHeader()}
-            {failedStreamNotice}
-          </>
-        }
+        ListHeaderComponent={renderHeader()}
         ListEmptyComponent={renderListEmpty}
-        ListFooterComponent={renderListFooter}
         numColumns={columns}
         key={String(columns)}
         contentContainerStyle={columns > 1 ? styles.gridListContent : styles.listContent}

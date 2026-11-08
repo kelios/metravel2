@@ -3,14 +3,15 @@ import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
-import {
-  isPointsCollectionPartial,
-  markPointsCollectionComplete,
-} from '@/api/userPointsCollectionCache';
+import { userPointDetailsStore } from '@/components/UserPoints/userPointDetailsStore';
 import { useAuthStore } from '@/stores/authStore';
 import { useSavedPointsCollection } from '@/hooks/useSavedPointsCollection';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
-import type { ImportedPoint } from '@/types/userPoints';
+import type { ImportedPoint, UserPointPin } from '@/types/userPoints';
+import { USER_POINTS_COLLECTION_STALE_TIME_MS, toUserPointPin } from '@/components/UserPoints/userPointPin';
+
+/** Запись общей коллекции: пин (#3161) или полная карточка, записанная мутацией до перевода на пины. */
+export type SavedPointLike = UserPointPin | ImportedPoint;
 
 /**
  * #334 — «Сохранить место» должно быть toggle.
@@ -43,8 +44,8 @@ const allocateOptimisticPointId = (): number => {
   return id;
 };
 
-function readPointsFromUnknown(data: unknown): ImportedPoint[] {
-  if (Array.isArray(data)) return data as ImportedPoint[];
+function readPointsFromUnknown(data: unknown): SavedPointLike[] {
+  if (Array.isArray(data)) return data as SavedPointLike[];
   return [];
 }
 
@@ -57,9 +58,9 @@ const coordBucket = (value: number): number => Math.round(value / COORD_INDEX_ST
 const coordBucketKey = (latBucket: number, lngBucket: number): string =>
   `${latBucket},${lngBucket}`;
 
-export type SavedPointCoordIndex = globalThis.Map<string, ImportedPoint[]>;
+export type SavedPointCoordIndex = globalThis.Map<string, SavedPointLike[]>;
 
-export function buildSavedPointCoordIndex(points: ImportedPoint[]): SavedPointCoordIndex {
+export function buildSavedPointCoordIndex(points: SavedPointLike[]): SavedPointCoordIndex {
   const index: SavedPointCoordIndex = new globalThis.Map();
   for (const p of points) {
     const pLat = Number(p?.latitude);
@@ -77,7 +78,7 @@ export function findSavedPointInIndex(
   index: SavedPointCoordIndex,
   lat: number,
   lng: number,
-): ImportedPoint | null {
+): SavedPointLike | null {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   const latB = coordBucket(lat);
   const lngB = coordBucket(lng);
@@ -103,10 +104,10 @@ export function findSavedPointInIndex(
 }
 
 export function findSavedPointByCoord(
-  points: ImportedPoint[],
+  points: SavedPointLike[],
   lat: number,
   lng: number,
-): ImportedPoint | null {
+): SavedPointLike | null {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   return findSavedPointInIndex(buildSavedPointCoordIndex(points), lat, lng);
 }
@@ -122,9 +123,8 @@ export async function removeSavedPointFromCollection(
   targetId: ImportedPoint['id'],
 ): Promise<void> {
   const key = queryKeys.userPointsAll(owner);
-  // Отменяем летящее чтение коллекции: она читается постранично (#1706) и
-  // резолвится долго, поэтому её ответ пришёл бы ПОСЛЕ оптимистичной записи и
-  // вернул бы удалённую точку. Трейлингового рефетча, который это чинил, больше нет.
+  // Отменяем летящее чтение коллекции: его ответ пришёл бы ПОСЛЕ
+  // оптимистичной записи и вернул бы удалённую точку. Трейлингового рефетча, который это чинил, больше нет.
   // Только при уже загруженной коллекции: `cancelQueries` откатывает данные к
   // предыдущему состоянию, и на ПЕРВОМ чтении это `undefined` — оптимистичная
   // запись оставила бы кэш из одной точки, свежий на весь staleTime.
@@ -133,9 +133,10 @@ export async function removeSavedPointFromCollection(
   }
   // Оптимистично убираем точку из кэша, чтобы `isSaved` (и ♥) переключились
   // сразу, не дожидаясь рефетча всей коллекции.
-  queryClient.setQueryData<ImportedPoint[]>(key, (old) =>
+  queryClient.setQueryData<SavedPointLike[]>(key, (old) =>
     readPointsFromUnknown(old).filter((p) => p.id !== targetId),
   );
+  userPointDetailsStore.remove([Number(targetId)]);
   try {
     await userPointsApi.deletePoint(targetId);
   } catch (e) {
@@ -144,8 +145,7 @@ export async function removeSavedPointFromCollection(
     throw e;
   }
   // Рефетча на успехе нет намеренно: DELETE прошёл, кэш уже совпадает с сервером.
-  // #1706 — коллекция читается постранично, и полный рефетч стоил бы
-  // ceil(count/200) запросов на каждое снятие. Клиентский лимитер считает
+  // Полный рефетч коллекции на каждое снятие — лишний запрос всех пинов; клиентский лимитер считает
   // `/user-points/` одним ключом (`utils/rateLimiter.ts:58`, 60 запросов в
   // минуту), поэтому серия сохранений упиралась бы в ложное 429.
 }
@@ -187,45 +187,21 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
       // already shows this point as saved we never POST a duplicate.
       if (savedPoint) return;
       const key = queryKeys.userPointsAll(owner);
-      const hasCollection = queryClient.getQueryData(key) !== undefined;
-      const collectionPartial = isPointsCollectionPartial(queryClient, owner);
       const targetLat = Number(payload.latitude ?? coord?.lat);
       const targetLng = Number(payload.longitude ?? coord?.lng);
-      if (!hasCollection || collectionPartial) {
-        // The cache cannot prove absence while its first full read is pending or
-        // while it contains a streamed prefix (#1709). Join the active full
-        // read (Query.fetch deduplicates it), then repeat the coordinate guard
-        // before POST. Failing closed is intentional: creating before this check
-        // can duplicate a point which exists beyond the cached prefix.
-        let completePoints = await queryClient.fetchQuery<ImportedPoint[]>({
+      if (queryClient.getQueryData(key) === undefined) {
+        // Кэш не доказывает отсутствие точки, пока коллекция не прочитана:
+        // присоединяемся к летящему чтению пинов (Query.fetch дедуплицирует)
+        // и повторяем координатную проверку перед POST. Fail closed: создать
+        // до проверки — сделать дубль, сервер по координатам не дедуплицирует.
+        const completePoints = await queryClient.fetchQuery<UserPointPin[]>({
           queryKey: key,
-          queryFn: async () => {
-            const allPoints = await userPointsApi.getAllPoints();
-            markPointsCollectionComplete(queryClient, owner);
-            return allPoints;
-          },
-          staleTime: 0,
+          queryFn: () => userPointsApi.getAllPins(),
+          staleTime: USER_POINTS_COLLECTION_STALE_TIME_MS,
         });
-        // A full-read consumer can mount while `usePointsDataModel` is fetching
-        // page 1 under the same key. React Query joins that request, whose result
-        // is only a prefix. Once it settles, run the required full query.
-        if (isPointsCollectionPartial(queryClient, owner)) {
-          completePoints = await queryClient.fetchQuery<ImportedPoint[]>({
-            queryKey: key,
-            queryFn: async () => {
-              const allPoints = await userPointsApi.getAllPoints();
-              markPointsCollectionComplete(queryClient, owner);
-              return allPoints;
-            },
-            staleTime: 0,
-          });
-          if (isPointsCollectionPartial(queryClient, owner)) {
-            throw new Error('Saved points collection is still partial');
-          }
-        }
         if (findSavedPointByCoord(completePoints, targetLat, targetLng)) return;
       }
-      // См. `removeSaved`: летящее постраничное чтение затёрло бы оптимистичную
+      // См. `removeSaved`: летящее чтение коллекции затёрло бы оптимистичную
       // точку, пользователь увидел бы «не сохранено» и создал дубль — сервер не
       // умеет дедуплицировать по координатам.
       await queryClient.cancelQueries({ queryKey: key });
@@ -238,7 +214,7 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
       // `findSavedPointByCoord`), чтобы иконка ＋→✓ переключилась мгновенно.
       const optimisticPointId = allocateOptimisticPointId();
       const optimistic = { ...(payload as ImportedPoint), id: optimisticPointId };
-      queryClient.setQueryData<ImportedPoint[]>(key, (old) => [
+      queryClient.setQueryData<SavedPointLike[]>(key, (old) => [
         ...readPointsFromUnknown(old),
         optimistic,
       ]);
@@ -247,15 +223,15 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
         created = await userPointsApi.createPoint(payload);
       } catch (e) {
         // Откат: убираем оптимистичную точку.
-        queryClient.setQueryData<ImportedPoint[]>(key, (old) =>
+        queryClient.setQueryData<SavedPointLike[]>(key, (old) =>
           readPointsFromUnknown(old).filter((p) => p.id !== optimisticPointId),
         );
         throw e;
       }
       // Заменяем оптимистичную запись реальной (с серверным id). Полного рефетча
       // на успехе нет — см. `removeSaved`: кэш уже держит серверную запись.
-      queryClient.setQueryData<ImportedPoint[]>(key, (old) =>
-        readPointsFromUnknown(old).map((p) => (p.id === optimisticPointId ? created : p)),
+      queryClient.setQueryData<SavedPointLike[]>(key, (old) =>
+        readPointsFromUnknown(old).map((p) => (p.id === optimisticPointId ? toUserPointPin(created) : p)),
       );
     },
     [coord, owner, queryClient, savedPoint],

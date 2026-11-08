@@ -28,7 +28,8 @@ jest.mock('@/components/UserPoints/usePointsHeaderRenderer', () => ({
 jest.mock('@/api/userPoints', () => ({
   userPointsApi: {
     getPoints: jest.fn(async () => []),
-    getPointsPage: jest.fn(async () => ({ items: [], hasMore: false })),
+    getAllPins: jest.fn(async () => []),
+    getPointsByIds: jest.fn(async () => []),
     createPoint: jest.fn(),
     updatePoint: jest.fn(),
     deletePoint: jest.fn(),
