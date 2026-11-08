@@ -97,61 +97,68 @@ const PointListRow = React.memo(function PointListRow({
   }, [handleRowPress, shouldIgnoreWebRowEvent]);
   const rowContent = (
     <>
-      <View style={styles.listRowThumb}>
-        {imageUrl && !imageError ? (
-          <ImageCardMedia
-            src={imageUrl}
-            alt={point.address}
-            fit="contain"
-            blurBackground
-            allowCriticalWebBlur
-            blurRadius={16}
-            placeholderColor={placeholderColor}
-            placeholderBlurhash={
-              Platform.OS === 'web' ? undefined : (placeholderBlurhash ?? undefined)
-            }
-            priority="low"
-            loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
-            onError={handleImageError}
-            style={StyleSheet.absoluteFill}
-          />
-        ) : (
-          <View style={styles.listRowThumbPlaceholder} />
-        )}
-      </View>
-
-      <View style={styles.listRowInfo}>
-        <View style={styles.listRowHeader}>
-          <View style={styles.listRowBullet}>
-            <Text style={styles.listRowBulletText}>{index + 1}</Text>
-          </View>
-          <Text style={styles.listRowTitle} numberOfLines={2}>
-            {point.address || i18nT('travel:common.noAddress')}
-          </Text>
+      {/* Медиа-объект: кадр 4:3 + текст. Ряд действий ниже — на всю ширину карточки,
+          иначе узкая колонка текста ломает его на 3 строки, а кадр тянется на всю
+          высоту строки и `contain` даёт широкие поля сверху и снизу. */}
+      <View style={styles.listRowMain}>
+        <View style={styles.listRowThumb}>
+          {imageUrl && !imageError ? (
+            <ImageCardMedia
+              src={imageUrl}
+              alt={point.address}
+              fit="contain"
+              blurBackground
+              allowCriticalWebBlur
+              blurRadius={16}
+              placeholderColor={placeholderColor}
+              placeholderBlurhash={
+                Platform.OS === 'web' ? undefined : (placeholderBlurhash ?? undefined)
+              }
+              priority="low"
+              loading={Platform.OS === 'web' ? 'lazy' : 'lazy'}
+              onError={handleImageError}
+              style={StyleSheet.absoluteFill}
+            />
+          ) : (
+            <View style={styles.listRowThumbPlaceholder} />
+          )}
         </View>
 
-        {point.coord ? (
-          <CardActionPressable
-            style={[styles.listRowCoordTouchFrame, globalFocusStyles.focusable]}
-            onPress={openMapFromLink}
-            accessibilityLabel={i18nT('travel:components.travel.PointListRow.koordinaty_value1_591481b3', { value1: point.coord })}
-            title={i18nT('travel:components.travel.PointListRow.otkryt_koordinaty_v_google_maps_2d3dbad0')}
-          >
-            <View style={styles.listRowCoordChip}>
-              <Feather name="map-pin" size={12} color={colors.textMuted} />
-              <Text style={styles.listRowCoordText} numberOfLines={1}>
-                {point.coord}
-              </Text>
+        <View style={styles.listRowInfo}>
+          <View style={styles.listRowHeader}>
+            <View style={styles.listRowBullet}>
+              <Text style={styles.listRowBulletText}>{index + 1}</Text>
             </View>
-          </CardActionPressable>
-        ) : null}
+            <Text style={styles.listRowTitle} numberOfLines={2}>
+              {point.address || i18nT('travel:common.noAddress')}
+            </Text>
+          </View>
 
-        {!!categoryLabel && (
-          <Text style={styles.listRowCategory} numberOfLines={1}>
-            {categoryLabel}
-          </Text>
-        )}
+          {point.coord ? (
+            <CardActionPressable
+              style={[styles.listRowCoordTouchFrame, globalFocusStyles.focusable]}
+              onPress={openMapFromLink}
+              accessibilityLabel={i18nT('travel:components.travel.PointListRow.koordinaty_value1_591481b3', { value1: point.coord })}
+              title={i18nT('travel:components.travel.PointListRow.otkryt_koordinaty_v_google_maps_2d3dbad0')}
+            >
+              <View style={styles.listRowCoordChip}>
+                <Feather name="map-pin" size={12} color={colors.textMuted} />
+                <Text style={styles.listRowCoordText} numberOfLines={1}>
+                  {point.coord}
+                </Text>
+              </View>
+            </CardActionPressable>
+          ) : null}
 
+          {!!categoryLabel && (
+            <Text style={styles.listRowCategory} numberOfLines={1}>
+              {categoryLabel}
+            </Text>
+          )}
+        </View>
+      </View>
+
+      {point.coord || onAddPoint ? (
         <View style={styles.listRowActions}>
           {point.coord ? (
             <>
@@ -176,20 +183,12 @@ const PointListRow = React.memo(function PointListRow({
                   <Feather name="send" size={14} color={colors.textMuted} />
                 </View>
               </CardActionPressable>
-
-              <View
-                style={styles.listRowNavigationMenu}
-                {...(Platform.OS === 'web' ? { dataSet: { cardAction: 'true' } } : null)}
-              >
-                <PointNavigationMenu
-                  coord={point.coord}
-                  label={i18nT('travel:components.travel.PointListRow.navigatsiya_17c636a8')}
-                  testIDPrefix={`travel-point-row-navigation-${point.id}`}
-                />
-              </View>
             </>
           ) : null}
 
+          {/* «Мои точки» — до «Навигации»: на узкой карточке переносится на вторую
+              строку именно растущая «Навигация» (целиком на ширину), а не одинокая
+              кнопка у правого края. */}
           {onAddPoint && (
             <CardActionPressable
               onPress={onAddPoint}
@@ -207,14 +206,27 @@ const PointListRow = React.memo(function PointListRow({
                 <ActivityIndicator size="small" color={colors.primaryDark} />
               ) : (
                 <>
-                  <Feather name="map-pin" size={13} color={colors.primaryDark} />
+                  <Feather name="map-pin" size={14} color={colors.primaryDark} />
                   <Text style={styles.listRowAddBtnText}>{i18nT('travel:components.travel.PointListRow.moi_tochki_aad50a18')}</Text>
                 </>
               )}
             </CardActionPressable>
           )}
+
+          {point.coord ? (
+            <View
+              style={styles.listRowNavigationMenu}
+              {...(Platform.OS === 'web' ? { dataSet: { cardAction: 'true' } } : null)}
+            >
+              <PointNavigationMenu
+                coord={point.coord}
+                label={i18nT('travel:components.travel.PointListRow.navigatsiya_17c636a8')}
+                testIDPrefix={`travel-point-row-navigation-${point.id}`}
+              />
+            </View>
+          ) : null}
         </View>
-      </View>
+      ) : null}
     </>
   );
 

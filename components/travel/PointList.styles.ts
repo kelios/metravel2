@@ -323,29 +323,46 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
       },
     }),
   },
+  // Строка = медиа-объект (кадр + текст) и под ним ряд действий на всю ширину.
+  // Раньше кадр и колонка текста стояли в `row/stretch`: кадр 96px тянулся на
+  // высоту всех кнопок (~190px), `contain` давал пустые поля сверху и снизу, а
+  // действия в узкой колонке ломались на три строки.
   listRowPressable: {
-    flexDirection: 'row',
-    alignItems: 'stretch',
+    flexDirection: 'column',
+    gap: DESIGN_TOKENS.spacing.xs,
+    padding: DESIGN_TOKENS.spacing.xs,
     ...Platform.select({
       web: { cursor: 'pointer' as any },
     }),
   },
+  listRowMain: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: DESIGN_TOKENS.spacing.sm,
+  },
+  // Слот кадра фиксированной формы 4:3 (большинство снимков точек — альбомные),
+  // а не колонка высотой в строку: `contain` и заливка `dominant_color` остаются
+  // (docs/RULES.md, «Images must preserve original aspect ratio»), поля минимальны.
   listRowThumb: {
-    width: 96,
-    minHeight: 96,
+    width: '30%',
+    maxWidth: 128,
+    aspectRatio: 4 / 3,
+    alignSelf: 'flex-start',
+    flexShrink: 0,
+    borderRadius: DESIGN_TOKENS.radii.sm,
     backgroundColor: colors.backgroundSecondary,
     position: 'relative',
     overflow: 'hidden',
   },
   listRowThumbPlaceholder: {
-    width: 96,
-    minHeight: 96,
+    ...StyleSheet.absoluteFill,
     backgroundColor: colors.backgroundTertiary,
   },
   listRowInfo: {
     flex: 1,
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
-    paddingHorizontal: DESIGN_TOKENS.spacing.md,
+    minWidth: 0,
+    paddingVertical: DESIGN_TOKENS.spacing.xxs,
+    paddingRight: DESIGN_TOKENS.spacing.xs,
     gap: 4,
     justifyContent: 'center',
   },
@@ -409,30 +426,39 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     marginVertical: -12,
     justifyContent: 'center',
   },
+  // Все элементы ряда высотой 44, поэтому выравнивание по верху: раскрытое меню
+  // «Навигации» растёт вниз внутри своей колонки, а кнопки слева не съезжают в
+  // середину его высоты.
   listRowActions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
+    alignItems: 'flex-start',
+    gap: DESIGN_TOKENS.spacing.xxs,
   },
   /**
    * Тач-таргет иконок «копировать»/«поделиться» (#1734): рамка 44dp вокруг
-   * видимого квадрата 36 (`listRowIconBtn`). По вертикали поля отрицательные
-   * целиком (ряд не растёт), по горизонтали — только на ширину зазора, чтобы
-   * рамки соседних кнопок не пересекались.
+   * видимого квадрата 36 (`listRowIconBtn`). По горизонтали поля отрицательные
+   * на ширину зазора, чтобы рамки соседних кнопок не пересекались.
    */
   listRowIconTouchFrame: {
     width: DESIGN_TOKENS.touchTarget.minWidth,
     height: DESIGN_TOKENS.touchTarget.minHeight,
-    marginVertical: -(DESIGN_TOKENS.touchTarget.minHeight - 36) / 2,
+    // По вертикали без отрицательных полей: ряд и так высотой 44 («Навигация»,
+    // «Мои точки»), а при выравнивании по верху квадрат 36 иначе встаёт на 4px
+    // выше соседей.
     marginHorizontal: -2,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Растёт в остатке ряда, но не шире 440 — без пилюли на всю ширину десктопа;
+  // 440 — чтобы в раскрытом меню по три в ряд влезали «Яндекс Карты» без «…».
+  // На узкой карточке не помещается после кнопок и уходит на вторую строку целиком.
   listRowNavigationMenu: {
-    flexBasis: '100%',
-    marginTop: DESIGN_TOKENS.spacing.xxs,
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 150,
+    minWidth: 0,
+    maxWidth: 440,
   },
   listRowIconBtn: {
     alignItems: 'center',
@@ -452,20 +478,21 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
   listRowAddBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
     // 44 — минимум тач-таргета. Измерено в браузере до правки: 25×95 px (#1733).
     // Гейт `scripts/guard-touch-targets.js` эту кнопку не видит и увидеть не
     // может: он сравнивает только ОБЪЯВЛЕННЫЕ числовые размеры, а высота здесь
     // набиралась паддингом, рамкой и шрифтом. Расширение INTERACTIVE_ELEMENTS
     // на `CardActionPressable` (#1734) это тоже не чинит — проверено прогоном.
     minHeight: 44,
+    gap: 6,
     paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 7,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
+    // Пилюля — та же форма, что у «Навигации» рядом.
+    borderRadius: DESIGN_TOKENS.radii.full,
     borderWidth: 1,
     borderColor: colors.primary,
     backgroundColor: 'transparent',
-    marginLeft: 'auto' as any,
     ...Platform.select({
       web: {
         cursor: 'pointer' as any,
@@ -478,8 +505,8 @@ export const createPointListStyles = (colors: ReturnType<typeof useThemedColors>
     backgroundColor: colors.primarySoft,
   },
   listRowAddBtnText: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: DESIGN_TOKENS.typography.sizes.sm,
+    fontWeight: '700',
     color: colors.primaryText,
   },
   globalFocusStyle: globalFocusStyles.focusable,
