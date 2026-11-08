@@ -315,6 +315,8 @@ const QUESTS = [
     { questId: 'spb-dostoevsky-sennaya', dir: 'spbDostoevskySennaya', finaleId: 333 },
     { questId: 'istanbul-balat-fener', dir: 'istanbulBalatFener', finaleId: 334 },
     { questId: 'tbilisi-sololaki-courtyards', dir: 'tbilisiSololakiCourtyards', finaleId: 335 },
+    // Алматы (квест 298) и волна D5 (339–342) — finaleId сверен по тексту финала 2026-11-08 (#3171)
+    { questId: 'almaty-verny-shadows', dir: 'almatyVernyShadows', finaleId: 295 },
     { questId: 'boston-freedom-trail', dir: 'bostonFreedomTrail', finaleId: 336 },
     { questId: 'kyoto-gion-kiyomizu', dir: 'kyotoGionKiyomizu', finaleId: 337 },
     { questId: 'hanoi-returned-sword', dir: 'hanoiReturnedSword', finaleId: 338 },
