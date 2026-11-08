@@ -331,9 +331,19 @@ export const userPointsApi = {
    * Returns the page items plus a heuristic `hasMore` flag derived from whether
    * the backend returned a full `perPage` batch.
    */
-  async getPointsPage(page: number, perPage: number): Promise<{ items: ImportedPoint[]; hasMore: boolean }> {
-    const items = await this.getPoints({ page, perPage });
-    return { items, hasMore: items.length >= perPage };
+  async getPointsPage(
+    page: number,
+    perPage: number,
+  ): Promise<{ items: ImportedPoint[]; hasMore: boolean; total: number }> {
+    const raw = await apiClient.get<unknown>(
+      buildPointsEndpoint({ page, perPage }),
+      USER_POINTS_LIST_TIMEOUT_MS,
+    );
+    const { items, total } = readPointsPayload(raw);
+    // `total` — серверный `count` страницы (#3133): экран показывает «Загружено
+    // N из M», пока фоновая докачка не завершилась. Голый массив без конверта
+    // даёт `total = items.length` — это и есть вся коллекция.
+    return { items, hasMore: items.length >= perPage, total };
   },
 
   async getPoint(id: number) {

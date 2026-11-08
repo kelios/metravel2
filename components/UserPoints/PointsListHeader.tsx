@@ -15,6 +15,7 @@ import type { PointFilters as PointFiltersType } from '@/types/userPoints'
 
 import type { PointsListStyles } from './types'
 import { translate as i18nT } from '@/i18n'
+import { formatInteger } from '@/i18n/format'
 import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
 
 
@@ -153,11 +154,11 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
           <View style={local.statsGrid}>
             <View style={[styles.statPill, local.statCard]}>
               <Text style={styles.statPillLabel}>{i18nT('map:components.UserPoints.PointsListHeader.vsego_f6d5c240')}</Text>
-              <Text style={[styles.statPillValue, local.statValue]}>{total || 0}</Text>
+              <Text style={[styles.statPillValue, local.statValue]}>{formatInteger(total || 0)}</Text>
             </View>
             <View style={[styles.statPill, local.statCard]}>
               <Text style={styles.statPillLabel}>{i18nT('map:components.UserPoints.PointsListHeader.naydeno_3670717b')}</Text>
-              <Text style={[styles.statPillValue, local.statValue]}>{found || 0}</Text>
+              <Text style={[styles.statPillValue, local.statValue]}>{formatInteger(found || 0)}</Text>
             </View>
           </View>
         </View>

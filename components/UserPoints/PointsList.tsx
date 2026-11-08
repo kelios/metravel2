@@ -145,6 +145,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     isLoading,
     loadFailed,
     refetch,
+    loadProgress,
     categoryIdToName,
     categoryData,
     resolveCategoryIdsByNames,
@@ -345,38 +346,34 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     availableColors,
   });
 
+  // #3133: renderItem стабилен — изменчивые входы (активная точка, выделение,
+  // время в пути) читаются из latest-ref, а перерисовку видимых строк запускает
+  // `listExtraData` у FlashList. Раньше смена активной точки меняла identity
+  // renderItem → пересоздавалась шапка списка и все видимые карточки.
+  const renderItemStateRef = useRef({ activePointId, activeDriveInfo, selectedIdSet, selectionMode });
+  renderItemStateRef.current = { activePointId, activeDriveInfo, selectedIdSet, selectionMode };
   const renderItem = useCallback(
-    ({ item }: { item: any }) => (
-      <PointsListItem
-        point={item}
-        layout={listColumns > 1 ? 'grid' : 'list'}
-        onPress={selectionMode ? undefined : handleOpenPointOnMap}
-        onEdit={selectionMode ? undefined : openEditPoint}
-        onDelete={selectionMode ? undefined : requestDeletePoint}
-        selectionMode={selectionMode}
-        selected={selectedIdSet.has(Number(item?.id))}
-        active={Number(item?.id) === Number(activePointId)}
-        compact
-        driveInfo={Number(item?.id) === Number(activePointId) ? activeDriveInfo : null}
-        onToggleSelect={toggleSelect}
-      />
-    ),
-    [
-      activeDriveInfo, 
-      activePointId, 
-      listColumns, 
-      handleOpenPointOnMap,
-      openEditPoint, 
-      requestDeletePoint, 
-      selectedIdSet, 
-      selectionMode, 
-      toggleSelect
-    ]
+    ({ item }: { item: any }) => {
+      const state = renderItemStateRef.current;
+      const isActive = Number(item?.id) === Number(state.activePointId);
+      return (
+        <PointsListItem
+          point={item}
+          layout={listColumns > 1 ? 'grid' : 'list'}
+          onPress={state.selectionMode ? undefined : handleOpenPointOnMap}
+          onEdit={state.selectionMode ? undefined : openEditPoint}
+          onDelete={state.selectionMode ? undefined : requestDeletePoint}
+          selectionMode={state.selectionMode}
+          selected={state.selectedIdSet.has(Number(item?.id))}
+          active={isActive}
+          compact
+          driveInfo={isActive ? state.activeDriveInfo : null}
+          onToggleSelect={toggleSelect}
+        />
+      );
+    },
+    [handleOpenPointOnMap, listColumns, openEditPoint, requestDeletePoint, toggleSelect]
   );
-
-  const renderFooter = useCallback(() => {
-    return null
-  }, [])
 
   const renderEmpty = useCallback(() => {
     if (loadFailed) {
@@ -436,7 +433,8 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 	        viewMode={viewMode}
 	        isLoading={isLoading}
 	        filteredPoints={visibleFilteredPoints}
-	        listExtraData={{ selectionMode, selectedIds }}
+	        listExtraData={{ selectionMode, selectedIds, activePointId, activeDriveInfo }}
+	        loadProgress={loadProgress}
 	        listKey={selectionMode ? 'selection' : 'normal'}
 	        panelTab={panelTab}
 	        onPanelTabChange={setPanelTab}
@@ -445,7 +443,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 	        renderItem={renderItem}
 	        renderEmpty={renderEmpty}
         onOpenActions={handleOpenActions}
-        renderFooter={renderFooter}
         onRefresh={refetch}
 	        currentLocation={currentLocation}
 	        onMapPress={handleMapPress}

@@ -26,6 +26,8 @@ export type PointsPaginationState = {
   nextPage: number;
   /** Коллекция в кэше полная — доверять ей можно. */
   complete: boolean;
+  /** Серверный `count` коллекции — знаменатель прогресса «Загружено N из M» (#3133). */
+  total?: number;
 };
 
 /** Общий staleTime коллекции: одинаковый у producer'а и у потребителей. */

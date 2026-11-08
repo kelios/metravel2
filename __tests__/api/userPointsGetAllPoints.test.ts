@@ -85,3 +85,25 @@ describe('userPointsApi.getAllPoints', () => {
     expect(mockedGet).toHaveBeenCalledTimes(1);
   });
 });
+
+// #3133: знаменатель «Загружено N из M» — серверный `count` страницы.
+describe('userPointsApi.getPointsPage', () => {
+  beforeEach(() => {
+    mockedGet.mockReset();
+  });
+
+  it('отдаёт серверный count как total и hasMore по полной странице', async () => {
+    mockedGet.mockResolvedValue({ count: 2656, results: makePoints(1, 200) });
+    const page = await userPointsApi.getPointsPage(1, 200);
+    expect(page.total).toBe(2656);
+    expect(page.hasMore).toBe(true);
+    expect(page.items).toHaveLength(200);
+    expect(parsePageParams(mockedGet.mock.calls[0][0])).toEqual({ page: '1', perPage: '200' });
+  });
+
+  it('голый массив без конверта: total = длина ответа', async () => {
+    mockedGet.mockResolvedValue(makePoints(1, 7));
+    const page = await userPointsApi.getPointsPage(1, 200);
+    expect(page).toMatchObject({ total: 7, hasMore: false });
+  });
+});

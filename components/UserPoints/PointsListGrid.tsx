@@ -1,11 +1,12 @@
 import { searchInputAccessibilityProps } from '@/utils/webProps'
 import React, { useMemo } from 'react'
-import { Platform, View, ScrollView, TextInput, Text as RNText, RefreshControl } from 'react-native'
+import { Platform, View, ScrollView, TextInput, Text as RNText } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { FlashList } from '@shopify/flash-list'
 
 import { UserPointsMap } from '@/components/UserPoints/UserPointsMap'
-import { PointsListWebLazyScroll } from '@/components/UserPoints/PointsListWebLazyScroll'
+import { PHONE_LIST_IMAGE_HEIGHT } from '@/components/UserPoints/PointCard'
+import { PointsListSkeleton, WIDE_LIST_SKELETON_IMAGE_HEIGHT } from '@/components/UserPoints/PointsListSkeleton'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useResponsiveWidth } from '@/hooks/useResponsive'
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
@@ -18,7 +19,7 @@ import { getMapGeocoderLanguage } from '@/utils/mapLocale'
 
 import type { PointsListStyles } from './types'
 import { translate as i18nT } from '@/i18n'
-import { formatNumber } from '@/i18n/format'
+import { formatInteger, formatNumber } from '@/i18n/format'
 import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 import { createLocalStyles } from './PointsListGrid.styles'
 
@@ -42,6 +43,8 @@ export const PointsListGrid: React.FC<{
   filteredPoints: any[]
   listExtraData?: any
   listKey?: string
+  /** Прогресс фоновой докачки коллекции — строка «Загружено N из M» под списком (#3133). */
+  loadProgress?: { loaded: number; total: number; complete: boolean }
   panelTab?: 'filters' | 'list'
   onPanelTabChange?: (tab: 'filters' | 'list') => void
 
@@ -52,7 +55,6 @@ export const PointsListGrid: React.FC<{
   renderEmpty: () => React.ReactElement
   onOpenActions?: () => void
 
-  renderFooter?: () => React.ReactElement | null
 
 	  onRefresh: () => void
 
@@ -92,6 +94,7 @@ export const PointsListGrid: React.FC<{
   filteredPoints,
   listExtraData,
   listKey,
+  loadProgress,
   panelTab: controlledPanelTab,
   onPanelTabChange,
   numColumns,
@@ -99,7 +102,6 @@ export const PointsListGrid: React.FC<{
   renderItem,
   renderEmpty,
   onOpenActions,
-	  renderFooter,
 	  onRefresh,
 	  currentLocation,
 	  onMapPress,
@@ -164,20 +166,23 @@ export const PointsListGrid: React.FC<{
   const geocodeAbortRef = React.useRef<AbortController | null>(null)
   const geocodeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastGeocodedQueryRef = React.useRef<string>('')
+  // #3133: число во вкладке — через форматтер локали («2 656»), а пока первая
+  // страница не пришла — многоточие вместо «(0)», которое читалось как «точек нет».
+  const listCountLabel = isLoading ? '…' : formatInteger(filteredPoints.length)
   const panelOptions = React.useMemo(
     () => [
       { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_karty_bf82f2ec') },
-      { key: 'list', label: i18nT('map:components.UserPoints.PointsListGrid.spisok_value1_cc1e53c4', { value1: filteredPoints.length }) },
+      { key: 'list', label: i18nT('map:components.UserPoints.PointsListGrid.spisok_value1_cc1e53c4', { value1: listCountLabel }) },
     ],
-    [filteredPoints.length]
+    [listCountLabel]
   )
   const mobileTabOptions = React.useMemo(
     () => [
       { key: 'map', label: i18nT('map:components.UserPoints.PointsListGrid.karta_b48708d8'), icon: 'map' },
-      { key: 'list', label: i18nT('map:components.UserPoints.PointsListGrid.spisok_value1_cc1e53c4', { value1: filteredPoints.length }), icon: 'list' },
+      { key: 'list', label: i18nT('map:components.UserPoints.PointsListGrid.spisok_value1_cc1e53c4', { value1: listCountLabel }), icon: 'list' },
       { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_a9025123'), icon: 'filter-list' },
     ],
-    [filteredPoints.length]
+    [listCountLabel]
   )
   const handleMobileTabChange = React.useCallback(
     (key: string) => {
@@ -427,44 +432,64 @@ export const PointsListGrid: React.FC<{
     ]
   )
 
+  // #3133: подвал списка — прогресс фоновой докачки. Пока страницы стримятся,
+  // счётчик вкладки растёт скачками по 200; строка объясняет, что это загрузка.
+  const renderListFooter = React.useCallback(() => {
+    if (isLoading || !loadProgress || loadProgress.complete || loadProgress.total <= loadProgress.loaded) return null
+    return (
+      <RNText style={localStyles.listProgressText} testID="userpoints-list-progress">
+        {i18nT('map:components.UserPoints.PointsListGrid.zagruzheno_value1_iz_value2_6c50f47e', {
+          value1: formatInteger(loadProgress.loaded),
+          value2: formatInteger(loadProgress.total),
+        })}
+      </RNText>
+    )
+  }, [isLoading, loadProgress, localStyles.listProgressText])
+
+  // Пока первая страница не пришла — каркас карточек, не пустота и не «нет точек».
+  // Высота фото каркаса повторяет карточку (#2253: каркас ≠ карточка → прыжок при замене).
+  const renderListEmpty = React.useCallback(
+    () =>
+      isLoading ? (
+        <PointsListSkeleton imageHeight={isWideScreen ? WIDE_LIST_SKELETON_IMAGE_HEIGHT : PHONE_LIST_IMAGE_HEIGHT} />
+      ) : (
+        renderEmpty()
+      ),
+    [isLoading, isWideScreen, renderEmpty]
+  )
+
+  // #3133: один виртуализированный список на web и native. Раньше web рисовал
+  // ScrollView со срезом по 80 карточек и сбрасывал его на каждую новую ссылку
+  // filteredPoints (в том числе на каждую докачанную страницу).
   const renderListPanel = React.useCallback(
     () => (
-      isWeb ? (
-        <PointsListWebLazyScroll
-          filteredPoints={filteredPoints}
-          isLoading={isLoading}
-          listKey={listKey}
-          localStyles={localStyles}
-          renderEmpty={renderEmpty}
-          renderListHeader={renderListHeader}
-          renderPointListItem={renderPointListItem}
-        />
-      ) : (
-        <FlashList
-          key={listKey ?? 'userpoints-list'}
-          style={localStyles.rightPanelScroll}
-          contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
-          data={filteredPoints}
-          extraData={listFlashExtraData}
-          keyExtractor={(item, index) => String((item as any)?.id ?? `idx-${index}`)}
-          {...({ estimatedItemSize: 120 } as any)}
-          testID="userpoints-panel-content-list"
-          renderItem={renderPointListItem}
-          ListHeaderComponent={renderListHeader()}
-          ListEmptyComponent={!isLoading ? renderEmpty : null}
-          showsVerticalScrollIndicator={true}
-          drawDistance={600}
-        />
-      )
+      <FlashList
+        key={listKey ?? 'userpoints-list'}
+        style={localStyles.rightPanelScroll}
+        contentContainerStyle={[localStyles.rightPanelContent, localStyles.pointsList] as any}
+        data={filteredPoints}
+        extraData={listFlashExtraData}
+        keyExtractor={(item, index) => String((item as any)?.id ?? `idx-${index}`)}
+        {...({ estimatedItemSize: 120 } as any)}
+        testID="userpoints-panel-content-list"
+        renderItem={renderPointListItem}
+        // Элемент, а не ссылка на функцию: FlashList делает createElement(функция),
+        // и новая identity колбэка (каждое нажатие в поиске) ремаунтила бы шапку —
+        // поле поиска теряло бы фокус после каждого символа.
+        ListHeaderComponent={renderListHeader()}
+        ListEmptyComponent={renderListEmpty}
+        ListFooterComponent={renderListFooter}
+        showsVerticalScrollIndicator={true}
+        drawDistance={600}
+      />
     ),
     [
       filteredPoints,
-      isLoading,
-      isWeb,
       listFlashExtraData,
       listKey,
       localStyles,
-      renderEmpty,
+      renderListEmpty,
+      renderListFooter,
       renderPointListItem,
       renderListHeader,
     ]
@@ -616,46 +641,12 @@ export const PointsListGrid: React.FC<{
   // summary-шапкой) применяем только на десктопе/широком web.
   if (viewMode === 'list' && isWideScreen) {
     const columns = typeof numColumns === 'number' && Number.isFinite(numColumns) ? numColumns : 1
-    if (isWeb) {
-      return (
-        <ScrollView
-          contentContainerStyle={columns > 1 ? styles.gridListContent : styles.listContent}
-          refreshControl={
-            <RefreshControl refreshing={isLoading} onRefresh={onRefresh} />
-          }
-        >
-          {renderHeader()}
-          {filteredPoints.length === 0 && !isLoading ? renderEmpty() : null}
-          {columns > 1 ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {filteredPoints.map((item: any, index: number) => {
-                const gap = 12
-                const col = columns > 0 ? index % columns : 0
-                const isFirst = col === 0
-                const isLast = col === columns - 1
-                const paddingLeft = isFirst ? 0 : gap / 2
-                const paddingRight = isLast ? 0 : gap / 2
-                return (
-                  <View key={String(item?.id ?? `idx-${index}`)} style={{ paddingLeft, paddingRight, width: `${100 / columns}%` }}>
-                    {renderItem({ item })}
-                  </View>
-                )
-              })}
-            </View>
-          ) : (
-            filteredPoints.map((item: any, index: number) => (
-              <React.Fragment key={String(item?.id ?? `idx-${index}`)}>
-                {renderItem({ item })}
-              </React.Fragment>
-            ))
-          )}
-          {renderFooter?.()}
-        </ScrollView>
-      )
-    }
+    // #3133: desktop list-режим тоже виртуализирован — раньше web рисовал все
+    // filteredPoints.map без окна.
     return (
       <FlashList
         data={filteredPoints}
+        extraData={listFlashExtraData}
         renderItem={({ item, index }: { item: any; index: number }) => {
           if (columns <= 1) {
             return renderItem({ item })
@@ -674,9 +665,9 @@ export const PointsListGrid: React.FC<{
         }}
         keyExtractor={(item: { id?: string | number }, index: number) => String(item?.id ?? `idx-${index}`)}
         {...({ estimatedItemSize: 120 } as any)}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={!isLoading ? renderEmpty : null}
-        ListFooterComponent={renderFooter}
+        ListHeaderComponent={renderHeader()}
+        ListEmptyComponent={renderListEmpty}
+        ListFooterComponent={renderListFooter}
         numColumns={columns}
         key={String(columns)}
         contentContainerStyle={columns > 1 ? styles.gridListContent : styles.listContent}

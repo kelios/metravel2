@@ -25,6 +25,9 @@ import type { ImportedPoint } from '@/types/userPoints';
 import { useThemedColors } from '@/hooks/useTheme';
 import { useResponsiveWidth } from '@/hooks/useResponsive';
 import { METRICS } from '@/constants/layout';
+
+/** Высота фото-полосы карточки точки в списке на телефоне (#3133). */
+export const PHONE_LIST_IMAGE_HEIGHT = 96;
 import { openExternalUrlInNewTab } from '@/utils/externalLinks';
 import { getSiteBaseUrl } from '@/utils/seo';
 import { showToast } from '@/utils/toast';
@@ -200,10 +203,14 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   }, [layout, viewportWidth]);
   const imageHeight = React.useMemo(() => {
     if (layout === 'grid') return 220;
+    // #3133: на телефоне карточка в списке занимала половину экрана фотографией —
+    // одна точка на экран из 2656. Фото-полоса 96 px держит узнаваемость,
+    // а на экран помещаются 3–4 точки.
+    if (isPhone) return PHONE_LIST_IMAGE_HEIGHT;
     return isWebPlatform()
       ? Math.round(Math.max(128, Math.min(188, (cardWidth ?? getWebCardWidth(viewportWidth)) * 0.48)))
       : getNativeCardImageHeight(viewportWidth);
-  }, [cardWidth, layout, viewportWidth]);
+  }, [cardWidth, isPhone, layout, viewportWidth]);
 
   const copyCoords = React.useCallback(async () => {
     if (!coord) return;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useQuery, useQueryClient } from '@tanstack/react-query';
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
 import {
@@ -77,7 +77,7 @@ export const usePointsDataModel = ({
   const pointsQuery = useQuery({
     queryKey: queryKeys.userPointsAll(owner),
     queryFn: async () => {
-      const { items } = await userPointsApi.getPointsPage(1, defaultPerPage);
+      const { items, total } = await userPointsApi.getPointsPage(1, defaultPerPage);
       // #1709: пока докачка не закончилась, в кэше лежит ПРЕФИКС коллекции.
       // Отметка полноты — часть контракта общего ключа: потребители, которым
       // нужна вся коллекция, обязаны её прочитать прежде, чем поверить кэшу.
@@ -86,6 +86,7 @@ export const usePointsDataModel = ({
         // A short page is the end. An oversized page means the backend ignored
         // perPage and returned the complete set in one response (#752).
         complete: items.length !== defaultPerPage,
+        total,
       });
       return items;
     },
@@ -96,6 +97,33 @@ export const usePointsDataModel = ({
     if (pointsQuery.error) return [];
     return Array.isArray(pointsQuery.data) ? pointsQuery.data : [];
   }, [pointsQuery.data, pointsQuery.error]);
+
+  // #3133: прогресс фоновой докачки для списка («Загружено N из M»). Отметка
+  // пагинации пишется через setQueryData без фетча, поэтому читаем её
+  // подпиской на тот же ключ: `enabled: false` — никаких запросов, только
+  // уведомления об изменении данных.
+  const paginationQuery = useQuery<PointsPaginationState | undefined>({
+    queryKey: queryKeys.userPointsPagination(owner),
+    queryFn: skipToken,
+    enabled: false,
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+  const loadProgress = useMemo(() => {
+    const state = paginationQuery.data;
+    const loaded = points.length;
+    const total =
+      typeof state?.total === 'number' && Number.isFinite(state.total) && state.total >= loaded
+        ? state.total
+        : loaded;
+    return {
+      loaded,
+      total,
+      // Без отметки докачка либо не начиналась (пустой кэш), либо кэш заполнен
+      // полным чтением — в обоих случаях показывать «из M» нечего.
+      complete: state === undefined || state.complete,
+    };
+  }, [paginationQuery.data, points.length]);
 
   const backgroundLoadRef = useRef<{ running: boolean; token: number }>({ running: false, token: 0 });
 
@@ -131,7 +159,7 @@ export const usePointsDataModel = ({
         // Guard against runaway loops on an unexpectedly non-terminating backend.
         const maxPages = 200;
         while (!cancelled && page <= maxPages) {
-          const { items, hasMore } = await userPointsApi.getPointsPage(page, defaultPerPage);
+          const { items, hasMore, total } = await userPointsApi.getPointsPage(page, defaultPerPage);
           if (cancelled || backgroundLoadRef.current.token !== token) return;
           let added = 0;
           if (items.length > 0) {
@@ -147,11 +175,11 @@ export const usePointsDataModel = ({
           // paginating (returns the full set every time, see #752) or we are
           // past the end — stop instead of re-downloading the same payload.
           if (!hasMore || added === 0) {
-            writePointsPaginationState(queryClient, owner, { nextPage: page, complete: true });
+            writePointsPaginationState(queryClient, owner, { nextPage: page, complete: true, total });
             break;
           }
           page += 1;
-          writePointsPaginationState(queryClient, owner, { nextPage: page, complete: false });
+          writePointsPaginationState(queryClient, owner, { nextPage: page, complete: false, total });
         }
       } finally {
         if (backgroundLoadRef.current.token === token) {
@@ -305,6 +333,7 @@ export const usePointsDataModel = ({
       Boolean(pointsQuery.error) ||
       (pointsQuery.fetchStatus === 'paused' && !Array.isArray(pointsQuery.data)),
     refetch: pointsQuery.refetch,
+    loadProgress,
     categoryIdToName,
     categoryData,
     resolveCategoryIdsByNames,

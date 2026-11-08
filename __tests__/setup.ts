@@ -858,10 +858,11 @@ jest.mock('@shopify/flash-list', () => {
 
   // Как у настоящего FlashList: ListEmptyComponent рисуется между шапкой и
   // подвалом, когда данных нет (#2179 — состояние каталога до результатов).
-  const FlashList = ({ data = [], renderItem, keyExtractor, ListHeaderComponent, ListEmptyComponent, ListFooterComponent }: any) => {
+  // `testID` доезжает до корня: экраны ищут список по нему (#3133 — web-панель «Моих точек»).
+  const FlashList = ({ data = [], renderItem, keyExtractor, ListHeaderComponent, ListEmptyComponent, ListFooterComponent, testID }: any) => {
     return React.createElement(
       RN.View,
-      null,
+      testID ? { testID } : null,
       renderListSlot(ListHeaderComponent),
       (data || []).length === 0 ? renderListSlot(ListEmptyComponent) : null,
       (data || []).map((item: any, index: number) => {
