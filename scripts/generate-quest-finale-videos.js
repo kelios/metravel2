@@ -307,6 +307,10 @@ const QUESTS = [
     { questId: 'nizhny-novgorod-koromyslova', dir: 'nizhnyNovgorodKoromyslova', finaleId: 325 },
     { questId: 'bern-zytglogge-bear', dir: 'bernZytgloggeBear', finaleId: 326 },
     { questId: 'gothenburg-poseidon-haga', dir: 'gothenburgPoseidonHaga', finaleId: 327 },
+    { questId: 'nuremberg-schoener-brunnen-ring', dir: 'nurembergSchoenerBrunnenRing', finaleId: 328 },
+    { questId: 'salzburg-mozart-getreidegasse', dir: 'salzburgMozartGetreidegasse', finaleId: 329 },
+    { questId: 'dresden-fuerstenzug', dir: 'dresdenFuerstenzug', finaleId: 330 },
+    { questId: 'hamburg-speicherstadt-stoertebeker', dir: 'hamburgSpeicherstadtStoertebeker', finaleId: 331 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
