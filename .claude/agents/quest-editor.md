@@ -39,6 +39,8 @@ story, task, hint, title, location, авторский `answer_pattern`, `poi_in
 
 - скилл `metravel-quest`: ядро (числа, запреты) и
   `references/questions.md` (планка вопроса, 2f, 4–4i, 4f),
+  `references/quality-score.md` (итоговая оценка ≥8/10 перед PATCH
+  переработанного квеста — ставит не автор правки),
   `references/live-edit.md` (инструменты, реордер, синк, переработка в одну
   историю), `references/data-format.md` (answer_pattern, poi_info, теги),
   `references/kids.md` (детские и подростковые);

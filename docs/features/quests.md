@@ -1534,7 +1534,9 @@ HTML (поисковики, no-JS, первый кадр): `useSyncExternalStore
 - Контент квестов: `scripts/<city>-quest-data.js` + универсальная идемпотентная
   миграция `node scripts/migrate-quest-from-file.js --source-file=… --dry-run|--apply`
   (отдельный `migrate-<city>-quest.js` — только для нестандартной логики),
-  гейт data-файла `npm run quest:gates -- --source=…`,
+  гейт data-файла `npm run quest:gates -- --source=…`, итоговая оценка
+  независимого ревью ≥8/10 перед заливкой (скилл `metravel-quest` →
+  `references/quality-score.md`, правило владельца 09.11.2026),
   `apply-quest-patches.js` (патчи в `.codex-temp/quest-audit/`), `sync-quest-to-prod.js`,
   `upload-quest-media*.js`, `generate-quest-finale-videos.js`,
   `audit-quest-coordinates.js`, `quest-geocheck.js`, `quest-poi-suggest.js`.
