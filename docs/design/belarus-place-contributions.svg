@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1020" height="330" viewBox="0 0 1020 330" role="img" aria-labelledby="title description">
   <title id="title">Допишем Беларусь вместе</title>
-  <desc id="description">Подборка с действием Поделиться фото и историей, карта со слоем Ищем историю, рядом с именем автора значки Автор и Сердце карты.</desc>
+  <desc id="description">Подборка с действием Рассказать о поездке, карта со слоем Ищем историю, рядом с именем автора значки Автор и Сердце карты.</desc>
   <defs>
     <symbol id="heart" viewBox="0 0 24 24"><path fill="currentColor" d="M12 21S2 14 2 8a5.5 5.5 0 0 1 10-3.2A5.5 5.5 0 0 1 22 8c0 6-10 13-10 13Z"/></symbol>
     <symbol id="pin" viewBox="0 0 40 44"><path fill="#90394c" d="M20 1A17 17 0 0 0 3 18c0 11 17 25 17 25s17-14 17-25A17 17 0 0 0 20 1Z"/><use href="#heart" x="10" y="9" width="20" height="20" color="#fff"/></symbol>
@@ -17,7 +17,7 @@
     <use href="#heart" x="41" y="208" width="15" height="15" color="#90394c"/>
     <text x="61" y="220" font-size="13">Ищем историю · Жиличи</text>
     <rect x="39" y="241" width="247" height="44" rx="9" fill="#27523d"/>
-    <text x="53" y="268" fill="#fff" font-size="14" font-weight="650">Поделиться фото и историей</text>
+    <text x="53" y="268" fill="#fff" font-size="14" font-weight="650">Рассказать о поездке</text>
     <rect x="352" y="18" width="316" height="294" rx="18" fill="#fff" stroke="#d6e2d5"/>
     <text x="373" y="50" font-size="13" font-weight="700">КАРТА / СЛОИ</text>
     <rect x="373" y="68" width="274" height="165" rx="10" fill="#e4ede0"/>
