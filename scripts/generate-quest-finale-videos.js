@@ -303,6 +303,10 @@ const QUESTS = [
     { questId: 'nessebar-forty-churches', dir: 'nessebarFortyChurches', finaleId: 321 },
     { questId: 'verona-arena-juliet', dir: 'veronaArenaJuliet', finaleId: 322 },
     { questId: 'thessaloniki-white-tower', dir: 'thessalonikiWhiteTower', finaleId: 323 },
+    { questId: 'seville-no8do-giralda', dir: 'sevilleNo8doGiralda', finaleId: 324 },
+    { questId: 'nizhny-novgorod-koromyslova', dir: 'nizhnyNovgorodKoromyslova', finaleId: 325 },
+    { questId: 'bern-zytglogge-bear', dir: 'bernZytgloggeBear', finaleId: 326 },
+    { questId: 'gothenburg-poseidon-haga', dir: 'gothenburgPoseidonHaga', finaleId: 327 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
