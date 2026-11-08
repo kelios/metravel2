@@ -173,6 +173,9 @@ export const PointsListGrid: React.FC<{
   // («Список (2655)») там не помещается ни с разрядами, ни без. Счётчик идёт
   // отдельным бейджем сегмента (как у общей карты), подпись — короткое «Список».
   const mobileListBadge = isLoading ? undefined : filteredPoints.length
+  // На 320 px сегмент ≈ 97 px: иконка + «Список» + бейдж «2656» не помещаются
+  // (прод-проба 08.11: scrollWidth > clientWidth), без иконок — помещаются.
+  const showMobileTabIcons = windowWidth >= 360
   const panelOptions = React.useMemo(
     () => [
       { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_karty_bf82f2ec') },
@@ -182,11 +185,11 @@ export const PointsListGrid: React.FC<{
   )
   const mobileTabOptions = React.useMemo(
     () => [
-      { key: 'map', label: i18nT('map:components.UserPoints.PointsListGrid.karta_b48708d8'), icon: 'map' },
-      { key: 'list', label: i18nT('map:components.UserPoints.PointsListHeader.spisok_b0731a7f'), icon: 'list', badge: mobileListBadge },
-      { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_a9025123'), icon: 'filter-list' },
+      { key: 'map', label: i18nT('map:components.UserPoints.PointsListGrid.karta_b48708d8'), icon: showMobileTabIcons ? 'map' : undefined },
+      { key: 'list', label: i18nT('map:components.UserPoints.PointsListHeader.spisok_b0731a7f'), icon: showMobileTabIcons ? 'list' : undefined, badge: mobileListBadge },
+      { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_a9025123'), icon: showMobileTabIcons ? 'filter-list' : undefined },
     ],
-    [mobileListBadge]
+    [mobileListBadge, showMobileTabIcons]
   )
   const handleMobileTabChange = React.useCallback(
     (key: string) => {
