@@ -8,7 +8,7 @@ import type { ImportedPoint } from '@/types/userPoints'
 import { isWebAutomation } from '@/utils/isWebAutomation'
 import { createLeafletLayer } from '@/utils/mapWebLayers'
 
-import { buildUserPointsTravelData, getUserPointsCenter, normalizeUserPoints } from './userPointsMapData'
+import { buildUserPointsTravelData, getUserPointsCenter, getUserPointsFocusBounds, normalizeUserPoints } from './userPointsMapData'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -19,6 +19,37 @@ type UserPointsMapWebControllerArgs = {
   mods: any
   colors: { primary: string }
   onMapUiApiReady?: (api: MapUiApi | null) => void
+}
+
+/** Доля точек, под которую подгоняется стартовая область карты (#3131). */
+const FOCUS_BOUNDS_SHARE = 0.9
+/** Максимальный зум стартовой подгонки и клика по точке из списка. */
+const FOCUS_MAX_ZOOM = 14
+
+/**
+ * Минимальный зум, при котором мир целиком заполняет контейнер карты (#3131):
+ * на телефоне 390×717 `fitBounds` по выбросам отдавал zoom 1 — мир высотой
+ * 512 px и пустые полосы без тайлов сверху и снизу. `getBoundsZoom(world, true)`
+ * возвращает наименьший зум, при котором вьюпорт лежит ВНУТРИ мира; Leaflet сам
+ * поднимает текущий зум, если он оказался ниже нового минимума.
+ */
+export function applyWorldMinZoom(map: any, L: any): number | null {
+  try {
+    if (!map || !L?.latLngBounds || typeof map.getBoundsZoom !== 'function') return null
+    const size = map.getSize?.()
+    if (!size || !(size.x > 0) || !(size.y > 0)) return null
+    const world = L.latLngBounds([
+      [-85, -180],
+      [85, 180],
+    ])
+    const minZoom = map.getBoundsZoom(world, true)
+    if (!Number.isFinite(minZoom)) return null
+    const next = Math.max(0, Math.ceil(minZoom))
+    if (typeof map.setMinZoom === 'function' && map.getMinZoom?.() !== next) map.setMinZoom(next)
+    return next
+  } catch {
+    return null
+  }
 }
 
 export function useUserPointsMapWebController({
@@ -322,12 +353,33 @@ export function useUserPointsMapWebController({
 
     try {
       const currentZoom = typeof mapInstance.getZoom === 'function' ? mapInstance.getZoom() : 12
-      const nextZoom = Math.max(14, Number.isFinite(currentZoom) ? currentZoom : 14)
+      const nextZoom = Math.max(FOCUS_MAX_ZOOM, Number.isFinite(currentZoom) ? currentZoom : FOCUS_MAX_ZOOM)
       mapInstance.setView([target.latitude, target.longitude], nextZoom, { animate: !isWebAutomation } as any)
     } catch {
       // noop
     }
   }, [activePointId, mapInstance, safePoints])
+
+  // Мир не меньше контейнера: без пустых полос над и под картой (#3131).
+  React.useEffect(() => {
+    const map = mapInstance
+    const L = mods?.L
+    if (!map || !L) return
+    applyWorldMinZoom(map, L)
+    const onResize = () => applyWorldMinZoom(map, L)
+    try {
+      map.on?.('resize', onResize)
+    } catch {
+      // noop
+    }
+    return () => {
+      try {
+        map.off?.('resize', onResize)
+      } catch {
+        // noop
+      }
+    }
+  }, [mapInstance, mods?.L])
 
   React.useEffect(() => {
     if (!mapInstance) return
@@ -339,10 +391,14 @@ export function useUserPointsMapWebController({
     try {
       if (safePoints.length === 1) {
         const point = safePoints[0]
-        mapInstance.setView([point.latitude, point.longitude], 14, { animate: !isWebAutomation } as any)
+        mapInstance.setView([point.latitude, point.longitude], FOCUS_MAX_ZOOM, { animate: !isWebAutomation } as any)
       } else {
-        const bounds = L.latLngBounds(safePoints.map((point: any) => [point.latitude, point.longitude]))
-        mapInstance.fitBounds(bounds, { padding: [40, 40], maxZoom: 14, animate: !isWebAutomation } as any)
+        // Подгонка под плотную часть коллекции, а не под все точки: четыре
+        // выброса на других континентах отдаляли карту до zoom 1–3 (#3131).
+        const focus = getUserPointsFocusBounds(safePoints, FOCUS_BOUNDS_SHARE)
+        if (!focus) return
+        const bounds = L.latLngBounds(focus)
+        mapInstance.fitBounds(bounds, { padding: [40, 40], maxZoom: FOCUS_MAX_ZOOM, animate: !isWebAutomation } as any)
       }
     } catch {
       // noop

@@ -86,7 +86,7 @@ const DELETE_SURFACES = {
   'components/UserPoints/PointsListActionsModal.tsx': ['sheet', 'пункт листа действий над точкой'],
   'components/UserPoints/PointsListBulkMapBar.tsx': ['bulk', 'удалить выбранные точки из панели выбора'],
   'components/UserPoints/PointsListBulkModals.tsx': ['dialog', 'кнопки диалогов подтверждения массовых действий'],
-  'components/UserPoints/UserPointsMapPointMarker.web.tsx': ['sheet', 'действие попапа точки на карте'],
+  'components/UserPoints/UserPointPopupContent.web.tsx': ['sheet', 'действие попапа точки на карте — содержимое ленивого попапа кластерного слоя (#3131)'],
   'components/listTravel/RecommendationsTabs.tsx': ['row', 'очистить список вкладки; confirmAction на всех платформах (#1556, #2115)'],
   'components/listTravel/TravelListItem.tsx': ['row', 'админское удаление карточки в списке'],
   'components/mainPage/StickySearchBar.tsx': ['row', 'очистить недавние поиски в выпадающем списке'],

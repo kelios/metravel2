@@ -2,7 +2,8 @@ import React from 'react'
 
 import type { ImportedPoint } from '@/types/userPoints'
 
-import { UserPointsMapPointMarkerWeb } from './UserPointsMapPointMarker.web'
+import { UserPointsClusterLayer, type UserPointMarkerHandle } from './UserPointsClusterLayer.web'
+import { UserPointPopupContent } from './UserPointPopupContent.web'
 import { translate as i18nT } from '@/i18n'
 
 
@@ -19,6 +20,7 @@ type UserPointsMapWebLayersProps = {
     primarySoft: string
     surface: string
     text: string
+    backgroundTertiary: string
   }
   centerOverride?: { lat: number; lng: number }
   searchMarker?: { lat: number; lng: number; label?: string } | null
@@ -28,8 +30,6 @@ type UserPointsMapWebLayersProps = {
   routeLines?: Array<{ id: number; line: Array<[number, number]> }>
   mapInstance: any
   isCompactPopup: boolean
-  isNarrowPopup: boolean
-  isTinyPopup: boolean
   driveInfoById: Record<number, DriveInfo | undefined>
   polylinePathOptions: any
   getMarkerIconCached: (color: any, opts?: { active?: boolean; emphasize?: boolean }) => any
@@ -39,11 +39,14 @@ type UserPointsMapWebLayersProps = {
   requestDriveInfo: (args: { pointId: number; pointLat: number; pointLng: number }) => void
   registerPointMarker: (args: {
     pointId: number
-    marker: any | null
+    marker: UserPointMarkerHandle | null
     coordKey?: string
     coordKeyFixed?: string
   }) => void
 }
+
+/** Зум, к которому карта приближается при клике по точке (как у общей карты). */
+const POINT_FOCUS_ZOOM = 14
 
 export function UserPointsMapWebStyles({
   colors,
@@ -117,8 +120,6 @@ export const UserPointsMapWebLayers = React.memo(function UserPointsMapWebLayers
     routeLines,
     mapInstance,
     isCompactPopup,
-    isNarrowPopup,
-    isTinyPopup,
     driveInfoById,
     polylinePathOptions,
     getMarkerIconCached,
@@ -128,6 +129,64 @@ export const UserPointsMapWebLayers = React.memo(function UserPointsMapWebLayers
     requestDriveInfo,
     registerPointMarker,
   } = props
+
+  // Клик по маркеру: приблизить к точке, при известной геолокации запросить
+  // время в пути, сообщить экрану о выборе. Попап Leaflet открывает сам (bindPopup).
+  const handleMarkerClick = React.useCallback(
+    (point: ImportedPoint, _handle: UserPointMarkerHandle) => {
+      const lat = Number(point.latitude)
+      const lng = Number(point.longitude)
+      const pointId = Number(point.id)
+      try {
+        const map = mapInstance
+        if (map && typeof map.getZoom === 'function' && typeof map.setView === 'function') {
+          const currentZoom = map.getZoom()
+          const nextZoom = Math.max(POINT_FOCUS_ZOOM, Number.isFinite(currentZoom) ? currentZoom : POINT_FOCUS_ZOOM)
+          map.setView([lat, lng], nextZoom, { animate: true } as any)
+        }
+      } catch {
+        // noop
+      }
+
+      try {
+        const userLat = Number(centerOverride?.lat)
+        const userLng = Number(centerOverride?.lng)
+        const driveInfo = Number.isFinite(pointId) ? driveInfoById[pointId] : undefined
+        if (
+          Number.isFinite(pointId) &&
+          Number.isFinite(userLat) &&
+          Number.isFinite(userLng) &&
+          driveInfo?.status !== 'ok' &&
+          driveInfo?.status !== 'loading'
+        ) {
+          requestDriveInfo({ pointId, pointLat: lat, pointLng: lng })
+        }
+      } catch {
+        // noop
+      }
+
+      onPointPress?.(point)
+    },
+    [centerOverride?.lat, centerOverride?.lng, driveInfoById, mapInstance, onPointPress, requestDriveInfo],
+  )
+
+  const renderPopup = React.useCallback(
+    (point: ImportedPoint, closePopup: () => void) => {
+      const pointId = Number(point.id)
+      return (
+        <UserPointPopupContent
+          point={point}
+          colors={colors as any}
+          isCompactPopup={isCompactPopup}
+          driveInfo={Number.isFinite(pointId) ? driveInfoById[pointId] : undefined}
+          onClose={closePopup}
+          onEditPoint={onEditPoint}
+          onDeletePoint={onDeletePoint}
+        />
+      )
+    },
+    [colors, driveInfoById, isCompactPopup, onDeletePoint, onEditPoint],
+  )
 
   return (
     <>
@@ -181,38 +240,20 @@ export const UserPointsMapWebLayers = React.memo(function UserPointsMapWebLayers
         />
       ) : null}
 
-      {points.map((point) => {
-        const id = Number((point as any)?.id)
-        const driveInfo = Number.isFinite(id) ? driveInfoById[id] : undefined
-        const lat = Number((point as any)?.latitude)
-        const lng = Number((point as any)?.longitude)
-        const coordKey = Number.isFinite(lat) && Number.isFinite(lng) ? `${lat},${lng}` : ''
-        const coordKeyFixed = Number.isFinite(lat) && Number.isFinite(lng) ? `${lat.toFixed(6)},${lng.toFixed(6)}` : ''
-
-        return (
-          <UserPointsMapPointMarkerWeb
-            key={String((point as any)?.id)}
-            mods={mods}
-            point={point}
-            isActive={Number(activePointId) === Number((point as any)?.id)}
-            colors={colors as any}
-            mapInstance={mapInstance}
-            isCompactPopup={isCompactPopup}
-            isNarrowPopup={isNarrowPopup}
-            isTinyPopup={isTinyPopup}
-            centerOverride={centerOverride}
-            driveInfo={driveInfo}
-            getMarkerIconCached={getMarkerIconCached}
-            onPointPress={onPointPress}
-            onEditPoint={onEditPoint}
-            onDeletePoint={onDeletePoint}
-            requestDriveInfo={requestDriveInfo}
-            onMarkerReady={({ pointId, marker }) => {
-              registerPointMarker({ pointId, marker, coordKey, coordKeyFixed })
-            }}
-          />
-        )
-      })}
+      {mapInstance ? (
+        <UserPointsClusterLayer
+          L={mods?.L}
+          map={mapInstance}
+          points={points}
+          activePointId={activePointId}
+          isCompactPopup={isCompactPopup}
+          colors={colors}
+          getMarkerIconCached={getMarkerIconCached}
+          onMarkerClick={handleMarkerClick}
+          registerPointMarker={registerPointMarker}
+          renderPopup={renderPopup}
+        />
+      ) : null}
     </>
   )
 })

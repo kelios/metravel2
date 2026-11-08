@@ -1,7 +1,5 @@
 /**
- * User Points Map - optimized map for user's personal points
- * Extends TravelMap with user-specific features (edit, delete, drive info)
- * Uses all optimizations from Phases 1-6
+ * User Points Map — карта личных точек (web: Leaflet + кластеры, native: WebView).
  * @module components/UserPoints/UserPointsMap
  */
 
@@ -90,23 +88,15 @@ interface UserPointsMapProps {
    * Map height
    */
   height?: number;
-
-  /**
-   * Enable clustering (auto-enabled for >25 points)
-   */
-  enableClustering?: boolean;
 }
 
 /**
- * Optimized map component for user's personal points
+ * Карта личных точек пользователя.
  *
- * Key improvements over old PointsMap.tsx:
- * - Uses TravelMap base (all optimizations from Phases 1-6)
- * - Lazy Leaflet loading (useLeafletLoader)
- * - Dynamic clustering (100-1000x faster)
- * - LazyPopup (70% less DOM nodes)
- * - Modular structure (MapLayers, etc.)
- * - 300 lines vs 1739 lines (-82%)
+ * Web: Leaflet через `loadLeafletRuntime`; точки живут в `L.markerClusterGroup`
+ * (`UserPointsClusterLayer.web.tsx`, #3131) — кластеры при отдалении, один
+ * ленивый попап на карту, стартовая область по плотной части коллекции и
+ * `minZoom` по размеру контейнера. Native: WebView+Leaflet стек экрана /map.
  *
  * @example
  * ```typescript
@@ -117,7 +107,6 @@ interface UserPointsMapProps {
  *   onPointPress={handlePress}
  *   onEditPoint={handleEdit}
  *   onDeletePoint={handleDelete}
- *   enableClustering={userPoints.length > 25}
  * />
  * ```
  */
@@ -136,9 +125,7 @@ export const UserPointsMap: React.FC<UserPointsMapProps> = ({
   onMapUiApiReady,
   routeLines,
   height,
-  enableClustering: _enableClustering,
 }) => {
-  void _enableClustering;
   if (Platform.OS === 'web') {
     return (
       <UserPointsMapWeb
@@ -353,7 +340,7 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
   const styles = React.useMemo(() => createStyles(colors), [colors]);
   const loadingStyles = React.useMemo(() => createLoadingStyles(colors), [colors]);
 
-  const { mods, isCompactPopup, isNarrowPopup, isTinyPopup } = useUserPointsMapWebRuntime();
+  const { mods, isCompactPopup } = useUserPointsMapWebRuntime();
   const { driveInfoById, requestDriveInfo } = useUserPointsDriveInfo(centerOverride);
   const { getMarkerIconCached } = useUserPointsMarkerIcons({ L: mods?.L, colors });
   const { center, mapInstance, mapRef, polylinePathOptions, registerPointMarker, safePoints, handleMapReady, handleWhenReady } =
@@ -408,8 +395,6 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
           routeLines={routeLines}
           mapInstance={mapInstance}
           isCompactPopup={isCompactPopup}
-          isNarrowPopup={isNarrowPopup}
-          isTinyPopup={isTinyPopup}
           driveInfoById={driveInfoById}
           polylinePathOptions={polylinePathOptions}
           getMarkerIconCached={getMarkerIconCached}

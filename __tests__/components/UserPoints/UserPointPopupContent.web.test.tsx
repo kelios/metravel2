@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { Text, View } from 'react-native';
 
-import { UserPointsMapPointMarkerWeb } from '@/components/UserPoints/UserPointsMapPointMarker.web';
+import { UserPointPopupContent } from '@/components/UserPoints/UserPointPopupContent.web';
 import { PointStatus, type ImportedPoint } from '@/types/userPoints';
 
 const mockPlacePopupCard = jest.fn((props: any) => (
@@ -35,7 +35,7 @@ jest.mock('@/utils/externalLinks', () => ({
   openExternalUrlInNewTab: jest.fn(async () => true),
 }));
 
-describe('UserPointsMapPointMarkerWeb', () => {
+describe('UserPointPopupContent (web, #3131)', () => {
   const point: ImportedPoint = {
     id: 77,
     name: 'Saved place',
@@ -57,85 +57,41 @@ describe('UserPointsMapPointMarkerWeb', () => {
     },
   };
 
-  const markerElement = {
-    setAttribute: jest.fn(),
-  };
-  const markerApi = {
-    openPopup: jest.fn(),
-    closePopup: jest.fn(),
-    getElement: jest.fn(() => markerElement),
-  };
+  const colors = {
+    backgroundTertiary: '#eee',
+    primary: '#111',
+    primaryDark: '#111',
+    primarySoft: '#ddd',
+    surface: '#fff',
+    text: '#111',
+    textMuted: '#666',
+  } as any;
 
-  const Marker = React.forwardRef<any, any>(({ children, eventHandlers }, ref) => {
-    React.useImperativeHandle(ref, () => markerApi);
-    return (
-      <View testID="mock-marker">
-        <Text accessibilityLabel="marker" onPress={eventHandlers?.click}>
-          marker
-        </Text>
-        {children}
-      </View>
-    );
-  });
-  Marker.displayName = 'MockMarker';
-
-  const Popup = ({ children, className }: any) => (
-    <View testID="mock-popup" data-class-name={className}>
-      {children}
-    </View>
-  );
-
-  const renderMarker = async (overrides: Partial<React.ComponentProps<typeof UserPointsMapPointMarkerWeb>> = {}) => {
-    const mapInstance = {
-      getZoom: jest.fn(() => 12),
-      setView: jest.fn(),
-      closePopup: jest.fn(),
-    };
+  const renderContent = async (overrides: Partial<React.ComponentProps<typeof UserPointPopupContent>> = {}) => {
+    const onClose = jest.fn();
     const onEditPoint = jest.fn();
     const onDeletePoint = jest.fn();
-    const requestDriveInfo = jest.fn();
-
     await render(
-      <UserPointsMapPointMarkerWeb
-        mods={{ Marker, Popup }}
+      <UserPointPopupContent
         point={point}
-        isActive
-        colors={{
-          backgroundTertiary: '#eee',
-          primary: '#111',
-          primaryDark: '#111',
-          primarySoft: '#ddd',
-          surface: '#fff',
-          text: '#111',
-          textMuted: '#666',
-        } as any}
-        mapInstance={mapInstance}
+        colors={colors}
         isCompactPopup
-        isNarrowPopup
-        isTinyPopup={false}
-        centerOverride={{ lat: 50, lng: 19 }}
-        getMarkerIconCached={jest.fn(() => 'icon')}
-        onPointPress={jest.fn()}
+        onClose={onClose}
         onEditPoint={onEditPoint}
         onDeletePoint={onDeletePoint}
-        requestDriveInfo={requestDriveInfo}
         {...overrides}
       />
     );
-
-    return { mapInstance, onDeletePoint, onEditPoint, requestDriveInfo };
+    return { onClose, onEditPoint, onDeletePoint };
   };
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockPlacePopupCard.mockClear();
-    markerElement.setAttribute.mockClear();
   });
 
   it('renders the saved point popup through the shared PlacePopupCard template', async () => {
-    await renderMarker();
-
-    expect(markerElement.setAttribute).toHaveBeenCalledWith('aria-label', 'Saved place');
+    await renderContent();
 
     expect(screen.getByTestId('mock-place-popup-card')).toBeTruthy();
     const props = mockPlacePopupCard.mock.calls[0]?.[0];
@@ -169,7 +125,7 @@ describe('UserPointsMapPointMarkerWeb', () => {
   });
 
   it('passes the saved travel id from tags to the related travel stack (#1960)', async () => {
-    await renderMarker({
+    await renderContent({
       point: {
         ...point,
         tags: { travelUrl: 'https://metravel.by/travels/forty-krakova', travelId: 435 },
@@ -185,7 +141,7 @@ describe('UserPointsMapPointMarkerWeb', () => {
   });
 
   it('ignores a malformed saved travel id', async () => {
-    await renderMarker({ point: { ...point, tags: { travelUrl: '/travels/krakow', travelId: 'abc' } } });
+    await renderContent({ point: { ...point, tags: { travelUrl: '/travels/krakow', travelId: 'abc' } } });
 
     expect(mockPlacePopupCard.mock.calls.at(-1)?.[0]).toEqual(
       expect.objectContaining({ relatedTravelUrl: '/travels/krakow', relatedTravelId: null }),
@@ -193,30 +149,32 @@ describe('UserPointsMapPointMarkerWeb', () => {
   });
 
   it('does not pass a saved travel id without its travel url', async () => {
-    await renderMarker({ point: { ...point, tags: { travelId: 435 } } });
+    await renderContent({ point: { ...point, tags: { travelId: 435 } } });
 
     expect(mockPlacePopupCard.mock.calls.at(-1)?.[0]).toEqual(
       expect.objectContaining({ relatedTravelUrl: null, relatedTravelId: null }),
     );
   });
 
-  it('keeps edit, delete, close and marker click behavior from the old popup', async () => {
-    const { mapInstance, onDeletePoint, onEditPoint, requestDriveInfo } = await renderMarker();
-
-    await fireEvent.press(screen.getByLabelText('marker'));
-    expect(markerApi.openPopup).toHaveBeenCalled();
-    expect(mapInstance.setView).toHaveBeenCalledWith([50.05924, 19.93941], 14, { animate: true });
-    expect(requestDriveInfo).toHaveBeenCalledWith({ pointId: 77, pointLat: 50.05924, pointLng: 19.93941 });
+  it('closes the popup before edit/delete and exposes the card close', async () => {
+    const { onClose, onDeletePoint, onEditPoint } = await renderContent();
 
     await fireEvent.press(screen.getByLabelText('Редактировать'));
-    expect(markerApi.closePopup).toHaveBeenCalled();
-    expect(mapInstance.closePopup).toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
     expect(onEditPoint).toHaveBeenCalledWith(point);
 
     await fireEvent.press(screen.getByLabelText('Удалить'));
+    expect(onClose).toHaveBeenCalledTimes(2);
     expect(onDeletePoint).toHaveBeenCalledWith(point);
 
     await fireEvent.press(screen.getByLabelText('Закрыть попап'));
-    expect(markerApi.closePopup).toHaveBeenCalledTimes(3);
+    expect(onClose).toHaveBeenCalledTimes(3);
+  });
+
+  it('turns drive info into metres and seconds for the card', async () => {
+    await renderContent({ driveInfo: { status: 'ok', distanceKm: 12.5, durationMin: 20 } });
+    expect(mockPlacePopupCard.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ drivingDistanceMeters: 12500, drivingDurationSeconds: 1200, isDrivingLoading: false }),
+    );
   });
 });

@@ -168,7 +168,7 @@ const PlacePopupCard: React.FC<Props> = ({
   title,
   renderText,
   subtitle: _subtitle,
-  imageUrl,
+  imageUrl: imageUrlProp,
   categoryLabel,
   coord,
   drivingDistanceMeters,
@@ -204,8 +204,8 @@ const PlacePopupCard: React.FC<Props> = ({
   imageHeight: _imageHeight = 56,
   compactLayout = false,
   fullscreenOnMobile = false,
-  bottomSheetSplit = false,
-  popupSplit = false,
+  bottomSheetSplit: bottomSheetSplitProp = false,
+  popupSplit: popupSplitProp = false,
   fullscreenTopInset = 0,
   fullscreenBottomInset = 0,
   onClose,
@@ -230,6 +230,17 @@ const PlacePopupCard: React.FC<Props> = ({
   // (ActionListSheet) instead of an always-expanded inline grid, so the card
   // content (status / point actions) stays visible without scrolling.
   const [navSheetVisible, setNavSheetVisible] = useState(false);
+  // #3131: фото, которое так и не загрузилось (терминальный сбой ImageCardMedia
+  // после своего ретрая), не должно держать под собой пустой белый блок на
+  // половину попапа — карточка перестраивается как точка без фото. Храним URL,
+  // а не флаг: смена картинки сбрасывает состояние сама.
+  const [failedHeroUrl, setFailedHeroUrl] = useState<string | null>(null);
+  const imageUrl = imageUrlProp && failedHeroUrl !== imageUrlProp ? imageUrlProp : null;
+  const bottomSheetSplit = bottomSheetSplitProp && Boolean(imageUrl);
+  const popupSplit = popupSplitProp && Boolean(imageUrl);
+  const handleHeroError = useCallback(() => {
+    if (imageUrlProp) setFailedHeroUrl(imageUrlProp);
+  }, [imageUrlProp]);
 
   const {
     revealPopupImageOnLoadOnly,
@@ -901,25 +912,18 @@ const PlacePopupCard: React.FC<Props> = ({
                   <View style={[styles.iconActionBubble, navExpanded && styles.iconActionBubbleActive]}>
                     {/* #842: единая иконка «Навигация» (компас) — как в PointNavigationMenu и на карточках. */}
                     <Feather name={SEMANTIC_ACTION_ICON.navigationMenu} size={19} color={colors.text} />
-                    {isBottomCardLayout ? (
-                      <Feather
-                        name={useNavSheet ? 'more-horizontal' : navExpanded ? 'chevron-up' : 'chevron-down'}
-                        size={11}
-                        color={colors.textMuted}
-                        style={{ position: 'absolute', right: 6, bottom: 5 } as any}
-                      />
-                    ) : null}
+                    {/* Индикатор «ещё» живёт в пузыре на всех раскладках (#3131): в строке
+                        подписи он отнимал ширину у равной колонки, и в desktop-попапе
+                        с пятью действиями «Навигация» резалась до «Навига…». */}
+                    <Feather
+                      name={useNavSheet || !isBottomCardLayout ? 'more-horizontal' : navExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={11}
+                      color={colors.textMuted}
+                      style={{ position: 'absolute', right: 6, bottom: 5 } as any}
+                    />
                   </View>
                   <View style={styles.iconActionLabelRow}>
                     <Text style={styles.iconActionLabel} numberOfLines={1}>{i18nT('map:components.MapPage.Map.PlacePopupCard.index.navigatsiya_b55f1991')}</Text>
-                    {/* #FIX-3 — on the native bottom card the indicator is already in the
-                        bubble (more-horizontal); a second chevron in the label row stole
-                        width and clipped «Навигация» → «Навигац…». On the web popup the
-                        toggle now opens the ActionListSheet picker (not an inline grid),
-                        so show the same «⋯» menu affordance instead of a chevron. */}
-                    {isBottomCardLayout ? null : (
-                      <Feather name="more-horizontal" size={13} color={colors.textMuted} />
-                    )}
                   </View>
                 </CardActionPressable>
               )}
@@ -1088,6 +1092,9 @@ const PlacePopupCard: React.FC<Props> = ({
             priority="high"
             loading="eager"
             optimizeWeb={false}
+            // Терминальный сбой, не каждая попытка: на native `onError` приходит и
+            // перед ретраем (#1212/#802), а hero схлопывать можно только после него.
+            onTerminalError={handleHeroError}
             style={StyleSheet.absoluteFill}
           />
           {Platform.OS === 'web' ? (
