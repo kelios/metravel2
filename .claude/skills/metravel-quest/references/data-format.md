@@ -11,8 +11,11 @@
 
 - Координаты — decimal degrees, 6 знаков; `mapsUrl` —
   `https://maps.google.com/?q=<lat>,<lng>` (или `?q=<место>`).
-- `meta`: `duration_min`, `difficulty` (`easy`/`medium`/`hard`), `tags`
-  (таксономия ниже), опц. `pet_friendly`.
+- `meta`: `lat`, `lng` (координаты квеста — старт/интро, decimal; ОБЯЗАТЕЛЬНЫ:
+  миграция шлёт `String(meta.lat)`, без них POST `/api/quests/` даёт 400, а
+  dry-run и `quest:gates` этого не ловят — 18.07 и 08.11.2026), `duration_min`,
+  `difficulty` (`easy`/`medium`/`hard`), `tags` (таксономия ниже), опц.
+  `pet_friendly`.
 - `country` — id страны КВЕСТА (не travel-страна): Польша 160, Беларусь 3,
   Армения 6; полный список `GET /api/countries/`.
 - `intro` — `is_intro`, `answer_pattern.type='any'`: завязка, тон, правила
