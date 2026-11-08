@@ -278,4 +278,51 @@ describe('TravelHeroExtras', () => {
       expect.objectContaining({ travelUrl: '/travels/99' })
     )
   })
+
+  // Один ряд действий одной высоты: на desktop web статус — 36 px чип, как
+  // офлайн, навигатор и GPX; на телефоне и на любом native (планшет тоже) —
+  // тач-таргет, как у соседних OfflineSaveControl/TravelRouteActions.
+  it('передаёт статусу размер ряда действий по ширине и платформе', async () => {
+    const travel: any = { id: 7, slug: 'grodno', name: 'Гродно за 1 день' }
+    Platform.OS = 'web' as any
+    await render(
+      <TravelHeroExtras travel={travel} isMobile={false} sectionLinks={[]} onQuickJump={jest.fn()} />
+    )
+    expect(mockTravelStatusButton).toHaveBeenCalledWith(expect.objectContaining({ size: 'sm' }))
+
+    mockTravelStatusButton.mockClear()
+    await render(
+      <TravelHeroExtras travel={travel} isMobile sectionLinks={[]} onQuickJump={jest.fn()} />
+    )
+    expect(mockTravelStatusButton).toHaveBeenCalledWith(expect.objectContaining({ size: 'md' }))
+
+    // Native tablet (width ≥ 768 → isMobile=false) keeps the 44/48 px touch row.
+    mockTravelStatusButton.mockClear()
+    Platform.OS = 'ios' as any
+    await render(
+      <TravelHeroExtras travel={travel} isMobile={false} sectionLinks={[]} onQuickJump={jest.fn()} />
+    )
+    expect(mockTravelStatusButton).toHaveBeenCalledWith(expect.objectContaining({ size: 'md' }))
+  })
+
+  // Табы дублируют навигацию desktop-сайдбара; прячет их CSS-медиазапрос
+  // (`travelFirstScreenLayout`) по маркеру, а не JS-ветка — ширина 0 на SSR.
+  it('помечает ряд табов маркером для CSS-скрытия рядом с сайдбаром (web)', async () => {
+    Platform.OS = 'web' as any
+    const view = await render(
+      <TravelHeroExtras
+        travel={{ id: 2, slug: 'hero-web', name: 'Hero web' } as any}
+        isMobile={false}
+        sectionLinks={[{ key: 'map', label: 'Карта', icon: 'map' }] as any}
+        onQuickJump={jest.fn()}
+      />
+    )
+    const hasMarker = (node: any): boolean => {
+      if (!node || typeof node !== 'object') return false
+      if (Array.isArray(node)) return node.some(hasMarker)
+      return node.props?.dataSet?.travelQuickJumps === 'true' || hasMarker(node.children)
+    }
+    expect(mockTravelHeroQuickJumps).toHaveBeenCalled()
+    expect(hasMarker(view.toJSON())).toBe(true)
+  })
 })

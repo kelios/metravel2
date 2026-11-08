@@ -4,7 +4,7 @@
  */
 
 import React, { memo, useCallback, useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { useThemedColors } from '@/hooks/useTheme';
 import { getAccessibilityLabel } from '@/utils/a11y';
 import { useTravelDetailsStyles } from '../TravelDetailsStyles';
@@ -15,6 +15,12 @@ import { translate as i18nT } from '@/i18n'
 
 
 const CONTENT_MARGIN_STYLE = { marginTop: 12 } as const;
+
+// Заголовок карточки мельче заголовков секций (`sectionHeaderText`, 20 px):
+// это переключатель над статьёй, а не раздел страницы.
+const localStyles = StyleSheet.create({
+  title: { fontSize: 16, lineHeight: 22 },
+});
 
 const normalizeViewChildren = (children: React.ReactNode): React.ReactNode =>
   React.Children.map(children, (child) => {
@@ -120,14 +126,14 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = memo(
               </View>
             ) : iconName ? (
               <View style={styles.sectionHeaderIcon}>
-                <Icon name={iconName} size={18} color={colors.primaryDark} />
+                <Icon name={iconName} size={16} color={colors.primaryDark} />
               </View>
             ) : null}
-            <Text style={styles.sectionHeaderText}>{title}</Text>
+            <Text style={[styles.sectionHeaderText, localStyles.title]}>{title}</Text>
           </View>
           <View style={styles.sectionHeaderRight}>
             {badgeLabel && <Text style={styles.sectionHeaderBadge}>{badgeLabel}</Text>}
-            <Icon name={open ? 'chevron-up' : 'chevron-down'} size={22} />
+            <Icon name={open ? 'chevron-up' : 'chevron-down'} size={18} />
           </View>
         </CardActionPressable>
         {open ? <View style={CONTENT_MARGIN_STYLE}>{safeChildren}</View> : null}

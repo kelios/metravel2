@@ -18,6 +18,13 @@ import { formatDays } from '@/utils/pluralize'
  * Значения продублированы в SSG-шелле (`scripts/ssg-skeletons.js`: CommonJS на
  * этапе сборки не импортирует TS); паритет держит
  * `__tests__/components/travel/travelFirstScreenLayout.test.ts`.
+ *
+ * Desktop (≥ 768 px): DOM и визуальный порядок совпадают — галерея → подпись →
+ * строка заголовка (h1 слева, «Хочу поехать» справа) → факты и действия →
+ * статья. Строку держит обёртка `heading`; ширина кнопки зарезервирована, чтобы
+ * ленивый слот не сдвигал перенос h1. Табы быстрых переходов при ≥ 1280 px
+ * скрыты тем же медиазапросом, что открывает левый сайдбар с той же
+ * навигацией, — CSS, а не `isMobile`, по той же причине (ширина 0 на SSR).
  */
 export const TRAVEL_FIRST_SCREEN = {
   /** Последний mobile-пиксель: тот же порог, что `isMobile` (`width < tablet`). */
@@ -35,29 +42,51 @@ export const TRAVEL_FIRST_SCREEN = {
   metaFontSizePx: 14,
   metaLineHeightPx: 20,
   metaMarginBottomPx: 12,
+  /** Высота слота «Хочу поехать» до загрузки ленивой кнопки (touch target). */
+  favoriteReservePx: 44,
+  /** Первый desktop-пиксель: h1 и «Хочу поехать» встают в одну строку. */
+  desktopMinWidth: `${METRICS.breakpoints.tablet}px`,
+  /** С этой ширины открыт левый сайдбар (`shouldShowTravelDetailsDesktopSidebar`). */
+  sidebarMinWidth: `${METRICS.breakpoints.desktop}px`,
+  /** Резерв ширины кнопки «Хочу поехать» в строке заголовка. */
+  favoriteReserveWidthPx: 176,
 } as const
 
 /** `dataSet`/атрибут-маркеры, на которые опирается таблица стилей. */
 export const TRAVEL_FIRST_SCREEN_ATTR = 'data-travel-first-screen'
 export const TRAVEL_SLIDER_CAPTION_ATTR = 'data-travel-slider-caption-part'
+/** Ряд табов быстрых переходов: дублирует навигацию desktop-сайдбара. */
+export const TRAVEL_QUICK_JUMPS_ATTR = 'data-travel-quick-jumps'
+/** react-native-web пропускает `data-*` в DOM только через `dataSet`. */
+export const TRAVEL_QUICK_JUMPS_WEB_PROPS = { dataSet: { travelQuickJumps: 'true' } } as const
 
 const MOBILE_SANS_FONT =
   '-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",system-ui,sans-serif'
 
 const F = TRAVEL_FIRST_SCREEN
 const CAPTION = `[${TRAVEL_SLIDER_CAPTION_ATTR}`
+const SCREEN = `[${TRAVEL_FIRST_SCREEN_ATTR}`
 
 export const TRAVEL_FIRST_SCREEN_STYLES = `
-[${TRAVEL_FIRST_SCREEN_ATTR}="meta"]{display:none}
-[${TRAVEL_FIRST_SCREEN_ATTR}="favorite"]{min-height:76px;margin-bottom:12px}
+${SCREEN}="meta"]{display:none}
+${SCREEN}="favorite"]{min-height:${F.favoriteReservePx}px;margin-bottom:12px}
 @media(max-width:${F.mobileMaxWidth}){
 [data-testid="travel-details-stale-content-banner"]{order:-2}
-[${TRAVEL_FIRST_SCREEN_ATTR}="favorite"]{order:-1}
+${SCREEN}="heading"]{order:-1}
+${SCREEN}="favorite"]{order:-1}
 [${TRAVEL_FIRST_SCREEN_ATTR}="title"]{order:-1;margin:${F.titleMarginTopPx}px 0 ${F.titleMarginBottomPx}px!important}
 [${TRAVEL_FIRST_SCREEN_ATTR}="meta"]{order:-1;display:block;height:${F.metaLineHeightPx}px;margin:0 0 ${F.metaMarginBottomPx}px;font:400 ${F.metaFontSizePx}px/${F.metaLineHeightPx}px ${MOBILE_SANS_FONT};color:var(--color-textMuted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 ${CAPTION}="root"]{padding:6px 4px 8px!important;gap:8px!important;align-items:baseline!important}
 ${CAPTION}="counter"]{flex-direction:row!important;align-items:baseline!important;gap:4px!important;padding-right:8px!important}
 ${CAPTION}="position"],${CAPTION}="total"],${CAPTION}="text"]{font:400 13px/18px ${MOBILE_SANS_FONT}!important;font-style:normal!important;color:var(--color-textMuted)!important}
+}
+@media(min-width:${F.desktopMinWidth}){
+${SCREEN}="heading"]{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin:12px 0 4px}
+${SCREEN}="title"]{flex:1 1 0;min-width:0;margin:0!important}
+${SCREEN}="favorite"]{flex:0 0 auto;display:flex;justify-content:flex-end;min-width:${F.favoriteReserveWidthPx}px;margin:0}
+}
+@media(min-width:${F.sidebarMinWidth}){
+[${TRAVEL_QUICK_JUMPS_ATTR}="true"]{display:none!important}
 }
 `
 

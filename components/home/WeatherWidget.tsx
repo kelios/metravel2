@@ -6,7 +6,6 @@ import { memo, useMemo } from 'react';
 import { Platform, View, Text, StyleSheet, ScrollView } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useThemedColors } from '@/hooks/useTheme';
-import { useResponsive } from '@/hooks/useResponsive';
 import { useWeatherWidgetModel } from './hooks/useWeatherWidgetModel';
 import { translate as i18nT } from '@/i18n'
 import { formatDate } from '@/i18n/format'
@@ -19,8 +18,7 @@ type Props = {
 
 function WeatherWidget({ points, countryName, onSettled }: Props) {
     const colors = useThemedColors(); // ✅ РЕДИЗАЙН: Темная тема
-    const { isMobile } = useResponsive();
-    const styles = useMemo(() => createStyles(colors, isMobile), [colors, isMobile]);
+    const styles = useMemo(() => createStyles(colors), [colors]);
     const { forecast, isDisabled, locationLabel, status } = useWeatherWidgetModel({
         points,
         countryName,
@@ -40,7 +38,7 @@ function WeatherWidget({ points, countryName, onSettled }: Props) {
       <View style={styles.wrapper}>
           <View style={styles.titleContainer}>
               <Text style={[styles.title, { color: colors.text }]}>
-                  {i18nT('home:components.home.WeatherWidget.pogoda_v_cdab7f8f', { value1: locationLabel })}</Text>
+                  {i18nT('home:components.home.WeatherWidget.titleWithLocation', { location: locationLabel })}</Text>
           </View>
 
           {hasForecast ? (
@@ -91,7 +89,7 @@ function formatDateShort(dateStr: string): string {
     return formatDate(date, { weekday: 'short', day: 'numeric' });
 }
 
-const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: boolean) => StyleSheet.create({
+const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
     // ✅ РЕДИЗАЙН: Компактный wrapper
     wrapper: {
         width: '100%',
@@ -119,8 +117,6 @@ const createStyles = (colors: ReturnType<typeof useThemedColors>, isMobile: bool
         ...(Platform.OS === 'web' ? {
             cursor: 'default',
             textDecorationLine: 'none',
-            // Serif — только desktop web; mobile web = системный sans, как на устройстве.
-            fontFamily: isMobile ? undefined : 'Georgia',
         } as any : {}),
     },
     forecastContainer: {

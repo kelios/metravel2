@@ -66,10 +66,14 @@ export function TravelDetailsHeroBlock({
   travel,
   activeKey,
   suppressHeroQuickJumps,
+  titleSlot,
 }: Omit<
   TravelDetailsHeroDeferredColumnProps,
   'deferredContent' | 'forceOpenKey'
->) {
+> & {
+  /** Web: the page heading row, placed between the gallery and the facts/actions. */
+  titleSlot?: React.ReactNode
+}) {
   return (
     <TravelHeroSection
       travel={travel}
@@ -82,6 +86,7 @@ export function TravelDetailsHeroBlock({
       deferExtras={deferHeroExtras}
       activeKey={activeKey}
       suppressQuickJumps={suppressHeroQuickJumps}
+      titleSlot={titleSlot}
     />
   )
 }

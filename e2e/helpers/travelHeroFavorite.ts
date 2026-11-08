@@ -104,7 +104,8 @@ export async function expectGuestFavoriteSignIn(page: Page, pathname: string): P
     return favorite !== null && Boolean(favorite.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)
   })
   expect(descriptionFollowsAction).toBe(true)
-  await expect(page.getByText('Войдите или зарегистрируйтесь, чтобы сохранить маршрут.', { exact: true })).toBeVisible()
+  // Подсказка о входе — не постоянный текст под кнопкой: нажатие само ведёт на вход.
+  await expect(page.getByText('Войдите или зарегистрируйтесь, чтобы сохранить маршрут.', { exact: true })).toHaveCount(0)
   await heroFavoriteButton(page).click()
   await expect(page).toHaveURL((url) =>
     (url.pathname === '/login' || url.pathname === '/registration') &&

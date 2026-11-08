@@ -2,7 +2,8 @@ import { render } from '@testing-library/react'
 
 // The shell renders a deep tree (hero, maps, sidebar). For the single-H1
 // regression we only care about the shell's own visible <h1>, its placement
-// between the hero and article, and cleanup of the SSG-injected sr-only H1.
+// between the gallery and the facts/actions (the hero renders it through
+// `titleSlot`), and cleanup of the SSG-injected sr-only H1.
 jest.mock('@/components/travel/CompactSideBarTravel', () => () => null)
 jest.mock('@/components/travel/details/TravelDetailsSkeletonOverlay', () => () => null)
 jest.mock('@/components/travel/details/TravelHeroSlots', () => {
@@ -15,7 +16,14 @@ jest.mock('@/components/travel/details/TravelHeroSlots', () => {
 jest.mock('@/components/travel/details/TravelDetailsHeroDeferredColumn', () => {
   const React = require('react')
   return {
-    TravelDetailsHeroBlock: () => React.createElement('div', { 'data-testid': 'hero-block' }),
+    TravelDetailsHeroBlock: ({ titleSlot }: { titleSlot?: unknown }) =>
+      React.createElement(
+        React.Fragment,
+        null,
+        React.createElement('div', { 'data-testid': 'hero-block' }),
+        titleSlot,
+        React.createElement('div', { 'data-testid': 'hero-extras' }),
+      ),
     TravelDetailsContentBlock: () => React.createElement('div', { 'data-testid': 'content-block' }),
   }
 })
@@ -96,18 +104,25 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
       expect(h1s[0].style.visibility).not.toBe('hidden')
       expect(h1s[0].style.fontSize).toBe(fontSize)
 
+      // DOM = visual order on desktop: gallery → heading row (h1 + «Хочу
+      // поехать») → facts/actions → article.
       const hero = container.querySelector('[data-testid="hero-block"]')
+      const heading = container.querySelector('[data-travel-first-screen="heading"]')
+      const extras = container.querySelector('[data-testid="hero-extras"]')
       const content = container.querySelector('[data-testid="content-block"]')
-      expect(hero?.nextElementSibling).toBe(h1s[0])
+      expect(hero?.nextElementSibling).toBe(heading)
+      expect(heading?.firstElementChild).toBe(h1s[0])
       const favorite = container.querySelector('[data-travel-first-screen="favorite"]')
       expect(h1s[0].nextElementSibling).toBe(favorite)
+      expect(favorite?.parentElement).toBe(heading)
       expect(favorite?.querySelector('[data-testid="favorite-action"]')).not.toBeNull()
-      expect(favorite?.nextElementSibling).toBe(content)
+      expect(heading?.nextElementSibling).toBe(extras)
+      expect(extras?.nextElementSibling).toBe(content)
     },
   )
 
-  // Mobile opens with h1 → meta → favorite → gallery. The mobile CSS
-  // lifts those blocks before the gallery while preserving the desktop DOM order.
+  // Mobile opens with h1 → meta → favorite → gallery. The mobile CSS lifts the
+  // heading row before the gallery while preserving the desktop DOM order.
   describe('mobile first screen (#2904)', () => {
     const fullTravel = {
       id: 1,
@@ -138,37 +153,60 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
       const h1 = container.querySelector('h1') as HTMLElement
       const meta = container.querySelector('[data-travel-first-screen="meta"]') as HTMLElement
       const hero = container.querySelector('[data-testid="hero-block"]')
-      const content = container.querySelector('[data-testid="content-block"]')
+      const heading = container.querySelector('[data-travel-first-screen="heading"]')
+      const extras = container.querySelector('[data-testid="hero-extras"]')
 
       expect(h1.getAttribute('data-travel-first-screen')).toBe('title')
       expect(meta.textContent).toBe('Юля · Октябрь 2019 · 1 день · Беларусь')
-      // Desktop DOM order is preserved: the flex order lives only in CSS.
-      expect(hero?.nextElementSibling).toBe(h1)
+      // One DOM order for every width: the mobile lift lives only in CSS.
+      expect(hero?.nextElementSibling).toBe(heading)
+      expect(heading?.firstElementChild).toBe(h1)
       expect(h1.nextElementSibling).toBe(meta)
       const favorite = container.querySelector('[data-travel-first-screen="favorite"]')
       expect(meta.nextElementSibling).toBe(favorite)
-      expect(favorite?.nextElementSibling).toBe(content)
+      expect(favorite?.nextElementSibling).toBeNull()
+      expect(heading?.nextElementSibling).toBe(extras)
       // Visibility of the meta line is owned by the stylesheet, not inline style.
       expect(meta.getAttribute('style')).toBeNull()
       expect(container.querySelectorAll('h1')).toHaveLength(1)
     })
 
-    it('lifts the h1 and meta above the gallery only below 768 px', () => {
+    it('lifts the heading row above the gallery only below 768 px', () => {
       const { container } = renderShell({ isMobile: true, screenWidth: 390, travel: fullTravel })
-      const { outside, mobile } = firstScreenCss(container)
+      const { outside, mobile: rest } = firstScreenCss(container)
+      const desktopStart = rest.indexOf('@media(min-width:768px){')
+      expect(desktopStart).toBeGreaterThan(-1)
+      const mobile = rest.slice(0, desktopStart)
+      const desktop = rest.slice(desktopStart)
 
+      expect(mobile).toContain('[data-travel-first-screen="heading"]{order:-1}')
       expect(mobile).toMatch(/\[data-travel-first-screen="title"\]\{order:-1;/)
       expect(mobile).toMatch(/\[data-travel-first-screen="meta"\]\{order:-1;display:block;height:20px;/)
       // Never clipped: post-deploy SEO check rejects a clamped travel H1.
-      const titleRule = mobile.match(/\[data-travel-first-screen="title"\]\{([^}]*)\}/)?.[1] ?? ''
-      expect(titleRule).not.toBe('')
-      expect(titleRule).not.toMatch(/line-clamp|overflow/)
-      // Outside the mobile media query nothing touches the h1 (desktop layout
-      // unchanged); the meta line is simply not displayed there.
+      for (const block of [mobile, desktop]) {
+        const titleRule = block.match(/\[data-travel-first-screen="title"\]\{([^}]*)\}/)?.[1] ?? ''
+        expect(titleRule).not.toBe('')
+        expect(titleRule).not.toMatch(/line-clamp|overflow/)
+      }
+      // Outside the media queries nothing touches the h1; the meta line is
+      // simply not displayed there.
       expect(outside).not.toContain('"title"')
       expect(outside).not.toContain('order')
       expect(outside.trim()).toContain('[data-travel-first-screen="meta"]{display:none}')
       expect(mobile).toContain('[data-travel-first-screen="favorite"]{order:-1}')
+      // Desktop: h1 and «Хочу поехать» share one row; nothing is reordered.
+      expect(desktop).toContain('[data-travel-first-screen="heading"]{display:flex;')
+      expect(desktop).not.toContain('order')
+    })
+
+    it('hides the quick-jump tabs only where the desktop sidebar carries the same navigation', () => {
+      const { container } = renderShell({ isMobile: true, screenWidth: 390, travel: fullTravel })
+      const { outside, mobile: rest } = firstScreenCss(container)
+      expect(outside).not.toContain('data-travel-quick-jumps')
+      const sidebarStart = rest.indexOf('@media(min-width:1280px){')
+      expect(sidebarStart).toBeGreaterThan(-1)
+      expect(rest.slice(0, sidebarStart)).not.toContain('data-travel-quick-jumps')
+      expect(rest.slice(sidebarStart)).toContain('[data-travel-quick-jumps="true"]{display:none!important}')
     })
 
     it('omits the meta line when the travel has no author, date, days or country', () => {

@@ -146,34 +146,34 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
     >
       {factItems}
 
+      {/* Метка и чипы — один переносимый поток: чипы не уходят отдельной
+          колонкой справа от метки, а продолжают её строку. */}
       {categories.length > 0 && (
-        <SafeView style={[styles.categoriesContainer, isMobile && styles.categoriesContainerMobile]}>
+        <SafeView style={styles.categoriesContainer}>
           <SafeView style={styles.categoriesHeader}>
             <Feather name="tag" size={iconSize} color={iconColor} />
             <Text style={styles.categoriesLabel}>{i18nT('travel:components.travel.QuickFacts.kategorii_074cf050')}</Text>
           </SafeView>
-          <SafeView style={styles.categoriesWrap}>
-            {categories.map((cat, index) => {
-              const categoryRole = onCategoryPress ? 'button' : 'text';
-              const categoryLabel = i18nT('travel:components.travel.QuickFacts.kategoriya_value1_3e381353', { value1: cat });
-              const webA11yProps = getWebA11yProps(categoryLabel, categoryRole);
+          {categories.map((cat, index) => {
+            const categoryRole = onCategoryPress ? 'button' : 'text';
+            const categoryLabel = i18nT('travel:components.travel.QuickFacts.kategoriya_value1_3e381353', { value1: cat });
+            const webA11yProps = getWebA11yProps(categoryLabel, categoryRole);
 
-              return (
-                <Pressable
-                  key={index}
-                  onPress={() => onCategoryPress?.(cat)}
-                  style={({ hovered }) => [styles.categoryTag, hovered && onCategoryPress && styles.categoryTagHovered]}
-                  disabled={!onCategoryPress}
-                  accessibilityRole={categoryRole}
-                  accessibilityLabel={categoryLabel}
-                  accessibilityHint={onCategoryPress ? i18nT('travel:components.travel.QuickFacts.filtruet_puteshestviya_po_etoy_kategorii_e6c229bd') : undefined}
-                  {...(webA11yProps as any)}
-                >
-                <Text style={styles.categoryText}>{cat}</Text>
-                </Pressable>
-              );
-            })}
-          </SafeView>
+            return (
+              <Pressable
+                key={index}
+                onPress={() => onCategoryPress?.(cat)}
+                style={({ hovered }) => [styles.categoryTag, hovered && onCategoryPress && styles.categoryTagHovered]}
+                disabled={!onCategoryPress}
+                accessibilityRole={categoryRole}
+                accessibilityLabel={categoryLabel}
+                accessibilityHint={onCategoryPress ? i18nT('travel:components.travel.QuickFacts.filtruet_puteshestviya_po_etoy_kategorii_e6c229bd') : undefined}
+                {...(webA11yProps as any)}
+              >
+              <Text style={styles.categoryText}>{cat}</Text>
+              </Pressable>
+            );
+          })}
         </SafeView>
       )}
     </SafeView>
@@ -181,102 +181,58 @@ function QuickFacts({ travel, onCategoryPress }: QuickFactsProps) {
 }
 
 const createStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
+  // Факты — справка, а не кнопки: иконка + текст без рамки, чтобы строка меты
+  // не спорила с рядом действий под ней. Рамку сохраняют только категории —
+  // они кликабельны.
   container: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     flexShrink: 1,
     maxWidth: '100%',
-    gap: Platform.select({
-      default: 6,
-      web: 8,
-    }),
-    paddingVertical: Platform.select({
-      default: 8,
-      web: 10,
-    }),
+    columnGap: DESIGN_TOKENS.spacing.md,
+    rowGap: DESIGN_TOKENS.spacing.xs,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: 0,
     backgroundColor: 'transparent',
-    borderRadius: 0,
-    borderWidth: 0,
-    borderColor: 'transparent',
   },
   containerMobile: {
-    paddingVertical: 6,
-    paddingHorizontal: 0,
-    gap: 6,
+    columnGap: DESIGN_TOKENS.spacing.sm,
   },
   factItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     maxWidth: '100%',
-    paddingVertical: Platform.select({
-      default: 6,
-      web: 7,
-    }),
-    paddingHorizontal: Platform.select({
-      default: 10,
-      web: 12,
-    }),
-    borderRadius: DESIGN_TOKENS.radii.sm,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    borderStyle: 'solid',
-    minHeight: Platform.select({
-      default: 32,
-      web: 34,
-    }),
-    ...(Platform.OS === 'web'
-      ? ({
-          transition: 'background-color 0.2s ease, box-shadow 0.2s ease',
-        } as any)
-      : {}),
+    minHeight: 24,
   },
   factText: {
     flexShrink: 1,
-    fontSize: Platform.select({
-      default: 13,
-      web: 13,
-    }),
+    fontSize: 13,
     fontWeight: '500',
-    color: colors.text,
+    color: colors.textSecondary,
     letterSpacing: 0,
     lineHeight: 18,
   },
   categoriesContainer: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     flexShrink: 1,
     maxWidth: '100%',
     gap: 6,
   },
-  categoriesContainerMobile: {
-    width: '100%',
-  },
   categoriesHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 4,
-    minHeight: Platform.select({
-      default: 26,
-      web: 28,
-    }),
-    paddingHorizontal: 0,
+    minHeight: 24,
   },
   categoriesLabel: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
     color: colors.textMuted,
-    letterSpacing: 0.1,
-  },
-  categoriesWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 5,
-    flex: 1,
+    letterSpacing: 0,
   },
   categoryTag: {
     backgroundColor: colors.surface,

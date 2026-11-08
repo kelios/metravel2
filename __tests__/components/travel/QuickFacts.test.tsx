@@ -89,6 +89,23 @@ describe('QuickFacts', () => {
     expect(onCategoryPress).toHaveBeenCalledWith('Город')
   })
 
+  // Метка «Категории» и чипы — один переносимый поток: у них общий родитель,
+  // а не отдельная колонка чипов справа от метки.
+  it('keeps the categories label and chips in one wrapping flow', async () => {
+    const travelWithCategories: any = {
+      ...baseTravel,
+      travelAddress: [{ categoryName: 'Музей, Статуя' }],
+    }
+    const { getByText } = await render(<QuickFacts travel={travelWithCategories} />)
+
+    const labelRow = getByText('Категории').parent
+    const museumChip = getByText('Музей').parent
+    const flow = labelRow?.parent
+    expect(flow).toBeTruthy()
+    expect(museumChip?.parent).toBe(flow)
+    expect(getByText('Статуя').parent?.parent).toBe(flow)
+  })
+
   it('does not treat categories as buttons when onCategoryPress is not provided', async () => {
     const travelWithCategories: any = {
       ...baseTravel,

@@ -27,7 +27,7 @@ describe('WeatherWidget', () => {
     const { getByText } = await render(
       <WeatherWidget points={[{ coord: '53.9, 27.56', address: 'Минск' }]} countryName="BY" />
     )
-    expect(getByText(/Погода в Минск, BY/)).toBeTruthy()
+    expect(getByText(/Погода · Минск, BY/)).toBeTruthy()
     expect(getByText(/Загружаем прогноз/)).toBeTruthy()
   })
 
@@ -62,7 +62,7 @@ describe('WeatherWidget', () => {
     await act(async () => {
       await Promise.resolve()
     })
-    await waitFor(() => expect(getByText(/Погода в Минск, Беларусь, Центр, BY/)).toBeTruthy())
+    await waitFor(() => expect(getByText(/Погода · Минск, Беларусь, Центр, BY/)).toBeTruthy())
     await waitFor(() => expect(getByText('Ясно')).toBeTruthy())
     expect(getByText(/Гроза/)).toBeTruthy()
     expect(queryByText(/tooltip/i)).toBeNull()
@@ -133,6 +133,18 @@ describe('WeatherWidget', () => {
       />,
     )
     // Номер дома/индекс не попадает в заголовок, страна не повторяется дважды.
-    expect(getByText(/Погода в Адршпа, Краловеградецкий край, Чехия$/)).toBeTruthy()
+    expect(getByText(/Погода · Адршпа, Краловеградецкий край, Чехия$/)).toBeTruthy()
+  })
+
+  it('титул в именительном падеже без скобочного дубля названия точки', async () => {
+    const { getByText, queryByText } = await render(
+      <WeatherWidget
+        points={[{ coord: '47.5, 19.03', address: 'Будайская крепость (Buda Castle)' }]}
+        countryName="Венгрия"
+      />,
+    )
+    expect(getByText(/^Погода · Будайская крепость, Венгрия$/)).toBeTruthy()
+    expect(queryByText(/Погода в /)).toBeNull()
+    expect(queryByText(/Buda Castle/)).toBeNull()
   })
 })

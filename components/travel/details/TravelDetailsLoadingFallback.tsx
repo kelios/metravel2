@@ -92,6 +92,11 @@ export default function TravelDetailsLoadingFallback() {
             <SkeletonLoader width="100%" height={heroHeight} borderRadius={DESIGN_TOKENS.radii.xl} />
 
             <View style={{ gap: DESIGN_TOKENS.spacing.md }}>
+              {/* Desktop order: gallery → h1 row with «Хочу поехать» → facts/actions. */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: DESIGN_TOKENS.spacing.md }}>
+                <SkeletonLoader width="56%" height={36} borderRadius={10} />
+                <SkeletonLoader width={160} height={44} borderRadius={DESIGN_TOKENS.radii.pill} />
+              </View>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.sm }}>
                 <SkeletonLoader width={110} height={20} borderRadius={12} />
                 <SkeletonLoader width={110} height={20} borderRadius={12} />

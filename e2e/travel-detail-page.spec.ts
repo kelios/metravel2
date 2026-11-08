@@ -67,8 +67,9 @@ test.describe('Travel details — deterministic product contracts', () => {
     await expect(page.getByTestId('travel-gpx-download')).toBeVisible();
   });
 
-  // #2904: mobile first screen reads h1 → meta → gallery; desktop keeps
-  // hero → h1. The order is a CSS media rule, so both viewports share one DOM.
+  // #2904: mobile first screen reads h1 → meta → gallery; desktop reads
+  // gallery → h1 → facts/actions. The order is a CSS media rule, so both
+  // viewports share one DOM.
   test('mobile opens with the h1 and meta above the gallery, desktop order unchanged', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await openStableTravel(page);
@@ -92,8 +93,17 @@ test.describe('Travel details — deterministic product contracts', () => {
 
     await page.setViewportSize({ width: 1280, height: 900 });
     await expect(meta).toBeHidden();
-    const [desktopTitle, desktopHero] = await Promise.all([title.boundingBox(), hero.boundingBox()]);
+    const facts = page.getByTestId('travel-details-quick-facts');
+    await expect(facts).toBeVisible();
+    const [desktopTitle, desktopHero, desktopFacts] = await Promise.all([
+      title.boundingBox(),
+      hero.boundingBox(),
+      facts.boundingBox(),
+    ]);
     expect(desktopHero!.y, 'desktop keeps the gallery above the h1').toBeLessThan(desktopTitle!.y);
+    expect(desktopTitle!.y, 'desktop h1 precedes the facts and actions').toBeLessThan(desktopFacts!.y);
+    // The left sidebar carries the same section navigation from 1280 px.
+    await expect(page.locator('[data-travel-quick-jumps="true"]').first()).toBeHidden();
   });
 
   test('publishes canonical metadata and valid Schema.org JSON-LD', async ({ page }) => {

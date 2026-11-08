@@ -75,8 +75,17 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     },
     cardRow: {
       flexDirection: 'row',
-      alignItems: 'flex-start',
+      alignItems: 'center',
       marginBottom: 0,
+    },
+    // Бейдж «Автор» слева, действия справа; на узком сайдбаре переносятся.
+    footerRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: DESIGN_TOKENS.spacing.xs,
+      marginTop: DESIGN_TOKENS.spacing.sm,
     },
     avatarWrap: {
       marginRight: DESIGN_TOKENS.spacing.sm,
@@ -114,9 +123,7 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: 6,
-      marginLeft: 'auto',
       flexShrink: 0,
-      alignSelf: 'center',
     },
     actionBtn: {
       width: 44,
@@ -211,7 +218,6 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     linkTxt: {
       marginLeft: 10,
       fontSize: (Platform.OS === 'web') ? 14 : 15,
-      fontFamily: 'Georgia',
       color: colors.text,
       fontWeight: '500',
       lineHeight: (Platform.OS === 'web') ? 20 : 22,
@@ -230,7 +236,6 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     linkMetaText: {
       fontSize: (Platform.OS === 'web') ? 12 : 14,
       color: colors.textMuted,
-      fontFamily: 'Georgia',
       fontWeight: '600',
       lineHeight: (Platform.OS === 'web') ? 16 : 18,
     },
@@ -260,7 +265,6 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) =>
     closeTxt: {
       color: colors.textOnDark,
       fontSize: DESIGN_TOKENS.typography.sizes.md,
-      fontFamily: 'Georgia',
       marginLeft: 8,
     },
     closeTopBar: {

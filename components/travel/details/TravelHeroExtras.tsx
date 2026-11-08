@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react'
-import { StyleSheet, View } from 'react-native'
+import { Platform, StyleSheet, View } from 'react-native'
 import { useRouter } from 'expo-router'
 
 import type { TravelSectionLink } from '@/components/travel/sectionLinks'
@@ -12,6 +12,7 @@ import { loadTravelOfflineAdapter } from '@/services/offline/loadTravelOfflineAd
 
 import { useTravelDetailsHeroStyles } from './TravelDetailsHeroStyles'
 import TravelHeroQuickJumps from './TravelHeroQuickJumps'
+import { TRAVEL_QUICK_JUMPS_WEB_PROPS } from './travelFirstScreenLayout'
 import TravelRouteActions from './TravelRouteActions'
 import { useTravelHeroExtrasModel } from './hooks/useTravelHeroExtrasModel'
 import { translate as i18nT } from '@/i18n'
@@ -55,12 +56,14 @@ export const TravelHeroExtras: React.FC<{
           styles.sectionContainer,
           styles.contentStable,
           styles.quickFactsContainer,
-          !isMobile && actionStyles.summaryRow,
+          !isMobile && actionStyles.summaryDesktop,
         ]}
       >
         <QuickFacts travel={travel} onCategoryPress={handleCategoryPress} />
-        {/* На широком экране действия идут за фактами по размеру содержимого.
-            На мобильном статус делит отдельный ряд с иконочным офлайн-чипом. */}
+        {/* Факты — одна строка, действия — отдельный ряд одной высоты: на
+            широком web чипы по 36 px, на мобильном web и на любом native
+            (планшет тоже) — тач-таргет, как у OfflineSaveControl и
+            TravelRouteActions (`!isWeb || isMobile`). */}
         <View style={actionStyles.row}>
           <TravelStatusButton
             travelId={travel.id}
@@ -70,6 +73,7 @@ export const TravelHeroExtras: React.FC<{
             travelCountry={travel.countryName}
             travelYear={travel.year}
             travelMonthName={travel.monthName}
+            size={Platform.OS === 'web' && !isMobile ? 'sm' : 'md'}
             style={[actionStyles.status, isMobile && actionStyles.statusMobile]}
           />
           {travel.id ? (
@@ -94,6 +98,7 @@ export const TravelHeroExtras: React.FC<{
             styles.quickJumpWrapper,
             isMobile && styles.quickJumpStickyMobile,
           ]}
+          {...(Platform.OS === 'web' ? TRAVEL_QUICK_JUMPS_WEB_PROPS : null)}
         >
           <TravelHeroQuickJumps
             links={quickJumpLinks}
@@ -108,11 +113,10 @@ export const TravelHeroExtras: React.FC<{
 }
 
 const actionStyles = StyleSheet.create({
-  summaryRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: DESIGN_TOKENS.spacing.sm,
+  // На desktop под рядом действий сразу идёт статья (табы при ≥ 1280 px несёт
+  // сайдбар): отступ отделяет действия от карточки «Содержание».
+  summaryDesktop: {
+    marginBottom: DESIGN_TOKENS.spacing.md,
   },
   row: {
     alignItems: 'center',

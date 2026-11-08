@@ -108,6 +108,20 @@ describe('TravelStatusButton — полный режим (default)', () => {
     expect(screen.getByRole('button', { name: 'Добавить в план' })).toBeTruthy()
   })
 
+  // Ряд действий статьи на desktop: статус — 36 px чип, как соседние офлайн,
+  // навигатор и GPX; по умолчанию кнопка остаётся 44 px.
+  it('size="sm" ужимает кнопку до 36 px, по умолчанию — 44 px', async () => {
+    const { StyleSheet } = require('react-native')
+    const view = await render(<TravelStatusButton {...baseProps} size="sm" />)
+    const small = StyleSheet.flatten(screen.getByRole('button', { name: 'Добавить в план' }).props.style)
+    expect(small.minHeight).toBe(36)
+    await view.unmount()
+
+    await render(<TravelStatusButton {...baseProps} />)
+    const regular = StyleSheet.flatten(screen.getByRole('button', { name: 'Добавить в план' }).props.style)
+    expect(regular.minHeight).toBe(44)
+  })
+
   it('отображает текущий статус, если он задан', async () => {
     useTravelStatus.mockReturnValue([currentEntry({ status: 'visited' })])
     await render(<TravelStatusButton {...baseProps} />)

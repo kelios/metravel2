@@ -29,6 +29,7 @@ import { useTravelSsgHeroHandoff } from './useTravelSsgHeroHandoff'
 import { translate as i18nT } from '@/i18n'
 import SliderCaption from '../sliderParts/SliderCaption'
 import { useTravelLoaderPayload } from './travelLoaderData'
+import { TRAVEL_QUICK_JUMPS_WEB_PROPS } from './travelFirstScreenLayout'
 
 // #1499: раньше выбор делался здесь — `Platform.OS === 'web' ? Lazy : Static`.
 // Статический импорт native-ветки остаётся ребром графа и в web-бандле, поэтому
@@ -57,6 +58,8 @@ type Props = {
   deferExtras?: boolean
   activeKey?: string
   suppressQuickJumps?: boolean
+  /** Web page heading row: after the gallery + caption, before facts/actions. */
+  titleSlot?: React.ReactNode
 }
 
 function TravelHeroSectionInner({
@@ -70,6 +73,7 @@ function TravelHeroSectionInner({
   deferExtras = false,
   activeKey,
   suppressQuickJumps = false,
+  titleSlot = null,
 }: Props) {
   const styles = useTravelDetailsHeroStyles()
   const [currentSlide, setCurrentSlide] = useState({ travelId: travel.id, index: 0 })
@@ -204,6 +208,7 @@ function TravelHeroSectionInner({
   if (!firstImg) {
     return (
       <>
+        {titleSlot}
         {isMobile ? <TravelAuthorQuickLink travel={travel} /> : null}
         <ExtrasSlot
           styles={styles}
@@ -318,6 +323,8 @@ function TravelHeroSectionInner({
         <SliderCaption caption={heroSliderImages[currentIndex]?.caption} currentIndex={currentIndex} total={heroSliderImages.length} />
       </View>
 
+      {titleSlot}
+
       {isRouterSsrTravel ? (
         <div data-ssr-mobile-author="true"><TravelAuthorQuickLink travel={travel} /></div>
       ) : isMobile ? <TravelAuthorQuickLink travel={travel} /> : null}
@@ -384,6 +391,7 @@ function ExtrasSlot({
             styles.contentStable,
             styles.quickJumpWrapper,
           ]}
+          {...(Platform.OS === 'web' ? TRAVEL_QUICK_JUMPS_WEB_PROPS : null)}
         >
           <QuickJumpSkeleton chipCount={quickJumpChipCount} />
         </View>

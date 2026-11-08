@@ -25,6 +25,11 @@ export type DailyForecast = {
 export type WeatherWidgetStatus = 'idle' | 'loading' | 'success' | 'error';
 type RawDailyForecast = Omit<DailyForecast, 'condition'> & { weatherCode: number };
 
+const stripParentheticalAlias = (part: string): string => {
+    const stripped = part.replace(/\s*\([^()]*\)/g, '').trim();
+    return stripped || part;
+};
+
 export function useWeatherWidgetModel({
     points,
     countryName,
@@ -48,13 +53,18 @@ export function useWeatherWidgetModel({
 
     const locationLabel = useMemo(() => {
         if (!primaryAddress && !normalizedCountryName) {
-            return primaryCoord ? i18nT('home:components.home.hooks.useWeatherWidgetModel.tochke_marshruta_50fd9f66') : '';
+            return primaryCoord ? i18nT('home:components.home.hooks.useWeatherWidgetModel.routePointFallback') : '';
         }
         // Адрес точки бывает целой цепочкой геокодера, в том числе через ` · `
         // и с номером дома первым сегментом: без разбора заголовок выглядел как
         // «Погода в 30110 · Адршпа · Краловеградецкий край · Чехия, Чехия» (#1750).
+        // Заголовок — «Погода · <место>» в именительном падеже: название точки
+        // не склоняется, поэтому предлог «в» давал «Погода в Будайская крепость».
+        // Скобочный дубль названия («(Buda Castle)») в заголовок не идёт.
         const locationParts = splitGeocodeChain(primaryAddress)
             .filter((part) => !isChainNoiseSegment(part))
+            .map(stripParentheticalAlias)
+            .filter(Boolean)
             .slice(0, 3);
         if (
             normalizedCountryName &&

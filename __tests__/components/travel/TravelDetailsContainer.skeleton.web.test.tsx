@@ -13,7 +13,8 @@ import { createTestQueryClient } from '@/__tests__/helpers/testQueryClient'
 
 const roots = createRootRegistry()
 const mockSetOptions = jest.fn()
-const mockTravelHeroSection = jest.fn<any, [any]>(() => null)
+// The page h1 row is rendered by the hero through `titleSlot` (after the gallery).
+const mockTravelHeroSection = jest.fn<any, [any]>((props: any) => props?.titleSlot ?? null)
 const mockScrollRuntime = jest.fn<any, [any]>(() => null)
 let mockGallery: Array<{ id: number; url: string }> = []
 const mockPerformanceState = {

@@ -99,15 +99,19 @@ describe('TravelHeroFavoriteToggle', () => {
     useAuth.mockReturnValue({ isAuthenticated: false, authReady: true })
     mockIsFavorite.mockReturnValue(false)
 
-    const { getByLabelText, getByText } = await render(
+    const { getByLabelText, queryByText } = await render(
       <TravelHeroFavoriteToggle
         travel={{ id: 3, slug: 'auth', name: 'Auth travel' } as any}
         isMobile={false}
       />
     )
 
-    expect(getByText('Войдите или зарегистрируйтесь, чтобы сохранить маршрут.')).toBeTruthy()
-    await fireEvent.press(getByLabelText('Добавить в «Хочу поехать»'))
+    // The sign-in explanation is the button's a11y hint, not permanent text:
+    // the press itself leads to sign-in with the favorite intent.
+    const button = getByLabelText('Добавить в «Хочу поехать»')
+    expect(queryByText('Войдите или зарегистрируйтесь, чтобы сохранить маршрут.')).toBeNull()
+    expect(button.props.accessibilityHint).toBe('Войдите или зарегистрируйтесь, чтобы сохранить маршрут.')
+    await fireEvent.press(button)
 
     await waitFor(() => {
       expect(mockRequireAuth).toHaveBeenCalledTimes(1)

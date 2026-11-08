@@ -36,11 +36,12 @@ import {
   buildTravelFirstScreenMeta,
 } from './travelFirstScreenLayout';
 
-// The travel name is the page's single semantic <h1>. In the DOM it follows the
-// hero and its metadata (desktop order, unchanged). #2904: below 768 px the
-// first-screen stylesheet lifts the h1 and its one-line meta to the top of the
-// content column via CSS `order`, so mobile reads h1 → meta → gallery without a
-// JS breakpoint branch (width is 0 on SSR/hydration on every viewport).
+// The travel name is the page's single semantic <h1>. In the DOM its heading row
+// (h1 + mobile meta + «Хочу поехать») follows the gallery and its caption and
+// precedes the facts/actions, so desktop reads in DOM order. #2904: below 768 px
+// the first-screen stylesheet lifts the heading row to the top of the content
+// column via CSS `order`, so mobile reads h1 → meta → gallery without a JS
+// breakpoint branch (width is 0 on SSR/hydration on every viewport).
 // The current SSG shell starts with a visible `.ssg-travel-h1`; on hydration it
 // is demoted to a same-class div until shell teardown. Legacy cached pages may
 // also carry `<h1 data-ssg-travel-h1>`, which the same effect removes.
@@ -267,8 +268,10 @@ export default function TravelDetailsCriticalShell({
   // Not memoized on `travel`: the days label is locale-dependent.
   const firstScreenMeta = Platform.OS === 'web' && travel ? buildTravelFirstScreenMeta(travel) : '';
 
-  const pageTitle = Platform.OS === 'web' && travel ? (
-    <>
+  // Rendered by the hero between the gallery and the facts/actions. Memoized so
+  // the stable hero element below is not invalidated by unrelated shell renders.
+  const pageTitle = useMemo(() => Platform.OS === 'web' && travel ? (
+    <div data-travel-first-screen="heading">
       <h1
         data-testid="travel-details-title"
         data-travel-first-screen="title"
@@ -282,7 +285,7 @@ export default function TravelDetailsCriticalShell({
         {travel.name}
       </h1>
       {/* Mobile-only meta line; `display` is owned by the first-screen stylesheet
-          (hidden ≥768 px), so desktop geometry stays exactly as before. */}
+          (hidden ≥768 px, where the facts row right below carries the same data). */}
       {firstScreenMeta ? (
         <p data-testid="travel-details-first-screen-meta" data-travel-first-screen="meta">
           {firstScreenMeta}
@@ -293,8 +296,8 @@ export default function TravelDetailsCriticalShell({
           <TravelHeroFavoriteToggleSlot travel={travel} isMobile={isMobile} />
         </Suspense>
       </div>
-    </>
-  ) : null;
+    </div>
+  ) : null, [travel, isMobile, isRouterSsrTravel, colors.text, firstScreenMeta]);
 
   // Completed server boundaries keep the visible HTML while React hydrates the
   // hero and article independently. Stable elements prevent unrelated container
@@ -310,9 +313,10 @@ export default function TravelDetailsCriticalShell({
         onQuickJump={onQuickJump}
         sectionLinks={sectionLinks}
         activeKey={activeSection ?? undefined}
+        titleSlot={pageTitle}
       />
     </Suspense>
-  ) : null, [travel, anchors, isMobile, deferHeroExtras, onFirstImageLoad, onQuickJump, sectionLinks, activeSection]);
+  ) : null, [travel, anchors, isMobile, deferHeroExtras, onFirstImageLoad, onQuickJump, sectionLinks, activeSection, pageTitle]);
 
   const webContentBlock = useMemo(() => travel ? (
     <Suspense fallback={null}>
@@ -329,7 +333,6 @@ export default function TravelDetailsCriticalShell({
     Platform.OS === 'web' ? (
       <>
         {webHeroBlock}
-        {pageTitle}
         {webContentBlock}
         {deferredContent}
       </>

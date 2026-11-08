@@ -6,16 +6,15 @@ import { type ThemedColors } from '@/hooks/useTheme'
 export const createTravelDetailsSectionHeaderStyles = (colors: ThemedColors) => ({
   // ✅ РЕДИЗАЙН: Современные карточки с улучшенными тенями
   // ✅ РЕДИЗАЙН: Унифицированные карточки с единой системой радиусов (12px)
+  // Заголовок раскрываемой карточки («Содержание») — компактная строка в
+  // тач-таргет, а не плашка: статья под ней остаётся главным блоком.
   sectionHeaderBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Platform.select({
-      default: 14,
-      web: 16,
-    }),
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
     paddingHorizontal: Platform.select({
-      default: 16,
-      web: 20,
+      default: 12,
+      web: 14,
     }),
     backgroundColor: colors.surface,
     borderRadius: DESIGN_TOKENS.radii.sm,
@@ -23,7 +22,7 @@ export const createTravelDetailsSectionHeaderStyles = (colors: ThemedColors) => 
     borderWidth: 1,
     borderColor: colors.borderLight,
     borderStyle: 'solid',
-    minHeight: 56,
+    minHeight: 44,
     ...(Platform.OS === 'web'
       ? ({
           transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -65,8 +64,8 @@ export const createTravelDetailsSectionHeaderStyles = (colors: ThemedColors) => 
   },
 
   sectionHeaderIcon: {
-    width: Platform.select({ default: 28, web: 30 }),
-    height: Platform.select({ default: 28, web: 30 }),
+    width: 26,
+    height: 26,
     borderRadius: Platform.select({ default: 8, web: 8 }),
     backgroundColor: colors.surface,
     justifyContent: 'center',

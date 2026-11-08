@@ -66,6 +66,11 @@ type Props = {
   /** Компактный режим: иконка + короткий видимый статус, стиль как у FavoriteButton variant="overlay" */
   compact?: boolean
   idleLabel?: string
+  /**
+   * Полный (не compact) режим: `md` — 44 px, `sm` — 36 px чип в тоне соседних
+   * чипов ряда действий статьи (desktop); тач-таргет добирает `hitSlop`.
+   */
+  size?: 'md' | 'sm'
   style?: StyleProp<ViewStyle>
 }
 
@@ -116,6 +121,7 @@ export default function TravelStatusButton({
   travelMonthName,
   compact = false,
   idleLabel,
+  size = 'md',
   style,
 }: Props) {
   const colors = useThemedColors()
@@ -304,6 +310,16 @@ export default function TravelStatusButton({
       fontSize: 15,
       fontWeight: '600',
       color: current ? colors.primary : colors.primaryText,
+    },
+    btnSm: {
+      gap: DESIGN_TOKENS.spacing.xs,
+      paddingVertical: 0,
+      minHeight: 36,
+      backgroundColor: colors.primaryLight,
+      borderColor: current ? colors.primary : colors.primaryAlpha30,
+    },
+    btnTextSm: {
+      fontSize: 13,
     },
     // overlay / sheet / handle / headerRow / sheetTitle / closeBtn — только web-диалог;
     // на native окно, шапку и ручку рисует `BottomSheet`.
@@ -696,21 +712,24 @@ export default function TravelStatusButton({
     )
   }
 
+  const isSmall = size === 'sm'
+
   return (
     <>
       <Pressable
-        style={[styles.btn, globalFocusStyles.focusable, style]}
+        style={[styles.btn, isSmall && styles.btnSm, globalFocusStyles.focusable, style]}
         onPress={handleMainPress}
+        hitSlop={isSmall ? 4 : undefined}
         accessibilityRole="button"
         accessibilityLabel={currentOption ? currentOption.label : (idleLabel ?? i18nT('travel:components.travel.TravelStatusButton.addToPlanFallback'))}
         accessibilityHint={i18nT('travel:components.travel.TravelStatusButton.upravlenie_statusom_puteshestviya_443c9fae')}
       >
         <Feather
           name={currentOption?.icon ?? 'plus-circle'}
-          size={20}
-          color={current ? colors.primary : colors.textMuted}
+          size={isSmall ? 16 : 20}
+          color={current ? colors.primary : isSmall ? colors.primaryText : colors.textMuted}
         />
-        <Text style={styles.btnText}>
+        <Text style={[styles.btnText, isSmall && styles.btnTextSm]}>
           {currentOption?.label ?? idleLabel ?? i18nT('travel:components.travel.TravelStatusButton.addToPlanFallback')}
         </Text>
         {current && current.status === 'planned' && current.plannedDate && (

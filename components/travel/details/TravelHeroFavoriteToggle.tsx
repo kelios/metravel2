@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback } from 'react'
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import Feather from '@expo/vector-icons/Feather'
@@ -34,13 +34,36 @@ export const TravelHeroFavoriteToggle: React.FC<{
     travel,
   })
 
+  // Гостю подсказка о входе — не постоянный текст под кнопкой: нажатие само
+  // ведёт на вход с намерением «сохранить» (`useFavoriteToggle`), а смысл
+  // получает скринридер. react-native-web 0.21 `accessibilityHint` до DOM не
+  // доносит (его нет в `forwardedProps`), поэтому на web подсказка ставится
+  // атрибутом `aria-description` на узел кнопки по ref.
+  const guestSaveHint = isAuthenticated
+    ? undefined
+    : t('travel:components.travel.details.TravelHeroFavoriteToggle.guestSaveHint')
+  const webGuestHintRef = useCallback(
+    (node: unknown) => {
+      const target = node as {
+        setAttribute?: (name: string, value: string) => void
+        removeAttribute?: (name: string) => void
+      } | null
+      if (!target?.setAttribute) return
+      if (guestSaveHint) target.setAttribute('aria-description', guestSaveHint)
+      else target.removeAttribute?.('aria-description')
+    },
+    [guestSaveHint],
+  )
+
   if (Platform.OS === 'web') {
     return (
       <View style={webStyles.container}>
         <Button
+          ref={webGuestHintRef}
           testID="travel-first-screen-favorite"
           label={favoriteButtonLabel}
           accessibilityLabel={favoriteButtonA11yLabel}
+          accessibilityHint={guestSaveHint}
           onPress={handleFavoriteToggle}
           disabled={isPending}
           variant={isFavorite ? 'primary' : 'outline'}
@@ -48,11 +71,6 @@ export const TravelHeroFavoriteToggle: React.FC<{
           style={webStyles.button}
           icon={<Feather name="heart" size={16} color={isFavorite ? colors.textOnPrimary : colors.primary} />}
         />
-        {!isAuthenticated && (
-          <Text style={[webStyles.hint, { color: colors.textSecondary }]}>
-            {t('travel:components.travel.details.TravelHeroFavoriteToggle.guestSaveHint')}
-          </Text>
-        )}
       </View>
     )
   }
@@ -93,9 +111,8 @@ export const TravelHeroFavoriteToggle: React.FC<{
 }
 
 const webStyles = StyleSheet.create({
-  container: { alignItems: 'flex-start', gap: DESIGN_TOKENS.spacing.xs },
+  container: { alignItems: 'flex-start' },
   button: { minHeight: DESIGN_TOKENS.touchTarget.minHeight },
-  hint: { fontSize: 13, lineHeight: 18 },
 })
 
 export default React.memo(TravelHeroFavoriteToggle)

@@ -157,80 +157,7 @@ export const AuthorBlock = memo(function AuthorBlock({
                 />
               ) : null}
             </Pressable>
-
-            <View style={styles.actionsRow}>
-              {canEdit && (
-                <Pressable
-                  onPress={onEdit}
-                  accessibilityRole="button"
-                  accessibilityLabel={i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.redaktirovat_puteshestvie_8010aa7b')}
-                  style={({ pressed, hovered }) => [
-                    styles.actionBtn,
-                    globalFocusStyles.focusable,
-                    hovered && styles.actionBtnHovered,
-                    pressed && styles.actionBtnPressed,
-                  ]}
-                  ref={webTitleRef(editTitle)}
-                  {...webOnly({
-                    role: 'button',
-                    'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.redaktirovat_puteshestvie_8010aa7b'),
-                  } as any)}
-                >
-                  <Feather name="edit" size={18} color={textColor} />
-                </Pressable>
-              )}
-
-              {isPrintAvailable() && (
-                <TravelPdfExportControl
-                  travel={travel}
-                  mutedText={mutedText}
-                  actionBtnStyle={styles.actionBtn}
-                  actionBtnHoveredStyle={styles.actionBtnHovered}
-                  actionBtnPressedStyle={styles.actionBtnPressed}
-                  actionBtnDisabledStyle={styles.actionBtnDisabled}
-                />
-              )}
-
-              {showSubscribeAndWrite && (
-                <>
-                  <SubscribeButton
-                    targetUserId={authorUserId!}
-                    iconOnly
-                    style={[styles.actionBtn, globalFocusStyles.focusable]}
-                    hoverStyle={styles.actionBtnHovered}
-                  />
-                  <Pressable
-                    onPress={onWrite}
-                    accessibilityRole="button"
-                    accessibilityLabel={i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.napisat_avtoru_value1_191ed8f0', { value1: displayName })}
-                    style={({ pressed, hovered }) => [
-                      styles.actionBtn,
-                      globalFocusStyles.focusable,
-                      hovered && styles.actionBtnHovered,
-                      pressed && styles.actionBtnPressed,
-                    ]}
-                    ref={webTitleRef(writeTitle)}
-                    {...webOnly({
-                      role: 'button',
-                      'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.napisat_avtoru_value1_191ed8f0', { value1: displayName }),
-                    } as any)}
-                  >
-                    <Feather name="mail" size={18} color={textColor} />
-                  </Pressable>
-                  <ContentSafetyActions
-                    contentRef={safetyRef}
-                    authorName={displayName}
-                    testIDPrefix="travel-sidebar-safety"
-                    style={styles.actionBtn}
-                  />
-                </>
-              )}
-            </View>
           </View>
-
-          {showPublicationMedals && authorUserId ? (
-            <DesktopPublicationMedals key={authorUserId} authorId={authorUserId} />
-          ) : null}
 
           {(whenLine || views != null) && (
             <View style={styles.metaRow}>
@@ -264,6 +191,83 @@ export const AuthorBlock = memo(function AuthorBlock({
                 </View>
               )}
             </View>
+          )}
+        </View>
+      </View>
+
+      {/* Бейдж «Автор» и действия — отдельной строкой под именем: строка имени
+          не раздувается до высоты кнопок, а имя, дата и бейдж стоят по одной
+          левой линии сетки. */}
+      <View style={styles.footerRow}>
+        {showPublicationMedals && authorUserId ? (
+          <DesktopPublicationMedals key={authorUserId} authorId={authorUserId} />
+        ) : null}
+        <View style={styles.actionsRow}>
+          {canEdit && (
+            <Pressable
+              onPress={onEdit}
+              accessibilityRole="button"
+              accessibilityLabel={i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.redaktirovat_puteshestvie_8010aa7b')}
+              style={({ pressed, hovered }) => [
+                styles.actionBtn,
+                globalFocusStyles.focusable,
+                hovered && styles.actionBtnHovered,
+                pressed && styles.actionBtnPressed,
+              ]}
+              ref={webTitleRef(editTitle)}
+              {...webOnly({
+                role: 'button',
+                'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.redaktirovat_puteshestvie_8010aa7b'),
+              } as any)}
+            >
+              <Feather name="edit" size={18} color={textColor} />
+            </Pressable>
+          )}
+
+          {isPrintAvailable() && (
+            <TravelPdfExportControl
+              travel={travel}
+              mutedText={mutedText}
+              actionBtnStyle={styles.actionBtn}
+              actionBtnHoveredStyle={styles.actionBtnHovered}
+              actionBtnPressedStyle={styles.actionBtnPressed}
+              actionBtnDisabledStyle={styles.actionBtnDisabled}
+            />
+          )}
+
+          {showSubscribeAndWrite && (
+            <>
+              <SubscribeButton
+                targetUserId={authorUserId!}
+                iconOnly
+                style={[styles.actionBtn, globalFocusStyles.focusable]}
+                hoverStyle={styles.actionBtnHovered}
+              />
+              <Pressable
+                onPress={onWrite}
+                accessibilityRole="button"
+                accessibilityLabel={i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.napisat_avtoru_value1_191ed8f0', { value1: displayName })}
+                style={({ pressed, hovered }) => [
+                  styles.actionBtn,
+                  globalFocusStyles.focusable,
+                  hovered && styles.actionBtnHovered,
+                  pressed && styles.actionBtnPressed,
+                ]}
+                ref={webTitleRef(writeTitle)}
+                {...webOnly({
+                  role: 'button',
+                  'aria-label': i18nT('travel:components.travel.compactSideBar.parts.AuthorBlock.napisat_avtoru_value1_191ed8f0', { value1: displayName }),
+                } as any)}
+              >
+                <Feather name="mail" size={18} color={textColor} />
+              </Pressable>
+              <ContentSafetyActions
+                contentRef={safetyRef}
+                authorName={displayName}
+                testIDPrefix="travel-sidebar-safety"
+                style={styles.actionBtn}
+              />
+            </>
           )}
         </View>
       </View>

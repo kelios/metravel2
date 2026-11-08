@@ -43,13 +43,18 @@ const staticStyles = StyleSheet.create({
   spacedBottom: { marginBottom: 8 },
   quickFactsContainer: {
     width: '100%',
-    gap: DESIGN_TOKENS.spacing.sm,
-    paddingVertical: DESIGN_TOKENS.spacing.sm,
+    gap: DESIGN_TOKENS.spacing.xs,
+    paddingVertical: DESIGN_TOKENS.spacing.xs,
   },
+  // Та же геометрия, что у `QuickFacts` + ряда действий: строка фактов текстом
+  // с чипами категорий в одном потоке, под ней ряд действий.
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: DESIGN_TOKENS.spacing.xs,
+    alignItems: 'center',
+    columnGap: DESIGN_TOKENS.spacing.md,
+    rowGap: DESIGN_TOKENS.spacing.xs,
+    minHeight: 28,
   },
   categoriesRow: {
     flexDirection: 'row',
@@ -144,14 +149,19 @@ export const SectionSkeleton: React.FC<{ lines?: number }> = ({ lines = 4 }) => 
 export const QuickFactsSkeleton: React.FC = () => (
   <View style={staticStyles.quickFactsContainer}>
     <View style={staticStyles.chipsRow}>
-      <SkeletonLoader width={140} height={40} borderRadius={DESIGN_TOKENS.radii.sm} />
-      <SkeletonLoader width={120} height={40} borderRadius={DESIGN_TOKENS.radii.sm} />
-      <SkeletonLoader width={132} height={40} borderRadius={DESIGN_TOKENS.radii.sm} />
+      <SkeletonLoader width={96} height={16} borderRadius={6} />
+      <SkeletonLoader width={56} height={16} borderRadius={6} />
+      <SkeletonLoader width={80} height={16} borderRadius={6} />
+      <View style={staticStyles.categoriesRow}>
+        <SkeletonLoader width={72} height={14} borderRadius={6} />
+        <SkeletonLoader width={64} height={28} borderRadius={DESIGN_TOKENS.radii.sm} />
+        <SkeletonLoader width={72} height={28} borderRadius={DESIGN_TOKENS.radii.sm} />
+      </View>
     </View>
     <View style={staticStyles.categoriesRow}>
-      <SkeletonLoader width={84} height={18} borderRadius={6} />
-      <SkeletonLoader width={92} height={32} borderRadius={DESIGN_TOKENS.radii.sm} />
-      <SkeletonLoader width={108} height={32} borderRadius={DESIGN_TOKENS.radii.sm} />
+      <SkeletonLoader width={156} height={36} borderRadius={DESIGN_TOKENS.radii.pill} />
+      <SkeletonLoader width={148} height={36} borderRadius={DESIGN_TOKENS.radii.pill} />
+      <SkeletonLoader width={196} height={36} borderRadius={DESIGN_TOKENS.radii.pill} />
     </View>
   </View>
 )
