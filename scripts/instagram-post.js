@@ -29,8 +29,8 @@ const { spawn } = require('child_process');
 const { GRAPH, GRAPH_VERSION, gget, graphUrl, loadToken, redact } = require('./lib/instagramGraph')
 
 const SITE = 'https://metravel.by'
-/** Unpublished service draft «Instagram: слайды каруселей» that hosts slide images. */
-const SLIDES_TRAVEL_ID = 786
+/** Unpublished service draft «Instagram: слайды каруселей» that hosts slide images (964 since 2026-11-08; the former 786 was deleted on prod). */
+const SLIDES_TRAVEL_ID = 964
 const MAX_CAPTION = 2200
 const MAX_CAROUSEL_ITEMS = 10
 const TRIAL_STRATEGIES = { manual: 'MANUAL', auto: 'SS_PERFORMANCE' }
