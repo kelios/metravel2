@@ -169,6 +169,10 @@ export const PointsListGrid: React.FC<{
   // #3133: число во вкладке — через форматтер локали («2 656»), а пока первая
   // страница не пришла — многоточие вместо «(0)», которое читалось как «точек нет».
   const listCountLabel = isLoading ? '…' : formatInteger(filteredPoints.length)
+  // Сегмент мобильного таб-бара — треть ширины 390 px: «Список (2 656)» с
+  // разрядом тысяч там обрезается до «Список (2 6…», поэтому число идёт без
+  // группировки — тем же форматтером локали.
+  const mobileListCountLabel = isLoading ? '…' : formatNumber(filteredPoints.length, { useGrouping: false, maximumFractionDigits: 0 })
   const panelOptions = React.useMemo(
     () => [
       { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_karty_bf82f2ec') },
@@ -179,10 +183,10 @@ export const PointsListGrid: React.FC<{
   const mobileTabOptions = React.useMemo(
     () => [
       { key: 'map', label: i18nT('map:components.UserPoints.PointsListGrid.karta_b48708d8'), icon: 'map' },
-      { key: 'list', label: i18nT('map:components.UserPoints.PointsListGrid.spisok_value1_cc1e53c4', { value1: listCountLabel }), icon: 'list' },
+      { key: 'list', label: i18nT('map:components.UserPoints.PointsListGrid.spisok_value1_cc1e53c4', { value1: mobileListCountLabel }), icon: 'list' },
       { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_a9025123'), icon: 'filter-list' },
     ],
-    [listCountLabel]
+    [mobileListCountLabel]
   )
   const handleMobileTabChange = React.useCallback(
     (key: string) => {
