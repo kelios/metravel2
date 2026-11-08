@@ -158,6 +158,9 @@ node scripts/instagram-post.js --reel <пакет>/reel.mp4 --caption-file <па
 | Профиль | `https://metravel.by/?utm_source=instagram&utm_medium=social&utm_campaign=profile` |
 | Стикер ссылки в истории | `https://metravel.by/?utm_source=instagram&utm_medium=social&utm_campaign=story` |
 | Ссылка для Reels | `https://metravel.by/?utm_source=instagram&utm_medium=social&utm_campaign=reel` |
+| Профиль, вторая ссылка «Допишем Беларусь вместе» (добавлена 08.11.2026 через приложение по adb; сохранять на время пилота) | `https://metravel.by/places/help?utm_source=instagram&utm_medium=organic_social&utm_campaign=belarus_place_stories&utm_content=carousel_launch` |
+
+Ссылки в профиле редактируются только в мобильном приложении (веб `accounts/edit` отказывает); по adb: «Редактировать профиль» → «Ссылки» → «Добавьте ссылку», URL — `input text` с экранированием `\?` и `\&`, кириллический заголовок — через буфер (страница с `navigator.clipboard.writeText` на `python3 -m http.server` + `adb reverse`, Chrome телефона, затем `input keycombination 113 50`), промо-подсказку Meta One сначала закрыть тапом вне неё.
 
 Для статьи или квеста заменить только целевой путь на его проверенный канонический
 URL; `utm_source=instagram` и `utm_medium=social` сохраняются, campaign выбирается
