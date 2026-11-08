@@ -299,6 +299,10 @@ const QUESTS = [
     { questId: 'zamosc-ideal-city', dir: 'zamoscIdealCity', finaleId: 317 },
     { questId: 'daugavpils-fortress-rothko', dir: 'daugavpilsFortressRothko', finaleId: 318 },
     { questId: 'augustow-canal-town', dir: 'augustowCanalTown', finaleId: 319 },
+    { questId: 'larnaca-saint-lazarus', dir: 'larnacaSaintLazarus', finaleId: 320 },
+    { questId: 'nessebar-forty-churches', dir: 'nessebarFortyChurches', finaleId: 321 },
+    { questId: 'verona-arena-juliet', dir: 'veronaArenaJuliet', finaleId: 322 },
+    { questId: 'thessaloniki-white-tower', dir: 'thessalonikiWhiteTower', finaleId: 323 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
