@@ -230,7 +230,7 @@ export const mapGenerated2 = {
   "components.UserPoints.PointsListGrid.panel_7e476941": "Panel",
   "components.UserPoints.PointsListGrid.poisk_po_nazvaniyu_adresu_opisaniyu_i_kategorii_bd6ebf74": "Search by name, address, description or category…",
   "components.UserPoints.PointsListGrid.sbrosit_filtry_811750be": "Reset filters",
-  "components.UserPoints.PointsListGrid.spisok_value1_cc1e53c4": "List({{value1}})",
+  "components.UserPoints.PointsListGrid.spisok_value1_cc1e53c4": "List ({{value1}})",
   "components.UserPoints.PointsListGrid.zagruzheno_value1_iz_value2_6c50f47e": "Loaded {{value1}} of {{value2}}",
   "components.UserPoints.PointsListGrid.upravlenie_tochkami_fcf804c2": "Point management",
   "components.UserPoints.PointsListGrid.vse_tochki_2d6d6b49": "All points",
