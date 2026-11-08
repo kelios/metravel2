@@ -136,6 +136,7 @@ function checkGenreHeadings(html) {
   const h1 = (body.match(/<h1\b/gi) || []).length;
   if (h1) problems.push(`<h1> в теле: ${h1}`);
   let practice = 0;
+  let reference = 0;
   for (const text of headingTexts(body)) {
     if (PICTOGRAPH_RE.test(text)) problems.push(`эмодзи в заголовке «${text}»`);
     if (text.endsWith('?')) continue;
@@ -145,8 +146,11 @@ function checkGenreHeadings(html) {
       problems.push(`раздел путеводителя «${text}»`);
     }
     if (norm.startsWith('если соберетесь')) practice += 1;
+    if (norm.startsWith('что еще посмотреть')) reference += 1;
   }
   if (practice > 1) problems.push(`«Если соберётесь» заголовком: ${practice}`);
+  // Справка о местах, где автора не было, — один блок в хвосте (решение владельца 08.11.2026).
+  if (reference > 1) problems.push(`«Что ещё посмотреть» заголовком: ${reference}`);
   return problems;
 }
 
