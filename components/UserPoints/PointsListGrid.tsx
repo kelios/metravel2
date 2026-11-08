@@ -9,6 +9,7 @@ import { PHONE_LIST_IMAGE_HEIGHT } from '@/components/UserPoints/PointCard'
 import { PointsListSkeleton, WIDE_LIST_SKELETON_IMAGE_HEIGHT } from '@/components/UserPoints/PointsListSkeleton'
 import { useThemedColors } from '@/hooks/useTheme'
 import { useResponsiveWidth } from '@/hooks/useResponsive'
+import { METRICS } from '@/constants/layout'
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
 import IconButton from '@/components/ui/IconButton'
@@ -175,7 +176,7 @@ export const PointsListGrid: React.FC<{
   const mobileListBadge = isLoading ? undefined : filteredPoints.length
   // На 320 px сегмент ≈ 97 px: иконка + «Список» + бейдж «2656» не помещаются
   // (прод-проба 08.11: scrollWidth > clientWidth), без иконок — помещаются.
-  const showMobileTabIcons = windowWidth >= 360
+  const showMobileTabIcons = windowWidth >= METRICS.breakpoints.phone
   const panelOptions = React.useMemo(
     () => [
       { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_karty_bf82f2ec') },
