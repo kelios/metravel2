@@ -104,9 +104,9 @@ describe('PointsList map settings availability (#1787)', () => {
     await fireEvent.press(screen.getByTestId('segmented-filters'));
     expectSettingsAbsent();
     expect(screen.getByText('Управление точками')).toBeTruthy();
-    expect(screen.getByText('Показать фильтры')).toBeTruthy();
-    await fireEvent.press(screen.getByTestId('userpoints-filters-toggle'));
-    expect(screen.getByText('Скрыть фильтры')).toBeTruthy();
+    // #3134: фильтры развёрнуты во вкладке сразу, кнопки «Показать фильтры» нет.
+    expect(screen.getByTestId('userpoints-filters-inline')).toBeTruthy();
+    expect(screen.queryByText('Показать фильтры')).toBeNull();
   });
 
   it.each([1024, 1280])('opens and closes the actual panel slot in desktop map mode at %ipx', async (width) => {
@@ -129,13 +129,13 @@ describe('PointsList map settings availability (#1787)', () => {
     await renderPoints();
     await fireEvent.press(screen.getByTestId('segmented-filters'));
     await fireEvent.press(screen.getByTestId('userpoints-map-settings-toggle'));
-    // The side-panel tab and the header view toggle both have a list option.
-    await fireEvent.press(screen.getByText('Список'));
+    // #3134: переключатель раскладки подписан по раскладке, а не «Карта/Список».
+    await fireEvent.press(screen.getByText('Только список'));
     expectSettingsAbsent();
     expect(screen.queryByTestId('userpoints-map-engine')).toBeNull();
     expect(screen.getByText('Управление точками')).toBeTruthy();
 
-    await fireEvent.press(screen.getByText('Карта'));
+    await fireEvent.press(screen.getByText('С картой'));
     expect(screen.getByTestId('userpoints-map-engine')).toBeTruthy();
     expect(screen.getByText('Скрыть настройки карты')).toBeTruthy();
     expect(screen.getByTestId('userpoints-map-settings-panel')).toBeTruthy();

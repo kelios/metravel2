@@ -32,8 +32,8 @@ test.describe('User points import (mock API)', () => {
 
   async function openFiltersPanelTab(page: import('@playwright/test').Page) {
     await page.getByTestId('segmented-filters').click();
-    await expect(page.getByRole('searchbox', { name: 'Поиск по точкам', exact: true }))
-      .toBeVisible({ timeout: 30_000 });
+    // #3134: the Filters tab has no search field; it always shows the filters.
+    await expect(page.getByTestId('userpoints-filters-inline')).toBeVisible({ timeout: 30_000 });
   }
 
   async function openImportWizard(page: any) {

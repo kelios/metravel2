@@ -46,6 +46,8 @@ export const PointsListGrid: React.FC<{
   listKey?: string
   /** Прогресс фоновой докачки коллекции — строка «Загружено N из M» под списком (#3133). */
   loadProgress?: { loaded: number; total: number; complete: boolean }
+  /** Число активных фильтров — бейдж вкладки «Фильтры» (#3134). */
+  activeFilterCount?: number
   panelTab?: 'filters' | 'list'
   onPanelTabChange?: (tab: 'filters' | 'list') => void
 
@@ -96,6 +98,7 @@ export const PointsListGrid: React.FC<{
   listExtraData,
   listKey,
   loadProgress,
+  activeFilterCount = 0,
   panelTab: controlledPanelTab,
   onPanelTabChange,
   numColumns,
@@ -136,7 +139,6 @@ export const PointsListGrid: React.FC<{
   const windowWidth = useResponsiveWidth({ clientOnly: true })
   const isWeb = Platform.OS === 'web'
   const isWideScreen = isWeb && windowWidth >= 1024
-  const compactControls = isWeb && windowWidth < 1200
   const themedColors = useThemedColors()
   const localStyles = useMemo(() => createLocalStyles(themedColors), [themedColors])
   const mapSettingsStyles = useMemo(
@@ -177,20 +179,23 @@ export const PointsListGrid: React.FC<{
   // На 320 px сегмент ≈ 97 px: иконка + «Список» + бейдж «2656» не помещаются
   // (прод-проба 08.11: scrollWidth > clientWidth), без иконок — помещаются.
   const showMobileTabIcons = windowWidth >= METRICS.breakpoints.phone
+  // #3134: вкладка так и называется — «Фильтры», а не «Фильтры карты», и несёт
+  // бейдж с числом активных фильтров; при нуле бейджа нет.
+  const filtersBadge = activeFilterCount > 0 ? activeFilterCount : undefined
   const panelOptions = React.useMemo(
     () => [
-      { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_karty_bf82f2ec') },
+      { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_a9025123'), badge: filtersBadge },
       { key: 'list', label: i18nT('map:components.UserPoints.PointsListGrid.spisok_value1_cc1e53c4', { value1: listCountLabel }) },
     ],
-    [listCountLabel]
+    [filtersBadge, listCountLabel]
   )
   const mobileTabOptions = React.useMemo(
     () => [
       { key: 'map', label: i18nT('map:components.UserPoints.PointsListGrid.karta_b48708d8'), icon: showMobileTabIcons ? 'map' : undefined },
       { key: 'list', label: i18nT('map:components.UserPoints.PointsListHeader.spisok_b0731a7f'), icon: showMobileTabIcons ? 'list' : undefined, badge: mobileListBadge },
-      { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_a9025123'), icon: showMobileTabIcons ? 'filter-list' : undefined },
+      { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_a9025123'), icon: showMobileTabIcons ? 'filter-list' : undefined, badge: filtersBadge },
     ],
-    [mobileListBadge, showMobileTabIcons]
+    [filtersBadge, mobileListBadge, showMobileTabIcons]
   )
   const handleMobileTabChange = React.useCallback(
     (key: string) => {
@@ -309,6 +314,13 @@ export const PointsListGrid: React.FC<{
           />
 
           <View style={localStyles.listControlsActions}>
+            {/*
+              #3134: над списком — только то, чего нет во вкладке «Фильтры»
+              одним нажатием: «Управление точками» с подписью на любой ширине
+              (иконка-шестерёнка не «говорящая», #1414) и «Сбросить фильтры»
+              только когда фильтры активны. Кнопка «Фильтры» убрана — вход
+              в фильтры один: вкладка панели / мобильного таб-бара.
+            */}
             {onOpenActions ? (
               <IconButton
                 icon={<Feather name="settings" size={16} color={themedColors.text} />}
@@ -316,28 +328,20 @@ export const PointsListGrid: React.FC<{
                 onPress={onOpenActions}
                 size="sm"
                 testID="userpoints-actions-open"
-                showLabel={!compactControls}
+                showLabel
               />
             ) : null}
 
-            <IconButton
-              icon={<Feather name="sliders" size={16} color={themedColors.text} />}
-              label={i18nT('map:components.UserPoints.PointsListGrid.filtry_a9025123')}
-              onPress={() => setPanelTab('filters')}
-              size="sm"
-              testID="userpoints-list-open-filters"
-              showLabel={!compactControls}
-            />
-
-            <IconButton
-              icon={<Feather name="rotate-ccw" size={16} color={themedColors.text} />}
-              label={i18nT('map:components.UserPoints.PointsListGrid.sbrosit_filtry_811750be')}
-              onPress={onResetFilters}
-              disabled={!hasFilters}
-              size="sm"
-              testID="userpoints-list-reset-filters"
-              showLabel={!compactControls}
-            />
+            {hasFilters ? (
+              <IconButton
+                icon={<Feather name="rotate-ccw" size={16} color={themedColors.text} />}
+                label={i18nT('map:components.UserPoints.PointsListGrid.sbrosit_filtry_811750be')}
+                onPress={onResetFilters}
+                size="sm"
+                testID="userpoints-list-reset-filters"
+                showLabel
+              />
+            ) : null}
           </View>
         </View>
 
@@ -395,7 +399,6 @@ export const PointsListGrid: React.FC<{
       localStyles.recommendationsActions,
       localStyles.recommendationsHeader,
       localStyles.recommendationsTitle,
-      compactControls,
       onCloseRecommendations,
       onOpenActions,
       onRefreshRecommendations,
@@ -403,7 +406,6 @@ export const PointsListGrid: React.FC<{
       onSearch,
       searchQuery,
       showingRecommendations,
-      setPanelTab,
       themedColors.text,
       themedColors.textMuted,
       themedColors.textOnPrimary,

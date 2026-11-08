@@ -6,7 +6,7 @@ import Feather from '@expo/vector-icons/Feather'
 import { PointFilters } from '@/components/UserPoints/PointFilters'
 import Button from '@/components/ui/Button'
 import Chip from '@/components/ui/Chip'
-import { useIsScreenHeaderMobile, useScreenHeader } from '@/components/layout/ScreenHeaderContext'
+import { useScreenHeader } from '@/components/layout/ScreenHeaderContext'
 import IconButton from '@/components/ui/IconButton'
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
@@ -16,7 +16,6 @@ import type { PointFilters as PointFiltersType } from '@/types/userPoints'
 import type { PointsListStyles } from './types'
 import { translate as i18nT } from '@/i18n'
 import { formatInteger } from '@/i18n/format'
-import { SCREEN_HEADER_DESKTOP_PROPS } from '@/utils/webProps'
 
 
 type ViewMode = 'list' | 'map'
@@ -26,6 +25,16 @@ type ActiveFilterChip = {
   label: string
 }
 
+/**
+ * Содержимое вкладки «Фильтры» панели «Мои точки» (#3134, макет —
+ * `docs/design/userpoints-panel.md`). Раньше вкладка называлась «Фильтры
+ * карты», но самих фильтров не содержала: промо «Случайный выбор», второй
+ * переключатель Карта/Список, второе поле поиска и кнопка «Показать фильтры»,
+ * которая только разворачивала их ниже (повтор #489). Теперь:
+ * счётчики → действия экрана → активные фильтры → сами фильтры, всегда
+ * развёрнутые. Поле поиска здесь показывается только в отдельном режиме
+ * списка на широком web (`showSearch`), где нет шапки списка со своим полем.
+ */
 type PointsListHeaderProps = {
   styles: PointsListStyles
   colors: {
@@ -33,7 +42,6 @@ type PointsListHeaderProps = {
     textMuted: string
     textOnPrimary: string
   }
-  isNarrow: boolean
   isMobile: boolean
   total: number
   found: number
@@ -44,16 +52,10 @@ type PointsListHeaderProps = {
   activeFilterChips: ActiveFilterChip[]
   onRemoveFilterChip: (key: string) => void
 
+  /** Режим раскладки широкого web: карта с панелью или список во всю ширину. */
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
-
-  /** Web desktop layout: right panel tabs (filters/list) */
-  panelTab?: 'filters' | 'list'
-  onPanelTabChange?: (tab: 'filters' | 'list') => void
   hideViewToggle?: boolean
-
-  showFilters: boolean
-  onToggleFilters: () => void
 
   canShowMapSettings: boolean
   showMapSettings: boolean
@@ -63,8 +65,10 @@ type PointsListHeaderProps = {
   onOpenActions: () => void
   onOpenRecommendations: () => void
 
-  searchQuery: string
-  onSearch: (text: string) => void
+  /** Поле поиска внутри шапки — только там, где нет шапки списка со своим полем. */
+  showSearch?: boolean
+  searchQuery?: string
+  onSearch?: (text: string) => void
 
   filters: PointFiltersType
   onFilterChange: (newFilters: PointFiltersType) => void
@@ -77,10 +81,12 @@ type PointsListHeaderProps = {
   availableColors?: string[]
 }
 
+/** Сколько точек нужно для «Случайного выбора». */
+const RECOMMENDATION_MIN_POINTS = 3
+
 export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   styles,
   colors,
-  isNarrow: _isNarrow,
   isMobile,
   total,
   found,
@@ -88,20 +94,17 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   onResetFilters,
   activeFilterChips,
   onRemoveFilterChip,
-  viewMode: _viewMode,
+  viewMode,
   onViewModeChange,
-  panelTab: _panelTab,
-  onPanelTabChange: _onPanelTabChange,
   hideViewToggle,
-  showFilters,
-  onToggleFilters,
   canShowMapSettings,
   showMapSettings,
   onToggleMapSettings,
   showingRecommendations,
   onOpenActions,
   onOpenRecommendations,
-  searchQuery,
+  showSearch = false,
+  searchQuery = '',
   onSearch,
   filters,
   onFilterChange,
@@ -113,7 +116,6 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
 }) => {
   const themed = useThemedColors();
   const local = React.useMemo(() => createLocalStyles(themed), [themed]);
-  const isHeaderMobile = useIsScreenHeaderMobile();
   useScreenHeader({
     title: i18nT('map:components.MapPage.Map.PlacePopupCard.index.moi_tochki_9e5ac9a2'),
     info: [
@@ -121,19 +123,23 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
       i18nT('map:components.UserPoints.PointsListHeader.filtruyte_tochki_nastraivayte_kartu_ili_nazh_d60229ee'),
     ],
   });
-  const canRecommend = total >= 3;
+  const canRecommend = total >= RECOMMENDATION_MIN_POINTS;
   const recommendationLabel = showingRecommendations
     ? i18nT('map:components.UserPoints.PointsListHeader.vybrat_drugie_sluchaynye_77185bc2')
     : i18nT('map:components.UserPoints.PointsListHeader.vybrat_3_sluchaynye_tochki_4ddd9506');
-  const recommendationDescription = !canRecommend
+  // Одна строка подсказки вместо промо-блока с заголовком и абзацем (#3134).
+  const recommendationHint = !canRecommend
     ? i18nT('map:components.UserPoints.PointsListHeader.sohranite_hotya_by_3_tochki_i_knopka_sluchay_73f1dd95')
     : showingRecommendations
       ? i18nT('map:components.UserPoints.PointsListHeader.pokazany_3_sluchaynye_tochki_iz_vashih_sohra_2b2a3228')
       : i18nT('map:components.UserPoints.PointsListHeader.ne_reshili_kuda_poehat_sluchayno_vyberem_3_t_a7b29b4f');
+  // Переключатель раскладки широкого web. Подписи называют раскладку, а не
+  // «Карта/Список»: иначе он читался как дубль вкладок панели и мобильного
+  // таб-бара (#3134).
   const viewModeOptions = React.useMemo(
     () => [
-      { key: 'map', label: i18nT('map:components.UserPoints.PointsListHeader.karta_27054ef9') },
-      { key: 'list', label: i18nT('map:components.UserPoints.PointsListHeader.spisok_b0731a7f') },
+      { key: 'map', label: i18nT('map:components.UserPoints.PointsListHeader.s_kartoy_11e00dcb'), icon: 'map' },
+      { key: 'list', label: i18nT('map:components.UserPoints.PointsListHeader.tolko_spisok_432a899d'), icon: 'list' },
     ],
     [],
   );
@@ -141,98 +147,53 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   return (
     <View style={styles.header}>
       <View style={local.summaryCard}>
-        <View style={local.summaryTopRow}>
-          {isHeaderMobile ? null : (
-            <View style={local.summaryTextBlock} {...SCREEN_HEADER_DESKTOP_PROPS}>
-              <Text style={local.summaryEyebrow}>{i18nT('map:components.UserPoints.PointsListHeader.vashi_tochki_4f58f81b')}</Text>
-              <Text style={local.summaryTitle}>{i18nT('map:components.UserPoints.PointsListHeader.upravlyayte_sohranennymi_mestami_56ebb898')}</Text>
-              <Text style={local.summarySubtitle}>
-                {i18nT('map:components.UserPoints.PointsListHeader.filtruyte_tochki_nastraivayte_kartu_ili_nazh_d60229ee')}</Text>
-            </View>
-          )}
-
-          <View style={local.statsGrid}>
-            <View style={[styles.statPill, local.statCard]}>
-              <Text style={styles.statPillLabel}>{i18nT('map:components.UserPoints.PointsListHeader.vsego_f6d5c240')}</Text>
-              <Text style={[styles.statPillValue, local.statValue]}>{formatInteger(total || 0)}</Text>
-            </View>
-            <View style={[styles.statPill, local.statCard]}>
-              <Text style={styles.statPillLabel}>{i18nT('map:components.UserPoints.PointsListHeader.naydeno_3670717b')}</Text>
-              <Text style={[styles.statPillValue, local.statValue]}>{formatInteger(found || 0)}</Text>
-            </View>
+        <View style={local.statsGrid}>
+          <View style={[styles.statPill, local.statCard]}>
+            <Text style={styles.statPillLabel}>{i18nT('map:components.UserPoints.PointsListHeader.vsego_f6d5c240')}</Text>
+            <Text style={[styles.statPillValue, local.statValue]}>{formatInteger(total || 0)}</Text>
+          </View>
+          <View style={[styles.statPill, local.statCard]}>
+            <Text style={styles.statPillLabel}>{i18nT('map:components.UserPoints.PointsListHeader.naydeno_3670717b')}</Text>
+            <Text style={[styles.statPillValue, local.statValue]}>{formatInteger(found || 0)}</Text>
           </View>
         </View>
 
-        <View style={local.recommendationCard}>
-          <View style={local.recommendationTextBlock}>
-            <View style={local.recommendationEyebrowRow}>
-              <Feather name="shuffle" size={13} color={themed.primaryDark} />
-              <Text style={local.recommendationEyebrow}>{i18nT('map:components.UserPoints.PointsListHeader.sluchaynyy_vybor_iz_vashih_tochek_b47a0775')}</Text>
-            </View>
-            <Text style={local.recommendationTitle}>{i18nT('map:components.UserPoints.PointsListHeader.kuda_poehat_vyberem_za_vas_2762a103')}</Text>
-            <Text style={local.recommendationDescription}>{recommendationDescription}</Text>
+        {!hideViewToggle ? (
+          <View style={local.viewModeControl}>
+            <SegmentedControl
+              options={viewModeOptions}
+              value={viewMode}
+              onChange={(key) => onViewModeChange(key as ViewMode)}
+              accessibilityLabel={i18nT('map:components.UserPoints.PointsListHeader.rezhim_otobrazheniya_tochek_3cfbac2e')}
+              compact
+            />
           </View>
+        ) : null}
 
-          <Button
+        {/*
+          Действия экрана — один ряд подписанных кнопок во всю ширину на любой
+          платформе (#1414: подпись обязательна, иконки здесь не «говорящие»).
+        */}
+        <View style={local.actionsGrid}>
+          <IconButton
+            icon={<Feather name="shuffle" size={18} color={colors.text} />}
             label={recommendationLabel}
             onPress={onOpenRecommendations}
-            accessibilityLabel={recommendationLabel}
-            icon={<Feather name="shuffle" size={16} color={colors.textOnPrimary} />}
-            size="sm"
-            fullWidth
             disabled={!canRecommend}
-            style={[
-              local.recommendationButton,
-              showingRecommendations && local.recommendationButtonActive,
-            ]}
+            active={showingRecommendations}
+            size="sm"
+            testID="userpoints-recommendations-open"
+            showLabel
+            style={local.actionButton}
           />
+          <Text style={local.actionHint}>{recommendationHint}</Text>
 
-          {canRecommend ? (
-            <Text style={local.recommendationHint}>{i18nT('map:components.UserPoints.PointsListHeader.sluchaynye_tochki_otkroyutsya_v_spiske_sprav_d9a43a42')}</Text>
-          ) : null}
-        </View>
-
-        <View style={local.actionsGrid}>
-          {!hideViewToggle ? (
-            <View style={local.viewModeControl}>
-              <SegmentedControl
-                options={viewModeOptions}
-                value={_viewMode}
-                onChange={(key) => onViewModeChange(key as ViewMode)}
-                accessibilityLabel={i18nT('map:components.UserPoints.PointsListHeader.rezhim_otobrazheniya_tochek_3cfbac2e')}
-                compact
-              />
-            </View>
-          ) : null}
-
-          {/*
-            #1414 (TestFlight 1.0.5 (8)): подпись действия обязательна на любой
-            ширине. `showLabel={!isMobile}` гасил её, и тогда `isMobile` означал
-            не вьюпорт, а `Platform.OS !== 'web'`, поэтому mobile web видел три
-            подписанные кнопки, а Android и iPhone — три одинаковых кружка
-            settings/filter/sliders без единой буквы. Источник `isMobile` с тех
-            пор исправлен на вьюпорт (#1788), но подпись всё равно остаётся
-            безусловной: иконки здесь не «говорящие» в смысле
-            `docs/DESIGN_SYSTEM.md` («Mobile pattern: secondary tool actions»),
-            значит действию нужна подпись, а не icon-only ряд на любой ширине.
-          */}
           <IconButton
             icon={<Feather name="settings" size={18} color={colors.text} />}
             label={i18nT('map:components.UserPoints.PointsListHeader.upravlenie_tochkami_f2146a1d')}
             onPress={onOpenActions}
             size="sm"
             testID="userpoints-actions-open"
-            showLabel
-            style={local.actionButton}
-          />
-
-          <IconButton
-            icon={<Feather name={showFilters ? 'eye-off' : 'filter'} size={18} color={colors.text} />}
-            label={showFilters ? i18nT('map:components.UserPoints.PointsListHeader.skryt_filtry_abc229ca') : i18nT('map:components.UserPoints.PointsListHeader.pokazat_filtry_70087f13')}
-            onPress={onToggleFilters}
-            active={showFilters}
-            size="sm"
-            testID="userpoints-filters-toggle"
             showLabel
             style={local.actionButton}
           />
@@ -252,26 +213,28 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
         </View>
       </View>
 
-      <View style={local.searchBlock}>
-        <Text style={local.searchLabel}>{i18nT('map:components.UserPoints.PointsListHeader.poisk_po_tochkam_f76d0d0d')}</Text>
-        <View style={local.searchField}>
-          <Feather name="search" size={16} color={colors.textMuted} />
-          <TextInput
-            {...searchInputAccessibilityProps()}
-            style={[styles.searchInput, local.searchInput]}
-            placeholder={i18nT('map:components.UserPoints.PointsListHeader.poisk_po_nazvaniyu_adresu_opisaniyu_i_kategorii_2d8497d1')}
-            value={searchQuery}
-            onChangeText={onSearch}
-            placeholderTextColor={colors.textMuted}
-            accessibilityLabel={i18nT('map:components.UserPoints.PointsListHeader.poisk_po_tochkam_f76d0d0d')}
-          />
+      {showSearch && onSearch ? (
+        <View style={local.searchBlock}>
+          <View style={local.searchField}>
+            <Feather name="search" size={16} color={colors.textMuted} />
+            <TextInput
+              {...searchInputAccessibilityProps()}
+              style={[styles.searchInput, local.searchInput]}
+              placeholder={i18nT('map:components.UserPoints.PointsListHeader.poisk_po_nazvaniyu_adresu_opisaniyu_i_kategorii_2d8497d1')}
+              value={searchQuery}
+              onChangeText={onSearch}
+              placeholderTextColor={colors.textMuted}
+              accessibilityLabel={i18nT('map:components.UserPoints.PointsListHeader.poisk_po_tochkam_f76d0d0d')}
+              testID="userpoints-header-search"
+            />
+          </View>
         </View>
-      </View>
+      ) : null}
 
       <View style={styles.headerDivider} />
 
       {hasActiveFilters ? (
-        <View style={local.activeFiltersBlock}>
+        <View style={local.activeFiltersBlock} testID="userpoints-active-filters">
           <View style={local.activeFiltersHeaderRow}>
             <Text style={[styles.subtitle, local.activeFiltersLabel]}>{i18nT('map:components.UserPoints.PointsListHeader.aktivnye_filtry_62c0a188')}</Text>
             {isMobile ? (
@@ -280,6 +243,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
                 label={i18nT('map:components.UserPoints.PointsListHeader.sbrosit_filtry_dae77a88')}
                 onPress={onResetFilters}
                 size="sm"
+                testID="userpoints-header-reset-filters"
               />
             ) : (
               <Button
@@ -288,26 +252,26 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
                 accessibilityLabel={i18nT('map:components.UserPoints.PointsListHeader.sbrosit_filtry_dae77a88')}
                 size="sm"
                 variant="secondary"
+                testID="userpoints-header-reset-filters"
               />
             )}
           </View>
 
           <View style={local.activeFiltersChipsRow}>
             {activeFilterChips.map((chip) => (
-              <View key={chip.key} style={local.activeFiltersChipItem}>
-                <Chip
-                  label={chip.label}
-                  onPress={() => onRemoveFilterChip(chip.key)}
-                  testID={`userpoints-filter-chip-${chip.key}`}
-                  selected
-                />
-              </View>
+              <Chip
+                key={chip.key}
+                label={chip.label}
+                onPress={() => onRemoveFilterChip(chip.key)}
+                testID={`userpoints-filter-chip-${chip.key}`}
+                selected
+              />
             ))}
           </View>
         </View>
       ) : null}
 
-      {showFilters ? (
+      <View testID="userpoints-filters-inline">
         <PointFilters
           filters={filters}
           onChange={onFilterChange}
@@ -317,7 +281,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
           activePresetId={activePresetId}
           onPresetChange={onPresetChange}
         />
-      ) : null}
+      </View>
     </View>
   )
 }
@@ -332,29 +296,6 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     borderColor: colors.borderLight,
     gap: DESIGN_TOKENS.spacing.md,
   },
-  summaryTopRow: {
-    gap: DESIGN_TOKENS.spacing.md,
-  },
-  summaryTextBlock: {
-    gap: 6,
-  },
-  summaryEyebrow: {
-    fontSize: 12,
-    fontWeight: '700' as any,
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-    color: colors.primaryText,
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: '800' as any,
-    color: colors.text,
-  },
-  summarySubtitle: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textMuted,
-  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -367,11 +308,9 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     borderColor: colors.borderLight,
   },
   statValue: {
-    fontSize: 15,
+    fontSize: DESIGN_TOKENS.typography.scale.body.fontSize,
   },
   actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: DESIGN_TOKENS.spacing.sm,
   },
   viewModeControl: {
@@ -379,84 +318,28 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     flexGrow: 1,
     flexShrink: 1,
   },
-  recommendationCard: {
-    padding: DESIGN_TOKENS.spacing.md,
-    borderRadius: DESIGN_TOKENS.radii.lg,
-    backgroundColor: colors.primarySoft,
-    borderWidth: 1,
-    borderColor: colors.primaryAlpha30,
-    gap: DESIGN_TOKENS.spacing.sm,
-    ...(Platform.OS === 'web'
-      ? ({
-          boxShadow: colors.boxShadows.light,
-        } as any)
-      : null),
-  },
-  recommendationTextBlock: {
-    gap: 6,
-  },
-  recommendationEyebrowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  recommendationEyebrow: {
-    fontSize: 12,
-    fontWeight: '700' as any,
-    letterSpacing: 0,
-    textTransform: 'uppercase',
-    color: colors.primaryDark,
-  },
-  recommendationTitle: {
-    fontSize: 18,
-    fontWeight: '800' as any,
-    color: colors.text,
-  },
-  recommendationDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.textMuted,
-  },
-  recommendationButton: {
-    marginTop: 2,
-  },
-  recommendationButtonActive: {
-    ...(Platform.OS === 'web'
-      ? ({
-          boxShadow: colors.boxShadows.hover,
-        } as any)
-      : null),
-  },
-  recommendationHint: {
-    fontSize: 12,
-    lineHeight: 18,
-    color: colors.textMuted,
-  },
   // Раскладка ряда действий одна на всех поверхностях: строка во всю ширину с
-  // иконкой и подписью слева. На web так было и раньше, native повторяет её
-  // один в один — иначе mobile web и iPhone расходятся (mobile parity,
-  // `docs/RULES.md`). Полная ширина здесь же снимает вопрос обрезания подписи
-  // на длинных BE/PL/UK: строке остаётся ~300dp против ~170dp самой длинной
-  // локализованной подписи.
+  // иконкой и подписью слева (mobile parity, `docs/RULES.md`). Полная ширина
+  // снимает вопрос обрезания подписи на длинных BE/PL/UK.
   actionButton: {
     marginHorizontal: 0,
     width: '100%',
     justifyContent: 'flex-start',
   },
+  actionHint: {
+    fontSize: DESIGN_TOKENS.typography.scale.caption.fontSize,
+    lineHeight: DESIGN_TOKENS.typography.scale.caption.lineHeight,
+    color: colors.textMuted,
+    marginTop: -DESIGN_TOKENS.spacing.xxs,
+  },
   searchBlock: {
     marginBottom: DESIGN_TOKENS.spacing.sm,
-    gap: DESIGN_TOKENS.spacing.xs,
-  },
-  searchLabel: {
-    fontSize: 13,
-    fontWeight: '600' as any,
-    color: colors.textMuted,
   },
   searchField: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 14,
+    gap: DESIGN_TOKENS.spacing.xs,
+    paddingHorizontal: DESIGN_TOKENS.spacing.sm,
     borderRadius: DESIGN_TOKENS.radii.md,
     borderWidth: 1,
     borderColor: colors.borderLight,
@@ -487,7 +370,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     marginBottom: DESIGN_TOKENS.spacing.xs,
   },
   activeFiltersLabel: {
-    fontSize: 13,
+    fontSize: DESIGN_TOKENS.typography.scale.caption.fontSize,
     fontWeight: '500' as any,
     color: colors.textMuted,
     marginBottom: 0,
@@ -495,10 +378,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
   activeFiltersChipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
-  activeFiltersChipItem: {
-    // gap handles spacing now
+    gap: DESIGN_TOKENS.spacing.xs,
+    marginTop: DESIGN_TOKENS.spacing.xs,
   },
 })

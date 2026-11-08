@@ -6,7 +6,6 @@ import type { PointsListStyles } from './types';
 type Params = {
   styles: PointsListStyles;
   colors: { text: string; textMuted: string; textOnPrimary: string };
-  isNarrow: boolean;
   isMobile: boolean;
   total: number;
   found: number;
@@ -17,14 +16,14 @@ type Params = {
   viewMode: 'list' | 'map';
   onViewModeChange: (mode: 'list' | 'map') => void;
   hideViewToggle?: boolean;
-  showFilters: boolean;
-  onToggleFilters: () => void;
   canShowMapSettings: boolean;
   showMapSettings: boolean;
   onToggleMapSettings: () => void;
   showingRecommendations: boolean;
   onOpenActions: () => void;
   onOpenRecommendations: () => void;
+  /** Поле поиска в шапке — только в отдельном режиме списка (#3134). */
+  showSearch: boolean;
   searchQuery: string;
   onSearch: (value: string) => void;
   filters: any;
@@ -38,7 +37,6 @@ type Params = {
 export const usePointsHeaderRenderer = ({
   styles,
   colors,
-  isNarrow,
   isMobile,
   total,
   found,
@@ -49,14 +47,13 @@ export const usePointsHeaderRenderer = ({
   viewMode,
   onViewModeChange,
   hideViewToggle,
-  showFilters,
-  onToggleFilters,
   canShowMapSettings,
   showMapSettings,
   onToggleMapSettings,
   showingRecommendations,
   onOpenActions,
   onOpenRecommendations,
+  showSearch,
   searchQuery,
   onSearch,
   filters,
@@ -71,7 +68,6 @@ export const usePointsHeaderRenderer = ({
       <PointsListHeader
         styles={styles}
         colors={colors}
-        isNarrow={isNarrow}
         isMobile={isMobile}
         total={total}
         found={found}
@@ -82,14 +78,13 @@ export const usePointsHeaderRenderer = ({
         viewMode={viewMode}
         onViewModeChange={onViewModeChange}
         hideViewToggle={hideViewToggle}
-        showFilters={showFilters}
-        onToggleFilters={onToggleFilters}
         canShowMapSettings={canShowMapSettings}
         showMapSettings={showMapSettings}
         onToggleMapSettings={onToggleMapSettings}
         showingRecommendations={showingRecommendations}
         onOpenActions={onOpenActions}
         onOpenRecommendations={onOpenRecommendations}
+        showSearch={showSearch}
         searchQuery={searchQuery}
         onSearch={onSearch}
         filters={filters}
@@ -114,7 +109,6 @@ export const usePointsHeaderRenderer = ({
     hasActiveFilters,
     hideViewToggle,
     isMobile,
-    isNarrow,
     onFilterChange,
     onOpenActions,
     onOpenRecommendations,
@@ -122,11 +116,10 @@ export const usePointsHeaderRenderer = ({
     onRemoveFilterChip,
     onResetFilters,
     onSearch,
-    onToggleFilters,
     onToggleMapSettings,
     onViewModeChange,
     searchQuery,
-    showFilters,
+    showSearch,
     showingRecommendations,
     canShowMapSettings,
     showMapSettings,

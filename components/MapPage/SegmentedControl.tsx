@@ -1,6 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Platform, View, Text, StyleSheet } from 'react-native';
 import { useThemedColors, type ThemedColors } from '@/hooks/useTheme';
+// Один формат счётчиков на все бейджи карты и панелей: число до 999, выше — «999+» (#2217, #3134).
+// Leaf-модуль, не `TravelListPanel/helpers`: тот тянет граф `useMapTravels`.
+import { formatPlaceCountBadge } from '@/components/MapPage/placeCountBadge';
 import { globalFocusStyles } from '@/styles/globalFocus';
 import MapIcon from './MapIcon';
 import CardActionPressable from '@/components/ui/CardActionPressable';
@@ -171,7 +174,7 @@ const SegmentedControl: React.FC<SegmentedControlProps> = ({
                   styles.badgeText,
                   active && styles.badgeTextActive,
                 ]}>
-                  {badge}
+                  {formatPlaceCountBadge(badge)}
                 </Text>
               </View>
             )}

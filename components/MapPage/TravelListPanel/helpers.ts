@@ -4,6 +4,7 @@ import { getMapPointKey } from '@/hooks/map/useMapTravels'
 import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
 import { translate as i18nT } from '@/i18n'
 import { getMapPointLabel } from '@/utils/mapPointCount'
+import { PLACE_COUNT_BADGE_CAP, formatPlaceCountBadge } from '@/components/MapPage/placeCountBadge'
 
 
 export const IS_WEB = Platform.OS === 'web'
@@ -11,14 +12,7 @@ export const WEB_LIST_OVERSCAN_ITEMS = 5
 export const WEB_ESTIMATED_ITEM_HEIGHT_PX = 340
 export const WEB_DEFAULT_VIEWPORT_HEIGHT = 600
 export const LOAD_MORE_THRESHOLD_RATIO = 0.5
-export const PLACE_COUNT_BADGE_CAP = 999
-/**
- * Text of a place-count badge: the count itself up to the cap, «999+» above it.
- * The one formula for every map badge and summary (list, sheet, panel header,
- * collapsed strip), so the cap cannot drift between surfaces (#2217).
- */
-export const formatPlaceCountBadge = (count: number): string =>
-  count > PLACE_COUNT_BADGE_CAP ? `${PLACE_COUNT_BADGE_CAP}+` : String(count)
+export { PLACE_COUNT_BADGE_CAP, formatPlaceCountBadge }
 // Запас снизу для native-списка мест внутри шторки (+ safe-area inset сверху).
 export const LIST_BOTTOM_PADDING = 96
 

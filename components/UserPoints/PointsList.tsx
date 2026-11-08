@@ -59,7 +59,6 @@ type PointsListProps = {
 export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const defaultPerPage = 200;
   const [activePresetId, setActivePresetId] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   const [showMapSettings, setShowMapSettings] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('map');
   const [panelTab, setPanelTab] = useState<'filters' | 'list'>('list');
@@ -88,7 +87,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   // Экран монтируется уже после гидратации (`UserPointsScreen` держит спиннер,
   // пока `authReady === false`), поэтому SSR-кадра здесь нет.
   const { width: windowWidth, isMobile } = useBreakpoints({ clientOnly: true });
-  const isNarrow = windowWidth < 420;
   // Панель настроек карты остаётся web-only: у native нет моста MapUiApi
   // (см. комментарий ниже), поэтому здесь Platform — признак ВОЗМОЖНОСТИ, а не
   // раскладки, и остаётся на месте.
@@ -317,7 +315,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const renderHeader = usePointsHeaderRenderer({
     styles,
     colors: headerColors,
-    isNarrow,
     isMobile,
     total: points.length,
     found: visibleFilteredPoints.length,
@@ -328,14 +325,15 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     viewMode,
     onViewModeChange: setViewMode,
     hideViewToggle: !isWideScreenWeb,
-    showFilters,
-    onToggleFilters: () => setShowFilters((prev) => !prev),
     canShowMapSettings,
     showMapSettings: mapSettingsVisible,
     onToggleMapSettings: () => setShowMapSettings((v) => !v),
     showingRecommendations,
     onOpenActions: handleOpenActions,
     onOpenRecommendations: handleOpenRecommendations,
+    // Поле поиска в шапке только в отдельном режиме списка: в режиме карты
+    // своё поле есть у шапки списка (#3134, одно поле на экран).
+    showSearch: viewMode === 'list' && isWideScreenWeb,
     searchQuery,
     onSearch: handleSearch,
     filters,
@@ -434,6 +432,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 	        isLoading={isLoading}
 	        filteredPoints={visibleFilteredPoints}
 	        listExtraData={{ selectionMode, selectedIds, activePointId, activeDriveInfo }}
+	        activeFilterCount={activeFilterChips.length}
 	        loadProgress={loadProgress}
 	        listKey={selectionMode ? 'selection' : 'normal'}
 	        panelTab={panelTab}

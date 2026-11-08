@@ -153,9 +153,11 @@ test.describe('User points', () => {
 
     await expect(page.locator('.leaflet-marker-icon').first()).toBeVisible({ timeout: 30_000 });
 
-    // Search + recommendations live in the Filters tab.
+    // Recommendations + always-expanded filters live in the Filters tab; search
+    // lives only in the list header (#3134: one search field per screen).
     await openFiltersPanelTab(page);
-    await expect(page.getByRole('searchbox', { name: 'Поиск по точкам', exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByTestId('userpoints-filters-inline')).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('searchbox', { name: 'Поиск по точкам', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Выбрать 3 случайные точки', exact: true })).toBeVisible({ timeout: 30_000 });
 
     // List item card should also expose the same coordinate actions.
@@ -163,8 +165,9 @@ test.describe('User points', () => {
     const listPanel = page.getByTestId('userpoints-panel-content-list').first();
     await expect(listPanel.getByText(pointName).first()).toBeVisible({ timeout: 30_000 });
     await expect(listPanel.getByTestId('userpoints-list-search')).toBeVisible({ timeout: 30_000 });
-    await expect(listPanel.getByRole('button', { name: 'Фильтры' }).first()).toBeVisible({ timeout: 30_000 });
-    await expect(listPanel.getByRole('button', { name: 'Сбросить фильтры' }).first()).toBeVisible({ timeout: 30_000 });
+    // #3134: the only entry to filters is the panel tab; reset shows only with active filters.
+    await expect(listPanel.getByTestId('userpoints-list-open-filters')).toHaveCount(0);
+    await expect(listPanel.getByTestId('userpoints-list-reset-filters')).toHaveCount(0);
     await expect(listPanel.getByRole('button', { name: 'Копировать координаты' }).first()).toBeVisible({ timeout: 30_000 });
     await expect(listPanel.getByRole('button', { name: 'Поделиться в Telegram' }).first()).toBeVisible({ timeout: 30_000 });
     // Individual map providers live behind the shared navigation disclosure.
@@ -362,8 +365,9 @@ test.describe('User points', () => {
     await openUserPoints(page);
     await expect(page.locator('.leaflet-container').first()).toBeVisible({ timeout: 30_000 });
 
-    await openFiltersPanelTab(page);
-    const searchBox = page.getByRole('searchbox', { name: 'Поиск по точкам', exact: true });
+    // #3134: the search field lives in the list header, not in the Filters tab.
+    await openListPanelTab(page);
+    const searchBox = page.getByTestId('userpoints-list-search');
     await searchBox.fill('Warsaw');
 
     // Wait for debounce + fetch.

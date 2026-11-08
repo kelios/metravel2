@@ -1,12 +1,9 @@
 // __tests__/components/UserPoints/PointsListHeader.test.tsx
 // #1414 (TestFlight 1.0.5 (8), iPhone 16 Pro): «Внизу кнопки ничего не делают
-// непонятно как фильтровать нужно улучшить ui ux».
-//
-// Механизм промаха: подпись действия гасилась пропом `isMobile`, а он в
-// `PointsList.tsx:81` равен `Platform.OS !== 'web'`, а не ширине вьюпорта.
-// Из-за этого mobile web показывал подписанные кнопки, а Android и iPhone —
-// одинаковые кружки settings/filter/sliders. Тест держит контракт mobile
-// parity: доступные действия подписаны; недоступные настройки скрыты (#1787).
+// непонятно как фильтровать нужно улучшить ui ux» — действия подписаны на любой
+// ширине. #3134: вкладка «Фильтры» содержит сами фильтры (без кнопки
+// «Показать фильтры»), промо «Случайный выбор» свёрнуто до действия с одной
+// строкой подсказки, второго поля поиска и второго Карта/Список нет.
 
 import React from 'react'
 import { Platform, StyleSheet } from 'react-native'
@@ -32,7 +29,6 @@ const renderHeader = async (overrides: Record<string, unknown> = {}) =>
     <PointsListHeader
       styles={{}}
       colors={{ text: '#111', textMuted: '#666', textOnPrimary: '#fff' }}
-      isNarrow
       // На native `PointsList` передаёт именно это значение.
       isMobile
       total={2656}
@@ -41,19 +37,15 @@ const renderHeader = async (overrides: Record<string, unknown> = {}) =>
       onResetFilters={noop}
       activeFilterChips={[]}
       onRemoveFilterChip={noop}
-      viewMode="list"
+      viewMode="map"
       onViewModeChange={noop}
       hideViewToggle
-      showFilters={false}
-      onToggleFilters={noop}
       canShowMapSettings={false}
       showMapSettings={false}
       onToggleMapSettings={noop}
       showingRecommendations={false}
       onOpenActions={noop}
       onOpenRecommendations={noop}
-      searchQuery=""
-      onSearch={noop}
       filters={{} as never}
       onFilterChange={noop}
       siteCategoryOptions={[]}
@@ -61,13 +53,37 @@ const renderHeader = async (overrides: Record<string, unknown> = {}) =>
     />,
   )
 
-describe('PointsListHeader — actions row', () => {
+describe('PointsListHeader — вкладка «Фильтры» (#3134)', () => {
   it('names every available action with visible text on a phone', async () => {
-    const { getByText, queryByTestId } = await renderHeader()
+    const { getByText, queryByTestId, queryByText } = await renderHeader()
 
     expect(getByText('Управление точками')).toBeTruthy()
-    expect(getByText('Показать фильтры')).toBeTruthy()
+    expect(getByText('Выбрать 3 случайные точки')).toBeTruthy()
+    // Кнопки «Показать фильтры» больше нет: фильтры развёрнуты всегда.
+    expect(queryByText('Показать фильтры')).toBeNull()
+    expect(queryByTestId('userpoints-filters-toggle')).toBeNull()
     expect(queryByTestId('userpoints-map-settings-toggle')).toBeNull()
+  })
+
+  it('renders the filters inline and no second search field or view toggle', async () => {
+    const { getByTestId, getByText, queryByTestId, queryByText } = await renderHeader()
+
+    expect(getByTestId('userpoints-filters-inline')).toBeTruthy()
+    expect(getByText('Радиус')).toBeTruthy()
+    expect(queryByTestId('userpoints-header-search')).toBeNull()
+    expect(queryByText('Карта')).toBeNull()
+    expect(queryByText('Список')).toBeNull()
+  })
+
+  it('shows the search field only in the standalone list layout', async () => {
+    const { getByTestId } = await renderHeader({ showSearch: true, onSearch: noop, searchQuery: '' })
+    expect(getByTestId('userpoints-header-search')).toBeTruthy()
+  })
+
+  it('labels the wide-web layout toggle by layout, not as a second Карта/Список', async () => {
+    const { getByText } = await renderHeader({ hideViewToggle: false })
+    expect(getByText('С картой')).toBeTruthy()
+    expect(getByText('Только список')).toBeTruthy()
   })
 
   it('shows a labelled settings action when the map supports it', async () => {
@@ -76,38 +92,65 @@ describe('PointsListHeader — actions row', () => {
   })
 
   it('keeps the visible caption in sync with the toggled state', async () => {
-    const { getByText } = await renderHeader({ canShowMapSettings: true, showFilters: true, showMapSettings: true })
-
-    expect(getByText('Скрыть фильтры')).toBeTruthy()
+    const { getByText } = await renderHeader({ canShowMapSettings: true, showMapSettings: true })
     expect(getByText('Скрыть настройки карты')).toBeTruthy()
+  })
+
+  it('collapses the recommendation promo to one action with a single hint line', async () => {
+    const { getByText, queryByText } = await renderHeader()
+    expect(getByText('Не решили, куда поехать? Случайно выберем 3 точки из ваших сохранений и построим к ним маршрут.')).toBeTruthy()
+    expect(queryByText('Куда поехать? Выберем за вас')).toBeNull()
+    expect(queryByText('Случайные точки откроются в списке справа с готовыми маршрутами.')).toBeNull()
+  })
+
+  it('disables the random pick until there are three points', async () => {
+    const { getByTestId } = await renderHeader({ total: 2 })
+    expect(getByTestId('userpoints-recommendations-open').props.accessibilityState?.disabled).toBe(true)
   })
 
   it('fires each action handler', async () => {
     const onOpenActions = jest.fn()
-    const onToggleFilters = jest.fn()
     const onToggleMapSettings = jest.fn()
+    const onOpenRecommendations = jest.fn()
     const { getByTestId } = await renderHeader({
       canShowMapSettings: true,
       onOpenActions,
-      onToggleFilters,
       onToggleMapSettings,
+      onOpenRecommendations,
     })
 
     await fireEvent.press(getByTestId('userpoints-actions-open'))
-    await fireEvent.press(getByTestId('userpoints-filters-toggle'))
     await fireEvent.press(getByTestId('userpoints-map-settings-toggle'))
+    await fireEvent.press(getByTestId('userpoints-recommendations-open'))
 
     expect(onOpenActions).toHaveBeenCalledTimes(1)
-    expect(onToggleFilters).toHaveBeenCalledTimes(1)
     expect(onToggleMapSettings).toHaveBeenCalledTimes(1)
+    expect(onOpenRecommendations).toHaveBeenCalledTimes(1)
+  })
+
+  it('shows the active-filters block with reset only when filters are active', async () => {
+    const onResetFilters = jest.fn()
+    const empty = await renderHeader()
+    expect(empty.queryByTestId('userpoints-active-filters')).toBeNull()
+    await empty.unmount()
+
+    const active = await renderHeader({
+      hasActiveFilters: true,
+      activeFilterChips: [{ key: 'color:red', label: 'Красный' }],
+      onResetFilters,
+    })
+    expect(active.getByTestId('userpoints-active-filters')).toBeTruthy()
+    await fireEvent.press(active.getByTestId('userpoints-header-reset-filters'))
+    expect(onResetFilters).toHaveBeenCalledTimes(1)
   })
 
   it('gives each action row the full width and the 44dp touch floor', async () => {
-    const { getByTestId } = await renderHeader()
+    const { getByTestId } = await renderHeader({ canShowMapSettings: true })
 
     for (const testID of [
+      'userpoints-recommendations-open',
       'userpoints-actions-open',
-      'userpoints-filters-toggle',
+      'userpoints-map-settings-toggle',
     ]) {
       const style = StyleSheet.flatten(getByTestId(testID).props.style)
       expect(style).toMatchObject({ width: '100%', minHeight: 44 })
