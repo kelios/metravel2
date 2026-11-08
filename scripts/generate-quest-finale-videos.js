@@ -315,6 +315,10 @@ const QUESTS = [
     { questId: 'spb-dostoevsky-sennaya', dir: 'spbDostoevskySennaya', finaleId: 333 },
     { questId: 'istanbul-balat-fener', dir: 'istanbulBalatFener', finaleId: 334 },
     { questId: 'tbilisi-sololaki-courtyards', dir: 'tbilisiSololakiCourtyards', finaleId: 335 },
+    { questId: 'boston-freedom-trail', dir: 'bostonFreedomTrail', finaleId: 336 },
+    { questId: 'kyoto-gion-kiyomizu', dir: 'kyotoGionKiyomizu', finaleId: 337 },
+    { questId: 'hanoi-returned-sword', dir: 'hanoiReturnedSword', finaleId: 338 },
+    { questId: 'harbin-central-street-sofia', dir: 'harbinCentralStreetSofia', finaleId: 339 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
