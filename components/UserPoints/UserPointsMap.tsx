@@ -9,6 +9,7 @@ import type { ImportedPoint } from '@/types/userPoints';
 import type { MapUiApi } from '@/types/mapUi';
 
 import { useThemedColors } from '@/hooks/useTheme';
+import { OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers';
 import { UserPointsMapWebLayers, UserPointsMapWebStyles } from './UserPointsMapWebLayers';
 import { useUserPointsDriveInfo } from './useUserPointsDriveInfo';
 import { useUserPointsMapWebController } from './useUserPointsMapWebController';
@@ -376,6 +377,9 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
         ref={mapRef}
         center={[center.lat, center.lng]}
         zoom={safePoints.length > 0 ? 10 : 5}
+        // leaflet.markercluster бросает «Map has no maxZoom specified» при добавлении
+        // группы на карту без maxZoom (#3131, прод 08.11): потолок — как у тайлов прокси.
+        maxZoom={OSM_PROXY_MAX_ZOOM}
         whenReady={handleWhenReady}
         style={leafletContainerStyle}
       >

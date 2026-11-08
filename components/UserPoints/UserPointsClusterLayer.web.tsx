@@ -18,6 +18,7 @@ import { buildClusterIconHtml } from '@/components/MapPage/Map/mapMarkerStyles'
 import { createMapClusterGroup } from '@/components/MapPage/Map/mapClusterGroup'
 import { useApplyClusterAccessibleName } from '@/components/MapPage/Map/clusterAccessibleName'
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem'
+import { OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers'
 import { useTheme } from '@/hooks/useTheme'
 import type { ImportedPoint } from '@/types/userPoints'
 
@@ -234,9 +235,22 @@ export const UserPointsClusterLayer: React.FC<UserPointsClusterLayerProps> = ({
         }
       : undefined
 
-    const { group, dispose } = createMapClusterGroup(L, map, { iconCreateFunction })
+    // Плагин кластеров при `onAdd` бросает «Map has no maxZoom specified», если у
+    // карты нет потолка зума — на проде 08.11 это уронило весь экран. Потолок
+    // задаёт MapContainer; здесь страховка для карты без него, а сам addLayer
+    // под try, чтобы сбой слоя не превращался в белую страницу.
+    let created: { group: any; dispose: () => void }
+    try {
+      if (!Number.isFinite(Number(map.getMaxZoom?.())) && typeof map.setMaxZoom === 'function') {
+        map.setMaxZoom(OSM_PROXY_MAX_ZOOM)
+      }
+      created = createMapClusterGroup(L, map, { iconCreateFunction })
+      map.addLayer(created.group)
+    } catch {
+      return
+    }
+    const { group, dispose } = created
     groupRef.current = group
-    map.addLayer(group)
     setGroupVersion((v) => v + 1)
 
     const entries = entriesRef.current

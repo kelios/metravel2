@@ -159,6 +159,26 @@ describe('UserPointsClusterLayer (web, #3131)', () => {
     return { registerPointMarker, onMarkerClick, renderPopup };
   };
 
+  it('gives the map a maxZoom before adding the cluster group (markercluster throws without it, #3131)', async () => {
+    const runtime = createRuntime();
+    const map = runtime.map as any;
+    map.getMaxZoom = jest.fn(() => undefined);
+    map.setMaxZoom = jest.fn();
+    await renderLayer(runtime);
+    expect(map.setMaxZoom).toHaveBeenCalledWith(expect.any(Number));
+    expect(runtime.map.addLayer).toHaveBeenCalledWith(runtime.group);
+  });
+
+  it('does not crash the screen when the plugin rejects the map', async () => {
+    const runtime = createRuntime();
+    (runtime.map as any).addLayer = jest.fn(() => {
+      throw new Error('Map has no maxZoom specified');
+    });
+    await renderLayer(runtime);
+    expect(runtime.L.marker).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('popup-content')).toBeNull();
+  });
+
   it('puts every point into one markerClusterGroup instead of standalone markers', async () => {
     const runtime = createRuntime();
     const { registerPointMarker } = await renderLayer(runtime);

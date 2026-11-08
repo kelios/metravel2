@@ -103,6 +103,8 @@ test('UserPointsMap.web wires MapContainer via whenReady/ref and emits map UI ap
   const props = (globalThis as any).__lastUserPointsMapContainerProps
   expect(typeof props?.whenReady).toBe('function')
   expect(props?.whenCreated).toBeUndefined()
+  // #3131: leaflet.markercluster требует maxZoom у карты, иначе бросает при addLayer.
+  expect(props?.maxZoom).toBe(require('@/config/mapWebLayers').OSM_PROXY_MAX_ZOOM)
 })
 
 test.each([false, true])('uses the theme background on the actual Leaflet owner before tiles arrive (dark=%s)', async (isDark) => {
