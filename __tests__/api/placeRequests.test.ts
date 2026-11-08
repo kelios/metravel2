@@ -57,3 +57,9 @@ it('requires the exact requested UUID and permits only canonical public story li
   expect(parsePlaceRequest({ ...request, public_travel_url: '/travels/%2e%2e%2fprofile' }).publicTravelUrl).toBeNull()
   expect(parsePlaceRequest({ ...request, public_travel_url: '%2Ftravels%2Fstory' }).publicTravelUrl).toBeNull()
 })
+
+it('carries the editorial place history and treats a missing one as empty', () => {
+  expect(parsePlaceRequest({ ...request, description: '  Усадьба Репина.  ' }).description).toBe('Усадьба Репина.')
+  expect(parsePlaceRequest(request).description).toBe('')
+  expect(parsePlaceRequest({ ...request, description: 42 }).description).toBe('')
+})

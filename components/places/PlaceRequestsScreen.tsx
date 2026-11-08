@@ -41,6 +41,7 @@ const STEPS = [
   'places:contributions.stepPhoto',
   'places:contributions.stepStory',
   'places:contributions.stepPublish',
+  'places:contributions.stepInstagram',
 ] as const
 
 export default function PlaceRequestsScreen() {
@@ -70,6 +71,10 @@ export default function PlaceRequestsScreen() {
   const getRegionLabel = (value: string) => {
     const region = REGIONS.find((entry) => entry === value)
     return region ? t(REGION_LABELS[region]) : value
+  }
+
+  function openDetail(id: string) {
+    router.push(buildPlaceRequestsHref(source, { region: selectedRegion, requestId: id }) as Href)
   }
 
   function clearDetail() {
@@ -137,7 +142,12 @@ export default function PlaceRequestsScreen() {
             <View style={styles.grid}>
               {invitationCards.map((request) => (
                 <View key={request.id} style={{ width: gridItemWidth }}>
-                  <PlaceRequestCard request={request} regionLabel={getRegionLabel(request.region)} source={source} />
+                  <PlaceRequestCard
+                    request={request}
+                    regionLabel={getRegionLabel(request.region)}
+                    source={source}
+                    onReadMore={isDetail ? undefined : () => openDetail(request.id)}
+                  />
                 </View>
               ))}
             </View>

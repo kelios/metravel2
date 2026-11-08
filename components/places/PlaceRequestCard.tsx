@@ -19,15 +19,18 @@ export default function PlaceRequestCard({
   request,
   regionLabel,
   source,
+  onReadMore,
 }: {
   request: PlaceRequest
   regionLabel: string
   source: PlaceContributionSource
+  /** In a collection the history is clamped and opens the place's own view. */
+  onReadMore?: () => void
 }) {
   const { t } = useTranslation()
   const colors = useThemedColors()
   const router = useRouter()
-  const { id, name, preview, publicTravelUrl, status } = request
+  const { id, name, description, preview, publicTravelUrl, status } = request
   const isOpen = status === 'open'
   const impression = useTrackedImpression(`place-contribution:${source}:${id}`, () => {
     if (isOpen) trackPlaceContribution('impression', { source, requestId: id })
@@ -72,7 +75,27 @@ export default function PlaceRequestCard({
         </View>
         <Heading level={3}>{name}</Heading>
         <Body variant="small" muted>{request.categoryName ? `${regionLabel} · ${request.categoryName}` : regionLabel}</Body>
-        <Body>{request.prompt}</Body>
+        {description ? (
+          <View style={styles.section}>
+            <Body variant="strong">{t('places:contributions.aboutPlace')}</Body>
+            <Body numberOfLines={onReadMore ? DESCRIPTION_PREVIEW_LINES : undefined}>{description}</Body>
+            {onReadMore ? (
+              <Pressable
+                accessibilityRole="link"
+                accessibilityLabel={`${t('places:contributions.readMore')}: ${name}`}
+                onPress={onReadMore}
+                style={styles.creditLink}
+                testID={`place-request-read-more-${id}`}
+              >
+                <Body variant="small" color={colors.primaryText}>{t('places:contributions.readMore')}</Body>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+        <View style={styles.section}>
+          <Body variant="strong">{t('places:contributions.question')}</Body>
+          <Body>{request.prompt}</Body>
+        </View>
         {preview ? (
           <View style={styles.credit}>
             <Body variant="small" muted>{preview.credit}</Body>
@@ -89,8 +112,8 @@ export default function PlaceRequestCard({
         <View style={styles.actions}>
           {isOpen ? (
             <>
-              <Button label={t('places:contributions.writeNote')} onPress={() => openEditor('note')} fullWidth />
-              <Button label={t('places:contributions.writeArticle')} onPress={() => openEditor('full')} variant="ghost" fullWidth />
+              <Button label={t('places:contributions.writeArticle')} onPress={() => openEditor('full')} fullWidth />
+              <Button label={t('places:contributions.writeNote')} onPress={() => openEditor('note')} variant="ghost" fullWidth />
               {source !== 'map' && (
                 <Button label={t('places:contributions.viewMap')} onPress={openMap} variant="secondary" fullWidth />
               )}
@@ -104,6 +127,8 @@ export default function PlaceRequestCard({
   )
 }
 
+const DESCRIPTION_PREVIEW_LINES = 4
+
 const styles = StyleSheet.create({
   card: {
     flex: 1,
@@ -113,6 +138,7 @@ const styles = StyleSheet.create({
   },
   content: { flex: 1, gap: DESIGN_TOKENS.spacing.sm, padding: DESIGN_TOKENS.spacing.md },
   status: { flexDirection: 'row', alignItems: 'center', gap: DESIGN_TOKENS.spacing.xs },
+  section: { gap: DESIGN_TOKENS.spacing.xs },
   credit: { marginTop: DESIGN_TOKENS.spacing.xs },
   creditLinks: { flexDirection: 'row', flexWrap: 'wrap', gap: DESIGN_TOKENS.spacing.md },
   creditLink: { minHeight: DESIGN_TOKENS.touchTarget.minHeight, justifyContent: 'center' },

@@ -63,7 +63,7 @@ export const aiAssistStaticResources = {
   "tripDraft.title": "Чернетка опису",
   "tripDraft.info": "Збере 2–3 варіанти опису поїздки за точками маршруту, датами й транспортом — лише за планом, нічого не вигадуючи. Варіант можна вставити й поправити.",
   "tripDraft.suggest": "Запропонувати опис",
-  "tripDraft.tooShort": "Додайте точки маршруту й дати — чернетці потрібно від {{min}} знаків плану, зараз {{count}}.",
+  "tripDraft.tooShort": "Додайте точки маршруту й дати — для чернетки потрібно від {{min}} знаків плану, зараз {{count}}.",
   "tripDraft.variantsTitle": "Варіанти опису",
   "tripDraft.insert": "Вставити",
   "tripDraft.replace": "Замінити",

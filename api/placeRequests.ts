@@ -19,6 +19,8 @@ export type PlaceRequest = {
   lat: number
   lng: number
   prompt: string
+  /** Editorial history of the place; empty when the API has none yet. */
+  description: string
   preview: PlaceRequestPreview | null
   publicTravelUrl: string | null
 }
@@ -90,6 +92,7 @@ export function parsePlaceRequest(value: unknown): PlaceRequest {
     lat,
     lng,
     prompt,
+    description: cleanText(data.description),
     preview: parsePreview(data.preview),
     publicTravelUrl: parsePublicTravelUrl(data.public_travel_url),
   }
