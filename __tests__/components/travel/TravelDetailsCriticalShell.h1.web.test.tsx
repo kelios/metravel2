@@ -193,7 +193,7 @@ describe('TravelDetailsCriticalShell single H1 (web)', () => {
       expect(outside).not.toContain('"title"')
       expect(outside).not.toContain('order')
       expect(outside.trim()).toContain('[data-travel-first-screen="meta"]{display:none}')
-      expect(mobile).toContain('[data-travel-first-screen="favorite"]{order:-1}')
+      expect(mobile).toContain('[data-travel-first-screen="heading"]{order:-1}')
       // Desktop: h1 and «Хочу поехать» share one row; nothing is reordered.
       expect(desktop).toContain('[data-travel-first-screen="heading"]{display:flex;')
       expect(desktop).not.toContain('order')
