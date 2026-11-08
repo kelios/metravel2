@@ -20,6 +20,7 @@ import { useApplyClusterAccessibleName } from '@/components/MapPage/Map/clusterA
 import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem'
 import { OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers'
 import { useTheme } from '@/hooks/useTheme'
+import { logError } from '@/utils/logger'
 import type { ImportedPoint } from '@/types/userPoints'
 
 import { getPointTitle, isSitePoint as isSitePointOf } from './userPointPresentation'
@@ -239,14 +240,26 @@ export const UserPointsClusterLayer: React.FC<UserPointsClusterLayerProps> = ({
     // карты нет потолка зума — на проде 08.11 это уронило весь экран. Потолок
     // задаёт MapContainer; здесь страховка для карты без него, а сам addLayer
     // под try, чтобы сбой слоя не превращался в белую страницу.
-    let created: { group: any; dispose: () => void }
+    let created: { group: any; dispose: () => void } | null = null
     try {
       if (!Number.isFinite(Number(map.getMaxZoom?.())) && typeof map.setMaxZoom === 'function') {
         map.setMaxZoom(OSM_PROXY_MAX_ZOOM)
       }
       created = createMapClusterGroup(L, map, { iconCreateFunction })
       map.addLayer(created.group)
-    } catch {
+    } catch (error) {
+      // Leaflet регистрирует слой в `_layers` до `onAdd`, поэтому упавшую группу
+      // снимаем с карты; сбой уходит в лог/мониторинг — пустая карта при живом
+      // списке иначе останется немой.
+      if (created) {
+        try {
+          created.dispose()
+          map.removeLayer?.(created.group)
+        } catch {
+          // noop
+        }
+      }
+      logError(error, { scope: 'UserPointsClusterLayer.createGroup' })
       return
     }
     const { group, dispose } = created

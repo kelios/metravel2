@@ -19,6 +19,12 @@ jest.mock('react-dom', () => ({
   createPortal: (node: any) => node,
 }));
 
+const mockLogError = jest.fn();
+jest.mock('@/utils/logger', () => ({
+  ...jest.requireActual('@/utils/logger'),
+  logError: (...args: any[]) => mockLogError(...args),
+}));
+
 type FakeMarker = {
   latlng: [number, number];
   options: Record<string, any>;
@@ -177,6 +183,10 @@ describe('UserPointsClusterLayer (web, #3131)', () => {
     await renderLayer(runtime);
     expect(runtime.L.marker).not.toHaveBeenCalled();
     expect(screen.queryByTestId('popup-content')).toBeNull();
+    // Упавшая группа снята с карты и отписана, сбой залогирован.
+    expect(runtime.group.off).toHaveBeenCalledWith('clusterclick', expect.any(Function));
+    expect(runtime.map.removeLayer).toHaveBeenCalledWith(runtime.group);
+    expect(mockLogError).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ scope: 'UserPointsClusterLayer.createGroup' }));
   });
 
   it('puts every point into one markerClusterGroup instead of standalone markers', async () => {
