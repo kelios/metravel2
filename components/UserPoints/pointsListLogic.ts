@@ -230,3 +230,30 @@ export const sortPointsByPresetProximity = <T extends Record<string, unknown>>(
       return String(a?.name ?? '').localeCompare(String(b?.name ?? ''));
     });
 };
+
+/**
+ * Нормализация строки поиска и индекса (#3132): регистр, лишние пробелы и
+ * «ё» → «е», чтобы «озеро» находило «Озеро», а «елка» — «Ёлка». Индекс
+ * собирается один раз при нормализации точки, запрос — на каждом вводе.
+ */
+export const normalizePointSearchText = (value: unknown): string =>
+  String(value ?? '')
+    .toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+/**
+ * Поисковый индекс точки: название, адрес, описание, заметки и имена
+ * категорий. Раньше поиск шёл только по `name + address`, и точку «водопад»
+ * по категории или заметке было не найти.
+ */
+export const buildPointSearchText = (
+  point: Record<string, unknown>,
+  categoryNames: readonly string[] = [],
+): string =>
+  normalizePointSearchText(
+    [point.name, point.address, point.description, point.notes, ...categoryNames]
+      .filter((part) => part != null && String(part).trim() !== '')
+      .join(' | '),
+  );

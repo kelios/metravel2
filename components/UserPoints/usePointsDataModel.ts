@@ -17,7 +17,14 @@ import {
   normalizeCategoryDictionary,
   resolveCategoryIdsByNames as mapNamesToIds,
 } from '@/utils/userPointsCategories';
-import { haversineKm, normalizeCategoryIdsFromPoint } from './pointsListLogic';
+import {
+  buildPointSearchText,
+  haversineKm,
+  normalizeCategoryIdsFromPoint,
+  normalizePointSearchText,
+} from './pointsListLogic';
+
+const NUMERIC_ID_RE = /^\d+$/;
 
 type Params = {
   defaultPerPage: number;
@@ -171,12 +178,21 @@ export const usePointsDataModel = ({
         .map((id) => categoryIdToName.get(id) ?? id)
         .map((v) => String(v).trim())
         .filter(Boolean);
-      return { ...p, categoryIds, categoryNames };
+      // #3132: индекс поиска считается здесь один раз на загрузку/смену словаря
+      // категорий, а не на каждую букву в фильтре ниже. Реальные точки хранят
+      // категорию строкой-именем («Парковка», нет в словаре) — она идёт в индекс;
+      // голый числовой id без имени («12») — нет, иначе ложные совпадения по цифрам.
+      const searchCategoryNames = [
+        ...categoryNames,
+        typeof p?.category === 'string' ? p.category.trim() : '',
+      ].filter((name) => name !== '' && !NUMERIC_ID_RE.test(name));
+      const searchText = buildPointSearchText(p, searchCategoryNames);
+      return { ...p, categoryIds, categoryNames, searchText };
     });
   }, [categoryIdToName, points]);
 
   const baseFilteredPoints = useMemo(() => {
-    const q = String(searchQuery || '').trim().toLowerCase();
+    const q = normalizePointSearchText(searchQuery);
     const selectedColors = filters.colors ?? [];
     const selectedStatuses = filters.statuses ?? [];
     const radiusKm = filters.radiusKm;
@@ -214,8 +230,7 @@ export const usePointsDataModel = ({
       }
 
       if (!q) return true;
-      const haystack = `${p.name ?? ''} ${p.address ?? ''}`.toLowerCase();
-      return haystack.includes(q);
+      return String(p.searchText ?? '').includes(q);
     });
   }, [currentLocation, filters.colors, filters.radiusKm, filters.statuses, pointsWithDerivedCategories, searchQuery]);
 

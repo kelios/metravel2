@@ -76,6 +76,8 @@ export const PointsListGrid: React.FC<{
   recommendedRoutes?: Record<number, { distance: number; duration: number; line?: Array<[number, number]> }>
 
   searchQuery: string
+  /** Запрос после debounce — по нему считаются `filteredPoints` и геокодинг пустого результата (#3132). */
+  appliedSearchQuery?: string
   onSearch: (text: string) => void
 
   hasFilters: boolean
@@ -115,6 +117,7 @@ export const PointsListGrid: React.FC<{
   activePointId,
   recommendedRoutes,
   searchQuery,
+  appliedSearchQuery = searchQuery,
   onSearch,
   hasFilters,
   onResetFilters,
@@ -286,9 +289,9 @@ export const PointsListGrid: React.FC<{
             style={localStyles.listSearchInput as any}
             value={searchQuery}
             onChangeText={onSearch}
-            placeholder={i18nT('map:components.UserPoints.PointsListGrid.poisk_po_nazvaniyu_0d899cfa')}
+            placeholder={i18nT('map:components.UserPoints.PointsListGrid.poisk_po_nazvaniyu_adresu_opisaniyu_i_kategorii_bd6ebf74')}
             placeholderTextColor={themedColors.textMuted}
-            accessibilityLabel={i18nT('map:components.UserPoints.PointsListGrid.poisk_po_nazvaniyu_0d899cfa')}
+            accessibilityLabel={i18nT('map:components.UserPoints.PointsListGrid.poisk_po_nazvaniyu_adresu_opisaniyu_i_kategorii_bd6ebf74')}
             testID="userpoints-list-search"
           />
 
@@ -524,7 +527,9 @@ export const PointsListGrid: React.FC<{
   }, [activePointId, filteredPoints, isLoading, isMapVisible, mapUiApi, showingRecommendations]);
 
   React.useEffect(() => {
-    const q = String(searchQuery || '').trim();
+    // Геокодинг пустого результата — по применённому запросу: иначе Nominatim
+    // дёргался бы на промежуточных буквах, пока список ещё не пересчитан (#3132).
+    const q = String(appliedSearchQuery || '').trim();
     if (!q) {
       setSearchMarker(null)
       lastGeocodedQueryRef.current = ''
@@ -604,7 +609,7 @@ export const PointsListGrid: React.FC<{
       }
       geocodeAbortRef.current?.abort()
     }
-  }, [filteredPoints, mapUiApi, searchQuery])
+  }, [appliedSearchQuery, filteredPoints, mapUiApi])
 
   // На узком экране режим показа полностью определяется верхним 3-таб-баром
   // (Карта / Список / Фильтры) ниже, поэтому standalone list-режим (с тяжёлой

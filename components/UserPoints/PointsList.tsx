@@ -106,6 +106,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     filters,
     setFilters,
     searchQuery,
+    appliedSearchQuery,
     setSearchQuery,
     handleSearch,
     handleFilterChange,
@@ -154,7 +155,8 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   } = usePointsDataModel({
     defaultPerPage,
     filters,
-    searchQuery,
+    // #3132: модель и карта видят запрос после паузы в наборе; поле ввода — сразу.
+    searchQuery: appliedSearchQuery,
     currentLocation,
     defaultPointColors: DEFAULT_POINT_COLORS,
   });
@@ -461,6 +463,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         activePointId={activePointId}
         recommendedRoutes={recommendedRoutes}
         searchQuery={searchQuery}
+        appliedSearchQuery={appliedSearchQuery}
         onSearch={handleSearch}
         hasFilters={hasActiveFilters}
         onResetFilters={handleResetFilters}

@@ -37,8 +37,8 @@ export const usePointsFilterChipActions = ({
     }
 
     if (key === 'search') {
+      // #3132: запрос живёт только в `searchQuery`; пустое значение применяется сразу.
       setSearchQuery('');
-      setFilters((prev) => ({ ...prev, search: '', page: 1 }));
       return;
     }
 

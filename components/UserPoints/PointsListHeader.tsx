@@ -258,7 +258,7 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
           <TextInput
             {...searchInputAccessibilityProps()}
             style={[styles.searchInput, local.searchInput]}
-            placeholder={i18nT('map:components.UserPoints.PointsListHeader.poisk_po_nazvaniyu_80c6e794')}
+            placeholder={i18nT('map:components.UserPoints.PointsListHeader.poisk_po_nazvaniyu_adresu_opisaniyu_i_kategorii_2d8497d1')}
             value={searchQuery}
             onChangeText={onSearch}
             placeholderTextColor={colors.textMuted}

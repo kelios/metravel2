@@ -344,9 +344,12 @@ const UserPointsMapWeb: React.FC<UserPointsMapProps> = ({
   const { mods, isCompactPopup } = useUserPointsMapWebRuntime();
   const { driveInfoById, requestDriveInfo } = useUserPointsDriveInfo(centerOverride);
   const { getMarkerIconCached } = useUserPointsMarkerIcons({ L: mods?.L, colors });
+  // #3132: перерисовка маркеров и подгонка карты — отложенный рендер, чтобы ввод
+  // в поиск и список не ждали пересборку слоя Leaflet.
+  const deferredPoints = React.useDeferredValue(points);
   const { center, mapInstance, mapRef, polylinePathOptions, registerPointMarker, safePoints, handleMapReady, handleWhenReady } =
     useUserPointsMapWebController({
-      points,
+      points: deferredPoints,
       centerOverride,
       activePointId,
       mods,
