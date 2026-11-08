@@ -1,7 +1,4 @@
-import type Feather from '@expo/vector-icons/Feather'
-
 import { SEMANTIC_ACTION_ICON } from '@/components/navigation/navigationActionMeta'
-import type { useThemedColors } from '@/hooks/useTheme'
 import { translate as i18nT } from '@/i18n'
 
 import type { ActionChip } from './PlaceListCard.types'
@@ -9,16 +6,10 @@ import type { ActionChip } from './PlaceListCard.types'
 type ActionModelInput = {
   /** #2778: ≤3 подписанных действия в ряду (главное + до двух), остальное — «⋯». */
   actionBudget?: boolean
-  addButtonPlacement: 'button' | 'row'
-  addLabel: string
-  colors: ReturnType<typeof useThemedColors>
   hasCoord: boolean
   inlineActions: ActionChip[]
-  isAdding: boolean
   isCompactActionCard: boolean
-  isSaved: boolean
   mapActions: ActionChip[]
-  onAddPoint?: () => void
   onCopyCoord?: () => void
   onShare?: () => void
   menuActions: ActionChip[]
@@ -31,13 +22,13 @@ type ActionModelInput = {
   relatedBookAction?: ActionChip | null
   relatedTravelUrl?: string | null
   showActionRow: boolean
-  showAddButton: boolean
   showTitleInContent: boolean
 }
 
 /**
- * Плиток в ряду при `actionBudget` ВСЕГО — вместе с «Сохранить» и входом в лист
- * «Навигация и действия» (#2778, приёмка: четыре плитки на 320 резали подписи).
+ * Плиток в ряду при `actionBudget` ВСЕГО — вместе со входом в лист «Навигация и
+ * действия» (#2778, приёмка: четыре плитки на 320 резали подписи). «Сохранить»
+ * в ряду больше нет: точку сохраняет ♥ на фото (08.11.2026).
  */
 export const PLACE_CARD_ROW_TILE_BUDGET = 3
 
@@ -58,16 +49,10 @@ export function buildPlaceListCardActionModel({
 
 function buildRowModel({
   actionBudget = false,
-  addButtonPlacement,
-  addLabel,
-  colors,
   hasCoord,
   inlineActions,
-  isAdding,
   isCompactActionCard,
-  isSaved,
   mapActions,
-  onAddPoint,
   onCopyCoord,
   onShare,
   menuActions,
@@ -75,27 +60,14 @@ function buildRowModel({
   quickActions,
   relatedTravelUrl,
   showActionRow,
-  showAddButton,
   showTitleInContent,
 }: Omit<ActionModelInput, 'relatedBookAction'>) {
-  const overlayAddInline = isCompactActionCard && addButtonPlacement === 'row'
   // #2778 (PLACE-CARD-ACTION-OVERLOAD): бюджет действует на компактной
   // popup-aligned карточке (`/places`, «Места рядом»). В ряду — главное действие
-  // и вторичные с полными подписями, всего не больше трёх вместе с «Сохранить»;
+  // и вторичные с полными подписями, всего не больше трёх;
   // координаты, Telegram, лишние ссылки и навигаторы — пункты «⋯».
   const budgeted = actionBudget && isCompactActionCard && popupAligned
   const showTitleShare = !budgeted && popupAligned && hasCoord && Boolean(onShare)
-  const showSaveTile = popupAligned && Boolean(onAddPoint)
-  const savedColor = colors.success ?? colors.primaryDark ?? colors.primary
-  const saveLabel = isSaved
-    ? i18nT('map:components.places.PlaceListCard.sohraneno_d848c817')
-    : addLabel
-  const saveIcon: keyof typeof Feather.glyphMap | undefined = isAdding
-    ? undefined
-    : isSaved
-      ? 'check'
-      : 'bookmark'
-  const saveIconColor = isSaved ? savedColor : colors.textMuted
   const shareOverflowAction: ActionChip | null =
     isCompactActionCard && !showTitleShare && hasCoord && onShare
       ? {
@@ -121,10 +93,9 @@ function buildRowModel({
   // Всё, что живёт только в листе, — навигаторы, координаты, Telegram, правка.
   const sheetOnlyCount =
     mapActions.length + (copyOverflowAction ? 1 : 0) + (shareOverflowAction ? 1 : 0) + menuActions.length
-  const slotsBesideSave = PLACE_CARD_ROW_TILE_BUDGET - (showSaveTile ? 1 : 0)
   // Плитка листа нужна, если в нём что-то есть или основные не влезают целиком.
-  const needsSheet = sheetOnlyCount > 0 || primaryActions.length > slotsBesideSave
-  const primarySlots = Math.max(0, slotsBesideSave - (needsSheet ? 1 : 0))
+  const needsSheet = sheetOnlyCount > 0 || primaryActions.length > PLACE_CARD_ROW_TILE_BUDGET
+  const primarySlots = Math.max(0, PLACE_CARD_ROW_TILE_BUDGET - (needsSheet ? 1 : 0))
   const visibleInlineActions = budgeted
     ? primaryActions.slice(0, primarySlots)
     : isCompactActionCard
@@ -154,18 +125,14 @@ function buildRowModel({
   const overflowHasMapActions = isCompactActionCard && mapActions.length > 0
   const showShareChip = !isCompactActionCard && hasCoord && Boolean(onShare)
   const showCopyChip = !budgeted && hasCoord && Boolean(onCopyCoord)
-  const showRowAddButton =
-    showAddButton && addButtonPlacement === 'row' && Boolean(onAddPoint) && !overlayAddInline
   const showRowQuickActions = !budgeted && popupAligned && quickActions.length > 0
   const hasActionRow = showActionRow && (
     showRowQuickActions ||
     showCopyChip ||
     showShareChip ||
-    showSaveTile ||
     visibleMapActions.length > 0 ||
     visibleInlineActions.length > 0 ||
-    overflowActions.length > 0 ||
-    showRowAddButton
+    overflowActions.length > 0
   )
 
   return {
@@ -178,16 +145,9 @@ function buildRowModel({
       : i18nT('map:components.places.PlaceListCard.esche_deystviya_6f82137f'),
     overflowActions,
     overflowHasMapActions,
-    overlayAddInline,
-    saveIcon,
-    saveIconColor,
-    saveLabel,
-    savedColor,
     showInlineRelatedTravelActions: !popupAligned && Boolean(relatedTravelUrl) && showTitleInContent,
-    showRowAddButton,
     showCopyChip,
     showRowQuickActions,
-    showSaveTile,
     showShareChip,
     showTitleShare,
     visibleInlineActions,

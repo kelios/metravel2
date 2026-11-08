@@ -376,7 +376,6 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
       mapActions={mapActions}
       inlineActions={inlineActions}
       menuActions={menuActions}
-      showAddButton={false}
       imageHeight={imageHeight}
       width={cardWidth}
       style={[

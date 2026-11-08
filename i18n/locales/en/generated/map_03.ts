@@ -134,7 +134,6 @@ export const mapGenerated3 = {
   "components.MapPage.MapOnboarding.spisok_mest_e8c5b25f": "List of places",
   "components.MapPage.MapOnboarding.stroyte_marshruty_ba7a03e3": "Build routes",
   "components.MapPage.MapOnboarding.zdes_otobrazhayutsya_interesnye_mesta_i_marshruty_7732a21e": "It displays interesting places and routes from other travelers. Move and zoom the map.",
-  "components.MapPage.TravelListPanel.useTravelItemRenderer.mesto_d8763e12": "Place",
   "components.MapPage.WeatherLegend.net_650340b5": "no",
   "components.MapPage.WeatherLegend.oblachnost_protsent_f61c0456": "Cloudiness, %",
   "components.MapPage.WeatherLegend.osadki_mm_ch_53d78d8f": "Precipitation, mm/h",

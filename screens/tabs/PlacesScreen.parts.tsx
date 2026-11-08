@@ -360,9 +360,8 @@ export const PlaceCard = React.memo(function PlaceCard({
         onCopyCoord={normalizedCoord ? handleCopyCoord : undefined}
         onShare={normalizedCoord ? handleShare : undefined}
         onAddPoint={normalizedCoord ? handleAddPoint : undefined}
-        // #2778: одно «Сохранить» (как в «Местах рядом»); у гостя активно и ведёт ко входу.
+        // ♥ на фото = эта точка в «Мои точки» (08.11.2026); у гостя ведёт ко входу (#2778).
         isSaved={isSaved}
-        addLabel={i18nT('map:components.MapPage.AddressListItem.AddressListItemCard.sohranit_06fb5b11')}
         addDisabled={!authReady || !normalizedCoord || isAdding || (isAuthenticated && !isSavedPointsReady)}
         isAdding={isAdding || (isAuthenticated && !isSavedPointsReady)}
         imageHeight={isMobileCard ? 240 : 280}

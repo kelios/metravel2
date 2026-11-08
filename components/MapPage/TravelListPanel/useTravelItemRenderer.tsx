@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import { Pressable, View } from 'react-native'
 
 import { Text } from '@/ui/paper'
-import { useFavoriteToggle } from '@/hooks/useFavoriteToggle'
 
 import AddressListItem from '../AddressListItem'
 import { SwipeableListItem } from '../SwipeableListItem'
@@ -46,8 +45,6 @@ export function useTravelItemRenderer({
   onToggleFavorite,
   favorites,
 }: UseTravelItemRendererArgs) {
-  const { toggle: toggleFavorite, isFavorite: isFavoriteInContext } = useFavoriteToggle()
-
   return useCallback(
     ({ item }: any) => {
       const itemId = getTravelItemId(item)
@@ -111,24 +108,9 @@ export function useTravelItemRenderer({
         )
       }
 
-      // Web (incl. web-mobile) and native desktop: no swipe, so expose an
-      // explicit favorite toggle button on the card, backed by the favorites
-      // context (the prop-based path is only used by the native swipe wrapper).
-      const ctxIsFavorite =
-        canUseItemId && isFavoriteInContext(itemId, 'travel')
-      const handleToggleFavorite = canUseItemId
-        ? () => {
-            void toggleFavorite({
-              id: itemId as string | number,
-              type: 'travel',
-              title: item?.address || item?.name || item?.title || i18nT('map:components.MapPage.TravelListPanel.useTravelItemRenderer.mesto_d8763e12'),
-              url: item?.urlTravel || item?.articleUrl || `/travels/${itemId}`,
-              imageUrl: item?.travelImageThumbUrl || item?.imageUrl,
-              source: 'map_travel_list',
-            })
-          }
-        : undefined
-
+      // Web (incl. web-mobile) and native desktop: ♥ на фото карточки сохраняет
+      // эту точку в «Мои точки» (PlaceListCard → onAddPoint). Раньше здесь ♥
+      // слал id ТОЧКИ как id статьи в «Хочу поехать» (PATCH /travels/<point>/ → 404).
       return (
         <AddressListItem
           travel={item}
@@ -138,8 +120,6 @@ export function useTravelItemRenderer({
           userLocation={userLocation}
           distanceOrigin={distanceOrigin}
           transportMode={transportMode}
-          isFavorite={ctxIsFavorite}
-          onToggleFavorite={handleToggleFavorite}
           screenWidth={screenWidth}
         />
       )
@@ -157,8 +137,6 @@ export function useTravelItemRenderer({
       styles,
       onToggleFavorite,
       favorites,
-      toggleFavorite,
-      isFavoriteInContext,
     ],
   )
 }

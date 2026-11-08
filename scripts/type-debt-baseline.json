@@ -2240,13 +2240,6 @@
       "tsExpectError": 0,
       "eslintDisable": 0
     },
-    "components/travel/FavoriteButton.tsx": {
-      "styleCast": 3,
-      "logicCast": 3,
-      "tsIgnore": 0,
-      "tsExpectError": 0,
-      "eslintDisable": 0
-    },
     "components/travel/FiltersUpsertComponent.tsx": {
       "styleCast": 1,
       "logicCast": 2,
@@ -3370,6 +3363,13 @@
     "utils/userPointsCategories.ts": {
       "styleCast": 0,
       "logicCast": 9,
+      "tsIgnore": 0,
+      "tsExpectError": 0,
+      "eslintDisable": 0
+    },
+    "components/travel/HeartToggleButton.tsx": {
+      "styleCast": 3,
+      "logicCast": 3,
       "tsIgnore": 0,
       "tsExpectError": 0,
       "eslintDisable": 0

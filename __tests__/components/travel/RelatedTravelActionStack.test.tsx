@@ -287,4 +287,77 @@ describe('RelatedTravelActionStack', () => {
     expect(mockFavoriteButton).not.toHaveBeenCalled()
     expect(mockStatusButton).not.toHaveBeenCalled()
   })
+
+  // 08.11.2026: ♥ на фото места сохранял статью, и все точки одной статьи
+  // загорались разом. С `placeSave` ♥ — точка в «Мои точки», статус — статья.
+  describe('placeSave (♥ = this place)', () => {
+    const { fireEvent } = require('@testing-library/react-native')
+    // jsdom-ветка ♥ — web-хит-зона с onClick/aria-*; `press` RNTL ушёл бы в
+    // onPress композита в обход проверки disabled, поэтому шлём именно click.
+    const click = (el: any) => fireEvent(el, 'click', { stopPropagation() {}, preventDefault() {} })
+
+    it('two places of ONE article keep independent hearts; tap saves only its point', async () => {
+      const zooToggle = jest.fn()
+      const telescopeToggle = jest.fn()
+      const screen = await renderWithQuery(
+        <>
+          <RelatedTravelActionStack
+            relatedTravelUrl="/travels/568"
+            fallbackTitle="Краков"
+            placeSave={{ isSaved: true, onToggle: zooToggle }}
+          />
+          <RelatedTravelActionStack
+            relatedTravelUrl="/travels/568"
+            fallbackTitle="Краков"
+            placeSave={{ isSaved: false, onToggle: telescopeToggle }}
+          />
+        </>,
+      )
+
+      expect(mockFavoriteButton).not.toHaveBeenCalled()
+      const hearts = screen.getAllByTestId('place-save-heart')
+      expect(hearts).toHaveLength(2)
+      expect(hearts[0].props['aria-pressed']).toBe(true)
+      expect(hearts[1].props['aria-pressed']).toBe(false)
+      expect(hearts[1].props['aria-label']).toBe('Сохранить в «Мои точки»')
+
+      click(hearts[1])
+      expect(telescopeToggle).toHaveBeenCalledTimes(1)
+      expect(zooToggle).not.toHaveBeenCalled()
+
+      // Статус поездки по-прежнему про статью.
+      expect(mockStatusButton.mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({ travelId: 568 }))
+    })
+
+    it('renders the place heart without a related article and skips the status', async () => {
+      const onToggle = jest.fn()
+      const screen = await renderWithQuery(
+        <RelatedTravelActionStack fallbackTitle="Точка" placeSave={{ isSaved: false, onToggle }} />,
+      )
+      expect(screen.getByTestId('place-save-heart')).toBeTruthy()
+      expect(mockStatusButton).not.toHaveBeenCalled()
+    })
+
+    it('statusOnly renders just the trip status under the «Статус поездки» label', async () => {
+      const screen = await renderWithQuery(
+        <RelatedTravelActionStack relatedTravelUrl="/travels/568" fallbackTitle="Краков" statusOnly />,
+      )
+      expect(screen.queryByTestId('place-save-heart')).toBeNull()
+      expect(mockFavoriteButton).not.toHaveBeenCalled()
+      expect(mockStatusButton.mock.calls.at(-1)?.[0]).toEqual(expect.objectContaining({ travelId: 568 }))
+    })
+
+    it('a disabled heart (auth or «Мои точки» not ready) does not toggle', async () => {
+      const onToggle = jest.fn()
+      const screen = await renderWithQuery(
+        <RelatedTravelActionStack
+          relatedTravelUrl="/travels/568"
+          fallbackTitle="Краков"
+          placeSave={{ isSaved: false, onToggle, disabled: true }}
+        />,
+      )
+      click(screen.getByTestId('place-save-heart'))
+      expect(onToggle).not.toHaveBeenCalled()
+    })
+  })
 })

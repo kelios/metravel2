@@ -3,6 +3,7 @@ import * as ReactQuery from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
+import { removeSavedPointFromCollection } from '@/hooks/map/useSavedPointToggle';
 import { DESIGN_COLORS } from '@/constants/designSystem';
 import { useAuth } from '@/context/AuthContext';
 import { useQueryOwner } from '@/hooks/useQueryOwner';
@@ -38,14 +39,15 @@ export function usePointListAddPointModel({
   baseTravelId,
   categoryIdToName,
   categoryNameToIds,
-  isPointSaved,
+  findSavedPoint,
   travelName,
 }: {
   baseUrl?: string;
   baseTravelId?: string | number | null;
   categoryIdToName: Map<string, string>;
   categoryNameToIds: Map<string, string[]>;
-  isPointSaved?: (coordStr?: string) => boolean;
+  /** Запись «Моих точек» на координате точки: есть — ♥ её снимает (toggle). */
+  findSavedPoint?: (coordStr?: string) => ImportedPoint | null;
   travelName?: string;
 }) {
   const [addingPointId, setAddingPointId] = useState<string | null>(null);
@@ -68,10 +70,21 @@ export function usePointListAddPointModel({
         return;
       }
 
-      // #839: точка уже в «Мои точки» — не плодим дубль (у бэка нет remove-by-coord),
-      // просто подтверждаем состояние.
-      if (isPointSaved?.(point.coord)) {
-        notify(i18nT('travel:components.travel.hooks.usePointListAddPointModel.tochka_uzhe_v_moi_tochki_fa7659b5'));
+      // ♥ точки — toggle (08.11.2026): уже в «Мои точки» — второй тап снимает её
+      // по id найденной записи, а не плодит дубль (#839) и не просто подтверждает.
+      const savedPoint = findSavedPoint?.(point.coord) ?? null;
+      if (savedPoint) {
+        setAddingPointId(point.id);
+        try {
+          await run({
+            key: 'save-point',
+            commit: () => removeSavedPointFromCollection(queryClient, owner, savedPoint.id),
+            success: { message: i18nT('travel:components.travel.hooks.usePointListAddPointModel.tochka_ubrana_iz_moi_tochki_dd3a60c7'), type: 'info' },
+            error: { message: i18nT('travel:components.travel.hooks.usePointListAddPointModel.ne_udalos_ubrat_tochku_96b266d3') },
+          });
+        } finally {
+          setAddingPointId(null);
+        }
         return;
       }
 
@@ -168,7 +181,7 @@ export function usePointListAddPointModel({
           }
         }
         // #839: оптимистично добавляем созданную точку в общий кэш `userPointsAll`,
-        // чтобы координатный матчер (isPointSaved) сразу отдал true и карточка
+        // чтобы координатный матчер (findSavedPoint) сразу отдал true и карточка
         // переключилась в «Сохранено» без перезагрузки.
         const cachedOptimistically =
           collectionReady && !!created && Number.isFinite(Number((created as any).latitude));
@@ -203,7 +216,7 @@ export function usePointListAddPointModel({
         setAddingPointId(null);
       }
     },
-    [addingPointId, authReady, baseTravelId, baseUrl, categoryIdToName, categoryNameToIds, isAuthenticated, isPointSaved, owner, queryClient, travelName, run, notify]
+    [addingPointId, authReady, baseTravelId, baseUrl, categoryIdToName, categoryNameToIds, findSavedPoint, isAuthenticated, owner, queryClient, travelName, run, notify]
   );
 
   return {

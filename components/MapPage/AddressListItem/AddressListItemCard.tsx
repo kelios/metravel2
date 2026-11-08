@@ -47,8 +47,6 @@ type Props = {
   categories: string[]
   urlTravel?: string
   articleUrl?: string
-  isFavorite: boolean
-  onToggleFavorite?: () => void
   onPress?: () => void
   transportMode: 'car' | 'bike' | 'foot'
   distanceInfo: DistanceInfo
@@ -89,8 +87,6 @@ const AddressListItemCard: React.FC<Props> = ({
   categories,
   urlTravel,
   articleUrl,
-  isFavorite,
-  onToggleFavorite,
   onPress,
   transportMode,
   distanceInfo,
@@ -141,8 +137,6 @@ const AddressListItemCard: React.FC<Props> = ({
       sourcePointId={resolveMapPointSourceId(travel)}
       relatedTravelCountry={typeof travelRecord.countryName === 'string' ? travelRecord.countryName : undefined}
       relatedTravelCity={typeof travelRecord.cityName === 'string' ? travelRecord.cityName : undefined}
-      isFavorite={isFavorite}
-      onToggleFavorite={onToggleFavorite}
       coord={coord}
       badges={badges}
       onCardPress={handleMainPress}
@@ -154,14 +148,13 @@ const AddressListItemCard: React.FC<Props> = ({
       mapActions={webMapActions}
       quickActions={quickActions}
       inlineActions={inlineActions}
+      // ♥ на фото = эта точка в «Мои точки» (08.11.2026); у гостя ведёт ко входу (#2778).
       onAddPoint={handleAddPoint}
-      // #2778: у гостя «Сохранить» активна и ведёт ко входу (useAddressListItemActions).
+      isSaved={pointAdded}
       addDisabled={!authReady || isAddingPoint || (isAuthenticated && !isSavedPointsReady)}
       isAdding={isAddingPoint || (isAuthenticated && !isSavedPointsReady)}
       imageHeight={cardImageHeight}
       width={cardWidth}
-      addLabel={pointAdded ? i18nT('map:components.MapPage.AddressListItem.AddressListItemCard.dobavleno_e6c744c6') : i18nT('map:components.MapPage.AddressListItem.AddressListItemCard.sohranit_06fb5b11')}
-      addButtonPlacement="row"
       compact
       popupAligned
       actionBudget

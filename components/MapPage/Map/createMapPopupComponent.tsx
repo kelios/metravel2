@@ -273,9 +273,9 @@ export const createMapPopupComponent = ({
       return { lat, lng };
     }, [coord]);
 
-    // #334 — saved-state for the «Сохранить место» button. Reads the user's
-    // collection (shared `userPointsAll` cache) and matches by coordinates so the
-    // button shows «Сохранено» and a second tap removes the point (toggle).
+    // #334 — saved-state for the place ♥ (save THIS point to «Мои точки», 08.11.2026).
+    // Reads the user's collection (shared `userPointsAll` cache) and matches by
+    // coordinates so the ♥ is filled and a second tap removes the point (toggle).
     const { isSaved, isReady: isSavedPointsReady, removeSaved, createPoint } = useSavedPointToggle({
       coord: normalizedCoord,
       enabled: isAuthenticated,
@@ -482,8 +482,8 @@ export const createMapPopupComponent = ({
 
       setIsAdding(true);
       try {
-        // Не закрываем попап: пользователь должен увидеть, что кнопка стала
-        // «Сохранено», чтобы понять про un-save (toggle, #334).
+        // Не закрываем попап: пользователь должен увидеть, что ♥ залился,
+        // чтобы понять про un-save (toggle, #334).
         await run({
           key: 'save-point',
           commit: () => createPoint(payload),
@@ -600,20 +600,6 @@ export const createMapPopupComponent = ({
           }
           addDisabled={!authReady || !normalizedCoord || !isSavedPointsReady || isAdding}
           isSaved={isQuest ? false : isSaved}
-          addLabel={!isQuest && isSaved ? i18nT('map:components.MapPage.Map.createMapPopupComponent.v_tochkah_a582e74c') : i18nT('map:components.MapPage.Map.createMapPopupComponent.moi_tochki_df7be800')}
-          addTooltip={
-            !authReady
-              ? i18nT('map:components.MapPage.Map.createMapPopupComponent.zagruzka_80ba0ae0')
-              : !isSavedPointsReady
-                ? i18nT('map:components.MapPage.Map.createMapPopupComponent.zagruzka_80ba0ae0')
-              : !isAuthenticated
-                ? i18nT('map:components.MapPage.Map.createMapPopupComponent.voydite_chtoby_sohranit_tochku_17cbe5b6')
-                : !normalizedCoord
-                  ? i18nT('map:components.MapPage.Map.createMapPopupComponent.koordinaty_tochki_nedostupny_debc7a97')
-                  : isSaved
-                    ? i18nT('map:components.MapPage.Map.createMapPopupComponent.ubrat_iz_moih_tochek_87bf91bc')
-                    : i18nT('map:components.MapPage.Map.createMapPopupComponent.sohranit_v_moi_tochki_d74b4957')
-          }
           isAdding={isAdding || (isAuthenticated && !isSavedPointsReady)}
           compactLayout={compactLayout}
           fullscreenOnMobile={fullscreenOnMobile}

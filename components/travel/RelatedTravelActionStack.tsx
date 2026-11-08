@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { queryKeys } from '@/api/queryKeys'
 import { fetchTravelBySlug } from '@/api/travelDetailsQueries'
 import FavoriteButton from '@/components/travel/FavoriteButton'
+import PlaceSaveHeartButton, { type PlaceSaveHeart } from '@/components/places/PlaceSaveHeartButton'
 import TravelStatusButton from '@/components/travel/TravelStatusButton'
 import { normalizeRelatedTravelId, resolveRelatedTravelRef } from '@/utils/relatedTravel'
 import { translate as i18nT } from '@/i18n'
@@ -19,6 +20,17 @@ type Props = {
   fallbackCity?: string | null
   variant?: 'overlay' | 'inline'
   style?: StyleProp<ViewStyle>
+  /**
+   * Карточка места умеет сохранять точку: ♥ тогда сохраняет ЭТУ точку в «Мои
+   * точки», а не статью (иначе ♥ загорался на всех точках одной статьи).
+   * Статус «Был / Хочу / Планирую» остаётся за статьёй.
+   */
+  placeSave?: PlaceSaveHeart
+  /**
+   * Только статус поездки, без ♥: подписанная секция «Статус поездки» карточки,
+   * чей ♥ точки стоит на фото.
+   */
+  statusOnly?: boolean
 }
 
 const stopWebCardEvent = (event?: {
@@ -45,6 +57,8 @@ export default function RelatedTravelActionStack({
   fallbackCity,
   variant = 'overlay',
   style,
+  placeSave,
+  statusOnly = false,
 }: Props) {
   const travelRef = useMemo(() => {
     const urlRef = resolveRelatedTravelRef(relatedTravelUrl)
@@ -73,10 +87,11 @@ export default function RelatedTravelActionStack({
   })
 
   const resolvedTravelId = relatedTravel?.id ?? travelRef?.id
-  if (!travelRef || !resolvedTravelId) return null
+  const hasTravel = Boolean(travelRef && resolvedTravelId)
+  if (!hasTravel && !placeSave) return null
 
   const travelTitle = relatedTravel?.name || fallbackTitle
-  const travelUrl = relatedTravel?.url || travelRef.route
+  const travelUrl = relatedTravel?.url || travelRef?.route || ''
   const travelImageUrl = relatedTravel?.travel_image_thumb_url || fallbackImageUrl || undefined
   const travelCountry = relatedTravel?.countryName || fallbackCountry || undefined
   const travelCity = relatedTravel?.cityName || fallbackCity || undefined
@@ -93,33 +108,39 @@ export default function RelatedTravelActionStack({
           } as any)
         : null)}
     >
-      <FavoriteButton
-        variant="overlay"
-        id={resolvedTravelId}
-        type="travel"
-        title={travelTitle}
-        imageUrl={travelImageUrl}
-        url={travelUrl}
-        country={travelCountry}
-        city={travelCity}
-        size={20}
-      />
-      <TravelStatusButton
-        travelId={resolvedTravelId}
-        travelTitle={travelTitle}
-        travelUrl={travelUrl}
-        travelImageUrl={travelImageUrl}
-        travelCountry={travelCountry}
-        travelCity={travelCity}
-        travelYear={relatedTravel?.year}
-        travelMonthName={relatedTravel?.monthName}
-        compact={variant !== 'inline'}
-        // Overlay (hero-corner) variant: no idle text — a plain icon circle like ♥
-        // so it never stretches into a wide «Был / Хочу / Планирую» pill over the
-        // photo. A selected status still shows its short label. The full inline
-        // variant keeps the descriptive idle label.
-        idleLabel={variant === 'inline' ? i18nT('travel:components.travel.RelatedTravelActionStack.byl_hochu_planiruyu_58750fb0') : undefined}
-      />
+      {statusOnly ? null : placeSave ? (
+        <PlaceSaveHeartButton {...placeSave} size={20} />
+      ) : (
+        <FavoriteButton
+          variant="overlay"
+          id={resolvedTravelId as number}
+          type="travel"
+          title={travelTitle}
+          imageUrl={travelImageUrl}
+          url={travelUrl}
+          country={travelCountry}
+          city={travelCity}
+          size={20}
+        />
+      )}
+      {hasTravel ? (
+        <TravelStatusButton
+          travelId={resolvedTravelId as number}
+          travelTitle={travelTitle}
+          travelUrl={travelUrl}
+          travelImageUrl={travelImageUrl}
+          travelCountry={travelCountry}
+          travelCity={travelCity}
+          travelYear={relatedTravel?.year}
+          travelMonthName={relatedTravel?.monthName}
+          compact={variant !== 'inline'}
+          // Overlay (hero-corner) variant: no idle text — a plain icon circle like ♥
+          // so it never stretches into a wide «Был / Хочу / Планирую» pill over the
+          // photo. A selected status still shows its short label. The full inline
+          // variant keeps the descriptive idle label.
+          idleLabel={variant === 'inline' ? i18nT('travel:components.travel.RelatedTravelActionStack.byl_hochu_planiruyu_58750fb0') : undefined}
+        />
+      ) : null}
     </View>
   )
 }

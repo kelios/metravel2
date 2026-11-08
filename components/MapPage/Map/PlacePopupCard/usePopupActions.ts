@@ -137,11 +137,6 @@ export function usePopupActions({
     return null;
   }, [hasArticle, hasCoord, onBuildRoute, onOpenArticle, onOpenGoogleMaps, popupTooltips, primaryActionOverride]);
 
-  const saveActionVisual = useMemo(
-    () => getNavigationActionVisual('save', colors),
-    [colors],
-  );
-
   const secondaryActions = useMemo(() => {
     const items: Array<{
       key: string;
@@ -289,7 +284,6 @@ export function usePopupActions({
     hasDrivingInfo,
     drivingText,
     primaryAction,
-    saveActionVisual,
     secondaryActions,
   };
 }

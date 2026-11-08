@@ -219,13 +219,13 @@ const PointList: React.FC<PointListProps> = ({ points, baseUrl, baseTravelId, tr
   });
 
   const { categoryIdToName, categoryNameToIds } = usePointListCategoryDictionaryModel();
-  const { isPointSaved } = usePointListSavedModel();
+  const { findSavedPoint, isPointSaved } = usePointListSavedModel();
   const { addingPointId, handleAddPoint } = usePointListAddPointModel({
     baseUrl,
     baseTravelId,
     categoryIdToName,
     categoryNameToIds,
-    isPointSaved,
+    findSavedPoint,
     travelName,
   });
   const { onCopy, onOpenArticle, onOpenMap, onShare } = usePointListExternalActionsModel({

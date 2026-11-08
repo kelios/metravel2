@@ -40,8 +40,6 @@ const AddressListItem: React.FC<Props> = ({
   userLocation,
   distanceOrigin,
   transportMode = 'car',
-  isFavorite = false,
-  onToggleFavorite,
   onBuildRoute,
   screenWidth,
 }) => {
@@ -283,8 +281,6 @@ const AddressListItem: React.FC<Props> = ({
       categories={categories}
       urlTravel={urlTravel}
       articleUrl={articleUrl}
-      isFavorite={isFavorite}
-      onToggleFavorite={onToggleFavorite}
       quickActions={routeAction ? [routeAction] : []}
       onPress={onPress}
       transportMode={transportMode}

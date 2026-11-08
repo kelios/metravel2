@@ -6,11 +6,30 @@ import { createRootRegistry } from '@/__tests__/helpers/rawRootLifecycle';
 const renderer = createRootRegistry();
 
 const mockImageCardMedia = jest.fn((props: any) => React.createElement('mock-image-card-media', props));
+// Мок повторяет контракт RelatedTravelActionStack (сам стек закрыт своим тестом):
+// с `placeSave` ♥ — переключатель ЭТОЙ точки (testID `place-save-heart`), статус
+// — только при статье.
 const mockRelatedTravelActionStack = jest.fn((props: any) =>
   React.createElement(
     'related-travel-action-stack',
     props,
-    props.variant === 'inline' ? 'Был / Хочу / Планирую' : 'overlay status',
+    props.placeSave
+      ? React.createElement('place-save-heart', {
+          testID: 'place-save-heart',
+          accessibilityState: {
+            checked: props.placeSave.isSaved,
+            disabled: Boolean(props.placeSave.disabled),
+            busy: Boolean(props.placeSave.busy),
+          },
+          onPress: () => {
+            if (props.placeSave.disabled || props.placeSave.busy) return;
+            void props.placeSave.onToggle();
+          },
+        })
+      : null,
+    props.relatedTravelUrl
+      ? props.variant === 'inline' ? 'Был / Хочу / Планирую' : 'overlay status'
+      : null,
   ),
 );
 
@@ -87,6 +106,23 @@ const findRelatedTravelStack = (tree: any) =>
 
 const findTextNode = (tree: any, text: string) =>
   tree.container.queryAll((node: any) => node.props?.children === text)[0];
+
+const findPlaceSaveHeart = (tree: any) =>
+  tree.container.queryAll((node: any) => node.type === 'place-save-heart')[0];
+
+// Отдельной кнопки сохранения в ряду действий больше нет (08.11.2026): ни лейбла
+// «Сохранить/Сохранено/Мои точки», ни checkbox-чипа.
+const expectNoSeparateSaveChip = (tree: any) => {
+  for (const label of ['Сохранить', 'Сохранено', 'Мои точки', 'В точках']) {
+    expect(tree.container.queryAll((node: any) => node.props?.children === label)).toHaveLength(0);
+    expect(
+      tree.container.queryAll((node: any) => node.props?.accessibilityLabel === label, { includeSelf: true }),
+    ).toHaveLength(0);
+  }
+  expect(
+    tree.container.queryAll((node: any) => node.props?.accessibilityRole === 'checkbox', { includeSelf: true }),
+  ).toHaveLength(0);
+};
 
 describe('PlacePopupCard', () => {
   const originalPlatform = Platform.OS;
@@ -538,7 +574,7 @@ describe('PlacePopupCard', () => {
     expect(onOpenGoogleMaps).toHaveBeenCalledTimes(1);
   });
 
-  it('runs the add-point handler when the save action is pressed', async () => {
+  it('toggles the point save through the ♥ (onAddPoint) and renders no separate save chip', async () => {
     const onAddPoint = jest.fn();
     let tree: any;
 
@@ -547,18 +583,78 @@ describe('PlacePopupCard', () => {
       tree.render(<PlacePopupCard
           colors={mockColors as any}
           title="Test point"
+          imageUrl="https://example.com/photo.jpg"
+          coord="53.9, 27.56"
+          relatedTravelUrl="/travels/krakow"
+          onAddPoint={onAddPoint}
+        />);
+    });
+
+    // ♥ стека получает toggle ЭТОЙ точки, а не статьи-источника.
+    expect(mockRelatedTravelActionStack.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({
+        relatedTravelUrl: '/travels/krakow',
+        placeSave: expect.objectContaining({ isSaved: false, onToggle: onAddPoint, busy: false, disabled: false }),
+      }),
+    );
+    const heart = findPlaceSaveHeart(tree);
+    expect(heart.props.accessibilityState.checked).toBe(false);
+
+    await React.act(() => {
+      heart.props.onPress();
+    });
+
+    expect(onAddPoint).toHaveBeenCalledTimes(1);
+    expectNoSeparateSaveChip(tree);
+  });
+
+  it('renders a ♥-only stack (point save) when the place has no related article', async () => {
+    const onAddPoint = jest.fn();
+    let tree: any;
+
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          imageUrl="https://example.com/photo.jpg"
           coord="53.9, 27.56"
           onAddPoint={onAddPoint}
         />);
     });
 
-    const saveAction = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Мои точки');
+    const stackProps = mockRelatedTravelActionStack.mock.calls.at(-1)?.[0];
+    expect(stackProps).toEqual(expect.objectContaining({ variant: 'overlay' }));
+    expect(stackProps.relatedTravelUrl).toBeFalsy();
+    expect(findPlaceSaveHeart(tree)).toBeTruthy();
+    expect(JSON.stringify(tree.container.toJSON())).not.toContain('overlay status');
+    expectNoSeparateSaveChip(tree);
+  });
 
+  it('does not render the ♥/status stack when there is neither an article nor a point save', async () => {
     await React.act(() => {
-      saveAction.props.onPress();
+      renderer.createRoot().render(<PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          imageUrl="https://example.com/photo.jpg"
+          coord="53.9, 27.56"
+        />);
     });
 
-    expect(onAddPoint).toHaveBeenCalledTimes(1);
+    expect(mockRelatedTravelActionStack).not.toHaveBeenCalled();
+  });
+
+  it('keeps the article ♥ when the card cannot save the point (no onAddPoint)', async () => {
+    await React.act(() => {
+      renderer.createRoot().render(<PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          imageUrl="https://example.com/photo.jpg"
+          relatedTravelUrl="/travels/krakow"
+        />);
+    });
+
+    expect(mockRelatedTravelActionStack.mock.calls.at(-1)?.[0].placeSave).toBeUndefined();
   });
 
   it('renders an explicit popup close button when an onClose handler is provided', async () => {
@@ -584,7 +680,7 @@ describe('PlacePopupCard', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('disables the save action when addDisabled is true', async () => {
+  it('disables the ♥ point save when addDisabled is true', async () => {
     const onAddPoint = jest.fn();
     let tree: any;
 
@@ -599,12 +695,15 @@ describe('PlacePopupCard', () => {
         />);
     });
 
-    const saveAction = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Мои точки');
-
-    expect(saveAction.props.disabled).toBe(true);
+    const heart = findPlaceSaveHeart(tree);
+    expect(heart.props.accessibilityState.disabled).toBe(true);
+    await React.act(() => {
+      heart.props.onPress();
+    });
+    expect(onAddPoint).not.toHaveBeenCalled();
   });
 
-  it('shows the checked «Сохранено» state on the bottom card when the point is saved', async () => {
+  it('shows the filled ♥ on the bottom card when the point is saved and toggles it off', async () => {
     const onAddPoint = jest.fn();
     let tree: any;
 
@@ -616,26 +715,25 @@ describe('PlacePopupCard', () => {
           coord="53.9, 27.56"
           onAddPoint={onAddPoint}
           isSaved
-          addLabel="В точках"
           compactLayout
         />);
     });
 
-    // Bottom-card save chip flips to the verb «Сохранено» and reports checked=true.
-    const saveAction = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityRole"] === 'checkbox');
-    expect(saveAction.props.accessibilityState.checked).toBe(true);
-    expect(saveAction.props.accessibilityState.disabled).toBe(false);
-    expect(
-      tree.container.queryAll((node: any) => node.props?.children === 'Сохранено').length,
-    ).toBeGreaterThan(0);
+    expect(mockRelatedTravelActionStack.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ variant: 'inline', placeSave: expect.objectContaining({ isSaved: true }) }),
+    );
+    const heart = findPlaceSaveHeart(tree);
+    expect(heart.props.accessibilityState.checked).toBe(true);
+    expect(heart.props.accessibilityState.disabled).toBe(false);
 
     await React.act(() => {
-      saveAction.props.onPress();
+      heart.props.onPress();
     });
     expect(onAddPoint).toHaveBeenCalledTimes(1);
+    expectNoSeparateSaveChip(tree);
   });
 
-  it('marks the bottom-card save action as busy/disabled while a save is in flight', async () => {
+  it('marks the bottom-card ♥ as busy/disabled while a save is in flight', async () => {
     let tree: any;
 
     await React.act(() => {
@@ -651,11 +749,41 @@ describe('PlacePopupCard', () => {
         />);
     });
 
-    const saveAction = getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityRole"] === 'checkbox');
-    expect(saveAction.props.disabled).toBe(true);
-    expect(saveAction.props.accessibilityState.disabled).toBe(true);
-    // A spinner replaces the icon so the press does not look like a silent no-op.
-    expect(tree.container.queryAll((node: any) => node.type === 'ActivityIndicator', { includeSelf: true }).length).toBeGreaterThan(0);
+    const heart = findPlaceSaveHeart(tree);
+    expect(heart.props.accessibilityState).toEqual(
+      expect.objectContaining({ disabled: true, busy: true }),
+    );
+  });
+
+  it('puts the ♥ point save into the fullscreen mobile overlay footer (only save entry there)', async () => {
+    require('react-native').useWindowDimensions = jest.fn(() => ({ width: 390, height: 844, scale: 1, fontScale: 1 }));
+    const onAddPoint = jest.fn();
+    let tree: any;
+
+    await React.act(() => {
+      tree = renderer.createRoot();
+      tree.render(<PlacePopupCard
+          colors={mockColors as any}
+          title="Test point"
+          coord="53.9, 27.56"
+          imageUrl="https://example.com/photo.jpg"
+          relatedTravelUrl="/travels/krakow"
+          onAddPoint={onAddPoint}
+          compactLayout
+          fullscreenOnMobile
+        />);
+    });
+
+    expect(mockRelatedTravelActionStack.mock.calls.at(-1)?.[0]).toEqual(
+      expect.objectContaining({ variant: 'inline' }),
+    );
+    const heart = findPlaceSaveHeart(tree);
+    expect(heart).toBeTruthy();
+    await React.act(() => {
+      heart.props.onPress();
+    });
+    expect(onAddPoint).toHaveBeenCalledTimes(1);
+    expectNoSeparateSaveChip(tree);
   });
 
   it('opens the page through the popup handler when the page action is pressed', async () => {
@@ -823,8 +951,8 @@ describe('PlacePopupCard', () => {
 
   // #1779 — карточка места на телефоне тратила три подряд полноширинных ряда на
   // координаты, пару ♥/«Был здесь» и ряд действий. Оба теста ниже фиксируют, что
-  // рядов стало на один меньше в каждой из двух конфигураций точки, а все шесть
-  // действий остались на месте.
+  // рядов стало на один меньше в каждой из двух конфигураций точки, а все
+  // действия остались на месте (сохранение точки с 08.11.2026 — это ♥ стека).
   it('draws the travel actions on the hero photo instead of a separate row below it (#1779)', async () => {
     require('react-native').useWindowDimensions = jest.fn(() => ({ width: 375, height: 812, scale: 1, fontScale: 1 }));
 
@@ -875,11 +1003,13 @@ describe('PlacePopupCard', () => {
       }),
     ).toBe(true);
 
-    // Все шесть действий на месте.
+    // Все действия на месте (сохранение точки — ♥ на фото).
     expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Скопировать координаты')).toBeTruthy();
     expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Построить маршрут от моего местоположения')).toBeTruthy();
     expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть статью')).toBeTruthy();
-    expect(tree.container.queryAll((node: any) => node.props?.children === 'Сохранить').length).toBeGreaterThan(0);
+    // Сохранение точки — ♥ в том же стеке, отдельной кнопки в ряду нет.
+    expect(findPlaceSaveHeart(tree)).toBeTruthy();
+    expectNoSeparateSaveChip(tree);
     expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть способы навигации')).toBeTruthy();
   });
 
@@ -921,7 +1051,9 @@ describe('PlacePopupCard', () => {
     expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Скопировать координаты')).toBeTruthy();
     expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Построить маршрут от моего местоположения')).toBeTruthy();
     expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть статью')).toBeTruthy();
-    expect(tree.container.queryAll((node: any) => node.props?.children === 'Сохранить').length).toBeGreaterThan(0);
+    // Сохранение точки — ♥ в том же стеке, отдельной кнопки в ряду нет.
+    expect(findPlaceSaveHeart(tree)).toBeTruthy();
+    expectNoSeparateSaveChip(tree);
     expect(getOnlyHost(tree.container, (node: any) => node.props?.["accessibilityLabel"] === 'Открыть способы навигации')).toBeTruthy();
   });
 });

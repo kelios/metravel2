@@ -180,9 +180,10 @@ describe('TravelListPanel (right list on map page)', () => {
     expect(buildRouteTo).toHaveBeenCalledWith(travelsData[0]);
   });
 
-  it('uses favorite auth intent and context favorite lookup for web card actions', async () => {
-    mockIsFavorite.mockImplementation((id: string | number, type: string) => id === 1 && type === 'travel');
-
+  // 08.11.2026: ♥ места сохраняет точку внутри карточки (PlaceListCard →
+  // onAddPoint). Список больше не привязывает к точке ♥ статьи: раньше он слал
+  // id ТОЧКИ как id статьи в «Хочу поехать», и точки одной статьи загорались разом.
+  it('does not wire the article favorite to map points', async () => {
     await render(
       <TravelListPanel
         travelsData={travelsData}
@@ -192,31 +193,11 @@ describe('TravelListPanel (right list on map page)', () => {
       />
     );
 
-    expect(mockUseRequireAuth).toHaveBeenCalledWith({ intent: 'favorite' });
-    expect(mockIsFavorite).toHaveBeenCalledWith(1, 'travel');
-    expect(mockAddressListItem.mock.calls[0][0].isFavorite).toBe(true);
-  });
-
-  it('shows feedback when web favorite toggle fails', async () => {
-    mockAddFavorite.mockRejectedValueOnce(new Error('failed'));
-
-    await render(
-      <TravelListPanel
-        travelsData={travelsData}
-        buildRouteTo={jest.fn()}
-        isMobile={false}
-        isLoading={false}
-      />
-    );
-
-    await mockAddressListItem.mock.calls[0][0].onToggleFavorite();
-
-    expect(mockShowToast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        type: 'error',
-        text1: 'Не удалось обновить «Хочу поехать»',
-      })
-    );
+    const props = mockAddressListItem.mock.calls[0][0];
+    expect(props).not.toHaveProperty('onToggleFavorite');
+    expect(props).not.toHaveProperty('isFavorite');
+    expect(mockIsFavorite).not.toHaveBeenCalled();
+    expect(mockAddFavorite).not.toHaveBeenCalled();
   });
 
   it('keeps the mobile list header free of legacy filter and map buttons', async () => {

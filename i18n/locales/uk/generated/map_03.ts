@@ -134,7 +134,6 @@ export const mapGenerated3 = {
   "components.MapPage.MapOnboarding.spisok_mest_e8c5b25f": "Список місць",
   "components.MapPage.MapOnboarding.stroyte_marshruty_ba7a03e3": "Будуйте маршрути",
   "components.MapPage.MapOnboarding.zdes_otobrazhayutsya_interesnye_mesta_i_marshruty_7732a21e": "Тут відображаються цікаві місця та маршрути від інших мандрівників. Переміщуйте та масштабуйте карту.",
-  "components.MapPage.TravelListPanel.useTravelItemRenderer.mesto_d8763e12": "Місце",
   "components.MapPage.WeatherLegend.net_650340b5": "ні",
   "components.MapPage.WeatherLegend.oblachnost_protsent_f61c0456": "Хмарність, %",
   "components.MapPage.WeatherLegend.osadki_mm_ch_53d78d8f": "Опади, мм/год",

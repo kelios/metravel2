@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, type QueryClient } from '@tanstack/react-query';
 
 import { userPointsApi } from '@/api/userPoints';
 import { queryKeys } from '@/api/queryKeys';
@@ -111,6 +111,45 @@ export function findSavedPointByCoord(
   return findSavedPointInIndex(buildSavedPointCoordIndex(points), lat, lng);
 }
 
+/**
+ * Снять точку из «Моих точек» по её id: оптимистично убрать из общего кэша
+ * `userPointsAll` и удалить на сервере. Общий путь для toggle попапа/карточек
+ * (`useSavedPointToggle`) и списка точек статьи (`usePointListAddPointModel`).
+ */
+export async function removeSavedPointFromCollection(
+  queryClient: QueryClient,
+  owner: string | null,
+  targetId: ImportedPoint['id'],
+): Promise<void> {
+  const key = queryKeys.userPointsAll(owner);
+  // Отменяем летящее чтение коллекции: она читается постранично (#1706) и
+  // резолвится долго, поэтому её ответ пришёл бы ПОСЛЕ оптимистичной записи и
+  // вернул бы удалённую точку. Трейлингового рефетча, который это чинил, больше нет.
+  // Только при уже загруженной коллекции: `cancelQueries` откатывает данные к
+  // предыдущему состоянию, и на ПЕРВОМ чтении это `undefined` — оптимистичная
+  // запись оставила бы кэш из одной точки, свежий на весь staleTime.
+  if (queryClient.getQueryData(key) !== undefined) {
+    await queryClient.cancelQueries({ queryKey: key });
+  }
+  // Оптимистично убираем точку из кэша, чтобы `isSaved` (и ♥) переключились
+  // сразу, не дожидаясь рефетча всей коллекции.
+  queryClient.setQueryData<ImportedPoint[]>(key, (old) =>
+    readPointsFromUnknown(old).filter((p) => p.id !== targetId),
+  );
+  try {
+    await userPointsApi.deletePoint(targetId);
+  } catch (e) {
+    // Запрос упал — синхронизируем кэш с сервером (точка вернётся).
+    void queryClient.invalidateQueries({ queryKey: key });
+    throw e;
+  }
+  // Рефетча на успехе нет намеренно: DELETE прошёл, кэш уже совпадает с сервером.
+  // #1706 — коллекция читается постранично, и полный рефетч стоил бы
+  // ceil(count/200) запросов на каждое снятие. Клиентский лимитер считает
+  // `/user-points/` одним ключом (`utils/rateLimiter.ts:58`, 60 запросов в
+  // минуту), поэтому серия сохранений упиралась бы в ложное 429.
+}
+
 type UseSavedPointToggleArgs = {
   coord: { lat: number; lng: number } | null;
   enabled?: boolean;
@@ -137,40 +176,10 @@ export function useSavedPointToggle({ coord, enabled = true }: UseSavedPointTogg
     return findSavedPointInIndex(coordIndex, coord.lat, coord.lng);
   }, [coord, coordIndex]);
 
-  const invalidate = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: queryKeys.userPointsAll(owner) });
-  }, [owner, queryClient]);
-
   const removeSaved = useCallback(async () => {
     if (!savedPoint) return;
-    const key = queryKeys.userPointsAll(owner);
-    const targetId = savedPoint.id;
-    // Отменяем летящее чтение коллекции: она читается постранично (#1706) и
-    // резолвится долго, поэтому её ответ пришёл бы ПОСЛЕ оптимистичной записи и
-    // вернул бы удалённую точку. Трейлингового рефетча, который это чинил, больше нет.
-    // Только при уже загруженной коллекции: `cancelQueries` откатывает данные к
-    // предыдущему состоянию, и на ПЕРВОМ чтении это `undefined` — оптимистичная
-    // запись оставила бы кэш из одной точки, свежий на весь staleTime.
-    if (queryClient.getQueryData(key) !== undefined) {
-      await queryClient.cancelQueries({ queryKey: key });
-    }
-    // Оптимистично убираем точку из кэша, чтобы `isSaved` (и иконка ✓→＋)
-    // переключились сразу, не дожидаясь рефетча всей коллекции.
-    queryClient.setQueryData<ImportedPoint[]>(key, (old) =>
-      readPointsFromUnknown(old).filter((p) => p.id !== targetId),
-    );
-    try {
-      await userPointsApi.deletePoint(targetId);
-    } catch (e) {
-      invalidate(); // запрос упал — синхронизируем кэш с сервером (точка вернётся)
-      throw e;
-    }
-    // Рефетча на успехе нет намеренно: DELETE прошёл, кэш уже совпадает с сервером.
-    // #1706 — коллекция читается постранично, и полный рефетч стоил бы
-    // ceil(count/200) запросов на каждое снятие. Клиентский лимитер считает
-    // `/user-points/` одним ключом (`utils/rateLimiter.ts:58`, 60 запросов в
-    // минуту), поэтому серия сохранений упиралась бы в ложное 429.
-  }, [invalidate, owner, queryClient, savedPoint]);
+    await removeSavedPointFromCollection(queryClient, owner, savedPoint.id);
+  }, [owner, queryClient, savedPoint]);
 
   const createPoint = useCallback(
     async (payload: Partial<ImportedPoint>) => {

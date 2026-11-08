@@ -824,29 +824,6 @@ export const getStyles = (
       backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
       borderColor: colors.primarySoft ?? colors.borderLight ?? colors.border,
     },
-    addBtn: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 2 : sp.iconButtonSize,
-      height: compactLayout ? compactSp.iconButtonSize : splitLayout ? sp.iconButtonSize - 2 : sp.iconButtonSize,
-      borderRadius: DESIGN_TOKENS.radii.full,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.primarySoft ?? colors.borderLight ?? colors.border,
-      backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
-      ...(Platform.OS === 'web' ? ({ cursor: 'pointer', transition: 'opacity 0.15s ease' } as any) : null),
-    },
-    addBtnDisabled: {
-      borderColor: colors.borderLight ?? colors.border,
-      opacity: 0.4,
-    },
-    addBtnPressed: {
-      opacity: 0.6,
-    },
-    addBtnText: {
-      fontSize: compactLayout ? fs.small - 1 : bp === 'narrow' ? 13 : fs.small,
-      fontWeight: '500',
-      color: colors.text,
-    },
     labeledActionBtn: {
       flexDirection: 'row',
       alignItems: 'center',

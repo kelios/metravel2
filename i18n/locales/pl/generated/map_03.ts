@@ -134,7 +134,6 @@ export const mapGenerated3 = {
   "components.MapPage.MapOnboarding.spisok_mest_e8c5b25f": "Lista miejsc",
   "components.MapPage.MapOnboarding.stroyte_marshruty_ba7a03e3": "Buduj trasy",
   "components.MapPage.MapOnboarding.zdes_otobrazhayutsya_interesnye_mesta_i_marshruty_7732a21e": "Wyświetla ciekawe miejsca i trasy od innych podróżników. Przesuń i powiększ mapę.",
-  "components.MapPage.TravelListPanel.useTravelItemRenderer.mesto_d8763e12": "Miejsce",
   "components.MapPage.WeatherLegend.net_650340b5": "nie",
   "components.MapPage.WeatherLegend.oblachnost_protsent_f61c0456": "Zachmurzenie,%",
   "components.MapPage.WeatherLegend.osadki_mm_ch_53d78d8f": "Opady, mm/h",

@@ -7,6 +7,7 @@ import ImageCardMedia from '@/components/ui/ImageCardMedia';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import ActionListSheet, { type ActionListSheetItem } from '@/components/ui/ActionListSheet';
 import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
+import type { PlaceSaveHeart } from '@/components/places/PlaceSaveHeartButton'
 import PlaceRatingSection from '@/components/places/PlaceRatingSection';
 import { SEMANTIC_ACTION_ICON } from '@/components/navigation/navigationActionMeta';
 import { getOptimalImageWidth, optimizeImageUrl } from '@/utils/imageOptimization';
@@ -81,19 +82,17 @@ type Props = {
    * share/utility area) instead of inside the navigation sheet. Telegram is a share
    * action, not a map-app, so it no longer belongs in «Навигация и действия». Used
    * by the native bottom card; also drives the native nav ActionListSheet + the
-   * coherence relayout (hero-corner ♥, full-width status, «Сохранить» chip).
+   * coherence relayout (hero-corner ♥, full-width status).
    */
   shareInActionRow?: boolean;
   addDisabled?: boolean;
   isAdding?: boolean;
   /**
    * #334 — the point is already in the user's «Мои точки» collection. Drives the
-   * toggle visual (check + «Сохранено») and the tap-to-remove tooltip; the actual
-   * remove is wired by the caller via `onAddPoint`.
+   * filled ♥ (PlaceSaveHeartButton); the actual remove is wired by the caller via
+   * `onAddPoint`, which toggles save/un-save.
    */
   isSaved?: boolean;
-  addLabel?: string;
-  addTooltip?: string;
   width?: number;
   imageHeight?: number;
   compactLayout?: boolean;
@@ -198,8 +197,6 @@ const PlacePopupCard: React.FC<Props> = ({
   addDisabled = false,
   isAdding = false,
   isSaved = false,
-  addLabel = i18nT('map:components.MapPage.Map.PlacePopupCard.index.moi_tochki_9e5ac9a2'),
-  addTooltip,
   width = 352,
   imageHeight: _imageHeight = 56,
   compactLayout = false,
@@ -246,7 +243,6 @@ const PlacePopupCard: React.FC<Props> = ({
     revealPopupImageOnLoadOnly,
     avoidIOSSafariBottomCardBlur,
     bp,
-    compactLabel,
     useFullscreenMobileOverlay,
     useCompactLayout,
     isBottomCardLayout,
@@ -258,8 +254,6 @@ const PlacePopupCard: React.FC<Props> = ({
     colors,
     width,
     imageUrl,
-    addLabel,
-    isSaved,
     imageHeight: _imageHeight,
     compactLayout,
     fullscreenOnMobile,
@@ -270,7 +264,6 @@ const PlacePopupCard: React.FC<Props> = ({
     hasDrivingInfo,
     drivingText,
     primaryAction,
-    saveActionVisual,
     secondaryActions,
   } = usePopupActions({
     colors,
@@ -344,8 +337,8 @@ const PlacePopupCard: React.FC<Props> = ({
   }, []);
 
   // Bottom-card chrome (mobile web sheet + native bottom card share ONE contract, per
-  // docs/features/map.md §Mobile parity contract): ♥ + trip status live on the hero,
-  // the save chip reads «Сохранить/Сохранено», and a divider precedes the action row.
+  // docs/features/map.md §Mobile parity contract): ♥ (save THIS point) + trip status
+  // live on the hero, and a divider precedes the action row.
   // The desktop Leaflet popup (isBottomCardLayout === false) keeps its own inline
   // layout otherwise.
   //
@@ -423,14 +416,6 @@ const PlacePopupCard: React.FC<Props> = ({
     isBottomCardLayout && primaryAction?.icon === 'arrow-right'
       ? i18nT('map:components.MapPage.Map.PlacePopupCard.index.stranitsa_42cb2f31')
       : primaryAction?.label;
-
-  // #FIX-3 — «Мои точки» is an ambiguous noun (reads as "view", but the chip ADDS the
-  // point). Use the verb «Сохранить» / «Сохранено» EVERYWHERE (bottom card + desktop
-  // Leaflet popup) so the same action reads identically across surfaces (#1011).
-  // The bookmark/✓ icon already conveys save vs saved; keeps the #334 add/un-save toggle.
-  const saveChipLabel = isSaved
-    ? i18nT('map:components.MapPage.Map.PlacePopupCard.index.sohraneno_c49c48f6')
-    : i18nT('map:components.MapPage.Map.PlacePopupCard.index.sohranit_e0638622');
 
   // #FIX-3 — «Поделиться» is a share action surfaced as a small right-aligned icon in
   // the title row on the native bottom card (NOT in the action row, which must stay at
@@ -519,15 +504,35 @@ const PlacePopupCard: React.FC<Props> = ({
     useCompactLayout,
   ]);
 
-  // Превью для ♥/статуса принадлежит связанной статье, а не активному материалу
-  // pager'а (иначе в избранное ушло бы фото из чужой статьи).
+  // Превью для статуса статьи принадлежит связанной статье, а не активному
+  // материалу pager'а (иначе в «Был / Хочу / Планирую» ушло бы фото чужой статьи).
   const relatedTravelFallbackImageUrl = relatedTravelImageUrl ?? imageUrl;
+
+  // ♥ карточки места = сохранить ЭТУ точку в «Мои точки» (решение владельца
+  // 08.11.2026), тот же toggle, что был у отдельной кнопки «Сохранить», — её в ряду
+  // действий больше нет: одно действие живёт в одном месте. Статус «Был / Хочу /
+  // Планирую» остаётся за статьёй. Без `onAddPoint` (квест, «Мои точки» владельца)
+  // стек ведёт себя по-старому: ♥ статьи.
+  const placeSave = useMemo<PlaceSaveHeart | undefined>(
+    () =>
+      onAddPoint
+        ? { isSaved, onToggle: onAddPoint, busy: isAdding, disabled: addDisabled }
+        : undefined,
+    [onAddPoint, isSaved, isAdding, addDisabled],
+  );
+
+  // Fullscreen mobile overlay (web ≤560 Leaflet popup) has no hero-overlay slot, so it
+  // renders the stack inline in the footer meta row like the photo-less bottom card.
+  // Before the ♥ became the point-save toggle this surface had no ♥/status at all;
+  // now it must, or the only way to save the point there would be gone.
+  const relatedTravelActionsInline = isBottomCardLayout || useFullscreenMobileOverlay;
 
   // Desktop Leaflet popup keeps this as a hero overlay. Bottom cards render the
   // same stack with its visible «Был / Хочу / Планирую» label — on the photo when
-  // there is one (hero caption), inline in the footer meta row otherwise.
+  // there is one (hero caption), inline in the footer meta row otherwise. Without a
+  // related article the stack is ♥-only (point save).
   const relatedTravelActionStack = useMemo(() => {
-    if (!relatedTravelUrl) return null;
+    if (!relatedTravelUrl && !placeSave) return null;
     return (
       <RelatedTravelActionStack
         relatedTravelUrl={relatedTravelUrl}
@@ -536,17 +541,19 @@ const PlacePopupCard: React.FC<Props> = ({
         fallbackImageUrl={relatedTravelFallbackImageUrl}
         fallbackCountry={relatedTravelCountry}
         fallbackCity={relatedTravelCity}
-        style={isBottomCardLayout ? styles.relatedTravelActionsInline : undefined}
-        variant={isBottomCardLayout ? 'inline' : 'overlay'}
+        style={relatedTravelActionsInline ? styles.relatedTravelActionsInline : undefined}
+        variant={relatedTravelActionsInline ? 'inline' : 'overlay'}
+        placeSave={placeSave}
       />
     );
   }, [
     relatedTravelFallbackImageUrl,
-    isBottomCardLayout,
+    relatedTravelActionsInline,
     relatedTravelCity,
     relatedTravelCountry,
     relatedTravelId,
     relatedTravelUrl,
+    placeSave,
     styles.relatedTravelActionsInline,
     title,
   ]);
@@ -729,7 +736,7 @@ const PlacePopupCard: React.FC<Props> = ({
     <View style={styles.footerStack}>
       {/* #1779: координаты и ♥/статус делят ОДИН ряд. Hero-caption mode рисует и
           то, и другое на самом фото, поэтому под фото этого ряда нет вовсе. */}
-      {!useHeroCaption && (hasCoord || (isBottomCardLayout && !!relatedTravelActionStack)) ? (
+      {!useHeroCaption && (hasCoord || (relatedTravelActionsInline && !!relatedTravelActionStack)) ? (
         <View style={styles.metaActionsRow}>
           {hasCoord ? (
             <View style={styles.coordRow}>
@@ -751,7 +758,7 @@ const PlacePopupCard: React.FC<Props> = ({
             </View>
           ) : null}
 
-          {isBottomCardLayout && relatedTravelActionStack ? (
+          {relatedTravelActionsInline && relatedTravelActionStack ? (
             <View style={styles.relatedTravelInlineSection}>
               {relatedTravelActionStack}
             </View>
@@ -832,46 +839,6 @@ const PlacePopupCard: React.FC<Props> = ({
                   </View>
                   <View style={styles.iconActionLabelRow}>
                     <Text style={styles.iconActionLabel} numberOfLines={1}>{i18nT('map:components.MapPage.Map.PlacePopupCard.index.stranitsa_42cb2f31')}</Text>
-                  </View>
-                </CardActionPressable>
-              )}
-
-              {onAddPoint && (
-                <CardActionPressable
-                  accessibilityLabel={compactLabel}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: isSaved, disabled: addDisabled || isAdding }}
-                  onPress={() => void onAddPoint()}
-                  disabled={addDisabled || isAdding}
-                  title={addTooltip ?? compactLabel}
-                  enableWebClickFallback
-                  style={({ pressed }) => [
-                    styles.iconActionBtn,
-                    (addDisabled || isAdding) && styles.addBtnDisabled,
-                    pressed && styles.iconActionBtnPressed,
-                  ]}
-                >
-                  <View
-                    style={[
-                      styles.iconActionBubble,
-                      isSaved && { backgroundColor: colors.successSoft, borderColor: colors.successSoft },
-                    ]}
-                  >
-                    {isAdding ? (
-                      <ActivityIndicator
-                        size="small"
-                        color={isSaved ? colors.successDark : saveActionVisual.iconColor}
-                      />
-                    ) : (
-                      <Feather
-                        name={isSaved ? 'check' : saveActionVisual.icon}
-                        size={19}
-                        color={isSaved ? colors.successDark : saveActionVisual.iconColor}
-                      />
-                    )}
-                  </View>
-                  <View style={styles.iconActionLabelRow}>
-                    <Text style={styles.iconActionLabel} numberOfLines={1}>{saveChipLabel}</Text>
                   </View>
                 </CardActionPressable>
               )}
@@ -977,31 +944,23 @@ const PlacePopupCard: React.FC<Props> = ({
     initialCount,
     initialUserRating,
     navActions,
-    addDisabled,
-    addTooltip,
     articleHref,
     colors.primaryDark,
     colors.text,
     colors.textMuted,
-    compactLabel,
-    colors.successDark,
-    colors.successSoft,
     displayCoord,
     extraActions,
     hasCoord,
     useHeroCaption,
-    isAdding,
     isBottomCardLayout,
-    isSaved,
     navExpanded,
     navSheetVisible,
     relatedTravelActionStack,
+    relatedTravelActionsInline,
     useNavSheet,
-    onAddPoint,
     onBuildRoute,
     onCopyCoord,
     onOpenArticle,
-    saveChipLabel,
     primaryAction,
     primaryIconActionLabel,
     primaryActionOverride,
@@ -1010,7 +969,6 @@ const PlacePopupCard: React.FC<Props> = ({
     popupTooltips.moreNavigation,
     popupTooltips.openArticle,
     renderFallbackPrimaryAction,
-    saveActionVisual,
     showNavGrid,
     showNavToggle,
     styles,
@@ -1019,22 +977,20 @@ const PlacePopupCard: React.FC<Props> = ({
     colors.textOnPrimary,
   ]);
 
-  const relatedTravelOverlays = relatedTravelUrl ? (
+  // Desktop Leaflet popup only: ♥/status in the hero corner. Bottom cards and the
+  // fullscreen mobile overlay place the same stack inline (hero caption / footer row).
+  const relatedTravelOverlays = relatedTravelActionStack && !relatedTravelActionsInline ? (
     <>
-      {isBottomCardLayout ? null : (
-        // Soft scrim so the semi-transparent ♥/＋ buttons stay readable over busy
-        // photos in the mobile bottom card (scoped — desktop popup unchanged).
-        <View
-          pointerEvents="none"
-          style={styles.relatedTravelScrim}
-          {...(Platform.OS === 'web' ? ({ 'aria-hidden': 'true' } as any) : null)}
-        />
-      )}
-      {!isBottomCardLayout && relatedTravelActionStack ? (
-        <View style={styles.relatedTravelActions} pointerEvents="box-none">
-          {relatedTravelActionStack}
-        </View>
-      ) : null}
+      {/* Soft scrim so the semi-transparent ♥/status buttons stay readable over
+          busy photos in the desktop popup hero corner. */}
+      <View
+        pointerEvents="none"
+        style={styles.relatedTravelScrim}
+        {...(Platform.OS === 'web' ? ({ 'aria-hidden': 'true' } as any) : null)}
+      />
+      <View style={styles.relatedTravelActions} pointerEvents="box-none">
+        {relatedTravelActionStack}
+      </View>
     </>
   ) : null;
 
@@ -1092,8 +1048,6 @@ const PlacePopupCard: React.FC<Props> = ({
             priority="high"
             loading="eager"
             optimizeWeb={false}
-            // Терминальный сбой, не каждая попытка: на native `onError` приходит и
-            // перед ретраем (#1212/#802), а hero схлопывать можно только после него.
             onTerminalError={handleHeroError}
             style={StyleSheet.absoluteFill}
           />

@@ -222,9 +222,9 @@ describe('PlacesScreen category search', () => {
     expect(await findByTestId('places-category-search-empty')).toBeTruthy()
   })
 
-  // #2778: у гостя «Сохранить» активна и ведёт на вход; на native после входа —
-  // обратно в каталог `/places`, а не на главную.
-  it('sends a guest from «Сохранить» to sign-up (#2898) and back to /places', async () => {
+  // #2778: у гостя сохранение точки (♥ на фото, 08.11.2026) активно и ведёт на
+  // вход; на native после входа — обратно в каталог `/places`, а не на главную.
+  it('sends a guest from the place ♥ to sign-up (#2898) and back to /places', async () => {
     ;(Platform as any).OS = 'ios'
     const prev = useAuthStore.getState()
     useAuthStore.setState({ isAuthenticated: false, authReady: true } as any)
@@ -233,7 +233,7 @@ describe('PlacesScreen category search', () => {
         wrapper: createQueryWrapper().Wrapper,
       })
       const placeCard = await findByTestId('places-card-place-1')
-      await fireEvent.press(within(placeCard).getByLabelText('Сохранить'))
+      await fireEvent.press(within(placeCard).getByLabelText('Сохранить в «Мои точки»'))
       // #2898: на устройстве без входа гостевое действие открывает регистрацию.
       expect(mockPush).toHaveBeenCalledWith('/registration?redirect=%2Fplaces&intent=save-point')
     } finally {
@@ -243,7 +243,7 @@ describe('PlacesScreen category search', () => {
 
   it('opens selected place on map and exposes navigator actions on the card', async () => {
     const root = await renderWebScreen()
-    const { findAllByLabelText, findByLabelText, findByTestId } = within(root.container)
+    const { findAllByLabelText, findByTestId } = within(root.container)
 
     const placeCard = await findByTestId('places-card-place-1')
     await act(() => placeCard.props.onClick())
@@ -271,15 +271,18 @@ describe('PlacesScreen category search', () => {
     // точка пришла: иначе все точки одного путешествия выглядят одинаково.
     expect(within(placeCard).getByText('Минск')).toBeTruthy()
     expect(within(placeCard).queryByText('Парковка у озера')).toBeNull()
-    // #2778: в ряду три плитки — «Прочитать», «Сохранить», «Навигация»; «На
-    // карте» (то же, что тап по карточке) — пункт листа «Навигация и действия».
+    // #2778: в ряду три плитки — «Прочитать», «На карте», «Навигация». Точку
+    // сохраняет ♥ на фото (08.11.2026), отдельной плитки «Сохранить» нет.
     expect(within(placeCard).getByText('Прочитать')).toBeTruthy()
-    expect(within(placeCard).getByText('Сохранить')).toBeTruthy()
-    expect(within(placeCard).queryByText('На карте')).toBeNull()
+    expect(within(placeCard).getByText('На карте')).toBeTruthy()
+    expect(within(placeCard).queryByText('Сохранить')).toBeNull()
+    expect(within(placeCard).getByLabelText('Сохранить в «Мои точки»')).toBeTruthy()
     const navigationControl = within(placeCard).getByLabelText('Навигация и действия')
-    await act(() => navigationControl.props.onPress())
-    const openMapControl = await findByLabelText('Открыть место на карте')
-    await act(() => openMapControl.props.onPress())
+    // «На карте» теперь плитка ряда, а не пункт листа «Навигация и действия».
+    const openMapControl = within(placeCard)
+      .getAllByLabelText('Открыть место на карте')
+      .find((node: any) => typeof node.props.onPress === 'function')
+    await act(() => openMapControl!.props.onPress())
 
     expect(mockPush).toHaveBeenCalledWith({
       pathname: '/map',

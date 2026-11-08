@@ -8,6 +8,8 @@ const mockUnifiedCard = jest.fn((props: any) => (
   <View testID="unified-card-mock">
     <Text testID="card-title">{props.title}</Text>
     <Text testID="card-meta">{props.metaText}</Text>
+    {props.leftTopSlot}
+    {props.rightTopSlot}
     {props.contentSlot}
   </View>
 ));
@@ -325,7 +327,8 @@ describe('PointList (web coordinates list uses popup template)', () => {
       <PointList points={[basePoint as any]} baseUrl="https://example.com/travel-page" travelName="T" />
     );
 
-    const addButtons = getAllByLabelText('Сохранить');
+    // ♥ на фото точки = сохранить её в «Мои точки» (08.11.2026).
+    const addButtons = getAllByLabelText('Сохранить в «Мои точки»');
     await fireEvent.press(addButtons[0]);
 
     await waitFor(() => {

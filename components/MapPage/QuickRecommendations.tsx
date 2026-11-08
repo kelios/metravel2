@@ -10,6 +10,8 @@ import PlaceListCard from '@/components/places/PlaceListCard'
 import { buildPlaceTitleParts } from '@/components/MapPage/Map/placeTitle'
 import { resolveMapPointRelatedTravelId } from '@/utils/relatedTravel'
 import { resolveMapPointSourceId } from '@/api/mapPlaces'
+import { useAddressListItemActions } from '@/hooks/useAddressListItemActions'
+import type { TravelCoords } from '@/types/types'
 import { translate as i18nT } from '@/i18n'
 import { getTransportLabel } from './transportModes'
 
@@ -42,6 +44,29 @@ const SkeletonCard: React.FC<{ styles: ReturnType<typeof getStyles> }> = ({ styl
     </View>
   </View>
 )
+
+type CardProps = Omit<React.ComponentProps<typeof PlaceListCard>, 'onAddPoint' | 'isSaved' | 'addDisabled' | 'isAdding'> & {
+  place: TravelCoords
+}
+
+/**
+ * ♥ рекомендации = эта точка в «Мои точки» (08.11.2026), тот же toggle по
+ * координате, что у «Мест рядом» (`useAddressListItemActions`). Без него ♥ уходил
+ * в статью-источник, и две рекомендации одной статьи загорались разом.
+ */
+const QuickRecommendationCard: React.FC<CardProps> = ({ place, ...cardProps }) => {
+  const { isAddingPoint, pointAdded, isSavedPointsReady, isAuthenticated, authReady, handleAddPoint } =
+    useAddressListItemActions(place)
+  return (
+    <PlaceListCard
+      {...cardProps}
+      onAddPoint={handleAddPoint}
+      isSaved={pointAdded}
+      addDisabled={!authReady || isAddingPoint || (isAuthenticated && !isSavedPointsReady)}
+      isAdding={isAddingPoint || (isAuthenticated && !isSavedPointsReady)}
+    />
+  )
+}
 
 export const QuickRecommendations: React.FC<Props> = React.memo(
   ({
@@ -122,8 +147,9 @@ export const QuickRecommendations: React.FC<Props> = React.memo(
       ]
       const badges = placeSubtitle ? [placeSubtitle, ...distanceBadges] : distanceBadges
       return (
-        <PlaceListCard
+        <QuickRecommendationCard
           key={getMapPointKey(place, index)}
+          place={place}
           title={placeTitle}
           imageUrl={thumbUrl}
           categoryLabel={categoryName || undefined}

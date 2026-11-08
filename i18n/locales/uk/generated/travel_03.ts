@@ -109,7 +109,6 @@ export const travelGenerated3 = {
   "components.travel.PhotoUploadWithPreview.peretaschite_syuda_izobrazhenie_2109990b": "Перетягніть сюди зображення",
   "components.travel.PhotoUploadWithPreview.predprosmotr_cd9c2eff": "Перегляд",
   "components.travel.PhotoUploadWithPreview.udalit_izobrazhenie_0c6f4255": "Видалити зображення",
-  "components.travel.PointListCardRenderer.sohranit_fef12e13": "Зберегти",
   "components.travel.PointListChrome.bystryy_spisok_tochek_ed47b401": "Швидкий список точок",
   "components.travel.PointListChrome.esche_11f20093": "+ ще {{value1}}",
   "components.travel.PointListChrome.kartochki_681d872e": "Картки",

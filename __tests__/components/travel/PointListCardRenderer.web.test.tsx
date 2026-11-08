@@ -90,6 +90,7 @@ describe('PointListCardRenderer (web) — mobile-parity compact card', () => {
     await renderCard();
 
     expect(screen.getByLabelText('Скопировать координаты')).toBeTruthy();
-    expect(screen.getByLabelText('Сохранить')).toBeTruthy();
+    // Сохранение точки — ♥ на фото (08.11.2026).
+    expect(screen.getByLabelText('Сохранить в «Мои точки»')).toBeTruthy();
   });
 });

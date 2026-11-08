@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import UnifiedTravelCard from '@/components/ui/UnifiedTravelCard';
 import CardActionPressable from '@/components/ui/CardActionPressable';
 import RelatedTravelActionStack from '@/components/travel/RelatedTravelActionStack'
+import PlaceSaveHeartButton, { type PlaceSaveHeart } from './PlaceSaveHeartButton'
 import PlaceSourcePager from '@/components/MapPage/Map/PlacePopupCard/PlaceSourcePager';
 import { ReadyBookRelatedLink, useReadyBookAction } from '@/components/books/ReadyBookRelatedLink'
 
@@ -43,7 +44,6 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   addDisabled = false,
   isAdding = false,
   isSaved = false,
-  addLabel = i18nT('map:components.places.PlaceListCard.moi_tochki_bd56c6f8'),
   width,
   imageHeight = 140,
   eagerImage = false,
@@ -51,8 +51,6 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   style,
   fillHeight = false,
   showActionRow = true,
-  showAddButton = true,
-  addButtonPlacement = 'button',
   webTouchAction,
   compact = false,
   titleLayout = 'overlay',
@@ -66,8 +64,6 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   sourcePointId,
   relatedTravelCountry,
   relatedTravelCity,
-  isFavorite = false,
-  onToggleFavorite,
   rating = null,
   ratingSlot = null,
   sourcePager,
@@ -94,16 +90,9 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
     overflowActionTitle,
     overflowActions,
     overflowHasMapActions,
-    overlayAddInline,
-    saveIcon,
-    saveIconColor,
-    saveLabel,
-    savedColor,
     showInlineRelatedTravelActions,
-    showRowAddButton,
     showCopyChip,
     showRowQuickActions,
-    showSaveTile,
     showShareChip,
     showTitleShare,
     showStandaloneRelatedBook,
@@ -111,17 +100,11 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
     visibleMapActions,
   } = buildPlaceListCardActionModel({
     actionBudget,
-    addButtonPlacement,
-    addLabel,
-    colors,
     hasCoord,
     inlineActions,
-    isAdding,
     isCompactActionCard,
-    isSaved,
     mapActions,
     menuActions,
-    onAddPoint,
     onCopyCoord,
     onShare,
     popupAligned,
@@ -129,36 +112,16 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
     relatedBookAction,
     relatedTravelUrl,
     showActionRow,
-    showAddButton,
     showTitleInContent,
   });
-  // Top-right overlay holds the two primary affordances (♥ favorite + ＋ save)
-  // on EVERY card, so the list reads as one pattern regardless of whether a
-  // card has a related travel or its own photo. Related-travel cards delegate
-  // to the shared favorite/status stack; plain cards get the fallback ♥ plus
-  // the ＋ "save point" button lifted out of the action row.
-  const overlayAddButton =
-    overlayAddInline && !showSaveTile && onAddPoint ? (
-      <CardActionPressable
-        accessibilityRole="button"
-        accessibilityLabel={addLabel}
-        accessibilityState={{ disabled: addDisabled || isAdding, busy: isAdding }}
-        disabled={addDisabled || isAdding}
-        onPress={() => void onAddPoint()}
-        title={addLabel}
-        style={({ pressed }) => [
-          styles.fallbackFavButton,
-          pressed && !addDisabled && !isAdding && styles.iconBtnPressed,
-          (addDisabled || isAdding) && styles.iconBtnDisabled,
-        ]}
-      >
-        {isAdding ? (
-          <ActivityIndicator size="small" color={colors.textOnDark} />
-        ) : (
-          <Feather name="plus" size={18} color={colors.textOnDark} />
-        )}
-      </CardActionPressable>
-    ) : null;
+  // ♥ на карточке места = сохранить ЭТУ точку в «Мои точки» (08.11.2026).
+  // Отдельной плитки/кнопки «Сохранить» больше нет: одно действие — одно место.
+  // Без `onAddPoint` (например, карточка самих «Моих точек») ♥ связанной статьи
+  // остаётся прежним — «Хочу поехать». В inline-раскладке ♥ точки тоже на фото,
+  // а секция «Статус поездки» ниже несёт только статус (`statusOnly`).
+  const placeSave: PlaceSaveHeart | undefined = onAddPoint
+    ? { isSaved, onToggle: onAddPoint, busy: isAdding, disabled: addDisabled }
+    : undefined;
 
   const favoriteAffordance = relatedTravelUrl && !showInlineRelatedTravelActions ? (
     <RelatedTravelActionStack
@@ -168,25 +131,11 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
       fallbackImageUrl={relatedTravelImageUrl}
       fallbackCountry={relatedTravelCountry}
       fallbackCity={relatedTravelCity}
+      placeSave={placeSave}
     />
-  ) : onToggleFavorite ? (
-    // Cards without a related travel still expose the same top-right favorite
-    // affordance so the whole list reads as one card pattern.
-    <CardActionPressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: isFavorite }}
-      accessibilityLabel={isFavorite ? i18nT('map:components.places.PlaceListCard.ubrat_iz_izbrannogo_5252f484') : i18nT('map:components.places.PlaceListCard.dobavit_v_izbrannoe_47de2856')}
-      onPress={onToggleFavorite}
-      title={isFavorite ? i18nT('map:components.places.PlaceListCard.ubrat_iz_izbrannogo_5252f484') : i18nT('map:components.places.PlaceListCard.dobavit_v_izbrannoe_47de2856')}
-      style={({ pressed }) => [styles.fallbackFavButton, pressed && styles.iconBtnPressed]}
-    >
-      <Feather
-        name="heart"
-        size={18}
-        color={isFavorite ? colors.danger : colors.textOnDark}
-        {...(!isFavorite ? ({ style: { opacity: 0.85 } } as any) : null)}
-      />
-    </CardActionPressable>
+  ) : placeSave ? (
+    // Без статьи — или статус вынесен в подписанную секцию ниже: ♥ точки на фото.
+    <PlaceSaveHeartButton {...placeSave} />
   ) : null
 
   // Popup parity: in popup-aligned mode the hero corner stack holds ONLY the two
@@ -217,15 +166,14 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
   ))
 
   const relatedTravelActions =
-    quickActionButtons.length > 0 || favoriteAffordance || overlayAddButton ? (
+    quickActionButtons.length > 0 || favoriteAffordance ? (
       <View style={[styles.fallbackActionStack, popupAligned && styles.fallbackActionStackStart]}>
         {quickActionButtons}
         {favoriteAffordance}
-        {overlayAddButton}
       </View>
     ) : null
 
-  // Rating pill always sits in the photo corner OPPOSITE the ♥/＋ action stack so
+  // Rating pill always sits in the photo corner OPPOSITE the ♥/status action stack so
   // the two never collide: the action stack is left-aligned in popup layout and
   // right-aligned otherwise, so the badge takes the other corner accordingly.
   const ratingBadge = rating && rating.value != null ? (
@@ -320,6 +268,8 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
                 fallbackCity={relatedTravelCity}
                 variant="inline"
                 style={styles.inlineRelatedTravelActionStack}
+                // ♥ точки — на фото; под подписью «Статус поездки» только статус.
+                statusOnly={Boolean(placeSave)}
               />
             </View>
           ) : null}
@@ -386,24 +336,6 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
                 />
               ))}
 
-              {showSaveTile && onAddPoint && (
-                <LabeledActionChip
-                  accessibilityLabel={saveLabel}
-                  accessibilityState={{ checked: isSaved, disabled: addDisabled || isAdding, busy: isAdding }}
-                  disabled={addDisabled || isAdding}
-                  icon={saveIcon}
-                  iconColor={saveIconColor}
-                  label={saveLabel}
-                  onPress={() => void onAddPoint()}
-                  styles={styles}
-                  title={saveLabel}
-                >
-                  {isAdding ? (
-                    <ActivityIndicator size="small" color={colors.primaryDark} />
-                  ) : null}
-                </LabeledActionChip>
-              )}
-
               {overflowActions.length > 0 && (
                 <PlaceCardOverflowControl
                   actions={overflowActions}
@@ -416,55 +348,9 @@ const PlaceListCard: React.FC<PlaceListCardProps> = ({
                 />
               )}
 
-              {showRowAddButton && onAddPoint && (
-                <LabeledActionChip
-                  accessibilityLabel={saveLabel}
-                  accessibilityState={{ checked: isSaved, disabled: addDisabled || isAdding, busy: isAdding }}
-                  disabled={addDisabled || isAdding}
-                  icon={saveIcon}
-                  iconColor={saveIconColor}
-                  label={saveLabel}
-                  onPress={() => void onAddPoint()}
-                  styles={styles}
-                  title={saveLabel}
-                >
-                  {isAdding ? (
-                    <ActivityIndicator size="small" color={colors.primaryDark} />
-                  ) : null}
-                </LabeledActionChip>
-              )}
             </View>
           )}
 
-          {showAddButton && addButtonPlacement === 'button' && !showSaveTile && onAddPoint && (
-            <CardActionPressable
-              onPress={() => void onAddPoint()}
-              disabled={addDisabled || isAdding}
-              accessibilityLabel={saveLabel}
-              accessibilityState={{ checked: isSaved, disabled: addDisabled || isAdding, busy: isAdding }}
-              title={saveLabel}
-              style={({ pressed }) => [
-                styles.addButton,
-                pressed && !addDisabled && !isAdding && styles.addButtonPressed,
-                (addDisabled || isAdding) && styles.addButtonDisabled,
-              ]}
-            >
-              {isAdding ? (
-                <ActivityIndicator size="small" color={colors.primaryDark} />
-              ) : (
-                <>
-                  <Feather
-                    name={isSaved ? 'check' : 'bookmark'}
-                    size={14}
-                    color={isSaved ? savedColor : colors.primaryDark ?? colors.primary}
-                  />
-                  <Text style={styles.addButtonText} numberOfLines={1}>
-                    {saveLabel}
-                  </Text>
-                </>
-              )}
-            </CardActionPressable>
-          )}
         </View>
       }
       mediaProps={{
@@ -706,7 +592,7 @@ const createStyles = (
     // Vertical icon+label action tile.
     // Popup-aligned mode: tiles distribute evenly across the FULL card width
     // (`flex:1, minWidth:0`) so 4 tiles each get ~¼ of the row and the labels
-    // («Сохранить» / «Навигация») have room and never truncate. Non-popupAligned
+    // («Маршрут» / «Навигация») have room and never truncate. Non-popupAligned
     // (e.g. /places inline map-app chips) keep the fixed 56/62px width so many
     // inline chips don't squash.
     mapActionChip: {
@@ -741,31 +627,6 @@ const createStyles = (
       // Popup-aligned tiles span the full card width, so the label uses the whole
       // tile (no cap → no «…» truncation). Non-popupAligned keeps the fixed cap.
       ...(popupAligned ? { alignSelf: 'stretch' } : { maxWidth: compact ? 56 : 62 }),
-    },
-    // Primary-soft filled "add" button (modern).
-    addButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: compact ? 6 : 7,
-      paddingVertical: compact ? 8 : 9,
-      paddingHorizontal: compact ? 14 : 16,
-      borderRadius: 999,
-      backgroundColor: colors.primarySoft ?? colors.backgroundSecondary,
-      ...webTransition('background-color 0.16s ease, opacity 0.16s ease, transform 0.16s ease'),
-    },
-    addButtonPressed: {
-      opacity: 0.85,
-      ...Platform.select({ web: { transform: 'scale(0.985)' as any } }),
-    },
-    addButtonDisabled: {
-      opacity: 0.45,
-    },
-    addButtonText: {
-      fontSize: compact ? 12 : 13,
-      fontWeight: '700',
-      letterSpacing: 0.1,
-      color: colors.primaryText,
     },
     overflowMenuContent: {
       backgroundColor: colors.surface,

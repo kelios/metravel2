@@ -117,6 +117,10 @@ describe('createMapPopupComponent saved-points readiness', () => {
     expect(mockPlacePopupCard).toHaveBeenLastCalledWith(
       expect.objectContaining({ addDisabled: false, isAdding: false, isSaved: false }),
     );
+    // Сохранение точки — ♥ карточки (08.11.2026): подписи отдельной кнопки
+    // «Мои точки / В точках» и её подсказка больше не передаются.
+    expect(mockPlacePopupCard.mock.calls.at(-1)?.[0]).not.toHaveProperty('addLabel');
+    expect(mockPlacePopupCard.mock.calls.at(-1)?.[0]).not.toHaveProperty('addTooltip');
     await React.act(async () => {
       await mockPlacePopupCard.mock.calls.at(-1)?.[0].onAddPoint();
     });

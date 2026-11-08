@@ -88,6 +88,9 @@ const INTERACTIVE_ELEMENTS = new Set([
   'Toggle',
   'SubscribeButton',
   'FavoriteButton',
+  // Общий вид ♥ и ♥ места («Мои точки»): проп `style` ложится на кружок 44 pt.
+  'HeartToggleButton',
+  'PlaceSaveHeartButton',
   'TravelStatusButton',
   'DeleteAction',
   'PeerBadgeGiveButton',

@@ -66,8 +66,9 @@ const mockPlaceListCard = jest.fn((props: any) => {
       </>
     ) : null}
     {props.onAddPoint ? (
-      <Pressable accessibilityLabel={props.addLabel} onPress={props.onAddPoint}>
-        <Text>{props.addLabel}</Text>
+      // ♥ на фото карточки (PlaceSaveHeartButton) — сохраняет эту точку.
+      <Pressable accessibilityLabel={props.isSaved ? 'place-heart-saved' : 'place-heart'} onPress={props.onAddPoint}>
+        <Text>♥</Text>
       </Pressable>
     ) : null}
   </View>
@@ -264,7 +265,12 @@ describe('AddressListItem (web right panel)', () => {
     expect(queryByLabelText('Проложить маршрут в Яндекс.Навигаторе')).toBeNull();
     expect(queryByLabelText('Открыть в OpenStreetMap')).toBeNull();
     expect(getAllByLabelText('Поделиться в Telegram').length).toBeGreaterThan(0);
-    expect(getAllByLabelText('Сохранить').length).toBeGreaterThan(0);
+    // ♥ на фото сохраняет эту точку в «Мои точки»; отдельной плитки «Сохранить» нет.
+    expect(getAllByLabelText('place-heart').length).toBeGreaterThan(0);
+    const cardProps = mockPlaceListCard.mock.calls[mockPlaceListCard.mock.calls.length - 1][0];
+    expect(cardProps.isSaved).toBe(false);
+    expect(cardProps).not.toHaveProperty('addLabel');
+    expect(cardProps).not.toHaveProperty('onToggleFavorite');
 
     await fireEvent.press(getAllByLabelText('Ещё действия')[0]);
 

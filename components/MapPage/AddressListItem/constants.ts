@@ -20,8 +20,6 @@ export type Props = {
    */
   distanceOrigin?: ListDistanceOrigin | null
   transportMode?: 'car' | 'bike' | 'foot'
-  isFavorite?: boolean
-  onToggleFavorite?: () => void
   onBuildRoute?: () => void
   /**
    * Viewport width supplied by the list. Lifted out of a per-row

@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 const OWNER = '7';
 
 const mockCreatePoint = jest.fn();
+const mockDeletePoint = jest.fn();
 const mockShowToast = jest.fn();
 const mockInvalidateQueries = jest.fn();
 const mockSetQueryData = jest.fn();
@@ -20,6 +21,7 @@ const mockUseAuth = jest.fn();
 jest.mock('@/api/userPoints', () => ({
   userPointsApi: {
     createPoint: (...args: any[]) => mockCreatePoint(...args),
+    deletePoint: (...args: any[]) => mockDeletePoint(...args),
   },
 }));
 
@@ -43,6 +45,7 @@ jest.mock('@tanstack/react-query', () => ({
 describe('usePointListAddPointModel', () => {
   beforeEach(() => {
     mockCreatePoint.mockReset();
+    mockDeletePoint.mockReset();
     mockShowToast.mockReset();
     mockInvalidateQueries.mockReset();
     mockSetQueryData.mockReset();
@@ -80,6 +83,39 @@ describe('usePointListAddPointModel', () => {
         type: 'info',
         text1: 'Авторизуйтесь, чтобы сохранять точки',
       })
+    );
+  });
+
+  // 08.11.2026: ♥ точки маршрута — toggle. Уже сохранённая точка снимается по id
+  // найденной записи «Моих точек», а не подтверждается тостом «уже в Мои точки».
+  it('removes an already saved point instead of creating a duplicate', async () => {
+    mockDeletePoint.mockResolvedValue(undefined);
+    mockGetQueryData.mockReturnValue([{ id: 42, latitude: 53.9, longitude: 27.56 }]);
+    const findSavedPoint = jest.fn(() => ({ id: 42, latitude: 53.9, longitude: 27.56 }) as any);
+
+    const { result } = await renderHook(() =>
+      usePointListAddPointModel({
+        baseUrl: 'https://example.com/travel',
+        categoryIdToName: new Map(),
+        categoryNameToIds: new Map(),
+        findSavedPoint,
+        travelName: 'Маршрут',
+      })
+    );
+
+    await act(async () => {
+      await result.current.handleAddPoint({ id: '3', address: 'Минск', coord: '53.9,27.56' });
+    });
+
+    expect(findSavedPoint).toHaveBeenCalledWith('53.9,27.56');
+    expect(mockDeletePoint).toHaveBeenCalledWith(42);
+    expect(mockCreatePoint).not.toHaveBeenCalled();
+    // Оптимистично убрана из общего кэша `userPointsAll` владельца.
+    const [key, updater] = mockSetQueryData.mock.calls[0];
+    expect(key).toEqual(queryKeys.userPointsAll(OWNER));
+    expect(updater([{ id: 42 }, { id: 7 }])).toEqual([{ id: 7 }]);
+    expect(mockShowToast).toHaveBeenCalledWith(
+      expect.objectContaining({ text1: 'Точка убрана из «Мои точки»' })
     );
   });
 

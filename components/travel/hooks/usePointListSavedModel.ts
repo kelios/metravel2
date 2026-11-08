@@ -41,15 +41,21 @@ export function usePointListSavedModel() {
   const points = useMemo(() => readPointsFromUnknown(pointsQuery.data), [pointsQuery.data]);
   const coordIndex = useMemo(() => buildSavedPointCoordIndex(points), [points]);
 
-  const isPointSaved = useCallback(
-    (coordStr?: string): boolean => {
-      if (!isAuthenticated) return false;
+  // Запись «Моих точек» на координате точки маршрута — её id нужен ♥ для снятия.
+  const findSavedPoint = useCallback(
+    (coordStr?: string): ImportedPoint | null => {
+      if (!isAuthenticated) return null;
       const c = parseCoord(coordStr);
-      if (!c) return false;
-      return !!findSavedPointInIndex(coordIndex, c.lat, c.lon);
+      if (!c) return null;
+      return findSavedPointInIndex(coordIndex, c.lat, c.lon);
     },
     [coordIndex, isAuthenticated],
   );
 
-  return { isPointSaved };
+  const isPointSaved = useCallback(
+    (coordStr?: string): boolean => findSavedPoint(coordStr) !== null,
+    [findSavedPoint],
+  );
+
+  return { findSavedPoint, isPointSaved };
 }

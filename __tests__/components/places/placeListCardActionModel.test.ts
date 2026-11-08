@@ -8,20 +8,14 @@ const nav: ActionChip = { key: 'google', label: 'Google', icon: 'map', onPress: 
 
 const build = (over: Record<string, unknown>) =>
   buildPlaceListCardActionModel({
-    addButtonPlacement: 'row',
-    addLabel: 'Сохранить',
-    colors: {} as never,
     hasCoord: true,
     inlineActions: [],
-    isAdding: false,
     isCompactActionCard: true,
-    isSaved: false,
     mapActions: [],
     menuActions: [],
     popupAligned: true,
     quickActions: [],
     showActionRow: true,
-    showAddButton: false,
     showTitleInContent: true,
     ...over,
   } as never)
@@ -48,6 +42,7 @@ describe('placeListCardActionModel menuActions', () => {
 // #2778 (PLACE-CARD-ACTION-OVERLOAD): на `/places` ряд набирал «Коорд.», «На
 // карте», «Прочитать», «Мои точки», «Навигация» + стрелку Telegram у заголовка;
 // приёмка: даже четыре плитки на 320 резали подписи — бюджет ряда три плитки ВСЕГО.
+// С 08.11.2026 «Сохранить» в ряду нет: точку сохраняет ♥ на фото, слот свободен.
 describe('placeListCardActionModel actionBudget', () => {
   const onMap: ActionChip = { key: 'open-map', label: 'На карте', icon: 'map-pin', onPress: noop }
   const article: ActionChip = { key: 'article', label: 'Прочитать', icon: 'book-open', onPress: noop }
@@ -55,27 +50,25 @@ describe('placeListCardActionModel actionBudget', () => {
   const open: ActionChip = { key: 'open', label: 'Открыть', icon: 'book-open', onPress: noop }
   const placesCard = {
     actionBudget: true,
-    addButtonPlacement: 'button',
     inlineActions: [article, onMap],
     mapActions: [nav],
-    onAddPoint: noop,
     onCopyCoord: noop,
     onShare: noop,
   }
   const rowTiles = (model: ReturnType<typeof build>) =>
-    model.visibleInlineActions.length + (model.showSaveTile ? 1 : 0) +
+    model.visibleInlineActions.length +
     (model.showRowQuickActions ? 1 : 0) + (model.showCopyChip ? 1 : 0) + (model.showShareChip ? 1 : 0) +
     (model.overflowActions.length > 0 ? 1 : 0)
 
-  it('/places: «Прочитать», «Сохранить», «Навигация» — the rest lives in the sheet', () => {
+  it('/places: «Прочитать», «На карте», «Навигация» — the rest lives in the sheet', () => {
     const model = build(placesCard)
-    expect(model.visibleInlineActions.map((a) => a.key)).toEqual(['article'])
-    expect(model.showSaveTile).toBe(true)
+    expect(model.visibleInlineActions.map((a) => a.key)).toEqual(['article', 'open-map'])
+    expect(model).not.toHaveProperty('showSaveTile')
     expect(model.showCopyChip).toBe(false)
     expect(model.showShareChip).toBe(false)
     expect(model.showTitleShare).toBe(false)
     expect(model.showRowQuickActions).toBe(false)
-    expect(model.overflowActions.map((a) => a.key)).toEqual(['open-map', 'google', 'copy-coord', 'share'])
+    expect(model.overflowActions.map((a) => a.key)).toEqual(['google', 'copy-coord', 'share'])
     expect(rowTiles(model)).toBe(3)
   })
 
@@ -88,10 +81,10 @@ describe('placeListCardActionModel actionBudget', () => {
     expect(rowTiles(build(over))).toBeLessThanOrEqual(3)
   })
 
-  it('map list keeps «Открыть», «Сохранить», «Навигация»', () => {
+  it('map list: «Открыть», «Маршрут», «Навигация» (save is the ♥ on the photo)', () => {
     const model = build({ ...placesCard, inlineActions: [open], quickActions: [route] })
-    expect(model.visibleInlineActions.map((a) => a.key)).toEqual(['open'])
-    expect(model.overflowActions.map((a) => a.key)).toEqual(['route', 'google', 'copy-coord', 'share'])
+    expect(model.visibleInlineActions.map((a) => a.key)).toEqual(['open', 'route'])
+    expect(model.overflowActions.map((a) => a.key)).toEqual(['google', 'copy-coord', 'share'])
   })
 
   // Книга места — действие под тем же бюджетом: на /places она уходит в лист после
@@ -100,8 +93,8 @@ describe('placeListCardActionModel actionBudget', () => {
     const book: ActionChip = { key: 'ready-book', label: 'Книга', icon: 'book', onPress: noop }
     const model = build({ ...placesCard, relatedBookAction: book })
     expect(rowTiles(model)).toBe(3)
-    expect(model.visibleInlineActions.map((a) => a.key)).toEqual(['article'])
-    expect(model.overflowActions.map((a) => a.key)).toEqual(['open-map', 'ready-book', 'google', 'copy-coord', 'share'])
+    expect(model.visibleInlineActions.map((a) => a.key)).toEqual(['article', 'open-map'])
+    expect(model.overflowActions.map((a) => a.key)).toEqual(['ready-book', 'google', 'copy-coord', 'share'])
     expect(model.showStandaloneRelatedBook).toBe(false)
   })
 
@@ -132,8 +125,6 @@ describe('/places row labels fit 320 in every locale (#2778)', () => {
   const CHAR_PX = 6
   const KEYS = [
     'screens.tabs.PlacesScreen_parts.statya_28264f10',
-    'components.MapPage.AddressListItem.AddressListItemCard.sohranit_06fb5b11',
-    'components.places.PlaceListCard.sohraneno_d848c817',
     'components.places.PlaceListCard.navigatsiya_fa115805',
     'components.places.PlaceListCard.esche_16276b19',
   ]

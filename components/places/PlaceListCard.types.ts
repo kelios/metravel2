@@ -46,11 +46,11 @@ export type PlaceListCardProps = {
    */
   menuActions?: ActionChip[]
   quickActions?: ActionChip[]
-  onAddPoint?: () => void
+  /** Сохранить/убрать ЭТУ точку в «Мои точки»; рисуется как ♥ на фото (08.11.2026). */
+  onAddPoint?: () => void | Promise<void>
   addDisabled?: boolean
   isAdding?: boolean
   isSaved?: boolean
-  addLabel?: string
   width?: number
   imageHeight?: number
   eagerImage?: boolean
@@ -63,8 +63,6 @@ export type PlaceListCardProps = {
    */
   fillHeight?: boolean
   showActionRow?: boolean
-  showAddButton?: boolean
-  addButtonPlacement?: 'button' | 'row'
   webTouchAction?: string
   compact?: boolean
   titleLayout?: 'overlay' | 'content'
@@ -85,8 +83,6 @@ export type PlaceListCardProps = {
   sourcePointId?: number | null
   relatedTravelCountry?: string | null
   relatedTravelCity?: string | null
-  isFavorite?: boolean
-  onToggleFavorite?: () => void
   /** External rating (2GIS/TripAdvisor/…). When present, a gold rating pill is
    *  shown over the top-left of the photo. Ignored in popup-aligned layout. */
   rating?: PlaceRating | null

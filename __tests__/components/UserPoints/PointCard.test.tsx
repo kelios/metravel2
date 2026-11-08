@@ -89,7 +89,8 @@ describe('PointCard', () => {
     expect(props.popupAligned).toBe(true);
     expect(props.titleLayout).toBe('content');
     expect(props.compact).toBe(true);
-    expect(props.showAddButton).toBe(false);
+    // Своя точка уже в «Мои точки»: сохранения (♥ = точка) на карточке нет.
+    expect(props.onAddPoint).toBeUndefined();
     expect(screen.getByText('Test Restaurant')).toBeTruthy();
   });
 

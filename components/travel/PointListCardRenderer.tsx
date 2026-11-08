@@ -4,7 +4,6 @@ import { Platform, View } from 'react-native'
 
 import PlaceListCard from '@/components/places/PlaceListCard'
 import { useRichMediaVisibility } from '@/components/ui/richMediaViewport'
-import { translate as i18nT } from '@/i18n'
 import { resolveTravelPointLabel } from '@/utils/travelDisplayLocation';
 
 
@@ -130,7 +129,6 @@ const PointListCardRenderer = React.memo(function PointListCardRenderer({
         mapActions={itemModel.mapActions}
         inlineActions={itemModel.inlineActions}
         onAddPoint={itemModel.handleAddPointClick}
-        addLabel={i18nT('travel:components.travel.PointListCardRenderer.sohranit_fef12e13')}
         addDisabled={itemModel.addDisabled}
         isAdding={itemModel.isAdding}
         isSaved={itemModel.isSaved}

@@ -56,11 +56,26 @@ jest.mock('@/components/places/PlaceListCard', () => ({
   default: (props: any) => mockPlaceListCard(props),
 }));
 
+const mockHandleAddPoint = jest.fn();
+const mockAddressActions = jest.fn((_place: any) => ({
+  isAddingPoint: false,
+  pointAdded: false,
+  isSavedPointsReady: true,
+  isAuthenticated: true,
+  authReady: true,
+  handleAddPoint: mockHandleAddPoint,
+}));
+
+jest.mock('@/hooks/useAddressListItemActions', () => ({
+  useAddressListItemActions: (place: any) => mockAddressActions(place),
+}));
+
 import { QuickRecommendations } from '@/components/MapPage/QuickRecommendations';
 
 describe('QuickRecommendations', () => {
   beforeEach(() => {
     mockPlaceListCard.mockClear();
+    mockAddressActions.mockClear();
   });
 
   it('passes larger media and content title layout to nearby recommendation cards', async () => {
@@ -131,5 +146,33 @@ describe('QuickRecommendations', () => {
         sourcePointId: 2,
       }),
     );
+  });
+  // 08.11.2026: ♥ рекомендации сохранял статью-источник — две рекомендации одной
+  // статьи загорались разом. Теперь ♥ — toggle ЭТОЙ точки в «Мои точки».
+  it('wires the card heart to saving THIS place, not the source article', async () => {
+    mockAddressActions.mockImplementation(((place: any) => ({
+      isAddingPoint: false,
+      pointAdded: place.id === 1,
+      isSavedPointsReady: true,
+      isAuthenticated: true,
+      authReady: true,
+      handleAddPoint: mockHandleAddPoint,
+    })) as any);
+    const shared = { categoryName: 'Замок', urlTravel: 'https://metravel.by/travels/one-article' };
+    await render(
+      <QuickRecommendations
+        places={[
+          { id: 1, address: 'Замок, Мир', coord: '53.451,26.473', ...shared },
+          { id: 2, address: 'Парк, Мир', coord: '53.452,26.474', ...shared },
+        ]}
+        userLocation={{ latitude: 53.45, longitude: 26.47 }}
+        onPlaceSelect={jest.fn()}
+      />,
+    );
+
+    expect(mockAddressActions.mock.calls.map(([place]) => place.id)).toEqual([1, 2]);
+    const [first, second] = mockPlaceListCard.mock.calls.slice(-2).map(([props]) => props);
+    expect(first).toEqual(expect.objectContaining({ onAddPoint: mockHandleAddPoint, isSaved: true, addDisabled: false }));
+    expect(second).toEqual(expect.objectContaining({ onAddPoint: mockHandleAddPoint, isSaved: false }));
   });
 });
