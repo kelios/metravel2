@@ -401,7 +401,7 @@ TR/DE/CY/BE 4, GE/ES/MD/DK/UZ 3, остальные 1–2). Открытых к�
 | E9 юг Европы | Ларнака (`larnaca-saint-lazarus`), Несебр (`nessebar-forty-churches`), Верона (`verona-arena-juliet`), Салоники (`thessaloniki-white-tower`) | #2877 | на проде 08.11.2026: квесты 323 `larnaca-saint-lazarus` (город 234), 324 `nessebar-forty-churches` (235), 325 `verona-arena-juliet` (236), 326 `thessaloniki-white-tower` (237); обложки — по PROMPT.md, финале-видео после обложек |
 | D4 (очередь волны D) | Севилья (`seville-no8do-giralda`), Нижний Новгород (`nizhny-novgorod-koromyslova`), Берн (`bern-zytglogge-bear`), Гётеборг (`gothenburg-poseidon-haga`) | #2878 | на проде 08.11.2026: квесты 327 `seville-no8do-giralda` (город 238), 328 `nizhny-novgorod-koromyslova` (239), 329 `bern-zytglogge-bear` (240), 330 `gothenburg-poseidon-haga` (241); обложки — по PROMPT.md, финале-видео после обложек |
 | E8 Германия/Австрия | Дрезден (`dresden-fuerstenzug`), Гамбург (`hamburg-speicherstadt-stoertebeker`), Нюрнберг (`nuremberg-schoener-brunnen-ring`), Зальцбург (`salzburg-mozart-getreidegasse`) | #2879 | на проде 08.11.2026: квесты 331 `nuremberg-schoener-brunnen-ring` (город 242), 332 `salzburg-mozart-getreidegasse` (243), 333 `dresden-fuerstenzug` (244), 334 `hamburg-speicherstadt-stoertebeker` (245); обложки — по PROMPT.md, финале-видео после обложек |
-| E10 вторые слои | Москва Булгакова (`moscow-bulgakov-patriarch-ponds`), Петербург Достоевского (`spb-dostoevsky-sennaya`), Стамбул Балат–Фенер (`istanbul-balat-fener`), Тбилиси Сололаки (`tbilisi-sololaki-courtyards`) | #2880 | todo |
+| E10 вторые слои | Москва Булгакова (`moscow-bulgakov-patriarch-ponds`), Петербург Достоевского (`spb-dostoevsky-sennaya`), Стамбул Балат–Фенер (`istanbul-balat-fener`), Тбилиси Сололаки (`tbilisi-sololaki-courtyards`) | #2880 | на проде 08.11.2026: квесты 335 `moscow-bulgakov-patriarch-ponds` (Москва, город 144), 336 `spb-dostoevsky-sennaya` (Санкт-Петербург, 58), 337 `istanbul-balat-fener` (Стамбул, 35), 338 `tbilisi-sololaki-courtyards` (Тбилиси, 34); обложки — по PROMPT.md, финале-видео после обложек |
 | D5 (очередь волны D) | Харбин, Киото, Бостон, Ханой | #2881 | todo |
 | MEDIA | обложки по PROMPT.md — владелец (needs_human), финале-видео после обложек | #2882 | todo |
 
@@ -487,6 +487,28 @@ QUEST_DEMAND_LOG.md 2026-07-18)
   прохождении: высота маскаронов в лоджии, забор у дома Шахворостова (обещали снять
   осенью 2026), рейтинг «Додо Пицца» на привале. Обложка — только PROMPT.md,
   переводы be/uk/pl/en не делались (как у E1).
+- 2026-11-08 (пакет E10 «Вторые слои», #2880): на проде квесты 335
+  `moscow-bulgakov-patriarch-ponds` (Москва, город 144, 10 точек, 2,9 км, 6 проверяемых), 336
+  `spb-dostoevsky-sennaya` (Санкт-Петербург, 58, 10 точек, 2,2 км, 6 проверяемых), 337
+  `istanbul-balat-fener` (Стамбул, 35, 10 точек, 1,2 км, 6 проверяемых), 338
+  `tbilisi-sololaki-courtyards` (Тбилиси, 34, 10 точек, 1,1 км, 6 проверяемых); финалы 332–335.
+  Города существующие — миграция переиспользовала их по имени; пересечений с квестами городов
+  (`moscow-kremlin-legends`, `spb-guardians`, `istanbul-empires`, `istanbul-galata`,
+  `tbilisi-warm-city`) — 0 точек. Имена файлов из карточки (`scripts/{spb,istanbul,tbilisi}-quest-data.js`)
+  совпадали с файлами старых квестов — новые файлы названы `scripts/{moscow-bulgakov,spb-dostoevsky,
+  istanbul-balat,tbilisi-sololaki}-quest-data.js`. Бриф `.codex-temp/quests-plan/brief-e10.md` (копия E7
+  с блоком вторых слоёв: без спойлеров романа, грузинское и греческое письмо не читаются, парадные
+  Сололаки — только открытые). Ревью оркестратора вернуло авторам 9 правок: Москва — книга Герцена →
+  доска Мандельштама, фонари ворот Морозовой → счёт панелей (4–6); Петербург — «добра» из контекста →
+  язык второй доски наводнения 1824 (немецкий), звёзды Вознесенского моста без фото ≥2020 → снят,
+  тросы львов (канон) → розетки ограды, добавлена доска Пржевальского; Стамбул — греческие надписи
+  ΜΑΡΑΣΛΗ/ΜΕΓΑΛΗ → счёт колонн школы Марасли (3–5) и мечеть Хаджи Иса 1465 (Фанарская школа после
+  выселения 2025 — в story); Тбилиси — шлем атланта → рога маскарона, вывеска «Кавказский дом» →
+  архитектор Симонсон по постоянной табличке. Решения по маршруту: Москва — Мансуровский и Арбат в
+  finale; Петербург — музей в Кузнечном в intro/finale; Тбилиси — дом Мелик-Азарянца и Бетлеми не взяты
+  (>1 км с возвратом). Nominatim 429 — точки по OSM API 0.6. Сверить при первом прохождении: ядра
+  на рельефе гауптвахты Сенной (4 м, подсветка), доска Сименса на Асатиани 30 (одно фото 2023),
+  статус Фанарской школы, часы «Кафе Пушкинъ» и Coffee Department.
 - 2026-11-08 (пакет D4 «Очередь волны D», #2878): на проде квесты 327
   `seville-no8do-giralda` (Севилья, город 238, 10 точек, 1,9 км, 6 проверяемых), 328
   `nizhny-novgorod-koromyslova` (Нижний Новгород, 239, 10 точек, 2,6 км, 6 проверяемых), 329

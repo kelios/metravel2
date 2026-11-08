@@ -311,6 +311,10 @@ const QUESTS = [
     { questId: 'salzburg-mozart-getreidegasse', dir: 'salzburgMozartGetreidegasse', finaleId: 329 },
     { questId: 'dresden-fuerstenzug', dir: 'dresdenFuerstenzug', finaleId: 330 },
     { questId: 'hamburg-speicherstadt-stoertebeker', dir: 'hamburgSpeicherstadtStoertebeker', finaleId: 331 },
+    { questId: 'moscow-bulgakov-patriarch-ponds', dir: 'moscowBulgakovPatriarchPonds', finaleId: 332 },
+    { questId: 'spb-dostoevsky-sennaya', dir: 'spbDostoevskySennaya', finaleId: 333 },
+    { questId: 'istanbul-balat-fener', dir: 'istanbulBalatFener', finaleId: 334 },
+    { questId: 'tbilisi-sololaki-courtyards', dir: 'tbilisiSololakiCourtyards', finaleId: 335 },
 ];
 
 // Старые квесты с готовым видео — нужен только постер (кадр из видео)
