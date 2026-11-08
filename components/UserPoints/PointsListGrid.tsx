@@ -169,10 +169,10 @@ export const PointsListGrid: React.FC<{
   // #3133: число во вкладке — через форматтер локали («2 656»), а пока первая
   // страница не пришла — многоточие вместо «(0)», которое читалось как «точек нет».
   const listCountLabel = isLoading ? '…' : formatInteger(filteredPoints.length)
-  // Сегмент мобильного таб-бара — треть ширины 390 px: «Список (2 656)» с
-  // разрядом тысяч там обрезается до «Список (2 6…», поэтому число идёт без
-  // группировки — тем же форматтером локали.
-  const mobileListCountLabel = isLoading ? '…' : formatNumber(filteredPoints.length, { useGrouping: false, maximumFractionDigits: 0 })
+  // Сегмент мобильного таб-бара — треть ширины 320–390 px: число в подписи
+  // («Список (2655)») там не помещается ни с разрядами, ни без. Счётчик идёт
+  // отдельным бейджем сегмента (как у общей карты), подпись — короткое «Список».
+  const mobileListBadge = isLoading ? undefined : filteredPoints.length
   const panelOptions = React.useMemo(
     () => [
       { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_karty_bf82f2ec') },
@@ -183,10 +183,10 @@ export const PointsListGrid: React.FC<{
   const mobileTabOptions = React.useMemo(
     () => [
       { key: 'map', label: i18nT('map:components.UserPoints.PointsListGrid.karta_b48708d8'), icon: 'map' },
-      { key: 'list', label: i18nT('map:components.UserPoints.PointsListGrid.spisok_value1_cc1e53c4', { value1: mobileListCountLabel }), icon: 'list' },
+      { key: 'list', label: i18nT('map:components.UserPoints.PointsListHeader.spisok_b0731a7f'), icon: 'list', badge: mobileListBadge },
       { key: 'filters', label: i18nT('map:components.UserPoints.PointsListGrid.filtry_a9025123'), icon: 'filter-list' },
     ],
-    [mobileListCountLabel]
+    [mobileListBadge]
   )
   const handleMobileTabChange = React.useCallback(
     (key: string) => {
@@ -717,6 +717,7 @@ export const PointsListGrid: React.FC<{
           onChange={handleMobileTabChange}
           accessibilityLabel={i18nT('map:components.UserPoints.PointsListGrid.karta_spisok_ili_filtry_tochek_7f0bb71f')}
           compact
+          dense
           activateOnPressInNative
         />
       </View>
