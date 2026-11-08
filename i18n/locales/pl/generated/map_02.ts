@@ -232,6 +232,8 @@ export const mapGenerated2 = {
   "components.UserPoints.PointsListGrid.sbrosit_filtry_811750be": "Zresetuj filtry",
   "components.UserPoints.PointsListGrid.spisok_value1_cc1e53c4": "Lista ({{value1}})",
   "components.UserPoints.PointsListGrid.zagruzheno_value1_iz_value2_6c50f47e": "Wczytano {{value1}} z {{value2}}",
+  "components.UserPoints.PointsListGrid.zagruzheny_ne_vse_tochki_value1_iz_value2_d6472252": "Nie wszystkie punkty zostały wczytane — {{value1}} z {{value2}}",
+  "components.UserPoints.PointsListGrid.povtorit_0a5bbc92": "Ponów",
   "components.UserPoints.PointsListGrid.upravlenie_tochkami_fcf804c2": "Zarządzanie punktami",
   "components.UserPoints.PointsListGrid.vse_tochki_2d6d6b49": "Wszystkie punkty",
   "components.UserPoints.PointsListHeader.aktivnye_filtry_62c0a188": "Aktywne filtry",

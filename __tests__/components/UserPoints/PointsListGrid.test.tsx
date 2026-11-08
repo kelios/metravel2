@@ -182,6 +182,42 @@ describe('PointsListGrid', () => {
     expect(utils.queryByTestId('userpoints-list-progress')).toBeNull();
   });
 
+  it('renders «Загружены не все точки» with a retry button when the stream failed (#3130)', async () => {
+    (require('react-native').Platform as any).OS = 'web';
+    const { fireEvent } = require('@testing-library/react-native');
+    const onRetryStream = jest.fn();
+    const points = Array.from({ length: 200 }, (_, index) => ({ id: index + 1, name: `P${index + 1}`, latitude: 53, longitude: 27 }));
+    const utils = await render(
+      <PointsListGrid
+        {...(baseProps({
+          filteredPoints: points,
+          loadProgress: { loaded: 200, total: 2656, complete: false, failed: true },
+          onRetryStream,
+        }) as any)}
+      />
+    );
+    expect(utils.queryByTestId('userpoints-list-progress')).toBeNull();
+    expect(utils.getByTestId('userpoints-list-progress-failed')).toBeTruthy();
+    expect(utils.getByText(/Загружены не все точки — 200 из 2[\u00a0\u202f ]656/)).toBeTruthy();
+    fireEvent.press(utils.getByTestId('userpoints-list-progress-retry'));
+    expect(onRetryStream).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows retry for a failed stream even without a server count (#3130)', async () => {
+    (require('react-native').Platform as any).OS = 'web';
+    const points = [{ id: 1, name: 'P1', latitude: 53, longitude: 27 }];
+    const utils = await render(
+      <PointsListGrid
+        {...(baseProps({
+          filteredPoints: points,
+          loadProgress: { loaded: 200, total: 200, complete: false, failed: true },
+          onRetryStream: jest.fn(),
+        }) as any)}
+      />
+    );
+    expect(utils.getByTestId('userpoints-list-progress-retry')).toBeTruthy();
+  });
+
   it('keeps the panel search input mounted while the query changes (#3133)', async () => {
     (require('react-native').Platform as any).OS = 'web';
     const points = [{ id: 1, name: 'P1', latitude: 53, longitude: 27 }];

@@ -58,7 +58,7 @@ describe('usePointsDataModel load progress', () => {
       expect(result.current.points.length).toBe(TOTAL)
     })
     await waitFor(() => {
-      expect(result.current.loadProgress).toEqual({ loaded: TOTAL, total: TOTAL, complete: true })
+      expect(result.current.loadProgress).toEqual({ loaded: TOTAL, total: TOTAL, complete: true, failed: false })
     })
   })
 
@@ -80,7 +80,7 @@ describe('usePointsDataModel load progress', () => {
       { wrapper }
     )
     await waitFor(() => {
-      expect(result.current.loadProgress).toEqual({ loaded: 10, total: 10, complete: true })
+      expect(result.current.loadProgress).toEqual({ loaded: 10, total: 10, complete: true, failed: false })
     })
   })
 })

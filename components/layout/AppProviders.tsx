@@ -8,6 +8,10 @@ import { FavoritesProvider } from '@/context/FavoritesProvider';
 import ThemedPaperProvider from '@/components/ui/ThemedPaperProvider';
 import { LocaleProvider } from '@/i18n/LocaleProvider';
 import { queryPersistenceOptions } from '@/utils/queryPersist';
+import { userPointsPersistence } from '@/utils/userPointsPersist';
+
+// #3130: коллекция «Моих точек» персистится своим ключом (см. utils/userPointsPersist.ts).
+const SECONDARY_PERSISTENCE = [userPointsPersistence] as const;
 
 interface AppProvidersProps {
   queryClient: any;
@@ -136,6 +140,7 @@ export default function AppProviders({
     <TransitionPersistQueryClientProvider
       client={queryClient}
       persistOptions={queryPersistenceOptions}
+      secondaryPersistence={SECONDARY_PERSISTENCE}
     >
       {shouldLoadDeferredRuntime && deferredRuntimeReady && (
         <React.Suspense fallback={null}>

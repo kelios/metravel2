@@ -232,6 +232,8 @@ export const mapGenerated2 = {
   "components.UserPoints.PointsListGrid.sbrosit_filtry_811750be": "Сбросить фильтры",
   "components.UserPoints.PointsListGrid.spisok_value1_cc1e53c4": "Список ({{value1}})",
   "components.UserPoints.PointsListGrid.zagruzheno_value1_iz_value2_6c50f47e": "Загружено {{value1}} из {{value2}}",
+  "components.UserPoints.PointsListGrid.zagruzheny_ne_vse_tochki_value1_iz_value2_d6472252": "Загружены не все точки — {{value1}} из {{value2}}",
+  "components.UserPoints.PointsListGrid.povtorit_0a5bbc92": "Повторить",
   "components.UserPoints.PointsListGrid.upravlenie_tochkami_fcf804c2": "Управление точками",
   "components.UserPoints.PointsListGrid.vse_tochki_2d6d6b49": "Все точки",
   "components.UserPoints.PointsListHeader.aktivnye_filtry_62c0a188": "Активные фильтры",

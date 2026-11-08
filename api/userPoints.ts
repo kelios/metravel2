@@ -34,23 +34,50 @@ export interface ImportOptions {
  */
 const USER_POINTS_MAX_PAGE_SIZE = 200;
 
+/** Поля сортировки бэкенда (`ordering_fields` в `user_points/views.py`). */
+const ORDERING_BY_SORT_KEY: Record<string, string> = {
+  name: 'name',
+  date: 'imported_at',
+  rating: 'rating',
+};
+
+/**
+ * `sortBy`/`sortOrder` клиента → DRF `ordering` («-imported_at»). `distance`
+ * сервер не сортирует (нужна геолокация клиента) — параметр не уходит.
+ */
+export const resolveOrderingParam = (
+  sortBy?: PointFilters['sortBy'],
+  sortOrder?: PointFilters['sortOrder'],
+): string | null => {
+  const field = sortBy ? ORDERING_BY_SORT_KEY[sortBy] : undefined;
+  if (!field) return null;
+  return sortOrder === 'desc' ? `-${field}` : field;
+};
+
 const buildPointsEndpoint = (filters?: PointFilters): string => {
   const params = new URLSearchParams();
 
-  if (filters?.colors && filters.colors.length > 0) {
-    params.append('colors', filters.colors.join(','));
+  // #3130 (2а): имена параметров — как у бэкенда (`user_points/views.py`:
+  // `filterset_fields = color, category, status`, `categories=1,2`, `search`,
+  // `ordering`). Прежние `colors`/`statuses`/`sortBy`/`sortOrder` сервер молча
+  // игнорировал. `color`/`status` одиночные: несколько значений фильтруются на
+  // клиенте по полной коллекции, в запрос уходит только единственное.
+  if (filters?.colors && filters.colors.length === 1) {
+    params.append('color', filters.colors[0]);
   }
-  if (filters?.statuses && filters.statuses.length > 0) {
-    params.append('statuses', filters.statuses.join(','));
+  if (filters?.statuses && filters.statuses.length === 1) {
+    params.append('status', filters.statuses[0]);
+  }
+  if (filters?.categoryIds && filters.categoryIds.length > 0) {
+    const numeric = filters.categoryIds.map((id) => String(id).trim()).filter((id) => /^\d+$/.test(id));
+    if (numeric.length === filters.categoryIds.length) params.append('categories', numeric.join(','));
   }
   if (filters?.search) {
     params.append('search', filters.search);
   }
-  if (filters?.sortBy) {
-    params.append('sortBy', filters.sortBy);
-  }
-  if (filters?.sortOrder) {
-    params.append('sortOrder', filters.sortOrder);
+  const ordering = resolveOrderingParam(filters?.sortBy, filters?.sortOrder);
+  if (ordering) {
+    params.append('ordering', ordering);
   }
 
   if (typeof filters?.page === 'number' && Number.isFinite(filters.page) && filters.page > 0) {

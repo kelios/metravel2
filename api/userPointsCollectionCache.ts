@@ -28,6 +28,8 @@ export type PointsPaginationState = {
   complete: boolean;
   /** Серверный `count` коллекции — знаменатель прогресса «Загружено N из M» (#3133). */
   total?: number;
+  /** Докачка оборвалась (сеть/API): в кэше префикс, экран показывает «Повторить» (#3130). */
+  failed?: boolean;
 };
 
 /** Общий staleTime коллекции: одинаковый у producer'а и у потребителей. */
@@ -83,5 +85,8 @@ export const markPointsCollectionComplete = (
   writePointsPaginationState(queryClient, userId, {
     nextPage: state?.nextPage ?? 1,
     complete: true,
+    total: state?.total,
+    // Полное чтение закрывает и оборванную докачку — кнопка «Повторить» уходит.
+    failed: false,
   });
 };

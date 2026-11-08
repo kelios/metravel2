@@ -1,6 +1,6 @@
 import { searchInputAccessibilityProps } from '@/utils/webProps'
 import React, { useMemo } from 'react'
-import { Platform, View, ScrollView, TextInput, Text as RNText } from 'react-native'
+import { Platform, Pressable, View, ScrollView, TextInput, Text as RNText } from 'react-native'
 import Feather from '@expo/vector-icons/Feather'
 import { FlashList } from '@shopify/flash-list'
 
@@ -45,7 +45,9 @@ export const PointsListGrid: React.FC<{
   listExtraData?: any
   listKey?: string
   /** Прогресс фоновой докачки коллекции — строка «Загружено N из M» под списком (#3133). */
-  loadProgress?: { loaded: number; total: number; complete: boolean }
+  loadProgress?: { loaded: number; total: number; complete: boolean; failed?: boolean }
+  /** Повторить оборванную фоновую докачку (#3130). */
+  onRetryStream?: () => void
   /** Число активных фильтров — бейдж вкладки «Фильтры» (#3134). */
   activeFilterCount?: number
   panelTab?: 'filters' | 'list'
@@ -98,6 +100,7 @@ export const PointsListGrid: React.FC<{
   listExtraData,
   listKey,
   loadProgress,
+  onRetryStream,
   activeFilterCount = 0,
   panelTab: controlledPanelTab,
   onPanelTabChange,
@@ -442,10 +445,36 @@ export const PointsListGrid: React.FC<{
     ]
   )
 
+  // #3130: обрыв докачки — заметка с «Повторить» НАД списком (в шапке), а не в
+  // подвале за 200 карточками: ревью гейта — состояние должно быть видно сразу,
+  // в раскладке с картой и на вкладке «Список» телефона. Без серверного count
+  // (total = loaded) тоже показываем.
+  const failedStreamNotice = React.useMemo(() => {
+    if (isLoading || !loadProgress?.failed) return null
+    return (
+      <View style={localStyles.listProgressRow} testID="userpoints-list-progress-failed">
+        <RNText style={localStyles.listProgressText}>
+          {i18nT('map:components.UserPoints.PointsListGrid.zagruzheny_ne_vse_tochki_value1_iz_value2_d6472252', {
+            value1: formatInteger(loadProgress.loaded),
+            value2: formatInteger(loadProgress.total),
+          })}
+        </RNText>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onRetryStream}
+          style={localStyles.listProgressRetry}
+          testID="userpoints-list-progress-retry"
+        >
+          <RNText style={localStyles.listProgressRetryText}>{i18nT('map:components.UserPoints.PointsListGrid.povtorit_0a5bbc92')}</RNText>
+        </Pressable>
+      </View>
+    )
+  }, [isLoading, loadProgress, localStyles, onRetryStream])
+
   // #3133: подвал списка — прогресс фоновой докачки. Пока страницы стримятся,
   // счётчик вкладки растёт скачками по 200; строка объясняет, что это загрузка.
   const renderListFooter = React.useCallback(() => {
-    if (isLoading || !loadProgress || loadProgress.complete || loadProgress.total <= loadProgress.loaded) return null
+    if (isLoading || !loadProgress || loadProgress.failed || loadProgress.complete || loadProgress.total <= loadProgress.loaded) return null
     return (
       <RNText style={localStyles.listProgressText} testID="userpoints-list-progress">
         {i18nT('map:components.UserPoints.PointsListGrid.zagruzheno_value1_iz_value2_6c50f47e', {
@@ -486,7 +515,12 @@ export const PointsListGrid: React.FC<{
         // Элемент, а не ссылка на функцию: FlashList делает createElement(функция),
         // и новая identity колбэка (каждое нажатие в поиске) ремаунтила бы шапку —
         // поле поиска теряло бы фокус после каждого символа.
-        ListHeaderComponent={renderListHeader()}
+        ListHeaderComponent={
+          <>
+            {renderListHeader()}
+            {failedStreamNotice}
+          </>
+        }
         ListEmptyComponent={renderListEmpty}
         ListFooterComponent={renderListFooter}
         showsVerticalScrollIndicator={true}
@@ -494,6 +528,7 @@ export const PointsListGrid: React.FC<{
       />
     ),
     [
+      failedStreamNotice,
       filteredPoints,
       listFlashExtraData,
       listKey,
@@ -675,7 +710,12 @@ export const PointsListGrid: React.FC<{
         }}
         keyExtractor={(item: { id?: string | number }, index: number) => String(item?.id ?? `idx-${index}`)}
         {...({ estimatedItemSize: 120 } as any)}
-        ListHeaderComponent={renderHeader()}
+        ListHeaderComponent={
+          <>
+            {renderHeader()}
+            {failedStreamNotice}
+          </>
+        }
         ListEmptyComponent={renderListEmpty}
         ListFooterComponent={renderListFooter}
         numColumns={columns}

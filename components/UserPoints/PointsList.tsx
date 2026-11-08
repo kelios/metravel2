@@ -144,6 +144,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     loadFailed,
     refetch,
     loadProgress,
+    resumeStream,
     categoryIdToName,
     categoryData,
     resolveCategoryIdsByNames,
@@ -434,6 +435,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 	        listExtraData={{ selectionMode, selectedIds, activePointId, activeDriveInfo }}
 	        activeFilterCount={activeFilterChips.length}
 	        loadProgress={loadProgress}
+	        onRetryStream={resumeStream}
 	        listKey={selectionMode ? 'selection' : 'normal'}
 	        panelTab={panelTab}
 	        onPanelTabChange={setPanelTab}

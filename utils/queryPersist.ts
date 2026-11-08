@@ -43,6 +43,8 @@ const PERSISTED_KEY_PREFIXES = new Set<string>([
   'recommendations',
   'view-history',
   'travel-status',
+  // Коллекция «Моих точек» (`userPointsAll`, ~1,2 МБ у владельца) НЕ здесь:
+  // у неё свой ключ и запись только на свои события — `utils/userPointsPersist.ts` (#3130).
 ]);
 
 /** Персистим только успешные запросы из whitelist-доменов. */

@@ -26,6 +26,9 @@ describe('shouldPersistQuery (#1015 persist whitelist)', () => {
     ['quest-bundle', ['quest-bundle', 'minsk', 'ru']],
     ['gamification', ['gamification', 'progress', 'me']],
     ['achievements', ['achievements', 'me']],
+    // #3130: коллекция «Моих точек» — отдельный персистер со своим ключом (utils/userPointsPersist.ts).
+    ['userPointsAll collection', ['userPointsAll', '1']],
+    ['userPointsAll pagination mark', ['userPointsAll', '1', 'pagination']],
   ])('НЕ персистит несписочный домен %s', (_label, key) => {
     expect(shouldPersistQuery(makeQuery(key, 'success'))).toBe(false);
   });

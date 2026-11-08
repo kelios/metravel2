@@ -71,7 +71,7 @@ describe('userPointsApi.getAllPoints', () => {
     await userPointsApi.getAllPoints({ statuses: ['visited'] });
 
     expect(mockedGet).toHaveBeenCalledWith(
-      expect.stringContaining('statuses=visited'),
+      expect.stringContaining('status=visited'),
       expect.any(Number),
     );
   });

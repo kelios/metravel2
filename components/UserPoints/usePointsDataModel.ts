@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { skipToken, useQuery, useQueryClient } from '@tanstack/react-query';
 import { userPointsApi } from '@/api/userPoints';
+import { logError } from '@/utils/logger';
+import { resolveTotalPages } from '@/utils/fetchAllPages';
 import { queryKeys } from '@/api/queryKeys';
 import {
   USER_POINTS_COLLECTION_STALE_TIME_MS,
@@ -25,6 +27,25 @@ import {
 } from './pointsListLogic';
 
 const NUMERIC_ID_RE = /^\d+$/;
+
+/** Сколько страниц докачки читать параллельно: браузер держит ~6 соединений на хост. */
+export const STREAM_CONCURRENCY = 6;
+/** Предохранитель от бесконечной докачки на неадекватном `count`/`hasMore`. */
+const STREAM_MAX_PAGES = 200;
+
+/**
+ * Свежая первая страница поверх уже скачанной коллекции: записи первой
+ * страницы заменяются по id, хвост остаётся. Пустой/короткий кэш — сама страница.
+ */
+export const mergeFirstPageIntoCollection = (
+  previous: ImportedPoint[] | undefined,
+  firstPage: ImportedPoint[],
+): ImportedPoint[] => {
+  if (!Array.isArray(previous) || previous.length <= firstPage.length) return firstPage;
+  const fresh = new Set(firstPage.map((p) => Number(p?.id)));
+  const tail = previous.filter((p) => !fresh.has(Number(p?.id)));
+  return [...firstPage, ...tail];
+};
 
 type Params = {
   defaultPerPage: number;
@@ -70,6 +91,12 @@ export const usePointsDataModel = ({
 
   const queryClient = useQueryClient();
   const owner = useQueryOwner();
+  // Хвост прежней коллекции, оставленный `queryFn` под свежей первой страницей:
+  // докачка его не сеет, а перечитывает (точки, удалённые на другом устройстве,
+  // уходят). Остальной кэш — страница 1 и оптимистичные записи (созданная
+  // точка встаёт ПЕРЕД страницей 1) — сеется целиком, а не срезом `slice(0, perPage)`,
+  // который терял последнюю точку страницы 1 после такой вставки.
+  const staleTailRef = useRef<{ owner: string | null; ids: Set<number> } | null>(null);
 
   // First page renders fast (perPage=defaultPerPage). Remaining pages stream in
   // the background and are appended to the same flat-array cache so map pins and
@@ -81,14 +108,23 @@ export const usePointsDataModel = ({
       // #1709: пока докачка не закончилась, в кэше лежит ПРЕФИКС коллекции.
       // Отметка полноты — часть контракта общего ключа: потребители, которым
       // нужна вся коллекция, обязаны её прочитать прежде, чем поверить кэшу.
-      writePointsPaginationState(queryClient, owner, {
-        nextPage: 2,
-        // A short page is the end. An oversized page means the backend ignored
-        // perPage and returned the complete set in one response (#752).
-        complete: items.length !== defaultPerPage,
-        total,
-      });
-      return items;
+      // A short page is the end. An oversized page means the backend ignored
+      // perPage and returned the complete set in one response (#752).
+      const complete = items.length !== defaultPerPage;
+      writePointsPaginationState(queryClient, owner, { nextPage: 2, complete, total });
+      if (complete) return items;
+      // #3130: повторное чтение первой страницы (кэш из персиста старше staleTime,
+      // invalidateQueries после импорта) не должно сжимать экран до 200 точек —
+      // уже скачанный хвост остаётся на месте, докачка ниже заменит его свежим.
+      const merged = mergeFirstPageIntoCollection(
+        queryClient.getQueryData<ImportedPoint[]>(queryKeys.userPointsAll(owner)),
+        items,
+      );
+      staleTailRef.current = {
+        owner,
+        ids: new Set(merged.slice(items.length).map((p) => Number(p?.id))),
+      };
+      return merged;
     },
     staleTime: USER_POINTS_COLLECTION_STALE_TIME_MS,
   });
@@ -122,16 +158,31 @@ export const usePointsDataModel = ({
       // Без отметки докачка либо не начиналась (пустой кэш), либо кэш заполнен
       // полным чтением — в обоих случаях показывать «из M» нечего.
       complete: state === undefined || state.complete,
+      // #3130: оборванная докачка — не «все точки», а префикс с кнопкой «Повторить».
+      failed: state?.failed === true,
     };
   }, [paginationQuery.data, points.length]);
+  const [streamAttempt, setStreamAttempt] = useState(0);
+  const resumeStream = useCallback(() => {
+    const state = readPointsPaginationState(queryClient, owner);
+    if (state?.failed) {
+      writePointsPaginationState(queryClient, owner, { ...state, failed: false });
+    }
+    setStreamAttempt((n) => n + 1);
+  }, [owner, queryClient]);
 
   const backgroundLoadRef = useRef<{ running: boolean; token: number }>({ running: false, token: 0 });
 
+  // Фоновая докачка остатка коллекции (#3130). Раньше страницы шли строго по
+  // очереди (13 round-trip подряд, 3,1 с водопада на 2656 точках) и каждая
+  // писалась в кэш отдельно — 13 перерисовок списка, карты и фильтров; ошибка
+  // страницы N глоталась, и префикс выглядел полной коллекцией. Теперь хвост
+  // читается параллельными пачками по `STREAM_CONCURRENCY`, в кэш уходит одна
+  // запись со свежим снимком, а обрыв фиксируется в отметке (`failed`) с
+  // кнопкой «Повторить». `dataUpdatedAt` в зависимостях перезапускает докачку
+  // после `invalidateQueries` (импорт, другое устройство), `streamAttempt` —
+  // по кнопке.
   useEffect(() => {
-    // Pagination metadata distinguishes accumulated full pages from an
-    // oversized first response. Cache length alone cannot do that. Appended
-    // pages stay outside the dependencies so they do not cancel/restart the
-    // in-flight run — that used to stop loading after page 2.
     if (pointsQuery.isLoading || pointsQuery.error) return;
     const cached = queryClient.getQueryData<ImportedPoint[]>(queryKeys.userPointsAll(owner));
     const count = Array.isArray(cached) ? cached.length : 0;
@@ -144,43 +195,101 @@ export const usePointsDataModel = ({
       pagination = { nextPage: 2, complete: false };
       writePointsPaginationState(queryClient, owner, pagination);
     }
-    if (pagination.complete) return;
+    if (pagination.complete || pagination.failed) return;
     if (backgroundLoadRef.current.running) return;
 
     const token = backgroundLoadRef.current.token + 1;
     backgroundLoadRef.current = { running: true, token };
     let cancelled = false;
+    const isStale = () => cancelled || backgroundLoadRef.current.token !== token;
+    const startPage = pagination.nextPage;
+    const knownTotal = pagination.total;
+    const collectionKey = queryKeys.userPointsAll(owner);
+    // Запись в коллекцию во время докачки (удаление, создание, правка) двигает
+    // `dataUpdatedAt` и перезапускает эффект, но cleanup приходит только после
+    // рендера: снимок, дописанный в этом окне, затёр бы оптимистичную запись.
+    const startedAt = queryClient.getQueryState(collectionKey)?.dataUpdatedAt;
+    const staleTail = staleTailRef.current?.owner === owner ? staleTailRef.current.ids : null;
 
     (async () => {
       try {
-        // Resume from explicit pagination metadata. Cache length alone cannot
-        // distinguish two streamed full pages from one oversized response.
-        let page = pagination.nextPage;
-        // Guard against runaway loops on an unexpectedly non-terminating backend.
-        const maxPages = 200;
-        while (!cancelled && page <= maxPages) {
-          const { items, hasMore, total } = await userPointsApi.getPointsPage(page, defaultPerPage);
-          if (cancelled || backgroundLoadRef.current.token !== token) return;
-          let added = 0;
-          if (items.length > 0) {
-            queryClient.setQueryData(queryKeys.userPointsAll(owner), (prev: unknown) => {
-              const arr: ImportedPoint[] = Array.isArray(prev) ? (prev as ImportedPoint[]) : [];
-              const seen = new Set(arr.map((p) => Number(p?.id)));
-              const next = items.filter((p) => !seen.has(Number(p?.id)));
-              added = next.length;
-              return next.length ? [...arr, ...next] : arr;
-            });
-          }
-          // A page that adds nothing new means the backend is not actually
-          // paginating (returns the full set every time, see #752) or we are
-          // past the end — stop instead of re-downloading the same payload.
-          if (!hasMore || added === 0) {
-            writePointsPaginationState(queryClient, owner, { nextPage: page, complete: true, total });
-            break;
-          }
-          page += 1;
-          writePointsPaginationState(queryClient, owner, { nextPage: page, complete: false, total });
+        const collected = new Map<number, ImportedPoint>();
+        for (const point of Array.isArray(cached) ? cached : []) {
+          const id = Number(point?.id);
+          if (!staleTail?.has(id)) collected.set(id, point);
         }
+        // «Новые» id для стоп-условия #752 считаются против страницы 1 и уже
+        // прочитанных страниц, а не против всего сида: недоотслеженный хвост в
+        // кэше (персист посреди докачки) не должен обрывать докачку раньше конца.
+        const seen = new Set<number>(
+          staleTail
+            ? collected.keys()
+            : (Array.isArray(cached) ? cached.slice(0, defaultPerPage) : []).map((p) => Number(p?.id)),
+        );
+        let total = knownTotal;
+        // Без серверного count число страниц неизвестно — идём пачками, пока
+        // страница не окажется короткой или пустой.
+        let page = startPage;
+        let reachedEnd = false;
+        while (!reachedEnd && page <= STREAM_MAX_PAGES) {
+          const lastKnownPage =
+            typeof total === 'number' && Number.isFinite(total) && total > 0
+              ? resolveTotalPages({ total, pageSize: defaultPerPage, maxPages: STREAM_MAX_PAGES })
+              : null;
+          const batchEnd = Math.min(
+            page + STREAM_CONCURRENCY - 1,
+            lastKnownPage ?? page + STREAM_CONCURRENCY - 1,
+            STREAM_MAX_PAGES,
+          );
+          if (batchEnd < page) break;
+          const pages = Array.from({ length: batchEnd - page + 1 }, (_, i) => page + i);
+          const results = await Promise.all(
+            pages.map((n) => userPointsApi.getPointsPage(n, defaultPerPage)),
+          );
+          if (isStale()) return;
+          let added = 0;
+          for (const result of results) {
+            if (typeof result.total === 'number' && Number.isFinite(result.total) && result.total > 0) {
+              total = result.total;
+            }
+            for (const point of result.items) {
+              const id = Number(point?.id);
+              // Свежая копия с сервера заменяет закэшированную.
+              collected.set(id, point);
+              if (!seen.has(id)) {
+                seen.add(id);
+                added += 1;
+              }
+            }
+            if (!result.hasMore) reachedEnd = true;
+          }
+          // Пачка без новых id — сервер не пагинирует (#752) или конец позади.
+          if (added === 0) reachedEnd = true;
+          page = batchEnd + 1;
+          if (lastKnownPage !== null && page > lastKnownPage) reachedEnd = true;
+        }
+        if (isStale() || queryClient.getQueryState(collectionKey)?.dataUpdatedAt !== startedAt) return;
+        const snapshot = Array.from(collected.values());
+        // Сначала отметка, потом данные: запись данных двигает `dataUpdatedAt`
+        // и перезапускает этот эффект, который обязан увидеть `complete`.
+        writePointsPaginationState(queryClient, owner, {
+          nextPage: page,
+          complete: true,
+          total: snapshot.length,
+        });
+        // Одна запись: свежий снимок заменяет и префикс, и прежний хвост (в том
+        // числе точки, удалённые с другого устройства).
+        queryClient.setQueryData(collectionKey, snapshot);
+        if (staleTailRef.current?.owner === owner) staleTailRef.current = null;
+      } catch (error) {
+        if (isStale()) return;
+        logError(error, { scope: 'usePointsDataModel.stream', page: startPage });
+        writePointsPaginationState(queryClient, owner, {
+          nextPage: startPage,
+          complete: false,
+          total: knownTotal,
+          failed: true,
+        });
       } finally {
         if (backgroundLoadRef.current.token === token) {
           backgroundLoadRef.current.running = false;
@@ -197,7 +306,15 @@ export const usePointsDataModel = ({
         backgroundLoadRef.current.running = false;
       }
     };
-  }, [defaultPerPage, owner, pointsQuery.error, pointsQuery.isLoading, queryClient]);
+  }, [
+    defaultPerPage,
+    owner,
+    pointsQuery.dataUpdatedAt,
+    pointsQuery.error,
+    pointsQuery.isLoading,
+    queryClient,
+    streamAttempt,
+  ]);
 
   const pointsWithDerivedCategories = useMemo(() => {
     return (points as any[]).map((p) => {
@@ -334,6 +451,7 @@ export const usePointsDataModel = ({
       (pointsQuery.fetchStatus === 'paused' && !Array.isArray(pointsQuery.data)),
     refetch: pointsQuery.refetch,
     loadProgress,
+    resumeStream,
     categoryIdToName,
     categoryData,
     resolveCategoryIdsByNames,
