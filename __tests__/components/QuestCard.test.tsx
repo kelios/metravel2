@@ -575,8 +575,8 @@ describe('QuestCard', () => {
             mockIsPhone = false;
         });
 
-        // Контроль русских форм: 2/3/4 → «раза», 5/11/21 → «раз». Единица ниже
-        // порога доверия (#2906) и в этот набор не входит.
+        // Контроль русских форм: 2/3/4 → «раза», 5/11/21 → «раз». Единицу
+        // («Пройдено 1 раз») фиксирует отдельный тест ниже.
         it.each([
             [2, 'Пройдено 2 раза'],
             [3, 'Пройдено 3 раза'],
@@ -632,8 +632,8 @@ describe('QuestCard', () => {
             expect(queryByText('Будьте первым')).toBeTruthy();
         });
 
-        it('одно прохождение ниже порога доверия: ни счётчика, ни первопроходца — «Будьте первым» (#2906)', async () => {
-            const { queryByTestId, queryByText, getByText } = await renderWithQueryClient(
+        it('не зовёт стать первым после первого прохождения и отзыва', async () => {
+            const { queryByText, getByText, getByTestId } = await renderWithQueryClient(
                 <QuestCard
                     styles={styles}
                     cardWidth={380}
@@ -641,14 +641,17 @@ describe('QuestCard', () => {
                     quest={makeQuest({
                         id: 'minsk-one',
                         completionsCount: 1,
+                        ratingAvg: 5,
+                        ratingCount: 1,
                         firstCompleter: { id: 7, name: 'Roman Shakun', avatar: null },
                     })}
                 />,
             );
 
-            expect(queryByTestId('quest-card-completions-minsk-one')).toBeNull();
-            expect(queryByText(/Первым прошёл/)).toBeNull();
-            expect(getByText('Будьте первым')).toBeTruthy();
+            expect(getByTestId('quest-card-completions-minsk-one')).toBeTruthy();
+            expect(getByText('Пройдено 1 раз')).toBeTruthy();
+            expect(getByText('Первым прошёл: Roman Shakun')).toBeTruthy();
+            expect(queryByText('Будьте первым')).toBeNull();
         });
     });
 

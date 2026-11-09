@@ -4,7 +4,7 @@
  * Шапка /quests показывает «N прохождений · M игроков» с первого прохождения и
  * первого игрока: счётчик — живое доказательство, что квесты проходят. Масштаб
  * каталога (квесты · города · страны) — запасной вариант, пока прохождений нет.
- * «Пройдено 1 раз» на карточке уступает место приглашению «Будьте первым».
+ * На карточке «Будьте первым» показывается только до первого прохождения.
  * Все пороги — здесь, в одном месте.
  */
 import { buildQuestCityLandingGroups } from '@/utils/questCityAlias'
@@ -15,7 +15,7 @@ export const QUEST_PUBLIC_STATS_THRESHOLDS = {
   /** Разные игроки (`GET /api/quests/stats/`): ниже — число игроков не показывается. */
   catalogPlayers: 1,
   /** Прохождения одного квеста: ниже — «Будьте первым» вместо «Пройдено N раз». */
-  questCompletions: 2,
+  questCompletions: 1,
 } as const
 
 export function isCatalogCompletionsPublic(total: number): boolean {
@@ -26,7 +26,7 @@ export function isCatalogPlayersPublic(players: number | null | undefined): bool
   return typeof players === 'number' && Number.isFinite(players) && players >= QUEST_PUBLIC_STATS_THRESHOLDS.catalogPlayers
 }
 
-/** «Пройдено N раз» и «Первым прошёл …» показываются от двух прохождений. */
+/** «Пройдено N раз» и «Первым прошёл …» показываются с первого прохождения. */
 export function isQuestCompletionsPublic(count: number | null | undefined): boolean {
   return typeof count === 'number' && Number.isFinite(count) && count >= QUEST_PUBLIC_STATS_THRESHOLDS.questCompletions
 }

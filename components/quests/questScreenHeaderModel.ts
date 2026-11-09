@@ -78,7 +78,7 @@ function buildQuestInfo(countModel: QuestCountModel, meta?: QuestScreenMeta): st
   if (meta?.isCompletedByMe) {
     info.push(i18nT('quests:components.quests.QuestCompletionBadge.vy_proshli_etot_kvest_7e00d905'))
   }
-  // Ниже порога (#2906) «Пройдено 1 раз» работает против доверия — строка не показывается.
+  // Строка прохождений — с первого прохождения, по общему порогу карточки и листа.
   if (meta && isQuestCompletionsPublic(meta.completionsCount)) {
     info.push(translatePlural('quests:components.quests.QuestCompletionBadge.completionCount', meta.completionsCount))
   }

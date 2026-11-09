@@ -27,11 +27,13 @@ describe('questPublicStatsPolicy (#2906)', () => {
     expect(isCatalogPlayersPublic(catalogPlayers)).toBe(true)
   })
 
-  it('«Пройдено N раз» и первопроходец — от двух прохождений', () => {
+  it('«Пройдено N раз» и первопроходец — с первого прохождения, «Будьте первым» — только при нуле', () => {
     expect(isQuestCompletionsPublic(0)).toBe(false)
-    expect(isQuestCompletionsPublic(1)).toBe(false)
+    expect(isQuestCompletionsPublic(1)).toBe(true)
     expect(isQuestCompletionsPublic(2)).toBe(true)
     expect(isQuestCompletionsPublic(undefined)).toBe(false)
+    expect(isQuestCompletionsPublic(null)).toBe(false)
+    expect(isQuestCompletionsPublic(Number.NaN)).toBe(false)
   })
 
   it('масштаб каталога считает разные города и страны без учёта регистра и пустых', () => {

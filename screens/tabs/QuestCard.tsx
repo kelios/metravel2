@@ -164,8 +164,8 @@ function QuestCard({
         ? QUEST_CARD_PHONE_HEIGHT
         : Math.round((cardWidth / QUESTS_GRID_MIN_COLUMN_WIDTH) * QUEST_CARD_BASE_HEIGHT);
     const showOverlayMeta = !isPhone;
-    // Ниже порога (#2906) «Пройдено 1 раз» и «Первым прошёл» работают против
-    // доверия: вместо них карточка зовёт стать первым. Порог — один на проект.
+    // Счётчик и первопроходец видны с первого прохождения; «Будьте первым» —
+    // только пока квест не прошёл никто. Порог — один на проект.
     const showCompletions = isQuestCompletionsPublic(quest.completionsCount);
 
     // Ширина обложки = CSS-слот × плотность экрана, с потолком DPR 2.
