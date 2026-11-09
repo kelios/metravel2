@@ -106,7 +106,7 @@ export const PointsListManualModal: React.FC<PointsListManualModalProps> = ({
                     style={styles.manualInput}
                     value={manualLat}
                     onChangeText={onChangeLat}
-                    placeholder="55.755800"
+                    placeholder="50.000000"
                     placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
                     keyboardType={numericKeyboardType}
                   />
@@ -118,7 +118,7 @@ export const PointsListManualModal: React.FC<PointsListManualModalProps> = ({
                     style={styles.manualInput}
                     value={manualLng}
                     onChangeText={onChangeLng}
-                    placeholder="37.617300"
+                    placeholder="20.000000"
                     placeholderTextColor={DESIGN_TOKENS.colors.textMuted}
                     keyboardType={numericKeyboardType}
                   />

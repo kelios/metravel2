@@ -30,6 +30,7 @@ import { getSiteBaseUrl } from '@/utils/seo'
 import { showToast } from '@/utils/toast'
 import { translate as i18nT } from '@/i18n'
 import { useUserPointDetail } from './userPointDetailsStore'
+import { useDriveInfoQuery } from './useDriveInfoQuery'
 
 import {
   getCategoryLabel,
@@ -40,16 +41,12 @@ import {
   getRelatedUrls,
 } from './userPointPresentation'
 
-type DriveInfo =
-  | { status: 'loading' }
-  | { status: 'ok'; distanceKm: number; durationMin: number }
-  | { status: 'error' }
-
 export type UserPointPopupContentProps = {
   point: ImportedPoint
   colors: ReturnType<typeof useThemedColors>
   isCompactPopup: boolean
-  driveInfo?: DriveInfo
+  /** Откуда считать время в пути (геолокация); запрос общий с карточкой списка (#3135). */
+  driveFrom?: { lat?: number | null; lng?: number | null } | null
   onClose: () => void
   onEditPoint?: (point: ImportedPoint) => void
   onDeletePoint?: (point: ImportedPoint) => void
@@ -80,10 +77,11 @@ const openRelatedPage = async (url: string) => {
 }
 
 export const UserPointPopupContent = React.memo(function UserPointPopupContent(props: UserPointPopupContentProps) {
-  const { point: pointProp, colors, isCompactPopup, driveInfo, onClose, onEditPoint, onDeletePoint } = props
+  const { point: pointProp, colors, isCompactPopup, driveFrom, onClose, onEditPoint, onDeletePoint } = props
   const dockPx = useDockReservePx()
   // #3161: маркер несёт пин; название, адрес и фото приходят окном `ids=`.
   const { point, hydrating } = useUserPointDetail(pointProp)
+  const driveInfo = useDriveInfoQuery({ from: driveFrom, to: { lat: point.latitude, lng: point.longitude } })
 
   const lat = Number(point.latitude)
   const lng = Number(point.longitude)

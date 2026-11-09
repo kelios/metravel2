@@ -44,3 +44,17 @@ describe('getUserPointsFocusBounds', () => {
     expect(bounds![0][0]).toBe(-20.2);
   });
 });
+
+describe('getUserPointsCenter (#3135)', () => {
+  const { getUserPointsCenter } = require('@/components/UserPoints/userPointsMapData')
+  it('геолокация → центр коллекции → null (без зашитой столицы)', () => {
+    expect(getUserPointsCenter({ lat: 50, lng: 20 }, [{ latitude: 10, longitude: 10 }] as any)).toEqual({ lat: 50, lng: 20 })
+    expect(getUserPointsCenter(undefined, [{ latitude: 10, longitude: 10 }, { latitude: 20, longitude: 30 }] as any)).toEqual({ lat: 15, lng: 20 })
+    expect(getUserPointsCenter(undefined, [])).toBeNull()
+  })
+  it('пины с координатой-строкой или null не дают NaN: считаются только конечные числа', () => {
+    const pins = [{ latitude: '10', longitude: '10' }, { latitude: null, longitude: null }, { latitude: 20, longitude: 30 }]
+    expect(getUserPointsCenter(undefined, pins as any)).toEqual({ lat: 15, lng: 20 })
+    expect(getUserPointsCenter(undefined, [{ latitude: null, longitude: undefined }] as any)).toBeNull()
+  })
+})

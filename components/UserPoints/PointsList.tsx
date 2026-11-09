@@ -16,24 +16,21 @@ import { usePointsRecommendations } from './usePointsRecommendations';
 import { usePointsBulkActions } from './usePointsBulkActions';
 import { usePointsManualForm } from './usePointsManualForm';
 import { usePointsDeletePoint } from './usePointsDeletePoint';
-import { usePointsDriveInfo } from './usePointsDriveInfo';
 import { usePointsExportKml } from './usePointsExportKml';
 import { usePointsActivePoint } from './usePointsActivePoint';
 import { usePointsFiltersController } from './usePointsFiltersController';
 import { usePointsFilterChipActions } from './usePointsFilterChipActions';
 import { usePointsDataModel } from './usePointsDataModel';
 import { usePointsViewModel } from './usePointsViewModel';
-import { usePointsHeaderRenderer } from './usePointsHeaderRenderer';
+import { PointsListHeader } from './PointsListHeader';
+import { PointsListEmptyState } from './PointsListEmptyState';
+import { getPointsPresetLabel, POINTS_PRESETS } from './pointsListLogic';
+import { getUserPointsCenter } from './userPointsMapData';
 
 import { PointsListGrid } from './PointsListGrid'
 import { PointsListItem } from './PointsListItem'
-import { PointsListActionsModal } from './PointsListActionsModal'
-import { PointsListBulkModals } from './PointsListBulkModals'
-import { PointsListManualModal } from './PointsListManualModal'
+import { PointsListModals } from './PointsListModals'
 import { PointsListBulkMapBar } from './PointsListBulkMapBar'
-import EmptyState from '@/components/ui/EmptyState'
-import { translate as i18nT } from '@/i18n'
-import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
 
 
 const DEFAULT_POINT_COLORS: string[] = [
@@ -127,8 +124,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     }
   }, []);
 
-  const listColumns = 1;
-
   const colors = useThemedColors();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -139,6 +134,7 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
   const gridColors = useMemo(() => ({ text: colors.text }), [colors.text]);
 
   const {
+    points,
     totalCount,
     isLoading,
     loadFailed,
@@ -181,59 +177,30 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     [categoryIdToName, resolveCategoryIdsByNames]
   );
 
+  const bulk = usePointsBulkActions({ filteredPoints, queryClient });
   const {
     selectionMode,
     selectedIds,
     selectedIdSet,
-    showBulkEdit,
     setShowBulkEdit,
-    bulkStatus,
-    setBulkStatus,
     isBulkWorking,
     setIsBulkWorking,
     bulkProgress,
-    showConfirmDeleteSelected,
     setShowConfirmDeleteSelected,
-    showConfirmDeleteAll,
     setShowConfirmDeleteAll,
     startSelectionMode,
     toggleSelect,
     clearSelection,
     exitSelectionMode,
-    applyBulkEdit,
-    deleteSelected,
-    deleteAll,
-  } = usePointsBulkActions({ filteredPoints, queryClient });
+  } = bulk;
 
-  const {
-    editingPointId,
-    showManualAdd,
-    manualName,
-    setManualName,
-    setManualNameTouched,
-    manualCoords,
-    manualLat,
-    setManualLat,
-    manualLng,
-    setManualLng,
-    manualColor,
-    setManualColor,
-    manualCategoryIds,
-    setManualCategoryIds,
-    isSavingManual,
-    manualError,
-    openManualAdd,
-    closeManualAdd,
-    openEditPoint,
-    handleMapPress,
-    syncCoordsFromInputs,
-    handleSaveManual,
-  } = usePointsManualForm({
+  const manual = usePointsManualForm({
     blurActiveElementForModal,
     setShowActions,
     resolveCategoryIdsForEdit,
     queryClient,
   });
+  const { showManualAdd, manualCoords, manualColor, openManualAdd, openEditPoint, handleMapPress } = manual;
   const manualCoordsValue = useMemo(
     () => {
       if (typeof manualCoords === 'string') return manualCoords;
@@ -247,10 +214,8 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     [manualCoords]
   );
 
-  const { pointToDelete, setPointToDelete, requestDeletePoint, confirmDeletePoint } = usePointsDeletePoint({
-    queryClient,
-    setIsBulkWorking,
-  });
+  const deletion = usePointsDeletePoint({ queryClient, setIsBulkWorking });
+  const { requestDeletePoint } = deletion;
 
   const {
     visibleFilteredPoints,
@@ -269,12 +234,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     categoryIdToName,
     statusLabels: STATUS_LABELS as Record<string, string>,
     openRecommendations: openRecommendations as (points: Record<string, unknown>[]) => Promise<void>,
-  });
-
-  const activeDriveInfo = usePointsDriveInfo({
-    activePointId,
-    currentLocation,
-    visibleFilteredPoints: visibleFilteredPoints as Record<string, unknown>[],
   });
 
   const handleOpenPointOnMap = useCallback((point: any) => {
@@ -311,44 +270,48 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
     setShowActions(true);
   }, [blurActiveElementForModal]);
 
-  const renderHeader = usePointsHeaderRenderer({
-    styles,
-    colors: headerColors,
-    isMobile,
-    total: totalCount,
-    found: visibleFilteredPoints.length,
-    hasActiveFilters,
-    onResetFilters: handleResetFilters,
-    activeFilterChips,
-    onRemoveFilterChip: handleRemoveFilterChip,
-    viewMode,
-    onViewModeChange: setViewMode,
-    hideViewToggle: !isWideScreenWeb,
-    canShowMapSettings,
-    showMapSettings: mapSettingsVisible,
-    onToggleMapSettings: () => setShowMapSettings((v) => !v),
-    showingRecommendations,
-    onOpenActions: handleOpenActions,
-    onOpenRecommendations: handleOpenRecommendations,
-    // Поле поиска в шапке только в отдельном режиме списка: в режиме карты
-    // своё поле есть у шапки списка (#3134, одно поле на экран).
-    showSearch: viewMode === 'list' && isWideScreenWeb,
-    searchQuery,
-    onSearch: handleSearch,
-    filters,
-    onFilterChange: handleFilterChangeWithLocation,
-    activePresetId,
-    onPresetChange: handlePresetChange,
-    siteCategoryOptions: availableCategoryOptions,
-    availableColors,
-  });
+  // Подписи пресетов — через i18n на каждом рендере (локаль переключается без ремаунта).
+  const presetOptions = POINTS_PRESETS.map((preset) => ({ id: preset.id, label: getPointsPresetLabel(preset) }));
+  // #3135: шапка — элемент `PointsListHeader`, а не `useCallback` с 29 зависимостями.
+  const header = (
+    <PointsListHeader
+      styles={styles}
+      colors={headerColors}
+      isMobile={isMobile}
+      total={totalCount}
+      found={visibleFilteredPoints.length}
+      hasActiveFilters={hasActiveFilters}
+      onResetFilters={handleResetFilters}
+      activeFilterChips={activeFilterChips}
+      onRemoveFilterChip={handleRemoveFilterChip}
+      viewMode={viewMode}
+      onViewModeChange={setViewMode}
+      hideViewToggle={!isWideScreenWeb}
+      canShowMapSettings={canShowMapSettings}
+      showMapSettings={mapSettingsVisible}
+      onToggleMapSettings={() => setShowMapSettings((v) => !v)}
+      showingRecommendations={showingRecommendations}
+      onOpenActions={handleOpenActions}
+      onOpenRecommendations={handleOpenRecommendations}
+      showSearch={viewMode === 'list' && isWideScreenWeb}
+      searchQuery={searchQuery}
+      onSearch={handleSearch}
+      filters={filters}
+      onFilterChange={handleFilterChangeWithLocation}
+      presets={presetOptions}
+      activePresetId={activePresetId}
+      onPresetChange={handlePresetChange}
+      siteCategoryOptions={availableCategoryOptions}
+      availableColors={availableColors}
+    />
+  );
 
   // #3133: renderItem стабилен — изменчивые входы (активная точка, выделение,
   // время в пути) читаются из latest-ref, а перерисовку видимых строк запускает
   // `listExtraData` у FlashList. Раньше смена активной точки меняла identity
   // renderItem → пересоздавалась шапка списка и все видимые карточки.
-  const renderItemStateRef = useRef({ activePointId, activeDriveInfo, selectedIdSet, selectionMode });
-  renderItemStateRef.current = { activePointId, activeDriveInfo, selectedIdSet, selectionMode };
+  const renderItemStateRef = useRef({ activePointId, currentLocation, selectedIdSet, selectionMode });
+  renderItemStateRef.current = { activePointId, currentLocation, selectedIdSet, selectionMode };
   const renderItem = useCallback(
     ({ item }: { item: any }) => {
       const state = renderItemStateRef.current;
@@ -356,7 +319,6 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
       return (
         <PointsListItem
           point={item}
-          layout={listColumns > 1 ? 'grid' : 'list'}
           onPress={state.selectionMode ? undefined : handleOpenPointOnMap}
           onEdit={state.selectionMode ? undefined : openEditPoint}
           onDelete={state.selectionMode ? undefined : requestDeletePoint}
@@ -364,42 +326,25 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
           selected={state.selectedIdSet.has(Number(item?.id))}
           active={isActive}
           compact
-          driveInfo={isActive ? state.activeDriveInfo : null}
+          driveFrom={isActive ? state.currentLocation : null}
           onToggleSelect={toggleSelect}
         />
       );
     },
-    [handleOpenPointOnMap, listColumns, openEditPoint, requestDeletePoint, toggleSelect]
+    [handleOpenPointOnMap, openEditPoint, requestDeletePoint, toggleSelect]
   );
 
-  const renderEmpty = useCallback(() => {
-    if (loadFailed) {
-      return (
-        <View style={styles.emptyContainer}>
-          <EmptyState
-            density="compact"
-            icon="wifi-off"
-            variant="error"
-            title={i18nT('map:components.UserPoints.PointsList.ne_udalos_zagruzit_tochki_a1d1dfdc')}
-            description={i18nT('map:components.UserPoints.PointsList.proverte_podklyuchenie_k_internetu_i_poprobu_e66933f1')}
-            action={{ label: i18nT('map:components.UserPoints.PointsList.povtorit_0641a83c'), onPress: () => refetch() }}
-          />
-        </View>
-      );
-    }
-    return (
-      <View style={styles.emptyContainer} {...SCREEN_CONTENT_FIRST_PROPS}>
-        <EmptyState
-          density="compact"
-          icon="map-pin"
-          variant="empty"
-          title={i18nT('map:components.UserPoints.PointsList.u_vas_poka_net_tochek_7f6af4ba')}
-          description={i18nT('map:components.UserPoints.PointsList.sohranyayte_interesnye_mesta_na_karte_ili_do_04659fd5')}
-          action={{ label: i18nT('map:components.UserPoints.PointsList.dobavit_tochku_c3c1a974'), onPress: openManualAdd }}
-        />
-      </View>
-    );
-  }, [styles.emptyContainer, openManualAdd, loadFailed, refetch]);
+  const renderEmpty = useCallback(
+    () => <PointsListEmptyState styles={styles} loadFailed={loadFailed} onRetry={() => refetch()} onAddPoint={openManualAdd} />,
+    [styles, openManualAdd, loadFailed, refetch]
+  );
+
+  // Куда смотреть карте, если геокодер поиска ничего не нашёл: геолокация,
+  // иначе центр коллекции (#3135; раньше — зашитый Минск).
+  const geocodeFallbackCenter = useMemo(
+    () => getUserPointsCenter(currentLocation ?? undefined, points),
+    [currentLocation, points]
+  );
 
 	  return (
 	    <View style={styles.container}>
@@ -430,14 +375,14 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
 	        viewMode={viewMode}
 	        isLoading={isLoading}
 	        filteredPoints={visibleFilteredPoints}
-	        listExtraData={{ selectionMode, selectedIds, activePointId, activeDriveInfo }}
+	        listExtraData={{ selectionMode, selectedIds, activePointId, currentLocation }}
 	        activeFilterCount={activeFilterChips.length}
 	        isSearching={isSearching}
 	        listKey={selectionMode ? 'selection' : 'normal'}
 	        panelTab={panelTab}
 	        onPanelTabChange={setPanelTab}
-	        numColumns={listColumns}
-	        renderHeader={renderHeader}
+	        header={header}
+	        geocodeFallbackCenter={geocodeFallbackCenter}
 	        renderItem={renderItem}
 	        renderEmpty={renderEmpty}
         onOpenActions={handleOpenActions}
@@ -465,80 +410,33 @@ export const PointsList: React.FC<PointsListProps> = ({ onImportPress }) => {
         showMapSettings={mapSettingsVisible}
       />
 
-      <PointsListActionsModal
+      <PointsListModals
         styles={styles}
-        visible={showActions}
+        bulk={bulk}
+        manual={manual}
+        deletion={deletion}
+        manualCoordsValue={manualCoordsValue}
+        categoryOptions={categoryData}
+        manualColorOptions={manualColorOptions}
+        showActions={showActions}
+        onCloseActions={() => setShowActions(false)}
         exportError={exportError}
         isExporting={isExporting}
-        onClose={() => setShowActions(false)}
+        onExport={handleExportKml}
         onImport={() => {
           setShowActions(false);
           onImportPress?.();
         }}
-        onExport={handleExportKml}
-        onOpenManualAdd={openManualAdd}
         onStartSelection={() => {
           setShowActions(false);
           startSelectionMode();
           setPanelTab('list');
         }}
-        onDeleteAll={() => {
+        onRequestDeleteAll={() => {
           setShowActions(false);
           blurActiveElementForModal();
           setShowConfirmDeleteAll(true);
         }}
-      />
-
-      <PointsListBulkModals
-        styles={styles}
-        pointToDelete={pointToDelete}
-        onClosePointDelete={() => setPointToDelete(null)}
-        onConfirmPointDelete={confirmDeletePoint}
-        showBulkEdit={showBulkEdit}
-        onCloseBulkEdit={() => setShowBulkEdit(false)}
-        bulkStatus={bulkStatus}
-        onBulkStatusChange={setBulkStatus}
-        onApplyBulkEdit={applyBulkEdit}
-        showConfirmDeleteSelected={showConfirmDeleteSelected}
-        onCloseConfirmDeleteSelected={() => setShowConfirmDeleteSelected(false)}
-        selectedCount={selectedIds.length}
-        onDeleteSelected={deleteSelected}
-        showConfirmDeleteAll={showConfirmDeleteAll}
-        onCloseConfirmDeleteAll={() => setShowConfirmDeleteAll(false)}
-        onDeleteAll={deleteAll}
-        isBulkWorking={isBulkWorking}
-      />
-
-      <PointsListManualModal
-        styles={styles}
-        visible={showManualAdd}
-        editingPointId={editingPointId}
-        onClose={closeManualAdd}
-        manualName={manualName}
-        onChangeName={(v) => {
-          setManualNameTouched(true);
-          setManualName(v);
-        }}
-        manualError={manualError}
-        manualCoords={manualCoordsValue}
-        manualLat={manualLat}
-        onChangeLat={(v) => {
-          setManualLat(v);
-          syncCoordsFromInputs(v, manualLng);
-        }}
-        manualLng={manualLng}
-        onChangeLng={(v) => {
-          setManualLng(v);
-          syncCoordsFromInputs(manualLat, v);
-        }}
-        categoryOptions={categoryData}
-        manualCategoryIds={manualCategoryIds}
-        onChangeCategoryIds={setManualCategoryIds}
-        manualColorOptions={manualColorOptions}
-        manualColor={manualColor}
-        onChangeColor={setManualColor}
-        isSavingManual={isSavingManual}
-        onSave={handleSaveManual}
       />
     </View>
   );

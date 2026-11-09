@@ -1,10 +1,7 @@
-import { searchInputAccessibilityProps } from '@/utils/webProps'
 import React, { useMemo } from 'react'
-import { Platform, View, ScrollView, TextInput, Text as RNText } from 'react-native'
-import Feather from '@expo/vector-icons/Feather'
+import { Platform, View, ScrollView, Text as RNText } from 'react-native'
 import { FlashList } from '@shopify/flash-list'
 
-import { UserPointsMap } from '@/components/UserPoints/UserPointsMap'
 import { PHONE_LIST_IMAGE_HEIGHT } from '@/components/UserPoints/PointCard'
 import { PointsListSkeleton, WIDE_LIST_SKELETON_IMAGE_HEIGHT } from '@/components/UserPoints/PointsListSkeleton'
 import { useThemedColors } from '@/hooks/useTheme'
@@ -12,26 +9,16 @@ import { useResponsiveWidth } from '@/hooks/useResponsive'
 import { METRICS } from '@/constants/layout'
 import FiltersPanelMapSettings from '@/components/MapPage/FiltersPanelMapSettings'
 import SegmentedControl from '@/components/MapPage/SegmentedControl'
-import IconButton from '@/components/ui/IconButton'
 import type { MapUiApi } from '@/types/mapUi'
-import { resolveExportedFunction } from '@/utils/moduleInterop'
-import { nominatimSearch } from '@/api/external/nominatim'
-import { getMapGeocoderLanguage } from '@/utils/mapLocale'
 
 import type { PointsListStyles } from './types'
 import { translate as i18nT } from '@/i18n'
 import { formatInteger, formatNumber } from '@/i18n/format'
-import { SCREEN_CONTENT_FIRST_PROPS } from '@/utils/screenContentMarker'
-import { createLocalStyles } from './PointsListGrid.styles'
+import { createLocalStyles, useMapSettingsStyles } from './PointsListGrid.styles'
+import { PointsListPanelHeader } from './PointsListPanelHeader'
+import { UserPointsMapCanvas } from './UserPointsMapCanvas'
+import { useUserPointsGeocode } from './useUserPointsGeocode'
 
-
-let getFiltersPanelStylesSafe: ((...args: any[]) => any) | null = null
-try {
-  const mod = require('@/components/MapPage/filtersPanelStyles')
-  getFiltersPanelStylesSafe = resolveExportedFunction(mod, 'getFiltersPanelStyles')
-} catch {
-  getFiltersPanelStylesSafe = null
-}
 
 type ViewMode = 'list' | 'map'
 
@@ -51,9 +38,10 @@ export const PointsListGrid: React.FC<{
   panelTab?: 'filters' | 'list'
   onPanelTabChange?: (tab: 'filters' | 'list') => void
 
-  numColumns?: number
-
-  renderHeader: () => React.ReactElement
+  /** Шапка экрана (сводка, переключатель раскладки, фильтры) — элемент, не рендерер (#3135). */
+  header: React.ReactElement
+  /** Куда смотреть, если геокодер поиска ничего не нашёл: геолокация или центр коллекции. */
+  geocodeFallbackCenter?: { lat: number; lng: number } | null
   renderItem: ({ item }: { item: any }) => React.ReactElement
   renderEmpty: () => React.ReactElement
   onOpenActions?: () => void
@@ -101,8 +89,8 @@ export const PointsListGrid: React.FC<{
   activeFilterCount = 0,
   panelTab: controlledPanelTab,
   onPanelTabChange,
-  numColumns,
-  renderHeader,
+  header,
+  geocodeFallbackCenter = null,
   renderItem,
   renderEmpty,
   onOpenActions,
@@ -141,13 +129,7 @@ export const PointsListGrid: React.FC<{
   const isWideScreen = isWeb && windowWidth >= 1024
   const themedColors = useThemedColors()
   const localStyles = useMemo(() => createLocalStyles(themedColors), [themedColors])
-  const mapSettingsStyles = useMemo(
-    () =>
-      typeof getFiltersPanelStylesSafe === 'function'
-        ? getFiltersPanelStylesSafe(themedColors as any, !isWideScreen, windowWidth)
-        : ({} as any),
-    [themedColors, isWideScreen, windowWidth]
-  )
+  const mapSettingsStyles = useMapSettingsStyles(themedColors, !isWideScreen, windowWidth)
 	  const recommendedRouteLines = useMemo(() => {
 	    if (!showingRecommendations) return [] as Array<{ id: number; line: Array<[number, number]> }>;
 	    const entries = Object.entries(recommendedRoutes ?? {});
@@ -165,10 +147,13 @@ export const PointsListGrid: React.FC<{
   const [mobileTab, setMobileTab] = React.useState<'map' | 'list' | 'filters'>('map')
   const [mapUiApi, setMapUiApi] = React.useState<MapUiApi | null>(null)
   const didInitialFitRef = React.useRef(false)
-  const [searchMarker, setSearchMarker] = React.useState<null | { lat: number; lng: number; label?: string }>(null)
-  const geocodeAbortRef = React.useRef<AbortController | null>(null)
-  const geocodeTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastGeocodedQueryRef = React.useRef<string>('')
+  const searchMarker = useUserPointsGeocode({
+    appliedSearchQuery,
+    filteredPoints,
+    isSearching,
+    mapUiApi,
+    fallbackCenter: geocodeFallbackCenter,
+  })
   // #3133: число во вкладке — через форматтер локали («2 656»), а пока первая
   // страница не пришла — многоточие вместо «(0)», которое читалось как «точек нет».
   const listCountLabel = isLoading || isSearching ? '…' : formatInteger(filteredPoints.length)
@@ -208,53 +193,25 @@ export const PointsListGrid: React.FC<{
     [setPanelTab],
   )
 
-  const renderMapCanvas = React.useCallback(
-    () => (
-      <View style={styles.mapInner} {...SCREEN_CONTENT_FIRST_PROPS}>
-	        <UserPointsMap
-	          points={filteredPoints}
-	          center={currentLocation ?? undefined}
-	          searchMarker={searchMarker}
-	          routeLines={recommendedRouteLines}
-	          onMapPress={onMapPress}
-	          onEditPoint={onPointEdit}
-	          onDeletePoint={onPointDelete}
-	          pendingMarker={showManualAdd ? manualCoords : null}
-	          pendingMarkerColor={manualColor}
-	          activePointId={activePointId ?? undefined}
-	          onPointPress={onMapPointPress}
-	          onMapUiApiReady={setMapUiApi}
-	        />
-
-        <IconButton
-          icon={<Feather name="crosshair" size={20} color={colors.text} />}
-          label={i18nT('map:components.UserPoints.PointsListGrid.moe_mestopolozhenie_852e92f2')}
-          onPress={onLocateMe}
-          disabled={isLocating}
-          style={[styles.locateFab, isLocating && styles.locateFabDisabled]}
-        />
-      </View>
-    ),
-	    [
-	      activePointId,
-	      colors.text,
-	      currentLocation,
-	      filteredPoints,
-	      onMapPointPress,
-	      isLocating,
-	      manualColor,
-	      manualCoords,
-      onLocateMe,
-      onMapPress,
-      onPointDelete,
-      onPointEdit,
-      recommendedRouteLines,
-      searchMarker,
-      showManualAdd,
-      styles.locateFab,
-      styles.locateFabDisabled,
-      styles.mapInner,
-    ]
+  const mapCanvas = (
+    <UserPointsMapCanvas
+      styles={styles}
+      colors={colors}
+      points={filteredPoints}
+      currentLocation={currentLocation}
+      searchMarker={searchMarker}
+      routeLines={recommendedRouteLines}
+      activePointId={activePointId}
+      pendingMarker={showManualAdd ? manualCoords : null}
+      pendingMarkerColor={manualColor}
+      isLocating={isLocating}
+      onLocateMe={onLocateMe}
+      onMapPress={onMapPress}
+      onMapPointPress={onMapPointPress}
+      onPointEdit={onPointEdit}
+      onPointDelete={onPointDelete}
+      onMapUiApiReady={setMapUiApi}
+    />
   )
 
   const renderFiltersPanel = React.useCallback(
@@ -264,7 +221,7 @@ export const PointsListGrid: React.FC<{
         contentContainerStyle={localStyles.rightPanelContent}
         showsVerticalScrollIndicator={true}
       >
-        {renderHeader()}
+        {header}
         {Platform.OS === 'web' && showMapSettings ? (
           <FiltersPanelMapSettings
             colors={themedColors as any}
@@ -292,124 +249,45 @@ export const PointsListGrid: React.FC<{
       mapSettingsStyles,
       mapUiApi,
       onResetFilters,
-      renderHeader,
+      header,
       showMapSettings,
       themedColors,
     ]
   )
 
-  const renderListHeader = React.useCallback(
+  const listHeader = React.useMemo(
     () => (
-      <>
-        <View style={localStyles.listControlsRow}>
-          <TextInput
-            {...searchInputAccessibilityProps()}
-            style={localStyles.listSearchInput as any}
-            value={searchQuery}
-            onChangeText={onSearch}
-            placeholder={i18nT('map:components.UserPoints.PointsListGrid.poisk_po_nazvaniyu_adresu_opisaniyu_i_kategorii_bd6ebf74')}
-            placeholderTextColor={themedColors.textMuted}
-            accessibilityLabel={i18nT('map:components.UserPoints.PointsListGrid.poisk_po_nazvaniyu_adresu_opisaniyu_i_kategorii_bd6ebf74')}
-            testID="userpoints-list-search"
-          />
-
-          <View style={localStyles.listControlsActions}>
-            {/*
-              #3134: над списком — только то, чего нет во вкладке «Фильтры»
-              одним нажатием: «Управление точками» с подписью на любой ширине
-              (иконка-шестерёнка не «говорящая», #1414) и «Сбросить фильтры»
-              только когда фильтры активны. Кнопка «Фильтры» убрана — вход
-              в фильтры один: вкладка панели / мобильного таб-бара.
-            */}
-            {onOpenActions ? (
-              <IconButton
-                icon={<Feather name="settings" size={16} color={themedColors.text} />}
-                label={i18nT('map:components.UserPoints.PointsListGrid.upravlenie_tochkami_fcf804c2')}
-                onPress={onOpenActions}
-                size="sm"
-                testID="userpoints-actions-open"
-                showLabel
-              />
-            ) : null}
-
-            {hasFilters ? (
-              <IconButton
-                icon={<Feather name="rotate-ccw" size={16} color={themedColors.text} />}
-                label={i18nT('map:components.UserPoints.PointsListGrid.sbrosit_filtry_811750be')}
-                onPress={onResetFilters}
-                size="sm"
-                testID="userpoints-list-reset-filters"
-                showLabel
-              />
-            ) : null}
-          </View>
-        </View>
-
-        {showingRecommendations ? (
-          <View style={localStyles.recommendationsHeader}>
-            <RNText style={localStyles.recommendationsTitle}>{i18nT('map:components.UserPoints.PointsListGrid.3_sluchaynye_tochki_iz_vashih_24a90489')}</RNText>
-            <View style={localStyles.recommendationsActions}>
-              <IconButton
-                icon={<Feather name="refresh-cw" size={16} color={themedColors.text} />}
-                label={i18nT('map:components.UserPoints.PointsListGrid.obnovit_335ad256')}
-                onPress={onRefreshRecommendations}
-                size="sm"
-                showLabel
-              />
-              <IconButton
-                icon={<Feather name="x" size={16} color={themedColors.textOnPrimary} />}
-                label={i18nT('map:components.UserPoints.PointsListGrid.vse_tochki_2d6d6b49')}
-                onPress={onCloseRecommendations}
-                size="sm"
-                active
-                showLabel
-              />
-            </View>
-          </View>
-        ) : null}
-        {/* PERM-3: геолокации нет — маршрутов к точкам тоже; просим её по кнопке, а не при загрузке. */}
-        {showingRecommendations && !currentLocation ? (
-          <View style={localStyles.recommendationsLocationRow} testID="userpoints-recommendations-need-location">
-            <RNText style={localStyles.recommendationsLocationHint}>
-              {i18nT('map:components.UserPoints.PointsListGrid.recommendationsNeedLocation')}
-            </RNText>
-            <IconButton
-              icon={<Feather name="crosshair" size={16} color={themedColors.text} />}
-              label={i18nT('map:components.UserPoints.PointsListGrid.recommendationsLocateCta')}
-              onPress={onLocateMe}
-              disabled={isLocating}
-              size="sm"
-              showLabel
-              testID="userpoints-recommendations-locate"
-            />
-          </View>
-        ) : null}
-      </>
+      <PointsListPanelHeader
+        localStyles={localStyles}
+        themedColors={themedColors}
+        searchQuery={searchQuery}
+        onSearch={onSearch}
+        onOpenActions={onOpenActions}
+        hasFilters={hasFilters}
+        onResetFilters={onResetFilters}
+        showingRecommendations={showingRecommendations}
+        onRefreshRecommendations={onRefreshRecommendations}
+        onCloseRecommendations={onCloseRecommendations}
+        currentLocation={currentLocation}
+        isLocating={isLocating}
+        onLocateMe={onLocateMe}
+      />
     ),
     [
       currentLocation,
-      isLocating,
-      onLocateMe,
-      localStyles.recommendationsLocationHint,
-      localStyles.recommendationsLocationRow,
       hasFilters,
-      localStyles.listControlsRow,
-      localStyles.listControlsActions,
-      localStyles.listSearchInput,
-      localStyles.recommendationsActions,
-      localStyles.recommendationsHeader,
-      localStyles.recommendationsTitle,
+      isLocating,
+      localStyles,
       onCloseRecommendations,
+      onLocateMe,
       onOpenActions,
       onRefreshRecommendations,
       onResetFilters,
       onSearch,
       searchQuery,
       showingRecommendations,
-      themedColors.text,
-      themedColors.textMuted,
-      themedColors.textOnPrimary,
-    ]
+      themedColors,
+    ],
   )
 
   const listFlashExtraData = React.useMemo(
@@ -469,10 +347,7 @@ export const PointsListGrid: React.FC<{
         {...({ estimatedItemSize: 120 } as any)}
         testID="userpoints-panel-content-list"
         renderItem={renderPointListItem}
-        // Элемент, а не ссылка на функцию: FlashList делает createElement(функция),
-        // и новая identity колбэка (каждое нажатие в поиске) ремаунтила бы шапку —
-        // поле поиска теряло бы фокус после каждого символа.
-        ListHeaderComponent={renderListHeader()}
+        ListHeaderComponent={listHeader}
         ListEmptyComponent={renderListEmpty}
         showsVerticalScrollIndicator={true}
         drawDistance={600}
@@ -485,7 +360,7 @@ export const PointsListGrid: React.FC<{
       localStyles,
       renderListEmpty,
       renderPointListItem,
-      renderListHeader,
+      listHeader,
     ]
   )
   
@@ -545,128 +420,23 @@ export const PointsListGrid: React.FC<{
     return () => clearTimeout(t);
   }, [activePointId, filteredPoints, isLoading, isMapVisible, mapUiApi, showingRecommendations]);
 
-  React.useEffect(() => {
-    // Геокодинг пустого результата — по применённому запросу: иначе Nominatim
-    // дёргался бы на промежуточных буквах, пока список ещё не пересчитан (#3132).
-    const q = String(appliedSearchQuery || '').trim();
-    if (!q) {
-      setSearchMarker(null)
-      lastGeocodedQueryRef.current = ''
-      geocodeAbortRef.current?.abort()
-      geocodeAbortRef.current = null
-      if (geocodeTimerRef.current) {
-        clearTimeout(geocodeTimerRef.current)
-        geocodeTimerRef.current = null
-      }
-      return
-    }
-
-    if (Array.isArray(filteredPoints) && filteredPoints.length > 0) {
-      setSearchMarker(null)
-      lastGeocodedQueryRef.current = ''
-      geocodeAbortRef.current?.abort()
-      geocodeAbortRef.current = null
-      if (geocodeTimerRef.current) {
-        clearTimeout(geocodeTimerRef.current)
-        geocodeTimerRef.current = null
-      }
-      return
-    }
-
-    if (!mapUiApi?.focusOnCoord) return
-    // #3161: пустой список под прежним ответом сервера (`keepPreviousData`) ещё
-    // не значит «по запросу точек нет» — геокодим только после ответа поиска.
-    if (isSearching) return
-    if (lastGeocodedQueryRef.current === q) return
-
-    const focusWith = (coords: { lat: number; lng: number; label?: string; zoom?: number }) => {
-      setSearchMarker({ lat: coords.lat, lng: coords.lng, label: coords.label })
-      lastGeocodedQueryRef.current = q
-      try {
-        mapUiApi.focusOnCoord?.(`${coords.lat},${coords.lng}`, { zoom: coords.zoom ?? 11 })
-      } catch {
-        // noop
-      }
-    }
-
-    const focusFallback = () => {
-      focusWith({ lat: 53.902496, lng: 27.561481, label: i18nT('map:components.UserPoints.PointsListGrid.minsk_f73327f9'), zoom: 10 })
-    }
-
-    if (geocodeTimerRef.current) clearTimeout(geocodeTimerRef.current)
-    geocodeTimerRef.current = setTimeout(() => {
-      geocodeTimerRef.current = null
-      geocodeAbortRef.current?.abort()
-
-      const controller = new AbortController()
-      geocodeAbortRef.current = controller
-
-      nominatimSearch(
-        { q, limit: 1, addressdetails: 1, acceptLanguage: getMapGeocoderLanguage() },
-        { signal: controller.signal },
-      )
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (controller.signal.aborted) return
-          const item = Array.isArray(data) ? data[0] : null
-          const lat = Number(item?.lat)
-          const lng = Number(item?.lon)
-          if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-            focusFallback()
-            return
-          }
-
-          focusWith({ lat, lng, label: String(item?.display_name ?? ''), zoom: 13 })
-        })
-        .catch(() => {
-          if (controller.signal.aborted) return
-          focusFallback()
-        })
-    }, 450)
-
-    return () => {
-      if (geocodeTimerRef.current) {
-        clearTimeout(geocodeTimerRef.current)
-        geocodeTimerRef.current = null
-      }
-      geocodeAbortRef.current?.abort()
-    }
-  }, [appliedSearchQuery, filteredPoints, isSearching, mapUiApi])
-
   // На узком экране режим показа полностью определяется верхним 3-таб-баром
   // (Карта / Список / Фильтры) ниже, поэтому standalone list-режим (с тяжёлой
   // summary-шапкой) применяем только на десктопе/широком web.
   if (viewMode === 'list' && isWideScreen) {
-    const columns = typeof numColumns === 'number' && Number.isFinite(numColumns) ? numColumns : 1
     // #3133: desktop list-режим тоже виртуализирован — раньше web рисовал все
-    // filteredPoints.map без окна.
+    // filteredPoints.map без окна. Сетки в несколько колонок нет (#3135: мёртвые
+    // grid-ветки убраны вместе с `numColumns`).
     return (
       <FlashList
         data={filteredPoints}
         extraData={listFlashExtraData}
-        renderItem={({ item, index }: { item: any; index: number }) => {
-          if (columns <= 1) {
-            return renderItem({ item })
-          }
-          const gap = 12
-          const col = columns > 0 ? index % columns : 0
-          const isFirst = col === 0
-          const isLast = col === columns - 1
-          const paddingLeft = isFirst ? 0 : gap / 2
-          const paddingRight = isLast ? 0 : gap / 2
-          return (
-            <View style={{ paddingLeft, paddingRight }}>
-              {renderItem({ item })}
-            </View>
-          )
-        }}
+        renderItem={renderItem}
         keyExtractor={(item: { id?: string | number }, index: number) => String(item?.id ?? `idx-${index}`)}
         {...({ estimatedItemSize: 120 } as any)}
-        ListHeaderComponent={renderHeader()}
+        ListHeaderComponent={header}
         ListEmptyComponent={renderListEmpty}
-        numColumns={columns}
-        key={String(columns)}
-        contentContainerStyle={columns > 1 ? styles.gridListContent : styles.listContent}
+        contentContainerStyle={styles.listContent}
         refreshing={isLoading}
         onRefresh={onRefresh}
         drawDistance={600}
@@ -679,7 +449,7 @@ export const PointsListGrid: React.FC<{
     return (
       <View style={localStyles.mapLayoutContainer}>
         <View style={localStyles.mapMainContent}>
-          {renderMapCanvas()}
+          {mapCanvas}
         </View>
 
         <View style={localStyles.mapRightPanel}>
@@ -715,7 +485,7 @@ export const PointsListGrid: React.FC<{
       </View>
 
       {mobileTab === 'map' ? (
-        renderMapCanvas()
+        mapCanvas
       ) : mobileTab === 'filters' ? (
         <View style={localStyles.mobilePanelContainer}>{renderFiltersPanel(true)}</View>
       ) : (

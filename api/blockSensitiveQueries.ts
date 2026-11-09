@@ -117,6 +117,7 @@ export const BLOCK_EXEMPT_ROOTS: Readonly<Record<string, string>> = {
   'filter-options': 'справочник',
   userPointsAll: 'личные точки владельца',
   userPointsSearch: 'личные точки владельца: серверный поиск по пинам (#3161)',
+  'drive-info': 'время в пути OSRM от геолокации до своей точки (#3135); чужого контента нет',
   'my-travels-count': 'свои путешествия',
   'export-my-travels-count': 'свои путешествия',
   'full-book-export': 'серверные задания книги владельца: статус и счётчики, без чужого контента',

@@ -7,11 +7,6 @@ import { UserPointPopupContent } from './UserPointPopupContent.web'
 import { translate as i18nT } from '@/i18n'
 
 
-type DriveInfo =
-  | { status: 'loading' }
-  | { status: 'ok'; distanceKm: number; durationMin: number }
-  | { status: 'error' }
-
 type UserPointsMapWebLayersProps = {
   mods: any
   points: ImportedPoint[]
@@ -30,13 +25,11 @@ type UserPointsMapWebLayersProps = {
   routeLines?: Array<{ id: number; line: Array<[number, number]> }>
   mapInstance: any
   isCompactPopup: boolean
-  driveInfoById: Record<number, DriveInfo | undefined>
   polylinePathOptions: any
   getMarkerIconCached: (color: any, opts?: { active?: boolean; emphasize?: boolean }) => any
   onPointPress?: (point: ImportedPoint) => void
   onEditPoint?: (point: ImportedPoint) => void
   onDeletePoint?: (point: ImportedPoint) => void
-  requestDriveInfo: (args: { pointId: number; pointLat: number; pointLng: number }) => void
   registerPointMarker: (args: {
     pointId: number
     marker: UserPointMarkerHandle | null
@@ -120,23 +113,20 @@ export const UserPointsMapWebLayers = React.memo(function UserPointsMapWebLayers
     routeLines,
     mapInstance,
     isCompactPopup,
-    driveInfoById,
     polylinePathOptions,
     getMarkerIconCached,
     onPointPress,
     onEditPoint,
     onDeletePoint,
-    requestDriveInfo,
     registerPointMarker,
   } = props
 
-  // Клик по маркеру: приблизить к точке, при известной геолокации запросить
-  // время в пути, сообщить экрану о выборе. Попап Leaflet открывает сам (bindPopup).
+  // Клик по маркеру: приблизить к точке и сообщить экрану о выборе. Попап
+  // Leaflet открывает сам (bindPopup); время в пути считает сам попап (#3135).
   const handleMarkerClick = React.useCallback(
     (point: ImportedPoint, _handle: UserPointMarkerHandle) => {
       const lat = Number(point.latitude)
       const lng = Number(point.longitude)
-      const pointId = Number(point.id)
       try {
         const map = mapInstance
         if (map && typeof map.getZoom === 'function' && typeof map.setView === 'function') {
@@ -148,44 +138,26 @@ export const UserPointsMapWebLayers = React.memo(function UserPointsMapWebLayers
         // noop
       }
 
-      try {
-        const userLat = Number(centerOverride?.lat)
-        const userLng = Number(centerOverride?.lng)
-        const driveInfo = Number.isFinite(pointId) ? driveInfoById[pointId] : undefined
-        if (
-          Number.isFinite(pointId) &&
-          Number.isFinite(userLat) &&
-          Number.isFinite(userLng) &&
-          driveInfo?.status !== 'ok' &&
-          driveInfo?.status !== 'loading'
-        ) {
-          requestDriveInfo({ pointId, pointLat: lat, pointLng: lng })
-        }
-      } catch {
-        // noop
-      }
-
       onPointPress?.(point)
     },
-    [centerOverride?.lat, centerOverride?.lng, driveInfoById, mapInstance, onPointPress, requestDriveInfo],
+    [mapInstance, onPointPress],
   )
 
   const renderPopup = React.useCallback(
     (point: ImportedPoint, closePopup: () => void) => {
-      const pointId = Number(point.id)
       return (
         <UserPointPopupContent
           point={point}
           colors={colors as any}
           isCompactPopup={isCompactPopup}
-          driveInfo={Number.isFinite(pointId) ? driveInfoById[pointId] : undefined}
+          driveFrom={centerOverride}
           onClose={closePopup}
           onEditPoint={onEditPoint}
           onDeletePoint={onDeletePoint}
         />
       )
     },
-    [colors, driveInfoById, isCompactPopup, onDeletePoint, onEditPoint],
+    [centerOverride, colors, isCompactPopup, onDeletePoint, onEditPoint],
   )
 
   return (

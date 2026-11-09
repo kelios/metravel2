@@ -43,6 +43,8 @@ const PERSONAL_KEY_ROOTS = new Set<string>([
   'user-blocked',
   'user-verifications',
   'userPointsAll',
+  // #3161: серверный поиск по пинам владельца — тоже личные данные.
+  'userPointsSearch',
 ])
 
 const keyRoot = ({ body }: Factory): string | null => /^\[\s*'([^']+)'/.exec(body)?.[1] ?? null
@@ -184,7 +186,7 @@ describe('#1829 владелец в ключах кэша', () => {
       ['tripMyApplications', (id: string) => queryKeys.tripMyApplications(id)],
       ['tripNotifications', (id: string) => queryKeys.tripNotifications(id)],
       ['userPointsAll', (id: string) => queryKeys.userPointsAll(id)],
-      ['userPointsPagination', (id: string) => queryKeys.userPointsPagination(id)],
+      ['userPointsSearch', (id: string) => queryKeys.userPointsSearch(id, 'озеро')],
     ] as const)
       .filter(([, build]) => JSON.stringify(build('A')) === JSON.stringify(build('B')))
       .map(([name]) => name)
@@ -204,10 +206,9 @@ describe('#1829 владелец в ключах кэша', () => {
       ['plannedTripsAll → plannedTripsMine', queryKeys.plannedTripsAll(), queryKeys.plannedTripsMine('A')],
       ['contactRequestsAll → contactRequests', queryKeys.contactRequestsAll(), queryKeys.contactRequests('A', 'incoming')],
       ['stravaActivitiesRoot → stravaActivities', queryKeys.stravaActivitiesRoot(), queryKeys.stravaActivities('A', { page: 1 })],
-      // Отметка полноты коллекции точек: инвалидация `userPointsAll` обязана
-      // задевать и её, иначе от снесённых данных остался бы признак
-      // «докачано целиком» (#1709).
-      ['userPointsAll → userPointsPagination', queryKeys.userPointsAll('A'), queryKeys.userPointsPagination('A')],
+      // #3161: результаты серверного поиска по пинам инвалидируются поддеревом
+      // владельца после мутаций и импорта.
+      ['userPointsSearchAll → userPointsSearch', queryKeys.userPointsSearchAll('A'), queryKeys.userPointsSearch('A', 'озеро')],
     ] as const)
       .filter(([, parent, child]) => !isPrefixOf(parent, child))
       .map(([label]) => label)

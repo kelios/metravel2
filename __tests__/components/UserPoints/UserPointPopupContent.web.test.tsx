@@ -22,6 +22,12 @@ const mockPlacePopupCard = jest.fn((props: any) => (
 ));
 
 // #3161: карточка заказывает полную запись у store — сеть в тесте не нужна.
+// #3135: время в пути считает общий хук `useDriveInfoQuery` (React Query) — в тесте он подменён.
+const mockUseDriveInfoQuery = jest.fn(() => null as any);
+jest.mock('@/components/UserPoints/useDriveInfoQuery', () => ({
+  useDriveInfoQuery: (args: any) => mockUseDriveInfoQuery(args),
+}));
+
 jest.mock('@/api/userPoints', () => ({
   userPointsApi: { getPointsByIds: jest.fn(async () => []) },
 }));
@@ -93,6 +99,7 @@ describe('UserPointPopupContent (web, #3131)', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockPlacePopupCard.mockClear();
+    mockUseDriveInfoQuery.mockReturnValue(null);
   });
 
   it('renders the saved point popup through the shared PlacePopupCard template', async () => {
@@ -177,7 +184,11 @@ describe('UserPointPopupContent (web, #3131)', () => {
   });
 
   it('turns drive info into metres and seconds for the card', async () => {
-    await renderContent({ driveInfo: { status: 'ok', distanceKm: 12.5, durationMin: 20 } });
+    mockUseDriveInfoQuery.mockReturnValue({ status: 'ok', distanceKm: 12.5, durationMin: 20 });
+    await renderContent({ driveFrom: { lat: 50, lng: 19.9 } });
+    expect(mockUseDriveInfoQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ from: { lat: 50, lng: 19.9 }, to: { lat: point.latitude, lng: point.longitude } }),
+    );
     expect(mockPlacePopupCard.mock.calls.at(-1)?.[0]).toEqual(
       expect.objectContaining({ drivingDistanceMeters: 12500, drivingDurationSeconds: 1200, isDrivingLoading: false }),
     );

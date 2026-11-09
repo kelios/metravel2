@@ -286,6 +286,11 @@ export const PointsListHeader: React.FC<PointsListHeaderProps> = ({
   )
 }
 
+/** Минимальная ширина плитки статистики — четыре в ряд на 440 px панели. */
+const STAT_CARD_MIN_WIDTH = 104
+/** Переключатель «С картой / Только список» не сжимается уже двух подписей. */
+const VIEW_MODE_CONTROL_MIN_WIDTH = 176
+
 const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleSheet.create({
   summaryCard: {
     marginBottom: DESIGN_TOKENS.spacing.md,
@@ -302,7 +307,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     gap: DESIGN_TOKENS.spacing.xs,
   },
   statCard: {
-    minWidth: 104,
+    minWidth: STAT_CARD_MIN_WIDTH,
     justifyContent: 'space-between',
     backgroundColor: colors.surface,
     borderColor: colors.borderLight,
@@ -314,7 +319,7 @@ const createLocalStyles = (colors: ReturnType<typeof useThemedColors>) => StyleS
     gap: DESIGN_TOKENS.spacing.sm,
   },
   viewModeControl: {
-    minWidth: 176,
+    minWidth: VIEW_MODE_CONTROL_MIN_WIDTH,
     flexGrow: 1,
     flexShrink: 1,
   },

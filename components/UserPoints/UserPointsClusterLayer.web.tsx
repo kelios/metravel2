@@ -15,15 +15,22 @@ import React from 'react'
 import { createPortal } from 'react-dom'
 
 import { buildClusterIconHtml } from '@/components/MapPage/Map/mapMarkerStyles'
-import { createMapClusterGroup } from '@/components/MapPage/Map/mapClusterGroup'
 import { useApplyClusterAccessibleName } from '@/components/MapPage/Map/clusterAccessibleName'
-import { DESIGN_COLORS, DESIGN_TOKENS } from '@/constants/designSystem'
-import { OSM_PROXY_MAX_ZOOM } from '@/config/mapWebLayers'
+import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { useTheme } from '@/hooks/useTheme'
-import { logError } from '@/utils/logger'
 import type { ImportedPoint } from '@/types/userPoints'
 
-import { getPointTitle, isSitePoint as isSitePointOf } from './userPointPresentation'
+import { getPointTitle } from './userPointPresentation'
+import { useUserPointsClusterGroup } from './useUserPointsClusterGroup'
+import {
+  REVEAL_ACTIVE_DELAY_MS,
+  applyMarkerAccessibleName,
+  applyMarkerKeyboard,
+  buildPopupOptions,
+  createMarkerHandle,
+  resolvePointMarkerIcon,
+  toFiniteId,
+} from './userPointsClusterMarkers'
 
 export type UserPointMarkerIconGetter = (
   color: string | undefined,
@@ -83,50 +90,6 @@ type MarkerEntry = {
   coordKeyFixed: string
 }
 
-const DEFAULT_SITE_POINT_COLOR = DESIGN_COLORS.travelPoint
-const POPUP_CLASS_NAME = 'metravel-user-point-popup metravel-place-popup'
-const POPUP_MAX_WIDTH = 360
-/** Длительность зум-анимации Leaflet; после неё можно просить кластер раскрыть маркер. */
-const REVEAL_ACTIVE_DELAY_MS = 350
-
-const toFiniteId = (point: ImportedPoint): number | null => {
-  const id = Number(point?.id)
-  return Number.isFinite(id) ? id : null
-}
-
-const applyMarkerAccessibleName = (marker: any, title: string) => {
-  try {
-    const element: HTMLElement | null = marker?._icon || marker?.getElement?.() || null
-    if (!element) return
-    element.setAttribute('aria-label', title)
-    element.setAttribute('title', title)
-  } catch {
-    // noop
-  }
-}
-
-/**
- * Leaflet ставит `tabindex="0"` и `role="button"` в `_initIcon` только при
- * `options.keyboard`, но при повторном `setIcon` переиспользует тот же `<div>`
- * и уже поставленные атрибуты не снимает. Снимаем сами, когда точка перестаёт
- * быть активной: в tab-порядке остаётся одна выбранная булавка, а не вся коллекция.
- */
-const applyMarkerKeyboard = (marker: any, active: boolean) => {
-  try {
-    const element: HTMLElement | null = marker?._icon || marker?.getElement?.() || null
-    if (!element) return
-    if (active) {
-      element.setAttribute('tabindex', '0')
-      element.setAttribute('role', 'button')
-    } else {
-      element.removeAttribute('tabindex')
-      element.removeAttribute('role')
-    }
-  } catch {
-    // noop
-  }
-}
-
 export const UserPointsClusterLayer: React.FC<UserPointsClusterLayerProps> = ({
   L,
   map,
@@ -140,12 +103,9 @@ export const UserPointsClusterLayer: React.FC<UserPointsClusterLayerProps> = ({
   renderPopup,
 }) => {
   const { isDark } = useTheme()
-  const groupRef = React.useRef<any>(null)
   const entriesRef = React.useRef<Map<number, MarkerEntry>>(new Map())
   const popupContainerRef = React.useRef<HTMLElement | null>(null)
   const [openPointId, setOpenPointId] = React.useState<number | null>(null)
-  const [groupVersion, setGroupVersion] = React.useState(0)
-  const [clusterPluginNonce, setClusterPluginNonce] = React.useState(0)
 
   // «Latest»-рефы: клик и регистрация приходят инлайн-функциями от родителя,
   // а пересоздавать маркеры на каждый его рендер нельзя.
@@ -210,71 +170,13 @@ export const UserPointsClusterLayer: React.FC<UserPointsClusterLayerProps> = ({
     popupContainerRef.current = container
   }
 
-  // Группа кластеров создаётся один раз на карту.
-  React.useEffect(() => {
-    if (!L || !map || typeof map.addLayer !== 'function') return
-    if (typeof L.markerClusterGroup !== 'function') {
-      // Штатно плагин уже применён в loadLeafletRuntime (#765); это фолбэк для
-      // нештатного L, как в MarkerClusterGroup общей карты.
-      let cancelled = false
-      Promise.resolve(import('@/utils/leafletVendor'))
-        .then(() => {
-          if (!cancelled && typeof L.markerClusterGroup === 'function') {
-            setClusterPluginNonce((v) => v + 1)
-          }
-        })
-        .catch(() => {})
-      return () => {
-        cancelled = true
-      }
-    }
-
-    const iconCreateFunction = clusterIconFactoryRef.current
-      ? (cluster: any) => {
-          const factory = clusterIconFactoryRef.current
-          return factory ? factory(cluster) : undefined
-        }
-      : undefined
-
-    // Плагин кластеров при `onAdd` бросает «Map has no maxZoom specified», если у
-    // карты нет потолка зума — на проде 08.11 это уронило весь экран. Потолок
-    // задаёт MapContainer; здесь страховка для карты без него, а сам addLayer
-    // под try, чтобы сбой слоя не превращался в белую страницу.
-    let created: { group: any; dispose: () => void } | null = null
-    try {
-      if (!Number.isFinite(Number(map.getMaxZoom?.())) && typeof map.setMaxZoom === 'function') {
-        map.setMaxZoom(OSM_PROXY_MAX_ZOOM)
-      }
-      created = createMapClusterGroup(L, map, { iconCreateFunction })
-      map.addLayer(created.group)
-    } catch (error) {
-      // Leaflet регистрирует слой в `_layers` до `onAdd`, поэтому упавшую группу
-      // снимаем с карты; сбой уходит в лог/мониторинг — пустая карта при живом
-      // списке иначе останется немой.
-      if (created) {
-        try {
-          created.dispose()
-          map.removeLayer?.(created.group)
-        } catch {
-          // noop
-        }
-      }
-      logError(error, { scope: 'UserPointsClusterLayer.createGroup' })
-      return
-    }
-    const { group, dispose } = created
-    groupRef.current = group
-    setGroupVersion((v) => v + 1)
-
-    const entries = entriesRef.current
-    return () => {
-      try {
-        dispose()
-        map.removeLayer(group)
-        group.clearLayers()
-      } catch {
-        // noop
-      }
+  // Группа кластеров создаётся один раз на карту (#3135: хук `useUserPointsClusterGroup`).
+  const { groupRef, groupVersion } = useUserPointsClusterGroup({
+    L,
+    map,
+    clusterIconFactoryRef,
+    onDispose: React.useCallback(() => {
+      const entries = entriesRef.current
       for (const entry of entries.values()) {
         try {
           entry.marker.off()
@@ -290,10 +192,9 @@ export const UserPointsClusterLayer: React.FC<UserPointsClusterLayerProps> = ({
         })
       }
       entries.clear()
-      groupRef.current = null
       setOpenPointId(null)
-    }
-  }, [L, map, clusterPluginNonce])
+    }, []),
+  })
 
   // Смена темы перекрашивает кластеры на месте, без пересборки группы.
   React.useEffect(() => {
@@ -304,7 +205,7 @@ export const UserPointsClusterLayer: React.FC<UserPointsClusterLayerProps> = ({
     } catch {
       // noop
     }
-  }, [isDark, groupVersion])
+  }, [isDark, groupVersion, groupRef])
 
   // Доступное имя кластеров — для каждой новой партии после зума/пана.
   React.useEffect(() => {
@@ -324,24 +225,9 @@ export const UserPointsClusterLayer: React.FC<UserPointsClusterLayerProps> = ({
     const entries = entriesRef.current
     const activeId = Number(activePointId)
     const popupContainer = popupContainerRef.current
-    const popupOptions = {
-      className: POPUP_CLASS_NAME,
-      closeButton: false,
-      autoPan: true,
-      autoPanPadding: isCompactPopup ? [16, 92] : [28, 120],
-      maxWidth: POPUP_MAX_WIDTH,
-      minWidth: 0,
-    }
-
-    const resolveIcon = (point: ImportedPoint, active: boolean) => {
-      const sitePoint = isSitePointOf(point)
-      const baseColor = String(point?.color ?? '').trim()
-      const fill = sitePoint ? baseColor || DEFAULT_SITE_POINT_COLOR : baseColor
-      return getMarkerIconCached(String(fill || '').trim() || colors.backgroundTertiary, {
-        active,
-        emphasize: sitePoint,
-      })
-    }
+    const popupOptions = buildPopupOptions(isCompactPopup)
+    const resolveIcon = (point: ImportedPoint, active: boolean) =>
+      resolvePointMarkerIcon(point, active, getMarkerIconCached, colors.backgroundTertiary)
 
     // 1. Снять маркеры точек, которых больше нет.
     const removed: MarkerEntry[] = []
@@ -450,48 +336,7 @@ export const UserPointsClusterLayer: React.FC<UserPointsClusterLayerProps> = ({
         continue
       }
 
-      const handle: UserPointMarkerHandle = {
-        pointId: id,
-        marker,
-        openPopup: () => {
-          try {
-            const currentGroup = groupRef.current
-            const onMap = typeof map?.hasLayer === 'function' ? map.hasLayer(marker) : true
-            if (!onMap && currentGroup && typeof currentGroup.zoomToShowLayer === 'function') {
-              currentGroup.zoomToShowLayer(marker, () => {
-                try {
-                  marker.openPopup?.()
-                } catch {
-                  // noop
-                }
-              })
-              return
-            }
-            marker.openPopup?.()
-          } catch {
-            // noop
-          }
-        },
-        closePopup: () => {
-          try {
-            marker.closePopup?.()
-          } catch {
-            // noop
-          }
-        },
-        setZIndexOffset: (offset: number) => {
-          try {
-            marker.setZIndexOffset?.(offset)
-          } catch {
-            // noop
-          }
-        },
-        getLatLng: () => marker.getLatLng?.(),
-        getElement: () => marker.getElement?.() ?? marker._icon ?? null,
-        get _map() {
-          return marker._map ?? null
-        },
-      }
+      const handle = createMarkerHandle(id, marker, map, () => groupRef.current)
 
       if (popupContainer) {
         marker.bindPopup(() => popupContainer, popupOptions)
@@ -553,6 +398,7 @@ export const UserPointsClusterLayer: React.FC<UserPointsClusterLayerProps> = ({
     colors.backgroundTertiary,
     getMarkerIconCached,
     groupVersion,
+    groupRef,
     applyClusterAccessibleName,
   ])
 
@@ -576,7 +422,7 @@ export const UserPointsClusterLayer: React.FC<UserPointsClusterLayerProps> = ({
       }
     }, REVEAL_ACTIVE_DELAY_MS)
     return () => clearTimeout(timer)
-  }, [activePointId, map, groupVersion])
+  }, [activePointId, map, groupVersion, groupRef])
 
   // Открытая точка отфильтрована — попап закрывается, а не висит над пустотой.
   React.useEffect(() => {

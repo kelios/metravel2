@@ -58,10 +58,6 @@ export const createStyles = (colors: ReturnType<typeof useThemedColors>) => Styl
   listContent: {
     paddingBottom: DESIGN_TOKENS.spacing.xl,
   },
-  gridListContent: {
-    paddingHorizontal: DESIGN_TOKENS.spacing.lg,
-    paddingBottom: DESIGN_TOKENS.spacing.xl,
-  },
   gridColumnWrapper: {
     gap: DESIGN_TOKENS.spacing.md,
     paddingBottom: DESIGN_TOKENS.spacing.md,

@@ -17,11 +17,17 @@ import { PointsList } from '@/components/UserPoints/PointsList';
 // map-режиме не монтируется вовсе. Ловим саму проводку — аргументы рендерера.
 const headerProps: Array<Record<string, unknown>> = [];
 
-jest.mock('@/components/UserPoints/usePointsHeaderRenderer', () => ({
-  usePointsHeaderRenderer: (args: Record<string, unknown>) => {
-    headerProps.push(args);
-    return () => null;
+jest.mock('@/components/UserPoints/PointsListHeader', () => ({
+  PointsListHeader: (props: Record<string, unknown>) => {
+    headerProps.push(props);
+    return null;
   },
+}));
+
+// #3135: шапка — элемент в пропе `header` сетки и монтируется только на вкладке
+// «Фильтры» / в режиме списка; мок сетки рисует её всегда, чтобы поймать проводку.
+jest.mock('@/components/UserPoints/PointsListGrid', () => ({
+  PointsListGrid: (props: Record<string, unknown>) => (props.header as React.ReactElement) ?? null,
 }));
 
 jest.mock('@/components/UserPoints/UserPointsMap', () => {

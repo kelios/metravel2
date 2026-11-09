@@ -40,6 +40,12 @@ const mockPlaceListCard = jest.fn((props: any) => {
 });
 
 // #3161: карточка заказывает полную запись у store — сеть в тесте не нужна.
+// #3135: время в пути — общий хук на React Query; карточке в тесте провайдер не нужен.
+const mockUseDriveInfoQuery = jest.fn(() => null as any);
+jest.mock('@/components/UserPoints/useDriveInfoQuery', () => ({
+  useDriveInfoQuery: (args: any) => mockUseDriveInfoQuery(args),
+}));
+
 jest.mock('@/api/userPoints', () => ({
   userPointsApi: { getPointsByIds: jest.fn(async () => []) },
 }));
@@ -277,5 +283,18 @@ describe('PointCard', () => {
     });
     expect(utils.queryByTestId('userpoints-point-card-skeleton-777', { includeHiddenElements: true })).toBeNull();
     expect(utils.getByTestId('userpoints-point-card-777')).toBeTruthy();
+  });
+
+  it('asks for drive info only when active and a location is known, and shows it as a badge (#3135)', async () => {
+    mockUseDriveInfoQuery.mockReturnValue(null);
+    await render(<PointCard point={mockPoint} driveFrom={{ lat: 50, lng: 19.9 }} />);
+    expect(mockUseDriveInfoQuery).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: false }));
+
+    mockUseDriveInfoQuery.mockReturnValue({ status: 'ok', distanceKm: 12.5, durationMin: 20 });
+    await render(<PointCard point={mockPoint} active driveFrom={{ lat: 50, lng: 19.9 }} />);
+    expect(mockUseDriveInfoQuery).toHaveBeenLastCalledWith(
+      expect.objectContaining({ enabled: true, from: { lat: 50, lng: 19.9 }, to: { lat: mockPoint.latitude, lng: mockPoint.longitude } }),
+    );
+    expect(screen.getByText(/12,5 км|12\.5 км/)).toBeTruthy();
   });
 });

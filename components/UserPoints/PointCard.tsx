@@ -27,6 +27,14 @@ import { useResponsiveWidth } from '@/hooks/useResponsive';
 import { METRICS } from '@/constants/layout';
 import { PointSkeletonCard } from './PointsListSkeleton';
 import { useUserPointDetail } from './userPointDetailsStore';
+import { useDriveInfoQuery } from './useDriveInfoQuery';
+import {
+  getCategoryLabel,
+  getCountryLabel,
+  getPointPhotoUrl,
+  getPointSubtitle,
+  getPointTitle,
+} from './userPointPresentation';
 
 /** Высота фото-полосы карточки точки в списке на телефоне (#3133). */
 export const PHONE_LIST_IMAGE_HEIGHT = 96;
@@ -48,95 +56,15 @@ interface PointCardProps {
   selected?: boolean;
   active?: boolean;
   compact?: boolean;
-  driveInfo?:
-    | null
-    | { status: 'loading' }
-    | { status: 'ok'; distanceKm: number; durationMin: number }
-    | { status: 'error' };
+  /**
+   * Откуда считать время в пути (геолокация). Запрос идёт только у активной
+   * карточки и делится с попапом карты через `useDriveInfoQuery` (#3135).
+   */
+  driveFrom?: { lat?: number | null; lng?: number | null } | null;
   onToggleSelect?: (point: ImportedPoint) => void;
 }
 
 const isWebPlatform = () => Platform.OS === 'web';
-
-const looksLikeFullAddress = (value: string): boolean => {
-  const parts = value.split(',').map((p) => p.trim()).filter(Boolean);
-  return parts.length >= 3;
-};
-
-const firstMeaningfulSegment = (value: string): string => {
-  const parts = value.split(',').map((p) => p.trim()).filter(Boolean);
-  if (parts.length === 0) return value.trim();
-  if (/^\d+[A-Za-zА-Яа-я]?$/.test(parts[0]) && parts[1]) {
-    return `${parts[0]}, ${parts[1]}`;
-  }
-  return parts[0];
-};
-
-const getPointPhotoUrl = (point: ImportedPoint): string | null => {
-  const pointRecord = point as unknown as Record<string, unknown>;
-  const direct = typeof point.photo === 'string' ? point.photo.trim() : '';
-  if (direct) return direct;
-
-  const legacy = pointRecord.photos;
-  if (typeof legacy === 'string' && legacy.trim()) return legacy.trim();
-  if (!legacy || typeof legacy !== 'object') return null;
-
-  const knownKeys = ['url', 'src', 'photo', 'image', 'thumb', 'thumbnail', 'travelImageThumbUrl'];
-  for (const key of knownKeys) {
-    const value = (legacy as Record<string, unknown>)[key];
-    if (typeof value === 'string' && value.trim()) return value.trim();
-  }
-  for (const value of Object.values(legacy as Record<string, unknown>)) {
-    if (typeof value === 'string' && value.trim()) return value.trim();
-  }
-  return null;
-};
-
-const getCountryLabel = (point: ImportedPoint): string => {
-  const direct = String((point as unknown as Record<string, unknown>).country ?? '').trim();
-  if (direct) return direct;
-  const address = String(point.address ?? '').trim();
-  if (!address) return '';
-  const parts = address.split(',').map((p) => p.trim()).filter(Boolean);
-  return parts.length >= 2 ? parts[parts.length - 1] ?? '' : '';
-};
-
-const getCategoryLabel = (point: ImportedPoint, countryLabel: string): string => {
-  const clean = (values: unknown[]) =>
-    values
-      .map((value) => String(value).trim())
-      .filter(Boolean)
-      .filter((name) => !countryLabel || name.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) !== 0)
-      .join(', ');
-
-  const names = (point as unknown as Record<string, unknown>).categoryNames;
-  if (Array.isArray(names) && names.length > 0) return clean(names);
-
-  const ids = point.categoryIds ?? point.category_ids;
-  if (Array.isArray(ids) && ids.length > 0) return clean(ids);
-
-  const legacy = String(point.category ?? '').trim();
-  if (!legacy) return '';
-  if (countryLabel && legacy.localeCompare(countryLabel, undefined, { sensitivity: 'accent' }) === 0) return '';
-  return legacy;
-};
-
-const getPointTitle = (point: ImportedPoint): string => {
-  const name = String(point.name ?? '').trim();
-  if (name) return looksLikeFullAddress(name) ? firstMeaningfulSegment(name) : name;
-  const address = String(point.address ?? '').trim();
-  if (address) return looksLikeFullAddress(address) ? firstMeaningfulSegment(address) : address;
-  return i18nT('map:components.UserPoints.PointCard.tochka_d03859aa');
-};
-
-const getPointSubtitle = (point: ImportedPoint, title: string): string => {
-  const name = String(point.name ?? '').trim();
-  const address = String(point.address ?? '').trim();
-  const fullFromName = name && looksLikeFullAddress(name) && name !== title ? name : '';
-  const source = fullFromName || address;
-  if (!source || source.toLowerCase() === title.toLowerCase()) return '';
-  return source;
-};
 
 const openPointUrl = async (url: string) => {
   const opened = await openExternalUrlInNewTab(url, {
@@ -172,13 +100,18 @@ export const PointCard: React.FC<PointCardProps> = React.memo(({
   selected,
   active,
   compact = true,
-  driveInfo,
+  driveFrom,
   onToggleSelect,
 }) => {
   const colors = useThemedColors();
   // #3161: в списке лежат пины; полная карточка (название, адрес, фото)
   // подгружается окном по `ids=` — до прихода рисуем каркас той же геометрии.
   const { point, hydrating } = useUserPointDetail(pointProp);
+  const driveInfo = useDriveInfoQuery({
+    from: driveFrom,
+    to: { lat: point?.latitude, lng: point?.longitude },
+    enabled: Boolean(active && driveFrom),
+  });
   // #1814 — один источник ширины на всю фичу «Мои точки»: родительский
   // `PointsList` читает `useBreakpoints({ clientOnly: true })`, карточка обязана
   // читать тот же стор с той же семантикой гидратации, иначе на первом web-кадре

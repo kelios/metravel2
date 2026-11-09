@@ -21,27 +21,36 @@ export function buildUserPointsTravelData(points: ImportedPoint[]) {
   }))
 }
 
+/**
+ * Центр карты: геолокация, иначе центр коллекции, иначе `null` — пустая
+ * коллекция без геолокации открывает мир, а не зашитую столицу (#3135).
+ */
 export function getUserPointsCenter(
   center?: { lat: number; lng: number },
-  safePoints: ImportedPoint[] = []
-) {
+  safePoints: ReadonlyArray<{ latitude?: unknown; longitude?: unknown }> = []
+): { lat: number; lng: number } | null {
   if (center && Number.isFinite(center.lat) && Number.isFinite(center.lng)) {
     return { lat: center.lat, lng: center.lng }
   }
 
-  if (safePoints.length > 0) {
-    const sum = safePoints.reduce(
-      (acc, p) => {
-        acc.lat += p.latitude
-        acc.lng += p.longitude
-        return acc
-      },
-      { lat: 0, lng: 0 }
-    )
-    return { lat: sum.lat / safePoints.length, lng: sum.lng / safePoints.length }
+  // Пины приходят с бэка без нормализации (координата может быть строкой или
+  // null): складываем только конечные числа, иначе `+=` склеит строки в NaN.
+  // `null`/`''` отсекаем явно — `Number(null)` равен 0 и сдвинул бы центр.
+  let latSum = 0
+  let lngSum = 0
+  let count = 0
+  for (const p of safePoints) {
+    if (p?.latitude == null || p?.longitude == null || p.latitude === '' || p.longitude === '') continue
+    const lat = Number(p.latitude)
+    const lng = Number(p.longitude)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue
+    latSum += lat
+    lngSum += lng
+    count += 1
   }
+  if (count > 0) return { lat: latSum / count, lng: lngSum / count }
 
-  return { lat: 55.7558, lng: 37.6173 }
+  return null
 }
 
 export type UserPointsBounds = [[number, number], [number, number]]

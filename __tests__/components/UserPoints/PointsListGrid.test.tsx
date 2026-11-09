@@ -71,7 +71,7 @@ describe('PointsListGrid', () => {
         viewMode="map"
         isLoading={false}
         filteredPoints={points}
-        renderHeader={() => <></>}
+        header={<></>}
         renderItem={({ item }) => {
           const { Text } = require('react-native');
           return <Text testID="userpoints-rendered-row">{String(item.name)}</Text>;
@@ -108,7 +108,7 @@ describe('PointsListGrid', () => {
     viewMode: 'map' as const,
     isLoading: false,
     filteredPoints: [] as any[],
-    renderHeader: () => <></>,
+    header: <></>,
     renderItem: ({ item }: { item: any }) => {
       const { Text } = require('react-native');
       return <Text testID="userpoints-rendered-row">{String(item.name)}</Text>;

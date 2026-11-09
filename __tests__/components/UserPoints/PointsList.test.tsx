@@ -35,6 +35,8 @@ jest.mock('@/components/UserPoints/PointsListGrid', () => {
       // Pressing segmented-list triggers onPanelTabChange so the parent can react.
       return (
         <View>
+          {/* #3135: шапка приходит элементом в `header`, а не рендерером. */}
+          {props.header}
           <Text testID="points-list-grid-view-mode">{props.viewMode}</Text>
           <TouchableOpacity
             testID="segmented-map"
@@ -169,8 +171,8 @@ describe('PointsList (manual create)', () => {
 
   const fillBasics = async () => {
     await fireEvent.changeText(screen.getByPlaceholderText('Например: Любимое кафе'), 'Место');
-    await fireEvent.changeText(screen.getByPlaceholderText('55.755800'), '55.7558');
-    await fireEvent.changeText(screen.getByPlaceholderText('37.617300'), '37.6173');
+    await fireEvent.changeText(screen.getByPlaceholderText('50.000000'), '55.7558');
+    await fireEvent.changeText(screen.getByPlaceholderText('20.000000'), '37.6173');
   };
 
   const selectCategory = async (id: string) => {

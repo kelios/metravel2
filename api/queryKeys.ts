@@ -94,6 +94,8 @@ export const queryKeys = {
     ['travelsForMapRoute', params] as const,
   travelsForMapRouteAll: () => ['travelsForMapRoute'] as const,
   mapClusters: (params: Record<string, unknown>) => ['mapClusters', params] as const,
+  /** Время в пути OSRM «откуда → куда» (#3135): карточка и попап делят один запрос. */
+  driveInfo: (fromKey: string, toKey: string) => ['drive-info', fromKey, toKey] as const,
   mapClustersAll: () => ['mapClusters'] as const,
   // Ленивые материалы места (#1571): ключ по placeKey — один запрос на place
   // на cache lifetime, повторное открытие карточки идёт из кэша.

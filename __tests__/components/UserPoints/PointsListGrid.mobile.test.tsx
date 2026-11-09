@@ -28,7 +28,7 @@ const baseProps = (overrides: Record<string, unknown>) => ({
   viewMode: 'map' as const,
   isLoading: false,
   filteredPoints: [] as any[],
-  renderHeader: () => <></>,
+  header: <></>,
   renderItem: () => <></>,
   renderEmpty: () => <></>,
   onRefresh: jest.fn(),

@@ -219,17 +219,14 @@ export interface RecommendationResponse {
   }>;
 }
 
-export interface UserPointsStats {
-  total: number;
-  byColor: Record<string, number>;
-  byCategoryId: Record<string, number>;
-  byStatus: Record<PointStatus, number>;
-  visited: number;
-  toVisit: number;
-  totalDistance: number;
-  countriesVisited: number;
-  citiesVisited: number;
-}
+/**
+ * Время в пути от текущей геолокации до точки (OSRM). Один тип на карточку,
+ * попап и хук `useDriveInfoQuery` — раньше объявлялся в шести файлах (#3135).
+ */
+export type DriveInfo =
+  | { status: 'loading' }
+  | { status: 'ok'; distanceKm: number; durationMin: number }
+  | { status: 'error' };
 
 export const STATUS_LABELS: Record<PointStatus, string> = {
   visited: 'Посещено',

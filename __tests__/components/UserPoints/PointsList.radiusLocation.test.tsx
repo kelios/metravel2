@@ -15,13 +15,14 @@ jest.mock('@/hooks/useResponsive', () => ({
 }));
 
 jest.mock('@/components/UserPoints/PointsListGrid', () => ({
-  PointsListGrid: () => null,
+  // #3135: шапка — элемент в пропе `header`; мок сетки рисует только её.
+  PointsListGrid: (props: any) => props.header ?? null,
 }));
 
-jest.mock('@/components/UserPoints/usePointsHeaderRenderer', () => ({
-  usePointsHeaderRenderer: (params: any) => {
-    mockHeaderParams.push(params);
-    return () => null;
+jest.mock('@/components/UserPoints/PointsListHeader', () => ({
+  PointsListHeader: (props: any) => {
+    mockHeaderParams.push(props);
+    return null;
   },
 }));
 

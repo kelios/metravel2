@@ -12,7 +12,6 @@ import type {
   RouteResponse,
   RecommendationRequest,
   RecommendationResponse,
-  UserPointsStats
 } from '@/types/userPoints';
 import type { DocumentPickerAsset } from 'expo-document-picker';
 import { translate as i18nT } from '@/i18n';
@@ -423,9 +422,6 @@ export const userPointsApi = {
     return apiClient.post<RecommendationResponse>('/user-points/recommendations/', request);
   },
   
-  async getStats() {
-    return apiClient.get<UserPointsStats>('/user-points/stats/');
-  },
 
   async exportKml() {
     return apiClient.download('/user-points/export-kml/', { method: 'GET' });
