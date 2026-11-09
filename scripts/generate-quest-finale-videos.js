@@ -326,10 +326,11 @@ const QUESTS = [
     { questId: 'baranovichi-kids-iron-horse', dir: 'baranovichiKidsIronHorse', finaleId: 341 },
     { questId: 'pinsk-kids-river-capital', dir: 'pinskKidsRiverCapital', finaleId: 342 },
     { questId: 'baranovichi-teens-two-stations', dir: 'baranovichiTeensTwoStations', finaleId: 343 },
-    // Волна F2 (квесты 347–349) — finaleId сверен по тексту финала 2026-11-09 (#3182)
+    // Волна F2 (квесты 347–350) — finaleId сверен по тексту финала 2026-11-09 (#3182)
     { questId: 'polotsk-kids-letter-u', dir: 'polotskKidsLetterU', finaleId: 344 },
     { questId: 'lida-kids-castle-squire', dir: 'lidaKidsCastleSquire', finaleId: 345 },
     { questId: 'mozyr-kids-castle-hill', dir: 'mozyrKidsCastleHill', finaleId: 346 },
+    { questId: 'nesvizh-kids-park-page', dir: 'nesvizhKidsParkPage', finaleId: 347 },
     // Легенды, рождественская волна и Выборг (237–284, 289–290) — finaleId сверен по тексту финала 2026-11-08 (#3184)
     { questId: 'vitebsk-dark-chronicle', dir: 'vitebskDarkChronicle', finaleId: 237 },
     { questId: 'grodno-royal-shadows', dir: 'grodnoRoyalShadows', finaleId: 238 },
