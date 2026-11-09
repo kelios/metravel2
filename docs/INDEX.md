@@ -205,6 +205,7 @@ Dated snapshots — использовать только с указанным 
 - `docs/INSTAGRAM_CONTENT_SPEC.md` — ТЗ владельца (10.10.2026) для контент-агентов Instagram @metravelby: недельная сетка, сезонность, работа со статьями, фото и люди, стиль, QA; роли `instagram-planner` → `instagram-researcher` → `instagram-creator` → `instagram-visual-qa`, оператор `instagram-editor`; раздел 25 — жёсткие правила владельца 04–06.10.2026. Мультяшный сезон «Наш день» — агент `reel-animator` и скилл `metravel-animated-reels`: постановочные сцены с действиями и диалогом, рендер в Grok Imagine при доступе, отдельные проверенные референсы для быта и реальной поездки.
 - `docs/INSTAGRAM_OPERATIONS.md` — рецепты оператора `instagram-editor`: режим «только по запросу», афиша, постановка в `scheduled_content` через веб/телефон/Graph API, публикация, метрики, чистка подписчиков.
 - `docs/INSTAGRAM_PLAN.md` — живой план Instagram @metravelby (календарь, пакеты недель, недельные разборы, чистка) для агентов `instagram-*`; диагноз 04.10.2026 (только статьи автора 1).
+- `docs/SOCIAL_CHANNELS_STRATEGY.md` — разбор Instagram за 05.10–08.11.2026 против поиска и GA4 и модель каналов, принятая владельцем 09.11.2026: Instagram три единицы в неделю с 16.11, запуск Pinterest и Threads (раздел 13), TikTok и YouTube отложены до 07.12; пороги и контрольные даты.
 
 ## Development handoffs
 
