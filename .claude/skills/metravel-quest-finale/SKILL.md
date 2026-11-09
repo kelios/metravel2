@@ -45,22 +45,18 @@ description: "Финал городского квеста: текст, фина
 ## Найти квесты без видео-финала
 
 ```bash
-node -e '
-const https=require("https");
-const get=u=>new Promise((r,j)=>https.get(u,x=>{let d="";x.on("data",c=>d+=c);x.on("end",()=>r(d))}).on("error",j));
-(async()=>{
-  // /api/quests/ — DRF-пагинация: {count, next, previous, results}
-  let page=1, all=[];
-  while(true){ const j=JSON.parse(await get("https://metravel.by/api/quests/?page="+page));
-    all.push(...j.results); if(!j.next) break; page++; }
-  for(const q of all){ const b=JSON.parse(await get("https://metravel.by/api/quests/by-quest-id/"+q.quest_id+"/"));
-    const f=b.finale||{}; if(!f.video_url) console.log("НЕТ ВИДЕО:", q.id, q.quest_id, "|", q.title); }
-})();'
+npm run quest:scan-media-gaps                       # весь каталог прода
+npm run quest:scan-media-gaps -- --quest-id=a,b,c   # только партия
 ```
+
+Скан (#3186) только читает прод: обложка-заглушка, нет текста, видео или
+постера финала. Exit 1 при любом пропуске или недоступном проде, у каждого
+квеста — следующий шаг (есть ли запись в `QUESTS`, есть ли `cover.png` /
+`PROMPT.md`). Квест вне `QUESTS` с готовым видео пропуском не считается.
 
 ## Процесс добавления видео-финала
 
-1. **Найди пробелы** командой выше — выпиши `id` + `quest_id` квестов без видео.
+1. **Найди пробелы** сканом выше — выпиши `id` + `quest_id` квестов без видео.
 2. **Внеси квест в список** `scripts/generate-quest-finale-videos.js` → массив
    `QUESTS`: `{ questId, dir (camelCase), finaleId }`. `finaleId` берётся
    из проверенного маппинга и сверки текущего текста/медиа, не вычисляется
@@ -91,6 +87,11 @@ const get=u=>new Promise((r,j)=>https.get(u,x=>{let d="";x.on("data",c=>d+=c);x.
    и `poster_url` непустые и ведут на S3. Видео отдаётся байт-в-байт (размер =
    локальному `finale.mp4`), а постер бэк перекодирует в WebP 1200×675 — его
    размер с `poster.jpg` не сравнивать, картинку сверять перцептивно.
+7. **Закрой партию сканом:** `npm run quest:scan-media-gaps -- --quest-id=<ids>`
+   — exit 0. Пока он красный, партия не готова и карточка не идёт в `done`.
+   Сбой прода посреди заливки (502 на `/me/`, таймаут клиента) — не повод
+   перезаливать вслепую: PATCH мог записаться, сначала GET, потом повтор только
+   пустых.
 
 ## Диагностика 401 при заливке
 

@@ -216,6 +216,8 @@
     "quest:scan-surface-answer:baseline": "node scripts/scan-quest-surface-answer.js --update-baseline",
     "quest:scan-step-numbering": "node scripts/scan-quest-step-numbering.js",
     "quest:scan-step-numbering:json": "node scripts/scan-quest-step-numbering.js --json",
+    "quest:scan-media-gaps": "node scripts/scan-quest-media-gaps.js",
+    "quest:scan-media-gaps:json": "node scripts/scan-quest-media-gaps.js --json",
     "quest:scan-point-roles": "node scripts/scan-quest-point-roles.js",
     "quest:scan-point-roles:json": "node scripts/scan-quest-point-roles.js --json",
     "quest:scan-point-roles:baseline": "node scripts/scan-quest-point-roles.js --update-baseline",
