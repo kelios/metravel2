@@ -1,5 +1,5 @@
 /** @jest-environment node */
-const { parseArgs, allRows, resolvedPeriod, collectStats, formatBreakdown, formatSourceBreakdown } = require('@/scripts/fetch-ga4-stats')
+const { parseArgs, allRows, resolvedPeriod, collectStats, formatBreakdown, formatQuestSearch, formatSourceBreakdown } = require('@/scripts/fetch-ga4-stats')
 const { SOURCE_EVENTS, buildSourceBreakdown } = require('@/scripts/lib/ga4-source-breakdown')
 
 const row = (dimensions: string[], metrics: number[]) => ({
@@ -189,5 +189,64 @@ describe('GA4 attribution diagnostics', () => {
     expect(result.rows[0]).toMatchObject({ sessions: null, status: { sessions: status } })
     const duplicate = buildSourceBreakdown({ sessions: { rows: [...report.rows, ...report.rows], complete: true, metadata: [] } })
     expect(duplicate.rows[0]).toMatchObject({ sessions: null, status: { sessions: 'duplicate' } })
+  })
+})
+
+describe('GA4 quest catalog search (#3183)', () => {
+  const searchReport = (rows: any[]) => jest.fn(async (body: any) => {
+    const dimensions = body.dimensions?.map((d: any) => d.name) || []
+    if (!dimensions.length) return { rows: [row([], [1, 1, 1, 1, 0])], metadata: { timeZone: 'Europe/Minsk' } }
+    if (dimensions[0] === 'customEvent:search_term') {
+      expect(dimensions).toEqual(['customEvent:search_term', 'customEvent:results_count'])
+      expect(body.dimensionFilter.filter).toEqual({ fieldName: 'eventName', stringFilter: { matchType: 'EXACT', value: 'quest_search' } })
+      return { rows, rowCount: rows.length }
+    }
+    return { rows: [], rowCount: 0 }
+  })
+
+  it('parses the flag', () => {
+    expect(parseArgs(['node', 'x', '--quest-search', '--days', '7'])).toMatchObject({ questSearch: true, days: 7 })
+  })
+
+  it('sums phrases across result counts, lists zero-result phrases and keeps (not set) apart', async () => {
+    const result = await collectStats({ days: 7, questSearch: true, json: true }, searchReport([
+      row(['полоцк', '1'], [3]),
+      row(['алматы', '0'], [2]),
+      row(['витебск', '7'], [1]),
+      row(['алматы', '1'], [1]),
+      row(['(not set)', '(not set)'], [6]),
+    ]))
+    expect(result.questSearch.terms).toEqual([
+      { term: 'алматы', searches: 3, zeroResultSearches: 2 },
+      { term: 'полоцк', searches: 3, zeroResultSearches: 0 },
+      { term: 'витебск', searches: 1, zeroResultSearches: 0 },
+    ])
+    expect(result.questSearch.zeroResultTerms.map((t: any) => t.term)).toEqual(['алматы'])
+    expect(result.questSearch.notSetSearches).toBe(6)
+    const text = formatQuestSearch(result.questSearch)
+    expect(text).toContain('3 × алматы (без результата: 2)')
+    expect(text).toContain('Искали и не нашли')
+    expect(text).toContain('6 событий без фразы')
+  })
+
+  it('keeps the GA4 (other) bucket out of phrases and flags the data loss', async () => {
+    const report = jest.fn(async (body: any) => {
+      if (body.dimensions?.[0]?.name !== 'customEvent:search_term') {
+        return { rows: [], rowCount: 0, metadata: { timeZone: 'Europe/Minsk' } }
+      }
+      return { rows: [row(['(other)', '0'], [4]), row(['брест', '0'], [1])], rowCount: 2, metadata: { dataLossFromOtherRow: true } }
+    })
+    const { questSearch } = await collectStats({ days: 7, questSearch: true, json: true }, report)
+    expect(questSearch.terms.map((t: any) => t.term)).toEqual(['брест'])
+    expect(questSearch.zeroResultTerms.map((t: any) => t.term)).toEqual(['брест'])
+    expect(questSearch).toMatchObject({ otherSearches: 4, dataLossFromOtherRow: true, complete: true })
+    expect(formatQuestSearch(questSearch)).toContain('свернул часть фраз в (other): 4 событий')
+  })
+
+  it('is not requested without the flag', async () => {
+    const report = searchReport([])
+    const result = await collectStats({ days: 7, json: true }, report)
+    expect(result.questSearch).toBeUndefined()
+    expect(report.mock.calls.some(([body]: any[]) => body.dimensions?.[0]?.name === 'customEvent:search_term')).toBe(false)
   })
 })

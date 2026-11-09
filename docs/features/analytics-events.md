@@ -124,4 +124,14 @@
 - Прод: изолированный браузер, слушатель `metravel:analytics-intent`
   (`e2e/helpers/analytics.ts`) — события видны и под автоматизацией, хотя в
   счётчики не уходят.
-- Отчёт: `npm run stats:ga4 -- --days 7 --events`.
+- Отчёт: `npm run stats:ga4 -- --days 7 --events`; поиск по каталогу квестов —
+  `npm run stats:ga4 -- --days 7 --quest-search`.
+- **Новый параметр события → регистрация измерения GA4.** Data API отдаёт
+  параметр события только как зарегистрированное event-scoped измерение
+  (Администратор → Специальные определения), и регистрация не ретроактивна.
+  Параметр, который нужен в отчётах по API, регистрируется в день выката
+  эмиттера. Зарегистрированы (список на 09.11.2026): `auth_state`,
+  `traffic_source`, `quest_id`, `city_id`, `outcome`, `radius_km`,
+  `event_category`, `event_label`, `search_term` и `results_count` (#3183);
+  метрика `duration_sec`. Без регистрации
+  `runReport` отвечает 400 «is not a valid dimension».

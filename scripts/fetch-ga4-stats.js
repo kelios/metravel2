@@ -6,6 +6,7 @@
 //   node scripts/fetch-ga4-stats.js --events --days 30   # воронка: сработавшие события
 //   node scripts/fetch-ga4-stats.js --channel-breakdown --days 30 --json
 //   node scripts/fetch-ga4-stats.js --channel-breakdown --start-date 2026-10-20 --end-date 2026-10-26
+//   node scripts/fetch-ga4-stats.js --quest-search --days 7   # фразы поиска по каталогу квестов (#3183)
 //
 // Find the numeric property ID in GA4: Admin → Property settings → "Идентификатор ресурса".
 // Needs the service-account email added to the GA4 property (Admin → Property Access
@@ -42,6 +43,7 @@ function parseArgs(argv) {
     if (a === '--json') args.json = true
     else if (a === '--events') args.events = true
     else if (a === '--channel-breakdown') args.channelBreakdown = true
+    else if (a === '--quest-search') args.questSearch = true
     else if (a === '--days') args.days = Number(argv[++i])
     else if (a === '--property') args.property = argv[++i]
     else if (a === '--start-date') args.startDate = argv[++i]
@@ -110,6 +112,70 @@ const parseDimensionRows = (response, names) => response.rows.map((r) => ({
   users: Number(r.metricValues[1]?.value || 0),
 }))
 
+// Поиск по каталогу квестов (#3183): событие `quest_search` с параметрами
+// `search_term` (уже прошёл PII-фильтр `utils/analyticsSearchTerm.ts`) и
+// `results_count`. Data API отдаёт их только как зарегистрированные
+// event-scoped измерения — регистрация 09.11.2026, не ретроактивна; события
+// раньше неё приходят с `(not set)` и считаются отдельно, а не как фраза.
+// `(other)` — хвост, свёрнутый GA4 по лимиту кардинальности: тоже не фраза.
+const QUEST_SEARCH_EVENT = 'quest_search'
+const QUEST_SEARCH_DIMENSIONS = ['customEvent:search_term', 'customEvent:results_count']
+const GA4_NOT_SET = '(not set)'
+const GA4_OTHER = '(other)'
+
+function buildQuestSearchReport(searchRows) {
+  const byTerm = new Map()
+  let notSet = 0
+  let other = 0
+  for (const r of searchRows.rows) {
+    const term = r.dimensionValues[0]?.value ?? ''
+    const resultsCount = r.dimensionValues[1]?.value ?? ''
+    const count = Number(r.metricValues[0]?.value || 0)
+    if (!term || term === GA4_NOT_SET) {
+      notSet += count
+      continue
+    }
+    if (term === GA4_OTHER) {
+      other += count
+      continue
+    }
+    const entry = byTerm.get(term) || { term, searches: 0, zeroResultSearches: 0 }
+    entry.searches += count
+    if (resultsCount === '0') entry.zeroResultSearches += count
+    byTerm.set(term, entry)
+  }
+  const terms = [...byTerm.values()].sort((a, b) => b.searches - a.searches || a.term.localeCompare(b.term))
+  return {
+    terms,
+    zeroResultTerms: terms.filter((t) => t.zeroResultSearches > 0)
+      .sort((a, b) => b.zeroResultSearches - a.zeroResultSearches || a.term.localeCompare(b.term)),
+    notSetSearches: notSet,
+    otherSearches: other,
+    dataLossFromOtherRow: searchRows.metadata.some((m) => m.dataLossFromOtherRow),
+    complete: searchRows.complete,
+    quality: searchRows.metadata,
+  }
+}
+
+function formatQuestSearch(report, limit = 30) {
+  const lines = [`\n   Поиск по каталогу квестов (${QUEST_SEARCH_EVENT}): ${report.terms.length} фраз`]
+  for (const t of report.terms.slice(0, limit)) {
+    lines.push(`     ${String(t.searches).padStart(5)} × ${t.term}${t.zeroResultSearches ? ` (без результата: ${t.zeroResultSearches})` : ''}`)
+  }
+  if (!report.terms.length) lines.push('     (фраз за окно нет)')
+  lines.push('   Искали и не нашли (results_count = 0):')
+  for (const t of report.zeroResultTerms) lines.push(`     ${String(t.zeroResultSearches).padStart(5)} × ${t.term}`)
+  if (!report.zeroResultTerms.length) lines.push('     (нет)')
+  if (report.notSetSearches) {
+    lines.push(`   ${report.notSetSearches} событий без фразы ((not set)) — до регистрации измерений 09.11.2026 или без параметра`)
+  }
+  if (report.otherSearches || report.dataLossFromOtherRow) {
+    lines.push(`   ⚠️  GA4 свернул часть фраз в (other): ${report.otherSearches} событий — топ и список «не нашли» неполные`)
+  }
+  if (!report.complete) lines.push('   ⚠️  Ответ неполный (пагинация) — счёт занижен')
+  return lines.join('\n')
+}
+
 async function collectStats(args, report) {
   let dateRanges = [{ startDate: args.startDate || `${args.days}daysAgo`, endDate: args.endDate || 'yesterday' }]
 
@@ -170,6 +236,17 @@ async function collectStats(args, report) {
         `   ⚠️  Список событий обрезан лимитом ${EVENT_NAME_LIMIT} (всего в ресурсе: ${byEvent.rowCount ?? 'неизвестно'}). Редкие имена могли не попасть в отчёт.`
       )
     }
+  }
+
+  let questSearch
+  if (args.questSearch) {
+    questSearch = buildQuestSearchReport(await allRows(report, {
+      dateRanges,
+      dimensions: QUEST_SEARCH_DIMENSIONS.map((name) => ({ name })),
+      dimensionFilter: { filter: { fieldName: 'eventName', stringFilter: { matchType: 'EXACT', value: QUEST_SEARCH_EVENT } } },
+      metrics: [{ name: 'eventCount' }],
+      orderBys: [{ metric: { metricName: 'eventCount' }, desc: true }],
+    }))
   }
 
   let channelBreakdown, sourceBreakdown
@@ -235,6 +312,7 @@ async function collectStats(args, report) {
     channels,
     quality: { totals: totals.metadata || {}, channels: { ...byChannel, rows: undefined } },
     ...(events ? { events, eventsTruncated } : {}),
+    ...(questSearch ? { questSearch } : {}),
     ...(channelBreakdown ? { channelBreakdown } : {}),
     ...(sourceBreakdown ? { sourceBreakdown } : {}),
   }
@@ -302,6 +380,7 @@ async function main() {
     }
     if (!events.length) console.log('     (ни одного события за окно — проверить инициализацию GA4)')
   }
+  if (result.questSearch) console.log(formatQuestSearch(result.questSearch))
   if (result.channelBreakdown) console.log(formatBreakdown(result.channelBreakdown))
   if (result.sourceBreakdown) console.log(formatSourceBreakdown(result.sourceBreakdown))
   console.log(`\n   Качество отчёта: ${JSON.stringify(result.quality)}`)
@@ -315,4 +394,14 @@ if (require.main === module) {
   })
 }
 
-module.exports = { parseArgs, allRows, resolvedPeriod, collectStats, formatBreakdown, formatSourceBreakdown, runReport }
+module.exports = {
+  parseArgs,
+  allRows,
+  resolvedPeriod,
+  collectStats,
+  buildQuestSearchReport,
+  formatBreakdown,
+  formatQuestSearch,
+  formatSourceBreakdown,
+  runReport,
+}
