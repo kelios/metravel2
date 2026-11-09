@@ -439,7 +439,7 @@ TR/DE/CY/BE 4, GE/ES/MD/DK/UZ 3, остальные 1–2). Открытых к�
 | Пакет | Квесты | Карточка | Приоритет | Статус |
 |---|---|---|---|---|
 | F1 | Барановичи 8–10 (`baranovichi-kids-iron-horse`), Барановичи 11–14 (`baranovichi-teens-two-stations`), Пинск 8–10 (`pinsk-kids-river-capital`), Бобруйск 8–10 (`bobruisk-kids-beavers`) | #3173 | high | на проде 08.11.2026: квесты 343 `bobruisk-kids-beavers` (город 38), 344 `baranovichi-kids-iron-horse` (61), 345 `pinsk-kids-river-capital` (33), 346 `baranovichi-teens-two-stations` (61); оценки независимого ревью 9,0 / 8,0 / 9,5 / 9,0 (первые оценки 7,5 / 3,5 / 8,0 / 6,0 — 2–3 круга правок); обложки — по PROMPT.md (#3182), финале-видео после обложек; L10N — спринт 28 |
-| F2 | Мозырь 8–10 (`mozyr-kids-castle-hill`), Лида 8–10 (`lida-kids-castle-squire`), Полоцк 8–10 (`polotsk-kids-letter-u`), Несвиж 8–10 (`nesvizh-kids-park-page`) | #3174 | high | todo |
+| F2 | Мозырь 8–10 (`mozyr-kids-castle-hill`), Лида 8–10 (`lida-kids-castle-squire`), Полоцк 8–10 (`polotsk-kids-letter-u`), Несвиж 8–10 (`nesvizh-kids-park-page`) | #3174 | high | на проде 09.11.2026: квесты 347 `polotsk-kids-letter-u` (город 18), 348 `lida-kids-castle-squire` (15), 349 `mozyr-kids-castle-hill` (98), 350 `nesvizh-kids-park-page` (17); оценки независимого ревью 9,5 / 9,0 / 10 / 9,0 (первые 7,0 / 8,0 / 6,0 / 6,5 — 2–3 круга); обложки — по PROMPT.md (#3182), финале-видео после обложек; L10N — спринт 28 |
 | F3 | Сандомир (`sandomierz-seven-hills`, новый город), Бельско-Бяла 8–10 (`bielsko-biala-kids-lost-frame`), Прага 8–10 (`prague-kids-golem`), Вена 8–10 (`vienna-kids-anker-clock`) | #3175 | medium | todo |
 | D6 | Валенсия, Псков, Женева, Тронхейм (очередь §4.1) | #3176 | low | todo |
 | D7 | Сеул, Бангкок (Раттанакосин), Хельсинки, Любляна | #3177 | low | todo |
@@ -524,6 +524,13 @@ QUEST_DEMAND_LOG.md 2026-07-18)
 
 ## 5. Журнал
 
+- 2026-11-09 (пакет F2, #3174): на проде четыре детских квеста 8–10 — 347
+  `polotsk-kids-letter-u`, 348 `lida-kids-castle-squire`, 349
+  `mozyr-kids-castle-hill`, 350 `nesvizh-kids-park-page`; бриф авторам
+  включал уроки F1, первые независимые оценки всё равно 6,0–8,0, итог 9,0–10
+  после 2–3 кругов. Новые классы находок: ответ с наземной таблички (зима),
+  возврат по маршруту ради точки (Мозырь, Несвиж), точка у воды без ограждения,
+  тротуар только на одной стороне улицы. Детали — QUEST_DEMAND_LOG.md 2026-11-09.
 - 2026-11-08 (пакет F1, #3173): на проде четыре детских/подростковых квеста
   Беларуси — 343 `bobruisk-kids-beavers`, 344 `baranovichi-kids-iron-horse`,
   345 `pinsk-kids-river-capital`, 346 `baranovichi-teens-two-stations`; первая
