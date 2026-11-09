@@ -55,6 +55,13 @@ HTTP-сервис (#2456) поверх артефакта смыслового �
 | `text` | `{text}` — накопленный текст после стража ссылок (не дельта: страж может убрать уже показанный адрес) |
 | `done` | `{status: done, removed_links, usage, remaining}` · `{status: off_topic, reason: offtopic_warning, strikes, strikes_to_block}` · `{status: off_topic, reason: model_refusal}` · `{status: no_sources}` · `{status: unavailable}` · `{status: error}` |
 
+Второй рубеж и лимит рекомендаций (#3216) — те же модули, что у экрана:
+`judgeModelReply` (`api/aiAssist/topicGate.ts`) отдаёт отказ модели на вопрос с
+признаком поездки как `done {status: no_sources}` со строкой `no_sources` в журнале
+спроса, без признака — прежний `off_topic/model_refusal`; генератор получает
+`maxRecommendations: AI_MAX_RECOMMENDATIONS` (3) и закрывает стрим на четвёртой
+рекомендации, поэтому последнее событие `text` несёт не больше трёх пунктов.
+
 Отказы до потока — JSON `{error, detail, …}`: `400 bad_request`;
 `429 offtopic_blocked` (`retry_after_sec`, `strikes`, `Retry-After` до полуночи) —
 третий за календарный день вопрос не по теме с этого IP и любой вопрос до полуночи

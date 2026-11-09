@@ -29,11 +29,11 @@ import {
   registerOffTopicStrike,
 } from '@/api/aiAssist/limits'
 import { countKeptSourceLinks, enforceSourceLinks, guardStreamingText } from '@/api/aiAssist/linkGuard'
-import { secondsToDayEnd } from '@/api/aiAssist/policy'
+import { AI_MAX_RECOMMENDATIONS, secondsToDayEnd } from '@/api/aiAssist/policy'
 import { MAX_QUESTION_LENGTH, buildAssistantMessages } from '@/api/aiAssist/prompt'
 import { buildRetrievalQuery, loadSourceCard, searchSiteMaterials } from '@/api/aiAssist/retrieval'
 import { pinSourceFirst, type AiSourceRef } from '@/api/aiAssist/sourceRef'
-import { classifyQuestion, isModelOffTopicReply } from '@/api/aiAssist/topicGate'
+import { classifyQuestion, judgeModelReply } from '@/api/aiAssist/topicGate'
 import type { AiHistoryItem, AiSource, AiUsage } from '@/api/aiAssist/types'
 import { getAiAssistantBaseUrl, getAiAssistantProvider, type AiAssistantProvider } from '@/utils/aiAssistantConfig'
 import { getAiPicksBaseUrl } from '@/utils/aiPicksConfig'
@@ -412,6 +412,7 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
         const result = await generator.generate({
           messages,
           signal: controller.signal,
+          maxRecommendations: AI_MAX_RECOMMENDATIONS,
           onDelta: (_delta, full) => {
             pendingFull = full
             if (!flushTimerRef.current) flushTimerRef.current = setTimeout(flush, STREAM_FLUSH_MS)
@@ -419,7 +420,15 @@ export function useAssistantChat(options: UseAssistantChatOptions) {
         })
         clearFlush()
         const guarded = enforceSourceLinks(result.text, sources)
-        if (isModelOffTopicReply(guarded.text, countKeptSourceLinks(guarded.text, sources))) {
+        const verdict = judgeModelReply(searchQuery, guarded.text, countKeptSourceLinks(guarded.text, sources))
+        if (verdict === 'no_material') {
+          // #3216: модель отказала вопросу с признаком поездки — это «материала нет», а не чужая тема.
+          patchTurn(id, { status: 'no_sources', answer: '', sources: [], removedLinks: 0 })
+          void logDemand({ q: question, locale, reason: 'no_sources' })
+          await finishQuota()
+          return
+        }
+        if (verdict === 'off_topic') {
           // Второй рубеж: фильтр пропустил, модель узнала чужую тему по правилу промпта.
           // Вопрос не по теме опорой уточнений не становится. В эскалацию такой отказ не идёт:
           // модель ошибается и на вопросах о поездке («travel hacks», просьба о чужой ссылке —

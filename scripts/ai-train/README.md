@@ -473,9 +473,9 @@ HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 ~/metravel-ai/venv/bin/python -I scripts
 
 Снимок 08.11.2026 (после ревью, см. ниже): s3 2156 → **2151 train** после точной
 подготовки (5 длинных примеров исключены: 4 translations, 1 site) / 34 valid /
-25 test; train по наборам — rag_answers 993 (edition 6: page 179, kids 146,
-quests 142, pick 135, topic 95, exact_one 89, followup 43, limit 40,
-no_material 32, injected 32, many 29, one_article 23, boundary 35), osm_intents
+25 test; train по наборам — rag_answers 993 (edition 6: page 170, kids 144,
+quests 140, pick 134, topic 93, exact_one 87, followup 41, limit 38,
+injected 31, no_material 30, many 29, one_article 21, boundary 35), osm_intents
 353, wikivoyage 248, site 263, toponyms 198, translations 73, offtopic 23;
 максимум 1007 токенов. Конфиг `lora-qwen3.5-4b-v6.yaml`: продолжение
 `adapters/metravel-llm-v4`, 2151 шаг, lr 1.5e-5 cosine, `adapters/metravel-llm-v6`.
@@ -550,8 +550,8 @@ sha256 `2bb809db8652a25ec7e7a9abae2ebe2e896f3274075848e88b6179f67caa60f6`. Од�
    карточек или текста автора.
 
 Третий подряд кандидат (v5, v5-rag, v6) меняет одни навыки на другие, поэтому
-четвёртый круг той же схемы не запускается без решения владельца по #2751:
-детерминированный слой пайплайна для (1) и (2) либо пересмотр порогов закрытых
-срезов. Сырые ответы: `.codex-temp/ai-assistant-eval/{v4,v6}-targets-v6round`,
+четвёртый круг той же схемы не запускается. Слой пайплайна для (1) и (2) —
+связанная карточка #3216 (`judgeModelReply`, остановка генератора на четвёртой
+рекомендации); пороги закрытых срезов (3) — решение владельца по #2751. Сырые ответы: `.codex-temp/ai-assistant-eval/{v4,v6}-targets-v6round`,
 `{v4,v6}-holdout-v6round`, `quality-{v4,v6}-s29-20261108`; срезы —
 `~/metravel-ai/logs/eval-v6-vs-v4-gguf/report.md`.

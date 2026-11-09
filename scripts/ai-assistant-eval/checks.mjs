@@ -164,6 +164,19 @@ export const makeCardUrlMatcher = (cards) => {
   }
 }
 
+/**
+ * Рекомендации в показанном ответе (#3216): ссылки на карточки, которые видит посетитель, и
+ * пункты списка. Генератор закрывает стрим на рекомендации сверх лимита, поэтому сырой ответ
+ * модели (`countRecommendations`) и показанный текст считаются отдельно.
+ */
+export const countShownRecommendations = (answer, linkLabels) => {
+  let bullets = 0
+  for (const line of String(answer ?? '').split('\n')) {
+    if (BULLET_RE.test(line) && line.replace(BULLET_RE, '').trim().length >= 4) bullets += 1
+  }
+  return Math.max(new Set((linkLabels ?? []).map((label) => String(label ?? '').trim()).filter(Boolean)).size, bullets)
+}
+
 export const countRecommendations = (raw, cards) => {
   const isCardUrl = makeCardUrlMatcher(cards)
   const mentioned = new Set()
@@ -282,6 +295,10 @@ export function evaluateTurn({ expect, lang, expectSources }, observed) {
     const onTopicAnswer = expect === 'answer' || ((expect === 'any_on_topic' || expect === 'no_material') && !isNoMaterial(answer))
     if (onTopicAnswer && !refusedOfftopic) {
       if (Math.max(recs.cardLinks, recs.bullets) > MAX_RECOMMENDATIONS) fail(failures, 'too_many', 'model', `рекомендаций ${Math.max(recs.cardLinks, recs.bullets)} > ${MAX_RECOMMENDATIONS}`)
+      // Слой модели выше считает сырой ответ; здесь — то, что дошло до посетителя после остановки генератора (#3216).
+      const shown = countShownRecommendations(answer, links)
+      metrics.shownRecommendations = shown
+      if (shown > MAX_RECOMMENDATIONS) fail(failures, 'too_many_shown', 'guard', `в показанном ответе рекомендаций ${shown} > ${MAX_RECOMMENDATIONS}`)
       if (links.length === 0) fail(failures, 'no_links', 'model', 'в ответе нет ни одной ссылки на карточку')
       else if (recs.bulletsWithoutLink >= 2) fail(failures, 'names_without_links', 'model', `${recs.bulletsWithoutLink} пунктов без ссылки`)
     }

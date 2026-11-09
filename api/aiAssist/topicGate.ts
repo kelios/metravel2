@@ -10,8 +10,10 @@
  * промпт и просьбы о коде поездкой не оправдываются.
  *
  * Второй рубеж — модель: промпт велит ей отвечать на чужую тему фразой отказа,
- * `isModelOffTopicReply` узнаёт эту фразу в ответе. Серверный `/ai/ask` (#2713)
- * повторяет эти же правила.
+ * `isModelOffTopicReply` узнаёт эту фразу в ответе, а `judgeModelReply` (#3216)
+ * решает, что показать: отказ модели на вопрос с признаком поездки — это «материала
+ * нет», а не «не по теме». Экран и серверный `/ai/ask` (#2713) идут через одну
+ * функцию.
  */
 
 export type OffTopicReason = 'injection' | 'coding' | 'cooking' | 'politics' | 'medicine' | 'finance' | 'study' | 'chitchat'
@@ -165,3 +167,24 @@ const MODEL_REFUSAL_RE =
   /(?:ассистент|асістэнт|асистент|asystent\p{L}*|assistant)\s+(?:сайта\s+)?metravel\.by|metravel\.by\s+(?:travel\s+)?assistant/iu
 export const isModelOffTopicReply = (text: string, keptLinks: number): boolean =>
   keptLinks === 0 && MODEL_REFUSAL_RE.test(String(text ?? ''))
+
+/** Что показать после ответа модели: сам ответ, отказ «не по теме» или «материала нет». */
+export type ModelReplyVerdict = 'answer' | 'off_topic' | 'no_material'
+
+/**
+ * Второй рубеж целиком (#3216) — одно решение для экрана и службы `/ai/ask`.
+ *
+ * Отказ модели на вопрос с признаком поездки чужой темой не считается. Первый рубеж
+ * такой вопрос пропустил («поход», «trip», город после предлога), а модель отказывает
+ * вероятностно: один и тот же промпт с посторонней карточкой даёт и ответ «материала
+ * нет», и фразу отказа (замер 09.11.2026, «Какую кашу взять с собой в поход?»: v4 —
+ * отказ 3 раза из 3, v6 — 2 из 3). Посетитель получает честное «материала нет», а
+ * вопрос попадает в журнал спроса.
+ *
+ * `question` — запрос подбора (`buildRetrievalQuery`): уточнение без своего места
+ * несёт признак поездки от опоры диалога.
+ */
+export const judgeModelReply = (question: string, text: string, keptLinks: number): ModelReplyVerdict => {
+  if (!isModelOffTopicReply(text, keptLinks)) return 'answer'
+  return hasTravelSignal(question) ? 'no_material' : 'off_topic'
+}

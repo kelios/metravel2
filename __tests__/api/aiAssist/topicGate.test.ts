@@ -1,4 +1,4 @@
-import { classifyQuestion, hasTravelSignal, isModelOffTopicReply } from '@/api/aiAssist/topicGate'
+import { classifyQuestion, hasTravelSignal, isModelOffTopicReply, judgeModelReply } from '@/api/aiAssist/topicGate'
 import { aiAssistStaticResources as be } from '@/i18n/locales/be/static/ai_assist_static'
 import { aiAssistStaticResources as en } from '@/i18n/locales/en/static/ai_assist_static'
 import { aiAssistStaticResources as pl } from '@/i18n/locales/pl/static/ai_assist_static'
@@ -101,5 +101,22 @@ describe('topicGate (#2711)', () => {
       expect(isModelOffTopicReply(locale['ask.offTopic'], 1)).toBe(false)
     }
     expect(isModelOffTopicReply('Посмотрите путеводитель по Кракову.', 0)).toBe(false)
+  })
+
+  // #3216: одно решение второго рубежа для экрана и службы — вопросы из контура оценки (bd01, bd11, mt03).
+  it('отказ модели на вопрос с признаком поездки — «материала нет», без признака — «не по теме»', () => {
+    const refusal = ru['ask.offTopic']
+    expect(judgeModelReply('Какую кашу взять с собой в поход?', refusal, 0)).toBe('no_material')
+    expect(judgeModelReply('Any tips for packing light on a weekend trip?', en['ask.offTopic'], 0)).toBe('no_material')
+    // Уточнение без своего места: признак поездки приходит от опоры диалога в запросе подбора.
+    expect(judgeModelReply('А какой из них подойдёт детям?', refusal, 0)).toBe('off_topic')
+    expect(judgeModelReply('Что посмотреть в Несвиже? А какой из них подойдёт детям?', refusal, 0)).toBe('no_material')
+    expect(judgeModelReply('Какие ингредиенты нужны для оливье?', refusal, 0)).toBe('off_topic')
+    expect(judgeModelReply('Какой курс доллара будет завтра?', refusal, 0)).toBe('off_topic')
+  })
+
+  it('ответ модели по существу и отказ со ссылкой на карточку вторым рубежом не трогаются', () => {
+    expect(judgeModelReply('Какую кашу взять с собой в поход?', 'Отдельного материала о походной еде на сайте пока нет.', 0)).toBe('answer')
+    expect(judgeModelReply('Какие ингредиенты нужны для оливье?', ru['ask.offTopic'], 1)).toBe('answer')
   })
 })

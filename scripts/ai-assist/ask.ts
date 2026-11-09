@@ -27,10 +27,11 @@ import type http from 'node:http'
 
 import { type Generator, isAiGeneratorError } from '../../api/aiAssist/generator.ts'
 import { countKeptSourceLinks, enforceSourceLinks, guardStreamingText } from '../../api/aiAssist/linkGuard.ts'
+import { AI_MAX_RECOMMENDATIONS } from '../../api/aiAssist/policy.ts'
 import { buildAssistantMessages, MAX_HISTORY_ITEMS } from '../../api/aiAssist/prompt.ts'
 import { buildRetrievalQuery, resolveRetrievalAnchor } from '../../api/aiAssist/retrievalQuery.ts'
 import { type AiSourceRef, parseSourceRef, pinSourceFirst } from '../../api/aiAssist/sourceRef.ts'
-import { classifyQuestion, isModelOffTopicReply } from '../../api/aiAssist/topicGate.ts'
+import { classifyQuestion, judgeModelReply } from '../../api/aiAssist/topicGate.ts'
 import type { AiHistoryItem, AiSource } from '../../api/aiAssist/types.ts'
 import type { DemandLog } from './demandLog.ts'
 import type { AskLimits } from './limits.ts'
@@ -253,6 +254,7 @@ export function createAskHandler(deps: AskDeps): AskHandler {
         generator.generate({
           messages,
           signal: controller.signal,
+          maxRecommendations: AI_MAX_RECOMMENDATIONS,
           onDelta: (_delta, full) => {
             ensureStream()
             pendingText = full
@@ -263,7 +265,14 @@ export function createAskHandler(deps: AskDeps): AskHandler {
       clearFlush()
       const guarded = enforceSourceLinks(result.text, sources)
       const open = ensureStream()
-      if (isModelOffTopicReply(guarded.text, countKeptSourceLinks(guarded.text, sources))) {
+      const verdict = judgeModelReply(retrievalQuery, guarded.text, countKeptSourceLinks(guarded.text, sources))
+      if (verdict === 'no_material') {
+        // #3216: модель отказала вопросу с признаком поездки — «материала нет» и строка в журнале спроса.
+        await demandLog.append({ q: question, locale, reason: 'no_sources' })
+        open.done({ status: 'no_sources' })
+        return
+      }
+      if (verdict === 'off_topic') {
         // Второй рубеж: модель узнала чужую тему по правилу промпта. В счётчик не идёт — модель
         // ошибается и на вопросах о поездке (замер #2710), блок за её ошибку получил бы посетитель.
         open.done({ status: 'off_topic', reason: 'model_refusal' })

@@ -4,6 +4,7 @@ import path from 'node:path'
 import {
   MAX_ANSWER_CHARS,
   countRecommendations,
+  countShownRecommendations,
   detectLang,
   detectLoop,
   evaluateTurn,
@@ -153,6 +154,21 @@ describe('ai-assistant-eval checks', () => {
   it('counts card links, bullets and names without links', () => {
     const raw = '- [Путеводитель](https://metravel.by/travels/krakow-guide)\n- Вавель\n- Казимеж\n- https://example.com/x'
     expect(countRecommendations(raw, CARDS)).toEqual({ cardLinks: 1, bullets: 4, bulletsWithoutLink: 3, unknownUrls: ['https://example.com/x'] })
+  })
+
+  // #3216: генератор закрывает стрим на четвёртой рекомендации — сырой ответ и показанный считаются отдельно.
+  it('counts shown recommendations apart from the raw model answer', () => {
+    expect(countShownRecommendations('Квесты:\n• Первый квест\n• Второй квест\n• Третий квест', ['Первый квест', 'Второй квест', 'Третий квест'])).toBe(3)
+    expect(countShownRecommendations('Посмотрите путеводитель и квест.', ['путеводитель', 'квест', 'квест'])).toBe(2)
+    const link = (slug: string) => `- [${slug}](https://metravel.by/quests/krakow/${slug})`
+    const raw = ['krakow-dragon', 'krakow-kazimierz', 'krakow-bike', 'krakow-nowa-huta'].map(link).join('\n')
+    const cards = [...CARDS, { type: 'quest', title: 'Казимеж', url: 'https://metravel.by/quests/krakow/krakow-kazimierz' }, { type: 'quest', title: 'Вело', url: 'https://metravel.by/quests/krakow/krakow-bike' }, { type: 'quest', title: 'Нова-Хута', url: 'https://metravel.by/quests/krakow/krakow-nowa-huta' }]
+    const turn = { expect: 'answer', lang: 'ru' }
+    const capped = evaluateTurn(turn, { ...observedDone(raw, '• Дракон\n• Казимеж\n• Вело', { linkLabels: ['Дракон', 'Казимеж', 'Вело'] }), modelCall: { text: raw, cards, finishReason: 'stop', ms: 1 } })
+    expect(capped.failures.map((f: { check: string }) => f.check)).toEqual(['too_many'])
+    expect(capped.metrics.shownRecommendations).toBe(3)
+    const leaked = evaluateTurn(turn, { ...observedDone(raw, '• Дракон\n• Казимеж\n• Вело\n• Нова-Хута', { linkLabels: ['Дракон', 'Казимеж', 'Вело', 'Нова-Хута'] }), modelCall: { text: raw, cards, finishReason: 'stop', ms: 1 } })
+    expect(leaked.failures.map((f: { check: string; layer: string }) => `${f.check}:${f.layer}`)).toEqual(['too_many:model', 'too_many_shown:guard'])
   })
 
   it('detects answer language like eval.py', () => {

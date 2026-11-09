@@ -54,6 +54,11 @@ export type GenerateRequest = {
   onDelta?: (delta: string, full: string) => void
   /** Потолок ответа вместо `LLAMACPP_MAX_TOKENS`: помощник автора (#2885) просит три лида разом. */
   maxTokens?: number
+  /**
+   * Сколько рекомендаций оставить в ответе (#3216): стрим закрывается на следующей. Задаёт только
+   * ответ ассистента; помощнику автора и фильтру карты списки нужны целиком.
+   */
+  maxRecommendations?: number
 }
 
 export interface Generator {
@@ -193,6 +198,56 @@ export const findRepetitionLoopCut = (text: string): number | null => {
   return text.slice(0, Math.min(...cuts)).replace(TRAILING_SEPARATORS_RE, '').length
 }
 
+const LIST_ITEM_RE = /^[ \t]*(?:[-*•]|\d+[.)])[ \t]+\S/
+const URL_IN_TEXT_RE = /https?:\/\/[^\s)\]>»"']+/g
+const URL_TRAILING_PUNCTUATION_RE = /[.,;:!?]+$/
+const LAST_LINE_RE = /\n([^\n]*)$/
+const LIST_INTRO_RE = /[:：][\s*_]*$/
+
+/** Текст без хвоста из разделителей и без подводки к отрезанным пунктам («День 3:», «Ещё варианты:»). */
+const trimCutTail = (text: string): string => {
+  let kept = text.replace(TRAILING_SEPARATORS_RE, '')
+  for (let last = LAST_LINE_RE.exec(kept); last && !LIST_ITEM_RE.test(last[1]) && LIST_INTRO_RE.test(last[1]); last = LAST_LINE_RE.exec(kept)) {
+    kept = kept.slice(0, last.index).replace(TRAILING_SEPARATORS_RE, '')
+  }
+  return kept
+}
+
+/**
+ * Длина текста до первой рекомендации сверх лимита (#3216) или `null`, если лишних нет.
+ *
+ * Рекомендация — пункт списка либо новый адрес в строке. Лишняя строка — пункт списка
+ * после `maxItems` рекомендаций или строка, все новые адреса которой уже сверх лимита
+ * («В карточках также — …»): она и всё после неё не показываются. Строка, где лимит
+ * переходится посередине («A, B, C и D» одной фразой), остаётся: обрубок фразы хуже
+ * лишней ссылки. Последняя строка может быть недописанной — пункт виден по маркеру,
+ * фраза с адресом — как только адрес начался и разошёлся с уже названными. Подводка
+ * к отрезанным пунктам (строка с двоеточием в конце прямо перед ними) уходит вместе с ними.
+ */
+export const findRecommendationOverflowCut = (text: string, maxItems: number): number | null => {
+  if (!(maxItems > 0)) return null
+  const seen = new Set<string>()
+  let count = 0
+  let position = 0
+  for (const line of text.split('\n')) {
+    const fresh = new Set<string>()
+    for (const match of line.matchAll(URL_IN_TEXT_RE)) {
+      const url = match[0].replace(URL_TRAILING_PUNCTUATION_RE, '')
+      if (seen.has(url)) continue
+      // Адрес в конце потока ещё дописывается: начало уже названного — не новая рекомендация.
+      const typing = position + (match.index ?? 0) + match[0].length === text.length
+      if (typing && [...seen].some((known) => known.startsWith(url))) continue
+      fresh.add(url)
+    }
+    const units = Math.max(fresh.size, LIST_ITEM_RE.test(line) ? 1 : 0)
+    if (units > 0 && count >= maxItems) return trimCutTail(text.slice(0, position)).length
+    count += units
+    for (const url of fresh) seen.add(url)
+    position += line.length + 1
+  }
+  return null
+}
+
 const isAbortError = (error: unknown): boolean =>
   typeof error === 'object' && error !== null && (error as { name?: string }).name === 'AbortError'
 
@@ -231,7 +286,7 @@ export class LlamaCppGenerator implements Generator {
     this.now = options.now ?? (() => Date.now())
   }
 
-  async generate({ messages, signal, onDelta, maxTokens }: GenerateRequest): Promise<AiGenerateResult> {
+  async generate({ messages, signal, onDelta, maxTokens, maxRecommendations }: GenerateRequest): Promise<AiGenerateResult> {
     if (!this.baseUrl) throw new AiGeneratorError('unavailable', 'assistant url is not configured')
     const controller = new AbortController()
     // Таймаут — не отмена посетителем: иначе экран молча показывал бы «ответ
@@ -252,22 +307,25 @@ export class LlamaCppGenerator implements Generator {
     let full = ''
     let usage: SseUsage | null = null
     let finished = false
-    let stoppedOnLoop = false
+    let stoppedEarly = false
 
     const consumeEvent = (event: string) => {
-      if (stoppedOnLoop) return
+      if (stoppedEarly) return
       const parsed = parseSseEvent(event)
       if (!parsed) return
       if (parsed.usage) usage = parsed.usage
       if (parsed.delta) {
         if (firstTokenAt === null) firstTokenAt = this.now()
         full += parsed.delta
-        const loopCut = findRepetitionLoopCut(full)
-        if (loopCut !== null) {
-          // Цикл не дописывается до max_tokens: стрим закрывается, хвост не показывается.
-          full = full.slice(0, loopCut)
+        // Цикл и рекомендации сверх лимита (#3216) не дописываются до max_tokens:
+        // стрим закрывается на первом из них, хвост не показывается.
+        const cuts = [findRepetitionLoopCut(full), maxRecommendations ? findRecommendationOverflowCut(full, maxRecommendations) : null].filter(
+          (cut): cut is number => cut !== null,
+        )
+        if (cuts.length) {
+          full = full.slice(0, Math.min(...cuts))
           onDelta?.('', full)
-          stoppedOnLoop = true
+          stoppedEarly = true
           finished = true
           return
         }

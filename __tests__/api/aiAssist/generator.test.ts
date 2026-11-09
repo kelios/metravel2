@@ -7,6 +7,7 @@ import {
   LLAMACPP_TEMPERATURE,
   LlamaCppGenerator,
   createGenerator,
+  findRecommendationOverflowCut,
   findRepetitionLoopCut,
   parseSseEvent,
   splitSseEvents,
@@ -140,6 +141,67 @@ describe('aiAssist generator (#2460)', () => {
     const nativeFetch = jest.fn(async () => makeResponse({ text: sse(chunk('А; Рынок; Рынок; Рынок'), chunk(' и дальше'), finalChunk, '[DONE]') }))
     const native = await new LlamaCppGenerator('http://127.0.0.1:8080', { fetchImpl: nativeFetch as unknown as typeof fetch }).generate({ messages })
     expect(native.text).toBe('А; Рынок')
+  })
+
+  // #3216: ответы из замера 09.11.2026 — «Якія квэсты ёсць у Мінску?» (шесть пунктов) и хвост «У картках таксама — …».
+  const QUEST = (slug: string) => `https://metravel.by/quests/minsk/${slug}`
+  const LIST = [
+    'Квэсты ў Мінску:',
+    `- [У пошуках цмока](${QUEST('minsk-cmok')}) — пунктаў — 10, каля 45 хв`,
+    `- [Белая пані](${QUEST('minsk-loshitsa')}) — пунктаў — 10, каля 90 хв`,
+    `- [Трактарны пасёлак](${QUEST('minsk-traktorny')}) — пунктаў — 10, каля 75 хв`,
+  ].join('\n')
+
+  it('рекомендации сверх лимита: четвёртый пункт списка и строка только с новыми адресами отрезаются', () => {
+    const cut = (text: string, max = 3) => text.slice(0, findRecommendationOverflowCut(text, max) ?? text.length)
+    expect(findRecommendationOverflowCut(LIST, 3)).toBeNull()
+    expect(cut(`${LIST}\n- [Дворыкі Мінска](${QUEST('minsk-dvoriki')}) — каля 90 хв\n- [Праспект](${QUEST('minsk-cipher')})`)).toBe(LIST)
+    // Недописанный четвёртый пункт виден по маркеру, пустой маркер и хвостовая фраза без адресов — нет.
+    expect(cut(`${LIST}\n- [Двор`)).toBe(LIST)
+    expect(findRecommendationOverflowCut(`${LIST}\n- `, 3)).toBeNull()
+    expect(findRecommendationOverflowCut(`${LIST}\n\nАстатняе — у спісе крыніц ніжэй.`, 3)).toBeNull()
+    // Фраза после списка, которая называет ещё карточки, уходит целиком.
+    expect(cut(`${LIST}\nУ картках таксама — [Дворыкі](${QUEST('minsk-dvoriki')}) і [Праспект](${QUEST('minsk-cipher')}). Колькі гадоў вам?`)).toBe(LIST)
+    // Повтор уже названного адреса рекомендацией не считается.
+    expect(findRecommendationOverflowCut(`${LIST}\n\nПачніце з ${QUEST('minsk-cmok')}.`, 3)).toBeNull()
+    // На потоке повтор дописывается по символу: его начало новым адресом не считается, новый — как только разошёлся.
+    const repeat = `${LIST}\nПачніце з [цмока](${QUEST('minsk-cmok')}).`
+    for (let end = LIST.length; end <= repeat.length; end += 1) expect(findRecommendationOverflowCut(repeat.slice(0, end), 3)).toBeNull()
+    expect(cut(`${LIST}\nТаксама [Дворыкі](${QUEST('minsk-d')}`)).toBe(LIST)
+    // Нумерованный список и адреса без markdown считаются так же.
+    expect(cut('1. Вавель https://metravel.by/a\n2. Казимеж https://metravel.by/b\n3. Тынец https://metravel.by/c\n4. Величка https://metravel.by/d')).toBe(
+      '1. Вавель https://metravel.by/a\n2. Казимеж https://metravel.by/b\n3. Тынец https://metravel.by/c',
+    )
+    // Подводка к отрезанным пунктам не повисает в конце ответа; подводка к оставшимся — на месте.
+    const plan = 'День 1:\n- Вавель https://metravel.by/a\n- Казимеж https://metravel.by/b\nДень 2:\n- Тынец https://metravel.by/c\n\n**День 3:**\n- Величка https://metravel.by/d'
+    expect(cut(plan)).toBe('День 1:\n- Вавель https://metravel.by/a\n- Казимеж https://metravel.by/b\nДень 2:\n- Тынец https://metravel.by/c')
+    // Лимит переходится посередине фразы — обрубок хуже лишней ссылки, текст остаётся.
+    const prose = 'Посмотрите https://metravel.by/a, https://metravel.by/b, https://metravel.by/c и https://metravel.by/d.'
+    expect(findRecommendationOverflowCut(prose, 3)).toBeNull()
+    expect(findRecommendationOverflowCut(LIST, 0)).toBeNull()
+  })
+
+  it('с лимитом рекомендаций стрим закрывается на четвёртой, без лимита список доходит целиком', async () => {
+    const parts = [chunk(`${LIST}\n`), chunk('- [Двор'), chunk(`ыкі Мінска](${QUEST('minsk-dvoriki')}) — каля 90 хв\n`), chunk('- ещё пункт')]
+    const run = async (maxRecommendations?: number) => {
+      const cancel = jest.fn(async () => undefined)
+      const reader = streamBody([sse(...parts)]).getReader()
+      const fetchImpl = jest.fn(async () => makeResponse({ body: { getReader: () => ({ ...reader, cancel }) } }))
+      const generator = new LlamaCppGenerator('http://127.0.0.1:8080', { fetchImpl: fetchImpl as unknown as typeof fetch })
+      const fulls: string[] = []
+      const result = await generator.generate({ messages, maxRecommendations, onDelta: (_delta, full) => fulls.push(full) })
+      return { result, fulls, cancel }
+    }
+    const capped = await run(3)
+    expect(capped.result.text).toBe(LIST)
+    expect(capped.fulls[capped.fulls.length - 1]).toBe(LIST)
+    expect(capped.fulls.some((full) => full.includes('minsk-dvoriki'))).toBe(false)
+    expect(capped.cancel).toHaveBeenCalled()
+
+    // Помощник автора и фильтр карты лимит не задают: их списки не режутся.
+    const open = await run()
+    expect(open.result.text).toContain('minsk-dvoriki')
+    expect(open.result.text.endsWith('- ещё пункт')).toBe(true)
   })
 
   it('без стримящего тела (native fetch) читает SSE целиком из text()', async () => {

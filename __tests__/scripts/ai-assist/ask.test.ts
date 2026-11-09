@@ -386,6 +386,29 @@ describe('metravel-assist: POST /ai/ask — ответ по теме', () => {
     }
   })
 
+  it('отказ модели на вопрос с признаком поездки (#3216) — done no_sources и строка в журнале спроса, без страйка', async () => {
+    const requests: GenerateRequest[] = []
+    const { server, limits, readLog } = makeServer({
+      generator: fakeGenerator((request) => {
+        requests.push(request)
+        return OFFTOPIC_REPLY_RU
+      }),
+    })
+    await listen(server)
+    try {
+      const reply = await post(server, '/ai/ask', { q: 'ярмарки в Кракове' }, { 'x-forwarded-for': '203.0.113.19' })
+      expect(reply.events[0].data.sources.length).toBeGreaterThan(0)
+      expect(reply.events.at(-1)!.data).toEqual({ status: 'no_sources' })
+      expect(readLog()).toEqual([expect.objectContaining({ q: 'ярмарки в Кракове', reason: 'no_sources' })])
+      expect(await limits.offTopicState('203.0.113.19')).toEqual({ strikes: 0, blocked: false })
+      expect((await limits.quotaState('203.0.113.19')).used).toBe(1)
+      // Служба, как и экран, просит генератор остановиться на четвёртой рекомендации.
+      expect(requests[0].maxRecommendations).toBe(3)
+    } finally {
+      await close(server)
+    }
+  })
+
   it('отказ самой модели — done off_topic/model_refusal без страйка; лимит списан', async () => {
     const { server, limits } = makeServer({ generator: fakeGenerator(() => OFFTOPIC_REPLY_RU) })
     await listen(server)

@@ -197,6 +197,13 @@ guard, падающий в CI на попытке обойти этот конт
   `hasTravelSignal` вопроса. Списки длиннее трёх появляются, когда в подборе
   4–6 карточек одного города. Оба случая — слой пайплайна (рубеж отказа,
   генератор), не набора; таблица — `scripts/ai-train/README.md` → «Приёмка v6».
+  Владелец слоя — #3216 (create-linked): одно решение второго рубежа
+  `judgeModelReply` (`api/aiAssist/topicGate.ts`) для экрана и службы и остановка
+  генератора на четвёртой рекомендации (`findRecommendationOverflowCut`,
+  `AI_MAX_RECOMMENDATIONS`). Контроли: `__tests__/api/aiAssist/topicGate.test.ts`,
+  `generator.test.ts`, тесты экрана и службы на оба пути, проверка показанного
+  ответа `too_many_shown` в `scripts/ai-assistant-eval/checks.mjs`. Прежние Done
+  gate мерили только сырой вывод модели — показанный ответ считается отдельно.
 - **Recurrence rule:** тот же механизм в наборе или повторный провал его
   инварианта — reuse открытой #2751 либо reopen канонической задачи после
   закрытия; иной подтверждённый слой (retrieval/prompt/guard/evaluator) —

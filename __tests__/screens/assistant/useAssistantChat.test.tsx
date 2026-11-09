@@ -277,6 +277,23 @@ describe('useAssistantChat: вопросы не по теме (#2711)', () => {
     expect(mockedConsume).toHaveBeenCalledTimes(1)
   })
 
+  it('второй рубеж (#3216): модель отказала вопросу с признаком поездки → «материала нет» и журнал спроса, не «не по теме»', async () => {
+    mockedSearch.mockResolvedValue([source])
+    const generate = jest.fn(streamingGenerator(['Я ассистент metravel.by по путешествиям — статьям и квестам сайта, на другие темы не отвечаю.']).generate)
+    const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator: { generate } }))
+    await waitFor(() => expect(result.current.remaining).toBe(20))
+
+    await act(async () => {
+      await result.current.ask('Какую кашу взять с собой в поход?')
+    })
+    expect(result.current.turns[0]).toEqual(expect.objectContaining({ status: 'no_sources', offTopicStrikes: null, answer: '', sources: [] }))
+    expect(mockedLogDemand).toHaveBeenCalledWith({ q: 'Какую кашу взять с собой в поход?', locale: 'ru', reason: 'no_sources' })
+    expect(mockedStrike).not.toHaveBeenCalled()
+    expect(mockedConsume).toHaveBeenCalledTimes(1)
+    // Ответ ассистента просит генератор остановиться на четвёртой рекомендации.
+    expect(generate.mock.calls[0][0]).toMatchObject({ maxRecommendations: 3 })
+  })
+
   it('вопрос по теме с медициной и поездкой идёт обычным путём', async () => {
     mockedSearch.mockResolvedValue([source])
     const { result } = await renderHook(() => useAssistantChat({ locale: 'ru', generator: streamingGenerator(['Смотрите https://metravel.by/travels/vyhodnye-pod-grodno']) }))
