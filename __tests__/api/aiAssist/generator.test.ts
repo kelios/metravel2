@@ -175,9 +175,22 @@ describe('aiAssist generator (#2460)', () => {
     // Подводка к отрезанным пунктам не повисает в конце ответа; подводка к оставшимся — на месте.
     const plan = 'День 1:\n- Вавель https://metravel.by/a\n- Казимеж https://metravel.by/b\nДень 2:\n- Тынец https://metravel.by/c\n\n**День 3:**\n- Величка https://metravel.by/d'
     expect(cut(plan)).toBe('День 1:\n- Вавель https://metravel.by/a\n- Казимеж https://metravel.by/b\nДень 2:\n- Тынец https://metravel.by/c')
-    // Лимит переходится посередине фразы — обрубок хуже лишней ссылки, текст остаётся.
-    const prose = 'Посмотрите https://metravel.by/a, https://metravel.by/b, https://metravel.by/c и https://metravel.by/d.'
-    expect(findRecommendationOverflowCut(prose, 3)).toBeNull()
+    // Лимит набран посреди строки: фраза заканчивается на границе перед лишней ссылкой.
+    expect(cut('Посмотрите https://metravel.by/a, https://metravel.by/b, https://metravel.by/c и https://metravel.by/d.')).toBe(
+      'Посмотрите https://metravel.by/a, https://metravel.by/b, https://metravel.by/c',
+    )
+    // Живой ответ v6 на «Якія квэсты ёсць у Мінску?» (09.11.2026): шесть квестов одной фразой через «;».
+    const item = (title: string, slug: string, tail: string) => `[${title}](${QUEST(slug)}) — гарадскі квэст: пунктаў — 10, ${tail}`
+    const inline = `У Мінску шэсць гарадскіх квэстаў: ${item('У пошуках цмока', 'minsk-cmok', 'каля 45 хв., лёгкі')}; ${item('Белая пані', 'minsk-loshitsa', 'каля 90 хв., лёгкі')}; ${item('Трактарны пасёлак', 'minsk-traktorny', 'каля 75 хв., лёгкі')}`
+    expect(findRecommendationOverflowCut(inline, 3)).toBeNull()
+    expect(cut(`${inline}; ${item('Дворыкі Мінска', 'minsk-dvoriki', 'каля 90 хв., лёгкі')}; [Праспект](${QUEST('minsk-cipher')})`)).toBe(inline)
+    // Предложение после оставленных ссылок закрывается своей точкой, подводка к лишней ссылке уходит.
+    expect(cut(`${inline}. Яшчэ ёсць: [Дворыкі Мінска](${QUEST('minsk-dvoriki')})`)).toBe(`${inline}.`)
+    // На потоке лишняя ссылка режется, как только её адрес разошёлся с названными, а до того текст не трогается.
+    const fourth = `${inline}; [Дворыкі Мінска](${QUEST('minsk-dvoriki')})`
+    const firstCut = Array.from({ length: fourth.length + 1 }, (_, length) => findRecommendationOverflowCut(fourth.slice(0, length), 3)).findIndex((value) => value !== null)
+    expect(fourth.slice(0, firstCut)).toBe(`${inline}; [Дворыкі Мінска](${QUEST('minsk-d')}`)
+    expect(cut(fourth.slice(0, firstCut))).toBe(inline)
     expect(findRecommendationOverflowCut(LIST, 0)).toBeNull()
   })
 

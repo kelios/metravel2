@@ -199,10 +199,11 @@ export const findRepetitionLoopCut = (text: string): number | null => {
 }
 
 const LIST_ITEM_RE = /^[ \t]*(?:[-*•]|\d+[.)])[ \t]+\S/
-const URL_IN_TEXT_RE = /https?:\/\/[^\s)\]>»"']+/g
+const LINK_IN_TEXT_RE = /\[[^\]\n]*\]\(\s*(https?:\/\/[^\s)\]>»"']+)|https?:\/\/[^\s)\]>»"']+/g
 const URL_TRAILING_PUNCTUATION_RE = /[.,;:!?]+$/
 const LAST_LINE_RE = /\n([^\n]*)$/
 const LIST_INTRO_RE = /[:：][\s*_]*$/
+const CLAUSE_END_RE = /[.!?;](?=[^.!?;]*$)/
 
 /** Текст без хвоста из разделителей и без подводки к отрезанным пунктам («День 3:», «Ещё варианты:»). */
 const trimCutTail = (text: string): string => {
@@ -214,15 +215,29 @@ const trimCutTail = (text: string): string => {
 }
 
 /**
+ * Где закончить фразу, если лишняя рекомендация началась посреди строки: после последней
+ * границы («.», «!», «?», «;») между оставленной ссылкой и лишней, иначе по последней запятой,
+ * иначе сразу за оставленной ссылкой («A, B, C и D» → «A, B, C»).
+ */
+const clauseEndBefore = (text: string, keptLinkEnd: number, overflowStart: number): number => {
+  const between = text.slice(keptLinkEnd, overflowStart)
+  const boundary = CLAUSE_END_RE.exec(between)
+  if (boundary) return keptLinkEnd + boundary.index + (boundary[0] === ';' ? 0 : 1)
+  const comma = between.lastIndexOf(',')
+  return comma >= 0 ? keptLinkEnd + comma : keptLinkEnd
+}
+
+/**
  * Длина текста до первой рекомендации сверх лимита (#3216) или `null`, если лишних нет.
  *
- * Рекомендация — пункт списка либо новый адрес в строке. Лишняя строка — пункт списка
- * после `maxItems` рекомендаций или строка, все новые адреса которой уже сверх лимита
- * («В карточках также — …»): она и всё после неё не показываются. Строка, где лимит
- * переходится посередине («A, B, C и D» одной фразой), остаётся: обрубок фразы хуже
- * лишней ссылки. Последняя строка может быть недописанной — пункт виден по маркеру,
- * фраза с адресом — как только адрес начался и разошёлся с уже названными. Подводка
- * к отрезанным пунктам (строка с двоеточием в конце прямо перед ними) уходит вместе с ними.
+ * Рекомендация — пункт списка либо новый адрес (первый адрес пункта — тот же пункт). Лишнее:
+ * - пункт списка после `maxItems` рекомендаций и строка, все новые адреса которой сверх лимита
+ *   («В карточках также — …») — режется с начала строки;
+ * - адрес посреди строки, где лимит уже набран («A — …; B — …; C — …; D — …» одной фразой,
+ *   замер 09.11.2026 на v6) — фраза заканчивается на границе перед ним (`clauseEndBefore`).
+ * Последняя строка может быть недописанной — пункт виден по маркеру, адрес — как только
+ * начался и разошёлся с уже названными. Подводка к отрезанным пунктам (строка с двоеточием
+ * в конце прямо перед ними) уходит вместе с ними.
  */
 export const findRecommendationOverflowCut = (text: string, maxItems: number): number | null => {
   if (!(maxItems > 0)) return null
@@ -230,19 +245,28 @@ export const findRecommendationOverflowCut = (text: string, maxItems: number): n
   let count = 0
   let position = 0
   for (const line of text.split('\n')) {
-    const fresh = new Set<string>()
-    for (const match of line.matchAll(URL_IN_TEXT_RE)) {
-      const url = match[0].replace(URL_TRAILING_PUNCTUATION_RE, '')
-      if (seen.has(url)) continue
-      // Адрес в конце потока ещё дописывается: начало уже названного — не новая рекомендация.
-      const typing = position + (match.index ?? 0) + match[0].length === text.length
-      if (typing && [...seen].some((known) => known.startsWith(url))) continue
-      fresh.add(url)
+    const isItem = LIST_ITEM_RE.test(line)
+    if (isItem && count >= maxItems) return trimCutTail(text.slice(0, position)).length
+    if (isItem) count += 1
+    // Первый новый адрес пункта списка принадлежит самому пункту и отдельно не считается.
+    let itemLinkPending = isItem
+    let keptLinkEnd: number | null = null
+    for (const match of line.matchAll(LINK_IN_TEXT_RE)) {
+      const url = (match[1] ?? match[0]).replace(URL_TRAILING_PUNCTUATION_RE, '')
+      const start = position + (match.index ?? 0)
+      let end = start + match[0].length
+      if (!seen.has(url)) {
+        // Адрес в конце потока ещё дописывается: начало уже названного — не новая рекомендация.
+        if (end === text.length && [...seen].some((known) => known.startsWith(url))) continue
+        if (itemLinkPending) itemLinkPending = false
+        else if (count >= maxItems) {
+          return trimCutTail(text.slice(0, keptLinkEnd === null ? position : clauseEndBefore(text, keptLinkEnd, start))).length
+        } else count += 1
+        seen.add(url)
+      }
+      if (text[end] === ')') end += 1
+      keptLinkEnd = end
     }
-    const units = Math.max(fresh.size, LIST_ITEM_RE.test(line) ? 1 : 0)
-    if (units > 0 && count >= maxItems) return trimCutTail(text.slice(0, position)).length
-    count += units
-    for (const url of fresh) seen.add(url)
     position += line.length + 1
   }
   return null
