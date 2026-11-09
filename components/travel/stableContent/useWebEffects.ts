@@ -15,6 +15,9 @@ import { isWeservImageUrl, unwrapWeservImageUrl } from '@/utils/weservImageUrl'
 
 import { WEB_RICH_TEXT_CLASS, WEB_RICH_TEXT_STYLES_ID } from './webStyles'
 
+// #3262: `data-yt` приходит из разметки статьи — в адрес плеера только id ролика.
+const YOUTUBE_FACADE_VIDEO_ID_RE = /^[A-Za-z0-9_-]{6,20}$/
+
 type LightboxImage = { src: string; alt: string }
 type LightboxGallery = { images: LightboxImage[]; initialIndex: number }
 
@@ -206,7 +209,7 @@ export function useStableContentWebEffects({
       if (ytRoot && !rootRef.current?.contains(ytRoot)) return
       if (ytRoot) {
         const vid = ytRoot.getAttribute('data-yt')
-        if (!vid) return
+        if (!vid || !YOUTUBE_FACADE_VIDEO_ID_RE.test(vid)) return
         const iframe = document.createElement('iframe')
         iframe.width = '560'
         iframe.height = '315'

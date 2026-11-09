@@ -94,6 +94,30 @@ describe('toInertHtml (#3202)', () => {
       expect(executableAttributes(toInertHtml(html))).toEqual([])
     }
   })
+
+  it('#3262: no DOM clobbering of app globals; heading and legacy anchors survive', () => {
+    const out = toInertHtml(
+      '<h2 id="marshrut-dnya">Маршрут</h2><a name="old-anchor">a</a>' +
+        '<img src="https://x/a.jpg" name="__metravelMetrikaInited"><form name="Quill"></form>' +
+        '<iframe src="https://www.youtube.com/embed/x" name="ReactNativeWebView"></iframe>' +
+        '<p id="__metravelBookPreviewWindow">p</p><p id="__proto__">q</p>',
+    )
+    const host = document.createElement('div')
+    host.innerHTML = out
+    document.body.appendChild(host)
+    try {
+      expect(host.querySelector('#marshrut-dnya')?.textContent).toBe('Маршрут')
+      expect(host.querySelector('a[name="old-anchor"]')).not.toBeNull()
+      expect(host.querySelectorAll('[name]:not(a)')).toHaveLength(0)
+      expect(host.querySelectorAll('[id^="__"]')).toHaveLength(0)
+      const globals = window as unknown as Record<string, unknown>
+      expect(globals.__metravelMetrikaInited).toBeUndefined()
+      expect(globals.__metravelBookPreviewWindow).toBeUndefined()
+      expect((document as unknown as Record<string, unknown>).Quill).toBeUndefined()
+    } finally {
+      host.remove()
+    }
+  })
 })
 
 describe('prepareStableContentHtml without the sink barrier (#3202, point C)', () => {

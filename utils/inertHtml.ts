@@ -116,11 +116,20 @@ const filterSrcset = (raw: string): string | null => {
   return kept.length ? kept.join(', ') : null
 }
 
-const sanitizeAttributes = (attrs: readonly HtmlAttribute[]): HtmlAttribute[] => {
+// #3262: подмена глобальных имён через DOM. `name` у img/iframe/form/embed/object
+// становится свойством document и window — оставляем его только у `<a>` (якорь
+// старого формата, его ищет scrollToHashTarget; именованным свойством он не
+// становится). `id` — якоря заголовков и ссылки `#…`, поэтому значения сохраняются;
+// выбрасываются только `__…` — пространство глобальных имён приложения (`__metravel*`).
+const isClobberingIdentity = (tagName: string, attr: HtmlAttribute): boolean =>
+  (attr.name === 'name' && tagName !== 'a') || (attr.name === 'id' && (attr.value ?? '').startsWith('__'))
+
+const sanitizeAttributes = (tagName: string, attrs: readonly HtmlAttribute[]): HtmlAttribute[] => {
   const out: HtmlAttribute[] = []
   for (const attr of attrs) {
     const name = attr.name
     if (!VALID_ATTRIBUTE_NAME_RE.test(name) || name.startsWith('on') || name === 'srcdoc') continue
+    if (isClobberingIdentity(tagName, attr)) continue
     if (attr.value !== null && URL_ATTRIBUTES.has(name) && isBlockedUrl(attr.value)) continue
     if (attr.value !== null && (name === 'srcset' || name === 'imagesrcset')) {
       const value = filterSrcset(attr.value)
@@ -167,7 +176,7 @@ export function toInertHtml(html: string | null | undefined): InertHtml {
           break
         }
         if (!VALID_TAG_NAME_RE.test(name) || DROP_TAG_ONLY.has(name)) break
-        const attrs = sanitizeAttributes(token.attrs)
+        const attrs = sanitizeAttributes(name, token.attrs)
         if (name === 'iframe') {
           if (isAllowedIframe(attrs)) out += `${serializeStartTag(name, attrs)}</iframe>`
           break

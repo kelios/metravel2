@@ -9,6 +9,7 @@
 // native/quest): у travel-карты нет офлайн-тайлов/оверлеев, поэтому лёгкого fit
 // достаточно — поведение сохранено 1:1 из прежнего inline-HTML.
 import { buildLeafletWebViewHtml } from '@/components/map-core/leafletWebViewHtml';
+import { serializeForInlineScript } from '@/utils/webViewBridge';
 import {
   getOsmNativeTileUrl,
   OSM_PROXY_ATTRIBUTION,
@@ -42,9 +43,11 @@ export const buildTravelMapNativeHtml = ({
   routeColor,
   birdMarkerHtml,
 }: TravelMapNativeHtmlParams): string => {
-  const pointsJson = JSON.stringify(points);
-  const routesJson = JSON.stringify(routes);
-  const highlightCoordJson = highlightCoord ? JSON.stringify(highlightCoord) : 'null';
+  // #3203: адрес точки — авторский текст; данные в тексте <script> только через
+  // serializeForInlineScript, иначе `</script>` в адресе закрывает наш скрипт.
+  const pointsJson = serializeForInlineScript(points);
+  const routesJson = serializeForInlineScript(routes);
+  const highlightCoordJson = highlightCoord ? serializeForInlineScript(highlightCoord) : 'null';
 
   return buildLeafletWebViewHtml({
     headStyles: `        .leaflet-popup-content-wrapper { background-color: ${surfaceColor}; border-radius: 8px; padding: 0; }
@@ -52,7 +55,7 @@ export const buildTravelMapNativeHtml = ({
         .metravel-marker { background: transparent; border: 0; }`,
     bodyScript: `        const map = L.map('map', { zoomControl: true }).setView([${center[0]}, ${center[1]}], ${initialZoom});
         L.tileLayer('${getOsmNativeTileUrl()}', {
-          attribution: ${JSON.stringify(OSM_PROXY_ATTRIBUTION)},
+          attribution: ${serializeForInlineScript(OSM_PROXY_ATTRIBUTION)},
           maxZoom: ${OSM_PROXY_MAX_ZOOM}
         }).addTo(map);
 
@@ -103,7 +106,7 @@ export const buildTravelMapNativeHtml = ({
         // invisible). Size/anchor match useLeafletIcons so the bird tip sits on the coord.
         const markerIcon = L.divIcon({
           className: 'metravel-marker',
-          html: ${JSON.stringify(birdMarkerHtml)},
+          html: ${serializeForInlineScript(birdMarkerHtml)},
           iconSize: [48, 58],
           iconAnchor: [24, 54],
           popupAnchor: [0, -46]

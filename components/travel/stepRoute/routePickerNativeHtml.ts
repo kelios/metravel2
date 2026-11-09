@@ -18,6 +18,7 @@ import {
   OSM_PROXY_ATTRIBUTION,
   OSM_PROXY_MAX_ZOOM,
 } from '@/config/mapWebLayers';
+import { serializeForInlineScript } from '@/utils/webViewBridge';
 
 export interface RoutePickerNativeHtmlParams {
   center: [number, number];
@@ -45,11 +46,11 @@ export const buildRoutePickerNativeHtml = ({
     bodyScript: `        const map = L.map('map', { zoomControl: true, tap: false })
           .setView([${center[0]}, ${center[1]}], ${initialZoom});
         L.tileLayer('${getOsmNativeTileUrl()}', {
-          attribution: ${JSON.stringify(OSM_PROXY_ATTRIBUTION)},
+          attribution: ${serializeForInlineScript(OSM_PROXY_ATTRIBUTION)},
           maxZoom: ${OSM_PROXY_MAX_ZOOM}
         }).addTo(map);
 
-        const BIRD_HTML = ${JSON.stringify(birdMarkerHtml)};
+        const BIRD_HTML = ${serializeForInlineScript(birdMarkerHtml)};
         let markers = [];
         let routeLine = null;
         // Leaflet на Android эмитит «призрачный» click после тапа по маркеру и

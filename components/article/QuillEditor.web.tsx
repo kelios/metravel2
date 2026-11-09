@@ -9,6 +9,7 @@ import {
 import { StyleSheet } from 'react-native'
 import { DESIGN_TOKENS } from '@/constants/designSystem'
 import { translate as i18nT } from '@/i18n'
+import { toInertHtml } from '@/utils/inertHtml'
 
 
 type QuillInstance = any
@@ -574,7 +575,8 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
           quill.clipboard?.dangerouslyPasteHTML?.(initial, 'silent')
         } catch {
           try {
-            quill.root.innerHTML = initial
+            // #3262: запасная ветка минует разбор Quill — в DOM только рубеж.
+            quill.root.innerHTML = toInertHtml(initial)
           } catch (e) {
             void e
           }
@@ -660,7 +662,7 @@ const QuillEditorWeb = forwardRef(function QuillEditorWeb(props: Props, ref: any
       applyQuillAccessibility(quill, null)
     } catch {
       try {
-        quill.root.innerHTML = next
+        quill.root.innerHTML = toInertHtml(next)
         lastHtmlRef.current = next
         applyQuillAccessibility(quill, null)
       } catch (e) {

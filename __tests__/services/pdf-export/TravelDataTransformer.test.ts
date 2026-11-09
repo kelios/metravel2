@@ -116,6 +116,24 @@ describe('TravelDataTransformer', () => {
       });
     });
 
+    it('#3262: правка style= после санитайзера не выводит атрибут из значения alt/title', () => {
+      const hostile = [
+        `<p><img src="https://metravel.by/a.jpg" alt="style='a' onerror=alert(1) x='"></p>`,
+        `<p><a href="https://metravel.by/" title="style='a' onmouseover=alert(2) x='">l</a></p>`,
+      ].join('');
+      const [result] = transformer.transform([
+        { id: 1, name: 'T', slug: 't', url: 't', description: hostile, recommendation: hostile, plus: hostile, minus: hostile } as Travel,
+      ]);
+      for (const field of [result.description, result.recommendation, result.plus, result.minus]) {
+        const doc = new DOMParser().parseFromString(String(field), 'text/html');
+        const handlers = Array.from(doc.querySelectorAll('*'))
+          .flatMap((el) => Array.from(el.attributes).map((attr) => attr.name))
+          .filter((name) => name.startsWith('on'));
+        expect(handlers).toEqual([]);
+        expect(doc.querySelector('img')?.getAttribute('src')).toContain('https://metravel.by/a.jpg');
+      }
+    });
+
     it('должен преобразовать галерею из массива строк', () => {
       const travels: Travel[] = [
         {

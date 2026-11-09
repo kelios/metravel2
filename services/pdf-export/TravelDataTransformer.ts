@@ -11,6 +11,7 @@ import {
   PRINT_IMAGE_THUMB_WIDTH,
 } from '@/utils/printImageUrl';
 import { sanitizeRichTextForPdf } from '@/utils/sanitizeRichText';
+import { toInertHtml } from '@/utils/inertHtml';
 import { buildDescriptionImageAspects, buildGalleryAspectsById } from './utils/imageAspects';
 import { translate as i18nT, translatePlural } from '@/i18n'
 
@@ -151,7 +152,9 @@ export class TravelDataTransformer {
     const withInlinedClassStyles = this.inlineKnownClassStyles(withoutVarUsage);
 
     const sanitizedHtml = sanitizeRichTextForPdf(withInlinedClassStyles);
-    const sanitizedStyles = this.sanitizeInlineStyles(sanitizedHtml);
+    // #3262: sanitizeInlineStyles правит строку регуляркой уже после санитайзера
+    // (`style='…'` внутри alt/title становится отдельными атрибутами) — рубеж последним.
+    const sanitizedStyles: string = toInertHtml(this.sanitizeInlineStyles(sanitizedHtml));
 
     // ✅ КРИТИЧНО: Убеждаемся что HTML валиден - если остался голый текст без тегов,
     // оборачиваем его в <p> для корректного отображения

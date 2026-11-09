@@ -479,7 +479,44 @@ describe('buildTravelMapNativeHtml — engine regression invariants', () => {
     expect(html).toContain("parsed.type === 'RESIZE'");
     expect(html).toContain("document.addEventListener('message', handleResizeMessage)");
     expect(html).toContain('metravel-marker');
-    expect(html).toContain('<div>BIRD_TIP</div>');
+    // #3203: разметка маркера уходит в текст <script> через serializeForInlineScript.
+    expect(html).toContain('\\u003cdiv\\u003eBIRD_TIP\\u003c/div\\u003e');
+  });
+
+  // #3203: адрес точки — авторский текст. Вставленный голым JSON.stringify,
+  // `</script>` в нём закрывал наш скрипт и открывал чужой в WebView карты.
+  it('keeps hostile point data inside the script: no extra <script> elements', () => {
+    const build = (points: unknown[]) =>
+      buildTravelMapNativeHtml({
+        points,
+        routes: [{ coords: [[53.9, 27.56], [53.91, 27.57]], color: '</script><script>window.__r=1</script>' }],
+        highlightCoord: '53.9,27.56</script><script>window.__h=1</script>',
+        center: [53.9, 27.56],
+        initialZoom: 11,
+        surfaceColor: '#ffffff',
+        routeColor: '#e07840',
+        birdMarkerHtml: '<div>BIRD_TIP</div>',
+      });
+    const countScripts = (doc: string) => (doc.match(/<script\b/gi) ?? []).length;
+    const hostileAddress = '</script><script>window.__x=1</script>';
+    const baseline = build([{ coord: '53.9,27.56', address: 'A' }]);
+    const hostile = build([
+      { coord: '53.9,27.56', address: 'A' },
+      { coord: '53.91,27.57', address: hostileAddress, categoryName: '<!--<script>' },
+    ]);
+
+    expect(countScripts(hostile)).toBe(countScripts(baseline));
+    expect(hostile).not.toContain('window.__x=1</script>');
+    expect(hostile).not.toContain(hostileAddress);
+    expect(hostile).not.toContain('<!--<script>');
+
+    // Данные остаются данными: литерал разбирается обратно в исходную строку.
+    const literal = hostile.match(/const points = (\[.*?\]);/)?.[1];
+    expect(JSON.parse(String(literal))[1].address).toBe(hostileAddress);
+
+    // Браузерный разбор: скриптов ровно столько же, сколько у безвредной точки.
+    const parsed = new DOMParser().parseFromString(hostile, 'text/html');
+    expect(parsed.querySelectorAll('script')).toHaveLength(countScripts(baseline));
   });
 
   it('uses the lighter whenReady fit (not the [80,240,600] scheduler)', () => {
