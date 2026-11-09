@@ -551,6 +551,9 @@ export default function Root({ children }: { children: React.ReactNode }) {
           pages without a route (+not-found, _sitemap) get them from the SSG fallback patch.
           The inline JS above fixes [param] canonical URLs. */}
       <meta name="twitter:site" content="@metravel_by" />
+      {/* #3222: Pinterest domain claim for pinterest.com/metravelby.
+          The value is public: Pinterest reads it from the served <head> to verify the site. */}
+      <meta name="p:domain_verify" content="1b52e6d9250214d8ee579dd7d89e9d99" />
 
       {routeDeclaresRobots ? null : <meta name="robots" content={siteDefaultRobots()} />}
 
