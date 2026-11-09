@@ -3,7 +3,7 @@
 #
 #     bash scripts/enable-prod-db-backup.sh            # установить/обновить расписание
 #     bash scripts/enable-prod-db-backup.sh --run-now  # прогнать бэкап прямо сейчас
-#     bash scripts/enable-prod-db-backup.sh --verify   # проверить критерии приёмки
+#     bash scripts/enable-prod-db-backup.sh --verify   # проверить расписание, целостность и свежесть копий
 #
 # Что делает установка на прод-хосте (всё от пользователя `sx3`, без sudo):
 #
@@ -21,6 +21,11 @@
 #
 # Сам скрипт бэкапа НЕ дублируется: запускается канонический
 # `deploy/prod/backup/backup_database_to_s3.sh` из бэкенд-чекаута на проде.
+#
+# `--verify` — не разовая приёмка, а постоянная проба (#3208): последний архив в
+# каталоге и в S3 не старше порога, две последние ночи завершились. Порог и
+# правило возраста живут в scripts/db-backup-freshness.py; этот скрипт везёт его
+# исходник в payload, поэтому на хост ничего не ставится.
 #
 # Документация: docs/DB_BACKUP.md
 
@@ -42,7 +47,7 @@ usage() {
 
   (без аргументов)  установить конфиг, обёртку, лог и cron-строку (идемпотентно)
   --run-now         прогнать полный бэкап немедленно и показать результат
-  --verify          проверить критерии приёмки #1247, ничего не меняя
+  --verify          проверить расписание, целостность и свежесть копий, ничего не меняя
   -h, --help        эта справка
 
 Переменные окружения: S3_URI, RETENTION_DAYS, CRON_SCHEDULE.
@@ -72,6 +77,7 @@ trap 'rm -f "$payload"' EXIT
   # молча выходил с 0.
   printf 'S3_URI=%q\nRETENTION_DAYS=%q\nCRON_SCHEDULE=%q\nMODE=%q\n' \
     "$S3_URI" "$RETENTION_DAYS" "$CRON_SCHEDULE" "$MODE"
+  printf 'FRESHNESS_B64=%q\n' "$(base64 < "${SCRIPT_DIR}/db-backup-freshness.py" | tr -d '\n')"
   printf 'MTV_SNIPPET=$(cat <<%sMTV_SNIPPET_EOF%s\n' "'" "'"
   metravel_container_remote_snippet
   printf 'MTV_SNIPPET_EOF\n)\n'
@@ -197,22 +203,17 @@ verify() {
   echo "== 2. лог =="
   if [[ -f "$LOG_FILE" ]]; then
     ls -l "$LOG_FILE"
-    local ok_dates
-    ok_dates="$(grep -F 'Backup completed' "$LOG_FILE" 2>/dev/null | sed -n 's/^\[\([0-9-]\{10\}\).*/\1/p' | sort -u)"
-    local nights
-    nights="$(printf '%s\n' "$ok_dates" | grep -c . || true)"
-    echo "успешных ночей (уникальных дат с 'Backup completed'): $nights"
-    printf '%s\n' "$ok_dates" | sed 's/^/  /'
     grep -c 'ERROR' "$LOG_FILE" >/dev/null 2>&1 && echo "строк с ERROR: $(grep -c 'ERROR' "$LOG_FILE")"
     tail -4 "$LOG_FILE" | sed 's/^/  /'
-    [[ "$nights" -ge 2 ]] || { echo "⏳ по DoD нужно ≥2 суток подряд"; rc=1; }
   else
     echo "❌ лога нет: $LOG_FILE"; rc=1
   fi
 
   echo "== 3. локальный архив =="
+  # Последний — по UTC-метке в имени, как его считает проверка свежести ниже,
+  # а не по mtime: целостность и возраст должны относиться к одному файлу.
   local newest
-  newest="$(ls -1t "${BACKUP_DIR}"/metravel-postgres-*.sql.gz 2>/dev/null | head -1 || true)"
+  newest="$(ls -1 "${BACKUP_DIR}"/metravel-postgres-*.sql.gz 2>/dev/null | tail -1 || true)"
   if [[ -n "$newest" ]]; then
     ls -l "$newest"
     if gzip -t "$newest"; then echo "gzip -t: OK"; else echo "❌ gzip -t провален"; rc=1; fi
@@ -230,11 +231,16 @@ verify() {
   fi
 
   echo "== 4. объект в S3 =="
+  local s3_listing=""
   if [[ -x "$AWS_CLI" && -n "${S3_URI:-}" ]]; then
-    if "$AWS_CLI" s3 ls "${S3_URI%/}/" | tail -5; then
+    if s3_listing="$("$AWS_CLI" s3 ls "${S3_URI%/}/" </dev/null)"; then
+      printf '%s\n' "$s3_listing" | tail -5
       local s3_size local_size
-      s3_size="$("$AWS_CLI" s3 ls "${S3_URI%/}/" | sort -k1,2 | tail -1 | awk '{print $3}')"
-      local_size="$(wc -c < "$newest" 2>/dev/null | tr -d ' ')"
+      s3_size="$(printf '%s\n' "$s3_listing" | awk '$4 ~ /^metravel-postgres-/ && $4 > name { name = $4; size = $3 } END { print size }')"
+      # Без локального архива редирект из пустого пути под pipefail ронял проверку
+      # здесь же, не дойдя до свежести.
+      local_size=""
+      if [[ -n "$newest" ]]; then local_size="$(wc -c < "$newest" | tr -d ' ')"; fi
       echo "размер: S3=${s3_size:-?} локально=${local_size:-?}"
       if [[ -n "$s3_size" && "$s3_size" == "$local_size" ]]; then
         echo "совпадение размеров: OK"
@@ -242,14 +248,33 @@ verify() {
         echo "⚠️ размеры не совпали (свежий локальный архив мог ещё не уехать)"
       fi
     else
+      # Упавший aws мог успеть напечатать часть листинга — свежесть по ней не считаем.
+      s3_listing=""
       echo "❌ листинг S3 не удался"; rc=1
     fi
   else
     echo "❌ нет AWS CLI или S3_URI"; rc=1
   fi
 
+  echo "== 5. свежесть копий =="
+  # Возраст обеих копий и две последние ночи считает scripts/db-backup-freshness.py
+  # (исходник приехал в payload). Листинг S3 идёт ему на stdin явно: собственный
+  # stdin этого скрипта — сам payload (`ssh … bash -s`). Неудавшийся листинг
+  # пуст, и копия в S3 тогда считается просроченной.
+  if command -v python3 >/dev/null 2>&1; then
+    local freshness_src
+    freshness_src="$(printf '%s' "$FRESHNESS_B64" | base64 -d)"
+    local logs=()
+    if [[ -f "${LOG_FILE}.1" ]]; then logs+=(--log "${LOG_FILE}.1"); fi
+    if [[ -f "$LOG_FILE" ]]; then logs+=(--log "$LOG_FILE"); fi
+    python3 -I -c "$freshness_src" --backup-dir "$BACKUP_DIR" --s3-listing - \
+      ${logs[@]+"${logs[@]}"} <<<"$s3_listing" || rc=1
+  else
+    echo "❌ нет python3 — возраст копий не проверен"; rc=1
+  fi
+
   echo
-  if [[ "$rc" -eq 0 ]]; then echo "✅ критерии приёмки #1247 выполнены"; else echo "⚠️ приёмка ещё не закрыта (см. отметки выше)"; fi
+  if [[ "$rc" -eq 0 ]]; then echo "✅ бэкап в норме: расписание, целостность и свежесть копий (#1247, #3208)"; else echo "⚠️ проверка не пройдена (см. отметки выше)"; fi
   return "$rc"
 }
 

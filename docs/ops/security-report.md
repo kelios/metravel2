@@ -13,6 +13,7 @@
 | Web | `docker logs metravel-nginx-1` за окно (JSON access + stderr) | внешние запросы без своих адресов, статусы, сканеры (`.env`, `.git`, `wp-*`, `*.php`), `POST /admin/login/` с разбивкой «отказ 403/429» и «дошли до проверки пароля» (⚠ от 10 дошедших), срабатывания `limit_req` по чужим адресам и зонам (⚠ от 20 вне зоны `login`), 5xx по путям, топ сетей `/24` / `/48` |
 | Роботы | `user_agent` против `https://metravel.by/robots.txt` | запросов по каждому роботу, разделы сайта, пометка «закрыт в robots.txt, отдано N», где N — ответы не 403, не редирект и не сам `/robots.txt`; ⚠ если закрытому роботу отдано ≥50 — nginx его не режет |
 | Почта приложения | `~/.local/state/metravel/moderation-reminders.log`, `~/metravel-monitor/relay-queue.cron.log` | ошибки SMTP рассылки модерации (⚠ при любой), отложенные письма в очереди Postfix |
+| Бэкап базы | `~/db-backups`, листинг `s3://…/postgres/` ключом бэкапа (раскладка — из `~/.metravel-backup.env`) | возраст последней копии в каталоге и в S3 по UTC-метке в имени архива; старше 26 часов, нет архивов или листинг не удался — `ПРОСРОЧЕНО` и ⚠ (#3208). Порог и правило — в `scripts/db-backup-freshness.py`, общие с `npm run db:backup:prod:verify` |
 | Хост | `df`, `free`, `/proc/loadavg`, `/var/run/reboot-required`, `/var/tmp/system_monitor.state`, `docker ps -a` | диск (⚠ от 85 %), память, нагрузка, состояние `monitor.sh`, нездоровые контейнеры |
 | Итог | файл состояния прошлого прогона | дельты «ко вчера» по ключевым числам и список ⚠ |
 
@@ -29,6 +30,8 @@ Access-лог nginx разбирается потоком, не читается
 | источник скрипта (в git) | `scripts/security-report.py` |
 | установщик (в git) | `scripts/enable-prod-security-report.sh` |
 | копия скрипта на хосте | `~/.local/bin/metravel-security-report.py` |
+| модуль свежести бэкапа (в git) | `scripts/db-backup-freshness.py` |
+| копия модуля на хосте | `~/.local/bin/metravel-db-backup-freshness.py` — отчёт импортирует её по тому же префиксу имени, что у него самого; без неё в письме ⚠ «возраст не проверен» |
 | обёртка cron | `~/.local/bin/metravel-security-report` (`--dry-run` печатает без письма) |
 | конфиг | `~/.metravel-security-report.env` (`SECURITY_REPORT_EMAIL`, `SECURITY_REPORT_HOST`, `SECURITY_REPORT_IGNORE_IPS`) |
 | лог | `~/logs/metravel-security-report.log` (ротация 4×1 МБ) |
@@ -39,6 +42,7 @@ Access-лог nginx разбирается потоком, не читается
 
 ```bash
 bash scripts/enable-prod-security-report.sh            # установить/обновить (идемпотентно)
+bash scripts/enable-prod-security-report.sh --update-script  # обновить только две копии скриптов
 bash scripts/enable-prod-security-report.sh --preview  # собрать и показать, не отправляя
 bash scripts/enable-prod-security-report.sh --run-now  # собрать и отправить сейчас (состояние дельт не трогает)
 bash scripts/enable-prod-security-report.sh --verify   # cron, файлы, последний прогон
@@ -47,7 +51,13 @@ bash scripts/enable-prod-security-report.sh --verify   # cron, файлы, по�
 Свой публичный IPv4 установщик берёт через `ifconfig.me` в момент установки и
 добавляет к IPv6 монитора ротаций; при смене адреса — переустановить или задать
 `IGNORE_IPS="1.2.3.4 2a0a:7d80:3:2::186"`. После правки `scripts/security-report.py`
-обязательна переустановка: на хосте лежит копия, не симлинк.
+или `scripts/db-backup-freshness.py` копии на хосте нужно обновить: там лежат
+файлы, не симлинки. Для этого хватает `--update-script`: он пишет только два
+файла в `~/.local/bin` (сначала рядом как `*.new`, после разбора — заменой) и не
+трогает конфиг со своими адресами, обёртку и crontab. Полная установка без
+аргументов перезаписывает и их: строка расписания пересоздаётся, а свои адреса
+берутся заново от машины, с которой она запущена. `--verify` сравнивает обе
+копии на хосте с репозиторием и краснеет при расхождении.
 
 ## Проверка без прода
 
@@ -56,6 +66,9 @@ bash scripts/enable-prod-security-report.sh --verify   # cron, файлы, по�
 с `--now` и `--log-utc-offset` (метки fail2ban наивные, в зоне хоста; лог модерации
 пишет Django с `TIME_ZONE = 'UTC'`, его метки всегда читаются в UTC),
 `--no-host --dry-run`. Тест держит окно, исключение своих адресов, пороги ⚠ и дельты.
+Раздел «Бэкап базы» при `--no-host` включается флагами `--backup-dir` и
+`--backup-s3-listing` (файл с выводом `aws s3 ls`); доставку обеих копий
+установщиком проверяет `__tests__/scripts/db-backup-freshness.test.ts`.
 
 ## Принуждение на nginx (#2823)
 

@@ -2,6 +2,7 @@
 # Установка и приёмка ежедневного security-отчёта прод-хоста (борд #2721).
 #
 #     bash scripts/enable-prod-security-report.sh            # установить/обновить скрипт, конфиг и cron
+#     bash scripts/enable-prod-security-report.sh --update-script  # обновить только копии скриптов на хосте
 #     bash scripts/enable-prod-security-report.sh --preview  # собрать отчёт сейчас и показать, не отправляя
 #     bash scripts/enable-prod-security-report.sh --run-now  # собрать и отправить письмо прямо сейчас
 #     bash scripts/enable-prod-security-report.sh --verify   # проверить cron, файлы и последний прогон
@@ -9,6 +10,8 @@
 # На прод-хосте (всё от `sx3`, без sudo, по образцу enable-prod-db-backup.sh):
 #
 #   ~/.local/bin/metravel-security-report.py  копия scripts/security-report.py
+#   ~/.local/bin/metravel-db-backup-freshness.py  копия scripts/db-backup-freshness.py — её импортирует
+#                                             отчёт: возраст последнего бэкапа базы (#3208)
 #   ~/.local/bin/metravel-security-report     обёртка (0700): конфиг, лог, запуск
 #   ~/.metravel-security-report.env           конфиг (0600): адрес, свои IP, хост
 #   ~/logs/metravel-security-report.log       лог (0640), ротация 4×1 МБ
@@ -38,6 +41,8 @@ usage() {
 Ежедневный security-отчёт прод-хоста на почту.
 
   (без аргументов)  установить скрипт, конфиг, лог и cron-строку (идемпотентно)
+  --update-script   обновить только копии скриптов на хосте; конфиг, обёртка,
+                    свои адреса и crontab не трогаются
   --preview         собрать отчёт сейчас и напечатать (без письма)
   --run-now         собрать отчёт сейчас и отправить письмо
   --verify          проверить критерии приёмки #2721, ничего не меняя
@@ -50,6 +55,7 @@ USAGE
 
 case "${1:-}" in
   "") ;;
+  --update-script) MODE="update-script" ;;
   --preview) MODE="preview" ;;
   --run-now) MODE="run-now" ;;
   --verify) MODE="verify" ;;
@@ -73,11 +79,14 @@ trap 'rm -f "$payload"' EXIT
   printf 'CRON_SCHEDULE=%q\nREPORT_EMAIL=%q\nREPORT_HOST=%q\nIGNORE_IPS=%q\nMODE=%q\n' \
     "$CRON_SCHEDULE" "$REPORT_EMAIL" "$REPORT_HOST" "$IGNORE_IPS" "$MODE"
   printf 'SCRIPT_B64=%q\n' "$(base64 < "${SCRIPT_DIR}/security-report.py" | tr -d '\n')"
+  printf 'FRESHNESS_B64=%q\n' "$(base64 < "${SCRIPT_DIR}/db-backup-freshness.py" | tr -d '\n')"
   cat <<'REMOTE_MAIN'
 set -Eeuo pipefail
 
 ENV_FILE="$HOME/.metravel-security-report.env"
 PY_FILE="$HOME/.local/bin/metravel-security-report.py"
+# Имя — тот же префикс, что у PY_FILE: по нему отчёт находит модуль рядом с собой.
+FRESHNESS_FILE="$HOME/.local/bin/metravel-db-backup-freshness.py"
 WRAPPER="$HOME/.local/bin/metravel-security-report"
 LOG_FILE="$HOME/logs/metravel-security-report.log"
 STATE_FILE="$HOME/.local/state/metravel/security-report-state.json"
@@ -85,18 +94,43 @@ CRON_MARK="# metravel-security-report"
 
 fail() { echo "❌ $*" >&2; exit 1; }
 
+# Обе копии ставятся вместе: отчёт без модуля свежести печатает ⚠ «возраст не
+# проверен». Сначала во временные файлы и компиляция, потом атомарная замена —
+# оборванная доставка не оставляет cron-у половину скрипта.
+install_scripts() {
+  command -v python3 >/dev/null || fail "нет python3"
+  umask 077
+  mkdir -p "$(dirname "$PY_FILE")"
+  local pair target b64
+  for pair in "$PY_FILE:$SCRIPT_B64" "$FRESHNESS_FILE:$FRESHNESS_B64"; do
+    target="${pair%%:*}"; b64="${pair#*:}"
+    printf '%s' "$b64" | base64 -d > "${target}.new"
+    # Разбор без py_compile: тот оставляет .pyc в ~/.local/bin/__pycache__.
+    python3 -I -c 'import ast, sys; ast.parse(open(sys.argv[1], encoding="utf-8").read(), sys.argv[1])' \
+      "${target}.new" </dev/null || { rm -f "${PY_FILE}.new" "${FRESHNESS_FILE}.new"; fail "скрипт не разбирается: $target"; }
+  done
+  for target in "$PY_FILE" "$FRESHNESS_FILE"; do
+    chmod 700 "${target}.new"
+    mv "${target}.new" "$target"
+  done
+}
+
+update_script() {
+  [[ -x "$WRAPPER" ]] || fail "сначала установка: без аргументов"
+  install_scripts
+  echo "== скрипты обновлены (конфиг, обёртка и crontab не тронуты) =="
+  ls -l "$PY_FILE" "$FRESHNESS_FILE"
+}
+
 install_all() {
   echo "== преднастройка =="
-  command -v python3 >/dev/null || fail "нет python3"
   [[ -x /usr/sbin/sendmail ]] || fail "нет /usr/sbin/sendmail"
   docker ps >/dev/null 2>&1 </dev/null || fail "docker недоступен пользователю $(id -un)"
 
   umask 077
   mkdir -p "$(dirname "$WRAPPER")" "$(dirname "$LOG_FILE")" "$(dirname "$STATE_FILE")"
 
-  printf '%s' "$SCRIPT_B64" | base64 -d > "$PY_FILE"
-  chmod 700 "$PY_FILE"
-  python3 -m py_compile "$PY_FILE" || fail "скрипт не компилируется"
+  install_scripts
 
   # Значения через %q: обёртка делает `source`, и пробел или `$(` в адресе не
   # должны превращаться в команду.
@@ -157,7 +191,7 @@ WRAPEOF
   rm -f "$tmp"
 
   echo "== установлено =="
-  ls -l "$ENV_FILE" "$PY_FILE" "$WRAPPER" "$LOG_FILE"
+  ls -l "$ENV_FILE" "$PY_FILE" "$FRESHNESS_FILE" "$WRAPPER" "$LOG_FILE"
   crontab -l | grep -F "$CRON_MARK"
   echo "расписание в таймзоне хоста: $(timedatectl show -p Timezone --value 2>/dev/null || cat /etc/timezone)"
   echo "свои адреса: $IGNORE_IPS"
@@ -183,8 +217,16 @@ verify() {
   echo "== 1. расписание =="
   if crontab -l 2>/dev/null | grep -F "$CRON_MARK"; then :; else echo "❌ cron-строки нет"; rc=1; fi
   echo "== 2. файлы =="
-  for f in "$ENV_FILE" "$PY_FILE" "$WRAPPER"; do
+  for f in "$ENV_FILE" "$PY_FILE" "$FRESHNESS_FILE" "$WRAPPER"; do
     if [[ -f "$f" ]]; then ls -l "$f"; else echo "❌ нет $f"; rc=1; fi
+  done
+  # На хосте лежат копии, не симлинки: расхождение с репозиторием значит, что
+  # письмо считает по прежним правилам — в том числе по прежнему порогу бэкапа.
+  local pair
+  for pair in "$PY_FILE:$SCRIPT_B64" "$FRESHNESS_FILE:$FRESHNESS_B64"; do
+    if [[ -f "${pair%%:*}" ]] && ! printf '%s' "${pair#*:}" | base64 -d | cmp -s - "${pair%%:*}"; then
+      echo "❌ ${pair%%:*} отличается от репозитория — обновить: --update-script"; rc=1
+    fi
   done
   echo "== 3. последний прогон =="
   if [[ -f "$LOG_FILE" ]]; then
@@ -207,6 +249,7 @@ verify() {
 
 case "$MODE" in
   install) install_all ;;
+  update-script) update_script ;;
   preview) preview ;;
   run-now) run_now ;;
   verify) verify ;;

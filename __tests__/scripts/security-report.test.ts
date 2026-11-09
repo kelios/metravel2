@@ -152,6 +152,8 @@ describe('scripts/security-report.py', () => {
     expect(out).not.toContain('Пропущено нечитаемых строк')
     expect(out).not.toContain('ко вчера')
     expect(out).not.toContain('сбор неполный')
+    // --no-host без каталога архивов: раздела бэкапа нет, счётчик ⚠ прежний
+    expect(out).not.toContain('Бэкап базы')
     const state = JSON.parse(fs.readFileSync(path.join(dir, 'state.json'), 'utf8'))
     expect(state.metrics).toEqual({
       ssh_failed: 3, ssh_unique_ips: 2, bans_sshd: 2, scanner_requests: 3, scanner_ips: 1,
@@ -182,5 +184,58 @@ describe('scripts/security-report.py', () => {
     expect(result.stdout).toContain('OK (сбор неполный)')
     expect(result.stdout).toContain('Отклонений по порогам отчёта нет.')
     expect(result.stdout).toContain('Примечания сбора: fail2ban.log не прочитан; auth.log не прочитан')
+  })
+
+  // #3208: возраст последней копии базы — постоянный сигнал в письме. Порог и
+  // правило возраста отчёт берёт из scripts/db-backup-freshness.py, своих чисел не держит.
+  describe('раздел «Бэкап базы»', () => {
+    const FRESH = 'metravel-postgres-20261024T231502Z.sql.gz' // 7 ч 45 мин до NOW
+    const STALE = 'metravel-postgres-20261023T031502Z.sql.gz' // 51 ч 45 мин до NOW
+    const s3Line = (name: string) => `2026-10-25 02:15:47   82315694 ${name}`
+
+    function backupArgs(name: string, localNames: string[], s3Names: string[]) {
+      const backups = path.join(dir, name)
+      fs.mkdirSync(backups, { recursive: true })
+      for (const file of localNames) fs.writeFileSync(path.join(backups, file), 'x')
+      const listing = path.join(dir, `${name}.s3.txt`)
+      fs.writeFileSync(listing, `${s3Names.map(s3Line).join('\n')}\n`)
+      return ['--backup-dir', backups, '--backup-s3-listing', listing]
+    }
+
+    it('свежая копия — возраст в часах без ⚠', () => {
+      const result = runReport(dir, backupArgs('backup-fresh', [STALE, FRESH], [STALE, FRESH]))
+      expect(result.status).toBe(0)
+      expect(result.stdout).toContain('== Бэкап базы ==')
+      expect(result.stdout).toContain(`Последняя копия, локальный архив: 7.7 ч — ${FRESH} (порог 26 ч)`)
+      expect(result.stdout).toContain(`Последняя копия, объект в S3: 7.7 ч — ${FRESH} (порог 26 ч)`)
+      expect(result.stdout).toContain('Security report metravel.by 25.10.2026: 4 ⚠')
+      expect(result.stdout).not.toContain('ПРОСРОЧЕНО')
+    })
+
+    it('копия старше порога — слово ПРОСРОЧЕНО в разделе, в итоге и в счётчике темы', () => {
+      const result = runReport(dir, backupArgs('backup-stale', [STALE], [STALE, FRESH]))
+      expect(result.status).toBe(0)
+      expect(result.stdout).toContain(`Последняя копия, локальный архив: ПРОСРОЧЕНО — 51.7 ч при пороге 26 ч (${STALE})`)
+      expect(result.stdout).toContain(`Последняя копия, объект в S3: 7.7 ч — ${FRESH}`)
+      expect(result.stdout).toContain(`⚠ бэкап базы, локальный архив: ПРОСРОЧЕНО — 51.7 ч при пороге 26 ч (${STALE})`)
+      expect(result.stdout).toContain('Security report metravel.by 25.10.2026: 5 ⚠')
+    })
+
+    it('копий нет ни в каталоге, ни в S3 — два ⚠ ПРОСРОЧЕНО', () => {
+      const result = runReport(dir, backupArgs('backup-empty', [], []))
+      expect(result.stdout).toContain('⚠ бэкап базы, локальный архив: ПРОСРОЧЕНО — архивов нет')
+      expect(result.stdout).toContain('⚠ бэкап базы, объект в S3: ПРОСРОЧЕНО — архивов нет')
+      expect(result.stdout).toContain('Security report metravel.by 25.10.2026: 6 ⚠')
+    })
+
+    it('модуль свежести не установлен — ⚠, а не тихий пропуск раздела', () => {
+      const result = runReport(dir, [
+        ...backupArgs('backup-no-module', [FRESH], [FRESH]),
+        '--backup-freshness', path.join(dir, 'metravel-db-backup-freshness.py'),
+      ])
+      expect(result.status).toBe(0)
+      expect(result.stdout).toContain('⚠ бэкап базы, возраст не проверен: модуль metravel-db-backup-freshness.py не отработал (FileNotFoundError)')
+      expect(result.stdout).toContain('Security report metravel.by 25.10.2026: 5 ⚠')
+    })
   })
 })

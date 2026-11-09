@@ -3,12 +3,15 @@
 
 Запускается cron-ом на хосте от `sx3` (без sudo), собирает за окно `--since-hours`:
 SSH (auth.log + fail2ban.log), web (docker logs nginx), роботов (user_agent против
-robots.txt), почту приложения (лог напоминаний модерации, relay-очередь) и факты
-хоста (диск, память, нагрузка, контейнеры). Сравнивает с прошлым прогоном из файла
+robots.txt), почту приложения (лог напоминаний модерации, relay-очередь), возраст
+последнего бэкапа базы (#3208) и факты хоста (диск, память, нагрузка, контейнеры).
+Сравнивает с прошлым прогоном из файла
 состояния и шлёт письмо через `sendmail -t` — тот же транспорт, что у seo_report.py.
 
 Только стандартная библиотека. Все входы можно подменить файлами (`--nginx-log`,
 `--fail2ban-log`, `--auth-log`, …) — так работает jest-тест на фикстурах.
+Порог и правило возраста бэкапа живут в соседнем `db-backup-freshness.py` — здесь
+его только импортируют, чтобы письмо и `db:backup:prod:verify` не разошлись.
 Персональные данные посетителей в письмо не попадают: только IP атакующих и UA роботов;
 общий топ трафика — сетями /24 (IPv4) и /48 (IPv6), без адреса посетителя.
 """
@@ -17,6 +20,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import functools
+import importlib.util
 import io
 import ipaddress
 import json
@@ -73,6 +77,10 @@ WARN_5XX_MIN = 50
 WARN_LIMIT_REQ_MIN = 20
 WARN_ADMIN_LOGIN_MIN = 10
 WARN_DISK_PCT = 85
+# Модуль лежит рядом под тем же префиксом имени: в репозитории это
+# scripts/db-backup-freshness.py, на хосте — ~/.local/bin/metravel-db-backup-freshness.py.
+BACKUP_FRESHNESS_PATH = str(Path(__file__).resolve().with_name(
+    Path(__file__).name.replace('security-report', 'db-backup-freshness')))
 
 
 def parse_args(argv):
@@ -93,7 +101,10 @@ def parse_args(argv):
     p.add_argument('--from-addr', default=os.environ.get('SECURITY_REPORT_FROM') or DEFAULT_FROM)
     p.add_argument('--ignore-ip', action='append', default=None, help='свои адреса (не считать атакой/лимитом)')
     p.add_argument('--hostname', default=os.environ.get('SECURITY_REPORT_HOST') or 'metravel.by')
-    p.add_argument('--no-host', action='store_true', help='не собирать df/free/docker (тесты)')
+    p.add_argument('--no-host', action='store_true', help='не собирать df/free/docker и бэкап базы (тесты)')
+    p.add_argument('--backup-dir', help='каталог архивов базы вместо раскладки хоста (тесты; включает раздел и при --no-host)')
+    p.add_argument('--backup-s3-listing', help='файл с выводом `aws s3 ls` вместо обращения к S3 (тесты)')
+    p.add_argument('--backup-freshness', default=BACKUP_FRESHNESS_PATH, help='путь к модулю db-backup-freshness.py')
     p.add_argument('--dry-run', action='store_true', help='печатать письмо, не отправлять')
     p.add_argument('--write-state', action='store_true', help='при --dry-run всё же записать состояние (тесты); без --dry-run пишется всегда')
     p.add_argument('--no-state', action='store_true', help='не записывать состояние (ручной --run-now не должен сдвигать базу дельт)')
@@ -394,6 +405,26 @@ def host_facts():
     return facts
 
 
+def backup_freshness(args, now):
+    """Возраст последней копии базы; правило и порог — в модуле db-backup-freshness.py (#3208).
+
+    Незагруженный модуль — не тихий пропуск раздела, а ⚠: иначе сигнал об остановке
+    бэкапа исчезает вместе с неполной установкой.
+    """
+    if args.no_host and not args.backup_dir:
+        return None
+    try:
+        sys.dont_write_bytecode = True  # импорт не должен оставлять __pycache__ рядом со скриптом
+        spec = importlib.util.spec_from_file_location('db_backup_freshness', args.backup_freshness)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        listing = read_text(args.backup_s3_listing) if args.backup_s3_listing else None
+        return module.summarize(module.collect(now, backup_dir=args.backup_dir, s3_listing=listing))
+    except Exception as exc:  # noqa: BLE001 — отчёт важнее источника
+        note = f'возраст не проверен: модуль {Path(args.backup_freshness).name} не отработал ({type(exc).__name__})'
+        return {'lines': [note], 'problems': [note]}
+
+
 def fmt_delta(key, cur, prev):
     if not prev or key not in prev:
         return ''
@@ -405,7 +436,7 @@ def top(counter, n=5):
     return ', '.join(f'{k} ×{v}' for k, v in counter.most_common(n)) or '—'
 
 
-def build_report(args, now, since, ng, f2b, auth, mod, relay, closed, facts, prev):
+def build_report(args, now, since, ng, f2b, auth, mod, relay, closed, facts, backup, prev):
     warn = []
     lines = []
     period = f'{since.astimezone(dt.timezone.utc):%d.%m %H:%M} – {now.astimezone(dt.timezone.utc):%d.%m %H:%M} UTC'
@@ -479,6 +510,12 @@ def build_report(args, now, since, ng, f2b, auth, mod, relay, closed, facts, pre
         lines.append('Очередь Postfix: нет данных relay-queue.cron.log')
     lines.append('')
 
+    if backup:
+        lines.append('== Бэкап базы ==')
+        lines.extend(f'Последняя копия, {line}' for line in backup['lines'])
+        warn.extend(f'бэкап базы, {problem}' for problem in backup['problems'])
+        lines.append('')
+
     if facts:
         lines.append('== Хост ==')
         lines.append(f'Диск: {facts.get("disk_pct", "?")} % (свободно {facts.get("disk_free_mb", "?")} МБ); память доступна {facts.get("mem_available_mb", "?")} МБ; load {" ".join(facts.get("loadavg", []))}; монитор {facts.get("monitor_state") or "?"}')
@@ -503,6 +540,7 @@ def build_report(args, now, since, ng, f2b, auth, mod, relay, closed, facts, pre
     lines.append('')
     lines.append('Что считается: SSH — auth.log и fail2ban.log за окно; web — docker logs nginx без адресов из SECURITY_REPORT_IGNORE_IPS; '
                  'роботы — по user_agent, закрытые группы берутся из robots.txt; почта — лог send_moderation_reminders и relay-queue; '
+                 'бэкап базы — возраст по UTC-метке в имени последнего архива в каталоге и в S3; '
                  'дельты — к прошлому прогону. Скрипт: scripts/security-report.py (#2721).')
     metrics = {
         'ssh_failed': auth['failed'], 'ssh_unique_ips': len(auth['ips']), 'bans_sshd': sshd_bans,
@@ -570,13 +608,14 @@ def main(argv=None):
     relay = analyze_relay(read_text(args.relay_log))
     closed = closed_crawlers(load_robots(args.robots))
     facts = {} if args.no_host else host_facts()
+    backup = backup_freshness(args, now)
 
     prev = None
     try:
         prev = json.loads(Path(args.state).read_text(encoding='utf-8')).get('metrics')
     except (OSError, ValueError):
         pass
-    subject, body, metrics, warn = build_report(args, now, since, ng, f2b, auth, mod, relay, closed, facts, prev)
+    subject, body, metrics, warn = build_report(args, now, since, ng, f2b, auth, mod, relay, closed, facts, backup, prev)
     if notes:
         body += '\n\nПримечания сбора: ' + '; '.join(notes)
         subject += ' (сбор неполный)'
