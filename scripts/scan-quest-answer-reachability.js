@@ -15,8 +15,10 @@
  *     всегда возвращает false: шаг непроходим;
  *   - `empty_after_normalize` — вариант схлопывается в пустую строку (`"-"`),
  *     рантайм его молча выбрасывает, автор считает, что вариант принимается;
- *   - `mixed_script` — внутри одного слова кириллица и латиница
- *     («гадзiннiк» с латинской `i`): такую форму игрок не наберёт;
+ *   - `mixed_script` — внутри одного слова кириллица и латиница, которые
+ *     рантайм не сводит к одному алфавиту («zwykłы»): такую форму игрок не
+ *     наберёт. Подменыши вида «гадзiннiк» с латинской `i` с #3191 сводятся
+ *     нормализацией и blocker не дают;
  *   - `step_unreachable` — у шага не осталось ни одной формы, которую игрок
  *     может ввести. Это громче всего: шаг непроходим в принципе.
  *
@@ -57,7 +59,7 @@
 const path = require('path')
 
 const { fetchQuestBundles, loadLocalBundles, parseSteps } = require('./lib/questBundles')
-const { normalizeAnswer } = require('./lib/questAnswerNormalize')
+const { normalizeAnswer, foldMixedScriptWords } = require('./lib/questAnswerNormalize')
 // Определение смешения алфавитов — общее со сканом видимого текста (#1464):
 // две копии регулярок разошлись бы, и один скан начал бы отчитываться «чисто»
 // о том, что другой считает дефектом.
@@ -158,7 +160,9 @@ function scanStep(step, dictionary = parseDictionary(step.answer_pattern)) {
       continue
     }
 
-    const mixed = mixedScriptWords(variant)
+    // Подменыши, которые рантайм сводит к алфавиту слова (#3191), игрок
+    // набирает и так: blocker — только смешение, которое сведение не снимает.
+    const mixed = mixedScriptWords(foldMixedScriptWords(variant))
     if (mixed.length) {
       findings.push({
         kind: 'mixed_script',

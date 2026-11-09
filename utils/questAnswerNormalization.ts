@@ -25,16 +25,52 @@ export const QUEST_ANSWER_SOURCE_LOCALE = 'ru'
 // Дефис в одном слове сохраняет слитное сравнение («тёмно-синий»).
 // В фразе он может обозначать границу слов, как тире.
 
+// Латинские и кириллические буквы, которые выглядят одинаково (#3191).
+// Мультиязычная клавиатура телефона подставляет латинскую «i» в белорусское
+// «вінцэнт», а глазом слово не отличить. Регистр различаем: заглавная «H»
+// похожа на «Н», строчная «h» на «н» — нет, поэтому сведение идёт ДО
+// `toLowerCase`.
+const LATIN_TO_CYRILLIC: Readonly<Record<string, string>> = {
+    a: 'а', c: 'с', e: 'е', i: 'і', o: 'о', p: 'р', x: 'х', y: 'у',
+    A: 'А', B: 'В', C: 'С', E: 'Е', H: 'Н', I: 'І', K: 'К', M: 'М', O: 'О', P: 'Р', T: 'Т', X: 'Х', Y: 'У',
+};
+const CYRILLIC_TO_LATIN: Readonly<Record<string, string>> = Object.fromEntries(
+    Object.entries(LATIN_TO_CYRILLIC).map(([latin, cyrillic]) => [cyrillic, latin]),
+);
+const CYRILLIC_LETTER = /[\u0400-\u04FF\u0500-\u052F]/g;
+const LATIN_LETTER = /[A-Za-z\u00C0-\u024F]/g;
+/** Слово из букв обоих алфавитов; дефис и пробел — границы («SPA-центр» не слово-подменыш). */
+const MIXED_SCRIPT_WORD = /[A-Za-z\u00C0-\u024F\u0400-\u04FF\u0500-\u052F]+/g;
+
+/**
+ * Слово, где алфавиты перемешаны, сводится к алфавиту большинства его букв:
+ * «вiнцэнт» (латинская i) → «вінцэнт», «flеur» (кириллическая е) → «fleur».
+ * Слово одного алфавита не меняется, поэтому «cat» и «pizza» остаются как есть.
+ * Ничья — к кириллице, языку источника квестов.
+ */
+function foldToMajorityScript(word: string): string {
+    const cyrillic = word.match(CYRILLIC_LETTER)?.length ?? 0;
+    const latin = word.match(LATIN_LETTER)?.length ?? 0;
+    if (!cyrillic || !latin) return word;
+    const table = cyrillic >= latin ? LATIN_TO_CYRILLIC : CYRILLIC_TO_LATIN;
+    let folded = '';
+    for (const letter of word) folded += table[letter] ?? letter;
+    return folded;
+}
+
 /**
  * Нормализация ответа (дублирует логику из data файлов).
- * Косметика обеих сторон сравнения: регистр, пробелы, пунктуация, «ё»→«е»,
- * белорусские «і»→«и» и «э»→«е», служебное «ад»→«от» (#1927). Не стеммер.
+ * Косметика обеих сторон сравнения: буквы-подменыши в слове смешанного
+ * алфавита (#3191), регистр, пробелы, пунктуация, «ё»→«е», белорусские
+ * «і»→«и» и «э»→«е», служебное «ад»→«от» (#1927). Не стеммер.
  *
- * Правило локалей `ru`/`be`. Цепочку зеркалит `scripts/lib/questAnswerNormalize.js`
+ * Правило локалей `ru`/`be`; через правило источника действует для ответа
+ * на любом языке. Цепочку зеркалит `scripts/lib/questAnswerNormalize.js`
  * — паритет сторожит `__tests__/scripts/scanQuestAnswerReachability.test.ts`.
  */
 export function normalize(s: string): string {
     return s
+        .replace(MIXED_SCRIPT_WORD, foldToMajorityScript)
         .toLowerCase()
         .replace(/[–—]/g, ' ')
         .replace(/-/g, /\S\s+\S/.test(s) ? ' ' : '')

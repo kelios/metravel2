@@ -148,3 +148,37 @@ describe('тире и пунктуация между словами', () => {
     expect(motto('дорога – жизнь', 'ru')).toBe(false)
   })
 })
+
+describe('буквы-подменыши в слове смешанного алфавита (#3191)', () => {
+  it('латинская i в кириллическом слове равна кириллической', () => {
+    expect(normalize('вiнцэнт')).toBe(normalize('вінцэнт'))
+    expect(normalize('вiнцэнт')).toBe('винцент')
+    expect(normalize('ВIНЦЭНТ')).toBe('винцент')
+    expect(normalize('Bитебск')).toBe('витебск')
+  })
+
+  it('полностью латинские и полностью кириллические слова не меняются', () => {
+    expect(normalize('cat')).toBe('cat')
+    expect(normalize('pizza')).toBe('pizza')
+    expect(normalizeQuestAnswer('Pizza', 'pl')).toBe('pizza')
+    expect(normalizeQuestAnswer('The Cat', 'en')).toBe('cat')
+    expect(normalize('кафе Bar')).toBe('кафе bar')
+    expect(normalize('SPA-центр')).toBe('spaцентр')
+  })
+
+  it('слово с латинским большинством сводится к латинице', () => {
+    expect(normalize('flеur de lis')).toBe('fleur de lis')
+  })
+
+  it('чекер принимает ввод с латинской i на русском и белорусском квесте', () => {
+    const vincent = exactAny('вінцэнт', 'винцент')
+    expect(vincent('вiнцэнт')).toBe(true)
+    expect(vincent('вiнцент')).toBe(true)
+    expect(evaluateQuestAnswer({ answer: exactAny('вінцэнт'), inputType: 'text', contentLocale: 'be' }, 'вiнцэнт').ok).toBe(true)
+    expect(vincent('винсент')).toBe(false)
+  })
+
+  it('украинский квест принимает «мiсто» с латинской i через правило источника', () => {
+    expect(exactAny('місто')('мiсто', 'uk')).toBe(true)
+  })
+})
